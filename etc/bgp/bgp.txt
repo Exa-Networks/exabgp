@@ -1,0 +1,31 @@
+neighbor 192.168.127.128 {
+	description "a quagga test peer";
+	router-id 192.168.127.1;
+	local-address 192.168.127.1;
+	local-as 65000;
+	peer-as 65000;
+
+	static {
+		route 10.0.1.0/24 {
+			next-hop 10.0.255.254;
+		}
+		route 10.0.2.0/24 {
+			next-hop 10.0.255.254;
+			community 30740:30740;
+		}
+		route 10.0.3.0/24 {
+			next-hop 10.0.255.254;
+			community [ 30740:30740 30740:0 ];
+		}
+		route 10.0.4.0/24 {
+			next-hop 10.0.255.254;
+			local-preference 200;
+		}
+		route 10.0.5.0/24 next-hop 10.0.255.254 local-preference 200;
+		route 10.0.6.0/24 next-hop 10.0.255.254 community 30740:30740;
+		route 10.0.7.0/24 next-hop 10.0.255.254 local-preference 200 community 30740:30740;
+		route 10.0.8.0/24 next-hop 10.0.255.254 community 30740:30740 local-preference 200;
+		route 10.0.7.0/24 next-hop 10.0.255.254 local-preference 200 community [30740:0 30740:30740];
+		route 10.0.8.0/24 next-hop 10.0.255.254 community [30740:0 30740:30740] local-preference 200;
+	}
+}

@@ -1,0 +1,3 @@
+allow reconfiguration (SIGHUP forcing a reload of the configuration)
+-> reconfiguration alter neighbor list
+-> reconfiguration alter neighbor routes
