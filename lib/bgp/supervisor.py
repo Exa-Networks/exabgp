@@ -8,6 +8,8 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 import time
+import signal
+
 from bgp.data import Notification
 from bgp.protocol import Protocol,Network
 from bgp.peer import Peer
@@ -24,16 +26,27 @@ class Supervisor (object):
 		self._shutdown = False
 		self.reload()
 		
+		signal.signal(signal.SIGTERM, self.sigterm)
+		signal.signal(signal.SIGHUP, self.sighup)
+	
+	def sigterm (self,signum, frame):
+		print "SIG TERM received"
+		self.shutdown()
+
+	def sighup (self,signum, frame):
+		print "SIG TERM received"
+		self.reload()
+	
 	def run (self):
 		start = time.time()
 		while self._peers:
 			try:
-				for ip in self._peers:
+				for ip in self._peers.keys():
 					peer = self._peers[ip]
 					peer.run()
 				if self._shutdown:
-					for ip in self._peers:
-						self._peer[ip].shutdown()
+					for ip in self._peers.keys():
+						self._peers[ip].shutdown()
 				# MUST not more than one KEEPALIVE / sec
 				time.sleep(1.0)
 			except KeyboardInterrupt:
