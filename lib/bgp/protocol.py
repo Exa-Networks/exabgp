@@ -22,11 +22,12 @@ class Network (socket.socket):
 		
 		try:
 			self._io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			self._io.settimeout(1)
 			self._io.connect((host,179))
 			self._io.setblocking(0)
 		except socket.error, e:
-			self.shutdown()
-			raise Notification(1,1)
+			self.close()
+			raise Failure('could not initialise: %s' % str(e))
 		
 	def pending (self):
 		r,_,_ = select.select([self._io,],[],[],0)
@@ -40,8 +41,8 @@ class Network (socket.socket):
 			self.last_read = time.time()
 			return r
 		except socket.error,e:
-			self.shutdown()
-			raise Failure('reading issue '+str(e))
+			self.close()
+			raise Failure('reading issue:  %s ' % str(e))
 
 	def write (self,data):
 		try:
@@ -49,8 +50,8 @@ class Network (socket.socket):
 			self.last_write = time.time()
 			return r
 		except socket.error, e:
-			self.shutdown()
-			raise Failure('writing issue '+str(e))
+			self.close()
+			raise Failure('writing issue: %s' % str(e))
 
 	def shutdown (self):
 		try:
@@ -62,12 +63,18 @@ class Network (socket.socket):
 class Protocol (object):
 	debug = False
 	
-	def __init__ (self,neighbor,network):
+	def dump (self,test,string):
+		if test: print time.strftime('%j %H:%M:%S',time.localtime()), '%15s/%7s' % (self.neighbor.peer_address.human(),self.neighbor.peer_as), string
+	
+	def __init__ (self,neighbor):
 		self.neighbor = neighbor
-		self.network = network
+		self.network = None
 		self._table = Table()
 		self._update = Update(self._table)
 		self._table.update(self.neighbor.routes)
+
+	def connect (self):
+		self.network = Network(self.neighbor.peer_address.human())
 	
 	def _read_header (self):
 		# Read it as a block as it is better for the timer code
@@ -91,7 +98,7 @@ class Protocol (object):
 			(msg == Notification.TYPE and length < 21) or
 			(msg == KeepAlive.TYPE and length != 19)
 		):
-			# Section 6.1 - Must send the faulty length back (pretty sure no implementation cares :p)
+			# MUST send the faulty length back
 			raise SendNotification(1,2,raw_length)
 			#(msg == RouteRefresh.TYPE and length != 23)
 		
@@ -107,22 +114,22 @@ class Protocol (object):
 		
 		if msg != Open.TYPE:
 			# We are speaking BGP - send us an OPEN ..
-			raise SendNotification(1,1)
+			raise SendNotification(1,1,chr(msg))
 		
 		version = ord(data[0])
 		if version != 4:
 			# Only version 4 is supported nowdays..
-			raise SendNotification(2,1)
+			raise SendNotification(2,1,data[0])
 		
 		asn = unpack('!H',data[1:3])[0]
 		if asn != self.neighbor.peer_as:
 			# ASN sent did not match ASN expected
-			raise SendNotification(2,2)
+			raise SendNotification(2,2,data[1:3])
 		
 		hold_time = unpack('!H',data[3:5])[0]
 		if hold_time == 0:
 			# Hold Time of zero not accepted
-			raise SendNotification(2,6)
+			raise SendNotification(2,6,data[3:5])
 		self.neighbor.hold_time.update(hold_time)
 		
 		router_id = unpack('!L',data[5:9])[0]
@@ -151,7 +158,7 @@ class Protocol (object):
 		if msg not in [KeepAlive.TYPE,Update.TYPE,Notification.TYPE]:
 			# We are speaking BGP - greet us with OPEN when we meet only
 			# We do not speak any extension like Route Refresh, so do not use it
-			raise SendNotification(1,3)
+			raise SendNotification(1,3,chr(msg))
 		if self.debug and msg == Update.TYPE: print "UPDATE RECV: ",[hex(ord(c)) for c in data]
 		return msg, data
 	
@@ -187,7 +194,6 @@ class Protocol (object):
 	
 	def new_notification (self,notification):
 		return self.network.write(notification.message())
-		self.network.shutdown()	
 	
 	def check_keepalive (self):
 		left = int (self.network.last_read  + self.neighbor.hold_time - time.time())
@@ -196,4 +202,6 @@ class Protocol (object):
 		return left
 	
 	def close (self):
-		self.network.close()
+		if self.network:
+			self.network.close()
+			self.network = None

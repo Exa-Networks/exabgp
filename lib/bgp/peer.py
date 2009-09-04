@@ -19,20 +19,17 @@ class Peer (object):
 	debug = False
 	
 	def dump (self,test,string):
-		if self.follow and test: print time.strftime('%j %H/%M/%S',time.localtime()), '%15s/%7s' % (self.bgp.neighbor.peer_address.human(),self.bgp.neighbor.peer_as), string
+		if self.follow and 	test: print time.strftime('%j %H:%M:%S',time.localtime()), '%15s/%7s' % (self.neighbor.peer_address.human(),self.neighbor.peer_as), string
 	
 	def __init__ (self,neighbor,supervisor,follow=True):
 		self.supervisor = supervisor
 		self.neighbor = neighbor
-		self.follow = True
-		self.running = False
-		self.bgp = None
+		self.follow = follow
+		self.running = True
+		self.bgp = Protocol(self.neighbor)
 		self.start()
 
 	def start (self):
-		if self.bgp: self.bgp.close()
-		self.bgp = Protocol(self.neighbor,Network(self.neighbor.peer_address.human()))
-		self.running = True
 		self._loop = self._run()
 
 	def stop (self):
@@ -50,6 +47,8 @@ class Peer (object):
 	
 	def _run (self):
 		try:
+			self.bgp.connect()
+		
 			o = self.bgp.new_open()
 			self.dump(o,'-> %s' % o)
 			yield
@@ -87,27 +86,34 @@ class Peer (object):
 			# User closing the connection
 			raise SendNotification(6,0)
 		except SendNotification,e:
-			print 'Sending notification (%d,%d) to peer' % (e.code,e.subcode)
+			print 'Sending Notification (%d,%d) to peer %s' % (e.code,e.subcode,str(e))
 			try:
 				self.bgp.new_notification(e)
 			except Failure:
 				pass
+			self.respawn()
 			return
-			self.supervisor.unschedule(self)
-			self.bgp.close()
 		except Notification, n:
-			print 'Notification Received', str(n)
-			self.supervisor.unschedule(self)
-			self.bgp.close()
+			print 'Received Notification (%d,%d) to peer %s' % (e.code,e.subcode,str(e))
+			self.respawn()
 			return
 		except Failure, e:
-			print 'Failure Received', str(e)
-			self.running = False
-			self.supervisor.respawn(self)
-			self.bgp.close()
+			print 'Failure', str(e)
+			# delay the retry
+			for r in range(0,10):
+				if self.running:
+					yield
+			self.respawn()
 			return
 		
+		if not self.running:
+			self.unschedule()
+	
+	def unschedule (self):
 		self.supervisor.unschedule(self)
 		self.bgp.close()
 	
+	def respawn (self):
+		self.supervisor.respawn(self)
+		self.bgp.close()
 	

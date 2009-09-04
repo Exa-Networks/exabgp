@@ -42,18 +42,21 @@ class Supervisor (object):
 		start = time.time()
 		while self._peers:
 			try:
+				# Re-initialise failed connection
+				while self._respawn:
+					self._respawn.pop(0).start()
+				
+				# Handle all connection
 				for ip in self._peers.keys():
 					peer = self._peers[ip]
 					peer.run()
+				
 				if self._shutdown:
 					for ip in self._peers.keys():
 						self._peers[ip].stop()
 				else:
 					if self._reload:
 						self.reload()
-					for peer in self._respawn:
-						peer.start()
-					self._respawn = []
 				# MUST not more than one KEEPALIVE / sec
 				time.sleep(1.0)
 			except KeyboardInterrupt:
@@ -65,22 +68,29 @@ class Supervisor (object):
 		self._peers[neighbor.peer_address.human()] = peer
 
 	def reload (self):
+		# XXXXXXXXXXXXXXX: This need changing as it does not take in consideration neighbor changes
+		
 		self._reload = False
 		self.configuration.reload()
 		for ip in self._peers.keys():
-			print ip, [n.human() for n in self.configuration.neighbor]
 			if ip not in [n.human() for n in self.configuration.neighbor]:
+				print "Removing Peer", ip
 				self._peers[ip].stop()
 		
 		for _,neighbor in self.configuration.neighbor.iteritems():
-			if neighbor.peer_address.human() not in self._peers:
+			ip = neighbor.peer_address.human()
+			if ip not in self._peers:
+				print "New neighbor ", ip 
 				self._add_peer(neighbor)
 		
 	def shutdown (self):
 		self._shutdown = True
 	
 	def unschedule (self,peer):
-		del self._peers[peer.bgp.neighbor.peer_address.human()]
+		ip = peer.neighbor.peer_address.human()
+		if ip in self._peers:
+			del self._peers[ip]
 	
 	def respawn (self,peer):
 		self._respawn.append(peer)
+		
