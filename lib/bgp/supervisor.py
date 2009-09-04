@@ -24,6 +24,7 @@ class Supervisor (object):
 		self.configuration = configuration
 		self._peers = {}
 		self._shutdown = False
+		self._reload = False
 		self.reload()
 		
 		signal.signal(signal.SIGTERM, self.sigterm)
@@ -34,8 +35,8 @@ class Supervisor (object):
 		self.shutdown()
 
 	def sighup (self,signum, frame):
-		print "SIG TERM received"
-		self.reload()
+		print "SIG HUP received"
+		self._reload = True
 	
 	def run (self):
 		start = time.time()
@@ -47,6 +48,8 @@ class Supervisor (object):
 				if self._shutdown:
 					for ip in self._peers.keys():
 						self._peers[ip].shutdown()
+				if self._reload:
+					self.reload()
 				# MUST not more than one KEEPALIVE / sec
 				time.sleep(1.0)
 			except KeyboardInterrupt:
@@ -61,9 +64,11 @@ class Supervisor (object):
 		self._peers[ip] = peer
 
 	def reload (self):
+		self._reload = False
 		self.configuration.reload()
 		for ip in self._peers.keys():
-			if ip not in self.configuration.neighbor:
+			print ip, [n.human() for n in self.configuration.neighbor]
+			if ip not in [n.human() for n in self.configuration.neighbor]:
 				self._peers[ip].shutdown()
 		
 		for _,neighbor in self.configuration.neighbor.iteritems():
