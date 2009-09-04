@@ -11,7 +11,6 @@ import time
 import signal
 
 from bgp.data import Notification
-from bgp.protocol import Protocol,Network
 from bgp.peer import Peer
 
 class Supervisor (object):
@@ -23,6 +22,7 @@ class Supervisor (object):
 	def __init__ (self,configuration):
 		self.configuration = configuration
 		self._peers = {}
+		self._respawn = []
 		self._shutdown = False
 		self._reload = False
 		self.reload()
@@ -43,13 +43,21 @@ class Supervisor (object):
 		while self._peers:
 			try:
 				for ip in self._peers.keys():
+					print "peer",ip
 					peer = self._peers[ip]
 					peer.run()
 				if self._shutdown:
 					for ip in self._peers.keys():
-						self._peers[ip].shutdown()
-				if self._reload:
-					self.reload()
+						print "shutdown",ip
+						self._peers[ip].stop()
+				else:
+					if self._reload:
+						print "reload"
+						self.reload()
+					for peer in self._respawn:
+						print "restart",ip
+						peer.start()
+					self._respawn = []
 				# MUST not more than one KEEPALIVE / sec
 				time.sleep(1.0)
 			except KeyboardInterrupt:
@@ -57,11 +65,8 @@ class Supervisor (object):
 				self.shutdown()
 	
 	def _add_peer (self,neighbor):
-		ip = neighbor.peer_address.human()
-		assert ip not in self._peers
-		network = Network(ip)
-		peer = Peer(Protocol(neighbor,network),self)
-		self._peers[ip] = peer
+		peer = Peer(neighbor,self)
+		self._peers[neighbor.peer_address.human()] = peer
 
 	def reload (self):
 		self._reload = False
@@ -69,7 +74,7 @@ class Supervisor (object):
 		for ip in self._peers.keys():
 			print ip, [n.human() for n in self.configuration.neighbor]
 			if ip not in [n.human() for n in self.configuration.neighbor]:
-				self._peers[ip].shutdown()
+				self._peers[ip].stop()
 		
 		for _,neighbor in self.configuration.neighbor.iteritems():
 			if neighbor.peer_address.human() not in self._peers:
@@ -78,5 +83,8 @@ class Supervisor (object):
 	def shutdown (self):
 		self._shutdown = True
 	
-	def unschedule (self,ip):
-		del self._peers[ip]
+	def unschedule (self,peer):
+		del self._peers[peer.bgp.neighbor.peer_address.human()]
+	
+	def respawn (self,peer):
+		self._respawn.append(peer)

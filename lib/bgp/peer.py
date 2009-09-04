@@ -10,6 +10,8 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 import time
 
 from bgp.data import NOP, Open, Update, Failure, Notification, SendNotification, KeepAlive
+from bgp.protocol import Protocol,Network
+
 
 # Present a File like interface to socket.socket
 
@@ -19,12 +21,22 @@ class Peer (object):
 	def dump (self,test,string):
 		if self.follow and test: print time.strftime('%j %H/%M/%S',time.localtime()), '%15s/%7s' % (self.bgp.neighbor.peer_address.human(),self.bgp.neighbor.peer_as), string
 	
-	def __init__ (self,bgp,supervisor,follow=True):
+	def __init__ (self,neighbor,supervisor,follow=True):
 		self.supervisor = supervisor
-		self.bgp = bgp
+		self.neighbor = neighbor
 		self.follow = True
 		self.running = False
+		self.bgp = None
+		self.start()
+
+	def start (self):
+		if self.bgp: self.bgp.close()
+		self.bgp = Protocol(self.neighbor,Network(self.neighbor.peer_address.human()))
+		self.running = True
 		self._loop = self._run()
+
+	def stop (self):
+		self.running = False
 	
 	def run (self):
 		try:
@@ -33,7 +45,6 @@ class Peer (object):
 			pass
 	
 	def _run (self):
-		self.running = True
 		try:
 			o = self.bgp.new_open()
 			self.dump(o,'-> %s' % o)
@@ -77,13 +88,21 @@ class Peer (object):
 				self.bgp.new_notification(e)
 			except Failure:
 				pass
+			return
+			self.supervisor.unschedule(self)
+			self.bgp.close()
 		except Notification, n:
 			print 'Notification Received', str(n)
+			self.supervisor.unschedule(self)
+			self.bgp.close()
+			return
 		except Failure, e:
 			print 'Failure Received', str(e)
-		self.supervisor.unschedule(self.bgp.neighbor.peer_address.human())
+			self.supervisor.respawn(self)
+			self.bgp.close()
+			return
+		
+		self.supervisor.unschedule(self)
 		self.bgp.close()
 	
-	def shutdown (self):
-		self.running = False
 	
