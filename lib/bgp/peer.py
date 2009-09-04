@@ -39,7 +39,9 @@ class Peer (object):
 		if self.running:
 			self.running = False
 		else:
+			# The peer already stopped (due to a notification or conneciton issue)
 			self.supervisor.unschedule(self)
+	
 	def run (self):
 		try:
 			self._loop.next()

@@ -43,19 +43,15 @@ class Supervisor (object):
 		while self._peers:
 			try:
 				for ip in self._peers.keys():
-					print "peer",ip
 					peer = self._peers[ip]
 					peer.run()
 				if self._shutdown:
 					for ip in self._peers.keys():
-						print "shutdown",ip
 						self._peers[ip].stop()
 				else:
 					if self._reload:
-						print "reload"
 						self.reload()
 					for peer in self._respawn:
-						print "restart",ip
 						peer.start()
 					self._respawn = []
 				# MUST not more than one KEEPALIVE / sec
