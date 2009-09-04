@@ -36,8 +36,10 @@ class Peer (object):
 		self._loop = self._run()
 
 	def stop (self):
-		self.running = False
-	
+		if self.running:
+			self.running = False
+		else:
+			self.supervisor.unschedule(self)
 	def run (self):
 		try:
 			self._loop.next()
@@ -98,6 +100,7 @@ class Peer (object):
 			return
 		except Failure, e:
 			print 'Failure Received', str(e)
+			self.running = False
 			self.supervisor.respawn(self)
 			self.bgp.close()
 			return
