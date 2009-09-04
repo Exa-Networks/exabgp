@@ -1,3 +1,4 @@
+check if the peer is using AUTHENTIFICATION and refuse the connection if it does
 allow reconfiguration (SIGHUP forcing a reload of the configuration)
 -> reconfiguration alter neighbor list
 -> reconfiguration alter neighbor routes

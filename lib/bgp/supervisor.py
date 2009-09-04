@@ -20,59 +20,47 @@ class Supervisor (object):
 	
 	def __init__ (self,configuration):
 		self.configuration = configuration
-		self._neighbor = []
-		self._neighbor_to_peer = {}
-		
+		self._peers = {}
+		self._shutdown = False
 		self.reload()
 		
 	def run (self):
 		start = time.time()
-		while self._neighbor:
+		while self._peers:
 			try:
-				for ip in self._neighbor:
-					peer = self._neighbor_to_peer[ip]
+				for ip in self._peers:
+					peer = self._peers[ip]
 					peer.run()
-				time.sleep(1)
+				if self._shutdown:
+					for ip in self._peers:
+						self._peer[ip].shutdown()
+				# MUST not more than one KEEPALIVE / sec
+				time.sleep(1.0)
 			except KeyboardInterrupt:
 				if self.debug: print "^C received"
 				self.shutdown()
 	
-	def remove_neighbor (self,neighbor):
-		ip = neighbor.peer_address.human()
-		peer = self._neighbor_to_peer[ip]
-		peer.shutdown()
-	
-	def remove_peer (self,neighbor):
-		ip = neighbor.peer_address.human()
-		self._neighbor.remove(ip)
-		del self._neighbor_to_peer[ip]
-
 	def _add_peer (self,neighbor):
 		ip = neighbor.peer_address.human()
-		if ip in self._neighbor:
-			return
+		assert ip not in self._peers
 		network = Network(ip)
 		peer = Peer(Protocol(neighbor,network),self)
-		self._neighbor.append(ip)
-		self._neighbor_to_peer[ip] = peer
+		self._peers[ip] = peer
 
 	def reload (self):
 		self.configuration.reload()
-		for ip in self._neighbor:
-			if ip not in self.configuration.neighbor.keys():
-				print "IP", ip
-				self.remove_neighbor(ip)
+		for ip in self._peers.keys():
+			if ip not in self.configuration.neighbor:
+				self._peers[ip].shutdown()
 		
 		for _,neighbor in self.configuration.neighbor.iteritems():
 			ip = neighbor.peer_address.human()
-			if ip in self._neighbor:
+			if ip in self._peers:
 				continue
 			self._add_peer(neighbor)
 		
 	def shutdown (self):
-		for ip in self._neighbor:
-			peer = self._neighbor_to_peer[ip]
-			peer.shutdown()
-		
+		self._shutdown = True
+	
 	def unschedule (self,ip):
-		self._neighbor.remove(ip)
+		del self._peers[ip]

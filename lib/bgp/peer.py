@@ -14,12 +14,16 @@ from bgp.data import NOP, Open, Update, Failure, Notification, SendNotification,
 # Present a File like interface to socket.socket
 
 class Peer (object):
-	debug = True
+	debug = False
 	
-	def __init__ (self,bgp,supervisor):
+	def dump (self,test,string):
+		if self.follow and test: print time.strftime('%j %H/%M/%S',time.localtime()), '%15s/%7s' % (self.bgp.neighbor.peer_address.human(),self.bgp.neighbor.peer_as), string
+	
+	def __init__ (self,bgp,supervisor,follow=True):
 		self.supervisor = supervisor
-		self.running = False
 		self.bgp = bgp
+		self.follow = True
+		self.running = False
 		self._loop = self._run()
 	
 	def run (self):
@@ -31,56 +35,52 @@ class Peer (object):
 	def _run (self):
 		self.running = True
 		try:
-			print 'Peer', self.bgp.neighbor.peer_address.human()
 			o = self.bgp.new_open()
-			if self.debug and o: print "->", o
+			self.dump(o,'-> %s' % o)
 			yield
 
-			print 'Peer', self.bgp.neighbor.peer_address.human()
 			o = self.bgp.read_open()
-			if self.debug and o: print "<-", o
+			self.dump(o,'-> %s' % o)
 			yield
 
-			print 'Peer', self.bgp.neighbor.peer_address.human()
 			c,_ = self.bgp.new_keepalive(force=True)
-			if self.debug: print "->", 'KEEPALIVE'
+			self.dump(o,'-> KEEPALIVE')
 			yield
 
-			print 'Peer', self.bgp.neighbor.peer_address.human()
 			msg,data = self.bgp.read_keepalive()
-			if self.debug and msg == KeepAlive.TYPE: print "<- KEEPALIVE",self.bgp.network.host
+			self.dump(msg == KeepAlive.TYPE,'<- KEEPALIVE')
 
-			print 'Peer', self.bgp.neighbor.peer_address.human()
 			a = self.bgp.new_announce()
-			if self.debug and a: print '->', a
+			self.dump(a,'-> %s' % a)
 
 			while self.running:
-				print 'Peer', self.bgp.neighbor.peer_address.human()
 				c = self.bgp.check_keepalive()
-				if self.debug: print "Receive Timer", self.bgp.network.host, ":", c, "second(s) left"
+				if self.debug: print 'Receive Timer', self.bgp.network.host, ':', c, 'second(s) left'
 
 				c,k = self.bgp.new_keepalive()
-				if self.debug and k: print "-> KEEPALIVE"
-				if self.debug: print "Sending Timer", self.bgp.network.host, ":", c, "second(s) left"
+				self.dump(k,'-> KEEPALIVE')
+				if self.debug: print 'Sending Timer', self.bgp.network.host, ':', c, 'second(s) left'
 
 				msg,data = self.bgp.read_message()
-				if self.debug and msg == KeepAlive.TYPE: print "<- KEEPALIVE",self.bgp.network.host
-				if self.debug and msg == Update.TYPE: print "<- UPDATE",self.bgp.network.host
+				self.dump(msg == KeepAlive.TYPE,'<- KEEPALIVE')
+				self.dump(msg == Update.TYPE,'<- UPDATE')
 
-#				u = self.bgp.new_update()
-#				if self.debug and u: print "->", u
+				u = self.bgp.new_update()
+				self.dump(u,'-> %s' % u)
 
 				yield 
 			# User closing the connection
 			raise SendNotification(6,0)
 		except SendNotification,e:
-			if self.debug: print "Sending notification (%d,%d) to peer" % (e.code,e.subcode)
-			self.bgp.new_notification(e)
+			print 'Sending notification (%d,%d) to peer' % (e.code,e.subcode)
+			try:
+				self.bgp.new_notification(e)
+			except Failure:
+				pass
 		except Notification, n:
-			if self.debug: print "Notification Received"
-			if self.debug: print str(n)
+			print 'Notification Received', str(n)
 		except Failure, e:
-			if self.debug: print "Failure Received", str(e)
+			print 'Failure Received', str(e)
 		self.supervisor.unschedule(self.bgp.neighbor.peer_address.human())
 		self.bgp.close()
 	

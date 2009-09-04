@@ -27,12 +27,8 @@ class Network (socket.socket):
 		except socket.error, e:
 			self.shutdown()
 			raise Notification(1,1)
-			
-#		self.pool = select.pool()
-#		self.pool.register(self._io,select.POLLIN)
 		
 	def pending (self):
-		#return self.pool.pool()
 		r,_,_ = select.select([self._io,],[],[],0)
 		return True if r else False
 
@@ -57,8 +53,6 @@ class Network (socket.socket):
 			raise Failure('writing issue '+str(e))
 
 	def shutdown (self):
-		#self.pool.close()
-		#??? self.pool.unregister(???)
 		try:
 			self._io.close()
 		except socket.error:
@@ -66,7 +60,7 @@ class Network (socket.socket):
 	
 
 class Protocol (object):
-	debug = True
+	debug = False
 	
 	def __init__ (self,neighbor,network):
 		self.neighbor = neighbor
@@ -133,7 +127,7 @@ class Protocol (object):
 		
 		router_id = unpack('!L',data[5:9])[0]
 
-# XXX: we must enable that (but it makes debugging so more painful as it force some connection to close)
+# XXX: Refuse connections with unknown options - not recommended. :) 
 #		option_len = ord(data[9])
 #		if option_len:
 #			# We do not support any Optional Parameter

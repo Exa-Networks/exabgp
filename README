@@ -1,2 +1,2 @@
-sudo tshark -i any port 179
-
+This programs requires python 2.6
+If you can not understand the code, do not use it :D
