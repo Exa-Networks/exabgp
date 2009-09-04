@@ -72,10 +72,8 @@ class Supervisor (object):
 				self._peers[ip].shutdown()
 		
 		for _,neighbor in self.configuration.neighbor.iteritems():
-			ip = neighbor.peer_address.human()
-			if ip in self._peers:
-				continue
-			self._add_peer(neighbor)
+			if neighbor.peer_address.human() not in self._peers:
+				self._add_peer(neighbor)
 		
 	def shutdown (self):
 		self._shutdown = True
