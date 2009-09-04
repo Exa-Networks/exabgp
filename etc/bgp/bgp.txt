@@ -14,7 +14,7 @@ neighbor 192.168.127.128 {
 	router-id 192.168.127.1;
 	local-address 192.168.127.1;
 	local-as 65000;
-	peer-as 65000;
+	peer-as 65534;
 
 	static {
 		route 10.0.1.0/24 {

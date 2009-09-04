@@ -62,13 +62,10 @@ class Supervisor (object):
 			except KeyboardInterrupt:
 				if self.debug: print "^C received"
 				self.shutdown()
-	
-	def _add_peer (self,neighbor):
-		peer = Peer(neighbor,self)
-		self._peers[neighbor.peer_address.human()] = peer
 
 	def reload (self):
-		# XXXXXXXXXXXXXXX: This need changing as it does not take in consideration neighbor changes
+		# XXX: This does not take in consideration neighbor changes (router_id, etc)
+		# XXX: Routes are affected but not the peer definition
 		
 		self._reload = False
 		self.configuration.reload()
@@ -81,7 +78,8 @@ class Supervisor (object):
 			ip = neighbor.peer_address.human()
 			if ip not in self._peers:
 				print "New neighbor ", ip 
-				self._add_peer(neighbor)
+				peer = Peer(neighbor,self)
+				self._peers[neighbor.peer_address.human()] = peer
 		
 	def shutdown (self):
 		self._shutdown = True

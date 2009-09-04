@@ -15,10 +15,15 @@ from bgp.table import Table
 from bgp.data import Message, Open, Update, Failure,Notification, SendNotification, KeepAlive
 
 class Network (socket.socket):
-	def __init__ (self,host):
+	
+	def log (self,string):
+		return "%s %s %s" % (time.strftime('%j %H:%M:%S',time.localtime()), '%15s/%7s' % (self.host,self.asn), string)
+	
+	def __init__ (self,host,asn=''):
 		self.last_read = 0
 		self.last_write = 0
 		self.host = host
+		self.asn = asn
 		
 		try:
 			self._io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -27,7 +32,7 @@ class Network (socket.socket):
 			self._io.setblocking(0)
 		except socket.error, e:
 			self.close()
-			raise Failure('could not initialise: %s' % str(e))
+			raise Failure(self.log('could not connect to peer: %s' % str(e)))
 		
 	def pending (self):
 		r,_,_ = select.select([self._io,],[],[],0)
@@ -42,7 +47,7 @@ class Network (socket.socket):
 			return r
 		except socket.error,e:
 			self.close()
-			raise Failure('reading issue:  %s ' % str(e))
+			raise Failure(self.log('problem attempting to read data from the network:  %s ' % str(e)))
 
 	def write (self,data):
 		try:
@@ -51,7 +56,7 @@ class Network (socket.socket):
 			return r
 		except socket.error, e:
 			self.close()
-			raise Failure('writing issue: %s' % str(e))
+			raise Failure(self.log('problem attempting to write data to the network: %s' % str(e)))
 
 	def shutdown (self):
 		try:
@@ -74,7 +79,7 @@ class Protocol (object):
 		self._table.update(self.neighbor.routes)
 
 	def connect (self):
-		self.network = Network(self.neighbor.peer_address.human())
+		self.network = Network(self.neighbor.peer_address.human(),self.neighbor.peer_as)
 	
 	def _read_header (self):
 		# Read it as a block as it is better for the timer code
@@ -159,7 +164,7 @@ class Protocol (object):
 			# We are speaking BGP - greet us with OPEN when we meet only
 			# We do not speak any extension like Route Refresh, so do not use it
 			raise SendNotification(1,3,chr(msg))
-		if self.debug and msg == Update.TYPE: print "UPDATE RECV: ",[hex(ord(c)) for c in data]
+		self.dump(self.debug and msg == Update.TYPE,"UPDATE RECV: %s " % [hex(ord(c)) for c in data])
 		return msg, data
 	
 	def read_keepalive (self):
@@ -175,7 +180,7 @@ class Protocol (object):
 	
 	def new_announce (self):
 		m = self._update.announce(self.neighbor.local_as,self.neighbor.peer_as)
-		if self.debug: print "UPDATE SENT: ",[hex(ord(c)) for c in m]
+		self.dump(self.debug,"UPDATE SENT: %s" % [hex(ord(c)) for c in m])
 		self.network.write(m)
 		return self._update if m else None
 	

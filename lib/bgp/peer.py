@@ -26,6 +26,7 @@ class Peer (object):
 		self.neighbor = neighbor
 		self.follow = follow
 		self.running = True
+		self.restart = True
 		self.bgp = Protocol(self.neighbor)
 		self.start()
 
@@ -46,6 +47,8 @@ class Peer (object):
 			pass
 	
 	def _run (self):
+		self.restart = True
+		
 		try:
 			self.bgp.connect()
 		
@@ -84,6 +87,7 @@ class Peer (object):
 
 				yield 
 			# User closing the connection
+			self.restart = False
 			raise SendNotification(6,0)
 		except SendNotification,e:
 			print 'Sending Notification (%d,%d) to peer %s' % (e.code,e.subcode,str(e))
@@ -98,7 +102,7 @@ class Peer (object):
 			self.respawn()
 			return
 		except Failure, e:
-			print 'Failure', str(e)
+			print str(e)
 			# delay the retry
 			for r in range(0,10):
 				if self.running:
@@ -114,6 +118,7 @@ class Peer (object):
 		self.bgp.close()
 	
 	def respawn (self):
-		self.supervisor.respawn(self)
-		self.bgp.close()
+		if self.restart:
+			self.supervisor.respawn(self)
+			self.bgp.close()
 	
