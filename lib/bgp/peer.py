@@ -25,30 +25,32 @@ class Peer (object):
 		self.supervisor = supervisor
 		self.neighbor = neighbor
 		self.follow = follow
-		self.running = True
+		self.running = False
 		self.restart = True
 		self.bgp = Protocol(self.neighbor)
-		self.start()
-
-	def start (self):
-		self._loop = self._run()
+		self._loop = None
 
 	def stop (self):
-		if self.running:
-			self.running = False
-		else:
-			# The peer already stopped (due to a notification or conneciton issue)
-			self.supervisor.unschedule(self)
+		self.running = False
+
+	def shutdown (self):
+		self.running = False
+		self.restart = False
 	
 	def run (self):
-		try:
-			self._loop.next()
-		except StopIteration:
-			pass
+		if self._loop:
+			try:
+				self._loop.next()
+			except StopIteration:
+				self._loop = None
+		elif self.restart:
+			self.running = True
+			self._loop = self._run()
+		else:
+			self.bgp.close()
+			self.supervisor.unschedule(self)
 	
 	def _run (self):
-		self.restart = True
-		
 		try:
 			self.bgp.connect()
 		
@@ -57,7 +59,7 @@ class Peer (object):
 			yield
 
 			o = self.bgp.read_open()
-			self.dump(o,'-> %s' % o)
+			self.dump(o,'<- %s' % o)
 			yield
 
 			c,_ = self.bgp.new_keepalive(force=True)
@@ -87,38 +89,18 @@ class Peer (object):
 
 				yield 
 			# User closing the connection
-			self.restart = False
 			raise SendNotification(6,0)
 		except SendNotification,e:
-			print 'Sending Notification (%d,%d) to peer %s' % (e.code,e.subcode,str(e))
+			self.dump(True,'Sending Notification (%d,%d) to peer %s' % (e.code,e.subcode,str(e)))
 			try:
 				self.bgp.new_notification(e)
 			except Failure:
 				pass
-			self.respawn()
 			return
 		except Notification, n:
-			print 'Received Notification (%d,%d) to peer %s' % (e.code,e.subcode,str(e))
-			self.respawn()
+			self.dump(True,'Received Notification (%d,%d) to peer %s' % (e.code,e.subcode,str(e)))
 			return
 		except Failure, e:
-			print str(e)
-			# delay the retry
-			for r in range(0,10):
-				if self.running:
-					yield
-			self.respawn()
+			self.dump(True,str(e))
 			return
-		
-		if not self.running:
-			self.unschedule()
-	
-	def unschedule (self):
-		self.supervisor.unschedule(self)
-		self.bgp.close()
-	
-	def respawn (self):
-		if self.restart:
-			self.supervisor.respawn(self)
-			self.bgp.close()
 	

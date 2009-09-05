@@ -22,7 +22,6 @@ class Supervisor (object):
 	def __init__ (self,configuration):
 		self.configuration = configuration
 		self._peers = {}
-		self._respawn = []
 		self._shutdown = False
 		self._reload = False
 		self.reload()
@@ -42,21 +41,18 @@ class Supervisor (object):
 		start = time.time()
 		while self._peers:
 			try:
-				# Re-initialise failed connection
-				while self._respawn:
-					self._respawn.pop(0).start()
+				if self._shutdown:
+					for ip in self._peers.keys():
+						self._peers[ip].shutdown()
+				else:
+					if self._reload:
+						self.reload()
 				
 				# Handle all connection
 				for ip in self._peers.keys():
 					peer = self._peers[ip]
 					peer.run()
 				
-				if self._shutdown:
-					for ip in self._peers.keys():
-						self._peers[ip].stop()
-				else:
-					if self._reload:
-						self.reload()
 				# MUST not more than one KEEPALIVE / sec
 				time.sleep(1.0)
 			except KeyboardInterrupt:
@@ -64,23 +60,24 @@ class Supervisor (object):
 				self.shutdown()
 
 	def reload (self):
-		# XXX: This does not take in consideration neighbor changes (router_id, etc)
-		# XXX: Routes are affected but not the peer definition
-		
 		self._reload = False
 		self.configuration.reload()
 		for ip in self._peers.keys():
 			if ip not in [n.human() for n in self.configuration.neighbor]:
 				print "Removing Peer", ip
-				self._peers[ip].stop()
+				self._peers[ip].shutdown()
 		
 		for _,neighbor in self.configuration.neighbor.iteritems():
+			# XXX: we should really use .human() for the key everywhere
 			ip = neighbor.peer_address.human()
 			if ip not in self._peers:
 				print "New neighbor ", ip 
 				peer = Peer(neighbor,self)
-				self._peers[neighbor.peer_address.human()] = peer
-		
+				self._peers[ip] = peer
+			else:
+				if self._peers[ip].neighbor != neighbor:
+					self._peers[ip].stop()
+	
 	def shutdown (self):
 		self._shutdown = True
 	
@@ -89,6 +86,3 @@ class Supervisor (object):
 		if ip in self._peers:
 			del self._peers[ip]
 	
-	def respawn (self,peer):
-		self._respawn.append(peer)
-		

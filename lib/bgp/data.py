@@ -510,7 +510,18 @@ class Neighbor (object):
 	@router_id.setter
 	def router_id (self,value):
 		self._router_id = value
-
+	
+	def __eq__ (self,other):
+		return \
+			self._router_id == other._router_id and \
+			self.local_address == other.local_address and \
+			self.local_as == other.local_as and \
+			self.peer_address == other.peer_address and \
+			self.peer_as == other.peer_as
+	
+	def __ne__(self, other):
+		return not (self == other)
+	
 	def __str__ (self):
 		return """\
 neighbor %s {
