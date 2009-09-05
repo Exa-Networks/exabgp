@@ -16,9 +16,6 @@ from bgp.data import Message, Open, Update, Failure,Notification, SendNotificati
 
 class Network (socket.socket):
 	
-	def log (self,string):
-		return "%s %s %s" % (time.strftime('%j %H:%M:%S',time.localtime()), '%15s/%7s' % (self.host,self.asn), string)
-	
 	def __init__ (self,host,asn=''):
 		self.last_read = 0
 		self.last_write = 0
@@ -32,7 +29,7 @@ class Network (socket.socket):
 			self._io.setblocking(0)
 		except socket.error, e:
 			self.close()
-			raise Failure(self.log('could not connect to peer: %s' % str(e)))
+			raise Failure('could not connect to peer: %s' % str(e))
 		
 	def pending (self):
 		r,_,_ = select.select([self._io,],[],[],0)
@@ -47,7 +44,7 @@ class Network (socket.socket):
 			return r
 		except socket.error,e:
 			self.close()
-			raise Failure(self.log('problem attempting to read data from the network:  %s ' % str(e)))
+			raise Failure('problem attempting to read data from the network:  %s ' % str(e))
 
 	def write (self,data):
 		try:
@@ -56,7 +53,7 @@ class Network (socket.socket):
 			return r
 		except socket.error, e:
 			self.close()
-			raise Failure(self.log('problem attempting to write data to the network: %s' % str(e)))
+			raise Failure('problem attempting to write data to the network: %s' % str(e))
 
 	def shutdown (self):
 		try:
