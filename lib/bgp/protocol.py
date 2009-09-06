@@ -12,6 +12,7 @@ import socket
 import select
 from struct import pack,unpack
 from bgp.table import Table
+from bgp.data import Display
 from bgp.data import Message, Open, Update, Failure,Notification, SendNotification, KeepAlive
 
 class Network (socket.socket):
@@ -62,11 +63,8 @@ class Network (socket.socket):
 			pass
 	
 
-class Protocol (object):
-	debug = False
-	
-	def dump (self,test,string):
-		if test: print time.strftime('%j %H:%M:%S',time.localtime()), '%15s/%7s' % (self.neighbor.peer_address.human(),self.neighbor.peer_as), string
+class Protocol (Display):
+	follow = False
 	
 	def __init__ (self,neighbor):
 		self.neighbor = neighbor
@@ -161,7 +159,7 @@ class Protocol (object):
 			# We are speaking BGP - greet us with OPEN when we meet only
 			# We do not speak any extension like Route Refresh, so do not use it
 			raise SendNotification(1,3,chr(msg))
-		self.dump(self.debug and msg == Update.TYPE,"UPDATE RECV: %s " % [hex(ord(c)) for c in data])
+		self.logIf(msg == Update.TYPE,"UPDATE RECV: %s " % [hex(ord(c)) for c in data])
 		return msg, data
 	
 	def read_keepalive (self):
@@ -177,7 +175,7 @@ class Protocol (object):
 	
 	def new_announce (self):
 		m = self._update.announce(self.neighbor.local_as,self.neighbor.peer_as)
-		self.dump(self.debug,"UPDATE SENT: %s" % [hex(ord(c)) for c in m])
+		self.log("UPDATE SENT: %s" % [hex(ord(c)) for c in m])
 		self.network.write(m)
 		return self._update if m else None
 	
