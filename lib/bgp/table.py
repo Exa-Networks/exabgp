@@ -31,7 +31,7 @@ class Table (object):
 	def _add (self,route):
 		raw = route.raw
 		if raw in self._plus.keys():
-			if route == self._plus[raw]:
+			if route == self._plus[raw][1]:
 				return
 		self._plus[raw] = (time.time(),route)
 	

@@ -18,124 +18,99 @@ from struct import pack,unpack
 def dump (data):
 	print [hex(ord(c)) for c in data]
 
-class Container (object):
-	def __init__ (self,value):
-		self.value = value
-	def __lt__(self, other):
-		return self.value < other
-	def __le__(self, other):
-		return self.value <= other
-	def __eq__(self, other):
-		return self.value == other
-	def __ne__(self, other):
-		return self.value != other
-	def __gt__(self, other):
-		return self.value > other
-	def __ge__(self, other):
-		return self.value >= other
-	def __cmp__(self,other):
-		return cmp(self.value,other)
-	def __hash__(self):
-		return hash(self.value)
-	def __nonzero__(self):
-		return self.value != 0
-	def __unicode__(self):
-		return unicode(self.value)
-	def __str__(self):
-		return str(self.value)
-	def __repr__(self):
-		return repr(self.value)
-	def __len__(self):
-		return len(self.value)
-	def __contains__(self,item):
-		return item in self.value
-	def __iter__ (self):
-		return iter(self.value)
-	def __reversed__(self):
-		return self.value.reversed()
-	def __setitem__(self, key, value):
-		self.value[key] = value
-	def __delitem__(self, key):
-		del self.value[key]
-
-class IP (Container):
+class IP (long):
 	regex_ipv4 = '(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])'
 
-	def __init__ (self,ip):
-		try: 
-			Container.__init__(self,unpack('>L',socket.inet_aton(ip))[0])
+	def __new__ (cls,ip):
+		try:
+			addr = unpack('>L',socket.inet_aton(ip))[0]
 		except socket.error:
 			raise ValueError('"%s" is an invalid address' % str(ip))
 		except TypeError:
-			Container.__init__(self,long(ip))
-	
+			addr = long(ip)
+		return long.__new__(cls,addr) 
+
 	def pack (self):
-		return pack('!L',self.value)
+		return pack('!L',self)
 
 	def human (self):
-		return "%s.%s.%s.%s" % (self.value>>24, self.value>>16&0xFF, self.value>>8&0xFF, self.value&0xFF)
+		return "%s.%s.%s.%s" % (self>>24, self>>16&0xFF, self>>8&0xFF, self&0xFF)
 
 	def __len__ (self):
 		return 4
 
-class Mask (Container):
+class Mask (int):
 	regex_mask = '(?:\d|[12]\d|3[012])'
 	slash_to_size = dict([(32-bits,(1<<bits)) for bits in range(0,33)])
 	mask_to_slash = dict([((1L<<32) - (1<<bits),32-bits) for bits in range(0,33)])
 	range_to_slash = dict([("%d.%d.%d.%d" % (k>>24, k>>16 & 0xFF ,k>>8 & 0xFF, k&0xFF),mask_to_slash[k]) for k in mask_to_slash.keys()])
 	slash_to_mask = dict([(32-bits,(1L<<32) - (1<<bits)) for bits in range(0,33)])
 
-	def __init__ (self,mask):
-		if mask.isdigit():
+	def __new__ (cls,mask):
+		try:
 			slash = int(mask)
-			Container.__init__(self,slash)
-		else:
-			try: Container.__init__(self,self.range_to_slash[mask])
-			except KeyError: raise ValueError('the netmask is invalid %s' % str(mask))
-		if not self.value in range(0,33):
+		except ValueError:
+			try:
+				slash = cls.range_to_slash[mask]
+			except KeyError:
+				raise ValueError('the netmask is invalid %s' % str(mask))
+		
+		if not slash in range(0,33):
 			return ValueError('the netmask is invalid /%s' % str(slash))
+
+		return int.__new__(cls,slash)
 	
 	def pack (self):
-		return chr(self.value)
+		return chr(self)
 	
 	def __len__ (self):
 		return 1
 
-class Prefix (Container):
+class Prefix (IP):
+	def __new__ (cls,ip,mask):
+		return IP.__new__(cls,ip)
+	
 	# format is (version,address,slash)
 	def __init__ (self,ip,mask):
-		Container.__init__(self,(4,IP(ip),Mask(mask)))
+		self.mask = Mask(mask)
 
 	@property
 	def version (self):
-		return self.value[0]
+		return 4
 	
 	@property
 	def name (self):
-		return self.value[1]
+		return IP(self)
 	
 	@property
 	def length (self):
-		return self.value[2]
+		return self.mask
 	
 	@property
 	def raw (self):
-		return self.value
+		return (4,long(self),int(self.mask))
 	
 	def human (self):
-		return "%s/%d" % (self.name.human(),self.length.value)
+		return "%s/%d" % (IP.human(self),self.mask)
 	
 	def bgp (self):
-		if self.value[2].value > 24: return "%s%s" % (self.value[2].pack(),self.value[1].pack())
-		if self.value[2].value > 16: return "%s%s" % (self.value[2].pack(),self.value[1].pack()[:3])
-		if self.value[2].value >  8: return "%s%s" % (self.value[2].pack(),self.value[1].pack()[:2])
-		if self.value[2].value >  0: return "%s%s" % (self.value[2].pack(),self.value[1].pack()[:1])
+		ip = IP(self)
+		if self.mask > 24: return "%s%s" % (self.mask.pack(),ip.pack())
+		if self.mask > 16: return "%s%s" % (self.mask.pack(),ip.pack()[:3])
+		if self.mask >  8: return "%s%s" % (self.mask.pack(),ip.pack()[:2])
+		if self.mask >  0: return "%s%s" % (self.mask.pack(),ip.pack()[:1])
 		return '\0'
-	
+
+# XXX: move this in a unittest
+#print 'str', Prefix('10.0.0.0','24')
+#print 'name', Prefix('10.0.0.0','24').name
+#print 'length', Prefix('10.0.0.0','24').length
+#print 'raw', Prefix('10.0.0.0','24').raw
+#print 'human', Prefix('10.0.0.0','24').human()
+#print 'bgp', [hex(ord(c)) for c in Prefix('10.0.0.0','24').bgp()]
 
 class RouterID (IP):
-	def __init__ (self,ip):
-		IP.__init__(self,ip)
+	pass
 
 class Version (int):
 	def pack (self):
@@ -150,25 +125,35 @@ class ASN (int):
 	def __len__ (self):
 		return 2
 
-class Community (Container):
-	def __init__(self,data):
-		separator = data.find(':')
-		if separator > 0:
-			value = (long(data[:separator])<<16) + long(data[separator+1:])
-		elif len(data) >=2 and data[1] in 'xX':
-			value = int(data,16)
-		else:
-			value = long(data)
-		Container.__init__(self,value)
+class Community (long):
+	def __new__ (cls,data):
+		try:
+			value = int(data)
+		except ValueError:
+			separator = data.find(':')
+			if separator > 0:
+				value = (long(data[:separator])<<16) + long(data[separator+1:])
+			elif len(data) >=2 and data[1] in 'xX':
+				value = long(data,16)
+			else:
+				value = long(data)
+				
+		return long.__new__(cls,value)
 	
 	def pack (self):
-		return pack('!L',self.value)
+		return pack('!L',self)
 	
 	def __str__ (self):
-		return "%d:%d" % (self.value >> 16, self.value & 0xFFFF)
+		return "%d:%d" % (self >> 16, self & 0xFFFF)
 	
 	def __len__ (self):
 		return 4
+
+# XXX: move this in a unittest
+#print 'integer', Community(256)
+#print 'hexa', Community('0x100')
+#print ':', Community('1:1')
+#print 'pack', [hex(ord(c)) for c in Community('1:1').pack()]
 
 class Communities (list):
 	def append (self,data):
@@ -231,13 +216,10 @@ class Route (Prefix):
 
 	def __cmp__ (self,other):
 		return \
-			self.raw() == other.raw() and \
+			self.raw == other.raw and \
 			self.next_hop == other.next_hop and \
 			self.local_preference == other.local_preference and \
 			self.communities == other.communities
-
-	def __repr__ (self):
-		return str(self)
 
 	def __str__ (self):
 		return "%s/%s next-hop %s%s%s" % \
