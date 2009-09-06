@@ -437,6 +437,15 @@ class Notification (Message,Failure):
 		},
 		6 : {
 			0 : "Cease.",
+			# RFC 4486
+			1 : "Maximum Number of Prefixes Reached",
+			2 : "Administrative Shutdown",
+			3 : "Peer De-configured",
+			4 : "Administrative Reset",
+			5 : "Connection Rejected",
+			6 : "Other Configuration Change",
+			7 : "Connection Collision Resolution",
+			8 : "Out of Resources",
 		},
 	}
 	
