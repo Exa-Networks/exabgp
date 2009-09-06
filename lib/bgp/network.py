@@ -10,7 +10,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 import time
 import socket
 import select
-from bgp.data import Failure
+from bgp.message import Failure
 
 class Network (object):
 	

@@ -13,10 +13,14 @@ import time
 class Display (object):
 	follow = True
 
+	def __init__ (self,peer,asn):
+		self.__peer = peer
+		self.__asn = asn
+	
 	def log (self,string):
 		if self.follow:
 			try:
-				print time.strftime('%j %H:%M:%S',time.localtime()), '%15s/%7s' % (self.neighbor.peer_address.human(),self.neighbor.peer_as), string
+				print time.strftime('%j %H:%M:%S',time.localtime()), '%15s/%7s' % (self.__peer,self.__asn), string
 				sys.stdout.flush()
 			except IOError:
 				# ^C was pressed while the output is going via a pipe, just ignore the fault, to close the BGP session correctly

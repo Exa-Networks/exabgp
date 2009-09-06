@@ -123,7 +123,6 @@ class Configuration (object):
 			self._error = 'invalid keyword "%s"' % command
 			return False
 
-		# XXX: Replace all those set function by something performing validation
 		if command == 'description': return self._set_description(tokens[1:])
 		if command == 'router-id': return self._set_ip('router-id',tokens[1:])
 		if command == 'local-address': return self._set_ip('local-address',tokens[1:])
@@ -193,12 +192,13 @@ class Configuration (object):
 		return True
 	
 	def _set_asn (self,command,value):
-		# XXX: we do not support 32 bits ASN... and this should be done within the ASN constructor raising ValueError if needed
-		if not value or not value[0].isdigit() or int(value[0]) >= (1<<16):
+		# XXX: we do not support 32 bits ASN...
+		try:
+			self._scope[-1][command] = ASN(value[0])
+			return True
+		except ValueError:
 			self._error = '"%s" is an invalid ASN' % ' '.join(value)
 			return False
-		self._scope[-1][command] = ASN(value[0])
-		return True
 
 	def _set_ip (self,command,value):
 		# XXX: we do not support IPv6

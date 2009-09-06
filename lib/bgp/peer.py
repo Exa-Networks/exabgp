@@ -9,7 +9,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 import time
 
-from bgp.data import NOP, Open, Update, Failure, Notification, SendNotification, KeepAlive
+from bgp.message import NOP, Open, Update, Failure, Notification, SendNotification, KeepAlive
 from bgp.protocol import Protocol,Network
 from bgp.display import Display
 
@@ -20,12 +20,14 @@ class Peer (Display):
 	debug_timers = True		# debug hold/keepalive timers
 	
 	def __init__ (self,neighbor,supervisor):
+		Display.__init__(self,neighbor.peer_address.human(),neighbor.peer_as)
 		self.supervisor = supervisor
 		self.neighbor = neighbor
 		self.running = False
 		self.restart = True
 		self.bgp = Protocol(self.neighbor)
 		self._loop = None
+		
 
 	def stop (self):
 		self.running = False

@@ -10,7 +10,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 import time
 import signal
 
-from bgp.data import Notification
+from bgp.message import Notification
 from bgp.peer import Peer
 
 class Supervisor (object):

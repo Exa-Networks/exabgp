@@ -72,7 +72,7 @@ class Prefix (IP):
 		new = IP.__new__(cls,ip)
 		new.mask = Mask(mask)
 		return new
-
+	
 	@property
 	def version (self):
 		return 4
@@ -109,16 +109,6 @@ class Prefix (IP):
 		if mask >  0: data = stream.read(1)+'\0\0\0'
 		if mask == 0: data = '\0\0\0\0'
 		return Prefix(unpack('!L')[0],mask)
-		
-		
-
-# XXX: move this in a unittest
-#print 'str', Prefix('10.0.0.0','24')
-#print 'name', Prefix('10.0.0.0','24').name
-#print 'length', Prefix('10.0.0.0','24').length
-#print 'raw', Prefix('10.0.0.0','24').raw
-#print 'human', Prefix('10.0.0.0','24').human()
-#print 'bgp', [hex(ord(c)) for c in Prefix('10.0.0.0','24').bgp()]
 
 class RouterID (IP):
 	pass
@@ -130,7 +120,14 @@ class Version (int):
 class ASN (int):
 	regex = "(?:0[xX][0-9a-fA-F]{1,8}|\d+:\d+|\d+)"
 	
-	# XXX: Should allow string as constructor and do the conversion here
+	def __new__ (cls,asn):
+		try:
+			value = int(asn)
+		except ValueError:
+			value = int(asn,16)
+		if value >= (1<<16):
+			raise ValueError('ASN is too big')
+		return int.__new__(cls,value)
 	
 	def pack (self):
 		return pack('!H',self)
@@ -162,11 +159,6 @@ class Community (long):
 	def __len__ (self):
 		return 4
 
-# XXX: move this in a unittest
-#print 'integer', Community(256)
-#print 'hexa', Community('0x100')
-#print ':', Community('1:1')
-#print 'pack', [hex(ord(c)) for c in Community('1:1').pack()]
 
 class Communities (list):
 	def append (self,data):
@@ -202,6 +194,61 @@ class HoldTime (int):
 
 	def __len__ (self):
 		return 2
+
+		class Flag (int):
+			EXTENDED_LENGTH = 16
+			PARTIAL = 32
+			TRANSITIVE = 64
+			OPTIONAL = 128
+
+			def __str__ (self):
+				if self ==  16: return "EXTENDED_LENGTH"
+				if self ==  32: return "PARTIAL"
+				if self ==  64: return "TRANSITIVE"
+				if self == 128: return "OPTIONAL"
+				return 'UNKNOWN'
+
+class Origin (int):
+	IGP = 0
+	EGP = 1
+	INCOMPLETE = 2
+
+	def __str__ (self):
+		if self == 0: return 'IGP'
+		if self == 1: return 'EGP'
+		if self == 2: return 'INCOMPLETE'
+		return 'INVALID'
+
+class ASPath (int):
+	AS_SET = 1
+	AS_SEQUENCE = 2
+
+	def __str__ (self):
+		if self == 1: return 'AS_SET'
+		if self == 2: return 'AS_SEQUENCE'
+		return 'INVALID'
+
+class Attribute (int):
+	ORIGIN = 1
+	AS_PATH = 2
+	NEXT_HOP = 3
+	MULTI_EXIT_DISC = 4
+	LOCAL_PREFERENCE = 5
+	ATOMIC_AGGREGATE = 6
+	AGGREGATOR = 7
+	COMMUNITY = 8
+
+	def __str__ (self):
+		if self ==  1: return "ORIGIN"
+		if self ==  2: return "AS_PATH"
+		if self ==  3: return "NEXT_HOP"
+		if self ==  4: return "MULTI_EXIT_DISC"
+		if self ==  5: return "LOCAL_PREFERENCE"
+		if self ==  6: return "ATOMIC_AGGREGATE"
+		if self ==  7: return "AGGREGATOR"
+		if self ==  8: return "COMMUNITY"
+		return 'UNKNOWN'
+
 
 class Route (Prefix):
 	def __new__ (cls,ip,slash,next_hop=''):
@@ -286,268 +333,6 @@ class Route (Prefix):
 				next_hop = unpack('!L',data[2:])[0]
 				print 'next hop is', IP(next_hop)
 		
-# We do not implement the RFC State Machine so .. we do not care :D
-class State (object):
-	IDLE = 1
-	CONNECT = 2
-	ACTIVE = 3
-	OPENSENT = 4
-	OPENCONFIRM = 5
-	ESTABLISHED = 6
-
-class Flag (int):
-	EXTENDED_LENGTH = 16
-	PARTIAL = 32
-	TRANSITIVE = 64
-	OPTIONAL = 128
-	
-	def __str__ (self):
-		if self ==  16: return "EXTENDED_LENGTH"
-		if self ==  32: return "PARTIAL"
-		if self ==  64: return "TRANSITIVE"
-		if self == 128: return "OPTIONAL"
-		return 'UNKNOWN'
-
-class Origin (int):
-	IGP = 0
-	EGP = 1
-	INCOMPLETE = 2
-	
-	def __str__ (self):
-		if self == 0: return 'IGP'
-		if self == 1: return 'EGP'
-		if self == 2: return 'INCOMPLETE'
-		return 'INVALID'
-
-class ASPath (int):
-	AS_SET = 1
-	AS_SEQUENCE = 2
-	
-	def __str__ (self):
-		if self == 1: return 'AS_SET'
-		if self == 2: return 'AS_SEQUENCE'
-		return 'INVALID'
-
-class Attribute (int):
-	ORIGIN = 1
-	AS_PATH = 2
-	NEXT_HOP = 3
-	MULTI_EXIT_DISC = 4
-	LOCAL_PREFERENCE = 5
-	ATOMIC_AGGREGATE = 6
-	AGGREGATOR = 7
-	COMMUNITY = 8
-	
-	def __str__ (self):
-		if self ==  1: return "ORIGIN"
-		if self ==  2: return "AS_PATH"
-		if self ==  3: return "NEXT_HOP"
-		if self ==  4: return "MULTI_EXIT_DISC"
-		if self ==  5: return "LOCAL_PREFERENCE"
-		if self ==  6: return "ATOMIC_AGGREGATE"
-		if self ==  7: return "AGGREGATOR"
-		if self ==  8: return "COMMUNITY"
-		return 'UNKNOWN'
-
-class Message (object):
-	TYPE = 0
-	
-	MARKER = chr(0xff)*16
-	
-	class Type:
-		OPEN = 1,
-		UPDATE = 2,
-		NOTIFICATION = 4,
-		KEEPALIVE = 8,
-		ROUTE_REFRESH = 16,
-		LIST = 32,
-		HEADER = 64,
-		GENERAL = 128,
-		#LOCALRIB = 256,
-	
-	# XXX: Those two names are HORRIBLE(s), fix this !!
-	
-	def _prefix (self,data):
-		return '%s%s' % (pack('!H',len(data)),data)
-	
-	def _defix (self,stream):
-		l = unpack('!H',stream.read(1))[0]
-		data = stream.read(l)
-		return l,data
-	
-	def _message (self,message = ""):
-		message_len = pack('!H',19+len(message))
-		return "%s%s%s%s" % (self.MARKER,message_len,self.TYPE,message)
-
-# This message is not part of the RFC but very practical to return that no data is waiting on the socket
-class NOP (Message):
-	TYPE = chr(0)
-
-class Open (Message):
-	TYPE = chr(1)
-
-	def __init__ (self,asn,router_id,hold_time=HOLD_TIME,version=4):
-		self.version = Version(version)
-		self.asn = ASN(asn)
-		self.hold_time = HoldTime(hold_time)
-		self.router_id = RouterID(router_id)
-
-	def message (self):
-		return self._message("%s%s%s%s%s" % (self.version.pack(),self.asn.pack(),self.hold_time.pack(),self.router_id.pack(),chr(0)))
-
-	def __str__ (self):
-		return "OPEN version=%d asn=%d hold_time=%s router_id=%s" % (self.version, self.asn, self.hold_time, self.router_id)
-
-class Update (Message):
-	TYPE = chr(2)
-
-	def __init__ (self,table):
-		self.table = table
-		self.last = 0
-
-	def announce (self,local_asn,remote_asn):
-		announce = []
-		# table.changed always returns routes to remove before routes to add
-		for action,route in self.table.changed(self.last):
-			if action == '+':
-				w = self._prefix(route.bgp())
-				a = self._prefix(route.pack(local_asn,remote_asn))+route.bgp()
-				announce.append(self._message(w + a))
-			if action == '':
-				self.last = route
-
-		return ''.join(announce)
-
-	def update (self,local_asn,remote_asn):
-		announce = []
-		withdraw = {}
-		# table.changed always returns routes to remove before routes to add
-		for action,route in self.table.changed(self.last):
-			if action == '-':
-				withdraw[route.raw] = route.bgp()
-			if action == '+':
-				raw = route.raw
-				if withdraw.has_key(raw):
-					del withdraw[raw]
-				w = self._prefix(route.bgp())
-				a = self._prefix(route.pack(local_asn,remote_asn))
-				announce.append(self._message(w + a))
-			if action == '':
-				self.last = route
-			
-		if len(withdraw.keys()) == 0 and len(announce) == 0:
-			return ''
-		
-		unfeasible = self._message(self._prefix(''.join([withdraw[raw] for raw in withdraw.keys()])) + self._prefix(''))
-		return unfeasible + ''.join(announce)
-	
-	def decode (self,stream):
-		# withdrawn
-		l,data = self._defix(stream)
-		if len(data) != l:
-			print "buffer underun in prefix resdrawn"
-			return
-		withdrawn = StringIO(data)
-		while not withdrawn.eof():
-			yield ('-',Prefix.unpack(withdrawn))
-
-		# attributes
-		l,data = self._defix(stream)
-		if len(data) != l:
-			print "buffer underun in prefix resdrawn"
-		announce = StringIO(data)
-		for route in Route.unpack(announce):
-			yield ('+',route)
-
-class Failure (Exception):
-	pass
-
-# A Notification received from our peer.
-# RFC 1771 Section 4.5 - but really I should refer to RFC 4271 Section 4.5 :)
-class Notification (Message,Failure):
-	TYPE = chr(3)
-	
-	_str_code = [
-		"",
-		"Message header error",
-		"OPEN message error",
-		"UPDATE message error", 
-		"Hold timer expired",
-		"State machine error",
-		"Cease"
-	]
-
-	_str_subcode = {
-		1 : {
-			0 : "Unspecific.",
-			1 : "Connection Not Synchronized.",
-			2 : "Bad Message Length.",
-			3 : "Bad Message Type.",
-		},
-		2 : {
-			0 : "Unspecific.",
-			1 : "Unsupported Version Number.",
-			2 : "Bad Peer AS.",
-			3 : "Bad BGP Identifier.",
-			4 : "Unsupported Optional Parameter.",
-			5 : "Authentication Notification (Deprecated).",
-			6 : "Unacceptable Hold Time.",
-		},
-		3 : {
-			0 : "Unspecific.",
-			1 : "Malformed Attribute List.",
-			2 : "Unrecognized Well-known Attribute.",
-			3 : "Missing Well-known Attribute.",
-			4 : "Attribute Flags Error.",
-			5 : "Attribute Length Error.",
-			6 : "Invalid ORIGIN Attribute.",
-			7 : "AS Routing Loop.",
-			8 : "Invalid NEXT_HOP Attribute.",
-			9 : "Optional Attribute Error.",
-			10 : "Invalid Network Field.",
-			11 : "Malformed AS_PATH.",
-		},
-		4 : {
-			0 : "Hold Timer Expired.",
-		},
-		5 : {
-			0 : "Finite State Machine Error.",
-		},
-		6 : {
-			0 : "Cease.",
-			# RFC 4486
-			1 : "Maximum Number of Prefixes Reached",
-			2 : "Administrative Shutdown",
-			3 : "Peer De-configured",
-			4 : "Administrative Reset",
-			5 : "Connection Rejected",
-			6 : "Other Configuration Change",
-			7 : "Connection Collision Resolution",
-			8 : "Out of Resources",
-		},
-	}
-	
-	def __init__ (self,code,subcode,data=''):
-		assert self._str_subcode.has_key(code)
-		assert self._str_subcode[code].has_key(subcode)
-		self.code = code
-		self.subcode = subcode
-		self.data = data
-	
-	def __str__ (self):
-		return "%s: %s" % (self._str_code[self.code], self._str_subcode[self.code][self.subcode])
-
-# A Notification we need to inform our peer of.
-class SendNotification (Notification):
-	def message (self):
-		return self._message("%s%s%s" % (chr(self.code),chr(self.subcode),self.data))
-
-class KeepAlive (Message):
-	TYPE = chr(4)
-	
-	def message (self):
-		return self._message()
-
 # The definition of a neighbor (from reading the configuration)
 
 class Neighbor (object):

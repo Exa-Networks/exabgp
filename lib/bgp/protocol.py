@@ -10,25 +10,30 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 import time
 from struct import pack,unpack
 from bgp.table import Table
-from bgp.data import Message, Open, Update, Failure,Notification, SendNotification, KeepAlive
+from bgp.message import Message, Open, Update, Failure,Notification, SendNotification, KeepAlive
 from bgp.network import Network
 from bgp.display import Display
+
+
 
 class Protocol (Display):
 	follow = True
 	
-	def __init__ (self,neighbor):
+	def __init__ (self,neighbor,network=None):
+		Display.__init__(self,neighbor.peer_address.human(),neighbor.peer_as)
 		self.neighbor = neighbor
-		self.network = None
+		self.network = network
 		self._table = Table()
 		self._update = Update(self._table)
 		self._table.update(self.neighbor.routes)
 
 	def connect (self):
-		peer = self.neighbor.peer_address.human()
-		local = self.neighbor.local_address.human()
-		asn = self.neighbor.peer_as
-		self.network = Network(peer,local,asn)
+		# allows to test the protocol code using modified StringIO with a extra 'pending' function
+		if not self.network:
+			peer = self.neighbor.peer_address.human()
+			local = self.neighbor.local_address.human()
+			asn = self.neighbor.peer_as
+			self.network = Network(peer,local,asn)
 	
 	def _read_header (self):
 		# Read it as a block as it is better for the timer code
