@@ -91,11 +91,13 @@ class Peer (Display):
 			self.log('Sending Notification (%d,%d) to peer %s' % (e.code,e.subcode,str(e)))
 			try:
 				self.bgp.new_notification(e)
+				self.bgp.close()
 			except Failure:
 				pass
 			return
 		except Notification, e:
-			self.log('Received Notification (%d,%d) to peer %s' % (e.code,e.subcode,str(e)))
+			self.log('Received Notification (%d,%d) from peer %s' % (e.code,e.subcode,str(e)))
+			self.bgp.close()
 			return
 		except Failure, e:
 			self.log(str(e))
