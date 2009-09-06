@@ -20,7 +20,7 @@ class Protocol (Display):
 	follow = True
 	
 	def __init__ (self,neighbor,network=None):
-		Display.__init__(self,neighbor.peer_address.human(),neighbor.peer_as)
+		Display.__init__(self,neighbor.peer_address,neighbor.peer_as)
 		self.neighbor = neighbor
 		self.network = network
 		self._table = Table()
@@ -30,8 +30,8 @@ class Protocol (Display):
 	def connect (self):
 		# allows to test the protocol code using modified StringIO with a extra 'pending' function
 		if not self.network:
-			peer = self.neighbor.peer_address.human()
-			local = self.neighbor.local_address.human()
+			peer = self.neighbor.peer_address
+			local = self.neighbor.local_address
 			asn = self.neighbor.peer_as
 			self.network = Network(peer,local,asn)
 	
@@ -128,7 +128,7 @@ class Protocol (Display):
 		return msg,data
 	
 	def new_open (self):
-		o = Open(self.neighbor.local_as,self.neighbor.router_id.human(),self.neighbor.hold_time)
+		o = Open(self.neighbor.local_as,self.neighbor.router_id,self.neighbor.hold_time)
 		self.network.write(o.message())
 		return o
 	

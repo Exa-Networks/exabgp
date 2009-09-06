@@ -95,11 +95,12 @@ class Update (Message):
 		# table.changed always returns routes to remove before routes to add
 		for action,route in self.table.changed(self.last):
 			if action == '-':
-				withdraw[route.raw] = route.bgp()
+				prefix = str(route)
+				withdraw[prefix] = route.bgp()
 			if action == '+':
-				raw = route.raw
-				if withdraw.has_key(raw):
-					del withdraw[raw]
+				prefix = str(route)
+				if withdraw.has_key(prefix):
+					del withdraw[prefix]
 				w = self._prefix(route.bgp())
 				a = self._prefix(route.pack(local_asn,remote_asn))
 				announce.append(self._message(w + a))
@@ -109,7 +110,7 @@ class Update (Message):
 		if len(withdraw.keys()) == 0 and len(announce) == 0:
 			return ''
 		
-		unfeasible = self._message(self._prefix(''.join([withdraw[raw] for raw in withdraw.keys()])) + self._prefix(''))
+		unfeasible = self._message(self._prefix(''.join([withdraw[prefix] for prefix in withdraw.keys()])) + self._prefix(''))
 		return unfeasible + ''.join(announce)
 	
 	def decode (self,stream):

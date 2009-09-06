@@ -163,7 +163,7 @@ class Configuration (object):
 			self._error = 'incomplete neighbor, missing %s' % missing
 			return False
 		if self._neighbor.has_key(neighbor.peer_address):
-			self_error = 'duplicate peer definition %s' % neighbor.peer_address.human()
+			self_error = 'duplicate peer definition %s' % neighbor.peer_address
 			return False
 		self._neighbor[neighbor.peer_address] = neighbor
 		return True
@@ -239,9 +239,12 @@ class Configuration (object):
 		return True
 	
 	def _check_route (self):
-		route = self._scope[-1]['routes'][-1].name
-		nexthop = self._scope[-1]['routes'][-1].next_hop.name
-		if route == nexthop:
+		route = self._scope[-1]['routes'][-1]
+		next_hop = self._scope[-1]['routes'][-1].next_hop
+		
+		print route.ip
+		print next_hop
+		if route.ip == next_hop:
 			self._error = 'syntax: route IP/MASK { next-hop IP; }'
 			return False
 		return True

@@ -20,7 +20,7 @@ class Peer (Display):
 	debug_timers = True		# debug hold/keepalive timers
 	
 	def __init__ (self,neighbor,supervisor):
-		Display.__init__(self,neighbor.peer_address.human(),neighbor.peer_as)
+		Display.__init__(self,neighbor.peer_address,neighbor.peer_as)
 		self.supervisor = supervisor
 		self.neighbor = neighbor
 		self.running = False

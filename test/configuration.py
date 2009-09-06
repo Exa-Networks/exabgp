@@ -31,21 +31,6 @@ class TestConfiguration (unittest.TestCase):
 #		for ip in self.configuration.neighbor:
 #			print self.configuration.neighbor[ip]
 	
-	def test_faults (self):
-		for config,error in self._faults.iteritems():
-			configuration = Configuration(config,True)
-			#print configuration.error
-			try:
-				self.assertEqual(configuration.reload(),False)
-				self.assertEqual(config + ' '*10 + configuration.error,config + ' '*10 + error)
-			except AssertionError:
-				print
-				print config
-				print
-				print configuration.error
-				print
-				raise
-
 	def test_reload (self):
 		configuration = Configuration(self.valid[0],True)
 		configuration.reload()
@@ -128,6 +113,23 @@ neighbor 10.0.0.10 {
 }
 """
 ]
+
+	def test_faults (self):
+		for config,error in self._faults.iteritems():
+			configuration = Configuration(config,True)
+			#print configuration.error
+			try:
+				self.assertEqual(configuration.reload(),False)
+				self.assertEqual(config + ' '*10 + configuration.error,config + ' '*10 + error)
+			except AssertionError:
+				print
+				print config
+				print
+				print configuration.error
+				print
+				raise
+
+
 
 	_faults = {
 """\

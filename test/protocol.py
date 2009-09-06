@@ -11,8 +11,8 @@ import unittest
 from StringIO import StringIO
 
 from bgp.table import Table
-from bgp.data import IP,ASN,Route
-from bgp.data import Neighbor, Message, Open, Update, Notification, KeepAlive
+from bgp.data import IP,ASN,Route,Neighbor
+from bgp.message import Message, Open, Update, Notification, KeepAlive
 from bgp.protocol import Protocol
 
 class Network (StringIO):
@@ -44,7 +44,7 @@ class TestProtocol (unittest.TestCase):
 		self.assertEqual(o.version,4)
 		self.assertEqual(o.asn,65000)
 		self.assertEqual(o.hold_time,30)
-		self.assertEqual(o.router_id.human(),'1.2.3.4')
+		self.assertEqual(str(o.router_id),'1.2.3.4')
 	
 	def test_selfparse_update_announce (self):
 		ds = Update(self.table)

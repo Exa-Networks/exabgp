@@ -24,12 +24,12 @@ class Network (object):
 			self._io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			self._io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 			self._io.settimeout(1)
-			self._io.bind((local,-1))
+			self._io.bind((str(local),-1))
 		except socket.error,e:
 			self.close()
 			raise Failure('could not bind to local ip %s: %s' % (local,str(e)))
 		try:
-			self._io.connect((peer,179))
+			self._io.connect((str(peer),179))
 			self._io.setblocking(0)
 		except socket.error, e:
 			self.close()

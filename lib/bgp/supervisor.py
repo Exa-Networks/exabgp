@@ -63,13 +63,12 @@ class Supervisor (object):
 		self._reload = False
 		self.configuration.reload()
 		for ip in self._peers.keys():
-			if ip not in [n.human() for n in self.configuration.neighbor]:
+			if ip not in self.configuration.neighbor:
 				print "Removing Peer", ip
 				self._peers[ip].shutdown()
 		
 		for _,neighbor in self.configuration.neighbor.iteritems():
-			# XXX: we should really use .human() for the key everywhere
-			ip = neighbor.peer_address.human()
+			ip = neighbor.peer_address
 			if ip not in self._peers:
 				print "New neighbor ", ip 
 				peer = Peer(neighbor,self)
@@ -82,7 +81,7 @@ class Supervisor (object):
 		self._shutdown = True
 	
 	def unschedule (self,peer):
-		ip = peer.neighbor.peer_address.human()
+		ip = peer.neighbor.peer_address
 		if ip in self._peers:
 			del self._peers[ip]
 	

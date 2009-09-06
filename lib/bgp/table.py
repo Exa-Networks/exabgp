@@ -19,45 +19,45 @@ class Table (object):
 	def update (self,routes):
 		for route in routes:
 			self._add(route)
-		for raw in self._plus.keys():
-			route = self._plus[raw][1]
+		for prefix in self._plus.keys():
+			route = self._plus[prefix][1]
 			if route not in routes:
 				self._remove(route)
 		return self
 	
 	def _add (self,route):
-		raw = route.raw
-		if raw in self._plus.keys():
-			if route == self._plus[raw][1]:
+		prefix = str(route)
+		if prefix in self._plus.keys():
+			if route == self._plus[prefix][1]:
 				return
-		self._plus[raw] = (time.time(),route)
+		self._plus[prefix] = (time.time(),route)
 	
 	def _remove (self,route):
-		raw = route.raw
-		if raw in self._plus.keys():
-			self._minus[raw] = (time.time(),self._plus[raw][1])
-			del self._plus[raw]
+		prefix = str(route)
+		if prefix in self._plus.keys():
+			self._minus[prefix] = (time.time(),self._plus[prefix][1])
+			del self._plus[prefix]
 	
 	def changed (self,when):
 		"""table.changed must _always_ returns routes to remove before routes to add and must _always_ finish by the time"""
-		for raw in self._minus.keys():
-			t,r = self._minus[raw]
+		for prefix in self._minus.keys():
+			t,r = self._minus[prefix]
 			if when < t:
 				yield ('-',r)
-		for raw in self._plus.keys():
-			t,r = self._plus[raw]
+		for prefix in self._plus.keys():
+			t,r = self._plus[prefix]
 			if when < t:
 				yield ('+',r)
 		yield ('',time.time())
 	
 	def purge (self,when):
-		for raw in self._plus.keys():
-			t,p = self._plus[raw]
+		for prefix in self._plus.keys():
+			t,p = self._plus[prefix]
 			if t < when:
 				del self._plus[k]
-		for raw in self._minus.keys():
-			t = self._minus[raw]
+		for prefix in self._minus.keys():
+			t = self._minus[prefix]
 			if t < when:
-				del self._minus[raw]
+				del self._minus[prefix]
 		
 	

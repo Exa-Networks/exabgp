@@ -20,21 +20,26 @@ import StringIO
 class IP (long):
 	regex_ipv4 = '(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])'
 
-	def __new__ (cls,ip):
+	def __new__ (cls,value):
 		try:
-			addr = unpack('>L',socket.inet_aton(ip))[0]
+			packed = socket.inet_aton(value)
+			numeric = unpack('>L',packed)[0]
+			string = value
 		except socket.error:
-			raise ValueError('"%s" is an invalid address' % str(ip))
+			raise ValueError('"%s" is an invalid address' % str(value))
 		except TypeError:
-			addr = long(ip)
-		return long.__new__(cls,addr) 
+		 	numeric = long(value)
+			string = "%d.%d.%d.%d" % (numeric>>24,(numeric>>16)&0xff,(numeric>>8)&0xff,numeric&0xff)
+		new = long.__new__(cls,numeric)
+		new.string = string
+		new.numeric = numeric
+		return new
 
 	def pack (self):
 		return pack('!L',self)
 
-	# remove this HORRIBLE function and use __str__ instead
-	def human (self):
-		return "%s.%s.%s.%s" % (self>>24, self>>16&0xFF, self>>8&0xFF, self&0xFF)
+	def __str__ (self):
+		return self.string
 
 	def __len__ (self):
 		return 4
@@ -66,38 +71,24 @@ class Mask (int):
 	def __len__ (self):
 		return 1
 
-class Prefix (IP):
+class Prefix (tuple):
 	# format is (version,address,slash)
-	def __new__ (cls,ip,mask):
-		new = IP.__new__(cls,ip)
-		new.mask = Mask(mask)
+	def __new__ (cls,address,mask):
+		ip = IP(address)
+		mask = Mask(mask)
+		new =  tuple.__new__(cls,(4,ip,mask))
+
+		new.ip = ip
+		new.mask = mask
+		new.version = 4
+
 		return new
 	
-	@property
-	def version (self):
-		return 4
-	
-	@property
-	def name (self):
-		return IP(self)
-	
-	@property
-	def length (self):
-		return self.mask
-	
-	@property
-	def raw (self):
-		return (4,long(self),int(self.mask))
-	
-	def human (self):
-		return "%s/%d" % (IP.human(self),self.mask)
-	
 	def bgp (self):
-		ip = IP(self)
-		if self.mask > 24: return "%s%s" % (self.mask.pack(),ip.pack())
-		if self.mask > 16: return "%s%s" % (self.mask.pack(),ip.pack()[:3])
-		if self.mask >  8: return "%s%s" % (self.mask.pack(),ip.pack()[:2])
-		if self.mask >  0: return "%s%s" % (self.mask.pack(),ip.pack()[:1])
+		if self.mask > 24: return "%s%s" % (self.mask.pack(),self.ip.pack())
+		if self.mask > 16: return "%s%s" % (self.mask.pack(),self.ip.pack()[:3])
+		if self.mask >  8: return "%s%s" % (self.mask.pack(),self.ip.pack()[:2])
+		if self.mask >  0: return "%s%s" % (self.mask.pack(),self.ip.pack()[:1])
 		return '\0'
 
 	# XXX: This perform no boundary check as it is only used for debugging atm
@@ -109,6 +100,9 @@ class Prefix (IP):
 		if mask >  0: data = stream.read(1)+'\0\0\0'
 		if mask == 0: data = '\0\0\0\0'
 		return Prefix(unpack('!L')[0],mask)
+
+	def __str__ (self):
+		return '%s/%d' % (self.ip,self.mask)
 
 class RouterID (IP):
 	pass
@@ -124,7 +118,9 @@ class ASN (int):
 		try:
 			value = int(asn)
 		except ValueError:
-			value = int(asn,16)
+			if asn.lower().startswith('0x'):
+				value = int(asn,16)
+			raise ValueError('ASN invalid')
 		if value >= (1<<16):
 			raise ValueError('ASN is too big')
 		return int.__new__(cls,value)
@@ -195,18 +191,18 @@ class HoldTime (int):
 	def __len__ (self):
 		return 2
 
-		class Flag (int):
-			EXTENDED_LENGTH = 16
-			PARTIAL = 32
-			TRANSITIVE = 64
-			OPTIONAL = 128
+class Flag (int):
+	EXTENDED_LENGTH = 16
+	PARTIAL = 32
+	TRANSITIVE = 64
+	OPTIONAL = 128
 
-			def __str__ (self):
-				if self ==  16: return "EXTENDED_LENGTH"
-				if self ==  32: return "PARTIAL"
-				if self ==  64: return "TRANSITIVE"
-				if self == 128: return "OPTIONAL"
-				return 'UNKNOWN'
+	def __str__ (self):
+		if self ==  16: return "EXTENDED_LENGTH"
+		if self ==  32: return "PARTIAL"
+		if self ==  64: return "TRANSITIVE"
+		if self == 128: return "OPTIONAL"
+		return 'UNKNOWN'
 
 class Origin (int):
 	IGP = 0
@@ -253,8 +249,7 @@ class Attribute (int):
 class Route (Prefix):
 	def __new__ (cls,ip,slash,next_hop=''):
 		new = Prefix.__new__(cls,ip,slash)
-		if next_hop: new.next_hop = next_hop
-		else: new.next_hop = ip
+		new.next_hop = next_hop if next_hop else ip
 		new._local_preference = LocalPreference(100)
 		new.communities = Communities()
 		return new
@@ -265,7 +260,7 @@ class Route (Prefix):
 
 	@next_hop.setter
 	def next_hop (self,ip):
-		self._next_hop = Prefix(ip,'32')
+		self._next_hop = IP(ip)
 
 	@property
 	def local_preference (self):
@@ -277,17 +272,17 @@ class Route (Prefix):
 
 	def __cmp__ (self,other):
 		return \
-			self.raw == other.raw and \
+			self.address == other.adress and \
+			self.mask == other.mask and \
 			self.next_hop == other.next_hop and \
 			self.local_preference == other.local_preference and \
 			self.communities == other.communities
 
 	def __str__ (self):
-		return "%s/%s next-hop %s%s%s" % \
+		return "%s next-hop %s%s%s" % \
 		(
-			self.human(),
-			self.length,
-			self.next_hop.human(),
+			Prefix.__str__(self),
+			self.next_hop,
 			" local_preference %d" % self.local_preference if self.local_preference != 100 else '',
 			" community %s" % self.communities if self.communities else ''
 		)
@@ -304,7 +299,7 @@ class Route (Prefix):
 		message = ''
 		message += self._attribute(Flag.TRANSITIVE,Attribute.ORIGIN,chr(Origin.IGP))
 		message += self._attribute(Flag.TRANSITIVE,Attribute.AS_PATH,'' if local_asn == peer_asn else self._segment(ASPath.AS_SEQUENCE,[local_asn]))
-		message += self._attribute(Flag.TRANSITIVE,Attribute.NEXT_HOP,self.next_hop.name.pack())
+		message += self._attribute(Flag.TRANSITIVE,Attribute.NEXT_HOP,self.next_hop.pack())
 		if local_asn == peer_asn:
 			message += self._attribute(Flag.TRANSITIVE,Attribute.LOCAL_PREFERENCE,self.local_preference.pack())
 		message += self._attribute(Flag.TRANSITIVE|Flag.OPTIONAL,Attribute.COMMUNITY,''.join([c.pack() for c in self.communities])) if self.communities else ''
@@ -383,10 +378,10 @@ neighbor %s {
 	static {%s
 	}
 }""" % (
-	self.peer_address.human(),
+	self.peer_address,
 	self.description,
-	self.router_id.human(),
-	self.local_address.human(),
+	self.router_id,
+	self.local_address,
 	self.local_as,
 	self.peer_as,
 	'\n\t\t' + '\n\t\t'.join([str(route) for route in self.routes]) if self.routes else ''
