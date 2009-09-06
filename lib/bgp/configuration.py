@@ -193,7 +193,7 @@ class Configuration (object):
 		return True
 	
 	def _set_asn (self,command,value):
-		# XXX: we do not support 32 bits ASN...
+		# XXX: we do not support 32 bits ASN... and this should be done within the ASN constructor raising ValueError if needed
 		if not value or not value[0].isdigit() or int(value[0]) >= (1<<16):
 			self._error = '"%s" is an invalid ASN' % ' '.join(value)
 			return False

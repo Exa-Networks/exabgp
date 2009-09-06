@@ -116,6 +116,8 @@ class Version (int):
 class ASN (int):
 	regex = "(?:0[xX][0-9a-fA-F]{1,8}|\d+:\d+|\d+)"
 	
+	# XXX: Should allow string as constructor and do the conversion here
+	
 	def pack (self):
 		return pack('!H',self)
 
