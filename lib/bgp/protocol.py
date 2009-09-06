@@ -12,6 +12,7 @@ from struct import pack,unpack
 from bgp.table import Table
 from bgp.data import Display
 from bgp.data import Message, Open, Update, Failure,Notification, SendNotification, KeepAlive
+from bgp.network import Network
 
 class Protocol (Display):
 	follow = True
