@@ -17,16 +17,22 @@ from bgp.data import Message, Open, Update, Failure,Notification, SendNotificati
 
 class Network (socket.socket):
 	
-	def __init__ (self,host,asn=''):
+	def __init__ (self,peer,local,asn=''):
 		self.last_read = 0
 		self.last_write = 0
-		self.host = host
+		self.peer = peer
 		self.asn = asn
 		
 		try:
 			self._io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			self._io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 			self._io.settimeout(1)
-			self._io.connect((host,179))
+			self._io.bind((local,-1))
+		except socket.error,e:
+			self.close()
+			raise Failure('could not bind to local ip: %s' % str(e))
+		try:
+			self._io.connect((peer,179))
 			self._io.setblocking(0)
 		except socket.error, e:
 			self.close()
@@ -74,7 +80,10 @@ class Protocol (Display):
 		self._table.update(self.neighbor.routes)
 
 	def connect (self):
-		self.network = Network(self.neighbor.peer_address.human(),self.neighbor.peer_as)
+		peer = self.neighbor.peer_address.human()
+		local = self.neighbor.local_address.human()
+		asn = self.neighbor.peer_as
+		self.network = Network(peer,local,asn)
 	
 	def _read_header (self):
 		# Read it as a block as it is better for the timer code

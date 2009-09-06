@@ -94,7 +94,7 @@ class Peer (Display):
 			except Failure:
 				pass
 			return
-		except Notification, n:
+		except Notification, e:
 			self.log('Received Notification (%d,%d) to peer %s' % (e.code,e.subcode,str(e)))
 			return
 		except Failure, e:
