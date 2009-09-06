@@ -9,9 +9,9 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 import time
 
-from bgp.data import Display
 from bgp.data import NOP, Open, Update, Failure, Notification, SendNotification, KeepAlive
 from bgp.protocol import Protocol,Network
+from bgp.display import Display
 
 
 # Present a File like interface to socket.socket

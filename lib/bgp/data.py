@@ -67,12 +67,11 @@ class Mask (int):
 		return 1
 
 class Prefix (IP):
-	def __new__ (cls,ip,mask):
-		return IP.__new__(cls,ip)
-	
 	# format is (version,address,slash)
-	def __init__ (self,ip,mask):
-		self.mask = Mask(mask)
+	def __new__ (cls,ip,mask):
+		new = IP.__new__(cls,ip)
+		new.mask = Mask(mask)
+		return new
 
 	@property
 	def version (self):
@@ -205,12 +204,13 @@ class HoldTime (int):
 		return 2
 
 class Route (Prefix):
-	def __init__ (self,ip,slash,next_hop=''):
-		Prefix.__init__(self,ip,slash)
-		if next_hop: self.next_hop = next_hop
-		else: self.next_hop = ip
-		self._local_preference = LocalPreference(100)
-		self.communities = Communities()
+	def __new__ (cls,ip,slash,next_hop=''):
+		new = Prefix.__new__(cls,ip,slash)
+		if next_hop: new.next_hop = next_hop
+		else: new.next_hop = ip
+		new._local_preference = LocalPreference(100)
+		new.communities = Communities()
+		return new
 
 	@property
 	def next_hop (self):
@@ -606,24 +606,4 @@ neighbor %s {
 	self.peer_as,
 	'\n\t\t' + '\n\t\t'.join([str(route) for route in self.routes]) if self.routes else ''
 )
-
-# Display stuff
-
-import sys
-
-class Display (object):
-	follow = True
-
-	def log (self,string):
-		if self.follow:
-			try:
-				print time.strftime('%j %H:%M:%S',time.localtime()), '%15s/%7s' % (self.neighbor.peer_address.human(),self.neighbor.peer_as), string
-				sys.stdout.flush()
-			except IOError:
-				# ^C was pressed while the output is going via a pipe, just ignore the fault, to close the BGP session correctly
-				pass
-	
-	def logIf (self,test,string):
-		if test: self.log(string)
-
 

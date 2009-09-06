@@ -10,9 +10,9 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 import time
 from struct import pack,unpack
 from bgp.table import Table
-from bgp.data import Display
 from bgp.data import Message, Open, Update, Failure,Notification, SendNotification, KeepAlive
 from bgp.network import Network
+from bgp.display import Display
 
 class Protocol (Display):
 	follow = True
