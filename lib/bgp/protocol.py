@@ -211,6 +211,7 @@ class Protocol (Display):
 		return left
 	
 	def close (self):
+		self._update.last = 0
 		if self.network:
 			self.network.close()
 			self.network = None
