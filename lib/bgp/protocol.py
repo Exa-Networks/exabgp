@@ -30,7 +30,7 @@ class Network (socket.socket):
 			self._io.bind((local,-1))
 		except socket.error,e:
 			self.close()
-			raise Failure('could not bind to local ip: %s' % str(e))
+			raise Failure('could not bind to local ip %s: %s' % (local,str(e)))
 		try:
 			self._io.connect((peer,179))
 			self._io.setblocking(0)
@@ -70,7 +70,7 @@ class Network (socket.socket):
 	
 
 class Protocol (Display):
-	follow = False
+	follow = True
 	
 	def __init__ (self,neighbor):
 		self.neighbor = neighbor
@@ -184,12 +184,13 @@ class Protocol (Display):
 	
 	def new_announce (self):
 		m = self._update.announce(self.neighbor.local_as,self.neighbor.peer_as)
-		self.log("UPDATE SENT: %s" % [hex(ord(c)) for c in m])
+		self.log("UPDATE (announce) SENT: %s" % [hex(ord(c)) for c in m][19:])
 		self.network.write(m)
 		return self._update if m else None
 	
 	def new_update (self):
 		m = self._update.update(self.neighbor.local_as,self.neighbor.peer_as)
+		self.log("UPDATE (update)   SENT: %s" % [hex(ord(c)) for c in m][19:])
 		if m: self.network.write(m)
 		return self._update if m else None
 	

@@ -14,6 +14,8 @@ import socket
 from struct import pack,unpack
 	# !L : Network Long  (4 bytes)
 	# !H : Network Short (2 bytes)
+import StringIO
+
 
 class IP (long):
 	regex_ipv4 = '(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])'
@@ -30,6 +32,7 @@ class IP (long):
 	def pack (self):
 		return pack('!L',self)
 
+	# remove this HORRIBLE function and use __str__ instead
 	def human (self):
 		return "%s.%s.%s.%s" % (self>>24, self>>16&0xFF, self>>8&0xFF, self&0xFF)
 
@@ -97,6 +100,18 @@ class Prefix (IP):
 		if self.mask >  8: return "%s%s" % (self.mask.pack(),ip.pack()[:2])
 		if self.mask >  0: return "%s%s" % (self.mask.pack(),ip.pack()[:1])
 		return '\0'
+
+	# XXX: This perform no boundary check as it is only used for debugging atm
+	def unpack (stream):
+		mask = ord(stream.read(1))
+		if mask > 24: data = stream.read(4)
+		if mask > 16: data = stream.read(3)+'\0'
+		if mask >  8: data = stream.read(2)+'\0\0'
+		if mask >  0: data = stream.read(1)+'\0\0\0'
+		if mask == 0: data = '\0\0\0\0'
+		return Prefix(unpack('!L')[0],mask)
+		
+		
 
 # XXX: move this in a unittest
 #print 'str', Prefix('10.0.0.0','24')
@@ -239,26 +254,39 @@ class Route (Prefix):
 		return "%s%s%s" % (seg_type,chr(len(values)),''.join([v.pack() for v in values]))
 	
 	def pack (self,local_asn,peer_asn):
-		TRANSITIVE = Message.Attribute.TRANSITIVE
-		OPTIONAL = Message.Attribute.OPTIONAL
-		
-		ORIGIN = Message.Attribute.ORIGIN
-		NEXT_HOP = Message.Attribute.NEXT_HOP
-		LOCAL_PREF = Message.Attribute.LOCAL_PREFERENCE
-		AS_PATH = Message.Attribute.AS_PATH
-		COMMUNITY = Message.Attribute.COMMUNITY
-
-		AS_SEQUENCE = Message.Attribute.ASPath.AS_SEQUENCE
-
 		message = ''
-		message += self._attribute(TRANSITIVE,ORIGIN,chr(Message.Attribute.Origin.IGP))
-		message += self._attribute(TRANSITIVE,AS_PATH,'' if local_asn == peer_asn else self._segment(AS_SEQUENCE,[local_asn]))
-		message += self._attribute(TRANSITIVE,NEXT_HOP,self.next_hop.name.pack())
+		message += self._attribute(Flag.TRANSITIVE,Attribute.ORIGIN,chr(Origin.IGP))
+		message += self._attribute(Flag.TRANSITIVE,Attribute.AS_PATH,'' if local_asn == peer_asn else self._segment(ASPath.AS_SEQUENCE,[local_asn]))
+		message += self._attribute(Flag.TRANSITIVE,Attribute.NEXT_HOP,self.next_hop.name.pack())
 		if local_asn == peer_asn:
-			message += self._attribute(TRANSITIVE,LOCAL_PREF,self.local_preference.pack())
-		message += self._attribute(TRANSITIVE|OPTIONAL,COMMUNITY,''.join([c.pack() for c in self.communities])) if self.communities else ''
-		return message
+			message += self._attribute(Flag.TRANSITIVE,Attribute.LOCAL_PREFERENCE,self.local_preference.pack())
+		message += self._attribute(Flag.TRANSITIVE|Flag.OPTIONAL,Attribute.COMMUNITY,''.join([c.pack() for c in self.communities])) if self.communities else ''
+		message += self.bgp()
 		
+		return message
+
+	# XXX: only for debugging does not do bound checking correctly
+	def unpack (stream):
+		l,data = self._defix(stream)
+		if len(data) != l:
+			print "buffer underrun in Route"
+		announced = StringIO(data)
+		while not announced.eof():
+			length = ord(announced.read(1))
+			data = announced.read(length)
+			flag = data[0]
+			code = data[1]
+			
+			if code == Attribute.ORIGIN:
+				origin = data[2]
+				print 'orgin is', Orgin(orgin)
+			if code == Attribute.AS_PATH:
+				pass
+			if code == Attribute.NEXT_HOP:
+				next_hop = unpack('!L',data[2:])[0]
+				print 'next hop is', IP(next_hop)
+		
+# We do not implement the RFC State Machine so .. we do not care :D
 class State (object):
 	IDLE = 1
 	CONNECT = 2
@@ -266,6 +294,60 @@ class State (object):
 	OPENSENT = 4
 	OPENCONFIRM = 5
 	ESTABLISHED = 6
+
+class Flag (int):
+	EXTENDED_LENGTH = 16
+	PARTIAL = 32
+	TRANSITIVE = 64
+	OPTIONAL = 128
+	
+	def __str__ (self):
+		if self ==  16: return "EXTENDED_LENGTH"
+		if self ==  32: return "PARTIAL"
+		if self ==  64: return "TRANSITIVE"
+		if self == 128: return "OPTIONAL"
+		return 'UNKNOWN'
+
+class Origin (int):
+	IGP = 0
+	EGP = 1
+	INCOMPLETE = 2
+	
+	def __str__ (self):
+		if self == 0: return 'IGP'
+		if self == 1: return 'EGP'
+		if self == 2: return 'INCOMPLETE'
+		return 'INVALID'
+
+class ASPath (int):
+	AS_SET = 1
+	AS_SEQUENCE = 2
+	
+	def __str__ (self):
+		if self == 1: return 'AS_SET'
+		if self == 2: return 'AS_SEQUENCE'
+		return 'INVALID'
+
+class Attribute (int):
+	ORIGIN = 1
+	AS_PATH = 2
+	NEXT_HOP = 3
+	MULTI_EXIT_DISC = 4
+	LOCAL_PREFERENCE = 5
+	ATOMIC_AGGREGATE = 6
+	AGGREGATOR = 7
+	COMMUNITY = 8
+	
+	def __str__ (self):
+		if self ==  1: return "ORIGIN"
+		if self ==  2: return "AS_PATH"
+		if self ==  3: return "NEXT_HOP"
+		if self ==  4: return "MULTI_EXIT_DISC"
+		if self ==  5: return "LOCAL_PREFERENCE"
+		if self ==  6: return "ATOMIC_AGGREGATE"
+		if self ==  7: return "AGGREGATOR"
+		if self ==  8: return "COMMUNITY"
+		return 'UNKNOWN'
 
 class Message (object):
 	TYPE = 0
@@ -282,30 +364,16 @@ class Message (object):
 		HEADER = 64,
 		GENERAL = 128,
 		#LOCALRIB = 256,
-
-	class Attribute:
-		class Origin:
-			IGP = 0
-			EGP = 1
-			INCOMPLETE = 2
-
-		class ASPath:
-			AS_SET = 1
-			AS_SEQUENCE = 2
-
-		ORIGIN = 1
-		AS_PATH = 2
-		NEXT_HOP = 3
-		MULTI_EXIT_DISC = 4
-		LOCAL_PREFERENCE = 5
-		ATOMIC_AGGREGATE = 6
-		AGGREGATOR = 7
-		COMMUNITY = 8
-
-		EXTENDED_LENGTH = 16
-		PARTIAL = 32
-		TRANSITIVE = 64
-		OPTIONAL = 128
+	
+	# XXX: Those two names are HORRIBLE(s), fix this !!
+	
+	def _prefix (self,data):
+		return '%s%s' % (pack('!H',len(data)),data)
+	
+	def _defix (self,stream):
+		l = unpack('!H',stream.read(1))[0]
+		data = stream.read(l)
+		return l,data
 	
 	def _message (self,message = ""):
 		message_len = pack('!H',19+len(message))
@@ -336,9 +404,6 @@ class Update (Message):
 	def __init__ (self,table):
 		self.table = table
 		self.last = 0
-
-	def _prefix (self,data):
-		return '%s%s' % (pack('!H',len(data)),data)
 
 	def announce (self,local_asn,remote_asn):
 		announce = []
@@ -376,10 +441,23 @@ class Update (Message):
 		unfeasible = self._message(self._prefix(''.join([withdraw[raw] for raw in withdraw.keys()])) + self._prefix(''))
 		return unfeasible + ''.join(announce)
 	
+	def decode (self,stream):
+		# withdrawn
+		l,data = self._defix(stream)
+		if len(data) != l:
+			print "buffer underun in prefix resdrawn"
+			return
+		withdrawn = StringIO(data)
+		while not withdrawn.eof():
+			yield ('-',Prefix.unpack(withdrawn))
 
-	def __str__ (self):
-		return "UPDATE"
-
+		# attributes
+		l,data = self._defix(stream)
+		if len(data) != l:
+			print "buffer underun in prefix resdrawn"
+		announce = StringIO(data)
+		for route in Route.unpack(announce):
+			yield ('+',route)
 
 class Failure (Exception):
 	pass
@@ -469,9 +547,6 @@ class KeepAlive (Message):
 	
 	def message (self):
 		return self._message()
-
-	def __str__ (self):
-		return "KEEPALIVE (%s)" % time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime())
 
 # The definition of a neighbor (from reading the configuration)
 
