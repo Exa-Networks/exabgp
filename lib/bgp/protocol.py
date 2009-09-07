@@ -112,7 +112,8 @@ class Protocol (Display):
 		if hold_time == 0:
 			# Hold Time of zero not accepted
 			raise SendNotification(2,6,data[3:5])
-		self.neighbor.hold_time.update(hold_time)
+		if hold_time >= 3:
+			self.neighbor.hold_time = min (self.neighbor.hold_time,hold_time)
 		
 		router_id = unpack('!L',data[5:9])[0]
 

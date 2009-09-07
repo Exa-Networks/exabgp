@@ -32,6 +32,7 @@ class TestProtocol (unittest.TestCase):
 		self.neighbor.local_as = ASN(65000)
 		self.neighbor.peer_as = ASN(65000)
 		self.neighbor.peer_address = IP('1.2.3.4')
+		self.neighbor.local_address = IP('5.6.7.8')
 	
 	def test_1_selfparse_open (self):
 		ds = Open(65000,'1.2.3.4',30,4)
@@ -106,6 +107,23 @@ class TestProtocol (unittest.TestCase):
 		self.assertEqual(network.read(1),'')
 		#print [hex(ord(c)) for c in msg.read(1024)]
 
+	def test_6_holdtime (self):
+		class MyPeer(Network):
+			_data = StringIO(Open(65000,'1.2.3.4',90,4).message())
+			def read (self,l):
+				return self._data.read(l)
+		
+		network = MyPeer('')
+		
+		bgp = Protocol(self.neighbor,network)
+		bgp.follow = False
+
+		before = bgp.neighbor.hold_time
+		bgp.new_open()
+		bgp.read_open()
+		after = bgp.neighbor.hold_time
+		
+		self.assertEqual(after,min(before,90))
 
 	
 if __name__ == '__main__':

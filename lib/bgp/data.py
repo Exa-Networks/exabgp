@@ -166,11 +166,6 @@ class LocalPreference (long):
 		return 4
 
 class HoldTime (int):
-	def update (self,value):
-		if value < 3: return
-		if value < self:
-			self = value
-	
 	def pack (self):
 		return pack('!H',self)
 
