@@ -292,7 +292,6 @@ class Route (Prefix):
 		if local_asn == peer_asn:
 			message += self._attribute(Flag.TRANSITIVE,Attribute.LOCAL_PREFERENCE,self.local_preference.pack())
 		message += self._attribute(Flag.TRANSITIVE|Flag.OPTIONAL,Attribute.COMMUNITY,''.join([c.pack() for c in self.communities])) if self.communities else ''
-		message += self.bgp()
 		
 		return message
 
