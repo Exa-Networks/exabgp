@@ -282,7 +282,7 @@ class Route (Prefix):
 	def _segment (self,seg_type,values):
 		if len(values)>255:
 			return self._segment(values[:256]) + self._segment(values[256:])
-		return "%s%s%s" % (seg_type,chr(len(values)),''.join([v.pack() for v in values]))
+		return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack() for v in values]))
 	
 	def pack (self,local_asn,peer_asn):
 		message = ''
