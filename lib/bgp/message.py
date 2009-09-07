@@ -108,6 +108,8 @@ class Update (Message):
 		unfeasible = self._message(self._prefix(''.join([withdraw[prefix] for prefix in withdraw.keys()])) + self._prefix(''))
 		return unfeasible + ''.join(announce)
 	
+	def __str__ (self):
+		return "UPDATE"
 
 class Failure (Exception):
 	pass
