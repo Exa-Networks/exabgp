@@ -17,7 +17,7 @@ from bgp.display import Display
 # Present a File like interface to socket.socket
 
 class Peer (Display):
-	debug_timers = True		# debug hold/keepalive timers
+	debug_timers = False		# debug hold/keepalive timers
 	
 	def __init__ (self,neighbor,supervisor):
 		Display.__init__(self,neighbor.peer_address,neighbor.peer_as)
