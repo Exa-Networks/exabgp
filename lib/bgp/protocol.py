@@ -12,7 +12,7 @@ import socket
 from struct import pack,unpack
 
 from bgp.table import Table
-from bgp.data import Flag,Attribute,Origin,IP,Route
+from bgp.data import Flag,Attribute,Origin,HoldTime,IP,Route
 from bgp.message import Message, Open, Update, Failure,Notification, SendNotification, KeepAlive
 from bgp.network import Network
 from bgp.display import Display
@@ -113,7 +113,7 @@ class Protocol (Display):
 			# Hold Time of zero not accepted
 			raise SendNotification(2,6,data[3:5])
 		if hold_time >= 3:
-			self.neighbor.hold_time = min (self.neighbor.hold_time,hold_time)
+			self.neighbor.hold_time = HoldTime(min(self.neighbor.hold_time,hold_time))
 		
 		router_id = unpack('!L',data[5:9])[0]
 
