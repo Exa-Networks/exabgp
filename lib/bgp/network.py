@@ -42,11 +42,13 @@ class Network (object):
 	# File like interface
 
 	def read (self,number):
+		if number == 0: return ''
 		try:
 			r = self._io.recv(number)
 			self.last_read = time.time()
 			return r
 		except socket.error,e:
+			raise
 			self.close()
 			raise Failure('problem attempting to read data from the network:  %s ' % str(e))
 
