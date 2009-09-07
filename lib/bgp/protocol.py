@@ -20,7 +20,7 @@ from bgp.display import Display
 
 
 class Protocol (Display):
-	follow = True
+	follow = False
 	
 	def __init__ (self,neighbor,network=None):
 		Display.__init__(self,neighbor.peer_address,neighbor.peer_as)
@@ -240,9 +240,9 @@ class Protocol (Display):
 			print "T",segment_type
 			segment_len = ord(data[offset+1])
 			print "L",segment_len
-			segment_data = data[offset+2:offset+2+(segment_len*4)]
+			segment_data = data[offset+2:offset+2+(segment_len*2)]
 			print [hex(ord(c)) for c in segment_data]
-			asns = unpack('N'*segment_len,segment_data)
+			asns = unpack('!H'*segment_len,segment_data)
 			print asns
 			# ignore it
 			self.set_path_attribute(routes,data[offset+length:])
@@ -273,8 +273,6 @@ class Protocol (Display):
 			# content is 6 bytes
 			self.set_path_attribute(routes,data[offset+length:])
 			return
-			
-		print 'not finished', code
 		return
 	
 	def read_bgp (self,data):
