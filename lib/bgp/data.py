@@ -14,7 +14,6 @@ import socket
 from struct import pack,unpack
 	# !L : Network Long  (4 bytes)
 	# !H : Network Short (2 bytes)
-import StringIO
 
 
 class IP (long):
@@ -90,16 +89,6 @@ class Prefix (tuple):
 		if self.mask >  8: return "%s%s" % (self.mask.pack(),self.ip.pack()[:2])
 		if self.mask >  0: return "%s%s" % (self.mask.pack(),self.ip.pack()[:1])
 		return '\0'
-
-	# XXX: This perform no boundary check as it is only used for debugging atm
-	def unpack (stream):
-		mask = ord(stream.read(1))
-		if mask > 24: data = stream.read(4)
-		if mask > 16: data = stream.read(3)+'\0'
-		if mask >  8: data = stream.read(2)+'\0\0'
-		if mask >  0: data = stream.read(1)+'\0\0\0'
-		if mask == 0: data = '\0\0\0\0'
-		return Prefix(unpack('!L')[0],mask)
 
 	def __str__ (self):
 		return '%s/%d' % (self.ip,self.mask)
@@ -307,27 +296,6 @@ class Route (Prefix):
 		
 		return message
 
-	# XXX: only for debugging does not do bound checking correctly
-	def unpack (stream):
-		l,data = self._defix(stream)
-		if len(data) != l:
-			print "buffer underrun in Route"
-		announced = StringIO(data)
-		while not announced.eof():
-			length = ord(announced.read(1))
-			data = announced.read(length)
-			flag = data[0]
-			code = data[1]
-			
-			if code == Attribute.ORIGIN:
-				origin = data[2]
-				print 'orgin is', Orgin(orgin)
-			if code == Attribute.AS_PATH:
-				pass
-			if code == Attribute.NEXT_HOP:
-				next_hop = unpack('!L',data[2:])[0]
-				print 'next hop is', IP(next_hop)
-		
 # The definition of a neighbor (from reading the configuration)
 
 class Neighbor (object):

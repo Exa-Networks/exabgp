@@ -9,7 +9,6 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 import unittest
 
-from StringIO import StringIO
 from bgp.configuration import Configuration
 
 class TestConfiguration (unittest.TestCase):

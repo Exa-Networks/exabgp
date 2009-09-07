@@ -35,15 +35,9 @@ class Message (object):
 		GENERAL = 128,
 		#LOCALRIB = 256,
 	
-	# XXX: Those two names are HORRIBLE(s), fix this !!
-	
+	# XXX: the name is HORRIBLE, fix this !!
 	def _prefix (self,data):
 		return '%s%s' % (pack('!H',len(data)),data)
-	
-	def _defix (self,stream):
-		l = unpack('!H',stream.read(1))[0]
-		data = stream.read(l)
-		return l,data
 	
 	def _message (self,message = ""):
 		message_len = pack('!H',19+len(message))
@@ -113,23 +107,6 @@ class Update (Message):
 		unfeasible = self._message(self._prefix(''.join([withdraw[prefix] for prefix in withdraw.keys()])) + self._prefix(''))
 		return unfeasible + ''.join(announce)
 	
-	def decode (self,stream):
-		# withdrawn
-		l,data = self._defix(stream)
-		if len(data) != l:
-			print "buffer underun in prefix resdrawn"
-			return
-		withdrawn = StringIO(data)
-		while not withdrawn.eof():
-			yield ('-',Prefix.unpack(withdrawn))
-
-		# attributes
-		l,data = self._defix(stream)
-		if len(data) != l:
-			print "buffer underun in prefix resdrawn"
-		announce = StringIO(data)
-		for route in Route.unpack(announce):
-			yield ('+',route)
 
 class Failure (Exception):
 	pass
