@@ -261,7 +261,7 @@ class Route (Prefix):
 
 	def __cmp__ (self,other):
 		return \
-			self.address == other.adress and \
+			tuple(self) == tuple(other) and \
 			self.mask == other.mask and \
 			self.next_hop == other.next_hop and \
 			self.local_preference == other.local_preference and \

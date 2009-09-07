@@ -237,13 +237,9 @@ class Protocol (Display):
 				self.set_path_attribute(routes,data[offset+length:])
 				return
 			segment_type = ord(data[offset])
-			print "T",segment_type
 			segment_len = ord(data[offset+1])
-			print "L",segment_len
 			segment_data = data[offset+2:offset+2+(segment_len*2)]
-			print [hex(ord(c)) for c in segment_data]
 			asns = unpack('!H'*segment_len,segment_data)
-			print asns
 			# ignore it
 			self.set_path_attribute(routes,data[offset+length:])
 			return

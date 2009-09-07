@@ -58,9 +58,14 @@ class TestProtocol (unittest.TestCase):
 		m,d = bgp.read_message()
 		self.assertEqual(m,chr(4))
 	
-	def test_3_parse_Update (self):
+	def test_3_parse_update (self):
 		txt = ''.join([chr(c) for c in [0x0, 0x0, 0x0, 0x1c, 0x40, 0x1, 0x1, 0x2, 0x40, 0x2, 0x0, 0x40, 0x3, 0x4, 0xc0, 0x0, 0x2, 0xfe, 0x80, 0x4, 0x4, 0x0, 0x0, 0x0, 0x0, 0x40, 0x5, 0x4, 0x0, 0x0, 0x1, 0x23, 0x20, 0x52, 0xdb, 0x0, 0x7, 0x20, 0x52, 0xdb, 0x0, 0x45, 0x20, 0x52, 0xdb, 0x0, 0x47]])
-		
+		network = Network('')
+		bgp = Protocol(self.neighbor,network)
+		bgp.read_update(len(txt),txt)
+
+	def test_4_parse_update (self):
+		txt = ''.join([chr(c) for c in [0x0, 0x0, 0x0, 0x12, 0x40, 0x1, 0x1, 0x0, 0x40, 0x2, 0x4, 0x2, 0x1, 0x78, 0x14, 0x40, 0x3, 0x4, 0x52, 0xdb, 0x2, 0xb5, 0x0]])
 		network = Network('')
 		bgp = Protocol(self.neighbor,network)
 		bgp.read_update(len(txt),txt)
@@ -80,6 +85,7 @@ class TestProtocol (unittest.TestCase):
 		ds = Update(self.table)
 		
 		txt  = ds.announce(65000,65000)
+		self.table.update(self.routes[:-1])
 		txt += ds.update(65000,65000)
 		network = Network(txt)
 
@@ -94,7 +100,8 @@ class TestProtocol (unittest.TestCase):
 		self.assertEqual(m,chr(2))
 		m,d = bgp.read_message()
 		self.assertEqual(m,chr(2))
-		self.assertEqual(d,chr(0)*4) 
+		self.assertEqual(len(d),1)
+		self.assertEqual(d[0][1],'\x10\x00\x02\x01') 
 
 		self.assertEqual(network.read(1),'')
 		#print [hex(ord(c)) for c in msg.read(1024)]

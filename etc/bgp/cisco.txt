@@ -1,7 +1,7 @@
 neighbor 192.0.2.181 {
 	description "a cisco test peer";
 	router-id 192.0.2.92;
-	local-address 192.0.2.132;
+	local-address 192.0.2.92;
 	local-as 65000;
 	peer-as 65000;
 

@@ -75,9 +75,10 @@ class Update (Message):
 		# table.changed always returns routes to remove before routes to add
 		for action,route in self.table.changed(self.last):
 			if action == '+':
-				w = self._prefix(route.bgp())
+				#w = self._prefix(route.bgp())
+				w = self._prefix('')
 				a = self._prefix(route.pack(local_asn,remote_asn))+route.bgp()
-				announce.append(self._message(w + a))
+				announce.append(self._message(w+a))
 			if action == '':
 				self.last = route
 
