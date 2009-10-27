@@ -167,7 +167,7 @@ class Protocol (Display):
 	
 	def read_keepalive (self):
 		msg,data = self.read_message()
-		if msg != KeepAlive.TYPE:
+		if msg and msg != KeepAlive.TYPE:
 			raise SendNotification(5,0)
 		return msg,data
 	

@@ -17,49 +17,101 @@ from struct import pack,unpack
 
 
 class IP (long):
-	regex_ipv4 = '(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])'
+	# Taken from perl Net::IPv6Addr
+
+	ipv6_patterns = {
+		'preferred' : """\
+			^(?:[a-f0-9]{1,4}:){7}[a-f0-9]{1,4}$
+		""",
+		'compressed' : """\
+			^[a-f0-9]{0,4}::$
+		|	^:(?::[a-f0-9]{1,4}){1,6}$
+		|	^(?:[a-f0-9]{1,4}:){1,6}:$
+		|	^(?:[a-f0-9]{1,4}:)(?::[a-f0-9]{1,4}){1,6}$
+		|	^(?:[a-f0-9]{1,4}:){2}(?::[a-f0-9]{1,4}){1,5}$
+		|	^(?:[a-f0-9]{1,4}:){3}(?::[a-f0-9]{1,4}){1,4}$
+		|	^(?:[a-f0-9]{1,4}:){4}(?::[a-f0-9]{1,4}){1,3}$
+		|	^(?:[a-f0-9]{1,4}:){5}(?::[a-f0-9]{1,4}){1,2}$
+		|	^(?:[a-f0-9]{1,4}:){6}(?::[a-f0-9]{1,4})$
+		""",
+		'ipv4' : """\
+			^(?:0:){5}ffff:(?:\d{1,3}\.){3}\d{1,3}$
+		|	^(?:0:){6}(?:\d{1,3}\.){3}\d{1,3}$
+		""",
+		'ipv4 compressed' : """\
+			^::(?:ffff:)?(?:\d{1,3}\.){3}\d{1,3}$
+		""",
+	}
+
+	ipv4_patterns = '(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])'
 
 	def __new__ (cls,value):
+		v4 = False
 		try:
-			packed = socket.inet_aton(value)
-			numeric = unpack('>L',packed)[0]
+			cls.packed = socket.inet_aton(value)
+			numeric = unpack('>L',cls.packed)[0]
 			string = value
+			v4 = True
 		except socket.error:
-			raise ValueError('"%s" is an invalid address' % str(value))
+			pass
 		except TypeError:
 		 	numeric = long(value)
 			string = "%d.%d.%d.%d" % (numeric>>24,(numeric>>16)&0xff,(numeric>>8)&0xff,numeric&0xff)
+			v4 = True
+		
+		if not v4:
+			try:
+				cls.packed = socket.inet_pton(socket.AF_INET6, value)
+				a,b,c,d = unpack('>LLLL',cls.packed)
+				numeric = (a << 96) + (b << 64) + (c << 32) + d
+				string = value
+			except socket.error:
+				raise ValueError('"%s" is an invalid address' % str(value))
+			except TypeError:
+			 	numeric = long(value)
+				string = ":".join([hex(c) in packed])
+		
 		new = long.__new__(cls,numeric)
 		new.string = string
-		new.numeric = numeric
+		new.numeric = value
+		if v4:
+			new.version = 4
+			new.length = 32
+		else:
+			new.version = 6
+			new.length = 128
+		return new
+
+	def new_v6 (cls,value):
+		new.length = 32
 		return new
 
 	def pack (self):
-		return pack('!L',self)
+		return self.packed
 
 	def __str__ (self):
 		return self.string
 
 	def __len__ (self):
-		return 4
+		return self.version
 
 class Mask (int):
-	regex_mask = '(?:\d|[12]\d|3[012])'
-	slash_to_size = dict([(32-bits,(1<<bits)) for bits in range(0,33)])
-	mask_to_slash = dict([((1L<<32) - (1<<bits),32-bits) for bits in range(0,33)])
-	range_to_slash = dict([("%d.%d.%d.%d" % (k>>24, k>>16 & 0xFF ,k>>8 & 0xFF, k&0xFF),mask_to_slash[k]) for k in mask_to_slash.keys()])
-	slash_to_mask = dict([(32-bits,(1L<<32) - (1<<bits)) for bits in range(0,33)])
+	def __new__ (cls,mask,length):
+		cls.slash_to_size = dict([(length-bits,(1<<bits)) for bits in range(0,length+1)])
+		cls.mask_to_slash = dict([((1L<<length) - (1<<bits),length-bits) for bits in range(0,length+1)])
+		cls.slash_to_mask = dict([(length-bits,(1L<<length) - (1<<bits)) for bits in range(0,length+1)])
+		cls.ipv4_to_slash = dict([("%d.%d.%d.%d" % (k>>24, k>>16 & 0xFF ,k>>8 & 0xFF, k&0xFF),cls.mask_to_slash[k]) for k in cls.mask_to_slash.keys()])
+		#cls.regex_mask = '(?:\d|[12]\d|3[012])'
 
-	def __new__ (cls,mask):
 		try:
 			slash = int(mask)
 		except ValueError:
 			try:
-				slash = cls.range_to_slash[mask]
+				slash = cls.ipv4_to_slash[mask]
 			except KeyError:
 				raise ValueError('the netmask is invalid %s' % str(mask))
 		
-		if not slash in range(0,33):
+		if not slash in range(0,length+1):
 			return ValueError('the netmask is invalid /%s' % str(slash))
 
 		return int.__new__(cls,slash)
@@ -74,7 +126,7 @@ class Prefix (tuple):
 	# format is (version,address,slash)
 	def __new__ (cls,address,mask):
 		ip = IP(address)
-		mask = Mask(mask)
+		mask = Mask(mask,ip.length)
 		new =  tuple.__new__(cls,(4,ip,mask))
 
 		new.ip = ip

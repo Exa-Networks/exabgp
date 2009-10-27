@@ -18,9 +18,16 @@ class TestData (unittest.TestCase):
 		self.assertEqual(str(IP((1<<24)+(2<<16)+(3<<8)+4)),'1.2.3.4')
 	def test_3_ip (self):
 		self.failUnlessRaises(ValueError,IP,'A')
+	def test_4_ip (self):
+		self.assertEqual(str(IP('::ffff:192.168.1.26')),'::ffff:192.168.1.26')
+	def test_5_ip (self):
+		self.failUnlessRaises(ValueError,IP,"2001:0000:1234:G:0000:C1C0:ABCD:0876")
 
 	def test_1_mask (self):
-		mask = Mask(24)
+		mask = Mask(24,32)
+	def test_2_mask (self):
+		mask = Mask(64,128)
+	# Plenty of tests missing here
 
 	def test_1_prefix (self):
 		self.assertEqual(Prefix('10.0.0.0','24'),(4, 167772160, 24))
