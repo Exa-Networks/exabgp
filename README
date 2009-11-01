@@ -1,2 +1,19 @@
-This programs requires python 2.6
-If you can not understand the code, do not use it :D
+This program is a BGP route injector. It can be used to announce routes in your network.
+
+Potential use are :
+ - AS112 announcement
+ - Injection of service IPs (customer accessible IP announced for the server)
+ - Temporary route redirection (customer service suspension)
+ - whatever you may find useful :D
+
+Even if it should not be hard to use this program, This is not a "plug and play" application.
+The code is deployed in production but if you are not ready to look into it to fix potential bugs yourself, do not use it.
+
+As the program is not intended to receive routing information and perform FIB manipulation it only partially implements:
+ - RFC 4271 (A Border Gateway Protocol 4 (BGP-4), Obsoletes: 1771)
+ - RFC 5492 (Capabilities Advertisement with BGP-4)
+ - RFC 4760 (Multiprotocol Extensions for BGP-4, Obsoletes: 2858)
+ - RFC 2545 (Use of BGP-4 Multiprotocol Extensions for IPv6 Inter-Domain Routing)
+
+This programs requires python 2.6 but does not have any dependences on any thrid party libraries.
+

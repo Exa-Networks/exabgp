@@ -1,4 +1,5 @@
 IPv6 Support (under development)
+add MD5 authentification support
 
 check if the peer is using AUTHENTIFICATION and refuse the connection if it does
 
