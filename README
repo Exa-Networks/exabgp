@@ -11,7 +11,7 @@ The code is deployed in production but if you are not ready to look into it to f
 
 As the program is not intended to receive routing information and perform FIB manipulation it only partially implements:
  - RFC 4271 (A Border Gateway Protocol 4 (BGP-4), Obsoletes: 1771)
- - RFC 5492 (Capabilities Advertisement with BGP-4)
+ - RFC 5492 (Capabilities Advertisement with BGP-4, Obsoletes 3392)
  - RFC 4760 (Multiprotocol Extensions for BGP-4, Obsoletes: 2858)
  - RFC 2545 (Use of BGP-4 Multiprotocol Extensions for IPv6 Inter-Domain Routing)
 

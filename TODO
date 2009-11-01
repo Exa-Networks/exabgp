@@ -1,7 +1,8 @@
 IPv6 Support (under development)
-add MD5 authentification support
+ - allow connection to an IPv6 address (ipv6 native connection)
+ - if we have some IPv6 routes and if the peer does not announce the MP_REACH_NLRI capacity, refuse the connection
 
-check if the peer is using AUTHENTIFICATION and refuse the connection if it does
+add MD5 authentification support
 
 allow reconfiguration (SIGHUP forcing a reload of the configuration)
 -> reconfiguration alter neighbor list

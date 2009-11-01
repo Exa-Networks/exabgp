@@ -230,33 +230,35 @@ class Protocol (Display):
 #		print 'pa  ', [hex(ord(c)) for c in announce]
 #		print 'nlri', [hex(ord(c)) for c in nlri]
 
-		routes = []
-
+		remove = []
 		while withdrawn:
 			route, withdrawn = self.read_bgp(withdrawn)
-			if route: routes.append(('-',route))
+			if route:
+				remove.append(route)
+				self.logIf(True,'removing route %s' % route)
 
-		new = []
+		add = []
 		while nlri:
 			route,nlri = self.read_bgp(nlri)
-			if route: new.append(route)
-			self.log(True,'ROUTE IS %s' % route)
+			if route:
+				add.append(route)
+				self.logIf(True,'adding route %s' % route)
 
-		self.set_path_attribute(new,announce)
-		
-		for route in new:
+		self.set_path_attribute(add,remove,announce)
+
+		routes = []
+		for route in remove:
+			routes.append(('-',route))
+		for route in add:
 			routes.append(('+',route))
-		
 		return routes
 
-	def set_path_attribute (self,routes,data):
+	def set_path_attribute (self,add,remove,data):
 		if not data: return
 		
 		# We do not care if the attribute are transitive or not as we do not redistribute
 		flag = Flag(ord(data[0]))
 		code = Attribute(ord(data[1]))
-		
-		print "CODE IS ", code, int(code)
 		
 		if flag & Flag.EXTENDED_LENGTH == Flag.EXTENDED_LENGTH:
 			length = unpack('!H',data[2:4])[0]
@@ -268,80 +270,74 @@ class Protocol (Display):
 		if code == Attribute.ORIGIN:
 			origin = ord(data[offset:offset+length])
 			# we do not care yet
-			self.set_path_attribute(routes,data[offset+length:])
+			self.set_path_attribute(add,remove,data[offset+length:])
 			return
 		if code == Attribute.AS_PATH:
 			if not length:
-				self.set_path_attribute(routes,data[offset+length:])
+				self.set_path_attribute(add,remove,data[offset+length:])
 				return
 			segment_type = ord(data[offset])
 			segment_len = ord(data[offset+1])
 			segment_data = data[offset+2:offset+2+(segment_len*2)]
 			asns = unpack('!H'*segment_len,segment_data)
 			# ignore it
-			self.set_path_attribute(routes,data[offset+length:])
+			self.set_path_attribute(add,remove,data[offset+length:])
 			return
 		if code == Attribute.NEXT_HOP:
 			next_hop = unpack('!L',data[offset:offset+length])[0]
-			for route in routes:
+			for route in add:
 				route.next_hop = next_hop
-			self.set_path_attribute(routes,data[offset+length:])
+			self.set_path_attribute(add,remove,data[offset+length:])
 			return
 		if code == Attribute.MULTI_EXIT_DISC:
 			med = unpack('!L',data[offset:offset+4])[0]
 			# ignore
-			self.set_path_attribute(routes,data[offset+length:])
+			self.set_path_attribute(add,remove,data[offset+length:])
 			return
 		if code == Attribute.LOCAL_PREFERENCE:
 			pref = unpack('!L',data[offset:offset+4])[0]
 			# if length != 4 we should really raise as you can not have multiple LOCAL_PREF
-			for route in routes:
+			for route in add:
 				route.local_preference = pref
-			self.set_path_attribute(routes,data[offset+length:])
+			self.set_path_attribute(add,remove,data[offset+length:])
 			return
 		if code == Attribute.ATOMIC_AGGREGATE:
 			# ignore
-			self.set_path_attribute(routes,data[offset+length:])
+			self.set_path_attribute(add,remove,data[offset+length:])
 			return
 		if code == Attribute.AGGREGATOR:
 			# content is 6 bytes
-			self.set_path_attribute(routes,data[offset+length:])
+			self.set_path_attribute(add,remove,data[offset+length:])
 			return
 		if code == Attribute.MP_REACH_NLRI:
-			if routes != []:
-				# XXX: This should not happen and I am not sure what should be done.
-				return
-
 			afi = AFI(unpack('!H',data[offset:offset+2])[0])
 			offset += 2
-			
-			if afi in (AFI.ipv4,AFI.ipv6):
-				# XXX: we only care about decoding IPv4/IPv6 unicast routes
-				return
-
 			safi = SAFI(ord(data[offset]))
 			offset += 1
-
-			if safi != SAFI.unicast:
-				# XXX: we only care about decoding IPv4/IPv6 unicast routes
-				return 
-
-			print "afi", afi
-			print "safi", safi
 			
+			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
+				log('we only understand IPv4/IPv6 and should never have received this route (%s %s)' % (afi,safi))
+				return
+
 			len_nh = ord(data[offset])
 			offset += 1
+			
+			if afi == AFI.ipv4 and not len_nh != 4:
+				log('bad IPv4 next-hop length (%d)' % len_nh)
+				return
+			if afi == AFI.ipv6 and not len_nh in (16,32):
+				log('bad IPv6 next-hop length (%d)' % len_nh)
+				return
+			
+			if len_nh == 32:
+				# we have a link-local address in the next-hop we ideally need to ignore
+				pass
 
-			print "len nh", len_nh
-
-			next_hop = data[offset:offset+len_nh]
+			nh = socket.inet_ntop(socket.AF_INET6 if len_nh >= 16 else socket.AF_INET,data[offset:offset+len_nh])
 			offset += len_nh
 
-			print "nh", [hex(ord(c)) for c in next_hop]
-			
 			nb_snpa = ord(data[offset])
 			offset += 1
-			print "nb snpa", nb_snpa
 			
 			snpas = []
 			for i in range(nb_snpa):
@@ -349,13 +345,13 @@ class Protocol (Display):
 				offset += 1
 				snpas.append(data[offset:offset+len_snpa])
 				offset += len_snpa
-			print "snpas", snpas
 
 			nlri = data[offset:]
 			while True:
-				route,nlri = self.read_bgp(nlri)
-				self.logIf(True,'MP_REACH_NLRI route is %s' % str(route))
-				if route: routes.append(route)
+				#self.hexdump(nlri)
+				route,nlri = self.read_bgp(nlri,afi)
+				route.next_hop = nh
+				if route: add.append(route)
 				if not nlri: break
 			return
 		if code == Attribute.MP_UNREACH_NLRI:
@@ -368,17 +364,16 @@ class Protocol (Display):
 		
 		if afi == AFI.ipv4:
 			fill = 4
-			parsed  = data[1:size+1] + '\0'* (fill-size), data[size+fill+1:]
-			ip = socket.inet_ntoa(parsed[0])
-			return Route(ip,mask),parsed[1]
-			
-		if afi == AFI.ipv6:
+			afi = socket.AF_INET
+		elif afi == AFI.ipv6:
 			fill = 16
-			parsed  = data[1:size+1] + '\0'* (fill-size), data[size+fill+1:]
-			ip = socket.inet_ptoa(parsed[0])
-			return Route(ip,mask),parsed[1]
-		
-		return None,None
+			afi = socket.AF_INET6
+		else:
+			return None,None
+			
+		parsed  = data[1:size+1] + '\0'* (fill-size), data[size+fill+1:]
+		ip = socket.inet_ntop(afi,parsed[0])
+		return Route(ip,mask),parsed[1]
 	
 	# Sending message to peer .................................................
 	
