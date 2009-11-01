@@ -7,12 +7,13 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
+import math
 import time
 import socket
 from struct import pack,unpack
 
 from bgp.table import Table
-from bgp.data import Flag,Attribute,Origin,HoldTime,IP,Route
+from bgp.data import AFI,SAFI,Parameter,Capabilities,Flag,Attribute,Origin,HoldTime,IP,Route
 from bgp.message import Message, Open, Update, Failure,Notification, SendNotification, KeepAlive
 from bgp.network import Network
 from bgp.display import Display
@@ -20,7 +21,8 @@ from bgp.display import Display
 
 
 class Protocol (Display):
-	follow = False
+	trace = False
+	decode = True
 	
 	def __init__ (self,neighbor,network=None):
 		Display.__init__(self,neighbor.peer_address,neighbor.peer_as)
@@ -86,6 +88,18 @@ class Protocol (Display):
 		
 		return msg,length-19
 	
+	def _key_values (self,name,data):
+		if len(data) < 2:
+			raise SendNotification(2,0,"bad length for OPEN %s (<2)" % name)
+		l = ord(data[1])
+		boundary = l+2
+		if len(data) < boundary:
+			raise SendNotification(2,0,"bad length for OPEN %s (buffer underrun)" % name)
+		key = ord(data[0])
+		value = data[2:boundary]
+		rest = data[boundary:]
+		return key,value,rest
+	
 	def read_open (self):
 		msg,l = self._read_header()
 		data = self.network.read(l)
@@ -117,14 +131,32 @@ class Protocol (Display):
 		
 		router_id = unpack('!L',data[5:9])[0]
 
-# XXX: Refuse connections with unknown options - not recommended. :) 
-#		option_len = ord(data[9])
-#		if option_len:
-#			# We do not support any Optional Parameter
-#			raise SendNotification(2,4)
-		
-		o = Open(asn,router_id,hold_time,version)
-		
+		capabilities = Capabilities()
+		option_len = ord(data[9])
+		if option_len:
+			opts = data[10:]
+			#self.hexdump(opts)
+			while opts:
+				key,value,opts = self._key_values('parameter',opts)
+				# Paramaters must only be sent once.
+				if key == Parameter.AUTHENTIFICATION_INFORMATION:
+					raise SendNotification(2,5)
+				elif key == Parameter.CAPABILITIES:
+					k,v,r = self._key_values('capability',value)
+					if r:
+						raise SendNotification(2,0,"bad length for OPEN %s (size mismatch)" % 'capability')
+					if k not in capabilities:
+						capabilities[k] = []
+					if k == 1:
+						afi = AFI(unpack('!H',value[2:4])[0])
+						safi = SAFI(unpack('!H',value[4:6])[0])
+						capabilities[k].append((afi,safi))
+					else:
+						if value[2:]:
+							capabilities[k].append([ord(_) for _ in value[2:]])
+				else:
+					raise SendNotification(2,0,'unknow OPEN parameter %s' % hex(key))
+		o = Open(version,asn,router_id,capabilities,hold_time)
 		return o
 
 	def absorb_message (self):
@@ -136,7 +168,8 @@ class Protocol (Display):
 
 		if msg not in [KeepAlive.TYPE,Update.TYPE,Notification.TYPE]:
 			raise SendNotification(1,3,chr(msg))
-		self.logIf(msg == Update.TYPE,"UPDATE RECV: %s " % [hex(ord(c)) for c in data])
+
+		self.logIf(self.trace and msg == Update.TYPE,"UPDATE RECV: %s " % [hex(ord(c)) for c in data])
 
 		if msg == Notification.TYPE:
 			# The other side wants to close
@@ -154,7 +187,7 @@ class Protocol (Display):
 		
 		if msg not in [KeepAlive.TYPE,Update.TYPE,Notification.TYPE]:
 			raise SendNotification(1,3,chr(msg))
-		self.logIf(msg == Update.TYPE,"UPDATE RECV: %s " % [hex(ord(c)) for c in data])
+		self.logIf(self.trace and msg == Update.TYPE,"UPDATE RECV: %s " % [hex(ord(c)) for c in data])
 
 		if msg == Notification.TYPE:
 			raise Notification(ord(data[0]),ord(data[1]))
@@ -188,6 +221,7 @@ class Protocol (Display):
 			raise SendNotification(3,1)
 		if 2 + lw + 2+ la + len(nlri) != length:
 			raise SendNotification(3,1)
+
 		# The RFC check ...
 		#if lw + la + 23 > length:
 		#	raise SendNotification(3,1)
@@ -200,12 +234,13 @@ class Protocol (Display):
 
 		while withdrawn:
 			route, withdrawn = self.read_bgp(withdrawn)
-			routes.append(('-',route))
+			if route: routes.append(('-',route))
 
 		new = []
 		while nlri:
 			route,nlri = self.read_bgp(nlri)
-			new.append(route)
+			if route: new.append(route)
+			self.log(True,'ROUTE IS %s' % route)
 
 		self.set_path_attribute(new,announce)
 		
@@ -218,8 +253,10 @@ class Protocol (Display):
 		if not data: return
 		
 		# We do not care if the attribute are transitive or not as we do not redistribute
-		flag = ord(data[0])
-		code = ord(data[1])
+		flag = Flag(ord(data[0]))
+		code = Attribute(ord(data[1]))
+		
+		print "CODE IS ", code, int(code)
 		
 		if flag & Flag.EXTENDED_LENGTH == Flag.EXTENDED_LENGTH:
 			length = unpack('!H',data[2:4])[0]
@@ -270,36 +307,96 @@ class Protocol (Display):
 			# content is 6 bytes
 			self.set_path_attribute(routes,data[offset+length:])
 			return
+		if code == Attribute.MP_REACH_NLRI:
+			if routes != []:
+				# XXX: This should not happen and I am not sure what should be done.
+				return
+
+			afi = AFI(unpack('!H',data[offset:offset+2])[0])
+			offset += 2
+			
+			if afi in (AFI.ipv4,AFI.ipv6):
+				# XXX: we only care about decoding IPv4/IPv6 unicast routes
+				return
+
+			safi = SAFI(ord(data[offset]))
+			offset += 1
+
+			if safi != SAFI.unicast:
+				# XXX: we only care about decoding IPv4/IPv6 unicast routes
+				return 
+
+			print "afi", afi
+			print "safi", safi
+			
+			len_nh = ord(data[offset])
+			offset += 1
+
+			print "len nh", len_nh
+
+			next_hop = data[offset:offset+len_nh]
+			offset += len_nh
+
+			print "nh", [hex(ord(c)) for c in next_hop]
+			
+			nb_snpa = ord(data[offset])
+			offset += 1
+			print "nb snpa", nb_snpa
+			
+			snpas = []
+			for i in range(nb_snpa):
+				len_snpa = ord(offset)
+				offset += 1
+				snpas.append(data[offset:offset+len_snpa])
+				offset += len_snpa
+			print "snpas", snpas
+
+			nlri = data[offset:]
+			while True:
+				route,nlri = self.read_bgp(nlri)
+				self.logIf(True,'MP_REACH_NLRI route is %s' % str(route))
+				if route: routes.append(route)
+				if not nlri: break
+			return
+		if code == Attribute.MP_UNREACH_NLRI:
+			return
 		return
 	
-	def read_bgp (self,data):
+	def read_bgp (self,data,afi=AFI.ipv4):
 		mask = ord(data[0])
-		if   mask > 24: parsed = data[1:5]          , data[5:]
-		elif mask > 16: parsed = data[1:4]+'\0'     , data[4:]
-		elif mask >  8: parsed = data[1:3]+'\0\0'   , data[3:]
-		elif mask >  0: parsed = data[1:2]+'\0\0\0' , data[2:]
-		elif mask == 0: parsed = '\0\0\0\0'         , data[1:]
-		ip = socket.inet_ntoa(parsed[0])
-		return Route(ip,mask),parsed[1]
-	
+		size = size = int(math.ceil(float(mask)/8))
+		
+		if afi == AFI.ipv4:
+			fill = 4
+			parsed  = data[1:size+1] + '\0'* (fill-size), data[size+fill+1:]
+			ip = socket.inet_ntoa(parsed[0])
+			return Route(ip,mask),parsed[1]
+			
+		if afi == AFI.ipv6:
+			fill = 16
+			parsed  = data[1:size+1] + '\0'* (fill-size), data[size+fill+1:]
+			ip = socket.inet_ptoa(parsed[0])
+			return Route(ip,mask),parsed[1]
+		
+		return None,None
 	
 	# Sending message to peer .................................................
 	
 	
 	def new_open (self):
-		o = Open(self.neighbor.local_as,self.neighbor.router_id,self.neighbor.hold_time)
+		o = Open(4,self.neighbor.local_as,self.neighbor.router_id,Capabilities().default(),self.neighbor.hold_time)
 		self.network.write(o.message())
 		return o
 	
 	def new_announce (self):
 		m = self._update.announce(self.neighbor.local_as,self.neighbor.peer_as)
-		self.log("UPDATE (announce) SENT: %s" % [hex(ord(c)) for c in m][19:])
+		self.logIf(self.trace,"UPDATE (announce) SENT: %s" % [hex(ord(c)) for c in m][19:])
 		self.network.write(m)
 		return self._update if m else None
 	
 	def new_update (self):
 		m = self._update.update(self.neighbor.local_as,self.neighbor.peer_as)
-		self.log("UPDATE (update)   SENT: %s" % [hex(ord(c)) for c in m][19:])
+		self.logIf(self.trace,"UPDATE (update)   SENT: %s" % [hex(ord(c)) for c in m][19:])
 		if m: self.network.write(m)
 		return self._update if m else None
 	

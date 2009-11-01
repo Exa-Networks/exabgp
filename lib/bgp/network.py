@@ -6,6 +6,8 @@ network.py
 Created by Thomas Mangin on 2009-09-06.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
+import sys
+import traceback
 
 import time
 import socket
@@ -48,8 +50,9 @@ class Network (object):
 			self.last_read = time.time()
 			return r
 		except socket.error,e:
-			raise
 			self.close()
+			# XXX: use Display for the rendering
+			traceback.print_exc(file=sys.stdout)
 			raise Failure('problem attempting to read data from the network:  %s ' % str(e))
 
 	def write (self,data):
@@ -59,6 +62,8 @@ class Network (object):
 			return r
 		except socket.error, e:
 			self.close()
+			# XXX: use Display for the rendering
+			traceback.print_exc(file=sys.stdout)
 			raise Failure('problem attempting to write data to the network: %s' % str(e))
 
 	def close (self):

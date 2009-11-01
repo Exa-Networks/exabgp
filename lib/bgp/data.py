@@ -9,12 +9,55 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 HOLD_TIME=180
 
+import math
 import time
 import socket
 from struct import pack,unpack
 	# !L : Network Long  (4 bytes)
 	# !H : Network Short (2 bytes)
 
+# http://www.iana.org/assignments/address-family-numbers/
+class AFI (int):
+	ipv4 = 1
+	ipv6 = 2
+	
+	def __str__ (self):
+		if self == 1: return "IPv4"
+		if self == 2: return "IPv6"
+		return "unknown afi"
+		
+# http://www.iana.org/assignments/safi-namespace
+class SAFI (int):
+	unicast = 1					# [RFC4760]
+	multicast = 2				# [RFC4760]
+	nlri_mpls = 4				# [RFC3107]
+	mcast_vpn = 5				# [draft-ietf-l3vpn-2547bis-mcast-bgp] (TEMPORARY - Expires 2008-06-19)
+	pseudowire = 6				# [draft-ietf-pwe3-dynamic-ms-pw] (TEMPORARY - Expires 2008-08-23) Dynamic Placement of Multi-Segment Pseudowires
+	encapsulation = 7			# [RFC5512]
+
+	tunel = 64					# [Nalawade]
+	vpls = 65					# [RFC4761]
+	bgp_mdt = 66				# [Nalawade]
+	bgp_4over6 = 67				# [Cui]
+	bgp_6over4 = 67				# [Cui]
+	vpn_adi = 69				# [RFC-ietf-l1vpn-bgp-auto-discovery-05.txt]
+
+	mpls_vpn = 128				# [RFC4364]
+	mcast_bgp_mpls_vpn = 129	# [RFC2547]
+	rt = 132					# [RFC4684]
+	flow_ipv4 = 133				# [RFC5575]
+	flow_vpnv4 = 134			# [RFC5575]
+
+	vpn_ad = 140				# [draft-ietf-l3vpn-bgpvpn-auto]
+
+	private = [_ for _ in range(241,254)]	# [RFC4760]
+	unassigned = [_ for _ in range(8,64)] + [_ for _ in range(70,128)]
+	reverved = [0,3] + [130,131] + [_ for _ in range(135,140)] + [_ for _ in range(141,241)] + [255,]	# [RFC4760]
+
+	def __str__ (self):
+		if self == 1: return "unicast"
+		if self == 2: return "multicast"
+		return "unknown safi"
 
 class IP (long):
 	# Taken from perl Net::IPv6Addr
@@ -50,7 +93,7 @@ class IP (long):
 		try:
 			cls.packed = socket.inet_aton(value)
 			numeric = unpack('>L',cls.packed)[0]
-			string = value
+			string = value.lower()
 			v4 = True
 		except socket.error:
 			pass
@@ -64,7 +107,7 @@ class IP (long):
 				cls.packed = socket.inet_pton(socket.AF_INET6, value)
 				a,b,c,d = unpack('>LLLL',cls.packed)
 				numeric = (a << 96) + (b << 64) + (c << 32) + d
-				string = value
+				string = value.lower()
 			except socket.error:
 				raise ValueError('"%s" is an invalid address' % str(value))
 			except TypeError:
@@ -80,10 +123,6 @@ class IP (long):
 		else:
 			new.version = 6
 			new.length = 128
-		return new
-
-	def new_v6 (cls,value):
-		new.length = 32
 		return new
 
 	def pack (self):
@@ -136,11 +175,8 @@ class Prefix (tuple):
 		return new
 	
 	def bgp (self):
-		if self.mask > 24: return "%s%s" % (self.mask.pack(),self.ip.pack())
-		if self.mask > 16: return "%s%s" % (self.mask.pack(),self.ip.pack()[:3])
-		if self.mask >  8: return "%s%s" % (self.mask.pack(),self.ip.pack()[:2])
-		if self.mask >  0: return "%s%s" % (self.mask.pack(),self.ip.pack()[:1])
-		return '\0'
+		size = int(math.ceil(float(self.mask)/8))
+		return "%s%s" % (self.mask.pack(),self.ip.pack()[:size])
 
 	def __str__ (self):
 		return '%s/%d' % (self.ip,self.mask)
@@ -261,6 +297,7 @@ class ASPath (int):
 		return 'INVALID'
 
 class Attribute (int):
+	# RFC 4271
 	ORIGIN = 1
 	AS_PATH = 2
 	NEXT_HOP = 3
@@ -269,6 +306,9 @@ class Attribute (int):
 	ATOMIC_AGGREGATE = 6
 	AGGREGATOR = 7
 	COMMUNITY = 8
+	# RFC 2858
+	MP_REACH_NLRI = 14
+	MP_UNREACH_NLRI = 15
 
 	def __str__ (self):
 		if self ==  1: return "ORIGIN"
@@ -279,8 +319,43 @@ class Attribute (int):
 		if self ==  6: return "ATOMIC_AGGREGATE"
 		if self ==  7: return "AGGREGATOR"
 		if self ==  8: return "COMMUNITY"
+		if self == 14: return "MP_REACH_NLRI"
+		if self == 15: return "MP_UNREACH_NLRI"
 		return 'UNKNOWN'
 
+class Parameter (int):
+	AUTHENTIFICATION_INFORMATION = 1 # Depreciated
+	CAPABILITIES = 2
+
+	def __str__ (self):
+		if self ==   1: return "AUTHENTIFICATION INFORMATION"
+		if self ==   2: return "OPTIONAL"
+		return 'UNKNOWN'
+
+# RFC 5492
+class Capabilities (dict):
+	def __str__ (self):
+		r = []
+		for key in self.keys():
+			if key == 1:
+				r += ['Multiprotocol Reachable NLRI for ' + ' '.join(["%s %s" % (str(afi),str(safi)) for (afi,safi) in self[key]])]
+			else: r+= ['unknown capability %d' % key]
+		return ', '.join(r)
+
+	def default (self):
+		self[1] = ((AFI(AFI.ipv4),SAFI(SAFI.unicast)),(AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+		return self
+
+	def pack (self):
+		rs = []
+		for k,vs in self.iteritems():
+			for v in vs:
+				if k == 1:
+					d = pack('!H',v[0]) + pack('!H',v[1])
+					rs.append("%s%s%s" % (chr(k),chr(len(d)),d))
+				else:
+					rs.append("%s%s%s" % (chr(k),chr(len(v)),v))
+		return "".join(["%s%s%s" % (chr(2),chr(len(r)),r) for r in rs])
 
 class Route (Prefix):
 	def __new__ (cls,ip,slash,next_hop=''):

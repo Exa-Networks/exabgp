@@ -28,3 +28,6 @@ class Display (object):
 	
 	def logIf (self,test,string):
 		if test: self.log(string)
+		
+	def hexdump (self,value):
+		print [(hex(ord(_))) for _ in value]

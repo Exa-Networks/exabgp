@@ -51,17 +51,18 @@ class NOP (Message):
 class Open (Message):
 	TYPE = chr(1)
 
-	def __init__ (self,asn,router_id,hold_time=HOLD_TIME,version=4):
+	def __init__ (self,version,asn,router_id,capabilities,hold_time=HOLD_TIME):
 		self.version = Version(version)
 		self.asn = ASN(asn)
 		self.hold_time = HoldTime(hold_time)
 		self.router_id = RouterID(router_id)
+		self.capabilities = capabilities
 
 	def message (self):
 		return self._message("%s%s%s%s%s" % (self.version.pack(),self.asn.pack(),self.hold_time.pack(),self.router_id.pack(),chr(0)))
 
 	def __str__ (self):
-		return "OPEN version=%d asn=%d hold_time=%s router_id=%s" % (self.version, self.asn, self.hold_time, self.router_id)
+		return "OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]" % (self.version, self.asn, self.hold_time, self.router_id,self.capabilities)
 
 class Update (Message):
 	TYPE = chr(2)
@@ -144,6 +145,8 @@ class Notification (Message,Failure):
 			4 : "Unsupported Optional Parameter.",
 			5 : "Authentication Notification (Deprecated).",
 			6 : "Unacceptable Hold Time.",
+			# RFC 5492
+			7 : "Unsupported Capability",
 		},
 		3 : {
 			0 : "Unspecific.",

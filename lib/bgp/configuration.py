@@ -242,8 +242,6 @@ class Configuration (object):
 		route = self._scope[-1]['routes'][-1]
 		next_hop = self._scope[-1]['routes'][-1].next_hop
 		
-		print route.ip
-		print next_hop
 		if route.ip == next_hop:
 			self._error = 'syntax: route IP/MASK { next-hop IP; }'
 			return False

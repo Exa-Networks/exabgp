@@ -10,7 +10,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 import unittest
 
 from bgp.table import Table
-from bgp.data import IP,ASN,Route,Neighbor
+from bgp.data import Capabilities,IP,ASN,Route,Neighbor
 from bgp.message import Message, Open, Update, Notification, KeepAlive
 from bgp.protocol import Protocol
 
@@ -35,7 +35,7 @@ class TestProtocol (unittest.TestCase):
 		self.neighbor.local_address = IP('5.6.7.8')
 	
 	def test_1_selfparse_open (self):
-		ds = Open(65000,'1.2.3.4',30,4)
+		ds = Open(4,65000,'1.2.3.4',Capabilities().default(),30)
 		
 		txt = ds.message()
 		network = Network(txt)
@@ -109,7 +109,7 @@ class TestProtocol (unittest.TestCase):
 
 	def test_6_holdtime (self):
 		class MyPeer(Network):
-			_data = StringIO(Open(65000,'1.2.3.4',90,4).message())
+			_data = StringIO(Open(4,65000,'1.2.3.4',Capabilities().default(),90).message())
 			def read (self,l):
 				return self._data.read(l)
 		

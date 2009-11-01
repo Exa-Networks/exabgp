@@ -25,7 +25,7 @@ class Peer (Display):
 		self.neighbor = neighbor
 		self.running = False
 		self.restart = True
-		self.bgp = Protocol(self.neighbor)
+		self.bgp = None
 		self._loop = None
 		
 
@@ -51,6 +51,7 @@ class Peer (Display):
 	
 	def _run (self):
 		try:
+			self.bgp = Protocol(self.neighbor)
 			self.bgp.connect()
 		
 			o = self.bgp.new_open()
@@ -90,7 +91,7 @@ class Peer (Display):
 			# User closing the connection
 			raise SendNotification(6,0)
 		except SendNotification,e:
-			self.log('Sending Notification (%d,%d) to peer %s' % (e.code,e.subcode,str(e)))
+			self.log('Sending Notification (%d,%d) [%s]  %s' % (e.code,e.subcode,str(e),e.data))
 			try:
 				self.bgp.new_notification(e)
 				self.bgp.close()
@@ -103,5 +104,10 @@ class Peer (Display):
 			return
 		except Failure, e:
 			self.log(str(e))
+			self.bgp.close()
 			return
-	
+		except Exception, e:
+			self.log('UNHANDLED EXCEPTION')
+			self.log(str(e))
+			self.bgp.close()
+			raise
