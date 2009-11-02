@@ -265,18 +265,30 @@ class HoldTime (int):
 		return 2
 
 class Flag (int):
-	EXTENDED_LENGTH = 16
-	PARTIAL = 32
-	TRANSITIVE = 64
-	OPTIONAL = 128
+	EXTENDED_LENGTH = 0x10 # 16
+	PARTIAL = 0x20 # 32
+	TRANSITIVE = 0x40 # 64
+	OPTIONAL = 0x80 # 128
 
 	def __str__ (self):
-		if self ==  16: return "EXTENDED_LENGTH"
-		if self ==  32: return "PARTIAL"
-		if self ==  64: return "TRANSITIVE"
-		if self == 128: return "OPTIONAL"
-		return 'UNKNOWN'
-
+		r = []
+		v = int(self)
+		if v & 0x10:
+			r.append("EXTENDED_LENGTH")
+			v -= 0x10
+		if v & 0x20:
+			r.append("PARTIAL")
+			v -= 0x20
+		if v & 0x40:
+			r.append("TRANSITIVE")
+			v -= 0x40
+		if v & 0x80:
+			r.append("OPTIONAL")
+			v -= 0x80
+		if v:
+			r.append("UNKNOWN %s" % hex(v))
+		return " ".join(r)
+		
 class Origin (int):
 	IGP = 0
 	EGP = 1

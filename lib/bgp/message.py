@@ -86,28 +86,32 @@ class Update (Message):
 		return ''.join(announce)
 
 	def update (self,local_asn,remote_asn):
-		announce = []
-		withdraw = {}
+		announce4 = []
+		withdraw4 = {}
 		# table.changed always returns routes to remove before routes to add
 		for action,route in self.table.changed(self.last):
 			if action == '-':
-				prefix = str(route)
-				withdraw[prefix] = route.bgp()
+				if route.version == 4:
+					prefix = str(route)
+					withdraw4[prefix] = route.bgp()
 			if action == '+':
-				prefix = str(route)
-				if withdraw.has_key(prefix):
-					del withdraw[prefix]
-				w = self._prefix(route.bgp())
-				a = self._prefix(route.pack(local_asn,remote_asn))
-				announce.append(self._message(w + a))
+				if route.version == 4:
+					prefix = str(route)
+					if withdraw4.has_key(prefix):
+						del withdraw4[prefix]
+					w = self._prefix(route.bgp())
+					a = self._prefix(route.pack(local_asn,remote_asn))
+					announce4.append(self._message(w + a))
+				if route.version == 6:
+					pass
 			if action == '':
 				self.last = route
 			
-		if len(withdraw.keys()) == 0 and len(announce) == 0:
+		if len(withdraw4.keys()) == 0 and len(announce4) == 0:
 			return ''
 		
-		unfeasible = self._message(self._prefix(''.join([withdraw[prefix] for prefix in withdraw.keys()])) + self._prefix(''))
-		return unfeasible + ''.join(announce)
+		unfeasible = self._message(self._prefix(''.join([withdraw4[prefix] for prefix in withdraw4.keys()])) + self._prefix(''))
+		return unfeasible + ''.join(announce4)
 	
 	def __str__ (self):
 		return "UPDATE"

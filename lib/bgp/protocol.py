@@ -212,6 +212,9 @@ class Protocol (Display):
 			raise SendNotification(3,0)
 	
 	def _read_update (self,length,data):
+#		self.log('- UPDATE -----------------')
+#		self.hexdump(data)
+#		self.log('--------------------------')
 		# withdrawn
 		lw,withdrawn,data = self._defix(data)
 		if len(withdrawn) != lw:
