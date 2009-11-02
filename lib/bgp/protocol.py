@@ -149,7 +149,7 @@ class Protocol (Display):
 						capabilities[k] = []
 					if k == 1:
 						afi = AFI(unpack('!H',value[2:4])[0])
-						safi = SAFI(unpack('!H',value[4:6])[0])
+						safi = SAFI(ord(value[5]))
 						capabilities[k].append((afi,safi))
 					else:
 						if value[2:]:
@@ -233,16 +233,14 @@ class Protocol (Display):
 		remove = []
 		while withdrawn:
 			route, withdrawn = self.read_bgp(withdrawn)
-			if route:
-				remove.append(route)
-				self.logIf(True,'removing route %s' % route)
+			remove.append(route)
+			self.logIf(True,'removing route %s' % str(route))
 
 		add = []
 		while nlri:
 			route,nlri = self.read_bgp(nlri)
-			if route:
-				add.append(route)
-				self.logIf(True,'adding route %s' % route)
+			add.append(route)
+			self.logIf(True,'adding route %s' % str(route))
 
 		self.set_path_attribute(add,remove,announce)
 
@@ -309,52 +307,63 @@ class Protocol (Display):
 			# content is 6 bytes
 			self.set_path_attribute(add,remove,data[offset+length:])
 			return
+		if code == Attribute.MP_UNREACH_NLRI:
+			afi = AFI(unpack('!H',data[offset:offset+2])[0])
+			offset += 2
+			safi = SAFI(ord(data[offset]))
+			offset += 1
+			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
+				log('we only understand IPv4/IPv6 and should never have received this route (%s %s)' % (afi,safi))
+				return
+			nlri = data[offset:]
+			while nlri:
+				route,nlri = read_bgp(nlri,afi)
+				remove.append(route)
+				self.logIf(True,'removing MP route %s' % str(route))
+			return
 		if code == Attribute.MP_REACH_NLRI:
 			afi = AFI(unpack('!H',data[offset:offset+2])[0])
 			offset += 2
 			safi = SAFI(ord(data[offset]))
 			offset += 1
-			
 			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
 				log('we only understand IPv4/IPv6 and should never have received this route (%s %s)' % (afi,safi))
 				return
-
 			len_nh = ord(data[offset])
 			offset += 1
-			
 			if afi == AFI.ipv4 and not len_nh != 4:
+				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
 				log('bad IPv4 next-hop length (%d)' % len_nh)
 				return
 			if afi == AFI.ipv6 and not len_nh in (16,32):
+				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
 				log('bad IPv6 next-hop length (%d)' % len_nh)
 				return
-			
+			nh = data[offset:offset+len_nh]
 			if len_nh == 32:
 				# we have a link-local address in the next-hop we ideally need to ignore
-				pass
-
-			nh = socket.inet_ntop(socket.AF_INET6 if len_nh >= 16 else socket.AF_INET,data[offset:offset+len_nh])
+				if nh[0] == 0xfe: nh = nh[16:]
+				elif nh[16] == 0xfe: nh = nh[:16]
+				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
+				else: return
+			nh = socket.inet_ntop(socket.AF_INET6 if len_nh >= 16 else socket.AF_INET,nh)
 			offset += len_nh
-
 			nb_snpa = ord(data[offset])
 			offset += 1
-			
 			snpas = []
 			for i in range(nb_snpa):
 				len_snpa = ord(offset)
 				offset += 1
 				snpas.append(data[offset:offset+len_snpa])
 				offset += len_snpa
-
 			nlri = data[offset:]
-			while True:
+			while nlri:
 				#self.hexdump(nlri)
 				route,nlri = self.read_bgp(nlri,afi)
 				route.next_hop = nh
-				if route: add.append(route)
-				if not nlri: break
-			return
-		if code == Attribute.MP_UNREACH_NLRI:
+				add.append(route)
+				print route
+				self.logIf(True,'adding MP route %s' % str(route))
 			return
 		return
 	
