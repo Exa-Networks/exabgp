@@ -24,7 +24,14 @@ class Network (object):
 		
 		try:
 			self._io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			self._io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+			try:
+				self._io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+			except AttributeError:
+				pass
+			try:
+				self._io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+			except AttributeError:
+				pass
 			self._io.settimeout(1)
 			self._io.bind((str(local),-1))
 		except socket.error,e:
