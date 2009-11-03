@@ -97,17 +97,10 @@ class Update (Message):
 					withdraw4[prefix] = route.bgp()
 					continue
 				if action == '+':
-					print "---------------"
-					print type(route)
-					print route
-					print Prefix.__str__(route)
-					print [hex(ord(_)) for _ in Prefix.bgp(route)]
-					print [hex(ord(_)) for _ in route.bgp()]
-					print '**********************'
 					prefix = str(route)
 					if withdraw4.has_key(prefix):
 						del withdraw4[prefix]
-					announce4.append(self._message(self._prefix(route.bgp()) + self._prefix(route.pack(local_asn,remote_asn))+route.bgp()))
+					announce4.append(self._message(self._prefix(route.bgp()) + self._prefix(route.pack(local_asn,remote_asn)) + route.bgp()))
 					continue
 			
 		if len(withdraw4.keys()) or len(announce4):

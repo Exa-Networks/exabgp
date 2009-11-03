@@ -29,7 +29,7 @@ class AFI (int):
 		return "unknown afi"
 
 	def pack (self):
-		return pack('!H',self)[0]
+		return pack('!H',self)
 
 # http://www.iana.org/assignments/safi-namespace
 class SAFI (int):
@@ -413,7 +413,9 @@ class Route (Prefix):
 				attr = AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + Prefix.pack(self)
 				message += self._attribute(Flag.TRANSITIVE,Attribute.MP_UNREACH_NLRI,attr)
 			if mp_action == '+':
-				attr = AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + Prefix.bgp(self) + self.next_hop.pack()
+				prefix = Prefix.bgp(self)
+				next_hop = self.next_hop.pack()
+				attr = AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + chr(len(next_hop)) + next_hop + chr(0) + prefix
 				message += self._attribute(Flag.TRANSITIVE,Attribute.MP_REACH_NLRI,attr)
 		return message
 
