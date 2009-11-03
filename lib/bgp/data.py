@@ -18,12 +18,12 @@ from struct import pack,unpack
 
 # http://www.iana.org/assignments/address-family-numbers/
 class AFI (int):
-	ipv4 = 1
-	ipv6 = 2
+	ipv4 = 0x01
+	ipv6 = 0x02
 	
 	def __str__ (self):
-		if self == 1: return "IPv4"
-		if self == 2: return "IPv6"
+		if self == 0x01: return "IPv4"
+		if self == 0x02: return "IPv6"
 		return "unknown afi"
 		
 # http://www.iana.org/assignments/safi-namespace
@@ -266,9 +266,9 @@ class HoldTime (int):
 
 class Flag (int):
 	EXTENDED_LENGTH = 0x10 # 16
-	PARTIAL = 0x20 # 32
-	TRANSITIVE = 0x40 # 64
-	OPTIONAL = 0x80 # 128
+	PARTIAL         = 0x20 # 32
+	TRANSITIVE      = 0x40 # 64
+	OPTIONAL        = 0x80 # 128
 
 	def __str__ (self):
 		r = []
@@ -290,64 +290,64 @@ class Flag (int):
 		return " ".join(r)
 		
 class Origin (int):
-	IGP = 0
-	EGP = 1
-	INCOMPLETE = 2
+	IGP        = 0x00
+	EGP        = 0x01
+	INCOMPLETE = 0x02
 
 	def __str__ (self):
-		if self == 0: return 'IGP'
-		if self == 1: return 'EGP'
-		if self == 2: return 'INCOMPLETE'
+		if self == 0x00: return 'IGP'
+		if self == 0x01: return 'EGP'
+		if self == 0x02: return 'INCOMPLETE'
 		return 'INVALID'
 
 class ASPath (int):
-	AS_SET = 1
-	AS_SEQUENCE = 2
+	AS_SET      = 0x01
+	AS_SEQUENCE = 0x02
 
 	def __str__ (self):
-		if self == 1: return 'AS_SET'
-		if self == 2: return 'AS_SEQUENCE'
+		if self == 0x01: return 'AS_SET'
+		if self == 0x02: return 'AS_SEQUENCE'
 		return 'INVALID'
 
 class Attribute (int):
 	# RFC 4271
-	ORIGIN = 1
-	AS_PATH = 2
-	NEXT_HOP = 3
-	MULTI_EXIT_DISC = 4
-	LOCAL_PREFERENCE = 5
-	ATOMIC_AGGREGATE = 6
-	AGGREGATOR = 7
-	COMMUNITY = 8
+	ORIGIN           = 0x01
+	AS_PATH          = 0x02
+	NEXT_HOP         = 0x03
+	MULTI_EXIT_DISC  = 0x04
+	LOCAL_PREFERENCE = 0x05
+	ATOMIC_AGGREGATE = 0x06
+	AGGREGATOR       = 0x07
+	COMMUNITY        = 0x08
 	# RFC 4760
-	MP_REACH_NLRI = 14
-	MP_UNREACH_NLRI = 15
+	MP_REACH_NLRI    = 0x0e # 14
+	MP_UNREACH_NLRI  = 0x0f # 15
 
 	def __str__ (self):
-		if self ==  1: return "ORIGIN"
-		if self ==  2: return "AS_PATH"
-		if self ==  3: return "NEXT_HOP"
-		if self ==  4: return "MULTI_EXIT_DISC"
-		if self ==  5: return "LOCAL_PREFERENCE"
-		if self ==  6: return "ATOMIC_AGGREGATE"
-		if self ==  7: return "AGGREGATOR"
-		if self ==  8: return "COMMUNITY"
-		if self == 14: return "MP_REACH_NLRI"
-		if self == 15: return "MP_UNREACH_NLRI"
+		if self == 0x01: return "ORIGIN"
+		if self == 0x02: return "AS_PATH"
+		if self == 0x03: return "NEXT_HOP"
+		if self == 0x04: return "MULTI_EXIT_DISC"
+		if self == 0x05: return "LOCAL_PREFERENCE"
+		if self == 0x06: return "ATOMIC_AGGREGATE"
+		if self == 0x07: return "AGGREGATOR"
+		if self == 0x08: return "COMMUNITY"
+		if self == 0x0e: return "MP_REACH_NLRI"
+		if self == 0x0f: return "MP_UNREACH_NLRI"
 		return 'UNKNOWN'
 
 class Parameter (int):
-	AUTHENTIFICATION_INFORMATION = 1 # Depreciated
-	CAPABILITIES = 2
+	AUTHENTIFICATION_INFORMATION = 0x01 # Depreciated
+	CAPABILITIES                 = 0x02
 
 	def __str__ (self):
-		if self ==   1: return "AUTHENTIFICATION INFORMATION"
-		if self ==   2: return "OPTIONAL"
+		if self == 0x01: return "AUTHENTIFICATION INFORMATION"
+		if self == 0x02: return "OPTIONAL"
 		return 'UNKNOWN'
 
 # RFC 5492
 class Capabilities (dict):
-	MULTIPROTOCOL_EXTENSIONS = 1
+	MULTIPROTOCOL_EXTENSIONS = 0x01
 	
 	def __str__ (self):
 		r = []
