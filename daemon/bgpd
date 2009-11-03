@@ -7,6 +7,7 @@ Created by Thomas Mangin on 2009-08-30.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
+import os
 import sys
 
 main = int(sys.version[0])
@@ -15,13 +16,13 @@ secondary = int(sys.version[2])
 if main != 2 or secondary < 6:
 	sys.exit('This program requires python 2.6 or higher')
 
-from bgp.configuration import Configuration
-from bgp.supervisor import Supervisor
-
 if __name__ == '__main__':
 	if len(sys.argv) < 2:
 		sys.exit('usage bgpd <configuration file>')
 	conf = sys.argv[1]
+
+	from bgp.configuration import Configuration
+	from bgp.supervisor import Supervisor
 	
 	configuration = Configuration(conf)
 	if not configuration.reload():
