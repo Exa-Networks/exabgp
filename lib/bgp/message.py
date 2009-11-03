@@ -11,29 +11,29 @@ from data import *
 
 # We do not implement the RFC State Machine so .. we do not care :D
 class State (object):
-	IDLE = 1
-	CONNECT = 2
-	ACTIVE = 3
-	OPENSENT = 4
-	OPENCONFIRM = 5
-	ESTABLISHED = 6
+	IDLE        = 0x01
+	CONNECT     = 0x02
+	ACTIVE      = 0x03
+	OPENSENT    = 0x04
+	OPENCONFIRM = 0x05
+	ESTABLISHED = 0x06
 
 
 class Message (object):
-	TYPE = 0
+	TYPE = 0 # Should be None ?
 	
 	MARKER = chr(0xff)*16
 	
 	class Type:
-		OPEN = 1,
-		UPDATE = 2,
-		NOTIFICATION = 4,
-		KEEPALIVE = 8,
-		ROUTE_REFRESH = 16,
-		LIST = 32,
-		HEADER = 64,
-		GENERAL = 128,
-		#LOCALRIB = 256,
+		OPEN          = 0x01, #   1
+		UPDATE        = 0x02, #   2
+		NOTIFICATION  = 0x04, #   4
+		KEEPALIVE     = 0x08, #   8
+		ROUTE_REFRESH = 0x10, #  16
+		LIST          = 0x20, #  32
+		HEADER        = 0x40, #  64
+		GENERAL       = 0x80, # 128
+		#LOCALRIB    = 0x100  # 256
 	
 	# XXX: the name is HORRIBLE, fix this !!
 	def _prefix (self,data):
@@ -46,10 +46,10 @@ class Message (object):
 
 # This message is not part of the RFC but very practical to return that no data is waiting on the socket
 class NOP (Message):
-	TYPE = chr(0)
+	TYPE = chr(0x00)
 
 class Open (Message):
-	TYPE = chr(1)
+	TYPE = chr(0x01)
 
 	def __init__ (self,version,asn,router_id,capabilities,hold_time=HOLD_TIME):
 		self.version = Version(version)
@@ -65,7 +65,7 @@ class Open (Message):
 		return "OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]" % (self.version, self.asn, self.hold_time, self.router_id,self.capabilities)
 
 class Update (Message):
-	TYPE = chr(2)
+	TYPE = chr(0x02)
 
 	def __init__ (self,table):
 		self.table = table
@@ -122,7 +122,7 @@ class Failure (Exception):
 # A Notification received from our peer.
 # RFC 1771 Section 4.5 - but really I should refer to RFC 4271 Section 4.5 :)
 class Notification (Message,Failure):
-	TYPE = chr(3)
+	TYPE = chr(0x03)
 	
 	_str_code = [
 		"",
@@ -202,7 +202,7 @@ class SendNotification (Notification):
 		return self._message("%s%s%s" % (chr(self.code),chr(self.subcode),self.data))
 
 class KeepAlive (Message):
-	TYPE = chr(4)
+	TYPE = chr(0x04)
 	
 	def message (self):
 		return self._message()
