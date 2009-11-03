@@ -72,46 +72,54 @@ class Update (Message):
 		self.last = 0
 
 	def announce (self,local_asn,remote_asn):
-		announce = []
+		return self.update(local_asn,remote_asn,False)
+
+	def update (self,local_asn,remote_asn,remove=True):
+		message = ''
+		withdraw4 = {}
+		announce4 = []
+		mp_route6 = []
 		# table.changed always returns routes to remove before routes to add
 		for action,route in self.table.changed(self.last):
-			if action == '+':
-				#w = self._prefix(route.bgp())
-				w = self._prefix('')
-				a = self._prefix(route.pack(local_asn,remote_asn))+route.bgp()
-				announce.append(self._message(w+a))
 			if action == '':
 				self.last = route
-
-		return ''.join(announce)
-
-	def update (self,local_asn,remote_asn):
-		announce4 = []
-		withdraw4 = {}
-		# table.changed always returns routes to remove before routes to add
-		for action,route in self.table.changed(self.last):
-			if action == '-':
-				if route.version == 4:
+				continue
+			if route.ip.version == 6:
+				# XXX: We should keep track of what we have already sent to only remove routes if we have sent them
+				if remove:
+					mp_route6.append(self._message(self._prefix('') + self._prefix(route.pack(local_asn,remote_asn,'-'))))
+				if action == '+':
+					mp_route6.append(self._message(self._prefix('') + self._prefix(route.pack(local_asn,remote_asn,'+'))))
+				continue
+			if route.ip.version == 4:
+				if action == '-' and remove:
 					prefix = str(route)
 					withdraw4[prefix] = route.bgp()
-			if action == '+':
-				if route.version == 4:
+					continue
+				if action == '+':
+					print "---------------"
+					print type(route)
+					print route
+					print Prefix.__str__(route)
+					print [hex(ord(_)) for _ in Prefix.bgp(route)]
+					print [hex(ord(_)) for _ in route.bgp()]
+					print '**********************'
 					prefix = str(route)
 					if withdraw4.has_key(prefix):
 						del withdraw4[prefix]
-					w = self._prefix(route.bgp())
-					a = self._prefix(route.pack(local_asn,remote_asn))
-					announce4.append(self._message(w + a))
-				if route.version == 6:
-					pass
-			if action == '':
-				self.last = route
+					announce4.append(self._message(self._prefix(route.bgp()) + self._prefix(route.pack(local_asn,remote_asn))+route.bgp()))
+					continue
 			
-		if len(withdraw4.keys()) == 0 and len(announce4) == 0:
-			return ''
+		if len(withdraw4.keys()) or len(announce4):
+			# XXX: We should keep track of what we have already sent to only remove routes if we have sent them
+			remove4 = self._message(self._prefix(''.join([withdraw4[prefix] for prefix in withdraw4.keys()])) + self._prefix(''))
+			adding4 = ''.join(announce4)
+			message += remove4 + adding4
 		
-		unfeasible = self._message(self._prefix(''.join([withdraw4[prefix] for prefix in withdraw4.keys()])) + self._prefix(''))
-		return unfeasible + ''.join(announce4)
+		if len(mp_route6):
+			message += ''.join(mp_route6)
+		
+		return message
 	
 	def __str__ (self):
 		return "UPDATE"

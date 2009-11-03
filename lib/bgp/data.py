@@ -16,16 +16,21 @@ from struct import pack,unpack
 	# !L : Network Long  (4 bytes)
 	# !H : Network Short (2 bytes)
 
+CAFE = chr(202) + chr(254)
+
 # http://www.iana.org/assignments/address-family-numbers/
 class AFI (int):
 	ipv4 = 0x01
 	ipv6 = 0x02
-	
+
 	def __str__ (self):
 		if self == 0x01: return "IPv4"
 		if self == 0x02: return "IPv6"
 		return "unknown afi"
-		
+
+	def pack (self):
+		return pack('!H',self)[0]
+
 # http://www.iana.org/assignments/safi-namespace
 class SAFI (int):
 	unicast = 1					# [RFC4760]
@@ -60,74 +65,46 @@ class SAFI (int):
 		if self == 2: return "multicast"
 		return "unknown safi"
 
-class IP (long):
-	# Taken from perl Net::IPv6Addr
+	def pack (self):
+		return chr(self)
 
-	ipv6_patterns = {
-		'preferred' : """\
-			^(?:[a-f0-9]{1,4}:){7}[a-f0-9]{1,4}$
-		""",
-		'compressed' : """\
-			^[a-f0-9]{0,4}::$
-		|	^:(?::[a-f0-9]{1,4}){1,6}$
-		|	^(?:[a-f0-9]{1,4}:){1,6}:$
-		|	^(?:[a-f0-9]{1,4}:)(?::[a-f0-9]{1,4}){1,6}$
-		|	^(?:[a-f0-9]{1,4}:){2}(?::[a-f0-9]{1,4}){1,5}$
-		|	^(?:[a-f0-9]{1,4}:){3}(?::[a-f0-9]{1,4}){1,4}$
-		|	^(?:[a-f0-9]{1,4}:){4}(?::[a-f0-9]{1,4}){1,3}$
-		|	^(?:[a-f0-9]{1,4}:){5}(?::[a-f0-9]{1,4}){1,2}$
-		|	^(?:[a-f0-9]{1,4}:){6}(?::[a-f0-9]{1,4})$
-		""",
-		'ipv4' : """\
-			^(?:0:){5}ffff:(?:\d{1,3}\.){3}\d{1,3}$
-		|	^(?:0:){6}(?:\d{1,3}\.){3}\d{1,3}$
-		""",
-		'ipv4 compressed' : """\
-			^::(?:ffff:)?(?:\d{1,3}\.){3}\d{1,3}$
-		""",
-	}
-
-	ipv4_patterns = '(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])'
-
-	def __new__ (cls,value):
+class IP (object):
+	def __init__ (self,value):
 		v4 = False
 		try:
-			cls.packed = socket.inet_aton(value)
-			numeric = unpack('>L',cls.packed)[0]
-			string = value.lower()
+			pack = socket.inet_pton(socket.AF_INET, str(value))
+			numeric = unpack('>L',pack)[0]
+			string = str(value)
 			v4 = True
 		except socket.error:
 			pass
 		except TypeError:
-		 	numeric = long(value)
-			string = "%d.%d.%d.%d" % (numeric>>24,(numeric>>16)&0xff,(numeric>>8)&0xff,numeric&0xff)
-			v4 = True
-		
+			pass
+
 		if not v4:
 			try:
-				cls.packed = socket.inet_pton(socket.AF_INET6, value)
-				a,b,c,d = unpack('>LLLL',cls.packed)
+				pack = socket.inet_pton(socket.AF_INET6, str(value))
+				a,b,c,d = unpack('>LLLL',pack)
 				numeric = (a << 96) + (b << 64) + (c << 32) + d
-				string = value.lower()
+				string = str(value).lower()
 			except socket.error:
 				raise ValueError('"%s" is an invalid address' % str(value))
 			except TypeError:
-			 	numeric = long(value)
-				string = ":".join([hex(c) in packed])
-		
-		new = long.__new__(cls,numeric)
-		new.string = string
-		new.numeric = value
+				raise ValueError('"%s" is an invalid address' % str(value))
+
+		self.numeric = numeric
+		self._pack = pack
+		self.string = string
+
 		if v4:
-			new.version = 4
-			new.length = 32
+			self.version = 4
+			self.length = 32
 		else:
-			new.version = 6
-			new.length = 128
-		return new
+			self.version = 6
+			self.length = 128
 
 	def pack (self):
-		return self.packed
+		return self._pack
 
 	def __str__ (self):
 		return self.string
@@ -150,37 +127,17 @@ class Mask (int):
 				slash = cls.ipv4_to_slash[mask]
 			except KeyError:
 				raise ValueError('the netmask is invalid %s' % str(mask))
-		
+
 		if not slash in range(0,length+1):
 			return ValueError('the netmask is invalid /%s' % str(slash))
 
 		return int.__new__(cls,slash)
-	
+
 	def pack (self):
 		return chr(self)
-	
+
 	def __len__ (self):
 		return 1
-
-class Prefix (tuple):
-	# format is (version,address,slash)
-	def __new__ (cls,address,mask):
-		ip = IP(address)
-		mask = Mask(mask,ip.length)
-		new =  tuple.__new__(cls,(4,ip,mask))
-
-		new.ip = ip
-		new.mask = mask
-		new.version = 4
-
-		return new
-	
-	def bgp (self):
-		size = int(math.ceil(float(self.mask)/8))
-		return "%s%s" % (self.mask.pack(),self.ip.pack()[:size])
-
-	def __str__ (self):
-		return '%s/%d' % (self.ip,self.mask)
 
 class RouterID (IP):
 	pass
@@ -191,7 +148,7 @@ class Version (int):
 
 class ASN (int):
 	regex = "(?:0[xX][0-9a-fA-F]{1,8}|\d+:\d+|\d+)"
-	
+
 	def __new__ (cls,asn):
 		try:
 			value = int(asn)
@@ -202,7 +159,7 @@ class ASN (int):
 		if value >= (1<<16):
 			raise ValueError('ASN is too big')
 		return int.__new__(cls,value)
-	
+
 	def pack (self):
 		return pack('!H',self)
 
@@ -221,15 +178,15 @@ class Community (long):
 				value = long(data,16)
 			else:
 				value = long(data)
-				
+
 		return long.__new__(cls,value)
-	
+
 	def pack (self):
 		return pack('!L',self)
-	
+
 	def __str__ (self):
 		return "%d:%d" % (self >> 16, self & 0xFFFF)
-	
+
 	def __len__ (self):
 		return 4
 
@@ -241,7 +198,7 @@ class Communities (list):
 
 	def pack (self):
 		return ''.join([community.pack() for community in self])
-		
+
 	def __str__ (self):
 		if len(self) >  1: return '[ %s ]' % ' '.join([str(community) for community in self])
 		if len(self) == 1: return str(self[0])
@@ -250,7 +207,7 @@ class Communities (list):
 class LocalPreference (long):
 	def pack (self):
 		return pack('!L',self)
-	
+
 	def __len__ (self):
 		return 4
 
@@ -288,7 +245,7 @@ class Flag (int):
 		if v:
 			r.append("UNKNOWN %s" % hex(v))
 		return " ".join(r)
-		
+
 class Origin (int):
 	IGP        = 0x00
 	EGP        = 0x01
@@ -299,6 +256,9 @@ class Origin (int):
 		if self == 0x01: return 'EGP'
 		if self == 0x02: return 'INCOMPLETE'
 		return 'INVALID'
+
+	def pack (self):
+		return chr(self)
 
 class ASPath (int):
 	AS_SET      = 0x01
@@ -348,7 +308,7 @@ class Parameter (int):
 # RFC 5492
 class Capabilities (dict):
 	MULTIPROTOCOL_EXTENSIONS = 0x01
-	
+
 	def __str__ (self):
 		r = []
 		for key in self.keys():
@@ -372,33 +332,41 @@ class Capabilities (dict):
 					rs.append("%s%s%s" % (chr(k),chr(len(v)),v))
 		return "".join(["%s%s%s" % (chr(2),chr(len(r)),r) for r in rs])
 
+class Prefix (object):
+	# format is (version,address,slash)
+	def __init__ (self,address,mask):
+		self.ip = IP(address)
+		self.mask = Mask(mask,self.ip.length)
+
+	def bgp (self):
+		size = int(math.ceil(float(self.mask)/8))
+		return "%s%s" % (self.mask.pack(),self.ip.pack()[:size])
+
+	def __str__ (self):
+		return '%s/%d' % (self.ip,self.mask)
+
 class Route (Prefix):
-	def __new__ (cls,ip,slash,next_hop=''):
-		new = Prefix.__new__(cls,ip,slash)
-		new.next_hop = next_hop if next_hop else ip
-		new._local_preference = LocalPreference(100)
-		new.communities = Communities()
-		return new
+	def __init__ (self,ip,slash,next_hop=''):
+		Prefix.__init__(self,ip,slash)
+		self.next_hop = next_hop if next_hop else ip
+		self.local_preference = 100
+		self.communities = Communities()
 
-	@property
-	def next_hop (self):
+	def get_next_hop (self):
 		return self._next_hop
-
-	@next_hop.setter
-	def next_hop (self,ip):
+	def set_next_hop (self,ip):
 		self._next_hop = IP(ip)
+	next_hop = property(get_next_hop,set_next_hop)
 
-	@property
-	def local_preference (self):
+	def get_local_preference (self):
 		return self._local_preference
-
-	@local_preference.setter
-	def local_preference (self,preference):
+	def set_local_preference (self,preference):
 		self._local_preference = LocalPreference(preference)
+	local_preference = property(get_local_preference,set_local_preference)
 
 	def __cmp__ (self,other):
 		return \
-			tuple(self) == tuple(other) and \
+			self.ip == other.ip and \
 			self.mask == other.mask and \
 			self.next_hop == other.next_hop and \
 			self.local_preference == other.local_preference and \
@@ -414,22 +382,39 @@ class Route (Prefix):
 		)
 
 	def _attribute (self,attr_flag,attr_type,value):
-		return "%s%s%s%s" % (chr(attr_flag),chr(attr_type),chr(len(value)),value)
-	
+		if attr_flag & Flag.OPTIONAL and not value:
+			return ''
+		length = len(value)
+		if length > 0xFF:
+			attr_flag &= Flag.EXTENDED_LENGTH
+		if attr_flag & Flag.EXTENDED_LENGTH:
+			len_value = pack('!H',length)[0]
+		else:
+			len_value = chr(length)
+		return "%s%s%s%s" % (chr(attr_flag),chr(attr_type),len_value,value)
+
 	def _segment (self,seg_type,values):
 		if len(values)>255:
 			return self._segment(values[:256]) + self._segment(values[256:])
 		return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack() for v in values]))
-	
-	def pack (self,local_asn,peer_asn):
+
+	def pack (self,local_asn,peer_asn,mp_action=''):
 		message = ''
-		message += self._attribute(Flag.TRANSITIVE,Attribute.ORIGIN,chr(Origin.IGP))
+		message += self._attribute(Flag.TRANSITIVE,Attribute.ORIGIN,Origin(Origin.IGP).pack())
 		message += self._attribute(Flag.TRANSITIVE,Attribute.AS_PATH,'' if local_asn == peer_asn else self._segment(ASPath.AS_SEQUENCE,[local_asn]))
-		message += self._attribute(Flag.TRANSITIVE,Attribute.NEXT_HOP,self.next_hop.pack())
 		if local_asn == peer_asn:
 			message += self._attribute(Flag.TRANSITIVE,Attribute.LOCAL_PREFERENCE,self.local_preference.pack())
 		message += self._attribute(Flag.TRANSITIVE|Flag.OPTIONAL,Attribute.COMMUNITY,''.join([c.pack() for c in self.communities])) if self.communities else ''
-		
+		# we do not store or send MED
+		if self.ip.version == 4:
+			message += self._attribute(Flag.TRANSITIVE,Attribute.NEXT_HOP,self.next_hop.pack())
+		if self.ip.version == 6:
+			if mp_action == '-':
+				attr = AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + Prefix.pack(self)
+				message += self._attribute(Flag.TRANSITIVE,Attribute.MP_UNREACH_NLRI,attr)
+			if mp_action == '+':
+				attr = AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + Prefix.bgp(self) + self.next_hop.pack()
+				message += self._attribute(Flag.TRANSITIVE,Attribute.MP_REACH_NLRI,attr)
 		return message
 
 # The definition of a neighbor (from reading the configuration)
@@ -452,14 +437,13 @@ class Neighbor (object):
 		if self.peer_as is None: return 'peer-as'
 		return ''
 
-	@property
-	def router_id (self):
-		return self._router_id if self._router_id else self.local_address
 
-	@router_id.setter
-	def router_id (self,value):
-		self._router_id = value
-	
+	def get_router_id (self):
+		return self._router_id if self._router_id else self.local_address
+	def set_router_id (self,id):
+		self._router_id = id
+	router_id = property(get_router_id,set_router_id)
+
 	def __eq__ (self,other):
 		return \
 			self._router_id == other._router_id and \
@@ -467,10 +451,10 @@ class Neighbor (object):
 			self.local_as == other.local_as and \
 			self.peer_address == other.peer_address and \
 			self.peer_as == other.peer_as
-	
+
 	def __ne__(self, other):
 		return not (self == other)
-	
+
 	def __str__ (self):
 		return """\
 neighbor %s {
@@ -490,4 +474,33 @@ neighbor %s {
 	self.peer_as,
 	'\n\t\t' + '\n\t\t'.join([str(route) for route in self.routes]) if self.routes else ''
 )
+
+
+# Taken from perl Net::IPv6Addr
+#	ipv6_patterns = {
+#		'preferred' : """\
+#			^(?:[a-f0-9]{1,4}:){7}[a-f0-9]{1,4}$
+#		""",
+#		'compressed' : """\
+#			^[a-f0-9]{0,4}::$
+#		|	^:(?::[a-f0-9]{1,4}){1,6}$
+#		|	^(?:[a-f0-9]{1,4}:){1,6}:$
+#		|	^(?:[a-f0-9]{1,4}:)(?::[a-f0-9]{1,4}){1,6}$
+#		|	^(?:[a-f0-9]{1,4}:){2}(?::[a-f0-9]{1,4}){1,5}$
+#		|	^(?:[a-f0-9]{1,4}:){3}(?::[a-f0-9]{1,4}){1,4}$
+#		|	^(?:[a-f0-9]{1,4}:){4}(?::[a-f0-9]{1,4}){1,3}$
+#		|	^(?:[a-f0-9]{1,4}:){5}(?::[a-f0-9]{1,4}){1,2}$
+#		|	^(?:[a-f0-9]{1,4}:){6}(?::[a-f0-9]{1,4})$
+#		""",
+#		'ipv4' : """\
+#			^(?:0:){5}ffff:(?:\d{1,3}\.){3}\d{1,3}$
+#		|	^(?:0:){6}(?:\d{1,3}\.){3}\d{1,3}$
+#		""",
+#		'ipv4 compressed' : """\
+#			^::(?:ffff:)?(?:\d{1,3}\.){3}\d{1,3}$
+#		""",
+#	}
+#
+#	ipv4_patterns = '(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])\.(?:\d{1,2}|1\d{2}|2[0-4]\d|25[0-5])'
+
 

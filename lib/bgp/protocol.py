@@ -129,7 +129,8 @@ class Protocol (Display):
 		if hold_time >= 3:
 			self.neighbor.hold_time = HoldTime(min(self.neighbor.hold_time,hold_time))
 		
-		router_id = unpack('!L',data[5:9])[0]
+		numeric = unpack('!L',data[5:9])[0]
+		router_id = "%d.%d.%d.%d" % (numeric>>24,(numeric>>16)&0xff,(numeric>>8)&0xff,numeric&0xff)
 
 		capabilities = Capabilities()
 		option_len = ord(data[9])
@@ -287,7 +288,7 @@ class Protocol (Display):
 		if code == Attribute.NEXT_HOP:
 			next_hop = unpack('!L',data[offset:offset+length])[0]
 			for route in add:
-				route.next_hop = next_hop
+				route.set_next_hop(next_hop)
 			self.set_path_attribute(add,remove,data[offset+length:])
 			return
 		if code == Attribute.MULTI_EXIT_DISC:
@@ -299,7 +300,7 @@ class Protocol (Display):
 			pref = unpack('!L',data[offset:offset+4])[0]
 			# if length != 4 we should really raise as you can not have multiple LOCAL_PREF
 			for route in add:
-				route.local_preference = pref
+				route.set_local_preference(pref)
 			self.set_path_attribute(add,remove,data[offset+length:])
 			return
 		if code == Attribute.ATOMIC_AGGREGATE:
@@ -363,9 +364,8 @@ class Protocol (Display):
 			while nlri:
 				#self.hexdump(nlri)
 				route,nlri = self.read_bgp(nlri,afi)
-				route.next_hop = nh
+				route.set_next_hop(nh)
 				add.append(route)
-				print route
 				self.logIf(True,'adding MP route %s' % str(route))
 			return
 		return
@@ -403,6 +403,7 @@ class Protocol (Display):
 	
 	def new_update (self):
 		m = self._update.update(self.neighbor.local_as,self.neighbor.peer_as)
+		self.log("UPDATE (update)   SENT: %s" % [hex(ord(c)) for c in m][19:])
 		self.logIf(self.trace,"UPDATE (update)   SENT: %s" % [hex(ord(c)) for c in m][19:])
 		if m: self.network.write(m)
 		return self._update if m else None

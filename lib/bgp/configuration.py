@@ -307,7 +307,7 @@ class Configuration (object):
 
 	def _route_local_preference (self,tokens):
 		try:
-			self._scope[-1]['routes'][-1].local_preference = LocalPreference(tokens.pop(0))
+			self._scope[-1]['routes'][-1].local_preference = tokens.pop(0)
 			return True
 		except ValueError:
 			self._error = self._str_route_error
