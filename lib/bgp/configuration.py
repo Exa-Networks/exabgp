@@ -27,9 +27,17 @@ class Configuration (object):
 		if self._text:
 			self._tokens = self._tokenise(self._fname.split('\n'))
 		else:
-			with open(self._fname,'r') as f:
-				self._tokens = self._tokenise(f.readlines())
-		
+			try:
+				with open(self._fname,'r') as f:
+					self._tokens = self._tokenise(f.readlines())
+			except IOError,e:
+				error = str(e)
+				if error.count(']'):
+					self.error = error.split(']')[1].strip()
+				else:
+					self.error = error
+				return False
+				
 		self._neighbor = {}
 		self._scope = []
 		self._location = ['root']
@@ -161,6 +169,9 @@ class Configuration (object):
 		missing = neighbor.missing()
 		if missing:
 			self._error = 'incomplete neighbor, missing %s' % missing
+			return False
+		if neighbor.router_id.version != 4:
+			self._error = 'router-id must be a IPv4 address (not %s)' % neighbor.router_id
 			return False
 		if self._neighbor.has_key(neighbor.peer_address):
 			self_error = 'duplicate peer definition %s' % neighbor.peer_address

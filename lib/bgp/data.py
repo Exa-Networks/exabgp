@@ -437,6 +437,7 @@ class Neighbor (object):
 		if self.peer_address is None: return 'peer-address'
 		if self.local_as is None: return 'local-as'
 		if self.peer_as is None: return 'peer-as'
+		if self.peer_address.version == 6 and not self._router_id: return 'router-id'
 		return ''
 
 

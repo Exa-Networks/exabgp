@@ -286,7 +286,8 @@ class Protocol (Display):
 			self.set_path_attribute(add,remove,data[offset+length:])
 			return
 		if code == Attribute.NEXT_HOP:
-			next_hop = unpack('!L',data[offset:offset+length])[0]
+			nhn = unpack('!L',data[offset:offset+length])[0]
+			next_hop = "%d.%d.%d.%d" % (nhn>>14,(nhn>>16)&0xFF,(nhn>>8)&0xFF,nhn&0xFF)
 			for route in add:
 				route.set_next_hop(next_hop)
 			self.set_path_attribute(add,remove,data[offset+length:])

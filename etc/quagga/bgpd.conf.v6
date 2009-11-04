@@ -1,0 +1,16 @@
+log file /var/log/quagga/bgpd informational
+password none
+enable password none
+!
+router bgp 65534
+ network 1.2.3.4/32
+  neighbor 2a02:b80::1 remote-as 65000
+!
+ address-family ipv6
+ network 1234:5678::/32
+ neighbor 2a02:b80::1 activate
+ exit-address-family
+!
+line vty
+!
+
