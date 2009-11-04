@@ -148,7 +148,7 @@ class Version (int):
 		return chr(self)
 
 class ASN (int):
-	regex = "(?:0[xX][0-9a-fA-F]{1,8}|\d+:\d+|\d+)"
+	# regex = "(?:0[xX][0-9a-fA-F]{1,8}|\d+:\d+|\d+)"
 
 	def __init__ (self,value):
 		int.__init__(self,value)
@@ -306,12 +306,23 @@ class Parameter (int):
 		if self == 0x02: return "OPTIONAL"
 		return 'UNKNOWN'
 
-# RFC 5492
+# http://www.iana.org/assignments/capability-codes/
 class Capabilities (dict):
-	MULTIPROTOCOL_EXTENSIONS = 0x01
-	ROUTE_REFRESH            = 0x02
-	GRACEFUL_RESTART         = 0x40
-	FOUR_BYTES_ASN           = 0x41
+	RESERVED                 = 0x00 # [RFC5492]
+	MULTIPROTOCOL_EXTENSIONS = 0x01 # [RFC2858]
+	ROUTE_REFRESH            = 0x02 # [RFC2918]
+	OUTBOUND_ROUTE_FILTERING = 0x03 # [RFC5291]
+	MULTIPLE_ROUTES          = 0x04 # [RFC3107]
+	EXTENDED_NEXT_HOP        = 0x05 # [RFC5549]
+	#6-63      Unassigned
+	GRACEFUL_RESTART         = 0x40 # [RFC4724]
+	FOUR_BYTES_ASN           = 0x41 # [RFC4893]
+	# 66 Deprecated
+	DYNAMIC_CAPABILITY       = 0x43 # [Chen]
+	MULTISESSION_BGP         = 0x44 # [Appanna]
+	ADD_PATH                 = 0x45 # [draft-ietf-idr-add-paths]
+	# 70-127    Unassigned 
+	# 128-255   Reserved for Private Use [RFC5492]
 
 	def __str__ (self):
 		r = []
