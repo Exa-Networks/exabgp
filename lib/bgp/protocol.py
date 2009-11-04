@@ -130,7 +130,7 @@ class Protocol (Display):
 			self.neighbor.hold_time = HoldTime(min(self.neighbor.hold_time,hold_time))
 		
 		numeric = unpack('!L',data[5:9])[0]
-		router_id = "%d.%d.%d.%d" % (numeric>>24,(numeric>>16)&0xff,(numeric>>8)&0xff,numeric&0xff)
+		router_id = "%d.%d.%d.%d" % (numeric>>24,(numeric>>16)&0xFF,(numeric>>8)&0xFF,numeric&0xFF)
 
 		capabilities = Capabilities()
 		option_len = ord(data[9])
@@ -287,7 +287,7 @@ class Protocol (Display):
 			return
 		if code == Attribute.NEXT_HOP:
 			nhn = unpack('!L',data[offset:offset+length])[0]
-			next_hop = "%d.%d.%d.%d" % (nhn>>14,(nhn>>16)&0xFF,(nhn>>8)&0xFF,nhn&0xFF)
+			next_hop = "%d.%d.%d.%d" % (nhn>>24,(nhn>>16)&0xFF,(nhn>>8)&0xFF,nhn&0xFF)
 			for route in add:
 				route.set_next_hop(next_hop)
 			self.set_path_attribute(add,remove,data[offset+length:])
