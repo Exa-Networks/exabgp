@@ -13,8 +13,8 @@ import sys
 main = int(sys.version[0])
 secondary = int(sys.version[2])
 
-if main != 2 or secondary < 6:
-	sys.exit('This program requires python 2.6 or higher')
+if main != 2 or secondary < 5:
+	sys.exit('This program is not tested with versions of python before 2.5')
 
 if __name__ == '__main__':
 	if len(sys.argv) < 2:
