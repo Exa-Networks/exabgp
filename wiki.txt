@@ -1,0 +1,118 @@
+===== BGP Route Injector =====
+
+==== What is it ? ====
+
+Some code which :
+  * Can inject routes with arbitrary next-hops into your network
+  * Can act as an IBGP or EBGP speaker (but not listener)
+
+==== Where can I get it ? ====
+
+The code is stored in our SVN repository: \\
+[[http://svn.exa.org.uk/bgp/trunk|http://svn.exa.org.uk/bgp/trunk]] \\
+[[http://fisheye.exa.org.uk/browse/BGP/trunk|Fisheye browsing]]
+
+Get it with
+   cd /opt
+   svn co http://svn.exa.org.uk/bgp/trunk bgp
+
+There is currently no tarball or official release yet.
+
+We currently use revesion 39 to source ASN112 within our network.
+
+==== How do you configure it ? ====
+
+You provide the name of the configuration file as an argument to the program. For example:
+
+   #!/bin/bash
+   exec env PYTHONPATH=/opt/bgp/lib setuidgid nobody /opt/bgp/daemon/bgpd /opt/bgp/etc/bgp/as112.txt 2>&1
+
+We are using [[http://cr.yp.to/daemontools.html|deamontools]] to run and supervise the application on crash, but we never saw it crash (touching wood).
+
+As the application does not bind to port 179, or program the local routing table, it does not need any escalated privileges and will happily run as "nobody".
+
+The configuration file is very juniper like :
+
+IPv4 example
+
+   neighbor 192.168.127.128 {
+   	description "a quagga test peer";
+   	router-id 192.168.127.1;
+   	local-address 192.168.127.1;
+   	local-as 65000;
+   	peer-as 65534;
+   
+   	static {
+   		route 10.0.1.0/24 {
+   			next-hop 10.0.255.254;
+   		}
+   		route 10.0.2.0/24 {
+   			next-hop 10.0.255.254;
+   			community 30740:30740;
+   		}
+   		route 10.0.3.0/24 {
+   			next-hop 10.0.255.254;
+   			community [ 30740:30740 30740:0 ];
+   		}
+   		route 10.0.4.0/24 {
+   			next-hop 10.0.255.254;
+   			local-preference 200;
+   		}
+   		route 10.0.5.0/24 next-hop 10.0.255.254 local-preference 200;
+   		route 10.0.6.0/24 next-hop 10.0.255.254 community 30740:30740;
+   		route 10.0.7.0/24 next-hop 10.0.255.254 local-preference 200 community 30740:30740;
+   		route 10.0.8.0/24 next-hop 10.0.255.254 community 30740:30740 local-preference 200;
+   		route 10.0.7.0/24 next-hop 10.0.255.254 local-preference 200 community [30740:0 30740:30740];
+   		route 10.0.8.0/24 next-hop 10.0.255.254 community [30740:0 30740:30740] local-preference 200;
+   		route 10.0.5.0/24 next-hop 192.0.2.92 local-preference 10 community [ 0x87654321 ];
+   	}
+   }
+
+IPv6 example
+
+   neighbor 2a02:b80::2 {
+   	description "a quagga test peer";
+   	router-id 192.168.127.1;
+   	local-address 2a02:b80::1;
+   	local-as 65000;
+   	peer-as 65534;
+   
+   	static {
+   		route 1.2.3.4/32 next-hop 5.6.7.8;
+   		route 2A02:B80:0:1::1/64 next-hop 2A02:B80:0:2::1 community [30740:0 30740:30740] local-preference 200;
+   	}
+   }
+
+
+==== Tell me more about the code ====
+
+It is written in Python and requires version 2.5 or later.
+No tests have been performed to check if it works with version 3.0.
+The code only relies on the standard library and has no external dependencies.
+
+==== Anticipated FAQ ====
+
+Q: I see an IPv6 example, is it fully IPv6 enabled ?
+A: It is since Revision 58 (current stable). The injector allows TCP IPv4 or IPv6 connections as well as supporting the exchange of both IPv4 and IPv6 routes.
+
+Q: Can you maintain more than one BGP session? \\
+A: Yes, you can define more than one neighbor in the configuration file
+
+Q: As the code is single threaded, can a blocking network IO cause issues ? \\
+A: We are using select to only read data when available but as we are not using a different thread for keepalive, I would not swear blind that a problem with a peer can not cause the other peer connection to timeout. Should it be a major concern, run one instance of the program per peer.
+
+Q: As you have no separate thread for keepalives, how many peers do you think one instance can manage comfortably? \\
+A: I have no answer as we only need one peer per application, but unless you speak to several dozen then it should do fine.
+
+Q: I am a Ruby coder and I hate Python \\
+A: use ByteMark BGPFeeder a very similar application [[https://projects.bytemark.co.uk/projects/bgpfeeder|https://projects.bytemark.co.uk/projects/bgpfeeder]]
+   hg clone http://src.bytemark.co.uk/bgpfeeder
+
+Q: I am a Perl coder and I hate Python \\
+A: Use bgpsimple [[http://code.google.com/p/bgpsimple|http://code.google.com/p/bgpsimple]]
+   svn checkout http://bgpsimple.googlecode.com/svn/trunk/ bgpsimple-read-only
+
+Q: But there is already one in Python here : [https://code.launchpad.net/pybgp|https://code.launchpad.net/pybgp]] \\
+A: I am not sure if this project existed when I started or not but I clearly missed it ! \\
+  (and it does not support the MultiProtocol Extensions - ie: IPv6)
+

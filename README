@@ -19,3 +19,5 @@ This programs does not have any dependences on any thrid party libraries.
 The route injector can connect to both IPv4 and IPv6 BGP daemon. 
 
 Development is done on python 2.6, the code was made compatible with python 2.5, previous versions are untested.
+
+A copy of the documentation on our wiki: http://bgp.exa.org.uk/ was added to the source code (wiki.txt)
