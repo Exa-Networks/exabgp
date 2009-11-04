@@ -17,3 +17,4 @@ As the program is not intended to receive routing information and perform FIB ma
 
 This programs requires python 2.6 but does not have any dependences on any thrid party libraries.
 
+The route injector can connect to both IPv4 and IPv6 BGP daemon. 

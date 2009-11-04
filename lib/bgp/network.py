@@ -10,6 +10,7 @@ import sys
 import traceback
 
 import time
+import struct
 import socket
 import select
 from bgp.message import Failure
@@ -22,9 +23,14 @@ class Network (object):
 		self.peer = peer
 		self.asn = asn
 		
-		print type(peer)
+		if peer.version != local.version:
+			raise Failure('The local IP and peer IP must be of the same family (both IPv4 or both IPv6)')
+		
 		try:
-			self._io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			if peer.version == 4:
+				self._io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			if peer.version == 6:
+				self._io = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
 			try:
 				self._io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 			except AttributeError:
@@ -37,9 +43,12 @@ class Network (object):
 			self._io.bind((str(local),-1))
 		except socket.error,e:
 			self.close()
-			raise Failure('could not bind to local ip %s: %s' % (local,str(e)))
+			raise Failure('could not bind to local ip %s - %s' % (local,str(e)))
 		try:
-			self._io.connect((str(peer),179))
+			if peer.version == 4:
+				self._io.connect((str(peer),179))
+			if peer.version == 6:
+				self._io.connect((str(peer),179,0,0))
 			self._io.setblocking(0)
 		except socket.error, e:
 			self.close()
