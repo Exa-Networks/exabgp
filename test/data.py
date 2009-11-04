@@ -24,9 +24,9 @@ class TestData (unittest.TestCase):
 		self.failUnlessRaises(ValueError,IP,"2001:0000:1234:G:0000:C1C0:ABCD:0876")
 
 	def test_1_mask (self):
-		mask = Mask(24,32)
+		mask = Mask().new(24,32)
 	def test_2_mask (self):
-		mask = Mask(64,128)
+		mask = Mask().new(64,128)
 	# Plenty of tests missing here
 
 #	def test_1_prefix (self):
@@ -47,11 +47,11 @@ class TestData (unittest.TestCase):
 	def test_1_community (self):
 		self.assertEqual(Community(256),256)
 	def test_2_community (self):
-		self.assertEqual(Community('0x100'),256)
+		self.assertEqual(Community().new('0x100'),256)
 	def test_3_community (self):
-		self.assertEqual(Community('1:1'),65537)
+		self.assertEqual(Community().new('1:1'),65537)
 	def test_4_community (self):
-		self.assertEqual(Community('1:1').pack(),''.join([chr(c) for c in  [0x0,0x1,0x0,0x1]]))
+		self.assertEqual(Community().new('1:1').pack(),''.join([chr(c) for c in  [0x0,0x1,0x0,0x1]]))
 
 if __name__ == '__main__':
 	unittest.main()

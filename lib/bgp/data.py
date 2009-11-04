@@ -112,26 +112,27 @@ class IP (object):
 	def __len__ (self):
 		return self.version
 
+# Super sub-optimal as code... make length as parameter of __init__ ?
 class Mask (int):
-	def __new__ (cls,mask,length):
-		cls.slash_to_size = dict([(length-bits,(1<<bits)) for bits in range(0,length+1)])
-		cls.mask_to_slash = dict([((1L<<length) - (1<<bits),length-bits) for bits in range(0,length+1)])
-		cls.slash_to_mask = dict([(length-bits,(1L<<length) - (1<<bits)) for bits in range(0,length+1)])
-		cls.ipv4_to_slash = dict([("%d.%d.%d.%d" % (k>>24, k>>16 & 0xFF ,k>>8 & 0xFF, k&0xFF),cls.mask_to_slash[k]) for k in cls.mask_to_slash.keys()])
-		#cls.regex_mask = '(?:\d|[12]\d|3[012])'
+	def new (self,mask,length):
+		#slash_to_size = dict([(length-bits,(1<<bits)) for bits in range(0,length+1)])
+		#slash_to_mask = dict([(length-bits,(1L<<length) - (1<<bits)) for bits in range(0,length+1)])
+		mask_to_slash = dict([((1L<<length) - (1<<bits),length-bits) for bits in range(0,length+1)])
+		ipv4_to_slash = dict([("%d.%d.%d.%d" % (k>>24, k>>16 & 0xFF ,k>>8 & 0xFF, k&0xFF),mask_to_slash[k]) for k in mask_to_slash.keys()])
 
+		#regex_mask = '(?:\d|[12]\d|3[012])'
 		try:
 			slash = int(mask)
 		except ValueError:
 			try:
-				slash = cls.ipv4_to_slash[mask]
+				slash = self.ipv4_to_slash[mask]
 			except KeyError:
 				raise ValueError('the netmask is invalid %s' % str(mask))
 
 		if not slash in range(0,length+1):
 			return ValueError('the netmask is invalid /%s' % str(slash))
 
-		return int.__new__(cls,slash)
+		return Mask(slash)
 
 	def pack (self):
 		return chr(self)
@@ -149,25 +150,14 @@ class Version (int):
 class ASN (int):
 	regex = "(?:0[xX][0-9a-fA-F]{1,8}|\d+:\d+|\d+)"
 
-	def __new__ (cls,asn):
-		try:
-			value = int(asn)
-		except ValueError:
-			if asn.lower().startswith('0x'):
-				value = int(asn,16)
-			raise ValueError('ASN invalid')
-		if value >= (1<<16):
-			raise ValueError('ASN is too big')
-		return int.__new__(cls,value)
-
 	def pack (self):
 		return pack('!H',self)
 
 	def __len__ (self):
 		return 2
-
+	
 class Community (long):
-	def __new__ (cls,data):
+	def new (self,data):
 		try:
 			value = int(data)
 		except ValueError:
@@ -178,8 +168,7 @@ class Community (long):
 				value = long(data,16)
 			else:
 				value = long(data)
-
-		return long.__new__(cls,value)
+		return Community(value)
 
 	def pack (self):
 		return pack('!L',self)
@@ -192,8 +181,10 @@ class Community (long):
 
 
 class Communities (list):
+	_factory = Community()
+	
 	def append (self,data):
-		list.append(self,Community(data))
+		list.append(self,self._factory.new(data))
 		self.sort()
 
 	def pack (self):
@@ -308,13 +299,23 @@ class Parameter (int):
 # RFC 5492
 class Capabilities (dict):
 	MULTIPROTOCOL_EXTENSIONS = 0x01
+	ROUTE_REFRESH            = 0x02
+	GRACEFUL_RESTART         = 0x40
+	FOUR_BYTES_ASN           = 0x41
 
 	def __str__ (self):
 		r = []
 		for key in self.keys():
-			if key == 1:
+			if key == self.MULTIPROTOCOL_EXTENSIONS:
 				r += ['Multiprotocol Reachable NLRI for ' + ' '.join(["%s %s" % (str(afi),str(safi)) for (afi,safi) in self[key]])]
-			else: r+= ['unknown capability %d' % key]
+			elif key == self.ROUTE_REFRESH:
+				r += ['Route Refresh']
+			elif key == self.GRACEFUL_RESTART:
+				r += ['Graceful Restart']
+			elif key == self.FOUR_BYTES_ASN:
+				r += ['4Bytes AS %s' % self[key]]
+			else:
+				r+= ['unknown capability %d' % key]
 		return ', '.join(r)
 
 	def default (self):
@@ -333,10 +334,12 @@ class Capabilities (dict):
 		return "".join(["%s%s%s" % (chr(2),chr(len(r)),r) for r in rs])
 
 class Prefix (object):
+	_factory = Mask()
+	
 	# format is (version,address,slash)
 	def __init__ (self,address,mask):
 		self.ip = IP(address)
-		self.mask = Mask(mask,self.ip.length)
+		self.mask = self._factory.new(mask,self.ip.length)
 
 	def bgp (self):
 		size = int(math.ceil(float(self.mask)/8))

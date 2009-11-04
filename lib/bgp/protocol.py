@@ -148,10 +148,16 @@ class Protocol (Display):
 						raise SendNotification(2,0,"bad length for OPEN %s (size mismatch)" % 'capability')
 					if k not in capabilities:
 						capabilities[k] = []
-					if k == 1:
+					if k == Capabilities.MULTIPROTOCOL_EXTENSIONS:
 						afi = AFI(unpack('!H',value[2:4])[0])
 						safi = SAFI(ord(value[5]))
 						capabilities[k].append((afi,safi))
+					elif key == Capabilities.ROUTE_REFRESH:
+						capabilities[k] = None
+					elif key == Capabilities.GRACEFUL_RESTART:
+						capabilities[k] = None
+					elif key == Capabilities.FOUR_BYTES_ASN:
+						capabilities[k] = ASN(unpack('!H',value[2:4])[0])
 					else:
 						if value[2:]:
 							capabilities[k].append([ord(_) for _ in value[2:]])
