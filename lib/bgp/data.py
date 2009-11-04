@@ -150,11 +150,21 @@ class Version (int):
 class ASN (int):
 	regex = "(?:0[xX][0-9a-fA-F]{1,8}|\d+:\d+|\d+)"
 
+	def __init__ (self,value):
+		int.__init__(self,value)
+		self.length = 2
+	
+	def four (self):
+		self.length = 4
+		return self
+	
 	def pack (self):
-		return pack('!H',self)
+		if self.length == 2:
+			return pack('!H',self)
+		return pack('!L',self)
 
 	def __len__ (self):
-		return 2
+		return self.length
 	
 class Community (long):
 	def new (self,data):
@@ -313,7 +323,7 @@ class Capabilities (dict):
 			elif key == self.GRACEFUL_RESTART:
 				r += ['Graceful Restart']
 			elif key == self.FOUR_BYTES_ASN:
-				r += ['4Bytes AS %s' % self[key]]
+				r += ['4Bytes AS %d' % self[key]]
 			else:
 				r+= ['unknown capability %d' % key]
 		return ', '.join(r)

@@ -13,7 +13,7 @@ import socket
 from struct import pack,unpack
 
 from bgp.table import Table
-from bgp.data import AFI,SAFI,Parameter,Capabilities,Flag,Attribute,Origin,HoldTime,IP,Route
+from bgp.data import AFI,SAFI,Parameter,Capabilities,Flag,Attribute,Origin,HoldTime,IP,Route,ASN
 from bgp.message import Message, Open, Update, Failure,Notification, SendNotification, KeepAlive
 from bgp.network import Network
 from bgp.display import Display
@@ -152,12 +152,12 @@ class Protocol (Display):
 						afi = AFI(unpack('!H',value[2:4])[0])
 						safi = SAFI(ord(value[5]))
 						capabilities[k].append((afi,safi))
-					elif key == Capabilities.ROUTE_REFRESH:
+					elif k == Capabilities.ROUTE_REFRESH:
 						capabilities[k] = None
-					elif key == Capabilities.GRACEFUL_RESTART:
+					elif k == Capabilities.GRACEFUL_RESTART:
 						capabilities[k] = None
-					elif key == Capabilities.FOUR_BYTES_ASN:
-						capabilities[k] = ASN(unpack('!H',value[2:4])[0])
+					elif k == Capabilities.FOUR_BYTES_ASN:
+						capabilities[k] = ASN(unpack('!L',value[2:6])[0]).four()
 					else:
 						if value[2:]:
 							capabilities[k].append([ord(_) for _ in value[2:]])
