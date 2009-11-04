@@ -403,7 +403,6 @@ class Protocol (Display):
 	
 	def new_update (self):
 		m = self._update.update(self.neighbor.local_as,self.neighbor.peer_as)
-		self.log("UPDATE (update)   SENT: %s" % [hex(ord(c)) for c in m][19:])
 		self.logIf(self.trace,"UPDATE (update)   SENT: %s" % [hex(ord(c)) for c in m][19:])
 		if m: self.network.write(m)
 		return self._update if m else None
