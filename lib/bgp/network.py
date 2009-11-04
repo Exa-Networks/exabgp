@@ -22,6 +22,7 @@ class Network (object):
 		self.peer = peer
 		self.asn = asn
 		
+		print type(peer)
 		try:
 			self._io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			try:
