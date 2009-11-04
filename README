@@ -15,6 +15,7 @@ As the program is not intended to receive routing information and perform FIB ma
  - RFC 4760 (Multiprotocol Extensions for BGP-4, Obsoletes: 2858)
  - RFC 2545 (Use of BGP-4 Multiprotocol Extensions for IPv6 Inter-Domain Routing)
 
-This programs requires python 2.6 but does not have any dependences on any thrid party libraries.
-
+This programs does not have any dependences on any thrid party libraries.
 The route injector can connect to both IPv4 and IPv6 BGP daemon. 
+
+Development is done on python 2.6, the code was made compatible with python 2.5, previous versions are untested.
