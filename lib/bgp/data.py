@@ -61,8 +61,8 @@ class SAFI (int):
 #	reverved = [0,3] + [130,131] + [_ for _ in range(135,140)] + [_ for _ in range(141,241)] + [255,]	# [RFC4760]
 
 	def __str__ (self):
-		if self == 1: return "unicast"
-		if self == 2: return "multicast"
+		if self == 0x01: return "unicast"
+		if self == 0x02: return "multicast"
 		return "unknown safi"
 
 	def pack (self):
@@ -149,11 +149,8 @@ class Version (int):
 
 class ASN (int):
 	# regex = "(?:0[xX][0-9a-fA-F]{1,8}|\d+:\d+|\d+)"
+	length = 2
 
-	def __init__ (self,value):
-		int.__init__(self,value)
-		self.length = 2
-	
 	def four (self):
 		self.length = 4
 		return self
@@ -324,19 +321,26 @@ class Capabilities (dict):
 	# 70-127    Unassigned 
 	# 128-255   Reserved for Private Use [RFC5492]
 
+	_unassigned = range(70,128)
+	_reserved = range(128,256)
+
 	def __str__ (self):
 		r = []
 		for key in self.keys():
 			if key == self.MULTIPROTOCOL_EXTENSIONS:
-				r += ['Multiprotocol Reachable NLRI for ' + ' '.join(["%s %s" % (str(afi),str(safi)) for (afi,safi) in self[key]])]
+				r += ['Multiprotocol for ' + ' '.join(["%s %s" % (str(afi),str(safi)) for (afi,safi) in self[key]])]
 			elif key == self.ROUTE_REFRESH:
 				r += ['Route Refresh']
 			elif key == self.GRACEFUL_RESTART:
 				r += ['Graceful Restart']
 			elif key == self.FOUR_BYTES_ASN:
 				r += ['4Bytes AS %d' % self[key]]
+			elif key in self._reserved:
+				r += ['private use capability %d' % key]
+			elif key in self._unassigned:
+				r += ['unassigned capability %d' % key]
 			else:
-				r+= ['unknown capability %d' % key]
+				r+= ['unhandled capability %d' % key]
 		return ', '.join(r)
 
 	def default (self):
@@ -347,7 +351,7 @@ class Capabilities (dict):
 		rs = []
 		for k,vs in self.iteritems():
 			for v in vs:
-				if k == 1:
+				if k == self.MULTIPROTOCOL_EXTENSIONS:
 					d = pack('!H',v[0]) + pack('!H',v[1])
 					rs.append("%s%s%s" % (chr(k),chr(len(d)),d))
 				else:

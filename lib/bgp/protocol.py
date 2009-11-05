@@ -268,7 +268,7 @@ class Protocol (Display):
 		flag = Flag(ord(data[0]))
 		code = Attribute(ord(data[1]))
 		
-		if flag & Flag.EXTENDED_LENGTH == Flag.EXTENDED_LENGTH:
+		if flag & Flag.EXTENDED_LENGTH:
 			length = unpack('!H',data[2:4])[0]
 			offset = 4
 		else:
