@@ -10,7 +10,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 import unittest
 import time
 
-from bgp.data import Route
+from bgp.message.update import Route
 from bgp.table import Table
 
 class TestTable (unittest.TestCase):

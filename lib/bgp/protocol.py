@@ -13,12 +13,22 @@ import socket
 from struct import pack,unpack
 
 from bgp.table import Table
-from bgp.data import AFI,SAFI,Parameter,Capabilities,Flag,Attribute,Origin,HoldTime,IP,Route,ASN
-from bgp.message import Message, Open, Update, Failure,Notification, SendNotification, KeepAlive
+
+from bgp.structure.family  import AFI,SAFI
+from bgp.structure.network import IP,ASN
+
+from bgp.structure.message    import Message,Failure
+from bgp.message.open         import Open,Parameter,Capabilities
+from bgp.message.update       import Update
+from bgp.message.keepalive    import KeepAlive
+from bgp.message.notification import Notification, SendNotification
+
 from bgp.network import Network
 from bgp.display import Display
 
-
+# XXX: This should move into update
+from bgp.message.update import Route,Flag,Attribute,Origin
+from bgp.message.open import HoldTime
 
 class Protocol (Display):
 	trace = False

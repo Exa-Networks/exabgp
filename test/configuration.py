@@ -116,7 +116,7 @@ neighbor 10.0.0.10 {
 	def test_faults (self):
 		for config,error in self._faults.iteritems():
 			configuration = Configuration(config,True)
-			#print configuration.error
+			
 			try:
 				self.assertEqual(configuration.reload(),False)
 				self.assertEqual(config + ' '*10 + configuration.error,config + ' '*10 + error)

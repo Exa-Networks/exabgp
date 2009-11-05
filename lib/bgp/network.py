@@ -13,7 +13,8 @@ import time
 import struct
 import socket
 import select
-from bgp.message import Failure
+
+from bgp.structure.message import Failure
 
 class Network (object):
 	

@@ -11,7 +11,7 @@ import time
 import signal
 
 from bgp.display import Display
-from bgp.message import Notification
+from bgp.message.notification import Notification
 from bgp.peer import Peer
 
 class Supervisor (Display):

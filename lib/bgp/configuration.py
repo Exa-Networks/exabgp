@@ -10,7 +10,10 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 from __future__ import with_statement
 
 import re
-from bgp.data import IP,Route,ASN,LocalPreference,Communities,Neighbor
+
+from bgp.structure.network  import IP,ASN
+from bgp.structure.neighbor import Neighbor
+from bgp.message.update     import Route,LocalPreference,Communities
 
 class Configuration (object):
 	_str_route_error = 'syntax: route IP/MASK next-hop IP [local-preference NUMBER] [community COMMUNITY| community [COMMUNITY1 COMMUNITY2]]'
