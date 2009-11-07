@@ -20,7 +20,7 @@ class Neighbor (object):
 		self.peer_address = None
 		self.peer_as = None
 		self.local_as = None
-		self.hold_time = HoldTime(HOLD_TIME)
+		self._hold_time = HOLD_TIME
 		self.routes = []
 
 	def missing (self):
@@ -31,6 +31,11 @@ class Neighbor (object):
 		if self.peer_address.version == 6 and not self._router_id: return 'router-id'
 		return ''
 
+	def get_hold_time (self):
+		return self._hold_time
+	def set_hold_time (self,hold_time):
+		self._hold_time = HoldTime(hold_time)
+	hold_time = property(get_hold_time,set_hold_time)
 
 	def get_router_id (self):
 		return self._router_id if self._router_id else self.local_address

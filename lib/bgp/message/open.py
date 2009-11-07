@@ -7,9 +7,21 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
-from bgp.structure.family  import *
 from bgp.structure.network import *
 from bgp.structure.message import *
+
+
+def new_Open (data):
+	version = ord(data[0])
+	if version != 4:
+		# Only version 4 is supported nowdays..
+		raise SendNotification(2,1,data[0])
+	asn = unpack('!H',data[1:3])[0]
+	hold_time = unpack('!H',data[3:5])[0]
+	numeric = unpack('!L',data[5:9])[0]
+	router_id = "%d.%d.%d.%d" % (numeric>>24,(numeric>>16)&0xFF,(numeric>>8)&0xFF,numeric&0xFF)
+	capabilities = new_Capabilities(data[9:])
+	return Open(version,asn,router_id,capabilities,hold_time)
 
 class Open (Message):
 	TYPE = chr(0x01)
@@ -47,7 +59,7 @@ class HoldTime (int):
 
 # =================================================================== RouterID
 
-class RouterID (IP):
+class RouterID (IPv4):
 	pass
 
 # =================================================================== Parameter
@@ -62,6 +74,53 @@ class Parameter (int):
 		return 'UNKNOWN'
 
 # =================================================================== Capabilities
+
+def _key_values (name,data):
+	if len(data) < 2:
+		raise SendNotification(2,0,"bad length for OPEN %s (<2)" % name)
+	l = ord(data[1])
+	boundary = l+2
+	if len(data) < boundary:
+		raise SendNotification(2,0,"bad length for OPEN %s (buffer underrun)" % name)
+	key = ord(data[0])
+	value = data[2:boundary]
+	rest = data[boundary:]
+	return key,value,rest
+
+
+def new_Capabilities (data):
+	capabilities = Capabilities()
+	
+	option_len = ord(data[0])
+	if option_len:
+		opts = data[1:]
+		#self.hexdump(opts)
+		while opts:
+			key,value,opts = _key_values('parameter',opts)
+			# Paramaters must only be sent once.
+			if key == Parameter.AUTHENTIFICATION_INFORMATION:
+				raise SendNotification(2,5)
+			elif key == Parameter.CAPABILITIES:
+				k,v,r = _key_values('capability',value)
+				if r:
+					raise SendNotification(2,0,"bad length for OPEN %s (size mismatch)" % 'capability')
+				if k not in capabilities:
+					capabilities[k] = []
+				if k == Capabilities.MULTIPROTOCOL_EXTENSIONS:
+					afi = AFI(unpack('!H',value[2:4])[0])
+					safi = SAFI(ord(value[5]))
+					capabilities[k].append((afi,safi))
+				elif k == Capabilities.ROUTE_REFRESH:
+					capabilities[k] = None
+				elif k == Capabilities.GRACEFUL_RESTART:
+					capabilities[k] = None
+				elif k == Capabilities.FOUR_BYTES_ASN:
+					capabilities[k] = ASN(unpack('!L',value[2:6])[0]).four()
+				else:
+					if value[2:]:
+						capabilities[k].append([ord(_) for _ in value[2:]])
+			else:
+				raise SendNotification(2,0,'unknow OPEN parameter %s' % hex(key))
 
 # http://www.iana.org/assignments/capability-codes/
 class Capabilities (dict):

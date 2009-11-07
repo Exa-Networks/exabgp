@@ -11,9 +11,13 @@ The code is deployed in production but if you are not ready to look into it to f
 
 As the program is not intended to receive routing information and perform FIB manipulation it only partially implements:
  - RFC 4271 (A Border Gateway Protocol 4 (BGP-4), Obsoletes: 1771)
+ - RFC 1997 (BGP Communities Attribute)
  - RFC 5492 (Capabilities Advertisement with BGP-4, Obsoletes 3392)
  - RFC 4760 (Multiprotocol Extensions for BGP-4, Obsoletes: 2858)
  - RFC 2545 (Use of BGP-4 Multiprotocol Extensions for IPv6 Inter-Domain Routing)
+
+There is not support for RFC 3107 (Carrying Label Information in BGP-4), However this situation may change.
+There is not plan to support RFC 5549 (Advertising IPv4 Network Layer Reachability Information with an IPv6 Next Hop).
 
 This programs does not have any dependences on any thrid party libraries.
 The route injector can connect to both IPv4 and IPv6 BGP daemon. 

@@ -11,9 +11,9 @@ from __future__ import with_statement
 
 import re
 
-from bgp.structure.network  import IP,ASN
+from bgp.structure.network  import new_IP,ASN
 from bgp.structure.neighbor import Neighbor
-from bgp.message.update     import Route,LocalPreference,Communities
+from bgp.message.update     import Route,toNLRI,Community,Communities,LocalPreference # XXX: Route should be removed/changed
 
 class Configuration (object):
 	_str_route_error = 'syntax: route IP/MASK next-hop IP [local-preference NUMBER] [community COMMUNITY| community [COMMUNITY1 COMMUNITY2]]'
@@ -186,7 +186,7 @@ class Configuration (object):
 	def _multi_neighbor (self,address):
 		self._scope.append({})
 		try:
-			self._scope[-1]['peer-address'] = IP(address)
+			self._scope[-1]['peer-address'] = new_IP(address)
 		except:
 			self._error = '"%s" is not a valid IP address' % address
 			return False
@@ -217,7 +217,7 @@ class Configuration (object):
 	def _set_ip (self,command,value):
 		# XXX: we do not support IPv6
 		try:
-			ip = IP(value[0])
+			ip = new_IP(value[0])
 		except (IndexError,ValueError):
 			self._error = '"%s" is an invalid IP address' % ' '.join(value)
 			return False
@@ -241,11 +241,11 @@ class Configuration (object):
 	def _insert_route (self,tokens):
 		try:
 			ip,nm = tokens.pop(0).split('/')
-			route = Route(ip,nm)
+			route = Route(toNLRI(ip,nm))
 		except ValueError:
 			self._error = self._str_route_error
 			return False
-		
+			
 		if not self._scope[-1].has_key('routes'):
 			self._scope[-1]['routes'] = []
 			
@@ -256,7 +256,7 @@ class Configuration (object):
 		route = self._scope[-1]['routes'][-1]
 		next_hop = self._scope[-1]['routes'][-1].next_hop
 		
-		if route.ip == next_hop:
+		if route.nlri.ip() == next_hop.ip():
 			self._error = 'syntax: route IP/MASK { next-hop IP; }'
 			return False
 		return True
@@ -312,44 +312,53 @@ class Configuration (object):
 	def _route_next_hop (self,tokens):
 		try:
 			t = tokens.pop(0)
-			ip = IP(t)
+			ip = new_IP(t)
+			self._scope[-1]['routes'][-1].next_hop = t
+			return True
 		except:
 			self._error = self._str_route_error
 			return False
-		self._scope[-1]['routes'][-1].next_hop = t
-		return True
 
 	def _route_local_preference (self,tokens):
 		try:
-			self._scope[-1]['routes'][-1].local_preference = tokens.pop(0)
+			self._scope[-1]['routes'][-1].attributes.add(LocalPreference(int(tokens.pop(0))))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
 			return False
+	
+	def _parse_community (self,data):
+		try:
+			value = long(data)
+		except ValueError:
+			separator = data.find(':')
+			if separator > 0:
+				# XXX: Check that the value do not overflow 16 bits
+				value = (int(data[:separator])<<16) + int(data[separator+1:])
+			elif len(data) >=2 and data[1] in 'xX':
+				value = long(data,16)
+			else:
+				value = long(data)
+		return Community(value)
 
 	def _route_community (self,tokens):
-		communities = []
+		communities = Communities()
 		community = tokens.pop(0)
-		if community == '[':
-			while True:
-				try:
-					community = tokens.pop(0)
-				except IndexError:
-					self._error = self._str_route_error
-					return False
-				if community == ']':
-					break
-				communities.append(community)
-			for community in communities:
-				try:
-					self._scope[-1]['routes'][-1].communities.append(community)
-				except ValueError:
-					self._error = self._str_route_error
-					return False
-		else:
-			try:
-				self._scope[-1]['routes'][-1].communities.append(community)
-			except ValueError:
-				self._error = self._str_route_error
-				return False
+		try:
+			if community == '[':
+				while True:
+					try:
+						community = tokens.pop(0)
+					except IndexError:
+						self._error = self._str_route_error
+						return False
+					if community == ']':
+						break
+					communities.append(self._parse_community(community))
+			else:
+				communities.append(self._parse_community(community))
+		except ValueError:
+			self._error = self._str_route_error
+			return False
+		self._scope[-1]['routes'][-1].attributes.add(Communities)
 		return True

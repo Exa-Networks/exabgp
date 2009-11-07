@@ -9,6 +9,9 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 from bgp.structure.message import *
 
+def new_KeepAlive (data=None):
+	return KeepAlive()
+
 class KeepAlive (Message):
 	TYPE = chr(0x04)
 	

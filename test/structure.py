@@ -23,13 +23,8 @@ class TestData (unittest.TestCase):
 	def test_5_ip (self):
 		self.failUnlessRaises(ValueError,IP,"2001:0000:1234:G:0000:C1C0:ABCD:0876")
 
-	def test_1_mask (self):
-		mask = Mask().new(24,32)
-	def test_2_mask (self):
-		mask = Mask().new(64,128)
-	# Plenty of tests missing here
-
 # XXX: NEED To add ASN test
+# XXX: NEED To add NLRI test
 
 if __name__ == '__main__':
 	unittest.main()

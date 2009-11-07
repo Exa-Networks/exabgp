@@ -23,6 +23,7 @@ from bgp.display import Display
 
 class Peer (Display):
 	debug_timers = False		# debug hold/keepalive timers
+	debug_trace = True			# debug traceback on unexpected exception
 	
 	def __init__ (self,neighbor,supervisor):
 		Display.__init__(self,neighbor.peer_address,neighbor.peer_as)
@@ -60,19 +61,19 @@ class Peer (Display):
 			self.bgp.connect()
 		
 			o = self.bgp.new_open()
-			self.logIf(o,'-> %s' % o)
+			self.log('-> %s' % o)
 			yield
 
 			o = self.bgp.read_open()
-			self.logIf(o,'<- %s' % o)
+			self.log('<- %s' % o)
 			yield
 
-			c,_ = self.bgp.new_keepalive(force=True)
-			self.logIf(o,'-> KEEPALIVE')
+			message = self.bgp.new_keepalive(force=True)
+			self.log('-> KEEPALIVE')
 			yield
 
-			msg,data = self.bgp.read_keepalive()
-			self.logIf(msg == KeepAlive.TYPE,'<- KEEPALIVE')
+			message = self.bgp.read_keepalive()
+			self.log('<- KEEPALIVE')
 
 			a = self.bgp.new_announce()
 			self.logIf(a,'-> %s' % a)
@@ -85,9 +86,9 @@ class Peer (Display):
 				self.logIf(k,'-> KEEPALIVE')
 				self.logIf(self.debug_timers,'Sending Timer %d second(s) left' % c)
 
-				msg,data = self.bgp.read_message()
-				self.logIf(msg == KeepAlive.TYPE,'<- KEEPALIVE')
-				self.logIf(msg == Update.TYPE,'<- UPDATE')
+				message = self.bgp.read_message()
+				self.logIf(message.TYPE == KeepAlive.TYPE,'<- KEEPALIVE')
+				self.logIf(message.TYPE == Update.TYPE,'<- UPDATE')
 
 				u = self.bgp.new_update()
 				self.logIf(u,'-> %s' % u)
@@ -113,6 +114,11 @@ class Peer (Display):
 			return
 		except Exception, e:
 			self.log('UNHANDLED EXCEPTION')
-			self.log(str(e))
-			self.bgp.close()
-			raise
+			if self.debug_trace:
+				import sys
+				import traceback
+				traceback.print_exc(file=sys.stdout)
+			else:
+				self.log(str(e))
+			if self.bgp: self.bgp.close()
+			return

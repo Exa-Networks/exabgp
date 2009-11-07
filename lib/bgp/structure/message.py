@@ -43,10 +43,5 @@ class Message (object):
 		message_len = pack('!H',19+len(message))
 		return "%s%s%s%s" % (self.MARKER,message_len,self.TYPE,message)
 
-
-# This message is not part of the RFC but very practical to return that no data is waiting on the socket
-class NOP (Message):
-	TYPE = chr(0x00)
-
 class Failure (Exception):
 	pass

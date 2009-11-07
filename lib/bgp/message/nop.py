@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+# encoding: utf-8
+"""
+nop.py
+
+Created by Thomas Mangin on 2009-11-06.
+Copyright (c) 2009 Exa Networks. All rights reserved.
+"""
+
+from bgp.structure.message import *
+
+def new_NOP (data):
+	return NOP(data)
+
+class NOP (Message):
+	TYPE = chr(0x00)
+	
+	def __init__ (data):
+		self.data = data
+	
+	def message (self):
+		return self._message(self.data)
+
