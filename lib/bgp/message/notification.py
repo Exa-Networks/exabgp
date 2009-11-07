@@ -9,8 +9,10 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 from bgp.structure.message import *
 
+# =================================================================== Notification
 # A Notification received from our peer.
-# RFC 1771 Section 4.5 - but really I should refer to RFC 4271 Section 4.5 :)
+# RFC 4271 Section 4.5
+
 class Notification (Message,Failure):
 	TYPE = chr(0x03)
 	
@@ -76,7 +78,9 @@ class Notification (Message,Failure):
 	def __str__ (self):
 		return "%s: %s" % (self._str_code.get(self.code,'unknown error'), self._str_subcode.get((self.code,self.subcode),'unknow reason'))
 
+# =================================================================== Notify
 # A Notification we need to inform our peer of.
-class SendNotification (Notification):
+
+class Notify (Notification):
 	def message (self):
 		return self._message("%s%s%s" % (chr(self.code),chr(self.subcode),self.data))

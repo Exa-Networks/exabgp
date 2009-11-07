@@ -12,6 +12,8 @@ from bgp.structure.message import *
 def new_KeepAlive (data=None):
 	return KeepAlive()
 
+# =================================================================== KeepAlive
+
 class KeepAlive (Message):
 	TYPE = chr(0x04)
 	

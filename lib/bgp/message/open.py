@@ -15,13 +15,15 @@ def new_Open (data):
 	version = ord(data[0])
 	if version != 4:
 		# Only version 4 is supported nowdays..
-		raise SendNotification(2,1,data[0])
+		raise Notify(2,1,data[0])
 	asn = unpack('!H',data[1:3])[0]
 	hold_time = unpack('!H',data[3:5])[0]
 	numeric = unpack('!L',data[5:9])[0]
 	router_id = "%d.%d.%d.%d" % (numeric>>24,(numeric>>16)&0xFF,(numeric>>8)&0xFF,numeric&0xFF)
 	capabilities = new_Capabilities(data[9:])
 	return Open(version,asn,router_id,capabilities,hold_time)
+
+# =================================================================== Open
 
 class Open (Message):
 	TYPE = chr(0x01)
@@ -77,11 +79,11 @@ class Parameter (int):
 
 def _key_values (name,data):
 	if len(data) < 2:
-		raise SendNotification(2,0,"bad length for OPEN %s (<2)" % name)
+		raise Notify(2,0,"bad length for OPEN %s (<2)" % name)
 	l = ord(data[1])
 	boundary = l+2
 	if len(data) < boundary:
-		raise SendNotification(2,0,"bad length for OPEN %s (buffer underrun)" % name)
+		raise Notify(2,0,"bad length for OPEN %s (buffer underrun)" % name)
 	key = ord(data[0])
 	value = data[2:boundary]
 	rest = data[boundary:]
@@ -90,20 +92,19 @@ def _key_values (name,data):
 
 def new_Capabilities (data):
 	capabilities = Capabilities()
-	
 	option_len = ord(data[0])
 	if option_len:
-		opts = data[1:]
-		#self.hexdump(opts)
-		while opts:
-			key,value,opts = _key_values('parameter',opts)
+		data = data[1:]
+		#self.hexdump(data)
+		while data:
+			key,value,data = _key_values('parameter',data)
 			# Paramaters must only be sent once.
 			if key == Parameter.AUTHENTIFICATION_INFORMATION:
-				raise SendNotification(2,5)
+				raise Notify(2,5)
 			elif key == Parameter.CAPABILITIES:
 				k,v,r = _key_values('capability',value)
 				if r:
-					raise SendNotification(2,0,"bad length for OPEN %s (size mismatch)" % 'capability')
+					raise Notify(2,0,"bad length for OPEN %s (size mismatch)" % 'capability')
 				if k not in capabilities:
 					capabilities[k] = []
 				if k == Capabilities.MULTIPROTOCOL_EXTENSIONS:
@@ -120,9 +121,12 @@ def new_Capabilities (data):
 					if value[2:]:
 						capabilities[k].append([ord(_) for _ in value[2:]])
 			else:
-				raise SendNotification(2,0,'unknow OPEN parameter %s' % hex(key))
+				raise Notify(2,0,'unknow OPEN parameter %s' % hex(key))
+	return capabilities
 
+# =================================================================== Capabilities
 # http://www.iana.org/assignments/capability-codes/
+
 class Capabilities (dict):
 	RESERVED                 = 0x00 # [RFC5492]
 	MULTIPROTOCOL_EXTENSIONS = 0x01 # [RFC2858]

@@ -19,7 +19,7 @@ from bgp.message.nop          import new_NOP
 from bgp.message.open         import new_Open,Open,Parameter,Capabilities
 from bgp.message.update       import new_Update,Update
 from bgp.message.keepalive    import new_KeepAlive,KeepAlive
-from bgp.message.notification import Notification, SendNotification
+from bgp.message.notification import Notification, Notify
 
 from bgp.network import Network
 from bgp.display import Display
@@ -34,7 +34,7 @@ class Protocol (Display):
 		self.neighbor = neighbor
 		self.network = network
 		self._table = Table()
-		self._update = Update(self._table)
+		#self._update = Update(self._table)
 		self._table.update(self.neighbor.routes)
 
 	def connect (self):
@@ -48,11 +48,11 @@ class Protocol (Display):
 	def check_keepalive (self):
 		left = int (self.network.last_read  + self.neighbor.hold_time - time.time())
 		if left <= 0:
-			raise SendNotification(4,0)
+			raise Notify(4,0)
 		return left
 	
 	def close (self):
-		self._update.last = 0
+		#self._update.last = 0
 		if self.network:
 			self.network.close()
 			self.network = None
@@ -62,13 +62,13 @@ class Protocol (Display):
 	
 	def read_message (self):
 		if not self.network.pending():
-			return chr(0),''
+			return new_NOP('')
 
 		data = self.network.read(19)
 
 		if data[:16] != Message.MARKER:
 			# We are speaking BGP - send us a valid Marker
-			raise SendNotification(1,1)
+			raise Notify(1,1)
 
 		raw_length = data[16:18]
 		length = unpack('!H',raw_length)[0]
@@ -76,7 +76,7 @@ class Protocol (Display):
 
 		if ( length < 19 or length > 4096):
 			# BAD Message Length
-			raise SendNotification(1,2)
+			raise Notify(1,2)
 
 		if (
 			(msg == Open.TYPE and length < 29) or
@@ -85,7 +85,7 @@ class Protocol (Display):
 			(msg == KeepAlive.TYPE and length != 19)
 		):
 			# MUST send the faulty length back
-			raise SendNotification(1,2,raw_length)
+			raise Notify(1,2,raw_length)
 			#(msg == RouteRefresh.TYPE and length != 23)
 
 		length -= 19
@@ -109,22 +109,22 @@ class Protocol (Display):
 			return new_Update(data)
 
 		if self.strict:
-			raise SendNotification(1,3,msg)
+			raise Notify(1,3,msg)
 
 		return new_NOP(data)
 
 	def read_open (self):
 		message = self.read_message()
 		if message.TYPE not in [Open.TYPE,]:
-			raise SendNotification(1,1,msg)
+			raise Notify(1,1,msg)
 
 		if message.asn != self.neighbor.peer_as:
 			# ASN sent did not match ASN expected
-			raise SendNotification(2,2,data[1:3])
+			raise Notify(2,2,data[1:3])
 
 		if message.hold_time == 0:
 			# Hold Time of zero not accepted
-			raise SendNotification(2,6,data[3:5])
+			raise Notify(2,6,data[3:5])
 		if message.hold_time >= 3:
 			self.neighbor.hold_time = min(self.neighbor.hold_time,message.hold_time)
 
@@ -133,7 +133,7 @@ class Protocol (Display):
 	def read_keepalive (self):
 		message = self.read_message()
 		if message.TYPE != KeepAlive.TYPE:
-			raise SendNotification(5,0)
+			raise Notify(5,0)
 		return message
 
 	# Sending message to peer .................................................
@@ -144,16 +144,18 @@ class Protocol (Display):
 		return o
 	
 	def new_announce (self):
-		m = self._update.announce(self.neighbor.local_as,self.neighbor.peer_as)
-		self.logIf(self.trace,"UPDATE (announce) SENT: %s" % [hex(ord(c)) for c in m][19:])
-		self.network.write(m)
-		return self._update if m else None
+#		m = self._update.announce(self.neighbor.local_as,self.neighbor.peer_as)
+#		self.logIf(self.trace,"UPDATE (announce) SENT: %s" % [hex(ord(c)) for c in m][19:])
+#		self.network.write(m)
+#		return self._update if m else None
+		return None
 	
 	def new_update (self):
-		m = self._update.update(self.neighbor.local_as,self.neighbor.peer_as)
-		self.logIf(self.trace,"UPDATE (update)   SENT: %s" % [hex(ord(c)) for c in m][19:])
-		if m: self.network.write(m)
-		return self._update if m else None
+#		m = self._update.update(self.neighbor.local_as,self.neighbor.peer_as)
+#		self.logIf(self.trace,"UPDATE (update)   SENT: %s" % [hex(ord(c)) for c in m][19:])
+#		if m: self.network.write(m)
+#		return self._update if m else None
+		return None
 	
 	def new_keepalive (self,force=False):
 		left = int(self.network.last_write + self.neighbor.hold_time.keepalive() - time.time())

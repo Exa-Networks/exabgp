@@ -13,7 +13,7 @@ from bgp.structure.message    import Failure
 from bgp.message.open         import Open
 from bgp.message.update       import Update
 from bgp.message.keepalive    import KeepAlive
-from bgp.message.notification import Notification, SendNotification
+from bgp.message.notification import Notification, Notify
 
 from bgp.protocol import Protocol,Network
 from bgp.display import Display
@@ -87,16 +87,17 @@ class Peer (Display):
 				self.logIf(self.debug_timers,'Sending Timer %d second(s) left' % c)
 
 				message = self.bgp.read_message()
+
 				self.logIf(message.TYPE == KeepAlive.TYPE,'<- KEEPALIVE')
 				self.logIf(message.TYPE == Update.TYPE,'<- UPDATE')
 
-				u = self.bgp.new_update()
-				self.logIf(u,'-> %s' % u)
+				#u = self.bgp.new_update()
+				#self.logIf(u,'-> %s' % u)
 
 				yield 
 			# User closing the connection
-			raise SendNotification(6,0)
-		except SendNotification,e:
+			raise Notify(6,0)
+		except Notify,e:
 			self.log('Sending Notification (%d,%d) [%s]  %s' % (e.code,e.subcode,str(e),e.data))
 			try:
 				self.bgp.new_notification(e)

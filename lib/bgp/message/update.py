@@ -14,105 +14,143 @@ from bgp.display import Display
 from bgp.structure.network import *
 from bgp.structure.message import *
 
-def _defix (self,data):
-	l = unpack('!H',data[0:2])[0]
-	return l,data[2:l+2],data[l+2:]
-
-def new_Update (self,data):
+def new_Update (data):
 		length = len(data)
 		# withdrawn
-		lw,withdrawn,data = _defix(data)
+		lw,withdrawn,data = defix(data)
 		if len(withdrawn) != lw:
-			raise SendNotification(3,1)
-		la,announced,nlri = _defix(data)
-		if len(announced) != la:
-			raise SendNotification(3,1)
-		if 2 + lw + 2+ la + len(nlri) != length:
-			raise SendNotification(3,1)
+			raise Notify(3,1)
+		la,attribute,announced = defix(data)
+		if len(attribute) != la:
+			raise Notify(3,1)
+		if 2 + lw + 2+ la + len(announced) != length:
+			raise Notify(3,1)
 
 		# The RFC check ...
 		#if lw + la + 23 > length:
-		#	raise SendNotification(3,1)
+		#	raise Notify(3,1)
 		
 #		print 'w   ', [hex(ord(c)) for c in withdrawn]
 #		print 'pa  ', [hex(ord(c)) for c in announce]
 #		print 'nlri', [hex(ord(c)) for c in nlri]
 
-		remove = []
+		remove = Update()
 		while withdrawn:
-			route = new_NLRI(withdrawn)
+			nlri = new_NLRI(withdrawn)
 			withdrawn = withdrawn[len(route):]
-			remove.append(route)
-			self.logIf(True,'removing route %s' % str(route))
+			remove.append(Route(nlri,'-'))
+			print 'removing route %s' % str(nlri)
 
-		add = []
+		update = Update()
 		while announced:
-			route = new_NLRI(announced)
-			announced = announced[len(route):]
-			add.append(route)
-			self.logIf(True,'adding route %s' % str(route))
+			nlri = new_NLRI(announced)
+			announced = announced[len(nlri):]
+			update.append(Route(nlri,'+'))
+			print 'updating route %s' % str(nlri)
 
-		#route.set_path_attribute(announce)
+		attributes = new_Attributes(attribute)
+		for route in update:
+			# XXX: we should really make a copy of the attribute so we can modify it later
+			route.attributes = attributes
 
-		routes = []
-		for route in remove:
-			routes.append(('-',route))
-		for route in add:
-			routes.append(('+',route))
-		return routes
+		update.extend(remove)
+		return update
 
-class Update (Message):
+# =================================================================== Update
+# An Update is a list of Route
+
+class Update (Message,list):
 	TYPE = chr(0x02)
 
-	def __init__ (self,table):
-		self.table = table
-		self.last = 0
-
-	def announce (self,local_asn,remote_asn):
-		return self.update(local_asn,remote_asn,False)
-
-	def update (self,local_asn,remote_asn,remove=True):
-		message = ''
-		withdraw4 = {}
-		announce4 = []
-		mp_route6 = []
-		# table.changed always returns routes to remove before routes to add
-		for action,route in self.table.changed(self.last):
-			if action == '':
-				self.last = route
-				continue
-			if route.ip.version == 6:
-				# XXX: We should keep track of what we have already sent to only remove routes if we have sent them
-				if remove:
-					mp_route6.append(self._message(self._prefix('') + self._prefix(route.pack(local_asn,remote_asn,'-'))))
-				if action == '+':
-					mp_route6.append(self._message(self._prefix('') + self._prefix(route.pack(local_asn,remote_asn,'+'))))
-				continue
-			if route.ip.version == 4:
-				if action == '-' and remove:
-					prefix = str(route)
-					withdraw4[prefix] = route.bgp()
-					continue
-				if action == '+':
-					prefix = str(route)
-					if withdraw4.has_key(prefix):
-						del withdraw4[prefix]
-					announce4.append(self._message(self._prefix(route.bgp()) + self._prefix(route.pack(local_asn,remote_asn)) + route.bgp()))
-					continue
-			
-		if len(withdraw4.keys()) or len(announce4):
-			# XXX: We should keep track of what we have already sent to only remove routes if we have sent them
-			remove4 = self._message(self._prefix(''.join([withdraw4[prefix] for prefix in withdraw4.keys()])) + self._prefix(''))
-			adding4 = ''.join(announce4)
-			message += remove4 + adding4
-		
-		if len(mp_route6):
-			message += ''.join(mp_route6)
-		
-		return message
-	
 	def __str__ (self):
 		return "UPDATE"
+
+# =================================================================== Route
+
+class Route (object):
+	def __init__ (self,nlri,action='+'):
+		self.nlri = nlri
+		self.attributes = Attributes()
+		self.action = action
+
+	def get_next_hop (self):
+		return self.attributes.get(Attribute.NEXT_HOP,IPv4('0.0.0.0'))
+	def set_next_hop (self,ip):
+		self.attributes[Attribute.NEXT_HOP] = NextHop4(ip)
+	next_hop = property(get_next_hop,set_next_hop)
+
+	def __cmp__ (self,other):
+		return \
+			self.nlri == other.nlri and \
+			self.next_hop == other.next_hop and \
+			self.attributes == other.attributes
+
+	def __str__ (self):
+		local_pref= ''
+		if self.attributes.has_key(Attribute.LOCAL_PREFERENCE):
+			l = self.attributes[Attribute.LOCAL_PREFERENCE]
+			if l == 100: # XXX: Double check default Local Pref
+				local_pref= ' local_preference %s' % l
+		
+		communities = ''
+		if self.attributes.has_key(Attribute.COMMUNITY):
+			communities = ' community %s' % str(self.attributes[Attribute.COMMUNITY])
+		
+		return "'%s next-hop %s%s%s" % \
+		(
+			str(self.nlri),self.next_hop,
+			local_pref, communities
+		)
+
+	def pack (self,local_asn,peer_asn,mp_action=''):
+		ibgp = local_asn == peer_asn
+		# we do not store or send MED
+		message = ''
+		
+		attributes = [self.attributes[a].ID for a in self.attributes]
+		
+		if Attribute.ORIGIN not in attributes:
+			message += Origin(Origin.IGP).pack()
+		
+		if Attribute.AS_PATH not in attributes:
+			if local_asn == peer_asn:
+				message += ASPath(ASPath.AS_SEQUENCE,[]).pack()
+			else:
+				message += ASPath(ASPath.AS_SEQUENCE,[local_asn]).pack()
+
+		# XXX: Is it mandatory even the the case of MP only routes ??
+		if Attribute.NEXT_HOP not in attributes:
+			if self.nlri.afi == AFI.ipv4:
+				raise ValueError('NEXT HOP is mandatory for IPv4')
+		
+		for k,attribute in self.attributes.iteritems():
+			if attribute.ID == Attribute.LOCAL_PREFERENCE:
+				if local_asn != peer_asn:
+					continue
+			if attribute.ID == Attribute.AS_PATH:
+				message += attribute.pack(ibgp)
+				continue
+			message += attribute.pack()
+
+		return message
+
+#		message += self._attribute(Flag.TRANSITIVE,ORIGIN,Origin(Origin.IGP).pack())
+#		message += self._attribute(Flag.TRANSITIVE,AS_PATH,'' if local_asn == peer_asn else self._segment(ASPath.AS_SEQUENCE,[local_asn]))
+#		if local_asn == peer_asn:
+#			message += self._attribute(Flag.TRANSITIVE,LOCAL_PREFERENCE,self.local_preference.pack())
+#		message += self._attribute(Flag.TRANSITIVE|Flag.OPTIONAL,COMMUNITY,''.join([c.pack() for c in self.communities])) if self.communities else ''
+#		if self.nlri.afi == AFI.ipv4:
+#			message += self._attribute(Flag.TRANSITIVE,NEXT_HOP,self.next_hop.pack())
+#		if self.nlri.afi == AFI.ipv6:
+#			if mp_action == '-':
+#				attr = AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + Prefix.pack(self)
+#				message += self._attribute(Flag.TRANSITIVE,MP_UNREACH_NLRI,attr)
+#			if mp_action == '+':
+#				prefix = self.nlri.pack()
+#				next_hop = self.next_hop.pack()
+#				attr = AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + chr(len(next_hop)) + next_hop + chr(0) + prefix
+#				message += self._attribute(Flag.TRANSITIVE,MP_REACH_NLRI,attr)
+#		return message
 
 # =================================================================== Flag
 
@@ -144,6 +182,9 @@ class Flag (int):
 # =================================================================== Attribute
 
 class Attribute (object):
+	ID   = 0x00
+	FLAG = 0x00
+
 	# RFC 4271
 	ORIGIN           = 0x01
 	AS_PATH          = 0x02
@@ -173,6 +214,27 @@ class Attribute (object):
 		if self.value == 0x0e: return "MP_REACH_NLRI"
 		if self.value == 0x0f: return "MP_UNREACH_NLRI"
 		return 'UNKNOWN ATTRIBUTE (%s)' % hex(self.value)
+
+	def _attribute (self,value):
+		flag = self.FLAG
+		if flag & Flag.OPTIONAL and not value:
+			return ''
+		length = len(value)
+		if length > 0xFF:
+			flag &= Flag.EXTENDED_LENGTH
+		if flag & Flag.EXTENDED_LENGTH:
+			len_value = pack('!H',length)[0]
+		else:
+			len_value = chr(length)
+		return "%s%s%s%s" % (chr(flag),chr(self.ID),len_value,value)
+
+	def _segment (self,seg_type,values):
+		if len(values)>255:
+			return self._segment(values[:256]) + self._segment(values[256:])
+		return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack() for v in values]))
+
+	def __cmp__ (self,other):
+		return cmp(self.value,other)
 
 # =================================================================== Attributes
 
@@ -211,114 +273,109 @@ class Attributes (dict):
 		if not length:
 			return self.new(data[length:])
 	
-		if code == ORIGIN:
-			self.attributes.add(new_Origin(data))
+		if code == Attribute.ORIGIN:
+			self.add(new_Origin(data))
 			return self.new(data[length:])
 		
-		if code == AS_PATH:
-			self.attributes.add(new_ASPath(data))
+		if code == Attribute.AS_PATH:
+			self.add(new_ASPath(data))
 			return self.new(data[length:])
 		
-		if code == NEXT_HOP:
-			self.attributes.add(NextHop(data))
+		if code == Attribute.NEXT_HOP:
+			self.add(new_NextHop4(data))
 			return self.new(data[length:])
 		
-		if code == MULTI_EXIT_DISC:
-			self.attributes.add(MED(data))
+		if code == Attribute.MULTI_EXIT_DISC:
+			self.add(new_MED(data))
 			return self.new(data[length:])
 		
-		if code == LOCAL_PREFERENCE:
-			self.attributes.add(LocalPreference(data))
+		if code == Attribute.LOCAL_PREFERENCE:
+			self.add(new_LocalPreference(data))
 			return self.new(data[length:])
 		
-		if code == ATOMIC_AGGREGATE:
+		if code == Attribute.ATOMIC_AGGREGATE:
 			# ignore
 			return self.new(data[length:])
 		
-		if code == AGGREGATOR:
+		if code == Attribute.AGGREGATOR:
 			# content is 6 bytes
 			return self.new(data[length:])
 
-		if code == COMMUNITY:
-			self.attributes.add(Communities(data))
+		if code == Attribute.COMMUNITY:
+			self.add(new_Communities(data))
 			return self.new(data[length:])
 		
-		if code == MP_UNREACH_NLRI:
-			afi = AFI(unpack('!H',data[offset:offset+2])[0])
-			offset += 2
-			safi = SAFI(ord(data[offset]))
-			offset += 1
-			# XXX: See RFC 5549 for better support
-			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
-				self.log('we only understand IPv4/IPv6 and should never have received this route (%s %s)' % (afi,safi))
-				return
-			data = data[offset:]
-			while data:
-				nlri = new_NLRI(nlri,afi)
-				data = data[len(nlri):]
-				self.add.append(nlri)
-				self.log('removing MP nlri %s' % str(nlri))
-			return self.new(data)
+#		if code == MP_UNREACH_NLRI:
+#			afi,safi = unpack('!HB',data)
+#			offset += 3
+#			# XXX: See RFC 5549 for better support
+#			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
+#				self.log('we only understand IPv4/IPv6 and should never have received this route (%s %s)' % (afi,safi))
+#				return
+#			data = data[offset:]
+#			while data:
+#				nlri = new_NLRI(nlri,afi)
+#				data = data[len(nlri):]
+#				self.add.append(nlri)
+#				self.log('removing MP nlri %s' % str(nlri))
+#			return self.new(data)
+#		
+#		if code == MP_REACH_NLRI:
+#			afi,safi = unpack('!HB',data)
+#			offset += 3
+#			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
+#				self.log('we only understand IPv4/IPv6 and should never have received this route (%s %s)' % (afi,safi))
+#				return
+#			len_nh = ord(data[offset])
+#			offset += 1
+#			if afi == AFI.ipv4 and not len_nh != 4:
+#				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
+#				self.log('bad IPv4 next-hop length (%d)' % len_nh)
+#				return
+#			if afi == AFI.ipv6 and not len_nh in (16,32):
+#				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
+#				self.log('bad IPv6 next-hop length (%d)' % len_nh)
+#				return
+#			nh = data[offset:offset+len_nh]
+#			if len_nh == 32:
+#				# we have a link-local address in the next-hop we ideally need to ignore
+#				if nh[0] == 0xfe: nh = nh[16:]
+#				elif nh[16] == 0xfe: nh = nh[:16]
+#				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
+#				else: return
+#			nh = socket.inet_ntop(socket.AF_INET6 if len_nh >= 16 else socket.AF_INET,nh)
+#			offset += len_nh
+#			nb_snpa = ord(data[offset])
+#			offset += 1
+#			snpas = []
+#			for i in range(nb_snpa):
+#				len_snpa = ord(offset)
+#				offset += 1
+#				snpas.append(data[offset:offset+len_snpa])
+#				offset += len_snpa
+#			nlri = data[offset:]
+#			while nlri:
+#				#self.hexdump(nlri)
+#				route,nlri = self.read_bgp(nlri,afi)
+#				route.set_next_hop(nh)
+#				mp.append(('+',route))
+#				self.log('adding MP route %s' % str(route))
+#			# XXX: This is wrong but will allow the code to run
+#			return self
+#			return self(data[offset:])
 		
-		if code == MP_REACH_NLRI:
-			afi = AFI(unpack('!H',data[offset:offset+2])[0])
-			offset += 2
-			safi = SAFI(ord(data[offset]))
-			offset += 1
-			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
-				self.log('we only understand IPv4/IPv6 and should never have received this route (%s %s)' % (afi,safi))
-				return
-			len_nh = ord(data[offset])
-			offset += 1
-			if afi == AFI.ipv4 and not len_nh != 4:
-				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-				self.log('bad IPv4 next-hop length (%d)' % len_nh)
-				return
-			if afi == AFI.ipv6 and not len_nh in (16,32):
-				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-				self.log('bad IPv6 next-hop length (%d)' % len_nh)
-				return
-			nh = data[offset:offset+len_nh]
-			if len_nh == 32:
-				# we have a link-local address in the next-hop we ideally need to ignore
-				if nh[0] == 0xfe: nh = nh[16:]
-				elif nh[16] == 0xfe: nh = nh[:16]
-				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-				else: return
-			nh = socket.inet_ntop(socket.AF_INET6 if len_nh >= 16 else socket.AF_INET,nh)
-			offset += len_nh
-			nb_snpa = ord(data[offset])
-			offset += 1
-			snpas = []
-			for i in range(nb_snpa):
-				len_snpa = ord(offset)
-				offset += 1
-				snpas.append(data[offset:offset+len_snpa])
-				offset += len_snpa
-			nlri = data[offset:]
-			while nlri:
-				#self.hexdump(nlri)
-				route,nlri = self.read_bgp(nlri,afi)
-				route.set_next_hop(nh)
-				mp.append(('+',route))
-				self.log('adding MP route %s' % str(route))
-			return mp
-			
-		else:
-			import warnings
-			warnings.warn(str(Attribute(code)))
-			return self.new(data[length:])
-
-		return
-	
+		import warnings
+		warnings.warn("Could not parse attribute %s" % str(code))
+		return self.new(data[length:])
 
 # =================================================================== Origin (1)
 
-def newOrigin (data):
+def new_Origin (data):
 	return Origin(ord(data[0]))
 
-class Origin (int):
+class Origin (int,Attribute):
 	ID = Attribute.ORIGIN
+	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 	
 	IGP        = 0x00
@@ -332,7 +389,7 @@ class Origin (int):
 		return 'INVALID'
 
 	def pack (self):
-		return chr(self)
+		return self._attribute(chr(self))
 
 	def __len__ (self):
 		return 1
@@ -349,17 +406,12 @@ def new_ASPath (data):
 		ASPS.append(c)
 	return ASPS
 
-class ASPATH (int):
+class ASPath (Attribute):
 	AS_SET      = 0x01
 	AS_SEQUENCE = 0x02
 
-	def __str__ (self):
-		if self.type == 0x01: return 'AS_SET'
-		if self.type == 0x02: return 'AS_SEQUENCE'
-		return 'INVALID'
-
-class ASPath (object):
-	ID = Attribute.AS_PATH          
+	ID = Attribute.AS_PATH
+	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 
 	def __init__ (self,asptype,aspsegment = []):
@@ -370,15 +422,19 @@ class ASPath (object):
 		self.segment.append(community)
 	
 	def pack (self):
-		return chr(self.type) + chr(len(self.segment)) + ''.join([community.pack() for community in self.segment])
-		
+		return self._attribute(self._segment(self.type,self.segment))
+	
 	def __len__ (self):
 		return 2 + (len(self.segment)*2)
 
 	def __str__ (self):
-		if len(self) >  1: return '[ %s ]' % ' '.join([str(community) for community in self])
-		if len(self) == 1: return str(self[0])
-		return ''
+		if self.type == 0x01: t = 'AS_SET'
+		if self.type == 0x02: t = 'AS_SEQUENCE'
+		else: t = 'INVALID'
+
+		if len(self) >  1: return '%s [ %s ]' % (t,' '.join([str(community) for community in self]))
+		if len(self) == 1: return '%s %s' % (t,str(self[0]))
+		return t
 
 # =================================================================== NextHop (3)
 # XXX: WE STILL USE IP IN THE CODE
@@ -392,16 +448,20 @@ def new_NextHop4 (data):
 def new_NextHop6 (self,data):
 	raise NotImplemented('not yet ...')
 
-class NextHop4 (IPv4):
+class NextHop4 (IPv4,Attribute):
 	ID = Attribute.NEXT_HOP
+	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
+
+	def pack (self):
+		return self._attribute(IPv4.pack(self))
 
 # =================================================================== MED (4)
 
-def new_LocalPreference (data):
+def new_MED (data):
 	return MED(unpack('!L',data[:4])[0])
 
-class MED (long):
+class MED (long,Attribute):
 	ID = Attribute.MULTI_EXIT_DISC  
 	MULTIPLE = False
 
@@ -416,12 +476,13 @@ class MED (long):
 def new_LocalPreference (data):
 	return LocalPreference(unpack('!L',data[:4])[0])
 
-class LocalPreference (long):
+class LocalPreference (long,Attribute):
 	ID = Attribute.LOCAL_PREFERENCE 
+	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 
 	def pack (self):
-		return pack('!L',self)
+		message += self._attribute(pack('!L',self))
 
 	def __len__ (self):
 		return 4
@@ -452,15 +513,30 @@ class Community (long):
 	def __len__ (self):
 		return 4
 
-class Communities (list):
-	ID = Attribute.COMMUNITY        
+class Communities (Attribute):
+	ID = Attribute.COMMUNITY
+	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
 	MULTIPLE = False
 
+	def __init__ (self,value=[]):
+		self.value = value
+
+	def append(self,data):
+		return self.value.append(data)
+
+	def pack (self):
+		if len(self.value):
+			return self._attribute(''.join([c.pack() for c in self.value])) 
+		return ''
+	
 	def __str__ (self):
-		if len(self) > 1:
-			return "[ %s ]" % " ".join(str(community) for community in self)
-		return str(self[0])
-		
+		if len(self.value) > 1:
+			return "[ %s ]" % " ".join(str(community) for community in self.value)
+		return str(self.value[0])
+	
+	# XXX: Check if this is right ........
+	def __len__ (self):
+		return 2 + len(self.values)*4
 # =================================================================== Unreacheable NLRI (14)
 
 def new_MPUnreachNLRI (data):
@@ -479,89 +555,18 @@ def new_MPUnreachNLRI (data):
 			self.log('removing MP nlri %s' % str(nlri))
 		return self.new(data)
 
-class MPURNLRI (list):
+class MPURNLRI (list,Attribute):
+	# XXX: FIX ME
+	FLAG = 0x00
 	ID = Attribute.MP_UNREACH_NLRI  
 	MULTIPLE = True
 
 # =================================================================== Unreacheable NLRI (14)
 
-class MPRNLRI (list):
+class MPRNLRI (list,Attribute):
+	# XXX: FIX ME
+	FLAG = 0x00
 	ID = Attribute.MP_REACH_NLRI    
 	MULTIPLE = True
 
 # =================================================================== Route
-
-class Route (object):
-	def __init__ (self,nlri):
-		self.nlri = nlri
-		self.next_hop = new_IP('0.0.0.0')
-		self.attributes = Attributes()
-
-	def get_next_hop (self):
-		return self._next_hop
-	def set_next_hop (self,ip):
-		self._next_hop = new_IP(ip)
-	next_hop = property(get_next_hop,set_next_hop)
-
-	def __cmp__ (self,other):
-		return \
-			self.nlri == other.nlri and \
-			self.next_hop == other.next_hop and \
-			self.attributes == other.attributes
-
-	def __str__ (self):
-		local_pref= ''
-		if self.attributes.has_key(Attribute.LOCAL_PREFERENCE):
-			l = self.attributes[Attribute.LOCAL_PREFERENCE]
-			if l == 100: # XXX: Double check default Local Pref
-				local_pref= ' local_preference %s' % l
-		
-		communities = ''
-		if self.attributes.has_key(Attribute.COMMUNITY):
-			communities = ' community %s' % str(self.attributes[Attribute.COMMUNITY])
-		
-		return "'%s next-hop %s%s%s" % \
-		(
-			str(self.nlri),self.next_hop,
-			local_pref, communities
-		)
-
-	def _attribute (self,attr_flag,attr_type,value):
-		if attr_flag & Flag.OPTIONAL and not value:
-			return ''
-		length = len(value)
-		if length > 0xFF:
-			attr_flag &= Flag.EXTENDED_LENGTH
-		if attr_flag & Flag.EXTENDED_LENGTH:
-			len_value = pack('!H',length)[0]
-		else:
-			len_value = chr(length)
-		return "%s%s%s%s" % (chr(attr_flag),chr(attr_type),len_value,value)
-
-	def _segment (self,seg_type,values):
-		if len(values)>255:
-			return self._segment(values[:256]) + self._segment(values[256:])
-		return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack() for v in values]))
-
-	def pack (self,local_asn,peer_asn,mp_action=''):
-		message = ''
-		message += self._attribute(Flag.TRANSITIVE,ORIGIN,Origin(Origin.IGP).pack())
-		message += self._attribute(Flag.TRANSITIVE,AS_PATH,'' if local_asn == peer_asn else self._segment(ASPath.AS_SEQUENCE,[local_asn]))
-		if local_asn == peer_asn:
-			message += self._attribute(Flag.TRANSITIVE,LOCAL_PREFERENCE,self.local_preference.pack())
-		message += self._attribute(Flag.TRANSITIVE|Flag.OPTIONAL,COMMUNITY,''.join([c.pack() for c in self.communities])) if self.communities else ''
-		# we do not store or send MED
-		if self.ip.version == 4:
-			message += self._attribute(Flag.TRANSITIVE,NEXT_HOP,self.next_hop.pack())
-		if self.ip.version == 6:
-			if mp_action == '-':
-				attr = AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + Prefix.pack(self)
-				message += self._attribute(Flag.TRANSITIVE,MP_UNREACH_NLRI,attr)
-			if mp_action == '+':
-				prefix = Prefix.bgp(self)
-				next_hop = self.next_hop.pack()
-				attr = AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + chr(len(next_hop)) + next_hop + chr(0) + prefix
-				message += self._attribute(Flag.TRANSITIVE,MP_REACH_NLRI,attr)
-		return message
-
-

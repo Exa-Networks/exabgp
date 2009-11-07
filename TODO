@@ -1,3 +1,7 @@
+The code is currently broken and will simply keep the session with the peer UP (no announcement)
+Update is becoming Delta - Need to re-add the route announcement code
+MP parsing is currently disabled
+
 Move all the new_* function in protocol
 Add the possibility to set the HoldTime in the configuration
 Add support RFC 3107

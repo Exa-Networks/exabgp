@@ -7,7 +7,7 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
-from struct import pack
+from struct import pack,unpack
 
 # We do not implement the RFC State Machine so .. we do not care :D
 class State (object):
@@ -18,6 +18,15 @@ class State (object):
 	OPENCONFIRM = 0x05
 	ESTABLISHED = 0x06
 
+
+# XXX: the name is HORRIBLE, fix this !!
+def defix (data):
+	l = unpack('!H',data[0:2])[0]
+	return l,data[2:l+2],data[l+2:]
+
+# XXX: the name is HORRIBLE, fix this !!
+def prefix (data):
+	return '%s%s' % (pack('!H',len(data)),data)
 
 class Message (object):
 	TYPE = 0 # Should be None ?
@@ -34,10 +43,6 @@ class Message (object):
 		HEADER        = 0x40, #  64
 		GENERAL       = 0x80, # 128
 		#LOCALRIB    = 0x100  # 256
-	
-	# XXX: the name is HORRIBLE, fix this !!
-	def _prefix (self,data):
-		return '%s%s' % (pack('!H',len(data)),data)
 	
 	def _message (self,message = ""):
 		message_len = pack('!H',19+len(message))

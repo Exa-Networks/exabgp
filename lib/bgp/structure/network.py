@@ -67,7 +67,11 @@ class SAFI (int):
 # =================================================================== NLRI
 
 def new_NLRI (data,afi=AFI.ipv4,safi=SAFI.unicast):
-	return NLRI(data[1:size+1],afi,safi)
+	raise 
+	print "===================="
+	print [hex(ord(c)) for c in data]
+	print "===================="
+	return NLRI(data[1:],afi,safi)
 
 def toNLRI(ip,netmask):
 	try:
@@ -99,7 +103,10 @@ class NLRI (object):
 
 	def _cache (self):
 		if not self._ip:
-			self._ip = socket.inet_ntop(self._af[self.afi],self.raw[1:])
+			if self.afi == AFI.ipv4:
+				self._ip = socket.inet_ntop(self._af[self.afi],self.raw[1:5])
+			else:
+				self._ip = socket.inet_ntop(self._af[self.afi],self.raw[1:17])
 			self._mask = ord(self.raw[0])
 		return self._ip, self._mask
 

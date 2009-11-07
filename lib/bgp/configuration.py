@@ -11,9 +11,9 @@ from __future__ import with_statement
 
 import re
 
-from bgp.structure.network  import new_IP,ASN
+from bgp.structure.network  import IPv4,IPv6,ASN
 from bgp.structure.neighbor import Neighbor
-from bgp.message.update     import Route,toNLRI,Community,Communities,LocalPreference # XXX: Route should be removed/changed
+from bgp.message.update     import Route,toNLRI,Community,Communities,LocalPreference
 
 class Configuration (object):
 	_str_route_error = 'syntax: route IP/MASK next-hop IP [local-preference NUMBER] [community COMMUNITY| community [COMMUNITY1 COMMUNITY2]]'
@@ -186,7 +186,10 @@ class Configuration (object):
 	def _multi_neighbor (self,address):
 		self._scope.append({})
 		try:
-			self._scope[-1]['peer-address'] = new_IP(address)
+			try:
+				self._scope[-1]['peer-address'] = IPv4(address)
+			except ValueError:
+				self._scope[-1]['peer-address'] = IPv6(address)
 		except:
 			self._error = '"%s" is not a valid IP address' % address
 			return False
@@ -215,9 +218,11 @@ class Configuration (object):
 			return False
 
 	def _set_ip (self,command,value):
-		# XXX: we do not support IPv6
 		try:
-			ip = new_IP(value[0])
+			try:
+				ip = IPv4(value[0])
+			except ValueError:
+				ip = IPv6(value[0])
 		except (IndexError,ValueError):
 			self._error = '"%s" is an invalid IP address' % ' '.join(value)
 			return False
@@ -312,7 +317,10 @@ class Configuration (object):
 	def _route_next_hop (self,tokens):
 		try:
 			t = tokens.pop(0)
-			ip = new_IP(t)
+			try:
+				ip = IPv4(t)
+			except ValueError:
+				ip = IPv6(t)
 			self._scope[-1]['routes'][-1].next_hop = t
 			return True
 		except:
@@ -360,5 +368,5 @@ class Configuration (object):
 		except ValueError:
 			self._error = self._str_route_error
 			return False
-		self._scope[-1]['routes'][-1].attributes.add(Communities)
+		self._scope[-1]['routes'][-1].attributes.add(communities)
 		return True

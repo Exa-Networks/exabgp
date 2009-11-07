@@ -15,7 +15,7 @@ def new_NOP (data):
 class NOP (Message):
 	TYPE = chr(0x00)
 	
-	def __init__ (data):
+	def __init__ (self,data):
 		self.data = data
 	
 	def message (self):
