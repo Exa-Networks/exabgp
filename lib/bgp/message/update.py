@@ -301,33 +301,31 @@ class Attributes (dict):
 			self.add(new_Communities(data))
 			return self.new(data[length:])
 		
-#		if code == Attribute.MP_UNREACH_NLRI:
-#			afi,safi = unpack('!HB',data)
-#			offset += 3
-#			# XXX: See RFC 5549 for better support
-#			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
-#				self.log('we only understand IPv4/IPv6 and should never have received this route (%s %s)' % (afi,safi))
-#				return
-#			data = data[offset:]
-#			while data:
-#				nlri = new_NLRI(nlri,afi)
-#				data = data[len(nlri):]
-#				self.add.append(nlri)
-#				self.log('removing MP nlri %s' % str(nlri))
-#			return self.new(data)
-#		
+		if code == Attribute.MP_UNREACH_NLRI:
+			next_attributes = data[length:]
+			data = data[:length]
+			afi,safi = unpack('!HB',data[:3])
+			offset = 3
+			# XXX: See RFC 5549 for better support
+			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
+				print 'we only understand IPv4/IPv6 and should never have received this route (%s %s)' % (afi,safi)
+				return self.new(next_attributes)
+			data = data[offset:]
+			while data:
+				route = Route(new_NLRI(data,afi))
+				data = data[len(route.nlri):]
+				self.add(MPURNLRI(route))
+				print 'removing MP route %s' % str(route)
+			return self.new(next_attributes)
 
 		if code == Attribute.MP_REACH_NLRI:
-			print [hex(ord(c)) for c in data[:length]]
-			
 			next_attributes = data[length:]
 			data = data[:length]
 			afi,safi = unpack('!HB',data[:3])
 			offset = 3
 			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
 				print 'we only understand IPv4/IPv6 and should never have received this route (%s %s)' % (afi,safi)
-				return
-			print [hex(ord(c)) for c in data[:length]]
+				return self.new(next_attributes)
 			len_nh = ord(data[offset])
 			offset += 1
 			if afi == AFI.ipv4 and not len_nh != 4:
@@ -361,7 +359,7 @@ class Attributes (dict):
 				route = Route(new_NLRI(data,afi))
 				route.next_hop6 = nh
 				data = data[len(route.nlri):]
-				self.add(MPURNLRI(route))
+				self.add(MPRNLRI(route))
 				print 'adding MP route %s' % str(route)
 			return self.new(next_attributes)
 		
