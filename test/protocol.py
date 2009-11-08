@@ -102,33 +102,48 @@ class TestProtocol (unittest.TestCase):
 		self.assertEqual(updates.TYPE,Update.TYPE)
 		self.assertEqual(updates[0].action,'-')
 		self.assertEqual(str(updates[0]),'10.0.0.1/32')
-		#self.assertEqual(m,chr(2))
 
-#	def test_5_selfparse_update_announce_multi (self):
-#		ds = Delta(self.table)
-#		
-#		txt  = ds.announce(65000,65000)
-#		self.table.update(self.routes[:-1])
-#		txt += ds.update(65000,65000)
-#		network = Network(txt)
-#
-#		bgp = Protocol(self.neighbor,network)
-#		bgp.follow = False
-#
-#		m,_ = bgp.read_message()
-#		self.assertEqual(m,chr(2))
-#		m,_ = bgp.read_message()
-#		self.assertEqual(m,chr(2))
-#		m,_ = bgp.read_message()
-#		self.assertEqual(m,chr(2))
-#		m,d = bgp.read_message()
-#		self.assertEqual(m,chr(2))
-#		self.assertEqual(len(d),1)
-#		self.assertEqual(d[0][1],'\x10\x00\x02\x01') 
-#
-#		self.assertEqual(network.read(1),'')
-#		#print [hex(ord(c)) for c in msg.read(1024)]
-#
+	def test_5_selfparse_update_announce_multi (self):
+		o = Open(4,65000,'1.2.3.4',Capabilities().default(),30).message()
+		k = KeepAlive().message()
+		d = Delta(self.table)
+		a = d.announce(65000,65000)
+		self.table.update(self.routes[:-1])
+		u = d.update(65000,65000)
+		bgp.follow = False
+
+		print a
+		print u
+
+
+
+
+
+
+		ds = Delta(self.table)
+		
+		txt  = ds.announce(65000,65000)
+		self.table.update(self.routes[:-1])
+		txt += ds.update(65000,65000)
+		network = Network(txt)
+
+		bgp = Protocol(self.neighbor,network)
+		bgp.follow = False
+
+		m,_ = bgp.read_message()
+		self.assertEqual(m,chr(2))
+		m,_ = bgp.read_message()
+		self.assertEqual(m,chr(2))
+		m,_ = bgp.read_message()
+		self.assertEqual(m,chr(2))
+		m,d = bgp.read_message()
+		self.assertEqual(m,chr(2))
+		self.assertEqual(len(d),1)
+		self.assertEqual(d[0][1],'\x10\x00\x02\x01') 
+
+		self.assertEqual(network.read(1),'')
+		#print [hex(ord(c)) for c in msg.read(1024)]
+
 #	def test_6_holdtime (self):
 #		class MyPeer(Network):
 #			_data = StringIO(Open(4,65000,'1.2.3.4',Capabilities().default(),90).message())
