@@ -95,7 +95,6 @@ def new_Capabilities (data):
 	option_len = ord(data[0])
 	if option_len:
 		data = data[1:]
-		#self.hexdump(data)
 		while data:
 			key,value,data = _key_values('parameter',data)
 			# Paramaters must only be sent once.

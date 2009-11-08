@@ -13,7 +13,7 @@ import re
 
 from bgp.structure.network  import IPv4,IPv6,ASN
 from bgp.structure.neighbor import Neighbor
-from bgp.message.update     import Route,toNLRI,Community,Communities,LocalPreference
+from bgp.message.update     import Update,to_NLRI,Community,Communities,LocalPreference
 
 class Configuration (object):
 	_str_route_error = 'syntax: route IP/MASK next-hop IP [local-preference NUMBER] [community COMMUNITY| community [COMMUNITY1 COMMUNITY2]]'
@@ -40,22 +40,22 @@ class Configuration (object):
 				else:
 					self.error = error
 				return False
-				
+
 		self._neighbor = {}
 		self._scope = []
 		self._location = ['root']
 		self._line = []
 		self._error = ''
 		self._number = 0
-		
+
 		while not self.finished():
 			r = self._dispatch('configuration',['neighbor',],[])
 			if r is False: break
-		
+
 		if r in [True,None]:
 			self.neighbor = self._neighbor
 			return True
-		
+
 		self.error = "syntax error in section %s\nline %d : %s\n%s" % (self._location[-1],self.number(),self.line(),self._error)
 		return False
 
@@ -75,7 +75,6 @@ class Configuration (object):
 	def tokens (self):
 		self._number += 1
 		self._line = self._tokens.pop(0)
-		#print "reading",self._line
 		return self._line
 
 	def number (self):
@@ -86,9 +85,9 @@ class Configuration (object):
 
 	def finished (self):
 		return len(self._tokens) == 0
-	
+
 	# Flow control ......................
-	
+
 	def _dispatch (self,name,multi=set([]),single=set([])):
 		try:
 			tokens = self.tokens()
@@ -164,7 +163,7 @@ class Configuration (object):
 			v = scope.get('routes',[])
 			for route in v:
 				neighbor.routes.append(route)
-			
+
 		# drop the neiborg
 		scope = self._scope.pop(-1)
 		neighbor.description = scope.get('description','')
@@ -197,9 +196,9 @@ class Configuration (object):
 		 	r = self._dispatch('neigbor',['static',],['description','router-id','local-address','local-as','peer-as'])
 			if r is False: return False
 			if r is None: return True
-	
+
 	# Command Neighbor
-	
+
 	def _set_description (self,tokens):
 		text = ' '.join(tokens)
 		if len(text) < 2 or text[0] != '"' or text[-1] != '"' or text[1:-1].count('"'):
@@ -207,7 +206,7 @@ class Configuration (object):
 			return False
 		self._scope[-1]['description'] = text[1:-1]
 		return True
-	
+
 	def _set_asn (self,command,value):
 		# XXX: we do not support 32 bits ASN...
 		try:
@@ -229,7 +228,7 @@ class Configuration (object):
 		self._scope[-1][command] = ip
 		return True
 
-	
+
 	#  Group Static ................
 
 	def _multi_static (self,tokens):
@@ -246,34 +245,34 @@ class Configuration (object):
 	def _insert_route (self,tokens):
 		try:
 			ip,nm = tokens.pop(0).split('/')
-			route = Route(toNLRI(ip,nm))
+			route = Update(to_NLRI(ip,nm))
 		except ValueError:
 			self._error = self._str_route_error
 			return False
-			
+
 		if not self._scope[-1].has_key('routes'):
 			self._scope[-1]['routes'] = []
-			
+
 		self._scope[-1]['routes'].append(route)
 		return True
-	
+
 	def _check_route (self):
 		route = self._scope[-1]['routes'][-1]
 		next_hop = self._scope[-1]['routes'][-1].next_hop
-		
+
 		if not next_hop:
 			self._error = 'syntax: route IP/MASK { next-hop IP; }'
 			return False
 		return True
-	
+
 	def _multi_route (self,tokens):
 		if len(tokens) != 1:
 			self._error = self._str_route_error
 			return False
-		
+
 		if not self._insert_route(tokens):
 			return False
-		
+
 		while True:
 			r = self._dispatch('route',[],['next-hop','local-preference','community'])
 			if r is False: return False
@@ -284,17 +283,17 @@ class Configuration (object):
 		if len(tokens) <3:
 			self._error = self._str_route_error
 			return False
-		
+
 		if not self._insert_route(tokens):
 			return False
-		
+
 		if tokens.pop(0) != 'next-hop':
 			self._error = self._str_route_error
 			return False
-		
+
 		if not self._route_next_hop(tokens):
 			return False
-		
+
 		while len(tokens):
 			if len(tokens) < 2:
 				self._error = self._str_route_error
@@ -311,9 +310,9 @@ class Configuration (object):
 			self._error = self._str_route_error
 			return False
 		return True
-	
+
 	# Command Route
-	
+
 	def _route_next_hop (self,tokens):
 		try:
 			t = tokens.pop(0)
@@ -333,7 +332,7 @@ class Configuration (object):
 		except ValueError:
 			self._error = self._str_route_error
 			return False
-	
+
 	def _parse_community (self,data):
 		try:
 			value = long(data)

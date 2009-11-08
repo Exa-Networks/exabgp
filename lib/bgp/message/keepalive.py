@@ -16,7 +16,7 @@ def new_KeepAlive (data=None):
 
 class KeepAlive (Message):
 	TYPE = chr(0x04)
-	
+
 	def message (self):
 		return self._message()
 

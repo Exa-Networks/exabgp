@@ -14,10 +14,10 @@ def new_NOP (data):
 
 class NOP (Message):
 	TYPE = chr(0x00)
-	
+
 	def __init__ (self,data):
 		self.data = data
-	
+
 	def message (self):
 		return self._message(self.data)
 

@@ -15,7 +15,7 @@ from bgp.structure.message import *
 
 class Notification (Message,Failure):
 	TYPE = chr(0x03)
-	
+
 	_str_code = {
 		1 : "Message header error",
 		2 : "OPEN message error",
@@ -30,7 +30,7 @@ class Notification (Message,Failure):
 		(1,1) : "Connection Not Synchronized.",
 		(1,2) : "Bad Message Length.",
 		(1,3) : "Bad Message Type.",
-		
+
 		(2,0) : "Unspecific.",
 		(2,1) : "Unsupported Version Number.",
 		(2,2) : "Bad Peer AS.",
@@ -69,12 +69,12 @@ class Notification (Message,Failure):
 		(6,7) : "Connection Collision Resolution",
 		(6,8) : "Out of Resources",
 	}
-	
+
 	def __init__ (self,code,subcode,data=''):
 		self.code = code
 		self.subcode = subcode
 		self.data = data
-	
+
 	def __str__ (self):
 		return "%s: %s" % (self._str_code.get(self.code,'unknown error'), self._str_subcode.get((self.code,self.subcode),'unknow reason'))
 

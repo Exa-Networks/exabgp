@@ -10,6 +10,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 import time
 
 from bgp.structure.message    import Failure
+from bgp.message.nop          import NOP
 from bgp.message.open         import Open
 from bgp.message.update       import Update
 from bgp.message.keepalive    import KeepAlive
@@ -24,7 +25,7 @@ from bgp.display import Display
 class Peer (Display):
 	debug_timers = False		# debug hold/keepalive timers
 	debug_trace = True			# debug traceback on unexpected exception
-	
+
 	def __init__ (self,neighbor,supervisor):
 		Display.__init__(self,neighbor.peer_address,neighbor.peer_as)
 		self.supervisor = supervisor
@@ -33,7 +34,7 @@ class Peer (Display):
 		self.restart = True
 		self.bgp = None
 		self._loop = None
-		
+
 
 	def stop (self):
 		self.running = False
@@ -41,7 +42,7 @@ class Peer (Display):
 	def shutdown (self):
 		self.running = False
 		self.restart = False
-	
+
 	def run (self):
 		if self._loop:
 			try:
@@ -54,12 +55,12 @@ class Peer (Display):
 		else:
 			self.bgp.close()
 			self.supervisor.unschedule(self)
-	
+
 	def _run (self):
 		try:
 			self.bgp = Protocol(self.neighbor)
 			self.bgp.connect()
-		
+
 			o = self.bgp.new_open()
 			self.log('-> %s' % o)
 			yield
@@ -75,8 +76,8 @@ class Peer (Display):
 			message = self.bgp.read_keepalive()
 			self.log('<- KEEPALIVE')
 
-			a = self.bgp.new_announce()
-			self.logIf(a,'-> %s' % a)
+			messages = self.bgp.new_announce()
+			self.logIf(messages,'-> UPDATE (%d)' % len(messages))
 
 			while self.running:
 				c = self.bgp.check_keepalive()
@@ -90,9 +91,10 @@ class Peer (Display):
 
 				self.logIf(message.TYPE == KeepAlive.TYPE,'<- KEEPALIVE')
 				self.logIf(message.TYPE == Update.TYPE,'<- UPDATE')
+				self.logIf(message.TYPE not in (KeepAlive.TYPE,Update.TYPE,NOP.TYPE), '<- %d' % ord(message.TYPE))
 
-				#u = self.bgp.new_update()
-				#self.logIf(u,'-> %s' % u)
+				messages = self.bgp.new_update()
+				self.logIf(messages,'-> UPDATE (%d)' % len(messages))
 
 				yield 
 			# User closing the connection

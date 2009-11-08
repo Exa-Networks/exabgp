@@ -10,13 +10,16 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 import sys
 import time
 
+def hexdump (value):
+	print [(hex(ord(_))) for _ in value]
+
 class Display (object):
 	follow = True
 
 	def __init__ (self,peer,asn):
 		self.peer = peer
 		self.asn = asn
-	
+
 	def log (self,string):
 		if self.follow:
 			try:
@@ -25,9 +28,9 @@ class Display (object):
 			except IOError:
 				# ^C was pressed while the output is going via a pipe, just ignore the fault, to close the BGP session correctly
 				pass
-	
+
 	def logIf (self,test,string):
 		if test: self.log(string)
-		
+
 	def hexdump (self,value):
 		print [(hex(ord(_))) for _ in value]

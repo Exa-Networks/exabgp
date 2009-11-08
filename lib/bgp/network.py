@@ -17,16 +17,15 @@ import select
 from bgp.structure.message import Failure
 
 class Network (object):
-	
-	def __init__ (self,peer,local,asn=''):
+
+	def __init__ (self,peer,local):
 		self.last_read = 0
 		self.last_write = 0
 		self.peer = peer
-		self.asn = asn
-		
+
 		if peer.version != local.version:
 			raise Failure('The local IP and peer IP must be of the same family (both IPv4 or both IPv6)')
-		
+
 		try:
 			if peer.version == 4:
 				self._io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -54,7 +53,7 @@ class Network (object):
 		except socket.error, e:
 			self.close()
 			raise Failure('could not connect to peer: %s' % str(e))
-		
+
 	def pending (self):
 		r,_,_ = select.select([self._io,],[],[],0)
 		return True if r else False
@@ -75,6 +74,7 @@ class Network (object):
 
 	def write (self,data):
 		try:
+			print "====", [hex(ord(_)) for _ in data]
 			r = self._io.send(data)
 			self.last_write = time.time()
 			return r
@@ -89,4 +89,4 @@ class Network (object):
 			self._io.close()
 		except socket.error:
 			pass
-	
+

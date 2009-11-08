@@ -1,14 +1,17 @@
+Add the possibility to set the HoldTime in the configuration
+Add MD5 authentification support
+
+Correct Unit Testing.
+ - Most of the use case have not been tested in production
+ - Most of the code is not covered
+
 The code is currently broken and will simply keep the session with the peer UP (no announcement)
 Update is becoming Delta - Need to re-add the route announcement code
-MP parsing is currently disabled
-IPv4/IPv6 and NextHop4/NextHop6 - do we really need the differenciation ?
 
-Move all the new_* function in protocol
-Add the possibility to set the HoldTime in the configuration
-Add support RFC 3107
-add MD5 authentification support
+Perhaps ? move all/most the new_* function in protocol
 
 allow reconfiguration (SIGHUP forcing a reload of the configuration)
--> reconfiguration alter neighbor list
--> reconfiguration alter neighbor routes
+ - reconfiguration alter neighbor list
+ - reconfiguration alter neighbor routes
 
+Add support RFC 3107

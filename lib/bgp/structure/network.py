@@ -7,6 +7,7 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
+import math
 import socket
 from struct import *
 
@@ -67,9 +68,10 @@ class SAFI (int):
 # =================================================================== NLRI
 
 def new_NLRI (data,afi=AFI.ipv4,safi=SAFI.unicast):
-	return NLRI(data,afi,safi)
+	size = int(math.ceil(float(ord(data[0]))/8)) + 1
+	return NLRI(data[:size],afi,safi)
 
-def toNLRI(ip,netmask):
+def to_NLRI(ip,netmask):
 	try:
 		nm = chr(int(netmask))
 	except ValueError:
@@ -84,7 +86,7 @@ def toNLRI(ip,netmask):
 		except socket.error:
 			raise ValueError('Invalid IP %s' % data)
 	return NLRI("%s%s" % (nm,pack),afi,SAFI.unicast)
-	
+
 class NLRI (object):
 	_af = {
 		AFI.ipv4: socket.AF_INET,
@@ -100,7 +102,7 @@ class NLRI (object):
 	def _cache (self):
 		if not self._ip:
 			if self.afi == AFI.ipv4:
-				self._ip = socket.inet_ntop(self._af[self.afi],self.raw[1:5])
+				self._ip = socket.inet_ntop(self._af[self.afi],self.raw[1:] + '\0'*(5-len(self.raw)))
 			else:
 				self._ip = socket.inet_ntop(self._af[self.afi],self.raw[1:] + '\0'*(17-len(self.raw)))
 			self._mask = ord(self.raw[0])
@@ -125,7 +127,7 @@ class NLRI (object):
 		return "%s/%d" % self._cache()
 
 	def __len__ (self):
-		return len(self.raw) + 1
+		return len(self.raw)
 
 #		mask = ord(data[0])
 #		size = int(math.ceil(float(mask)/8))
@@ -182,8 +184,11 @@ class _INET (object):
 		import warnings
 		warnings.warn('we should never compare things which are not comparable %s and %s' % (type(self),type(other)))
 		return False
-		
+
 	# XXX: Should we implement the other test to not create bad surprised ? ...
+
+	def __str__ (self):
+		return self.string
 
 class IPv4 (_INET):
 	def __init__ (self,value):

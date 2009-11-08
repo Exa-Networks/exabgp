@@ -40,7 +40,7 @@ class TestTable (unittest.TestCase):
 		self.failIf(('+',self.routes[1]) not in [(t,r) for (t,r) in self.table.changed(self.now) if t])
 		self.failIf(('-',self.routes[2]) not in [(t,r) for (t,r) in self.table.changed(self.now) if t])
 
-	
+
 	def test_3_del_all (self):
 		self.table = Table()
 
@@ -77,6 +77,6 @@ class TestTable (unittest.TestCase):
 		self.failIf(('+',self.routes[0]) not in [(t,r) for (t,r) in self.table.changed(self.now) if t])
 		self.failIf(('+',self.routes[1]) not in [(t,r) for (t,r) in self.table.changed(self.now) if t])
 		self.failIf(('+',self.routes[2]) not in [(t,r) for (t,r) in self.table.changed(self.now) if t])
-	
+
 if __name__ == '__main__':
 	unittest.main()

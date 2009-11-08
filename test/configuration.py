@@ -29,11 +29,11 @@ class TestConfiguration (unittest.TestCase):
 				raise
 #		for ip in self.configuration.neighbor:
 #			print self.configuration.neighbor[ip]
-	
+
 	def test_reload (self):
 		configuration = Configuration(self.valid[0],True)
 		configuration.reload()
-		
+
 	valid = [
 """\
 neighbor 192.168.127.128 {
@@ -116,7 +116,7 @@ neighbor 10.0.0.10 {
 	def test_faults (self):
 		for config,error in self._faults.iteritems():
 			configuration = Configuration(config,True)
-			
+
 			try:
 				self.assertEqual(configuration.reload(),False)
 				self.assertEqual(config + ' '*10 + configuration.error,config + ' '*10 + error)

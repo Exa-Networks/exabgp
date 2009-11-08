@@ -30,9 +30,9 @@ def prefix (data):
 
 class Message (object):
 	TYPE = 0 # Should be None ?
-	
+
 	MARKER = chr(0xff)*16
-	
+
 	class Type:
 		OPEN          = 0x01, #   1
 		UPDATE        = 0x02, #   2
@@ -43,7 +43,7 @@ class Message (object):
 		HEADER        = 0x40, #  64
 		GENERAL       = 0x80, # 128
 		#LOCALRIB    = 0x100  # 256
-	
+
 	def _message (self,message = ""):
 		message_len = pack('!H',19+len(message))
 		return "%s%s%s%s" % (self.MARKER,message_len,self.TYPE,message)

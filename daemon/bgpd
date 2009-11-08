@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
 	from bgp.configuration import Configuration
 	from bgp.supervisor import Supervisor
-	
+
 	configuration = Configuration(conf)
 	if not configuration.reload():
 		sys.exit('%s' % configuration.error)
