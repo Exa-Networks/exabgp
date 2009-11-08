@@ -261,7 +261,7 @@ class Configuration (object):
 		route = self._scope[-1]['routes'][-1]
 		next_hop = self._scope[-1]['routes'][-1].next_hop
 		
-		if route.nlri.ip() == next_hop.ip():
+		if not next_hop:
 			self._error = 'syntax: route IP/MASK { next-hop IP; }'
 			return False
 		return True
@@ -318,10 +318,9 @@ class Configuration (object):
 		try:
 			t = tokens.pop(0)
 			try:
-				ip = IPv4(t)
+				self._scope[-1]['routes'][-1].next_hop = t
 			except ValueError:
-				ip = IPv6(t)
-			self._scope[-1]['routes'][-1].next_hop = t
+				self._scope[-1]['routes'][-1].next_hop6 = t
 			return True
 		except:
 			self._error = self._str_route_error

@@ -67,11 +67,7 @@ class SAFI (int):
 # =================================================================== NLRI
 
 def new_NLRI (data,afi=AFI.ipv4,safi=SAFI.unicast):
-	raise 
-	print "===================="
-	print [hex(ord(c)) for c in data]
-	print "===================="
-	return NLRI(data[1:],afi,safi)
+	return NLRI(data,afi,safi)
 
 def toNLRI(ip,netmask):
 	try:
@@ -106,7 +102,7 @@ class NLRI (object):
 			if self.afi == AFI.ipv4:
 				self._ip = socket.inet_ntop(self._af[self.afi],self.raw[1:5])
 			else:
-				self._ip = socket.inet_ntop(self._af[self.afi],self.raw[1:17])
+				self._ip = socket.inet_ntop(self._af[self.afi],self.raw[1:] + '\0'*(17-len(self.raw)))
 			self._mask = ord(self.raw[0])
 		return self._ip, self._mask
 
@@ -206,6 +202,9 @@ class IPv4 (_INET):
 		self.version = 4
 		self.length =  4
 
+	def pack (self):
+		return pack('>L',self.numeric)
+
 class IPv6 (_INET):
 	def __init__ (self,value):
 		try:
@@ -223,6 +222,9 @@ class IPv6 (_INET):
 		self.string = string
 		self.version = 6
 		self.length = 16
+
+	def pack (self):
+		return pack('>LLLL',(numeric >> 96),(numeric >> 64) & 0xFFFF, (numeric >> 32) & 0xFFFF, numeric & 0xFFFF)
 
 # =================================================================== Family
 

@@ -71,13 +71,20 @@ class Route (object):
 	def __init__ (self,nlri,action='+'):
 		self.nlri = nlri
 		self.attributes = Attributes()
+		self._next_hop6 = None
 		self.action = action
 
 	def get_next_hop (self):
-		return self.attributes.get(Attribute.NEXT_HOP,IPv4('0.0.0.0'))
+		return self.attributes.get(Attribute.NEXT_HOP,None)
 	def set_next_hop (self,ip):
-		self.attributes[Attribute.NEXT_HOP] = NextHop4(ip)
+		self.attributes[Attribute.NEXT_HOP] = NextHop(ip)
 	next_hop = property(get_next_hop,set_next_hop)
+
+	def get_next_hop6 (self):
+		return self._next_hop6
+	def set_next_hop6 (self,ip):
+		self._next_hop6 = IPv6(ip)
+	next_hop6 = property(get_next_hop6,set_next_hop6)
 
 	def __cmp__ (self,other):
 		return \
@@ -98,11 +105,11 @@ class Route (object):
 		
 		return "'%s next-hop %s%s%s" % \
 		(
-			str(self.nlri),self.next_hop,
+			str(self.nlri),self.next_hop if self.next_hop else self.next_hop6 if self.next_hop6 else '-',
 			local_pref, communities
 		)
 
-	def pack (self,local_asn,peer_asn,mp_action=''):
+	def pack_attributes (self,local_asn,peer_asn):
 		ibgp = local_asn == peer_asn
 		# we do not store or send MED
 		message = ''
@@ -118,12 +125,10 @@ class Route (object):
 			else:
 				message += ASPath(ASPath.AS_SEQUENCE,[local_asn]).pack()
 
-		# XXX: Is it mandatory even the the case of MP only routes ??
-		if Attribute.NEXT_HOP not in attributes:
-			if self.nlri.afi == AFI.ipv4:
-				raise ValueError('NEXT HOP is mandatory for IPv4')
-		
 		for k,attribute in self.attributes.iteritems():
+			if attribute.ID == Attribute.NEXT_HOP:
+				if self.nlri.afi != AFI.ipv4 or self.next_hop6:
+					continue
 			if attribute.ID == Attribute.LOCAL_PREFERENCE:
 				if local_asn != peer_asn:
 					continue
@@ -134,23 +139,14 @@ class Route (object):
 
 		return message
 
-#		message += self._attribute(Flag.TRANSITIVE,ORIGIN,Origin(Origin.IGP).pack())
-#		message += self._attribute(Flag.TRANSITIVE,AS_PATH,'' if local_asn == peer_asn else self._segment(ASPath.AS_SEQUENCE,[local_asn]))
-#		if local_asn == peer_asn:
-#			message += self._attribute(Flag.TRANSITIVE,LOCAL_PREFERENCE,self.local_preference.pack())
-#		message += self._attribute(Flag.TRANSITIVE|Flag.OPTIONAL,COMMUNITY,''.join([c.pack() for c in self.communities])) if self.communities else ''
-#		if self.nlri.afi == AFI.ipv4:
-#			message += self._attribute(Flag.TRANSITIVE,NEXT_HOP,self.next_hop.pack())
-#		if self.nlri.afi == AFI.ipv6:
-#			if mp_action == '-':
-#				attr = AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + Prefix.pack(self)
-#				message += self._attribute(Flag.TRANSITIVE,MP_UNREACH_NLRI,attr)
-#			if mp_action == '+':
-#				prefix = self.nlri.pack()
-#				next_hop = self.next_hop.pack()
-#				attr = AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + chr(len(next_hop)) + next_hop + chr(0) + prefix
-#				message += self._attribute(Flag.TRANSITIVE,MP_REACH_NLRI,attr)
-#		return message
+	def announce (self):
+		attributes = sef.pack_attributes(local_asn,remote_asn)
+		if self.nlri.afi == AFI.ipv6:
+			attributes += MPUNRNLRI(self).pack()
+		return self._message(prefix('') + prefix(attributes))
+	
+	def withdraw (self,local_asn,remote_asn):
+		return self._message(prefix(self.nlri.pack()) + prefix(''))
 
 # =================================================================== Flag
 
@@ -247,7 +243,7 @@ class Attributes (dict):
 		typ = attribute.ID
 		multi = attribute.MULTIPLE
 		if attribute.MULTIPLE:
-			if typ not in self.attributes:
+			if typ not in self.keys():
 				self[typ] = []
 			self[typ].append(attribute)
 		else:
@@ -305,7 +301,7 @@ class Attributes (dict):
 			self.add(new_Communities(data))
 			return self.new(data[length:])
 		
-#		if code == MP_UNREACH_NLRI:
+#		if code == Attribute.MP_UNREACH_NLRI:
 #			afi,safi = unpack('!HB',data)
 #			offset += 3
 #			# XXX: See RFC 5549 for better support
@@ -320,49 +316,54 @@ class Attributes (dict):
 #				self.log('removing MP nlri %s' % str(nlri))
 #			return self.new(data)
 #		
-#		if code == MP_REACH_NLRI:
-#			afi,safi = unpack('!HB',data)
-#			offset += 3
-#			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
-#				self.log('we only understand IPv4/IPv6 and should never have received this route (%s %s)' % (afi,safi))
-#				return
-#			len_nh = ord(data[offset])
-#			offset += 1
-#			if afi == AFI.ipv4 and not len_nh != 4:
-#				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-#				self.log('bad IPv4 next-hop length (%d)' % len_nh)
-#				return
-#			if afi == AFI.ipv6 and not len_nh in (16,32):
-#				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-#				self.log('bad IPv6 next-hop length (%d)' % len_nh)
-#				return
-#			nh = data[offset:offset+len_nh]
-#			if len_nh == 32:
-#				# we have a link-local address in the next-hop we ideally need to ignore
-#				if nh[0] == 0xfe: nh = nh[16:]
-#				elif nh[16] == 0xfe: nh = nh[:16]
-#				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-#				else: return
-#			nh = socket.inet_ntop(socket.AF_INET6 if len_nh >= 16 else socket.AF_INET,nh)
-#			offset += len_nh
-#			nb_snpa = ord(data[offset])
-#			offset += 1
-#			snpas = []
-#			for i in range(nb_snpa):
-#				len_snpa = ord(offset)
-#				offset += 1
-#				snpas.append(data[offset:offset+len_snpa])
-#				offset += len_snpa
-#			nlri = data[offset:]
-#			while nlri:
-#				#self.hexdump(nlri)
-#				route,nlri = self.read_bgp(nlri,afi)
-#				route.set_next_hop(nh)
-#				mp.append(('+',route))
-#				self.log('adding MP route %s' % str(route))
-#			# XXX: This is wrong but will allow the code to run
-#			return self
-#			return self(data[offset:])
+
+		if code == Attribute.MP_REACH_NLRI:
+			print [hex(ord(c)) for c in data[:length]]
+			
+			next_attributes = data[length:]
+			data = data[:length]
+			afi,safi = unpack('!HB',data[:3])
+			offset = 3
+			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
+				print 'we only understand IPv4/IPv6 and should never have received this route (%s %s)' % (afi,safi)
+				return
+			print [hex(ord(c)) for c in data[:length]]
+			len_nh = ord(data[offset])
+			offset += 1
+			if afi == AFI.ipv4 and not len_nh != 4:
+				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
+				print 'bad IPv4 next-hop length (%d)' % len_nh
+				return self(next_attributes)
+			if afi == AFI.ipv6 and not len_nh in (16,32):
+				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
+				print 'bad IPv6 next-hop length (%d)' % len_nh
+				return self(next_attributes)
+			nh = data[offset:offset+len_nh]
+			offset += len_nh
+			if len_nh == 32:
+				# we have a link-local address in the next-hop we ideally need to ignore
+				if nh[0] == 0xfe: nh = nh[16:]
+				elif nh[16] == 0xfe: nh = nh[:16]
+				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
+				else: return
+			nh = socket.inet_ntop(socket.AF_INET6 if len_nh >= 16 else socket.AF_INET,nh)
+			nb_snpa = ord(data[offset])
+			offset += 1
+			snpas = []
+			for i in range(nb_snpa):
+				len_snpa = ord(offset)
+				offset += 1
+				snpas.append(data[offset:offset+len_snpa])
+				offset += len_snpa
+			data = data[offset:]
+			while data:
+				#self.hexdump(nlri)
+				route = Route(new_NLRI(data,afi))
+				route.next_hop6 = nh
+				data = data[len(route.nlri):]
+				self.add(MPURNLRI(route))
+				print 'adding MP route %s' % str(route)
+			return self.new(next_attributes)
 		
 		import warnings
 		warnings.warn("Could not parse attribute %s" % str(code))
@@ -440,15 +441,10 @@ class ASPath (Attribute):
 # XXX: WE STILL USE IP IN THE CODE
 
 
-def new_NextHop4 (data):
-	nhn = unpack('!L',data[offset:offset+length])[0]
-	next_hop = "%d.%d.%d.%d" % (nhn>>24,(nhn>>16)&0xFF,(nhn>>8)&0xFF,nhn&0xFF)
-	return NextHop4(next_hop,AFI.ipv4,SAFI.unicast)
+def new_NextHop (data):
+	return NextHop4(socket.inet_ntop(socket.AF_INET,data),AFI.ipv4,SAFI.unicast)
 
-def new_NextHop6 (self,data):
-	raise NotImplemented('not yet ...')
-
-class NextHop4 (IPv4,Attribute):
+class NextHop (IPv4,Attribute):
 	ID = Attribute.NEXT_HOP
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
@@ -537,6 +533,7 @@ class Communities (Attribute):
 	# XXX: Check if this is right ........
 	def __len__ (self):
 		return 2 + len(self.values)*4
+
 # =================================================================== Unreacheable NLRI (14)
 
 def new_MPUnreachNLRI (data):
@@ -556,17 +553,50 @@ def new_MPUnreachNLRI (data):
 		return self.new(data)
 
 class MPURNLRI (list,Attribute):
-	# XXX: FIX ME
-	FLAG = 0x00
+	FLAG = Flag.TRANSITIVE
 	ID = Attribute.MP_UNREACH_NLRI  
 	MULTIPLE = True
+
+	def __init__ (self,route):
+		self.route = route
+	
+	def pack (self):
+		return self._attribute(AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + self.route.nlri.pack())
 
 # =================================================================== Unreacheable NLRI (14)
 
 class MPRNLRI (list,Attribute):
-	# XXX: FIX ME
-	FLAG = 0x00
+	FLAG = Flag.TRANSITIVE
 	ID = Attribute.MP_REACH_NLRI    
 	MULTIPLE = True
 
-# =================================================================== Route
+	def __init__ (self,route):
+		self.route = route
+	
+	def pack (self):
+		next_hop = self.route.next_hop.pack() if self.next_hop else '\0'
+		return self._attribute(
+			AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + 
+			chr(len(next_hop)) + next_hop + 
+			chr(0) + self.route.nlri.pack()
+		)
+
+# The past :)
+#		message += self._attribute(Flag.TRANSITIVE,ORIGIN,Origin(Origin.IGP).pack())
+#		message += self._attribute(Flag.TRANSITIVE,AS_PATH,'' if local_asn == peer_asn else self._segment(ASPath.AS_SEQUENCE,[local_asn]))
+#		if local_asn == peer_asn:
+#			message += self._attribute(Flag.TRANSITIVE,LOCAL_PREFERENCE,self.local_preference.pack())
+#		message += self._attribute(Flag.TRANSITIVE|Flag.OPTIONAL,COMMUNITY,''.join([c.pack() for c in self.communities])) if self.communities else ''
+#		if self.nlri.afi == AFI.ipv4:
+#			message += self._attribute(Flag.TRANSITIVE,NEXT_HOP,self.next_hop.pack())
+#		if self.nlri.afi == AFI.ipv6:
+#			if mp_action == '-':
+#				attr = AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + Prefix.pack(self)
+#				message += self._attribute(Flag.TRANSITIVE,MP_UNREACH_NLRI,attr)
+#			if mp_action == '+':
+#				prefix = self.nlri.pack()
+#				next_hop = self.next_hop.pack()
+#				attr = AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + chr(len(next_hop)) + next_hop + chr(0) + prefix
+#				message += self._attribute(Flag.TRANSITIVE,MP_REACH_NLRI,attr)
+#		return message
+
