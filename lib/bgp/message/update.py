@@ -60,7 +60,7 @@ class Updates (list):
 	TYPE = chr(0x02)
 
 	def __str__ (self):
-		return "UPDATES"
+		return "UPDATES [%s]" % ' '.join(str(update) for update in self)
 
 # =================================================================== Route
 
@@ -145,7 +145,7 @@ class Update (Message):
 		if self.nlri.afi == AFI.ipv6:
 			attributes += MPUNRNLRI(self).pack()
 			return self._message(prefix('') + prefix(attributes))
-		return self._message(prefix() + prefix(attributes)) + self.nlri.pack()
+		return self._message(prefix('') + prefix(attributes) + self.nlri.pack())
 
 	def withdraw (self,local_asn=None,remote_asn=None):
 		if self.nlri.afi == AFI.ipv4:
@@ -157,7 +157,7 @@ class Update (Message):
 		if self.nlri.afi == AFI.ipv6:
 			attributes += MPRNLRI(self).pack()
 			return self._message(prefix('') + prefix(attributes))
-		return self._message(prefix(self.nlri.pack()) + prefix(attributes)) + self.nlri.pack()
+		return self._message(prefix(self.nlri.pack()) + prefix(attributes) + self.nlri.pack())
 
 # =================================================================== Flag
 

@@ -66,7 +66,6 @@ class Protocol (Display):
 			return new_NOP('')
 
 		data = self.network.read(19)
-
 		if data[:16] != Message.MARKER:
 			# We are speaking BGP - send us a valid Marker
 			raise Notify(1,1)
@@ -94,6 +93,11 @@ class Protocol (Display):
 
 		if len(data) != length:
 			raise SendNotificaiton(ord(msg),0)
+
+		print "************************************", ord(msg)
+		from display import *
+		hexdump(data)
+		print "************************************"
 
 		self.logIf(self.trace and msg == Update.TYPE,"UPDATE RECV: %s " % [hex(ord(c)) for c in data])
 
