@@ -20,3 +20,6 @@ class KeepAlive (Message):
 	def message (self):
 		return self._message()
 
+	def __str__ (self):
+		return "KEEPALIVE"
+

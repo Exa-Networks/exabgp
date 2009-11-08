@@ -83,22 +83,27 @@ class TestProtocol (unittest.TestCase):
 		self.assertEqual(routes[1],'82.219.0.7/32 next-hop 192.0.2.254')
 		self.assertEqual(routes[2],'82.219.0.71/32 next-hop 192.0.2.254')
 
-#	def test_4_parse_update (self):
-#		txt = ''.join([chr(c) for c in [0x0, 0x0, 0x0, 0x12, 0x40, 0x1, 0x1, 0x0, 0x40, 0x2, 0x4, 0x2, 0x1, 0x78, 0x14, 0x40, 0x3, 0x4, 0x52, 0xdb, 0x2, 0xb5, 0x0]])
-#		updates = new_Updates(txt)
-#		print updates[0]
+	def test_4_parse_update (self):
+		txt = ''.join([chr(c) for c in [0x0, 0x0, 0x0, 0x12, 0x40, 0x1, 0x1, 0x0, 0x40, 0x2, 0x4, 0x2, 0x1, 0x78, 0x14, 0x40, 0x3, 0x4, 0x52, 0xdb, 0x2, 0xb5, 0x0]])
+		updates = new_Updates(txt)
+		self.assertEqual(str(updates[0]),'0.0.0.0/0 next-hop 82.219.2.181')
 
-#	def test_4_selfparse_update_announce (self):
-#		ds = Delta(self.table)
-#
-#		txt = ds.announce(65000,65000)
-#		network = Network(txt)
-#		bgp = Protocol(self.neighbor,network)
-#		bgp.follow = False
-#
-#		m,_ = bgp.read_message()
-#		self.assertEqual(m,chr(2))
-#
+	def test_4_selfparse_update_announce (self):
+		o = Open(4,65000,'1.2.3.4',Capabilities().default(),30).message()
+		k = KeepAlive().message()
+		u = Delta(self.table).announce(65000,65000)
+		network = Network(o+k+ ''.join(u))
+		bgp = Protocol(self.neighbor,network)
+		bgp.follow = False
+
+		self.assertEqual(bgp.read_message().TYPE,Open.TYPE)
+		self.assertEqual(bgp.read_message().TYPE,KeepAlive.TYPE)
+		updates = bgp.read_message()
+		self.assertEqual(updates.TYPE,Update.TYPE)
+		self.assertEqual(updates[0].action,'-')
+		self.assertEqual(str(updates[0]),'10.0.0.1/32')
+		#self.assertEqual(m,chr(2))
+
 #	def test_5_selfparse_update_announce_multi (self):
 #		ds = Delta(self.table)
 #		

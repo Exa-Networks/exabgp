@@ -34,7 +34,7 @@ def new_Updates (data):
 		remove = Updates()
 		while withdrawn:
 			nlri = new_NLRI(withdrawn)
-			withdrawn = withdrawn[len(route):]
+			withdrawn = withdrawn[len(nlri):]
 			remove.append(Update(nlri,'-'))
 			print 'removing route %s' % str(nlri)
 
@@ -58,6 +58,9 @@ def new_Updates (data):
 
 class Updates (list):
 	TYPE = chr(0x02)
+
+	def __str__ (self):
+		return "UPDATES"
 
 # =================================================================== Route
 
@@ -99,11 +102,13 @@ class Update (Message):
 		if self.attributes.has_key(Attribute.COMMUNITY):
 			communities = ' community %s' % str(self.attributes[Attribute.COMMUNITY])
 
-		return "%s next-hop %s%s%s" % \
-		(
-			str(self.nlri),self.next_hop if self.next_hop else self.next_hop6 if self.next_hop6 else '-',
-			local_pref, communities
-		)
+		next_hop = ''
+		if self.next_hop:
+			next_hop = ' next-hop %s' % self.next_hop 
+		elif self.next_hop6:
+			next_hop = ' next-hop %s' % self.next_hop6
+
+		return "%s%s%s%s" % (str(self.nlri),next_hop,local_pref,communities)
 
 	def pack_attributes (self,local_asn,peer_asn):
 		ibgp = local_asn == peer_asn
