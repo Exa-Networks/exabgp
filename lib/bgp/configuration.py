@@ -138,6 +138,7 @@ class Configuration (object):
 		if command == 'local-address': return self._set_ip('local-address',tokens[1:])
 		if command == 'local-as': return self._set_asn('local-as',tokens[1:])
 		if command == 'peer-as': return self._set_asn('peer-as',tokens[1:])
+		if command == 'hold-time': return self._set_holdtime('hold-time',tokens[1:])
 
 		if command == 'route': return self._single_route(tokens[1:])
 		if command == 'next-hop': return self._route_next_hop(tokens[1:])
@@ -227,6 +228,14 @@ class Configuration (object):
 			return False
 		self._scope[-1][command] = ip
 		return True
+
+	def _set_holdtime (self,command,value):
+		try:
+			self._scope[-1][command] = HoldTime(value[0])
+			return True
+		except ValueError:
+			self._error = '"%s" is an invalid hold-time' % ' '.join(value)
+			return False
 
 
 	#  Group Static ................

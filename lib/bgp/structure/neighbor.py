@@ -9,8 +9,6 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 from bgp.message.open import HoldTime
 
-HOLD_TIME = 180
-
 # The definition of a neighbor (from reading the configuration)
 class Neighbor (object):
 	def __init__ (self):
@@ -20,7 +18,7 @@ class Neighbor (object):
 		self.peer_address = None
 		self.peer_as = None
 		self.local_as = None
-		self._hold_time = HOLD_TIME
+		self._hold_time = HoldTime(180)
 		self.routes = []
 
 	def missing (self):

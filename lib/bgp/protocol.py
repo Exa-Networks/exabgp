@@ -44,7 +44,7 @@ class Protocol (Display):
 			peer = self.neighbor.peer_address
 			local = self.neighbor.local_address
 			asn = self.neighbor.peer_as
-			self.network = Network(peer,local,asn)
+			self.network = Network(peer,local)
 
 	def check_keepalive (self):
 		left = int (self.network.last_read  + self.neighbor.hold_time - time.time())
