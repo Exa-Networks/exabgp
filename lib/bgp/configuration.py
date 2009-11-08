@@ -13,6 +13,7 @@ import re
 
 from bgp.structure.network  import IPv4,IPv6,ASN
 from bgp.structure.neighbor import Neighbor
+from bgp.message.open       import HoldTime
 from bgp.message.update     import Update,to_NLRI,Community,Communities,LocalPreference
 
 class Configuration (object):
@@ -161,6 +162,8 @@ class Configuration (object):
 			if v: neighbor.local_as = v
 			v = scope.get('peer-as','')
 			if v: neighbor.peer_as = v
+			v = scope.get('hold-time','')
+			if v: neighbor.hold_time = v
 			v = scope.get('routes',[])
 			for route in v:
 				neighbor.routes.append(route)
@@ -194,7 +197,7 @@ class Configuration (object):
 			self._error = '"%s" is not a valid IP address' % address
 			return False
 		while True:
-		 	r = self._dispatch('neigbor',['static',],['description','router-id','local-address','local-as','peer-as'])
+		 	r = self._dispatch('neigbor',['static',],['description','router-id','local-address','local-as','peer-as','hold-time'])
 			if r is False: return False
 			if r is None: return True
 
