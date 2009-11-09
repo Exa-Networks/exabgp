@@ -372,9 +372,9 @@ class Configuration (object):
 						return False
 					if community == ']':
 						break
-					communities.append(self._parse_community(community))
+					communities.add(self._parse_community(community))
 			else:
-				communities.append(self._parse_community(community))
+				communities.add(self._parse_community(community))
 		except ValueError:
 			self._error = self._str_route_error
 			return False
