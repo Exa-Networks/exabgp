@@ -74,7 +74,6 @@ class Network (object):
 
 	def write (self,data):
 		try:
-			print "====", [hex(ord(_)) for _ in data]
 			r = self._io.send(data)
 			self.last_write = time.time()
 			return r

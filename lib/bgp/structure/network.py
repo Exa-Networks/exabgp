@@ -82,7 +82,7 @@ def to_NLRI(ip,netmask):
 	except socket.error:
 		try:
 			pack = socket.inet_pton(socket.AF_INET6,ip)
-			safi = AFI.ipv6
+			afi = AFI.ipv6
 		except socket.error:
 			raise ValueError('Invalid IP %s' % data)
 	size = int(math.ceil(float(netmask)/8))
@@ -182,11 +182,11 @@ class _INET (object):
 	def __eq__ (self,other):
 		if type(self) == type(other):
 			return self.numeric == other.numeric and self.version == other.version
-		import warnings
-		warnings.warn('we should never compare things which are not comparable %s and %s' % (type(self),type(other)))
+		# XXX: Should we implement the other test to not create bad surprised ? ...
+		if type(other) != type(None):
+			import warnings
+			warnings.warn('we should never compare things which are not comparable %s and %s' % (type(self),type(other)))
 		return False
-
-	# XXX: Should we implement the other test to not create bad surprised ? ...
 
 	def __str__ (self):
 		return self.string

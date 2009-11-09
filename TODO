@@ -4,11 +4,6 @@ Correct Unit Testing.
  - Most of the use case have not been tested in production
  - Most of the code is not covered
 
-The code is currently broken and will simply keep the session with the peer UP (no announcement)
-Update is becoming Delta - Need to re-add the route announcement code
-
-Perhaps ? move all/most the new_* function in protocol
-
 allow reconfiguration (SIGHUP forcing a reload of the configuration)
  - reconfiguration alter neighbor list
  - reconfiguration alter neighbor routes

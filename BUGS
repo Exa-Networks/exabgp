@@ -1,2 +1,4 @@
 For incomming messages:
  - Does not correctly replace the ::/0 or 0.0.0.0/0 route by the IP of the peer (does not matter as we do not use received routes tho)
+ - Have an issue with hold time of 3 - see why and what can be done (4 is fine !!)
+ - IPv6 announcement is still not back

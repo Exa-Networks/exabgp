@@ -13,9 +13,7 @@ from bgp.display import Display
 
 from bgp.structure.network import *
 from bgp.structure.message import *
-
-# XXX: debug
-from bgp.display import *
+from bgp.message.notification import Notify
 
 def new_Updates (data):
 		length = len(data)
@@ -87,9 +85,10 @@ class Update (Message):
 
 	def __cmp__ (self,other):
 		return \
-			self.nlri == other.nlri and \
-			self.next_hop == other.next_hop and \
-			self.attributes == other.attributes
+			self.nlri == other.nlri \
+		and self.next_hop == other.next_hop \
+		and self.next_hop6 == other.next_hop6 \
+#		and self.attributes == other.attributes
 
 	def __str__ (self):
 		local_pref= ''
@@ -143,7 +142,7 @@ class Update (Message):
 	def announce (self,local_asn,remote_asn):
 		attributes = self.pack_attributes(local_asn,remote_asn)
 		if self.nlri.afi == AFI.ipv6:
-			attributes += MPUNRNLRI(self).pack()
+			attributes += MPURNLRI(self).pack()
 			return self._message(prefix('') + prefix(attributes))
 		return self._message(prefix('') + prefix(attributes) + self.nlri.pack())
 
