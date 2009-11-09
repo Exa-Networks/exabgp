@@ -36,9 +36,19 @@ def new_Updates (data):
 			remove.append(Update(nlri,'-'))
 			print 'removing route %s' % str(nlri)
 
+		updates = Updates()
 		attributes = new_Attributes(attribute)
 
-		updates = Updates()
+		for aid,attrs in attributes.iteritems():
+			if aid == MPRNLRI.ID:
+				for a in attrs:
+					# XXX: not the best interface ever (.value)
+					updates.append(a.value)
+			if aid == MPURNLRI.ID:
+				for a in attr:
+					nlri = a.value.nlri
+					remove.append(Update(nlri,'-'))
+
 		while announced:
 			nlri = new_NLRI(announced)
 			announced = announced[len(nlri):]
@@ -82,32 +92,6 @@ class Update (Message):
 	def set_next_hop6 (self,ip):
 		self._next_hop6 = IPv6(ip)
 	next_hop6 = property(get_next_hop6,set_next_hop6)
-
-	def __cmp__ (self,other):
-		return \
-			self.nlri == other.nlri \
-		and self.next_hop == other.next_hop \
-		and self.next_hop6 == other.next_hop6 \
-#		and self.attributes == other.attributes
-
-	def __str__ (self):
-		local_pref= ''
-		if self.attributes.has_key(Attribute.LOCAL_PREFERENCE):
-			l = self.attributes[Attribute.LOCAL_PREFERENCE]
-			if l == 100: # XXX: Double check default Local Pref
-				local_pref= ' local_preference %s' % l
-
-		communities = ''
-		if self.attributes.has_key(Attribute.COMMUNITY):
-			communities = ' community %s' % str(self.attributes[Attribute.COMMUNITY])
-
-		next_hop = ''
-		if self.next_hop:
-			next_hop = ' next-hop %s' % self.next_hop 
-		elif self.next_hop6:
-			next_hop = ' next-hop %s' % self.next_hop6
-
-		return "%s%s%s%s" % (str(self.nlri),next_hop,local_pref,communities)
 
 	def pack_attributes (self,local_asn,peer_asn):
 		ibgp = local_asn == peer_asn
@@ -158,6 +142,34 @@ class Update (Message):
 			return self._message(prefix('') + prefix(attributes))
 		return self._message(prefix(self.nlri.pack()) + prefix(attributes) + self.nlri.pack())
 
+	def __cmp__ (self,other):
+		return \
+			self.nlri == other.nlri \
+		and self.next_hop == other.next_hop \
+		and self.next_hop6 == other.next_hop6 \
+#		and self.attributes == other.attributes
+
+	def __str__ (self):
+		local_pref= ''
+
+		if self.attributes.has(Attribute.LOCAL_PREFERENCE):
+			l = self.attributes[Attribute.LOCAL_PREFERENCE]
+			if l == 100: # XXX: Double check default Local Pref
+				local_pref= ' local_preference %s' % l
+
+		communities = ''
+		if self.attributes.has(Attribute.COMMUNITY):
+			communities = ' community %s' % str(self.attributes[Attribute.COMMUNITY])
+
+		next_hop = ''
+		if self.next_hop:
+			next_hop = ' next-hop %s' % self.next_hop 
+		elif self.next_hop6:
+			next_hop = ' next-hop %s' % self.next_hop6
+
+		return "%s%s%s%s" % (str(self.nlri),next_hop,local_pref,communities)
+
+
 # =================================================================== Flag
 
 class Flag (int):
@@ -191,6 +203,7 @@ class Attribute (object):
 	ID   = 0x00
 	FLAG = 0x00
 
+	# This should move within the classes and not be here
 	# RFC 4271
 	ORIGIN           = 0x01
 	AS_PATH          = 0x02
@@ -209,17 +222,18 @@ class Attribute (object):
 		self.value = value
 
 	def __str__ (self):
-		if self.value == 0x01: return "ORIGIN"
-		if self.value == 0x02: return "AS_PATH"
-		if self.value == 0x03: return "NEXT_HOP"
-		if self.value == 0x04: return "MULTI_EXIT_DISC"
-		if self.value == 0x05: return "LOCAL_PREFERENCE"
-		if self.value == 0x06: return "ATOMIC_AGGREGATE"
-		if self.value == 0x07: return "AGGREGATOR"
-		if self.value == 0x08: return "COMMUNITY"
-		if self.value == 0x0e: return "MP_REACH_NLRI"
-		if self.value == 0x0f: return "MP_UNREACH_NLRI"
-		return 'UNKNOWN ATTRIBUTE (%s)' % hex(self.value)
+		# This should move within the classes and not be here
+		if self.ID == 0x01: return "ORIGIN"
+		if self.ID == 0x02: return "AS_PATH"
+		if self.ID == 0x03: return "NEXT_HOP"
+		if self.ID == 0x04: return "MULTI_EXIT_DISC"
+		if self.ID == 0x05: return "LOCAL_PREFERENCE"
+		if self.ID == 0x06: return "ATOMIC_AGGREGATE"
+		if self.ID == 0x07: return "AGGREGATOR"
+		if self.ID == 0x08: return "COMMUNITY"
+		if self.ID == 0x0e: return "MP_REACH_NLRI"
+		if self.ID == 0x0f: return "MP_UNREACH_NLRI"
+		return 'UNKNOWN ATTRIBUTE (%s)' % hex(self.ID)
 
 	def _attribute (self,value):
 		flag = self.FLAG
@@ -240,6 +254,8 @@ class Attribute (object):
 		return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack() for v in values]))
 
 	def __cmp__ (self,other):
+		if type(self) == type(other):
+			return cmp(self.value,other.value)
 		return cmp(self.value,other)
 
 # =================================================================== Attributes
@@ -250,15 +266,21 @@ def new_Attributes (data):
 	return attributes
 
 class Attributes (dict):
+	def has (self,k):
+		return self.has_key(k)
+
 	def add (self,attribute):
-		typ = attribute.ID
-		multi = attribute.MULTIPLE
-		if attribute.MULTIPLE:
-			if typ not in self.keys():
-				self[typ] = []
-			self[typ].append(attribute)
+		if self.has(attribute.ID):
+			if attribute.MULTIPLE:
+				self[attribute.ID].append(attribute)
+				return True
+			return False
 		else:
-			self[typ] = attribute
+			if attribute.MULTIPLE:
+				self[attribute.ID] = [attribute]
+			else:
+				self[attribute.ID] = attribute
+			return True
 
 	def new (self,data):
 		if not data:
@@ -354,7 +376,7 @@ class Attributes (dict):
 				if nh[0] == 0xfe: nh = nh[16:]
 				elif nh[16] == 0xfe: nh = nh[:16]
 				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-				else: return
+				else: self(next_attributes)
 			nh = socket.inet_ntop(socket.AF_INET6 if len_nh >= 16 else socket.AF_INET,nh)
 			nb_snpa = ord(data[offset])
 			offset += 1
@@ -382,7 +404,7 @@ class Attributes (dict):
 def new_Origin (data):
 	return Origin(ord(data[0]))
 
-class Origin (int,Attribute):
+class Origin (Attribute):
 	ID = Attribute.ORIGIN
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
@@ -391,17 +413,18 @@ class Origin (int,Attribute):
 	EGP        = 0x01
 	INCOMPLETE = 0x02
 
-	def __str__ (self):
-		if self == 0x00: return 'IGP'
-		if self == 0x01: return 'EGP'
-		if self == 0x02: return 'INCOMPLETE'
-		return 'INVALID'
-
 	def pack (self):
-		return self._attribute(chr(self))
+		return self._attribute(chr(self.value))
 
 	def __len__ (self):
-		return 1
+		return len(self.pack())
+
+	def __str__ (self):
+		if self.value == 0x00: return 'IGP'
+		if self.value == 0x01: return 'EGP'
+		if self.value == 0x02: return 'INCOMPLETE'
+		return 'INVALID'
+
 
 # =================================================================== ASPath (2)
 
@@ -412,7 +435,7 @@ def new_ASPath (data):
 
 	ASPS = ASPath(stype)
 	for c in unpack('!'+('H'*slen),sdata):
-		ASPS.append(c)
+		ASPS.add(c)
 	return ASPS
 
 class ASPath (Attribute):
@@ -424,25 +447,24 @@ class ASPath (Attribute):
 	MULTIPLE = False
 
 	def __init__ (self,asptype,aspsegment = []):
-		self.type = asptype
-		self.segment = aspsegment
+		Attribute.__init__(self,(asptype,aspsegment))
 
-	def append (self,community):
-		self.segment.append(community)
+	def add (self,community):
+		self.value[1].append(community)
 
 	def pack (self):
-		return self._attribute(self._segment(self.type,self.segment))
+		return self._attribute(self._segment(self.value[0],self.value[1]))
 
 	def __len__ (self):
-		return 2 + (len(self.segment)*2)
+		return 2 + (len(self.value[1])*2)
 
 	def __str__ (self):
-		if self.type == 0x01: t = 'AS_SET'
-		if self.type == 0x02: t = 'AS_SEQUENCE'
+		if self.value[0] == 0x01: t = 'AS_SET'
+		if self.value[0] == 0x02: t = 'AS_SEQUENCE'
 		else: t = 'INVALID'
 
-		if len(self) >  1: return '%s [ %s ]' % (t,' '.join([str(community) for community in self]))
-		if len(self) == 1: return '%s %s' % (t,str(self[0]))
+		if len(self) >  1: return '%s [ %s ]' % (t,' '.join([str(community) for community in self.value[1]]))
+		if len(self) == 1: return '%s %s' % (t,str(self.value[1][0]))
 		return t
 
 # =================================================================== NextHop (3)
@@ -455,44 +477,60 @@ def new_NextHop (data):
 def to_NextHop (ip):
 	return NextHop(ip)
 
-class NextHop (IPv4,Attribute):
+class NextHop (Attribute):
 	ID = Attribute.NEXT_HOP
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 
+	def __init__ (self,value):
+		Attribute.__init__(self,IPv4(value))
+
 	def pack (self):
-		return self._attribute(IPv4.pack(self))
+		return self._attribute(self.value.pack())
+
+	def __len__ (self):
+		return len(self.value.pack())
+
+	def __str__ (self):
+		return str(self.value)
 
 # =================================================================== MED (4)
 
 def new_MED (data):
 	return MED(unpack('!L',data[:4])[0])
 
-class MED (long,Attribute):
+class MED (Attribute):
 	ID = Attribute.MULTI_EXIT_DISC  
+	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 
 	def pack (self):
-		return pack('!L',self)
+		return pack('!L',self.value)
 
 	def __len__ (self):
 		return 4
+
+	def __str__ (self):
+		return str(self.value)
 
 # =================================================================== Local Preference (5)
 
 def new_LocalPreference (data):
 	return LocalPreference(unpack('!L',data[:4])[0])
 
-class LocalPreference (long,Attribute):
+class LocalPreference (Attribute):
 	ID = Attribute.LOCAL_PREFERENCE 
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 
 	def pack (self):
-		message += self._attribute(pack('!L',self))
+		message += self._attribute(pack('!L',self.value))
 
 	def __len__ (self):
 		return 4
+	
+	def __str__ (self):
+		return str(self.value)
 
 # =================================================================== Aggregate (6)
 # we do not pass routes to other speakers, so we do not care (but could).
@@ -507,7 +545,7 @@ def new_Communities (data):
 	while data:
 		community = unpack('!L',data)
 		data = data[2:]
-		Communities.append(Community(community))
+		Communities.add(Community(community))
 	return communities
 
 class Community (long):
@@ -526,18 +564,21 @@ class Communities (Attribute):
 	MULTIPLE = False
 
 	def __init__ (self,value=None):
-		if value == None:
-			self.value = []
-		else:
-			self.value = value
+		# Must be None as = param is only evaluated once
+		Attribute.__init__(self,value if value else [])
 
-	def append(self,data):
+	def add(self,data):
 		return self.value.append(data)
 
 	def pack (self):
 		if len(self.value):
 			return self._attribute(''.join([c.pack() for c in self.value])) 
 		return ''
+
+	# XXX: Check if this is right ........
+	def __len__ (self):
+		return 2 + len(self.values)*4
+
 
 	def __str__ (self):
 		l = len(self.value)
@@ -547,48 +588,31 @@ class Communities (Attribute):
 			return str(self.value[0])
 		return ""
 
-	# XXX: Check if this is right ........
-	def __len__ (self):
-		return 2 + len(self.values)*4
+# =================================================================== MP NLRI (14)
 
-# =================================================================== Unreacheable NLRI (14)
-
-def new_MPUnreachNLRI (data):
-		# We are not creating AFI and SAFI instances here ..
-		afi,safi = unpack('!HB',data)
-		offset += 3
-		# XXX: See RFC 5549 for better support
-		if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
-			self.log('we only understand IPv4/IPv6 and should never have received this route (%s %s)' % (afi,safi))
-			return
-		data = data[offset:]
-		while data:
-			nlri = new_NLRI(nlri,afi)
-			data = data[len(nlri):]
-			self.append(nlri)
-			self.log('removing MP nlri %s' % str(nlri))
-		return self.new(data)
-
-class MPURNLRI (list,Attribute):
+class MPURNLRI (Attribute):
 	FLAG = Flag.TRANSITIVE
 	ID = Attribute.MP_UNREACH_NLRI  
 	MULTIPLE = True
 
-	def __init__ (self,route):
-		self.route = route
-
 	def pack (self):
-		return self._attribute(AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + self.route.nlri.pack())
+		return self._attribute(AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + self.value.nlri.pack())
 
-# =================================================================== Unreacheable NLRI (14)
+	def __len__ (self):
+		return len(self.pack())
 
-class MPRNLRI (list,Attribute):
+	def __str__ (self):
+		return "MP Unreacheable NLRI"
+
+# =================================================================== MP Unreacheable NLRI (15)
+
+class MPRNLRI (Attribute):
 	FLAG = Flag.TRANSITIVE
 	ID = Attribute.MP_REACH_NLRI    
 	MULTIPLE = True
 
 	def __init__ (self,route):
-		self.route = route
+		Attribute.__init__(self,route)
 
 	def pack (self):
 		next_hop = self.route.next_hop.pack() if self.next_hop else '\0'
@@ -597,6 +621,12 @@ class MPRNLRI (list,Attribute):
 			chr(len(next_hop)) + next_hop + 
 			chr(0) + self.route.nlri.pack()
 		)
+
+	def __len__ (self):
+		return len(self.pack())
+
+	def __str__ (self):
+		return "MP Reacheable NLRI"
 
 # The past :)
 #		message += self._attribute(Flag.TRANSITIVE,ORIGIN,Origin(Origin.IGP).pack())
