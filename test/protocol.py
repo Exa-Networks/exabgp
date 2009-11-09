@@ -132,23 +132,23 @@ class TestProtocol (unittest.TestCase):
 		self.assertEqual(updates[0].action,'-')
 		self.assertEqual(str(updates[0]),'10.0.2.1/32')
 
-#	def test_6_holdtime (self):
-#		class MyPeer(Network):
-#			_data = StringIO(Open(4,65000,'1.2.3.4',Capabilities().default(),90).message())
-#			def read (self,l):
-#				return self._data.read(l)
-#		
-#		network = MyPeer('')
-#		
-#		bgp = Protocol(self.neighbor,network)
-#		bgp.follow = False
-#
-#		before = bgp.neighbor.hold_time
-#		bgp.new_open()
-#		bgp.read_open()
-#		after = bgp.neighbor.hold_time
-#		
-#		self.assertEqual(after,min(before,90))
+	def test_6_holdtime (self):
+		class MyPeer(Network):
+			_data = StringIO(Open(4,65000,'1.2.3.4',Capabilities().default(),90).message())
+			def read (self,l):
+				return self._data.read(l)
+		
+		network = MyPeer('')
+		
+		bgp = Protocol(self.neighbor,network)
+		bgp.follow = False
+
+		before = bgp.neighbor.hold_time
+		bgp.new_open()
+		bgp.read_open()
+		after = bgp.neighbor.hold_time
+		
+		self.assertEqual(after,min(before,90))
 
 
 if __name__ == '__main__':
