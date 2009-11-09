@@ -94,11 +94,6 @@ class Protocol (Display):
 		if len(data) != length:
 			raise SendNotificaiton(ord(msg),0)
 
-		print "************************************", ord(msg)
-		from display import *
-		hexdump(data)
-		print "************************************"
-
 		self.logIf(self.trace and msg == Update.TYPE,"UPDATE RECV: %s " % [hex(ord(c)) for c in data])
 
 		if msg == Notification.TYPE:
