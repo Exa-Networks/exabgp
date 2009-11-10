@@ -12,7 +12,7 @@ import signal
 
 from bgp.display import Display
 from bgp.message.notification import Notification
-from bgp.peer import Peer
+from bgp.network.peer         import Peer
 
 class Supervisor (Display):
 	debug = True

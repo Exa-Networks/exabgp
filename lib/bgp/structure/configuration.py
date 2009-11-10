@@ -11,7 +11,7 @@ from __future__ import with_statement
 
 import re
 
-from bgp.structure.network  import IPv4,IPv6,ASN
+from bgp.message.inet  import IPv4,IPv6,ASN
 from bgp.structure.neighbor import Neighbor
 from bgp.message.open       import HoldTime
 from bgp.message.update     import Update,to_NLRI,Community,Communities,LocalPreference

@@ -9,14 +9,13 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 import time
 
-from bgp.structure.message    import Failure
+from bgp.message.parent       import Failure
 from bgp.message.nop          import NOP
 from bgp.message.open         import Open
 from bgp.message.update       import Update
 from bgp.message.keepalive    import KeepAlive
 from bgp.message.notification import Notification, Notify
-
-from bgp.protocol import Protocol,Network
+from bgp.network.protocol     import Protocol
 from bgp.display import Display
 
 

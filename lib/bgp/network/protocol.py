@@ -15,14 +15,14 @@ from struct import pack,unpack
 from bgp.rib.table import Table
 from bgp.rib.delta import Delta
 
-from bgp.structure.message    import Message,Failure
+from bgp.message.parent    import Message,Failure
 from bgp.message.nop          import new_NOP
 from bgp.message.open         import new_Open,Open,Parameter,Capabilities
 from bgp.message.update       import new_Updates,Update
 from bgp.message.keepalive    import new_KeepAlive,KeepAlive
 from bgp.message.notification import Notification, Notify
 
-from bgp.network import Network
+from bgp.network.connection import Connection
 from bgp.display import Display
 
 class Protocol (Display):
@@ -30,42 +30,42 @@ class Protocol (Display):
 	decode = True
 	strict = False
 
-	def __init__ (self,neighbor,network=None):
+	def __init__ (self,neighbor,connection=None):
 		Display.__init__(self,neighbor.peer_address,neighbor.peer_as)
 		self.neighbor = neighbor
-		self.network = network
+		self.connection = connection
 		self._table = Table()
 		self._table.update(self.neighbor.routes)
 		self._delta = Delta(self._table)
 
 	def connect (self):
 		# allows to test the protocol code using modified StringIO with a extra 'pending' function
-		if not self.network:
+		if not self.connection:
 			peer = self.neighbor.peer_address
 			local = self.neighbor.local_address
 			asn = self.neighbor.peer_as
-			self.network = Network(peer,local)
+			self.connection = Connection(peer,local)
 
 	def check_keepalive (self):
-		left = int (self.network.last_read  + self.neighbor.hold_time - time.time())
+		left = int (self.connection.last_read  + self.neighbor.hold_time - time.time())
 		if left <= 0:
 			raise Notify(4,0)
 		return left
 
 	def close (self):
 		#self._delta.last = 0
-		if self.network:
-			self.network.close()
-			self.network = None
+		if self.connection:
+			self.connection.close()
+			self.connection = None
 
 
 	# Read from network .......................................................
 
 	def read_message (self):
-		if not self.network.pending():
+		if not self.connection.pending():
 			return new_NOP('')
 
-		data = self.network.read(19)
+		data = self.connection.read(19)
 		if data[:16] != Message.MARKER:
 			# We are speaking BGP - send us a valid Marker
 			raise Notify(1,1)
@@ -89,7 +89,7 @@ class Protocol (Display):
 			#(msg == RouteRefresh.TYPE and length != 23)
 
 		length -= 19
-		data = self.network.read(length)
+		data = self.connection.read(length)
 
 		if len(data) != length:
 			raise SendNotificaiton(ord(msg),0)
@@ -140,32 +140,32 @@ class Protocol (Display):
 
 	def new_open (self):
 		o = Open(4,self.neighbor.local_as,self.neighbor.router_id,Capabilities().default(),self.neighbor.hold_time)
-		self.network.write(o.message())
+		self.connection.write(o.message())
 		return o
 
 	def new_announce (self):
 		m = self._delta.announce(self.neighbor.local_as,self.neighbor.peer_as)
 		updates = ''.join(m)
 		self.logIf(self.trace,"UPDATE (update)   SENT: %s" % [hex(ord(c)) for c in updates][19:])
-		if m: self.network.write(updates)
+		if m: self.connection.write(updates)
 		return m if m else []
 
 	def new_update (self):
 		m = self._delta.update(self.neighbor.local_as,self.neighbor.peer_as)
 		updates = ''.join(m)
 		self.logIf(self.trace,"UPDATE (update)   SENT: %s" % [hex(ord(c)) for c in updates][19:])
-		if m: self.network.write(updates)
+		if m: self.connection.write(updates)
 		return m if m else []
 
 	def new_keepalive (self,force=False):
-		left = int(self.network.last_write + self.neighbor.hold_time.keepalive() - time.time())
+		left = int(self.connection.last_write + self.neighbor.hold_time.keepalive() - time.time())
 		if force or left <= 0:
 			k = KeepAlive()
-			self.network.write(k.message())
+			self.connection.write(k.message())
 			return left,k
 		return left,None
 
 	def new_notification (self,notification):
-		return self.network.write(notification.message())
+		return self.connection.write(notification.message())
 
 

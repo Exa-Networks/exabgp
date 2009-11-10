@@ -7,7 +7,7 @@ Created by Thomas Mangin on 2009-11-06.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
-from bgp.structure.message import *
+from bgp.message.parent import *
 
 def new_NOP (data):
 	return NOP(data)

@@ -21,8 +21,8 @@ if __name__ == '__main__':
 		sys.exit('usage bgpd <configuration file>')
 	conf = sys.argv[1]
 
-	from bgp.configuration import Configuration
-	from bgp.supervisor import Supervisor
+	from bgp.structure.configuration import Configuration
+	from bgp.structure.supervisor import Supervisor
 
 	configuration = Configuration(conf)
 	if not configuration.reload():

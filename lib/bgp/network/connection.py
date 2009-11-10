@@ -14,9 +14,9 @@ import struct
 import socket
 import select
 
-from bgp.structure.message import Failure
+from bgp.message.parent import Failure
 
-class Network (object):
+class Connection (object):
 
 	def __init__ (self,peer,local):
 		self.last_read = 0

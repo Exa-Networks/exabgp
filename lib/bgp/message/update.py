@@ -11,8 +11,8 @@ import math
 
 from bgp.display import Display
 
-from bgp.structure.network import *
-from bgp.structure.message import *
+from bgp.message.inet import *
+from bgp.message.parent import *
 from bgp.message.notification import Notify
 
 def new_Updates (data):
