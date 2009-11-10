@@ -12,8 +12,8 @@ import time
 import socket
 from struct import pack,unpack
 
-from bgp.table import Table
-from bgp.delta import Delta
+from bgp.rib.table import Table
+from bgp.rib.delta import Delta
 
 from bgp.structure.message    import Message,Failure
 from bgp.message.nop          import new_NOP

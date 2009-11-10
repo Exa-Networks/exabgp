@@ -11,7 +11,7 @@ import unittest
 import time
 
 from bgp.message.update import Route
-from bgp.table import Table
+from bgp.rib.table import Table
 
 class TestTable (unittest.TestCase):
 	routes = [Route('10.0.0.1','32','10.0.0.254'),Route('10.0.1.1','32','10.0.0.254'),Route('10.0.2.1','32','10.0.0.254')]

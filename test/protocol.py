@@ -17,8 +17,8 @@ from bgp.message.update       import Updates,Update,new_Updates
 from bgp.structure.network import *
 from bgp.structure.neighbor import Neighbor
 
-from bgp.table import Table
-from bgp.delta import Delta
+from bgp.rib.table import Table
+from bgp.rib.delta import Delta
 from bgp.protocol import Protocol
 
 from StringIO import StringIO
