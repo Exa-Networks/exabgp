@@ -538,7 +538,37 @@ class LocalPreference (Attribute):
 # =================================================================== Aggregator (7)
 # we do not pass routes to other speakers, so we do not care (but could).
 
-# =================================================================== Community (8)
+# =================================================================== Community
+
+def to_Community (data):
+	separator = data.find(':')
+	if separator > 0:
+		# XXX: Check that the value do not overflow 16 bits
+		return Community((int(data[:separator])<<16) + int(data[separator+1:]))
+	elif len(data) >=2 and data[1] in 'xX':
+		return Community(long(data,16))
+	else:
+		return Community(long(data))
+
+class Community (object):
+	def __init__ (self,value):
+		self.value = value
+	
+	def pack (self):
+		return pack('!L',self.value)
+
+	def __str__ (self):
+		return "%d:%d" % (self.value >> 16, self.value & 0xFFFF)
+
+	def __len__ (self):
+		return 4
+
+	def __cmp__ (self,other):
+		if type(self) == type(other):
+			return cmp(self.value,other.value)
+		return cmp(self.value,other)
+
+# =================================================================== Communities (8)
 
 def new_Communities (data):
 	communities = Communities()
@@ -547,16 +577,6 @@ def new_Communities (data):
 		data = data[2:]
 		Communities.add(Community(community))
 	return communities
-
-class Community (long):
-	def pack (self):
-		return pack('!L',self)
-
-	def __str__ (self):
-		return "%d:%d" % (self >> 16, self & 0xFFFF)
-
-	def __len__ (self):
-		return 4
 
 class Communities (Attribute):
 	ID = Attribute.COMMUNITY

@@ -8,8 +8,8 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 import unittest
-from bgp.configuration import Configuration
-from bgp.supervisor import Supervisor
+from bgp.structure.configuration import Configuration
+from bgp.structure.supervisor    import Supervisor
 
 class TestPeer (unittest.TestCase):
 	text_configuration = """\

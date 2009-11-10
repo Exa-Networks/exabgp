@@ -9,17 +9,16 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 import unittest
 
+from bgp.message.inet         import *
 from bgp.message.open         import Open,Capabilities,new_Open
 from bgp.message.notification import Notification
 from bgp.message.keepalive    import KeepAlive,new_KeepAlive
 from bgp.message.update       import Updates,Update,new_Updates
 
-from bgp.structure.network import *
-from bgp.structure.neighbor import Neighbor
-
-from bgp.rib.table import Table
-from bgp.rib.delta import Delta
-from bgp.protocol import Protocol
+from bgp.rib.table            import Table
+from bgp.rib.delta            import Delta
+from bgp.network.protocol     import Protocol
+from bgp.structure.neighbor   import Neighbor
 
 from StringIO import StringIO
 

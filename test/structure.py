@@ -9,7 +9,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 import unittest
 
-from bgp.structure.network import *
+from bgp.message.inet import *
 from bgp.message.update import new_Updates
 
 class TestData (unittest.TestCase):

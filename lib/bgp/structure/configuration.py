@@ -14,7 +14,7 @@ import re
 from bgp.message.inet  import IPv4,IPv6,ASN
 from bgp.structure.neighbor import Neighbor
 from bgp.message.open       import HoldTime
-from bgp.message.update     import Update,to_NLRI,Community,Communities,LocalPreference
+from bgp.message.update     import Update,to_NLRI,to_Community,Communities,LocalPreference
 
 class Configuration (object):
 	_str_route_error = 'syntax: route IP/MASK next-hop IP [local-preference NUMBER] [community COMMUNITY| community [COMMUNITY1 COMMUNITY2]]'
@@ -349,15 +349,7 @@ class Configuration (object):
 		try:
 			value = long(data)
 		except ValueError:
-			separator = data.find(':')
-			if separator > 0:
-				# XXX: Check that the value do not overflow 16 bits
-				value = (int(data[:separator])<<16) + int(data[separator+1:])
-			elif len(data) >=2 and data[1] in 'xX':
-				value = long(data,16)
-			else:
-				value = long(data)
-		return Community(value)
+			return to_Community(data)
 
 	def _route_community (self,tokens):
 		communities = Communities()
