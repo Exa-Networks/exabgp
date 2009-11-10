@@ -31,6 +31,22 @@ class TestData (unittest.TestCase):
 	def test_3_nlri (self):
 		self.assertEqual(''.join([chr(c) for c in [20,1,2,3]]),to_NLRI('1.2.3.4','20').pack())
 
+	def test_1_ipv6 (self):
+		default = IPv6('::')
+		self.assertEqual(str(default),'::')
+		self.assertEqual(default.pack(),'\0'*16)
+
+	def test_2_ipv6 (self):
+		default = IPv6('1234:5678::')
+		self.assertEqual(str(default),'1234:5678::')
+		self.assertEqual(default.pack(),'\x12\x34\x56\x78'+'\0'*12)
+
+	def test_3_ipv6 (self):
+		default = IPv6('1234:5678::1')
+		self.assertEqual(str(default),'1234:5678::1')
+		self.assertEqual(default.pack(),'\x12\x34\x56\x78'+'\0'*11 + '\x01')
+
+
 # XXX: NEED To add ASN test
 # XXX: NEED To add NLRI test
 

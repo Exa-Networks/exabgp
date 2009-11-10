@@ -175,10 +175,7 @@ class _INET (object):
 
 	def __len__ (self):
 		return self.length
-
-	def __str__ (self):
-		return self.string
-
+	
 	def __eq__ (self,other):
 		if type(self) == type(other):
 			return self.numeric == other.numeric and self.version == other.version
@@ -208,9 +205,6 @@ class IPv4 (_INET):
 		self.version = 4
 		self.length =  4
 
-	def pack (self):
-		return pack('>L',self.numeric)
-
 class IPv6 (_INET):
 	def __init__ (self,value):
 		try:
@@ -228,9 +222,6 @@ class IPv6 (_INET):
 		self.string = string
 		self.version = 6
 		self.length = 16
-
-	def pack (self):
-		return pack('>LLLL',(numeric >> 96),(numeric >> 64) & 0xFFFF, (numeric >> 32) & 0xFFFF, numeric & 0xFFFF)
 
 # =================================================================== Family
 
