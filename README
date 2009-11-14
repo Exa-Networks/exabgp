@@ -1,3 +1,5 @@
+IPv6 support is currently totally broken.
+
 This program is a BGP route injector. It can be used to announce routes in your network.
 
 Potential use are :

@@ -9,4 +9,3 @@ allow reconfiguration (SIGHUP forcing a reload of the configuration)
  - reconfiguration alter neighbor routes
 
 Add support RFC 3107
-Change all the .version to get (afi,safi) tuple instead
