@@ -8,6 +8,8 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 import time
+import sys
+import traceback
 
 from bgp.message.parent       import Failure
 from bgp.message.nop          import NOP
@@ -64,7 +66,7 @@ class Peer (Display):
 			self.log('-> %s' % o)
 			yield
 
-			o = self.bgp.read_open()
+			o = self.bgp.read_open(self.bgp.peer.ip())
 			self.log('<- %s' % o)
 			yield
 
@@ -117,9 +119,8 @@ class Peer (Display):
 		except Exception, e:
 			self.log('UNHANDLED EXCEPTION')
 			if self.debug_trace:
-				import sys
-				import traceback
 				traceback.print_exc(file=sys.stdout)
+				raise
 			else:
 				self.log(str(e))
 			if self.bgp: self.bgp.close()

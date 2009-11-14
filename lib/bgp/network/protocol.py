@@ -17,8 +17,8 @@ from bgp.rib.delta import Delta
 
 from bgp.message.parent    import Message,Failure
 from bgp.message.nop          import new_NOP
-from bgp.message.open         import new_Open,Open,Parameter,Capabilities
-from bgp.message.update       import new_Updates,Update
+from bgp.message.open         import new_Open,Open,Parameter,Capabilities,RouterID
+from bgp.message.update       import new_Update,Update
 from bgp.message.keepalive    import new_KeepAlive,KeepAlive
 from bgp.message.notification import Notification, Notify
 
@@ -106,14 +106,14 @@ class Protocol (Display):
 			return new_Open(data)
 
 		if msg == Update.TYPE:
-			return new_Updates(data)
+			return new_Update(data)
 
 		if self.strict:
 			raise Notify(1,3,msg)
 
 		return new_NOP(data)
 
-	def read_open (self):
+	def read_open (self,ip):
 		message = self.read_message()
 		if message.TYPE not in [Open.TYPE,]:
 			raise Notify(1,1,msg)
@@ -128,6 +128,9 @@ class Protocol (Display):
 		if message.hold_time >= 3:
 			self.neighbor.hold_time = min(self.neighbor.hold_time,message.hold_time)
 
+		if message.router_id == '0.0.0.0':
+			message.router_id = RouterID(ip)
+
 		return message
 
 	def read_keepalive (self):
@@ -139,7 +142,7 @@ class Protocol (Display):
 	# Sending message to peer .................................................
 
 	def new_open (self):
-		o = Open(4,self.neighbor.local_as,self.neighbor.router_id,Capabilities().default(),self.neighbor.hold_time)
+		o = Open(4,self.neighbor.local_as,self.neighbor.router_id.ip(),Capabilities().default(),self.neighbor.hold_time)
 		self.connection.write(o.message())
 		return o
 

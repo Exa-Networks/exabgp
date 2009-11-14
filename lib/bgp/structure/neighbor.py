@@ -7,6 +7,7 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
+from bgp.message.inet import AFI
 from bgp.message.open import HoldTime
 
 # The definition of a neighbor (from reading the configuration)
@@ -18,7 +19,7 @@ class Neighbor (object):
 		self.peer_address = None
 		self.peer_as = None
 		self.local_as = None
-		self._hold_time = HoldTime(180)
+		self.hold_time = HoldTime(180)
 		self.routes = []
 
 	def missing (self):
@@ -26,14 +27,8 @@ class Neighbor (object):
 		if self.peer_address is None: return 'peer-address'
 		if self.local_as is None: return 'local-as'
 		if self.peer_as is None: return 'peer-as'
-		if self.peer_address.version == 6 and not self._router_id: return 'router-id'
+		if self.peer_address.afi == AFI.ipv6 and not self._router_id: return 'router-id'
 		return ''
-
-	def get_hold_time (self):
-		return self._hold_time
-	def set_hold_time (self,hold_time):
-		self._hold_time = HoldTime(hold_time)
-	hold_time = property(get_hold_time,set_hold_time)
 
 	def get_router_id (self):
 		return self._router_id if self._router_id else self.local_address

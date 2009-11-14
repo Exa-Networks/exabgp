@@ -60,8 +60,29 @@ class HoldTime (int):
 
 # =================================================================== RouterID
 
-class RouterID (IPv4):
-	pass
+class RouterID (object):
+	def __init__ (self,ip):
+		self.ip = ip
+		self.raw = socket.inet_pton(socket.AF_INET,ip)
+
+	def afi (self):
+		return AFI.ipv4
+
+	def __len__ (self):
+		return 4
+
+	def pack (self):
+		return self.raw
+	
+	def __str__ (self):
+		return self.ip
+
+	def __cmp__ (self,other):
+		if type(self) == type(other):
+			return self.raw == other.raw
+		if self.raw == other:
+			return cmp(self.raw,other)
+		return cmp(self.ip,other)
 
 # =================================================================== Parameter
 

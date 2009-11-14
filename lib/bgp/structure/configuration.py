@@ -11,12 +11,13 @@ from __future__ import with_statement
 
 import re
 
-from bgp.message.inet  import IPv4,IPv6,ASN
+from bgp.message.inet       import AFI,ASN,to_IP
 from bgp.structure.neighbor import Neighbor
 from bgp.message.open       import HoldTime
-from bgp.message.update     import Update,to_NLRI,to_Community,Communities,LocalPreference
+from bgp.message.update     import Attributes,to_Community,Communities,LocalPreference,to_Route
 
 class Configuration (object):
+	debug = True
 	_str_route_error = 'syntax: route IP/MASK next-hop IP [local-preference NUMBER] [community COMMUNITY| community [COMMUNITY1 COMMUNITY2]]'
 
 	def __init__ (self,fname,text=False):
@@ -40,6 +41,7 @@ class Configuration (object):
 					self.error = error.split(']')[1].strip()
 				else:
 					self.error = error
+				if self.debug: raise
 				return False
 
 		self._neighbor = {}
@@ -94,6 +96,7 @@ class Configuration (object):
 			tokens = self.tokens()
 		except IndexError:
 			self._error = 'configuration file incomplete (most likely missing })'
+			if self.debug: raise
 			return False
 		end = tokens[-1]
 		if multi and end == '{':
@@ -176,7 +179,7 @@ class Configuration (object):
 		if missing:
 			self._error = 'incomplete neighbor, missing %s' % missing
 			return False
-		if neighbor.router_id.version != 4:
+		if neighbor.router_id.afi != AFI.ipv4:
 			self._error = 'router-id must be a IPv4 address (not %s)' % neighbor.router_id
 			return False
 		if self._neighbor.has_key(neighbor.peer_address):
@@ -189,12 +192,10 @@ class Configuration (object):
 	def _multi_neighbor (self,address):
 		self._scope.append({})
 		try:
-			try:
-				self._scope[-1]['peer-address'] = IPv4(address)
-			except ValueError:
-				self._scope[-1]['peer-address'] = IPv6(address)
+			self._scope[-1]['peer-address'] = to_IP(address)
 		except:
 			self._error = '"%s" is not a valid IP address' % address
+			if self.debug: raise
 			return False
 		while True:
 		 	r = self._dispatch('neigbor',['static',],['description','router-id','local-address','local-as','peer-as','hold-time'])
@@ -218,16 +219,15 @@ class Configuration (object):
 			return True
 		except ValueError:
 			self._error = '"%s" is an invalid ASN' % ' '.join(value)
+			if self.debug: raise
 			return False
 
 	def _set_ip (self,command,value):
 		try:
-			try:
-				ip = IPv4(value[0])
-			except ValueError:
-				ip = IPv6(value[0])
+			ip = to_IP(value[0])
 		except (IndexError,ValueError):
 			self._error = '"%s" is an invalid IP address' % ' '.join(value)
+			if self.debug: raise
 			return False
 		self._scope[-1][command] = ip
 		return True
@@ -238,6 +238,7 @@ class Configuration (object):
 			return True
 		except ValueError:
 			self._error = '"%s" is an invalid hold-time' % ' '.join(value)
+			if self.debug: raise
 			return False
 
 
@@ -257,9 +258,10 @@ class Configuration (object):
 	def _insert_route (self,tokens):
 		try:
 			ip,nm = tokens.pop(0).split('/')
-			route = Update(to_NLRI(ip,nm))
+			route = to_Route(ip,nm)
 		except ValueError:
 			self._error = self._str_route_error
+			if self.debug: raise
 			return False
 
 		if not self._scope[-1].has_key('routes'):
@@ -328,13 +330,11 @@ class Configuration (object):
 	def _route_next_hop (self,tokens):
 		try:
 			t = tokens.pop(0)
-			try:
-				self._scope[-1]['routes'][-1].next_hop = t
-			except ValueError:
-				self._scope[-1]['routes'][-1].next_hop6 = t
+			self._scope[-1]['routes'][-1].next_hop = t
 			return True
 		except:
 			self._error = self._str_route_error
+			if self.debug: raise
 			return False
 
 	def _route_local_preference (self,tokens):
@@ -343,6 +343,7 @@ class Configuration (object):
 			return True
 		except ValueError:
 			self._error = self._str_route_error
+			if self.debug: raise
 			return False
 
 	def _parse_community (self,data):
@@ -361,6 +362,7 @@ class Configuration (object):
 						community = tokens.pop(0)
 					except IndexError:
 						self._error = self._str_route_error
+						if self.debug: raise
 						return False
 					if community == ']':
 						break
@@ -369,6 +371,7 @@ class Configuration (object):
 				communities.add(self._parse_community(community))
 		except ValueError:
 			self._error = self._str_route_error
+			if self.debug: raise
 			return False
 		self._scope[-1]['routes'][-1].attributes.add(communities)
 		return True

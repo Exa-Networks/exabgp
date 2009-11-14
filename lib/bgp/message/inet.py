@@ -88,11 +88,21 @@ def to_NLRI(ip,netmask):
 	size = int(math.ceil(float(netmask)/8))
 	return NLRI("%s%s" % (nm,pack[:size]),afi,SAFI.unicast)
 
+def to_IP4 (value):
+	return to_NLRI(value,32)
+
+def to_IP6 (value):
+	return to_NLRI(value,128)
+
+def to_IP (value):
+	return to_NLRI(value,128 if value.count(':') else 32)
+
 class NLRI (object):
 	_af = {
 		AFI.ipv4: socket.AF_INET,
 		AFI.ipv6: socket.AF_INET6,
 	}
+
 	def __init__ (self,raw,afi,safi):
 		self.afi = afi
 		self.safi = safi
@@ -115,9 +125,18 @@ class NLRI (object):
 	def mask (self):
 		return self._cache()[1]
 
+#	def nlri (self):
+#		size = int(math.ceil(float(mask)/8))+1
+#		return NLRI('%s%s' % (chr(size),self._pack[1:size]) ,AFI.ipv4,SAFI.unicast)
+
 	def pack (self):
 		return self.raw
 
+	def packedip (self):
+		if self.afi == AFI.ipv4:
+			return self.raw[1:] + '\0'*(5-len(self.raw))
+		return self.raw[1:] + '\0'*(17-len(self.raw))
+		
 	def __cmp__ (self,other):
 		return \
 			self.afi == other.afi and \
@@ -130,98 +149,16 @@ class NLRI (object):
 	def __len__ (self):
 		return len(self.raw)
 
-#		mask = ord(data[0])
-#		size = int(math.ceil(float(mask)/8))
-#	def bgp (self):
-#		size = int(math.ceil(float(self.mask)/8))
-#		return "%s%s" % (self.mask.pack(),self.ip.pack()[:size])
-#	def __len__ (self):
-#		return int(math.ceil(float(self.mask)/8)) + 1
-#	parsed  = data[1:size+1] + '\0'* (fill-size)
-#	ip = socket.inet_ntop(afi,parsed[0])
-
-# =================================================================== IP
-
-def new_IP (value):
-	try:
-		return new_IPv4(value)
-	except ValueError:
-		return new_IPv6(value)
-
-def new_IPv4 (value):
-	try:
-		pack = socket.inet_pton(socket.AF_INET, str(value))
-		return IPv4(value)
-	except (socket.error,TypeError):
-		raise ValueError('"%s" is an invalid address' % str(value))
-
-def new_IPv6 (value):
-	try:
-		pack = socket.inet_pton(socket.AF_INET6, str(value))
-		return IPv6(value)
-	except (socket.error,TypeError):
-		raise ValueError('"%s" is an invalid address' % str(value))
-
-class _INET (object):
-	def nlri (self):
-		size = int(math.ceil(float(self.mask)/8))
-		return NLRI('%s%s' % (chr(size),self._pack[:size]) ,AFI.ipv4,SAFI.unicast)
-
-	def pack (self):
-		return self._pack
-
-	def ip (self):
-		return self.string
-
-	def __len__ (self):
-		return self.length
-	
 	def __eq__ (self,other):
 		if type(self) == type(other):
-			return self.numeric == other.numeric and self.version == other.version
+			return self.raw == other.raw and self.afi == other.afi
 		# XXX: Should we implement the other test to not create bad surprised ? ...
 		if type(other) != type(None):
 			import warnings
 			warnings.warn('we should never compare things which are not comparable %s and %s' % (type(self),type(other)))
 		return False
 
-	def __str__ (self):
-		return self.string
-
-class IPv4 (_INET):
-	def __init__ (self,value):
-		try:
-			pack = socket.inet_pton(socket.AF_INET, str(value))
-			numeric = unpack('>L',pack)[0]
-			string = str(value)
-		except socket.error:
-			raise ValueError('"%s" is an invalid address' % str(value))
-		except TypeError:
-			raise ValueError('"%s" is an invalid address' % str(value))
-
-		self.numeric = numeric
-		self._pack = pack
-		self.string = string
-		self.version = 4
-		self.length =  4
-
-class IPv6 (_INET):
-	def __init__ (self,value):
-		try:
-			pack = socket.inet_pton(socket.AF_INET6, str(value))
-			a,b,c,d = unpack('>LLLL',pack)
-			numeric = (a << 96) + (b << 64) + (c << 32) + d
-			string = str(value).lower()
-		except socket.error:
-			raise ValueError('"%s" is an invalid address' % str(value))
-		except TypeError:
-			raise ValueError('"%s" is an invalid address' % str(value))
-
-		self.numeric = numeric
-		self._pack = pack
-		self.string = string
-		self.version = 6
-		self.length = 16
+#		return int(math.ceil(float(self.mask)/8)) + 1
 
 # =================================================================== Family
 
