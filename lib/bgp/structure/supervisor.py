@@ -10,18 +10,18 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 import time
 import signal
 
-from bgp.display import Display
+from bgp.utils                import *
 from bgp.message.notification import Notification
 from bgp.network.peer         import Peer
 
-class Supervisor (Display):
+class Supervisor (object):
 	debug = True
 
 	# [hex(ord(c)) for c in os.popen('clear').read()]
 	clear = ''.join([chr(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a']])
 
 	def __init__ (self,configuration):
-		Display.__init__(self,'Supervisor','')
+		self.log = Log('Supervisor','')
 		self.configuration = configuration
 		self._peers = {}
 		self._shutdown = False
@@ -32,11 +32,11 @@ class Supervisor (Display):
 		signal.signal(signal.SIGHUP, self.sighup)
 
 	def sigterm (self,signum, frame):
-		self.log("SIG TERM received")
+		self.log.out("SIG TERM received")
 		self.shutdown()
 
 	def sighup (self,signum, frame):
-		self.log("SIG HUP received")
+		self.log.out("SIG HUP received")
 		self._reload = True
 
 	def run (self):
@@ -58,7 +58,7 @@ class Supervisor (Display):
 				# RFC state that we MUST not more than one KEEPALIVE / sec
 				time.sleep(1.0)
 			except KeyboardInterrupt:
-				if self.debug: self.log("^C received")
+				if self.debug: self.log.out("^C received")
 				self.shutdown()
 
 	def reload (self):
@@ -66,13 +66,13 @@ class Supervisor (Display):
 		self.configuration.reload()
 		for ip in self._peers.keys():
 			if ip not in self.configuration.neighbor:
-				self.log("Removing Peer %s" % str(ip))
+				self.log.out("Removing Peer %s" % str(ip))
 				self._peers[ip].shutdown()
 
 		for _,neighbor in self.configuration.neighbor.iteritems():
 			ip = neighbor.peer_address
 			if ip not in self._peers:
-				self.log("New Peer %s" % str(ip))
+				self.log.out("New Peer %s" % str(ip))
 				peer = Peer(neighbor,self)
 				self._peers[ip] = peer
 			else:

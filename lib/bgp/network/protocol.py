@@ -15,23 +15,22 @@ from struct import pack,unpack
 from bgp.rib.table import Table
 from bgp.rib.delta import Delta
 
-from bgp.message.parent    import Message,Failure
+from bgp.utils                import *
+from bgp.message.parent       import Message,Failure
 from bgp.message.nop          import new_NOP
 from bgp.message.open         import new_Open,Open,Parameter,Capabilities,RouterID
 from bgp.message.update       import new_Update,Update
 from bgp.message.keepalive    import new_KeepAlive,KeepAlive
 from bgp.message.notification import Notification, Notify
+from bgp.network.connection   import Connection
 
-from bgp.network.connection import Connection
-from bgp.display import Display
-
-class Protocol (Display):
+class Protocol (object):
 	trace = False
 	decode = True
 	strict = False
 
 	def __init__ (self,neighbor,connection=None):
-		Display.__init__(self,neighbor.peer_address,neighbor.peer_as)
+		self.log = Log(neighbor.peer_address,neighbor.peer_as)
 		self.neighbor = neighbor
 		self.connection = connection
 		self._table = Table()
@@ -94,7 +93,7 @@ class Protocol (Display):
 		if len(data) != length:
 			raise SendNotificaiton(ord(msg),0)
 
-		self.logIf(self.trace and msg == Update.TYPE,"UPDATE RECV: %s " % [hex(ord(c)) for c in data])
+		self.log.outIf(self.trace and msg == Update.TYPE,"UPDATE RECV: %s " % hexa(data))
 
 		if msg == Notification.TYPE:
 			raise Notification(ord(data[0]),ord(data[1]))
@@ -149,14 +148,14 @@ class Protocol (Display):
 	def new_announce (self):
 		m = self._delta.announce(self.neighbor.local_as,self.neighbor.peer_as)
 		updates = ''.join(m)
-		self.logIf(self.trace,"UPDATE (update)   SENT: %s" % [hex(ord(c)) for c in updates][19:])
+		self.log.outIf(self.trace,"UPDATE (update)   SENT: %s" % hexa(updates[19:]))
 		if m: self.connection.write(updates)
 		return m if m else []
 
 	def new_update (self):
 		m = self._delta.update(self.neighbor.local_as,self.neighbor.peer_as)
 		updates = ''.join(m)
-		self.logIf(self.trace,"UPDATE (update)   SENT: %s" % [hex(ord(c)) for c in updates][19:])
+		self.log.outIf(self.trace,"UPDATE (update)   SENT: %s" % hexa(updates[19:]))
 		if m: self.connection.write(updates)
 		return m if m else []
 

@@ -1,5 +1,7 @@
 Add MD5 authentification support
 
+Formally define the interface used - Change inheritance.
+
 Correct Unit Testing.
  - Most of the use case have not been tested in production
  - Most of the code is not covered

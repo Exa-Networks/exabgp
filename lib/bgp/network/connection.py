@@ -14,13 +14,15 @@ import struct
 import socket
 import select
 
+from bgp.utils          import *
 from bgp.message.inet   import AFI
 from bgp.message.parent import Failure
 
 class Connection (object):
-	debug = True
+	debug = False
 
 	def __init__ (self,peer,local):
+		self.log = Log(peer,'-')
 		self.last_read = 0
 		self.last_write = 0
 		self.peer = peer
@@ -67,25 +69,23 @@ class Connection (object):
 		try:
 			r = self._io.recv(number)
 			self.last_read = time.time()
-			print "received:", [hex(ord(_)) for _ in r]
+			if self.debug: print "received:", hexa(r)
 			return r
 		except socket.error,e:
 			self.close()
-			# XXX: use Display for the rendering
-			traceback.print_exc(file=sys.stdout)
+			self.log.out(trace())
 			raise Failure('problem attempting to read data from the network:  %s ' % str(e))
 
 	def write (self,data):
 		try:
-			print "sending :", [hex(ord(_)) for _ in data]
+			if self.debug: print "sending :", hexa(data)
 			r = self._io.send(data)
 			self.last_write = time.time()
 			return r
 		except socket.error, e:
 			if e.errno != 32: # Broken pipe, we ignore as we want to make sure if there is data to read before failing
 				self.close()
-				# XXX: use Display for the rendering
-				traceback.print_exc(file=sys.stdout)
+				self.log.out(trace())
 				raise Failure('problem attempting to write data to the network: %s' % str(e))
 
 	def close (self):

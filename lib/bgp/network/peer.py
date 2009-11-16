@@ -7,10 +7,7 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
-import time
-import sys
-import traceback
-
+from bgp.utils                import *
 from bgp.message.parent       import Failure
 from bgp.message.nop          import NOP
 from bgp.message.open         import Open
@@ -18,17 +15,15 @@ from bgp.message.update       import Update
 from bgp.message.keepalive    import KeepAlive
 from bgp.message.notification import Notification, Notify
 from bgp.network.protocol     import Protocol
-from bgp.display import Display
-
 
 # Present a File like interface to socket.socket
 
-class Peer (Display):
+class Peer (object):
 	debug_timers = False		# debug hold/keepalive timers
 	debug_trace = True			# debug traceback on unexpected exception
 
 	def __init__ (self,neighbor,supervisor):
-		Display.__init__(self,neighbor.peer_address,neighbor.peer_as)
+		self.log = Log(neighbor.peer_address,neighbor.peer_as)
 		self.supervisor = supervisor
 		self.neighbor = neighbor
 		self.running = False
@@ -63,45 +58,45 @@ class Peer (Display):
 			self.bgp.connect()
 
 			o = self.bgp.new_open()
-			self.log('-> %s' % o)
+			self.log.out('-> %s' % o)
 			yield
 
-			o = self.bgp.read_open(self.bgp.peer.ip())
-			self.log('<- %s' % o)
+			o = self.bgp.read_open(self.neighbor.peer_address.ip())
+			self.log.out('<- %s' % o)
 			yield
 
 			message = self.bgp.new_keepalive(force=True)
-			self.log('-> KEEPALIVE')
+			self.log.out('-> KEEPALIVE')
 			yield
 
 			message = self.bgp.read_keepalive()
-			self.log('<- KEEPALIVE')
+			self.log.out('<- KEEPALIVE')
 
 			messages = self.bgp.new_announce()
-			self.logIf(messages,'-> UPDATE (%d)' % len(messages))
+			self.log.outIf(messages,'-> UPDATE (%d)' % len(messages))
 
 			while self.running:
 				c = self.bgp.check_keepalive()
-				self.logIf(self.debug_timers,'Receive Timer %d second(s) left' % c)
+				self.log.outIf(self.debug_timers,'Receive Timer %d second(s) left' % c)
 
 				c,k = self.bgp.new_keepalive()
-				self.logIf(k,'-> KEEPALIVE')
-				self.logIf(self.debug_timers,'Sending Timer %d second(s) left' % c)
+				self.log.outIf(k,'-> KEEPALIVE')
+				self.log.outIf(self.debug_timers,'Sending Timer %d second(s) left' % c)
 
 				message = self.bgp.read_message()
 
-				self.logIf(message.TYPE == KeepAlive.TYPE,'<- KEEPALIVE')
-				self.logIf(message.TYPE == Update.TYPE,'<- UPDATE')
-				self.logIf(message.TYPE not in (KeepAlive.TYPE,Update.TYPE,NOP.TYPE), '<- %d' % ord(message.TYPE))
+				self.log.outIf(message.TYPE == KeepAlive.TYPE,'<- KEEPALIVE')
+				self.log.outIf(message.TYPE == Update.TYPE,'<- UPDATE')
+				self.log.outIf(message.TYPE not in (KeepAlive.TYPE,Update.TYPE,NOP.TYPE), '<- %d' % ord(message.TYPE))
 
 				messages = self.bgp.new_update()
-				self.logIf(messages,'-> UPDATE (%d)' % len(messages))
+				self.log.outIf(messages,'-> UPDATE (%d)' % len(messages))
 
 				yield 
 			# User closing the connection
 			raise Notify(6,0)
 		except Notify,e:
-			self.log('Sending Notification (%d,%d) [%s]  %s' % (e.code,e.subcode,str(e),e.data))
+			self.log.out('Sending Notification (%d,%d) [%s]  %s' % (e.code,e.subcode,str(e),e.data))
 			try:
 				self.bgp.new_notification(e)
 				self.bgp.close()
@@ -109,19 +104,19 @@ class Peer (Display):
 				pass
 			return
 		except Notification, e:
-			self.log('Received Notification (%d,%d) from peer %s' % (e.code,e.subcode,str(e)))
+			self.log.out('Received Notification (%d,%d) from peer %s' % (e.code,e.subcode,str(e)))
 			self.bgp.close()
 			return
 		except Failure, e:
-			self.log(str(e))
+			self.log.out(str(e))
 			self.bgp.close()
 			return
 		except Exception, e:
-			self.log('UNHANDLED EXCEPTION')
+			self.log.out('UNHANDLED EXCEPTION')
 			if self.debug_trace:
 				traceback.print_exc(file=sys.stdout)
 				raise
 			else:
-				self.log(str(e))
+				self.log.out(str(e))
 			if self.bgp: self.bgp.close()
 			return

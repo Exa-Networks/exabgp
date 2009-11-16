@@ -9,10 +9,8 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 import math
 
-from bgp.display import Display
-
-from bgp.message.inet import *
-from bgp.message.parent import *
+from bgp.message.inet         import *
+from bgp.message.parent       import *
 from bgp.message.notification import Notify
 
 # =================================================================== List of NLRI
@@ -312,15 +310,9 @@ class Attributes (dict):
 		if not data:
 			return self
 
-		print "before .............................."
-		print [hex(ord(c)) for c in data]
-
 		# We do not care if the attribute are transitive or not as we do not redistribute
 		flag = Flag(ord(data[0]))
 		code = Attribute(ord(data[1]))
-
-		print flag
-		print code
 
 		if flag & Flag.EXTENDED_LENGTH:
 			length = unpack('!H',data[2:4])[0]
@@ -486,11 +478,8 @@ class ASPath (Attribute):
 		self.value[1].append(community)
 
 	def pack (self):
-		r = self._attribute(self._segment(self.value[0],self.value[1]))
-		print "-------------------------------------"
-		print [hex(ord(c)) for c in r]
-		print "-------------------------------------"
-		return r
+		return self._attribute(self._segment(self.value[0],self.value[1]))
+
 	def __len__ (self):
 		return 2 + (len(self.value[1])*2)
 
