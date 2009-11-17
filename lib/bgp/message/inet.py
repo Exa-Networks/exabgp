@@ -71,11 +71,11 @@ class SAFI (int):
 
 def to_IPv4 (ip):
 	pack = socket.inet_pton(socket.AF_INET,ip)
-	return IP(pack,AFI.ipv4,SAFI.unicast)
+	return IP(pack,AFI.ipv4,SAFI.unicast,ip)
 
 def to_IPv6 (ip):
 	pack = socket.inet_pton(socket.AF_INET6,ip)
-	return IP(pack,AFI.ipv4,SAFI.unicast)
+	return IP(pack,AFI.ipv4,SAFI.unicast,ip)
 
 def to_IP (value):
 	return to_IPv6(value) if value.count(':') else to_IPv4(value)
@@ -86,18 +86,18 @@ class IP (object):
 		AFI.ipv6: socket.AF_INET6,
 	}
 
-	def __init__ (self,pip,afi,safi):
+	def __init__ (self,pip,afi,safi,ip=None):
 		self.afi = afi
 		self.safi = safi
 		self.pip = pip
-		self._ip = None
+		self._ip = ip
 
 	def ip (self):
 		if not self._ip:
 			if self.afi == AFI.ipv4:
-				self._ip = socket.inet_ntop(self._af[self.afi],self.pip[1:] + '\0'*(5-len(self.pip)))
+				self._ip = socket.inet_ntop(self._af[self.afi],self.pip)
 			else:
-				self._ip = socket.inet_ntop(self._af[self.afi],self.pip[1:] + '\0'*(17-len(self.pip)))
+				self._ip = socket.inet_ntop(self._af[self.afi],self.pip)
 		return self._ip
 
 	def pack (self):
