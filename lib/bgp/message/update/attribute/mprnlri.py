@@ -22,7 +22,7 @@ class MPRNLRI (Attribute):
 
 	def pack (self):
 		nlri = self.value.nlri.pack()
-		next_hop = self.value.next_hop
+		next_hop = self.value.next_hop.pack()
 		return self._attribute(
 			AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + 
 			chr(len(next_hop)) + next_hop + 

@@ -8,7 +8,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 from bgp.utils import *
-from bgp.message.inet import to_NLRI, NLRI
+from bgp.message.inet import to_NLRI, NLRI, to_IP, IP
 from bgp.message.inet import AFI,SAFI
 from bgp.message.update.attribute.nexthop import NextHop, to_NextHop
 from bgp.message.update.attribute.parent import Attribute,Flag
@@ -31,7 +31,7 @@ class Route (object):
 		self._next_hop = to_IP(nh)
 	def _get_next_hop (self):
 		return self._next_hop
-	property = (_get_next_hop,_set_next_hop)
+	next_hop = property(_get_next_hop,_set_next_hop)
 
 	def announce (self,local_asn,remote_asn):
 		attributes = Attributes(self.attributes.copy())

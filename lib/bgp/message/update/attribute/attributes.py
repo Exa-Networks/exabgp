@@ -8,6 +8,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 from bgp.utils import *
+from bgp.message.update.update import Update
 from bgp.message.update.attribute.parent import Attribute,Flag
 
 from bgp.message.update.attribute.origin      import *	# 01
