@@ -8,7 +8,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 from bgp.utils import *
-from bgp.message.update.update import Update
+from bgp.message.inet import new_NLRI
 from bgp.message.update.attribute.parent import Attribute,Flag
 
 from bgp.message.update.attribute.origin      import *	# 01
@@ -122,7 +122,7 @@ class Attributes (dict):
 				return self.new(next_attributes)
 			data = data[offset:]
 			while data:
-				route = Update(new_NLRI(data,afi))
+				route = to_Update(NLRIS(), new_NLRI(data,afi))
 				data = data[len(route.nlri):]
 				self.add(MPURNLRI(route))
 				print 'removing MP route %s' % str(route)
@@ -165,7 +165,7 @@ class Attributes (dict):
 				offset += len_snpa
 			data = data[offset:]
 			while data:
-				route = Update(new_NLRI(data,afi))
+				route = to_Update(NLRIS(), new_NLRI(data,afi))
 				route.next_hop6 = nh
 				data = data[len(route.nlri):]
 				self.add(MPRNLRI(route))
@@ -175,3 +175,8 @@ class Attributes (dict):
 		import warnings
 		warnings.warn("Could not parse attribute %s" % str(code))
 		return self.new(data[length:])
+
+
+
+
+from bgp.message.update.update import Update, to_Update, NLRIS

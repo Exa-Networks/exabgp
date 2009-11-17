@@ -12,6 +12,14 @@ from bgp.message.inet import new_NLRI, NLRI
 from bgp.message.parent import Message,prefix,defix
 from bgp.message.update.attribute.parent import Attribute,Flag
 from bgp.message.update.attribute import *
+from bgp.message.update.attribute.origin import Origin
+from bgp.message.update.attribute.attributes import Attributes, new_Attributes
+from bgp.message.update.attribute.aspath import ASPath
+from bgp.message.update.attribute.communities import Communities
+from bgp.message.update.attribute.mpurnlri import MPURNLRI
+from bgp.message.update.attribute.mprnlri import MPRNLRI
+
+
 
 # =================================================================== List of NLRI
 
