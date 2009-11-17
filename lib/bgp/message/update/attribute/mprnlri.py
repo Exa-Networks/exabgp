@@ -33,7 +33,7 @@ class MPRNLRI (Attribute):
 		return len(self.pack())
 
 	def __str__ (self):
-		return "MP Reacheable NLRI"
+		return "MP Reacheable NLRI %s" % str(self.value)
 
 ## The past :)
 ##		message += self._attribute(Flag.TRANSITIVE,ORIGIN,Origin(Origin.IGP).pack())

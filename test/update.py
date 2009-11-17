@@ -9,7 +9,9 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 import unittest
 
-from bgp.message.update import *
+from bgp.message.inet import to_NLRI 
+from bgp.message.update.attribute.communities import to_Community, Community, Communities
+from bgp.message.update.attribute.attributes  import new_Route,to_Route
 
 class TestData (unittest.TestCase):
 	def test_2_prefix (self):
@@ -54,11 +56,10 @@ class TestData (unittest.TestCase):
 		route.next_hop = '8765:4321::1'
 		announced = route.announce(1,1)
 		message = announced[19:]
-		print hexa(message)
 		update = new_Update(message)
 		print update.nlri
 		print update.withdraw
-		print update.attributes
+		print update.attributes[MPRNLRI.ID][0]
 
 
 #	def test_2_ipv4_broken (self):

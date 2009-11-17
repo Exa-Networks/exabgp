@@ -3,3 +3,5 @@ For incomming messages:
  - IPv6 announcement is still not back
  - ASPath assumes only one segment
  - all the XXX: and FIXME: in the code
+
+The tracking of route may (is likely to be) totally buggy at this point
