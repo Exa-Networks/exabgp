@@ -11,7 +11,7 @@ from bgp.utils import *
 
 from bgp.message.inet         import new_NLRI, NLRI
 from bgp.message.parent       import Message,prefix,defix
-
+from bgp.message.update.route                 import new_Attributes
 from bgp.message.update.attribute.parent      import Attribute,Flag
 from bgp.message.update.attribute.origin      import Origin
 from bgp.message.update.attribute.aspath      import ASPath

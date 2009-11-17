@@ -10,8 +10,9 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 import unittest
 
 from bgp.message.inet import to_NLRI 
+from bgp.message.update.update import new_Update
+from bgp.message.update.route import new_Route,to_Route
 from bgp.message.update.attribute.communities import to_Community, Community, Communities
-from bgp.message.update.attribute.attributes  import new_Route,to_Route
 
 class TestData (unittest.TestCase):
 	def test_2_prefix (self):
