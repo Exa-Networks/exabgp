@@ -149,7 +149,7 @@ def to_NLRI(ip,netmask):
 			pack = socket.inet_pton(socket.AF_INET6,ip)
 			afi = AFI.ipv6
 		except socket.error:
-			raise ValueError('Invalid IP %s' % data)
+			raise ValueError('Invalid IP %s' % ip)
 	size = int(math.ceil(float(netmask)/8))
 	return NLRI("%s%s" % (nm,pack[:size]),afi,SAFI.unicast)
 

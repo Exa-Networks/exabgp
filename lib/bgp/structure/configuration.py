@@ -14,10 +14,9 @@ import re
 from bgp.message.inet         import AFI,ASN,to_IP
 from bgp.structure.neighbor   import Neighbor
 from bgp.message.open         import HoldTime
-from bgp.message.update.route import Attributes
+from bgp.message.update       import to_Route, Attributes
 from bgp.message.update.attribute.communities import to_Community,Communities
 from bgp.message.update.attribute.localpref   import LocalPreference
-from bgp.message.update.route                 import to_Route
 
 class Configuration (object):
 	debug = True
