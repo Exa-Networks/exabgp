@@ -11,6 +11,8 @@ import math
 import socket
 from struct import *
 
+from bgp.utils import *
+
 # =================================================================== AFI
 
 # http://www.iana.org/assignments/address-family-numbers/

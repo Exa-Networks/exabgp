@@ -19,7 +19,7 @@ from bgp.message.inet   import AFI
 from bgp.message.parent import Failure
 
 class Connection (object):
-	debug = False
+	debug = True
 
 	def __init__ (self,peer,local):
 		self.log = Log(peer,'-')
