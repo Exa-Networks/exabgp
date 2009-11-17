@@ -67,6 +67,69 @@ class SAFI (int):
 	def pack (self):
 		return chr(self)
 
+# =================================================================== IP
+
+def to_IPv4 (ip):
+	pack = socket.inet_pton(socket.AF_INET,ip)
+	return IP(pack,AFI.ipv4,SAFI.unicast)
+
+def to_IPv6 (ip):
+	pack = socket.inet_pton(socket.AF_INET6,ip)
+	return IP(pack,AFI.ipv4,SAFI.unicast)
+
+def to_IP (value):
+	return to_IPv6(value) if value.count(':') else to_IPv4(value)
+
+class IP (object):
+	_af = {
+		AFI.ipv4: socket.AF_INET,
+		AFI.ipv6: socket.AF_INET6,
+	}
+
+	def __init__ (self,pip,afi,safi):
+		self.afi = afi
+		self.safi = safi
+		self.pip = pip
+		self._ip = None
+
+	def ip (self):
+		if not self._ip:
+			if self.afi == AFI.ipv4:
+				self._ip = socket.inet_ntop(self._af[self.afi],self.pip[1:] + '\0'*(5-len(self.pip)))
+			else:
+				self._ip = socket.inet_ntop(self._af[self.afi],self.pip[1:] + '\0'*(17-len(self.pip)))
+		return self._ip
+
+	def pack (self):
+		return self.pip
+
+	def packed (self):
+		if self.afi == AFI.ipv4:
+			return self.pip[1:] + '\0'*(5-len(self.pip))
+		return self.pip[1:] + '\0'*(17-len(self.pip))
+
+	def __cmp__ (self,other):
+		return \
+			self.afi == other.afi and \
+			self.safi == other.safi and \
+			self.pip == other.pip
+
+	def __str__ (self):
+		return "%s" % self.ip()
+
+	def __len__ (self):
+		return len(self.pip)
+
+	def __eq__ (self,other):
+		if type(self) == type(other):
+			return self.pip == other.pip and self.afi == other.afi
+		# XXX: Should we implement the other test to not create bad surprised ? ...
+		if type(other) != type(None):
+			import warnings
+			warnings.warn('we should never compare things which are not comparable %s and %s' % (type(self),type(other)))
+		return False
+
+
 # =================================================================== NLRI
 
 def new_NLRI (data,afi=AFI.ipv4,safi=SAFI.unicast):
@@ -90,16 +153,7 @@ def to_NLRI(ip,netmask):
 	size = int(math.ceil(float(netmask)/8))
 	return NLRI("%s%s" % (nm,pack[:size]),afi,SAFI.unicast)
 
-def to_IP4 (value):
-	return to_NLRI(value,32)
-
-def to_IP6 (value):
-	return to_NLRI(value,128)
-
-def to_IP (value):
-	return to_NLRI(value,128 if value.count(':') else 32)
-
-class NLRI (object):
+class NLRI (IP):
 	_af = {
 		AFI.ipv4: socket.AF_INET,
 		AFI.ipv6: socket.AF_INET6,
@@ -122,23 +176,15 @@ class NLRI (object):
 		return self._ip, self._mask
 
 	def ip (self):
-		return self._cache()[0]
+		l = 5 if self.afi == AFI.ipv4 else 17
+		return IP(self.raw[1:] + '\0'*(l-len(self.raw)),self.api,self.safi)
 
 	def mask (self):
-		return self._cache()[1]
-
-#	def nlri (self):
-#		size = int(math.ceil(float(mask)/8))+1
-#		return NLRI('%s%s' % (chr(size),self._pack[1:size]) ,AFI.ipv4,SAFI.unicast)
+		return ord(self.raw[0])
 
 	def pack (self):
 		return self.raw
 
-	def packedip (self):
-		if self.afi == AFI.ipv4:
-			return self.raw[1:] + '\0'*(5-len(self.raw))
-		return self.raw[1:] + '\0'*(17-len(self.raw))
-		
 	def __cmp__ (self,other):
 		return \
 			self.afi == other.afi and \

@@ -8,6 +8,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 from bgp.utils import *
+from bgp.message.inet import new_NLRI, NLRI
 from bgp.message.parent import Message,prefix,defix
 from bgp.message.update.attribute.parent import Attribute,Flag
 from bgp.message.update.attribute import *
