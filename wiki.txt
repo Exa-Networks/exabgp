@@ -5,7 +5,6 @@
 Some code which :
   * Can inject routes with arbitrary next-hops into your network
   * Can act as an IBGP or EBGP speaker (but not listener)
-
 ==== Where can I get it ? ====
 
 The code is stored in our SVN repository: \\
@@ -14,11 +13,11 @@ The code is stored in our SVN repository: \\
 
 Get it with
    cd /opt
-   svn co http://svn.exa.org.uk/bgp/trunk bgp
+   svn co -r 98 http://svn.exa.org.uk/bgp/trunk bgp
 
 There is currently no tarball or official release yet.
 
-We currently use revesion 39 to source ASN112 within our network.
+We currently use revision 98 to source ASN112 and some /32 within our network.
 
 ==== How do you configure it ? ====
 
@@ -89,20 +88,22 @@ IPv6 example
 It is written in Python and requires version 2.5 or later.
 No tests have been performed to check if it works with version 3.0.
 The code only relies on the standard library and has no external dependencies.
-
 ==== Anticipated FAQ ====
 
-Q: I see an IPv6 example, is it fully IPv6 enabled ?
-A: It is since Revision 58 (current stable). The injector allows TCP IPv4 or IPv6 connections as well as supporting the exchange of both IPv4 and IPv6 routes.
+Q: I am trying to connect to my router and it is not working \\
+A: Did you enable multi-hop BGP on your router ?
+
+Q: I see an IPv6 example, is it fully IPv6 enabled ? \\
+A: The injector allows TCP IPv4 or IPv6 connections as well as supporting the exchange of both IPv4 and IPv6 routes.
 
 Q: Can you maintain more than one BGP session? \\
 A: Yes, you can define more than one neighbor in the configuration file
 
 Q: As the code is single threaded, can a blocking network IO cause issues ? \\
-A: We are using select to only read data when available but as we are not using a different thread for keepalive, I would not swear blind that a problem with a peer can not cause the other peer connection to timeout. Should it be a major concern, run one instance of the program per peer.
+A: We are using select to only read data when available but as we are not using a different thread for keepalive, so it could happen. Should it be a major concern, run one instance of the program per peer.
 
 Q: As you have no separate thread for keepalives, how many peers do you think one instance can manage comfortably? \\
-A: I have no answer as we only need one peer per application, but unless you speak to several dozen then it should do fine.
+A: I have no answer as we only need one peer per application, but unless you speak to several dozen and have a very low keepalive time it should do fine.
 
 Q: I am a Ruby coder and I hate Python \\
 A: use ByteMark BGPFeeder a very similar application [[https://projects.bytemark.co.uk/projects/bgpfeeder|https://projects.bytemark.co.uk/projects/bgpfeeder]]
@@ -112,7 +113,12 @@ Q: I am a Perl coder and I hate Python \\
 A: Use bgpsimple [[http://code.google.com/p/bgpsimple|http://code.google.com/p/bgpsimple]]
    svn checkout http://bgpsimple.googlecode.com/svn/trunk/ bgpsimple-read-only
 
-Q: But there is already one in Python here : [https://code.launchpad.net/pybgp|https://code.launchpad.net/pybgp]] \\
-A: I am not sure if this project existed when I started or not but I clearly missed it ! \\
-  (and it does not support the MultiProtocol Extensions - ie: IPv6)
+Q: But there is already one in Python here : [[https://code.launchpad.net/pybgp|https://code.launchpad.net/pybgp]] \\
+A: I am not sure if this project existed when I started or not but I clearly missed it ! (and it does not support the MultiProtocol Extensions for IPv6 but instead for ipv4 and vpnv4/mpls)
+   bzr branch lp:pybgp
 
+Q: Is this code supported ? \\
+A: YES - Should you find any bug, please report it. 
+
+Q: Are you planning to add more features ? (support for vpnv4,etc) \\
+A: New features will really only be added for my own use, but feel free to send me patches.
