@@ -1,6 +1,5 @@
 For incomming messages:
  - Have an issue with hold time of 3 - see why and what can be done (4 is fine !!)
- - IPv6 announcement is still not back
  - ASPath assumes only one segment
  - all the XXX: and FIXME: in the code
 

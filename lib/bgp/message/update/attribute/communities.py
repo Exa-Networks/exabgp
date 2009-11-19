@@ -60,7 +60,7 @@ class Communities (Attribute):
 	def __init__ (self,value=None):
 		# Must be None as = param is only evaluated once
 		if value: v = value
-		else: value = []
+		else: v = []
 		Attribute.__init__(self,v)
 
 	def add(self,data):

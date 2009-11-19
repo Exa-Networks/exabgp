@@ -16,7 +16,7 @@ secondary = int(sys.version[2])
 if main != 2 or secondary < 4:
 	sys.exit('This program can not work (is not tested) with your python version (< 2.4 or >= 3.0)')
 
-if main == 2 or secondary == 4:
+if main == 2 and secondary == 4:
 	sys.stdout.write('\n\n')
 	sys.stdout.write('************ WARNING *** WARNING *** WARNING *** WARNING *********\n')
 	sys.stdout.write('* This program MAY work with your python version (2.4).          *\n')

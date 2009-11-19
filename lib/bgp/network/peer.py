@@ -94,8 +94,6 @@ class Peer (object):
 
 				yield None
 			# User closing the connection
-			print Notify(6,0)
-			print type(Notify(6,0))
 			raise Notify(6,0)
 		except Notify,e:
 			self.log.out('Sending Notification (%d,%d) [%s]  %s' % (e.code,e.subcode,str(e),e.data))
