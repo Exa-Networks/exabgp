@@ -64,18 +64,22 @@ class Supervisor (object):
 	def reload (self):
 		self._reload = False
 		self.configuration.reload()
+
 		for ip in self._peers.keys():
-			if ip not in self.configuration.neighbor:
+			if ip not in self.configuration.neighbor.keys():
 				self.log.out("Removing Peer %s" % str(ip))
 				self._peers[ip].shutdown()
 
-		for _,neighbor in self.configuration.neighbor.iteritems():
-			ip = neighbor.peer_address
-			if ip not in self._peers:
+		for k in self.configuration.neighbor.keys():
+			neighbor = self.configuration.neighbor[k]
+			ip = neighbor.peer_address.ip()
+			if ip not in self._peers.keys():
 				self.log.out("New Peer %s" % str(ip))
 				peer = Peer(neighbor,self)
 				self._peers[ip] = peer
 			else:
+				self.log.out("Stopping Peer %s" % str(ip))
+				# which will force a reconnection with the new settings
 				if self._peers[ip].neighbor != neighbor:
 					self._peers[ip].stop()
 
@@ -83,6 +87,6 @@ class Supervisor (object):
 		self._shutdown = True
 
 	def unschedule (self,peer):
-		ip = peer.neighbor.peer_address
+		ip = peer.neighbor.peer_address.ip()
 		if ip in self._peers:
 			del self._peers[ip]

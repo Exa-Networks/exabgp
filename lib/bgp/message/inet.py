@@ -110,12 +110,6 @@ class IP (object):
 			return self.pip[1:] + '\0'*(5-len(self.pip))
 		return self.pip[1:] + '\0'*(17-len(self.pip))
 
-	def __cmp__ (self,other):
-		return \
-			self.afi == other.afi and \
-			self.safi == other.safi and \
-			self.pip == other.pip
-
 	def __str__ (self):
 		return "%s" % self.ip()
 
@@ -124,7 +118,7 @@ class IP (object):
 
 	def __eq__ (self,other):
 		if type(self) == type(other):
-			return self.pip == other.pip and self.afi == other.afi
+			return self.pip == other.pip and self.afi == other.afi and self.safi == other.safi
 		# XXX: Should we implement the other test to not create bad surprised ? ...
 		if type(other) != type(None):
 			import warnings

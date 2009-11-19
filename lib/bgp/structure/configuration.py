@@ -186,7 +186,7 @@ class Configuration (object):
 		if self._neighbor.has_key(neighbor.peer_address):
 			self_error = 'duplicate peer definition %s' % neighbor.peer_address
 			return False
-		self._neighbor[neighbor.peer_address] = neighbor
+		self._neighbor[neighbor.peer_address.ip()] = neighbor
 		return True
 
 
