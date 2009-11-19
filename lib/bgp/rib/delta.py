@@ -29,14 +29,14 @@ class Delta (object):
 				continue
 			if action == '-':
 				if remove:
-#					print 'annoucing (withdraw) ', route.nlri, route.next_hop
+					print 'annoucing (withdraw) ', route
 					messages.append(route.withdraw())
 			if action == '+':
 				if remove:
-#					print 'annoucing (update)   ', route.nlri, route.next_hop
+					print 'annoucing (update)   ', route
 					messages.append(route.update(local_asn,peer_asn))
 				else:
-#						print 'annoucing (new)      ', route.nlri, route.next_hop
+					print 'annoucing (new)      ', route
 					messages.append(route.announce(local_asn,peer_asn))
 		return messages
 

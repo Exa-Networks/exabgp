@@ -120,7 +120,11 @@ class Update (Message):
 
 		if Attribute.LOCAL_PREFERENCE in attributes:
 			if local_asn == peer_asn:
-				message += self.attributes[Attribute.LOCAL_PREFERENCE].pack(ibgp)
+				message += self.attributes[Attribute.LOCAL_PREFERENCE].pack()
+
+		if Attribute.MULTI_EXIT_DISC in attributes:
+			if local_asn != peer_asn:
+				message += self.attributes[Attribute.MULTI_EXIT_DISC].pack()
 
 		for attribute in [Communities.ID,MPURNLRI.ID,MPRNLRI.ID]:
 			if  self.attributes.has(attribute):
@@ -200,8 +204,11 @@ class Route (object):
 
 		if self.attributes.has(Attribute.LOCAL_PREFERENCE):
 			l = self.attributes[Attribute.LOCAL_PREFERENCE]
-			if l == 100: # XXX: Double check default Local Pref
-				local_pref= ' local_preference %s' % l
+			local_pref= ' local_preference %s' % l
+
+		if self.attributes.has(Attribute.MULTI_EXIT_DISC):
+			m = self.attributes[Attribute.MULTI_EXIT_DISC]
+			local_pref= ' med %s' % m
 
 		communities = ''
 		if self.attributes.has(Attribute.COMMUNITY):

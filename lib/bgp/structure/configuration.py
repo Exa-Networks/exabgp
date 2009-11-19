@@ -15,10 +15,11 @@ from bgp.message.open         import HoldTime
 from bgp.message.update       import to_Route, Attributes
 from bgp.message.update.attribute.communities import to_Community,Communities
 from bgp.message.update.attribute.localpref   import LocalPreference
+from bgp.message.update.attribute.med         import MED
 
 class Configuration (object):
 	debug = True
-	_str_route_error = 'syntax: route IP/MASK next-hop IP [local-preference NUMBER] [community COMMUNITY| community [COMMUNITY1 COMMUNITY2]]'
+	_str_route_error = 'syntax: route IP/MASK next-hop IP [local-preference NUMBER] [med NUMBER] [community COMMUNITY| community [COMMUNITY1 COMMUNITY2]]'
 
 	def __init__ (self,fname,text=False):
 		self._text = text
@@ -148,6 +149,7 @@ class Configuration (object):
 		if command == 'route': return self._single_route(tokens[1:])
 		if command == 'next-hop': return self._route_next_hop(tokens[1:])
 		if command == 'local-preference': return self._route_local_preference(tokens[1:])
+		if command == 'med': return self._route_med(tokens[1:])
 		if command == 'community': return self._route_community(tokens[1:])
 		return False
 
@@ -289,7 +291,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch('route',[],['next-hop','local-preference','community'])
+			r = self._dispatch('route',[],['next-hop','local-preference','med','community'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -316,6 +318,10 @@ class Configuration (object):
 			command = tokens.pop(0)
 			if command == 'local-preference':
 				if self._route_local_preference(tokens):
+					continue
+				return False
+			if command == 'med':
+				if self._route_med(tokens):
 					continue
 				return False
 			if command == 'community':
@@ -346,6 +352,16 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
+
+	def _route_med (self,tokens):
+		try:
+			self._scope[-1]['routes'][-1].attributes.add(MED(int(tokens.pop(0))))
+			return True
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+
 
 	def _parse_community (self,data):
 		try:
