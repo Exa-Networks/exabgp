@@ -7,8 +7,6 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
-from __future__ import with_statement
-
 import re
 
 from bgp.message.inet         import AFI,ASN,to_IP
@@ -35,8 +33,9 @@ class Configuration (object):
 			self._tokens = self._tokenise(self._fname.split('\n'))
 		else:
 			try:
-				with open(self._fname,'r') as f:
-					self._tokens = self._tokenise(f.readlines())
+				f = open(self._fname,'r')
+				self._tokens = self._tokenise(f.readlines())
+				f.close()
 			except IOError,e:
 				error = str(e)
 				if error.count(']'):

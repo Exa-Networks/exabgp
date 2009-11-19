@@ -59,7 +59,9 @@ class Communities (Attribute):
 
 	def __init__ (self,value=None):
 		# Must be None as = param is only evaluated once
-		Attribute.__init__(self,value if value else [])
+		if value: v = value
+		else: value = []
+		Attribute.__init__(self,v)
 
 	def add(self,data):
 		return self.value.append(data)

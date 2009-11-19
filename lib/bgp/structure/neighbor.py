@@ -31,7 +31,9 @@ class Neighbor (object):
 		return ''
 
 	def get_router_id (self):
-		return self._router_id if self._router_id else self.local_address
+		if self._router_id:
+			return self._router_id
+		return self.local_address
 	def set_router_id (self,id):
 		self._router_id = id
 	router_id = property(get_router_id,set_router_id)
@@ -48,6 +50,9 @@ class Neighbor (object):
 		return not (self == other)
 
 	def __str__ (self):
+		routes = '\n\t\t'
+		if self.routes:
+			routes += '\n\t\t'.join([str(route) for route in self.routes])
 		return """\
 neighbor %s {
 	description "%s";
@@ -64,5 +69,5 @@ neighbor %s {
 	self.local_address,
 	self.local_as,
 	self.peer_as,
-	'\n\t\t' + '\n\t\t'.join([str(route) for route in self.routes]) if self.routes else ''
+	routes
 )

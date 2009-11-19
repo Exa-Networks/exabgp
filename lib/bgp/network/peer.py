@@ -59,15 +59,15 @@ class Peer (object):
 
 			o = self.bgp.new_open()
 			self.log.out('-> %s' % o)
-			yield
+			yield None
 
 			o = self.bgp.read_open(self.neighbor.peer_address.ip())
 			self.log.out('<- %s' % o)
-			yield
+			yield None
 
 			message = self.bgp.new_keepalive(force=True)
 			self.log.out('-> KEEPALIVE')
-			yield
+			yield None
 
 			message = self.bgp.read_keepalive()
 			self.log.out('<- KEEPALIVE')
@@ -92,8 +92,10 @@ class Peer (object):
 				messages = self.bgp.new_update()
 				self.log.outIf(messages,'-> UPDATE (%d)' % len(messages))
 
-				yield 
+				yield None
 			# User closing the connection
+			print Notify(6,0)
+			print type(Notify(6,0))
 			raise Notify(6,0)
 		except Notify,e:
 			self.log.out('Sending Notification (%d,%d) [%s]  %s' % (e.code,e.subcode,str(e),e.data))

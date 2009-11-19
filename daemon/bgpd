@@ -13,9 +13,19 @@ import sys
 main = int(sys.version[0])
 secondary = int(sys.version[2])
 
-if main != 2 or secondary < 5:
-	sys.exit('This program is not tested with versions of python before 2.5')
+if main != 2 or secondary < 4:
+	sys.exit('This program can not work (is not tested) with your python version (< 2.4 or >= 3.0)')
 
+if main == 2 or secondary == 4:
+	sys.stdout.write('\n\n')
+	sys.stdout.write('************ WARNING *** WARNING *** WARNING *** WARNING *********\n')
+	sys.stdout.write('* This program MAY work with your python version (2.4).          *\n')
+	sys.stdout.write('* Please consider upgrading to the latest 2.x stable realease.   *\n')
+	sys.stdout.write('* Notification Message (for or to the peer) may cause it to exit *\n')
+	sys.stdout.write('* instead of being sent, and the peer connection restarted.      *\n')
+	sys.stdout.write('******************************************************************\n')
+	sys.stdout.write('\n\n')
+	
 if __name__ == '__main__':
 	if len(sys.argv) < 2:
 		sys.exit('usage bgpd <configuration file>')

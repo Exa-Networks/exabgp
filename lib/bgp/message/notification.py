@@ -7,7 +7,7 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
-from bgp.message.parent import *
+from bgp.message.parent import Failure, Message
 
 # =================================================================== Notification
 # A Notification received from our peer.

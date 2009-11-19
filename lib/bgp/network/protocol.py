@@ -148,15 +148,19 @@ class Protocol (object):
 		m = self._delta.announce(self.neighbor.local_as,self.neighbor.peer_as)
 		updates = ''.join(m)
 		self.log.outIf(self.trace,"UPDATE (update)   SENT: %s" % hexa(updates[19:]))
-		if m: self.connection.write(updates)
-		return m if m else []
+		if m:
+			self.connection.write(updates)
+			return m
+		return []
 
 	def new_update (self):
 		m = self._delta.update(self.neighbor.local_as,self.neighbor.peer_as)
 		updates = ''.join(m)
 		self.log.outIf(self.trace,"UPDATE (update)   SENT: %s" % hexa(updates[19:]))
-		if m: self.connection.write(updates)
-		return m if m else []
+		if m:
+			self.connection.write(updates)
+			return m
+		return []
 
 	def new_keepalive (self,force=False):
 		left = int(self.connection.last_write + self.neighbor.hold_time.keepalive() - time.time())

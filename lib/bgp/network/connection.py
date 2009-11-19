@@ -60,7 +60,8 @@ class Connection (object):
 
 	def pending (self):
 		r,_,_ = select.select([self._io,],[],[],0)
-		return True if r else False
+		if r: return True
+		return False
 
 	# File like interface
 

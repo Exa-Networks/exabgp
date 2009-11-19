@@ -78,7 +78,9 @@ def to_IPv6 (ip):
 	return IP(pack,AFI.ipv4,SAFI.unicast,ip)
 
 def to_IP (value):
-	return to_IPv6(value) if value.count(':') else to_IPv4(value)
+	if value.count(':'):
+		return to_IPv6(value)
+	return to_IPv4(value)
 
 class IP (object):
 	_af = {
@@ -176,7 +178,8 @@ class NLRI (IP):
 		return self._ip, self._mask
 
 	def ip (self):
-		l = 5 if self.afi == AFI.ipv4 else 17
+		if self.afi == AFI.ipv4: l = 5
+		else: l = 17
 		return IP(self.raw[1:] + '\0'*(l-len(self.raw)),self.api,self.safi)
 
 	def mask (self):

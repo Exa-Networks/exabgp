@@ -341,7 +341,8 @@ class Attributes (dict):
 				elif nh[16] == 0xfe: nh = nh[:16]
 				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
 				else: self(next_attributes)
-			nh = socket.inet_ntop(socket.AF_INET6 if len_nh >= 16 else socket.AF_INET,nh)
+			if len_nh >= 16: nh = socket.inet_ntop(socket.AF_INET6,nh)
+			else: nh = socket.inet_ntop(socket.AF_INET,nh)
 			nb_snpa = ord(data[offset])
 			offset += 1
 			snpas = []
