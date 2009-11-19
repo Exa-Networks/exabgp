@@ -19,7 +19,7 @@ def new_MED (data):
 
 class MED (Attribute):
 	ID = Attribute.MULTI_EXIT_DISC  
-	FLAG = Flag.TRANSITIVE
+	FLAG = Flag.OPTIONAL
 	MULTIPLE = False
 
 	def pack (self):
