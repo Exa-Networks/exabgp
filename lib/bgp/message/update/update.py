@@ -200,6 +200,10 @@ class Route (object):
 		return Update(NLRIS(),NLRIS([self.nlri]),attributes).update(local_asn,remote_asn)
 
 	def __str__ (self):
+		origin = ''
+		if self.attributes.has(Attribute.ORIGIN):
+			origin = ' origin %s' % str(self.attributes[Attribute.ORIGIN]).lower()
+
 		aspath = ''
 		if self.attributes.has(Attribute.AS_PATH):
 			aspath = ' %s' % str(self.attributes[Attribute.AS_PATH]).lower().replace('_','-')
@@ -223,7 +227,7 @@ class Route (object):
 		elif self.next_hop:
 			next_hop = ' next-hop %s' % str(self.next_hop)
 
-		return "%s%s%s%s%s" % (self.nlri,next_hop,aspath,local_pref,communities)
+		return "%s%s%s%s%s%s" % (self.nlri,next_hop,origin,aspath,local_pref,communities)
 
 # =================================================================== Attributes
 

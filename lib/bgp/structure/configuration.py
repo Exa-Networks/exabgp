@@ -13,6 +13,7 @@ from bgp.message.inet         import AFI,to_ASN,to_IP
 from bgp.structure.neighbor   import Neighbor
 from bgp.message.open         import HoldTime
 from bgp.message.update       import to_Route, Attributes
+from bgp.message.update.attribute.origin      import to_Origin
 from bgp.message.update.attribute.aspath      import ASPath
 from bgp.message.update.attribute.med         import MED
 from bgp.message.update.attribute.localpref   import LocalPreference
@@ -21,10 +22,11 @@ from bgp.message.update.attribute.communities import to_Community,Communities
 class Configuration (object):
 	debug = True
 	_str_route_error = 'syntax: route IP/MASK next-hop IP' \
-	' [as-path ASN| as-path [ASN1 ASN2 ...]]'
-	' [med NUMBER]' \
-	' [local-preference NUMBER]' \
-	' [community COMMUNITY| community [COMMUNITY1 COMMUNITY2 ...]]' \
+	' origin IGP|EGP|INCOMPLETE' \
+	' as-path ASN| as-path [ASN1 ASN2 ...]' \
+	' med NUMBER' \
+	' local-preference NUMBER]' \
+	' community COMMUNITY| community [COMMUNITY1 COMMUNITY2 ...]' \
 
 	def __init__ (self,fname,text=False):
 		self._text = text
@@ -152,11 +154,12 @@ class Configuration (object):
 		if command == 'hold-time': return self._set_holdtime('hold-time',tokens[1:])
 
 		if command == 'route': return self._single_route(tokens[1:])
+		if command == 'origin': return self._route_origin(tokens[1:])
+		if command == 'as-path': return self._route_aspath(tokens[1:])
+		if command == 'med': return self._route_med(tokens[1:])
 		if command == 'next-hop': return self._route_next_hop(tokens[1:])
 		if command == 'local-preference': return self._route_local_preference(tokens[1:])
-		if command == 'med': return self._route_med(tokens[1:])
 		if command == 'community': return self._route_community(tokens[1:])
-		if command == 'as-path': return self._route_aspath(tokens[1:])
 		return False
 
 	# Group Neighbor
@@ -297,7 +300,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch('route',[],['next-hop','local-preference','med','community','as-path'])
+			r = self._dispatch('route',[],['next-hop','origin','as-path','med','local-preference','community'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -322,20 +325,24 @@ class Configuration (object):
 				self._error = self._str_route_error
 				return False
 			command = tokens.pop(0)
-			if command == 'local-preference':
-				if self._route_local_preference(tokens):
+			if command == 'origin':
+				if self._route_origin(tokens):
+					continue
+				return False
+			if command == 'as-path':
+				if self._route_aspath(tokens):
 					continue
 				return False
 			if command == 'med':
 				if self._route_med(tokens):
 					continue
 				return False
-			if command == 'community':
-				if self._route_community(tokens):
+			if command == 'local-preference':
+				if self._route_local_preference(tokens):
 					continue
 				return False
-			if command == 'as-path':
-				if self._route_aspath(tokens):
+			if command == 'community':
+				if self._route_community(tokens):
 					continue
 				return False
 			self._error = self._str_route_error
@@ -354,51 +361,15 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-	def _route_local_preference (self,tokens):
+	def _route_origin (self,tokens):
 		try:
-			self._scope[-1]['routes'][-1].attributes.add(LocalPreference(int(tokens.pop(0))))
+			self._scope[-1]['routes'][-1].attributes.add(to_Origin(tokens.pop(0)))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
 
-	def _route_med (self,tokens):
-		try:
-			self._scope[-1]['routes'][-1].attributes.add(MED(int(tokens.pop(0))))
-			return True
-		except ValueError:
-			self._error = self._str_route_error
-			if self.debug: raise
-			return False
-
-
-	def _parse_community (self,data):
-		return to_Community(data)
-
-	def _route_community (self,tokens):
-		communities = Communities()
-		community = tokens.pop(0)
-		try:
-			if community == '[':
-				while True:
-					try:
-						community = tokens.pop(0)
-					except IndexError:
-						self._error = self._str_route_error
-						if self.debug: raise
-						return False
-					if community == ']':
-						break
-					communities.add(self._parse_community(community))
-			else:
-				communities.add(self._parse_community(community))
-		except ValueError:
-			self._error = self._str_route_error
-			if self.debug: raise
-			return False
-		self._scope[-1]['routes'][-1].attributes.add(communities)
-		return True
 
 	def _parse_asn (self,data):
 		if not data.isdigit():
@@ -429,4 +400,49 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		self._scope[-1]['routes'][-1].attributes.add(aspath)
+		return True
+
+	def _route_med (self,tokens):
+		try:
+			self._scope[-1]['routes'][-1].attributes.add(MED(int(tokens.pop(0))))
+			return True
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+
+	def _route_local_preference (self,tokens):
+		try:
+			self._scope[-1]['routes'][-1].attributes.add(LocalPreference(int(tokens.pop(0))))
+			return True
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+
+	def _parse_community (self,data):
+		return to_Community(data)
+
+	def _route_community (self,tokens):
+		communities = Communities()
+		community = tokens.pop(0)
+		try:
+			if community == '[':
+				while True:
+					try:
+						community = tokens.pop(0)
+					except IndexError:
+						self._error = self._str_route_error
+						if self.debug: raise
+						return False
+					if community == ']':
+						break
+					communities.add(self._parse_community(community))
+			else:
+				communities.add(self._parse_community(community))
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+		self._scope[-1]['routes'][-1].attributes.add(communities)
 		return True

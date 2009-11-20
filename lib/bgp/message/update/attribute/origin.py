@@ -15,6 +15,16 @@ from bgp.message.update.attribute.parent import Attribute,Flag
 def new_Origin (data):
 	return Origin(ord(data[0]))
 
+def to_Origin (data):
+	data = data.lower()
+	if data == 'igp':
+		return Origin(0x00)
+	if data == 'egp':
+		return Origin(0x01)
+	if data == 'incomplete':
+		return Origin(0x02)
+	raise ValueError('invalid origin')
+
 class Origin (Attribute):
 	ID = Attribute.ORIGIN
 	FLAG = Flag.TRANSITIVE
