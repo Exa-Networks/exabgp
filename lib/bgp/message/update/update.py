@@ -100,7 +100,7 @@ class Update (Message):
 		if Attribute.ORIGIN not in attributes:
 			message += Origin(Origin.IGP).pack()
 		else:
-			message += self.attributes[Attribute.ORIGIN].pack(ibgp)
+			message += self.attributes[Attribute.ORIGIN].pack()
 
 		if Attribute.AS_PATH not in attributes:
 			if local_asn == peer_asn:
@@ -108,7 +108,7 @@ class Update (Message):
 			else:
 				message += ASPath(ASPath.AS_SEQUENCE,[local_asn]).pack()
 		else:
-			message += self.attributes[Attribute.AS_PATH].pack(ibgp)
+			message += self.attributes[Attribute.AS_PATH].pack()
 
 		if Attribute.NEXT_HOP in attributes:
 			next_hop = self.attributes[Attribute.NEXT_HOP]
@@ -200,8 +200,11 @@ class Route (object):
 		return Update(NLRIS(),NLRIS([self.nlri]),attributes).update(local_asn,remote_asn)
 
 	def __str__ (self):
-		local_pref= ''
+		aspath = ''
+		if self.attributes.has(Attribute.AS_PATH):
+			aspath = ' %s' % str(self.attributes[Attribute.AS_PATH]).lower().replace('_','-')
 
+		local_pref= ''
 		if self.attributes.has(Attribute.LOCAL_PREFERENCE):
 			l = self.attributes[Attribute.LOCAL_PREFERENCE]
 			local_pref= ' local_preference %s' % l
@@ -220,7 +223,7 @@ class Route (object):
 		elif self.next_hop:
 			next_hop = ' next-hop %s' % str(self.next_hop)
 
-		return "%s%s%s%s" % (self.nlri,next_hop,local_pref,communities)
+		return "%s%s%s%s%s" % (self.nlri,next_hop,aspath,local_pref,communities)
 
 # =================================================================== Attributes
 

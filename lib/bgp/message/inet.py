@@ -217,6 +217,9 @@ class Family (object):
 
 # =================================================================== ASN
 
+def to_ASN (data):
+	return ASN(int(data))
+
 class ASN (int):
 	# regex = "(?:0[xX][0-9a-fA-F]{1,8}|\d+:\d+|\d+)"
 	length = 2

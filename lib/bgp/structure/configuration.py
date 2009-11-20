@@ -9,17 +9,22 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 import re
 
-from bgp.message.inet         import AFI,ASN,to_IP
+from bgp.message.inet         import AFI,to_ASN,to_IP
 from bgp.structure.neighbor   import Neighbor
 from bgp.message.open         import HoldTime
 from bgp.message.update       import to_Route, Attributes
-from bgp.message.update.attribute.communities import to_Community,Communities
-from bgp.message.update.attribute.localpref   import LocalPreference
+from bgp.message.update.attribute.aspath      import ASPath
 from bgp.message.update.attribute.med         import MED
+from bgp.message.update.attribute.localpref   import LocalPreference
+from bgp.message.update.attribute.communities import to_Community,Communities
 
 class Configuration (object):
 	debug = True
-	_str_route_error = 'syntax: route IP/MASK next-hop IP [local-preference NUMBER] [med NUMBER] [community COMMUNITY| community [COMMUNITY1 COMMUNITY2]]'
+	_str_route_error = 'syntax: route IP/MASK next-hop IP' \
+	' [as-path ASN| as-path [ASN1 ASN2 ...]]'
+	' [med NUMBER]' \
+	' [local-preference NUMBER]' \
+	' [community COMMUNITY| community [COMMUNITY1 COMMUNITY2 ...]]' \
 
 	def __init__ (self,fname,text=False):
 		self._text = text
@@ -151,6 +156,7 @@ class Configuration (object):
 		if command == 'local-preference': return self._route_local_preference(tokens[1:])
 		if command == 'med': return self._route_med(tokens[1:])
 		if command == 'community': return self._route_community(tokens[1:])
+		if command == 'as-path': return self._route_aspath(tokens[1:])
 		return False
 
 	# Group Neighbor
@@ -218,7 +224,7 @@ class Configuration (object):
 	def _set_asn (self,command,value):
 		# XXX: we do not support 32 bits ASN...
 		try:
-			self._scope[-1][command] = ASN(value[0])
+			self._scope[-1][command] = to_ASN(value[0])
 			return True
 		except ValueError:
 			self._error = '"%s" is an invalid ASN' % ' '.join(value)
@@ -291,7 +297,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch('route',[],['next-hop','local-preference','med','community'])
+			r = self._dispatch('route',[],['next-hop','local-preference','med','community','as-path'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -326,6 +332,10 @@ class Configuration (object):
 				return False
 			if command == 'community':
 				if self._route_community(tokens):
+					continue
+				return False
+			if command == 'as-path':
+				if self._route_aspath(tokens):
 					continue
 				return False
 			self._error = self._str_route_error
@@ -364,10 +374,7 @@ class Configuration (object):
 
 
 	def _parse_community (self,data):
-		try:
-			value = long(data)
-		except ValueError:
-			return to_Community(data)
+		return to_Community(data)
 
 	def _route_community (self,tokens):
 		communities = Communities()
@@ -391,4 +398,35 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		self._scope[-1]['routes'][-1].attributes.add(communities)
+		return True
+
+	def _parse_asn (self,data):
+		if not data.isdigit():
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+		return to_ASN(data)
+
+	def _route_aspath (self,tokens):
+		aspath = ASPath()
+		asn = tokens.pop(0)
+		try:
+			if asn == '[':
+				while True:
+					try:
+						asn = tokens.pop(0)
+					except IndexError:
+						self._error = self._str_route_error
+						if self.debug: raise
+						return False
+					if asn == ']':
+						break
+					aspath.add(self._parse_asn(asn))
+			else:
+				aspath.add(self._parse_asn(asn))
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+		self._scope[-1]['routes'][-1].attributes.add(aspath)
 		return True

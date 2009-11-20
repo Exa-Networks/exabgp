@@ -85,13 +85,26 @@ IPv6 example
 
 ==== Tell me more about the code ====
 
-It is written in Python and requires version 2.5 or later.
+It is written in Python 2.x for version 2.5 or later. \\
 No tests have been performed to check if it works with version 3.0.
+
+The Python specificities of 2.5/2.6 have been removed from the code at commit 102 and 2.4 will let you setup bgp adjacencies but there are issues when it comes to dealing with BGP Notification Messages.
+
 The code only relies on the standard library and has no external dependencies.
 ==== Anticipated FAQ ====
 
 Q: I am trying to connect to my router and it is not working \\
 A: Did you enable multi-hop BGP on your router ?
+
+Q: All seems fine but my route is not added to the routing table \\
+A: You may need to allow for non-directly connected next-hop \\
+A: (accept-remote-nexthop with Juniper)
+
+Q: I see I can specify the as-path (as-sequence) sent to the peer. Do you prepend the router ASN to EBGP peers ? \\
+A: Yes and No :) \\
+A: Should you not define an as-path for a EBGP connection, we will add the router ASN automatically \\
+A: Otherwise you must add it yourself. \\
+A: As we are not a real router, we let you do whatever you want.
 
 Q: I see an IPv6 example, is it fully IPv6 enabled ? \\
 A: The injector allows TCP IPv4 or IPv6 connections as well as supporting the exchange of both IPv4 and IPv6 routes.
@@ -121,4 +134,4 @@ Q: Is this code supported ? \\
 A: YES - Should you find any bug, please report it. 
 
 Q: Are you planning to add more features ? (support for vpnv4,etc) \\
-A: New features will really only be added for my own use, but feel free to send me patches.
+A: I will only really code new features for my own use, but feel free to send me patches.

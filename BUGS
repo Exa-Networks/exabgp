@@ -1,3 +1,5 @@
+Add all the optional Flag to the attribute defined as optional by RFC 4271
+
 For incomming messages:
  - Have an issue with hold time of 3 - see why and what can be done (4 is fine !!)
  - ASPath assumes only one segment

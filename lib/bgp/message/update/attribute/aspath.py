@@ -36,11 +36,15 @@ class ASPath (Attribute):
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 
-	def __init__ (self,asptype,aspsegment = []):
-		Attribute.__init__(self,(asptype,aspsegment))
+	def __init__ (self,asptype=0x02,aspsegment = None):
+		if aspsegment == None:
+			asps = []
+		else:
+			asps = aspsegment
+		Attribute.__init__(self,(asptype,asps))
 
-	def add (self,community):
-		self.value[1].append(community)
+	def add (self,asn):
+		self.value[1].append(asn)
 
 	def pack (self):
 		return self._attribute(self._segment(self.value[0],self.value[1]))
