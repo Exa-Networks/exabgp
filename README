@@ -14,14 +14,18 @@ The code is deployed in at least one production network to inject some /32 but s
 As the program is not intended to receive routing information and perform FIB manipulation it only partially implements:
  - RFC 4271 (A Border Gateway Protocol 4 (BGP-4), Obsoletes: 1771)
  - RFC 1997 (BGP Communities Attribute)
- - RFC 5492 (Capabilities Advertisement with BGP-4, Obsoletes 3392)
- - RFC 4760 (Multiprotocol Extensions for BGP-4, Obsoletes: 2858)
  - RFC 2545 (Use of BGP-4 Multiprotocol Extensions for IPv6 Inter-Domain Routing)
+ - RFC 4760 (Multiprotocol Extensions for BGP-4, Obsoletes: 2858)
+ - RFC 5492 (Capabilities Advertisement with BGP-4, Obsoletes 3392)
 
 Some speakers may use RFC 2385 (Protection of BGP Sessions via the TCP MD5 Signature) to allow the BGP connection to be established. To the best of my knowledge, there is no way this can be done in python and as a result the feature will/can not be implemented (The Python socket module exports IPPROTO_TCP but not TCP_MD5_AUTH).
 
-RFC 3107 is not supported (Carrying Label Information in BGP-4), however this situation may change.
-RFC 5549 (Advertising IPv4 Network Layer Reachability Information with an IPv6 Next Hop) will unlikely never be supported without third party patches.
+The following BG4 related RFC are not supported:
+ - RFC 2918 (Route Refresh Capability for BGP-4)
+ - RFC 3107 is not supported (Carrying Label Information in BGP-4)
+ - RFC 4724 (Graceful Restart Mechanism for BGP)
+ - RFC 5549 (Advertising IPv4 Network Layer Reachability Information with an IPv6 Next Hop) and will unlikely never be supported without third party patches.
+
 
 Development is done on python 2.6, the code was made compatible with python 2.5, previous version can not be supported due to their lack of support for coroutine (the yield feature).
 
