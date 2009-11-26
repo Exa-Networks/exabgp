@@ -1,0 +1,2 @@
+#!/bin/bash
+exec multilog s2500000 n20 ./main
