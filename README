@@ -15,14 +15,13 @@ As the program is not intended to receive routing information and perform FIB ma
  - RFC 4271 (A Border Gateway Protocol 4 (BGP-4), Obsoletes: 1771)
  - RFC 1997 (BGP Communities Attribute)
  - RFC 2545 (Use of BGP-4 Multiprotocol Extensions for IPv6 Inter-Domain Routing)
+ - RFC 4724 (Graceful Restart Mechanism for BGP)
  - RFC 4760 (Multiprotocol Extensions for BGP-4, Obsoletes: 2858)
  - RFC 5492 (Capabilities Advertisement with BGP-4, Obsoletes 3392,2842)
 
 Some speakers may use RFC 2385 (Protection of BGP Sessions via the TCP MD5 Signature) to allow the BGP connection to be established. To the best of my knowledge, there is no way this can be done in python and as a result the feature will/can not be implemented (The Python socket module exports IPPROTO_TCP but not TCP_MD5_AUTH).
 
 The following BG4 related RFC are not supported:
- - RFC 4724 (Graceful Restart Mechanism for BGP) - under development but not working it would seems
-   see: http://www.cisco.com/en/US/products/ps6550/products_white_paper09186a008016317c.shtml
  - RFC 2796 (BGP Route Reflection - An Alternative to Full Mesh IB)
  - RFC 2918 (Route Refresh Capability for BGP-4)
  - RFC 3065 (Autonomous System Confederations for BGP)

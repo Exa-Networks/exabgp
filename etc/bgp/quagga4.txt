@@ -4,6 +4,8 @@ neighbor 192.168.127.128 {
 	local-address 192.168.127.1;
 	local-as 65000;
 	peer-as 65534;
+	hold-time 180;
+	graceful-restart;
 
 	static {
 		route 10.0.1.0/24 {

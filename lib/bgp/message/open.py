@@ -289,7 +289,7 @@ class Capabilities (dict):
 				r+= ['unhandled capability %d' % key]
 		return ', '.join(r)
 
-	def default (self,restarted):
+	def default (self,graceful,restarted):
 		families = ((AFI(AFI.ipv4),SAFI(SAFI.unicast)),(AFI(AFI.ipv6),SAFI(SAFI.unicast)))
 
 		mp = MultiProtocol()
@@ -297,10 +297,11 @@ class Capabilities (dict):
 		self[Capabilities.MULTIPROTOCOL_EXTENSIONS] = mp 
 
 		# XXX: RFC 4727 Section 4.0, says that the time SHOULD be inferiour or equal to the HOLDTIME ... 
-		if restarted:
-			self[Capabilities.GRACEFUL_RESTART] = Graceful(Graceful.RESTART_STATE,120,[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in families])
-		else:
-			self[Capabilities.GRACEFUL_RESTART] = Graceful(0x0,120,[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in families])
+		if graceful:
+			if restarted:
+				self[Capabilities.GRACEFUL_RESTART] = Graceful(Graceful.RESTART_STATE,120,[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in families])
+			else:
+				self[Capabilities.GRACEFUL_RESTART] = Graceful(0x0,120,[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in families])
 
 		return self
 

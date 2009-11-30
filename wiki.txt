@@ -5,6 +5,7 @@
 Some code which :
   * Can inject routes with arbitrary next-hops into your network
   * Can act as an IBGP or EBGP speaker (but not listener)
+
 ==== Where can I get it ? ====
 
 The code is stored in our SVN repository: \\
@@ -75,6 +76,8 @@ IPv6 example
    	local-address 2a02:b80::1;
    	local-as 65000;
    	peer-as 65534;
+   	hold-time 180;
+   	graceful-restart;
    
    	static {
    		route 1.2.3.4/32 next-hop 5.6.7.8;
@@ -135,3 +138,6 @@ A: YES - Should you find any bug, please report it.
 
 Q: Are you planning to add more features ? (support for vpnv4,etc) \\
 A: I will only really code new features for my own use, but feel free to send me patches.
+
+Q: Why did you implement Graceful Restart ? \\
+A: My use case are machines announcing service IPs without lower MED/Local Prefence backup machines ready to take the over in case of problems. The BGP IPs are then still routed during reboots and in case of very high load for example it will not render the service IP unreacheable if some keepalive are missed.

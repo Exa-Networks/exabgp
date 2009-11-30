@@ -152,6 +152,7 @@ class Configuration (object):
 		if command == 'local-as': return self._set_asn('local-as',tokens[1:])
 		if command == 'peer-as': return self._set_asn('peer-as',tokens[1:])
 		if command == 'hold-time': return self._set_holdtime('hold-time',tokens[1:])
+		if command == 'graceful-restart': return self._set_gracefulrestart('graceful-restart',tokens[1:])
 
 		if command == 'route': return self._single_route(tokens[1:])
 		if command == 'origin': return self._route_origin(tokens[1:])
@@ -186,6 +187,7 @@ class Configuration (object):
 		# drop the neiborg
 		scope = self._scope.pop(-1)
 		neighbor.description = scope.get('description','')
+		neighbor.graceful_restart = scope.get('graceful-restart',False)
 
 		missing = neighbor.missing()
 		if missing:
@@ -210,7 +212,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-		 	r = self._dispatch('neigbor',['static',],['description','router-id','local-address','local-as','peer-as','hold-time'])
+		 	r = self._dispatch('neigbor',['static',],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart'])
 			if r is False: return False
 			if r is None: return True
 
@@ -252,6 +254,14 @@ class Configuration (object):
 			self._error = '"%s" is an invalid hold-time' % ' '.join(value)
 			if self.debug: raise
 			return False
+
+	def _set_gracefulrestart (self,command,value):
+		if len(value):
+			self._error = 'graceful-restart is not taking parameters "%s"' % ' '.join(value)
+			if self.debug: raise
+			return False
+		self._scope[-1]['graceful-restart'] = True
+		return True
 
 
 	#  Group Static ................

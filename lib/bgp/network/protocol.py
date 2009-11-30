@@ -139,8 +139,8 @@ class Protocol (object):
 
 	# Sending message to peer .................................................
 
-	def new_open (self,restarted):
-		o = Open(4,self.neighbor.local_as,self.neighbor.router_id.ip(),Capabilities().default(restarted),self.neighbor.hold_time)
+	def new_open (self,graceful,restarted):
+		o = Open(4,self.neighbor.local_as,self.neighbor.router_id.ip(),Capabilities().default(graceful,restarted),self.neighbor.hold_time)
 		self.connection.write(o.message())
 		return o
 

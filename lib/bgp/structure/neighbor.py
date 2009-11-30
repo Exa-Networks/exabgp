@@ -20,6 +20,7 @@ class Neighbor (object):
 		self.peer_as = None
 		self.local_as = None
 		self.hold_time = HoldTime(180)
+		self.graceful_restart = False
 		self.routes = []
 
 	def missing (self):
@@ -28,6 +29,7 @@ class Neighbor (object):
 		if self.local_as is None: return 'local-as'
 		if self.peer_as is None: return 'peer-as'
 		if self.peer_address.afi == AFI.ipv6 and not self._router_id: return 'router-id'
+		if self.graceful_restart is None: return 'graceful-restart'
 		return ''
 
 	def get_router_id (self):

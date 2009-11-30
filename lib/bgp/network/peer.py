@@ -74,7 +74,7 @@ class Peer (object):
 			self.bgp = Protocol(self.neighbor)
 			self.bgp.connect()
 
-			o = self.bgp.new_open(self._restarted)
+			o = self.bgp.new_open(self.neighbor.graceful_restart,self._restarted)
 			self.log.out('-> %s' % o)
 			yield None
 
@@ -98,7 +98,7 @@ class Peer (object):
 				self.log.outIf(k,'-> KEEPALIVE (no UPDATE)')
 
 			# if self._restarted and self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
-			if self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
+			if self.neighbor.graceful_restart and self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
 				messages = self.bgp.new_eor4()
 				self.log.outIf(messages,'-> EOR IPv4')
 
@@ -125,8 +125,8 @@ class Peer (object):
 
 				yield None
 			
-			if self._restart and self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
-				self.log.out('Stalling the connection without notification')
+			if 	self.neighbor.graceful_restart and self._restart and self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
+				self.log.out('Closing the connection without notification')
 				self.bgp.close()
 				return
 
