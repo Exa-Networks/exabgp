@@ -35,7 +35,7 @@ class Open (Message):
 		self.capabilities = capabilities
 
 	def message (self):
-		return self._message("%s%s%s%s%s" % (self.version.pack(),self.asn.pack(),self.hold_time.pack(),self.router_id.pack(),chr(0)))
+		return self._message("%s%s%s%s%s" % (self.version.pack(),self.asn.pack(),self.hold_time.pack(),self.router_id.pack(),self.capabilities.pack()))
 
 	def __str__ (self):
 		return "OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]" % (self.version, self.asn, self.hold_time, self.router_id,self.capabilities)
@@ -102,8 +102,7 @@ class Graceful (dict):
 			self[(afi,safi)] = family_flag & Graceful.FORWARDING_STATE
 	
 	def extract (self):
-		print "............................"
-		restart  = pack('!H',((self.restart_flag << 12) | (self.restart_time & Graful.TIME_MASK)))
+		restart  = pack('!H',((self.restart_flag << 12) | (self.restart_time & Graceful.TIME_MASK)))
 		families = [(afi.pack(),safi.pack(),chr(self[(afi,safi)])) for (afi,safi) in self.keys()]
 		sfamilies = ''.join(["%s%s%s" % (pafi,psafi,family) for (pafi,psafi,family) in families])
 		return ["%s%s" % (restart,sfamilies)]
@@ -310,7 +309,8 @@ class Capabilities (dict):
 		for k,capabilities in self.iteritems():
 			for capability in capabilities.extract():
 				rs.append("%s%s%s" % (chr(k),chr(len(capability)),capability))
-		return "".join(["%s%s%s" % (chr(2),chr(len(r)),r) for r in rs])
+		parameters = "".join(["%s%s%s" % (chr(2),chr(len(r)),r) for r in rs])
+		return "%s%s" % (chr(len(parameters)),parameters)
 
 	def __str__ (self):
 		r = []
