@@ -124,6 +124,9 @@ class RouteRefresh (list):
 	def __str__ (self):
 		return "Route Refresh (unparsed)"
 
+class CiscoRouteRefresh (list):
+	def __str__ (self):
+		return "Cisco Route Refresh (unparsed)"
 
 # =================================================================== Unknown
 
@@ -132,6 +135,8 @@ class Unknown (object):
 		self.value = value
 	
 	def __str__ (self):
+		if self.value in Capabilities.reserved: return 'Reserved %s' % str(self.value)
+		if self.value in Capabilities.unassigned: return 'Unassigned %s' % str(self.value)
 		return 'unknown %s' % str(self.value)
 
 # =================================================================== Parameter
@@ -208,6 +213,10 @@ def new_Capabilities (data):
 					capabilities[k] = RouteRefresh()
 					continue
 
+				if k == Capabilities.CISCO_ROUTE_REFRESH:
+					capabilities[k] = CiscoRouteRefresh()
+					continue
+
 				if k not in capabilities:
 					capabilities[k] = Unknown(k)
 				if value[2:]:
@@ -234,10 +243,11 @@ class Capabilities (dict):
 	MULTISESSION_BGP         = 0x44 # [Appanna]
 	ADD_PATH                 = 0x45 # [draft-ietf-idr-add-paths]
 	# 70-127    Unassigned 
+	CISCO_ROUTE_REFRESH      = 0x80 # I Can only find reference to this in the router logs
 	# 128-255   Reserved for Private Use [RFC5492]
 
-	_unassigned = range(70,128)
-	_reserved = range(128,256)
+	unassigned = range(70,128)
+	reserved = range(128,256)
 
 	def announced (self,capability):
 		return self.has_key(capability)
@@ -249,6 +259,8 @@ class Capabilities (dict):
 				r += ['Multiprotocol for ' + ' '.join(["%s %s" % (str(afi),str(safi)) for (afi,safi) in self[key]])]
 			elif key == self.ROUTE_REFRESH:
 				r += ['Route Refresh']
+			elif key == self.CISCO_ROUTE_REFRESH:
+				r += ['Cisco Route Refresh']
 			elif key == self.GRACEFUL_RESTART:
 				r += ['Graceful Restart']
 			elif key == self.FOUR_BYTES_ASN:
@@ -268,7 +280,7 @@ class Capabilities (dict):
 		mp.extend(families)
 		self[Capabilities.MULTIPROTOCOL_EXTENSIONS] = mp 
 
-		# RFC 4727 Section 4.0, says that the time SHOULD be inferiour or equal to the HOLDTIME ... 
+		# XXX: RFC 4727 Section 4.0, says that the time SHOULD be inferiour or equal to the HOLDTIME ... 
 		if restarted:
 			self[Capabilities.GRACEFUL_RESTART] = Graceful(Graceful.RESTART_STATE,120,families,Graceful.FORWARDING_STATE)
 		else:

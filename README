@@ -22,6 +22,7 @@ Some speakers may use RFC 2385 (Protection of BGP Sessions via the TCP MD5 Signa
 
 The following BG4 related RFC are not supported:
  - RFC 4724 (Graceful Restart Mechanism for BGP) - under development but not working it would seems
+   see: http://www.cisco.com/en/US/products/ps6550/products_white_paper09186a008016317c.shtml
  - RFC 2796 (BGP Route Reflection - An Alternative to Full Mesh IB)
  - RFC 2918 (Route Refresh Capability for BGP-4)
  - RFC 3065 (Autonomous System Confederations for BGP)

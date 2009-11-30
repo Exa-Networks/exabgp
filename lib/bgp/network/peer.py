@@ -121,12 +121,12 @@ class Peer (object):
 				yield None
 			
 			if self._restart and self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
-				self.log.out('Closing connection without notification')
+				self.log.out('Stalling the connection without notification')
 				self.bgp.close()
 				return
-			else:
-				# User closing the connection
-				raise Notify(6,3)
+
+			# User closing the connection
+			raise Notify(6,3)
 		except Notify,e:
 			self.log.out('Sending Notification (%d,%d) [%s]  %s' % (e.code,e.subcode,str(e),e.data))
 			try:
