@@ -21,15 +21,15 @@ class TestData (unittest.TestCase):
 		self.assertEqual(o.asn,65534)
 		self.assertEqual(o.router_id,'0.0.0.0')
 		self.assertEqual(o.hold_time,180)
-		self.assertEqual(o.capabilities, {128: [], 1: [(1, 1), (2, 1)], 2: None, 65: 65534})
+		self.assertEqual(o.capabilities, {128: [], 1: [(1, 1), (2, 1)], 2: [], 65: 65534})
 
 	def test_2_open (self):
-		o = Open(4,65500,'127.0.0.1',Capabilities().default(),180)
+		o = Open(4,65500,'127.0.0.1',Capabilities().default(False),180)
 		self.assertEqual(o.version,4)
 		self.assertEqual(o.asn,65500)
 		self.assertEqual(o.router_id,'127.0.0.1')
 		self.assertEqual(o.hold_time,180)
-		self.assertEqual(o.capabilities, {1: ((1, 1), (2, 1))})
+		self.assertEqual(o.capabilities, {64: {(1, 1): 128, (2, 1): 128}, 1: [(1, 1), (2, 1)]})
 		
 if __name__ == '__main__':
 	unittest.main()

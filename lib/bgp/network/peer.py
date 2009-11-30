@@ -90,7 +90,12 @@ class Peer (object):
 			self.log.out('<- KEEPALIVE')
 
 			messages = self.bgp.new_announce()
-			self.log.outIf(messages,'-> UPDATE (%d)' % len(messages))
+			if messages:
+				self.log.out('-> UPDATE (%d)' % len(messages))
+			else:
+				# Do like the big boys (cisco) and send a keepalive if you have no update
+				c,k = self.bgp.new_keepalive()
+				self.log.outIf(k,'-> KEEPALIVE (no UPDATE)')
 
 			# if self._restarted and self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
 			if self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):

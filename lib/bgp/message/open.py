@@ -87,7 +87,7 @@ class RouterID (object):
 # =================================================================== Graceful (Restart)
 # RFC 4727
 
-class Graceful (object):
+class Graceful (dict):
 	TIME_MASK     = 0x0FFF
 	FLAG_MASK     = 0xF000
 
@@ -95,21 +95,23 @@ class Graceful (object):
 	RESTART_STATE = 0x08 
 	FORWARDING_STATE = 0x80
 	
-	def __init__ (self,restart_flag,restart_time,families,family_flag):
+	def __init__ (self,restart_flag,restart_time,protos):
 		self.restart_flag = restart_flag
 		self.restart_time = restart_time & Graceful.TIME_MASK
-		self.families = families
-		self.family_flag = family_flag & Graceful.FORWARDING_STATE
+		for afi,safi,family_flag in protos:
+			self[(afi,safi)] = family_flag & Graceful.FORWARDING_STATE
 	
-	def pack (self):
-		restart  = pack('!H',((restart_time << 12) | (self.restart_time & Graful.TIME_MASK)))
-		families = ''.join(["%s%s" % (pafi,psafi) for (pafi,psafi) in [(afi.pack(),safi.pack()) for (afi,safi) in self.families]])
-		family = chr(self.family_flag)
-		return "%s%s%s" % (restart,families,family)
+	def extract (self):
+		print "............................"
+		restart  = pack('!H',((self.restart_flag << 12) | (self.restart_time & Graful.TIME_MASK)))
+		families = [(afi.pack(),safi.pack(),chr(self[(afi,safi)])) for (afi,safi) in self.keys()]
+		sfamilies = ''.join(["%s%s%s" % (pafi,psafi,family) for (pafi,psafi,family) in families])
+		return ["%s%s" % (restart,sfamilies)]
 
 	def __str__ (self):
-		families = ' '.join(["%s %s" % (safi,ssafi) for (safi,ssafi) in [(str(afi),str(safi)) for (afi,safi) in self.families]])
-		return "Graceful Restart Flags %s Time %d Families %s Family Flags %s" % (hex(self.restart_flag),self.restart_time,families,hex(self.family_flag))
+		families = [(str(afi),str(safi),hex(self[(afi,safi)])) for (afi,safi) in self.keys()]
+		sfamilies = ' '.join(["%s/%s=%s" % (afi,safi,family) for (afi,safi,family) in families])
+		return "Graceful Restart Flags %s Time %d %s" % (hex(self.restart_flag),self.restart_time,sfamilies)
 
 
 # =================================================================== MultiProtocol
@@ -118,15 +120,27 @@ class MultiProtocol (list):
 	def __str__ (self):
 		return 'Multiprotocol ' + ' '.join(["%s %s" % (safi,ssafi) for (safi,ssafi) in [(str(afi),str(safi)) for (afi,safi) in self]])
 
+	def extract (self):
+		rs = []
+		for v in self:
+			rs.append(pack('!H',v[0]) + pack('!H',v[1]))
+		return rs
+
 # =================================================================== RouteRefresh
 
 class RouteRefresh (list):
 	def __str__ (self):
 		return "Route Refresh (unparsed)"
 
+	def extract (self):
+		return []
+
 class CiscoRouteRefresh (list):
 	def __str__ (self):
 		return "Cisco Route Refresh (unparsed)"
+
+	def extract (self):
+		return []
 
 # =================================================================== Unknown
 
@@ -138,6 +152,9 @@ class Unknown (object):
 		if self.value in Capabilities.reserved: return 'Reserved %s' % str(self.value)
 		if self.value in Capabilities.unassigned: return 'Unassigned %s' % str(self.value)
 		return 'unknown %s' % str(self.value)
+
+	def extract (self):
+		return []
 
 # =================================================================== Parameter
 
@@ -196,13 +213,13 @@ def new_Capabilities (data):
 					restart_time = restart & Graceful.TIME_MASK
 					value = value[4:]
 					families = []
-					while len(value) >= 3:
+					while value:
 						afi = AFI(unpack('!H',value[:2])[0])
 						safi = SAFI(ord(value[2]))
-						families.append((afi,safi))
-						value = value[3:]
-					flag_family = ord(value[0])
-					capabilities[k] = Graceful(restart_flag,restart_time,families,flag_family)
+						flag_family = ord(value[0])
+						families.append((afi,safi,flag_family))
+						value = value[4:]
+					capabilities[k] = Graceful(restart_flag,restart_time,families)
 					continue
 
 				if k == Capabilities.FOUR_BYTES_ASN:
@@ -282,21 +299,17 @@ class Capabilities (dict):
 
 		# XXX: RFC 4727 Section 4.0, says that the time SHOULD be inferiour or equal to the HOLDTIME ... 
 		if restarted:
-			self[Capabilities.GRACEFUL_RESTART] = Graceful(Graceful.RESTART_STATE,120,families,Graceful.FORWARDING_STATE)
+			self[Capabilities.GRACEFUL_RESTART] = Graceful(Graceful.RESTART_STATE,120,[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in families])
 		else:
-			self[Capabilities.GRACEFUL_RESTART] = Graceful(0x0,120,families,0x0)
+			self[Capabilities.GRACEFUL_RESTART] = Graceful(0x0,120,[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in families])
 
 		return self
 
 	def pack (self):
 		rs = []
-		for k,vs in self.iteritems():
-			for v in vs:
-				if k == self.MULTIPROTOCOL_EXTENSIONS:
-					d = pack('!H',v[0]) + pack('!H',v[1])
-					rs.append("%s%s%s" % (chr(k),chr(len(d)),d))
-				else:
-					rs.append("%s%s%s" % (chr(k),chr(len(v)),v))
+		for k,capabilities in self.iteritems():
+			for capability in capabilities.extract():
+				rs.append("%s%s%s" % (chr(k),chr(len(capability)),capability))
 		return "".join(["%s%s%s" % (chr(2),chr(len(r)),r) for r in rs])
 
 	def __str__ (self):
