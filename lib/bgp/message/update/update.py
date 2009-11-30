@@ -98,23 +98,25 @@ class Update (Message):
 		attributes = [self.attributes[a].ID for a in self.attributes]
 
 		if Attribute.ORIGIN not in attributes:
-			message += Origin(Origin.IGP).pack()
+			if self.attributes.autocomplete:
+				message += Origin(Origin.IGP).pack()
 		else:
 			message += self.attributes[Attribute.ORIGIN].pack()
 
 		if Attribute.AS_PATH not in attributes:
-			if local_asn == peer_asn:
-				message += ASPath(ASPath.AS_SEQUENCE,[]).pack()
-			else:
-				message += ASPath(ASPath.AS_SEQUENCE,[local_asn]).pack()
+			if self.attributes.autocomplete:
+				if local_asn == peer_asn:
+					message += ASPath(ASPath.AS_SEQUENCE,[]).pack()
+				else:
+					message += ASPath(ASPath.AS_SEQUENCE,[local_asn]).pack()
 		else:
 			message += self.attributes[Attribute.AS_PATH].pack()
 
-		if Attribute.NEXT_HOP in attributes:
-			next_hop = self.attributes[Attribute.NEXT_HOP]
+		if Attribute.NEXT_HOP not in attributes:
+			if self.attributes.autocomplete:
+				message += to_NextHop('0.0.0.0').pack()
 		else:
-			next_hop = to_NextHop('0.0.0.0')
-		message += next_hop.pack()
+			message += self.attributes[Attribute.NEXT_HOP].pack()
 
 		# XXX: Lazy ... do not encode the MED atm
 
@@ -229,6 +231,20 @@ class Route (object):
 
 		return "%s%s%s%s%s%s" % (self.nlri,next_hop,origin,aspath,local_pref,communities)
 
+# =================================================================== End-Of-Record
+
+class No_Attributes (dict):
+	autocomplete = False
+	def has (self,value): return self.has_key(value)
+
+class EOR (object):
+	def ipv4 (self):
+		attributes = No_Attributes()
+		return Update([],[],attributes).announce(0,0)
+	
+	def ipv6 (self):
+		raise NotImplemented('did not implement IPv6 EOR (yet)')
+
 # =================================================================== Attributes
 
 def new_Attributes (data):
@@ -237,6 +253,8 @@ def new_Attributes (data):
 	return attributes
 
 class Attributes (dict):
+	autocomplete = True
+	
 	def has (self,k):
 		return self.has_key(k)
 

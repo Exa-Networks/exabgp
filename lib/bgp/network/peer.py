@@ -10,7 +10,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 from bgp.utils                import *
 from bgp.message.parent       import Failure
 from bgp.message.nop          import NOP
-from bgp.message.open         import Open
+from bgp.message.open         import Open,Capabilities
 from bgp.message.update       import Update
 from bgp.message.keepalive    import KeepAlive
 from bgp.message.notification import Notification, Notify
@@ -26,18 +26,35 @@ class Peer (object):
 		self.log = Log(neighbor.peer_address,neighbor.peer_as)
 		self.supervisor = supervisor
 		self.neighbor = neighbor
-		self.running = False
-		self.restart = True
 		self.bgp = None
-		self._loop = None
 
+		self._loop = None
+		self._open = None
+
+		# The peer message should be processed
+		self._running = False
+		# The peer should restart after a stop
+		self._restart = True
+		# The peer was restarted (to know what kind of open to send for graceful restart)
+		self._restarted = False
 
 	def stop (self):
-		self.running = False
+		# we want to tear down the session and re-establish it
+		self._running = False
+		self._restart = True
+		self._restarted = False
+
+	def restart (self):
+		# we want to tear down the session and re-establish it
+		self._running = False
+		self._restart = True
+		self._restarted = True
 
 	def shutdown (self):
-		self.running = False
-		self.restart = False
+		# this peer is going down forever
+		self._running = False
+		self._restart = False
+		self._restarted = False
 
 	def run (self):
 		if self._loop:
@@ -45,8 +62,8 @@ class Peer (object):
 				self._loop.next()
 			except StopIteration:
 				self._loop = None
-		elif self.restart:
-			self.running = True
+		elif self._restart:
+			self._running = True
 			self._loop = self._run()
 		else:
 			self.bgp.close()
@@ -57,12 +74,12 @@ class Peer (object):
 			self.bgp = Protocol(self.neighbor)
 			self.bgp.connect()
 
-			o = self.bgp.new_open()
+			o = self.bgp.new_open(self._restarted)
 			self.log.out('-> %s' % o)
 			yield None
 
-			o = self.bgp.read_open(self.neighbor.peer_address.ip())
-			self.log.out('<- %s' % o)
+			self._open = self.bgp.read_open(self.neighbor.peer_address.ip())
+			self.log.out('<- %s' % self._open)
 			yield None
 
 			message = self.bgp.new_keepalive(force=True)
@@ -75,7 +92,16 @@ class Peer (object):
 			messages = self.bgp.new_announce()
 			self.log.outIf(messages,'-> UPDATE (%d)' % len(messages))
 
-			while self.running:
+			# if self._restarted and self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
+			if self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
+				messages = self.bgp.new_eor4()
+				self.log.outIf(messages,'-> EOR IPv4')
+
+				if self._open.capabilities.announced(Capabilities.MULTIPROTOCOL_EXTENSIONS):
+					# XXX: We should check if ipv6 unicast is announced and then do what we need :p
+					pass
+
+			while self._running:
 				c = self.bgp.check_keepalive()
 				self.log.outIf(self.debug_timers,'Receive Timer %d second(s) left' % c)
 
@@ -93,8 +119,14 @@ class Peer (object):
 				self.log.outIf(messages,'-> UPDATE (%d)' % len(messages))
 
 				yield None
-			# User closing the connection
-			raise Notify(6,3)
+			
+			if self._restart and self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
+				self.log.out('Closing connection without notification')
+				self.bgp.close()
+				return
+			else:
+				# User closing the connection
+				raise Notify(6,3)
 		except Notify,e:
 			self.log.out('Sending Notification (%d,%d) [%s]  %s' % (e.code,e.subcode,str(e),e.data))
 			try:

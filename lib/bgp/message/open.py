@@ -84,6 +84,56 @@ class RouterID (object):
 			return cmp(self.raw,other)
 		return cmp(self.ip,other)
 
+# =================================================================== Graceful (Restart)
+# RFC 4727
+
+class Graceful (object):
+	TIME_MASK     = 0x0FFF
+	FLAG_MASK     = 0xF000
+
+	# 0x8 is binary 1000
+	RESTART_STATE = 0x08 
+	FORWARDING_STATE = 0x80
+	
+	def __init__ (self,restart_flag,restart_time,families,family_flag):
+		self.restart_flag = restart_flag
+		self.restart_time = restart_time & Graceful.TIME_MASK
+		self.families = families
+		self.family_flag = family_flag & Graceful.FORWARDING_STATE
+	
+	def pack (self):
+		restart  = pack('!H',((restart_time << 12) | (self.restart_time & Graful.TIME_MASK)))
+		families = ''.join(["%s%s" % (pafi,psafi) for (pafi,psafi) in [(afi.pack(),safi.pack()) for (afi,safi) in self.families]])
+		family = chr(self.family_flag)
+		return "%s%s%s" % (restart,families,family)
+
+	def __str__ (self):
+		families = ' '.join(["%s %s" % (safi,ssafi) for (safi,ssafi) in [(str(afi),str(safi)) for (afi,safi) in self.families]])
+		return "Graceful Restart Flags %s Time %d Families %s Family Flags %s" % (hex(self.restart_flag),self.restart_time,families,hex(self.family_flag))
+
+
+# =================================================================== MultiProtocol
+
+class MultiProtocol (list):
+	def __str__ (self):
+		return 'Multiprotocol ' + ' '.join(["%s %s" % (safi,ssafi) for (safi,ssafi) in [(str(afi),str(safi)) for (afi,safi) in self]])
+
+# =================================================================== RouteRefresh
+
+class RouteRefresh (list):
+	def __str__ (self):
+		return "Route Refresh (unparsed)"
+
+
+# =================================================================== Unknown
+
+class Unknown (object):
+	def __init__ (self,value):
+		self.value = value
+	
+	def __str__ (self):
+		return 'unknown %s' % str(self.value)
+
 # =================================================================== Parameter
 
 class Parameter (int):
@@ -120,25 +170,48 @@ def new_Capabilities (data):
 			# Paramaters must only be sent once.
 			if key == Parameter.AUTHENTIFICATION_INFORMATION:
 				raise Notify(2,5)
-			elif key == Parameter.CAPABILITIES:
+				continue
+
+			if key == Parameter.CAPABILITIES:
 				k,v,r = _key_values('capability',value)
 				if r:
 					raise Notify(2,0,"bad length for OPEN %s (size mismatch)" % 'capability')
-				if k not in capabilities:
-					capabilities[k] = []
+
 				if k == Capabilities.MULTIPROTOCOL_EXTENSIONS:
+					if k not in capabilities:
+						capabilities[k] = MultiProtocol()
 					afi = AFI(unpack('!H',value[2:4])[0])
 					safi = SAFI(ord(value[5]))
 					capabilities[k].append((afi,safi))
-				elif k == Capabilities.ROUTE_REFRESH:
-					capabilities[k] = None
-				elif k == Capabilities.GRACEFUL_RESTART:
-					capabilities[k] = None
-				elif k == Capabilities.FOUR_BYTES_ASN:
+					continue
+
+				if k == Capabilities.GRACEFUL_RESTART:
+					restart = unpack('!H',value[2:4])[0]
+					restart_flag = restart >> 12
+					restart_time = restart & Graceful.TIME_MASK
+					value = value[4:]
+					families = []
+					while len(value) >= 3:
+						afi = AFI(unpack('!H',value[:2])[0])
+						safi = SAFI(ord(value[2]))
+						families.append((afi,safi))
+						value = value[3:]
+					flag_family = ord(value[0])
+					capabilities[k] = Graceful(restart_flag,restart_time,families,flag_family)
+					continue
+
+				if k == Capabilities.FOUR_BYTES_ASN:
 					capabilities[k] = ASN(unpack('!L',value[2:6])[0]).four()
-				else:
-					if value[2:]:
-						capabilities[k].append([ord(_) for _ in value[2:]])
+					continue
+
+				if k == Capabilities.ROUTE_REFRESH:
+					capabilities[k] = RouteRefresh()
+					continue
+
+				if k not in capabilities:
+					capabilities[k] = Unknown(k)
+				if value[2:]:
+					capabilities[k].append([ord(_) for _ in value[2:]])
 			else:
 				raise Notify(2,0,'unknow OPEN parameter %s' % hex(key))
 	return capabilities
@@ -166,6 +239,9 @@ class Capabilities (dict):
 	_unassigned = range(70,128)
 	_reserved = range(128,256)
 
+	def announced (self,capability):
+		return self.has_key(capability)
+
 	def __str__ (self):
 		r = []
 		for key in self.keys():
@@ -185,8 +261,19 @@ class Capabilities (dict):
 				r+= ['unhandled capability %d' % key]
 		return ', '.join(r)
 
-	def default (self):
-		self[1] = ((AFI(AFI.ipv4),SAFI(SAFI.unicast)),(AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+	def default (self,restarted):
+		families = ((AFI(AFI.ipv4),SAFI(SAFI.unicast)),(AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+
+		mp = MultiProtocol()
+		mp.extend(families)
+		self[Capabilities.MULTIPROTOCOL_EXTENSIONS] = mp 
+
+		# RFC 4727 Section 4.0, says that the time SHOULD be inferiour or equal to the HOLDTIME ... 
+		if restarted:
+			self[Capabilities.GRACEFUL_RESTART] = Graceful(Graceful.RESTART_STATE,120,families,Graceful.FORWARDING_STATE)
+		else:
+			self[Capabilities.GRACEFUL_RESTART] = Graceful(0x0,120,families,0x0)
+
 		return self
 
 	def pack (self):
@@ -200,4 +287,8 @@ class Capabilities (dict):
 					rs.append("%s%s%s" % (chr(k),chr(len(v)),v))
 		return "".join(["%s%s%s" % (chr(2),chr(len(r)),r) for r in rs])
 
-
+	def __str__ (self):
+		r = []
+		for k in self.keys():
+			r.append(str(self[k]))
+		return ', '.join(r)

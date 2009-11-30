@@ -18,7 +18,7 @@ from bgp.utils                import *
 from bgp.message.parent       import Message,Failure
 from bgp.message.nop          import new_NOP
 from bgp.message.open         import new_Open,Open,Parameter,Capabilities,RouterID
-from bgp.message.update       import new_Update,Update
+from bgp.message.update       import new_Update,Update,EOR
 from bgp.message.keepalive    import new_KeepAlive,KeepAlive
 from bgp.message.notification import Notification, Notify
 from bgp.network.connection   import Connection
@@ -139,8 +139,8 @@ class Protocol (object):
 
 	# Sending message to peer .................................................
 
-	def new_open (self):
-		o = Open(4,self.neighbor.local_as,self.neighbor.router_id.ip(),Capabilities().default(),self.neighbor.hold_time)
+	def new_open (self,restarted):
+		o = Open(4,self.neighbor.local_as,self.neighbor.router_id.ip(),Capabilities().default(restarted),self.neighbor.hold_time)
 		self.connection.write(o.message())
 		return o
 
@@ -152,6 +152,18 @@ class Protocol (object):
 			self.connection.write(updates)
 			return m
 		return []
+
+	def new_eor4 (self):
+		eor = EOR().ipv4()
+		self.log.outIf(self.trace,"UPDATE (ipv4 eor) SENT: %s" % hexa(eor[19:]))
+		self.connection.write(eor)
+		return eor
+
+	def new_eor6 (self):
+		eor = EOR().ipv6()
+		self.log.outIf(self.trace,"UPDATE (ipv6 eor) SENT: %s" % hexa(eor[19:]))
+		self.connection.write(eor)
+		return eor
 
 	def new_update (self):
 		m = self._delta.update(self.neighbor.local_as,self.neighbor.peer_as)

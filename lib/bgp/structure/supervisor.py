@@ -26,29 +26,35 @@ class Supervisor (object):
 		self._peers = {}
 		self._shutdown = False
 		self._reload = False
+		self._restart = False
 		self.reload()
 
 		signal.signal(signal.SIGTERM, self.sigterm)
 		signal.signal(signal.SIGHUP, self.sighup)
+		signal.signal(signal.SIGALRM, self.sigalrm)
 
 	def sigterm (self,signum, frame):
 		self.log.out("SIG TERM received")
-		self.shutdown()
+		self._shutdown = True
 
 	def sighup (self,signum, frame):
 		self.log.out("SIG HUP received")
 		self._reload = True
+
+	def sigalrm (self,signum, frame):
+		self.log.out("SIG ALRM received")
+		self._restart = True
 
 	def run (self):
 		start = time.time()
 		while self._peers:
 			try:
 				if self._shutdown:
-					for ip in self._peers.keys():
-						self._peers[ip].shutdown()
-				else:
-					if self._reload:
-						self.reload()
+					self.shutdown()
+				elif self._reload:
+					self.reload()
+				elif self._restart:
+					self.restart()
 
 				# Handle all connection
 				for ip in self._peers.keys():
@@ -59,9 +65,17 @@ class Supervisor (object):
 				time.sleep(1.0)
 			except KeyboardInterrupt:
 				if self.debug: self.log.out("^C received")
-				self.shutdown()
+				self._shutdown = True
+
+	def shutdown (self):
+		"""terminate all the current BGP connections"""
+		self.log.out("performing shutdown")
+		for ip in self._peers.keys():
+			self._peers[ip].shutdown()
 
 	def reload (self):
+		"""reload the configuration and send to the peer the route which changed"""
+		self.log.out("performing reload")
 		self._reload = False
 		self.configuration.reload()
 
@@ -81,10 +95,20 @@ class Supervisor (object):
 				self.log.out("Stopping Peer %s" % str(ip))
 				# which will force a reconnection with the new settings
 				if self._peers[ip].neighbor != neighbor:
-					self._peers[ip].stop()
+					self._peers[ip].restart()
 
-	def shutdown (self):
-		self._shutdown = True
+	def restart (self):
+		"""kill the BGP session and restart it"""
+		self.log.out("performing restart")
+		self._restart = False
+		self.configuration.reload()
+
+		for ip in self._peers.keys():
+			if ip not in self.configuration.neighbor.keys():
+				self.log.out("Removing Peer %s" % str(ip))
+				self._peers[ip].stop()
+			else:
+				self._peers[ip].restart()
 
 	def unschedule (self,peer):
 		ip = peer.neighbor.peer_address.ip()
