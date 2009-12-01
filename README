@@ -30,9 +30,7 @@ I have no interrest in implementing:
  - RFC 3065 (Autonomous System Confederations for BGP)
  - RFC 5549 (Advertising IPv4 Network Layer Reachability Information with an IPv6 Next Hop)
 
-Read more: http://www.faqs.org/rfcs/rfc2796.html#ixzz0YLkC7NM2
-
-Development is done on python 2.6, the code was made compatible with python 2.4, previous version can not be supported due to their lack of support for coroutine (the yield feature).
+Development is done on python 2.6, the code was made compatible with python 2.4, previous versions can not be supported due to their lack of support for coroutine (the yield feature).
 
 This programs does not have any dependences on any thrid party libraries.
 
