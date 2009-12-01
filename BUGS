@@ -1,9 +1,11 @@
+The tracking of route is likely to be totally buggy at this point
+
 Add all the optional Flag to the attribute defined as optional by RFC 4271
+Need to forbid negative times in the configuration for hold-time and graceful-restart.
+Have an issue with hold time of 3 - see why and what can be done (4 is fine !!)
 
 For incomming messages:
- - Have an issue with hold time of 3 - see why and what can be done (4 is fine !!)
  - ASPath assumes only one segment
  - all the XXX: and FIXME: in the code
 
-The tracking of route may (is likely to be) totally buggy at this point
 The update unitest suffer from our bad includes (include loop), so update.py contains lots of code

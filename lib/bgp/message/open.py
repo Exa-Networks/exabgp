@@ -296,12 +296,11 @@ class Capabilities (dict):
 		mp.extend(families)
 		self[Capabilities.MULTIPROTOCOL_EXTENSIONS] = mp 
 
-		# XXX: RFC 4727 Section 4.0, says that the time SHOULD be inferiour or equal to the HOLDTIME ... 
 		if graceful:
 			if restarted:
-				self[Capabilities.GRACEFUL_RESTART] = Graceful(Graceful.RESTART_STATE,120,[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in families])
+				self[Capabilities.GRACEFUL_RESTART] = Graceful(Graceful.RESTART_STATE,graceful,[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in families])
 			else:
-				self[Capabilities.GRACEFUL_RESTART] = Graceful(0x0,120,[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in families])
+				self[Capabilities.GRACEFUL_RESTART] = Graceful(0x0,graceful,[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in families])
 
 		return self
 

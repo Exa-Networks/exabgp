@@ -187,7 +187,10 @@ class Configuration (object):
 		# drop the neiborg
 		scope = self._scope.pop(-1)
 		neighbor.description = scope.get('description','')
-		neighbor.graceful_restart = scope.get('graceful-restart',False)
+
+		neighbor.graceful_restart = scope.get('graceful-restart',0)
+		if neighbor.graceful_restart < 0:
+			neighbor.graceful_restart = int(neighbor.hold_time)
 
 		missing = neighbor.missing()
 		if missing:
@@ -256,11 +259,16 @@ class Configuration (object):
 			return False
 
 	def _set_gracefulrestart (self,command,value):
-		if len(value):
-			self._error = 'graceful-restart is not taking parameters "%s"' % ' '.join(value)
+		if not len(value):
+			self._scope[-1]['graceful-restart'] = -1
+			return True
+		try:
+			self._scope[-1][command] = int(value[0])
+			return True
+		except ValueError:
+			self._error = '"%s" is an invalid graceful-restart time' % ' '.join(value)
 			if self.debug: raise
 			return False
-		self._scope[-1]['graceful-restart'] = True
 		return True
 
 

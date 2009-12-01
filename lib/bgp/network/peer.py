@@ -16,6 +16,12 @@ from bgp.message.keepalive    import KeepAlive
 from bgp.message.notification import Notification, Notify
 from bgp.network.protocol     import Protocol
 
+# As we can not know if this is our first start or not, this flag is used to
+# always make the program act like it was recovering from a failure
+# If set to FALSE, no EOR and OPEN Flags set for Restart will be set in the
+# OPEN Graceful Restart Capability
+FORCE_GRACEFUL = True
+
 # Present a File like interface to socket.socket
 
 class Peer (object):
@@ -36,7 +42,7 @@ class Peer (object):
 		# The peer should restart after a stop
 		self._restart = True
 		# The peer was restarted (to know what kind of open to send for graceful restart)
-		self._restarted = False
+		self._restarted = FORCE_GRACEFUL
 
 	def stop (self):
 		# we want to tear down the session and re-establish it
@@ -92,10 +98,6 @@ class Peer (object):
 			messages = self.bgp.new_announce()
 			if messages:
 				self.log.out('-> UPDATE (%d)' % len(messages))
-			else:
-				# Do like the big boys (cisco) and send a keepalive if you have no update
-				c,k = self.bgp.new_keepalive()
-				self.log.outIf(k,'-> KEEPALIVE (no UPDATE)')
 
 			# if self._restarted and self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
 			if self.neighbor.graceful_restart and self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
@@ -105,6 +107,11 @@ class Peer (object):
 				if self._open.capabilities.announced(Capabilities.MULTIPROTOCOL_EXTENSIONS):
 					# XXX: We should check if ipv6 unicast is announced and then do what we need :p
 					pass
+			elif not messages:
+				# If we are not sending an EOR, do like the big boys (cisco) and send a keepalive if you have no update
+				# So the other routers knows that we have no routes to send ... (is that behaviour documented somewhere ??)
+				c,k = self.bgp.new_keepalive()
+				self.log.outIf(k,'-> KEEPALIVE (no UPDATE and no EOR)')
 
 			while self._running:
 				c = self.bgp.check_keepalive()
@@ -125,7 +132,7 @@ class Peer (object):
 
 				yield None
 			
-			if 	self.neighbor.graceful_restart and self._restart and self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
+			if self.neighbor.graceful_restart and self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
 				self.log.out('Closing the connection without notification')
 				self.bgp.close()
 				return

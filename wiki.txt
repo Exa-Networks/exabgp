@@ -115,24 +115,6 @@ A: The injector allows TCP IPv4 or IPv6 connections as well as supporting the ex
 Q: Can you maintain more than one BGP session? \\
 A: Yes, you can define more than one neighbor in the configuration file
 
-Q: As the code is single threaded, can a blocking network IO cause issues ? \\
-A: We are using select to only read data when available but as we are not using a different thread for keepalive, so it could happen. Should it be a major concern, run one instance of the program per peer.
-
-Q: As you have no separate thread for keepalives, how many peers do you think one instance can manage comfortably? \\
-A: I have no answer as we only need one peer per application, but unless you speak to several dozen and have a very low keepalive time it should do fine.
-
-Q: I am a Ruby coder and I hate Python \\
-A: use ByteMark BGPFeeder a very similar application [[https://projects.bytemark.co.uk/projects/bgpfeeder|https://projects.bytemark.co.uk/projects/bgpfeeder]]
-   hg clone http://src.bytemark.co.uk/bgpfeeder
-
-Q: I am a Perl coder and I hate Python \\
-A: Use bgpsimple [[http://code.google.com/p/bgpsimple|http://code.google.com/p/bgpsimple]]
-   svn checkout http://bgpsimple.googlecode.com/svn/trunk/ bgpsimple-read-only
-
-Q: But there is already one in Python here : [[https://code.launchpad.net/pybgp|https://code.launchpad.net/pybgp]] \\
-A: I am not sure if this project existed when I started or not but I clearly missed it ! (and it does not support the MultiProtocol Extensions for IPv6 but instead for ipv4 and vpnv4/mpls)
-   bzr branch lp:pybgp
-
 Q: Is this code supported ? \\
 A: YES - Should you find any bug, please report it. 
 
@@ -140,4 +122,27 @@ Q: Are you planning to add more features ? (support for vpnv4,etc) \\
 A: I will only really code new features for my own use, but feel free to send me patches.
 
 Q: Why did you implement Graceful Restart ? \\
-A: My use case are machines announcing service IPs without lower MED/Local Prefence backup machines ready to take the over in case of problems. The BGP IPs are then still routed during reboots and in case of very high load for example it will not render the service IP unreacheable if some keepalive are missed.
+A: My use case are machines announcing service IPs without lower MED/Local Prefence backup machines ready to take the over in case of problems. The BGP IPs are then still routed during reboots and in case of very high load for example it will not render the service IP unreacheable if some keepalive are missed. \\
+A: If no graceful-restart time is set, the waiting time is set to be the same as the hold-time. As servers often take much longer than the default 180 seconds to reboots, we recommend that you set the graceful-restart timer to a much higher value.
+
+Q: I would like to inject routes in the network but my BGP speaker is behind a NATing firewall, will it work ? \\
+A: Yes, just set your local-address as your machine LAN IP and the router-id as the firewall public IP and it will just work.
+
+Q: As the code is single threaded, can a blocking network IO cause issues ? \\
+A: We are using select to only read data when available but as we are not using a different thread for keepalive, so it could happen. Should it be a major concern, run one instance of the program per peer.
+
+Q: As you have no separate thread for keepalives, how many peers do you think one instance can manage comfortably? \\
+A: I have no answer as we only need one peer per application, but unless you speak to several dozen and have a very low keepalive time it should do fine.
+
+Q: I am a Ruby coder and I hate Python \\
+A: use ByteMark [[https://projects.bytemark.co.uk/projects/bgpfeeder|BGPFeeder]] a very similar application 
+   hg clone http://src.bytemark.co.uk/bgpfeeder
+
+Q: I am a Perl coder and I hate Python \\
+A: Use [[http://code.google.com/p/bgpsimple|bgpsimple]]
+   svn checkout http://bgpsimple.googlecode.com/svn/trunk/ bgpsimple-read-only
+
+Q: But there is [[https://code.launchpad.net/pybgp| already one in Python]] ! \\
+A: I am not sure if this project existed when I started or not but I clearly missed it ! (and it does not support the MultiProtocol Extensions for IPv6 but instead for ipv4 and vpnv4/mpls which was not good for me :p)
+   bzr branch lp:pybgp
+
