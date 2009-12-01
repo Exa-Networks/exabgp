@@ -14,11 +14,11 @@ The code is stored in our SVN repository: \\
 
 Get it with
    cd /opt
-   svn co -r 98 http://svn.exa.org.uk/bgp/trunk bgp
+   svn co -r 118 http://svn.exa.org.uk/bgp/trunk bgp
 
 There is currently no tarball or official release yet.
 
-We currently use revision 98 to source ASN112 and some /32 within our network.
+We currently use revision 117 to source ASN112 and some /32 within our network.
 
 ==== How do you configure it ? ====
 
@@ -123,7 +123,8 @@ A: I will only really code new features for my own use, but feel free to send me
 
 Q: Why did you implement Graceful Restart ? \\
 A: My use case are machines announcing service IPs without lower MED/Local Prefence backup machines ready to take the over in case of problems. The BGP IPs are then still routed during reboots and in case of very high load for example it will not render the service IP unreacheable if some keepalive are missed. \\
-A: If no graceful-restart time is set, the waiting time is set to be the same as the hold-time. As servers often take much longer than the default 180 seconds to reboots, we recommend that you set the graceful-restart timer to a much higher value.
+A: If no graceful-restart time is set, the waiting time is set to be the same as the hold-time. As servers often take much longer than the default 180 seconds to reboots, we recommend that you set the graceful-restart timer to a much higher value. \\
+A: GRACEFUL RESTART IS ONLY IMPLEMENTED FOR IPv4 Unicast (I am just lazy)
 
 Q: I would like to inject routes in the network but my BGP speaker is behind a NATing firewall, will it work ? \\
 A: Yes, just set your local-address as your machine LAN IP and the router-id as the firewall public IP and it will just work.

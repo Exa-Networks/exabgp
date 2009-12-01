@@ -107,11 +107,12 @@ class Peer (object):
 				if self._open.capabilities.announced(Capabilities.MULTIPROTOCOL_EXTENSIONS):
 					# XXX: We should check if ipv6 unicast is announced and then do what we need :p
 					pass
-			elif not messages:
-				# If we are not sending an EOR, do like the big boys (cisco) and send a keepalive if you have no update
-				# So the other routers knows that we have no routes to send ... (is that behaviour documented somewhere ??)
+			else:
+				# If we are not sending an EOR, do like the big boys (cisco) and send a keepalive when finished
+				# So the other routers knows that we have no (more) routes to send ...
+				# (is that behaviour documented somewhere ??)
 				c,k = self.bgp.new_keepalive()
-				self.log.outIf(k,'-> KEEPALIVE (no UPDATE and no EOR)')
+				self.log.outIf(k,'-> KEEPALIVE (no more UPDATE and no EOR)')
 
 			while self._running:
 				c = self.bgp.check_keepalive()
