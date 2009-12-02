@@ -13,7 +13,7 @@ from bgp.message.update.attribute.parent import Attribute,Flag
 # =================================================================== MP NLRI (14)
 
 class MPURNLRI (Attribute):
-	FLAG = Flag.TRANSITIVE
+	FLAG = Flag.OPTIONAL
 	ID = Attribute.MP_UNREACH_NLRI  
 	MULTIPLE = True
 

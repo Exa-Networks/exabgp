@@ -14,7 +14,7 @@ from bgp.message.update.attribute.parent import Attribute,Flag
 # =================================================================== MP Unreacheable NLRI (15)
 
 class MPRNLRI (Attribute):
-	FLAG = Flag.TRANSITIVE
+	FLAG = Flag.OPTIONAL
 	ID = Attribute.MP_REACH_NLRI    
 	MULTIPLE = True
 
