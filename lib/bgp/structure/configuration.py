@@ -20,7 +20,7 @@ from bgp.message.update.attribute.localpref   import LocalPreference
 from bgp.message.update.attribute.communities import to_Community,Communities
 
 class Configuration (object):
-	debug = True
+	debug = False
 	_str_route_error = 'syntax: route IP/MASK next-hop IP' \
 	' origin IGP|EGP|INCOMPLETE' \
 	' as-path ASN| as-path [ASN1 ASN2 ...]' \
