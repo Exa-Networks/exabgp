@@ -58,7 +58,7 @@ class Configuration (object):
 		self._location = ['root']
 		self._line = []
 		self._error = ''
-		self._number = 0
+		self._number = 1
 
 		while not self.finished():
 			r = self._dispatch('configuration',['neighbor',],[])
