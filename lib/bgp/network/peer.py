@@ -101,8 +101,8 @@ class Peer (object):
 
 			# if self._restarted and self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
 			if self.neighbor.graceful_restart and self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
-				messages = self.bgp.new_eor4()
-				self.log.outIf(messages,'-> EOR IPv4')
+				families = self.bgp.new_eors(self._open.capabilities[Capabilities.GRACEFUL_RESTART].families())
+				self.log.outIf(families,'-> EOR %s' % ', '.join(['%s %s' % (str(afi),str(safi)) for (afi,safi) in families]))
 
 				if self._open.capabilities.announced(Capabilities.MULTIPROTOCOL_EXTENSIONS):
 					# XXX: We should check if ipv6 unicast is announced and then do what we need :p

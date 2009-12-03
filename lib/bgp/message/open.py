@@ -112,6 +112,8 @@ class Graceful (dict):
 		sfamilies = ' '.join(["%s/%s=%s" % (afi,safi,family) for (afi,safi,family) in families])
 		return "Graceful Restart Flags %s Time %d %s" % (hex(self.restart_flag),self.restart_time,sfamilies)
 
+	def families (self):
+		return self.keys()
 
 # =================================================================== MultiProtocol
 

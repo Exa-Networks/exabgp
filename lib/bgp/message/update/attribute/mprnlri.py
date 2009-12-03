@@ -18,13 +18,15 @@ class MPRNLRI (Attribute):
 	ID = Attribute.MP_REACH_NLRI    
 	MULTIPLE = True
 
-	# init takes a Route ...
+	def __init__ (self,afi,safi,route):
+		Attribute.__init__(self,(afi,safi,route))
 
 	def pack (self):
-		nlri = self.value.nlri.pack()
-		next_hop = self.value.next_hop.pack()
+		afi,safi,route = self.value
+		nlri = route.nlri.pack()
+		next_hop = route.next_hop.pack()
 		return self._attribute(
-			AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + 
+			afi.pack() + safi.pack() + 
 			chr(len(next_hop)) + next_hop + 
 			chr(0) + nlri
 		)

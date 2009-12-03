@@ -17,10 +17,12 @@ class MPURNLRI (Attribute):
 	ID = Attribute.MP_UNREACH_NLRI  
 	MULTIPLE = True
 
-	# init takes a route (and not NLRI)
+	def __init__ (self,afi,safi,route):
+		Attribute.__init__(self,(afi,safi,route))
 
 	def pack (self):
-		return self._attribute(AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + self.value.nlri.pack())
+		afi,safi,route = self.value
+		return self._attribute(afi.pack() + safi.pack() + route.nlri.pack())
 
 	def __len__ (self):
 		return len(self.pack())

@@ -153,17 +153,12 @@ class Protocol (object):
 			return m
 		return []
 
-	def new_eor4 (self):
-		eor = EOR().ipv4()
-		self.log.outIf(self.trace,"UPDATE (ipv4 eor) SENT: %s" % hexa(eor[19:]))
-		self.connection.write(eor)
-		return eor
-
-	def new_eor6 (self):
-		eor = EOR().ipv6()
-		self.log.outIf(self.trace,"UPDATE (ipv6 eor) SENT: %s" % hexa(eor[19:]))
-		self.connection.write(eor)
-		return eor
+	def new_eors (self,families):
+		eor = EOR()
+		eors = eor.eors(families)
+		self.log.outIf(self.trace,"UPDATE (eors) SENT: %s" % hexa(eors[19:]))
+		self.connection.write(eors)
+		return eor.announced()
 
 	def new_update (self):
 		m = self._delta.update(self.neighbor.local_as,self.neighbor.peer_as)

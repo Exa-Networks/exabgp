@@ -97,28 +97,23 @@ class Update (Message):
 
 		attributes = [self.attributes[a].ID for a in self.attributes]
 
-		if Attribute.ORIGIN not in attributes:
-			if self.attributes.autocomplete:
-				message += Origin(Origin.IGP).pack()
-		else:
+		if Attribute.ORIGIN in attributes:
 			message += self.attributes[Attribute.ORIGIN].pack()
+		elif self.attributes.autocomplete:
+			message += Origin(Origin.IGP).pack()
 
-		if Attribute.AS_PATH not in attributes:
-			if self.attributes.autocomplete:
-				if local_asn == peer_asn:
-					message += ASPath(ASPath.AS_SEQUENCE,[]).pack()
-				else:
-					message += ASPath(ASPath.AS_SEQUENCE,[local_asn]).pack()
-		else:
+		if Attribute.AS_PATH in attributes:
 			message += self.attributes[Attribute.AS_PATH].pack()
+		elif self.attributes.autocomplete:
+			if local_asn == peer_asn:
+				message += ASPath(ASPath.AS_SEQUENCE,[]).pack()
+			else:
+				message += ASPath(ASPath.AS_SEQUENCE,[local_asn]).pack()
 
-		if Attribute.NEXT_HOP not in attributes:
-			if self.attributes.autocomplete:
-				message += to_NextHop('0.0.0.0').pack()
-		else:
+		if Attribute.NEXT_HOP in attributes:
 			message += self.attributes[Attribute.NEXT_HOP].pack()
-
-		# XXX: Lazy ... do not encode the MED atm
+		elif self.attributes.autocomplete:
+			message += to_NextHop('0.0.0.0').pack()
 
 		if Attribute.LOCAL_PREFERENCE in attributes:
 			if local_asn == peer_asn:
@@ -231,26 +226,31 @@ class Route (object):
 
 		return "%s%s%s%s%s%s" % (self.nlri,next_hop,origin,aspath,local_pref,communities)
 
-# =================================================================== End-Of-Record
-
-class No_Attributes (dict):
-	autocomplete = False
-	def has (self,value): return self.has_key(value)
-
-class EOR (object):
-	def ipv4 (self):
-		attributes = No_Attributes()
-		return Update([],[],attributes).announce(0,0)
-	
-	def ipv6 (self):
-		raise NotImplemented('did not implement IPv6 EOR (yet)')
-
 # =================================================================== Attributes
 
 def new_Attributes (data):
 	attributes = Attributes()
 	attributes.new(data)
 	return attributes
+
+class MultiAttributes (list):
+	def __init__ (self,attribute):
+		self.ID = attribute.ID
+		self.FLAG = attribute.FLAG
+		self.MULTIPLE = True
+		self.append(attribute)
+
+	def pack (self):
+		r = []
+		for attribute in self:
+			r.append(attribute.pack())
+		return ''.join(r)
+
+	def __len__ (self):
+		return len(self.pack())
+
+	def __str__ (self):
+		return "MultiAttribute"
 
 class Attributes (dict):
 	autocomplete = True
@@ -266,7 +266,7 @@ class Attributes (dict):
 			return False
 		else:
 			if attribute.MULTIPLE:
-				self[attribute.ID] = [attribute]
+				self[attribute.ID] = MultiAttributes(attribute)
 			else:
 				self[attribute.ID] = attribute
 			return True
@@ -343,7 +343,7 @@ class Attributes (dict):
 			while data:
 				route = new_NLRI(data,afi)
 				data = data[len(route.nlri):]
-				self.add(MPURNLRI(route))
+				self.add(MPURNLRI(AFI(afi),SAFI(safi),route))
 				print 'removing MP route %s' % str(route)
 			return self.new(next_attributes)
 
@@ -388,11 +388,54 @@ class Attributes (dict):
 				route = new_Route(data,afi)
 				route.next_hop = nh
 				data = data[len(route.nlri):]
-				self.add(MPRNLRI(route))
+				self.add(MPRNLRI(AFI(afi),SAFI(safi),route))
 				print 'adding MP route %s' % str(route)
 			return self.new(next_attributes)
 
 		import warnings
 		warnings.warn("Could not parse attribute %s" % str(code))
 		return self.new(data[length:])
+
+# =================================================================== End-Of-Record
+
+class Empty (object):
+	def pack (self):
+		return ''
+	def __len__ (self):
+		return 0
+
+class EmptyRoute (Empty):
+	nlri = Empty()
+
+class EOR (object):
+	def __init__ (self):
+		self._announced = []
+
+	def eors (self,families):
+		self._announced = []
+		r = ''
+		for afi,safi in families:
+			if safi != SAFI.unicast:
+				continue
+			if afi == AFI.ipv4:
+				r += self.ipv4()
+			else:
+				r += self.mp(afi,safi)
+			self._announced.append((afi,safi))
+		return r
+
+	def ipv4 (self):
+		#attributes = EORAttributes()
+		attributes = Attributes()
+		attributes.autocomplete = False
+		return Update([],[],attributes).announce(0,0)
+
+	def mp (self,afi,safi):
+		attributes = Attributes()
+		attributes.autocomplete = False
+		attributes.add(MPURNLRI(afi,safi,EmptyRoute()))
+		return Update([],[],attributes).announce(0,0)
+
+	def announced (self):
+		return self._announced
 
