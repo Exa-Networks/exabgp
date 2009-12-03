@@ -41,6 +41,7 @@ IPv4 example
    	local-address 192.168.127.1;
    	local-as 65000;
    	peer-as 65534;
+   	graceful-restart;
    
    	static {
    		route 10.0.1.0/24 {
@@ -77,7 +78,7 @@ IPv6 example
    	local-as 65000;
    	peer-as 65534;
    	hold-time 180;
-   	graceful-restart;
+   	graceful-restart 1200;
    
    	static {
    		route 1.2.3.4/32 next-hop 5.6.7.8;
@@ -100,12 +101,14 @@ Q: I am trying to connect to my router and it is not working \\
 A: Did you enable multi-hop BGP on your router ?
 
 Q: I am trying to send some IPv6 routes to my router but the connection never stays up \\
-A: You may need to enable family inet6 for this peer. On Juniper is it something like \\
-A: set protocol bgp group <mygroup> neighbor <IP> family inet6 unicast
+A: You may need to enable family inet6 for this peer. \\
+A: juniper: set protocol bgp group <mygroup> neighbor <IP> family inet6 unicast \\
+A: Do not forget to explicitly enable IPv4 as well if you are planning to send both v6 and v4 routes \\
+A: juniper: set protocol bgp group <mygroup> neighbor <IP> family inet  unicast
 
 Q: All seems fine but my route is not added to the routing table \\
 A: You may need to allow for non-directly connected next-hop \\
-A: (accept-remote-nexthop with Juniper)
+A: juniper: set protocol bgp group <mygroup> neighbor <IP> accept-remote-nexthop
 
 Q: I see I can specify the as-path (as-sequence) sent to the peer. Do you prepend the router ASN to EBGP peers ? \\
 A: Yes and No :) \\
