@@ -187,7 +187,7 @@ class Route (object):
 			return Update(NLRIS(),NLRIS([self.nlri]),attributes).announce(local_asn,remote_asn)
 		if self.nlri.afi == AFI.ipv6:
 			attributes[Attribute.NEXT_HOP] = to_NextHop('0.0.0.0')
-			attributes[Attribute.MP_REACH_NLRI] = MPRNLRI(self)
+			attributes[Attribute.MP_REACH_NLRI] = MPRNLRI(AFI(self.nlri.afi),SAFI(self.nlri.safi),self)
 			return Update(NLRIS(),NLRIS(),attributes).announce(local_asn,remote_asn)
 
 	def update (self,local_asn,remote_asn):
