@@ -1,7 +1,6 @@
-IPv6 support is currently totally broken.
-
 This program is a BGP route injector. It can be used to announce routes in your network.
-The route injector can connect using either IPv4 or IPv6 BGP and announce both IPv4 and IPv6 routes.
+
+The route injector can connect using either IPv4 or IPv6 BGP and announce both IPv4 and IPv6 routes through IPv4 or IPv6 TCP connections.
 
 Potential use are :
  - Injection of service IPs (my use of it) like AS112 announcement
@@ -21,16 +20,18 @@ As the program is not intended to receive routing information and perform FIB ma
 
 The following BG4 related RFC are not supported but would be on the roadmap if there was one:
  - RFC 3107 (Carrying Label Information in BGP-4)
- - RFC 2796 (BGP Route Reflection - An Alternative to Full Mesh IB) Not sure if anything is needed as a client
 
 Some speakers may use RFC 2385 (Protection of BGP Sessions via the TCP MD5 Signature) to allow the BGP connection to be established. To the best of my knowledge, there is no way this can be done in python and as a result the feature will/can not be implemented (The Python socket module exports IPPROTO_TCP but not TCP_MD5_AUTH).
+
+There is no support for RFC 2796 (BGP Route Reflection - An Alternative to Full Mesh IB). The code knows nothing about the ORIGINATOR_ID attribute.
+However, as the injector does not re-announce routes, nothing prevent its use with a Route Reflector.
 
 I have no interrest in implementing:
  - RFC 2918 (Route Refresh Capability for BGP-4)
  - RFC 3065 (Autonomous System Confederations for BGP)
  - RFC 5549 (Advertising IPv4 Network Layer Reachability Information with an IPv6 Next Hop)
 
-Development is done on python 2.6, the code was made compatible with python 2.4, previous versions can not be supported due to their lack of support for coroutine (the yield feature).
+Development is done on python 2.6, the code was made compatible with python 2.4, previous versions can not be supported due to their lack of support for coroutine (the yield feature). Using python2.4 is known it cause some small issues on session teardown.
 
 This programs does not have any dependences on any thrid party libraries.
 
