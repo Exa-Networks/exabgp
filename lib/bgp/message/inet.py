@@ -75,7 +75,7 @@ def to_IPv4 (ip):
 
 def to_IPv6 (ip):
 	pack = socket.inet_pton(socket.AF_INET6,ip)
-	return IP(pack,AFI.ipv4,SAFI.unicast,ip)
+	return IP(pack,AFI.ipv6,SAFI.unicast,ip)
 
 def to_IP (value):
 	if value.count(':'):

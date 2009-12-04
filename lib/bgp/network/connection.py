@@ -44,7 +44,10 @@ class Connection (object):
 			except AttributeError:
 				pass
 			self._io.settimeout(1)
-			self._io.bind((local.ip(),0))
+			if peer.afi == AFI.ipv4:
+				self._io.bind((local.ip(),0))
+			if peer.afi == AFI.ipv6:
+				self._io.bind((local.ip(),0,0,0))
 		except socket.error,e:
 			self.close()
 			raise Failure('could not bind to local ip %s - %s' % (local.ip(),str(e)))
