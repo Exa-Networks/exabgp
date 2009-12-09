@@ -22,11 +22,11 @@ from bgp.message.update.attribute.communities import to_Community,Communities
 class Configuration (object):
 	debug = False
 	_str_route_error = 'syntax: route IP/MASK next-hop IP' \
-	' origin IGP|EGP|INCOMPLETE' \
-	' as-path ASN| as-path [ASN1 ASN2 ...]' \
-	' med NUMBER' \
-	' local-preference NUMBER]' \
-	' community COMMUNITY| community [COMMUNITY1 COMMUNITY2 ...]' \
+	' <origin IGP|EGP|INCOMPLETE>' \
+	' <as-path ASN| as-path [ASN1 ASN2 ...]>' \
+	' <med NUMBER>' \
+	' <local-preference NUMBER]>' \
+	' <community COMMUNITY|community [COMMUNITY1 COMMUNITY2 ...]>' \
 
 	def __init__ (self,fname,text=False):
 		self._text = text
