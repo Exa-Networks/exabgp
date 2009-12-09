@@ -190,6 +190,7 @@ class Configuration (object):
 
 		neighbor.graceful_restart = scope.get('graceful-restart',0)
 		if neighbor.graceful_restart < 0:
+			# XXX: Should not be an int but a subclass
 			neighbor.graceful_restart = int(neighbor.hold_time)
 
 		missing = neighbor.missing()
@@ -199,6 +200,9 @@ class Configuration (object):
 		if neighbor.router_id.afi != AFI.ipv4:
 			self._error = 'router-id must be a IPv4 address (not %s)' % neighbor.router_id
 			return False
+		if neighbor.local_address.afi != neighbor.peer_address.afi:
+			self._error = 'local-address and peer-address must be of the same family'
+			return False 
 		if self._neighbor.has_key(neighbor.peer_address):
 			self_error = 'duplicate peer definition %s' % neighbor.peer_address
 			return False
@@ -251,7 +255,12 @@ class Configuration (object):
 
 	def _set_holdtime (self,command,value):
 		try:
-			self._scope[-1][command] = HoldTime(value[0])
+			holdtime = HoldTime(value[0])
+			if holdtime < 0:
+				raise ValueError('holdtime can not be negative')
+			if holdtime >= pow(2,16):
+				raise ValueError('holdtime can not be negative')
+			self._scope[-1][command] = holdtime
 			return True
 		except ValueError:
 			self._error = '"%s" is an invalid hold-time' % ' '.join(value)
@@ -263,7 +272,13 @@ class Configuration (object):
 			self._scope[-1]['graceful-restart'] = -1
 			return True
 		try:
-			self._scope[-1][command] = int(value[0])
+			# XXX: Should be a subclass of int
+			grace = int(value[0])
+			if grace < 0:
+				raise ValueError('graceful-restart can not be negative')
+			if grace >= pow(2,16):
+				raise ValueError('graceful-restart can not be negative')
+			self._scope[-1][command] = grace
 			return True
 		except ValueError:
 			self._error = '"%s" is an invalid graceful-restart time' % ' '.join(value)
