@@ -28,7 +28,7 @@ def defix (data):
 def prefix (data):
 	return '%s%s' % (pack('!H',len(data)),data)
 
-class Message (object):
+class Message (Exception):
 	TYPE = 0 # Should be None ?
 
 	MARKER = chr(0xff)*16
