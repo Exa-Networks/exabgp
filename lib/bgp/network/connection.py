@@ -75,6 +75,10 @@ class Connection (object):
 			self.last_read = time.time()
 			if self.debug: print "received:", hexa(r)
 			return r
+		except socket.timeout:
+			self.close()
+			self.log.out(trace())
+			raise Failure('timeout attempting to read data from the network:  %s ' % str(e))
 		except socket.error,e:
 			self.close()
 			self.log.out(trace())
@@ -86,6 +90,10 @@ class Connection (object):
 			r = self._io.send(data)
 			self.last_write = time.time()
 			return r
+		except socket.timeout:
+			self.close()
+			self.log.out(trace())
+			raise Failure('timeout attempting to write data to the network: %s' % str(e))
 		except socket.error, e:
 			if e.errno != 32: # Broken pipe, we ignore as we want to make sure if there is data to read before failing
 				self.close()
