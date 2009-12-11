@@ -13,7 +13,7 @@ from bgp.message.nop          import NOP
 from bgp.message.open         import Open,Capabilities
 from bgp.message.update       import Update
 from bgp.message.keepalive    import KeepAlive
-from bgp.message.notification import Notification, Notify
+from bgp.message.notification import Notification, Notify, NotConnected
 from bgp.network.protocol     import Protocol
 
 # As we can not know if this is our first start or not, this flag is used to
@@ -140,6 +140,13 @@ class Peer (object):
 
 			# User closing the connection
 			raise Notify(6,3)
+		except NotConnected, e:
+			self.log.out('we can not connect to the peer %s' % str(e))
+			try:
+				self.bgp.close()
+			except Failure:
+				pass
+			return
 		except Notify,e:
 			self.log.out('Sending Notification (%d,%d) [%s]  %s' % (e.code,e.subcode,str(e),e.data))
 			try:

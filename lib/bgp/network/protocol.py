@@ -20,7 +20,7 @@ from bgp.message.nop          import new_NOP
 from bgp.message.open         import new_Open,Open,Parameter,Capabilities,RouterID
 from bgp.message.update       import new_Update,Update,EOR
 from bgp.message.keepalive    import new_KeepAlive,KeepAlive
-from bgp.message.notification import Notification, Notify
+from bgp.message.notification import Notification, Notify, NotConnected
 from bgp.network.connection   import Connection
 
 class Protocol (object):
@@ -64,6 +64,7 @@ class Protocol (object):
 			return new_NOP('')
 
 		data = self.connection.read(19)
+
 		if data[:16] != Message.MARKER:
 			# We are speaking BGP - send us a valid Marker
 			raise Notify(1,1)
@@ -113,6 +114,10 @@ class Protocol (object):
 
 	def read_open (self,ip):
 		message = self.read_message()
+
+		if message.TYPE == NOP.TYPE:
+			raise NotConnected(ip)
+
 		if message.TYPE not in [Open.TYPE,]:
 			raise Notify(1,1,msg)
 

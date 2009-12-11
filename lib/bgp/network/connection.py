@@ -77,11 +77,11 @@ class Connection (object):
 			return r
 		except socket.timeout:
 			self.close()
-			self.log.out(trace())
+			if self.debug: self.log.out(trace())
 			raise Failure('timeout attempting to read data from the network:  %s ' % str(e))
 		except socket.error,e:
 			self.close()
-			self.log.out(trace())
+			if self.debug: self.log.out(trace())
 			raise Failure('problem attempting to read data from the network:  %s ' % str(e))
 
 	def write (self,data):
@@ -94,7 +94,7 @@ class Connection (object):
 			# Broken pipe, we ignore as we want to make sure if there is data to read before failing
 			if getattr(e,'errno',None) != 32:
 				self.close()
-				self.log.out(trace())
+				if self.debug: self.log.out(trace())
 				raise Failure('problem attempting to write data to the network: %s' % str(e))
 
 	def close (self):

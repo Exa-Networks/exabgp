@@ -84,3 +84,9 @@ class Notification (Message,Failure):
 class Notify (Notification):
 	def message (self):
 		return self._message("%s%s%s" % (chr(self.code),chr(self.subcode),self.data))
+
+# =================================================================== Notify
+# We tried to read data when the connection is not established
+
+class NotConnected (Exception):
+	pass
