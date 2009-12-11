@@ -65,6 +65,10 @@ class Protocol (object):
 
 		data = self.connection.read(19)
 
+		# It seems that select tells us there is data even when there isn't
+		if not data:
+			raise NotConnected(self.neighbor.peer_address)
+
 		if data[:16] != Message.MARKER:
 			# We are speaking BGP - send us a valid Marker
 			raise Notify(1,1)
@@ -114,9 +118,6 @@ class Protocol (object):
 
 	def read_open (self,ip):
 		message = self.read_message()
-
-		if message.TYPE == NOP.TYPE:
-			raise NotConnected(ip)
 
 		if message.TYPE not in [Open.TYPE,]:
 			raise Notify(1,1,msg)

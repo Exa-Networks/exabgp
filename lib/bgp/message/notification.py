@@ -86,7 +86,7 @@ class Notify (Notification):
 		return self._message("%s%s%s" % (chr(self.code),chr(self.subcode),self.data))
 
 # =================================================================== Notify
-# We tried to read data when the connection is not established
+# We tried to read data when the connection is not established (as it seems select let us do that !)
 
 class NotConnected (Exception):
 	pass
