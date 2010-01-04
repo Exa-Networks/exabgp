@@ -13,7 +13,7 @@ I will gladly fix bugs if any are found, just contact me: thomas . mangin AT exa
 As the program is not intended to receive routing information and perform FIB manipulation it only partially implements:
  - RFC 1997 (BGP Communities Attribute)
  - RFC 2545 (Use of BGP-4 Multiprotocol Extensions for IPv6 Inter-Domain Routing)
- - RFC 4724 (Graceful Restart Mechanism for BGP) IPv4 Unicast ONLY ATM
+ - RFC 4724 (Graceful Restart Mechanism for BGP)
  - RFC 4760 (Multiprotocol Extensions for BGP-4, Obsoletes: 2858)
  - RFC 4271 (A Border Gateway Protocol 4 (BGP-4), Obsoletes: 1771)
  - RFC 5492 (Capabilities Advertisement with BGP-4, Obsoletes 3392,2842)
