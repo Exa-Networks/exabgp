@@ -13,6 +13,38 @@ from struct import *
 
 from bgp.utils import *
 
+# =================================================================== Protocol
+
+# http://www.iana.org/assignments/protocol-numbers/
+class Protcol (int):
+	ICMP  = 0x01
+	TCP   = 0x06
+	UDP   = 0x11
+	SCTP  = 0x84
+	
+	def __str__ (self):
+		if self == 0x01: return "ICMP"
+		if self == 0x06: return "TCP"
+		if self == 0x11: return "UDP"
+		if self == 0x84: return "SCTP"
+		return "unknown protocol"
+
+	def pack (self):
+		return chr(self)
+
+
+# =================================================================== ICMP Code Field
+
+# http://www.iana.org/assignments/protocol-numbers/
+class ICMP (int):
+	ECHO_REPLY               = 0x00
+	DESTINATION_UNREACHEABLE = 0x03
+	SOURCE_QUENCH            = 0x04
+	REDIRECT                 = 0x05
+	ECHO                     = 0x08
+	TIME_EXCEEDED            = 0x0B
+	TRACEROUTE               = 0x1E
+
 # =================================================================== AFI
 
 # http://www.iana.org/assignments/address-family-numbers/
@@ -50,8 +82,8 @@ class SAFI (int):
 	mpls_vpn = 128				# [RFC4364]
 #	mcast_bgp_mpls_vpn = 129	# [RFC2547]
 #	rt = 132					# [RFC4684]
-#	flow_ipv4 = 133				# [RFC5575]
-#	flow_vpnv4 = 134			# [RFC5575]
+	flow_ipv4 = 133				# [RFC5575]
+	flow_vpnv4 = 134			# [RFC5575]
 #
 #	vpn_ad = 140				# [draft-ietf-l3vpn-bgpvpn-auto]
 #
@@ -62,6 +94,8 @@ class SAFI (int):
 	def __str__ (self):
 		if self == 0x01: return "unicast"
 		if self == 0x02: return "multicast"
+		if self == 0x85: return "flow-ipv4"
+		if self == 0x86: return "flow-vpnv4"
 		return "unknown safi"
 
 	def pack (self):

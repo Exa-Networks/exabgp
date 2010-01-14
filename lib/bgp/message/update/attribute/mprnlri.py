@@ -21,6 +21,7 @@ class MPRNLRI (Attribute):
 	def __init__ (self,afi,safi,route):
 		Attribute.__init__(self,(afi,safi,route))
 
+	# XXX: For flow route we may have to really remove the NEXT_HOP which is recommended anyway
 	def pack (self):
 		afi,safi,route = self.value
 		nlri = route.nlri.pack()
@@ -36,23 +37,3 @@ class MPRNLRI (Attribute):
 
 	def __str__ (self):
 		return "MP Reacheable NLRI %s" % str(self.value)
-
-## The past :)
-##		message += self._attribute(Flag.TRANSITIVE,ORIGIN,Origin(Origin.IGP).pack())
-##		message += self._attribute(Flag.TRANSITIVE,AS_PATH,'' if local_asn == peer_asn else self._segment(ASPath.AS_SEQUENCE,[local_asn]))
-##		if local_asn == peer_asn:
-##			message += self._attribute(Flag.TRANSITIVE,LOCAL_PREFERENCE,self.local_preference.pack())
-##		message += self._attribute(Flag.TRANSITIVE|Flag.OPTIONAL,COMMUNITY,''.join([c.pack() for c in self.communities])) if self.communities else ''
-##		if self.nlri.afi == AFI.ipv4:
-##			message += self._attribute(Flag.TRANSITIVE,NEXT_HOP,self.next_hop.pack())
-##		if self.nlri.afi == AFI.ipv6:
-##			if mp_action == '-':
-##				attr = AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + Prefix.pack(self)
-##				message += self._attribute(Flag.TRANSITIVE,MP_UNREACH_NLRI,attr)
-##			if mp_action == '+':
-##				prefix = self.nlri.pack()
-##				next_hop = self.next_hop.pack()
-##				attr = AFI(AFI.ipv6).pack() + SAFI(SAFI.unicast).pack() + chr(len(next_hop)) + next_hop + chr(0) + prefix
-##				message += self._attribute(Flag.TRANSITIVE,MP_REACH_NLRI,attr)
-##		return message
-#

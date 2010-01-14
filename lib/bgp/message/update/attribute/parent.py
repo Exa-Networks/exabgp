@@ -18,18 +18,20 @@ class Attribute (object):
 
 	# This should move within the classes and not be here
 	# RFC 4271
-	ORIGIN           = 0x01
-	AS_PATH          = 0x02
-	NEXT_HOP         = 0x03
-	MULTI_EXIT_DISC  = 0x04
-	LOCAL_PREFERENCE = 0x05
-	ATOMIC_AGGREGATE = 0x06
-	AGGREGATOR       = 0x07
+	ORIGIN             = 0x01
+	AS_PATH            = 0x02
+	NEXT_HOP           = 0x03
+	MULTI_EXIT_DISC    = 0x04
+	LOCAL_PREFERENCE   = 0x05
+	ATOMIC_AGGREGATE   = 0x06
+	AGGREGATOR         = 0x07
 	# RFC 1997
-	COMMUNITY        = 0x08
+	COMMUNITY          = 0x08
+	# RFC 4360
+	EXTENDED_COMMUNITY = 0x10
 	# RFC 4760
-	MP_REACH_NLRI    = 0x0e # 14
-	MP_UNREACH_NLRI  = 0x0f # 15
+	MP_REACH_NLRI      = 0x0e # 14
+	MP_UNREACH_NLRI    = 0x0f # 15
 
 	def __init__ (self,value):
 		self.value = value
