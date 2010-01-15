@@ -9,7 +9,7 @@ Copyright (c) 2010 Exa Networks. All rights reserved.
 
 import unittest
 
-from bgp.message.update import flow
+from bgp.message.update.flow import *
 
 class TestFlow (unittest.TestCase):
 
@@ -17,69 +17,41 @@ class TestFlow (unittest.TestCase):
 		pass
 
 	def test_source (self):
-		self.policy = flow.Policy()
-		self.policy.add(flow.Destination("192.0.2.0",24))
-		print self.policy.pack()
+		components = {
+			'destination': Destination("192.0.2.0",24),
+			'source'     : Source("10.1.2.0",24),
+			'anyport_1'  : AnyPort(NumericOperator.EQ,25),
+		}
+		messages = {
+			'destination': [0x01, 0x04, 0x18, 0xc0, 0x00, 0x02],
+			'source'     : [0x02, 0x04, 0x18, 0x0a, 0x01, 0x02],
+			'anyport_1'  : [0x04, 0x01, 0x19],  
+		}
 		
+		for key in components.keys():
+			component = components[key].pack()
+			message   = ''.join((chr(_) for _ in messages[key]))
+			if component != message:
+				self.fail('failed test %s\n%s\n%s\n' % (key, [hex(ord(_)) for _ in component], [hex(ord(_)) for _ in message]))
+
 		
+		components = {
+			'source_dest_port' : [Destination("192.0.2.0",24), Source("10.1.2.0",24), AnyPort(NumericOperator.EQ,25)],
+		}
+
+		messages = {
+			'source_dest_port' : [0x0f, 0x01, 0x04, 0x18, 0xc0, 0x00, 0x02, 0x02, 0x04, 0x18, 0x0a, 0x01, 0x02, 0x04, 0x81, 0x19],
+		}
 		
-#		self.table = Table()
-#		self.table.update(routes)
-#		changed = [(t,r) for (t,r) in self.table.changed(self.now) if t]
-#		self.failIf(('+',routes[0]) not in changed)
-#		self.failIf(('+',routes[1]) not in changed)
-#		self.failIf('-' in [t for t,r in self.table.changed(self.now) if t])
-#
-#	def test_2_del_all_but_1 (self):
-#		self.table = Table()
-#
-#		self.table.update(routes)
-#		changed = [(t,r) for (t,r) in self.table.changed(self.now) if t]
-#		self.failIf(('+',routes[0]) not in changed)
-#		self.failIf(('+',routes[1]) not in changed)
-#
-#		self.table.update([routes[1]])
-#		self.failIf(('-',routes[0]) not in [(t,r) for (t,r) in self.table.changed(self.now) if t])
-#		self.failIf(('+',routes[1]) not in [(t,r) for (t,r) in self.table.changed(self.now) if t])
-#		self.failIf(('-',routes[2]) not in [(t,r) for (t,r) in self.table.changed(self.now) if t])
-#
-#
-#	def test_3_del_all (self):
-#		self.table = Table()
-#
-#		self.table.update(routes)
-#		changed = [(t,r) for (t,r) in self.table.changed(self.now) if t]
-#		self.failIf(('+',routes[0]) not in changed)
-#		self.failIf(('+',routes[1]) not in changed)
-#
-#		self.table.update([])
-#		self.failIf('+' in [t for (t,r) in self.table.changed(self.now) if t])
-#		self.failIf(('-',routes[0]) not in [(t,r) for (t,r) in self.table.changed(self.now) if t])
-#		self.failIf(('-',routes[1]) not in [(t,r) for (t,r) in self.table.changed(self.now) if t])
-#		self.failIf(('-',routes[2]) not in [(t,r) for (t,r) in self.table.changed(self.now) if t])
-#
-#	def test_4_multichanges (self):
-#		self.table = Table()
-#
-#		self.table.update(routes)
-#		changed = [(t,r) for (t,r) in self.table.changed(self.now) if t]
-#		self.failIf(('+',routes[0]) not in changed)
-#		self.failIf(('+',routes[1]) not in changed)
-#
-#		self.table.update([routes[1]])
-#		print '-------------------------'
-#		print 
-#		print [(t,r) for (t,r) in self.table.changed(self.now) if t]
-#		print
-#		self.failIf(('-',routes[0]) not in [(t,r) for (t,r) in self.table.changed(self.now) if t])
-#		self.failIf(('+',routes[1]) not in [(t,r) for (t,r) in self.table.changed(self.now) if t])
-#		self.failIf(('-',routes[2]) not in [(t,r) for (t,r) in self.table.changed(self.now) if t])
-#
-#		self.table.update(routes)
-#		changed = [(t,r) for (t,r) in self.table.changed(self.now) if t]
-#		self.failIf(('+',routes[0]) not in [(t,r) for (t,r) in self.table.changed(self.now) if t])
-#		self.failIf(('+',routes[1]) not in [(t,r) for (t,r) in self.table.changed(self.now) if t])
-#		self.failIf(('+',routes[2]) not in [(t,r) for (t,r) in self.table.changed(self.now) if t])
+		for key in components.keys():
+			policy = Policy()
+			for component in components[key]:
+				policy.add_and(component)
+			flow = policy.flow()
+			update = flow.announce(0,0)
+			message   = ''.join((chr(_) for _ in messages[key]))
+			if update != message:
+				self.fail('failed test %s\n%s\n%s\n' % (key, [hex(ord(_)) for _ in update], [hex(ord(_)) for _ in message]))
 
 if __name__ == '__main__':
 	unittest.main()

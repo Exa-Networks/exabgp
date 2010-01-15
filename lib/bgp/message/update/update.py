@@ -184,7 +184,8 @@ class Route (object):
 	def announce (self,local_asn,remote_asn):
 		attributes = Attributes(self.attributes.copy())
 		if self.nlri.afi == AFI.ipv4:
-			attributes[Attribute.NEXT_HOP] = to_NextHop(self.next_hop.ip())
+			if self.nlri.safi == SAFI.unicast:
+				attributes[Attribute.NEXT_HOP] = to_NextHop(self.next_hop.ip())
 			return Update(NLRIS(),NLRIS([self.nlri]),attributes).announce(local_asn,remote_asn)
 		if self.nlri.afi == AFI.ipv6:
 			attributes[Attribute.MP_REACH_NLRI] = MPRNLRI(AFI(self.nlri.afi),SAFI(self.nlri.safi),self)

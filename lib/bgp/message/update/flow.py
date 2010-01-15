@@ -9,7 +9,7 @@ Copyright (c) 2010 Exa Networks. All rights reserved.
 
 from bgp.utils import *
 from bgp.message.inet import AFI,SAFI,to_NLRI
-from bgp.message.update.attribute.mprnlri import MPRNLRI
+from bgp.message.update.update import Route,MPRNLRI
 
 # =================================================================== Flow Components
 
@@ -22,19 +22,18 @@ class CommonOperator:
 	# power (2,x) is the same as 1 << x which is what the RFC say the len is
 	power = { 0:1, 1:2, 2:4, 3:8, }
 	rewop = { 1:0, 2:1, 4:2, 8:3, }
+	len_position = 0x30
 
 	EOL       = 0x80
 	AND       = 0x40
 
 class NumericOperator (CommonOperator):
-#	len_value = 0x30
 #	reserved  = 0x08
 	LT        = 0x04
 	GT        = 0x02
 	EQ        = 0x01
 
 class BinaryOperator (CommonOperator):
-#	len_value = 0x30
 #	reserved  = 0x0C
 	NOT       = 0x02
 	MATCH     = 0x01
@@ -43,7 +42,7 @@ def _len_to_bit (value):
 	return NumericOperator.rewop[value] << 4
 
 def _bit_to_len (value):
-	return NumericOperator.power[(value & self.LEN) >> 4]
+	return NumericOperator.power[(value & CommonOperator.len_position) >> 4]
 
 class Fragments:
 #	reserved  = 0xF0
@@ -74,8 +73,8 @@ class IOperation (IComponent):
 
 	def pack (self):
 		l,v = self.encode(self.value)
-		op = self.operations & _len_to_bit(l)
-		return "%s%s%s" % (chr(self.ID),op,v)
+		op = self.operations | _len_to_bit(l)
+		return "%s%s%s" % (chr(self.ID),chr(op),v)
 
 class IOperationIPv4 (IOperation):
 	def encode (self,value):
@@ -140,20 +139,38 @@ class Fragment (IOperationByteShort):
 
 # ..........................................................
 
-class _DummyRoute (object):
-	def __init__ (self):
+class _DummyPrefix (object):
+	def __init__ (self,parent):
+		self.parent = parent
+	
+	def pack (self):
+		return self.parent._pack()
+
+class _DummyNH (object):
+	def pack (self):
+		return ""
+
+class _DummyNLRI (object):
+	def __init__ (self,afi,safi):
 		self.data = []
+		self.afi = afi
+		self.safi = safi
+		self.nlri = _DummyPrefix(self)
+		self.next_hop = _DummyNH()
 	
 	def add (self,data):
 		self.data.append(data)
 	
-	def pack (self):
+	def _pack (self):
 		components = ''.join(self.data)
 		l = len(components)
-		if l < 0xf0:
+		if l < 0xF0:
 			size = chr(l)
+		elif l < 0x0FFF:
+			size = pack('!H',l) | 0xF000
 		else:
-			size = pack('!H',l & 0xF000) 
+			print "rule too big for NLRI - how to handle this - does this work ?"
+			return "%s" % (chr(0))
 		return "%s%s" % (size,components)
 	
 	def __str__ (self):
@@ -164,14 +181,27 @@ class _DummyRoute (object):
 
 class Policy (object):
 	def __init__ (self,safi=SAFI.flow_ipv4):
-		self.safi = safi
+		self.afi = AFI(AFI.ipv4)
+		self.safi = SAFI(safi)
 		self.rules = {}
+		self.last = -1
 
-	def add (self,rule):
-		self.rules.setdefault(rule.ID,[]).append(rule)
+	def add_and (self,rule):
+		ID = rule.ID
+		if self.last > 0:
+			self.rules[ID][-1] |= CommonOperator.AND
+		self.rules.setdefault(ID,[]).append(rule)
+		return True
 
-	def pack (self):
-		components = _DummyRoute()
+	def add_or (self,rule):
+		ID = rule.ID
+		if ID in [flow.Destination, flow.Source]:
+			return False
+		self.rules.setdefault(ID,[]).append(rule)
+		return True
+
+	def flow (self):
+		nlri = _DummyNLRI(self.afi,self.safi)
 		# get all the possible type of component
 		IDS = self.rules.keys()
 		# the RFC order is the best to use for packing
@@ -182,11 +212,13 @@ class Policy (object):
 			# the format use does not prevent two opposing rules meaning that no packet can ever match
 			for rule in rules:
 				# clear the EOL if it has been set (it should not have been done.)
-				rule.operations &= (not CommonOperator.EOL)
+				rule.operations &= (CommonOperator.EOL ^ 0xFF)
 			# and add it to the last rule
-			rules[-1].operations &= CommonOperator.EOL
+			rules[-1].operations |= CommonOperator.EOL
 			
 			for rule in rules:
-				components.add(rule.pack())
+				nlri.add(rule.pack())
 		
-		return MPRNLRI(AFI.ipv4,self.safi,components)
+		route = Route(MPRNLRI(self.afi,self.safi,nlri))
+		#route.attributes.append()
+		return route

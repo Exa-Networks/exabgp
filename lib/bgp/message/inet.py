@@ -123,8 +123,9 @@ class IP (object):
 	}
 
 	def __init__ (self,pip,afi,safi,ip=None):
-		self.afi = afi
-		self.safi = safi
+		# XXX: Add a check to make sure it is Unicast(/Multicast?) 
+		self.afi = AFI(afi)
+		self.safi = SAFI(safi)
 		self.pip = pip
 		self._ip = ip
 
@@ -190,20 +191,11 @@ class NLRI (IP):
 	}
 
 	def __init__ (self,raw,afi,safi):
-		self.afi = afi
-		self.safi = safi
+		self.afi = AFI(afi)
+		self.safi = SAFI(safi)
 		self.raw = raw
 		self._ip = None
 		self._mask = None
-
-	def _cache (self):
-		if not self._ip:
-			if self.afi == AFI.ipv4:
-				self._ip = socket.inet_ntop(self._af[self.afi],self.raw[1:] + '\0'*(5-len(self.raw)))
-			else:
-				self._ip = socket.inet_ntop(self._af[self.afi],self.raw[1:] + '\0'*(17-len(self.raw)))
-			self._mask = ord(self.raw[0])
-		return self._ip, self._mask
 
 	def ip (self):
 		if self.afi == AFI.ipv4: l = 5
@@ -223,7 +215,18 @@ class NLRI (IP):
 			self.raw == other.raw
 
 	def __str__ (self):
-		return "%s/%d" % self._cache()
+		if not self._ip:
+			if self.afi == AFI.ipv4:
+				self._ip = socket.inet_ntop(self._af[self.afi],self.raw[1:] + '\0'*(5-len(self.raw)))
+				self._mask = ord(self.raw[0])
+			if self.afi == AFI.ipv6:
+				self._ip = socket.inet_ntop(self._af[self.afi],self.raw[1:] + '\0'*(17-len(self.raw)))
+				self._mask = ord(self.raw[0])
+
+		if self.afi in [AFI.ipv4,AFI.ipv6]:
+			return "NLRI %s/%s %s/%d" % (str(self.afi),str(self.safi), self._ip,self._mask)
+		else:
+			return "NLRI %s/%s [%s]" % (hex(self.afi),hex(self.safi),''.join([hex(ord(_)) for _ in self.raw]))
 
 	def __len__ (self):
 		return len(self.raw)

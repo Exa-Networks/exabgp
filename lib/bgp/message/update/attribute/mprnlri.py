@@ -19,14 +19,16 @@ class MPRNLRI (Attribute):
 	MULTIPLE = True
 
 	def __init__ (self,afi,safi,route):
-		Attribute.__init__(self,(afi,safi,route))
+		Attribute.__init__(self,route)
+		self.afi = AFI(afi)
+		self.safi = SAFI(safi)
 
 	def pack (self):
-		afi,safi,route = self.value
+		route = self.value
 		nlri = route.nlri.pack()
 		next_hop = route.next_hop.pack()
 		return self._attribute(
-			afi.pack() + safi.pack() + 
+			self.afi.pack() + self.safi.pack() + 
 			chr(len(next_hop)) + next_hop + 
 			chr(0) + nlri
 		)
