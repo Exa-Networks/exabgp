@@ -259,7 +259,7 @@ class Configuration (object):
 			if holdtime < 0:
 				raise ValueError('holdtime can not be negative')
 			if holdtime >= pow(2,16):
-				raise ValueError('holdtime can not be negative')
+				raise ValueError('holdtime must be smaller than %d' % pow(2,16))
 			self._scope[-1][command] = holdtime
 			return True
 		except ValueError:
@@ -277,7 +277,7 @@ class Configuration (object):
 			if grace < 0:
 				raise ValueError('graceful-restart can not be negative')
 			if grace >= pow(2,16):
-				raise ValueError('graceful-restart can not be negative')
+				raise ValueError('graceful-restart must be smaller than %d' % pow(2,16))
 			self._scope[-1][command] = grace
 			return True
 		except ValueError:
