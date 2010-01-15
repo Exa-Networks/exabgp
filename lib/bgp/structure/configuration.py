@@ -203,8 +203,8 @@ class Configuration (object):
 		if neighbor.local_address.afi != neighbor.peer_address.afi:
 			self._error = 'local-address and peer-address must be of the same family'
 			return False 
-		if self._neighbor.has_key(neighbor.peer_address):
-			self_error = 'duplicate peer definition %s' % neighbor.peer_address
+		if self._neighbor.has_key(neighbor.peer_address.ip()):
+			self_error = 'duplicate peer definition %s' % neighbor.peer_address.ip()
 			return False
 		self._neighbor[neighbor.peer_address.ip()] = neighbor
 		return True

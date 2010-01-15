@@ -11,5 +11,3 @@ For incomming messages:
  - all the XXX: and FIXME: in the code
 
 The update unitest suffer from our bad includes (include loop), so update.py contains lots of code
-
-It is possible to have two connections to the same routers with the same source IP, forbid it.
