@@ -8,7 +8,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 from bgp.utils import *
-from bgp.message.inet import AFI,SAFI
+from bgp.structure.family import AFI,SAFI
 from bgp.message.update.attribute.parent import Attribute,Flag
 
 # =================================================================== MP Unreacheable NLRI (15)

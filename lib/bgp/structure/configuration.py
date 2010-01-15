@@ -9,7 +9,8 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 import re
 
-from bgp.message.inet         import AFI,to_ASN,to_IP
+from bgp.message.inet         import AFI,to_IP
+from bgp.structure.asn        import to_ASN
 from bgp.structure.neighbor   import Neighbor
 from bgp.message.open         import HoldTime
 from bgp.message.update       import to_Route, Attributes

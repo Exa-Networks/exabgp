@@ -14,9 +14,9 @@ import struct
 import socket
 import select
 
-from bgp.utils          import *
-from bgp.message.inet   import AFI
-from bgp.message.parent import Failure
+from bgp.utils            import *
+from bgp.structure.family import AFI
+from bgp.message.parent   import Failure
 
 class Connection (object):
 	debug = False

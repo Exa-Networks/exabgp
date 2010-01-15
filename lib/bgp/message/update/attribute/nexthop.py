@@ -10,7 +10,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 import socket
 
 from bgp.utils import *
-from bgp.message.inet import AFI,SAFI
+from bgp.structure.family import AFI,SAFI
 from bgp.message.inet import to_IP, IP
 from bgp.message.update.attribute.parent import Attribute,Flag
 

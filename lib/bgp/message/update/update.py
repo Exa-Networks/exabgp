@@ -12,7 +12,8 @@ from bgp.utils import *
 
 
 from bgp.utils import *
-from bgp.message.inet         import AFI, SAFI, to_NLRI, new_NLRI, NLRI, to_IP, IP
+from bgp.structure.family     import AFI, SAFI
+from bgp.message.inet         import to_NLRI, new_NLRI, NLRI, to_IP, IP
 from bgp.message.parent       import Message,prefix,defix
 
 from bgp.message.update.attribute.origin      import *	# 01

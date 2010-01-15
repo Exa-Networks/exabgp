@@ -8,7 +8,8 @@ Copyright (c) 2010 Exa Networks. All rights reserved.
 """
 
 from bgp.utils import *
-from bgp.message.inet import AFI,SAFI,to_NLRI
+from bgp.structure.family import AFI,SAFI
+from bgp.message.inet import to_NLRI
 from bgp.message.update.update import Route,MPRNLRI
 
 # =================================================================== Flow Components
