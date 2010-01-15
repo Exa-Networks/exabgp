@@ -21,7 +21,6 @@ class MPRNLRI (Attribute):
 	def __init__ (self,afi,safi,route):
 		Attribute.__init__(self,(afi,safi,route))
 
-	# XXX: For flow route we may have to really remove the NEXT_HOP which is recommended anyway
 	def pack (self):
 		afi,safi,route = self.value
 		nlri = route.nlri.pack()

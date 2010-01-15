@@ -112,8 +112,9 @@ class Update (Message):
 
 		if Attribute.NEXT_HOP in attributes:
 			message += self.attributes[Attribute.NEXT_HOP].pack()
-		elif self.attributes.autocomplete:
-			message += to_NextHop('0.0.0.0').pack()
+#		XXX: This autocomplete SHOULD be uncessary and even possibly harmful
+#		elif self.attributes.autocomplete:
+#			message += to_NextHop('0.0.0.0').pack()
 
 		if Attribute.LOCAL_PREFERENCE in attributes:
 			if local_asn == peer_asn:
