@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-set.py
+parser.py
 
 Created by Thomas Mangin on 2010-01-16.
 Copyright (c) 2010 Exa Networks. All rights reserved.
@@ -13,6 +13,7 @@ from bgp.structure.afi import AFI
 from bgp.structure.safi import SAFI
 from bgp.message.update.attribute.flag import Flag
 from bgp.message.update.attribute import Attribute
+from bgp.message.update.attributes import Attributes
 
 from bgp.message.update.attribute.origin      import *	# 01
 from bgp.message.update.attribute.aspath      import *	# 02
@@ -26,56 +27,18 @@ from bgp.message.update.attribute.communities import *	# 08
 # =================================================================== Attributes
 
 def new_Attributes (data):
-	attributes = Attributes()
-	attributes.new(data)
-	return attributes
+	try:
+		parser = Parser()
+		parser.parse(data)
+		return parser.attributes
+	except IndexError:
+		raise Notify(3,2,data)
 
-class MultiAttributes (list):
-	def __init__ (self,attribute):
-		self.ID = attribute.ID
-		self.FLAG = attribute.FLAG
-		self.MULTIPLE = True
-		self.append(attribute)
-
-	def pack (self):
-		r = []
-		for attribute in self:
-			r.append(attribute.pack())
-		return ''.join(r)
-
-	def __len__ (self):
-		return len(self.pack())
-
-	def __str__ (self):
-		return "MultiAttribute"
-
-class Attributes (dict):
-	autocomplete = True
+class Parser (object):
+	def __init__ (self):
+		self.attributes = Attributes()
 	
-	def has (self,k):
-		return self.has_key(k)
-
-	def add (self,attribute):
-		if self.has(attribute.ID):
-			if attribute.MULTIPLE:
-				self[attribute.ID].append(attribute)
-				return True
-			return False
-		else:
-			if attribute.MULTIPLE:
-				self[attribute.ID] = MultiAttributes(attribute)
-			else:
-				self[attribute.ID] = attribute
-			return True
-
-	def new (self,data):
-		try:
-			return self._new(data)
-		except IndexError:
-			raise
-			raise Notify(3,2,data)
-
-	def _new (self,data):
+	def parse (self,data):
 		if not data:
 			return self
 
@@ -93,39 +56,39 @@ class Attributes (dict):
 		data = data[offset:]
 
 		if not length:
-			return self.new(data[length:])
+			return self.parse(data[length:])
 
 		if code == Attribute.ORIGIN:
-			self.add(new_Origin(data))
-			return self.new(data[length:])
+			self.attributes.add(new_Origin(data))
+			return self.parse(data[length:])
 
 		if code == Attribute.AS_PATH:
-			self.add(new_ASPath(data))
-			return self.new(data[length:])
+			self.attributes.add(new_ASPath(data))
+			return self.parse(data[length:])
 
 		if code == Attribute.NEXT_HOP:
-			self.add(new_NextHop(data[:4]))
-			return self.new(data[length:])
+			self.attributes.add(new_NextHop(data[:4]))
+			return self.parse(data[length:])
 
 		if code == Attribute.MULTI_EXIT_DISC:
-			self.add(new_MED(data))
-			return self.new(data[length:])
+			self.attributes.add(new_MED(data))
+			return self.parse(data[length:])
 
 		if code == Attribute.LOCAL_PREFERENCE:
-			self.add(new_LocalPreference(data))
-			return self.new(data[length:])
+			self.attributes.add(new_LocalPreference(data))
+			return self.parse(data[length:])
 
 		if code == Attribute.ATOMIC_AGGREGATE:
 			# ignore
-			return self.new(data[length:])
+			return self.parse(data[length:])
 
 		if code == Attribute.AGGREGATOR:
 			# content is 6 bytes
-			return self.new(data[length:])
+			return self.parse(data[length:])
 
 		if code == Attribute.COMMUNITY:
-			self.add(new_Communities(data))
-			return self.new(data[length:])
+			self.attributes.add(new_Communities(data))
+			return self.parse(data[length:])
 
 		if code == Attribute.MP_UNREACH_NLRI:
 			next_attributes = data[length:]
@@ -135,14 +98,14 @@ class Attributes (dict):
 			# XXX: See RFC 5549 for better support
 			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
 				print 'we only understand IPv4/IPv6 and should never have received this route (%s %s)' % (afi,safi)
-				return self.new(next_attributes)
+				return self.parse(next_attributes)
 			data = data[offset:]
 			while data:
 				route = new_NLRI(data,afi)
 				data = data[len(route.nlri):]
-				self.add(MPURNLRI(AFI(afi),SAFI(safi),route))
+				self.attributes.add(MPURNLRI(AFI(afi),SAFI(safi),route))
 				print 'removing MP route %s' % str(route)
-			return self.new(next_attributes)
+			return self.parse(next_attributes)
 
 		if code == Attribute.MP_REACH_NLRI:
 			next_attributes = data[length:]
@@ -151,17 +114,17 @@ class Attributes (dict):
 			offset = 3
 			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
 				print 'we only understand IPv4/IPv6 and should never have received this route (%s %s)' % (afi,safi)
-				return self.new(next_attributes)
+				return self.parse(next_attributes)
 			len_nh = ord(data[offset])
 			offset += 1
 			if afi == AFI.ipv4 and not len_nh != 4:
 				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
 				print 'bad IPv4 next-hop length (%d)' % len_nh
-				return self.new(next_attributes)
+				return self.parse(next_attributes)
 			if afi == AFI.ipv6 and not len_nh in (16,32):
 				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
 				print 'bad IPv6 next-hop length (%d)' % len_nh
-				return self.new(next_attributes)
+				return self.parse(next_attributes)
 			nh = data[offset:offset+len_nh]
 			offset += len_nh
 			if len_nh == 32:
@@ -185,11 +148,11 @@ class Attributes (dict):
 				route = new_Route(data,afi)
 				route.next_hop = nh
 				data = data[len(route.nlri):]
-				self.add(MPRNLRI(AFI(afi),SAFI(safi),route))
+				self.attributes.add(MPRNLRI(AFI(afi),SAFI(safi),route))
 				print 'adding MP route %s' % str(route)
-			return self.new(next_attributes)
+			return self.parse(next_attributes)
 
 		import warnings
 		warnings.warn("Could not parse attribute %s" % str(code))
-		return self.new(data[length:])
+		return self.parse(data[length:])
 

@@ -11,7 +11,7 @@ from bgp.structure.afi  import AFI
 from bgp.structure.safi import SAFI
 from bgp.message.update import Update
 from bgp.message.update.attribute.mpurnlri import MPURNLRI
-from bgp.message.update.attribute.set import Attributes
+from bgp.message.update.attributes import Attributes
 
 # =================================================================== End-Of-Record
 

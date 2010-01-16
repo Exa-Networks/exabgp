@@ -16,7 +16,7 @@ from bgp.structure.safi import SAFI
 from bgp.structure.ip import to_Prefix
 from bgp.message.parent import Message,prefix,defix
 
-from bgp.message.update.attribute.set import new_Attributes
+from bgp.message.update.parser import new_Attributes
 
 from bgp.message.update.attribute.origin      import *	# 01
 from bgp.message.update.attribute.aspath      import *	# 02
