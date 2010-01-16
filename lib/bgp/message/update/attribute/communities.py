@@ -11,7 +11,7 @@ import socket
 from struct import pack,unpack
 
 from bgp.utils import *
-from bgp.message.update.attribute.parent import Attribute,Flag
+from bgp.message.update.attribute import Attribute,Flag
 
 # =================================================================== Community
 

@@ -13,7 +13,7 @@ from bgp.utils import *
 from bgp.structure.afi import AFI
 from bgp.structure.safi import SAFI
 from bgp.message.inet import to_IP, IP
-from bgp.message.update.attribute.parent import Attribute,Flag
+from bgp.message.update.attribute import Attribute,Flag
 
 # =================================================================== NextHop (3)
 

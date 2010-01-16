@@ -18,7 +18,8 @@ from bgp.utils                import *
 from bgp.message.parent       import Message,Failure
 from bgp.message.nop          import new_NOP
 from bgp.message.open         import new_Open,Open,Parameter,Capabilities,RouterID
-from bgp.message.update       import new_Update,Update,EOR
+from bgp.message.update       import new_Update,Update
+from bgp.message.update.eor   import EOR
 from bgp.message.keepalive    import new_KeepAlive,KeepAlive
 from bgp.message.notification import Notification, Notify, NotConnected
 from bgp.network.connection   import Connection
