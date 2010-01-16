@@ -9,7 +9,8 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 import socket
 import math
-from bgp.structure.family import AFI,SAFI
+from bgp.structure.afi import AFI
+from bgp.structure.safi import SAFI
 
 # =================================================================== IP
 
