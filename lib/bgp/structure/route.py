@@ -13,7 +13,7 @@ from bgp.structure.safi import SAFI
 from bgp.message.inet import to_NLRI,to_IP
 from bgp.message.update import Update,NLRIS
 
-from bgp.message.update.attribute.set import Attributes
+from bgp.message.update.attributes import Attributes
 from bgp.message.update.attribute import Attribute
 
 from bgp.message.update.attribute.nexthop     import to_NextHop

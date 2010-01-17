@@ -18,7 +18,7 @@ from bgp.structure.neighbor   import Neighbor
 from bgp.message.open         import HoldTime
 #from bgp.message.update       import to_Route, Attributes
 from bgp.structure.route      import to_Route
-from bgp.message.update.attribute.set         import Attributes
+from bgp.message.update.attributes         import Attributes
 from bgp.message.update.attribute.origin      import to_Origin
 from bgp.message.update.attribute.aspath      import ASPath
 from bgp.message.update.attribute.med         import MED
