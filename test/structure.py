@@ -47,16 +47,20 @@ class TestData (unittest.TestCase):
 
 	def test_xxx (self):
 		ip = "192.0.2.0"
-		bgp = chr(24) + chr (192) + chr(0) + chr(2)
 		net  = chr (192) + chr(0) + chr(2) +chr(0)
+		bnt = chr(24) + chr (192) + chr(0) + chr(2)
 
-		pfx = Prefix(AFI.ipv4,SAFI.unicast,"192.0.2.0",24)
-		afi = AFIPrefix(AFI.ipv4,SAFI.unicast,net,24)
-		bgp = BGPPrefix(AFI.ipv4,SAFI.unicast,bgp)
+		pfx = Prefix(AFI.ipv4,ip,24)
+		afi = AFIPrefix(AFI.ipv4,net,24)
+		bgp = BGPPrefix(AFI.ipv4,bnt)
 
 		self.assertEqual(str(pfx),"%s/24" % ip)
-		self.assertEqual(str(pfx),afi,"%s/24" % ip)
-		self.assertEqual(str(pfx),bgp,"%s/24" % ip)
+		self.assertEqual(str(afi),"%s/24" % ip)
+		self.assertEqual(str(bgp),"%s/24" % ip)
+
+		self.assertEqual(pfx.pack(),bnt)
+		self.assertEqual(afi.pack(),bnt)
+		self.assertEqual(bgp.pack(),bnt)
 
 # XXX: NEED To add ASN test
 # XXX: NEED To add NLRI test
