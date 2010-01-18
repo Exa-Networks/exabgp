@@ -14,7 +14,6 @@ import socket
 from bgp.interface import IByteStream
 from bgp.structure.afi import AFI
 from bgp.structure.safi import SAFI
-from bgp.structure.nlri import NLRI
 
 _bgp = {}
 for mask in range(0,129):

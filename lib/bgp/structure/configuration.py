@@ -399,7 +399,7 @@ class Configuration (object):
 
 	def _route_origin (self,tokens):
 		try:
-			self._scope[-1]['routes'][-1].attributes.add(to_Origin(tokens.pop(0)))
+			self._scope[-1]['routes'][-1].add(to_Origin(tokens.pop(0)))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -435,12 +435,12 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
-		self._scope[-1]['routes'][-1].attributes.add(aspath)
+		self._scope[-1]['routes'][-1].add(aspath)
 		return True
 
 	def _route_med (self,tokens):
 		try:
-			self._scope[-1]['routes'][-1].attributes.add(MED(int(tokens.pop(0))))
+			self._scope[-1]['routes'][-1].add(MED(int(tokens.pop(0))))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -449,7 +449,7 @@ class Configuration (object):
 
 	def _route_local_preference (self,tokens):
 		try:
-			self._scope[-1]['routes'][-1].attributes.add(LocalPreference(int(tokens.pop(0))))
+			self._scope[-1]['routes'][-1].add(LocalPreference(int(tokens.pop(0))))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -480,5 +480,5 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
-		self._scope[-1]['routes'][-1].attributes.add(communities)
+		self._scope[-1]['routes'][-1].add(communities)
 		return True
