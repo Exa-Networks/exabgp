@@ -8,12 +8,10 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 
-from bgp.message.inet         import to_NLRI, new_NLRI, NLRI, to_IP, IP
-
 from bgp.utils import *
 from bgp.structure.afi import AFI
 from bgp.structure.safi import SAFI
-from bgp.structure.ip import to_Prefix
+from bgp.structure.ip import BGPPrefix
 from bgp.message.parent import Message,prefix,defix
 
 from bgp.message.update.parser import new_Attributes
@@ -58,7 +56,7 @@ def new_Update (data):
 
 		remove = NLRIS()
 		while withdrawn:
-			nlri = new_NLRI(withdrawn)
+			nlri = BGPPrefix(AFI.ipv4,withdrawn)
 			withdrawn = withdrawn[len(nlri):]
 			remove.append(Update(nlri,'-'))
 
@@ -66,7 +64,7 @@ def new_Update (data):
 
 		announce = NLRIS()
 		while announced:
-			nlri = new_NLRI(announced)
+			nlri = BGPPrefix(AFI.ipv4,announced)
 			announced = announced[len(nlri):]
 			announce.append(nlri)
 
@@ -108,9 +106,6 @@ class Update (Message):
 
 		if Attribute.NEXT_HOP in attributes:
 			message += self.attributes[Attribute.NEXT_HOP].pack()
-#		XXX: This autocomplete SHOULD be uncessary and even possibly harmful
-#		elif self.attributes.autocomplete:
-#			message += to_NextHop('0.0.0.0').pack()
 
 		if Attribute.LOCAL_PREFERENCE in attributes:
 			if local_asn == peer_asn:

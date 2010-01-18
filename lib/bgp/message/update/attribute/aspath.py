@@ -11,9 +11,6 @@ from struct import pack,unpack
 
 from bgp.utils                import *
 from bgp.message.update.attribute import Attribute,Flag
-#from bgp.message.inet         import *
-#from bgp.message.parent       import *
-#from bgp.message.notification import Notify
 
 # =================================================================== ASPath (2)
 

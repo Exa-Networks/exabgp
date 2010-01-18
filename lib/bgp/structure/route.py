@@ -9,8 +9,8 @@ Copyright (c) 2010 Exa Networks. All rights reserved.
 
 from bgp.structure.afi import AFI
 from bgp.structure.safi import SAFI
+from bgp.structure.ip import to_Prefix,to_IP
 
-from bgp.message.inet import to_NLRI,to_IP
 from bgp.message.update import Update,NLRIS
 
 from bgp.message.update.attributes import Attributes
@@ -24,7 +24,7 @@ from bgp.message.update.attribute.mpurnlri    import MPURNLRI
 # =================================================================== Route
 
 def to_Route (ip,netmask):
-	return Route(to_NLRI(ip,netmask))
+	return Route(to_Prefix(ip,netmask))
 
 def new_Route (data,afi):
 	nlri = new_NLRI(data,afi)
@@ -44,8 +44,7 @@ class Route (object):
 	def announce (self,local_asn,remote_asn):
 		attributes = Attributes(self.attributes.copy())
 		if self.nlri.afi == AFI.ipv4:
-			if self.nlri.safi == SAFI.unicast:
-				attributes[Attribute.NEXT_HOP] = to_NextHop(self.next_hop.ip())
+			attributes[Attribute.NEXT_HOP] = to_NextHop(self.next_hop.ip())
 			return Update(NLRIS(),NLRIS([self.nlri]),attributes).announce(local_asn,remote_asn)
 		if self.nlri.afi == AFI.ipv6:
 			attributes[Attribute.MP_REACH_NLRI] = MPRNLRI(AFI(self.nlri.afi),SAFI(self.nlri.safi),self)

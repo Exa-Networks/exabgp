@@ -7,9 +7,12 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
+import socket
+
+from bgp.structure.afi import AFI
+from bgp.structure.safi import SAFI
 from bgp.structure.asn  import ASN
 from bgp.message.parent import *
-from bgp.message.inet   import *
 
 def new_Open (data):
 	version = ord(data[0])

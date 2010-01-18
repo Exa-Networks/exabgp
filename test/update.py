@@ -9,7 +9,6 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 import unittest
 
-from bgp.message.inet import to_NLRI 
 from bgp.message.update.update import *
 from bgp.message.update.attribute.communities import to_Community, Community, Communities
 

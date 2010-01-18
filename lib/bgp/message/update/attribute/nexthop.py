@@ -12,13 +12,13 @@ import socket
 from bgp.utils import *
 from bgp.structure.afi import AFI
 from bgp.structure.safi import SAFI
-from bgp.message.inet import to_IP, IP
+from bgp.structure.ip import to_IP,Inet
 from bgp.message.update.attribute import Attribute,Flag
 
 # =================================================================== NextHop (3)
 
-def new_NextHop (data,afi=AFI.ipv4,safi=SAFI.unicast):
-	return NextHop(IP(data,afi,safi))
+def new_NextHop (data,afi=AFI.ipv4):
+	return NextHop(Inet(afi,data))
 
 def to_NextHop (ip):
 	return NextHop(to_IP(ip))
@@ -39,4 +39,4 @@ class NextHop (Attribute):
 		return len(self.value) - 1
 
 	def __str__ (self):
-		return self.value.ip()
+		return str(self.value)

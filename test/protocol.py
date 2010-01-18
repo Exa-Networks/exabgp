@@ -9,7 +9,6 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 import unittest
 
-from bgp.message.inet         import *
 from bgp.message.open         import Open,Capabilities,new_Open
 from bgp.message.notification import Notification
 from bgp.message.keepalive    import KeepAlive,new_KeepAlive

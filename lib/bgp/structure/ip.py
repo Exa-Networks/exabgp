@@ -20,14 +20,23 @@ _bgp = {}
 for mask in range(0,129):
 	_bgp[mask] = int(math.ceil(float(mask)/8))
 
+def _detect_afi(ip):
+	if ip.count(':'):
+		return AFI.ipv6
+	return AFI.ipv4
 
-def to_Prefix (value):
-	if value.count(':'):
-		raw = socket.inet_pton(socket.AF_INET6,value)
-		return to_Prefix(AFI.ipv6,value)
-	raw = socket.inet_pton(socket.AF_INET,value)
-	return to_Prefix4(AFI.ipv4,value)
+def to_IP (ip):
+	afi = _detect_afi(ip)
+	af = Inet._af[afi]
+	network = socket.inet_pton(af,ip)
+	return Inet(afi,network)
 
+def new_IP (afi,ip):
+	return Inet(afi,ip)
+
+def to_Prefix (ip,mask):
+	afi = _detect_afi(ip)
+	return Prefix(afi,ip,mask)
 
 class Inet (IByteStream):
 	"""An IP in the 4 bytes format"""
@@ -36,52 +45,63 @@ class Inet (IByteStream):
 		AFI.ipv6: socket.AF_INET6,
 	}
 
-	_length = {
-		socket.AF_INET  :  4,
-		socket.AF_INET6 : 16,
+	_afi = {
+		socket.AF_INET : AFI.ipv4,
+		socket.AF_INET6: AFI.ipv6,
 	}
 
-	def __init__ (self,af,ip):
-		self.af = af
-		self.ip = ip
+	_length = {
+		AFI.ipv4:  4,
+		AFI.ipv6: 16,
+	}
+
+	def __init__ (self,afi,raw):
+		self.afi = afi
+		self.raw = raw
+		# XXX: check if the route is multicast
+		self.safi = SAFI.unicast
 
 	def pack (self):
-		return self.network
+		return self.raw
+
+	def ip (self):
+		return socket.inet_ntop(self._af[self.afi],self.raw)
+
+	def __len__ (self):
+		return len(self.raw)
 
 	def __str__ (self):
-		return socket.inet_ntop(self.af,self.ip)
-
-class IPrefix (Inet):
-	# have a .ip for the ip
+		return self.ip()
+	
+class _Prefix (Inet):
+	# have a .raw for the ip
 	# have a .mask for the mask
 	# have a .bgp with the bgp wire format of the prefix
 
 	def __init__(self,af,ip,mask):
-		self.mask = mask
+		self.mask = int(mask)
 		Inet.__init__(self,af,ip)
 
 	def __str__ (self):
-		return "%s/%s" % (socket.inet_ntop(self.af,self.ip),self.mask)
+		return "%s/%s" % (self.ip(),self.mask)
 
 	def pack (self):
-		return chr(self.mask) + self.ip[:_bgp[self.mask]]
+		return chr(self.mask) + self.raw[:_bgp[self.mask]]
 
 
-class BGPPrefix (IPrefix):
+class BGPPrefix (_Prefix):
 	"""From the BGP prefix wire format, Store an IP (in the network format), its netmask and the bgp format"""
 	def __init__ (self,afi,bgp):
-		af = self._af[afi]
-		IPrefix.__init__(self,af,bgp[1:] + '\0'*(self._length[af]+1-len(bgp)),ord(bgp[0]))
+		_Prefix.__init__(self,afi,bgp[1:] + '\0'*(self._length[afi]+1-len(bgp)),ord(bgp[0]))
 
-class AFIPrefix (IPrefix):
+class AFIPrefix (_Prefix):
 	"""Store an IP (in the network format), its netmask and the bgp format of the IP"""
 	def __init__ (self,afi,network,mask):
-		af = self._af[afi]
-		IPrefix.__init__(self,af,network,mask)
+		_Prefix.__init__(self,afi,network,mask)
 
-class Prefix (IPrefix):
+class Prefix (_Prefix):
 	"""Store an IP (in the network format), its netmask and the bgp format of the IP"""
 	def __init__ (self,afi,ip,mask):
 		af = self._af[afi]
 		network = socket.inet_pton(af,ip)
-		IPrefix.__init__(self,af,network,mask)
+		_Prefix.__init__(self,afi,network,mask)

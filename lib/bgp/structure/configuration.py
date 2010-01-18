@@ -10,15 +10,12 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 import re
 
 from bgp.structure.afi        import AFI
-from bgp.message.inet         import to_IP
-#from bgp.structure.ip         import to_Prefix
-to_Prefix = to_IP
+from bgp.structure.ip         import to_IP,to_Prefix
 from bgp.structure.asn        import to_ASN
 from bgp.structure.neighbor   import Neighbor
 from bgp.message.open         import HoldTime
-#from bgp.message.update       import to_Route, Attributes
 from bgp.structure.route      import to_Route
-from bgp.message.update.attributes         import Attributes
+from bgp.message.update.attributes            import Attributes
 from bgp.message.update.attribute.origin      import to_Origin
 from bgp.message.update.attribute.aspath      import ASPath
 from bgp.message.update.attribute.med         import MED
@@ -26,7 +23,7 @@ from bgp.message.update.attribute.localpref   import LocalPreference
 from bgp.message.update.attribute.communities import to_Community,Communities
 
 class Configuration (object):
-	debug = False
+	debug = True
 	_str_route_error = 'syntax: route IP/MASK next-hop IP' \
 	' <origin IGP|EGP|INCOMPLETE>' \
 	' <as-path ASN| as-path [ASN1 ASN2 ...]>' \
@@ -153,8 +150,8 @@ class Configuration (object):
 			return False
 
 		if command == 'description': return self._set_description(tokens[1:])
-		if command == 'router-id': return self._set_prefix('router-id',tokens[1:])
-		if command == 'local-address': return self._set_prefix('local-address',tokens[1:])
+		if command == 'router-id': return self._set_ip('router-id',tokens[1:])
+		if command == 'local-address': return self._set_ip('local-address',tokens[1:])
 		if command == 'local-as': return self._set_asn('local-as',tokens[1:])
 		if command == 'peer-as': return self._set_asn('peer-as',tokens[1:])
 		if command == 'hold-time': return self._set_holdtime('hold-time',tokens[1:])
@@ -219,7 +216,7 @@ class Configuration (object):
 	def _multi_neighbor (self,address):
 		self._scope.append({})
 		try:
-			self._scope[-1]['peer-address'] = to_Prefix(address)
+			self._scope[-1]['peer-address'] = to_IP(address)
 		except:
 			self._error = '"%s" is not a valid IP address' % address
 			if self.debug: raise
@@ -249,9 +246,9 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-	def _set_prefix (self,command,value):
+	def _set_ip (self,command,value):
 		try:
-			ip = to_Prefix(value[0])
+			ip = to_IP(value[0])
 		except (IndexError,ValueError):
 			self._error = '"%s" is an invalid IP address' % ' '.join(value)
 			if self.debug: raise
