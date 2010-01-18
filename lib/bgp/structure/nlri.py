@@ -18,7 +18,8 @@ class Address (object):
 		self.afi = AFI(afi)
 		self.safi = SAFI(safi)
 
-# Opaque ByteString container of for NLRI
+# =================================================================== NLRI
+
 class NLRI (Address,IByteStream):
 	def __init__ (self,afi,safi,nlri):
 		Address.__init__(self,afi,safi)
@@ -29,4 +30,10 @@ class NLRI (Address,IByteStream):
 	
 	def __len__ (self):
 		return len(self.nlri)
+
+# =================================================================== List of NLRI
+
+class NLRIS (list):
+	def __str__ (self):
+		return "NLRIS %s" % str([str(nlri) for nlri in self])
 

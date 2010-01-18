@@ -7,6 +7,8 @@ Created by Thomas Mangin on 2010-01-16.
 Copyright (c) 2010 Exa Networks. All rights reserved.
 """
 
+from bgp.message.update.attribute import Attribute
+
 # =================================================================== Attributes
 
 class MultiAttributes (list):
@@ -46,3 +48,29 @@ class Attributes (dict):
 			else:
 				self[attribute.ID] = attribute
 			return True
+
+	def __str__ (self):
+		origin = ''
+		if self.has(Attribute.ORIGIN):
+			origin = ' origin %s' % str(self[Attribute.ORIGIN]).lower()
+
+		aspath = ''
+		if self.has(Attribute.AS_PATH):
+			aspath = ' %s' % str(self[Attribute.AS_PATH]).lower().replace('_','-')
+
+		local_pref= ''
+		if self.has(Attribute.LOCAL_PREFERENCE):
+			l = self[Attribute.LOCAL_PREFERENCE]
+			local_pref= ' local_preference %s' % l
+
+		med = ''
+		if self.has(Attribute.MULTI_EXIT_DISC):
+			m = self[Attribute.MULTI_EXIT_DISC]
+			med = ' med %s' % m
+
+		communities = ''
+		if self.has(Attribute.COMMUNITY):
+			communities = ' community %s' % str(self[Attribute.COMMUNITY])
+
+		return "%s%s%s%s%s" % (origin,aspath,local_pref,med,communities)
+

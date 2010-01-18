@@ -34,55 +34,30 @@ class Route (object):
 	def __init__ (self,nlri):
 		self.nlri = nlri
 		self.attributes = Attributes()
+		self._next_hop = None
 
 	def _set_next_hop (self,nh):
+		if self.nlri.afi == AFI.ipv4:
+			self.attributes[Attribute.NEXT_HOP] = to_NextHop(nh)
+		if self.nlri.afi == AFI.ipv6:
+			self.attributes[Attribute.MP_REACH_NLRI] = MPRNLRI(AFI(self.nlri.afi),SAFI(self.nlri.safi),self)
 		self._next_hop = to_IP(nh)
 	def _get_next_hop (self):
 		return self._next_hop
 	next_hop = property(_get_next_hop,_set_next_hop)
 
 	def announce (self,local_asn,remote_asn):
-		attributes = Attributes(self.attributes.copy())
 		if self.nlri.afi == AFI.ipv4:
-			attributes[Attribute.NEXT_HOP] = to_NextHop(self.next_hop.ip())
-			return Update(NLRIS(),NLRIS([self.nlri]),attributes).announce(local_asn,remote_asn)
+			return Update(NLRIS(),NLRIS([self.nlri]),self.attributes).announce(local_asn,remote_asn)
 		if self.nlri.afi == AFI.ipv6:
-			attributes[Attribute.MP_REACH_NLRI] = MPRNLRI(AFI(self.nlri.afi),SAFI(self.nlri.safi),self)
-			return Update(NLRIS(),NLRIS(),attributes).announce(local_asn,remote_asn)
+			return Update(NLRIS(),NLRIS(),self.attributes).announce(local_asn,remote_asn)
 
 	def update (self,local_asn,remote_asn):
-		attributes = Attributes(self.attributes.copy())
-		if self.nlri.afi == AFI.ipv4:
-			attributes[Attribute.NEXT_HOP] = to_NextHop(self.next_hop)
-		return Update(NLRIS(),NLRIS([self.nlri]),attributes).update(local_asn,remote_asn)
+		return Update(NLRIS(),NLRIS([self.nlri]),self.attributes).update(local_asn,remote_asn)
 
 	def __str__ (self):
-		origin = ''
-		if self.attributes.has(Attribute.ORIGIN):
-			origin = ' origin %s' % str(self.attributes[Attribute.ORIGIN]).lower()
-
-		aspath = ''
-		if self.attributes.has(Attribute.AS_PATH):
-			aspath = ' %s' % str(self.attributes[Attribute.AS_PATH]).lower().replace('_','-')
-
-		local_pref= ''
-		if self.attributes.has(Attribute.LOCAL_PREFERENCE):
-			l = self.attributes[Attribute.LOCAL_PREFERENCE]
-			local_pref= ' local_preference %s' % l
-
-		if self.attributes.has(Attribute.MULTI_EXIT_DISC):
-			m = self.attributes[Attribute.MULTI_EXIT_DISC]
-			local_pref= ' med %s' % m
-
-		communities = ''
-		if self.attributes.has(Attribute.COMMUNITY):
-			communities = ' community %s' % str(self.attributes[Attribute.COMMUNITY])
-
 		next_hop = ''
-		if self.attributes.has(Attribute.NEXT_HOP):
-			next_hop = ' next-hop %s' % str(self.attributes[Attribute.NEXT_HOP])
-		elif self.next_hop:
+		if self.next_hop:
 			next_hop = ' next-hop %s' % str(self.next_hop)
-
-		return "%s%s%s%s%s%s" % (self.nlri,next_hop,origin,aspath,local_pref,communities)
+		return "%s%s%s" % (self.nlri,next_hop,str(self.attributes))
 
