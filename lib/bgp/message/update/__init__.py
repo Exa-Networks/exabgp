@@ -17,22 +17,6 @@ from bgp.message.parent import Message,prefix,defix
 
 from bgp.message.update.parser import new_Attributes
 
-from bgp.message.update.attribute.origin      import *	# 01
-from bgp.message.update.attribute.aspath      import *	# 02
-from bgp.message.update.attribute.nexthop     import *	# 03
-from bgp.message.update.attribute.med         import * 	# 04
-from bgp.message.update.attribute.localpref   import *	# 05
-from bgp.message.update.attribute.aggregate   import *	# 06
-from bgp.message.update.attribute.aggregator  import *	# 07
-from bgp.message.update.attribute.communities import *	# 08
-# 09
-# 10 - 0A
-# 11 - 0B
-# 12 - 0C
-# 13 - 0D
-from bgp.message.update.attribute.mprnlri     import *	# 14 - 0E
-from bgp.message.update.attribute.mpurnlri    import *	# 15 - 0F
-
 # =================================================================== Update
 
 def new_Update (data):
@@ -79,59 +63,19 @@ class Update (Message):
 		else:
 			self.attributes = attributes
 
-	def pack_attributes (self,local_asn,peer_asn):
-		ibgp = local_asn == peer_asn
-		# we do not store or send MED
-		message = ''
-
-		attributes = [self.attributes[a].ID for a in self.attributes]
-
-		if Attribute.ORIGIN in attributes:
-			message += self.attributes[Attribute.ORIGIN].pack()
-		elif self.attributes.autocomplete:
-			message += Origin(Origin.IGP).pack()
-
-		if Attribute.AS_PATH in attributes:
-			message += self.attributes[Attribute.AS_PATH].pack()
-		elif self.attributes.autocomplete:
-			if local_asn == peer_asn:
-				message += ASPath(ASPath.AS_SEQUENCE,[]).pack()
-			else:
-				message += ASPath(ASPath.AS_SEQUENCE,[local_asn]).pack()
-
-		if Attribute.NEXT_HOP in attributes:
-			message += self.attributes[Attribute.NEXT_HOP].pack()
-
-		if Attribute.LOCAL_PREFERENCE in attributes:
-			if local_asn == peer_asn:
-				message += self.attributes[Attribute.LOCAL_PREFERENCE].pack()
-
-		if Attribute.MULTI_EXIT_DISC in attributes:
-			if local_asn != peer_asn:
-				message += self.attributes[Attribute.MULTI_EXIT_DISC].pack()
-
-		for attribute in [Communities.ID,MPURNLRI.ID,MPRNLRI.ID]:
-			if  self.attributes.has(attribute):
-				message += self.attributes[attribute].pack()
-
-		return message
-
 	def announce (self,local_asn,remote_asn):
-		attributes = self.pack_attributes(local_asn,remote_asn)
 		nlri = ''.join([nlri.pack() for nlri in self.nlri])
-		return self._message(prefix('') + prefix(attributes) + nlri)
+		return self._message(prefix('') + prefix(self.attributes.bgp(local_asn,remote_asn)) + nlri)
 
 	def withdraw (self,local_asn=None,remote_asn=None):
 		withdraw = ''.join([withdraw.packedip() for withdraw in self.withdraw])
-		attributes = self.pack_attributes(local_asn,remote_asn)
 		nlri = ''.join([nlri.pack() for nlri in self.nlri])
 		return self._message(prefix(withdraw) + prefix(''))
 
 	def update (self,local_asn,remote_asn):
 		withdraw = ''.join([withdraw.packedip() for withdraw in self.withdraw])
-		attributes = self.pack_attributes(local_asn,remote_asn)
 		nlri = ''.join([nlri.pack() for nlri in self.nlri])
-		return self._message(prefix(withdraw) + prefix(attributes) + nlri)
+		return self._message(prefix(withdraw) + prefix(self.attributes.bgp(local_asn,remote_asn)) + nlri)
 
 	def added (self):
 		routes = NLRIS()

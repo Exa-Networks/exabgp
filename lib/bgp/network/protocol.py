@@ -121,7 +121,7 @@ class Protocol (object):
 		message = self.read_message()
 
 		if message.TYPE not in [Open.TYPE,]:
-			raise Notify(1,1,msg)
+			raise Notify(1,1,'first packet not an open message (%s)' % str(message.TYPE))
 
 		if message.asn != self.neighbor.peer_as:
 			# ASN sent did not match ASN expected

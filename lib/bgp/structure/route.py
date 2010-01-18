@@ -52,9 +52,6 @@ class Route (object):
 		if self.nlri.afi == AFI.ipv6:
 			return Update(NLRIS(),NLRIS(),self.attributes).announce(local_asn,remote_asn)
 
-	def update (self,local_asn,remote_asn):
-		return Update(NLRIS(),NLRIS([self.nlri]),self.attributes).update(local_asn,remote_asn)
-
 	def __str__ (self):
 		next_hop = ''
 		if self.next_hop:
