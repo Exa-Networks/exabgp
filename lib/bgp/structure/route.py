@@ -7,17 +7,11 @@ Created by Thomas Mangin on 2010-01-16.
 Copyright (c) 2010 Exa Networks. All rights reserved.
 """
 
-from bgp.structure.address import AFI,SAFI,Address
-from bgp.structure.ip import to_Prefix,to_IP
-
-from bgp.message.update import Update,NLRIS
+from bgp.structure.address import AFI,Address
+from bgp.structure.ip import to_Prefix
 
 from bgp.message.update.attributes import Attributes
-from bgp.message.update.attribute import AttributeID
-
-from bgp.message.update.attribute.nexthop     import to_NextHop
-from bgp.message.update.attribute.mprnlri     import MPRNLRI
-from bgp.message.update.attribute.mpurnlri    import MPURNLRI
+from bgp.message.update import Update,NLRIS
 
 # This class must be separated from the wire representation of a Route
 # =================================================================== Route
