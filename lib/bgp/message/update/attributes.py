@@ -72,12 +72,12 @@ class Attributes (dict):
 
 		attributes = [self[a].ID for a in self]
 
-		if Attribute.ORIGIN in attributes:
+		if Attribute.ORIGIN in self:
 			message += self[Attribute.ORIGIN].pack()
 		elif self.autocomplete:
 			message += Origin(Origin.IGP).pack()
 
-		if Attribute.AS_PATH in attributes:
+		if Attribute.AS_PATH in self:
 			message += self[Attribute.AS_PATH].pack()
 		elif self.autocomplete:
 			if local_asn == peer_asn:
@@ -85,14 +85,17 @@ class Attributes (dict):
 			else:
 				message += ASPath(ASPath.AS_SEQUENCE,[local_asn]).pack()
 
-		if Attribute.NEXT_HOP in attributes:
-			message += self[Attribute.NEXT_HOP].pack()
+		if Attribute.NEXT_HOP in self:
+			if self[Attribute.NEXT_HOP].attribute.afi == AFI.ipv4:
+				message += self[Attribute.NEXT_HOP].pack()
+			else:
+				message += MPRNLRI(self.afi,self.safi,self).pack()
 
-		if Attribute.LOCAL_PREFERENCE in attributes:
+		if Attribute.LOCAL_PREFERENCE in self:
 			if local_asn == peer_asn:
 				message += self[Attribute.LOCAL_PREFERENCE].pack()
 
-		if Attribute.MULTI_EXIT_DISC in attributes:
+		if Attribute.MULTI_EXIT_DISC in self:
 			if local_asn != peer_asn:
 				message += self[Attribute.MULTI_EXIT_DISC].pack()
 
@@ -103,6 +106,10 @@ class Attributes (dict):
 		return message
 
 	def __str__ (self):
+		next_hop = ''
+		if self.has(Attribute.NEXT_HOP):
+			next_hop = ' next-hop %s' % str(self[Attribute.NEXT_HOP].attribute).lower()
+
 		origin = ''
 		if self.has(Attribute.ORIGIN):
 			origin = ' origin %s' % str(self[Attribute.ORIGIN]).lower()
@@ -125,5 +132,5 @@ class Attributes (dict):
 		if self.has(Attribute.COMMUNITY):
 			communities = ' community %s' % str(self[Attribute.COMMUNITY])
 
-		return "%s%s%s%s%s" % (origin,aspath,local_pref,med,communities)
+		return "%s%s%s%s%s%s" % (next_hop,origin,aspath,local_pref,med,communities)
 

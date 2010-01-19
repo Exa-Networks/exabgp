@@ -23,11 +23,11 @@ class MED (Attribute):
 	MULTIPLE = False
 
 	def pack (self):
-		return self._attribute(pack('!L',self.value))
+		return self._attribute(pack('!L',self.attribute))
 
 	def __len__ (self):
 		return 4
 
 	def __str__ (self):
-		return str(self.value)
+		return str(self.attribute)
 

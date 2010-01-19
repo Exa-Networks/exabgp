@@ -15,8 +15,10 @@ from bgp.structure.asn        import to_ASN
 from bgp.structure.neighbor   import Neighbor
 from bgp.message.open         import HoldTime
 from bgp.structure.route      import to_Route
+from bgp.message.update.attribute             import Attribute
 from bgp.message.update.attributes            import Attributes
 from bgp.message.update.attribute.origin      import to_Origin
+from bgp.message.update.attribute.nexthop     import to_NextHop
 from bgp.message.update.attribute.aspath      import ASPath
 from bgp.message.update.attribute.med         import MED
 from bgp.message.update.attribute.localpref   import LocalPreference
@@ -389,8 +391,7 @@ class Configuration (object):
 
 	def _route_next_hop (self,tokens):
 		try:
-			t = tokens.pop(0)
-			self._scope[-1]['routes'][-1].next_hop = t
+			self._scope[-1]['routes'][-1].add(to_NextHop(tokens.pop(0)))
 			return True
 		except:
 			self._error = self._str_route_error

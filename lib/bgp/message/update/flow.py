@@ -148,17 +148,12 @@ class _DummyPrefix (object):
 	def pack (self):
 		return self.parent._pack()
 
-class _DummyNH (object):
-	def pack (self):
-		return ""
-
 class _DummyNLRI (object):
 	def __init__ (self,afi,safi):
 		self.data = []
 		self.afi = afi
 		self.safi = safi
 		self.nlri = _DummyPrefix(self)
-		self.next_hop = _DummyNH()
 	
 	def add (self,data):
 		self.data.append(data)

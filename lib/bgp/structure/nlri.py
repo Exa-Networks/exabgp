@@ -31,6 +31,9 @@ class NLRI (Address,IByteStream):
 	def __len__ (self):
 		return len(self.nlri)
 	
+	def __str__ (self):
+		return str(self.nlri)
+	
 	def update (self):
 		raise NotImplemented('subclasses should return an Update class')
 

@@ -33,10 +33,10 @@ class NextHop (Attribute):
 		Attribute.__init__(self,value)
 
 	def pack (self):
-		return self._attribute(self.value.pack())
+		return self._attribute(self.attribute.pack())
 
 	def __len__ (self):
-		return len(self.value) - 1
+		return len(self.attribute.pack())
 
 	def __str__ (self):
-		return str(self.value)
+		return str(self.attribute)

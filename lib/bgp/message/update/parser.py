@@ -45,6 +45,7 @@ class Parser (object):
 		# We do not care if the attribute are transitive or not as we do not redistribute
 		flag = Flag(ord(data[0]))
 		code = Attribute(ord(data[1]))
+		code = ord(data[1])
 
 		if flag & Flag.EXTENDED_LENGTH:
 			length = unpack('!H',data[2:4])[0]
@@ -101,9 +102,10 @@ class Parser (object):
 				return self.parse(next_attributes)
 			data = data[offset:]
 			while data:
-				route = new_NLRI(data,afi)
-				data = data[len(route.nlri):]
-				self.attributes.add(MPURNLRI(AFI(afi),SAFI(safi),route))
+				route = BGPPrefix(afi,data)
+				data = data[len(route):]
+				# XXX: we need to create one route per NLRI and then attribute them
+				#self.attributes.add(MPURNLRI(AFI(afi),SAFI(safi),route))
 				print 'removing MP route %s' % str(route)
 			return self.parse(next_attributes)
 
@@ -145,14 +147,15 @@ class Parser (object):
 				offset += len_snpa
 			data = data[offset:]
 			while data:
-				route = new_Route(data,afi)
-				route.next_hop = nh
-				data = data[len(route.nlri):]
-				self.attributes.add(MPRNLRI(AFI(afi),SAFI(safi),route))
+				route = BGPPrefix(afi,data)
+				data = data[len(route):]
+				# XXX: we are not storing the NextHop Anymore
+				#route.next_hop = nh
+				#self.attributes.add(MPRNLRI(AFI(afi),SAFI(safi),route))
 				print 'adding MP route %s' % str(route)
 			return self.parse(next_attributes)
 
 		import warnings
-		warnings.warn("Could not parse attribute %s" % str(code))
+		warnings.warn("Could not parse attribute %s %s" % (str(code),[hex(ord(_)) for _ in data]))
 		return self.parse(data[length:])
 

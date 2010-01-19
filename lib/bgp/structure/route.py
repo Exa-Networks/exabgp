@@ -31,28 +31,17 @@ def to_Route (ip,netmask):
 class Route (NLRI,Attributes):
 	def __init__ (self,afi,safi,nlri):
 		NLRI.__init__(self,afi,safi,nlri)
-		self.nlri = nlri
-		self._next_hop = None
-
-	def _set_next_hop (self,nh):
-		if self.nlri.afi == AFI.ipv4:
-			self[Attribute.NEXT_HOP] = to_NextHop(nh)
-		if self.nlri.afi == AFI.ipv6:
-			self[Attribute.MP_REACH_NLRI] = MPRNLRI(AFI(self.afi),SAFI(self.safi),self)
-		self._next_hop = to_IP(nh)
-	def _get_next_hop (self):
-		return self._next_hop
-	next_hop = property(_get_next_hop,_set_next_hop)
+		Attributes.__init__(self)
 
 	def update (self):
-		if self.nlri.afi == AFI.ipv4:
+		if self.afi == AFI.ipv4:
 			return Update(NLRIS(),NLRIS([self.nlri]),self)
-		if self.nlri.afi == AFI.ipv6:
+		if self.afi == AFI.ipv6:
 			return Update(NLRIS(),NLRIS(),self)
 
+	def pack (self):
+		return NLRI.pack(self)
+
 	def __str__ (self):
-		next_hop = ''
-		if self.next_hop:
-			next_hop = ' next-hop %s' % str(self.next_hop)
-		return "%s%s%s" % (self.nlri,next_hop,Attributes.__str__(self))
+		return "%s%s" % (NLRI.__str__(self),Attributes.__str__(self))
 

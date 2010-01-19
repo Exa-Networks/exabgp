@@ -41,19 +41,19 @@ class ASPath (Attribute):
 		Attribute.__init__(self,(asptype,asps))
 
 	def add (self,asn):
-		self.value[1].append(asn)
+		self.attribute[1].append(asn)
 
 	def pack (self):
-		return self._attribute(self._segment(self.value[0],self.value[1]))
+		return self._attribute(self._segment(self.attribute[0],self.attribute[1]))
 
 	def __len__ (self):
-		return 2 + (len(self.value[1])*2)
+		return 2 + (len(self.attribute[1])*2)
 
 	def __str__ (self):
-		if self.value[0] == 0x01: t = 'AS_SET'
-		if self.value[0] == 0x02: t = 'AS_SEQUENCE'
+		if self.attribute[0] == 0x01: t = 'AS_SET'
+		if self.attribute[0] == 0x02: t = 'AS_SEQUENCE'
 		else: t = 'INVALID'
 
-		if len(self) >  1: return '%s [ %s ]' % (t,' '.join([str(community) for community in self.value[1]]))
-		if len(self) == 1: return '%s %s' % (t,str(self.value[1][0]))
+		if len(self) >  1: return '%s [ %s ]' % (t,' '.join([str(community) for community in self.attribute[1]]))
+		if len(self) == 1: return '%s %s' % (t,str(self.attribute[1][0]))
 		return t

@@ -65,24 +65,19 @@ class Communities (Attribute):
 		Attribute.__init__(self,v)
 
 	def add(self,data):
-		return self.value.append(data)
+		return self.attribute.append(data)
 
 	def pack (self):
-		if len(self.value):
-			return self._attribute(''.join([c.pack() for c in self.value])) 
+		if len(self.attribute):
+			return self._attribute(''.join([c.pack() for c in self.attribute])) 
 		return ''
 
-	# XXX: Check if this is right ........
-	def __len__ (self):
-		return 2 + len(self.values)*4
-
-
 	def __str__ (self):
-		l = len(self.value)
+		l = len(self.attribute)
 		if l > 1:
-			return "[ %s ]" % " ".join(str(community) for community in self.value)
+			return "[ %s ]" % " ".join(str(community) for community in self.attribute)
 		if l == 1:
-			return str(self.value[0])
+			return str(self.attribute[0])
 		return ""
 
 # =================================================================== ECommunity
