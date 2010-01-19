@@ -11,7 +11,7 @@ import socket
 from struct import pack,unpack
 
 from bgp.utils import *
-from bgp.message.update.attribute import Attribute,Flag
+from bgp.message.update.attribute import Attribute,Flag,PathAttribute
 
 # =================================================================== Community
 
@@ -53,7 +53,7 @@ def new_Communities (data):
 		communities.add(Community(community))
 	return communities
 
-class Communities (Attribute):
+class Communities (PathAttribute):
 	ID = Attribute.COMMUNITY
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
 	MULTIPLE = False

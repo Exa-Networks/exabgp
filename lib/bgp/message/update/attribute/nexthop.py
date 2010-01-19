@@ -13,7 +13,7 @@ from bgp.utils import *
 from bgp.structure.afi import AFI
 from bgp.structure.safi import SAFI
 from bgp.structure.ip import to_IP,Inet
-from bgp.message.update.attribute import Attribute,Flag
+from bgp.message.update.attribute import Attribute,Flag,PathAttribute
 
 # =================================================================== NextHop (3)
 
@@ -23,14 +23,14 @@ def new_NextHop (data,afi=AFI.ipv4):
 def to_NextHop (ip):
 	return NextHop(to_IP(ip))
 
-class NextHop (Attribute):
+class NextHop (PathAttribute):
 	ID = Attribute.NEXT_HOP
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 
 	# Take an IP as value
 	def __init__ (self,value):
-		Attribute.__init__(self,value)
+		PathAttribute.__init__(self,value)
 
 	def pack (self):
 		return self._attribute(self.attribute.pack())

@@ -9,18 +9,18 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 from bgp.utils import *
 from bgp.structure.nlri import NLRI
-from bgp.message.update.attribute import Attribute,Flag
+from bgp.message.update.attribute import Attribute,Flag,PathAttribute
 
 # =================================================================== MP NLRI (14)
 
-class MPURNLRI (NLRI,Attribute):
+class MPURNLRI (NLRI,PathAttribute):
 	FLAG = Flag.OPTIONAL
 	ID = Attribute.MP_UNREACH_NLRI  
 	MULTIPLE = True
 
 	def __init__ (self,afi,safi,nlri):
 		NLRI.__init__(self,afi,safi,nlri)
-		Attribute.__init__(self)
+		PathAttribute.__init__(self)
 
 	def pack (self):
 		return self._attribute(self.afi.pack() + self.safi.pack() + self.nlri.pack())

@@ -12,10 +12,7 @@ from bgp.message.update.attribute.flag import Flag
 
 # =================================================================== Attribute
 
-class Attribute (object):
-	ID   = 0x00
-	FLAG = 0x00
-
+class Attribute (int):
 	# This should move within the classes and not be here
 	# RFC 4271
 	ORIGIN             = 0x01
@@ -33,22 +30,27 @@ class Attribute (object):
 	MP_REACH_NLRI      = 0x0e # 14
 	MP_UNREACH_NLRI    = 0x0f # 15
 
-	def __init__ (self,value=None):
-		self.attribute = value
-
 	def __str__ (self):
 		# This should move within the classes and not be here
-		if self.ID == 0x01: return "ORIGIN"
-		if self.ID == 0x02: return "AS_PATH"
-		if self.ID == 0x03: return "NEXT_HOP"
-		if self.ID == 0x04: return "MULTI_EXIT_DISC"
-		if self.ID == 0x05: return "LOCAL_PREFERENCE"
-		if self.ID == 0x06: return "ATOMIC_AGGREGATE"
-		if self.ID == 0x07: return "AGGREGATOR"
-		if self.ID == 0x08: return "COMMUNITY"
-		if self.ID == 0x0e: return "MP_REACH_NLRI"
-		if self.ID == 0x0f: return "MP_UNREACH_NLRI"
-		return 'UNKNOWN ATTRIBUTE (%s)' % hex(self.ID)
+		if self == 0x01: return "ORIGIN"
+		if self == 0x02: return "AS_PATH"
+		if self == 0x03: return "NEXT_HOP"
+		if self == 0x04: return "MULTI_EXIT_DISC"
+		if self == 0x05: return "LOCAL_PREFERENCE"
+		if self == 0x06: return "ATOMIC_AGGREGATE"
+		if self == 0x07: return "AGGREGATOR"
+		if self == 0x08: return "COMMUNITY"
+		if self == 0x0e: return "MP_REACH_NLRI"
+		if self == 0x0f: return "MP_UNREACH_NLRI"
+		return 'UNKNOWN ATTRIBUTE (%s)' % hex(self)
+
+
+class PathAttribute (object):
+	ID   = 0x00
+	FLAG = 0x00
+
+	def __init__ (self,value=None):
+		self.attribute = value
 
 	def _attribute (self,value):
 		flag = self.FLAG

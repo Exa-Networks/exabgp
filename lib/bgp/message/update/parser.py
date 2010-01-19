@@ -45,7 +45,6 @@ class Parser (object):
 		# We do not care if the attribute are transitive or not as we do not redistribute
 		flag = Flag(ord(data[0]))
 		code = Attribute(ord(data[1]))
-		code = ord(data[1])
 
 		if flag & Flag.EXTENDED_LENGTH:
 			length = unpack('!H',data[2:4])[0]
