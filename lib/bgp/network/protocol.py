@@ -43,6 +43,7 @@ class Protocol (object):
 	trace = False
 	decode = True
 	strict = False
+	parse_update = False
 
 	def __init__ (self,neighbor,connection=None):
 		self.log = Log(neighbor.peer_address,neighbor.peer_as)
@@ -125,7 +126,10 @@ class Protocol (object):
 			return self.OpenFactory(data)
 
 		if msg == Update.TYPE:
-			return self.UpdateFactory(data)
+			if self.parse_update:
+				return self.UpdateFactory(data)
+			self.log.out('<- UPDATE (not parsed)')
+			return NOP(data)
 
 		if self.strict:
 			raise Notify(1,3,msg)
@@ -320,6 +324,7 @@ class Protocol (object):
 			nlri = BGPPrefix(AFI.ipv4,announced)
 			announced = announced[len(nlri):]
 			announce.append(nlri)
+			self.log.out('received route %s' % nlri)
 
 		return Update(remove,announce,attributes)
 
@@ -407,15 +412,14 @@ class Protocol (object):
 			offset = 3
 			# XXX: See RFC 5549 for better support
 			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
-				print 'we only understand IPv4/IPv6 and should never have received this route (%s %s)' % (afi,safi)
+				self.log.out('we only understand IPv4/IPv6 and should never have received this MP_UNREACH_NLRI (%s %s)' % (afi,safi))
 				return self._AttributesFactory(next_attributes)
 			data = data[offset:]
 			while data:
-				route = BGPPrefix(afi,data)
-				data = data[len(route):]
-				# XXX: we need to create one route per NLRI and then attribute them
-				#self.attributes.add(MPURNLRI(AFI(afi),SAFI(safi),route))
-				print 'removing MP route %s' % str(route)
+				prefix = BGPPrefix(afi,data)
+				data = data[len(prefix):]
+				self.attributes.add(MPURNLRI(AFI(afi),SAFI(safi),prefix))
+				self.log.out('removing MP route %s' % str(prefix))
 			return self._AttributesFactory(next_attributes)
 
 		if code == AttributeID.MP_REACH_NLRI:
@@ -424,17 +428,17 @@ class Protocol (object):
 			afi,safi = unpack('!HB',data[:3])
 			offset = 3
 			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
-				print 'we only understand IPv4/IPv6 and should never have received this route (%s %s)' % (afi,safi)
+				self.log.out('we only understand IPv4/IPv6 and should never have received this MP_REACH_NLRI (%s %s)' % (afi,safi))
 				return self._AttributesFactory(next_attributes)
 			len_nh = ord(data[offset])
 			offset += 1
 			if afi == AFI.ipv4 and not len_nh != 4:
 				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-				print 'bad IPv4 next-hop length (%d)' % len_nh
+				self.log.out('bad IPv4 next-hop length (%d)' % len_nh)
 				return self._AttributesFactory(next_attributes)
 			if afi == AFI.ipv6 and not len_nh in (16,32):
 				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-				print 'bad IPv6 next-hop length (%d)' % len_nh
+				self.log.out('bad IPv6 next-hop length (%d)' % len_nh)
 				return self._AttributesFactory(next_attributes)
 			nh = data[offset:offset+len_nh]
 			offset += len_nh
@@ -456,12 +460,11 @@ class Protocol (object):
 				offset += len_snpa
 			data = data[offset:]
 			while data:
-				route = new_Route(afi,data)
-				data = data[len(route.nlri):]
-				# XXX: we are not storing the NextHop Anymore
-				#route.next_hop = nh
-				#self.attributes.add(MPRNLRI(AFI(afi),SAFI(safi),route))
-				print 'adding MP route %s' % str(route)
+				prefix = BGPPrefix(afi,data)
+				route = Route(prefix.afi,prefix.safi,prefix)
+				data = data[len(prefix):]
+				route.attributes.add(NextHop(to_IP(nh)))
+				self.log.out('adding MP route %s' % str(route))
 			return self._AttributesFactory(next_attributes)
 
 		import warnings

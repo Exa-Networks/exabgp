@@ -15,16 +15,6 @@ from bgp.message.update.attribute import AttributeID,Flag,Attribute
 
 # =================================================================== Community
 
-def to_Community (data):
-	separator = data.find(':')
-	if separator > 0:
-		# XXX: Check that the value do not overflow 16 bits
-		return Community((int(data[:separator])<<16) + int(data[separator+1:]))
-	elif len(data) >=2 and data[1] in 'xX':
-		return Community(long(data,16))
-	else:
-		return Community(long(data))
-
 class Community (object):
 	def __init__ (self,value):
 		self.value = value

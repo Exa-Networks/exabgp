@@ -16,9 +16,6 @@ from bgp.message.update.attribute import AttributeID,Flag,Attribute
 
 # =================================================================== NextHop (3)
 
-def to_NextHop (ip):
-	return NextHop(to_IP(ip))
-
 class NextHop (Attribute):
 	ID = AttributeID.NEXT_HOP
 	FLAG = Flag.TRANSITIVE

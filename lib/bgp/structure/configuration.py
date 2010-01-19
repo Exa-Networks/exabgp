@@ -11,18 +11,18 @@ import re
 
 from bgp.structure.address    import AFI
 from bgp.structure.ip         import to_IP,to_Prefix
-from bgp.structure.asn        import to_ASN
+from bgp.structure.asn        import ASN
 from bgp.structure.neighbor   import Neighbor
 from bgp.message.open         import HoldTime
-from bgp.structure.route      import to_Route
+from bgp.structure.route      import Route
 from bgp.message.update.attribute             import AttributeID
 from bgp.message.update.attributes            import Attributes
-from bgp.message.update.attribute.origin      import to_Origin
-from bgp.message.update.attribute.nexthop     import to_NextHop
+from bgp.message.update.attribute.origin      import Origin
+from bgp.message.update.attribute.nexthop     import NextHop
 from bgp.message.update.attribute.aspath      import ASPath
 from bgp.message.update.attribute.med         import MED
 from bgp.message.update.attribute.localpref   import LocalPreference
-from bgp.message.update.attribute.communities import to_Community,Communities
+from bgp.message.update.attribute.communities import Community,Communities
 
 class Configuration (object):
 	debug = True
@@ -241,7 +241,7 @@ class Configuration (object):
 	def _set_asn (self,command,value):
 		# XXX: we do not support 32 bits ASN...
 		try:
-			self._scope[-1][command] = to_ASN(value[0])
+			self._scope[-1][command] = ASN(int(value[0]))
 			return True
 		except ValueError:
 			self._error = '"%s" is an invalid ASN' % ' '.join(value)
@@ -308,7 +308,8 @@ class Configuration (object):
 	def _insert_route (self,tokens):
 		try:
 			ip,nm = tokens.pop(0).split('/')
-			route = to_Route(ip,nm)
+			prefix = to_Prefix(ip,nm)
+			route = Route(prefix.afi,prefix.safi,prefix)
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise
@@ -391,7 +392,7 @@ class Configuration (object):
 
 	def _route_next_hop (self,tokens):
 		try:
-			self._scope[-1]['routes'][-1].add(to_NextHop(tokens.pop(0)))
+			self._scope[-1]['routes'][-1].add(NextHop(to_IP(tokens.pop(0))))
 			return True
 		except:
 			self._error = self._str_route_error
@@ -399,21 +400,26 @@ class Configuration (object):
 			return False
 
 	def _route_origin (self,tokens):
-		try:
-			self._scope[-1]['routes'][-1].add(to_Origin(tokens.pop(0)))
+		data = tokens.pop(0).lower()
+		if data == 'igp':
+			self._scope[-1]['routes'][-1].add(Origin(0x00))
 			return True
-		except ValueError:
-			self._error = self._str_route_error
-			if self.debug: raise
-			return False
-
+		if data == 'egp':
+			self._scope[-1]['routes'][-1].add(Origin(0x01))
+			return True
+		if data == 'incomplete':
+			self._scope[-1]['routes'][-1].add(Origin(0x02))
+			return True
+		self._error = self._str_route_error
+		if self.debug: raise
+		return False
 
 	def _parse_asn (self,data):
 		if not data.isdigit():
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
-		return to_ASN(data)
+		return ASN(int(data))
 
 	def _route_aspath (self,tokens):
 		aspath = ASPath()
@@ -458,7 +464,14 @@ class Configuration (object):
 			return False
 
 	def _parse_community (self,data):
-		return to_Community(data)
+		separator = data.find(':')
+		if separator > 0:
+			# XXX: Check that the value do not overflow 16 bits
+			return Community((int(data[:separator])<<16) + int(data[separator+1:]))
+		elif len(data) >=2 and data[1] in 'xX':
+			return Community(long(data,16))
+		else:
+			return Community(long(data))
 
 	def _route_community (self,tokens):
 		communities = Communities()
