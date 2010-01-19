@@ -9,8 +9,7 @@ Copyright (c) 2010 Exa Networks. All rights reserved.
 
 from struct import unpack
 
-from bgp.structure.afi import AFI
-from bgp.structure.safi import SAFI
+from bgp.structure.address import AFI,SAFI
 from bgp.message.update.attribute.flag import Flag
 from bgp.message.update.attribute import AttributeID
 from bgp.message.update.attributes import Attributes

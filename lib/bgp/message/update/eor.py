@@ -7,8 +7,7 @@ Created by Thomas Mangin on 2010-01-16.
 Copyright (c) 2010 Exa Networks. All rights reserved.
 """
 
-from bgp.structure.afi  import AFI
-from bgp.structure.safi import SAFI
+from bgp.structure.address import AFI,SAFI
 from bgp.message.update import Update
 from bgp.message.update.attribute.mpurnlri import MPURNLRI
 from bgp.message.update.attributes import Attributes

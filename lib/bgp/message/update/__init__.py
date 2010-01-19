@@ -9,13 +9,18 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 
 from bgp.utils import *
-from bgp.structure.afi import AFI
-from bgp.structure.safi import SAFI
+from bgp.structure.address import AFI,SAFI
 from bgp.structure.ip import BGPPrefix
-from bgp.structure.nlri import NLRIS
 from bgp.message.parent import Message,prefix,defix
 
 from bgp.message.update.parser import new_Attributes
+
+
+
+class NLRIS (list):
+	def __str__ (self):
+		return "NLRIS %s" % str([str(nlri) for nlri in self])
+
 
 # =================================================================== Update
 

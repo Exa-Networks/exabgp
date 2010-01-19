@@ -9,8 +9,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 import unittest
 
-from bgp.structure.afi import AFI
-from bgp.structure.safi import SAFI
+from bgp.structure.address import AFI,SAFI
 from bgp.structure.ip import *
 
 class TestData (unittest.TestCase):

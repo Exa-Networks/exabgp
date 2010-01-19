@@ -9,7 +9,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 import re
 
-from bgp.structure.afi        import AFI
+from bgp.structure.address    import AFI
 from bgp.structure.ip         import to_IP,to_Prefix
 from bgp.structure.asn        import to_ASN
 from bgp.structure.neighbor   import Neighbor

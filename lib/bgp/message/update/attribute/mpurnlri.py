@@ -8,7 +8,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 from bgp.utils import *
-from bgp.structure.nlri import Address
+from bgp.structure.address import Address
 from bgp.message.update.attribute import AttributeID,Flag,PathAttribute
 
 # =================================================================== MP NLRI (14)

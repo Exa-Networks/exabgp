@@ -8,8 +8,7 @@ Copyright (c) 2010 Exa Networks. All rights reserved.
 """
 
 from bgp.utils import *
-from bgp.structure.afi import AFI
-from bgp.structure.safi import SAFI
+from bgp.structure.address import AFI,SAFI
 from bgp.message.inet import to_NLRI
 from bgp.message.update.update import Route,MPRNLRI
 

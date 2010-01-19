@@ -15,7 +15,7 @@ import socket
 import select
 
 from bgp.utils import *
-from bgp.structure.afi import AFI
+from bgp.structure.address import AFI
 from bgp.message.parent import Failure
 
 class Connection (object):

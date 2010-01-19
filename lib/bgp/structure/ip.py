@@ -12,8 +12,7 @@ import math
 import socket
 
 from bgp.interface import IByteStream
-from bgp.structure.afi import AFI
-from bgp.structure.safi import SAFI
+from bgp.structure.address import AFI,SAFI
 
 _bgp = {}
 for mask in range(0,129):
