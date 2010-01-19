@@ -10,7 +10,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 from struct import pack,unpack
 
 from bgp.utils import *
-from bgp.message.update.attribute import Attribute,Flag,PathAttribute
+from bgp.message.update.attribute import AttributeID,Flag,PathAttribute
 
 # =================================================================== MED (4)
 
@@ -18,7 +18,7 @@ def new_MED (data):
 	return MED(unpack('!L',data[:4])[0])
 
 class MED (PathAttribute):
-	ID = Attribute.MULTI_EXIT_DISC  
+	ID = AttributeID.MED  
 	FLAG = Flag.OPTIONAL
 	MULTIPLE = False
 

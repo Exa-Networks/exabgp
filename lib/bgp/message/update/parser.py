@@ -12,7 +12,7 @@ from struct import unpack
 from bgp.structure.afi import AFI
 from bgp.structure.safi import SAFI
 from bgp.message.update.attribute.flag import Flag
-from bgp.message.update.attribute import Attribute
+from bgp.message.update.attribute import AttributeID
 from bgp.message.update.attributes import Attributes
 
 from bgp.message.update.attribute.origin      import *	# 01
@@ -44,7 +44,7 @@ class Parser (object):
 
 		# We do not care if the attribute are transitive or not as we do not redistribute
 		flag = Flag(ord(data[0]))
-		code = Attribute(ord(data[1]))
+		code = AttributeID(ord(data[1]))
 
 		if flag & Flag.EXTENDED_LENGTH:
 			length = unpack('!H',data[2:4])[0]
@@ -58,39 +58,39 @@ class Parser (object):
 		if not length:
 			return self.parse(data[length:])
 
-		if code == Attribute.ORIGIN:
+		if code == AttributeID.ORIGIN:
 			self.attributes.add(new_Origin(data))
 			return self.parse(data[length:])
 
-		if code == Attribute.AS_PATH:
+		if code == AttributeID.AS_PATH:
 			self.attributes.add(new_ASPath(data))
 			return self.parse(data[length:])
 
-		if code == Attribute.NEXT_HOP:
+		if code == AttributeID.NEXT_HOP:
 			self.attributes.add(new_NextHop(data[:4]))
 			return self.parse(data[length:])
 
-		if code == Attribute.MULTI_EXIT_DISC:
+		if code == AttributeID.MED:
 			self.attributes.add(new_MED(data))
 			return self.parse(data[length:])
 
-		if code == Attribute.LOCAL_PREFERENCE:
+		if code == AttributeID.LOCAL_PREF:
 			self.attributes.add(new_LocalPreference(data))
 			return self.parse(data[length:])
 
-		if code == Attribute.ATOMIC_AGGREGATE:
+		if code == AttributeID.ATOMIC_AGGREGATE:
 			# ignore
 			return self.parse(data[length:])
 
-		if code == Attribute.AGGREGATOR:
+		if code == AttributeID.AGGREGATOR:
 			# content is 6 bytes
 			return self.parse(data[length:])
 
-		if code == Attribute.COMMUNITY:
+		if code == AttributeID.COMMUNITY:
 			self.attributes.add(new_Communities(data))
 			return self.parse(data[length:])
 
-		if code == Attribute.MP_UNREACH_NLRI:
+		if code == AttributeID.MP_UNREACH_NLRI:
 			next_attributes = data[length:]
 			data = data[:length]
 			afi,safi = unpack('!HB',data[:3])
@@ -108,7 +108,7 @@ class Parser (object):
 				print 'removing MP route %s' % str(route)
 			return self.parse(next_attributes)
 
-		if code == Attribute.MP_REACH_NLRI:
+		if code == AttributeID.MP_REACH_NLRI:
 			next_attributes = data[length:]
 			data = data[:length]
 			afi,safi = unpack('!HB',data[:3])

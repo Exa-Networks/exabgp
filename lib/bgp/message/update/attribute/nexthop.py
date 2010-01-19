@@ -13,7 +13,7 @@ from bgp.utils import *
 from bgp.structure.afi import AFI
 from bgp.structure.safi import SAFI
 from bgp.structure.ip import to_IP,Inet
-from bgp.message.update.attribute import Attribute,Flag,PathAttribute
+from bgp.message.update.attribute import AttributeID,Flag,PathAttribute
 
 # =================================================================== NextHop (3)
 
@@ -24,7 +24,7 @@ def to_NextHop (ip):
 	return NextHop(to_IP(ip))
 
 class NextHop (PathAttribute):
-	ID = Attribute.NEXT_HOP
+	ID = AttributeID.NEXT_HOP
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 

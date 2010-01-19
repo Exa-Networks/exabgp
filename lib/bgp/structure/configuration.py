@@ -15,7 +15,7 @@ from bgp.structure.asn        import to_ASN
 from bgp.structure.neighbor   import Neighbor
 from bgp.message.open         import HoldTime
 from bgp.structure.route      import to_Route
-from bgp.message.update.attribute             import Attribute
+from bgp.message.update.attribute             import AttributeID
 from bgp.message.update.attributes            import Attributes
 from bgp.message.update.attribute.origin      import to_Origin
 from bgp.message.update.attribute.nexthop     import to_NextHop

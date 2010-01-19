@@ -8,7 +8,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 from bgp.utils import *
-from bgp.message.update.attribute import Attribute,Flag,PathAttribute
+from bgp.message.update.attribute import AttributeID,Flag,PathAttribute
 
 # =================================================================== Origin (1)
 
@@ -26,7 +26,7 @@ def to_Origin (data):
 	raise ValueError('invalid origin')
 
 class Origin (PathAttribute):
-	ID = Attribute.ORIGIN
+	ID = AttributeID.ORIGIN
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 

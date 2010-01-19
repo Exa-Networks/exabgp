@@ -10,12 +10,12 @@ Copyright (c) 2010 Exa Networks. All rights reserved.
 from bgp.structure.afi import AFI
 from bgp.structure.safi import SAFI
 from bgp.structure.ip import to_Prefix,to_IP
-from bgp.structure.nlri import NLRI
+from bgp.structure.nlri import Address
 
 from bgp.message.update import Update,NLRIS
 
 from bgp.message.update.attributes import Attributes
-from bgp.message.update.attribute import Attribute
+from bgp.message.update.attribute import AttributeID
 
 from bgp.message.update.attribute.nexthop     import to_NextHop
 from bgp.message.update.attribute.mprnlri     import MPRNLRI
@@ -28,10 +28,11 @@ def to_Route (ip,netmask):
 	prefix = to_Prefix(ip,netmask)
 	return Route(prefix.afi,prefix.safi,prefix)
 
-class Route (NLRI,Attributes):
+class Route (Address,Attributes):
 	def __init__ (self,afi,safi,nlri):
-		NLRI.__init__(self,afi,safi,nlri)
+		Address.__init__(self,afi,safi)
 		Attributes.__init__(self)
+		self.nlri = nlri
 
 	def update (self):
 		if self.afi == AFI.ipv4:
@@ -40,8 +41,8 @@ class Route (NLRI,Attributes):
 			return Update(NLRIS(),NLRIS(),self)
 
 	def pack (self):
-		return NLRI.pack(self)
+		return self.nlri.pack()
 
 	def __str__ (self):
-		return "%s%s" % (NLRI.__str__(self),Attributes.__str__(self))
+		return "%s%s" % (self.nlri,Attributes.__str__(self))
 

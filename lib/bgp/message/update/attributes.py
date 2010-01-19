@@ -7,7 +7,7 @@ Created by Thomas Mangin on 2010-01-16.
 Copyright (c) 2010 Exa Networks. All rights reserved.
 """
 
-from bgp.message.update.attribute import Attribute
+from bgp.message.update.attribute import AttributeID
 
 from bgp.message.update.attribute.origin      import *	# 01
 from bgp.message.update.attribute.aspath      import *	# 02
@@ -72,32 +72,32 @@ class Attributes (dict):
 
 		attributes = [self[a].ID for a in self]
 
-		if Attribute.ORIGIN in self:
-			message += self[Attribute.ORIGIN].pack()
+		if AttributeID.ORIGIN in self:
+			message += self[AttributeID.ORIGIN].pack()
 		elif self.autocomplete:
 			message += Origin(Origin.IGP).pack()
 
-		if Attribute.AS_PATH in self:
-			message += self[Attribute.AS_PATH].pack()
+		if AttributeID.AS_PATH in self:
+			message += self[AttributeID.AS_PATH].pack()
 		elif self.autocomplete:
 			if local_asn == peer_asn:
 				message += ASPath(ASPath.AS_SEQUENCE,[]).pack()
 			else:
 				message += ASPath(ASPath.AS_SEQUENCE,[local_asn]).pack()
 
-		if Attribute.NEXT_HOP in self:
-			if self[Attribute.NEXT_HOP].attribute.afi == AFI.ipv4:
-				message += self[Attribute.NEXT_HOP].pack()
+		if AttributeID.NEXT_HOP in self:
+			if self[AttributeID.NEXT_HOP].attribute.afi == AFI.ipv4:
+				message += self[AttributeID.NEXT_HOP].pack()
 			else:
 				message += MPRNLRI(self.afi,self.safi,self).pack()
 
-		if Attribute.LOCAL_PREFERENCE in self:
+		if AttributeID.LOCAL_PREF in self:
 			if local_asn == peer_asn:
-				message += self[Attribute.LOCAL_PREFERENCE].pack()
+				message += self[AttributeID.LOCAL_PREF].pack()
 
-		if Attribute.MULTI_EXIT_DISC in self:
+		if AttributeID.MED in self:
 			if local_asn != peer_asn:
-				message += self[Attribute.MULTI_EXIT_DISC].pack()
+				message += self[AttributeID.MED].pack()
 
 		for attribute in [Communities.ID,MPURNLRI.ID,MPRNLRI.ID]:
 			if  self.has(attribute):
@@ -107,30 +107,30 @@ class Attributes (dict):
 
 	def __str__ (self):
 		next_hop = ''
-		if self.has(Attribute.NEXT_HOP):
-			next_hop = ' next-hop %s' % str(self[Attribute.NEXT_HOP].attribute).lower()
+		if self.has(AttributeID.NEXT_HOP):
+			next_hop = ' next-hop %s' % str(self[AttributeID.NEXT_HOP].attribute).lower()
 
 		origin = ''
-		if self.has(Attribute.ORIGIN):
-			origin = ' origin %s' % str(self[Attribute.ORIGIN]).lower()
+		if self.has(AttributeID.ORIGIN):
+			origin = ' origin %s' % str(self[AttributeID.ORIGIN]).lower()
 
 		aspath = ''
-		if self.has(Attribute.AS_PATH):
-			aspath = ' %s' % str(self[Attribute.AS_PATH]).lower().replace('_','-')
+		if self.has(AttributeID.AS_PATH):
+			aspath = ' %s' % str(self[AttributeID.AS_PATH]).lower().replace('_','-')
 
 		local_pref= ''
-		if self.has(Attribute.LOCAL_PREFERENCE):
-			l = self[Attribute.LOCAL_PREFERENCE]
+		if self.has(AttributeID.LOCAL_PREF):
+			l = self[AttributeID.LOCAL_PREF]
 			local_pref= ' local_preference %s' % l
 
 		med = ''
-		if self.has(Attribute.MULTI_EXIT_DISC):
-			m = self[Attribute.MULTI_EXIT_DISC]
+		if self.has(AttributeID.MED):
+			m = self[AttributeID.MED]
 			med = ' med %s' % m
 
 		communities = ''
-		if self.has(Attribute.COMMUNITY):
-			communities = ' community %s' % str(self[Attribute.COMMUNITY])
+		if self.has(AttributeID.COMMUNITY):
+			communities = ' community %s' % str(self[AttributeID.COMMUNITY])
 
 		return "%s%s%s%s%s%s" % (next_hop,origin,aspath,local_pref,med,communities)
 

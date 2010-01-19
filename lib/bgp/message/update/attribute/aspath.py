@@ -10,7 +10,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 from struct import pack,unpack
 
 from bgp.utils                import *
-from bgp.message.update.attribute import Attribute,Flag,PathAttribute
+from bgp.message.update.attribute import AttributeID,Flag,PathAttribute
 
 # =================================================================== ASPath (2)
 
@@ -29,7 +29,7 @@ class ASPath (PathAttribute):
 	AS_SET      = 0x01
 	AS_SEQUENCE = 0x02
 
-	ID = Attribute.AS_PATH
+	ID = AttributeID.AS_PATH
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 
