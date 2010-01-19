@@ -45,14 +45,6 @@ class Community (object):
 
 # =================================================================== Communities (8)
 
-def new_Communities (data):
-	communities = Communities()
-	while data:
-		community = unpack('!L',data[:4])
-		data = data[4:]
-		communities.add(Community(community))
-	return communities
-
 class Communities (Attribute):
 	ID = AttributeID.COMMUNITY
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
@@ -124,29 +116,29 @@ class ECommunity (object):
 
 # =================================================================== ECommunities (16)
 
-def new_ASCommunity (subtype,asn,data,transitive):
+def to_ASCommunity (subtype,asn,data,transitive):
 	r = chr(0x00)
 	if transitive: r += chr(0x40)
 	return r + chr(subtype) + pack('!N',asn) + ''.join([chr(c) for c in data[:4]])
 
-def new_IPv4Community (subtype,data,transitive):
+def to_IPv4Community (subtype,data,transitive):
 	r = chr(0x01)
 	if transitive: r += chr(0x40)
 	return r + chr(subtype) + socket.inet_pton(socket.AF_INET,ipv4) + ''.join([chr(c) for c in data[:2]])
 
-def new_OpaqueCommunity (subtype,data,transitive):
+def to_OpaqueCommunity (subtype,data,transitive):
 	r = chr(0x03)
 	if transitive: r += chr(0x40)
 	return r + chr(subtype) + ''.join([chr(c) for c in data[:6]])
 
-def new_RouteTargetCommunity (asn,number,hightype=0x01):
+def to_RouteTargetCommunity (asn,number,hightype=0x01):
 	# hightype must be 0x01, 0x02 or 0x03
 	# 0x00, 0x02 Number is administrated by a global authority
 	# 0x01, Number is administered by the ASN owner
 	return chr(hightype) + chr(0x02) + pack('!N',asn) + pack('!L',number)
 
 # See RFC4364
-def new_RouteOriginCommunity (asn,number,hightype=0x01):
+def to_RouteOriginCommunity (asn,number,hightype=0x01):
 	# hightype must be 0x01, 0x02 or 0x03
 	# 0x00, 0x02 Number is administrated by a global authority
 	# 0x01, Number is administered by the ASN owner

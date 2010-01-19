@@ -14,16 +14,6 @@ from bgp.message.update.attribute import AttributeID,Flag,Attribute
 
 # =================================================================== ASPath (2)
 
-def new_ASPath (data):
-	stype = ord(data[0])
-	slen = ord(data[1])
-	sdata = data[2:2+(slen*2)]
-
-	ASPS = ASPath(stype)
-	for c in unpack('!'+('H'*slen),sdata):
-		ASPS.add(c)
-	return ASPS
-
 # XXX: There can be more than once segment ...........
 class ASPath (Attribute):
 	AS_SET      = 0x01

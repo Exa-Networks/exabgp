@@ -13,10 +13,6 @@ from bgp.structure.address import AFI,SAFI
 from bgp.structure.ip import BGPPrefix
 from bgp.message.parent import Message,prefix,defix
 
-from bgp.message.update.parser import new_Attributes
-
-
-
 class NLRIS (list):
 	def __str__ (self):
 		return "NLRIS %s" % str([str(nlri) for nlri in self])
@@ -24,43 +20,10 @@ class NLRIS (list):
 
 # =================================================================== Update
 
-def new_Update (data):
-		length = len(data)
-		# withdrawn
-		lw,withdrawn,data = defix(data)
-		if len(withdrawn) != lw:
-			raise Notify(3,1)
-		la,attribute,announced = defix(data)
-		if len(attribute) != la:
-			raise Notify(3,1)
-		# The RFC check ...
-		#if lw + la + 23 > length:
-		if 2 + lw + 2+ la + len(announced) != length:
-			raise Notify(3,1)
-
-		remove = NLRIS()
-		while withdrawn:
-			nlri = BGPPrefix(AFI.ipv4,withdrawn)
-			withdrawn = withdrawn[len(nlri):]
-			remove.append(Update(nlri,'-'))
-
-		attributes = new_Attributes(attribute)
-
-		announce = NLRIS()
-		while announced:
-			nlri = BGPPrefix(AFI.ipv4,announced)
-			announced = announced[len(nlri):]
-			announce.append(nlri)
-
-		return Update(remove,announce,attributes)
-
-def to_Update (withdraw,nlri,attributes=None):
-	return Update(withdraw,nlri,attributes)
-
 class Update (Message):
 	TYPE = chr(0x02)
 
-	def __init__ (self,withdraw,nlri,attributes):
+	def __init__ (self,withdraw,nlri,attributes=None):
 		self.nlris = nlri
 		self.withdraw = withdraw
 		if attributes == None:

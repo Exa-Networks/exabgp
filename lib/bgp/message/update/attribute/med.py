@@ -14,9 +14,6 @@ from bgp.message.update.attribute import AttributeID,Flag,Attribute
 
 # =================================================================== MED (4)
 
-def new_MED (data):
-	return MED(unpack('!L',data[:4])[0])
-
 class MED (Attribute):
 	ID = AttributeID.MED  
 	FLAG = Flag.OPTIONAL

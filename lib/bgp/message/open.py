@@ -13,18 +13,6 @@ from bgp.structure.address import AFI,SAFI
 from bgp.structure.asn  import ASN
 from bgp.message.parent import *
 
-def new_Open (data):
-	version = ord(data[0])
-	if version != 4:
-		# Only version 4 is supported nowdays..
-		raise Notify(2,1,data[0])
-	asn = unpack('!H',data[1:3])[0]
-	hold_time = unpack('!H',data[3:5])[0]
-	numeric = unpack('!L',data[5:9])[0]
-	router_id = "%d.%d.%d.%d" % (numeric>>24,(numeric>>16)&0xFF,(numeric>>8)&0xFF,numeric&0xFF)
-	capabilities = new_Capabilities(data[9:])
-	return Open(version,asn,router_id,capabilities,hold_time)
-
 # =================================================================== Open
 
 class Open (Message):
@@ -172,79 +160,6 @@ class Parameter (int):
 		return 'UNKNOWN'
 
 # =================================================================== Capabilities
-
-def _key_values (name,data):
-	if len(data) < 2:
-		raise Notify(2,0,"bad length for OPEN %s (<2)" % name)
-	l = ord(data[1])
-	boundary = l+2
-	if len(data) < boundary:
-		raise Notify(2,0,"bad length for OPEN %s (buffer underrun)" % name)
-	key = ord(data[0])
-	value = data[2:boundary]
-	rest = data[boundary:]
-	return key,value,rest
-
-
-def new_Capabilities (data):
-	capabilities = Capabilities()
-	option_len = ord(data[0])
-	if option_len:
-		data = data[1:]
-		while data:
-			key,value,data = _key_values('parameter',data)
-			# Paramaters must only be sent once.
-			if key == Parameter.AUTHENTIFICATION_INFORMATION:
-				raise Notify(2,5)
-				continue
-
-			if key == Parameter.CAPABILITIES:
-				k,v,r = _key_values('capability',value)
-				if r:
-					raise Notify(2,0,"bad length for OPEN %s (size mismatch)" % 'capability')
-
-				if k == Capabilities.MULTIPROTOCOL_EXTENSIONS:
-					if k not in capabilities:
-						capabilities[k] = MultiProtocol()
-					afi = AFI(unpack('!H',value[2:4])[0])
-					safi = SAFI(ord(value[5]))
-					capabilities[k].append((afi,safi))
-					continue
-
-				if k == Capabilities.GRACEFUL_RESTART:
-					restart = unpack('!H',value[2:4])[0]
-					restart_flag = restart >> 12
-					restart_time = restart & Graceful.TIME_MASK
-					value = value[4:]
-					families = []
-					while value:
-						afi = AFI(unpack('!H',value[:2])[0])
-						safi = SAFI(ord(value[2]))
-						flag_family = ord(value[0])
-						families.append((afi,safi,flag_family))
-						value = value[4:]
-					capabilities[k] = Graceful(restart_flag,restart_time,families)
-					continue
-
-				if k == Capabilities.FOUR_BYTES_ASN:
-					capabilities[k] = ASN(unpack('!L',value[2:6])[0]).four()
-					continue
-
-				if k == Capabilities.ROUTE_REFRESH:
-					capabilities[k] = RouteRefresh()
-					continue
-
-				if k == Capabilities.CISCO_ROUTE_REFRESH:
-					capabilities[k] = CiscoRouteRefresh()
-					continue
-
-				if k not in capabilities:
-					capabilities[k] = Unknown(k)
-				if value[2:]:
-					capabilities[k].append([ord(_) for _ in value[2:]])
-			else:
-				raise Notify(2,0,'unknow OPEN parameter %s' % hex(key))
-	return capabilities
 
 # =================================================================== Capabilities
 # http://www.iana.org/assignments/capability-codes/

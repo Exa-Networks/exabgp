@@ -9,9 +9,6 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 from bgp.message.parent import *
 
-def new_NOP (data):
-	return NOP(data)
-
 class NOP (Message):
 	TYPE = chr(0x00)
 

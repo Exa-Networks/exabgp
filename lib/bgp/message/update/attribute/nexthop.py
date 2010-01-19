@@ -16,9 +16,6 @@ from bgp.message.update.attribute import AttributeID,Flag,Attribute
 
 # =================================================================== NextHop (3)
 
-def new_NextHop (data,afi=AFI.ipv4):
-	return NextHop(Inet(afi,data))
-
 def to_NextHop (ip):
 	return NextHop(to_IP(ip))
 

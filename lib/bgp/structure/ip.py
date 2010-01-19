@@ -29,9 +29,6 @@ def to_IP (ip):
 	network = socket.inet_pton(af,ip)
 	return Inet(afi,network)
 
-def new_IP (afi,ip):
-	return Inet(afi,ip)
-
 def to_Prefix (ip,mask):
 	afi = _detect_afi(ip)
 	return Prefix(afi,ip,mask)

@@ -12,9 +12,6 @@ from bgp.message.update.attribute import AttributeID,Flag,Attribute
 
 # =================================================================== Origin (1)
 
-def new_Origin (data):
-	return Origin(ord(data[0]))
-
 def to_Origin (data):
 	data = data.lower()
 	if data == 'igp':

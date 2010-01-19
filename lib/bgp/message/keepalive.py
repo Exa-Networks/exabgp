@@ -9,9 +9,6 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 from bgp.message.parent import *
 
-def new_KeepAlive (data=None):
-	return KeepAlive()
-
 # =================================================================== KeepAlive
 
 class KeepAlive (Message):

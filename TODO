@@ -19,3 +19,4 @@ Add support RFC 3107
 Graceful restart docs much clearer than the RFC
 http://www.cisco.com/en/US/products/ps6550/products_white_paper09186a008016317c.shtml
 
+remove all the new_ Functions and integrate them into protocol

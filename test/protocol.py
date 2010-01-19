@@ -12,7 +12,7 @@ import unittest
 from bgp.message.open         import Open,Capabilities,new_Open
 from bgp.message.notification import Notification
 from bgp.message.keepalive    import KeepAlive,new_KeepAlive
-from bgp.message.update       import Update,Attributes,to_Update,new_Update
+from bgp.message.update       import Update,Attributes,new_Update
 
 from bgp.network.protocol     import Protocol
 from bgp.structure.neighbor   import Neighbor
@@ -23,7 +23,7 @@ class Network (StringIO):
 	def pending (self):
 		return True
 
-route1 = to_Update([],[to_NLRI('10.0.0.1','32')],Attributes())
+route1 = Update([],[to_NLRI('10.0.0.1','32')],Attributes())
 route1.next_hop = '10.0.0.254'
 
 route2 = Update([],[to_NLRI('10.0.1.1','32')],Attributes())
