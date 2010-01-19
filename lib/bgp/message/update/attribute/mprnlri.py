@@ -9,18 +9,18 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 from bgp.utils import *
 from bgp.structure.address import Address
-from bgp.message.update.attribute import AttributeID,Flag,PathAttribute
+from bgp.message.update.attribute import AttributeID,Flag,Attribute
 
 # =================================================================== MP Unreacheable NLRI (15)
 
-class MPRNLRI (Address,PathAttribute):
+class MPRNLRI (Address,Attribute):
 	FLAG = Flag.OPTIONAL
 	ID = AttributeID.MP_REACH_NLRI    
 	MULTIPLE = True
 
 	def __init__ (self,afi,safi,nlri):
 		Address.__init__(self,afi,safi)
-		PathAttribute.__init__(self,nlri)
+		Attribute.__init__(self,nlri)
 
 	def pack (self):
 		next_hop = self.attribute[AttributeID.NEXT_HOP].attribute.pack()

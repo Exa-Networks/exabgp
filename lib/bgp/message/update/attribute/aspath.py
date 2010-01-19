@@ -10,7 +10,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 from struct import pack,unpack
 
 from bgp.utils                import *
-from bgp.message.update.attribute import AttributeID,Flag,PathAttribute
+from bgp.message.update.attribute import AttributeID,Flag,Attribute
 
 # =================================================================== ASPath (2)
 
@@ -25,7 +25,7 @@ def new_ASPath (data):
 	return ASPS
 
 # XXX: There can be more than once segment ...........
-class ASPath (PathAttribute):
+class ASPath (Attribute):
 	AS_SET      = 0x01
 	AS_SEQUENCE = 0x02
 
@@ -38,7 +38,7 @@ class ASPath (PathAttribute):
 			asps = []
 		else:
 			asps = aspsegment
-		PathAttribute.__init__(self,(asptype,asps))
+		Attribute.__init__(self,(asptype,asps))
 
 	def add (self,asn):
 		self.attribute[1].append(asn)

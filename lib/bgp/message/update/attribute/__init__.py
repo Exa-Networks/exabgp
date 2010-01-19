@@ -13,7 +13,7 @@ from bgp.message.update.attribute.id import AttributeID
 
 # =================================================================== Attribute
 
-class PathAttribute (object):
+class Attribute (object):
 	ID   = 0x00
 	FLAG = 0x00
 

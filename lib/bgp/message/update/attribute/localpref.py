@@ -8,14 +8,14 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 from bgp.utils import *
-from bgp.message.update.attribute import AttributeID,Flag,PathAttribute
+from bgp.message.update.attribute import AttributeID,Flag,Attribute
 
 # =================================================================== Local Preference (5)
 
 def new_LocalPreference (data):
 	return LocalPreference(unpack('!L',data[:4])[0])
 
-class LocalPreference (PathAttribute):
+class LocalPreference (Attribute):
 	ID = AttributeID.LOCAL_PREF 
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
