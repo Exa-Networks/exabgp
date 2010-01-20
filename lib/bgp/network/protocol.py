@@ -174,6 +174,29 @@ class Protocol (object):
 		m = self._delta.announce(self.neighbor.local_as,self.neighbor.peer_as)
 		updates = ''.join(m)
 		self.log.outIf(self.trace,"UPDATE (update)   SENT: %s" % hexa(updates[19:]))
+
+		if False:
+			print "SENDING EXTRA FLOW"
+			from bgp.message.update.flow import *
+
+			components = {
+				'source_dest_port' : [Destination("192.0.2.0",24), Source("10.1.2.0",24), AnyPort(NumericOperator.EQ,25)],
+			}
+
+			messages = {
+				'source_dest_port' : [0x0f, 0x01, 0x04, 0x18, 0xc0, 0x00, 0x02, 0x02, 0x04, 0x18, 0x0a, 0x01, 0x02, 0x04, 0x81, 0x19],
+			}
+
+			for key in components.keys():
+				policy = Policy()
+				for component in components[key]:
+					policy.add_and(component)
+				flow = policy.update()
+				flow.attributes.add(to_FlowAction(65000,False,False))
+				update = flow.announce(0,0)
+				print "WIRING", [hex(ord(_)) for _ in update]
+				self.connection.write(update)
+
 		if m:
 			self.connection.write(updates)
 			return m
