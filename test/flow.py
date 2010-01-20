@@ -16,7 +16,7 @@ class TestFlow (unittest.TestCase):
 	def setUp(self):
 		pass
 
-	def test_source (self):
+	def test_rule (self):
 		components = {
 			'destination': Destination("192.0.2.0",24),
 			'source'     : Source("10.1.2.0",24),
@@ -34,7 +34,7 @@ class TestFlow (unittest.TestCase):
 			if component != message:
 				self.fail('failed test %s\n%s\n%s\n' % (key, [hex(ord(_)) for _ in component], [hex(ord(_)) for _ in message]))
 
-		
+	def test_update (self):
 		components = {
 			'source_dest_port' : [Destination("192.0.2.0",24), Source("10.1.2.0",24), AnyPort(NumericOperator.EQ,25)],
 		}
@@ -47,7 +47,7 @@ class TestFlow (unittest.TestCase):
 			policy = Policy()
 			for component in components[key]:
 				policy.add_and(component)
-			flow = policy.flow()
+			flow = policy.update()
 			update = flow.announce(0,0)
 			message   = ''.join((chr(_) for _ in messages[key]))
 			if update != message:

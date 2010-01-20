@@ -8,9 +8,11 @@ Copyright (c) 2010 Exa Networks. All rights reserved.
 """
 
 from bgp.utils import *
-from bgp.structure.address import AFI,SAFI
-from bgp.message.inet import to_NLRI
-from bgp.message.update.update import Route,MPRNLRI
+from bgp.structure.address import Address,AFI,SAFI
+from bgp.structure.ip import Prefix
+from bgp.message.update.attributes import Attributes
+from bgp.message.update.attribute.mprnlri import MPRNLRI
+from bgp.message.update import Update,NLRIS
 
 # =================================================================== Flow Components
 
@@ -59,7 +61,7 @@ class IPrefix (IComponent):
 	operations = 0x0
 
 	def __init__ (self,ipv4,netmask):
-		self.nlri = to_NLRI(ipv4,netmask)
+		self.nlri = Prefix(AFI.ipv4,ipv4,netmask)
 
 	def pack (self):
 		raw = self.nlri.pack()
@@ -140,20 +142,12 @@ class Fragment (IOperationByteShort):
 
 # ..........................................................
 
-class _DummyPrefix (object):
-	def __init__ (self,parent):
-		self.parent = parent
-	
-	def pack (self):
-		return self.parent._pack()
-
-class _DummyNLRI (object):
+class Flow (Address,Attributes):
 	def __init__ (self,afi,safi):
+		Attributes.__init__(self)
+		Address.__init__(self,afi,safi)
 		self.data = []
-		self.afi = afi
-		self.safi = safi
-		self.nlri = _DummyPrefix(self)
-	
+
 	def add (self,data):
 		self.data.append(data)
 	
@@ -168,6 +162,9 @@ class _DummyNLRI (object):
 			print "rule too big for NLRI - how to handle this - does this work ?"
 			return "%s" % (chr(0))
 		return "%s%s" % (size,components)
+
+	def pack (self):
+		return MPRNLRI(self.afi,self.safi,self._pack())
 	
 	def __str__ (self):
 		return '[ ' + ' '.join([hex(ord(_)) for _ in self.pack()]) + ' ]'
@@ -197,7 +194,7 @@ class Policy (object):
 		return True
 
 	def flow (self):
-		nlri = _DummyNLRI(self.afi,self.safi)
+		flow = Flow(self.afi,self.safi)
 		# get all the possible type of component
 		IDS = self.rules.keys()
 		# the RFC order is the best to use for packing
@@ -213,8 +210,8 @@ class Policy (object):
 			rules[-1].operations |= CommonOperator.EOL
 			
 			for rule in rules:
-				nlri.add(rule.pack())
+				flow.add(rule.pack())
+		return flow
 		
-		route = Route(MPRNLRI(self.afi,self.safi,nlri))
-		#route.attributes.append()
-		return route
+	def update (self):
+		return Update(NLRIS(),NLRIS(),self.flow())

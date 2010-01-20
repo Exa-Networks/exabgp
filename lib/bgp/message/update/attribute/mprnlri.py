@@ -23,7 +23,9 @@ class MPRNLRI (Address,Attribute):
 		Attribute.__init__(self,nlri)
 
 	def pack (self):
-		next_hop = self.attribute[AttributeID.NEXT_HOP].attribute.pack()
+		next_hop = ''
+		if self.attribute.has_key(AttributeID.NEXT_HOP):
+			next_hop = self.attribute[AttributeID.NEXT_HOP].attribute.pack()
 		return self._attribute(
 			self.afi.pack() + self.safi.pack() + 
 			chr(len(next_hop)) + next_hop + 
@@ -34,4 +36,4 @@ class MPRNLRI (Address,Attribute):
 		return len(self.pack())
 
 	def __str__ (self):
-		return "MP Reacheable NLRI %s" % str(self.nlri)
+		return "MP Reacheable NLRI %s %s" % (Address.__str__(self),Attribute.__str__(self))

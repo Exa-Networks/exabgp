@@ -42,4 +42,7 @@ class Attribute (object):
 		if type(self) == type(other):
 			return cmp(self.ID,other.ID)
 		return cmp(self.ID,other)
+	
+	def __str__ (self):
+		return str([hex(ord(_)) for _ in self.attribute])
 

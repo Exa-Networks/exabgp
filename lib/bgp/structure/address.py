@@ -72,3 +72,6 @@ class Address (object):
 		self.afi = AFI(afi)
 		self.safi = SAFI(safi)
 
+	def __str__ (self):
+		return "%s %s" % (str(self.afi),str(self.safi))
+
