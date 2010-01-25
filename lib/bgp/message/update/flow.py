@@ -65,7 +65,7 @@ class IPrefix (IComponent):
 
 	def pack (self):
 		raw = self.nlri.pack()
-		return "%s%s%s" % (chr(self.ID),chr(len(raw)),raw)
+		return "%s%s" % (chr(self.ID),raw)
 
 class IOperation (IComponent):
 	# need to implement encode which encode the value of the operator
@@ -73,11 +73,15 @@ class IOperation (IComponent):
 	def __init__ (self,operations,value):
 		self.operations = operations
 		self.value = value
+		self.first = True
 
 	def pack (self):
 		l,v = self.encode(self.value)
 		op = self.operations | _len_to_bit(l)
-		return "%s%s%s" % (chr(self.ID),chr(op),v)
+		if self.first:
+			return "%s%s%s" % (chr(self.ID),chr(op),v)
+		return "%s%s" % (chr(op),v)
+
 
 class IOperationIPv4 (IOperation):
 	def encode (self,value):
@@ -142,47 +146,63 @@ class Fragment (IOperationByteShort):
 
 # ..........................................................
 
+class _NLRI (object):
+	def pack ():
+		return ""
+
 class Flow (Address,Attributes):
 	def __init__ (self,afi,safi):
-		Attributes.__init__(self)
 		Address.__init__(self,afi,safi)
-		self.data = []
+		Attributes.__init__(self)
+		self.nlri = _NLRI()
+		# the serialised (packed) data of the NLRI forming the rule
+		self.rules = []
+		self.actions = []
 
 	def add (self,data):
-		self.data.append(data)
+		self.rules.append(data)
 	
-	def _pack (self):
-		components = ''.join(self.data)
+	def pack (self):
+		components = ''.join([rule.pack() for rule in self.rules])
 		l = len(components)
 		if l < 0xF0:
-			size = chr(l)
+			data = "%s%s" % (chr(l),components)
 		elif l < 0x0FFF:
-			size = pack('!H',l) | 0xF000
+			data = "%s%s" % (pack('!H',l) | 0xF000,components)
 		else:
 			print "rule too big for NLRI - how to handle this - does this work ?"
-			return "%s" % (chr(0))
-		return "%s%s" % (size,components)
+			data = "%s" % chr(0)
+		return data
+		
+	def update (self):
+		attributes = Attributes()
+		attributes.add(MPRNLRI(self.afi,self.safi,self))
+		return Update(NLRIS(),NLRIS(),attributes)
+		# Test code here
+		attributes = Attributes()
+		for community in self.actions:
+			attributes.add(community)
+		attributes.add(MPRNLRI(self.afi,self.safi,self))
+		return Update(NLRIS(),NLRIS(),self)
 
-	def pack (self):
-		return MPRNLRI(self.afi,self.safi,self._pack())
-	
+
 	def __str__ (self):
 		return '[ ' + ' '.join([hex(ord(_)) for _ in self.pack()]) + ' ]'
 	
 	def __repr__ (self):
 		return str(self)
 
-class Policy (object):
+class Policy (Address):
 	def __init__ (self,safi=SAFI.flow_ipv4):
-		self.afi = AFI(AFI.ipv4)
-		self.safi = SAFI(safi)
+		Address.__init__(self,AFI.ipv4,safi)
 		self.rules = {}
-		self.last = -1
+		self.communities = []
 
 	def add_and (self,rule):
 		ID = rule.ID
-		if self.last > 0:
-			self.rules[ID][-1] |= CommonOperator.AND
+		if self.rules.has_key(ID):
+			rule.first = False
+			self.rules[ID][-1].operations |= CommonOperator.AND
 		self.rules.setdefault(ID,[]).append(rule)
 		return True
 
@@ -190,14 +210,20 @@ class Policy (object):
 		ID = rule.ID
 		if ID in [flow.Destination, flow.Source]:
 			return False
+		if self.rules.has_key(ID):
+			rule.first = False
 		self.rules.setdefault(ID,[]).append(rule)
 		return True
+
+	def add_action (self,community):
+		pass
+		#self.communities.append(community)
 
 	def flow (self):
 		flow = Flow(self.afi,self.safi)
 		# get all the possible type of component
 		IDS = self.rules.keys()
-		# the RFC order is the best to use for packing
+		# the order is a RFC requirement
 		IDS.sort()
 		for ID in IDS:
 			rules = self.rules[ID]
@@ -210,8 +236,7 @@ class Policy (object):
 			rules[-1].operations |= CommonOperator.EOL
 			
 			for rule in rules:
-				flow.add(rule.pack())
+				flow.add(rule)
+			#flow.actions = self.communities
+
 		return flow
-		
-	def update (self):
-		return Update(NLRIS(),NLRIS(),self.flow())

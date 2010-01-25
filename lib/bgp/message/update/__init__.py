@@ -23,8 +23,8 @@ class NLRIS (list):
 class Update (Message):
 	TYPE = chr(0x02)
 
-	def __init__ (self,withdraw,nlri,attributes=None):
-		self.nlris = nlri
+	def __init__ (self,withdraw,nlris,attributes=None):
+		self.nlris = nlris
 		self.withdraw = withdraw
 		if attributes == None:
 			self.attributes = Attributes()

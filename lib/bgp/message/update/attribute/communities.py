@@ -78,6 +78,10 @@ def to_ECommunity (data):
 # http://www.iana.org/assignments/bgp-extended-communities
 
 class ECommunity (object):
+	ID = AttributeID.EXTENDED_COMMUNITY
+	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
+	MULTIPLE = False
+
 	# size of value for data (boolean: is extended)
 	length_value = {False:7, True:6}
 	name = {False: 'regular', True: 'extended'}

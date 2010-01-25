@@ -209,8 +209,10 @@ class Capabilities (dict):
 				r+= ['unhandled capability %d' % key]
 		return ', '.join(r)
 
-	def default (self,graceful,restarted):
-		families = ((AFI(AFI.ipv4),SAFI(SAFI.unicast)),(AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+	def default (self,graceful,restarted,flow=True,ipv6=True):
+		families = [(AFI(AFI.ipv4),SAFI(SAFI.unicast))]
+		if ipv6: families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+		if flow: families.append((AFI(AFI.ipv4),SAFI(SAFI.flow_ipv4)))
 
 		mp = MultiProtocol()
 		mp.extend(families)

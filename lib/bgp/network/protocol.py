@@ -178,24 +178,17 @@ class Protocol (object):
 		if False:
 			print "SENDING EXTRA FLOW"
 			from bgp.message.update.flow import *
+			from bgp.structure.ip import *
+			from bgp.structure.asn import *
 
-			components = {
-				'source_dest_port' : [Destination("192.0.2.0",24), Source("10.1.2.0",24), AnyPort(NumericOperator.EQ,25)],
-			}
-
-			messages = {
-				'source_dest_port' : [0x0f, 0x01, 0x04, 0x18, 0xc0, 0x00, 0x02, 0x02, 0x04, 0x18, 0x0a, 0x01, 0x02, 0x04, 0x81, 0x19],
-			}
-
-			for key in components.keys():
-				policy = Policy()
-				for component in components[key]:
-					policy.add_and(component)
-				flow = policy.update()
-				flow.attributes.add(to_FlowAction(65000,False,False))
-				update = flow.announce(0,0)
-				print "WIRING", [hex(ord(_)) for _ in update]
-				self.connection.write(update)
+			policy = Policy()
+			policy.add_action(to_FlowAction(65000,False,False))
+			for component in Destination("82.219.4.253",32), Source("82.219.4.254",32), AnyPort(NumericOperator.GT,25), AnyPort(NumericOperator.LT,80):
+				policy.add_and(component)
+			update = policy.flow().update().announce(ASN(65000),ASN(30740)) # it is an ebgp session
+			print "WIRING", [hex(ord(_)) for _ in update]
+			self.connection.write(update)
+			return []
 
 		if m:
 			self.connection.write(updates)
