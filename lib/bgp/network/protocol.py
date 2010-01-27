@@ -175,7 +175,7 @@ class Protocol (object):
 		updates = ''.join(m)
 		self.log.outIf(self.trace,"UPDATE (update)   SENT: %s" % hexa(updates[19:]))
 
-		if True:
+		if False:
 			print "SENDING EXTRA FLOW"
 			from bgp.message.update.flow import *
 			from bgp.structure.ip import *
