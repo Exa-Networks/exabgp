@@ -19,7 +19,7 @@ from bgp.structure.address    import AFI,SAFI
 from bgp.structure.ip         import BGPPrefix
 from bgp.network.connection   import Connection
 # XXX: defix should be renamed and moved ...
-from bgp.message.parent       import Message,Failure,defix
+from bgp.message              import Message,Failure,defix
 from bgp.message.nop          import NOP
 from bgp.message.open         import Open,Parameter,Capabilities,RouterID,MultiProtocol,RouteRefresh,CiscoRouteRefresh,Graceful
 from bgp.message.update       import Update,NLRIS
@@ -175,7 +175,7 @@ class Protocol (object):
 		updates = ''.join(m)
 		self.log.outIf(self.trace,"UPDATE (update)   SENT: %s" % hexa(updates[19:]))
 
-		if False:
+		if True:
 			print "SENDING EXTRA FLOW"
 			from bgp.message.update.flow import *
 			from bgp.structure.ip import *

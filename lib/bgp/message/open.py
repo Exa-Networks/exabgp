@@ -11,7 +11,7 @@ import socket
 
 from bgp.structure.address import AFI,SAFI
 from bgp.structure.asn  import ASN
-from bgp.message.parent import *
+from bgp.message import *
 
 # =================================================================== Open
 

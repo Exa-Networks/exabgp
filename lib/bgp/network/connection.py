@@ -16,7 +16,7 @@ import select
 
 from bgp.utils import *
 from bgp.structure.address import AFI
-from bgp.message.parent import Failure
+from bgp.message import Failure
 
 class Connection (object):
 	debug = False

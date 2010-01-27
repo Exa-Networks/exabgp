@@ -7,7 +7,7 @@ Created by Thomas Mangin on 2009-11-06.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
-from bgp.message.parent import *
+from bgp.message import *
 
 class NOP (Message):
 	TYPE = chr(0x00)

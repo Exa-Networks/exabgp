@@ -8,7 +8,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 from bgp.utils                import *
-from bgp.message.parent       import Failure
+from bgp.message              import Failure
 from bgp.message.nop          import NOP
 from bgp.message.open         import Open,Capabilities
 from bgp.message.update       import Update

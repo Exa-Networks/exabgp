@@ -11,7 +11,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 from bgp.utils import *
 from bgp.structure.address import AFI,SAFI
 from bgp.structure.ip import BGPPrefix
-from bgp.message.parent import Message,prefix,defix
+from bgp.message import Message,prefix,defix
 
 class NLRIS (list):
 	def __str__ (self):
