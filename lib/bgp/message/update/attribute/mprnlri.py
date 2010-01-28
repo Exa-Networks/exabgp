@@ -36,4 +36,4 @@ class MPRNLRI (Address,Attribute):
 		return len(self.pack())
 
 	def __str__ (self):
-		return "MP Reacheable NLRI %s %s" % (Address.__str__(self),Attribute.__str__(self))
+		return "MP_REACH_NLRI Family %s NLRI %s" % (Address.__str__(self),str(self.attribute))

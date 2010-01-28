@@ -64,15 +64,15 @@ class Communities (Attribute):
 
 # =================================================================== ECommunity
 
-def to_ECommunity (data):
-	separator = data.find(':')
-	if separator > 0:
-		# XXX: Check that the value do not overflow 16 bits
-		return ECommunity((int(data[:separator])<<16) + int(data[separator+1:]))
-	elif len(data) >=2 and data[1] in 'xX':
-		return ECommunity(long(data,16))
-	else:
-		return ECommunity(long(data))
+#def to_ECommunity (data):
+#	separator = data.find(':')
+#	if separator > 0:
+#		# XXX: Check that the value do not overflow 16 bits
+#		return ECommunity((int(data[:separator])<<16) + int(data[separator+1:]))
+#	elif len(data) >=2 and data[1] in 'xX':
+#		return ECommunity(long(data,16))
+#	else:
+#		return ECommunity(long(data))
 
 
 # http://www.iana.org/assignments/bgp-extended-communities

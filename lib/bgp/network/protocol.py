@@ -182,9 +182,9 @@ class Protocol (object):
 			from bgp.structure.asn import *
 
 			policy = Policy()
-			policy.add_action(to_FlowAction(65000,False,False))
 			for component in Destination("82.219.4.253",32), Source("82.219.4.254",32), AnyPort(NumericOperator.GT,25), AnyPort(NumericOperator.LT,80):
 				policy.add_and(component)
+			policy.add_action(to_FlowAction(65000,False,False))
 			update = policy.flow().update().announce(ASN(65000),ASN(30740)) # it is an ebgp session
 			print "WIRING", [hex(ord(_)) for _ in update]
 			self.connection.write(update)

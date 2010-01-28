@@ -44,7 +44,7 @@ class MultiAttributes (list):
 		return len(self.pack())
 
 	def __str__ (self):
-		return "MultiAttribute"
+		return 'MultiAttibutes(%s)' % ' '.join(str(_) for _ in self)
 
 class Attributes (dict):
 	autocomplete = True
@@ -99,7 +99,7 @@ class Attributes (dict):
 			if local_asn != peer_asn:
 				message += self[AttributeID.MED].pack()
 
-		for attribute in [Communities.ID,MPURNLRI.ID,MPRNLRI.ID]:
+		for attribute in [Communities.ID,ECommunities.ID,MPURNLRI.ID,MPRNLRI.ID]:
 			if  self.has(attribute):
 				message += self[attribute].pack()
 
@@ -132,5 +132,13 @@ class Attributes (dict):
 		if self.has(AttributeID.COMMUNITY):
 			communities = ' community %s' % str(self[AttributeID.COMMUNITY])
 
-		return "%s%s%s%s%s%s" % (next_hop,origin,aspath,local_pref,med,communities)
+		ecommunities = ''
+		if self.has(AttributeID.EXTENDED_COMMUNITY):
+			ecommunities = ' extended community %s' % str(self[AttributeID.EXTENDED_COMMUNITY])
+
+		mpr = ''
+		if self.has(AttributeID.MP_REACH_NLRI):
+			mpr = ' mp_reach_nlri %s' % str(self[AttributeID.MP_REACH_NLRI])
+
+		return "%s%s%s%s%s%s%s%s" % (next_hop,origin,aspath,local_pref,med,communities,ecommunities,mpr)
 

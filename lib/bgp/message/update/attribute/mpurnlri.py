@@ -29,4 +29,4 @@ class MPURNLRI (Address,Attribute):
 		return len(self.pack())
 
 	def __str__ (self):
-		return "MP Unreacheable NLRI"
+		return "MP_UNREACH_NLRI Family %s NLRI %s" % (Address.__str__(self),str(self.attribute))

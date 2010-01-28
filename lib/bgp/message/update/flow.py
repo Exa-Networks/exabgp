@@ -12,6 +12,7 @@ from bgp.structure.address import Address,AFI,SAFI
 from bgp.structure.ip import Prefix
 from bgp.message.update.attributes import Attributes
 from bgp.message.update.attribute.mprnlri import MPRNLRI
+from bgp.message.update.attribute.communities import ECommunities
 from bgp.message.update import Update,NLRIS
 
 # =================================================================== Flow Components
@@ -150,14 +151,17 @@ class _NLRI (object):
 	def pack ():
 		return ""
 
+	def __str__ (self):
+		return "Dummy_NLRI"
+
 class Flow (Address,Attributes):
-	def __init__ (self,afi,safi):
+	def __init__ (self,afi,safi,communities):
 		Address.__init__(self,afi,safi)
 		Attributes.__init__(self)
 		self.nlri = _NLRI()
 		# the serialised (packed) data of the NLRI forming the rule
 		self.rules = []
-		self.actions = []
+		self.communities = communities
 
 	def add (self,data):
 		self.rules.append(data)
@@ -177,17 +181,11 @@ class Flow (Address,Attributes):
 	def update (self):
 		attributes = Attributes()
 		attributes.add(MPRNLRI(self.afi,self.safi,self))
+		attributes.add(self.communities)
 		return Update(NLRIS(),NLRIS(),attributes)
-		# Test code here
-		attributes = Attributes()
-		for community in self.actions:
-			attributes.add(community)
-		attributes.add(MPRNLRI(self.afi,self.safi,self))
-		return Update(NLRIS(),NLRIS(),self)
-
 
 	def __str__ (self):
-		return '[ ' + ' '.join([hex(ord(_)) for _ in self.pack()]) + ' ]'
+		return 'Flow [ ' + ' '.join([hex(ord(_)) for _ in self.pack()]) + ' ]'
 	
 	def __repr__ (self):
 		return str(self)
@@ -196,7 +194,7 @@ class Policy (Address):
 	def __init__ (self,safi=SAFI.flow_ipv4):
 		Address.__init__(self,AFI.ipv4,safi)
 		self.rules = {}
-		self.communities = []
+		self.communities = ECommunities()
 
 	def add_and (self,rule):
 		ID = rule.ID
@@ -216,11 +214,10 @@ class Policy (Address):
 		return True
 
 	def add_action (self,community):
-		pass
-		#self.communities.append(community)
+		self.communities.add(community)
 
 	def flow (self):
-		flow = Flow(self.afi,self.safi)
+		flow = Flow(self.afi,self.safi,self.communities)
 		# get all the possible type of component
 		IDS = self.rules.keys()
 		# the order is a RFC requirement
@@ -237,6 +234,5 @@ class Policy (Address):
 			
 			for rule in rules:
 				flow.add(rule)
-			#flow.actions = self.communities
 
 		return flow
