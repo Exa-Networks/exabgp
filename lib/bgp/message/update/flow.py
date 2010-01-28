@@ -147,21 +147,16 @@ class Fragment (IOperationByteShort):
 
 # ..........................................................
 
-class _NLRI (object):
+class _DummyNLRI (object):
 	def pack ():
 		return ""
 
-	def __str__ (self):
-		return "Dummy_NLRI"
-
-class Flow (Address,Attributes):
-	def __init__ (self,afi,safi,communities):
-		Address.__init__(self,afi,safi)
-		Attributes.__init__(self)
-		self.nlri = _NLRI()
+class _FlowNLRI (Attributes):
+	def __init__ (self):
 		# the serialised (packed) data of the NLRI forming the rule
+		Attributes.__init__(self)
 		self.rules = []
-		self.communities = communities
+		self.nlri = _DummyNLRI()
 
 	def add (self,data):
 		self.rules.append(data)
@@ -178,19 +173,13 @@ class Flow (Address,Attributes):
 			data = "%s" % chr(0)
 		return data
 		
-	def update (self):
-		attributes = Attributes()
-		attributes.add(MPRNLRI(self.afi,self.safi,self))
-		attributes.add(self.communities)
-		return Update(NLRIS(),NLRIS(),attributes)
-
 	def __str__ (self):
 		return 'Flow [ ' + ' '.join([hex(ord(_)) for _ in self.pack()]) + ' ]'
 	
 	def __repr__ (self):
 		return str(self)
 
-class Policy (Address):
+class Flow (Address):
 	def __init__ (self,safi=SAFI.flow_ipv4):
 		Address.__init__(self,AFI.ipv4,safi)
 		self.rules = {}
@@ -216,8 +205,8 @@ class Policy (Address):
 	def add_action (self,community):
 		self.communities.add(community)
 
-	def flow (self):
-		flow = Flow(self.afi,self.safi,self.communities)
+	def update (self):
+		nlri = _FlowNLRI()
 		# get all the possible type of component
 		IDS = self.rules.keys()
 		# the order is a RFC requirement
@@ -233,6 +222,10 @@ class Policy (Address):
 			rules[-1].operations |= CommonOperator.EOL
 			
 			for rule in rules:
-				flow.add(rule)
+				nlri.add(rule)
+		
+		attributes = Attributes()
+		attributes.add(MPRNLRI(self.afi,self.safi,nlri))
+		attributes.add(self.communities)
+		return Update(NLRIS(),NLRIS(),attributes)
 
-		return flow

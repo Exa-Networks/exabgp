@@ -113,8 +113,9 @@ class ECommunity (object):
 def _to_FlowCommunity (action,data):
 	return ECommunity(pack('!H',action) + data[:6])
 
-def to_FlowTrafficRate (rate):
-	return _to_FlowCommunity (0x8006,pack('!f',rate))
+# rate is bytes/seconds
+def to_FlowTrafficRate (asn,rate):
+	return _to_FlowCommunity (0x8006,pack('!H',asn)[:2]+pack('!f',rate))
 
 def to_FlowAction (asn,sample,terminal):
 	bitmask = chr(0)

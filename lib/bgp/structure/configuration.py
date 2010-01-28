@@ -15,6 +15,7 @@ from bgp.structure.asn        import ASN
 from bgp.structure.neighbor   import Neighbor
 from bgp.message.open         import HoldTime
 from bgp.structure.route      import Route
+from bgp.message.update.flow  import Flow
 from bgp.message.update.attribute             import AttributeID
 from bgp.message.update.attributes            import Attributes
 from bgp.message.update.attribute.origin      import Origin
@@ -24,6 +25,7 @@ from bgp.message.update.attribute.med         import MED
 from bgp.message.update.attribute.localpref   import LocalPreference
 from bgp.message.update.attribute.communities import Community,Communities
 
+
 class Configuration (object):
 	debug = True
 	_str_route_error = 'syntax: route IP/MASK next-hop IP' \
@@ -32,6 +34,15 @@ class Configuration (object):
 	' <med NUMBER>' \
 	' <local-preference NUMBER]>' \
 	' <community COMMUNITY|community [COMMUNITY1 COMMUNITY2 ...]>' \
+
+	_str_flow_error = \
+	'syntax: flow {\n' \
+	'          match {\n' \
+	'             <source IP/MASK>\n' \
+	'             <destination IP/MASK>\n' \
+	'          }\n' \
+	'          then <discard>\n' \
+	'        }' \
 
 	def __init__ (self,fname,text=False):
 		self._text = text
@@ -105,6 +116,7 @@ class Configuration (object):
 
 	# Flow control ......................
 
+	# XXX: it seems we are not using name anymore ...
 	def _dispatch (self,name,multi=set([]),single=set([])):
 		try:
 			tokens = self.tokens()
@@ -143,6 +155,18 @@ class Configuration (object):
 			if self._multi_route(tokens[1:]):
 				return self._check_route()
 			return False
+		if command == 'flow':
+			if self._multi_flow(tokens[1:]):
+				return self._check_flow()
+			return False
+		if command == 'match':
+			if self._multi_match(tokens[1:]):
+				return True
+			return False
+		if command == 'then':
+			if self._multi_then(tokens[1:]):
+				return True
+			return False
 		return False
 
 	def _single_line (self,tokens,valid=set([])):
@@ -160,6 +184,7 @@ class Configuration (object):
 		if command == 'graceful-restart': return self._set_gracefulrestart('graceful-restart',tokens[1:])
 
 		if command == 'route': return self._single_route(tokens[1:])
+#		if command == 'flow': return self._single_flow(tokens[1:])
 		if command == 'origin': return self._route_origin(tokens[1:])
 		if command == 'as-path': return self._route_aspath(tokens[1:])
 		if command == 'med': return self._route_med(tokens[1:])
@@ -496,3 +521,62 @@ class Configuration (object):
 			return False
 		self._scope[-1]['routes'][-1].add(communities)
 		return True
+
+	# Group Flow  ........
+
+	def _insert_flow (self,tokens):
+		try:
+			flow = Flow()
+		except ValueError:
+			self._error = self._str_flow_error
+			if self.debug: raise
+			return False
+
+		if not self._scope[-1].has_key('routes'):
+			self._scope[-1]['routes'] = []
+
+		self._scope[-1]['routes'].append(flow)
+		return True
+
+	def _check_flow (self):
+		return True
+
+	def _multi_flow (self,tokens):
+		if len(tokens) != 1:
+			self._error = self._str_flow_error
+			return False
+
+		if not self._insert_flow(tokens):
+			return False
+
+		while True:
+#			r = self._dispatch('flow',[],['source','destination','port'])
+			r = self._dispatch('flow',[],['match','then'])
+			if r is False: return False
+			if r is None: break
+		return True
+
+		# ..........................................
+		
+		def _multi_match (self,tokens):
+			if len(tokens) != 1:
+				self._error = self._str_flow_error
+				return False
+
+			while True:
+				r = self._dispatch('match',[],['source','destination','port'])
+				if r is False: return False
+				if r is None: break
+			return True
+
+		def _multi_then (self,tokens):
+			if len(tokens) != 1:
+				self._error = self._str_flow_error
+				return False
+
+			while True:
+				r = self._dispatch('then',[],['discard',])
+				if r is False: return False
+				if r is None: break
+			return True
+
