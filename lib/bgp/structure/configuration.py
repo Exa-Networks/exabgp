@@ -538,10 +538,10 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-		if not self._scope[-1].has_key('flows'):
-			self._scope[-1]['flows'] = []
+		if not self._scope[-1].has_key('routes'):
+			self._scope[-1]['routes'] = []
 
-		self._scope[-1]['flows'].append(flow)
+		self._scope[-1]['routes'].append(flow)
 		return True
 
 	def _check_flow (self):
@@ -549,10 +549,12 @@ class Configuration (object):
 		return True
 
 	def _multi_flow (self,tokens):
-		if len(tokens) != 1:
+		if len(tokens) > 1:
 			self._error = self._str_flow_error
 			return False
 
+		# if name was not provided, just set up an empty one
+		tokens.append('')
 		if not self._insert_flow(tokens[0]):
 			return False
 
@@ -580,8 +582,6 @@ class Configuration (object):
 		return True
 
 	def _multi_then (self,tokens):
-		print "*"*80
-		print tokens
 		if len(tokens) != 0:
 			self._error = self._str_flow_error
 			return False
@@ -598,7 +598,7 @@ class Configuration (object):
 		try:
 			ip,nm = tokens.pop(0).split('/')
 			prefix = to_Prefix(ip,nm)
-			self._scope[-1]['flows'][-1].add_and(Source(ip,nm))
+			self._scope[-1]['routes'][-1].add_and(Source(ip,nm))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -609,7 +609,7 @@ class Configuration (object):
 		try:
 			ip,nm = tokens.pop(0).split('/')
 			prefix = to_Prefix(ip,nm)
-			self._scope[-1]['flows'][-1].add_and(Destination(ip,nm))
+			self._scope[-1]['routes'][-1].add_and(Destination(ip,nm))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -657,7 +657,7 @@ class Configuration (object):
 					while token:
 						operator,_ = self._operator(token)
 						value,token = self._numeric(_)
-						self._scope[-1]['flows'][-1].add_or(AnyPort(AND|operator,value))
+						self._scope[-1]['routes'][-1].add_or(AnyPort(AND|operator,value))
 						AND = BinaryOperator.AND
 					continue
 				operator,rest = self._operator(token)
@@ -665,7 +665,7 @@ class Configuration (object):
 					value = int(rest)
 				except ValueError:
 					raise ValueError('Invalid numeric value in test %s' % string)
-				self._scope[-1]['flows'][-1].add_or(AnyPort(operator,value))
+				self._scope[-1]['routes'][-1].add_or(AnyPort(operator,value))
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise
@@ -674,7 +674,7 @@ class Configuration (object):
 	def _flow_discard (self,tokens):
 		# XXX: We are setting the ASN as zero as that what Juniper did when we created a local flow route
 		try:
-			self._scope[-1]['flows'][-1].add_action(to_FlowTrafficRate(ASN(0),0))
+			self._scope[-1]['routes'][-1].add_action(to_FlowTrafficRate(ASN(0),0))
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise
