@@ -7,6 +7,8 @@ Created by Thomas Mangin on 2010-01-14.
 Copyright (c) 2010 Exa Networks. All rights reserved.
 """
 
+from struct import pack
+
 from bgp.utils import *
 from bgp.structure.address import Address,AFI,SAFI
 from bgp.structure.ip import Prefix
@@ -30,6 +32,7 @@ class CommonOperator:
 
 	EOL       = 0x80
 	AND       = 0x40
+	NOP       = 0x00
 
 class NumericOperator (CommonOperator):
 #	reserved  = 0x08
@@ -153,7 +156,6 @@ class _DummyNLRI (object):
 
 class _FlowNLRI (Attributes):
 	def __init__ (self):
-		# the serialised (packed) data of the NLRI forming the rule
 		Attributes.__init__(self)
 		self.rules = []
 		self.nlri = _DummyNLRI()
@@ -195,7 +197,7 @@ class Flow (Address):
 
 	def add_or (self,rule):
 		ID = rule.ID
-		if ID in [flow.Destination, flow.Source]:
+		if ID in [Destination, Source.ID]:
 			return False
 		if self.rules.has_key(ID):
 			rule.first = False

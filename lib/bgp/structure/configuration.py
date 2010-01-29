@@ -15,7 +15,7 @@ from bgp.structure.asn        import ASN
 from bgp.structure.neighbor   import Neighbor
 from bgp.message.open         import HoldTime
 from bgp.structure.route      import Route
-from bgp.message.update.flow  import Flow
+from bgp.message.update.flow  import Flow,Source,Destination,BinaryOperator,NumericOperator,AnyPort
 from bgp.message.update.attribute             import AttributeID
 from bgp.message.update.attributes            import Attributes
 from bgp.message.update.attribute.origin      import Origin
@@ -23,7 +23,7 @@ from bgp.message.update.attribute.nexthop     import NextHop
 from bgp.message.update.attribute.aspath      import ASPath
 from bgp.message.update.attribute.med         import MED
 from bgp.message.update.attribute.localpref   import LocalPreference
-from bgp.message.update.attribute.communities import Community,Communities
+from bgp.message.update.attribute.communities import Community,Communities,to_FlowTrafficRate
 
 
 class Configuration (object):
@@ -38,8 +38,9 @@ class Configuration (object):
 	_str_flow_error = \
 	'syntax: flow {\n' \
 	'          match {\n' \
-	'             <source IP/MASK>\n' \
-	'             <destination IP/MASK>\n' \
+	'             <source IP/MASK;>\n' \
+	'             <destination IP/MASK;>\n' \
+	'             <port OPERATION_ON_PORT;>\n' \
 	'          }\n' \
 	'          then <discard>\n' \
 	'        }' \
@@ -116,7 +117,7 @@ class Configuration (object):
 
 	# Flow control ......................
 
-	# XXX: it seems we are not using name anymore ...
+	# name is not used yet but will come really handy if we have name collision :D
 	def _dispatch (self,name,multi=set([]),single=set([])):
 		try:
 			tokens = self.tokens()
@@ -127,9 +128,9 @@ class Configuration (object):
 		end = tokens[-1]
 		if multi and end == '{':
 			self._location.append(tokens[0])
-			return self._multi_line(tokens[:-1],multi)
+			return self._multi_line(name,tokens[:-1],multi)
 		if single and end == ';':
-			return self._single_line(tokens[:-1],single)
+			return self._single_line(name,tokens[:-1],single)
 		if end == '}':
 			if len(self._location) == 1:
 				self._error = 'closing too many parenthesis'
@@ -138,7 +139,7 @@ class Configuration (object):
 			return None
 		return False
 
-	def _multi_line (self,tokens,valid=set([])):
+	def _multi_line (self,name,tokens,valid=set([])):
 		command = tokens[0]
 		if valid and command not in valid:
 			self._error = 'option %s in not valid here' % command
@@ -169,7 +170,7 @@ class Configuration (object):
 			return False
 		return False
 
-	def _single_line (self,tokens,valid=set([])):
+	def _single_line (self,name,tokens,valid=set([])):
 		command = tokens[0]
 		if valid and command not in valid:
 			self._error = 'invalid keyword "%s"' % command
@@ -184,13 +185,18 @@ class Configuration (object):
 		if command == 'graceful-restart': return self._set_gracefulrestart('graceful-restart',tokens[1:])
 
 		if command == 'route': return self._single_route(tokens[1:])
-#		if command == 'flow': return self._single_flow(tokens[1:])
 		if command == 'origin': return self._route_origin(tokens[1:])
 		if command == 'as-path': return self._route_aspath(tokens[1:])
 		if command == 'med': return self._route_med(tokens[1:])
 		if command == 'next-hop': return self._route_next_hop(tokens[1:])
 		if command == 'local-preference': return self._route_local_preference(tokens[1:])
 		if command == 'community': return self._route_community(tokens[1:])
+		
+		if command == 'source': return self._flow_source(tokens[1:])
+		if command == 'destination': return self._flow_destination(tokens[1:])
+		if command == 'port': return self._flow_anyport(tokens[1:])
+		if command == 'discard': return self._flow_discard(tokens[1:])
+		
 		return False
 
 	# Group Neighbor
@@ -324,7 +330,7 @@ class Configuration (object):
 			self._error = 'syntax: static { route; route; ... }'
 			return False
 		while True:
-		 	r = self._dispatch('static',['route',],['route',])
+		 	r = self._dispatch('static',['route','flow'],['route',])
 			if r is False: return False
 			if r is None: return True
 
@@ -532,13 +538,14 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-		if not self._scope[-1].has_key('routes'):
-			self._scope[-1]['routes'] = []
+		if not self._scope[-1].has_key('flows'):
+			self._scope[-1]['flows'] = []
 
-		self._scope[-1]['routes'].append(flow)
+		self._scope[-1]['flows'].append(flow)
 		return True
 
 	def _check_flow (self):
+		print "warning: no check on flows are implemented"
 		return True
 
 	def _multi_flow (self,tokens):
@@ -546,37 +553,129 @@ class Configuration (object):
 			self._error = self._str_flow_error
 			return False
 
-		if not self._insert_flow(tokens):
+		if not self._insert_flow(tokens[0]):
 			return False
 
 		while True:
-#			r = self._dispatch('flow',[],['source','destination','port'])
-			r = self._dispatch('flow',[],['match','then'])
+			r = self._dispatch('flow',['match',],[])
+			if r is False: return False
+			if r is None: break
+		while True:
+			r = self._dispatch('flow',['then',],[])
 			if r is False: return False
 			if r is None: break
 		return True
 
-		# ..........................................
-		
-		def _multi_match (self,tokens):
-			if len(tokens) != 1:
-				self._error = self._str_flow_error
-				return False
+	# ..........................................
+	
+	def _multi_match (self,tokens):
+		if len(tokens) != 0:
+			self._error = self._str_flow_error
+			return False
 
-			while True:
-				r = self._dispatch('match',[],['source','destination','port'])
-				if r is False: return False
-				if r is None: break
+		while True:
+			r = self._dispatch('flow-match',[],['source','destination','port'])
+			if r is False: return False
+			if r is None: break
+		return True
+
+	def _multi_then (self,tokens):
+		print "*"*80
+		print tokens
+		if len(tokens) != 0:
+			self._error = self._str_flow_error
+			return False
+
+		while True:
+			r = self._dispatch('flow-then',[],['discard',])
+			if r is False: return False
+			if r is None: break
+		return True
+
+	# Command Flow
+
+	def _flow_source (self,tokens):
+		try:
+			ip,nm = tokens.pop(0).split('/')
+			prefix = to_Prefix(ip,nm)
+			self._scope[-1]['flows'][-1].add_and(Source(ip,nm))
 			return True
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
 
-		def _multi_then (self,tokens):
-			if len(tokens) != 1:
-				self._error = self._str_flow_error
-				return False
-
-			while True:
-				r = self._dispatch('then',[],['discard',])
-				if r is False: return False
-				if r is None: break
+	def _flow_destination (self,tokens):
+		try:
+			ip,nm = tokens.pop(0).split('/')
+			prefix = to_Prefix(ip,nm)
+			self._scope[-1]['flows'][-1].add_and(Destination(ip,nm))
 			return True
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
 
+	# to parse the port configuration of flow
+
+	def _operator (self,string):
+		if string[0] == '=':
+			return NumericOperator.EQ,string[1:]
+		if string[1] == '=':
+			operator = NumericOperator.EQ
+			rest = string[2:]
+		else:
+			operator = NumericOperator.NOP
+			rest = string[1:]
+		if string[0] == '>':
+			operator += NumericOperator.GT
+		elif string[0] == '<':
+			operator += NumericOperator.LT
+		else:
+			raise ValueError('Invalid operator in test %s' % string)
+		return operator,rest
+
+	def _numeric (self,string):
+		l = 0
+		for c in string:
+			if c.isdigit():
+				l += 1
+				continue
+			break
+		try:
+			return int(string[:l]),string[l:]
+		except ValueError:
+			raise ValueError('Expecting a number at the start of string [%s]' % string)
+
+	# parse =80 or >80 or <25 or &>10<20
+	def _flow_anyport (self,tokens):
+		try:
+			for token in tokens:
+				if token[0] == '&':
+					token = token[1:]
+					AND = BinaryOperator.NOP
+					while token:
+						operator,_ = self._operator(token)
+						value,token = self._numeric(_)
+						self._scope[-1]['flows'][-1].add_or(AnyPort(AND|operator,value))
+						AND = BinaryOperator.AND
+					continue
+				operator,rest = self._operator(token)
+				try:
+					value = int(rest)
+				except ValueError:
+					raise ValueError('Invalid numeric value in test %s' % string)
+				self._scope[-1]['flows'][-1].add_or(AnyPort(operator,value))
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+
+	def _flow_discard (self,tokens):
+		# XXX: We are setting the ASN as zero as that what Juniper did when we created a local flow route
+		try:
+			self._scope[-1]['flows'][-1].add_action(to_FlowTrafficRate(ASN(0),0))
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False

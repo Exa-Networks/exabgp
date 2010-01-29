@@ -175,22 +175,6 @@ class Protocol (object):
 		updates = ''.join(m)
 		self.log.outIf(self.trace,"UPDATE (update)   SENT: %s" % hexa(updates[19:]))
 
-		if True:
-			print "SENDING EXTRA FLOW"
-			from bgp.message.update.flow import *
-			from bgp.structure.ip import *
-			from bgp.structure.asn import *
-
-			flow = Flow()
-			for component in Destination("82.219.4.253",32), Source("82.219.4.254",32), AnyPort(NumericOperator.GT,25), AnyPort(NumericOperator.LT,80):
-				flow.add_and(component)
-#			flow.add_action(to_FlowAction(65000,False,False))
-			flow.add_action(to_FlowTrafficRate(ASN(65000),0))
-			update = flow.update().announce(ASN(65000),ASN(30740)) # it is an ebgp session
-			print "WIRING", [hex(ord(_)) for _ in update]
-			self.connection.write(update)
-			return []
-
 		if m:
 			self.connection.write(updates)
 			return m
