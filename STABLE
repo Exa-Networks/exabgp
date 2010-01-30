@@ -1,3 +1,2 @@
-No stable release is currently available,
-= svn revision 60 is used in production by the author to announce ONE route
-= current trunk is broken ..
+stable released can be found in the /branches part of the SVN tree
+/trunk should be considered unstable and unfit for production use.

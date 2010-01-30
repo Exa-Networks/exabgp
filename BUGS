@@ -1,7 +1,6 @@
-The tracking of route is likely to be totally buggy at this point
+The tracking of route changes is likely to be totally buggy at this point
 
-Add all the optional Flag to the attribute defined as optional by RFC 4271
-We are sending IPv6 routes even if IPv6 was not a multiproto negociated - we should report the problem and not send the routes
+We are sending IPv6 or flow routes even if the capacity was not negociated at OPEN - we should report the problem and not send the routes
 
 Need to forbid negative times in the configuration for hold-time and graceful-restart.
 Have an issue with hold time of 3 - see why and what can be done (4 is fine !!)
@@ -10,4 +9,4 @@ For incomming messages:
  - ASPath assumes only one segment
  - all the XXX: and FIXME: in the code
 
-The update unitest suffer from our bad includes (include loop), so update.py contains lots of code
+The update unitest really need to be to be updated.
