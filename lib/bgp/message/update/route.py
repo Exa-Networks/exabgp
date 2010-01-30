@@ -32,5 +32,5 @@ class Route (Address,Attributes):
 		return self.nlri.pack()
 
 	def __str__ (self):
-		return "%s%s" % (self.nlri,Attributes.__str__(self))
+		return "%s %s%s" % (Address.__str__(self),str(self.nlri),Attributes.__str__(self))
 

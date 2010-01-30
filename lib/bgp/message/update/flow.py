@@ -70,6 +70,9 @@ class IPrefix (IComponent):
 	def pack (self):
 		raw = self.nlri.pack()
 		return "%s%s" % (chr(self.ID),raw)
+	
+	def __str__ (self):
+		return "%s %s" % (self.NAME,str(self.nlri))
 
 class IOperation (IComponent):
 	# need to implement encode which encode the value of the operator
@@ -101,48 +104,87 @@ class IOperationByteShort (IOperation):
 			return 1,chr(value)
 		return 2,pack('!H',value)
 
+# String representation for Numeric and Binary Tests
+
+class NumericString (object):
+	_string = {
+		NumericOperator.AND  : '&',
+		NumericOperator.LT   : '<',
+		NumericOperator.GT   : '>',
+		NumericOperator.EQ   : '=',
+		NumericOperator.LT|NumericOperator.EQ : '<:',
+		NumericOperator.GT|NumericOperator.EQ : '>:',
+	}
+
+	def __str__ (self):
+		return "%s %s%s" % (self.NAME, self._string[self.operations & (CommonOperator.EOL ^ 0xFF) ], self.value)
+
+class BinaryString (object):
+	_string = {
+		BinaryOperator.AND   : '&',
+		BinaryOperator.NOT   : '!',
+		BinaryOperator.MATCH : ':',
+	}
+
+	def __str__ (self):
+		return "%s %s%s" % (self.NAME, self._string[self.operations & (CommonOperator.EOL ^ 0xFF) ], self.value)
+
 # Components ..............................
 
 # Prefix
 class Destination (IPrefix):
 	ID = 0x01
+	NAME = 'destination'
 
 # Prefix
 class Source (IPrefix):
 	ID = 0x02
+	NAME = 'source'
 
 # NumericOperator
-class IPProtocol (IOperationByte):
+class IPProtocol (IOperationByte,NumericString):
 	ID  = 0x03
+	NAME = 'protocol'
 
 # NumericOperator
-class AnyPort (IOperationByteShort):
+class AnyPort (IOperationByteShort,NumericString):
 	ID  = 0x04
+	NAME = 'port'
 
 # NumericOperator
-class SourcePort (IOperationByteShort):
+class DestinationPort (IOperationByteShort,NumericString):
+	ID  = 0x05
+	NAME = 'destination-port'
+
+# NumericOperator
+class SourcePort (IOperationByteShort,NumericString):
 	ID  = 0x06
+	NAME = 'source-port'
 
-# NumericOperator
-class DestinationPort (IOperationByteShort):
-	ID  = 0x07
+# BinaryOperator
+class ICMPType (IOperationByte,BinaryString):
+	ID = 0x07
+	NAME = 'destination-port'
 
-# NumericOperator
-class ICMP (IOperationByte):
+# BinaryOperator
+class ICMPCode (IOperationByte,BinaryString):
 	ID = 0x08
 
 # BinaryOperator
-class TCPFlag (IOperationByte):
+class TCPFlag (IOperationByte,BinaryString):
 	ID = 0x09
+	NAME = 'tcp-flags'
 
 # NumericOperator
-class PacketLength (IOperationByteShort):
+class PacketLength (IOperationByteShort,NumericString):
 	ID = 0x0A
+	NAME = 'packet-length'
 
 # NumericOperator
 # RFC2474
 class DSCP (IOperationByteShort):
 	ID = 0x0B
+	NAME = 'dscp'
 
 # BinaryOperator
 class Fragment (IOperationByteShort):
@@ -160,7 +202,7 @@ class _FlowNLRI (Attributes):
 		self.rules = []
 		self.nlri = _DummyNLRI()
 
-	def add (self,data):
+	def add_rule (self,data):
 		self.rules.append(data)
 	
 	def pack (self):
@@ -176,7 +218,7 @@ class _FlowNLRI (Attributes):
 		return data
 		
 	def __str__ (self):
-		return 'Flow [ ' + ' '.join([hex(ord(_)) for _ in self.pack()]) + ' ]'
+		return ','.join([str(rule) for rule in self.rules])
 	
 	def __repr__ (self):
 		return str(self)
@@ -207,7 +249,7 @@ class Flow (Address):
 	def add_action (self,community):
 		self.communities.add(community)
 
-	def update (self):
+	def _nlri (self):
 		nlri = _FlowNLRI()
 		# get all the possible type of component
 		IDS = self.rules.keys()
@@ -222,12 +264,15 @@ class Flow (Address):
 				rule.operations &= (CommonOperator.EOL ^ 0xFF)
 			# and add it to the last rule
 			rules[-1].operations |= CommonOperator.EOL
-			
 			for rule in rules:
-				nlri.add(rule)
-		
+				nlri.add_rule(rule)
+		return nlri
+
+	def update (self):
 		attributes = Attributes()
-		attributes.add(MPRNLRI(self.afi,self.safi,nlri))
+		attributes.add(MPRNLRI(self.afi,self.safi,self._nlri()))
 		attributes.add(self.communities)
 		return Update(NLRIS(),NLRIS(),attributes)
 
+	def __str__ (self):
+		return "%s %s" % (Address.__str__(self) , str(self._nlri()))

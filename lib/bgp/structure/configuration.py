@@ -14,8 +14,8 @@ from bgp.structure.ip         import to_IP,to_Prefix
 from bgp.structure.asn        import ASN
 from bgp.structure.neighbor   import Neighbor
 from bgp.message.open         import HoldTime
-from bgp.structure.route      import Route
-from bgp.message.update.flow  import Flow,Source,Destination,BinaryOperator,NumericOperator,AnyPort
+from bgp.message.update.route import Route
+from bgp.message.update.flow  import Flow,Source,Destination,BinaryOperator,NumericOperator,SourcePort,DestinationPort,AnyPort
 from bgp.message.update.attribute             import AttributeID
 from bgp.message.update.attributes            import Attributes
 from bgp.message.update.attribute.origin      import Origin
@@ -41,6 +41,8 @@ class Configuration (object):
 	'             <source IP/MASK;>\n' \
 	'             <destination IP/MASK;>\n' \
 	'             <port OPERATION_ON_PORT;>\n' \
+	'             <source-port OPERATION_ON_PORT;>\n' \
+	'             <destination-port OPERATION_ON_PORT;>\n' \
 	'          }\n' \
 	'          then <discard>\n' \
 	'        }' \
@@ -206,6 +208,8 @@ class Configuration (object):
 		if command == 'source': return self._flow_source(tokens[1:])
 		if command == 'destination': return self._flow_destination(tokens[1:])
 		if command == 'port': return self._flow_route_anyport(tokens[1:])
+		if command == 'source-port': return self._flow_route_source_port(tokens[1:])
+		if command == 'destination-port': return self._flow_route_destination_port(tokens[1:])
 		if command == 'discard': return self._flow_route_discard(tokens[1:])
 		
 		return False
@@ -581,11 +585,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch('flow-route',['match',],[])
-			if r is False: return False
-			if r is None: break
-		while True:
-			r = self._dispatch('flow-route',['then',],[])
+			r = self._dispatch('flow-route',['match','then'],[])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -598,7 +598,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch('flow-match',[],['source','destination','port'])
+			r = self._dispatch('flow-match',[],['source','destination','port','source-port','destination-port'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -641,21 +641,22 @@ class Configuration (object):
 	# to parse the port configuration of flow
 
 	def _operator (self,string):
-		if string[0] == '=':
-			return NumericOperator.EQ,string[1:]
-		if string[1] == '=':
-			operator = NumericOperator.EQ
-			rest = string[2:]
-		else:
-			operator = NumericOperator.NOP
-			rest = string[1:]
-		if string[0] == '>':
-			operator += NumericOperator.GT
-		elif string[0] == '<':
-			operator += NumericOperator.LT
-		else:
-			raise ValueError('Invalid operator in test %s' % string)
-		return operator,rest
+		try:
+			if string[0] == '=':
+				return NumericOperator.EQ,string[1:]
+			elif string[0] == '>':
+				operator = NumericOperator.GT
+			elif string[0] == '<':
+				operator = NumericOperator.LT
+			else:
+				raise ValueError('Invalid operator in test %s' % string)
+			if string[1] == '=':
+				operator += NumericOperator.EQ
+				return operator,string[2:]
+			else:
+				return operator,string[1:]
+		except IndexError:
+			raise('Invalid expression (too short) %s' % string)
 
 	def _numeric (self,string):
 		l = 0
@@ -670,28 +671,36 @@ class Configuration (object):
 			raise ValueError('Expecting a number at the start of string [%s]' % string)
 
 	# parse =80 or >80 or <25 or &>10<20
-	def _flow_route_anyport (self,tokens):
+	def _flow_generic_port (self,tokens,klass):
 		try:
-			for token in tokens:
-				if token[0] == '&':
-					token = token[1:]
-					AND = BinaryOperator.NOP
-					while token:
-						operator,_ = self._operator(token)
-						value,token = self._numeric(_)
-						self._scope[-1]['routes'][-1].add_or(AnyPort(AND|operator,value))
-						AND = BinaryOperator.AND
-					continue
-				operator,rest = self._operator(token)
-				try:
-					value = int(rest)
-				except ValueError:
-					raise ValueError('Invalid numeric value in test %s' % string)
-				self._scope[-1]['routes'][-1].add_or(AnyPort(operator,value))
+			for test in tokens:
+				AND = BinaryOperator.NOP
+				while test:
+					operator,_ = self._operator(test)
+					value,test = self._numeric(_)
+					self._scope[-1]['routes'][-1].add_or(klass(AND|operator,value))
+					if test:
+						if test[0] == '&':
+							AND = BinaryOperator.AND
+							test = test[1:]
+							if not test:
+								raise ValueError("Can not finish an expresion on an &")
+						else:
+							raise ValueError("Unknown binary operator %s" % test[0])
+				return True
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
+
+	def _flow_route_anyport (self,tokens):
+		return self._flow_generic_port(tokens,AnyPort)
+
+	def _flow_route_source_port (self,tokens):
+		return self._flow_generic_port(tokens,SourcePort)
+
+	def _flow_route_destination_port (self,tokens):
+		return self._flow_generic_port(tokens,DestinationPort)
 
 	def _flow_route_discard (self,tokens):
 		# XXX: We are setting the ASN as zero as that what Juniper did when we created a local flow route
