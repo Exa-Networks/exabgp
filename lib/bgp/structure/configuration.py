@@ -144,30 +144,41 @@ class Configuration (object):
 		if valid and command not in valid:
 			self._error = 'option %s in not valid here' % command
 			return False
-		if command == 'neighbor':
-			if len(tokens) != 2:
-				self._error = 'syntax: neighbor <ip> { <options> }'
+
+		if name == 'configuration':
+			if  command == 'neighbor':
+				if len(tokens) != 2:
+					self._error = 'syntax: neighbor <ip> { <options> }'
+					return False
+				if self._multi_neighbor(tokens[1]):
+					return self._make_neighbor()
 				return False
-			if self._multi_neighbor(tokens[1]):
-				return self._make_neighbor()
-			return False
-		if command == 'static': return self._multi_static(tokens[1:])
-		if command == 'route':
-			if self._multi_route(tokens[1:]):
-				return self._check_route()
-			return False
-		if command == 'flow':
-			if self._multi_flow(tokens[1:]):
-				return self._check_flow()
-			return False
-		if command == 'match':
-			if self._multi_match(tokens[1:]):
-				return True
-			return False
-		if command == 'then':
-			if self._multi_then(tokens[1:]):
-				return True
-			return False
+
+		if name == 'neighbor':
+			if command == 'static': return self._multi_static(tokens[1:])
+			if command == 'flow': return self._multi_flow(tokens[1:])
+
+		if name == 'static':
+			if command == 'route':
+				if self._multi_static_route(tokens[1:]):
+					return self._check_static_route()
+				return False
+
+		if name == 'flow':
+			if command == 'route':
+				if self._multi_flow_route(tokens[1:]):
+					return self._check_flow_route()
+				return False
+
+		if name == 'flow-route':
+			if command == 'match':
+				if self._multi_match(tokens[1:]):
+					return True
+				return False
+			if command == 'then':
+				if self._multi_then(tokens[1:]):
+					return True
+				return False
 		return False
 
 	def _single_line (self,name,tokens,valid=set([])):
@@ -184,7 +195,7 @@ class Configuration (object):
 		if command == 'hold-time': return self._set_holdtime('hold-time',tokens[1:])
 		if command == 'graceful-restart': return self._set_gracefulrestart('graceful-restart',tokens[1:])
 
-		if command == 'route': return self._single_route(tokens[1:])
+		if command == 'route': return self._single_static_route(tokens[1:])
 		if command == 'origin': return self._route_origin(tokens[1:])
 		if command == 'as-path': return self._route_aspath(tokens[1:])
 		if command == 'med': return self._route_med(tokens[1:])
@@ -194,8 +205,8 @@ class Configuration (object):
 		
 		if command == 'source': return self._flow_source(tokens[1:])
 		if command == 'destination': return self._flow_destination(tokens[1:])
-		if command == 'port': return self._flow_anyport(tokens[1:])
-		if command == 'discard': return self._flow_discard(tokens[1:])
+		if command == 'port': return self._flow_route_anyport(tokens[1:])
+		if command == 'discard': return self._flow_route_discard(tokens[1:])
 		
 		return False
 
@@ -255,7 +266,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-		 	r = self._dispatch('neigbor',['static',],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart'])
+		 	r = self._dispatch('neighbor',['static','flow'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart'])
 			if r is False: return False
 			if r is None: return True
 
@@ -330,13 +341,13 @@ class Configuration (object):
 			self._error = 'syntax: static { route; route; ... }'
 			return False
 		while True:
-		 	r = self._dispatch('static',['route','flow'],['route',])
+		 	r = self._dispatch('static',['route',],['route',])
 			if r is False: return False
 			if r is None: return True
 
 	# Group Route  ........
 
-	def _insert_route (self,tokens):
+	def _insert_static_route (self,tokens):
 		try:
 			ip,nm = tokens.pop(0).split('/')
 			prefix = to_Prefix(ip,nm)
@@ -352,7 +363,7 @@ class Configuration (object):
 		self._scope[-1]['routes'].append(route)
 		return True
 
-	def _check_route (self):
+	def _check_static_route (self):
 		route = self._scope[-1]['routes'][-1]
 		next_hop = self._scope[-1]['routes'][-1].next_hop
 
@@ -361,12 +372,12 @@ class Configuration (object):
 			return False
 		return True
 
-	def _multi_route (self,tokens):
+	def _multi_static_route (self,tokens):
 		if len(tokens) != 1:
 			self._error = self._str_route_error
 			return False
 
-		if not self._insert_route(tokens):
+		if not self._insert_static_route(tokens):
 			return False
 
 		while True:
@@ -375,12 +386,12 @@ class Configuration (object):
 			if r is None: break
 		return True
 
-	def _single_route (self,tokens):
+	def _single_static_route (self,tokens):
 		if len(tokens) <3:
 			self._error = self._str_route_error
 			return False
 
-		if not self._insert_route(tokens):
+		if not self._insert_static_route(tokens):
 			return False
 
 		if tokens.pop(0) != 'next-hop':
@@ -530,7 +541,18 @@ class Configuration (object):
 
 	# Group Flow  ........
 
-	def _insert_flow (self,tokens):
+	def _multi_flow (self,tokens):
+		if len(tokens) != 0:
+			self._error = self._str_flow_error
+			return False
+
+		while True:
+			r = self._dispatch('flow',['route',],[])
+			if r is False: return False
+			if r is None: break
+		return True
+
+	def _insert_flow_route (self,tokens):
 		try:
 			flow = Flow()
 		except ValueError:
@@ -544,26 +566,26 @@ class Configuration (object):
 		self._scope[-1]['routes'].append(flow)
 		return True
 
-	def _check_flow (self):
+	def _check_flow_route (self):
 		print "warning: no check on flows are implemented"
 		return True
 
-	def _multi_flow (self,tokens):
+	def _multi_flow_route (self,tokens):
 		if len(tokens) > 1:
 			self._error = self._str_flow_error
 			return False
 
 		# if name was not provided, just set up an empty one
 		tokens.append('')
-		if not self._insert_flow(tokens[0]):
+		if not self._insert_flow_route(tokens[0]):
 			return False
 
 		while True:
-			r = self._dispatch('flow',['match',],[])
+			r = self._dispatch('flow-route',['match',],[])
 			if r is False: return False
 			if r is None: break
 		while True:
-			r = self._dispatch('flow',['then',],[])
+			r = self._dispatch('flow-route',['then',],[])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -648,7 +670,7 @@ class Configuration (object):
 			raise ValueError('Expecting a number at the start of string [%s]' % string)
 
 	# parse =80 or >80 or <25 or &>10<20
-	def _flow_anyport (self,tokens):
+	def _flow_route_anyport (self,tokens):
 		try:
 			for token in tokens:
 				if token[0] == '&':
@@ -671,7 +693,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-	def _flow_discard (self,tokens):
+	def _flow_route_discard (self,tokens):
 		# XXX: We are setting the ASN as zero as that what Juniper did when we created a local flow route
 		try:
 			self._scope[-1]['routes'][-1].add_action(to_FlowTrafficRate(ASN(0),0))
