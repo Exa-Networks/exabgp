@@ -72,7 +72,7 @@ class IPrefix (IComponent):
 		return "%s%s" % (chr(self.ID),raw)
 	
 	def __str__ (self):
-		return "%s %s" % (self.NAME,str(self.nlri))
+		return str(self.nlri)
 
 class IOperation (IComponent):
 	# need to implement encode which encode the value of the operator
@@ -108,26 +108,32 @@ class IOperationByteShort (IOperation):
 
 class NumericString (object):
 	_string = {
-		NumericOperator.AND  : '&',
 		NumericOperator.LT   : '<',
 		NumericOperator.GT   : '>',
 		NumericOperator.EQ   : '=',
-		NumericOperator.LT|NumericOperator.EQ : '<:',
-		NumericOperator.GT|NumericOperator.EQ : '>:',
+		NumericOperator.LT|NumericOperator.EQ : '<=',
+		NumericOperator.GT|NumericOperator.EQ : '>=',
+
+		NumericOperator.AND|NumericOperator.LT   : '&<',
+		NumericOperator.AND|NumericOperator.GT   : '&>',
+		NumericOperator.AND|NumericOperator.EQ   : '&=',
+		NumericOperator.AND|NumericOperator.LT|NumericOperator.EQ : '&<=',
+		NumericOperator.AND|NumericOperator.GT|NumericOperator.EQ : '&>=',
 	}
 
 	def __str__ (self):
-		return "%s %s%s" % (self.NAME, self._string[self.operations & (CommonOperator.EOL ^ 0xFF) ], self.value)
+		return "%s%s" % (self._string[self.operations & (CommonOperator.EOL ^ 0xFF) ], self.value)
 
 class BinaryString (object):
 	_string = {
-		BinaryOperator.AND   : '&',
 		BinaryOperator.NOT   : '!',
-		BinaryOperator.MATCH : ':',
+		BinaryOperator.MATCH : '=',
+		BinaryOperator.AND|BinaryOperator.NOT   : '&!',
+		BinaryOperator.AND|BinaryOperator.MATCH : '&=',
 	}
 
 	def __str__ (self):
-		return "%s %s%s" % (self.NAME, self._string[self.operations & (CommonOperator.EOL ^ 0xFF) ], self.value)
+		return "%s%s" % (self._string[self.operations & (CommonOperator.EOL ^ 0xFF) ], self.value)
 
 # Components ..............................
 
@@ -192,42 +198,10 @@ class Fragment (IOperationByteShort):
 
 # ..........................................................
 
-class _DummyNLRI (object):
-	def pack ():
-		return ""
-
 class _FlowNLRI (Attributes):
 	def __init__ (self):
 		Attributes.__init__(self)
-		self.rules = []
-		self.nlri = _DummyNLRI()
-
-	def add_rule (self,data):
-		self.rules.append(data)
-	
-	def pack (self):
-		components = ''.join([rule.pack() for rule in self.rules])
-		l = len(components)
-		if l < 0xF0:
-			data = "%s%s" % (chr(l),components)
-		elif l < 0x0FFF:
-			data = "%s%s" % (pack('!H',l) | 0xF000,components)
-		else:
-			print "rule too big for NLRI - how to handle this - does this work ?"
-			data = "%s" % chr(0)
-		return data
-		
-	def __str__ (self):
-		return ','.join([str(rule) for rule in self.rules])
-	
-	def __repr__ (self):
-		return str(self)
-
-class Flow (Address):
-	def __init__ (self,safi=SAFI.flow_ipv4):
-		Address.__init__(self,AFI.ipv4,safi)
 		self.rules = {}
-		self.communities = ECommunities()
 
 	def add_and (self,rule):
 		ID = rule.ID
@@ -246,15 +220,13 @@ class Flow (Address):
 		self.rules.setdefault(ID,[]).append(rule)
 		return True
 
-	def add_action (self,community):
-		self.communities.add(community)
-
-	def _nlri (self):
-		nlri = _FlowNLRI()
-		# get all the possible type of component
-		IDS = self.rules.keys()
+	def pack (self):
+		ordered_rules = []
+		
 		# the order is a RFC requirement
+		IDS = self.rules.keys()
 		IDS.sort()
+		
 		for ID in IDS:
 			rules = self.rules[ID]
 			# for each component get all the operation to do
@@ -265,14 +237,55 @@ class Flow (Address):
 			# and add it to the last rule
 			rules[-1].operations |= CommonOperator.EOL
 			for rule in rules:
-				nlri.add_rule(rule)
-		return nlri
+				ordered_rules.append(rule)
+		
+		components = ''.join([rule.pack() for rule in ordered_rules])
+		l = len(components)
+		if l < 0xF0:
+			data = "%s%s" % (chr(l),components)
+		elif l < 0x0FFF:
+			data = "%s%s" % (pack('!H',l) | 0xF000,components)
+		else:
+			print "rule too big for NLRI - how to handle this - does this work ?"
+			data = "%s" % chr(0)
+		return data
+		
+	def __str__ (self):
+		string = []
+		for _,rules in self.rules.iteritems():
+			s = []
+			for rule in rules:
+				if rule.operations & NumericOperator.AND:
+					s.append(str(rule))
+				else:
+					s.append(' ')
+					s.append(str(rule))
+			string.append('%s %s' % (rules[0].NAME,''.join(s[1:])))
+		return ','.join(string)
+	
+	def __repr__ (self):
+		return str(self)
+
+class Flow (Address):
+	def __init__ (self,safi=SAFI.flow_ipv4):
+		Address.__init__(self,AFI.ipv4,safi)
+		self.nlri = _FlowNLRI()
+		self.communities = ECommunities()
+
+	def add_and (self,rule):
+		return self.nlri.add_and(rule)
+
+	def add_or (self,rule):
+		return self.nlri.add_or(rule)
+
+	def add_action (self,community):
+		self.communities.add(community)
 
 	def update (self):
 		attributes = Attributes()
-		attributes.add(MPRNLRI(self.afi,self.safi,self._nlri()))
+		attributes.add(MPRNLRI(self.afi,self.safi,self.nlri))
 		attributes.add(self.communities)
 		return Update(NLRIS(),NLRIS(),attributes)
 
 	def __str__ (self):
-		return "%s %s" % (Address.__str__(self) , str(self._nlri()))
+		return "%s %s" % (Address.__str__(self),str(self.nlri))

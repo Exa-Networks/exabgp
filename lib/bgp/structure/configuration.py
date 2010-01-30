@@ -571,7 +571,7 @@ class Configuration (object):
 		return True
 
 	def _check_flow_route (self):
-		print "warning: no check on flows are implemented"
+		if self.debug: print "warning: no check on flows are implemented"
 		return True
 
 	def _multi_flow_route (self,tokens):
@@ -687,7 +687,7 @@ class Configuration (object):
 								raise ValueError("Can not finish an expresion on an &")
 						else:
 							raise ValueError("Unknown binary operator %s" % test[0])
-				return True
+			return True
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise
