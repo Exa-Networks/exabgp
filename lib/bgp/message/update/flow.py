@@ -14,6 +14,7 @@ from bgp.structure.address import Address,AFI,SAFI
 from bgp.structure.ip import Prefix
 from bgp.message.update.attributes import Attributes
 from bgp.message.update.attribute.mprnlri import MPRNLRI
+from bgp.message.update.attribute.mpurnlri import MPURNLRI
 from bgp.message.update.attribute.communities import ECommunities
 from bgp.message.update import Update,NLRIS
 
@@ -280,6 +281,12 @@ class Flow (Address):
 
 	def add_action (self,community):
 		self.communities.add(community)
+
+	def withdraw (self):
+		attributes = Attributes()
+		attributes.add(MPURNLRI(self.afi,self.safi,self.nlri))
+		attributes.add(self.communities)
+		return Update(NLRIS(),NLRIS(),attributes)
 
 	def update (self):
 		attributes = Attributes()

@@ -23,7 +23,7 @@ from bgp.message.update.attribute.nexthop     import NextHop
 from bgp.message.update.attribute.aspath      import ASPath
 from bgp.message.update.attribute.med         import MED
 from bgp.message.update.attribute.localpref   import LocalPreference
-from bgp.message.update.attribute.communities import Community,Communities,to_FlowTrafficRate,to_RouteTargetCommunity
+from bgp.message.update.attribute.communities import Community,Communities,to_FlowTrafficRate,to_RouteTargetCommunity_00,to_RouteTargetCommunity_01
 
 
 class Configuration (object):
@@ -731,16 +731,25 @@ class Configuration (object):
 	def _flow_route_redirect (self,tokens):
 		# XXX: We are setting the ASN as zero as that what Juniper did when we created a local flow route
 		try:
-			bitmask = tokens[0]
-			if bitmask[:2].lower() != '0x':
-				raise ValueError('redirect takes a 4 bytes hexadecimal bitmask, prefixed with 0x, ie: 0x12345678 (not prefixed with 0x) %s' % bitmask) 
-			try:
-				route_target = int(bitmask,16)
-			except ValueError:
-				raise ValueError('redirect takes a 4 bytes long hexadecimal bitmask, prefixed with 0x, ie: 0x12345678 (not valid hexanumeric) %s' % bitmask) 
-			if len(bitmask) > 10:
-				raise ValueError('redirect takes a 4 bytes long hexadecimal bitmask, prefixed with 0x, ie: 0x12345678 (too short) %s' % bitmask) 
-			self._scope[-1]['routes'][-1].add_action(to_RouteTargetCommunity(0,route_target))
+			prefix,suffix=tokens[0].split(':',1)
+			if prefix.count('.'):
+				ip = prefix.split('.')
+				if len(ip) != 4:
+					raise ValueError('')
+				ipn = 0
+				while ip:
+					ipn <<= 8
+					ipn += int(ip.pop(0))
+				number = int(suffix)
+				self._scope[-1]['routes'][-1].add_action(to_RouteTargetCommunity_01(ipn,number))
+			else:
+				asn = int(prefix)
+				route_target = int(suffix)
+				if asn >= pow(2,16):
+					asn = asn & 0xFFFF
+				if route_target >= pow(2,32):
+					raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
+				self._scope[-1]['routes'][-1].add_action(to_RouteTargetCommunity_00(asn,route_target))
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise

@@ -16,7 +16,10 @@ neighbor 82.219.4.254 {
 				source-port >1024;
 			}
 			then {
-				discard;
+#				rate-limit 9600;
+#				discard;
+				redirect 65500:12345;
+#				redirect 1.2.3.4:5678;
 			}
 		}
 	}

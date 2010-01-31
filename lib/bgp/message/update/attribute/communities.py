@@ -148,11 +148,17 @@ def to_OpaqueCommunity (subtype,data,transitive):
 	if transitive: r += chr(0x40)
 	return ECommunity(r + chr(subtype) + ''.join([chr(c) for c in data[:6]]))
 
-def to_RouteTargetCommunity (asn,number,hightype=0x01):
+def to_RouteTargetCommunity_00 (asn,number):
 	# hightype must be 0x01, 0x02 or 0x03
 	# 0x00, 0x02 Number is administrated by a global authority
 	# 0x01, Number is administered by the ASN owner
-	return ECommunity(chr(hightype) + chr(0x02) + pack('!H',asn) + pack('!L',number))
+	return ECommunity(chr(0x00) + chr(0x02) + pack('!H',asn) + pack('!L',number))
+
+def to_RouteTargetCommunity_01 (ipn,number):
+	# hightype must be 0x01, 0x02 or 0x03
+	# 0x00, 0x02 Number is administrated by a global authority
+	# 0x01, Number is administered by the ASN owner
+	return ECommunity(chr(0x01) + chr(0x02) + pack('!L',ipn) + pack('!H',number))
 
 # See RFC4364
 def to_RouteOriginCommunity (asn,number,hightype=0x01):
