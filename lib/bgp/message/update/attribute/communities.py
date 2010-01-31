@@ -136,7 +136,7 @@ def to_FlowMark (dscp):
 def to_ASCommunity (subtype,asn,data,transitive):
 	r = chr(0x00)
 	if transitive: r += chr(0x40)
-	return ECommunity(r + chr(subtype) + pack('!N',asn) + ''.join([chr(c) for c in data[:4]]))
+	return ECommunity(r + chr(subtype) + pack('!H',asn) + ''.join([chr(c) for c in data[:4]]))
 
 def to_IPv4Community (subtype,data,transitive):
 	r = chr(0x01)
@@ -152,14 +152,14 @@ def to_RouteTargetCommunity (asn,number,hightype=0x01):
 	# hightype must be 0x01, 0x02 or 0x03
 	# 0x00, 0x02 Number is administrated by a global authority
 	# 0x01, Number is administered by the ASN owner
-	return ECommunity(chr(hightype) + chr(0x02) + pack('!N',asn) + pack('!L',number))
+	return ECommunity(chr(hightype) + chr(0x02) + pack('!H',asn) + pack('!L',number))
 
 # See RFC4364
 def to_RouteOriginCommunity (asn,number,hightype=0x01):
 	# hightype must be 0x01, 0x02 or 0x03
 	# 0x00, 0x02 Number is administrated by a global authority
 	# 0x01, Number is administered by the ASN owner
-	return ECommunity(chr(hightype) + chr(0x03) + pack('!N',asn) + pack('!L',number))
+	return ECommunity(chr(hightype) + chr(0x03) + pack('!H',asn) + pack('!L',number))
 
 def new_ECommunities (data):
 	communities = ECommunities()
