@@ -23,11 +23,11 @@ from bgp.message.update.attribute.nexthop     import NextHop
 from bgp.message.update.attribute.aspath      import ASPath
 from bgp.message.update.attribute.med         import MED
 from bgp.message.update.attribute.localpref   import LocalPreference
-from bgp.message.update.attribute.communities import Community,Communities,to_FlowTrafficRate
+from bgp.message.update.attribute.communities import Community,Communities,to_FlowTrafficRate,to_FlowRedirect
 
 
 class Configuration (object):
-	debug = True
+	debug = False
 	_str_route_error = 'syntax: route IP/MASK next-hop IP' \
 	' <origin IGP|EGP|INCOMPLETE>' \
 	' <as-path ASN| as-path [ASN1 ASN2 ...]>' \
@@ -211,6 +211,8 @@ class Configuration (object):
 		if command == 'source-port': return self._flow_route_source_port(tokens[1:])
 		if command == 'destination-port': return self._flow_route_destination_port(tokens[1:])
 		if command == 'discard': return self._flow_route_discard(tokens[1:])
+		if command == 'rate-limit': return self._flow_route_rate_limit(tokens[1:])
+		if command == 'redirect': return self._flow_route_redirect(tokens[1:])
 		
 		return False
 
@@ -609,7 +611,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch('flow-then',[],['discard',])
+			r = self._dispatch('flow-then',[],['discard','rate-limit','redirect'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -710,3 +712,37 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
+
+	def _flow_route_rate_limit (self,tokens):
+		# XXX: We are setting the ASN as zero as that what Juniper did when we created a local flow route
+		try:
+			speed = int(tokens[0])
+			if speed < 9600 and speed != 0:
+				print "warning: rate-limiting flow under 9600 bytes per seconds may not work"
+			if speed > 1000000000000:
+				speed = 1000000000000
+				print "warning: rate-limiting changed for 1 000 000 000 000 bytes from %s" % tokens[0]
+			self._scope[-1]['routes'][-1].add_action(to_FlowTrafficRate(ASN(0),speed))
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+
+	def _flow_route_redirect (self,tokens):
+		# we expect tokens[0] to be string of an hexacimal number in the form '0x...' representing 6bytes of data
+		try:
+			bitmask = tokens[0]
+			if bitmask[:2].lower() != '0x':
+				raise ValueError('redirect takes a 6 bytes long hexadecimal bitmask, prefixed with 0x, ie: 0x123456789ABC (not prefixed with 0x) %s' % bitmask) 
+			try:
+				_ = int(bitmask,16)
+			except ValueError:
+				raise ValueError('redirect takes a 6 bytes long hexadecimal bitmask, prefixed with 0x, ie: 0x123456789ABC (not valid hexanumeric) %s' % bitmask) 
+			if len(bitmask) != 14:
+				raise ValueError('redirect takes a 6 bytes long hexadecimal bitmask, prefixed with 0x, ie: 0x123456789ABC (too short) %s' % bitmask) 
+			self._scope[-1]['routes'][-1].add_action(to_FlowRedirect(bitmask))
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+		

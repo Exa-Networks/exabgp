@@ -123,8 +123,12 @@ def to_FlowAction (asn,sample,terminal):
 	if sample: bitmask += 0x02
 	return _to_FlowCommunity (0x8007,chr(0)*5+bitmask)
 
+# take a string representing a 6 bytes long hexacedimal number like "0x123456789ABC"
 def to_FlowRedirect (bitmask):
-	return _to_FlowCommunity (0x8007,''.join([chr(_) for _ in bitmask[:6]]))
+	route_target = ''
+	for p in range(2,14,2): # 2,4,6,8,10,12
+		route_target += chr(int(bitmask[p:p+2],16))
+	return _to_FlowCommunity (0x8008,route_target)
 
 def to_FlowMark (dscp):
 	return _to_FlowCommunity (0x8009,chr(0)*5 + chr(dscp))
