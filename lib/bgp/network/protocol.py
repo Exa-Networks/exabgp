@@ -45,12 +45,11 @@ class Protocol (object):
 	strict = False
 	parse_update = False
 
-	def __init__ (self,neighbor,connection=None):
-		self.log = Log(neighbor.peer_address,neighbor.peer_as)
-		self.neighbor = neighbor
+	def __init__ (self,supervisor,connection=None):
+		self.log = Log(supervisor.neighbor.peer_address,supervisor.neighbor.peer_as)
+		self.neighbor = supervisor.neighbor
 		self.connection = connection
-		self._table = Table()
-		self._table.update(self.neighbor.routes)
+		self._table = Table(supervisor)
 		self._delta = Delta(self._table)
 
 	def connect (self):

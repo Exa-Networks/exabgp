@@ -16,6 +16,8 @@ class Delta (object):
 		return self.update(local_asn,peer_asn,False)
 
 	def update (self,local_asn,peer_asn,remove=True):
+		self.table.recalculate()
+
 		# Here we should perform intelligent message re-organisation (group announcements)
 		# and intelligence like if we resdrawn a resdrawal, we need to re-announce
 		# but for the moment, let just be daft but correct as we are just no a full bgp router
@@ -29,8 +31,8 @@ class Delta (object):
 				continue
 			if action == '-':
 				if remove:
-					print 'annoucing (withdraw) ', route
-					messages.append(route.update().withdraw())
+					pass
+					#messages.append(route.withdraw())
 			if action == '+':
 				if remove:
 					print 'annoucing (update)   ', route

@@ -201,7 +201,6 @@ class Fragment (IOperationByteShort):
 
 class _FlowNLRI (Attributes):
 	def __init__ (self):
-		Attributes.__init__(self)
 		self.rules = {}
 
 	def add_and (self,rule):
@@ -267,7 +266,7 @@ class _FlowNLRI (Attributes):
 	def __repr__ (self):
 		return str(self)
 
-class Flow (Address):
+class Flow (Address,Attributes):
 	def __init__ (self,safi=SAFI.flow_ipv4):
 		Address.__init__(self,AFI.ipv4,safi)
 		self.nlri = _FlowNLRI()
@@ -282,15 +281,9 @@ class Flow (Address):
 	def add_action (self,community):
 		self.communities.add(community)
 
-	def withdraw (self):
-		attributes = Attributes()
-		attributes.add(MPURNLRI(self.afi,self.safi,self.nlri))
-		attributes.add(self.communities)
-		return Update(NLRIS(),NLRIS(),attributes)
-
 	def update (self):
 		attributes = Attributes()
-		attributes.add(MPRNLRI(self.afi,self.safi,self.nlri))
+		attributes.add(MPRNLRI(self.afi,self.safi,self))
 		attributes.add(self.communities)
 		return Update(NLRIS(),NLRIS(),attributes)
 

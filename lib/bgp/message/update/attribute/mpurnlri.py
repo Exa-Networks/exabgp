@@ -18,15 +18,15 @@ class MPURNLRI (Address,Attribute):
 	ID = AttributeID.MP_UNREACH_NLRI  
 	MULTIPLE = True
 
-	def __init__ (self,afi,safi,nlri):
+	def __init__ (self,afi,safi,route):
 		Address.__init__(self,afi,safi)
-		Attribute.__init__(self,nlri)
+		self.route = route
 
 	def pack (self):
-		return self._attribute(self.afi.pack() + self.safi.pack() + self.attribute.pack())
+		return self._attribute(self.afi.pack() + self.safi.pack() + self.route.nlri.pack())
 
 	def __len__ (self):
 		return len(self.pack())
 
 	def __str__ (self):
-		return "MP_UNREACH_NLRI Family %s NLRI %s" % (Address.__str__(self),str(self.attribute))
+		return "MP_UNREACH_NLRI Family %s NLRI %s" % (Address.__str__(self),str(self.route))

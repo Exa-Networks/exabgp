@@ -28,9 +28,6 @@ class Route (Address,Attributes):
 		if self.afi == AFI.ipv6:
 			return Update(NLRIS(),NLRIS(),self)
 
-	def pack (self):
-		return self.nlri.pack()
-
 	def __str__ (self):
 		return "%s %s%s" % (Address.__str__(self),str(self.nlri),Attributes.__str__(self))
 

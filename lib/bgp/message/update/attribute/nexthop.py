@@ -22,14 +22,14 @@ class NextHop (Attribute):
 	MULTIPLE = False
 
 	# Take an IP as value
-	def __init__ (self,value):
-		Attribute.__init__(self,value)
+	def __init__ (self,next_hop):
+		self.next_hop = next_hop
 
 	def pack (self):
-		return self._attribute(self.attribute.pack())
+		return self._attribute(self.next_hop.pack())
 
 	def __len__ (self):
-		return len(self.attribute.pack())
+		return len(self.next_hop.pack())
 
 	def __str__ (self):
-		return str(self.attribute)
+		return str(self.next_hop)

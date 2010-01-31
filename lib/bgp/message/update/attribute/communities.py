@@ -16,22 +16,20 @@ from bgp.message.update.attribute import AttributeID,Flag,Attribute
 # =================================================================== Community
 
 class Community (object):
-	def __init__ (self,value):
-		self.value = value
+	def __init__ (self,community):
+		self.community = community
 	
 	def pack (self):
-		return pack('!L',self.value)
+		return pack('!L',self.community)
 
 	def __str__ (self):
-		return "%d:%d" % (self.value >> 16, self.value & 0xFFFF)
+		return "%d:%d" % (self.community >> 16, self.community & 0xFFFF)
 
 	def __len__ (self):
 		return 4
 
-	def __cmp__ (self,other):
-		if type(self) == type(other):
-			return cmp(self.value,other.value)
-		return cmp(self.value,other)
+	def __eq__ (self,other):
+		return self.community == other.community
 
 # =================================================================== Communities (8)
 
@@ -40,26 +38,28 @@ class Communities (Attribute):
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
 	MULTIPLE = False
 
-	def __init__ (self,value=None):
+	def __init__ (self,communities=None):
+		Attribute.__init__(self)
 		# Must be None as = param is only evaluated once
-		if value: v = value
-		else: v = []
-		Attribute.__init__(self,v)
+		if communities: 
+			self.communities = communities
+		else:
+			self.communities = []
 
 	def add(self,data):
-		return self.attribute.append(data)
+		return self.communities.append(data)
 
 	def pack (self):
-		if len(self.attribute):
-			return self._attribute(''.join([c.pack() for c in self.attribute])) 
+		if len(self.communities):
+			return self._attribute(''.join([c.pack() for c in self.communities])) 
 		return ''
 
 	def __str__ (self):
 		l = len(self.attribute)
 		if l > 1:
-			return "[ %s ]" % " ".join(str(community) for community in self.attribute)
+			return "[ %s ]" % " ".join(str(community) for community in self.communities)
 		if l == 1:
-			return str(self.attribute[0])
+			return str(self.communities[0])
 		return ""
 
 # =================================================================== ECommunity
@@ -86,18 +86,18 @@ class ECommunity (object):
 	length_value = {False:7, True:6}
 	name = {False: 'regular', True: 'extended'}
 	
-	def __init__ (self,value):
+	def __init__ (self,community):
 		# Two top bits are iana and transitive bits
-		self.value = value
+		self.community = community
 
 	def iana (self):
-		return not not (self.value[0] & 0x80)
+		return not not (self.community[0] & 0x80)
 
 	def transitive (self):
-		return not not (self.value[0] & 0x40)
+		return not not (self.community[0] & 0x40)
 
 	def pack (self):
-		return self.value
+		return self.community
 
 	def __str__ (self):
 		return '[ ' + ' '.join([hex(ord(c)) for c in self.value]) + ' ]'

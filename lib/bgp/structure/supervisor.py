@@ -91,12 +91,12 @@ class Supervisor (object):
 				peer = Peer(neighbor,self)
 				self._peers[ip] = peer
 			else:
-				# which will force a reconnection with the new settings
+				# check if the neighbor definition are the same (BUT NOT THE ROUTES)
 				if self._peers[ip].neighbor != neighbor:
 					self.log.out("Peer definition change, restarting %s" % str(ip))
 					self._peers[ip].restart()
-				else:
-					self.log.out('WE NEED TO UPDATE THE ROUTES OR SOMETHING ??')
+				# set the new neighbor with the new routes
+				self._peers[ip].neighbor = neighbor
 
 	def restart (self):
 		"""kill the BGP session and restart it"""

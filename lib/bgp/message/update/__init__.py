@@ -35,15 +35,15 @@ class Update (Message):
 		nlri = ''.join([nlri.pack() for nlri in self.nlris])
 		return self._message(prefix('') + prefix(self.attributes.bgp(local_asn,remote_asn)) + nlri)
 
-#	def withdraw (self,local_asn=None,remote_asn=None):
-#		withdraw = ''.join([withdraw.packedip() for withdraw in self.withdraw])
-#		nlri = ''.join([nlri.pack() for nlri in self.nlris])
-#		return self._message(prefix(withdraw) + prefix(''))
-
 	def update (self,local_asn,remote_asn):
 		withdraw = ''.join([withdraw.packedip() for withdraw in self.withdraw])
 		nlri = ''.join([nlri.pack() for nlri in self.nlris])
 		return self._message(prefix(withdraw) + prefix(self.attributes.bgp(local_asn,remote_asn)) + nlri)
+
+	def withdraw (self,local_asn=None,remote_asn=None):
+		withdraw = ''.join([withdraw.packedip() for withdraw in self.withdraw])
+		nlri = ''.join([nlri.pack() for nlri in self.nlris])
+		return self._message(prefix(withdraw) + prefix(''))
 
 	def added (self):
 		routes = NLRIS()

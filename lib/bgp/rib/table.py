@@ -11,12 +11,14 @@ import time
 
 class Table (object):
 
-	def __init__ (self):
+	def __init__ (self,supervisor):
 		self._plus = {}
 		self._minus = {}
+		self.supervisor = supervisor
 
 	# This interface is very good for the file change but not if you want to update from network
-	def update (self,routes):
+	def recalculate (self):
+		routes = self.supervisor.neighbor.routes
 		for route in routes:
 			self._add(route)
 		for prefix in self._plus.keys():

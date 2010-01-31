@@ -86,7 +86,7 @@ class Attributes (dict):
 				message += ASPath(ASPath.AS_SEQUENCE,[local_asn]).pack()
 
 		if AttributeID.NEXT_HOP in self:
-			if self[AttributeID.NEXT_HOP].attribute.afi == AFI.ipv4:
+			if self[AttributeID.NEXT_HOP].next_hop.afi == AFI.ipv4:
 				message += self[AttributeID.NEXT_HOP].pack()
 			else:
 				message += MPRNLRI(self.afi,self.safi,self).pack()
@@ -108,7 +108,7 @@ class Attributes (dict):
 	def __str__ (self):
 		next_hop = ''
 		if self.has(AttributeID.NEXT_HOP):
-			next_hop = ' next-hop %s' % str(self[AttributeID.NEXT_HOP].attribute).lower()
+			next_hop = ' next-hop %s' % str(self[AttributeID.NEXT_HOP]).lower()
 
 		origin = ''
 		if self.has(AttributeID.ORIGIN):

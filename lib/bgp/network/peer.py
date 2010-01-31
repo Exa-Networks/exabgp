@@ -77,7 +77,7 @@ class Peer (object):
 
 	def _run (self):
 		try:
-			self.bgp = Protocol(self.neighbor)
+			self.bgp = Protocol(self)
 			self.bgp.connect()
 
 			o = self.bgp.new_open(self.neighbor.graceful_restart,self._restarted)

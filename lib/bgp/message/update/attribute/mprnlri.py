@@ -18,18 +18,20 @@ class MPRNLRI (Address,Attribute):
 	ID = AttributeID.MP_REACH_NLRI    
 	MULTIPLE = True
 
-	def __init__ (self,afi,safi,nlri):
+	def __init__ (self,afi,safi,route):
 		Address.__init__(self,afi,safi)
-		Attribute.__init__(self,nlri)
+		self.route = route
 
 	def pack (self):
 		next_hop = ''
-		if self.attribute.has_key(AttributeID.NEXT_HOP):
-			next_hop = self.attribute[AttributeID.NEXT_HOP].attribute.pack()
+		if self.route.has_key(AttributeID.NEXT_HOP):
+			# we do not want a next_hop attribute packed (with the _attribute()) but just the next_hop itself
+			next_hop = self.route[AttributeID.NEXT_HOP].next_hop.pack()
+		
 		return self._attribute(
 			self.afi.pack() + self.safi.pack() + 
 			chr(len(next_hop)) + next_hop + 
-			chr(0) + self.attribute.pack()
+			chr(0) + self.route.nlri.pack()
 		)
 
 	def __len__ (self):

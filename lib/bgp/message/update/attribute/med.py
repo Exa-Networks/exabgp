@@ -19,12 +19,15 @@ class MED (Attribute):
 	FLAG = Flag.OPTIONAL
 	MULTIPLE = False
 
+	def __init__ (self,med):
+		self.med = med
+
 	def pack (self):
-		return self._attribute(pack('!L',self.attribute))
+		return self._attribute(pack('!L',self.med))
 
 	def __len__ (self):
 		return 4
 
 	def __str__ (self):
-		return str(self.attribute)
+		return str(self.med)
 

@@ -17,9 +17,6 @@ class Attribute (object):
 	ID   = 0x00
 	FLAG = 0x00
 
-	def __init__ (self,value=None):
-		self.attribute = value
-
 	def _attribute (self,value):
 		flag = self.FLAG
 		if flag & Flag.OPTIONAL and not value:
@@ -38,11 +35,6 @@ class Attribute (object):
 			return self._segment(values[:256]) + self._segment(values[256:])
 		return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack() for v in values]))
 
-	def __cmp__ (self,other):
-		if type(self) == type(other):
-			return cmp(self.ID,other.ID)
-		return cmp(self.ID,other)
-	
-	def __str__ (self):
-		return str([hex(ord(_)) for _ in self.attribute])
+	def __eq__ (self,other):
+		return self.ID == other.ID
 
