@@ -1,0 +1,24 @@
+neighbor 82.219.4.254 {
+	description "m7i-4 router";
+	router-id 10.0.0.1;
+	local-address 10.0.0.1;
+	local-as 65500;
+	peer-as 61000;
+	graceful-restart 5;
+
+	flow {
+		route optional-name-of-the-route {
+			match {
+				source 10.0.0.1/32;
+				destination 192.168.0.1/32;
+				port =80 =8080;
+				destination-port >8080&<8088 =3128;
+				source-port >1024;
+			}
+			then {
+				discard;
+			}
+		}
+	}
+}
+
