@@ -152,7 +152,7 @@ class Protocol (object):
 		if message.hold_time >= 3:
 			self.neighbor.hold_time = min(self.neighbor.hold_time,message.hold_time)
 
-		if message.router_id == '0.0.0.0':
+		if message.router_id == RouterID('0.0.0.0'):
 			message.router_id = RouterID(ip)
 
 		return message
@@ -166,7 +166,7 @@ class Protocol (object):
 	# Sending message to peer .................................................
 
 	def new_open (self,graceful,restarted):
-		o = Open(4,self.neighbor.local_as,self.neighbor.router_id.ip(),Capabilities().default(graceful,restarted),self.neighbor.hold_time)
+		o = Open(4,self.neighbor.local_as,self.neighbor.router_id.ip,Capabilities().default(graceful,restarted),self.neighbor.hold_time)
 		self.connection.write(o.message())
 		return o
 

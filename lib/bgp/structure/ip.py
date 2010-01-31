@@ -68,6 +68,9 @@ class Inet (IByteStream):
 	def __str__ (self):
 		return self.ip()
 	
+	def __eq__ (self,other):
+		return self.raw == other.raw and self.safi == other.safi
+	
 class _Prefix (Inet):
 	# have a .raw for the ip
 	# have a .mask for the mask

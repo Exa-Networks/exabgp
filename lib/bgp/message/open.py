@@ -68,12 +68,8 @@ class RouterID (object):
 	def __str__ (self):
 		return self.ip
 
-	def __cmp__ (self,other):
-		if type(self) == type(other):
-			return self.raw == other.raw
-		if self.raw == other:
-			return cmp(self.raw,other)
-		return cmp(self.ip,other)
+	def __eq__ (self,other):
+		return self.ip == other.ip
 
 # =================================================================== Graceful (Restart)
 # RFC 4727

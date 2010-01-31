@@ -84,18 +84,19 @@ class Supervisor (object):
 				self.log.out("Removing Peer %s" % str(ip))
 				self._peers[ip].shutdown()
 
-		for k in self.configuration.neighbor.keys():
-			neighbor = self.configuration.neighbor[k]
-			ip = neighbor.peer_address.ip()
+		for ip in self.configuration.neighbor.keys():
+			neighbor = self.configuration.neighbor[ip]
 			if ip not in self._peers.keys():
 				self.log.out("New Peer %s" % str(ip))
 				peer = Peer(neighbor,self)
 				self._peers[ip] = peer
 			else:
-				self.log.out("Stopping Peer %s" % str(ip))
 				# which will force a reconnection with the new settings
 				if self._peers[ip].neighbor != neighbor:
+					self.log.out("Peer definition change, restarting %s" % str(ip))
 					self._peers[ip].restart()
+				else:
+					self.log.out('WE NEED TO UPDATE THE ROUTES OR SOMETHING ??')
 
 	def restart (self):
 		"""kill the BGP session and restart it"""

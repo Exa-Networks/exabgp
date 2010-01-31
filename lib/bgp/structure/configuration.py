@@ -13,7 +13,7 @@ from bgp.structure.address    import AFI
 from bgp.structure.ip         import to_IP,to_Prefix
 from bgp.structure.asn        import ASN
 from bgp.structure.neighbor   import Neighbor
-from bgp.message.open         import HoldTime
+from bgp.message.open         import HoldTime,RouterID
 from bgp.message.update.route import Route
 from bgp.message.update.flow  import Flow,Source,Destination,BinaryOperator,NumericOperator,SourcePort,DestinationPort,AnyPort
 from bgp.message.update.attribute             import AttributeID
@@ -190,7 +190,7 @@ class Configuration (object):
 			return False
 
 		if command == 'description': return self._set_description(tokens[1:])
-		if command == 'router-id': return self._set_ip('router-id',tokens[1:])
+		if command == 'router-id': return self._set_router_id('router-id',tokens[1:])
 		if command == 'local-address': return self._set_ip('local-address',tokens[1:])
 		if command == 'local-as': return self._set_asn('local-as',tokens[1:])
 		if command == 'peer-as': return self._set_asn('peer-as',tokens[1:])
@@ -250,12 +250,13 @@ class Configuration (object):
 		if missing:
 			self._error = 'incomplete neighbor, missing %s' % missing
 			return False
-		if neighbor.router_id.afi != AFI.ipv4:
-			self._error = 'router-id must be a IPv4 address (not %s)' % neighbor.router_id
-			return False
-		if neighbor.local_address.afi != neighbor.peer_address.afi:
-			self._error = 'local-address and peer-address must be of the same family'
-			return False 
+# XXX: This test need replacing by a similar working test
+#		if neighbor.router_id.afi != AFI.ipv4:
+#			self._error = 'router-id must be a IPv4 address (not %s)' % neighbor.router_id
+#			return False
+#		if neighbor.local_address.afi != neighbor.peer_address.afi:
+#			self._error = 'local-address and peer-address must be of the same family'
+#			return False 
 		if self._neighbor.has_key(neighbor.peer_address.ip()):
 			self_error = 'duplicate peer definition %s' % neighbor.peer_address.ip()
 			return False
@@ -277,6 +278,16 @@ class Configuration (object):
 			if r is None: return True
 
 	# Command Neighbor
+
+	def _set_router_id (self,command,value):
+		try:
+			ip = RouterID(value[0])
+		except (IndexError,ValueError):
+			self._error = '"%s" is an invalid IP address' % ' '.join(value)
+			if self.debug: raise
+			return False
+		self._scope[-1][command] = ip
+		return True
 
 	def _set_description (self,tokens):
 		text = ' '.join(tokens)

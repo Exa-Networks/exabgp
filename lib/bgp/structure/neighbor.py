@@ -8,13 +8,13 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 from bgp.structure.address import AFI
-from bgp.message.open import HoldTime
+from bgp.message.open import HoldTime, RouterID
 
 # The definition of a neighbor (from reading the configuration)
 class Neighbor (object):
 	def __init__ (self):
 		self.description = ''
-		self._router_id = None
+		self.router_id = None
 		self.local_address = None
 		self.peer_address = None
 		self.peer_as = None
@@ -28,21 +28,13 @@ class Neighbor (object):
 		if self.peer_address is None: return 'peer-address'
 		if self.local_as is None: return 'local-as'
 		if self.peer_as is None: return 'peer-as'
-		if self.peer_address.afi == AFI.ipv6 and not self._router_id: return 'router-id'
+		if self.peer_address.afi == AFI.ipv6 and not self.router_id: return 'router-id'
 		if self.graceful_restart is None: return 'graceful-restart'
 		return ''
 
-	def get_router_id (self):
-		if self._router_id:
-			return self._router_id
-		return self.local_address
-	def set_router_id (self,id):
-		self._router_id = id
-	router_id = property(get_router_id,set_router_id)
-
 	def __eq__ (self,other):
 		return \
-			self._router_id == other._router_id and \
+			self.router_id == other.router_id and \
 			self.local_address == other.local_address and \
 			self.local_as == other.local_as and \
 			self.peer_address == other.peer_address and \
