@@ -22,7 +22,7 @@ from bgp.network.connection   import Connection
 from bgp.message              import Message,Failure,defix
 from bgp.message.nop          import NOP
 from bgp.message.open         import Open,Parameter,Capabilities,RouterID,MultiProtocol,RouteRefresh,CiscoRouteRefresh,Graceful
-from bgp.message.update       import Update,NLRIS
+from bgp.message.update       import Update
 from bgp.message.update.eor   import EOR
 from bgp.message.keepalive    import KeepAlive
 from bgp.message.notification import Notification, Notify, NotConnected
@@ -43,7 +43,7 @@ class Protocol (object):
 	trace = False
 	decode = True
 	strict = False
-	parse_update = False
+	parse_update = False # DO NOT TOGGLE TO TRUE, THE CODE IS COMPLETELY BROKEN
 
 	def __init__ (self,supervisor,connection=None):
 		self.log = Log(supervisor.neighbor.peer_address,supervisor.neighbor.peer_as)
@@ -311,7 +311,7 @@ class Protocol (object):
 		if 2 + lw + 2+ la + len(announced) != length:
 			raise Notify(3,1)
 
-		remove = NLRIS()
+		remove = []
 		while withdrawn:
 			nlri = BGPPrefix(AFI.ipv4,withdrawn)
 			withdrawn = withdrawn[len(nlri):]
@@ -319,7 +319,7 @@ class Protocol (object):
 
 		attributes = self.AttributesFactory(attribute)
 
-		announce = NLRIS()
+		announce = []
 		while announced:
 			nlri = BGPPrefix(AFI.ipv4,announced)
 			announced = announced[len(nlri):]

@@ -7,7 +7,7 @@ Created by Thomas Mangin on 2010-01-16.
 Copyright (c) 2010 Exa Networks. All rights reserved.
 """
 
-from bgp.structure.address import AFI,SAFI
+from bgp.structure.address import Address,AFI,SAFI
 from bgp.message.update import Update
 from bgp.message.update.attribute.mpurnlri import MPURNLRI
 from bgp.message.update.attributes import Attributes
@@ -20,7 +20,7 @@ class Empty (object):
 	def __len__ (self):
 		return 0
 
-class EmptyRoute (Empty):
+class EmptyRoute (Empty,Address,Attributes):
 	nlri = Empty()
 
 class EOR (object):
@@ -33,7 +33,7 @@ class EOR (object):
 		for afi,safi in families:
 			if safi != SAFI.unicast:
 				continue
-			if afi == AFI.ipv4:
+			if afi == AFI.ipv4 and safi in [SAFI.unicast, SAFI.multicast]:
 				r += self.ipv4()
 			else:
 				r += self.mp(afi,safi)
@@ -41,16 +41,10 @@ class EOR (object):
 		return r
 
 	def ipv4 (self):
-		#attributes = EORAttributes()
-		attributes = Attributes()
-		attributes.autocomplete = False
-		return Update([],[],attributes).announce(0,0)
+		return Update(EmptyRoute(AFI.ipv4,SAFI.unicast)).announce(0,0)
 
 	def mp (self,afi,safi):
-		attributes = Attributes()
-		attributes.autocomplete = False
-		attributes.add(MPURNLRI(afi,safi,EmptyRoute()))
-		return Update([],[],attributes).announce(0,0)
+		return Update(EmptyRoute(afi,safi)).announce(0,0)
 
 	def announced (self):
 		return self._announced

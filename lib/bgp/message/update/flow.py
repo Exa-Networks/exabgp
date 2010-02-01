@@ -13,10 +13,11 @@ from bgp.utils import *
 from bgp.structure.address import Address,AFI,SAFI
 from bgp.structure.ip import Prefix
 from bgp.message.update.attributes import Attributes
+from bgp.message.update.attribute.id import AttributeID
 from bgp.message.update.attribute.mprnlri import MPRNLRI
 from bgp.message.update.attribute.mpurnlri import MPURNLRI
 from bgp.message.update.attribute.communities import ECommunities
-from bgp.message.update import Update,NLRIS
+from bgp.message.update import Update
 
 # =================================================================== Flow Components
 
@@ -268,9 +269,10 @@ class _FlowNLRI (Attributes):
 
 class Flow (Address,Attributes):
 	def __init__ (self,safi=SAFI.flow_ipv4):
+		Attributes.__init__(self)
 		Address.__init__(self,AFI.ipv4,safi)
 		self.nlri = _FlowNLRI()
-		self.communities = ECommunities()
+		self[AttributeID.EXTENDED_COMMUNITY] = ECommunities()
 
 	def add_and (self,rule):
 		return self.nlri.add_and(rule)
@@ -279,13 +281,7 @@ class Flow (Address,Attributes):
 		return self.nlri.add_or(rule)
 
 	def add_action (self,community):
-		self.communities.add(community)
-
-	def update (self):
-		attributes = Attributes()
-		attributes.add(MPRNLRI(self.afi,self.safi,self))
-		attributes.add(self.communities)
-		return Update(NLRIS(),NLRIS(),attributes)
+		self[AttributeID.EXTENDED_COMMUNITY].add(community)
 
 	def __str__ (self):
 		return "%s %s" % (Address.__str__(self),str(self.nlri))

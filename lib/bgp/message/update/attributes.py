@@ -65,7 +65,7 @@ class Attributes (dict):
 				self[attribute.ID] = attribute
 			return True
 
-	def bgp (self,local_asn,peer_asn):
+	def bgp_announce (self,local_asn,peer_asn):
 		ibgp = local_asn == peer_asn
 		# we do not store or send MED
 		message = ''
@@ -86,10 +86,10 @@ class Attributes (dict):
 				message += ASPath(ASPath.AS_SEQUENCE,[local_asn]).pack()
 
 		if AttributeID.NEXT_HOP in self:
-			if self[AttributeID.NEXT_HOP].next_hop.afi == AFI.ipv4:
+			afi = self[AttributeID.NEXT_HOP].next_hop.afi
+			safi = self[AttributeID.NEXT_HOP].next_hop.safi
+			if afi == AFI.ipv4 and safi in [SAFI.unicast, SAFI.multicast]:
 				message += self[AttributeID.NEXT_HOP].pack()
-			else:
-				message += MPRNLRI(self.afi,self.safi,self).pack()
 
 		if AttributeID.LOCAL_PREF in self:
 			if local_asn == peer_asn:
@@ -99,8 +99,8 @@ class Attributes (dict):
 			if local_asn != peer_asn:
 				message += self[AttributeID.MED].pack()
 
-		for attribute in [Communities.ID,ECommunities.ID,MPURNLRI.ID,MPRNLRI.ID]:
-			if  self.has(attribute):
+		for attribute in [AttributeID.COMMUNITY,AttributeID.EXTENDED_COMMUNITY]:
+			if attribute in self:
 				message += self[attribute].pack()
 
 		return message
