@@ -1,23 +1,9 @@
 So much I can not even start to think about what is missing here :)
 
-Formally define the interface used - Change inheritance.
-The Attributes do not need to share a common __init__ as the parameters do not match
-
-We do not support Graceful Restart for IPv6 (very easy to add - just not done)
-Need a dict of AFI/SAFI returning the right function which generate the EOR for that pair (currently ipv4 hardcoded)
-
-Correct Unit Testing.
- - Most of the use case have not been tested in production
- - Most of the code is not covered
-
-allow reconfiguration (SIGHUP forcing a reload of the configuration)
- - reconfiguration alter neighbor list
- - reconfiguration alter neighbor routes
-
-Add support RFC 3107
+Formally define the interface used - Change inheritance (mainly for Route and Flow as it is implicit)
+Need a dict of AFI/SAFI returning the right function which generate the EOR for that pair.
 
 Graceful restart docs much clearer than the RFC
 http://www.cisco.com/en/US/products/ps6550/products_white_paper09186a008016317c.shtml
 
-remove all the new_ functions and integrate them into protocol
-reduct use of to_ functions
+reduce to a minimum all the new_ and to_ functions and integrate them into protocol

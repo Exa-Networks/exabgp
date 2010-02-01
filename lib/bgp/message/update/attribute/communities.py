@@ -55,7 +55,7 @@ class Communities (Attribute):
 		return ''
 
 	def __str__ (self):
-		l = len(self.attribute)
+		l = len(self.communities)
 		if l > 1:
 			return "[ %s ]" % " ".join(str(community) for community in self.communities)
 		if l == 1:
@@ -100,7 +100,7 @@ class ECommunity (object):
 		return self.community
 
 	def __str__ (self):
-		return '[ ' + ' '.join([hex(ord(c)) for c in self.value]) + ' ]'
+		return '[ ' + ' '.join([hex(ord(c)) for c in self.community]) + ' ]'
 
 	def __len__ (self):
 		return 8

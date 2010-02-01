@@ -1,12 +1,8 @@
-The tracking of route changes is likely to be totally buggy at this point
-
+Rewrite the unittesting which is really missing.
+Look at all the XXX: and FIXME: in the code
 We are sending IPv6 or flow routes even if the capacity was not negociated at OPEN - we should report the problem and not send the routes
-
 Need to forbid negative times in the configuration for hold-time and graceful-restart.
+Two test on route in the configuration are currently commented.
 Have an issue with hold time of 3 - see why and what can be done (4 is fine !!)
-
-For incomming messages:
- - ASPath assumes only one segment
- - all the XXX: and FIXME: in the code
-
-The update unitest really need to be to be updated.
+UPDATE parsing is totally disabled, incomming messages ASPath assumes only one segment
+We are not generating EORs when first announcing routes

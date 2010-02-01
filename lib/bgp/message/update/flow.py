@@ -284,4 +284,4 @@ class Flow (Address,Attributes):
 		self[AttributeID.EXTENDED_COMMUNITY].add(community)
 
 	def __str__ (self):
-		return "%s %s" % (Address.__str__(self),str(self.nlri))
+		return "%s %s%s" % (Address.__str__(self),str(self.nlri),Attributes.__str__(self))

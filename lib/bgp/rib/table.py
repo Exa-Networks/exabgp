@@ -9,6 +9,10 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 import time
 
+# - : remove the route
+# + : add a new route
+# * : update an existing route (as we use str() and that a route includes the prefix and attributes, may not be used often)
+
 class Table (object):
 
 	def __init__ (self,supervisor):
@@ -30,9 +34,10 @@ class Table (object):
 	def _add (self,route):
 		prefix = str(route)
 		if prefix in self._plus.keys():
-			if route == self._plus[prefix][1]:
-				return
-		self._plus[prefix] = (time.time(),route)
+			if route != self._plus[prefix][1]:
+				self._plus[prefix] = (time.time(),route,'*')
+			return
+		self._plus[prefix] = (time.time(),route,'+')
 
 	def _remove (self,route):
 		prefix = str(route)
@@ -47,9 +52,9 @@ class Table (object):
 			if when < t:
 				yield ('-',r)
 		for prefix in self._plus.keys():
-			t,r = self._plus[prefix]
+			t,r,o = self._plus[prefix]
 			if when < t:
-				yield ('+',r)
+				yield (o,r)
 		yield ('',time.time())
 
 	def purge (self,when):
