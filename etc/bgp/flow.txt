@@ -14,6 +14,8 @@ neighbor 82.219.4.254 {
 				port =80 =8080;
 				destination-port >8080&<8088 =3128;
 				source-port >1024;
+#				protocol [ tcp udp ];
+				protocol tcp;
 			}
 			then {
 #				rate-limit 9600;

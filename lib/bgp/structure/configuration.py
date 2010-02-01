@@ -13,9 +13,10 @@ from bgp.structure.address    import AFI
 from bgp.structure.ip         import to_IP,to_Prefix
 from bgp.structure.asn        import ASN
 from bgp.structure.neighbor   import Neighbor
+from bgp.structure.protocol   import NamedProtocol
 from bgp.message.open         import HoldTime,RouterID
 from bgp.message.update.route import Route
-from bgp.message.update.flow  import Flow,Source,Destination,BinaryOperator,NumericOperator,SourcePort,DestinationPort,AnyPort
+from bgp.message.update.flow  import Flow,Source,Destination,BinaryOperator,NumericOperator,SourcePort,DestinationPort,AnyPort,IPProtocol
 from bgp.message.update.attribute             import AttributeID
 from bgp.message.update.attributes            import Attributes
 from bgp.message.update.attribute.origin      import Origin
@@ -28,24 +29,44 @@ from bgp.message.update.attribute.communities import Community,Communities,to_Fl
 
 class Configuration (object):
 	debug = False
-	_str_route_error = 'syntax: route IP/MASK next-hop IP' \
-	' <origin IGP|EGP|INCOMPLETE>' \
-	' <as-path ASN| as-path [ASN1 ASN2 ...]>' \
-	' <med NUMBER>' \
-	' <local-preference NUMBER]>' \
-	' <community COMMUNITY|community [COMMUNITY1 COMMUNITY2 ...]>' \
+	_str_route_error = '' \
+	'syntax:\n' \
+	'route 10.0.0.1/24 {\n' \
+	'  next-hop 192.0.1.254;\n'
+	'  origin IGP|EGP|INCOMPLETE;\n' \
+	'  as-path [ ASN1 ASN2 ];\n' \
+	'  med 100;\n' \
+	'  local-preference 100;\n' \
+	'  community [ 65000 65001 65002 ]>\n' \
+	'}\n\n' \
+	'route 10.0.0.1/24 next-hop 192.0.2.1' \
+	' origin IGP|EGP|INCOMPLETE' \
+	' as-path ASN' \
+	' med 100' \
+	' local-preference 100' \
+	' community 65000' \
+	';\n\n' \
+	'community and as-path can take a single community as parameter. only next-hop is mandatory\n\n'
+
 
 	_str_flow_error = \
 	'syntax: flow {\n' \
 	'          match {\n' \
-	'             <source IP/MASK;>\n' \
-	'             <destination IP/MASK;>\n' \
-	'             <port OPERATION_ON_PORT;>\n' \
-	'             <source-port OPERATION_ON_PORT;>\n' \
-	'             <destination-port OPERATION_ON_PORT;>\n' \
+	'             source 10.0.0.0/24;\n' \
+	'             destination 10.0.1.0/24;\n' \
+	'             port 25;\n' \
+	'             source-port >1024\n' \
+	'             destination-port =80 =3128 >8080&<8088;\n' \
+	'             protocol [ udp tcp ];\n' \
 	'          }\n' \
-	'          then <discard>\n' \
-	'        }' \
+	'          then {\n' \
+	'             discard;\n' \
+	'             rate-limit 9600;\n' \
+	'             redirect 30740:12345;\n' \
+	'             redirect 1.2.3.4:5678;\n' \
+	'          }\n' \
+	'        }\n\n' \
+	'one or more match term, one action\n' \
 
 	def __init__ (self,fname,text=False):
 		self._text = text
@@ -210,6 +231,7 @@ class Configuration (object):
 		if command == 'port': return self._flow_route_anyport(tokens[1:])
 		if command == 'source-port': return self._flow_route_source_port(tokens[1:])
 		if command == 'destination-port': return self._flow_route_destination_port(tokens[1:])
+		if command == 'protocol': return self._flow_route_protocol(tokens[1:])
 		if command == 'discard': return self._flow_route_discard(tokens[1:])
 		if command == 'rate-limit': return self._flow_route_rate_limit(tokens[1:])
 		if command == 'redirect': return self._flow_route_redirect(tokens[1:])
@@ -611,7 +633,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch('flow-match',[],['source','destination','port','source-port','destination-port'])
+			r = self._dispatch('flow-match',[],['source','destination','port','source-port','destination-port','protocol'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -714,6 +736,31 @@ class Configuration (object):
 
 	def _flow_route_destination_port (self,tokens):
 		return self._flow_generic_port(tokens,DestinationPort)
+
+	def _flow_route_protocol (self,tokens):
+		protocol = tokens.pop(0)
+		AND = BinaryOperator.NOP
+		try:
+			if protocol == '[':
+				while True:
+					protocol = tokens.pop(0)
+					if protocol == ']':
+						break
+					try:
+						number = NamedProtocol(protocol)
+						self._scope[-1]['routes'][-1].add_or(IPProtocol(NumericOperator.EQ|AND,number))
+					except IndexError:
+						self._error = self._str_flow_error
+						if self.debug: raise
+						return False
+			else:
+				number = NamedProtocol(protocol)
+				self._scope[-1]['routes'][-1].add_or(IPProtocol(NumericOperator.EQ|AND,number))
+		except ValueError:
+			self._error = self._str_flow_error
+			if self.debug: raise
+			return False
+		return True
 
 	def _flow_route_discard (self,tokens):
 		# XXX: We are setting the ASN as zero as that what Juniper did when we created a local flow route
