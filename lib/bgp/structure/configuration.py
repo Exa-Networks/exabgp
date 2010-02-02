@@ -617,7 +617,9 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch('flow-route',['match','then'],[])
+			r = self._dispatch('flow-route',['match',],[])
+			if r is False: return False
+			r = self._dispatch('flow-route',['then',],[])
 			if r is False: return False
 			if r is None: break
 		return True
