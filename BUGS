@@ -1,4 +1,3 @@
-Multilines static routes are not correctly parsed and added to the in memory configuration
 Rewrite the unittesting which is really missing.
 Look at all the XXX: and FIXME: in the code
 We are sending IPv6 or flow routes even if the capacity was not negociated at OPEN - we should report the problem and not send the routes

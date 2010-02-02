@@ -40,6 +40,6 @@ class Delta (object):
 				print 'updating     ', route
 				messages.append(Update([route]).update(local_asn,peer_asn))
 			if action == '+':
-				print 'annoucing    ', route
+				print 'announcing    ', route
 				messages.append(Update([route]).announce(local_asn,peer_asn))
 		return messages
