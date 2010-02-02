@@ -144,6 +144,7 @@ class Configuration (object):
 	def _dispatch (self,name,multi=set([]),single=set([])):
 		try:
 			tokens = self.tokens()
+			if self.debug: print 'dispatching', tokens, 'with valid options multi', multi, 'single', single 
 		except IndexError:
 			self._error = 'configuration file incomplete (most likely missing })'
 			if self.debug: raise
@@ -404,9 +405,7 @@ class Configuration (object):
 
 	def _check_static_route (self):
 		route = self._scope[-1]['routes'][-1]
-		next_hop = self._scope[-1]['routes'][-1].next_hop
-
-		if not next_hop:
+		if not route.has(AttributeID.NEXT_HOP):
 			self._error = 'syntax: route IP/MASK { next-hop IP; }'
 			return False
 		return True
@@ -591,7 +590,7 @@ class Configuration (object):
 			if r is None: break
 		return True
 
-	def _insert_flow_route (self,tokens):
+	def _insert_flow_route (self,tokens=None):
 		try:
 			flow = Flow()
 		except ValueError:
@@ -614,9 +613,7 @@ class Configuration (object):
 			self._error = self._str_flow_error
 			return False
 
-		# if name was not provided, just set up an empty one
-		tokens.append('')
-		if not self._insert_flow_route(tokens[0]):
+		if not self._insert_flow_route():
 			return False
 
 		while True:
