@@ -5,4 +5,3 @@ Need to forbid negative times in the configuration for hold-time and graceful-re
 Two test on route in the configuration are currently commented.
 Have an issue with hold time of 3 - see why and what can be done (4 is fine !!)
 UPDATE parsing is totally disabled, incomming messages ASPath assumes only one segment
-We are not generating EORs when first announcing routes

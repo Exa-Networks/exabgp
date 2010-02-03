@@ -21,7 +21,11 @@ class Empty (object):
 		return 0
 
 class EmptyRoute (Empty,Address,Attributes):
-	nlri = Empty()
+	autocomplete = False
+
+	def __init__ (self,afi,safi):
+		Address.__init__(self,afi,safi)
+		self.nlri = Empty()
 
 class EOR (object):
 	def __init__ (self):
@@ -31,8 +35,6 @@ class EOR (object):
 		self._announced = []
 		r = ''
 		for afi,safi in families:
-			if safi != SAFI.unicast:
-				continue
 			if afi == AFI.ipv4 and safi in [SAFI.unicast, SAFI.multicast]:
 				r += self.ipv4()
 			else:
@@ -41,10 +43,10 @@ class EOR (object):
 		return r
 
 	def ipv4 (self):
-		return Update(EmptyRoute(AFI.ipv4,SAFI.unicast)).announce(0,0)
+		return Update([EmptyRoute(AFI.ipv4,SAFI.unicast),]).withdraw()
 
 	def mp (self,afi,safi):
-		return Update(EmptyRoute(afi,safi)).announce(0,0)
+		return Update([EmptyRoute(afi,safi),]).withdraw()
 
 	def announced (self):
 		return self._announced
