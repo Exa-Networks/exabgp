@@ -793,19 +793,19 @@ class Configuration (object):
 		return self._flow_generic_condition(tokens,int,PacketLength)
 
 	def _flow_route_tcp_flags (self,tokens):
-		return self._flow_generic_condition(tokens,NamedTCPFlag,TCPFlag)
+		return self._flow_generic_list(tokens,NamedTCPFlag,TCPFlag)
 
 	def _flow_route_protocol (self,tokens):
-		return self._flow_generic_condition(tokens,NamedProtocol,IPProtocol)
+		return self._flow_generic_list(tokens,NamedProtocol,IPProtocol)
 
 	def _flow_route_icmp_type (self,tokens):
-		return self._flow_generic_condition(tokens,NamedICMPType,ICMPType)
+		return self._flow_generic_list(tokens,NamedICMPType,ICMPType)
 
 	def _flow_route_icmp_code (self,tokens):
-		return self._flow_generic_condition(tokens,NamedICMPCode,ICMPCode)
+		return self._flow_generic_list(tokens,NamedICMPCode,ICMPCode)
 
 	def _flow_route_fragment (self,tokens):
-		return self._flow_generic_condition(tokens,NamedFragment,Fragment)
+		return self._flow_generic_list(tokens,NamedFragment,Fragment)
 	
 	def _flow_route_dscp (self,tokens):
 		return self._flow_generic_condition(tokens,int,DSCP)
