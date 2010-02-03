@@ -14,9 +14,10 @@ from bgp.structure.ip         import to_IP,to_Prefix
 from bgp.structure.asn        import ASN
 from bgp.structure.neighbor   import Neighbor
 from bgp.structure.protocol   import NamedProtocol
+from bgp.structure.icmp       import NamedICMPType
 from bgp.message.open         import HoldTime,RouterID
 from bgp.message.update.route import Route
-from bgp.message.update.flow  import Flow,Source,Destination,BinaryOperator,NumericOperator,SourcePort,DestinationPort,AnyPort,IPProtocol,Fragment,NamedFragment,PacketLength
+from bgp.message.update.flow  import Flow,Source,Destination,BinaryOperator,NumericOperator,SourcePort,DestinationPort,AnyPort,IPProtocol,Fragment,NamedFragment,PacketLength,ICMPType
 from bgp.message.update.attribute             import AttributeID
 from bgp.message.update.attributes            import Attributes
 from bgp.message.update.attribute.origin      import Origin
@@ -237,6 +238,7 @@ class Configuration (object):
 		if command == 'source-port': return self._flow_route_source_port(tokens[1:])
 		if command == 'destination-port': return self._flow_route_destination_port(tokens[1:])
 		if command == 'protocol': return self._flow_route_protocol(tokens[1:])
+		if command == 'icmp-type': return self._flow_route_icmp_type(tokens[1:])
 		if command == 'fragment': return self._flow_route_fragment(tokens[1:])
 		if command == 'packet-length': return self._flow_route_packet_length(tokens[1:])
 		if command == 'discard': return self._flow_route_discard(tokens[1:])
@@ -638,7 +640,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch('flow-match',[],['source','destination','port','source-port','destination-port','protocol','fragment','packet-length'])
+			r = self._dispatch('flow-match',[],['source','destination','port','source-port','destination-port','protocol','icmp-type','fragment','packet-length'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -770,6 +772,31 @@ class Configuration (object):
 			return False
 		return True
 
+	def _flow_route_icmp_type (self,tokens):
+		icmp_type = tokens.pop(0)
+		AND = BinaryOperator.NOP
+		try:
+			if icmp_type == '[':
+				while True:
+					icmp_type = tokens.pop(0)
+					if icmp_type == ']':
+						break
+					try:
+						number = NamedICMPType(icmp_type)
+						self._scope[-1]['routes'][-1].add_or(ICMPType(NumericOperator.EQ|AND,number))
+					except IndexError:
+						self._error = self._str_flow_error
+						if self.debug: raise
+						return False
+			else:
+				number = NamedProtocol(icmp_type)
+				self._scope[-1]['routes'][-1].add_or(ICMPType(NumericOperator.EQ|AND,number))
+		except ValueError:
+			self._error = self._str_flow_error
+			if self.debug: raise
+			return False
+		return True
+
 	def _flow_route_fragment (self,tokens):
 		fragment = tokens.pop(0)
 		AND = BinaryOperator.NOP
@@ -794,7 +821,6 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		return True
-
 
 	def _flow_route_discard (self,tokens):
 		# XXX: We are setting the ASN as zero as that what Juniper did when we created a local flow route

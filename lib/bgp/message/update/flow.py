@@ -68,7 +68,8 @@ class Fragments (int):
 		if self == self.LAST:  return 'last-fragment'
 		return "unknown fragment value %d" % int.__str__(self)
 
-def NamedFragment (fragment):
+def NamedFragment (name):
+	fragment = name.lower()
 	if fragment == 'not-a-fragment': return Fragments(0x00)
 	if fragment == 'dont-fragment':  return Fragments(Fragments.DONT)
 	if fragment == 'is-fragment':    return Fragments(Fragments.IS)
@@ -188,11 +189,12 @@ class SourcePort (IOperationByteShort,NumericString):
 # BinaryOperator
 class ICMPType (IOperationByte,BinaryString):
 	ID = 0x07
-	NAME = 'destination-port'
+	NAME = 'icmp-type'
 
 # BinaryOperator
 class ICMPCode (IOperationByte,BinaryString):
 	ID = 0x08
+	NAME = 'icmp-code'
 
 # BinaryOperator
 class TCPFlag (IOperationByte,BinaryString):

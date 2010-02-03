@@ -11,14 +11,15 @@ neighbor 82.219.4.254 {
 			match {
 				source 10.0.0.1/32;
 				destination 192.168.0.1/32;
-				port =80 =8080;
-				destination-port >8080&<8088 =3128;
-				source-port >1024;
+#				port =80 =8080;
+#				destination-port >8080&<8088 =3128;
+#				source-port >1024;
 #				protocol [ tcp udp ];
-				protocol tcp;
-				packet-length >200&<300 >400&<500;
+#				protocol tcp;
+#				packet-length >200&<300 >400&<500;
 #				fragment not-a-fragment;
 #				fragment [ first-fragment last-fragment ];
+#				icmp-type [ unreachable echo-request echo-reply ];
 				
 			}
 			then {
