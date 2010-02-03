@@ -20,6 +20,7 @@ neighbor 82.219.4.254 {
 #				fragment not-a-fragment;
 #				fragment [ first-fragment last-fragment ];
 #				icmp-type [ unreachable echo-request echo-reply ];
+#				icmp-code [ host-unreachable network-unreachable ];
 				
 			}
 			then {
