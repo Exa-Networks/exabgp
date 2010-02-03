@@ -16,7 +16,7 @@ from bgp.structure.neighbor   import Neighbor
 from bgp.structure.protocol   import NamedProtocol
 from bgp.message.open         import HoldTime,RouterID
 from bgp.message.update.route import Route
-from bgp.message.update.flow  import Flow,Source,Destination,BinaryOperator,NumericOperator,SourcePort,DestinationPort,AnyPort,IPProtocol,Fragment,NamedFragment
+from bgp.message.update.flow  import Flow,Source,Destination,BinaryOperator,NumericOperator,SourcePort,DestinationPort,AnyPort,IPProtocol,Fragment,NamedFragment,PacketLength
 from bgp.message.update.attribute             import AttributeID
 from bgp.message.update.attributes            import Attributes
 from bgp.message.update.attribute.origin      import Origin
@@ -58,7 +58,8 @@ class Configuration (object):
 	'             source-port >1024\n' \
 	'             destination-port =80 =3128 >8080&<8088;\n' \
 	'             protocol [ udp tcp ];\n' \
-	'             fragment [ not-a-fragment dont-fragment is-fragment first-fragment last-fragment ]\n' \
+	'             fragment [ not-a-fragment dont-fragment is-fragment first-fragment last-fragment ];\n' \
+	'             packet-length >200&<300 >400&<500;'
 	'          }\n' \
 	'          then {\n' \
 	'             discard;\n' \
@@ -237,6 +238,7 @@ class Configuration (object):
 		if command == 'destination-port': return self._flow_route_destination_port(tokens[1:])
 		if command == 'protocol': return self._flow_route_protocol(tokens[1:])
 		if command == 'fragment': return self._flow_route_fragment(tokens[1:])
+		if command == 'packet-length': return self._flow_route_packet_length(tokens[1:])
 		if command == 'discard': return self._flow_route_discard(tokens[1:])
 		if command == 'rate-limit': return self._flow_route_rate_limit(tokens[1:])
 		if command == 'redirect': return self._flow_route_redirect(tokens[1:])
@@ -636,7 +638,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch('flow-match',[],['source','destination','port','source-port','destination-port','protocol','fragment'])
+			r = self._dispatch('flow-match',[],['source','destination','port','source-port','destination-port','protocol','fragment','packet-length'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -709,7 +711,7 @@ class Configuration (object):
 			raise ValueError('Expecting a number at the start of string [%s]' % string)
 
 	# parse =80 or >80 or <25 or &>10<20
-	def _flow_generic_port (self,tokens,klass):
+	def _flow_generic_numeric (self,tokens,klass):
 		try:
 			for test in tokens:
 				AND = BinaryOperator.NOP
@@ -732,13 +734,16 @@ class Configuration (object):
 			return False
 
 	def _flow_route_anyport (self,tokens):
-		return self._flow_generic_port(tokens,AnyPort)
+		return self._flow_generic_numeric(tokens,AnyPort)
 
 	def _flow_route_source_port (self,tokens):
-		return self._flow_generic_port(tokens,SourcePort)
+		return self._flow_generic_numeric(tokens,SourcePort)
 
 	def _flow_route_destination_port (self,tokens):
-		return self._flow_generic_port(tokens,DestinationPort)
+		return self._flow_generic_numeric(tokens,DestinationPort)
+
+	def _flow_route_packet_length (self,tokens):
+		return self._flow_generic_numeric(tokens,PacketLength)
 
 	def _flow_route_protocol (self,tokens):
 		protocol = tokens.pop(0)
