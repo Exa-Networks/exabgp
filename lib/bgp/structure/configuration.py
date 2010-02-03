@@ -704,27 +704,28 @@ class Configuration (object):
 		except IndexError:
 			raise('Invalid expression (too short) %s' % string)
 
-	def _numeric (self,string):
+	def _value (self,string):
 		l = 0
 		for c in string:
-			if c.isdigit():
+			if c not in ['&',]:
 				l += 1
 				continue
 			break
-		try:
-			return int(string[:l]),string[l:]
-		except ValueError:
-			raise ValueError('Expecting a number at the start of string [%s]' % string)
+		return string[:l],string[l:]
 
 	# parse =80 or >80 or <25 or &>10<20
-	def _flow_generic_numeric (self,tokens,klass):
+	def _flow_generic_expression (self,tokens,converter,klass):
 		try:
 			for test in tokens:
 				AND = BinaryOperator.NOP
 				while test:
 					operator,_ = self._operator(test)
-					value,test = self._numeric(_)
-					self._scope[-1]['routes'][-1].add_or(klass(AND|operator,value))
+					value,test = self._value(_)
+					try:
+						number = int(value)
+					except ValueError:
+						number = converter(value)
+					self._scope[-1]['routes'][-1].add_or(klass(AND|operator,number))
 					if test:
 						if test[0] == '&':
 							AND = BinaryOperator.AND
@@ -739,18 +740,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-	def _flow_route_anyport (self,tokens):
-		return self._flow_generic_numeric(tokens,AnyPort)
-
-	def _flow_route_source_port (self,tokens):
-		return self._flow_generic_numeric(tokens,SourcePort)
-
-	def _flow_route_destination_port (self,tokens):
-		return self._flow_generic_numeric(tokens,DestinationPort)
-
-	def _flow_route_packet_length (self,tokens):
-		return self._flow_generic_numeric(tokens,PacketLength)
-
+	# parse [ content1 content2 content3 ]
 	def _flow_generic_list (self,tokens,converter,klass):
 		name = tokens.pop(0)
 		AND = BinaryOperator.NOP
@@ -761,14 +751,20 @@ class Configuration (object):
 					if name == ']':
 						break
 					try:
-						number = converter(name)
+						try:
+							number = int(name)
+						except ValueError:
+							number = converter(name)
 						self._scope[-1]['routes'][-1].add_or(klass(NumericOperator.EQ|AND,number))
 					except IndexError:
 						self._error = self._str_flow_error
 						if self.debug: raise
 						return False
 			else:
-				number = converter(name)
+				try:
+					number = int(name)
+				except ValueError:
+					number = converter(name)
 				self._scope[-1]['routes'][-1].add_or(klass(NumericOperator.EQ|AND,number))
 		except ValueError:
 			self._error = self._str_flow_error
@@ -776,23 +772,43 @@ class Configuration (object):
 			return False
 		return True
 
+	def _flow_generic_condition (self,tokens,converter,klass):
+		if tokens[0][0] in ['=','>','<']:
+			return self._flow_generic_expression(tokens,converter,klass)
+		return self._flow_generic_list(tokens,converter,klass)
+
+	# XXX: Did not implement port name conversion ...
+	def _flow_route_anyport (self,tokens):
+		return self._flow_generic_condition(tokens,int,AnyPort)
+
+		# XXX: Did not implement port name conversion ...
+	def _flow_route_source_port (self,tokens):
+		return self._flow_generic_condition(tokens,int,SourcePort)
+
+		# XXX: Did not implement port name conversion ...
+	def _flow_route_destination_port (self,tokens):
+		return self._flow_generic_condition(tokens,int,DestinationPort)
+
+	def _flow_route_packet_length (self,tokens):
+		return self._flow_generic_condition(tokens,int,PacketLength)
+
 	def _flow_route_tcp_flags (self,tokens):
-		return self._flow_generic_list(tokens,NamedTCPFlag,TCPFlag)
+		return self._flow_generic_condition(tokens,NamedTCPFlag,TCPFlag)
 
 	def _flow_route_protocol (self,tokens):
-		return self._flow_generic_list(tokens,NamedProtocol,IPProtocol)
+		return self._flow_generic_condition(tokens,NamedProtocol,IPProtocol)
 
 	def _flow_route_icmp_type (self,tokens):
-		return self._flow_generic_list(tokens,NamedICMPType,ICMPType)
+		return self._flow_generic_condition(tokens,NamedICMPType,ICMPType)
 
 	def _flow_route_icmp_code (self,tokens):
-		return self._flow_generic_list(tokens,NamedICMPCode,ICMPCode)
+		return self._flow_generic_condition(tokens,NamedICMPCode,ICMPCode)
 
 	def _flow_route_fragment (self,tokens):
-		return self._flow_generic_list(tokens,NamedFragment,Fragment)
+		return self._flow_generic_condition(tokens,NamedFragment,Fragment)
 	
 	def _flow_route_dscp (self,tokens):
-		return self._flow_generic_list(tokens,int,DSCP)
+		return self._flow_generic_condition(tokens,int,DSCP)
 
 	def _flow_route_discard (self,tokens):
 		# XXX: We are setting the ASN as zero as that what Juniper did when we created a local flow route
