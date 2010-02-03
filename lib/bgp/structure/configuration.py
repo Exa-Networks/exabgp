@@ -16,7 +16,7 @@ from bgp.structure.neighbor   import Neighbor
 from bgp.structure.protocol   import NamedProtocol
 from bgp.message.open         import HoldTime,RouterID
 from bgp.message.update.route import Route
-from bgp.message.update.flow  import Flow,Source,Destination,BinaryOperator,NumericOperator,SourcePort,DestinationPort,AnyPort,IPProtocol
+from bgp.message.update.flow  import Flow,Source,Destination,BinaryOperator,NumericOperator,SourcePort,DestinationPort,AnyPort,IPProtocol,Fragment,NamedFragment
 from bgp.message.update.attribute             import AttributeID
 from bgp.message.update.attributes            import Attributes
 from bgp.message.update.attribute.origin      import Origin
@@ -58,6 +58,7 @@ class Configuration (object):
 	'             source-port >1024\n' \
 	'             destination-port =80 =3128 >8080&<8088;\n' \
 	'             protocol [ udp tcp ];\n' \
+	'             fragment [ not-a-fragment dont-fragment is-fragment first-fragment last-fragment ]\n' \
 	'          }\n' \
 	'          then {\n' \
 	'             discard;\n' \
@@ -67,6 +68,8 @@ class Configuration (object):
 	'          }\n' \
 	'        }\n\n' \
 	'one or more match term, one action\n' \
+	'fragment code is totally untested\n' \
+
 
 	def __init__ (self,fname,text=False):
 		self._text = text
@@ -233,6 +236,7 @@ class Configuration (object):
 		if command == 'source-port': return self._flow_route_source_port(tokens[1:])
 		if command == 'destination-port': return self._flow_route_destination_port(tokens[1:])
 		if command == 'protocol': return self._flow_route_protocol(tokens[1:])
+		if command == 'fragment': return self._flow_route_fragment(tokens[1:])
 		if command == 'discard': return self._flow_route_discard(tokens[1:])
 		if command == 'rate-limit': return self._flow_route_rate_limit(tokens[1:])
 		if command == 'redirect': return self._flow_route_redirect(tokens[1:])
@@ -632,7 +636,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch('flow-match',[],['source','destination','port','source-port','destination-port','protocol'])
+			r = self._dispatch('flow-match',[],['source','destination','port','source-port','destination-port','protocol','fragment'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -760,6 +764,32 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		return True
+
+	def _flow_route_fragment (self,tokens):
+		fragment = tokens.pop(0)
+		AND = BinaryOperator.NOP
+		try:
+			if fragment == '[':
+				while True:
+					fragment = tokens.pop(0)
+					if fragment == ']':
+						break
+					try:
+						number = NamedFragment(fragment)
+						self._scope[-1]['routes'][-1].add_or(Fragment(NumericOperator.EQ|AND,number))
+					except IndexError:
+						self._error = self._str_flow_error
+						if self.debug: raise
+						return False
+			else:
+				number = NamedProtocol(fragment)
+				self._scope[-1]['routes'][-1].add_or(Fragment(NumericOperator.EQ|AND,number))
+		except ValueError:
+			self._error = self._str_flow_error
+			if self.debug: raise
+			return False
+		return True
+
 
 	def _flow_route_discard (self,tokens):
 		# XXX: We are setting the ASN as zero as that what Juniper did when we created a local flow route
