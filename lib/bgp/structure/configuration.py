@@ -747,80 +747,39 @@ class Configuration (object):
 	def _flow_route_packet_length (self,tokens):
 		return self._flow_generic_numeric(tokens,PacketLength)
 
-	def _flow_route_protocol (self,tokens):
-		protocol = tokens.pop(0)
+	def _flow_generic_list (self,tokens,converter,klass):
+		name = tokens.pop(0)
 		AND = BinaryOperator.NOP
 		try:
-			if protocol == '[':
+			if name == '[':
 				while True:
-					protocol = tokens.pop(0)
-					if protocol == ']':
+					name = tokens.pop(0)
+					if name == ']':
 						break
 					try:
-						number = NamedProtocol(protocol)
-						self._scope[-1]['routes'][-1].add_or(IPProtocol(NumericOperator.EQ|AND,number))
+						number = converter(name)
+						self._scope[-1]['routes'][-1].add_or(klass(NumericOperator.EQ|AND,number))
 					except IndexError:
 						self._error = self._str_flow_error
 						if self.debug: raise
 						return False
 			else:
-				number = NamedProtocol(protocol)
-				self._scope[-1]['routes'][-1].add_or(IPProtocol(NumericOperator.EQ|AND,number))
+				number = converter(name)
+				self._scope[-1]['routes'][-1].add_or(klass(NumericOperator.EQ|AND,number))
 		except ValueError:
 			self._error = self._str_flow_error
 			if self.debug: raise
 			return False
 		return True
+
+	def _flow_route_protocol (self,tokens):
+		return self._flow_generic_list(tokens,NamedProtocol,IPProtocol)
 
 	def _flow_route_icmp_type (self,tokens):
-		icmp_type = tokens.pop(0)
-		AND = BinaryOperator.NOP
-		try:
-			if icmp_type == '[':
-				while True:
-					icmp_type = tokens.pop(0)
-					if icmp_type == ']':
-						break
-					try:
-						number = NamedICMPType(icmp_type)
-						self._scope[-1]['routes'][-1].add_or(ICMPType(NumericOperator.EQ|AND,number))
-					except IndexError:
-						self._error = self._str_flow_error
-						if self.debug: raise
-						return False
-			else:
-				number = NamedProtocol(icmp_type)
-				self._scope[-1]['routes'][-1].add_or(ICMPType(NumericOperator.EQ|AND,number))
-		except ValueError:
-			self._error = self._str_flow_error
-			if self.debug: raise
-			return False
-		return True
+		return self._flow_generic_list(tokens,NamedICMPType,ICMPType)
 
 	def _flow_route_fragment (self,tokens):
-		fragment = tokens.pop(0)
-		AND = BinaryOperator.NOP
-		try:
-			if fragment == '[':
-				while True:
-					fragment = tokens.pop(0)
-					if fragment == ']':
-						break
-					try:
-						number = NamedFragment(fragment)
-						self._scope[-1]['routes'][-1].add_or(Fragment(NumericOperator.EQ|AND,number))
-					except IndexError:
-						self._error = self._str_flow_error
-						if self.debug: raise
-						return False
-			else:
-				number = NamedProtocol(fragment)
-				self._scope[-1]['routes'][-1].add_or(Fragment(NumericOperator.EQ|AND,number))
-		except ValueError:
-			self._error = self._str_flow_error
-			if self.debug: raise
-			return False
-		return True
+		return self._flow_generic_list(tokens,NamedFragment,Fragment)
 
 	def _flow_route_discard (self,tokens):
 		# XXX: We are setting the ASN as zero as that what Juniper did when we created a local flow route
