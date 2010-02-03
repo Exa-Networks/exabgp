@@ -18,7 +18,7 @@ from bgp.structure.icmp       import NamedICMPType,NamedICMPCode
 from bgp.message.open         import HoldTime,RouterID
 from bgp.message.update.route import Route
 from bgp.message.update.flow  import BinaryOperator,NumericOperator,NamedFragment,NamedTCPFlag
-from bgp.message.update.flow  import Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode
+from bgp.message.update.flow  import Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
 from bgp.message.update.attribute             import AttributeID
 from bgp.message.update.attributes            import Attributes
 from bgp.message.update.attribute.origin      import Origin
@@ -243,6 +243,7 @@ class Configuration (object):
 		if command == 'icmp-type': return self._flow_route_icmp_type(tokens[1:])
 		if command == 'icmp-code': return self._flow_route_icmp_code(tokens[1:])
 		if command == 'fragment': return self._flow_route_fragment(tokens[1:])
+		if command == 'dscp': return self._flow_route_dscp(tokens[1:])
 		if command == 'packet-length': return self._flow_route_packet_length(tokens[1:])
 		if command == 'discard': return self._flow_route_discard(tokens[1:])
 		if command == 'rate-limit': return self._flow_route_rate_limit(tokens[1:])
@@ -643,7 +644,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch('flow-match',[],['source','destination','port','source-port','destination-port','protocol','tcp-flags','icmp-type','icmp-code','fragment','packet-length'])
+			r = self._dispatch('flow-match',[],['source','destination','port','source-port','destination-port','protocol','tcp-flags','icmp-type','icmp-code','fragment','dscp','packet-length'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -789,6 +790,9 @@ class Configuration (object):
 
 	def _flow_route_fragment (self,tokens):
 		return self._flow_generic_list(tokens,NamedFragment,Fragment)
+	
+	def _flow_route_dscp (self,tokens):
+		return self._flow_generic_list(tokens,int,DSCP)
 
 	def _flow_route_discard (self,tokens):
 		# XXX: We are setting the ASN as zero as that what Juniper did when we created a local flow route

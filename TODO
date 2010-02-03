@@ -7,3 +7,4 @@ Graceful restart docs much clearer than the RFC
 http://www.cisco.com/en/US/products/ps6550/products_white_paper09186a008016317c.shtml
 
 reduce to a minimum all the new_ and to_ functions and integrate them into protocol
+some of the match condition of flows currently take list or numeric tests, they should always take both, refactor the code for it.

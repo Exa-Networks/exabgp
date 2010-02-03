@@ -238,7 +238,7 @@ class PacketLength (IOperationByteShort,NumericString):
 
 # NumericOperator
 # RFC2474
-class DSCP (IOperationByteShort):
+class DSCP (IOperationByteShort,NumericString):
 	ID = 0x0B
 	NAME = 'dscp'
 

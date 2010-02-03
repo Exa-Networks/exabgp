@@ -22,6 +22,7 @@ neighbor 82.219.4.254 {
 #				icmp-type [ unreachable echo-request echo-reply ];
 #				icmp-code [ host-unreachable network-unreachable ];
 #				tcp-flags [ urgent rst ];
+#				dscp [ 10 20 ];
 				
 			}
 			then {
