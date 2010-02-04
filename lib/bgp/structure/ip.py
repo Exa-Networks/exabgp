@@ -11,7 +11,6 @@ from struct import pack
 import math
 import socket
 
-from bgp.interface import IByteStream
 from bgp.structure.address import AFI,SAFI
 
 _bgp = {}
@@ -33,7 +32,7 @@ def to_Prefix (ip,mask):
 	afi = _detect_afi(ip)
 	return Prefix(afi,ip,mask)
 
-class Inet (IByteStream):
+class Inet (object):
 	"""An IP in the 4 bytes format"""
 	_af = {
 		AFI.ipv4: socket.AF_INET,
