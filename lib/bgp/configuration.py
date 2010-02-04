@@ -15,9 +15,10 @@ from bgp.structure.asn        import ASN
 from bgp.structure.neighbor   import Neighbor
 from bgp.structure.protocol   import NamedProtocol
 from bgp.structure.icmp       import NamedICMPType,NamedICMPCode
+from bgp.structure.tcpflags   import NamedTCPFlags
 from bgp.message.open         import HoldTime,RouterID
 from bgp.message.update.route import Route
-from bgp.message.update.flow  import BinaryOperator,NumericOperator,NamedFragment,NamedTCPFlag
+from bgp.message.update.flow  import BinaryOperator,NumericOperator,NamedFragment
 from bgp.message.update.flow  import Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
 from bgp.message.update.attribute             import AttributeID
 from bgp.message.update.attributes            import Attributes
@@ -793,7 +794,7 @@ class Configuration (object):
 		return self._flow_generic_condition(tokens,int,PacketLength)
 
 	def _flow_route_tcp_flags (self,tokens):
-		return self._flow_generic_list(tokens,NamedTCPFlag,TCPFlag)
+		return self._flow_generic_list(tokens,NamedTCPFlags,TCPFlag)
 
 	def _flow_route_protocol (self,tokens):
 		return self._flow_generic_list(tokens,NamedProtocol,IPProtocol)
