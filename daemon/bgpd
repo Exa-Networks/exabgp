@@ -139,7 +139,7 @@ if __name__ == '__main__':
 		sys.exit('usage bgpd <configuration file>')
 	conf = sys.argv[1]
 
-	from bgp.structure.configuration import Configuration
+	from bgp.configuration import Configuration
 
 	configuration = Configuration(conf)
 	if not configuration.reload():
