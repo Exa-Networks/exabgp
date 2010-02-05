@@ -8,6 +8,7 @@ env \
 			--disable-msg=C0324 \
 			--disable-msg=C0111 \
 			--disable-msg=C0321 \
+			--disable-msg=C0103 \
 			--max-line-length=200  \
 			$1 
 
@@ -15,3 +16,4 @@ env \
 # C0324 : Comma not followed by a space
 # C0111 : Missing docstring 
 # C0321 : More than one statement on a single line
+# C0103 : the regex for class and functions

@@ -7,10 +7,6 @@ Created by Thomas Mangin on 2010-01-15.
 Copyright (c) 2010 Exa Networks. All rights reserved.
 """
 
-from struct import pack
-
-# =================================================================== Protocol
-
 # http://www.iana.org/assignments/protocol-numbers/
 class Protocol (int):
 	ICMP  = 0x01
@@ -28,19 +24,19 @@ class Protocol (int):
 	SCTP  = 0x84
 	
 	def __str__ (self):
-		if self == self.ICMP:    return 'ICMP'
-		if self == self.IGMP:    return 'IGMP'
-		if self == self.TCP:     return 'TCP'
-		if self == self.EGP:     return 'EGP'
-		if self == self.UDP:     return 'UDP'
-		if self == self.RSVP:    return 'RSVP'
-		if self == self.GRE:     return 'GRE'
-		if self == self.ESP:     return 'ESP'
-		if self == self.AH:      return 'AH'
-		if self == self.OSPF:    return 'OSPF'
-		if self == self.IPIP:    return 'IPIP'
-		if self == self.PIM:     return 'PIM'
-		if self == self.SCTP:    return 'SCTP'
+		if self == Protocol.ICMP:    return 'ICMP'
+		if self == Protocol.IGMP:    return 'IGMP'
+		if self == Protocol.TCP:     return 'TCP'
+		if self == Protocol.EGP:     return 'EGP'
+		if self == Protocol.UDP:     return 'UDP'
+		if self == Protocol.RSVP:    return 'RSVP'
+		if self == Protocol.GRE:     return 'GRE'
+		if self == Protocol.ESP:     return 'ESP'
+		if self == Protocol.AH:      return 'AH'
+		if self == Protocol.OSPF:    return 'OSPF'
+		if self == Protocol.IPIP:    return 'IPIP'
+		if self == Protocol.PIM:     return 'PIM'
+		if self == Protocol.SCTP:    return 'SCTP'
 		return "unknown protocol %d" % int.__str__(self)
 
 	def pack (self):

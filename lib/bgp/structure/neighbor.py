@@ -8,7 +8,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 from bgp.structure.address import AFI
-from bgp.message.open import HoldTime, RouterID
+from bgp.message.open import HoldTime
 
 # The definition of a neighbor (from reading the configuration)
 class Neighbor (object):

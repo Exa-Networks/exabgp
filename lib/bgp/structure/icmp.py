@@ -29,21 +29,21 @@ class ICMPType (int):
 	TRACEROUTE               = 0x1E
 
 	def __str__ (self):
-		if self == self.ICMPType.ECHO_REPLY:               return 'echo-reply'
-		if self == self.ICMPType.ECHO_REQUEST:             return 'echo-request'
-		if self == self.ICMPType.INFO_REPLY:               return 'info-reply'
-		if self == self.ICMPType.INFO_REQUEST:             return 'info-request'
-		if self == self.ICMPType.MASK_REPLY:               return 'mask-reply'
-		if self == self.ICMPType.MASK_REQUEST:             return 'mask-request'
-		if self == self.ICMPType.PARAMETER_PROBLEM:        return 'parameter-problem'
-		if self == self.ICMPType.REDIRECT:                 return 'redirect'
-		if self == self.ICMPType.ROUTER_ADVERTISEMENT:     return 'router-advertisement'
-		if self == self.ICMPType.ROUTER_SOLICIT:           return 'router-solicit'
-		if self == self.ICMPType.SOURCE_QUENCH:            return 'source-quench'
-		if self == self.ICMPType.TIME_EXCEEDED:            return 'time-exceeded'
-		if self == self.ICMPType.TIMESTAMP_REQUEST:        return 'timestamp'
-		if self == self.ICMPType.TIMESTAMP_REPLY:          return 'timestamp-reply'
-		if self == self.ICMPType.DESTINATION_UNREACHEABLE: return 'unreachable'
+		if self == ICMPType.ECHO_REPLY:               return 'echo-reply'
+		if self == ICMPType.ECHO_REQUEST:             return 'echo-request'
+		if self == ICMPType.INFO_REPLY:               return 'info-reply'
+		if self == ICMPType.INFO_REQUEST:             return 'info-request'
+		if self == ICMPType.MASK_REPLY:               return 'mask-reply'
+		if self == ICMPType.MASK_REQUEST:             return 'mask-request'
+		if self == ICMPType.PARAMETER_PROBLEM:        return 'parameter-problem'
+		if self == ICMPType.REDIRECT:                 return 'redirect'
+		if self == ICMPType.ROUTER_ADVERTISEMENT:     return 'router-advertisement'
+		if self == ICMPType.ROUTER_SOLICIT:           return 'router-solicit'
+		if self == ICMPType.SOURCE_QUENCH:            return 'source-quench'
+		if self == ICMPType.TIME_EXCEEDED:            return 'time-exceeded'
+		if self == ICMPType.TIMESTAMP_REQUEST:        return 'timestamp'
+		if self == ICMPType.TIMESTAMP_REPLY:          return 'timestamp-reply'
+		if self == ICMPType.DESTINATION_UNREACHEABLE: return 'unreachable'
 		return 'invalid icmp type %d' % int.__str__(self)
 
 def NamedICMPType (name):
@@ -63,7 +63,7 @@ def NamedICMPType (name):
 	if icmp == 'timestamp':           return ICMPType.TIMESTAMP_REQUEST
 	if icmp == 'timestamp-reply':     return ICMPType.TIMESTAMP_REPLY
 	if icmp == 'unreachable':         return ICMPType.DESTINATION_UNREACHEABLE
-	return ValueError('unknow icmp type %s' % icmp)
+	raise ValueError('unknow icmp type %s' % icmp)
 
 
 # http://www.iana.org/assignments/icmp-parameters

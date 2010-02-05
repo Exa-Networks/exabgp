@@ -7,15 +7,14 @@ Created by Thomas Mangin on 2010-01-15.
 Copyright (c) 2010 Exa Networks. All rights reserved.
 """
 
-from struct import pack
 import math
 import socket
 
 from bgp.structure.address import AFI,SAFI
 
 _bgp = {}
-for mask in range(0,129):
-	_bgp[mask] = int(math.ceil(float(mask)/8))
+for netmask in range(0,129):
+	_bgp[netmask] = int(math.ceil(float(netmask)/8))
 
 def _detect_afi(ip):
 	if ip.count(':'):
@@ -34,6 +33,7 @@ def to_Prefix (ip,mask):
 
 class Inet (object):
 	"""An IP in the 4 bytes format"""
+	# XXX: yep, we should surely change this _ name here
 	_af = {
 		AFI.ipv4: socket.AF_INET,
 		AFI.ipv6: socket.AF_INET6,
