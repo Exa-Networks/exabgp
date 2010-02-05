@@ -61,7 +61,7 @@ class Table (object):
 		for prefix in self._plus.keys():
 			t,p = self._plus[prefix]
 			if t < when:
-				del self._plus[k]
+				del self._plus[prefix]
 		for prefix in self._minus.keys():
 			t = self._minus[prefix]
 			if t < when:
