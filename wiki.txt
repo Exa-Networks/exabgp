@@ -1,10 +1,29 @@
 ===== BGP Route Injector =====
 
+==== Latest Update ====
+
+If you are interested in FlowSpec (RFC 5575), there is now full support for it on trunk.
+
+   svn co http://svn.exa.org.uk/bgp/trunk bgp
+
+Make sure your trunk version up-to-date. Bug reports are welcome :)
+
+What is FlowSpec ?
+  * http://uknof.org/uknof15/Mangin-NakedBGP.pdf 
+  * http://www.terena.org/activities/tf-ngn/tf-ngn17/uze-flowspec.pdf
+  * http://www.nanog.net/meetings/nanog38/presentations/labovitz-bgp-flowspec.pdf
+  * http://resources.nznog.org/2006/Friday-240306/DavidLambert-BGPFlowSpecificationUpdate/Lambert.ppt
+
 ==== What is it ? ====
 
-Some code which :
-  * Can inject routes with arbitrary next-hops into your network
-  * Can act as an IBGP or EBGP speaker (but not listener)
+A BGP speaker which can inject routes with arbitrary next-hops into your network.
+ 
+I use it to :
+  * source ASN112 servers
+  * source some ipv4 routes
+  * **source some ipv6 routes** (using both IPv4 and IPv6 TCP connections)
+  * **redirect traffic flows** from my customers to a mail sink hole when they spam
+  * **mitigate DDOS**
 
 ==== Where can I get it ? ====
 
@@ -12,27 +31,28 @@ The code is stored in our SVN repository: \\
 [[http://svn.exa.org.uk/bgp/trunk|http://svn.exa.org.uk/bgp/trunk]] \\
 [[http://fisheye.exa.org.uk/browse/BGP/trunk|Fisheye browsing]]
 
+The latest stable version information is available at
+   http://svn.exa.org.uk/bgp/branches/stable
+
+Currently it is version 1.0
+
 Get it with
    cd /opt
-   svn co -r 128 http://svn.exa.org.uk/bgp/trunk bgp
+   svn co http://svn.exa.org.uk/bgp/branches/1.0 bgp
 
-There is currently no tarball or official release yet.
-
-However, we currently use revision 128 to:
-  * source ASN112 servers
-  * source some ipv4 /32
-  * source some /128 (using both IPv4 and IPv6 TCP connections)
-
-The code to reload the configuration and send the correct update on SIGHUP is currently untested - it may work, it may not (you can use graceful restart and simply kill the daemon to achieve a similar result).
+There is no tarball, the only way to download the code is through SVN.
 
 ==== How do you configure it ? ====
 
-You provide the name of the configuration file as an argument to the program. For example:
+You can copy and edit one of the sample configuration file provided in the etc/bgp folder, then provide the name of the configuration file as an argument to the program.
 
-   #!/bin/bash
-   exec env PYTHONPATH=/opt/bgp/lib setuidgid nobody /opt/bgp/daemon/bgpd /opt/bgp/etc/bgp/as112.txt 2>&1
+However, the folder lib/bgp must be the in Python include PATH for the program to run.
 
-We are using [[http://cr.yp.to/daemontools.html|deamontools]] to run and supervise the application on crash, but we never saw it crash (touching wood).
+   env PYTHONPATH=/opt/bgp/lib /opt/bgp/daemon/bgpd /opt/bgp/etc/bgp/as112.txt
+
+We are using [[http://cr.yp.to/daemontools.html|deamontools]] to run and restart the application on kill/crash (we never saw it crash - touching wood).
+
+Some supervise scripts are provided in the repository service folder (but the configuration file name).
 
 As the application does not bind to port 179, or program the local routing table, it does not need any escalated privileges and will happily run as "nobody".
 
@@ -91,19 +111,76 @@ IPv6 example
    	}
    }
 
+FlowSpec (RFC 5575) Example
+
+   neighbor 192.168.127.128 {
+   	description "a juniper router";
+   	router-id 192.168.127.1;
+   	local-address 192.168.127.1;
+   	local-as 65000;
+   	peer-as 65534;
+   
+   	flow {
+   		route optional-name-of-the-route {
+   			match {
+   				source 10.0.0.1/32;
+   				destination 192.168.0.1/32;
+   				port =80 =8080;
+   				destination-port >8080&<8088 =3128;
+   				source-port >1024;
+   				protocol [ udp tcp ];
+   #     protocol tcp;
+   #     packet-length >200&<300 >400&<500;
+   #     fragment not-a-fragment;
+   #     fragment [ first-fragment last-fragment ];
+   #     icmp-type [ unreachable echo-request echo-reply ];
+   #     icmp-code [ host-unreachable network-unreachable ];
+   #     tcp-flags [ urgent rst ];
+   #     dscp [ 10 20 ];
+   #     dscp >10&<20;
+   			}
+   			then {
+   # bytes/seconds
+   				rate-limit 9600;
+   #     discard;
+   #     redirect 65500:12345;
+   #     redirect 1.2.3.4:5678;
+   			}
+   		}
+   	}
+   }
+
+It is possible to send a SIGHUP signal the program to have it send the right updates (peer setup and tear down, announcement and withdrawal) to sync the remote RIB to a new configuration file.
 
 ==== Tell me more about the code ====
 
 It is written in Python 2.x for version 2.5 or later. \\
 No tests have been performed to check if it works with version 3.0.
 
-The Python specificities of 2.5/2.6 have been removed from the code at commit 102 and 2.4 will let you setup bgp adjacencies but there are issues when it comes to dealing with BGP Notification Messages.
+The Python specificities of 2.5/2.6 have been removed from the code and 2.4 will now let you setup bgp adjacencies.
 
 The code only relies on the standard library and has no external dependencies.
+
 ==== Anticipated Users FAQ ====
 
 Q: Where is the documentation ? \\
 A: Here and in the code .. really do you need more ??
+
+Q: Is this code supported ? \\
+A: YES - Should you find any bug, please report it.
+
+Q: Where do I report bugs - ask for help ?? \\
+A: <sigh> ... contact me: **thomas . mangin AT exa - networks . co . uk**
+
+Q: Does it work on Linux,MACOSX, Windows ? \\
+A: Linux: yes, it is our deployment environment \\
+A: MACOS: yes, it is developed on MAC OSX 10.6 \\
+A: Windows: It should, but I have never tried. Let me know your experience.
+
+Q: I keep seeing "Received Notification (3,10) from peer UPDATE message error: Invalid Network Field." in the logs \\
+A: You are most likely trying to send IPv6 route(s) to a router which is not ready to accept them \\
+A: This is caused as we send the route(s) even if the router did not announce the protocol \\
+A: To fix it under junos type "set family inet6 unicast" under your bgp group or peer 
 
 Q: I am trying to connect to my router and it is not working \\
 A: Did you enable multi-hop BGP on your router ?
@@ -130,9 +207,6 @@ A: The injector allows TCP IPv4 or IPv6 connections as well as supporting the ex
 Q: Can you maintain more than one BGP session? \\
 A: Yes, you can define more than one neighbor in the configuration file
 
-Q: Is this code supported ? \\
-A: YES - Should you find any bug, please report it. 
-
 Q: Are you planning to add more features ? (support for vpnv4,etc) \\
 A: I will only really code new features for my own use, but feel free to send me patches.
 
@@ -143,9 +217,6 @@ A: If no graceful-restart time is set, the waiting time is set to be the same as
 Q: I would like to inject routes in the network but my server is behind a NATing firewall, will it work ? \\
 A: NAT is not a good idea but: Yes, it will work. \\
 A: Set your local-address as your machine LAN IP and the router-id as the firewall public IP.
-
-Q: Where do I report bugs - ask for help ?? \\
-A: <sigh> ... contact me: thomas . mangin AT exa - networks . co . uk
 
 ==== Anticipated Coders FAQ ====
 
@@ -167,3 +238,4 @@ A: Use [[http://code.google.com/p/bgpsimple|bgpsimple]]
 Q: But there is [[https://code.launchpad.net/pybgp| already one in Python]] ! \\
 A: I am not sure if this project existed when I started or not but I clearly missed it ! (and it does not support the MultiProtocol Extensions for IPv6 but instead for ipv4 and vpnv4/mpls which was not good for me :p)
    bzr branch lp:pybgp
+

@@ -7,9 +7,7 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
-import re
-
-from bgp.structure.address    import AFI
+#from bgp.structure.address    import AFI
 from bgp.structure.ip         import to_IP,to_Prefix
 from bgp.structure.asn        import ASN
 from bgp.structure.neighbor   import Neighbor
@@ -22,7 +20,7 @@ from bgp.message.update.route import Route
 from bgp.message.update.flow  import BinaryOperator,NumericOperator
 from bgp.message.update.flow  import Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
 from bgp.message.update.attribute             import AttributeID
-from bgp.message.update.attributes            import Attributes
+#from bgp.message.update.attributes            import Attributes
 from bgp.message.update.attribute.origin      import Origin
 from bgp.message.update.attribute.nexthop     import NextHop
 from bgp.message.update.attribute.aspath      import ASPath
@@ -81,6 +79,13 @@ class Configuration (object):
 		self._fname = fname
 		self.neighbor = {}
 		self.error = ''
+
+		self._neighbor = {}
+		self._scope = []
+		self._location = ['root']
+		self._line = []
+		self._error = ''
+		self._number = 1
 
 	# Public Interface
 
@@ -295,7 +300,7 @@ class Configuration (object):
 #			self._error = 'local-address and peer-address must be of the same family'
 #			return False 
 		if self._neighbor.has_key(neighbor.peer_address.ip()):
-			self_error = 'duplicate peer definition %s' % neighbor.peer_address.ip()
+			self.error = 'duplicate peer definition %s' % neighbor.peer_address.ip()
 			return False
 		self._neighbor[neighbor.peer_address.ip()] = neighbor
 		return True
@@ -667,7 +672,6 @@ class Configuration (object):
 	def _flow_source (self,tokens):
 		try:
 			ip,nm = tokens.pop(0).split('/')
-			prefix = to_Prefix(ip,nm)
 			self._scope[-1]['routes'][-1].add_and(Source(ip,nm))
 			return True
 		except ValueError:
@@ -678,7 +682,6 @@ class Configuration (object):
 	def _flow_destination (self,tokens):
 		try:
 			ip,nm = tokens.pop(0).split('/')
-			prefix = to_Prefix(ip,nm)
 			self._scope[-1]['routes'][-1].add_and(Destination(ip,nm))
 			return True
 		except ValueError:

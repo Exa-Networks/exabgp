@@ -1,0 +1,17 @@
+#!/bin/sh
+env \
+	PYTHONPATH=$PYTHONPATH:lib \
+	python2.6 \
+		/opt/local/bin/pylint-2.6 \
+			--variable-rgx="[a-z_][a-z0-9_]{0,30}$" \
+			--disable-msg=W0312 \
+			--disable-msg=C0324 \
+			--disable-msg=C0111 \
+			--disable-msg=C0321 \
+			--max-line-length=200  \
+			$1 
+
+# W0312 : Found indentation with tabs instead of spaces
+# C0324 : Comma not followed by a space
+# C0111 : Missing docstring 
+# C0321 : More than one statement on a single line

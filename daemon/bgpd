@@ -7,19 +7,18 @@ Created by Thomas Mangin on 2009-08-30.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
-import os
 import sys
 
 import time
 import signal
 
-from bgp.utils                import *
-from bgp.message.notification import Notification
+from bgp.utils                import Log
 from bgp.network.peer         import Peer
 
 class Supervisor (object):
 	debug = True
 
+	# import os
 	# [hex(ord(c)) for c in os.popen('clear').read()]
 	clear = ''.join([chr(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a']])
 
@@ -49,7 +48,6 @@ class Supervisor (object):
 		self._restart = True
 
 	def run (self):
-		start = time.time()
 		while self._peers:
 			try:
 				if self._shutdown:
