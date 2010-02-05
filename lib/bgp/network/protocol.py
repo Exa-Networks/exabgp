@@ -9,35 +9,40 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 import time
 import socket
-from struct import pack,unpack
+from struct import unpack
 
 from bgp.rib.table import Table
 from bgp.rib.delta import Delta
 
-from bgp.utils                import *
+from bgp.utils                import Log,hexa
 from bgp.structure.address    import AFI,SAFI
-from bgp.structure.ip         import BGPPrefix
+from bgp.structure.ip         import BGPPrefix,Inet,to_IP
+from bgp.structure.asn        import ASN
 from bgp.network.connection   import Connection
 # XXX: defix should be renamed and moved ...
-from bgp.message              import Message,Failure,defix
+from bgp.message              import Message,defix
 from bgp.message.nop          import NOP
-from bgp.message.open         import Open,Parameter,Capabilities,RouterID,MultiProtocol,RouteRefresh,CiscoRouteRefresh,Graceful
+from bgp.message.open         import Open,Unknown,Parameter,Capabilities,RouterID,MultiProtocol,RouteRefresh,CiscoRouteRefresh,Graceful
 from bgp.message.update       import Update
 from bgp.message.update.eor   import EOR
 from bgp.message.keepalive    import KeepAlive
 from bgp.message.notification import Notification, Notify, NotConnected
+from bgp.message.update.route import Route
 from bgp.message.update.attributes     import Attributes
 from bgp.message.update.attribute      import AttributeID
 from bgp.message.update.attribute.flag        import Flag
-from bgp.message.update.attribute.origin      import *	# 01
-from bgp.message.update.attribute.aspath      import *	# 02
-from bgp.message.update.attribute.nexthop     import *	# 03
-from bgp.message.update.attribute.med         import * 	# 04
-from bgp.message.update.attribute.localpref   import *	# 05
-from bgp.message.update.attribute.aggregate   import *	# 06
-from bgp.message.update.attribute.aggregator  import *	# 07
-from bgp.message.update.attribute.communities import *	# 08
+from bgp.message.update.attribute.origin      import Origin
+from bgp.message.update.attribute.aspath      import ASPath
+from bgp.message.update.attribute.nexthop     import NextHop
+from bgp.message.update.attribute.med         import MED
+from bgp.message.update.attribute.localpref   import LocalPreference
+#from bgp.message.update.attribute.aggregate   import *
+#from bgp.message.update.attribute.aggregator  import *
+from bgp.message.update.attribute.communities import Community,Communities
+#from bgp.message.update.attribute.mprnlri     import MPRNLRI
+from bgp.message.update.attribute.mpurnlri    import MPURNLRI
 
+# XXX: Move all the old packet decoding in another file to clean up the includes here, as it is not used anyway
 
 class Protocol (object):
 	trace = False
@@ -57,7 +62,6 @@ class Protocol (object):
 		if not self.connection:
 			peer = self.neighbor.peer_address
 			local = self.neighbor.local_address
-			asn = self.neighbor.peer_as
 			self.connection = Connection(peer,local)
 
 	def check_keepalive (self):
@@ -111,7 +115,7 @@ class Protocol (object):
 		data = self.connection.read(length)
 
 		if len(data) != length:
-			raise SendNotificaiton(ord(msg),0)
+			raise Notify(ord(msg),0)
 
 		self.log.outIf(self.trace and msg == Update.TYPE,"UPDATE RECV: %s " % hexa(data))
 
@@ -142,12 +146,10 @@ class Protocol (object):
 			raise Notify(1,1,'first packet not an open message (%s)' % str(message.TYPE))
 
 		if message.asn != self.neighbor.peer_as:
-			# ASN sent did not match ASN expected
-			raise Notify(2,2,data[1:3])
+			raise Notify(2,2,'ASN sent (%d) did not match ASN expected (%d)' % (message.asn,self.neighbor.peer_as))
 
-		if message.hold_time == 0:
-			# Hold Time of zero not accepted
-			raise Notify(2,6,data[3:5])
+		if message.hold_time < 3:
+			raise Notify(2,6,'Hold Time is invalid (%d)' % message.hold_time)
 		if message.hold_time >= 3:
 			self.neighbor.hold_time = min(self.neighbor.hold_time,message.hold_time)
 
@@ -223,7 +225,6 @@ class Protocol (object):
 		rest = data[boundary:]
 		return key,value,rest
 
-
 	def CapabilitiesFactory (self,data):
 		capabilities = Capabilities()
 		option_len = ord(data[0])
@@ -234,7 +235,6 @@ class Protocol (object):
 				# Paramaters must only be sent once.
 				if key == Parameter.AUTHENTIFICATION_INFORMATION:
 					raise Notify(2,5)
-					continue
 
 				if key == Parameter.CAPABILITIES:
 					k,v,r = self._key_values('capability',value)
@@ -447,13 +447,13 @@ class Protocol (object):
 				if nh[0] == 0xfe: nh = nh[16:]
 				elif nh[16] == 0xfe: nh = nh[:16]
 				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-				else: self(next_attributes)
+				else: return self._AttributesFactory(next_attributes)
 			if len_nh >= 16: nh = socket.inet_ntop(socket.AF_INET6,nh)
 			else: nh = socket.inet_ntop(socket.AF_INET,nh)
 			nb_snpa = ord(data[offset])
 			offset += 1
 			snpas = []
-			for i in range(nb_snpa):
+			for _ in range(nb_snpa):
 				len_snpa = ord(offset)
 				offset += 1
 				snpas.append(data[offset:offset+len_snpa])
@@ -463,7 +463,7 @@ class Protocol (object):
 				prefix = BGPPrefix(afi,data)
 				route = Route(prefix.afi,prefix.safi,prefix)
 				data = data[len(prefix):]
-				route.attributes.add(NextHop(to_IP(nh)))
+				route.add(NextHop(to_IP(nh)))
 				self.log.out('adding MP route %s' % str(route))
 			return self._AttributesFactory(next_attributes)
 

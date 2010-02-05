@@ -7,10 +7,13 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
-from bgp.utils                import *
+import sys
+import traceback
+
+from bgp.utils                import Log
 from bgp.message              import Failure
 from bgp.message.nop          import NOP
-from bgp.message.open         import Open,Capabilities
+from bgp.message.open         import Capabilities
 from bgp.message.update       import Update
 from bgp.message.keepalive    import KeepAlive
 from bgp.message.notification import Notification, Notify, NotConnected

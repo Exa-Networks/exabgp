@@ -6,15 +6,12 @@ network.py
 Created by Thomas Mangin on 2009-09-06.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
-import sys
-import traceback
 
 import time
-import struct
 import socket
 import select
 
-from bgp.utils import *
+from bgp.utils import Log,hexa,trace
 from bgp.structure.address import AFI
 from bgp.message import Failure
 
