@@ -27,6 +27,11 @@ class ASPath (Attribute):
 		else:
 			self.aspsegment = aspsegment
 
+	def _segment (self,seg_type,values):
+		if len(values)>255:
+			return self._segment(seg_type,values[:255]) + self._segment(seg_type,values[255:])
+		return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack() for v in values]))
+
 	def add (self,asn):
 		self.aspsegment.append(asn)
 

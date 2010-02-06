@@ -31,11 +31,6 @@ class Attribute (object):
 			len_value = chr(length)
 		return "%s%s%s%s" % (chr(flag),chr(self.ID),len_value,value)
 
-	def _segment (self,seg_type,values):
-		if len(values)>255:
-			return self._segment(values[:256]) + self._segment(values[256:])
-		return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack() for v in values]))
-
 	def __eq__ (self,other):
 		return self.ID == other.ID
 
