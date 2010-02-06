@@ -7,7 +7,6 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
-from bgp.utils import *
 from bgp.structure.address import Address
 from bgp.message.update.attribute import AttributeID,Flag,Attribute
 

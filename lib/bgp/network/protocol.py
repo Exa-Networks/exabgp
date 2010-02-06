@@ -36,8 +36,6 @@ from bgp.message.update.attribute.aspath      import ASPath
 from bgp.message.update.attribute.nexthop     import NextHop
 from bgp.message.update.attribute.med         import MED
 from bgp.message.update.attribute.localpref   import LocalPreference
-#from bgp.message.update.attribute.aggregate   import *
-#from bgp.message.update.attribute.aggregator  import *
 from bgp.message.update.attribute.communities import Community,Communities
 #from bgp.message.update.attribute.mprnlri     import MPRNLRI
 from bgp.message.update.attribute.mpurnlri    import MPURNLRI

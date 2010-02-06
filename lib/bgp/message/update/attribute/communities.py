@@ -7,10 +7,8 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
-import socket
-from struct import pack,unpack
+from struct import pack
 
-from bgp.utils import *
 from bgp.message.update.attribute import AttributeID,Flag,Attribute
 
 # =================================================================== Community
@@ -39,7 +37,6 @@ class Communities (Attribute):
 	MULTIPLE = False
 
 	def __init__ (self,communities=None):
-		Attribute.__init__(self)
 		# Must be None as = param is only evaluated once
 		if communities: 
 			self.communities = communities
@@ -110,6 +107,17 @@ class ECommunity (object):
 
 # =================================================================== ECommunities (16)
 
+#def new_ECommunities (data):
+#	communities = ECommunities()
+#	while data:
+#		ECommunity = unpack(data[:8])
+#		data = data[8:]
+#		communities.add(ECommunity(ECommunity))
+#	return communities
+
+class ECommunities (Communities):
+	ID = AttributeID.EXTENDED_COMMUNITY
+
 def _to_FlowCommunity (action,data):
 	return ECommunity(pack('!H',action) + data[:6])
 
@@ -117,36 +125,48 @@ def _to_FlowCommunity (action,data):
 def to_FlowTrafficRate (asn,rate):
 	return _to_FlowCommunity (0x8006,pack('!H',asn)[:2]+pack('!f',rate))
 
-def to_FlowAction (asn,sample,terminal):
-	bitmask = chr(0)
-	if terminal: bitmask += 0x01
-	if sample: bitmask += 0x02
-	return _to_FlowCommunity (0x8007,chr(0)*5+bitmask)
+def to_RouteOriginCommunity (asn,number,hightype=0x01):
+	return ECommunity(chr(hightype) + chr(0x03) + pack('!H',asn) + pack('!L',number))
 
-# take a string representing a 6 bytes long hexacedimal number like "0x123456789ABC"
-def to_FlowRedirect (bitmask):
-	route_target = ''
-	for p in range(2,14,2): # 2,4,6,8,10,12
-		route_target += chr(int(bitmask[p:p+2],16))
-	return _to_FlowCommunity (0x8008,route_target)
+# VRF is ASN:Long
+def to_RouteTargetCommunity_00 (asn,number):
+	return ECommunity(chr(0x00) + chr(0x02) + pack('!H',asn) + pack('!L',number))
 
-def to_FlowMark (dscp):
-	return _to_FlowCommunity (0x8009,chr(0)*5 + chr(dscp))
+# VRF is A.B.C.D:Short
+def to_RouteTargetCommunity_01 (ipn,number):
+	return ECommunity(chr(0x01) + chr(0x02) + pack('!L',ipn) + pack('!H',number))
 
-def to_ASCommunity (subtype,asn,data,transitive):
-	r = chr(0x00)
-	if transitive: r += chr(0x40)
-	return ECommunity(r + chr(subtype) + pack('!H',asn) + ''.join([chr(c) for c in data[:4]]))
-
-def to_IPv4Community (subtype,data,transitive):
-	r = chr(0x01)
-	if transitive: r += chr(0x40)
-	return ECommunity(r + chr(subtype) + socket.inet_pton(socket.AF_INET,ipv4) + ''.join([chr(c) for c in data[:2]]))
-
-def to_OpaqueCommunity (subtype,data,transitive):
-	r = chr(0x03)
-	if transitive: r += chr(0x40)
-	return ECommunity(r + chr(subtype) + ''.join([chr(c) for c in data[:6]]))
+#def to_FlowAction (sample,terminal):
+#	bitmask = chr(0)
+#	if terminal: bitmask += 0x01
+#	if sample: bitmask += 0x02
+#	return _to_FlowCommunity (0x8007,chr(0)*5+bitmask)
+#
+## take a string representing a 6 bytes long hexacedimal number like "0x123456789ABC"
+#def to_FlowRedirect (bitmask):
+#	route_target = ''
+#	for p in range(2,14,2): # 2,4,6,8,10,12
+#		route_target += chr(int(bitmask[p:p+2],16))
+#	return _to_FlowCommunity (0x8008,route_target)
+#
+#def to_FlowMark (dscp):
+#	return _to_FlowCommunity (0x8009,chr(0)*5 + chr(dscp))
+#
+#def to_ASCommunity (subtype,asn,data,transitive):
+#	r = chr(0x00)
+#	if transitive: r += chr(0x40)
+#	return ECommunity(r + chr(subtype) + pack('!H',asn) + ''.join([chr(c) for c in data[:4]]))
+#
+#import socket
+#def to_IPv4Community (subtype,data,transitive):
+#	r = chr(0x01)
+#	if transitive: r += chr(0x40)
+#	return ECommunity(r + chr(subtype) + socket.inet_pton(socket.AF_INET,ipv4) + ''.join([chr(c) for c in data[:2]]))
+#
+#def to_OpaqueCommunity (subtype,data,transitive):
+#	r = chr(0x03)
+#	if transitive: r += chr(0x40)
+#	return ECommunity(r + chr(subtype) + ''.join([chr(c) for c in data[:6]]))
 
 # See RFC4360 
 # 0x00, 0x02 Number is administrated by a global authority
@@ -155,22 +175,3 @@ def to_OpaqueCommunity (subtype,data,transitive):
 # Format is ip:route_target  (4 bytes:2 bytes)
 # 0x02 and 0x03 .. read the RFC :)
 
-def to_RouteTargetCommunity_00 (asn,number):
-	return ECommunity(chr(0x00) + chr(0x02) + pack('!H',asn) + pack('!L',number))
-
-def to_RouteTargetCommunity_01 (ipn,number):
-	return ECommunity(chr(0x01) + chr(0x02) + pack('!L',ipn) + pack('!H',number))
-
-def to_RouteOriginCommunity (asn,number,hightype=0x01):
-	return ECommunity(chr(hightype) + chr(0x03) + pack('!H',asn) + pack('!L',number))
-
-def new_ECommunities (data):
-	communities = ECommunities()
-	while data:
-		ECommunity = unpack(data[:8])
-		data = data[8:]
-		communities.add(ECommunity(ECommunity))
-	return communities
-
-class ECommunities (Communities):
-	ID = AttributeID.EXTENDED_COMMUNITY

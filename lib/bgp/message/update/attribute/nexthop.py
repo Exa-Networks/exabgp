@@ -7,11 +7,6 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
-import socket
-
-from bgp.utils import *
-from bgp.structure.address import AFI,SAFI
-from bgp.structure.ip import to_IP,Inet
 from bgp.message.update.attribute import AttributeID,Flag,Attribute
 
 # =================================================================== NextHop (3)

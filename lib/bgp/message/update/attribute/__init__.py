@@ -7,7 +7,8 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
-from bgp.utils import *
+from struct import pack
+
 from bgp.message.update.attribute.flag import Flag
 from bgp.message.update.attribute.id import AttributeID
 
