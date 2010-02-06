@@ -1,0 +1,6 @@
+#!/bin/sh
+env \
+	PYTHONPATH=$PYTHONPATH:lib \
+	python2.6 \
+		/opt/local/Library/Frameworks/Python.framework/Versions/2.6/lib/python2.6/site-packages/pychecker/checker.py \
+			$1

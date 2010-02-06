@@ -1,0 +1,6 @@
+#!/bin/sh
+env \
+	PYTHONPATH=$PYTHONPATH:lib \
+	python2.6 \
+		/opt/local/bin/pyflakes-2.6 \
+			$1
