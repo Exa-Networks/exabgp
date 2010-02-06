@@ -8,8 +8,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 from bgp.structure.address import AFI,SAFI
-from bgp.structure.ip import BGPPrefix
-from bgp.message import Message,prefix,defix
+from bgp.message import Message,prefix
 
 from bgp.message.update.attribute.mprnlri     import MPRNLRI
 from bgp.message.update.attribute.mpurnlri    import MPURNLRI
