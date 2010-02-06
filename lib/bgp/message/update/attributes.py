@@ -7,28 +7,17 @@ Created by Thomas Mangin on 2010-01-16.
 Copyright (c) 2010 Exa Networks. All rights reserved.
 """
 
+from bgp.structure.address import AFI,SAFI
 from bgp.message.update.attribute import AttributeID
 
-from bgp.message.update.attribute.origin      import *	# 01
-from bgp.message.update.attribute.aspath      import *	# 02
-from bgp.message.update.attribute.nexthop     import *	# 03
-from bgp.message.update.attribute.med         import * 	# 04
-from bgp.message.update.attribute.localpref   import *	# 05
-from bgp.message.update.attribute.aggregate   import *	# 06
-from bgp.message.update.attribute.aggregator  import *	# 07
-from bgp.message.update.attribute.communities import *	# 08
-# 09
-# 10 - 0A
-# 11 - 0B
-# 12 - 0C
-# 13 - 0D
-from bgp.message.update.attribute.mprnlri     import *	# 14 - 0E
-from bgp.message.update.attribute.mpurnlri    import *	# 15 - 0F
+from bgp.message.update.attribute.origin      import Origin
+from bgp.message.update.attribute.aspath      import ASPath
 
 # =================================================================== Attributes
 
 class MultiAttributes (list):
 	def __init__ (self,attribute):
+		list.__init__(self)
 		self.ID = attribute.ID
 		self.FLAG = attribute.FLAG
 		self.MULTIPLE = True
@@ -66,11 +55,9 @@ class Attributes (dict):
 			return True
 
 	def bgp_announce (self,local_asn,peer_asn):
-		ibgp = local_asn == peer_asn
+		ibgp = (local_asn == peer_asn)
 		# we do not store or send MED
 		message = ''
-
-		attributes = [self[a].ID for a in self]
 
 		if AttributeID.ORIGIN in self:
 			message += self[AttributeID.ORIGIN].pack()
@@ -80,7 +67,7 @@ class Attributes (dict):
 		if AttributeID.AS_PATH in self:
 			message += self[AttributeID.AS_PATH].pack()
 		elif self.autocomplete:
-			if local_asn == peer_asn:
+			if ibgp:
 				message += ASPath(ASPath.AS_SEQUENCE,[]).pack()
 			else:
 				message += ASPath(ASPath.AS_SEQUENCE,[local_asn]).pack()
@@ -92,7 +79,7 @@ class Attributes (dict):
 				message += self[AttributeID.NEXT_HOP].pack()
 
 		if AttributeID.LOCAL_PREF in self:
-			if local_asn == peer_asn:
+			if ibgp:
 				message += self[AttributeID.LOCAL_PREF].pack()
 
 		if AttributeID.MED in self:
@@ -118,10 +105,10 @@ class Attributes (dict):
 		if self.has(AttributeID.AS_PATH):
 			aspath = ' %s' % str(self[AttributeID.AS_PATH]).lower().replace('_','-')
 
-		local_pref= ''
+		local_pref = ''
 		if self.has(AttributeID.LOCAL_PREF):
 			l = self[AttributeID.LOCAL_PREF]
-			local_pref= ' local_preference %s' % l
+			local_pref = ' local_preference %s' % l
 
 		med = ''
 		if self.has(AttributeID.MED):

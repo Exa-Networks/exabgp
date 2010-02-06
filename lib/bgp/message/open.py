@@ -8,10 +8,11 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 import socket
+from struct import pack
 
 from bgp.structure.address import AFI,SAFI
 from bgp.structure.asn  import ASN
-from bgp.message import *
+from bgp.message import Message
 
 # =================================================================== Open
 
@@ -83,6 +84,7 @@ class Graceful (dict):
 	FORWARDING_STATE = 0x80
 	
 	def __init__ (self,restart_flag,restart_time,protos):
+		dict.__init__(self)
 		self.restart_flag = restart_flag
 		self.restart_time = restart_time & Graceful.TIME_MASK
 		for afi,safi,family_flag in protos:
@@ -197,12 +199,12 @@ class Capabilities (dict):
 				r += ['Graceful Restart']
 			elif key == self.FOUR_BYTES_ASN:
 				r += ['4Bytes AS %d' % self[key]]
-			elif key in self._reserved:
+			elif key in self.reserved:
 				r += ['private use capability %d' % key]
-			elif key in self._unassigned:
+			elif key in self.unassigned:
 				r += ['unassigned capability %d' % key]
 			else:
-				r+= ['unhandled capability %d' % key]
+				r += ['unhandled capability %d' % key]
 		return ', '.join(r)
 
 	def default (self,graceful,restarted,flow=True,ipv6=True):
@@ -229,9 +231,3 @@ class Capabilities (dict):
 				rs.append("%s%s%s" % (chr(k),chr(len(capability)),capability))
 		parameters = "".join(["%s%s%s" % (chr(2),chr(len(r)),r) for r in rs])
 		return "%s%s" % (chr(len(parameters)),parameters)
-
-	def __str__ (self):
-		r = []
-		for k in self.keys():
-			r.append(str(self[k]))
-		return ', '.join(r)

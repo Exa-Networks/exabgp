@@ -9,15 +9,11 @@ Copyright (c) 2010 Exa Networks. All rights reserved.
 
 from struct import pack
 
-from bgp.utils import *
 from bgp.structure.address import Address,AFI,SAFI
 from bgp.structure.ip import Prefix
 from bgp.message.update.attributes import Attributes
 from bgp.message.update.attribute.id import AttributeID
-from bgp.message.update.attribute.mprnlri import MPRNLRI
-from bgp.message.update.attribute.mpurnlri import MPURNLRI
 from bgp.message.update.attribute.communities import ECommunities
-from bgp.message.update import Update
 
 # =================================================================== Flow Components
 
@@ -58,6 +54,8 @@ def _bit_to_len (value):
 class IPrefix (IComponent):
 	# not used, just present for simplying the nlri generation
 	operations = 0x0
+	ID = None
+	NAME = None
 
 	def __init__ (self,ipv4,netmask):
 		self.nlri = Prefix(AFI.ipv4,ipv4,netmask)
@@ -84,10 +82,12 @@ class IOperation (IComponent):
 			return "%s%s%s" % (chr(self.ID),chr(op),v)
 		return "%s%s" % (chr(op),v)
 
-
-class IOperationIPv4 (IOperation):
 	def encode (self,value):
-		return 4, socket.pton(socket.AF_INET,value)
+		raise NotImplemented('this method must be implemented by subclasses')
+
+#class IOperationIPv4 (IOperation):
+#	def encode (self,value):
+#		return 4, socket.pton(socket.AF_INET,value)
 
 class IOperationByte (IOperation):
 	def encode (self,value):
@@ -197,6 +197,7 @@ class Fragment (IOperationByteShort,NumericString):
 
 class _FlowNLRI (Attributes):
 	def __init__ (self):
+		Attributes.__init__(self)
 		self.rules = {}
 
 	def add_and (self,rule):

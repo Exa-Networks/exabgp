@@ -7,8 +7,6 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
-
-from bgp.utils import *
 from bgp.structure.address import AFI,SAFI
 from bgp.structure.ip import BGPPrefix
 from bgp.message import Message,prefix,defix
@@ -18,17 +16,17 @@ from bgp.message.update.attribute.mpurnlri    import MPURNLRI
 
 # =================================================================== Update
 
-def bgp_mp (self):
-	if AttributeID.NEXT_HOP in self:
-		if self[AttributeID.NEXT_HOP].next_hop.afi != AFI.ipv4:
-			return MPRNLRI(self).pack()
-	return ''
-
-def bgp_resdraw (self):
-	if AttributeID.NEXT_HOP in self:
-		if self[AttributeID.NEXT_HOP].next_hop.afi != AFI.ipv4:
-			return MPURNLRI(self.afi,self.safi,self).pack()
-	return ''
+#def bgp_mp (self):
+#	if AttributeID.NEXT_HOP in self:
+#		if self[AttributeID.NEXT_HOP].next_hop.afi != AFI.ipv4:
+#			return MPRNLRI(self).pack()
+#	return ''
+#
+#def bgp_resdraw (self):
+#	if AttributeID.NEXT_HOP in self:
+#		if self[AttributeID.NEXT_HOP].next_hop.afi != AFI.ipv4:
+#			return MPURNLRI(self.afi,self.safi,self).pack()
+#	return ''
 
 class Update (Message):
 	TYPE = chr(0x02)

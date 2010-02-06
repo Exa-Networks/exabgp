@@ -7,11 +7,8 @@ Created by Thomas Mangin on 2010-01-16.
 Copyright (c) 2010 Exa Networks. All rights reserved.
 """
 
-from bgp.structure.address import AFI,Address
-from bgp.structure.ip import to_Prefix
-
+from bgp.structure.address import Address
 from bgp.message.update.attributes import Attributes
-from bgp.message.update import Update
 
 # This class must be separated from the wire representation of a Route
 # =================================================================== Route

@@ -9,7 +9,6 @@ Copyright (c) 2010 Exa Networks. All rights reserved.
 
 from bgp.structure.address import Address,AFI,SAFI
 from bgp.message.update import Update
-from bgp.message.update.attribute.mpurnlri import MPURNLRI
 from bgp.message.update.attributes import Attributes
 
 # =================================================================== End-Of-Record
@@ -20,11 +19,12 @@ class Empty (object):
 	def __len__ (self):
 		return 0
 
-class EmptyRoute (Empty,Address,Attributes):
+class EmptyRoute (Address,Attributes):
 	autocomplete = False
 
 	def __init__ (self,afi,safi):
 		Address.__init__(self,afi,safi)
+		Attributes.__init__(self)
 		self.nlri = Empty()
 
 class EOR (object):
