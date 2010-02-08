@@ -21,12 +21,15 @@ As the program is not intended to receive routing information and perform FIB ma
  - RFC 4360 - BGP Extended Communities Attribute
  - RFC 5575 - Dissemination of Flow Specification Rules
 
-The following BG4 related RFC are not supported but would be on the roadmap if there was one:
- - RFC 3107 (Carrying Label Information in BGP-4)
-
 Some speakers may use RFC 2385 (Protection of BGP Sessions via the TCP MD5 Signature) to allow the BGP connection to be established. To the best of my knowledge, there is no way this can be done in python and as a result the feature will/can not be implemented (The Python socket module exports IPPROTO_TCP but not TCP_MD5_AUTH).
 
-There is no support for RFC 2796 (BGP Route Reflection - An Alternative to Full Mesh IB). The code knows nothing about the ORIGINATOR_ID and CLUSTER_LIST attributes.
+The following BG4 related RFC are not supported but would be on the roadmap if there was one:
+ - RFC 3107 (Carrying Label Information in BGP-4)
+Adding the feature should be trivial.
+
+There is no support for:
+  - RFC 2796 (BGP Route Reflection - An Alternative to Full Mesh IB).
+  - the ORIGINATOR_ID and CLUSTER_LIST attributes.
 However, as the injector does not re-announce routes, nothing prevent its use with a Route Reflector.
 
 I have no interrest in implementing:

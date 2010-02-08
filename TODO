@@ -1,10 +1,8 @@
-So much I can not even start to think about what is missing here :)
-
-Formally define the interface used - Change inheritance (mainly for Route and Flow as it is implicit)
-Need a dict of AFI/SAFI returning the right function which generate the EOR for that pair.
-
-Graceful restart docs much clearer than the RFC
-http://www.cisco.com/en/US/products/ps6550/products_white_paper09186a008016317c.shtml
+Formally define the interface used
 
 reduce to a minimum all the new_ and to_ functions and integrate them into protocol
-some of the match condition of flows currently take list or numeric tests, they should always take both, refactor the code for it.
+some of the match condition of flows currently take list or numeric tests, they should always take both, refactor the code for it (ports for example)
+
+Graceful restart docs much clearer than the RFC (but still not 100%)
+http://www.cisco.com/en/US/products/ps6550/products_white_paper09186a008016317c.shtml
+
