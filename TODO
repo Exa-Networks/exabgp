@@ -1,3 +1,5 @@
+Write a correct documentation
+
 Formally define the interface used
 
 reduce to a minimum all the new_ and to_ functions and integrate them into protocol
