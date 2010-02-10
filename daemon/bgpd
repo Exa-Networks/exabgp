@@ -78,7 +78,12 @@ class Supervisor (object):
 		"""reload the configuration and send to the peer the route which changed"""
 		self.log.out("performing reload")
 		self._reload = False
-		self.configuration.reload()
+		
+		reloaded = self.configuration.reload()
+		if not reloaded:
+			self.log.out("problem with the configuration file, no change done")
+			self.log.out(configuration.error)
+			return
 
 		for ip in self._peers.keys():
 			if ip not in self.configuration.neighbor.keys():
@@ -98,6 +103,8 @@ class Supervisor (object):
 					self._peers[ip].restart()
 				# set the new neighbor with the new routes
 				self._peers[ip].neighbor = neighbor
+
+		self.log.out("loaded new configuration successfully")
 
 	def restart (self):
 		"""kill the BGP session and restart it"""
