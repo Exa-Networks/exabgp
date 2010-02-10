@@ -1,6 +1,5 @@
 Rewrite the unittesting which is really missing.
 Look at all the XXX: and FIXME: in the code
-We are sending IPv6 or flow routes even if the capacity was not negociated at OPEN - we should report the problem and not send the routes
 Need to forbid negative times in the configuration for hold-time and graceful-restart.
 Three test on route in the configuration are currently commented.
 Have an issue with hold time of 3 - see why and what can be done (4 is fine !!)

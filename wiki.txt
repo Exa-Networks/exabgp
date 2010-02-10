@@ -127,8 +127,10 @@ FlowSpec (RFC 5575) Example
                destination 192.168.0.1/32;
                port =80 =8080;
                destination-port >8080&<8088 =3128;
+   #           destination-port [ 8080 3128 ];
                source-port >1024;
                protocol [ udp tcp ];
+   #           protocol [ 4 6 ];
    #           protocol tcp;
    #           packet-length >200&<300 >400&<500;
    #           fragment not-a-fragment;
@@ -231,14 +233,14 @@ The code only relies on the standard library and has no external dependencies.
 
 ==== Anticipated Users FAQ ====
 
+Q: Where do I report bugs - ask for help ?? \\
+A: <sigh> ... contact me: **thomas . mangin AT exa - networks . co . uk**
+
 Q: Where is the documentation ? \\
 A: Here and in the code .. really do you need more ??
 
 Q: Is this code supported ? \\
 A: YES - Should you find any bug, please report it.
-
-Q: Where do I report bugs - ask for help ?? \\
-A: <sigh> ... contact me: **thomas . mangin AT exa - networks . co . uk**
 
 Q: Does it work on Linux,MACOSX, Windows ? \\
 A: Linux: yes, it is our deployment environment \\
@@ -263,20 +265,19 @@ Q: All seems fine but my route is not added to the routing table \\
 A: You may need to allow for non-directly connected next-hop \\
 A: juniper: set protocol bgp group <mygroup> neighbor <IP> accept-remote-nexthop
 
-Q: I see I can specify the as-path (as-sequence) sent to the peer. Do you prepend the router ASN to EBGP peers ? \\
-A: Yes and No :) \\
-A: Should you not define an as-path for a EBGP connection, we will add the router ASN automatically \\
-A: Otherwise you must add it yourself. \\
-A: As we are not a real router, we let you do whatever you want.
+Q: I see I can specify the as-path (as-sequence) sent to the peer. Do you prepend the router ASN to peers ? \\
+A: EBGP: we will add the router ASN automatically, to create loops. \\
+A: IBGP: it is used "as it".
 
-Q: I see an IPv6 example, is it fully IPv6 enabled ? \\
-A: The injector allows TCP IPv4 or IPv6 connections as well as supporting the exchange of both IPv4 and IPv6 routes.
+Q: Can I connect using a IPv6 connection ? \\
+A: Yes
 
 Q: Can you maintain more than one BGP session? \\
-A: Yes, you can define more than one neighbor in the configuration file
+A: Yes, you can define more than one neighbor in the configuration file \\
+A: Or have multiple instance running (like one instance per peer)
 
-Q: Are you planning to add more features ? (support for vpnv4,etc) \\
-A: I will only really code new features for my own use, but feel free to send me patches.
+Q: Are you planning to add more features ? (support for vpnv4, etc.) \\
+A: I will only really code new features for my own use, but feel free to ask or send me patches.
 
 Q: Why did you implement Graceful Restart ? \\
 A: My use case are machines announcing service IPs without lower MED/Local Prefence backup machines ready to take the over in case of problems. The BGP IPs are then still routed during reboots and in case of very high load for example it will not render the service IP unreacheable if some keepalive are missed. \\
@@ -286,14 +287,16 @@ Q: I would like to inject routes in the network but my server is behind a NATing
 A: NAT is not a good idea but: Yes, it will work. \\
 A: Set your local-address as your machine LAN IP and the router-id as the firewall public IP.
 
-==== Anticipated Coders FAQ ====
-
 Q: As the code is single threaded, can a blocking network IO with one peer cause issues with another ? \\
 A: We are using select to only read data when available on the socket but as we are not using a dedicated thread for keepalive, it could happen. \\
-A: Should it be a major concern, run one instance of the program per peer.
+A: Should Disk IO be very slow on configuration reload, we may be not be able sending KEEPALIVE in time, this is why the default run script renice positively the program.
+A: If it be a concern, run one instance of the program per peer.
 
 Q: As you have no separate thread for keepalives, how many peers do you think one instance can manage comfortably? \\
-A: it will really depend on the number of routes exchanged, but unless you speak to several dozen, have a very low keepalive time it should do fine for most use.
+A: it will really depend on the number of routes exchanged, and many other parameters, but under normal use (even thousand of routes) you should never encounter an issue. \\
+A: if unsure, just drop me a mail.
+
+==== Anticipated Coders FAQ ====
 
 Q: I am a Ruby coder and I hate Python \\
 A: use ByteMark [[https://projects.bytemark.co.uk/projects/bgpfeeder|BGPFeeder]] a very similar application 
