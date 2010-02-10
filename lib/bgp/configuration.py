@@ -278,6 +278,8 @@ class Configuration (object):
 			v = scope.get('routes',[])
 			for route in v:
 				neighbor.routes.append(route)
+				if (route.afi,route.safi) not in neighbor.families:
+					neighbor.families.append((route.afi,route.safi))
 
 		# drop the neiborg
 		scope = self._scope.pop(-1)
@@ -302,6 +304,7 @@ class Configuration (object):
 		if self._neighbor.has_key(neighbor.peer_address.ip()):
 			self.error = 'duplicate peer definition %s' % neighbor.peer_address.ip()
 			return False
+		
 		self._neighbor[neighbor.peer_address.ip()] = neighbor
 		return True
 

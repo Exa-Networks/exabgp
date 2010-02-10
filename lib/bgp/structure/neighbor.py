@@ -22,6 +22,7 @@ class Neighbor (object):
 		self.hold_time = HoldTime(180)
 		self.graceful_restart = False
 		self.routes = []
+		self.families = []
 
 	def missing (self):
 		if self.local_address is None: return 'local-address'

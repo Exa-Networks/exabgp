@@ -102,16 +102,18 @@ class Peer (object):
 			if messages:
 				self.log.out('-> UPDATE (%d)' % len(messages))
 
-			# if self._restarted and self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
-			if self.neighbor.graceful_restart and self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
-				families = self.bgp.new_eors(self._open.capabilities[Capabilities.GRACEFUL_RESTART].families())
-				self.log.outIf(families,'-> EOR %s' % ', '.join(['%s %s' % (str(afi),str(safi)) for (afi,safi) in families]))
+			if	self.neighbor.graceful_restart and \
+				self._open.capabilities.announced(Capabilities.MULTIPROTOCOL_EXTENSIONS) and \
+				self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
 
-				if self._open.capabilities.announced(Capabilities.MULTIPROTOCOL_EXTENSIONS):
-					# XXX: We should check if ipv6 unicast is announced and then do what we need :p
-					pass
+				families = []
+				for family in self._open.capabilities[Capabilities.GRACEFUL_RESTART].families():
+					if family in self.neighbor.families:
+						families.append(family)
+				self.bgp.new_eors(families)
+				self.log.outIf(families,'-> EOR %s' % ', '.join(['%s %s' % (str(afi),str(safi)) for (afi,safi) in families]))
 			else:
-				# If we are not sending an EOR, do like the big boys (cisco) and send a keepalive when finished
+				# If we are not sending an EOR, send a keepalive as soon as when finished
 				# So the other routers knows that we have no (more) routes to send ...
 				# (is that behaviour documented somewhere ??)
 				c,k = self.bgp.new_keepalive()
