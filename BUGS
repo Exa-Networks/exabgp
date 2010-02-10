@@ -1,4 +1,3 @@
 Rewrite the unittesting which is really missing.
 Look at all the XXX: and FIXME: in the code
-Have an issue with hold time of 3 - see why and what can be done (4 is fine !!)
 UPDATE parsing is totally disabled, the broken update parsing for ASPath assumes only one segment
