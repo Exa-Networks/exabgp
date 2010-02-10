@@ -7,7 +7,7 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
-#from bgp.structure.address    import AFI
+from bgp.structure.address    import AFI
 from bgp.structure.ip         import to_IP,to_Prefix
 from bgp.structure.asn        import ASN
 from bgp.structure.neighbor   import Neighbor
@@ -294,13 +294,9 @@ class Configuration (object):
 		if missing:
 			self._error = 'incomplete neighbor, missing %s' % missing
 			return False
-# XXX: This test need replacing by a similar working test
-#		if neighbor.router_id.afi != AFI.ipv4:
-#			self._error = 'router-id must be a IPv4 address (not %s)' % neighbor.router_id
-#			return False
-#		if neighbor.local_address.afi != neighbor.peer_address.afi:
-#			self._error = 'local-address and peer-address must be of the same family'
-#			return False 
+		if neighbor.local_address.afi != neighbor.peer_address.afi:
+			self._error = 'local-address and peer-address must be of the same family'
+			return False 
 		if self._neighbor.has_key(neighbor.peer_address.ip()):
 			self.error = 'duplicate peer definition %s' % neighbor.peer_address.ip()
 			return False

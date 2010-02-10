@@ -55,7 +55,10 @@ class HoldTime (int):
 class RouterID (object):
 	def __init__ (self,ip):
 		self.ip = ip
-		self.raw = socket.inet_pton(socket.AF_INET,ip)
+		try:
+			self.raw = socket.inet_pton(socket.AF_INET,ip)
+		except socket.error:
+			raise ValueError('invalid IP address %s' % str(ip))
 
 	def afi (self):
 		return AFI.ipv4
