@@ -59,8 +59,8 @@ class TestData (unittest.TestCase):
 		self.assertEqual(afi.pack(),bnt)
 		self.assertEqual(bgp.pack(),bnt)
 
-# XXX: NEED To add ASN test
-# XXX: NEED To add NLRI test
+		# README: NEED To add ASN test
+		# README: NEED To add NLRI test
 
 if __name__ == '__main__':
 	unittest.main()

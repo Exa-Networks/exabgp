@@ -19,7 +19,6 @@ from bgp.structure.address    import AFI,SAFI
 from bgp.structure.ip         import BGPPrefix,Inet,to_IP
 from bgp.structure.asn        import ASN
 from bgp.network.connection   import Connection
-# XXX: defix should be renamed and moved ...
 from bgp.message              import Message,defix
 from bgp.message.nop          import NOP
 from bgp.message.open         import Open,Unknown,Parameter,Capabilities,RouterID,MultiProtocol,RouteRefresh,CiscoRouteRefresh,Graceful
@@ -40,7 +39,7 @@ from bgp.message.update.attribute.communities import Community,Communities
 #from bgp.message.update.attribute.mprnlri     import MPRNLRI
 from bgp.message.update.attribute.mpurnlri    import MPURNLRI
 
-# XXX: Move all the old packet decoding in another file to clean up the includes here, as it is not used anyway
+# README: Move all the old packet decoding in another file to clean up the includes here, as it is not used anyway
 
 class Protocol (object):
 	trace = False
@@ -408,7 +407,7 @@ class Protocol (object):
 			data = data[:length]
 			afi,safi = unpack('!HB',data[:3])
 			offset = 3
-			# XXX: See RFC 5549 for better support
+			# See RFC 5549 for better support
 			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
 				self.log.out('we only understand IPv4/IPv6 and should never have received this MP_UNREACH_NLRI (%s %s)' % (afi,safi))
 				return self._AttributesFactory(next_attributes)

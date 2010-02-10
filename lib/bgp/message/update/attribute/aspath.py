@@ -11,7 +11,6 @@ from bgp.message.update.attribute import AttributeID,Flag,Attribute
 
 # =================================================================== ASPath (2)
 
-# XXX: There can be more than once segment ...........
 class ASPath (Attribute):
 	AS_SET      = 0x01
 	AS_SEQUENCE = 0x02

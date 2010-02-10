@@ -33,7 +33,7 @@ def to_Prefix (ip,mask):
 
 class Inet (object):
 	"""An IP in the 4 bytes format"""
-	# XXX: yep, we should surely change this _ name here
+	# README: yep, we should surely change this _ name here
 	_af = {
 		AFI.ipv4: socket.AF_INET,
 		AFI.ipv6: socket.AF_INET6,
@@ -52,14 +52,19 @@ class Inet (object):
 	def __init__ (self,afi,raw):
 		self.afi = afi
 		self.raw = raw
-		# XXX: check if the route is multicast
-		self.safi = SAFI.unicast
+		if int(self.ip().split('.')[0]) in range(224,240): # 239 is last
+			self.safi = SAFI.multicast
+		else:
+			self.safi = SAFI.unicast
 
 	def pack (self):
 		return self.raw
 
 	def ip (self):
-		return socket.inet_ntop(self._af[self.afi],self.raw)
+		try:
+			return socket.inet_ntop(self._af[self.afi],self.raw)
+		except socket.error:
+			raise ValueError('invalid IP')
 
 	def __len__ (self):
 		return len(self.raw)

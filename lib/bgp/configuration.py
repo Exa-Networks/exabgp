@@ -287,7 +287,7 @@ class Configuration (object):
 
 		neighbor.graceful_restart = scope.get('graceful-restart',0)
 		if neighbor.graceful_restart < 0:
-			# XXX: Should not be an int but a subclass
+			# README: Should it be a subclass of int ?
 			neighbor.graceful_restart = int(neighbor.hold_time)
 
 		missing = neighbor.missing()
@@ -339,7 +339,6 @@ class Configuration (object):
 		return True
 
 	def _set_asn (self,command,value):
-		# XXX: we do not support 32 bits ASN...
 		try:
 			self._scope[-1][command] = ASN(int(value[0]))
 			return True
@@ -377,7 +376,7 @@ class Configuration (object):
 			self._scope[-1]['graceful-restart'] = -1
 			return True
 		try:
-			# XXX: Should be a subclass of int
+			# README: Should it be a subclass of int ?
 			grace = int(value[0])
 			if grace < 0:
 				raise ValueError('graceful-restart can not be negative')
@@ -564,12 +563,23 @@ class Configuration (object):
 	def _parse_community (self,data):
 		separator = data.find(':')
 		if separator > 0:
-			# XXX: Check that the value do not overflow 16 bits
-			return Community((int(data[:separator])<<16) + int(data[separator+1:]))
+			prefix = int(data[:separator])
+			suffix = int(data[separator+1:])
+			if prefix >= pow(2,16):
+				raise ValueError('invalid community %s (prefix too large)' % data) 
+			if suffix >= pow(2,16):
+				raise ValueError('invalid community %s (suffix too large)' % data) 
+			return Community((prefix<<16) + suffix)
 		elif len(data) >=2 and data[1] in 'xX':
-			return Community(long(data,16))
+			value = long(data,16)
+			if value >= pow(2,32):
+				raise ValueError('invalid community %s (too large)' % data) 
+			return Community(value)
 		else:
-			return Community(long(data))
+			value = long(data)
+			if value >= pow(2,32):
+				raise ValueError('invalid community %s (too large)' % data) 
+			return Community(value)
 
 	def _route_community (self,tokens):
 		communities = Communities()
@@ -781,15 +791,12 @@ class Configuration (object):
 			return self._flow_generic_expression(tokens,converter,klass)
 		return self._flow_generic_list(tokens,converter,klass)
 
-	# XXX: Did not implement port name conversion ...
 	def _flow_route_anyport (self,tokens):
 		return self._flow_generic_condition(tokens,int,AnyPort)
 
-		# XXX: Did not implement port name conversion ...
 	def _flow_route_source_port (self,tokens):
 		return self._flow_generic_condition(tokens,int,SourcePort)
 
-		# XXX: Did not implement port name conversion ...
 	def _flow_route_destination_port (self,tokens):
 		return self._flow_generic_condition(tokens,int,DestinationPort)
 
@@ -815,7 +822,7 @@ class Configuration (object):
 		return self._flow_generic_condition(tokens,int,DSCP)
 
 	def _flow_route_discard (self,tokens):
-		# XXX: We are setting the ASN as zero as that what Juniper did when we created a local flow route
+		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
 			self._scope[-1]['routes'][-1].add_action(to_FlowTrafficRate(ASN(0),0))
 		except ValueError:
@@ -824,7 +831,7 @@ class Configuration (object):
 			return False
 
 	def _flow_route_rate_limit (self,tokens):
-		# XXX: We are setting the ASN as zero as that what Juniper did when we created a local flow route
+		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
 			speed = int(tokens[0])
 			if speed < 9600 and speed != 0:
@@ -839,7 +846,7 @@ class Configuration (object):
 			return False
 
 	def _flow_route_redirect (self,tokens):
-		# XXX: We are setting the ASN as zero as that what Juniper did when we created a local flow route
+		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
 			prefix,suffix=tokens[0].split(':',1)
 			if prefix.count('.'):

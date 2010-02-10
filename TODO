@@ -1,12 +1,16 @@
+Look at all the XXX: in the code
+Some of the match condition of flows currently take list or numeric tests, they should always take both, refactor the code for it (ports for example)
+
 Write a correct documentation
 
 Formally define the interface used
-
+Rewrite the unittesting which is really missing.
 reduce to a minimum all the new_ and to_ functions and integrate them into protocol
-some of the match condition of flows currently take list or numeric tests, they should always take both, refactor the code for it (ports for example)
 
 Have an issue with hold time of 3 - see why and what can be done (4 is fine !!)
 Juniper does not accept any holdtime <20
+
+UPDATE parsing is totally disabled, the broken update parsing for ASPath assumes only one segment
 
 Graceful restart docs much clearer than the RFC (but still not 100%)
 http://www.cisco.com/en/US/products/ps6550/products_white_paper09186a008016317c.shtml
