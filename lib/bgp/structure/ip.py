@@ -52,7 +52,9 @@ class Inet (object):
 	def __init__ (self,afi,raw):
 		self.afi = afi
 		self.raw = raw
-		if int(self.ip().split('.')[0]) in range(224,240): # 239 is last
+		self.ip = self._ip()
+		
+		if self.afi == AFI.ipv4 and int(self.ip.split('.')[0]) in range(224,240): # 239 is last
 			self.safi = SAFI.multicast
 		else:
 			self.safi = SAFI.unicast
@@ -60,7 +62,7 @@ class Inet (object):
 	def pack (self):
 		return self.raw
 
-	def ip (self):
+	def _ip (self):
 		try:
 			return socket.inet_ntop(self._af[self.afi],self.raw)
 		except socket.error:
@@ -70,7 +72,7 @@ class Inet (object):
 		return len(self.raw)
 
 	def __str__ (self):
-		return self.ip()
+		return self.ip
 	
 	def __eq__ (self,other):
 		return self.raw == other.raw and self.safi == other.safi
@@ -85,7 +87,7 @@ class _Prefix (Inet):
 		Inet.__init__(self,af,ip)
 
 	def __str__ (self):
-		return "%s/%s" % (self.ip(),self.mask)
+		return "%s/%s" % (self.ip,self.mask)
 
 	def pack (self):
 		return chr(self.mask) + self.raw[:_bgp[self.mask]]

@@ -87,7 +87,7 @@ class Peer (object):
 			self.log.out('-> %s' % o)
 			yield None
 
-			self._open = self.bgp.read_open(self.neighbor.peer_address.ip())
+			self._open = self.bgp.read_open(self.neighbor.peer_address.ip)
 			self.log.out('<- %s' % self._open)
 			yield None
 

@@ -120,7 +120,7 @@ class Supervisor (object):
 				self._peers[ip].restart()
 
 	def unschedule (self,peer):
-		ip = peer.neighbor.peer_address.ip()
+		ip = peer.neighbor.peer_address.ip
 		if ip in self._peers:
 			del self._peers[ip]
 
