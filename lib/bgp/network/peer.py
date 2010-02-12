@@ -83,11 +83,11 @@ class Peer (object):
 			self.bgp = Protocol(self)
 			self.bgp.connect()
 
-			o = self.bgp.new_open(self.neighbor.graceful_restart,self._restarted)
-			self.log.out('-> %s' % o)
+			_open = self.bgp.new_open(self._restarted)
+			self.log.out('-> %s' % _open)
 			yield None
 
-			self._open = self.bgp.read_open(self.neighbor.peer_address.ip)
+			self._open = self.bgp.read_open(_open,self.neighbor.peer_address.ip)
 			self.log.out('<- %s' % self._open)
 			yield None
 
@@ -98,7 +98,9 @@ class Peer (object):
 			message = self.bgp.read_keepalive()
 			self.log.out('<- KEEPALIVE')
 
-			messages = self.bgp.new_announce()
+			asn4 = not not self._open.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
+
+			messages = self.bgp.new_announce(asn4)
 			if messages:
 				self.log.out('-> UPDATE (%d)' % len(messages))
 
@@ -133,7 +135,7 @@ class Peer (object):
 				self.log.outIf(message.TYPE == Update.TYPE,'<- UPDATE')
 				self.log.outIf(message.TYPE not in (KeepAlive.TYPE,Update.TYPE,NOP.TYPE), '<- %d' % ord(message.TYPE))
 
-				messages = self.bgp.new_update()
+				messages = self.bgp.new_update(asn4)
 				self.log.outIf(messages,'-> UPDATE (%d)' % len(messages))
 
 				yield None

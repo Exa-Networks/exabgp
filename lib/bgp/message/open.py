@@ -27,7 +27,9 @@ class Open (Message):
 		self.capabilities = capabilities
 
 	def message (self):
-		return self._message("%s%s%s%s%s" % (self.version.pack(),self.asn.pack(),self.hold_time.pack(),self.router_id.pack(),self.capabilities.pack()))
+		if self.asn.asn4():
+			return self._message("%s%s%s%s%s" % (self.version.pack(),ASN(23456).pack(False),self.hold_time.pack(),self.router_id.pack(),self.capabilities.pack()))
+		return self._message("%s%s%s%s%s" % (self.version.pack(),self.asn.pack(False),self.hold_time.pack(),self.router_id.pack(),self.capabilities.pack()))
 
 	def __str__ (self):
 		return "OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]" % (self.version, self.asn, self.hold_time, self.router_id,self.capabilities)
@@ -135,6 +137,13 @@ class CiscoRouteRefresh (list):
 	def extract (self):
 		return []
 
+
+# =================================================================== Parameter
+
+class ASN4 (int):
+	def extract (self):
+		return [pack('!L',self)]
+
 # =================================================================== Unknown
 
 class Unknown (object):
@@ -159,8 +168,6 @@ class Parameter (int):
 		if self == 0x01: return "AUTHENTIFICATION INFORMATION"
 		if self == 0x02: return "OPTIONAL"
 		return 'UNKNOWN'
-
-# =================================================================== Capabilities
 
 # =================================================================== Capabilities
 # http://www.iana.org/assignments/capability-codes/
@@ -210,20 +217,21 @@ class Capabilities (dict):
 				r += ['unhandled capability %d' % key]
 		return ', '.join(r)
 
-	def default (self,graceful,restarted,flow=True,ipv6=True):
-		families = [(AFI(AFI.ipv4),SAFI(SAFI.unicast))]
-		if ipv6: families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
-		if flow: families.append((AFI(AFI.ipv4),SAFI(SAFI.flow_ipv4)))
+	def default (self,neighbor,restarted):
+		graceful = neighbor.graceful_restart
+		families = neighbor.families
 
 		mp = MultiProtocol()
 		mp.extend(families)
 		self[Capabilities.MULTIPROTOCOL_EXTENSIONS] = mp 
+		self[Capabilities.FOUR_BYTES_ASN] = ASN4(neighbor.local_as)
 
 		if graceful:
 			if restarted:
 				self[Capabilities.GRACEFUL_RESTART] = Graceful(Graceful.RESTART_STATE,graceful,[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in families])
 			else:
 				self[Capabilities.GRACEFUL_RESTART] = Graceful(0x0,graceful,[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in families])
+
 
 		return self
 

@@ -14,10 +14,10 @@ class Delta (object):
 		self.table = table
 		self.last = 0
 
-	def announce (self,local_asn,peer_asn):
-		return self.update(local_asn,peer_asn,False)
+	def announce (self,asn4,local_asn,peer_asn):
+		return self.update(asn4,local_asn,peer_asn,False)
 
-	def update (self,local_asn,peer_asn,remove=True):
+	def update (self,asn4,local_asn,peer_asn,remove=True):
 		self.table.recalculate()
 
 		# Here we should perform intelligent message re-organisation (group announcements)
@@ -33,13 +33,13 @@ class Delta (object):
 			if action == '-':
 				if remove:
 					print 'withdrawing  ', route
-					messages.append(Update([route]).withdraw())
+					messages.append(Update([route]).withdraw(asn4))
 				else:
 					print 'keeping route', route
 			if action == '*':
 				print 'updating     ', route
-				messages.append(Update([route]).update(local_asn,peer_asn))
+				messages.append(Update([route]).update(asn4,local_asn,peer_asn))
 			if action == '+':
 				print 'announcing    ', route
-				messages.append(Update([route]).announce(local_asn,peer_asn))
+				messages.append(Update([route]).announce(asn4,local_asn,peer_asn))
 		return messages

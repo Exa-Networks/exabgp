@@ -19,7 +19,8 @@ class ASPath (Attribute):
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 
-	def __init__ (self,asptype=0x02,aspsegment = None):
+	def __init__ (self,asn4=False,asptype=0x02,aspsegment=None):
+		self.asn4 = asn4
 		self.asptype = asptype
 		if aspsegment == None:
 			self.aspsegment = []
@@ -29,7 +30,7 @@ class ASPath (Attribute):
 	def _segment (self,seg_type,values):
 		if len(values)>255:
 			return self._segment(seg_type,values[:255]) + self._segment(seg_type,values[255:])
-		return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack() for v in values]))
+		return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack(self.asn4) for v in values]))
 
 	def add (self,asn):
 		self.aspsegment.append(asn)
@@ -48,3 +49,11 @@ class ASPath (Attribute):
 		if len(self) >  1: return '%s [ %s ]' % (t,' '.join([str(community) for community in self.aspsegment]))
 		if len(self) == 1: return '%s %s' % (t,str(self.aspsegment[0]))
 		return t
+
+
+class AS4Path (ASPath):
+	ID = AttributeID.AS4_PATH
+	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
+	
+	def __init__ (self,asptype=0x02,aspsegment=None):
+		ASPath.__init__(self,True,asptype,aspsegment)

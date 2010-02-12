@@ -8,10 +8,11 @@ Copyright (c) 2010 Exa Networks. All rights reserved.
 """
 
 from bgp.structure.address import AFI,SAFI
+from bgp.structure.asn import AS_TRANS
 from bgp.message.update.attribute import AttributeID
 
 from bgp.message.update.attribute.origin      import Origin
-from bgp.message.update.attribute.aspath      import ASPath
+from bgp.message.update.attribute.aspath      import ASPath,AS4Path
 
 # =================================================================== Attributes
 
@@ -54,7 +55,7 @@ class Attributes (dict):
 				self[attribute.ID] = attribute
 			return True
 
-	def bgp_announce (self,local_asn,peer_asn):
+	def bgp_announce (self,asn4,local_asn,peer_asn):
 		ibgp = (local_asn == peer_asn)
 		# we do not store or send MED
 		message = ''
@@ -65,12 +66,27 @@ class Attributes (dict):
 			message += Origin(Origin.IGP).pack()
 
 		if AttributeID.AS_PATH in self:
-			message += self[AttributeID.AS_PATH].pack()
+			if not asn4:
+				# we need to create a AS4Path
+				asp = self[AttributeID.AS_PATH]
+				aspath = ASPath(False,asp.asptype)
+				as4path = AS4Path(asp.asptype)
+				for segment in asp.aspsegment:
+					if segment.asn4():
+						aspath.add(AS_TRANS)
+						as4path.add(segment)
+					else:
+						aspath.add(segment)
+				message += aspath.pack()
+				message += as4path.pack()
+			else:
+				asp = self[AttributeID.AS_PATH]
+				message += ASPath(asn4,asp.asptype,asp.aspsegment).pack()
 		elif self.autocomplete:
 			if ibgp:
-				message += ASPath(ASPath.AS_SEQUENCE,[]).pack()
+				message += ASPath(asn4,ASPath.AS_SEQUENCE,[]).pack()
 			else:
-				message += ASPath(ASPath.AS_SEQUENCE,[local_asn]).pack()
+				message += ASPath(asn4,ASPath.AS_SEQUENCE,[local_asn]).pack()
 
 		if AttributeID.NEXT_HOP in self:
 			afi = self[AttributeID.NEXT_HOP].next_hop.afi

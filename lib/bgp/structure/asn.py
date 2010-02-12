@@ -13,18 +13,15 @@ from struct import pack
 # =================================================================== ASN
 
 class ASN (int):
-	# regex = "(?:0[xX][0-9a-fA-F]{1,8}|\d+:\d+|\d+)"
-	length = 2
+	def asn4 (self):
+		return self > pow(2,16)
 
-	def four (self):
-		self.length = 4
-		return self
-
-	def pack (self):
-		if self.length == 2:
-			return pack('!H',self)
-		return pack('!L',self)
+	def pack (self,asn4):
+		if asn4:
+			return pack('!L',self)
+		return pack('!H',self)
 
 	def __len__ (self):
 		return self.length
 
+AS_TRANS = ASN(23456)

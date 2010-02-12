@@ -17,7 +17,7 @@ from bgp.rib.delta import Delta
 from bgp.utils                import Log,hexa
 from bgp.structure.address    import AFI,SAFI
 from bgp.structure.ip         import BGPPrefix,Inet,to_IP
-from bgp.structure.asn        import ASN
+from bgp.structure.asn        import ASN,AS_TRANS
 from bgp.network.connection   import Connection
 from bgp.message              import Message,defix
 from bgp.message.nop          import NOP
@@ -136,13 +136,21 @@ class Protocol (object):
 
 		return NOP(data)
 
-	def read_open (self,ip):
+	def read_open (self,_open,ip):
 		message = self.read_message()
 
 		if message.TYPE not in [Open.TYPE,]:
 			raise Notify(1,1,'first packet not an open message (%s)' % str(message.TYPE))
 
-		if message.asn != self.neighbor.peer_as:
+		if _open.asn.asn4() and not message.capabilities.announced(Capabilities.FOUR_BYTES_ASN):
+			raise Notify(2,0,'we have an ASN4 and you do not speak it. bye.')
+
+		if message.asn == AS_TRANS:
+			peer_as = message.capabilities[FOUR_BYTES_ASN]
+		else:
+			peer_as = message.asn
+
+		if peer_as != self.neighbor.peer_as:
 			raise Notify(2,2,'ASN sent (%d) did not match ASN expected (%d)' % (message.asn,self.neighbor.peer_as))
 
 		if message.hold_time < 3:
@@ -152,6 +160,15 @@ class Protocol (object):
 
 		if message.router_id == RouterID('0.0.0.0'):
 			message.router_id = RouterID(ip)
+
+# README: This limit what we are announcing may cause some issue if you add new family and SIGHUP
+# README: So it is commented until I make my mind to add it or not (as Juniper complain about mismatch capabilities)
+#		# Those are the capacity we need to announce those routes
+#		for family in _open.capabilities[Capabilities.MULTIPROTOCOL_EXTENSIONS]:
+#			# if the peer does not support them, tear down the session
+#			if family not in message.capabilities[Capabilities.MULTIPROTOCOL_EXTENSIONS]:
+#				afi,safi = family
+#				raise Notify(2,0,'Peers does not speak %s %s' % (afi,safi))
 
 		return message
 
@@ -163,13 +180,13 @@ class Protocol (object):
 
 	# Sending message to peer .................................................
 
-	def new_open (self,graceful,restarted):
-		o = Open(4,self.neighbor.local_as,self.neighbor.router_id.ip,Capabilities().default(graceful,restarted),self.neighbor.hold_time)
+	def new_open (self,restarted):
+		o = Open(4,self.neighbor.local_as,self.neighbor.router_id.ip,Capabilities().default(self.neighbor,restarted),self.neighbor.hold_time)
 		self.connection.write(o.message())
 		return o
 
-	def new_announce (self):
-		m = self._delta.announce(self.neighbor.local_as,self.neighbor.peer_as)
+	def new_announce (self,asn4):
+		m = self._delta.announce(asn4,self.neighbor.local_as,self.neighbor.peer_as)
 		updates = ''.join(m)
 		self.log.outIf(self.trace,"UPDATE (update)   SENT: %s" % hexa(updates[19:]))
 
@@ -185,8 +202,8 @@ class Protocol (object):
 		self.connection.write(eors)
 		return eor.announced()
 
-	def new_update (self):
-		m = self._delta.update(self.neighbor.local_as,self.neighbor.peer_as)
+	def new_update (self,asn4):
+		m = self._delta.update(asn4,self.neighbor.local_as,self.neighbor.peer_as)
 		updates = ''.join(m)
 		self.log.outIf(self.trace,"UPDATE (update)   SENT: %s" % hexa(updates[19:]))
 		if m:
@@ -262,7 +279,7 @@ class Protocol (object):
 						continue
 
 					if k == Capabilities.FOUR_BYTES_ASN:
-						capabilities[k] = ASN(unpack('!L',value[2:6])[0]).four()
+						capabilities[k] = ASN(unpack('!L',value[2:6])[0])
 						continue
 
 					if k == Capabilities.ROUTE_REFRESH:

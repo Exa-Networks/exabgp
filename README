@@ -20,6 +20,7 @@ As the program is not intended to receive routing information and perform FIB ma
  - RFC 5492 - Capabilities Advertisement with BGP-4, Obsoletes 3392,2842
  - RFC 4360 - BGP Extended Communities Attribute
  - RFC 5575 - Dissemination of Flow Specification Rules
+ - RFC 4893 - BGP Support for Four-octet AS Number Space
 
 Some speakers may use RFC 2385 (Protection of BGP Sessions via the TCP MD5 Signature) to allow the BGP connection to be established. To the best of my knowledge, there is no way this can be done in python and as a result the feature will/can not be implemented (The Python socket module exports IPPROTO_TCP but not TCP_MD5_AUTH).
 
