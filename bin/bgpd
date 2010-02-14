@@ -1,0 +1,16 @@
+#!/bin/bash
+
+dirname=`dirname $0`
+
+if [[ $dirname == /* ]]; then
+        path=$dirname/..
+else
+        cd `pwd`/$dirname/.. > /dev/null
+        path=`pwd`
+        cd - > /dev/null
+fi
+
+export PYTHONPATH=$path/lib
+export ETC=$path/etc/bgpd
+
+python $path/daemon/bgpd $*
