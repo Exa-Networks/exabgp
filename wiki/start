@@ -1,0 +1,72 @@
+===== BGP Route Injector =====
+
+==== What is it ? ====
+
+A BGP speaker which can inject routes with arbitrary next-hops into your network to **source some ipv4/ipv6 routes** (using both IPv4 and IPv6 TCP connections and/or **mitigate DDOS** using flowspec.
+
+==== Latest Update ====
+
+The development version has seen the following improvements:
+  * support for **RFC 4893** - BGP Support for Four-octet AS Number Space
+  * support for **RFC 5575** - Dissemination of Flow Specification Rules
+  * possibility to reload the configuration with SIGHUP
+  * code refactorisation
+  * small bug fixes
+
+For more information about what is FlowSpec
+  * http://uknof.org/uknof15/Mangin-NakedBGP.pdf 
+  * http://www.terena.org/activities/tf-ngn/tf-ngn17/uze-flowspec.pdf
+  * http://www.nanog.net/meetings/nanog38/presentations/labovitz-bgp-flowspec.pdf
+
+\\
+**Some FlowSpec configuration examples (route injector and router) are available [[flowspec|here]]**
+
+==== Where can I get it ? ====
+
+The code is stored in our SVN repository: \\
+  * [[http://svn.exa.org.uk/bgp/trunk|http://svn.exa.org.uk/bgp/trunk]] \\
+  * [[http://fisheye.exa.org.uk/browse/BGP/trunk|Fisheye browsing]]
+
+\\
+**Get it with:**
+
+   cd /opt
+   svn co http://svn.exa.org.uk/bgp/trunk bgp
+
+Make sure your trunk version up-to-date as trunk is currently under heavy development.\\
+Bug reports are welcome :)
+
+There is no tarball, the only way to download the code is through SVN.
+
+==== How do you use it ? ====
+
+You can copy and modify one of the sample configuration files provided in the etc/bgp folder, then provide it as an argument to the program.
+
+   /opt/bgp/bin/bgpd /opt/bgp/etc/bgp/as112.txt
+
+For production use, we are using [[http://cr.yp.to/daemontools.html|deamontools]] to supervise the program. Some supervise scripts are provided in the repository "service" folder. That said, we never saw the application crash unexpectedly - touching wood.
+
+As the application does not bind to port 179, or perform RIB update, and hence does not need any escalated privileges and will happily run as "nobody".
+
+   #!/bin/bash
+   exec nice --4 env PYTHONPATH=/opt/bgp/lib setuidgid nobody /opt/bgp/daemon/bgpd /opt/bgp/etc/bgp/service-ip.txt 2>&1
+
+It is possible to send a SIGHUP signal the program to have it send the right updates (peer setup and tear down, announcement and withdrawal) to sync the remote RIB to a new configuration file.
+
+The configuration file is very juniper like with many **[[examples|examples here]]**
+
+==== Installation Requirements ====
+
+Should you care, the program is written in Python 2.x for version 2.5 or later. \\
+
+The code only relies on the standard library and has no external dependencies, as Python is installed with most Unix systems, it should just run out of the box.
+
+The Python specificities of 2.5/2.6 have been removed from the code and 2.4 will now work. However this version is not used by the developers and may accidentally break.
+
+No tests have been performed to check if it works with version 3.0.
+
+==== Curious ? ====
+
+Any questions ? Check our **[[FAQ|FAQ]]** and let us know if your question is not yet here.
+
+

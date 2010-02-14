@@ -1,0 +1,68 @@
+==== An example of FlowSpec setup ====
+
+   neighbor 82.219.123.221 {
+      [....] 
+      flow {
+         route {
+            match {
+               source 10.0.0.1/32;
+               destination 192.168.0.1/32;
+               port =80;
+               destination-port =3128 >8080&<8088;
+               source-port >1024;
+               protocol tcp;
+            }
+            then {
+               discard;
+            }
+         }
+      }
+   }
+
+   thomas@router> show configuration protocols bgp 
+   local-as 30740;
+   group flow {
+      type external;
+      multihop;
+      local-preference 100;
+      local-address 82.219.123.221;
+      import no-export;
+      export deny-all;
+      peer-as 65500;
+      neighbor 82.219.131.242 {
+         traceoptions {
+            file bgp;
+            flag all;
+         }
+         family inet {
+            unicast;
+            flow {
+               no-validate everything;
+            }
+         }
+         family inet6 {
+            unicast;
+         }
+      }
+   }
+
+   thomas@router> show configuration policy-options policy-statement everything       
+   then accept;
+
+
+   thomas@router> show route table inetflow.0 extensive 
+   
+   inetflow.0: 1 destinations, 1 routes (1 active, 0 holddown, 0 hidden)
+   192.168.0.1,10.0.0.1,proto=6,port=80,dstport=3128,>8080&<8088,srcport>1024/256 (1 entry, 0 announced)
+     *BGP    Preference: 170/-101
+             Next hop type: Fictitious
+             Next-hop reference count: 1
+             State: <Active Ext>
+             Peer AS: 65500
+             Age: 1:13 
+             Task: BGP_65500_30740.82.219.131.242+32319
+             AS path: 65500 I
+             Communities: no-export traffic-rate:0:0
+             Localpref: 100
+             Router ID: 82.219.131.242
+

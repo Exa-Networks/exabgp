@@ -1,0 +1,79 @@
+==== Anticipated Users FAQ ====
+
+Q: Where do I report bugs - ask for help ?? \\
+A: <sigh> ... contact me: **thomas . mangin AT exa - networks . co . uk**
+
+Q: Where is the documentation ? \\
+A: Here and in the code .. really do you need more ??
+
+Q: Is this code supported ? \\
+A: YES - Should you find any bug, please report it.
+
+Q: Does it work on Linux,MACOSX, Windows ? \\
+A: Linux: yes, it is our deployment environment \\
+A: MACOS: yes, it is developed on MAC OSX 10.6 \\
+A: Windows: It should, but I have never tried. Let me know your experience.
+
+Q: I keep seeing "Received Notification (3,10) from peer UPDATE message error: Invalid Network Field." in the logs \\
+A: You are most likely trying to send IPv6 route(s) to a router which is not ready to accept them \\
+A: This is caused as we send the route(s) even if the router did not announce the protocol \\
+A: To fix it under junos type "set family inet6 unicast" under your bgp group or peer 
+
+Q: I am trying to connect to my router and it is not working \\
+A: Did you enable multi-hop BGP on your router ?
+
+Q: I am trying to send some IPv6 routes to my router but the connection never stays up \\
+A: You may need to enable family inet6 for this peer. \\
+A: juniper: set protocol bgp group <mygroup> neighbor <IP> family inet6 unicast \\
+A: Do not forget to explicitly enable IPv4 as well if you are planning to send both v6 and v4 routes \\
+A: juniper: set protocol bgp group <mygroup> neighbor <IP> family inet  unicast
+
+Q: All seems fine but my route is not added to the routing table \\
+A: You may need to allow for non-directly connected next-hop \\
+A: juniper: set protocol bgp group <mygroup> neighbor <IP> accept-remote-nexthop
+
+Q: I see I can specify the as-path (as-sequence) sent to the peer. Do you prepend the router ASN to peers ? \\
+A: EBGP: we will add the router ASN automatically, to create loops. \\
+A: IBGP: it is used "as it".
+
+Q: Can I connect using a IPv6 connection ? \\
+A: Yes
+
+Q: Can you maintain more than one BGP session? \\
+A: Yes, you can define more than one neighbor in the configuration file \\
+A: Or have multiple instance running (like one instance per peer)
+
+Q: Are you planning to add more features ? (support for vpnv4, etc.) \\
+A: I will only really code new features for my own use, but feel free to ask or send me patches.
+
+Q: Why did you implement Graceful Restart ? \\
+A: My use case are machines announcing service IPs without lower MED/Local Prefence backup machines ready to take the over in case of problems. The BGP IPs are then still routed during reboots and in case of very high load for example it will not render the service IP unreacheable if some keepalive are missed. \\
+A: If no graceful-restart time is set, the waiting time is set to be the same as the hold-time. As servers often take much longer than the default 180 seconds to reboots, we recommend that you set the graceful-restart timer to a much higher value.
+
+Q: I would like to inject routes in the network but my server is behind a NATing firewall, will it work ? \\
+A: NAT is not a good idea but: Yes, it will work. \\
+A: Set your local-address as your machine LAN IP and the router-id as the firewall public IP.
+
+Q: As the code is single threaded, can a blocking network IO with one peer cause issues with another ? \\
+A: We are using select to only read data when available on the socket but as we are not using a dedicated thread for keepalive, it could happen. \\
+A: Should Disk IO be very slow on configuration reload, we may be not be able sending KEEPALIVE in time, this is why the default run script renice positively the program.
+A: If it be a concern, run one instance of the program per peer.
+
+Q: As you have no separate thread for keepalives, how many peers do you think one instance can manage comfortably? \\
+A: it will really depend on the number of routes exchanged, and many other parameters, but under normal use (even thousand of routes) you should never encounter an issue. \\
+A: if unsure, just drop me a mail.
+
+==== Anticipated Coders FAQ ====
+
+Q: I am a Ruby coder and I hate Python \\
+A: use ByteMark [[https://projects.bytemark.co.uk/projects/bgpfeeder|BGPFeeder]] a very similar application 
+   hg clone http://src.bytemark.co.uk/bgpfeeder
+
+Q: I am a Perl coder and I hate Python \\
+A: Use [[http://code.google.com/p/bgpsimple|bgpsimple]]
+   svn checkout http://bgpsimple.googlecode.com/svn/trunk/ bgpsimple-read-only
+
+Q: But there is [[https://code.launchpad.net/pybgp| already one in Python]] ! \\
+A: I am not sure if this project existed when I started or not but I clearly missed it ! (and it does not support the MultiProtocol Extensions for IPv6 but instead for ipv4 and vpnv4/mpls which was not good for me :p)
+   bzr branch lp:pybgp
+
