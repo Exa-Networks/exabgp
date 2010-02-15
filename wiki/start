@@ -55,6 +55,8 @@ It is possible to send a SIGHUP signal the program to have it send the right upd
 
 The configuration file is very juniper like with many **[[examples|examples here]]**
 
+if you speak 5234 (ABNF) Please help [[abnf|here]]
+
 ==== Installation Requirements ====
 
 Should you care, the program is written in Python 2.x for version 2.5 or later. \\
