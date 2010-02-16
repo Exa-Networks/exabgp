@@ -47,11 +47,12 @@ class Protocol (object):
 	strict = False
 	parse_update = False # DO NOT TOGGLE TO TRUE, THE CODE IS COMPLETELY BROKEN
 
-	def __init__ (self,supervisor,connection=None):
-		self.log = Log(supervisor.neighbor.peer_address,supervisor.neighbor.peer_as)
-		self.neighbor = supervisor.neighbor
+	def __init__ (self,peer,connection=None):
+		self.log = Log(peer.neighbor.peer_address,peer.neighbor.peer_as)
+		self.peer = peer
+		self.neighbor = peer.neighbor
 		self.connection = connection
-		self._table = Table(supervisor)
+		self._table = Table(peer)
 		self._delta = Delta(self._table)
 
 	def connect (self):
@@ -185,7 +186,8 @@ class Protocol (object):
 		self.connection.write(o.message())
 		return o
 
-	def new_announce (self,asn4):
+	def new_announce (self):
+		asn4 = not not self.peer.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
 		m = self._delta.announce(asn4,self.neighbor.local_as,self.neighbor.peer_as)
 		updates = ''.join(m)
 		self.log.outIf(self.trace,"UPDATE (update)   SENT: %s" % hexa(updates[19:]))
@@ -202,7 +204,8 @@ class Protocol (object):
 		self.connection.write(eors)
 		return eor.announced()
 
-	def new_update (self,asn4):
+	def new_update (self):
+		asn4 = not not self.peer.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
 		m = self._delta.update(asn4,self.neighbor.local_as,self.neighbor.peer_as)
 		updates = ''.join(m)
 		self.log.outIf(self.trace,"UPDATE (update)   SENT: %s" % hexa(updates[19:]))

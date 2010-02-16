@@ -38,7 +38,7 @@ class Peer (object):
 		self.bgp = None
 
 		self._loop = None
-		self._open = None
+		self.open = None
 
 		# The peer message should be processed
 		self._running = False
@@ -87,8 +87,8 @@ class Peer (object):
 			self.log.out('-> %s' % _open)
 			yield None
 
-			self._open = self.bgp.read_open(_open,self.neighbor.peer_address.ip)
-			self.log.out('<- %s' % self._open)
+			self.open = self.bgp.read_open(_open,self.neighbor.peer_address.ip)
+			self.log.out('<- %s' % self.open)
 			yield None
 
 			message = self.bgp.new_keepalive(force=True)
@@ -98,18 +98,16 @@ class Peer (object):
 			message = self.bgp.read_keepalive()
 			self.log.out('<- KEEPALIVE')
 
-			asn4 = not not self._open.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
-
-			messages = self.bgp.new_announce(asn4)
+			messages = self.bgp.new_announce()
 			if messages:
 				self.log.out('-> UPDATE (%d)' % len(messages))
 
 			if	self.neighbor.graceful_restart and \
-				self._open.capabilities.announced(Capabilities.MULTIPROTOCOL_EXTENSIONS) and \
-				self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
+				self.open.capabilities.announced(Capabilities.MULTIPROTOCOL_EXTENSIONS) and \
+				self.open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
 
 				families = []
-				for family in self._open.capabilities[Capabilities.GRACEFUL_RESTART].families():
+				for family in self.open.capabilities[Capabilities.GRACEFUL_RESTART].families():
 					if family in self.neighbor.families:
 						families.append(family)
 				self.bgp.new_eors(families)
@@ -135,12 +133,12 @@ class Peer (object):
 				self.log.outIf(message.TYPE == Update.TYPE,'<- UPDATE')
 				self.log.outIf(message.TYPE not in (KeepAlive.TYPE,Update.TYPE,NOP.TYPE), '<- %d' % ord(message.TYPE))
 
-				messages = self.bgp.new_update(asn4)
+				messages = self.bgp.new_update()
 				self.log.outIf(messages,'-> UPDATE (%d)' % len(messages))
 
 				yield None
 			
-			if self.neighbor.graceful_restart and self._open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
+			if self.neighbor.graceful_restart and self.open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
 				self.log.out('Closing the connection without notification')
 				self.bgp.close()
 				return
