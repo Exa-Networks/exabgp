@@ -55,9 +55,10 @@ A: NAT is not a good idea but: Yes, it will work. \\
 A: Set your local-address as your machine LAN IP and the router-id as the firewall public IP.
 
 Q: As the code is single threaded, can a blocking network IO with one peer cause issues with another ? \\
-A: We are using select to only read data when available on the socket but as we are not using a dedicated thread for keepalive, it could happen. \\
-A: Should Disk IO be very slow on configuration reload, we may be not be able sending KEEPALIVE in time, this is why the default run script renice positively the program.
-A: If it be a concern, run one instance of the program per peer.
+A: We are using select to only read data when available on the socket but we are not using a dedicated thread for keepalive, \\
+A: Should a peer send us less than the expected data (ie: violate the RFCs), we may be not be able to send KEEPALIVES in time. \\
+A: If it be a concern, run one instance of the program per peer. \\
+A: High Disk IO (causing a long pause on configuration reload) may have the same effect, that is why the default run script renice positively the program.
 
 Q: As you have no separate thread for keepalives, how many peers do you think one instance can manage comfortably? \\
 A: it will really depend on the number of routes exchanged, and many other parameters, but under normal use (even thousand of routes) you should never encounter an issue. \\
@@ -76,4 +77,3 @@ A: Use [[http://code.google.com/p/bgpsimple|bgpsimple]]
 Q: But there is [[https://code.launchpad.net/pybgp| already one in Python]] ! \\
 A: I am not sure if this project existed when I started or not but I clearly missed it ! (and it does not support the MultiProtocol Extensions for IPv6 but instead for ipv4 and vpnv4/mpls which was not good for me :p)
    bzr branch lp:pybgp
-
