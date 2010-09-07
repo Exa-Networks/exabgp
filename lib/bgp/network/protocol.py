@@ -189,13 +189,16 @@ class Protocol (object):
 	def new_announce (self):
 		asn4 = not not self.peer.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
 		m = self._delta.announce(asn4,self.neighbor.local_as,self.neighbor.peer_as)
-		updates = ''.join(m)
-		self.log.outIf(self.trace,"UPDATE (update)   SENT: %s" % hexa(updates[19:]))
-
+		# Do not try to join the message and write all in one go as it causes issue
+		# Python 2.5.2 for example send partial data which BGP decoders then take as garbage.
 		if m:
-			self.connection.write(updates)
+			for update in m:
+				self.log.outIf(self.trace,"UPDATE (update)   SENT: %s" % hexa(update[19:]))
+				self.connection.write(update)
 			return m
 		return []
+
+
 
 	def new_eors (self,families):
 		eor = EOR()
