@@ -1,0 +1,2 @@
+Version 1.0.1 - 7th of September 2010
+ * Fixes an issue with some python versions (at least 2.5.2) when sending a large number of routes (several hundred). Some messages could be sent in multiple parts, causing the parser at the other end to barf.
