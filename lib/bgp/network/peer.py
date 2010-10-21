@@ -35,7 +35,11 @@ class Peer (object):
 		self.log = Log(neighbor.peer_address,neighbor.peer_as)
 		self.supervisor = supervisor
 		self.neighbor = neighbor
+		# The next restart neighbor definition
+		self._neighbor = None
 		self.bgp = None
+		# We may have new update to transmit to our peers, so we need to check
+		self._updates = False
 
 		self._loop = None
 		self.open = None
@@ -48,22 +52,20 @@ class Peer (object):
 		self._restarted = FORCE_GRACEFUL
 
 	def stop (self):
-		# we want to tear down the session and re-establish it
 		self._running = False
-		self._restart = True
+		self._restart = False
 		self._restarted = False
 
-	def restart (self):
+	def reload (self,routes):
+		self._updates = True
+		self.neighbor.routes = routes
+
+	def restart (self,restart_neighbor=None):
 		# we want to tear down the session and re-establish it
 		self._running = False
 		self._restart = True
 		self._restarted = True
-
-	def shutdown (self):
-		# this peer is going down forever
-		self._running = False
-		self._restart = False
-		self._restarted = False
+		self._neighbor = restart_neighbor
 
 	def run (self):
 		if self._loop:
@@ -72,6 +74,10 @@ class Peer (object):
 			except StopIteration:
 				self._loop = None
 		elif self._restart:
+			# If we are restarting, and the neighbor definition is different, update the neighbor
+			if self._neighbor:
+				self.neighbor = self._neighbor
+				self._neighbor = None
 			self._running = True
 			self._loop = self._run()
 		else:
@@ -133,8 +139,10 @@ class Peer (object):
 				self.log.outIf(message.TYPE == Update.TYPE,'<- UPDATE')
 				self.log.outIf(message.TYPE not in (KeepAlive.TYPE,Update.TYPE,NOP.TYPE), '<- %d' % ord(message.TYPE))
 
-				messages = self.bgp.new_update()
-				self.log.outIf(messages,'-> UPDATE (%d)' % len(messages))
+				if self._updates:
+					self._updates = False
+					messages = self.bgp.new_update()
+					self.log.outIf(messages,'-> UPDATE (%d)' % len(messages))
 
 				yield None
 			

@@ -51,10 +51,13 @@ class Supervisor (object):
 		while self._peers:
 			try:
 				if self._shutdown:
+					self._shutdown = False
 					self.shutdown()
 				elif self._reload:
+					self._reload = False
 					self.reload()
 				elif self._restart:
+					self._restart = False
 					self.restart()
 
 				# Handle all connection
@@ -72,12 +75,11 @@ class Supervisor (object):
 		"""terminate all the current BGP connections"""
 		self.log.out("performing shutdown")
 		for ip in self._peers.keys():
-			self._peers[ip].shutdown()
+			self._peers[ip].stop()
 
 	def reload (self):
 		"""reload the configuration and send to the peer the route which changed"""
 		self.log.out("performing reload")
-		self._reload = False
 		
 		reloaded = self.configuration.reload()
 		if not reloaded:
@@ -88,10 +90,11 @@ class Supervisor (object):
 		for ip in self._peers.keys():
 			if ip not in self.configuration.neighbor.keys():
 				self.log.out("Removing Peer %s" % str(ip))
-				self._peers[ip].shutdown()
+				self._peers[ip].stop()
 
 		for ip in self.configuration.neighbor.keys():
 			neighbor = self.configuration.neighbor[ip]
+			# new peer
 			if ip not in self._peers.keys():
 				self.log.out("New Peer %s" % str(ip))
 				peer = Peer(neighbor,self)
@@ -100,16 +103,16 @@ class Supervisor (object):
 				# check if the neighbor definition are the same (BUT NOT THE ROUTES)
 				if self._peers[ip].neighbor != neighbor:
 					self.log.out("Peer definition change, restarting %s" % str(ip))
-					self._peers[ip].restart()
+					self._peers[ip].restart(neighbor)
 				# set the new neighbor with the new routes
-				self._peers[ip].neighbor = neighbor
-
+				else:
+					self.log.out("updating routes for %s" % str(ip))
+					self._peers[ip].reload(neighbor.routes)
 		self.log.out("loaded new configuration successfully")
 
 	def restart (self):
 		"""kill the BGP session and restart it"""
 		self.log.out("performing restart")
-		self._restart = False
 		self.configuration.reload()
 
 		for ip in self._peers.keys():
