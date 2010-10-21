@@ -33,13 +33,17 @@ class Neighbor (object):
 		if self.graceful_restart is None: return 'graceful-restart'
 		return ''
 
+	# This function only compares the neighbor BUT NOT ITS ROUTES
 	def __eq__ (self,other):
 		return \
 			self.router_id == other.router_id and \
 			self.local_address == other.local_address and \
 			self.local_as == other.local_as and \
 			self.peer_address == other.peer_address and \
-			self.peer_as == other.peer_as
+			self.peer_as == other.peer_as and \
+			self.hold_time == other.hold_time and \
+			self.graceful_restart == other.graceful_restart and \
+			self.families == other.families
 
 	def __ne__(self, other):
 		return not (self == other)
