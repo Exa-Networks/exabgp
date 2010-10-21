@@ -52,8 +52,7 @@ class Protocol (object):
 		self.peer = peer
 		self.neighbor = peer.neighbor
 		self.connection = connection
-		self._table = Table(peer)
-		self._delta = Delta(self._table)
+		self._delta = Delta(Table(peer))
 
 	def connect (self):
 		# allows to test the protocol code using modified StringIO with a extra 'pending' function
