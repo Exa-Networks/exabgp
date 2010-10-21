@@ -15,20 +15,20 @@ import time
 
 class Table (object):
 
-	def __init__ (self,supervisor):
+	def __init__ (self,peer):
 		self._plus = {}
 		self._minus = {}
-		self.supervisor = supervisor
+		self.peer = peer
 
 	# This interface is very good for the file change but not if you want to update from network
 	def recalculate (self):
-		routes = self.supervisor.neighbor.routes
-		for route in routes:
-			self._add(route)
+		routes = self.peer.neighbor.routes
 		for prefix in self._plus.keys():
 			route = self._plus[prefix][1]
 			if route not in routes:
 				self._remove(route)
+		for route in routes:
+			self._add(route)
 		return self
 
 	def _add (self,route):
