@@ -77,9 +77,11 @@ class Configuration (object):
 	def __init__ (self,fname,text=False):
 		self._text = text
 		self._fname = fname
+		self._clear()
+	
+	def _clear (self):
 		self.neighbor = {}
 		self.error = ''
-
 		self._neighbor = {}
 		self._scope = []
 		self._location = ['root']
@@ -106,12 +108,7 @@ class Configuration (object):
 				if self.debug: raise
 				return False
 
-		self._neighbor = {}
-		self._scope = []
-		self._location = ['root']
-		self._line = []
-		self._error = ''
-		self._number = 1
+		self._clear()
 
 		while not self.finished():
 			r = self._dispatch('configuration',['neighbor',],[])
@@ -281,7 +278,7 @@ class Configuration (object):
 				if (route.afi,route.safi) not in neighbor.families:
 					neighbor.families.append((route.afi,route.safi))
 
-		# drop the neiborg
+		# drop the neighbor
 		scope = self._scope.pop(-1)
 		neighbor.description = scope.get('description','')
 
