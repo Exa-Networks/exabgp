@@ -1,2 +1,7 @@
+Version 1.0.2 - not released
+ * Improvement: only try to generate UPDATE message if the configuration was changed (save some CPU)
+ * Fix : a neighbor configuration change could have been undetected on SIGALRM
+ * Fix : reloading the configuration preventing the withdrawal of removed routes (thank you to Renaud Chaput for the bug report)
+
 Version 1.0.1 - 7th of September 2010
  * Fixes an issue with some python versions (at least 2.5.2) when sending a large number of routes (several hundred). Some messages could be sent in multiple parts, causing the parser at the other end to barf (Thank you to Renaud Chaput for the bug report)
