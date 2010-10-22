@@ -208,6 +208,7 @@ class Protocol (object):
 
 	def new_update (self):
 		asn4 = not not self.peer.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
+		# This delta update can take quite some time (a few seconds with 500+ routes which may be a problem with low keepalive)
 		m = self._delta.update(asn4,self.neighbor.local_as,self.neighbor.peer_as)
 		updates = ''.join(m)
 		self.log.outIf(self.trace,"UPDATE (update)   SENT: %s" % hexa(updates[19:]))

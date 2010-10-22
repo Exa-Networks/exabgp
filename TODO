@@ -12,6 +12,8 @@ Juniper does not accept any holdtime <20
 
 UPDATE parsing is totally disabled, the broken update parsing for ASPath assumes only one segment
 
+Calculing the difference between two configuration can take quite some time, possibly more than the keepalive if it is very low
+
 Graceful restart docs much clearer than the RFC (but still not 100%)
 http://www.cisco.com/en/US/products/ps6550/products_white_paper09186a008016317c.shtml
 
