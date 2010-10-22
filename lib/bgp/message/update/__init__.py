@@ -61,8 +61,9 @@ class Update (Message):
 		if self.afi == AFI.ipv4 and self.safi in [SAFI.unicast, SAFI.multicast]:
 			nlri = ''.join([route.nlri.pack() for route in self.routes])
 			mp = ''
+			attr = ''
 		else:
 			nlri = ''
 			mp = MPURNLRI(self.routes).pack()
-		attr = self.routes[0].bgp_announce(asn4,local_asn,remote_asn)
+			attr = self.routes[0].bgp_announce(asn4,local_asn,remote_asn)
 		return self._message(prefix(nlri) + prefix(attr + mp))
