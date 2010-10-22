@@ -1,0 +1,84 @@
+#!/bin/bash
+
+me=`id -u`
+
+if [ $me -eq 0 ]; then
+	echo 'root is not allowed to use this script'
+	exit 1
+fi
+
+dirname=`dirname $0`
+
+if [[ $dirname == /* ]]; then
+        path=$dirname/..
+else
+        cd `pwd`/$dirname/.. > /dev/null
+        path=`pwd`
+        cd - > /dev/null
+fi
+
+# This is not safe against race condition, but I trust my own machine to not be hacked ..
+
+build=/tmp
+version=`cat $path/VERSION`
+name=exabgp-$version
+destination=$build/$name
+
+echo destination is $destination
+rm -rf $destination
+mkdir $destination
+
+# Adding the files and folders
+
+echo adding the files
+
+cd $path
+for f in `ls`;
+do
+	echo copying $f
+	cp -r $f $destination/
+done
+
+# Removing all the non-commited files (normally test configurations)
+
+echo removing unreleased file
+
+internal=`hg status | grep "^?" | awk '{ print $2; }'`
+
+cd $destination
+for f in $internal;
+do
+	echo removing $f
+	rm -f $f
+done
+
+echo removing pyc files
+
+cd $destination
+for f in `find . -name "*.pyc"`;
+do
+	echo removing $f
+	rm -f $f
+done
+
+echo removing dot files
+
+cd $destination
+for f in `find . -name ".?*"`;
+do
+	echo removing $f
+	rm -f $f
+done
+
+# Making tarball
+
+echo making tarbal
+
+cd $path
+rm -f ${name}.tgz
+
+cd $build
+rm -f ${name}.tgz
+tar zcvf $path/${name}.tgz $name
+
+echo 'done'
