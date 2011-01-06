@@ -146,7 +146,7 @@ class Protocol (object):
 			raise Notify(2,0,'we have an ASN4 and you do not speak it. bye.')
 
 		if message.asn == AS_TRANS:
-			peer_as = message.capabilities[FOUR_BYTES_ASN]
+			peer_as = message.capabilities[Capabilities.FOUR_BYTES_ASN]
 		else:
 			peer_as = message.asn
 
