@@ -235,11 +235,11 @@ class Protocol (object):
 
 	def _key_values (self,name,data):
 		if len(data) < 2:
-			raise Notify(2,0,"bad length for OPEN %s (<2)" % name)
+			raise Notify(2,0,"bad length for OPEN %s (<2) %s" % (name,hexa(value)))
 		l = ord(data[1])
 		boundary = l+2
 		if len(data) < boundary:
-			raise Notify(2,0,"bad length for OPEN %s (buffer underrun)" % name)
+			raise Notify(2,0,"bad length for OPEN %s (buffer underrun) %s" % (name,hexa(value)))
 		key = ord(data[0])
 		value = data[2:boundary]
 		rest = data[boundary:]
@@ -259,7 +259,7 @@ class Protocol (object):
 				if key == Parameter.CAPABILITIES:
 					k,v,r = self._key_values('capability',value)
 					if r:
-						raise Notify(2,0,"bad length for OPEN %s (size mismatch)" % 'capability')
+						raise Notify(2,0,"bad length for OPEN %s (size mismatch) %s" % ('capability',hexa(value)))
 
 					if k == Capabilities.MULTIPROTOCOL_EXTENSIONS:
 						if k not in capabilities:
