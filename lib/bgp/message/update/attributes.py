@@ -13,6 +13,7 @@ from bgp.message.update.attribute import AttributeID
 
 from bgp.message.update.attribute.origin      import Origin
 from bgp.message.update.attribute.aspath      import ASPath,AS4Path
+from bgp.message.update.attribute.localpref   import LocalPreference
 
 # =================================================================== Attributes
 
@@ -94,9 +95,11 @@ class Attributes (dict):
 			if afi == AFI.ipv4 and safi in [SAFI.unicast, SAFI.multicast]:
 				message += self[AttributeID.NEXT_HOP].pack()
 
-		if AttributeID.LOCAL_PREF in self:
-			if ibgp:
+		if ibgp:
+			if AttributeID.LOCAL_PREF in self:
 				message += self[AttributeID.LOCAL_PREF].pack()
+			else:
+				message += LocalPreference(100).pack()
 
 		if AttributeID.MED in self:
 			if local_asn != peer_asn:
