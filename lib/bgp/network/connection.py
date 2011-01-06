@@ -7,6 +7,7 @@ Created by Thomas Mangin on 2009-09-06.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
+import os
 import time
 import socket
 import select
@@ -16,7 +17,7 @@ from bgp.structure.address import AFI
 from bgp.message import Failure
 
 class Connection (object):
-	debug = False
+	debug = False if os.environ.get('DEBUG_WIRE','0') == '0' else True
 
 	def __init__ (self,peer,local):
 		self.log = Log(peer,'-')

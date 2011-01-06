@@ -7,6 +7,8 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
+import os
+
 from bgp.structure.address    import AFI
 from bgp.structure.ip         import to_IP,to_Prefix
 from bgp.structure.asn        import ASN
@@ -30,7 +32,8 @@ from bgp.message.update.attribute.communities import Community,Communities,to_Fl
 
 
 class Configuration (object):
-	debug = False
+	debug = False if os.environ.get('DEBUG_CONFIGURATION','0') == '0' else True
+	
 	_str_route_error = '' \
 	'syntax:\n' \
 	'route 10.0.0.1/24 {\n' \

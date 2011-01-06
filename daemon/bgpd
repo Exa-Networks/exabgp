@@ -8,7 +8,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 import sys
-
+import os
 import time
 import signal
 
@@ -16,7 +16,7 @@ from bgp.utils                import Log
 from bgp.network.peer         import Peer
 
 class Supervisor (object):
-	debug = True
+	debug = False if os.environ.get('DEBUG_SUPERVISOR','0') == '0' else True
 
 	# import os
 	# [hex(ord(c)) for c in os.popen('clear').read()]
@@ -36,15 +36,15 @@ class Supervisor (object):
 		signal.signal(signal.SIGALRM, self.sigalrm)
 
 	def sigterm (self,signum, frame):
-		self.log.out("SIG TERM received")
+		if self.debug: self.log.out("SIG TERM received")
 		self._shutdown = True
 
 	def sighup (self,signum, frame):
-		self.log.out("SIG HUP received")
+		if self.debug: self.log.out("SIG HUP received")
 		self._reload = True
 
 	def sigalrm (self,signum, frame):
-		self.log.out("SIG ALRM received")
+		if self.debug: self.log.out("SIG ALRM received")
 		self._restart = True
 
 	def run (self):
@@ -89,24 +89,24 @@ class Supervisor (object):
 
 		for ip in self._peers.keys():
 			if ip not in self.configuration.neighbor.keys():
-				self.log.out("Removing Peer %s" % str(ip))
+				if self.debug: self.log.out("Removing Peer %s" % str(ip))
 				self._peers[ip].stop()
 
 		for ip in self.configuration.neighbor.keys():
 			neighbor = self.configuration.neighbor[ip]
 			# new peer
 			if ip not in self._peers.keys():
-				self.log.out("New Peer %s" % str(ip))
+				if self.debug: self.log.out("New Peer %s" % str(ip))
 				peer = Peer(neighbor,self)
 				self._peers[ip] = peer
 			else:
 				# check if the neighbor definition are the same (BUT NOT THE ROUTES)
 				if self._peers[ip].neighbor != neighbor:
-					self.log.out("Peer definition change, restarting %s" % str(ip))
+					if self.debug: self.log.out("Peer definition change, restarting %s" % str(ip))
 					self._peers[ip].restart(neighbor)
 				# set the new neighbor with the new routes
 				else:
-					self.log.out("updating routes for %s" % str(ip))
+					if self.debug: self.log.out("updating routes for %s" % str(ip))
 					self._peers[ip].reload(neighbor.routes)
 		self.log.out("loaded new configuration successfully")
 
@@ -117,7 +117,7 @@ class Supervisor (object):
 
 		for ip in self._peers.keys():
 			if ip not in self.configuration.neighbor.keys():
-				self.log.out("Removing Peer %s" % str(ip))
+				if self.debug: self.log.out("Removing Peer %s" % str(ip))
 				self._peers[ip].stop()
 			else:
 				self._peers[ip].restart()
@@ -135,16 +135,28 @@ if __name__ == '__main__':
 		sys.exit('This program can not work (is not tested) with your python version (< 2.4 or >= 3.0)')
 
 	if main == 2 and secondary == 4:
-		sys.stdout.write('\n\n')
+		sys.stdout.write('\n')
 		sys.stdout.write('************ WARNING *** WARNING *** WARNING *** WARNING *********\n')
 		sys.stdout.write('* This program SHOULD work with your python version (2.4).       *\n')
 		sys.stdout.write('* No tests have been performed. Consider python 2.4 unsupported  *\n')
 		sys.stdout.write('* Please consider upgrading to the latest 2.x stable realease.   *\n')
 		sys.stdout.write('************ WARNING *** WARNING *** WARNING *** WARNING *********\n')
-		sys.stdout.write('\n\n')
+		sys.stdout.write('\n')
 
 	if len(sys.argv) < 2:
-		sys.exit('usage bgpd <configuration file>')
+		sys.stdout.write('\n')
+		sys.stdout.write('*******************************************************************************\n')
+		sys.stdout.write('set the following environment values to gather information and report bugs\n')
+		sys.stdout.write('\n')
+		sys.stdout.write('DEBUG_CONFIGURATION : verbose configuration parsing\n')
+		sys.stdout.write('DEBUG_SUPERVISOR : debug the supervisor\n')
+		sys.stdout.write('DEBUG_WIRE : debug the packet sent and received\n')
+		sys.stdout.write('\n')
+		sys.stdout.write('For example :\n')
+		sys.stdout.write('> env DEBUG_SUPERVISOR=1 DEBUG_WIRE=1 ./bin/bgpd ./etc/bgp/configuration.txt\n')
+		sys.stdout.write('*******************************************************************************\n')
+		sys.stdout.write('\n')
+		sys.exit('usage:\n bgpd <configuration file>\n')
 	conf = sys.argv[1]
 
 	from bgp.configuration import Configuration
