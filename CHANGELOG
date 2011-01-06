@@ -1,3 +1,7 @@
+Version 1.0.3 - 6th of January 2010
+ * Fix: missing default localpref on IBGP session if not specified on the route
+ * Improvement: more verbose messages in case of OPEN negociation issue
+
 Version 1.0.2 - 22nd of October 2010
  * Improvement: only try to generate UPDATE messages if the configuration was changed (save quite some CPU as the algorithm is really naive)
  * Fix : a neighbor configuration change could have been undetected on SIGHUP/SIGALRM
