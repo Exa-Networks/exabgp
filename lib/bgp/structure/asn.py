@@ -22,6 +22,8 @@ class ASN (int):
 		return pack('!H',self)
 
 	def __len__ (self):
-		return self.length
+		if self.asn4:
+			return 4
+		return 2
 
 AS_TRANS = ASN(23456)
