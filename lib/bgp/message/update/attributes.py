@@ -56,6 +56,27 @@ class Attributes (dict):
 				self[attribute.ID] = attribute
 			return True
 
+	def _as_path (self,asn4,asp):
+		message = ''
+		# if the peer does not understand ASN4, we need to build a transitive AS4_PATH
+		if not asn4:
+			has_asn4 = False
+			aspath = ASPath(False,asp.asptype)
+			as4path = AS4Path(asp.asptype)
+			for segment in asp.aspsegment:
+				if segment.asn4():
+					has_asn4 = True
+					aspath.add(AS_TRANS)
+					as4path.add(segment)
+				else:
+					aspath.add(segment)
+			message += aspath.pack()
+			if has_asn4:
+				message += as4path.pack()
+		else:
+			message += ASPath(asn4,asp.asptype,asp.aspsegment).pack()
+		return message
+
 	def bgp_announce (self,asn4,local_asn,peer_asn):
 		ibgp = (local_asn == peer_asn)
 		# we do not store or send MED
@@ -66,32 +87,14 @@ class Attributes (dict):
 		elif self.autocomplete:
 			message += Origin(Origin.IGP).pack()
 
-		has_asn4 = False
-
 		if AttributeID.AS_PATH in self:
-			if not asn4:
-				# we need to create a AS4Path
-				asp = self[AttributeID.AS_PATH]
-				aspath = ASPath(False,asp.asptype)
-				as4path = AS4Path(asp.asptype)
-				for segment in asp.aspsegment:
-					if segment.asn4():
-						has_asn4 = True
-						aspath.add(AS_TRANS)
-						as4path.add(segment)
-					else:
-						aspath.add(segment)
-				message += aspath.pack()
-				if has_asn4:
-					message += as4path.pack()
-			else:
-				asp = self[AttributeID.AS_PATH]
-				message += ASPath(asn4,asp.asptype,asp.aspsegment).pack()
+			asp = self[AttributeID.AS_PATH]
 		elif self.autocomplete:
 			if ibgp:
-				message += ASPath(asn4,ASPath.AS_SEQUENCE,[]).pack()
+				asp = ASPath(asn4,ASPath.AS_SEQUENCE,[])
 			else:
-				message += ASPath(asn4,ASPath.AS_SEQUENCE,[local_asn]).pack()
+				asp = ASPath(asn4,ASPath.AS_SEQUENCE,[local_asn])
+		message += self._as_path(asn4,asp)
 
 		if AttributeID.NEXT_HOP in self:
 			afi = self[AttributeID.NEXT_HOP].next_hop.afi
