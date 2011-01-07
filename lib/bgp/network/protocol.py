@@ -258,13 +258,9 @@ class Protocol (object):
 					raise Notify(2,5)
 
 				if key == Parameter.CAPABILITIES:
-					print "data",hexa(data)
 					r = data
 					while r:
 						k,v,r = self._key_values('capability',value)
-						print "key", k
-						print "v", hexa(v)
-						print "r", hexa(r)
 
 						if k == Capabilities.MULTIPROTOCOL_EXTENSIONS:
 							if k not in capabilities:
