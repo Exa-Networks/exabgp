@@ -235,11 +235,11 @@ class Protocol (object):
 
 	def _key_values (self,name,data):
 		if len(data) < 2:
-			raise Notify(2,0,"bad length for OPEN %s (<2) %s" % (name,hexa(value)))
+			raise Notify(2,0,"bad length for OPEN %s (<2) %s" % (name,hexa(data)))
 		l = ord(data[1])
 		boundary = l+2
 		if len(data) < boundary:
-			raise Notify(2,0,"bad length for OPEN %s (buffer underrun) %s" % (name,hexa(value)))
+			raise Notify(2,0,"bad length for OPEN %s (buffer underrun) %s" % (name,hexa(data)))
 		key = ord(data[0])
 		value = data[2:boundary]
 		rest = data[boundary:]
@@ -257,49 +257,51 @@ class Protocol (object):
 					raise Notify(2,5)
 
 				if key == Parameter.CAPABILITIES:
-					k,v,r = self._key_values('capability',value)
-					if r:
-						raise Notify(2,0,"bad length for OPEN %s (size mismatch) %s" % ('capability',hexa(value)))
-
-					if k == Capabilities.MULTIPROTOCOL_EXTENSIONS:
+					while value:
+						k,capv,value = self._key_values('capability',value)
+						# Multiple Capabilities can be present in a single attribute
+						#if r:
+						#	raise Notify(2,0,"bad length for OPEN %s (size mismatch) %s" % ('capability',hexa(value)))
+	
+						if k == Capabilities.MULTIPROTOCOL_EXTENSIONS:
+							if k not in capabilities:
+								capabilities[k] = MultiProtocol()
+							afi = AFI(unpack('!H',capv[:2])[0])
+							safi = SAFI(ord(capv[3]))
+							capabilities[k].append((afi,safi))
+							continue
+	
+						if k == Capabilities.GRACEFUL_RESTART:
+							restart = unpack('!H',capv[:2])[0]
+							restart_flag = restart >> 12
+							restart_time = restart & Graceful.TIME_MASK
+							value_gr = capv[2:]
+							families = []
+							while value_gr:
+								afi = AFI(unpack('!H',value_gr[:2])[0])
+								safi = SAFI(ord(value_gr[2]))
+								flag_family = ord(value_gr[0])
+								families.append((afi,safi,flag_family))
+								value_gr = value_gr[4:]
+							capabilities[k] = Graceful(restart_flag,restart_time,families)
+							continue
+	
+						if k == Capabilities.FOUR_BYTES_ASN:
+							capabilities[k] = ASN(unpack('!L',capv[:4])[0])
+							continue
+	
+						if k == Capabilities.ROUTE_REFRESH:
+							capabilities[k] = RouteRefresh()
+							continue
+	
+						if k == Capabilities.CISCO_ROUTE_REFRESH:
+							capabilities[k] = CiscoRouteRefresh()
+							continue
+	
 						if k not in capabilities:
-							capabilities[k] = MultiProtocol()
-						afi = AFI(unpack('!H',value[2:4])[0])
-						safi = SAFI(ord(value[5]))
-						capabilities[k].append((afi,safi))
-						continue
-
-					if k == Capabilities.GRACEFUL_RESTART:
-						restart = unpack('!H',value[2:4])[0]
-						restart_flag = restart >> 12
-						restart_time = restart & Graceful.TIME_MASK
-						value = value[4:]
-						families = []
-						while value:
-							afi = AFI(unpack('!H',value[:2])[0])
-							safi = SAFI(ord(value[2]))
-							flag_family = ord(value[0])
-							families.append((afi,safi,flag_family))
-							value = value[4:]
-						capabilities[k] = Graceful(restart_flag,restart_time,families)
-						continue
-
-					if k == Capabilities.FOUR_BYTES_ASN:
-						capabilities[k] = ASN(unpack('!L',value[2:6])[0])
-						continue
-
-					if k == Capabilities.ROUTE_REFRESH:
-						capabilities[k] = RouteRefresh()
-						continue
-
-					if k == Capabilities.CISCO_ROUTE_REFRESH:
-						capabilities[k] = CiscoRouteRefresh()
-						continue
-
-					if k not in capabilities:
-						capabilities[k] = Unknown(k)
-					if value[2:]:
-						capabilities[k].append([ord(_) for _ in value[2:]])
+							capabilities[k] = Unknown(k)
+						if capv:
+							capabilities[k].append([ord(_) for _ in capv])
 				else:
 					raise Notify(2,0,'unknow OPEN parameter %s' % hex(key))
 		return capabilities
