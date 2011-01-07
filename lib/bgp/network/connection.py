@@ -72,8 +72,8 @@ class Connection (object):
 			self.last_read = time.time()
 			if self.debug: print "received:", hexa(r)
 			return r
-		except socket.timeout:
-			self.close()
+		except socket.timeout,e:
+			self.close()	
 			if self.debug: self.log.out(trace())
 			raise Failure('timeout attempting to read data from the network:  %s ' % str(e))
 		except socket.error,e:
