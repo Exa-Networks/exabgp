@@ -66,6 +66,8 @@ class Attributes (dict):
 		elif self.autocomplete:
 			message += Origin(Origin.IGP).pack()
 
+		has_asn4 = False
+
 		if AttributeID.AS_PATH in self:
 			if not asn4:
 				# we need to create a AS4Path
@@ -74,12 +76,14 @@ class Attributes (dict):
 				as4path = AS4Path(asp.asptype)
 				for segment in asp.aspsegment:
 					if segment.asn4():
+						has_asn4 = True
 						aspath.add(AS_TRANS)
 						as4path.add(segment)
 					else:
 						aspath.add(segment)
 				message += aspath.pack()
-				message += as4path.pack()
+				if has_asn4:
+					message += as4path.pack()
 			else:
 				asp = self[AttributeID.AS_PATH]
 				message += ASPath(asn4,asp.asptype,asp.aspsegment).pack()
