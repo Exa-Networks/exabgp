@@ -57,9 +57,10 @@ class Protocol (object):
 	def connect (self):
 		# allows to test the protocol code using modified StringIO with a extra 'pending' function
 		if not self.connection:
+			md5 = self.neighbor.md5
 			peer = self.neighbor.peer_address
 			local = self.neighbor.local_address
-			self.connection = Connection(peer,local)
+			self.connection = Connection(md5,peer,local)
 
 	def check_keepalive (self):
 		left = int (self.connection.last_read  + self.neighbor.hold_time - time.time())
