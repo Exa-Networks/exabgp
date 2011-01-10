@@ -399,7 +399,8 @@ class Configuration (object):
 			return False
 		return True
 
-	def _set_md5 (self,command,md5):
+	def _set_md5 (self,command,value):
+		md5 = value[0]
 		if len(md5) > 2 and md5[0] == md5[-1] and md5[0] in ['"',"'"]:
 			md5 = md5[1:-1]
 		if len(md5) > 80:
