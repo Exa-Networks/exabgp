@@ -100,7 +100,7 @@ class Configuration (object):
 		else:
 			try:
 				f = open(self._fname,'r')
-				self._tokens = self._tokenise(f.readlines())
+				self._tokens = self._tokenise(f)
 				f.close()
 			except IOError,e:
 				error = str(e)
@@ -129,12 +129,18 @@ class Configuration (object):
 	def _tokenise (self,text):
 		r = []
 		for line in text:
-			line = line.strip().replace('\t',' ').replace(']',' ]').replace('[','[ ').lower()
-			if not line:
+			replaced = line.strip().replace('\t',' ').replace(']',' ]').replace('[','[ ').lower()
+			if not replaced:
 				continue
-			if line.startswith('#'):
+			if replaced.startswith('#'):
 				continue
-			r.append([t for t in line[:-1].split(' ') if t] + [line[-1]])
+			if replaced[:3] == 'md5':
+				password = line.strip()[3:].strip()
+				if password[-1] == ';':
+					password = password[:-1]
+				r.append(['md5',password,';'])
+			else:
+				r.append([t for t in replaced[:-1].split(' ') if t] + [replaced[-1]])
 		return r
 
 	def tokens (self):
@@ -301,7 +307,7 @@ class Configuration (object):
 			self._error = 'local-address and peer-address must be of the same family'
 			return False 
 		if self._neighbor.has_key(neighbor.peer_address.ip):
-			self.error = 'duplicate peer definition %s' % neighbor.peer_address.ip
+			self._error = 'duplicate peer definition %s' % neighbor.peer_address.ip
 			return False
 		
 		self._neighbor[neighbor.peer_address.ip] = neighbor
@@ -393,13 +399,15 @@ class Configuration (object):
 			return False
 		return True
 
-	def _set_md5 (self,command,value):
-		if not len(value):
-			self._scope[-1]['md5'] = -1
-			return True
-		md5 = str(value[0])
+	def _set_md5 (self,command,md5):
+		if len(md5) > 2 and md5[0] == md5[-1] and md5[0] in ['"',"'"]:
+			md5 = md5[1:-1]
+		if len(md5) > 80:
+			self._error = 'md5 password must be no larger than 80 characters'
+			if self.debug: raise
+			return False
 		if not md5:
-			self._error = 'md5 requires the md5 password as an argument'
+			self._error = 'md5 requires the md5 password as an argument (quoted or unquoted)'
 			if self.debug: raise
 			return False
 		self._scope[-1][command] = md5
