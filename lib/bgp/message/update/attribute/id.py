@@ -37,6 +37,8 @@ class AttributeID (int):
 		if self == 0x06: return "ATOMIC_AGGREGATE"
 		if self == 0x07: return "AGGREGATOR"
 		if self == 0x08: return "COMMUNITY"
+		if self == 0x10: return "EXTENDED_COMMUNITY"
+		if self == 0x11: return "AS4_PATH"
 		if self == 0x0e: return "MP_REACH_NLRI"
 		if self == 0x0f: return "MP_UNREACH_NLRI"
 		return 'UNKNOWN ATTRIBUTE (%s)' % hex(self)
