@@ -7,6 +7,8 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
+import os
+
 from bgp.structure.address    import AFI
 from bgp.structure.ip         import to_IP,to_Prefix
 from bgp.structure.asn        import ASN
@@ -31,7 +33,8 @@ from bgp.message.update.attribute.communities import Community,Communities,to_Fl
 
 
 class Configuration (object):
-	debug = False
+	debug = False if os.environ.get('DEBUG_CONFIGURATION','0') == '0' else True
+	
 	_str_route_error = '' \
 	'syntax:\n' \
 	'route 10.0.0.1/24 {\n' \
@@ -231,6 +234,7 @@ class Configuration (object):
 		if command == 'peer-as': return self._set_asn('peer-as',tokens[1:])
 		if command == 'hold-time': return self._set_holdtime('hold-time',tokens[1:])
 		if command == 'graceful-restart': return self._set_gracefulrestart('graceful-restart',tokens[1:])
+		if command == 'md5': return self._set_md5('md5',tokens[1:])
 
 		if command == 'route': return self._single_static_route(tokens[1:])
 		if command == 'origin': return self._route_origin(tokens[1:])
@@ -291,6 +295,8 @@ class Configuration (object):
 			# README: Should it be a subclass of int ?
 			neighbor.graceful_restart = int(neighbor.hold_time)
 
+		neighbor.md5 = scope.get('md5','')
+
 		missing = neighbor.missing()
 		if missing:
 			self._error = 'incomplete neighbor, missing %s' % missing
@@ -315,7 +321,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-		 	r = self._dispatch('neighbor',['static','flow'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart'])
+		 	r = self._dispatch('neighbor',['static','flow'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart','md5'])
 			if r is False: return False
 			if r is None: return True
 
@@ -391,6 +397,17 @@ class Configuration (object):
 			return False
 		return True
 
+	def _set_md5 (self,command,value):
+		if not len(value):
+			self._scope[-1]['md5'] = -1
+			return True
+		md5 = str(value[0])
+		if not md5:
+			self._error = 'md5 requires the md5 password as an argument'
+			if self.debug: raise
+			return False
+		self._scope[-1][command] = md5
+		return True
 
 	#  Group Static ................
 

@@ -7,6 +7,8 @@ Created by Thomas Mangin on 2009-09-06.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
+import os
+import struct
 import time
 import socket
 import select
@@ -16,9 +18,9 @@ from bgp.structure.address import AFI
 from bgp.message import Failure
 
 class Connection (object):
-	debug = False
+	debug = False if os.environ.get('DEBUG_WIRE','0') == '0' else True
 
-	def __init__ (self,peer,local):
+	def __init__ (self,md5,peer,local):
 		self.log = Log(peer,'-')
 		self.last_read = 0
 		self.last_write = 0
@@ -29,9 +31,15 @@ class Connection (object):
 
 		try:
 			if peer.afi == AFI.ipv4:
-				self._io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+				if md5:
+					self._io = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+				else:
+					self._io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			if peer.afi == AFI.ipv6:
-				self._io = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+				if md5:
+					self._io = socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+				else:
+					self._io = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
 			try:
 				self._io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 			except AttributeError:
@@ -48,6 +56,22 @@ class Connection (object):
 		except socket.error,e:
 			self.close()
 			raise Failure('could not bind to local ip %s - %s' % (local.ip,str(e)))
+
+		if md5:
+			try:
+				TCP_MD5SIG = 14
+				TCP_MD5SIG_MAXKEYLEN = 80
+				SS_PADSIZE = 120
+				
+				n_addr = socket.inet_aton(peer.ip)
+				n_port = socket.htons(179)
+				shape = 'HH4s%dx2xH4x%ds' % (SS_PADSIZE, TCP_MD5SIG_MAXKEYLEN)
+				md5sig = struct.pack(shape, socket.AF_INET, n_port, n_addr, len(md5), md5)
+				self._io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, md5sig)
+			except socket.error,e:
+				self.close()
+				raise Failure('this OS does not support our MD5 hack: %s' % str(e))
+
 		try:
 			if peer.afi == AFI.ipv4:
 				self._io.connect((peer.ip,179))
