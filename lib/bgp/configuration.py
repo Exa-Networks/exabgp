@@ -43,8 +43,8 @@ class Configuration (object):
 	'  as-path [ ASN1 ASN2 ];\n' \
 	'  med 100;\n' \
 	'  local-preference 100;\n' \
-	'  community [ 65000 65001 65002 ]>\n' \
-	'  label [ 100 200 ]>\n' \
+	'  community [ 65000 65001 65002 ];\n' \
+	'  label [ 100 200 ];\n' \
 	'}\n\n' \
 	'route 10.0.0.1/24 next-hop 192.0.2.1' \
 	' origin IGP|EGP|INCOMPLETE' \
