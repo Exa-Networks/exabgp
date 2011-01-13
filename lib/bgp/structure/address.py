@@ -58,6 +58,8 @@ class SAFI (int):
 	def __str__ (self):
 		if self == 0x01: return "unicast"
 		if self == 0x02: return "multicast"
+		if self == 0x04: return "nlri-mpls"
+		if self == 0x80: return "mpls-vpn"
 		if self == 0x85: return "flow-ipv4"
 		if self == 0x86: return "flow-vpnv4"
 		return "unknown safi"
