@@ -29,6 +29,7 @@ from bgp.message.update.attribute.aspath      import ASPath
 from bgp.message.update.attribute.med         import MED
 from bgp.message.update.attribute.localpref   import LocalPreference
 from bgp.message.update.attribute.communities import Community,Communities,to_FlowTrafficRate,to_RouteTargetCommunity_00,to_RouteTargetCommunity_01
+#from bgp.message.update.attribute.labels      import Label,Labels
 
 
 class Configuration (object):
@@ -43,6 +44,7 @@ class Configuration (object):
 	'  med 100;\n' \
 	'  local-preference 100;\n' \
 	'  community [ 65000 65001 65002 ]>\n' \
+	'  label [ 100 200 ]>\n' \
 	'}\n\n' \
 	'route 10.0.0.1/24 next-hop 192.0.2.1' \
 	' origin IGP|EGP|INCOMPLETE' \
@@ -50,6 +52,7 @@ class Configuration (object):
 	' med 100' \
 	' local-preference 100' \
 	' community 65000' \
+	' label 150' \
 	';\n\n' \
 	'community and as-path can take a single community as parameter. only next-hop is mandatory\n\n'
 
@@ -100,7 +103,7 @@ class Configuration (object):
 		else:
 			try:
 				f = open(self._fname,'r')
-				self._tokens = self._tokenise(f)
+				self._tokens = self._tokenise(f.readlines())
 				f.close()
 			except IOError,e:
 				error = str(e)
@@ -129,18 +132,12 @@ class Configuration (object):
 	def _tokenise (self,text):
 		r = []
 		for line in text:
-			replaced = line.strip().replace('\t',' ').replace(']',' ]').replace('[','[ ').lower()
-			if not replaced:
+			line = line.strip().replace('\t',' ').replace(']',' ]').replace('[','[ ').lower()
+			if not line:
 				continue
-			if replaced.startswith('#'):
+			if line.startswith('#'):
 				continue
-			if replaced[:3] == 'md5':
-				password = line.strip()[3:].strip()
-				if password[-1] == ';':
-					password = password[:-1]
-				r.append(['md5',password,';'])
-			else:
-				r.append([t for t in replaced[:-1].split(' ') if t] + [replaced[-1]])
+			r.append([t for t in line[:-1].split(' ') if t] + [line[-1]])
 		return r
 
 	def tokens (self):
@@ -246,6 +243,7 @@ class Configuration (object):
 		if command == 'next-hop': return self._route_next_hop(tokens[1:])
 		if command == 'local-preference': return self._route_local_preference(tokens[1:])
 		if command == 'community': return self._route_community(tokens[1:])
+		if command == 'label': return self._route_label(tokens[1:])
 		
 		if command == 'source': return self._flow_source(tokens[1:])
 		if command == 'destination': return self._flow_destination(tokens[1:])
@@ -307,7 +305,7 @@ class Configuration (object):
 			self._error = 'local-address and peer-address must be of the same family'
 			return False 
 		if self._neighbor.has_key(neighbor.peer_address.ip):
-			self._error = 'duplicate peer definition %s' % neighbor.peer_address.ip
+			self.error = 'duplicate peer definition %s' % neighbor.peer_address.ip
 			return False
 		
 		self._neighbor[neighbor.peer_address.ip] = neighbor
@@ -400,15 +398,12 @@ class Configuration (object):
 		return True
 
 	def _set_md5 (self,command,value):
-		md5 = value[0]
-		if len(md5) > 2 and md5[0] == md5[-1] and md5[0] in ['"',"'"]:
-			md5 = md5[1:-1]
-		if len(md5) > 80:
-			self._error = 'md5 password must be no larger than 80 characters'
-			if self.debug: raise
-			return False
+		if not len(value):
+			self._scope[-1]['md5'] = -1
+			return True
+		md5 = str(value[0])
 		if not md5:
-			self._error = 'md5 requires the md5 password as an argument (quoted or unquoted)'
+			self._error = 'md5 requires the md5 password as an argument'
 			if self.debug: raise
 			return False
 		self._scope[-1][command] = md5
@@ -459,7 +454,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch('route',[],['next-hop','origin','as-path','med','local-preference','community'])
+			r = self._dispatch('route',[],['next-hop','origin','as-path','med','local-preference','community','label'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -502,6 +497,10 @@ class Configuration (object):
 				return False
 			if command == 'community':
 				if self._route_community(tokens):
+					continue
+				return False
+			if command == 'label':
+				if self._route_label(tokens):
 					continue
 				return False
 			self._error = self._str_route_error
@@ -627,6 +626,31 @@ class Configuration (object):
 			return False
 		self._scope[-1]['routes'][-1].add(communities)
 		return True
+
+	def _route_label (self,tokens):
+		communities = Communities()
+		community = tokens.pop(0)
+		try:
+			if community == '[':
+				while True:
+					try:
+						community = tokens.pop(0)
+					except IndexError:
+						self._error = self._str_route_error
+						if self.debug: raise
+						return False
+					if community == ']':
+						break
+					communities.add(self._parse_community(community))
+			else:
+				communities.add(self._parse_community(community))
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+		self._scope[-1]['routes'][-1].add(communities)
+		return True
+
 
 	# Group Flow  ........
 

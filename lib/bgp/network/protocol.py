@@ -258,49 +258,51 @@ class Protocol (object):
 					raise Notify(2,5)
 
 				if key == Parameter.CAPABILITIES:
-					r = data
-					while r:
-						k,v,r = self._key_values('capability',value)
-
+					while value:
+						k,capv,value = self._key_values('capability',value)
+						# Multiple Capabilities can be present in a single attribute
+						#if r:
+						#	raise Notify(2,0,"bad length for OPEN %s (size mismatch) %s" % ('capability',hexa(value)))
+	
 						if k == Capabilities.MULTIPROTOCOL_EXTENSIONS:
 							if k not in capabilities:
 								capabilities[k] = MultiProtocol()
-							afi = AFI(unpack('!H',value[2:4])[0])
-							safi = SAFI(ord(value[5]))
+							afi = AFI(unpack('!H',capv[:2])[0])
+							safi = SAFI(ord(capv[3]))
 							capabilities[k].append((afi,safi))
 							continue
-
+	
 						if k == Capabilities.GRACEFUL_RESTART:
-							restart = unpack('!H',value[2:4])[0]
+							restart = unpack('!H',capv[:2])[0]
 							restart_flag = restart >> 12
 							restart_time = restart & Graceful.TIME_MASK
-							value = value[4:]
+							value_gr = capv[2:]
 							families = []
-							while value:
-								afi = AFI(unpack('!H',value[:2])[0])
-								safi = SAFI(ord(value[2]))
-								flag_family = ord(value[0])
+							while value_gr:
+								afi = AFI(unpack('!H',value_gr[:2])[0])
+								safi = SAFI(ord(value_gr[2]))
+								flag_family = ord(value_gr[0])
 								families.append((afi,safi,flag_family))
-								value = value[4:]
+								value_gr = value_gr[4:]
 							capabilities[k] = Graceful(restart_flag,restart_time,families)
 							continue
-
+	
 						if k == Capabilities.FOUR_BYTES_ASN:
-							capabilities[k] = ASN(unpack('!L',value[2:6])[0])
+							capabilities[k] = ASN(unpack('!L',capv[:4])[0])
 							continue
-
+	
 						if k == Capabilities.ROUTE_REFRESH:
 							capabilities[k] = RouteRefresh()
 							continue
-
+	
 						if k == Capabilities.CISCO_ROUTE_REFRESH:
 							capabilities[k] = CiscoRouteRefresh()
 							continue
-
+	
 						if k not in capabilities:
 							capabilities[k] = Unknown(k)
-						if value[2:]:
-							capabilities[k].append([ord(_) for _ in value[2:]])
+						if capv:
+							capabilities[k].append([ord(_) for _ in capv])
 				else:
 					raise Notify(2,0,'unknow OPEN parameter %s' % hex(key))
 		return capabilities

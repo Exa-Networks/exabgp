@@ -31,9 +31,15 @@ class Connection (object):
 
 		try:
 			if peer.afi == AFI.ipv4:
-				self._io = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+				if md5:
+					self._io = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+				else:
+					self._io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			if peer.afi == AFI.ipv6:
-				self._io = socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+				if md5:
+					self._io = socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+				else:
+					self._io = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
 			try:
 				self._io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 			except AttributeError:
@@ -59,12 +65,12 @@ class Connection (object):
 				
 				n_addr = socket.inet_aton(peer.ip)
 				n_port = socket.htons(179)
-				tcp_md5sig = 'HH4s%dx2xH4x%ds' % (SS_PADSIZE, TCP_MD5SIG_MAXKEYLEN)
-				md5sig = struct.pack(tcp_md5sig, socket.AF_INET, n_port, n_addr, len(md5), md5)
+				shape = 'HH4s%dx2xH4x%ds' % (SS_PADSIZE, TCP_MD5SIG_MAXKEYLEN)
+				md5sig = struct.pack(shape, socket.AF_INET, n_port, n_addr, len(md5), md5)
 				self._io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, md5sig)
 			except socket.error,e:
 				self.close()
-				raise Failure('This OS does not support TCP_MD5SIG, you can not use MD5 : %s' % str(e))
+				raise Failure('this OS does not support our MD5 hack: %s' % str(e))
 
 		try:
 			if peer.afi == AFI.ipv4:
@@ -74,7 +80,7 @@ class Connection (object):
 			self._io.setblocking(0)
 		except socket.error, e:
 			self.close()
-			raise Failure('could not connect to peer (if you use MD5, check your passwords): %s' % str(e))
+			raise Failure('could not connect to peer: %s' % str(e))
 
 	def pending (self):
 		r,_,_ = select.select([self._io,],[],[],0)
@@ -90,8 +96,8 @@ class Connection (object):
 			self.last_read = time.time()
 			if self.debug: print "received:", hexa(r)
 			return r
-		except socket.timeout:
-			self.close()
+		except socket.timeout,e:
+			self.close()	
 			if self.debug: self.log.out(trace())
 			raise Failure('timeout attempting to read data from the network:  %s ' % str(e))
 		except socket.error,e:
