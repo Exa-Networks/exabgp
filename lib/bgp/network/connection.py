@@ -31,15 +31,9 @@ class Connection (object):
 
 		try:
 			if peer.afi == AFI.ipv4:
-				if md5:
-					self._io = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
-				else:
-					self._io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+				self._io = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
 			if peer.afi == AFI.ipv6:
-				if md5:
-					self._io = socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
-				else:
-					self._io = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+				self._io = socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
 			try:
 				self._io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 			except AttributeError:
@@ -65,12 +59,12 @@ class Connection (object):
 				
 				n_addr = socket.inet_aton(peer.ip)
 				n_port = socket.htons(179)
-				shape = 'HH4s%dx2xH4x%ds' % (SS_PADSIZE, TCP_MD5SIG_MAXKEYLEN)
-				md5sig = struct.pack(shape, socket.AF_INET, n_port, n_addr, len(md5), md5)
+				tcp_md5sig = 'HH4s%dx2xH4x%ds' % (SS_PADSIZE, TCP_MD5SIG_MAXKEYLEN)
+				md5sig = struct.pack(tcp_md5sig, socket.AF_INET, n_port, n_addr, len(md5), md5)
 				self._io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, md5sig)
 			except socket.error,e:
 				self.close()
-				raise Failure('this OS does not support our MD5 hack: %s' % str(e))
+				raise Failure('This OS does not support TCP_MD5SIG, you can not use MD5 : %s' % str(e))
 
 		try:
 			if peer.afi == AFI.ipv4:
@@ -80,7 +74,7 @@ class Connection (object):
 			self._io.setblocking(0)
 		except socket.error, e:
 			self.close()
-			raise Failure('could not connect to peer: %s' % str(e))
+			raise Failure('could not connect to peer (if you use MD5, check your passwords): %s' % str(e))
 
 	def pending (self):
 		r,_,_ = select.select([self._io,],[],[],0)
