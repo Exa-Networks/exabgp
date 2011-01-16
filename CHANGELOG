@@ -1,8 +1,8 @@
-Version 1.1.0 - 10th of January 2010
+Version 1.1.0 - 10th of January 2011
  * Improvement: Tested and completed TCP MD5 signature
     contribution: MD5 TCP code by David Farrar
 
-Version 1.0.4 - 8th of January 2010
+Version 1.0.4 - 8th of January 2011
  * Improvement: can now toggle debuging using environment values (DEBUG_CONFIGURATION, DEBUG_SUPERVISOR, DEBUG_WIRE)
  * Fix: some change to the AS_PATH generation code (some routers did not accept empty AS_PATH as it was encoded before)
     reported by: R.P. Aditya
@@ -10,7 +10,7 @@ Version 1.0.4 - 8th of January 2010
     (issue 1) reported by Manuel Guesdon
  * Experimental: Some MD5 for Linux (untested - surely not working)
 
-Version 1.0.3 - 6th of January 2010
+Version 1.0.3 - 6th of January 2011
  * Fix: missing default localpref on IBGP session if not specified on the route
  * Improvement: more verbose messages in case of OPEN negociation issue
  * Fix: typo preventing 4 Bytes ASN to work
