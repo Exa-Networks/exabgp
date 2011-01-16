@@ -8,6 +8,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 import os
+from copy import deepcopy as clone
 
 from bgp.structure.address    import AFI
 from bgp.structure.ip         import to_IP,to_Prefix
@@ -21,15 +22,23 @@ from bgp.message.open         import HoldTime,RouterID
 from bgp.message.update.route import Route
 from bgp.message.update.flow  import BinaryOperator,NumericOperator
 from bgp.message.update.flow  import Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
-from bgp.message.update.attribute             import AttributeID
-#from bgp.message.update.attributes            import Attributes
+from bgp.message.update.attribute             import AttributeID,Attribute
 from bgp.message.update.attribute.origin      import Origin
 from bgp.message.update.attribute.nexthop     import NextHop
 from bgp.message.update.attribute.aspath      import ASPath
 from bgp.message.update.attribute.med         import MED
 from bgp.message.update.attribute.localpref   import LocalPreference
 from bgp.message.update.attribute.communities import Community,Communities,to_FlowTrafficRate,to_RouteTargetCommunity_00,to_RouteTargetCommunity_01
-#from bgp.message.update.attribute.labels      import Label,Labels
+
+
+# Duck class, faking part of the Attribute interface
+# We add this to routes when when need o split a route in smaller route
+# The value stored is the longer netmask we want to use
+# As this is not a real BGP attribute this stays in the configuration file
+
+class Split (int):
+	ID = AttributeID.INTERNAL_SPLIT
+	MULTIPLE = False
 
 
 class Configuration (object):
@@ -37,7 +46,7 @@ class Configuration (object):
 	
 	_str_route_error = '' \
 	'syntax:\n' \
-	'route 10.0.0.1/24 {\n' \
+	'route 10.0.0.1/22 {\n' \
 	'  next-hop 192.0.1.254;\n'
 	'  origin IGP|EGP|INCOMPLETE;\n' \
 	'  as-path [ ASN1 ASN2 ];\n' \
@@ -45,14 +54,16 @@ class Configuration (object):
 	'  local-preference 100;\n' \
 	'  community [ 65000 65001 65002 ];\n' \
 	'  label [ 100 200 ];\n' \
+	'  split /24\n' \
 	'}\n\n' \
-	'route 10.0.0.1/24 next-hop 192.0.2.1' \
+	'route 10.0.0.1/22 next-hop 192.0.2.1' \
 	' origin IGP|EGP|INCOMPLETE' \
 	' as-path ASN' \
 	' med 100' \
 	' local-preference 100' \
 	' community 65000' \
 	' label 150' \
+	' split /24' \
 	';\n\n' \
 	'community and as-path can take a single community as parameter. only next-hop is mandatory\n\n'
 
@@ -249,6 +260,7 @@ class Configuration (object):
 		if command == 'next-hop': return self._route_next_hop(tokens[1:])
 		if command == 'local-preference': return self._route_local_preference(tokens[1:])
 		if command == 'community': return self._route_community(tokens[1:])
+		if command == 'split': return self._route_split(tokens[1:])
 		if command == 'label': return self._route_label(tokens[1:])
 		
 		if command == 'source': return self._flow_source(tokens[1:])
@@ -431,6 +443,58 @@ class Configuration (object):
 
 	# Group Route  ........
 
+	def split_last_route (self):
+		# if the route does not need to be broken in smaller routes, return
+		route = self._scope[-1]['routes'][-1]
+		if not AttributeID.INTERNAL_SPLIT in route:
+			return True
+
+		# ignore if the request is for an aggregate, or the same size
+		mask = route.nlri.mask
+		split = route[AttributeID.INTERNAL_SPLIT]
+		if mask >= split:
+			return True
+
+		# remove the route, we are going to replace it
+		route = self._scope[-1]['routes'].pop(-1)
+
+		# calculate the number of IP in the /<size> of the new route
+		increment = pow(2,(len(route.nlri)*8) - split)
+		# how many new routes are we going to create from the initial one
+		number = pow(2,split - route.nlri.mask)
+
+		# convert the IP into a integer/long
+		ip = 0
+		for c in route.nlri.raw:
+			ip = ip << 8
+			ip += ord(c)
+
+		# route is becoming a template we will clone (deepcopy) so change its netmask
+		route.nlri.mask = split
+
+		# generate the new routes
+		for _ in range(number):
+			r = clone(route)
+			# convert the ip to a network packed format
+			ipn = ip
+			i = ''
+			while ipn:
+				lower = ipn&0xFF
+				ipn = ipn >> 8
+				i = chr(lower) + i
+			
+			# change the route network
+			r.nlri.update_raw(i)
+			# update ip to the next route
+			ip += increment
+			
+			# save route
+			self._scope[-1]['routes'].append(r)
+		
+		# route is no longer needed - delete it explicitely
+		del(route)
+		return True
+
 	def _insert_static_route (self,tokens):
 		try:
 			ip,nm = tokens.pop(0).split('/')
@@ -463,10 +527,9 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch('route',[],['next-hop','origin','as-path','med','local-preference','community','label'])
+			r = self._dispatch('route',[],['next-hop','origin','as-path','med','local-preference','community','split','label'])
 			if r is False: return False
-			if r is None: break
-		return True
+			if r is None: return self.split_last_route()
 
 	def _single_static_route (self,tokens):
 		if len(tokens) <3:
@@ -508,13 +571,17 @@ class Configuration (object):
 				if self._route_community(tokens):
 					continue
 				return False
+			if command == 'split':
+				if self._route_split(tokens):
+					continue
+				return False
 			if command == 'label':
 				if self._route_label(tokens):
 					continue
 				return False
 			self._error = self._str_route_error
 			return False
-		return True
+		return self.split_last_route()
 
 	# Command Route
 
@@ -635,6 +702,18 @@ class Configuration (object):
 			return False
 		self._scope[-1]['routes'][-1].add(communities)
 		return True
+
+	def _route_split (self,tokens):
+		try:
+			size = tokens.pop(0)
+			if not size or size[0] != '/':
+				raise ValueError('route "as" require a CIDR')
+			self._scope[-1]['routes'][-1].add(Split(int(size[1:])))
+			return True
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
 
 	def _route_label (self,tokens):
 		communities = Communities()

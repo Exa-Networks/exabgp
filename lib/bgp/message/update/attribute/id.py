@@ -27,6 +27,8 @@ class AttributeID (int):
 	MP_REACH_NLRI      = 0x0e # 14
 	MP_UNREACH_NLRI    = 0x0f # 15
 
+	INTERNAL_SPLIT     = 0xFFFF
+
 	def __str__ (self):
 		# This should move within the classes and not be here
 		if self == 0x01: return "ORIGIN"
@@ -41,6 +43,7 @@ class AttributeID (int):
 		if self == 0x11: return "AS4_PATH"
 		if self == 0x0e: return "MP_REACH_NLRI"
 		if self == 0x0f: return "MP_UNREACH_NLRI"
+		if self == 0xffff: return "INTERNAL SPLIT"
 		return 'UNKNOWN ATTRIBUTE (%s)' % hex(self)
 
 

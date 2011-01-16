@@ -52,6 +52,9 @@ class Inet (object):
 	def __init__ (self,afi,raw):
 		self.afi = afi
 		self.raw = raw
+		self.__update()
+		
+	def __update (self):
 		self.ip = self._ip()
 		
 		if self.afi == AFI.ipv4 and int(self.ip.split('.')[0]) in range(224,240): # 239 is last
@@ -59,6 +62,10 @@ class Inet (object):
 		else:
 			self.safi = SAFI.unicast
 
+	def update_raw (self,raw):
+		self.raw = raw
+		self.__update()
+	
 	def pack (self):
 		return self.raw
 
