@@ -48,7 +48,7 @@ For production use, we are using [[http://cr.yp.to/daemontools.html|deamontools]
 
 As the application does not bind to port 179, or perform RIB update, and hence does not need any escalated privileges and will happily run as "nobody".
 
-   #!/bin/bash
+   #!/bin/sh
    exec nice --4 env PYTHONPATH=/opt/bgp/lib setuidgid nobody /opt/bgp/daemon/bgpd /opt/bgp/etc/bgp/service-ip.txt 2>&1
 
 It is possible to send a SIGHUP signal the program to have it send the right updates (peer setup and tear down, announcement and withdrawal) to sync the remote RIB to a new configuration file.

@@ -1,2 +1,2 @@
-#!/bin/bash
+#!/bin/sh
 exec nice --4 env PYTHONPATH=/opt/bgp/lib setuidgid nobody /opt/bgp/daemon/bgpd /opt/bgp/etc/bgp/service-ip.txt 2>&1
