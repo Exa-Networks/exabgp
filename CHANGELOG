@@ -2,6 +2,8 @@ Version 1.x.x - ..th of ....... 2011
  * Improvement: Allow to break route in more specific (ie define a /22 and get 4x /24 announced)
                 This is useful when blackholing traffic to make sure no routes more specific are received from your network peer/transit
     requested by : Renauld Chaput
+ * Improvement: Save the program PID into a file (set the PID environment value with the file path)
+    requested by : Renauld Chaput
 
 Version 1.1.0 - 10th of January 2011
  * Improvement: Tested and completed TCP MD5 signature
