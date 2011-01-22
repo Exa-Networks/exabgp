@@ -9,6 +9,9 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 from bgp.message.update import Update
 
+from bgp.log import Logger
+logger = Logger()
+
 class Delta (object):
 	def __init__ (self,table):
 		self.table = table
@@ -32,14 +35,14 @@ class Delta (object):
 				continue
 			if action == '-':
 				if remove:
-					print 'withdrawing  ', route
+					logger.rib('withdrawing %s' % route)
 					messages.append(Update([route]).withdraw(asn4))
 				else:
-					print 'keeping route', route
+					logger.rib('keeping %s' % route)
 			if action == '*':
-				print 'updating     ', route
+				logger.rib('updating %s' % route)
 				messages.append(Update([route]).update(asn4,local_asn,peer_asn))
 			if action == '+':
-				print 'announcing    ', route
+				logger.rib('announcing %s' % route)
 				messages.append(Update([route]).announce(asn4,local_asn,peer_asn))
 		return messages

@@ -14,7 +14,7 @@ from struct import unpack
 from bgp.rib.table import Table
 from bgp.rib.delta import Delta
 
-from bgp.utils                import Log,hexa
+from bgp.utils                import hexa
 from bgp.structure.address    import AFI,SAFI
 from bgp.structure.ip         import BGPPrefix,Inet,to_IP
 from bgp.structure.asn        import ASN,AS_TRANS
@@ -39,20 +39,24 @@ from bgp.message.update.attribute.communities import Community,Communities
 #from bgp.message.update.attribute.mprnlri     import MPRNLRI
 from bgp.message.update.attribute.mpurnlri    import MPURNLRI
 
+from bgp.log import Logger
+logger = Logger()
+
 # README: Move all the old packet decoding in another file to clean up the includes here, as it is not used anyway
 
 class Protocol (object):
-	trace = False
 	decode = True
 	strict = False
 	parse_update = False # DO NOT TOGGLE TO TRUE, THE CODE IS COMPLETELY BROKEN
 
 	def __init__ (self,peer,connection=None):
-		self.log = Log(peer.neighbor.peer_address,peer.neighbor.peer_as)
 		self.peer = peer
 		self.neighbor = peer.neighbor
 		self.connection = connection
 		self._delta = Delta(Table(peer))
+
+	def me (self,message):
+		return "%15s/%7s %s" % (self.peer.neighbor.peer_address,self.peer.neighbor.peer_as,message)
 
 	def connect (self):
 		# allows to test the protocol code using modified StringIO with a extra 'pending' function
@@ -115,8 +119,6 @@ class Protocol (object):
 		if len(data) != length:
 			raise Notify(ord(msg),0)
 
-		self.log.outIf(self.trace and msg == Update.TYPE,"UPDATE RECV: %s " % hexa(data))
-
 		if msg == Notification.TYPE:
 			raise Notification(ord(data[0]),ord(data[1]))
 
@@ -129,7 +131,7 @@ class Protocol (object):
 		if msg == Update.TYPE:
 			if self.parse_update:
 				return self.UpdateFactory(data)
-			self.log.out('<- UPDATE (not parsed)')
+			logger.message(self.me('<< UPDATE (not parsed)'))
 			return NOP(data)
 
 		if self.strict:
@@ -193,7 +195,7 @@ class Protocol (object):
 		# Python 2.5.2 for example send partial data which BGP decoders then take as garbage.
 		if m:
 			for update in m:
-				self.log.outIf(self.trace,"UPDATE (update)   SENT: %s" % hexa(update[19:]))
+				logger.message(self.me(">> UPDATE (update)"))
 				self.connection.write(update)
 			return m
 		return []
@@ -203,7 +205,7 @@ class Protocol (object):
 	def new_eors (self,families):
 		eor = EOR()
 		eors = eor.eors(families)
-		self.log.outIf(self.trace,"UPDATE (eors) SENT: %s" % hexa(eors[19:]))
+		logger.message(self.me(">> UPDATE (eors)"))
 		self.connection.write(eors)
 		return eor.announced()
 
@@ -212,7 +214,6 @@ class Protocol (object):
 		# This delta update can take quite some time (a few seconds with 500+ routes which may be a problem with low keepalive)
 		m = self._delta.update(asn4,self.neighbor.local_as,self.neighbor.peer_as)
 		updates = ''.join(m)
-		self.log.outIf(self.trace,"UPDATE (update)   SENT: %s" % hexa(updates[19:]))
 		if m:
 			self.connection.write(updates)
 			return m
@@ -347,7 +348,7 @@ class Protocol (object):
 			nlri = BGPPrefix(AFI.ipv4,announced)
 			announced = announced[len(nlri):]
 			announce.append(nlri)
-			self.log.out('received route %s' % nlri)
+			#logger.info(self.me('received route %s' % nlri))
 
 		return Update(remove,announce,attributes)
 
@@ -435,14 +436,14 @@ class Protocol (object):
 			offset = 3
 			# See RFC 5549 for better support
 			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
-				self.log.out('we only understand IPv4/IPv6 and should never have received this MP_UNREACH_NLRI (%s %s)' % (afi,safi))
+				#self.log.out('we only understand IPv4/IPv6 and should never have received this MP_UNREACH_NLRI (%s %s)' % (afi,safi))
 				return self._AttributesFactory(next_attributes)
 			data = data[offset:]
 			while data:
 				prefix = BGPPrefix(afi,data)
 				data = data[len(prefix):]
 				self.attributes.add(MPURNLRI(AFI(afi),SAFI(safi),prefix))
-				self.log.out('removing MP route %s' % str(prefix))
+				#self.log.out('removing MP route %s' % str(prefix))
 			return self._AttributesFactory(next_attributes)
 
 		if code == AttributeID.MP_REACH_NLRI:
@@ -451,17 +452,17 @@ class Protocol (object):
 			afi,safi = unpack('!HB',data[:3])
 			offset = 3
 			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
-				self.log.out('we only understand IPv4/IPv6 and should never have received this MP_REACH_NLRI (%s %s)' % (afi,safi))
+				#self.log.out('we only understand IPv4/IPv6 and should never have received this MP_REACH_NLRI (%s %s)' % (afi,safi))
 				return self._AttributesFactory(next_attributes)
 			len_nh = ord(data[offset])
 			offset += 1
 			if afi == AFI.ipv4 and not len_nh != 4:
 				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-				self.log.out('bad IPv4 next-hop length (%d)' % len_nh)
+				#self.log.out('bad IPv4 next-hop length (%d)' % len_nh)
 				return self._AttributesFactory(next_attributes)
 			if afi == AFI.ipv6 and not len_nh in (16,32):
 				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-				self.log.out('bad IPv6 next-hop length (%d)' % len_nh)
+				#self.log.out('bad IPv6 next-hop length (%d)' % len_nh)
 				return self._AttributesFactory(next_attributes)
 			nh = data[offset:offset+len_nh]
 			offset += len_nh
@@ -487,7 +488,7 @@ class Protocol (object):
 				route = Route(prefix.afi,prefix.safi,prefix)
 				data = data[len(prefix):]
 				route.add(NextHop(to_IP(nh)))
-				self.log.out('adding MP route %s' % str(route))
+				#self.log.out('adding MP route %s' % str(route))
 			return self._AttributesFactory(next_attributes)
 
 		import warnings

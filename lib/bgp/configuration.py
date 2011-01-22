@@ -30,6 +30,8 @@ from bgp.message.update.attribute.med         import MED
 from bgp.message.update.attribute.localpref   import LocalPreference
 from bgp.message.update.attribute.communities import Community,Communities,to_FlowTrafficRate,to_RouteTargetCommunity_00,to_RouteTargetCommunity_01
 
+from bgp.log import Logger
+logger = Logger()
 
 # Duck class, faking part of the Attribute interface
 # We add this to routes when when need o split a route in smaller route
@@ -42,8 +44,8 @@ class Split (int):
 
 
 class Configuration (object):
-	debug = False if os.environ.get('DEBUG_CONFIGURATION','0') == '0' else True
-	
+	debug = False if os.environ.get('RAISE_CONFIGURATION','0') == '0' else True
+
 	_str_route_error = '' \
 	'syntax:\n' \
 	'route 10.0.0.1/22 {\n' \
@@ -177,7 +179,7 @@ class Configuration (object):
 	def _dispatch (self,name,multi=set([]),single=set([])):
 		try:
 			tokens = self.tokens()
-			if self.debug: print 'dispatching', tokens, 'with valid options multi', multi, 'single', single 
+			logger.configuration('dispatching %s with valid options multi %s single %s' % (str(tokens), str(multi), str(single)))
 		except IndexError:
 			self._error = 'configuration file incomplete (most likely missing })'
 			if self.debug: raise
@@ -768,7 +770,7 @@ class Configuration (object):
 		return True
 
 	def _check_flow_route (self):
-		if self.debug: print "warning: no check on flows are implemented"
+		logger.configuration('warning: no check on flows are implemented')
 		return True
 
 	def _multi_flow_route (self,tokens):
@@ -970,10 +972,10 @@ class Configuration (object):
 		try:
 			speed = int(tokens[0])
 			if speed < 9600 and speed != 0:
-				print "warning: rate-limiting flow under 9600 bytes per seconds may not work"
+				logger.warning("rate-limiting flow under 9600 bytes per seconds may not work")
 			if speed > 1000000000000:
 				speed = 1000000000000
-				print "warning: rate-limiting changed for 1 000 000 000 000 bytes from %s" % tokens[0]
+				logger.warning("rate-limiting changed for 1 000 000 000 000 bytes from %s" % tokens[0])
 			self._scope[-1]['routes'][-1].add_action(to_FlowTrafficRate(ASN(0),speed))
 		except ValueError:
 			self._error = self._str_route_error

@@ -15,6 +15,9 @@ from bgp.message.update.attributes import Attributes
 from bgp.message.update.attribute.id import AttributeID
 from bgp.message.update.attribute.communities import ECommunities
 
+from bgp.log import Logger
+logger = Logger()
+
 # =================================================================== Flow Components
 
 class IComponent (object):
@@ -243,7 +246,7 @@ class _FlowNLRI (Attributes):
 		elif l < 0x0FFF:
 			data = "%s%s" % (pack('!H',l) | 0xF000,components)
 		else:
-			print "rule too big for NLRI - how to handle this - does this work ?"
+			logger.critical("rule too big for NLRI - how to handle this - does this work ?")
 			data = "%s" % chr(0)
 		return data
 		

@@ -4,6 +4,8 @@ Version 1.x.x - ..th of ....... 2011
     requested by : Renaud Chaput
  * Improvement: Save the program PID into a file (set the PID environment value with the file path)
     requested by : Renaud Chaput
+ * Improvement: Add syslog support
+    requested by : ... someone ...
 
 Version 1.1.0 - 10th of January 2011
  * Improvement: Tested and completed TCP MD5 signature

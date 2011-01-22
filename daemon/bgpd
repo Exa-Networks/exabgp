@@ -12,11 +12,12 @@ import os
 import time
 import signal
 
-from bgp.utils                import Log
-from bgp.network.peer         import Peer
+from bgp.network.peer import Peer
+
+from bgp.log import Logger
+logger = Logger()
 
 class Supervisor (object):
-	debug = False if os.environ.get('DEBUG_SUPERVISOR','0') == '0' else True
 	pid_file = os.environ.get('PID','')
 
 	# import os
@@ -24,7 +25,6 @@ class Supervisor (object):
 	clear = ''.join([chr(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a']])
 
 	def __init__ (self,configuration):
-		self.log = Log('Supervisor','')
 		self.configuration = configuration
 		self._peers = {}
 		self._shutdown = False
@@ -41,11 +41,16 @@ class Supervisor (object):
 		if not self.pid_file:
 			return
 
+		ownid = os.getpid()
+
 		flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
 		mode = ((os.R_OK | os.W_OK) << 6) | (os.R_OK << 3) | os.R_OK
-		fd = os.open(self.pid_file,flags,mode)
 
-		ownid = os.getpid()
+		try:
+			fd = os.open(self.pid_file,flags,mode)
+		except OSError, e:
+			logger.supervisor("PIDfile already exists, not updated %s" % self.pid_file)
+			return
 
 		try:
 			f = os.fdopen(fd,'w')
@@ -53,9 +58,9 @@ class Supervisor (object):
 			f.write(line)
 			f.close()
 		except IOError, e:
-			self.log.out("Can not create PIDfile %s" % self.pid_file)
+			logger.supervisor("Can not create PIDfile %s" % self.pid_file)
 			return
-		self.log.out("created PIDfile %s with value %d" % (self.pid_file,ownid))
+		logger.supervisor("created PIDfile %s with value %d" % (self.pid_file,ownid))
 
 
 	def removepid (self):
@@ -67,21 +72,21 @@ class Supervisor (object):
 			if e.errno == errno.ENOENT:
 				pass
 			else:
-				self.log.out("Can not remove PIDfile %s" % self.pid_file)
+				logger.supervisor("Can not remove PIDfile %s" % self.pid_file)
 				return
-		self.log.out("removed PIDfile %s" % self.pid_file)
+		logger.supervisor("removed PIDfile %s" % self.pid_file)
 
 
 	def sigterm (self,signum, frame):
-		if self.debug: self.log.out("SIG TERM received")
+		logger.supervisor("SIG TERM received")
 		self._shutdown = True
 
 	def sighup (self,signum, frame):
-		if self.debug: self.log.out("SIG HUP received")
+		logger.supervisor("SIG HUP received")
 		self._reload = True
 
 	def sigalrm (self,signum, frame):
-		if self.debug: self.log.out("SIG ALRM received")
+		logger.supervisor("SIG ALRM received")
 		self._restart = True
 
 	def run (self):
@@ -106,57 +111,57 @@ class Supervisor (object):
 				# RFC state that we MUST not more than one KEEPALIVE / sec
 				time.sleep(1.0)
 			except KeyboardInterrupt:
-				if self.debug: self.log.out("^C received")
+				logger.supervisor("^C received")
 				self._shutdown = True
 		self.removepid()
 
 	def shutdown (self):
 		"""terminate all the current BGP connections"""
-		self.log.out("performing shutdown")
+		logger.info("performing shutdown")
 		for ip in self._peers.keys():
 			self._peers[ip].stop()
 
 	def reload (self):
 		"""reload the configuration and send to the peer the route which changed"""
-		self.log.out("performing reload")
+		logger.info("performing reload")
 		
 		reloaded = self.configuration.reload()
 		if not reloaded:
-			self.log.out("problem with the configuration file, no change done")
-			self.log.out(configuration.error)
+			logger.info("problem with the configuration file, no change done")
+			logger.info(configuration.error)
 			return
 
 		for ip in self._peers.keys():
 			if ip not in self.configuration.neighbor.keys():
-				if self.debug: self.log.out("Removing Peer %s" % str(ip))
+				logger.supervisor("Removing Peer %s" % str(ip))
 				self._peers[ip].stop()
 
 		for ip in self.configuration.neighbor.keys():
 			neighbor = self.configuration.neighbor[ip]
 			# new peer
 			if ip not in self._peers.keys():
-				if self.debug: self.log.out("New Peer %s" % str(ip))
+				logger.supervisor("New Peer %s" % str(ip))
 				peer = Peer(neighbor,self)
 				self._peers[ip] = peer
 			else:
 				# check if the neighbor definition are the same (BUT NOT THE ROUTES)
 				if self._peers[ip].neighbor != neighbor:
-					if self.debug: self.log.out("Peer definition change, restarting %s" % str(ip))
+					logger.supervisor("Peer definition change, restarting %s" % str(ip))
 					self._peers[ip].restart(neighbor)
 				# set the new neighbor with the new routes
 				else:
-					if self.debug: self.log.out("updating routes for %s" % str(ip))
+					logger.supervisor("updating routes for %s" % str(ip))
 					self._peers[ip].reload(neighbor.routes)
-		self.log.out("loaded new configuration successfully")
+		logger.info("loaded new configuration successfully")
 
 	def restart (self):
 		"""kill the BGP session and restart it"""
-		self.log.out("performing restart")
+		logger.info("performing restart")
 		self.configuration.reload()
 
 		for ip in self._peers.keys():
 			if ip not in self.configuration.neighbor.keys():
-				if self.debug: self.log.out("Removing Peer %s" % str(ip))
+				logger.supervisor("Removing Peer %s" % str(ip))
 				self._peers[ip].stop()
 			else:
 				self._peers[ip].restart()
@@ -188,11 +193,14 @@ if __name__ == '__main__':
 		sys.stdout.write('set the following environment values to gather information and report bugs\n')
 		sys.stdout.write('\n')
 		sys.stdout.write('DEBUG_CONFIGURATION : verbose configuration parsing\n')
-		sys.stdout.write('DEBUG_SUPERVISOR : debug the supervisor\n')
-		sys.stdout.write('DEBUG_WIRE : debug the packet sent and received\n')
+		sys.stdout.write('DEBUG_SUPERVISOR : signal received, configuration reload (default: yes))\n')
+		sys.stdout.write('DEBUG_WIRE : the packet sent and received\n')
+		sys.stdout.write('DEBUG_RIB : change in route announcement in config reload\n')
+		sys.stdout.write('DEBUG_MESSAGE : changes in route announcement in config reload (default: yes)\n')
+		sys.stdout.write('DEBUG_TIMERS : tracking keepalives\n')
 		sys.stdout.write('\n')
 		sys.stdout.write('For example :\n')
-		sys.stdout.write('> env DEBUG_SUPERVISOR=1 DEBUG_WIRE=1 ./bin/bgpd ./etc/bgp/configuration.txt\n')
+		sys.stdout.write('> env DEBUG_SUPERVISOR=0 DEBUG_WIRE=1 ./bin/bgpd ./etc/bgp/configuration.txt\n')
 		sys.stdout.write('*******************************************************************************\n')
 		sys.stdout.write('\n')
 		sys.exit('usage:\n bgpd <configuration file>\n')

@@ -13,15 +13,15 @@ import time
 import socket
 import select
 
-from bgp.utils import Log,hexa,trace
+from bgp.utils import hexa,trace
 from bgp.structure.address import AFI
 from bgp.message import Failure
 
-class Connection (object):
-	debug = False if os.environ.get('DEBUG_WIRE','0') == '0' else True
+from bgp.log import Logger
+logger = Logger()
 
+class Connection (object):
 	def __init__ (self,md5,peer,local):
-		self.log = Log(peer,'-')
 		self.last_read = 0
 		self.last_write = 0
 		self.peer = peer
@@ -88,20 +88,20 @@ class Connection (object):
 		try:
 			r = self._io.recv(number)
 			self.last_read = time.time()
-			if self.debug: print "received:", hexa(r)
+			logger.wire("%15s RECV %s" % (self.peer,hexa(r)))
 			return r
 		except socket.timeout,e:
-			self.close()	
-			if self.debug: self.log.out(trace())
+			self.close()
+			logger.wire("%15s %s" % (self.peer,trace()))
 			raise Failure('timeout attempting to read data from the network:  %s ' % str(e))
 		except socket.error,e:
 			self.close()
-			if self.debug: self.log.out(trace())
+			logger.wire("%15s %s" % (self.peer,trace()))
 			raise Failure('problem attempting to read data from the network:  %s ' % str(e))
 
 	def write (self,data):
 		try:
-			if self.debug: print "sending :", hexa(data)
+			logger.wire("%15s SENT %s" % (self.peer,hexa(data)))
 			r = self._io.send(data)
 			self.last_write = time.time()
 			return r
@@ -109,7 +109,7 @@ class Connection (object):
 			# Broken pipe, we ignore as we want to make sure if there is data to read before failing
 			if getattr(e,'errno',None) != 32:
 				self.close()
-				if self.debug: self.log.out(trace())
+				logger.wire("%15s %s" % (self.peer,trace()))
 				raise Failure('problem attempting to write data to the network: %s' % str(e))
 
 	def close (self):
