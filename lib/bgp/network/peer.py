@@ -53,7 +53,7 @@ class Peer (object):
 		self._restarted = FORCE_GRACEFUL
 
 	def me (self,message):
-		return "%15s/%7s %s" % (self.neighbor.peer_address,self.neighbor.peer_as,message)
+		return "Peer %15s ASN %-7s %s" % (self.neighbor.peer_address,self.neighbor.peer_as,message)
 
 	def stop (self):
 		self._running = False
@@ -110,7 +110,7 @@ class Peer (object):
 
 			messages = self.bgp.new_announce()
 			if messages:
-				logger.message(self.me('>> UPDATE (%d)' % len(messages)))
+				logger.message(self.me('>> %d UPDATE(s)' % len(messages)))
 
 			if	self.neighbor.graceful_restart and \
 				self.open.capabilities.announced(Capabilities.MULTIPROTOCOL_EXTENSIONS) and \

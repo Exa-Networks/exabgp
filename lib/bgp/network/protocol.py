@@ -56,7 +56,7 @@ class Protocol (object):
 		self._delta = Delta(Table(peer))
 
 	def me (self,message):
-		return "%15s/%7s %s" % (self.peer.neighbor.peer_address,self.peer.neighbor.peer_as,message)
+		return "Peer %15s ASN %-7s %s" % (self.peer.neighbor.peer_address,self.peer.neighbor.peer_as,message)
 
 	def connect (self):
 		# allows to test the protocol code using modified StringIO with a extra 'pending' function

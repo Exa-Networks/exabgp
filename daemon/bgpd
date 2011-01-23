@@ -62,7 +62,7 @@ class Supervisor (object):
 				if pid > 0:
 					os._exit(0)
 			except OSError, e:
-				logger.critial('can not fork, errno %d : %s' % (e.errno,e.strerror))
+				logger.critial('can not fork, errno %d : %s' % (e.errno,e.strerror),'supervisor')
 
 		# do not detach if we are already supervised or run by init like process
 		if self._is_socket(sys.__stdin__.fileno()) or os.getppid() != 1:
@@ -156,18 +156,18 @@ class Supervisor (object):
 
 	def shutdown (self):
 		"""terminate all the current BGP connections"""
-		logger.info("performing shutdown")
+		logger.info("performing shutdown","supervisor")
 		for ip in self._peers.keys():
 			self._peers[ip].stop()
 
 	def reload (self):
 		"""reload the configuration and send to the peer the route which changed"""
-		logger.info("performing reload")
+		logger.info("performing reload","configuration")
 		
 		reloaded = self.configuration.reload()
 		if not reloaded:
-			logger.info("problem with the configuration file, no change done")
-			logger.info(configuration.error)
+			logger.info("problem with the configuration file, no change done","configuration")
+			logger.info(configuration.error,"configuration")
 			return
 
 		for ip in self._peers.keys():
@@ -191,11 +191,11 @@ class Supervisor (object):
 				else:
 					logger.supervisor("updating routes for %s" % str(ip))
 					self._peers[ip].reload(neighbor.routes)
-		logger.info("loaded new configuration successfully")
+		logger.info("loaded new configuration successfully",'configuration')
 
 	def restart (self):
 		"""kill the BGP session and restart it"""
-		logger.info("performing restart")
+		logger.info("performing restart","supervisor")
 		self.configuration.reload()
 
 		for ip in self._peers.keys():

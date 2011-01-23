@@ -25,24 +25,3 @@ def trace ():
 	r = buff.getvalue()
 	buff.close()
 	return r
-
-#class Log (object):
-#	follow = True
-#
-#	def __init__ (self,peer,asn):
-#		self.peer = peer
-#		self.asn = asn
-#
-#	def out (self,string):
-#		if self.follow:
-#			try:
-#				for line in string.split('\n'):
-#					return time.strftime('%j %H:%M:%S',time.localtime()), '%15s/%7s' % (self.peer,self.asn), line
-#			except IOError:
-#				# ^C was pressed while the output is going via a pipe, just ignore the fault, to close the BGP session correctly
-#				pass
-#
-#	def outIf (self,test,string):
-#		if test: 
-#			return self.out(string)
-#		return ''
