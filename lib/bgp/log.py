@@ -8,12 +8,13 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 import os
+import sys
 import time
 import logging
-from logging.handlers import SysLogHandler
+import logging.handlers
 
 class _Logger (object):
-	syslog = os.environ.get('SYSLOG','')
+	_syslog = os.environ.get('SYSLOG',None)
 	_all = False if os.environ.get('DEBUG_ALL','0') == '0' else True
 	_instance = None
 	_supervisor = True if os.environ.get('DEBUG_SUPERVISOR','1') in ['1','yes','Yes','YES'] else False
@@ -23,6 +24,8 @@ class _Logger (object):
 	_rib = False if os.environ.get('DEBUG_RIB','0') == '0' else True
 	_timers = False if os.environ.get('DEBUG_TIMER','0') == '0' else True
 
+	syslog = None
+
 	# we use os.pid everytime as we may fork and the class is instance before it
 
 	def _prefixed (self,level,source,message):
@@ -30,42 +33,57 @@ class _Logger (object):
 		return "%s %-8s %-6d %-13s %s" % (now,level,os.getpid(),source,message)
 
 	def __init__ (self):
-		if self.syslog:
-			try:
-				logging.basicConfig(level=logging.DEBUG,
-					filename=self.syslog,
-					filemode='w')
-			except IOError,e :
-				self.syslog = ''
-				self.critical('Can not use SYSLOG, failing back to stdout')
+		if self._syslog is None:
+			return
+		try:
+			if self._syslog == '':
+				if sys.platform == "darwin":
+					address = '/var/run/syslog'
+				else:
+					address = '/dev/log'
+				if not os.path.exists(address):
+					address = ('localhost', 514)
+				handler = logging.handlers.SysLogHandler(address)
+			elif self._syslog.lower().startswith('host:'):
+				# If the address is invalid, each syslog call will print an error.
+				# See how it can be avoided, as the socket error is encapsulated and not returned
+				address = (self._syslog[5:].strip(), 514)
+				handler = logging.handlers.SysLogHandler(address)
+			else:
+				handler = logging.handlers.RotatingFileHandler(self._syslog, maxBytes=5*1024*1024, backupCount=5)
+			self.syslog = logging.getLogger()
+			self.syslog.setLevel(logging.DEBUG)
+			self.syslog.addHandler(handler)
+		except IOError,e :
+			self.critical('Can not use SYSLOG, failing back to stdout')
 
 	def debug (self,message,source='',level='DEBUG'):
 		if self.syslog:
-			logging.debug(self._prefixed(level,source,message))
+			self.syslog.debug(self._prefixed(level,source,message))
 		else:
 			print self._prefixed(level,source,message)
 
 	def info (self,message,source='',level='INFO'):
 		if self.syslog:
-			logging.info(self._prefixed(level,source,message))
+			self.syslog.info(self._prefixed(level,source,message))
 		else:
 			print self._prefixed(level,source,message)
 
 	def warning (self,message,source='',level='WARNING'):
 		if self.syslog:
-			logging.warning(self._prefixed(level,source,message))
+			self.syslog.warning(self._prefixed(level,source,message))
 		else:
 			print self._prefixed(level,source,message)
 
 	def error (self,message,source='',level='ERROR'):
 		if self.syslog:
-			logging.error(self._prefixed(level,source,message))
+			self.syslog.error(self._prefixed(level,source,message))
 		else:
 			print self._prefixed(level,source,message)
 
 	def critical (self,message,source='',level='CRITICAL'):
 		if self.syslog:
-			logging.error(self._prefixed(level,source,message))
+			self.syslog.critical(self._prefixed(level,source,message))
 		else:
 			print self._prefixed(level,source,message)
 
