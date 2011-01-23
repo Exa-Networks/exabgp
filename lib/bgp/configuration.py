@@ -8,7 +8,8 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 import os
-from copy import deepcopy as clone
+from pprint import pformat
+from copy import deepcopy
 
 from bgp.structure.address    import AFI
 from bgp.structure.ip         import to_IP,to_Prefix
@@ -130,7 +131,7 @@ class Configuration (object):
 		self._clear()
 
 		while not self.finished():
-			r = self._dispatch('configuration',['neighbor',],[])
+			r = self._dispatch('configuration',['group','neighbor'],[])
 			if r is False: break
 
 		if r in [True,None]:
@@ -179,11 +180,13 @@ class Configuration (object):
 	def _dispatch (self,name,multi=set([]),single=set([])):
 		try:
 			tokens = self.tokens()
-			logger.configuration('dispatching %s with valid options multi %s single %s' % (str(tokens), str(multi), str(single)))
 		except IndexError:
 			self._error = 'configuration file incomplete (most likely missing })'
 			if self.debug: raise
 			return False
+		logger.configuration('analysing tokens %s ' % str(tokens))
+		logger.configuration('  valid block options %s' % str(multi))
+		logger.configuration('  valid parameters    %s' % str(single))
 		end = tokens[-1]
 		if multi and end == '{':
 			self._location.append(tokens[0])
@@ -212,6 +215,22 @@ class Configuration (object):
 				if self._multi_neighbor(tokens[1]):
 					return self._make_neighbor()
 				return False
+			if  command == 'group':
+				if len(tokens) != 2:
+					self._error = 'syntax: group <name> { <options> }'
+					return False
+				return self._multi_group(tokens[1])
+
+		if name == 'group':
+			if  command == 'neighbor':
+				if len(tokens) != 2:
+					self._error = 'syntax: neighbor <ip> { <options> }'
+					return False
+				if self._multi_neighbor(tokens[1]):
+					return self._make_neighbor()
+				return False
+			if command == 'static': return self._multi_static(tokens[1:])
+			if command == 'flow': return self._multi_flow(tokens[1:])
 
 		if name == 'neighbor':
 			if command == 'static': return self._multi_static(tokens[1:])
@@ -285,7 +304,29 @@ class Configuration (object):
 
 	# Group Neighbor
 
+	def _multi_group (self,address):
+		self._scope.append({})
+		while True:
+			r = self._dispatch('group',['static','flow','neighbor'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart','md5'])
+			if r is False:
+				return False
+			if r is None:
+				self._scope.pop(-1)
+				return True
+
 	def _make_neighbor (self):
+		# we have scope[-2] as the group template and scope[-1] as the peer specific
+		if len(self._scope) > 1:
+			for key,content in self._scope[-2].iteritems():
+				if key not in self._scope[-1]:
+					self._scope[-1][key] = deepcopy(content)
+
+		logger.configuration("\nPeer configuration complete :")
+		for _key in self._scope[-1].keys():
+			for _line in pformat(self._scope[-1][_key],3,3,3).split('\n'):
+				logger.configuration("   %s: %s" %(_key,_line))
+		logger.configuration("\n")
+
 		neighbor = Neighbor()
 		for scope in self._scope:
 			v = scope.get('router-id','')
@@ -476,7 +517,7 @@ class Configuration (object):
 
 		# generate the new routes
 		for _ in range(number):
-			r = clone(route)
+			r = deepcopy(route)
 			# convert the ip to a network packed format
 			ipn = ip
 			i = ''
