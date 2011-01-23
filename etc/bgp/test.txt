@@ -1,0 +1,13 @@
+neighbor 82.219.0.69 {
+	router-id 82.219.212.253;
+	local-address 192.0.2.73;
+	local-as 30740;
+	peer-as 30740;
+	hold-time 180;
+	graceful-restart 1200;
+
+	static {
+       		#route 82.219.200.0/32 next-hop 192.0.2.1 med 200 community [177:666];
+		route 82.219.200.0/32 next-hop 192.0.2.1 community [177:666] as-path [30741];
+        }
+}
