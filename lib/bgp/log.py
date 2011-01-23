@@ -58,34 +58,39 @@ class _Logger (object):
 			self.critical('Can not use SYSLOG, failing back to stdout')
 
 	def debug (self,message,source='',level='DEBUG'):
-		if self.syslog:
-			self.syslog.debug(self._prefixed(level,source,message))
-		else:
-			print self._prefixed(level,source,message)
+		for line in message.split('\n'):
+			if self.syslog:
+				self.syslog.debug(self._prefixed(level,source,line))
+			else:
+				print self._prefixed(level,source,line)
 
 	def info (self,message,source='',level='INFO'):
-		if self.syslog:
-			self.syslog.info(self._prefixed(level,source,message))
-		else:
-			print self._prefixed(level,source,message)
+		for line in message.split('\n'):
+			if self.syslog:
+				self.syslog.info(self._prefixed(level,source,line))
+			else:
+				print self._prefixed(level,source,line)
 
 	def warning (self,message,source='',level='WARNING'):
-		if self.syslog:
-			self.syslog.warning(self._prefixed(level,source,message))
-		else:
-			print self._prefixed(level,source,message)
+		for line in message.split('\n'):
+			if self.syslog:
+				self.syslog.warning(self._prefixed(level,source,line))
+			else:
+				print self._prefixed(level,source,line)
 
 	def error (self,message,source='',level='ERROR'):
-		if self.syslog:
-			self.syslog.error(self._prefixed(level,source,message))
-		else:
-			print self._prefixed(level,source,message)
+		for line in message.split('\n'):
+			if self.syslog:
+				self.syslog.error(self._prefixed(level,source,line))
+			else:
+				print self._prefixed(level,source,line)
 
 	def critical (self,message,source='',level='CRITICAL'):
-		if self.syslog:
-			self.syslog.critical(self._prefixed(level,source,message))
-		else:
-			print self._prefixed(level,source,message)
+		for line in message.split('\n'):
+			if self.syslog:
+				self.syslog.critical(self._prefixed(level,source,line))
+			else:
+				print self._prefixed(level,source,line)
 
 	# show the message on the wire 
 	def wire (self,message):
