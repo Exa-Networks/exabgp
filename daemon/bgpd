@@ -206,6 +206,16 @@ if __name__ == '__main__':
 		sys.exit('usage:\n bgpd <configuration file>\n')
 	conf = sys.argv[1]
 
+	pid = os.getpid()
+	gid = os.getgid()
+
+	if not pid or not gid:
+		sys.stdout.write('\n')
+		sys.stdout.write('*'*80+'\n')
+		sys.stdout.write('RUNNING THIS PROGRAM AS ROOT IS INSECURE\n')
+		sys.stdout.write('*'*80+'\n')
+		sys.stdout.write('\n')
+
 	from bgp.configuration import Configuration
 
 	configuration = Configuration(conf)
