@@ -1,11 +1,22 @@
-Version 1.x.x - ..th of ....... 2011
+Version explained:
+ major : codebase (1 for the forseeable future)
+ minor : increase on new features
+ bug   : increase on bug fixes
+
+Version 1.2.x - ..th of ....... 2011
  * Improvement: Allow to break route in more specific (ie define a /22 and get 4x /24 announced)
                 This is useful when blackholing traffic to make sure no routes more specific are received from your network peer/transit
     requested by : Renaud Chaput
  * Improvement: Save the program PID into a file (set the PID environment value with the file path)
     requested by : Renaud Chaput
- * Improvement: Add syslog support
+ * Improvement: Add syslog support (env SYSLOG= nothing for local syslog, a file name (auto-rotate) or host:<host> for remote syslog)
     requested by : Josh Ward
+ * Improvement: Can now daemonise (env DAEMON= detach and send the program in the background)
+    requested by : Josh Ward
+ * Improvement: Selection of what subsystems to log, more readable logs (well, less unreadeable to be exact)
+ * Improvement: Create a new "group" in the configuration to share routes and configuration options between neighbors
+    requested by : Multiple people
+ * Fix: non detection of MD5 change on configuration reload
 
 Version 1.1.0 - 10th of January 2011
  * Improvement: Tested and completed TCP MD5 signature
