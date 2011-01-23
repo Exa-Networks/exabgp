@@ -34,3 +34,6 @@ class Origin (Attribute):
 		if self.origin == 0x01: return 'EGP'
 		if self.origin == 0x02: return 'INCOMPLETE'
 		return 'INVALID'
+
+	def __repr__ (self):
+		return str(self)

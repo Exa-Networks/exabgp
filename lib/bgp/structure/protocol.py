@@ -39,6 +39,9 @@ class Protocol (int):
 		if self == Protocol.SCTP:    return 'SCTP'
 		return "unknown protocol %d" % int.__str__(self)
 
+	def __repr__ (self):
+		return str(self)
+
 	def pack (self):
 		return chr(self)
 

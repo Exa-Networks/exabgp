@@ -21,6 +21,9 @@ class AFI (int):
 		if self == 0x02: return "IPv6"
 		return "unknown afi"
 
+	def __repr__ (self):
+		return str(self)
+
 	def pack (self):
 		return pack('!H',self)
 
@@ -64,6 +67,9 @@ class SAFI (int):
 		if self == 0x86: return "flow-vpnv4"
 		return "unknown safi"
 
+	def __repr__ (self):
+		return str(self)
+
 	def pack (self):
 		return chr(self)
 
@@ -77,3 +83,5 @@ class Address (object):
 	def __str__ (self):
 		return "%s %s" % (str(self.afi),str(self.safi))
 
+	def __repr__ (self):
+		return str(self)

@@ -46,6 +46,9 @@ class ICMPType (int):
 		if self == ICMPType.DESTINATION_UNREACHEABLE: return 'unreachable'
 		return 'invalid icmp type %d' % int.__str__(self)
 
+	def __repr__ (self):
+		return str(self)
+
 def NamedICMPType (name):
 	icmp = name.lower()
 	if icmp == 'echo-reply':          return ICMPType.ECHO_REPLY
@@ -102,6 +105,9 @@ class ICMPCode (int):
 
 	def __str__ (self):
 		return 'icmp code %d' % int.__str__(self)
+
+	def __repr__ (self):
+		return str(self)
 
 def NamedICMPCode (name):
 	icmp = name.lower()

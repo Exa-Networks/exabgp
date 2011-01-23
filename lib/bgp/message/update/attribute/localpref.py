@@ -30,3 +30,5 @@ class LocalPreference (Attribute):
 	def __str__ (self):
 		return str(self.localpref)
 
+	def __repr__ (self):
+		return str(self)

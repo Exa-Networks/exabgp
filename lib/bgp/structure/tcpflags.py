@@ -25,6 +25,9 @@ class TCPFlags (int):
 		if self == self.URGENT: return 'urgent'
 		return 'invalid tcp flag %d' % int.__str__(self)
 
+	def __repr__ (self):
+		return str(self)
+
 def NamedTCPFlags (name):
 	flag = name.lower()
 	if flag == 'fin':    return TCPFlags(TCPFlags.FIN)

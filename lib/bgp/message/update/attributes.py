@@ -37,6 +37,9 @@ class MultiAttributes (list):
 	def __str__ (self):
 		return 'MultiAttibutes(%s)' % ' '.join(str(_) for _ in self)
 
+	def __repr__ (self):
+		return str(self)
+
 class Attributes (dict):
 	autocomplete = True
 	
@@ -155,3 +158,5 @@ class Attributes (dict):
 
 		return "%s%s%s%s%s%s%s%s" % (next_hop,origin,aspath,local_pref,med,communities,ecommunities,mpr)
 
+	def __repr__ (self):
+		return str(self)

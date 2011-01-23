@@ -83,3 +83,6 @@ neighbor %s {
 	md5,
 	routes
 )
+
+	def __repr__ (self):
+		return str(self)

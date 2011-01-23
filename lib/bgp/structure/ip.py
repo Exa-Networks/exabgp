@@ -80,6 +80,9 @@ class Inet (object):
 
 	def __str__ (self):
 		return self.ip
+
+	def __repr__ (self):
+		return str(self)
 	
 	def __eq__ (self,other):
 		return self.raw == other.raw and self.safi == other.safi
@@ -95,6 +98,9 @@ class _Prefix (Inet):
 
 	def __str__ (self):
 		return "%s/%s" % (self.ip,self.mask)
+
+	def __repr__ (self):
+		return str(self)
 
 	def pack (self):
 		return chr(self.mask) + self.raw[:_bgp[self.mask]]

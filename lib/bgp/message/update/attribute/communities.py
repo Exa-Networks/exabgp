@@ -59,6 +59,9 @@ class Communities (Attribute):
 			return str(self.communities[0])
 		return ""
 
+	def __repr__ (self):
+		return str(self)
+
 # =================================================================== ECommunity
 
 #def to_ECommunity (data):
@@ -98,6 +101,9 @@ class ECommunity (object):
 
 	def __str__ (self):
 		return '[ ' + ' '.join([hex(ord(c)) for c in self.community]) + ' ]'
+
+	def __repr__ (self):
+		return str(self)
 
 	def __len__ (self):
 		return 8

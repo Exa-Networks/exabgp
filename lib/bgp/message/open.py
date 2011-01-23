@@ -74,6 +74,9 @@ class RouterID (object):
 	def __str__ (self):
 		return self.ip
 
+	def __repr__ (self):
+		return str(self)
+
 	def __eq__ (self,other):
 		return self.ip == other.ip
 

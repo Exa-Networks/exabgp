@@ -53,6 +53,8 @@ class ASPath (Attribute):
 		if len(self) == 1: return '%s %s' % (t,str(self.aspsegment[0]))
 		return t
 
+	def __repr__ (self):
+		return str(self)
 
 class AS4Path (ASPath):
 	ID = AttributeID.AS4_PATH
