@@ -21,6 +21,7 @@ class Neighbor (object):
 		self.local_as = None
 		self.hold_time = HoldTime(180)
 		self.graceful_restart = False
+		self.md5 = None
 		self.routes = []
 		self.families = []
 
@@ -43,6 +44,7 @@ class Neighbor (object):
 			self.peer_as == other.peer_as and \
 			self.hold_time == other.hold_time and \
 			self.graceful_restart == other.graceful_restart and \
+			self.md5 == other.md5 and \
 			self.families == other.families
 
 	def __ne__(self, other):
@@ -52,21 +54,32 @@ class Neighbor (object):
 		routes = '\n\t\t'
 		if self.routes:
 			routes += '\n\t\t'.join([str(route) for route in self.routes])
+
+		if self.md5: md5 = "md5: %s" % self.md5
+		else: md5 = ''
+
 		return """\
 neighbor %s {
 	description "%s";
 	router-id %s;
+	peer-address %s;
+	peer-as %d;
 	local-address %s;
 	local-as %d;
-	peer-as %d;
+	hold-time %s;
+	graceful-restart %d;
+	%s
 	static {%s
 	}
 }""" % (
-	self.peer_address,
 	self.description,
 	self.router_id,
+	self.peer_address,
+	self.peer_as,
 	self.local_address,
 	self.local_as,
-	self.peer_as,
+	self.hold_time,
+	self.graceful_restart,
+	md5,
 	routes
 )
