@@ -11,6 +11,8 @@ import sys
 import os
 import time
 import signal
+import socket
+import errno
 
 from bgp.network.peer import Peer
 
@@ -35,6 +37,42 @@ class Supervisor (object):
 		signal.signal(signal.SIGTERM, self.sigterm)
 		signal.signal(signal.SIGHUP, self.sighup)
 		signal.signal(signal.SIGALRM, self.sigalrm)
+
+	def _is_socket (self,fd):
+		try:
+			s = socket.fromfd(fd, socket.AF_INET, socket.SOCK_RAW)
+		except ValueError,e:
+			# The file descriptor is closed
+			return False
+		try:
+			what = s.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
+		except socket.error, e:
+			# It is look like one but it is not a socket ...
+			if e.args[0] == errno.ENOTSOCK:
+				return False
+		return True
+
+	def fork (self):
+		if os.environ.get('DAEMON','0') == '0':
+			return
+		
+		def fork_exit ():
+			try:
+				pid = os.fork()
+				if pid > 0:
+					os._exit(0)
+			except OSError, e:
+				logger.critial('can not fork, errno %d : %s' % (e.errno,e.strerror))
+
+		# do not detach if we are already supervised or run by init like process
+		if self._is_socket(sys.__stdin__.fileno()) or os.getppid() != 1:
+			fork_exit()
+			os.setsid()
+			fork_exit()
+			if not os.environ.get('SYSLOG',''):
+				# XXX: Force SYSLOG, we need to be able to access the local syslog deamon
+				# os.environ['SYSLOG']='??'
+				pass
 
 
 	def savepid (self):
@@ -90,6 +128,7 @@ class Supervisor (object):
 		self._restart = True
 
 	def run (self):
+		self.fork()
 		self.savepid()
 		while self._peers:
 			try:
