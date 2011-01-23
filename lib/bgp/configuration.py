@@ -45,7 +45,7 @@ class Split (int):
 
 
 class Configuration (object):
-	debug = False if os.environ.get('RAISE_CONFIGURATION','0') == '0' else True
+	debug = os.environ.get('RAISE_CONFIGURATION',None) != None
 
 	_str_route_error = '' \
 	'syntax:\n' \

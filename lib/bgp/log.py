@@ -14,17 +14,8 @@ import logging
 import logging.handlers
 
 class _Logger (object):
-	_syslog = os.environ.get('SYSLOG',None)
-	_all = False if os.environ.get('DEBUG_ALL','0') == '0' else True
 	_instance = None
-	_supervisor = True if os.environ.get('DEBUG_SUPERVISOR','1') in ['1','yes','Yes','YES'] else False
-	_configuration = False if os.environ.get('DEBUG_CONFIGURATION','0') == '0' else True
-	_wire = False if os.environ.get('DEBUG_WIRE','0') == '0' else True
-	_message = True if os.environ.get('DEBUG_MESSAGE','1') in ['1','yes','Yes','YES'] else False
-	_rib = False if os.environ.get('DEBUG_RIB','0') == '0' else True
-	_timers = False if os.environ.get('DEBUG_TIMER','0') == '0' else True
-
-	syslog = None
+	_syslog = None
 
 	# we use os.pid everytime as we may fork and the class is instance before it
 
@@ -33,10 +24,27 @@ class _Logger (object):
 		return "%s %-8s %-6d %-13s %s" % (now,level,os.getpid(),source,message)
 
 	def __init__ (self):
-		if self._syslog is None:
+		if os.environ.get('DEBUG_ALL','0') == '0': self._all = False 
+		else: self._all = True
+		if os.environ.get('DEBUG_SUPERVISOR','1') in ['1','yes','Yes','YES']: self._supervisor = True
+		else: self._supervisor = False
+		if os.environ.get('DEBUG_CONFIGURATION','0') == '0': self._configuration = False
+		else: self._configuration = True
+		if os.environ.get('DEBUG_WIRE','0') == '0': self._wire = False
+		else: self._wire = True
+		if os.environ.get('DEBUG_MESSAGE','1') in ['1','yes','Yes','YES']: self._message = True
+		else: self.message = False
+		if os.environ.get('DEBUG_RIB','0') == '0': self._rib = False
+		else: self._rib = True
+		if os.environ.get('DEBUG_TIMER','0') == '0': self._timers = False
+		else: self.timers = True
+
+		destination = os.environ.get('SYSLOG',None)
+		if destination is None:
 			return
+
 		try:
-			if self._syslog == '':
+			if destination == '':
 				if sys.platform == "darwin":
 					address = '/var/run/syslog'
 				else:
@@ -44,51 +52,51 @@ class _Logger (object):
 				if not os.path.exists(address):
 					address = ('localhost', 514)
 				handler = logging.handlers.SysLogHandler(address)
-			elif self._syslog.lower().startswith('host:'):
+			elif destination.lower().startswith('host:'):
 				# If the address is invalid, each syslog call will print an error.
 				# See how it can be avoided, as the socket error is encapsulated and not returned
-				address = (self._syslog[5:].strip(), 514)
+				address = (destination[5:].strip(), 514)
 				handler = logging.handlers.SysLogHandler(address)
 			else:
-				handler = logging.handlers.RotatingFileHandler(self._syslog, maxBytes=5*1024*1024, backupCount=5)
-			self.syslog = logging.getLogger()
-			self.syslog.setLevel(logging.DEBUG)
-			self.syslog.addHandler(handler)
+				handler = logging.handlers.RotatingFileHandler(destination, maxBytes=5*1024*1024, backupCount=5)
+			self._syslog = logging.getLogger()
+			self._syslog.setLevel(logging.DEBUG)
+			self._syslog.addHandler(handler)
 		except IOError,e :
 			self.critical('Can not use SYSLOG, failing back to stdout')
 
 	def debug (self,message,source='',level='DEBUG'):
 		for line in message.split('\n'):
-			if self.syslog:
-				self.syslog.debug(self._prefixed(level,source,line))
+			if self._syslog:
+				self._syslog.debug(self._prefixed(level,source,line))
 			else:
 				print self._prefixed(level,source,line)
 
 	def info (self,message,source='',level='INFO'):
 		for line in message.split('\n'):
-			if self.syslog:
-				self.syslog.info(self._prefixed(level,source,line))
+			if self._syslog:
+				self._syslog.info(self._prefixed(level,source,line))
 			else:
 				print self._prefixed(level,source,line)
 
 	def warning (self,message,source='',level='WARNING'):
 		for line in message.split('\n'):
-			if self.syslog:
-				self.syslog.warning(self._prefixed(level,source,line))
+			if self._syslog:
+				self._syslog.warning(self._prefixed(level,source,line))
 			else:
 				print self._prefixed(level,source,line)
 
 	def error (self,message,source='',level='ERROR'):
 		for line in message.split('\n'):
-			if self.syslog:
-				self.syslog.error(self._prefixed(level,source,line))
+			if self._syslog:
+				self._syslog.error(self._prefixed(level,source,line))
 			else:
 				print self._prefixed(level,source,line)
 
 	def critical (self,message,source='',level='CRITICAL'):
 		for line in message.split('\n'):
-			if self.syslog:
-				self.syslog.critical(self._prefixed(level,source,line))
+			if self._syslog:
+				self._syslog.critical(self._prefixed(level,source,line))
 			else:
 				print self._prefixed(level,source,line)
 
