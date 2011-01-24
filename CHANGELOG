@@ -17,6 +17,7 @@ Version 1.2.x - ..th of ....... 2011
  * Improvement: Create a new "group" in the configuration to share routes and configuration options between neighbors
     requested by : Multiple people
  * Fix: non detection of MD5 change on configuration reload
+ * Improvement: support distutil with a setup.py file for easy installation
 
 Version 1.1.0 - 10th of January 2011
  * Improvement: Tested and completed TCP MD5 signature
