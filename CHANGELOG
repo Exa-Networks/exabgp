@@ -3,7 +3,7 @@ Version explained:
  minor : increase on new features
  bug   : increase on bug fixes
 
-Version 1.2.x - ..th of ....... 2011
+Version 1.2.0 - 25th of January 2011
  * Improvement: Allow to break route in more specific (ie define a /22 and get 4x /24 announced)
                 This is useful when blackholing traffic to make sure no routes more specific are received from your network peer/transit
     requested by : Renaud Chaput
