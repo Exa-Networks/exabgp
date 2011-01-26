@@ -54,7 +54,7 @@ class Supervisor (object):
 		return True
 
 	def fork (self):
-		if os.environ.get('DAEMON','0') == '0':
+		if os.environ.get('DAEMON','0') not in ['','1','yes','Yes','YES']:
 			return
 		
 		def fork_exit ():
