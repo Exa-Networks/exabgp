@@ -167,6 +167,8 @@ class Supervisor (object):
 		self.savepid()
 		while self._peers:
 			try:
+				start = time.time()
+				
 				if self._shutdown:
 					self._shutdown = False
 					self.shutdown()
@@ -182,8 +184,11 @@ class Supervisor (object):
 					peer = self._peers[ip]
 					peer.run()
 
+				duration = time.time() - start
+
 				# RFC state that we MUST not more than one KEEPALIVE / sec
-				time.sleep(1.0)
+				if duration < 1.0:
+					time.sleep(1.0-duration)
 			except KeyboardInterrupt:
 				logger.supervisor("^C received")
 				self._shutdown = True
