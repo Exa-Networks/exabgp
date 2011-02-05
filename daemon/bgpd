@@ -9,6 +9,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 import sys
 import os
+import pwd
 import time
 import signal
 import socket
@@ -21,6 +22,7 @@ logger = Logger()
 
 class Supervisor (object):
 	pid_file = os.environ.get('PID','')
+	user = os.environ.get('USER','nobody')
 
 	# import os
 	# [hex(ord(c)) for c in os.popen('clear').read()]
@@ -115,6 +117,34 @@ class Supervisor (object):
 				return
 		logger.supervisor("removed PIDfile %s" % self.pid_file)
 
+	def drop_privileges (self,name):
+		"""returns true if we are left with insecure privileges"""
+		# os.name can be ['posix', 'nt', 'os2', 'ce', 'java', 'riscos']
+		if os.name not in ['posix',]:
+			return False
+		
+		uid = os.getpid()
+		gid = os.getgid()
+
+		if uid and gid:
+			return False
+
+		try:
+			user = pwd.getpwnam(name)
+			nuid = int(user.pw_uid)
+			ngid = int(user.pw_uid)
+		except KeyError:
+			return True
+
+		# not sure you can change your gid if you do not have a pid of zero
+		try:
+			if not uid:
+				os.setuid(nuid)
+			if not gid:
+				os.setgid(ngid)
+			return False
+		except OSError,e:
+			return True
 
 	def sigterm (self,signum, frame):
 		logger.supervisor("SIG TERM received")
@@ -129,6 +159,10 @@ class Supervisor (object):
 		self._restart = True
 
 	def run (self):
+		if self.drop_privileges(self.user):
+			logger.supervisor("could not drop privileges to '%s' refusing to run as root" % self.user)
+			logger.supervisor("set the environmemnt value USER to change the unprivileged user")
+			return
 		self.fork()
 		self.savepid()
 		while self._peers:
@@ -245,16 +279,6 @@ if __name__ == '__main__':
 		sys.stdout.write('\n')
 		sys.exit('usage:\n bgpd <configuration file>\n')
 	conf = sys.argv[1]
-
-	pid = os.getpid()
-	gid = os.getgid()
-
-	if not pid or not gid:
-		sys.stdout.write('\n')
-		sys.stdout.write('*'*80+'\n')
-		sys.stdout.write('RUNNING THIS PROGRAM AS ROOT IS INSECURE\n')
-		sys.stdout.write('*'*80+'\n')
-		sys.stdout.write('\n')
 
 	from bgp.configuration import Configuration
 
