@@ -45,7 +45,7 @@ class Split (int):
 
 
 class Configuration (object):
-	TTL_SECURITY = 1
+	TTL_SECURITY = 255
 	debug = os.environ.get('RAISE_CONFIGURATION',None) != None
 
 	_str_route_error = '' \
