@@ -162,7 +162,7 @@ class Peer (object):
 			# User closing the connection
 			raise Notify(6,3)
 		except NotConnected, e:
-			self.warning('we can not connect to the peer %s' % str(e))
+			logger.warning('we can not connect to the peer %s' % str(e))
 			try:
 				self.bgp.close()
 			except Failure:
