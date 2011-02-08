@@ -45,6 +45,7 @@ class Split (int):
 
 
 class Configuration (object):
+	TTL_SECURITY = 1
 	debug = os.environ.get('RAISE_CONFIGURATION',None) != None
 
 	_str_route_error = '' \
@@ -273,6 +274,7 @@ class Configuration (object):
 		if command == 'hold-time': return self._set_holdtime('hold-time',tokens[1:])
 		if command == 'graceful-restart': return self._set_gracefulrestart('graceful-restart',tokens[1:])
 		if command == 'md5': return self._set_md5('md5',tokens[1:])
+		if command == 'ttl-security': return self._set_ttl('ttl-security',tokens[1:])
 
 		if command == 'route': return self._single_static_route(tokens[1:])
 		if command == 'origin': return self._route_origin(tokens[1:])
@@ -307,7 +309,7 @@ class Configuration (object):
 	def _multi_group (self,address):
 		self._scope.append({})
 		while True:
-			r = self._dispatch('group',['static','flow','neighbor'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart','md5'])
+			r = self._dispatch('group',['static','flow','neighbor'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart','md5','ttl-security'])
 			if r is False:
 				return False
 			if r is None:
@@ -352,11 +354,12 @@ class Configuration (object):
 		neighbor.description = scope.get('description','')
 
 		neighbor.graceful_restart = scope.get('graceful-restart',0)
-		if neighbor.graceful_restart < 0:
+		if neighbor.graceful_restart is None:
 			# README: Should it be a subclass of int ?
 			neighbor.graceful_restart = int(neighbor.hold_time)
 
-		neighbor.md5 = scope.get('md5','')
+		neighbor.md5 = scope.get('md5',None)
+		neighbor.ttl = scope.get('ttl-security',None)
 
 		missing = neighbor.missing()
 		if missing:
@@ -382,7 +385,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-		 	r = self._dispatch('neighbor',['static','flow'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart','md5'])
+		 	r = self._dispatch('neighbor',['static','flow'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart','md5','ttl-security'])
 			if r is False: return False
 			if r is None: return True
 
@@ -441,7 +444,7 @@ class Configuration (object):
 
 	def _set_gracefulrestart (self,command,value):
 		if not len(value):
-			self._scope[-1]['graceful-restart'] = -1
+			self._scope[-1][command] = None
 			return True
 		try:
 			# README: Should it be a subclass of int ?
@@ -471,6 +474,25 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		self._scope[-1][command] = md5
+		return True
+
+	def _set_ttl (self,command,value):
+		if not len(value):
+			self._scope[-1][command] = self.TTL_SECURITY
+			return True
+		try:
+			# README: Should it be a subclass of int ?
+			ttl = int(value[0])
+			if ttl < 0:
+				raise ValueError('ttl-security can not be negative')
+			if ttl >= 255:
+				raise ValueError('ttl must be smaller than 256')
+			self._scope[-1][command] = ttl
+			return True
+		except ValueError:
+			self._error = '"%s" is an invalid ttl-security' % ' '.join(value)
+			if self.debug: raise
+			return False
 		return True
 
 	#  Group Static ................

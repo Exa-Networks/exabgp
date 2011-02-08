@@ -21,7 +21,7 @@ from bgp.log import Logger
 logger = Logger()
 
 class Connection (object):
-	def __init__ (self,md5,peer,local):
+	def __init__ (self,peer,local,md5,ttl):
 		self.last_read = 0
 		self.last_write = 0
 		self.peer = peer
@@ -65,6 +65,14 @@ class Connection (object):
 			except socket.error,e:
 				self.close()
 				raise Failure('This OS does not support TCP_MD5SIG, you can not use MD5 : %s' % str(e))
+
+		# None (ttl-security unset) or zero (maximum TTL) is the same thing
+		if ttl:
+			try:
+				self._io.setsockopt(socket.IPPROTO_IP,socket.IP_TTL, 20)
+			except socket.error,e:
+				self.close()
+				raise Failure('This OS does not support IP_TTL (ttl-security), you can not use MD5 : %s' % str(e))
 
 		try:
 			if peer.afi == AFI.ipv4:

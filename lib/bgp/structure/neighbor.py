@@ -22,6 +22,7 @@ class Neighbor (object):
 		self.hold_time = HoldTime(180)
 		self.graceful_restart = False
 		self.md5 = None
+		self.ttl = None
 		self.routes = []
 		self.families = []
 
@@ -31,7 +32,6 @@ class Neighbor (object):
 		if self.local_as is None: return 'local-as'
 		if self.peer_as is None: return 'peer-as'
 		if self.peer_address.afi == AFI.ipv6 and not self.router_id: return 'router-id'
-		if self.graceful_restart is None: return 'graceful-restart'
 		return ''
 
 	# This function only compares the neighbor BUT NOT ITS ROUTES
@@ -45,6 +45,7 @@ class Neighbor (object):
 			self.hold_time == other.hold_time and \
 			self.graceful_restart == other.graceful_restart and \
 			self.md5 == other.md5 and \
+			self.ttl == other.ttl and \
 			self.families == other.families
 
 	def __ne__(self, other):
@@ -55,8 +56,10 @@ class Neighbor (object):
 		if self.routes:
 			routes += '\n\t\t'.join([str(route) for route in self.routes])
 
-		if self.md5: md5 = "md5: %s" % self.md5
-		else: md5 = ''
+		options = []
+		if self.md5: options.append("md5: %s" % self.md5)
+		if self.ttl is not None: options.append("ttl-security: %d" % self.ttl)
+		if self.graceful_restart: options.append("graceful-restart: %d" % self.graceful_restart)
 
 		return """\
 neighbor %s {
@@ -67,7 +70,6 @@ neighbor %s {
 	local-address %s;
 	local-as %d;
 	hold-time %s;
-	graceful-restart %d;
 	%s
 	static {%s
 	}
@@ -79,8 +81,7 @@ neighbor %s {
 	self.local_address,
 	self.local_as,
 	self.hold_time,
-	self.graceful_restart,
-	md5,
+	'\n'.join(options),
 	routes
 )
 
