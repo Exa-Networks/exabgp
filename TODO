@@ -9,7 +9,6 @@ Formally define the interface used
 Rewrite the unittesting which is really missing.
 reduce to a minimum all the new_ and to_ functions and integrate them into protocol
 
-Have an issue with hold time of 3 - see why and what can be done (4 is fine !!)
 Juniper does not accept any holdtime <20
 
 UPDATE parsing is totally disabled, the broken update parsing for ASPath assumes only one segment
