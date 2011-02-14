@@ -103,7 +103,7 @@ class Peer (object):
 
 			message = self.bgp.new_keepalive(force=True)
 			logger.message(self.me('>> KEEPALIVE (OPENCONFIRM)'))
-			yield None
+			yield True
 
 			message = self.bgp.read_keepalive()
 			logger.message(self.me('<< KEEPALIVE (ESTABLISHED)'))
