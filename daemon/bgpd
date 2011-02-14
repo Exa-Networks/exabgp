@@ -166,6 +166,10 @@ class Supervisor (object):
 			return
 		self.fork()
 		self.savepid()
+
+		# did we complete the run of updates caused by the last SIGHUP ?
+		reload_completed = True
+		
 		while self._peers:
 			try:
 				start = time.time()
@@ -173,13 +177,14 @@ class Supervisor (object):
 				if self._shutdown:
 					self._shutdown = False
 					self.shutdown()
-				elif self._reload:
+				elif self._reload and reload_completed:
 					self._reload = False
 					self.reload()
 				elif self._restart:
 					self._restart = False
 					self.restart()
 
+				reload_completed = True
 				# Handle all connection
 				peers = self._peers.keys()
 				while peers:
@@ -192,6 +197,7 @@ class Supervisor (object):
 					# otherwise process as many routes as we can within a second for the remaining peers
 					duration = time.time() - start
 					if duration >= 1.0:
+						reload_completed = False
 						break
 				duration = time.time() - start
 				# RFC state that we MUST not more than one KEEPALIVE / sec
