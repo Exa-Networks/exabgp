@@ -26,6 +26,8 @@ class Connection (object):
 		self.last_write = 0
 		self.peer = peer
 
+		logger.wire("Opening connection to %s" % self.peer)
+
 		if peer.afi != local.afi:
 			raise Failure('The local IP and peer IP must be of the same family (both IPv4 or both IPv6)')
 
@@ -122,6 +124,7 @@ class Connection (object):
 
 	def close (self):
 		try:
+			logger.wire("Closing connection to %s" % self.peer)
 			self._io.close()
 		except socket.error:
 			pass
