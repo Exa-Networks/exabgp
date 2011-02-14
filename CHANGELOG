@@ -3,6 +3,16 @@ Version explained:
  minor : increase on new features
  bug   : increase on bug fixes
 
+Version 1.2.1 - --th of ------- 2011
+ * Improvement: reduce likelyness of route update recalculation causing us to not send keepalive in time
+ * Fix: introduced a bug in neighbor printing
+ * Fix: we were trying to send a KEEPALIVE after the initial routes, but it was not going
+ * Fix: a work around a python bug with TCP was not implemented everywhere
+ * Improvement: adding a 'ttl-security' to allow to explicit setup of TCP TTL
+ * Improvement: better handling of BGP timer for keepalive
+ * Improvement: refuse to run as root, try to run as nobody, USER= to set the user to use otherwise
+ * Removed: the old wiki documentation
+
 Version 1.2.0 - 25th of January 2011
  * Improvement: Allow to break route in more specific (ie define a /22 and get 4x /24 announced)
                 This is useful when blackholing traffic to make sure no routes more specific are received from your network peer/transit
