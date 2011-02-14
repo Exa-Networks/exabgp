@@ -114,6 +114,7 @@ class Peer (object):
 			if count:
 				logger.message(self.me('>> %d UPDATE(s)' % count))
 
+			eor = False
 			if	self.neighbor.graceful_restart and \
 				self.open.capabilities.announced(Capabilities.MULTIPROTOCOL_EXTENSIONS) and \
 				self.open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
@@ -123,12 +124,15 @@ class Peer (object):
 					if family in self.neighbor.families:
 						families.append(family)
 				self.bgp.new_eors(families)
-				if families: logger.message(self.me('>> EOR %s' % ', '.join(['%s %s' % (str(afi),str(safi)) for (afi,safi) in families])))
-			else:
+				if families:
+					eor = True
+					logger.message(self.me('>> EOR %s' % ', '.join(['%s %s' % (str(afi),str(safi)) for (afi,safi) in families])))
+			
+			if not eor:
 				# If we are not sending an EOR, send a keepalive as soon as when finished
 				# So the other routers knows that we have no (more) routes to send ...
 				# (is that behaviour documented somewhere ??)
-				c,k = self.bgp.new_keepalive()
+				c,k = self.bgp.new_keepalive(True)
 				if k: logger.message(self.me('>> KEEPALIVE (no more UPDATE and no EOR)'))
 
 			while self._running:
