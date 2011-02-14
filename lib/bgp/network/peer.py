@@ -74,7 +74,7 @@ class Peer (object):
 	def run (self):
 		if self._loop:
 			try:
-				self._loop.next()
+				return self._loop.next()
 			except StopIteration:
 				self._loop = None
 		elif self._restart:
@@ -102,15 +102,17 @@ class Peer (object):
 			yield None
 
 			message = self.bgp.new_keepalive(force=True)
-			logger.message(self.me('>> KEEPALIVE'))
+			logger.message(self.me('>> KEEPALIVE (OPENCONFIRM)'))
 			yield None
 
 			message = self.bgp.read_keepalive()
-			logger.message(self.me('<< KEEPALIVE'))
+			logger.message(self.me('<< KEEPALIVE (ESTABLISHED)'))
 
-			messages = self.bgp.new_announce()
-			if messages:
-				logger.message(self.me('>> %d UPDATE(s)' % len(messages)))
+			count = 0
+			for count in self.bgp.new_announce():
+				yield True
+			if count:
+				logger.message(self.me('>> %d UPDATE(s)' % count))
 
 			if	self.neighbor.graceful_restart and \
 				self.open.capabilities.announced(Capabilities.MULTIPROTOCOL_EXTENSIONS) and \
@@ -130,14 +132,14 @@ class Peer (object):
 				if k: logger.message(self.me('>> KEEPALIVE (no more UPDATE and no EOR)'))
 
 			while self._running:
-				c = self.bgp.check_keepalive()
-				logger.timers(self.me('Receive Timer %d second(s) left' % c))
-
 				c,k = self.bgp.new_keepalive()
 				if k: logger.message(self.me('>> KEEPALIVE'))
 				logger.timers(self.me('Sending Timer %d second(s) left' % c))
 
 				message = self.bgp.read_message()
+				# let's read if we have keepalive before doing the timer check
+				c = self.bgp.check_keepalive()
+				logger.timers(self.me('Receive Timer %d second(s) left' % c))
 
 				if message.TYPE == KeepAlive.TYPE:
 					logger.message(self.me('<< KEEPALIVE'))
@@ -148,9 +150,12 @@ class Peer (object):
 
 				if self._updates:
 					self._updates = False
-					messages = self.bgp.new_update()
-					if messages:
-						logger.message(self.me('>> UPDATE (%d)' % len(messages)))
+
+					count = 0
+					for count in self.bgp.new_update():
+						yield True
+					logger.message(self.me('>> UPDATE (%d)' % count))
+
 
 				yield None
 			

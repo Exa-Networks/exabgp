@@ -180,12 +180,19 @@ class Supervisor (object):
 					self.restart()
 
 				# Handle all connection
-				for ip in self._peers.keys():
-					peer = self._peers[ip]
-					peer.run()
-
+				peers = self._peers.keys()
+				while peers:
+					for ip in peers[:]:
+						peer = self._peers[ip]
+						# there was no routes to send for this peer, we performed keepalive checks
+						if peer.run() is not True:
+							# no need to come back to it before a second
+							peers.remove(ip)
+					# otherwise process as many routes as we can within a second for the remaining peers
+					duration = time.time() - start
+					if duration >= 1.0:
+						break
 				duration = time.time() - start
-
 				# RFC state that we MUST not more than one KEEPALIVE / sec
 				if duration < 1.0:
 					time.sleep(1.0-duration)

@@ -191,17 +191,14 @@ class Protocol (object):
 
 	def new_announce (self):
 		asn4 = not not self.peer.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
-		m = self._delta.announce(asn4,self.neighbor.local_as,self.neighbor.peer_as)
 		# Do not try to join the message and write all in one go as it causes issue if the size is bigger than the MTU
 		# Python 2.5.2 for example send partial data which BGP decoders then take as garbage.
-		if m:
-			for update in m:
-				logger.message(self.me(">> UPDATE (update)"))
-				self.connection.write(update)
-			return m
-		return []
-
-
+		count = 0
+		for update in self._delta.announce(asn4,self.neighbor.local_as,self.neighbor.peer_as):
+			count += 1
+			logger.message(self.me(">> UPDATE (update)"))
+			self.connection.write(update)
+			yield count
 
 	def new_eors (self,families):
 		eor = EOR()
@@ -212,15 +209,13 @@ class Protocol (object):
 
 	def new_update (self):
 		asn4 = not not self.peer.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
-		# This delta update can take quite some time (a few seconds with 500+ routes which may be a problem with low keepalive)
-		updates = self._delta.update(asn4,self.neighbor.local_as,self.neighbor.peer_as)
 		# Do not try to join the message and write all in one go as it causes issue if the size is bigger than the MTU
 		# Python 2.5.2 for example send partial data which BGP decoders then take as garbage.
-		if updates:
-			for update in updates
-				self.connection.write(update)
-			return updates
-		return []
+		count = 0
+		for update in self._delta.update(asn4,self.neighbor.local_as,self.neighbor.peer_as):
+			count += 1
+			self.connection.write(update)
+			yield count
 
 	def new_keepalive (self,force=False):
 		left = int(self.connection.last_write + self.neighbor.hold_time.keepalive() - time.time())

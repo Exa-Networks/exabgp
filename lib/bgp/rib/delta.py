@@ -27,7 +27,6 @@ class Delta (object):
 		# and intelligence like if we resdrawn a resdrawal, we need to re-announce
 		# but for the moment, let just be daft but correct as we are just no a full bgp router
 
-		messages = []
 		# table.changed always returns routes to remove before routes to add
 		for action,route in self.table.changed(self.last):
 			if action == '':
@@ -36,13 +35,12 @@ class Delta (object):
 			if action == '-':
 				if remove:
 					logger.rib('withdrawing %s' % route)
-					messages.append(Update([route]).withdraw(asn4))
+					yield Update([route]).withdraw(asn4)
 				else:
 					logger.rib('keeping %s' % route)
 			if action == '*':
 				logger.rib('updating %s' % route)
-				messages.append(Update([route]).update(asn4,local_asn,peer_asn))
+				yield Update([route]).update(asn4,local_asn,peer_asn)
 			if action == '+':
 				logger.rib('announcing %s' % route)
-				messages.append(Update([route]).announce(asn4,local_asn,peer_asn))
-		return messages
+				yield Update([route]).announce(asn4,local_asn,peer_asn)
