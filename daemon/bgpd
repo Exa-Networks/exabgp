@@ -34,6 +34,7 @@ class Supervisor (object):
 		self._shutdown = False
 		self._reload = False
 		self._restart = False
+		self._saved_pid = False
 		self.reload()
 
 		mask = os.umask(0137)
@@ -98,14 +99,14 @@ class Supervisor (object):
 			line = "%d\n" % ownid
 			f.write(line)
 			f.close()
+			self._saved_pid = True
 		except IOError, e:
 			logger.supervisor("Can not create PIDfile %s" % self.pid_file)
 			return
 		logger.supervisor("created PIDfile %s with value %d" % (self.pid_file,ownid))
 
-
 	def removepid (self):
-		if not self.pid_file:
+		if not self.pid_file or not self._saved_pid:
 			return
 		try:
 			os.remove(self.pid_file)
