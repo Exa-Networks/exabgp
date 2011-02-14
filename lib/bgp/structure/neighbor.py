@@ -57,31 +57,30 @@ class Neighbor (object):
 			routes += '\n\t\t'.join([str(route) for route in self.routes])
 
 		options = []
-		if self.md5: options.append("md5: %s" % self.md5)
-		if self.ttl is not None: options.append("ttl-security: %d" % self.ttl)
-		if self.graceful_restart: options.append("graceful-restart: %d" % self.graceful_restart)
+		if self.md5: options.append("md5: %s;" % self.md5)
+		if self.ttl is not None: options.append("ttl-security: %d;" % self.ttl)
+		if self.graceful_restart: options.append("graceful-restart: %d;" % self.graceful_restart)
 
 		return """\
 neighbor %s {
 	description "%s";
 	router-id %s;
-	peer-address %s;
-	peer-as %d;
 	local-address %s;
-	local-as %d;
+	local-as %s;
+	peer-as %s;
 	hold-time %s;
 	%s
 	static {%s
 	}
 }""" % (
+	self.peer_address,
 	self.description,
 	self.router_id,
-	self.peer_address,
-	self.peer_as,
 	self.local_address,
 	self.local_as,
+	self.peer_as,
 	self.hold_time,
-	'\n'.join(options),
+	'\n\t'.join(options),
 	routes
 )
 
