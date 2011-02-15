@@ -1,0 +1,33 @@
+!
+interface Loopback1
+  description BGP
+  ip address 192.168.127.128 255.255.255.255
+!
+bgp 65533
+  no synchronization 
+  bgp router-id 172.16.0.1
+  neighbor service-ip peer-group
+  neighbor service-ip remote-as 65533
+  neighbor service-ip description Service IPs
+  neighbor service-ip ebgp-multihop 5
+  neighbor service-ip update-source loopback1
+  neighbor service-ip default-originate
+  neighbor service-ip route-map bgp-service-ip in
+  neighbor service-ip route-map deny-any out
+  neighbor 192.168.127.1 peer-group service-ip
+  no auto-summary
+!
+ip prefix-list service-ip seq 10 permit 192.0.2.1/32
+ip prefix-list service-ip seq 99999 deny 0.0.0.0/0 le 32
+!
+ip access-list standard match-any
+  permit any
+!
+route-map bgp-service-ip permit 10
+  match ip address prefix-list service-ip
+  set community no-export additive
+! 
+route-map deny-any deny 10
+  match ip address match-any
+!
+
