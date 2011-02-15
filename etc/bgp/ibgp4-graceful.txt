@@ -2,10 +2,11 @@ neighbor 192.168.127.128 {
 	description "a quagga test peer";
 	router-id 192.168.127.1;
 	local-address 192.168.127.1;
-	local-as 65000;
-	peer-as 65534;
+	local-as 65533;
+	peer-as 65533;
 	hold-time 180;
-	graceful-restart;
+	#graceful-restart;
+	graceful-restart 1200;
 
 	static {
 		route 10.0.1.0/24 {

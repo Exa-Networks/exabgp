@@ -1,0 +1,19 @@
+/bin/bash: 2010/10/22: No such file or directory
+ssword none
+enable password none
+log file /var/log/quagga/bgpd informational
+!
+router bgp 65533
+ network 1.2.3.4/32
+ bgp router-id 0.0.0.0
+ neighbor 192.168.127.1 remote-as 65533
+ neighbor 192.168.127.130 remote-as 65533
+!
+ address-family ipv6
+ network 1234:5678::/32
+ neighbor 192.168.127.1 activate
+ exit-address-family
+!
+line vty
+!
+

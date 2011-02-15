@@ -1,0 +1,12 @@
+neighbor 192.168.127.128 {
+	description "will announce 256 /24";
+	router-id 198.111.227.39;
+	local-address 192.168.127.1;
+	local-as 65533;
+	peer-as 65533;
+	hold-time 3;
+
+	static {
+       		route 172.10.0.0/16 next-hop 192.0.2.1 med 200 community [174:666];
+        }
+}

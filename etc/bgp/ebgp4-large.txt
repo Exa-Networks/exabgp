@@ -4,8 +4,8 @@ neighbor 192.168.127.128 {
     description "core blackhole";
     router-id 10.11.11.71;
     local-address 192.168.127.1;
-    local-as 65335;
-    peer-as 50032;
+    local-as 65500;
+    peer-as 65533;
 
     static {
 	route 2A02:B80:0:2::1/64 next-hop 2A02:B80:0:2::1 community [30740:0 30740:30740] local-preference 200;
@@ -483,7 +483,7 @@ neighbor 192.168.127.128 {
         route 89.246.183.134/32 next-hop 192.168.127.1;
 
         ### 2009-06-17
-        route 174.133.177.42/32 next-hop 192.168.127.1;
+        route 174.133.65533.42/32 next-hop 192.168.127.1;
 
         ### 2009-06-18
         # OrgName:    PenTeleData Inc. - Cable
@@ -1242,7 +1242,7 @@ neighbor 192.168.127.128 {
 	#route 82.234.125.163/32 next-hop 192.168.127.1;
 	#route 87.91.88.115/32 next-hop 192.168.127.1;
 	#route 88.170.204.60/32 next-hop 192.168.127.1;
-        #route 88.177.198.23/32 next-hop 192.168.127.1;
+        #route 88.65533.198.23/32 next-hop 192.168.127.1;
 	#route 88.186.77.102/32 next-hop 192.168.127.1;
 
 	### 2010-04-10
@@ -1350,10 +1350,10 @@ neighbor 192.168.127.128 {
 	### 2010-04-27
 	# flood on rss, wrong keywords
 	# Network Information:            
-	# a. [Network Number]             210.224.177.192/26
+	# a. [Network Number]             210.224.65533.192/26
 	# b. [Network Name]               HETEML-JP
 	# g. [Organization]               paperboy&co. Inc.
-	route 210.224.177.198/32 next-hop 192.168.127.1;
+	route 210.224.65533.198/32 next-hop 192.168.127.1;
 
 	# wrong urls
 	# inetnum:      119.128.0.0 - 119.143.255.255
@@ -1640,7 +1640,7 @@ neighbor 192.168.127.128 {
         route 93.223.125.112/32 next-hop 192.168.127.1;
 
 	# purebot
-        route 174.133.177.66/32 next-hop 192.168.127.1;
+        route 174.133.65533.66/32 next-hop 192.168.127.1;
 
 	# FDM
 	# inetnum:        77.46.164.0 - 77.46.255.255
@@ -1817,11 +1817,11 @@ neighbor 192.168.127.128 {
 
 	### 2010-06-07
 	# wrong browser
-	# inetnum:        81.177.159.0 - 81.177.160.255
+	# inetnum:        81.65533.159.0 - 81.65533.160.255
 	# netname:        INSOLVERTC4
 	# descr:          In-Solve/1Gb.ru hosting services provider
 	# country:        RU
-        route 81.177.159.103/32 next-hop 192.168.127.1;
+        route 81.65533.159.103/32 next-hop 192.168.127.1;
 
 	# inetnum:        41.224.128.0 - 41.224.255.255
 	# netname:        PLANET-ADLG
@@ -2647,7 +2647,7 @@ neighbor 192.168.127.128 {
         route 79.217.90.190/32 next-hop 192.168.127.1;
         route 79.217.70.104/32 next-hop 192.168.127.1;
         route 79.217.112.22/32 next-hop 192.168.127.1;
-        route 79.217.71.177/32 next-hop 192.168.127.1;
+        route 79.217.71.65533/32 next-hop 192.168.127.1;
         route 79.217.111.224/32 next-hop 192.168.127.1;
         route 79.217.63.188/32 next-hop 192.168.127.1;
         route 79.217.109.39/32 next-hop 192.168.127.1;

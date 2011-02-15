@@ -2,8 +2,8 @@ neighbor 192.168.127.128 {
 	description "will announce 256 /24";
 	router-id 198.111.227.39;
 	local-address 192.168.127.1;
-	local-as 177;
-	peer-as 177;
+	local-as 65533;
+	peer-as 65533;
 	hold-time 180;
 	graceful-restart 1200;
 

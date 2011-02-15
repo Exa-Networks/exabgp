@@ -1,8 +1,8 @@
 #route 77.93.35.15/32 next-hop 192.168.127.1;
 
 group test {
-	local-as 177;
-	peer-as 177;
+	local-as 65533;
+	peer-as 65533;
 	hold-time 180;
 	graceful-restart 1200;
 

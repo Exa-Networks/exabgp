@@ -3,7 +3,7 @@ neighbor 82.219.4.254 {
 	router-id 10.0.0.1;
 	local-address 10.0.0.1;
 	local-as 65500;
-	peer-as 61000;
+	peer-as 65533;
 	graceful-restart 5;
 
 	flow {

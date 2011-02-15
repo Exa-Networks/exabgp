@@ -1,20 +1,10 @@
-neighbor 192.0.2.181 {
-	description "a quagga test peer";
-	router-id 192.0.2.92;
-	local-address 192.0.2.92;
-	local-as 65533;
-	peer-as 65533;
-
-	static {
-		route 10.0.5.0/24 next-hop 192.0.2.92 local-preference 10 community [ 0x87654321 ];
-	}
-}
 neighbor 192.168.127.128 {
 	description "a quagga test peer";
 	router-id 192.168.127.1;
 	local-address 192.168.127.1;
 	local-as 65500;
 	peer-as 65533;
+	hold-time 180;
 
 	static {
 		route 10.0.1.0/24 {
