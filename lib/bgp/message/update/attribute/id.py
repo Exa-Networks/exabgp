@@ -27,6 +27,7 @@ class AttributeID (int):
 	MP_REACH_NLRI      = 0x0e # 14
 	MP_UNREACH_NLRI    = 0x0f # 15
 
+	INTERNAL_WATCHDOG  = 0xFFFE
 	INTERNAL_SPLIT     = 0xFFFF
 
 	def __str__ (self):

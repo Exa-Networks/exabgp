@@ -8,6 +8,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 import os
+import stat
 from pprint import pformat
 from copy import deepcopy
 
@@ -44,14 +45,20 @@ class Split (int):
 	MULTIPLE = False
 
 
+class Watchdog (str):
+	ID = AttributeID.INTERNAL_WATCHDOG
+	MULTIPLE = False
+
+
 class Configuration (object):
 	TTL_SECURITY = 255
 	debug = os.environ.get('RAISE_CONFIGURATION',None) != None
 
-	_str_route_error = '' \
+	_str_route_error = \
+	'community and as-path can take a single community as parameter. only next-hop is mandatory\n\n' \
 	'syntax:\n' \
 	'route 10.0.0.1/22 {\n' \
-	'  next-hop 192.0.1.254;\n'
+	'  next-hop 192.0.1.254;\n' \
 	'  origin IGP|EGP|INCOMPLETE;\n' \
 	'  as-path [ ASN1 ASN2 ];\n' \
 	'  med 100;\n' \
@@ -59,7 +66,9 @@ class Configuration (object):
 	'  community [ 65000 65001 65002 ];\n' \
 	'  label [ 100 200 ];\n' \
 	'  split /24\n' \
+	'  watchdog watchog-name\n' \
 	'}\n\n' \
+	'syntax:\n' \
 	'route 10.0.0.1/22 next-hop 192.0.2.1' \
 	' origin IGP|EGP|INCOMPLETE' \
 	' as-path ASN' \
@@ -68,8 +77,7 @@ class Configuration (object):
 	' community 65000' \
 	' label 150' \
 	' split /24' \
-	';\n\n' \
-	'community and as-path can take a single community as parameter. only next-hop is mandatory\n\n'
+	';\n' \
 
 
 	_str_flow_error = \
@@ -94,6 +102,10 @@ class Configuration (object):
 	'one or more match term, one action\n' \
 	'fragment code is totally untested\n' \
 
+	_str_watchdog_error = \
+	'syntax: watchdog name-of-watchdog {\n' \
+	'          run /path/to/command with its args;\n' \
+	'        }\n\n' \
 
 	def __init__ (self,fname,text=False):
 		self._text = text
@@ -101,6 +113,7 @@ class Configuration (object):
 		self._clear()
 	
 	def _clear (self):
+		self.watchdog = {}
 		self.neighbor = {}
 		self.error = ''
 		self._neighbor = {}
@@ -139,7 +152,7 @@ class Configuration (object):
 			self.neighbor = self._neighbor
 			return True
 
-		self.error = "syntax error in section %s\nline %d : %s\n%s" % (self._location[-1],self.number(),self.line(),self._error)
+		self.error = "\nsyntax error in section %s\nline %d : %s\n\n%s" % (self._location[-1],self.number(),self.line(),self._error)
 		return False
 
 	# Tokenisation
@@ -232,10 +245,12 @@ class Configuration (object):
 				return False
 			if command == 'static': return self._multi_static(tokens[1:])
 			if command == 'flow': return self._multi_flow(tokens[1:])
+			if command == 'watchdog': return self._multi_watchdog(tokens[1:])
 
 		if name == 'neighbor':
 			if command == 'static': return self._multi_static(tokens[1:])
 			if command == 'flow': return self._multi_flow(tokens[1:])
+			if command == 'watchdog': return self._multi_watchdog(tokens[1:])
 
 		if name == 'static':
 			if command == 'route':
@@ -301,15 +316,81 @@ class Configuration (object):
 		if command == 'discard': return self._flow_route_discard(tokens[1:])
 		if command == 'rate-limit': return self._flow_route_rate_limit(tokens[1:])
 		if command == 'redirect': return self._flow_route_redirect(tokens[1:])
-		
+
+		if command == 'run': return self._set_watchdog_run('watchdog_run',tokens[1:])
+
 		return False
+
+	# Group Watchdog
+	
+	def _multi_watchdog (self,tokens):
+		if len(tokens) != 1:
+			self._error = self._str_watchdog_error
+			return False
+		while True:
+			r = self._dispatch('watchdog',[],['run',])
+			if r is False: return False
+			if r is None: break
+		self.watchdog[tokens[0]] = self._scope[-1].pop('watchdog_run')
+		return True
+
+	def _set_watchdog_run (self,command,value):
+		prg = value[0]
+		if len(prg) > 2 and prg[0] == prg[-1] and prg[0] in ['"',"'"]:
+			prg = prg[1:-1]
+		if not prg:
+			self._error = 'prg requires the program to prg as an argument (quoted or unquoted)'
+			if self.debug: raise
+			return False
+		if prg[0] != '/':
+			prg = os.path.join(os.getcwd(),prg)
+		if not os.path.exists(prg):
+			self._error = 'can not locate the the program "%s"' % prg
+			if self.debug: raise
+			return False
+
+		# XXX: Yep, race conditions are possible, those are sanity checks not security ones ...
+		s = os.stat(prg)
+		
+		if stat.S_ISDIR(s.st_mode):
+			self._error = 'can not execute directories "%s"' % prg
+			if self.debug: raise
+			return False
+
+		if s.st_mode & stat.S_ISUID:
+			self._error = 'refusing to run setuid programs "%s"' % prg
+			if self.debug: raise
+			return False
+
+		check = stat.S_IXOTH
+		if s.st_uid == os.getuid():
+			check |= stat.S_IXUSR
+		if s.st_gid == os.getgid():
+			check |= stat.S_IXGRP
+
+		if not check & s.st_mode:
+			self._error = 'exabgp will not be able to run this program "%s"' % prg
+			if self.debug: raise
+			return False
+
+		self._scope[-1][command] = prg
+		return True
+
+	def _route_watchdog (self,tokens):
+		try:
+			self._scope[-1]['routes'][-1].add(Watchdog(tokens.pop(0)))
+			return True
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
 
 	# Group Neighbor
 
 	def _multi_group (self,address):
 		self._scope.append({})
 		while True:
-			r = self._dispatch('group',['static','flow','neighbor'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart','md5','ttl-security'])
+			r = self._dispatch('group',['static','flow','neighbor','watchdog'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart','md5','ttl-security'])
 			if r is False:
 				return False
 			if r is None:
@@ -385,7 +466,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-		 	r = self._dispatch('neighbor',['static','flow'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart','md5','ttl-security'])
+		 	r = self._dispatch('neighbor',['static','flow','watchdog'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart','md5','ttl-security'])
 			if r is False: return False
 			if r is None: return True
 
@@ -644,6 +725,10 @@ class Configuration (object):
 				if self._route_label(tokens):
 					continue
 				return False
+			if command == 'watchdog':
+				if self._route_watchdog(tokens):
+					continue
+				return False
 			self._error = self._str_route_error
 			return False
 		return self.split_last_route()
@@ -803,7 +888,6 @@ class Configuration (object):
 			return False
 		self._scope[-1]['routes'][-1].add(communities)
 		return True
-
 
 	# Group Flow  ........
 
