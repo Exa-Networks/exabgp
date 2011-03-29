@@ -13,4 +13,4 @@ fi
 export PYTHONPATH=$path/lib
 export ETC=$path/etc/bgpd
 
-python $path/daemon/bgpd $*
+python -m bgp.debug $path/daemon/bgpd $*
