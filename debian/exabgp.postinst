@@ -1,0 +1,15 @@
+#! /bin/sh
+
+set -e
+
+if [ "$1" = "configure" ]; then
+        if [ ! `getent group exabgp >/dev/null` ]; then
+                 deluser --quiet --system exabgp
+        fi
+        adduser --quiet --system --group --no-create-home exabgp
+fi
+
+. /usr/share/debconf/confmodule
+db_version 2.0
+
+#DEBHELPER#

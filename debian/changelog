@@ -1,0 +1,13 @@
+exabgp (1.2.0-2) unstable; urgency=low
+  * Added watch file for uscan
+
+ -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Thu, 25 Apr 2011 17:12:28 +0000
+
+exabgp (1.2.0-1) unstable; urgency=low
+
+  * Patches:
+    - copyright: Extend validity of the COPYRIGHT to 2011, on author request.
+  * Initial release (Closes: #623616) 
+
+ -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Thu, 21 Apr 2011 19:35:15 +0000
+

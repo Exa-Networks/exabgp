@@ -1,0 +1,45 @@
+# Defaults for exabgp initscript
+# sourced by /etc/init.d/exabgp
+# installed at /etc/default/exabgp by the maintainer scripts
+
+#
+# This is a POSIX shell fragment
+#
+
+# Additional options that are passed to the Daemon.
+# This is the configuration file the daemon will use
+DAEMON_OPTS="current"
+
+# Change this to "yes" when your configuration file is ready.
+# The configuration file is, by default, /etc/exabgp/current
+# Use the examples stored under /usr/share/doc/exabgp/examples
+# to build your configuration file.
+EXABGPRUN="no"
+
+# This environement variable will tell the daemon in which folder
+# we store the configuration files.
+export ETC="/etc/exabgp/"
+
+# syslog : no value for local syslog, a file name (which will auto-rotate) or host:<host> for remote syslog
+#export SYSLOG=/var/log/exabgp
+
+# All the environment variable below are for debugging purpose.
+
+# verbose configuration parsing
+#export DEBUG_CONFIGURATION=1
+
+# signal received, configuration reload (default on)
+#export DEBUG_SUPERVISOR=0
+
+# changes in route announcement after config reload
+#export DEBUG_RIB=1
+
+# the packets sent and received
+#export DEBUG_WIRE=1
+
+# changes in route announcement in config reload (default on)
+#export DEBUG_MESSAGE=0
+
+# tracking keepalives
+#export DEBUG_TIMERS=1
+
