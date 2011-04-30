@@ -20,6 +20,7 @@ from bgp.network.peer import Peer
 from bgp.log import Logger
 logger = Logger()
 
+
 class Supervisor (object):
 	pid_file = os.environ.get('PID','')
 	user = os.environ.get('USER','nobody')
@@ -66,7 +67,7 @@ class Supervisor (object):
 				if pid > 0:
 					os._exit(0)
 			except OSError, e:
-				logger.critial('can not fork, errno %d : %s' % (e.errno,e.strerror),'supervisor')
+				logger.critial('Can not fork, errno %d : %s' % (e.errno,e.strerror),'supervisor')
 
 		# do not detach if we are already supervised or run by init like process
 		if self._is_socket(sys.__stdin__.fileno()) or os.getppid() != 1:
@@ -77,7 +78,6 @@ class Supervisor (object):
 				# XXX: Force SYSLOG, we need to be able to access the local syslog deamon
 				# os.environ['SYSLOG']='??'
 				pass
-
 
 	def savepid (self):
 		if not self.pid_file:
@@ -103,7 +103,7 @@ class Supervisor (object):
 		except IOError, e:
 			logger.supervisor("Can not create PIDfile %s" % self.pid_file)
 			return
-		logger.supervisor("created PIDfile %s with value %d" % (self.pid_file,ownid))
+		logger.supervisor("Created PIDfile %s with value %d" % (self.pid_file,ownid))
 
 	def removepid (self):
 		if not self.pid_file or not self._saved_pid:
@@ -116,7 +116,7 @@ class Supervisor (object):
 			else:
 				logger.supervisor("Can not remove PIDfile %s" % self.pid_file)
 				return
-		logger.supervisor("removed PIDfile %s" % self.pid_file)
+		logger.supervisor("Removed PIDfile %s" % self.pid_file)
 
 	def drop_privileges (self,name):
 		"""returns true if we are left with insecure privileges"""
@@ -161,8 +161,8 @@ class Supervisor (object):
 
 	def run (self):
 		if self.drop_privileges(self.user):
-			logger.supervisor("could not drop privileges to '%s' refusing to run as root" % self.user)
-			logger.supervisor("set the environmemnt value USER to change the unprivileged user")
+			logger.supervisor("Could not drop privileges to '%s' refusing to run as root" % self.user)
+			logger.supervisor("Set the environmemnt value USER to change the unprivileged user")
 			return
 		self.fork()
 		self.savepid()
@@ -210,17 +210,17 @@ class Supervisor (object):
 
 	def shutdown (self):
 		"""terminate all the current BGP connections"""
-		logger.info("performing shutdown","supervisor")
+		logger.info("Performing shutdown","supervisor")
 		for ip in self._peers.keys():
 			self._peers[ip].stop()
 
 	def reload (self):
 		"""reload the configuration and send to the peer the route which changed"""
-		logger.info("performing reload","configuration")
+		logger.info("Performing reload","configuration")
 		
 		reloaded = self.configuration.reload()
 		if not reloaded:
-			logger.info("problem with the configuration file, no change done","configuration")
+			logger.info("Problem with the configuration file, no change done","configuration")
 			logger.info(configuration.error,"configuration")
 			return
 
@@ -243,13 +243,13 @@ class Supervisor (object):
 					self._peers[ip].restart(neighbor)
 				# set the new neighbor with the new routes
 				else:
-					logger.supervisor("updating routes for %s" % str(ip))
+					logger.supervisor("Updating routes for %s" % str(ip))
 					self._peers[ip].reload(neighbor.routes)
-		logger.info("loaded new configuration successfully",'configuration')
+		logger.info("Loaded new configuration successfully",'configuration')
 
 	def restart (self):
 		"""kill the BGP session and restart it"""
-		logger.info("performing restart","supervisor")
+		logger.info("Performing restart","supervisor")
 		self.configuration.reload()
 
 		for ip in self._peers.keys():
