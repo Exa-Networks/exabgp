@@ -8,7 +8,7 @@
 
 # Additional options that are passed to the Daemon.
 # This is the configuration file the daemon will use
-DAEMON_OPTS="current"
+DAEMON_OPTS="exabgp.conf"
 
 # Change this to "yes" when your configuration file is ready.
 # The configuration file is, by default, /etc/exabgp/current
