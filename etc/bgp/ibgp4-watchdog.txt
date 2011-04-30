@@ -5,12 +5,19 @@ neighbor 192.168.127.128 {
 	local-as 65533;
 	peer-as 65533;
 
-	# control route(s) announcement, return down or up on it stdout to reflect route announcement change
+	# control route(s) announcement every second, return down or up on it stdout to reflect route announcement change
+	# flap the route with the watchdog name "watchdog-one"
 	watchdog service-1 {
 		run etc/watchdog/service-1.sh;
 	}
 
+
+	# add and remove a route every 10 second
+	watchdog service-2 {
+		run etc/watchdog/service-2.sh;
+	}
+
 	static {
-       		route 172.10.0.0/16 next-hop 192.0.2.1 med 200 community [174:666] watchdog service-1;
+       		route 172.10.0.0/16 next-hop 192.0.2.1 med 200 community [174:666] watchdog watchdog-one;
         }
 }
