@@ -1,20 +1,18 @@
-Make sure that should the route delta calculation take over one second, to stop and resume it after sending keepalives
-When parsing routes, warns if a route use the as-path feature in a ibgp connection and has the ASN in it, it is invalid and the router will drop the route.
-Look at all the XXX: in the code
-Some of the match condition of flows currently take list or numeric tests, they should always take both, refactor the code for it (ports for example)
+BUGS:
+ * Rewrite the unittesting which is really missing.
+ * Write a correct documentation (argh ...)
+ * Look at all the XXX: in the code
 
-Write a correct documentation
+FEATURE:
+ * When parsing routes, warns if a route use the as-path feature in a ibgp connection and has the ASN in it, it is invalid and the router will drop the route.
+ * Some of the match condition of flows currently take list or numeric tests, they should always take both, refactor the code for it (ports for example)
+ * UPDATE parsing is totally disabled as very broken ATM, the broken update parsing for ASPath assumes only one segment
+ * Modification of trhe RIB from the code
 
-Formally define the interface used
-Rewrite the unittesting which is really missing.
-reduce to a minimum all the new_ and to_ functions and integrate them into protocol
+CODE IMPROVEMENTS:
+ * reduce to a minimum all the new_ and to_ functions and integrate them into protocol
+ * Formally define the interfaces used (perhaps ...)
 
-Juniper does not accept any holdtime <20
-
-UPDATE parsing is totally disabled, the broken update parsing for ASPath assumes only one segment
-
-Calculing the difference between two configuration can take quite some time, possibly more than the keepalive if it is very low
-
-Graceful restart docs much clearer than the RFC (but still not 100%)
-http://www.cisco.com/en/US/products/ps6550/products_white_paper09186a008016317c.shtml
+NOTES:
+ * Juniper does not accept any holdtime <20 (double check again)
 
