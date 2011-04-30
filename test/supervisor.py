@@ -4,7 +4,7 @@
 peer.py
 
 Created by Thomas Mangin on 2009-08-30.
-Copyright (c) 2009 Exa Networks. All rights reserved.
+Copyright (c) 2009-2011 Exa Networks. All rights reserved.
 """
 
 import unittest

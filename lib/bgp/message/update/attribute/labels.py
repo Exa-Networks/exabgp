@@ -5,7 +5,7 @@ labels.py
 
 based on communities.py Created by Thomas Mangin on 2009-11-05.
 Modified by Diego Garcia del Rio on 2010-01-05
-Copyright (c) 2009 Exa Networks. All rights reserved.
+Copyright (c) 2009-2011 Exa Networks. All rights reserved.
 """
 
 from struct import pack

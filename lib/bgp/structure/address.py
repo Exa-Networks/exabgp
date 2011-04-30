@@ -4,7 +4,7 @@
 address.py
 
 Created by Thomas Mangin on 2010-01-19.
-Copyright (c) 2010 Exa Networks. All rights reserved.
+Copyright (c) 2010-2011 Exa Networks. All rights reserved.
 """
 
 from struct import pack

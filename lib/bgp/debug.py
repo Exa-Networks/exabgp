@@ -1,3 +1,12 @@
+#!/usr/bin/env python
+# encoding: utf-8
+"""
+configuration.py
+
+Created by Thomas Mangin on 2011-03-29.
+Copyright (c) 2011-2011 Exa Networks. All rights reserved.
+"""
+
 import os
 import sys
 

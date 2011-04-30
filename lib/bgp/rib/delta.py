@@ -4,7 +4,7 @@
 delta.py
 
 Created by Thomas Mangin on 2009-11-07.
-Copyright (c) 2009 Exa Networks. All rights reserved.
+Copyright (c) 2009-2011 Exa Networks. All rights reserved.
 """
 
 from bgp.message.update import Update
