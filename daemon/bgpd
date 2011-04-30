@@ -83,40 +83,48 @@ class Supervisor (object):
 				# os.environ['SYSLOG']='??'
 				pass
 
+	def _new_watchdog (self,name):
+		try:
+			self._proc[name] = subprocess.Popen([self.configuration.watchdog[name],],
+				shell=True,
+				stdin=subprocess.PIPE,
+				stdout=subprocess.PIPE,
+			)
+			logger.supervisor("Forked watchdog %s" % name)
+		except (subprocess.CalledProcessError,OSError,ValueError):
+			logger.supervisor("Could not start watchdog %s" % name)
+
 	def fork_watchdogs (self):
-		watchdogs = self.configuration.watchdog
-		if not watchdogs:
+		if not self.configuration.watchdog:
 			return
-		for name in watchdogs:
-			try:
-				self._proc[name] = subprocess.Popen([watchdogs[name],],
-					shell=True,
-					stdin=subprocess.PIPE,
-					stdout=subprocess.PIPE,
-				)
-				logger.supervisor("Forked watchdog %s" % name)
-			except subprocess.CalledProcessError:
-				logger.supervisor("Could not start watchdog %s" % name)
+		for name in self.configuration.watchdog:
+			self._new_watchdog(name)
 
 	def read_watchdogs (self):
 		lines = {}
-		for name in self._proc:
-			proc = self._proc[name]
-			r = True
-			while r:
-				r,_,_ = select.select([proc.stdout,],[],[],0)
-				if r:
-					# XXX: readline is blocking, so we are taking the assuption that it will not block
-					# XXX: most likely not going to but perhaps the code should be more robust ?
-					line = proc.stdout.readline().rstrip()
-					if not line:
-						# It seems that when we send ^C this is passed to the children to
-						# And if they do not intercept it correctly, select.select returns but
-						# there is not data to read
-						r = False
-					else:
-						logger.supervisor("Command from watchdog %s : %s " % (name,line))
-						lines.setdefault(name,[]).append(line)
+		for name in list(self._proc):
+			try:
+				proc = self._proc[name]
+				r = True
+				while r:
+					r,_,_ = select.select([proc.stdout,],[],[],0)
+					if r:
+						# XXX: readline is blocking, so we are taking the assuption that it will not block
+						# XXX: most likely not going to but perhaps the code should be more robust ?
+						line = proc.stdout.readline().rstrip()
+						if not line:
+							# It seems that when we send ^C this is passed to the children to
+							# And if they do not intercept it correctly, select.select returns but
+							# there is not data to read
+							r = False
+						else:
+							logger.supervisor("Command from watchdog %s : %s " % (name,line))
+							lines.setdefault(name,[]).append(line)
+			except (subprocess.CalledProcessError,OSError,ValueError):
+				logger.supervisor("Issue with the watchdog, terminating it and restarting it")
+				self._proc[name].terminate()
+				self._new_watchdog(name)
+				
 		return lines
 
 	def terminate_watchdogs (self):
