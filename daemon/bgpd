@@ -83,8 +83,24 @@ class Supervisor (object):
 				# os.environ['SYSLOG']='??'
 				pass
 
+	def _terminate_watchdog (self,name):
+		logger.supervisor("Terminating watchdog %s" % name)
+		self._proc[name].terminate()
+		self._proc[name].wait()
+		del self._proc[name]
+
+	def terminate_watchdogs (self):
+		for name in list(self._proc):
+			self._terminate_watchdog(name)
+
 	def _new_watchdog (self,name):
 		try:
+			if name in self._proc:
+				logger.supervisor("Can not start watchdog, it is alrady running")
+				return
+			if not name in self.configuration.watchdog:
+				logger.supervisor("Can not start watchdog, no configuration for it (anymore ?)")
+				return
 			self._proc[name] = subprocess.Popen([self.configuration.watchdog[name],],
 				shell=True,
 				stdin=subprocess.PIPE,
@@ -95,10 +111,11 @@ class Supervisor (object):
 			logger.supervisor("Could not start watchdog %s" % name)
 
 	def fork_watchdogs (self):
-		if not self.configuration.watchdog:
-			return
 		for name in self.configuration.watchdog:
 			self._new_watchdog(name)
+		for name in list(self._proc):
+			if not name in self.configuration.watchdog:
+				self._terminate_watchdog(name)
 
 	def read_watchdogs (self):
 		lines = {}
@@ -122,15 +139,10 @@ class Supervisor (object):
 							lines.setdefault(name,[]).append(line)
 			except (subprocess.CalledProcessError,OSError,ValueError):
 				logger.supervisor("Issue with the watchdog, terminating it and restarting it")
-				self._proc[name].terminate()
+				self._terminate_watchdog(name)
 				self._new_watchdog(name)
 				
 		return lines
-
-	def terminate_watchdogs (self):
-		for name in self.configuration.watchdog:
-			self._proc[name].terminate()
-			self._proc[name].wait()
 
 	def savepid (self):
 		if not self.pid_file:
@@ -219,7 +231,6 @@ class Supervisor (object):
 			return
 		self.fork()
 		self.savepid()
-		self.fork_watchdogs()
 
 		# did we complete the run of updates caused by the last SIGHUP ?
 		reload_completed = True
@@ -313,6 +324,7 @@ class Supervisor (object):
 					logger.supervisor("Updating routes for %s" % str(ip))
 					self._peers[ip].reload(neighbor.routes)
 		logger.info("Loaded new configuration successfully",'configuration')
+		self.fork_watchdogs()
 
 	def restart (self):
 		"""kill the BGP session and restart it"""
@@ -325,6 +337,7 @@ class Supervisor (object):
 				self._peers[ip].stop()
 			else:
 				self._peers[ip].restart()
+		self.fork_watchdogs()
 
 	def unschedule (self,peer):
 		ip = peer.neighbor.peer_address.ip
