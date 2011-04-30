@@ -14,6 +14,8 @@ import time
 import signal
 import socket
 import errno
+import subprocess
+import select
 
 from bgp.network.peer import Peer
 
@@ -31,6 +33,8 @@ class Supervisor (object):
 
 	def __init__ (self,configuration):
 		self.configuration = configuration
+		self._proc = {}
+		self.watchdog = {}
 		self._peers = {}
 		self._shutdown = False
 		self._reload = False
@@ -78,6 +82,47 @@ class Supervisor (object):
 				# XXX: Force SYSLOG, we need to be able to access the local syslog deamon
 				# os.environ['SYSLOG']='??'
 				pass
+
+	def fork_watchdogs (self):
+		watchdogs = self.configuration.watchdog
+		if not watchdogs:
+			return
+		for name in watchdogs:
+			try:
+				self._proc[name] = subprocess.Popen([watchdogs[name],],
+					shell=True,
+					stdin=subprocess.PIPE,
+					stdout=subprocess.PIPE,
+				)
+				logger.supervisor("Forked watchdog %s" % name)
+			except subprocess.CalledProcessError:
+				logger.supervisor("Could not start watchdog %s" % name)
+
+	def read_watchdogs (self):
+		lines = {}
+		for name in self._proc:
+			proc = self._proc[name]
+			r = True
+			while r:
+				r,_,_ = select.select([proc.stdout,],[],[],0)
+				if r:
+					# XXX: readline is blocking, so we are taking the assuption that it will not block
+					# XXX: most likely not going to but perhaps the code should be more robust ?
+					line = proc.stdout.readline().rstrip()
+					if not line:
+						# It seems that when we send ^C this is passed to the children to
+						# And if they do not intercept it correctly, select.select returns but
+						# there is not data to read
+						r = False
+					else:
+						logger.supervisor("Command from watchdog %s : %s " % (name,line))
+						lines.setdefault(name,[]).append(line)
+		return lines
+
+	def terminate_watchdogs (self):
+		for name in self.configuration.watchdog:
+			self._proc[name].send_signal(signal.SIGTERM)
+			self._proc[name].wait()
 
 	def savepid (self):
 		if not self.pid_file:
@@ -166,6 +211,7 @@ class Supervisor (object):
 			return
 		self.fork()
 		self.savepid()
+		self.fork_watchdogs()
 
 		# did we complete the run of updates caused by the last SIGHUP ?
 		reload_completed = True
@@ -183,6 +229,18 @@ class Supervisor (object):
 				elif self._restart:
 					self._restart = False
 					self.restart()
+				else:
+					watchdog = self.read_watchdogs()
+					for service in watchdog:
+						for command in watchdog[service]:
+							if command.startswith('announce watchdog '):
+								name = command.split(' ')[2]
+								self.watchdog[name] = 'announce'
+							elif command.startswith('withdraw watchdog '):
+								name = command.split(' ')[2]
+								self.watchdog[name] = 'withdraw'
+							else:
+								logger.supervisor("Command from watchdog not understood : %s" % command)
 
 				reload_completed = True
 				# Handle all connection
@@ -207,6 +265,7 @@ class Supervisor (object):
 				logger.supervisor("^C received")
 				self._shutdown = True
 		self.removepid()
+		self.terminate_watchdogs()
 
 	def shutdown (self):
 		"""terminate all the current BGP connections"""
