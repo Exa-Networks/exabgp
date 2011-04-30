@@ -121,7 +121,7 @@ class Supervisor (object):
 
 	def terminate_watchdogs (self):
 		for name in self.configuration.watchdog:
-			self._proc[name].send_signal(signal.SIGTERM)
+			self._proc[name].terminate()
 			self._proc[name].wait()
 
 	def savepid (self):
