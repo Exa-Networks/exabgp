@@ -62,7 +62,7 @@ class Peer (object):
 
 	def reload (self,routes):
 		self._updates = True
-		self.neighbor.routes = routes
+		self.neighbor.set_routes(routes)
 
 	def restart (self,restart_neighbor=None):
 		# we want to tear down the session and re-establish it

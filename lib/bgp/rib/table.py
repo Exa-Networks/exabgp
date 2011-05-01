@@ -22,7 +22,7 @@ class Table (object):
 
 	# This interface is very good for the file change but not if you want to update from network
 	def recalculate (self):
-		routes = self.peer.neighbor.routes
+		routes = self.peer.neighbor.routes()
 		for prefix in self._plus.keys():
 			route = self._plus[prefix][1]
 			if route not in routes:

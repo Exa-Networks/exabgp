@@ -23,8 +23,18 @@ class Neighbor (object):
 		self.graceful_restart = False
 		self.md5 = None
 		self.ttl = None
-		self.routes = []
+		self._routes = []
 		self.families = []
+
+	def routes (self):
+		for route in self._routes:
+			yield route
+
+	def add_route (self,route):
+		self._routes.append(route)
+
+	def set_routes (self,routes):
+		self._routes = routes
 
 	def missing (self):
 		if self.local_address is None: return 'local-address'

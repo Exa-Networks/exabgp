@@ -322,7 +322,7 @@ class Supervisor (object):
 				# set the new neighbor with the new routes
 				else:
 					logger.supervisor("Updating routes for %s" % str(ip))
-					self._peers[ip].reload(neighbor.routes)
+					self._peers[ip].reload(neighbor.routes())
 		logger.info("Loaded new configuration successfully",'configuration')
 		self.fork_watchdogs()
 

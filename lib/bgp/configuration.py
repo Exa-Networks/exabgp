@@ -426,7 +426,7 @@ class Configuration (object):
 			if v: neighbor.hold_time = v
 			v = scope.get('routes',[])
 			for route in v:
-				neighbor.routes.append(route)
+				neighbor.add_route(route)
 				if (route.afi,route.safi) not in neighbor.families:
 					neighbor.families.append((route.afi,route.safi))
 
