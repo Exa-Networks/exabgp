@@ -1,7 +1,10 @@
 #!/bin/sh
 
 # ignore Control C
-trap '' 2
+# if the user ^C exabgp we will get that signal too, ignore it and let exabgp send us a SIGTERM
+trap '' SIGINT
+
+# command and watchdog name are case sensitive
 
 while `true`;
 do

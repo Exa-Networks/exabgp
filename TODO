@@ -8,6 +8,10 @@ FEATURE:
  * Some of the match condition of flows currently take list or numeric tests, they should always take both, refactor the code for it (ports for example)
  * UPDATE parsing is totally disabled as very broken ATM, the broken update parsing for ASPath assumes only one segment
  * Modification of trhe RIB from the code
+ * route announcement and withdrawal from process
+ * reload/restart/terminate exabgp from process
+ * a sample process application relaying command from stdin
+ * a sample process application relaying command from socket (using netcat ?)
 
 CODE IMPROVEMENTS:
  * reduce to a minimum all the new_ and to_ functions and integrate them into protocol

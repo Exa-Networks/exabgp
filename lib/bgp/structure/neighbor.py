@@ -7,8 +7,11 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2011 Exa Networks. All rights reserved.
 """
 
+from copy import copy
+
 from bgp.structure.address import AFI
 from bgp.message.open import HoldTime
+from bgp.message.update.attribute.id import AttributeID
 
 # The definition of a neighbor (from reading the configuration)
 class Neighbor (object):
@@ -25,10 +28,23 @@ class Neighbor (object):
 		self.ttl = None
 		self._routes = []
 		self.families = []
+		self._watchdog = {}
 
-	def routes (self):
+	def watchdog (self,watchdog):
+		self._watchdog = copy(watchdog)
+
+	def every_routes (self):
+		return self._routes
+
+	def filtered_routes (self):
+		routes = []
 		for route in self._routes:
-			yield route
+			watchdog = route.get(AttributeID.INTERNAL_WATCHDOG,None)
+			if watchdog in self._watchdog:
+				if self._watchdog[watchdog] == 'withdraw':
+					continue
+			routes.append(route)
+		return routes
 
 	def add_route (self,route):
 		self._routes.append(route)
