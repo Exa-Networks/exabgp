@@ -39,6 +39,7 @@ class Supervisor (object):
 		self._shutdown = False
 		self._reload = False
 		self._restart = False
+		self._evaluate = False
 		self._saved_pid = False
 		self.reload()
 
@@ -248,16 +249,21 @@ class Supervisor (object):
 				elif self._restart:
 					self._restart = False
 					self.restart()
+				elif self._evaluate:
+					self._evaluate = False
+					self.evaluate()
 				else:
 					watchdog = self.read_watchdogs()
 					for service in watchdog:
 						for command in watchdog[service]:
-							if command.startswith('announce watchdog '):
-								name = command.split(' ')[2]
-								self.watchdog[name] = 'announce'
-							elif command.startswith('withdraw watchdog '):
-								name = command.split(' ')[2]
-								self.watchdog[name] = 'withdraw'
+							if command.startswith('announce watchdog') or command.startswith('withdraw watchdog'):
+								parts = command.split(' ')
+								try:
+									name = parts[2]
+								except IndexError:
+									name = service
+								self.watchdog[name] = parts[0]
+								self._evaluate = True
 							else:
 								logger.supervisor("Command from watchdog not understood : %s" % command)
 
@@ -321,10 +327,20 @@ class Supervisor (object):
 					self._peers[ip].restart(neighbor)
 				# set the new neighbor with the new routes
 				else:
-					logger.supervisor("Updating routes for %s" % str(ip))
-					self._peers[ip].reload(neighbor.routes())
+					logger.supervisor("Updating routes for peer %s" % str(ip))
+					self._peers[ip].reload(neighbor.every_routes())
 		logger.info("Loaded new configuration successfully",'configuration')
 		self.fork_watchdogs()
+
+	def evaluate (self):
+		"""the watchdog ran and we need to figure what routes to changes"""
+		logger.info("Performing configuration evaluation","configuration")
+		
+		for ip in self.configuration.neighbor.keys():
+			neighbor = self.configuration.neighbor[ip]
+			neighbor.watchdog(self.watchdog)
+			self._peers[ip].reload(neighbor.every_routes())
+		logger.info("Updated peers watchdogs successfully",'configuration')
 
 	def restart (self):
 		"""kill the BGP session and restart it"""

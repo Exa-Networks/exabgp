@@ -9,13 +9,14 @@ Copyright (c) 2011-2011 Exa Networks. All rights reserved.
 
 import os
 import sys
+import signal
 
 debug = os.environ.get('PDB',None)
 
 if debug is None:
 	def intercept (type, value, trace):
 		import traceback
-		print >> sys.stderr, 'the program failed :', value
+		print >> sys.stderr, 'the program failed with message :', value
 	sys.excepthook = intercept
 elif debug not in ['0','']:
 	def intercept (type, value, trace):
