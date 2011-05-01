@@ -39,7 +39,7 @@ class Supervisor (object):
 		self._shutdown = False
 		self._reload = False
 		self._restart = False
-		self._evaluate = False
+		self._process_watchdog = False
 		self._saved_pid = False
 		self.reload()
 
@@ -84,41 +84,41 @@ class Supervisor (object):
 				# os.environ['SYSLOG']='??'
 				pass
 
-	def _terminate_watchdog (self,name):
-		logger.supervisor("Terminating watchdog %s" % name)
+	def _terminate_process (self,name):
+		logger.supervisor("Terminating process %s" % name)
 		self._proc[name].terminate()
 		self._proc[name].wait()
 		del self._proc[name]
 
-	def terminate_watchdogs (self):
+	def terminate_processes (self):
 		for name in list(self._proc):
-			self._terminate_watchdog(name)
+			self._terminate_process(name)
 
-	def _new_watchdog (self,name):
+	def _new_process (self,name):
 		try:
 			if name in self._proc:
-				logger.supervisor("Can not start watchdog, it is alrady running")
+				logger.supervisor("Can not start process, it is alrady running")
 				return
 			if not name in self.configuration.watchdog:
-				logger.supervisor("Can not start watchdog, no configuration for it (anymore ?)")
+				logger.supervisor("Can not start process, no configuration for it (anymore ?)")
 				return
 			self._proc[name] = subprocess.Popen([self.configuration.watchdog[name],],
 				shell=True,
 				stdin=subprocess.PIPE,
 				stdout=subprocess.PIPE,
 			)
-			logger.supervisor("Forked watchdog %s" % name)
+			logger.supervisor("Forked process %s" % name)
 		except (subprocess.CalledProcessError,OSError,ValueError):
-			logger.supervisor("Could not start watchdog %s" % name)
+			logger.supervisor("Could not start process %s" % name)
 
-	def fork_watchdogs (self):
+	def fork_processes (self):
 		for name in self.configuration.watchdog:
-			self._new_watchdog(name)
+			self._new_process(name)
 		for name in list(self._proc):
 			if not name in self.configuration.watchdog:
-				self._terminate_watchdog(name)
+				self._terminate_process(name)
 
-	def read_watchdogs (self):
+	def read_processes (self):
 		lines = {}
 		for name in list(self._proc):
 			try:
@@ -136,13 +136,12 @@ class Supervisor (object):
 							# there is not data to read
 							r = False
 						else:
-							logger.supervisor("Command from watchdog %s : %s " % (name,line))
+							logger.supervisor("Command from process %s : %s " % (name,line))
 							lines.setdefault(name,[]).append(line)
 			except (subprocess.CalledProcessError,OSError,ValueError):
-				logger.supervisor("Issue with the watchdog, terminating it and restarting it")
-				self._terminate_watchdog(name)
-				self._new_watchdog(name)
-				
+				logger.supervisor("Issue with the process, terminating it and restarting it")
+				self._terminate_process(name)
+				self._new_process(name)
 		return lines
 
 	def savepid (self):
@@ -249,13 +248,13 @@ class Supervisor (object):
 				elif self._restart:
 					self._restart = False
 					self.restart()
-				elif self._evaluate:
-					self._evaluate = False
-					self.evaluate()
+				elif self._process_watchdog:
+					self._process_watchdog = False
+					self.process_watchdog()
 				else:
-					watchdog = self.read_watchdogs()
-					for service in watchdog:
-						for command in watchdog[service]:
+					commands = self.read_processes()
+					for service in commands:
+						for command in commands[service]:
 							if command.startswith('announce watchdog') or command.startswith('withdraw watchdog'):
 								parts = command.split(' ')
 								try:
@@ -263,9 +262,9 @@ class Supervisor (object):
 								except IndexError:
 									name = service
 								self.watchdog[name] = parts[0]
-								self._evaluate = True
+								self._process_watchdog = True
 							else:
-								logger.supervisor("Command from watchdog not understood : %s" % command)
+								logger.supervisor("Command from process not understood : %s" % command)
 
 				reload_completed = True
 				# Handle all connection
@@ -290,7 +289,7 @@ class Supervisor (object):
 				logger.supervisor("^C received")
 				self._shutdown = True
 		self.removepid()
-		self.terminate_watchdogs()
+		self.terminate_processes()
 
 	def shutdown (self):
 		"""terminate all the current BGP connections"""
@@ -330,11 +329,11 @@ class Supervisor (object):
 					logger.supervisor("Updating routes for peer %s" % str(ip))
 					self._peers[ip].reload(neighbor.every_routes())
 		logger.info("Loaded new configuration successfully",'configuration')
-		self.fork_watchdogs()
+		self.fork_processes()
 
-	def evaluate (self):
-		"""the watchdog ran and we need to figure what routes to changes"""
-		logger.info("Performing configuration evaluation","configuration")
+	def process_watchdog (self):
+		"""the process ran and we need to figure what routes to changes"""
+		logger.info("Performing watchdog update","configuration")
 		
 		for ip in self.configuration.neighbor.keys():
 			neighbor = self.configuration.neighbor[ip]
@@ -353,7 +352,7 @@ class Supervisor (object):
 				self._peers[ip].stop()
 			else:
 				self._peers[ip].restart()
-		self.fork_watchdogs()
+		self.fork_processes()
 
 	def unschedule (self,peer):
 		ip = peer.neighbor.peer_address.ip
