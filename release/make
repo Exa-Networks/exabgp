@@ -20,7 +20,7 @@ fi
 # This is not safe against race condition, but I trust my own machine to not be hacked ..
 
 build=/tmp
-version=`cat $path/VERSION`
+version=`/usr/bin/env python $path/lib/bgp/version.py`
 name=exabgp-$version
 destination=$build/$name
 
