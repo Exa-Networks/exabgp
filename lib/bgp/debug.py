@@ -10,7 +10,7 @@ Copyright (c) 2011-2011 Exa Networks. All rights reserved.
 import os
 import sys
 
-debug = os.environ.get('DEBUG_EXIT',None)
+debug = os.environ.get('PDB',None)
 
 if debug is None:
 	def intercept (type, value, trace):

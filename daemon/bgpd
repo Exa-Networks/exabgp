@@ -371,6 +371,7 @@ if __name__ == '__main__':
 		sys.stdout.write('DEBUG_RIB : change in route announcement in config reload\n')
 		sys.stdout.write('DEBUG_MESSAGE : changes in route announcement in config reload (default: yes)\n')
 		sys.stdout.write('DEBUG_TIMERS : tracking keepalives\n')
+		sys.stdout.write('PDB : on program fault, start pdb the python interactive debugger\n')
 		sys.stdout.write('\n')
 		sys.stdout.write('USER : the user the program should try to use if run by root (default: nobody)\n')
 		sys.stdout.write('PID : the file in which the pid of the program should be stored\n')
