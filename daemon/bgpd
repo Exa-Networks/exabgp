@@ -62,7 +62,7 @@ class Supervisor (object):
 		return True
 
 	def fork (self):
-		if os.environ.get('DAEMON','0') not in ['','1','yes','Yes','YES']:
+		if os.environ.get('DAEMONIZE','0') not in ['','1','yes','Yes','YES']:
 			return
 		
 		def fork_exit ():
@@ -375,11 +375,11 @@ if __name__ == '__main__':
 		sys.stdout.write('USER : the user the program should try to use if run by root (default: nobody)\n')
 		sys.stdout.write('PID : the file in which the pid of the program should be stored\n')
 		sys.stdout.write('SYSLOG: no value for local syslog, a file name (which will auto-rotate) or host:<host> for remote syslog\n')
-		sys.stdout.write('DAEMON: detach and send the program in the background\n')
+		sys.stdout.write('DAEMONIZE: detach and send the program in the background\n')
 		sys.stdout.write('\n')
 		sys.stdout.write('For example :\n')
 		sys.stdout.write('> env DEBUG_SUPERVISOR=0 DEBUG_WIRE=1 \\\n')
-		sys.stdout.write('     USER=wheel SYSLOG=host:127.0.0.1 DAEMON= PID=/var/run/exabpg.pid \\\n')
+		sys.stdout.write('     USER=wheel SYSLOG=host:127.0.0.1 DAEMONIZE= PID=/var/run/exabpg.pid \\\n')
 		sys.stdout.write('     ./bin/bgpd ./etc/bgp/configuration.txt\n')
 		sys.stdout.write('*******************************************************************************\n')
 		sys.stdout.write('\n')
