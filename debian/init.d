@@ -23,7 +23,7 @@ USER=exabgp
 NAME=exabgp 
 DAEMON=/usr/bin/exabgp
 DAEMON_ARGS="" 
-PIDFILE=/var/run/$NAME.pid
+PIDFILE=/var/run/$NAME/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
 # Exit if the package is not installed
@@ -52,17 +52,21 @@ fi
 #
 do_start()
 {
-	if [ "$EXABGPRUN" = "yes" ]; then
-		# Return
-		#   0 if daemon has been started
-		#   1 if daemon was already running
-		#   2 if daemon could not be started
-		start-stop-daemon --start --quiet --pidfile $PIDFILE -c $USER --exec $DAEMON --test -- $DAEMON_OPTS > /dev/null \
-			|| return 1
-		start-stop-daemon --start --quiet --pidfile $PIDFILE -c $USER --exec $DAEMON -- $DAEMON_OPTS \
-			$DAEMON_ARGS \
-			|| return 2
-	fi
+        if [ "$EXABGPRUN" = "yes" ] || [ "$EXABGPRUN" = "YES" ]; then
+                status_of_proc "$DAEMON" "$NAME" >/dev/null
+                retcode=$?
+                if [ $retcode -ne 0 ]; then
+                        # Return
+                        #   0 if daemon has been started
+                        #   1 if daemon was already running
+                        #   2 if daemon could not be started
+                        start-stop-daemon --start --quiet --pidfile $PIDFILE -c $USER --exec $DAEMON -- $DAEMON_OPTS || return 2
+                else
+                        log_daemon_msg "$NAME is already running!"
+			log_end_msg 0
+                        return 1
+                fi
+        fi
 }
 
 #
@@ -70,13 +74,13 @@ do_start()
 #
 do_stop()
 {
-	if [ "$EXABGPRUN" = "yes" ]; then
+	if [ "$EXABGPRUN" = "yes" ] || [ "$EXABGPRUN" = "YES" ]; then
 		# Return
 		#   0 if daemon has been stopped
 		#   1 if daemon was already stopped
 		#   2 if daemon could not be stopped
 		#   other if a failure occurred
-		start-stop-daemon --stop --quiet --retry=TERM/30/KILL/5 --pidfile $PIDFILE --name $NAME -c $USER
+		start-stop-daemon --stop --quiet --signal TERM --pidfile $PIDFILE -c $USER
 		RETVAL="$?"
 		[ "$RETVAL" = 2 ] && return 2
 		# Wait for children to finish too if this is a daemon that forks
@@ -87,8 +91,6 @@ do_stop()
 		# sleep for some time.
 		start-stop-daemon --stop --quiet --oknodo --retry=0/30/KILL/5 --exec $DAEMON
 		[ "$?" = 2 ] && return 2
-		# Many daemons don't delete their pidfiles when they exit.
-		rm -f $PIDFILE
 		return "$RETVAL"
 	fi
 }
@@ -97,27 +99,27 @@ do_stop()
 # Function that sends a SIGHUP to the daemon/service
 #
 do_reload() {
-	if [ "$EXABGPRUN" = "yes" ]; then
-		start-stop-daemon --stop --signal 1 --quiet --pidfile $PIDFILE --name $NAME -c $USER
+	if [ "$EXABGPRUN" = "yes" ] || [ "$EXABGPRUN" = "YES" ]; then
+		start-stop-daemon --stop --signal HUP --quiet --pidfile $PIDFILE --name $NAME -c $USER
 		return 0
 	fi
 }
 
 case "$1" in
   start)
-    [ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC " "$NAME"
+    log_daemon_msg "Starting $DESC " "$NAME"
     do_start
     case "$?" in
-		0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
-		2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
+		0|1) log_end_msg 0 ;;
+		2) log_end_msg 1 ;;
 	esac
   ;;
   stop)
-	[ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
+	log_daemon_msg "Stopping $DESC" "$NAME"
 	do_stop
 	case "$?" in
-		0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
-		2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
+		0|1) log_end_msg 0 ;;
+		2) log_end_msg 1 ;;
 	esac
 	;;
   status)

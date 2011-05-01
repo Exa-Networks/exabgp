@@ -7,11 +7,10 @@
 #
 
 # Additional options that are passed to the Daemon.
-# This is the configuration file the daemon will use
-DAEMON_OPTS="exabgp.conf"
+DAEMON_OPTS="/etc/exabgp/exabgp.conf"
 
-# Change this to "yes" when your configuration file is ready.
-# The configuration file is, by default, /etc/exabgp/current
+# Change this to yes when your configuration file is ready.
+# The configuration file is, by default, /etc/exabgp/config.
 # Use the examples stored under /usr/share/doc/exabgp/examples
 # to build your configuration file.
 EXABGPRUN="no"
@@ -21,9 +20,16 @@ EXABGPRUN="no"
 export ETC="/etc/exabgp/"
 
 # syslog : no value for local syslog, a file name (which will auto-rotate) or host:<host> for remote syslog
-#export SYSLOG=/var/log/exabgp
+export SYSLOG=
 
-# All the environment variable below are for debugging purpose.
+# This will tell the daemon it needs to daemonize itself
+export DAEMONIZE=1
+
+# This will tell the daemon where the PID is going to be saved
+export PID=/var/run/exabgp/exabgp.pid
+
+
+# All the below environment variable are for debugging purpose.
 
 # verbose configuration parsing
 #export DEBUG_CONFIGURATION=1
@@ -42,4 +48,3 @@ export ETC="/etc/exabgp/"
 
 # tracking keepalives
 #export DEBUG_TIMERS=1
-

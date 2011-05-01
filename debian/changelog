@@ -7,6 +7,8 @@ exabgp (1.2.0-1) unstable; urgency=low
 
   * Patches:
     - copyright: Extend validity of the COPYRIGHT to 2011, on author request.
+    - daemonize: Let the daemon daemonize on the basis of that ENV var.
+        Original comportment is to decide to fork or not depending on DAEMON ENV var.
   * Initial release (Closes: #623616) 
 
  -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Thu, 21 Apr 2011 19:35:15 +0000
