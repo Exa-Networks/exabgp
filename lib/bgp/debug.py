@@ -9,7 +9,6 @@ Copyright (c) 2011-2011 Exa Networks. All rights reserved.
 
 import os
 import sys
-import signal
 
 debug = os.environ.get('PDB',None)
 
