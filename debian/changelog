@@ -1,3 +1,8 @@
+exabgp (1.3.0-1) unstable; urgency=low
+  * Updated packaging for 1.3.0, removed patches.
+
+ -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Thu, 2 May 2011 10:05:07 +0000
+
 exabgp (1.2.0-2) unstable; urgency=low
   * Added watch file for uscan
 
