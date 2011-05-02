@@ -10,8 +10,5 @@ neighbor 192.168.127.128 {
 		run etc/processes/dynamic-1.sh;
 	}
 
-	static {
-		route 172.10.0.0/16 next-hop 192.0.2.1 med 200 community [174:666] watchdog watchdog-one;
-		route 192.168.0.0/16 next-hop 192.0.2.1 med 200 community [174:666] watchdog service-dynamic;
-	}
+	# no static routes to make sure nothing is wrong when we are fully dynamic
 }
