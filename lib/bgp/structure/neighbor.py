@@ -79,8 +79,8 @@ class Neighbor (object):
 
 	def __str__ (self):
 		routes = '\n\t\t'
-		if self.routes:
-			routes += '\n\t\t'.join([str(route) for route in self.routes])
+		if self._routes:
+			routes += '\n\t\t'.join([str(route) for route in self._routes])
 
 		options = []
 		if self.md5: options.append("md5: %s;" % self.md5)
