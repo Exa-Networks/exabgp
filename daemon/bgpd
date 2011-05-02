@@ -191,9 +191,6 @@ class Supervisor (object):
 
 				# flow announcement / withdrawal
 				elif command.startswith('announce flow'):
-					print "COMMAND ---------------------------------------------------"
-					print command
-					print "COMMAND ---------------------------------------------------"
 					flow = self.configuration.parse_single_flow(command)
 					if not flow:
 						logger.supervisor("Command could not parse flow in : %s" % command)
