@@ -1,20 +1,23 @@
 BUGS:
- * Rewrite the unittesting which is really missing.
- * Write a correct documentation (argh ...)
- * Look at all the XXX: in the code
- * We have exact duplicate routes in the configuration, and they will be announced twice
- * reading stderr from forked process and displaying via the logger class
+ * If you find a bug we want to hear it.
 
 FEATURE:
  * When parsing routes, warns if a route use the as-path feature in a ibgp connection and has the ASN in it, it is invalid and the router will drop the route.
  * Some of the match condition of flows currently take list or numeric tests, they should always take both, refactor the code for it (ports for example)
  * UPDATE parsing is totally disabled as very broken ATM, the broken update parsing for ASPath assumes only one segment
  * Modification of the RIB from the code
- * Parsing of flowspec from process
 
 CODE IMPROVEMENTS:
+ * Rewrite the unittesting which is really missing.
+ * Look at all the XXX: in the code
  * reduce to a minimum all the new_ and to_ functions and integrate them into protocol
  * Formally define the interfaces used (perhaps ...)
+ * We do not validate the flow created
+ * reading stderr from forked process and displaying via the logger class
+ * We can have exact duplicate routes in the configuration, and they will be announced twice even if identical
+
+DOCUMENTATION:
+ * Write the documentation, and do not rely on the example and the site wiki (argh ...)
 
 NOTES:
  * Juniper does not accept any holdtime <20 (double check again)
