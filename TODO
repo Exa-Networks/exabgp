@@ -3,16 +3,14 @@ BUGS:
  * Write a correct documentation (argh ...)
  * Look at all the XXX: in the code
  * We have exact duplicate routes in the configuration, and they will be announced twice
+ * reading stderr from forked process and displaying via the logger class
 
 FEATURE:
  * When parsing routes, warns if a route use the as-path feature in a ibgp connection and has the ASN in it, it is invalid and the router will drop the route.
  * Some of the match condition of flows currently take list or numeric tests, they should always take both, refactor the code for it (ports for example)
  * UPDATE parsing is totally disabled as very broken ATM, the broken update parsing for ASPath assumes only one segment
- * Modification of trhe RIB from the code
- * route announcement and withdrawal from process
- * reload/restart/terminate exabgp from process
- * a sample process application relaying command from stdin
- * a sample process application relaying command from socket (using netcat ?)
+ * Modification of the RIB from the code
+ * Parsing of flowspec from process
 
 CODE IMPROVEMENTS:
  * reduce to a minimum all the new_ and to_ functions and integrate them into protocol

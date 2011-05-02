@@ -13,17 +13,30 @@ from SocketServer import TCPServer,StreamRequestHandler
 class Control (StreamRequestHandler):
 	def handle(self):
 		command = 'go'
-		while command:
+		while command not in ['quit','exit']:
 			# reading the command on TCP
 			self.wfile.write('> ')
 
 			# relaying it to exabgp via the socket
 			command = self.rfile.readline().strip()
+
+			if command in ['quit','exit']:
+				continue
+
 			sys.stdout.write('%s\n' % command)
 			sys.stdout.flush()
 
+			if command in ['help','?']:
+				self.wfile.write('hum, you need help ? I am not good at helping people, try :\n')
+				self.wfile.write('version\n')
+				self.wfile.write('reload\n')
+				self.wfile.write('restart\n')
+				self.wfile.write('shutdown\n')
+				continue
+
 			# if exabgp is not answering, finished
-			if not command in ['shutdown','version']:
+			if not command in ['shutdown','reload','restart','version']:
+				self.wfile.write('unknown command, try: help\n')
 				continue
 
 			# reading answer (dirty dirty :p)

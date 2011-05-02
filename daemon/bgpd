@@ -188,7 +188,7 @@ class Supervisor (object):
 							logger.supervisor("Command failure, route not found : %s" % route)
 
 				# commands
-				elif command in ['shutdown','version']:
+				elif command in ['reload','restart','shutdown','version']:
 					self._commands.setdefault(service,[]).append(command)
 
 				# unknown
@@ -205,6 +205,14 @@ class Supervisor (object):
 				if command == 'shutdown':
 					self._shutdown = True
 					_answer(service,'shutdown in progress')
+					continue
+				if command == 'reload':
+					self._reload = True
+					_answer(service,'reload in progress')
+					continue
+				if command == 'restart':
+					self._restart = True
+					_answer(service,'restart in progress')
 					continue
 				if command == 'version':
 					_answer(service,'exabgp %s' % version)
