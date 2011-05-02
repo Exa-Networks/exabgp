@@ -108,8 +108,8 @@ class Supervisor (object):
 						break
 				duration = time.time() - start
 				# RFC state that we MUST not more than one KEEPALIVE / sec
-				if duration < 1.0:
-					time.sleep(1.0-duration)
+				if duration < 0.1:
+					time.sleep(0.1-duration)
 			except KeyboardInterrupt:
 				logger.supervisor("^C received")
 				self._shutdown = True
