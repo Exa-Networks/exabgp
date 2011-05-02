@@ -8,211 +8,44 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
 import sys
-import os
-import pwd
 import time
 import signal
-import socket
-import errno
-import subprocess
-import select
 
 from bgp.network.peer import Peer
 from bgp.version import version
+
+from bgp.daemon import Daemon
+from bgp.processes import Processes
+from bgp.configuration import Configuration
 
 from bgp.log import Logger
 logger = Logger()
 
 
 class Supervisor (object):
-	pid_file = os.environ.get('PID','')
-	user = os.environ.get('USER','nobody')
-
 	# import os
 	# [hex(ord(c)) for c in os.popen('clear').read()]
 	clear = ''.join([chr(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a']])
 
 	def __init__ (self,configuration):
-		self.configuration = configuration
-		self._proc = {}
-		self.watchdog = {}
+		self.daemon = Daemon(self)
+		self.processes = Processes(self)
+		self.configuration = Configuration(configuration)
+
+		self.watchdogs = {}
 		self.commands = {}
 		self._peers = {}
 		self._shutdown = False
 		self._reload = False
 		self._restart = False
-		self._process_route_change = False
-		self._process_commands = False
+		self._watchdog = False
+		self._commands = False
 		self._saved_pid = False
 		self.reload()
 
-		mask = os.umask(0137)
 		signal.signal(signal.SIGTERM, self.sigterm)
 		signal.signal(signal.SIGHUP, self.sighup)
 		signal.signal(signal.SIGALRM, self.sigalrm)
-
-	def _is_socket (self,fd):
-		try:
-			s = socket.fromfd(fd, socket.AF_INET, socket.SOCK_RAW)
-		except ValueError,e:
-			# The file descriptor is closed
-			return False
-		try:
-			what = s.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
-		except socket.error, e:
-			# It is look like one but it is not a socket ...
-			if e.args[0] == errno.ENOTSOCK:
-				return False
-		return True
-
-	def fork (self):
-		if os.environ.get('DAEMONIZE','0') not in ['','1','yes','Yes','YES']:
-			return
-		
-		def fork_exit ():
-			try:
-				pid = os.fork()
-				if pid > 0:
-					os._exit(0)
-			except OSError, e:
-				logger.critial('Can not fork, errno %d : %s' % (e.errno,e.strerror),'supervisor')
-
-		# do not detach if we are already supervised or run by init like process
-		if self._is_socket(sys.__stdin__.fileno()) or os.getppid() != 1:
-			fork_exit()
-			os.setsid()
-			fork_exit()
-			if not os.environ.get('SYSLOG',''):
-				# XXX: Force SYSLOG, we need to be able to access the local syslog deamon
-				# os.environ['SYSLOG']='??'
-				pass
-
-	def _terminate_process (self,name):
-		logger.supervisor("Terminating process %s" % name)
-		self._proc[name].terminate()
-		self._proc[name].wait()
-		del self._proc[name]
-
-	def terminate_processes (self):
-		for name in list(self._proc):
-			self._terminate_process(name)
-
-	def _new_process (self,name):
-		try:
-			if name in self._proc:
-				logger.supervisor("Can not start process, it is alrady running")
-				return
-			if not name in self.configuration.process:
-				logger.supervisor("Can not start process, no configuration for it (anymore ?)")
-				return
-			self._proc[name] = subprocess.Popen([self.configuration.process[name],],
-				stdin=subprocess.PIPE,
-				stdout=subprocess.PIPE,
-			)
-			logger.supervisor("Forked process %s" % name)
-		except (subprocess.CalledProcessError,OSError,ValueError):
-			logger.supervisor("Could not start process %s" % name)
-
-	def fork_processes (self):
-		for name in self.configuration.process:
-			self._new_process(name)
-		for name in list(self._proc):
-			if not name in self.configuration.process:
-				self._terminate_process(name)
-
-	def read_processes (self):
-		lines = {}
-		for name in list(self._proc):
-			try:
-				proc = self._proc[name]
-				r = True
-				while r:
-					r,_,_ = select.select([proc.stdout,],[],[],0)
-					if r:
-						# XXX: readline is blocking, so we are taking the assuption that it will not block
-						# XXX: most likely not going to but perhaps the code should be more robust ?
-						line = proc.stdout.readline().rstrip()
-						if not line:
-							# It seems that when we send ^C this is passed to the children to
-							# And if they do not intercept it correctly, select.select returns but
-							# there is not data to read
-							r = False
-						else:
-							logger.supervisor("Command from process %s : %s " % (name,line))
-							lines.setdefault(name,[]).append(line)
-			except (subprocess.CalledProcessError,OSError,ValueError):
-				logger.supervisor("Issue with the process, terminating it and restarting it")
-				self._terminate_process(name)
-				self._new_process(name)
-		return lines
-
-	def savepid (self):
-		if not self.pid_file:
-			return
-
-		ownid = os.getpid()
-
-		flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
-		mode = ((os.R_OK | os.W_OK) << 6) | (os.R_OK << 3) | os.R_OK
-
-		try:
-			fd = os.open(self.pid_file,flags,mode)
-		except OSError, e:
-			logger.supervisor("PIDfile already exists, not updated %s" % self.pid_file)
-			return
-
-		try:
-			f = os.fdopen(fd,'w')
-			line = "%d\n" % ownid
-			f.write(line)
-			f.close()
-			self._saved_pid = True
-		except IOError, e:
-			logger.supervisor("Can not create PIDfile %s" % self.pid_file)
-			return
-		logger.supervisor("Created PIDfile %s with value %d" % (self.pid_file,ownid))
-
-	def removepid (self):
-		if not self.pid_file or not self._saved_pid:
-			return
-		try:
-			os.remove(self.pid_file)
-		except OSError, e:
-			if e.errno == errno.ENOENT:
-				pass
-			else:
-				logger.supervisor("Can not remove PIDfile %s" % self.pid_file)
-				return
-		logger.supervisor("Removed PIDfile %s" % self.pid_file)
-
-	def drop_privileges (self,name):
-		"""returns true if we are left with insecure privileges"""
-		# os.name can be ['posix', 'nt', 'os2', 'ce', 'java', 'riscos']
-		if os.name not in ['posix',]:
-			return False
-		
-		uid = os.getpid()
-		gid = os.getgid()
-
-		if uid and gid:
-			return False
-
-		try:
-			user = pwd.getpwnam(name)
-			nuid = int(user.pw_uid)
-			ngid = int(user.pw_uid)
-		except KeyError:
-			return True
-
-		# not sure you can change your gid if you do not have a pid of zero
-		try:
-			if not uid:
-				os.setuid(nuid)
-			if not gid:
-				os.setgid(ngid)
-			return False
-		except OSError,e:
-			return True
 
 	def sigterm (self,signum, frame):
 		logger.supervisor("SIG TERM received")
@@ -227,12 +60,12 @@ class Supervisor (object):
 		self._restart = True
 
 	def run (self):
-		if self.drop_privileges(self.user):
-			logger.supervisor("Could not drop privileges to '%s' refusing to run as root" % self.user)
+		if self.daemon.drop_privileges():
+			logger.supervisor("Could not drop privileges to '%s' refusing to run as root" % self.daemon.user)
 			logger.supervisor("Set the environmemnt value USER to change the unprivileged user")
 			return
-		self.fork()
-		self.savepid()
+		self.daemon.daemonise()
+		self.daemon.savepid()
 
 		# did we complete the run of updates caused by the last SIGHUP ?
 		reload_completed = True
@@ -240,7 +73,9 @@ class Supervisor (object):
 		while self._peers:
 			try:
 				start = time.time()
-				
+
+				self.handle_commands(self.processes.received())
+
 				if self._shutdown:
 					self._shutdown = False
 					self.shutdown()
@@ -250,46 +85,13 @@ class Supervisor (object):
 				elif self._restart:
 					self._restart = False
 					self.restart()
-				elif self._process_route_change:
-					self._process_route_change = False
-					self.process_route_change()
-				elif self._process_commands:
-					self._process_commands = False
-					self.process_commands(self.commands)
+				elif self._watchdog:
+					self._watchdog = False
+					self.watchdog()
+				elif self._commands:
+					self._commands = False
+					self.commands(self.commands)
 					self.commands = {}
-				else:
-					commands = self.read_processes()
-					for service in commands:
-						for command in commands[service]:
-							if command.startswith('announce watchdog') or command.startswith('withdraw watchdog'):
-								parts = command.split(' ')
-								try:
-									name = parts[2]
-								except IndexError:
-									name = service
-								self.watchdog[name] = parts[0]
-								self._process_route_change = True
-							elif command.startswith('announce route'):
-								route = self.configuration.parse_single_route(command.split(' ')[1:])
-								if not route:
-									logger.supervisor("Command could not parse route in : %s" % command)
-								self.configuration.add_route_all_peers(route)
-								self._process_route_change = True
-							elif command.startswith('withdraw route'):
-								route = self.configuration.parse_single_route(command.split(' ')[1:])
-								if not route:
-									logger.supervisor("Command could not parse route in : %s" % command)
-								else:
-									if self.configuration.remove_route_all_peers(route):
-										logger.supervisor("Command success, route found and removed : %s" % route)
-										self._process_route_change = True
-									else:
-										logger.supervisor("Command failure, route not found : %s" % route)
-							elif command in ['shutdown','version']:
-								self.commands.setdefault(service,[]).append(command)
-								self._process_commands = True
-							else:
-								logger.supervisor("Command from process not understood : %s" % command)
 
 				reload_completed = True
 				# Handle all connection
@@ -313,8 +115,8 @@ class Supervisor (object):
 			except KeyboardInterrupt:
 				logger.supervisor("^C received")
 				self._shutdown = True
-		self.removepid()
-		self.terminate_processes()
+		self.daemon.removepid()
+		self.processes.terminate()
 
 	def shutdown (self):
 		"""terminate all the current BGP connections"""
@@ -329,7 +131,7 @@ class Supervisor (object):
 		reloaded = self.configuration.reload()
 		if not reloaded:
 			logger.info("Problem with the configuration file, no change done","configuration")
-			logger.info(configuration.error,"configuration")
+			logger.info(self.configuration.error,"configuration")
 			return
 
 		for ip in self._peers.keys():
@@ -354,12 +156,51 @@ class Supervisor (object):
 					logger.supervisor("Updating routes for peer %s" % str(ip))
 					self._peers[ip].reload(neighbor.every_routes())
 		logger.info("Loaded new configuration successfully",'configuration')
-		self.fork_processes()
+		self.processes.start()
 
-	def process_commands (self,commands):
+	def handle_commands (self,commands):
+		for service in commands:
+			for command in commands[service]:
+				# watchdog
+				if command.startswith('announce watchdog') or command.startswith('withdraw watchdog'):
+					parts = command.split(' ')
+					try:
+						name = parts[2]
+					except IndexError:
+						name = service
+					self.watchdogs[name] = parts[0]
+					self._watchdog = True
+
+				# route announcement / withdrawal
+				elif command.startswith('announce route'):
+					route = self.configuration.parse_single_route(command.split(' ')[1:])
+					if not route:
+						logger.supervisor("Command could not parse route in : %s" % command)
+					self.configuration.add_route_all_peers(route)
+					self._watchdog = True
+				elif command.startswith('withdraw route'):
+					route = self.configuration.parse_single_route(command.split(' ')[1:])
+					if not route:
+						logger.supervisor("Command could not parse route in : %s" % command)
+					else:
+						if self.configuration.remove_route_all_peers(route):
+							logger.supervisor("Command success, route found and removed : %s" % route)
+							self._watchdog = True
+						else:
+							logger.supervisor("Command failure, route not found : %s" % route)
+
+				# commands
+				elif command in ['shutdown','version']:
+					self.commands.setdefault(service,[]).append(command)
+					self._commands = True
+
+				# unknown
+				else:
+					logger.supervisor("Command from process not understood : %s" % command)
+
+	def commands (self,commands):
 		def _answer (service,string):
-			self._proc[service].stdin.write('%s\r\n' % string)
-			self._proc[service].stdin.flush()
+			self.process.write(service,string)
 			logger.supervisor('Responding to %s : %s' % (service,string))
 		
 		for service in commands:
@@ -372,13 +213,13 @@ class Supervisor (object):
 					_answer(service,'exabgp %s' % version)
 					continue
 
-	def process_route_change (self):
+	def watchdog (self):
 		"""the process ran and we need to figure what routes to changes"""
 		logger.supervisor("Performing dynamic route update")
 		
 		for ip in self.configuration.neighbor.keys():
 			neighbor = self.configuration.neighbor[ip]
-			neighbor.watchdog(self.watchdog)
+			neighbor.watchdog(self.watchdogs)
 			self._peers[ip].reload(neighbor.every_routes())
 		logger.supervisor("Updated peers dynamic routes successfully")
 
@@ -393,12 +234,13 @@ class Supervisor (object):
 				self._peers[ip].stop()
 			else:
 				self._peers[ip].restart()
-		self.fork_processes()
+		self.processes.start()
 
 	def unschedule (self,peer):
 		ip = peer.neighbor.peer_address.ip
 		if ip in self._peers:
 			del self._peers[ip]
+
 
 if __name__ == '__main__':
 	main = int(sys.version[0])
@@ -421,12 +263,16 @@ if __name__ == '__main__':
 		sys.stdout.write('*******************************************************************************\n')
 		sys.stdout.write('set the following environment values to gather information and report bugs\n')
 		sys.stdout.write('\n')
+		sys.stdout.write('DEBUG_ALL : debug everything\n')
 		sys.stdout.write('DEBUG_CONFIGURATION : verbose configuration parsing\n')
 		sys.stdout.write('DEBUG_SUPERVISOR : signal received, configuration reload (default: yes))\n')
+		sys.stdout.write('DEBUG_DAEMON : pid change, forking, ... (default: yes))\n')
+		sys.stdout.write('DEBUG_PROCESSES : handling of forked processes (default: yes))\n')
 		sys.stdout.write('DEBUG_WIRE : the packet sent and received\n')
 		sys.stdout.write('DEBUG_RIB : change in route announcement in config reload\n')
 		sys.stdout.write('DEBUG_MESSAGE : changes in route announcement in config reload (default: yes)\n')
 		sys.stdout.write('DEBUG_TIMERS : tracking keepalives\n')
+		sys.stdout.write('\n')
 		sys.stdout.write('PDB : on program fault, start pdb the python interactive debugger\n')
 		sys.stdout.write('\n')
 		sys.stdout.write('USER : the user the program should try to use if run by root (default: nobody)\n')
@@ -441,11 +287,6 @@ if __name__ == '__main__':
 		sys.stdout.write('*******************************************************************************\n')
 		sys.stdout.write('\n')
 		sys.exit('usage:\n bgpd <configuration file>\n')
-	conf = sys.argv[1]
-
-	from bgp.configuration import Configuration
-
-	configuration = Configuration(conf)
-	supervisor = Supervisor(configuration)
-	supervisor.run()
+		
+	Supervisor(sys.argv[1]).run()
 	sys.exit(0)
