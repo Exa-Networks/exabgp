@@ -85,6 +85,7 @@ echo making tarbal
 
 # Telling MACs to not include the ._ version of the files
 export COPY_EXTENDED_ATTRIBUTES_DISABLE=true
+export COPYFILE_DISABLE=true
 
 cd $path
 rm -f ${name}.tgz
