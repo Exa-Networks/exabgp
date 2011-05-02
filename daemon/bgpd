@@ -445,8 +445,6 @@ if __name__ == '__main__':
 	from bgp.configuration import Configuration
 
 	configuration = Configuration(conf)
-	if not configuration.reload():
-		sys.exit('%s' % configuration.error)
 	supervisor = Supervisor(configuration)
 	supervisor.run()
 	sys.exit(0)
