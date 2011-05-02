@@ -374,13 +374,13 @@ class Supervisor (object):
 
 	def process_route_change (self):
 		"""the process ran and we need to figure what routes to changes"""
-		logger.info("Performing dynamic route update")
+		logger.supervisor("Performing dynamic route update")
 		
 		for ip in self.configuration.neighbor.keys():
 			neighbor = self.configuration.neighbor[ip]
 			neighbor.watchdog(self.watchdog)
 			self._peers[ip].reload(neighbor.every_routes())
-		logger.info("Updated peers dynamic routes successfully")
+		logger.supervisor("Updated peers dynamic routes successfully")
 
 	def restart (self):
 		"""kill the BGP session and restart it"""
