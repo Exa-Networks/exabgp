@@ -32,6 +32,9 @@ SCRIPTNAME=/etc/init.d/$NAME
 # Some env var the daemon will need
 export ETC="/etc/exabgp/"
 
+# This will tell the daemon it needs to daemonize itself
+export DAEMONIZE=1
+
 # Read configuration variable file if it is present
 [ -r /etc/default/$NAME ] && . /etc/default/$NAME
 

@@ -22,9 +22,6 @@ export ETC="/etc/exabgp/"
 # syslog : no value for local syslog, a file name (which will auto-rotate) or host:<host> for remote syslog
 export SYSLOG=
 
-# This will tell the daemon it needs to daemonize itself
-export DAEMONIZE=1
-
 # This will tell the daemon where the PID is going to be saved
 export PID=/var/run/exabgp/exabgp.pid
 
