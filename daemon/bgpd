@@ -33,13 +33,12 @@ class Supervisor (object):
 		self.configuration = Configuration(configuration)
 
 		self.watchdogs = {}
-		self.commands = {}
 		self._peers = {}
 		self._shutdown = False
 		self._reload = False
 		self._restart = False
 		self._watchdog = False
-		self._commands = False
+		self._commands = {}
 		self._saved_pid = False
 		self.reload()
 
@@ -89,9 +88,8 @@ class Supervisor (object):
 					self._watchdog = False
 					self.watchdog()
 				elif self._commands:
-					self._commands = False
-					self.commands(self.commands)
-					self.commands = {}
+					self.commands(self._commands)
+					self._commands = {}
 
 				reload_completed = True
 				# Handle all connection
@@ -191,8 +189,7 @@ class Supervisor (object):
 
 				# commands
 				elif command in ['shutdown','version']:
-					self.commands.setdefault(service,[]).append(command)
-					self._commands = True
+					self._commands.setdefault(service,[]).append(command)
 
 				# unknown
 				else:
@@ -200,7 +197,7 @@ class Supervisor (object):
 
 	def commands (self,commands):
 		def _answer (service,string):
-			self.process.write(service,string)
+			self.processes.write(service,string)
 			logger.supervisor('Responding to %s : %s' % (service,string))
 		
 		for service in commands:

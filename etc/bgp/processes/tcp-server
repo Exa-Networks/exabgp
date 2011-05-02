@@ -50,12 +50,16 @@ signal.signal(signal.SIGTERM, sig)
 
 host, port = "localhost", 9999
 
+count = 0
 connected = False
 while not connected:
 	try:
 		server = TCPServer((host, port), Control)
 		connected = True
 	except socket.error:
+		count += 1
+		if count % 10 == 0:
+			print >> sys.stderr, 'tcp-server still trying to bind to %s:%d' % (host,port)
 		# we can not connect to the socket, retrying (happens if respawns too quickly)
 		time.sleep(1)
 server.serve_forever()

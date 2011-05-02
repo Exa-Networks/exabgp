@@ -78,5 +78,5 @@ class Processes (object):
 		return lines
 
 	def write (self,name,string):
-		self._process[service].stdin.write('%s\r\n' % string)
-		self._process[service].stdin.flush()
+		self._process[name].stdin.write('%s\r\n' % string)
+		self._process[name].stdin.flush()
