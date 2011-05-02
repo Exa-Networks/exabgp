@@ -1,4 +1,5 @@
-etc/exabgp
+etc/exabgp/processes
 usr/share/man/man1
 usr/share/doc/exabgp
+usr/share/lintian/overrides
 
