@@ -19,6 +19,7 @@ Version 1.3.0 - --st of May 2011
     warning: this code is not yet considered production ready, expect some bugs for complex configurations
  * Improvement: it is now possible to modify the configuration without reload from external proccess (see process example conf.)
     warning: this code is not yet considered production ready, expect some bugs for complex configurations
+ * Fix: make sure we can setup a session even if no route (ie: AFI/SAFI families for Mulitprotocol) are in the configuration
  * Fix: many small bug fixes (display, etc.)
 
 Version 1.2.0 - 25th of January 2011

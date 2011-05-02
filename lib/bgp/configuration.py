@@ -12,7 +12,7 @@ import stat
 from pprint import pformat
 from copy import deepcopy
 
-from bgp.structure.address    import AFI
+from bgp.structure.address    import AFI,SAFI
 from bgp.structure.ip         import to_IP,to_Prefix
 from bgp.structure.asn        import ASN
 from bgp.structure.neighbor   import Neighbor
@@ -446,10 +446,17 @@ class Configuration (object):
 			v = local_scope.get('hold-time','')
 			if v: neighbor.hold_time = v
 			v = local_scope.get('routes',[])
-			for route in v:
-				neighbor.add_route(route)
-				if (route.afi,route.safi) not in neighbor.families:
-					neighbor.families.append((route.afi,route.safi))
+			# we have route, only announce what we need
+			if v:
+				for route in v:
+					neighbor.add_route(route)
+					if (route.afi,route.safi) not in neighbor.families:
+						neighbor.families.append((route.afi,route.safi))
+			# we do not know, announce all we are able to do
+			else:
+				neighbor.families.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
+				neighbor.families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+				neighbor.families.append((AFI(AFI.ipv4),SAFI(SAFI.flow_ipv4)))
 
 		# drop the neighbor
 		local_scope = scope.pop(-1)
