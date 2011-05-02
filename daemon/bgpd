@@ -270,11 +270,20 @@ class Supervisor (object):
 								self.watchdog[name] = parts[0]
 								self._process_watchdog = True
 							elif command.startswith('announce route'):
-								if not self.configuration.single_static_route(command.split(' ')[1:]):
-									logger.supervisor("Command from process not understood : %s" % command)
+								route = self.configuration.parse_single_route(command.split(' ')[1:])
+								if not route:
+									logger.supervisor("Command could not parse route in : %s" % command)
+								self.configuration.add_route_all_peers(route)
 							elif command.startswith('withdraw route'):
-								# unimplemented
-								pass
+								route = self.configuration.parse_single_route(command.split(' ')[1:])
+								if not route:
+									logger.supervisor("Command could not parse route in : %s" % command)
+								else:
+									self.configuration.remove_route_all_peers(route)
+#									if True:
+#										logger.supervisor("Command success, route removed : %s" % route)
+#									else:
+#										logger.supervisor("Command failure, route not found : %s" % route)
 							elif command in ['shutdown','version']:
 								self.commands.setdefault(service,[]).append(command)
 								self._process_commands = True
