@@ -15,6 +15,7 @@ CODE IMPROVEMENTS:
  * We do not validate the flow created
  * reading stderr from forked process and displaying via the logger class
  * We can have exact duplicate routes in the configuration, and they will be announced twice even if identical
+ * Do not announce route of a AFI/SAFI pair if the pair was not received on the OPEN by the peer
 
 DOCUMENTATION:
  * Write the documentation, and do not rely on the example and the site wiki (argh ...)
