@@ -269,6 +269,12 @@ class Supervisor (object):
 									name = service
 								self.watchdog[name] = parts[0]
 								self._process_watchdog = True
+							elif command.startswith('announce route'):
+								if not self.configuration.single_static_route(command.split(' ')[1:]):
+									logger.supervisor("Command from process not understood : %s" % command)
+							elif command.startswith('withdraw route'):
+								# unimplemented
+								pass
 							elif command in ['shutdown','version']:
 								self.commands.setdefault(service,[]).append(command)
 								self._process_commands = True
