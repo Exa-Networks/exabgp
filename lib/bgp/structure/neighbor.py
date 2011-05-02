@@ -49,6 +49,11 @@ class Neighbor (object):
 	def add_route (self,route):
 		self._routes.append(route)
 
+	def remove_route (self,route):
+		for r in self._routes:
+			if r == route:
+				self._routes.remove(r)
+
 	def set_routes (self,routes):
 		self._routes = routes
 
