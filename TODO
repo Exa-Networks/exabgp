@@ -2,6 +2,7 @@ BUGS:
  * Rewrite the unittesting which is really missing.
  * Write a correct documentation (argh ...)
  * Look at all the XXX: in the code
+ * We have exact duplicate routes in the configuration, and they will be announced twice
 
 FEATURE:
  * When parsing routes, warns if a route use the as-path feature in a ibgp connection and has the ASN in it, it is invalid and the router will drop the route.
