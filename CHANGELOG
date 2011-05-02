@@ -12,7 +12,7 @@ Version 1.3.0 - --st of May 2011
  * Improvement: better handling of BGP timer for keepalive
  * Improvement: refuse to run as root, try to run as nobody automatically, uid/gid set to the user defined by env USER otherwise
  * Removed: the old wiki documentation
- * Improvement: Debian Packaging (author and maintainer: Nicolas Tourneur - thank you) 
+ * Improvement: Debian Packaging (author and maintainer: Henry-Nicolas Tourneur - thank you) 
  * Change: renamed env variable DAEMON to DAEMONIZE (to prevent name clash with Debian)
  * Improvement: added env variable PDB if set the program will call pdb, the python debugger, on program fault
  * Improvement: it is now possible to get some routes withdrawn from an external process (see watchdog example conf.)
