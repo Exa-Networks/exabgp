@@ -18,6 +18,7 @@ import subprocess
 import select
 
 from bgp.network.peer import Peer
+from bgp.version import version
 
 from bgp.log import Logger
 logger = Logger()
@@ -35,11 +36,13 @@ class Supervisor (object):
 		self.configuration = configuration
 		self._proc = {}
 		self.watchdog = {}
+		self.commands = {}
 		self._peers = {}
 		self._shutdown = False
 		self._reload = False
 		self._restart = False
 		self._process_watchdog = False
+		self._process_commands = False
 		self._saved_pid = False
 		self.reload()
 
@@ -99,11 +102,10 @@ class Supervisor (object):
 			if name in self._proc:
 				logger.supervisor("Can not start process, it is alrady running")
 				return
-			if not name in self.configuration.watchdog:
+			if not name in self.configuration.process:
 				logger.supervisor("Can not start process, no configuration for it (anymore ?)")
 				return
-			self._proc[name] = subprocess.Popen([self.configuration.watchdog[name],],
-				shell=True,
+			self._proc[name] = subprocess.Popen([self.configuration.process[name],],
 				stdin=subprocess.PIPE,
 				stdout=subprocess.PIPE,
 			)
@@ -112,10 +114,10 @@ class Supervisor (object):
 			logger.supervisor("Could not start process %s" % name)
 
 	def fork_processes (self):
-		for name in self.configuration.watchdog:
+		for name in self.configuration.process:
 			self._new_process(name)
 		for name in list(self._proc):
-			if not name in self.configuration.watchdog:
+			if not name in self.configuration.process:
 				self._terminate_process(name)
 
 	def read_processes (self):
@@ -251,6 +253,10 @@ class Supervisor (object):
 				elif self._process_watchdog:
 					self._process_watchdog = False
 					self.process_watchdog()
+				elif self._process_commands:
+					self._process_commands = False
+					self.process_commands(self.commands)
+					self.commands = {}
 				else:
 					commands = self.read_processes()
 					for service in commands:
@@ -263,6 +269,9 @@ class Supervisor (object):
 									name = service
 								self.watchdog[name] = parts[0]
 								self._process_watchdog = True
+							elif command in ['shutdown','version']:
+								self.commands.setdefault(service,[]).append(command)
+								self._process_commands = True
 							else:
 								logger.supervisor("Command from process not understood : %s" % command)
 
@@ -330,6 +339,22 @@ class Supervisor (object):
 					self._peers[ip].reload(neighbor.every_routes())
 		logger.info("Loaded new configuration successfully",'configuration')
 		self.fork_processes()
+
+	def process_commands (self,commands):
+		def _answer (service,string):
+			self._proc[service].stdin.write('%s\r\n' % string)
+			self._proc[service].stdin.flush()
+			logger.supervisor('Responding to %s : %s' % (service,string))
+		
+		for service in commands:
+			for command in commands[service]:
+				if command == 'shutdown':
+					self._shutdown = True
+					_answer(service,'shutdown in progress')
+					continue
+				if command == 'version':
+					_answer(service,'exabgp %s' % version)
+					continue
 
 	def process_watchdog (self):
 		"""the process ran and we need to figure what routes to changes"""

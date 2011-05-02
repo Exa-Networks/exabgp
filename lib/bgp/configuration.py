@@ -102,8 +102,8 @@ class Configuration (object):
 	'one or more match term, one action\n' \
 	'fragment code is totally untested\n' \
 
-	_str_watchdog_error = \
-	'syntax: watchdog name-of-watchdog {\n' \
+	_str_process_error = \
+	'syntax: process name-of-process {\n' \
 	'          run /path/to/command with its args;\n' \
 	'        }\n\n' \
 
@@ -113,7 +113,7 @@ class Configuration (object):
 		self._clear()
 	
 	def _clear (self):
-		self.watchdog = {}
+		self.process = {}
 		self.neighbor = {}
 		self.error = ''
 		self._neighbor = {}
@@ -245,12 +245,12 @@ class Configuration (object):
 				return False
 			if command == 'static': return self._multi_static(tokens[1:])
 			if command == 'flow': return self._multi_flow(tokens[1:])
-			if command == 'watchdog': return self._multi_watchdog(tokens[1:])
+			if command == 'process': return self._multi_process(tokens[1:])
 
 		if name == 'neighbor':
 			if command == 'static': return self._multi_static(tokens[1:])
 			if command == 'flow': return self._multi_flow(tokens[1:])
-			if command == 'watchdog': return self._multi_watchdog(tokens[1:])
+			if command == 'process': return self._multi_process(tokens[1:])
 
 		if name == 'static':
 			if command == 'route':
@@ -317,24 +317,24 @@ class Configuration (object):
 		if command == 'rate-limit': return self._flow_route_rate_limit(tokens[1:])
 		if command == 'redirect': return self._flow_route_redirect(tokens[1:])
 
-		if command == 'run': return self._set_watchdog_run('watchdog_run',tokens[1:])
+		if command == 'run': return self._set_process_run('process_run',tokens[1:])
 
 		return False
 
 	# Group Watchdog
 	
-	def _multi_watchdog (self,tokens):
+	def _multi_process (self,tokens):
 		if len(tokens) != 1:
-			self._error = self._str_watchdog_error
+			self._error = self._str_process_error
 			return False
 		while True:
-			r = self._dispatch('watchdog',[],['run',])
+			r = self._dispatch('process',[],['run',])
 			if r is False: return False
 			if r is None: break
-		self.watchdog[tokens[0]] = self._scope[-1].pop('watchdog_run')
+		self.process[tokens[0]] = self._scope[-1].pop('process_run')
 		return True
 
-	def _set_watchdog_run (self,command,value):
+	def _set_process_run (self,command,value):
 		prg = value[0]
 		if len(prg) > 2 and prg[0] == prg[-1] and prg[0] in ['"',"'"]:
 			prg = prg[1:-1]
@@ -390,7 +390,7 @@ class Configuration (object):
 	def _multi_group (self,address):
 		self._scope.append({})
 		while True:
-			r = self._dispatch('group',['static','flow','neighbor','watchdog'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart','md5','ttl-security'])
+			r = self._dispatch('group',['static','flow','neighbor','process'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart','md5','ttl-security'])
 			if r is False:
 				return False
 			if r is None:
@@ -466,7 +466,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-		 	r = self._dispatch('neighbor',['static','flow','watchdog'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart','md5','ttl-security'])
+		 	r = self._dispatch('neighbor',['static','flow','process'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart','md5','ttl-security'])
 			if r is False: return False
 			if r is None: return True
 

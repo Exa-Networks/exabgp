@@ -1,0 +1,62 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import readline
+import signal
+import socket
+import time
+import select
+
+from SocketServer import TCPServer,StreamRequestHandler
+
+class Control (StreamRequestHandler):
+	def handle(self):
+		command = 'go'
+		while command:
+			# reading the command on TCP
+			self.wfile.write('> ')
+
+			# relaying it to exabgp via the socket
+			command = self.rfile.readline().strip()
+			sys.stdout.write('%s\n' % command)
+			sys.stdout.flush()
+
+			# if exabgp is not answering, finished
+			if not command in ['shutdown','version']:
+				continue
+
+			# reading answer (dirty dirty :p)
+			r, waiting_answer = True, True
+			while r or waiting_answer:
+				r,_,_ = select.select([sys.stdin], [], [], 1.0)
+				if r:
+					waiting_answer = False
+					response = sys.stdin.readline()
+					self.wfile.write(response)
+				time.sleep(0.1)
+
+def sig (signum, frame):
+	# outch rude but pervent silly trace on exit if waiting for a read on stdin :p
+	os.kill(os.getpid(),signal.SIGKILL)
+
+signal.signal(signal.SIGINT, sig)
+signal.signal(signal.SIGTERM, sig)
+
+#def intercept (type, value, trace):
+#	pass
+#
+#sys.excepthook = intercept
+
+host, port = "localhost", 9999
+
+connected = False
+while not connected:
+	try:
+		server = TCPServer((host, port), Control)
+		connected = True
+	except socket.error:
+		# we can not connect to the socket, retrying (happens if respawns too quickly)
+		time.sleep(1)
+server.serve_forever()
+
