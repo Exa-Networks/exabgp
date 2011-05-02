@@ -155,13 +155,23 @@ class Configuration (object):
 		self.error = "\nsyntax error in section %s\nline %d : %s\n\n%s" % (self._location[-1],self.number(),self.line(),self._error)
 		return False
 
-	def parse_single_route (self,tokens):
+	def parse_single_route (self,command):
+		tokens = command.split(' ')[1:]
 		if len(tokens) < 4:
 			return False
 		if tokens[0] != 'route':
 			return False
 		scope = [{}]
 		if not self._single_static_route(scope,tokens[1:]):
+			return None
+		return scope[0]['routes'][0]
+
+	def parse_single_flow (self,command):
+		self._tokens = self._tokenise(' '.join(command.split(' ')[2:]).split('\\n'))
+		scope = [{}]
+		if not self._dispatch(scope,'flow',['route',],[]): 
+			return None
+		if not self._check_flow_route(scope):
 			return None
 		return scope[0]['routes'][0]
 
@@ -447,7 +457,7 @@ class Configuration (object):
 			if v: neighbor.hold_time = v
 			v = local_scope.get('routes',[])
 			# we have route, only announce what we need
-			if v:
+			if v and os.environ.get('MINIMAL_MP','0') in ['','1','yes','Yes','YES']:
 				for route in v:
 					neighbor.add_route(route)
 					if (route.afi,route.safi) not in neighbor.families:

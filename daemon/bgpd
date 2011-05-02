@@ -171,13 +171,14 @@ class Supervisor (object):
 
 				# route announcement / withdrawal
 				elif command.startswith('announce route'):
-					route = self.configuration.parse_single_route(command.split(' ')[1:])
+					route = self.configuration.parse_single_route(command)
 					if not route:
 						logger.supervisor("Command could not parse route in : %s" % command)
-					self.configuration.add_route_all_peers(route)
-					self._route_update = True
+					else:
+						self.configuration.add_route_all_peers(route)
+						self._route_update = True
 				elif command.startswith('withdraw route'):
-					route = self.configuration.parse_single_route(command.split(' ')[1:])
+					route = self.configuration.parse_single_route(command)
 					if not route:
 						logger.supervisor("Command could not parse route in : %s" % command)
 					else:
@@ -190,13 +191,17 @@ class Supervisor (object):
 
 				# flow announcement / withdrawal
 				elif command.startswith('announce flow'):
-					flow = self.configuration.parse_single_flow(command.split(' ')[1:])
+					print "COMMAND ---------------------------------------------------"
+					print command
+					print "COMMAND ---------------------------------------------------"
+					flow = self.configuration.parse_single_flow(command)
 					if not flow:
 						logger.supervisor("Command could not parse flow in : %s" % command)
-					self.configuration.add_route_all_peers(flow)
-					self._route_update = True
+					else:
+						self.configuration.add_route_all_peers(flow)
+						self._route_update = True
 				elif command.startswith('withdraw flow'):
-					flow = self.configuration.parse_single_flow(command.split(' ')[1:])
+					flow = self.configuration.parse_single_flow(command)
 					if not flow:
 						logger.supervisor("Command could not parse flow in : %s" % command)
 					else:
@@ -303,6 +308,7 @@ if __name__ == '__main__':
 		sys.stdout.write('PID : the file in which the pid of the program should be stored\n')
 		sys.stdout.write('SYSLOG: no value for local syslog, a file name (which will auto-rotate) or host:<host> for remote syslog\n')
 		sys.stdout.write('DAEMONIZE: detach and send the program in the background\n')
+		sys.stdout.write('MINIMAL_MP: when negociating multiprotocol, try to announce as few AFI/SAFI pair as possible\n')
 		sys.stdout.write('\n')
 		sys.stdout.write('For example :\n')
 		sys.stdout.write('> env DEBUG_SUPERVISOR=0 DEBUG_WIRE=1 \\\n')

@@ -62,7 +62,7 @@ class Processes (object):
 					if r:
 						# XXX: readline is blocking, so we are taking the assuption that it will not block
 						# XXX: most likely not going to but perhaps the code should be more robust ?
-						line = proc.stdout.readline().rstrip().replace('\\n','\n')
+						line = proc.stdout.readline().rstrip()
 						if not line:
 							# It seems that when we send ^C this is passed to the children to
 							# And if they do not intercept it correctly, select.select returns but
