@@ -291,7 +291,7 @@ class Configuration (object):
 		if command == 'md5': return self._set_md5('md5',tokens[1:])
 		if command == 'ttl-security': return self._set_ttl('ttl-security',tokens[1:])
 
-		if command == 'route': return self._single_static_route(tokens[1:])
+		if command == 'route': return self.single_static_route(tokens[1:])
 		if command == 'origin': return self._route_origin(tokens[1:])
 		if command == 'as-path': return self._route_aspath(tokens[1:])
 		if command == 'med': return self._route_med(tokens[1:])
@@ -589,7 +589,7 @@ class Configuration (object):
 
 	# Group Route  ........
 
-	def split_last_route (self):
+	def _split_last_route (self):
 		# if the route does not need to be broken in smaller routes, return
 		route = self._scope[-1]['routes'][-1]
 		if not AttributeID.INTERNAL_SPLIT in route:
@@ -657,6 +657,9 @@ class Configuration (object):
 		self._scope[-1]['routes'].append(route)
 		return True
 
+	def _remove_static_route (self):
+		self._scope[-1]['routes'] = self._scope[-1]['routes'][:-1]
+
 	def _check_static_route (self):
 		route = self._scope[-1]['routes'][-1]
 		if not route.has(AttributeID.NEXT_HOP):
@@ -675,9 +678,9 @@ class Configuration (object):
 		while True:
 			r = self._dispatch('route',[],['next-hop','origin','as-path','med','local-preference','community','split','label'])
 			if r is False: return False
-			if r is None: return self.split_last_route()
+			if r is None: return self._split_last_route()
 
-	def _single_static_route (self,tokens):
+	def single_static_route (self,tokens):
 		if len(tokens) <3:
 			self._error = self._str_route_error
 			return False
@@ -687,51 +690,64 @@ class Configuration (object):
 
 		if tokens.pop(0) != 'next-hop':
 			self._error = self._str_route_error
+			self._remove_static_route()
 			return False
 
 		if not self._route_next_hop(tokens):
+			self._error = self._str_route_error
+			self._remove_static_route()
 			return False
 
 		while len(tokens):
 			if len(tokens) < 2:
 				self._error = self._str_route_error
+				self._remove_static_route()
 				return False
 			command = tokens.pop(0)
 			if command == 'origin':
 				if self._route_origin(tokens):
 					continue
+				self._remove_static_route()
 				return False
 			if command == 'as-path':
 				if self._route_aspath(tokens):
 					continue
+				self._remove_static_route()
 				return False
 			if command == 'med':
 				if self._route_med(tokens):
 					continue
+				self._remove_static_route()
 				return False
 			if command == 'local-preference':
 				if self._route_local_preference(tokens):
 					continue
+				self._remove_static_route()
 				return False
 			if command == 'community':
 				if self._route_community(tokens):
 					continue
+				self._remove_static_route()
 				return False
 			if command == 'split':
 				if self._route_split(tokens):
 					continue
+				self._remove_static_route()
 				return False
 			if command == 'label':
 				if self._route_label(tokens):
 					continue
+				self._remove_static_route()
 				return False
 			if command == 'watchdog':
 				if self._route_watchdog(tokens):
 					continue
+				self._remove_static_route()
 				return False
+			self._remove_static_route()
 			self._error = self._str_route_error
 			return False
-		return self.split_last_route()
+		return self._split_last_route()
 
 	# Command Route
 
