@@ -170,8 +170,11 @@ class Configuration (object):
 			self.neighbor[neighbor].add_route(route)
 
 	def remove_route_all_peers (self,route):
+		result = False
 		for neighbor in self.neighbor:
-			self.neighbor[neighbor].remove_route(route)
+			if self.neighbor[neighbor].remove_route(route):
+				result = True
+		return result
 
 	# Tokenisation
 

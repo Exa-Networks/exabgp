@@ -50,9 +50,12 @@ class Neighbor (object):
 		self._routes.append(route)
 
 	def remove_route (self,route):
+		result = False
 		for r in self._routes:
 			if r == route:
 				self._routes.remove(r)
+				result = True
+		return result
 
 	def set_routes (self,routes):
 		self._routes = routes

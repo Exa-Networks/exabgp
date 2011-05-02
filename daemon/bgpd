@@ -41,7 +41,7 @@ class Supervisor (object):
 		self._shutdown = False
 		self._reload = False
 		self._restart = False
-		self._process_watchdog = False
+		self._process_route_change = False
 		self._process_commands = False
 		self._saved_pid = False
 		self.reload()
@@ -250,9 +250,9 @@ class Supervisor (object):
 				elif self._restart:
 					self._restart = False
 					self.restart()
-				elif self._process_watchdog:
-					self._process_watchdog = False
-					self.process_watchdog()
+				elif self._process_route_change:
+					self._process_route_change = False
+					self.process_route_change()
 				elif self._process_commands:
 					self._process_commands = False
 					self.process_commands(self.commands)
@@ -268,22 +268,23 @@ class Supervisor (object):
 								except IndexError:
 									name = service
 								self.watchdog[name] = parts[0]
-								self._process_watchdog = True
+								self._process_route_change = True
 							elif command.startswith('announce route'):
 								route = self.configuration.parse_single_route(command.split(' ')[1:])
 								if not route:
 									logger.supervisor("Command could not parse route in : %s" % command)
 								self.configuration.add_route_all_peers(route)
+								self._process_route_change = True
 							elif command.startswith('withdraw route'):
 								route = self.configuration.parse_single_route(command.split(' ')[1:])
 								if not route:
 									logger.supervisor("Command could not parse route in : %s" % command)
 								else:
-									self.configuration.remove_route_all_peers(route)
-#									if True:
-#										logger.supervisor("Command success, route removed : %s" % route)
-#									else:
-#										logger.supervisor("Command failure, route not found : %s" % route)
+									if self.configuration.remove_route_all_peers(route):
+										logger.supervisor("Command success, route found and removed : %s" % route)
+										self._process_route_change = True
+									else:
+										logger.supervisor("Command failure, route not found : %s" % route)
 							elif command in ['shutdown','version']:
 								self.commands.setdefault(service,[]).append(command)
 								self._process_commands = True
@@ -371,15 +372,15 @@ class Supervisor (object):
 					_answer(service,'exabgp %s' % version)
 					continue
 
-	def process_watchdog (self):
+	def process_route_change (self):
 		"""the process ran and we need to figure what routes to changes"""
-		logger.info("Performing watchdog update","configuration")
+		logger.info("Performing dynamic route update")
 		
 		for ip in self.configuration.neighbor.keys():
 			neighbor = self.configuration.neighbor[ip]
 			neighbor.watchdog(self.watchdog)
 			self._peers[ip].reload(neighbor.every_routes())
-		logger.info("Updated peers watchdogs successfully",'configuration')
+		logger.info("Updated peers dynamic routes successfully")
 
 	def restart (self):
 		"""kill the BGP session and restart it"""
