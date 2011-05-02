@@ -15,7 +15,11 @@ Version 1.3.0 - --st of May 2011
  * Improvement: Debian Packaging (author and maintainer: Nicolas Tourneur - thank you) 
  * Change: renamed env variable DAEMON to DAEMONIZE (to prevent name clash with Debian)
  * Improvement: added env variable PDB if set the program will call pdb, the python debugger, on program fault
- * Improvement: it is now possible to get some routes withdrawn from an external process (see watchdog example configuration)
+ * Improvement: it is now possible to get some routes withdrawn from an external process (see watchdog example conf.)
+    warning: this code is not yet considered production ready, expect some bugs for complex configurations
+ * Improvement: it is now possible to modify the configuration without reload from external proccess (see process example conf.)
+    warning: this code is not yet considered production ready, expect some bugs for complex configurations
+ * Fix: many small bug fixes (display, etc.)
 
 Version 1.2.0 - 25th of January 2011
  * Improvement: Allow to break route in more specific (ie define a /22 and get 4x /24 announced)
