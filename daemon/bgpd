@@ -37,7 +37,7 @@ class Supervisor (object):
 		self._shutdown = False
 		self._reload = False
 		self._restart = False
-		self._watchdog = False
+		self._route_update = False
 		self._commands = {}
 		self._saved_pid = False
 		self.reload()
@@ -84,9 +84,9 @@ class Supervisor (object):
 				elif self._restart:
 					self._restart = False
 					self.restart()
-				elif self._watchdog:
-					self._watchdog = False
-					self.watchdog()
+				elif self._route_update:
+					self._route_update = False
+					self.route_update()
 				elif self._commands:
 					self.commands(self._commands)
 					self._commands = {}
@@ -167,7 +167,7 @@ class Supervisor (object):
 					except IndexError:
 						name = service
 					self.watchdogs[name] = parts[0]
-					self._watchdog = True
+					self._route_update = True
 
 				# route announcement / withdrawal
 				elif command.startswith('announce route'):
@@ -175,7 +175,7 @@ class Supervisor (object):
 					if not route:
 						logger.supervisor("Command could not parse route in : %s" % command)
 					self.configuration.add_route_all_peers(route)
-					self._watchdog = True
+					self._route_update = True
 				elif command.startswith('withdraw route'):
 					route = self.configuration.parse_single_route(command.split(' ')[1:])
 					if not route:
@@ -183,9 +183,28 @@ class Supervisor (object):
 					else:
 						if self.configuration.remove_route_all_peers(route):
 							logger.supervisor("Command success, route found and removed : %s" % route)
-							self._watchdog = True
+							self._route_update = True
 						else:
 							logger.supervisor("Command failure, route not found : %s" % route)
+
+
+				# flow announcement / withdrawal
+				elif command.startswith('announce flow'):
+					flow = self.configuration.parse_single_flow(command.split(' ')[1:])
+					if not flow:
+						logger.supervisor("Command could not parse flow in : %s" % command)
+					self.configuration.add_route_all_peers(flow)
+					self._route_update = True
+				elif command.startswith('withdraw flow'):
+					flow = self.configuration.parse_single_flow(command.split(' ')[1:])
+					if not flow:
+						logger.supervisor("Command could not parse flow in : %s" % command)
+					else:
+						if self.configuration.remove_route_all_peers(flow):
+							logger.supervisor("Command success, flow found and removed : %s" % flow)
+							self._route_update = True
+						else:
+							logger.supervisor("Command failure, flow not found : %s" % flow)
 
 				# commands
 				elif command in ['reload','restart','shutdown','version']:
@@ -218,7 +237,7 @@ class Supervisor (object):
 					_answer(service,'exabgp %s' % version)
 					continue
 
-	def watchdog (self):
+	def route_update (self):
 		"""the process ran and we need to figure what routes to changes"""
 		logger.supervisor("Performing dynamic route update")
 		
