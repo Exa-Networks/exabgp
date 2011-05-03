@@ -1,3 +1,8 @@
+exabgp (1.3.1-1) unstable; urgency=low
+  * Updated packaging for 1.3.1.
+
+ -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Thu, 3 May 2011 13:54:07 +0000
+
 exabgp (1.3.0-1) unstable; urgency=low
   * Updated packaging for 1.3.0, removed patches.
   * Added a lintian override as the packaging is now done upstream.
