@@ -5,7 +5,8 @@ set -e
 if [ $1 = purge ]; then  
     if getent passwd exabgp >/dev/null; then
         if [ -x /usr/sbin/deluser ]; then
-            deluser --quiet --system --remove-home exabgp
+            deluser --quiet --system exabgp
+	    test -d /var/run/exabgp && rmdir /var/run/exabgp || true #ignore non-failure errors
         else
             echo "Can't remove user exabgp. Please remove this user by hand."
         fi
