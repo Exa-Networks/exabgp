@@ -12,7 +12,7 @@ if [ $1 = purge ]; then
     fi
     if getent group exabgp >/dev/null; then
         if [ -x /usr/sbin/delgroup ]; then
-            delgroup --quiet --system exabgp
+            delgroup --quiet --system --remove-home exabgp
         else
             echo "Can't remove group exabgp. Please remove this group by hand."
         fi
