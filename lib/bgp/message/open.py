@@ -7,6 +7,7 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2011 Exa Networks. All rights reserved.
 """
 
+import os
 import socket
 from struct import pack
 
@@ -222,7 +223,14 @@ class Capabilities (dict):
 
 	def default (self,neighbor,restarted):
 		graceful = neighbor.graceful_restart
-		families = neighbor.families
+
+		if os.environ.get('MINIMAL_MP','0') in ['','1','yes','Yes','YES']:
+			families = neighbor.families
+		else:
+			families = []
+			families.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
+			families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+			families.append((AFI(AFI.ipv4),SAFI(SAFI.flow_ipv4)))
 
 		mp = MultiProtocol()
 		mp.extend(families)
