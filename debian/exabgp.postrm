@@ -5,14 +5,14 @@ set -e
 if [ $1 = purge ]; then  
     if getent passwd exabgp >/dev/null; then
         if [ -x /usr/sbin/deluser ]; then
-            deluser --quiet --system exabgp
+            deluser --quiet --system --remove-home exabgp
         else
             echo "Can't remove user exabgp. Please remove this user by hand."
         fi
     fi
     if getent group exabgp >/dev/null; then
         if [ -x /usr/sbin/delgroup ]; then
-            delgroup --quiet --system --remove-home exabgp
+            delgroup --quiet --system exabgp
         else
             echo "Can't remove group exabgp. Please remove this group by hand."
         fi
