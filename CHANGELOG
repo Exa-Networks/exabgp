@@ -3,7 +3,7 @@ Version explained:
  minor : increase on new features
  bug   : increase on bug fixes
 
-Version 1.3.0 - --st of May 2011
+Version 1.3.0 - 2nd of May 2011
  * Improvement: reduce likelyness of route update recalculation causing us to not send keepalive in time
  * Fix: introduced a bug in neighbor printing
  * Fix: we were trying to send a KEEPALIVE after the initial routes, but it was not going
