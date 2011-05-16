@@ -23,9 +23,6 @@ class Control (StreamRequestHandler):
 			if command in ['quit','exit']:
 				continue
 
-			sys.stdout.write('%s\n' % command)
-			sys.stdout.flush()
-
 			if command in ['help','?']:
 				self.wfile.write('exabgp tcp-control help\n')
 				self.wfile.write('\n')
@@ -60,14 +57,20 @@ class Control (StreamRequestHandler):
 				continue
 
 			if command.startswith('announce '):
+				sys.stdout.write('%s\n' % command)
+				sys.stdout.flush()
 				self.wfile.write('requested %s annoucement\n' % command.split(' ')[1])
 				continue
 
 			if command.startswith('withdraw '):
+				sys.stdout.write('%s\n' % command)
+				sys.stdout.flush()
 				self.wfile.write('request %s withdrawal\n' % command.split(' ')[1])
 				continue
 
 			if command in ['shutdown','reload','restart','version']:
+				sys.stdout.write('%s\n' % command)
+				sys.stdout.flush()
 				r, waiting_answer = True, True
 				while r or waiting_answer:
 					r,_,_ = select.select([sys.stdin], [], [], 1.0)
