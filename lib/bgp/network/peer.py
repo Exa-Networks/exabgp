@@ -51,6 +51,19 @@ class Peer (object):
 		self._restart = True
 		# The peer was restarted (to know what kind of open to send for graceful restart)
 		self._restarted = FORCE_GRACEFUL
+		self._reset_skip()
+
+	def _reset_skip (self):
+		# We are currently not skipping connection attempts
+		self._skip = 0
+		# when we can not connect to a peer how many time (in loop) should we back-off
+		self._next_skip = 1
+
+	def _more_skip (self):
+		self._skip = self._next_skip
+		self._next_skip = self._next_skip*2
+		if self._next_skip > 512:
+			self._next_skip = 512
 
 	def me (self,message):
 		return "Peer %15s ASN %-7s %s" % (self.neighbor.peer_address,self.neighbor.peer_as,message)
@@ -59,10 +72,12 @@ class Peer (object):
 		self._running = False
 		self._restart = False
 		self._restarted = False
+		self._reset_skip()
 
 	def reload (self,routes):
 		self._updates = True
 		self.neighbor.set_routes(routes)
+		self._reset_skip()
 
 	def restart (self,restart_neighbor=None):
 		# we want to tear down the session and re-establish it
@@ -70,11 +85,16 @@ class Peer (object):
 		self._restart = True
 		self._restarted = True
 		self._neighbor = restart_neighbor
+		self._reset_skip()
 
 	def run (self):
 		if self._loop:
 			try:
-				return self._loop.next()
+				if self._skip:
+					self._skip -= 1
+					return None
+				else:
+					return self._loop.next()
 			except StopIteration:
 				self._loop = None
 		elif self._restart:
@@ -160,7 +180,6 @@ class Peer (object):
 						yield True
 					logger.message(self.me('>> UPDATE (%d)' % count))
 
-
 				yield None
 			
 			if self.neighbor.graceful_restart and self.open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
@@ -172,6 +191,7 @@ class Peer (object):
 			raise Notify(6,3)
 		except NotConnected, e:
 			logger.warning('we can not connect to the peer %s' % str(e))
+			self._more_skip()
 			try:
 				self.bgp.close()
 			except Failure:
@@ -191,10 +211,12 @@ class Peer (object):
 			return
 		except Failure, e:
 			logger.warning(self.me(str(e)))
+			self._more_skip()
 			self.bgp.close()
 			return
 		except Exception, e:
 			logger.warning(self.me('UNHANDLED EXCEPTION'))
+			self._more_skip()
 			if self.debug_trace:
 				# should really go to syslog
 				traceback.print_exc(file=sys.stdout)
