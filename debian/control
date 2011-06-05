@@ -3,14 +3,14 @@ Maintainer: Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>
 Section: net
 Priority: optional
 Build-Depends: debhelper (>= 7.0.50~), python-support (>= 0.8.4), python
-Standards-Version: 3.9.1
+Standards-Version: 3.9.2
 X-Python-Version: >= 2.5
 XS-Python-Version: current
 Homepage: http://code.google.com/p/exabgp/
 
 Package: exabgp
 Architecture: all
-Depends: ${misc:Depends}, python, adduser
+Depends: ${misc:Depends}, ${python:Depends}, adduser
 Description: BGP route injector
  This program is a BGP route injector.
  The route injector can connect using either IPv4 or IPv6
