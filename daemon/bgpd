@@ -124,7 +124,7 @@ class Supervisor (object):
 
 	def reload (self):
 		"""reload the configuration and send to the peer the route which changed"""
-		logger.info("Performing reload","configuration")
+		logger.info("Performing reload of exabgp %s" % version,"configuration")
 		
 		reloaded = self.configuration.reload()
 		if not reloaded:
@@ -251,7 +251,7 @@ class Supervisor (object):
 
 	def restart (self):
 		"""kill the BGP session and restart it"""
-		logger.info("Performing restart","supervisor")
+		logger.info("Performing restart of exabgp %s" % version,"supervisor")
 		self.configuration.reload()
 
 		for ip in self._peers.keys():
