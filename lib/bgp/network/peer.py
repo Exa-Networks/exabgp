@@ -120,7 +120,6 @@ class Peer (object):
 
 			start = time.time()
 			while True:
-				print "\n\n\------ IN LOOP \n\n"
 				self.open = self.bgp.read_open(_open,self.neighbor.peer_address.ip)
 				if self.open:
 					logger.message(self.me('<< %s' % self.open))
