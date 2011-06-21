@@ -119,13 +119,13 @@ class Peer (object):
 			yield None
 
 			start = time.time()
-			endless = True
-			while endless:
+			while True:
+				print "\n\n\------ IN LOOP \n\n"
 				self.open = self.bgp.read_open(_open,self.neighbor.peer_address.ip)
 				if self.open:
 					logger.message(self.me('<< %s' % self.open))
-					endless = False
-					continue
+					yield None
+					break
 				if time.time() - start > max_wait_open: 
 					logger.message(self.me('waited for an OPEN for too long - killing the session'))
 					raise Notify(1,1,'the packet received does not contain a BGP marker')
