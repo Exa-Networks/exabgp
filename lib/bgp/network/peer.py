@@ -13,7 +13,7 @@ import traceback
 
 from bgp.message              import Failure
 from bgp.message.nop          import NOP
-from bgp.message.open         import Capabilities
+from bgp.message.open         import Open,Capabilities
 from bgp.message.update       import Update
 from bgp.message.keepalive    import KeepAlive
 from bgp.message.notification import Notification, Notify, NotConnected
@@ -121,21 +121,27 @@ class Peer (object):
 			start = time.time()
 			while True:
 				self.open = self.bgp.read_open(_open,self.neighbor.peer_address.ip)
-				if self.open:
+				# OPEN or NOP
+				if self.open.TYPE == Open.TYPE:
 					logger.message(self.me('<< %s' % self.open))
 					yield None
 					break
 				if time.time() - start > max_wait_open: 
 					logger.message(self.me('waited for an OPEN for too long - killing the session'))
-					raise Notify(1,1,'the packet received does not contain a BGP marker')
+					raise Notify(1,1,'the client took over %s seconds to send the OPEN, closing' % str(max_wait_open))
 				yield None
 
 			message = self.bgp.new_keepalive(force=True)
 			logger.message(self.me('>> KEEPALIVE (OPENCONFIRM)'))
 			yield True
 
-			message = self.bgp.read_keepalive()
-			logger.message(self.me('<< KEEPALIVE (ESTABLISHED)'))
+			while True:
+				message = self.bgp.read_keepalive()
+				# KEEPALIVE or NOP
+				if message.TYPE == KeepAlive.TYPE:
+					logger.message(self.me('<< KEEPALIVE (ESTABLISHED)'))
+					break
+				yield None
 
 			count = 0
 			for count in self.bgp.new_announce():

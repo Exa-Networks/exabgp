@@ -143,10 +143,10 @@ class Protocol (object):
 	def read_open (self,_open,ip):
 		message = self.read_message()
 
-		if message.TYPE in [NOP.TYPE,]:
-			return None
+		if message.TYPE == NOP.TYPE:
+			return message
 
-		if message.TYPE not in [Open.TYPE,]:
+		if message.TYPE != Open.TYPE:
 			raise Notify(1,1,'the first packet recevied is not an open message (%s)' % message)
 
 		if _open.asn.asn4() and not message.capabilities.announced(Capabilities.FOUR_BYTES_ASN):
@@ -181,6 +181,8 @@ class Protocol (object):
 
 	def read_keepalive (self):
 		message = self.read_message()
+		if message.TYPE == NOP.TYPE:
+			return message
 		if message.TYPE != KeepAlive.TYPE:
 			raise Notify(5,0)
 		return message

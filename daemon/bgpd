@@ -99,7 +99,7 @@ class Supervisor (object):
 						peer = self._peers[ip]
 						# there was no routes to send for this peer, we performed keepalive checks
 						if peer.run() is not True:
-							# no need to come back to it before a second
+							# no need to come back to it before a a full cycle
 							peers.remove(ip)
 					# otherwise process as many routes as we can within a second for the remaining peers
 					duration = time.time() - start
