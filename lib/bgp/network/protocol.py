@@ -94,7 +94,7 @@ class Protocol (object):
 
 		if data[:16] != Message.MARKER:
 			# We are speaking BGP - send us a valid Marker
-			raise Notify(1,1)
+			raise Notify(1,1,'the packet received does not contain a BGP marker')
 
 		raw_length = data[16:18]
 		length = unpack('!H',raw_length)[0]
@@ -143,8 +143,11 @@ class Protocol (object):
 	def read_open (self,_open,ip):
 		message = self.read_message()
 
+		if message.TYPE in [NOP.TYPE,]:
+			return None
+
 		if message.TYPE not in [Open.TYPE,]:
-			raise Notify(1,1,'first packet not an open message (%s)' % str(message.TYPE))
+			raise Notify(1,1,'the first packet recevied is not an open message (%s)' % message)
 
 		if _open.asn.asn4() and not message.capabilities.announced(Capabilities.FOUR_BYTES_ASN):
 			raise Notify(2,0,'we have an ASN4 and you do not speak it. bye.')
