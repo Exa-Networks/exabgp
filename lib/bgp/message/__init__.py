@@ -29,24 +29,51 @@ def prefix (data):
 	return '%s%s' % (pack('!H',len(data)),data)
 
 class Message (Exception):
-	TYPE = 0 # Should be None ?
+	TYPE = None
 
 	MARKER = chr(0xff)*16
 
 	class Type:
-		OPEN          = 0x01, #   1
-		UPDATE        = 0x02, #   2
-		NOTIFICATION  = 0x04, #   4
-		KEEPALIVE     = 0x08, #   8
-		ROUTE_REFRESH = 0x10, #  16
-		LIST          = 0x20, #  32
-		HEADER        = 0x40, #  64
-		GENERAL       = 0x80, # 128
+		OPEN          = 0x01  #   1
+		UPDATE        = 0x02  #   2
+		NOTIFICATION  = 0x04  #   4
+		KEEPALIVE     = 0x08  #   8
+		ROUTE_REFRESH = 0x10  #  16
+		LIST          = 0x20  #  32
+		HEADER        = 0x40  #  64
+		GENERAL       = 0x80  # 128
 		#LOCALRIB    = 0x100  # 256
 
 	def _message (self,message = ""):
 		message_len = pack('!H',19+len(message))
 		return "%s%s%s%s" % (self.MARKER,message_len,self.TYPE,message)
+
+	def __str__ (self,code=None):
+		if code is None:
+			if self.TYPE is None:
+				return 'UNKNOWN (invalid code : %s)' % str(code)
+			code = ord(self.TYPE)
+
+		result = []
+		if code & self.Type.OPEN:
+			result.append('OPEN')
+		if code & self.Type.UPDATE:
+			result.append('UPDATE')
+		if code & self.Type.NOTIFICATION:
+			result.append('NOTIFICATION')
+		if code & self.Type.KEEPALIVE:
+			result.append('KEEPALIVE')
+		if code & self.Type.ROUTE_REFRESH:
+			result.append('ROUTE_REFRESH')
+		if code & self.Type.LIST:
+			result.append('LIST')
+		if code & self.Type.HEADER:
+			result.append('HEADER')
+		if code & self.Type.GENERAL:
+			result.append('GENERAL')
+		if result:
+			return ' '.join(result)
+		return 'UNKNOWN (%d)' % code
 
 class Failure (Exception):
 	pass

@@ -8,6 +8,7 @@ Copyright (c) 2009-2011 Exa Networks. All rights reserved.
 """
 
 import sys
+import time
 import traceback
 
 from bgp.message              import Failure
@@ -108,7 +109,7 @@ class Peer (object):
 			self.bgp.close()
 			self.supervisor.unschedule(self)
 
-	def _run (self):
+	def _run (self,max_wait_open=10.0):
 		try:
 			self.bgp = Protocol(self)
 			self.bgp.connect()
@@ -117,9 +118,18 @@ class Peer (object):
 			logger.message(self.me('>> %s' % _open))
 			yield None
 
-			self.open = self.bgp.read_open(_open,self.neighbor.peer_address.ip)
-			logger.message(self.me('<< %s' % self.open))
-			yield None
+			start = time.time()
+			endless = True
+			while endless:
+				self.open = self.bgp.read_open(_open,self.neighbor.peer_address.ip)
+				if self.open:
+					logger.message(self.me('<< %s' % self.open))
+					endless = False
+					continue
+				if time.time() - start > max_wait_open: 
+					logger.message(self.me('waited for an OPEN for too long - killing the session'))
+					raise Notify(1,1,'the packet received does not contain a BGP marker')
+				yield None
 
 			message = self.bgp.new_keepalive(force=True)
 			logger.message(self.me('>> KEEPALIVE (OPENCONFIRM)'))
