@@ -58,7 +58,7 @@ class Supervisor (object):
 		logger.supervisor("SIG ALRM received")
 		self._restart = True
 
-	def run (self):
+	def run (self,supervisor_speed=0.1):
 		if self.daemon.drop_privileges():
 			logger.supervisor("Could not drop privileges to '%s' refusing to run as root" % self.daemon.user)
 			logger.supervisor("Set the environmemnt value USER to change the unprivileged user")
@@ -108,8 +108,8 @@ class Supervisor (object):
 						break
 				duration = time.time() - start
 				# RFC state that we MUST not more than one KEEPALIVE / sec
-				if duration < 0.1:
-					time.sleep(0.1-duration)
+				if duration < supervisor_speed:
+					time.sleep(supervisor_speed-duration)
 			except KeyboardInterrupt:
 				logger.supervisor("^C received")
 				self._shutdown = True
