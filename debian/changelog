@@ -1,7 +1,8 @@
-exabgp (1.3.2-1) unstable; urgency=low
+exabgp (1.3.3-1) unstable; urgency=low
   * Fix a bug on high latency links
+  * Dramatically accelerate route delta calculation
 
- -- Thomas Mangin <thomas.mangin@exa-networks.co.uk>  Tue, 21 Jun 2011 23:23:23 +0000
+ -- Thomas Mangin <thomas.mangin@exa-networks.co.uk>  Tue, 25 Jun 2011 16:30:00 +0000
 
 exabgp (1.3.1-2) unstable; urgency=low
   * Cleaned up a lintian error and one warning.
