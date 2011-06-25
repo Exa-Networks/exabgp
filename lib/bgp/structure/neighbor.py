@@ -37,13 +37,15 @@ class Neighbor (object):
 		return self._routes
 
 	def filtered_routes (self):
-		routes = []
+		# This function returns a hash and not a list as "in" tests are O(n) with lists and O(1) with hash
+		# and with ten thousands routes this makes an enormous difference (60 seconds to 2)
+		routes = {}
 		for route in self._routes:
 			watchdog = route.get(AttributeID.INTERNAL_WATCHDOG,None)
 			if watchdog in self._watchdog:
 				if self._watchdog[watchdog] == 'withdraw':
 					continue
-			routes.append(route)
+			routes[str(route)] = route
 		return routes
 
 	def add_route (self,route):

@@ -25,15 +25,15 @@ class Table (object):
 		routes = self.peer.neighbor.filtered_routes()
 		for prefix in self._plus.keys():
 			route = self._plus[prefix][1]
-			if route not in routes:
+			if str(route) not in routes:
 				self._remove(route)
 		for route in routes:
-			self._add(route)
+			self._add(routes[route])
 		return self
 
 	def _add (self,route):
 		prefix = str(route)
-		if prefix in self._plus.keys():
+		if prefix in self._plus:
 			if route != self._plus[prefix][1]:
 				self._plus[prefix] = (time.time(),route,'*')
 			return
@@ -41,13 +41,13 @@ class Table (object):
 
 	def _remove (self,route):
 		prefix = str(route)
-		if prefix in self._plus.keys():
+		if prefix in self._plus:
 			self._minus[prefix] = (time.time(),self._plus[prefix][1])
 			del self._plus[prefix]
 
 	def changed (self,when):
 		"""table.changed must _always_ returns routes to remove before routes to add and must _always_ finish by the time"""
-		for prefix in self._minus.keys():
+		for prefix in self._minus:
 			t,r = self._minus[prefix]
 			if when < t:
 				yield ('-',r)
@@ -62,7 +62,7 @@ class Table (object):
 			t,p = self._plus[prefix]
 			if t < when:
 				del self._plus[prefix]
-		for prefix in self._minus.keys():
+		for prefix in self._minus:
 			t = self._minus[prefix]
 			if t < when:
 				del self._minus[prefix]
