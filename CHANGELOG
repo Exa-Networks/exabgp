@@ -3,6 +3,10 @@ Version explained:
  minor : increase on new features
  bug   : increase on bug fixes
 
+Version 1.3.4 - --th of xxxx 2011
+ * Improvement: added support for asdot/asdot+
+    requested by jonlooney (with a patch - thank you)
+
 Version 1.3.3 - 25th of June 2011
  * Improvement: massive speed improvement when reloading with many routes (60 to 2 seconds with 10k routes)
     reported by Martin Baum (with proof of concept patch)
