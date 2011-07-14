@@ -520,9 +520,18 @@ class Configuration (object):
 		scope[-1]['description'] = text[1:-1]
 		return True
 
+	# will raise ValueError if the ASN is not correct
+	def _newASN (self,value):
+		if value.count('.'):
+			high,low = value.split('.',1)
+			asn = (int(high) << 16) + int(low)
+		else:
+			asn = int(value[0])
+		return ASN(asn)
+
 	def _set_asn (self,scope,command,value):
 		try:
-			scope[-1][command] = ASN(int(value[0]))
+			scope[-1][command] = self._newASN(value[0])
 			return True
 		except ValueError:
 			self._error = '"%s" is an invalid ASN' % ' '.join(value)
@@ -806,13 +815,6 @@ class Configuration (object):
 		if self.debug: raise
 		return False
 
-	def _parse_asn (self,data,scope):
-		if not data.isdigit():
-			self._error = self._str_route_error
-			if self.debug: raise
-			return False
-		return ASN(int(data))
-
 	def _route_aspath (self,scope,tokens):
 		aspath = ASPath()
 		asn = tokens.pop(0)
@@ -827,9 +829,9 @@ class Configuration (object):
 						return False
 					if asn == ']':
 						break
-					aspath.add(self._parse_asn(asn))
+					aspath.add(self._newASN(asn))
 			else:
-				aspath.add(self._parse_asn(asn))
+				aspath.add(self._newASN(asn))
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise
