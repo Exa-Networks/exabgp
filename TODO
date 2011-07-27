@@ -6,6 +6,8 @@ FEATURE:
  * Some of the match condition of flows currently take list or numeric tests, they should always take both, refactor the code for it (ports for example)
  * UPDATE parsing is totally disabled as very broken ATM, the broken update parsing for ASPath assumes only one segment
  * Modification of the RIB from the code
+ * Be graceful if the peer does not support multiprotocol and try without if we see an optional attribute error, an unsupported capability or a grouping conflict.
+ * Add/Remove a default route in the local FIB if the BGP session is up/down
 
 CODE IMPROVEMENTS:
  * Rewrite the unittesting which is really missing.
