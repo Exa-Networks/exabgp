@@ -1,27 +1,18 @@
-This work was packaged for Debian by:
+This work was packaged for Debian by Henry-Nicolas Tourneur <henry.nicolas@tourneur.be> on 
+Thu, 21 Apr 2011 19:35:15 +0000
 
-    Henry-Nicolas Tourneur <henry.nicolas@tourneur.be> on Thu, 21 Apr 2011 19:35:15 +0000
+It was downloaded from: http://code.google.com/p/exabgp/source/list
 
-It was downloaded from:
-    http://exabgp.googlecode.com/files/exabgp-1.2.0.tgz
-    
-
-Upstream Author(s):
-
+Upstream Authors:
     Thomas Mangin <thomas.mangin@exa-networks.co.uk>
     Diego Garcia del Rio <garci66@gmail.com>
 
 Copyright:
-
     Copyright (c) 2009-2011, Exa Networks Limited
     Copyright (c) 2009-2011, Thomas Mangin
 
 License:
-
     New BSD License
 
 The Debian packaging is:
-
     Copyright (C) 2011 Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>
-
-
