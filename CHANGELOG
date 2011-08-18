@@ -6,6 +6,7 @@ Version explained:
 Version 1.3.4 - --th of xxxx 2011
  * Improvement: added support for asdot/asdot+
     requested by jonlooney (with a patch - thank you)
+ * Fix: when the pid file could not be written, the daemon was crashing on exit
 
 Version 1.3.3 - 25th of June 2011
  * Improvement: massive speed improvement when reloading with many routes (60 to 2 seconds with 10k routes)

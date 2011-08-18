@@ -25,6 +25,8 @@ class Daemon (object):
 		mask = os.umask(0137)
 
 	def savepid (self):
+		self._saved_pid = False
+
 		if not self.pid_file:
 			return
 
