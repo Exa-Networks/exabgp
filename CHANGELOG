@@ -3,7 +3,7 @@ Version explained:
  minor : increase on new features
  bug   : increase on bug fixes
 
-Version 1.3.4 - --th of xxxx 2011
+Version 1.3.4 - 21th of September 2011
  * Improvement: added support for asdot/asdot+
     requested by jonlooney (with a patch - thank you)
  * Fix: when the pid file could not be written, the daemon was crashing on exit

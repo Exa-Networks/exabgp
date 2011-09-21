@@ -526,7 +526,7 @@ class Configuration (object):
 			high,low = value.split('.',1)
 			asn = (int(high) << 16) + int(low)
 		else:
-			asn = int(value[0])
+			asn = int(value)
 		return ASN(asn)
 
 	def _set_asn (self,scope,command,value):
