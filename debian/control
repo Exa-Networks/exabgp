@@ -4,8 +4,7 @@ Section: net
 Priority: optional
 Build-Depends: debhelper (>= 7.0.50~), python-support (>= 0.8.4), python
 Standards-Version: 3.9.2
-X-Python-Version: >= 2.5
-XS-Python-Version: current
+XS-Python-Version: >= 2.5
 Homepage: http://code.google.com/p/exabgp/
 
 Package: exabgp
