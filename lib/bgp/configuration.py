@@ -977,13 +977,10 @@ class Configuration (object):
 		if not self._insert_flow_route(scope):
 			return False
 
-		while True:
-			r = self._dispatch(scope,'flow-route',['match',],[])
-			if r is False: return False
-			r = self._dispatch(scope,'flow-route',['then',],[])
-			if r is False: return False
-			if r is None: break
-		return True
+		r = self._dispatch(scope,'flow-route',['match',],[])
+		if r is False: return False
+		r = self._dispatch(scope,'flow-route',['then',],[])
+		return r
 
 	# ..........................................
 	
@@ -1158,6 +1155,7 @@ class Configuration (object):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
 			scope[-1]['routes'][-1].add_action(to_FlowTrafficRate(ASN(0),0))
+			return True
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise
@@ -1173,6 +1171,7 @@ class Configuration (object):
 				speed = 1000000000000
 				logger.warning("rate-limiting changed for 1 000 000 000 000 bytes from %s" % tokens[0],"configuration")
 			scope[-1]['routes'][-1].add_action(to_FlowTrafficRate(ASN(0),speed))
+			return True
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise
@@ -1192,6 +1191,7 @@ class Configuration (object):
 					ipn += int(ip.pop(0))
 				number = int(suffix)
 				scope[-1]['routes'][-1].add_action(to_RouteTargetCommunity_01(ipn,number))
+				return True
 			else:
 				asn = int(prefix)
 				route_target = int(suffix)
@@ -1200,6 +1200,7 @@ class Configuration (object):
 				if route_target >= pow(2,32):
 					raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
 				scope[-1]['routes'][-1].add_action(to_RouteTargetCommunity_00(asn,route_target))
+				return True
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise

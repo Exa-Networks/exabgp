@@ -30,6 +30,7 @@ neighbor 82.219.4.254 {
 #				discard;
 				redirect 65500:12345;
 #				redirect 1.2.3.4:5678;
+				community [30740:0 30740:30740];
 			}
 		}
 	}
