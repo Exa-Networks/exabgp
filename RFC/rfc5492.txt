@@ -1,0 +1,395 @@
+
+
+
+
+
+
+Network Working Group                                         J. Scudder
+Request for Comments: 5492                              Juniper Networks
+Obsoletes: 3392                                               R. Chandra
+Category: Standards Track                                  Sonoa Systems
+                                                           February 2009
+
+
+                 Capabilities Advertisement with BGP-4
+
+Status of This Memo
+
+   This document specifies an Internet standards track protocol for the
+   Internet community, and requests discussion and suggestions for
+   improvements.  Please refer to the current edition of the "Internet
+   Official Protocol Standards" (STD 1) for the standardization state
+   and status of this protocol.  Distribution of this memo is unlimited.
+
+Copyright Notice
+
+   Copyright (c) 2009 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents in effect on the date of
+   publication of this document (http://trustee.ietf.org/license-info).
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.
+
+   This document may contain material from IETF Documents or IETF
+   Contributions published or made publicly available before November
+   10, 2008.  The person(s) controlling the copyright in some of this
+   material may not have granted the IETF Trust the right to allow
+   modifications of such material outside the IETF Standards Process.
+   Without obtaining an adequate license from the person(s) controlling
+   the copyright in such materials, this document may not be modified
+   outside the IETF Standards Process, and derivative works of it may
+   not be created outside the IETF Standards Process, except to format
+   it for publication as an RFC or to translate it into languages other
+   than English.
+
+Abstract
+
+   This document defines an Optional Parameter, called Capabilities,
+   that is expected to facilitate the introduction of new capabilities
+   in the Border Gateway Protocol (BGP) by providing graceful capability
+   advertisement without requiring that BGP peering be terminated.
+
+   This document obsoletes RFC 3392.
+
+
+
+Scudder & Chandra           Standards Track                     [Page 1]
+
+RFC 5492               Capabilities Advertisement          February 2009
+
+
+1.  Introduction
+
+   The base BGP-4 specification [RFC4271] requires that when a BGP
+   speaker receives an OPEN message with one or more unrecognized
+   Optional Parameters, the speaker must terminate the BGP peering.
+   This complicates the introduction of new capabilities in BGP.
+
+   This specification defines an Optional Parameter and processing rules
+   that allow BGP speakers to communicate capabilities in an OPEN
+   message.  A pair of BGP speakers that supports this specification can
+   establish the peering even when presented with unrecognized
+   capabilities, so long as all capabilities required to support the
+   peering are supported.
+
+2.  Requirements Language
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+   document are to be interpreted as described in RFC 2119 [RFC2119].
+
+3.  Overview of Operations
+
+   When a BGP speaker [RFC4271] that supports capabilities advertisement
+   sends an OPEN message to its BGP peer, the message MAY include an
+   Optional Parameter, called Capabilities.  The parameter lists the
+   capabilities supported by the speaker.
+
+   A BGP speaker determines the capabilities supported by its peer by
+   examining the list of capabilities present in the Capabilities
+   Optional Parameter carried by the OPEN message that the speaker
+   receives from the peer.
+
+   A BGP speaker that supports a particular capability may use this
+   capability with its peer after the speaker determines (as described
+   above) that the peer supports this capability.  Simply put, a given
+   capability can be used on a peering if that capability has been
+   advertised by both peers.  If either peer has not advertised it, the
+   capability cannot be used.
+
+   A BGP speaker determines that its peer doesn't support capabilities
+   advertisement if, in response to an OPEN message that carries the
+   Capabilities Optional Parameter, the speaker receives a NOTIFICATION
+   message with the Error Subcode set to Unsupported Optional Parameter.
+   (This is a consequence of the base BGP-4 specification [RFC4271] and
+   not a new requirement.)  In this case, the speaker SHOULD attempt to
+   re-establish a BGP connection with the peer without sending to the
+   peer the Capabilities Optional Parameter.
+
+
+
+
+Scudder & Chandra           Standards Track                     [Page 2]
+
+RFC 5492               Capabilities Advertisement          February 2009
+
+
+   If a BGP speaker that supports a certain capability determines that
+   its peer doesn't support this capability, the speaker MAY send a
+   NOTIFICATION message to the peer and terminate peering (see Section
+   "Extensions to Error Handling" for more details).  For example, a BGP
+   speaker may need to terminate peering if it established peering to
+   exchange IPv6 routes and determines that its peer does not support
+   Multiprotocol Extensions for BGP-4 [RFC4760].  The Error Subcode in
+   the NOTIFICATION message is then set to Unsupported Capability.  The
+   message MUST contain the capability or capabilities that cause the
+   speaker to send the message.  The decision to send the message and
+   terminate the peering is local to the speaker.  If terminated, such
+   peering SHOULD NOT be re-established automatically.
+
+   If a BGP speaker receives from its peer a capability that it does not
+   itself support or recognize, it MUST ignore that capability.  In
+   particular, the Unsupported Capability NOTIFICATION message MUST NOT
+   be generated and the BGP session MUST NOT be terminated in response
+   to reception of a capability that is not supported by the local
+   speaker.
+
+4.  Capabilities Optional Parameter (Parameter Type 2):
+
+   This is an Optional Parameter that is used by a BGP speaker to convey
+   to its BGP peer the list of capabilities supported by the speaker.
+   The encoding of BGP Optional Parameters is specified in Section 4.2
+   of [RFC4271].  The parameter type of the Capabilities Optional
+   Parameter is 2.
+
+   The parameter contains one or more triples <Capability Code,
+   Capability Length, Capability Value>, where each triple is encoded as
+   shown below:
+
+          +------------------------------+
+          | Capability Code (1 octet)    |
+          +------------------------------+
+          | Capability Length (1 octet)  |
+          +------------------------------+
+          | Capability Value (variable)  |
+          ~                              ~
+          +------------------------------+
+
+   The use and meaning of these fields are as follows:
+
+      Capability Code:
+
+         Capability Code is a one-octet unsigned binary integer that
+         unambiguously identifies individual capabilities.
+
+
+
+
+Scudder & Chandra           Standards Track                     [Page 3]
+
+RFC 5492               Capabilities Advertisement          February 2009
+
+
+      Capability Length:
+
+         Capability Length is a one-octet unsigned binary integer that
+         contains the length of the Capability Value field in octets.
+
+      Capability Value:
+
+         Capability Value is a variable-length field that is interpreted
+         according to the value of the Capability Code field.
+
+   BGP speakers SHOULD NOT include more than one instance of a
+   capability with the same Capability Code, Capability Length, and
+   Capability Value.  Note, however, that processing of multiple
+   instances of such capability does not require special handling, as
+   additional instances do not change the meaning of the announced
+   capability; thus, a BGP speaker MUST be prepared to accept such
+   multiple instances.
+
+   BGP speakers MAY include more than one instance of a capability (as
+   identified by the Capability Code) with non-zero Capability Length
+   field, but with different Capability Value and either the same or
+   different Capability Length.  Processing of these capability
+   instances is specific to the Capability Code and MUST be described in
+   the document introducing the new capability.
+
+   The Capabilities Optional Parameter (OPEN Optional Parameter Type 2)
+   SHOULD only be included in the OPEN message once.  If the BGP speaker
+   wishes to include multiple capabilities in the OPEN message, it
+   SHOULD do so as discussed above -- by listing all those capabilities
+   as TLVs within a single Capabilities Optional Parameter.  However,
+   for backward compatibility, a BGP speaker MUST be prepared to receive
+   an OPEN message that contains multiple Capabilities Optional
+   Parameters, each of which contains one or more capabilities TLVs.
+   The set of capabilities should be processed in the same way in either
+   case, whether it is enumerated within a single Capabilities Optional
+   Parameter of the OPEN message or split across multiple Capabilities
+   Optional Parameters.
+
+5.  Extensions to Error Handling
+
+   This document defines a new Error Subcode, Unsupported Capability.
+   The value of this Subcode is 7.  The Data field in the NOTIFICATION
+   message MUST list the set of capabilities that causes the speaker to
+   send the message.  Each such capability is encoded in the same way as
+   it would be encoded in the OPEN message.
+
+
+
+
+
+
+Scudder & Chandra           Standards Track                     [Page 4]
+
+RFC 5492               Capabilities Advertisement          February 2009
+
+
+   As explained in the "Overview of Operations" section, the Unsupported
+   Capability NOTIFICATION is a way for a BGP speaker to complain that
+   its peer does not support a required capability without which the
+   peering cannot proceed.  It MUST NOT be used when a BGP speaker
+   receives a capability that it does not understand; such capabilities
+   MUST be ignored.
+
+6.  IANA Considerations
+
+   This document defines a Capability Optional Parameter along with a
+   Capability Code field.  IANA maintains the registry for Capability
+   Code values.  Capability Code value 0 is reserved.  Capability Code
+   values 1 through 63 are to be assigned by IANA using the "IETF
+   Review" policy defined in [RFC5226].  Capability Code values 64
+   through 127 are to be assigned by IANA using the "First Come First
+   Served" policy defined in [RFC5226].  Capability Code values 128
+   through 255 are for "Private Use" as defined in [RFC5226].
+
+   IANA created and maintains a registry for OPEN message Optional
+   Parameters called "BGP OPEN Optional Parameter Types".  Optional
+   Parameters are identified by the Parameter Type, which is a one-octet
+   unsigned integer.  Values (0 reserved, 1-255) are to be allocated
+   according to the "IETF Review" policy as defined in [RFC5226].
+
+   The registry has been populated with the two Parameter Type codes
+   that are currently defined:
+
+   o  Parameter Type 1: Authentication (deprecated) [RFC4271] [RFC5492]
+
+   o  Parameter Type 2: Capabilities [RFC5492]
+
+7.  Security Considerations
+
+   This extension to BGP does not change the underlying security issues
+   inherent in the existing BGP [RFC4272].
+
+8.  Acknowledgments
+
+   The authors would like to thank members of the IDR Working Group and
+   the IESG and its Directorates for their review and comments.
+
+
+
+
+
+
+
+
+
+
+
+Scudder & Chandra           Standards Track                     [Page 5]
+
+RFC 5492               Capabilities Advertisement          February 2009
+
+
+9.  References
+
+9.1.  Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119, March 1997.
+
+   [RFC4271]  Rekhter, Y., Li, T., and S. Hares, "A Border Gateway
+              Protocol 4 (BGP-4)", RFC 4271, January 2006.
+
+   [RFC5226]  Narten, T. and H. Alvestrand, "Guidelines for Writing an
+              IANA Considerations Section in RFCs", BCP 26, RFC 5226,
+              May 2008.
+
+9.2.  Informative References
+
+   [RFC4272]  Murphy, S., "BGP Security Vulnerabilities Analysis",
+              RFC 4272, January 2006.
+
+   [RFC4760]  Bates, T., Chandra, R., Katz, D., and Y. Rekhter,
+              "Multiprotocol Extensions for BGP-4", RFC 4760,
+              January 2007.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Scudder & Chandra           Standards Track                     [Page 6]
+
+RFC 5492               Capabilities Advertisement          February 2009
+
+
+Appendix A.  Comparison between RFC 2842 and RFC 3392
+
+   In addition to several minor editorial changes, RFC 3392 also
+   clarified how to handle multiple instances of the same capability.
+
+Appendix B.  Comparison between RFC 3392 and This Document
+
+   This document makes minor editorial changes and updated references,
+   clarifies the use of the Unsupported Optional Parameter NOTIFICATION
+   message, clarifies behavior when the Capabilities Parameter is
+   included in the OPEN message multiple times, and clarifies
+   requirements by changing a number of SHOULDs to MUSTs.
+
+Authors' Addresses
+
+   John G. Scudder
+   Juniper Networks
+
+   EMail: jgs@juniper.net
+
+
+   Ravi Chandra
+   Sonoa Systems
+
+   EMail: rchandra@sonoasystems.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Scudder & Chandra           Standards Track                     [Page 7]
+

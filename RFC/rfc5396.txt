@@ -1,0 +1,171 @@
+
+
+
+
+
+
+Network Working Group                                          G. Huston
+Request for Comments: 5396                                 G. Michaelson
+Category: Standards Track                                          APNIC
+                                                           December 2008
+
+
+        Textual Representation of Autonomous System (AS) Numbers
+
+Status of This Memo
+
+   This document specifies an Internet standards track protocol for the
+   Internet community, and requests discussion and suggestions for
+   improvements.  Please refer to the current edition of the "Internet
+   Official Protocol Standards" (STD 1) for the standardization state
+   and status of this protocol.  Distribution of this memo is unlimited.
+
+Copyright Notice
+
+   Copyright (c) 2008 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (http://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.
+
+Abstract
+
+   A textual representation for Autonomous System (AS) numbers is
+   defined as the decimal value of the AS number.  This textual
+   representation is to be used by all documents, systems, and user
+   interfaces referring to AS numbers.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . . . 2
+   2.  Taxonomy of Representation Formats  . . . . . . . . . . . . . . 2
+   3.  Representation of AS Number Values  . . . . . . . . . . . . . . 2
+   4.  IANA Considerations . . . . . . . . . . . . . . . . . . . . . . 3
+   5.  Security Considerations . . . . . . . . . . . . . . . . . . . . 3
+   6.  Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . 3
+   7.  Informative References  . . . . . . . . . . . . . . . . . . . . 3
+
+
+
+
+
+
+
+
+Huston & Michaelson         Standards Track                     [Page 1]
+
+RFC 5396                      ASN Notation                 December 2008
+
+
+1.  Introduction
+
+   A textual representation for Autonomous System (AS) numbers is
+   defined as the decimal value of the AS number.  This textual
+   representation is to be used by all documents, systems, and user
+   interfaces referring to AS numbers.
+
+   This document notes a number of potential representation formats and
+   proposes the adoption of a decimal value notation for AS numbers, or
+   "asplain" according to the representation taxonomy described here.
+
+2.  Taxonomy of Representation Formats
+
+   A taxonomy of representation for AS numbers is as follows:
+
+   asplain
+      refers to a syntax scheme of representing all AS numbers using
+      decimal integer notation.  Using asplain notation, an AS number of
+      value 65526 would be represented as the string "65526" and an AS
+      number of value 65546 would be represented as the string "65546".
+
+   asdot+
+      refers to a syntax scheme of representing all AS numbers using a
+      notation of two integer values joined by a period character: <high
+      order 16-bit value in decimal>.<low order 16-bit value in
+      decimal>.  Using asdot+ notation, an AS number of value 65526
+      would be represented as the string "0.65526" and an AS number of
+      value 65546 would be represented as the string "1.10".
+
+   asdot
+      refers to a syntax scheme of representing AS number values less
+      than 65536 using asplain notation and representing AS number
+      values equal to or greater than 65536 using asdot+ notation.
+      Using asdot notation, an AS number of value 65526 would be
+      represented as the string "65526" and an AS number of value 65546
+      would be represented as the string "1.10".
+
+3.  Representation of AS Number Values
+
+   To avoid confusion, a single textual notation is useful for
+   documentation, configuration systems, reports, and external tools and
+   information repositories.  The decimal value representation, or
+   "asplain" is proposed as the textual notation to use for AS numbers.
+
+   The "asplain" representation represents the number as its decimal
+   value, without any field delimiter, corresponding to the lack of any
+   internal structure required by the use of AS numbers in the inter-
+   domain routing context.
+
+
+
+Huston & Michaelson         Standards Track                     [Page 2]
+
+RFC 5396                      ASN Notation                 December 2008
+
+
+4.  IANA Considerations
+
+   IANA Registries should use decimal representation ("asplain") for AS
+   numbers.
+
+5.  Security Considerations
+
+   This document does not refer to matters associated with security of
+   routing systems.
+
+6.  Acknowledgments
+
+   The terminology of "asplain", "asdot", and "asdot+" was originally
+   devised and described by Juergen Kammer in January 2007 [KAMMER2007].
+
+7.  Informative References
+
+   [KAMMER2007]  Kammer, J., "AS Number Formats", Jan 2007,
+                 <http://quagga.ncc.eurodata.de/asnumformat.html>.
+
+Authors' Addresses
+
+   Geoff Huston
+   Asia Pacific Network Information Centre
+
+   EMail: gih@apnic.net
+
+
+   George Michaelson
+   Asia Pacific Network Information Centre
+
+   EMail: ggm@apnic.net
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Huston & Michaelson         Standards Track                     [Page 3]
+
