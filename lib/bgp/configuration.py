@@ -328,7 +328,6 @@ class Configuration (object):
 		if command == 'next-hop': return self._route_next_hop(scope,tokens[1:])
 		if command == 'local-preference': return self._route_local_preference(scope,tokens[1:])
 		if command == 'community': return self._route_community(scope,tokens[1:])
-		if command == 'extended-community': return self._route_extended_community(scope,tokens[1:])
 		if command == 'split': return self._route_split(scope,tokens[1:])
 		if command == 'label': return self._route_label(scope,tokens[1:])
 		
@@ -775,10 +774,6 @@ class Configuration (object):
 				if self._route_community(scope,tokens):
 					continue
 				return False
-			if command == 'extended-community':
-				if self._route_extended_community(scope,tokens):
-					continue
-				return False
 			if command == 'split':
 				if self._route_split(scope,tokens):
 					continue
@@ -907,30 +902,6 @@ class Configuration (object):
 		scope[-1]['routes'][-1].add(communities)
 		return True
 
-	def _route_extended_community (self,scope,tokens):
-		communities = Communities()
-		community = tokens.pop(0)
-		try:
-			if community == '[':
-				while True:
-					try:
-						community = tokens.pop(0)
-					except IndexError:
-						self._error = self._str_route_error
-						if self.debug: raise
-						return False
-					if community == ']':
-						break
-					communities.add(self._parse_community(scope,community))
-			else:
-				communities.add(self._parse_community(scope,community))
-		except ValueError:
-			self._error = self._str_route_error
-			if self.debug: raise
-			return False
-		scope[-1]['routes'][-1].add(communities)
-		return True
-
 	def _route_split (self,scope,tokens):
 		try:
 			size = tokens.pop(0)
@@ -1033,7 +1004,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch(scope,'flow-then',[],['discard','rate-limit','redirect','extended-community'])
+			r = self._dispatch(scope,'flow-then',[],['discard','rate-limit','redirect','community'])
 			if r is False: return False
 			if r is None: break
 		return True
