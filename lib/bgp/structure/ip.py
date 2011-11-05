@@ -10,7 +10,8 @@ Copyright (c) 2010-2011 Exa Networks. All rights reserved.
 import math
 import socket
 
-from bgp.structure.address import AFI,SAFI
+from bgp.structure.address import AFI,SAFI,Address
+from bgp.message.update.route import Route
 
 _bgp = {}
 for netmask in range(0,129):
@@ -27,9 +28,9 @@ def to_IP (ip):
 	network = socket.inet_pton(af,ip)
 	return Inet(afi,network)
 
-def to_Prefix (ip,mask):
+def to_Route (ip,mask):
 	afi = _detect_afi(ip)
-	return Prefix(afi,ip,mask)
+	return Route(Prefix(afi,ip,mask))
 
 class Inet (object):
 	"""An IP in the 4 bytes format"""

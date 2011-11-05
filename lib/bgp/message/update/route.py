@@ -14,8 +14,8 @@ from bgp.message.update.attributes import Attributes
 # =================================================================== Route
 
 class Route (Address,Attributes):
-	def __init__ (self,afi,safi,nlri):
-		Address.__init__(self,afi,safi)
+	def __init__ (self,nlri):
+		Address.__init__(self,nlri.afi,nlri.safi)
 		Attributes.__init__(self)
 		self.nlri = nlri
 

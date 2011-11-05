@@ -12,7 +12,7 @@ import stat
 from pprint import pformat
 from copy import deepcopy
 
-from bgp.structure.ip         import to_IP,to_Prefix
+from bgp.structure.ip         import to_IP,to_Route
 from bgp.structure.asn        import ASN
 from bgp.structure.neighbor   import Neighbor
 from bgp.structure.protocol   import NamedProtocol
@@ -692,8 +692,7 @@ class Configuration (object):
 		except ValueError:
 			nm = '32'
 		try:
-			prefix = to_Prefix(ip,nm)
-			route = Route(prefix.afi,prefix.safi,prefix)
+			route = to_Route(ip,nm)
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise
