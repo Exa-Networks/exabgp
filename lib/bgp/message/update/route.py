@@ -28,3 +28,10 @@ class Route (Address,Attributes):
 	def __eq__ (self,other):
 		return str(self) == str(other)
 
+class ReceivedRoute (Route):
+	def __init__ (self,afi,safi,nlri,action):
+		self.action = action	# announce or withdraw
+		Route.__init__(self,afi,safi,nlri)
+
+	def __str__ (self):
+		return "%s %s" % (self.action,Route.__str__(self))

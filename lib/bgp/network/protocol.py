@@ -26,7 +26,7 @@ from bgp.message.update       import Update
 from bgp.message.update.eor   import EOR
 from bgp.message.keepalive    import KeepAlive
 from bgp.message.notification import Notification, Notify, NotConnected
-from bgp.message.update.route import Route
+from bgp.message.update.route import Route,ReceivedRoute
 from bgp.message.update.attributes     import Attributes
 from bgp.message.update.attribute      import AttributeID
 from bgp.message.update.attribute.flag        import Flag
@@ -338,23 +338,31 @@ class Protocol (object):
 		if 2 + lw + 2+ la + len(announced) != length:
 			raise Notify(3,1)
 
-		remove = []
+		routes = []
 		while withdrawn:
 			nlri = BGPPrefix(AFI.ipv4,withdrawn)
+			route = ReceivedRoute(AFI.ipv4,SAFI.unicast,nlri,'withdraw')
 			withdrawn = withdrawn[len(nlri):]
-			remove.append(Update(nlri,'-'))
+			routes.append(route)
 
 		attributes = self.AttributesFactory(attribute)
 
 		announce = []
 		while announced:
 			nlri = BGPPrefix(AFI.ipv4,announced)
+			route = ReceivedRoute(AFI.ipv4,SAFI.unicast,nlri,'announce')
+			# XXX: This should really be a deep copy
+			route.attributes = attributes
 			announced = announced[len(nlri):]
-			announce.append(nlri)
+			routes.append(route)
 			#logger.info(self.me('received route %s' % nlri))
 
-		return Update(remove,announce,attributes)
+		#print "routes", routes
+		#print "attributes", attributes
 
+		if routes:
+			return Update(routes)
+		return NOP('')
 
 	def AttributesFactory (self,data):
 		try:
@@ -425,7 +433,7 @@ class Protocol (object):
 			def new_Communities (data):
 				communities = Communities()
 				while data:
-					community = unpack('!L',data[:4])
+					community = unpack('!L',data[:4])[0]
 					data = data[4:]
 					communities.add(Community(community))
 				return communities
