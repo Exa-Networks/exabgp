@@ -408,7 +408,7 @@ class Configuration (object):
 
 	def _route_watchdog (self,scope,tokens):
 		try:
-			scope[-1]['routes'][-1].add(Watchdog(tokens.pop(0)))
+			scope[-1]['routes'][-1].attributes.add(Watchdog(tokens.pop(0)))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -457,8 +457,8 @@ class Configuration (object):
 			v = local_scope.get('routes',[])
 			for route in v:
 				neighbor.add_route(route)
-				if (route.afi,route.safi) not in neighbor.families:
-					neighbor.families.append((route.afi,route.safi))
+				if (route.nlri.afi,route.nlri.safi) not in neighbor.families:
+					neighbor.families.append((route.nlri.afi,route.nlri.safi))
 
 		# drop the neighbor
 		local_scope = scope.pop(-1)
@@ -631,7 +631,7 @@ class Configuration (object):
 	def _split_last_route (self,scope):
 		# if the route does not need to be broken in smaller routes, return
 		route = scope[-1]['routes'][-1]
-		if not AttributeID.INTERNAL_SPLIT in route:
+		if not AttributeID.INTERNAL_SPLIT in route.attributes:
 			return True
 
 		# ignore if the request is for an aggregate, or the same size
@@ -718,7 +718,7 @@ class Configuration (object):
 
 	def _check_static_route (self,scope):
 		route = scope[-1]['routes'][-1]
-		if not route.has(AttributeID.NEXT_HOP):
+		if not route.attributes.has(AttributeID.NEXT_HOP):
 			self._error = 'syntax: route IP/MASK { next-hop IP; }'
 			return False
 		return True
@@ -792,7 +792,7 @@ class Configuration (object):
 
 	def _route_next_hop (self,scope,tokens):
 		try:
-			scope[-1]['routes'][-1].add(NextHop(to_IP(tokens.pop(0))))
+			scope[-1]['routes'][-1].attributes.add(NextHop(to_IP(tokens.pop(0))))
 			return True
 		except:
 			self._error = self._str_route_error
@@ -802,13 +802,13 @@ class Configuration (object):
 	def _route_origin (self,scope,tokens):
 		data = tokens.pop(0).lower()
 		if data == 'igp':
-			scope[-1]['routes'][-1].add(Origin(0x00))
+			scope[-1]['routes'][-1].attributes.add(Origin(0x00))
 			return True
 		if data == 'egp':
-			scope[-1]['routes'][-1].add(Origin(0x01))
+			scope[-1]['routes'][-1].attributes.add(Origin(0x01))
 			return True
 		if data == 'incomplete':
-			scope[-1]['routes'][-1].add(Origin(0x02))
+			scope[-1]['routes'][-1].attributes.add(Origin(0x02))
 			return True
 		self._error = self._str_route_error
 		if self.debug: raise
@@ -835,12 +835,12 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
-		scope[-1]['routes'][-1].add(aspath)
+		scope[-1]['routes'][-1].attributes.add(aspath)
 		return True
 
 	def _route_med (self,scope,tokens):
 		try:
-			scope[-1]['routes'][-1].add(MED(int(tokens.pop(0))))
+			scope[-1]['routes'][-1].attributes.add(MED(int(tokens.pop(0))))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -849,7 +849,7 @@ class Configuration (object):
 
 	def _route_local_preference (self,scope,tokens):
 		try:
-			scope[-1]['routes'][-1].add(LocalPreference(int(tokens.pop(0))))
+			scope[-1]['routes'][-1].attributes.add(LocalPreference(int(tokens.pop(0))))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -898,7 +898,7 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
-		scope[-1]['routes'][-1].add(communities)
+		scope[-1]['routes'][-1].attributes.add(communities)
 		return True
 
 	def _route_split (self,scope,tokens):
@@ -906,7 +906,7 @@ class Configuration (object):
 			size = tokens.pop(0)
 			if not size or size[0] != '/':
 				raise ValueError('route "as" require a CIDR')
-			scope[-1]['routes'][-1].add(Split(int(size[1:])))
+			scope[-1]['routes'][-1].attributes.add(Split(int(size[1:])))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -934,7 +934,7 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
-		scope[-1]['routes'][-1].add(communities)
+		scope[-1]['routes'][-1].attributes.add(communities)
 		return True
 
 	# Group Flow  ........

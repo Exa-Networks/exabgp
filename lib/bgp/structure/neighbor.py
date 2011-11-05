@@ -41,7 +41,7 @@ class Neighbor (object):
 		# and with ten thousands routes this makes an enormous difference (60 seconds to 2)
 		routes = {}
 		for route in self._routes:
-			watchdog = route.get(AttributeID.INTERNAL_WATCHDOG,None)
+			watchdog = route.attributes.get(AttributeID.INTERNAL_WATCHDOG,None)
 			if watchdog in self._watchdog:
 				if self._watchdog[watchdog] == 'withdraw':
 					continue

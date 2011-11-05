@@ -13,14 +13,14 @@ from bgp.message.update.attributes import Attributes
 # This class must be separated from the wire representation of a Route
 # =================================================================== Route
 
-class Route (Address,Attributes):
+class Route (object):
 	def __init__ (self,nlri):
-		Address.__init__(self,nlri.afi,nlri.safi)
-		Attributes.__init__(self)
 		self.nlri = nlri
+		self.address = Address(nlri.afi,nlri.safi)
+		self.attributes = Attributes()
 
 	def __str__ (self):
-		return "%s %s%s" % (Address.__str__(self),str(self.nlri),Attributes.__str__(self))
+		return "%s %s%s" % (str(self.address),str(self.nlri),str(self.attributes))
 
 	def __repr__ (self):
 		return str(self)

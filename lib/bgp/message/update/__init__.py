@@ -33,8 +33,8 @@ class Update (Message):
 	# All the route must be of the same family and have the same next-hop
 	def __init__ (self,routes):
 		self.routes = routes
-		self.afi = routes[0].afi
-		self.safi = routes[0].safi
+		self.afi = routes[0].nlri.afi
+		self.safi = routes[0].nlri.safi
 
 	# The routes MUST have the same attributes ...
 	def announce (self,asn4,local_asn,remote_asn):
@@ -44,7 +44,7 @@ class Update (Message):
 		else:
 			nlri = ''
 			mp = MPRNLRI(self.routes).pack()
-		attr = self.routes[0].bgp_announce(asn4,local_asn,remote_asn)
+		attr = self.routes[0].attributes.bgp_announce(asn4,local_asn,remote_asn)
 		return self._message(prefix('') + prefix(attr + mp) + nlri)
 
 	def update (self,asn4,local_asn,remote_asn):
@@ -54,7 +54,7 @@ class Update (Message):
 		else:
 			nlri = ''
 			mp = MPURNLRI(self.routes).pack() + MPRNLRI(self.routes).pack()
-		attr = self.routes[0].bgp_announce(asn4,local_asn,remote_asn)
+		attr = self.routes[0].attributes.bgp_announce(asn4,local_asn,remote_asn)
 		return self._message(prefix(nlri) + prefix(attr + mp) + nlri)
 
 	def withdraw (self,asn4=False,local_asn=None,remote_asn=None):
@@ -65,5 +65,5 @@ class Update (Message):
 		else:
 			nlri = ''
 			mp = MPURNLRI(self.routes).pack()
-			attr = self.routes[0].bgp_announce(asn4,local_asn,remote_asn)
+			attr = self.routes[0].attributes.bgp_announce(asn4,local_asn,remote_asn)
 		return self._message(prefix(nlri) + prefix(attr + mp))

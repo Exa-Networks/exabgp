@@ -495,8 +495,7 @@ class Protocol (object):
 				offset += len_snpa
 			data = data[offset:]
 			while data:
-				prefix = BGPPrefix(afi,data)
-				route = Route(prefix.afi,prefix.safi,prefix)
+				route = Route(BGPPrefix(afi,data))
 				data = data[len(prefix):]
 				route.add(NextHop(to_IP(nh)))
 				#self.log.out('adding MP route %s' % str(route))
