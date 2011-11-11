@@ -16,11 +16,11 @@ from bgp.message.update.attributes import Attributes
 class Route (object):
 	def __init__ (self,nlri):
 		self.nlri = nlri
-		self.address = Address(nlri.afi,nlri.safi) # We should be able to remove this field
+		self.__address = Address(nlri.afi,nlri.safi)
 		self.attributes = Attributes()
 
 	def __str__ (self):
-		return "%s %s%s" % (str(self.address),str(self.nlri),str(self.attributes))
+		return "%s %s%s" % (str(self.__address),str(self.nlri),str(self.attributes))
 
 	def __repr__ (self):
 		return str(self)
