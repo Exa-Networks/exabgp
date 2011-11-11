@@ -11,8 +11,21 @@ def _prefixed (level,message):
 
 syslog.openlog("ExaBPG")
 
-while True:
-	now = time.strftime('%a, %d %b %Y %H:%M:%S',time.localtime())
+# When the parent dies we are seeing continual newlines, so we only access so many before stopping
+counter = 0
 
-	line = sys.stdin.readline()
-	syslog.syslog(syslog.LOG_ALERT, _prefixed('INFO',line))
+while True:
+	try:
+		line = sys.stdin.readline().strip()
+		if line == "": 
+			counter += 1
+			if counter > 100:
+				break
+			continue
+		
+		counter = 0
+		
+		now = time.strftime('%a, %d %b %Y %H:%M:%S',time.localtime())
+		syslog.syslog(syslog.LOG_ALERT, _prefixed('INFO',line))
+	except KeyboardInterrupt:
+		pass

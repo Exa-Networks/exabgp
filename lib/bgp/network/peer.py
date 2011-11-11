@@ -53,6 +53,9 @@ class Peer (object):
 		# The peer was restarted (to know what kind of open to send for graceful restart)
 		self._restarted = FORCE_GRACEFUL
 		self._reset_skip()
+		
+		# The routes we have parsed from our neighbour
+		self._received_routes = []
 
 	def _reset_skip (self):
 		# We are currently not skipping connection attempts
@@ -183,6 +186,7 @@ class Peer (object):
 				if message.TYPE == KeepAlive.TYPE:
 					logger.message(self.me('<< KEEPALIVE'))
 				if message.TYPE == Update.TYPE:
+					self._received_routes.extend(message.routes)
 					if message.routes:
 						logger.message(self.me('<< UPDATE'))
 						for route in message.routes:
@@ -245,3 +249,11 @@ class Peer (object):
 				logger.warning(self.me(str(e)))
 			if self.bgp: self.bgp.close()
 			return
+
+	def received_routes (self):
+		if self._received_routes:
+			route = self._received_routes.pop(0)
+			yield route
+		else:
+			raise StopIteration()
+			

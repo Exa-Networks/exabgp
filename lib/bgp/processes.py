@@ -80,3 +80,9 @@ class Processes (object):
 	def write (self,name,string):
 		self._process[name].stdin.write('%s\r\n' % string)
 		self._process[name].stdin.flush()
+
+	# return all the process which are interrested in route update notification
+	def receive_routes (self):
+		for name in self._process:
+			if True:
+				yield name

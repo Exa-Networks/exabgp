@@ -101,6 +101,12 @@ class Supervisor (object):
 						if peer.run() is not True:
 							# no need to come back to it before a a full cycle
 							peers.remove(ip)
+						# send the route we parsed (if we parsed any to our child processes)
+						# This is a generator and can only be run once
+						for route in peer.received_routes():
+							# This is a generator which content does only change at config reload
+							for name in self.processes.receive_routes():
+								self.processes.write(name,"neighbor %s %s\n" % (ip,str(route)))
 					# otherwise process as many routes as we can within a second for the remaining peers
 					duration = time.time() - start
 					if duration >= 1.0:
@@ -113,14 +119,16 @@ class Supervisor (object):
 			except KeyboardInterrupt:
 				logger.supervisor("^C received")
 				self._shutdown = True
-		self.daemon.removepid()
 		self.processes.terminate()
+		self.daemon.removepid()
 
 	def shutdown (self):
 		"""terminate all the current BGP connections"""
 		logger.info("Performing shutdown","supervisor")
 		for ip in self._peers.keys():
 			self._peers[ip].stop()
+			for name in self.processes.receive_routes():
+				self.processes.write(name,"neighbor %s down\n" % ip)
 
 	def reload (self):
 		"""reload the configuration and send to the peer the route which changed"""
@@ -136,6 +144,8 @@ class Supervisor (object):
 			if ip not in self.configuration.neighbor.keys():
 				logger.supervisor("Removing Peer %s" % str(ip))
 				self._peers[ip].stop()
+				for name in self.processes.receive_routes():
+					self.processes.write(name,"neighbor %s down\n" % ip)
 
 		for ip in self.configuration.neighbor.keys():
 			neighbor = self.configuration.neighbor[ip]
