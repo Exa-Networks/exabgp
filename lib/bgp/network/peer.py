@@ -183,7 +183,12 @@ class Peer (object):
 				if message.TYPE == KeepAlive.TYPE:
 					logger.message(self.me('<< KEEPALIVE'))
 				if message.TYPE == Update.TYPE:
-					logger.message(self.me('<< UPDATE'))
+					if message.routes:
+						logger.message(self.me('<< UPDATE'))
+						for route in message.routes:
+							logger.message(self.me('   route %s') %  str(route))
+					else:
+						logger.message(self.me('<< UPDATE (not parsed)'))
 				if message.TYPE not in (KeepAlive.TYPE,Update.TYPE,NOP.TYPE):
 					 logger.message(self.me('<< %d' % ord(message.TYPE)))
 

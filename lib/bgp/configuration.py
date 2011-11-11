@@ -348,6 +348,7 @@ class Configuration (object):
 		if command == 'redirect': return self._flow_route_redirect(scope,tokens[1:])
 
 		if command == 'run': return self._set_process_run(scope,'process_run',tokens[1:])
+		if command == 'parse-routes': return self._set_process_parse_routes(scope,'parse-routes',tokens[1:])
 
 		return False
 
@@ -358,10 +359,14 @@ class Configuration (object):
 			self._error = self._str_process_error
 			return False
 		while True:
-			r = self._dispatch(scope,'process',[],['run',])
+			r = self._dispatch(scope,'process',[],['run','parse-routes'])
 			if r is False: return False
 			if r is None: break
 		self.process[tokens[0]] = scope[-1].pop('process_run')
+		return True
+
+	def _set_process_parse_routes (self,scope,command,value):
+		scope[-1][command] = True
 		return True
 
 	def _set_process_run (self,scope,command,value):
@@ -454,6 +459,8 @@ class Configuration (object):
 			if v: neighbor.peer_as = v
 			v = local_scope.get('hold-time','')
 			if v: neighbor.hold_time = v
+			v = local_scope.get('parse-routes','')
+			if v: neighbor.parse_routes = v
 			v = local_scope.get('routes',[])
 			for route in v:
 				neighbor.add_route(route)

@@ -7,6 +7,7 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2011 Exa Networks. All rights reserved.
 """
 
+import os
 import time
 import socket
 from struct import unpack
@@ -47,7 +48,6 @@ logger = Logger()
 class Protocol (object):
 	decode = True
 	strict = False
-	parse_update = False # DO NOT TOGGLE TO TRUE, THE CODE IS COMPLETELY BROKEN
 
 	def __init__ (self,peer,connection=None):
 		self.peer = peer
@@ -130,10 +130,11 @@ class Protocol (object):
 			return self.OpenFactory(data)
 
 		if msg == Update.TYPE:
-			if self.parse_update:
-				return self.UpdateFactory(data)
-			logger.message(self.me('<< UPDATE (not parsed)'))
-			return NOP(data)
+			if self.neighbor.parse_routes:
+				update = self.UpdateFactory(data)
+				return update
+			else:
+				return Update()
 
 		if self.strict:
 			raise Notify(1,3,msg)
@@ -350,7 +351,7 @@ class Protocol (object):
 		announce = []
 		while announced:
 			nlri = BGPPrefix(AFI.ipv4,announced)
-			route = ReceivedRoute(AFI.ipv4,SAFI.unicast,nlri,'announce')
+			route = ReceivedRoute(nlri,'announce')
 			# XXX: This should really be a deep copy
 			route.attributes = attributes
 			announced = announced[len(nlri):]
@@ -496,8 +497,8 @@ class Protocol (object):
 			data = data[offset:]
 			while data:
 				route = Route(BGPPrefix(afi,data))
-				data = data[len(prefix):]
-				route.add(NextHop(to_IP(nh)))
+				data = data[len(route.nlri):]
+				route.attributes.add(NextHop(to_IP(nh)))
 				#self.log.out('adding MP route %s' % str(route))
 			return self._AttributesFactory(next_attributes)
 
