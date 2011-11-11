@@ -460,8 +460,7 @@ class Configuration (object):
 			if v: neighbor.peer_as = v
 			v = local_scope.get('hold-time','')
 			if v: neighbor.hold_time = v
-			v = local_scope.get('parse-routes','')
-			if v: neighbor.parse_routes = v
+			neighbor.parse_routes = local_scope.get('parse-routes',False)
 			v = local_scope.get('routes',[])
 			for route in v:
 				neighbor.add_route(route)

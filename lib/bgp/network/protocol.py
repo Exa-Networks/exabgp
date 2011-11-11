@@ -135,7 +135,7 @@ class Protocol (object):
 				update = self.UpdateFactory(data)
 				return update
 			else:
-				return Update()
+				return NOP('')
 
 		if self.strict:
 			raise Notify(1,3,msg)
