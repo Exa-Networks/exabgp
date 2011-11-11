@@ -347,7 +347,7 @@ class Configuration (object):
 		if command == 'rate-limit': return self._flow_route_rate_limit(scope,tokens[1:])
 		if command == 'redirect': return self._flow_route_redirect(scope,tokens[1:])
 
-		if command == 'run': return self._set_process_run(scope,'process_run',tokens[1:])
+		if command == 'run': return self._set_process_run(scope,'process-run',tokens[1:])
 		if command == 'parse-routes': return self._set_process_parse_routes(scope,'parse-routes',tokens[1:])
 
 		return False
@@ -362,7 +362,8 @@ class Configuration (object):
 			r = self._dispatch(scope,'process',[],['run','parse-routes'])
 			if r is False: return False
 			if r is None: break
-		self.process[tokens[0]] = scope[-1].pop('process_run')
+		self.process.setdefault(tokens[0],{})['run'] = scope[-1].pop('process-run')
+		self.process[tokens[0]]['receive-routes'] = scope[-1].get('parse-routes',False)
 		return True
 
 	def _set_process_parse_routes (self,scope,command,value):

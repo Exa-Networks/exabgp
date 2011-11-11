@@ -17,6 +17,7 @@ class Processes (object):
 	def __init__ (self,supervisor):
 		self.supervisor = supervisor
 		self._process = {}
+		self._receive_routes = {}
 
 	def _terminate (self,name):
 		logger.processes("Terminating process %s" % name)
@@ -36,7 +37,8 @@ class Processes (object):
 			if not name in self.supervisor.configuration.process:
 				logger.processes("Can not start process, no configuration for it (anymore ?)")
 				return
-			self._process[name] = subprocess.Popen([self.supervisor.configuration.process[name],],
+			self._receive_routes[name] = self.supervisor.configuration.process[name]['receive-routes']
+			self._process[name] = subprocess.Popen([self.supervisor.configuration.process[name]['run'],],
 				stdin=subprocess.PIPE,
 				stdout=subprocess.PIPE,
 			)
@@ -84,5 +86,5 @@ class Processes (object):
 	# return all the process which are interrested in route update notification
 	def receive_routes (self):
 		for name in self._process:
-			if True:
+			if self._receive_routes[name]:
 				yield name
