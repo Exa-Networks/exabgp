@@ -390,8 +390,8 @@ class Protocol (object):
 
 		data = data[offset:]
 
-		if not length:
-			return self._AttributesFactory(data[length:])
+#		if not length:
+#			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.ORIGIN:
 			self.attributes.add(Origin(ord(data[0])))
@@ -438,7 +438,7 @@ class Protocol (object):
 					data = data[4:]
 					communities.add(Community(community))
 				return communities
-			self.attributes.add(new_Communities(data))
+			self.attributes.add(new_Communities(data[:length]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.MP_UNREACH_NLRI:
