@@ -8,6 +8,7 @@ Copyright (c) 2009-2011 Exa Networks. All rights reserved.
 """
 
 import os
+import copy
 import time
 import socket
 from struct import unpack
@@ -346,13 +347,15 @@ class Protocol (object):
 			withdrawn = withdrawn[len(nlri):]
 			routes.append(route)
 
+		self.mp_routes = []
 		attributes = self.AttributesFactory(attribute)
+		routes.extend(self.mp_routes)
 
 		announce = []
 		while announced:
 			nlri = BGPPrefix(AFI.ipv4,announced)
 			route = ReceivedRoute(nlri,'announce')
-			# XXX: This should really be a deep copy
+			# XXX: Should this be a deep copy
 			route.attributes = attributes
 			announced = announced[len(nlri):]
 			routes.append(route)
@@ -441,6 +444,10 @@ class Protocol (object):
 			self.attributes.add(new_Communities(data[:length]))
 			return self._AttributesFactory(data[length:])
 
+		if code == AttributeID.COMMUNITY:
+			# skipping extended communities (RFC 4360)
+			return self._AttributesFactory(data[length:])
+
 		if code == AttributeID.MP_UNREACH_NLRI:
 			next_attributes = data[length:]
 			data = data[:length]
@@ -452,10 +459,11 @@ class Protocol (object):
 				return self._AttributesFactory(next_attributes)
 			data = data[offset:]
 			while data:
-				prefix = BGPPrefix(afi,data)
-				data = data[len(prefix):]
-				self.attributes.add(MPURNLRI(AFI(afi),SAFI(safi),prefix))
-				#self.log.out('removing MP route %s' % str(prefix))
+				route = ReceivedRoute(BGPPrefix(afi,data),'withdraw')
+				data = data[len(route.nlri):]
+				route.attributes = self.attributes
+				route.attributes.add(NextHop(to_IP(nh)))
+				self.mp_routes.append(route)
 			return self._AttributesFactory(next_attributes)
 
 		if code == AttributeID.MP_REACH_NLRI:
@@ -496,10 +504,11 @@ class Protocol (object):
 				offset += len_snpa
 			data = data[offset:]
 			while data:
-				route = Route(BGPPrefix(afi,data))
+				route = ReceivedRoute(BGPPrefix(afi,data),'announce')
 				data = data[len(route.nlri):]
+				route.attributes = self.attributes
 				route.attributes.add(NextHop(to_IP(nh)))
-				#self.log.out('adding MP route %s' % str(route))
+				self.mp_routes.append(route)
 			return self._AttributesFactory(next_attributes)
 
 		import warnings
