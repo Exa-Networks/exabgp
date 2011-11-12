@@ -26,6 +26,7 @@ class Neighbor (object):
 		self.graceful_restart = False
 		self.md5 = None
 		self.ttl = None
+		self.parse_routes = None
 		self._routes = []
 		self.families = []
 		self._watchdog = {}
