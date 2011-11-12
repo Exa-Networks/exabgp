@@ -55,6 +55,7 @@ class Protocol (object):
 		self.neighbor = peer.neighbor
 		self.connection = connection
 		self._delta = Delta(Table(peer))
+		self._asn4 = False
 
 	def me (self,message):
 		return "Peer %15s ASN %-7s %s" % (self.peer.neighbor.peer_address,self.peer.neighbor.peer_as,message)
@@ -153,6 +154,8 @@ class Protocol (object):
 
 		if _open.asn.asn4() and not message.capabilities.announced(Capabilities.FOUR_BYTES_ASN):
 			raise Notify(2,0,'we have an ASN4 and you do not speak it. bye.')
+
+		self._asn4 = message.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
 
 		if message.asn == AS_TRANS:
 			peer_as = message.capabilities[Capabilities.FOUR_BYTES_ASN]
@@ -401,16 +404,22 @@ class Protocol (object):
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.AS_PATH:
-			def new_ASPath (data):
+			def new_ASPath (data,asn4=False):
+				if asn4:
+					size = 4
+					decoder = 'L' # could it be 'I' as well ?
+				else:
+					size = 2
+					decoder = 'H'
 				stype = ord(data[0])
 				slen = ord(data[1])
-				sdata = data[2:2+(slen*2)]
+				sdata = data[2:2+(slen*size)]
 
 				ASPS = ASPath(stype)
-				for c in unpack('!'+('H'*slen),sdata):
+				for c in unpack('!'+(decoder*slen),sdata):
 					ASPS.add(c)
 				return ASPS
-			self.attributes.add(new_ASPath(data))
+			self.attributes.add(new_ASPath(data,self._asn4))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.NEXT_HOP:
