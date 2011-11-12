@@ -470,8 +470,6 @@ class Protocol (object):
 			while data:
 				route = ReceivedRoute(BGPPrefix(afi,data),'withdraw')
 				data = data[len(route.nlri):]
-				route.attributes = self.attributes
-				route.attributes.add(NextHop(to_IP(nh)))
 				self.mp_routes.append(route)
 			return self._AttributesFactory(next_attributes)
 
