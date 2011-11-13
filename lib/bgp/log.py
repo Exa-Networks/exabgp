@@ -18,7 +18,7 @@ class _Logger (object):
 	_syslog = None
 
 	_history = []
-	_max_log = 20
+	_max_history = 20
 	
 	_config = ''
 	
@@ -34,7 +34,7 @@ class _Logger (object):
 
 	def _prefixed (self,level,source,message):
 		now = time.strftime('%a, %d %b %Y %H:%M:%S',time.localtime())
-		if len(self._history) > self._max_log:
+		if len(self._history) > self._max_history:
 			self._history.pop(0)
 		string = "%s %-8s %-6d %-13s %s" % (now,level,os.getpid(),source,message)
 		self._history.append(string)

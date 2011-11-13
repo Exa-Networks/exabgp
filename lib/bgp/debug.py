@@ -12,7 +12,7 @@ import sys
 
 debug = os.environ.get('PDB',None)
 
-def intercept_logs (type, value, trace):
+def bug_report (type, value, trace):
 	import traceback
 	from bgp.log import Logger
 	logger = Logger()
@@ -54,11 +54,11 @@ def intercept_logs (type, value, trace):
 
 if debug is None:
 	def intercept (type, value, trace):
-		intercept_logs(type, value, trace)
+		bug_report(type, value, trace)
 	sys.excepthook = intercept
 elif debug not in ['0','']:
 	def intercept (type, value, trace):
-		intercept_logs(type, value, trace)
+		bug_report(type, value, trace)
 		import pdb
 		pdb.pm()
 	sys.excepthook = intercept
