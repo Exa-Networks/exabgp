@@ -21,7 +21,7 @@ def bug_report (type, value, trace):
 	print
 	print "-"*80
 	print "-- Please provide the information below on :"
-	print "-- http://code.google.com/p/exabgp/issues/list"
+	print "-- http://code.google.com/p/exabgp/issues/entry"
 	print "-"*80
 	print
 	print
@@ -45,7 +45,7 @@ def bug_report (type, value, trace):
 	print
 	print "-"*80
 	print "-- Please provide the information above on :"
-	print "-- http://code.google.com/p/exabgp/issues/list"
+	print "-- http://code.google.com/p/exabgp/issues/entry"
 	print "-"*80
 	print
 	print
