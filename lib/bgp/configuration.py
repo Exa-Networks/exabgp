@@ -189,8 +189,10 @@ class Configuration (object):
 
 	def _tokenise (self,text):
 		r = []
+		config = ''
 		for line in text:
 			replaced = line.strip().replace('\t',' ').replace(']',' ]').replace('[','[ ').lower()
+			config += line
 			if not replaced:
 				continue
 			if replaced.startswith('#'):
@@ -202,6 +204,7 @@ class Configuration (object):
 				r.append(['md5',password,';'])
 			else:
 				r.append([t for t in replaced[:-1].split(' ') if t] + [replaced[-1]])
+		logger.config(config)
 		return r
 
 	def tokens (self):

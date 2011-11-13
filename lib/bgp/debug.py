@@ -12,17 +12,54 @@ import sys
 
 debug = os.environ.get('PDB',None)
 
+def intercept_logs (type, value, trace):
+	import traceback
+	from bgp.log import Logger
+	logger = Logger()
+
+	print
+	print
+	print "-"*80
+	print "-- Please provide the information below on :"
+	print "-- http://code.google.com/p/exabgp/issues/list"
+	print "-"*80
+	print
+	print
+	print "-- Configuration"
+	print
+	print
+	print logger.config()
+	print
+	print
+	print "-- Logging History"
+	print
+	print
+	print logger.history()
+	print
+	print
+	print "-- Traceback"
+	print
+	print
+	traceback.print_exception(type,value,trace)
+	print
+	print
+	print "-"*80
+	print "-- Please provide the information above on :"
+	print "-- http://code.google.com/p/exabgp/issues/list"
+	print "-"*80
+	print
+	print
+	
+	#print >> sys.stderr, 'the program failed with message :', value
+
 if debug is None:
 	def intercept (type, value, trace):
-		import traceback
-		print >> sys.stderr, 'the program failed with message :', value
+		intercept_logs(type, value, trace)
 	sys.excepthook = intercept
 elif debug not in ['0','']:
 	def intercept (type, value, trace):
-		import traceback
+		intercept_logs(type, value, trace)
 		import pdb
-		traceback.print_exception(type,value,trace)
-		print
 		pdb.pm()
 	sys.excepthook = intercept
 
