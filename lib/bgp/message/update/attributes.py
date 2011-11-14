@@ -100,7 +100,7 @@ class Attributes (dict):
 				asp = ASPath(asn4,ASPath.AS_SEQUENCE,[local_asn])
 			message += self._as_path(asn4,asp)
 		else:
-			raise RunTimeError('Generated routes must always have an AS_PATH ')
+			raise RuntimeError('Generated routes must always have an AS_PATH ')
 
 		if AttributeID.NEXT_HOP in self:
 			afi = self[AttributeID.NEXT_HOP].next_hop.afi
