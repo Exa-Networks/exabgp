@@ -7,7 +7,7 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2011 Exa Networks. All rights reserved.
 """
 
-from bgp.structure.address import Address
+from bgp.structure.address import Address,AFI,SAFI
 from bgp.message.update.attribute import AttributeID,Flag,Attribute
 
 # =================================================================== MP Unreacheable NLRI (15)
@@ -24,13 +24,13 @@ class MPRNLRI (Attribute):
 	def pack (self):
 		next_hop = ''
 		# EOR do not have any next_hop
-		if self.routes[0].has_key(AttributeID.NEXT_HOP):
+		if self.routes[0].attributes.has(AttributeID.NEXT_HOP):
 			# we do not want a next_hop attribute packed (with the _attribute()) but just the next_hop itself
-			next_hop = self.routes[0][AttributeID.NEXT_HOP].next_hop.pack()
+			next_hop = self.routes[0].attributes[AttributeID.NEXT_HOP].next_hop.pack()
 		routes = ''.join([route.nlri.pack() for route in self.routes])
 
 		return self._attribute(
-			self.routes[0].afi.pack() + self.routes[0].safi.pack() + 
+			self.routes[0].nlri.afi.pack() + self.routes[0].nlri.safi.pack() + 
 			chr(len(next_hop)) + next_hop + 
 			chr(0) + routes
 		)

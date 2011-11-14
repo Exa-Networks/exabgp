@@ -13,19 +13,21 @@ from bgp.message.update.attributes import Attributes
 
 # =================================================================== End-Of-Record
 
-class Empty (object):
+class Empty (Address):
+	def __init__ (self,afi,safi):
+		Address.__init__(self,AFI(afi),SAFI(safi))
+
 	def pack (self):
 		return ''
 	def __len__ (self):
 		return 0
 
-class EmptyRoute (Address,Attributes):
+class EmptyRoute (object):
 	autocomplete = False
 
 	def __init__ (self,afi,safi):
-		Address.__init__(self,afi,safi)
-		Attributes.__init__(self)
-		self.nlri = Empty()
+		self.attributes = Attributes()
+		self.nlri = Empty(afi,safi)
 
 class EOR (object):
 	def __init__ (self):

@@ -51,7 +51,7 @@ class Inet (object):
 	}
 
 	def __init__ (self,afi,raw):
-		self.afi = afi
+		self.afi = AFI(afi)
 		self.raw = raw
 		self.__update()
 		
@@ -59,9 +59,9 @@ class Inet (object):
 		self.ip = self._ip()
 		
 		if self.afi == AFI.ipv4 and int(self.ip.split('.')[0]) in range(224,240): # 239 is last
-			self.safi = SAFI.multicast
+			self.safi = SAFI(SAFI.multicast)
 		else:
-			self.safi = SAFI.unicast
+			self.safi = SAFI(SAFI.unicast)
 
 	def update_raw (self,raw):
 		self.raw = raw
