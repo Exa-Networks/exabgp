@@ -21,7 +21,3 @@ CODE IMPROVEMENTS:
 
 DOCUMENTATION:
  * Write the documentation, and do not rely on the example and the site wiki (argh ...)
-
-NOTES:
- * Juniper does not accept any holdtime <20 (double check again)
-
