@@ -400,10 +400,12 @@ class Protocol (object):
 #			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.ORIGIN:
+			#logger.debug('parsing origin')
 			self.attributes.add(Origin(ord(data[0])))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.AS_PATH:
+			#logger.debug('parsing as_path')
 			def new_ASPath (data,asn4=False):
 				if asn4:
 					size = 4
@@ -423,26 +425,32 @@ class Protocol (object):
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.NEXT_HOP:
+			#logger.debug('parsing next-hop')
 			self.attributes.add(NextHop(Inet(AFI.ipv4,data[:4])))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.MED:
+			#logger.debug('parsing med')
 			self.attributes.add(MED(unpack('!L',data[:4])[0]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.LOCAL_PREF:
+			#logger.debug('parsing local-preference')
 			self.attributes.add(LocalPreference(unpack('!L',data[:4])[0]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.ATOMIC_AGGREGATE:
+			#logger.debug('ignoring atomic-aggregate')
 			# ignore
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.AGGREGATOR:
+			#logger.debug('ignoring aggregator')
 			# content is 6 bytes
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.COMMUNITY:
+			#logger.debug('parsing communities')
 			def new_Communities (data):
 				communities = Communities()
 				while data:
@@ -453,11 +461,8 @@ class Protocol (object):
 			self.attributes.add(new_Communities(data[:length]))
 			return self._AttributesFactory(data[length:])
 
-		if code == AttributeID.COMMUNITY:
-			# skipping extended communities (RFC 4360)
-			return self._AttributesFactory(data[length:])
-
 		if code == AttributeID.MP_UNREACH_NLRI:
+			#logger.debug('parsing multi-protocol nlri unreacheable')
 			next_attributes = data[length:]
 			data = data[:length]
 			afi,safi = unpack('!HB',data[:3])
@@ -474,6 +479,7 @@ class Protocol (object):
 			return self._AttributesFactory(next_attributes)
 
 		if code == AttributeID.MP_REACH_NLRI:
+			#logger.debug('parsing multi-protocol nlri reacheable')
 			next_attributes = data[length:]
 			data = data[:length]
 			afi,safi = unpack('!HB',data[:3])
