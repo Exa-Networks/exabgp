@@ -106,11 +106,15 @@ class _Prefix (Inet):
 	def pack (self):
 		return chr(self.mask) + self.raw[:_bgp[self.mask]]
 
+	def __len__ (self):
+		return len(self.raw) + 1
+
 
 class BGPPrefix (_Prefix):
 	"""From the BGP prefix wire format, Store an IP (in the network format), its netmask and the bgp format"""
 	def __init__ (self,afi,bgp):
-		_Prefix.__init__(self,afi,bgp[1:] + '\0'*(self._length[afi]+1-len(bgp)),ord(bgp[0]))
+		end = _bgp[ord(bgp[0])]
+		_Prefix.__init__(self,afi,bgp[1:end+1] + '\0'*(self._length[afi]-end),ord(bgp[0]))
 
 class AFIPrefix (_Prefix):
 	"""Store an IP (in the network format), its netmask and the bgp format of the IP"""
