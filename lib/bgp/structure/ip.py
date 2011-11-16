@@ -107,7 +107,7 @@ class _Prefix (Inet):
 		return chr(self.mask) + self.raw[:_bgp[self.mask]]
 
 	def __len__ (self):
-		return len(self.raw) + 1
+		return _bgp[self.mask] + 1
 
 
 class BGPPrefix (_Prefix):
