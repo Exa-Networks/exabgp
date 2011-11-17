@@ -346,7 +346,7 @@ class Protocol (object):
 		routes = []
 		while withdrawn:
 			nlri = BGPPrefix(AFI.ipv4,withdrawn)
-			route = ReceivedRoute(AFI.ipv4,SAFI.unicast,nlri,'withdraw')
+			route = ReceivedRoute(nlri,'withdraw')
 			withdrawn = withdrawn[len(nlri):]
 			routes.append(route)
 
