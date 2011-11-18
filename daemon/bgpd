@@ -329,6 +329,7 @@ def help ():
 	sys.stdout.write('DEBUG_RIB : change in route announcement in config reload\n')
 	sys.stdout.write('DEBUG_MESSAGE : changes in route announcement in config reload (default: yes)\n')
 	sys.stdout.write('DEBUG_TIMERS : tracking keepalives\n')
+	sys.stdout.write('DEBUG_ROUTES : print parsed routes\n')
 	sys.stdout.write('\n')
 	sys.stdout.write('PDB : on program fault, start pdb the python interactive debugger\n')
 	sys.stdout.write('\n')

@@ -525,6 +525,6 @@ class Protocol (object):
 			return self._AttributesFactory(next_attributes)
 
 		import warnings
-		warnings.warn("Could not parse attribute %s %s" % (str(code),[hex(ord(_)) for _ in data]))
+		warnings.warn("I do not parse attributes of type %s %s (yet) - ignoring it" % (str(code),[hex(ord(_)) for _ in data]))
 		return self._AttributesFactory(data[length:])
 

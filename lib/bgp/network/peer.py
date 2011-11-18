@@ -190,7 +190,7 @@ class Peer (object):
 					if message.routes:
 						logger.message(self.me('<< UPDATE'))
 						for route in message.routes:
-							logger.message(self.me('   route %s') %  str(route))
+							logger.routes(self.me('%s') %  str(route))
 					else:
 						logger.message(self.me('<< UPDATE (not parsed)'))
 				if message.TYPE not in (KeepAlive.TYPE,Update.TYPE,NOP.TYPE):
