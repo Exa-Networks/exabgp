@@ -60,13 +60,13 @@ class _Logger (object):
 		else: self._wire = True
 
 		if os.environ.get('DEBUG_MESSAGE','1') in ['1','yes','Yes','YES']: self._message = True
-		else: self.message = False
+		else: self._message = False
 
 		if os.environ.get('DEBUG_RIB','0') == '0': self._rib = False
 		else: self._rib = True
 
 		if os.environ.get('DEBUG_TIMER','0') == '0': self._timers = False
-		else: self.timers = True
+		else: self._timers = True
 
 		destination = os.environ.get('SYSLOG',None)
 		if destination is None:
