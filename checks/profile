@@ -26,10 +26,21 @@ try:
 except IndexError:
 	field = 'time'
 
-options = ['time','calls']
+options = {
+	'calls'  : 'call count',
+	'cumulative'  : 'cumulative time',
+	'file'  : 'file name',
+	'module'  : 'file name',
+	'pcalls'  : 'primitive call count',
+	'line'  : 'line number',
+	'name'  : 'function name',
+	'nfl'  : 'name/file/line',
+	'stdname'  : 'standard name',
+	'time'  : 'internal time',
+}
 
 if field not in options:
-	print 'invalid sorting field, valid enties %s' % ', '.join(options)
+	print 'invalid sorting field, valid enties are :\n%s' % '\n'.join("  %-10s : %s" % (k,v) for (k,v) in options.iteritems())
 	sys.exit(1)
 
 try:
