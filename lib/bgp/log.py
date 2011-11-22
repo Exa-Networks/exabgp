@@ -21,6 +21,7 @@ class _Logger (object):
 	_max_history = 20
 	
 	_config = ''
+	_pid = os.getpid()
 	
 	# we use os.pid everytime as we may fork and the class is instance before it
 
@@ -36,7 +37,7 @@ class _Logger (object):
 		now = time.strftime('%a, %d %b %Y %H:%M:%S',time.localtime())
 		if len(self._history) > self._max_history:
 			self._history.pop(0)
-		string = "%s %-8s %-6d %-13s %s" % (now,level,os.getpid(),source,message)
+		string = "%s %-8s %-6d %-13s %s" % (now,level,self._pid,source,message)
 		self._history.append(string)
 		return string
 
