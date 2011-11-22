@@ -60,7 +60,7 @@ class _Logger (object):
 		if os.environ.get('DEBUG_WIRE','0') == '0': self._wire = False
 		else: self._wire = True
 
-		if os.environ.get('DEBUG_MESSAGE','1') in ['1','yes','Yes','YES']: self._message = True
+		if os.environ.get('DEBUG_MESSAGE','0') in ['1','yes','Yes','YES']: self._message = True
 		else: self._message = False
 
 		if os.environ.get('DEBUG_RIB','0') == '0': self._rib = False
