@@ -44,17 +44,14 @@ class Message (Exception):
 		GENERAL       = 0x80  # 128
 		#LOCALRIB    = 0x100  # 256
 
-	def _message (self,message = ""):
-		message_len = pack('!H',19+len(message))
-		return "%s%s%s%s" % (self.MARKER,message_len,self.TYPE,message)
+	def __init__ (self):
+		if self.TYPE is None:
+			self._str = 'UNKNOWN (invalid code : %s)' % str(code)
+			return
 
-	def __str__ (self,code=None):
-		if code is None:
-			if self.TYPE is None:
-				return 'UNKNOWN (invalid code : %s)' % str(code)
-			code = ord(self.TYPE)
-
+		code = ord(self.TYPE)
 		result = []
+
 		if code & self.Type.OPEN:
 			result.append('OPEN')
 		if code & self.Type.UPDATE:
@@ -71,9 +68,18 @@ class Message (Exception):
 			result.append('HEADER')
 		if code & self.Type.GENERAL:
 			result.append('GENERAL')
+
 		if result:
-			return ' '.join(result)
-		return 'UNKNOWN (%d)' % code
+			self._str = ' '.join(result)
+		else:
+			self._str = 'UNKNOWN (%d)' % code
+
+	def _message (self,message = ""):
+		message_len = pack('!H',19+len(message))
+		return "%s%s%s%s" % (self.MARKER,message_len,self.TYPE,message)
+
+	def __str__ (self):
+		return self._str
 
 class Failure (Exception):
 	pass
