@@ -43,10 +43,14 @@ class MultiAttributes (list):
 class Attributes (dict):
 	autocomplete = True
 	
+	def __init__ (self):
+		self._str = ''
+	
 	def has (self,k):
 		return self.has_key(k)
 
 	def add (self,attribute):
+		self._str = ''
 		if self.has(attribute.ID):
 			if attribute.MULTIPLE:
 				self[attribute.ID].append(attribute)
@@ -125,6 +129,9 @@ class Attributes (dict):
 		return message
 
 	def __str__ (self):
+		if self._str:
+			return self._str
+
 		next_hop = ''
 		if self.has(AttributeID.NEXT_HOP):
 			next_hop = ' next-hop %s' % str(self[AttributeID.NEXT_HOP]).lower()
@@ -159,7 +166,8 @@ class Attributes (dict):
 		if self.has(AttributeID.MP_REACH_NLRI):
 			mpr = ' mp_reach_nlri %s' % str(self[AttributeID.MP_REACH_NLRI])
 
-		return "%s%s%s%s%s%s%s%s" % (next_hop,origin,aspath,local_pref,med,communities,ecommunities,mpr)
+		self._str = "%s%s%s%s%s%s%s%s" % (next_hop,origin,aspath,local_pref,med,communities,ecommunities,mpr)
+		return self._str
 
 	def __repr__ (self):
 		return str(self)
