@@ -13,4 +13,17 @@ fi
 export PYTHONPATH=$path/lib
 export ETC=$path/etc/bgpd
 
-python -m bgp.debug $path/daemon/bgpd $*
+PYTHON=`which python`
+PYPY=`which pypy`
+
+if [ -f "$PYPY" ]
+then
+	INTERPRETER=$PYPY
+elif [ -f "$PYTHON" ]
+then
+	INTERPRETER=$PYTHON
+else
+	INTERPRETER=python
+fi
+
+$INTERPRETER -m bgp.debug $path/daemon/bgpd $*
