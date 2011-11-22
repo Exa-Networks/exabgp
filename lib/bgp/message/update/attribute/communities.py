@@ -16,12 +16,13 @@ from bgp.message.update.attribute import AttributeID,Flag,Attribute
 class Community (object):
 	def __init__ (self,community):
 		self.community = community
+		self._str = "%d:%d" % (community >> 16, community & 0xFFFF)
 	
 	def pack (self):
 		return pack('!L',self.community)
 
 	def __str__ (self):
-		return "%d:%d" % (self.community >> 16, self.community & 0xFFFF)
+		return self._str
 
 	def __len__ (self):
 		return 4
