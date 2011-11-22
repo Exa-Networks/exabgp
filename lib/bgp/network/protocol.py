@@ -96,7 +96,7 @@ class Protocol (object):
 
 		if data[:16] != Message.MARKER:
 			# We are speaking BGP - send us a valid Marker
-			raise Notify(1,1,'the packet received does not contain a BGP marker')
+			raise Notify(1,1,'The packet received does not contain a BGP marker')
 
 		raw_length = data[16:18]
 		length = unpack('!H',raw_length)[0]
@@ -150,10 +150,10 @@ class Protocol (object):
 			return message
 
 		if message.TYPE != Open.TYPE:
-			raise Notify(1,1,'the first packet recevied is not an open message (%s)' % message)
+			raise Notify(1,1,'The first packet recevied is not an open message (%s)' % message)
 
 		if _open.asn.asn4() and not message.capabilities.announced(Capabilities.FOUR_BYTES_ASN):
-			raise Notify(2,0,'we have an ASN4 and you do not speak it. bye.')
+			raise Notify(2,0,'We have an ASN4 and you do not speak it. bye.')
 
 		self._asn4 = message.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
 
@@ -245,11 +245,11 @@ class Protocol (object):
 
 	def _key_values (self,name,data):
 		if len(data) < 2:
-			raise Notify(2,0,"bad length for OPEN %s (<2) %s" % (name,hexa(data)))
+			raise Notify(2,0,"Bad length for OPEN %s (<2) %s" % (name,hexa(data)))
 		l = ord(data[1])
 		boundary = l+2
 		if len(data) < boundary:
-			raise Notify(2,0,"bad length for OPEN %s (buffer underrun) %s" % (name,hexa(data)))
+			raise Notify(2,0,"Bad length for OPEN %s (buffer underrun) %s" % (name,hexa(data)))
 		key = ord(data[0])
 		value = data[2:boundary]
 		rest = data[boundary:]
@@ -271,7 +271,7 @@ class Protocol (object):
 						k,capv,value = self._key_values('capability',value)
 						# Multiple Capabilities can be present in a single attribute
 						#if r:
-						#	raise Notify(2,0,"bad length for OPEN %s (size mismatch) %s" % ('capability',hexa(value)))
+						#	raise Notify(2,0,"Bad length for OPEN %s (size mismatch) %s" % ('capability',hexa(value)))
 	
 						if k == Capabilities.MULTIPROTOCOL_EXTENSIONS:
 							if k not in capabilities:
@@ -313,7 +313,7 @@ class Protocol (object):
 						if capv:
 							capabilities[k].append([ord(_) for _ in capv])
 				else:
-					raise Notify(2,0,'unknow OPEN parameter %s' % hex(key))
+					raise Notify(2,0,'Unknow OPEN parameter %s' % hex(key))
 		return capabilities
 
 	def OpenFactory (self,data):
@@ -362,7 +362,7 @@ class Protocol (object):
 			route.attributes = attributes
 			announced = announced[len(nlri):]
 			routes.append(route)
-			#logger.info(self.me('received route %s' % nlri))
+			#logger.info(self.me('Received route %s' % nlri))
 
 		#print "routes", routes
 		#print "attributes", attributes
@@ -524,6 +524,6 @@ class Protocol (object):
 				self.mp_routes.append(route)
 			return self._AttributesFactory(next_attributes)
 
-		logger.warning("ignoring attributes of type %s %s" % (str(code),[hex(ord(_)) for _ in data]))
+		logger.warning("ignoring attributes of type %s %s" % (str(code),[hex(ord(_)) for _ in data]),'parsing')
 		return self._AttributesFactory(data[length:])
 

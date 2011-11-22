@@ -51,7 +51,7 @@ class Connection (object):
 				self._io.bind((local.ip,0,0,0))
 		except socket.error,e:
 			self.close()
-			raise Failure('could not bind to local ip %s - %s' % (local.ip,str(e)))
+			raise Failure('Could not bind to local ip %s - %s' % (local.ip,str(e)))
 
 		if md5:
 			try:
@@ -84,7 +84,7 @@ class Connection (object):
 			self._io.setblocking(0)
 		except socket.error, e:
 			self.close()
-			raise Failure('could not connect to peer (if you use MD5, check your passwords): %s' % str(e))
+			raise Failure('Could not connect to peer (if you use MD5, check your passwords): %s' % str(e))
 
 	def pending (self):
 		r,_,_ = select.select([self._io,],[],[],0)
@@ -102,10 +102,10 @@ class Connection (object):
 			return r
 		except socket.timeout,e:
 			self.close()
-			raise Failure('timeout attempting to read data from the network:  %s ' % str(e))
+			raise Failure('Timeout while reading data from the network:  %s ' % str(e))
 		except socket.error,e:
 			self.close()
-			raise Failure('problem attempting to read data from the network:  %s ' % str(e))
+			raise Failure('Problem while reading data from the network:  %s ' % str(e))
 
 	def write (self,data):
 		try:
@@ -118,7 +118,7 @@ class Connection (object):
 			if getattr(e,'errno',None) != 32:
 				self.close()
 				logger.wire("%15s %s" % (self.peer,trace()))
-				raise Failure('problem attempting to write data to the network: %s' % str(e))
+				raise Failure('Problem while writing data to the network: %s' % str(e))
 
 	def close (self):
 		try:

@@ -130,8 +130,8 @@ class Peer (object):
 					yield None
 					break
 				if time.time() - start > max_wait_open: 
-					logger.message(self.me('waited for an OPEN for too long - killing the session'))
-					raise Notify(1,1,'the client took over %s seconds to send the OPEN, closing' % str(max_wait_open))
+					logger.message(self.me('Waited for an OPEN for too long - killing the session'))
+					raise Notify(1,1,'The client took over %s seconds to send the OPEN, closing' % str(max_wait_open))
 				yield None
 
 			message = self.bgp.new_keepalive(force=True)
@@ -234,7 +234,7 @@ class Peer (object):
 			self.bgp.close()
 			return
 		except Failure, e:
-			logger.warning(self.me(str(e)))
+			logger.warning(self.me(str(e)),'connection')
 			self._more_skip()
 			self.bgp.close()
 			return
