@@ -68,59 +68,61 @@ class Supervisor (object):
 
 		# did we complete the run of updates caused by the last SIGHUP ?
 		reload_completed = True
-		
-		while self._peers:
+
+		while True:
 			try:
-				start = time.time()
+				while self._peers:
+					start = time.time()
 
-				self.handle_commands(self.processes.received())
+					self.handle_commands(self.processes.received())
 
-				if self._shutdown:
-					self._shutdown = False
-					self.shutdown()
-				elif self._reload and reload_completed:
-					self._reload = False
-					self.reload()
-				elif self._restart:
-					self._restart = False
-					self.restart()
-				elif self._route_update:
-					self._route_update = False
-					self.route_update()
-				elif self._commands:
-					self.commands(self._commands)
-					self._commands = {}
+					if self._shutdown:
+						self._shutdown = False
+						self.shutdown()
+					elif self._reload and reload_completed:
+						self._reload = False
+						self.reload()
+					elif self._restart:
+						self._restart = False
+						self.restart()
+					elif self._route_update:
+						self._route_update = False
+						self.route_update()
+					elif self._commands:
+						self.commands(self._commands)
+						self._commands = {}
 
-				reload_completed = True
-				# Handle all connection
-				peers = self._peers.keys()
-				while peers:
-					for ip in peers[:]:
-						peer = self._peers[ip]
-						# there was no routes to send for this peer, we performed keepalive checks
-						if peer.run() is not True:
-							# no need to come back to it before a a full cycle
-							peers.remove(ip)
-						# send the route we parsed (if we parsed any to our child processes)
-						# This is a generator and can only be run once
-						for route in peer.received_routes():
-							# This is a generator which content does only change at config reload
-							for name in self.processes.receive_routes():
-								self.processes.write(name,"neighbor %s %s\n" % (ip,str(route)))
-					# otherwise process as many routes as we can within a second for the remaining peers
+					reload_completed = True
+					# Handle all connection
+					peers = self._peers.keys()
+					while peers:
+						for ip in peers[:]:
+							peer = self._peers[ip]
+							# there was no routes to send for this peer, we performed keepalive checks
+							if peer.run() is not True:
+								# no need to come back to it before a a full cycle
+								peers.remove(ip)
+							# send the route we parsed (if we parsed any to our child processes)
+							# This is a generator and can only be run once
+							for route in peer.received_routes():
+								# This is a generator which content does only change at config reload
+								for name in self.processes.receive_routes():
+									self.processes.write(name,"neighbor %s %s\n" % (ip,str(route)))
+						# otherwise process as many routes as we can within a second for the remaining peers
+						duration = time.time() - start
+						if duration >= 1.0:
+							reload_completed = False
+							break
 					duration = time.time() - start
-					if duration >= 1.0:
-						reload_completed = False
-						break
-				duration = time.time() - start
-				# RFC state that we MUST not more than one KEEPALIVE / sec
-				if duration < supervisor_speed:
-					time.sleep(supervisor_speed-duration)
+					# RFC state that we MUST not more than one KEEPALIVE / sec
+					if duration < supervisor_speed:
+						time.sleep(supervisor_speed-duration)
+				self.processes.terminate()
+				self.daemon.removepid()
+				break
 			except KeyboardInterrupt:
 				logger.supervisor("^C received")
 				self._shutdown = True
-		self.processes.terminate()
-		self.daemon.removepid()
 
 	def shutdown (self):
 		"""terminate all the current BGP connections"""
