@@ -17,7 +17,7 @@ from bgp.utils import hexa,trace
 from bgp.structure.address import AFI
 from bgp.message import Failure
 
-from bgp.log import Logger
+from bgp.log import Logger,LazyFormat
 logger = Logger()
 
 class Connection (object):
@@ -98,20 +98,18 @@ class Connection (object):
 		try:
 			r = self._io.recv(number)
 			self.last_read = time.time()
-			logger.wire("%15s RECV %s" % (self.peer,hexa(r)))
+			logger.wire(LazyFormat("%15s RECV " % self.peer,hexa,r))
 			return r
 		except socket.timeout,e:
 			self.close()
-			logger.wire("%15s %s" % (self.peer,trace()))
 			raise Failure('timeout attempting to read data from the network:  %s ' % str(e))
 		except socket.error,e:
 			self.close()
-			logger.wire("%15s %s" % (self.peer,trace()))
 			raise Failure('problem attempting to read data from the network:  %s ' % str(e))
 
 	def write (self,data):
 		try:
-			logger.wire("%15s SENT %s" % (self.peer,hexa(data)))
+			logger.wire(LazyFormat("%15s SENT " % self.peer,hexa,data))
 			r = self._io.send(data)
 			self.last_write = time.time()
 			return r

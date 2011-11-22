@@ -13,6 +13,20 @@ import time
 import logging
 import logging.handlers
 
+class LazyFormat (object):
+	def __init__ (self,prefix,format,message):
+		self.prefix = prefix
+		self.format = format
+		self.message = message
+	
+	def __str__ (self):
+		if self.format:
+			return self.prefix + self.format(self.message)
+		return self.message
+	
+	def split (self,c):
+		return str(self).split(c)
+
 class _Logger (object):
 	_instance = None
 	_syslog = None
