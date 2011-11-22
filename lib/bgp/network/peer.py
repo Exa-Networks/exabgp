@@ -194,7 +194,7 @@ class Peer (object):
 					else:
 						logger.message(self.me('<< UPDATE (not parsed)'))
 				if message.TYPE not in (KeepAlive.TYPE,Update.TYPE,NOP.TYPE):
-					 logger.message(self.me('<< %d' % message.CODE))
+					 logger.message(self.me('<< %d' % ord(message.TYPE)))
 
 				if self._updates:
 					self._updates = False
