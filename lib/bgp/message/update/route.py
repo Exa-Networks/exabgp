@@ -18,9 +18,10 @@ class Route (object):
 		self.nlri = nlri
 		self.__address = Address(nlri.afi,nlri.safi)
 		self.attributes = Attributes()
+		self._str = "%s %s%s" % (str(self.__address),str(self.nlri),str(self.attributes))
 
 	def __str__ (self):
-		return "%s %s%s" % (str(self.__address),str(self.nlri),str(self.attributes))
+		return self._str
 
 	def __repr__ (self):
 		return str(self)
