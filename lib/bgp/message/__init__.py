@@ -69,6 +69,8 @@ class Message (Exception):
 		if code & self.Type.GENERAL:
 			result.append('GENERAL')
 
+		self.CODE = code
+
 		if result:
 			self._str = ' '.join(result)
 		else:
