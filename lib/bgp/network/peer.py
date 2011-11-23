@@ -33,6 +33,7 @@ FORCE_GRACEFUL = True
 class Peer (object):
 	# debug hold/keepalive timers
 	debug_trace = True			# debug traceback on unexpected exception
+	update_time = 3
 
 	def __init__ (self,neighbor,supervisor):
 		self.supervisor = supervisor
@@ -56,6 +57,10 @@ class Peer (object):
 		
 		# The routes we have parsed from our neighbour
 		self._received_routes = []
+		
+		self._route_parsed = 0L
+		self._now = time.time()
+		self._next_info = self._now + self.update_time
 
 	def _reset_skip (self):
 		# We are currently not skipping connection attempts
@@ -174,14 +179,25 @@ class Peer (object):
 				if k: logger.message(self.me('>> KEEPALIVE (no more UPDATE and no EOR)'))
 
 			while self._running:
+				self._now = time.time()
+				if self._now > self._next_info:
+					self._next_info = self._now + self.update_time
+					display_update = True
+				else:
+					display_update = False
+
 				c,k = self.bgp.new_keepalive()
 				if k: logger.message(self.me('>> KEEPALIVE'))
-				logger.timers(self.me('Sending Timer %d second(s) left' % c))
+
+				if display_update:
+					logger.timers(self.me('Sending Timer %d second(s) left' % c))
 
 				message = self.bgp.read_message()
 				# let's read if we have keepalive before doing the timer check
 				c = self.bgp.check_keepalive()
-				logger.timers(self.me('Receive Timer %d second(s) left' % c))
+
+				if display_update:
+					logger.timers(self.me('Receive Timer %d second(s) left' % c))
 
 				if message.TYPE == KeepAlive.TYPE:
 					logger.message(self.me('<< KEEPALIVE'))
@@ -189,8 +205,12 @@ class Peer (object):
 					self._received_routes.extend(message.routes)
 					if message.routes:
 						logger.message(self.me('<< UPDATE'))
-						for route in message.routes:
-							logger.routes(LazyFormat(self.me(''),str,route))
+						self._route_parsed += len(message.routes)
+						if self._route_parsed:
+							for route in message.routes:
+								logger.routes(LazyFormat(self.me(''),str,route))
+							if display_update:
+								logger.supervisor(self.me('processed %d routes' % route_parsed))
 					else:
 						logger.message(self.me('<< UPDATE (not parsed)'))
 				if message.TYPE not in (KeepAlive.TYPE,Update.TYPE,NOP.TYPE):
