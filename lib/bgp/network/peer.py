@@ -210,7 +210,7 @@ class Peer (object):
 							for route in message.routes:
 								logger.routes(LazyFormat(self.me(''),str,route))
 							if display_update:
-								logger.supervisor(self.me('processed %d routes' % route_parsed))
+								logger.supervisor(self.me('processed %d routes' % self._route_parsed))
 					else:
 						logger.message(self.me('<< UPDATE (not parsed)'))
 				if message.TYPE not in (KeepAlive.TYPE,Update.TYPE,NOP.TYPE):
