@@ -19,7 +19,7 @@ from bgp.message.keepalive    import KeepAlive
 from bgp.message.notification import Notification, Notify, NotConnected
 from bgp.network.protocol     import Protocol
 
-from bgp.log import Logger
+from bgp.log import Logger,LazyFormat
 logger = Logger()
 
 # As we can not know if this is our first start or not, this flag is used to
@@ -190,7 +190,7 @@ class Peer (object):
 					if message.routes:
 						logger.message(self.me('<< UPDATE'))
 						for route in message.routes:
-							logger.routes(self.me('%s') %  str(route))
+							logger.routes(LazyFormat(self.me(''),str,route))
 					else:
 						logger.message(self.me('<< UPDATE (not parsed)'))
 				if message.TYPE not in (KeepAlive.TYPE,Update.TYPE,NOP.TYPE):
