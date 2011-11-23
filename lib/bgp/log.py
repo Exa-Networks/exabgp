@@ -22,7 +22,7 @@ class LazyFormat (object):
 	def __str__ (self):
 		if self.format:
 			return self.prefix + self.format(self.message)
-		return self.message
+		return self.prefix + self.message
 	
 	def split (self,c):
 		return str(self).split(c)
