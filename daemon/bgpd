@@ -103,7 +103,7 @@ class Supervisor (object):
 							# there was no routes to send for this peer, we performed keepalive checks
 							if peer.run() is not True:
 								# no need to come back to it before a a full cycle
-								if peer.bgp.connection:
+								if peer.bgp and peer.bgp.connection:
 									ios.append(peer.bgp.connection.io)
 								peers.remove(ip)
 							# send the route we parsed (if we parsed any to our child processes)
@@ -120,12 +120,12 @@ class Supervisor (object):
 							reload_completed = False
 							ios=[]
 							break
+					duration = time.time() - start
 					if ios:
-						read,_,_ = select.select(ios,[],[],0)
-						if not read:
-							duration = time.time() - start
-							if duration < supervisor_speed:
-								time.sleep(supervisor_speed-duration)
+						read,_,_ = select.select(ios,[],[],supervisor_speed-duration)
+					else:
+						if duration < supervisor_speed:
+							time.sleep(supervisor_speed-duration)
 				self.processes.terminate()
 				self.daemon.removepid()
 				break

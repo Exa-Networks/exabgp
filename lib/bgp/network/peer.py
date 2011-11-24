@@ -64,15 +64,15 @@ class Peer (object):
 
 	def _reset_skip (self):
 		# We are currently not skipping connection attempts
-		self._skip = 0
+		self._skip_time = 0
 		# when we can not connect to a peer how many time (in loop) should we back-off
-		self._next_skip = 1
+		self._next_skip = 0
 
 	def _more_skip (self):
-		self._skip = self._next_skip
-		self._next_skip = self._next_skip*2
-		if self._next_skip > 512:
-			self._next_skip = 512
+		self._skip_time = time.time() + self._next_skip
+		self._next_skip = int(1+ self._next_skip*1.2)
+		if self._next_skip > 60:
+			self._next_skip = 60
 
 	def me (self,message):
 		return "Peer %15s ASN %-7s %s" % (self.neighbor.peer_address,self.neighbor.peer_as,message)
@@ -99,8 +99,7 @@ class Peer (object):
 	def run (self):
 		if self._loop:
 			try:
-				if self._skip:
-					self._skip -= 1
+				if self._skip_time > time.time():
 					return None
 				else:
 					return self._loop.next()
@@ -113,7 +112,6 @@ class Peer (object):
 				self._neighbor = None
 			self._running = True
 			self._loop = self._run()
-			return self._loop.next()
 		else:
 			self.bgp.close()
 			self.supervisor.unschedule(self)
@@ -122,6 +120,8 @@ class Peer (object):
 		try:
 			self.bgp = Protocol(self)
 			self.bgp.connect()
+
+			self._reset_skip()
 
 			_open = self.bgp.new_open(self._restarted)
 			logger.message(self.me('>> %s' % _open))
