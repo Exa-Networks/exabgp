@@ -48,6 +48,8 @@ class _Logger (object):
 		return "\n".join(self._format(*_) for _ in self._history)
 
 	def _record (self,timestamp,level,source,message):
+		if len(self._history) > self._max_history:
+			self._history.pop(0)
 		self._history.append((timestamp,level,source,message))
 
 	def _format (self,timestamp,level,source,message):
