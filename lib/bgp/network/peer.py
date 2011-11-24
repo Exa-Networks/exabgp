@@ -274,7 +274,8 @@ class Peer (object):
 	def received_routes (self):
 		if self._received_routes:
 			route = self._received_routes.pop(0)
-			yield route
+			yield str(route)
+			del(route)
 		else:
 			raise StopIteration()
 			

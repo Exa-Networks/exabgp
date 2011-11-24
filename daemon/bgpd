@@ -111,7 +111,7 @@ class Supervisor (object):
 							for route in peer.received_routes():
 								# This is a generator which content does only change at config reload
 								for name in self.processes.receive_routes():
-									self.processes.write(name,"neighbor %s %s\n" % (ip,str(route)))
+									self.processes.write(name,"neighbor %s %s\n" % (ip,route))
 						# otherwise process as many routes as we can within a second for the remaining peers
 						duration = time.time() - start
 						# RFC state that we MUST not more than one KEEPALIVE / sec
