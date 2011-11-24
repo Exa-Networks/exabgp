@@ -33,6 +33,10 @@ def to_Route (ip,mask):
 	return Route(Prefix(afi,ip,mask))
 
 class Inet (object):
+	_UNICAST = SAFI(SAFI.unicast)
+	_MULTICAST = SAFI(SAFI.multicast)
+	_unicast_range = set(range(224,240)) # 239 is last
+	
 	"""An IP in the 4 bytes format"""
 	# README: yep, we should surely change this _ name here
 	_af = {
@@ -58,10 +62,10 @@ class Inet (object):
 	def __update (self):
 		self.ip = self._ip()
 		
-		if self.afi == AFI.ipv4 and int(self.ip.split('.')[0]) in range(224,240): # 239 is last
-			self.safi = SAFI(SAFI.multicast)
+		if self.afi == AFI.ipv4 and int(self.ip.split('.')[0]) in self._unicast_range:
+			self.safi = self._MULTICAST
 		else:
-			self.safi = SAFI(SAFI.unicast)
+			self.safi = self._UNICAST
 
 	def update_raw (self,raw):
 		self.raw = raw
