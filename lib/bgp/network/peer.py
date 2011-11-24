@@ -203,7 +203,7 @@ class Peer (object):
 				if message.TYPE == KeepAlive.TYPE:
 					logger.message(self.me('<< KEEPALIVE'))
 				if message.TYPE == Update.TYPE:
-					self._received_routes.extend(str(message.route))
+					self._received_routes.extend(message.routes)
 					if message.routes:
 						logger.message(self.me('<< UPDATE'))
 						self._route_parsed += len(message.routes)
@@ -274,7 +274,7 @@ class Peer (object):
 	def received_routes (self):
 		if self._received_routes:
 			route = self._received_routes.pop(0)
-			yield route
+			yield str(route)
 		else:
 			raise StopIteration()
 			
