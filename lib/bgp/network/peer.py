@@ -179,6 +179,7 @@ class Peer (object):
 				c,k = self.bgp.new_keepalive(True)
 				if k: logger.message(self.me('>> KEEPALIVE (no more UPDATE and no EOR)'))
 
+			seen_update = False
 			while self._running:
 				self._now = time.time()
 				if self._now > self._next_info:
@@ -202,7 +203,8 @@ class Peer (object):
 
 				if message.TYPE == KeepAlive.TYPE:
 					logger.message(self.me('<< KEEPALIVE'))
-				if message.TYPE == Update.TYPE:
+				elif message.TYPE == Update.TYPE:
+					seen_update = True
 					self._received_routes.extend(message.routes)
 					if message.routes:
 						logger.message(self.me('<< UPDATE'))
@@ -210,12 +212,14 @@ class Peer (object):
 						if self._route_parsed:
 							for route in message.routes:
 								logger.routes(LazyFormat(self.me(''),str,route))
-							if display_update:
-								logger.supervisor(self.me('processed %d routes' % self._route_parsed))
 					else:
 						logger.message(self.me('<< UPDATE (not parsed)'))
-				if message.TYPE not in (KeepAlive.TYPE,Update.TYPE,NOP.TYPE):
+				elif message.TYPE not in (NOP.TYPE,):
 					 logger.message(self.me('<< %d' % ord(message.TYPE)))
+
+				if seen_update and display_update:
+					logger.supervisor(self.me('processed %d routes' % self._route_parsed))
+					seen_update = False
 
 				if self._updates:
 					self._updates = False
