@@ -10,6 +10,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 import sys
 import time
 import signal
+import select
 
 from bgp.network.peer import Peer
 from bgp.version import version
@@ -95,12 +96,15 @@ class Supervisor (object):
 					reload_completed = True
 					# Handle all connection
 					peers = self._peers.keys()
+					ios = []
 					while peers:
 						for ip in peers[:]:
 							peer = self._peers[ip]
 							# there was no routes to send for this peer, we performed keepalive checks
 							if peer.run() is not True:
 								# no need to come back to it before a a full cycle
+								if peer.bgp.connection:
+									ios.append(peer.bgp.connection.io)
 								peers.remove(ip)
 							# send the route we parsed (if we parsed any to our child processes)
 							# This is a generator and can only be run once
@@ -110,13 +114,18 @@ class Supervisor (object):
 									self.processes.write(name,"neighbor %s %s\n" % (ip,str(route)))
 						# otherwise process as many routes as we can within a second for the remaining peers
 						duration = time.time() - start
+						# RFC state that we MUST not more than one KEEPALIVE / sec
+						# And doing less could cause the session to drop
 						if duration >= 1.0:
 							reload_completed = False
+							ios=[]
 							break
-					duration = time.time() - start
-					# RFC state that we MUST not more than one KEEPALIVE / sec
-					if duration < supervisor_speed:
-						time.sleep(supervisor_speed-duration)
+					if ios:
+						read,_,_ = select.select(ios,[],[],0)
+						if not read:
+							duration = time.time() - start
+							if duration < supervisor_speed:
+								time.sleep(supervisor_speed-duration)
 				self.processes.terminate()
 				self.daemon.removepid()
 				break

@@ -113,6 +113,7 @@ class Peer (object):
 				self._neighbor = None
 			self._running = True
 			self._loop = self._run()
+			return self._loop.next()
 		else:
 			self.bgp.close()
 			self.supervisor.unschedule(self)

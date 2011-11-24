@@ -33,22 +33,22 @@ class Connection (object):
 
 		try:
 			if peer.afi == AFI.ipv4:
-				self._io = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+				self.io = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
 			if peer.afi == AFI.ipv6:
-				self._io = socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+				self.io = socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
 			try:
-				self._io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+				self.io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 			except AttributeError:
 				pass
 			try:
-				self._io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+				self.io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
 			except AttributeError:
 				pass
-			self._io.settimeout(1)
+			self.io.settimeout(1)
 			if peer.afi == AFI.ipv4:
-				self._io.bind((local.ip,0))
+				self.io.bind((local.ip,0))
 			if peer.afi == AFI.ipv6:
-				self._io.bind((local.ip,0,0,0))
+				self.io.bind((local.ip,0,0,0))
 		except socket.error,e:
 			self.close()
 			raise Failure('Could not bind to local ip %s - %s' % (local.ip,str(e)))
@@ -63,7 +63,7 @@ class Connection (object):
 				n_port = socket.htons(179)
 				tcp_md5sig = 'HH4s%dx2xH4x%ds' % (SS_PADSIZE, TCP_MD5SIG_MAXKEYLEN)
 				md5sig = struct.pack(tcp_md5sig, socket.AF_INET, n_port, n_addr, len(md5), md5)
-				self._io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, md5sig)
+				self.io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, md5sig)
 			except socket.error,e:
 				self.close()
 				raise Failure('This OS does not support TCP_MD5SIG, you can not use MD5 : %s' % str(e))
@@ -71,23 +71,23 @@ class Connection (object):
 		# None (ttl-security unset) or zero (maximum TTL) is the same thing
 		if ttl:
 			try:
-				self._io.setsockopt(socket.IPPROTO_IP,socket.IP_TTL, 20)
+				self.io.setsockopt(socket.IPPROTO_IP,socket.IP_TTL, 20)
 			except socket.error,e:
 				self.close()
 				raise Failure('This OS does not support IP_TTL (ttl-security), you can not use MD5 : %s' % str(e))
 
 		try:
 			if peer.afi == AFI.ipv4:
-				self._io.connect((peer.ip,179))
+				self.io.connect((peer.ip,179))
 			if peer.afi == AFI.ipv6:
-				self._io.connect((peer.ip,179,0,0))
-			self._io.setblocking(0)
+				self.io.connect((peer.ip,179,0,0))
+			self.io.setblocking(0)
 		except socket.error, e:
 			self.close()
 			raise Failure('Could not connect to peer (if you use MD5, check your passwords): %s' % str(e))
 
 	def pending (self):
-		r,_,_ = select.select([self._io,],[],[],0)
+		r,_,_ = select.select([self.io,],[],[],0)
 		if r: return True
 		return False
 
@@ -96,7 +96,7 @@ class Connection (object):
 	def read (self,number):
 		if number == 0: return ''
 		try:
-			r = self._io.recv(number)
+			r = self.io.recv(number)
 			self.last_read = time.time()
 			logger.wire(LazyFormat("%15s RECV " % self.peer,hexa,r))
 			return r
@@ -110,7 +110,7 @@ class Connection (object):
 	def write (self,data):
 		try:
 			logger.wire(LazyFormat("%15s SENT " % self.peer,hexa,data))
-			r = self._io.send(data)
+			r = self.io.send(data)
 			self.last_write = time.time()
 			return r
 		except socket.error, e:
@@ -123,7 +123,7 @@ class Connection (object):
 	def close (self):
 		try:
 			logger.wire("Closing connection to %s" % self.peer)
-			self._io.close()
+			self.io.close()
 		except socket.error:
 			pass
 
