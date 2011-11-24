@@ -122,10 +122,10 @@ class Supervisor (object):
 							break
 					duration = time.time() - start
 					if ios:
-						read,_,_ = select.select(ios,[],[],supervisor_speed-duration)
+						read,_,_ = select.select(ios,[],[],max(supervisor_speed-duration,0))
 					else:
 						if duration < supervisor_speed:
-							time.sleep(supervisor_speed-duration)
+							time.sleep(max(supervisor_speed-duration,0))
 				self.processes.terminate()
 				self.daemon.removepid()
 				break
