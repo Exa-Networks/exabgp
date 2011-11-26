@@ -3,11 +3,13 @@ Version explained:
  minor : increase on new features
  bug   : increase on bug fixes
 
-Version 1.4.0 - --th of --------- 2011
+Version 2.0.0 - --th of December 2011
  * Improvement: can set flowspec communities
     requested by Yiming Gong 
- * Improvement: incoming route parsing
+ * Improvement: incoming route parsing for processing by an external application
     requested by Daniel Piekacz (and others)
+ * Improvment: Add profiling features to find bottlenecks
+ * Improvment: Code speedup following profiling
 
 Version 1.3.4 - 21th of September 2011
  * Improvement: added support for asdot/asdot+
