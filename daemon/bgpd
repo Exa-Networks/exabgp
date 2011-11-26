@@ -132,6 +132,11 @@ class Supervisor (object):
 			except KeyboardInterrupt:
 				logger.supervisor("^C received")
 				self._shutdown = True
+#				from leak import objgraph
+#				print objgraph.show_most_common_types(limit=20)
+#				import random
+#				obj = objgraph.by_type('ReceivedRoute')[random.randint(0,2000)]
+#				objgraph.show_backrefs([obj], max_depth=10)
 
 	def shutdown (self):
 		"""terminate all the current BGP connections"""
