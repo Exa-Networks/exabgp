@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-bgp.py
+setup.py
 
 Created by Thomas Mangin on 2011-01-24.
 Copyright (c) 2009-2011 Exa Networks. All rights reserved.
@@ -14,7 +14,7 @@ from distutils.core import setup
 from distutils.util import get_platform
 
 try:
-	f = open('lib/bgp/version.py','r')
+	f = open('lib/exabgp/version.py','r')
 	version = f.read().strip().split('"')[1]
 	f.close()
 except Exception,e:
@@ -52,10 +52,10 @@ setup(name='exabgp',
 	platforms=[get_platform(),],
 	package_dir = {'': 'lib'},
 	packages=packages('lib'),
-	scripts=['daemon/bgpd',],
+	scripts=['daemon/exabgp',],
 	download_url='http://exabgp.googlecode.com/files/exabgp-%s.tgz' % version,
 	data_files=[
-		('etc/bgp',configuration('etc/bgp')),
+		('etc/exabgp',configuration('etc/exabgp')),
 	],
 	classifiers=[
 		'Development Status :: 5 - Production/Stable',

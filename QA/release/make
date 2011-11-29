@@ -10,9 +10,9 @@ fi
 dirname=`dirname $0`
 
 if [[ $dirname == /* ]]; then
-        path=$dirname/..
+        path=$dirname/../..
 else
-        cd `pwd`/$dirname/.. > /dev/null
+        cd `pwd`/$dirname/../.. > /dev/null
         path=`pwd`
         cd - > /dev/null
 fi
@@ -20,7 +20,7 @@ fi
 # This is not safe against race condition, but I trust my own machine to not be hacked ..
 
 build=/tmp
-version=`/usr/bin/env python $path/lib/bgp/version.py`
+version=`/usr/bin/env python $path/lib/exabgp/version.py`
 name=exabgp-$version
 destination=$build/$name
 
