@@ -9,13 +9,13 @@ Copyright (c) 2009-2011 Exa Networks. All rights reserved.
 
 import unittest
 
-from bgp.message.open         import Open,Capabilities,new_Open
-from bgp.message.notification import Notification
-from bgp.message.keepalive    import KeepAlive,new_KeepAlive
-from bgp.message.update       import Update,Attributes,new_Update
+from exabgp.message.open         import Open,Capabilities,new_Open
+from exabgp.message.notification import Notification
+from exabgp.message.keepalive    import KeepAlive,new_KeepAlive
+from exabgp.message.update       import Update,Attributes,new_Update
 
-from bgp.network.protocol     import Protocol
-from bgp.structure.neighbor   import Neighbor
+from exabgp.network.protocol     import Protocol
+from exabgp.structure.neighbor   import Neighbor
 
 from StringIO import StringIO
 

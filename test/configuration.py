@@ -9,7 +9,7 @@ Copyright (c) 2009-2011 Exa Networks. All rights reserved.
 
 import unittest
 
-from bgp.configuration import Configuration
+from exabgp.configuration import Configuration
 
 class TestConfiguration (unittest.TestCase):
 	def setUp(self):

@@ -9,8 +9,8 @@ Copyright (c) 2009-2011 Exa Networks. All rights reserved.
 
 import unittest
 
-from bgp.message.update.update import *
-from bgp.message.update.attribute.communities import to_Community, Community, Communities
+from exabgp.message.update.update import *
+from exabgp.message.update.attribute.communities import to_Community, Community, Communities
 
 class TestData (unittest.TestCase):
 	def test_2_prefix (self):

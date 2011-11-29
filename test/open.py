@@ -9,7 +9,7 @@ Copyright (c) 2009-2011 Exa Networks. All rights reserved.
 
 import unittest
 
-from bgp.message.open import *
+from exabgp.message.open import *
 
 class TestData (unittest.TestCase):
 

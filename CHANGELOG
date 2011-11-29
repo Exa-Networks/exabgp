@@ -1,5 +1,5 @@
 Version explained:
- major : codebase (1 for the forseeable future)
+ major : codebase
  minor : increase on new features
  bug   : increase on bug fixes
 
@@ -10,6 +10,10 @@ Version 2.0.0 - --th of December 2011
     requested by Daniel Piekacz (and others)
  * Improvment: Add profiling features to find bottlenecks
  * Improvment: Code speedup following profiling
+ * Internal Change : all includes now under exabpg and not bgp
+ * User Change : move the program from bin to sbin, and renamed it from bgpd to exabgp
+ * User Change : configuration folder now called exabgp to match debian package
+ * User Change : move all external processes in the exabgp configuration folder
 
 Version 1.3.4 - 21th of September 2011
  * Improvement: added support for asdot/asdot+
