@@ -1,12 +1,25 @@
-This program is a BGP route injector. It can be used to announce routes in your network.
+ExaBGP is a BGP engine (RFC4271)
 
-The route injector can connect using either IPv4 or IPv6 BGP and announce both IPv4 and IPv6 routes through IPv4 or IPv6 TCP connections.
+It can :
+
+ - announce route as defined by it JunOS looking configuration file
+ - generate BGP updates from third party applications
+ - parse BGP updates and send their textual representations to thrid party applications
 
 Potential use are :
- - Injection of service IPs (my use of it) like AS112 announcement
- - Temporary route redirection (adding more specific route with different next-hop)
- - Injection of flow routes
- - ...
+
+ - announce IPv4/IPv6 routes with arbitrary next-hops into your network
+   * injection of service IPs like AS112 announcement
+   * temporary route redirection (adding more specific routes with different next-hop)
+   * injection of flow routes to handle DDOS
+ - source flow routes.
+ - track changes in the global routing table.
+ - add the received default route to an host
+ - it can connect using either IPv4 or IPv6 and announce both IPv4 and IPv6 routes.
+
+Keep up to date, follow us on twitter, user exabgp ( https://twitter.com/#!/search/exabgp )
+
+The program does not perform any FIB manipulation, however it can call an application which will perform them.
 
 The code is deployed in many networks but as noone is perfect,
 I will gladly fix bugs if any are found, just contact me: thomas . mangin AT exa - networks . co . uk
@@ -22,6 +35,11 @@ As the program is not intended to receive routing information and perform FIB ma
  - RFC 5575 - Dissemination of Flow Specification Rules
  - RFC 4893 - BGP Support for Four-octet AS Number Space
 
+The following BG4 related RFC are not supported but would be on the roadmap if there was one :
+  * [http://www.ietf.org/rfc/rfc3107.txt RFC 3107] (Carrying Label Information in BGP-4)
+  * [http://tools.ietf.org/html/draft-raszuk-idr-flow-spec-v6-01 draft-raszuk-idr-flow-spec-v6-01] (Flow Spec for IPv6)
+  * Perhaps [http://tools.ietf.org/html/draft-wkumari-idr-as0-01 draft-wkumari-idr-as0-01] (Codification of AS 0 processing)
+
 Some speakers may use RFC 2385 (Protection of BGP Sessions via the TCP MD5 Signature) to allow the BGP connection to be established.
 This is currently only supported under Linux. (The Python socket module exports IPPROTO_TCP but not TCP_MD5_AUTH so it has to be done "by hand").
 
@@ -32,7 +50,7 @@ Adding the feature should be trivial.
 There is no support for:
   - RFC 2796 (BGP Route Reflection - An Alternative to Full Mesh IB).
   - the ORIGINATOR_ID and CLUSTER_LIST attributes.
-However, as the injector does not re-announce routes, nothing prevent its use with a Route Reflector.
+However, as the program does not re-announce routes (unless you make it do so), nothing prevent its use with a Route Reflector.
 
 I have no interrest in implementing:
  - RFC 2918 (Route Refresh Capability for BGP-4)
