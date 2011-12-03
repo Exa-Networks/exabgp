@@ -58,8 +58,6 @@ class _Logger (object):
 
 	def _prefixed (self,level,source,message):
 		ts = time.localtime()
-		if len(self._history) > self._max_history:
-			self._history.pop(0)
 		self._record(ts,level,source,message)
 		return self._format(ts,level,source,message)
 
