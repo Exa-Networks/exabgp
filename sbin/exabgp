@@ -26,4 +26,4 @@ else
 	INTERPRETER=python
 fi
 
-$INTERPRETER -m exabgp.debug $path/daemon/exabgp $*
+$INTERPRETER -m exabgp.debug $path/lib/exabgp/application.py $*
