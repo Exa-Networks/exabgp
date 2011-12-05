@@ -7,6 +7,7 @@ Created by Thomas Mangin on 2009-08-30.
 Copyright (c) 2009 Exa Networks. All rights reserved.
 """
 
+import os
 import sys
 import time
 import signal
@@ -24,7 +25,6 @@ logger = Logger()
 
 
 class Supervisor (object):
-	# import os
 	# [hex(ord(c)) for c in os.popen('clear').read()]
 	clear = ''.join([chr(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a']])
 
