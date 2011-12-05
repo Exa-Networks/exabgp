@@ -26,4 +26,6 @@ else
 	INTERPRETER=python
 fi
 
-$INTERPRETER -m exabgp.debug $path/lib/exabgp/application.py $*
+APPLICATION=`python -c "import sys,os; ';'.join(_ for _ in sys.path if os.path.isfile('/'.join((_,'application.py'))))"`
+
+$INTERPRETER -m exabgp.debug $APPLICATION $*
