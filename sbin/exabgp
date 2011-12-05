@@ -2,7 +2,7 @@
 
 dirname=`dirname $0`
 
-if [[ $dirname == /* ]]; then
+if [ `echo $dirname | grep "^/" -c` -eq 1 ]; then
         path=$dirname/..
 else
         cd `pwd`/$dirname/.. > /dev/null
@@ -26,6 +26,7 @@ else
 	INTERPRETER=python
 fi
 
-APPLICATION=`python -c "import sys,os; ';'.join(_ for _ in sys.path if os.path.isfile('/'.join((_,'application.py'))))"`
+APPLICATIONS=`python -c "import sys,os; print ' '.join(os.path.join(_,'exabgp','application.py') for _ in sys.path if os.path.isfile('/'.join((_,'exabgp/application.py'))))"`
+APPLICATION=`echo $APPLICATIONS | awk '{ print $1; }'`
 
 $INTERPRETER -m exabgp.debug $APPLICATION $*
