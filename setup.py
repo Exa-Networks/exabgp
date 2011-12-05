@@ -52,7 +52,7 @@ setup(name='exabgp',
 	platforms=[get_platform(),],
 	package_dir = {'': 'lib'},
 	packages=packages('lib'),
-	scripts=['lib/exabgp/application.py',],
+	scripts=['sbin/exabgp',],
 	download_url='http://exabgp.googlecode.com/files/exabgp-%s.tgz' % version,
 	data_files=[
 		('etc/exabgp',configuration('etc/exabgp')),

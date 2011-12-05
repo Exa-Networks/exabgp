@@ -1,0 +1,21 @@
+Source: exabgp
+Maintainer: Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>
+Section: net
+Priority: optional
+Build-Depends: debhelper (>= 8.9.11~), python
+Standards-Version: 3.9.2
+X-Python-Version: >= 2.6.6-3~
+Homepage: http://code.google.com/p/exabgp/
+
+Package: exabgp
+Architecture: all
+Depends: ${misc:Depends}, ${python:Depends}, adduser
+Description: BGP route injector
+ This program is a BGP route injector.
+ The route injector can connect using either IPv4 or IPv6
+ and announce both IPv4 and IPv6 routes.
+ Potential use are :
+	Injection of service IPs like AS112 announcement
+	Temporary route redirection: more specific routes with different next-hop
+	Injection of flow routes to handle DDOS
+
