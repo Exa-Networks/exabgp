@@ -207,9 +207,10 @@ class Fragment (IOperationByteShort,NumericString):
 
 # ..........................................................
 
-class _FlowNLRI (Attributes):
-	def __init__ (self):
+class _FlowNLRI (Attributes,Address):
+	def __init__ (self,afi,safi):
 		Attributes.__init__(self)
+		Address.__init__(self,afi,safi)
 		self.rules = {}
 
 	def add_and (self,rule):
@@ -275,12 +276,11 @@ class _FlowNLRI (Attributes):
 	def __repr__ (self):
 		return str(self)
 
-class Flow (Address,Attributes):
-	def __init__ (self,safi=SAFI.flow_ipv4):
-		Attributes.__init__(self)
-		Address.__init__(self,AFI.ipv4,safi)
-		self.nlri = _FlowNLRI()
-		self[AttributeID.EXTENDED_COMMUNITY] = ECommunities()
+class Flow (object):
+	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ipv4):
+		self.attributes = Attributes()
+		self.nlri = _FlowNLRI(afi,safi)
+		self.attributes[AttributeID.EXTENDED_COMMUNITY] = ECommunities()
 
 	def add_and (self,rule):
 		return self.nlri.add_and(rule)
@@ -289,10 +289,10 @@ class Flow (Address,Attributes):
 		return self.nlri.add_or(rule)
 
 	def add_action (self,community):
-		self[AttributeID.EXTENDED_COMMUNITY].add(community)
+		self.attributes[AttributeID.EXTENDED_COMMUNITY].add(community)
 
 	def __str__ (self):
-		return "%s %s%s" % (Address.__str__(self),str(self.nlri),Attributes.__str__(self))
+		return "%s %s%s" % (Address.__str__(self.nlri),str(self.nlri),str(self.attributes))
 
 	def __repr__ (self):
 		return str(self)
