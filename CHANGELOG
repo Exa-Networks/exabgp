@@ -3,6 +3,11 @@ Version explained:
  minor : increase on new features
  bug   : increase on bug fixes
 
+Version 2.0.1 - 8th of December 2011 (experimental version)
+ * Fix : Regression on FlowSpec
+ * Fix : interpreter not found on some Linux version
+    (issue 3) reported by  Sebastien Luttringer
+
 Version 2.0.0 - 3rd of December 2011 (experimental version)
  * Improvement: can set flowspec communities
     requested by Yiming Gong 
