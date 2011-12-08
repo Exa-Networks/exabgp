@@ -13,12 +13,32 @@ fi
 export PYTHONPATH=$path/lib:/usr/share/exabgp
 export ETC=$path/etc/exabgp
 
-PYTHON=`which python`
 PYPY=`which pypy`
+PYTHON27=`which python2.7`
+PYTHON26=`which python2.6`
+PYTHON25=`which python2.5`
+PYTHON24=`which python2.4`
+PYTHON2=`which python2`
+PYTHON=`which python`
 
 if [ -f "$PYPY" ]
 then
 	INTERPRETER=$PYPY
+elif [ -f "$PYTHON27" ]
+then
+	INTERPRETER=$PYTHON27
+elif [ -f "$PYTHON26" ]
+then
+	INTERPRETER=$PYTHON26
+elif [ -f "$PYTHON25" ]
+then
+	INTERPRETER=$PYTHON25
+elif [ -f "$PYTHON24" ]
+then
+	INTERPRETER=$PYTHON24
+elif [ -f "$PYTHON2" ]
+then
+	INTERPRETER=$PYTHON2
 elif [ -f "$PYTHON" ]
 then
 	INTERPRETER=$PYTHON
