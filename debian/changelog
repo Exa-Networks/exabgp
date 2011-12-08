@@ -1,3 +1,8 @@
+exabgp (2.0.1-1) unstable; urgency=low
+  * Fix regression in flow route parsing.
+
+ -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Tue, 05 Dec 2011 11:24:00 +0000
+
 exabgp (2.0.0-1) unstable; urgency=low
   * New upstream version, debian packaging adaptations.
 
