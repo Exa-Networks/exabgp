@@ -51,6 +51,7 @@ do
 	echo removing $f
 	rm -f $f
 done
+cd -
 
 echo removing pyc files
 
@@ -60,6 +61,7 @@ do
 	echo removing $f
 	rm -f $f
 done
+cd -
 
 echo removing dot files
 
@@ -69,6 +71,7 @@ do
 	echo removing $f
 	rm -f $f
 done
+cd -
 
 echo removing orig files
 
@@ -78,6 +81,15 @@ do
 	echo removing $f
 	rm -f $f
 done
+cd -
+
+cd $destination
+for f in `find . -name "rfc*.txt"`;
+do
+        echo removing $f
+        rm -f $f
+done
+cd -
 
 # Making tarball
 
