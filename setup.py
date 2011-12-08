@@ -43,8 +43,8 @@ def configuration (etc):
 
 setup(name='exabgp',
 	version=version,
-	description='a bgp route injector',
-	long_description="A BGP route injector which can be used to announce IPv4/IPv6 routes with arbitrary next-hops into your network or source flow routes.",
+	description='a bgp route engine',
+	long_description="A BGP software which can be used to announce IPv4/IPv6 routes with arbitrary next-hops, source flow routes, manipulate received routes/generate routes though third party plugins/applications",
 	author='Thomas Mangin',
 	author_email='thomas.mangin@exa-networks.co.uk',
 	url='http://code.google.com/p/exabgp/',
