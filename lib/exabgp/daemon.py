@@ -4,7 +4,7 @@
 daemon.py
 
 Created by Thomas Mangin on 2011-05-02.
-Copyright (c) 2009-2011 Exa Networks. All rights reserved.
+Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
 import os
@@ -119,7 +119,7 @@ class Daemon (object):
 					os._exit(0)
 			except OSError, e:
 				logger.critial('Can not fork, errno %d : %s' % (e.errno,e.strerror),'supervisor')
-
+				
 		# do not detach if we are already supervised or run by init like process
 		if not self._is_socket(sys.__stdin__.fileno()) and os.getppid() != 1:
 			fork_exit()

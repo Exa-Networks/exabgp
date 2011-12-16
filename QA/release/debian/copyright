@@ -5,14 +5,13 @@ It was downloaded from: http://code.google.com/p/exabgp/source/list
 
 Upstream Authors:
     Thomas Mangin <thomas.mangin@exa-networks.co.uk>
-    Diego Garcia del Rio <garci66@gmail.com>
 
 Copyright:
-    Copyright (c) 2009-2011, Exa Networks Limited
-    Copyright (c) 2009-2011, Thomas Mangin
+    Copyright (c) 2009-2012, Exa Networks Limited
+    Copyright (c) 2009-2012, Thomas Mangin
 
 License:
     New BSD License
 
 The Debian packaging is:
-    Copyright (C) 2011 Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>
+    Copyright (C) 2011-2012 Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>

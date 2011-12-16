@@ -4,7 +4,7 @@
 process.py
 
 Created by Thomas Mangin on 2011-05-02.
-Copyright (c) 2009-2011 Exa Networks. All rights reserved.
+Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
 import subprocess

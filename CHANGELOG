@@ -5,6 +5,7 @@ Version explained:
 
 Version 2.0.2 - --th of -------- 2012 (experimental version)
  * Fix : would not daemonise correctly
+ * Copyright: updated all copyright notice (welcome to 2012)
 
 Version 2.0.1 - 8th of December 2011
  * Fix : Regression on FlowSpec
