@@ -24,13 +24,13 @@ group test {
 
 	neighbor 127.0.0.1 {
 		description "router 2 with four routes";
-		router-id 0.0.0.0;
+		router-id 127.0.0.0;
 		local-address 192.168.127.1;
 	}
 
 	neighbor 127.0.0.2 {
 		description "router 3 with five routes";
-		router-id 0.0.0.0;
+		router-id 127.0.0.0;
 		local-address 192.168.127.1;
 		static {
        			route 5.0.0.0/8 next-hop 1.1.1.1;
