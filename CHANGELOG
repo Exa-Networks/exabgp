@@ -4,8 +4,10 @@ Version explained:
  bug   : increase on bug fixes
 
 Version 2.0.2 - --th of -------- 2012 (experimental version)
- * Fix : would not daemonise correctly
  * Copyright: updated all copyright notice (welcome to 2012)
+ * Fix : would not daemonise correctly
+ * Fix: we were mistakenly not displaying Notify sent on errors
+ * User Change: implemented RFC 6286 BGP Identifier released restrictions
 
 Version 2.0.1 - 8th of December 2011
  * Fix : Regression on FlowSpec

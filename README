@@ -34,6 +34,7 @@ As the program is not intended to receive routing information and perform FIB ma
  - RFC 4360 - BGP Extended Communities Attribute
  - RFC 5575 - Dissemination of Flow Specification Rules
  - RFC 4893 - BGP Support for Four-octet AS Number Space
+ - RFC 6286 - Autonomous-System-Wide Unique BGP Identifier for BGP-4
 
 The following BG4 related RFC are not supported but would be on the roadmap if there was one :
   * [http://www.ietf.org/rfc/rfc3107.txt RFC 3107] (Carrying Label Information in BGP-4)
