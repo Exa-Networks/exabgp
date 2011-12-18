@@ -247,7 +247,7 @@ class Peer (object):
 				pass
 			return
 		except Notify,e:
-			logger.message(self.me('Sending Notification (%d,%d) [%s]  %s' % (e.code,e.subcode,str(e),e.data)))
+			logger.warning(self.me('Sending Notification (%d,%d) [%s]  %s' % (e.code,e.subcode,str(e),e.data)))
 			try:
 				self.bgp.new_notification(e)
 				self.bgp.close()
@@ -255,7 +255,7 @@ class Peer (object):
 				pass
 			return
 		except Notification, e:
-			logger.message(self.me('Received Notification (%d,%d) from peer %s' % (e.code,e.subcode,str(e))))
+			logger.warning(self.me('Received Notification (%d,%d) from peer %s' % (e.code,e.subcode,str(e))))
 			self.bgp.close()
 			return
 		except Failure, e:
