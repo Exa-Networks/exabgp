@@ -163,15 +163,20 @@ class Protocol (object):
 			peer_as = message.asn
 
 		if peer_as != self.neighbor.peer_as:
-			raise Notify(2,2,'ASN sent (%d) did not match ASN expected (%d)' % (message.asn,self.neighbor.peer_as))
+			raise Notify(2,2,'ASN in OPEN (%d) did not match ASN expected (%d)' % (message.asn,self.neighbor.peer_as))
+
+		# RFC 6286 : http://tools.ietf.org/html/rfc6286
+		#if message.router_id == RouterID('0.0.0.0'):
+		#	message.router_id = RouterID(ip)
+		if message.router_id == RouterID('0.0.0.0'):
+			raise Notify(2,3,'0.0.0.0 is an invalid router_id according to RFC6286')
+		if message.router_id == self.neighbor.router_id and message.asn == self.neighbor.local_as:
+			raise Notify(2,3,'BGP Indendifier collision (%s) on IBGP according to RFC 6286' % message.router_id)
 
 		if message.hold_time < 3:
 			raise Notify(2,6,'Hold Time is invalid (%d)' % message.hold_time)
 		if message.hold_time >= 3:
 			self.neighbor.hold_time = min(self.neighbor.hold_time,message.hold_time)
-
-		if message.router_id == RouterID('0.0.0.0'):
-			message.router_id = RouterID(ip)
 
 # README: This limit what we are announcing may cause some issue if you add new family and SIGHUP
 # README: So it is commented until I make my mind to add it or not (as Juniper complain about mismatch capabilities)
