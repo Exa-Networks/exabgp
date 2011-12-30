@@ -10,7 +10,7 @@ else
         cd - > /dev/null
 fi
 
-export PYTHONPATH=$path/lib:/usr/share/exabgp
+export PYTHONPATH=$path/lib:/usr/share/exabgp/lib/2.0.2
 export ETC=$path/etc/exabgp
 
 PYPY=`which pypy`

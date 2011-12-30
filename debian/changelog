@@ -2,6 +2,7 @@ exabgp (2.0.2-1) unstable; urgency=low
 
   * Small upstream fixes.
   * Closes: #653729
+  * Change the location of the python libraries
 
  -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Tue, 30 Dec 2011 11:04:00 +0000
 
