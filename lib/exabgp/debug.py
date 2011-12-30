@@ -14,7 +14,7 @@ debug = os.environ.get('PDB',None)
 
 def bug_report (type, value, trace):
 	import traceback
-	from proxy.log import Logger
+	from exabgp.log import Logger
 	logger = Logger()
 
 	print
