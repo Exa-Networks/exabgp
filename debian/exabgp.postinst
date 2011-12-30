@@ -10,3 +10,6 @@ if [ "$1" = "configure" ]; then
 fi
 
 #DEBHELPER#
+
+# do this to avoid a <defunct> postinst (closing all FDs).
+db_stop

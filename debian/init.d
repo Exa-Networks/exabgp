@@ -56,7 +56,7 @@ fi
 do_start()
 {
         if [ "$EXABGPRUN" = "yes" ] || [ "$EXABGPRUN" = "YES" ]; then
-                status_of_proc "$DAEMON" "$NAME" >/dev/null
+		status_of_proc -p "$PIDFILE" "$DAEMON" "$NAME" > /dev/null 2>&1
                 retcode=$?
                 if [ $retcode -ne 0 ]; then
                         # Return
@@ -159,4 +159,4 @@ case "$1" in
 	;;
 esac
 
-:
+exit 0
