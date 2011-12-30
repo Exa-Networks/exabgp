@@ -2,7 +2,7 @@
 
 # Small instruction set done by Henry-Nicolas Tourneur to automate testings.
 
-apt-get install build-essential dpkg-dev fakeroot lintian
+apt-get install build-essential dpkg-dev fakeroot lintian debhelper
 echo "Make sure you'r in the ExaBGP root folder"
 dpkg-buildpackage
 echo "To install your package, run dpkg -i exabgp_VERSION_all.deb"
