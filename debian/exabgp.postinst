@@ -9,6 +9,13 @@ if [ "$1" = "configure" ]; then
         adduser --quiet --system --group --disabled-login --home /var/run/exabgp exabgp
 fi
 
+if [ -d /etc/exabgp/processes ]; then
+	echo "Removing obsolete conffile in /etc/exabgp/processes"
+	rm /etc/exabgp/processes/dynamic-1.sh  
+	rm /etc/exabgp/processes/watchdog-1.sh
+	rmdir /etc/exabgp/processes || echo "Not removing folder /etc/exabgp/processes, not empty"
+fi
+
 #DEBHELPER#
 
 # do this to avoid a <defunct> postinst (closing all FDs).
