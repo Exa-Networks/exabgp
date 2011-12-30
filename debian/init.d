@@ -84,6 +84,8 @@ do_stop()
 		start-stop-daemon --stop --quiet --signal TERM --pidfile $PIDFILE -c $USER
 		RETVAL="$?"
 		sleep 1
+		# clean stale PID file
+		rm $PIDFILE
 		[ "$RETVAL" = 2 ] && return 2
 		# Wait for children to finish too if this is a daemon that forks
 		# and if the daemon is only ever run from this initscript.

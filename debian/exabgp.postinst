@@ -24,7 +24,7 @@ case "$1" in
 configure)
     clean_old_conf
     adduser --quiet --system --group --disabled-login --home /var/run/exabgp exabgp
-    if [ ! -z "$2" -o -e /var/run/exabgp/exabgp.pid ]; then # first install
+    if [ ! -z "$2" ] && [ -e /var/run/exabgp/exabgp.pid ]; then # first install
     	invoke-rc.d exabgp stop 
     fi
     # The script will be started through the DEBHELPER script called hereunder.
