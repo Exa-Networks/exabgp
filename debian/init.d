@@ -32,9 +32,6 @@ SCRIPTNAME=/etc/init.d/$NAME
 # Some env var the daemon will need
 export ETC="/etc/exabgp/"
 
-# This will tell the daemon it needs to daemonize itself
-export DAEMONIZE=1
-
 # Read configuration variable file if it is present
 [ -r /etc/default/$NAME ] && . /etc/default/$NAME
 
@@ -63,7 +60,8 @@ do_start()
                         #   0 if daemon has been started
                         #   1 if daemon was already running
                         #   2 if daemon could not be started
-                        start-stop-daemon --start --quiet --pidfile $PIDFILE -c $USER --exec $DAEMON -- $DAEMON_OPTS || return 2
+			# We create the PID file and we do background thanks to start-stop-daemon
+                        start-stop-daemon --start --quiet --pidfile $PIDFILE -c $USER -b -m --exec $DAEMON -- $DAEMON_OPTS || return 2
                 else
                         log_daemon_msg "$NAME is already running!"
 			log_end_msg 0
