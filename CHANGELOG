@@ -3,10 +3,11 @@ Version explained:
  minor : increase on new features
  bug   : increase on bug fixes
 
-Version 2.0.2 - --th of -------- 2012 (experimental version)
+Version 2.0.2 - 1st of January 2012 (experimental version)
  * Copyright: updated all copyright notice (welcome to 2012)
  * Fix : would not daemonise correctly
  * Fix: we were mistakenly not displaying Notify sent on errors
+ * Fix: some debian packaging issues
  * User Change: implemented RFC 6286 BGP Identifier released restrictions
 
 Version 2.0.1 - 8th of December 2011

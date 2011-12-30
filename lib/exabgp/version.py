@@ -1,4 +1,4 @@
-version="2.0.1"
+version="2.0.2"
 
 # Do not change the first line as it is parsed by scripts
 
