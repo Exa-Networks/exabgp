@@ -15,5 +15,12 @@ neighbor 192.168.127.128 {
 	static {
 		route 192.168.0.0/16 next-hop 192.0.2.1 med 200 community [174:666] withdrawn watchdog service-watchdog;
 		route 172.10.0.0/16 next-hop 192.0.2.1 med 200 community [174:666] watchdog watchdog-one withdrawn;
+		route 10.0.0.0/16 {
+			next-hop 192.0.2.1;
+			med 200;
+			community [174:666];
+			watchdog watchdog-one;
+			withdrawn;
+		}
 	}
 }
