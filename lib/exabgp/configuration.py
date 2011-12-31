@@ -48,6 +48,9 @@ class Watchdog (str):
 	ID = AttributeID.INTERNAL_WATCHDOG
 	MULTIPLE = False
 
+class Withdrawn (object):
+	ID = AttributeID.INTERNAL_WITHDRAWN
+	MULTIPLE = False
 
 class Configuration (object):
 	TTL_SECURITY = 255
@@ -66,6 +69,7 @@ class Configuration (object):
 	'  label [ 100 200 ];\n' \
 	'  split /24\n' \
 	'  watchdog watchog-name\n' \
+	'  withdrawn\n' \
 	'}\n\n' \
 	'syntax:\n' \
 	'route 10.0.0.1/22 next-hop 192.0.2.1' \
@@ -333,6 +337,8 @@ class Configuration (object):
 		if command == 'community': return self._route_community(scope,tokens[1:])
 		if command == 'split': return self._route_split(scope,tokens[1:])
 		if command == 'label': return self._route_label(scope,tokens[1:])
+		if command == 'watchdog': return self._route_watchdog(scope,tokens[1:])
+		if command == 'withdrawn': return self._route_withdrawn(scope,tokens[1:])
 		
 		if command == 'source': return self._flow_source(scope,tokens[1:])
 		if command == 'destination': return self._flow_destination(scope,tokens[1:])
@@ -418,6 +424,15 @@ class Configuration (object):
 	def _route_watchdog (self,scope,tokens):
 		try:
 			scope[-1]['routes'][-1].attributes.add(Watchdog(tokens.pop(0)))
+			return True
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+
+	def _route_withdrawn (self,scope,tokens):
+		try:
+			scope[-1]['routes'][-1].attributes.add(Withdrawn())
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -742,7 +757,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','med','local-preference','community','split','label'])
+			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','med','local-preference','community','split','label','watchdog','withdrawn'])
 			if r is False: return False
 			if r is None: return self._split_last_route(scope)
 
@@ -760,9 +775,15 @@ class Configuration (object):
 			return False
 
 		while len(tokens):
-			if len(tokens) < 2:
-				return False
 			command = tokens.pop(0)
+			if command == 'withdrawn':
+				if self._route_withdrawn(scope,tokens):
+					continue
+				return False
+			
+			if len(tokens) < 1:
+				return False
+
 			if command == 'origin':
 				if self._route_origin(scope,tokens):
 					continue

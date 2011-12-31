@@ -9,8 +9,11 @@ Version 2.0.2 - 1st of January 2012 (experimental version)
  * Fix: we were mistakenly not displaying Notify sent on errors
  * Fix: some debian packaging issues
  * Fix: bug when parsing unknown open capability
+ * Fix: forgotten to allow some route option on multiline
  * User Change: implemented RFC 6286 BGP Identifier released restrictions
  * Improvment: recognise multisession capability (draft-ietf-idr-bgp-multisession-06)
+ * Improvment: allow the configuration of route which will not be announced on configuration reload (to work in conjunction with watchdog)
+    requested by Marco d'Itri
 
 Version 2.0.1 - 8th of December 2011
  * Fix : Regression on FlowSpec

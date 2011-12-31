@@ -13,6 +13,9 @@ from exabgp.structure.address import AFI
 from exabgp.message.open import HoldTime
 from exabgp.message.update.attribute.id import AttributeID
 
+from exabgp.log import Logger
+logger = Logger()
+
 # The definition of a neighbor (from reading the configuration)
 class Neighbor (object):
 	def __init__ (self):
@@ -42,6 +45,13 @@ class Neighbor (object):
 		# and with ten thousands routes this makes an enormous difference (60 seconds to 2)
 		routes = {}
 		for route in self._routes:
+			withdrawn = route.attributes.pop(AttributeID.INTERNAL_WITHDRAWN,None)
+			if withdrawn is not None:
+				logger.rib('skipping initial announcement of %s' % route)
+				watchdog = route.attributes.get(AttributeID.INTERNAL_WATCHDOG,None)
+				if watchdog in self._watchdog:
+					self._watchdog[watchdog] == 'withdraw'
+				continue
 			watchdog = route.attributes.get(AttributeID.INTERNAL_WATCHDOG,None)
 			if watchdog in self._watchdog:
 				if self._watchdog[watchdog] == 'withdraw':
