@@ -141,6 +141,14 @@ class CiscoRouteRefresh (list):
 	def extract (self):
 		return []
 
+# =================================================================== MultiSession
+
+class MultiSession (list):
+	def __str__ (self):
+		return "Multi Session"
+
+	def extract (self):
+		return []
 
 # =================================================================== Parameter
 
@@ -151,13 +159,14 @@ class ASN4 (int):
 # =================================================================== Unknown
 
 class Unknown (object):
-	def __init__ (self,value):
+	def __init__ (self,value,raw=''):
 		self.value = value
+		self.raw = raw
 	
 	def __str__ (self):
 		if self.value in Capabilities.reserved: return 'Reserved %s' % str(self.value)
 		if self.value in Capabilities.unassigned: return 'Unassigned %s' % str(self.value)
-		return 'unknown %s' % str(self.value)
+		return 'unknown %s %s' % (str(self.value),str(self.raw))
 
 	def extract (self):
 		return []
@@ -192,6 +201,7 @@ class Capabilities (dict):
 	ADD_PATH                 = 0x45 # [draft-ietf-idr-add-paths]
 	# 70-127    Unassigned 
 	CISCO_ROUTE_REFRESH      = 0x80 # I Can only find reference to this in the router logs
+	MULTISESSION             = 0x83 # http://tools.ietf.org/html/draft-ietf-idr-bgp-multisession-03
 	# 128-255   Reserved for Private Use [RFC5492]
 
 	unassigned = range(70,128)

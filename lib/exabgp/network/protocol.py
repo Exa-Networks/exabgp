@@ -23,7 +23,7 @@ from exabgp.structure.asn        import ASN,AS_TRANS
 from exabgp.network.connection   import Connection
 from exabgp.message              import Message,defix
 from exabgp.message.nop          import NOP
-from exabgp.message.open         import Open,Unknown,Parameter,Capabilities,RouterID,MultiProtocol,RouteRefresh,CiscoRouteRefresh,Graceful
+from exabgp.message.open         import Open,Unknown,Parameter,Capabilities,RouterID,MultiProtocol,RouteRefresh,CiscoRouteRefresh,MultiSession,Graceful
 from exabgp.message.update       import Update
 from exabgp.message.update.eor   import EOR
 from exabgp.message.keepalive    import KeepAlive
@@ -313,10 +313,12 @@ class Protocol (object):
 							capabilities[k] = CiscoRouteRefresh()
 							continue
 	
+						if k == Capabilities.MULTISESSION:
+							capabilities[k] = MultiSession()
+							continue
+
 						if k not in capabilities:
-							capabilities[k] = Unknown(k)
-						if capv:
-							capabilities[k].append([ord(_) for _ in capv])
+							capabilities[k] = Unknown(k,[ord(_) for _ in capv])
 				else:
 					raise Notify(2,0,'Unknow OPEN parameter %s' % hex(key))
 		return capabilities
