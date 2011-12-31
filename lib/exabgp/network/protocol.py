@@ -313,7 +313,10 @@ class Protocol (object):
 							capabilities[k] = CiscoRouteRefresh()
 							continue
 	
-						if k == Capabilities.MULTISESSION:
+						if k == Capabilities.MULTISESSION_BGP:
+							capabilities[k] = MultiSession()
+							continue
+						if k == Capabilities.MULTISESSION_BGP_OLD:
 							capabilities[k] = MultiSession()
 							continue
 

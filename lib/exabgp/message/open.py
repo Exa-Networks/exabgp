@@ -197,11 +197,11 @@ class Capabilities (dict):
 	FOUR_BYTES_ASN           = 0x41 # [RFC4893]
 	# 66 Deprecated
 	DYNAMIC_CAPABILITY       = 0x43 # [Chen]
-	MULTISESSION_BGP         = 0x44 # [Appanna]
+	MULTISESSION_BGP         = 0x44 # [draft-ietf-idr-bgp-multisession]
 	ADD_PATH                 = 0x45 # [draft-ietf-idr-add-paths]
 	# 70-127    Unassigned 
 	CISCO_ROUTE_REFRESH      = 0x80 # I Can only find reference to this in the router logs
-	MULTISESSION             = 0x83 # http://tools.ietf.org/html/draft-ietf-idr-bgp-multisession-03
+	MULTISESSION_BGP_OLD     = 0x83 # before http://tools.ietf.org/html/draft-ietf-idr-bgp-multisession-04
 	# 128-255   Reserved for Private Use [RFC5492]
 
 	unassigned = range(70,128)
