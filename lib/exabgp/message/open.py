@@ -210,6 +210,7 @@ class Capabilities (dict):
 	def announced (self,capability):
 		return self.has_key(capability)
 
+	# XXX: Should we not call the __str__ function of all the created capability classes ?
 	def __str__ (self):
 		r = []
 		for key in self.keys():
@@ -223,6 +224,8 @@ class Capabilities (dict):
 				r += ['Graceful Restart']
 			elif key == self.FOUR_BYTES_ASN:
 				r += ['4Bytes AS %d' % self[key]]
+			elif key == self.MULTISESSION:
+				r += ['Multi Session']
 			elif key in self.reserved:
 				r += ['private use capability %d' % key]
 			elif key in self.unassigned:
