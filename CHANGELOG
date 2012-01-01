@@ -3,7 +3,7 @@ Version explained:
  minor : increase on new features
  bug   : increase on bug fixes
 
-Version 2.0.2 - 1st of January 2012 (experimental version)
+Version 2.0.2 - 1st of January 2012 (stable version)
  * Copyright: updated all copyright notice (welcome to 2012)
  * Fix : would not daemonise correctly
  * Fix: we were mistakenly not displaying Notify sent on errors
