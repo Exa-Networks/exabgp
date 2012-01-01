@@ -105,7 +105,7 @@ do_stop()
 #
 do_reload() {
 	if [ "$EXABGPRUN" = "yes" ] || [ "$EXABGPRUN" = "YES" ]; then
-		start-stop-daemon --stop --signal HUP --quiet --pidfile $PIDFILE --name $NAME -c $USER
+		start-stop-daemon --stop --signal HUP --quiet --pidfile $PIDFILE -c $USER
 		return 0
 	fi
 }
