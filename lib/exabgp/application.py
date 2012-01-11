@@ -143,8 +143,6 @@ class Supervisor (object):
 		logger.info("Performing shutdown","supervisor")
 		for ip in self._peers.keys():
 			self._peers[ip].stop()
-			for name in self.processes.receive_routes():
-				self.processes.write(name,"neighbor %s down\n" % ip)
 
 	def reload (self):
 		"""reload the configuration and send to the peer the route which changed"""
@@ -160,8 +158,6 @@ class Supervisor (object):
 			if ip not in self.configuration.neighbor.keys():
 				logger.supervisor("Removing Peer %s" % str(ip))
 				self._peers[ip].stop()
-				for name in self.processes.receive_routes():
-					self.processes.write(name,"neighbor %s down\n" % ip)
 
 		for ip in self.configuration.neighbor.keys():
 			neighbor = self.configuration.neighbor[ip]
