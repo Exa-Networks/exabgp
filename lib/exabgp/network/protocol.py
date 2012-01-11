@@ -68,8 +68,8 @@ class Protocol (object):
 			md5 = self.neighbor.md5
 			ttl = self.neighbor.ttl
 			self.connection = Connection(peer,local,md5,ttl)
-			self.peer.supervisor.processes.write(name,"neighbor %s up\n" % self.peer.neighbor.peer_address)
-			
+			for name in self.peer.supervisor.processes.receive_routes():
+				self.peer.supervisor.processes.write(name,"neighbor %s up\n" % self.peer.neighbor.peer_address)
 
 	def check_keepalive (self):
 		left = int (self.connection.last_read  + self.neighbor.hold_time - time.time())
@@ -80,7 +80,8 @@ class Protocol (object):
 	def close (self):
 		#self._delta.last = 0
 		if self.connection:
-			self.peer.supervisor.processes.write(name,"neighbor %s down\n" % self.peer.neighbor.peer_address)
+			for name in self.peer.supervisor.processes.receive_routes():
+				self.peer.supervisor.processes.write(name,"neighbor %s down\n" % self.peer.neighbor.peer_address)
 			self.connection.close()
 			self.connection = None
 
