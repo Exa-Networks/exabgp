@@ -3,7 +3,11 @@ Version explained:
  minor : increase on new features
  bug   : increase on bug fixes
 
-Version 2.0.2 - 1st of January 2012 (stable version)
+Version 2.0.3 - ..th of ....... 2012 (stable version)
+ * Improvement: now sending help "neighbor <ip> up" when a neighbor goes up
+ * Fix: now sending correctly "neighbor <ip> down" when a neighbor goes down
+
+Version 2.0.2 - 1st of January 2012
  * Copyright: updated all copyright notice (welcome to 2012)
  * Fix : would not daemonise correctly
  * Fix: we were mistakenly not displaying Notify sent on errors
