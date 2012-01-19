@@ -115,24 +115,14 @@ class Connection (object):
 			self.close()
 			raise Failure('Problem while reading data from the network:  %s ' % str(e))
 
-	# XXX: using a buffer here is an HORRIBLE FIX, hopefully it will fix most of the problem seen but it is really
-	# XXX: the issue is that we could wait for a message when we _think_ we sent the data (and it is not the case)
 	def write (self,data):
-		self._buffer.append(data)
-		data = ''.join(self._buffer[:2])
 		try:
 			logger.wire(LazyFormat("%15s SENT " % self.peer,hexa,data))
 			r = self.io.send(data)
 			self.last_write = time.time()
-			if len(self._buffer) >=2:
-				self._buffer = self._buffer[2:]
-			else:
-				self._buffer = self._buffer[1:]
 			return r
 		except socket.error, e:
-			# Broken pipe, we ignore as we want to make sure if there is data to read before failing
 			failure = getattr(e,'errno',None)
-			# if failure != errno.EPIPE: #32  ??
 			if failure in errno_block:
 				return 0
 			self.close()

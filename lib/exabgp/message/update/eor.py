@@ -35,12 +35,12 @@ class EOR (object):
 
 	def eors (self,families):
 		self._announced = []
-		r = ''
+		r = []
 		for afi,safi in families:
 			if afi == AFI.ipv4 and safi in [SAFI.unicast, SAFI.multicast]:
-				r += self.ipv4()
+				r.append(self.ipv4())
 			else:
-				r += self.mp(afi,safi)
+				r.append(self.mp(afi,safi))
 			self._announced.append((afi,safi))
 		return r
 

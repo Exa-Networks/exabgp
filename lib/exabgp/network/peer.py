@@ -222,12 +222,11 @@ class Peer (object):
 					seen_update = False
 
 				if self._updates:
-					self._updates = False
-
 					count = 0
 					for count in self.bgp.new_update():
 						yield True
 					logger.message(self.me('>> UPDATE (%d)' % count))
+					self._updates = self.bgp.buffered()
 
 				yield None
 			

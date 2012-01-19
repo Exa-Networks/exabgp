@@ -56,6 +56,7 @@ class Protocol (object):
 		self.connection = connection
 		self._delta = Delta(Table(peer))
 		self._asn4 = False
+		self._messages = {}
 
 	def me (self,message):
 		return "Peer %15s ASN %-7s %s" % (self.peer.neighbor.peer_address,self.peer.neighbor.peer_as,message)
@@ -203,38 +204,12 @@ class Protocol (object):
 
 	# Sending message to peer .................................................
 
+	# we do not buffer those message in purpose
+
 	def new_open (self,restarted):
 		o = Open(4,self.neighbor.local_as,self.neighbor.router_id.ip,Capabilities().default(self.neighbor,restarted),self.neighbor.hold_time)
 		self.connection.write(o.message())
 		return o
-
-	def new_announce (self):
-		asn4 = not not self.peer.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
-		# Do not try to join the message and write all in one go as it causes issue if the size is bigger than the MTU
-		# Python 2.5.2 for example send partial data which BGP decoders then take as garbage.
-		count = 0
-		for update in self._delta.announce(asn4,self.neighbor.local_as,self.neighbor.peer_as):
-			count += 1
-			logger.message(self.me(">> UPDATE (update)"))
-			self.connection.write(update)
-			yield count
-
-	def new_eors (self,families):
-		eor = EOR()
-		eors = eor.eors(families)
-		logger.message(self.me(">> UPDATE (eors)"))
-		self.connection.write(eors)
-		return eor.announced()
-
-	def new_update (self):
-		asn4 = not not self.peer.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
-		# Do not try to join the message and write all in one go as it causes issue if the size is bigger than the MTU
-		# Python 2.5.2 for example send partial data which BGP decoders then take as garbage.
-		count = 0
-		for update in self._delta.update(asn4,self.neighbor.local_as,self.neighbor.peer_as):
-			count += 1
-			self.connection.write(update)
-			yield count
 
 	def new_keepalive (self,force=False):
 		left = int(self.connection.last_write + self.neighbor.hold_time.keepalive() - time.time())
@@ -246,6 +221,65 @@ class Protocol (object):
 
 	def new_notification (self,notification):
 		return self.connection.write(notification.message())
+
+	# messages buffered in case of failure
+
+	def buffered (self):
+		return self._messages.get(self.neighbor.peer_as,[]) != []
+
+	def _backlog (self):
+		backlog = self._messages.get(self.neighbor.peer_as,[])
+		count = 0
+		while backlog:
+			count += 1
+			name,update = backlog[0]
+			written = self.connection.write(update)
+			if written:
+				logger.message(self.me(">> DEFERED %s" % name))
+				backlog.pop(0)
+				yield count
+				continue
+			logger.message(self.me(">> DEFERED %s STILL NOT ABLE TO SEND" % name))
+			break
+		self._messages[self.neighbor.peer_as] = backlog
+
+	def _announce (self,name,generator):
+		# Do not try to join the message and write all in one go as it causes issue if the size is bigger than the MTU
+		# Python 2.5.2 for example send partial data which BGP decoders then take as garbage.
+		count = 0
+		for update in generator:
+			count += 1
+			if self._messages[self.neighbor.peer_as]:
+				logger.message(self.me(">> %s could not be sent, some messages are still in the buffer" % name))
+				self._messages[self.neighbor.peer_as].append((name,update))
+				continue
+			written = self.connection.write(update)
+			if not written:
+				logger.message(self.me(">> %s buffered" % name))
+				self._messages[self.neighbor.peer_as].append((name,update))
+			yield count
+
+	def new_announce (self):
+		for answer in self._backlog():
+			yield answer
+		asn4 = not not self.peer.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
+		for answer in self._announce('UPDATE',self._delta.announce(asn4,self.neighbor.local_as,self.neighbor.peer_as)):
+			yield answer
+
+	def new_update (self):
+		for answer in self._backlog():
+			yield answer
+		asn4 = not not self.peer.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
+		for answer in self._announce('UPDATE',self._delta.update(asn4,self.neighbor.local_as,self.neighbor.peer_as)):
+			yield answer
+
+	def new_eors (self,families):
+		for answer in self._backlog():
+			pass
+		eor = EOR()
+		eors = eor.eors(families)
+		for answer in self._announce('EOR',eors):
+			pass
 
 	# Message Factory .................................................
 
