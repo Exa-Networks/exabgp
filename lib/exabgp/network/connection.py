@@ -11,6 +11,7 @@ import os
 import struct
 import time
 import socket
+import errno
 import select
 
 from exabgp.utils import hexa,trace
@@ -20,11 +21,18 @@ from exabgp.message import Failure
 from exabgp.log import Logger,LazyFormat
 logger = Logger()
 
+errno_block = set((
+	errno.EAGAIN, errno.EWOULDBLOCK,
+	errno.EINTR, errno.EDEADLK,
+))
+
 class Connection (object):
 	def __init__ (self,peer,local,md5,ttl):
 		self.last_read = 0
 		self.last_write = 0
 		self.peer = peer
+
+		self._buffer = []
 
 		logger.wire("Opening connection to %s" % self.peer)
 
@@ -108,17 +116,26 @@ class Connection (object):
 			raise Failure('Problem while reading data from the network:  %s ' % str(e))
 
 	def write (self,data):
+		self._buffer.append(data)
+		data = ''.join(self._buffer[:2])
 		try:
 			logger.wire(LazyFormat("%15s SENT " % self.peer,hexa,data))
 			r = self.io.send(data)
 			self.last_write = time.time()
+			if len(self._buffer) >=2:
+				self._buffer = self._buffer[2:]
+			else:
+				self._buffer = self._buffer[1:]
 			return r
 		except socket.error, e:
 			# Broken pipe, we ignore as we want to make sure if there is data to read before failing
-			if getattr(e,'errno',None) != 32:
-				self.close()
-				logger.wire("%15s %s" % (self.peer,trace()))
-				raise Failure('Problem while writing data to the network: %s' % str(e))
+			failure = getattr(e,'errno',None)
+			# if failure != errno.EPIPE: #32  ??
+			if failure in errno_block:
+				return 0
+			self.close()
+			logger.wire("%15s %s" % (self.peer,trace()))
+			raise Failure('Problem while writing data to the network: %s' % str(e))
 
 	def close (self):
 		try:
