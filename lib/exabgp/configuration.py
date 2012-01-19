@@ -661,7 +661,7 @@ class Configuration (object):
 
 		# ignore if the request is for an aggregate, or the same size
 		mask = route.nlri.mask
-		split = route[AttributeID.INTERNAL_SPLIT]
+		split = route.attributes[AttributeID.INTERNAL_SPLIT]
 		if mask >= split:
 			return True
 
