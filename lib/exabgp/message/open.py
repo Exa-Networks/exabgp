@@ -224,7 +224,9 @@ class Capabilities (dict):
 				r += ['Graceful Restart']
 			elif key == self.FOUR_BYTES_ASN:
 				r += ['4Bytes AS %d' % self[key]]
-			elif key == self.MULTISESSION:
+			elif key == self.MULTISESSION_BGP:
+				r += ['Multi Session']
+			elif key == self.MULTISESSION_BGP_OLD:
 				r += ['Multi Session']
 			elif key in self.reserved:
 				r += ['private use capability %d' % key]
