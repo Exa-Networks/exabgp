@@ -115,6 +115,8 @@ class Connection (object):
 			self.close()
 			raise Failure('Problem while reading data from the network:  %s ' % str(e))
 
+	# XXX: using a buffer here is an HORRIBLE FIX, hopefully it will fix most of the problem seen but it is really
+	# XXX: the issue is that we could wait for a message when we _think_ we sent the data (and it is not the case)
 	def write (self,data):
 		self._buffer.append(data)
 		data = ''.join(self._buffer[:2])
