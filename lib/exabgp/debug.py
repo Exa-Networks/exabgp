@@ -25,6 +25,12 @@ def bug_report (type, value, trace):
 	print "-"*80
 	print
 	print
+	print '-- Version'
+	print
+	print
+	print sys.version
+	print
+	print
 	print "-- Configuration"
 	print
 	print
