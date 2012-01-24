@@ -13,6 +13,7 @@ fi
 export PYTHONPATH=$path/lib:/usr/share/exabgp/lib/2.0.3
 export ETC=$path/etc/exabgp
 
+INTERPRETER=`which $INTERPRETER`
 PYPY=`which pypy`
 PYTHON27=`which python2.7`
 PYTHON26=`which python2.6`
