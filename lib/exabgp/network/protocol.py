@@ -234,9 +234,10 @@ class Protocol (object):
 			count += 1
 			name,update = backlog[0]
 			written = self.connection.write(update)
-			if written:
+			if written != len(update):
 				logger.message(self.me(">> DEFERED %s" % name))
 				backlog.pop(0)
+				backlog.insert(0,update[written:])
 				yield count
 				continue
 			logger.message(self.me(">> DEFERED %s STILL NOT ABLE TO SEND" % name))
@@ -254,9 +255,9 @@ class Protocol (object):
 				self._messages[self.neighbor.peer_as].append((name,update))
 				continue
 			written = self.connection.write(update)
-			if not written:
+			if written != len(update):
 				logger.message(self.me(">> %s buffered" % name))
-				self._messages[self.neighbor.peer_as].append((name,update))
+				self._messages[self.neighbor.peer_as].append((name,update[written:]))
 			yield count
 
 	def new_announce (self):

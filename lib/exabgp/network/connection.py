@@ -124,7 +124,7 @@ class Connection (object):
 		except socket.error, e:
 			failure = getattr(e,'errno',None)
 			if failure in errno_block:
-				return 0
+				return r
 			self.close()
 			logger.wire("%15s %s" % (self.peer,trace()))
 			raise Failure('Problem while writing data to the network: %s' % str(e))
