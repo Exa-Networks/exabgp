@@ -125,7 +125,7 @@ class Protocol (object):
 		data = self.connection.read(length)
 
 		if len(data) != length:
-			raise Notify(ord(msg),0)
+			raise Notify(ord(msg),0,'buffer underrun when reading on socket')
 
 		if msg == Notification.TYPE:
 			raise Notification(ord(data[0]),ord(data[1]))
@@ -213,7 +213,10 @@ class Protocol (object):
 
 	def new_keepalive (self,force=False):
 		left = int(self.connection.last_write + self.neighbor.hold_time.keepalive() - time.time())
-		if force or left <= 0:
+		backlog = self._messages.get(self.neighbor.peer_as,[])
+		if backlog:
+			self._backlog()
+		elif (force or left <= 0):
 			k = KeepAlive()
 			self.connection.write(k.message())
 			return left,k

@@ -8,11 +8,14 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
 import os
+import sys
 import struct
 import time
 import socket
+import fcntl
 import errno
 import select
+import array
 
 from exabgp.utils import hexa,trace
 from exabgp.structure.address import AFI
@@ -25,6 +28,13 @@ errno_block = set((
 	errno.EAGAIN, errno.EWOULDBLOCK,
 	errno.EINTR, errno.EDEADLK,
 ))
+
+SIOCOUTQ = 0x5411
+SIOCINQ  = 0x541B
+FIONSPACE = 0x0fff3976
+# From NetBSD
+# define _IOR(x,y,z)    (0x0fff3900|y)
+# define FIONSPACE       _IOR('f', 118, int)     /* get space in send queue */
 
 class Connection (object):
 	def __init__ (self,peer,local,md5,ttl):
@@ -51,6 +61,12 @@ class Connection (object):
 			try:
 				self.io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
 			except AttributeError:
+				pass
+			try:
+				# diable Nagle's algorithm (no grouping of packets)
+				self.io.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+			except AttributeError:
+				logger.warning("wire","Could not diable nagle's algorithm for %s" % self.peer)
 				pass
 			self.io.settimeout(1)
 			if peer.afi == AFI.ipv4:
@@ -94,12 +110,32 @@ class Connection (object):
 			self.close()
 			raise Failure('Could not connect to peer (if you use MD5, check your passwords): %s' % str(e))
 
+		if sys.platform.startswith('linux'):
+			self.socket_capacity = self.io.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
+			self._free = self._free_linux
+			logger.wire('using linux fcntl to figure out tcp buffer size')
+		elif sys.platform.startswith('darwin') or sys.platform.startswith('freebsd'):
+			logger.wire('using bsd fcntl to figure out tcp buffer size')
+			self._free = self._free_bsd
+			self._free('')
+		else:
+			self._free = lambda self,message: True
+
 	def pending (self):
 		r,_,_ = select.select([self.io,],[],[],0)
 		if r: return True
 		return False
 
-	# File like interface
+	def _free_linux (self,message):
+		queued = array.array('i', [-1])
+		fcntl.ioctl(self.io.fileno(), SIOCOUTQ, queued, True)
+		return self.socket_capacity - queued[0] >= len(message) + 19 # 19 is the size of a KEEPALIVE
+
+	def _free_bsd (self,message):
+		available = array.array('i', [-1])
+		fcntl.ioctl(self.io.fileno(), FIONSPACE, available, True)
+		print "free space is", type(available[0]), available[0]
+		return available[0] >= len(message) + 19 # 19 is the size of a KEEPALIVE
 
 	def read (self,number):
 		if number == 0: return ''
@@ -116,6 +152,8 @@ class Connection (object):
 			raise Failure('Problem while reading data from the network:  %s ' % str(e))
 
 	def write (self,data):
+		if not self._free(data):
+			return 0
 		try:
 			logger.wire(LazyFormat("%15s SENT " % self.peer,hexa,data))
 			r = self.io.send(data)
@@ -124,7 +162,7 @@ class Connection (object):
 		except socket.error, e:
 			failure = getattr(e,'errno',None)
 			if failure in errno_block:
-				return r
+				return 0
 			self.close()
 			logger.wire("%15s %s" % (self.peer,trace()))
 			raise Failure('Problem while writing data to the network: %s' % str(e))
