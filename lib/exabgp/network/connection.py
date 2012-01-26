@@ -25,16 +25,16 @@ from exabgp.log import Logger,LazyFormat
 logger = Logger()
 
 errno_block = set((
+	errno.EINPROGRESS, errno.EALREADY,
 	errno.EAGAIN, errno.EWOULDBLOCK,
 	errno.EINTR, errno.EDEADLK,
 ))
 
-SIOCOUTQ = 0x5411
-SIOCINQ  = 0x541B
-FIONSPACE = 0x0fff3976
-# From NetBSD
-# define _IOR(x,y,z)    (0x0fff3900|y)
-# define FIONSPACE       _IOR('f', 118, int)     /* get space in send queue */
+errno_fatal = set((
+	errno.EBADF, errno.ECONNRESET,
+	errno.ENOTCONN, errno.ESHUTDOWN,
+	errno.ECONNABORTED, errno.EPIPE,
+))
 
 class Connection (object):
 	def __init__ (self,peer,local,md5,ttl):
@@ -110,32 +110,15 @@ class Connection (object):
 			self.close()
 			raise Failure('Could not connect to peer (if you use MD5, check your passwords): %s' % str(e))
 
-		if sys.platform.startswith('linux'):
-			self.socket_capacity = self.io.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
-			self._free = self._free_linux
-			logger.wire('using linux fcntl to figure out tcp buffer size')
-		elif sys.platform.startswith('darwin') or sys.platform.startswith('freebsd'):
-			logger.wire('using bsd fcntl to figure out tcp buffer size')
-			self._free = self._free_bsd
-			self._free('')
-		else:
-			self._free = lambda self,message: True
-
 	def pending (self):
 		r,_,_ = select.select([self.io,],[],[],0)
 		if r: return True
 		return False
 
-	def _free_linux (self,message):
-		queued = array.array('i', [-1])
-		fcntl.ioctl(self.io.fileno(), SIOCOUTQ, queued, True)
-		return self.socket_capacity - queued[0] >= len(message) + 19 # 19 is the size of a KEEPALIVE
-
-	def _free_bsd (self,message):
-		available = array.array('i', [-1])
-		fcntl.ioctl(self.io.fileno(), FIONSPACE, available, True)
-		print "free space is", type(available[0]), available[0]
-		return available[0] >= len(message) + 19 # 19 is the size of a KEEPALIVE
+	def ready (self):
+		_,w,_ = select.select([],[self.io,],[],0)
+		if w: return True
+		return False
 
 	def read (self,number):
 		if number == 0: return ''
@@ -152,17 +135,18 @@ class Connection (object):
 			raise Failure('Problem while reading data from the network:  %s ' % str(e))
 
 	def write (self,data):
-		if not self._free(data):
-			return 0
+		if not self.ready():
+			return False
 		try:
 			logger.wire(LazyFormat("%15s SENT " % self.peer,hexa,data))
-			r = self.io.send(data)
+			self.io.sendall(data)
 			self.last_write = time.time()
-			return r
+			return True
 		except socket.error, e:
-			failure = getattr(e,'errno',None)
-			if failure in errno_block:
-				return 0
+			# Must never happen as we are performing a select before the write
+			#failure = getattr(e,'errno',None)
+			#if failure in errno_block:
+			#	return False
 			self.close()
 			logger.wire("%15s %s" % (self.peer,trace()))
 			raise Failure('Problem while writing data to the network: %s' % str(e))

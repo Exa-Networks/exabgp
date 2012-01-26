@@ -21,7 +21,7 @@ from exabgp.structure.address    import AFI,SAFI
 from exabgp.structure.ip         import BGPPrefix,Inet,to_IP
 from exabgp.structure.asn        import ASN,AS_TRANS
 from exabgp.network.connection   import Connection
-from exabgp.message              import Message,defix
+from exabgp.message              import Message,defix,Failure
 from exabgp.message.nop          import NOP
 from exabgp.message.open         import Open,Unknown,Parameter,Capabilities,RouterID,MultiProtocol,RouteRefresh,CiscoRouteRefresh,MultiSession,Graceful
 from exabgp.message.update       import Update
@@ -208,17 +208,27 @@ class Protocol (object):
 
 	def new_open (self,restarted):
 		o = Open(4,self.neighbor.local_as,self.neighbor.router_id.ip,Capabilities().default(self.neighbor,restarted),self.neighbor.hold_time)
-		self.connection.write(o.message())
+		if not self.connection.write(o.message()):
+			raise Failure('Could not send open')
 		return o
 
 	def new_keepalive (self,force=False):
 		left = int(self.connection.last_write + self.neighbor.hold_time.keepalive() - time.time())
-		backlog = self._messages.get(self.neighbor.peer_as,[])
-		if backlog:
-			self._backlog()
-		elif (force or left <= 0):
-			k = KeepAlive()
+		k = KeepAlive()
+		m = k.message()
+		if force:
+			written = self.connection.write(k.message())
+			if not written:
+				logger.message(self.me(">> KEEPALIVE buffered"))
+				self._messages[self.neighbor.peer_as].append(('KEEPALIVE',m))
+			return left,k
+		if left <= 0:
+			for message in self._backlog(10):
+				pass
 			self.connection.write(k.message())
+			if not written:
+				logger.message(self.me(">> KEEPALIVE buffered"))
+				self._messages[self.neighbor.peer_as].append(('KEEPALIVE',m))
 			return left,k
 		return left,None
 
@@ -230,21 +240,20 @@ class Protocol (object):
 	def buffered (self):
 		return self._messages.get(self.neighbor.peer_as,[]) != []
 
-	def _backlog (self):
+	def _backlog (self,maximum=0):
 		backlog = self._messages.get(self.neighbor.peer_as,[])
 		count = 0
 		while backlog:
 			count += 1
 			name,update = backlog[0]
 			written = self.connection.write(update)
-			if written != len(update):
-				logger.message(self.me(">> DEFERED %s" % name))
-				backlog.pop(0)
-				backlog.insert(0,update[written:])
-				yield count
-				continue
-			logger.message(self.me(">> DEFERED %s STILL NOT ABLE TO SEND" % name))
-			break
+			if not written:
+				break
+			logger.message(self.me(">> DEBUFFERED %s" % name))
+			backlog.pop(0)
+			yield count
+			if maximum and count >= maximum:
+				break
 		self._messages[self.neighbor.peer_as] = backlog
 
 	def _announce (self,name,generator):
@@ -258,9 +267,9 @@ class Protocol (object):
 				self._messages[self.neighbor.peer_as].append((name,update))
 				continue
 			written = self.connection.write(update)
-			if written != len(update):
+			if not written:
 				logger.message(self.me(">> %s buffered" % name))
-				self._messages[self.neighbor.peer_as].append((name,update[written:]))
+				self._messages[self.neighbor.peer_as].append((name,update))
 			yield count
 
 	def new_announce (self):

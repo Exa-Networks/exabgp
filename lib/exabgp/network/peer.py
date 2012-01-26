@@ -155,6 +155,7 @@ class Peer (object):
 			count = 0
 			for count in self.bgp.new_announce():
 				yield True
+			self._updates = self.bgp.buffered()
 			if count:
 				logger.message(self.me('>> %d UPDATE(s)' % count))
 
