@@ -225,7 +225,7 @@ class Protocol (object):
 		if left <= 0:
 			for message in self._backlog(10):
 				pass
-			self.connection.write(k.message())
+			written = self.connection.write(k.message())
 			if not written:
 				logger.message(self.me(">> KEEPALIVE buffered"))
 				self._messages[self.neighbor.peer_as].append(('KEEPALIVE',m))
