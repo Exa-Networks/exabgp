@@ -124,6 +124,7 @@ class _Logger (object):
 				self._syslog.debug(self._prefixed(level,source,line))
 			else:
 				print self._prefixed(level,source,line)
+				sys.stdout.flush()
 
 	def info (self,message,source='',level='INFO'):
 		for line in message.split('\n'):
@@ -131,6 +132,7 @@ class _Logger (object):
 				self._syslog.info(self._prefixed(level,source,line))
 			else:
 				print self._prefixed(level,source,line)
+				sys.stdout.flush()
 
 	def warning (self,message,source='',level='WARNING'):
 		for line in message.split('\n'):
@@ -138,6 +140,7 @@ class _Logger (object):
 				self._syslog.warning(self._prefixed(level,source,line))
 			else:
 				print self._prefixed(level,source,line)
+				sys.stdout.flush()
 
 	def error (self,message,source='',level='ERROR'):
 		for line in message.split('\n'):
@@ -145,6 +148,7 @@ class _Logger (object):
 				self._syslog.error(self._prefixed(level,source,line))
 			else:
 				print self._prefixed(level,source,line)
+				sys.stdout.flush()
 
 	def critical (self,message,source='',level='CRITICAL'):
 		for line in message.split('\n'):
@@ -152,6 +156,7 @@ class _Logger (object):
 				self._syslog.critical(self._prefixed(level,source,line))
 			else:
 				print self._prefixed(level,source,line)
+				sys.stdout.flush()
 
 	# show the message on the wire 
 	def wire (self,message):
