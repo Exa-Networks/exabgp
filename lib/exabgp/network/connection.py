@@ -114,9 +114,8 @@ class Connection (object):
 		try:
 			r,_,_ = select.select([self.io,],[],[],0)
 		except select.error,e:
-			if getattr(e,'errno',None) in (errno.EINTR,):
-				# XXX: is this an issue with SIGALRM and others ?
-				raise KeyboardInterrupt('SIGNAL received in select')
+			if getattr(e,'errno',None) in errno_block:
+				return False
 			raise
 		if r: return True
 		return False
@@ -125,9 +124,8 @@ class Connection (object):
 		try:
 			_,w,_ = select.select([],[self.io,],[],0)
 		except select.error,e:
-			if getattr(e,'errno',None) in (errno.EINTR,):
-				# XXX: is this an issue with SIGALRM and others ?
-				raise KeyboardInterrupt('SIGNAL received in select')
+			if getattr(e,'errno',None) in errno_block:
+				return False
 			raise
 		if w: return True
 		return False
