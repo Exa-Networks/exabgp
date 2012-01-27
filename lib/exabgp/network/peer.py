@@ -250,18 +250,27 @@ class Peer (object):
 			logger.warning(self.me('Sending Notification (%d,%d) [%s] %s' % (e.code,e.subcode,str(e),e.data)))
 			try:
 				self.bgp.new_notification(e)
+			except Failure:
+				pass
+			try:
 				self.bgp.close()
 			except Failure:
 				pass
 			return
 		except Notification, e:
 			logger.warning(self.me('Received Notification (%d,%d) from peer %s' % (e.code,e.subcode,str(e))))
-			self.bgp.close()
+			try:
+				self.bgp.close()
+			except Failure:
+				pass
 			return
 		except Failure, e:
 			logger.warning(self.me(str(e)),'connection')
 			self._more_skip()
-			self.bgp.close()
+			try:
+				self.bgp.close()
+			except Failure:
+				pass
 			return
 		except Exception, e:
 			logger.warning(self.me('UNHANDLED EXCEPTION'))
