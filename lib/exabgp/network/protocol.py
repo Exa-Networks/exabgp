@@ -94,11 +94,13 @@ class Protocol (object):
 		if not self.connection.pending():
 			return NOP('')
 
-		data = self.connection.read(19)
-
-		# It seems that select tells us there is data even when there isn't
-		if not data:
-			raise NotConnected(self.neighbor.peer_address)
+			length = 19
+			data = ''
+			while length:
+				if self.connection.pending():
+					delta = self.connection.read(length)
+					data += delta
+					length -= len(delta)
 
 		if data[:16] != Message.MARKER:
 			# We are speaking BGP - send us a valid Marker
