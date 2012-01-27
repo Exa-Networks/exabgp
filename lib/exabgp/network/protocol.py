@@ -250,7 +250,8 @@ class Protocol (object):
 	def _backlog (self,maximum=0):
 		backlog = self._messages.get(self.neighbor.peer_as,[])
 		if backlog:
-			self._frozen += 1
+			if not self.connection.zero():
+				self._frozen += 1
 			if self._frozen > 10:
 				raise Failure('peer %s not reading on socket - killing session' % self.neighbor.peer_as)
 			logger.message(self.me("updable to send route for %d/10 iteration" % self._frozen))

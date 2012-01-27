@@ -129,7 +129,14 @@ class Connection (object):
 			if errno in errno_block:
 				return False
 			raise
-		if w: return True
+		if not w: return False
+		return not self.zero()
+
+	def zero (self):
+		queued = array.array('i', [-1])
+		fcntl.ioctl(self.io.fileno(), SIOCOUTQ, queued, True)
+		if queue[0] == 0:
+			return True
 		return False
 
 	def read (self,number):
