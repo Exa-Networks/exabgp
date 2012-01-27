@@ -126,8 +126,9 @@ class Protocol (object):
 		data = ''
 		while length:
 			if self.connection.pending():
-				data += self.connection.read(length)
-				length -= len(data)
+				delta = self.connection.read(length)
+				data += delta
+				length -= len(delta)
 
 		if msg == Notification.TYPE:
 			raise Notification(ord(data[0]),ord(data[1]))
