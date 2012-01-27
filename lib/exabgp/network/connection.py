@@ -137,7 +137,7 @@ class Connection (object):
 	def zero (self):
 		queued = array.array('i', [-1])
 		fcntl.ioctl(self.io.fileno(), SIOCOUTQ, queued, True)
-		if queue[0] == 0:
+		if queued[0] == 0:
 			return True
 		return False
 
