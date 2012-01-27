@@ -111,12 +111,24 @@ class Connection (object):
 			raise Failure('Could not connect to peer (if you use MD5, check your passwords): %s' % str(e))
 
 	def pending (self):
-		r,_,_ = select.select([self.io,],[],[],0)
+		try:
+			r,_,_ = select.select([self.io,],[],[],0)
+		except select.error,e:
+			if getattr(e,'errno',None) in (errno.EINTR)
+				# XXX: is this an issue with SIGALRM and others ?
+				raise KeyboardInterrupt('SIGNAL received in select')
+			raise
 		if r: return True
 		return False
 
 	def ready (self):
-		_,w,_ = select.select([],[self.io,],[],0)
+		try:
+			_,w,_ = select.select([],[self.io,],[],0)
+		except select.error,e:
+			if getattr(e,'errno',None) in (errno.EINTR)
+				# XXX: is this an issue with SIGALRM and others ?
+				raise KeyboardInterrupt('SIGNAL received in select')
+			raise
 		if w: return True
 		return False
 

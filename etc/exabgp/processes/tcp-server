@@ -73,7 +73,13 @@ class Control (StreamRequestHandler):
 				sys.stdout.flush()
 				r, waiting_answer = True, True
 				while r or waiting_answer:
-					r,_,_ = select.select([sys.stdin], [], [], 1.0)
+					try:
+						r,_,_ = select.select([sys.stdin], [], [], 1.0)
+					except select.error,e:
+						if getattr(e,'errno',None) in (errno.EINTR)
+							# XXX: is this an issue with SIGALRM and others ?
+							raise KeyboardInterrupt('SIGNAL received in select')
+						raise
 					if r:
 						waiting_answer = False
 						response = sys.stdin.readline()
