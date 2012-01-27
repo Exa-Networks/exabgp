@@ -19,6 +19,7 @@ from exabgp.version import version
 from exabgp.daemon import Daemon
 from exabgp.processes import Processes
 from exabgp.configuration import Configuration
+from exabgp.network.connnection import errno_block
 
 from exabgp.log import Logger
 logger = Logger()
@@ -122,7 +123,12 @@ class Supervisor (object):
 							break
 					duration = time.time() - start
 					if ios:
-						read,_,_ = select.select(ios,[],[],max(supervisor_speed-duration,0))
+						try:
+							read,_,_ = select.select(ios,[],[],max(supervisor_speed-duration,0))
+						except select.error,e:
+							if getattr(e,'errno',None) in errno_block:
+								return False
+							raise
 					else:
 						if duration < supervisor_speed:
 							time.sleep(max(supervisor_speed-duration,0))
