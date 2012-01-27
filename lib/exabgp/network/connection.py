@@ -135,10 +135,7 @@ class Connection (object):
 		return not self.zero()
 
 	def zero (self):
-		queued = array.array('i', [-1])
-		fcntl.ioctl(self.io.fileno(), SIOCOUTQ, queued, True)
-		if queued[0] == 0:
-			return True
+		# The code here was totally wrong - time for me to get some sleep
 		return False
 
 	def read (self,number):
