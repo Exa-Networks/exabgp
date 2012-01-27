@@ -1,5 +1,4 @@
-/bin/bash: 2010/10/22: No such file or directory
-ssword none
+password none
 enable password none
 log file /var/log/quagga/bgpd informational
 !
