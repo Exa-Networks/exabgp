@@ -19,7 +19,7 @@ from exabgp.version import version
 from exabgp.daemon import Daemon
 from exabgp.processes import Processes
 from exabgp.configuration import Configuration
-from exabgp.network.connnection import errno_block
+from exabgp.network.connection import errno_block
 
 from exabgp.log import Logger
 logger = Logger()
