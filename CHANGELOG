@@ -7,8 +7,10 @@ Version 2.0.3 - ..th of ....... 2012 (stable version)
  * Improvement: now sending help "neighbor <ip> up" when a neighbor goes up
  * Fix: now sending correctly "neighbor <ip> down" when a neighbor goes down
  * Fix: a bug when parsing "split" configuration
- * Improvement: Buffering message we can not send if sockets return a transient failure
  * Fix: sending routes faster than a router can accept does not cause the BGP session to go down
+    problem found by Eric Nghia Nguyen Duy (thank you for giving me access to his lab to fix the issue)
+ * Improvement: Buffering message we can not send if sockets return a transient failure
+ * Improvement: Limiting how long and how deep the buffer are kept before we kill the session
 
 Version 2.0.2 - 1st of January 2012
  * Copyright: updated all copyright notice (welcome to 2012)

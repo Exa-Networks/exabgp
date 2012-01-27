@@ -57,6 +57,7 @@ class Protocol (object):
 		self._delta = Delta(Table(peer))
 		self._asn4 = False
 		self._messages = {}
+		self._frozen = 0
 
 	def me (self,message):
 		return "Peer %15s ASN %-7s %s" % (self.peer.neighbor.peer_address,self.peer.neighbor.peer_as,message)
@@ -221,14 +222,16 @@ class Protocol (object):
 			if not written:
 				logger.message(self.me(">> KEEPALIVE buffered"))
 				self._messages[self.neighbor.peer_as].append(('KEEPALIVE',m))
+			else:
+				self._frozen = 0
 			return left,k
 		if left <= 0:
-			for message in self._backlog(10):
-				pass
 			written = self.connection.write(k.message())
 			if not written:
 				logger.message(self.me(">> KEEPALIVE buffered"))
 				self._messages[self.neighbor.peer_as].append(('KEEPALIVE',m))
+			else:
+				self._frozen = 0
 			return left,k
 		return left,None
 
@@ -242,6 +245,15 @@ class Protocol (object):
 
 	def _backlog (self,maximum=0):
 		backlog = self._messages.get(self.neighbor.peer_as,[])
+		if backlog:
+			self._frozen += 1
+			if self._frozen > 10:
+				raise Failure('peer %s not reading on socket - killing session' % self.neighbor.peer_as)
+			logger.message(self.me("updable to send route for %d/10 iteration" % self._frozen))
+			nb_backlog = len(backlog)
+			if nb_backlog > 200000:
+				raise Failure('over 200,000 routes buffered for peer %s - killing session' % self.neighbor.peer_as)	
+			logger.message(self.me("backlog of %d routes" % nb_backlog))
 		count = 0
 		while backlog:
 			count += 1
@@ -251,6 +263,7 @@ class Protocol (object):
 				break
 			logger.message(self.me(">> DEBUFFERED %s" % name))
 			backlog.pop(0)
+			self._frozen = 0
 			yield count
 			if maximum and count >= maximum:
 				break
