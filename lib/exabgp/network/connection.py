@@ -114,7 +114,8 @@ class Connection (object):
 		try:
 			r,_,_ = select.select([self.io,],[],[],0)
 		except select.error,e:
-			if getattr(e,'errno',None) in errno_block:
+			errno,message = e.args 
+			if errno in errno_block:
 				return False
 			raise
 		if r: return True
@@ -124,7 +125,8 @@ class Connection (object):
 		try:
 			_,w,_ = select.select([],[self.io,],[],0)
 		except select.error,e:
-			if getattr(e,'errno',None) in errno_block:
+			errno,message = e.args 
+			if errno in errno_block:
 				return False
 			raise
 		if w: return True
