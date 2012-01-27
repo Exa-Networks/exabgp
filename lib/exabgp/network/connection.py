@@ -24,6 +24,8 @@ from exabgp.message import Failure
 from exabgp.log import Logger,LazyFormat
 logger = Logger()
 
+SIOCOUTQ = 0x5411
+
 errno_block = set((
 	errno.EINPROGRESS, errno.EALREADY,
 	errno.EAGAIN, errno.EWOULDBLOCK,
