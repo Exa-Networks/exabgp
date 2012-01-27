@@ -126,7 +126,7 @@ class Protocol (object):
 		data = self.connection.read(length)
 
 		if len(data) != length:
-			raise Notify(ord(msg),0,'buffer underrun when reading on socket')
+			raise Notify(ord(msg),0,'buffer underrun when reading on socket read %d expecing %d' % (len(data),length))
 
 		if msg == Notification.TYPE:
 			raise Notification(ord(data[0]),ord(data[1]))
