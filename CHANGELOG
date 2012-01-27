@@ -11,6 +11,8 @@ Version 2.0.3 - ..th of ....... 2012 (stable version)
     problem found by Eric Nghia Nguyen Duy (thank you for giving me access to his lab to fix the issue)
  * Improvement: Buffering message we can not send if sockets return a transient failure
  * Improvement: Limiting how long and how deep the buffer are kept before we kill the session
+ * Fix: under load we could receive partial messages, read until we have it all
+ * Fix: we were not always sending the 'down' message to handlers
 
 Version 2.0.2 - 1st of January 2012
  * Copyright: updated all copyright notice (welcome to 2012)
