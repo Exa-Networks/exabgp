@@ -94,13 +94,13 @@ class Protocol (object):
 		if not self.connection.pending():
 			return NOP('')
 
-			length = 19
-			data = ''
-			while length:
-				if self.connection.pending():
-					delta = self.connection.read(length)
-					data += delta
-					length -= len(delta)
+		length = 19
+		data = ''
+		while length:
+			if self.connection.pending():
+				delta = self.connection.read(length)
+				data += delta
+				length -= len(delta)
 
 		if data[:16] != Message.MARKER:
 			# We are speaking BGP - send us a valid Marker
