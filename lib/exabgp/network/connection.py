@@ -132,11 +132,7 @@ class Connection (object):
 				return False
 			raise
 		if not w: return False
-		return not self.zero()
-
-	def zero (self):
-		# The code here was totally wrong - time for me to get some sleep
-		return False
+		return True
 
 	def read (self,number):
 		if number == 0: return ''

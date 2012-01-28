@@ -252,10 +252,9 @@ class Protocol (object):
 	def _backlog (self,maximum=0):
 		backlog = self._messages.get(self.neighbor.peer_as,[])
 		if backlog:
-			if not self.connection.zero():
-				if not self._frozen:
-					self._frozen = time.time()
-			if self._frozen + (self.neighbor.hold_time) < time.time():
+			if not self._frozen:
+				self._frozen = time.time()
+			if self.frozen and self._frozen + (self.neighbor.hold_time) < time.time():
 				raise Failure('peer %s not reading on socket - killing session' % self.neighbor.peer_as)
 			logger.message(self.me("unable to send route for %d second (maximum allowed %d)" % (time.time()-self._frozen,self.neighbor.hold_time)))
 			nb_backlog = len(backlog)
