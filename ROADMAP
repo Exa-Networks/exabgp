@@ -1,0 +1,18 @@
+This is an informal roadmap - no promise
+
+ROADMAP
+
+Version 2.0.3
+- usual bug fixes and improvements
+- parse correctly AS4_PATH (seems we do not when we should)
+
+Version 2.0.4
+- usual bug fixes and improvments
+- implement generation and parsing of extended communities
+  http://tools.ietf.org/html/rfc4360
+- group update to up to maximum message size (4096 or more if negociated)
+  http://www.ietf.org/id/draft-ietf-idr-bgp-extended-messages-02.txt
+
+LATER
+- look what fun RFC we could implement from the list at 
+  http://code.google.com/p/exabgp/wiki/RFC
