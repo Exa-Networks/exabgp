@@ -83,9 +83,13 @@ class _Logger (object):
 		if os.environ.get('DEBUG_RIB','0') == '0': self._rib = False
 		else: self._rib = True
 
-		if os.environ.get('DEBUG_TIMER','0') == '0': self._timers = False
-		else: self._timers = True
+		if os.environ.get('DEBUG_TIMER','0') == '0': self._timer = False
+		else: self._timer = True
 
+		if os.environ.get('DEBUG_ROUTE','0') == '0': self._routes = False
+		else: self._routes = True
+
+		# DEPRECATED, kept for compatibility in 2.0.x series
 		if os.environ.get('DEBUG_ROUTES','0') == '0': self._routes = False
 		else: self._routes = True
 
@@ -97,7 +101,7 @@ class _Logger (object):
 			self._wire = True
 			self._message = True
 			self._rib = True
-			self._timers = True
+			self._timer = True
 			self._routes = True
 
 		if os.environ.get('DEBUG_CORE','0') == '0': self._core = False 
@@ -107,8 +111,8 @@ class _Logger (object):
 			#self._configuration = True
 			#self._wire = True
 			self._message = True
-			self._rib = True
-			self._timers = True
+			#self._rib = True
+			self._timer = True
 			self._routes = True
 
 
@@ -215,7 +219,7 @@ class _Logger (object):
 
 	# show the change of rib table
 	def timers (self,message):
-		if self._timers:
+		if self._timer:
 			self.info(message,'timers')
 		else:
 			self._record(time.localtime(),'timers','info',message)
