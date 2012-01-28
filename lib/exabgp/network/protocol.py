@@ -44,7 +44,6 @@ from exabgp.message.update.attribute.mpurnlri    import MPURNLRI
 from exabgp.log import Logger
 logger = Logger()
 
-MAX_FROZEN = 200
 MAX_BACKLOG = 200000
 
 # README: Move all the old packet decoding in another file to clean up the includes here, as it is not used anyway
@@ -254,10 +253,10 @@ class Protocol (object):
 		backlog = self._messages.get(self.neighbor.peer_as,[])
 		if backlog:
 			if not self.connection.zero():
-				self._frozen += 1
-			if self._frozen > MAX_FROZEN:
+				self._frozen = time.time()
+			if self._frozen + (self.neighbor.hold_time) < time.time():
 				raise Failure('peer %s not reading on socket - killing session' % self.neighbor.peer_as)
-			logger.message(self.me("updable to send route for %d/%d iteration" % (self._frozen,MAX_FROZEN)))
+			logger.message(self.me("updable to send route for %d second (maximum allowed %d)" % (time.time()-self._frozen,self.neighbor.hold_time)))
 			nb_backlog = len(backlog)
 			if nb_backlog > MAX_BACKLOG:
 				raise Failure('over %d routes buffered for peer %s - killing session' % (MAX_BACKLOG,self.neighbor.peer_as))
