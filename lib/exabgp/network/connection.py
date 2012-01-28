@@ -24,7 +24,9 @@ from exabgp.message import Failure
 from exabgp.log import Logger,LazyFormat
 logger = Logger()
 
-SIOCOUTQ = 0x5411
+# If the OS tells us we have data on the socket, 
+# we should never have to wait more than READ_TIMEOUT to be able to read it.
+READ_TIMEOUT = 1
 
 errno_block = set((
 	errno.EINPROGRESS, errno.EALREADY,
@@ -43,6 +45,7 @@ class Connection (object):
 		self.last_read = 0
 		self.last_write = 0
 		self.peer = peer
+		self._loop_start = None
 
 		self._buffer = []
 
@@ -112,7 +115,15 @@ class Connection (object):
 			self.close()
 			raise Failure('Could not connect to peer (if you use MD5, check your passwords): %s' % str(e))
 
-	def pending (self):
+	def pending (self,reset=True):
+		if reset:
+			self._loop_start = None
+		else:
+			if not self._loop_start:
+				self._loop_start = time.time()
+			else:
+				if self._loop_start + READ_TIMEOUT < time.time():
+					raise Failure('Waited for data on a socket for more than %d second(s)' % READ_TIMEOUT)
 		try:
 			r,_,_ = select.select([self.io,],[],[],0)
 		except select.error,e:

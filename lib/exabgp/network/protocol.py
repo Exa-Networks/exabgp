@@ -93,7 +93,8 @@ class Protocol (object):
 	# Read from network .......................................................
 
 	def read_message (self):
-		if not self.connection.pending():
+		# This call reset the time for the timeout in 
+		if not self.connection.pending(True):
 			return NOP('')
 
 		length = 19
