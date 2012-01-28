@@ -3,17 +3,21 @@
 dirname=`dirname $0`
 
 if [ `echo $dirname | grep "^/" -c` -eq 1 ]; then
-        path=$dirname/..
+	echo $path
 else
-        cd `pwd`/$dirname/.. > /dev/null
-        path=`pwd`
-        cd - > /dev/null
+	cd `pwd`/$dirname/.. > /dev/null
+	path=`pwd`
+	cd - > /dev/null
 fi
 
 export PYTHONPATH=$path/lib:/usr/share/exabgp/lib/2.0.3
 export ETC=$path/etc/exabgp
 
-INTERPRETER=`which $INTERPRETER`
+if [ "$INTERPRETER" != "" ]
+then
+	INTERPRETER=`which $INTERPRETER`
+fi
+
 PYPY=`which pypy`
 PYTHON27=`which python2.7`
 PYTHON26=`which python2.6`
