@@ -388,7 +388,12 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		if prg[0] != '/':
-			prg = os.path.join(os.getcwd(),prg)
+			if prg.startswith('etc/exabgp'):
+				parts = prg.split('/')
+				path = [os.environ.get('ETC','etc'),] + parts[2:]
+				prg = os.path.join(*path)
+			else:
+				prg = os.path.join(os.getcwd(),prg)
 		if not os.path.exists(prg):
 			self._error = 'can not locate the the program "%s"' % prg
 			if self.debug: raise
