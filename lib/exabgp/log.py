@@ -104,7 +104,7 @@ class _Logger (object):
 			self._timer = True
 			self._routes = True
 
-		if os.environ.get('DEBUG_CORE','0') == '0': self._core = False 
+		if os.environ.get('DEBUG_CORE','0') == '0':
 			self._supervisor = True
 			self._daemon = True
 			self._processes = True
