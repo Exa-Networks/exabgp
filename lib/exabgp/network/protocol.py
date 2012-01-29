@@ -214,8 +214,14 @@ class Protocol (object):
 
 	# we do not buffer those message in purpose
 
-	def new_open (self,restarted):
-		o = Open(4,self.neighbor.local_as,self.neighbor.router_id.ip,Capabilities().default(self.neighbor,restarted),self.neighbor.hold_time)
+	def new_open (self,restarted,asn4):
+		if asn4:
+			asn = self.neighbor.local_as
+		else:
+			asn = AS_TRANS
+
+		o = Open(4,asn,self.neighbor.router_id.ip,Capabilities().default(self.neighbor,restarted),self.neighbor.hold_time)
+
 		if not self.connection.write(o.message()):
 			raise Failure('Could not send open')
 		return o

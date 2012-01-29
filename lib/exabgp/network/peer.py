@@ -54,7 +54,9 @@ class Peer (object):
 		# The peer was restarted (to know what kind of open to send for graceful restart)
 		self._restarted = FORCE_GRACEFUL
 		self._reset_skip()
-		
+
+		self._asn4 = True
+
 		# The routes we have parsed from our neighbour
 		self._received_routes = []
 		
@@ -123,7 +125,7 @@ class Peer (object):
 
 			self._reset_skip()
 
-			_open = self.bgp.new_open(self._restarted)
+			_open = self.bgp.new_open(self._restarted,self._asn4)
 			logger.message(self.me('>> %s' % _open))
 			yield None
 
@@ -135,6 +137,9 @@ class Peer (object):
 					logger.message(self.me('<< %s' % self.open))
 					yield None
 					break
+				if not self.open.capabilities.announced(FOUR_BYTES_ASN) and _open.asn.asn4():
+					self._asn4 = False
+					raise Notify(2,0,'peer does not speak ASN4 - restarting in compatibility mode')
 				if time.time() - start > max_wait_open: 
 					logger.message(self.me('Waited for an OPEN for too long - killing the session'))
 					raise Notify(1,1,'The client took over %s seconds to send the OPEN, closing' % str(max_wait_open))
