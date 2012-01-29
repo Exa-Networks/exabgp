@@ -93,6 +93,9 @@ class _Logger (object):
 		if os.environ.get('DEBUG_ROUTES','0') == '0': self._routes = False
 		else: self._routes = True
 
+		if os.environ.get('DEBUG_PARSER','0') == '0': self._routes = False
+		else: self._parser = True
+
 		if not os.environ.get('DEBUG_ALL','0') == '0':
 			self._supervisor = True
 			self._daemon = True
@@ -103,6 +106,7 @@ class _Logger (object):
 			self._rib = True
 			self._timer = True
 			self._routes = True
+			self._parser = True
 
 		if os.environ.get('DEBUG_CORE','0') == '0':
 			self._supervisor = True
@@ -114,7 +118,7 @@ class _Logger (object):
 			#self._rib = True
 			self._timer = True
 			self._routes = True
-
+			self._parser = False
 
 		destination = os.environ.get('SYSLOG',None)
 		if destination is None:
@@ -244,6 +248,13 @@ class _Logger (object):
 			self.info(message,'route')
 		else:
 			self._record(time.localtime(),'route','info',message)
+
+	# show how the message received are parsed
+	def parser (self,message):
+		if self._parser:
+			self.info(message,'parser')
+		else:
+			self._record(time.localtime(),'parser','info',message)
 
 def Logger ():
 	if _Logger._instance:
