@@ -466,6 +466,31 @@ class Protocol (object):
 		except IndexError:
 			raise Notify(3,2,data)
 
+	def __new_ASPath (self,data,asn4=False):
+		if asn4:
+			size = 4
+			decoder = 'L' # could it be 'I' as well ?
+		else:
+			size = 2
+			decoder = 'H'
+		stype = ord(data[0])
+		slen = ord(data[1])
+		sdata = data[2:2+(slen*size)]
+
+		ASPS = ASPath(stype)
+		for c in unpack('!'+(decoder*slen),sdata):
+			ASPS.add(c)
+		return ASPS
+
+	def __new_AS4Path (self,data,asn4=False):
+		stype = ord(data[0])
+		slen = ord(data[1])
+		sdata = data[2:2+(slen*size)]
+
+		ASPS = AS4Path(stype)
+		for c in unpack('!LLLL',sdata):
+			ASPS.add(c)
+		return ASPS
 
 	def _AttributesFactory (self,data):
 		if not data:
@@ -494,22 +519,12 @@ class Protocol (object):
 
 		if code == AttributeID.AS_PATH:
 			#logger.debug('parsing as_path')
-			def new_ASPath (data,asn4=False):
-				if asn4:
-					size = 4
-					decoder = 'L' # could it be 'I' as well ?
-				else:
-					size = 2
-					decoder = 'H'
-				stype = ord(data[0])
-				slen = ord(data[1])
-				sdata = data[2:2+(slen*size)]
+			self.attributes.add(self.__new_ASPath(data,self._asn4))
+			return self._AttributesFactory(data[length:])
 
-				ASPS = ASPath(stype)
-				for c in unpack('!'+(decoder*slen),sdata):
-					ASPS.add(c)
-				return ASPS
-			self.attributes.add(new_ASPath(data,self._asn4))
+		if code == AttributeID.AS4_PATH:
+			#logger.debug('parsing as_path')
+			self.attributes.add(self.__new_AS4Path(data,True))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.NEXT_HOP:
