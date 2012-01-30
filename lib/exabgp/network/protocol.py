@@ -477,20 +477,42 @@ class Protocol (object):
 		slen = ord(data[1])
 		sdata = data[2:2+(slen*size)]
 
-		ASPS = ASPath(stype)
+		ASPS = ASPath(asn4,stype)
 		for c in unpack('!'+(decoder*slen),sdata):
 			ASPS.add(c)
 		return ASPS
 
-	def __new_AS4Path (self,data,asn4=False):
+	def __new_AS4Path (self,data):
 		stype = ord(data[0])
 		slen = ord(data[1])
 		sdata = data[2:2+(slen*size)]
 
-		ASPS = AS4Path(stype)
+		ASPS = AS4Path(True,stype)
 		for c in unpack('!LLLL',sdata):
 			ASPS.add(c)
 		return ASPS
+
+	def __merge_attributes (self):
+		as2path = self.attributes[AttributeID.AS_PATH]
+		as4path = self.attributes[AttributeID.AS4_PATH]
+		newASPS = ASPath(True,as2path.asptype,as2path.aspsegment)
+		len2 = len(as2path.aspsegment)
+		len4 = len(as4path.aspsegment)
+
+		if len2 < len4:
+			for asn in as4path.aspsegment:
+				newASPS.add(asn)
+		else:
+			for asn in as4path.aspsegment[:len2-len4]:
+				newASPS.add(asn)
+			for asn in as4path.aspsegment:
+				newASPS.add(asn)
+
+		self.attributes.remove(AttributeID.AS_PATH)
+		self.attributes.remove(AttributeID.AS4_PATH)
+		self.attributes.add(newASPS,True)
+
+		#raise Notify(3,1,'could not merge AS4_PATH in AS_PATH')
 
 	def _AttributesFactory (self,data):
 		if not data:
@@ -512,6 +534,8 @@ class Protocol (object):
 #		if not length:
 #			return self._AttributesFactory(data[length:])
 
+		# XXX: This code does not make sure that attributes are unique - or does it ?
+
 		if code == AttributeID.ORIGIN:
 			#logger.debug('parsing origin')
 			self.attributes.add(Origin(ord(data[0])))
@@ -520,11 +544,15 @@ class Protocol (object):
 		if code == AttributeID.AS_PATH:
 			#logger.debug('parsing as_path')
 			self.attributes.add(self.__new_ASPath(data,self._asn4))
+			if not self._asn4 and self.attributes.announced(AttributeID.AS4_PATH)
+				self.__merge_attributes()
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.AS4_PATH:
 			#logger.debug('parsing as_path')
 			self.attributes.add(self.__new_AS4Path(data,True))
+			if not self._asn4 and self.attributes.announced(AttributeID.AS_PATH)
+				self._merge_attributes()
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.NEXT_HOP:

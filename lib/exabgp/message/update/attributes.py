@@ -63,6 +63,9 @@ class Attributes (dict):
 				self[attribute.ID] = attribute
 			return True
 
+	def remove (self,attrid):
+		self.pop(attrid)
+
 	def _as_path (self,asn4,asp):
 		message = ''
 		# if the peer does not understand ASN4, we need to build a transitive AS4_PATH
