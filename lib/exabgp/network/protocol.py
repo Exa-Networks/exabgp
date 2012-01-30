@@ -37,7 +37,7 @@ from exabgp.message.update.attribute.aspath      import ASPath,AS4Path
 from exabgp.message.update.attribute.nexthop     import NextHop
 from exabgp.message.update.attribute.med         import MED
 from exabgp.message.update.attribute.localpref   import LocalPreference
-from exabgp.message.update.attribute.communities import Community,Communities
+from exabgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities
 #from exabgp.message.update.attribute.mprnlri     import MPRNLRI
 from exabgp.message.update.attribute.mpurnlri    import MPURNLRI
 
@@ -521,9 +521,20 @@ class Protocol (object):
 		while data:
 			community = unpack('!L',data[:4])[0]
 			data = data[4:]
+			if data and len(data) < 4:
+				raise Notify(3,1,'could not decode community %s' % str([hex(ord(_)) for _ in data]))
 			communities.add(Community(community))
 		return communities
 
+	def __new_extended_communities (self,data):
+		communities = ECommunities()
+		while data:
+			community = data[:8]
+			data = data[8:]
+			if data and len(data) < 8:
+				raise Notify(3,1,'could not decode extended community %s' % str([hex(ord(_)) for _ in data]))
+			communities.add(ECommunity(community))
+		return communities
 
 	def _AttributesFactory (self,data):
 		if not data:
@@ -600,7 +611,7 @@ class Protocol (object):
 
 		if code == AttributeID.EXTENDED_COMMUNITY:
 			logger.parser('parsing communities')
-			#self.attributes.add(new_extended_ommunities(data[:length]))
+			self.attributes.add(self.__new_extended_communities(data[:length]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.MP_UNREACH_NLRI:

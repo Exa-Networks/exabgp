@@ -27,6 +27,7 @@ set atomic-aggregate
 set metric 20
 set originator-id 9.8.7.6
 set extcommunity rt 65000:1
+set extcommunity soo 1.2.3.4:5678
 !
 line vty
 !

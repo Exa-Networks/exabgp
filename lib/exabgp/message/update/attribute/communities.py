@@ -7,7 +7,7 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
-from struct import pack
+from struct import pack,unpack
 
 from exabgp.message.update.attribute import AttributeID,Flag,Attribute
 
@@ -101,7 +101,28 @@ class ECommunity (object):
 		return self.community
 
 	def __str__ (self):
-		return '[ ' + ' '.join([hex(ord(c)) for c in self.community]) + ' ]'
+		# XXX: This does not encode transitivity
+		community_type = ord(self.community[0]) & 0x0F
+		community_stype = ord(self.community[1])
+		if community_stype == 0x02:
+			if community_type in (0x00,0x01,0x02):
+				asn = unpack('!H',self.community[2:4])[0]
+				value = unpack('!L',self.community[4:])[0]
+				return "target:%d:%s" % (asn,value)
+		if community_stype == 0x03:
+			if community_type in (0x00,0x02):
+				asn = unpack('!H',self.community[2:4])[0]
+				value = unpack('!L',self.community[4:])[0]
+				return "origin:%d:%s" % (asn,value)
+			if community_type == 0x01:
+				ip = '%s.%s.%s.%s' % unpack('!BBBB',self.community[2:6])
+				asn = unpack('!H',self.community[6:])[0]
+				return "origin:%s:%d" % (ip,asn)
+		h = 0x00
+		for byte in self.community:
+			h <<= 8
+			h += ord(byte)
+		return "0x%016X" % h
 
 	def __repr__ (self):
 		return str(self)
@@ -124,6 +145,8 @@ class ECommunity (object):
 
 class ECommunities (Communities):
 	ID = AttributeID.EXTENDED_COMMUNITY
+
+# =================================================================== FlowSpec Defined Extended Communities
 
 def _to_FlowCommunity (action,data):
 	return ECommunity(pack('!H',action) + data[:6])
