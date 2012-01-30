@@ -516,6 +516,15 @@ class Protocol (object):
 
 		#raise Notify(3,1,'could not merge AS4_PATH in AS_PATH')
 
+	def __new_communities (self,data):
+		communities = Communities()
+		while data:
+			community = unpack('!L',data[:4])[0]
+			data = data[4:]
+			communities.add(Community(community))
+		return communities
+
+
 	def _AttributesFactory (self,data):
 		if not data:
 			return self
@@ -586,14 +595,12 @@ class Protocol (object):
 
 		if code == AttributeID.COMMUNITY:
 			logger.parser('parsing communities')
-			def new_Communities (data):
-				communities = Communities()
-				while data:
-					community = unpack('!L',data[:4])[0]
-					data = data[4:]
-					communities.add(Community(community))
-				return communities
-			self.attributes.add(new_Communities(data[:length]))
+			self.attributes.add(self.__new_communities(data[:length]))
+			return self._AttributesFactory(data[length:])
+
+		if code == AttributeID.EXTENDED_COMMUNITY:
+			logger.parser('parsing communities')
+			#self.attributes.add(new_extended_ommunities(data[:length]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.MP_UNREACH_NLRI:
