@@ -23,6 +23,7 @@ class AttributeID (int):
 	EXTENDED_COMMUNITY = 0x10
 	# RFC 4893
 	AS4_PATH           = 0x11
+	AS4_AGGREGATOR     = 0x12
 	# RFC 4760
 	MP_REACH_NLRI      = 0x0e # 14
 	MP_UNREACH_NLRI    = 0x0f # 15

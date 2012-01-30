@@ -572,12 +572,14 @@ class Protocol (object):
 
 		if code == AttributeID.ATOMIC_AGGREGATE:
 			logger.parser('ignoring atomic-aggregate')
-			# ignore
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.AGGREGATOR:
 			logger.parser('ignoring aggregator')
-			# content is 6 bytes
+			return self._AttributesFactory(data[length:])
+
+		if code == AttributeID.AS4_AGGREGATOR:
+			logger.parser('ignoring as4_aggregator')
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.COMMUNITY:

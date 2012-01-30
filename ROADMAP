@@ -4,7 +4,9 @@ ROADMAP
 
 Version 2.0.3
 - usual bug fixes and improvements
-- parse correctly AS4_PATH (seems we do not when we should)
+- parse and behave correctly for ATOMIC_AGGREGATE (as it is needed to make ExaBGP a full speaker)
+- parse and behave correctly for AGGREGATOR (as it is needed to make ExaBGP a full speaker)
+- parse and behave correctly for AS4_AGGREGATOR (as it is needed to make ExaBGP a full speaker)
 
 Version 2.0.4
 - usual bug fixes and improvments
