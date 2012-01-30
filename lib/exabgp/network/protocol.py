@@ -505,11 +505,10 @@ class Protocol (object):
 			for asn in as4path.aspsegment:
 				newASPS.add(asn)
 		else:
-			for index in range(len2):
-				if index < len4:
-					newASPS.add(as4path.aspsegment[index])
-				else:
-					newASPS.add(as2path.aspsegment[index])
+			for asn in as2path.aspsegment[:-len4]:
+				newASPS.add(asn)
+			for asn in as4path.aspsegment:
+				newASPS.add(asn)
 
 		self.attributes.remove(AttributeID.AS_PATH)
 		self.attributes.remove(AttributeID.AS4_PATH)
