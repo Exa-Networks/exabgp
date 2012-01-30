@@ -33,7 +33,7 @@ from exabgp.message.update.attributes     import Attributes
 from exabgp.message.update.attribute      import AttributeID
 from exabgp.message.update.attribute.flag        import Flag
 from exabgp.message.update.attribute.origin      import Origin
-from exabgp.message.update.attribute.aspath      import ASPath
+from exabgp.message.update.attribute.aspath      import ASPath,AS4Path
 from exabgp.message.update.attribute.nexthop     import NextHop
 from exabgp.message.update.attribute.med         import MED
 from exabgp.message.update.attribute.localpref   import LocalPreference
