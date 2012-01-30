@@ -132,18 +132,21 @@ class Peer (object):
 			start = time.time()
 			while True:
 				self.open = self.bgp.read_open(_open,self.neighbor.peer_address.ip)
-				# OPEN or NOP
-				if self.open.TYPE == Open.TYPE:
-					logger.message(self.me('<< %s' % self.open))
-					yield None
-					break
-				if not self.open.capabilities.announced(FOUR_BYTES_ASN) and _open.asn.asn4():
-					self._asn4 = False
-					raise Notify(2,0,'peer does not speak ASN4 - restarting in compatibility mode')
 				if time.time() - start > max_wait_open: 
 					logger.message(self.me('Waited for an OPEN for too long - killing the session'))
 					raise Notify(1,1,'The client took over %s seconds to send the OPEN, closing' % str(max_wait_open))
+				# OPEN or NOP
+				if self.open.TYPE == NOP.TYPE:
+					yield None
+					continue
+				if self.open.TYPE != Open.TYPE:
+					raise Notify(1,1,'We are expecting an OPEN message')
+				logger.message(self.me('<< %s' % self.open))
+				if not self.open.capabilities.announced(FOUR_BYTES_ASN) and _open.asn.asn4():
+					self._asn4 = False
+					raise Notify(2,0,'peer does not speak ASN4 - restarting in compatibility mode')
 				yield None
+				break
 
 			message = self.bgp.new_keepalive(force=True)
 			logger.message(self.me('>> KEEPALIVE (OPENCONFIRM)'))
