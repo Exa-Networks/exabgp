@@ -537,51 +537,51 @@ class Protocol (object):
 		# XXX: This code does not make sure that attributes are unique - or does it ?
 
 		if code == AttributeID.ORIGIN:
-			#logger.debug('parsing origin')
+			logger.parser('parsing origin')
 			self.attributes.add(Origin(ord(data[0])))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.AS_PATH:
-			#logger.debug('parsing as_path')
+			logger.parser('parsing as_path')
 			self.attributes.add(self.__new_ASPath(data,self._asn4))
 			if not self._asn4 and self.attributes.announced(AttributeID.AS4_PATH)
 				self.__merge_attributes()
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.AS4_PATH:
-			#logger.debug('parsing as_path')
+			logger.parser('parsing as_path')
 			self.attributes.add(self.__new_AS4Path(data,True))
 			if not self._asn4 and self.attributes.announced(AttributeID.AS_PATH)
 				self._merge_attributes()
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.NEXT_HOP:
-			#logger.debug('parsing next-hop')
+			logger.parser('parsing next-hop')
 			self.attributes.add(NextHop(Inet(AFI.ipv4,data[:4])))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.MED:
-			#logger.debug('parsing med')
+			logger.parser('parsing med')
 			self.attributes.add(MED(unpack('!L',data[:4])[0]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.LOCAL_PREF:
-			#logger.debug('parsing local-preference')
+			logger.parser('parsing local-preference')
 			self.attributes.add(LocalPreference(unpack('!L',data[:4])[0]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.ATOMIC_AGGREGATE:
-			#logger.debug('ignoring atomic-aggregate')
+			logger.parser('ignoring atomic-aggregate')
 			# ignore
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.AGGREGATOR:
-			#logger.debug('ignoring aggregator')
+			logger.parser('ignoring aggregator')
 			# content is 6 bytes
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.COMMUNITY:
-			#logger.debug('parsing communities')
+			logger.parser('parsing communities')
 			def new_Communities (data):
 				communities = Communities()
 				while data:
@@ -593,7 +593,7 @@ class Protocol (object):
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.MP_UNREACH_NLRI:
-			#logger.debug('parsing multi-protocol nlri unreacheable')
+			logger.parser('parsing multi-protocol nlri unreacheable')
 			next_attributes = data[length:]
 			data = data[:length]
 			afi,safi = unpack('!HB',data[:3])
@@ -610,7 +610,7 @@ class Protocol (object):
 			return self._AttributesFactory(next_attributes)
 
 		if code == AttributeID.MP_REACH_NLRI:
-			#logger.debug('parsing multi-protocol nlri reacheable')
+			logger.parser('parsing multi-protocol nlri reacheable')
 			next_attributes = data[length:]
 			data = data[:length]
 			afi,safi = unpack('!HB',data[:3])

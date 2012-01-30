@@ -253,8 +253,6 @@ class _Logger (object):
 	def parser (self,message):
 		if self._parser:
 			self.info(message,'parser')
-		else:
-			self._record(time.localtime(),'parser','info',message)
 
 def Logger ():
 	if _Logger._instance:
