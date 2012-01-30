@@ -544,14 +544,16 @@ class Protocol (object):
 		if code == AttributeID.AS_PATH:
 			logger.parser('parsing as_path')
 			self.attributes.add(self.__new_ASPath(data,self._asn4))
-			if not self._asn4 and self.attributes.announced(AttributeID.AS4_PATH):
+			print type(self.attributes)
+			print dir(self.attributes)
+			if not self._asn4 and self.attributes.has(AttributeID.AS4_PATH):
 				self.__merge_attributes()
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.AS4_PATH:
 			logger.parser('parsing as_path')
 			self.attributes.add(self.__new_AS4Path(data,True))
-			if not self._asn4 and self.attributes.announced(AttributeID.AS_PATH):
+			if not self._asn4 and self.attributes.has(AttributeID.AS_PATH):
 				self._merge_attributes()
 			return self._AttributesFactory(data[length:])
 
