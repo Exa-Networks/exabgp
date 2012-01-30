@@ -512,7 +512,7 @@ class Protocol (object):
 
 		self.attributes.remove(AttributeID.AS_PATH)
 		self.attributes.remove(AttributeID.AS4_PATH)
-		self.attributes.add(newASPS,True)
+		self.attributes.add(newASPS)
 
 		#raise Notify(3,1,'could not merge AS4_PATH in AS_PATH')
 
