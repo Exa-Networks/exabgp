@@ -2,10 +2,6 @@ This is an informal roadmap - no promise
 
 ROADMAP
 
-Version 2.0.3
-- usual bug fixes and improvements
-- parse and behave correctly for ATOMIC_AGGREGATE (as it is needed to make ExaBGP a full speaker)
-
 Version 2.0.4
 - usual bug fixes and improvments
 - implement generation and parsing of extended communities
