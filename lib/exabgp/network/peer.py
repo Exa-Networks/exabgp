@@ -142,7 +142,7 @@ class Peer (object):
 				if self.open.TYPE != Open.TYPE:
 					raise Notify(1,1,'We are expecting an OPEN message')
 				logger.message(self.me('<< %s' % self.open))
-				if not self.open.capabilities.announced(FOUR_BYTES_ASN) and _open.asn.asn4():
+				if not self.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN) and _open.asn.asn4():
 					self._asn4 = False
 					raise Notify(2,0,'peer does not speak ASN4 - restarting in compatibility mode')
 				yield None
