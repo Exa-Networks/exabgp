@@ -478,7 +478,8 @@ class Protocol (object):
 		sdata = data[2:2+(slen*size)]
 
 		ASPS = ASPath(asn4,stype)
-		for c in unpack('!'+(decoder*slen),sdata):
+		format = '!'+(decoder*slen)
+		for c in unpack(format,sdata):
 			ASPS.add(c)
 		return ASPS
 
@@ -487,8 +488,9 @@ class Protocol (object):
 		slen = ord(data[1])
 		sdata = data[2:2+(slen*4)]
 
-		ASPS = AS4Path(True,stype)
-		for c in unpack('!'+('L'*slen),sdata):
+		ASPS = AS4Path(stype)
+		format = '!'+('L'*slen)
+		for c in unpack(format,sdata):
 			ASPS.add(c)
 		return ASPS
 
