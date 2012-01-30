@@ -488,7 +488,7 @@ class Protocol (object):
 		sdata = data[2:2+(slen*4)]
 
 		ASPS = AS4Path(True,stype)
-		for c in unpack('!LLLL',sdata):
+		for c in unpack('!'+('L'*slen),sdata):
 			ASPS.add(c)
 		return ASPS
 
