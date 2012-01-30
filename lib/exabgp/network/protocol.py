@@ -485,7 +485,7 @@ class Protocol (object):
 	def __new_AS4Path (self,data):
 		stype = ord(data[0])
 		slen = ord(data[1])
-		sdata = data[2:2+(slen*size)]
+		sdata = data[2:2+(slen*4)]
 
 		ASPS = AS4Path(True,stype)
 		for c in unpack('!LLLL',sdata):
@@ -552,7 +552,7 @@ class Protocol (object):
 
 		if code == AttributeID.AS4_PATH:
 			logger.parser('parsing as_path')
-			self.attributes.add(self.__new_AS4Path(data,True))
+			self.attributes.add(self.__new_AS4Path(data))
 			if not self._asn4 and self.attributes.has(AttributeID.AS_PATH):
 				self._merge_attributes()
 			return self._AttributesFactory(data[length:])
