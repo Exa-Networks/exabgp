@@ -505,7 +505,7 @@ class Protocol (object):
 			for asn in as4path.aspsegment:
 				newASPS.add(asn)
 		else:
-			for asn in as2path.aspsegment[:-len4]:
+			for asn in as2path.aspsegment[-len4:]:
 				newASPS.add(asn)
 			for asn in as4path.aspsegment:
 				newASPS.add(asn)
