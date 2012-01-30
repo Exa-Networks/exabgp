@@ -497,7 +497,7 @@ class Protocol (object):
 	def __merge_attributes (self):
 		as2path = self.attributes[AttributeID.AS_PATH]
 		as4path = self.attributes[AttributeID.AS4_PATH]
-		newASPS = ASPath(True,as2path.asptype,as2path.aspsegment)
+		newASPS = ASPath(True,as2path.asptype)
 		len2 = len(as2path.aspsegment)
 		len4 = len(as4path.aspsegment)
 
@@ -505,7 +505,7 @@ class Protocol (object):
 			for asn in as4path.aspsegment:
 				newASPS.add(asn)
 		else:
-			for asn in as2path.aspsegment[-len4:]:
+			for asn in as2path.aspsegment[:-len4]:
 				newASPS.add(asn)
 			for asn in as4path.aspsegment:
 				newASPS.add(asn)
