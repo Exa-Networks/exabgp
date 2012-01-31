@@ -3,7 +3,6 @@ This is an informal roadmap - no promise
 ROADMAP
 
 Version 2.0.3
-- Exented community support
 - Generation of AS4_PATH when sending routes to OLD BGP speakers
 
 Version 2.0.4

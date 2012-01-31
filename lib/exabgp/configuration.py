@@ -29,7 +29,7 @@ from exabgp.message.update.attribute.nexthop     import NextHop
 from exabgp.message.update.attribute.aspath      import ASPath
 from exabgp.message.update.attribute.med         import MED
 from exabgp.message.update.attribute.localpref   import LocalPreference
-from exabgp.message.update.attribute.communities import Community,Communities,to_FlowTrafficRate,to_RouteTargetCommunity_00,to_RouteTargetCommunity_01
+from exabgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_RouteTargetCommunity_00,to_RouteTargetCommunity_01
 
 from exabgp.log import Logger
 logger = Logger()
@@ -57,7 +57,9 @@ class Configuration (object):
 	debug = os.environ.get('RAISE_CONFIGURATION',None) != None
 
 	_str_route_error = \
-	'community and as-path can take a single community as parameter. only next-hop is mandatory\n\n' \
+	'community, extended-communities and as-path can take a single community as parameter.\n' \
+	'only next-hop is mandatory\n' \
+	'\n' \
 	'syntax:\n' \
 	'route 10.0.0.1/22 {\n' \
 	'  next-hop 192.0.1.254;\n' \
@@ -66,11 +68,13 @@ class Configuration (object):
 	'  med 100;\n' \
 	'  local-preference 100;\n' \
 	'  community [ 65000 65001 65002 ];\n' \
+	'  extended-community [ target:1234:5.6.7.8 target:1.2.3.4:5678 origin:1234:5.6.7.8 origin:1.2.3.4:5678 0x0002FDE800000001 ]\n' \
 	'  label [ 100 200 ];\n' \
 	'  split /24\n' \
 	'  watchdog watchog-name\n' \
 	'  withdrawn\n' \
-	'}\n\n' \
+	'}\n' \
+	'\n' \
 	'syntax:\n' \
 	'route 10.0.0.1/22 next-hop 192.0.2.1' \
 	' origin IGP|EGP|INCOMPLETE' \
@@ -762,7 +766,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','med','local-preference','community','split','label','watchdog','withdrawn'])
+			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','med','local-preference','community','extended-community','split','label','watchdog','withdrawn'])
 			if r is False: return False
 			if r is None: return self._split_last_route(scope)
 
@@ -807,6 +811,10 @@ class Configuration (object):
 				return False
 			if command == 'community':
 				if self._route_community(scope,tokens):
+					continue
+				return False
+			if command == 'extended-community':
+				if self._route_extended_community(scope,tokens):
 					continue
 				return False
 			if command == 'split':
@@ -936,6 +944,47 @@ class Configuration (object):
 			return False
 		scope[-1]['routes'][-1].attributes.add(communities)
 		return True
+
+	def _parse_extended_community (self,scope,data):
+		if data[:2].lower() == '0x':
+			try:
+				raw = ''
+				for i in range(2,len(data),2):
+					raw += chr(int(data[i:i+2],16))
+			except ValueError:
+				raise ValueError('invalid extended community %s' % data) 
+			if len(raw) != 8:
+				raise ValueError('invalid extended community %s' % data) 
+			return ECommunity(raw)
+		elif data.count(':'):
+			return to_ExtendedCommunity(data)
+		else:
+			raise ValueError('invalid extended community %s - lc+gc' % data) 
+
+	def _route_extended_community (self,scope,tokens):
+		extended_communities = ECommunities()
+		extended_community = tokens.pop(0)
+		try:
+			if extended_community == '[':
+				while True:
+					try:
+						extended_community = tokens.pop(0)
+					except IndexError:
+						self._error = self._str_route_error
+						if self.debug: raise
+						return False
+					if extended_community == ']':
+						break
+					extended_communities.add(self._parse_extended_community(scope,extended_community))
+			else:
+				extended_communities.add(self._parse_extended_community(scope,extended_community))
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+		scope[-1]['routes'][-1].attributes.add(extended_communities)
+		return True
+
 
 	def _route_split (self,scope,tokens):
 		try:

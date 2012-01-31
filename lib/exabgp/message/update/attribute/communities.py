@@ -78,6 +78,35 @@ class Communities (Attribute):
 
 # http://www.iana.org/assignments/bgp-extended-communities
 
+
+# MUST ONLY raise ValueError
+def to_ExtendedCommunity (data):
+	command,ga,la = data.split(':')
+
+	if command == 'origin':
+		subtype = chr(0x03)
+	elif command == 'target':
+		subtype = chr(0x02)
+	else:
+		raise ValueError('invalid extended community %s (only origin or target are supported) ' % command) 
+
+	gc = ga.count('.')
+	lc = la.count('.')
+	if gc == 0 and lc == 3:
+		# ASN first, IP second
+		header = chr(0x40)
+		global_admin = pack('!H',int(ga))
+		local_admin = pack('!BBBB',*[int(_) for _ in la.split('.')])
+	elif gc == 3 and lc == 0:
+		# IP first, ASN second
+		header = chr(0x41)
+		global_admin = pack('!BBBB',*[int(_) for _ in ga.split('.')])
+		local_admin = pack('!H',int(la))
+	else:
+		raise ValueError('invalid extended community %s ' % data) 
+
+	return ECommunity(header+subtype+global_admin+local_admin)
+
 class ECommunity (object):
 	ID = AttributeID.EXTENDED_COMMUNITY
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL

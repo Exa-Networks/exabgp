@@ -19,6 +19,8 @@ Version 2.0.3 - ..th of ....... 2012 (stable version)
  * User Change: DEBUG_ROUTES is deprecated please use DEBUG_ROUTE (2.0.x release with have both values)
  * Improvement: Parsing AS4_PATH message and merging AS_PATH when required
  * Fix: possible problem with session establishment
+ * Improvement: extendeded community are available in the configuration file
+ * Improvement: printed routes now include extended community information
 
 Version 2.0.2 - 1st of January 2012
  * Copyright: updated all copyright notice (welcome to 2012)
