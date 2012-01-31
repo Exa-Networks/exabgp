@@ -80,11 +80,12 @@ class Attributes (dict):
 					as4path.add(segment)
 				else:
 					aspath.add(segment)
+					as4path.add(segment)
 			message += aspath.pack()
 			if has_asn4:
 				message += as4path.pack()
 		else:
-			message += ASPath(asn4,asp.asptype,asp.aspsegment).pack()
+			message += ASPath(True,asp.asptype,asp.aspsegment).pack()
 		return message
 
 	def bgp_announce (self,asn4,local_asn,peer_asn):
