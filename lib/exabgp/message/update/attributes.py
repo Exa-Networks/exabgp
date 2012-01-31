@@ -163,7 +163,7 @@ class Attributes (dict):
 
 		ecommunities = ''
 		if self.has(AttributeID.EXTENDED_COMMUNITY):
-			ecommunities = ' extended community %s' % str(self[AttributeID.EXTENDED_COMMUNITY])
+			ecommunities = ' extended-community %s' % str(self[AttributeID.EXTENDED_COMMUNITY])
 
 		mpr = ''
 		if self.has(AttributeID.MP_REACH_NLRI):

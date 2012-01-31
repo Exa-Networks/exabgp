@@ -133,17 +133,12 @@ class ECommunity (object):
 		# 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0F
 		community_type = ord(self.community[0]) & 0x0F
 		community_stype = ord(self.community[1])
-		h = 0
-		for byte in self.community:
-			h <<= 8
-			h += ord(byte)
-		return "0x%016X" % h
 		# Target 
 		if community_stype == 0x02:
 			if community_type in (0x00,0x02):
 				asn = unpack('!H',self.community[2:4])[0]
 				ip = ip = '%s.%s.%s.%s' % unpack('!BBBB',self.community[4:])
-				return "target:%d:%s" % (asn,value)
+				return "target:%d:%s" % (asn,ip)
 			if community_type == 0x01:
 				ip = '%s.%s.%s.%s' % unpack('!BBBB',self.community[2:6])
 				asn = unpack('!H',self.community[6:])[0]
@@ -152,8 +147,8 @@ class ECommunity (object):
 		if community_stype == 0x03:
 			if community_type in (0x00,0x02):
 				asn = unpack('!H',self.community[2:4])[0]
-				value = unpack('!L',self.community[4:])[0]
-				return "origin:%d:%s" % (asn,value)
+				ip = unpack('!L',self.community[4:])[0]
+				return "origin:%d:%s" % (asn,ip)
 			if community_type == 0x01:
 				ip = '%s.%s.%s.%s' % unpack('!BBBB',self.community[2:6])
 				asn = unpack('!H',self.community[6:])[0]
