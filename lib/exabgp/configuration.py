@@ -335,6 +335,7 @@ class Configuration (object):
 		if command == 'route': return self._single_static_route(scope,tokens[1:])
 		if command == 'origin': return self._route_origin(scope,tokens[1:])
 		if command == 'as-path': return self._route_aspath(scope,tokens[1:])
+		if command == 'as-sequence': return self._route_aspath(scope,tokens[1:])
 		if command == 'med': return self._route_med(scope,tokens[1:])
 		if command == 'next-hop': return self._route_next_hop(scope,tokens[1:])
 		if command == 'local-preference': return self._route_local_preference(scope,tokens[1:])
@@ -766,7 +767,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','med','local-preference','community','extended-community','split','label','watchdog','withdrawn'])
+			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','as-sequence','med','local-preference','community','extended-community','split','label','watchdog','withdrawn'])
 			if r is False: return False
 			if r is None: return self._split_last_route(scope)
 
@@ -798,6 +799,10 @@ class Configuration (object):
 					continue
 				return False
 			if command == 'as-path':
+				if self._route_aspath(scope,tokens):
+					continue
+				return False
+			if command == 'as-sequence':
 				if self._route_aspath(scope,tokens):
 					continue
 				return False
