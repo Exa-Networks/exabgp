@@ -3,7 +3,7 @@ Version explained:
  minor : increase on new features
  bug   : increase on bug fixes
 
-Version 2.0.3 - ..th of ....... 2012 (stable version)
+Version 2.0.3 - 1st of Febuary 2012 (stable version)
  * Improvement: now sending help "neighbor <ip> up" when a neighbor goes up
  * Fix: now sending correctly "neighbor <ip> down" when a neighbor goes down
  * Fix: a bug when parsing "split" configuration
@@ -21,6 +21,7 @@ Version 2.0.3 - ..th of ....... 2012 (stable version)
  * Fix: possible problem with session establishment
  * Improvement: extendeded community are available in the configuration file
  * Improvement: printed routes now include extended community information
+ * Fix: bad route generation for OLD BGP speakers, previously not including 2 bytes ASN in the AS4_PATH
 
 Version 2.0.2 - 1st of January 2012
  * Copyright: updated all copyright notice (welcome to 2012)
