@@ -93,7 +93,7 @@ class _Logger (object):
 		if os.environ.get('DEBUG_ROUTES','0') == '0': self._routes = False
 		else: self._routes = True
 
-		if os.environ.get('DEBUG_PARSER','0') == '0': self._routes = False
+		if os.environ.get('DEBUG_PARSER','0') == '0': self._parser = False
 		else: self._parser = True
 
 		if not os.environ.get('DEBUG_ALL','0') == '0':
@@ -108,7 +108,7 @@ class _Logger (object):
 			self._routes = True
 			self._parser = True
 
-		if os.environ.get('DEBUG_CORE','0') == '0':
+		if not os.environ.get('DEBUG_CORE','0') == '0':
 			self._supervisor = True
 			self._daemon = True
 			self._processes = True
