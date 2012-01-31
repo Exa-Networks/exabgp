@@ -1,22 +1,23 @@
 exabgp (2.0.3-1) unstable; urgency=low
 
   * Internal Change how we read from socket
-  * User Change new DEBUG_CORE option (alias for DEBUG_SUPERVISOR, DEBUG_DAEMON, DEBUG_PROCESS, DEBUG_MESSAGE, DEBUG_TIMER, DEBUG_ROUTE)
-  * User Change DEBUG_ROUTES is deprecated please use DEBUG_ROUTE (2.0.x release with have both values)
+  * User Change new DEBUG_CORE option
+  * User Change DEBUG_ROUTES is deprecated please use DEBUG_ROUTE
   * Fix now sending correctly "neighbor <ip> down" when a neighbor goes down
   * Fix a bug when parsing "split" configuration
-  * Fix sending routes faster than a router can accept does not cause the BGP session to go down
+  * Fix do not send routes faster than a router can accept them
   * Fix under load we could receive partial messages, read until we have it all
   * Fix we were not always sending the 'down' message to handlers
   * Fix handle signal during select
   * Fix possible problem with session establishment
-  * Fix bad route generation for OLD BGP speakers, previously not including 2 bytes ASN in the AS4_PATH
+  * Fix bad route generation for OLD BGP speakers
   * Improvement now sending help "neighbor <ip> up" when a neighbor goes up
-  * Improvement Buffering message we can not send if sockets return a transient failure
-  * Improvement Limiting how long and how deep the buffer are kept before we kill the session
+  * Improvement Buffering message we can not send them
+  * Improvement Limiting how long and how deep the buffer can be
   * Improvement Parsing AS4_PATH message and merging AS_PATH when required
   * Improvement extendeded community are available in the configuration file
   * Improvement printed routes now include extended community information
+  * Closes: #653923
 
  -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Wed, 01 Feb 2012 12:00:00 +0000
 
