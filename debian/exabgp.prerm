@@ -1,0 +1,12 @@
+#!/bin/sh -e
+
+case "$1" in
+    upgrade)
+	pyclean -p exabgp
+	exit 0
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0
