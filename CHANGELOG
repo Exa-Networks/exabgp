@@ -3,7 +3,10 @@ Version explained:
  minor : increase on new features
  bug   : increase on bug fixes
 
-Version 2.0.3 - 1st of Febuary 2012 (stable version)
+Version 2.0.4 - 1st of Febuary 2012 (stable version)
+ * Fix: sending any signal stoped the program instead of reloading
+
+Version 2.0.3 - 1st of Febuary 2012
  * Improvement: now sending help "neighbor <ip> up" when a neighbor goes up
  * Fix: now sending correctly "neighbor <ip> down" when a neighbor goes down
  * Fix: a bug when parsing "split" configuration

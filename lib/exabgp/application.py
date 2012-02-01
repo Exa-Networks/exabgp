@@ -128,7 +128,7 @@ class Supervisor (object):
 						except select.error,e:
 							errno,message = e.args 
 							if errno in errno_block:
-								return False
+								continue
 							raise
 					else:
 						if duration < supervisor_speed:
