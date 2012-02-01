@@ -32,7 +32,7 @@ class Processes (object):
 	def _start (self,name):
 		try:
 			if name in self._process:
-				logger.processes("Can not start process, it is alrady running")
+				logger.processes("process alrady running")
 				return
 			if not name in self.supervisor.configuration.process:
 				logger.processes("Can not start process, no configuration for it (anymore ?)")
