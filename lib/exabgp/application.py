@@ -127,9 +127,8 @@ class Supervisor (object):
 							read,_,_ = select.select(ios,[],[],max(supervisor_speed-duration,0))
 						except select.error,e:
 							errno,message = e.args 
-							if errno in errno_block:
-								continue
-							raise
+							if not errno in errno_block:
+								raise
 					else:
 						if duration < supervisor_speed:
 							time.sleep(max(supervisor_speed-duration,0))
