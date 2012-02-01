@@ -10,7 +10,7 @@ else
 	cd - > /dev/null
 fi
 
-export PYTHONPATH=$path/lib:/usr/share/exabgp/lib/2.0.3
+export PYTHONPATH=$path/lib:/usr/share/exabgp/lib/2.0.4
 export ETC=$path/etc/exabgp
 
 if [ "$INTERPRETER" != "" ]
