@@ -3,6 +3,9 @@ Version explained:
  minor : increase on new features
  bug   : increase on bug fixes
 
+Version 2.0.5 - -- of ------- 2012 (stable version)
+ * Improvement: allow named community
+
 Version 2.0.4 - 1st of Febuary 2012 (stable version)
  * Fix: sending any signal stoped the program instead of reloading
 
