@@ -17,11 +17,11 @@ class Community (object):
 	def __init__ (self,community):
 		self.community = community
 		if community == 0xFFFFFF01:
-			data = 'no-export'
+			self._str = 'no-export'
 		elif community == 0xFFFFFF02:
-			data = 'no-advertise'
+			self._str = 'no-advertise'
 		elif community == 0xFFFFFF03:
-			data = 'no-export-subconfed'
+			self._str = 'no-export-subconfed'
 		else:
 			self._str = "%d:%d" % (community >> 16, community & 0xFFFF)
 	
