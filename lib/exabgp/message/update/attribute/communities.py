@@ -16,7 +16,14 @@ from exabgp.message.update.attribute import AttributeID,Flag,Attribute
 class Community (object):
 	def __init__ (self,community):
 		self.community = community
-		self._str = "%d:%d" % (community >> 16, community & 0xFFFF)
+		if community == 0xFFFFFF01:
+			data = 'no-export'
+		elif community == 0xFFFFFF02:
+			data = 'no-advertise'
+		elif community == 0xFFFFFF03:
+			data = 'no-export-subconfed'
+		else:
+			self._str = "%d:%d" % (community >> 16, community & 0xFFFF)
 	
 	def pack (self):
 		return pack('!L',self.community)

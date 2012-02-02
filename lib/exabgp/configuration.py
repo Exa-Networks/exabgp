@@ -921,6 +921,13 @@ class Configuration (object):
 				raise ValueError('invalid community %s (too large)' % data) 
 			return Community(value)
 		else:
+			low = data.lower()
+			if low == 'no-export':
+				data = 0xFFFFFF01
+			elif low == 'no-advertise':
+				data = 0xFFFFFF02
+			elif low == 'no-export-subconfed':
+				data = 0xFFFFFF03
 			value = long(data)
 			if value >= pow(2,32):
 				raise ValueError('invalid community %s (too large)' % data) 
