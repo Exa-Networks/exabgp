@@ -271,7 +271,7 @@ class _FlowNLRI (Attributes,Address):
 					s.append(' ')
 					s.append(str(rule))
 			string.append('%s %s' % (rules[0].NAME,''.join(s[1:])))
-		return ','.join(string)
+		return ' '.join(string)
 	
 	def __repr__ (self):
 		return str(self)
