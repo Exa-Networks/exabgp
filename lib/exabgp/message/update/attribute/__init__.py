@@ -24,9 +24,9 @@ class Attribute (object):
 			return ''
 		length = len(value)
 		if length > 0xFF:
-			flag &= Flag.EXTENDED_LENGTH
+			flag |= Flag.EXTENDED_LENGTH
 		if flag & Flag.EXTENDED_LENGTH:
-			len_value = pack('!H',length)[0]
+			len_value = pack('!H',length)
 		else:
 			len_value = chr(length)
 		return "%s%s%s%s" % (chr(flag),chr(self.ID),len_value,value)
