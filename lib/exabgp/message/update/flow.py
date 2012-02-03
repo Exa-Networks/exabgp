@@ -254,7 +254,7 @@ class _FlowNLRI (Attributes,Address):
 		if l < 0xF0:
 			data = "%s%s" % (chr(l),components)
 		elif l < 0x0FFF:
-			data = "%s%s" % (pack('!H',l) | 0xF000,components)
+			data = "%s%s" % (pack('!H',l | 0xF000),components)
 		else:
 			logger.critical("rule too big for NLRI - how to handle this - does this work ?")
 			data = "%s" % chr(0)
