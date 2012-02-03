@@ -223,7 +223,7 @@ class _FlowNLRI (Attributes,Address):
 
 	def add_or (self,rule):
 		ID = rule.ID
-		if ID in [Destination, Source.ID]:
+		if ID in [Destination.ID, Source.ID]:
 			return False
 		if self.rules.has_key(ID):
 			rule.first = False

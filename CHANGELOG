@@ -5,6 +5,7 @@ Version explained:
 
 Version 2.0.5 - -- of ------- 2012 (stable version)
  * Improvement: allow named community
+ * Fix: possible bug when generating destination part of flowspec route
 
 Version 2.0.4 - 1st of Febuary 2012 (stable version)
  * Fix: sending any signal stoped the program instead of reloading
