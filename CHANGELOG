@@ -7,6 +7,8 @@ Version 2.0.5 - -- of ------- 2012 (stable version)
  * Improvement: allow named community
  * Fix: bad flowspec component size calculation for large flow routes
  * Fix: bad attribute generation for attributes bigger than 256 chars
+ * Fix: allows to pass arguments to the helper programs
+ * Contribution: route collector utilities from Daniel Piekacz
 
 Version 2.0.4 - 1st of Febuary 2012 (stable version)
  * Fix: sending any signal stoped the program instead of reloading

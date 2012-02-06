@@ -385,9 +385,15 @@ class Configuration (object):
 		return True
 
 	def _set_process_run (self,scope,command,value):
-		prg = value[0]
-		if len(prg) > 2 and prg[0] == prg[-1] and prg[0] in ['"',"'"]:
-			prg = prg[1:-1]
+		line = ' '.join(value).strip()
+		if len(line) > 2 and line[0] == line[-1] and line[0] in ['"',"'"]:
+			line = prg[1:-1]
+		if ' ' in line:
+			prg,args = line.split(' ',1)
+		else:
+			prg = line
+			args = ''
+
 		if not prg:
 			self._error = 'prg requires the program to prg as an argument (quoted or unquoted)'
 			if self.debug: raise
@@ -428,7 +434,10 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-		scope[-1][command] = prg
+		if args:
+			scope[-1][command] = '%s %s' % (prg,args)
+		else:
+			scope[-1][command] = prg
 		return True
 
 	def _route_watchdog (self,scope,tokens):
