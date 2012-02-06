@@ -435,9 +435,9 @@ class Configuration (object):
 			return False
 
 		if args:
-			scope[-1][command] = '%s %s' % (prg,args)
+			scope[-1][command] = [prg] + args.split(' ')
 		else:
-			scope[-1][command] = prg
+			scope[-1][command] = [prg,]
 		return True
 
 	def _route_watchdog (self,scope,tokens):

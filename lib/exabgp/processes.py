@@ -38,7 +38,7 @@ class Processes (object):
 				logger.processes("Can not start process, no configuration for it (anymore ?)")
 				return
 			self._receive_routes[name] = self.supervisor.configuration.process[name]['receive-routes']
-			self._process[name] = subprocess.Popen([self.supervisor.configuration.process[name]['run'],],
+			self._process[name] = subprocess.Popen(self.supervisor.configuration.process[name]['run'],
 				stdin=subprocess.PIPE,
 				stdout=subprocess.PIPE,
 			)
