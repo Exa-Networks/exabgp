@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
 Created by Daniel Piekacz on 2012-01-14.
+Last update on 2012-02-06.
 Copyright (c) 2012 Daniel Piekacz. All rights reserved.
 Copyright (c) 2012 Thomas Mangin. All rights reserved.
 Project website: gix.net.pl, e-mail: daniel@piekacz.tel
@@ -12,7 +13,6 @@ import os
 import time
 import syslog
 import string
-import syslog
 
 # just to test, run ./collector.py print | ./collector.py <db settings>
 def print_debug():
@@ -23,6 +23,7 @@ neighbor 192.168.127.130 announce IPv4 unicast 1.2.3.4/32 next-hop 192.168.127.1
 neighbor 192.168.127.130 announce IPv4 unicast 8.9.0.0/16 next-hop 192.168.127.130 origin igp as-sequence [ 123456 64 128 256 1234567 ] med 20 community 65000:1 extended-community [ target:65000:0.0.0.1 origin:1.2.3.4:5678 ]
 neighbor 192.168.127.130 announce IPv4 unicast 5.6.7.0/24 next-hop 192.168.127.130 origin igp as-sequence [ 123456 64 128 256 1234567 ] med 20 community 65000:1 extended-community [ target:65000:0.0.0.1 origin:1.2.3.4:5678 ]
 neighbor 192.168.127.130 announce IPv6 unicast 1234:5678::/32 next-hop :: origin igp as-sequence [ 123456 ] med 0
+neighbor 192.168.127.130 withdraw IPv4 unicast 5.6.7.0/24
 '''
 	sys.exit(0)
 
@@ -102,19 +103,19 @@ def tosql (cursor,route):
 	try:
 		if route['state'] == "up":
 			cursor.execute ("DELETE FROM prefixes WHERE (neighbor = %s)", (route['neighbor']))
-			cursor.execute ("UPDATE members SET time=%s,prefixes=0,status=1,updown=updown+1,lastup=%s WHERE neighbor=%s", (route['time'],route['time'], route['neighbor']))
-			syslog.syslog(syslog.LOG_ALERT, _prefixed('INFO', "BGP: %s %s" % (route['neighbor'], route['state'])))
+			cursor.execute ("UPDATE members SET time='0000-00-00 00:00:00',prefixes=0,status=1,updown=updown+1,lastup=%s WHERE neighbor=%s", (route['time'], route['neighbor']))
 			return
 
 		if route['state'] == "down":
 			cursor.execute ("DELETE FROM prefixes WHERE (neighbor = %s)", (route['neighbor']))
 			cursor.execute ("UPDATE members SET time='0000-00-00 00:00:00',prefixes=0,status=0,updown=updown+1,lastdown=%s WHERE neighbor=%s", (route['time'], route['neighbor']))
-			syslog.syslog(syslog.LOG_ALERT, _prefixed('INFO', "BGP: %s %s" % (route['neighbor'], route['state'])))
 			return
 
-		if 'announce' in route:
-			cursor.execute ("""\
-				REPLACE INTO prefixes 
+		if route['announce']:
+			cursor.execute ("SELECT '' FROM prefixes WHERE ((neighbor=%s) && (prefix=%s))", (route['neighbor'], route['unicast']))
+			if cursor.rowcount == 0:
+				cursor.execute ("""\
+				INSERT INTO prefixes 
 				(
 					neighbor,
 					type,
@@ -138,15 +139,22 @@ def tosql (cursor,route):
 					route['origin'],
 					route['time']
 				))
-			cursor.execute ("UPDATE members SET prefixes=prefixes+1,time=%s WHERE neighbor=%s", (route['time'], route['neighbor']))
+				cursor.execute ("UPDATE members SET prefixes=prefixes+1,time=%s WHERE neighbor=%s", (route['time'], route['neighbor']))
+			else:
+				cursor.execute ("UPDATE prefixes SET aspath=%s,nexthop=%s,community=%s,extended_community=%s,origin=%s,time=%s WHERE ((neighbor=%s) && (prefix=%s))", (route['as-path'], route['next-hop'], route['community'], route['extended-community'], route['origin'], route['time'], route['neighbor'], route['unicast']))
+				cursor.execute ("UPDATE members SET time=%s WHERE neighbor=%s", (route['time'], route['neighbor']))
 			return
 
-		if 'withdraw' in route:
-			cursor.execute ("DELETE FROM prefixes WHERE ((neighbor = %s) && (prefix = %s))", (route['neighbor'], route['unicast']))
-			cursor.execute ("UPDATE members SET prefixes=prefixes-1,time=%s WHERE neighbor=%s", (route['time'], route['neighbor']))
+		if route['withdraw']:
+			cursor.execute ("SELECT '' FROM prefixes WHERE ((neighbor=%s) && (prefix=%s))", (route['neighbor'], route['unicast']))
+			if cursor.rowcount == 0:
+				cursor.execute ("UPDATE members SET time=%s WHERE neighbor=%s", (route['time'], route['neighbor']))
+			else:
+				cursor.execute ("DELETE FROM prefixes WHERE ((neighbor = %s) && (prefix = %s))", (route['neighbor'], route['unicast']))
+				cursor.execute ("UPDATE members SET prefixes=prefixes-1,time=%s WHERE neighbor=%s", (route['time'], route['neighbor']))
 			return
 
-		syslog.syslog(syslog.LOG_ALERT, _prefixed('INFO', "BGP: %s %s" % (route['neighbor'], route['state'])))
+		syslog.syslog(syslog.LOG_ALERT, _prefixed('INFO', "BGP: unparsed route %s" % (str(route))))
 	except KeyboardInterrupt:
 		# keyboard interrupt are not for us, whatever it was we were doing, do it.
 		tosql(cursor,route)
@@ -176,7 +184,7 @@ def main ():
 		try:
 			for route in routes():
 				tosql(cursor,route)
-				mydb.commit ()
+				mydb.commit()
 			running = False
 		except KeyboardInterrupt:
 			# If we are so unlucky to get the keyboard interrupt between the yield and the function call, there is no much we can do, that update will be lost
@@ -195,7 +203,7 @@ def main ():
 		pass
 
 if __name__ == '__main__':
-	if len(sys.argv) > 1 and sys.argv[1] == 'print':
+	if len(sys.argv) == 2 and sys.argv[1] == 'print':
 		print_debug()
 	elif len(sys.argv) == 5:
 		main ()
@@ -203,6 +211,3 @@ if __name__ == '__main__':
 		print "wrong syntax"
 		print "%s <host> <database> <user> <password>" % sys.argv[0]
 		sys.exit(1)
-
-
-
