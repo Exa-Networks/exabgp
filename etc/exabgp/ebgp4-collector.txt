@@ -1,0 +1,16 @@
+neighbor 192.168.127.130 {
+	description "will pass received routes to the program";
+	router-id 192.168.127.1;
+	local-address 192.168.127.1;
+	local-as 654321;
+	peer-as 123456;
+	hold-time 180;
+
+	process parsed-route-backend {
+		parse-routes;
+		run contrib/daniel.piekacz/collector.py 192.168.127.130 collector collector collector;
+	}
+
+	static {
+	}
+}
