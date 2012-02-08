@@ -1,5 +1,6 @@
-create database collector;
-use collector;
+drop database if exists `collector`;
+create database `collector`;
+use `collector`;
 
 DROP TABLE IF EXISTS `members`;
 CREATE TABLE IF NOT EXISTS `members` (
@@ -7,7 +8,7 @@ CREATE TABLE IF NOT EXISTS `members` (
   `asn` int(10) unsigned NOT NULL,
   `type` tinyint(3) unsigned NOT NULL,
   `status` tinyint(3) unsigned NOT NULL,
-  `time` timestamp NOT NULL default '0000-00-00 00:00:00';
+  `time` timestamp NOT NULL default '0000-00-00 00:00:00',
   `lastup` timestamp NOT NULL default '0000-00-00 00:00:00',
   `lastdown` timestamp NOT NULL default '0000-00-00 00:00:00',
   `prefixes` int(10) unsigned NOT NULL,
@@ -28,7 +29,7 @@ CREATE TABLE IF NOT EXISTS `prefixes` (
   `community` TEXT NOT NULL,
   `extended_community` TEXT NOT NULL,
   `origin` varchar(10) NOT NULL,
-  `time` timestamp NOT NULL default '0000-00-00 00:00:00';
+  `time` timestamp NOT NULL default '0000-00-00 00:00:00',
   UNIQUE KEY `neighbor_prefix` (`neighbor`,`prefix`),
   KEY `neighbor` (`neighbor`),
   KEY `type` (`type`),
