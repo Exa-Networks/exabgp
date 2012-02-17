@@ -2,10 +2,8 @@ This is an informal roadmap - no promise
 
 ROADMAP
 
-Version 2.0.4
+Version 2.0.6+
 - usual bug fixes and improvments
-- implement generation and parsing of extended communities
-  http://tools.ietf.org/html/rfc4360
 - group update to up to maximum message size (4096 or more if negociated)
   http://www.ietf.org/id/draft-ietf-idr-bgp-extended-messages-02.txt
 

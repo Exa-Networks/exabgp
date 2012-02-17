@@ -1,3 +1,12 @@
+exabgp (2.0.5-1) unstable; urgency=low
+  
+  * New upstream release
+  * Fix bad flowspec component size calculation for large flow routes
+  * Fix bad attribute generation for attributes bigger than 256 chars
+  * Fix allows to pass arguments to the helper programsP
+
+ -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Wed, 10 Feb 2012 20:00:00 +0000
+
 exabgp (2.0.4-1) unstable; urgency=low
   
   * New upstream release
