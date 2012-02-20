@@ -294,7 +294,9 @@ class Protocol (object):
 		def chunked (generator,size):
 			chunk = ''
 			for data in generator:
-				if len(chunk) + len(data) < size:
+				if len(data) > size:
+					raise Failure('Can not send BGP update larger than %d bytes on this connection.' % size)
+				if len(chunk) + len(data) <= size:
 					chunk += data
 					continue
 				yield chunk
