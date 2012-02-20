@@ -60,6 +60,7 @@ class Protocol (object):
 		self._asn4 = False
 		self._messages = {}
 		self._frozen = 0
+		self.message_size = 4096
 
 	def me (self,message):
 		return "Peer %15s ASN %-7s %s" % (self.peer.neighbor.peer_address,self.peer.neighbor.peer_as,message)
@@ -191,6 +192,12 @@ class Protocol (object):
 		if message.hold_time >= 3:
 			self.neighbor.hold_time = min(self.neighbor.hold_time,message.hold_time)
 
+		# XXX: Does not work as the capa is not yet defined
+		if message.capabilities.announced(Capabilities.EXTENDED_MESSAGE):
+			# untested !
+			if self.peer.bgp.message_size:
+				self.message_size = self.peer.bgp.message_size
+
 # README: This limit what we are announcing may cause some issue if you add new family and SIGHUP
 # README: So it is commented until I make my mind to add it or not (as Juniper complain about mismatch capabilities)
 #		# Those are the capacity we need to announce those routes
@@ -284,10 +291,21 @@ class Protocol (object):
 		self._messages[self.neighbor.peer_as] = backlog
 
 	def _announce (self,name,generator):
+		def chunked (generator,size):
+			chunk = ''
+			for data in generator:
+				if len(chunk) + len(data) < size:
+					chunk += data
+					continue
+				yield chunk
+				chunk = data
+			if chunk:
+				yield chunk
+
 		# Do not try to join the message and write all in one go as it causes issue if the size is bigger than the MTU
 		# Python 2.5.2 for example send partial data which BGP decoders then take as garbage.
 		count = 0
-		for update in generator:
+		for update in chunked(generator,self.message_size):
 			count += 1
 			if self._messages[self.neighbor.peer_as]:
 				logger.message(self.me(">> %s could not be sent, some messages are still in the buffer" % name))

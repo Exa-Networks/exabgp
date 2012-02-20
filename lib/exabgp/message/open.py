@@ -204,6 +204,8 @@ class Capabilities (dict):
 	MULTISESSION_BGP_OLD     = 0x83 # before http://tools.ietf.org/html/draft-ietf-idr-bgp-multisession-04
 	# 128-255   Reserved for Private Use [RFC5492]
 
+	EXTENDED_MESSAGE         = -1 # No yet defined by draft http://tools.ietf.org/html/draft-ietf-idr-extended-messages-02.txt
+
 	unassigned = range(70,128)
 	reserved = range(128,256)
 

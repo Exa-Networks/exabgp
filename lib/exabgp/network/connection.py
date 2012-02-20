@@ -115,6 +115,16 @@ class Connection (object):
 			self.close()
 			raise Failure('Could not connect to peer (if you use MD5, check your passwords): %s' % str(e))
 
+		try:
+			try:
+				# Linux / Windows
+				self.message_size = self.io.getsockopt(socket.SOL_SOCKET, socket.SO_MAX_MSG_SIZE)
+			except AttributeError:
+				# BSD
+				self.message_size = self.io.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
+		except socket.error, e:
+			self.message_size = None
+
 	def pending (self,reset=True):
 		if reset:
 			self._loop_start = None
