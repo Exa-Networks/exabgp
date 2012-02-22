@@ -5,7 +5,6 @@ Version explained:
 
 Version 2.0.6 - -- of March 2012 (stable version)
  * Improvement: update grouping up to 4096 bytes
- * Improvement: implementation of draft-ietf-idr-bgp-extended-messages-02 (just waiting for the capability number)
 
 Version 2.0.5 - 10 of Febuary 2012
  * Improvement: allow named community
