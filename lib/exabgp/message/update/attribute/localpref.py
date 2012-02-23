@@ -14,7 +14,7 @@ from exabgp.message.update.attribute import AttributeID,Flag,Attribute
 # =================================================================== Local Preference (5)
 
 class LocalPreference (Attribute):
-	ID = AttributeID.LOCAL_PREF 
+	ID = AttributeID.LOCAL_PREF
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 
@@ -26,7 +26,7 @@ class LocalPreference (Attribute):
 
 	def __len__ (self):
 		return 4
-	
+
 	def __str__ (self):
 		return str(self.localpref)
 

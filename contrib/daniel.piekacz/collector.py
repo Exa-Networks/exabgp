@@ -54,7 +54,7 @@ def routes ():
 			# med default is 100
 
 			route = dict(zip(route_keys,['',]*len(route_keys)))
-			route['time'] = msgtime = time.strftime('%Y-%m-%d  %H:%M:%S',time.localtime())
+			route['time'] = time.strftime('%Y-%m-%d  %H:%M:%S',time.localtime())
 
 			tokens = line.split(' ')
 
@@ -115,7 +115,7 @@ def tosql (cursor,route):
 			cursor.execute ("SELECT '' FROM prefixes WHERE ((neighbor=%s) && (prefix=%s))", (route['neighbor'], route['unicast']))
 			if cursor.rowcount == 0:
 				cursor.execute ("""\
-				INSERT INTO prefixes 
+				INSERT INTO prefixes
 				(
 					neighbor,
 					type,
@@ -126,8 +126,8 @@ def tosql (cursor,route):
 					extended_community,
 					origin,
 					time
-				) VALUES 
-				(%s,%s,%s,%s,%s,%s,%s,%s,%s)""", 
+				) VALUES
+				(%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
 				(
 					route['neighbor'],
 					route['announce'][-1],

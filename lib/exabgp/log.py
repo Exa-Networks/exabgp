@@ -18,12 +18,12 @@ class LazyFormat (object):
 		self.prefix = prefix
 		self.format = format
 		self.message = message
-	
+
 	def __str__ (self):
 		if self.format:
 			return self.prefix + self.format(self.message)
 		return self.prefix + self.message
-	
+
 	def split (self,c):
 		return str(self).split(c)
 
@@ -33,10 +33,10 @@ class _Logger (object):
 
 	_history = []
 	_max_history = 20
-	
+
 	_config = ''
 	_pid = os.getpid()
-	
+
 	# we use os.pid everytime as we may fork and the class is instance before it
 
 	def config (self,config=None):
@@ -143,7 +143,7 @@ class _Logger (object):
 			self._syslog = logging.getLogger()
 			self._syslog.setLevel(logging.DEBUG)
 			self._syslog.addHandler(handler)
-		except IOError,e :
+		except IOError:
 			self.critical('Can not use SYSLOG, failing back to stdout')
 
 	def debug (self,message,source='',level='DEBUG'):
@@ -186,7 +186,7 @@ class _Logger (object):
 				print self._prefixed(level,source,line)
 				sys.stdout.flush()
 
-	# show the message on the wire 
+	# show the message on the wire
 	def wire (self,message):
 		if self._wire:
 			self.debug(message,'wire')
@@ -199,7 +199,7 @@ class _Logger (object):
 			self.info(message,'message')
 		else:
 			self._record(time.localtime(),'message','info',message)
-	
+
 	# show the parsing of the configuration
 	def configuration (self,message):
 		if self._configuration:
@@ -266,4 +266,4 @@ if __name__ == '__main__':
 	logger.wire('wire packet content')
 	logger.message('message exchanged')
 	logger.debug('debug test')
-	
+

@@ -28,9 +28,9 @@ class TestFlow (unittest.TestCase):
 		messages = {
 			'destination': [0x01, 0x18, 0xc0, 0x00, 0x02],
 			'source'     : [0x02, 0x18, 0x0a, 0x01, 0x02],
-			'anyport_1'  : [0x04, 0x01, 0x19],  
+			'anyport_1'  : [0x04, 0x01, 0x19],
 		}
-		
+
 		for key in components.keys():
 			component = components[key].pack()
 			message   = ''.join((chr(_) for _ in messages[key]))
@@ -47,8 +47,8 @@ class TestFlow (unittest.TestCase):
 		messages = {
 			'destination': [0x01, 0x18, 0xc0, 0x00, 0x02],
 			'source'     : [0x02, 0x18, 0x0a, 0x01, 0x02],
-			'anyport_1'  : [0x04, 0x43, 0x19],  
-			'anyport_2'  : [0x04, 0x85, 0x50],  
+			'anyport_1'  : [0x04, 0x43, 0x19],
+			'anyport_2'  : [0x04, 0x85, 0x50],
 		}
 
 		policy = Policy()
@@ -71,10 +71,10 @@ class TestFlow (unittest.TestCase):
 		messages = {
 			'destination': [0x01, 0x18, 0xc0, 0x00, 0x02],
 			'source'     : [0x02, 0x18, 0x0a, 0x01, 0x02],
-			'anyport_1'  : [0x04, 0x43, 0x19],  
-			'anyport_2'  : [0x85, 0x50],  
+			'anyport_1'  : [0x04, 0x43, 0x19],
+			'anyport_2'  : [0x85, 0x50],
 		}
-		
+
 		policy = Policy()
 		message = ""
 		for key in ['destination','source','anyport_1','anyport_2']:
@@ -98,7 +98,7 @@ class TestFlow (unittest.TestCase):
 #		messages = {
 #			'source_dest_port' : [0x0f, 0x01, 0x04, 0x18, 0xc0, 0x00, 0x02, 0x02, 0x04, 0x18, 0x0a, 0x01, 0x02, 0x04, 0x81, 0x19],
 #		}
-#		
+#
 #		for key in components.keys():
 #			policy = Policy()
 #			for component in components[key]:

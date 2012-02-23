@@ -42,10 +42,10 @@ class MultiAttributes (list):
 
 class Attributes (dict):
 	autocomplete = True
-	
+
 	def __init__ (self):
 		self._str = ''
-	
+
 	def has (self,k):
 		return self.has_key(k)
 

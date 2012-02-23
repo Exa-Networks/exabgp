@@ -77,7 +77,7 @@ class TestTable (unittest.TestCase):
 
 		self.table.update([routes[1]])
 		print '-------------------------'
-		print 
+		print
 		print [(t,r) for (t,r) in self.table.changed(self.now) if t]
 		print
 		self.failIf(('-',routes[0]) not in [(t,r) for (t,r) in self.table.changed(self.now) if t])

@@ -7,14 +7,14 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
-from exabgp.structure.address import Address,AFI,SAFI
+from exabgp.structure.address import Address #,AFI,SAFI
 from exabgp.message.update.attribute import AttributeID,Flag,Attribute
 
 # =================================================================== MP Unreacheable NLRI (15)
 
 class MPRNLRI (Attribute):
 	FLAG = Flag.OPTIONAL
-	ID = AttributeID.MP_REACH_NLRI    
+	ID = AttributeID.MP_REACH_NLRI
 	MULTIPLE = True
 
 	def __init__ (self,routes):
@@ -30,8 +30,8 @@ class MPRNLRI (Attribute):
 		routes = ''.join([route.nlri.pack() for route in self.routes])
 
 		return self._attribute(
-			self.routes[0].nlri.afi.pack() + self.routes[0].nlri.safi.pack() + 
-			chr(len(next_hop)) + next_hop + 
+			self.routes[0].nlri.afi.pack() + self.routes[0].nlri.safi.pack() +
+			chr(len(next_hop)) + next_hop +
 			chr(0) + routes
 		)
 

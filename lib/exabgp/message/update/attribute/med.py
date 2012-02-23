@@ -14,7 +14,7 @@ from exabgp.message.update.attribute import AttributeID,Flag,Attribute
 # =================================================================== MED (4)
 
 class MED (Attribute):
-	ID = AttributeID.MED  
+	ID = AttributeID.MED
 	FLAG = Flag.OPTIONAL
 	MULTIPLE = False
 

@@ -71,7 +71,7 @@ class RouterID (object):
 
 	def pack (self):
 		return self.raw
-	
+
 	def __str__ (self):
 		return self.ip
 
@@ -89,16 +89,16 @@ class Graceful (dict):
 	FLAG_MASK     = 0xF000
 
 	# 0x8 is binary 1000
-	RESTART_STATE = 0x08 
+	RESTART_STATE = 0x08
 	FORWARDING_STATE = 0x80
-	
+
 	def __init__ (self,restart_flag,restart_time,protos):
 		dict.__init__(self)
 		self.restart_flag = restart_flag
 		self.restart_time = restart_time & Graceful.TIME_MASK
 		for afi,safi,family_flag in protos:
 			self[(afi,safi)] = family_flag & Graceful.FORWARDING_STATE
-	
+
 	def extract (self):
 		restart  = pack('!H',((self.restart_flag << 12) | (self.restart_time & Graceful.TIME_MASK)))
 		families = [(afi.pack(),safi.pack(),chr(self[(afi,safi)])) for (afi,safi) in self.keys()]
@@ -162,7 +162,7 @@ class Unknown (object):
 	def __init__ (self,value,raw=''):
 		self.value = value
 		self.raw = raw
-	
+
 	def __str__ (self):
 		if self.value in Capabilities.reserved: return 'Reserved %s' % str(self.value)
 		if self.value in Capabilities.unassigned: return 'Unassigned %s' % str(self.value)
@@ -199,7 +199,7 @@ class Capabilities (dict):
 	DYNAMIC_CAPABILITY       = 0x43 # [Chen]
 	MULTISESSION_BGP         = 0x44 # [draft-ietf-idr-bgp-multisession]
 	ADD_PATH                 = 0x45 # [draft-ietf-idr-add-paths]
-	# 70-127    Unassigned 
+	# 70-127    Unassigned
 	CISCO_ROUTE_REFRESH      = 0x80 # I Can only find reference to this in the router logs
 	MULTISESSION_BGP_OLD     = 0x83 # before http://tools.ietf.org/html/draft-ietf-idr-bgp-multisession-04
 	# 128-255   Reserved for Private Use [RFC5492]
@@ -251,7 +251,7 @@ class Capabilities (dict):
 
 		mp = MultiProtocol()
 		mp.extend(families)
-		self[Capabilities.MULTIPROTOCOL_EXTENSIONS] = mp 
+		self[Capabilities.MULTIPROTOCOL_EXTENSIONS] = mp
 		self[Capabilities.FOUR_BYTES_ASN] = ASN4(neighbor.local_as)
 
 		if graceful:

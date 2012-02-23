@@ -46,7 +46,7 @@ class Message (Exception):
 
 	def __init__ (self):
 		if self.TYPE is None:
-			self._str = 'UNKNOWN (invalid code : %s)' % str(code)
+			self._str = 'UNKNOWN (invalid code)'
 			return
 
 		code = ord(self.TYPE)

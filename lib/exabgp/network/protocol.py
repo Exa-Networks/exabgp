@@ -7,8 +7,8 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
-import os
-import copy
+#import os
+#import copy
 import time
 import socket
 from struct import unpack
@@ -27,8 +27,8 @@ from exabgp.message.open         import Open,Unknown,Parameter,Capabilities,Rout
 from exabgp.message.update       import Update
 from exabgp.message.update.eor   import EOR
 from exabgp.message.keepalive    import KeepAlive
-from exabgp.message.notification import Notification, Notify, NotConnected
-from exabgp.message.update.route import Route,ReceivedRoute
+from exabgp.message.notification import Notification, Notify #, NotConnected
+from exabgp.message.update.route import ReceivedRoute # ,Route
 from exabgp.message.update.attributes     import Attributes
 from exabgp.message.update.attribute      import AttributeID
 from exabgp.message.update.attribute.flag        import Flag
@@ -39,7 +39,7 @@ from exabgp.message.update.attribute.med         import MED
 from exabgp.message.update.attribute.localpref   import LocalPreference
 from exabgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities
 #from exabgp.message.update.attribute.mprnlri     import MPRNLRI
-from exabgp.message.update.attribute.mpurnlri    import MPURNLRI
+#from exabgp.message.update.attribute.mpurnlri    import MPURNLRI
 
 from exabgp.log import Logger
 logger = Logger()
@@ -94,7 +94,7 @@ class Protocol (object):
 	# Read from network .......................................................
 
 	def read_message (self):
-		# This call reset the time for the timeout in 
+		# This call reset the time for the timeout in
 		if not self.connection.pending(True):
 			return NOP('')
 
@@ -375,7 +375,7 @@ class Protocol (object):
 						# Multiple Capabilities can be present in a single attribute
 						#if r:
 						#	raise Notify(2,0,"Bad length for OPEN %s (size mismatch) %s" % ('capability',hexa(value)))
-	
+
 						if k == Capabilities.MULTIPROTOCOL_EXTENSIONS:
 							if k not in capabilities:
 								capabilities[k] = MultiProtocol()
@@ -383,7 +383,7 @@ class Protocol (object):
 							safi = SAFI(ord(capv[3]))
 							capabilities[k].append((afi,safi))
 							continue
-	
+
 						if k == Capabilities.GRACEFUL_RESTART:
 							restart = unpack('!H',capv[:2])[0]
 							restart_flag = restart >> 12
@@ -398,19 +398,19 @@ class Protocol (object):
 								value_gr = value_gr[4:]
 							capabilities[k] = Graceful(restart_flag,restart_time,families)
 							continue
-	
+
 						if k == Capabilities.FOUR_BYTES_ASN:
 							capabilities[k] = ASN(unpack('!L',capv[:4])[0])
 							continue
-	
+
 						if k == Capabilities.ROUTE_REFRESH:
 							capabilities[k] = RouteRefresh()
 							continue
-	
+
 						if k == Capabilities.CISCO_ROUTE_REFRESH:
 							capabilities[k] = CiscoRouteRefresh()
 							continue
-	
+
 						if k == Capabilities.MULTISESSION_BGP:
 							capabilities[k] = MultiSession()
 							continue
@@ -462,7 +462,6 @@ class Protocol (object):
 		attributes = self.AttributesFactory(attribute)
 		routes.extend(self.mp_routes)
 
-		announce = []
 		while announced:
 			nlri = BGPPrefix(AFI.ipv4,announced)
 			route = ReceivedRoute(nlri,'announce')

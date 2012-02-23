@@ -55,19 +55,19 @@ def bug_report (type, value, trace):
 	print "-"*80
 	print
 	print
-	
+
 	#print >> sys.stderr, 'the program failed with message :', value
 
 if debug is None:
-	def intercept (type, value, trace):
+	def intercept_nopdb (type, value, trace):
 		bug_report(type, value, trace)
-	sys.excepthook = intercept
+	sys.excepthook = intercept_nopdb
 elif debug not in ['0','']:
-	def intercept (type, value, trace):
+	def intercept_pdb (type, value, trace):
 		bug_report(type, value, trace)
 		import pdb
 		pdb.pm()
-	sys.excepthook = intercept
+	sys.excepthook = intercept_pdb
 
 del sys.argv[0]
 

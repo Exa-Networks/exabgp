@@ -59,7 +59,7 @@ class Peer (object):
 
 		# The routes we have parsed from our neighbour
 		self._received_routes = []
-		
+
 		self._route_parsed = 0L
 		self._now = time.time()
 		self._next_info = self._now + self.update_time
@@ -132,7 +132,7 @@ class Peer (object):
 			start = time.time()
 			while True:
 				self.open = self.bgp.read_open(_open,self.neighbor.peer_address.ip)
-				if time.time() - start > max_wait_open: 
+				if time.time() - start > max_wait_open:
 					logger.message(self.me('Waited for an OPEN for too long - killing the session'))
 					raise Notify(1,1,'The client took over %s seconds to send the OPEN, closing' % str(max_wait_open))
 				# OPEN or NOP
@@ -180,7 +180,7 @@ class Peer (object):
 				if families:
 					eor = True
 					logger.message(self.me('>> EOR %s' % ', '.join(['%s %s' % (str(afi),str(safi)) for (afi,safi) in families])))
-			
+
 			if not eor:
 				# If we are not sending an EOR, send a keepalive as soon as when finished
 				# So the other routers knows that we have no (more) routes to send ...
@@ -238,7 +238,7 @@ class Peer (object):
 					self._updates = self.bgp.buffered()
 
 				yield None
-			
+
 			if self.neighbor.graceful_restart and self.open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
 				logger.warning('Closing the connection without notification')
 				self.bgp.close()
@@ -299,4 +299,4 @@ class Peer (object):
 				yield str(route)
 		else:
 			raise StopIteration()
-			
+

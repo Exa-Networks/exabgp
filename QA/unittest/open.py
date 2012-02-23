@@ -30,6 +30,6 @@ class TestData (unittest.TestCase):
 		self.assertEqual(o.router_id,'127.0.0.1')
 		self.assertEqual(o.hold_time,180)
 		self.assertEqual(o.capabilities, {64: {(1, 1): 128, (2, 1): 128}, 1: [(1, 1), (2, 1)]})
-		
+
 if __name__ == '__main__':
 	unittest.main()

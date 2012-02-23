@@ -19,10 +19,10 @@ logger = Logger()
 class Daemon (object):
 	pid_file = os.environ.get('PID','')
 	user = os.environ.get('USER','nobody')
-	
+
 	def __init__ (self,supervisor):
 		self.supervisor = supervisor
-		mask = os.umask(0137)
+		#mask = os.umask(0137)
 
 	def savepid (self):
 		self._saved_pid = False
@@ -37,7 +37,7 @@ class Daemon (object):
 
 		try:
 			fd = os.open(self.pid_file,flags,mode)
-		except OSError, e:
+		except OSError:
 			logger.daemon("PIDfile already exists, not updated %s" % self.pid_file)
 			return
 
@@ -47,7 +47,7 @@ class Daemon (object):
 			f.write(line)
 			f.close()
 			self._saved_pid = True
-		except IOError, e:
+		except IOError:
 			logger.daemon("Can not create PIDfile %s" % self.pid_file)
 			return
 		logger.daemon("Created PIDfile %s with value %d" % (self.pid_file,ownid))
@@ -70,7 +70,7 @@ class Daemon (object):
 		# os.name can be ['posix', 'nt', 'os2', 'ce', 'java', 'riscos']
 		if os.name not in ['posix',]:
 			return False
-		
+
 		uid = os.getpid()
 		gid = os.getgid()
 
@@ -91,7 +91,7 @@ class Daemon (object):
 			if not gid:
 				os.setgid(ngid)
 			return False
-		except OSError,e:
+		except OSError:
 			return True
 
 	def _is_socket (self,fd):
@@ -101,7 +101,7 @@ class Daemon (object):
 			# The file descriptor is closed
 			return False
 		try:
-			what = s.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
+			s.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
 		except socket.error, e:
 			# It is look like one but it is not a socket ...
 			if e.args[0] == errno.ENOTSOCK:
@@ -111,7 +111,7 @@ class Daemon (object):
 	def daemonise (self):
 		if os.environ.get('DAEMONIZE','0') not in ['','1','yes','Yes','YES']:
 			return
-		
+
 		def fork_exit ():
 			try:
 				pid = os.fork()
@@ -119,7 +119,7 @@ class Daemon (object):
 					os._exit(0)
 			except OSError, e:
 				logger.critial('Can not fork, errno %d : %s' % (e.errno,e.strerror),'supervisor')
-				
+
 		# do not detach if we are already supervised or run by init like process
 		if not self._is_socket(sys.__stdin__.fileno()) and os.getppid() != 1:
 			fork_exit()

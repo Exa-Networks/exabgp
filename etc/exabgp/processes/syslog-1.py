@@ -17,14 +17,14 @@ counter = 0
 while True:
 	try:
 		line = sys.stdin.readline().strip()
-		if line == "": 
+		if line == "":
 			counter += 1
 			if counter > 100:
 				break
 			continue
-		
+
 		counter = 0
-		
+
 		syslog.syslog(syslog.LOG_ALERT, _prefixed('INFO',line))
 	except KeyboardInterrupt:
 		pass

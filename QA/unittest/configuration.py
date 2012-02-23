@@ -147,31 +147,31 @@ neighbor 10.0.0.10 {
 	description A non quoted description;
 }
 """ : 'syntax error in section neighbor\nline 2 : description a non quoted description ;\nsyntax: description "<description>"'
-,	
+,
 """\
 neighbor 10.0.0.10 {
 	description "A quoted description with "quotes" inside";
 }
 """ : 'syntax error in section neighbor\nline 2 : description "a quoted description with "quotes" inside" ;\nsyntax: description "<description>"'
-,	
+,
 """\
 neighbor 10.0.0.10 {
 	local-address A;
 }
 """ : 'syntax error in section neighbor\nline 2 : local-address a ;\n"a" is an invalid IP address'
-,	
+,
 """\
 neighbor 10.0.0.10 {
 	local-as A;
 }
 """ : 'syntax error in section neighbor\nline 2 : local-as a ;\n"a" is an invalid ASN'
-,	
+,
 """\
 neighbor 10.0.0.10 {
 	peer-as A;
 }
 """ : 'syntax error in section neighbor\nline 2 : peer-as a ;\n"a" is an invalid ASN'
-,	
+,
 """\
 neighbor 10.0.0.10 {
 	router-id A;

@@ -59,6 +59,6 @@ class ASPath (Attribute):
 class AS4Path (ASPath):
 	ID = AttributeID.AS4_PATH
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
-	
+
 	def __init__ (self,asptype=0x02,aspsegment=None):
 		ASPath.__init__(self,True,asptype,aspsegment)

@@ -67,7 +67,7 @@ class TestProtocol (unittest.TestCase):
 		updates = bgp.read_message()
 		self.assertEqual(updates.TYPE,Update.TYPE)
 		self.assertEqual(str(updates.added()[0]),'10.0.1.1/32 next-hop 10.0.0.254')
-		
+
 	def test_5_selfparse_update_announce_multi (self):
 		o = Open(4,65000,'1.2.3.4',Capabilities().default(),30).message()
 		k = KeepAlive().message()

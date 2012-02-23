@@ -9,14 +9,14 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 
 from struct import pack
 
-from exabgp.message.update.attribute import AttributeID,Flag,Attribute
+#from exabgp.message.update.attribute import AttributeID,Flag,Attribute
 
 # =================================================================== Community
 
 class Label (object):
 	def __init__ (self,label):
 		self.label = label
-	
+
 	def pack (self):
 		return pack('!L',self.label)
 

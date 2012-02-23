@@ -7,15 +7,15 @@ Created by Thomas Mangin on 2009-09-06.
 Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
-import os
-import sys
+#import os
+#import sys
 import struct
 import time
 import socket
-import fcntl
+#import fcntl
 import errno
 import select
-import array
+#import array
 
 from exabgp.utils import hexa,trace
 from exabgp.structure.address import AFI
@@ -24,7 +24,7 @@ from exabgp.message import Failure
 from exabgp.log import Logger,LazyFormat
 logger = Logger()
 
-# If the OS tells us we have data on the socket, 
+# If the OS tells us we have data on the socket,
 # we should never have to wait more than READ_TIMEOUT to be able to read it.
 READ_TIMEOUT = 1
 
@@ -87,7 +87,7 @@ class Connection (object):
 				TCP_MD5SIG = 14
 				TCP_MD5SIG_MAXKEYLEN = 80
 				SS_PADSIZE = 120
-				
+
 				n_addr = socket.inet_aton(peer.ip)
 				n_port = socket.htons(179)
 				tcp_md5sig = 'HH4s%dx2xH4x%ds' % (SS_PADSIZE, TCP_MD5SIG_MAXKEYLEN)
@@ -137,7 +137,7 @@ class Connection (object):
 		try:
 			r,_,_ = select.select([self.io,],[],[],0)
 		except select.error,e:
-			errno,message = e.args 
+			errno,message = e.args
 			if errno in errno_block:
 				return False
 			raise
@@ -148,7 +148,7 @@ class Connection (object):
 		try:
 			_,w,_ = select.select([],[self.io,],[],0)
 		except select.error,e:
-			errno,message = e.args 
+			errno,message = e.args
 			if errno in errno_block:
 				return False
 			raise

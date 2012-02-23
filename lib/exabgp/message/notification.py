@@ -19,7 +19,7 @@ class Notification (Message,Failure):
 	_str_code = {
 		1 : "Message header error",
 		2 : "OPEN message error",
-		3 : "UPDATE message error", 
+		3 : "UPDATE message error",
 		4 : "Hold timer expired",
 		5 : "State machine error",
 		6 : "Cease"

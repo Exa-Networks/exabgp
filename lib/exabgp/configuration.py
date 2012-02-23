@@ -20,10 +20,10 @@ from exabgp.structure.icmp       import NamedICMPType,NamedICMPCode
 from exabgp.structure.tcpflags   import NamedTCPFlags
 from exabgp.structure.fragments  import NamedFragments
 from exabgp.message.open         import HoldTime,RouterID
-from exabgp.message.update.route import Route
+#from exabgp.message.update.route import Route
 from exabgp.message.update.flow  import BinaryOperator,NumericOperator
 from exabgp.message.update.flow  import Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
-from exabgp.message.update.attribute             import AttributeID,Attribute
+from exabgp.message.update.attribute             import AttributeID #,Attribute
 from exabgp.message.update.attribute.origin      import Origin
 from exabgp.message.update.attribute.nexthop     import NextHop
 from exabgp.message.update.attribute.aspath      import ASPath
@@ -118,7 +118,7 @@ class Configuration (object):
 		self._text = text
 		self._fname = fname
 		self._clear()
-	
+
 	def _clear (self):
 		self.process = {}
 		self.neighbor = {}
@@ -176,7 +176,7 @@ class Configuration (object):
 	def parse_single_flow (self,command):
 		self._tokens = self._tokenise(' '.join(command.split(' ')[2:]).split('\\n'))
 		scope = [{}]
-		if not self._dispatch(scope,'flow',['route',],[]): 
+		if not self._dispatch(scope,'flow',['route',],[]):
 			return None
 		if not self._check_flow_route(scope):
 			return None
@@ -344,7 +344,7 @@ class Configuration (object):
 		if command == 'label': return self._route_label(scope,tokens[1:])
 		if command == 'watchdog': return self._route_watchdog(scope,tokens[1:])
 		if command == 'withdrawn': return self._route_withdrawn(scope,tokens[1:])
-		
+
 		if command == 'source': return self._flow_source(scope,tokens[1:])
 		if command == 'destination': return self._flow_destination(scope,tokens[1:])
 		if command == 'port': return self._flow_route_anyport(scope,tokens[1:])
@@ -367,7 +367,7 @@ class Configuration (object):
 		return False
 
 	# Group Watchdog
-	
+
 	def _multi_process (self,scope,tokens):
 		if len(tokens) != 1:
 			self._error = self._str_process_error
@@ -387,7 +387,7 @@ class Configuration (object):
 	def _set_process_run (self,scope,command,value):
 		line = ' '.join(value).strip()
 		if len(line) > 2 and line[0] == line[-1] and line[0] in ['"',"'"]:
-			line = prg[1:-1]
+			line = line[1:-1]
 		if ' ' in line:
 			prg,args = line.split(' ',1)
 		else:
@@ -412,7 +412,7 @@ class Configuration (object):
 
 		# XXX: Yep, race conditions are possible, those are sanity checks not security ones ...
 		s = os.stat(prg)
-		
+
 		if stat.S_ISDIR(s.st_mode):
 			self._error = 'can not execute directories "%s"' % prg
 			if self.debug: raise
@@ -522,11 +522,11 @@ class Configuration (object):
 			return False
 		if neighbor.local_address.afi != neighbor.peer_address.afi:
 			self._error = 'local-address and peer-address must be of the same family'
-			return False 
+			return False
 		if self._neighbor.has_key(neighbor.peer_address.ip):
 			self._error = 'duplicate peer definition %s' % neighbor.peer_address.ip
 			return False
-		
+
 		self._neighbor[neighbor.peer_address.ip] = neighbor
 		return True
 
@@ -711,15 +711,15 @@ class Configuration (object):
 				lower = ipn&0xFF
 				ipn = ipn >> 8
 				i = chr(lower) + i
-			
+
 			# change the route network
 			r.nlri.update_raw(i)
 			# update ip to the next route
 			ip += increment
-			
+
 			# save route
 			scope[-1]['routes'].append(r)
-		
+
 		# route is no longer needed - delete it explicitely
 		del(route)
 		return True
@@ -799,7 +799,7 @@ class Configuration (object):
 				if self._route_withdrawn(scope,tokens):
 					continue
 				return False
-			
+
 			if len(tokens) < 1:
 				return False
 
@@ -920,14 +920,14 @@ class Configuration (object):
 			prefix = int(data[:separator])
 			suffix = int(data[separator+1:])
 			if prefix >= pow(2,16):
-				raise ValueError('invalid community %s (prefix too large)' % data) 
+				raise ValueError('invalid community %s (prefix too large)' % data)
 			if suffix >= pow(2,16):
-				raise ValueError('invalid community %s (suffix too large)' % data) 
+				raise ValueError('invalid community %s (suffix too large)' % data)
 			return Community((prefix<<16) + suffix)
 		elif len(data) >=2 and data[1] in 'xX':
 			value = long(data,16)
 			if value >= pow(2,32):
-				raise ValueError('invalid community %s (too large)' % data) 
+				raise ValueError('invalid community %s (too large)' % data)
 			return Community(value)
 		else:
 			low = data.lower()
@@ -939,7 +939,7 @@ class Configuration (object):
 				data = 0xFFFFFF03
 			value = long(data)
 			if value >= pow(2,32):
-				raise ValueError('invalid community %s (too large)' % data) 
+				raise ValueError('invalid community %s (too large)' % data)
 			return Community(value)
 
 	def _route_community (self,scope,tokens):
@@ -973,14 +973,14 @@ class Configuration (object):
 				for i in range(2,len(data),2):
 					raw += chr(int(data[i:i+2],16))
 			except ValueError:
-				raise ValueError('invalid extended community %s' % data) 
+				raise ValueError('invalid extended community %s' % data)
 			if len(raw) != 8:
-				raise ValueError('invalid extended community %s' % data) 
+				raise ValueError('invalid extended community %s' % data)
 			return ECommunity(raw)
 		elif data.count(':'):
 			return to_ExtendedCommunity(data)
 		else:
-			raise ValueError('invalid extended community %s - lc+gc' % data) 
+			raise ValueError('invalid extended community %s - lc+gc' % data)
 
 	def _route_extended_community (self,scope,tokens):
 		extended_communities = ECommunities()
@@ -1088,7 +1088,7 @@ class Configuration (object):
 		return r
 
 	# ..........................................
-	
+
 	def _multi_match (self,scope,tokens):
 		if len(tokens) != 0:
 			self._error = self._str_flow_error
@@ -1252,7 +1252,7 @@ class Configuration (object):
 
 	def _flow_route_fragment (self,scope,tokens):
 		return self._flow_generic_list(scope,tokens,NamedFragments,Fragment)
-	
+
 	def _flow_route_dscp (self,scope,tokens):
 		return self._flow_generic_condition(scope,tokens,int,DSCP)
 
@@ -1310,4 +1310,4 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
-		
+

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# based on netlink.py at .... 
+# based on netlink.py at ....
 # https://gforge.inria.fr/scm/viewvc.php/canso/trunk/tools/netlink.py?view=markup&revision=1360&root=mehani&pathrev=1360
 # http://www.linuxjournal.com/article/7356?page=0,1
 # http://smacked.org/docs/netlink.pdf
@@ -83,7 +83,7 @@ class NetLinkRoute (object):
 	def encode (self, type, seq, flags, body, attributes):
 		attrs = Attributes().encode(attributes)
 		length = self.Header.LEN + len(attrs) + len(body)
-		return pack(self.Header.PACK, length, type, flags, seq, self.pid) + body + attrs 
+		return pack(self.Header.PACK, length, type, flags, seq, self.pid) + body + attrs
 
 	def decode (self,data):
 		while data:
@@ -105,7 +105,7 @@ class NetLinkRoute (object):
 		)
 
 		self.socket.send(message)
-		
+
 		running = True
 		while True:
 			data = self.socket.recv(640000)
@@ -131,7 +131,7 @@ class NetLinkRoute (object):
 		)
 
 		self.socket.send(message)
-		
+
 		running = True
 		while True:
 			data = self.socket.recv(640000)
@@ -187,7 +187,7 @@ class Attributes (object):
 
 	def encode (self,attributes):
 		return ''.join([self._encode(k,v) for (k,v) in attributes.items()])
-		
+
 class _InfoMessage (object):
 	def __init__ (self,route):
 		self.route = route
@@ -228,7 +228,7 @@ class Link(_InfoMessage):
 		RTM_NEWLINK = 0x10  # Create a new network interface
 		RTM_DELLINK = 0x11  # Destroy a network interface
 		RTM_GETLINK = 0x12  # Retrieve information about a network interface (ifinfomsg)
-		RTM_SETLINK = 0x13  # 
+		RTM_SETLINK = 0x13  #
 
 	class Type (object):
 		class Family (object):
@@ -302,7 +302,7 @@ class Address (_InfoMessage):
 			IFA_F_PERMANENT  = 0x00 # For a permanent address set by the user.  When this is not set, it means the address was dynamically created (e.g., by stateless autoconfiguration).
 			IFA_F_DEPRECATED = 0x00 # Defines deprecated (IPV4) address
 			IFA_F_TENTATIVE  = 0x00 # Defines tentative (IPV4) address (duplicate address detection is still in progress)
-	
+
 		class Scope (object):
 			RT_SCOPE_UNIVERSE = 0x00 # Global route
 			RT_SCOPE_SITE     = 0x00 # Interior route in the local autonomous system
@@ -337,7 +337,7 @@ class Address (_InfoMessage):
 			IFLA_STATS64     = 0x17
 		        IFLA_VF_PORTS    = 0x18
 			IFLA_PORT_SELF   = 0x19
-	
+
 	def getAddresses (self):
 		return self.extract(self.Command.RTM_GETADDR)
 

@@ -125,7 +125,7 @@ def by_type(typename):
 
 def at(addr):
     """Return an object at a given memory address.
-    
+
     The reverse of id(obj):
 
         >>> at(id(obj)) is obj

@@ -66,7 +66,7 @@ class IPrefix (IComponent):
 	def pack (self):
 		raw = self.nlri.pack()
 		return "%s%s" % (chr(self.ID),raw)
-	
+
 	def __str__ (self):
 		return str(self.nlri)
 
@@ -75,7 +75,7 @@ class IPrefix (IComponent):
 
 class IOperation (IComponent):
 	# need to implement encode which encode the value of the operator
-	
+
 	def __init__ (self,operations,value):
 		self.operations = operations
 		self.value = value
@@ -234,11 +234,11 @@ class _FlowNLRI (Attributes,Address):
 
 	def pack (self):
 		ordered_rules = []
-		
+
 		# the order is a RFC requirement
 		IDS = self.rules.keys()
 		IDS.sort()
-		
+
 		for ID in IDS:
 			rules = self.rules[ID]
 			# for each component get all the operation to do
@@ -250,7 +250,7 @@ class _FlowNLRI (Attributes,Address):
 			rules[-1].operations |= CommonOperator.EOL
 			for rule in rules:
 				ordered_rules.append(rule)
-		
+
 		components = ''.join([rule.pack() for rule in ordered_rules])
 		l = len(components)
 		if l < 0xF0:
@@ -261,7 +261,7 @@ class _FlowNLRI (Attributes,Address):
 			logger.critical("rule too big for NLRI - how to handle this - does this work ?")
 			data = "%s" % chr(0)
 		return data
-		
+
 	def __str__ (self):
 		string = []
 		for _,rules in self.rules.iteritems():
@@ -274,7 +274,7 @@ class _FlowNLRI (Attributes,Address):
 					s.append(str(rule))
 			string.append('%s %s' % (rules[0].NAME,''.join(s[1:])))
 		return ' '.join(string)
-	
+
 	def __repr__ (self):
 		return str(self)
 

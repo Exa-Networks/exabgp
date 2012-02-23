@@ -126,7 +126,7 @@ class Supervisor (object):
 						try:
 							read,_,_ = select.select(ios,[],[],max(supervisor_speed-duration,0))
 						except select.error,e:
-							errno,message = e.args 
+							errno,message = e.args
 							if not errno in errno_block:
 								raise
 					else:
@@ -153,7 +153,7 @@ class Supervisor (object):
 	def reload (self):
 		"""reload the configuration and send to the peer the route which changed"""
 		logger.info("Performing reload of exabgp %s" % version,"configuration")
-		
+
 		reloaded = self.configuration.reload()
 		if not reloaded:
 			logger.info("Problem with the configuration file, no change done","configuration")
@@ -248,7 +248,7 @@ class Supervisor (object):
 		def _answer (service,string):
 			self.processes.write(service,string)
 			logger.supervisor('Responding to %s : %s' % (service,string))
-		
+
 		for service in commands:
 			for command in commands[service]:
 				if command == 'shutdown':
@@ -270,7 +270,7 @@ class Supervisor (object):
 	def route_update (self):
 		"""the process ran and we need to figure what routes to changes"""
 		logger.supervisor("Performing dynamic route update")
-		
+
 		for ip in self.configuration.neighbor.keys():
 			neighbor = self.configuration.neighbor[ip]
 			neighbor.watchdog(self.watchdogs)
@@ -361,7 +361,7 @@ def main ():
 		if arg in ['-h','--help']:
 			help()
 			sys.exit(0)
-		
+
 	Supervisor(sys.argv[1]).run()
 	sys.exit(0)
 

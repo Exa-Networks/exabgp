@@ -10,7 +10,7 @@ Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 import math
 import socket
 
-from exabgp.structure.address import AFI,SAFI,Address
+from exabgp.structure.address import AFI,SAFI #,Address
 from exabgp.message.update.route import Route
 
 _bgp = {}
@@ -36,7 +36,7 @@ class Inet (object):
 	_UNICAST = SAFI(SAFI.unicast)
 	_MULTICAST = SAFI(SAFI.multicast)
 	_unicast_range = set(range(224,240)) # 239 is last
-	
+
 	"""An IP in the 4 bytes format"""
 	# README: yep, we should surely change this _ name here
 	_af = {
@@ -58,10 +58,10 @@ class Inet (object):
 		self.afi = AFI(afi)
 		self.raw = raw
 		self.__update()
-		
+
 	def __update (self):
 		self.ip = self._ip()
-		
+
 		if self.afi == AFI.ipv4 and int(self.ip.split('.')[0]) in self._unicast_range:
 			self.safi = self._MULTICAST
 		else:
@@ -70,7 +70,7 @@ class Inet (object):
 	def update_raw (self,raw):
 		self.raw = raw
 		self.__update()
-	
+
 	def pack (self):
 		return self.raw
 
@@ -88,10 +88,10 @@ class Inet (object):
 
 	def __repr__ (self):
 		return str(self)
-	
+
 	def __eq__ (self,other):
 		return self.raw == other.raw and self.safi == other.safi
-	
+
 class _Prefix (Inet):
 	# have a .raw for the ip
 	# have a .mask for the mask

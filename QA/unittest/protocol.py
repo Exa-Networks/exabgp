@@ -89,9 +89,9 @@ class TestProtocol (unittest.TestCase):
 			_data = StringIO(Open(4,65000,'1.2.3.4',Capabilities().default(),90).message())
 			def read (self,l):
 				return self._data.read(l)
-		
+
 		network = MyPeer('')
-		
+
 		bgp = Protocol(self.neighbor,network)
 		bgp.follow = False
 
@@ -99,7 +99,7 @@ class TestProtocol (unittest.TestCase):
 		bgp.new_open()
 		bgp.read_open('127.0.0.1')
 		after = bgp.neighbor.hold_time
-		
+
 		self.assertEqual(after,min(before,90))
 
 #	def test_7_message (self):

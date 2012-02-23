@@ -7,8 +7,8 @@ Created by Thomas Mangin on 2009-09-06.
 Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
-import sys
-import time
+#import sys
+#import time
 
 import StringIO
 import traceback

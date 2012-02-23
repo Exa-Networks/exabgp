@@ -22,7 +22,7 @@ class Protocol (int):
 	IPIP  = 0x5E
 	PIM   = 0x67
 	SCTP  = 0x84
-	
+
 	def __str__ (self):
 		if self == Protocol.ICMP:    return 'ICMP'
 		if self == Protocol.IGMP:    return 'IGMP'

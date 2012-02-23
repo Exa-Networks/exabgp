@@ -14,7 +14,7 @@ from exabgp.message.update.attribute import AttributeID,Flag,Attribute
 
 class MPURNLRI (Attribute):
 	FLAG = Flag.OPTIONAL
-	ID = AttributeID.MP_UNREACH_NLRI  
+	ID = AttributeID.MP_UNREACH_NLRI
 	MULTIPLE = True
 
 	def __init__ (self,routes):

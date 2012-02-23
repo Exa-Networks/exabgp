@@ -24,7 +24,7 @@ class Community (object):
 			self._str = 'no-export-subconfed'
 		else:
 			self._str = "%d:%d" % (community >> 16, community & 0xFFFF)
-	
+
 	def pack (self):
 		return pack('!L',self.community)
 
@@ -46,7 +46,7 @@ class Communities (Attribute):
 
 	def __init__ (self,communities=None):
 		# Must be None as = param is only evaluated once
-		if communities: 
+		if communities:
 			self.communities = communities
 		else:
 			self.communities = []
@@ -56,7 +56,7 @@ class Communities (Attribute):
 
 	def pack (self):
 		if len(self.communities):
-			return self._attribute(''.join([c.pack() for c in self.communities])) 
+			return self._attribute(''.join([c.pack() for c in self.communities]))
 		return ''
 
 	def __str__ (self):
@@ -95,7 +95,7 @@ def to_ExtendedCommunity (data):
 	elif command == 'target':
 		subtype = chr(0x02)
 	else:
-		raise ValueError('invalid extended community %s (only origin or target are supported) ' % command) 
+		raise ValueError('invalid extended community %s (only origin or target are supported) ' % command)
 
 	gc = ga.count('.')
 	lc = la.count('.')
@@ -110,7 +110,7 @@ def to_ExtendedCommunity (data):
 		global_admin = pack('!BBBB',*[int(_) for _ in ga.split('.')])
 		local_admin = pack('!H',int(la))
 	else:
-		raise ValueError('invalid extended community %s ' % data) 
+		raise ValueError('invalid extended community %s ' % data)
 
 	return ECommunity(header+subtype+global_admin+local_admin)
 
@@ -122,7 +122,7 @@ class ECommunity (object):
 	# size of value for data (boolean: is extended)
 	length_value = {False:7, True:6}
 	name = {False: 'regular', True: 'extended'}
-	
+
 	def __init__ (self,community):
 		# Two top bits are iana and transitive bits
 		self.community = community
@@ -140,7 +140,7 @@ class ECommunity (object):
 		# 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0F
 		community_type = ord(self.community[0]) & 0x0F
 		community_stype = ord(self.community[1])
-		# Target 
+		# Target
 		if community_stype == 0x02:
 			if community_type in (0x00,0x02):
 				asn = unpack('!H',self.community[2:4])[0]
@@ -240,7 +240,7 @@ def to_RouteTargetCommunity_01 (ipn,number):
 #	if transitive: r += chr(0x40)
 #	return ECommunity(r + chr(subtype) + ''.join([chr(c) for c in data[:6]]))
 
-# See RFC4360 
+# See RFC4360
 # 0x00, 0x02 Number is administrated by a global authority
 # Format is asn:route_target (2 bytes:4 bytes)
 # 0x01, Number is administered by the ASN owner
