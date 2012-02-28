@@ -3,8 +3,9 @@ Version explained:
  minor : increase on new features
  bug   : increase on bug fixes
 
-Version 2.0.6 - -- of March 2012 (stable version)
+Version 2.0.6 - 28 of March 2012 (stable version)
  * Improvement: update grouping up to 4096 bytes
+ * Fix: debian packaging issue
 
 Version 2.0.5 - 10 of Febuary 2012
  * Improvement: allow named community

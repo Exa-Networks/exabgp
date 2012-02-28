@@ -1,6 +1,7 @@
 exabgp (2.0.6-1) unstable; urgency=low
   
   * New upstream release
+  * Group BGP updates up to 4096 bytes
   * Closes: #661472
 
  -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Wed, 28 Feb 2012 20:00:00 +0000
