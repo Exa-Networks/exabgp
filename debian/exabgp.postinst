@@ -1,32 +1,20 @@
-#! /bin/sh
+#!/bin/sh -e
 
-set -e
 . /usr/share/debconf/confmodule
 db_version 2.0
 
-rm_conffile() {
-    local PKGNAME="$1" # Unused
-    local CONFFILE="$2"
-    if [ `grep -c $CONFFILE /etc/exabgp/*` -eq 0 ] && [ -f "$CONFFILE".dpkg-del ]; then
-        rm -f "$CONFFILE".dpkg-del
-    fi
-}
-
-clean_old_conf(){
-    if dpkg --compare-versions "$2" le "$LASTVERSION"; then
-        rm_conffile exabgp "/etc/exabgp/processes/dynamic-1.sh"
-        rm_conffile exabgp "/etc/exabgp/processes/watchdog-1.sh"
-    fi
-
-}
+if dpkg-maintscript-helper supports mv_conffile 2>/dev/null; then
+    FILE_ONE="/etc/exabgp/processes/dynamic-1.sh"
+    FILE_TWO="/etc/exabgp/processes/watchdog-1.sh"
+    if ! egrep -q "$FILE_ONE" /etc/exabgp/exabgp.conf ; then dpkg-maintscript-helper rm_conffile "$FILE_ONE" -- "$@" ; fi
+    if ! egrep -q "$FILE_TWO" /etc/exabgp/exabgp.conf ; then dpkg-maintscript-helper rm_conffile "$FILE_TWO" -- "$@" ; fi
+    if [ -d "/etc/exabgp/processes/" ] ; then rmdir /etc/exabgp/processes 2>/dev/null ; fi 
+fi
 
 case "$1" in
 configure)
-    clean_old_conf
     adduser --quiet --system --group --disabled-login --home /var/run/exabgp exabgp
-    if [ ! -z "$2" ] && [ -e /var/run/exabgp/exabgp.pid ]; then # first install
-    	invoke-rc.d exabgp stop 
-    fi
+    if [ ! -z "$2" ] && [ -e /var/run/exabgp/exabgp.pid ]; then invoke-rc.d exabgp stop; fi
     # The script will be started through the DEBHELPER script called hereunder.
     ;;
 install|upgrade)
