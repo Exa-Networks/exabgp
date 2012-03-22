@@ -1,7 +1,7 @@
 exabgp (2.0.7-1) unstable; urgency=low
   
   * New upstream release
-  * Fix bad setup script clean target
+  * Fix bad clean target for build/ directory
 
  -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Thu, 22 Mar 2012 12:00:00 +0000
 
