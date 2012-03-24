@@ -150,6 +150,7 @@ class Configuration (object):
 
 		self._clear()
 
+		r = False
 		while not self.finished():
 			r = self._dispatch(self._scope,'configuration',['group','neighbor'],[])
 			if r is False: break
