@@ -2,6 +2,19 @@
 
 dirname=`dirname $0`
 
+case $dirname in
+	/*)
+		cd $dirname/.. > /dev/null
+		path=`pwd`
+		cd - > /dev/null
+	;;
+	*)
+		cd `pwd`/$dirname/.. > /dev/null
+		path=`pwd`
+		cd - > /dev/null
+	;;
+esac
+
 if [ `echo $dirname | grep "^/" -c` -eq 1 ]; then
 	echo $path
 else
