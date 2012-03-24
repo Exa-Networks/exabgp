@@ -2,9 +2,8 @@ This is an informal roadmap - no promise
 
 ROADMAP
 
-Version 2.0.6+
+Version 2.0.7+
 - usual bug fixes and improvments
-- group update to up to maximum message size (4096 or more if negociated)
   http://www.ietf.org/id/draft-ietf-idr-bgp-extended-messages-02.txt
 
 LATER
