@@ -264,10 +264,7 @@ class Configuration (object):
 
 		if name == 'configuration':
 			if  command == 'neighbor':
-				if len(tokens) != 2:
-					self._error = 'syntax: neighbor <ip> { <options> }'
-					return False
-				if self._multi_neighbor(scope,tokens[1]):
+				if self._multi_neighbor(scope,tokens[1:]):
 					return self._make_neighbor(scope)
 				return False
 			if  command == 'group':
@@ -278,10 +275,7 @@ class Configuration (object):
 
 		if name == 'group':
 			if  command == 'neighbor':
-				if len(tokens) != 2:
-					self._error = 'syntax: neighbor <ip> { <options> }'
-					return False
-				if self._multi_neighbor(scope,tokens[1]):
+				if self._multi_neighbor(scope,tokens[1:]):
 					return self._make_neighbor(scope)
 				return False
 			if command == 'static': return self._multi_static(scope,tokens[1:])
@@ -331,6 +325,7 @@ class Configuration (object):
 		if command == 'graceful-restart': return self._set_gracefulrestart(scope,'graceful-restart',tokens[1:])
 		if command == 'md5': return self._set_md5(scope,'md5',tokens[1:])
 		if command == 'ttl-security': return self._set_ttl(scope,'ttl-security',tokens[1:])
+		if command == 'multi-session': return self._set_multisession(scope,'multi-session',tokens[1:])
 
 		if command == 'route': return self._single_static_route(scope,tokens[1:])
 		if command == 'origin': return self._route_origin(scope,tokens[1:])
@@ -463,7 +458,7 @@ class Configuration (object):
 	def _multi_group (self,scope,address):
 		scope.append({})
 		while True:
-			r = self._dispatch(scope,'group',['static','flow','neighbor','process'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart','md5','ttl-security'])
+			r = self._dispatch(scope,'group',['static','flow','neighbor','process'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart','md5','ttl-security','multi-session'])
 			if r is False:
 				return False
 			if r is None:
@@ -514,6 +509,7 @@ class Configuration (object):
 
 		neighbor.md5 = local_scope.get('md5',None)
 		neighbor.ttl = local_scope.get('ttl-security',None)
+		neighbor.multisession = local_scope.get('multi-session',False)
 
 		missing = neighbor.missing()
 		if missing:
@@ -526,11 +522,26 @@ class Configuration (object):
 			self._error = 'duplicate peer definition %s' % neighbor.peer_address.ip
 			return False
 
-		self._neighbor[neighbor.peer_address.ip] = neighbor
+		if neighbor.multisession:
+			for family in neighbor.families():
+				afi,safi = family
+				family_n = deepcopy(neighbor)
+				for f in neighbor.families():
+					if f == family:
+						continue
+					family_n.remove_family(f)
+				self._neighbor[family_n.name()] = family_n
+		else:
+			self._neighbor[neighbor.name()] = neighbor
 		return True
 
 
-	def _multi_neighbor (self,scope,address):
+	def _multi_neighbor (self,scope,tokens):
+		if len(tokens) != 1:
+			self._error = 'syntax: neighbor <ip> { <options> }'
+			return False
+
+		address = tokens[0]
 		scope.append({})
 		try:
 			scope[-1]['peer-address'] = to_IP(address)
@@ -539,7 +550,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-		 	r = self._dispatch(scope,'neighbor',['static','flow','process'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart','md5','ttl-security'])
+		 	r = self._dispatch(scope,'neighbor',['static','flow','process'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart','md5','ttl-security','multi-session'])
 			if r is False: return False
 			if r is None: return True
 
@@ -656,6 +667,10 @@ class Configuration (object):
 			self._error = '"%s" is an invalid ttl-security' % ' '.join(value)
 			if self.debug: raise
 			return False
+		return True
+
+	def _set_multisession (self,scope,command,value):
+		scope[-1][command] = True
 		return True
 
 	#  Group Static ................

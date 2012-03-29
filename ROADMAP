@@ -2,12 +2,13 @@ This is an informal roadmap - no promise
 
 ROADMAP
 
-Version 2.0.7+
+Version 2.1.0
+- add full support for multisession (this is too intrusive to still call 2.0.xx stable)
 - usual bug fixes and improvments
   http://www.ietf.org/id/draft-ietf-idr-bgp-extended-messages-02.txt
 - an exception interception wrapper so forked process do not die on signal sent to exabgp
 - have a command to shutdown the process properly
-- add full support for multisession
+- check that the route received are well from a family negociated during the OPEN
 
 LATER
 - look what fun RFC we could implement from the list at 

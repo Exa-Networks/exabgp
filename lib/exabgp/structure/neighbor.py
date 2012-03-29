@@ -28,9 +28,17 @@ class Neighbor (object):
 		self.graceful_restart = False
 		self.md5 = None
 		self.ttl = None
+		self.multisession = None
 		self.parse_routes = None
 		self._families = {}
 		self._watchdog = {}
+
+	def name (self):
+		if self.multisession:
+			session =  ", ".join("%s %s" % (afi,safi) for (afi,safi) in self._families.keys())
+			return "%s multi-session %s" % (self.peer_address,session)
+		else:
+			return "%s" % (self.peer_address)
 
 	def families (self):
 		return self._families.keys()
@@ -62,6 +70,10 @@ class Neighbor (object):
 						continue
 				routes[str(route)] = route
 		return routes
+
+	def remove_family (self,family):
+		if family in self._families:
+			del self._families[family]
 
 	def add_route (self,route):
 		self._families.setdefault((route.nlri.afi,route.nlri.safi),[]).append(route)
@@ -99,6 +111,7 @@ class Neighbor (object):
 			self.graceful_restart == other.graceful_restart and \
 			self.md5 == other.md5 and \
 			self.ttl == other.ttl and \
+			self.multisession == other.multisession and \
 			self.families() == other.families()
 
 	def __ne__(self, other):
@@ -108,7 +121,7 @@ class Neighbor (object):
 		routes = '\n\t\t'
 		for family in self._families:
 			for _routes in self._families[family]:
-				routes += '\n\t\t'.join([str(route) for route in _routes])
+				routes += '\n\t\t%s' % _routes
 
 		options = []
 		if self.md5: options.append("md5: %s;" % self.md5)

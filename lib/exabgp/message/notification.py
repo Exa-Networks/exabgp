@@ -40,6 +40,11 @@ class Notification (Message,Failure):
 		# RFC 5492
 		(2,7) : "Unsupported Capability",
 
+		# draft-ietf-idr-bgp-multisession-06
+		#(2,7) : "Capability Value Mismatch",
+		#(2,8) : "Grouping Conflict",
+		#(2,9) : "Grouping Required",
+
 		(3,0) : "Unspecific.",
 		(3,1) : "Malformed Attribute List.",
 		(3,2) : "Unrecognized Well-known Attribute.",

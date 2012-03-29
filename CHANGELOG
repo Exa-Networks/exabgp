@@ -3,8 +3,9 @@ Version explained:
  minor : increase on new features
  bug   : increase on bug fixes
 
-Version 2.0.8 - -- of ----- 2012 (stable version)
+Version 2.1.0 - -- of ----- 2012 (experimental version)
  * Fix: reset counters correctly for number of routes seen (only affects the logs)
+ * Improvement: implementation of draft-ietf-idr-bgp-multisession-06
 
 Version 2.0.7 - 24 of March 2012
  * Fix: debian packaging issue
