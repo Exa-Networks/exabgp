@@ -500,9 +500,8 @@ class Configuration (object):
 			neighbor.parse_routes = local_scope.get('parse-routes',False)
 			v = local_scope.get('routes',[])
 			for route in v:
+				# This add the family to neighbor.families()
 				neighbor.add_route(route)
-				if (route.nlri.afi,route.nlri.safi) not in neighbor.families:
-					neighbor.families.append((route.nlri.afi,route.nlri.safi))
 
 		# drop the neighbor
 		local_scope = scope.pop(-1)

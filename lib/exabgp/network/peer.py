@@ -174,7 +174,7 @@ class Peer (object):
 
 				families = []
 				for family in self.open.capabilities[Capabilities.GRACEFUL_RESTART].families():
-					if family in self.neighbor.families:
+					if family in self.neighbor.families():
 						families.append(family)
 				self.bgp.new_eors(families)
 				if families:

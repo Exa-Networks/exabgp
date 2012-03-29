@@ -241,7 +241,7 @@ class Capabilities (dict):
 		graceful = neighbor.graceful_restart
 
 		if os.environ.get('MINIMAL_MP','0') in ['','1','yes','Yes','YES']:
-			families = neighbor.families
+			families = neighbor.families()
 		else:
 			families = []
 			families.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
