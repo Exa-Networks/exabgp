@@ -94,6 +94,7 @@ class Peer (object):
 		self._running = False
 		self._restart = True
 		self._restarted = True
+		self._route_parsed = 0L
 		self._neighbor = restart_neighbor
 		self._reset_skip()
 
