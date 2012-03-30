@@ -303,10 +303,9 @@ class Protocol (object):
 			if chunk:
 				yield chunk
 
-		# Do not try to join the message and write all in one go as it causes issue if the size is bigger than the MTU
-		# Python 2.5.2 for example send partial data which BGP decoders then take as garbage.
 		count = 0
-		for update in chunked(generator,self.message_size):
+		# The message size is the whole BGP message INCLUDING headers !
+		for update in chunked(generator,self.message_size-19):
 			count += 1
 			if self._messages[self.neighbor.peer_as]:
 				logger.message(self.me(">> %s could not be sent, some messages are still in the buffer" % name))

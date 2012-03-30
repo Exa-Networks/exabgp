@@ -3,7 +3,10 @@ Version explained:
  minor : increase on new features
  bug   : increase on bug fixes
 
-Version 2.0.7 - 24 of March 2012 (stable version)
+Version 2.0.8 - 31 of March 2012 (stable version)
+ * Fix: the update grouping could cause message up to "header size" bigger than allowed.
+
+Version 2.0.7 - 24 of March 2012
  * Fix: debian packaging issue
  * Note: Only released for debian (again :p)
 
