@@ -2,13 +2,18 @@
 
 dirname=`dirname $0`
 
-if [ `echo $dirname | grep "^/" -c` -eq 1 ]; then
-	echo $path
-else
-	cd `pwd`/$dirname/.. > /dev/null
-	path=`pwd`
-	cd - > /dev/null
-fi
+case $dirname in
+	/*)
+		cd $dirname/.. > /dev/null
+		path=`pwd`
+		cd - > /dev/null
+	;;
+	*)
+		cd `pwd`/$dirname/.. > /dev/null
+		path=`pwd`
+		cd - > /dev/null
+	;;
+esac
 
 export PYTHONPATH=$path/lib:/usr/share/exabgp/lib/2.0.8
 export ETC=$path/etc/exabgp
