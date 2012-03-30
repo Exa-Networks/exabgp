@@ -26,7 +26,11 @@ class Processes (object):
 
 	def terminate (self):
 		for name in list(self._process):
-			self._terminate(name)
+			try:
+				self._terminate(name)
+			except OSError:
+				# we most likely received a SIGTERM signal and our child is already dead
+				pass
 
 	def _start (self,name):
 		try:

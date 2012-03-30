@@ -28,49 +28,68 @@ class Neighbor (object):
 		self.graceful_restart = False
 		self.md5 = None
 		self.ttl = None
+		self.multisession = None
 		self.parse_routes = None
-		self._routes = []
-		self.families = []
+		self._families = {}
 		self._watchdog = {}
+
+	def name (self):
+		if self.multisession:
+			session =  ", ".join("%s %s" % (afi,safi) for (afi,safi) in self._families.keys())
+			return "%s multi-session %s" % (self.peer_address,session)
+		else:
+			return "%s" % (self.peer_address)
+
+	def families (self):
+		return self._families.keys()
 
 	def watchdog (self,watchdog):
 		self._watchdog = copy(watchdog)
 
 	def every_routes (self):
-		return self._routes
+		for family in self._families:
+			for route in self._families[family]:
+				yield route
 
 	def filtered_routes (self):
 		# This function returns a hash and not a list as "in" tests are O(n) with lists and O(1) with hash
 		# and with ten thousands routes this makes an enormous difference (60 seconds to 2)
 		routes = {}
-		for route in self._routes:
-			withdrawn = route.attributes.pop(AttributeID.INTERNAL_WITHDRAWN,None)
-			if withdrawn is not None:
-				logger.rib('skipping initial announcement of %s' % route)
+		for family in self._families:
+			for route in self._families[family]:
+				withdrawn = route.attributes.pop(AttributeID.INTERNAL_WITHDRAWN,None)
+				if withdrawn is not None:
+					logger.rib('skipping initial announcement of %s' % route)
+					watchdog = route.attributes.get(AttributeID.INTERNAL_WATCHDOG,None)
+					if watchdog in self._watchdog:
+						self._watchdog[watchdog] == 'withdraw'
+					continue
 				watchdog = route.attributes.get(AttributeID.INTERNAL_WATCHDOG,None)
 				if watchdog in self._watchdog:
-					self._watchdog[watchdog] == 'withdraw'
-				continue
-			watchdog = route.attributes.get(AttributeID.INTERNAL_WATCHDOG,None)
-			if watchdog in self._watchdog:
-				if self._watchdog[watchdog] == 'withdraw':
-					continue
-			routes[str(route)] = route
+					if self._watchdog[watchdog] == 'withdraw':
+						continue
+				routes[str(route)] = route
 		return routes
 
+	def remove_family (self,family):
+		if family in self._families:
+			del self._families[family]
+
 	def add_route (self,route):
-		self._routes.append(route)
+		self._families.setdefault((route.nlri.afi,route.nlri.safi),[]).append(route)
 
 	def remove_route (self,route):
 		result = False
-		for r in self._routes:
+		for r in self._families.get((route.nlri.afi,route.nlri.safi),[]):
 			if r == route:
-				self._routes.remove(r)
+				self._families[(route.nlri.afi,route.nlri.safi)].remove(r)
 				result = True
 		return result
 
 	def set_routes (self,routes):
-		self._routes = routes
+		self._families = {}
+		for route in routes:
+			self.add_route(route)
 
 	def missing (self):
 		if self.local_address is None: return 'local-address'
@@ -92,15 +111,17 @@ class Neighbor (object):
 			self.graceful_restart == other.graceful_restart and \
 			self.md5 == other.md5 and \
 			self.ttl == other.ttl and \
-			self.families == other.families
+			self.multisession == other.multisession and \
+			self.families() == other.families()
 
 	def __ne__(self, other):
 		return not (self == other)
 
 	def __str__ (self):
 		routes = '\n\t\t'
-		if self._routes:
-			routes += '\n\t\t'.join([str(route) for route in self._routes])
+		for family in self._families:
+			for _routes in self._families[family]:
+				routes += '\n\t\t%s' % _routes
 
 		options = []
 		if self.md5: options.append("md5: %s;" % self.md5)

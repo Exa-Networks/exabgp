@@ -98,20 +98,21 @@ class Supervisor (object):
 					peers = self._peers.keys()
 					ios = []
 					while peers:
-						for ip in peers[:]:
-							peer = self._peers[ip]
+						for key in peers[:]:
+							peer = self._peers[key]
 							# there was no routes to send for this peer, we performed keepalive checks
 							if peer.run() is not True:
 								# no need to come back to it before a a full cycle
 								if peer.bgp and peer.bgp.connection:
 									ios.append(peer.bgp.connection.io)
-								peers.remove(ip)
+								peers.remove(key)
 							# send the route we parsed (if we parsed any to our child processes)
 							# This is a generator and can only be run once
 							for route in peer.received_routes():
 								# This is a generator which content does only change at config reload
 								for name in self.processes.receive_routes():
-									self.processes.write(name,"neighbor %s %s\n" % (ip,route))
+									# using str(key) as we should not manipulate it and assume its format
+									self.processes.write(name,"neighbor %s %s\n" % (str(key),route))
 						# otherwise process as many routes as we can within a second for the remaining peers
 						duration = time.time() - start
 						# RFC state that we MUST not more than one KEEPALIVE / sec
@@ -146,8 +147,8 @@ class Supervisor (object):
 	def shutdown (self):
 		"""terminate all the current BGP connections"""
 		logger.info("Performing shutdown","supervisor")
-		for ip in self._peers.keys():
-			self._peers[ip].stop()
+		for key in self._peers.keys():
+			self._peers[key].stop()
 
 	def reload (self):
 		"""reload the configuration and send to the peer the route which changed"""
@@ -159,27 +160,28 @@ class Supervisor (object):
 			logger.info(self.configuration.error,"configuration")
 			return
 
-		for ip in self._peers.keys():
-			if ip not in self.configuration.neighbor.keys():
-				logger.supervisor("Removing Peer %s" % str(ip))
-				self._peers[ip].stop()
+		for key in self._peers.keys():
+			if key not in self.configuration.neighbor.keys():
+				neighbor = self.configuration.neighbor[key]
+				logger.supervisor("Removing Peer %s" % neighbor.name())
+				self._peers[key].stop()
 
-		for ip in self.configuration.neighbor.keys():
-			neighbor = self.configuration.neighbor[ip]
+		for key in self.configuration.neighbor.keys():
+			neighbor = self.configuration.neighbor[key]
 			# new peer
-			if ip not in self._peers.keys():
-				logger.supervisor("New Peer %s" % str(ip))
+			if key not in self._peers.keys():
+				logger.supervisor("New Peer %s" % neighbor.name())
 				peer = Peer(neighbor,self)
-				self._peers[ip] = peer
+				self._peers[key] = peer
 			else:
 				# check if the neighbor definition are the same (BUT NOT THE ROUTES)
-				if self._peers[ip].neighbor != neighbor:
-					logger.supervisor("Peer definition change, restarting %s" % str(ip))
-					self._peers[ip].restart(neighbor)
+				if self._peers[key].neighbor != neighbor:
+					logger.supervisor("Peer definition change, restarting %s" % str(key))
+					self._peers[key].restart(neighbor)
 				# set the new neighbor with the new routes
 				else:
-					logger.supervisor("Updating routes for peer %s" % str(ip))
-					self._peers[ip].reload(neighbor.every_routes())
+					logger.supervisor("Updating routes for peer %s" % str(key))
+					self._peers[key].reload(neighbor.every_routes())
 		logger.info("Loaded new configuration successfully",'configuration')
 		self.processes.start()
 
@@ -270,10 +272,10 @@ class Supervisor (object):
 		"""the process ran and we need to figure what routes to changes"""
 		logger.supervisor("Performing dynamic route update")
 
-		for ip in self.configuration.neighbor.keys():
-			neighbor = self.configuration.neighbor[ip]
+		for key in self.configuration.neighbor.keys():
+			neighbor = self.configuration.neighbor[key]
 			neighbor.watchdog(self.watchdogs)
-			self._peers[ip].reload(neighbor.every_routes())
+			self._peers[key].reload(neighbor.every_routes())
 		logger.supervisor("Updated peers dynamic routes successfully")
 
 	def restart (self):
@@ -281,18 +283,19 @@ class Supervisor (object):
 		logger.info("Performing restart of exabgp %s" % version,"supervisor")
 		self.configuration.reload()
 
-		for ip in self._peers.keys():
-			if ip not in self.configuration.neighbor.keys():
-				logger.supervisor("Removing Peer %s" % str(ip))
-				self._peers[ip].stop()
+		for key in self._peers.keys():
+			if key not in self.configuration.neighbor.keys():
+				neighbor = self.configuration.neighbor[key]
+				logger.supervisor("Removing Peer %s" % neighbor.name())
+				self._peers[key].stop()
 			else:
-				self._peers[ip].restart()
+				self._peers[key].restart()
 		self.processes.start()
 
 	def unschedule (self,peer):
-		ip = peer.neighbor.peer_address.ip
-		if ip in self._peers:
-			del self._peers[ip]
+		key = peer.neighbor.name()
+		if key in self._peers:
+			del self._peers[key]
 
 
 def version_warning ():

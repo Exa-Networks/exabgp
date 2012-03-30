@@ -94,6 +94,7 @@ class Peer (object):
 		self._running = False
 		self._restart = True
 		self._restarted = True
+		self._route_parsed = 0L
 		self._neighbor = restart_neighbor
 		self._reset_skip()
 
@@ -144,6 +145,19 @@ class Peer (object):
 				if not self.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN) and _open.asn.asn4():
 					self._asn4 = False
 					raise Notify(2,0,'peer does not speak ASN4 - restarting in compatibility mode')
+				if _open.capabilities.announced(Capabilities.MULTISESSION_BGP):
+					if not self.open.capabilities.announced(Capabilities.MULTISESSION_BGP):
+						raise Notify(2,7,'peer does not support MULTISESSION')
+					local_sessionid = set(_open.capabilities[Capabilities.MULTISESSION_BGP])
+					remote_sessionid = self.open.capabilities[Capabilities.MULTISESSION_BGP]
+					# Empty capability is the same as MultiProtocol (which is what we send)
+					if not remote_sessionid:
+						remote_sessionid.append(Capabilities.MULTIPROTOCOL_EXTENSIONS)
+					remote_sessionid = set(remote_sessionid)
+					# As we only send one MP per session, if the matching fails, we have nothing in common
+					if local_sessionid.intersection(remote_sessionid) != local_sessionid:
+						raise Notify(2,8,'peer did not reply with the sessionid we sent')
+					# We can not collide due to the way we generate the configuration
 				yield None
 				break
 
@@ -173,7 +187,7 @@ class Peer (object):
 
 				families = []
 				for family in self.open.capabilities[Capabilities.GRACEFUL_RESTART].families():
-					if family in self.neighbor.families:
+					if family in self.neighbor.families():
 						families.append(family)
 				self.bgp.new_eors(families)
 				if families:

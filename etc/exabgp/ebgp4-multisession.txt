@@ -1,0 +1,23 @@
+neighbor 192.168.127.130 {
+	description "will pass received routes to the program";
+	router-id 192.168.127.1;
+	local-address 192.168.127.1;
+	local-as 654321;
+	peer-as 123456;
+	hold-time 180;
+	multi-session;
+
+	process parsed-route-backend {
+		parse-routes;
+		run etc/exabgp/processes/syslog-1.py;
+	}
+
+	static {
+		route 10.0.0.0/24 next-hop 192.0.2.1;
+		route 10.0.1.0/24 next-hop 192.0.2.1;
+		route 10.0.2.0/24 next-hop 192.0.2.1;
+		route 10.0.3.0/24 next-hop 192.0.2.1;
+
+		route 2A02:B80:0:1::1/64 next-hop 2A02:B80:0:2::1 community [30740:0 30740:30740] local-preference 200;
+	}
+}

@@ -124,6 +124,18 @@ class MultiProtocol (list):
 			rs.append(pack('!H',v[0]) + pack('!H',v[1]))
 		return rs
 
+# =================================================================== MultiSession
+
+class MultiSession (list):
+	def __str__ (self):
+		return 'Multisession %s' % ' '.join([str(capa) for capa in self])
+
+	def extract (self):
+		rs = [chr(0),]
+		for v in self:
+			rs.append(chr(v))
+		return  rs
+
 # =================================================================== RouteRefresh
 
 class RouteRefresh (list):
@@ -136,15 +148,6 @@ class RouteRefresh (list):
 class CiscoRouteRefresh (list):
 	def __str__ (self):
 		return "Cisco Route Refresh (unparsed)"
-
-	def extract (self):
-		return []
-
-# =================================================================== MultiSession
-
-class MultiSession (list):
-	def __str__ (self):
-		return "Multi Session"
 
 	def extract (self):
 		return []
@@ -216,7 +219,7 @@ class Capabilities (dict):
 		r = []
 		for key in self.keys():
 			if key == self.MULTIPROTOCOL_EXTENSIONS:
-				r += ['Multiprotocol for ' + ' '.join(["%s %s" % (str(afi),str(safi)) for (afi,safi) in self[key]])]
+				r += [str(self[key])]
 			elif key == self.ROUTE_REFRESH:
 				r += ['Route Refresh']
 			elif key == self.CISCO_ROUTE_REFRESH:
@@ -226,7 +229,7 @@ class Capabilities (dict):
 			elif key == self.FOUR_BYTES_ASN:
 				r += ['4Bytes AS %d' % self[key]]
 			elif key == self.MULTISESSION_BGP:
-				r += ['Multi Session']
+				r += [str(self[key])]
 			elif key == self.MULTISESSION_BGP_OLD:
 				r += ['Multi Session']
 			elif key in self.reserved:
@@ -240,8 +243,8 @@ class Capabilities (dict):
 	def default (self,neighbor,restarted):
 		graceful = neighbor.graceful_restart
 
-		if os.environ.get('MINIMAL_MP','0') in ['','1','yes','Yes','YES']:
-			families = neighbor.families
+		if neighbor.multisession or os.environ.get('MINIMAL_MP','0') in ['','1','yes','Yes','YES']:
+			families = neighbor.families()
 		else:
 			families = []
 			families.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
@@ -259,7 +262,8 @@ class Capabilities (dict):
 			else:
 				self[Capabilities.GRACEFUL_RESTART] = Graceful(0x0,graceful,[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in families])
 
-
+		# MUST be the last key added
+		self[Capabilities.MULTISESSION_BGP] = MultiSession([Capabilities.MULTIPROTOCOL_EXTENSIONS])
 		return self
 
 	def pack (self):
