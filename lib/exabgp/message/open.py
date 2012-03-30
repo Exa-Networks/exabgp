@@ -263,7 +263,8 @@ class Capabilities (dict):
 				self[Capabilities.GRACEFUL_RESTART] = Graceful(0x0,graceful,[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in families])
 
 		# MUST be the last key added
-		self[Capabilities.MULTISESSION_BGP] = MultiSession([Capabilities.MULTIPROTOCOL_EXTENSIONS])
+		if neighbor.multisession:
+			self[Capabilities.MULTISESSION_BGP] = MultiSession([Capabilities.MULTIPROTOCOL_EXTENSIONS])
 		return self
 
 	def pack (self):
