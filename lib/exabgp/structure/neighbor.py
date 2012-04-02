@@ -36,9 +36,9 @@ class Neighbor (object):
 	def name (self):
 		if self.multisession:
 			session =  ", ".join("%s %s" % (afi,safi) for (afi,safi) in self._families.keys())
-			return "%s multi-session %s" % (self.peer_address,session)
+			return "%s-%s multi-session %s" % (self.local_address,self.peer_address,session)
 		else:
-			return "%s" % (self.peer_address)
+			return "%s-%s" % (self.local_address,self.peer_address)
 
 	def families (self):
 		return self._families.keys()
