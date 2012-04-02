@@ -4,7 +4,7 @@ exabgp (2.0.8-1) unstable; urgency=low
   * Fix the update grouping which could cause bigger than allowed updates
   * Fix caller script path detection issue
 
- -- Thomas Mangin <thomas.mangin@exa-networks.co.uk>  Sat, 31 Mar 2012 12:00:00 +0000
+ -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be> Sat, 31 Mar 2012 12:00:00 +0000
 
 exabgp (2.0.7-1) unstable; urgency=low
   
