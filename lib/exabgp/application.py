@@ -138,6 +138,9 @@ class Supervisor (object):
 			except KeyboardInterrupt:
 				logger.supervisor("^C received")
 				self._shutdown = True
+			except IOError:
+				logger.supervisor("I/O Error received, most likely ^C during IO")
+				self._shutdown = True
 #				from leak import objgraph
 #				print objgraph.show_most_common_types(limit=20)
 #				import random
