@@ -6,6 +6,7 @@ Version explained:
 Version 2.1.0 - -- of ----- 2012 (experimental version)
  * Fix: reset counters correctly for number of routes seen (only affects the logs)
  * Improvement: implementation of draft-ietf-idr-bgp-multisession-06
+ * Improvement: prevent 100% CPU usage/loop when trying to read on unreliable links
 
 Version 2.0.8 - 31 of March 2012 (stable version)
  * Fix: the update grouping could cause message up to "header size" bigger than allowed.
