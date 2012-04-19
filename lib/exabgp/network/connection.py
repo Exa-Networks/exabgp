@@ -124,7 +124,7 @@ class Connection (object):
 		except socket.error, e:
 			self.message_size = None
 
-	def pending (self,reset=True):
+	def pending (self,reset=False):
 		if reset:
 			self._loop_start = None
 		else:
