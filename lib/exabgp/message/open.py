@@ -199,12 +199,12 @@ class Capabilities (dict):
 	FOUR_BYTES_ASN           = 0x41 # [RFC4893]
 	# 66 Deprecated
 	DYNAMIC_CAPABILITY       = 0x43 # [Chen]
-	MULTISESSION_BGP         = 0x44 # [draft-ietf-idr-bgp-multisession]
+	MULTISESSION_BGP_RFC     = 0x44 # [draft-ietf-idr-bgp-multisession]
 	ADD_PATH                 = 0x45 # [draft-ietf-idr-add-paths]
 	# 70-127    Unassigned
 	CISCO_ROUTE_REFRESH      = 0x80 # I Can only find reference to this in the router logs
-	MULTISESSION_BGP_OLD     = 0x83 # before http://tools.ietf.org/html/draft-ietf-idr-bgp-multisession-04
 	# 128-255   Reserved for Private Use [RFC5492]
+	MULTISESSION_BGP         = 0x83 # What Cisco really use for Multisession (yes this is a reserved range in prod !)
 
 	EXTENDED_MESSAGE         = -1 # No yet defined by draft http://tools.ietf.org/html/draft-ietf-idr-extended-messages-02.txt
 
@@ -230,7 +230,7 @@ class Capabilities (dict):
 				r += ['4Bytes AS %d' % self[key]]
 			elif key == self.MULTISESSION_BGP:
 				r += [str(self[key])]
-			elif key == self.MULTISESSION_BGP_OLD:
+			elif key == self.MULTISESSION_BGP_RFC:
 				r += ['Multi Session']
 			elif key in self.reserved:
 				r += ['private use capability %d' % key]

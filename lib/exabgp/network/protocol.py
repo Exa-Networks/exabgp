@@ -418,7 +418,7 @@ class Protocol (object):
 						if k == Capabilities.MULTISESSION_BGP:
 							capabilities[k] = MultiSession()
 							continue
-						if k == Capabilities.MULTISESSION_BGP_OLD:
+						if k == Capabilities.MULTISESSION_BGP_RFC:
 							capabilities[k] = MultiSession()
 							continue
 
