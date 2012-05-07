@@ -6,6 +6,8 @@ Version explained:
 Version 2.1.0 - -- of ----- 2012 (experimental version)
  * Fix: reset counters correctly for number of routes seen (only affects the logs)
  * Fix: prevent 100% CPU usage/loop when trying to read on unreliable links
+ * Fix: correctly process IPv6 routes with 32 bytes long next-hop
+    reported by Daniel Piekacz (with patch, thank you) 
  * Improvement: implementation of draft-ietf-idr-bgp-multisession-06
  * Improvement: use capability 131 (and not 68) for multisession to achieve interop with Cisco
 

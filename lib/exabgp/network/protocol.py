@@ -677,8 +677,8 @@ class Protocol (object):
 			offset += len_nh
 			if len_nh == 32:
 				# we have a link-local address in the next-hop we ideally need to ignore
-				if nh[0] == 0xfe: nh = nh[16:]
-				elif nh[16] == 0xfe: nh = nh[:16]
+				if nh[0] == chr(0xfe): nh = nh[16:]
+				elif nh[16] == chr(0xfe): nh = nh[:16]
 				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
 				else: return self._AttributesFactory(next_attributes)
 			if len_nh >= 16: nh = socket.inet_ntop(socket.AF_INET6,nh)
