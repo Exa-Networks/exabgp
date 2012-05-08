@@ -182,7 +182,7 @@ class Peer (object):
 				logger.message(self.me('>> %d UPDATE(s)' % count))
 
 			eor = False
-			if	self.neighbor.graceful_restart and \
+			if self.neighbor.graceful_restart and \
 				self.open.capabilities.announced(Capabilities.MULTIPROTOCOL_EXTENSIONS) and \
 				self.open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
 
