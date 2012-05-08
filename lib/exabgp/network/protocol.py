@@ -169,7 +169,7 @@ class Protocol (object):
 			return message
 
 		if message.TYPE != Open.TYPE:
-			raise Notify(1,1,'The first packet recevied is not an open message (%s)' % message)
+			raise Notify(5,1,'The first packet recevied is not an open message (%s)' % message)
 
 		if _open.asn.asn4() and not message.capabilities.announced(Capabilities.FOUR_BYTES_ASN):
 			raise Notify(2,0,'We have an ASN4 and you do not speak it. bye.')
@@ -219,7 +219,7 @@ class Protocol (object):
 		if message.TYPE == NOP.TYPE:
 			return message
 		if message.TYPE != KeepAlive.TYPE:
-			raise Notify(5,0)
+			raise Notify(5,2)
 		return message
 
 	# Sending message to peer .................................................

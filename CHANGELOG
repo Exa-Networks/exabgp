@@ -9,7 +9,8 @@ Version 2.1.0 - -- of ----- 2012 (experimental version)
  * Fix: correctly process IPv6 routes with 32 bytes long next-hop
     reported by Daniel Piekacz (with patch, thank you) 
  * Improvement: implementation of draft-ietf-idr-bgp-multisession-06
- * Improvement: use capability 131 (and not 68) for multisession to achieve interop with Cisco
+    use capability 131 (and not 68) for multisession to achieve interop with Cisco
+ * Improvement: following RFC 6608 new notification codes
 
 Version 2.0.8 - 31 of March 2012 (stable version)
  * Fix: the update grouping could cause message up to "header size" bigger than allowed.

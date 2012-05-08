@@ -139,8 +139,9 @@ class Peer (object):
 				if self.open.TYPE == NOP.TYPE:
 					yield None
 					continue
-				if self.open.TYPE != Open.TYPE:
-					raise Notify(1,1,'We are expecting an OPEN message')
+				# This test is already done in read_open
+				#if self.open.TYPE != Open.TYPE:
+				#	raise Notify(5,1,'We are expecting an OPEN message')
 				logger.message(self.me('<< %s' % self.open))
 				if not self.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN) and _open.asn.asn4():
 					self._asn4 = False

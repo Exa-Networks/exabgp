@@ -61,6 +61,10 @@ class Notification (Message,Failure):
 		(4,0) : "Unspecific.",
 
 		(5,0) : "Unspecific.",
+		# RFC 6608
+		(5,1) : "Receive Unexpected Message in OpenSent State.",
+		(5,2) : "Receive Unexpected Message in OpenConfirm State.",
+		(5,3) : "Receive Unexpected Message in Established State.",
 
 		(6,0) : "Unspecific.",
 		# RFC 4486
