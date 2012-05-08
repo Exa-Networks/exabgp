@@ -4,10 +4,15 @@ Version explained:
  bug   : increase on bug fixes
 
 Version 2.1.0 - -- of ----- 2012 (experimental version)
+ * API Change: send "up" message to worker process when neighbor OPEN negociation is complete (not on TCP up)
+ * API Addition: send "connected" to worker when neighbor TCP session is established (replace previous 'up')
  * Fix: reset counters correctly for number of routes seen (only affects the logs)
  * Fix: prevent 100% CPU usage/loop when trying to read on unreliable links
  * Fix: correctly process IPv6 routes with 32 bytes long next-hop
-    reported by Daniel Piekacz (with patch, thank you) 
+    reported by Daniel Piekacz (with patch, thank you)
+ * Fix: problem on broken pipe with the helper program
+ * Fix: correct sending of message to helper program (every worker was getting every peers messages)
+ * Fix: if an helper program goes away, do not try to restart the peer (prevent surprises)
  * Improvement: implementation of draft-ietf-idr-bgp-multisession-06
     use capability 131 (and not 68) for multisession to achieve interop with Cisco
  * Improvement: following RFC 6608 new notification codes

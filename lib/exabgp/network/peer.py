@@ -17,6 +17,7 @@ from exabgp.message.update       import Update
 from exabgp.message.keepalive    import KeepAlive
 from exabgp.message.notification import Notification, Notify, NotConnected
 from exabgp.network.protocol     import Protocol
+from exabgp.processes            import ProcessError
 
 from exabgp.log import Logger,LazyFormat
 logger = Logger()
@@ -120,6 +121,10 @@ class Peer (object):
 
 	def _run (self,max_wait_open=10.0):
 		try:
+			if self.supervisor.processes.broken(self.neighbor.peer_address):
+				# XXX: we should perhaps try to restart the process ??
+				raise Failure('ExaBGP lost the helper process for this peer - peer down')
+
 			self.bgp = Protocol(self)
 			self.bgp.connect()
 
@@ -161,6 +166,13 @@ class Peer (object):
 					# We can not collide due to the way we generate the configuration
 				yield None
 				break
+
+			try:
+				for name in self.supervisor.processes.notify[self.neighbor.peer_address]:
+					self.supervisor.processes.write(name,'neighbor %s up\n' % self.neighbor.peer_address)
+			except ProcessError:
+				# Can not find any better error code that 6,0 !
+				raise Notify(6,0,'ExaBGP Internal error, sorry.')
 
 			message = self.bgp.new_keepalive(force=True)
 			logger.message(self.me('>> KEEPALIVE (OPENCONFIRM)'))

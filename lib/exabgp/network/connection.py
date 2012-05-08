@@ -41,6 +41,7 @@ errno_fatal = set((
 
 class Connection (object):
 	def __init__ (self,peer,local,md5,ttl):
+		self.io = None
 		self.last_read = 0
 		self.last_write = 0
 		self.peer = peer
@@ -155,6 +156,8 @@ class Connection (object):
 		return True
 
 	def read (self,number):
+		if not self.io:
+			raise Failure('Trying to read on a close TCP conncetion')
 		if number == 0: return ''
 		try:
 			r = self.io.recv(number)
@@ -169,6 +172,8 @@ class Connection (object):
 			raise Failure('Problem while reading data from the network:  %s ' % str(e))
 
 	def write (self,data):
+		if not self.io:
+			return False
 		if not self.ready():
 			return False
 		try:
@@ -188,7 +193,8 @@ class Connection (object):
 	def close (self):
 		try:
 			logger.wire("Closing connection to %s" % self.peer)
-			self.io.close()
+			if self.io:
+				self.io.close()
 		except socket.error:
 			pass
 

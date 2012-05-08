@@ -373,6 +373,7 @@ class Configuration (object):
 			if r is None: break
 		self.process.setdefault(tokens[0],{})['run'] = scope[-1].pop('process-run')
 		self.process[tokens[0]]['receive-routes'] = scope[-1].get('parse-routes',False)
+		self.process[tokens[0]]['neighbor'] = scope[-1]['peer-address']
 		return True
 
 	def _set_process_parse_routes (self,scope,command,value):

@@ -20,6 +20,8 @@ from exabgp.processes import Processes
 from exabgp.configuration import Configuration
 from exabgp.network.connection import errno_block
 
+from exabgp.processes import ProcessError
+
 from exabgp.log import Logger
 logger = Logger()
 
@@ -108,11 +110,15 @@ class Supervisor (object):
 								peers.remove(key)
 							# send the route we parsed (if we parsed any to our child processes)
 							# This is a generator and can only be run once
-							for route in peer.received_routes():
-								# This is a generator which content does only change at config reload
-								for name in self.processes.receive_routes():
-									# using str(key) as we should not manipulate it and assume its format
-									self.processes.write(name,"neighbor %s %s\n" % (str(key),route))
+							try:
+								for route in peer.received_routes():
+									# This is a generator which content does only change at config reload
+									for name in self.processes.receive_routes():
+										# using str(key) as we should not manipulate it and assume its format
+										self.processes.write(name,'neighbor %s %s\n' % (str(key),route))
+							except ProcessError:
+								# Can not find any better error code that 6,0 !
+								raise Notify(6,0,'ExaBGP Internal error, sorry.')
 						# otherwise process as many routes as we can within a second for the remaining peers
 						duration = time.time() - start
 						# RFC state that we MUST not more than one KEEPALIVE / sec
@@ -140,6 +146,9 @@ class Supervisor (object):
 				self._shutdown = True
 			except IOError:
 				logger.supervisor("I/O Error received, most likely ^C during IO")
+				self._shutdown = True
+			except ProcessError:
+				logger.supervisor("Problem when sending message(s) to helper program, stopping")
 				self._shutdown = True
 #				from leak import objgraph
 #				print objgraph.show_most_common_types(limit=20)

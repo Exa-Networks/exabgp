@@ -39,6 +39,7 @@ from exabgp.message.update.attribute.localpref   import LocalPreference
 from exabgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities
 #from exabgp.message.update.attribute.mprnlri     import MPRNLRI
 #from exabgp.message.update.attribute.mpurnlri    import MPURNLRI
+from exabgp.processes  import ProcessError
 
 from exabgp.log import Logger
 logger = Logger()
@@ -61,6 +62,8 @@ class Protocol (object):
 		self._frozen = 0
 		self.message_size = 4096
 
+	# XXX: we use self.peer.neighbor.peer_address when we could use self.neighbor.peer_address
+
 	def me (self,message):
 		return "Peer %15s ASN %-7s %s" % (self.peer.neighbor.peer_address,self.peer.neighbor.peer_as,message)
 
@@ -72,8 +75,14 @@ class Protocol (object):
 			md5 = self.neighbor.md5
 			ttl = self.neighbor.ttl
 			self.connection = Connection(peer,local,md5,ttl)
-			for name in self.peer.supervisor.processes.receive_routes():
-				self.peer.supervisor.processes.write(name,"neighbor %s up\n" % self.peer.neighbor.peer_address)
+
+			message = 'neighbor %s connected\n' % self.peer.neighbor.peer_address
+			try:
+				proc = self.peer.supervisor.processes
+				for name in proc.notify[self.neighbor.peer_address]:
+					proc.write(name,message)
+			except ProcessError:
+				raise Failure('Could not send message(s) to helper program(s) : %s' % message)
 
 	def check_keepalive (self):
 		left = int (self.connection.last_read  + self.neighbor.hold_time - time.time())
@@ -84,11 +93,17 @@ class Protocol (object):
 	def close (self):
 		#self._delta.last = 0
 		if self.connection:
-			for name in self.peer.supervisor.processes.receive_routes():
-				self.peer.supervisor.processes.write(name,"neighbor %s down\n" % self.peer.neighbor.peer_address)
+			# must be first otherwise we could have a loop caused by the raise in the below
 			self.connection.close()
 			self.connection = None
 
+			message = 'neighbor %s down\n' % self.peer.neighbor.peer_address
+			try:
+				proc = self.peer.supervisor.processes
+				for name in proc.notify[self.neighbor.peer_address]:
+					proc.write(name,message)
+			except ProcessError:
+				raise Failure('Could not send message(s) to helper program(s) : %s' % message)
 
 	# Read from network .......................................................
 

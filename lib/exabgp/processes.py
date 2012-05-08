@@ -12,11 +12,15 @@ import select
 from exabgp.log import Logger
 logger = Logger()
 
+class ProcessError (Exception):
+	pass
+
 class Processes (object):
 	def __init__ (self,supervisor):
 		self.supervisor = supervisor
 		self._process = {}
 		self._receive_routes = {}
+		self.notify = {}
 
 	def _terminate (self,name):
 		logger.processes("Terminating process %s" % name)
@@ -37,24 +41,34 @@ class Processes (object):
 			if name in self._process:
 				logger.processes("process already running")
 				return
-			if not name in self.supervisor.configuration.process:
+			proc = self.supervisor.configuration.process
+			if not name in proc:
 				logger.processes("Can not start process, no configuration for it (anymore ?)")
 				return
-			self._receive_routes[name] = self.supervisor.configuration.process[name]['receive-routes']
-			self._process[name] = subprocess.Popen(self.supervisor.configuration.process[name]['run'],
+			self._receive_routes[name] = proc[name]['receive-routes']
+			self._process[name] = subprocess.Popen(proc[name]['run'],
 				stdin=subprocess.PIPE,
 				stdout=subprocess.PIPE,
 			)
+			neighbor = proc[name]['neighbor']
+			self.notify.setdefault(neighbor,[]).append(name)
 			logger.processes("Forked process %s" % name)
 		except (subprocess.CalledProcessError,OSError,ValueError):
 			logger.processes("Could not start process %s" % name)
 
 	def start (self):
-		for name in self.supervisor.configuration.process:
+		proc = self.supervisor.configuration.process
+		for name in proc:
 			self._start(name)
 		for name in list(self._process):
-			if not name in self.supervisor.configuration.process:
+			if not name in proc:
 				self._terminate(name)
+
+	def broken (self,neighbor):
+		for name in self.notify[neighbor]:
+			if self._process[name] is None:
+				return True
+		return False
 
 	def received (self):
 		lines = {}
@@ -83,8 +97,18 @@ class Processes (object):
 		return lines
 
 	def write (self,name,string):
-		self._process[name].stdin.write('%s\r\n' % string)
-		self._process[name].stdin.flush()
+		while True:
+			try:
+				self._process[name].stdin.write('%s\r\n' % string)
+				self._process[name].stdin.flush()
+			except IOError,e:
+				if e.errno == 32:
+					logger.processes("Issue while sending data to our helper program")
+					raise ProcessError()
+				else:
+					continue
+			break
+		return True
 
 	# return all the process which are interrested in route update notification
 	def receive_routes (self):
