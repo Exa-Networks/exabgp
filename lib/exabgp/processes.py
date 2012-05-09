@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2011-05-02.
 Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
+import os
 import subprocess
 import select
 
@@ -50,6 +51,7 @@ class Processes (object):
 			self._process[name] = subprocess.Popen(proc[name]['run'],
 				stdin=subprocess.PIPE,
 				stdout=subprocess.PIPE,
+				preexec_fn=os.setsid
 			)
 			neighbor = proc[name]['neighbor']
 			self._notify.setdefault(neighbor,[]).append(name)
