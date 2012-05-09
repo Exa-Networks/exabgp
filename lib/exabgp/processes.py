@@ -20,7 +20,8 @@ class Processes (object):
 		self.supervisor = supervisor
 		self._process = {}
 		self._receive_routes = {}
-		self.notify = {}
+		self._notify = {}
+		self._broken = []
 
 	def _terminate (self,name):
 		logger.processes("Terminating process %s" % name)
@@ -51,9 +52,10 @@ class Processes (object):
 				stdout=subprocess.PIPE,
 			)
 			neighbor = proc[name]['neighbor']
-			self.notify.setdefault(neighbor,[]).append(name)
+			self._notify.setdefault(neighbor,[]).append(name)
 			logger.processes("Forked process %s" % name)
 		except (subprocess.CalledProcessError,OSError,ValueError):
+			self._broken.append(name)
 			logger.processes("Could not start process %s" % name)
 
 	def start (self):
@@ -64,9 +66,18 @@ class Processes (object):
 			if not name in proc:
 				self._terminate(name)
 
+	def notify (self,neighbor):
+		for name in self._notify.get(neighbor,[]):
+			yield name
+		for name in self._notify.get('*',[]):
+			yield name
+
 	def broken (self,neighbor):
-		for name in self.notify[neighbor]:
-			if self._process[name] is None:
+		if self._broken:
+			for name in self._notify.get(neighbor,[]):
+				if name in self._broken:
+					return True
+			if '*' in self._broken:
 				return True
 		return False
 
@@ -100,14 +111,24 @@ class Processes (object):
 		while True:
 			try:
 				self._process[name].stdin.write('%s\r\n' % string)
-				self._process[name].stdin.flush()
 			except IOError,e:
+				self._broken.append(name)
 				if e.errno == 32:
+					self._broken.append(name)
 					logger.processes("Issue while sending data to our helper program")
 					raise ProcessError()
 				else:
+					# Could it have been caused by a signal ? What to do. 
+					logger.processes("REPORT TO DEVELOPERS: IOError received while SENDING data to helper program %s, retrying" % str(e.errno))
 					continue
 			break
+
+		try:
+			self._process[name].stdin.flush()
+		except IOError,e:
+			# AFAIK, the buffer should be flushed at the next attempt.
+			logger.processes("REPORT TO DEVELOPERS: IOError received while FLUSHING data to helper program %s, retrying" % str(e.errno))
+
 		return True
 
 	# return all the process which are interrested in route update notification

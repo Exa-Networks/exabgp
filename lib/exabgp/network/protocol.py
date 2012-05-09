@@ -79,7 +79,7 @@ class Protocol (object):
 			message = 'neighbor %s connected\n' % self.peer.neighbor.peer_address
 			try:
 				proc = self.peer.supervisor.processes
-				for name in proc.notify[self.neighbor.peer_address]:
+				for name in proc.notify(self.neighbor.peer_address):
 					proc.write(name,message)
 			except ProcessError:
 				raise Failure('Could not send message(s) to helper program(s) : %s' % message)
@@ -100,7 +100,7 @@ class Protocol (object):
 			message = 'neighbor %s down\n' % self.peer.neighbor.peer_address
 			try:
 				proc = self.peer.supervisor.processes
-				for name in proc.notify[self.neighbor.peer_address]:
+				for name in proc.notify(self.neighbor.peer_address):
 					proc.write(name,message)
 			except ProcessError:
 				raise Failure('Could not send message(s) to helper program(s) : %s' % message)

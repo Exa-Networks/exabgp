@@ -173,7 +173,10 @@ class Connection (object):
 
 	def write (self,data):
 		if not self.io:
-			return False
+			# We alrady returned a Failure
+			# It must be a write attempted during the closing of the peering session
+			# Make sure it does not hold the cleanup.
+			return True
 		if not self.ready():
 			return False
 		try:

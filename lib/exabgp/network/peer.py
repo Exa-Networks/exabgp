@@ -180,7 +180,7 @@ class Peer (object):
 				yield None
 
 			try:
-				for name in self.supervisor.processes.notify[self.neighbor.peer_address]:
+				for name in self.supervisor.processes.notify(self.neighbor.peer_address):
 					self.supervisor.processes.write(name,'neighbor %s up\n' % self.neighbor.peer_address)
 			except ProcessError:
 				# Can not find any better error code that 6,0 !
