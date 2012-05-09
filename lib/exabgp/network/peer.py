@@ -167,13 +167,6 @@ class Peer (object):
 				yield None
 				break
 
-			try:
-				for name in self.supervisor.processes.notify[self.neighbor.peer_address]:
-					self.supervisor.processes.write(name,'neighbor %s up\n' % self.neighbor.peer_address)
-			except ProcessError:
-				# Can not find any better error code that 6,0 !
-				raise Notify(6,0,'ExaBGP Internal error, sorry.')
-
 			message = self.bgp.new_keepalive(force=True)
 			logger.message(self.me('>> KEEPALIVE (OPENCONFIRM)'))
 			yield True
@@ -185,6 +178,13 @@ class Peer (object):
 					logger.message(self.me('<< KEEPALIVE (ESTABLISHED)'))
 					break
 				yield None
+
+			try:
+				for name in self.supervisor.processes.notify[self.neighbor.peer_address]:
+					self.supervisor.processes.write(name,'neighbor %s up\n' % self.neighbor.peer_address)
+			except ProcessError:
+				# Can not find any better error code that 6,0 !
+				raise Notify(6,0,'ExaBGP Internal error, sorry.')
 
 			count = 0
 			for count in self.bgp.new_announce():
