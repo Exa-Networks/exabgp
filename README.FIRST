@@ -21,10 +21,15 @@ Potential use are :
 
 It can connect using either IPv4 or IPv6 and announce both IPv4 and IPv6 routes.
 
+ExaBGP is for injecting or performing complex route mangling with BGP.
+ExaBGP is not intended to use to transform a server in BGP router.
 The program does not perform any FIB manipulation, however it can call an application which will perform them.
+Please look at BIRD, http://bird.network.cz/ if this is what you are looking for.
+
+Please look at http://code.google.com/p/exabgp/wiki/RFC for the list of supported RFC
 
 The code is deployed in many networks but is not perfect,
-I will gladly fix bugs if any are found, just contact me:
+I will fix bugs if any are found, just contact me:
 thomas . mangin AT exa - networks . co . uk
 
 Some speakers may use RFC 2385 (Protection of BGP Sessions via the TCP MD5 Signature).
