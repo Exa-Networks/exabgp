@@ -187,11 +187,10 @@ class value (object):
 defaults = {
 	'profile' : {
 		'enable'        : (value.boolean,value.lower,'false',    'toggle profiling of the code'),
-		'file'          : (value.unquote,value.quote,'',         'file where profiling information is saved (none means stdout). ExaBGP does not overwrite existing files'),
+		'file'          : (value.unquote,value.quote,'',         'profiling result file, none means stdout, no overwriting'),
 	},
 	'pdb' : {
 		'enable'        : (value.boolean,value.lower,'false',    'on program fault, start pdb the python interactive debugger'),
-		'file'          : (value.unquote,value.quote,'',         'file where profiling information is saved (none means stdout). ExaBGP does not overwrite existing files'),
 	},
 	'daemon' : {
 #		'identifier'    : (value.unquote,value.nop,'ExaBGP',     'a name for the log (to diferenciate multiple instances more easily)'),
@@ -217,7 +216,7 @@ defaults = {
 		'parser'        : (value.boolean,value.lower,'false',    'report BGP message parsing details'),
 	},
 	'bgp' : {
-		'minimal'       : (value.boolean,value.lower,'false',    'when negociating multiprotocol, try to announce as few AFI/SAFI pair as possible'),
+		'minimal'       : (value.boolean,value.lower,'false',    'try to announce as few AFI/SAFI pair as possible'),
 	},
 	# Here for internal use
 	'internal' : {

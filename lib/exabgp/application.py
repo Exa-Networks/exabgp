@@ -45,10 +45,13 @@ def help ():
 	sys.stdout.write('  -e, --env       : display the configuration using the env format\n')
 	sys.stdout.write(' -di, --diff-ini  : display non-default configurations values using the ini format\n')
 	sys.stdout.write(' -de, --diff-env  : display non-default configurations values using the env format\n')
-	sys.stdout.write('  -d, --debug     : shortcut to turn on all subsystems debugging (shortcut for exabgp.log.all=true)\n')
-	sys.stdout.write('  -p, --pdb       : start the python debugger on serious logging and on SIGTERM\n')
-#	sys.stdout.write('  -m, --memory    : display memory usage information on exit\n')
-	sys.stdout.write(' --profile <file> : enable profiling (shortcut for exabgp.profile.enable=true exabgp.profle=file=<file>)\n')
+	sys.stdout.write('  -d, --debug     : turn on all subsystems debugging\n'
+	                 '                    shortcut for exabgp.log.all=true exabgp.log.level=LOG_DEBUG\n')
+	sys.stdout.write('  -p, --pdb       : start the python debugger on serious logging and on SIGTERM\n'
+	                 '                    shortcut for exabgp.pdb.enable=true\n')
+	sys.stdout.write('  -m, --memory    : display memory usage information on exit\n')
+	sys.stdout.write(' --profile <file> : enable profiling\n'
+	                 '                    shortcut for exabgp.profile.enable=true exabgp.profle=file=<file>\n')
 
 	sys.stdout.write('\n')
 	sys.stdout.write('ExaBGP will automatically look for its configuration file (in windows ini format)\n')
@@ -67,6 +70,7 @@ def help ():
 	sys.stdout.write(' - 3 : command line env value using underscore separated notation\n')
 	sys.stdout.write(' - 4 : exported value from the shell using underscore separated notation\n')
 	sys.stdout.write(' - 5 : the value in the ini configuration file\n')
+	sys.stdout.write(' - 6 : the built-in defaults\n')
 	sys.stdout.write('\n')
 	sys.stdout.write('For example :\n')
 	sys.stdout.write('> env exabgp.profile.enable=true \\\n')
@@ -107,20 +111,29 @@ if __name__ == '__main__':
 		'configuration' : '',
 	}
 
-	configuration = os.path.normpath(os.path.abspath(sys.argv[-1]))
-	if not os.path.exists(configuration):
-		sys.stdout.write('The last parameter is not a peer and route definition file')
-		sys.exit(1)
-
-	for arg in sys.argv[1:-1]:
+	for arg in sys.argv[1:]:
 		if next:
 			arguments[next] = arg
 			next = ''
 			continue
 		if arg in ['-c','--command']:
 			next = 'command'
+			continue
 		if arg in ['--profile',]:
 			next = 'profile'
+			continue
+		if arg.startswith('-'):
+			continue
+		if not arguments['configuration']:
+			arguments['configuration'] = arg
+			continue
+		sys.stdout.write("invalid command line, more than one file name provided '%s' and '%s'" % (arguments['configuration'],arg))
+		sys.exit(1)
+
+	configuration = os.path.realpath(os.path.normpath(arguments['configuration']))
+	if not os.path.isfile(configuration):
+		sys.stdout.write('missing the peer and route definition file')
+		sys.exit(1)
 
 	try:
 		command = load(arguments['command'])
