@@ -9,8 +9,23 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 import os
 import sys
 import time
+import syslog
 import logging
 import logging.handlers
+
+from exabgp.command import load
+
+level_value = {
+#	'emmergency' : syslog.LOG_EMERG,
+#	'alert'      : syslog.LOG_ALERT,
+	'critical'   : syslog.LOG_CRIT,
+	'error'      : syslog.LOG_ERR,
+	'warning'    : syslog.LOG_WARNING,
+#	'notice'     : syslog.LOG_NOTICE,
+	'info'       : syslog.LOG_INFO,
+	'debug'      : syslog.LOG_DEBUG,
+}
+
 
 class LazyFormat (object):
 	def __init__ (self,prefix,format,message):
@@ -61,67 +76,34 @@ class _Logger (object):
 		return self._format(ts,level,source,message)
 
 	def __init__ (self):
-		if os.environ.get('DEBUG_SUPERVISOR','1') in ['1','yes','Yes','YES']: self._supervisor = True
-		else: self._supervisor = False
+		command = load()
+		self.level = command.log.level
 
-		if os.environ.get('DEBUG_DAEMON','1') in ['1','yes','Yes','YES']: self._daemon = True
-		else: self._daemon = False
+		self._supervisor    = command.log.enable and (command.log.all or command.log.supervisor)
+		self._daemon        = command.log.enable and (command.log.all or command.log.daemon)
+		self._processes     = command.log.enable and (command.log.all or command.log.processes)
+		self._configuration = command.log.enable and (command.log.all or command.log.configuration)
+		self._network       = command.log.enable and (command.log.all or command.log.network)
+		self._wire          = command.log.enable and (command.log.all or command.log.packets)
+		self._message       = command.log.enable and (command.log.all or command.log.message)
+		self._rib           = command.log.enable and (command.log.all or command.log.rib)
+		self._timer         = command.log.enable and (command.log.all or command.log.timers)
+		self._routes        = command.log.enable and (command.log.all or command.log.routes)
+		self._parser        = command.log.enable and (command.log.all or command.log.parser)
 
-		if os.environ.get('DEBUG_PROCESSES','1') in ['1','yes','Yes','YES']: self._processes = True
-		else: self._processes = False
+#		if not os.environ.get('DEBUG_CORE','0') == '0':
+#			self._supervisor = True
+#			self._daemon = True
+#			self._processes = True
+#			self._message = True
+#			self._timer = True
+#			self._routes = True
+#			self._parser = False
 
-		if os.environ.get('DEBUG_CONFIGURATION','0') == '0': self._configuration = False
-		else: self._configuration = True
-
-		if os.environ.get('DEBUG_WIRE','0') == '0': self._wire = False
-		else: self._wire = True
-
-		if os.environ.get('DEBUG_MESSAGE','0') in ['1','yes','Yes','YES']: self._message = True
-		else: self._message = False
-
-		if os.environ.get('DEBUG_RIB','0') == '0': self._rib = False
-		else: self._rib = True
-
-		if os.environ.get('DEBUG_TIMER','0') == '0': self._timer = False
-		else: self._timer = True
-
-		if os.environ.get('DEBUG_ROUTE','0') == '0': self._routes = False
-		else: self._routes = True
-
-		# DEPRECATED, kept for compatibility in 2.0.x series
-		if os.environ.get('DEBUG_ROUTES','0') == '0': self._routes = False
-		else: self._routes = True
-
-		if os.environ.get('DEBUG_PARSER','0') == '0': self._parser = False
-		else: self._parser = True
-
-		if not os.environ.get('DEBUG_ALL','0') == '0':
-			self._supervisor = True
-			self._daemon = True
-			self._processes = True
-			self._configuration = True
-			self._wire = True
-			self._message = True
-			self._rib = True
-			self._timer = True
-			self._routes = True
-			self._parser = True
-
-		if not os.environ.get('DEBUG_CORE','0') == '0':
-			self._supervisor = True
-			self._daemon = True
-			self._processes = True
-			#self._configuration = True
-			#self._wire = True
-			self._message = True
-			#self._rib = True
-			self._timer = True
-			self._routes = True
-			self._parser = False
-
-		destination = os.environ.get('SYSLOG',None)
-		if destination is None:
+		if not command.log.enable:
 			return
+
+		destination = command.log.destination
 
 		try:
 			if destination == '':
@@ -138,7 +120,12 @@ class _Logger (object):
 				address = (destination[5:].strip(), 514)
 				handler = logging.handlers.SysLogHandler(address)
 			else:
-				handler = logging.handlers.RotatingFileHandler(destination, maxBytes=5*1024*1024, backupCount=5)
+				if destination.lower() == 'stdout':
+					handler = logging.StreamHandler(sys.stdout)
+				elif destination.lower() == 'stderr':
+					handler = logging.StreamHandler(sys.stderr)
+				else:
+					handler = logging.handlers.RotatingFileHandler(destination, maxBytes=5*1024*1024, backupCount=5)
 			self._syslog = logging.getLogger()
 			self._syslog.setLevel(logging.DEBUG)
 			self._syslog.addHandler(handler)
@@ -186,72 +173,79 @@ class _Logger (object):
 				sys.stdout.flush()
 
 	# show the message on the wire
-	def wire (self,message):
-		if self._wire:
-			self.debug(message,'wire')
+	def network (self,message,recorder='info'):
+		if self._wire and level_value[recorder] <= self.level:
+			getattr(self,recorder)(message,'network')
 		else:
-			self._record(time.localtime(),'wire','DEBUG',message)
+			self._record(time.localtime(),'network',recorder.upper(),message)
+
+	# show the message on the wire
+	def wire (self,message,recorder='debug'):
+		if self._wire and level_value[recorder] <= self.level:
+			getattr(self,recorder)(message,'wire')
+		else:
+			self._record(time.localtime(),'wire',recorder.upper(),message)
 
 	# show the exchange of message between peers
-	def message (self,message):
-		if self._message:
-			self.info(message,'message')
+	def message (self,message,recorder='info'):
+		if self._message and level_value[recorder] <= self.level:
+			getattr(self,recorder)(message,'message')
 		else:
-			self._record(time.localtime(),'message','info',message)
+			self._record(time.localtime(),'message',recorder.upper(),message)
 
 	# show the parsing of the configuration
-	def configuration (self,message):
-		if self._configuration:
-			self.info(message,'configuration')
+	def configuration (self,message,recorder='info'):
+		if self._configuration and level_value[recorder] <= self.level:
+			getattr(self,recorder)(message,'configuration')
 		else:
-			self._record(time.localtime(),'configuration','info',message)
+			self._record(time.localtime(),'configuration',recorder.upper(),message)
 
 	# show the exchange of message generated by the supervisor (^C and signal received)
-	def supervisor (self,message):
-		if self._supervisor:
-			self.info(message,'supervisor')
+	def supervisor (self,message,recorder='info'):
+		if self._supervisor and level_value[recorder] <= self.level:
+			getattr(self,recorder)(message,'supervisor')
 		else:
-			self._record(time.localtime(),'supervisor','info',message)
+			self._record(time.localtime(),'supervisor',recorder.upper(),message)
 
 	# show the change of rib table
-	def rib (self,message):
-		if self._rib:
-			self.info(message,'rib')
+	def rib (self,message,recorder='info'):
+		if self._rib and level_value[recorder] <= self.level:
+			getattr(self,recorder)(message,'rib')
 		else:
-			self._record(time.localtime(),'rib','info',message)
+			self._record(time.localtime(),'rib',recorder.upper(),message)
 
 	# show the change of rib table
-	def timers (self,message):
-		if self._timer:
-			self.info(message,'timers')
+	def timers (self,message,recorder='debug'):
+		if self._timer and level_value[recorder] <= self.level:
+			getattr(self,recorder)(message,'timers')
 		else:
-			self._record(time.localtime(),'timers','info',message)
+			self._record(time.localtime(),'timers',recorder.upper(),message)
 
 	# show the exchange of message generated by the daemon feature (change pid, fork, ...)
-	def daemon (self,message):
-		if self._daemon:
-			self.info(message,'daemon')
+	def daemon (self,message,recorder='info'):
+		if self._daemon and level_value[recorder] <= self.level:
+			getattr(self,recorder)(message,'daemon')
 		else:
-			self._record(time.localtime(),'daemon','info',message)
+			self._record(time.localtime(),'daemon',recorder.upper(),message)
 
 	# show the exchange of message generated by the forked processes
-	def processes (self,message):
-		if self._processes:
-			self.info(message,'processes')
+	def processes (self,message,recorder='info'):
+		if self._processes and level_value[recorder] <= self.level:
+			getattr(self,recorder)(message,'processes')
 		else:
-			self._record(time.localtime(),'processes','info',message)
+			self._record(time.localtime(),'processes',recorder.upper(),message)
 
 	# show the exchange of message generated by the routes received
-	def routes (self,message):
-		if self._routes:
-			self.info(message,'route')
+	def routes (self,message,recorder='info'):
+		if self._routes and level_value[recorder] <= self.level:
+			getattr(self,recorder)(message,'route')
 		else:
-			self._record(time.localtime(),'route','info',message)
+			self._record(time.localtime(),'route',recorder.upper(),message)
 
 	# show how the message received are parsed
-	def parser (self,message):
-		if self._parser:
-			self.info(message,'parser')
+	def parser (self,message,recorder='info'):
+		if self._parser and level_value[recorder] <= self.level:
+			getattr(self,recorder)(message,'parser')
 
 def Logger ():
 	if _Logger._instance:

@@ -71,7 +71,7 @@ class Connection (object):
 				# diable Nagle's algorithm (no grouping of packets)
 				self.io.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 			except AttributeError:
-				logger.warning("wire","Could not diable nagle's algorithm for %s" % self.peer)
+				logger.network("wire","Could not disable nagle's algorithm for %s" % self.peer,'warning')
 				pass
 			self.io.settimeout(1)
 			if peer.afi == AFI.ipv4:

@@ -12,12 +12,13 @@ import pwd
 import errno
 import socket
 
+from exabgp.command import load
+
 from exabgp.log import Logger
 logger = Logger()
 
 class Daemon (object):
-	pid_file = os.environ.get('PID','')
-	user = os.environ.get('USER','nobody')
+	daemon = load().daemon
 
 	def __init__ (self,supervisor):
 		self.supervisor = supervisor
@@ -26,7 +27,7 @@ class Daemon (object):
 	def savepid (self):
 		self._saved_pid = False
 
-		if not self.pid_file:
+		if not self.daemon.pid:
 			return
 
 		ownid = os.getpid()
@@ -35,9 +36,9 @@ class Daemon (object):
 		mode = ((os.R_OK | os.W_OK) << 6) | (os.R_OK << 3) | os.R_OK
 
 		try:
-			fd = os.open(self.pid_file,flags,mode)
+			fd = os.open(self.daemon.pid,flags,mode)
 		except OSError:
-			logger.daemon("PIDfile already exists, not updated %s" % self.pid_file)
+			logger.daemon("PIDfile already exists, not updated %s" % self.daemon.pid)
 			return
 
 		try:
@@ -47,22 +48,22 @@ class Daemon (object):
 			f.close()
 			self._saved_pid = True
 		except IOError:
-			logger.daemon("Can not create PIDfile %s" % self.pid_file)
+			logger.daemon("Can not create PIDfile %s" % self.daemon.pid,'error')
 			return
-		logger.daemon("Created PIDfile %s with value %d" % (self.pid_file,ownid))
+		logger.daemon("Created PIDfile %s with value %d" % (self.daemon.pid,ownid))
 
 	def removepid (self):
-		if not self.pid_file or not self._saved_pid:
+		if not self.daemon.pid or not self._saved_pid:
 			return
 		try:
-			os.remove(self.pid_file)
+			os.remove(self.daemon.pid)
 		except OSError, e:
 			if e.errno == errno.ENOENT:
 				pass
 			else:
-				logger.daemon("Can not remove PIDfile %s" % self.pid_file)
+				logger.daemon("Can not remove PIDfile %s" % self.daemon.pid,'error')
 				return
-		logger.daemon("Removed PIDfile %s" % self.pid_file)
+		logger.daemon("Removed PIDfile %s" % self.daemon.pid)
 
 	def drop_privileges (self):
 		"""returns true if we are left with insecure privileges"""
@@ -77,7 +78,7 @@ class Daemon (object):
 			return False
 
 		try:
-			user = pwd.getpwnam(self.user)
+			user = pwd.getpwnam(self.daemon.user)
 			nuid = int(user.pw_uid)
 			ngid = int(user.pw_uid)
 		except KeyError:
@@ -108,7 +109,12 @@ class Daemon (object):
 		return True
 
 	def daemonise (self):
-		if os.environ.get('DAEMONIZE','0') not in ['','1','yes','Yes','YES']:
+		if not self.daemon.daemonize:
+			return
+
+		log = load().log
+		if log.enable and log.destination.lower() in ('stdout','stderr'):
+			logger.daemon('ExaBGP not fork when logs are going to %s' % log.destination.lower(),'critical')
 			return
 
 		def fork_exit ():
@@ -117,14 +123,10 @@ class Daemon (object):
 				if pid > 0:
 					os._exit(0)
 			except OSError, e:
-				logger.critial('Can not fork, errno %d : %s' % (e.errno,e.strerror),'supervisor')
+				logger.supervisor('Can not fork, errno %d : %s' % (e.errno,e.strerror),'critical')
 
 		# do not detach if we are already supervised or run by init like process
 		if not self._is_socket(sys.__stdin__.fileno()) and os.getppid() != 1:
 			fork_exit()
 			os.setsid()
 			fork_exit()
-			if os.environ.get('SYSLOG',None) is None:
-				# XXX: Force SYSLOG, we need to be able to access the local syslog deamon
-				# XXX: Is there not a bug on python (old version) where that does not work ?
-				os.environ['SYSLOG']=''

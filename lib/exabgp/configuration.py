@@ -11,6 +11,8 @@ import stat
 from pprint import pformat
 from copy import deepcopy
 
+from exabgp.command import load
+
 from exabgp.structure.ip         import to_IP,to_Route
 from exabgp.structure.asn        import ASN
 from exabgp.structure.neighbor   import Neighbor
@@ -53,7 +55,7 @@ class Withdrawn (object):
 
 class Configuration (object):
 	TTL_SECURITY = 255
-	debug = os.environ.get('RAISE_CONFIGURATION',None) != None
+	debug = load().debug.configuration
 
 	_str_route_error = \
 	'community, extended-communities and as-path can take a single community as parameter.\n' \
@@ -1289,10 +1291,10 @@ class Configuration (object):
 		try:
 			speed = int(tokens[0])
 			if speed < 9600 and speed != 0:
-				logger.warning("rate-limiting flow under 9600 bytes per seconds may not work","configuration")
+				logger.configuration("rate-limiting flow under 9600 bytes per seconds may not work",'warning')
 			if speed > 1000000000000:
 				speed = 1000000000000
-				logger.warning("rate-limiting changed for 1 000 000 000 000 bytes from %s" % tokens[0],"configuration")
+				logger.configuration("rate-limiting changed for 1 000 000 000 000 bytes from %s" % tokens[0],'warning')
 			scope[-1]['routes'][-1].add_action(to_FlowTrafficRate(ASN(0),speed))
 			return True
 		except ValueError:

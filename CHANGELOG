@@ -3,9 +3,13 @@ Version explained:
  minor : increase on new features
  bug   : increase on bug fixes
 
-Version 2.1.0 - -- of ----- 2012 (experimental version)
- * API Change: send "up" message to worker process when neighbor OPEN negociation is complete (not on TCP up)
- * API Addition: send "connected" to worker when neighbor TCP session is established (replace previous 'up')
+Version 3.0.0 - -- of June 2012 (experimental version)
+ * Major version change due to incompatible CLI interface with version 1.x.x and 2.x.x
+ * Major version change due to a change of API behaviour with the forked worker processes
+
+ * CLI Change: use new ini file and environment values for configuration
+ * API Change: send "up" message to worker process when neighbour OPEN negotiation is complete (not on TCP up)
+ * API Addition: send "connected" to worker when neighbour TCP session is established (replace previous 'up')
  * Fix: reset counters correctly for number of routes seen (only affects the logs)
  * Fix: prevent 100% CPU usage/loop when trying to read on unreliable links
  * Fix: correctly process IPv6 routes with 32 bytes long next-hop
@@ -16,6 +20,7 @@ Version 2.1.0 - -- of ----- 2012 (experimental version)
  * Improvement: implementation of draft-ietf-idr-bgp-multisession-06
     use capability 131 (and not 68) for multisession to achieve interop with Cisco
  * Improvement: following RFC 6608 new notification codes
+ * Improvement: to the logging code and message filtering
 
 Version 2.0.8 - 31 of March 2012 (stable version)
  * Fix: the update grouping could cause message up to "header size" bigger than allowed.

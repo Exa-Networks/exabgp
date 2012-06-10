@@ -10,6 +10,8 @@ import os
 import socket
 from struct import pack
 
+from exabgp.command import load
+
 from exabgp.structure.address import AFI,SAFI
 from exabgp.structure.asn  import ASN
 from exabgp.message import Message
@@ -243,7 +245,7 @@ class Capabilities (dict):
 	def default (self,neighbor,restarted):
 		graceful = neighbor.graceful_restart
 
-		if neighbor.multisession or os.environ.get('MINIMAL_MP','0') in ['','1','yes','Yes','YES']:
+		if neighbor.multisession or load().bgp.minimal:
 			families = neighbor.families()
 		else:
 			families = []

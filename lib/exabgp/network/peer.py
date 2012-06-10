@@ -266,14 +266,14 @@ class Peer (object):
 				yield None
 
 			if self.neighbor.graceful_restart and self.open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
-				logger.warning('Closing the connection without notification')
+				logger.network('Closing the connection without notification','error')
 				self.bgp.close()
 				return
 
 			# User closing the connection
 			raise Notify(6,3)
 		except NotConnected, e:
-			logger.warning('we can not connect to the peer %s' % str(e))
+			logger.network('we can not connect to the peer %s' % str(e),'error')
 			self._more_skip()
 			try:
 				self.bgp.close()
@@ -281,7 +281,7 @@ class Peer (object):
 				pass
 			return
 		except Notify,e:
-			logger.warning(self.me('Sending Notification (%d,%d) [%s] %s' % (e.code,e.subcode,str(e),e.data)))
+			logger.network(self.me('Sending Notification (%d,%d) [%s] %s' % (e.code,e.subcode,str(e),e.data)),'info')
 			try:
 				self.bgp.new_notification(e)
 			except Failure:
@@ -292,14 +292,14 @@ class Peer (object):
 				pass
 			return
 		except Notification, e:
-			logger.warning(self.me('Received Notification (%d,%d) from peer %s' % (e.code,e.subcode,str(e))))
+			logger.network(self.me('Received Notification (%d,%d) from peer %s' % (e.code,e.subcode,str(e))))
 			try:
 				self.bgp.close()
 			except Failure:
 				pass
 			return
 		except Failure, e:
-			logger.warning(self.me(str(e)),'connection')
+			logger.network(self.me(str(e)),'error')
 			self._more_skip()
 			try:
 				self.bgp.close()
@@ -307,14 +307,14 @@ class Peer (object):
 				pass
 			return
 		except Exception, e:
-			logger.warning(self.me('UNHANDLED EXCEPTION'))
+			logger.network(self.me('UNHANDLED EXCEPTION'),'error')
 			self._more_skip()
 			if self.debug_trace:
 				# should really go to syslog
 				traceback.print_exc(file=sys.stdout)
 				raise
 			else:
-				logger.warning(self.me(str(e)))
+				logger.network(self.me(str(e)),'error')
 			if self.bgp: self.bgp.close()
 			return
 
