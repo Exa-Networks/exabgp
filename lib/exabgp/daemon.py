@@ -71,7 +71,7 @@ class Daemon (object):
 		if os.name not in ['posix',]:
 			return False
 
-		uid = os.getpid()
+		uid = os.getuid()
 		gid = os.getgid()
 
 		if uid and gid:
