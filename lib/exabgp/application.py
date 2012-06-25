@@ -40,9 +40,9 @@ def help ():
 	sys.stdout.write('usage:\n exabgp [options] <bgp configuration file>\n')
 	sys.stdout.write('\n')
 	sys.stdout.write('  -h, --help      : this help\n')
-	sys.stdout.write('  -c, --command   : command line file to use (ini format)\n')
-	sys.stdout.write('  -i, --ini       : display the configuration using the ini format\n')
-	sys.stdout.write('  -e, --env       : display the configuration using the env format\n')
+	sys.stdout.write('  -e, --env       : configuration file with environment value (ini format)\n')
+	sys.stdout.write(' -fi, --full-ini  : display the configuration using the ini format\n')
+	sys.stdout.write(' -fe, --full-env  : display the configuration using the env format\n')
 	sys.stdout.write(' -di, --diff-ini  : display non-default configurations values using the ini format\n')
 	sys.stdout.write(' -de, --diff-env  : display non-default configurations values using the env format\n')
 	sys.stdout.write('  -d, --debug     : turn on all subsystems debugging\n'
@@ -56,7 +56,7 @@ def help ():
 	sys.stdout.write('\n')
 	sys.stdout.write('ExaBGP will automatically look for its configuration file (in windows ini format)\n')
 	sys.stdout.write(' - in the etc/exabgp folder located within the extracted tar.gz \n')
-	sys.stdout.write(' - in /etc/exabgp/exabgp.conf\n')
+	sys.stdout.write(' - in /etc/exabgp/exabgp.env\n')
 	sys.stdout.write('\n')
 	sys.stdout.write('Individual configuration options can be set using environment variables, such as :\n')
 	sys.stdout.write('   > env exabgp.bgp.minimal=true ./sbin/exabgp\n')
@@ -65,9 +65,9 @@ def help ():
 	sys.stdout.write('\n')
 	sys.stdout.write('Multiple environment values can be set\n')
 	sys.stdout.write('and the order of preference is :\n')
-	sys.stdout.write(' - 1 : command line env value using dot separated notation\n')
+	sys.stdout.write(' - 1 : command line environment value using dot separated notation\n')
 	sys.stdout.write(' - 2 : exported value from the shell using dot separated notation\n')
-	sys.stdout.write(' - 3 : command line env value using underscore separated notation\n')
+	sys.stdout.write(' - 3 : command line environment value using underscore separated notation\n')
 	sys.stdout.write(' - 4 : exported value from the shell using underscore separated notation\n')
 	sys.stdout.write(' - 5 : the value in the ini configuration file\n')
 	sys.stdout.write(' - 6 : the built-in defaults\n')
@@ -99,7 +99,7 @@ if __name__ == '__main__':
 	if main == 2 and secondary == 4:
 		version_warning()
 
-	from exabgp.command import CommandError,load,ini,env,default
+	from exabgp.environment import EnvError,load,iter_ini,iter_env,default
 
 	if len(sys.argv) < 2:
 		help()
@@ -107,7 +107,7 @@ if __name__ == '__main__':
 
 	next = ''
 	arguments = {
-		'command' : '',
+		'environment' : '',
 		'configuration' : '',
 	}
 
@@ -116,8 +116,8 @@ if __name__ == '__main__':
 			arguments[next] = arg
 			next = ''
 			continue
-		if arg in ['-c','--command']:
-			next = 'command'
+		if arg in ['-e','--env']:
+			next = 'environment'
 			continue
 		if arg in ['--profile',]:
 			next = 'profile'
@@ -127,23 +127,25 @@ if __name__ == '__main__':
 		if not arguments['configuration']:
 			arguments['configuration'] = arg
 			continue
-		sys.stdout.write("invalid command line, more than one file name provided '%s' and '%s'" % (arguments['configuration'],arg))
+		sys.stdout.write("invalid command line, more than one file name provided '%s' and '%s'\n" % (arguments['configuration'],arg))
 		sys.exit(1)
 
-	configuration = os.path.realpath(os.path.normpath(arguments['configuration']))
-	if not os.path.isfile(configuration):
-		sys.stdout.write('missing the peer and route definition file')
-		sys.exit(1)
+	if arguments['environment']:
+		envpath = os.path.realpath(os.path.normpath(arguments['environment']))
+		if not os.path.isfile(envpath):
+			sys.stdout.write('warning : environment file name provided [%s] does not exists\n' % arguments['environment'])
+	else:
+		arguments['environment'] = '%s/exabgp.env' % os.environ.get('ETC','etc')
 
 	try:
-		command = load(arguments['command'])
-	except CommandError,e:
+		env = load(arguments['environment'])
+	except EnvError,e:
 		print >> sys.stderr, 'configuration issue,', str(e)
 		sys.exit(1)
 
 	if 'profile' in arguments:
-		command.profile.enable = True
-		command.profile.file = arguments['profile']
+		env.profile.enable = True
+		env.profile.file = arguments['profile']
 
 	for arg in sys.argv[1:]:
 		if arg in ['--',]:
@@ -151,11 +153,14 @@ if __name__ == '__main__':
 		if arg in ['-h','--help']:
 			help()
 			sys.exit(0)
-		if arg in ['-i','--ini']:
-			ini()
+		if arg in ['-fi','--full-ini']:
+			for line in iter_ini():
+				print line
 			sys.exit(0)
-		if arg in ['-e','--env']:
-			env()
+		if arg in ['-fe','--full-env']:
+			print
+			for line in iter_env():
+				print line
 			sys.exit(0)
 		if arg in ['-di','--diff-ini']:
 			ini(True)
@@ -164,39 +169,45 @@ if __name__ == '__main__':
 			env(True)
 			sys.exit(0)
 		if arg in ['--profile',]:
-			command.profile.enable = True
+			env.profile.enable = True
 		if arg in ['-d','--debug']:
-			command.log.all = True
-			command.log.level='LOG_DEBUG'
+			env.log.all = True
+			env.log.level='LOG_DEBUG'
 		if arg in ['-p','--pdb']:
 			# The following may fail on old version of python (but is required for debug.py)
 			os.environ['PDB'] = 'true'
-			command.debug.pdb = True
+			env.debug.pdb = True
 		if arg in ['-m','--memory']:
-			command.debug.memory = True
+			env.debug.memory = True
 
 	from exabgp.log import Logger
 	logger = Logger()
 
 	from exabgp.supervisor import Supervisor
 
-	if not command.profile.enable:
+	# check the file only once that we have parsed all the command line options and allowed them to run
+	configuration = os.path.realpath(os.path.normpath(arguments['configuration']))
+	if not os.path.isfile(configuration):
+		sys.stdout.write('missing the peer and route definition file\n')
+		sys.exit(1)
+
+	if not env.profile.enable:
 		Supervisor(configuration).run()
-		__exit(command.debug.memory,0)
+		__exit(env.debug.memory,0)
 
 	try:
 		import cProfile as profile
 	except:
 		import profile
 
-	if not command.profile.file or command.profile.file == 'stdout':
+	if not env.profile.file or env.profile.file == 'stdout':
 		profile.run('Supervisor(configuration).run()')
-		__exit(command.debug.memory,0)
+		__exit(env.debug.memory,0)
 
 	notice = ''
-	if os.path.isdir(command.profile.file):
+	if os.path.isdir(env.profile.file):
 		notice = 'profile can not use this filename as outpout, it is not a directory (%s)' % profiled
-	if os.path.exists(command.profile.file):
+	if os.path.exists(env.profile.file):
 		notice = 'profile can not use this filename as outpout, it already exists (%s)' % profiled
 
 	if not notice:
@@ -207,4 +218,4 @@ if __name__ == '__main__':
 		log.debug(notice)
 		log.debug("-"*len(notice))
 		main()
-		__exit(command.debug.memory,0)
+		__exit(env.debug.memory,0)

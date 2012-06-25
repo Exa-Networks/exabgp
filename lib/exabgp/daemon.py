@@ -12,7 +12,7 @@ import pwd
 import errno
 import socket
 
-from exabgp.command import load
+from exabgp.environment import load
 
 from exabgp.log import Logger
 logger = Logger()

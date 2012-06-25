@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-command.py
+environment.py
 
 Created by Thomas Mangin on 2011-11-29.
 Copyright (c) 2011 Exa Networks. All rights reserved.
@@ -17,7 +17,7 @@ import pwd
 
 from exabgp.version import version
 
-class CommandError (Exception):
+class EnvError (Exception):
 	pass
 
 syslog_name_value = {
@@ -243,7 +243,7 @@ class Store (dict):
 		return dict.__setitem__(self,key.replace('_','-'),value)
 
 
-def _command (conf):
+def _env (conf):
 	location = os.path.join(os.sep,*os.path.join(value.location.split(os.sep)))
 	while location:
 		location, directory = os.path.split(location)
@@ -254,10 +254,10 @@ def _command (conf):
 	if conf:
 		_conf_paths.append(os.path.abspath(os.path.normpath(conf)))
 	if location:
-		_conf_paths.append(os.path.normpath(os.path.join(location,'etc','exabgp','exabgp.conf')))
-	_conf_paths.append(os.path.normpath(os.path.join('/','etc','exabgp','exabgp.conf')))
+		_conf_paths.append(os.path.normpath(os.path.join(location,'etc','exabgp','exabgp.env')))
+	_conf_paths.append(os.path.normpath(os.path.join('/','etc','exabgp','exabgp.env')))
 
-	command = Store()
+	env = Store()
 	ini = ConfigParser.ConfigParser()
 
 	ini_files = [path for path in _conf_paths if os.path.exists(path)]
@@ -287,22 +287,22 @@ def _command (conf):
 			except (ConfigParser.NoSectionError,ConfigParser.NoOptionError):
 				conf = default[option][2]
 			try:
-				command.setdefault(section,Store())[option] = convert(conf)
+				env.setdefault(section,Store())[option] = convert(conf)
 			except TypeError:
-				raise CommandError('invalid value for %s.%s : %s' % (section,option,conf))
+				raise EnvError('invalid value for %s.%s : %s' % (section,option,conf))
 
-	return command
+	return env
 
-__command = None
+__env = None
 
 def load (conf=None):
-	global __command
-	if __command:
-		return __command
+	global __env
+	if __env:
+		return __env
 	if conf is None:
 		raise RuntimeError('You can not have an import using load() before main() initialised it')
-	__command = _command(conf)
-	return __command
+	__env = _env(conf)
+	return __env
 
 def default ():
 	for section in sorted(defaults):
@@ -313,29 +313,28 @@ def default ():
 			default = "'%s'" % values[2] if values[1] in (value.list,value.path,value.quote,value.syslog) else values[2]
 			yield 'exabgp.%s.%s %s: %s. default (%s)' % (section,option,' '*(20-len(section)-len(option)),values[3],default)
 
-def ini (diff=False):
-	for section in sorted(__command):
+def iter_ini (diff=False):
+	for section in sorted(__env):
 		if section in ('internal','debug'):
 			continue
 		header = '\n[exabgp.%s]' % section
-		for k in sorted(__command[section]):
-			v = __command[section][k]
+		for k in sorted(__env[section]):
+			v = __env[section][k]
 			if diff and defaults[section][k][0](defaults[section][k][2]) == v:
 				continue
 			if header:
-				print header
+				yield header
 				header = ''
-			print '%s = %s' % (k,defaults[section][k][1](v))
+			yield '%s = %s' % (k,defaults[section][k][1](v))
 
-def env (diff=False):
-	print
-	for section,values in __command.items():
+def iter_env (diff=False):
+	for section,values in __env.items():
 		if section in ('internal','debug'):
 			continue
 		for k,v in values.items():
 			if diff and defaults[section][k][0](defaults[section][k][2]) == v:
 				continue
 			if defaults[section][k][1] == value.quote:
-				print "exabgp.%s.%s='%s'" % (section,k,v)
+				yield "exabgp.%s.%s='%s'" % (section,k,v)
 				continue
-			print "exabgp.%s.%s=%s" % (section,k,defaults[section][k][1](v))
+			yield "exabgp.%s.%s=%s" % (section,k,defaults[section][k][1](v))

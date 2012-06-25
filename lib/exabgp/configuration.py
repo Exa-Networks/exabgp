@@ -11,7 +11,7 @@ import stat
 from pprint import pformat
 from copy import deepcopy
 
-from exabgp.command import load
+from exabgp.environment import load
 
 from exabgp.structure.ip         import to_IP,to_Route
 from exabgp.structure.asn        import ASN

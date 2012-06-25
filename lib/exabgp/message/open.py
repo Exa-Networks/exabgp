@@ -10,7 +10,7 @@ import os
 import socket
 from struct import pack
 
-from exabgp.command import load
+from exabgp.environment import load
 
 from exabgp.structure.address import AFI,SAFI
 from exabgp.structure.asn  import ASN
