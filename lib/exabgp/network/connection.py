@@ -188,8 +188,7 @@ class Connection (object):
 					sent = self.io.send(data)
 					data = data[sent:]
 				except socket.error,e:
-					failure = getattr(e,'errno',None)
-					if failure == errno.EAGAIN:
+					if e.args[0] in errno_block:
 						logger.wire("%15s BACKING OFF as writing on socket failed with errno EAGAIN" % self.peer)
 						time.sleep(0.01)
 						continue
