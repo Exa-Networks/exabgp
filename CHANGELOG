@@ -17,6 +17,8 @@ Version 3.0.0 - -- of June 2012 (experimental version)
  * Fix: problem on broken pipe with the helper program
  * Fix: correct sending of message to helper program (every worker was getting every peers messages)
  * Fix: if an helper program goes away, do not try to restart the peer (prevent surprises)
+ * Fix: problem when writing too fast and causing EGAIN errno failure on the socket (mostly/only on Mac OSX)
+    reported by Simon Helson (with patch, thank you)
  * Improvement: implementation of draft-ietf-idr-bgp-multisession-06
     use capability 131 (and not 68) for multisession to achieve interop with Cisco
  * Improvement: following RFC 6608 new notification codes

@@ -181,7 +181,21 @@ class Connection (object):
 			return False
 		try:
 			logger.wire(LazyFormat("%15s SENT " % self.peer,hexa,data))
-			self.io.sendall(data)
+			# we can not use sendall as in case of network buffer filling
+			# it does raise and does not let you know how much was sent
+			while data:
+				try:
+					sent = self.io.send(data)
+					data = data[sent:]
+				except socket.error,e:
+					failure = getattr(e,'errno',None)
+					if failure == errno.EAGAIN:
+						logger.wire("%15s BACKING OFF as writing on socket failed with errno EAGAIN" % self.peer)
+						time.sleep(0.01)
+						continue
+					else:
+						raise e
+			#self.io.sendall(data)
 			self.last_write = time.time()
 			return True
 		except socket.error, e:
