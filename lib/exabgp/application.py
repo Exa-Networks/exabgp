@@ -40,6 +40,7 @@ def help ():
 	sys.stdout.write('usage:\n exabgp [options] <bgp configuration file>\n')
 	sys.stdout.write('\n')
 	sys.stdout.write('  -h, --help      : this help\n')
+	sys.stdout.write('  -c, --conf      : configuration folder\n')
 	sys.stdout.write('  -e, --env       : configuration file with environment value (ini format)\n')
 	sys.stdout.write(' -fi, --full-ini  : display the configuration using the ini format\n')
 	sys.stdout.write(' -fe, --full-env  : display the configuration using the env format\n')
@@ -107,38 +108,48 @@ if __name__ == '__main__':
 
 	next = ''
 	arguments = {
-		'environment' : '',
-		'configuration' : '',
+		'folder' : '',
+		'file' : '',
+		'env' : 'exabgp.env',
 	}
+
+	parse_error = ''
 
 	for arg in sys.argv[1:]:
 		if next:
 			arguments[next] = arg
 			next = ''
 			continue
+		if arg in ['-c','--conf']:
+			next = 'folder'
+			continue
 		if arg in ['-e','--env']:
-			next = 'environment'
+			next = 'env'
 			continue
 		if arg in ['--profile',]:
 			next = 'profile'
 			continue
 		if arg.startswith('-'):
 			continue
-		if not arguments['configuration']:
-			arguments['configuration'] = arg
+		if not arguments['file']:
+			arguments['file'] = arg
 			continue
-		sys.stdout.write("invalid command line, more than one file name provided '%s' and '%s'\n" % (arguments['configuration'],arg))
-		sys.exit(1)
+		parse_error = "invalid command line, more than one file name provided '%s' and '%s'" % (arguments['file'],arg)
+		break
 
-	if arguments['environment']:
-		envpath = os.path.realpath(os.path.normpath(arguments['environment']))
-		if not os.path.isfile(envpath):
-			sys.stdout.write('warning : environment file name provided [%s] does not exists\n' % arguments['environment'])
+	if arguments['folder']:
+		etc = os.path.realpath(os.path.normpath(arguments['folder']))
 	else:
-		arguments['environment'] = '%s/exabgp.env' % os.environ.get('ETC','etc')
+		etc = os.path.realpath(os.path.normpath(os.environ.get('ETC','etc')))
+	os.environ['ETC'] = etc
+	
+	if not arguments['env'].startswith('/'):
+		envfile = '%s/%s' % (etc,arguments['env'])
+	else:
+		envfile = arguments['env']
 
 	try:
-		env = load(arguments['environment'])
+		env = load(envfile)
 	except EnvError,e:
 		print >> sys.stderr, 'configuration issue,', str(e)
 		sys.exit(1)
@@ -183,12 +194,20 @@ if __name__ == '__main__':
 	from exabgp.log import Logger
 	logger = Logger()
 
+	if parse_error:
+		logger.error(parse_error,'configuration')
+		sys.exit(1)
+
+	if not os.path.isfile(envfile):
+		logger.info('environment file missing','configuration')
+		logger.info('generate it using "%s -fi > %s"' % (sys.argv[0],envfile),'configuration')
+
 	from exabgp.supervisor import Supervisor
 
 	# check the file only once that we have parsed all the command line options and allowed them to run
-	configuration = os.path.realpath(os.path.normpath(arguments['configuration']))
+	configuration = os.path.realpath(os.path.normpath(arguments['file']))
 	if not os.path.isfile(configuration):
-		sys.stdout.write('missing the peer and route definition file\n')
+		logger.error('the peer and route definition option passed is not a file','configuration')
 		sys.exit(1)
 
 	if not env.profile.enable:
@@ -211,11 +230,11 @@ if __name__ == '__main__':
 		notice = 'profile can not use this filename as outpout, it already exists (%s)' % profiled
 
 	if not notice:
-		log.debug('profiling ....')
+		logger.info('profiling ....','profile')
 		profile.run('main()',filename=configuration.profile.destination)
 	else:
-		log.debug("-"*len(notice))
-		log.debug(notice)
-		log.debug("-"*len(notice))
+		logger.info("-"*len(notice),'profile')
+		logger.info(notice,'profile')
+		logger.info("-"*len(notice),'profile')
 		main()
 		__exit(env.debug.memory,0)
