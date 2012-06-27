@@ -1,4 +1,3 @@
-# encoding: utf-8
 """
 process.py
 
@@ -47,11 +46,16 @@ class Processes (object):
 			if not name in proc:
 				logger.processes("Can not start process, no configuration for it (anymore ?)")
 				return
+			# Prevent some weird termcap data to be created at the start of the PIPE
+			# \x1b[?1034h (no-eol) (esc)
+			os.environ['TERM']='dumb'
 			self._receive_routes[name] = proc[name]['receive-routes']
 			self._process[name] = subprocess.Popen(proc[name]['run'],
 				stdin=subprocess.PIPE,
 				stdout=subprocess.PIPE,
 				preexec_fn=os.setsid
+				# This flags exists for python 2.7.3 in the documentation but on on my MAC
+				# creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
 			)
 			neighbor = proc[name]['neighbor']
 			self._notify.setdefault(neighbor,[]).append(name)
