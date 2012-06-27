@@ -30,6 +30,7 @@ class Neighbor (object):
 		self.ttl = None
 		self.multisession = None
 		self.parse_routes = None
+		self.peer_updates = None
 		self._families = {}
 		self._watchdog = {}
 

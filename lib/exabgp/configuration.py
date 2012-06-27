@@ -360,6 +360,7 @@ class Configuration (object):
 
 		if command == 'run': return self._set_process_run(scope,'process-run',tokens[1:])
 		if command == 'parse-routes': return self._set_process_parse_routes(scope,'parse-routes',tokens[1:])
+		if command == 'peer-updates': return self._set_process_peer_updates(scope,'peer-updates',tokens[1:])
 
 		return False
 
@@ -370,7 +371,7 @@ class Configuration (object):
 			self._error = self._str_process_error
 			return False
 		while True:
-			r = self._dispatch(scope,'process',[],['run','parse-routes'])
+			r = self._dispatch(scope,'process',[],['run','parse-routes','peer-updates'])
 			if r is False: return False
 			if r is None: break
 		self.process.setdefault(tokens[0],{})['run'] = scope[-1].pop('process-run')
@@ -382,6 +383,10 @@ class Configuration (object):
 		return True
 
 	def _set_process_parse_routes (self,scope,command,value):
+		scope[-1][command] = True
+		return True
+
+	def _set_process_peer_updates (self,scope,command,value):
 		scope[-1][command] = True
 		return True
 
@@ -499,6 +504,7 @@ class Configuration (object):
 			v = local_scope.get('hold-time','')
 			if v: neighbor.hold_time = v
 			neighbor.parse_routes = local_scope.get('parse-routes',False)
+			neighbor.peer_updates = local_scope.get('peer-updates',False)
 			v = local_scope.get('routes',[])
 			for route in v:
 				# This add the family to neighbor.families()

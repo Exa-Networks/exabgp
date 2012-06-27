@@ -76,13 +76,14 @@ class Protocol (object):
 			ttl = self.neighbor.ttl
 			self.connection = Connection(peer,local,md5,ttl)
 
-			message = 'neighbor %s connected\n' % self.peer.neighbor.peer_address
-			try:
-				proc = self.peer.supervisor.processes
-				for name in proc.notify(self.neighbor.peer_address):
-					proc.write(name,message)
-			except ProcessError:
-				raise Failure('Could not send message(s) to helper program(s) : %s' % message)
+			if self.peer.neighbor.peer_updates:
+				message = 'neighbor %s connected\n' % self.peer.neighbor.peer_address
+				try:
+					proc = self.peer.supervisor.processes
+					for name in proc.notify(self.neighbor.peer_address):
+						proc.write(name,message)
+				except ProcessError:
+					raise Failure('Could not send message(s) to helper program(s) : %s' % message)
 
 	def check_keepalive (self):
 		left = int (self.connection.last_read  + self.neighbor.hold_time - time.time())
@@ -97,13 +98,14 @@ class Protocol (object):
 			self.connection.close()
 			self.connection = None
 
-			message = 'neighbor %s down\n' % self.peer.neighbor.peer_address
-			try:
-				proc = self.peer.supervisor.processes
-				for name in proc.notify(self.neighbor.peer_address):
-					proc.write(name,message)
-			except ProcessError:
-				raise Failure('Could not send message(s) to helper program(s) : %s' % message)
+			if self.peer.neighbor.peer_updates:
+				message = 'neighbor %s down\n' % self.peer.neighbor.peer_address
+				try:
+					proc = self.peer.supervisor.processes
+					for name in proc.notify(self.neighbor.peer_address):
+						proc.write(name,message)
+				except ProcessError:
+					raise Failure('Could not send message(s) to helper program(s) : %s' % message)
 
 	# Read from network .......................................................
 
