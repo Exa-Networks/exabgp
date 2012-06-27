@@ -129,6 +129,9 @@ class Processes (object):
 					continue
 			break
 
+		# XXX: When I read data, I only get the first of many lines ... 
+		# is "flush" really flushing or is it "optimised" (MySQL dev complained of something like that) :( ??
+
 		try:
 			self._process[name].stdin.flush()
 		except IOError,e:

@@ -227,7 +227,6 @@ class Supervisor (object):
 						else:
 							logger.supervisor("Command failure, route not found : %s" % route,'warning')
 
-
 				# flow announcement / withdrawal
 				elif command.startswith('announce flow'):
 					flow = self.configuration.parse_single_flow(command)
@@ -249,6 +248,9 @@ class Supervisor (object):
 
 				# commands
 				elif command in ['reload','restart','shutdown','version']:
+					self._commands.setdefault(service,[]).append(command)
+
+				elif command.startswith('show '):
 					self._commands.setdefault(service,[]).append(command)
 
 				# unknown
@@ -277,6 +279,24 @@ class Supervisor (object):
 				if command == 'version':
 					_answer(service,'exabgp %s' % version)
 					continue
+
+				if command == 'show neighbors':
+					for key in self.configuration.neighbor.keys():
+						neighbor = self.configuration.neighbor[key]
+						for line in str(neighbor).split('\n'):
+							_answer(service,line)
+
+				elif command == 'show routes':
+					_answer(service,'be patient ...')
+#					for key in self.configuration.neighbor.keys():
+#						neighbor = self.configuration.neighbor[key]
+#						print "N", str(neighbor)
+#						for route in neighbor.every_routes():
+#							print "R",route
+#							#_answer(service,'neighbor %s %s\n' % (str(neighbor),route))
+
+				else:
+					_answer(service,'unknown command %s' % command)
 
 	def route_update (self):
 		"""the process ran and we need to figure what routes to changes"""

@@ -7,18 +7,44 @@ import signal
 import socket
 import time
 import select
+import signal
 
 from SocketServer import TCPServer,StreamRequestHandler
 
+class TimeoutException(Exception):
+	pass
+
+def read_command(rfile,wfile,prompt):
+	def timeout_handler(signum, frame):
+		raise TimeoutException()
+
+	n = wfile.fileno()
+
+	signal.signal(signal.SIGALRM, timeout_handler) 
+	signal.alarm(1)
+
+	try:
+		if prompt:
+			wfile.write('\n> ')
+		c = rfile.readline()
+		signal.alarm(0)
+	except TimeoutException:
+		signal.alarm(0)
+		return ''
+
+	return c.strip()
+
 class Control (StreamRequestHandler):
+	allow_reuse_address = True
+
 	def handle(self):
 		command = 'go'
+		prompt = True
 		while command not in ['quit','exit']:
 			# reading the command on TCP
-			self.wfile.write('> ')
-
 			# relaying it to exabgp via the socket
-			command = self.rfile.readline().strip()
+			command = read_command(self.rfile,self.wfile,prompt)
+			prompt = False
 
 			if command in ['quit','exit']:
 				continue
@@ -54,37 +80,74 @@ class Control (StreamRequestHandler):
 				self.wfile.write(' exabgp does not have a single line flow syntax so you must use the multiline version indicating newlines with \\n\n')
 				self.wfile.write(' example: withdraw flow route {\\n match {\\n source 10.0.0.1/32;\\n destination 1.2.3.4/32;\\n }\\n then {\\n discard;\\n }\\n }\\n\n')
 				self.wfile.write('\n')
-				continue
+				self.wfile.write('SHOW COMMANDS SHOULD NOT BE USED IN PRODUCTION AS THEY HALT THE BGP ROUTE PROCESSING\n')
+				self.wfile.write('AND CAN RESULT IN BGP PEERING SESSION DROPPING - You have been warned\n')
+				self.wfile.write('\n')
+				self.wfile.write('show neighbors\n')
+				self.wfile.write(' display the neighbor configured\\n\n')
+				self.wfile.write('show routes\n')
+				self.wfile.write(' display routes which have been announced\\n\n')
+				self.wfile.write('\n')
+				self.wfile.flush()
+				prompt = True
 
-			if command.startswith('announce '):
+			elif command.startswith('announce '):
 				sys.stdout.write('%s\n' % command)
 				sys.stdout.flush()
 				self.wfile.write('requested %s annoucement\n' % command.split(' ')[1])
-				continue
+				self.wfile.flush()
+				prompt = True
 
-			if command.startswith('withdraw '):
+			elif command.startswith('withdraw '):
 				sys.stdout.write('%s\n' % command)
 				sys.stdout.flush()
 				self.wfile.write('request %s withdrawal\n' % command.split(' ')[1])
-				continue
+				self.wfile.flush()
+				prompt = True
 
-			if command in ['shutdown','reload','restart','version']:
+			elif command.startswith('show '):
 				sys.stdout.write('%s\n' % command)
 				sys.stdout.flush()
-				r, waiting_answer = True, True
-				while r or waiting_answer:
-					try:
-						r,_,_ = select.select([sys.stdin], [], [], 1.0)
-					except select.error,e:
-						raise KeyboardInterrupt('SIGNAL received in select')
-					if r:
-						waiting_answer = False
-						response = sys.stdin.readline()
-						self.wfile.write(response)
-					time.sleep(0.1)
-				continue
+				self.wfile.write('%s requested\n' % command.split(' ')[1])
+				self.wfile.flush()
+				prompt = True
 
-			self.wfile.write('unknown command, try: help\n')
+			elif command in ['shutdown','reload','restart','version']:
+				sys.stdout.write('%s\n' % command)
+				sys.stdout.flush()
+				prompt = True
+
+			elif command not in ['go','']:
+				self.wfile.write('unknown command [%s], try: help\n' % command)
+				self.wfile.flush()
+				prompt = True
+
+			try:
+				#self.wfile.write("reading ....\n")
+				r,_,_ = select.select([sys.stdin], [], [], 1.0)
+				#self.wfile.write('r is : %s' % r)
+			except select.error,e:
+				raise KeyboardInterrupt('SIGNAL received in select')
+
+			if r:
+				self.wfile.write('\n')
+
+			while r:
+				response = sys.stdin.readline()
+				self.wfile.write(response)
+				prompt = True
+				time.sleep(0.1)
+				try:
+					#self.wfile.write("rereading ....\n")
+					r,_,_ = select.select([sys.stdin], [], [], 1.0)
+					#self.wfile.write('r is : %s' % r)
+				except select.error,e:
+					raise KeyboardInterrupt('SIGNAL received in select')
+			continue
+
+def timed (message):
+	now = time.strftime('%a, %d %b %Y %H:%M:%S',time.localtime())
+	return "%s %-8s %-6d %s" % (now,'FORKED',os.getpid(),message)
 
 def sig (signum, frame):
 	# outch rude but pervent silly trace on exit if waiting for a read on stdin :p
@@ -93,23 +156,19 @@ def sig (signum, frame):
 signal.signal(signal.SIGINT, sig)
 signal.signal(signal.SIGTERM, sig)
 
-#def intercept (type, value, trace):
-#	pass
-#
-#sys.excepthook = intercept
-
 host, port = "localhost", 9999
 
 count = 0
 connected = False
+
 while not connected:
 	try:
 		server = TCPServer((host, port), Control)
 		connected = True
 	except socket.error:
 		count += 1
-		if count % 10 == 0:
-			print >> sys.stderr, 'tcp-server still trying to bind to %s:%d' % (host,port)
+		if count % 1 == 0:
+			print >> sys.stderr, timed('tcp-server still trying to bind to %s:%d' % (host,port))
 		# we can not connect to the socket, retrying (happens if respawns too quickly)
 		time.sleep(1)
 server.serve_forever()
