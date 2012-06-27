@@ -16,7 +16,6 @@ case $dirname in
 esac
 
 export PYTHONPATH=$path/lib:/usr/share/exabgp/lib/3.0.0
-export ETC=$path/etc/exabgp
 
 if [ "$INTERPRETER" != "" ]
 then
@@ -59,4 +58,4 @@ fi
 APPLICATIONS=`$INTERPRETER -c "import sys,os; print ' '.join(os.path.join(_,'exabgp','application.py') for _ in sys.path if os.path.isfile('/'.join((_,'exabgp/application.py'))))"`
 APPLICATION=`echo $APPLICATIONS | awk '{ print $1; }'`
 
-exec $INTERPRETER -m exabgp.debug $APPLICATION $*
+exec $INTERPRETER -m exabgp.debug $APPLICATION -c $path/etc/exabgp $*
