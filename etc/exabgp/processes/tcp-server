@@ -123,9 +123,7 @@ class Control (StreamRequestHandler):
 				prompt = True
 
 			try:
-				#self.wfile.write("reading ....\n")
 				r,_,_ = select.select([sys.stdin], [], [], 1.0)
-				#self.wfile.write('r is : %s' % r)
 			except select.error,e:
 				raise KeyboardInterrupt('SIGNAL received in select')
 
@@ -133,14 +131,15 @@ class Control (StreamRequestHandler):
 				self.wfile.write('\n')
 
 			while r:
-				response = sys.stdin.readline()
+				# Can not use readline with select.
+				# From http://stackoverflow.com/questions/5486717/python-select-doesnt-signal-all-input-from-pipe
+				# Note that internally file.readlines([size]) loops and invokes the read() syscall more than once, attempting to fill an internal buffer of size. The first call to read() will immediately return, since select() indicated the fd was readable. However the 2nd call will block until data is available, which defeats the purpose of using select. In any case it is tricky to use file.readlines([size]) in an asynchronous app.
+				response = os.read(sys.stdin.fileno(),4096)
 				self.wfile.write(response)
 				prompt = True
 				time.sleep(0.1)
 				try:
-					#self.wfile.write("rereading ....\n")
 					r,_,_ = select.select([sys.stdin], [], [], 1.0)
-					#self.wfile.write('r is : %s' % r)
 				except select.error,e:
 					raise KeyboardInterrupt('SIGNAL received in select')
 			continue
