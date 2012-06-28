@@ -281,19 +281,18 @@ class Supervisor (object):
 					continue
 
 				if command == 'show neighbors':
+					_answer(service,'This command holds ExaBGP, do not be surprised if it takes ages and then cause peers to drop ...\n')
 					for key in self.configuration.neighbor.keys():
 						neighbor = self.configuration.neighbor[key]
 						for line in str(neighbor).split('\n'):
 							_answer(service,line)
 
 				elif command == 'show routes':
-					_answer(service,'be patient ...')
-#					for key in self.configuration.neighbor.keys():
-#						neighbor = self.configuration.neighbor[key]
-#						print "N", str(neighbor)
-#						for route in neighbor.every_routes():
-#							print "R",route
-#							#_answer(service,'neighbor %s %s\n' % (str(neighbor),route))
+					_answer(service,'This command holds ExaBGP, do not be surprised if it takes ages and then cause peers to drop ...\n')
+					for key in self.configuration.neighbor.keys():
+						neighbor = self.configuration.neighbor[key]
+						for route in neighbor.every_routes():
+							_answer(service,'neighbor %s %s' % (neighbor.name(),route))
 
 				else:
 					_answer(service,'unknown command %s' % command)
