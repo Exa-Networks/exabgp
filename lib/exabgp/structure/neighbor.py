@@ -88,9 +88,12 @@ class Neighbor (object):
 		return result
 
 	def set_routes (self,routes):
-		self._families = {}
+		# routes can be a generator for self.everyroutes, if we delete self._families
+		# then the generator will return an empty content when ran, so we can not use add_route
+		f = {}
 		for route in routes:
-			self.add_route(route)
+			f.setdefault((route.nlri.afi,route.nlri.safi),[]).append(route)
+		self._families = f
 
 	def missing (self):
 		if self.local_address is None: return 'local-address'
