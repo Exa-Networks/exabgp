@@ -245,7 +245,11 @@ class Capabilities (dict):
 	def default (self,neighbor,restarted):
 		graceful = neighbor.graceful_restart
 
-		if neighbor.multisession or load().bgp.minimal:
+		# XXX: required for multisession but it may cause issues with dynamic route announcement ...
+		if neighbor.multisession:
+			families = neighbor.families()
+		# If routes can be added later on, play safe and do not allow mimimal announcement
+		elif load().bgp.minimal and not neighbor.peer_updates and not neighbor.parse_route:
 			families = neighbor.families()
 		else:
 			families = []
