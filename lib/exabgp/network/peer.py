@@ -283,13 +283,13 @@ class Peer (object):
 				pass
 			return
 		except Notify,e:
-			logger.info(self.me('Sending Notification (%d,%d) to peer %s [%s]' % (e.code,e.subcode,str(e),e.data)),'network')
+			logger.info(self.me('Sending Notification (%d,%d) to peer [%s] %s' % (e.code,e.subcode,str(e),e.data)),'network')
 			try:
 				self.bgp.new_notification(e)
 			except Failure:
 				pass
 			try:
-				self.bgp.close('notification sent (%d,%d) %s [%s]' % (e.code,e.subcode,str(e),e.data))
+				self.bgp.close('notification sent (%d,%d) [%s] %s' % (e.code,e.subcode,str(e),e.data))
 			except Failure:
 				pass
 			return
