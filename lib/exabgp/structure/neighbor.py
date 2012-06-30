@@ -36,7 +36,7 @@ class Neighbor (object):
 
 	def name (self):
 		if self.multisession:
-			session =  ", ".join("%s %s" % (afi,safi) for (afi,safi) in self._families.keys())
+			session =  "/ ".join("%s-%s" % (afi,safi) for (afi,safi) in self._families.keys())
 		else:
 			session = 'in-open'
 		return "%s local-ip %s family-allowed %s" % (self.peer_address,self.local_address,session)
@@ -122,7 +122,7 @@ class Neighbor (object):
 		return not (self == other)
 
 	def __str__ (self):
-		routes = '\n\t\t'
+		routes = ''
 		for family in self._families:
 			for _routes in self._families[family]:
 				routes += '\n\t\t%s' % _routes

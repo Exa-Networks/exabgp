@@ -19,6 +19,9 @@ class Route (object):
 		self.attributes = Attributes()
 
 	def __str__ (self):
+		return "route %s%s" % (str(self.nlri),str(self.attributes))
+
+	def extensive (self):
 		return "%s %s%s" % (str(self.__address),str(self.nlri),str(self.attributes))
 
 	def __repr__ (self):

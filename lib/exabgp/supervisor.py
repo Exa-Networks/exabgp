@@ -292,7 +292,14 @@ class Supervisor (object):
 					for key in self.configuration.neighbor.keys():
 						neighbor = self.configuration.neighbor[key]
 						for route in neighbor.every_routes():
-							_answer(service,'neighbor %s %s' % (neighbor.name(),route))
+							_answer(service,'neighbor %s %s' % (neighbor.local_address,route))
+
+				elif command == 'show routes extensive':
+					_answer(service,'This command holds ExaBGP, do not be surprised if it takes ages and then cause peers to drop ...\n')
+					for key in self.configuration.neighbor.keys():
+						neighbor = self.configuration.neighbor[key]
+						for route in neighbor.every_routes():
+							_answer(service,'neighbor %s %s' % (neighbor.name(),route.extensive()))
 
 				else:
 					_answer(service,'unknown command %s' % command)
