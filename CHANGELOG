@@ -14,6 +14,7 @@ Version 3.0.0 - -- of June 2012 (experimental version)
  * API Addition: send "connected" to worker when neighbour TCP session is established (replace previous 'up')
  * API Addition: requires peer-updates under 'process' to announce peer status changes
  * API Addition: show routes, show routes extensive, show neighbors
+ * Fix: were not dropping root privileges correctly
  * Fix: reset counters correctly for number of routes seen (only affects the logs)
  * Fix: prevent 100% CPU usage/loop when trying to read on unreliable links
  * Fix: correctly process IPv6 routes with 32 bytes long next-hop
