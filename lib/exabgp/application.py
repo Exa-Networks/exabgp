@@ -88,7 +88,7 @@ def help ():
 	for line in default():
 			sys.stdout.write(' - %s\n' % line)
 	sys.stdout.write('\n')
-
+	sys.stdout.write(comment)
 
 if __name__ == '__main__':
 	main = int(sys.version[0])

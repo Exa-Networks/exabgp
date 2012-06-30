@@ -38,8 +38,8 @@ class Neighbor (object):
 		if self.multisession:
 			session =  ", ".join("%s %s" % (afi,safi) for (afi,safi) in self._families.keys())
 		else:
-			session = 'open'
-		return "%s peer-ip %s family %s" % (self.peer_address,self.local_address,session)
+			session = 'in-open'
+		return "%s local-ip %s family-allowed %s" % (self.peer_address,self.local_address,session)
 
 	def families (self):
 		return self._families.keys()

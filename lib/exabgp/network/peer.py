@@ -295,7 +295,7 @@ class Peer (object):
 		except Notification, e:
 			logger.network(self.me('Received Notification (%d,%d) %s' % (e.code,e.subcode,str(e))))
 			try:
-				self.bgp.close('notification received (%d,%d) %s' % (e.code,e.subcode,str(e))))
+				self.bgp.close('notification received (%d,%d) %s' % (e.code,e.subcode,str(e)))
 			except Failure:
 				pass
 			return
