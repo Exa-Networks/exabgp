@@ -116,7 +116,7 @@ class Peer (object):
 			self._running = True
 			self._loop = self._run()
 		else:
-			self.bgp.close()
+			self.bgp.close('safety shutdown before unregistering peer, session should already be closed, report if seen in anywhere')
 			self.supervisor.unschedule(self)
 
 	def _run (self,max_wait_open=10.0):
@@ -268,7 +268,7 @@ class Peer (object):
 
 			if self.neighbor.graceful_restart and self.open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
 				logger.network('Closing the connection without notification','error')
-				self.bgp.close()
+				self.bgp.close('graceful restarted negociated, closing without sending any notification')
 				return
 
 			# User closing the connection
@@ -277,25 +277,25 @@ class Peer (object):
 			logger.network('we can not connect to the peer %s' % str(e),'error')
 			self._more_skip()
 			try:
-				self.bgp.close()
+				self.bgp.close('could not connect to the peer')
 			except Failure:
 				pass
 			return
 		except Notify,e:
-			logger.network(self.me('Sending Notification (%d,%d) [%s] %s' % (e.code,e.subcode,str(e),e.data)),'info')
+			logger.network(self.me('Sending Notification (%d,%d) to peer %s [%s]' % (e.code,e.subcode,str(e),e.data)),'info')
 			try:
 				self.bgp.new_notification(e)
 			except Failure:
 				pass
 			try:
-				self.bgp.close()
+				self.bgp.close('notification sent (%d,%d) %s [%s]' % (e.code,e.subcode,str(e),e.data))
 			except Failure:
 				pass
 			return
 		except Notification, e:
-			logger.network(self.me('Received Notification (%d,%d) from peer %s' % (e.code,e.subcode,str(e))))
+			logger.network(self.me('Received Notification (%d,%d) %s' % (e.code,e.subcode,str(e))))
 			try:
-				self.bgp.close()
+				self.bgp.close('notification received (%d,%d) %s' % (e.code,e.subcode,str(e))))
 			except Failure:
 				pass
 			return
@@ -303,7 +303,7 @@ class Peer (object):
 			logger.network(self.me(str(e)),'error')
 			self._more_skip()
 			try:
-				self.bgp.close()
+				self.bgp.close('failure %s' % str(e))
 			except Failure:
 				pass
 			return
@@ -316,7 +316,7 @@ class Peer (object):
 				raise
 			else:
 				logger.network(self.me(str(e)),'error')
-			if self.bgp: self.bgp.close()
+			if self.bgp: self.bgp.close('internal problem %s' % str(e))
 			return
 
 	def received_routes (self):

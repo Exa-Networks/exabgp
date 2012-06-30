@@ -91,7 +91,7 @@ class Protocol (object):
 			raise Notify(4,0)
 		return left
 
-	def close (self):
+	def close (self,reason='unspecified'):
 		#self._delta.last = 0
 		if self.connection:
 			# must be first otherwise we could have a loop caused by the raise in the below
@@ -99,7 +99,7 @@ class Protocol (object):
 			self.connection = None
 
 			if self.peer.neighbor.peer_updates:
-				message = 'neighbor %s down\n' % self.peer.neighbor.peer_address
+				message = 'neighbor %s down - %s\n' % (self.peer.neighbor.peer_address,reason)
 				try:
 					proc = self.peer.supervisor.processes
 					for name in proc.notify(self.neighbor.peer_address):
