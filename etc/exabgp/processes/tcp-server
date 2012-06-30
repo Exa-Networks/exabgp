@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+host, port = "localhost", 9999
+
 import os
 import sys
 import readline
@@ -155,14 +157,18 @@ def sig (signum, frame):
 signal.signal(signal.SIGINT, sig)
 signal.signal(signal.SIGTERM, sig)
 
-host, port = "localhost", 9999
-
 count = 0
 connected = False
 
+class Server (TCPServer):
+	def server_activate (self):
+		print >> sys.stderr, timed('tcp-server listening on %s:%d' % (host,port))
+		sys.stderr.flush()
+		TCPServer.server_activate(self)
+
 while not connected:
 	try:
-		server = TCPServer((host, port), Control)
+		server = Server((host, port), Control)
 		connected = True
 	except socket.error:
 		count += 1
