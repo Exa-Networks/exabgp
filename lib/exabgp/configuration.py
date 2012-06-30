@@ -963,6 +963,9 @@ class Configuration (object):
 				data = 0xFFFFFF02
 			elif low == 'no-export-subconfed':
 				data = 0xFFFFFF03
+			# no-peer is not a correct syntax but I am sure someone will make the mistake :)
+			elif low == 'nopeer' or low == 'no-peer':
+				data = 0xFFFFFF04
 			value = long(data)
 			if value >= pow(2,32):
 				raise ValueError('invalid community %s (too large)' % data)

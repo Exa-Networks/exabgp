@@ -28,6 +28,7 @@ Version 3.0.0 - -- of June 2012 (experimental version)
     use capability 131 (and not 68) for multisession to achieve interop with Cisco
  * Improvement: following RFC 6608 new notification codes
  * Improvement: to the logging code and message filtering
+ * Improvement: support RFC 3765 (NOPEER community)
 
 Version 2.0.8 - 31 of March 2012 (stable version)
  * Fix: the update grouping could cause message up to "header size" bigger than allowed.
