@@ -146,7 +146,7 @@ class Control (StreamRequestHandler):
 
 def timed (message):
 	now = time.strftime('%a, %d %b %Y %H:%M:%S',time.localtime())
-	return "%s %-8s %-6d %s" % (now,'FORKED',os.getpid(),message)
+	return "%s | %-8s | %-6d | %-13s | %s" % (now,'FORKED',os.getpid(),'tcp-server',message)
 
 def sig (signum, frame):
 	# outch rude but pervent silly trace on exit if waiting for a read on stdin :p

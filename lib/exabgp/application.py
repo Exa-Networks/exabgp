@@ -36,7 +36,7 @@ def version_warning ():
 	sys.stdout.write('\n')
 
 
-def help ():
+def help (comment=''):
 	sys.stdout.write('usage:\n exabgp [options] <bgp configuration file>\n')
 	sys.stdout.write('\n')
 	sys.stdout.write('  -h, --help      : this help\n')
@@ -102,10 +102,6 @@ if __name__ == '__main__':
 
 	from exabgp.environment import EnvError,load,iter_ini,iter_env,default
 
-	if len(sys.argv) < 2:
-		help()
-		sys.exit(0)
-
 	next = ''
 	arguments = {
 		'folder' : '',
@@ -158,11 +154,16 @@ if __name__ == '__main__':
 		env.profile.enable = True
 		env.profile.file = arguments['profile']
 
+	if envfile and not os.path.isfile(envfile):
+		comment = 'environment file missing\ngenerate it using "%s -fi > %s\n"' % (sys.argv[0],envfile)
+	else:
+		comment = ''
+
 	for arg in sys.argv[1:]:
 		if arg in ['--',]:
 			break
 		if arg in ['-h','--help']:
-			help()
+			help(comment)
 			sys.exit(0)
 		if arg in ['-fi','--full-ini']:
 			for line in iter_ini():
@@ -198,17 +199,22 @@ if __name__ == '__main__':
 		logger.error(parse_error,'configuration')
 		sys.exit(1)
 
-	if not os.path.isfile(envfile):
-		logger.info('environment file missing','configuration')
-		logger.info('generate it using "%s -fi > %s"' % (sys.argv[0],envfile),'configuration')
-
 	from exabgp.supervisor import Supervisor
 
 	# check the file only once that we have parsed all the command line options and allowed them to run
-	configuration = os.path.realpath(os.path.normpath(arguments['file']))
-	if not os.path.isfile(configuration):
-		logger.error('the peer and route definition option passed is not a file','configuration')
+	if arguments['file']:
+		configuration = os.path.realpath(os.path.normpath(arguments['file']))
+	else:
+		logger.error('no configuration file provided','configuration')
 		sys.exit(1)
+
+	if not os.path.isfile(configuration):
+		logger.error('the argument passed as configuration is not a file','configuration')
+		sys.exit(1)
+
+	if not os.path.isfile(envfile):
+		logger.info('environment file missing','configuration')
+		logger.info('generate it using "%s -fi > %s"' % (sys.argv[0],envfile),'configuration')
 
 	if not env.profile.enable:
 		Supervisor(configuration).run()

@@ -68,7 +68,7 @@ class _Logger (object):
 
 	def _format (self,timestamp,level,source,message):
 		now = time.strftime('%a, %d %b %Y %H:%M:%S',timestamp)
-		return "%s %-8s %-6d %-13s %s" % (now,level,self._pid,source,message)
+		return "%s | %-8s | %-6d | %-13s | %s" % (now,level,self._pid,source,message)
 
 	def _prefixed (self,level,source,message):
 		ts = time.localtime()
