@@ -179,6 +179,7 @@ class Peer (object):
 					break
 				yield None
 
+			logger.info('Connected to peer %s' % self.neighbor.name(),'network')
 			if self.neighbor.peer_updates:
 				try:
 					for name in self.supervisor.processes.notify(self.neighbor.peer_address):
@@ -267,14 +268,14 @@ class Peer (object):
 				yield None
 
 			if self.neighbor.graceful_restart and self.open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
-				logger.network('Closing the connection without notification','error')
+				logger.error('Closing the connection without notification','network')
 				self.bgp.close('graceful restarted negociated, closing without sending any notification')
 				return
 
 			# User closing the connection
 			raise Notify(6,3)
 		except NotConnected, e:
-			logger.network('we can not connect to the peer %s' % str(e),'error')
+			logger.error('we can not connect to the peer %s' % str(e),'network')
 			self._more_skip()
 			try:
 				self.bgp.close('could not connect to the peer')
@@ -282,7 +283,7 @@ class Peer (object):
 				pass
 			return
 		except Notify,e:
-			logger.network(self.me('Sending Notification (%d,%d) to peer %s [%s]' % (e.code,e.subcode,str(e),e.data)),'info')
+			logger.info(self.me('Sending Notification (%d,%d) to peer %s [%s]' % (e.code,e.subcode,str(e),e.data)),'network')
 			try:
 				self.bgp.new_notification(e)
 			except Failure:
@@ -300,7 +301,7 @@ class Peer (object):
 				pass
 			return
 		except Failure, e:
-			logger.network(self.me(str(e)),'error')
+			logger.error(self.me(str(e)),'network')
 			self._more_skip()
 			try:
 				self.bgp.close('failure %s' % str(e))
@@ -308,14 +309,14 @@ class Peer (object):
 				pass
 			return
 		except Exception, e:
-			logger.network(self.me('UNHANDLED EXCEPTION'),'error')
+			logger.error(self.me('UNHANDLED EXCEPTION'),'network')
 			self._more_skip()
 			if self.debug_trace:
 				# should really go to syslog
 				traceback.print_exc(file=sys.stdout)
 				raise
 			else:
-				logger.network(self.me(str(e)),'error')
+				logger.error(self.me(str(e)),'network')
 			if self.bgp: self.bgp.close('internal problem %s' % str(e))
 			return
 

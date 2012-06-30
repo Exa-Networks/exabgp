@@ -48,9 +48,9 @@ class Daemon (object):
 			f.close()
 			self._saved_pid = True
 		except IOError:
-			logger.daemon("Can not create PIDfile %s" % self.daemon.pid,'error')
+			logger.warning("Can not create PIDfile %s" % self.daemon.pid,'daemon')
 			return
-		logger.daemon("Created PIDfile %s with value %d" % (self.daemon.pid,ownid))
+		logger.warning("Created PIDfile %s with value %d" % (self.daemon.pid,ownid),'daemon')
 
 	def removepid (self):
 		if not self.daemon.pid or not self._saved_pid:
@@ -61,7 +61,7 @@ class Daemon (object):
 			if e.errno == errno.ENOENT:
 				pass
 			else:
-				logger.daemon("Can not remove PIDfile %s" % self.daemon.pid,'error')
+				logger.error("Can not remove PIDfile %s" % self.daemon.pid,'daemon')
 				return
 		logger.daemon("Removed PIDfile %s" % self.daemon.pid)
 

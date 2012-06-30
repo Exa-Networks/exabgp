@@ -48,21 +48,21 @@ class Supervisor (object):
 		signal.signal(signal.SIGALRM, self.sigalrm)
 
 	def sigterm (self,signum, frame):
-		logger.supervisor("SIG TERM received",'info')
+		logger.info("SIG TERM received",'supervisor')
 		self._shutdown = True
 
 	def sighup (self,signum, frame):
-		logger.supervisor("SIG HUP received",'info')
+		logger.info("SIG HUP received",'supervisor')
 		self._reload = True
 
 	def sigalrm (self,signum, frame):
-		logger.supervisor("SIG ALRM received",'info')
+		logger.info("SIG ALRM received",'supervisor')
 		self._restart = True
 
 	def run (self,supervisor_speed=0.5):
 		if self.daemon.drop_privileges():
-			logger.supervisor("Could not drop privileges to '%s' refusing to run as root" % self.daemon.user,'error')
-			logger.supervisor("Set the environmemnt value exabgp.daemon.user to change the unprivileged user",'error')
+			logger.error("Could not drop privileges to '%s' refusing to run as root" % self.daemon.user,'supervisor')
+			logger.error("Set the environmemnt value exabgp.daemon.user to change the unprivileged user",'supervisor')
 			return
 		self.daemon.daemonise()
 		self.daemon.savepid()
@@ -140,13 +140,13 @@ class Supervisor (object):
 				self.daemon.removepid()
 				break
 			except KeyboardInterrupt:
-				logger.supervisor("^C received",'info')
+				logger.info("^C received",'supervisor')
 				self._shutdown = True
 			except IOError:
-				logger.supervisor("I/O Error received, most likely ^C during IO",'warning')
+				logger.warning("I/O Error received, most likely ^C during IO",'supervisor')
 				self._shutdown = True
 			except ProcessError:
-				logger.supervisor("Problem when sending message(s) to helper program, stopping",'error')
+				logger.error("Problem when sending message(s) to helper program, stopping",'supervisor')
 				self._shutdown = True
 #				from exabgp.leak import objgraph
 #				print objgraph.show_most_common_types(limit=20)
@@ -156,18 +156,18 @@ class Supervisor (object):
 
 	def shutdown (self):
 		"""terminate all the current BGP connections"""
-		logger.supervisor("Performing shutdown",'info')
+		logger.info("Performing shutdown",'supervisor')
 		for key in self._peers.keys():
 			self._peers[key].stop()
 
 	def reload (self):
 		"""reload the configuration and send to the peer the route which changed"""
-		logger.supervisor("Performing reload of exabgp %s" % version,'info')
+		logger.info("Performing reload of exabgp %s" % version,'supervisor')
 
 		reloaded = self.configuration.reload()
 		if not reloaded:
-			logger.configuration("Problem with the configuration file, no change done",'error')
-			logger.configuration(self.configuration.error,'error')
+			logger.error("Problem with the configuration file, no change done",'configuration')
+			logger.error(self.configuration.error,'configuration')
 			return
 
 		for key in self._peers.keys():
@@ -192,7 +192,7 @@ class Supervisor (object):
 				else:
 					logger.supervisor("Updating routes for peer %s" % str(key))
 					self._peers[key].reload(neighbor.every_routes())
-		logger.configuration("Loaded new configuration successfully",'warning')
+		logger.warning("Loaded new configuration successfully",'configuration')
 		self.processes.start()
 
 	def handle_commands (self,commands):
@@ -212,20 +212,20 @@ class Supervisor (object):
 				elif command.startswith('announce route'):
 					route = self.configuration.parse_single_route(command)
 					if not route:
-						logger.supervisor("Command could not parse route in : %s" % command,'warning')
+						logger.warning("Command could not parse route in : %s" % command,'supervisor')
 					else:
 						self.configuration.add_route_all_peers(route)
 						self._route_update = True
 				elif command.startswith('withdraw route'):
 					route = self.configuration.parse_single_route(command)
 					if not route:
-						logger.supervisor("Command could not parse route in : %s" % command,'warning')
+						logger.warning("Command could not parse route in : %s" % command,'supervisor')
 					else:
 						if self.configuration.remove_route_all_peers(route):
 							logger.supervisor("Command success, route found and removed : %s" % route)
 							self._route_update = True
 						else:
-							logger.supervisor("Command failure, route not found : %s" % route,'warning')
+							logger.warning("Command failure, route not found : %s" % route,'supervisor')
 
 				# flow announcement / withdrawal
 				elif command.startswith('announce flow'):
@@ -255,7 +255,7 @@ class Supervisor (object):
 
 				# unknown
 				else:
-					logger.supervisor("Command from process not understood : %s" % command,'warning')
+					logger.warning("Command from process not understood : %s" % command,'supervisor')
 
 	def commands (self,commands):
 		def _answer (service,string):
@@ -316,7 +316,7 @@ class Supervisor (object):
 
 	def restart (self):
 		"""kill the BGP session and restart it"""
-		logger.supervisor("Performing restart of exabgp %s" % version,'info')
+		logger.info("Performing restart of exabgp %s" % version,'supervisor')
 		self.configuration.reload()
 
 		for key in self._peers.keys():

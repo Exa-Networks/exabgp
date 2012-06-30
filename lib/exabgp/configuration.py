@@ -1300,10 +1300,10 @@ class Configuration (object):
 		try:
 			speed = int(tokens[0])
 			if speed < 9600 and speed != 0:
-				logger.configuration("rate-limiting flow under 9600 bytes per seconds may not work",'warning')
+				logger.warning("rate-limiting flow under 9600 bytes per seconds may not work",'configuration')
 			if speed > 1000000000000:
 				speed = 1000000000000
-				logger.configuration("rate-limiting changed for 1 000 000 000 000 bytes from %s" % tokens[0],'warning')
+				logger.warning("rate-limiting changed for 1 000 000 000 000 bytes from %s" % tokens[0],'configuration')
 			scope[-1]['routes'][-1].add_action(to_FlowTrafficRate(ASN(0),speed))
 			return True
 		except ValueError:
