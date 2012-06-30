@@ -9,6 +9,7 @@ Version 3.0.0 - -- of June 2012 (experimental version)
 
  * CLI Change: use new ini file and environment values for configuration
  * API Change: send "up" message to worker process when neighbour OPEN negotiation is complete (not on TCP up)
+ * API Change: the format of the line sent to the worker changed, neighbor name include multi-session information
  * API Addition: send "connected" to worker when neighbour TCP session is established (replace previous 'up')
  * API Addition: requires peer-updates under 'process' to announce peer status changes
  * Fix: reset counters correctly for number of routes seen (only affects the logs)
