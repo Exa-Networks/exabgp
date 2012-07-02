@@ -9,8 +9,6 @@ Copyright (c) 2011-2012 Exa Networks. All rights reserved.
 import os
 import sys
 
-debug = os.environ.get('PDB',None)
-
 def bug_report (type, value, trace):
 	import traceback
 	from exabgp.log import Logger
@@ -57,16 +55,13 @@ def bug_report (type, value, trace):
 
 	#print >> sys.stderr, 'the program failed with message :', value
 
-if debug is None:
-	def intercept_nopdb (type, value, trace):
-		bug_report(type, value, trace)
-	sys.excepthook = intercept_nopdb
-elif debug not in ['0','']:
-	def intercept_pdb (type, value, trace):
-		bug_report(type, value, trace)
+def intercept (type, value, trace):
+	bug_report(type, value, trace)
+	if os.environ.get('PDB',None) not in [None,'0','']:
 		import pdb
 		pdb.pm()
-	sys.excepthook = intercept_pdb
+
+sys.excepthook = intercept
 
 del sys.argv[0]
 
