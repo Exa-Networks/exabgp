@@ -118,7 +118,7 @@ class Graceful (dict):
 
 class MultiProtocol (list):
 	def __str__ (self):
-		return 'Multiprotocol ' + ' '.join(["%s %s" % (safi,ssafi) for (safi,ssafi) in [(str(afi),str(safi)) for (afi,safi) in self]])
+		return 'Multiprotocol(' + ','.join(["%s %s" % (str(afi),str(safi)) for (afi,safi) in self]) + ')'
 
 	def extract (self):
 		rs = []
