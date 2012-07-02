@@ -89,6 +89,7 @@ def help (comment=''):
 			sys.stdout.write(' - %s\n' % line)
 	sys.stdout.write('\n')
 	sys.stdout.write(comment)
+	sys.stdout.write('\n')
 
 if __name__ == '__main__':
 	main = int(sys.version[0])
@@ -155,7 +156,7 @@ if __name__ == '__main__':
 		env.profile.file = arguments['profile']
 
 	if envfile and not os.path.isfile(envfile):
-		comment = 'environment file missing\ngenerate it using "%s -fi > %s\n"' % (sys.argv[0],envfile)
+		comment = 'environment file missing\ngenerate it using "exabgp -fi > %s"' % envfile
 	else:
 		comment = ''
 
@@ -214,9 +215,8 @@ if __name__ == '__main__':
 		logger.error('the argument passed as configuration is not a file','configuration')
 		sys.exit(1)
 
-	if not os.path.isfile(envfile):
-		logger.info('environment file missing','configuration')
-		logger.info('generate it using "%s -fi > %s"' % (sys.argv[0],envfile),'configuration')
+	if comment:
+		logger.info(comment,'configuration')
 
 	if not env.profile.enable:
 		Supervisor(configuration).run()
