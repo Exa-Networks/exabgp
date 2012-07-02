@@ -126,6 +126,35 @@ class MultiProtocol (list):
 			rs.append(pack('!H',v[0]) + pack('!H',v[1]))
 		return rs
 
+# =================================================================== AddPath
+
+class AddPath (list):
+	SR = {
+		0 : 'invalid',
+		1 : 'receive',
+		2 : 'send',
+		3 : 'send/receive',
+	}
+	
+	def __init__ (self,families,send=False,receive=True):
+		send_receive = 0
+		if receive: send_receive += 1
+		if send:    send_receive += 2
+		self.extend(families)
+
+		self.send_receive = {}
+		for family in families:
+			self.send_receive[family] = send_receive
+
+	def __str__ (self):
+		return 'AddPath(' + ','.join(["%s %s %s" % (self.SR[self.send_receive[aafi]],xafi,xsafi) for (aafi,xafi,xsafi) in [((afi,safi),str(afi),str(safi)) for (afi,safi) in self]]) + ')'
+
+	def extract (self):
+		rs = []
+		for v in self:
+			rs.append(pack('!B',self.send_receive[v]) + pack('!H',v[0]) + pack('!H',v[1]))
+		return rs
+
 # =================================================================== MultiSession
 
 class MultiSession (list):
@@ -234,6 +263,8 @@ class Capabilities (dict):
 				r += [str(self[key])]
 			elif key == self.MULTISESSION_BGP_RFC:
 				r += ['Multi Session']
+			elif key == self.ADD_PATH:
+				r += [str(self[key])]
 			elif key in self.reserved:
 				r += ['private use capability %d' % key]
 			elif key in self.unassigned:
@@ -261,6 +292,9 @@ class Capabilities (dict):
 		mp.extend(families)
 		self[Capabilities.MULTIPROTOCOL_EXTENSIONS] = mp
 		self[Capabilities.FOUR_BYTES_ASN] = ASN4(neighbor.local_as)
+
+		# accept add Path, we can not parse it ATM, so if we get some route ExaBGP will bomb out !
+		self[Capabilities.ADD_PATH] = AddPath(families)
 
 		if graceful:
 			if restarted:
