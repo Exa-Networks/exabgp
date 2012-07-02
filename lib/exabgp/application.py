@@ -175,10 +175,12 @@ if __name__ == '__main__':
 				print line
 			sys.exit(0)
 		if arg in ['-di','--diff-ini']:
-			ini(True)
+			for line in iter_ini(True):
+				print line
 			sys.exit(0)
 		if arg in ['-de','--diff-env']:
-			env(True)
+			for line in iter_env(True):
+				print line
 			sys.exit(0)
 		if arg in ['--profile',]:
 			env.profile.enable = True
