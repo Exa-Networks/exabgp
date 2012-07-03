@@ -1,0 +1,283 @@
+
+
+
+
+
+
+Internet Engineering Task Force (IETF)                           J. Dong
+Request for Comments: 6608                                       M. Chen
+Updates: 4271                                        Huawei Technologies
+Category: Standards Track                               A. Suryanarayana
+ISSN: 2070-1721                                            Cisco Systems
+                                                                May 2012
+
+
+              Subcodes for BGP Finite State Machine Error
+
+Abstract
+
+   This document defines several subcodes for the BGP Finite State
+   Machine (FSM) Error that could provide more information to help
+   network operators in diagnosing BGP FSM issues and correlating
+   network events.  This document updates RFC 4271.
+
+Status of This Memo
+
+   This is an Internet Standards Track document.
+
+   This document is a product of the Internet Engineering Task Force
+   (IETF).  It represents the consensus of the IETF community.  It has
+   received public review and has been approved for publication by
+   the Internet Engineering Steering Group (IESG).  Further
+   information on Internet Standards is available in Section 2 of
+   RFC 5741.
+
+   Information about the current status of this document, any
+   errata, and how to provide feedback on it may be obtained at
+   http://www.rfc-editor.org/info/rfc6608.
+
+Copyright Notice
+
+   Copyright (c) 2012 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (http://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document.  Please review these documents
+   carefully, as they describe your rights and restrictions with respect
+   to this document.  Code Components extracted from this document must
+   include Simplified BSD License text as described in Section 4.e of
+   the Trust Legal Provisions and are provided without warranty as
+   described in the Simplified BSD License.
+
+
+
+
+
+Dong, et al.                 Standards Track                    [Page 1]
+
+RFC 6608                  BGP FSM Error Subcode                 May 2012
+
+
+Table of Contents
+
+   1. Introduction ....................................................2
+   2. Requirements Language ...........................................2
+   3. Definition of Finite State Machine Error Subcodes ...............2
+   4. Usage of FSM Error Subcodes .....................................2
+   5. Security Considerations .........................................3
+   6. IANA Considerations .............................................3
+   7. Contributors ....................................................4
+   8. Acknowledgements ................................................4
+   9. References ......................................................4
+      9.1. Normative References .......................................4
+      9.2. Informative References .....................................4
+
+1.  Introduction
+
+   This document defines several subcodes for the BGP [RFC4271] Finite
+   State Machine (FSM) Error that could provide more information to help
+   network operators in diagnosing BGP FSM issues and correlating
+   network events.  This information is also helpful to developers in
+   lab situations.  This document updates [RFC4271] by requiring that
+   BGP implementations insert appropriate FSM Error subcodes in
+   NOTIFICATION messages for BGP FSM errors.
+
+2.  Requirements Language
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+   document are to be interpreted as described in RFC 2119 [RFC2119].
+
+3.  Definition of Finite State Machine Error Subcodes
+
+   This document defines the following subcodes for the BGP Finite State
+   Machine Error:
+
+   0 - Unspecified Error
+
+   1 - Receive Unexpected Message in OpenSent State
+
+   2 - Receive Unexpected Message in OpenConfirm State
+
+   3 - Receive Unexpected Message in Established State
+
+4.  Usage of FSM Error Subcodes
+
+   If a BGP speaker receives an unexpected message (e.g., KEEPALIVE/
+   UPDATE/ROUTE-REFRESH message) on a session in OpenSent state, it MUST
+   send to the neighbor a NOTIFICATION message with the Error Code
+
+
+
+Dong, et al.                 Standards Track                    [Page 2]
+
+RFC 6608                  BGP FSM Error Subcode                 May 2012
+
+
+   Finite State Machine Error and the Error Subcode "Receive Unexpected
+   Message in OpenSent State".  The Data field is a 1-octet, unsigned
+   integer that indicates the type of the unexpected message.
+
+   If a BGP speaker receives an unexpected message (e.g., OPEN/UPDATE/
+   ROUTE-REFRESH message) on a session in OpenConfirm state, it MUST
+   send a NOTIFICATION message with the Error Code Finite State Machine
+   Error and the Error Subcode "Receive Unexpected Message in
+   OpenConfirm State" to the neighbor.  The Data field is a 1-octet,
+   unsigned integer that indicates the type of the unexpected message.
+
+   If a BGP speaker receives an unexpected message (e.g., OPEN message)
+   on a session in Established State, it MUST send to the neighbor a
+   NOTIFICATION message with the Error Code Finite State Machine Error
+   and the Error Subcode "Receive Unexpected Message in Established
+   State".  The Data field is a 1-octet, unsigned integer that indicates
+   the type of the unexpected message.
+
+5.  Security Considerations
+
+   Specification, implementation, and deployment of the proposed BGP FSM
+   Error subcodes could make BGP implementation fingerprinting easier
+   and probably more accurate.  Operators using BGP need to consider
+   this as an operational security consideration of their BGP deployment
+   decisions.
+
+   [BFMR2010] discusses a number of BGP security issues and potential
+   solutions that might be relevant both to BGP implementers and BGP
+   operators.
+
+6.  IANA Considerations
+
+   IANA has created the registry "BGP Finite State Machine Error
+   Subcodes", within the "BGP Error Subcodes" registry, with a
+   Registration Procedure of "Standards Action" as defined in [RFC5226]
+   (early allocation of such subcodes is allowed, in accordance with
+   [RFC4020]).
+
+   The registry has been populated with the following values:
+
+   Value      Name
+     0        Unspecified Error
+     1        Receive Unexpected Message in OpenSent State
+     2        Receive Unexpected Message in OpenConfirm State
+     3        Receive Unexpected Message in Established State
+
+
+
+
+
+
+Dong, et al.                 Standards Track                    [Page 3]
+
+RFC 6608                  BGP FSM Error Subcode                 May 2012
+
+
+7.  Contributors
+
+   The following individuals contributed to this document:
+
+   Xiaoming Gu
+   EMail: guxiaoming@huawei.com
+
+   Chong Wang
+   EMail: chongwang@huawei.com
+
+8.  Acknowledgements
+
+   The authors would like to thank John Scudder, Jeffrey Haas, Susan
+   Hares, Keyur Patel, Enke Chen, Ruediger Volk, and Ran Atkinson for
+   their valuable suggestions and comments to this document.
+
+9.  References
+
+9.1.  Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119, March 1997.
+
+   [RFC4020]  Kompella, K. and A. Zinin, "Early IANA Allocation of
+              Standards Track Code Points", BCP 100, RFC 4020, February
+              2005.
+
+   [RFC4271]  Rekhter, Y., Ed., Li, T., Ed., and S. Hares, Ed., "A
+              Border Gateway Protocol 4 (BGP-4)", RFC 4271, January
+              2006.
+
+   [RFC5226]  Narten, T. and H. Alvestrand, "Guidelines for Writing an
+              IANA Considerations Section in RFCs", BCP 26, RFC 5226,
+              May 2008.
+
+9.2.  Informative References
+
+   [BFMR2010] Butler, K., Farley, T., Mcdaniel, P., and J. Rexford, "A
+              Survey of BGP Security Issues and Solutions", January
+              2010.
+
+
+
+
+
+
+
+
+
+
+
+Dong, et al.                 Standards Track                    [Page 4]
+
+RFC 6608                  BGP FSM Error Subcode                 May 2012
+
+
+Authors' Addresses
+
+   Jie Dong
+   Huawei Technologies
+   Huawei Building, No.156 Beiqing Rd
+   Beijing 100095
+   China
+
+   EMail: jie.dong@huawei.com
+
+
+   Mach Chen
+   Huawei Technologies
+   Huawei Building, No.156 Beiqing Rd
+   Beijing 100095
+   China
+
+   EMail: mach.chen@huawei.com
+
+
+   Anantharamu Suryanarayana
+   Cisco Systems
+   USA
+
+   EMail: asuryana@cisco.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Dong, et al.                 Standards Track                    [Page 5]
+

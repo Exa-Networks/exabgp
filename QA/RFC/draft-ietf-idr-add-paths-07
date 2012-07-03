@@ -1,0 +1,616 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head profile="http://dublincore.org/documents/2008/08/04/dc-html/">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="robots" content="index,follow" />
+    <meta name="creator" content="rfcmarkup version 1.101" />
+    <link rel="schema.DC" href="http://purl.org/dc/elements/1.1/" />
+<meta name="DC.Identifier" content="urn:ietf:id:ietf-idr-add-paths" />
+<meta name="DC.Description.Abstract" content="In this document we propose a BGP extension that allows the" />
+<meta name="DC.Creator" content="Scudder, John" />
+<meta name="DC.Creator" content="Retana, Alvaro" />
+<meta name="DC.Creator" content="Walton, Daniel" />
+<meta name="DC.Creator" content="Chen, Enke" />
+<meta name="DC.Date.Issued" content="2012-06-17" />
+<meta name="DC.Title" content="Advertisement of Multiple Paths in BGP" />
+
+    <link rel="icon" href="/images/id.png" type="image/png" />
+    <link rel="shortcut icon" href="/images/id.png" type="image/png" />
+    <title>draft-ietf-idr-add-paths-07 - Advertisement of Multiple Paths in BGP</title>
+    
+    
+    <style type="text/css">
+	body {
+	    margin: 0px 8px;
+            font-size: 1em;
+	}
+        h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+	    font-weight: bold;
+            line-height: 0pt;
+            display: inline;
+            white-space: pre;
+            font-family: monospace;
+            font-size: 1em;
+	    font-weight: bold;
+        }
+        pre {
+            font-size: 1em;
+            margin-top: 0px;
+            margin-bottom: 0px;
+        }
+	.pre {
+	    white-space: pre;
+	    font-family: monospace;
+	}
+	.header{
+	    font-weight: bold;
+	}
+        .newpage {
+            page-break-before: always;
+        }
+        .invisible {
+            text-decoration: none;
+            color: white;
+        }
+        a.selflink {
+          color: black;
+          text-decoration: none;
+        }
+        @media print {
+            body {
+                font-family: monospace;
+                font-size: 10.5pt;
+            }
+            h1, h2, h3, h4, h5, h6 {
+                font-size: 1em;
+            }
+        
+            a:link, a:visited {
+                color: inherit;
+                text-decoration: none;
+            }
+            .noprint {
+                display: none;
+            }
+        }
+	@media screen {
+	    .grey, .grey a:link, .grey a:visited {
+		color: #777;
+	    }
+            .docinfo {
+                background-color: #EEE;
+            }
+            .top {
+                border-top: 7px solid #EEE;
+            }
+            .bgwhite  { background-color: white; }
+            .bgred    { background-color: #F44; }
+            .bggrey   { background-color: #666; }
+            .bgbrown  { background-color: #840; }            
+            .bgorange { background-color: #FA0; }
+            .bgyellow { background-color: #EE0; }
+            .bgmagenta{ background-color: #F4F; }
+            .bgblue   { background-color: #66F; }
+            .bgcyan   { background-color: #4DD; }
+            .bggreen  { background-color: #4F4; }
+
+            .legend   { font-size: 90%; }
+            .cplate   { font-size: 70%; border: solid grey 1px; }
+	}
+    </style>
+    <!--[if IE]>
+    <style>
+    body {
+       font-size: 13px;
+       margin: 10px 10px;
+    }
+    </style>
+    <![endif]-->
+
+    <script type="text/javascript"><!--
+    function addHeaderTags() {
+	var spans = document.getElementsByTagName("span");
+	for (var i=0; i < spans.length; i++) {
+	    var elem = spans[i];
+	    if (elem) {
+		var level = elem.getAttribute("class");
+                if (level == "h1" || level == "h2" || level == "h3" || level == "h4" || level == "h5" || level == "h6") {
+                    elem.innerHTML = "<"+level+">"+elem.innerHTML+"</"+level+">";		
+                }
+	    }
+	}
+    }
+    var legend_html = "Colour legend:<br />      <table>         <tr><td>Unknown:</td>          <td><span class='cplate bgwhite'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Draft:</td>            <td><span class='cplate bgred'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Informational:</td>    <td><span class='cplate bgorange'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Experimental:</td>     <td><span class='cplate bgyellow'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Best Common Practice:</td><td><span class='cplate bgmagenta'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Proposed Standard:</td><td><span class='cplate bgblue'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Draft Standard:</td>   <td><span class='cplate bgcyan'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Standard:</td>         <td><span class='cplate bggreen'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Historic:</td>         <td><span class='cplate bggrey'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Obsolete:</td>         <td><span class='cplate bgbrown'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>     </table>";
+    function showElem(id) {
+        var elem = document.getElementById(id);
+        elem.innerHTML = eval(id+"_html");
+        elem.style.visibility='visible';
+    }
+    function hideElem(id) {
+        var elem = document.getElementById(id);
+        elem.style.visibility='hidden';        
+        elem.innerHTML = "";
+    }
+    // -->
+    </script>
+</head>
+<body onload="addHeaderTags()">
+   <div style="height: 13px;">
+      <div onmouseover="this.style.cursor='pointer';"
+         onclick="showElem('legend');"
+         onmouseout="hideElem('legend')"
+	 style="height: 6px; position: absolute;"
+         class="pre noprint docinfo bgred"
+         title="Click for colour legend." >                                                                        </div>
+      <div id="legend"
+           class="docinfo noprint pre legend"
+           style="position:absolute; top: 4px; left: 4ex; visibility:hidden; background-color: white; padding: 4px 9px 5px 7px; border: solid #345 1px; "
+           onmouseover="showElem('legend');"
+           onmouseout="hideElem('legend');">
+      </div>
+   </div>
+<span class="pre noprint docinfo top">[<a href="../html/" title="Document search and retrieval page">Docs</a>] [<a href="http://tools.ietf.org/id/draft-ietf-idr-add-paths-07.txt" title="Plaintext version of this document">txt</a>|<a href="/pdf/draft-ietf-idr-add-paths-07.txt" title="PDF version of this document">pdf</a>] [<a href='https://datatracker.ietf.org/doc/draft-ietf-idr-add-paths' title='IESG Datatracker information for this document'>Tracker</a>] [<a href="../wg/idr" title="The working group handling this document">WG</a>] [<a href="mailto:draft-ietf-idr-add-paths@tools.ietf.org?subject=draft-ietf-idr-add-paths%20" title="Send email to the document authors">Email</a>] [<a href="/rfcdiff?difftype=--hwdiff&amp;url2=draft-ietf-idr-add-paths-07.txt" title="Inline diff (wdiff)">Diff1</a>] [<a href="/rfcdiff?url2=draft-ietf-idr-add-paths-07.txt" title="Side-by-side diff">Diff2</a>] [<a href="/idnits?url=http://tools.ietf.org/id/draft-ietf-idr-add-paths-07.txt" title="Run an idnits check of this document">Nits</a>]          </span><br />
+<span class="pre noprint docinfo">                                                                        </span><br />
+<span class="pre noprint docinfo">Versions: <a href="./draft-ietf-idr-add-paths-00">00</a> <a href="./draft-ietf-idr-add-paths-01">01</a> <a href="./draft-ietf-idr-add-paths-02">02</a> <a href="./draft-ietf-idr-add-paths-03">03</a> <a href="./draft-ietf-idr-add-paths-04">04</a> <a href="./draft-ietf-idr-add-paths-05">05</a> <a href="./draft-ietf-idr-add-paths-06">06</a> <a href="./draft-ietf-idr-add-paths-07">07</a>                                       </span><br />
+<span class="pre noprint docinfo">                                                                        </span><br />
+<pre>
+XXX
+XXX WARNING: old character encoding and/or character set
+XXX
+
+
+
+
+
+
+Network Working Group                                          D. Walton
+Internet Draft                                                   E. Chen
+Intended Status: Standards Track                           Cisco Systems
+Expiration Date: December 18, 2012                             A. Retana
+                                                     Hewlett-Packard Co.
+                                                              J. Scudder
+                                                        Juniper Networks
+                                                           June 17, 2012
+
+
+                 <span class="h1">Advertisement of Multiple Paths in BGP</span>
+
+                    <a href="./draft-ietf-idr-add-paths-07.txt">draft-ietf-idr-add-paths-07.txt</a>
+
+
+Status of this Memo
+
+   This Internet-Draft is submitted to IETF in full conformance with the
+   provisions of <a href="./bcp78">BCP 78</a> and <a href="./bcp79">BCP 79</a>.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF), its areas, and its working groups.  Note that
+   other groups may also distribute working documents as Internet-
+   Drafts.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   The list of current Internet-Drafts can be accessed at
+   <a href="http://www.ietf.org/1id-abstracts.html">http://www.ietf.org/1id-abstracts.html</a>
+
+   The list of Internet-Draft Shadow Directories can be accessed at
+   <a href="http://www.ietf.org/shadow.html">http://www.ietf.org/shadow.html</a>
+
+   This Internet-Draft will expire on December 18, 2012.
+
+Copyright Notice
+
+   Copyright (c) 2012 IETF Trust and the persons identified as the
+   document authors. All rights reserved.
+
+   This document is subject to <a href="./bcp78">BCP 78</a> and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (<a href="http://trustee.ietf.org/license-info">http://trustee.ietf.org/license-info</a>) in effect on the date of
+   publication of this document. Please review these documents
+   carefully, as they describe your rights and restrictions with respect
+
+
+
+<span class="grey">Walton, et al         Expiration Date December 2012             [Page 1]</span>
+</pre><!--NewPage--><pre class='newpage'><a name="page-2" id="page-2" href="#page-2" class="invisible"> </a>
+<span class="grey">INTERNET DRAFT       <a href="./draft-ietf-idr-add-paths-07.txt">draft-ietf-idr-add-paths-07.txt</a>           June 2012</span>
+
+
+   to this document. Code Components extracted from this document must
+   include Simplified BSD License text as described in <a href="#section-4">Section 4</a>.e of
+   the Trust Legal Provisions and are provided without warranty as
+   described in the Simplified BSD License.
+
+Abstract
+
+   In this document we propose a BGP extension that allows the
+   advertisement of multiple paths for the same address prefix without
+   the new paths implicitly replacing any previous ones.  The essence of
+   the extension is that each path is identified by a path identifier in
+   addition to the address prefix.
+
+
+<span class="h2"><a class="selflink" name="section-1" href="#section-1">1</a>. Introduction</span>
+
+   The BGP specification [<a href="./rfc4271" title="&quot;A Border Gateway Protocol 4 (BGP-4),&quot;">RFC4271</a>] defines an "Update-Send Process" to
+   advertise the routes chosen by the Decision Process to other BGP
+   speakers.  No provisions are made to allow the advertisement of
+   multiple paths for the same address prefix, or Network Layer
+   Reachability Information (NLRI).  In fact, a route with the same NLRI
+   as a previously advertised route implicitly replaces the previous
+   advertisement.
+
+   In this document we propose a BGP extension that allows the
+   advertisement of multiple paths for the same address prefix without
+   the new paths implicitly replacing any previous ones.  The essence of
+   the extension is that each path is identified by a path identifier in
+   addition to the address prefix.
+
+
+<span class="h3"><a class="selflink" name="section-1.1" href="#section-1.1">1.1</a>. Specification of Requirements</span>
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+   document are to be interpreted as described in [<a href="./rfc2119" title="&quot;Key words for use in RFCs to Indicate Requirement Levels,&quot;">RFC2119</a>].
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<span class="grey">Walton, et al         Expiration Date December 2012             [Page 2]</span>
+</pre><!--NewPage--><pre class='newpage'><a name="page-3" id="page-3" href="#page-3" class="invisible"> </a>
+<span class="grey">INTERNET DRAFT       <a href="./draft-ietf-idr-add-paths-07.txt">draft-ietf-idr-add-paths-07.txt</a>           June 2012</span>
+
+
+<span class="h2"><a class="selflink" name="section-2" href="#section-2">2</a>. How to Identify a Path</span>
+
+   As defined in [<a href="./rfc4271" title="&quot;A Border Gateway Protocol 4 (BGP-4),&quot;">RFC4271</a>], a path refers to the information reported in
+   the path attribute field of an UPDATE message.  As the procedures
+   specified in [<a href="./rfc4271" title="&quot;A Border Gateway Protocol 4 (BGP-4),&quot;">RFC4271</a>] allow only the advertisement of one path for a
+   particular address prefix, a path for an address prefix from a BGP
+   peer can be keyed on the address prefix.
+
+   In order for a BGP speaker to advertise multiple paths for the same
+   address prefix, a new identifier (termed "Path Identifier" hereafter)
+   needs to be introduced so that a particular path for an address
+   prefix can be identified by the combination of the address prefix and
+   the Path Identifier.
+
+   The assignment of the Path Identifier for a path by a BGP speaker is
+   purely a local matter.  However, the Path Identifier MUST be assigned
+   in such a way that the BGP speaker is able to use the (prefix, path
+   identifier) to uniquely identify a path advertised to a neighbor.  A
+   BGP speaker that re-advertises a route MUST generate its own Path
+   Identifier to be associated with the re-advertised route.  A BGP
+   speaker that receives a route SHOULD NOT assume that the identifier
+   carries any particular semantics; it SHOULD be treated as an opaque
+   value.
+
+
+<span class="h2"><a class="selflink" name="section-3" href="#section-3">3</a>. Extended NLRI Encodings</span>
+
+   In order to carry the Path Identifier in an UPDATE message, the
+   existing NLRI encodings are extended by prepending the Path
+   Identifier field, which is of four-octets.
+
+   For example, the NLRI encodings specified in [RFC4271, <a href="./rfc4760">RFC4760</a>] are
+   extended as the following:
+
+
+               +--------------------------------+
+               | Path Identifier (4 octets)     |
+               +--------------------------------+
+               | Length (1 octet)               |
+               +--------------------------------+
+               | Prefix (variable)              |
+               +--------------------------------+
+
+
+   and the NLRI encoding specified in [<a href="./rfc3107" title="&quot;Carrying Label Information in BGP-4,&quot;">RFC3107</a>] is extended as the
+   following:
+
+
+
+
+
+<span class="grey">Walton, et al         Expiration Date December 2012             [Page 3]</span>
+</pre><!--NewPage--><pre class='newpage'><a name="page-4" id="page-4" href="#page-4" class="invisible"> </a>
+<span class="grey">INTERNET DRAFT       <a href="./draft-ietf-idr-add-paths-07.txt">draft-ietf-idr-add-paths-07.txt</a>           June 2012</span>
+
+
+               +--------------------------------+
+               | Path Identifier (4 octets)     |
+               +--------------------------------+
+               | Length (1 octet)               |
+               +--------------------------------+
+               | Label (3 octets)               |
+               +--------------------------------+
+               | ...                            |
+               +--------------------------------+
+               | Prefix (variable)              |
+               +--------------------------------+
+
+
+   The usage of the extended NLRI encodings is specified in the
+   Operation section.
+
+
+<span class="h2"><a class="selflink" name="section-4" href="#section-4">4</a>. ADD-PATH Capability</span>
+
+   The ADD-PATH Capability is a new BGP capability [<a href="./rfc5492" title="&quot;Capabilities Advertisement with BGP-4&quot;">RFC5492</a>].  The
+   Capability Code for this capability is specified in the IANA
+   Considerations section of this document. The Capability Length field
+   of this capability is variable. The Capability Value field consists
+   of one or more of the following tuples:
+
+
+             +------------------------------------------------+
+             | Address Family Identifier (2 octets)           |
+             +------------------------------------------------+
+             | Subsequent Address Family Identifier (1 octet) |
+             +------------------------------------------------+
+             | Send/Receive (1 octet)                         |
+             +------------------------------------------------+
+
+
+   The meaning and use of the fields are as follows:
+
+       Address Family Identifier (AFI):
+
+          This field is the same as the one used in [<a href="./rfc4760" title="&quot;Multiprotocol Extensions for BGP-4&quot;">RFC4760</a>].
+
+       Subsequent Address Family Identifier (SAFI):
+
+          This field is the same as the one used in [<a href="./rfc4760" title="&quot;Multiprotocol Extensions for BGP-4&quot;">RFC4760</a>].
+
+       Send/Receive:
+
+          This field indicates whether the sender is (a) willing to
+
+
+
+<span class="grey">Walton, et al         Expiration Date December 2012             [Page 4]</span>
+</pre><!--NewPage--><pre class='newpage'><a name="page-5" id="page-5" href="#page-5" class="invisible"> </a>
+<span class="grey">INTERNET DRAFT       <a href="./draft-ietf-idr-add-paths-07.txt">draft-ietf-idr-add-paths-07.txt</a>           June 2012</span>
+
+
+          receive multiple paths from its peer (value 1), (b) would
+          like to send multiple paths to its peer (value 2), or (c)
+          both (value 3) for the &lt;AFI, SAFI&gt;.
+
+
+<span class="h2"><a class="selflink" name="section-5" href="#section-5">5</a>. Operation</span>
+
+   The Path Identifier specified in the previous section can be used to
+   advertise multiple paths for the same address prefix without
+   subsequent advertisements replacing the previous ones.  Apart from
+   the fact that this is now possible, the route advertisement rules of
+   [<a href="./rfc4271" title="&quot;A Border Gateway Protocol 4 (BGP-4),&quot;">RFC4271</a>] are not changed.  In particular, a new advertisement for a
+   given address prefix and a given path identifier replaces a previous
+   advertisement for the given address prefix and the given path
+   identifier.
+
+   A BGP speaker that is willing to receive multiple paths from its
+   peer, or would like to send multiple paths to its peer, SHOULD
+   advertise the ADD-PATH Capability to the peer using BGP Capabilities
+   advertisement [<a href="./rfc5492" title="&quot;Capabilities Advertisement with BGP-4&quot;">RFC5492</a>].
+
+   A BGP speaker MUST follow the existing procedures in generating an
+   UPDATE message for a particular &lt;AFI, SAFI&gt; to a peer unless the BGP
+   speaker advertises the ADD-PATH Capability to the peer indicating its
+   desire to send multiple paths for the &lt;AFI, SAFI&gt;, and also receives
+   the ADD-PATH Capability from the peer indicating its willingness to
+   receive multiple paths for the &lt;AFI, SAFI&gt;, in which case the speaker
+   MUST generate a route update for the &lt;AFI, SAFI&gt; based on the
+   combination of the address prefix and the Path Identifier, and use
+   the extended NLRI encodings specified in this document.  The peer
+   SHALL act accordingly in processing an UPDATE message related to a
+   particular &lt;AFI, SAFI&gt;.
+
+   A BGP speaker SHOULD include the bestpath when more than one path are
+   advertised to a neighbor unless the bestpath is a path received from
+   that neighbor.
+
+   When deployed as a provider edge router or a peering router that
+   interacts with external neighbors, a BGP speaker usually advertises
+   at most one path to the internal neighbors in a network.  In the case
+   the speaker is configured to advertise multiple paths to the internal
+   neighbors, it should include the Edge_Discriminator attribute defined
+   in [<a href="#ref-FAST-CONV" title="&quot;Fast Connectivity Restoration Using BGP Add-path&quot;">FAST-CONV</a>] in order to make the route selection consistent inside
+   the network.
+
+   As the Path Identifiers are locally assigned, and may or may not be
+   persistent across a control plane restart of a BGP speaker, an
+   implementation SHOULD take special care so that the underlying
+
+
+
+<span class="grey">Walton, et al         Expiration Date December 2012             [Page 5]</span>
+</pre><!--NewPage--><pre class='newpage'><a name="page-6" id="page-6" href="#page-6" class="invisible"> </a>
+<span class="grey">INTERNET DRAFT       <a href="./draft-ietf-idr-add-paths-07.txt">draft-ietf-idr-add-paths-07.txt</a>           June 2012</span>
+
+
+   forwarding plane of a "Receiving Speaker" as described in [<a href="./rfc4724" title="&quot;Graceful Restart Mechanism for BGP&quot;">RFC4724</a>]
+   is not affected during the graceful restart of a BGP session.
+
+
+<span class="h2"><a class="selflink" name="section-6" href="#section-6">6</a>. Applications</span>
+
+   The BGP extension specified in this document can be used by a BGP
+   speaker to advertise multiple paths in certain applications.  The
+   availability of the additional paths can help reduce or eliminate
+   persistent route oscillations [<a href="./rfc3345" title="&quot;Border Gateway Protocol (BGP) Persistent Route Oscillation Condition&quot;">RFC3345</a>].  It can also help with
+   optimal routing and routing convergence in a network.  The
+   applications are detailed in separate documents.
+
+
+<span class="h2"><a class="selflink" name="section-7" href="#section-7">7</a>. Deployment Considerations</span>
+
+   The extension proposed in this document provides a mechanism for a
+   BGP speaker to advertise multiple paths over a BGP session.  Care
+   needs to be taken in its deployment to ensure consistent routing and
+   forwarding in a network, the details of which will be described in
+   separate application documents.
+
+
+<span class="h2"><a class="selflink" name="section-8" href="#section-8">8</a>. IANA Considerations</span>
+
+   IANA has assigned capability number 69 for the ADD-PATH Capability
+   described in this document.  This registration is in the BGP
+   Capability Codes registry.
+
+
+<span class="h2"><a class="selflink" name="section-9" href="#section-9">9</a>. Security Considerations</span>
+
+   This document introduces no new security concerns to BGP or other
+   specifications referenced in this document.
+
+
+<span class="h2"><a class="selflink" name="section-10" href="#section-10">10</a>. Acknowledgments</span>
+
+   We would like to thank David Cook and Naiming Shen for their
+   contributions to the design and development of the extension.
+
+   Many people have made valuable comments and suggestions, including
+   Rex Fernando, Eugene Kim, Danny McPherson, Dave Meyer, Pradosh
+   Mohapatra, Keyur Patel, Robert Raszuk, Eric Rosen, Srihari Sangli,
+   Dan Tappan, and Mark Turner.
+
+
+
+
+
+
+<span class="grey">Walton, et al         Expiration Date December 2012             [Page 6]</span>
+</pre><!--NewPage--><pre class='newpage'><a name="page-7" id="page-7" href="#page-7" class="invisible"> </a>
+<span class="grey">INTERNET DRAFT       <a href="./draft-ietf-idr-add-paths-07.txt">draft-ietf-idr-add-paths-07.txt</a>           June 2012</span>
+
+
+<span class="h2"><a class="selflink" name="section-11" href="#section-11">11</a>. References</span>
+
+
+<span class="h3"><a class="selflink" name="section-11.1" href="#section-11.1">11.1</a>. Normative References</span>
+
+   [<a name="ref-RFC4271" id="ref-RFC4271">RFC4271</a>] Rekhter, Y., T. Li, and S. Hares, "A Border Gateway
+   Protocol 4 (BGP-4)," <a href="./rfc4271">RFC 4271</a>, January 2006.
+
+   [<a name="ref-RFC5492" id="ref-RFC5492">RFC5492</a>] Scudder, J. and R. Chandra, "Capabilities Advertisement
+   with BGP-4", <a href="./rfc5492">RFC 5492</a>, February 2009.
+
+   [<a name="ref-RFC4760" id="ref-RFC4760">RFC4760</a>] Bates, T., Chandra, R., Rekhter, Y., and D. Katz,
+   "Multiprotocol Extensions for BGP-4", <a href="./rfc4760">RFC 4760</a>, January 2007.
+
+   [<a name="ref-RFC3107" id="ref-RFC3107">RFC3107</a>] Rekhter, R. and E. Rosen, "Carrying Label Information in
+   BGP-4," <a href="./rfc3107">RFC 3107</a>, May 2001.
+
+   [<a name="ref-RFC2119" id="ref-RFC2119">RFC2119</a>] Bradner, S., "Key words for use in RFCs to Indicate
+   Requirement Levels," <a href="./rfc2119">RFC 2119</a>, <a href="./bcp14">BCP 14</a>, March 1997.
+
+   [<a name="ref-RFC4724" id="ref-RFC4724">RFC4724</a>] Sangli, S., E. Chen, R. Fernando, J. Scudder, and Y.
+   Rekhter, "Graceful Restart Mechanism for BGP", <a href="./rfc4724">RFC 4724</a>, January
+   2007.
+
+   [<a name="ref-FAST-CONV" id="ref-FAST-CONV">FAST-CONV</a>] Mohapatra, P., R. Fernando, C. Filsfils, R. Raszuk, "Fast
+   Connectivity Restoration Using BGP Add-path", Work in Progress, March
+   2011.
+
+
+<span class="h3"><a class="selflink" name="section-11.2" href="#section-11.2">11.2</a>. Informative References</span>
+
+   [<a name="ref-RFC3345" id="ref-RFC3345">RFC3345</a>] McPherson, D., V. Gill, D. Walton, and A. Retana, "Border
+   Gateway Protocol (BGP) Persistent Route Oscillation Condition", <a href="./rfc3345">RFC</a>
+   <a href="./rfc3345">3345</a>, August 2002.
+
+
+<span class="h2"><a class="selflink" name="section-12" href="#section-12">12</a>. Authors' Addresses</span>
+
+   Daniel Walton
+   Cisco Systems, Inc.
+   7025 Kit Creek Rd.
+   Research Triangle Park, NC 27709
+
+   Email: dwalton@cisco.com
+
+
+   Alvaro Retana
+   Hewlett-Packard Co.
+
+
+
+<span class="grey">Walton, et al         Expiration Date December 2012             [Page 7]</span>
+</pre><!--NewPage--><pre class='newpage'><a name="page-8" id="page-8" href="#page-8" class="invisible"> </a>
+<span class="grey">INTERNET DRAFT       <a href="./draft-ietf-idr-add-paths-07.txt">draft-ietf-idr-add-paths-07.txt</a>           June 2012</span>
+
+
+   2610 Wycliff Road
+   Raleigh, NC  27607
+
+   Email: alvaro.retana@hp.com
+
+
+   Enke Chen
+   Cisco Systems, Inc.
+   170 W. Tasman Dr.
+   San Jose, CA 95134
+
+   Email: enkechen@cisco.com
+
+
+   John Scudder
+   Juniper Networks
+
+   Email: jgs@juniper.net
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Walton, et al         Expiration Date December 2012             [Page 8]
+
+</pre><br />
+<span class="noprint"><small><small>Html markup produced by rfcmarkup 1.101, available from
+<a href="http://tools.ietf.org/tools/rfcmarkup/">http://tools.ietf.org/tools/rfcmarkup/</a>
+</small></small></span>
+</body></html>
