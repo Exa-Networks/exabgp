@@ -128,7 +128,7 @@ class MultiProtocol (list):
 
 # =================================================================== AddPath
 
-class AddPath (list):
+class AddPath (dict):
 	SR = {
 		0 : 'invalid',
 		1 : 'receive',
@@ -136,23 +136,24 @@ class AddPath (list):
 		3 : 'send/receive',
 	}
 	
-	def __init__ (self,families,send=False,receive=True):
+	def __init__ (self,families=[],send=False,receive=True):
 		send_receive = 0
 		if receive: send_receive += 1
 		if send:    send_receive += 2
-		self.extend(families)
 
-		self.send_receive = {}
-		for family in families:
-			self.send_receive[family] = send_receive
+		for afi,safi in families:
+			self.add_path(afi,safi,send_receive)
+	
+	def add_path (self,afi,safi,send_receive):
+		self[(afi,safi)] = send_receive
 
 	def __str__ (self):
-		return 'AddPath(' + ','.join(["%s %s %s" % (self.SR[self.send_receive[aafi]],xafi,xsafi) for (aafi,xafi,xsafi) in [((afi,safi),str(afi),str(safi)) for (afi,safi) in self]]) + ')'
+		return 'AddPath(' + ','.join(["%s %s %s" % (self.SR[self[aafi]],xafi,xsafi) for (aafi,xafi,xsafi) in [((afi,safi),str(afi),str(safi)) for (afi,safi) in self]]) + ')'
 
 	def extract (self):
 		rs = []
 		for v in self:
-			rs.append(pack('!B',self.send_receive[v]) + pack('!H',v[0]) + pack('!H',v[1]))
+			rs.append(pack('!B',self[v]) + pack('!H',v[0]) + pack('!H',v[1]))
 		return rs
 
 # =================================================================== MultiSession
@@ -293,8 +294,10 @@ class Capabilities (dict):
 		self[Capabilities.MULTIPROTOCOL_EXTENSIONS] = mp
 		self[Capabilities.FOUR_BYTES_ASN] = ASN4(neighbor.local_as)
 
-		# accept add Path, we can not parse it ATM, so if we get some route ExaBGP will bomb out !
-		self[Capabilities.ADD_PATH] = AddPath(families)
+		ap_families = []
+		ap_families.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
+		ap_families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+		self[Capabilities.ADD_PATH] = AddPath(ap_families)
 
 		if graceful:
 			if restarted:

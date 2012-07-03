@@ -438,6 +438,15 @@ class Protocol (object):
 						if k == Capabilities.MULTISESSION_BGP_RFC:
 							capabilities[k] = MultiSession()
 							continue
+						if k == Capabilities.ADD_PATH:
+							capabilities[k] = AddPath()
+							value_ad = capv
+							while value_ad:
+								afi = AFI(unpack('!H',value_ad[:2])[0])
+								safi = SAFI(ord(value_ad[2]))
+								sr = ord(value_ad[3])
+								capabilities[k].add_apth(afi,safi,sr)
+								value_ad = value_ad[4:]
 
 						if k not in capabilities:
 							capabilities[k] = Unknown(k,[ord(_) for _ in capv])
