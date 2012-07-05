@@ -151,7 +151,8 @@ class AddPath (dict):
 		rs = []
 		for v in self:
 			if self[v]:
-				rs.append(pack('!B',self[v]) + pack('!H',v[0]) + pack('!H',v[1]))
+				#rs.append(pack('!H',v[0]) + pack('!B',v[1]) + pack('!B',self[v]))
+				rs.append(v[0].pack() +v[1].pack() + pack('!B',self[v]))
 		return rs
 
 # =================================================================== MultiSession
