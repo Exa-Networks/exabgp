@@ -216,6 +216,7 @@ class Supervisor (object):
 					else:
 						self.configuration.add_route_all_peers(route)
 						self._route_update = True
+
 				elif command.startswith('withdraw route'):
 					route = self.configuration.parse_single_route(command)
 					if not route:
@@ -235,6 +236,7 @@ class Supervisor (object):
 					else:
 						self.configuration.add_route_all_peers(flow)
 						self._route_update = True
+
 				elif command.startswith('withdraw flow'):
 					flow = self.configuration.parse_single_flow(command)
 					if not flow:
