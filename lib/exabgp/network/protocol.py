@@ -22,7 +22,7 @@ from exabgp.structure.asn        import ASN,AS_TRANS
 from exabgp.network.connection   import Connection
 from exabgp.message              import Message,defix,Failure
 from exabgp.message.nop          import NOP
-from exabgp.message.open         import Open,Unknown,Parameter,Capabilities,RouterID,MultiProtocol,RouteRefresh,CiscoRouteRefresh,MultiSession,Graceful
+from exabgp.message.open         import Open,Unknown,Parameter,Capabilities,RouterID,MultiProtocol,RouteRefresh,CiscoRouteRefresh,MultiSession,Graceful,AddPath
 from exabgp.message.update       import Update
 from exabgp.message.update.eor   import EOR
 from exabgp.message.keepalive    import KeepAlive
@@ -445,7 +445,7 @@ class Protocol (object):
 								afi = AFI(unpack('!H',value_ad[:2])[0])
 								safi = SAFI(ord(value_ad[2]))
 								sr = ord(value_ad[3])
-								capabilities[k].add_apth(afi,safi,sr)
+								capabilities[k].add_path(afi,safi,sr)
 								value_ad = value_ad[4:]
 
 						if k not in capabilities:

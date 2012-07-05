@@ -143,7 +143,7 @@ class AddPath (dict):
 
 		for afi,safi in families:
 			self.add_path(afi,safi,send_receive)
-	
+
 	def add_path (self,afi,safi,send_receive):
 		self[(afi,safi)] = send_receive
 
@@ -296,7 +296,7 @@ class Capabilities (dict):
 
 		ap_families = []
 		ap_families.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
-		ap_families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+		# ap_families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
 		self[Capabilities.ADD_PATH] = AddPath(ap_families)
 
 		if graceful:
