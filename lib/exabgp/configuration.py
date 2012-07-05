@@ -637,9 +637,9 @@ class Configuration (object):
 		try:
 			ap = value[0].lower()
 			apv = 0
-			if ap.startswith('send'):
-				apv += 1
 			if ap.endswith('receive'):
+				apv += 1
+			if ap.startswith('send'):
 				apv += 2
 			if not apv and ap != 'disabled':
 				raise ValueError('invalid add-path')
