@@ -71,6 +71,8 @@ class Configuration (object):
 	'  community [ 65000 65001 65002 ];\n' \
 	'  extended-community [ target:1234:5.6.7.8 target:1.2.3.4:5678 origin:1234:5.6.7.8 origin:1.2.3.4:5678 0x0002FDE800000001 ]\n' \
 	'  label [ 100 200 ];\n' \
+	'  hold-time 180;\n' \
+	'  add-path disabled|send|receive|send/receive;\n' \
 	'  split /24\n' \
 	'  watchdog watchog-name\n' \
 	'  withdrawn\n' \
@@ -324,6 +326,7 @@ class Configuration (object):
 		if command == 'local-as': return self._set_asn(scope,'local-as',tokens[1:])
 		if command == 'peer-as': return self._set_asn(scope,'peer-as',tokens[1:])
 		if command == 'hold-time': return self._set_holdtime(scope,'hold-time',tokens[1:])
+		if command == 'add-path': return self._set_addpath(scope,'add-path',tokens[1:])
 		if command == 'graceful-restart': return self._set_gracefulrestart(scope,'graceful-restart',tokens[1:])
 		if command == 'md5': return self._set_md5(scope,'md5',tokens[1:])
 		if command == 'ttl-security': return self._set_ttl(scope,'ttl-security',tokens[1:])
@@ -469,7 +472,7 @@ class Configuration (object):
 	def _multi_group (self,scope,address):
 		scope.append({})
 		while True:
-			r = self._dispatch(scope,'group',['static','flow','neighbor','process'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart','md5','ttl-security','multi-session'])
+			r = self._dispatch(scope,'group',['static','flow','neighbor','process'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session'])
 			if r is False:
 				return False
 			if r is None:
@@ -503,6 +506,8 @@ class Configuration (object):
 			if v: neighbor.peer_as = v
 			v = local_scope.get('hold-time','')
 			if v: neighbor.hold_time = v
+			v = local_scope.get('add-path','')
+			if v: neighbor.add_path = v
 			neighbor.parse_routes = local_scope.get('parse-routes',False)
 			neighbor.peer_updates = local_scope.get('peer-updates',False)
 			v = local_scope.get('routes',[])
@@ -562,7 +567,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-		 	r = self._dispatch(scope,'neighbor',['static','flow','process'],['description','router-id','local-address','local-as','peer-as','hold-time','graceful-restart','md5','ttl-security','multi-session'])
+		 	r = self._dispatch(scope,'neighbor',['static','flow','process'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session'])
 			if r is False: return False
 			if r is None: return True
 
@@ -625,6 +630,23 @@ class Configuration (object):
 			return True
 		except ValueError:
 			self._error = '"%s" is an invalid hold-time' % ' '.join(value)
+			if self.debug: raise
+			return False
+
+	def _set_addpath (self,scope,command,value):
+		try:
+			ap = value[0].lower()
+			apv = 0
+			if ap.startswith('send'):
+				apv += 1
+			if ap.endswith('receive'):
+				apv += 2
+			if not apv and ap != 'disabled':
+				raise ValueError('invalid add-path')
+			scope[-1][command] = apv
+			return True
+		except ValueError:
+			self._error = '"%s" is an invalid add-path' % ' '.join(value)
 			if self.debug: raise
 			return False
 

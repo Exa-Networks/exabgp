@@ -9,7 +9,7 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 from copy import copy
 
 from exabgp.structure.address import AFI
-from exabgp.message.open import HoldTime
+from exabgp.message.open import HoldTime,AddPath
 from exabgp.message.update.attribute.id import AttributeID
 
 from exabgp.log import Logger
@@ -25,6 +25,7 @@ class Neighbor (object):
 		self.peer_as = None
 		self.local_as = None
 		self.hold_time = HoldTime(180)
+		self.add_path = 0
 		self.graceful_restart = False
 		self.md5 = None
 		self.ttl = None
@@ -112,6 +113,7 @@ class Neighbor (object):
 			self.peer_address == other.peer_address and \
 			self.peer_as == other.peer_as and \
 			self.hold_time == other.hold_time and \
+			self.add_path == other.add_path and \
 			self.graceful_restart == other.graceful_restart and \
 			self.md5 == other.md5 and \
 			self.ttl == other.ttl and \
@@ -140,6 +142,7 @@ neighbor %s {
 	local-as %s;
 	peer-as %s;
 	hold-time %s;
+	add-path %s;
 	%s
 	static {%s
 	}
@@ -151,6 +154,7 @@ neighbor %s {
 	self.local_as,
 	self.peer_as,
 	self.hold_time,
+	AddPath.string[self.add_path],
 	'\n\t'.join(options),
 	routes
 )
