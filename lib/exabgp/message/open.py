@@ -168,8 +168,8 @@ class UsePath (object):
 		receive = received_open.capabilities.get(Capabilities.ADD_PATH,FalseDict())
 		send = sent_open.capabilities.get(Capabilities.ADD_PATH,FalseDict())
 
-		self.send = {}
-		self.receive = {}
+		self._send = {}
+		self._receive = {}
 
 		# python 2.4 compatibility mean no simple union but using sets.Set
 		union = []
@@ -177,8 +177,14 @@ class UsePath (object):
 		union.extend([k for k in receive.keys() if k not in send.keys()])
 
 		for k in union:
-			self.send[k] = bool(receive[k] & self.ANNOUNCE and send[k] & self.ACCEPT)
-			self.receive[k] = bool(receive[k] & self.ACCEPT and send[k] & self.ANNOUNCE)
+			self._send[k] = bool(receive[k] & self.ANNOUNCE and send[k] & self.ACCEPT)
+			self._receive[k] = bool(receive[k] & self.ACCEPT and send[k] & self.ANNOUNCE)
+
+	def send (self,afi,safi):
+		return self._sendget((afi,safi),False)
+
+	def receive (self,afi,safi):
+		return self._receive.get((afi,safi),False)
 
 # =================================================================== MultiSession
 

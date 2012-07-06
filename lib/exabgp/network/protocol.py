@@ -485,7 +485,7 @@ class Protocol (object):
 			raise Notify(3,1)
 
 		# Is the peer going to send us some Path Information with the route (AddPath)
-		path_info = self.use_path.receive[(AFI.ipv4,SAFI.unicast)]
+		path_info = self.use_path.receive(AFI.ipv4,SAFI.unicast)
 
 		routes = []
 		while withdrawn:
@@ -680,8 +680,10 @@ class Protocol (object):
 				#self.log.out('we only understand IPv4/IPv6 and should never have received this MP_UNREACH_NLRI (%s %s)' % (afi,safi))
 				return self._AttributesFactory(next_attributes)
 			data = data[offset:]
+			# Is the peer going to send us some Path Information with the route (AddPath)
+			path_info = self.use_path.receive(AFI.ipv4,SAFI.unicast)
 			while data:
-				route = ReceivedRoute(BGPPrefix(afi,data),'withdraw')
+				route = ReceivedRoute(BGPPrefix(afi,data,path_info),'withdraw')
 				data = data[len(route.nlri):]
 				self.mp_routes.append(route)
 			return self._AttributesFactory(next_attributes)
@@ -718,9 +720,9 @@ class Protocol (object):
 				else: return self._AttributesFactory(next_attributes)
 			if len_nh >= 16: nh = socket.inet_ntop(socket.AF_INET6,nh)
 			else: nh = socket.inet_ntop(socket.AF_INET,nh)
+			# -- Reading the reserved byte, which MUST be set to zero
+			# So this follow code MUST be useless !
 			nb_snpa = ord(data[offset])
-
-			# -- Skipping the reserved byte 
 			offset += 1
 			snpas = []
 			for _ in range(nb_snpa):
@@ -728,10 +730,12 @@ class Protocol (object):
 				offset += 1
 				snpas.append(data[offset:offset+len_snpa])
 				offset += len_snpa
-
+			# Reading the NLRIs
 			data = data[offset:]
+			# Is the peer going to send us some Path Information with the route (AddPath)
+			path_info = self.use_path.receive(AFI.ipv4,SAFI.unicast)
 			while data:
-				route = ReceivedRoute(BGPPrefix(afi,data),'announce')
+				route = ReceivedRoute(BGPPrefix(afi,data,path_info),'announce')
 				data = data[len(route.nlri):]
 				route.attributes = self.attributes
 				route.attributes.add(NextHop(to_IP(nh)))
