@@ -881,8 +881,6 @@ class Configuration (object):
 					continue
 				return False
 			if command == 'path-information':
-				import pdb
-				pdb.set_trace()
 				if self._route_path_information(scope,tokens):
 					continue
 				return False
@@ -981,16 +979,12 @@ class Configuration (object):
 		try:
 			pi = tokens.pop(0)
 			if pi.isdigit():
-				raw = ''.join([chr((int(pi) >> offset ) & 0xFF) for offset in xrange(24,-8,-8)])
+				#raw = ''.join([chr((int(pi) >> offset ) & 0xFF) for offset in xrange(24,-8,-8)])
+				value = int(pi)
 			else:
-				raw = ''.join([chr(int(_)) for _ in pi.split('.')])
-			if len(raw) != 4:
-				raise ValueError('Invalid path-information %s' % pi)
-			# XXX: wrong but will do
-			import pdb
-			pdb.set_trace()
-			rr = scope[-1]['routes'][-1]
-			scope[-1]['routes'][-1].nlri.path_info = raw
+				#raw = ''.join([chr(int(_)) for _ in pi.split('.')])
+				value = sum(int(a)<<offset for (a,offset) in zip(pi.split('.'), range(24, -8, -8)))
+			scope[-1]['routes'][-1].nlri.add_path(value)
 			return True
 		except ValueError:
 			self._error = self._str_route_error

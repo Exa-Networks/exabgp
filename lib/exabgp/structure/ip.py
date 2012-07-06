@@ -30,7 +30,7 @@ def to_IP (ip):
 def to_Route (ip,mask):
 	afi = _detect_afi(ip)
 	network = socket.inet_pton(AFI.Family[afi],ip)
-	return Route(NLRI(afi,network,mask,''))
+	return Route(NLRI(afi,network,mask))
 
 class Inet (object):
 	_UNICAST = SAFI(SAFI.unicast)
@@ -113,25 +113,28 @@ class _Prefix (Inet):
 	def __len__ (self):
 		return _bgp[self.mask] + 1
 
-
-
 class NLRI (_Prefix):
-	def __init__(self,af,ip,mask,path_info):
-		self.path_info = path_info
+	def __init__(self,af,ip,mask,path_info=None):
+		if path_info is not None:
+			self.path_info = ''.join([chr((path_info>>offset) & 0xff) for offset in [24,16,8,0]])
+		else:
+			self.path_info = ''
+
 		_Prefix.__init__(self,af,ip,mask)
 
 	def __len__ (self):
-		if self.path_info:
-			return _Prefix.__len__(self) + 4
-		else:
-			return _Prefix.__len__(self)
+		return _Prefix.__len__(self) + len(self.path_info)
 
 	def __str__ (self):
 		if self.path_info:
 			return "%s path-information %s" % (_Prefix.__str__(self),socket.inet_ntoa(self.path_info))
 		return _Prefix.__str__(self)
 
+	def pack (self):
+		return self.path_info + _Prefix.pack(self)
 
+	def add_path (self,value):
+		self.path_info = ''.join([chr((value>>offset) & 0xff) for offset in [24,16,8,0]])
 
 class BGPPrefix (NLRI):
 	"""From the BGP prefix wire format, Store an IP (in the network format), its netmask and the bgp format"""
@@ -139,6 +142,8 @@ class BGPPrefix (NLRI):
 		if has_multiple_path:
 			pi = bgp[:4]
 			bgp = bgp[4:]
+		else:
+			pi = None
 		end = _bgp[ord(bgp[0])]
 		NLRI.__init__(self,afi,bgp[1:end+1] + '\0'*(self._length[afi]-end),ord(bgp[0]),pi)
 	
@@ -149,7 +154,7 @@ class AFIPrefix (NLRI):
 
 class Prefix (NLRI):
 	"""Store an IP (in the network format), its netmask and the bgp format of the IP"""
-	def __init__ (self,afi,ip,mask,path_info=''):
+	def __init__ (self,afi,ip,mask,path_info=None):
 		af = self._af[afi]
 		network = socket.inet_pton(af,ip)
 		NLRI.__init__(self,afi,network,mask,path_info)
