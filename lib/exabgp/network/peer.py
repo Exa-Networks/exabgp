@@ -199,12 +199,9 @@ class Peer (object):
 				logger.message(self.me('>> %d UPDATE(s)' % count))
 
 			eor = False
-			if self.neighbor.graceful_restart and \
-				self.open.capabilities.announced(Capabilities.MULTIPROTOCOL_EXTENSIONS) and \
-				self.open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
-
+			if self.open.capabilities.announced(Capabilities.MULTIPROTOCOL_EXTENSIONS):
 				families = []
-				for family in self.open.capabilities[Capabilities.GRACEFUL_RESTART].families():
+				for family in self.open.capabilities[Capabilities.MULTIPROTOCOL_EXTENSIONS]:
 					if family in self.neighbor.families():
 						families.append(family)
 				self.bgp.new_eors(families)

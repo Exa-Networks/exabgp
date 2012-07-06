@@ -8,7 +8,7 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 
 from copy import copy
 
-from exabgp.structure.address import AFI
+from exabgp.structure.address import AFI,SAFI
 from exabgp.message.open import HoldTime,AddPath
 from exabgp.message.update.attribute.id import AttributeID
 
@@ -32,7 +32,7 @@ class Neighbor (object):
 		self.multisession = None
 		self.parse_routes = None
 		self.peer_updates = None
-		self._families = {}
+		self._families = {(AFI.ipv4,SAFI.unicast):[]}
 		self._watchdog = {}
 
 	def name (self):

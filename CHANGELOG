@@ -27,6 +27,7 @@ Version 3.0.0 - -- of June 2012 (experimental version)
     reported by Simon Helson (with patch, thank you)
  * Fix: a nasty bug when dynamic route announcement would not work when no routes were setup
     reported by Tim Gebbett
+ * Improvement: Announce EOR even if Graceful-Restart was not negociated but only MultiProtocol
  * Improvement: implementation of draft-ietf-idr-bgp-multisession-06
     use capability 131 (and not 68) for multisession to achieve interop with Cisco
  * Improvement: following RFC 6608 new notification codes
