@@ -143,7 +143,7 @@ class BGPPrefix (NLRI):
 			pi = bgp[:4]
 			bgp = bgp[4:]
 		else:
-			pi = None
+			pi = ''
 		end = _bgp[ord(bgp[0])]
 		NLRI.__init__(self,afi,bgp[1:end+1] + '\0'*(self._length[afi]-end),ord(bgp[0]))
 		self.path_info = pi
