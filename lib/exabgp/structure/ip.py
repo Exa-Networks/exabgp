@@ -115,9 +115,21 @@ class _Prefix (Inet):
 
 class BGPPrefix (_Prefix):
 	"""From the BGP prefix wire format, Store an IP (in the network format), its netmask and the bgp format"""
-	def __init__ (self,afi,bgp):
+	def __init__ (self,afi,bgp,path_information):
+		if path_information:
+			self.path_information = bgp[:4]
+			bgp = bgp[4:]
+		else:
+			self.path_information = None
 		end = _bgp[ord(bgp[0])]
 		_Prefix.__init__(self,afi,bgp[1:end+1] + '\0'*(self._length[afi]-end),ord(bgp[0]))
+	
+	def __len__ (self):
+		if self.path_information:
+			pathinfo = 4
+		else:
+			pathinfo = 0
+		return pathinfo + _Prefix.__len__(self)
 
 class AFIPrefix (_Prefix):
 	"""Store an IP (in the network format), its netmask and the bgp format of the IP"""

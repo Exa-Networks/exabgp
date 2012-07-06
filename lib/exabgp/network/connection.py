@@ -47,8 +47,6 @@ class Connection (object):
 		self.peer = peer
 		self._loop_start = None
 
-		self._buffer = []
-
 		logger.wire("Opening connection to %s" % self.peer)
 
 		if peer.afi != local.afi:

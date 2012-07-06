@@ -155,6 +155,31 @@ class AddPath (dict):
 				rs.append(v[0].pack() +v[1].pack() + pack('!B',self[v]))
 		return rs
 
+class UsePath (object):
+	ACCEPT = 1
+	ANNOUNCE = 2
+	
+	def __init__(self,received_open,sent_open):
+		# A Dict always returning False
+		class FalseDict (dict):
+			def __getitem__(self,key):
+				return False
+
+		receive = received_open.capabilities.get(Capabilities.ADD_PATH,FalseDict())
+		send = sent_open.capabilities.get(Capabilities.ADD_PATH,FalseDict())
+
+		self.send = {}
+		self.receive = {}
+
+		# python 2.4 compatibility mean no simple union but using sets.Set
+		union = []
+		union.extend(send.keys())
+		union.extend([k for k in receive.keys() if k not in send.keys()])
+
+		for k in union:
+			self.send[k] = bool(receive[k] & self.ANNOUNCE and send[k] & self.ACCEPT)
+			self.receive[k] = bool(receive[k] & self.ACCEPT and send[k] & self.ANNOUNCE)
+
 # =================================================================== MultiSession
 
 class MultiSession (list):

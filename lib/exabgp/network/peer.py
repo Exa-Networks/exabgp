@@ -12,7 +12,7 @@ import traceback
 
 from exabgp.message              import Failure
 from exabgp.message.nop          import NOP
-from exabgp.message.open         import Open,Capabilities
+from exabgp.message.open         import Open,Capabilities,UsePath
 from exabgp.message.update       import Update
 from exabgp.message.keepalive    import KeepAlive
 from exabgp.message.notification import Notification, Notify, NotConnected
@@ -170,6 +170,9 @@ class Peer (object):
 			message = self.bgp.new_keepalive(force=True)
 			logger.message(self.me('>> KEEPALIVE (OPENCONFIRM)'))
 			yield True
+
+			# Dict with for each AFI/SAFI pair if we should announce ADDPATH Path Identifier
+			self.bgp.use_path = UsePath(_open,self.open)
 
 			while True:
 				message = self.bgp.read_keepalive()

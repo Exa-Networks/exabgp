@@ -26,7 +26,7 @@ ExaBGP is not intended to use to transform a server in BGP router.
 The program does not perform any FIB manipulation, however it can call an application which will perform them.
 Please look at BIRD, http://bird.network.cz/ if this is what you are looking for.
 
-Please look at http://code.google.com/p/exabgp/wiki/RFC for the list of supported RFC
+The list of supported RFC is available at http://code.google.com/p/exabgp/wiki/RFC
 
 The code is deployed in many networks but is not perfect,
 I will fix bugs if any are found, just contact me:

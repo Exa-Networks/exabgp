@@ -56,6 +56,9 @@ class Protocol (object):
 		self.peer = peer
 		self.neighbor = peer.neighbor
 		self.connection = connection
+		# for which afi/safi pair should we encode path information (addpath)
+		self.use_path = None
+
 		self._delta = Delta(Table(peer))
 		self._asn4 = False
 		self._messages = {}
@@ -481,9 +484,12 @@ class Protocol (object):
 		if 2 + lw + 2+ la + len(announced) != length:
 			raise Notify(3,1)
 
+		# Is the peer going to send us some Path Information with the route (AddPath)
+		path_info = self.use_path.receive[(AFI.ipv4,SAFI.unicast)]
+
 		routes = []
 		while withdrawn:
-			nlri = BGPPrefix(AFI.ipv4,withdrawn)
+			nlri = BGPPrefix(AFI.ipv4,withdrawn,path_info)
 			route = ReceivedRoute(nlri,'withdraw')
 			withdrawn = withdrawn[len(nlri):]
 			routes.append(route)
@@ -493,7 +499,7 @@ class Protocol (object):
 		routes.extend(self.mp_routes)
 
 		while announced:
-			nlri = BGPPrefix(AFI.ipv4,announced)
+			nlri = BGPPrefix(AFI.ipv4,announced,path_info)
 			route = ReceivedRoute(nlri,'announce')
 			# XXX: Should this be a deep copy
 			route.attributes = attributes
@@ -684,11 +690,13 @@ class Protocol (object):
 			logger.parser('parsing multi-protocol nlri reacheable')
 			next_attributes = data[length:]
 			data = data[:length]
+			# -- Reading AFI/SAFI
 			afi,safi = unpack('!HB',data[:3])
 			offset = 3
 			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
 				#self.log.out('we only understand IPv4/IPv6 and should never have received this MP_REACH_NLRI (%s %s)' % (afi,safi))
 				return self._AttributesFactory(next_attributes)
+			# -- Reading length of next-hop
 			len_nh = ord(data[offset])
 			offset += 1
 			if afi == AFI.ipv4 and not len_nh != 4:
@@ -699,6 +707,7 @@ class Protocol (object):
 				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
 				#self.log.out('bad IPv6 next-hop length (%d)' % len_nh)
 				return self._AttributesFactory(next_attributes)
+			# -- Reading next-hop
 			nh = data[offset:offset+len_nh]
 			offset += len_nh
 			if len_nh == 32:
@@ -710,6 +719,8 @@ class Protocol (object):
 			if len_nh >= 16: nh = socket.inet_ntop(socket.AF_INET6,nh)
 			else: nh = socket.inet_ntop(socket.AF_INET,nh)
 			nb_snpa = ord(data[offset])
+
+			# -- Skipping the reserved byte 
 			offset += 1
 			snpas = []
 			for _ in range(nb_snpa):
@@ -717,6 +728,7 @@ class Protocol (object):
 				offset += 1
 				snpas.append(data[offset:offset+len_snpa])
 				offset += len_snpa
+
 			data = data[offset:]
 			while data:
 				route = ReceivedRoute(BGPPrefix(afi,data),'announce')
