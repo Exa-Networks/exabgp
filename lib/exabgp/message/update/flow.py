@@ -9,7 +9,7 @@ Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 from struct import pack
 
 from exabgp.structure.address import Address,AFI,SAFI
-from exabgp.structure.ip import Prefix
+from exabgp.structure.ip import NLRI
 from exabgp.message.update.attributes import Attributes
 from exabgp.message.update.attribute.id import AttributeID
 from exabgp.message.update.attribute.communities import ECommunities
@@ -206,7 +206,7 @@ class Fragment (IOperationByteShort,NumericString):
 
 # ..........................................................
 
-class _FlowNLRI (Attributes,Address):
+class FlowNLRI (Attributes,Address):
 	def __init__ (self,afi,safi):
 		Attributes.__init__(self)
 		Address.__init__(self,afi,safi)
@@ -280,7 +280,7 @@ class _FlowNLRI (Attributes,Address):
 class Flow (object):
 	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ipv4):
 		self.attributes = Attributes()
-		self.nlri = _FlowNLRI(afi,safi)
+		self.nlri = FlowNLRI(afi,safi)
 		self.attributes[AttributeID.EXTENDED_COMMUNITY] = ECommunities()
 
 	def add_and (self,rule):

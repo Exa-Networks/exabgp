@@ -63,6 +63,7 @@ class Configuration (object):
 	'\n' \
 	'syntax:\n' \
 	'route 10.0.0.1/22 {\n' \
+	'  path-information 0.0.0.1;\n' \
 	'  next-hop 192.0.1.254;\n' \
 	'  origin IGP|EGP|INCOMPLETE;\n' \
 	'  as-path [ ASN1 ASN2 ];\n' \
@@ -79,7 +80,7 @@ class Configuration (object):
 	'}\n' \
 	'\n' \
 	'syntax:\n' \
-	'route 10.0.0.1/22 next-hop 192.0.2.1' \
+	'route 10.0.0.1/22 local-information 0.0.0.1 next-hop 192.0.2.1' \
 	' origin IGP|EGP|INCOMPLETE' \
 	' as-path ASN' \
 	' med 100' \
@@ -339,6 +340,7 @@ class Configuration (object):
 		if command == 'med': return self._route_med(scope,tokens[1:])
 		if command == 'next-hop': return self._route_next_hop(scope,tokens[1:])
 		if command == 'local-preference': return self._route_local_preference(scope,tokens[1:])
+		if command == 'path-information': return self._route_path_information(scope,tokens[1:])
 		if command == 'community': return self._route_community(scope,tokens[1:])
 		if command == 'split': return self._route_split(scope,tokens[1:])
 		if command == 'label': return self._route_label(scope,tokens[1:])
@@ -824,7 +826,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','as-sequence','med','local-preference','community','extended-community','split','label','watchdog','withdrawn'])
+			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','as-sequence','med','local-preference','path-information','community','extended-community','split','label','watchdog','withdrawn'])
 			if r is False: return False
 			if r is None: return self._split_last_route(scope)
 
@@ -835,7 +837,14 @@ class Configuration (object):
 		if not self._insert_static_route(scope,tokens):
 			return False
 
-		if tokens.pop(0) != 'next-hop':
+		# we generate path-information before next-hop so we must allow it
+		next_hop = tokens.pop(0)
+		if next_hop == 'path-information':
+			tokens.append(next_hop)
+			tokens.append(tokens.pop(0))
+			next_hop = tokens.pop(0)
+
+		if next_hop != 'next-hop':
 			return False
 
 		if not self._route_next_hop(scope,tokens):
@@ -869,6 +878,12 @@ class Configuration (object):
 				return False
 			if command == 'local-preference':
 				if self._route_local_preference(scope,tokens):
+					continue
+				return False
+			if command == 'path-information':
+				import pdb
+				pdb.set_trace()
+				if self._route_path_information(scope,tokens):
 					continue
 				return False
 			if command == 'community':
@@ -956,6 +971,26 @@ class Configuration (object):
 	def _route_local_preference (self,scope,tokens):
 		try:
 			scope[-1]['routes'][-1].attributes.add(LocalPreference(int(tokens.pop(0))))
+			return True
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+
+	def _route_path_information (self,scope,tokens):
+		try:
+			pi = tokens.pop(0)
+			if pi.isdigit():
+				raw = ''.join([chr((int(pi) >> offset ) & 0xFF) for offset in xrange(24,-8,-8)])
+			else:
+				raw = ''.join([chr(int(_)) for _ in pi.split('.')])
+			if len(raw) != 4:
+				raise ValueError('Invalid path-information %s' % pi)
+			# XXX: wrong but will do
+			import pdb
+			pdb.set_trace()
+			rr = scope[-1]['routes'][-1]
+			scope[-1]['routes'][-1].nlri.path_info = raw
 			return True
 		except ValueError:
 			self._error = self._str_route_error

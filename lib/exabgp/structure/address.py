@@ -15,6 +15,11 @@ class AFI (int):
 	ipv4 = 0x01
 	ipv6 = 0x02
 
+	Family = {
+		ipv4 : 0x02, # socket.AF_INET,
+		ipv6 : 0x30, # socket.AF_INET6,
+	}
+
 	def __str__ (self):
 		if self == 0x01: return "IPv4"
 		if self == 0x02: return "IPv6"
