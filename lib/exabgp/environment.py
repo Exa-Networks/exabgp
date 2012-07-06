@@ -222,6 +222,7 @@ defaults = {
 	'internal' : {
 		'name'    : (value.nop,value.nop,'ExaBGP', 'name'),
 		'version' : (value.nop,value.nop,version,  'version'),
+		'timeout' : (value.integer,value.nop,'1',  'time we will wait on select (dangerous)'),
 	},
 	# Here for internal use
 	'debug' : {

@@ -16,6 +16,8 @@ import errno
 import select
 #import array
 
+from exabgp.environment import load
+
 from exabgp.utils import hexa,trace
 from exabgp.structure.address import AFI
 from exabgp.message import Failure
@@ -25,7 +27,7 @@ logger = Logger()
 
 # If the OS tells us we have data on the socket,
 # we should never have to wait more than READ_TIMEOUT to be able to read it.
-READ_TIMEOUT = 1
+READ_TIMEOUT = load().internal.timeout
 
 errno_block = set((
 	errno.EINPROGRESS, errno.EALREADY,
