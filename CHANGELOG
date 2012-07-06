@@ -27,6 +27,7 @@ Version 3.0.0 - -- of June 2012 (experimental version)
     reported by Simon Helson (with patch, thank you)
  * Fix: a nasty bug when dynamic route announcement would not work when no routes were setup
     reported by Tim Gebbett
+ * Fix: bad counting of routes parsed (not resetting in some case)
  * Improvement: hidden option to change BGP select timeout (use at your own risk - do not ask me where it is - it is hidden)
  * Improvement: announce EOR even if Graceful-Restart was not negociated but only MultiProtocol
  * Improvement: implementation of draft-ietf-idr-bgp-multisession-06

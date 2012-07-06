@@ -95,7 +95,6 @@ class Peer (object):
 		self._running = False
 		self._restart = True
 		self._restarted = True
-		self._route_parsed = 0L
 		self._neighbor = restart_neighbor
 		self._reset_skip()
 
@@ -217,6 +216,7 @@ class Peer (object):
 				if k: logger.message(self.me('>> KEEPALIVE (no more UPDATE and no EOR)'))
 
 			seen_update = False
+			self._route_parsed = 0L
 			while self._running:
 				self._now = time.time()
 				if self._now > self._next_info:
