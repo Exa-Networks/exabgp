@@ -145,7 +145,8 @@ class BGPPrefix (NLRI):
 		else:
 			pi = None
 		end = _bgp[ord(bgp[0])]
-		NLRI.__init__(self,afi,bgp[1:end+1] + '\0'*(self._length[afi]-end),ord(bgp[0]),pi)
+		NLRI.__init__(self,afi,bgp[1:end+1] + '\0'*(self._length[afi]-end),ord(bgp[0]))
+		self.path_info = pi
 	
 class AFIPrefix (NLRI):
 	"""Store an IP (in the network format), its netmask and the bgp format of the IP"""
