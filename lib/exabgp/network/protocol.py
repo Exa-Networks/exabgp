@@ -681,7 +681,7 @@ class Protocol (object):
 				return self._AttributesFactory(next_attributes)
 			data = data[offset:]
 			# Is the peer going to send us some Path Information with the route (AddPath)
-			path_info = self.use_path.receive(AFI.ipv4,SAFI.unicast)
+			path_info = self.use_path.receive(afi,safi)
 			while data:
 				route = ReceivedRoute(BGPPrefix(afi,data,path_info),'withdraw')
 				data = data[len(route.nlri):]
@@ -733,7 +733,7 @@ class Protocol (object):
 			# Reading the NLRIs
 			data = data[offset:]
 			# Is the peer going to send us some Path Information with the route (AddPath)
-			path_info = self.use_path.receive(AFI.ipv4,SAFI.unicast)
+			path_info = self.use_path.receive(afi,safi)
 			while data:
 				route = ReceivedRoute(BGPPrefix(afi,data,path_info),'announce')
 				data = data[len(route.nlri):]
