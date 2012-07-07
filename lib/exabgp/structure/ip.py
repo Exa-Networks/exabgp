@@ -113,6 +113,13 @@ class _Prefix (Inet):
 	def __len__ (self):
 		return _bgp[self.mask] + 1
 
+class Prefix (_Prefix):
+	"""Store an IP (in the network format), its netmask and the bgp format of the IP"""
+	def __init__ (self,afi,ip,mask):
+		af = self._af[afi]
+		network = socket.inet_pton(af,ip)
+		Prefix.__init__(self,afi,network,mask,path_info)
+
 class NLRI (_Prefix):
 	def __init__(self,af,ip,mask,path_info=None):
 		if path_info is not None:
@@ -147,15 +154,3 @@ class BGPPrefix (NLRI):
 		end = _bgp[ord(bgp[0])]
 		NLRI.__init__(self,afi,bgp[1:end+1] + '\0'*(self._length[afi]-end),ord(bgp[0]))
 		self.path_info = pi
-	
-class AFIPrefix (NLRI):
-	"""Store an IP (in the network format), its netmask and the bgp format of the IP"""
-	def __init__ (self,afi,network,mask):
-		NLRI.__init__(self,afi,network,mask,'')
-
-class Prefix (NLRI):
-	"""Store an IP (in the network format), its netmask and the bgp format of the IP"""
-	def __init__ (self,afi,ip,mask,path_info=None):
-		af = self._af[afi]
-		network = socket.inet_pton(af,ip)
-		NLRI.__init__(self,afi,network,mask,path_info)
