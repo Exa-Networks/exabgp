@@ -15,3 +15,6 @@ LATER
 - vpnv4 - really this is now missing ... must find the motivation .
 - look what fun RFC we could implement from the list at 
   http://code.google.com/p/exabgp/wiki/RFC
+- prevent originator-id and cluster-list on EBGP session ?
+- unify all classes which are IPv4 like to use the IPv4 class
+- use the same logic/api in configuration for aspath that has been used for clusterlist

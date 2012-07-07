@@ -161,9 +161,13 @@ class Attributes (dict):
 		if self.has(AttributeID.COMMUNITY):
 			communities = ' community %s' % str(self[AttributeID.COMMUNITY])
 
-		orginatorid = ''
+		originator_id = ''
 		if self.has(AttributeID.ORIGINATOR_ID):
-			orginatorid = ' originator-id %s' % str(self[AttributeID.ORIGINATOR_ID])
+			originator_id = ' originator-id %s' % str(self[AttributeID.ORIGINATOR_ID])
+
+		cluster_list = ''
+		if self.has(AttributeID.ORIGINATOR_ID):
+			cluster_list = ' cluster-list %s' % str(self[AttributeID.ORIGINATOR_ID])
 
 		ecommunities = ''
 		if self.has(AttributeID.EXTENDED_COMMUNITY):
@@ -173,7 +177,7 @@ class Attributes (dict):
 		if self.has(AttributeID.MP_REACH_NLRI):
 			mpr = ' mp_reach_nlri %s' % str(self[AttributeID.MP_REACH_NLRI])
 
-		self._str = "%s%s%s%s%s%s%s%s%s" % (next_hop,origin,aspath,local_pref,med,communities,ecommunities,mpr,orginatorid)
+		self._str = "%s%s%s%s%s%s%s%s%s%s" % (next_hop,origin,aspath,local_pref,med,communities,ecommunities,mpr,originator_id,cluster_list)
 		return self._str
 
 	def __repr__ (self):

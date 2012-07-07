@@ -40,7 +40,7 @@ from exabgp.message.update.attribute.communities import Community,Communities,EC
 #from exabgp.message.update.attribute.mprnlri     import MPRNLRI
 #from exabgp.message.update.attribute.mpurnlri    import MPURNLRI
 from exabgp.message.update.attribute.originatorid import OriginatorID
-#from exabgp.message.update.attribute.clusterlist  import ClusterList
+from exabgp.message.update.attribute.clusterlist  import ClusterList
 
 from exabgp.processes  import ProcessError
 
@@ -675,7 +675,8 @@ class Protocol (object):
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.CLUSTER_LIST:
-			logger.parser('----- skipping cluster-list')
+			logger.parser('parsing cluster-list')
+			self.attributes.add(ClusterList(data[:length]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.EXTENDED_COMMUNITY:

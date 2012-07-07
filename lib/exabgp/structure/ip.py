@@ -32,6 +32,35 @@ def to_Route (ip,mask):
 	network = socket.inet_pton(AFI.Family[afi],ip)
 	return Route(NLRI(afi,network,mask))
 
+
+class IPv4 (object):
+	def __init__ (self):
+		self._raw = '\x00\x00\x00\x00'
+		self._ip = '0.0.0.0'
+
+	def ip (self,ip):
+		self._ip = ip
+		self._raw = ''.join([chr(int(_)) for _ in pi.split('.')])
+
+	def raw (self,raw):
+		self._raw = raw
+		self._ip = '.'.join([str(ord(_)) for _ in raw])
+
+	def pack (self):
+		return self._raw
+
+	def __len__ (self):
+		return 4
+
+	def __str__ (self):
+		return self._ip
+
+	def __repr__ (self):
+		return self._ip
+
+	def __eq__ (self,other):
+		return self._raw == other._raw
+
 class Inet (object):
 	_UNICAST = SAFI(SAFI.unicast)
 	_MULTICAST = SAFI(SAFI.multicast)

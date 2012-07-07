@@ -32,6 +32,7 @@ from exabgp.message.update.attribute.med         import MED
 from exabgp.message.update.attribute.localpref   import LocalPreference
 from exabgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_RouteTargetCommunity_00,to_RouteTargetCommunity_01
 from exabgp.message.update.attribute.originatorid import OriginatorID
+from exabgp.message.update.attribute.clusterlist  import ClusterList
 
 from exabgp.log import Logger
 logger = Logger()
@@ -73,6 +74,7 @@ class Configuration (object):
 	'  community [ 65000 65001 65002 ];\n' \
 	'  extended-community [ target:1234:5.6.7.8 target:1.2.3.4:5678 origin:1234:5.6.7.8 origin:1.2.3.4:5678 0x0002FDE800000001 ]\n' \
 	'  originator-id 10.0.0.10;\n' \
+	'  cluster-list [ 10.10.0.1 10.10.0.2 ];\n' \
 	'  label [ 100 200 ];\n' \
 	'  hold-time 180;\n' \
 	'  add-path disabled|send|receive|send/receive;\n' \
@@ -89,6 +91,7 @@ class Configuration (object):
 	' local-preference 100' \
 	' community 65000' \
 	' originator-id 10.0.0.10' \
+	' cluster-list [ 10.10.0.1 10.10.0.2 ]' \
 	' label 150' \
 	' split /24' \
 	';\n' \
@@ -346,6 +349,7 @@ class Configuration (object):
 		if command == 'path-information': return self._route_path_information(scope,tokens[1:])
 		if command == 'community': return self._route_community(scope,tokens[1:])
 		if command == 'originator-id': return self._route_originator_id(scope,tokens[1:])
+		if command == 'cluster-list': return self._route_cluster_list(scope,tokens[1:])
 		if command == 'split': return self._route_split(scope,tokens[1:])
 		if command == 'label': return self._route_label(scope,tokens[1:])
 		if command == 'watchdog': return self._route_watchdog(scope,tokens[1:])
@@ -830,7 +834,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','as-sequence','med','local-preference','path-information','community','originator-id','extended-community','split','label','watchdog','withdrawn'])
+			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','as-sequence','med','local-preference','path-information','community','originator-id','cluster-list','extended-community','split','label','watchdog','withdrawn'])
 			if r is False: return False
 			if r is None: return self._split_last_route(scope)
 
@@ -894,6 +898,10 @@ class Configuration (object):
 				return False
 			if command == 'originator-id':
 				if self._route_originator_id(scope,tokens):
+					continue
+				return False
+			if command == 'cluster-list':
+				if self._route_cluster_list(scope,tokens):
 					continue
 				return False
 			if command == 'extended-community':
@@ -1038,6 +1046,33 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
+
+	def _route_cluster_list (self,scope,tokens):
+		_list = ''
+		clusterid = tokens.pop(0)
+		try:
+			if clusterid == '[':
+				while True:
+					try:
+						clusterid = tokens.pop(0)
+					except IndexError:
+						self._error = self._str_route_error
+						if self.debug: raise
+						return False
+					if clusterid == ']':
+						break
+					_list += ''.join([chr(int(_)) for _ in clusterid.split('.')])
+			else:
+				_list = ''.join([chr(int(_)) for _ in clusterid.split('.')])
+			if not _list:
+				raise ValueError('no cluster-id in the cluster-list')
+			clusterlist = ClusterList(_list)
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+		scope[-1]['routes'][-1].attributes.add(clusterlist)
+		return True
 
 	def _route_community (self,scope,tokens):
 		communities = Communities()

@@ -38,6 +38,8 @@ Version 3.0.0 - -- of June 2012 (experimental version)
  * Improvement: support RFC 3765 (NOPEER community)
  * Improvement: support for draft-ietf-idr-add-paths-07 (even IPv6 even if it is not supported by anyone)
     requested by: Rishabh Goel (Thank you for giving me a BGP session to an XR)
+ * Improvement: support for RFC 4456 (BGP Route Reflection: An Alternative to Full Mesh Internal BGP (IBGP))
+    more exactly the generation and parsing of originator-id and cluster-list attributes
 
 Version 2.0.8 - 31 of March 2012 (stable version)
  * Fix: the update grouping could cause message up to "header size" bigger than allowed.
