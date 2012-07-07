@@ -18,3 +18,4 @@ LATER
 - prevent originator-id and cluster-list on EBGP session ?
 - unify all classes which are IPv4 like to use the IPv4 class
 - use the same logic/api in configuration for aspath that has been used for clusterlist
+- handle correctly the death of helper processes

@@ -116,7 +116,9 @@ class Supervisor (object):
 										self.processes.write(name,'neighbor %s %s\n' % (str(key),route))
 							except ProcessError:
 								# Can not find any better error code that 6,0 !
-								raise Notify(6,0,'ExaBGP Internal error, sorry.')
+								logger.warning("Problem sending message to helper program - shutting down",'supervisor')
+								# XXX: Not a graceful handling of error
+								self._shutdown = True
 						# otherwise process as many routes as we can within a second for the remaining peers
 						duration = time.time() - start
 						# RFC state that we MUST not more than one KEEPALIVE / sec
