@@ -36,33 +36,34 @@ class Update (Message):
 		self.safi = routes[0].nlri.safi
 
 	# The routes MUST have the same attributes ...
-	def announce (self,asn4,local_asn,remote_asn):
+	def announce (self,asn4,local_asn,remote_asn,with_path_info):
 		if self.afi == AFI.ipv4 and self.safi in [SAFI.unicast, SAFI.multicast]:
-			nlri = ''.join([route.nlri.pack() for route in self.routes])
+			nlri = ''.join([route.nlri.pack(with_path_info) for route in self.routes])
 			mp = ''
 		else:
 			nlri = ''
-			mp = MPRNLRI(self.routes).pack()
+			mp = MPRNLRI(self.routes).pack(with_path_info)
 		attr = self.routes[0].attributes.bgp_announce(asn4,local_asn,remote_asn)
 		return self._message(prefix('') + prefix(attr + mp) + nlri)
 
-	def update (self,asn4,local_asn,remote_asn):
+	def update (self,asn4,local_asn,remote_asn,with_path_info):
 		if self.afi == AFI.ipv4 and self.safi in [SAFI.unicast, SAFI.multicast]:
-			nlri = ''.join([route.nlri.pack() for route in self.routes])
+			nlri = ''.join([route.nlri.pack(with_path_info) for route in self.routes])
 			mp = ''
 		else:
 			nlri = ''
-			mp = MPURNLRI(self.routes).pack() + MPRNLRI(self.routes).pack()
+			mp = MPURNLRI(self.routes).pack(with_path_info) + MPRNLRI(self.routes).pack()
 		attr = self.routes[0].attributes.bgp_announce(asn4,local_asn,remote_asn)
 		return self._message(prefix(nlri) + prefix(attr + mp) + nlri)
 
-	def withdraw (self,asn4=False,local_asn=None,remote_asn=None):
+	# XXX: Remove those default values ? - most likely good.
+	def withdraw (self,asn4=False,local_asn=None,remote_asn=None,with_path_info=None):
 		if self.afi == AFI.ipv4 and self.safi in [SAFI.unicast, SAFI.multicast]:
-			nlri = ''.join([route.nlri.pack() for route in self.routes])
+			nlri = ''.join([route.nlri.pack(with_path_info) for route in self.routes])
 			mp = ''
 			attr = ''
 		else:
 			nlri = ''
-			mp = MPURNLRI(self.routes).pack()
+			mp = MPURNLRI(self.routes).pack(with_path_info)
 			attr = self.routes[0].attributes.bgp_announce(asn4,local_asn,remote_asn)
 		return self._message(prefix(nlri) + prefix(attr + mp))

@@ -178,11 +178,11 @@ class UsePath (object):
 		union.extend([k for k in receive.keys() if k not in send.keys()])
 
 		for k in union:
-			self._send[k] = bool(receive[k] & self.ANNOUNCE and send[k] & self.ACCEPT)
+			self._send[k] = bool(receive.get(k,self.REFUSE) & self.ANNOUNCE and send.get(k,self.REFUSE) & self.ACCEPT)
 			self._receive[k] = bool(receive.get(k,self.REFUSE) & self.ACCEPT and send.get(k,self.REFUSE) & self.ANNOUNCE)
 
 	def send (self,afi,safi):
-		return self._sendget((afi,safi),False)
+		return self._send.get((afi,safi),False)
 
 	def receive (self,afi,safi):
 		return self._receive.get((afi,safi),False)

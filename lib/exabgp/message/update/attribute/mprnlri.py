@@ -20,13 +20,13 @@ class MPRNLRI (Attribute):
 		# all the routes must have the same next-hop
 		self.routes = routes
 
-	def pack (self):
+	def pack (self,with_path_info):
 		next_hop = ''
 		# EOR do not have any next_hop
 		if self.routes[0].attributes.has(AttributeID.NEXT_HOP):
 			# we do not want a next_hop attribute packed (with the _attribute()) but just the next_hop itself
 			next_hop = self.routes[0].attributes[AttributeID.NEXT_HOP].next_hop.pack()
-		routes = ''.join([route.nlri.pack() for route in self.routes])
+		routes = ''.join([route.nlri.pack(with_path_info) for route in self.routes])
 
 		return self._attribute(
 			self.routes[0].nlri.afi.pack() + self.routes[0].nlri.safi.pack() +

@@ -16,7 +16,7 @@ class Empty (Address):
 	def __init__ (self,afi,safi):
 		Address.__init__(self,AFI(afi),SAFI(safi))
 
-	def pack (self):
+	def pack (self,ignore_path_info_encoding=True):
 		return ''
 	def __len__ (self):
 		return 0

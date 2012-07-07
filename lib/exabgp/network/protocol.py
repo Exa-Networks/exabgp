@@ -348,7 +348,7 @@ class Protocol (object):
 			yield answer
 		# XXX: This should really be calculated once only
 		asn4 = not not self.peer.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
-		for answer in self._announce('UPDATE',self._delta.announce(asn4,self.neighbor.local_as,self.neighbor.peer_as)):
+		for answer in self._announce('UPDATE',self._delta.announce(asn4,self.neighbor.local_as,self.neighbor.peer_as,self.use_path)):
 			yield answer
 
 	def new_update (self):
@@ -356,7 +356,7 @@ class Protocol (object):
 			yield answer
 		# XXX: This should really be calculated once only
 		asn4 = not not self.peer.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
-		for answer in self._announce('UPDATE',self._delta.update(asn4,self.neighbor.local_as,self.neighbor.peer_as)):
+		for answer in self._announce('UPDATE',self._delta.update(asn4,self.neighbor.local_as,self.neighbor.peer_as,self.use_path)):
 			yield answer
 
 	def new_eors (self,families):

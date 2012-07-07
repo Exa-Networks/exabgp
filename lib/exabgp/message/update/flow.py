@@ -63,7 +63,7 @@ class IPrefix (IComponent):
 		self.nlri = Prefix(AFI.ipv4,ipv4,netmask)
 
 	def pack (self):
-		raw = self.nlri.pack()
+		raw = self.nlri.pack(with_path_info=False)
 		return "%s%s" % (chr(self.ID),raw)
 
 	def __str__ (self):

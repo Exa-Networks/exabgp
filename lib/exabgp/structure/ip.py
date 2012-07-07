@@ -137,8 +137,10 @@ class NLRI (_Prefix):
 			return "%s path-information %s" % (_Prefix.__str__(self),socket.inet_ntoa(self.path_info))
 		return _Prefix.__str__(self)
 
-	def pack (self):
-		return self.path_info + _Prefix.pack(self)
+	def pack (self,with_path_info):
+		if with_path_info:
+			return self.path_info + _Prefix.pack(self)
+		return _Prefix.pack(self)
 
 	def add_path (self,value):
 		self.path_info = ''.join([chr((value>>offset) & 0xff) for offset in [24,16,8,0]])
