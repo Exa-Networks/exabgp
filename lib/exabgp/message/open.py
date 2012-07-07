@@ -156,6 +156,7 @@ class AddPath (dict):
 		return rs
 
 class UsePath (object):
+	REFUSE = 0
 	ACCEPT = 1
 	ANNOUNCE = 2
 	
@@ -178,7 +179,7 @@ class UsePath (object):
 
 		for k in union:
 			self._send[k] = bool(receive[k] & self.ANNOUNCE and send[k] & self.ACCEPT)
-			self._receive[k] = bool(receive[k] & self.ACCEPT and send[k] & self.ANNOUNCE)
+			self._receive[k] = bool(receive.get(k,self.REFUSE) & self.ACCEPT and send.get(k,self.REFUSE) & self.ANNOUNCE)
 
 	def send (self,afi,safi):
 		return self._sendget((afi,safi),False)
@@ -327,6 +328,7 @@ class Capabilities (dict):
 		if neighbor.add_path:
 			ap_families = []
 			ap_families.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
+			ap_families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
 			self[Capabilities.ADD_PATH] = AddPath(ap_families,neighbor.add_path)
 
 		if graceful:
