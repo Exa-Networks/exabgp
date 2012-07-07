@@ -150,7 +150,7 @@ class Attributes (dict):
 		local_pref = ''
 		if self.has(AttributeID.LOCAL_PREF):
 			l = self[AttributeID.LOCAL_PREF]
-			local_pref = ' local_preference %s' % l
+			local_pref = ' local-preference %s' % l
 
 		med = ''
 		if self.has(AttributeID.MED):
