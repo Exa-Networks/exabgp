@@ -18,14 +18,17 @@ class AttributeID (int):
 	AGGREGATOR         = 0x07
 	# RFC 1997
 	COMMUNITY          = 0x08
-	# RFC 4360
-	EXTENDED_COMMUNITY = 0x10
-	# RFC 4893
-	AS4_PATH           = 0x11
-	AS4_AGGREGATOR     = 0x12
+	# RFC 4456
+	ORIGINATOR_ID      = 0x09
+	CLUSTER_LIST       = 0x0A # 10
 	# RFC 4760
-	MP_REACH_NLRI      = 0x0e # 14
-	MP_UNREACH_NLRI    = 0x0f # 15
+	MP_REACH_NLRI      = 0x0E # 14
+	MP_UNREACH_NLRI    = 0x0F # 15
+	# RFC 4360
+	EXTENDED_COMMUNITY = 0x10 # 16
+	# RFC 4893
+	AS4_PATH           = 0x11 # 17
+	AS4_AGGREGATOR     = 0x12 # 18
 
 	INTERNAL_WITHDRAWN = 0xFFFD
 	INTERNAL_WATCHDOG  = 0xFFFE
@@ -41,6 +44,8 @@ class AttributeID (int):
 		if self == 0x06: return "ATOMIC_AGGREGATE"
 		if self == 0x07: return "AGGREGATOR"
 		if self == 0x08: return "COMMUNITY"
+		if self == 0x09: return "ORIGINATOR_ID"
+		if self == 0x0A: return "CLUSTER_LIST"
 		if self == 0x10: return "EXTENDED_COMMUNITY"
 		if self == 0x11: return "AS4_PATH"
 		if self == 0x0e: return "MP_REACH_NLRI"

@@ -31,6 +31,7 @@ from exabgp.message.update.attribute.aspath      import ASPath
 from exabgp.message.update.attribute.med         import MED
 from exabgp.message.update.attribute.localpref   import LocalPreference
 from exabgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_RouteTargetCommunity_00,to_RouteTargetCommunity_01
+from exabgp.message.update.attribute.originatorid import OriginatorID
 
 from exabgp.log import Logger
 logger = Logger()
@@ -71,6 +72,7 @@ class Configuration (object):
 	'  local-preference 100;\n' \
 	'  community [ 65000 65001 65002 ];\n' \
 	'  extended-community [ target:1234:5.6.7.8 target:1.2.3.4:5678 origin:1234:5.6.7.8 origin:1.2.3.4:5678 0x0002FDE800000001 ]\n' \
+	'  originator-id 10.0.0.10;\n' \
 	'  label [ 100 200 ];\n' \
 	'  hold-time 180;\n' \
 	'  add-path disabled|send|receive|send/receive;\n' \
@@ -86,6 +88,7 @@ class Configuration (object):
 	' med 100' \
 	' local-preference 100' \
 	' community 65000' \
+	' originator-id 10.0.0.10' \
 	' label 150' \
 	' split /24' \
 	';\n' \
@@ -342,6 +345,7 @@ class Configuration (object):
 		if command == 'local-preference': return self._route_local_preference(scope,tokens[1:])
 		if command == 'path-information': return self._route_path_information(scope,tokens[1:])
 		if command == 'community': return self._route_community(scope,tokens[1:])
+		if command == 'originator-id': return self._route_originator_id(scope,tokens[1:])
 		if command == 'split': return self._route_split(scope,tokens[1:])
 		if command == 'label': return self._route_label(scope,tokens[1:])
 		if command == 'watchdog': return self._route_watchdog(scope,tokens[1:])
@@ -826,7 +830,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','as-sequence','med','local-preference','path-information','community','extended-community','split','label','watchdog','withdrawn'])
+			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','as-sequence','med','local-preference','path-information','community','originator-id','extended-community','split','label','watchdog','withdrawn'])
 			if r is False: return False
 			if r is None: return self._split_last_route(scope)
 
@@ -886,6 +890,10 @@ class Configuration (object):
 				return False
 			if command == 'community':
 				if self._route_community(scope,tokens):
+					continue
+				return False
+			if command == 'originator-id':
+				if self._route_originator_id(scope,tokens):
 					continue
 				return False
 			if command == 'extended-community':
@@ -1021,6 +1029,15 @@ class Configuration (object):
 			if value >= pow(2,32):
 				raise ValueError('invalid community %s (too large)' % data)
 			return Community(value)
+
+	def _route_originator_id (self,scope,tokens):
+		try:
+			scope[-1]['routes'][-1].attributes.add(OriginatorID(to_IP(tokens.pop(0))))
+			return True
+		except:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
 
 	def _route_community (self,scope,tokens):
 		communities = Communities()

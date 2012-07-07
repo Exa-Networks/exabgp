@@ -39,6 +39,9 @@ from exabgp.message.update.attribute.localpref   import LocalPreference
 from exabgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities
 #from exabgp.message.update.attribute.mprnlri     import MPRNLRI
 #from exabgp.message.update.attribute.mpurnlri    import MPURNLRI
+from exabgp.message.update.attribute.originatorid import OriginatorID
+#from exabgp.message.update.attribute.clusterlist  import ClusterList
+
 from exabgp.processes  import ProcessError
 
 from exabgp.log import Logger
@@ -664,6 +667,15 @@ class Protocol (object):
 		if code == AttributeID.COMMUNITY:
 			logger.parser('parsing communities')
 			self.attributes.add(self.__new_communities(data[:length]))
+			return self._AttributesFactory(data[length:])
+
+		if code == AttributeID.ORIGINATOR_ID:
+			logger.parser('parsing originator-id')
+			self.attributes.add(OriginatorID(Inet(AFI.ipv4,data[:4])))
+			return self._AttributesFactory(data[length:])
+
+		if code == AttributeID.CLUSTER_LIST:
+			logger.parser('----- skipping cluster-list')
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.EXTENDED_COMMUNITY:
