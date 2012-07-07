@@ -744,6 +744,6 @@ class Protocol (object):
 				self.mp_routes.append(route)
 			return self._AttributesFactory(next_attributes)
 
-		logger.parser("ignoring attributes of type %s %s" % (str(code),[hex(ord(_)) for _ in data]))
+		logger.parser("ignoring attributes of type %s %s" % (str(code).lower(),[hex(ord(_)) for _ in data]))
 		return self._AttributesFactory(data[length:])
 

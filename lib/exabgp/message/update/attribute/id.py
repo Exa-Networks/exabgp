@@ -46,6 +46,6 @@ class AttributeID (int):
 		if self == 0x0e: return "MP_REACH_NLRI"
 		if self == 0x0f: return "MP_UNREACH_NLRI"
 		if self == 0xffff: return "INTERNAL SPLIT"
-		return 'UNKNOWN ATTRIBUTE (%s)' % hex(self)
+		return 'UNKNOWN (%s)' % hex(self)
 
 
