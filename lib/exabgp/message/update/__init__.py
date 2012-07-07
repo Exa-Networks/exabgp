@@ -34,12 +34,10 @@ class Update (Message):
 		self.routes = routes
 		self.afi = routes[0].nlri.afi
 		self.safi = routes[0].nlri.safi
-		#self.encode_path = routes[0].encode_path
-		self.encode_path = False
 
 	# The routes MUST have the same attributes ...
 	def announce (self,asn4,local_asn,remote_asn):
-		if self.encode_path and self.afi == AFI.ipv4 and self.safi in [SAFI.unicast, SAFI.multicast]:
+		if self.afi == AFI.ipv4 and self.safi in [SAFI.unicast, SAFI.multicast]:
 			nlri = ''.join([route.nlri.pack() for route in self.routes])
 			mp = ''
 		else:
@@ -49,12 +47,12 @@ class Update (Message):
 		return self._message(prefix('') + prefix(attr + mp) + nlri)
 
 	def update (self,asn4,local_asn,remote_asn):
-		if self.encode_path and self.afi == AFI.ipv4 and self.safi in [SAFI.unicast, SAFI.multicast]:
+		if self.afi == AFI.ipv4 and self.safi in [SAFI.unicast, SAFI.multicast]:
 			nlri = ''.join([route.nlri.pack() for route in self.routes])
 			mp = ''
 		else:
 			nlri = ''
-			mp = MPURNLRI(self.routes,self.encode_path).pack() + MPRNLRI(self.routes,self.encode_path).pack()
+			mp = MPURNLRI(self.routes).pack() + MPRNLRI(self.routes).pack()
 		attr = self.routes[0].attributes.bgp_announce(asn4,local_asn,remote_asn)
 		return self._message(prefix(nlri) + prefix(attr + mp) + nlri)
 
@@ -65,6 +63,6 @@ class Update (Message):
 			attr = ''
 		else:
 			nlri = ''
-			mp = MPURNLRI(self.routes,self.encode_path).pack()
+			mp = MPURNLRI(self.routes).pack()
 			attr = self.routes[0].attributes.bgp_announce(asn4,local_asn,remote_asn)
 		return self._message(prefix(nlri) + prefix(attr + mp))
