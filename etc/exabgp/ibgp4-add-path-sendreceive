@@ -1,0 +1,28 @@
+neighbor 82.219.119.133 {
+	description "addpath route sending";
+	router-id 82.219.212.34;
+	local-address 82.219.212.34;
+	local-as 30636;
+	peer-as 30636;
+	hold-time 180;
+	add-path send/receive;
+
+	process parsed-route-backend {
+		parse-routes;
+		peer-updates;
+		run etc/exabgp/processes/syslog-1.py;
+	}
+
+	static {
+		route 82.219.0.0/16 {
+			# 17 34 51 68 -> 0x11 0x22 0x33 0x44 
+      path-information 17.34.51.68;
+			next-hop 127.0.0.1;
+			origin igp;
+			as-sequence [ 30740 30740 30740 30740 30740 30740 30740 ];
+			local-preference 1;
+			med 2000;
+			community [ no-export ];
+		}
+	}
+}

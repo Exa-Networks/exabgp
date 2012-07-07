@@ -1,0 +1,18 @@
+neighbor 82.219.119.133 {
+	description "addpath route reception";
+	router-id 82.219.212.34;
+	local-address 82.219.212.34;
+	local-as 30636;
+	peer-as 30636;
+	hold-time 180;
+	add-path receive;
+
+	process parsed-route-backend {
+		parse-routes;
+    peer-updates;
+		run etc/exabgp/processes/syslog-1.py;
+	}
+
+	static {
+	}
+}
