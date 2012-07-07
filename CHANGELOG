@@ -29,6 +29,8 @@ Version 3.0.0 - -- of June 2012 (experimental version)
     reported by Tim Gebbett
  * Fix: bad counting of routes parsed (not resetting in some case)
  * Fix: badly printed local-preference when generating route representation
+ * Fix: bug when trying to daemonise ExaBGP, caused by unclosed FD
+    reported by Ryan Lane (with a patch, thank you)
  * Improvement: hidden option to change BGP select timeout (use at your own risk - do not ask me where it is - it is hidden)
  * Improvement: announce EOR even if Graceful-Restart was not negociated but only MultiProtocol
  * Improvement: implementation of draft-ietf-idr-bgp-multisession-06

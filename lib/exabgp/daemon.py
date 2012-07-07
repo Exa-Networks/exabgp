@@ -11,6 +11,7 @@ import sys
 import pwd
 import errno
 import socket
+import resource
 
 from exabgp.environment import load
 
@@ -126,7 +127,23 @@ class Daemon (object):
 				logger.supervisor('Can not fork, errno %d : %s' % (e.errno,e.strerror),'critical')
 
 		# do not detach if we are already supervised or run by init like process
-		if not self._is_socket(sys.__stdin__.fileno()) and os.getppid() != 1:
-			fork_exit()
-			os.setsid()
-			fork_exit()
+		if self._is_socket(sys.__stdin__.fileno()) or os.getppid() == 1:
+			return
+
+		fork_exit()
+		os.setsid()
+		fork_exit()
+		self.silence()
+
+	def silence (self):
+		maxfd = resource.getrlimit(resource.RLIMIT_NOFILE)[1]
+		if (maxfd == resource.RLIM_INFINITY):
+			maxfd = MAXFD
+		for fd in range(0, maxfd):
+			try:
+				os.close(fd)
+			except OSError:
+				pass
+		os.open("/dev/null", os.O_RDWR)
+		os.dup2(0, 1)
+		os.dup2(0, 2)
