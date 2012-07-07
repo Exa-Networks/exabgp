@@ -13,6 +13,7 @@ from struct import pack
 from exabgp.environment import load
 
 from exabgp.structure.address import AFI,SAFI
+from exabgp.structure.ip import IPv4
 from exabgp.structure.asn  import ASN
 from exabgp.message import Message
 
@@ -56,31 +57,10 @@ class HoldTime (int):
 
 # =================================================================== RouterID
 
-class RouterID (object):
-	def __init__ (self,ip):
-		self.ip = ip
-		try:
-			self.raw = socket.inet_pton(socket.AF_INET,ip)
-		except socket.error:
-			raise ValueError('invalid IP address %s' % str(ip))
-
-	def afi (self):
-		return AFI.ipv4
-
-	def __len__ (self):
-		return 4
-
-	def pack (self):
-		return self.raw
-
-	def __str__ (self):
-		return self.ip
-
-	def __repr__ (self):
-		return str(self)
-
-	def __eq__ (self,other):
-		return self.ip == other.ip
+class RouterID (IPv4):
+	def __init__ (self,ipv4):
+		IPv4.__init__(self)
+		self.ipv4(ipv4)
 
 # =================================================================== Graceful (Restart)
 # RFC 4727

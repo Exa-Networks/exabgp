@@ -35,31 +35,33 @@ def to_Route (ip,mask):
 
 class IPv4 (object):
 	def __init__ (self):
-		self._raw = '\x00\x00\x00\x00'
-		self._ip = '0.0.0.0'
+		self.raw = '\x00\x00\x00\x00'
+		self.ip = '0.0.0.0'
 
-	def ip (self,ip):
-		self._ip = ip
-		self._raw = ''.join([chr(int(_)) for _ in pi.split('.')])
+	def ipv4 (self,ipv4):
+		self.ip = ipv4
+		self.raw = ''.join([chr(int(_)) for _ in ipv4.split('.')])
+		return self
 
 	def raw (self,raw):
-		self._raw = raw
-		self._ip = '.'.join([str(ord(_)) for _ in raw])
+		self.raw = raw
+		self.ip = '.'.join([str(ord(_)) for _ in raw])
+		return self
 
 	def pack (self):
-		return self._raw
+		return self.raw
 
 	def __len__ (self):
 		return 4
 
 	def __str__ (self):
-		return self._ip
+		return self.ip
 
 	def __repr__ (self):
-		return self._ip
+		return self.ip
 
 	def __eq__ (self,other):
-		return self._raw == other._raw
+		return self.raw == other.raw
 
 class Inet (object):
 	_UNICAST = SAFI(SAFI.unicast)
