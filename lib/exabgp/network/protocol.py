@@ -672,7 +672,7 @@ class Protocol (object):
 
 		if code == AttributeID.ORIGINATOR_ID:
 			logger.parser('parsing originator-id')
-			self.attributes.add(OriginatorID(Inet(AFI.ipv4,data[:4])))
+			self.attributes.add(OriginatorID(AFI.ipv4,data[:4]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.CLUSTER_LIST:

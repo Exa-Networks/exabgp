@@ -33,7 +33,7 @@ from exabgp.message.update.attribute.aspath      import ASPath
 from exabgp.message.update.attribute.med         import MED
 from exabgp.message.update.attribute.localpref   import LocalPreference
 from exabgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_RouteTargetCommunity_00,to_RouteTargetCommunity_01
-from exabgp.message.update.attribute.originatorid import OriginatorID
+from exabgp.message.update.attribute.originatorid import OriginatorIDIP
 from exabgp.message.update.attribute.clusterlist  import ClusterList
 
 from exabgp.log import Logger
@@ -1039,7 +1039,7 @@ class Configuration (object):
 
 	def _route_originator_id (self,scope,tokens):
 		try:
-			scope[-1]['routes'][-1].attributes.add(OriginatorID(InetIP(tokens.pop(0))))
+			scope[-1]['routes'][-1].attributes.add(OriginatorIDIP(tokens.pop(0)))
 			return True
 		except:
 			self._error = self._str_route_error
