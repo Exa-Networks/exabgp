@@ -6,11 +6,9 @@ Created by Thomas Mangin on 2010-01-16.
 Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 """
 
-import socket
-
 from exabgp.structure.address import AFI,SAFI
 from exabgp.structure.address import Address
-from exabgp.structure.ip import detect_afi
+from exabgp.structure.ip import afi_packed
 from exabgp.structure.nlri import NLRI
 from exabgp.message.update.attributes import Attributes
 
@@ -45,7 +43,6 @@ class RouteBGP (Route):
 
 
 def RouteIP (ip,mask):
-	afi = detect_afi(ip)
-	network = socket.inet_pton(AFI.Family[afi],ip)
-	return Route(NLRI(afi,network,mask))
+	afi,packed = afi_packed(ip)
+	return Route(NLRI(afi,packed,mask))
 

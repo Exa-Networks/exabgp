@@ -15,10 +15,14 @@ mask_to_bytes = {}
 for netmask in range(0,129):
 	mask_to_bytes[netmask] = int(math.ceil(float(netmask)/8))
 
-def detect_afi(ip):
+def _detect_afi(ip):
 	if ip.count(':'):
 		return AFI.ipv6
 	return AFI.ipv4
+
+def afi_packed (ip):
+	afi = _detect_afi(ip)
+	return afi,socket.inet_pton(Inet._af[afi],ip)
 
 class IPv4 (object):
 	def __init__ (self):
@@ -111,10 +115,7 @@ class Inet (object):
 		return self.raw == other.raw and self.safi == other.safi
 
 def InetIP (ip):
-	afi = detect_afi(ip)
-	af = Inet._af[afi]
-	network = socket.inet_pton(af,ip)
-	return Inet(afi,network)
+	return Inet(*afi_packed(ip))
 
 
 class BGPPrefix (Inet):
