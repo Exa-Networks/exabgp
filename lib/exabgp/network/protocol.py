@@ -17,7 +17,7 @@ from exabgp.rib.delta import Delta
 
 from exabgp.utils                import hexa
 from exabgp.structure.address    import AFI,SAFI
-from exabgp.structure.ip         import Inet,to_IP
+from exabgp.structure.ip         import Inet,InetIP
 from exabgp.structure.nlri       import BGPNLRI
 from exabgp.structure.route      import RouteBGP
 from exabgp.structure.asn        import ASN,AS_TRANS
@@ -754,7 +754,7 @@ class Protocol (object):
 				route = RouteBGP(BGPNLRI(afi,data,path_info),'announce')
 				data = data[len(route.nlri):]
 				route.attributes = self.attributes
-				route.attributes.add(NextHop(to_IP(nh)))
+				route.attributes.add(NextHop(InetIP(nh)))
 				self.mp_routes.append(route)
 			return self._AttributesFactory(next_attributes)
 

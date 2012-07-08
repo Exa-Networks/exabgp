@@ -13,7 +13,7 @@ from copy import deepcopy
 
 from exabgp.environment import load
 
-from exabgp.structure.ip         import to_IP
+from exabgp.structure.ip         import InetIP
 from exabgp.structure.nlri       import PathInfo
 from exabgp.structure.route      import RouteIP
 from exabgp.structure.asn        import ASN
@@ -573,7 +573,7 @@ class Configuration (object):
 		address = tokens[0]
 		scope.append({})
 		try:
-			scope[-1]['peer-address'] = to_IP(address)
+			scope[-1]['peer-address'] = InetIP(address)
 		except:
 			self._error = '"%s" is not a valid IP address' % address
 			if self.debug: raise
@@ -623,7 +623,7 @@ class Configuration (object):
 
 	def _set_ip (self,scope,command,value):
 		try:
-			ip = to_IP(value[0])
+			ip = InetIP(value[0])
 		except (IndexError,ValueError):
 			self._error = '"%s" is an invalid IP address' % ' '.join(value)
 			if self.debug: raise
@@ -929,7 +929,7 @@ class Configuration (object):
 
 	def _route_next_hop (self,scope,tokens):
 		try:
-			scope[-1]['routes'][-1].attributes.add(NextHop(to_IP(tokens.pop(0))))
+			scope[-1]['routes'][-1].attributes.add(NextHop(InetIP(tokens.pop(0))))
 			return True
 		except:
 			self._error = self._str_route_error
@@ -1039,7 +1039,7 @@ class Configuration (object):
 
 	def _route_originator_id (self,scope,tokens):
 		try:
-			scope[-1]['routes'][-1].attributes.add(OriginatorID(to_IP(tokens.pop(0))))
+			scope[-1]['routes'][-1].attributes.add(OriginatorID(InetIP(tokens.pop(0))))
 			return True
 		except:
 			self._error = self._str_route_error

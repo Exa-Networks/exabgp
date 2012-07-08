@@ -20,12 +20,6 @@ def detect_afi(ip):
 		return AFI.ipv6
 	return AFI.ipv4
 
-def to_IP (ip):
-	afi = detect_afi(ip)
-	af = Inet._af[afi]
-	network = socket.inet_pton(af,ip)
-	return Inet(afi,network)
-
 class IPv4 (object):
 	def __init__ (self):
 		self.raw = '\x00\x00\x00\x00'
@@ -115,6 +109,13 @@ class Inet (object):
 
 	def __eq__ (self,other):
 		return self.raw == other.raw and self.safi == other.safi
+
+def InetIP (ip):
+	afi = detect_afi(ip)
+	af = Inet._af[afi]
+	network = socket.inet_pton(af,ip)
+	return Inet(afi,network)
+
 
 class BGPPrefix (Inet):
 	# have a .raw for the ip

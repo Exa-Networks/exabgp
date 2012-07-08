@@ -41,8 +41,8 @@ class TestProtocol (unittest.TestCase):
 		self.neighbor = Neighbor()
 		self.neighbor.local_as = ASN(65000)
 		self.neighbor.peer_as = ASN(65000)
-		self.neighbor.peer_address = to_IP('1.2.3.4')
-		self.neighbor.local_address = to_IP('5.6.7.8')
+		self.neighbor.peer_address = InetIP('1.2.3.4')
+		self.neighbor.local_address = InetIP('5.6.7.8')
 
 	def test_1_selfparse_open (self):
 		ds = Open(4,65000,'1.2.3.4',Capabilities().default(),30)

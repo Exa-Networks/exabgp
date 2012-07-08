@@ -229,7 +229,7 @@ def to_RouteTargetCommunity_01 (ipn,number):
 #	return ECommunity(r + chr(subtype) + pack('!H',asn) + ''.join([chr(c) for c in data[:4]]))
 #
 #import socket
-#def to_IPv4Community (subtype,data,transitive):
+#def toIPv4Community (subtype,data,transitive):
 #	r = chr(0x01)
 #	if transitive: r += chr(0x40)
 #	return ECommunity(r + chr(subtype) + socket.inet_pton(socket.AF_INET,ipv4) + ''.join([chr(c) for c in data[:2]]))
