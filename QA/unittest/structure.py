@@ -48,7 +48,7 @@ class TestData (unittest.TestCase):
 		bnt = chr(24) + chr (192) + chr(0) + chr(2)
 
 		pfx = Prefix(AFI.ipv4,ip,24)
-		bgp = BGPPrefix(AFI.ipv4,bnt)
+		bgp = BGPNLRI(AFI.ipv4,bnt)
 
 		self.assertEqual(str(pfx),"%s/24" % ip)
 		self.assertEqual(str(afi),"%s/24" % ip)

@@ -10,28 +10,21 @@ import math
 import socket
 
 from exabgp.structure.address import AFI,SAFI
-from exabgp.message.update.route import Route
 
-_bgp = {}
+mask_to_bytes = {}
 for netmask in range(0,129):
-	_bgp[netmask] = int(math.ceil(float(netmask)/8))
+	mask_to_bytes[netmask] = int(math.ceil(float(netmask)/8))
 
-def _detect_afi(ip):
+def detect_afi(ip):
 	if ip.count(':'):
 		return AFI.ipv6
 	return AFI.ipv4
 
 def to_IP (ip):
-	afi = _detect_afi(ip)
+	afi = detect_afi(ip)
 	af = Inet._af[afi]
 	network = socket.inet_pton(af,ip)
 	return Inet(afi,network)
-
-def to_Route (ip,mask):
-	afi = _detect_afi(ip)
-	network = socket.inet_pton(AFI.Family[afi],ip)
-	return Route(NLRI(afi,network,mask))
-
 
 class IPv4 (object):
 	def __init__ (self):
@@ -80,7 +73,7 @@ class Inet (object):
 		socket.AF_INET6: AFI.ipv6,
 	}
 
-	_length = {
+	length = {
 		AFI.ipv4:  4,
 		AFI.ipv6: 16,
 	}
@@ -123,7 +116,7 @@ class Inet (object):
 	def __eq__ (self,other):
 		return self.raw == other.raw and self.safi == other.safi
 
-class _Prefix (Inet):
+class BGPPrefix (Inet):
 	# have a .raw for the ip
 	# have a .mask for the mask
 	# have a .bgp with the bgp wire format of the prefix
@@ -139,68 +132,7 @@ class _Prefix (Inet):
 		return str(self)
 
 	def pack (self):
-		return chr(self.mask) + self.raw[:_bgp[self.mask]]
+		return chr(self.mask) + self.raw[:mask_to_bytes[self.mask]]
 
 	def __len__ (self):
-		return _bgp[self.mask] + 1
-
-class Prefix (_Prefix):
-	"""Store an IP (in the network format), its netmask and the bgp format of the IP"""
-	def __init__ (self,afi,ip,mask):
-		af = self._af[afi]
-		network = socket.inet_pton(af,ip)
-		Prefix.__init__(self,afi,network,mask,path_info)
-
-class PathInfo (object):
-	def __init__ (self,integer=None,ip=None,raw=None):
-		if raw:
-			self.value = raw
-		elif ip:
-			self.value = ''.join([chr(int(_)) for _ in ip.split('.')])
-		elif integer:
-			self.value = ''.join([chr((path_info>>offset) & 0xff) for offset in [24,16,8,0]])
-		else:
-			self.value = ''
-		#sum(int(a)<<offset for (a,offset) in zip(ip.split('.'), range(24, -8, -8)))
-
-	def __len__ (self):
-		return 4
-
-	def __str__ (self):
-		if self.value:
-			return " path-information %s" % socket.inet_ntoa(self.value)
-		return ''
-
-	def pack (self):
-		return self.value
-
-_NoPathInfo = PathInfo(ip=0)
-
-class NLRI (_Prefix):
-	def __init__(self,af,ip,mask):
-		self.path_info = _NoPathInfo
-		_Prefix.__init__(self,af,ip,mask)
-
-	def __len__ (self):
-		return len(self.path_info) + _Prefix.__len__(self)
-
-	def __str__ (self):
-		return "%s%s" % (_Prefix.__str__(self),str(self.path_info))
-
-	def pack (self,with_path_info):
-		if with_path_info:
-			return self.path_info.pack() + _Prefix.pack(self)
-		return _Prefix.pack(self)
-
-
-class BGPPrefix (NLRI):
-	"""From the BGP prefix wire format, Store an IP (in the network format), its netmask and the bgp format"""
-	def __init__ (self,afi,bgp,has_multiple_path):
-		if has_multiple_path:
-			pi = bgp[:4]
-			bgp = bgp[4:]
-		else:
-			pi = ''
-		end = _bgp[ord(bgp[0])]
-		NLRI.__init__(self,afi,bgp[1:end+1] + '\0'*(self._length[afi]-end),ord(bgp[0]))
-		self.path_info = PathInfo(raw=pi)
+		return mask_to_bytes[self.mask] + 1

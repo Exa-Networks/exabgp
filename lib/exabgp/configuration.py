@@ -13,7 +13,9 @@ from copy import deepcopy
 
 from exabgp.environment import load
 
-from exabgp.structure.ip         import to_IP,to_Route,PathInfo
+from exabgp.structure.ip         import to_IP
+from exabgp.structure.nlri       import PathInfo
+from exabgp.structure.route      import to_Route
 from exabgp.structure.asn        import ASN
 from exabgp.structure.neighbor   import Neighbor
 from exabgp.structure.protocol   import NamedProtocol
