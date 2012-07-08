@@ -14,7 +14,7 @@ from copy import deepcopy
 from exabgp.environment import load
 
 from exabgp.structure.ip         import InetIP
-from exabgp.structure.nlri       import PathInfo
+from exabgp.structure.nlri       import PathInfo,Labels
 from exabgp.structure.route      import RouteIP
 from exabgp.structure.asn        import ASN
 from exabgp.structure.neighbor   import Neighbor
@@ -849,9 +849,14 @@ class Configuration (object):
 
 		# we generate path-information before next-hop so we must allow it
 		next_hop = tokens.pop(0)
-		if next_hop == 'path-information':
+		while next_hop in ['path-information','label']:
 			tokens.append(next_hop)
-			tokens.append(tokens.pop(0))
+			value = tokens.pop(0)
+			tokens.append(value)
+			if value == '[':
+				while value != ']':
+					value = tokens.pop(0)
+					tokens.append(value)
 			next_hop = tokens.pop(0)
 
 		if next_hop != 'next-hop':
@@ -1151,27 +1156,27 @@ class Configuration (object):
 			return False
 
 	def _route_label (self,scope,tokens):
-		communities = Communities()
-		community = tokens.pop(0)
+		labels = []
+		label = tokens.pop(0)
 		try:
-			if community == '[':
+			if label == '[':
 				while True:
 					try:
-						community = tokens.pop(0)
+						label = tokens.pop(0)
 					except IndexError:
 						self._error = self._str_route_error
 						if self.debug: raise
 						return False
-					if community == ']':
+					if label == ']':
 						break
-					communities.add(self._parse_community(community))
+					labels.append(int(label))
 			else:
-				communities.add(self._parse_community(community))
+				labels.append(int(label))
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
-		scope[-1]['routes'][-1].attributes.add(communities)
+		scope[-1]['routes'][-1].nlri.labels = Labels(labels)
 		return True
 
 	# Group Flow  ........

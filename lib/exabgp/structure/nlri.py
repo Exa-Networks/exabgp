@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2012-07-08.
 Copyright (c) 2012 Exa Networks. All rights reserved.
 """
 
+from struct import pack
 from exabgp.structure.ip import mask_to_bytes,afi_packed,Inet
 
 class PathInfo (object):
@@ -25,7 +26,7 @@ class PathInfo (object):
 
 	def __str__ (self):
 		if self.value:
-			return " path-information %s" % '.'.join([str(ord(_)) for _ in self.value])
+			return ' path-information %s' % '.'.join([str(ord(_)) for _ in self.value])
 		return ''
 
 	def pack (self):
@@ -33,6 +34,38 @@ class PathInfo (object):
 
 _NoPathInfo = PathInfo(ip=0)
 
+
+class Labels (object):
+	biggest = pow(2,20)
+
+	def __init__ (self,labels):
+		self.labels = labels
+		packed = []
+		for label in labels:
+			# shift to 20 bits of the label to be at the top of three bytes and then truncate.
+			packed.append(pack('!L',label << 4)[1:])
+		# Mark the bottom of stack with the bit
+		if packed:
+			packed.pop()
+			packed.append(pack('!L',(label << 4)|1)[1:])
+		self.packed = ''.join(packed)
+		self._len = len(self.packed)
+
+	def pack (self):
+		return self.packed
+
+	def __len__ (self):
+		return self._len
+
+	def __str__ (self):
+		if self._len != 1:
+			return ' label [ %s ]' % ' '.join([str(_) for _ in self.labels])
+		return '%s' % self.labels[0]
+
+	def __repr__ (self):
+		return str(self)
+
+_NoLabels = Labels([])
 
 class BGPPrefix (Inet):
 	# have a .raw for the ip
@@ -59,17 +92,21 @@ class BGPPrefix (Inet):
 class NLRI (BGPPrefix):
 	def __init__(self,af,ip,mask):
 		self.path_info = _NoPathInfo
+		self.labels = _NoLabels
+
 		BGPPrefix.__init__(self,af,ip,mask)
 
 	def __len__ (self):
-		return len(self.path_info) + BGPPrefix.__len__(self)
+		return len(self.path_info) + len(self.labels) + BGPPrefix.__len__(self)
 
 	def __str__ (self):
-		return "%s%s" % (BGPPrefix.__str__(self),str(self.path_info))
+		return "%s%s%s" % (BGPPrefix.__str__(self),str(self.labels),str(self.path_info))
 
 	def pack (self,with_path_info):
+		if self.labels:
+			self.safi = self._VPN
 		if with_path_info:
-			return self.path_info.pack() + BGPPrefix.pack(self)
+			return self.path_info.pack() + self.labels.pack() + BGPPrefix.pack(self)
 		return BGPPrefix.pack(self)
 
 

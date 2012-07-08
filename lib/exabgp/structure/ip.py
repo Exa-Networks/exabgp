@@ -57,6 +57,8 @@ class IPv4 (object):
 class Inet (object):
 	_UNICAST = SAFI(SAFI.unicast)
 	_MULTICAST = SAFI(SAFI.multicast)
+	_VPN = SAFI(SAFI.nlri_mpls)
+
 	_unicast_range = set(range(224,240)) # 239 is last
 
 	"""An IP in the 4 bytes format"""
