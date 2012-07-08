@@ -51,7 +51,7 @@ class TestData (unittest.TestCase):
 		self.assertEqual(str(update.nlri[0]),'1234:5678::/32')
 
 	def test_1_ipv6_2 (self):
-		route = to_Route('1234:5678::',64)
+		route = RouteIP('1234:5678::',64)
 		route.next_hop = '8765:4321::1'
 		announced = route.announce(1,1)
 		message = announced[19:]

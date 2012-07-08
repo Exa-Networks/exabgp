@@ -35,7 +35,7 @@ class Route (object):
 	def __eq__ (self,other):
 		return str(self) == str(other)
 
-class ReceivedRoute (Route):
+class RouteBGP (Route):
 	def __init__ (self,nlri,action):
 		self.action = action	# announce or withdraw
 		Route.__init__(self,nlri)
@@ -44,7 +44,7 @@ class ReceivedRoute (Route):
 		return "%s %s" % (self.action,Route.__str__(self))
 
 
-def to_Route (ip,mask):
+def RouteIP (ip,mask):
 	afi = detect_afi(ip)
 	network = socket.inet_pton(AFI.Family[afi],ip)
 	return Route(NLRI(afi,network,mask))

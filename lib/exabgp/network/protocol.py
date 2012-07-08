@@ -19,7 +19,7 @@ from exabgp.utils                import hexa
 from exabgp.structure.address    import AFI,SAFI
 from exabgp.structure.ip         import Inet,to_IP
 from exabgp.structure.nlri       import BGPNLRI
-from exabgp.structure.route      import ReceivedRoute
+from exabgp.structure.route      import RouteBGP
 from exabgp.structure.asn        import ASN,AS_TRANS
 from exabgp.network.connection   import Connection
 from exabgp.message              import Message,defix,Failure
@@ -496,7 +496,7 @@ class Protocol (object):
 		routes = []
 		while withdrawn:
 			nlri = BGPNLRI(AFI.ipv4,withdrawn,path_info)
-			route = ReceivedRoute(nlri,'withdraw')
+			route = RouteBGP(nlri,'withdraw')
 			withdrawn = withdrawn[len(nlri):]
 			routes.append(route)
 
@@ -506,7 +506,7 @@ class Protocol (object):
 
 		while announced:
 			nlri = BGPNLRI(AFI.ipv4,announced,path_info)
-			route = ReceivedRoute(nlri,'announce')
+			route = RouteBGP(nlri,'announce')
 			# XXX: Should this be a deep copy
 			route.attributes = attributes
 			announced = announced[len(nlri):]
@@ -699,7 +699,7 @@ class Protocol (object):
 			# Is the peer going to send us some Path Information with the route (AddPath)
 			path_info = self.use_path.receive(afi,safi)
 			while data:
-				route = ReceivedRoute(BGPNLRI(afi,data,path_info),'withdraw')
+				route = RouteBGP(BGPNLRI(afi,data,path_info),'withdraw')
 				data = data[len(route.nlri):]
 				self.mp_routes.append(route)
 			return self._AttributesFactory(next_attributes)
@@ -751,7 +751,7 @@ class Protocol (object):
 			# Is the peer going to send us some Path Information with the route (AddPath)
 			path_info = self.use_path.receive(afi,safi)
 			while data:
-				route = ReceivedRoute(BGPNLRI(afi,data,path_info),'announce')
+				route = RouteBGP(BGPNLRI(afi,data,path_info),'announce')
 				data = data[len(route.nlri):]
 				route.attributes = self.attributes
 				route.attributes.add(NextHop(to_IP(nh)))

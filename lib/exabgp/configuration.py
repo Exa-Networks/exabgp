@@ -15,7 +15,7 @@ from exabgp.environment import load
 
 from exabgp.structure.ip         import to_IP
 from exabgp.structure.nlri       import PathInfo
-from exabgp.structure.route      import to_Route
+from exabgp.structure.route      import RouteIP
 from exabgp.structure.asn        import ASN
 from exabgp.structure.neighbor   import Neighbor
 from exabgp.structure.protocol   import NamedProtocol
@@ -796,7 +796,7 @@ class Configuration (object):
 		except ValueError:
 			nm = '32'
 		try:
-			route = to_Route(ip,nm)
+			route = RouteIP(ip,nm)
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise
