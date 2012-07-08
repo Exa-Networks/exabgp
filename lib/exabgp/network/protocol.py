@@ -17,7 +17,7 @@ from exabgp.rib.delta import Delta
 
 from exabgp.utils                import hexa
 from exabgp.structure.address    import AFI,SAFI
-from exabgp.structure.ip         import Inet,InetIP
+from exabgp.structure.ip         import Inet
 from exabgp.structure.nlri       import BGPNLRI
 from exabgp.structure.route      import RouteBGP
 from exabgp.structure.asn        import ASN,AS_TRANS
@@ -34,7 +34,7 @@ from exabgp.message.update.attribute      import AttributeID
 from exabgp.message.update.attribute.flag        import Flag
 from exabgp.message.update.attribute.origin      import Origin
 from exabgp.message.update.attribute.aspath      import ASPath,AS4Path
-from exabgp.message.update.attribute.nexthop     import NextHop
+from exabgp.message.update.attribute.nexthop     import NextHop,NextHopIP
 from exabgp.message.update.attribute.med         import MED
 from exabgp.message.update.attribute.localpref   import LocalPreference
 from exabgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities
@@ -640,7 +640,7 @@ class Protocol (object):
 
 		if code == AttributeID.NEXT_HOP:
 			logger.parser('parsing next-hop')
-			self.attributes.add(NextHop(Inet(AFI.ipv4,data[:4])))
+			self.attributes.add(NextHop(AFI.ipv4,data[:4]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.MED:
@@ -754,7 +754,7 @@ class Protocol (object):
 				route = RouteBGP(BGPNLRI(afi,data,path_info),'announce')
 				data = data[len(route.nlri):]
 				route.attributes = self.attributes
-				route.attributes.add(NextHop(InetIP(nh)))
+				route.attributes.add(NextHopIP(nh))
 				self.mp_routes.append(route)
 			return self._AttributesFactory(next_attributes)
 

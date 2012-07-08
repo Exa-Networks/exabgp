@@ -110,8 +110,8 @@ class Attributes (dict):
 			raise RuntimeError('Generated routes must always have an AS_PATH ')
 
 		if AttributeID.NEXT_HOP in self:
-			afi = self[AttributeID.NEXT_HOP].next_hop.afi
-			safi = self[AttributeID.NEXT_HOP].next_hop.safi
+			afi = self[AttributeID.NEXT_HOP].afi
+			safi = self[AttributeID.NEXT_HOP].safi
 			if afi == AFI.ipv4 and safi in [SAFI.unicast, SAFI.multicast]:
 				message += self[AttributeID.NEXT_HOP].pack()
 

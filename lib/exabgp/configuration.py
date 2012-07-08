@@ -28,7 +28,7 @@ from exabgp.message.update.flow  import BinaryOperator,NumericOperator
 from exabgp.message.update.flow  import Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
 from exabgp.message.update.attribute             import AttributeID #,Attribute
 from exabgp.message.update.attribute.origin      import Origin
-from exabgp.message.update.attribute.nexthop     import NextHop
+from exabgp.message.update.attribute.nexthop     import NextHopIP
 from exabgp.message.update.attribute.aspath      import ASPath
 from exabgp.message.update.attribute.med         import MED
 from exabgp.message.update.attribute.localpref   import LocalPreference
@@ -929,7 +929,7 @@ class Configuration (object):
 
 	def _route_next_hop (self,scope,tokens):
 		try:
-			scope[-1]['routes'][-1].attributes.add(NextHop(InetIP(tokens.pop(0))))
+			scope[-1]['routes'][-1].attributes.add(NextHopIP(tokens.pop(0)))
 			return True
 		except:
 			self._error = self._str_route_error

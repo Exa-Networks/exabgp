@@ -16,13 +16,13 @@ from exabgp.message.update.attribute.mpurnlri    import MPURNLRI
 
 #def bgp_mp (self):
 #	if AttributeID.NEXT_HOP in self:
-#		if self[AttributeID.NEXT_HOP].next_hop.afi != AFI.ipv4:
+#		if self[AttributeID.NEXT_HOP].afi != AFI.ipv4:
 #			return MPRNLRI(self).pack()
 #	return ''
 #
 #def bgp_resdraw (self):
 #	if AttributeID.NEXT_HOP in self:
-#		if self[AttributeID.NEXT_HOP].next_hop.afi != AFI.ipv4:
+#		if self[AttributeID.NEXT_HOP].afi != AFI.ipv4:
 #			return MPURNLRI(self.afi,self.safi,self).pack()
 #	return ''
 

@@ -20,3 +20,4 @@ LATER
 - use the same logic/api in configuration for aspath that has been used for clusterlist
 - handle correctly the death of helper processes
 - reduce use of import socket by better API
+- add debug.configuration to the list of option
