@@ -104,7 +104,7 @@ class NLRI (BGPPrefix):
 
 	def pack (self,with_path_info):
 		if self.labels:
-			self.safi = self._VPN
+			self.safi = self._MPLS
 		if with_path_info:
 			return self.path_info.pack() + self.labels.pack() + BGPPrefix.pack(self)
 		return BGPPrefix.pack(self)
