@@ -151,30 +151,47 @@ class Prefix (_Prefix):
 		network = socket.inet_pton(af,ip)
 		Prefix.__init__(self,afi,network,mask,path_info)
 
-class NLRI (_Prefix):
-	def __init__(self,af,ip,mask,path_info=None):
-		if path_info is not None:
-			self.path_info = ''.join([chr((path_info>>offset) & 0xff) for offset in [24,16,8,0]])
+class PathInfo (object):
+	def __init__ (self,integer=None,ip=None,raw=None):
+		if raw:
+			self.value = raw
+		elif ip:
+			self.value = ''.join([chr(int(_)) for _ in ip.split('.')])
+		elif integer:
+			self.value = ''.join([chr((path_info>>offset) & 0xff) for offset in [24,16,8,0]])
 		else:
-			self.path_info = ''
+			self.value = ''
+		#sum(int(a)<<offset for (a,offset) in zip(ip.split('.'), range(24, -8, -8)))
 
+	def __len__ (self):
+		return 4
+
+	def __str__ (self):
+		if self.value:
+			return " path-information %s" % socket.inet_ntoa(self.value)
+		return ''
+
+	def pack (self):
+		return self.value
+
+_NoPathInfo = PathInfo(ip=0)
+
+class NLRI (_Prefix):
+	def __init__(self,af,ip,mask):
+		self.path_info = _NoPathInfo
 		_Prefix.__init__(self,af,ip,mask)
 
 	def __len__ (self):
-		return _Prefix.__len__(self) + len(self.path_info)
+		return len(self.path_info) + _Prefix.__len__(self)
 
 	def __str__ (self):
-		if self.path_info:
-			return "%s path-information %s" % (_Prefix.__str__(self),socket.inet_ntoa(self.path_info))
-		return _Prefix.__str__(self)
+		return "%s%s" % (_Prefix.__str__(self),str(self.path_info))
 
 	def pack (self,with_path_info):
 		if with_path_info:
-			return self.path_info + _Prefix.pack(self)
+			return self.path_info.pack() + _Prefix.pack(self)
 		return _Prefix.pack(self)
 
-	def add_path (self,value):
-		self.path_info = ''.join([chr((value>>offset) & 0xff) for offset in [24,16,8,0]])
 
 class BGPPrefix (NLRI):
 	"""From the BGP prefix wire format, Store an IP (in the network format), its netmask and the bgp format"""
@@ -186,4 +203,4 @@ class BGPPrefix (NLRI):
 			pi = ''
 		end = _bgp[ord(bgp[0])]
 		NLRI.__init__(self,afi,bgp[1:end+1] + '\0'*(self._length[afi]-end),ord(bgp[0]))
-		self.path_info = pi
+		self.path_info = PathInfo(raw=pi)
