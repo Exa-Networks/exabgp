@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2012-07-08.
 Copyright (c) 2012 Exa Networks. All rights reserved.
 """
 
-from exabgp.structure.ip import mask_to_bytes,afi_packed
+from exabgp.structure.ip import mask_to_bytes,afi_packed,Inet
 
 class PathInfo (object):
 	def __init__ (self,integer=None,ip=None,raw=None):
@@ -89,6 +89,6 @@ def BGPNLRI (afi,bgp,has_multiple_path):
 
 
 # Generate an NLRI suitable for use in Flow Routes
-def FlowNLRI (afi,ip,mask):
+def FlowPrefix (afi,ip,mask):
 		afi,packed = afi_packed
 		return BGPPrefix(afi,packed,mask)

@@ -9,7 +9,7 @@ Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 from struct import pack
 
 from exabgp.structure.address import Address,AFI,SAFI
-from exabgp.structure.nlri import FlowNLRI
+from exabgp.structure.nlri import FlowPrefix
 from exabgp.message.update.attributes import Attributes
 from exabgp.message.update.attribute.id import AttributeID
 from exabgp.message.update.attribute.communities import ECommunities
@@ -60,7 +60,7 @@ class IPrefix (IComponent):
 	NAME = None
 
 	def __init__ (self,ipv4,netmask):
-		self.nlri = FlowNLRI(AFI.ipv4,ipv4,netmask)
+		self.nlri = FlowPrefix(AFI.ipv4,ipv4,netmask)
 
 	def pack (self):
 		raw = self.nlri.pack(with_path_info=False)
