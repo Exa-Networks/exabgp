@@ -297,8 +297,9 @@ class Capabilities (dict):
 		else:
 			families = []
 			families.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
-			families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+			#families.append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
 			families.append((AFI(AFI.ipv4),SAFI(SAFI.flow_ipv4)))
+			families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
 
 		mp = MultiProtocol()
 		mp.extend(families)
