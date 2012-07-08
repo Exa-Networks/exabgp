@@ -116,25 +116,3 @@ class Inet (object):
 
 def InetIP (ip):
 	return Inet(*afi_packed(ip))
-
-
-class BGPPrefix (Inet):
-	# have a .raw for the ip
-	# have a .mask for the mask
-	# have a .bgp with the bgp wire format of the prefix
-
-	def __init__(self,af,ip,mask):
-		self.mask = int(mask)
-		Inet.__init__(self,af,ip)
-
-	def __str__ (self):
-		return "%s/%s" % (self.ip,self.mask)
-
-	def __repr__ (self):
-		return str(self)
-
-	def pack (self):
-		return chr(self.mask) + self.raw[:mask_to_bytes[self.mask]]
-
-	def __len__ (self):
-		return mask_to_bytes[self.mask] + 1
