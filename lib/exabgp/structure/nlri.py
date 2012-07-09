@@ -18,7 +18,7 @@ class PathInfo (object):
 		elif integer:
 			self.value = ''.join([chr((path_info>>offset) & 0xff) for offset in [24,16,8,0]])
 		else:
-			self.value = ''
+			self.value = None
 		#sum(int(a)<<offset for (a,offset) in zip(ip.split('.'), range(24, -8, -8)))
 
 	def __len__ (self):
