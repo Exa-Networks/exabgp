@@ -17,8 +17,8 @@ from exabgp.rib.delta import Delta
 
 from exabgp.utils                import hexa
 from exabgp.structure.address    import AFI,SAFI
-from exabgp.structure.ip         import Inet
-from exabgp.structure.nlri       import BGPNLRI
+from exabgp.structure.ip         import Inet,mask_to_bytes
+from exabgp.structure.nlri       import NLRI,PathInfo,Labels
 from exabgp.structure.route      import RouteBGP
 from exabgp.structure.asn        import ASN,AS_TRANS
 from exabgp.network.connection   import Connection
@@ -49,6 +49,49 @@ from exabgp.log import Logger
 logger = Logger()
 
 MAX_BACKLOG = 200000
+
+
+# Generate an NLRI from a BGP packet receive
+def BGPNLRI (afi,safi,bgp,has_multiple_path):
+
+	if has_multiple_path:
+		pi = bgp[:4]
+		bgp = bgp[4:]
+	else:
+		pi = ''
+
+	if not bgp:
+		raise Notify(3,0,'could not find nlri and/or labels once the path-identifier was removed')
+
+	labels = []
+	if safi == SAFI.nlri_mpls:
+		while bgp:
+			l = bgp[:3]
+			bgp = bgp[3:]
+			labels.append(l>>4)
+			if l & 1:
+				break
+
+	if not bgp:
+		raise Notify(3,0,'could not find bottom-of-stack in labels')
+
+	# XXX: The padding calculation should really go into the NLRI class
+	end = mask_to_bytes[ord(bgp[0])]
+	prefix = bgp[1:end+1]
+	padding = '\0'*(NLRI.length[afi]-end)
+
+	nlri = NLRI(prefix + padding,afi,ord(bgp[0]))
+
+	# XXX: Not the best interface but will do for now
+	if safi:
+		nlri.safi = SAFI(safi)
+
+	nlri.path_info = PathInfo(packed=pi)
+	if labels:
+		nrli.labels = Labels(labels)
+
+	return nlri
+
 
 # README: Move all the old packet decoding in another file to clean up the includes here, as it is not used anyway
 
@@ -495,7 +538,7 @@ class Protocol (object):
 
 		routes = []
 		while withdrawn:
-			nlri = BGPNLRI(AFI.ipv4,withdrawn,path_info)
+			nlri = BGPNLRI(AFI.ipv4,SAFI.unicast_multicast,withdrawn,path_info)
 			route = RouteBGP(nlri,'withdraw')
 			withdrawn = withdrawn[len(nlri):]
 			routes.append(route)
@@ -505,7 +548,7 @@ class Protocol (object):
 		routes.extend(self.mp_routes)
 
 		while announced:
-			nlri = BGPNLRI(AFI.ipv4,announced,path_info)
+			nlri = BGPNLRI(AFI.ipv4,SAFI.unicast_multicast,announced,path_info)
 			route = RouteBGP(nlri,'announce')
 			# XXX: Should this be a deep copy
 			route.attributes = attributes
@@ -699,7 +742,7 @@ class Protocol (object):
 			# Is the peer going to send us some Path Information with the route (AddPath)
 			path_info = self.use_path.receive(afi,safi)
 			while data:
-				route = RouteBGP(BGPNLRI(afi,data,path_info),'withdraw')
+				route = RouteBGP(BGPNLRI(afi,safi,data,path_info),'withdraw')
 				data = data[len(route.nlri):]
 				self.mp_routes.append(route)
 			return self._AttributesFactory(next_attributes)
@@ -751,7 +794,7 @@ class Protocol (object):
 			# Is the peer going to send us some Path Information with the route (AddPath)
 			path_info = self.use_path.receive(afi,safi)
 			while data:
-				route = RouteBGP(BGPNLRI(afi,data,path_info),'announce')
+				route = RouteBGP(BGPNLRI(afi,safi,data,path_info),'announce')
 				data = data[len(route.nlri):]
 				route.attributes = self.attributes
 				route.attributes.add(NextHopIP(nh))

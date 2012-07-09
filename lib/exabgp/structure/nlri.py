@@ -92,11 +92,11 @@ class BGPPrefix (Inet):
 
 
 class NLRI (BGPPrefix):
-	def __init__(self,af,ip,mask):
+	def __init__(self,afi,packed,mask):
 		self.path_info = _NoPathInfo
 		self.labels = _NoLabels
 
-		BGPPrefix.__init__(self,af,ip,mask)
+		BGPPrefix.__init__(self,afi,packed,mask)
 
 	def __len__ (self):
 		return len(self.path_info) + len(self.labels) + BGPPrefix.__len__(self)
@@ -105,27 +105,9 @@ class NLRI (BGPPrefix):
 		return "%s%s%s" % (BGPPrefix.__str__(self),str(self.labels),str(self.path_info))
 
 	def pack (self,with_path_info):
-		if self.labels:
-			self.safi = self._MPLS
 		if with_path_info:
 			return self.path_info.pack() + self.labels.pack() + BGPPrefix.pack(self)
-		return BGPPrefix.pack(self)
-
-
-# Generate an NLRI from a BGP packet receive
-def BGPNLRI (afi,bgp,has_multiple_path):
-	if has_multiple_path:
-		pi = bgp[:4]
-		bgp = bgp[4:]
-	else:
-		pi = ''
-	end = mask_to_bytes[ord(bgp[0])]
-
-	nlri = NLRI(bgp[1:end+1] + '\0'*(NLRI.length[afi]-end),afi,ord(bgp[0]))
-	nlri.path_info = PathInfo(packed=pi)
-
-	return nlri
-
+		return self.labels.pack() + BGPPrefix.pack(self)
 
 # Generate an NLRI suitable for use in Flow Routes
 def FlowPrefix (afi,ip,mask):

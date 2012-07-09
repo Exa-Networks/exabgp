@@ -13,6 +13,7 @@ from copy import deepcopy
 
 from exabgp.environment import load
 
+from exabgp.structure.address    import SAFI
 from exabgp.structure.ip         import InetIP
 from exabgp.structure.nlri       import PathInfo,Labels
 from exabgp.structure.route      import RouteIP
@@ -1176,6 +1177,7 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
+		scope[-1]['routes'][-1].nlri.safi = SAFI(SAFI.nlri_mpls)
 		scope[-1]['routes'][-1].nlri.labels = Labels(labels)
 		return True
 
