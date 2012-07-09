@@ -19,7 +19,9 @@ from exabgp.log import Logger
 logger = Logger()
 
 class Daemon (object):
-	daemon = load().daemon
+	pid = load().daemon.pid
+	user = load().daemon.user
+	daemonize = load().daemon.daemonize
 
 	def __init__ (self,supervisor):
 		self.supervisor = supervisor
@@ -28,7 +30,7 @@ class Daemon (object):
 	def savepid (self):
 		self._saved_pid = False
 
-		if not self.daemon.pid:
+		if not self.pid:
 			return
 
 		ownid = os.getpid()
@@ -37,9 +39,9 @@ class Daemon (object):
 		mode = ((os.R_OK | os.W_OK) << 6) | (os.R_OK << 3) | os.R_OK
 
 		try:
-			fd = os.open(self.daemon.pid,flags,mode)
+			fd = os.open(self.pid,flags,mode)
 		except OSError:
-			logger.daemon("PIDfile already exists, not updated %s" % self.daemon.pid)
+			logger.daemon("PIDfile already exists, not updated %s" % self.pid)
 			return
 
 		try:
@@ -49,22 +51,22 @@ class Daemon (object):
 			f.close()
 			self._saved_pid = True
 		except IOError:
-			logger.warning("Can not create PIDfile %s" % self.daemon.pid,'daemon')
+			logger.warning("Can not create PIDfile %s" % self.pid,'daemon')
 			return
-		logger.warning("Created PIDfile %s with value %d" % (self.daemon.pid,ownid),'daemon')
+		logger.warning("Created PIDfile %s with value %d" % (self.pid,ownid),'daemon')
 
 	def removepid (self):
-		if not self.daemon.pid or not self._saved_pid:
+		if not self.pid or not self._saved_pid:
 			return
 		try:
-			os.remove(self.daemon.pid)
+			os.remove(self.pid)
 		except OSError, e:
 			if e.errno == errno.ENOENT:
 				pass
 			else:
-				logger.error("Can not remove PIDfile %s" % self.daemon.pid,'daemon')
+				logger.error("Can not remove PIDfile %s" % self.pid,'daemon')
 				return
-		logger.daemon("Removed PIDfile %s" % self.daemon.pid)
+		logger.daemon("Removed PIDfile %s" % self.pid)
 
 	def drop_privileges (self):
 		"""returns true if we are left with insecure privileges"""
@@ -79,7 +81,7 @@ class Daemon (object):
 			return False
 
 		try:
-			user = pwd.getpwnam(self.daemon.user)
+			user = pwd.getpwnam(self.user)
 			nuid = int(user.pw_uid)
 			ngid = int(user.pw_uid)
 		except KeyError:
@@ -110,7 +112,7 @@ class Daemon (object):
 		return True
 
 	def daemonise (self):
-		if not self.daemon.daemonize:
+		if not self.daemonize:
 			return
 
 		log = load().log
