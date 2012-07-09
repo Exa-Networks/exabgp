@@ -8,7 +8,7 @@ Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 
 from exabgp.structure.address import AFI,SAFI
 from exabgp.structure.address import Address
-from exabgp.structure.ip import afi_packed
+from exabgp.structure.ip import packed_afi
 from exabgp.structure.nlri import NLRI
 from exabgp.message.update.attributes import Attributes
 
@@ -43,6 +43,6 @@ class RouteBGP (Route):
 
 
 def RouteIP (ip,mask):
-	afi,packed = afi_packed(ip)
+	afi,packed = packed_afi(ip)
 	return Route(NLRI(afi,packed,mask))
 

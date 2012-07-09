@@ -13,7 +13,7 @@ from exabgp.message.update.attribute import AttributeID,Flag,Attribute
 
 class ClusterID (IPv4):
 	def __init__ (self,cluster_id):
-		self.packed(cluster_id)
+		self.update(cluster_id)
 
 	def __repr__ (self):
 		return str(self)

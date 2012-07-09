@@ -754,7 +754,7 @@ class Configuration (object):
 
 		# convert the IP into a integer/long
 		ip = 0
-		for c in route.nlri.raw:
+		for c in route.nlri.packed:
 			ip = ip << 8
 			ip += ord(c)
 
@@ -773,7 +773,7 @@ class Configuration (object):
 				i = chr(lower) + i
 
 			# change the route network
-			r.nlri.update_raw(i)
+			r.nlri.update(i)
 			# update ip to the next route
 			ip += increment
 

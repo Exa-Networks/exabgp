@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2012-07-07.
 Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
-from exabgp.structure.ip import Inet,afi_packed
+from exabgp.structure.ip import Inet,packed_afi
 from exabgp.message.update.attribute import AttributeID,Flag,Attribute
 
 # =================================================================== OriginatorID (3)
@@ -17,8 +17,8 @@ class OriginatorID (Attribute,Inet):
 	MULTIPLE = False
 
 	# Take an IP as value
-	def __init__ (self,afi,raw):
-		Inet.__init__(self,afi,raw)
+	def __init__ (self,packed,afi):
+		Inet.__init__(self,packed,afi)
 
 	def pack (self):
 		return self._attribute(Inet.pack(self))
@@ -30,4 +30,4 @@ class OriginatorID (Attribute,Inet):
 		return str(self)
 
 def OriginatorIDIP (ip):
-	return OriginatorID(*afi_packed(ip))
+	return OriginatorID(*packed_afi(ip))

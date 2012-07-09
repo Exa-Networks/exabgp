@@ -20,27 +20,27 @@ def _detect_afi(ip):
 		return AFI.ipv6
 	return AFI.ipv4
 
-def afi_packed (ip):
+def packed_afi (ip):
 	afi = _detect_afi(ip)
-	return afi,socket.inet_pton(Inet._af[afi],ip)
+	return socket.inet_pton(Inet._af[afi],ip),afi
 
 class IPv4 (object):
 	def __init__ (self):
-		self.raw = '\x00\x00\x00\x00'
+		self.packed = '\x00\x00\x00\x00'
 		self.ip = '0.0.0.0'
 
 	def ipv4 (self,ipv4):
 		self.ip = ipv4
-		self.raw = ''.join([chr(int(_)) for _ in ipv4.split('.')])
+		self.packed = ''.join([chr(int(_)) for _ in ipv4.split('.')])
 		return self
 
-	def raw (self,raw):
-		self.raw = raw
-		self.ip = '.'.join([str(ord(_)) for _ in raw])
+	def update (self,packed):
+		self.packed = packed
+		self.ip = '.'.join([str(ord(_)) for _ in packed])
 		return self
 
 	def pack (self):
-		return self.raw
+		return self.packed
 
 	def __len__ (self):
 		return 4
@@ -52,7 +52,7 @@ class IPv4 (object):
 		return self.ip
 
 	def __eq__ (self,other):
-		return self.raw == other.raw
+		return self.packed == other.packed
 
 class Inet (object):
 	_UNICAST = SAFI(SAFI.unicast)
@@ -78,34 +78,38 @@ class Inet (object):
 		AFI.ipv6: 16,
 	}
 
-	def __init__ (self,afi,raw):
+	def __init__ (self,packed,afi,safi=0):
 		self.afi = AFI(afi)
-		self.raw = raw
+		self.safi = 0 # it get updated with __update
+		self.packed = packed
 		self.__update()
 
 	def __update (self):
 		self.ip = self._ip()
 
-		if self.afi == AFI.ipv4 and int(self.ip.split('.')[0]) in self._unicast_range:
-			self.safi = self._MULTICAST
+		if not self.safi:
+			if self.afi == AFI.ipv4 and int(self.ip.split('.')[0]) in self._unicast_range:
+				self.safi = self._MULTICAST
+			else:
+				self.safi = self._UNICAST
 		else:
 			self.safi = self._UNICAST
 
-	def update_raw (self,raw):
-		self.raw = raw
+	def update (self,packed):
+		self.packed = packed
 		self.__update()
 
 	def pack (self):
-		return self.raw
+		return self.packed
 
 	def _ip (self):
 		try:
-			return socket.inet_ntop(self._af[self.afi],self.raw)
+			return socket.inet_ntop(self._af[self.afi],self.packed)
 		except socket.error:
 			raise ValueError('invalid IP')
 
 	def __len__ (self):
-		return len(self.raw)
+		return len(self.packed)
 
 	def __str__ (self):
 		return self.ip
@@ -114,7 +118,7 @@ class Inet (object):
 		return str(self)
 
 	def __eq__ (self,other):
-		return self.raw == other.raw and self.safi == other.safi
+		return self.packed == other.packed and self.safi == other.safi
 
 def InetIP (ip):
-	return Inet(*afi_packed(ip))
+	return Inet(*packed_afi(ip))

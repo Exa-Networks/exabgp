@@ -640,7 +640,7 @@ class Protocol (object):
 
 		if code == AttributeID.NEXT_HOP:
 			logger.parser('parsing next-hop')
-			self.attributes.add(NextHop(AFI.ipv4,data[:4]))
+			self.attributes.add(NextHop(data[:4],AFI.ipv4))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.MED:
@@ -672,7 +672,7 @@ class Protocol (object):
 
 		if code == AttributeID.ORIGINATOR_ID:
 			logger.parser('parsing originator-id')
-			self.attributes.add(OriginatorID(AFI.ipv4,data[:4]))
+			self.attributes.add(OriginatorID(data[:4],AFI.ipv4))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.CLUSTER_LIST:
