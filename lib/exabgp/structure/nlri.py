@@ -30,7 +30,9 @@ class PathInfo (object):
 		return ''
 
 	def pack (self):
-		return self.value
+		if self.value:
+			return self.value
+		return '\x00\x00\x00\x00'
 
 _NoPathInfo = PathInfo(ip=0)
 
