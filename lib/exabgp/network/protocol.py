@@ -18,7 +18,7 @@ from exabgp.rib.delta import Delta
 from exabgp.utils                import hexa
 from exabgp.structure.address    import AFI,SAFI
 from exabgp.structure.ip         import Inet,mask_to_bytes
-from exabgp.structure.nlri       import NLRI,PathInfo,Labels
+from exabgp.structure.nlri       import NLRI,PathInfo,Labels,RouteDistinguisher
 from exabgp.structure.route      import RouteBGP
 from exabgp.structure.asn        import ASN,AS_TRANS
 from exabgp.network.connection   import Connection
@@ -53,43 +53,69 @@ MAX_BACKLOG = 200000
 
 # Generate an NLRI from a BGP packet receive
 def BGPNLRI (afi,safi,bgp,has_multiple_path):
-
 	if has_multiple_path:
-		pi = bgp[:4]
+		path_identifier = bgp[:4]
 		bgp = bgp[4:]
 	else:
-		pi = ''
+		path_identifier = ''
 
 	if not bgp:
 		raise Notify(3,0,'could not find nlri and/or labels once the path-identifier was removed')
 
 	labels = []
-	if safi == SAFI.nlri_mpls:
+	rd = ''
+
+	if safi in (SAFI.nlri_mpls,SAFI.mpls_vpn):
+		print
+		print "BGP", [hex(ord(_)) for _ in bgp]
+		print
+
+		length = ord(bgp[0])
+		bgp = bgp[1:length+1]
+
 		while bgp:
-			l = bgp[:3]
+			label = int(unpack('!L',chr(0) + bgp[:3])[0])
 			bgp = bgp[3:]
-			labels.append(l>>4)
-			if l & 1:
+			labels.append(label>>4)
+			length -= (20+1) # 20 bits for the label and one for the bottom-of-stack bit
+			if label & 1:
 				break
 
-	if not bgp:
-		raise Notify(3,0,'could not find bottom-of-stack in labels')
+		if safi == SAFI.mpls_vpn:
+			length -= 8*8 # the 8 bytes of the route distinguisher
+			rd = bgp[:8]
+			bgp = bgp[8:]
 
-	# XXX: The padding calculation should really go into the NLRI class
-	end = mask_to_bytes[ord(bgp[0])]
-	prefix = bgp[1:end+1]
-	padding = '\0'*(NLRI.length[afi]-end)
+		if length < 0:
+			import pdb
+			pdb.set_trace()
+			raise Notify(3,0,'designers of RFC 3107 need shorting - length calculation issue')
 
-	nlri = NLRI(prefix + padding,afi,ord(bgp[0]))
+		if not bgp:
+			raise Notify(3,0,'could not find bottom-of-stack in labels')
+
+		mask = length
+	else:
+		# XXX: The padding calculation should really go into the NLRI class
+		mask = ord(bgp[0])
+		bgp = bgp[1:]
+
+	size = mask_to_bytes[mask]
+	network = bgp[:size]
+	padding = '\0'*(NLRI.length[afi]-size)
+	prefix = network + padding
+	nlri = NLRI(prefix,afi,mask)
 
 	# XXX: Not the best interface but will do for now
 	if safi:
 		nlri.safi = SAFI(safi)
 
-	nlri.path_info = PathInfo(packed=pi)
+	nlri.path_info = PathInfo(packed=path_identifier)
+	
 	if labels:
-		nrli.labels = Labels(labels)
-
+		nlri.labels = Labels(labels)
+	if rd:
+		nlri.rd = RouteDistinguisher(rd)
 	return nlri
 
 
@@ -729,13 +755,15 @@ class Protocol (object):
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.MP_UNREACH_NLRI:
-			logger.parser('parsing multi-protocol nlri unreacheable %s' % [hex(ord(_)) for _ in data[:length]])
+			logger.parser('parsing multi-protocol nlri unreacheable')
 			next_attributes = data[length:]
+			# -- Reading AFI/SAFI
 			data = data[:length]
 			afi,safi = unpack('!HB',data[:3])
+			logger.parser('NLRI afi %s, safi %s %s' % (AFI(afi),SAFI(safi),[hex(ord(_)) for _ in data[:length]]))
 			offset = 3
 			# See RFC 5549 for better support
-			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
+			if (afi,safi) not in self.neighbor._families.keys():
 				#self.log.out('we only understand IPv4/IPv6 and should never have received this MP_UNREACH_NLRI (%s %s)' % (afi,safi))
 				return self._AttributesFactory(next_attributes)
 			data = data[offset:]
@@ -748,22 +776,26 @@ class Protocol (object):
 			return self._AttributesFactory(next_attributes)
 
 		if code == AttributeID.MP_REACH_NLRI:
-			logger.parser('parsing multi-protocol nlri reacheable %s' % [hex(ord(_)) for _ in data[:length]])
+			logger.parser('parsing multi-protocol nlri reacheable')
 			next_attributes = data[length:]
 			data = data[:length]
 			# -- Reading AFI/SAFI
 			afi,safi = unpack('!HB',data[:3])
+			logger.parser('NLRI afi %s, safi %s %s' % (AFI(afi),SAFI(safi),[hex(ord(_)) for _ in data[:length]]))
 			offset = 3
-			if not afi in (AFI.ipv4,AFI.ipv6) or safi != SAFI.unicast:
+			if (afi,safi) not in self.neighbor._families.keys():
 				#self.log.out('we only understand IPv4/IPv6 and should never have received this MP_REACH_NLRI (%s %s)' % (afi,safi))
 				return self._AttributesFactory(next_attributes)
 			# -- Reading length of next-hop
 			len_nh = ord(data[offset])
 			offset += 1
-			if afi == AFI.ipv4 and not len_nh != 4:
-				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-				#self.log.out('bad IPv4 next-hop length (%d)' % len_nh)
-				return self._AttributesFactory(next_attributes)
+
+			if afi == AFI.ipv4:
+				if safi in (SAFI.unicast,SAFI.multicast) and not len_nh != 4:
+					# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
+					return self._AttributesFactory(next_attributes)
+				if safi == SAFI.mpls_vpn and len_nh != 12:
+					return self._AttributesFactory(next_attributes)
 			if afi == AFI.ipv6 and not len_nh in (16,32):
 				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
 				#self.log.out('bad IPv6 next-hop length (%d)' % len_nh)
@@ -771,24 +803,32 @@ class Protocol (object):
 			# -- Reading next-hop
 			nh = data[offset:offset+len_nh]
 			offset += len_nh
+			# Two IPv6
 			if len_nh == 32:
 				# we have a link-local address in the next-hop we ideally need to ignore
 				if nh[0] == chr(0xfe): nh = nh[16:]
 				elif nh[16] == chr(0xfe): nh = nh[:16]
 				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
 				else: return self._AttributesFactory(next_attributes)
-			if len_nh >= 16: nh = socket.inet_ntop(socket.AF_INET6,nh)
-			else: nh = socket.inet_ntop(socket.AF_INET,nh)
-			# -- Reading the reserved byte, which MUST be set to zero
-			# So this follow code MUST be useless !
-			nb_snpa = ord(data[offset])
+			# IPv6
+			if len_nh >= 16: 
+				nh = socket.inet_ntop(socket.AF_INET6,nh)
+			# IPv4 mpls-vpn
+			elif len_nh == 12:
+				if sum([int(ord(_)) for _ in nh[:-4]]) != 0:
+					# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
+					return self._AttributesFactory(next_attributes)
+				nh = socket.inet_ntop(socket.AF_INET,nh[-4:])
+			else:
+				nh = socket.inet_ntop(socket.AF_INET,nh)
+			
+			# Skip a reserved bit as somone had to bug us !
+			reserved = ord(data[offset])
+			if reserved != 0:
+				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
+				return self._AttributesFactory(next_attributes)
 			offset += 1
-			snpas = []
-			for _ in range(nb_snpa):
-				len_snpa = ord(offset)
-				offset += 1
-				snpas.append(data[offset:offset+len_snpa])
-				offset += len_snpa
+
 			# Reading the NLRIs
 			data = data[offset:]
 			# Is the peer going to send us some Path Information with the route (AddPath)

@@ -60,14 +60,35 @@ class Labels (object):
 		return self._len
 
 	def __str__ (self):
-		if self._len != 1:
+		if self._len > 1:
 			return ' label [ %s ]' % ' '.join([str(_) for _ in self.labels])
-		return '%s' % self.labels[0]
+		elif self._len == 1:
+			return '%s' % self.labels[0]
+		else:
+			return ''
 
 	def __repr__ (self):
 		return str(self)
 
 _NoLabels = Labels([])
+
+class RouteDistinguisher (object):
+	def __init__ (self,rd):
+		self.rd = rd
+		self._len = len(self.rd)
+
+	def pack (self):
+		return self.rd
+
+	def __len__ (self):
+		return self._len
+
+	def __str__ (self):
+		if self.rd:
+			return ' route-distinguisher %s' % ' '.join([str(_) for _ in self.labels])
+		return ''
+
+_NoRD = RouteDistinguisher('')
 
 class BGPPrefix (Inet):
 	# have a .raw for the ip
@@ -95,19 +116,20 @@ class NLRI (BGPPrefix):
 	def __init__(self,afi,packed,mask):
 		self.path_info = _NoPathInfo
 		self.labels = _NoLabels
+		self.rd = _NoRD
 
 		BGPPrefix.__init__(self,afi,packed,mask)
 
 	def __len__ (self):
-		return len(self.path_info) + len(self.labels) + BGPPrefix.__len__(self)
+		return len(self.path_info) + len(self.labels) + len(self.rd) + BGPPrefix.__len__(self)
 
 	def __str__ (self):
-		return "%s%s%s" % (BGPPrefix.__str__(self),str(self.labels),str(self.path_info))
+		return "%s%s%s%s" % (BGPPrefix.__str__(self),str(self.labels),str(self.path_info),str(self.rd))
 
 	def pack (self,with_path_info):
 		if with_path_info:
-			return self.path_info.pack() + self.labels.pack() + BGPPrefix.pack(self)
-		return self.labels.pack() + BGPPrefix.pack(self)
+			return self.path_info.pack() + self.labels.pack() + self.rd.pack() + BGPPrefix.pack(self)
+		return self.labels.pack() + self.rd.pack() + BGPPrefix.pack(self)
 
 # Generate an NLRI suitable for use in Flow Routes
 def FlowPrefix (afi,ip,mask):
