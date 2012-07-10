@@ -401,7 +401,7 @@ class Configuration (object):
 			if command == 'inet': return self._set_family_inet4(scope,tokens[1:])
 			if command == 'inet4': return self._set_family_inet4(scope,tokens[1:])
 			if command == 'inet6': return self._set_family_inet6(scope,tokens[1:])
-			if command == 'minimal': return self._set_family_name(scope,tokens[1:])
+			if command == 'minimal': return self._set_family_minimal(scope,tokens[1:])
 			if command == 'all': return self._set_family_all(scope,tokens[1:])
 
 		return False
@@ -523,7 +523,7 @@ class Configuration (object):
 		elif safi == 'nlri-mpls':
 			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
 		elif safi == 'mpls-vpn':
-			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.multicast)))
+			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.mpls_vpn)))
 		elif safi == 'flow-vpnv4':
 			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.flow_ipv4)))
 		else:
@@ -543,21 +543,21 @@ class Configuration (object):
 			return False
 		return True
 
+	def _set_family_minimal (self,scope,tokens):
+		if scope[-1]['families']:
+			self._error = 'minimal can not be used with any other options'
+			if self.debug: raise
+			return False
+		scope[-1]['families'] = 'minimal'
+		self._family = True
+		return True
+
 	def _set_family_all (self,scope,tokens):
 		if scope[-1]['families']:
 			self._error = 'all can not be used with any other options'
 			if self.debug: raise
 			return False
-		scope[-1]['families'] = self._all_families()
-		self._family = True
-		return True
-
-	def _set_family_name (self,scope,tokens):
-		if scope[-1]['families']:
-			self._error = '%s can not be used with any other options %s' % tokens[0]
-			if self.debug: raise
-			return False
-		scope[-1]['families'] = tokens[0]
+		scope[-1]['families'] = 'all'
 		self._family = True
 		return True
 
@@ -672,12 +672,12 @@ class Configuration (object):
 		# announce every family we known
 		if neighbor.multisession and openfamilies == 'everything':
 			# announce what is needed, and no more, no need to have lots of TCP session doing nothing
-			families = self._families.keys()
+			families = neighbor._families.keys()
 		elif openfamilies in ('all','everything'):
 			families = self._all_families()
 		# only announce what you have as routes
 		elif openfamilies == 'minimal':
-			families = self._families.keys()
+			families = neighbor._families.keys()
 		else:
 			families = openfamilies
 
