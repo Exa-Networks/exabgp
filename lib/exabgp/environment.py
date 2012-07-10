@@ -215,14 +215,14 @@ defaults = {
 		'routes'        : (value.boolean,value.lower,'false',    'report received routes'),
 		'parser'        : (value.boolean,value.lower,'false',    'report BGP message parsing details'),
 	},
-	'bgp' : {
-		'minimal'       : (value.boolean,value.lower,'false',    'try to announce as few AFI/SAFI pair as possible'),
+	'tcp' : {
+		'timeout' : (value.integer,value.nop,'1',  'time we will wait on select (can help with unstable BGP multihop)\n'
+		                                           '%sVERY dangerous use only if you understand BGP very well.' % (' '* 34)),
 	},
 	# Here for internal use
 	'internal' : {
 		'name'    : (value.nop,value.nop,'ExaBGP', 'name'),
 		'version' : (value.nop,value.nop,version,  'version'),
-		'timeout' : (value.integer,value.nop,'1',  'time we will wait on select (dangerous)'),
 	},
 	# Here for internal use
 	'debug' : {

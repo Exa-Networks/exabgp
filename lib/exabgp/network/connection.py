@@ -25,9 +25,9 @@ from exabgp.message import Failure
 from exabgp.log import Logger,LazyFormat
 logger = Logger()
 
-# If the OS tells us we have data on the socket,
-# we should never have to wait more than READ_TIMEOUT to be able to read it.
-READ_TIMEOUT = load().internal.timeout
+# If the OS tells us we have data on the socket, we should never have to wait more than READ_TIMEOUT to be able to read it.
+# However real life says that on some OS we do ... So let the user control this value
+READ_TIMEOUT = load().tcp.timeout
 
 errno_block = set((
 	errno.EINPROGRESS, errno.EALREADY,
