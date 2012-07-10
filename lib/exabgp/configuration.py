@@ -265,6 +265,7 @@ class Configuration (object):
 		if end == '}':
 			if len(self._location) == 1:
 				self._error = 'closing too many parenthesis'
+				if self.debug: raise
 				return False
 			self._location.pop(-1)
 			return None
@@ -274,6 +275,7 @@ class Configuration (object):
 		command = tokens[0]
 		if valid and command not in valid:
 			self._error = 'option %s in not valid here' % command
+			if self.debug: raise
 			return False
 
 		if name == 'configuration':
@@ -284,6 +286,7 @@ class Configuration (object):
 			if  command == 'group':
 				if len(tokens) != 2:
 					self._error = 'syntax: group <name> { <options> }'
+					if self.debug: raise
 					return False
 				return self._multi_group(scope,tokens[1])
 
@@ -328,6 +331,7 @@ class Configuration (object):
 		command = tokens[0]
 		if valid and command not in valid:
 			self._error = 'invalid keyword "%s"' % command
+			if self.debug: raise
 			return False
 
 		if command == 'description': return self._set_description(scope,tokens[1:])
@@ -385,6 +389,7 @@ class Configuration (object):
 	def _multi_process (self,scope,tokens):
 		if len(tokens) != 1:
 			self._error = self._str_process_error
+			if self.debug: raise
 			return False
 		while True:
 			r = self._dispatch(scope,'process',[],['run','parse-routes','peer-updates'])
@@ -544,12 +549,15 @@ class Configuration (object):
 		missing = neighbor.missing()
 		if missing:
 			self._error = 'incomplete neighbor, missing %s' % missing
+			if self.debug: raise
 			return False
 		if neighbor.local_address.afi != neighbor.peer_address.afi:
 			self._error = 'local-address and peer-address must be of the same family'
+			if self.debug: raise
 			return False
 		if self._neighbor.has_key(neighbor.peer_address.ip):
 			self._error = 'duplicate peer definition %s' % neighbor.peer_address.ip
+			if self.debug: raise
 			return False
 
 		if neighbor.multisession:
@@ -569,6 +577,7 @@ class Configuration (object):
 	def _multi_neighbor (self,scope,tokens):
 		if len(tokens) != 1:
 			self._error = 'syntax: neighbor <ip> { <options> }'
+			if self.debug: raise
 			return False
 
 		address = tokens[0]
@@ -600,6 +609,7 @@ class Configuration (object):
 		text = ' '.join(tokens)
 		if len(text) < 2 or text[0] != '"' or text[-1] != '"' or text[1:-1].count('"'):
 			self._error = 'syntax: description "<description>"'
+			if self.debug: raise
 			return False
 		scope[-1]['description'] = text[1:-1]
 		return True
@@ -725,6 +735,7 @@ class Configuration (object):
 	def _multi_static (self,scope,tokens):
 		if len(tokens) != 0:
 			self._error = 'syntax: static { route; route; ... }'
+			if self.debug: raise
 			return False
 		while True:
 		 	r = self._dispatch(scope,'static',['route',],['route',])
@@ -825,12 +836,14 @@ class Configuration (object):
 		route = scope[-1]['routes'][-1]
 		if not route.attributes.has(AttributeID.NEXT_HOP):
 			self._error = 'syntax: route IP/MASK { next-hop IP; }'
+			if self.debug: raise
 			return False
 		return True
 
 	def _multi_static_route (self,scope,tokens):
 		if len(tokens) != 1:
 			self._error = self._str_route_error
+			if self.debug: raise
 			return False
 
 		if not self._insert_static_route(scope,tokens):
@@ -1186,6 +1199,7 @@ class Configuration (object):
 	def _multi_flow (self,scope,tokens):
 		if len(tokens) != 0:
 			self._error = self._str_flow_error
+			if self.debug: raise
 			return False
 
 		while True:
@@ -1215,6 +1229,7 @@ class Configuration (object):
 	def _multi_flow_route (self,scope,tokens):
 		if len(tokens) > 1:
 			self._error = self._str_flow_error
+			if self.debug: raise
 			return False
 
 		if not self._insert_flow_route(scope):
@@ -1230,6 +1245,7 @@ class Configuration (object):
 	def _multi_match (self,scope,tokens):
 		if len(tokens) != 0:
 			self._error = self._str_flow_error
+			if self.debug: raise
 			return False
 
 		while True:
@@ -1241,6 +1257,7 @@ class Configuration (object):
 	def _multi_then (self,scope,tokens):
 		if len(tokens) != 0:
 			self._error = self._str_flow_error
+			if self.debug: raise
 			return False
 
 		while True:
