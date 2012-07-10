@@ -663,73 +663,73 @@ class Protocol (object):
 		# XXX: This code does not make sure that attributes are unique - or does it ?
 
 		if code == AttributeID.ORIGIN:
-			logger.parser('parsing origin')
+			logger.parser('parsing origin %s' % [hex(ord(_)) for _ in data[:length]])
 			self.attributes.add(Origin(ord(data[0])))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.AS_PATH:
-			logger.parser('parsing as_path')
+			logger.parser('parsing as_path %s' % [hex(ord(_)) for _ in data[:length]])
 			self.attributes.add(self.__new_ASPath(data,self._asn4))
 			if not self._asn4 and self.attributes.has(AttributeID.AS4_PATH):
 				self.__merge_attributes()
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.AS4_PATH:
-			logger.parser('parsing as_path')
+			logger.parser('parsing as_path %s' % [hex(ord(_)) for _ in data[:length]])
 			self.attributes.add(self.__new_AS4Path(data))
 			if not self._asn4 and self.attributes.has(AttributeID.AS_PATH):
 				self.__merge_attributes()
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.NEXT_HOP:
-			logger.parser('parsing next-hop')
+			logger.parser('parsing next-hop %s' % [hex(ord(_)) for _ in data[:length]])
 			self.attributes.add(NextHop(data[:4],AFI.ipv4))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.MED:
-			logger.parser('parsing med')
+			logger.parser('parsing med %s' % [hex(ord(_)) for _ in data[:length]])
 			self.attributes.add(MED(unpack('!L',data[:4])[0]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.LOCAL_PREF:
-			logger.parser('parsing local-preference')
+			logger.parser('parsing local-preference %s' % [hex(ord(_)) for _ in data[:length]])
 			self.attributes.add(LocalPreference(unpack('!L',data[:4])[0]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.ATOMIC_AGGREGATE:
-			logger.parser('ignoring atomic-aggregate')
+			logger.parser('ignoring atomic-aggregate %s' % [hex(ord(_)) for _ in data[:length]])
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.AGGREGATOR:
-			logger.parser('ignoring aggregator')
+			logger.parser('ignoring aggregator %s' % [hex(ord(_)) for _ in data[:length]])
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.AS4_AGGREGATOR:
-			logger.parser('ignoring as4_aggregator')
+			logger.parser('ignoring as4_aggregator %s' % [hex(ord(_)) for _ in data[:length]])
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.COMMUNITY:
-			logger.parser('parsing communities')
+			logger.parser('parsing communities %s' % [hex(ord(_)) for _ in data[:length]])
 			self.attributes.add(self.__new_communities(data[:length]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.ORIGINATOR_ID:
-			logger.parser('parsing originator-id')
+			logger.parser('parsing originator-id %s' % [hex(ord(_)) for _ in data[:length]])
 			self.attributes.add(OriginatorID(data[:4],AFI.ipv4))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.CLUSTER_LIST:
-			logger.parser('parsing cluster-list')
+			logger.parser('parsing cluster-list %s' % [hex(ord(_)) for _ in data[:length]])
 			self.attributes.add(ClusterList(data[:length]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.EXTENDED_COMMUNITY:
-			logger.parser('parsing communities')
+			logger.parser('parsing communities %s' % [hex(ord(_)) for _ in data[:length]])
 			self.attributes.add(self.__new_extended_communities(data[:length]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.MP_UNREACH_NLRI:
-			logger.parser('parsing multi-protocol nlri unreacheable')
+			logger.parser('parsing multi-protocol nlri unreacheable %s' % [hex(ord(_)) for _ in data[:length]])
 			next_attributes = data[length:]
 			data = data[:length]
 			afi,safi = unpack('!HB',data[:3])
@@ -748,7 +748,7 @@ class Protocol (object):
 			return self._AttributesFactory(next_attributes)
 
 		if code == AttributeID.MP_REACH_NLRI:
-			logger.parser('parsing multi-protocol nlri reacheable')
+			logger.parser('parsing multi-protocol nlri reacheable %s' % [hex(ord(_)) for _ in data[:length]])
 			next_attributes = data[length:]
 			data = data[:length]
 			# -- Reading AFI/SAFI
@@ -801,6 +801,6 @@ class Protocol (object):
 				self.mp_routes.append(route)
 			return self._AttributesFactory(next_attributes)
 
-		logger.parser("ignoring attributes of type %s %s" % (str(code).lower(),[hex(ord(_)) for _ in data]))
+		logger.parser("ignoring attributes of type %s %s" % (str(code).lower(),[hex(ord(_)) for _ in data[:length]]))
 		return self._AttributesFactory(data[length:])
 
