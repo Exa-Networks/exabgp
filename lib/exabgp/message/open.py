@@ -286,19 +286,7 @@ class Capabilities (dict):
 
 	def default (self,neighbor,restarted):
 		graceful = neighbor.graceful_restart
-
-		# XXX: required for multisession but it may cause issues with dynamic route announcement ...
-		if neighbor.multisession:
-			families = neighbor.families()
-		# If routes can be added later on, play safe and do not allow mimimal announcement
-		elif load().bgp.minimal and not neighbor.peer_updates and not neighbor.parse_route:
-			families = neighbor.families()
-		else:
-			families = []
-			families.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
-			families.append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
-			families.append((AFI(AFI.ipv4),SAFI(SAFI.flow_ipv4)))
-			families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+		families = neighbor.families()
 
 		mp = MultiProtocol()
 		mp.extend(families)
@@ -308,7 +296,8 @@ class Capabilities (dict):
 		if neighbor.add_path:
 			ap_families = []
 			ap_families.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
-			ap_families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+			ap_families.append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
+			#ap_families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
 			self[Capabilities.ADD_PATH] = AddPath(ap_families,neighbor.add_path)
 
 		if graceful:

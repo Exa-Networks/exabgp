@@ -43,6 +43,8 @@ Version 3.0.0 - -- of July 2012 (experimental version)
  * Improvement: support for RFC 4456 (BGP Route Reflection: An Alternative to Full Mesh Internal BGP (IBGP))
     more exactly the generation and parsing of originator-id and cluster-list attributes
  * Improvement: support for RFC 3107 (Carrying Label Information in BGP-4)
+ * Improvement: add tcp timeout control for connection over very slow ebgp multihop (dangerous, use with care)
+ * Improvement: control of the MP families announced in the OPEN message
 
 Version 2.0.8 - 31 of March 2012 (stable version)
  * Fix: the update grouping could cause message up to "header size" bigger than allowed.

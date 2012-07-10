@@ -13,7 +13,7 @@ from copy import deepcopy
 
 from exabgp.environment import load
 
-from exabgp.structure.address    import SAFI
+from exabgp.structure.address    import AFI,SAFI
 from exabgp.structure.ip         import InetIP
 from exabgp.structure.nlri       import PathInfo,Labels
 from exabgp.structure.route      import RouteIP
@@ -126,6 +126,19 @@ class Configuration (object):
 	'syntax: process name-of-process {\n' \
 	'          run /path/to/command with its args;\n' \
 	'        }\n\n' \
+
+	_str_family_error = \
+	'syntax: family {\n' \
+	'          all;       # default if not family block is present, announce all we know\n' \
+	'          minimal    # use the AFI/SAFI required to announce the routes in the configuration\n' \
+	'          \n' \
+	'          [inet|inet4] unicast;\n' \
+	'          [inet|inet4] multicast;\n' \
+	'          [inet|inet4] nlri-mpls;\n' \
+	'          [inet|inet4] mpls-vpn;\n' \
+	'          [inet|inet4] flow-vpnv4;\n' \
+	'          inet6 unicast;\n' \
+	'        }\n'
 
 	def __init__ (self,fname,text=False):
 		self._text = text
@@ -298,11 +311,13 @@ class Configuration (object):
 			if command == 'static': return self._multi_static(scope,tokens[1:])
 			if command == 'flow': return self._multi_flow(scope,tokens[1:])
 			if command == 'process': return self._multi_process(scope,tokens[1:])
+			if command == 'family': return self._multi_family(scope,tokens[1:])
 
 		if name == 'neighbor':
 			if command == 'static': return self._multi_static(scope,tokens[1:])
 			if command == 'flow': return self._multi_flow(scope,tokens[1:])
 			if command == 'process': return self._multi_process(scope,tokens[1:])
+			if command == 'family': return self._multi_family(scope,tokens[1:])
 
 		if name == 'static':
 			if command == 'route':
@@ -382,9 +397,16 @@ class Configuration (object):
 		if command == 'parse-routes': return self._set_process_parse_routes(scope,'parse-routes',tokens[1:])
 		if command == 'peer-updates': return self._set_process_peer_updates(scope,'peer-updates',tokens[1:])
 
+		if name == 'family':
+			if command == 'inet': return self._set_family_inet4(scope,tokens[1:])
+			if command == 'inet4': return self._set_family_inet4(scope,tokens[1:])
+			if command == 'inet6': return self._set_family_inet6(scope,tokens[1:])
+			if command == 'minimal': return self._set_family_name(scope,tokens[1:])
+			if command == 'all': return self._set_family_all(scope,tokens[1:])
+
 		return False
 
-	# Group Watchdog
+	# Programs used to control exabgp
 
 	def _multi_process (self,scope,tokens):
 		if len(tokens) != 1:
@@ -467,6 +489,91 @@ class Configuration (object):
 			scope[-1][command] = [prg,]
 		return True
 
+	# Limit the AFI/SAFI pair announced to peers
+
+	def _multi_family (self,scope,tokens):
+		# we know all the families we should use
+		self._family = False
+		scope[-1]['families'] = []
+		while True:
+			r = self._dispatch(scope,'family',[],['inet','inet4','inet6','minimal','all'])
+			if r is False: return False
+			if r is None: break
+		self._family = False
+
+#		self.process.setdefault(tokens[0],{})['run'] = scope[-1].pop('process-run')
+#		self.process[tokens[0]]['receive-routes'] = scope[-1].get('parse-routes',False)
+#		if 'peer-address' in scope[-1]:
+#			self.process[tokens[0]]['neighbor'] = scope[-1]['peer-address']
+#		else:
+#			self.process[tokens[0]]['neighbor'] = '*'
+		return True
+
+	def _set_family_inet4 (self,scope,tokens):
+		if self._family:
+			self._error = 'inet/inet4 can not be used with all or minimal'
+			if self.debug: raise
+			return False
+
+		safi = tokens.pop(0)
+		if safi == 'unicast':
+			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
+		elif safi == 'multicast':
+			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.multicast)))
+		elif safi == 'nlri-mpls':
+			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
+		elif safi == 'mpls-vpn':
+			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.multicast)))
+		elif safi == 'flow-vpnv4':
+			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.flow_ipv4)))
+		else:
+			return False
+		return True
+
+	def _set_family_inet6 (self,scope,tokens):
+		if self._family:
+			self._error = 'inet6 can not be used with all or minimal'
+			if self.debug: raise
+			return False
+
+		safi = tokens.pop(0)
+		if safi == 'unicast':
+			scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+		else:
+			return False
+		return True
+
+	def _set_family_all (self,scope,tokens):
+		if scope[-1]['families']:
+			self._error = 'all can not be used with any other options'
+			if self.debug: raise
+			return False
+		scope[-1]['families'] = self._all_families()
+		self._family = True
+		return True
+
+	def _set_family_name (self,scope,tokens):
+		if scope[-1]['families']:
+			self._error = '%s can not be used with any other options %s' % tokens[0]
+			if self.debug: raise
+			return False
+		scope[-1]['families'] = tokens[0]
+		self._family = True
+		return True
+
+	def _all_families (self):
+		# it can not be a generator
+		families = []
+		families.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
+		families.append((AFI(AFI.ipv4),SAFI(SAFI.multicast)))
+		families.append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
+		families.append((AFI(AFI.ipv4),SAFI(SAFI.multicast)))
+		families.append((AFI(AFI.ipv4),SAFI(SAFI.flow_ipv4)))
+		families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+		return families
+
+	# route grouping with watchdog
+
 	def _route_watchdog (self,scope,tokens):
 		try:
 			scope[-1]['routes'][-1].attributes.add(Watchdog(tokens.pop(0)))
@@ -490,7 +597,7 @@ class Configuration (object):
 	def _multi_group (self,scope,address):
 		scope.append({})
 		while True:
-			r = self._dispatch(scope,'group',['static','flow','neighbor','process'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session'])
+			r = self._dispatch(scope,'group',['static','flow','neighbor','process','family'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session'])
 			if r is False:
 				return False
 			if r is None:
@@ -526,6 +633,7 @@ class Configuration (object):
 			if v: neighbor.hold_time = v
 			v = local_scope.get('add-path','')
 			if v: neighbor.add_path = v
+
 			neighbor.parse_routes = local_scope.get('parse-routes',False)
 			neighbor.peer_updates = local_scope.get('peer-updates',False)
 			v = local_scope.get('routes',[])
@@ -560,6 +668,32 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
+		openfamilies = local_scope.get('families','everything')
+		# announce every family we known
+		if neighbor.multisession and openfamilies == 'everything':
+			# announce what is needed, and no more, no need to have lots of TCP session doing nothing
+			families = self._families.keys()
+		elif openfamilies in ('all','everything'):
+			families = self._all_families()
+		# only announce what you have as routes
+		elif openfamilies == 'minimal':
+			families = self._families.keys()
+		else:
+			families = openfamilies
+
+		# check we are not trying to announce routes without the right MP announcement
+		for family in neighbor._families.keys():
+			if family not in families:
+				afi,safi = family
+				self._error = 'Trying to announce a route of type %s,%s when we are not announcing the family to our peer' % (afi,safi)
+				if self.debug: raise
+				return False
+
+		# add the families to the list of families known
+		for family in families:
+			if family not in neighbor._families:
+				neighbor._families[family] = []
+
 		if neighbor.multisession:
 			for family in neighbor.families():
 				afi,safi = family
@@ -589,7 +723,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-		 	r = self._dispatch(scope,'neighbor',['static','flow','process'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session'])
+		 	r = self._dispatch(scope,'neighbor',['static','flow','process','family'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session'])
 			if r is False: return False
 			if r is None: return True
 

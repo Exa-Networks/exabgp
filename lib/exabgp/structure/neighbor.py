@@ -32,7 +32,7 @@ class Neighbor (object):
 		self.multisession = None
 		self.parse_routes = None
 		self.peer_updates = None
-		self._families = {(AFI.ipv4,SAFI.unicast):[]}
+		self._families = {}
 		self._watchdog = {}
 
 	def name (self):
