@@ -534,7 +534,7 @@ class Protocol (object):
 			raise Notify(3,1)
 
 		# Is the peer going to send us some Path Information with the route (AddPath)
-		path_info = self.use_path.receive(AFI.ipv4,SAFI.unicast)
+		path_info = self.use_path.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
 
 		routes = []
 		while withdrawn:
