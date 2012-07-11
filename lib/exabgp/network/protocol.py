@@ -62,14 +62,14 @@ def BGPNLRI (afi,safi,bgp,has_multiple_path):
 	labels = []
 	rd = ''
 
-	mask = ord(bgp[0])
-	bgp = bgp[1:]
-
 	if has_multiple_path:
 		path_identifier = bgp[:4]
 		bgp = bgp[4:]
 	else:
 		path_identifier = ''
+
+	mask = ord(bgp[0])
+	bgp = bgp[1:]
 
 	if _has_label(afi,safi):
 		while bgp and mask >= 8:
