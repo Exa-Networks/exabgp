@@ -59,11 +59,11 @@ def _has_rd (afi,safi):
 
 # Generate an NLRI from a BGP packet receive
 def BGPNLRI (afi,safi,bgp,has_multiple_path):
-	print
-	print
-	print "BGPNLRI -> ", [hex(ord(_)) for _ in bgp]
-	print
-	print
+#	print
+#	print
+#	print "BGPNLRI -> ", [hex(ord(_)) for _ in bgp]
+#	print
+#	print
 
 	if has_multiple_path:
 		path_identifier = bgp[:4]
@@ -130,14 +130,14 @@ def BGPNLRI (afi,safi,bgp,has_multiple_path):
 	if rd:
 		nlri.rd = RouteDistinguisher(rd)
 
-	print
-	print
-	print
-	print str(nlri)
-	print len(nlri)
-	print
-	print
-	print
+#	print
+#	print
+#	print
+#	print str(nlri)
+#	print len(nlri)
+#	print
+#	print
+#	print
 
 	return nlri
 
@@ -857,7 +857,7 @@ class Protocol (object):
 			# Is the peer going to send us some Path Information with the route (AddPath)
 			path_info = self.use_path.receive(afi,safi)
 			while data:
-				print ":::::::::::", [hex(ord(_)) for _ in data]
+				#print ":::::::::::", [hex(ord(_)) for _ in data]
 				route = RouteBGP(BGPNLRI(afi,safi,data,path_info),'announce')
 				data = data[len(route.nlri):]
 				route.attributes = self.attributes
