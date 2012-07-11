@@ -59,7 +59,6 @@ def _has_rd (afi,safi):
 
 # Generate an NLRI from a BGP packet receive
 def BGPNLRI (afi,safi,bgp,has_multiple_path):
-	print "==========>>>   DECODING ", [hex(ord(_)) for _ in bgp]
 	labels = []
 	rd = ''
 
@@ -89,10 +88,10 @@ def BGPNLRI (afi,safi,bgp,has_multiple_path):
 		rd = bgp[:8]
 		bgp = bgp[8:]
 
-		if mask < 0:
-			raise Notify(3,0,'length calculation issue')
+	if mask < 0:
+		raise Notify(3,0,'length calculation issue')
 
-	if not bgp:
+	if not bgp and mask:
 		raise Notify(3,0,'could not decode route')
 
 	size = mask_to_bytes[mask]
