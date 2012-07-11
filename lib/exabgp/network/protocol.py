@@ -607,6 +607,9 @@ class Protocol (object):
 		slen = ord(data[1])
 		sdata = data[2:2+(slen*size)]
 
+		if stype not in (ASPath.AS_SET, ASPath.AS_SEQUENCE):
+			raise Notify(2,0,'invalid AS Path type sent %d' % stype)
+
 		ASPS = ASPath(asn4,stype)
 		format = '!'+(decoder*slen)
 		for c in unpack(format,sdata):
@@ -695,16 +698,18 @@ class Protocol (object):
 
 		if code == AttributeID.AS_PATH:
 			logger.parser('parsing as_path %s' % [hex(ord(_)) for _ in data[:length]])
-			self.attributes.add(self.__new_ASPath(data,self._asn4))
-			if not self._asn4 and self.attributes.has(AttributeID.AS4_PATH):
-				self.__merge_attributes()
+			if length:
+				self.attributes.add(self.__new_ASPath(data[:length],self._asn4))
+				if not self._asn4 and self.attributes.has(AttributeID.AS4_PATH):
+					self.__merge_attributes()
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.AS4_PATH:
 			logger.parser('parsing as_path %s' % [hex(ord(_)) for _ in data[:length]])
-			self.attributes.add(self.__new_AS4Path(data))
-			if not self._asn4 and self.attributes.has(AttributeID.AS_PATH):
-				self.__merge_attributes()
+			if length:
+				self.attributes.add(self.__new_AS4Path(data))
+				if not self._asn4 and self.attributes.has(AttributeID.AS_PATH):
+					self.__merge_attributes()
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.NEXT_HOP:
