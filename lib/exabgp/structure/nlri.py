@@ -85,6 +85,9 @@ class RouteDistinguisher (object):
 		return self._len
 
 	def __str__ (self):
+		if not self.rd:
+			return ''
+
 		t,c1,c2,c3 = unpack('!HHHH',self.rd)
 		if t == 0:
 			rd = '%d:%d' % (c1,(c2<<16)+c3)
@@ -152,8 +155,7 @@ class NLRI (BGPPrefix):
 
 		if self.has_label():
 			length = 8 + len(self.labels) + len(self.rd)*8 + self.mask
-			payload = chr(length) + path_info + self.labels.pack() + self.rd.pack() + self.packed[:mask_to_bytes[self.mask]]
-			return chr(length) + payload
+			return chr(length) + path_info + self.labels.pack() + self.rd.pack() + self.packed[:mask_to_bytes[self.mask]]
 		else:
 			return path_info + BGPPrefix.pack(self)
 
