@@ -76,7 +76,7 @@ _NoLabels = Labels([])
 class RouteDistinguisher (object):
 	def __init__ (self,rd):
 		self.rd = rd
-		self._len = len(self.rd)*3 # length of label WITHOUT THE LENGTH PREFIXED
+		self._len = len(self.rd)
 
 	def pack (self):
 		return self.rd
@@ -129,8 +129,6 @@ class NLRI (BGPPrefix):
 
 	def __len__ (self):
 		prefix_len = len(self.path_info) + len(self.labels) + len(self.rd)
-		# The one is either : the mask for a normal NLRI
-		#                   : the byte for the length of the label otherwise
 		return 1 + prefix_len + mask_to_bytes[self.mask]
 
 	def __str__ (self):
@@ -142,7 +140,6 @@ class NLRI (BGPPrefix):
 		else:
 			path_info = ''
 
-		#import pdb; pdb.set_trace()
 		if self.has_label():
 			length = 8 + len(self.labels) + len(self.rd)*8 + self.mask
 			payload = chr(length) + path_info + self.labels.pack() + self.rd.pack() + self.packed[:mask_to_bytes[self.mask]]

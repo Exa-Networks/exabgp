@@ -59,11 +59,12 @@ def _has_rd (afi,safi):
 
 # Generate an NLRI from a BGP packet receive
 def BGPNLRI (afi,safi,bgp,has_multiple_path):
-#	print
-#	print
-#	print "BGPNLRI -> ", [hex(ord(_)) for _ in bgp]
-#	print
-#	print
+	print "==========>>>   DECODING ", [hex(ord(_)) for _ in bgp]
+	labels = []
+	rd = ''
+
+	mask = ord(bgp[0])
+	bgp = bgp[1:]
 
 	if has_multiple_path:
 		path_identifier = bgp[:4]
@@ -71,50 +72,36 @@ def BGPNLRI (afi,safi,bgp,has_multiple_path):
 	else:
 		path_identifier = ''
 
-	if not bgp:
-		raise Notify(3,0,'could not find nlri and/or labels once the path-identifier was removed')
-
-	labels = []
-	rd = ''
-
 	if _has_label(afi,safi):
-		length = ord(bgp[0])
-		bgp = bgp[1:length+1]
-
-		while bgp:
+		while bgp and mask >= 8:
 			label = int(unpack('!L',chr(0) + bgp[:3])[0])
 			bgp = bgp[3:]
 			labels.append(label>>4)
-			length -= 24 # 3 bytes
+			mask -= 24 # 3 bytes
 			if label & 1:
 				break
 			# This is a route withdrawal, or next-hop
 			if label == 0x000000 or label == 0x80000:
 				break
 
-		if _has_rd(afi,safi):
-			length -= 8*8 # the 8 bytes of the route distinguisher
-			rd = bgp[:8]
-			bgp = bgp[8:]
+	if _has_rd(afi,safi):
+		mask -= 8*8 # the 8 bytes of the route distinguisher
+		rd = bgp[:8]
+		bgp = bgp[8:]
 
-		if length < 0:
+		if mask < 0:
 			raise Notify(3,0,'length calculation issue')
-
-		size = mask_to_bytes[length]
-		mask = length
-	else:
-		# XXX: The padding calculation should really go into the NLRI class
-		mask = ord(bgp[0])
-		size = mask_to_bytes[mask]
-		bgp = bgp[1:]
 
 	if not bgp:
 		raise Notify(3,0,'could not decode route')
+
+	size = mask_to_bytes[mask]
 
 	if len(bgp) < size:
 		raise Notify(3,0,'could not decode AFI/SAFI route')
 
 	network = bgp[:size]
+	# XXX: The padding calculation should really go into the NLRI class
 	padding = '\0'*(NLRI.length[afi]-size)
 	prefix = network + padding
 	nlri = NLRI(prefix,afi,mask)
@@ -123,22 +110,12 @@ def BGPNLRI (afi,safi,bgp,has_multiple_path):
 	if safi:
 		nlri.safi = SAFI(safi)
 
-	nlri.path_info = PathInfo(packed=path_identifier)
-	
+	if path_identifier:
+		nlri.path_info = PathInfo(packed=path_identifier)
 	if labels:
 		nlri.labels = Labels(labels)
 	if rd:
 		nlri.rd = RouteDistinguisher(rd)
-
-#	print
-#	print
-#	print
-#	print str(nlri)
-#	print len(nlri)
-#	print
-#	print
-#	print
-
 	return nlri
 
 
@@ -857,7 +834,6 @@ class Protocol (object):
 			# Is the peer going to send us some Path Information with the route (AddPath)
 			path_info = self.use_path.receive(afi,safi)
 			while data:
-				#print ":::::::::::", [hex(ord(_)) for _ in data]
 				route = RouteBGP(BGPNLRI(afi,safi,data,path_info),'announce')
 				data = data[len(route.nlri):]
 				route.attributes = self.attributes
