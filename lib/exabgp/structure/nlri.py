@@ -85,8 +85,18 @@ class RouteDistinguisher (object):
 		return self._len
 
 	def __str__ (self):
+		t,c1,c2,c3 = unpack('!HHHH',self.rd)
+		if t == 0:
+			rd = '%d:%d' % (c1,(c2<<16)+c3)
+		elif t == 1:
+			rd = '%d.%d.%d.%d:%d' % (c1>>8,c1&0xFF,c2>>8,c2&0xFF,c3)
+		elif t == 2:
+			rd = '%d:%d' % ((c1<<16)+c2,c3)
+		else:
+			rd = str(self.rd)
+
 		if self.rd:
-			return ' route-distinguisher %d:%d' % (unpack('!LL',self.rd)[0],unpack('!LL',self.rd)[1])
+			return ' route-distinguisher %s' % rd
 		return ''
 	
 	def __repr__ (self):
