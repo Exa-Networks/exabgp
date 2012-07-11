@@ -89,15 +89,15 @@ def BGPNLRI (afi,safi,bgp,has_multiple_path):
 		bgp = bgp[8:]
 
 	if mask < 0:
-		raise Notify(3,0,'length calculation issue')
+		raise Notify(3,0,'invalid length in NLRI prefix')
 
 	if not bgp and mask:
-		raise Notify(3,0,'could not decode route')
+		raise Notify(3,0,'not enough data for the mask provided to decode the NLRI')
 
 	size = mask_to_bytes[mask]
 
 	if len(bgp) < size:
-		raise Notify(3,0,'could not decode AFI/SAFI route')
+		raise Notify(3,0,'could not decode route with AFI %d sand SAFI %d' % (afi,safi))
 
 	network = bgp[:size]
 	# XXX: The padding calculation should really go into the NLRI class
@@ -549,14 +549,14 @@ class Protocol (object):
 		# withdrawn
 		lw,withdrawn,data = defix(data)
 		if len(withdrawn) != lw:
-			raise Notify(3,1)
+			raise Notify(3,1,'invalid withdrawn routes length, not enough data available')
 		la,attribute,announced = defix(data)
 		if len(attribute) != la:
-			raise Notify(3,1)
+			raise Notify(3,1,'invalid total path attribute length, not enough data available')
 		# The RFC check ...
 		#if lw + la + 23 > length:
 		if 2 + lw + 2+ la + len(announced) != length:
-			raise Notify(3,1)
+			raise Notify(3,1,'error in BGP message lenght, not enough data for the size announced')
 
 		# Is the peer going to send us some Path Information with the route (AddPath)
 		path_info = self.use_path.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
@@ -607,7 +607,7 @@ class Protocol (object):
 		sdata = data[2:2+(slen*size)]
 
 		if stype not in (ASPath.AS_SET, ASPath.AS_SEQUENCE):
-			raise Notify(2,0,'invalid AS Path type sent %d' % stype)
+			raise Notify(3,11,'invalid AS Path type sent %d' % stype)
 
 		ASPS = ASPath(asn4,stype)
 		format = '!'+(decoder*slen)

@@ -18,12 +18,12 @@ class State (object):
 	ESTABLISHED = 0x06
 
 
-# README: the name is HORRIBLE, fix this !!
+# XXX: the name is HORRIBLE, fix this !!
 def defix (data):
 	l = unpack('!H',data[0:2])[0]
 	return l,data[2:l+2],data[l+2:]
 
-# README: the name is HORRIBLE, fix this !!
+# XXX: the name is HORRIBLE, fix this !!
 def prefix (data):
 	return '%s%s' % (pack('!H',len(data)),data)
 
