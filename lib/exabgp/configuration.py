@@ -10,12 +10,13 @@ import os
 import stat
 from pprint import pformat
 from copy import deepcopy
+from struct import pack,unpack
 
 from exabgp.environment import load
 
 from exabgp.structure.address    import AFI,SAFI
 from exabgp.structure.ip         import InetIP
-from exabgp.structure.nlri       import PathInfo,Labels
+from exabgp.structure.nlri       import PathInfo,Labels,RouteDistinguisher
 from exabgp.structure.route      import RouteIP
 from exabgp.structure.asn        import ASN
 from exabgp.structure.neighbor   import Neighbor
@@ -69,6 +70,7 @@ class Configuration (object):
 	'syntax:\n' \
 	'route 10.0.0.1/22 {\n' \
 	'  path-information 0.0.0.1;\n' \
+	'  route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535' \
 	'  next-hop 192.0.1.254;\n' \
 	'  origin IGP|EGP|INCOMPLETE;\n' \
 	'  as-path [ ASN1 ASN2 ];\n' \
@@ -87,7 +89,10 @@ class Configuration (object):
 	'}\n' \
 	'\n' \
 	'syntax:\n' \
-	'route 10.0.0.1/22 local-information 0.0.0.1 next-hop 192.0.2.1' \
+	'route 10.0.0.1/22' \
+	' local-information 0.0.0.1' \
+	' route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535' \
+	' next-hop 192.0.2.1' \
 	' origin IGP|EGP|INCOMPLETE' \
 	' as-path ASN' \
 	' med 100' \
@@ -98,7 +103,6 @@ class Configuration (object):
 	' label 150' \
 	' split /24' \
 	';\n' \
-
 
 	_str_flow_error = \
 	'syntax: flow {\n' \
@@ -374,6 +378,7 @@ class Configuration (object):
 		if command == 'cluster-list': return self._route_cluster_list(scope,tokens[1:])
 		if command == 'split': return self._route_split(scope,tokens[1:])
 		if command == 'label': return self._route_label(scope,tokens[1:])
+		if command in ('rd','route-distinguisher'): return self._route_rd(scope,tokens[1:])
 		if command == 'watchdog': return self._route_watchdog(scope,tokens[1:])
 		if command == 'withdrawn': return self._route_withdrawn(scope,tokens[1:])
 
@@ -984,7 +989,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','as-sequence','med','local-preference','path-information','community','originator-id','cluster-list','extended-community','split','label','watchdog','withdrawn'])
+			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','as-sequence','med','local-preference','path-information','community','originator-id','cluster-list','extended-community','split','label','rd','route-distinguisher','watchdog','withdrawn'])
 			if r is False: return False
 			if r is None: return self._split_last_route(scope)
 
@@ -992,25 +997,9 @@ class Configuration (object):
 		if len(tokens) <3:
 			return False
 
+		have_next_hop = False
+
 		if not self._insert_static_route(scope,tokens):
-			return False
-
-		# we generate path-information before next-hop so we must allow it
-		next_hop = tokens.pop(0)
-		while next_hop in ['path-information','label']:
-			tokens.append(next_hop)
-			value = tokens.pop(0)
-			tokens.append(value)
-			if value == '[':
-				while value != ']':
-					value = tokens.pop(0)
-					tokens.append(value)
-			next_hop = tokens.pop(0)
-
-		if next_hop != 'next-hop':
-			return False
-
-		if not self._route_next_hop(scope,tokens):
 			return False
 
 		while len(tokens):
@@ -1023,6 +1012,11 @@ class Configuration (object):
 			if len(tokens) < 1:
 				return False
 
+			if command == 'next-hop':
+				if self._route_next_hop(scope,tokens):
+					have_next_hop = True
+					continue
+				return False
 			if command == 'origin':
 				if self._route_origin(scope,tokens):
 					continue
@@ -1071,11 +1065,20 @@ class Configuration (object):
 				if self._route_label(scope,tokens):
 					continue
 				return False
+			if command in ('rd','route-distinguisher'):
+				if self._route_rd(scope,tokens):
+					continue
+				return False
 			if command == 'watchdog':
 				if self._route_watchdog(scope,tokens):
 					continue
 				return False
 			return False
+		
+		if not have_next_hop:
+			self._error = 'every route requires a next-hop'
+			if self.debug: raise
+			
 		return self._split_last_route(scope)
 
 	# Command Route
@@ -1327,6 +1330,42 @@ class Configuration (object):
 		scope[-1]['routes'][-1].nlri.safi = SAFI(SAFI.nlri_mpls)
 		scope[-1]['routes'][-1].nlri.labels = Labels(labels)
 		return True
+
+	def _route_rd (self,scope,tokens):
+		try:
+			try:
+				data = tokens.pop(0)
+			except IndexError:
+				self._error = self._str_route_error
+				if self.debug: raise
+				return False
+
+			separator = data.find(':')
+			if separator > 0:
+				prefix = data[:separator]
+				suffix = int(data[separator+1:])
+
+			if '.' in prefix:
+				bytes = [chr(0),chr(1)]
+				bytes.extend([chr(int(_)) for _ in prefix.split('.')])
+				bytes.extend([suffix>>8,suffix&0xFF])
+				rd = ''.join(bytes)
+			else:
+				number = int(prefix)
+				if number < pow(2,16) and suffix < pow(2,32):
+					rd = chr(0) + chr(0) + pack('!H',number) + pack('!L',suffix)
+				elif number < pow(2,32) and suffix < pow(2,16):
+					rd = chr(0) + chr(2) + pack('!L',number) + pack('!H',suffix)
+				else:
+					raise ValueError('invalid route-distinguisher %s' % data)
+
+			scope[-1]['routes'][-1].nlri.rd = RouteDistinguisher(rd)
+			return True
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+
 
 	# Group Flow  ........
 
