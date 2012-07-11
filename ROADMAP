@@ -5,18 +5,17 @@ ROADMAP
 Version 3.
 - usual bug fixes and improvments (bugs ? which bugs ?)
 - protect the forked process do not have to deal with SIGHUP or others signals sent to exabgp (done ? to test)
+- finish mpls-vpn support
 - multiple configuration files as paramter (considering)
 - have a command to shutdown the process properly
-- check that the route received are well from a family negociated during the OPEN
+- check that the route received are well from a family negociated during the OPEN ?
   (no peer should send you route which are not in the negociated AFI/SAFI families and we do not really care if they do but we should)
 
 LATER
 - http://www.ietf.org/id/draft-ietf-idr-bgp-extended-messages-02.txt
-- vpnv4 - really this is now missing ... must find the motivation .
+- use the same logic/api in configuration for aspath that has been used for clusterlist ?
+- handle correctly the death of helper processes
+- look at the Inet, IPv4 and NLRI class to see if it can be simplied
+- look at the classes to reduce conversion and improve perf
 - look what fun RFC we could implement from the list at 
   http://code.google.com/p/exabgp/wiki/RFC
-- prevent originator-id and cluster-list on EBGP session ?
-- unify all classes which are IPv4 like to use the IPv4 class
-- use the same logic/api in configuration for aspath that has been used for clusterlist
-- handle correctly the death of helper processes
-- add debug.configuration to the list of option
