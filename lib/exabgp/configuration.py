@@ -186,6 +186,42 @@ class Configuration (object):
 			r = self._dispatch(self._scope,'configuration',['group','neighbor'],[])
 			if r is False: break
 
+		try:
+			# self check to see if we can decode what we encode
+			if False:
+				from exabgp.structure.asn import ASN
+				from exabgp.structure.neighbor import Neighbor
+				from exabgp.network.peer import Peer
+				from exabgp.network.protocol import BGPNLRI,Protocol
+				from exabgp.message.update import Update
+				from exabgp.message.open import Open,Capabilities,UsePath
+
+				n = Neighbor()
+				n.local_as = ASN(30740)
+				for f in self._all_families():
+					n._families[f] = []
+				o = Open(4,30740,'127.0.0.1',Capabilities().default(n,False),180)
+
+				proto = Protocol(Peer(n,None))
+				proto.use_path = UsePath(o,o)
+
+				for route in self._scope[0]['routes']:
+					#decoded = BGPNLRI(1,128,route.nlri.pack(False),False)
+					update = Update([route])
+					packed = update.announce(False,ASN(30740),ASN(30740),False)
+					print "PACKED  ---->", [hex(ord(_)) for _ in packed]
+					# This does not take the BGP header - let's assume we will not break that :)
+					import pdb;
+					pdb.set_trace()
+					recoded = proto.UpdateFactory(packed[19:])
+					decoded = recoded.routes[0]
+					print "DECODED ===>", str(decoded)
+					print
+				return False
+		except Exception,e:
+			import pdb;
+			pdb.set_trace()
+
 		if r in [True,None]:
 			self.neighbor = self._neighbor
 			return True
@@ -1074,11 +1110,11 @@ class Configuration (object):
 					continue
 				return False
 			return False
-		
+
 		if not have_next_hop:
 			self._error = 'every route requires a next-hop'
 			if self.debug: raise
-			
+
 		return self._split_last_route(scope)
 
 	# Command Route
