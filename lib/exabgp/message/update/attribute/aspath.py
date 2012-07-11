@@ -46,7 +46,7 @@ class ASPath (Attribute):
 	def __str__ (self):
 		if self.asptype == 0x01: t = 'AS_SET'
 		if self.asptype == 0x02: t = 'AS_SEQUENCE'
-		else: t = 'INVALID'
+		else: t = 'invalid_ASPATH_%d' % self.asptype
 
 		if len(self) >  1: return '%s [ %s ]' % (t,' '.join([str(community) for community in self.aspsegment]))
 		if len(self) == 1: return '%s %s' % (t,str(self.aspsegment[0]))
