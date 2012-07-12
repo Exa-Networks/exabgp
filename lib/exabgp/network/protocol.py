@@ -563,13 +563,8 @@ class Protocol (object):
 			nlri = BGPNLRI(AFI.ipv4,SAFI.unicast_multicast,withdrawn,path_info)
 			route = RouteBGP(nlri,'withdraw')
 			# XXX: Should this be a deep copy
-			route.attributes = attributes
+			route.attributes = self.attributes
 			withdrawn = withdrawn[len(nlri):]
-			routes.append(route)
-
-		for route in self.mp_withdraw:
-			# XXX: Should this be a deep copy
-			route.nlri.attributes = attributes
 			routes.append(route)
 
 		while announced:
@@ -581,9 +576,14 @@ class Protocol (object):
 			routes.append(route)
 			#logger.info(self.me('Received route %s' % nlri))
 
+		# We assume that the MP will always be the last Attributes
+		# It is not in the RFC
+		for route in self.mp_withdraw:
+			# XXX: Should this be a deep copy
+			routes.append(route)
+
 		for route in self.mp_announce:
 			# XXX: Should this be a deep copy
-			route.nlri.attributes = attributes
 			routes.append(route)
 
 		#print "routes", routes
@@ -780,8 +780,9 @@ class Protocol (object):
 			path_info = self.use_path.receive(afi,safi)
 			while data:
 				route = RouteBGP(BGPNLRI(afi,safi,data,path_info),'withdraw')
-				data = data[len(route.nlri):]
+				route.attributes = self.attributes
 				self.mp_withdraw.append(route)
+				data = data[len(route.nlri):]
 			return self._AttributesFactory(next_attributes)
 
 		if code == AttributeID.MP_REACH_NLRI:
@@ -844,10 +845,10 @@ class Protocol (object):
 			path_info = self.use_path.receive(afi,safi)
 			while data:
 				route = RouteBGP(BGPNLRI(afi,safi,data,path_info),'announced')
-				data = data[len(route.nlri):]
 				route.attributes = self.attributes
 				route.attributes.add(NextHopIP(nh))
 				self.mp_announce.append(route)
+				data = data[len(route.nlri):]
 			return self._AttributesFactory(next_attributes)
 
 		logger.parser("ignoring attributes of type %s %s" % (str(code).lower(),[hex(ord(_)) for _ in data[:length]]))
