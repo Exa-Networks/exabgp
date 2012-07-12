@@ -1114,6 +1114,7 @@ class Configuration (object):
 		if not have_next_hop:
 			self._error = 'every route requires a next-hop'
 			if self.debug: raise
+			return False
 
 		return self._split_last_route(scope)
 
@@ -1363,8 +1364,11 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
-		scope[-1]['routes'][-1].nlri.safi = SAFI(SAFI.nlri_mpls)
-		scope[-1]['routes'][-1].nlri.labels = Labels(labels)
+
+		nlri = scope[-1]['routes'][-1].nlri
+		if not nlri.safi.has_label():
+			nlri.safi = SAFI(SAFI.nlri_mpls)
+		nlri.labels = Labels(labels)
 		return True
 
 	def _route_rd (self,scope,tokens):
@@ -1395,7 +1399,10 @@ class Configuration (object):
 				else:
 					raise ValueError('invalid route-distinguisher %s' % data)
 
-			scope[-1]['routes'][-1].nlri.rd = RouteDistinguisher(rd)
+			nlri = scope[-1]['routes'][-1].nlri
+			# overwrite nlri-mpls
+			nlri.safi = SAFI(SAFI.mpls_vpn)
+			nlri.rd = RouteDistinguisher(rd)
 			return True
 		except ValueError:
 			self._error = self._str_route_error

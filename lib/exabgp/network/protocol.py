@@ -50,13 +50,6 @@ logger = Logger()
 
 MAX_BACKLOG = 200000
 
-
-def _has_label (afi,safi):
-	return safi in (SAFI.nlri_mpls,SAFI.mpls_vpn)
-
-def _has_rd (afi,safi):
-	return safi in (SAFI.mpls_vpn,)
-
 # Generate an NLRI from a BGP packet receive
 def BGPNLRI (afi,safi,bgp,has_multiple_path):
 	labels = []
@@ -71,7 +64,7 @@ def BGPNLRI (afi,safi,bgp,has_multiple_path):
 	mask = ord(bgp[0])
 	bgp = bgp[1:]
 
-	if _has_label(afi,safi):
+	if SAFI(safi).has_label():
 		while bgp and mask >= 8:
 			label = int(unpack('!L',chr(0) + bgp[:3])[0])
 			bgp = bgp[3:]
@@ -83,7 +76,7 @@ def BGPNLRI (afi,safi,bgp,has_multiple_path):
 			if label == 0x000000 or label == 0x80000:
 				break
 
-	if _has_rd(afi,safi):
+	if SAFI(safi).has_rd():
 		mask -= 8*8 # the 8 bytes of the route distinguisher
 		rd = bgp[:8]
 		bgp = bgp[8:]

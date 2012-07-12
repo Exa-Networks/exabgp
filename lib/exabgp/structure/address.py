@@ -78,6 +78,12 @@ class SAFI (int):
 	def pack (self):
 		return chr(self)
 
+	def has_label (self):
+		return self in (self.nlri_mpls,self.mpls_vpn)
+
+	def has_rd (self):
+		return self in (self.mpls_vpn,)
+
 ## =================================================================== Address
 
 class Address (object):
