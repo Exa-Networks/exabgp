@@ -96,7 +96,7 @@ def BGPNLRI (afi,safi,bgp,has_multiple_path):
 	# XXX: The padding calculation should really go into the NLRI class
 	padding = '\0'*(NLRI.length[afi]-size)
 	prefix = network + padding
-	nlri = NLRI(prefix,afi,mask)
+	nlri = NLRI(prefix,afi,safi,mask)
 
 	# XXX: Not the best interface but will do for now
 	if safi:
@@ -554,16 +554,23 @@ class Protocol (object):
 		# Is the peer going to send us some Path Information with the route (AddPath)
 		path_info = self.use_path.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
 
+		self.mp_announce = []
+		self.mp_withdraw = []
+		attributes = self.AttributesFactory(attribute)
+
 		routes = []
 		while withdrawn:
 			nlri = BGPNLRI(AFI.ipv4,SAFI.unicast_multicast,withdrawn,path_info)
 			route = RouteBGP(nlri,'withdraw')
+			# XXX: Should this be a deep copy
+			route.attributes = attributes
 			withdrawn = withdrawn[len(nlri):]
 			routes.append(route)
 
-		self.mp_routes = []
-		attributes = self.AttributesFactory(attribute)
-		routes.extend(self.mp_routes)
+		for route in self.mp_withdraw:
+			# XXX: Should this be a deep copy
+			route.nlri.attributes = attributes
+			routes.append(route)
 
 		while announced:
 			nlri = BGPNLRI(AFI.ipv4,SAFI.unicast_multicast,announced,path_info)
@@ -573,6 +580,11 @@ class Protocol (object):
 			announced = announced[len(nlri):]
 			routes.append(route)
 			#logger.info(self.me('Received route %s' % nlri))
+
+		for route in self.mp_announce:
+			# XXX: Should this be a deep copy
+			route.nlri.attributes = attributes
+			routes.append(route)
 
 		#print "routes", routes
 		#print "attributes", attributes
@@ -769,7 +781,7 @@ class Protocol (object):
 			while data:
 				route = RouteBGP(BGPNLRI(afi,safi,data,path_info),'withdraw')
 				data = data[len(route.nlri):]
-				self.mp_routes.append(route)
+				self.mp_withdraw.append(route)
 			return self._AttributesFactory(next_attributes)
 
 		if code == AttributeID.MP_REACH_NLRI:
@@ -835,7 +847,7 @@ class Protocol (object):
 				data = data[len(route.nlri):]
 				route.attributes = self.attributes
 				route.attributes.add(NextHopIP(nh))
-				self.mp_routes.append(route)
+				self.mp_announce.append(route)
 			return self._AttributesFactory(next_attributes)
 
 		logger.parser("ignoring attributes of type %s %s" % (str(code).lower(),[hex(ord(_)) for _ in data[:length]]))

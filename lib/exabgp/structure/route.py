@@ -44,5 +44,5 @@ class RouteBGP (Route):
 
 def RouteIP (ip,mask):
 	afi,packed = packed_afi(ip)
-	return Route(NLRI(afi,packed,mask))
+	return Route(NLRI(afi,SAFI.unicast_multicast,packed,mask))
 

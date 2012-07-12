@@ -60,7 +60,7 @@ class IPrefix (IComponent):
 	NAME = None
 
 	def __init__ (self,ipv4,netmask):
-		self.nlri = FlowPrefix(AFI.ipv4,ipv4,netmask)
+		self.nlri = FlowPrefix(AFI.ipv4,SAFI.flow_ipv4,ipv4,netmask)
 
 	def pack (self):
 		raw = self.nlri.pack(with_path_info=False)

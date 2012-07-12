@@ -112,9 +112,9 @@ class BGPPrefix (Inet):
 	# have a .mask for the mask
 	# have a .bgp with the bgp wire format of the prefix
 
-	def __init__(self,packed,afi,mask):
+	def __init__(self,packed,afi,safi,mask):
 		self.mask = int(mask)
-		Inet.__init__(self,packed,afi)
+		Inet.__init__(self,packed,afi,safi)
 
 	def __str__ (self):
 		return "%s/%s" % (self.ip,self.mask)
@@ -130,12 +130,12 @@ class BGPPrefix (Inet):
 
 
 class NLRI (BGPPrefix):
-	def __init__(self,afi,packed,mask):
+	def __init__(self,afi,safi,packed,mask):
 		self.path_info = _NoPathInfo
 		self.labels = _NoLabels
 		self.rd = _NoRD
 
-		BGPPrefix.__init__(self,afi,packed,mask)
+		BGPPrefix.__init__(self,afi,safi,packed,mask)
 
 	def has_label (self):
 		return self.afi == AFI.ipv4 and self.safi in (SAFI.nlri_mpls,SAFI.mpls_vpn)
@@ -160,6 +160,6 @@ class NLRI (BGPPrefix):
 			return path_info + BGPPrefix.pack(self)
 
 # Generate an NLRI suitable for use in Flow Routes
-def FlowPrefix (afi,ip,mask):
+def FlowPrefix (afi,safi,ip,mask):
 		packed,afi = packed_afi
-		return BGPPrefix(packed,afi,mask)
+		return BGPPrefix(packed,afi,safi,mask)

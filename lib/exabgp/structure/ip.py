@@ -89,11 +89,11 @@ class Inet (object):
 
 		if not self.safi:
 			if self.afi == AFI.ipv4 and int(self.ip.split('.')[0]) in self._unicast_range:
-				self.safi = self._MULTICAST
+				self.safi = SAFI(self._MULTICAST)
 			else:
-				self.safi = self._UNICAST
+				self.safi = SAFI(self._UNICAST)
 		else:
-			self.safi = self._UNICAST
+			self.safi = SAFI(self.safi)
 
 	def update (self,packed):
 		self.packed = packed

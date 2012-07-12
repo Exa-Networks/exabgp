@@ -19,3 +19,6 @@ LATER
 - look at the classes to reduce conversion and improve perf
 - look what fun RFC we could implement from the list at 
   http://code.google.com/p/exabgp/wiki/RFC
+- Break protocol.py in several files
+- change the order for all calls to be afi,safi,<data>
+- packed_afi to return SAFI ?
