@@ -212,7 +212,7 @@ defaults = {
 		'rib'           : (value.boolean,value.lower,'false',    'report change in locally configured routes'),
 		'message'       : (value.boolean,value.lower,'false',    'report changes in route announcement on config reload'),
 		'timers'        : (value.boolean,value.lower,'false',    'report keepalives timers'),
-		'routes'        : (value.boolean,value.lower,'false',    'report received routes'),
+		'routes'        : (value.boolean,value.lower,'true',     'report received routes'),
 		'parser'        : (value.boolean,value.lower,'false',    'report BGP message parsing details'),
 	},
 	'tcp' : {

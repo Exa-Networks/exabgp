@@ -567,7 +567,7 @@ class Protocol (object):
 
 		while announced:
 			nlri = BGPNLRI(AFI.ipv4,SAFI.unicast_multicast,announced,path_info)
-			route = RouteBGP(nlri,'announce')
+			route = RouteBGP(nlri,'announced')
 			# XXX: Should this be a deep copy
 			route.attributes = attributes
 			announced = announced[len(nlri):]
@@ -831,7 +831,7 @@ class Protocol (object):
 			# Is the peer going to send us some Path Information with the route (AddPath)
 			path_info = self.use_path.receive(afi,safi)
 			while data:
-				route = RouteBGP(BGPNLRI(afi,safi,data,path_info),'announce')
+				route = RouteBGP(BGPNLRI(afi,safi,data,path_info),'announced')
 				data = data[len(route.nlri):]
 				route.attributes = self.attributes
 				route.attributes.add(NextHopIP(nh))
