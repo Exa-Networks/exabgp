@@ -186,45 +186,9 @@ class Configuration (object):
 			r = self._dispatch(self._scope,'configuration',['group','neighbor'],[])
 			if r is False: break
 
-		try:
-			# self check to see if we can decode what we encode
-			if False:
-				from exabgp.structure.asn import ASN
-				from exabgp.structure.neighbor import Neighbor
-				from exabgp.network.peer import Peer
-				from exabgp.network.protocol import BGPNLRI,Protocol
-				from exabgp.message.update import Update
-				from exabgp.message.open import Open,Capabilities,UsePath
-
-				n = Neighbor()
-				n.local_as = ASN(30740)
-				for f in self._all_families():
-					n._families[f] = []
-				o = Open(4,30740,'127.0.0.1',Capabilities().default(n,False),180)
-
-				proto = Protocol(Peer(n,None))
-				proto.use_path = UsePath(o,o)
-
-				for route in self._scope[0]['routes']:
-					#decoded = BGPNLRI(1,128,route.nlri.pack(False),False)
-					update = Update([route])
-					packed = update.announce(False,ASN(30740),ASN(30740),False)
-					print "PACKED  ---->", [hex(ord(_)) for _ in packed]
-					# This does not take the BGP header - let's assume we will not break that :)
-					import pdb;
-					pdb.set_trace()
-					recoded = proto.UpdateFactory(packed[19:])
-					decoded = recoded.routes[0]
-					print "DECODED ===>", str(decoded)
-					print
-				return False
-		except Exception,e:
-			import pdb;
-			pdb.set_trace()
-
 		if r in [True,None]:
 			self.neighbor = self._neighbor
-			return True
+			return self.selfcheck()
 
 		self.error = "\nsyntax error in section %s\nline %d : %s\n\n%s" % (self._location[-1],self.number(),self.line(),self._error)
 		return False
@@ -1681,4 +1645,48 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
+
+	def selfcheck (self):
+		if False:
+			return True
+		return True
+
+		try:
+			# self check to see if we can decode what we encode
+			from exabgp.structure.asn import ASN
+			from exabgp.structure.neighbor import Neighbor
+			from exabgp.network.peer import Peer
+			from exabgp.network.protocol import BGPNLRI,Protocol
+			from exabgp.message.update import Update
+			from exabgp.message.open import Open,Capabilities,UsePath
+
+			n = Neighbor()
+			n.local_as = ASN(30740)
+			for f in self._all_families():
+				n._families[f] = []
+			o = Open(4,30740,'127.0.0.1',Capabilities().default(n,False),180)
+
+			proto = Protocol(Peer(n,None))
+			proto.use_path = UsePath(o,o)
+
+			import pdb;
+			pdb.set_trace()
+
+			for nei in self.neighbor.keys():
+				for family in self.neighbor[nei].families():
+					for route in self.neighbor[nei]._families[family]:
+						update = Update([route])
+						packed = update.announce(False,ASN(30740),ASN(30740),False)
+						print "PACKED  ---->", [hex(ord(_)) for _ in packed]
+						# This does not take the BGP header - let's assume we will not break that :)
+						recoded = proto.UpdateFactory(packed[19:])
+						decoded = recoded.routes[0]
+						print "DECODED ===>", str(decoded)
+						print
+			return False
+		except Exception,e:
+			import pdb;
+			pdb.set_trace()
+			return False
+
 
