@@ -12,7 +12,7 @@ from struct import pack
 from exabgp.environment import load
 
 from exabgp.structure.address import AFI,SAFI
-from exabgp.structure.ip import IPv4
+from exabgp.structure.ip import Inet,inet
 from exabgp.structure.asn  import ASN
 from exabgp.message import Message
 
@@ -56,10 +56,9 @@ class HoldTime (int):
 
 # =================================================================== RouterID
 
-class RouterID (IPv4):
+class RouterID (Inet):
 	def __init__ (self,ipv4):
-		IPv4.__init__(self)
-		self.ipv4(ipv4)
+		Inet.__init__(self,*inet(ipv4))
 
 # =================================================================== Graceful (Restart)
 # RFC 4727

@@ -11,14 +11,12 @@ Version 3.
 - check that the route received are well from a family negociated during the OPEN ?
   (no peer should send you route which are not in the negociated AFI/SAFI families and we do not really care if they do but we should)
 
-LATER
+LATER or BEFORE
 - http://www.ietf.org/id/draft-ietf-idr-bgp-extended-messages-02.txt
 - use the same logic/api in configuration for aspath that has been used for clusterlist ?
 - handle correctly the death of helper processes
-- look at the Inet, IPv4 and NLRI class to see if it can be simplied
 - look at the classes to reduce conversion and improve perf
 - look what fun RFC we could implement from the list at 
   http://code.google.com/p/exabgp/wiki/RFC
 - Break protocol.py in several files
-- change the order for all calls to be afi,safi,<data>
-- packed_afi to return SAFI ?
+- focus on performance : always store packed data

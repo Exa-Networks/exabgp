@@ -15,9 +15,9 @@ from struct import pack,unpack
 from exabgp.environment import load
 
 from exabgp.structure.address    import AFI,SAFI
-from exabgp.structure.ip         import InetIP
-from exabgp.structure.nlri       import PathInfo,Labels,RouteDistinguisher
-from exabgp.structure.route      import RouteIP
+from exabgp.structure.ip         import Inet,inet
+from exabgp.structure.nlri       import NLRI,PathInfo,Labels,RouteDistinguisher
+from exabgp.structure.route      import Route
 from exabgp.structure.asn        import ASN
 from exabgp.structure.neighbor   import Neighbor
 from exabgp.structure.protocol   import NamedProtocol
@@ -35,7 +35,7 @@ from exabgp.message.update.attribute.aspath      import ASPath
 from exabgp.message.update.attribute.med         import MED
 from exabgp.message.update.attribute.localpref   import LocalPreference
 from exabgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_RouteTargetCommunity_00,to_RouteTargetCommunity_01
-from exabgp.message.update.attribute.originatorid import OriginatorIDIP
+from exabgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.message.update.attribute.clusterlist  import ClusterList
 
 from exabgp.log import Logger
@@ -722,7 +722,7 @@ class Configuration (object):
 		address = tokens[0]
 		scope.append({})
 		try:
-			scope[-1]['peer-address'] = InetIP(address)
+			scope[-1]['peer-address'] = Inet(*inet(address))
 		except:
 			self._error = '"%s" is not a valid IP address' % address
 			if self.debug: raise
@@ -773,7 +773,7 @@ class Configuration (object):
 
 	def _set_ip (self,scope,command,value):
 		try:
-			ip = InetIP(value[0])
+			ip = Inet(*inet(value[0]))
 		except (IndexError,ValueError):
 			self._error = '"%s" is an invalid IP address' % ' '.join(value)
 			if self.debug: raise
@@ -943,11 +943,11 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		try:
-			ip,nm = ip.split('/')
+			ip,mask = ip.split('/')
 		except ValueError:
-			nm = '32'
+			mask = '32'
 		try:
-			route = RouteIP(ip,nm)
+			route = Route(NLRI(*inet(ip),mask=mask))
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise
@@ -1196,7 +1196,7 @@ class Configuration (object):
 
 	def _route_originator_id (self,scope,tokens):
 		try:
-			scope[-1]['routes'][-1].attributes.add(OriginatorIDIP(tokens.pop(0)))
+			scope[-1]['routes'][-1].attributes.add(OriginatorID(*inet(tokens.pop(0))))
 			return True
 		except:
 			self._error = self._str_route_error
@@ -1647,9 +1647,8 @@ class Configuration (object):
 			return False
 
 	def selfcheck (self):
-		if False:
+		if True:
 			return True
-		return True
 
 		try:
 			# self check to see if we can decode what we encode

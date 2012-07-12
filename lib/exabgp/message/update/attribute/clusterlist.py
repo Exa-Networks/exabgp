@@ -6,17 +6,15 @@ Created by Thomas Mangin on 2012-07-07.
 Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
-from exabgp.structure.ip import IPv4
+from exabgp.structure.address import AFI,SAFI
+from exabgp.structure.ip import Inet,inet
 from exabgp.message.update.attribute import AttributeID,Flag,Attribute
 
 # =================================================================== 
 
-class ClusterID (IPv4):
+class ClusterID (Inet):
 	def __init__ (self,cluster_id):
-		self.update(cluster_id)
-
-	def __repr__ (self):
-		return str(self)
+		Inet.__init__(self,AFI.ipv4,SAFI.unicast_multicast,cluster_id)
 
 
 class ClusterList (Attribute):

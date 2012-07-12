@@ -96,7 +96,7 @@ def BGPNLRI (afi,safi,bgp,has_multiple_path):
 	# XXX: The padding calculation should really go into the NLRI class
 	padding = '\0'*(NLRI.length[afi]-size)
 	prefix = network + padding
-	nlri = NLRI(prefix,afi,safi,mask)
+	nlri = NLRI(afi,safi,prefix,mask)
 
 	# XXX: Not the best interface but will do for now
 	if safi:
@@ -718,7 +718,7 @@ class Protocol (object):
 
 		if code == AttributeID.NEXT_HOP:
 			logger.parser('parsing next-hop %s' % [hex(ord(_)) for _ in data[:length]])
-			self.attributes.add(NextHop(data[:4],AFI.ipv4))
+			self.attributes.add(NextHop(AFI.ipv4,SAFI.unicast_multicast,data[:4]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.MED:
@@ -750,7 +750,7 @@ class Protocol (object):
 
 		if code == AttributeID.ORIGINATOR_ID:
 			logger.parser('parsing originator-id %s' % [hex(ord(_)) for _ in data[:length]])
-			self.attributes.add(OriginatorID(data[:4],AFI.ipv4))
+			self.attributes.add(OriginatorID(AFI.ipv4,SAFI.unicast,data[:4]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.CLUSTER_LIST:

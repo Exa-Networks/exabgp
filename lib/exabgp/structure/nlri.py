@@ -8,7 +8,7 @@ Copyright (c) 2012 Exa Networks. All rights reserved.
 
 from struct import pack,unpack
 from exabgp.structure.address import AFI,SAFI
-from exabgp.structure.ip import mask_to_bytes,packed_afi,Inet
+from exabgp.structure.ip import mask_to_bytes,Inet,inet
 
 class PathInfo (object):
 	def __init__ (self,integer=None,ip=None,packed=None):
@@ -112,9 +112,9 @@ class BGPPrefix (Inet):
 	# have a .mask for the mask
 	# have a .bgp with the bgp wire format of the prefix
 
-	def __init__(self,packed,afi,safi,mask):
+	def __init__(self,afi,safi,packed,mask):
 		self.mask = int(mask)
-		Inet.__init__(self,packed,afi,safi)
+		Inet.__init__(self,afi,safi,packed)
 
 	def __str__ (self):
 		return "%s/%s" % (self.ip,self.mask)
@@ -158,8 +158,3 @@ class NLRI (BGPPrefix):
 			return chr(length) + path_info + self.labels.pack() + self.rd.pack() + self.packed[:mask_to_bytes[self.mask]]
 		else:
 			return path_info + BGPPrefix.pack(self)
-
-# Generate an NLRI suitable for use in Flow Routes
-def FlowPrefix (afi,safi,ip,mask):
-		packed,afi = packed_afi
-		return BGPPrefix(packed,afi,safi,mask)
