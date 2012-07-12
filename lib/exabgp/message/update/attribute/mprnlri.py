@@ -25,9 +25,10 @@ class MPRNLRI (Attribute):
 		# EOR do not have any next_hop
 		if self.routes[0].attributes.has(AttributeID.NEXT_HOP):
 			# we do not want a next_hop attribute packed (with the _attribute()) but just the next_hop itself
-			next_hop = self.routes[0].attributes[AttributeID.NEXT_HOP].pack()
+			next_hop = self.routes[0].attributes[AttributeID.NEXT_HOP].packed
+			if self.routes[0].nlri.safi.has_rd():
+				next_hop = chr(0)*8 + next_hop
 		routes = ''.join([route.nlri.pack(with_path_info) for route in self.routes])
-
 		return self._attribute(
 			self.routes[0].nlri.afi.pack() + self.routes[0].nlri.safi.pack() +
 			chr(len(next_hop)) + next_hop +

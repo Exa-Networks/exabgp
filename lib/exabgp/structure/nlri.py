@@ -154,7 +154,7 @@ class NLRI (BGPPrefix):
 			path_info = ''
 
 		if self.has_label():
-			length = 8 + len(self.labels) + len(self.rd)*8 + self.mask
-			return chr(length) + path_info + self.labels.pack() + self.rd.pack() + self.packed[:mask_to_bytes[self.mask]]
+			length = len(self.labels)*8 + len(self.rd)*8 + self.mask
+			return path_info + chr(length) + self.labels.pack() + self.rd.pack() + self.packed[:mask_to_bytes[self.mask]]
 		else:
 			return path_info + BGPPrefix.pack(self)

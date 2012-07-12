@@ -1647,45 +1647,53 @@ class Configuration (object):
 			return False
 
 	def selfcheck (self):
-		if True:
-			return True
+		return True
 
-		try:
-			# self check to see if we can decode what we encode
-			from exabgp.structure.asn import ASN
-			from exabgp.structure.neighbor import Neighbor
-			from exabgp.network.peer import Peer
-			from exabgp.network.protocol import BGPNLRI,Protocol
-			from exabgp.message.update import Update
-			from exabgp.message.open import Open,Capabilities,UsePath
+		with_path_info = True
+		
+		# self check to see if we can decode what we encode
+		from exabgp.structure.asn import ASN
+		from exabgp.structure.neighbor import Neighbor
+		from exabgp.network.peer import Peer
+		from exabgp.network.protocol import BGPNLRI,Protocol
+		from exabgp.message.update import Update
+		from exabgp.message.open import Open,Capabilities,UsePath
 
-			n = Neighbor()
-			n.local_as = ASN(30740)
-			for f in self._all_families():
-				n._families[f] = []
-			o = Open(4,30740,'127.0.0.1',Capabilities().default(n,False),180)
+		n = Neighbor()
+		n.local_as = ASN(30740)
+		capa = Capabilities().default(n,False)
+		path = {}
+		for f in self._all_families():
+			n._families[f] = []
+			if with_path_info:
+				path[f] = 3
+		capa[Capabilities.ADD_PATH] = path
 
-			proto = Protocol(Peer(n,None))
-			proto.use_path = UsePath(o,o)
+		o = Open(4,30740,'127.0.0.1',capa,180)
 
-			import pdb;
-			pdb.set_trace()
+		proto = Protocol(Peer(n,None))
+		proto.use_path = UsePath(o,o)
 
-			for nei in self.neighbor.keys():
-				for family in self.neighbor[nei].families():
-					for route in self.neighbor[nei]._families[family]:
-						update = Update([route])
-						packed = update.announce(False,ASN(30740),ASN(30740),False)
-						print "PACKED  ---->", [hex(ord(_)) for _ in packed]
-						# This does not take the BGP header - let's assume we will not break that :)
-						recoded = proto.UpdateFactory(packed[19:])
-						decoded = recoded.routes[0]
-						print "DECODED ===>", str(decoded)
-						print
-			return False
-		except Exception,e:
-			import pdb;
-			pdb.set_trace()
-			return False
+		for nei in self.neighbor.keys():
+			for family in self.neighbor[nei].families():
+				for route in self.neighbor[nei]._families[family]:
+					str1 = str(route)
+					print 
+					print "ROUTE   > announce- ", str1
+					update = Update([route])
+					packed = update.announce(False,ASN(30740),ASN(30740),with_path_info)
+					# This does not take the BGP header - let's assume we will not break that :)
+					recoded = proto.UpdateFactory(packed[19:])
+					decoded = recoded.routes[0]
+					str2 = str(decoded)
+					print "DECODED >", str(decoded)
+					if "announced " + str1 != str2:
+						print "-----------------------------------------------"
+						print "--------------------DOES NOT DECODE TO WHAT WAS"
+						print "-----------------------------------------------"
+						print "PACKED  >", [hex(ord(_)) for _ in packed]
+						print "-----------------------------------------------"
+					print
+		return False
 
 
