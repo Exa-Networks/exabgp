@@ -562,7 +562,6 @@ class Protocol (object):
 		while withdrawn:
 			nlri = BGPNLRI(AFI.ipv4,SAFI.unicast_multicast,withdrawn,path_info)
 			route = RouteBGP(nlri,'withdrawn')
-			# XXX: Should this be a deep copy
 			route.attributes = self.attributes
 			withdrawn = withdrawn[len(nlri):]
 			routes.append(route)
@@ -570,24 +569,15 @@ class Protocol (object):
 		while announced:
 			nlri = BGPNLRI(AFI.ipv4,SAFI.unicast_multicast,announced,path_info)
 			route = RouteBGP(nlri,'announced')
-			# XXX: Should this be a deep copy
 			route.attributes = attributes
 			announced = announced[len(nlri):]
 			routes.append(route)
-			#logger.info(self.me('Received route %s' % nlri))
 
-		# We assume that the MP will always be the last Attributes
-		# It is not in the RFC
 		for route in self.mp_withdraw:
-			# XXX: Should this be a deep copy
 			routes.append(route)
 
 		for route in self.mp_announce:
-			# XXX: Should this be a deep copy
 			routes.append(route)
-
-		#print "routes", routes
-		#print "attributes", attributes
 
 		if routes:
 			return Update(routes)
