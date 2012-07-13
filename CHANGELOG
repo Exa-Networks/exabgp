@@ -45,8 +45,8 @@ Version 3.0.0 - -- of July 2012 (experimental version)
     more exactly the generation and parsing of originator-id and cluster-list attributes
  * Improvement: add tcp timeout control for connection over very slow ebgp multihop (dangerous, use with care)
  * Improvement: control of the MP families announced in the OPEN message
- * Improvement : support for RFC 3107 and 4364 (Carrying Label Information in BGP-4)
-                 does not yet support route withdrawal, or sending routes
+ * Improvement: support for RFC 3107 and 4364 (Carrying Label Information in BGP-4)
+ * Improvement: selfcheck, allow to check if the routes we generate pass our own parser
 
 Version 2.0.8 - 31 of March 2012 (stable version)
  * Fix: the update grouping could cause message up to "header size" bigger than allowed.

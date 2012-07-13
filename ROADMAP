@@ -13,10 +13,12 @@ Version 3.
 
 LATER or BEFORE
 - http://www.ietf.org/id/draft-ietf-idr-bgp-extended-messages-02.txt
-- use the same logic/api in configuration for aspath that has been used for clusterlist ?
-- handle correctly the death of helper processes
-- look at the classes to reduce conversion and improve perf
+- handle better the death of helper processes
 - look what fun RFC we could implement from the list at 
   http://code.google.com/p/exabgp/wiki/RFC
-- Break protocol.py in several files
+
+MEMO
+- break protocol.py in several files
+- use the same logic/api in configuration for aspath that has been used for clusterlist ?
+- look at the classes to reduce conversion and improve perf
 - focus on performance : always store packed data
