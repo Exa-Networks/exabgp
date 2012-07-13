@@ -1647,9 +1647,14 @@ class Configuration (object):
 			return False
 
 	def selfcheck (self):
-		return True
+		selfcheck = load().debug.selfcheck
+		if not selfcheck:
+			return True
 
-		with_path_info = True
+		if 'path-info' in selfcheck:
+			with_path_info = True
+		else:
+			with_path_info = False
 		
 		# self check to see if we can decode what we encode
 		from exabgp.structure.asn import ASN
@@ -1667,7 +1672,8 @@ class Configuration (object):
 			n._families[f] = []
 			if with_path_info:
 				path[f] = 3
-		capa[Capabilities.ADD_PATH] = path
+		if with_path_info:
+			capa[Capabilities.ADD_PATH] = path
 
 		o = Open(4,30740,'127.0.0.1',capa,180)
 
@@ -1678,22 +1684,16 @@ class Configuration (object):
 			for family in self.neighbor[nei].families():
 				for route in self.neighbor[nei]._families[family]:
 					str1 = str(route)
-					print 
-					print "ROUTE   > announce- ", str1
+					logger.info('parsed    %s' % str1,'configuration') 
 					update = Update([route])
 					packed = update.announce(False,ASN(30740),ASN(30740),with_path_info)
 					# This does not take the BGP header - let's assume we will not break that :)
 					recoded = proto.UpdateFactory(packed[19:])
 					decoded = recoded.routes[0]
 					str2 = str(decoded)
-					print "DECODED >", str(decoded)
-					if "announced " + str1 != str2:
-						print "-----------------------------------------------"
-						print "--------------------DOES NOT DECODE TO WHAT WAS"
-						print "-----------------------------------------------"
-						print "PACKED  >", [hex(ord(_)) for _ in packed]
-						print "-----------------------------------------------"
-					print
-		return False
+					logger.info(str(decoded),'configuration') 
+					logger.info('%s\n' % [hex(ord(_)) for _ in packed],'configuration') 
+		import sys
+		sys.exit(0)
 
 
