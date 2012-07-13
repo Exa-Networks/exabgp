@@ -23,6 +23,7 @@ class ClusterList (Attribute):
 	MULTIPLE = False
 
 	def __init__ (self,cluster_ids):
+		self.packed = ''
 		self.clusters = []
 		while cluster_ids:
 			self.clusters.append(ClusterID(cluster_ids[:4]))
@@ -30,7 +31,9 @@ class ClusterList (Attribute):
 		self._len = len(self.clusters)*4
 
 	def pack (self):
-		return ''.join([_.pack() for _ in self.clusters])
+		if not self.packed:
+			self.packed = ''.join([_.pack() for _ in self.clusters])
+		return self.packed
 
 	def __len__ (self):
 		return self._len
