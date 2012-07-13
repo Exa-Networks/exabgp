@@ -381,7 +381,7 @@ class Configuration (object):
 		if command in ('rd','route-distinguisher'): return self._route_rd(scope,tokens[1:])
 		if command == 'watchdog': return self._route_watchdog(scope,tokens[1:])
 		# withdrawn is here to not break legacy code
-		if command in ('withdraw','withdrawn'),: return self._route_withdraw(scope,tokens[1:])
+		if command in ('withdraw','withdrawn'): return self._route_withdraw(scope,tokens[1:])
 
 		if command == 'source': return self._flow_source(scope,tokens[1:])
 		if command == 'destination': return self._flow_destination(scope,tokens[1:])
