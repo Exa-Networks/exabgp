@@ -18,11 +18,11 @@ class MED (Attribute):
 	MULTIPLE = False
 
 	def __init__ (self,med):
-		self.med = med
+		self.med = self._attribute(med)
 		self._str = str(unpack('!L',med)[0])
 
 	def pack (self):
-		return self._attribute(self.med)
+		return self.med
 
 	def __len__ (self):
 		return 4

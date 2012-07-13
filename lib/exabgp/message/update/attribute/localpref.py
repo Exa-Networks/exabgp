@@ -18,11 +18,11 @@ class LocalPreference (Attribute):
 	MULTIPLE = False
 
 	def __init__ (self,localpref):
-		self.localpref = localpref
+		self.localpref = self._attribute(localpref)
 		self._str = str(unpack('!L',localpref)[0])
 
 	def pack (self):
-		return self._attribute(self.localpref)
+		return self.localpref
 
 	def __len__ (self):
 		return 4
