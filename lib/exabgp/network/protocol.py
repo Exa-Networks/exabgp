@@ -726,7 +726,7 @@ class Protocol (object):
 		if code == AttributeID.MED:
 			logger.parser('parsing med %s' % [hex(ord(_)) for _ in data[:length]])
 			if not self.attributes.get(code,data):
-				self.attributes.add(MED(unpack('!L',data[:length])[0]))
+				self.attributes.add(MED(data[:length]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.LOCAL_PREF:
