@@ -3,7 +3,7 @@ Version explained:
  minor : increase on new features
  bug   : increase on bug fixes
 
-Version 3.0.0 - -- of July 2012 (experimental version)
+Version 3.0.0 - 13 of July 2012 (unreleased experimental version)
  * Major version change due to incompatible CLI interface with version 1.x.x and 2.x.x
  * Major version change due to a change of API behaviour with the forked worker processes
 

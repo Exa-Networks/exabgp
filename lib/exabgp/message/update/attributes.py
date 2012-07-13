@@ -40,6 +40,8 @@ class MultiAttributes (list):
 		return str(self)
 
 class Attributes (dict):
+	cache = {}
+
 	autocomplete = True
 
 	def __init__ (self):
@@ -48,8 +50,16 @@ class Attributes (dict):
 	def has (self,k):
 		return self.has_key(k)
 
-	def add (self,attribute):
+	def get (self,attributeid,data):
+		if data in self.cache.setdefault(attributeid,{}):
+			self.add(self.cache[attributeid][data])
+			return True
+		return False
+
+	def add (self,attribute,data=None):
 		self._str = ''
+		if data:
+			self.cache[attribute.ID][data] = attribute
 		if self.has(attribute.ID):
 			if attribute.MULTIPLE:
 				self[attribute.ID].append(attribute)

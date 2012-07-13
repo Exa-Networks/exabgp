@@ -697,13 +697,15 @@ class Protocol (object):
 
 		if code == AttributeID.ORIGIN:
 			logger.parser('parsing origin %s' % [hex(ord(_)) for _ in data[:length]])
-			self.attributes.add(Origin(ord(data[0])))
+			if not self.attributes.get(code,data):
+				self.attributes.add(Origin(ord(data[0])))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.AS_PATH:
 			logger.parser('parsing as_path %s' % [hex(ord(_)) for _ in data[:length]])
 			if length:
-				self.attributes.add(self.__new_ASPath(data[:length],self._asn4))
+				if not self.attributes.get(code,data):
+					self.attributes.add(self.__new_ASPath(data[:length],self._asn4))
 				if not self._asn4 and self.attributes.has(AttributeID.AS4_PATH):
 					self.__merge_attributes()
 			return self._AttributesFactory(data[length:])
@@ -711,24 +713,28 @@ class Protocol (object):
 		if code == AttributeID.AS4_PATH:
 			logger.parser('parsing as_path %s' % [hex(ord(_)) for _ in data[:length]])
 			if length:
-				self.attributes.add(self.__new_AS4Path(data))
+				if not self.attributes.get(code,data):
+					self.attributes.add(self.__new_AS4Path(data))
 				if not self._asn4 and self.attributes.has(AttributeID.AS_PATH):
 					self.__merge_attributes()
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.NEXT_HOP:
 			logger.parser('parsing next-hop %s' % [hex(ord(_)) for _ in data[:length]])
-			self.attributes.add(NextHop(AFI.ipv4,SAFI.unicast_multicast,data[:4]))
+			if not self.attributes.get(code,data):
+				self.attributes.add(NextHop(AFI.ipv4,SAFI.unicast_multicast,data[:4]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.MED:
 			logger.parser('parsing med %s' % [hex(ord(_)) for _ in data[:length]])
-			self.attributes.add(MED(unpack('!L',data[:4])[0]))
+			if not self.attributes.get(code,data):
+				self.attributes.add(MED(unpack('!L',data[:4])[0]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.LOCAL_PREF:
 			logger.parser('parsing local-preference %s' % [hex(ord(_)) for _ in data[:length]])
-			self.attributes.add(LocalPreference(unpack('!L',data[:4])[0]))
+			if not self.attributes.get(code,data):
+				self.attributes.add(LocalPreference(unpack('!L',data[:4])[0]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.ATOMIC_AGGREGATE:
@@ -745,22 +751,26 @@ class Protocol (object):
 
 		if code == AttributeID.COMMUNITY:
 			logger.parser('parsing communities %s' % [hex(ord(_)) for _ in data[:length]])
-			self.attributes.add(self.__new_communities(data[:length]))
+			if not self.attributes.get(code,data):
+				self.attributes.add(self.__new_communities(data[:length]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.ORIGINATOR_ID:
 			logger.parser('parsing originator-id %s' % [hex(ord(_)) for _ in data[:length]])
-			self.attributes.add(OriginatorID(AFI.ipv4,SAFI.unicast,data[:4]))
+			if not self.attributes.get(code,data):
+				self.attributes.add(OriginatorID(AFI.ipv4,SAFI.unicast,data[:4]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.CLUSTER_LIST:
 			logger.parser('parsing cluster-list %s' % [hex(ord(_)) for _ in data[:length]])
-			self.attributes.add(ClusterList(data[:length]))
+			if not self.attributes.get(code,data):
+				self.attributes.add(ClusterList(data[:length]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.EXTENDED_COMMUNITY:
 			logger.parser('parsing communities %s' % [hex(ord(_)) for _ in data[:length]])
-			self.attributes.add(self.__new_extended_communities(data[:length]))
+			if not self.attributes.get(code,data):
+				self.attributes.add(self.__new_extended_communities(data[:length]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.MP_UNREACH_NLRI:
