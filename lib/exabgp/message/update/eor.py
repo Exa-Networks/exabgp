@@ -36,15 +36,9 @@ class EOR (object):
 		self._announced = []
 		r = []
 		for afi,safi in families:
-			if afi == AFI.ipv4 and safi in [SAFI.unicast, SAFI.multicast]:
-				r.append(self.ipv4())
-			else:
-				r.append(self.mp(afi,safi))
+			r.append(self.mp(afi,safi))
 			self._announced.append((afi,safi))
 		return r
-
-	def ipv4 (self):
-		return Update([EmptyRoute(AFI.ipv4,SAFI.unicast),]).withdraw()
 
 	def mp (self,afi,safi):
 		return Update([EmptyRoute(afi,safi),]).withdraw()
