@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
-from struct import pack
+from struct import unpack
 
 from exabgp.message.update.attribute import AttributeID,Flag,Attribute
 
@@ -19,15 +19,16 @@ class LocalPreference (Attribute):
 
 	def __init__ (self,localpref):
 		self.localpref = localpref
+		self._str = str(unpack('!L',localpref)[0])
 
 	def pack (self):
-		return self._attribute(pack('!L',self.localpref))
+		return self._attribute(self.localpref)
 
 	def __len__ (self):
 		return 4
 
 	def __str__ (self):
-		return str(self.localpref)
+		return self._str
 
 	def __repr__ (self):
 		return str(self)

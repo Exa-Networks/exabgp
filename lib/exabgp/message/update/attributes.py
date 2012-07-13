@@ -129,7 +129,8 @@ class Attributes (dict):
 			if AttributeID.LOCAL_PREF in self:
 				message += self[AttributeID.LOCAL_PREF].pack()
 			else:
-				message += LocalPreference(100).pack()
+				# '\x00\x00\x00d' is 100 packed in long network bytes order
+				message += LocalPreference('\x00\x00\x00d').pack()
 
 		if AttributeID.MED in self:
 			if local_asn != peer_asn:

@@ -720,19 +720,19 @@ class Protocol (object):
 		if code == AttributeID.NEXT_HOP:
 			logger.parser('parsing next-hop %s' % [hex(ord(_)) for _ in data[:length]])
 			if not self.attributes.get(code,data):
-				self.attributes.add(NextHop(AFI.ipv4,SAFI.unicast_multicast,data[:4]))
+				self.attributes.add(NextHop(AFI.ipv4,SAFI.unicast_multicast,data[:length]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.MED:
 			logger.parser('parsing med %s' % [hex(ord(_)) for _ in data[:length]])
 			if not self.attributes.get(code,data):
-				self.attributes.add(MED(unpack('!L',data[:4])[0]))
+				self.attributes.add(MED(unpack('!L',data[:length])[0]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.LOCAL_PREF:
 			logger.parser('parsing local-preference %s' % [hex(ord(_)) for _ in data[:length]])
 			if not self.attributes.get(code,data):
-				self.attributes.add(LocalPreference(unpack('!L',data[:4])[0]))
+				self.attributes.add(LocalPreference(data[:length]))
 			return self._AttributesFactory(data[length:])
 
 		if code == AttributeID.ATOMIC_AGGREGATE:

@@ -1144,7 +1144,7 @@ class Configuration (object):
 
 	def _route_local_preference (self,scope,tokens):
 		try:
-			scope[-1]['routes'][-1].attributes.add(LocalPreference(int(tokens.pop(0))))
+			scope[-1]['routes'][-1].attributes.add(LocalPreference(pack('!L',int(tokens.pop(0)))))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
