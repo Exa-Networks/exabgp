@@ -12,6 +12,7 @@ import time
 # + : add a new route
 # * : update an existing route (as we use str() and that a route includes the prefix and attributes, may not be used often)
 
+# This is our Adj-RIBs-In
 class Table (object):
 
 	def __init__ (self,peer):

@@ -35,7 +35,7 @@ class Route (object):
 
 class RouteBGP (Route):
 	def __init__ (self,nlri,action):
-		self.action = action	# announce, announced or withdraw
+		self.action = action	# announce, announced, withdraw or withdrawn
 		Route.__init__(self,nlri)
 
 	def __str__ (self):

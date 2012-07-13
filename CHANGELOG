@@ -12,6 +12,7 @@ Version 3.0.0 - -- of July 2012 (experimental version)
  * API Change: send "up" message to worker process when neighbour OPEN negotiation is complete (not on TCP up)
  * API Change: the format of the line sent to the worker changed, neighbor name include multi-session information
  * API Change: the down message sent to help programs now include a reason for the shutdown of the session
+ * API Change: use the word withdrawn when the route was received, withdraw when it is an action, same for announce and announced
  * API Addition: send "connected" to worker when neighbour TCP session is established (replace previous 'up')
  * API Addition: requires peer-updates under 'process' to announce peer status changes
  * API Addition: show routes, show routes extensive, show neighbors

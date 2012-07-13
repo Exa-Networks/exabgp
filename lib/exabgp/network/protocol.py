@@ -539,7 +539,7 @@ class Protocol (object):
 
 	def UpdateFactory (self,data):
 		length = len(data)
-		# withdrawn
+		# withdraw
 		lw,withdrawn,data = defix(data)
 		if len(withdrawn) != lw:
 			raise Notify(3,1,'invalid withdrawn routes length, not enough data available')
@@ -561,7 +561,7 @@ class Protocol (object):
 		routes = []
 		while withdrawn:
 			nlri = BGPNLRI(AFI.ipv4,SAFI.unicast_multicast,withdrawn,path_info)
-			route = RouteBGP(nlri,'withdraw')
+			route = RouteBGP(nlri,'withdrawn')
 			# XXX: Should this be a deep copy
 			route.attributes = self.attributes
 			withdrawn = withdrawn[len(nlri):]
@@ -779,7 +779,7 @@ class Protocol (object):
 			# Is the peer going to send us some Path Information with the route (AddPath)
 			path_info = self.use_path.receive(afi,safi)
 			while data:
-				route = RouteBGP(BGPNLRI(afi,safi,data,path_info),'withdraw')
+				route = RouteBGP(BGPNLRI(afi,safi,data,path_info),'withdrawn')
 				route.attributes = self.attributes
 				self.mp_withdraw.append(route)
 				data = data[len(route.nlri):]

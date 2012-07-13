@@ -85,7 +85,7 @@ class Configuration (object):
 	'  add-path disabled|send|receive|send/receive;\n' \
 	'  split /24\n' \
 	'  watchdog watchog-name\n' \
-	'  withdrawn\n' \
+	'  withdraw\n' \
 	'}\n' \
 	'\n' \
 	'syntax:\n' \
@@ -380,7 +380,8 @@ class Configuration (object):
 		if command == 'label': return self._route_label(scope,tokens[1:])
 		if command in ('rd','route-distinguisher'): return self._route_rd(scope,tokens[1:])
 		if command == 'watchdog': return self._route_watchdog(scope,tokens[1:])
-		if command == 'withdrawn': return self._route_withdrawn(scope,tokens[1:])
+		# withdrawn is here to not break legacy code
+		if command in ('withdraw','withdrawn'),: return self._route_withdraw(scope,tokens[1:])
 
 		if command == 'source': return self._flow_source(scope,tokens[1:])
 		if command == 'destination': return self._flow_destination(scope,tokens[1:])
@@ -588,7 +589,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-	def _route_withdrawn (self,scope,tokens):
+	def _route_withdraw (self,scope,tokens):
 		try:
 			scope[-1]['routes'][-1].attributes.add(Withdrawn())
 			return True
@@ -989,7 +990,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','as-sequence','med','local-preference','path-information','community','originator-id','cluster-list','extended-community','split','label','rd','route-distinguisher','watchdog','withdrawn'])
+			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','as-sequence','med','local-preference','path-information','community','originator-id','cluster-list','extended-community','split','label','rd','route-distinguisher','watchdog','withdraw'])
 			if r is False: return False
 			if r is None: return self._split_last_route(scope)
 
@@ -1004,8 +1005,8 @@ class Configuration (object):
 
 		while len(tokens):
 			command = tokens.pop(0)
-			if command == 'withdrawn':
-				if self._route_withdrawn(scope,tokens):
+			if command == 'withdraw':
+				if self._route_withdraw(scope,tokens):
 					continue
 				return False
 
