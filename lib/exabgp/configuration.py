@@ -1173,27 +1173,27 @@ class Configuration (object):
 				raise ValueError('invalid community %s (prefix too large)' % data)
 			if suffix >= pow(2,16):
 				raise ValueError('invalid community %s (suffix too large)' % data)
-			return Community((prefix<<16) + suffix)
+			return Community(pack('!L',(prefix<<16) + suffix))
 		elif len(data) >=2 and data[1] in 'xX':
 			value = long(data,16)
 			if value >= pow(2,32):
 				raise ValueError('invalid community %s (too large)' % data)
-			return Community(value)
+			return Community(pack('!L',value))
 		else:
 			low = data.lower()
 			if low == 'no-export':
-				data = 0xFFFFFF01
+				data = Community.NO_EXPORT
 			elif low == 'no-advertise':
-				data = 0xFFFFFF02
+				data = Community.NO_ADVERTISE
 			elif low == 'no-export-subconfed':
-				data = 0xFFFFFF03
+				data = Community.NO_EXPORT_SUBCONFED
 			# no-peer is not a correct syntax but I am sure someone will make the mistake :)
 			elif low == 'nopeer' or low == 'no-peer':
-				data = 0xFFFFFF04
+				data = Community.NO_PEER
 			value = long(data)
 			if value >= pow(2,32):
 				raise ValueError('invalid community %s (too large)' % data)
-			return Community(value)
+			return Community(pack('!L',value))
 
 	def _route_originator_id (self,scope,tokens):
 		try:

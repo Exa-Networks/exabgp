@@ -656,21 +656,19 @@ class Protocol (object):
 	def __new_communities (self,data):
 		communities = Communities()
 		while data:
-			community = unpack('!L',data[:4])[0]
-			data = data[4:]
 			if data and len(data) < 4:
 				raise Notify(3,1,'could not decode community %s' % str([hex(ord(_)) for _ in data]))
-			communities.add(Community(community))
+			communities.add(Community(data[:4]))
+			data = data[4:]
 		return communities
 
 	def __new_extended_communities (self,data):
 		communities = ECommunities()
 		while data:
-			community = data[:8]
-			data = data[8:]
 			if data and len(data) < 8:
 				raise Notify(3,1,'could not decode extended community %s' % str([hex(ord(_)) for _ in data]))
-			communities.add(ECommunity(community))
+			communities.add(ECommunity(data[:8]))
+			data = data[8:]
 		return communities
 
 	def _AttributesFactory (self,data):

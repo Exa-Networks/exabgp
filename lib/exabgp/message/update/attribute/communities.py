@@ -13,19 +13,25 @@ from exabgp.message.update.attribute import AttributeID,Flag,Attribute
 # =================================================================== Community
 
 class Community (object):
+	NO_EXPORT           = pack('!L',0xFFFFFF01)
+	NO_ADVERTISE        = pack('!L',0xFFFFFF02)
+	NO_EXPORT_SUBCONFED = pack('!L',0xFFFFFF03)
+	NO_PEER             = pack('!L',0xFFFFFF04)
+
 	def __init__ (self,community):
 		self.community = community
-		if community == 0xFFFFFF01:
+		if community == self.NO_EXPORT:
 			self._str = 'no-export'
-		elif community == 0xFFFFFF02:
+		elif community == self.NO_ADVERTISE:
 			self._str = 'no-advertise'
-		elif community == 0xFFFFFF03:
+		elif community == self.NO_EXPORT_SUBCONFED:
 			self._str = 'no-export-subconfed'
 		else:
-			self._str = "%d:%d" % (community >> 16, community & 0xFFFF)
+			integer = unpack('!L',community)[0]
+			self._str = "%d:%d" % (integer >> 16, integer & 0xFFFF)
 
 	def pack (self):
-		return pack('!L',self.community)
+		return self.community
 
 	def __str__ (self):
 		return self._str
@@ -71,19 +77,7 @@ class Communities (Attribute):
 
 # =================================================================== ECommunity
 
-#def to_ECommunity (data):
-#	separator = data.find(':')
-#	if separator > 0:
-#		# XXX: Check that the value do not overflow 16 bits
-#		return ECommunity((int(data[:separator])<<16) + int(data[separator+1:]))
-#	elif len(data) >=2 and data[1] in 'xX':
-#		return ECommunity(long(data,16))
-#	else:
-#		return ECommunity(long(data))
-
-
 # http://www.iana.org/assignments/bgp-extended-communities
-
 
 # MUST ONLY raise ValueError
 def to_ExtendedCommunity (data):
