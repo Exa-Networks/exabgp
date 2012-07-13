@@ -19,6 +19,7 @@ class ASPath (Attribute):
 	MULTIPLE = False
 
 	def __init__ (self,asn4=False,asptype=0x02,aspsegment=None):
+		self.packed = ''
 		self.asn4 = asn4
 		self.asptype = asptype
 		if aspsegment == None:
@@ -38,7 +39,9 @@ class ASPath (Attribute):
 		self.aspsegment.append(asn)
 
 	def pack (self):
-		return self._attribute(self._segment(self.asptype,self.aspsegment))
+		if not self.packed:
+			self.packed = self._attribute(self._segment(self.asptype,self.aspsegment))
+		return self.packed
 
 	def __len__ (self):
 		return 2 + (len(self.aspsegment)*2)
