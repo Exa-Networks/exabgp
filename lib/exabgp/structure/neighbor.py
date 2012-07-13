@@ -59,7 +59,7 @@ class Neighbor (object):
 		routes = {}
 		for family in self._families:
 			for route in self._families[family]:
-				withdrawn = route.attributes.pop(AttributeID.INTERNAL_WITHDRAWN,None)
+				withdrawn = route.attributes.pop(AttributeID.INTERNAL_WITHDRAW,None)
 				if withdrawn is not None:
 					logger.rib('skipping initial announcement of %s' % route)
 					watchdog = route.attributes.get(AttributeID.INTERNAL_WATCHDOG,None)

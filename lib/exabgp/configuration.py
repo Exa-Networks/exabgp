@@ -56,7 +56,7 @@ class Watchdog (str):
 	MULTIPLE = False
 
 class Withdrawn (object):
-	ID = AttributeID.INTERNAL_WITHDRAWN
+	ID = AttributeID.INTERNAL_WITHDRAW
 	MULTIPLE = False
 
 class Configuration (object):
