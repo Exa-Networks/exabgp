@@ -18,6 +18,7 @@ Version 3.0.1 - -- of July 2012 (unreleased experimental version)
  * Fix: were not parsing extended-community in multi-line routes
  * Fix: flow-spec route creation (broken during the work for 3.0.0)
  * Fix: typo when generating route string with labels
+ * Fix: problem when forking on BSD/Darwin
  * Change: to ASN4 code
 
 Version 3.0.0 - 13 of July 2012 (unreleased experimental version)

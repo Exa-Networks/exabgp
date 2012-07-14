@@ -18,6 +18,8 @@ from exabgp.environment import load
 from exabgp.log import Logger
 logger = Logger()
 
+MAXFD = 2048
+
 class Daemon (object):
 	pid = load().daemon.pid
 	user = load().daemon.user
@@ -117,7 +119,7 @@ class Daemon (object):
 
 		log = load().log
 		if log.enable and log.destination.lower() in ('stdout','stderr'):
-			logger.daemon('ExaBGP not fork when logs are going to %s' % log.destination.lower(),'critical')
+			logger.daemon('ExaBGP can not fork when logs are going to %s' % log.destination.lower(),'critical')
 			return
 
 		def fork_exit ():
@@ -138,9 +140,21 @@ class Daemon (object):
 		self.silence()
 
 	def silence (self):
-		maxfd = resource.getrlimit(resource.RLIMIT_NOFILE)[1]
-		if (maxfd == resource.RLIM_INFINITY):
+		if 'linux' in sys.platform:
+			nofile = resource.RLIMIT_NOFILE
+		elif 'bsd' in sys.platform:
+			nofile = resource.RLIMIT_OFILE
+		else:
+			logger.daemon("For platform %s, can not close FDS before forking" % sys.platform)
+			nofile = None
+
+		if nofile:
+			maxfd = resource.getrlimit(nofile)[1]
+			if (maxfd == resource.RLIM_INFINITY):
+				maxfd = MAXFD
+		else:
 			maxfd = MAXFD
+
 		for fd in range(0, maxfd):
 			try:
 				os.close(fd)

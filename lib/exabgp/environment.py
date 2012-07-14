@@ -354,18 +354,6 @@ def _compatibility (env):
 
 	# PDB : still compatible as a side effect of the code structure
 
-	pid = os.environ.get('PID','')
-	if pid:
-		env.deamon.pid = pid
-
-	user = os.environ.get('USER','')
-	if user and user != 'root' and user != os.environ.get('LOGNAME','') and env.daemon.user == 'nobody':
-		env.daemon.user = user
-
-	daemon = os.environ.get('DAEMONIZE','').lower() in ['1','yes']
-	if daemon:
-		env.daemon.daemonize = True
-
 	syslog = os.environ.get('SYSLOG','')
 	if syslog != '':
 		env.log.destination=syslog
@@ -403,5 +391,18 @@ def _compatibility (env):
 		env.log.timer = True
 		env.log.routes = True
 		env.log.parser = False
+
+	pid = os.environ.get('PID','')
+	if pid:
+		env.deamon.pid = pid
+
+	user = os.environ.get('USER','')
+	if user and user != 'root' and user != os.environ.get('LOGNAME','') and env.daemon.user == 'nobody':
+		env.daemon.user = user
+
+	daemon = os.environ.get('DAEMONIZE','').lower() in ['1','yes']
+	if daemon:
+		env.daemon.daemonize = True
+		env.log.enable = False
 
 	return env
