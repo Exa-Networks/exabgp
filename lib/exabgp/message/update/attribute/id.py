@@ -34,23 +34,31 @@ class AttributeID (int):
 	INTERNAL_WATCHDOG  = 0xFFFE
 	INTERNAL_SPLIT     = 0xFFFF
 
+	_str = {
+		0x01: 'origin',
+		0x02: 'as-path',
+		0x03: 'next-hop',
+		0x04: 'med',
+#		0x04: 'multi-exit-disc',
+		0x05: 'local-preference',
+		0x06: 'atomic-aggregate',
+		0x07: 'aggregator',
+		0x08: 'community',
+		0x09: 'originator-id',
+		0x0a: 'cluster-list',
+		0x0e: 'mp-reach-nlri',
+		0x0f: 'mp-unreach-nlri',
+#		0x0e: 'multi-protocol reacheable nlri'
+#		0x0f: 'multi-protocol unreacheable nlri'
+		0x10: 'extended-community',
+		0x11: 'as4-path',
+		0x12: 'as4-aggregator',
+		0xfffd: 'internal-withdraw',
+		0xfffe: 'internal-watchdog',
+		0xffff: 'internal-split',
+	}
+
 	def __str__ (self):
-		# This should move within the classes and not be here
-		if self == 0x01: return "ORIGIN"
-		if self == 0x02: return "AS_PATH"
-		if self == 0x03: return "NEXT_HOP"
-		if self == 0x04: return "MULTI_EXIT_DISC"
-		if self == 0x05: return "LOCAL_PREFERENCE"
-		if self == 0x06: return "ATOMIC_AGGREGATE"
-		if self == 0x07: return "AGGREGATOR"
-		if self == 0x08: return "COMMUNITY"
-		if self == 0x09: return "ORIGINATOR_ID"
-		if self == 0x0A: return "CLUSTER_LIST"
-		if self == 0x10: return "EXTENDED_COMMUNITY"
-		if self == 0x11: return "AS4_PATH"
-		if self == 0x0e: return "MP_REACH_NLRI"
-		if self == 0x0f: return "MP_UNREACH_NLRI"
-		if self == 0xffff: return "INTERNAL SPLIT"
-		return 'UNKNOWN (%s)' % hex(self)
+		return self._str.get(self,'unknown-attribute-%s' % hex(self))
 
 
