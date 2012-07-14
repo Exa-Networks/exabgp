@@ -37,6 +37,7 @@ from exabgp.message.update.attribute.aspath      import ASPath,AS4Path
 from exabgp.message.update.attribute.nexthop     import NextHop
 from exabgp.message.update.attribute.med         import MED
 from exabgp.message.update.attribute.localpref   import LocalPreference
+from exabgp.message.update.attribute.atomicaggregate  import AtomicAggregate
 from exabgp.message.update.attribute.aggregator  import Aggregator
 from exabgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities
 #from exabgp.message.update.attribute.mprnlri     import MPRNLRI
@@ -722,6 +723,8 @@ class Protocol (object):
 			return self._AttributesFactory(next)
 
 		if code == AttributeID.ATOMIC_AGGREGATE:
+			if not self.attributes.get(AttributeID.ATOMIC_AGGREGATE,attribute):
+				raise Notify(3,2,'invalid ATOMIC_AGGREGATE %s' % [hex(ord(_)) for _ in attribute])
 			return self._AttributesFactory(next)
 
 		if code == AttributeID.AGGREGATOR:

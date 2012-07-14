@@ -34,6 +34,7 @@ from exabgp.message.update.attribute.nexthop     import NextHop
 from exabgp.message.update.attribute.aspath      import ASPath
 from exabgp.message.update.attribute.med         import MED
 from exabgp.message.update.attribute.localpref   import LocalPreference
+from exabgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.message.update.attribute.aggregator   import Aggregator
 from exabgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_RouteTargetCommunity_00,to_RouteTargetCommunity_01
 from exabgp.message.update.attribute.originatorid import OriginatorID
@@ -80,6 +81,7 @@ class Configuration (object):
 	'  as-path [ ASN1 ASN2 ];\n' \
 	'  med 100;\n' \
 	'  local-preference 100;\n' \
+	'  atomic-aggregate;\n' \
 	'  community [ 65000 65001 65002 ];\n' \
 	'  extended-community [ target:1234:5.6.7.8 target:1.2.3.4:5678 origin:1234:5.6.7.8 origin:1.2.3.4:5678 0x0002FDE800000001 ]\n' \
 	'  originator-id 10.0.0.10;\n' \
@@ -100,6 +102,7 @@ class Configuration (object):
 	' as-path ASN' \
 	' med 100' \
 	' local-preference 100' \
+	' atomic-aggregate' \
 	' community 65000' \
 	' extended-community target:1234:5.6.7.8' \
 	' originator-id 10.0.0.10' \
@@ -379,6 +382,7 @@ class Configuration (object):
 		if command == 'med': return self._route_med(scope,tokens[1:])
 		if command == 'next-hop': return self._route_next_hop(scope,tokens[1:])
 		if command == 'local-preference': return self._route_local_preference(scope,tokens[1:])
+		if command == 'atomic-aggregate': return self._route_atomic_aggregate(scope,tokens[1:])
 		if command == 'aggregator': return self._route_aggregator(scope,tokens[1:])
 		if command == 'path-information': return self._route_path_information(scope,tokens[1:])
 		if command == 'community': return self._route_community(scope,tokens[1:])
@@ -998,7 +1002,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','as-sequence','med','local-preference','aggregator','path-information','community','originator-id','cluster-list','extended-community','split','label','rd','route-distinguisher','watchdog','withdraw'])
+			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','as-sequence','med','local-preference','atomic-aggregate','aggregator','path-information','community','originator-id','cluster-list','extended-community','split','label','rd','route-distinguisher','watchdog','withdraw'])
 			if r is False: return False
 			if r is None: return self._split_last_route(scope)
 
@@ -1044,6 +1048,10 @@ class Configuration (object):
 				return False
 			if command == 'local-preference':
 				if self._route_local_preference(scope,tokens):
+					continue
+				return False
+			if command == 'atomic-aggregate':
+				if self._route_atomic_aggregate(scope,tokens):
 					continue
 				return False
 			if command == 'aggregator':
@@ -1157,6 +1165,15 @@ class Configuration (object):
 	def _route_local_preference (self,scope,tokens):
 		try:
 			scope[-1]['routes'][-1].attributes.add(LocalPreference(pack('!L',int(tokens.pop(0)))))
+			return True
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+
+	def _route_atomic_aggregate (self,scope,tokens):
+		try:
+			scope[-1]['routes'][-1].attributes.add(AtomicAggregate())
 			return True
 		except ValueError:
 			self._error = self._str_route_error

@@ -13,6 +13,8 @@ from exabgp.message.update.attribute import AttributeID
 from exabgp.message.update.attribute.origin      import Origin
 from exabgp.message.update.attribute.aspath      import ASPath,AS4Path
 from exabgp.message.update.attribute.localpref   import LocalPreference
+from exabgp.message.update.attribute                  import AttributeID
+from exabgp.message.update.attribute.atomicaggregate  import AtomicAggregate
 
 # =================================================================== Attributes
 
@@ -40,7 +42,10 @@ class MultiAttributes (list):
 		return str(self)
 
 class Attributes (dict):
-	cache = {}
+	cache = {
+		# There can only be one :)
+		AttributeID.ATOMIC_AGGREGATE : { '' : AtomicAggregate() }
+	}
 
 	autocomplete = True
 
@@ -137,7 +142,7 @@ class Attributes (dict):
 			aggregator = self[AttributeID.AGGREGATOR]
 			message += aggregator.pack(asn4)
 
-		for attribute in [AttributeID.COMMUNITY,AttributeID.ORIGINATOR_ID,AttributeID.CLUSTER_LIST,AttributeID.EXTENDED_COMMUNITY]:
+		for attribute in [AttributeID.ATOMIC_AGGREGATE,AttributeID.COMMUNITY,AttributeID.ORIGINATOR_ID,AttributeID.CLUSTER_LIST,AttributeID.EXTENDED_COMMUNITY]:
 			if attribute in self:
 				message += self[attribute].pack()
 
@@ -167,6 +172,10 @@ class Attributes (dict):
 		if self.has(AttributeID.AGGREGATOR):
 			aggregator = ' aggregator ( %s )' % self[AttributeID.AGGREGATOR]
 
+		atomic = ''
+		if self.has(AttributeID.ATOMIC_AGGREGATE):
+			atomic = ' atomic-aggregate'
+
 		med = ''
 		if self.has(AttributeID.MED):
 			med = ' med %s' % self[AttributeID.MED]
@@ -191,7 +200,7 @@ class Attributes (dict):
 		if self.has(AttributeID.MP_REACH_NLRI):
 			mpr = ' mp_reach_nlri %s' % str(self[AttributeID.MP_REACH_NLRI])
 
-		self._str = "%s%s%s%s%s%s%s%s%s%s%s" % (next_hop,origin,aspath,aggregator,local_pref,med,communities,ecommunities,mpr,originator_id,cluster_list)
+		self._str = "%s%s%s%s%s%s%s%s%s%s%s%s" % (next_hop,origin,aspath,local_pref,atomic,aggregator,med,communities,ecommunities,mpr,originator_id,cluster_list)
 		return self._str
 
 	def __repr__ (self):
