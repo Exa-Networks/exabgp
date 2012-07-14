@@ -764,11 +764,11 @@ class Protocol (object):
 			data = data[:length]
 			afi,safi = unpack('!HB',data[:3])
 			offset = 3
-			# See RFC 5549 for better support
-			if (afi,safi) not in self.neighbor._families.keys():
-				#self.log.out('we only understand IPv4/IPv6 and should never have received this MP_UNREACH_NLRI (%s %s)' % (afi,safi))
-				return self._AttributesFactory(next)
 			data = data[offset:]
+
+			if (afi,safi) not in self.neighbor._families.keys():
+				raise Notify(3,0,'presented a non-negociated family')
+
 			# Is the peer going to send us some Path Information with the route (AddPath)
 			path_info = self.use_path.receive(afi,safi)
 			while data:
@@ -783,61 +783,64 @@ class Protocol (object):
 			# -- Reading AFI/SAFI
 			afi,safi = unpack('!HB',data[:3])
 			offset = 3
+
+			# we do not want to accept unknown families
 			if (afi,safi) not in self.neighbor._families.keys():
-				#self.log.out('we only understand IPv4/IPv6 and should never have received this MP_REACH_NLRI (%s %s)' % (afi,safi))
-				return self._AttributesFactory(next)
+				raise Notify(3,0,'presented a non-negociated family')
+
 			# -- Reading length of next-hop
 			len_nh = ord(data[offset])
 			offset += 1
 
+			rd = 0
+
+			# check next-hope size
 			if afi == AFI.ipv4:
-				if safi in (SAFI.unicast,SAFI.multicast) and not len_nh != 4:
-					# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-					return self._AttributesFactory(next)
-				if safi == SAFI.mpls_vpn and len_nh != 12:
-					return self._AttributesFactory(next)
-			if afi == AFI.ipv6 and not len_nh in (16,32):
-				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-				#self.log.out('bad IPv6 next-hop length (%d)' % len_nh)
-				return self._AttributesFactory(next)
+				if safi in (SAFI.unicast,SAFI.multicast):
+					if len_nh != 4:
+						raise Notify(3,0,'invalid next-hop length')
+				if safi in (SAFI.mpls_vpn,):
+					if len_nh != 12:
+						raise Notify(3,0,'invalid next-hop length')
+					rd = 8
+				size = 4
+			elif afi == AFI.ipv6:
+				if safi in (SAFI.unicast,):
+					if len_nh not in (16,32):
+						raise Notify(3,0,'invalid next-hop length')
+				if safi in (SAFI.mpls_vpn,):
+					if len_nh not in (24,40):
+						raise Notify(3,0,'invalid next-hop length')
+					rd = 8
+				size = 16
+
 			# -- Reading next-hop
-			nh = data[offset:offset+len_nh]
+			nh = data[offset+rd:offset+rd+size]
+
+			# chech the RD is well zeo
+			if rd and sum([int(ord(_)) for _ in data[offset:8]]) != 0:
+				raise Notify(3,0,'route-distinguisher for the next-hop is not zero')
+
 			offset += len_nh
-			# Two IPv6
-			if len_nh == 32:
-				# we have a link-local address in the next-hop we ideally need to ignore
-				if nh[0] == chr(0xfe): nh = nh[16:]
-				elif nh[16] == chr(0xfe): nh = nh[:16]
-				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-				else: return self._AttributesFactory(next)
-			# IPv6
-			if len_nh >= 16: 
-				nh = socket.inet_ntop(socket.AF_INET6,nh)
-			# IPv4 mpls-vpn
-			elif len_nh == 12:
-				if sum([int(ord(_)) for _ in nh[:-4]]) != 0:
-					# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-					return self._AttributesFactory(next)
-				nh = socket.inet_ntop(socket.AF_INET,nh[-4:])
-			else:
-				nh = socket.inet_ntop(socket.AF_INET,nh)
-			
+
 			# Skip a reserved bit as somone had to bug us !
 			reserved = ord(data[offset])
-			if reserved != 0:
-				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-				return self._AttributesFactory(next)
 			offset += 1
+
+			if reserved != 0:
+				raise Notify(3,0,'the reserved bit of MP_REACH_NLRI is not zero')
+
+			# Is the peer going to send us some Path Information with the route (AddPath)
+			path_info = self.use_path.receive(afi,safi)
 
 			# Reading the NLRIs
 			data = data[offset:]
-			# Is the peer going to send us some Path Information with the route (AddPath)
-			path_info = self.use_path.receive(afi,safi)
+
 			while data:
 				route = RouteBGP(BGPNLRI(afi,safi,data,path_info),'announced')
 				route.attributes = self.attributes
 				if not route.attributes.get(AttributeID.NEXT_HOP,nh):
-					route.attributes.add(NextHop(*inet(nh)),nh)
+					route.attributes.add(NextHop(afi,safi,nh),nh)
 				self.mp_announce.append(route)
 				data = data[len(route.nlri):]
 			return self._AttributesFactory(next)

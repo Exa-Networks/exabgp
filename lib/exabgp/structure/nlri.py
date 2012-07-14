@@ -139,7 +139,11 @@ class NLRI (BGPPrefix):
 		BGPPrefix.__init__(self,afi,safi,packed,mask)
 
 	def has_label (self):
-		return self.afi == AFI.ipv4 and self.safi in (SAFI.nlri_mpls,SAFI.mpls_vpn)
+		if self.afi == AFI.ipv4 and self.safi in (SAFI.nlri_mpls,SAFI.mpls_vpn):	
+			return True
+		if self.afi == AFI.ipv6 and self.safi == SAFI.mpls_vpn:
+			return True
+		return False
 
 	def __len__ (self):
 		prefix_len = len(self.path_info) + len(self.labels) + len(self.rd)

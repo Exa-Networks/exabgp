@@ -571,6 +571,8 @@ class Configuration (object):
 		safi = tokens.pop(0)
 		if safi == 'unicast':
 			scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+		elif safi == 'mpls-vpn':
+			scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)))
 		else:
 			return False
 		return True
@@ -602,6 +604,7 @@ class Configuration (object):
 		families.append((AFI(AFI.ipv4),SAFI(SAFI.mpls_vpn)))
 		families.append((AFI(AFI.ipv4),SAFI(SAFI.flow_ipv4)))
 		families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+		families.append((AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)))
 		return families
 
 	# route grouping with watchdog
