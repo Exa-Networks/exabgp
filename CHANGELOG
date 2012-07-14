@@ -3,7 +3,7 @@ Version explained:
  minor : increase on new features
  bug   : increase on bug fixes
 
-Version 3.0.1 - -- of July 2012 (unreleased experimental version)
+Version 3.0.1 - 14 of July 2012 (unreleased experimental version)
  * Improvement: caching of parsed attributes of route received (saving memory and CPU)
  * Improvement: do not generate complex string with packet data if not printed
  * Improvement: all objects are storing data in the wire format when possible
