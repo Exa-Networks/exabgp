@@ -678,78 +678,80 @@ class Protocol (object):
 			offset = 3
 
 		data = data[offset:]
+		next = data[length:]
+		attribute = data[:length]
 
 		logger.parser(LazyFormat("parsing %s " % code,hexa,data[:length]))
 
 		if code == AttributeID.ORIGIN:
-			if not self.attributes.get(code,data[:length]):
-				self.attributes.add(Origin(ord(data[0])),data[:length])
-			return self._AttributesFactory(data[length:])
+			if not self.attributes.get(code,attribute):
+				self.attributes.add(Origin(ord(data[0])),attribute)
+			return self._AttributesFactory(next)
 
+		# only 2-4% of duplicated data - is it worth it ?
 		if code == AttributeID.AS_PATH:
 			if length:
-				if not self.attributes.get(code,data):
-					self.attributes.add(self.__new_ASPath(data[:length],self._asn4),data[:length])
+				if not self.attributes.get(code,attribute):
+					self.attributes.add(self.__new_ASPath(attribute,self._asn4),attribute)
 				if not self._asn4 and self.attributes.has(AttributeID.AS4_PATH):
 					self.__merge_attributes()
-			return self._AttributesFactory(data[length:])
+			return self._AttributesFactory(next)
 
 		if code == AttributeID.AS4_PATH:
 			if length:
-				if not self.attributes.get(code,data):
-					self.attributes.add(self.__new_AS4Path(data),data[:length])
+				if not self.attributes.get(code,attribute):
+					self.attributes.add(self.__new_AS4Path(data),attribute)
 				if not self._asn4 and self.attributes.has(AttributeID.AS_PATH):
 					self.__merge_attributes()
-			return self._AttributesFactory(data[length:])
+			return self._AttributesFactory(next)
 
 		if code == AttributeID.NEXT_HOP:
-			if not self.attributes.get(code,data):
-				self.attributes.add(NextHop(AFI.ipv4,SAFI.unicast_multicast,data[:length]),data[:length])
-			return self._AttributesFactory(data[length:])
+			if not self.attributes.get(code,attribute):
+				self.attributes.add(NextHop(AFI.ipv4,SAFI.unicast_multicast,attribute),attribute)
+			return self._AttributesFactory(next)
 
 		if code == AttributeID.MED:
-			if not self.attributes.get(code,data):
-				self.attributes.add(MED(data[:length]),data[:length])
-			return self._AttributesFactory(data[length:])
+			if not self.attributes.get(code,attribute):
+				self.attributes.add(MED(attribute),attribute)
+			return self._AttributesFactory(next)
 
 		if code == AttributeID.LOCAL_PREF:
-			if not self.attributes.get(code,data):
-				self.attributes.add(LocalPreference(data[:length]),data[:length])
-			return self._AttributesFactory(data[length:])
+			if not self.attributes.get(code,attribute):
+				self.attributes.add(LocalPreference(attribute),attribute)
+			return self._AttributesFactory(next)
 
 		if code == AttributeID.ATOMIC_AGGREGATE:
-			return self._AttributesFactory(data[length:])
+			return self._AttributesFactory(next)
 
 		if code == AttributeID.AGGREGATOR:
 			logger.parser('ignoring aggregator')
-			return self._AttributesFactory(data[length:])
+			return self._AttributesFactory(next)
 
 		if code == AttributeID.AS4_AGGREGATOR:
 			logger.parser('ignoring as4_aggregator')
-			return self._AttributesFactory(data[length:])
+			return self._AttributesFactory(next)
 
 		if code == AttributeID.COMMUNITY:
-			if not self.attributes.get(code,data):
-				self.attributes.add(self.__new_communities(data[:length]),data[:length])
-			return self._AttributesFactory(data[length:])
+			if not self.attributes.get(code,attribute):
+				self.attributes.add(self.__new_communities(attribute),attribute)
+			return self._AttributesFactory(next)
 
 		if code == AttributeID.ORIGINATOR_ID:
-			if not self.attributes.get(code,data):
-				self.attributes.add(OriginatorID(AFI.ipv4,SAFI.unicast,data[:4]),data[:length])
-			return self._AttributesFactory(data[length:])
+			if not self.attributes.get(code,attribute):
+				self.attributes.add(OriginatorID(AFI.ipv4,SAFI.unicast,data[:4]),attribute)
+			return self._AttributesFactory(next)
 
 		if code == AttributeID.CLUSTER_LIST:
-			if not self.attributes.get(code,data):
-				self.attributes.add(ClusterList(data[:length]),data[:length])
-			return self._AttributesFactory(data[length:])
+			if not self.attributes.get(code,attribute):
+				self.attributes.add(ClusterList(attribute),attribute)
+			return self._AttributesFactory(next)
 
 		if code == AttributeID.EXTENDED_COMMUNITY:
-			if not self.attributes.get(code,data):
-				self.attributes.add(self.__new_extended_communities(data[:length]),data[:length])
-			return self._AttributesFactory(data[length:])
+			if not self.attributes.get(code,attribute):
+				self.attributes.add(self.__new_extended_communities(attribute),attribute)
+			return self._AttributesFactory(next)
 
 		if code == AttributeID.MP_UNREACH_NLRI:
-			next_attributes = data[length:]
 			# -- Reading AFI/SAFI
 			data = data[:length]
 			afi,safi = unpack('!HB',data[:3])
@@ -757,7 +759,7 @@ class Protocol (object):
 			# See RFC 5549 for better support
 			if (afi,safi) not in self.neighbor._families.keys():
 				#self.log.out('we only understand IPv4/IPv6 and should never have received this MP_UNREACH_NLRI (%s %s)' % (afi,safi))
-				return self._AttributesFactory(next_attributes)
+				return self._AttributesFactory(next)
 			data = data[offset:]
 			# Is the peer going to send us some Path Information with the route (AddPath)
 			path_info = self.use_path.receive(afi,safi)
@@ -766,17 +768,16 @@ class Protocol (object):
 				route.attributes = self.attributes
 				self.mp_withdraw.append(route)
 				data = data[len(route.nlri):]
-			return self._AttributesFactory(next_attributes)
+			return self._AttributesFactory(next)
 
 		if code == AttributeID.MP_REACH_NLRI:
-			next_attributes = data[length:]
 			data = data[:length]
 			# -- Reading AFI/SAFI
 			afi,safi = unpack('!HB',data[:3])
 			offset = 3
 			if (afi,safi) not in self.neighbor._families.keys():
 				#self.log.out('we only understand IPv4/IPv6 and should never have received this MP_REACH_NLRI (%s %s)' % (afi,safi))
-				return self._AttributesFactory(next_attributes)
+				return self._AttributesFactory(next)
 			# -- Reading length of next-hop
 			len_nh = ord(data[offset])
 			offset += 1
@@ -784,13 +785,13 @@ class Protocol (object):
 			if afi == AFI.ipv4:
 				if safi in (SAFI.unicast,SAFI.multicast) and not len_nh != 4:
 					# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-					return self._AttributesFactory(next_attributes)
+					return self._AttributesFactory(next)
 				if safi == SAFI.mpls_vpn and len_nh != 12:
-					return self._AttributesFactory(next_attributes)
+					return self._AttributesFactory(next)
 			if afi == AFI.ipv6 and not len_nh in (16,32):
 				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
 				#self.log.out('bad IPv6 next-hop length (%d)' % len_nh)
-				return self._AttributesFactory(next_attributes)
+				return self._AttributesFactory(next)
 			# -- Reading next-hop
 			nh = data[offset:offset+len_nh]
 			offset += len_nh
@@ -800,7 +801,7 @@ class Protocol (object):
 				if nh[0] == chr(0xfe): nh = nh[16:]
 				elif nh[16] == chr(0xfe): nh = nh[:16]
 				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-				else: return self._AttributesFactory(next_attributes)
+				else: return self._AttributesFactory(next)
 			# IPv6
 			if len_nh >= 16: 
 				nh = socket.inet_ntop(socket.AF_INET6,nh)
@@ -808,7 +809,7 @@ class Protocol (object):
 			elif len_nh == 12:
 				if sum([int(ord(_)) for _ in nh[:-4]]) != 0:
 					# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-					return self._AttributesFactory(next_attributes)
+					return self._AttributesFactory(next)
 				nh = socket.inet_ntop(socket.AF_INET,nh[-4:])
 			else:
 				nh = socket.inet_ntop(socket.AF_INET,nh)
@@ -817,7 +818,7 @@ class Protocol (object):
 			reserved = ord(data[offset])
 			if reserved != 0:
 				# We are not following RFC 4760 Section 7 (deleting route and possibly tearing down the session)
-				return self._AttributesFactory(next_attributes)
+				return self._AttributesFactory(next)
 			offset += 1
 
 			# Reading the NLRIs
@@ -831,8 +832,8 @@ class Protocol (object):
 					route.attributes.add(NextHop(*inet(nh)),nh)
 				self.mp_announce.append(route)
 				data = data[len(route.nlri):]
-			return self._AttributesFactory(next_attributes)
+			return self._AttributesFactory(next)
 
 		logger.parser('ignoring attribute')
-		return self._AttributesFactory(data[length:])
+		return self._AttributesFactory(next)
 
