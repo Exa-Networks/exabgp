@@ -64,7 +64,7 @@ class Labels (object):
 		if self._len > 1:
 			return ' label [ %s ]' % ' '.join([str(_) for _ in self.labels])
 		elif self._len == 1:
-			return '%s' % self.labels[0]
+			return ' label %s' % self.labels[0]
 		else:
 			return ''
 
