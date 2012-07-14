@@ -17,7 +17,7 @@ from exabgp.rib.delta import Delta
 
 from exabgp.utils                import hexa
 from exabgp.structure.address    import AFI,SAFI
-from exabgp.structure.ip         import Inet,mask_to_bytes
+from exabgp.structure.ip         import Inet,inet,mask_to_bytes
 from exabgp.structure.nlri       import NLRI,PathInfo,Labels,RouteDistinguisher
 from exabgp.structure.route      import RouteBGP
 from exabgp.structure.asn        import ASN,AS_TRANS
@@ -34,7 +34,7 @@ from exabgp.message.update.attribute      import AttributeID
 from exabgp.message.update.attribute.flag        import Flag
 from exabgp.message.update.attribute.origin      import Origin
 from exabgp.message.update.attribute.aspath      import ASPath,AS4Path
-from exabgp.message.update.attribute.nexthop     import NextHop,NextHopIP
+from exabgp.message.update.attribute.nexthop     import NextHop
 from exabgp.message.update.attribute.med         import MED
 from exabgp.message.update.attribute.localpref   import LocalPreference
 from exabgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities
@@ -828,7 +828,7 @@ class Protocol (object):
 				route = RouteBGP(BGPNLRI(afi,safi,data,path_info),'announced')
 				route.attributes = self.attributes
 				if not route.attributes.get(AttributeID.NEXT_HOP,nh):
-					route.attributes.add(NextHopIP(nh),nh)
+					route.attributes.add(NextHop(*inet(nh)),nh)
 				self.mp_announce.append(route)
 				data = data[len(route.nlri):]
 			return self._AttributesFactory(next_attributes)

@@ -28,6 +28,3 @@ class NextHop (Attribute,Inet):
 
 	def __repr__ (self):
 		return str(self)
-
-def NextHopIP (ip):
-	return NextHop(*inet(ip))
