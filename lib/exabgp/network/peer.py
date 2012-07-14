@@ -122,7 +122,8 @@ class Peer (object):
 		try:
 			if self.supervisor.processes.broken(self.neighbor.peer_address):
 				# XXX: we should perhaps try to restart the process ??
-				raise Failure('ExaBGP lost the helper process for this peer - peer down')
+				logger.error('ExaBGP lost the helper process for this peer - stopping','process')
+				self._running = False
 
 			self.bgp = Protocol(self)
 			self.bgp.connect()
