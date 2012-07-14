@@ -827,7 +827,8 @@ class Protocol (object):
 			while data:
 				route = RouteBGP(BGPNLRI(afi,safi,data,path_info),'announced')
 				route.attributes = self.attributes
-				route.attributes.add(NextHopIP(nh),nh)
+				if not route.attributes.get(AttributeID.NEXT_HOP,nh):
+					route.attributes.add(NextHopIP(nh),nh)
 				self.mp_announce.append(route)
 				data = data[len(route.nlri):]
 			return self._AttributesFactory(next_attributes)
