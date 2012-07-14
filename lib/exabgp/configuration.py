@@ -34,6 +34,7 @@ from exabgp.message.update.attribute.nexthop     import NextHop
 from exabgp.message.update.attribute.aspath      import ASPath
 from exabgp.message.update.attribute.med         import MED
 from exabgp.message.update.attribute.localpref   import LocalPreference
+from exabgp.message.update.attribute.aggregator   import Aggregator
 from exabgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_RouteTargetCommunity_00,to_RouteTargetCommunity_01
 from exabgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.message.update.attribute.clusterlist  import ClusterList
@@ -63,6 +64,9 @@ class Configuration (object):
 	TTL_SECURITY = 255
 	debug = load().debug.configuration
 
+#	'  hold-time 180;\n' \
+#	'  add-path disabled|send|receive|send/receive;\n' \
+
 	_str_route_error = \
 	'community, extended-communities and as-path can take a single community as parameter.\n' \
 	'only next-hop is mandatory\n' \
@@ -81,8 +85,7 @@ class Configuration (object):
 	'  originator-id 10.0.0.10;\n' \
 	'  cluster-list [ 10.10.0.1 10.10.0.2 ];\n' \
 	'  label [ 100 200 ];\n' \
-	'  hold-time 180;\n' \
-	'  add-path disabled|send|receive|send/receive;\n' \
+	'  aggregator ( 65000:10.0.0.10 )\n' \
 	'  split /24\n' \
 	'  watchdog watchog-name\n' \
 	'  withdraw\n' \
@@ -90,7 +93,7 @@ class Configuration (object):
 	'\n' \
 	'syntax:\n' \
 	'route 10.0.0.1/22' \
-	' local-information 0.0.0.1' \
+	' path-information 0.0.0.1' \
 	' route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535' \
 	' next-hop 192.0.2.1' \
 	' origin IGP|EGP|INCOMPLETE' \
@@ -98,10 +101,14 @@ class Configuration (object):
 	' med 100' \
 	' local-preference 100' \
 	' community 65000' \
+	' extended-community target:1234:5.6.7.8' \
 	' originator-id 10.0.0.10' \
-	' cluster-list [ 10.10.0.1 10.10.0.2 ]' \
+	' cluster-list 10.10.0.1' \
 	' label 150' \
+	' aggregator' \
 	' split /24' \
+	' watchdog watchog-name' \
+	' withdraw' \
 	';\n' \
 
 	_str_flow_error = \
@@ -372,6 +379,7 @@ class Configuration (object):
 		if command == 'med': return self._route_med(scope,tokens[1:])
 		if command == 'next-hop': return self._route_next_hop(scope,tokens[1:])
 		if command == 'local-preference': return self._route_local_preference(scope,tokens[1:])
+		if command == 'aggregator': return self._route_aggregator(scope,tokens[1:])
 		if command == 'path-information': return self._route_path_information(scope,tokens[1:])
 		if command == 'community': return self._route_community(scope,tokens[1:])
 		if command == 'originator-id': return self._route_originator_id(scope,tokens[1:])
@@ -990,7 +998,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','as-sequence','med','local-preference','path-information','community','originator-id','cluster-list','extended-community','split','label','rd','route-distinguisher','watchdog','withdraw'])
+			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','as-sequence','med','local-preference','aggregator','path-information','community','originator-id','cluster-list','extended-community','split','label','rd','route-distinguisher','watchdog','withdraw'])
 			if r is False: return False
 			if r is None: return self._split_last_route(scope)
 
@@ -1036,6 +1044,10 @@ class Configuration (object):
 				return False
 			if command == 'local-preference':
 				if self._route_local_preference(scope,tokens):
+					continue
+				return False
+			if command == 'aggregator':
+				if self._route_aggregator(scope,tokens):
 					continue
 				return False
 			if command == 'path-information':
@@ -1150,6 +1162,35 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
+
+	def _route_aggregator (self,scope,tokens):
+		try:
+			if tokens:
+				if tokens.pop(0) != '(':
+					raise ValueError('invalid aggregator syntax')
+				asn,address = tokens.pop(0).split(':')
+				if tokens.pop(0) != ')':
+					raise ValueError('invalid aggregator syntax')
+				local_as = ASN(asn)
+				local_address = RouterID(address)
+			else:
+				local_as = scope[-1]['local-as']
+				local_address = scope[-1]['local-address']
+		except (ValueError,IndexError):
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+		except KeyError:
+			self._error = 'local-as and/or local-address missing from neighbor/group to make aggregator'
+			if self.debug: raise
+			return False
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+
+		scope[-1]['routes'][-1].attributes.add(Aggregator(local_as.pack(True)+local_address.pack()))
+		return True
 
 	def _route_path_information (self,scope,tokens):
 		try:
@@ -1676,10 +1717,11 @@ class Configuration (object):
 		if with_path_info:
 			capa[Capabilities.ADD_PATH] = path
 
-		o = Open(4,30740,'127.0.0.1',capa,180)
+		o1 = Open(4,3074000,'127.0.0.1',capa,180)
+		o2 = Open(4,30740,'127.0.0.1',capa,180)
 
 		proto = Protocol(Peer(n,None))
-		proto.use_path = UsePath(o,o)
+		proto.use_path = UsePath(o1,o2)
 
 		for nei in self.neighbor.keys():
 			for family in self.neighbor[nei].families():

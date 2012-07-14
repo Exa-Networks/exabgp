@@ -23,3 +23,4 @@ MEMO
 - look at the classes to reduce conversion and improve perf
 - focus on performance : always store packed data
 - move the generation of the route when the delta is done in an object with the peer info to display the route change in the log
+- the code could be simplied if all ASPATH4 work was done in the configuration parser and printing was trying as4path first and aspath otherwise

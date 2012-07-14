@@ -29,9 +29,7 @@ class Open (Message):
 		self.capabilities = capabilities
 
 	def message (self):
-		if self.asn.asn4():
-			return self._message("%s%s%s%s%s" % (self.version.pack(),ASN(23456).pack(False),self.hold_time.pack(),self.router_id.pack(),self.capabilities.pack()))
-		return self._message("%s%s%s%s%s" % (self.version.pack(),self.asn.pack(False),self.hold_time.pack(),self.router_id.pack(),self.capabilities.pack()))
+		return self._message("%s%s%s%s%s" % (self.version.pack(),self.asn.trans(),self.hold_time.pack(),self.router_id.pack(),self.capabilities.pack()))
 
 	def __str__ (self):
 		return "OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]" % (self.version, self.asn, self.hold_time, self.router_id,self.capabilities)
@@ -193,12 +191,6 @@ class CiscoRouteRefresh (list):
 	def extract (self):
 		return []
 
-# =================================================================== Parameter
-
-class ASN4 (int):
-	def extract (self):
-		return [pack('!L',self)]
-
 # =================================================================== Unknown
 
 class Unknown (object):
@@ -290,7 +282,7 @@ class Capabilities (dict):
 		mp = MultiProtocol()
 		mp.extend(families)
 		self[Capabilities.MULTIPROTOCOL_EXTENSIONS] = mp
-		self[Capabilities.FOUR_BYTES_ASN] = ASN4(neighbor.local_as)
+		self[Capabilities.FOUR_BYTES_ASN] = neighbor.local_as
 
 		if neighbor.add_path:
 			ap_families = []

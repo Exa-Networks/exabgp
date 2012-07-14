@@ -60,17 +60,13 @@ class Attributes (dict):
 		self._str = ''
 		if data:
 			self.cache[attribute.ID][data] = attribute
-		if self.has(attribute.ID):
-			if attribute.MULTIPLE:
+		if attribute.MULTIPLE:
+			if self.has(attribute.ID):
 				self[attribute.ID].append(attribute)
-				return True
-			return False
-		else:
-			if attribute.MULTIPLE:
-				self[attribute.ID] = MultiAttributes(attribute)
 			else:
-				self[attribute.ID] = attribute
-			return True
+				self[attribute.ID] = MultiAttributes(attribute)
+		else:
+			self[attribute.ID] = attribute
 
 	def remove (self,attrid):
 		self.pop(attrid)
@@ -125,6 +121,10 @@ class Attributes (dict):
 			if afi == AFI.ipv4 and safi in [SAFI.unicast, SAFI.multicast]:
 				message += self[AttributeID.NEXT_HOP].pack()
 
+		if AttributeID.MED in self:
+			if local_asn != peer_asn:
+				message += self[AttributeID.MED].pack()
+
 		if ibgp:
 			if AttributeID.LOCAL_PREF in self:
 				message += self[AttributeID.LOCAL_PREF].pack()
@@ -132,11 +132,12 @@ class Attributes (dict):
 				# '\x00\x00\x00d' is 100 packed in long network bytes order
 				message += LocalPreference('\x00\x00\x00d').pack()
 
-		if AttributeID.MED in self:
-			if local_asn != peer_asn:
-				message += self[AttributeID.MED].pack()
+		# This generate both AGGREGATOR and AS4_AGGREGATOR
+		if AttributeID.AGGREGATOR in self:
+			aggregator = self[AttributeID.AGGREGATOR]
+			message += aggregator.pack(asn4)
 
-		for attribute in [AttributeID.COMMUNITY,AttributeID.EXTENDED_COMMUNITY]:
+		for attribute in [AttributeID.COMMUNITY,AttributeID.ORIGINATOR_ID,AttributeID.CLUSTER_LIST,AttributeID.EXTENDED_COMMUNITY]:
 			if attribute in self:
 				message += self[attribute].pack()
 
@@ -160,13 +161,15 @@ class Attributes (dict):
 
 		local_pref = ''
 		if self.has(AttributeID.LOCAL_PREF):
-			l = self[AttributeID.LOCAL_PREF]
-			local_pref = ' local-preference %s' % l
+			local_pref = ' local-preference %s' % self[AttributeID.LOCAL_PREF]
+
+		aggregator = ''
+		if self.has(AttributeID.AGGREGATOR):
+			aggregator = ' aggregator ( %s )' % self[AttributeID.AGGREGATOR]
 
 		med = ''
 		if self.has(AttributeID.MED):
-			m = self[AttributeID.MED]
-			med = ' med %s' % m
+			med = ' med %s' % self[AttributeID.MED]
 
 		communities = ''
 		if self.has(AttributeID.COMMUNITY):
@@ -188,7 +191,7 @@ class Attributes (dict):
 		if self.has(AttributeID.MP_REACH_NLRI):
 			mpr = ' mp_reach_nlri %s' % str(self[AttributeID.MP_REACH_NLRI])
 
-		self._str = "%s%s%s%s%s%s%s%s%s%s" % (next_hop,origin,aspath,local_pref,med,communities,ecommunities,mpr,originator_id,cluster_list)
+		self._str = "%s%s%s%s%s%s%s%s%s%s%s" % (next_hop,origin,aspath,aggregator,local_pref,med,communities,ecommunities,mpr,originator_id,cluster_list)
 		return self._str
 
 	def __repr__ (self):

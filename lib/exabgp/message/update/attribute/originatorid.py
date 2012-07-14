@@ -19,9 +19,8 @@ class OriginatorID (Attribute,Inet):
 	# Take an IP as value
 	def __init__ (self,afi,safi,packed):
 		Inet.__init__(self,afi,safi,packed)
-
-	def pack (self):
-		return self._attribute(Inet.pack(self))
+		# This override Inet.pack too.
+		self.packed = self._attribute(Inet.pack(self))
 
 	def __str__ (self):
 		return Inet.__str__(self)

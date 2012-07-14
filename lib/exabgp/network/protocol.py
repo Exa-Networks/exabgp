@@ -37,6 +37,7 @@ from exabgp.message.update.attribute.aspath      import ASPath,AS4Path
 from exabgp.message.update.attribute.nexthop     import NextHop
 from exabgp.message.update.attribute.med         import MED
 from exabgp.message.update.attribute.localpref   import LocalPreference
+from exabgp.message.update.attribute.aggregator  import Aggregator
 from exabgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities
 #from exabgp.message.update.attribute.mprnlri     import MPRNLRI
 #from exabgp.message.update.attribute.mpurnlri    import MPURNLRI
@@ -724,11 +725,15 @@ class Protocol (object):
 			return self._AttributesFactory(next)
 
 		if code == AttributeID.AGGREGATOR:
-			logger.parser('ignoring aggregator')
+			# AS4_AGGREGATOR are stored as AGGREGATOR - so do not overwrite if exists
+			if not self.attributes.has(code):
+				if not self.attributes.get(code,attribute):
+					self.attributes.add(Aggregator(attribute),attribute)
 			return self._AttributesFactory(next)
 
 		if code == AttributeID.AS4_AGGREGATOR:
-			logger.parser('ignoring as4_aggregator')
+			if not self.attributes.get(AttributeID.AGGREGATOR,attribute):
+				self.attributes.add(Aggregator(attribute),attribute)
 			return self._AttributesFactory(next)
 
 		if code == AttributeID.COMMUNITY:

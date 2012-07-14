@@ -15,14 +15,24 @@ class ASN (int):
 	def asn4 (self):
 		return self > pow(2,16)
 
-	def pack (self,asn4):
+	def pack (self,asn4=None):
+		if asn4 is None:
+			asn4 = self.asn4()
 		if asn4:
 			return pack('!L',self)
 		return pack('!H',self)
 
 	def __len__ (self):
-		if self.asn4:
+		if self.asn4():
 			return 4
 		return 2
+
+	def extract (self):
+		return [pack('!L',self)]
+
+	def trans (self):
+		if self.asn4():
+			return AS_TRANS.pack()
+		return self.pack()
 
 AS_TRANS = ASN(23456)
