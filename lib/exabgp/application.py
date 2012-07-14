@@ -239,7 +239,7 @@ if __name__ == '__main__':
 
 	if not notice:
 		logger.info('profiling ....','profile')
-		profile.run('main()',filename=configuration.profile.destination)
+		profile.run('Supervisor(configuration).run()',filename=env.profile.file)
 	else:
 		logger.info("-"*len(notice),'profile')
 		logger.info(notice,'profile')
