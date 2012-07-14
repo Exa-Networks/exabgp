@@ -294,7 +294,8 @@ def _env (conf):
 			except TypeError:
 				raise EnvError('invalid value for %s.%s : %s' % (section,option,conf))
 
-	return env
+	return _compatibility(env)
+
 
 __env = None
 
@@ -341,3 +342,66 @@ def iter_env (diff=False):
 				yield "exabgp.%s.%s='%s'" % (section,k,v)
 				continue
 			yield "exabgp.%s.%s=%s" % (section,k,defaults[section][k][1](v))
+
+
+# Compatibility with 2.0.x
+def _compatibility (env):
+	profile = os.environ.get('PROFILE','')
+	if profile:
+		env.profile.enable=True
+	if profile and profile.lower() not in ['1','true','yes','on','enable']:
+		env.profile.file=profile
+
+	# PDB : still compatible as a side effect of the code structure
+
+	pid = os.environ.get('PID','')
+	if pid:
+		env.deamon.pid = pid
+
+	user = os.environ.get('USER','')
+	if user and user != 'root' and user != os.environ.get('LOGNAME','') and env.daemon.user == 'nobody':
+		env.daemon.user = user
+
+	daemon = os.environ.get('DAEMONIZE','').lower() in ['1','yes']
+	if daemon:
+		env.daemon.daemonize = True
+
+	syslog = os.environ.get('SYSLOG','')
+	if syslog != '':
+		env.log.destination=syslog
+
+	if os.environ.get('DEBUG_SUPERVISOR','').lower() in ['1','yes']:
+		env.log.supervisor = True
+	if os.environ.get('DEBUG_DAEMON','').lower() in ['1','yes']:
+		env.log.daemon = True
+	if os.environ.get('DEBUG_PROCESSES','').lower() in ['1','yes']:
+		env.log.processes = True
+	if os.environ.get('DEBUG_CONFIGURATION','').lower() in ['1','yes']:
+		env.log.configuration = True
+	if os.environ.get('DEBUG_WIRE','').lower() in ['1','yes']:
+		env.log.network = True
+		env.log.packets = True
+	if os.environ.get('DEBUG_MESSAGE','').lower() in ['1','yes']:
+		env.log.message = True
+	if os.environ.get('DEBUG_RIB','').lower() in ['1','yes']:
+		env.log.rib = True
+	if os.environ.get('DEBUG_TIMER','').lower() in ['1','yes']:
+		env.log.timers = True
+	if os.environ.get('DEBUG_PARSER','').lower() in ['1','yes']:
+		env.log.parser = True
+	if os.environ.get('DEBUG_ROUTE','').lower() in ['1','yes']:
+		env.log.routes = True
+	if os.environ.get('DEBUG_ROUTES','').lower() in ['1','yes']: # DEPRECATED even in 2.0.x
+		env.log.routes = True
+	if os.environ.get('DEBUG_ALL','').lower() in ['1','yes']:
+		env.log.all = True
+	if os.environ.get('DEBUG_CORE','').lower() in ['1','yes']:
+		env.log.supervisor = True
+		env.log.daemon = True
+		env.log.processes = True
+		env.log.message = True
+		env.log.timer = True
+		env.log.routes = True
+		env.log.parser = False
+
+	return env
