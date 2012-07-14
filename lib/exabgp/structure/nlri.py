@@ -122,7 +122,8 @@ class BGPPrefix (Inet):
 	def __repr__ (self):
 		return str(self)
 
-	def pack (self):
+	# The API requires with_path_info, but it is irrelevant here.
+	def pack (self,with_path_info=None):
 		return chr(self.mask) + self.packed[:mask_to_bytes[self.mask]]
 
 	def __len__ (self):

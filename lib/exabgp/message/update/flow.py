@@ -60,7 +60,8 @@ class IPrefix (IComponent):
 	NAME = None
 
 	def __init__ (self,ipv4,netmask):
-		self.nlri = BGPPrefix(AFI.ipv4,SAFI.flow_ipv4,ipv4,netmask)
+		raw = ''.join(chr(int(_)) for _ in ipv4.split('.'))
+		self.nlri = BGPPrefix(AFI.ipv4,SAFI.flow_ipv4,raw,netmask)
 
 	def pack (self):
 		raw = self.nlri.pack(with_path_info=False)
@@ -231,7 +232,8 @@ class FlowNLRI (Attributes,Address):
 		self.rules.setdefault(ID,[]).append(rule)
 		return True
 
-	def pack (self):
+	# The API requires with_path_info, but it is irrelevant here.
+	def pack (self,with_path_info=None):
 		ordered_rules = []
 
 		# the order is a RFC requirement
