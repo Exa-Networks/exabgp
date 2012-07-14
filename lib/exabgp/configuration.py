@@ -300,6 +300,7 @@ class Configuration (object):
 
 	def _multi_line (self,scope,name,tokens,valid):
 		command = tokens[0]
+
 		if valid and command not in valid:
 			self._error = 'option %s in not valid here' % command
 			if self.debug: raise
@@ -388,6 +389,7 @@ class Configuration (object):
 		if command == 'community': return self._route_community(scope,tokens[1:])
 		if command == 'originator-id': return self._route_originator_id(scope,tokens[1:])
 		if command == 'cluster-list': return self._route_cluster_list(scope,tokens[1:])
+		if command == 'extended-community': return self._route_extended_community(scope,tokens[1:])
 		if command == 'split': return self._route_split(scope,tokens[1:])
 		if command == 'label': return self._route_label(scope,tokens[1:])
 		if command in ('rd','route-distinguisher'): return self._route_rd(scope,tokens[1:])

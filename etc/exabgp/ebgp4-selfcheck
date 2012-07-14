@@ -34,7 +34,7 @@ neighbor 1.2.3.4 {
 			originator-id 82.219.212.34;
 			cluster-list [ 82.219.212.34 10.10.10.10 ];
       aggregator;
-			#extended-community target:30740:0.0.3.233;
+			extended-community target:30740:0.0.3.233;
 			atomic-aggregate;
 		}
 		route 82.219.0.0/16 {
