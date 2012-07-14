@@ -364,65 +364,77 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-		if command == 'description': return self._set_description(scope,tokens[1:])
-		if command == 'router-id': return self._set_router_id(scope,'router-id',tokens[1:])
-		if command == 'local-address': return self._set_ip(scope,'local-address',tokens[1:])
-		if command == 'local-as': return self._set_asn(scope,'local-as',tokens[1:])
-		if command == 'peer-as': return self._set_asn(scope,'peer-as',tokens[1:])
-		if command == 'hold-time': return self._set_holdtime(scope,'hold-time',tokens[1:])
-		if command == 'add-path': return self._set_addpath(scope,'add-path',tokens[1:])
-		if command == 'graceful-restart': return self._set_gracefulrestart(scope,'graceful-restart',tokens[1:])
-		if command == 'md5': return self._set_md5(scope,'md5',tokens[1:])
-		if command == 'ttl-security': return self._set_ttl(scope,'ttl-security',tokens[1:])
-		if command == 'multi-session': return self._set_multisession(scope,'multi-session',tokens[1:])
+		elif name == 'route':
+			if command == 'origin': return self._route_origin(scope,tokens[1:])
+			if command == 'as-path': return self._route_aspath(scope,tokens[1:])
+			if command == 'as-sequence': return self._route_aspath(scope,tokens[1:])
+			if command == 'med': return self._route_med(scope,tokens[1:])
+			if command == 'next-hop': return self._route_next_hop(scope,tokens[1:])
+			if command == 'local-preference': return self._route_local_preference(scope,tokens[1:])
+			if command == 'atomic-aggregate': return self._route_atomic_aggregate(scope,tokens[1:])
+			if command == 'aggregator': return self._route_aggregator(scope,tokens[1:])
+			if command == 'path-information': return self._route_path_information(scope,tokens[1:])
+			if command == 'originator-id': return self._route_originator_id(scope,tokens[1:])
+			if command == 'cluster-list': return self._route_cluster_list(scope,tokens[1:])
+			if command == 'split': return self._route_split(scope,tokens[1:])
+			if command == 'label': return self._route_label(scope,tokens[1:])
+			if command in ('rd','route-distinguisher'): return self._route_rd(scope,tokens[1:])
+			if command == 'watchdog': return self._route_watchdog(scope,tokens[1:])
+			# withdrawn is here to not break legacy code
+			if command in ('withdraw','withdrawn'): return self._route_withdraw(scope,tokens[1:])
 
-		if command == 'route': return self._single_static_route(scope,tokens[1:])
-		if command == 'origin': return self._route_origin(scope,tokens[1:])
-		if command == 'as-path': return self._route_aspath(scope,tokens[1:])
-		if command == 'as-sequence': return self._route_aspath(scope,tokens[1:])
-		if command == 'med': return self._route_med(scope,tokens[1:])
-		if command == 'next-hop': return self._route_next_hop(scope,tokens[1:])
-		if command == 'local-preference': return self._route_local_preference(scope,tokens[1:])
-		if command == 'atomic-aggregate': return self._route_atomic_aggregate(scope,tokens[1:])
-		if command == 'aggregator': return self._route_aggregator(scope,tokens[1:])
-		if command == 'path-information': return self._route_path_information(scope,tokens[1:])
-		if command == 'community': return self._route_community(scope,tokens[1:])
-		if command == 'originator-id': return self._route_originator_id(scope,tokens[1:])
-		if command == 'cluster-list': return self._route_cluster_list(scope,tokens[1:])
-		if command == 'extended-community': return self._route_extended_community(scope,tokens[1:])
-		if command == 'split': return self._route_split(scope,tokens[1:])
-		if command == 'label': return self._route_label(scope,tokens[1:])
-		if command in ('rd','route-distinguisher'): return self._route_rd(scope,tokens[1:])
-		if command == 'watchdog': return self._route_watchdog(scope,tokens[1:])
-		# withdrawn is here to not break legacy code
-		if command in ('withdraw','withdrawn'): return self._route_withdraw(scope,tokens[1:])
+			if command == 'community': return self._route_community(scope,tokens[1:])
+			if command == 'extended-community': return self._route_extended_community(scope,tokens[1:])
 
-		if command == 'source': return self._flow_source(scope,tokens[1:])
-		if command == 'destination': return self._flow_destination(scope,tokens[1:])
-		if command == 'port': return self._flow_route_anyport(scope,tokens[1:])
-		if command == 'source-port': return self._flow_route_source_port(scope,tokens[1:])
-		if command == 'destination-port': return self._flow_route_destination_port(scope,tokens[1:])
-		if command == 'protocol': return self._flow_route_protocol(scope,tokens[1:])
-		if command == 'tcp-flags': return self._flow_route_tcp_flags(scope,tokens[1:])
-		if command == 'icmp-type': return self._flow_route_icmp_type(scope,tokens[1:])
-		if command == 'icmp-code': return self._flow_route_icmp_code(scope,tokens[1:])
-		if command == 'fragment': return self._flow_route_fragment(scope,tokens[1:])
-		if command == 'dscp': return self._flow_route_dscp(scope,tokens[1:])
-		if command == 'packet-length': return self._flow_route_packet_length(scope,tokens[1:])
-		if command == 'discard': return self._flow_route_discard(scope,tokens[1:])
-		if command == 'rate-limit': return self._flow_route_rate_limit(scope,tokens[1:])
-		if command == 'redirect': return self._flow_route_redirect(scope,tokens[1:])
+		elif name == 'flow-match':
+			if command == 'source': return self._flow_source(scope,tokens[1:])
+			if command == 'destination': return self._flow_destination(scope,tokens[1:])
+			if command == 'port': return self._flow_route_anyport(scope,tokens[1:])
+			if command == 'source-port': return self._flow_route_source_port(scope,tokens[1:])
+			if command == 'destination-port': return self._flow_route_destination_port(scope,tokens[1:])
+			if command == 'protocol': return self._flow_route_protocol(scope,tokens[1:])
+			if command == 'tcp-flags': return self._flow_route_tcp_flags(scope,tokens[1:])
+			if command == 'icmp-type': return self._flow_route_icmp_type(scope,tokens[1:])
+			if command == 'icmp-code': return self._flow_route_icmp_code(scope,tokens[1:])
+			if command == 'fragment': return self._flow_route_fragment(scope,tokens[1:])
+			if command == 'dscp': return self._flow_route_dscp(scope,tokens[1:])
+			if command == 'packet-length': return self._flow_route_packet_length(scope,tokens[1:])
 
-		if command == 'run': return self._set_process_run(scope,'process-run',tokens[1:])
-		if command == 'parse-routes': return self._set_process_parse_routes(scope,'parse-routes',tokens[1:])
-		if command == 'peer-updates': return self._set_process_peer_updates(scope,'peer-updates',tokens[1:])
+		elif name == 'flow-then':
+			if command == 'discard': return self._flow_route_discard(scope,tokens[1:])
+			if command == 'rate-limit': return self._flow_route_rate_limit(scope,tokens[1:])
+			if command == 'redirect': return self._flow_route_redirect(scope,tokens[1:])
 
-		if name == 'family':
+			if command == 'community': return self._route_community(scope,tokens[1:])
+			if command == 'extended-community': return self._route_extended_community(scope,tokens[1:])
+
+		if name in ('neighbor','group'):
+			if command == 'description': return self._set_description(scope,tokens[1:])
+			if command == 'router-id': return self._set_router_id(scope,'router-id',tokens[1:])
+			if command == 'local-address': return self._set_ip(scope,'local-address',tokens[1:])
+			if command == 'local-as': return self._set_asn(scope,'local-as',tokens[1:])
+			if command == 'peer-as': return self._set_asn(scope,'peer-as',tokens[1:])
+			if command == 'hold-time': return self._set_holdtime(scope,'hold-time',tokens[1:])
+			if command == 'add-path': return self._set_addpath(scope,'add-path',tokens[1:])
+			if command == 'graceful-restart': return self._set_gracefulrestart(scope,'graceful-restart',tokens[1:])
+			if command == 'md5': return self._set_md5(scope,'md5',tokens[1:])
+			if command == 'ttl-security': return self._set_ttl(scope,'ttl-security',tokens[1:])
+			if command == 'multi-session': return self._set_multisession(scope,'multi-session',tokens[1:])
+
+		elif name == 'family':
 			if command == 'inet': return self._set_family_inet4(scope,tokens[1:])
 			if command == 'inet4': return self._set_family_inet4(scope,tokens[1:])
 			if command == 'inet6': return self._set_family_inet6(scope,tokens[1:])
 			if command == 'minimal': return self._set_family_minimal(scope,tokens[1:])
 			if command == 'all': return self._set_family_all(scope,tokens[1:])
+
+		elif name == 'process':
+			if command == 'run': return self._set_process_run(scope,'process-run',tokens[1:])
+			if command == 'parse-routes': return self._set_process_parse_routes(scope,'parse-routes',tokens[1:])
+			if command == 'peer-updates': return self._set_process_peer_updates(scope,'peer-updates',tokens[1:])
+
+		elif name == 'static':
+			if command == 'route': return self._single_static_route(scope,tokens[1:])
 
 		return False
 
