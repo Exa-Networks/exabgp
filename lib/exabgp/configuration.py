@@ -1190,7 +1190,7 @@ class Configuration (object):
 			# no-peer is not a correct syntax but I am sure someone will make the mistake :)
 			elif low == 'nopeer' or low == 'no-peer':
 				data = Community.NO_PEER
-			value = long(data)
+			value = unpack('!L',data)[0]
 			if value >= pow(2,32):
 				raise ValueError('invalid community %s (too large)' % data)
 			return Community(pack('!L',value))
