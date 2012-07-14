@@ -214,6 +214,7 @@ defaults = {
 		'timers'        : (value.boolean,value.lower,'false',    'report keepalives timers'),
 		'routes'        : (value.boolean,value.lower,'false',    'report received routes'),
 		'parser'        : (value.boolean,value.lower,'false',    'report BGP message parsing details'),
+		'short'         : (value.boolean,value.lower,'false',    'use short log format (not prepended with time,level,pid and source)'),
 	},
 	'tcp' : {
 		'timeout' : (value.integer,value.nop,'1',  'time we will wait on select (can help with unstable BGP multihop)\n'

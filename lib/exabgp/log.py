@@ -42,6 +42,8 @@ class LazyFormat (object):
 		return str(self).split(c)
 
 class _Logger (object):
+	short = load().log.short
+	
 	_instance = None
 	_syslog = None
 
@@ -67,6 +69,7 @@ class _Logger (object):
 		self._history.append((timestamp,level,source,message))
 
 	def _format (self,timestamp,level,source,message):
+		if self.short: return message
 		now = time.strftime('%a, %d %b %Y %H:%M:%S',timestamp)
 		return "%s | %-8s | %-6d | %-13s | %s" % (now,level,self._pid,source,message)
 
