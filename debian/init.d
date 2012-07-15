@@ -56,6 +56,10 @@ do_start()
 		status_of_proc -p "$PIDFILE" "$DAEMON" "$NAME" > /dev/null 2>&1
                 retcode=$?
                 if [ $retcode -ne 0 ]; then
+			CFG_COUNT=`cat /etc/exabgp/exabgp.conf | grep -v ^# | grep -v ^$ | wc -l`
+			if [ $CFG_COUNT -lt 2 ] ; then
+				echo "\nWARNING: Empty configuration file. ExaBGP won't start"
+			fi
                         # Return
                         #   0 if daemon has been started
                         #   1 if daemon was already running

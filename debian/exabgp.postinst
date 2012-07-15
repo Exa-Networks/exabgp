@@ -3,6 +3,14 @@
 . /usr/share/debconf/confmodule
 db_version 2.0
 
+function restore_user_settings {
+    source /tmp/exabgp.default.bak
+    sed -i "s#EXABGPRUN=\"no#EXABGPRUN=\"$EXABGPRUN#" /etc/default/exabgp
+    sed -i "s#ETC=\"/etc/exabgp/#ETC=\"$ETC#" /etc/default/exabgp
+    sed -i "s#DAEMON_OPTS=\"/etc/exabgp/exabgp.conf#DAEMON_OPTS=\"$DAEMON_OPTS#" /etc/default/exabgp
+    rm /tmp/exabgp.default.bak
+}
+
 if dpkg-maintscript-helper supports mv_conffile 2>/dev/null; then
     FILE_ONE="/etc/exabgp/processes/dynamic-1.sh"
     FILE_TWO="/etc/exabgp/processes/watchdog-1.sh"
@@ -16,12 +24,19 @@ configure)
     adduser --quiet --system --group --disabled-login --home /var/run/exabgp exabgp
     if [ ! -z "$2" ] && [ -e /var/run/exabgp/exabgp.pid ]; then invoke-rc.d exabgp stop; fi
     # The script will be started through the DEBHELPER script called hereunder.
+    if dpkg --compare-versions "$2" lt 3.0.0 &&  [ ! -f /etc/default/exabgp.dpkg-dist ] ; then restore_user_settings fi
     ;;
 install|upgrade)
     ;;
 esac
 
 #DEBHELPER#
+
+if [ "$1"  = "configure" ] && dpkg --compare-versions "$2" lt 3.0.0; then
+    echo "ExaBGP: Migrating your old configuration data to the new file format."
+    /usr/sbin/exabgp -fi > /etc/exabgp/exabgp.env 2>/dev/null
+    invoke-rc.d exabgp reload  || exit $?
+fi
 
 # do this to avoid a <defunct> postinst (closing all FDs).
 db_stop

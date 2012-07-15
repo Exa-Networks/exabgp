@@ -1,11 +1,20 @@
 #!/bin/sh -e
 
+. /usr/share/debconf/confmodule
+
 if dpkg-maintscript-helper supports rm_conffile 2>/dev/null; then
     FILE_ONE="/etc/exabgp/processes/dynamic-1.sh"
     FILE_TWO="/etc/exabgp/processes/watchdog-1.sh"
     if ! egrep -q "$FILE_ONE" /etc/exabgp/exabgp.conf ; then dpkg-maintscript-helper rm_conffile "$FILE_ONE" -- "$@" ; fi
     if ! egrep -q "$FILE_TWO" /etc/exabgp/exabgp.conf ; then dpkg-maintscript-helper rm_conffile "$FILE_TWO" -- "$@" ; fi
 fi
+
+if [ "$1"  = "configure" ] && dpkg --compare-versions "$2" lt 3.0.0; then
+    cp /etc/default/exabgp /tmp/exabgp.default.bak
+    db_input medium cfg_change || true
+    db_go		
+fi
+
 
 #DEBHELPER#
 

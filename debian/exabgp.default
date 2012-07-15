@@ -19,25 +19,3 @@ EXABGPRUN="no"
 # we store the configuration files.
 export ETC="/etc/exabgp/"
 
-# syslog : no value for local syslog, a file name (which will auto-rotate) or host:<host> for remote syslog
-export SYSLOG=
-
-# All the below environment variable are for debugging purpose.
-
-# verbose configuration parsing
-#export DEBUG_CONFIGURATION=1
-
-# signal received, configuration reload (default on)
-#export DEBUG_SUPERVISOR=0
-
-# changes in route announcement after config reload
-#export DEBUG_RIB=1
-
-# the packets sent and received
-#export DEBUG_WIRE=1
-
-# changes in route announcement in config reload (default on)
-#export DEBUG_MESSAGE=0
-
-# tracking keepalives
-#export DEBUG_TIMERS=1
