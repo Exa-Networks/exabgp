@@ -3,7 +3,7 @@
 . /usr/share/debconf/confmodule
 db_version 2.0
 
-function restore_user_settings {
+restore_user_settings() {
     source /tmp/exabgp.default.bak
     sed -i "s#EXABGPRUN=\"no#EXABGPRUN=\"$EXABGPRUN#" /etc/default/exabgp
     sed -i "s#ETC=\"/etc/exabgp/#ETC=\"$ETC#" /etc/default/exabgp
@@ -14,17 +14,17 @@ function restore_user_settings {
 if dpkg-maintscript-helper supports mv_conffile 2>/dev/null; then
     FILE_ONE="/etc/exabgp/processes/dynamic-1.sh"
     FILE_TWO="/etc/exabgp/processes/watchdog-1.sh"
-    if ! egrep -q "$FILE_ONE" /etc/exabgp/exabgp.conf ; then dpkg-maintscript-helper rm_conffile "$FILE_ONE" -- "$@" ; fi
-    if ! egrep -q "$FILE_TWO" /etc/exabgp/exabgp.conf ; then dpkg-maintscript-helper rm_conffile "$FILE_TWO" -- "$@" ; fi
+    if ! egrep -q "$FILE_ONE" /etc/exabgp/exabgp.conf 2> /dev/null ; then dpkg-maintscript-helper rm_conffile "$FILE_ONE" -- "$@" ; fi
+    if ! egrep -q "$FILE_TWO" /etc/exabgp/exabgp.conf 2> /dev/null ; then dpkg-maintscript-helper rm_conffile "$FILE_TWO" -- "$@" ; fi
     if [ -d "/etc/exabgp/processes/" ] ; then rmdir /etc/exabgp/processes 2>/dev/null ; fi 
 fi
 
 case "$1" in
 configure)
     adduser --quiet --system --group --disabled-login --home /var/run/exabgp exabgp
-    if [ ! -z "$2" ] && [ -e /var/run/exabgp/exabgp.pid ]; then invoke-rc.d exabgp stop; fi
+    if [ ! -z "$2" ] && [ -e /var/run/exabgp/exabgp.pid ]; then invoke-rc.d exabgp stop ; fi
     # The script will be started through the DEBHELPER script called hereunder.
-    if dpkg --compare-versions "$2" lt 3.0.0 &&  [ ! -f /etc/default/exabgp.dpkg-dist ] ; then restore_user_settings fi
+    if dpkg --compare-versions "$2" lt 3.0.0 &&  [ ! -f /etc/default/exabgp.dpkg-dist ] ; then restore_user_settings ; fi
     ;;
 install|upgrade)
     ;;
