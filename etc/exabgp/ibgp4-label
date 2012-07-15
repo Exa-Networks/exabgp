@@ -18,7 +18,7 @@ neighbor 10.0.0.10 {
 			# 17 34 51 68 -> 0x11 0x22 0x33 0x44 
 			next-hop 127.0.0.1;
 			origin igp;
-			as-sequence [ 30740 30740 30740 30740 30740 30740 30740 ];
+			as-path [ 30740 30740 30740 30740 30740 30740 30740 ];
 			local-preference 1;
 			med 2000;
 			community [ no-export ];
@@ -31,7 +31,7 @@ neighbor 10.0.0.10 {
       path-information 17.34.51.68;
 			next-hop 127.0.0.1;
 			origin igp;
-			as-sequence [ 30740 30740 30740 30740 30740 30740 30740 ];
+			as-path [ 30740 30740 30740 30740 30740 30740 30740 ];
 			local-preference 1;
 			med 2000;
 			community [ no-export ];

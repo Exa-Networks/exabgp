@@ -76,26 +76,40 @@ class Attributes (dict):
 	def remove (self,attrid):
 		self.pop(attrid)
 
+
+#	def _as_path (self,asn4,asp):
+#		message = ''
+#		# if the peer does not understand ASN4, we need to build a transitive AS4_PATH
+#		if not asn4:
+#			has_asn4 = False
+#			aspath = ASPath(False,asp.asptype)
+#			as4path = AS4Path(asp.asptype)
+#			for segment in asp.aspsegment:
+#				if segment.asn4():
+#					has_asn4 = True
+#					aspath.add(AS_TRANS)
+#					as4path.add(segment)
+#				else:
+#					aspath.add(segment)
+#					as4path.add(segment)
+#			message += aspath.pack()
+#			if has_asn4:
+#				message += as4path.pack()
+#		else:
+#			message += ASPath(True,asp.asptype,asp.aspsegment).pack()
+#		return message
+
 	def _as_path (self,asn4,asp):
-		message = ''
 		# if the peer does not understand ASN4, we need to build a transitive AS4_PATH
-		if not asn4:
-			has_asn4 = False
-			aspath = ASPath(False,asp.asptype)
-			as4path = AS4Path(asp.asptype)
-			for segment in asp.aspsegment:
-				if segment.asn4():
-					has_asn4 = True
-					aspath.add(AS_TRANS)
-					as4path.add(segment)
-				else:
-					aspath.add(segment)
-					as4path.add(segment)
-			message += aspath.pack()
-			if has_asn4:
-				message += as4path.pack()
-		else:
-			message += ASPath(True,asp.asptype,asp.aspsegment).pack()
+		if asn4:
+			return asp.pack(True)
+
+		as2_seq = [_ if not _.asn4() else AS_TRANS for _ in asp.as_seq]
+		as2_set = [_ if not _.asn4() else AS_TRANS for _ in asp.as_set]
+
+		message = ASPath(as2_seq,as2_set).pack(False)
+		if AS_TRANS in as2_seq or AS_TRANS in as2_set:
+			message += AS4Path(asp.as_seq,asp.as_set).pack()
 		return message
 
 	def bgp_announce (self,asn4,local_asn,peer_asn):
@@ -113,9 +127,9 @@ class Attributes (dict):
 			message += self._as_path(asn4,asp)
 		elif self.autocomplete:
 			if ibgp:
-				asp = ASPath(asn4,ASPath.AS_SEQUENCE,[])
+				asp = ASPath(asn4,[],[])
 			else:
-				asp = ASPath(asn4,ASPath.AS_SEQUENCE,[local_asn])
+				asp = ASPath(asn4,[local_asn,],[])
 			message += self._as_path(asn4,asp)
 		else:
 			raise RuntimeError('Generated routes must always have an AS_PATH ')
@@ -162,7 +176,7 @@ class Attributes (dict):
 
 		aspath = ''
 		if self.has(AttributeID.AS_PATH):
-			aspath = ' %s' % str(self[AttributeID.AS_PATH]).lower().replace('_','-')
+			aspath = ' as-path %s' % str(self[AttributeID.AS_PATH])
 
 		local_pref = ''
 		if self.has(AttributeID.LOCAL_PREF):

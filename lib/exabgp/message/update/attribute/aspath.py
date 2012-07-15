@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
+from struct import unpack,error
+
 from exabgp.message.update.attribute import AttributeID,Flag,Attribute
 
 # =================================================================== ASPath (2)
@@ -18,49 +20,57 @@ class ASPath (Attribute):
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 
-	def __init__ (self,asn4=False,asptype=0x02,aspsegment=None):
-		self.packed = ''
-		self.asn4 = asn4
-		self.asptype = asptype
-		if aspsegment == None:
-			self.aspsegment = []
-		else:
-			self.aspsegment = aspsegment
+	def __init__ (self,as_sequence,as_set,index=None):
+		self.as_seq = as_sequence
+		self.as_set = as_set
+		self.segments = ''
+		self.packed = {True:'',False:''}
+		self.index = index # the original packed data, use for indexing
+		self._str = ''
 
-	def _segment (self,seg_type,values):
+	def _segment (self,seg_type,values,asn4):
 		l = len(values)
 		if l:
 			if l>255:
 				return self._segment(seg_type,values[:255]) + self._segment(seg_type,values[255:])
-			return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack(self.asn4) for v in values]))
+			return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack(asn4) for v in values]))
 		return ""
 
-	def add (self,asn):
-		self.aspsegment.append(asn)
+	def _segments (self,asn4):
+		segments = ''
+		if self.as_seq:
+			segments = self._segment(self.AS_SEQUENCE,self.as_seq,asn4)
+		if self.as_set:
+			segments += self._segment(self.AS_SET,self.as_set,asn4)
+		return segments
 
-	def pack (self):
-		if not self.packed:
-			self.packed = self._attribute(self._segment(self.asptype,self.aspsegment))
-		return self.packed
-
+	def pack (self,asn4):
+		if not self.packed[asn4]:
+			self.packed[asn4] = self._attribute(self._segments(asn4))
+		return self.packed[asn4]
+		
 	def __len__ (self):
-		return 2 + (len(self.aspsegment)*2)
+		raise RuntimeError('it makes no sense to ask for the size of this object')
 
 	def __str__ (self):
-		if self.asptype == 0x01: t = 'AS_SET'
-		if self.asptype == 0x02: t = 'AS_SEQUENCE'
-		else: t = 'invalid_ASPATH_%d' % self.asptype
-
-		if len(self) >  1: return '%s [ %s ]' % (t,' '.join([str(community) for community in self.aspsegment]))
-		if len(self) == 1: return '%s %s' % (t,str(self.aspsegment[0]))
-		return t
-
-	def __repr__ (self):
-		return str(self)
+		if not self._str:
+			lseq = len(self.as_seq)
+			lset = len(self.as_set)
+			if lseq == 1 and not lseq:
+				string = '%d' % self.as_seq[0]
+			elif lseq > 1 or lset:
+				string = '[ %s ]' % (' '.join([str(_) for _ in self.as_seq]))
+			else:
+				string = ''
+			if lset:
+				str_set = '[ %s ]' % (' '.join([str(_) for _ in self.as_set]))
+				string = ' '.join([string,str_set])
+			self._str = string
+		return self._str
 
 class AS4Path (ASPath):
 	ID = AttributeID.AS4_PATH
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
 
-	def __init__ (self,asptype=0x02,aspsegment=None):
-		ASPath.__init__(self,True,asptype,aspsegment)
+	def pack (self):
+		ASPath.pack(self,True)

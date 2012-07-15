@@ -19,10 +19,10 @@ neighbor 82.219.119.133 {
       path-information 17.34.51.68;
 			next-hop 127.0.0.1;
 			origin igp;
-			as-sequence [ 30740 30740 30740 30740 30740 30740 30740 ];
 			local-preference 1;
 			med 2000;
 			community [ no-export ];
+			as-path [ 30740 30740 30740 30740 30740 30740 ] [ 30740 ];
 		}
 	}
 }

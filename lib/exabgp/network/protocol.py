@@ -10,7 +10,7 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 #import copy
 import time
 import socket
-from struct import unpack
+from struct import unpack,error
 
 from exabgp.rib.table import Table
 from exabgp.rib.delta import Delta
@@ -588,65 +588,55 @@ class Protocol (object):
 			return Update(routes)
 		return NOP('')
 
-	def AttributesFactory (self,data):
-		try:
-			self.attributes = Attributes()
-			return self._AttributesFactory(data).attributes
-		except IndexError:
-			raise Notify(3,2,data)
-
-	def __new_ASPath (self,data,asn4=False):
-		if asn4:
-			size = 4
-			decoder = 'L' # could it be 'I' as well ?
-		else:
-			size = 2
-			decoder = 'H'
-		stype = ord(data[0])
-		slen = ord(data[1])
-		sdata = data[2:2+(slen*size)]
-
-		if stype not in (ASPath.AS_SET, ASPath.AS_SEQUENCE):
-			raise Notify(3,11,'invalid AS Path type sent %d' % stype)
-
-		ASPS = ASPath(asn4,stype)
-		format = '!'+(decoder*slen)
-		for c in unpack(format,sdata):
-			ASPS.add(c)
-		return ASPS
-
-	def __new_AS4Path (self,data):
-		stype = ord(data[0])
-		slen = ord(data[1])
-		sdata = data[2:2+(slen*4)]
-
-		ASPS = AS4Path(stype)
-		format = '!'+('L'*slen)
-		for c in unpack(format,sdata):
-			ASPS.add(c)
-		return ASPS
-
 	def __merge_attributes (self):
 		as2path = self.attributes[AttributeID.AS_PATH]
 		as4path = self.attributes[AttributeID.AS4_PATH]
-		newASPS = ASPath(True,as2path.asptype)
-		len2 = len(as2path.aspsegment)
-		len4 = len(as4path.aspsegment)
-
-		if len2 < len4:
-			for asn in as4path.aspsegment:
-				newASPS.add(asn)
-		else:
-			for asn in as2path.aspsegment[:-len4]:
-				newASPS.add(asn)
-			for asn in as4path.aspsegment:
-				newASPS.add(asn)
-
 		self.attributes.remove(AttributeID.AS_PATH)
 		self.attributes.remove(AttributeID.AS4_PATH)
-		self.attributes.add(newASPS)
 
-		#raise Notify(3,1,'could not merge AS4_PATH in AS_PATH')
+		# this key is unique as index length is a two header, plus a number of ASN of size 2 or 4
+		# so adding the : make the length odd and unique
+		key = "%s:%s" % (as2path.index, as4path.index)
+		
+		# found a cache copy
+		if self.attributes.get(AttributeID.AS_PATH,key):
+			return
+
+		as_seq = []
+		as_set = []
+
+		len2 = len(as2path.as_seq)
+		len4 = len(as4path.as_seq)
+
+		# RFC 4893 section 4.2.3
+		if len2 < len4:
+			asn = aspath.as_seq
+		else:
+			asn = as2path.as_seq[:-len4]
+			asn.append(as4path.as_seq)
+
+		len2 = len(as2path.as_set)
+		len4 = len(as4path.as_set)
+
+		if len2 < len4:
+			asn = as4path.as_set
+		else:
+			asn = as2path.as_set[:-len4]
+			asn.append(as4path.as_set)
+
+		aspath = ASPath(as_seq,as_set,)
+		self.attributes.add(aspath,key)
+
+
+	def AttributesFactory (self,data):
+		try:
+			self.attributes = Attributes()
+			self._AttributesFactory(data)
+			if AttributeID.AS_PATH in self.attributes and AttributeID.AS4_PATH in self.attributes:
+				self.__merge_attributes()
+			return self.attributes
+		except IndexError:
+			raise Notify(3,2,data)
 
 	def __new_communities (self,data):
 		communities = Communities()
@@ -665,6 +655,59 @@ class Protocol (object):
 			communities.add(ECommunity(data[:8]))
 			data = data[8:]
 		return communities
+
+	def __new_aspaths (self,data,asn4,klass):
+		as_set = []
+		as_seq = []
+		backup = data
+
+		unpacker = {
+			False : '!H',
+			True  : '!L',
+		}
+		size = {
+			False: 2,
+			True : 4,
+		}
+		as_choice = {
+			ASPath.AS_SEQUENCE : as_seq,
+			ASPath.AS_SET      : as_set,
+		}
+
+		upr = unpacker[asn4]
+		length = size[asn4]
+
+		try:
+
+			while data:
+				stype = ord(data[0])
+				slen  = ord(data[1])
+
+				if stype not in (ASPath.AS_SET, ASPath.AS_SEQUENCE):
+					raise Notify(3,11,'invalid AS Path type sent %d' % stype)
+
+				end = 2+(slen*length)
+				sdata = data[2:end]
+				data = data[end:]
+				asns = as_choice[stype]
+
+				for i in range(slen):
+					asn = unpack(upr,sdata[:length])[0]
+					asns.append(ASN(asn))
+					sdata = sdata[length:]
+
+		except IndexError:
+			raise Notify(3,11,'not enough data to decode AS_PATH or AS4_PATH')
+		except error: # struct
+			raise Notify(3,11,'not enough data to decode AS_PATH or AS4_PATH')
+
+		return klass(as_seq,as_set,backup)
+
+	def __new_ASPath (self,data,asn4):
+		return self.__new_aspaths(data,asn4,ASPath)
+
+	def __new_ASPath4 (self,data):
+		return self.__new_aspaths(data,True,ASPath4)
 
 	def _AttributesFactory (self,data):
 		if not data:
@@ -692,21 +735,20 @@ class Protocol (object):
 				self.attributes.add(Origin(ord(data[0])),attribute)
 			return self._AttributesFactory(next)
 
-		# only 2-4% of duplicated data - is it worth it ?
+		# only 2-4% of duplicated data - is it worth to cache ?
 		if code == AttributeID.AS_PATH:
 			if length:
-				if not self.attributes.get(code,attribute):
-					self.attributes.add(self.__new_ASPath(attribute,self._asn4),attribute)
-				if not self._asn4 and self.attributes.has(AttributeID.AS4_PATH):
-					self.__merge_attributes()
+				if not self.attributes.has(code):
+					if not self.attributes.get(code,attribute):
+						self.attributes.add(self.__new_ASPath(attribute,self._asn4),attribute)
 			return self._AttributesFactory(next)
 
 		if code == AttributeID.AS4_PATH:
 			if length:
-				if not self.attributes.get(code,attribute):
-					self.attributes.add(self.__new_AS4Path(data),attribute)
-				if not self._asn4 and self.attributes.has(AttributeID.AS_PATH):
-					self.__merge_attributes()
+				# ignore the AS4_PATH on new spekers as required by RFC 4893 section 4.1
+				if not self._asn4 and not self.attributes.get(code,attribute):
+					# This replace the old AS_PATH
+					self.attributes.add(self.__new_ASPath4(attribute),attribute)
 			return self._AttributesFactory(next)
 
 		if code == AttributeID.NEXT_HOP:
