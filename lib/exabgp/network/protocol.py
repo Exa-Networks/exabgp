@@ -577,9 +577,11 @@ class Protocol (object):
 			routes.append(route)
 
 		for route in self.mp_withdraw:
+			route.attributes = attributes
 			routes.append(route)
 
 		for route in self.mp_announce:
+			route.attributes = attributes
 			routes.append(route)
 
 		if routes:
@@ -838,7 +840,6 @@ class Protocol (object):
 
 			while data:
 				route = RouteBGP(BGPNLRI(afi,safi,data,path_info),'announced')
-				route.attributes = self.attributes
 				if not route.attributes.get(AttributeID.NEXT_HOP,nh):
 					route.attributes.add(NextHop(afi,safi,nh),nh)
 				self.mp_announce.append(route)
