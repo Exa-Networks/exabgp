@@ -66,6 +66,7 @@ do_start()
                         #   2 if daemon could not be started
 			# We create the PID file and we do background thanks to start-stop-daemon
                         start-stop-daemon --start --quiet --pidfile $PIDFILE -c $USER -b -m --exec $DAEMON -- $DAEMON_OPTS || return 2
+			sleep 1 
                 else
                         log_daemon_msg "$NAME is already running!"
 			log_end_msg 0
