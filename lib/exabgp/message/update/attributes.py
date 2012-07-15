@@ -76,29 +76,6 @@ class Attributes (dict):
 	def remove (self,attrid):
 		self.pop(attrid)
 
-
-#	def _as_path (self,asn4,asp):
-#		message = ''
-#		# if the peer does not understand ASN4, we need to build a transitive AS4_PATH
-#		if not asn4:
-#			has_asn4 = False
-#			aspath = ASPath(False,asp.asptype)
-#			as4path = AS4Path(asp.asptype)
-#			for segment in asp.aspsegment:
-#				if segment.asn4():
-#					has_asn4 = True
-#					aspath.add(AS_TRANS)
-#					as4path.add(segment)
-#				else:
-#					aspath.add(segment)
-#					as4path.add(segment)
-#			message += aspath.pack()
-#			if has_asn4:
-#				message += as4path.pack()
-#		else:
-#			message += ASPath(True,asp.asptype,asp.aspsegment).pack()
-#		return message
-
 	def _as_path (self,asn4,asp):
 		# if the peer does not understand ASN4, we need to build a transitive AS4_PATH
 		if asn4:
