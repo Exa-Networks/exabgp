@@ -9,6 +9,7 @@ Version 3.0.3 - xx of July 2012 (unreleased experimental version)
  * Fix: on peer reload make sure all the routes are re-announced (still need work)
  * Fix: massive CPU saving - only check for new route to announce when we have some
  * Improvement: on corner case networking
+ * Improvement: in the way we store route in memory
 
 Version 3.0.2 - 17 of July 2012 (unreleased experimental version)
  * CHANGE: python2.4 may work but it not supported anymore

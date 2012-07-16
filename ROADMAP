@@ -7,7 +7,6 @@ Version 3.
 - protect the forked process do not have to deal with SIGHUP or others signals sent to exabgp (done ? to test)
 - multiple configuration files as paramter (considering)
 - have a command to shutdown the process properly
-- finish work on the route DELTA (check what we could be sending update/announce) and improve storage..
 
 MEMO
 - break protocol.py in several files ? 
@@ -22,4 +21,4 @@ MEMO
 - remove all the __repr__ using str
 - group routes generated to be nicer on the router CPU.
 - do we really need to remove a route before re-announcing it or can we just "overwrite" it
-- better store the union of both peers families
+- if we define the same route twice we will send a withdraw before the announce .. 

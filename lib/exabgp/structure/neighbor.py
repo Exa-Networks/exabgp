@@ -72,7 +72,7 @@ class Neighbor (object):
 				if watchdog in self._watchdog:
 					if self._watchdog[watchdog] == 'withdraw':
 						continue
-				routes[str(route)] = route
+				routes[route.index()] = route
 		return routes
 
 	def add_family (self,family):

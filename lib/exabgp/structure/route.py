@@ -24,11 +24,8 @@ class Route (object):
 	def extensive (self):
 		return "%s %s%s" % (str(self.__address),str(self.nlri),str(self.attributes))
 
-	def __repr__ (self):
-		return str(self)
-
-	def __eq__ (self,other):
-		return str(self) == str(other)
+	def index (self):
+		return self.nlri.packed+self.nlri.rd.rd
 
 class RouteBGP (Route):
 	def __init__ (self,nlri,action):
