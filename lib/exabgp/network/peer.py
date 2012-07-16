@@ -277,6 +277,7 @@ class Peer (object):
 		except NotConnected, e:
 			logger.error('we can not connect to the peer %s' % str(e),'network')
 			self._more_skip()
+			self.bgp.clear_buffer()
 			try:
 				self.bgp.close('could not connect to the peer')
 			except Failure:
@@ -284,17 +285,20 @@ class Peer (object):
 			return
 		except Notify,e:
 			logger.error(self.me('Sending Notification (%d,%d) to peer [%s] %s' % (e.code,e.subcode,str(e),e.data)),'network')
+			self.bgp.clear_buffer()
 			try:
 				self.bgp.new_notification(e)
 			except Failure:
 				pass
 			try:
+				self.bgp.clear_buffer()
 				self.bgp.close('notification sent (%d,%d) [%s] %s' % (e.code,e.subcode,str(e),e.data))
 			except Failure:
 				pass
 			return
 		except Notification, e:
 			logger.error(self.me('Received Notification (%d,%d) %s' % (e.code,e.subcode,str(e))),'network')
+			self.bgp.clear_buffer()
 			try:
 				self.bgp.close('notification received (%d,%d) %s' % (e.code,e.subcode,str(e)))
 			except Failure:
@@ -303,6 +307,7 @@ class Peer (object):
 		except Failure, e:
 			logger.error(self.me(str(e)),'network')
 			self._more_skip()
+			self.bgp.clear_buffer()
 			try:
 				self.bgp.close('failure %s' % str(e))
 			except Failure:
@@ -311,6 +316,7 @@ class Peer (object):
 		except Exception, e:
 			logger.error(self.me('UNHANDLED EXCEPTION'),'network')
 			self._more_skip()
+			self.bgp.clear_buffer()
 			if self.debug_trace:
 				# should really go to syslog
 				traceback.print_exc(file=sys.stdout)

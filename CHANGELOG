@@ -5,6 +5,7 @@ Version explained:
 
 Version 3.0.3 - xx of July 2012 (unreleased experimental version)
  * Fix: bug in ASN4 path reconstruction
+ * Fix: on peer close, do not carry untransmitted routes through the next cycle
  * Improvement: on corner case networking
 
 Version 3.0.2 - 17 of July 2012 (unreleased experimental version)

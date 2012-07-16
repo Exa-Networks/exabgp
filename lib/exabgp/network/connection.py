@@ -202,7 +202,7 @@ class Connection (object):
 							time.sleep(0.01)
 						continue
 					else:
-						logger.wire("%15s problem sending message, errno %s" % (self.peer,str(e.args[0]))
+						logger.wire("%15s problem sending message, errno %s" % (self.peer,str(e.args[0])))
 						raise e
 			self.last_write = time.time()
 			return True
