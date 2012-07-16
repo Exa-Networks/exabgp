@@ -13,13 +13,13 @@ import select
 
 from exabgp.version import version
 
-from exabgp.daemon import Daemon
-from exabgp.processes import Processes,ProcessError
-from exabgp.configuration import Configuration
+from exabgp.structure.daemon import Daemon
+from exabgp.structure.processes import Processes,ProcessError
+from exabgp.structure.configuration import Configuration
 from exabgp.network.peer import Peer
 from exabgp.network.connection import errno_block
 
-from exabgp.log import Logger
+from exabgp.structure.log import Logger
 logger = Logger()
 
 class Supervisor (object):

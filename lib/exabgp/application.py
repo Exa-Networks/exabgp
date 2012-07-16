@@ -99,7 +99,7 @@ if __name__ == '__main__':
 	if main == 2 and secondary == 4:
 		version_warning()
 
-	from exabgp.environment import EnvError,load,iter_ini,iter_env,default
+	from exabgp.structure.environment import EnvError,load,iter_ini,iter_env,default
 
 	next = ''
 	arguments = {
@@ -193,14 +193,14 @@ if __name__ == '__main__':
 		if arg in ['-m','--memory']:
 			env.debug.memory = True
 
-	from exabgp.log import Logger
+	from exabgp.structure.log import Logger
 	logger = Logger()
 
 	if parse_error:
 		logger.error(parse_error,'configuration')
 		sys.exit(1)
 
-	from exabgp.supervisor import Supervisor
+	from exabgp.structure.supervisor import Supervisor
 
 	# check the file only once that we have parsed all the command line options and allowed them to run
 	if arguments['file']:

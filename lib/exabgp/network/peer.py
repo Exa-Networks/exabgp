@@ -17,9 +17,9 @@ from exabgp.message.update       import Update
 from exabgp.message.keepalive    import KeepAlive
 from exabgp.message.notification import Notification, Notify, NotConnected
 from exabgp.network.protocol     import Protocol
-from exabgp.processes            import ProcessError
+from exabgp.structure.processes  import ProcessError
 
-from exabgp.log import Logger,LazyFormat
+from exabgp.structure.log import Logger,LazyFormat
 logger = Logger()
 
 # As we can not know if this is our first start or not, this flag is used to

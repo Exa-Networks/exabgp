@@ -9,7 +9,7 @@ import os
 import subprocess
 import select
 
-from exabgp.log import Logger
+from exabgp.structure.log import Logger
 logger = Logger()
 
 class ProcessError (Exception):

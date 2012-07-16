@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
-from exabgp.structure.address import Address #,AFI,SAFI
+from exabgp.protocol.ip.address import Address #,AFI,SAFI
 from exabgp.message.update.attribute import AttributeID,Flag,Attribute
 
 # =================================================================== MP Unreacheable NLRI (15)

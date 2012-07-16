@@ -16,13 +16,13 @@ import errno
 import select
 #import array
 
-from exabgp.environment import load
+from exabgp.structure.environment import load
 
-from exabgp.utils import hexa,trace
-from exabgp.structure.address import AFI
+from exabgp.structure.utils import hexa,trace
+from exabgp.protocol.family import AFI
 from exabgp.message import Failure
 
-from exabgp.log import Logger,LazyFormat
+from exabgp.structure.log import Logger,LazyFormat
 logger = Logger()
 
 # If the OS tells us we have data on the socket, we should never have to wait more than READ_TIMEOUT to be able to read it.

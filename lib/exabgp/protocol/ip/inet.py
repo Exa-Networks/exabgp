@@ -9,7 +9,7 @@ Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 import math
 import socket
 
-from exabgp.structure.address import AFI,SAFI
+from exabgp.protocol.family import AFI,SAFI
 
 mask_to_bytes = {}
 for netmask in range(0,129):

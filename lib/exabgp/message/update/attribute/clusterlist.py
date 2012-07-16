@@ -6,8 +6,8 @@ Created by Thomas Mangin on 2012-07-07.
 Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
-from exabgp.structure.address import AFI,SAFI
-from exabgp.structure.ip.inet import Inet
+from exabgp.protocol.family import AFI,SAFI
+from exabgp.protocol.ip.inet import Inet
 from exabgp.message.update.attribute import AttributeID,Flag,Attribute
 
 # =================================================================== 

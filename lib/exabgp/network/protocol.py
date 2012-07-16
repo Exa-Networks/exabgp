@@ -14,9 +14,9 @@ from struct import unpack,error
 from exabgp.rib.table import Table
 from exabgp.rib.delta import Delta
 
-from exabgp.utils                import hexa
-from exabgp.structure.address    import AFI,SAFI
-from exabgp.structure.ip.inet    import mask_to_bytes
+from exabgp.structure.utils      import hexa
+from exabgp.protocol.family      import AFI,SAFI
+from exabgp.protocol.ip.inet     import mask_to_bytes
 from exabgp.structure.route      import RouteBGP
 from exabgp.structure.asn        import ASN,AS_TRANS
 from exabgp.network.connection   import Connection
@@ -27,25 +27,23 @@ from exabgp.message.update       import Update
 from exabgp.message.update.eor   import EOR
 from exabgp.message.keepalive    import KeepAlive
 from exabgp.message.notification import Notification, Notify #, NotConnected
-from exabgp.message.update.nlri                  import NLRI,PathInfo,Labels,RouteDistinguisher
-from exabgp.message.update.attribute             import AttributeID
-from exabgp.message.update.attribute.attributes  import Attributes
-from exabgp.message.update.attribute.flag        import Flag
-from exabgp.message.update.attribute.origin      import Origin
-from exabgp.message.update.attribute.nexthop     import NextHop
-from exabgp.message.update.attribute.med         import MED
-from exabgp.message.update.attribute.localpref   import LocalPreference
-from exabgp.message.update.attribute.aggregator  import Aggregator
-from exabgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities
-from exabgp.message.update.attribute.aspath      import ASPath,AS4Path
-#from exabgp.message.update.attribute.mprnlri     import MPRNLRI
-#from exabgp.message.update.attribute.mpurnlri    import MPURNLRI
+from exabgp.message.update.nlri                   import NLRI,PathInfo,Labels,RouteDistinguisher
+from exabgp.message.update.attribute              import AttributeID
+from exabgp.message.update.attribute.attributes   import Attributes
+from exabgp.message.update.attribute.flag         import Flag
+from exabgp.message.update.attribute.origin       import Origin
+from exabgp.message.update.attribute.nexthop      import NextHop
+from exabgp.message.update.attribute.med          import MED
+from exabgp.message.update.attribute.localpref    import LocalPreference
+from exabgp.message.update.attribute.aggregator   import Aggregator
+from exabgp.message.update.attribute.communities  import Community,Communities,ECommunity,ECommunities
+from exabgp.message.update.attribute.aspath       import ASPath,AS4Path
 from exabgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.message.update.attribute.clusterlist  import ClusterList
 
-from exabgp.processes  import ProcessError
+from exabgp.structure.processes  import ProcessError
 
-from exabgp.log import Logger,LazyFormat
+from exabgp.structure.log import Logger,LazyFormat
 logger = Logger()
 
 MAX_BACKLOG = 200000

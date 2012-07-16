@@ -8,13 +8,14 @@ Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 
 from struct import pack
 
-from exabgp.structure.address import Address,AFI,SAFI
+from exabgp.protocol.family import AFI,SAFI
+from exabgp.protocol.ip.address import Address
 from exabgp.message.update.nlri import BGPPrefix
 from exabgp.message.update.attribute import AttributeID
 from exabgp.message.update.attribute.attributes  import Attributes
 from exabgp.message.update.attribute.communities import ECommunities
 
-from exabgp.log import Logger
+from exabgp.structure.log import Logger
 logger = Logger()
 
 # =================================================================== Flow Components

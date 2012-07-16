@@ -13,9 +13,9 @@ import errno
 import socket
 import resource
 
-from exabgp.environment import load
+from exabgp.structure.environment import load
 
-from exabgp.log import Logger
+from exabgp.structure.log import Logger
 logger = Logger()
 
 MAXFD = 2048

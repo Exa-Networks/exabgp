@@ -13,7 +13,7 @@ import syslog
 import logging
 import logging.handlers
 
-from exabgp.environment import load
+from exabgp.structure.environment import load
 
 level_value = {
 #	'emmergency' : syslog.LOG_EMERG,

@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2010-01-16.
 Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 """
 
-from exabgp.structure.address import AFI,SAFI
+from exabgp.protocol.family import AFI,SAFI
 from exabgp.structure.asn import AS_TRANS
 
 from exabgp.message.update.attribute.origin      import Origin

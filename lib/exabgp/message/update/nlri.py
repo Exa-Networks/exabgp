@@ -7,8 +7,8 @@ Copyright (c) 2012 Exa Networks. All rights reserved.
 """
 
 from struct import pack,unpack
-from exabgp.structure.address import AFI,SAFI
-from exabgp.structure.ip.inet import mask_to_bytes,Inet
+from exabgp.protocol.family import AFI,SAFI
+from exabgp.protocol.ip.inet import mask_to_bytes,Inet
 
 class PathInfo (object):
 	def __init__ (self,integer=None,ip=None,packed=None):

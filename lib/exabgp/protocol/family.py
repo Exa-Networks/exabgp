@@ -83,16 +83,3 @@ class SAFI (int):
 
 	def has_rd (self):
 		return self in (self.mpls_vpn,)
-
-## =================================================================== Address
-
-class Address (object):
-	def __init__ (self,afi,safi):
-		self.afi = AFI(afi)
-		self.safi = SAFI(safi)
-
-	def __str__ (self):
-		return "%s %s" % (str(self.afi),str(self.safi))
-
-	def __repr__ (self):
-		return str(self)

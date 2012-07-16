@@ -8,8 +8,8 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 
 from struct import pack
 
-from exabgp.structure.address import AFI,SAFI
-from exabgp.structure.ip.inet import Inet,inet
+from exabgp.protocol.family import AFI,SAFI
+from exabgp.protocol.ip.inet import Inet,inet
 from exabgp.structure.asn  import ASN
 from exabgp.message import Message
 

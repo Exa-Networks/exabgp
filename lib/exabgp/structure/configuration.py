@@ -12,35 +12,34 @@ from pprint import pformat
 from copy import deepcopy
 from struct import pack,unpack
 
-from exabgp.environment import load
+from exabgp.structure.environment import load
 
-from exabgp.structure.address    import AFI,SAFI
-from exabgp.structure.route      import Route
-from exabgp.structure.asn        import ASN
-from exabgp.structure.neighbor   import Neighbor
-from exabgp.structure.protocol   import NamedProtocol
-from exabgp.structure.ip.inet      import Inet,inet
-from exabgp.structure.ip.icmp      import NamedICMPType,NamedICMPCode
-from exabgp.structure.ip.fragment  import NamedFragment
-from exabgp.structure.ip.tcp.flags import NamedTCPFlags
-from exabgp.message.open         import HoldTime,RouterID
-#from exabgp.message.update.route import Route
-from exabgp.message.update.nlri  import NLRI,PathInfo,Labels,RouteDistinguisher
-from exabgp.message.update.flow  import BinaryOperator,NumericOperator
-from exabgp.message.update.flow  import Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
-from exabgp.message.update.attribute             import AttributeID #,Attribute
-from exabgp.message.update.attribute.origin      import Origin
-from exabgp.message.update.attribute.nexthop     import NextHop
-from exabgp.message.update.attribute.aspath      import ASPath
-from exabgp.message.update.attribute.med         import MED
-from exabgp.message.update.attribute.localpref   import LocalPreference
+from exabgp.protocol.family import AFI,SAFI
+from exabgp.structure.route import Route
+from exabgp.structure.asn import ASN
+from exabgp.structure.neighbor import Neighbor
+from exabgp.protocol import NamedProtocol
+from exabgp.protocol.ip.inet import Inet,inet
+from exabgp.protocol.ip.icmp import NamedICMPType,NamedICMPCode
+from exabgp.protocol.ip.fragment import NamedFragment
+from exabgp.protocol.ip.tcp.flags import NamedTCPFlags
+from exabgp.message.open import HoldTime,RouterID
+from exabgp.message.update.nlri import NLRI,PathInfo,Labels,RouteDistinguisher
+from exabgp.message.update.flow import BinaryOperator,NumericOperator
+from exabgp.message.update.flow import Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
+from exabgp.message.update.attribute import AttributeID
+from exabgp.message.update.attribute.origin import Origin
+from exabgp.message.update.attribute.nexthop import NextHop
+from exabgp.message.update.attribute.aspath import ASPath
+from exabgp.message.update.attribute.med import MED
+from exabgp.message.update.attribute.localpref import LocalPreference
 from exabgp.message.update.attribute.atomicaggregate import AtomicAggregate
-from exabgp.message.update.attribute.aggregator   import Aggregator
+from exabgp.message.update.attribute.aggregator import Aggregator
 from exabgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_RouteTargetCommunity_00,to_RouteTargetCommunity_01
 from exabgp.message.update.attribute.originatorid import OriginatorID
-from exabgp.message.update.attribute.clusterlist  import ClusterList
+from exabgp.message.update.attribute.clusterlist import ClusterList
 
-from exabgp.log import Logger
+from exabgp.structure.log import Logger
 logger = Logger()
 
 # Duck class, faking part of the Attribute interface

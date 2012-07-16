@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2010-01-16.
 Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 """
 
-from exabgp.structure.address import Address,AFI,SAFI
+from exabgp.protocol.ip.address import Address,AFI,SAFI
 from exabgp.message.update import Update
 from exabgp.message.update.attribute.attributes import Attributes
 

@@ -8,11 +8,11 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 
 from copy import copy
 
-from exabgp.structure.address import AFI
+from exabgp.protocol.family import AFI
 from exabgp.message.open import HoldTime,AddPath
 from exabgp.message.update.attribute import AttributeID
 
-from exabgp.log import Logger
+from exabgp.structure.log import Logger
 logger = Logger()
 
 # The definition of a neighbor (from reading the configuration)
