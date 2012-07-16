@@ -28,8 +28,8 @@ from exabgp.message.update       import Update
 from exabgp.message.update.eor   import EOR
 from exabgp.message.keepalive    import KeepAlive
 from exabgp.message.notification import Notification, Notify #, NotConnected
-from exabgp.message.update.attributes     import Attributes
-from exabgp.message.update.attribute      import AttributeID
+from exabgp.message.update.attribute             import AttributeID
+from exabgp.message.update.attribute.attributes  import Attributes
 from exabgp.message.update.attribute.flag        import Flag
 from exabgp.message.update.attribute.origin      import Origin
 from exabgp.message.update.attribute.nexthop     import NextHop

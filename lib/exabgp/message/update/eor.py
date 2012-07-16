@@ -8,7 +8,7 @@ Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 
 from exabgp.structure.address import Address,AFI,SAFI
 from exabgp.message.update import Update
-from exabgp.message.update.attributes import Attributes
+from exabgp.message.update.attribute.attributes import Attributes
 
 # =================================================================== End-Of-Record
 

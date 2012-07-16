@@ -11,7 +11,7 @@ from struct import pack
 from exabgp.structure.address import Address,AFI,SAFI
 from exabgp.structure.nlri import BGPPrefix
 from exabgp.message.update.attribute import AttributeID
-from exabgp.message.update.attributes import Attributes
+from exabgp.message.update.attribute.attributes  import Attributes
 from exabgp.message.update.attribute.communities import ECommunities
 
 from exabgp.log import Logger
