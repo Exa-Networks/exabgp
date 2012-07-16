@@ -19,6 +19,7 @@ class Update (Message):
 
 	# All the route must be of the same family and have the same next-hop
 	def __init__ (self,routes):
+		Message.__init__(self)
 		self.routes = routes
 		self.afi = routes[0].nlri.afi
 		self.safi = routes[0].nlri.safi
