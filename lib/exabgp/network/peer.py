@@ -41,8 +41,8 @@ class Peer (object):
 		# The next restart neighbor definition
 		self._neighbor = None
 		self.bgp = None
-		# We may have new update to transmit to our peers, so we need to check
-		self._updates = False
+		# number of buffered updates to transmit to our peers
+		self._updates = 0
 
 		self._loop = None
 		self.open = None
@@ -86,7 +86,6 @@ class Peer (object):
 		self._reset_skip()
 
 	def reload (self,routes):
-		self._updates = True
 		self.neighbor.set_routes(routes)
 		self._reset_skip()
 
@@ -194,9 +193,9 @@ class Peer (object):
 			count = 0
 			for count in self.bgp.new_announce():
 				yield True
-			self._updates = self.bgp.buffered()
 			if count:
 				logger.message(self.me('>> %d UPDATE(s)' % count))
+			self._updates = self.bgp.buffered()
 
 			eor = False
 			if self.open.capabilities.announced(Capabilities.MULTIPROTOCOL_EXTENSIONS):
@@ -260,10 +259,11 @@ class Peer (object):
 					seen_update = False
 
 				if self._updates:
+					logger.message(self.me('BUFFERED MESSAGES  (%d)' % self._updates))
 					count = 0
 					for count in self.bgp.new_update():
 						yield True
-					logger.message(self.me('>> UPDATE (%d)' % count))
+					logger.message(self.me('>> BUFFERED UPDATE (%d)' % count))
 					self._updates = self.bgp.buffered()
 
 				yield None

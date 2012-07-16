@@ -18,4 +18,4 @@ MEMO
 - use a cache for the object created in the configuration too
 - provide an helper program able to read MRT dumps and announce them too.
 - cleanup the community code the same way we cleanup the aspath and others
-
+- remove all the __repr__ using str

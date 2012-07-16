@@ -354,7 +354,7 @@ class Protocol (object):
 	# messages buffered in case of failure
 
 	def buffered (self):
-		return self._messages.get(self.neighbor.peer_as,[]) != []
+		return len(self._messages.get(self.neighbor.peer_as,[]))
 
 	def _backlog (self,maximum=0):
 		backlog = self._messages.get(self.neighbor.peer_as,[])
