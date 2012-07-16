@@ -3,13 +3,14 @@ Version explained:
  minor : increase on new features
  bug   : increase on bug fixes
 
-Version 3.0.2 - 14 of July 2012 (unreleased experimental version)
+Version 3.0.2 - 17 of July 2012 (unreleased experimental version)
  * CHANGE: python2.4 may work but it not supported anymore
  * Fix: as-path decoding issue with as-set being eaten (full rewrite of ASPATH and ASN4 parsing)
     reported by Rishabh Goel
  * Fix: bug with profiling
  * Fix: withdrawal was broken when path-info was added
  * API CHANGE: as-path configurtion syntax (as-sequence removed)
+ * CHANGE: restructuration of file hierarchy
 
 Version 3.0.1 - 14 of July 2012 (unreleased experimental version)
  * Improvement: caching of parsed attributes of route received (saving memory and CPU)
