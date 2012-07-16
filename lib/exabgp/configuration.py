@@ -22,12 +22,11 @@ from exabgp.structure.neighbor   import Neighbor
 from exabgp.structure.protocol   import NamedProtocol
 from exabgp.structure.icmp       import NamedICMPType,NamedICMPCode
 from exabgp.structure.tcpflags   import NamedTCPFlags
-from exabgp.structure.fragments  import NamedFragments
 from exabgp.message.open         import HoldTime,RouterID
 #from exabgp.message.update.route import Route
 from exabgp.message.update.nlri  import NLRI,PathInfo,Labels,RouteDistinguisher
 from exabgp.message.update.flow  import BinaryOperator,NumericOperator
-from exabgp.message.update.flow  import Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
+from exabgp.message.update.flow  import Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP,NamedFragments
 from exabgp.message.update.attribute             import AttributeID #,Attribute
 from exabgp.message.update.attribute.origin      import Origin
 from exabgp.message.update.attribute.nexthop     import NextHop
