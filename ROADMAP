@@ -5,22 +5,17 @@ ROADMAP
 Version 3.
 - usual bug fixes and improvments (bugs ? which bugs ?)
 - protect the forked process do not have to deal with SIGHUP or others signals sent to exabgp (done ? to test)
-- finish mpls-vpn support
 - multiple configuration files as paramter (considering)
 - have a command to shutdown the process properly
-- check that the route received are well from a family negociated during the OPEN ?
-  (no peer should send you route which are not in the negociated AFI/SAFI families and we do not really care if they do but we should)
-
-LATER or BEFORE
-- http://www.ietf.org/id/draft-ietf-idr-bgp-extended-messages-02.txt
-- handle better the death of helper processes
-- look what fun RFC we could implement from the list at 
-  http://code.google.com/p/exabgp/wiki/RFC
 
 MEMO
-- break protocol.py in several files
-- use the same logic/api in configuration for aspath that has been used for clusterlist ?
+- break protocol.py in several files ? 
 - look at the classes to reduce conversion and improve perf
 - focus on performance : always store packed data
+- change the configuration to allow grouping of attributes for routes
+- keep route grouping provided by the routers who sent them to us.
 - move the generation of the route when the delta is done in an object with the peer info to display the route change in the log
-- the code could be simplied if all ASPATH4 work was done in the configuration parser and printing was trying as4path first and aspath otherwise
+- use a cache for the object created in the configuration too
+- provide an helper program able to read MRT dumps and announce them too.
+- cleanup the community code the same way we cleanup the aspath and others
+
