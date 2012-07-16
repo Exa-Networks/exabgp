@@ -608,7 +608,7 @@ class Protocol (object):
 			as_seq = as2path.as_seq
 		else:
 			as_seq = as2path.as_seq[:-len4]
-			as_seq.append(as4path.as_seq)
+			as_seq.extend(as4path.as_seq)
 
 		len2 = len(as2path.as_set)
 		len4 = len(as4path.as_set)
@@ -617,7 +617,7 @@ class Protocol (object):
 			as_set = as4path.as_set
 		else:
 			as_set = as2path.as_set[:-len4]
-			as_set.append(as4path.as_set)
+			as_set.extend(as4path.as_set)
 
 		aspath = ASPath(as_seq,as_set)
 		self.attributes.add(aspath,key)

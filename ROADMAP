@@ -19,3 +19,4 @@ MEMO
 - provide an helper program able to read MRT dumps and announce them too.
 - cleanup the community code the same way we cleanup the aspath and others
 - remove all the __repr__ using str
+- group routes generated to be nicer on the router CPU.

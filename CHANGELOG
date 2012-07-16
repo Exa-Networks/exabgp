@@ -3,6 +3,9 @@ Version explained:
  minor : increase on new features
  bug   : increase on bug fixes
 
+Version 3.0.3 - xx of July 2012 (unreleased experimental version)
+ * Fix: bug in ASN4 path reconstruction
+
 Version 3.0.2 - 17 of July 2012 (unreleased experimental version)
  * CHANGE: python2.4 may work but it not supported anymore
  * Fix: as-path decoding issue with as-set being eaten (full rewrite of ASPATH and ASN4 parsing)
