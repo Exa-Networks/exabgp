@@ -124,7 +124,7 @@ class Protocol (object):
 
 		self._delta = Delta(Table(peer))
 		self._asn4 = False
-		self._messages = {}
+		self._messages = []
 		self._frozen = 0
 		self.message_size = 4096
 
@@ -329,7 +329,7 @@ class Protocol (object):
 			written = self.connection.write(k.message())
 			if not written:
 				logger.message(self.me("|| KEEPALIVE buffered"))
-				self._messages[self.neighbor.peer_as].append(('KEEPALIVE',m))
+				self._messages.append(('KEEPALIVE',m))
 			else:
 				self._frozen = 0
 			return left,k
@@ -337,7 +337,7 @@ class Protocol (object):
 			written = self.connection.write(k.message())
 			if not written:
 				logger.message(self.me("|| KEEPALIVE buffered"))
-				self._messages[self.neighbor.peer_as].append(('KEEPALIVE',m))
+				self._messages.append(('KEEPALIVE',m))
 			else:
 				self._frozen = 0
 			return left,k
@@ -346,13 +346,15 @@ class Protocol (object):
 	def new_notification (self,notification):
 		return self.connection.write(notification.message())
 
-	# messages buffered in case of failure
+	def clear_buffer (self):
+		self._messages = []
 
 	def buffered (self):
-		return len(self._messages.get(self.neighbor.peer_as,[]))
+		return len(self._messages)
 
 	def _backlog (self,maximum=0):
-		backlog = self._messages.get(self.neighbor.peer_as,[])
+		# performance only to remove inference
+		backlog = self._messages
 		if backlog:
 			if not self._frozen:
 				self._frozen = time.time()
@@ -376,7 +378,7 @@ class Protocol (object):
 			yield count
 			if maximum and count >= maximum:
 				break
-		self._messages[self.neighbor.peer_as] = backlog
+		self._messages = backlog
 
 	def _announce (self,name,generator):
 		def chunked (generator,size):
@@ -396,14 +398,14 @@ class Protocol (object):
 		# The message size is the whole BGP message INCLUDING headers !
 		for update in chunked(generator,self.message_size-19):
 			count += 1
-			if self._messages[self.neighbor.peer_as]:
+			if self._messages:
 				logger.message(self.me(">> %s could not be sent, some messages are still in the buffer" % name))
-				self._messages[self.neighbor.peer_as].append((name,update))
+				self._messages.append((name,update))
 				continue
 			written = self.connection.write(update)
 			if not written:
 				logger.message(self.me(">> %s buffered" % name))
-				self._messages[self.neighbor.peer_as].append((name,update))
+				self._messages.append((name,update))
 			yield count
 
 	def new_announce (self):

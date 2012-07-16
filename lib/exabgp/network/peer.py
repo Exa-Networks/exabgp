@@ -184,7 +184,9 @@ class Peer (object):
 					for name in self.supervisor.processes.notify(self.neighbor.peer_address):
 						self.supervisor.processes.write(name,'neighbor %s up\n' % self.neighbor.peer_address)
 				except ProcessError:
-					# Can not find any better error code that 6,0 !
+					# Can not find any better error code than 6,0 !
+					# XXX: We can not restart the program so this will come back again and again - FIX
+					# XXX: In the main loop we do exit on this kind of error
 					raise Notify(6,0,'ExaBGP Internal error, sorry.')
 
 			count = 0
