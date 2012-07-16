@@ -32,33 +32,35 @@ class Neighbor (object):
 		self.multisession = None
 		self.parse_routes = None
 		self.peer_updates = None
-		self._families = {}
+		self._families = []
+		self._routes = {}
 		self._watchdog = {}
 
 	def name (self):
 		if self.multisession:
-			session =  "/ ".join("%s-%s" % (afi,safi) for (afi,safi) in self._families.keys())
+			session =  "/ ".join("%s-%s" % (afi,safi) for (afi,safi) in self.families())
 		else:
 			session = 'in-open'
 		return "%s local-ip %s family-allowed %s" % (self.peer_address,self.local_address,session)
 
 	def families (self):
-		return self._families.keys()
+		# this list() is important .. as we use the function to modify self._families
+		return list(self._families)
 
 	def watchdog (self,watchdog):
 		self._watchdog = copy(watchdog)
 
 	def every_routes (self):
-		for family in self._families:
-			for route in self._families[family]:
+		for family in list(self._routes.keys()):
+			for route in self._routes[family]:
 				yield route
 
 	def filtered_routes (self):
 		# This function returns a hash and not a list as "in" tests are O(n) with lists and O(1) with hash
 		# and with ten thousands routes this makes an enormous difference (60 seconds to 2)
 		routes = {}
-		for family in self._families:
-			for route in self._families[family]:
+		for family in list(self._routes.keys()):
+			for route in self._routes[family]:
 				withdrawn = route.attributes.pop(AttributeID.INTERNAL_WITHDRAW,None)
 				if withdrawn is not None:
 					logger.rib('skipping initial announcement of %s' % route)
@@ -73,20 +75,24 @@ class Neighbor (object):
 				routes[str(route)] = route
 		return routes
 
-	def remove_family (self,family):
-		if family in self._families:
-			del self._families[family]
+	def add_family (self,family):
+		if not family in self.families():
+			self._families.append(family)
+
+	def remove_family_and_routes (self,family):
+		if family in self.families():
+			self._families.remove(family)
+			if family in self._routes:
+				del self._routes[family]
 
 	def add_route (self,route):
-		self._families.setdefault((route.nlri.afi,route.nlri.safi),[]).append(route)
+		self._routes.setdefault((route.nlri.afi,route.nlri.safi),[]).append(route)
 
 	def remove_route (self,route):
-		result = False
-		for r in self._families.get((route.nlri.afi,route.nlri.safi),[]):
-			if r == route:
-				self._families[(route.nlri.afi,route.nlri.safi)].remove(r)
-				result = True
-		return result
+		if r in self._routes.get((route.nlri.afi,route.nlri.safi),[]):
+			self._routes[(route.nlri.afi,route.nlri.safi)].remove(r)
+			return True
+		return False
 
 	def set_routes (self,routes):
 		# routes can be a generator for self.everyroutes, if we delete self._families
@@ -94,7 +100,7 @@ class Neighbor (object):
 		f = {}
 		for route in routes:
 			f.setdefault((route.nlri.afi,route.nlri.safi),[]).append(route)
-		self._families = f
+		self._routes = f
 
 	def missing (self):
 		if self.local_address is None: return 'local-address'
@@ -125,9 +131,13 @@ class Neighbor (object):
 
 	def __str__ (self):
 		routes = ''
-		for family in self._families:
+		for family in self.families():
 			for _routes in self._families[family]:
-				routes += '\n\t\t%s' % _routes
+				routes += '\n    %s' % _routes
+
+		families = ''
+		for afi,safi in self.families():
+			families += '\n    %s %s' % (afi.name(),safi.name())
 
 		options = []
 		if self.md5: options.append("md5: %s;" % self.md5)
@@ -136,16 +146,18 @@ class Neighbor (object):
 
 		return """\
 neighbor %s {
-	description "%s";
-	router-id %s;
-	local-address %s;
-	local-as %s;
-	peer-as %s;
-	hold-time %s;
-	add-path %s;
-	%s
-	static {%s
-	}
+  description "%s";
+  router-id %s;
+  local-address %s;
+  local-as %s;
+  peer-as %s;
+  hold-time %s;
+  add-path %s;
+  %s
+  family {%s
+  }
+  static { %s
+  }
 }""" % (
 	self.peer_address,
 	self.description,
@@ -155,7 +167,8 @@ neighbor %s {
 	self.peer_as,
 	self.hold_time,
 	AddPath.string[self.add_path],
-	'\n\t'.join(options),
+	'\n  '.join(options),
+	families,
 	routes
 )
 

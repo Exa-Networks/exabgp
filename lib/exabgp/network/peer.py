@@ -41,8 +41,6 @@ class Peer (object):
 		# The next restart neighbor definition
 		self._neighbor = None
 		self.bgp = None
-		# number of buffered updates to transmit to our peers
-		self._updates = 0
 
 		self._loop = None
 		self.open = None
@@ -54,6 +52,9 @@ class Peer (object):
 		# The peer was restarted (to know what kind of open to send for graceful restart)
 		self._restarted = FORCE_GRACEFUL
 		self._reset_skip()
+
+		# We want to clear the buffer of unsent routes
+		self._clear_routes_buffer = True
 
 		self._asn4 = True
 
@@ -129,9 +130,17 @@ class Peer (object):
 
 			self._reset_skip()
 
+			#
+			# SEND OPEN
+			#
+
 			_open = self.bgp.new_open(self._restarted,self._asn4)
 			logger.message(self.me('>> %s' % _open))
 			yield None
+
+			#
+			# READ OPEN
+			#
 
 			start = time.time()
 			while True:
@@ -163,12 +172,17 @@ class Peer (object):
 				yield None
 				break
 
+			#
+			# SEND KEEPALIVE
+			#
+
 			message = self.bgp.new_keepalive(force=True)
 			logger.message(self.me('>> KEEPALIVE (OPENCONFIRM)'))
 			yield True
 
-			# Dict with for each AFI/SAFI pair if we should announce ADDPATH Path Identifier
-			self.bgp.use_path = UsePath(_open,self.open)
+			#
+			# READ KEEPALIVE
+			#
 
 			while True:
 				message = self.bgp.read_keepalive()
@@ -177,6 +191,10 @@ class Peer (object):
 					logger.message(self.me('<< KEEPALIVE (ESTABLISHED)'))
 					break
 				yield None
+
+			#
+			# GET HELPER PROGRAM COMMANDS
+			#
 
 			logger.network('Connected to peer %s' % self.neighbor.name())
 			if self.neighbor.peer_updates:
@@ -189,40 +207,53 @@ class Peer (object):
 					# XXX: In the main loop we do exit on this kind of error
 					raise Notify(6,0,'ExaBGP Internal error, sorry.')
 
+
+			#
+			# SENDING OUR ROUTING TABLE
+			#
+
+			# Dict with for each AFI/SAFI pair if we should announce ADDPATH Path Identifier
+			self.bgp.use_path = UsePath(_open,self.open)
+
 			count = 0
-			for count in self.bgp.new_announce():
+			for count in self.bgp.new_update():
 				yield True
 			if count:
 				logger.message(self.me('>> %d UPDATE(s)' % count))
-			self._updates = self.bgp.buffered()
 
-			eor = False
-			if self.open.capabilities.announced(Capabilities.MULTIPROTOCOL_EXTENSIONS):
-				families = []
-				for family in self.open.capabilities[Capabilities.MULTIPROTOCOL_EXTENSIONS]:
-					if family in self.neighbor.families():
-						families.append(family)
-				self.bgp.new_eors(families)
-				if families:
-					eor = True
-					logger.message(self.me('>> EOR %s' % ', '.join(['%s %s' % (str(afi),str(safi)) for (afi,safi) in families])))
-
-			if not eor:
+			if self.bgp.families:
+				self.bgp.new_eors(self.bgp.families)
+				logger.message(self.me('>> EOR %s' % ', '.join(['%s %s' % (str(afi),str(safi)) for (afi,safi) in self.bgp.families])))
+			else:
 				# If we are not sending an EOR, send a keepalive as soon as when finished
 				# So the other routers knows that we have no (more) routes to send ...
 				# (is that behaviour documented somewhere ??)
 				c,k = self.bgp.new_keepalive(True)
 				if k: logger.message(self.me('>> KEEPALIVE (no more UPDATE and no EOR)'))
 
+			#
+			# MAIN UPDATE LOOP
+			#
+
 			seen_update = False
 			self._route_parsed = 0L
 			while self._running:
+				# UPDATE TIME
 				self._now = time.time()
+				
+				#
+				# CALCULATE WHEN IS THE NEXT UPDATE FOR THE NUMBER OF ROUTES PARSED DUE
+				#
+				
 				if self._now > self._next_info:
 					self._next_info = self._now + self.update_time
 					display_update = True
 				else:
 					display_update = False
+
+				#
+				# SEND KEEPALIVES
+				#
 
 				c,k = self.bgp.new_keepalive()
 				if k: logger.message(self.me('>> KEEPALIVE'))
@@ -230,15 +261,29 @@ class Peer (object):
 				if display_update:
 					logger.timers(self.me('Sending Timer %d second(s) left' % c))
 
+				#
+				# READ MESSAGE
+				#
+
 				message = self.bgp.read_message()
+
 				# let's read if we have keepalive before doing the timer check
 				c = self.bgp.check_keepalive()
 
 				if display_update:
 					logger.timers(self.me('Receive Timer %d second(s) left' % c))
 
+				#
+				# KEEPALIVE
+				#
+
 				if message.TYPE == KeepAlive.TYPE:
 					logger.message(self.me('<< KEEPALIVE'))
+				
+				#
+				# UPDATE
+				#
+
 				elif message.TYPE == Update.TYPE:
 					seen_update = True
 					self._received_routes.extend(message.routes)
@@ -250,30 +295,77 @@ class Peer (object):
 								logger.routes(LazyFormat(self.me(''),str,route))
 					else:
 						logger.message(self.me('<< UPDATE (not parsed)'))
+
+				#
+				# NO MESSAGES
+				#
+
 				elif message.TYPE not in (NOP.TYPE,):
 					 logger.message(self.me('<< %d' % ord(message.TYPE)))
+
+				#
+				# GIVE INFORMATION ON THE NUMBER OF ROUTES SEEN 
+				#
 
 				if seen_update and display_update:
 					logger.supervisor(self.me('processed %d routes' % self._route_parsed))
 					seen_update = False
 
-				if self._updates:
+				#
+				# IF WE RELOADED, CLEAR THE BUFFER WE MAY HAVE QUEUED AND NOT YET SENT
+				#
+
+				if self._clear_routes_buffer:
+					self._clear_routes_buffer = False
+					self.bgp.clear_buffer()
+
+				#
+				# GIVE INFORMATION ON THE NB OF BUFFERED ROUTES
+				#
+
+				nb_pending = self.bgp.buffered()
+				if nb_pending:
 					logger.message(self.me('BUFFERED MESSAGES  (%d)' % self._updates))
+					print self.bgp._messages
 					count = 0
-					for count in self.bgp.new_update():
-						yield True
+
+				#
+				# SEND UPDATES (NEW OR BUFFERED)
+				#
+
+				# If we have reloaded, reset the RIB information 
+
+				count = 0
+				for count in self.bgp.new_update():
+					yield True
+				if count:
 					logger.message(self.me('>> BUFFERED UPDATE (%d)' % count))
-					self._updates = self.bgp.buffered()
+
+				#
+				# Go to other Peers
+				#
 
 				yield None
+
+			#
+			# IF GRACEFUL RESTART, SILENT SHUTDOWN
+			#
 
 			if self.neighbor.graceful_restart and self.open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
 				logger.error('Closing the connection without notification','network')
 				self.bgp.close('graceful restarted negociated, closing without sending any notification')
 				return
 
-			# User closing the connection
+			#
+			# NOTIFYING OUR PEER OF THE SHUTDOWN
+			#
+
 			raise Notify(6,3)
+
+		#
+		# CONNECTION FAILURE, UPDATING TIMERS FOR BACK-OFF
+		#
+
 		except NotConnected, e:
 			logger.error('we can not connect to the peer %s' % str(e),'network')
 			self._more_skip()
@@ -283,6 +375,11 @@ class Peer (object):
 			except Failure:
 				pass
 			return
+
+		#
+		# NOTIFY THE PEER OF AN ERROR
+		#
+
 		except Notify,e:
 			logger.error(self.me('Sending Notification (%d,%d) to peer [%s] %s' % (e.code,e.subcode,str(e),e.data)),'network')
 			self.bgp.clear_buffer()
@@ -296,6 +393,11 @@ class Peer (object):
 			except Failure:
 				pass
 			return
+
+		#
+		# THE PEER NOTIFIED US OF AN ERROR
+		#
+
 		except Notification, e:
 			logger.error(self.me('Received Notification (%d,%d) %s' % (e.code,e.subcode,str(e))),'network')
 			self.bgp.clear_buffer()
@@ -304,6 +406,11 @@ class Peer (object):
 			except Failure:
 				pass
 			return
+
+		#
+		# OTHER FAILURES
+		#
+
 		except Failure, e:
 			logger.error(self.me(str(e)),'network')
 			self._more_skip()
@@ -313,6 +420,11 @@ class Peer (object):
 			except Failure:
 				pass
 			return
+
+		#
+		# UNHANDLED PROBLEMS
+		#
+
 		except Exception, e:
 			logger.error(self.me('UNHANDLED EXCEPTION'),'network')
 			self._more_skip()

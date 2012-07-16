@@ -25,6 +25,11 @@ class AFI (int):
 		if self == 0x02: return "IPv6"
 		return "unknown afi"
 
+	def name (self):
+		if self == 0x01: return "inet4"
+		if self == 0x02: return "inet6"
+		return "unknown afi"
+
 	def __repr__ (self):
 		return str(self)
 
@@ -63,7 +68,7 @@ class SAFI (int):
 #	unassigned = [_ for _ in range(8,64)] + [_ for _ in range(70,128)]
 #	reverved = [0,3] + [130,131] + [_ for _ in range(135,140)] + [_ for _ in range(141,241)] + [255,]    # [RFC4760]
 
-	def __str__ (self):
+	def name (self):
 		if self == 0x01: return "unicast"
 		if self == 0x02: return "multicast"
 		if self == 0x04: return "nlri-mpls"
@@ -72,8 +77,11 @@ class SAFI (int):
 		if self == 0x86: return "flow-vpnv4"
 		return "unknown safi"
 
+	def __str__ (self):
+		return self.name()
+
 	def __repr__ (self):
-		return str(self)
+		return self.name()
 
 	def pack (self):
 		return chr(self)

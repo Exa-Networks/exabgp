@@ -16,10 +16,7 @@ class Delta (object):
 		self.table = table
 		self.last = 0
 
-	def announce (self,asn4,local_asn,peer_asn,use_path):
-		return self.update(asn4,local_asn,peer_asn,use_path,False)
-
-	def update (self,asn4,local_asn,peer_asn,use_path,remove=True):
+	def updates (self,asn4,local_asn,peer_asn,use_path):
 		self.table.recalculate()
 
 		# Here we should perform intelligent message re-organisation (group announcements)
@@ -34,15 +31,12 @@ class Delta (object):
 
 			add_path = use_path.send(route.nlri.afi,route.nlri.safi)
 
-			if action == '-':
-				if remove:
-					logger.rib('withdrawing %s' % route)
-					yield Update([route]).withdraw(asn4,local_asn,peer_asn,add_path)
-				else:
-					logger.rib('keeping %s' % route)
-			if action == '*':
-				logger.rib('updating %s' % route)
-				yield Update([route]).update(asn4,local_asn,peer_asn,add_path)
 			if action == '+':
 				logger.rib('announcing %s' % route)
 				yield Update([route]).announce(asn4,local_asn,peer_asn,add_path)
+			elif action == '*':
+				logger.rib('updating %s' % route)
+				yield Update([route]).update(asn4,local_asn,peer_asn,add_path)
+			elif action == '-':
+				logger.rib('withdrawing %s' % route)
+				yield Update([route]).withdraw(asn4,local_asn,peer_asn,add_path)

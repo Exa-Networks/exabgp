@@ -41,7 +41,7 @@ class Update (Message):
 			mp = ''
 		else:
 			nlri = ''
-			mp = MPURNLRI(self.routes).pack(with_path_info) + MPRNLRI(self.routes).pack()
+			mp = MPURNLRI(self.routes).pack(with_path_info) + MPRNLRI(self.routes).pack(with_path_info)
 		attr = self.routes[0].attributes.bgp_announce(asn4,local_asn,remote_asn)
 		return self._message(prefix(nlri) + prefix(attr + mp) + nlri)
 

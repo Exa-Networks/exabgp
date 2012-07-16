@@ -16,9 +16,12 @@ import time
 class Table (object):
 
 	def __init__ (self,peer):
+		self.peer = peer
+		self.reset()
+	
+	def reset (self):
 		self._plus = {}
 		self._minus = {}
-		self.peer = peer
 
 	# This interface is very good for the file change but not if you want to update from network
 	def recalculate (self):
@@ -34,7 +37,14 @@ class Table (object):
 	def _add (self,route):
 		prefix = str(route)
 		if prefix in self._plus:
-			if route != self._plus[prefix][1]:
+			# XXX:
+			# XXX: Route has a __eq__ function but we have to implicitely call str() for the test to work
+			# XXX: WHY ! oH WHY !
+			# XXX: And as the key is not only route/next-hop but the whole string .. it makes two update, withdraw/add
+			# XXX: Is the withdraw really required ??
+			# XXX:
+			#if route != self._plus[prefix][1]:
+			if str(route) != str(self._plus[prefix][1]):
 				self._plus[prefix] = (time.time(),route,'*')
 			return
 		self._plus[prefix] = (time.time(),route,'+')

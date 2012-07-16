@@ -193,6 +193,7 @@ class Supervisor (object):
 					logger.supervisor("Updating routes for peer %s" % str(key))
 					self._peers[key].reload(neighbor.every_routes())
 		logger.warning("Loaded new configuration successfully",'configuration')
+		# This only starts once ...
 		self.processes.start()
 
 	def handle_commands (self,commands):

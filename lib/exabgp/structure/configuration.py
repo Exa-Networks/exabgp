@@ -707,17 +707,17 @@ class Configuration (object):
 		# announce every family we known
 		if neighbor.multisession and openfamilies == 'everything':
 			# announce what is needed, and no more, no need to have lots of TCP session doing nothing
-			families = neighbor._families.keys()
+			families = neighbor.families()
 		elif openfamilies in ('all','everything'):
 			families = self._all_families()
 		# only announce what you have as routes
 		elif openfamilies == 'minimal':
-			families = neighbor._families.keys()
+			families = neighbor.families()
 		else:
 			families = openfamilies
 
 		# check we are not trying to announce routes without the right MP announcement
-		for family in neighbor._families.keys():
+		for family in neighbor.families():
 			if family not in families:
 				afi,safi = family
 				self._error = 'Trying to announce a route of type %s,%s when we are not announcing the family to our peer' % (afi,safi)
@@ -725,19 +725,21 @@ class Configuration (object):
 				return False
 
 		# add the families to the list of families known
+		initial_families = list(neighbor.families())
 		for family in families:
-			if family not in neighbor._families:
-				neighbor._families[family] = []
+			if family not in initial_families	:
+				# we are modifying the data used by .families() here
+				neighbor.add_family(family)
 
+		# create one neighbor object per family for multisession
 		if neighbor.multisession:
 			for family in neighbor.families():
-				afi,safi = family
-				family_n = deepcopy(neighbor)
+				m_neighbor = deepcopy(neighbor)
 				for f in neighbor.families():
 					if f == family:
 						continue
-					family_n.remove_family(f)
-				self._neighbor[family_n.name()] = family_n
+					m_neighbor.remove_family_and_routes(f)
+				self._neighbor[m_neighbor.name()] = m_neighbor
 		else:
 			self._neighbor[neighbor.name()] = neighbor
 		return True

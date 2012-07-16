@@ -22,7 +22,7 @@ from exabgp.structure.asn        import ASN,AS_TRANS
 from exabgp.network.connection   import Connection
 from exabgp.message              import Message,defix,Failure
 from exabgp.message.nop          import NOP
-from exabgp.message.open         import Open,Unknown,Parameter,Capabilities,RouterID,MultiProtocol,RouteRefresh,CiscoRouteRefresh,MultiSession,Graceful,AddPath
+from exabgp.message.open         import Open,Unknown,Parameter,Capabilities,RouterID,MultiProtocol,RouteRefresh,CiscoRouteRefresh,MultiSession,Graceful,AddPath,HoldTime
 from exabgp.message.update       import Update
 from exabgp.message.update.eor   import EOR
 from exabgp.message.keepalive    import KeepAlive
@@ -128,6 +128,10 @@ class Protocol (object):
 		self._frozen = 0
 		self.message_size = 4096
 
+		# The holdtime / families negocicated between the two peers
+		self.hold_time = None
+		self.families = []
+
 	# XXX: we use self.peer.neighbor.peer_address when we could use self.neighbor.peer_address
 
 	def me (self,message):
@@ -152,7 +156,7 @@ class Protocol (object):
 					raise Failure('Could not send message(s) to helper program(s) : %s' % message)
 
 	def check_keepalive (self):
-		left = int (self.connection.last_read  + self.neighbor.hold_time - time.time())
+		left = int (self.connection.last_read  + self.hold_time - time.time())
 		if left <= 0:
 			raise Notify(4,0)
 		return left
@@ -278,7 +282,13 @@ class Protocol (object):
 		if message.hold_time < 3:
 			raise Notify(2,6,'Hold Time is invalid (%d)' % message.hold_time)
 		if message.hold_time >= 3:
-			self.neighbor.hold_time = min(self.neighbor.hold_time,message.hold_time)
+			self.hold_time = HoldTime(min(self.neighbor.hold_time,message.hold_time))
+
+		if message.capabilities.announced(Capabilities.MULTIPROTOCOL_EXTENSIONS) \
+		and _open.capabilities.announced(Capabilities.MULTIPROTOCOL_EXTENSIONS):
+			for family in message.capabilities[Capabilities.MULTIPROTOCOL_EXTENSIONS]:
+				if family in _open.capabilities[Capabilities.MULTIPROTOCOL_EXTENSIONS]:
+					self.families.append(family)
 
 		# XXX: Does not work as the capa is not yet defined
 		if message.capabilities.announced(Capabilities.EXTENDED_MESSAGE):
@@ -322,7 +332,7 @@ class Protocol (object):
 		return o
 
 	def new_keepalive (self,force=False):
-		left = int(self.connection.last_write + self.neighbor.hold_time.keepalive() - time.time())
+		left = int(self.connection.last_write + self.hold_time.keepalive() - time.time())
 		k = KeepAlive()
 		m = k.message()
 		if force:
@@ -358,9 +368,9 @@ class Protocol (object):
 		if backlog:
 			if not self._frozen:
 				self._frozen = time.time()
-			if self._frozen and self._frozen + (self.neighbor.hold_time) < time.time():
+			if self._frozen and self._frozen + (self.hold_time) < time.time():
 				raise Failure('peer %s not reading on socket - killing session' % self.neighbor.peer_as)
-			logger.message(self.me("unable to send route for %d second (maximum allowed %d)" % (time.time()-self._frozen,self.neighbor.hold_time)))
+			logger.message(self.me("unable to send route for %d second (maximum allowed %d)" % (time.time()-self._frozen,self.hold_time)))
 			nb_backlog = len(backlog)
 			if nb_backlog > MAX_BACKLOG:
 				raise Failure('over %d routes buffered for peer %s - killing session' % (MAX_BACKLOG,self.neighbor.peer_as))
@@ -408,20 +418,19 @@ class Protocol (object):
 				self._messages.append((name,update))
 			yield count
 
-	def new_announce (self):
-		for answer in self._backlog():
-			yield answer
-		# XXX: This should really be calculated once only
-		asn4 = not not self.peer.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
-		for answer in self._announce('UPDATE',self._delta.announce(asn4,self.neighbor.local_as,self.neighbor.peer_as,self.use_path)):
-			yield answer
+#	def new_announce (self):
+#		# we can not have any backlog as we are starting
+#		# XXX: This should really be calculated once only
+#		asn4 = not not self.peer.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
+#		for answer in self._announce('UPDATE',self._delta.updates(asn4,self.neighbor.local_as,self.neighbor.peer_as,self.use_path)):
+#			yield answer
 
 	def new_update (self):
 		for answer in self._backlog():
 			yield answer
 		# XXX: This should really be calculated once only
 		asn4 = not not self.peer.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
-		for answer in self._announce('UPDATE',self._delta.update(asn4,self.neighbor.local_as,self.neighbor.peer_as,self.use_path)):
+		for answer in self._announce('UPDATE',self._delta.updates(asn4,self.neighbor.local_as,self.neighbor.peer_as,self.use_path)):
 			yield answer
 
 	def new_eors (self,families):
@@ -808,7 +817,7 @@ class Protocol (object):
 			offset = 3
 			data = data[offset:]
 
-			if (afi,safi) not in self.neighbor._families.keys():
+			if (afi,safi) not in self.neighbor.families():
 				raise Notify(3,0,'presented a non-negociated family')
 
 			# Is the peer going to send us some Path Information with the route (AddPath)
@@ -827,7 +836,7 @@ class Protocol (object):
 			offset = 3
 
 			# we do not want to accept unknown families
-			if (afi,safi) not in self.neighbor._families.keys():
+			if (afi,safi) not in self.neighbor.families():
 				raise Notify(3,0,'presented a non-negociated family')
 
 			# -- Reading length of next-hop
