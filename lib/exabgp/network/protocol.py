@@ -732,12 +732,13 @@ class Protocol (object):
 
 		if code == AttributeID.ORIGIN:
 			if not self.attributes.get(code,attribute):
-				self.attributes.add(Origin(ord(data[0])),attribute)
+				self.attributes.add(Origin(ord(attribute)),attribute)
 			return self._AttributesFactory(next)
 
 		# only 2-4% of duplicated data - is it worth to cache ?
 		if code == AttributeID.AS_PATH:
 			if length:
+				# we store the AS4_PATH as AS_PATH, do not over-write
 				if not self.attributes.has(code):
 					if not self.attributes.get(code,attribute):
 						self.attributes.add(self.__new_ASPath(attribute,self._asn4),attribute)
