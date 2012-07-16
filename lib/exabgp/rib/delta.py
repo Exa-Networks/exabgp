@@ -37,7 +37,7 @@ class Delta (object):
 			if action == '-':
 				if remove:
 					logger.rib('withdrawing %s' % route)
-					yield Update([route]).withdraw(asn4,send_path,add_path)
+					yield Update([route]).withdraw(asn4,local_asn,peer_asn,add_path)
 				else:
 					logger.rib('keeping %s' % route)
 			if action == '*':
