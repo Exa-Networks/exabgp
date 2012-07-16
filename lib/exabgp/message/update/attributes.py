@@ -104,9 +104,9 @@ class Attributes (dict):
 			message += self._as_path(asn4,asp)
 		elif self.autocomplete:
 			if ibgp:
-				asp = ASPath(asn4,[],[])
+				asp = ASPath([],[])
 			else:
-				asp = ASPath(asn4,[local_asn,],[])
+				asp = ASPath([local_asn,],[])
 			message += self._as_path(asn4,asp)
 		else:
 			raise RuntimeError('Generated routes must always have an AS_PATH ')

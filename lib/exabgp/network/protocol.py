@@ -610,21 +610,21 @@ class Protocol (object):
 
 		# RFC 4893 section 4.2.3
 		if len2 < len4:
-			asn = aspath.as_seq
+			as_seq = aspath.as_seq
 		else:
-			asn = as2path.as_seq[:-len4]
-			asn.append(as4path.as_seq)
+			as_seq = as2path.as_seq[:-len4]
+			as_seq.append(as4path.as_seq)
 
 		len2 = len(as2path.as_set)
 		len4 = len(as4path.as_set)
 
 		if len2 < len4:
-			asn = as4path.as_set
+			as_set = as4path.as_set
 		else:
-			asn = as2path.as_set[:-len4]
-			asn.append(as4path.as_set)
+			as_set = as2path.as_set[:-len4]
+			as_set.append(as4path.as_set)
 
-		aspath = ASPath(as_seq,as_set,)
+		aspath = ASPath(as_seq,as_set)
 		self.attributes.add(aspath,key)
 
 
