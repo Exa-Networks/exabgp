@@ -16,7 +16,6 @@ from exabgp.environment import load
 
 from exabgp.structure.address    import AFI,SAFI
 from exabgp.structure.ip         import Inet,inet
-from exabgp.structure.nlri       import NLRI,PathInfo,Labels,RouteDistinguisher
 from exabgp.structure.route      import Route
 from exabgp.structure.asn        import ASN
 from exabgp.structure.neighbor   import Neighbor
@@ -26,6 +25,7 @@ from exabgp.structure.tcpflags   import NamedTCPFlags
 from exabgp.structure.fragments  import NamedFragments
 from exabgp.message.open         import HoldTime,RouterID
 #from exabgp.message.update.route import Route
+from exabgp.message.update.nlri  import NLRI,PathInfo,Labels,RouteDistinguisher
 from exabgp.message.update.flow  import BinaryOperator,NumericOperator
 from exabgp.message.update.flow  import Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
 from exabgp.message.update.attribute             import AttributeID #,Attribute

@@ -17,7 +17,6 @@ from exabgp.rib.delta import Delta
 from exabgp.utils                import hexa
 from exabgp.structure.address    import AFI,SAFI
 from exabgp.structure.ip         import mask_to_bytes
-from exabgp.structure.nlri       import NLRI,PathInfo,Labels,RouteDistinguisher
 from exabgp.structure.route      import RouteBGP
 from exabgp.structure.asn        import ASN,AS_TRANS
 from exabgp.network.connection   import Connection
@@ -28,6 +27,7 @@ from exabgp.message.update       import Update
 from exabgp.message.update.eor   import EOR
 from exabgp.message.keepalive    import KeepAlive
 from exabgp.message.notification import Notification, Notify #, NotConnected
+from exabgp.message.update.nlri                  import NLRI,PathInfo,Labels,RouteDistinguisher
 from exabgp.message.update.attribute             import AttributeID
 from exabgp.message.update.attribute.attributes  import Attributes
 from exabgp.message.update.attribute.flag        import Flag
