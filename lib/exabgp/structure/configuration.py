@@ -1760,7 +1760,7 @@ class Configuration (object):
 		capa = Capabilities().default(n,False)
 		path = {}
 		for f in self._all_families():
-			n._families[f] = []
+			n._families.append(f)
 			if with_path_info:
 				path[f] = 3
 		if with_path_info:
@@ -1784,7 +1784,9 @@ class Configuration (object):
 
 		for nei in self.neighbor.keys():
 			for family in self.neighbor[nei].families():
-				for route in self.neighbor[nei]._families[family]:
+				if not family in self.neighbor[nei]._routes:
+					continue
+				for route in self.neighbor[nei]._routes[family]:
 					str1 = str(route)
 					logger.info('parsed    %s' % str1,'configuration') 
 					update = Update([route])
