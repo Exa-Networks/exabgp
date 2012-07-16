@@ -7,6 +7,7 @@ Version 3.
 - protect the forked process do not have to deal with SIGHUP or others signals sent to exabgp (done ? to test)
 - multiple configuration files as paramter (considering)
 - have a command to shutdown the process properly
+- finish work on the route DELTA (check what we could be sending update/announce) and improve storage..
 
 MEMO
 - break protocol.py in several files ? 

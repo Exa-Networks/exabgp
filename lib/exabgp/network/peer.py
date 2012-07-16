@@ -56,6 +56,9 @@ class Peer (object):
 		# We want to clear the buffer of unsent routes
 		self._clear_routes_buffer = True
 
+		# We have routes following a reload (or we just started)
+		self._have_routes = True
+
 		self._asn4 = True
 
 		# The routes we have parsed from our neighbour
@@ -88,6 +91,7 @@ class Peer (object):
 
 	def reload (self,routes):
 		self.neighbor.set_routes(routes)
+		self._have_routes = True
 		self._reset_skip()
 
 	def restart (self,restart_neighbor=None):
@@ -193,7 +197,7 @@ class Peer (object):
 				yield None
 
 			#
-			# GET HELPER PROGRAM COMMANDS
+			# ANNOUNCE TO THE PROCESS BGP IS UP
 			#
 
 			logger.network('Connected to peer %s' % self.neighbor.name())
@@ -335,11 +339,15 @@ class Peer (object):
 
 				# If we have reloaded, reset the RIB information 
 
-				count = 0
-				for count in self.bgp.new_update():
-					yield True
-				if count:
-					logger.message(self.me('>> BUFFERED UPDATE (%d)' % count))
+				if self._have_routes:
+					self._have_routes = False
+					logger.message(self.me('CHECKING FOR NEW ROUTES'))
+				
+					count = 0
+					for count in self.bgp.new_update():
+						yield True
+					if count:
+						logger.message(self.me('>> UPDATE (%d)' % count))
 
 				#
 				# Go to other Peers
