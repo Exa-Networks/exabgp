@@ -130,23 +130,20 @@ class Peer (object):
 			self._reset_skip()
 
 			_open = self.bgp.new_open(self._restarted,self._asn4)
-			logger.message(self.me('>> %s' % _open))
+			logger.info(self.me('>> %s' % _open),'message')
 			yield None
 
 			start = time.time()
 			while True:
 				self.open = self.bgp.read_open(_open,self.neighbor.peer_address.ip)
 				if time.time() - start > max_wait_open:
-					logger.message(self.me('Waited for an OPEN for too long - killing the session'))
+					logger.error(self.me('Waited for an OPEN for too long - killing the session'),'message')
 					raise Notify(1,1,'The client took over %s seconds to send the OPEN, closing' % str(max_wait_open))
 				# OPEN or NOP
 				if self.open.TYPE == NOP.TYPE:
 					yield None
 					continue
-				# This test is already done in read_open
-				#if self.open.TYPE != Open.TYPE:
-				#	raise Notify(5,1,'We are expecting an OPEN message')
-				logger.message(self.me('<< %s' % self.open))
+				logger.info(self.me('<< %s' % self.open),'message')
 				if not self.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN) and _open.asn.asn4():
 					self._asn4 = False
 					raise Notify(2,0,'peer does not speak ASN4 - restarting in compatibility mode')
@@ -167,7 +164,7 @@ class Peer (object):
 				break
 
 			message = self.bgp.new_keepalive(force=True)
-			logger.message(self.me('>> KEEPALIVE (OPENCONFIRM)'))
+			logger.info(self.me('>> KEEPALIVE (OPENCONFIRM)'),'message')
 			yield True
 
 			# Dict with for each AFI/SAFI pair if we should announce ADDPATH Path Identifier
@@ -177,7 +174,7 @@ class Peer (object):
 				message = self.bgp.read_keepalive()
 				# KEEPALIVE or NOP
 				if message.TYPE == KeepAlive.TYPE:
-					logger.message(self.me('<< KEEPALIVE (ESTABLISHED)'))
+					logger.info(self.me('<< KEEPALIVE (ESTABLISHED)'),'message')
 					break
 				yield None
 
@@ -194,7 +191,7 @@ class Peer (object):
 			for count in self.bgp.new_announce():
 				yield True
 			if count:
-				logger.message(self.me('>> %d UPDATE(s)' % count))
+				logger.info(self.me('>> %d UPDATE(s)' % count),'message')
 			self._updates = self.bgp.buffered()
 
 			eor = False
@@ -206,14 +203,14 @@ class Peer (object):
 				self.bgp.new_eors(families)
 				if families:
 					eor = True
-					logger.message(self.me('>> EOR %s' % ', '.join(['%s %s' % (str(afi),str(safi)) for (afi,safi) in families])))
+					logger.info(self.me('>> EOR %s' % ', '.join(['%s %s' % (str(afi),str(safi)) for (afi,safi) in families])),'message')
 
 			if not eor:
 				# If we are not sending an EOR, send a keepalive as soon as when finished
 				# So the other routers knows that we have no (more) routes to send ...
 				# (is that behaviour documented somewhere ??)
 				c,k = self.bgp.new_keepalive(True)
-				if k: logger.message(self.me('>> KEEPALIVE (no more UPDATE and no EOR)'))
+				if k: logger.info(self.me('>> KEEPALIVE (no more UPDATE and no EOR)'),'message')
 
 			seen_update = False
 			self._route_parsed = 0L
@@ -226,7 +223,7 @@ class Peer (object):
 					display_update = False
 
 				c,k = self.bgp.new_keepalive()
-				if k: logger.message(self.me('>> KEEPALIVE'))
+				if k: logger.info(self.me('>> KEEPALIVE'),'message')
 
 				if display_update:
 					logger.timers(self.me('Sending Timer %d second(s) left' % c))
@@ -239,27 +236,27 @@ class Peer (object):
 					logger.timers(self.me('Receive Timer %d second(s) left' % c))
 
 				if message.TYPE == KeepAlive.TYPE:
-					logger.message(self.me('<< KEEPALIVE'))
+					logger.info(self.me('<< KEEPALIVE'),'message')
 				elif message.TYPE == Update.TYPE:
 					seen_update = True
 					self._received_routes.extend(message.routes)
 					if message.routes:
-						logger.message(self.me('<< UPDATE'))
+						logger.info(self.me('<< UPDATE'),'message')
 						self._route_parsed += len(message.routes)
 						if self._route_parsed:
 							for route in message.routes:
-								logger.routes(LazyFormat(self.me(''),str,route))
+								logger.info(LazyFormat(self.me(''),str,route),'routes')
 					else:
-						logger.message(self.me('<< UPDATE (not parsed)'))
+						logger.info(self.me('<< UPDATE (not parsed)'),'message')
 				elif message.TYPE not in (NOP.TYPE,):
-					 logger.message(self.me('<< %d' % ord(message.TYPE)))
+					 logger.info(self.me('<< %d' % ord(message.TYPE)),'message')
 
 				if seen_update and display_update:
-					logger.supervisor(self.me('processed %d routes' % self._route_parsed))
+					logger.info(self.me('processed %d routes' % self._route_parsed),'supervisor')
 					seen_update = False
 
 				if self._updates:
-					logger.message(self.me('BUFFERED MESSAGES  (%d)' % self._updates))
+					logger.info(self.me('BUFFERED MESSAGES  (%d)' % self._updates),'message')
 					count = 0
 					for count in self.bgp.new_update():
 						yield True
