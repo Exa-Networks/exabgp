@@ -12,7 +12,7 @@ import traceback
 
 from exabgp.message              import Failure
 from exabgp.message.nop          import NOP
-from exabgp.message.open         import Open,Capabilities,UsePath
+from exabgp.message.open         import Capabilities,UsePath
 from exabgp.message.update       import Update
 from exabgp.message.keepalive    import KeepAlive
 from exabgp.message.notification import Notification, Notify, NotConnected

@@ -9,7 +9,6 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 #import os
 #import copy
 import time
-import socket
 from struct import unpack,error
 
 from exabgp.rib.table import Table
@@ -17,7 +16,7 @@ from exabgp.rib.delta import Delta
 
 from exabgp.utils                import hexa
 from exabgp.structure.address    import AFI,SAFI
-from exabgp.structure.ip         import Inet,inet,mask_to_bytes
+from exabgp.structure.ip         import mask_to_bytes
 from exabgp.structure.nlri       import NLRI,PathInfo,Labels,RouteDistinguisher
 from exabgp.structure.route      import RouteBGP
 from exabgp.structure.asn        import ASN,AS_TRANS
@@ -33,13 +32,12 @@ from exabgp.message.update.attributes     import Attributes
 from exabgp.message.update.attribute      import AttributeID
 from exabgp.message.update.attribute.flag        import Flag
 from exabgp.message.update.attribute.origin      import Origin
-from exabgp.message.update.attribute.aspath      import ASPath,AS4Path
 from exabgp.message.update.attribute.nexthop     import NextHop
 from exabgp.message.update.attribute.med         import MED
 from exabgp.message.update.attribute.localpref   import LocalPreference
-from exabgp.message.update.attribute.atomicaggregate  import AtomicAggregate
 from exabgp.message.update.attribute.aggregator  import Aggregator
 from exabgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities
+from exabgp.message.update.attribute.aspath      import ASPath,AS4Path
 #from exabgp.message.update.attribute.mprnlri     import MPRNLRI
 #from exabgp.message.update.attribute.mpurnlri    import MPURNLRI
 from exabgp.message.update.attribute.originatorid import OriginatorID
@@ -47,7 +45,6 @@ from exabgp.message.update.attribute.clusterlist  import ClusterList
 
 from exabgp.processes  import ProcessError
 
-from exabgp.utils import hexa,trace
 from exabgp.log import Logger,LazyFormat
 logger = Logger()
 
@@ -610,7 +607,7 @@ class Protocol (object):
 
 		# RFC 4893 section 4.2.3
 		if len2 < len4:
-			as_seq = aspath.as_seq
+			as_seq = as2path.as_seq
 		else:
 			as_seq = as2path.as_seq[:-len4]
 			as_seq.append(as4path.as_seq)
@@ -707,7 +704,7 @@ class Protocol (object):
 		return self.__new_aspaths(data,asn4,ASPath)
 
 	def __new_ASPath4 (self,data):
-		return self.__new_aspaths(data,True,ASPath4)
+		return self.__new_aspaths(data,True,AS4Path)
 
 	def _AttributesFactory (self,data):
 		if not data:
