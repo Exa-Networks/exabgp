@@ -29,10 +29,10 @@ class _Fragment (int):
 def NamedFragment (name):
 	fragment = name.lower()
 	if fragment == 'not-a-fragment': return _Fragment(0x00)
-	if fragment == 'dont-fragment':  return _Fragment(Fragment.DONT)
-	if fragment == 'is-fragment':    return _Fragment(Fragment.IS)
-	if fragment == 'first-fragment': return _Fragment(Fragment.FIRST)
-	if fragment == 'last-fragment':  return _Fragment(Fragment.LAST)
+	if fragment == 'dont-fragment':  return _Fragment(_Fragment.DONT)
+	if fragment == 'is-fragment':    return _Fragment(_Fragment.IS)
+	if fragment == 'first-fragment': return _Fragment(_Fragment.FIRST)
+	if fragment == 'last-fragment':  return _Fragment(_Fragment.LAST)
 	raise ValueError('invalid fragment name %s' % fragment)
 
 
