@@ -233,9 +233,9 @@ if __name__ == '__main__':
 
 	notice = ''
 	if os.path.isdir(env.profile.file):
-		notice = 'profile can not use this filename as outpout, it is not a directory (%s)' % profiled
+		notice = 'profile can not use this filename as outpout, it is not a directory (%s)' % profile
 	if os.path.exists(env.profile.file):
-		notice = 'profile can not use this filename as outpout, it already exists (%s)' % profiled
+		notice = 'profile can not use this filename as outpout, it already exists (%s)' % profile
 
 	if not notice:
 		logger.info('profiling ....','profile')
@@ -244,5 +244,5 @@ if __name__ == '__main__':
 		logger.info("-"*len(notice),'profile')
 		logger.info(notice,'profile')
 		logger.info("-"*len(notice),'profile')
-		main()
+		Supervisor(configuration).run()
 		__exit(env.debug.memory,0)

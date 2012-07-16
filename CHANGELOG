@@ -7,6 +7,7 @@ Version 3.0.2 - 14 of July 2012 (unreleased experimental version)
  * CHANGE: python2.4 may work but it not supported anymore
  * Fix: as-path decoding issue with as-set being eaten (full rewrite of ASPATH and ASN4 parsing)
     reported by Rishabh Goel
+ * Fix: bug with profiling
  * API CHANGE: as-path configurtion syntax (as-sequence removed)
 
 Version 3.0.1 - 14 of July 2012 (unreleased experimental version)
