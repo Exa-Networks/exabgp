@@ -19,10 +19,10 @@ from exabgp.structure.route      import Route
 from exabgp.structure.asn        import ASN
 from exabgp.structure.neighbor   import Neighbor
 from exabgp.structure.protocol   import NamedProtocol
-from exabgp.structure.icmp       import NamedICMPType,NamedICMPCode
-from exabgp.structure.tcpflags   import NamedTCPFlags
-from exabgp.structure.ip.inet     import Inet,inet
-from exabgp.structure.ip.fragment import NamedFragment
+from exabgp.structure.ip.inet      import Inet,inet
+from exabgp.structure.ip.icmp      import NamedICMPType,NamedICMPCode
+from exabgp.structure.ip.fragment  import NamedFragment
+from exabgp.structure.ip.tcp.flags import NamedTCPFlags
 from exabgp.message.open         import HoldTime,RouterID
 #from exabgp.message.update.route import Route
 from exabgp.message.update.nlri  import NLRI,PathInfo,Labels,RouteDistinguisher
