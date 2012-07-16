@@ -10,7 +10,7 @@ Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 import unittest
 
 from exabgp.message.update.flow import *
-from exabgp.structure.ip import *
+from exabgp.structure.ip.inet import *
 from exabgp.message.update.attribute.communities import *
 
 

@@ -10,7 +10,7 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 import unittest
 
 from exabgp.structure.address import AFI,SAFI
-from exabgp.structure.ip import *
+from exabgp.structure.ip.inet import *
 
 class TestData (unittest.TestCase):
 	def test_1_nlri_1 (self):

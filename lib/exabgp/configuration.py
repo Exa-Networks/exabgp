@@ -15,18 +15,19 @@ from struct import pack,unpack
 from exabgp.environment import load
 
 from exabgp.structure.address    import AFI,SAFI
-from exabgp.structure.ip         import Inet,inet
 from exabgp.structure.route      import Route
 from exabgp.structure.asn        import ASN
 from exabgp.structure.neighbor   import Neighbor
 from exabgp.structure.protocol   import NamedProtocol
 from exabgp.structure.icmp       import NamedICMPType,NamedICMPCode
 from exabgp.structure.tcpflags   import NamedTCPFlags
+from exabgp.structure.ip.inet     import Inet,inet
+from exabgp.structure.ip.fragment import NamedFragment
 from exabgp.message.open         import HoldTime,RouterID
 #from exabgp.message.update.route import Route
 from exabgp.message.update.nlri  import NLRI,PathInfo,Labels,RouteDistinguisher
 from exabgp.message.update.flow  import BinaryOperator,NumericOperator
-from exabgp.message.update.flow  import Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP,NamedFragments
+from exabgp.message.update.flow  import Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
 from exabgp.message.update.attribute             import AttributeID #,Attribute
 from exabgp.message.update.attribute.origin      import Origin
 from exabgp.message.update.attribute.nexthop     import NextHop
@@ -1675,7 +1676,7 @@ class Configuration (object):
 		return self._flow_generic_list(scope,tokens,NamedICMPCode,ICMPCode)
 
 	def _flow_route_fragment (self,scope,tokens):
-		return self._flow_generic_list(scope,tokens,NamedFragments,Fragment)
+		return self._flow_generic_list(scope,tokens,NamedFragment,Fragment)
 
 	def _flow_route_dscp (self,scope,tokens):
 		return self._flow_generic_condition(scope,tokens,int,DSCP)
