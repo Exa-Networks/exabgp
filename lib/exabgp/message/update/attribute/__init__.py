@@ -9,7 +9,6 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 from struct import pack
 
 from exabgp.message.update.attribute.flag import Flag
-from exabgp.message.update.attribute.id import AttributeID
 
 # =================================================================== Attribute
 

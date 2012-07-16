@@ -8,7 +8,7 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 
 from copy import copy
 
-from exabgp.structure.address import AFI,SAFI
+from exabgp.structure.address import AFI
 from exabgp.message.open import HoldTime,AddPath
 from exabgp.message.update.attribute.id import AttributeID
 

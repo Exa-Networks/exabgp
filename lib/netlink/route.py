@@ -6,7 +6,6 @@
 # http://smacked.org/docs/netlink.pdf
 # RFC 3549
 
-import os
 import socket
 from struct import pack,unpack,calcsize
 from collections import namedtuple
@@ -106,7 +105,6 @@ class NetLinkRoute (object):
 
 		self.socket.send(message)
 
-		running = True
 		while True:
 			data = self.socket.recv(640000)
 			for mtype, flags, seq, pid, data in self.decode(data):
@@ -132,7 +130,6 @@ class NetLinkRoute (object):
 
 		self.socket.send(message)
 
-		running = True
 		while True:
 			data = self.socket.recv(640000)
 			for mtype, flags, seq, pid, data in self.decode(data):

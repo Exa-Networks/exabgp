@@ -8,7 +8,6 @@ Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 
 from exabgp.structure.address import AFI,SAFI
 from exabgp.structure.asn import AS_TRANS
-from exabgp.message.update.attribute import AttributeID
 
 from exabgp.message.update.attribute.origin      import Origin
 from exabgp.message.update.attribute.aspath      import ASPath,AS4Path

@@ -7,7 +7,7 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
 from exabgp.structure.address import AFI,SAFI
-from exabgp.structure.ip import Inet,inet
+from exabgp.structure.ip import Inet
 from exabgp.message.update.attribute import AttributeID,Flag,Attribute
 
 # =================================================================== 

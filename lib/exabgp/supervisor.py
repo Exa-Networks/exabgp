@@ -7,8 +7,6 @@ Created by Thomas Mangin on 2012-06-10.
 Copyright (c) 2012 Exa Networks. All rights reserved.
 """
 
-import os
-import sys
 import time
 import signal
 import select

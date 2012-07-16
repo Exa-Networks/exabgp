@@ -1750,7 +1750,7 @@ class Configuration (object):
 		from exabgp.structure.asn import ASN
 		from exabgp.structure.neighbor import Neighbor
 		from exabgp.network.peer import Peer
-		from exabgp.network.protocol import BGPNLRI,Protocol
+		from exabgp.network.protocol import Protocol
 		from exabgp.message.update import Update
 		from exabgp.message.open import Open,Capabilities,UsePath
 
@@ -1788,7 +1788,7 @@ class Configuration (object):
 					recoded = proto.UpdateFactory(packed[19:])
 					decoded = recoded.routes[0]
 					str2 = str(decoded)
-					logger.info(str(decoded),'configuration') 
+					logger.info(str2,'configuration') 
 					logger.info('%s\n' % [hex(ord(_)) for _ in packed],'configuration') 
 		import sys
 		sys.exit(0)

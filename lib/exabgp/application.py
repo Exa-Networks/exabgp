@@ -9,8 +9,6 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 import os
 import sys
 
-from exabgp.version import version
-
 def __exit(memory,code):
 	if memory:
 		from exabgp.leak import objgraph
