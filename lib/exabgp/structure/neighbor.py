@@ -10,7 +10,7 @@ from copy import copy
 
 from exabgp.structure.address import AFI
 from exabgp.message.open import HoldTime,AddPath
-from exabgp.message.update.attribute.id import AttributeID
+from exabgp.message.update.attribute import AttributeID
 
 from exabgp.log import Logger
 logger = Logger()
