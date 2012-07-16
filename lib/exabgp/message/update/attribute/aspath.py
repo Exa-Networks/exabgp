@@ -56,7 +56,7 @@ class ASPath (Attribute):
 		if not self._str:
 			lseq = len(self.as_seq)
 			lset = len(self.as_set)
-			if lseq == 1 and not lseq:
+			if lseq == 1 and not lset:
 				string = '%d' % self.as_seq[0]
 			elif lseq > 1 or lset:
 				string = '[ %s ]' % (' '.join([str(_) for _ in self.as_seq]))
