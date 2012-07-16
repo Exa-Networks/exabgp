@@ -328,7 +328,7 @@ class Protocol (object):
 		if force:
 			written = self.connection.write(k.message())
 			if not written:
-				logger.message(self.me(">> KEEPALIVE buffered"))
+				logger.message(self.me("|| KEEPALIVE buffered"))
 				self._messages[self.neighbor.peer_as].append(('KEEPALIVE',m))
 			else:
 				self._frozen = 0
@@ -336,7 +336,7 @@ class Protocol (object):
 		if left <= 0:
 			written = self.connection.write(k.message())
 			if not written:
-				logger.message(self.me(">> KEEPALIVE buffered"))
+				logger.message(self.me("|| KEEPALIVE buffered"))
 				self._messages[self.neighbor.peer_as].append(('KEEPALIVE',m))
 			else:
 				self._frozen = 0
@@ -370,7 +370,7 @@ class Protocol (object):
 			written = self.connection.write(update)
 			if not written:
 				break
-			logger.message(self.me(">> DEBUFFERED %s" % name))
+			logger.message(self.me("|| %s debuffered" % name))
 			backlog.pop(0)
 			self._frozen = 0
 			yield count

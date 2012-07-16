@@ -5,6 +5,7 @@ Version explained:
 
 Version 3.0.3 - xx of July 2012 (unreleased experimental version)
  * Fix: bug in ASN4 path reconstruction
+ * Improvement: on corner case networking
 
 Version 3.0.2 - 17 of July 2012 (unreleased experimental version)
  * CHANGE: python2.4 may work but it not supported anymore

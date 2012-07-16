@@ -173,7 +173,7 @@ class Connection (object):
 
 	def write (self,data):
 		if not self.io:
-			# We alrady returned a Failure
+			# We already returned a Failure
 			# It must be a write attempted during the closing of the peering session
 			# Make sure it does not hold the cleanup.
 			return True
@@ -183,18 +183,27 @@ class Connection (object):
 			logger.wire(LazyFormat("%15s SENT " % self.peer,hexa,data))
 			# we can not use sendall as in case of network buffer filling
 			# it does raise and does not let you know how much was sent
-			while data:
+			sent = 0
+			length = len(data)
+			while sent < length:
 				try:
-					sent = self.io.send(data)
-					data = data[sent:]
+					nb = self.io.send(data[sent:])
+					if not nb:
+						logger.wire("%15s lost TCP session with peer" % self.peer)
+						raise Failure('lost TCP session')
+					sent += nb
 				except socket.error,e:
 					if e.args[0] in errno_block:
-						logger.wire("%15s BACKING OFF as writing on socket failed with errno EAGAIN" % self.peer)
-						time.sleep(0.01)
+						if sent == 0:
+							logger.wire("%15s problem sending message, errno EAGAIN, will retry later" % self.peer)
+							return False
+						else:
+							logger.wire("%15s problem sending mid-way through a message, trying to complete" % self.peer)
+							time.sleep(0.01)
 						continue
 					else:
+						logger.wire("%15s problem sending message, errno %s" % (self.peer,str(e.args[0]))
 						raise e
-			#self.io.sendall(data)
 			self.last_write = time.time()
 			return True
 		except socket.error, e:
