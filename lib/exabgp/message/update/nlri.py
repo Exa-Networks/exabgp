@@ -68,9 +68,6 @@ class Labels (object):
 		else:
 			return ''
 
-	def __repr__ (self):
-		return str(self)
-
 _NoLabels = Labels([])
 
 class RouteDistinguisher (object):
@@ -101,9 +98,6 @@ class RouteDistinguisher (object):
 		if self.rd:
 			return ' route-distinguisher %s' % rd
 		return ''
-	
-	def __repr__ (self):
-		return str(self)
 
 _NoRD = RouteDistinguisher('')
 
@@ -118,9 +112,6 @@ class BGPPrefix (Inet):
 
 	def __str__ (self):
 		return "%s/%s" % (self.ip,self.mask)
-
-	def __repr__ (self):
-		return str(self)
 
 	# The API requires with_path_info, but it is irrelevant here.
 	def pack (self,with_path_info=None):

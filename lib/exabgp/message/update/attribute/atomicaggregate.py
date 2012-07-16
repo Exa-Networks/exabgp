@@ -24,6 +24,3 @@ class AtomicAggregate (Attribute):
 
 	def __str__ (self):
 		return ''
-
-	def __repr__ (self):
-		return str(self)

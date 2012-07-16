@@ -71,9 +71,6 @@ class IPrefix (IComponent):
 	def __str__ (self):
 		return str(self.nlri)
 
-	def __repr__ (self):
-		return str(self)
-
 class IOperation (IComponent):
 	# need to implement encode which encode the value of the operator
 
@@ -126,9 +123,6 @@ class NumericString (object):
 	def __str__ (self):
 		return "%s%s" % (self._string[self.operations & (CommonOperator.EOL ^ 0xFF) ], self.value)
 
-	def __repr__ (self):
-		return str(self)
-
 class BinaryString (object):
 	_string = {
 		BinaryOperator.NOT   : '!',
@@ -139,9 +133,6 @@ class BinaryString (object):
 
 	def __str__ (self):
 		return "%s%s" % (self._string[self.operations & (CommonOperator.EOL ^ 0xFF) ], self.value)
-
-	def __repr__ (self):
-		return str(self)
 
 # Components ..............................
 
@@ -277,8 +268,6 @@ class FlowNLRI (Attributes,Address):
 			string.append('%s %s' % (rules[0].NAME,''.join(s[1:])))
 		return ' '.join(string)
 
-	def __repr__ (self):
-		return str(self)
 
 class Flow (object):
 	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ipv4):
@@ -297,6 +286,3 @@ class Flow (object):
 
 	def __str__ (self):
 		return "%s %s%s" % (Address.__str__(self.nlri),str(self.nlri),str(self.attributes))
-
-	def __repr__ (self):
-		return str(self)

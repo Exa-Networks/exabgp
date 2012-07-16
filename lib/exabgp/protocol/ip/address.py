@@ -18,6 +18,3 @@ class Address (object):
 
 	def __str__ (self):
 		return "%s %s" % (str(self.afi),str(self.safi))
-
-	def __repr__ (self):
-		return str(self)

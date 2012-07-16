@@ -171,6 +171,3 @@ neighbor %s {
 	families,
 	routes
 )
-
-	def __repr__ (self):
-		return str(self)

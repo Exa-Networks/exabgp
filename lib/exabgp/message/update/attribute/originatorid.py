@@ -24,7 +24,3 @@ class OriginatorID (Attribute,Inet):
 
 	def __str__ (self):
 		return Inet.__str__(self)
-
-	def __repr__ (self):
-		return str(self)
-

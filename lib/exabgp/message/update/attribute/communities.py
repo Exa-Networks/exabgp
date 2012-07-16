@@ -72,9 +72,6 @@ class Communities (Attribute):
 			return str(self.communities[0])
 		return ""
 
-	def __repr__ (self):
-		return str(self)
-
 # =================================================================== ECommunity
 
 # http://www.iana.org/assignments/bgp-extended-communities
@@ -158,9 +155,6 @@ class ECommunity (object):
 			h <<= 8
 			h += ord(byte)
 		return "0x%016X" % h
-
-	def __repr__ (self):
-		return str(self)
 
 	def __len__ (self):
 		return 8

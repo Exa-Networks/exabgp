@@ -27,6 +27,3 @@ class MPURNLRI (Attribute):
 
 	def __str__ (self):
 		return "MP_UNREACH_NLRI Family %s %d NLRI(s)" % (Address.__str__(self.routes[0]),len(self.routes))
-
-	def __repr__ (self):
-		return str(self)

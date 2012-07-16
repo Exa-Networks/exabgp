@@ -23,9 +23,6 @@ class _Fragment (int):
 		if self == self.LAST:  return 'last-fragment'
 		return 'unknown fragment value %d' % int.__str__(self)
 
-	def __repr__ (self):
-		return str(self)
-
 def NamedFragment (name):
 	fragment = name.lower()
 	if fragment == 'not-a-fragment': return _Fragment(0x00)

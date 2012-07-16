@@ -37,9 +37,6 @@ class MultiAttributes (list):
 	def __str__ (self):
 		return 'MultiAttibutes(%s)' % ' '.join(str(_) for _ in self)
 
-	def __repr__ (self):
-		return str(self)
-
 class Attributes (dict):
 	cache = {
 		# There can only be one :)
@@ -192,6 +189,3 @@ class Attributes (dict):
 
 		self._str = "%s%s%s%s%s%s%s%s%s%s%s%s" % (next_hop,origin,aspath,local_pref,atomic,aggregator,med,communities,ecommunities,mpr,originator_id,cluster_list)
 		return self._str
-
-	def __repr__ (self):
-		return str(self)
