@@ -347,7 +347,7 @@ class Protocol (object):
 		if left <= 0:
 			written = self.connection.write(k.message())
 			if not written:
-				logger.message(self.me('|| could not send KEEPALIVE, buffering it'))
+				logger.message(self.me('|| could not send KEEPALIVE, buffering'))
 				self._messages.append((1,'KEEPALIVE',m))
 			else:
 				self._frozen = 0
@@ -419,7 +419,7 @@ class Protocol (object):
 						logger.message(self.me('>> %d %s(s)' % (number,name)))
 						yield number
 					else:
-						logger.message(self.me('|| could not send %d  %s(s), buffering it' % (number,name)))
+						logger.message(self.me('|| could not send %d %s(s), buffering' % (number,name)))
 						self._messages.append((number,name,update))
 						sending = False
 				else:

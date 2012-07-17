@@ -343,6 +343,12 @@ class Peer (object):
 					for count in self.bgp.new_update():
 						yield True
 
+				# emptying the buffer of routes
+
+				elif self.bgp.buffered():
+					for count in self.bgp.new_update():
+						yield True
+
 				#
 				# Go to other Peers
 				#
