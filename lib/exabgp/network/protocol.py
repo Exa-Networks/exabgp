@@ -381,7 +381,7 @@ class Protocol (object):
 			written = self.connection.write(update)
 			if not written:
 				break
-			logger.message(self.me(">> %s(s) sent from buffer" % (number,name)))
+			logger.message(self.me(">> %d %s(s) sent from buffer" % (number,name)))
 			backlog.pop(0)
 			self._frozen = 0
 			yield number
