@@ -394,7 +394,7 @@ class Protocol (object):
 					raise Failure('Can not send BGP update larger than %d bytes on this connection.' % size)
 				if len(chunk) + len(data) <= size:
 					chunk += data
-					number += 1
+ 					number += 1
 					continue
 				yield number,chunk
 				chunk = data
@@ -408,6 +408,7 @@ class Protocol (object):
 					logger.message(self.me('|| adding %d  %s(s) to existing buffer' % (number,name)))
 					self._messages.append((number,name,update))
 			for number in self._backlog():
+				logger.message(self.me('>> %d buffered %s(s)' % (number,name)))
 				yield number
 		else:
 			# The message size is the whole BGP message INCLUDING headers !
