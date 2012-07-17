@@ -17,7 +17,7 @@ from exabgp.rib.delta import Delta
 from exabgp.structure.utils import hexa
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.protocol.ip.inet import mask_to_bytes
-from exabgp.structure.route import RouteBGP
+from exabgp.bgp.route import RouteBGP
 from exabgp.bgp.message.open.asn import ASN,AS_TRANS
 from exabgp.bgp.connection import Connection
 from exabgp.bgp.message import Message,defix,Failure

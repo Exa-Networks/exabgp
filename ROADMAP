@@ -1,24 +1,27 @@
-This is an informal roadmap - no promise
+This is an informal roadmap - no promise, just here to remind me what I want to do
 
 ROADMAP
 
-Version 3.
+Version 3.0
 - usual bug fixes and improvments (bugs ? which bugs ?)
 - protect the forked process do not have to deal with SIGHUP or others signals sent to exabgp (done ? to test)
 - multiple configuration files as paramter (considering)
 - have a command to shutdown the process properly
-
-MEMO
+- handle ^C during configuration reload gracefully
 - break protocol.py in several files ? 
 - look at the classes to reduce conversion and improve perf
-- focus on performance : always store packed data
-- change the configuration to allow grouping of attributes for routes
-- keep route grouping provided by the routers who sent them to us.
 - move the generation of the route when the delta is done in an object with the peer info to display the route change in the log
 - use a cache for the object created in the configuration too
+- improve the Route object API
+
+Version 3.1
+- group routes generated with same attributes to be nicer on the router CPU.
+- keep route grouping provided by the routers who sent them to us.
+
+
+Helpers
 - provide an helper program able to read MRT dumps and announce them too.
-- cleanup the community code the same way we cleanup the aspath and others
-- group routes generated to be nicer on the router CPU.
+
+Notes
 - do we really need to remove a route before re-announcing it or can we just "overwrite" it
-- if we define the same route twice we will send a withdraw before the announce .. 
-- handle ^C during configuration reload gracefully
+- if we define the same route twice in the configuration we will/may send a withdraw before the announce .. 

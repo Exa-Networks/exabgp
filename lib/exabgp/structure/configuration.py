@@ -13,7 +13,7 @@ from copy import deepcopy
 from struct import pack,unpack
 
 from exabgp.structure.environment import load
-from exabgp.structure.route import Route
+from exabgp.bgp.route import Route
 
 from exabgp.protocol.family import AFI,SAFI
 
