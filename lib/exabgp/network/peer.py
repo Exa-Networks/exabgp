@@ -220,7 +220,6 @@ class Peer (object):
 			self.bgp.use_path = UsePath(_open,self.open)
 
 			for count in self.bgp.new_update():
-				logger.message(self.me('>> %d UPDATE(s)' % count))
 				yield True
 
 			if self.bgp.families:
@@ -341,11 +340,8 @@ class Peer (object):
 					self._have_routes = False
 					logger.message(self.me('CHECKING FOR NEW ROUTES'))
 				
-					count = 0
 					for count in self.bgp.new_update():
 						yield True
-					if count:
-						logger.message(self.me('>> UPDATE (%d)' % count))
 
 				#
 				# Go to other Peers

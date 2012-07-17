@@ -407,13 +407,15 @@ class Protocol (object):
 		# The message size is the whole BGP message INCLUDING headers !
 		for number,update in chunked(generator,self.message_size-19):
 			if self._messages:
-				logger.message(self.me('|| buffer not yet empty, adding %d MESSAGE(s) to it' % number))
+				logger.message(self.me('|| adding %d  %s(s) to existing buffer' % (number,name)))
 				self._messages.append((number,name,update))
 				continue
 			written = self.connection.write(update)
 			if not written:
-				logger.message(self.me('|| could not send MESSAGE(S), buffering it/them'))
+				logger.message(self.me('|| could not send %d  %s(s), adding them to the buffer' % (number,name)))
 				self._messages.append((number,name,update))
+			else:
+				logger.message(self.me('>> %d %s(s)' % (number,name)))
 			yield number
 
 #	def new_announce (self):
@@ -424,15 +426,15 @@ class Protocol (object):
 #			yield answer
 
 	def new_update (self):
-		for answer in self._backlog():
-			yield answer
+		for number in self._backlog():
+			yield number
 		# XXX: This should really be calculated once only
 		asn4 = not not self.peer.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
-		for answer in self._announce('UPDATE',self._delta.updates(asn4,self.neighbor.local_as,self.neighbor.peer_as,self.use_path)):
-			yield answer
+		for number in self._announce('UPDATE',self._delta.updates(asn4,self.neighbor.local_as,self.neighbor.peer_as,self.use_path)):
+			yield number
 
 	def new_eors (self,families):
-		for answer in self._backlog():
+		for number in self._backlog():
 			pass
 		eor = EOR()
 		eors = eor.eors(families)
