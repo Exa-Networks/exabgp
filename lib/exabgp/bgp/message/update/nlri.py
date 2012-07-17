@@ -10,6 +10,12 @@ from struct import pack,unpack
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.protocol.ip.inet import mask_to_bytes,Inet
 
+from exabgp.protocol.ip.address import Address
+from exabgp.bgp.message.update.attribute.attributes import Attributes
+
+from exabgp.bgp.message.notification import Notify
+
+
 class PathInfo (object):
 	def __init__ (self,integer=None,ip=None,packed=None):
 		if packed:
@@ -154,3 +160,92 @@ class NLRI (BGPPrefix):
 			return path_info + chr(length) + self.labels.pack() + self.rd.pack() + self.packed[:mask_to_bytes[self.mask]]
 		else:
 			return path_info + BGPPrefix.pack(self)
+
+
+# Generate an NLRI from a BGP packet receive
+def BGPNLRI (afi,safi,bgp,has_multiple_path):
+	labels = []
+	rd = ''
+
+	if has_multiple_path:
+		path_identifier = bgp[:4]
+		bgp = bgp[4:]
+	else:
+		path_identifier = ''
+
+	mask = ord(bgp[0])
+	bgp = bgp[1:]
+
+	if SAFI(safi).has_label():
+		while bgp and mask >= 8:
+			label = int(unpack('!L',chr(0) + bgp[:3])[0])
+			bgp = bgp[3:]
+			labels.append(label>>4)
+			mask -= 24 # 3 bytes
+			if label & 1:
+				break
+			# This is a route withdrawal, or next-hop
+			if label == 0x000000 or label == 0x80000:
+				break
+
+	if SAFI(safi).has_rd():
+		mask -= 8*8 # the 8 bytes of the route distinguisher
+		rd = bgp[:8]
+		bgp = bgp[8:]
+
+	if mask < 0:
+		raise Notify(3,0,'invalid length in NLRI prefix')
+
+	if not bgp and mask:
+		raise Notify(3,0,'not enough data for the mask provided to decode the NLRI')
+
+	size = mask_to_bytes[mask]
+
+	if len(bgp) < size:
+		raise Notify(3,0,'could not decode route with AFI %d sand SAFI %d' % (afi,safi))
+
+	network = bgp[:size]
+	# XXX: The padding calculation should really go into the NLRI class
+	padding = '\0'*(NLRI.length[afi]-size)
+	prefix = network + padding
+	nlri = NLRI(afi,safi,prefix,mask)
+
+	# XXX: Not the best interface but will do for now
+	if safi:
+		nlri.safi = SAFI(safi)
+
+	if path_identifier:
+		nlri.path_info = PathInfo(packed=path_identifier)
+	if labels:
+		nlri.labels = Labels(labels)
+	if rd:
+		nlri.rd = RouteDistinguisher(rd)
+	return nlri
+
+
+class Route (object):
+	def __init__ (self,nlri):
+		self.nlri = nlri
+		self.__address = Address(nlri.afi,nlri.safi)
+		self.attributes = Attributes()
+
+	def __str__ (self):
+		return "route %s%s" % (str(self.nlri),str(self.attributes))
+
+	def extensive (self):
+		return "%s %s%s" % (str(self.__address),str(self.nlri),str(self.attributes))
+
+	def index (self):
+		return self.nlri.packed+self.nlri.rd.rd
+
+
+class RouteBGP (Route):
+	def __init__ (self,nlri,action):
+		self.action = action	# announce, announced, withdraw or withdrawn
+		Route.__init__(self,nlri)
+
+	def __str__ (self):
+		return "%s %s" % (self.action,Route.__str__(self))
+
+def routeFactory(afi,safi,data,path_info,state):
+	return RouteBGP(BGPNLRI(afi,safi,data,path_info),state)

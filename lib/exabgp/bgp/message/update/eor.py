@@ -41,7 +41,7 @@ class EOR (object):
 		return r
 
 	def mp (self,afi,safi):
-		return Update([EmptyRoute(afi,safi),]).withdraw()
+		return Update().new([EmptyRoute(afi,safi),]).withdraw()
 
 	def announced (self):
 		return self._announced

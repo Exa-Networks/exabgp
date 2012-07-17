@@ -7,7 +7,8 @@ Created by Thomas Mangin on 2012-07-14.
 Copyright (c) 2012 Exa Networks. All rights reserved.
 """
 
-from exabgp.bgp.message.update.attribute import AttributeID,Flag,Attribute
+from exabgp.bgp.message.update.attribute.id import AttributeID
+from exabgp.bgp.message.update.attribute import Flag,Attribute
 
 # =================================================================== AtomicAggregate (6)
 

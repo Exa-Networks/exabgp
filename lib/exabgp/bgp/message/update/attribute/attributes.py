@@ -6,14 +6,30 @@ Created by Thomas Mangin on 2010-01-16.
 Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 """
 
-from exabgp.protocol.family import AFI,SAFI
-from exabgp.bgp.message.open.asn import AS_TRANS
+from struct import unpack,error
 
+from exabgp.structure.utils import hexa
+
+from exabgp.protocol.family import AFI,SAFI
+
+from exabgp.bgp.message.open.asn import ASN,AS_TRANS
+from exabgp.bgp.message.notification import Notify
+
+from exabgp.bgp.message.update.attribute.id import AttributeID
+from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import ASPath,AS4Path
+from exabgp.bgp.message.update.attribute.nexthop import NextHop
+from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
-from exabgp.bgp.message.update.attribute import AttributeID
+from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
+from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
+from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
+from exabgp.bgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities
+
+from exabgp.structure.log import Logger,LazyFormat
+logger = Logger()
 
 # =================================================================== Attributes
 
@@ -38,6 +54,8 @@ class MultiAttributes (list):
 		return 'MultiAttibutes(%s)' % ' '.join(str(_) for _ in self)
 
 class Attributes (dict):
+	routeFactory = None
+
 	cache = {
 		# There can only be one :)
 		AttributeID.ATOMIC_AGGREGATE : { '' : AtomicAggregate() }
@@ -189,3 +207,315 @@ class Attributes (dict):
 
 		self._str = "%s%s%s%s%s%s%s%s%s%s%s%s" % (next_hop,origin,aspath,local_pref,atomic,aggregator,med,communities,ecommunities,mpr,originator_id,cluster_list)
 		return self._str
+
+
+	def factory (self,asn4,families,use_path,data):
+		try:
+			# XXX: hackish for now
+			self.mp_announce = []
+			self.mp_withdraw = []
+
+			self._asn4 = asn4
+			self._families = families
+			self._use_path = use_path
+			self._factory(data)
+			if AttributeID.AS_PATH in self and AttributeID.AS4_PATH in self:
+				self.__merge_attributes()
+			return self
+		except IndexError:
+			raise Notify(3,2,data)
+
+	def _factory (self,data):
+		if not data:
+			return self
+
+		# We do not care if the attribute are transitive or not as we do not redistribute
+		flag = Flag(ord(data[0]))
+		code = AttributeID(ord(data[1]))
+
+		if flag & Flag.EXTENDED_LENGTH:
+			length = unpack('!H',data[2:4])[0]
+			offset = 4
+		else:
+			length = ord(data[2])
+			offset = 3
+
+		data = data[offset:]
+		next = data[length:]
+		attribute = data[:length]
+
+		logger.parser(LazyFormat("parsing %s " % code,hexa,data[:length]))
+
+		if code == AttributeID.ORIGIN:
+			if not self.get(code,attribute):
+				self.add(Origin(ord(attribute)),attribute)
+			return self._factory(next)
+
+		# only 2-4% of duplicated data - is it worth to cache ?
+		if code == AttributeID.AS_PATH:
+			if length:
+				# we store the AS4_PATH as AS_PATH, do not over-write
+				if not self.has(code):
+					if not self.get(code,attribute):
+						self.add(self.__new_ASPath(attribute,self._asn4),attribute)
+			return self._factory(next)
+
+		if code == AttributeID.AS4_PATH:
+			if length:
+				# ignore the AS4_PATH on new spekers as required by RFC 4893 section 4.1
+				if not self._asn4 and not self.get(code,attribute):
+					# This replace the old AS_PATH
+					self.add(self.__new_ASPath4(attribute),attribute)
+			return self._factory(next)
+
+		if code == AttributeID.NEXT_HOP:
+			if not self.get(code,attribute):
+				self.add(NextHop(AFI.ipv4,SAFI.unicast_multicast,attribute),attribute)
+			return self._factory(next)
+
+		if code == AttributeID.MED:
+			if not self.get(code,attribute):
+				self.add(MED(attribute),attribute)
+			return self._factory(next)
+
+		if code == AttributeID.LOCAL_PREF:
+			if not self.get(code,attribute):
+				self.add(LocalPreference(attribute),attribute)
+			return self._factory(next)
+
+		if code == AttributeID.ATOMIC_AGGREGATE:
+			if not self.get(AttributeID.ATOMIC_AGGREGATE,attribute):
+				raise Notify(3,2,'invalid ATOMIC_AGGREGATE %s' % [hex(ord(_)) for _ in attribute])
+			return self._factory(next)
+
+		if code == AttributeID.AGGREGATOR:
+			# AS4_AGGREGATOR are stored as AGGREGATOR - so do not overwrite if exists
+			if not self.has(code):
+				if not self.get(code,attribute):
+					self.add(Aggregator(attribute),attribute)
+			return self._factory(next)
+
+		if code == AttributeID.AS4_AGGREGATOR:
+			if not self.get(AttributeID.AGGREGATOR,attribute):
+				self.add(Aggregator(attribute),attribute)
+			return self._factory(next)
+
+		if code == AttributeID.COMMUNITY:
+			if not self.get(code,attribute):
+				self.add(self.__new_communities(attribute),attribute)
+			return self._factory(next)
+
+		if code == AttributeID.ORIGINATOR_ID:
+			if not self.get(code,attribute):
+				self.add(OriginatorID(AFI.ipv4,SAFI.unicast,data[:4]),attribute)
+			return self._factory(next)
+
+		if code == AttributeID.CLUSTER_LIST:
+			if not self.get(code,attribute):
+				self.add(ClusterList(attribute),attribute)
+			return self._factory(next)
+
+		if code == AttributeID.EXTENDED_COMMUNITY:
+			if not self.get(code,attribute):
+				self.add(self.__new_extended_communities(attribute),attribute)
+			return self._factory(next)
+
+		if code == AttributeID.MP_UNREACH_NLRI:
+			# -- Reading AFI/SAFI
+			data = data[:length]
+			afi,safi = unpack('!HB',data[:3])
+			offset = 3
+			data = data[offset:]
+
+			if (afi,safi) not in self._families:
+				raise Notify(3,0,'presented a non-negociated family')
+
+			# Is the peer going to send us some Path Information with the route (AddPath)
+			path_info = self._use_path.receive(afi,safi)
+			while data:
+				route = self.routeFactory(afi,safi,data,path_info,'withdrawn')
+				route.attributes = self.attributes
+				self.mp_withdraw.append(route)
+				data = data[len(route.nlri):]
+			return self._factory(next)
+
+		if code == AttributeID.MP_REACH_NLRI:
+			data = data[:length]
+			# -- Reading AFI/SAFI
+			afi,safi = unpack('!HB',data[:3])
+			offset = 3
+
+			# we do not want to accept unknown families
+			if (afi,safi) not in self._families:
+				raise Notify(3,0,'presented a non-negociated family')
+
+			# -- Reading length of next-hop
+			len_nh = ord(data[offset])
+			offset += 1
+
+			rd = 0
+
+			# check next-hope size
+			if afi == AFI.ipv4:
+				if safi in (SAFI.unicast,SAFI.multicast):
+					if len_nh != 4:
+						raise Notify(3,0,'invalid next-hop length')
+				if safi in (SAFI.mpls_vpn,):
+					if len_nh != 12:
+						raise Notify(3,0,'invalid next-hop length')
+					rd = 8
+				size = 4
+			elif afi == AFI.ipv6:
+				if safi in (SAFI.unicast,):
+					if len_nh not in (16,32):
+						raise Notify(3,0,'invalid next-hop length')
+				if safi in (SAFI.mpls_vpn,):
+					if len_nh not in (24,40):
+						raise Notify(3,0,'invalid next-hop length')
+					rd = 8
+				size = 16
+
+			# -- Reading next-hop
+			nh = data[offset+rd:offset+rd+size]
+
+			# chech the RD is well zeo
+			if rd and sum([int(ord(_)) for _ in data[offset:8]]) != 0:
+				raise Notify(3,0,'route-distinguisher for the next-hop is not zero')
+
+			offset += len_nh
+
+			# Skip a reserved bit as somone had to bug us !
+			reserved = ord(data[offset])
+			offset += 1
+
+			if reserved != 0:
+				raise Notify(3,0,'the reserved bit of MP_REACH_NLRI is not zero')
+
+			# Is the peer going to send us some Path Information with the route (AddPath)
+			path_info = self._use_path.receive(afi,safi)
+
+			# Reading the NLRIs
+			data = data[offset:]
+
+			while data:
+				route = self.routeFactory(afi,safi,data,path_info,'announced')
+				if not route.attributes.get(AttributeID.NEXT_HOP,nh):
+					route.attributes.add(NextHop(afi,safi,nh),nh)
+				self.mp_announce.append(route)
+				data = data[len(route.nlri):]
+			return self._factory(next)
+
+		logger.parser('ignoring attribute')
+		return self._factory(next)
+
+	def __merge_attributes (self):
+		as2path = self.attributes[AttributeID.AS_PATH]
+		as4path = self.attributes[AttributeID.AS4_PATH]
+		self.remove(AttributeID.AS_PATH)
+		self.remove(AttributeID.AS4_PATH)
+
+		# this key is unique as index length is a two header, plus a number of ASN of size 2 or 4
+		# so adding the : make the length odd and unique
+		key = "%s:%s" % (as2path.index, as4path.index)
+		
+		# found a cache copy
+		if self.get(AttributeID.AS_PATH,key):
+			return
+
+		as_seq = []
+		as_set = []
+
+		len2 = len(as2path.as_seq)
+		len4 = len(as4path.as_seq)
+
+		# RFC 4893 section 4.2.3
+		if len2 < len4:
+			as_seq = as2path.as_seq
+		else:
+			as_seq = as2path.as_seq[:-len4]
+			as_seq.extend(as4path.as_seq)
+
+		len2 = len(as2path.as_set)
+		len4 = len(as4path.as_set)
+
+		if len2 < len4:
+			as_set = as4path.as_set
+		else:
+			as_set = as2path.as_set[:-len4]
+			as_set.extend(as4path.as_set)
+
+		aspath = ASPath(as_seq,as_set)
+		self.add(aspath,key)
+
+	def __new_communities (self,data):
+		communities = Communities()
+		while data:
+			if data and len(data) < 4:
+				raise Notify(3,1,'could not decode community %s' % str([hex(ord(_)) for _ in data]))
+			communities.add(Community(data[:4]))
+			data = data[4:]
+		return communities
+
+	def __new_extended_communities (self,data):
+		communities = ECommunities()
+		while data:
+			if data and len(data) < 8:
+				raise Notify(3,1,'could not decode extended community %s' % str([hex(ord(_)) for _ in data]))
+			communities.add(ECommunity(data[:8]))
+			data = data[8:]
+		return communities
+
+	def __new_aspaths (self,data,asn4,klass):
+		as_set = []
+		as_seq = []
+		backup = data
+
+		unpacker = {
+			False : '!H',
+			True  : '!L',
+		}
+		size = {
+			False: 2,
+			True : 4,
+		}
+		as_choice = {
+			ASPath.AS_SEQUENCE : as_seq,
+			ASPath.AS_SET      : as_set,
+		}
+
+		upr = unpacker[asn4]
+		length = size[asn4]
+
+		try:
+
+			while data:
+				stype = ord(data[0])
+				slen  = ord(data[1])
+
+				if stype not in (ASPath.AS_SET, ASPath.AS_SEQUENCE):
+					raise Notify(3,11,'invalid AS Path type sent %d' % stype)
+
+				end = 2+(slen*length)
+				sdata = data[2:end]
+				data = data[end:]
+				asns = as_choice[stype]
+
+				for i in range(slen):
+					asn = unpack(upr,sdata[:length])[0]
+					asns.append(ASN(asn))
+					sdata = sdata[length:]
+
+		except IndexError:
+			raise Notify(3,11,'not enough data to decode AS_PATH or AS4_PATH')
+		except error: # struct
+			raise Notify(3,11,'not enough data to decode AS_PATH or AS4_PATH')
+
+		return klass(as_seq,as_set,backup)
+
+	def __new_ASPath (self,data,asn4):
+		return self.__new_aspaths(data,asn4,ASPath)
+
+	def __new_ASPath4 (self,data):
+		return self.__new_aspaths(data,True,AS4Path)
+
+	

@@ -33,10 +33,10 @@ class Delta (object):
 
 			if action == '+':
 				logger.rib('announcing %s' % route)
-				yield Update([route]).announce(asn4,local_asn,peer_asn,add_path)
+				yield Update().new([route]).announce(asn4,local_asn,peer_asn,add_path)
 			elif action == '*':
 				logger.rib('updating %s' % route)
-				yield Update([route]).update(asn4,local_asn,peer_asn,add_path)
+				yield Update().new([route]).update(asn4,local_asn,peer_asn,add_path)
 			elif action == '-':
 				logger.rib('withdrawing %s' % route)
-				yield Update([route]).withdraw(asn4,local_asn,peer_asn,add_path)
+				yield Update().new([route]).withdraw(asn4,local_asn,peer_asn,add_path)

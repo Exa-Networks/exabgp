@@ -13,7 +13,6 @@ from copy import deepcopy
 from struct import pack,unpack
 
 from exabgp.structure.environment import load
-from exabgp.bgp.route import Route
 
 from exabgp.protocol.family import AFI,SAFI
 
@@ -29,10 +28,10 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 
-from exabgp.bgp.message.update.nlri import NLRI,PathInfo,Labels,RouteDistinguisher
+from exabgp.bgp.message.update.nlri import Route,NLRI,PathInfo,Labels,RouteDistinguisher
 from exabgp.bgp.message.update.flow import BinaryOperator,NumericOperator,Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
 
-from exabgp.bgp.message.update.attribute import AttributeID
+from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.nexthop import NextHop
 from exabgp.bgp.message.update.attribute.aspath import ASPath
@@ -1804,7 +1803,7 @@ class Configuration (object):
 				for route in self.neighbor[nei]._routes[family]:
 					str1 = str(route)
 					logger.info('parsed    %s' % str1,'configuration') 
-					update = Update([route])
+					update = Update().new([route])
 					packed = update.announce(False,ASN(30740),ASN(30740),with_path_info)
 					# This does not take the BGP header - let's assume we will not break that :)
 					recoded = proto.UpdateFactory(packed[19:])

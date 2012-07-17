@@ -10,7 +10,8 @@ from exabgp.protocol.family import AFI,SAFI
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.protocol.ip.inet import Inet
 
-from exabgp.bgp.message.update.attribute import AttributeID,Flag,Attribute
+from exabgp.bgp.message.update.attribute.id import AttributeID
+from exabgp.bgp.message.update.attribute import Flag,Attribute
 
 # =================================================================== AGGREGATOR (7)
 

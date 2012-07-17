@@ -11,7 +11,7 @@ from copy import copy
 from exabgp.protocol.family import AFI
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.capability import AddPath
-from exabgp.bgp.message.update.attribute import AttributeID
+from exabgp.bgp.message.update.attribute.id import AttributeID
 
 from exabgp.structure.log import Logger
 logger = Logger()

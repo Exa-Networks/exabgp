@@ -6,7 +6,8 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
-from exabgp.bgp.message.update.attribute import AttributeID,Flag,Attribute
+from exabgp.bgp.message.update.attribute.id import AttributeID
+from exabgp.bgp.message.update.attribute import Flag,Attribute
 
 # =================================================================== Origin (1)
 

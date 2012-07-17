@@ -7,12 +7,19 @@ Created by Thomas Mangin on 2012-07-17.
 Copyright (c) 2012 Exa Networks. All rights reserved.
 """
 
+from struct import unpack
+
+from exabgp.structure.utils import hexa
+
 from exabgp.protocol.family import AFI,SAFI
+from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.id import CapabilityID
 from exabgp.bgp.message.open.capability.mp import MultiProtocol
 from exabgp.bgp.message.open.capability.graceful import Graceful
 from exabgp.bgp.message.open.capability.ms import MultiSession
 from exabgp.bgp.message.open.capability.addpath import AddPath
+from exabgp.bgp.message.open.capability.refresh import RouteRefresh,CiscoRouteRefresh
+from exabgp.bgp.message.notification import Notify
 
 # =================================================================== Unknown
 
@@ -112,3 +119,90 @@ class Capabilities (dict):
 				rs.append("%s%s%s" % (chr(k),chr(len(capability)),capability))
 		parameters = "".join(["%s%s%s" % (chr(2),chr(len(r)),r) for r in rs])
 		return "%s%s" % (chr(len(parameters)),parameters)
+
+	def _key_values (self,name,data):
+		if len(data) < 2:
+			raise Notify(2,0,"Bad length for OPEN %s (<2) %s" % (name,hexa(data)))
+		l = ord(data[1])
+		boundary = l+2
+		if len(data) < boundary:
+			raise Notify(2,0,"Bad length for OPEN %s (buffer underrun) %s" % (name,hexa(data)))
+		key = ord(data[0])
+		value = data[2:boundary]
+		rest = data[boundary:]
+		return key,value,rest
+
+	def factory (self,data):
+		option_len = ord(data[0])
+		if option_len:
+			data = data[1:]
+			while data:
+				key,value,data = self._key_values('parameter',data)
+				# Paramaters must only be sent once.
+				if key == Parameter.AUTHENTIFICATION_INFORMATION:
+					raise Notify(2,5)
+
+				if key == Parameter.CAPABILITIES:
+					while value:
+						k,capv,value = self._key_values('capability',value)
+						# Multiple Capabilities can be present in a single attribute
+						#if r:
+						#	raise Notify(2,0,"Bad length for OPEN %s (size mismatch) %s" % ('capability',hexa(value)))
+
+						if k == CapabilityID.MULTIPROTOCOL_EXTENSIONS:
+							if k not in self:
+								self[k] = MultiProtocol()
+							afi = AFI(unpack('!H',capv[:2])[0])
+							safi = SAFI(ord(capv[3]))
+							self[k].append((afi,safi))
+							continue
+
+						if k == CapabilityID.GRACEFUL_RESTART:
+							restart = unpack('!H',capv[:2])[0]
+							restart_flag = restart >> 12
+							restart_time = restart & Graceful.TIME_MASK
+							value_gr = capv[2:]
+							families = []
+							while value_gr:
+								afi = AFI(unpack('!H',value_gr[:2])[0])
+								safi = SAFI(ord(value_gr[2]))
+								flag_family = ord(value_gr[0])
+								families.append((afi,safi,flag_family))
+								value_gr = value_gr[4:]
+							self[k] = Graceful(restart_flag,restart_time,families)
+							continue
+
+						if k == CapabilityID.FOUR_BYTES_ASN:
+							self[k] = ASN(unpack('!L',capv[:4])[0])
+							continue
+
+						if k == CapabilityID.ROUTE_REFRESH:
+							self[k] = RouteRefresh()
+							continue
+
+						if k == CapabilityID.CISCO_ROUTE_REFRESH:
+							self[k] = CiscoRouteRefresh()
+							continue
+
+						if k == CapabilityID.MULTISESSION_BGP:
+							self[k] = MultiSession()
+							continue
+						if k == CapabilityID.MULTISESSION_BGP_RFC:
+							self[k] = MultiSession()
+							continue
+						if k == CapabilityID.ADD_PATH:
+							self[k] = AddPath()
+							value_ad = capv
+							while value_ad:
+								afi = AFI(unpack('!H',value_ad[:2])[0])
+								safi = SAFI(ord(value_ad[2]))
+								sr = ord(value_ad[3])
+								self[k].add_path(afi,safi,sr)
+								value_ad = value_ad[4:]
+
+						if k not in self:
+							self[k] = Unknown(k,[ord(_) for _ in capv])
+				else:
+					raise Notify(2,0,'Unknow OPEN parameter %s' % hex(key))
+		return self
+

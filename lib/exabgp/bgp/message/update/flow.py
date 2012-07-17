@@ -11,7 +11,7 @@ from struct import pack
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.protocol.ip.address import Address
 from exabgp.bgp.message.update.nlri import BGPPrefix
-from exabgp.bgp.message.update.attribute import AttributeID
+from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute.attributes import Attributes
 from exabgp.bgp.message.update.attribute.communities import ECommunities
 
