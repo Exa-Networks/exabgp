@@ -380,7 +380,6 @@ class Protocol (object):
 			if not self.connection.write(update):
 				logger.message(self.me("|| failed to send %d %s(s) from buffer" % (number,name)))
 				break
-			logger.message(self.me(">> %d %s(s) sent from buffer" % (number,name)))
 			self._messages.pop(0)
 			self._frozen = 0
 			yield number
@@ -407,6 +406,7 @@ class Protocol (object):
 			for number,update in chunked(generator,self.message_size-19):
 					logger.message(self.me('|| adding %d  %s(s) to existing buffer' % (number,name)))
 					self._messages.append((number,name,update))
+			logger.message(self.me('-------------------------------------------------'))
 			for number in self._backlog():
 				logger.message(self.me('>> %d buffered %s(s)' % (number,name)))
 				yield number
@@ -414,11 +414,12 @@ class Protocol (object):
 			# The message size is the whole BGP message INCLUDING headers !
 			for number,update in chunked(generator,self.message_size-19):
 				if not self.connection.write(update):
-					logger.message(self.me('|| could not send %d  %s(s), adding them to the buffer' % (number,name)))
-					self._messages.append((number,name,update))
-				else:
 					logger.message(self.me('>> %d %s(s)' % (number,name)))
 					yield number
+				else:
+					logger.message(self.me('|| could not send %d  %s(s), adding them to the buffer' % (number,name)))
+					self._messages.append((number,name,update))
+					yield 0
 
 	def new_update (self):
 		# XXX: This should really be calculated once only
