@@ -77,7 +77,7 @@ class Configuration (object):
 	'  route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535' \
 	'  next-hop 192.0.1.254;\n' \
 	'  origin IGP|EGP|INCOMPLETE;\n' \
-	'  as-path [ AS-SEQUENCE-ASN1 AS-SEQUENCE-ASN2 ]{ AS-SET-ASN3 };\n' \
+	'  as-path [ AS-SEQUENCE-ASN1 AS-SEQUENCE-ASN2 ( AS-SET-ASN3 )] ;\n' \
 	'  med 100;\n' \
 	'  local-preference 100;\n' \
 	'  atomic-aggregate;\n' \
@@ -239,7 +239,7 @@ class Configuration (object):
 		r = []
 		config = ''
 		for line in text:
-			replaced = line.strip().replace('\t',' ').replace(']',' ]').replace('[','[ ').lower()
+			replaced = line.strip().replace('\t',' ').replace(']',' ]').replace('[','[ ').replace(')',' )').replace('(','( ').lower()
 			config += line
 			if not replaced:
 				continue
@@ -1167,21 +1167,22 @@ class Configuration (object):
 						self._error = self._str_route_error
 						if self.debug: raise
 						return False
+					if asn == '(':
+						while True:
+							try:
+								asn = tokens.pop(0)
+							except IndexError:
+								self._error = self._str_route_error
+								if self.debug: raise
+								return False
+							if asn == ')':
+								break
+							as_set.append(self._newASN(asn))
+					if asn == ')':
+						continue
 					if asn == ']':
 						break
 					as_seq.append(self._newASN(asn))
-				if tokens and tokens[0] == '[':
-					asn = tokens.pop(0)
-					while True:
-						try:
-							asn = tokens.pop(0)
-						except IndexError:
-							self._error = self._str_route_error
-							if self.debug: raise
-							return False
-						if asn == ']':
-							break
-						as_set.append(self._newASN(asn))
 			else:
 				as_seq.append(self._newASN(asn))
 		except ValueError:

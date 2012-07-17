@@ -46,7 +46,7 @@ neighbor 1.2.3.4 {
 			atomic-aggregate;
 			route-distinguisher 30740:1001;
 			label [ 16 ];
-			as-path [ 1 2 3 4 5 ]< 6 >;
+			as-path [ 1 2 3 4 5 ( 6 )];
 		}
 		route 82.219.0.0/16 {
 			label [ 12345 5678 ];
@@ -54,7 +54,7 @@ neighbor 1.2.3.4 {
 			path-information 17.34.51.68;
 			next-hop 127.0.0.1;
 			origin igp;
-			as-path [ 30740 30740 30740 30740 30740 30740 30740 ] [ 30740 ];
+			as-path [ 30740 30740 30740 30740 30740 30740 30740 ( 30740 ) ];
 			local-preference 1;
 			med 2000;
 			community [ no-export ];

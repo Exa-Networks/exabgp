@@ -21,3 +21,4 @@ MEMO
 - group routes generated to be nicer on the router CPU.
 - do we really need to remove a route before re-announcing it or can we just "overwrite" it
 - if we define the same route twice we will send a withdraw before the announce .. 
+- handle ^C during configuration reload gracefully

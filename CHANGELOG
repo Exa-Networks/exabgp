@@ -8,11 +8,13 @@ Version 3.0.3 - xx of July 2012 (unreleased experimental version)
  * Fix: on peer close, do not carry untransmitted routes through the next cycle
  * Fix: on peer reload make sure all the routes are re-announced
  * Fix: massive CPU saving - only check for new route to announce when we have some
- * Improvement: on corner case networking
- * Improvement: in the way we store route in memory
+ * Fix: route buffering when sending many routes over slow connection/to slow routers was broken
+    reported by Simon Woodhead (thank you for the testbed to debug it)
+ * Improvement: in the way we store route in memory for the route delta on config change
  * Improvement: better reporting of message buffering
+ * CHANGE: The way the routes as-path is printed/parsed (final for the 3.x.x)
 
-Version 3.0.2 - 17 of July 2012 (unreleased experimental version)
+Version 3.0.2 - 16 of July 2012 (unreleased experimental version)
  * CHANGE: python2.4 may work but it not supported anymore
  * Fix: as-path decoding issue with as-set being eaten (full rewrite of ASPATH and ASN4 parsing)
     reported by Rishabh Goel
