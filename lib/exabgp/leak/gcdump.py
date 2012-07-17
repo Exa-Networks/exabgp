@@ -36,7 +36,7 @@ class tmp(object):
         a = 0
 
 if __name__=="__main__":
-    import gc
+ import gc
     gc.enable()
     gc.set_debug(gc.DEBUG_LEAK)
 

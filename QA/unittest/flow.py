@@ -9,9 +9,9 @@ Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 
 import unittest
 
-from exabgp.message.update.flow import *
+from exabgp.bgp.message.update.flow import *
 from exabgp.protocol.ip.inet import *
-from exabgp.message.update.attribute.communities import *
+from exabgp.bgp.message.update.attribute.communities import *
 
 
 class TestFlow (unittest.TestCase):

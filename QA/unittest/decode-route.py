@@ -192,9 +192,9 @@ body = [
 route = header + body
 
 from StringIO import StringIO
-from exabgp.network.protocol import Protocol
-from exabgp.network.peer import Peer
-from exabgp.structure.neighbor import Neighbor
+from exabgp.bgp.protocol import Protocol
+from exabgp.bgp.peer import Peer
+from exabgp.bgp.neighbor import Neighbor
 
 class Connection (StringIO):
 	def pending (self,**argv):

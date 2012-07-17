@@ -9,7 +9,7 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 
 import unittest
 from exabgp.structure.configuration import Configuration
-from exabgp.structure.supervisor    import Supervisor
+from exabgp.structure.supervisor import Supervisor
 
 class TestPeer (unittest.TestCase):
 	text_configuration = """\

@@ -10,8 +10,8 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 import unittest
 import time
 
-from exabgp.message.update import Route
-from exabgp.rib.table      import Table
+from exabgp.bgp.message.update import Route
+from exabgp.rib.table import Table
 
 route1 = Update(to_NLRI('10.0.0.1','32'))
 route1.next_hop = '10.0.0.254'

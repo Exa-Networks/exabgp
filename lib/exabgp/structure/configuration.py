@@ -13,31 +13,36 @@ from copy import deepcopy
 from struct import pack,unpack
 
 from exabgp.structure.environment import load
+from exabgp.structure.route import Route
 
 from exabgp.protocol.family import AFI,SAFI
-from exabgp.structure.route import Route
-from exabgp.structure.asn import ASN
-from exabgp.structure.neighbor import Neighbor
+
+from exabgp.bgp.neighbor import Neighbor
+
 from exabgp.protocol import NamedProtocol
 from exabgp.protocol.ip.inet import Inet,inet
 from exabgp.protocol.ip.icmp import NamedICMPType,NamedICMPCode
 from exabgp.protocol.ip.fragment import NamedFragment
 from exabgp.protocol.ip.tcp.flags import NamedTCPFlags
-from exabgp.message.open import HoldTime,RouterID
-from exabgp.message.update.nlri import NLRI,PathInfo,Labels,RouteDistinguisher
-from exabgp.message.update.flow import BinaryOperator,NumericOperator
-from exabgp.message.update.flow import Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
-from exabgp.message.update.attribute import AttributeID
-from exabgp.message.update.attribute.origin import Origin
-from exabgp.message.update.attribute.nexthop import NextHop
-from exabgp.message.update.attribute.aspath import ASPath
-from exabgp.message.update.attribute.med import MED
-from exabgp.message.update.attribute.localpref import LocalPreference
-from exabgp.message.update.attribute.atomicaggregate import AtomicAggregate
-from exabgp.message.update.attribute.aggregator import Aggregator
-from exabgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_RouteTargetCommunity_00,to_RouteTargetCommunity_01
-from exabgp.message.update.attribute.originatorid import OriginatorID
-from exabgp.message.update.attribute.clusterlist import ClusterList
+
+from exabgp.bgp.message.open.asn import ASN
+from exabgp.bgp.message.open.holdtime import HoldTime
+from exabgp.bgp.message.open.routerid import RouterID
+
+from exabgp.bgp.message.update.nlri import NLRI,PathInfo,Labels,RouteDistinguisher
+from exabgp.bgp.message.update.flow import BinaryOperator,NumericOperator,Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
+
+from exabgp.bgp.message.update.attribute import AttributeID
+from exabgp.bgp.message.update.attribute.origin import Origin
+from exabgp.bgp.message.update.attribute.nexthop import NextHop
+from exabgp.bgp.message.update.attribute.aspath import ASPath
+from exabgp.bgp.message.update.attribute.med import MED
+from exabgp.bgp.message.update.attribute.localpref import LocalPreference
+from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
+from exabgp.bgp.message.update.attribute.aggregator import Aggregator
+from exabgp.bgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_RouteTargetCommunity_00,to_RouteTargetCommunity_01
+from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
+from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 
 from exabgp.structure.log import Logger
 logger = Logger()
@@ -1755,12 +1760,15 @@ class Configuration (object):
 			with_path_info = False
 		
 		# self check to see if we can decode what we encode
-		from exabgp.structure.asn import ASN
-		from exabgp.structure.neighbor import Neighbor
-		from exabgp.network.peer import Peer
-		from exabgp.network.protocol import Protocol
-		from exabgp.message.update import Update
-		from exabgp.message.open import Open,Capabilities,UsePath
+		from exabgp.bgp.message.open.asn import ASN
+		from exabgp.bgp.neighbor import Neighbor
+		from exabgp.bgp.peer import Peer
+		from exabgp.bgp.protocol import Protocol
+		from exabgp.bgp.message.update import Update
+		from exabgp.bgp.message.open import Open
+		from exabgp.bgp.message.open.capability import Capabilities
+		from exabgp.bgp.message.open.capability.addpath import UsePath
+		from exabgp.bgp.message.open.capability.id import CapabilityID
 
 		n = Neighbor()
 		n.local_as = ASN(30740)
@@ -1771,7 +1779,7 @@ class Configuration (object):
 			if with_path_info:
 				path[f] = 3
 		if with_path_info:
-			capa[Capabilities.ADD_PATH] = path
+			capa[CapabilityID.ADD_PATH] = path
 
 		o1 = Open(4,3074000,'127.0.0.1',capa,180)
 		o2 = Open(4,30740,'127.0.0.1',capa,180)

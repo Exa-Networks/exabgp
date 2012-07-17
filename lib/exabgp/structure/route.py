@@ -7,7 +7,7 @@ Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 """
 
 from exabgp.protocol.ip.address import Address
-from exabgp.message.update.attribute.attributes import Attributes
+from exabgp.bgp.message.update.attribute.attributes import Attributes
 
 # This class must be separated from the wire representation of a Route
 # =================================================================== Route

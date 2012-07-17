@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2009-11-07.
 Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
-from exabgp.message.update import Update
+from exabgp.bgp.message.update import Update
 
 from exabgp.structure.log import Logger
 logger = Logger()

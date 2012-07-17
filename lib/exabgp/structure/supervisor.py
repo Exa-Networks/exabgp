@@ -16,8 +16,8 @@ from exabgp.version import version
 from exabgp.structure.daemon import Daemon
 from exabgp.structure.processes import Processes,ProcessError
 from exabgp.structure.configuration import Configuration
-from exabgp.network.peer import Peer
-from exabgp.network.connection import errno_block
+from exabgp.bgp.peer import Peer
+from exabgp.bgp.connection import errno_block
 
 from exabgp.structure.log import Logger
 logger = Logger()
