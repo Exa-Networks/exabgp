@@ -3,7 +3,7 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
-Version 3.0.4 - xx of July 2012 (unreleased experimental version)
+Version 3.0.4 - xx of July 2012
  * Fix: FlowSpec API change update forgotten
  * Fix: Provide the right user to -fi when upgrading on Debian
 
