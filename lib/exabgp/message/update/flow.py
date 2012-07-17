@@ -199,11 +199,17 @@ class Fragment (IOperationByteShort,NumericString):
 
 # ..........................................................
 
+class _FakeRouterDistinguisher (object):
+	rd = ''
+
+_FakeRD = _FakeRouterDistinguisher()
+
 class FlowNLRI (Attributes,Address):
 	def __init__ (self,afi,safi):
 		Attributes.__init__(self)
 		Address.__init__(self,afi,safi)
 		self.rules = {}
+		self.rd = _FakeRD
 
 	def add_and (self,rule):
 		ID = rule.ID
