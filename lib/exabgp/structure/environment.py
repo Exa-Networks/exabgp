@@ -396,9 +396,15 @@ def _compatibility (env):
 	if pid:
 		env.deamon.pid = pid
 
-	user = os.environ.get('USER','')
-	if user and user != 'root' and user != os.environ.get('LOGNAME','') and env.daemon.user == 'nobody':
-		env.daemon.user = user
+	import pwd
+
+	try:
+		me = pwd.getpwuid(os.getuid()).pw_name
+		user = os.environ.get('USER','')
+		if user and user != 'root' and user != me and env.daemon.user == 'nobody':
+			env.daemon.user = user
+	except KeyError:
+		pass
 
 	daemon = os.environ.get('DAEMONIZE','').lower() in ['1','yes']
 	if daemon:
