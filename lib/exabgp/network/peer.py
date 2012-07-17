@@ -54,7 +54,7 @@ class Peer (object):
 		self._reset_skip()
 
 		# We want to clear the buffer of unsent routes
-		self._clear_routes_buffer = False
+		self._clear_routes_buffer = None
 
 		# We have routes following a reload (or we just started)
 		self._have_routes = True
@@ -134,6 +134,9 @@ class Peer (object):
 			self.bgp.connect()
 
 			self._reset_skip()
+
+			# The reload() function is called before we get it and it will set this value we do not want on startup
+			self._clear_routes_buffer = False
 
 			#
 			# SEND OPEN
