@@ -392,7 +392,6 @@ class Peer (object):
 			except Failure:
 				pass
 			try:
-				self.bgp.clear_buffer()
 				self.bgp.close('notification sent (%d,%d) [%s] %s' % (e.code,e.subcode,str(e),e.data))
 			except Failure:
 				pass
