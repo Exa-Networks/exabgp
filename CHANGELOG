@@ -4,7 +4,7 @@ Version explained:
  bug   : increase on bug or incremental changes
 
 Version 3.0.4 - xx of July 2012 (unreleased experimental version)
- * Fix: did not update FlowSpec in 3.0.3 to work with the new Delta API (issue when you have no box to test)
+ * Fix: FlowSpec API change update forgotten
  * Fix: TODO - get the right user when upgrading with Debian Package
 
 Version 3.0.3 - 17 of July 2012 (unreleased experimental version)

@@ -199,17 +199,11 @@ class Fragment (IOperationByteShort,NumericString):
 
 # ..........................................................
 
-class _FakeRouterDistinguisher (object):
-	rd = ''
-
-_FakeRD = _FakeRouterDistinguisher()
-
 class FlowNLRI (Attributes,Address):
 	def __init__ (self,afi,safi):
 		Attributes.__init__(self)
 		Address.__init__(self,afi,safi)
 		self.rules = {}
-		self.rd = _FakeRD
 
 	def add_and (self,rule):
 		ID = rule.ID
@@ -275,11 +269,24 @@ class FlowNLRI (Attributes,Address):
 		return ' '.join(string)
 
 
+def _next_index ():
+	value = 0
+	while True:
+		yield str(value)
+		value += 1
+
+next_index = _next_index()
+
+
 class Flow (object):
 	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ipv4):
 		self.attributes = Attributes()
 		self.nlri = FlowNLRI(afi,safi)
 		self.attributes[AttributeID.EXTENDED_COMMUNITY] = ECommunities()
+		self.packed = next_index.next()
+
+	def index (self):
+		return self.packed
 
 	def add_and (self,rule):
 		return self.nlri.add_and(rule)

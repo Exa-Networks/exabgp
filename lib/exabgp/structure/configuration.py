@@ -556,7 +556,7 @@ class Configuration (object):
 			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
 		elif safi == 'mpls-vpn':
 			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.mpls_vpn)))
-		elif safi == 'flow-vpnv4':
+		elif safi in ('flow-vpnv4','flow'):
 			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.flow_ipv4)))
 		else:
 			return False
