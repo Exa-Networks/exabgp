@@ -54,7 +54,7 @@ class Peer (object):
 		self._reset_skip()
 
 		# We want to clear the buffer of unsent routes
-		self._clear_routes_buffer = True
+		self._clear_routes_buffer = False
 
 		# We have routes following a reload (or we just started)
 		self._have_routes = True
@@ -92,6 +92,7 @@ class Peer (object):
 	def reload (self,routes):
 		self.neighbor.set_routes(routes)
 		self._have_routes = True
+		self._clear_routes_buffer = True
 		self._reset_skip()
 
 	def restart (self,restart_neighbor=None):
