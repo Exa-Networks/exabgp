@@ -419,13 +419,11 @@ class Protocol (object):
 						logger.message(self.me('>> %d %s(s)' % (number,name)))
 						yield number
 					else:
+						logger.message(self.me('|| could not send %d  %s(s), buffering it' % (number,name)))
+						self._messages.append((number,name,update))
 						sending = False
 				else:
-					logger.message(self.me('|| could not send %d  %s(s), buffering it' % (number,name)))
-					self._messages.append((number,name,update))
-					yield 0
-				else:
-					logger.message(self.me('|| could not send %d  %s(s), buffering it' % (number,name)))
+					logger.message(self.me('|| buffering the rest of the %s(s) (%d)' % (name,number)))
 					self._messages.append((number,name,update))
 					yield 0
 
