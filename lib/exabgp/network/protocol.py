@@ -358,6 +358,7 @@ class Protocol (object):
 		return self.connection.write(notification.message())
 
 	def clear_buffer (self):
+		logger.message(self.me('clearing MESSAGE(s) buffer'))
 		self._messages = []
 
 	def buffered (self):
@@ -406,18 +407,25 @@ class Protocol (object):
 			for number,update in chunked(generator,self.message_size-19):
 					logger.message(self.me('|| adding %d  %s(s) to existing buffer' % (number,name)))
 					self._messages.append((number,name,update))
-			logger.message(self.me('-------------------------------------------------'))
 			for number in self._backlog():
 				logger.message(self.me('>> %d buffered %s(s)' % (number,name)))
 				yield number
 		else:
+			sending = True
 			# The message size is the whole BGP message INCLUDING headers !
 			for number,update in chunked(generator,self.message_size-19):
-				if not self.connection.write(update):
-					logger.message(self.me('>> %d %s(s)' % (number,name)))
-					yield number
+				if sending:
+					if self.connection.write(update):
+						logger.message(self.me('>> %d %s(s)' % (number,name)))
+						yield number
+					else:
+						sending = False
 				else:
-					logger.message(self.me('|| could not send %d  %s(s), adding them to the buffer' % (number,name)))
+					logger.message(self.me('|| could not send %d  %s(s), buffering it' % (number,name)))
+					self._messages.append((number,name,update))
+					yield 0
+				else:
+					logger.message(self.me('|| could not send %d  %s(s), buffering it' % (number,name)))
 					self._messages.append((number,name,update))
 					yield 0
 
