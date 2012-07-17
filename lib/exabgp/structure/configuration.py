@@ -648,8 +648,14 @@ class Configuration (object):
 
 		logger.configuration("\nPeer configuration complete :")
 		for _key in scope[-1].keys():
-			for _line in pformat(scope[-1][_key],3,3,3).split('\n'):
-				logger.configuration("   %s: %s" %(_key,_line))
+			stored = scope[-1][_key]
+			if hasattr(stored,'__iter__'):
+				for category in scope[-1][_key]:
+					for _line in pformat(str(category),3,3,3).split('\n'):
+						logger.configuration("   %s: %s" %(_key,_line))
+			else:
+				for _line in pformat(str(stored),3,3,3).split('\n'):
+					logger.configuration("   %s: %s" %(_key,_line))
 		logger.configuration("\n")
 
 		neighbor = Neighbor()
