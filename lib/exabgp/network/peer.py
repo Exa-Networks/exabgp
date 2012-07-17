@@ -338,7 +338,7 @@ class Peer (object):
 
 				if self._have_routes:
 					self._have_routes = False
-					logger.message(self.me('CHECKING FOR NEW ROUTES'))
+					logger.message(self.me('checking for new routes to send'))
 				
 					for count in self.bgp.new_update():
 						yield True

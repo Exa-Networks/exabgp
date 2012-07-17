@@ -365,27 +365,25 @@ class Protocol (object):
 
 	def _backlog (self):
 		# performance only to remove inference
-		backlog = self._messages
-		if backlog:
+		if self._messages:
 			if not self._frozen:
 				self._frozen = time.time()
 			if self._frozen and self._frozen + (self.hold_time) < time.time():
 				raise Failure('peer %s not reading on socket - killing session' % self.neighbor.peer_as)
 			logger.message(self.me("unable to send route for %d second (maximum allowed %d)" % (time.time()-self._frozen,self.hold_time)))
-			nb_backlog = len(backlog)
+			nb_backlog = len(self._messages)
 			if nb_backlog > MAX_BACKLOG:
 				raise Failure('over %d chunked routes buffered for peer %s - killing session' % (MAX_BACKLOG,self.neighbor.peer_as))
-			logger.message(self.me("backlog of %d/%d chunked routes" % (nb_backlog,MAX_BACKLOG)))
-		while backlog:
-			number,name,update = backlog[0]
-			written = self.connection.write(update)
-			if not written:
+			logger.message(self.me("self._messages of %d/%d chunked routes" % (nb_backlog,MAX_BACKLOG)))
+		while self._messages:
+			number,name,update = self._messages[0]
+			if not self.connection.write(update):
+				logger.message(self.me("|| failed to send %d %s(s) from buffer" % (number,name)))
 				break
 			logger.message(self.me(">> %d %s(s) sent from buffer" % (number,name)))
-			backlog.pop(0)
+			self._messages.pop(0)
 			self._frozen = 0
 			yield number
-		self._messages = backlog
 
 	def _announce (self,name,generator):
 		def chunked (generator,size):
@@ -404,38 +402,30 @@ class Protocol (object):
 			if chunk:
 				yield number,chunk
 
-		# The message size is the whole BGP message INCLUDING headers !
-		for number,update in chunked(generator,self.message_size-19):
-			if self._messages:
-				logger.message(self.me('|| adding %d  %s(s) to existing buffer' % (number,name)))
-				self._messages.append((number,name,update))
-				continue
-			written = self.connection.write(update)
-			if not written:
-				logger.message(self.me('|| could not send %d  %s(s), adding them to the buffer' % (number,name)))
-				self._messages.append((number,name,update))
-			else:
-				logger.message(self.me('>> %d %s(s)' % (number,name)))
-			yield number
-
-#	def new_announce (self):
-#		# we can not have any backlog as we are starting
-#		# XXX: This should really be calculated once only
-#		asn4 = not not self.peer.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
-#		for answer in self._announce('UPDATE',self._delta.updates(asn4,self.neighbor.local_as,self.neighbor.peer_as,self.use_path)):
-#			yield answer
+		if self._messages:
+			# The message size is the whole BGP message INCLUDING headers !
+			for number,update in chunked(generator,self.message_size-19):
+					logger.message(self.me('|| adding %d  %s(s) to existing buffer' % (number,name)))
+					self._messages.append((number,name,update))
+			for number in self._backlog():
+				yield number
+		else:
+			# The message size is the whole BGP message INCLUDING headers !
+			for number,update in chunked(generator,self.message_size-19):
+				if not self.connection.write(update):
+					logger.message(self.me('|| could not send %d  %s(s), adding them to the buffer' % (number,name)))
+					self._messages.append((number,name,update))
+				else:
+					logger.message(self.me('>> %d %s(s)' % (number,name)))
+					yield number
 
 	def new_update (self):
-		for number in self._backlog():
-			yield number
 		# XXX: This should really be calculated once only
 		asn4 = not not self.peer.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN)
 		for number in self._announce('UPDATE',self._delta.updates(asn4,self.neighbor.local_as,self.neighbor.peer_as,self.use_path)):
 			yield number
 
 	def new_eors (self,families):
-		for number in self._backlog():
-			pass
 		eor = EOR()
 		eors = eor.eors(families)
 		for answer in self._announce('EOR',eors):
