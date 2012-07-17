@@ -1,7 +1,7 @@
 Version explained:
- major : codebase
- minor : increase on new features
- bug   : increase on bug fixes
+ major : codebase increase on incompatible changes
+ minor : increase on risk of code breakage during a major release
+ bug   : increase on bug or incremental changes
 
 Version 3.0.3 - xx of July 2012 (unreleased experimental version)
  * Fix: bug in ASN4 path reconstruction

@@ -338,7 +338,7 @@ class Protocol (object):
 		if force:
 			written = self.connection.write(k.message())
 			if not written:
-				logger.message(self.me("|| KEEPALIVE buffered"))
+				logger.message(self.me('|| buffer not yet empty, adding KEEPALIVE to it'))
 				self._messages.append(('KEEPALIVE',m))
 			else:
 				self._frozen = 0
@@ -346,7 +346,7 @@ class Protocol (object):
 		if left <= 0:
 			written = self.connection.write(k.message())
 			if not written:
-				logger.message(self.me("|| KEEPALIVE buffered"))
+				logger.message(self.me('|| could not send KEEPALIVE, buffering it'))
 				self._messages.append(('KEEPALIVE',m))
 			else:
 				self._frozen = 0
@@ -382,7 +382,7 @@ class Protocol (object):
 			written = self.connection.write(update)
 			if not written:
 				break
-			logger.message(self.me("|| %s debuffered" % name))
+			logger.message(self.me(">> %s from buffer" % name))
 			backlog.pop(0)
 			self._frozen = 0
 			yield count
@@ -409,12 +409,12 @@ class Protocol (object):
 		for update in chunked(generator,self.message_size-19):
 			count += 1
 			if self._messages:
-				logger.message(self.me(">> %s could not be sent, some messages are still in the buffer" % name))
+				logger.message(self.me('|| buffer not yet empty, adding %s to it' % name))
 				self._messages.append((name,update))
 				continue
 			written = self.connection.write(update)
 			if not written:
-				logger.message(self.me(">> %s buffered" % name))
+				logger.message(self.me('|| could not send %s, buffering it' % name))
 				self._messages.append((name,update))
 			yield count
 
