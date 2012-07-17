@@ -393,30 +393,31 @@ class Protocol (object):
 	def _announce (self,name,generator):
 		def chunked (generator,size):
 			chunk = ''
+			number = 0
 			for data in generator:
 				if len(data) > size:
 					raise Failure('Can not send BGP update larger than %d bytes on this connection.' % size)
 				if len(chunk) + len(data) <= size:
 					chunk += data
+					number += 1
 					continue
-				yield chunk
+				yield number,chunk
 				chunk = data
+				number = 1
 			if chunk:
-				yield chunk
+				yield number,chunk
 
-		count = 0
 		# The message size is the whole BGP message INCLUDING headers !
-		for update in chunked(generator,self.message_size-19):
-			count += 1
+		for number,update in chunked(generator,self.message_size-19):
 			if self._messages:
-				logger.message(self.me('|| buffer not yet empty, adding %s to it' % name))
+				logger.message(self.me('|| buffer not yet empty, adding %d MESSAGE(s) to it' % number))
 				self._messages.append((name,update))
 				continue
 			written = self.connection.write(update)
 			if not written:
-				logger.message(self.me('|| could not send %s, buffering it' % name))
+				logger.message(self.me('|| could not send MESSAGE(S), buffering it/them'))
 				self._messages.append((name,update))
-			yield count
+			yield number
 
 #	def new_announce (self):
 #		# we can not have any backlog as we are starting
