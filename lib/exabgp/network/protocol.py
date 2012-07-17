@@ -46,7 +46,8 @@ from exabgp.structure.processes  import ProcessError
 from exabgp.structure.log import Logger,LazyFormat
 logger = Logger()
 
-MAX_BACKLOG = 200000
+# This is the number of chuncked message we are willing to buffer, not the number of routes
+MAX_BACKLOG = 15000
 
 # Generate an NLRI from a BGP packet receive
 def BGPNLRI (afi,safi,bgp,has_multiple_path):
@@ -339,7 +340,7 @@ class Protocol (object):
 			written = self.connection.write(k.message())
 			if not written:
 				logger.message(self.me('|| buffer not yet empty, adding KEEPALIVE to it'))
-				self._messages.append(('KEEPALIVE',m))
+				self._messages.append((1,'KEEPALIVE',m))
 			else:
 				self._frozen = 0
 			return left,k
@@ -347,7 +348,7 @@ class Protocol (object):
 			written = self.connection.write(k.message())
 			if not written:
 				logger.message(self.me('|| could not send KEEPALIVE, buffering it'))
-				self._messages.append(('KEEPALIVE',m))
+				self._messages.append((1,'KEEPALIVE',m))
 			else:
 				self._frozen = 0
 			return left,k
@@ -362,7 +363,7 @@ class Protocol (object):
 	def buffered (self):
 		return len(self._messages)
 
-	def _backlog (self,maximum=0):
+	def _backlog (self):
 		# performance only to remove inference
 		backlog = self._messages
 		if backlog:
@@ -373,21 +374,17 @@ class Protocol (object):
 			logger.message(self.me("unable to send route for %d second (maximum allowed %d)" % (time.time()-self._frozen,self.hold_time)))
 			nb_backlog = len(backlog)
 			if nb_backlog > MAX_BACKLOG:
-				raise Failure('over %d routes buffered for peer %s - killing session' % (MAX_BACKLOG,self.neighbor.peer_as))
-			logger.message(self.me("backlog of %d/%d routes" % (nb_backlog,MAX_BACKLOG)))
-		count = 0
+				raise Failure('over %d chunked routes buffered for peer %s - killing session' % (MAX_BACKLOG,self.neighbor.peer_as))
+			logger.message(self.me("backlog of %d/%d chunked routes" % (nb_backlog,MAX_BACKLOG)))
 		while backlog:
-			count += 1
-			name,update = backlog[0]
+			number,name,update = backlog[0]
 			written = self.connection.write(update)
 			if not written:
 				break
-			logger.message(self.me(">> %s from buffer" % name))
+			logger.message(self.me(">> %s(s) sent from buffer" % (number,name)))
 			backlog.pop(0)
 			self._frozen = 0
-			yield count
-			if maximum and count >= maximum:
-				break
+			yield number
 		self._messages = backlog
 
 	def _announce (self,name,generator):
@@ -411,12 +408,12 @@ class Protocol (object):
 		for number,update in chunked(generator,self.message_size-19):
 			if self._messages:
 				logger.message(self.me('|| buffer not yet empty, adding %d MESSAGE(s) to it' % number))
-				self._messages.append((name,update))
+				self._messages.append((number,name,update))
 				continue
 			written = self.connection.write(update)
 			if not written:
 				logger.message(self.me('|| could not send MESSAGE(S), buffering it/them'))
-				self._messages.append((name,update))
+				self._messages.append((number,name,update))
 			yield number
 
 #	def new_announce (self):

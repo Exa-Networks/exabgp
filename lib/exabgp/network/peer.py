@@ -219,11 +219,9 @@ class Peer (object):
 			# Dict with for each AFI/SAFI pair if we should announce ADDPATH Path Identifier
 			self.bgp.use_path = UsePath(_open,self.open)
 
-			count = 0
 			for count in self.bgp.new_update():
-				yield True
-			if count:
 				logger.message(self.me('>> %d UPDATE(s)' % count))
+				yield True
 
 			if self.bgp.families:
 				self.bgp.new_eors(self.bgp.families)
