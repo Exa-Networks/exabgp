@@ -306,6 +306,7 @@ class Protocol (object):
 #				afi,safi = family
 #				raise Notify(2,0,'Peers does not speak %s %s' % (afi,safi))
 
+		logger.message(self.me('<< %s' % message))
 		return message
 
 	def read_keepalive (self):
@@ -314,6 +315,7 @@ class Protocol (object):
 			return message
 		if message.TYPE != KeepAlive.TYPE:
 			raise Notify(5,2)
+		logger.message(self.me('<< KEEPALIVE (ESTABLISHED)'))
 		return message
 
 	# Sending message to peer .................................................
@@ -330,9 +332,10 @@ class Protocol (object):
 
 		if not self.connection.write(o.message()):
 			raise Failure('Could not send open')
+		logger.message(self.me('>> %s' % o))
 		return o
 
-	def new_keepalive (self,force=False):
+	def new_keepalive (self,force=None):
 		left = int(self.connection.last_write + self.hold_time.keepalive() - time.time())
 		k = KeepAlive()
 		m = k.message()
@@ -343,6 +346,10 @@ class Protocol (object):
 				self._messages.append((1,'KEEPALIVE',m))
 			else:
 				self._frozen = 0
+				if force == True:
+					logger.message(self.me('>> KEEPALIVE (OPENCONFIRM)'))
+				elif force == False:
+					logger.message(self.me('>> KEEPALIVE (no more UPDATE and no EOR)'))
 			return left,k
 		if left <= 0:
 			written = self.connection.write(k.message())
@@ -350,6 +357,7 @@ class Protocol (object):
 				logger.message(self.me('|| could not send KEEPALIVE, buffering'))
 				self._messages.append((1,'KEEPALIVE',m))
 			else:
+				logger.message(self.me('>> KEEPALIVE'))
 				self._frozen = 0
 			return left,k
 		return left,None
@@ -436,7 +444,7 @@ class Protocol (object):
 	def new_eors (self,families):
 		eor = EOR()
 		eors = eor.eors(families)
-		for answer in self._announce('EOR',eors):
+		for answer in self._announce('EOR %s' % ', '.join(['%s %s' % (str(afi),str(safi)) for (afi,safi) in families]),eors):
 			pass
 
 	# Message Factory .................................................

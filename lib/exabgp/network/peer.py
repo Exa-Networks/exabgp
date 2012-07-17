@@ -139,7 +139,6 @@ class Peer (object):
 			#
 
 			_open = self.bgp.new_open(self._restarted,self._asn4)
-			logger.message(self.me('>> %s' % _open))
 			yield None
 
 			#
@@ -150,13 +149,12 @@ class Peer (object):
 			while True:
 				self.open = self.bgp.read_open(_open,self.neighbor.peer_address.ip)
 				if time.time() - start > max_wait_open:
-					logger.error(self.me('Waited for an OPEN for too long - killing the session'),'message')
+					logger.error(self.me('Waited for an OPEN for too long - killing the session'),'supervisor')
 					raise Notify(1,1,'The client took over %s seconds to send the OPEN, closing' % str(max_wait_open))
 				# OPEN or NOP
 				if self.open.TYPE == NOP.TYPE:
 					yield None
 					continue
-				logger.message(self.me('<< %s' % self.open))
 				if not self.open.capabilities.announced(Capabilities.FOUR_BYTES_ASN) and _open.asn.asn4():
 					self._asn4 = False
 					raise Notify(2,0,'peer does not speak ASN4 - restarting in compatibility mode')
@@ -180,8 +178,7 @@ class Peer (object):
 			# SEND KEEPALIVE
 			#
 
-			message = self.bgp.new_keepalive(force=True)
-			logger.message(self.me('>> KEEPALIVE (OPENCONFIRM)'))
+			message = self.bgp.new_keepalive(True)
 			yield True
 
 			#
@@ -192,7 +189,6 @@ class Peer (object):
 				message = self.bgp.read_keepalive()
 				# KEEPALIVE or NOP
 				if message.TYPE == KeepAlive.TYPE:
-					logger.message(self.me('<< KEEPALIVE (ESTABLISHED)'))
 					break
 				yield None
 
@@ -224,13 +220,11 @@ class Peer (object):
 
 			if self.bgp.families:
 				self.bgp.new_eors(self.bgp.families)
-				logger.message(self.me('>> EOR %s' % ', '.join(['%s %s' % (str(afi),str(safi)) for (afi,safi) in self.bgp.families])))
 			else:
 				# If we are not sending an EOR, send a keepalive as soon as when finished
 				# So the other routers knows that we have no (more) routes to send ...
 				# (is that behaviour documented somewhere ??)
 				c,k = self.bgp.new_keepalive(True)
-				if k: logger.message(self.me('>> KEEPALIVE (no more UPDATE and no EOR)'))
 
 			#
 			# MAIN UPDATE LOOP
@@ -256,8 +250,7 @@ class Peer (object):
 				# SEND KEEPALIVES
 				#
 
-				c,k = self.bgp.new_keepalive()
-				if k: logger.message(self.me('>> KEEPALIVE'))
+				c,k = self.bgp.new_keepalive(False)
 
 				if display_update:
 					logger.timers(self.me('Sending Timer %d second(s) left' % c))
@@ -326,8 +319,7 @@ class Peer (object):
 
 				nb_pending = self.bgp.buffered()
 				if nb_pending:
-					logger.message(self.me('BUFFERED MESSAGES  (%d)' % self._updates))
-					print self.bgp._messages
+					logger.supervisor(self.me('BUFFERED MESSAGES  (%d)' % nb_pending))
 					count = 0
 
 				#
@@ -338,7 +330,7 @@ class Peer (object):
 
 				if self._have_routes:
 					self._have_routes = False
-					logger.message(self.me('checking for new routes to send'))
+					logger.supervisor(self.me('checking for new routes to send'))
 				
 					for count in self.bgp.new_update():
 						yield True
@@ -360,7 +352,7 @@ class Peer (object):
 			#
 
 			if self.neighbor.graceful_restart and self.open.capabilities.announced(Capabilities.GRACEFUL_RESTART):
-				logger.error('Closing the connection without notification','network')
+				logger.error('Closing the connection without notification','supervisor')
 				self.bgp.close('graceful restarted negociated, closing without sending any notification')
 				return
 
@@ -375,7 +367,7 @@ class Peer (object):
 		#
 
 		except NotConnected, e:
-			logger.error('we can not connect to the peer %s' % str(e),'network')
+			logger.error('we can not connect to the peer %s' % str(e),'supervisor')
 			self._more_skip()
 			self.bgp.clear_buffer()
 			try:
@@ -389,7 +381,7 @@ class Peer (object):
 		#
 
 		except Notify,e:
-			logger.error(self.me('Sending Notification (%d,%d) to peer [%s] %s' % (e.code,e.subcode,str(e),e.data)),'network')
+			logger.error(self.me('Sending Notification (%d,%d) to peer [%s] %s' % (e.code,e.subcode,str(e),e.data)),'supervisor')
 			self.bgp.clear_buffer()
 			try:
 				self.bgp.new_notification(e)
@@ -407,7 +399,7 @@ class Peer (object):
 		#
 
 		except Notification, e:
-			logger.error(self.me('Received Notification (%d,%d) %s' % (e.code,e.subcode,str(e))),'network')
+			logger.error(self.me('Received Notification (%d,%d) %s' % (e.code,e.subcode,str(e))),'supervisor')
 			self.bgp.clear_buffer()
 			try:
 				self.bgp.close('notification received (%d,%d) %s' % (e.code,e.subcode,str(e)))
@@ -420,7 +412,7 @@ class Peer (object):
 		#
 
 		except Failure, e:
-			logger.error(self.me(str(e)),'network')
+			logger.error(self.me(str(e)),'supervisor')
 			self._more_skip()
 			self.bgp.clear_buffer()
 			try:
@@ -434,7 +426,7 @@ class Peer (object):
 		#
 
 		except Exception, e:
-			logger.error(self.me('UNHANDLED EXCEPTION'),'network')
+			logger.error(self.me('UNHANDLED EXCEPTION'),'supervisor')
 			self._more_skip()
 			self.bgp.clear_buffer()
 			if self.debug_trace:
@@ -442,7 +434,7 @@ class Peer (object):
 				traceback.print_exc(file=sys.stdout)
 				raise
 			else:
-				logger.error(self.me(str(e)),'network')
+				logger.error(self.me(str(e)),'supervisor')
 			if self.bgp: self.bgp.close('internal problem %s' % str(e))
 			return
 
