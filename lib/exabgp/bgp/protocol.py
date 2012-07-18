@@ -165,9 +165,9 @@ class Protocol (object):
 
 		if msg == Update.TYPE:
 			if self.neighbor.parse_routes:
-				routes = Update().factory(self._asn4,self.neighbor.families(),self.use_path,data)
-				if routes:
-					return Update().new(routes)
+				update = Update().factory(self._asn4,self.neighbor.families(),self.use_path,data)
+				if update.routes:
+					return update
 				return NOP('')
 
 		if self.strict:
