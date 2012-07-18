@@ -176,6 +176,13 @@ class Configuration (object):
 	# Public Interface
 
 	def reload (self):
+		try:
+			return self._reload()
+		except KeyboardInterrupt:
+			self.error = 'configuration reload aborted by ^C or SIGINT'
+			return False
+
+	def _reload (self):
 		if self._text:
 			self._tokens = self._tokenise(self._fname.split('\n'))
 		else:

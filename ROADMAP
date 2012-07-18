@@ -4,7 +4,6 @@ ROADMAP
 
 Version 3.0
 - usual bug fixes and improvments (bugs ? which bugs ?)
-- handle ^C during configuration reload gracefully
 - move the generation of the route when the delta is done in an object with the peer info to display the route change in the log
 - use a cache for the object created in the configuration too
 - improve the Route objects API
