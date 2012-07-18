@@ -17,3 +17,5 @@ class NOP (Message):
 	def message (self):
 		return self._message(self.data)
 
+	def __str__ (self):
+		return "NOP"
