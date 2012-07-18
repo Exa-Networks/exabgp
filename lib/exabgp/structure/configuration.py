@@ -1814,11 +1814,12 @@ class Configuration (object):
 					logger.info('parsed    %s' % str1,'configuration') 
 					update = Update().new([route])
 					packed = update.announce(False,ASN(30740),ASN(30740),with_path_info)
-					# This does not take the BGP header - let's assume we will not break that :)
-					decoded = Update().factory(asn4,n._families,use_path,packed[19:])
-					str2 = str(decoded)
-					logger.info(str2,'configuration') 
-					logger.info('%s\n' % [hex(ord(_)) for _ in packed],'configuration') 
+					for pack in packed:
+						# This does not take the BGP header - let's assume we will not break that :)
+						decoded = Update().factory(asn4,n._families,use_path,pack[19:])
+						str2 = str(decoded)
+						logger.info(str2,'configuration') 
+						logger.info('%s\n' % [hex(ord(_)) for _ in pack],'configuration') 
 		import sys
 		sys.exit(0)
 
