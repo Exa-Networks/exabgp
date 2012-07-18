@@ -52,7 +52,8 @@ class Protocol (object):
 		self._asn4 = False
 		self._messages = []
 		self._frozen = 0
-		self.message_size = 4096
+		# The message size is the whole BGP message _without_ headers
+		self.message_size = 4096-19
 
 		# The holdtime / families negocicated between the two peers
 		self.hold_time = None
@@ -220,7 +221,7 @@ class Protocol (object):
 		if message.capabilities.announced(CapabilityID.EXTENDED_MESSAGE):
 			# untested !
 			if self.peer.bgp.message_size:
-				self.message_size = self.peer.bgp.message_size
+				self.message_size = self.peer.bgp.message_size - 19
 
 # README: This limit what we are announcing may cause some issue if you add new family and SIGHUP
 # README: So it is commented until I make my mind to add it or not (as Juniper complain about mismatch capabilities)
@@ -336,8 +337,7 @@ class Protocol (object):
 				yield number,chunk
 
 		if self._messages:
-			# The message size is the whole BGP message INCLUDING headers !
-			for number,update in chunked(generator,self.message_size-19):
+			for number,update in chunked(generator,self.message_size):
 					logger.message(self.me('|| adding %d  %s(s) to existing buffer' % (number,name)))
 					self._messages.append((number,name,update))
 			for number in self._backlog():
@@ -345,8 +345,7 @@ class Protocol (object):
 				yield number
 		else:
 			sending = True
-			# The message size is the whole BGP message INCLUDING headers !
-			for number,update in chunked(generator,self.message_size-19):
+			for number,update in chunked(generator,self.message_size):
 				if sending:
 					if self.connection.write(update):
 						logger.message(self.me('>> %d %s(s)' % (number,name)))
@@ -363,7 +362,7 @@ class Protocol (object):
 	def new_update (self):
 		# XXX: This should really be calculated once only
 		asn4 = not not self.peer.open.capabilities.announced(CapabilityID.FOUR_BYTES_ASN)
-		for number in self._announce('UPDATE',self._delta.updates(asn4,self.neighbor.local_as,self.neighbor.peer_as,self.use_path)):
+		for number in self._announce('UPDATE',self._delta.updates(asn4,self.neighbor.local_as,self.neighbor.peer_as,self.neighbor.group_updates,self.use_path,self.message_size)):
 			yield number
 
 	def new_eors (self,families):

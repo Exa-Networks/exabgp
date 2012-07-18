@@ -431,6 +431,7 @@ class Configuration (object):
 			if command == 'md5': return self._set_md5(scope,'md5',tokens[1:])
 			if command == 'ttl-security': return self._set_ttl(scope,'ttl-security',tokens[1:])
 			if command == 'multi-session': return self._set_multisession(scope,'multi-session',tokens[1:])
+			if command == 'group-updates': return self._set_group_updates(scope,'group-updates',tokens[1:])
 
 		elif name == 'family':
 			if command == 'inet': return self._set_family_inet4(scope,tokens[1:])
@@ -643,7 +644,7 @@ class Configuration (object):
 	def _multi_group (self,scope,address):
 		scope.append({})
 		while True:
-			r = self._dispatch(scope,'group',['static','flow','neighbor','process','family'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session'])
+			r = self._dispatch(scope,'group',['static','flow','neighbor','process','family'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates'])
 			if r is False:
 				return False
 			if r is None:
@@ -705,6 +706,7 @@ class Configuration (object):
 		neighbor.md5 = local_scope.get('md5',None)
 		neighbor.ttl = local_scope.get('ttl-security',None)
 		neighbor.multisession = local_scope.get('multi-session',False)
+		neighbor.group_updates = local_scope.get('group-updates',False)
 
 		missing = neighbor.missing()
 		if missing:
@@ -777,7 +779,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-		 	r = self._dispatch(scope,'neighbor',['static','flow','process','family'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session'])
+		 	r = self._dispatch(scope,'neighbor',['static','flow','process','family'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates'])
 			if r is False: return False
 			if r is None: return True
 
@@ -915,6 +917,10 @@ class Configuration (object):
 		return True
 
 	def _set_multisession (self,scope,command,value):
+		scope[-1][command] = True
+		return True
+
+	def _set_group_updates (self,scope,command,value):
 		scope[-1][command] = True
 		return True
 

@@ -9,7 +9,6 @@ Version 3.0
 - improve the Route objects API
 
 Version 3.1
-- group routes generated with same attributes to be nicer on the router CPU.
 - keep route grouping provided by the routers who sent them to us.
 
 
@@ -19,5 +18,5 @@ Helpers
 Notes
 - do we really need to remove a route before re-announcing it or can we just "overwrite" it
 - if we define the same route twice in the configuration we will/may send a withdraw before the announce .. 
-- UsePath should really be storing things ASN4, UsePath, etc. ie: open negociation
+- UsePath should really be storing things ASN4, UsePath, etc. ie: open negociation so it is one args to functions
 - Attributes / MultiAttributes API ?

@@ -28,7 +28,7 @@ class Update (Message):
 		return self
 
 	# The routes MUST have the same attributes ...
-	def announce (self,asn4,local_asn,remote_asn,with_path_info):
+	def announce (self,asn4,local_asn,remote_asn,with_path_info,msg_size=4077):
 		if self.afi == AFI.ipv4 and self.safi in [SAFI.unicast, SAFI.multicast]:
 			nlri = ''.join([route.nlri.pack(with_path_info) for route in self.routes])
 			mp = ''
@@ -36,9 +36,21 @@ class Update (Message):
 			nlri = ''
 			mp = MPRNLRI(self.routes).pack(with_path_info)
 		attr = self.routes[0].attributes.bgp_announce(asn4,local_asn,remote_asn)
-		return self._message(prefix('') + prefix(attr + mp) + nlri)
+		packed = self._message(prefix('') + prefix(attr + mp) + nlri)
+		if len(packed) > msg_size:
+			routes = self.routes
+			left = self.routes[:len(self.routes)/2]
+			right = self.routes[len(self.routes)/2:]
+			packed = []
+			self.routes = left
+			packed.extend(self.announce(asn4,local_asn,remote_asn,with_path_info,msg_size))
+			self.routes = right
+			packed.extend(self.announce(asn4,local_asn,remote_asn,with_path_info,msg_size))
+			self.routes = routes
+			return packed
+		return [packed]
 
-	def update (self,asn4,local_asn,remote_asn,with_path_info):
+	def update (self,asn4,local_asn,remote_asn,with_path_info,msg_size=4077):
 		if self.afi == AFI.ipv4 and self.safi in [SAFI.unicast, SAFI.multicast]:
 			nlri = ''.join([route.nlri.pack(with_path_info) for route in self.routes])
 			mp = ''
@@ -46,10 +58,22 @@ class Update (Message):
 			nlri = ''
 			mp = MPURNLRI(self.routes).pack(with_path_info) + MPRNLRI(self.routes).pack(with_path_info)
 		attr = self.routes[0].attributes.bgp_announce(asn4,local_asn,remote_asn)
-		return self._message(prefix(nlri) + prefix(attr + mp) + nlri)
+		packed = self._message(prefix(nlri) + prefix(attr + mp) + nlri)
+		if len(packed) > msg_size:
+			routes = self.routes
+			left = self.routes[:len(self.routes)/2]
+			right = self.routes[len(self.routes)/2:]
+			packed = []
+			self.routes = left
+			packed.extend(self.update(asn4,local_asn,remote_asn,with_path_info,msg_size))
+			self.routes = right
+			packed.extend(self.update(asn4,local_asn,remote_asn,with_path_info,msg_size))
+			self.routes = routes
+			return packed
+		return [packed]
 
 	# XXX: Remove those default values ? - most likely good.
-	def withdraw (self,asn4=False,local_asn=None,remote_asn=None,with_path_info=None):
+	def withdraw (self,asn4=False,local_asn=None,remote_asn=None,with_path_info=None,msg_size=4077):
 		if self.afi == AFI.ipv4 and self.safi in [SAFI.unicast, SAFI.multicast]:
 			nlri = ''.join([route.nlri.pack(with_path_info) for route in self.routes])
 			mp = ''
@@ -58,7 +82,19 @@ class Update (Message):
 			nlri = ''
 			mp = MPURNLRI(self.routes).pack(with_path_info)
 			attr = self.routes[0].attributes.bgp_announce(asn4,local_asn,remote_asn)
-		return self._message(prefix(nlri) + prefix(attr + mp))
+		packed = self._message(prefix(nlri) + prefix(attr + mp))
+		if len(packed) > msg_size:
+			routes = self.routes
+			left = self.routes[:len(self.routes)/2]
+			right = self.routes[len(self.routes)/2:]
+			packed = []
+			self.routes = left
+			packed.extend(self.withdraw(asn4,local_asn,remote_asn,with_path_info,msg_size))
+			self.routes = right
+			packed.extend(self.withdraw(asn4,local_asn,remote_asn,with_path_info,msg_size))
+			self.routes = routes
+			return packed
+		return [packed]
 
 
 	def factory (self,asn4,families,use_path,data):

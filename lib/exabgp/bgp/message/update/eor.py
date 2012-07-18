@@ -36,7 +36,7 @@ class EOR (object):
 		self._announced = []
 		r = []
 		for afi,safi in families:
-			r.append(self.mp(afi,safi))
+			r.extend(self.mp(afi,safi))
 			self._announced.append((afi,safi))
 		return r
 

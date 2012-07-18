@@ -14,6 +14,7 @@ Version 3.0.4 - xx of July 2012
  * Improvement: allow multiple configuration files, which forks multiple main loops
  * Improvement: send a "shutdown" message before terminating the worker processes
  * Improvement: handle gracefully ^C during configuration load/reload
+ * Improvement: group-updates option in neighbor which group routes with the same attributes in one update
 
 Version 3.0.3 - 17 of July 2012 (unreleased experimental version)
  * Fix: bug in ASN4 path reconstruction

@@ -31,6 +31,7 @@ class Neighbor (object):
 		self.md5 = None
 		self.ttl = None
 		self.multisession = None
+		self.group_updates = None
 		self.parse_routes = None
 		self.peer_updates = None
 		self._families = []
@@ -124,6 +125,7 @@ class Neighbor (object):
 			self.graceful_restart == other.graceful_restart and \
 			self.md5 == other.md5 and \
 			self.ttl == other.ttl and \
+			self.group_updates == other.group_updates and \
 			self.multisession == other.multisession and \
 			self.families() == other.families()
 
@@ -153,6 +155,8 @@ neighbor %s {
   local-as %s;
   peer-as %s;
   hold-time %s;
+  multi-session %s;
+  group-updates: %s;
   add-path %s;
   %s
   family {%s
@@ -167,6 +171,8 @@ neighbor %s {
 	self.local_as,
 	self.peer_as,
 	self.hold_time,
+	self.multisession,
+	self.group_updates,
 	AddPath.string[self.add_path],
 	'\n  '.join(options),
 	families,
