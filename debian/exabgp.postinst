@@ -4,11 +4,10 @@
 db_version 2.0
 
 restore_user_settings() {
-    source /tmp/exabgp.default.bak
+    . /etc/default/exabgp.dpkg-old
     sed -i "s#EXABGPRUN=\"no#EXABGPRUN=\"$EXABGPRUN#" /etc/default/exabgp
     sed -i "s#ETC=\"/etc/exabgp/#ETC=\"$ETC#" /etc/default/exabgp
     sed -i "s#DAEMON_OPTS=\"/etc/exabgp/exabgp.conf#DAEMON_OPTS=\"$DAEMON_OPTS#" /etc/default/exabgp
-    rm /tmp/exabgp.default.bak
 }
 
 if dpkg-maintscript-helper supports mv_conffile 2>/dev/null; then
@@ -34,7 +33,7 @@ esac
 
 if [ "$1"  = "configure" ] && dpkg --compare-versions "$2" lt 3.0.0; then
     echo "ExaBGP: Migrating your old configuration data to the new file format."
-    /usr/sbin/exabgp -fi > /etc/exabgp/exabgp.env 2>/dev/null
+    exabgp -fi > /etc/exabgp/exabgp.env 2>/dev/null
     invoke-rc.d exabgp reload  || exit $?
 fi
 
