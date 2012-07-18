@@ -1811,15 +1811,19 @@ class Configuration (object):
 					continue
 				for route in self.neighbor[nei]._routes[family]:
 					str1 = str(route)
-					logger.info('parsed    %s' % str1,'configuration') 
+					logger.info('parsed route %s' % str1,'configuration') 
 					update = Update().new([route])
+					#update = Update().new([route]*1000)
 					packed = update.announce(False,ASN(30740),ASN(30740),with_path_info)
+					logger.info('parsed route requires %d updates' % len(packed),'configuration') 
 					for pack in packed:
+						logger.info('update size is %d' % len(pack),'configuration') 
 						# This does not take the BGP header - let's assume we will not break that :)
-						decoded = Update().factory(asn4,n._families,use_path,pack[19:])
-						str2 = str(decoded)
-						logger.info(str2,'configuration') 
-						logger.info('%s\n' % [hex(ord(_)) for _ in pack],'configuration') 
+						update = Update().factory(asn4,n._families,use_path,pack[19:])
+						for route in update.routes:
+							str2 = str(route)
+							logger.info('decoded route %s' % str2,'configuration')
+						logger.info('decoded hex %s\n' % [hex(ord(_)) for _ in pack],'configuration') 
 		import sys
 		sys.exit(0)
 
