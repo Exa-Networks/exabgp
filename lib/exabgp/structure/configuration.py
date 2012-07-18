@@ -964,7 +964,7 @@ class Configuration (object):
 		for _ in range(number):
 			r = deepcopy(route)
 			# update ip to the next route, this recalculate the "ip" field of the Inet class
-			r.nlri = NLRI(afi,safi,pack_int(afi,ip,mask),mask)
+			r.nlri = NLRI(afi,safi,pack_int(afi,ip,split),split)
 			r.nlri.labels = labels
 			r.nlri.rd = rd
 			r.nlri.path_info = path_info

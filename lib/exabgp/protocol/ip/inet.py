@@ -52,7 +52,7 @@ class Inet (object):
 
 	def __init__ (self,afi,safi,packed):
 		self.afi = AFI(afi)
-		if not safi:
+		if safi:
 			self.safi = SAFI(safi)
 		elif ord(packed[0]) in self._multicast_range:
 			self.safi = self._MULTICAST
