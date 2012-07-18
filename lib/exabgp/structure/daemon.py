@@ -91,10 +91,11 @@ class Daemon (object):
 
 		# not sure you can change your gid if you do not have a pid of zero
 		try:
-			if not uid:
-				os.setuid(nuid)
+			# we must change the GID first otherwise it may fail after change UID
 			if not gid:
 				os.setgid(ngid)
+			if not uid:
+				os.setuid(nuid)
 			return False
 		except OSError:
 			return True
