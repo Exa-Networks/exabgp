@@ -15,6 +15,13 @@ logger = Logger()
 class ProcessError (Exception):
 	pass
 
+def preexec_helper ():
+	# make this process a new process group
+	os.setsid()
+	# This prevent the signal to be sent to the children
+	os.setpgrp()
+	#signal.signal(signal.SIGINT, signal.SIG_IGN)
+
 class Processes (object):
 	def __init__ (self,supervisor):
 		self.supervisor = supervisor
@@ -53,7 +60,7 @@ class Processes (object):
 			self._process[name] = subprocess.Popen(proc[name]['run'],
 				stdin=subprocess.PIPE,
 				stdout=subprocess.PIPE,
-				preexec_fn=os.setsid
+				preexec_fn=preexec_helper
 				# This flags exists for python 2.7.3 in the documentation but on on my MAC
 				# creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
 			)

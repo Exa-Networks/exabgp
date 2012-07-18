@@ -4,7 +4,6 @@ ROADMAP
 
 Version 3.0
 - usual bug fixes and improvments (bugs ? which bugs ?)
-- protect the forked process do not have to deal with SIGHUP or others signals sent to exabgp (done ? to test)
 - multiple configuration files as paramter (considering)
 - have a command to shutdown the process properly
 - handle ^C during configuration reload gracefully
