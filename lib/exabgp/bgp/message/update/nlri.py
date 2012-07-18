@@ -203,15 +203,15 @@ def BGPNLRI (afi,safi,bgp,has_multiple_path):
 		bgp = bgp[8:]
 
 	if mask < 0:
-		raise Notify(3,0,'invalid length in NLRI prefix')
+		raise Notify(3,10,'invalid length in NLRI prefix')
 
 	if not bgp and mask:
-		raise Notify(3,0,'not enough data for the mask provided to decode the NLRI')
+		raise Notify(3,10,'not enough data for the mask provided to decode the NLRI')
 
 	size = mask_to_bytes[mask]
 
 	if len(bgp) < size:
-		raise Notify(3,0,'could not decode route with AFI %d sand SAFI %d' % (afi,safi))
+		raise Notify(3,10,'could not decode route with AFI %d sand SAFI %d' % (afi,safi))
 
 	network = bgp[:size]
 	# XXX: The padding calculation should really go into the NLRI class
