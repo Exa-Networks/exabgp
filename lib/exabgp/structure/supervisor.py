@@ -28,7 +28,7 @@ class Supervisor (object):
 
 	def __init__ (self,configuration):
 		self.daemon = Daemon(self)
-		self.processes = Processes(self)
+		self.processes = None
 		self.configuration = Configuration(configuration)
 
 		self.watchdogs = {}
@@ -64,6 +64,9 @@ class Supervisor (object):
 			return
 		self.daemon.daemonise()
 		self.daemon.savepid()
+
+		# Make sure we create processes one we have dropped privileges and closed file descriptor
+		self.processes = Processes(self)
 
 		# did we complete the run of updates caused by the last SIGHUP ?
 		reload_completed = True
