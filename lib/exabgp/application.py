@@ -24,18 +24,8 @@ def __exit(memory,code):
 	sys.exit(code)
 
 
-def version_warning ():
-	sys.stdout.write('\n')
-	sys.stdout.write('************ WARNING *** WARNING *** WARNING *** WARNING *********\n')
-	sys.stdout.write('* This program SHOULD work with your python version (2.4).       *\n')
-	sys.stdout.write('* No tests have been performed. Consider python 2.4 unsupported  *\n')
-	sys.stdout.write('* Please consider upgrading to the latest 2.x stable realease.   *\n')
-	sys.stdout.write('************ WARNING *** WARNING *** WARNING *** WARNING *********\n')
-	sys.stdout.write('\n')
-
-
 def help (comment=''):
-	sys.stdout.write('usage:\n exabgp [options] <bgp configuration file>\n')
+	sys.stdout.write('usage:\n exabgp [options] <bgp configuration file1> <more optional configuration files>\n')
 	sys.stdout.write('\n')
 	sys.stdout.write('  -h, --help      : this help\n')
 	sys.stdout.write('  -c, --conf      : configuration folder\n')
@@ -94,11 +84,8 @@ def main ():
 	main = int(sys.version[0])
 	secondary = int(sys.version[2])
 
-	if main != 2 or secondary < 4:
-		sys.exit('This program can not work (is not tested) with your python version (< 2.4 or >= 3.0)')
-
-	if main == 2 and secondary == 4:
-		version_warning()
+	if main != 2 or secondary < 5:
+		sys.exit('This program can not work (is not tested) with your python version (< 2.5 or >= 3.0)')
 
 	from exabgp.structure.environment import EnvError,load,iter_ini,iter_env,default,LOG
 
