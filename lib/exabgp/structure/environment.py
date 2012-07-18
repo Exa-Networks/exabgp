@@ -214,7 +214,7 @@ defaults = {
 	},
 	'log' : {
 		'enable'        : (value.boolean,value.lower,'true',     'enable logging'),
-		'level'         : (value.syslog_value,value.syslog_name,'LOG_INFO', 'log message with at least the priority SYSLOG.<level>'),
+		'level'         : (value.syslog_value,value.syslog_name,'INFO', 'log message with at least the priority SYSLOG.<level>'),
 		'destination'   : (value.unquote,value.quote,'stdout',   'where logging should log'),
 		'all'           : (value.boolean,value.lower,'false',    'report debug information for everything'),
 		'configuration' : (value.boolean,value.lower,'false',    'report command parsing'),
