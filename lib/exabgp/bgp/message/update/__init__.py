@@ -86,7 +86,7 @@ class Update (Message):
 		while withdrawn:
 			nlri = BGPNLRI(AFI.ipv4,SAFI.unicast_multicast,withdrawn,path_info)
 			route = RouteBGP(nlri,'withdrawn')
-			route.attributes = self.attributes
+			route.attributes = attributes
 			withdrawn = withdrawn[len(nlri):]
 			routes.append(route)
 
