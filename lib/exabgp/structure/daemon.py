@@ -27,7 +27,9 @@ class Daemon (object):
 
 	def __init__ (self,supervisor):
 		self.supervisor = supervisor
-		#mask = os.umask(0137)
+		os.chdir('/')
+		#os.umask(0)
+		os.umask(0137)
 
 	def savepid (self):
 		self._saved_pid = False
@@ -136,11 +138,7 @@ class Daemon (object):
 			return
 
 		fork_exit()
-
 		os.setsid()
-		os.chdir('/')
-		os.umask(0)
-    
 		fork_exit()
 		self.silence()
 

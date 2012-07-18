@@ -90,7 +90,7 @@ def help (comment=''):
 	sys.stdout.write(comment)
 	sys.stdout.write('\n')
 
-if __name__ == '__main__':
+def main ():
 	main = int(sys.version[0])
 	secondary = int(sys.version[2])
 
@@ -105,7 +105,7 @@ if __name__ == '__main__':
 	next = ''
 	arguments = {
 		'folder' : '',
-		'file' : '',
+		'file' : [],
 		'env' : 'exabgp.env',
 	}
 
@@ -127,11 +127,8 @@ if __name__ == '__main__':
 			continue
 		if arg.startswith('-'):
 			continue
-		if not arguments['file']:
-			arguments['file'] = arg
-			continue
-		parse_error = "invalid command line, more than one file name provided '%s' and '%s'" % (arguments['file'],arg)
-		break
+		arguments['file'].append(arg)
+		continue
 
 	if arguments['folder']:
 		etc = os.path.realpath(os.path.normpath(arguments['folder']))
@@ -194,28 +191,61 @@ if __name__ == '__main__':
 		if arg in ['-m','--memory']:
 			env.debug.memory = True
 
-	from exabgp.structure.log import Logger
-	logger = Logger()
-
 	if parse_error:
+		from exabgp.structure.log import Logger
+		logger = Logger()
 		logger.error(parse_error,'configuration')
 		sys.exit(1)
 
-	from exabgp.structure.supervisor import Supervisor
-
+	configurations = []
 	# check the file only once that we have parsed all the command line options and allowed them to run
 	if arguments['file']:
-		configuration = os.path.realpath(os.path.normpath(arguments['file']))
+		for f in arguments['file']:
+			configurations.append(os.path.realpath(os.path.normpath(f)))
 	else:
+		from exabgp.structure.log import Logger
+		logger = Logger()
 		logger.error('no configuration file provided','configuration')
 		sys.exit(1)
 
-	if not os.path.isfile(configuration):
-		logger.error('the argument passed as configuration is not a file','configuration')
-		sys.exit(1)
+	for configuration in configurations:
+		if not os.path.isfile(configuration):
+			from exabgp.structure.log import Logger
+			logger = Logger()
+			logger.error('the argument passed as configuration is not a file','configuration')
+			sys.exit(1)
+
+	if len(configuration) == 1:
+		run(env,comment,configuration)
+
+	try:
+		# run each configuration in its own process
+		pids = []
+		for configuration in configurations:
+			pid = os.fork()
+			if pid == 0:
+				run(env,comment,configuration)
+			else:
+				pids.append(pid)
+
+		# If we get a ^C / SIGTERM, ignore just continue waiting for our child process
+		import signal
+		signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+		# wait for the forked processes
+		for pid in pids:
+			os.waitpid(pid,0)
+	except OSError, e:
+		logger.supervisor('Can not fork, errno %d : %s' % (e.errno,e.strerror),'critical')
+
+def run (env,comment,configuration):
+	from exabgp.structure.log import Logger
+	logger = Logger()
 
 	if comment:
 		logger.info(comment,'configuration')
+
+	from exabgp.structure.supervisor import Supervisor
 
 	if not env.profile.enable:
 		Supervisor(configuration).run()
@@ -239,9 +269,14 @@ if __name__ == '__main__':
 	if not notice:
 		logger.info('profiling ....','profile')
 		profile.run('Supervisor(configuration).run()',filename=env.profile.file)
+		__exit(env.debug.memory,0)
 	else:
 		logger.info("-"*len(notice),'profile')
 		logger.info(notice,'profile')
 		logger.info("-"*len(notice),'profile')
 		Supervisor(configuration).run()
 		__exit(env.debug.memory,0)
+
+
+if __name__ == '__main__':
+	main()
