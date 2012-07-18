@@ -39,7 +39,6 @@ class Supervisor (object):
 		self._route_update = False
 		self._commands = {}
 		self._saved_pid = False
-		self.reload()
 
 		signal.signal(signal.SIGTERM, self.sigterm)
 		signal.signal(signal.SIGHUP, self.sighup)
@@ -67,6 +66,7 @@ class Supervisor (object):
 
 		# Make sure we create processes one we have dropped privileges and closed file descriptor
 		self.processes = Processes(self)
+		self.reload()
 
 		# did we complete the run of updates caused by the last SIGHUP ?
 		reload_completed = True
