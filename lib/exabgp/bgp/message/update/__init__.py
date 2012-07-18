@@ -105,6 +105,6 @@ class Update (Message):
 			route.attributes = attributes
 			routes.append(route)
 		
-		return self.new(routes)	
+		return self.new(routes)
 
 	

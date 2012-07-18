@@ -136,10 +136,10 @@ class Daemon (object):
 			return
 
 		fork_exit()
+
 		os.setsid()
 		os.chdir('/')
 		os.umask(0)
-		os.setsid()
     
 		fork_exit()
 		self.silence()

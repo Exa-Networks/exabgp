@@ -938,7 +938,7 @@ class Configuration (object):
 			return True
 
 		# get a local copy of the route
-		route = scope[-1]['routes'][-1]
+		route = scope[-1]['routes'].pop(-1)
 
 		# calculate the number of IP in the /<size> of the new route
 		increment = pow(2,(len(route.nlri.packed)*8) - split)
@@ -951,23 +951,28 @@ class Configuration (object):
 			ip = ip << 8
 			ip += ord(c)
 
-		route.mask = split
 		afi = route.nlri.afi
 		safi = route.nlri.safi
+		# Really ugly 
+		labels = route.nlri.labels
+		rd = route.nlri.rd
+		path_info = route.nlri.path_info
+
+		route.mask = split
+		route.nlri = None
 		# generate the new routes
 		for _ in range(number):
 			r = deepcopy(route)
-			# convert the ip to a network packed format
-			n = NLRI(afi,safi,pack_int(afi,ip,mask),mask=split)
-			# update ip to the next route
-			r.nlri = n
+			# update ip to the next route, this recalculate the "ip" field of the Inet class
+			r.nlri = NLRI(afi,safi,pack_int(afi,ip,mask),mask)
+			r.nlri.labels = labels
+			r.nlri.rd = rd
+			r.nlri.path_info = path_info
 			# next ip
 			ip += increment
 			# save route
 			scope[-1]['routes'].append(r)
 
-		# route is no longer needed - delete it explicitely
-		del(route)
 		return True
 
 	def _insert_static_route (self,scope,tokens):
