@@ -334,7 +334,7 @@ class Attributes (dict):
 			path_info = self._use_path.receive(afi,safi)
 			while data:
 				route = self.routeFactory(afi,safi,data,path_info,'withdrawn')
-				route.attributes = self.attributes
+				route.attributes = self
 				self.mp_withdraw.append(route)
 				data = data[len(route.nlri):]
 			return self._factory(next)
@@ -409,8 +409,8 @@ class Attributes (dict):
 		return self._factory(next)
 
 	def __merge_attributes (self):
-		as2path = self.attributes[AttributeID.AS_PATH]
-		as4path = self.attributes[AttributeID.AS4_PATH]
+		as2path = self[AttributeID.AS_PATH]
+		as4path = self[AttributeID.AS4_PATH]
 		self.remove(AttributeID.AS_PATH)
 		self.remove(AttributeID.AS4_PATH)
 
