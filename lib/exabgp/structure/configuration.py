@@ -28,7 +28,7 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 
-from exabgp.bgp.message.update.nlri import Route,NLRI,PathInfo,Labels,RouteDistinguisher
+from exabgp.bgp.message.update.nlri import Route,NLRI,PathInfo,Labels,RouteDistinguisher,pack_int
 from exabgp.bgp.message.update.flow import BinaryOperator,NumericOperator,Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
@@ -937,11 +937,11 @@ class Configuration (object):
 		if mask >= split:
 			return True
 
-		# remove the route, we are going to replace it
-		route = scope[-1]['routes'].pop(-1)
+		# get a local copy of the route
+		route = scope[-1]['routes'][-1]
 
 		# calculate the number of IP in the /<size> of the new route
-		increment = pow(2,(len(route.nlri)*8) - split)
+		increment = pow(2,(len(route.nlri.packed)*8) - split)
 		# how many new routes are we going to create from the initial one
 		number = pow(2,split - route.nlri.mask)
 
@@ -951,25 +951,18 @@ class Configuration (object):
 			ip = ip << 8
 			ip += ord(c)
 
-		# route is becoming a template we will clone (deepcopy) so change its netmask
-		route.nlri.mask = split
-
+		route.mask = split
+		afi = route.nlri.afi
+		safi = route.nlri.safi
 		# generate the new routes
 		for _ in range(number):
 			r = deepcopy(route)
 			# convert the ip to a network packed format
-			ipn = ip
-			i = ''
-			while ipn:
-				lower = ipn&0xFF
-				ipn = ipn >> 8
-				i = chr(lower) + i
-
-			# change the route network
-			r.nlri.update(i)
+			n = NLRI(afi,safi,pack_int(afi,ip,mask),mask=split)
 			# update ip to the next route
+			r.nlri = n
+			# next ip
 			ip += increment
-
 			# save route
 			scope[-1]['routes'].append(r)
 
@@ -1762,7 +1755,6 @@ class Configuration (object):
 		from exabgp.bgp.message.open.asn import ASN
 		from exabgp.bgp.neighbor import Neighbor
 		from exabgp.bgp.peer import Peer
-		from exabgp.bgp.protocol import Protocol
 		from exabgp.bgp.message.update import Update
 		from exabgp.bgp.message.open import Open
 		from exabgp.bgp.message.open.capability import Capabilities
@@ -1780,11 +1772,10 @@ class Configuration (object):
 		if with_path_info:
 			capa[CapabilityID.ADD_PATH] = path
 
-		o1 = Open(4,3074000,'127.0.0.1',capa,180)
-		o2 = Open(4,30740,'127.0.0.1',capa,180)
-
-		proto = Protocol(Peer(n,None))
-		proto.use_path = UsePath(o1,o2)
+		o1 = Open().new(4,3074000,'127.0.0.1',capa,180)
+		o2 = Open().new(4,30740,'127.0.0.1',capa,180)
+		asn4 = o1.capabilities.announced(CapabilityID.FOUR_BYTES_ASN) and o2.capabilities.announced(CapabilityID.FOUR_BYTES_ASN)
+		use_path = UsePath(o1,o2)
 
 # ASN4 merge test
 #		injected = ['0x0', '0x0', '0x0', '0x2e', '0x40', '0x1', '0x1', '0x0', '0x40', '0x2', '0x8', '0x2', '0x3', '0x78', '0x14', '0xab', '0xe9', '0x5b', '0xa0', '0x40', '0x3', '0x4', '0x52', '0xdb', '0x0', '0x4f', '0xc0', '0x8', '0x8', '0x78', '0x14', '0xc9', '0x46', '0x78', '0x14', '0xfd', '0xea', '0xe0', '0x11', '0xa', '0x2', '0x2', '0x0', '0x0', '0xab', '0xe9', '0x0', '0x3', '0x5', '0x54', '0x17', '0x9f', '0x65', '0x9e', '0x15', '0x9f', '0x65', '0x80', '0x18', '0x9f', '0x65', '0x9f']
@@ -1806,8 +1797,7 @@ class Configuration (object):
 					update = Update().new([route])
 					packed = update.announce(False,ASN(30740),ASN(30740),with_path_info)
 					# This does not take the BGP header - let's assume we will not break that :)
-					recoded = proto.UpdateFactory(packed[19:])
-					decoded = recoded.routes[0]
+					decoded = Update().factory(asn4,n._families,use_path,packed[19:])
 					str2 = str(decoded)
 					logger.info(str2,'configuration') 
 					logger.info('%s\n' % [hex(ord(_)) for _ in packed],'configuration') 

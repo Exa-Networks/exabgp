@@ -6,14 +6,9 @@ Created by Thomas Mangin on 2010-01-15.
 Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 """
 
-import math
 import socket
 
 from exabgp.protocol.family import AFI,SAFI
-
-mask_to_bytes = {}
-for netmask in range(0,129):
-	mask_to_bytes[netmask] = int(math.ceil(float(netmask)/8))
 
 def _detect_afi(ip):
 	if ip.count(':'):
@@ -30,6 +25,7 @@ def inet (ip):
 	afi = _detect_afi(ip)
 	safi = _detect_safi(ip)
 	return afi,safi,socket.inet_pton(Inet._af[afi],ip)
+
 
 class Inet (object):
 	_UNICAST = SAFI(SAFI.unicast)
@@ -62,12 +58,8 @@ class Inet (object):
 			self.safi = self._MULTICAST
 		else:
 			self.safi = self._UNICAST
-		self.update(packed)
-
-	def update (self,packed):
 		self.packed = packed
 		self.ip = socket.inet_ntop(self._af[self.afi],self.packed)
-		return self
 
 	def pack (self):
 		return self.packed

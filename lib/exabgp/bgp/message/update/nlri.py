@@ -6,14 +6,24 @@ Created by Thomas Mangin on 2012-07-08.
 Copyright (c) 2012 Exa Networks. All rights reserved.
 """
 
+import math
+
 from struct import pack,unpack
 from exabgp.protocol.family import AFI,SAFI
-from exabgp.protocol.ip.inet import mask_to_bytes,Inet
+from exabgp.protocol.ip.inet import Inet,inet
 
 from exabgp.protocol.ip.address import Address
 from exabgp.bgp.message.update.attribute.attributes import Attributes
 
 from exabgp.bgp.message.notification import Notify
+
+mask_to_bytes = {}
+for netmask in range(0,129):
+	mask_to_bytes[netmask] = int(math.ceil(float(netmask)/8))
+
+# Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
+def pack_int (afi,integer,mask):
+	return ''.join([chr((integer>>(offset*8)) & 0xff) for offset in range(NLRI.length[afi]-1,-1,-1)])
 
 
 class PathInfo (object):
@@ -160,7 +170,6 @@ class NLRI (BGPPrefix):
 			return path_info + chr(length) + self.labels.pack() + self.rd.pack() + self.packed[:mask_to_bytes[self.mask]]
 		else:
 			return path_info + BGPPrefix.pack(self)
-
 
 # Generate an NLRI from a BGP packet receive
 def BGPNLRI (afi,safi,bgp,has_multiple_path):
