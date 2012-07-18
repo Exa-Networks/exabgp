@@ -20,26 +20,40 @@ from exabgp.version import version
 class EnvError (Exception):
 	pass
 
+class LOG:
+	EMERG    = syslog.LOG_EMERG,
+	ALERT    = syslog.LOG_ALERT,
+	CRIT     = syslog.LOG_CRIT,
+	CRITICAL = syslog.LOG_CRIT,
+	ERR      = syslog.LOG_ERR,
+	ERROR    = syslog.LOG_ERR,
+	WARNING  = syslog.LOG_WARNING,
+	NOTICE   = syslog.LOG_NOTICE,
+	INFO     = syslog.LOG_INFO,
+	DEBUG    = syslog.LOG_DEBUG,
+
 syslog_name_value = {
-	'LOG_EMERG'    : syslog.LOG_EMERG,
-	'LOG_ALERT'    : syslog.LOG_ALERT,
-	'LOG_CRIT'     : syslog.LOG_CRIT,
-	'LOG_ERR'      : syslog.LOG_ERR,
-	'LOG_WARNING'  : syslog.LOG_WARNING,
-	'LOG_NOTICE'   : syslog.LOG_NOTICE,
-	'LOG_INFO'     : syslog.LOG_INFO,
-	'LOG_DEBUG'    : syslog.LOG_DEBUG,
+	'EMERG'    : LOG.EMERG,
+	'ALERT'    : LOG.ALERT,
+	'CRIT'     : LOG.CRIT,
+	'CRITICAL' : LOG.CRIT,
+	'ERR'      : LOG.ERR,
+	'ERROR'    : LOG.ERR,
+	'WARNING'  : LOG.WARNING,
+	'NOTICE'   : LOG.NOTICE,
+	'INFO'     : LOG.INFO,
+	'DEBUG'    : LOG.DEBUG,
 }
 
 syslog_value_name = {
-	syslog.LOG_EMERG    : 'LOG_EMERG',
-	syslog.LOG_ALERT    : 'LOG_ALERT',
-	syslog.LOG_CRIT     : 'LOG_CRIT',
-	syslog.LOG_ERR      : 'LOG_ERR',
-	syslog.LOG_WARNING  : 'LOG_WARNING',
-	syslog.LOG_NOTICE   : 'LOG_NOTICE',
-	syslog.LOG_INFO     : 'LOG_INFO',
-	syslog.LOG_DEBUG    : 'LOG_DEBUG',
+	LOG.EMERG    : 'EMERG',
+	LOG.ALERT    : 'ALERT',
+	LOG.CRIT     : 'CRIT',
+	LOG.ERR      : 'ERR',
+	LOG.WARNING  : 'WARNING',
+	LOG.NOTICE   : 'NOTICE',
+	LOG.INFO     : 'INFO',
+	LOG.DEBUG    : 'DEBUG',
 }
 
 

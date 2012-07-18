@@ -7,6 +7,7 @@ Version 3.0.4 - xx of July 2012
  * Fix: FlowSpec API change update forgotten
  * Fix: Provide the right user to -fi when upgrading on Debian
  * Fix: recent re-breakage of the split option
+ * Fix: log level parsing with -d
 
 Version 3.0.3 - 17 of July 2012 (unreleased experimental version)
  * Fix: bug in ASN4 path reconstruction

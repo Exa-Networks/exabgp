@@ -45,7 +45,8 @@ def help (comment=''):
 	sys.stdout.write(' -di, --diff-ini  : display non-default configurations values using the ini format\n')
 	sys.stdout.write(' -de, --diff-env  : display non-default configurations values using the env format\n')
 	sys.stdout.write('  -d, --debug     : turn on all subsystems debugging\n'
-	                 '                    shortcut for exabgp.log.all=true exabgp.log.level=LOG_DEBUG\n')
+	                 '                    shortcut for exabgp.log.all=true exabgp.log.level=DEBUG\n'
+	                 '                    one of : EMERG,ALERT,CRITICAL,ERROR,WARNING,NOTICE,INFO,DEBUG')
 	sys.stdout.write('  -p, --pdb       : start the python debugger on serious logging and on SIGTERM\n'
 	                 '                    shortcut for exabgp.pdb.enable=true\n')
 	sys.stdout.write('  -m, --memory    : display memory usage information on exit\n')
@@ -99,7 +100,7 @@ if __name__ == '__main__':
 	if main == 2 and secondary == 4:
 		version_warning()
 
-	from exabgp.structure.environment import EnvError,load,iter_ini,iter_env,default
+	from exabgp.structure.environment import EnvError,load,iter_ini,iter_env,default,LOG
 
 	next = ''
 	arguments = {
@@ -185,7 +186,7 @@ if __name__ == '__main__':
 			env.profile.enable = True
 		if arg in ['-d','--debug']:
 			env.log.all = True
-			env.log.level='LOG_DEBUG'
+			env.log.level=LOG.DEBUG
 		if arg in ['-p','--pdb']:
 			# The following may fail on old version of python (but is required for debug.py)
 			os.environ['PDB'] = 'true'
