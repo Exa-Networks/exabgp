@@ -4,13 +4,10 @@ ROADMAP
 
 Version 3.0
 - usual bug fixes and improvments (bugs ? which bugs ?)
-- have a command to shutdown the process properly
 - handle ^C during configuration reload gracefully
-- break protocol.py in several files ? 
-- look at the classes to reduce conversion and improve perf
 - move the generation of the route when the delta is done in an object with the peer info to display the route change in the log
 - use a cache for the object created in the configuration too
-- improve the Route object API
+- improve the Route objects API
 
 Version 3.1
 - group routes generated with same attributes to be nicer on the router CPU.

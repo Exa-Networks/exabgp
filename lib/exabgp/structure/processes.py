@@ -6,6 +6,8 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
 import os
+import errno
+import time
 import subprocess
 import select
 
@@ -37,6 +39,9 @@ class Processes (object):
 		del self._process[name]
 
 	def terminate (self):
+		for name in list(self._process):
+			self.write(name,'shutdown',shutdown=True)
+		time.sleep(0.1)
 		for name in list(self._process):
 			try:
 				self._terminate(name)
@@ -120,13 +125,14 @@ class Processes (object):
 				self._start(name)
 		return lines
 
-	def write (self,name,string):
+	def write (self,name,string,shutdown=False):
 		while True:
 			try:
 				self._process[name].stdin.write('%s\r\n' % string)
 			except IOError,e:
+				if shutdown: return True
 				self._broken.append(name)
-				if e.errno == 32:
+				if e.errno == errno.EPIPE:
 					self._broken.append(name)
 					logger.processes("Issue while sending data to our helper program")
 					raise ProcessError()
@@ -139,6 +145,7 @@ class Processes (object):
 		try:
 			self._process[name].stdin.flush()
 		except IOError,e:
+			if shutdown: return True
 			# AFAIK, the buffer should be flushed at the next attempt.
 			logger.processes("REPORT TO DEVELOPERS: IOError received while FLUSHING data to helper program %s, retrying" % str(e.errno))
 
