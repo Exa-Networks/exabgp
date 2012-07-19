@@ -63,9 +63,6 @@ class Peer (object):
 
 		self._asn4 = True
 
-		# The routes we have parsed from our neighbour
-		self._received_routes = []
-
 		self._route_parsed = 0L
 		self._now = time.time()
 		self._next_info = self._now + self.update_time
@@ -267,6 +264,7 @@ class Peer (object):
 
 				message = self.bgp.read_message()
 				if message.TYPE == Update.TYPE:
+					seen_update = True
 					if self.neighbor.peer_updates:
 						proc = self.supervisor.processes
 						try:
@@ -296,8 +294,6 @@ class Peer (object):
 				#
 
 				elif message.TYPE == Update.TYPE:
-					seen_update = True
-					self._received_routes.extend(message.routes)
 					if message.routes:
 						logger.message(self.me('<< UPDATE'))
 						self._route_parsed += len(message.routes)
@@ -453,12 +449,3 @@ class Peer (object):
 				logger.error(self.me(str(e)),'supervisor')
 			if self.bgp: self.bgp.close('internal problem %s' % str(e))
 			return
-
-	def received_routes (self):
-		if self._received_routes:
-			while self._received_routes:
-				route = self._received_routes.pop(0)
-				yield str(route)
-		else:
-			raise StopIteration()
-

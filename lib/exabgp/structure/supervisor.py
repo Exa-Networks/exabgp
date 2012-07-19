@@ -107,19 +107,6 @@ class Supervisor (object):
 								if peer.bgp and peer.bgp.connection:
 									ios.append(peer.bgp.connection.io)
 								peers.remove(key)
-							# send the route we parsed (if we parsed any to our child processes)
-							# This is a generator and can only be run once
-							try:
-								for route in peer.received_routes():
-									# This is a generator which content does only change at config reload
-									for name in self.processes.receive_routes():
-										# using str(key) as we should not manipulate it and assume its format
-										self.processes.write(name,'neighbor %s %s\n' % (str(key),route))
-							except ProcessError:
-								# Can not find any better error code that 6,0 !
-								logger.warning("Problem sending message to helper program - shutting down",'supervisor')
-								# XXX: Not a graceful handling of error
-								self._shutdown = True
 						# otherwise process as many routes as we can within a second for the remaining peers
 						duration = time.time() - start
 						# RFC state that we MUST not more than one KEEPALIVE / sec
