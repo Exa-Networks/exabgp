@@ -169,6 +169,9 @@ class Protocol (object):
 				if update.routes:
 					return update
 
+		if msg == Refresh.TYPE:
+			if self.neighbor.parse_routes:
+				refresh = Refresh().factory(data)
 		return NOP(data)
 
 	def read_open (self,_open,ip):
