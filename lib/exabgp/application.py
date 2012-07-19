@@ -202,7 +202,9 @@ def main ():
 			logger.error('the argument passed as configuration is not a file','configuration')
 			sys.exit(1)
 
-	if len(configuration) == 1:
+	import pdb; pdb.set_trace()
+
+	if len(configurations) == 1:
 		run(env,comment,configuration)
 
 	try:
