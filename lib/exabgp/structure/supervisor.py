@@ -332,6 +332,7 @@ class Supervisor (object):
 				self._peers[key].stop()
 			else:
 				self._peers[key].restart()
+		self.processes.terminate()
 		self.processes.start()
 
 	def unschedule (self,peer):

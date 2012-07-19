@@ -223,6 +223,8 @@ def main ():
 		for pid in pids:
 			os.waitpid(pid,0)
 	except OSError, e:
+		from exabgp.structure.log import Logger
+		logger = Logger()
 		logger.supervisor('Can not fork, errno %d : %s' % (e.errno,e.strerror),'critical')
 
 def run (env,comment,configuration):

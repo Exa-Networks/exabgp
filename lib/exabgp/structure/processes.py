@@ -19,14 +19,16 @@ class ProcessError (Exception):
 
 def preexec_helper ():
 	# make this process a new process group
-	os.setsid()
-	# This prevent the signal to be sent to the children
+	#os.setsid()
+	# This prevent the signal to be sent to the children (and create a new process group)
 	os.setpgrp()
 	#signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 class Processes (object):
 	def __init__ (self,supervisor):
 		self.supervisor = supervisor
+	
+	def clean (self):
 		self._process = {}
 		self._receive_routes = {}
 		self._notify = {}
@@ -48,6 +50,7 @@ class Processes (object):
 			except OSError:
 				# we most likely received a SIGTERM signal and our child is already dead
 				pass
+		self.clean()
 
 	def _start (self,name):
 		try:
@@ -72,9 +75,10 @@ class Processes (object):
 			neighbor = proc[name]['neighbor']
 			self._notify.setdefault(neighbor,[]).append(name)
 			logger.processes("Forked process %s" % name)
-		except (subprocess.CalledProcessError,OSError,ValueError):
+		except (subprocess.CalledProcessError,OSError,ValueError),e:
 			self._broken.append(name)
 			logger.processes("Could not start process %s" % name)
+			logger.processes("reason: %s" % str(e))
 
 	def start (self):
 		proc = self.supervisor.configuration.process
