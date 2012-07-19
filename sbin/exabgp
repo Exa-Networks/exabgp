@@ -22,13 +22,13 @@ then
 	INTERPRETER=`which $INTERPRETER`
 fi
 
-PYPY=`which pypy`
-PYTHON27=`which python2.7`
-PYTHON26=`which python2.6`
-PYTHON25=`which python2.5`
-PYTHON24=`which python2.4`
-PYTHON2=`which python2`
-PYTHON=`which python`
+PYPY=`which pypy 2>/dev/null`
+PYTHON27=`which python2.7 2>/dev/null`
+PYTHON26=`which python2.6 2>/dev/null`
+PYTHON25=`which python2.5 2>/dev/null`
+PYTHON24=`which python2.4 2>/dev/null`
+PYTHON2=`which python2 2>/dev/null`
+PYTHON=`which python 2>/dev/null`
 
 if [ -f "$PYPY" ]
 then
