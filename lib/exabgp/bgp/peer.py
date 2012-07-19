@@ -266,6 +266,17 @@ class Peer (object):
 				#
 
 				message = self.bgp.read_message()
+				if message.TYPE == Update.TYPE:
+					if self.neighbor.peer_updates:
+						proc = self.supervisor.processes
+						try:
+							for name in proc.notify(self.neighbor.peer_address):
+								proc.write(name,'neighbor %s update start\n' % self.neighbor.peer_address)
+								for route in message.routes:
+									proc.write(name,'neighbor %s %s\n' % (self.neighbor.peer_address,str(route)) )
+								proc.write(name,'neighbor %s update end\n' % self.neighbor.peer_address)
+						except ProcessError:
+							raise Failure('Could not send message(s) to helper program(s) : %s' % message)
 
 				# let's read if we have keepalive before doing the timer check
 				c = self.bgp.check_keepalive()
