@@ -39,7 +39,6 @@ MAX_BACKLOG = 15000
 
 class Protocol (object):
 	decode = True
-	strict = False
 
 	def __init__ (self,peer,connection=None):
 		self.peer = peer
@@ -169,10 +168,6 @@ class Protocol (object):
 				update = Update().factory(self._asn4,self.neighbor.families(),self.use_path,data)
 				if update.routes:
 					return update
-				return NOP('')
-
-		if self.strict:
-			raise Notify(1,3,msg)
 
 		return NOP(data)
 
