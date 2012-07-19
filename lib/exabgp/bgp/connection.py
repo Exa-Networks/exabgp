@@ -23,11 +23,6 @@ from exabgp.protocol.family import AFI
 from exabgp.bgp.message import Failure
 
 from exabgp.structure.log import Logger,LazyFormat
-logger = Logger()
-
-# If the OS tells us we have data on the socket, we should never have to wait more than READ_TIMEOUT to be able to read it.
-# However real life says that on some OS we do ... So let the user control this value
-READ_TIMEOUT = load().tcp.timeout
 
 errno_block = set((
 	errno.EINPROGRESS, errno.EALREADY,
@@ -43,13 +38,18 @@ errno_fatal = set((
 
 class Connection (object):
 	def __init__ (self,peer,local,md5,ttl):
+		# If the OS tells us we have data on the socket, we should never have to wait more than READ_TIMEOUT to be able to read it.
+		# However real life says that on some OS we do ... So let the user control this value
+		self.READ_TIMEOUT = load().tcp.timeout
+
+		self.logger = Logger()
 		self.io = None
 		self.last_read = 0
 		self.last_write = 0
 		self.peer = peer
 		self._loop_start = None
 
-		logger.wire("Opening connection to %s" % self.peer)
+		self.logger.wire("Opening connection to %s" % self.peer)
 
 		if peer.afi != local.afi:
 			raise Failure('The local IP and peer IP must be of the same family (both IPv4 or both IPv6)')
@@ -71,7 +71,7 @@ class Connection (object):
 				# diable Nagle's algorithm (no grouping of packets)
 				self.io.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 			except AttributeError:
-				logger.warning("wire","Could not disable nagle's algorithm for %s" % self.peer,'network')
+				self.logger.warning("wire","Could not disable nagle's algorithm for %s" % self.peer,'network')
 				pass
 			self.io.settimeout(1)
 			if peer.afi == AFI.ipv4:
@@ -132,8 +132,8 @@ class Connection (object):
 			if not self._loop_start:
 				self._loop_start = time.time()
 			else:
-				if self._loop_start + READ_TIMEOUT < time.time():
-					raise Failure('Waited for data on a socket for more than %d second(s)' % READ_TIMEOUT)
+				if self._loop_start + self.READ_TIMEOUT < time.time():
+					raise Failure('Waited for data on a socket for more than %d second(s)' % self.READ_TIMEOUT)
 		try:
 			r,_,_ = select.select([self.io,],[],[],0)
 		except select.error,e:
@@ -162,7 +162,7 @@ class Connection (object):
 		try:
 			r = self.io.recv(number)
 			self.last_read = time.time()
-			logger.wire(LazyFormat("%15s RECV " % self.peer,hexa,r))
+			self.logger.wire(LazyFormat("%15s RECV " % self.peer,hexa,r))
 			return r
 		except socket.timeout,e:
 			self.close()
@@ -180,7 +180,7 @@ class Connection (object):
 		if not self.ready():
 			return False
 		try:
-			logger.wire(LazyFormat("%15s SENT " % self.peer,hexa,data))
+			self.logger.wire(LazyFormat("%15s SENT " % self.peer,hexa,data))
 			# we can not use sendall as in case of network buffer filling
 			# it does raise and does not let you know how much was sent
 			sent = 0
@@ -189,20 +189,20 @@ class Connection (object):
 				try:
 					nb = self.io.send(data[sent:])
 					if not nb:
-						logger.wire("%15s lost TCP session with peer" % self.peer)
+						self.logger.wire("%15s lost TCP session with peer" % self.peer)
 						raise Failure('lost TCP session')
 					sent += nb
 				except socket.error,e:
 					if e.args[0] in errno_block:
 						if sent == 0:
-							logger.wire("%15s problem sending message, errno EAGAIN, will retry later" % self.peer)
+							self.logger.wire("%15s problem sending message, errno EAGAIN, will retry later" % self.peer)
 							return False
 						else:
-							logger.wire("%15s problem sending mid-way through a message, trying to complete" % self.peer)
+							self.logger.wire("%15s problem sending mid-way through a message, trying to complete" % self.peer)
 							time.sleep(0.01)
 						continue
 					else:
-						logger.wire("%15s problem sending message, errno %s" % (self.peer,str(e.args[0])))
+						self.logger.wire("%15s problem sending message, errno %s" % (self.peer,str(e.args[0])))
 						raise e
 			self.last_write = time.time()
 			return True
@@ -212,12 +212,12 @@ class Connection (object):
 			#if failure in errno_block:
 			#	return False
 			self.close()
-			logger.wire("%15s %s" % (self.peer,trace()))
+			self.logger.wire("%15s %s" % (self.peer,trace()))
 			raise Failure('Problem while writing data to the network: %s' % str(e))
 
 	def close (self):
 		try:
-			logger.wire("Closing connection to %s" % self.peer)
+			self.logger.wire("Closing connection to %s" % self.peer)
 			if self.io:
 				self.io.close()
 		except socket.error:

@@ -29,7 +29,7 @@ from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 from exabgp.bgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities
 
 from exabgp.structure.log import Logger,LazyFormat
-logger = Logger()
+
 
 # =================================================================== Attributes
 
@@ -244,6 +244,7 @@ class Attributes (dict):
 		next = data[length:]
 		attribute = data[:length]
 
+		logger = Logger()
 		logger.parser(LazyFormat("parsing %s " % code,hexa,data[:length]))
 
 		if code == AttributeID.ORIGIN:

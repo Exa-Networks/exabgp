@@ -88,6 +88,8 @@ def main ():
 		sys.exit('This program can not work (is not tested) with your python version (< 2.5 or >= 3.0)')
 
 	from exabgp.structure.environment import EnvError,load,iter_ini,iter_env,default,LOG
+	# import before the fork to improve copy on write memory savings
+	from exabgp.structure.supervisor import Supervisor
 
 	next = ''
 	arguments = {
@@ -228,13 +230,12 @@ def main ():
 		logger.supervisor('Can not fork, errno %d : %s' % (e.errno,e.strerror),'critical')
 
 def run (env,comment,configuration,pid=0):
+	from exabgp.structure.supervisor import Supervisor
 	from exabgp.structure.log import Logger
 	logger = Logger()
 
 	if comment:
 		logger.info(comment,'configuration')
-
-	from exabgp.structure.supervisor import Supervisor
 
 	if not env.profile.enable:
 		Supervisor(configuration).run()

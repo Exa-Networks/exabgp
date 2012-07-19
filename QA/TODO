@@ -14,7 +14,7 @@ CODE IMPROVEMENTS:
  * reduce to a minimum all the new_ and to_ functions and integrate them into protocol
  * Formally define the interfaces used (perhaps ...)
  * We do not validate the flow created
- * reading stderr from forked process and displaying via the logger class
+ * reading stderr from forked process and displaying via the self.logger class
  * We can have exact duplicate routes in the configuration, and they will be announced twice even if identical
  * Do not announce route of a AFI/SAFI pair if the pair was not received on the OPEN by the peer
 

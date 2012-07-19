@@ -16,16 +16,18 @@ import resource
 from exabgp.structure.environment import load
 
 from exabgp.structure.log import Logger
-logger = Logger()
 
 MAXFD = 2048
 
 class Daemon (object):
-	pid = load().daemon.pid
-	user = load().daemon.user
-	daemonize = load().daemon.daemonize
 
 	def __init__ (self,supervisor):
+		self.pid = load().daemon.pid
+		self.user = load().daemon.user
+		self.daemonize = load().daemon.daemonize
+
+		self.logger = Logger()
+
 		self.supervisor = supervisor
 		os.chdir('/')
 		#os.umask(0)
@@ -45,7 +47,7 @@ class Daemon (object):
 		try:
 			fd = os.open(self.pid,flags,mode)
 		except OSError:
-			logger.daemon("PIDfile already exists, not updated %s" % self.pid)
+			self.logger.daemon("PIDfile already exists, not updated %s" % self.pid)
 			return
 
 		try:
@@ -55,9 +57,9 @@ class Daemon (object):
 			f.close()
 			self._saved_pid = True
 		except IOError:
-			logger.warning("Can not create PIDfile %s" % self.pid,'daemon')
+			self.logger.warning("Can not create PIDfile %s" % self.pid,'daemon')
 			return
-		logger.warning("Created PIDfile %s with value %d" % (self.pid,ownid),'daemon')
+		self.logger.warning("Created PIDfile %s with value %d" % (self.pid,ownid),'daemon')
 
 	def removepid (self):
 		if not self.pid or not self._saved_pid:
@@ -68,9 +70,9 @@ class Daemon (object):
 			if e.errno == errno.ENOENT:
 				pass
 			else:
-				logger.error("Can not remove PIDfile %s" % self.pid,'daemon')
+				self.logger.error("Can not remove PIDfile %s" % self.pid,'daemon')
 				return
-		logger.daemon("Removed PIDfile %s" % self.pid)
+		self.logger.daemon("Removed PIDfile %s" % self.pid)
 
 	def drop_privileges (self):
 		"""returns true if we are left with insecure privileges"""
@@ -122,7 +124,7 @@ class Daemon (object):
 
 		log = load().log
 		if log.enable and log.destination.lower() in ('stdout','stderr'):
-			logger.daemon('ExaBGP can not fork when logs are going to %s' % log.destination.lower(),'critical')
+			self.logger.daemon('ExaBGP can not fork when logs are going to %s' % log.destination.lower(),'critical')
 			return
 
 		def fork_exit ():
@@ -131,7 +133,7 @@ class Daemon (object):
 				if pid > 0:
 					os._exit(0)
 			except OSError, e:
-				logger.supervisor('Can not fork, errno %d : %s' % (e.errno,e.strerror),'critical')
+				self.logger.supervisor('Can not fork, errno %d : %s' % (e.errno,e.strerror),'critical')
 
 		# do not detach if we are already supervised or run by init like process
 		if self._is_socket(sys.__stdin__.fileno()) or os.getppid() == 1:
@@ -148,7 +150,7 @@ class Daemon (object):
 		elif 'bsd' in sys.platform:
 			nofile = resource.RLIMIT_OFILE
 		else:
-			logger.daemon("For platform %s, can not close FDS before forking" % sys.platform)
+			self.logger.daemon("For platform %s, can not close FDS before forking" % sys.platform)
 			nofile = None
 
 		if nofile:

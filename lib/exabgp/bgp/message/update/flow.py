@@ -14,9 +14,8 @@ from exabgp.bgp.message.update.nlri import BGPPrefix
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute.attributes import Attributes
 from exabgp.bgp.message.update.attribute.communities import ECommunities
+from exabgp.bgp.message.notification import Notify
 
-from exabgp.structure.log import Logger
-logger = Logger()
 
 # =================================================================== Flow Components
 
@@ -251,7 +250,7 @@ class FlowNLRI (Attributes,Address):
 		elif l < 0x0FFF:
 			data = "%s%s" % (pack('!H',l | 0xF000),components)
 		else:
-			logger.critical("rule too big for NLRI - how to handle this - does this work ?")
+			raise Notify("rule too big for NLRI - how to handle this - does this work ?")
 			data = "%s" % chr(0)
 		return data
 

@@ -9,11 +9,11 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 from exabgp.bgp.message.update import Update
 
 from exabgp.structure.log import Logger
-logger = Logger()
 
 
 class Delta (object):
 	def __init__ (self,table):
+		self.logger = Logger()
 		self.table = table
 		self.last = 0
 
@@ -34,15 +34,15 @@ class Delta (object):
 			add_path = use_path.send(route.nlri.afi,route.nlri.safi)
 
 			if action == '+':
-				logger.rib('announcing %s' % route)
+				self.logger.rib('announcing %s' % route)
 				for update in Update().new([route]).announce(asn4,local_asn,peer_asn,add_path,msg_size):
 					yield update
 			elif action == '*':
-				logger.rib('updating %s' % route)
+				self.logger.rib('updating %s' % route)
 				for update in Update().new([route]).update(asn4,local_asn,peer_asn,add_path,msg_size):
 					yield update
 			elif action == '-':
-				logger.rib('withdrawing %s' % route)
+				self.logger.rib('withdrawing %s' % route)
 				for update in Update().new([route]).withdraw(asn4,local_asn,peer_asn,add_path,msg_size):
 					yield update
 
@@ -65,21 +65,21 @@ class Delta (object):
 		for attributes in grouped['+']:
 			routes = grouped['+'][attributes]
 			for route in routes:
-				logger.rib('announcing group %d %s' % (group,route))
+				self.logger.rib('announcing group %d %s' % (group,route))
 			group += 1
 			for update in Update().new(routes).announce(asn4,local_asn,peer_asn,add_path,msg_size):
 				yield update
 		for attributes in grouped['*']:
 			routes = grouped['*'][attributes]
 			for route in routes:
-				logger.rib('updating group %d %s' % (group,route))
+				self.logger.rib('updating group %d %s' % (group,route))
 			group += 1
 			for update in Update().new(routes).update(asn4,local_asn,peer_asn,add_path,msg_size):
 				yield update
 		for attributes in grouped['*']:
 			routes = grouped['*'][attributes]
 			for route in routes:
-				logger.rib('updating group %d %s' % (group,route))
+				self.logger.rib('updating group %d %s' % (group,route))
 			group += 1
 			for update in Update().new(routes).withdraw(asn4,local_asn,peer_asn,add_path,msg_size):
 				yield update

@@ -22,7 +22,6 @@ from exabgp.bgp.protocol import Protocol
 from exabgp.structure.processes import ProcessError
 
 from exabgp.structure.log import Logger,LazyFormat
-logger = Logger()
 
 # As we can not know if this is our first start or not, this flag is used to
 # always make the program act like it was recovering from a failure
@@ -38,6 +37,7 @@ class Peer (object):
 	update_time = 3
 
 	def __init__ (self,neighbor,supervisor):
+		self.logger = Logger()
 		self.supervisor = supervisor
 		self.neighbor = neighbor
 		# The next restart neighbor definition
@@ -126,7 +126,7 @@ class Peer (object):
 		try:
 			if self.supervisor.processes.broken(self.neighbor.peer_address):
 				# XXX: we should perhaps try to restart the process ??
-				logger.error('ExaBGP lost the helper process for this peer - stopping','process')
+				self.logger.error('ExaBGP lost the helper process for this peer - stopping','process')
 				self._running = False
 
 			self.bgp = Protocol(self)
@@ -152,7 +152,7 @@ class Peer (object):
 			while True:
 				self.open = self.bgp.read_open(_open,self.neighbor.peer_address.ip)
 				if time.time() - start > max_wait_open:
-					logger.error(self.me('Waited for an OPEN for too long - killing the session'),'supervisor')
+					self.logger.error(self.me('Waited for an OPEN for too long - killing the session'),'supervisor')
 					raise Notify(1,1,'The client took over %s seconds to send the OPEN, closing' % str(max_wait_open))
 				# OPEN or NOP
 				if self.open.TYPE == NOP.TYPE:
@@ -199,7 +199,7 @@ class Peer (object):
 			# ANNOUNCE TO THE PROCESS BGP IS UP
 			#
 
-			logger.network('Connected to peer %s' % self.neighbor.name())
+			self.logger.network('Connected to peer %s' % self.neighbor.name())
 			if self.neighbor.peer_updates:
 				try:
 					for name in self.supervisor.processes.notify(self.neighbor.peer_address):
@@ -256,7 +256,7 @@ class Peer (object):
 				c,k = self.bgp.new_keepalive(False)
 
 				if display_update:
-					logger.timers(self.me('Sending Timer %d second(s) left' % c))
+					self.logger.timers(self.me('Sending Timer %d second(s) left' % c))
 
 				#
 				# READ MESSAGE
@@ -280,14 +280,14 @@ class Peer (object):
 				c = self.bgp.check_keepalive()
 
 				if display_update:
-					logger.timers(self.me('Receive Timer %d second(s) left' % c))
+					self.logger.timers(self.me('Receive Timer %d second(s) left' % c))
 
 				#
 				# KEEPALIVE
 				#
 
 				if message.TYPE == KeepAlive.TYPE:
-					logger.message(self.me('<< KEEPALIVE'))
+					self.logger.message(self.me('<< KEEPALIVE'))
 				
 				#
 				# UPDATE
@@ -295,27 +295,27 @@ class Peer (object):
 
 				elif message.TYPE == Update.TYPE:
 					if message.routes:
-						logger.message(self.me('<< UPDATE'))
+						self.logger.message(self.me('<< UPDATE'))
 						self._route_parsed += len(message.routes)
 						if self._route_parsed:
 							for route in message.routes:
-								logger.routes(LazyFormat(self.me(''),str,route))
+								self.logger.routes(LazyFormat(self.me(''),str,route))
 					else:
-						logger.message(self.me('<< UPDATE (not parsed)'))
+						self.logger.message(self.me('<< UPDATE (not parsed)'))
 
 				#
 				# NO MESSAGES
 				#
 
 				elif message.TYPE not in (NOP.TYPE,):
-					 logger.message(self.me('<< %d' % ord(message.TYPE)))
+					 self.logger.message(self.me('<< %d' % ord(message.TYPE)))
 
 				#
 				# GIVE INFORMATION ON THE NUMBER OF ROUTES SEEN 
 				#
 
 				if seen_update and display_update:
-					logger.supervisor(self.me('processed %d routes' % self._route_parsed))
+					self.logger.supervisor(self.me('processed %d routes' % self._route_parsed))
 					seen_update = False
 
 				#
@@ -332,7 +332,7 @@ class Peer (object):
 
 				nb_pending = self.bgp.buffered()
 				if nb_pending:
-					logger.supervisor(self.me('BUFFERED MESSAGES  (%d)' % nb_pending))
+					self.logger.supervisor(self.me('BUFFERED MESSAGES  (%d)' % nb_pending))
 					count = 0
 
 				#
@@ -343,7 +343,7 @@ class Peer (object):
 
 				if self._have_routes:
 					self._have_routes = False
-					logger.supervisor(self.me('checking for new routes to send'))
+					self.logger.supervisor(self.me('checking for new routes to send'))
 				
 					for count in self.bgp.new_update():
 						yield True
@@ -365,7 +365,7 @@ class Peer (object):
 			#
 
 			if self.neighbor.graceful_restart and self.open.capabilities.announced(CapabilityID.GRACEFUL_RESTART):
-				logger.error('Closing the connection without notification','supervisor')
+				self.logger.error('Closing the connection without notification','supervisor')
 				self.bgp.close('graceful restarted negociated, closing without sending any notification')
 				return
 
@@ -380,7 +380,7 @@ class Peer (object):
 		#
 
 		except NotConnected, e:
-			logger.error('we can not connect to the peer %s' % str(e),'supervisor')
+			self.logger.error('we can not connect to the peer %s' % str(e),'supervisor')
 			self._more_skip()
 			self.bgp.clear_buffer()
 			try:
@@ -394,7 +394,7 @@ class Peer (object):
 		#
 
 		except Notify,e:
-			logger.error(self.me('Sending Notification (%d,%d) to peer [%s] %s' % (e.code,e.subcode,str(e),e.data)),'supervisor')
+			self.logger.error(self.me('Sending Notification (%d,%d) to peer [%s] %s' % (e.code,e.subcode,str(e),e.data)),'supervisor')
 			self.bgp.clear_buffer()
 			try:
 				self.bgp.new_notification(e)
@@ -411,7 +411,7 @@ class Peer (object):
 		#
 
 		except Notification, e:
-			logger.error(self.me('Received Notification (%d,%d) %s' % (e.code,e.subcode,str(e))),'supervisor')
+			self.logger.error(self.me('Received Notification (%d,%d) %s' % (e.code,e.subcode,str(e))),'supervisor')
 			self.bgp.clear_buffer()
 			try:
 				self.bgp.close('notification received (%d,%d) %s' % (e.code,e.subcode,str(e)))
@@ -424,7 +424,7 @@ class Peer (object):
 		#
 
 		except Failure, e:
-			logger.error(self.me(str(e)),'supervisor')
+			self.logger.error(self.me(str(e)),'supervisor')
 			self._more_skip()
 			self.bgp.clear_buffer()
 			try:
@@ -438,7 +438,7 @@ class Peer (object):
 		#
 
 		except Exception, e:
-			logger.error(self.me('UNHANDLED EXCEPTION'),'supervisor')
+			self.logger.error(self.me('UNHANDLED EXCEPTION'),'supervisor')
 			self._more_skip()
 			self.bgp.clear_buffer()
 			if self.debug_trace:
@@ -446,6 +446,6 @@ class Peer (object):
 				traceback.print_exc(file=sys.stdout)
 				raise
 			else:
-				logger.error(self.me(str(e)),'supervisor')
+				self.logger.error(self.me(str(e)),'supervisor')
 			if self.bgp: self.bgp.close('internal problem %s' % str(e))
 			return

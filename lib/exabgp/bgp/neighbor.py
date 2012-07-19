@@ -14,11 +14,11 @@ from exabgp.bgp.message.open.capability import AddPath
 from exabgp.bgp.message.update.attribute.id import AttributeID
 
 from exabgp.structure.log import Logger
-logger = Logger()
 
 # The definition of a neighbor (from reading the configuration)
 class Neighbor (object):
 	def __init__ (self):
+		self.logger = Logger()
 		self.description = ''
 		self.router_id = None
 		self.local_address = None
@@ -65,7 +65,7 @@ class Neighbor (object):
 			for route in self._routes[family]:
 				withdrawn = route.attributes.pop(AttributeID.INTERNAL_WITHDRAW,None)
 				if withdrawn is not None:
-					logger.rib('skipping initial announcement of %s' % route)
+					self.logger.rib('skipping initial announcement of %s' % route)
 					watchdog = route.attributes.get(AttributeID.INTERNAL_WATCHDOG,None)
 					if watchdog in self._watchdog:
 						self._watchdog[watchdog] == 'withdraw'

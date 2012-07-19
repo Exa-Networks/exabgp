@@ -29,7 +29,6 @@ from exabgp.bgp.message.notification import Notification, Notify
 from exabgp.structure.processes import ProcessError
 
 from exabgp.structure.log import Logger
-logger = Logger()
 
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000
@@ -41,6 +40,7 @@ class Protocol (object):
 	decode = True
 
 	def __init__ (self,peer,connection=None):
+		self.logger = Logger()
 		self.peer = peer
 		self.neighbor = peer.neighbor
 		self.connection = connection
@@ -227,7 +227,7 @@ class Protocol (object):
 #				afi,safi = family
 #				raise Notify(2,0,'Peers does not speak %s %s' % (afi,safi))
 
-		logger.message(self.me('<< %s' % message))
+		self.logger.message(self.me('<< %s' % message))
 		return message
 
 	def read_keepalive (self):
@@ -236,7 +236,7 @@ class Protocol (object):
 			return message
 		if message.TYPE != KeepAlive.TYPE:
 			raise Notify(5,2)
-		logger.message(self.me('<< KEEPALIVE (ESTABLISHED)'))
+		self.logger.message(self.me('<< KEEPALIVE (ESTABLISHED)'))
 		return message
 
 	# Sending message to peer .................................................
@@ -253,7 +253,7 @@ class Protocol (object):
 
 		if not self.connection.write(o.message()):
 			raise Failure('Could not send open')
-		logger.message(self.me('>> %s' % o))
+		self.logger.message(self.me('>> %s' % o))
 		return o
 
 	def new_keepalive (self,force=None):
@@ -263,22 +263,22 @@ class Protocol (object):
 		if force:
 			written = self.connection.write(k.message())
 			if not written:
-				logger.message(self.me('|| buffer not yet empty, adding KEEPALIVE to it'))
+				self.logger.message(self.me('|| buffer not yet empty, adding KEEPALIVE to it'))
 				self._messages.append((1,'KEEPALIVE',m))
 			else:
 				self._frozen = 0
 				if force == True:
-					logger.message(self.me('>> KEEPALIVE (OPENCONFIRM)'))
+					self.logger.message(self.me('>> KEEPALIVE (OPENCONFIRM)'))
 				elif force == False:
-					logger.message(self.me('>> KEEPALIVE (no more UPDATE and no EOR)'))
+					self.logger.message(self.me('>> KEEPALIVE (no more UPDATE and no EOR)'))
 			return left,k
 		if left <= 0:
 			written = self.connection.write(k.message())
 			if not written:
-				logger.message(self.me('|| could not send KEEPALIVE, buffering'))
+				self.logger.message(self.me('|| could not send KEEPALIVE, buffering'))
 				self._messages.append((1,'KEEPALIVE',m))
 			else:
-				logger.message(self.me('>> KEEPALIVE'))
+				self.logger.message(self.me('>> KEEPALIVE'))
 				self._frozen = 0
 			return left,k
 		return left,None
@@ -287,7 +287,7 @@ class Protocol (object):
 		return self.connection.write(notification.message())
 
 	def clear_buffer (self):
-		logger.message(self.me('clearing MESSAGE(s) buffer'))
+		self.logger.message(self.me('clearing MESSAGE(s) buffer'))
 		self._messages = []
 
 	def buffered (self):
@@ -300,15 +300,15 @@ class Protocol (object):
 				self._frozen = time.time()
 			if self._frozen and self._frozen + (self.hold_time) < time.time():
 				raise Failure('peer %s not reading on socket - killing session' % self.neighbor.peer_as)
-			logger.message(self.me("unable to send route for %d second (maximum allowed %d)" % (time.time()-self._frozen,self.hold_time)))
+			self.logger.message(self.me("unable to send route for %d second (maximum allowed %d)" % (time.time()-self._frozen,self.hold_time)))
 			nb_backlog = len(self._messages)
 			if nb_backlog > MAX_BACKLOG:
 				raise Failure('over %d chunked routes buffered for peer %s - killing session' % (MAX_BACKLOG,self.neighbor.peer_as))
-			logger.message(self.me("self._messages of %d/%d chunked routes" % (nb_backlog,MAX_BACKLOG)))
+			self.logger.message(self.me("self._messages of %d/%d chunked routes" % (nb_backlog,MAX_BACKLOG)))
 		while self._messages:
 			number,name,update = self._messages[0]
 			if not self.connection.write(update):
-				logger.message(self.me("|| failed to send %d %s(s) from buffer" % (number,name)))
+				self.logger.message(self.me("|| failed to send %d %s(s) from buffer" % (number,name)))
 				break
 			self._messages.pop(0)
 			self._frozen = 0
@@ -333,24 +333,24 @@ class Protocol (object):
 
 		if self._messages:
 			for number,update in chunked(generator,self.message_size):
-					logger.message(self.me('|| adding %d  %s(s) to existing buffer' % (number,name)))
+					self.logger.message(self.me('|| adding %d  %s(s) to existing buffer' % (number,name)))
 					self._messages.append((number,name,update))
 			for number in self._backlog():
-				logger.message(self.me('>> %d buffered %s(s)' % (number,name)))
+				self.logger.message(self.me('>> %d buffered %s(s)' % (number,name)))
 				yield number
 		else:
 			sending = True
 			for number,update in chunked(generator,self.message_size):
 				if sending:
 					if self.connection.write(update):
-						logger.message(self.me('>> %d %s(s)' % (number,name)))
+						self.logger.message(self.me('>> %d %s(s)' % (number,name)))
 						yield number
 					else:
-						logger.message(self.me('|| could not send %d %s(s), buffering' % (number,name)))
+						self.logger.message(self.me('|| could not send %d %s(s), buffering' % (number,name)))
 						self._messages.append((number,name,update))
 						sending = False
 				else:
-					logger.message(self.me('|| buffering the rest of the %s(s) (%d)' % (name,number)))
+					self.logger.message(self.me('|| buffering the rest of the %s(s) (%d)' % (name,number)))
 					self._messages.append((number,name,update))
 					yield 0
 

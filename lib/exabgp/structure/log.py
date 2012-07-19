@@ -42,8 +42,6 @@ class LazyFormat (object):
 		return str(self).split(c)
 
 class _Logger (object):
-	short = load().log.short
-	
 	_instance = None
 	_syslog = None
 
@@ -80,6 +78,7 @@ class _Logger (object):
 
 	def __init__ (self):
 		command = load()
+		self.short = command.log.short
 		self.level = command.log.level
 
 		self._supervisor    = command.log.enable and (command.log.all or command.log.supervisor)

@@ -12,7 +12,6 @@ import subprocess
 import select
 
 from exabgp.structure.log import Logger
-logger = Logger()
 
 class ProcessError (Exception):
 	pass
@@ -26,6 +25,7 @@ def preexec_helper ():
 
 class Processes (object):
 	def __init__ (self,supervisor):
+		self.logger = Logger()
 		self.supervisor = supervisor
 		self.clean()
 	
@@ -36,7 +36,7 @@ class Processes (object):
 		self._broken = []
 
 	def _terminate (self,name):
-		logger.processes("Terminating process %s" % name)
+		self.logger.processes("Terminating process %s" % name)
 		self._process[name].terminate()
 		self._process[name].wait()
 		del self._process[name]
@@ -56,11 +56,11 @@ class Processes (object):
 	def _start (self,name):
 		try:
 			if name in self._process:
-				logger.processes("process already running")
+				self.logger.processes("process already running")
 				return
 			proc = self.supervisor.configuration.process
 			if not name in proc:
-				logger.processes("Can not start process, no configuration for it (anymore ?)")
+				self.logger.processes("Can not start process, no configuration for it (anymore ?)")
 				return
 			# Prevent some weird termcap data to be created at the start of the PIPE
 			# \x1b[?1034h (no-eol) (esc)
@@ -75,11 +75,11 @@ class Processes (object):
 			)
 			neighbor = proc[name]['neighbor']
 			self._notify.setdefault(neighbor,[]).append(name)
-			logger.processes("Forked process %s" % name)
+			self.logger.processes("Forked process %s" % name)
 		except (subprocess.CalledProcessError,OSError,ValueError),e:
 			self._broken.append(name)
-			logger.processes("Could not start process %s" % name)
-			logger.processes("reason: %s" % str(e))
+			self.logger.processes("Could not start process %s" % name)
+			self.logger.processes("reason: %s" % str(e))
 
 	def start (self):
 		proc = self.supervisor.configuration.process
@@ -122,10 +122,10 @@ class Processes (object):
 							# there is not data to read
 							r = False
 						else:
-							logger.processes("Command from process %s : %s " % (name,line))
+							self.logger.processes("Command from process %s : %s " % (name,line))
 							lines.setdefault(name,[]).append(line)
 			except (subprocess.CalledProcessError,OSError,ValueError):
-				logger.processes("Issue with the process, terminating it and restarting it")
+				self.logger.processes("Issue with the process, terminating it and restarting it")
 				self._terminate(name)
 				self._start(name)
 		return lines
@@ -139,11 +139,11 @@ class Processes (object):
 				self._broken.append(name)
 				if e.errno == errno.EPIPE:
 					self._broken.append(name)
-					logger.processes("Issue while sending data to our helper program")
+					self.logger.processes("Issue while sending data to our helper program")
 					raise ProcessError()
 				else:
 					# Could it have been caused by a signal ? What to do. 
-					logger.processes("REPORT TO DEVELOPERS: IOError received while SENDING data to helper program %s, retrying" % str(e.errno))
+					self.logger.processes("REPORT TO DEVELOPERS: IOError received while SENDING data to helper program %s, retrying" % str(e.errno))
 					continue
 			break
 
@@ -152,7 +152,7 @@ class Processes (object):
 		except IOError,e:
 			if shutdown: return True
 			# AFAIK, the buffer should be flushed at the next attempt.
-			logger.processes("REPORT TO DEVELOPERS: IOError received while FLUSHING data to helper program %s, retrying" % str(e.errno))
+			self.logger.processes("REPORT TO DEVELOPERS: IOError received while FLUSHING data to helper program %s, retrying" % str(e.errno))
 
 		return True
 

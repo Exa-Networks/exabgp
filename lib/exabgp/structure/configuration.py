@@ -44,7 +44,6 @@ from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 
 from exabgp.structure.log import Logger
-logger = Logger()
 
 # Duck class, faking part of the Attribute interface
 # We add this to routes when when need o split a route in smaller route
@@ -66,7 +65,6 @@ class Withdrawn (object):
 
 class Configuration (object):
 	TTL_SECURITY = 255
-	debug = load().debug.configuration
 
 #	'  hold-time 180;\n' \
 #	'  add-path disabled|send|receive|send/receive;\n' \
@@ -158,6 +156,9 @@ class Configuration (object):
 	'        }\n'
 
 	def __init__ (self,fname,text=False):
+		debug = load().debug.configuration
+
+		self.logger = Logger()
 		self._text = text
 		self._fname = fname
 		self._clear()
@@ -263,7 +264,7 @@ class Configuration (object):
 				r.append(['md5',password,';'])
 			else:
 				r.append([t for t in replaced[:-1].split(' ') if t] + [replaced[-1]])
-		logger.config(config)
+		self.logger.config(config)
 		return r
 
 	def tokens (self):
@@ -290,9 +291,9 @@ class Configuration (object):
 			self._error = 'configuration file incomplete (most likely missing })'
 			if self.debug: raise
 			return False
-		logger.configuration('analysing tokens %s ' % str(tokens))
-		logger.configuration('  valid block options %s' % str(multi))
-		logger.configuration('  valid parameters    %s' % str(single))
+		self.logger.configuration('analysing tokens %s ' % str(tokens))
+		self.logger.configuration('  valid block options %s' % str(multi))
+		self.logger.configuration('  valid parameters    %s' % str(single))
 		end = tokens[-1]
 		if multi and end == '{':
 			self._location.append(tokens[0])
@@ -658,17 +659,17 @@ class Configuration (object):
 				if key not in scope[-1]:
 					scope[-1][key] = deepcopy(content)
 
-		logger.configuration("\nPeer configuration complete :")
+		self.logger.configuration("\nPeer configuration complete :")
 		for _key in scope[-1].keys():
 			stored = scope[-1][_key]
 			if hasattr(stored,'__iter__'):
 				for category in scope[-1][_key]:
 					for _line in pformat(str(category),3,3,3).split('\n'):
-						logger.configuration("   %s: %s" %(_key,_line))
+						self.logger.configuration("   %s: %s" %(_key,_line))
 			else:
 				for _line in pformat(str(stored),3,3,3).split('\n'):
-					logger.configuration("   %s: %s" %(_key,_line))
-		logger.configuration("\n")
+					self.logger.configuration("   %s: %s" %(_key,_line))
+		self.logger.configuration("\n")
 
 		neighbor = Neighbor()
 		for local_scope in scope:
@@ -1516,7 +1517,7 @@ class Configuration (object):
 		return True
 
 	def _check_flow_route (self,scope):
-		logger.configuration('warning: no check on flows are implemented')
+		self.logger.configuration('warning: no check on flows are implemented')
 		return True
 
 	def _multi_flow_route (self,scope,tokens):
@@ -1719,10 +1720,10 @@ class Configuration (object):
 		try:
 			speed = int(tokens[0])
 			if speed < 9600 and speed != 0:
-				logger.warning("rate-limiting flow under 9600 bytes per seconds may not work",'configuration')
+				self.logger.warning("rate-limiting flow under 9600 bytes per seconds may not work",'configuration')
 			if speed > 1000000000000:
 				speed = 1000000000000
-				logger.warning("rate-limiting changed for 1 000 000 000 000 bytes from %s" % tokens[0],'configuration')
+				self.logger.warning("rate-limiting changed for 1 000 000 000 000 bytes from %s" % tokens[0],'configuration')
 			scope[-1]['routes'][-1].add_action(to_FlowTrafficRate(ASN(0),speed))
 			return True
 		except ValueError:
@@ -1811,19 +1812,19 @@ class Configuration (object):
 					continue
 				for route in self.neighbor[nei]._routes[family]:
 					str1 = str(route)
-					logger.info('parsed route %s' % str1,'configuration') 
+					self.logger.info('parsed route %s' % str1,'configuration') 
 					update = Update().new([route])
 					#update = Update().new([route]*1000)
 					packed = update.announce(False,ASN(30740),ASN(30740),with_path_info)
-					logger.info('parsed route requires %d updates' % len(packed),'configuration') 
+					self.logger.info('parsed route requires %d updates' % len(packed),'configuration') 
 					for pack in packed:
-						logger.info('update size is %d' % len(pack),'configuration') 
+						self.logger.info('update size is %d' % len(pack),'configuration') 
 						# This does not take the BGP header - let's assume we will not break that :)
 						update = Update().factory(asn4,n._families,use_path,pack[19:])
 						for route in update.routes:
 							str2 = str(route)
-							logger.info('decoded route %s' % str2,'configuration')
-						logger.info('decoded hex %s\n' % [hex(ord(_)) for _ in pack],'configuration') 
+							self.logger.info('decoded route %s' % str2,'configuration')
+						self.logger.info('decoded hex %s\n' % [hex(ord(_)) for _ in pack],'configuration') 
 		import sys
 		sys.exit(0)
 
