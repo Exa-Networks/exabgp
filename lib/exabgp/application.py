@@ -211,7 +211,7 @@ def main ():
 		for configuration in configurations:
 			pid = os.fork()
 			if pid == 0:
-				run(env,comment,configuration)
+				run(env,comment,configuration,os.getpid())
 			else:
 				pids.append(pid)
 
@@ -227,7 +227,7 @@ def main ():
 		logger = Logger()
 		logger.supervisor('Can not fork, errno %d : %s' % (e.errno,e.strerror),'critical')
 
-def run (env,comment,configuration):
+def run (env,comment,configuration,pid=0):
 	from exabgp.structure.log import Logger
 	logger = Logger()
 
@@ -249,15 +249,20 @@ def run (env,comment,configuration):
 		profile.run('Supervisor(configuration).run()')
 		__exit(env.debug.memory,0)
 
+	if pid:
+		profile_name = "%s-pid-%d" % (env.profile.file,pid)
+	else:
+		profile_name = env.profile.file
+
 	notice = ''
-	if os.path.isdir(env.profile.file):
-		notice = 'profile can not use this filename as outpout, it is not a directory (%s)' % profile
-	if os.path.exists(env.profile.file):
-		notice = 'profile can not use this filename as outpout, it already exists (%s)' % profile
+	if os.path.isdir(profile_name):
+		notice = 'profile can not use this filename as outpout, it is not a directory (%s)' % profile_name
+	if os.path.exists(profile_name):
+		notice = 'profile can not use this filename as outpout, it already exists (%s)' % profile_name
 
 	if not notice:
 		logger.info('profiling ....','profile')
-		profile.run('Supervisor(configuration).run()',filename=env.profile.file)
+		profile.run('Supervisor(configuration).run()',filename=profile_name)
 		__exit(env.debug.memory,0)
 	else:
 		logger.info("-"*len(notice),'profile')
