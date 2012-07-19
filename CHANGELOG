@@ -10,6 +10,7 @@ Version 3.0.4 - xx of July 2012
  * Fix: log level parsing with -d
  * Fix: need to change gid before uid when dropping privileges
  * Fix: do not run our forked program as the caller but the suid user (fix bug when daemonizing too)
+ * Fix: bug when daemonizing and not using syslog
  * Improvement: prevent SIGINT to reach the forked programs
  * Improvement: allow multiple configuration files, which forks multiple main loops
  * Improvement: send a "shutdown" message before terminating the worker processes

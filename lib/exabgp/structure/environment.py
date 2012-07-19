@@ -302,7 +302,6 @@ def _env (conf):
 				elif rep_name in os.environ:
 					conf = os.environ.get(rep_name)
 				else:
-					# raise and set the default
 					conf = value.unquote(ini.get(proxy_section,option,nonedict))
 					# name without an = or : in the configuration and no value
 					if conf == None:

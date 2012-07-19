@@ -11,7 +11,6 @@ import sys
 import pwd
 import errno
 import socket
-import resource
 
 from exabgp.structure.environment import load
 
@@ -145,20 +144,8 @@ class Daemon (object):
 		self.silence()
 
 	def silence (self):
-		if 'linux' in sys.platform:
-			nofile = resource.RLIMIT_NOFILE
-		elif 'bsd' in sys.platform:
-			nofile = resource.RLIMIT_OFILE
-		else:
-			self.logger.daemon("For platform %s, can not close FDS before forking" % sys.platform)
-			nofile = None
-
-		if nofile:
-			maxfd = resource.getrlimit(nofile)[1]
-			if (maxfd == resource.RLIM_INFINITY):
-				maxfd = MAXFD
-		else:
-			maxfd = MAXFD
+		# closing more would close the log file too if open
+		maxfd = 3
 
 		for fd in range(0, maxfd):
 			try:
@@ -168,3 +155,19 @@ class Daemon (object):
 		os.open("/dev/null", os.O_RDWR)
 		os.dup2(0, 1)
 		os.dup2(0, 2)
+
+#		import resource		
+#		if 'linux' in sys.platform:
+#			nofile = resource.RLIMIT_NOFILE
+#		elif 'bsd' in sys.platform:
+#			nofile = resource.RLIMIT_OFILE
+#		else:
+#			self.logger.daemon("For platform %s, can not close FDS before forking" % sys.platform)
+#			nofile = None
+#		if nofile:
+#			maxfd = resource.getrlimit(nofile)[1]
+#			if (maxfd == resource.RLIM_INFINITY):
+#				maxfd = MAXFD
+#		else:
+#			maxfd = MAXFD
+
