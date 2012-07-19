@@ -108,7 +108,7 @@ class _Logger (object):
 		destination = command.log.destination
 
 		try:
-			if destination == '':
+			if destination in ('','syslog'):
 				if sys.platform == "darwin":
 					address = '/var/run/syslog'
 				else:

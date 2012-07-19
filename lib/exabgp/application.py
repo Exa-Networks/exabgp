@@ -9,6 +9,10 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 import os
 import sys
 
+from exabgp.structure.environment import EnvError,load,iter_ini,iter_env,LOG,default
+# import before the fork to improve copy on write memory savings
+from exabgp.structure.supervisor import Supervisor
+
 def __exit(memory,code):
 	if memory:
 		from exabgp.leak import objgraph
@@ -74,6 +78,7 @@ def help (comment=''):
 	sys.stdout.write('\n')
 	sys.stdout.write('Valid configuration options are :\n')
 	sys.stdout.write('\n')
+
 	for line in default():
 			sys.stdout.write(' - %s\n' % line)
 	sys.stdout.write('\n')
@@ -86,10 +91,6 @@ def main ():
 
 	if main != 2 or secondary < 5:
 		sys.exit('This program can not work (is not tested) with your python version (< 2.5 or >= 3.0)')
-
-	from exabgp.structure.environment import EnvError,load,iter_ini,iter_env,default,LOG
-	# import before the fork to improve copy on write memory savings
-	from exabgp.structure.supervisor import Supervisor
 
 	next = ''
 	arguments = {
@@ -206,6 +207,12 @@ def main ():
 
 	if len(configurations) == 1:
 		run(env,comment,configuration)
+
+	if not (env.log.destination in ('syslog','stdout','stderr') or env.log.destination.startswith('host:')):
+		from exabgp.structure.log import Logger
+		logger = Logger()
+		logger.error('can not log to files when running multiple configuration (as we fork)','configuration')
+		sys.exit(1)
 
 	try:
 		# run each configuration in its own process
