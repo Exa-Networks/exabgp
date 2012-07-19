@@ -20,3 +20,14 @@ Notes
 - if we define the same route twice in the configuration we will/may send a withdraw before the announce .. 
 - UsePath should really be storing things ASN4, UsePath, etc. ie: open negociation so it is one args to functions
 - Attributes / MultiAttributes API ?
+- warn if an as-path has the router ASN on an ibgp connection
+- Some of the match condition of flows currently take list or numeric tests, they should always take both, refactor
+- We do not validate the flow created
+- reading stderr from forked process and displaying via the self.logger class
+- Do not announce route of a AFI/SAFI pair if the pair was not received on the OPEN by the peer (done ?)
+
+Important
+* Write the documentation, and do not rely on the example and the site wiki (argh ...)
+* Rewrite the unittesting which is really missing.
+* Look at all the XXX: in the code
+~      
