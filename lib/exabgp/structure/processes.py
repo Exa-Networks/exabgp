@@ -27,6 +27,7 @@ def preexec_helper ():
 class Processes (object):
 	def __init__ (self,supervisor):
 		self.supervisor = supervisor
+		self.clean()
 	
 	def clean (self):
 		self._process = {}
