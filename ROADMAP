@@ -7,9 +7,11 @@ Version 3.0
 - move the generation of the route when the delta is done in an object with the peer info to display the route change in the log
 - use a cache for the object created in the configuration too
 - improve the Route objects API
+- Change sure all the Message have the API new() and factory() and empty __init__
 
 Version 3.1
 - keep route grouping provided by the routers who sent them to us.
+- create a capability section under neighbor for capability negociation options
 
 
 Helpers

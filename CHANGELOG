@@ -3,7 +3,7 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
-Version 3.0.4 - xx of July 2012
+Version 3.0.4 - 19 of July 2012
  * Fix: FlowSpec API change update forgotten
  * Fix: Provide the right user to -fi when upgrading on Debian
  * Fix: split option now works with non ipv4 unicast route
@@ -11,10 +11,10 @@ Version 3.0.4 - xx of July 2012
  * Fix: need to change gid before uid when dropping privileges
  * Fix: do not run our forked program as the caller but the suid user (fix bug when daemonizing too)
  * Fix: bug when daemonizing and not using syslog
+ * Fix: handle gracefully ^C during configuration load/reload
  * Improvement: prevent SIGINT to reach the forked programs
  * Improvement: allow multiple configuration files, which forks multiple main loops
  * Improvement: send a "shutdown" message before terminating the worker processes
- * Improvement: handle gracefully ^C during configuration load/reload
  * Improvement: group-updates option in neighbor which group routes with the same attributes in one update
  * Improvement: announce to helpers the start and end of update
 
