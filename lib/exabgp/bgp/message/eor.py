@@ -10,6 +10,7 @@ from exabgp.bgp.message import Message
 from exabgp.protocol.ip.address import Address
 
 # =================================================================== End-Of-RIB
+# not technically a different message type but easier to treat as one
 
 class EOR (Message):
 	TYPE = chr(0x02)
@@ -28,7 +29,7 @@ class EOR (Message):
 	def __str__ (self):
 		return 'EOR %s %s' % (self.afi,self.safi)
 
-class EmptyRoute (object):
+class RouteEOR (object):
 	def __init__ (self,afi,safi,action):
 		self.nlri = Address(afi,safi)
 		self.action = action

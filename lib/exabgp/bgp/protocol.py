@@ -22,7 +22,7 @@ from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.negociated import Negociated
 from exabgp.bgp.message.update import Update
-from exabgp.bgp.message.update.eor import EOR
+from exabgp.bgp.message.eor import EOR
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notification, Notify
 
