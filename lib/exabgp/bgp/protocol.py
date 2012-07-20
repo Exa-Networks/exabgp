@@ -115,7 +115,7 @@ class Protocol (object):
 				data += delta
 				length -= len(delta)
 				# The socket is closed
-				if not data:
+				if not delta:
 					raise Failure('The TCP connection is closed')
 
 		if data[:16] != Message.MARKER:
@@ -148,7 +148,7 @@ class Protocol (object):
 				data += delta
 				length -= len(delta)
 				# The socket is closed
-				if not data:
+				if not delta:
 					raise Failure('The TCP connection is closed')
 
 		if msg == Notification.TYPE:
