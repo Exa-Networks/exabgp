@@ -12,12 +12,11 @@ import traceback
 
 from exabgp.bgp.message import Failure
 from exabgp.bgp.message.nop import NOP
-from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.id import CapabilityID
-from exabgp.bgp.message.open.capability.negociated import Negociated
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notification, Notify
+from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.protocol import Protocol
 from exabgp.structure.processes import ProcessError
 
@@ -311,6 +310,14 @@ class Peer (object):
 								self.logger.routes(LazyFormat(self.me(''),str,route))
 					else:
 						self.logger.message(self.me('<< UPDATE (not parsed)'))
+
+
+				#
+				# ROUTE REFRESH
+				#
+
+				elif message.TYPE == RouteRefresh.TYPE:
+					self.logger.message(self.me('<< ROUTE-REFRESH'))
 
 				#
 				# NO MESSAGES

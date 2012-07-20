@@ -338,12 +338,14 @@ class Configuration (object):
 			if command == 'flow': return self._multi_flow(scope,tokens[1:])
 			if command == 'process': return self._multi_process(scope,tokens[1:])
 			if command == 'family': return self._multi_family(scope,tokens[1:])
+			if command == 'capability': return self._multi_capability(scope,tokens[1:])
 
 		if name == 'neighbor':
 			if command == 'static': return self._multi_static(scope,tokens[1:])
 			if command == 'flow': return self._multi_flow(scope,tokens[1:])
 			if command == 'process': return self._multi_process(scope,tokens[1:])
 			if command == 'family': return self._multi_family(scope,tokens[1:])
+			if command == 'capability': return self._multi_capability(scope,tokens[1:])
 
 		if name == 'static':
 			if command == 'route':
@@ -427,12 +429,14 @@ class Configuration (object):
 			if command == 'local-as': return self._set_asn(scope,'local-as',tokens[1:])
 			if command == 'peer-as': return self._set_asn(scope,'peer-as',tokens[1:])
 			if command == 'hold-time': return self._set_holdtime(scope,'hold-time',tokens[1:])
-			if command == 'add-path': return self._set_addpath(scope,'add-path',tokens[1:])
-			if command == 'graceful-restart': return self._set_gracefulrestart(scope,'graceful-restart',tokens[1:])
 			if command == 'md5': return self._set_md5(scope,'md5',tokens[1:])
 			if command == 'ttl-security': return self._set_ttl(scope,'ttl-security',tokens[1:])
-			if command == 'multi-session': return self._set_multisession(scope,'multi-session',tokens[1:])
 			if command == 'group-updates': return self._set_group_updates(scope,'group-updates',tokens[1:])
+			# deprecated
+			if command == 'route-refresh': return self._set_routerefresh(scope,'route-refresh',tokens[1:])
+			if command == 'graceful-restart': return self._set_gracefulrestart(scope,'graceful-restart',tokens[1:])
+			if command == 'multi-session': return self._set_multisession(scope,'multi-session',tokens[1:])
+			if command == 'add-path': return self._set_addpath(scope,'add-path',tokens[1:])
 
 		elif name == 'family':
 			if command == 'inet': return self._set_family_inet4(scope,tokens[1:])
@@ -440,6 +444,12 @@ class Configuration (object):
 			if command == 'inet6': return self._set_family_inet6(scope,tokens[1:])
 			if command == 'minimal': return self._set_family_minimal(scope,tokens[1:])
 			if command == 'all': return self._set_family_all(scope,tokens[1:])
+
+		elif name == 'capability':
+			if command == 'route-refresh': return self._set_routerefresh(scope,'route-refresh',tokens[1:])
+			if command == 'graceful-restart': return self._set_gracefulrestart(scope,'graceful-restart',tokens[1:])
+			if command == 'multi-session': return self._set_multisession(scope,'multi-session',tokens[1:])
+			if command == 'add-path': return self._set_addpath(scope,'add-path',tokens[1:])
 
 		elif name == 'process':
 			if command == 'run': return self._set_process_run(scope,'process-run',tokens[1:])
@@ -545,13 +555,6 @@ class Configuration (object):
 			if r is False: return False
 			if r is None: break
 		self._family = False
-
-#		self.process.setdefault(tokens[0],{})['run'] = scope[-1].pop('process-run')
-#		self.process[tokens[0]]['receive-routes'] = scope[-1].get('parse-routes',False)
-#		if 'peer-address' in scope[-1]:
-#			self.process[tokens[0]]['neighbor'] = scope[-1]['peer-address']
-#		else:
-#			self.process[tokens[0]]['neighbor'] = '*'
 		return True
 
 	def _set_family_inet4 (self,scope,tokens):
@@ -620,6 +623,62 @@ class Configuration (object):
 		families.append((AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)))
 		return families
 
+	# capacity
+
+	def _multi_capability (self,scope,tokens):
+		# we know all the families we should use
+		self._capability = False
+		while True:
+			r = self._dispatch(scope,'capability',[],['route-refresh','graceful-restart','multi-session','add-path'])
+			if r is False: return False
+			if r is None: break
+		return True
+
+	def _set_routerefresh (self,scope,command,value):
+		scope[-1][command] = True
+		return True
+
+	def _set_gracefulrestart (self,scope,command,value):
+		if not len(value):
+			scope[-1][command] = None
+			return True
+		try:
+			# README: Should it be a subclass of int ?
+			grace = int(value[0])
+			if grace < 0:
+				raise ValueError('graceful-restart can not be negative')
+			if grace >= pow(2,16):
+				raise ValueError('graceful-restart must be smaller than %d' % pow(2,16))
+			scope[-1][command] = grace
+			return True
+		except ValueError:
+			self._error = '"%s" is an invalid graceful-restart time' % ' '.join(value)
+			if self.debug: raise
+			return False
+		return True
+
+	def _set_multisession (self,scope,command,value):
+		scope[-1][command] = True
+		return True
+
+	def _set_addpath (self,scope,command,value):
+		try:
+			ap = value[0].lower()
+			apv = 0
+			if ap.endswith('receive'):
+				apv += 1
+			if ap.startswith('send'):
+				apv += 2
+			if not apv and ap != 'disabled':
+				raise ValueError('invalid add-path')
+			scope[-1][command] = apv
+			return True
+		except ValueError:
+			self._error = '"%s" is an invalid add-path' % ' '.join(value)
+			if self.debug: raise
+			return False
+
+
 	# route grouping with watchdog
 
 	def _route_watchdog (self,scope,tokens):
@@ -645,7 +704,7 @@ class Configuration (object):
 	def _multi_group (self,scope,address):
 		scope.append({})
 		while True:
-			r = self._dispatch(scope,'group',['static','flow','neighbor','process','family'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates'])
+			r = self._dispatch(scope,'group',['static','flow','neighbor','process','family','capability'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','route-refresh'])
 			if r is False:
 				return False
 			if r is None:
@@ -685,8 +744,6 @@ class Configuration (object):
 			if v: neighbor.peer_as = v
 			v = local_scope.get('hold-time','')
 			if v: neighbor.hold_time = v
-			v = local_scope.get('add-path','')
-			if v: neighbor.add_path = v
 
 			neighbor.parse_routes = local_scope.get('parse-routes',False)
 			neighbor.peer_updates = local_scope.get('peer-updates',False)
@@ -699,15 +756,17 @@ class Configuration (object):
 		local_scope = scope.pop(-1)
 		neighbor.description = local_scope.get('description','')
 
+		neighbor.md5 = local_scope.get('md5',None)
+		neighbor.ttl = local_scope.get('ttl-security',None)
+		neighbor.group_updates = local_scope.get('group-updates',False)
+
+		neighbor.route_refresh = local_scope.get('route-refresh',0)
 		neighbor.graceful_restart = local_scope.get('graceful-restart',0)
 		if neighbor.graceful_restart is None:
 			# README: Should it be a subclass of int ?
 			neighbor.graceful_restart = int(neighbor.hold_time)
-
-		neighbor.md5 = local_scope.get('md5',None)
-		neighbor.ttl = local_scope.get('ttl-security',None)
 		neighbor.multisession = local_scope.get('multi-session',False)
-		neighbor.group_updates = local_scope.get('group-updates',False)
+		neighbor.add_path = local_scope.get('add-path','')
 
 		missing = neighbor.missing()
 		if missing:
@@ -780,7 +839,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-		 	r = self._dispatch(scope,'neighbor',['static','flow','process','family'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates'])
+		 	r = self._dispatch(scope,'neighbor',['static','flow','process','family','capability'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates'])
 			if r is False: return False
 			if r is None: return True
 
@@ -847,42 +906,6 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-	def _set_addpath (self,scope,command,value):
-		try:
-			ap = value[0].lower()
-			apv = 0
-			if ap.endswith('receive'):
-				apv += 1
-			if ap.startswith('send'):
-				apv += 2
-			if not apv and ap != 'disabled':
-				raise ValueError('invalid add-path')
-			scope[-1][command] = apv
-			return True
-		except ValueError:
-			self._error = '"%s" is an invalid add-path' % ' '.join(value)
-			if self.debug: raise
-			return False
-
-	def _set_gracefulrestart (self,scope,command,value):
-		if not len(value):
-			scope[-1][command] = None
-			return True
-		try:
-			# README: Should it be a subclass of int ?
-			grace = int(value[0])
-			if grace < 0:
-				raise ValueError('graceful-restart can not be negative')
-			if grace >= pow(2,16):
-				raise ValueError('graceful-restart must be smaller than %d' % pow(2,16))
-			scope[-1][command] = grace
-			return True
-		except ValueError:
-			self._error = '"%s" is an invalid graceful-restart time' % ' '.join(value)
-			if self.debug: raise
-			return False
-		return True
-
 	def _set_md5 (self,scope,command,value):
 		md5 = value[0]
 		if len(md5) > 2 and md5[0] == md5[-1] and md5[0] in ['"',"'"]:
@@ -915,10 +938,6 @@ class Configuration (object):
 			self._error = '"%s" is an invalid ttl-security' % ' '.join(value)
 			if self.debug: raise
 			return False
-		return True
-
-	def _set_multisession (self,scope,command,value):
-		scope[-1][command] = True
 		return True
 
 	def _set_group_updates (self,scope,command,value):

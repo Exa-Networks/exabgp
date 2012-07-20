@@ -27,13 +27,20 @@ class Neighbor (object):
 		self.local_as = None
 		self.hold_time = HoldTime(180)
 		self.add_path = 0
-		self.graceful_restart = False
 		self.md5 = None
 		self.ttl = None
-		self.multisession = None
 		self.group_updates = None
+
+		# processes
 		self.parse_routes = None
 		self.peer_updates = None
+
+		# capability
+		self.route_refresh = False
+		self.graceful_restart = False
+		self.multisession = None
+		self.add_path = None
+
 		self._families = []
 		self._routes = {}
 		self._watchdog = {}
@@ -121,12 +128,13 @@ class Neighbor (object):
 			self.peer_address == other.peer_address and \
 			self.peer_as == other.peer_as and \
 			self.hold_time == other.hold_time and \
-			self.add_path == other.add_path and \
-			self.graceful_restart == other.graceful_restart and \
 			self.md5 == other.md5 and \
 			self.ttl == other.ttl and \
-			self.group_updates == other.group_updates and \
+			self.route_refresh == other.route_refresh and \
+			self.graceful_restart == other.graceful_restart and \
 			self.multisession == other.multisession and \
+			self.add_path == other.add_path and \
+			self.group_updates == other.group_updates and \
 			self.families() == other.families()
 
 	def __ne__(self, other):
@@ -142,10 +150,6 @@ class Neighbor (object):
 		for afi,safi in self.families():
 			families += '\n    %s %s' % (afi.name(),safi.name())
 
-		options = []
-		if self.md5: options.append("md5: %s;" % self.md5)
-		if self.ttl is not None: options.append("ttl-security: %d;" % self.ttl)
-		if self.graceful_restart: options.append("graceful-restart: %d;" % self.graceful_restart)
 
 		return """\
 neighbor %s {
@@ -155,10 +159,9 @@ neighbor %s {
   local-as %s;
   peer-as %s;
   hold-time %s;
-  multi-session %s;
-  group-updates: %s;
-  add-path %s;
-  %s
+%s%s%s
+  capability {
+%s%s%s%s  }
   family {%s
   }
   static { %s
@@ -171,10 +174,13 @@ neighbor %s {
 	self.local_as,
 	self.peer_as,
 	self.hold_time,
-	self.multisession,
-	self.group_updates,
-	AddPath.string[self.add_path],
-	'\n  '.join(options),
+	'  group-updates: %s;\n' % self.group_update if self.group_updates else '',
+	'  md5: %d;\n' % self.ttl if self.ttl else ''
+	'  ttl-security: %d;\n' % self.ttl if self.ttl else ''
+	'    route-refresh;\n' if self.route_refresh else '',
+	'    graceful-restart %s;\n' % self.graceful_restart if self.graceful_restart else '',
+	'    add-path %s;\n' % AddPath.string[self.add_path] if self.add_path else '',
+	'    multi-session;\n' if self.multisession else '',
 	families,
 	routes
 )

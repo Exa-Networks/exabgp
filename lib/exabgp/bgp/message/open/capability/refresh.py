@@ -10,15 +10,7 @@ Copyright (c) 2012 Exa Networks. All rights reserved.
 
 class RouteRefresh (list):
 	def __str__ (self):
-		return "Route Refresh (unparsed)"
+		return 'Route Refresh'
 
 	def extract (self):
 		return []
-
-class CiscoRouteRefresh (list):
-	def __str__ (self):
-		return "Cisco Route Refresh (unparsed)"
-
-	def extract (self):
-		return []
-

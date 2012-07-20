@@ -25,6 +25,7 @@ from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.eor import EOR
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notification, Notify
+from exabgp.bgp.message.refresh import RouteRefresh
 
 from exabgp.structure.processes import ProcessError
 
@@ -134,11 +135,11 @@ class Protocol (object):
 			(msg == Open.TYPE and length < 29) or
 			(msg == Update.TYPE and length < 23) or
 			(msg == Notification.TYPE and length < 21) or
-			(msg == KeepAlive.TYPE and length != 19)
+			(msg == KeepAlive.TYPE and length != 19) or
+			(msg == RouteRefresh.TYPE and length != 23)
 		):
 			# MUST send the faulty length back
 			raise Notify(1,2,raw_length)
-			#(msg == RouteRefresh.TYPE and length != 23)
 
 		length -= 19
 		data = ''
@@ -166,9 +167,9 @@ class Protocol (object):
 				if update.routes:
 					return update
 
-#		if msg == Refresh.TYPE:
-#			if self.neighbor.parse_routes:
-#				refresh = Refresh().factory(data)
+		if msg == Refresh.TYPE:
+			if self.neighbor.parse_routes:
+				refresh = Refresh().factory(data)
 
 		return NOP().factory(msg)
 
