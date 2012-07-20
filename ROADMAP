@@ -29,6 +29,7 @@ Notes
 - reading stderr from forked process and displaying via the self.logger class
 - Do not announce route of a AFI/SAFI pair if the pair was not received on the OPEN by the peer (done ?)
 - NotificationID
+- For the first run, add a grouping of route BEFORE the OPEN negociation to not cause issues with OPEN
 
 Important
 * Write the documentation, and do not rely on the example and the site wiki (argh ...)

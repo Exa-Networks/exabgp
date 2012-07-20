@@ -36,7 +36,7 @@ class Daemon (object):
 		self._saved_pid = False
 
 		if not self.pid:
-			return
+			return True
 
 		ownid = os.getpid()
 
@@ -47,7 +47,7 @@ class Daemon (object):
 			fd = os.open(self.pid,flags,mode)
 		except OSError:
 			self.logger.daemon("PIDfile already exists, not updated %s" % self.pid)
-			return
+			return False
 
 		try:
 			f = os.fdopen(fd,'w')
@@ -57,8 +57,9 @@ class Daemon (object):
 			self._saved_pid = True
 		except IOError:
 			self.logger.warning("Can not create PIDfile %s" % self.pid,'daemon')
-			return
+			return False
 		self.logger.warning("Created PIDfile %s with value %d" % (self.pid,ownid),'daemon')
+		return True
 
 	def removepid (self):
 		if not self.pid or not self._saved_pid:

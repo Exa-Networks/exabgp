@@ -61,7 +61,8 @@ class Supervisor (object):
 			self.logger.error("Set the environmemnt value exabgp.daemon.user to change the unprivileged user",'supervisor')
 			return
 		self.daemon.daemonise()
-		self.daemon.savepid()
+		if not self.daemon.savepid():
+			self.logger.error('could not update PID, not starting','supervisor')
 
 		# Make sure we create processes one we have dropped privileges and closed file descriptor
 		self.processes = Processes(self)
