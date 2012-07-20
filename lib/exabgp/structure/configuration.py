@@ -156,7 +156,7 @@ class Configuration (object):
 	'        }\n'
 
 	def __init__ (self,fname,text=False):
-		debug = load().debug.configuration
+		self.debug = load().debug.configuration
 
 		self.logger = Logger()
 		self._text = text
