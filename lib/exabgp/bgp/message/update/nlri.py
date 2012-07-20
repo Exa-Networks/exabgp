@@ -129,8 +129,8 @@ class BGPPrefix (Inet):
 	def __str__ (self):
 		return "%s/%s" % (self.ip,self.mask)
 
-	# The API requires with_path_info, but it is irrelevant here.
-	def pack (self,with_path_info=None):
+	# The API requires addpath, but it is irrelevant here.
+	def pack (self,addpath=None):
 		return chr(self.mask) + self.packed[:mask_to_bytes[self.mask]]
 
 	def __len__ (self):
@@ -159,8 +159,8 @@ class NLRI (BGPPrefix):
 	def __str__ (self):
 		return "%s%s%s%s" % (BGPPrefix.__str__(self),str(self.labels),str(self.path_info),str(self.rd))
 
-	def pack (self,with_path_info):
-		if with_path_info:
+	def pack (self,addpath):
+		if addpath:
 			path_info = self.path_info.pack()
 		else:
 			path_info = ''

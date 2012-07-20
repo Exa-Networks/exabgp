@@ -20,8 +20,8 @@ class MPURNLRI (Attribute):
 	def __init__ (self,routes):
 		self.routes = routes
 
-	def pack (self,with_path_info):
-		return self._attribute(self.routes[0].nlri.afi.pack() + self.routes[0].nlri.safi.pack() + ''.join([route.nlri.pack(with_path_info) for route in self.routes]))
+	def pack (self,addpath):
+		return self._attribute(self.routes[0].nlri.afi.pack() + self.routes[0].nlri.safi.pack() + ''.join([route.nlri.pack(addpath) for route in self.routes]))
 
 	def __len__ (self):
 		return len(self.pack())

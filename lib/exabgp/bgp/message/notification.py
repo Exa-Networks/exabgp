@@ -78,23 +78,30 @@ class Notification (Message,Failure):
 		(6,8) : "Out of Resources",
 	}
 
-	def __init__ (self,code,subcode,data=''):
+	def new (self,code,subcode,data=''):
 		self.code = code
 		self.subcode = subcode
 		self.data = data
+		return self
+
+	def factory (data):
+		return self.new(ord(data[0]),ord(data[1]),data[2:])
 
 	def __str__ (self):
-		return "%s: %s" % (self._str_code.get(self.code,'unknown error'), self._str_subcode.get((self.code,self.subcode),'unknow reason'))
+		return "%s / %s%s" %  (
+			self._str_code.get(self.code,'unknown error'),
+			self._str_subcode.get((self.code,self.subcode),'unknow reason'),
+			'%s' % ('/ %s' % self.data if self.data else '')
+		)
+
 
 # =================================================================== Notify
 # A Notification we need to inform our peer of.
 
 class Notify (Notification):
+	def __init__ (self,code,subcode,data=''):
+		Notification.__init__(self)
+		self.new(code,subcode,data)
+
 	def message (self):
 		return self._message("%s%s%s" % (chr(self.code),chr(self.subcode),self.data))
-
-# =================================================================== Notify
-# We tried to read data when the connection is not established (as it seems select let us do that !)
-
-class NotConnected (Exception):
-	pass

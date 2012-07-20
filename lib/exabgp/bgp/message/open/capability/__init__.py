@@ -81,7 +81,7 @@ class Capabilities (dict):
 				r += ['unhandled capability %d' % key]
 		return ', '.join(r)
 
-	def default (self,neighbor,restarted):
+	def new (self,neighbor,restarted):
 		graceful = neighbor.graceful_restart
 		families = neighbor.families()
 

@@ -16,7 +16,7 @@ class Empty (Address):
 	def __init__ (self,afi,safi):
 		Address.__init__(self,AFI(afi),SAFI(safi))
 
-	def pack (self,ignore_path_info_encoding=True):
+	def pack (self,ignore_addpath_encoding=True):
 		return ''
 	def __len__ (self):
 		return 0
@@ -32,7 +32,7 @@ class EOR (object):
 	def __init__ (self):
 		self._announced = []
 
-	def eors (self,families):
+	def new (self,families):
 		self._announced = []
 		r = []
 		for afi,safi in families:

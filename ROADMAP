@@ -27,6 +27,8 @@ Notes
 - We do not validate the flow created
 - reading stderr from forked process and displaying via the self.logger class
 - Do not announce route of a AFI/SAFI pair if the pair was not received on the OPEN by the peer (done ?)
+- NotificationID
+= peer self.open
 
 Important
 * Write the documentation, and do not rely on the example and the site wiki (argh ...)

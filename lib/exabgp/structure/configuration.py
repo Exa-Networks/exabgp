@@ -1766,9 +1766,9 @@ class Configuration (object):
 			return True
 
 		if 'path-info' in selfcheck:
-			with_path_info = True
+			addpath = True
 		else:
-			with_path_info = False
+			addpath = False
 		
 		# self check to see if we can decode what we encode
 		from exabgp.bgp.message.open.asn import ASN
@@ -1782,13 +1782,13 @@ class Configuration (object):
 
 		n = Neighbor()
 		n.local_as = ASN(30740)
-		capa = Capabilities().default(n,False)
+		capa = Capabilities().new(n,False)
 		path = {}
 		for f in self._all_families():
 			n._families.append(f)
-			if with_path_info:
+			if addpath:
 				path[f] = 3
-		if with_path_info:
+		if addpath:
 			capa[CapabilityID.ADD_PATH] = path
 
 		o1 = Open().new(4,3074000,'127.0.0.1',capa,180)
@@ -1815,7 +1815,7 @@ class Configuration (object):
 					self.logger.info('parsed route %s' % str1,'configuration') 
 					update = Update().new([route])
 					#update = Update().new([route]*1000)
-					packed = update.announce(False,ASN(30740),ASN(30740),with_path_info)
+					packed = update.announce(False,ASN(30740),ASN(30740),addpath)
 					self.logger.info('parsed route requires %d updates' % len(packed),'configuration') 
 					for pack in packed:
 						self.logger.info('update size is %d' % len(pack),'configuration') 

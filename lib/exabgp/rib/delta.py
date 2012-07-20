@@ -17,36 +17,34 @@ class Delta (object):
 		self.table = table
 		self.last = 0
 
-	def updates  (self,asn4,local_asn,peer_asn,grouped,use_path,msg_size):
+	def updates  (self,negociated,grouped):
 		self.table.recalculate()
 		if grouped:
-			return self.group_updates (asn4,local_asn,peer_asn,use_path,msg_size)
+			return self.group_updates (negociated)
 		else:
-			return self.simple_updates (asn4,local_asn,peer_asn,use_path,msg_size)
+			return self.simple_updates (negociated)
 
-	def simple_updates (self,asn4,local_asn,peer_asn,use_path,msg_size):
+	def simple_updates (self,negociated):
 		# table.changed always returns routes to remove before routes to add
 		for action,route in self.table.changed(self.last):
 			if action == '':
 				self.last = route # when action is '' route is a timestamp
 				continue
 
-			add_path = use_path.send(route.nlri.afi,route.nlri.safi)
-
 			if action == '+':
 				self.logger.rib('announcing %s' % route)
-				for update in Update().new([route]).announce(asn4,local_asn,peer_asn,add_path,msg_size):
+				for update in Update().new([route]).announce(negociated):
 					yield update
 			elif action == '*':
 				self.logger.rib('updating %s' % route)
-				for update in Update().new([route]).update(asn4,local_asn,peer_asn,add_path,msg_size):
+				for update in Update().new([route]).update(negociated):
 					yield update
 			elif action == '-':
 				self.logger.rib('withdrawing %s' % route)
-				for update in Update().new([route]).withdraw(asn4,local_asn,peer_asn,add_path,msg_size):
+				for update in Update().new([route]).withdraw(negociated):
 					yield update
 
-	def group_updates (self,asn4,local_asn,peer_asn,use_path,msg_size):
+	def group_updates (self,negociated):
 		grouped = {
 			'+' : {},
 			'*' : {},
@@ -58,7 +56,6 @@ class Delta (object):
 			if action == '':
 				self.last = route # when action is '' route is a timestamp
 				continue
-			add_path = use_path.send(route.nlri.afi,route.nlri.safi)
 			grouped[action].setdefault(str(route.attributes),[]).append(route)
 
 		group = 0
@@ -67,20 +64,20 @@ class Delta (object):
 			for route in routes:
 				self.logger.rib('announcing group %d %s' % (group,route))
 			group += 1
-			for update in Update().new(routes).announce(asn4,local_asn,peer_asn,add_path,msg_size):
+			for update in Update().new(routes).announce(negociated):
 				yield update
 		for attributes in grouped['*']:
 			routes = grouped['*'][attributes]
 			for route in routes:
 				self.logger.rib('updating group %d %s' % (group,route))
 			group += 1
-			for update in Update().new(routes).update(asn4,local_asn,peer_asn,add_path,msg_size):
+			for update in Update().new(routes).update(negociated):
 				yield update
 		for attributes in grouped['*']:
 			routes = grouped['*'][attributes]
 			for route in routes:
 				self.logger.rib('updating group %d %s' % (group,route))
 			group += 1
-			for update in Update().new(routes).withdraw(asn4,local_asn,peer_asn,add_path,msg_size):
+			for update in Update().new(routes).withdraw(negociated):
 				yield update
 

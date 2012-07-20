@@ -37,37 +37,3 @@ class AddPath (dict):
 				rs.append(v[0].pack() +v[1].pack() + pack('!B',self[v]))
 		return rs
 
-# =================================================================== AddPath
-
-class UsePath (object):
-	REFUSE = 0
-	ACCEPT = 1
-	ANNOUNCE = 2
-
-	def __init__(self,received_open,sent_open):
-		# A Dict always returning False
-		class FalseDict (dict):
-			def __getitem__(self,key):
-				return False
-
-		receive = received_open.capabilities.get(CapabilityID.ADD_PATH,FalseDict())
-		send = sent_open.capabilities.get(CapabilityID.ADD_PATH,FalseDict())
-
-		self._send = {}
-		self._receive = {}
-
-		# python 2.4 compatibility mean no simple union but using sets.Set
-		union = []
-		union.extend(send.keys())
-		union.extend([k for k in receive.keys() if k not in send.keys()])
-
-		for k in union:
-			self._send[k] = bool(receive.get(k,self.REFUSE) & self.ANNOUNCE and send.get(k,self.REFUSE) & self.ACCEPT)
-			self._receive[k] = bool(receive.get(k,self.REFUSE) & self.ACCEPT and send.get(k,self.REFUSE) & self.ANNOUNCE)
-
-	def send (self,afi,safi):
-		return self._send.get((afi,safi),False)
-
-	def receive (self,afi,safi):
-		return self._receive.get((afi,safi),False)
-

@@ -209,15 +209,13 @@ class Attributes (dict):
 		return self._str
 
 
-	def factory (self,asn4,families,use_path,data):
+	def factory (self,negociated,data):
 		try:
 			# XXX: hackish for now
 			self.mp_announce = []
 			self.mp_withdraw = []
 
-			self._asn4 = asn4
-			self._families = families
-			self._use_path = use_path
+			self.negociated = negociated
 			self._factory(data)
 			if AttributeID.AS_PATH in self and AttributeID.AS4_PATH in self:
 				self.__merge_attributes()
@@ -258,13 +256,13 @@ class Attributes (dict):
 				# we store the AS4_PATH as AS_PATH, do not over-write
 				if not self.has(code):
 					if not self.get(code,attribute):
-						self.add(self.__new_ASPath(attribute,self._asn4),attribute)
+						self.add(self.__new_ASPath(attribute),attribute)
 			return self._factory(next)
 
 		if code == AttributeID.AS4_PATH:
 			if length:
 				# ignore the AS4_PATH on new spekers as required by RFC 4893 section 4.1
-				if not self._asn4 and not self.get(code,attribute):
+				if not self.negociated.asn4 and not self.get(code,attribute):
 					# This replace the old AS_PATH
 					self.add(self.__new_ASPath4(attribute),attribute)
 			return self._factory(next)
@@ -328,13 +326,13 @@ class Attributes (dict):
 			offset = 3
 			data = data[offset:]
 
-			if (afi,safi) not in self._families:
+			if (afi,safi) not in self.negociated.families:
 				raise Notify(3,0,'presented a non-negociated family')
 
 			# Is the peer going to send us some Path Information with the route (AddPath)
-			path_info = self._use_path.receive(afi,safi)
+			addpath = self.negociated.addpath.receive(afi,safi)
 			while data:
-				route = self.routeFactory(afi,safi,data,path_info,'withdrawn')
+				route = self.routeFactory(afi,safi,data,addpath,'withdrawn')
 				route.attributes = self
 				self.mp_withdraw.append(route)
 				data = data[len(route.nlri):]
@@ -347,7 +345,7 @@ class Attributes (dict):
 			offset = 3
 
 			# we do not want to accept unknown families
-			if (afi,safi) not in self._families:
+			if (afi,safi) not in self.negociated.families:
 				raise Notify(3,0,'presented a non-negociated family')
 
 			# -- Reading length of next-hop
@@ -393,13 +391,13 @@ class Attributes (dict):
 				raise Notify(3,0,'the reserved bit of MP_REACH_NLRI is not zero')
 
 			# Is the peer going to send us some Path Information with the route (AddPath)
-			path_info = self._use_path.receive(afi,safi)
+			addpath = self.negociated.addpath.receive(afi,safi)
 
 			# Reading the NLRIs
 			data = data[offset:]
 
 			while data:
-				route = self.routeFactory(afi,safi,data,path_info,'announced')
+				route = self.routeFactory(afi,safi,data,addpath,'announced')
 				if not route.attributes.get(AttributeID.NEXT_HOP,nh):
 					route.attributes.add(NextHop(afi,safi,nh),nh)
 				self.mp_announce.append(route)
@@ -513,8 +511,8 @@ class Attributes (dict):
 
 		return klass(as_seq,as_set,backup)
 
-	def __new_ASPath (self,data,asn4):
-		return self.__new_aspaths(data,asn4,ASPath)
+	def __new_ASPath (self,data):
+		return self.__new_aspaths(data,self.negociated.asn4,ASPath)
 
 	def __new_ASPath4 (self,data):
 		return self.__new_aspaths(data,True,AS4Path)

@@ -19,8 +19,8 @@ from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
-from exabgp.bgp.message.open.capability.id import CapabilityID
 from exabgp.bgp.message.open.capability import Capabilities
+from exabgp.bgp.message.open.capability.negociated import Negociated
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.eor import EOR
 from exabgp.bgp.message.keepalive import KeepAlive
@@ -44,11 +44,9 @@ class Protocol (object):
 		self.peer = peer
 		self.neighbor = peer.neighbor
 		self.connection = connection
-		# for which afi/safi pair should we encode path information (addpath)
-		self.use_path = None
+		self.negociated = Negociated()
 
 		self._delta = Delta(Table(peer))
-		self._asn4 = False
 		self._messages = []
 		self._frozen = 0
 		# The message size is the whole BGP message _without_ headers
@@ -56,7 +54,6 @@ class Protocol (object):
 
 		# The holdtime / families negocicated between the two peers
 		self.hold_time = None
-		self.families = []
 
 	# XXX: we use self.peer.neighbor.peer_address when we could use self.neighbor.peer_address
 
@@ -108,7 +105,7 @@ class Protocol (object):
 	def read_message (self):
 		# This call reset the time for the timeout in
 		if not self.connection.pending(True):
-			return NOP('')
+			return NOP()
 
 		length = 19
 		data = ''
@@ -155,7 +152,7 @@ class Protocol (object):
 					raise Failure('The TCP connection is closed')
 
 		if msg == Notification.TYPE:
-			raise Notification(ord(data[0]),ord(data[1]))
+			raise Notification().factory(data)
 
 		if msg == KeepAlive.TYPE:
 			return KeepAlive()
@@ -165,7 +162,7 @@ class Protocol (object):
 
 		if msg == Update.TYPE:
 			if self.neighbor.parse_routes:
-				update = Update().factory(self._asn4,self.neighbor.families(),self.use_path,data)
+				update = Update().factory(self.negociated,data)
 				if update.routes:
 					return update
 
@@ -173,7 +170,7 @@ class Protocol (object):
 #			if self.neighbor.parse_routes:
 #				refresh = Refresh().factory(data)
 
-		return NOP(data)
+		return NOP().factory(msg)
 
 	def read_open (self,_open,ip):
 		message = self.read_message()
@@ -184,17 +181,12 @@ class Protocol (object):
 		if message.TYPE != Open.TYPE:
 			raise Notify(5,1,'The first packet recevied is not an open message (%s)' % message)
 
-		if _open.asn.asn4() and not message.capabilities.announced(CapabilityID.FOUR_BYTES_ASN):
+		self.negociated.received(message)
+
+		if self.negociated.asn4_problem():
 			raise Notify(2,0,'We have an ASN4 and you do not speak it. bye.')
 
-		self._asn4 = message.capabilities.announced(CapabilityID.FOUR_BYTES_ASN)
-
-		if message.asn == AS_TRANS:
-			peer_as = message.capabilities[CapabilityID.FOUR_BYTES_ASN]
-		else:
-			peer_as = message.asn
-
-		if peer_as != self.neighbor.peer_as:
+		if self.negociated.peer_as != self.neighbor.peer_as:
 			raise Notify(2,2,'ASN in OPEN (%d) did not match ASN expected (%d)' % (message.asn,self.neighbor.peer_as))
 
 		# RFC 6286 : http://tools.ietf.org/html/rfc6286
@@ -209,27 +201,6 @@ class Protocol (object):
 			raise Notify(2,6,'Hold Time is invalid (%d)' % message.hold_time)
 		if message.hold_time >= 3:
 			self.hold_time = HoldTime(min(self.neighbor.hold_time,message.hold_time))
-
-		if message.capabilities.announced(CapabilityID.MULTIPROTOCOL_EXTENSIONS) \
-		and _open.capabilities.announced(CapabilityID.MULTIPROTOCOL_EXTENSIONS):
-			for family in message.capabilities[CapabilityID.MULTIPROTOCOL_EXTENSIONS]:
-				if family in _open.capabilities[CapabilityID.MULTIPROTOCOL_EXTENSIONS]:
-					self.families.append(family)
-
-		# XXX: Does not work as the capa is not yet defined
-		if message.capabilities.announced(CapabilityID.EXTENDED_MESSAGE):
-			# untested !
-			if self.peer.bgp.message_size:
-				self.message_size = self.peer.bgp.message_size - 19
-
-# README: This limit what we are announcing may cause some issue if you add new family and SIGHUP
-# README: So it is commented until I make my mind to add it or not (as Juniper complain about mismatch capabilities)
-#		# Those are the capacity we need to announce those routes
-#		for family in _open.capabilities[CapabilityID.MULTIPROTOCOL_EXTENSIONS]:
-#			# if the peer does not support them, tear down the session
-#			if family not in message.capabilities[CapabilityID.MULTIPROTOCOL_EXTENSIONS]:
-#				afi,safi = family
-#				raise Notify(2,0,'Peers does not speak %s %s' % (afi,safi))
 
 		self.logger.message(self.me('<< %s' % message))
 		return message
@@ -253,12 +224,14 @@ class Protocol (object):
 		else:
 			asn = AS_TRANS
 
-		o = Open().new(4,asn,self.neighbor.router_id.ip,Capabilities().default(self.neighbor,restarted),self.neighbor.hold_time)
+		sent_open = Open().new(4,asn,self.neighbor.router_id.ip,Capabilities().new(self.neighbor,restarted),self.neighbor.hold_time)
+		
+		self.negociated.sent(sent_open)
 
-		if not self.connection.write(o.message()):
+		if not self.connection.write(sent_open.message()):
 			raise Failure('Could not send open')
-		self.logger.message(self.me('>> %s' % o))
-		return o
+		self.logger.message(self.me('>> %s' % sent_open))
+		return sent_open
 
 	def new_keepalive (self,force=None):
 		left = int(self.connection.last_write + self.hold_time.keepalive() - time.time())
@@ -360,13 +333,12 @@ class Protocol (object):
 
 	def new_update (self):
 		# XXX: This should really be calculated once only
-		asn4 = not not self.peer.open.capabilities.announced(CapabilityID.FOUR_BYTES_ASN)
-		for number in self._announce('UPDATE',self._delta.updates(asn4,self.neighbor.local_as,self.neighbor.peer_as,self.neighbor.group_updates,self.use_path,self.message_size)):
+		for number in self._announce('UPDATE',self._delta.updates(self.negociated,self.neighbor.group_updates)):
 			yield number
 
-	def new_eors (self,families):
+	def new_eors (self):
 		eor = EOR()
-		eors = eor.eors(families)
-		for answer in self._announce('EOR %s' % ', '.join(['%s %s' % (str(afi),str(safi)) for (afi,safi) in families]),eors):
+		eors = eor.new(self.negociated.families)
+		for answer in self._announce('EOR %s' % ', '.join(['%s %s' % (str(afi),str(safi)) for (afi,safi) in self.negociated.families]),eors):
 			pass
 

@@ -14,14 +14,21 @@ from exabgp.bgp.message import Failure
 from exabgp.bgp.message.nop import NOP
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.id import CapabilityID
-from exabgp.bgp.message.open.capability.addpath import UsePath
+from exabgp.bgp.message.open.capability.negociated import Negociated
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.keepalive import KeepAlive
-from exabgp.bgp.message.notification import Notification, Notify, NotConnected
+from exabgp.bgp.message.notification import Notification, Notify
 from exabgp.bgp.protocol import Protocol
 from exabgp.structure.processes import ProcessError
 
 from exabgp.structure.log import Logger,LazyFormat
+
+
+# ===================================================================
+# We tried to read data when the connection is not established (as it seems select let us do that !)
+
+class NotConnected (Exception):
+	pass
 
 # As we can not know if this is our first start or not, this flag is used to
 # always make the program act like it was recovering from a failure
@@ -151,16 +158,20 @@ class Peer (object):
 			start = time.time()
 			while True:
 				self.open = self.bgp.read_open(_open,self.neighbor.peer_address.ip)
+
 				if time.time() - start > max_wait_open:
 					self.logger.error(self.me('Waited for an OPEN for too long - killing the session'),'supervisor')
 					raise Notify(1,1,'The client took over %s seconds to send the OPEN, closing' % str(max_wait_open))
+
 				# OPEN or NOP
 				if self.open.TYPE == NOP.TYPE:
 					yield None
 					continue
+
 				if not self.open.capabilities.announced(CapabilityID.FOUR_BYTES_ASN) and _open.asn.asn4():
 					self._asn4 = False
 					raise Notify(2,0,'peer does not speak ASN4 - restarting in compatibility mode')
+
 				if _open.capabilities.announced(CapabilityID.MULTISESSION_BGP):
 					if not self.open.capabilities.announced(CapabilityID.MULTISESSION_BGP):
 						raise Notify(2,7,'peer does not support MULTISESSION')
@@ -216,13 +227,12 @@ class Peer (object):
 			#
 
 			# Dict with for each AFI/SAFI pair if we should announce ADDPATH Path Identifier
-			self.bgp.use_path = UsePath(_open,self.open)
 
 			for count in self.bgp.new_update():
 				yield True
 
-			if self.bgp.families:
-				self.bgp.new_eors(self.bgp.families)
+			if self.bgp.negociated.families:
+				self.bgp.new_eors()
 			else:
 				# If we are not sending an EOR, send a keepalive as soon as when finished
 				# So the other routers knows that we have no (more) routes to send ...
