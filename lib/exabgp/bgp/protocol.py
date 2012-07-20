@@ -339,6 +339,6 @@ class Protocol (object):
 	def new_eors (self):
 		eor = EOR()
 		eors = eor.new(self.negociated.families)
-		for answer in self._announce('EOR %s' % ', '.join(['%s %s' % (str(afi),str(safi)) for (afi,safi) in self.negociated.families]),eors):
+		for answer in self._announce(str(eors),eors.announce()):
 			pass
 

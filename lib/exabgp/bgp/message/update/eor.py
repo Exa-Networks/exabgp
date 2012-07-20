@@ -8,40 +8,28 @@ Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 
 from exabgp.protocol.ip.address import Address,AFI,SAFI
 from exabgp.bgp.message.update import Update
+from exabgp.bgp.message.update.attribute import Flag,Attribute
 from exabgp.bgp.message.update.attribute.attributes import Attributes
 
 # =================================================================== End-Of-Record
 
-class Empty (Address):
-	def __init__ (self,afi,safi):
-		Address.__init__(self,AFI(afi),SAFI(safi))
 
-	def pack (self,ignore_addpath_encoding=True):
-		return ''
-	def __len__ (self):
-		return 0
-
-class EmptyRoute (object):
-	autocomplete = False
-
-	def __init__ (self,afi,safi):
-		self.attributes = Attributes()
-		self.nlri = Empty(afi,safi)
-
-class EOR (object):
+class EOR (Attribute):
 	def __init__ (self):
-		self._announced = []
+		self.families = []
 
 	def new (self,families):
-		self._announced = []
+		self.families = families
+		return self
+
+	def announce (self):
 		r = []
-		for afi,safi in families:
-			r.extend(self.mp(afi,safi))
-			self._announced.append((afi,safi))
+		for afi,safi in self.families:
+			r.append(self.mp(afi,safi))
 		return r
 
 	def mp (self,afi,safi):
-		return Update().new([EmptyRoute(afi,safi),]).withdraw()
+		return '\x00\x00\x00\x07\x90\x0f\x00\x03' + afi.pack() + safi.pack()
 
-	def announced (self):
-		return self._announced
+	def __str__ (self):
+		return 'EOR %s' % ', '.join(['%s %s' % (str(afi),str(safi)) for (afi,safi) in self.families])

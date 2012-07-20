@@ -23,8 +23,9 @@ class Update (Message):
 
 	def new (self,routes):
 		self.routes = routes
-		self.afi = routes[0].nlri.afi
-		self.safi = routes[0].nlri.safi
+		if routes:
+			self.afi = routes[0].nlri.afi
+			self.safi = routes[0].nlri.safi
 		return self
 
 
@@ -170,5 +171,5 @@ class Update (Message):
 		for route in attributes.mp_announce:
 			route.attributes = attributes
 			routes.append(route)
-		
+
 		return self.new(routes)

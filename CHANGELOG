@@ -13,7 +13,8 @@ Version 3.0.5 - xx of July 2012
  * ArchLinux package by:
     by: Sébastien Luttringer
  * CHANGE: Do not start if the PID file exists
- * Fix: possible miss of connection losss
+ * Fix: possible miss of connection loss
+ * Fix: EOR code (again)
 
 Version 3.0.4 - 19 of July 2012
  * Fix: FlowSpec API change update forgotten
