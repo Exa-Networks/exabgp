@@ -337,8 +337,8 @@ class Protocol (object):
 			yield number
 
 	def new_eors (self):
-		eor = EOR()
-		eors = eor.new(self.negociated.families)
-		for answer in self._announce(str(eors),eors.announce()):
-			pass
+		for afi,safi in self.negociated.families:
+			eor = EOR().new(afi,safi)
+			for answer in self._announce(str(eor),[eor.pack()]):
+				pass
 

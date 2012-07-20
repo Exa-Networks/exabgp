@@ -6,30 +6,35 @@ Created by Thomas Mangin on 2010-01-16.
 Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 """
 
-from exabgp.protocol.ip.address import Address,AFI,SAFI
-from exabgp.bgp.message.update import Update
-from exabgp.bgp.message.update.attribute import Flag,Attribute
-from exabgp.bgp.message.update.attribute.attributes import Attributes
+from exabgp.bgp.message import Message
+from exabgp.protocol.ip.address import Address
 
-# =================================================================== End-Of-Record
+# =================================================================== End-Of-RIB
 
+class EOR (Message):
+	TYPE = chr(0x02)
 
-class EOR (Attribute):
 	def __init__ (self):
-		self.families = []
+		self.routes = []
 
-	def new (self,families):
-		self.families = families
+	def new (self,afi,safi):
+		self.afi = afi
+		self.safi = safi
 		return self
 
-	def announce (self):
-		r = []
-		for afi,safi in self.families:
-			r.append(self.mp(afi,safi))
-		return r
-
-	def mp (self,afi,safi):
-		return '\x00\x00\x00\x07\x90\x0f\x00\x03' + afi.pack() + safi.pack()
+	def pack (self):
+		return self._message('\x00\x00\x00\x07\x90\x0f\x00\x03' + self.afi.pack() + self.safi.pack())
 
 	def __str__ (self):
-		return 'EOR %s' % ', '.join(['%s %s' % (str(afi),str(safi)) for (afi,safi) in self.families])
+		return 'EOR %s %s' % (self.afi,self.safi)
+
+class EmptyRoute (object):
+	def __init__ (self,afi,safi,action):
+		self.nlri = Address(afi,safi)
+		self.action = action
+
+	def pack (self):
+		return '\x00\x00\x00\x07\x90\x0f\x00\x03' + self.nlri.afi.pack() + self.nlri.safi.pack()
+
+	def __str__ (self):
+		return '%s eor %d/%d (%s %s)' % (self.action,self.nlri.afi,self.nlri.safi,self.nlri.afi,self.nlri.safi)

@@ -15,6 +15,7 @@ from exabgp.protocol.family import AFI,SAFI
 from exabgp.bgp.message.open.asn import ASN,AS_TRANS
 from exabgp.bgp.message.notification import Notify
 
+from exabgp.bgp.message.update.eor import EmptyRoute
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.origin import Origin
@@ -331,6 +332,12 @@ class Attributes (dict):
 
 			# Is the peer going to send us some Path Information with the route (AddPath)
 			addpath = self.negociated.addpath.receive(afi,safi)
+
+			# XXX: we do assume that it is an EOR. most likely harmless
+			if not data:
+				self.mp_withdraw.append(EmptyRoute(afi,safi,'announced'))
+				return self._factory(next)
+
 			while data:
 				route = self.routeFactory(afi,safi,data,addpath,'withdrawn')
 				route.attributes = self
