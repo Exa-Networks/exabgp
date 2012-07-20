@@ -52,7 +52,6 @@ class Peer (object):
 		self.bgp = None
 
 		self._loop = None
-		self.open = None
 
 		# The peer message should be processed
 		self._running = False
@@ -157,26 +156,26 @@ class Peer (object):
 
 			start = time.time()
 			while True:
-				self.open = self.bgp.read_open(_open,self.neighbor.peer_address.ip)
+				opn = self.bgp.read_open(_open,self.neighbor.peer_address.ip)
 
 				if time.time() - start > max_wait_open:
 					self.logger.error(self.me('Waited for an OPEN for too long - killing the session'),'supervisor')
 					raise Notify(1,1,'The client took over %s seconds to send the OPEN, closing' % str(max_wait_open))
 
 				# OPEN or NOP
-				if self.open.TYPE == NOP.TYPE:
+				if opn.TYPE == NOP.TYPE:
 					yield None
 					continue
 
-				if not self.open.capabilities.announced(CapabilityID.FOUR_BYTES_ASN) and _open.asn.asn4():
+				if not opn.capabilities.announced(CapabilityID.FOUR_BYTES_ASN) and _open.asn.asn4():
 					self._asn4 = False
 					raise Notify(2,0,'peer does not speak ASN4 - restarting in compatibility mode')
 
 				if _open.capabilities.announced(CapabilityID.MULTISESSION_BGP):
-					if not self.open.capabilities.announced(CapabilityID.MULTISESSION_BGP):
+					if not opn.capabilities.announced(CapabilityID.MULTISESSION_BGP):
 						raise Notify(2,7,'peer does not support MULTISESSION')
 					local_sessionid = set(_open.capabilities[CapabilityID.MULTISESSION_BGP])
-					remote_sessionid = self.open.capabilities[CapabilityID.MULTISESSION_BGP]
+					remote_sessionid = opn.capabilities[CapabilityID.MULTISESSION_BGP]
 					# Empty capability is the same as MultiProtocol (which is what we send)
 					if not remote_sessionid:
 						remote_sessionid.append(CapabilityID.MULTIPROTOCOL_EXTENSIONS)
@@ -374,7 +373,7 @@ class Peer (object):
 			# IF GRACEFUL RESTART, SILENT SHUTDOWN
 			#
 
-			if self.neighbor.graceful_restart and self.open.capabilities.announced(CapabilityID.GRACEFUL_RESTART):
+			if self.neighbor.graceful_restart and opn.capabilities.announced(CapabilityID.GRACEFUL_RESTART):
 				self.logger.error('Closing the connection without notification','supervisor')
 				self.bgp.close('graceful restarted negociated, closing without sending any notification')
 				return
