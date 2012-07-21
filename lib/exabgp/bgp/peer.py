@@ -29,6 +29,28 @@ from exabgp.structure.log import Logger,LazyFormat
 class NotConnected (Exception):
 	pass
 
+# reporting the number of routes we saw
+class RouteCounter (object):
+	def __init__ (self,me,interval=3):
+		self.logger = Logger()
+
+		self.me = me
+		self.interval = interval
+		self.last_update = time.time()
+		self.count = 0
+		self.last_count = 0
+
+	def display (self):
+		left = int(self.last_update  + self.interval - time.time())
+		if left <=0:
+			self.last_update = time.time()
+			if self.count > self.last_count:
+				self.last_count = self.count
+				self.logger.supervisor(self.me('processed %d routes' % self.count))
+
+	def increment (self,count):
+		self.count += count
+
 # As we can not know if this is our first start or not, this flag is used to
 # always make the program act like it was recovering from a failure
 # If set to FALSE, no EOR and OPEN Flags set for Restart will be set in the
@@ -38,9 +60,6 @@ FORCE_GRACEFUL = True
 # Present a File like interface to socket.socket
 
 class Peer (object):
-	# debug hold/keepalive timers
-	update_time = 3
-
 	def __init__ (self,neighbor,supervisor):
 		self.logger = Logger()
 		self.supervisor = supervisor
@@ -66,10 +85,6 @@ class Peer (object):
 		self._have_routes = True
 
 		self._asn4 = True
-
-		self._route_parsed = 0L
-		self._now = time.time()
-		self._next_info = self._now + self.update_time
 
 	def _reset_skip (self):
 		# We are currently not skipping connection attempts
@@ -248,22 +263,9 @@ class Peer (object):
 			# MAIN UPDATE LOOP
 			#
 
-			seen_update = False
-			self._route_parsed = 0L
+			counter = RouteCounter(self.me)
+
 			while self._running:
-				# UPDATE TIME
-				self._now = time.time()
-
-				#
-				# CALCULATE WHEN IS THE NEXT UPDATE FOR THE NUMBER OF ROUTES PARSED DUE
-				#
-				
-				if self._now > self._next_info:
-					self._next_info = self._now + self.update_time
-					display_update = True
-				else:
-					display_update = False
-
 				#
 				# SEND KEEPALIVES
 				#
@@ -291,8 +293,8 @@ class Peer (object):
 				#
 
 				elif message.TYPE == Update.TYPE:
+					counter.increment(len(message.routes))
 					seen_update = True
-					self._route_parsed += len(message.routes)
 
 					self.logger.message(self.me('<< %s' % str(message)))
 					for route in message.routes:
@@ -327,9 +329,7 @@ class Peer (object):
 				# GIVE INFORMATION ON THE NUMBER OF ROUTES SEEN 
 				#
 
-				if seen_update and display_update:
-					self.logger.supervisor(self.me('processed %d routes' % self._route_parsed))
-					seen_update = False
+				counter.display()
 
 				#
 				# IF WE RELOADED, CLEAR THE BUFFER WE MAY HAVE QUEUED AND NOT YET SENT
