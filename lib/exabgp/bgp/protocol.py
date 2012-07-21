@@ -242,7 +242,6 @@ class Protocol (object):
 			self.logger.message(self.me('|| buffer not yet empty, adding KEEPALIVE to it'))
 			self._messages.append((1,'KEEPALIVE%s' % comment,m))
 		else:
-			self._frozen = 0
 			self.logger.message(self.me('>> KEEPALIVE%s' % comment))
 		return k
 
@@ -262,7 +261,7 @@ class Protocol (object):
 			if not self._frozen:
 				self._frozen = time.time()
 			if self._frozen and self._frozen + (self.hold_time) < time.time():
-				raise Failure('peer %s not reading on socket - killing session' % self.neighbor.peer_as)
+				raise Failure('peer %s not reading on his socket (or not fast at all) - killing session' % self.neighbor.peer_as)
 			self.logger.message(self.me("unable to send route for %d second (maximum allowed %d)" % (time.time()-self._frozen,self.hold_time)))
 			nb_backlog = len(self._messages)
 			if nb_backlog > MAX_BACKLOG:
@@ -275,7 +274,7 @@ class Protocol (object):
 				break
 			self._messages.pop(0)
 			self._frozen = 0
-			yield number
+			yield name,number
 
 	def _announce (self,name,generator):
 		def chunked (generator,size):
@@ -298,7 +297,7 @@ class Protocol (object):
 			for number,update in chunked(generator,self.message_size):
 					self.logger.message(self.me('|| adding %d  %s(s) to existing buffer' % (number,name)))
 					self._messages.append((number,name,update))
-			for number in self._backlog():
+			for name,number in self._backlog():
 				self.logger.message(self.me('>> %d buffered %s(s)' % (number,name)))
 				yield number
 		else:
