@@ -124,24 +124,24 @@ class Protocol (object):
 			raise Notify(1,1,'The packet received does not contain a BGP marker')
 
 		raw_length = data[16:18]
-		length = unpack('!H',raw_length)[0]
+		msg_length = unpack('!H',raw_length)[0]
 		msg = data[18]
 
-		if ( length < 19 or length > 4096):
+		if ( msg_length < 19 or msg_length > 4096):
 			# BAD Message Length
 			raise Notify(1,2)
 
 		if (
-			(msg == Open.TYPE and length < 29) or
-			(msg == Update.TYPE and length < 23) or
-			(msg == Notification.TYPE and length < 21) or
-			(msg == KeepAlive.TYPE and length != 19) or
-			(msg == RouteRefresh.TYPE and length != 23)
+			(msg == Open.TYPE and msg_length < 29) or
+			(msg == Update.TYPE and msg_length < 23) or
+			(msg == Notification.TYPE and msg_length < 21) or
+			(msg == KeepAlive.TYPE and msg_length != 19) or
+			(msg == RouteRefresh.TYPE and msg_length != 23)
 		):
-			# MUST send the faulty length back
-			raise Notify(1,2,raw_length)
+			# MUST send the faulty msg_length back
+			raise Notify(1,2,raw_msg_length)
 
-		length -= 19
+		length = msg_length - 19
 		data = ''
 		while length:
 			if self.connection.pending():
@@ -163,13 +163,14 @@ class Protocol (object):
 
 		if msg == Update.TYPE:
 			if self.neighbor.parse_routes:
+				if msg_length == 30 and data.startswith(EOR.PREFIX):
+					return EOR().factory(data)
 				update = Update().factory(self.negociated,data)
 				if update.routes:
 					return update
 
-		if msg == Refresh.TYPE:
-			if self.neighbor.parse_routes:
-				refresh = Refresh().factory(data)
+		if msg == RouteRefresh.TYPE:
+			return RouteRefresh().factory(data)
 
 		return NOP().factory(msg)
 
@@ -338,8 +339,7 @@ class Protocol (object):
 			yield number
 
 	def new_eors (self):
-		for afi,safi in self.negociated.families:
-			eor = EOR().new(afi,safi)
-			for answer in self._announce(str(eor),[eor.pack()]):
+		eor = EOR().new(self.negociated.families)
+		for answer in self._announce(str(eor),eor.updates(self.negociated)):
 				pass
 

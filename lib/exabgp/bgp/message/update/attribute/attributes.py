@@ -14,8 +14,7 @@ from exabgp.protocol.family import AFI,SAFI
 
 from exabgp.bgp.message.open.asn import ASN,AS_TRANS
 from exabgp.bgp.message.notification import Notify
-
-from exabgp.bgp.message.eor import RouteEOR
+from exabgp.bgp.message.nlri.eor import RouteEOR
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.origin import Origin
@@ -58,8 +57,9 @@ class Attributes (dict):
 	routeFactory = None
 
 	cache = {
-		# There can only be one :)
+		# There can only be one, build it now :)
 		AttributeID.ATOMIC_AGGREGATE : { '' : AtomicAggregate() }
+		# XXX: Build the three Origin too ?
 	}
 
 	autocomplete = True

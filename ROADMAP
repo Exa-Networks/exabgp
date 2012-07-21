@@ -2,6 +2,8 @@ This is an informal roadmap - no promise, just here to remind me what I want to 
 
 ROADMAP
 
+Route is a terrible class we should have NLRI and Attributes, Updates, no Route
+
 Version 3.0
 - usual bug fixes and improvments (bugs ? which bugs ?)
 - move the generation of the route when the delta is done in an object with the peer info to display the route change in the log

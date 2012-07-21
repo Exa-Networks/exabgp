@@ -7,35 +7,30 @@ Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message import Message
-from exabgp.protocol.ip.address import Address
+from exabgp.bgp.message.nlri.eor import RouteEOR,announcedRouteEOR
 
 # =================================================================== End-Of-RIB
 # not technically a different message type but easier to treat as one
 
 class EOR (Message):
-	TYPE = chr(0x02)
+	TYPE = chr(0x02) # it is an update
+	PREFIX = RouteEOR.PREFIX
 
 	def __init__ (self):
 		self.routes = []
 
-	def new (self,afi,safi):
-		self.afi = afi
-		self.safi = safi
+	def new (self,families):
+		for afi,safi in families:
+			self.routes.append(RouteEOR(afi,safi,'announce'))
 		return self
 
-	def pack (self):
-		return self._message('\x00\x00\x00\x07\x90\x0f\x00\x03' + self.afi.pack() + self.safi.pack())
+	def factory(self,data):
+		self.routes.append(announcedRouteEOR(data))
+		return self
+
+	def updates (self,negociated):
+		for eor in self.routes:
+			yield self._message(eor.pack())
 
 	def __str__ (self):
-		return 'EOR %s %s' % (self.afi,self.safi)
-
-class RouteEOR (object):
-	def __init__ (self,afi,safi,action):
-		self.nlri = Address(afi,safi)
-		self.action = action
-
-	def pack (self):
-		return '\x00\x00\x00\x07\x90\x0f\x00\x03' + self.nlri.afi.pack() + self.nlri.safi.pack()
-
-	def __str__ (self):
-		return '%s eor %d/%d (%s %s)' % (self.action,self.nlri.afi,self.nlri.safi,self.nlri.afi,self.nlri.safi)
+		return 'EOR'

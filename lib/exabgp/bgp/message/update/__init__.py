@@ -12,8 +12,7 @@ from exabgp.bgp.message import Message,prefix,defix
 from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
 from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
 from exabgp.bgp.message.update.attribute.attributes import Attributes
-from exabgp.bgp.message.update.nlri import routeFactory
-from exabgp.bgp.message.update.nlri import RouteBGP,BGPNLRI
+from exabgp.bgp.message.nlri.route import RouteBGP,BGPNLRI,routeFactory
 from exabgp.bgp.message.notification import Notify
 
 # =================================================================== Update
@@ -26,8 +25,8 @@ class Update (Message):
 		if routes:
 			self.afi = routes[0].nlri.afi
 			self.safi = routes[0].nlri.safi
+			self.attributes = self.routes[0].attributes
 		return self
-
 
 	# The routes MUST have the same attributes ...
 	def announce (self,negociated):
@@ -44,7 +43,7 @@ class Update (Message):
 		else:
 			nlri = ''
 			mp = MPRNLRI(self.routes).pack(addpath)
-		attr = self.routes[0].attributes.bgp_announce(asn4,local_as,peer_as)
+		attr = self.attributes.bgp_announce(asn4,local_as,peer_as)
 		packed = self._message(prefix('') + prefix(attr + mp) + nlri)
 		if len(packed) > msg_size:
 			routes = self.routes
@@ -73,7 +72,7 @@ class Update (Message):
 		else:
 			nlri = ''
 			mp = MPURNLRI(self.routes).pack(addpath) + MPRNLRI(self.routes).pack(addpath)
-		attr = self.routes[0].attributes.bgp_announce(asn4,local_as,peer_as)
+		attr = self.attributes.bgp_announce(asn4,local_as,peer_as)
 		packed = self._message(prefix(nlri) + prefix(attr + mp) + nlri)
 		if len(packed) > msg_size:
 			routes = self.routes
@@ -110,7 +109,7 @@ class Update (Message):
 		else:
 			nlri = ''
 			mp = MPURNLRI(self.routes).pack(addpath)
-			attr = self.routes[0].attributes.bgp_announce(asn4,local_as,peer_as)
+			attr = self.attributes.bgp_announce(asn4,local_as,peer_as)
 		packed = self._message(prefix(nlri) + prefix(attr + mp))
 		if len(packed) > msg_size:
 			routes = self.routes

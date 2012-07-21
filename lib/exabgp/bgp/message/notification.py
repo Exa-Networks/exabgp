@@ -84,7 +84,7 @@ class Notification (Message,Failure):
 		self.data = data
 		return self
 
-	def factory (data):
+	def factory (self,data):
 		return self.new(ord(data[0]),ord(data[1]),data[2:])
 
 	def __str__ (self):
