@@ -7,6 +7,7 @@ Copyright (c) 2012 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message.open.asn import ASN,AS_TRANS
+from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.capability.id import CapabilityID
 
 
@@ -32,6 +33,8 @@ class Negociated (object):
 			self._negociate()
 
 	def _negociate (self):
+		self.holdtime = HoldTime(min(self.sent_open.hold_time,self.received_open.hold_time))
+		
 		self.addpath = RequirePath(self.sent_open,self.received_open)
 		self.asn4 = self.received_open.capabilities.announced(CapabilityID.FOUR_BYTES_ASN)
 

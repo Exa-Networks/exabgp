@@ -44,8 +44,6 @@ class Connection (object):
 
 		self.logger = Logger()
 		self.io = None
-		self.last_read = 0
-		self.last_write = 0
 		self.peer = peer
 		self._loop_start = None
 
@@ -161,7 +159,6 @@ class Connection (object):
 		if number == 0: return ''
 		try:
 			r = self.io.recv(number)
-			self.last_read = time.time()
 			self.logger.wire(LazyFormat("%15s RECV " % self.peer,hexa,r))
 			return r
 		except socket.timeout,e:
@@ -204,7 +201,6 @@ class Connection (object):
 					else:
 						self.logger.wire("%15s problem sending message, errno %s" % (self.peer,str(e.args[0])))
 						raise e
-			self.last_write = time.time()
 			return True
 		except socket.error, e:
 			# Must never happen as we are performing a select before the write

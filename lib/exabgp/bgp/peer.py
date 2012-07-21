@@ -10,6 +10,7 @@ import sys
 import time
 import traceback
 
+from exabgp.bgp.timer import Timer
 from exabgp.bgp.message import Failure
 from exabgp.bgp.message.nop import NOP
 from exabgp.bgp.message.open.capability.id import CapabilityID
@@ -21,7 +22,6 @@ from exabgp.bgp.protocol import Protocol
 from exabgp.structure.processes import ProcessError
 
 from exabgp.structure.log import Logger,LazyFormat
-
 
 # ===================================================================
 # We tried to read data when the connection is not established (as it seems select let us do that !)
@@ -39,7 +39,6 @@ FORCE_GRACEFUL = True
 
 class Peer (object):
 	# debug hold/keepalive timers
-	debug_trace = True			# debug traceback on unexpected exception
 	update_time = 3
 
 	def __init__ (self,neighbor,supervisor):
@@ -187,22 +186,30 @@ class Peer (object):
 				break
 
 			#
-			# SEND KEEPALIVE
+			# Start keeping keepalive timer
 			#
 
-			message = self.bgp.new_keepalive(True)
-			yield True
+			timer = Timer(self.me,self.bgp.negociated.holdtime)
 
 			#
 			# READ KEEPALIVE
 			#
 
 			while True:
-				message = self.bgp.read_keepalive()
+				message = self.bgp.read_keepalive(' (OPENCONFIRM)')
+				timer.tick(message)
 				# KEEPALIVE or NOP
 				if message.TYPE == KeepAlive.TYPE:
 					break
 				yield None
+
+			#
+			# SEND KEEPALIVE
+			#
+
+			message = self.bgp.new_keepalive(' (ESTABLISHED)')
+			yield True
+
 
 			#
 			# ANNOUNCE TO THE PROCESS BGP IS UP
@@ -235,7 +242,7 @@ class Peer (object):
 				# If we are not sending an EOR, send a keepalive as soon as when finished
 				# So the other routers knows that we have no (more) routes to send ...
 				# (is that behaviour documented somewhere ??)
-				c,k = self.bgp.new_keepalive(True)
+				c,k = self.bgp.new_keepalive('KEEPALIVE (EOR)')
 
 			#
 			# MAIN UPDATE LOOP
@@ -246,7 +253,7 @@ class Peer (object):
 			while self._running:
 				# UPDATE TIME
 				self._now = time.time()
-				
+
 				#
 				# CALCULATE WHEN IS THE NEXT UPDATE FOR THE NUMBER OF ROUTES PARSED DUE
 				#
@@ -261,22 +268,16 @@ class Peer (object):
 				# SEND KEEPALIVES
 				#
 
-				c,k = self.bgp.new_keepalive(False)
-
-				if display_update:
-					self.logger.timers(self.me('Sending Timer %d second(s) left' % c))
+				if timer.keepalive():
+					self.bgp.new_keepalive()
 
 				#
 				# READ MESSAGE
 				#
 
 				message = self.bgp.read_message()
+				timer.tick(message)
 
-				# let's read if we have keepalive before doing the timer check
-				c = self.bgp.check_keepalive()
-
-				if display_update:
-					self.logger.timers(self.me('Receive Timer %d second(s) left' % c))
 
 				#
 				# KEEPALIVE
@@ -453,8 +454,8 @@ class Peer (object):
 			self.logger.error(self.me('UNHANDLED EXCEPTION'),'supervisor')
 			self._more_skip()
 			self.bgp.clear_buffer()
-			if self.debug_trace:
-				# should really go to syslog
+			# XXX: we need to read this from the env.
+			if True:
 				traceback.print_exc(file=sys.stdout)
 				raise
 			else:

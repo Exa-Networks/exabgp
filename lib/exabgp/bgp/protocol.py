@@ -17,7 +17,6 @@ from exabgp.bgp.message import Message,Failure
 from exabgp.bgp.message.nop import NOP
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open.asn import AS_TRANS
-from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.negociated import Negociated
@@ -33,7 +32,6 @@ from exabgp.structure.log import Logger
 
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000
-
 
 # README: Move all the old packet decoding in another file to clean up the includes here, as it is not used anyway
 
@@ -78,12 +76,6 @@ class Protocol (object):
 						proc.write(name,message)
 				except ProcessError:
 					raise Failure('Could not send message(s) to helper program(s) : %s' % message)
-
-	def check_keepalive (self):
-		left = int (self.connection.last_read  + self.hold_time - time.time())
-		if left <= 0:
-			raise Notify(4,0)
-		return left
 
 	def close (self,reason='unspecified'):
 		#self._delta.last = 0
@@ -139,7 +131,7 @@ class Protocol (object):
 			(msg == RouteRefresh.TYPE and msg_length != 23)
 		):
 			# MUST send the faulty msg_length back
-			raise Notify(1,2,raw_msg_length)
+			raise Notify(1,2,'%d has an invalid message length of %d' %(str(msg),msg_length))
 
 		length = msg_length - 19
 		data = ''
@@ -201,19 +193,17 @@ class Protocol (object):
 
 		if message.hold_time < 3:
 			raise Notify(2,6,'Hold Time is invalid (%d)' % message.hold_time)
-		if message.hold_time >= 3:
-			self.hold_time = HoldTime(min(self.neighbor.hold_time,message.hold_time))
 
 		self.logger.message(self.me('<< %s' % message))
 		return message
 
-	def read_keepalive (self):
+	def read_keepalive (self,comment=''):
 		message = self.read_message()
 		if message.TYPE == NOP.TYPE:
 			return message
 		if message.TYPE != KeepAlive.TYPE:
 			raise Notify(5,2)
-		self.logger.message(self.me('<< KEEPALIVE (ESTABLISHED)'))
+		self.logger.message(self.me('<< KEEPALIVE%s' % comment))
 		return message
 
 	# Sending message to peer .................................................
@@ -235,32 +225,17 @@ class Protocol (object):
 		self.logger.message(self.me('>> %s' % sent_open))
 		return sent_open
 
-	def new_keepalive (self,force=None):
-		left = int(self.connection.last_write + self.hold_time.keepalive() - time.time())
+	def new_keepalive (self,comment=''):
 		k = KeepAlive()
 		m = k.message()
-		if force:
-			written = self.connection.write(k.message())
-			if not written:
-				self.logger.message(self.me('|| buffer not yet empty, adding KEEPALIVE to it'))
-				self._messages.append((1,'KEEPALIVE',m))
-			else:
-				self._frozen = 0
-				if force == True:
-					self.logger.message(self.me('>> KEEPALIVE (OPENCONFIRM)'))
-				elif force == False:
-					self.logger.message(self.me('>> KEEPALIVE (no more UPDATE and no EOR)'))
-			return left,k
-		if left <= 0:
-			written = self.connection.write(k.message())
-			if not written:
-				self.logger.message(self.me('|| could not send KEEPALIVE, buffering'))
-				self._messages.append((1,'KEEPALIVE',m))
-			else:
-				self.logger.message(self.me('>> KEEPALIVE'))
-				self._frozen = 0
-			return left,k
-		return left,None
+		written = self.connection.write(m)
+		if not written:
+			self.logger.message(self.me('|| buffer not yet empty, adding KEEPALIVE to it'))
+			self._messages.append((1,'KEEPALIVE%s' % comment,m))
+		else:
+			self._frozen = 0
+			self.logger.message(self.me('>> KEEPALIVE%s' % comment))
+		return k
 
 	def new_notification (self,notification):
 		return self.connection.write(notification.message())
