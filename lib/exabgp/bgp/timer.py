@@ -14,20 +14,27 @@ from exabgp.bgp.message.notification import Notify
 
 # Track the time for keepalive updates
 
+_NOP = NOP()
+
 class Timer (object):
-	def __init__ (self,me,holdtime):
+	def __init__ (self,me,holdtime,code,subcode,message=''):
 		self.logger = Logger()
 
 		self.me = me
+
+		self.code = code
+		self.subcode = subcode
+		self.message = message
+
 		self.holdtime = holdtime
 		self.last_read = time.time()
 		self.last_sent = time.time()
 
-	def tick (self,message):
+	def tick (self,message=_NOP):
 		left = int(self.last_read  + self.holdtime - time.time())
 		self.logger.timers(self.me('Receive Timer %d second(s) left' % left))
 		if left <= 0:
-			raise Notify(4,0)
+			raise Notify(self.code,self.subcode,self.message)
 		if message.TYPE != NOP.TYPE:
 			self.last_read = time.time()
 

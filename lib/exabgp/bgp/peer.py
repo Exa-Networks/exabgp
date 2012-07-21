@@ -84,8 +84,6 @@ class Peer (object):
 		# We have routes following a reload (or we just started)
 		self._have_routes = True
 
-		self._asn4 = True
-
 	def _reset_skip (self):
 		# We are currently not skipping connection attempts
 		self._skip_time = 0
@@ -141,7 +139,7 @@ class Peer (object):
 			self.bgp.close('safety shutdown before unregistering peer, session should already be closed, report if seen in anywhere')
 			self.supervisor.unschedule(self)
 
-	def _run (self,max_wait_open=10.0):
+	def _run (self):
 		try:
 			if self.supervisor.processes.broken(self.neighbor.peer_address):
 				# XXX: we should perhaps try to restart the process ??
@@ -160,51 +158,27 @@ class Peer (object):
 			# SEND OPEN
 			#
 
-			_open = self.bgp.new_open(self._restarted,self._asn4)
+			_open = self.bgp.new_open(self._restarted)
 			yield None
 
 			#
 			# READ OPEN
 			#
 
-			start = time.time()
-			while True:
+			# XXX: put that timer timer in the configuration
+			opentimer = Timer(self.me,10.0,1,1,'waited for open too long')
+			opn = NOP()
+
+			while opn.TYPE == NOP.TYPE:
 				opn = self.bgp.read_open(_open,self.neighbor.peer_address.ip)
-
-				if time.time() - start > max_wait_open:
-					self.logger.error(self.me('Waited for an OPEN for too long - killing the session'),'supervisor')
-					raise Notify(1,1,'The client took over %s seconds to send the OPEN, closing' % str(max_wait_open))
-
-				# OPEN or NOP
-				if opn.TYPE == NOP.TYPE:
-					yield None
-					continue
-
-				if not opn.capabilities.announced(CapabilityID.FOUR_BYTES_ASN) and _open.asn.asn4():
-					self._asn4 = False
-					raise Notify(2,0,'peer does not speak ASN4 - restarting in compatibility mode')
-
-				if _open.capabilities.announced(CapabilityID.MULTISESSION_BGP):
-					if not opn.capabilities.announced(CapabilityID.MULTISESSION_BGP):
-						raise Notify(2,7,'peer does not support MULTISESSION')
-					local_sessionid = set(_open.capabilities[CapabilityID.MULTISESSION_BGP])
-					remote_sessionid = opn.capabilities[CapabilityID.MULTISESSION_BGP]
-					# Empty capability is the same as MultiProtocol (which is what we send)
-					if not remote_sessionid:
-						remote_sessionid.append(CapabilityID.MULTIPROTOCOL_EXTENSIONS)
-					remote_sessionid = set(remote_sessionid)
-					# As we only send one MP per session, if the matching fails, we have nothing in common
-					if local_sessionid.intersection(remote_sessionid) != local_sessionid:
-						raise Notify(2,8,'peer did not reply with the sessionid we sent')
-					# We can not collide due to the way we generate the configuration
+				opentimer.tick()
 				yield None
-				break
 
 			#
 			# Start keeping keepalive timer
 			#
 
-			timer = Timer(self.me,self.bgp.negociated.holdtime)
+			timer = Timer(self.me,self.bgp.negociated.holdtime,4,0)
 
 			#
 			# READ KEEPALIVE
@@ -294,7 +268,6 @@ class Peer (object):
 
 				elif message.TYPE == Update.TYPE:
 					counter.increment(len(message.routes))
-					seen_update = True
 
 					self.logger.message(self.me('<< %s' % str(message)))
 					for route in message.routes:

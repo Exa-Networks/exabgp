@@ -177,8 +177,12 @@ class Protocol (object):
 
 		self.negociated.received(message)
 
-		if self.negociated.asn4_problem():
-			raise Notify(2,0,'We have an ASN4 and you do not speak it. bye.')
+		if not self.negociated.asn4:
+			if self.neighbor.local_as.asn4():
+				raise Notify(2,0,'peer does not speak ASN4, we are stuck')
+			else:
+				# we will use RFC 4893 to convey new ASN to the peer
+				self.negociated.asn4
 
 		if self.negociated.peer_as != self.neighbor.peer_as:
 			raise Notify(2,2,'ASN in OPEN (%d) did not match ASN expected (%d)' % (message.asn,self.neighbor.peer_as))
@@ -188,11 +192,15 @@ class Protocol (object):
 		#	message.router_id = RouterID(ip)
 		if message.router_id == RouterID('0.0.0.0'):
 			raise Notify(2,3,'0.0.0.0 is an invalid router_id according to RFC6286')
+
 		if message.router_id == self.neighbor.router_id and message.asn == self.neighbor.local_as:
 			raise Notify(2,3,'BGP Indendifier collision (%s) on IBGP according to RFC 6286' % message.router_id)
 
 		if message.hold_time < 3:
 			raise Notify(2,6,'Hold Time is invalid (%d)' % message.hold_time)
+
+		if self.negociated.multisession not in (True,False):
+			raise Notify(*self.negociated.multisession)
 
 		self.logger.message(self.me('<< %s' % message))
 		return message
@@ -210,13 +218,14 @@ class Protocol (object):
 
 	# we do not buffer those message in purpose
 
-	def new_open (self,restarted,asn4):
-		if asn4:
-			asn = self.neighbor.local_as
-		else:
-			asn = AS_TRANS
-
-		sent_open = Open().new(4,asn,self.neighbor.router_id.ip,Capabilities().new(self.neighbor,restarted),self.neighbor.hold_time)
+	def new_open (self,restarted):
+		sent_open = Open().new(
+			4,
+			self.neighbor.local_as,
+			self.neighbor.router_id.ip,
+			Capabilities().new(self.neighbor,restarted),
+			self.neighbor.hold_time
+		)
 		
 		self.negociated.sent(sent_open)
 
