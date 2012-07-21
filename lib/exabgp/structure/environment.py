@@ -413,7 +413,7 @@ def _compatibility (env):
 
 	pid = os.environ.get('PID','')
 	if pid:
-		env.deamon.pid = pid
+		env.daemon.pid = pid
 
 	import pwd
 
