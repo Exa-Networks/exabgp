@@ -33,21 +33,24 @@ class Negociated (object):
 			self._negociate()
 
 	def _negociate (self):
+		sent_capa = self.sent_open.capabilities
+		recv_capa = self.received_open.capabilities
+		
 		self.holdtime = HoldTime(min(self.sent_open.hold_time,self.received_open.hold_time))
 		
 		self.addpath = RequirePath(self.sent_open,self.received_open)
-		self.asn4 = self.received_open.capabilities.announced(CapabilityID.FOUR_BYTES_ASN)
+		self.asn4 = sent_capa.announced(CapabilityID.FOUR_BYTES_ASN) and recv_capa.announced(CapabilityID.FOUR_BYTES_ASN)
 
 		self.local_as = self.sent_open.asn
 		self.peer_as = self.received_open.asn
 		if self.received_open.asn == AS_TRANS:
-			self.peer_as = self.received_open.capabilities[CapabilityID.FOUR_BYTES_ASN]
+			self.peer_as = recv_capa[CapabilityID.FOUR_BYTES_ASN]
 
 		self.families = []
-		if self.received_open.capabilities.announced(CapabilityID.MULTIPROTOCOL_EXTENSIONS) \
-		and self.sent_open.capabilities.announced(CapabilityID.MULTIPROTOCOL_EXTENSIONS):
-			for family in self.received_open.capabilities[CapabilityID.MULTIPROTOCOL_EXTENSIONS]:
-				if family in self.sent_open.capabilities[CapabilityID.MULTIPROTOCOL_EXTENSIONS]:
+		if recv_capa.announced(CapabilityID.MULTIPROTOCOL_EXTENSIONS) \
+		and sent_capa.announced(CapabilityID.MULTIPROTOCOL_EXTENSIONS):
+			for family in recv_capa[CapabilityID.MULTIPROTOCOL_EXTENSIONS]:
+				if family in sent_capa[CapabilityID.MULTIPROTOCOL_EXTENSIONS]:
 					self.families.append(family)
 
 		# XXX: Does not work as the capa is not yet defined
