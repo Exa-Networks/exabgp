@@ -214,9 +214,9 @@ class Protocol (object):
 		self.logger.message(self.me('<< KEEPALIVE%s' % comment))
 		return message
 
-	# Sending message to peer .................................................
-
-	# we do not buffer those message in purpose
+	#
+	# Sending message to peer
+	#
 
 	def new_open (self,restarted):
 		sent_open = Open().new(
@@ -229,6 +229,7 @@ class Protocol (object):
 		
 		self.negociated.sent(sent_open)
 
+		# we do not buffer open message in purpose
 		if not self.connection.write(sent_open.message()):
 			raise Failure('Could not send open')
 		self.logger.message(self.me('>> %s' % sent_open))
@@ -245,8 +246,22 @@ class Protocol (object):
 			self.logger.message(self.me('>> KEEPALIVE%s' % comment))
 		return k
 
+	def new_update (self):
+		# XXX: This should really be calculated once only
+		for number in self._announce('UPDATE',self._delta.updates(self.negociated,self.neighbor.group_updates)):
+			yield number
+
+	def new_eors (self):
+		eor = EOR().new(self.negociated.families)
+		for answer in self._announce(str(eor),eor.updates(self.negociated)):
+				pass
+
 	def new_notification (self,notification):
 		return self.connection.write(notification.message())
+
+	#
+	# Sending / Buffer handling
+	#
 
 	def clear_buffer (self):
 		self.logger.message(self.me('clearing MESSAGE(s) buffer'))
@@ -315,14 +330,3 @@ class Protocol (object):
 					self.logger.message(self.me('|| buffering the rest of the %s(s) (%d)' % (name,number)))
 					self._messages.append((number,name,update))
 					yield 0
-
-	def new_update (self):
-		# XXX: This should really be calculated once only
-		for number in self._announce('UPDATE',self._delta.updates(self.negociated,self.neighbor.group_updates)):
-			yield number
-
-	def new_eors (self):
-		eor = EOR().new(self.negociated.families)
-		for answer in self._announce(str(eor),eor.updates(self.negociated)):
-				pass
-
