@@ -21,8 +21,8 @@ class AFI (int):
 	}
 
 	def __str__ (self):
-		if self == 0x01: return "IPv4"
-		if self == 0x02: return "IPv6"
+		if self == 0x01: return "ipv4"
+		if self == 0x02: return "ipv6"
 		return "unknown afi"
 
 	def name (self):

@@ -164,7 +164,7 @@ class Attributes (dict):
 		if self._str:
 			return self._str
 
-		next_hop = ' next-hop %s' % str(self[AID.NEXT_HOP]).lower() if self.has(AID.NEXT_HOP) else ''
+		next_hop = ' next-hop %s' % str(self[AID.NEXT_HOP]) if self.has(AID.NEXT_HOP) else ''
 		origin = ' origin %s' % str(self[AID.ORIGIN]) if self.has(AID.ORIGIN) else ''
 		aspath = ' as-path %s' % str(self[AID.AS_PATH]) if self.has(AID.AS_PATH) else ''
 		local_pref = ' local-preference %s' % self[AID.LOCAL_PREF] if self.has(AID.LOCAL_PREF) else ''
