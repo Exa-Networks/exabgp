@@ -1177,13 +1177,13 @@ class Configuration (object):
 	def _route_origin (self,scope,tokens):
 		data = tokens.pop(0).lower()
 		if data == 'igp':
-			scope[-1]['routes'][-1].attributes.add(Origin(0x00))
+			scope[-1]['routes'][-1].attributes.add(Origin(Origin.IGP))
 			return True
 		if data == 'egp':
-			scope[-1]['routes'][-1].attributes.add(Origin(0x01))
+			scope[-1]['routes'][-1].attributes.add(Origin(Origin.EGP))
 			return True
 		if data == 'incomplete':
-			scope[-1]['routes'][-1].attributes.add(Origin(0x02))
+			scope[-1]['routes'][-1].attributes.add(Origin(Origin.INCOMPLETE))
 			return True
 		self._error = self._str_route_error
 		if self.debug: raise

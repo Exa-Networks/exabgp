@@ -30,7 +30,7 @@ class Origin (Attribute):
 		return len(self.pack())
 
 	def __str__ (self):
-		if self.origin == 0x00: return 'IGP'
-		if self.origin == 0x01: return 'EGP'
-		if self.origin == 0x02: return 'INCOMPLETE'
-		return 'INVALID'
+		if self.origin == 0x00: return 'igp'
+		if self.origin == 0x01: return 'egp'
+		if self.origin == 0x02: return 'incomplete'
+		return 'invalid'
