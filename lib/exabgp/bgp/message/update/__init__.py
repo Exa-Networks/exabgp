@@ -6,11 +6,14 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
+from copy import deepcopy
+
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.bgp.message import Message,prefix,defix
 
 from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
 from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
+from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute.attributes import Attributes
 from exabgp.bgp.message.nlri.route import RouteBGP,BGPNLRI,routeFactory
 from exabgp.bgp.message.notification import Notify
@@ -163,12 +166,20 @@ class Update (Message):
 			announced = announced[len(nlri):]
 			routes.append(route)
 
+		next_hop_attributes = {}
+
 		for route in attributes.mp_withdraw:
-			route.attributes = attributes
 			routes.append(route)
 
 		for route in attributes.mp_announce:
-			route.attributes = attributes
+			next_hop = route.attributes[AttributeID.NEXT_HOP]
+			str_hop = str(next_hop)
+			if not str_hop in next_hop_attributes:
+				attr = deepcopy(attributes)
+				attr[AttributeID.NEXT_HOP] = next_hop
+				next_hop_attributes[str_hop] = attr
+			else:
+			route.attributes = next_hop_attributes[str_hop]
 			routes.append(route)
 
 		return self.new(routes)
