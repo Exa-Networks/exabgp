@@ -15,7 +15,7 @@ from exabgp.protocol.family import AFI,SAFI
 from exabgp.bgp.message.open.asn import ASN,AS_TRANS
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.nlri.eor import RouteEOR
-from exabgp.bgp.message.update.attribute.id import AttributeID
+from exabgp.bgp.message.update.attribute.id import AttributeID as AID
 from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import ASPath,AS4Path
@@ -58,7 +58,7 @@ class Attributes (dict):
 
 	cache = {
 		# There can only be one, build it now :)
-		AttributeID.ATOMIC_AGGREGATE : { '' : AtomicAggregate() }
+		AID.ATOMIC_AGGREGATE : { '' : AtomicAggregate() }
 		# XXX: Build the three Origin too ?
 	}
 
@@ -104,18 +104,18 @@ class Attributes (dict):
 			message += AS4Path(asp.as_seq,asp.as_set).pack()
 		return message
 
-	def bgp_announce (self,asn4,local_asn,peer_asn):
+	def pack (self,asn4,local_asn,peer_asn):
 		ibgp = (local_asn == peer_asn)
 		# we do not store or send MED
 		message = ''
 
-		if AttributeID.ORIGIN in self:
-			message += self[AttributeID.ORIGIN].pack()
+		if AID.ORIGIN in self:
+			message += self[AID.ORIGIN].pack()
 		elif self.autocomplete:
 			message += Origin(Origin.IGP).pack()
 
-		if AttributeID.AS_PATH in self:
-			asp = self[AttributeID.AS_PATH]
+		if AID.AS_PATH in self:
+			asp = self[AID.AS_PATH]
 			message += self._as_path(asn4,asp)
 		elif self.autocomplete:
 			if ibgp:
@@ -126,29 +126,35 @@ class Attributes (dict):
 		else:
 			raise RuntimeError('Generated routes must always have an AS_PATH ')
 
-		if AttributeID.NEXT_HOP in self:
-			afi = self[AttributeID.NEXT_HOP].afi
-			safi = self[AttributeID.NEXT_HOP].safi
+		if AID.NEXT_HOP in self:
+			afi = self[AID.NEXT_HOP].afi
+			safi = self[AID.NEXT_HOP].safi
 			if afi == AFI.ipv4 and safi in [SAFI.unicast, SAFI.multicast]:
-				message += self[AttributeID.NEXT_HOP].pack()
+				message += self[AID.NEXT_HOP].pack()
 
-		if AttributeID.MED in self:
+		if AID.MED in self:
 			if local_asn != peer_asn:
-				message += self[AttributeID.MED].pack()
+				message += self[AID.MED].pack()
 
 		if ibgp:
-			if AttributeID.LOCAL_PREF in self:
-				message += self[AttributeID.LOCAL_PREF].pack()
+			if AID.LOCAL_PREF in self:
+				message += self[AID.LOCAL_PREF].pack()
 			else:
 				# '\x00\x00\x00d' is 100 packed in long network bytes order
 				message += LocalPreference('\x00\x00\x00d').pack()
 
 		# This generate both AGGREGATOR and AS4_AGGREGATOR
-		if AttributeID.AGGREGATOR in self:
-			aggregator = self[AttributeID.AGGREGATOR]
+		if AID.AGGREGATOR in self:
+			aggregator = self[AID.AGGREGATOR]
 			message += aggregator.pack(asn4)
 
-		for attribute in [AttributeID.ATOMIC_AGGREGATE,AttributeID.COMMUNITY,AttributeID.ORIGINATOR_ID,AttributeID.CLUSTER_LIST,AttributeID.EXTENDED_COMMUNITY]:
+		for attribute in [
+			AID.ATOMIC_AGGREGATE,
+			AID.COMMUNITY,
+			AID.ORIGINATOR_ID,
+			AID.CLUSTER_LIST,
+			AID.EXTENDED_COMMUNITY
+		]:
 			if attribute in self:
 				message += self[attribute].pack()
 
@@ -158,55 +164,22 @@ class Attributes (dict):
 		if self._str:
 			return self._str
 
-		next_hop = ''
-		if self.has(AttributeID.NEXT_HOP):
-			next_hop = ' next-hop %s' % str(self[AttributeID.NEXT_HOP]).lower()
+		next_hop = ' next-hop %s' % str(self[AID.NEXT_HOP]).lower() if self.has(AID.NEXT_HOP) else ''
+		origin = ' origin %s' % str(self[AID.ORIGIN]).lower() if self.has(AID.ORIGIN) else ''
+		aspath = ' as-path %s' % str(self[AID.AS_PATH]) if self.has(AID.AS_PATH) else ''
+		local_pref = ' local-preference %s' % self[AID.LOCAL_PREF] if self.has(AID.LOCAL_PREF) else ''
+		aggregator = ' aggregator ( %s )' % self[AID.AGGREGATOR] if self.has(AID.AGGREGATOR) else ''
+		atomic = ' atomic-aggregate' if self.has(AID.ATOMIC_AGGREGATE) else ''
+		med = ' med %s' % self[AID.MED] if self.has(AID.MED) else ''
+		communities = ' community %s' % str(self[AID.COMMUNITY]) if self.has(AID.COMMUNITY) else ''
+		originator_id = ' originator-id %s' % str(self[AID.ORIGINATOR_ID]) if self.has(AID.ORIGINATOR_ID) else ''
+		cluster_list = ' cluster-list %s' % str(self[AID.ORIGINATOR_ID]) if self.has(AID.ORIGINATOR_ID) else ''
+		ecommunities = ' extended-community %s' % str(self[AID.EXTENDED_COMMUNITY]) if self.has(AID.EXTENDED_COMMUNITY) else ''
+		mpr = ' mp_reach_nlri %s' % str(self[AID.MP_REACH_NLRI]) if self.has(AID.MP_REACH_NLRI) else ''
 
-		origin = ''
-		if self.has(AttributeID.ORIGIN):
-			origin = ' origin %s' % str(self[AttributeID.ORIGIN]).lower()
-
-		aspath = ''
-		if self.has(AttributeID.AS_PATH):
-			aspath = ' as-path %s' % str(self[AttributeID.AS_PATH])
-
-		local_pref = ''
-		if self.has(AttributeID.LOCAL_PREF):
-			local_pref = ' local-preference %s' % self[AttributeID.LOCAL_PREF]
-
-		aggregator = ''
-		if self.has(AttributeID.AGGREGATOR):
-			aggregator = ' aggregator ( %s )' % self[AttributeID.AGGREGATOR]
-
-		atomic = ''
-		if self.has(AttributeID.ATOMIC_AGGREGATE):
-			atomic = ' atomic-aggregate'
-
-		med = ''
-		if self.has(AttributeID.MED):
-			med = ' med %s' % self[AttributeID.MED]
-
-		communities = ''
-		if self.has(AttributeID.COMMUNITY):
-			communities = ' community %s' % str(self[AttributeID.COMMUNITY])
-
-		originator_id = ''
-		if self.has(AttributeID.ORIGINATOR_ID):
-			originator_id = ' originator-id %s' % str(self[AttributeID.ORIGINATOR_ID])
-
-		cluster_list = ''
-		if self.has(AttributeID.ORIGINATOR_ID):
-			cluster_list = ' cluster-list %s' % str(self[AttributeID.ORIGINATOR_ID])
-
-		ecommunities = ''
-		if self.has(AttributeID.EXTENDED_COMMUNITY):
-			ecommunities = ' extended-community %s' % str(self[AttributeID.EXTENDED_COMMUNITY])
-
-		mpr = ''
-		if self.has(AttributeID.MP_REACH_NLRI):
-			mpr = ' mp_reach_nlri %s' % str(self[AttributeID.MP_REACH_NLRI])
-
-		self._str = "%s%s%s%s%s%s%s%s%s%s%s%s" % (next_hop,origin,aspath,local_pref,atomic,aggregator,med,communities,ecommunities,mpr,originator_id,cluster_list)
+		self._str = "%s%s%s%s%s%s%s%s%s%s%s%s" % (
+			next_hop,origin,aspath,local_pref,atomic,aggregator,med,communities,ecommunities,mpr,originator_id,cluster_list
+		)
 		return self._str
 
 
@@ -218,7 +191,7 @@ class Attributes (dict):
 
 			self.negociated = negociated
 			self._factory(data)
-			if AttributeID.AS_PATH in self and AttributeID.AS4_PATH in self:
+			if AID.AS_PATH in self and AID.AS4_PATH in self:
 				self.__merge_attributes()
 			return self
 		except IndexError:
@@ -230,7 +203,7 @@ class Attributes (dict):
 
 		# We do not care if the attribute are transitive or not as we do not redistribute
 		flag = Flag(ord(data[0]))
-		code = AttributeID(ord(data[1]))
+		code = AID(ord(data[1]))
 
 		if flag & Flag.EXTENDED_LENGTH:
 			length = unpack('!H',data[2:4])[0]
@@ -246,13 +219,13 @@ class Attributes (dict):
 		logger = Logger()
 		logger.parser(LazyFormat("parsing %s " % code,hexa,data[:length]))
 
-		if code == AttributeID.ORIGIN:
+		if code == AID.ORIGIN:
 			if not self.get(code,attribute):
 				self.add(Origin(ord(attribute)),attribute)
 			return self._factory(next)
 
 		# only 2-4% of duplicated data - is it worth to cache ?
-		if code == AttributeID.AS_PATH:
+		if code == AID.AS_PATH:
 			if length:
 				# we store the AS4_PATH as AS_PATH, do not over-write
 				if not self.has(code):
@@ -260,7 +233,7 @@ class Attributes (dict):
 						self.add(self.__new_ASPath(attribute),attribute)
 			return self._factory(next)
 
-		if code == AttributeID.AS4_PATH:
+		if code == AID.AS4_PATH:
 			if length:
 				# ignore the AS4_PATH on new spekers as required by RFC 4893 section 4.1
 				if not self.negociated.asn4 and not self.get(code,attribute):
@@ -268,59 +241,59 @@ class Attributes (dict):
 					self.add(self.__new_ASPath4(attribute),attribute)
 			return self._factory(next)
 
-		if code == AttributeID.NEXT_HOP:
+		if code == AID.NEXT_HOP:
 			if not self.get(code,attribute):
 				self.add(NextHop(AFI.ipv4,SAFI.unicast_multicast,attribute),attribute)
 			return self._factory(next)
 
-		if code == AttributeID.MED:
+		if code == AID.MED:
 			if not self.get(code,attribute):
 				self.add(MED(attribute),attribute)
 			return self._factory(next)
 
-		if code == AttributeID.LOCAL_PREF:
+		if code == AID.LOCAL_PREF:
 			if not self.get(code,attribute):
 				self.add(LocalPreference(attribute),attribute)
 			return self._factory(next)
 
-		if code == AttributeID.ATOMIC_AGGREGATE:
-			if not self.get(AttributeID.ATOMIC_AGGREGATE,attribute):
+		if code == AID.ATOMIC_AGGREGATE:
+			if not self.get(AID.ATOMIC_AGGREGATE,attribute):
 				raise Notify(3,2,'invalid ATOMIC_AGGREGATE %s' % [hex(ord(_)) for _ in attribute])
 			return self._factory(next)
 
-		if code == AttributeID.AGGREGATOR:
+		if code == AID.AGGREGATOR:
 			# AS4_AGGREGATOR are stored as AGGREGATOR - so do not overwrite if exists
 			if not self.has(code):
 				if not self.get(code,attribute):
 					self.add(Aggregator(attribute),attribute)
 			return self._factory(next)
 
-		if code == AttributeID.AS4_AGGREGATOR:
-			if not self.get(AttributeID.AGGREGATOR,attribute):
+		if code == AID.AS4_AGGREGATOR:
+			if not self.get(AID.AGGREGATOR,attribute):
 				self.add(Aggregator(attribute),attribute)
 			return self._factory(next)
 
-		if code == AttributeID.COMMUNITY:
+		if code == AID.COMMUNITY:
 			if not self.get(code,attribute):
 				self.add(self.__new_communities(attribute),attribute)
 			return self._factory(next)
 
-		if code == AttributeID.ORIGINATOR_ID:
+		if code == AID.ORIGINATOR_ID:
 			if not self.get(code,attribute):
 				self.add(OriginatorID(AFI.ipv4,SAFI.unicast,data[:4]),attribute)
 			return self._factory(next)
 
-		if code == AttributeID.CLUSTER_LIST:
+		if code == AID.CLUSTER_LIST:
 			if not self.get(code,attribute):
 				self.add(ClusterList(attribute),attribute)
 			return self._factory(next)
 
-		if code == AttributeID.EXTENDED_COMMUNITY:
+		if code == AID.EXTENDED_COMMUNITY:
 			if not self.get(code,attribute):
 				self.add(self.__new_extended_communities(attribute),attribute)
 			return self._factory(next)
 
-		if code == AttributeID.MP_UNREACH_NLRI:
+		if code == AID.MP_UNREACH_NLRI:
 			# -- Reading AFI/SAFI
 			data = data[:length]
 			afi,safi = unpack('!HB',data[:3])
@@ -345,7 +318,7 @@ class Attributes (dict):
 				data = data[len(route.nlri):]
 			return self._factory(next)
 
-		if code == AttributeID.MP_REACH_NLRI:
+		if code == AID.MP_REACH_NLRI:
 			data = data[:length]
 			# -- Reading AFI/SAFI
 			afi,safi = unpack('!HB',data[:3])
@@ -405,7 +378,7 @@ class Attributes (dict):
 
 			while data:
 				route = self.routeFactory(afi,safi,data,addpath,'announced')
-				if not route.attributes.get(AttributeID.NEXT_HOP,nh):
+				if not route.attributes.get(AID.NEXT_HOP,nh):
 					route.attributes.add(NextHop(afi,safi,nh),nh)
 				self.mp_announce.append(route)
 				data = data[len(route.nlri):]
@@ -415,17 +388,17 @@ class Attributes (dict):
 		return self._factory(next)
 
 	def __merge_attributes (self):
-		as2path = self[AttributeID.AS_PATH]
-		as4path = self[AttributeID.AS4_PATH]
-		self.remove(AttributeID.AS_PATH)
-		self.remove(AttributeID.AS4_PATH)
+		as2path = self[AID.AS_PATH]
+		as4path = self[AID.AS4_PATH]
+		self.remove(AID.AS_PATH)
+		self.remove(AID.AS4_PATH)
 
 		# this key is unique as index length is a two header, plus a number of ASN of size 2 or 4
 		# so adding the : make the length odd and unique
 		key = "%s:%s" % (as2path.index, as4path.index)
 		
 		# found a cache copy
-		if self.get(AttributeID.AS_PATH,key):
+		if self.get(AID.AS_PATH,key):
 			return
 
 		as_seq = []

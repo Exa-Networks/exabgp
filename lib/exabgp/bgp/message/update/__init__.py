@@ -43,7 +43,7 @@ class Update (Message):
 		else:
 			nlri = ''
 			mp = MPRNLRI(self.routes).pack(addpath)
-		attr = self.attributes.bgp_announce(asn4,local_as,peer_as)
+		attr = self.attributes.pack(asn4,local_as,peer_as)
 		packed = self._message(prefix('') + prefix(attr + mp) + nlri)
 		if len(packed) > msg_size:
 			routes = self.routes
@@ -72,7 +72,7 @@ class Update (Message):
 		else:
 			nlri = ''
 			mp = MPURNLRI(self.routes).pack(addpath) + MPRNLRI(self.routes).pack(addpath)
-		attr = self.attributes.bgp_announce(asn4,local_as,peer_as)
+		attr = self.attributes.pack(asn4,local_as,peer_as)
 		packed = self._message(prefix(nlri) + prefix(attr + mp) + nlri)
 		if len(packed) > msg_size:
 			routes = self.routes
@@ -109,7 +109,7 @@ class Update (Message):
 		else:
 			nlri = ''
 			mp = MPURNLRI(self.routes).pack(addpath)
-			attr = self.attributes.bgp_announce(asn4,local_as,peer_as)
+			attr = self.attributes.pack(asn4,local_as,peer_as)
 		packed = self._message(prefix(nlri) + prefix(attr + mp))
 		if len(packed) > msg_size:
 			routes = self.routes
