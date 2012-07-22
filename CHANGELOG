@@ -8,16 +8,18 @@ Version 3.0.5 - 22 of July 2012
     patch by: Sébastien Luttringer
  * Fix: some unexpected verbosity when use the exabgp shell script on some OSes
     patch by: Sébastien Luttringer
- * Debian package update by:
-    Henry-Nicolas Tourneur
- * ArchLinux package by:
-    by: Sébastien Luttringer
  * Fix: possible miss of connection loss
  * Fix: EOR code (again)
  * Fix: we were deleting the next-hop of MP routes !
  * Fix: follow correctly RFC 4760 (MP) for route generation (it was working, we were lucky)
+ * Fix: exabgp.daemon was spelt exabgp.deamon for the PID location migration
+    reported by: Tim Gebbett
  * CHANGE: Do not start if the PID file exists
  * CHANGE: helpers can now get new message for EORs like "announced eor 1/1 (IPv4 unicast)"
+ * Debian package update by:
+    Henry-Nicolas Tourneur
+ * ArchLinux package by:
+    by: Sébastien Luttringer
 
 Version 3.0.4 - 19 of July 2012
  * Fix: FlowSpec API change update forgotten
