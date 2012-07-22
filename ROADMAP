@@ -21,17 +21,16 @@ Helpers
 - provide an helper program able to read MRT dumps and announce them too.
 
 Notes
-- do we really need to remove a route before re-announcing it or can we just "overwrite" it
-- if we define the same route twice in the configuration we will/may send a withdraw before the announce .. 
-- UsePath should really be storing things ASN4, UsePath, etc. ie: open negociation so it is one args to functions
+- if we define the same route twice in the configuration we will/may send them both .. 
 - Attributes / MultiAttributes API ?
 - warn if an as-path has the router ASN on an ibgp connection
 - Some of the match condition of flows currently take list or numeric tests, they should always take both, refactor
-- We do not validate the flow created
+- We can not parse flows (yet)
 - reading stderr from forked process and displaying via the self.logger class
 - Do not announce route of a AFI/SAFI pair if the pair was not received on the OPEN by the peer (done ?)
 - NotificationID
 - For the first run, add a grouping of route BEFORE the OPEN negociation to not cause issues with OPEN
+- allow per per announcement of routes from the helper program
 
 Important
 * Write the documentation, and do not rely on the example and the site wiki (argh ...)
