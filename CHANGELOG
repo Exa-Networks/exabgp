@@ -14,7 +14,8 @@ Version 3.0.5 - xx of July 2012
     by: Sébastien Luttringer
  * Fix: possible miss of connection loss
  * Fix: EOR code (again)
- * Fix: where deleting the next-hop of MP route ! 
+ * Fix: we were deleting the next-hop of MP routes !
+ * Fix: follow correctly RFC 4760 (MP) for route generation (it was working, we were lucky)
  * CHANGE: Do not start if the PID file exists
  * CHANGE: helpers can now get new message for EORs like "announced eor 1/1 (IPv4 unicast)"
 

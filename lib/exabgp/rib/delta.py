@@ -37,7 +37,7 @@ class Delta (object):
 					yield update
 			elif action == '*':
 				self.logger.rib('updating %s' % route)
-				for update in Update().new([route]).update(negociated):
+				for update in Update().new([route]).announce(negociated):
 					yield update
 			elif action == '-':
 				self.logger.rib('withdrawing %s' % route)

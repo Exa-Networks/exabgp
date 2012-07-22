@@ -62,35 +62,6 @@ class Update (Message):
 		return [packed]
 
 
-	def update (self,negociated):
-		asn4 = negociated.asn4
-		local_as = negociated.local_as
-		peer_as = negociated.peer_as
-		addpath = negociated.addpath
-		msg_size = negociated.msg_size
-
-		if self.afi == AFI.ipv4 and self.safi in [SAFI.unicast, SAFI.multicast]:
-			nlri = ''.join([route.nlri.pack(addpath) for route in self.routes])
-			mp = ''
-		else:
-			nlri = ''
-			mp = MPURNLRI(self.routes).pack(addpath) + MPRNLRI(self.routes).pack(addpath)
-		attr = self.attributes.pack(asn4,local_as,peer_as)
-		packed = self._message(prefix(nlri) + prefix(attr + mp) + nlri)
-		if len(packed) > msg_size:
-			routes = self.routes
-			left = self.routes[:len(self.routes)/2]
-			right = self.routes[len(self.routes)/2:]
-			packed = []
-			self.routes = left
-			packed.extend(self.update(negociated))
-			self.routes = right
-			packed.extend(self.update(negociated))
-			self.routes = routes
-			return packed
-		return [packed]
-
-
 	def withdraw (self,negociated=None):
 		if negociated:
 			asn4 = negociated.asn4
@@ -108,12 +79,11 @@ class Update (Message):
 		if self.afi == AFI.ipv4 and self.safi in [SAFI.unicast, SAFI.multicast]:
 			nlri = ''.join([route.nlri.pack(addpath) for route in self.routes])
 			mp = ''
-			attr = ''
 		else:
 			nlri = ''
 			mp = MPURNLRI(self.routes).pack(addpath)
-			attr = self.attributes.pack(asn4,local_as,peer_as)
-		packed = self._message(prefix(nlri) + prefix(attr + mp))
+		# last sentence of RFC 4760 Section 4, no attributes are required (and make sense) 
+		packed = self._message(prefix(nlri) + prefix(mp))
 		if len(packed) > msg_size:
 			routes = self.routes
 			left = self.routes[:len(self.routes)/2]
@@ -179,7 +149,7 @@ class Update (Message):
 				attr[AttributeID.NEXT_HOP] = next_hop
 				next_hop_attributes[str_hop] = attr
 			else:
-			route.attributes = next_hop_attributes[str_hop]
+				route.attributes = next_hop_attributes[str_hop]
 			routes.append(route)
 
 		return self.new(routes)
