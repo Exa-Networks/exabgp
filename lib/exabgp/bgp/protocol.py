@@ -16,7 +16,6 @@ from exabgp.bgp.connection import Connection
 from exabgp.bgp.message import Message,Failure
 from exabgp.bgp.message.nop import NOP
 from exabgp.bgp.message.open import Open
-from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.negociated import Negociated
@@ -50,9 +49,6 @@ class Protocol (object):
 		self._frozen = 0
 		# The message size is the whole BGP message _without_ headers
 		self.message_size = 4096-19
-
-		# The holdtime / families negocicated between the two peers
-		self.hold_time = None
 
 	# XXX: we use self.peer.neighbor.peer_address when we could use self.neighbor.peer_address
 
@@ -275,9 +271,9 @@ class Protocol (object):
 		if self._messages:
 			if not self._frozen:
 				self._frozen = time.time()
-			if self._frozen and self._frozen + (self.hold_time) < time.time():
+			if self._frozen and self._frozen + self.negociated.holdtime < time.time():
 				raise Failure('peer %s not reading on his socket (or not fast at all) - killing session' % self.neighbor.peer_as)
-			self.logger.message(self.me("unable to send route for %d second (maximum allowed %d)" % (time.time()-self._frozen,self.hold_time)))
+			self.logger.message(self.me("unable to send route for %d second (maximum allowed %d)" % (time.time()-self._frozen,self.negociated.holdtime)))
 			nb_backlog = len(self._messages)
 			if nb_backlog > MAX_BACKLOG:
 				raise Failure('over %d chunked routes buffered for peer %s - killing session' % (MAX_BACKLOG,self.neighbor.peer_as))
