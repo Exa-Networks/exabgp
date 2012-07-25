@@ -1,8 +1,9 @@
-exabgp (3.0.0-1) unstable; urgency=low
+exabgp (3.0.6-1) unstable; urgency=low
   
   * New upstream release
+  * Debian packaging adapted for new configuration template
 
- -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Sat, 14 Jul 2012 12:00:00 +0000
+ -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Wed, 25 Jul 2012 18:48:00 +0000
 
 exabgp (2.0.8-1) unstable; urgency=low
   

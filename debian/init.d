@@ -65,8 +65,9 @@ do_start()
                         #   1 if daemon was already running
                         #   2 if daemon could not be started
 			# We create the PID file and we do background thanks to start-stop-daemon
-                        start-stop-daemon --start --quiet --pidfile $PIDFILE -c $USER -b -m --exec $DAEMON -- $DAEMON_OPTS || return 2
-			sleep 1 
+                        start-stop-daemon --start --quiet --pidfile $PIDFILE -c $USER -b -m --exec $DAEMON -- $DAEMON_OPTS 
+			RETVAL="$?"
+			return "$RETVAL"
                 else
                         log_daemon_msg "$NAME is already running!"
 			log_end_msg 0
@@ -117,13 +118,13 @@ do_reload() {
 
 case "$1" in
   start)
-    log_daemon_msg "Starting $DESC " "$NAME"
-    do_start
-    case "$?" in
+	log_daemon_msg "Starting $DESC" "$NAME"
+	do_start
+	case "$?" in
 		0|1) log_end_msg 0 ;;
 		2) log_end_msg 1 ;;
 	esac
-  ;;
+  	;;
   stop)
 	log_daemon_msg "Stopping $DESC" "$NAME"
 	do_stop

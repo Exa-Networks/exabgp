@@ -21,9 +21,9 @@ fi
 case "$1" in
 configure)
     adduser --quiet --system --group --disabled-login --home /var/run/exabgp exabgp
-    if [ ! -z "$2" ] && [ -e /var/run/exabgp/exabgp.pid ]; then invoke-rc.d exabgp stop ; fi
     # The script will be started through the DEBHELPER script called hereunder.
     if dpkg --compare-versions "$2" lt 3.0.0 &&  [ ! -f /etc/default/exabgp.dpkg-dist ] ; then restore_user_settings ; fi
+    if [ ! -z "$2" ] && [ -e /var/run/exabgp/exabgp.pid ]; then invoke-rc.d exabgp stop ; fi
     ;;
 install|upgrade)
     ;;

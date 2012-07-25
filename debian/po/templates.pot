@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: exabgp\n"
 "Report-Msgid-Bugs-To: exabgp@packages.debian.org\n"
-"POT-Creation-Date: 2012-07-18 16:20+0000\n"
+"POT-Creation-Date: 2012-07-25 16:48+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -27,30 +27,12 @@ msgstr ""
 #. Description
 #: ../templates:1001
 msgid ""
-"Starting with ExaBGP 3.0.0, the environment variables used to configure the "
-"ExaBGP daemon are stored under /etc/exabpg/exabgp.env"
-msgstr ""
-
-#. Type: note
-#. Description
-#: ../templates:1001
-msgid ""
-"The variables related to the daemon startup (EXABGP_RUN, DAEMON_OPTS and "
-"ETC) remain under /etc/default/exabgp"
-msgstr ""
-
-#. Type: note
-#. Description
-#: ../templates:1001
-msgid ""
-"This package will autogenerate the exabgp.env file based on your previous "
-"configuration."
-msgstr ""
-
-#. Type: note
-#. Description
-#: ../templates:1001
-msgid ""
-"If you let DPKG replace /etc/default/exabgp with the package version, the "
+" Starting with ExaBGP 3.0.0, the file /etc/exabgp/exabgp.env is used to "
+"store the environment variables to configure the ExaBGP daemon.\n"
+" The variables related to the daemon startup (EXABGP_RUN, DAEMON_OPTS and "
+"ETC) remain under /etc/default/exabgp.\n"
+" This package will autogenerate the exabgp.env file based on your previous "
+"configuration.\n"
+" If you let DPKG replace /etc/default/exabgp with the package version, the "
 "new file will be adapted to include your previous settings."
 msgstr ""
