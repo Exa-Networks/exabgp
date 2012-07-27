@@ -5,6 +5,7 @@ Version explained:
 
 Version 3.0.6 - xx of July 2012
  * Fix: ommission during a variable name change
+ * Fix: the example supervise script
 
 Version 3.0.5 - 22 of July 2012
  * Improvement: suppor for systemd
