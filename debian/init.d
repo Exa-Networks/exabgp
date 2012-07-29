@@ -52,27 +52,20 @@ fi
 #
 do_start()
 {
-        if [ "$EXABGPRUN" = "yes" ] || [ "$EXABGPRUN" = "YES" ]; then
-		status_of_proc -p "$PIDFILE" "$DAEMON" "$NAME" > /dev/null 2>&1
-                retcode=$?
-                if [ $retcode -ne 0 ]; then
-			CFG_COUNT=`cat /etc/exabgp/exabgp.conf | grep -v ^# | grep -v ^$ | wc -l`
-			if [ $CFG_COUNT -lt 2 ] ; then
-				echo "\nWARNING: Empty configuration file. ExaBGP won't start"
-			fi
-                        # Return
-                        #   0 if daemon has been started
-                        #   1 if daemon was already running
-                        #   2 if daemon could not be started
+	if [ "$EXABGPRUN" = "yes" ] || [ "$EXABGPRUN" = "YES" ]; then
+		CFG_COUNT=`cat /etc/exabgp/exabgp.conf | grep -v ^# | grep -v ^$ | wc -l`
+		if [ $CFG_COUNT -lt 2 ] ; then
+			log_warning_msg "WARNING: Empty configuration file. ExaBGP won't start"
+			return 1
+		else
+			# Return
+			#   0 if daemon has been started
+			#   1 if daemon was already running
+			#   2 if daemon could not be started
 			# We create the PID file and we do background thanks to start-stop-daemon
-                        start-stop-daemon --start --quiet --pidfile $PIDFILE -c $USER -b -m --exec $DAEMON -- $DAEMON_OPTS 
-			RETVAL="$?"
-			return "$RETVAL"
-                else
-                        log_daemon_msg "$NAME is already running!"
-			log_end_msg 0
-                        return 1
-                fi
+			start-stop-daemon --start --quiet --pidfile $PIDFILE -c $USER -b -m --exec $DAEMON -- $DAEMON_OPTS 
+			return $?
+		fi
         fi
 }
 
@@ -91,7 +84,7 @@ do_stop()
 		RETVAL="$?"
 		sleep 1
 		# clean stale PID file
-		rm $PIDFILE
+		rm $PIDFILE 2> /dev/null
 		[ "$RETVAL" = 2 ] && return 2
 		# Wait for children to finish too if this is a daemon that forks
 		# and if the daemon is only ever run from this initscript.
@@ -118,31 +111,38 @@ do_reload() {
 
 case "$1" in
   start)
-	log_daemon_msg "Starting $DESC" "$NAME"
-	do_start
-	case "$?" in
-		0|1) log_end_msg 0 ;;
-		2) log_end_msg 1 ;;
-	esac
-  	;;
+	start-stop-daemon --status --quiet --pidfile $PIDFILE -c $USER
+	retval=$?
+	if [ $retval -eq 0 ] ; then
+		log_warning_msg "$NAME is already running" 
+		log_end_msg 1
+	else
+		log_daemon_msg "Starting $DESC" "$NAME "
+		do_start
+		case "$?" in
+			0|1) log_end_msg 0 ;;
+			2) log_end_msg 1 ;;
+		esac
+	fi
+	;;
   stop)
-	log_daemon_msg "Stopping $DESC" "$NAME"
+	log_daemon_msg "Stopping $DESC" "$NAME "
 	do_stop
 	case "$?" in
-		0|1) log_end_msg 0 ;;
-		2) log_end_msg 1 ;;
+		0) log_end_msg 0 ;;
+		1|2) log_end_msg 1 ;;
 	esac
 	;;
   status)
 	status_of_proc -p "$PIDFILE" "$DAEMON" "$NAME" && exit 0 || exit $?
         ;;
   reload|force-reload)
-	log_daemon_msg "Reloading $DESC" "$NAME"
+	log_daemon_msg "Reloading $DESC" "$NAME "
 	do_reload
 	log_end_msg $?
 	;;
   restart|force-reload)
-	log_daemon_msg "Restarting $DESC" "$NAME"
+	log_daemon_msg "Restarting $DESC" "$NAME "
 	do_stop
 	case "$?" in
 	  0|1)
@@ -160,7 +160,8 @@ case "$1" in
 	esac
 	;;
   *)
-	echo "Usage: $SCRIPTNAME {start|stop|restart|reload|force-reload|status}" >&2
+	log_warning_msg "Usage: $SCRIPTNAME {start|stop|restart|reload|force-reload|status}" 
+	log_end_msg 3
 	exit 3
 	;;
 esac
