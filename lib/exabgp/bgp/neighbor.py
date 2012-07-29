@@ -98,9 +98,11 @@ class Neighbor (object):
 		self._routes.setdefault((route.nlri.afi,route.nlri.safi),[]).append(route)
 
 	def remove_route (self,route):
-		if route in self._routes.get((route.nlri.afi,route.nlri.safi),[]):
-			self._routes[(route.nlri.afi,route.nlri.safi)].remove(route)
-			return True
+		str_route = str(route)
+		for r in self._routes.get((route.nlri.afi,route.nlri.safi),[]):
+			if str(r) == str_route:
+				self._routes[(route.nlri.afi,route.nlri.safi)].remove(r)
+				return True
 		return False
 
 	def set_routes (self,routes):
