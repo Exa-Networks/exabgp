@@ -4,7 +4,7 @@ exabgp (3.0.6-1) unstable; urgency=low
   * Debian packaging adapted for new configuration template
   * Improved init script
 
- -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Sun, 29 Jul 2012 16:08:00 +0000
+ -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Sun, 12 Aug 2012 13:42:00 +0000
 
 exabgp (2.0.8-1) unstable; urgency=low
   
