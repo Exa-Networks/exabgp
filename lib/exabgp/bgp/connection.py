@@ -159,6 +159,9 @@ class Connection (object):
 		if number == 0: return ''
 		try:
 			r = self.io.recv(number)
+			if not r:
+				# The socket was closed - no data is available anymore (the caller will call .close() on us)
+				raise Failure('The TCP connection is closed')
 			self.logger.wire(LazyFormat("%15s RECV " % self.peer,hexa,r))
 			return r
 		except socket.timeout,e:

@@ -103,9 +103,6 @@ class Protocol (object):
 				delta = self.connection.read(length)
 				data += delta
 				length -= len(delta)
-				# The socket is closed
-				if not delta:
-					raise Failure('The TCP connection is closed')
 
 		if data[:16] != Message.MARKER:
 			# We are speaking BGP - send us a valid Marker
@@ -136,9 +133,6 @@ class Protocol (object):
 				delta = self.connection.read(length)
 				data += delta
 				length -= len(delta)
-				# The socket is closed
-				if not delta:
-					raise Failure('The TCP connection is closed')
 
 		if msg == Notification.TYPE:
 			raise Notification().factory(data)
