@@ -3,6 +3,9 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.0.7 - 19th of August 2012
+ * Fix: parser had a bug with multiple flow routes
+
 Version 3.0.6 - 5th of August 2012
  * Fix: ommission during a variable name change
  * Fix: the example supervise script

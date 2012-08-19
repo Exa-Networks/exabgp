@@ -173,6 +173,7 @@ class Configuration (object):
 		self._line = []
 		self._error = ''
 		self._number = 1
+		self._flow_state = 'out'
 
 	# Public Interface
 
@@ -1522,6 +1523,13 @@ class Configuration (object):
 		return True
 
 	def _insert_flow_route (self,scope,tokens=None):
+		if self._flow_state != 'out':
+			self._error = self._str_flow_error
+			if self.debug: raise
+			return False
+
+		self._flow_state = 'match'
+
 		try:
 			flow = Flow()
 		except ValueError:
@@ -1548,10 +1556,17 @@ class Configuration (object):
 		if not self._insert_flow_route(scope):
 			return False
 
-		r = self._dispatch(scope,'flow-route',['match',],[])
-		if r is False: return False
-		r = self._dispatch(scope,'flow-route',['then',],[])
-		return r
+		while True:
+			r = self._dispatch(scope,'flow-route',['match','then'],[])
+			if r is False: return False
+			if r is None: break
+
+		if self._flow_state != 'out':
+			self._error = self._str_flow_error
+			if self.debug: raise
+			return False
+
+		return True
 
 	# ..........................................
 
@@ -1560,6 +1575,13 @@ class Configuration (object):
 			self._error = self._str_flow_error
 			if self.debug: raise
 			return False
+
+		if self._flow_state != 'match':
+			self._error = self._str_flow_error
+			if self.debug: raise
+			return False
+
+		self._flow_state = 'then'
 
 		while True:
 			r = self._dispatch(scope,'flow-match',[],['source','destination','port','source-port','destination-port','protocol','tcp-flags','icmp-type','icmp-code','fragment','dscp','packet-length'])
@@ -1572,6 +1594,13 @@ class Configuration (object):
 			self._error = self._str_flow_error
 			if self.debug: raise
 			return False
+
+		if self._flow_state != 'then':
+			self._error = self._str_flow_error
+			if self.debug: raise
+			return False
+
+		self._flow_state = 'out'
 
 		while True:
 			r = self._dispatch(scope,'flow-then',[],['discard','rate-limit','redirect','community'])
