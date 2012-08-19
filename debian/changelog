@@ -1,3 +1,10 @@
+exabgp (3.0.7-1) unstable; urgency=low
+  
+  * New upstream release
+  * Fix configuration parser when multiple flows are provided
+
+ -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Sun, 19 Aug 2012 20:00:00 +0000
+
 exabgp (3.0.6-1) unstable; urgency=low
   
   * New upstream release
