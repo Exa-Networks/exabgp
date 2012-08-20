@@ -15,10 +15,12 @@ Version 3.0
 Version 3.1
 - keep route grouping provided by the routers who sent them to us.
 - create a capability section under neighbor for capability negociation options
-
-
-Helpers
+- per neighbor route announcement
+- MRT compatible helpers
 - provide an helper program able to read MRT dumps and announce them too.
+- route refresh
+- operational draft support
+- fix code testing coverage
 
 Notes
 - if we define the same route twice in the configuration we will/may send them both .. 
