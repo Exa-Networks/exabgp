@@ -13,7 +13,7 @@ unexport FFLAGS
 unexport LDFLAGS
 
 %:
-	dh --with python2 $@
+	dh $@ --with python2 
 
 override_dh_auto_install: 
 	python setup.py install --root=debian/exabgp --install-layout=deb --install-data=/ --install-lib=/usr/share/exabgp/lib/3.0.7 --install-scripts=/usr/sbin
