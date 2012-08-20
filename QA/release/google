@@ -89,6 +89,11 @@ do
         echo removing $f
         rm -f $f
 done
+for f in `find . -name "draft-*.txt"`;
+do
+        echo removing $f
+        rm -f $f
+done
 cd -
 
 # Making tarball
