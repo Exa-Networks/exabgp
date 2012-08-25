@@ -47,6 +47,10 @@ if [ "$EXABGPRUN" = "no" ]; then
 	log_end_msg 0
 fi
 
+# Check that the RUNDIR exists, create it otherwise
+RUNDIR=$(dirname ${PIDFILE})
+[ ! -d ${RUNDIR} ] && mkdir -p ${RUNDIR} && chown exabgp:exabgp ${RUNDIR}
+
 #
 # Function that starts the daemon/service
 #
