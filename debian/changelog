@@ -1,3 +1,9 @@
+exabgp (3.0.8-1) unstable; urgency=low
+  
+  * Improved init script for /var/run checks
+
+ -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Sat, 25 Aug 2012 13:32:00 +0000
+
 exabgp (3.0.7-1) unstable; urgency=low
   
   * New upstream release
