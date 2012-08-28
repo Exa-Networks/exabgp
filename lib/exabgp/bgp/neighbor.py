@@ -26,6 +26,7 @@ class Neighbor (object):
 		self.peer_as = None
 		self.local_as = None
 		self.hold_time = HoldTime(180)
+		self.asn4 = None
 		self.add_path = 0
 		self.md5 = None
 		self.ttl = None
@@ -162,7 +163,7 @@ neighbor %s {
   hold-time %s;
 %s%s%s
   capability {
-%s%s%s%s  }
+%s%s%s%s%s  }
   family {%s
   }
   static { %s
@@ -178,6 +179,7 @@ neighbor %s {
 	'  group-updates: %s;\n' % self.group_update if self.group_updates else '',
 	'  md5: %d;\n' % self.ttl if self.ttl else '',
 	'  ttl-security: %d;\n' % self.ttl if self.ttl else '',
+	'    asn4 enable;\n' if self.asn4 else '    asn4 disable;\n',
 	'    route-refresh;\n' if self.route_refresh else '',
 	'    graceful-restart %s;\n' % self.graceful_restart if self.graceful_restart else '',
 	'    add-path %s;\n' % AddPath.string[self.add_path] if self.add_path else '',

@@ -88,7 +88,9 @@ class Capabilities (dict):
 		mp = MultiProtocol()
 		mp.extend(families)
 		self[CapabilityID.MULTIPROTOCOL_EXTENSIONS] = mp
-		self[CapabilityID.FOUR_BYTES_ASN] = neighbor.local_as
+
+		if neighbor.asn4:
+			self[CapabilityID.FOUR_BYTES_ASN] = neighbor.local_as
 
 		if neighbor.add_path:
 			ap_families = []

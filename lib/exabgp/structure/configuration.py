@@ -68,7 +68,6 @@ class Configuration (object):
 	TTL_SECURITY = 255
 
 #	'  hold-time 180;\n' \
-#	'  add-path disabled|send|receive|send/receive;\n' \
 
 	_str_route_error = \
 	'community, extended-communities and as-path can take a single community as parameter.\n' \
@@ -154,6 +153,12 @@ class Configuration (object):
 	'          [inet|inet4] mpls-vpn;\n' \
 	'          [inet|inet4] flow-vpnv4;\n' \
 	'          inet6 unicast;\n' \
+	'        }\n'
+
+	_str_capa_error = \
+	'syntax: capability {\n' \
+	'          asn4 enable|disable;\n' \
+	'          add-path disable|send|receive|send/receive;\n' \
 	'        }\n'
 
 	def __init__ (self,fname,text=False):
@@ -461,6 +466,7 @@ class Configuration (object):
 			if command == 'graceful-restart': return self._set_gracefulrestart(scope,'graceful-restart',tokens[1:])
 			if command == 'multi-session': return self._set_multisession(scope,'multi-session',tokens[1:])
 			if command == 'add-path': return self._set_addpath(scope,'add-path',tokens[1:])
+			if command == 'asn4': return self._set_asn4(scope,'asn4',tokens[1:])
 
 		elif name == 'process':
 			if command == 'run': return self._set_process_run(scope,'process-run',tokens[1:])
@@ -640,7 +646,7 @@ class Configuration (object):
 		# we know all the families we should use
 		self._capability = False
 		while True:
-			r = self._dispatch(scope,'capability',[],['route-refresh','graceful-restart','multi-session','add-path'])
+			r = self._dispatch(scope,'capability',[],['route-refresh','graceful-restart','multi-session','add-path','asn4'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -680,12 +686,31 @@ class Configuration (object):
 				apv += 1
 			if ap.startswith('send'):
 				apv += 2
-			if not apv and ap != 'disabled':
+			if not apv and ap not in ('disable','disabled'):
 				raise ValueError('invalid add-path')
 			scope[-1][command] = apv
 			return True
 		except ValueError:
 			self._error = '"%s" is an invalid add-path' % ' '.join(value)
+			if self.debug: raise
+			return False
+
+	def _set_asn4 (self,scope,command,value):
+		try:
+			if not value:
+				scope[-1][command] = True
+				return True
+			asn4 = value[0].lower()
+			if asn4 in ('disable','disabled'):
+				scope[-1][command] = False
+				return True
+			if asn4 in ('enable','enabled'):
+				scope[-1][command] = True
+				return True
+			self._error = '"%s" is an invalid asn4 parameter options are enable (default) and disable)' % ' '.join(value)
+			return False
+		except ValueError:
+			self._error = '"%s" is an invalid asn4 parameter options are enable (default) and disable)' % ' '.join(value)
 			if self.debug: raise
 			return False
 
@@ -715,7 +740,7 @@ class Configuration (object):
 	def _multi_group (self,scope,address):
 		scope.append({})
 		while True:
-			r = self._dispatch(scope,'group',['static','flow','neighbor','process','family','capability'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','route-refresh'])
+			r = self._dispatch(scope,'group',['static','flow','neighbor','process','family','capability'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','route-refresh','asn4'])
 			if r is False:
 				return False
 			if r is None:
@@ -778,6 +803,7 @@ class Configuration (object):
 			neighbor.graceful_restart = int(neighbor.hold_time)
 		neighbor.multisession = local_scope.get('multi-session',False)
 		neighbor.add_path = local_scope.get('add-path','')
+		neighbor.asn4 = local_scope.get('asn4',True)
 
 		missing = neighbor.missing()
 		if missing:
@@ -850,7 +876,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-		 	r = self._dispatch(scope,'neighbor',['static','flow','process','family','capability'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates'])
+			r = self._dispatch(scope,'neighbor',['static','flow','process','family','capability'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','asn4'])
 			if r is False: return False
 			if r is None: return True
 

@@ -10,6 +10,7 @@ Version 3.0.8 - 28th of August 2012
  * Improvement: change the packet dump format to be cisco like
  * Change: added configuration self-checking (-t, --test)
  * Improvement: added parsing of raw update in command line (--decode)
+ * Improvement: add a capability to disable asn4 support (useful when decoding routes)
 
 Version 3.0.7 - 19th of August 2012
  * Fix: parser had a bug with multiple flow routes

@@ -11,6 +11,7 @@ Version 3.0
 - improve the Route objects API
 - Change sure all the Message have the API new() and factory() and empty __init__
 - Let the forked process indicate when it has finished and do not kill it before then
+- Make sure all the capabilities are printed when the neighbor is printed
 
 Version 3.1
 - keep route grouping provided by the routers who sent them to us.
