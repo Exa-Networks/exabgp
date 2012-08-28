@@ -8,7 +8,7 @@ Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 
 from struct import unpack,error
 
-from exabgp.structure.utils import hexa
+from exabgp.structure.utils import dump
 
 from exabgp.protocol.family import AFI,SAFI
 
@@ -217,7 +217,7 @@ class Attributes (dict):
 		attribute = data[:length]
 
 		logger = Logger()
-		logger.parser(LazyFormat("parsing %s " % code,hexa,data[:length]))
+		logger.parser(LazyFormat("parsing %s " % code,dump,data[:length]))
 
 		if code == AID.ORIGIN:
 			if not self.get(code,attribute):
