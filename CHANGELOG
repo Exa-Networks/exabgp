@@ -5,6 +5,7 @@ Version explained:
 
 Version 3.0.8 - 28th of August 2012
  * Improvement: change the packet dump format to be cisco like
+ * Change: added configuration self-checking (-t, --test)
 
 Version 3.0.7 - 19th of August 2012
  * Fix: parser had a bug with multiple flow routes

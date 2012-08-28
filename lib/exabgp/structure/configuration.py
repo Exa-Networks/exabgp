@@ -7,6 +7,7 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
 import os
+import sys
 import stat
 from pprint import pformat
 from copy import deepcopy
@@ -1812,7 +1813,10 @@ class Configuration (object):
 		selfcheck = load().debug.selfcheck
 		if not selfcheck:
 			return True
+		self.logger.info('no issues found with the configuration') 
+		sys.exit(0)
 
+	def decode (self):
 		if 'path-info' in selfcheck:
 			addpath = True
 		else:

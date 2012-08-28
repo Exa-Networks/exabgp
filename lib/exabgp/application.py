@@ -44,6 +44,7 @@ def help (comment=''):
 	sys.stdout.write('  -p, --pdb       : start the python debugger on serious logging and on SIGTERM\n'
 	                 '                    shortcut for exabgp.pdb.enable=true\n')
 	sys.stdout.write('  -m, --memory    : display memory usage information on exit\n')
+	sys.stdout.write('  -t, --test      : perform a configuration validity check only')
 	sys.stdout.write(' --profile <file> : enable profiling\n'
 	                 '                    shortcut for exabgp.profile.enable=true exabgp.profle=file=<file>\n')
 
@@ -178,6 +179,8 @@ def main ():
 			# The following may fail on old version of python (but is required for debug.py)
 			os.environ['PDB'] = 'true'
 			env.debug.pdb = True
+		if arg in ['-t','--test']:
+			env.debug.selfcheck = True
 		if arg in ['-m','--memory']:
 			env.debug.memory = True
 

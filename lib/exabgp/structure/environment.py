@@ -249,7 +249,7 @@ defaults = {
 	'debug' : {
 		'memory' : (value.boolean,value.lower,'false','command line option --memory'),
 		'configuration' : (value.boolean,value.lower,'false','undocumented option: raise when parsing configuration errors'),
-		'selfcheck' : (value.unquote,value.quote,'','does a self check on the routes generation with or without path-info'),
+		'selfcheck' : (value.unquote,value.quote,'','does a self check on the configuration file'),
 	},
 }
 
