@@ -235,14 +235,13 @@ def BGPNLRI (afi,safi,bgp,has_multiple_path):
 class Route (object):
 	def __init__ (self,nlri):
 		self.nlri = nlri
-		self.__address = Address(nlri.afi,nlri.safi)
 		self.attributes = Attributes()
 
 	def __str__ (self):
 		return "route %s%s" % (str(self.nlri),str(self.attributes))
 
 	def extensive (self):
-		return "%s %s%s" % (str(self.__address),str(self.nlri),str(self.attributes))
+		return "%s %s%s" % (str(Address(self.nlri.afi,self.nlri.safi)),str(self.nlri),str(self.attributes))
 
 	def index (self):
 		return self.nlri.packed+self.nlri.rd.rd

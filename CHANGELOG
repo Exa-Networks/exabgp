@@ -7,6 +7,7 @@ Version 3.0.8 - 28th of August 2012
  * Fix: empty as-path route printing
  * Fix: bug in printing neighbor objects
  * Fix: the first route of any MultiProtocol Update did not get its attributes set
+ * Fix: safi on extensive route printing
  * Improvement: change the packet dump format to be cisco like
  * Change: added configuration self-checking (-t, --test)
  * Improvement: added parsing of raw update in command line (--decode)
