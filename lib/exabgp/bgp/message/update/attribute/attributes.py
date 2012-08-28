@@ -301,7 +301,7 @@ class Attributes (dict):
 			data = data[offset:]
 
 			if (afi,safi) not in self.negociated.families:
-				raise Notify(3,0,'presented a non-negociated family')
+				raise Notify(3,0,'presented a non-negociated family %d/%d' % (afi,safi))
 
 			# Is the peer going to send us some Path Information with the route (AddPath)
 			addpath = self.negociated.addpath.receive(afi,safi)
@@ -326,7 +326,7 @@ class Attributes (dict):
 
 			# we do not want to accept unknown families
 			if (afi,safi) not in self.negociated.families:
-				raise Notify(3,0,'presented a non-negociated family')
+				raise Notify(3,0,'presented a non-negociated family %d/%d' % (afi,safi))
 
 			# -- Reading length of next-hop
 			len_nh = ord(data[offset])
@@ -338,19 +338,19 @@ class Attributes (dict):
 			if afi == AFI.ipv4:
 				if safi in (SAFI.unicast,SAFI.multicast):
 					if len_nh != 4:
-						raise Notify(3,0,'invalid next-hop length')
+						raise Notify(3,0,'invalid ipv4 unicast/multicast next-hop length %d expected 4' % len_nh)
 				if safi in (SAFI.mpls_vpn,):
 					if len_nh != 12:
-						raise Notify(3,0,'invalid next-hop length')
+						raise Notify(3,0,'invalid ipv4 mpls_vpn next-hop length %d expected 12' % len_nh)
 					rd = 8
 				size = 4
 			elif afi == AFI.ipv6:
 				if safi in (SAFI.unicast,):
 					if len_nh not in (16,32):
-						raise Notify(3,0,'invalid next-hop length')
+						raise Notify(3,0,'invalid ipv6 unicast next-hop length %d expected 16 or 32' % len_nh)
 				if safi in (SAFI.mpls_vpn,):
 					if len_nh not in (24,40):
-						raise Notify(3,0,'invalid next-hop length')
+						raise Notify(3,0,'invalid ipv6 mpls_vpn next-hop length %d expected 24 or 40' % len_nh)
 					rd = 8
 				size = 16
 
@@ -359,7 +359,7 @@ class Attributes (dict):
 
 			# chech the RD is well zeo
 			if rd and sum([int(ord(_)) for _ in data[offset:8]]) != 0:
-				raise Notify(3,0,'route-distinguisher for the next-hop is not zero')
+				raise Notify(3,0,"MP_REACH_NLRI next-hop's route-distinguisher must be zero")
 
 			offset += len_nh
 
