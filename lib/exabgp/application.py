@@ -44,7 +44,8 @@ def help (comment=''):
 	sys.stdout.write('  -p, --pdb       : start the python debugger on serious logging and on SIGTERM\n'
 	                 '                    shortcut for exabgp.pdb.enable=true\n')
 	sys.stdout.write('  -m, --memory    : display memory usage information on exit\n')
-	sys.stdout.write('  -t, --test      : perform a configuration validity check only')
+	sys.stdout.write('  -t, --test      : perform a configuration validity check only\n')
+	sys.stdout.write(' --decode <route> : decode a the raw route packet in hexadecimal string')
 	sys.stdout.write(' --profile <file> : enable profiling\n'
 	                 '                    shortcut for exabgp.profile.enable=true exabgp.profle=file=<file>\n')
 
@@ -95,6 +96,7 @@ def main ():
 
 	next = ''
 	arguments = {
+		'decode' : '',
 		'folder' : '',
 		'file' : [],
 		'env' : 'exabgp.env',
@@ -115,6 +117,9 @@ def main ():
 			continue
 		if arg in ['--profile',]:
 			next = 'profile'
+			continue
+		if arg in ['--decode',]:
+			next = 'decode'
 			continue
 		if arg.startswith('-'):
 			continue
@@ -207,6 +212,9 @@ def main ():
 			logger = Logger()
 			logger.error('the argument passed as configuration is not a file','configuration')
 			sys.exit(1)
+
+	if arguments['decode']:
+		env.debug.route = arguments['decode']
 
 	if len(configurations) == 1:
 		run(env,comment,configuration)
