@@ -298,3 +298,6 @@ class Flow (object):
 
 	def __str__ (self):
 		return "%s %s%s" % (Address.__str__(self.nlri),str(self.nlri),str(self.attributes))
+
+	def extensive (self):
+		return str(self)

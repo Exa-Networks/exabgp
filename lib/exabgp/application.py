@@ -44,6 +44,8 @@ def help (comment=''):
 	sys.stdout.write('  -p, --pdb       : start the python debugger on serious logging and on SIGTERM\n'
 	                 '                    shortcut for exabgp.pdb.enable=true\n')
 	sys.stdout.write('  -m, --memory    : display memory usage information on exit\n')
+	sys.stdout.write('  -t, --test      : perform a configuration validity check only\n')
+	sys.stdout.write(' --decode <route> : decode a the raw route packet in hexadecimal string')
 	sys.stdout.write(' --profile <file> : enable profiling\n'
 	                 '                    shortcut for exabgp.profile.enable=true exabgp.profle=file=<file>\n')
 
@@ -94,6 +96,7 @@ def main ():
 
 	next = ''
 	arguments = {
+		'decode' : '',
 		'folder' : '',
 		'file' : [],
 		'env' : 'exabgp.env',
@@ -114,6 +117,9 @@ def main ():
 			continue
 		if arg in ['--profile',]:
 			next = 'profile'
+			continue
+		if arg in ['--decode',]:
+			next = 'decode'
 			continue
 		if arg.startswith('-'):
 			continue
@@ -136,6 +142,10 @@ def main ():
 	except EnvError,e:
 		print >> sys.stderr, 'configuration issue,', str(e)
 		sys.exit(1)
+
+	if arguments['decode']:
+		env.log.parser = True
+		env.debug.route = arguments['decode']
 
 	if 'profile' in arguments:
 		env.profile.enable = True
@@ -178,6 +188,9 @@ def main ():
 			# The following may fail on old version of python (but is required for debug.py)
 			os.environ['PDB'] = 'true'
 			env.debug.pdb = True
+		if arg in ['-t','--test']:
+			env.debug.selfcheck = True
+			env.log.parser = True
 		if arg in ['-m','--memory']:
 			env.debug.memory = True
 

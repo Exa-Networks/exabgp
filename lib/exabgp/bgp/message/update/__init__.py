@@ -148,8 +148,7 @@ class Update (Message):
 				attr = deepcopy(attributes)
 				attr[AttributeID.NEXT_HOP] = next_hop
 				next_hop_attributes[str_hop] = attr
-			else:
-				route.attributes = next_hop_attributes[str_hop]
+			route.attributes = next_hop_attributes[str_hop]
 			routes.append(route)
 
 		return self.new(routes)

@@ -7,6 +7,7 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
 import os
+import sys
 import stat
 from pprint import pformat
 from copy import deepcopy
@@ -67,7 +68,6 @@ class Configuration (object):
 	TTL_SECURITY = 255
 
 #	'  hold-time 180;\n' \
-#	'  add-path disabled|send|receive|send/receive;\n' \
 
 	_str_route_error = \
 	'community, extended-communities and as-path can take a single community as parameter.\n' \
@@ -155,6 +155,12 @@ class Configuration (object):
 	'          inet6 unicast;\n' \
 	'        }\n'
 
+	_str_capa_error = \
+	'syntax: capability {\n' \
+	'          asn4 enable|disable;\n' \
+	'          add-path disable|send|receive|send/receive;\n' \
+	'        }\n'
+
 	def __init__ (self,fname,text=False):
 		self.debug = load().debug.configuration
 
@@ -208,12 +214,21 @@ class Configuration (object):
 			r = self._dispatch(self._scope,'configuration',['group','neighbor'],[])
 			if r is False: break
 
-		if r in [True,None]:
-			self.neighbor = self._neighbor
-			return self.selfcheck()
+		if r not in [True,None]:
+			self.error = "\nsyntax error in section %s\nline %d : %s\n\n%s" % (self._location[-1],self.number(),self.line(),self._error)
+			return False
 
-		self.error = "\nsyntax error in section %s\nline %d : %s\n\n%s" % (self._location[-1],self.number(),self.line(),self._error)
-		return False
+		self.neighbor = self._neighbor
+
+		if load().debug.route:
+			self.decode(load().debug.route)
+			sys.exit(0)
+
+		if load().debug.selfcheck:
+			self.selfcheck()
+			sys.exit(0)
+
+		return True
 
 	def parse_single_route (self,command):
 		tokens = command.split(' ')[1:]
@@ -451,6 +466,7 @@ class Configuration (object):
 			if command == 'graceful-restart': return self._set_gracefulrestart(scope,'graceful-restart',tokens[1:])
 			if command == 'multi-session': return self._set_multisession(scope,'multi-session',tokens[1:])
 			if command == 'add-path': return self._set_addpath(scope,'add-path',tokens[1:])
+			if command == 'asn4': return self._set_asn4(scope,'asn4',tokens[1:])
 
 		elif name == 'process':
 			if command == 'run': return self._set_process_run(scope,'process-run',tokens[1:])
@@ -630,7 +646,7 @@ class Configuration (object):
 		# we know all the families we should use
 		self._capability = False
 		while True:
-			r = self._dispatch(scope,'capability',[],['route-refresh','graceful-restart','multi-session','add-path'])
+			r = self._dispatch(scope,'capability',[],['route-refresh','graceful-restart','multi-session','add-path','asn4'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -670,12 +686,31 @@ class Configuration (object):
 				apv += 1
 			if ap.startswith('send'):
 				apv += 2
-			if not apv and ap != 'disabled':
+			if not apv and ap not in ('disable','disabled'):
 				raise ValueError('invalid add-path')
 			scope[-1][command] = apv
 			return True
 		except ValueError:
 			self._error = '"%s" is an invalid add-path' % ' '.join(value)
+			if self.debug: raise
+			return False
+
+	def _set_asn4 (self,scope,command,value):
+		try:
+			if not value:
+				scope[-1][command] = True
+				return True
+			asn4 = value[0].lower()
+			if asn4 in ('disable','disabled'):
+				scope[-1][command] = False
+				return True
+			if asn4 in ('enable','enabled'):
+				scope[-1][command] = True
+				return True
+			self._error = '"%s" is an invalid asn4 parameter options are enable (default) and disable)' % ' '.join(value)
+			return False
+		except ValueError:
+			self._error = '"%s" is an invalid asn4 parameter options are enable (default) and disable)' % ' '.join(value)
 			if self.debug: raise
 			return False
 
@@ -705,7 +740,7 @@ class Configuration (object):
 	def _multi_group (self,scope,address):
 		scope.append({})
 		while True:
-			r = self._dispatch(scope,'group',['static','flow','neighbor','process','family','capability'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','route-refresh'])
+			r = self._dispatch(scope,'group',['static','flow','neighbor','process','family','capability'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','route-refresh','asn4'])
 			if r is False:
 				return False
 			if r is None:
@@ -768,6 +803,7 @@ class Configuration (object):
 			neighbor.graceful_restart = int(neighbor.hold_time)
 		neighbor.multisession = local_scope.get('multi-session',False)
 		neighbor.add_path = local_scope.get('add-path','')
+		neighbor.asn4 = local_scope.get('asn4',True)
 
 		missing = neighbor.missing()
 		if missing:
@@ -840,7 +876,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-		 	r = self._dispatch(scope,'neighbor',['static','flow','process','family','capability'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates'])
+			r = self._dispatch(scope,'neighbor',['static','flow','process','family','capability'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','asn4'])
 			if r is False: return False
 			if r is None: return True
 
@@ -1808,78 +1844,105 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-	def selfcheck (self):
-		selfcheck = load().debug.selfcheck
-		if not selfcheck:
-			return True
 
-		if 'path-info' in selfcheck:
-			addpath = True
-		else:
-			addpath = False
-		
+	def decode (self,route):
 		# self check to see if we can decode what we encode
-		from exabgp.bgp.message.open.asn import ASN
-		from exabgp.bgp.neighbor import Neighbor
-		from exabgp.bgp.peer import Peer
+		from exabgp.structure.utils import dump
 		from exabgp.bgp.message.update import Update
 		from exabgp.bgp.message.open import Open
 		from exabgp.bgp.message.open.capability import Capabilities
 		from exabgp.bgp.message.open.capability.negociated import Negociated
 		from exabgp.bgp.message.open.capability.id import CapabilityID
 
-		n = Neighbor()
-		n.local_as = ASN(30740)
-		capa = Capabilities().new(n,False)
+		self.logger.info('\ndecoding routes in configuration','parser')
+
+		if route.startswith('F'*32):
+			route = route[19*2:]
+			prepend = route[:19*2]
+		else:
+			prepend = ''
+
+		n = self.neighbor[self.neighbor.keys()[0]]
+
 		path = {}
 		for f in self._all_families():
-			n._families.append(f)
-			if addpath:
-				path[f] = 3
-		if addpath:
-			capa[CapabilityID.ADD_PATH] = path
-		capa[CapabilityID.MULTIPROTOCOL_EXTENSIONS] = self._all_families()
+			if n.add_path:
+				path[f] = n.add_path
 
-		o1 = Open().new(4,3074000,'127.0.0.1',capa,180)
-		o2 = Open().new(4,30740,'127.0.0.1',capa,180)
+		capa = Capabilities().new(n,False)
+		capa[CapabilityID.ADD_PATH] = path
+		capa[CapabilityID.MULTIPROTOCOL_EXTENSIONS] = n.families()
+
+		o1 = Open().new(4,n.local_as,str(n.local_address),capa,180)
+		o2 = Open().new(4,n.peer_as,str(n.peer_address),capa,180)
 		negociated = Negociated()
 		negociated.sent(o1)
 		negociated.received(o2)
 		grouped = False
 
+		injected = ''.join(chr(int(_,16)) for _ in (route[i*2:(i*2)+2] for i in range(len(route)/2)))
+		# This does not take the BGP header - let's assume we will not break that :)
+		update = Update().factory(negociated,injected)
+		self.logger.info('','parser')
+		for route in update.routes:
+			self.logger.info('decoded route %s' % route.extensive(),'parser')
+		import sys
+		sys.exit(0)
+
+
 # ASN4 merge test
 #		injected = ['0x0', '0x0', '0x0', '0x2e', '0x40', '0x1', '0x1', '0x0', '0x40', '0x2', '0x8', '0x2', '0x3', '0x78', '0x14', '0xab', '0xe9', '0x5b', '0xa0', '0x40', '0x3', '0x4', '0x52', '0xdb', '0x0', '0x4f', '0xc0', '0x8', '0x8', '0x78', '0x14', '0xc9', '0x46', '0x78', '0x14', '0xfd', '0xea', '0xe0', '0x11', '0xa', '0x2', '0x2', '0x0', '0x0', '0xab', '0xe9', '0x0', '0x3', '0x5', '0x54', '0x17', '0x9f', '0x65', '0x9e', '0x15', '0x9f', '0x65', '0x80', '0x18', '0x9f', '0x65', '0x9f']
-
-#		injected = ['0x0', '0x0', '0x0', '0x4b', '0x40', '0x1', '0x1', '0x0', '0x40', '0x2', '0x1a', '0x2', '0x6', '0x0', '0x0', '0x39', '0x99', '0x0', '0x0', '0x56', '0x74', '0x0', '0x0', '0x39', '0x99', '0x0', '0x0', '0xb', '0x62', '0x0', '0x0', '0xd', '0x1c', '0x0', '0x0', '0x11', '0xed', '0x40', '0x3', '0x4', '0xac', '0x10', '0x32', '0x1', '0x80', '0x4', '0x4', '0x0', '0x0', '0x0', '0x0', '0x40', '0x5', '0x4', '0x0', '0x4', '0x93', '0xe0', '0xc0', '0x8', '0x4', '0xfd', '0xf2', '0x1', '0x2c', '0x80', '0xa', '0x4', '0x40', '0x4a', '0x77', '0x85', '0x80', '0x9', '0x4', '0x40', '0x4a', '0x77', '0x82', '0x0', '0x0', '0x0', '0x1', '0x13', '0x3e', '0xc0', '0x60', '0x0', '0x0', '0x0', '0x1', '0x13', '0xd5', '0x8b', '0x0', '0x0', '0x0', '0x0', '0x1', '0xf', '0xd4', '0x86', '0x0', '0x0', '0x0', '0x1', '0x10', '0xc2', '0xc3', '0x0', '0x0', '0x0', '0x1', '0x12', '0xd4', '0xe0', '0x0', '0x0', '0x0', '0x0', '0x1', '0x10', '0xc2', '0xe9', '0x0', '0x0', '0x0', '0x1', '0x18', '0xcc', '0x7c', '0xc7', '0x0', '0x0', '0x0', '0x1', '0x10', '0xc3', '0xb3', '0x0', '0x0', '0x0', '0x1', '0xd', '0x57', '0x50', '0x0', '0x0', '0x0', '0x1', '0x11', '0xd4', '0xdd', '0x80', '0x0', '0x0', '0x0', '0x1', '0x10', '0x54', '0x25', '0x0', '0x0', '0x0', '0x1', '0x17', '0xc2', '0x3d', '0xa2', '0x0', '0x0', '0x0', '0x1', '0x10', '0xc2', '0x40', '0x0', '0x0', '0x0', '0x1', '0x11', '0xa1', '0xc', '0x80', '0x0', '0x0', '0x0', '0x1', '0x11', '0xc3', '0xfc', '0x80', '0x0', '0x0', '0x0', '0x1', '0x12', '0xc3', '0xb1', '0x0', '0x0', '0x0', '0x0', '0x1', '0x18', '0xcc', '0x4a', '0x1d', '0x0', '0x0', '0x0', '0x1', '0x10', '0xc3', '0xac', '0x0', '0x0', '0x0', '0x1', '0x18', '0xc2', '0x3d', '0xad', '0x0', '0x0', '0x0', '0x1', '0x10', '0xc2', '0xa3', '0x0', '0x0', '0x0', '0x1', '0x12', '0xc2', '0xe9', '0xc0', '0x0', '0x0', '0x0', '0x1', '0x10', '0xc3', '0xb4', '0x0', '0x0', '0x0', '0x1', '0x15', '0xc1', '0x24', '0x8', '0x0', '0x0', '0x0', '0x1', '0x13', '0xd4', '0x74', '0x0']
-#		injected = ''.join(chr(int(_,16)) for _ in injected)
-
 # EOR
 #		injected = '\x00\x00\x00\x07\x90\x0f\x00\x03\x00\x02\x01'
-#
-#		recorded = Update().factory(negociated,injected)
-#		import sys
-#		sys.exit(0)
+
+	def selfcheck (self):
+		# self check to see if we can decode what we encode
+		from exabgp.structure.utils import dump
+		from exabgp.bgp.message.update import Update
+		from exabgp.bgp.message.open import Open
+		from exabgp.bgp.message.open.capability import Capabilities
+		from exabgp.bgp.message.open.capability.negociated import Negociated
+		from exabgp.bgp.message.open.capability.id import CapabilityID
+
+		self.logger.info('\ndecoding routes in configuration','parser')
+
+		n = self.neighbor[self.neighbor.keys()[0]]
+
+		path = {}
+		for f in self._all_families():
+			if n.add_path:
+				path[f] = n.add_path
+
+		capa = Capabilities().new(n,False)
+		capa[CapabilityID.ADD_PATH] = path
+		capa[CapabilityID.MULTIPROTOCOL_EXTENSIONS] = n.families()
+
+		o1 = Open().new(4,n.local_as,str(n.local_address),capa,180)
+		o2 = Open().new(4,n.peer_as,str(n.peer_address),capa,180)
+		negociated = Negociated()
+		negociated.sent(o1)
+		negociated.received(o2)
+		grouped = False
 
 		for nei in self.neighbor.keys():
 			for family in self.neighbor[nei].families():
 				if not family in self.neighbor[nei]._routes:
 					continue
 				for route in self.neighbor[nei]._routes[family]:
-					str1 = str(route)
-					self.logger.info('parsed route %s' % str1,'configuration') 
+					str1 = route.extensive()
 					update = Update().new([route])
-					#update = Update().new([route]*1000)
 					packed = update.announce(negociated)
-					self.logger.info('parsed route requires %d updates' % len(packed),'configuration') 
+					self.logger.info('parsed route requires %d updates' % len(packed),'parser')
 					for pack in packed:
-						self.logger.info('update size is %d' % len(pack),'configuration') 
+						self.logger.info('update size is %d' % len(pack),'parser')
 						# This does not take the BGP header - let's assume we will not break that :)
 						update = Update().factory(negociated,pack[19:])
+						self.logger.info('','parser')
 						for route in update.routes:
-							str2 = str(route)
-							self.logger.info('decoded route %s' % str2,'configuration')
-						self.logger.info('decoded hex %s\n' % [hex(ord(_)) for _ in pack],'configuration') 
+							str2 = route.extensive()
+							self.logger.info('parsed  route %s' % str1,'parser')
+							self.logger.info('recoded route %s' % str2,'parser')
+							self.logger.info('recoded hex   %s\n' % dump(pack),'parser')
 		import sys
 		sys.exit(0)
-
 

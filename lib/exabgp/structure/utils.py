@@ -15,6 +15,16 @@ import traceback
 def hexa (value):
 	return "%s" % [(hex(ord(_))) for _ in value]
 
+def dump (value):
+	def spaced (value):
+		even = None
+		for v in value:
+			if even is False:
+				yield ' '
+			yield '%02X' % ord(v)
+			even = not even
+	return ''.join(spaced(value))
+
 def hexdump (value):
 	print hexa(value)
 
