@@ -217,7 +217,7 @@ class Attributes (dict):
 		attribute = data[:length]
 
 		logger = Logger()
-		logger.parser(LazyFormat("parsing flag %x %s %02x len %02x %s" % (flag,code,int(code),length,'payload ' if length else ''),dump,data[:length]))
+		logger.parser(LazyFormat("parsing flag %x type %02x (%s) len %02x %s" % (flag,int(code),code,length,'payload ' if length else ''),dump,data[:length]))
 
 		if code == AID.ORIGIN:
 			if not self.get(code,attribute):
