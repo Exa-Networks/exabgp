@@ -1821,6 +1821,10 @@ class Configuration (object):
 	def decode (self,route):
 		if route.startswith('FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'):
 			route = route[19*2:]
+			prepend = route[:19*2]
+		else:
+			prepend = ''
+		
 
 		# self check to see if we can decode what we encode
 		from exabgp.structure.utils import dump
@@ -1873,10 +1877,15 @@ class Configuration (object):
 						self.logger.info('update size is %d' % len(pack),'parser') 
 						# This does not take the BGP header - let's assume we will not break that :)
 						update = Update().factory(negociated,pack[19:])
+						self.logger.info('','parser') 
 						for route in update.routes:
 							str2 = str(route)
-							self.logger.info('decoded route %s' % str2,'configuration')
-						self.logger.info('decoded hex %s\n' % dump(pack),'configuration') 
+							if prepend:
+								packed = dump(pack)
+							else:
+								packed = dump(pack[19*2:])
+							self.logger.info('decoded hex %s\n' % packed,'parser') 
+							self.logger.info('decoded route %s' % str2,'parser')
 		import sys
 		sys.exit(0)
 
