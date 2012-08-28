@@ -209,12 +209,16 @@ class Configuration (object):
 			r = self._dispatch(self._scope,'configuration',['group','neighbor'],[])
 			if r is False: break
 
-		if r in [True,None]:
-			self.neighbor = self._neighbor
-			return self.selfcheck()
+		if r not in [True,None]:
+			self.error = "\nsyntax error in section %s\nline %d : %s\n\n%s" % (self._location[-1],self.number(),self.line(),self._error)
+			return False
 
-		self.error = "\nsyntax error in section %s\nline %d : %s\n\n%s" % (self._location[-1],self.number(),self.line(),self._error)
-		return False
+		if load().debug.selfcheck:
+			self.logger.info('no issues found with the configuration')
+			sys.exit(0)
+
+		self.neighbor = self._neighbor
+		return True
 
 	def parse_single_route (self,command):
 		tokens = command.split(' ')[1:]
@@ -1808,13 +1812,6 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
-
-	def selfcheck (self):
-		selfcheck = load().debug.selfcheck
-		if not selfcheck:
-			return True
-		self.logger.info('no issues found with the configuration') 
-		sys.exit(0)
 
 	def decode (self):
 		if 'path-info' in selfcheck:
