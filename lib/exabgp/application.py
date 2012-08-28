@@ -214,6 +214,7 @@ def main ():
 			sys.exit(1)
 
 	if arguments['decode']:
+		env.log.parser = True
 		env.debug.route = arguments['decode']
 
 	if len(configurations) == 1:
