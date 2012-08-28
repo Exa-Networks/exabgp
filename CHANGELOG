@@ -5,6 +5,7 @@ Version explained:
 
 Version 3.0.8 - 28th of August 2012
  * Fix: empty as-path route printing
+ * Fix: bug in printing neighbor objects
  * Improvement: change the packet dump format to be cisco like
  * Change: added configuration self-checking (-t, --test)
 

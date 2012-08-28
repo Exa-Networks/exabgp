@@ -144,9 +144,8 @@ class Neighbor (object):
 
 	def __str__ (self):
 		routes = ''
-		for family in self.families():
-			for _routes in self._families[family]:
-				routes += '\n    %s' % _routes
+		for route in self.every_routes():
+			routes += '\n    %s' % route
 
 		families = ''
 		for afi,safi in self.families():
@@ -177,8 +176,8 @@ neighbor %s {
 	self.peer_as,
 	self.hold_time,
 	'  group-updates: %s;\n' % self.group_update if self.group_updates else '',
-	'  md5: %d;\n' % self.ttl if self.ttl else ''
-	'  ttl-security: %d;\n' % self.ttl if self.ttl else ''
+	'  md5: %d;\n' % self.ttl if self.ttl else '',
+	'  ttl-security: %d;\n' % self.ttl if self.ttl else '',
 	'    route-refresh;\n' if self.route_refresh else '',
 	'    graceful-restart %s;\n' % self.graceful_restart if self.graceful_restart else '',
 	'    add-path %s;\n' % AddPath.string[self.add_path] if self.add_path else '',
