@@ -21,6 +21,8 @@ Version 3.1
 - route refresh
 - operational draft support
 - fix code testing coverage
+- provide easy integration with http://www.spamhaus.org/bgpf/ and http://www.spamhaus.org/drop/
+
 
 Notes
 - if we define the same route twice in the configuration we will/may send them both .. 
