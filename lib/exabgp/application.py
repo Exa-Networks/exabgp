@@ -143,6 +143,10 @@ def main ():
 		print >> sys.stderr, 'configuration issue,', str(e)
 		sys.exit(1)
 
+	if arguments['decode']:
+		env.log.parser = True
+		env.debug.route = arguments['decode']
+
 	if 'profile' in arguments:
 		env.profile.enable = True
 		env.profile.file = arguments['profile']
@@ -186,6 +190,7 @@ def main ():
 			env.debug.pdb = True
 		if arg in ['-t','--test']:
 			env.debug.selfcheck = True
+			env.log.parser = True
 		if arg in ['-m','--memory']:
 			env.debug.memory = True
 
@@ -212,10 +217,6 @@ def main ():
 			logger = Logger()
 			logger.error('the argument passed as configuration is not a file','configuration')
 			sys.exit(1)
-
-	if arguments['decode']:
-		env.log.parser = True
-		env.debug.route = arguments['decode']
 
 	if len(configurations) == 1:
 		run(env,comment,configuration)

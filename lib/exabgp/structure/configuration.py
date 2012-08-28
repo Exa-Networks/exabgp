@@ -213,14 +213,14 @@ class Configuration (object):
 			self.error = "\nsyntax error in section %s\nline %d : %s\n\n%s" % (self._location[-1],self.number(),self.line(),self._error)
 			return False
 
-		if load().debug.selfcheck:
-			self.logger.info('no issues found with the configuration')
-			sys.exit(0)
-
 		self.neighbor = self._neighbor
 
 		if load().debug.route:
 			self.decode(load().debug.route)
+			sys.exit(0)
+
+		if load().debug.selfcheck:
+			self.selfcheck()
 			sys.exit(0)
 
 		return True
@@ -1818,13 +1818,14 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
+
 	def decode (self,route):
 		if route.startswith('FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'):
 			route = route[19*2:]
 			prepend = route[:19*2]
 		else:
 			prepend = ''
-		
+
 
 		# self check to see if we can decode what we encode
 		from exabgp.structure.utils import dump
@@ -1836,7 +1837,7 @@ class Configuration (object):
 
 		n = self.neighbor[self.neighbor.keys()[0]]
 
-		self.logger.info('\ndecoding route %s\n' % route,'parser') 
+		self.logger.info('\ndecoding route %s\n' % route,'parser')
 
 
 		path = {}
@@ -1868,24 +1869,68 @@ class Configuration (object):
 					continue
 				for route in self.neighbor[nei]._routes[family]:
 					str1 = str(route)
-					self.logger.info('parsed route %s' % str1,'parser') 
+					self.logger.info('parsed route %s' % str1,'parser')
 					update = Update().new([route])
-					#update = Update().new([route]*1000)
 					packed = update.announce(negociated)
-					self.logger.info('parsed route requires %d updates' % len(packed),'parser') 
+					self.logger.info('parsed route requires %d updates' % len(packed),'parser')
 					for pack in packed:
-						self.logger.info('update size is %d' % len(pack),'parser') 
+						self.logger.info('update size is %d' % len(pack),'parser')
 						# This does not take the BGP header - let's assume we will not break that :)
 						update = Update().factory(negociated,pack[19:])
-						self.logger.info('','parser') 
+						self.logger.info('','parser')
 						for route in update.routes:
 							str2 = str(route)
 							if prepend:
 								packed = dump(pack)
 							else:
 								packed = dump(pack[19*2:])
-							self.logger.info('decoded hex %s\n' % packed,'parser') 
+							self.logger.info('decoded hex %s\n' % packed,'parser')
 							self.logger.info('decoded route %s' % str2,'parser')
+		import sys
+		sys.exit(0)
+
+	def selfcheck (self,tested):
+		# self check to see if we can decode what we encode
+		from exabgp.structure.utils import dump
+		from exabgp.bgp.message.update import Update
+		from exabgp.bgp.message.open import Open
+		from exabgp.bgp.message.open.capability import Capabilities
+		from exabgp.bgp.message.open.capability.negociated import Negociated
+		from exabgp.bgp.message.open.capability.id import CapabilityID
+
+		self.logger.info('\ndecoding routes in configuration','parser')
+
+		n = self.neighbor[self.neighbor.keys()[0]]
+
+		path = {}
+		for f in self._all_families():
+			if n.add_path:
+				path[f] = n.add_path
+
+		capa = Capabilities().new(n,False)
+		capa[CapabilityID.ADD_PATH] = path
+		capa[CapabilityID.MULTIPROTOCOL_EXTENSIONS] = n.families()
+
+		o1 = Open().new(4,n.local_as,str(n.local_address),capa,180)
+		o2 = Open().new(4,n.peer_as,str(n.peer_address),capa,180)
+		negociated = Negociated()
+		negociated.sent(o1)
+		negociated.received(o2)
+		grouped = False
+
+		if tested.startswith('F'*32):
+			pack = tested[19*2:]
+		else:
+			pack = tested
+
+		self.logger.info('update size is %d' % len(pack),'parser')
+		# This does not take the BGP header - let's assume we will not break that :)
+		update = Update().factory(negociated,pack[19:])
+		self.logger.info('','parser')
+		for route in update.routes:
+			str2 = str(route)
+			self.logger.info('decoded hex %s\n' % dump(pack),'parser')
+			self.logger.info('decoded route %s' % str2,'parser')
 		import sys
 		sys.exit(0)
 
