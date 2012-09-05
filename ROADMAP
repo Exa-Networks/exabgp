@@ -36,7 +36,8 @@ Notes
 - NotificationID
 - For the first run, add a grouping of route BEFORE the OPEN negociation to not cause issues with OPEN
 - allow per per announcement of routes from the helper program
-- on unhandled exception, stop all the workers 
+- on unhandled exception, stop all the workers
+- look at tox http://tox.testrun.org/latest/
 
 Important
 * Write the documentation, and do not rely on the example and the site wiki (argh ...)
