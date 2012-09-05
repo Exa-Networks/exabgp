@@ -11,7 +11,7 @@ from struct import pack
 
 # =================================================================== ASN
 
-class ASN (int):
+class ASN (long):
 	def asn4 (self):
 		return self > pow(2,16)
 
