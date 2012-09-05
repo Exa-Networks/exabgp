@@ -3,6 +3,10 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.0.9 - 5th of September 2012
+ * Fix: problem when parsing ASN which are not fitting in a Python integer
+    reported by: Matthias Cramer
+
 Version 3.0.8 - 28th of August 2012
  * Fix: empty as-path route printing
  * Fix: bug in printing neighbor objects
