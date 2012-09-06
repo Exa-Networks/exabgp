@@ -205,6 +205,7 @@ class Supervisor (object):
 					if not route:
 						self.logger.warning("Command could not parse route in : %s" % command,'supervisor')
 					else:
+						self.configuration.remove_route_all_peers(route)
 						self.configuration.add_route_all_peers(route)
 						self._route_update = True
 
