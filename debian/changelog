@@ -1,3 +1,9 @@
+exabgp (3.0.10-1) unstable; urgency=low
+  
+  * New upstream release
+
+ -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Thu, 06 Sep 2012 12:34:56 +0000
+
 exabgp (3.0.9-1) unstable; urgency=low
   
   * New upstream release
