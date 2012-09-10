@@ -1,3 +1,2 @@
-
-misc:Depends=debconf (>= 0.5) | debconf-2.0
 python:Depends=python (>= 2.6.6-7~), python (>= 2.6)
+misc:Depends=

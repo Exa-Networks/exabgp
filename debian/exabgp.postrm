@@ -1,5 +1,7 @@
 #!/bin/sh -e
 
+. /usr/share/debconf/confmodule
+
 if dpkg-maintscript-helper supports rm_conffile 2>/dev/null; then
     FILE_ONE="/etc/exabgp/processes/dynamic-1.sh"
     FILE_TWO="/etc/exabgp/processes/watchdog-1.sh"
@@ -8,5 +10,7 @@ if dpkg-maintscript-helper supports rm_conffile 2>/dev/null; then
 fi
 
 #DEBHELPER#
+
+db_purge
 
 exit 0
