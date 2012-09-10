@@ -15,6 +15,11 @@ restore_user_settings() {
 	sed -i "s#EXABGPRUN=\"no#EXABGPRUN=\"$EXABGPRUN#" /etc/default/exabgp
     	sed -i "s#ETC=\"/etc/exabgp/#ETC=\"$ETC#" /etc/default/exabgp
     	sed -i "s#DAEMON_OPTS=\"/etc/exabgp/exabgp.conf#DAEMON_OPTS=\"$DAEMON_OPTS#" /etc/default/exabgp
+    elif [ -f /etc/default/exabgp.dpkg-new ] ; then
+	. /etc/default/exabgp
+	sed -i "s#EXABGPRUN=\"no#EXABGPRUN=\"$EXABGPRUN#" /etc/default/exabgp-new
+    	sed -i "s#ETC=\"/etc/exabgp/#ETC=\"$ETC#" /etc/default/exabgp-new
+    	sed -i "s#DAEMON_OPTS=\"/etc/exabgp/exabgp.conf#DAEMON_OPTS=\"$DAEMON_OPTS#" /etc/default/exabgp-new
     fi
 }
 
@@ -35,6 +40,7 @@ configure)
 		# Upgrade from an older version
 		restore_user_settings
     		gen_env_config "ExaBGP: Migrating your old configuration data to the new file format."
+		if [ -f /etc/default/exabgp.dpkg-new ] ; then mv /etc/default/exabgp.dpkg-new /etc/default/exabgp ; fi
 	fi
     	if [ -e /var/run/exabgp/exabgp.pid ]; then invoke-rc.d exabgp stop ; fi
     else
