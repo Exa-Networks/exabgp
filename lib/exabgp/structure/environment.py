@@ -67,6 +67,23 @@ class value (object):
 	location = os.path.normpath(sys.argv[0]) if sys.argv[0].startswith('/') else os.path.normpath(os.path.join(os.getcwd(),sys.argv[0]))
 
 	@staticmethod
+	def root (path):
+		roots = value.location.split(os.sep)
+		location = []
+		for index in range(len(roots)-1,-1,-1):
+			if roots[index] == 'lib':
+				if index: 
+					location = roots[:index]
+				break
+		root = os.path.join(*location)
+		paths = [
+			os.path.normpath(os.path.join(os.path.join(os.sep,root,path))),
+			os.path.normpath(os.path.expanduser(value.unquote(path))),
+			os.path.normpath(os.path.join('/',path)),
+		]
+		return paths
+
+	@staticmethod
 	def integer (_):
 		return int(_)
 
@@ -114,12 +131,7 @@ class value (object):
 
 	@staticmethod
 	def folder(path):
-		path = os.path.expanduser(value.unquote(path))
-		paths = [
-			os.path.normpath(os.path.join(os.path.join(os.sep,*os.path.join(value.location.split(os.sep)[:-3])),path)),
-			os.path.normpath(os.path.join('/','etc','exabgp','exabgp.conf',path)),
-			os.path.normpath(path)
-		]
+		paths = self.root(path)
 		options = [path for path in paths if os.path.exists(path)]
 		if not options: raise TypeError('%s does not exists' % path)
 		first = options[0]
@@ -143,21 +155,6 @@ class value (object):
 		first = value.folder(path)
 		if not os.path.isfile(first): raise TypeError('%s is not a file' % path)
 		return first
-
-	@staticmethod
-	def resolver(path):
-		paths = [
-			os.path.normpath(path),
-			os.path.normpath(os.path.join(os.path.join(os.sep,*os.path.join(value.location.split(os.sep)[:-3])),path)),
-			os.path.normpath(os.path.join(os.path.join(os.sep,*os.path.join(value.location.split(os.sep)[:-3])),'etc','exabgp','dns','resolv.conf')),
-			os.path.normpath(os.path.join('/','etc','exabgp','resolv.conf',path)),
-		]
-		for resolver in paths:
-			if os.path.exists(resolver):
-				with open(resolver) as r:
-					if 'nameserver' in (line.strip().split(None,1)[0].lower() for line in r.readlines()):
-						return resolver
-		raise TypeError('resolv.conf can not be found')
 
 	@staticmethod
 	def exe (path):

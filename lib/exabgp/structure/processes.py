@@ -50,6 +50,7 @@ class Processes (object):
 				self._terminate(name)
 			except OSError:
 				# we most likely received a SIGTERM signal and our child is already dead
+				self.logger.processes("child process %s was already dead" % name)
 				pass
 		self.clean()
 
