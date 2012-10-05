@@ -84,12 +84,20 @@ class Connection (object):
 			try:
 				TCP_MD5SIG = 14
 				TCP_MD5SIG_MAXKEYLEN = 80
-				SS_PADSIZE = 120
 
-				n_addr = socket.inet_aton(peer.ip)
 				n_port = socket.htons(179)
-				tcp_md5sig = 'HH4s%dx2xH4x%ds' % (SS_PADSIZE, TCP_MD5SIG_MAXKEYLEN)
-				md5sig = struct.pack(tcp_md5sig, socket.AF_INET, n_port, n_addr, len(md5), md5)
+				if peer.afi == AFI.ipv4:
+					SS_PADSIZE = 120
+					n_addr = socket.inet_pton(socket.AF_INET, peer.ip)
+					tcp_md5sig = 'HH4s%dx2xH4x%ds' % (SS_PADSIZE, TCP_MD5SIG_MAXKEYLEN)
+					md5sig = struct.pack(tcp_md5sig, socket.AF_INET, n_port, n_addr, len(md5), md5)
+				if peer.afi == AFI.ipv6:
+					SS_PADSIZE = 100
+					SIN6_FLOWINFO = 0
+					SIN6_SCOPE_ID = 0
+					n_addr = socket.inet_pton(socket.AF_INET6, peer.ip)
+					tcp_md5sig = 'HHI16sI%dx2xH4x%ds' % (SS_PADSIZE, TCP_MD5SIG_MAXKEYLEN)
+					md5sig = struct.pack(tcp_md5sig, socket.AF_INET6, n_port, SIN6_FLOWINFO, n_addr, SIN6_SCOPE_ID, len(md5), md5)
 				self.io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, md5sig)
 			except socket.error,e:
 				self.close()

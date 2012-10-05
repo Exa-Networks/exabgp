@@ -3,6 +3,10 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.0.11 - -th of --------- 2012
+ * Fix: add support for IPv6 MD5SUM
+    reported by: Eiichiro Watanabe (with a patch, thank you)
+
 Version 3.0.10 - 6th of September 2012
  * Fix: not removing duplicate route correctly (same nlri different attributes) (issue 7)
     reported by: Reggie Yam (with a patch, thank you)
