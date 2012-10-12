@@ -396,7 +396,7 @@ class Attributes (dict):
 		# this key is unique as index length is a two header, plus a number of ASN of size 2 or 4
 		# so adding the : make the length odd and unique
 		key = "%s:%s" % (as2path.index, as4path.index)
-		
+
 		# found a cache copy
 		if self.get(AID.AS_PATH,key):
 			return
@@ -497,4 +497,4 @@ class Attributes (dict):
 	def __new_ASPath4 (self,data):
 		return self.__new_aspaths(data,True,AS4Path)
 
-	
+

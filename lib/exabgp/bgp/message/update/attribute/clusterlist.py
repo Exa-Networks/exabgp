@@ -11,7 +11,7 @@ from exabgp.protocol.ip.inet import Inet
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute import Flag,Attribute
 
-# =================================================================== 
+# ===================================================================
 
 class ClusterID (Inet):
 	def __init__ (self,cluster_id):

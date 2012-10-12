@@ -72,7 +72,7 @@ class value (object):
 		location = []
 		for index in range(len(roots)-1,-1,-1):
 			if roots[index] == 'lib':
-				if index: 
+				if index:
 					location = roots[:index]
 				break
 		root = os.path.join(*location)

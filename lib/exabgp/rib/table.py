@@ -18,7 +18,7 @@ class Table (object):
 	def __init__ (self,peer):
 		self.peer = peer
 		self.reset()
-	
+
 	def reset (self):
 		self._plus = {}
 		self._minus = {}

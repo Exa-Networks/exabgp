@@ -216,7 +216,7 @@ class Protocol (object):
 			Capabilities().new(self.neighbor,restarted),
 			self.neighbor.hold_time
 		)
-		
+
 		self.negociated.sent(sent_open)
 
 		# we do not buffer open message in purpose

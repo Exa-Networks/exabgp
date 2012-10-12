@@ -157,7 +157,7 @@ class Daemon (object):
 		os.dup2(0, 1)
 		os.dup2(0, 2)
 
-#		import resource		
+#		import resource
 #		if 'linux' in sys.platform:
 #			nofile = resource.RLIMIT_NOFILE
 #		elif 'bsd' in sys.platform:

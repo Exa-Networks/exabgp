@@ -47,7 +47,7 @@ class ASPath (Attribute):
 		if not self.packed[asn4]:
 			self.packed[asn4] = self._attribute(self._segments(asn4))
 		return self.packed[asn4]
-		
+
 	def __len__ (self):
 		raise RuntimeError('it makes no sense to ask for the size of this object')
 

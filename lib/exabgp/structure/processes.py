@@ -28,7 +28,7 @@ class Processes (object):
 		self.logger = Logger()
 		self.supervisor = supervisor
 		self.clean()
-	
+
 	def clean (self):
 		self._process = {}
 		self._receive_routes = {}
@@ -143,7 +143,7 @@ class Processes (object):
 					self.logger.processes("Issue while sending data to our helper program")
 					raise ProcessError()
 				else:
-					# Could it have been caused by a signal ? What to do. 
+					# Could it have been caused by a signal ? What to do.
 					self.logger.processes("REPORT TO DEVELOPERS: IOError received while SENDING data to helper program %s, retrying" % str(e.errno))
 					continue
 			break

@@ -131,7 +131,7 @@ def main ():
 	else:
 		etc = os.path.realpath(os.path.normpath(os.environ.get('ETC','etc')))
 	os.environ['ETC'] = etc
-	
+
 	if not arguments['env'].startswith('/'):
 		envfile = '%s/%s' % (etc,arguments['env'])
 	else:

@@ -261,7 +261,7 @@ class Peer (object):
 
 				if message.TYPE == KeepAlive.TYPE:
 					self.logger.message(self.me('<< KEEPALIVE'))
-				
+
 				#
 				# UPDATE
 				#
@@ -299,7 +299,7 @@ class Peer (object):
 					 self.logger.message(self.me('<< %d' % ord(message.TYPE)))
 
 				#
-				# GIVE INFORMATION ON THE NUMBER OF ROUTES SEEN 
+				# GIVE INFORMATION ON THE NUMBER OF ROUTES SEEN
 				#
 
 				counter.display()
@@ -325,12 +325,12 @@ class Peer (object):
 				# SEND UPDATES (NEW OR BUFFERED)
 				#
 
-				# If we have reloaded, reset the RIB information 
+				# If we have reloaded, reset the RIB information
 
 				if self._have_routes:
 					self._have_routes = False
 					self.logger.supervisor(self.me('checking for new routes to send'))
-				
+
 					for count in self.bgp.new_update():
 						yield True
 

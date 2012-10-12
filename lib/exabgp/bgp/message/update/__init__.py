@@ -82,7 +82,7 @@ class Update (Message):
 		else:
 			nlri = ''
 			mp = MPURNLRI(self.routes).pack(addpath)
-		# last sentence of RFC 4760 Section 4, no attributes are required (and make sense) 
+		# last sentence of RFC 4760 Section 4, no attributes are required (and make sense)
 		packed = self._message(prefix(nlri) + prefix(mp))
 		if len(packed) > msg_size:
 			routes = self.routes

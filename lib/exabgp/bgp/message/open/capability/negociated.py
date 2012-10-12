@@ -36,9 +36,9 @@ class Negociated (object):
 	def _negociate (self):
 		sent_capa = self.sent_open.capabilities
 		recv_capa = self.received_open.capabilities
-		
+
 		self.holdtime = HoldTime(min(self.sent_open.hold_time,self.received_open.hold_time))
-		
+
 		self.addpath = RequirePath(self.sent_open,self.received_open)
 		self.asn4 = sent_capa.announced(CID.FOUR_BYTES_ASN) and recv_capa.announced(CID.FOUR_BYTES_ASN)
 

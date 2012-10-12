@@ -25,4 +25,4 @@ class RouteEOR (object):
 		return '%s eor %d/%d (%s %s)' % (self.action,self.nlri.afi,self.nlri.safi,self.nlri.afi,self.nlri.safi)
 
 def announcedRouteEOR (data):
-	return RouteEOR(unpack('!H',data[-4:-2])[0],unpack('!H',data[-2:])[0],'announced') 
+	return RouteEOR(unpack('!H',data[-4:-2])[0],unpack('!H',data[-2:])[0],'announced')

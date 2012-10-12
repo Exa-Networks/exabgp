@@ -1023,7 +1023,7 @@ class Configuration (object):
 
 		afi = route.nlri.afi
 		safi = route.nlri.safi
-		# Really ugly 
+		# Really ugly
 		labels = route.nlri.labels
 		rd = route.nlri.rd
 		path_info = route.nlri.path_info
