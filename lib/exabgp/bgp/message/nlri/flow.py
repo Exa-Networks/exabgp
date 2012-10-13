@@ -206,7 +206,7 @@ class FlowNLRI (Attributes,Address):
 
 	def add_and (self,rule):
 		ID = rule.ID
-		if self.rules.has_key(ID):
+		if ID in self.rules:
 			rule.first = False
 			# Source and Destination do not use operations, it is just here to make the code simpler
 			self.rules[ID][-1].operations |= CommonOperator.AND
@@ -218,7 +218,7 @@ class FlowNLRI (Attributes,Address):
 		# This test currently always fails (we do not call add_or with Source/Destinations).
 		if ID in [Destination.ID, Source.ID]:
 			return False
-		if self.rules.has_key(ID):
+		if ID in self.rules:
 			rule.first = False
 		self.rules.setdefault(ID,[]).append(rule)
 		return True

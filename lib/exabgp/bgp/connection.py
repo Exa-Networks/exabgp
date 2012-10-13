@@ -229,4 +229,3 @@ class Connection (object):
 				self.io.close()
 		except socket.error:
 			pass
-

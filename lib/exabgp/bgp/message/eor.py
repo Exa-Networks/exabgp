@@ -13,7 +13,7 @@ from exabgp.bgp.message.nlri.eor import RouteEOR,announcedRouteEOR
 # not technically a different message type but easier to treat as one
 
 class EOR (Message):
-	TYPE = chr(0x02) # it is an update
+	TYPE = chr(0x02)  # it is an update
 	PREFIX = RouteEOR.PREFIX
 
 	def __init__ (self):

@@ -93,11 +93,11 @@ class value (object):
 
 	@staticmethod
 	def unquote (_):
-		 return _.strip().strip('\'"')
+		return _.strip().strip('\'"')
 
 	@staticmethod
 	def quote (_):
-		 return "'%s'" % str(_)
+		return "'%s'" % str(_)
 
 	@staticmethod
 	def nop (_):
@@ -131,7 +131,7 @@ class value (object):
 
 	@staticmethod
 	def folder(path):
-		paths = self.root(path)
+		paths = value.root(path)
 		options = [path for path in paths if os.path.exists(path)]
 		if not options: raise TypeError('%s does not exists' % path)
 		first = options[0]
@@ -256,10 +256,13 @@ import ConfigParser
 class Store (dict):
 	def __getitem__ (self,key):
 		return dict.__getitem__(self,key.replace('_','-'))
+
 	def __setitem__ (self,key,value):
 		return dict.__setitem__(self,key.replace('_','-'),value)
+
 	def __getattr__ (self,key):
 		return dict.__getitem__(self,key.replace('_','-'))
+
 	def __setattr__ (self,key,value):
 		return dict.__setitem__(self,key.replace('_','-'),value)
 
@@ -396,7 +399,7 @@ def _compatibility (env):
 		env.log.parser = True
 	if os.environ.get('DEBUG_ROUTE','').lower() in ['1','yes']:
 		env.log.routes = True
-	if os.environ.get('DEBUG_ROUTES','').lower() in ['1','yes']: # DEPRECATED even in 2.0.x
+	if os.environ.get('DEBUG_ROUTES','').lower() in ['1','yes']:  # DEPRECATED even in 2.0.x
 		env.log.routes = True
 	if os.environ.get('DEBUG_ALL','').lower() in ['1','yes']:
 		env.log.all = True

@@ -234,4 +234,3 @@ def to_RouteTargetCommunity_01 (ipn,number):
 # 0x01, Number is administered by the ASN owner
 # Format is ip:route_target  (4 bytes:2 bytes)
 # 0x02 and 0x03 .. read the RFC :)
-

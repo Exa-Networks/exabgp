@@ -8,8 +8,6 @@ Copyright (c) 2012 Exa Networks. All rights reserved.
 
 from struct import pack
 
-from exabgp.bgp.message.open.capability.id import CapabilityID
-
 # =================================================================== AddPath
 
 class AddPath (dict):
@@ -36,4 +34,3 @@ class AddPath (dict):
 			if self[v]:
 				rs.append(v[0].pack() +v[1].pack() + pack('!B',self[v]))
 		return rs
-

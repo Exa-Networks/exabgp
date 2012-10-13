@@ -16,4 +16,4 @@ class MultiSession (list):
 		rs = [chr(0),]
 		for v in self:
 			rs.append(chr(v))
-		return  rs
+		return rs

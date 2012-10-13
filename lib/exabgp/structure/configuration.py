@@ -334,11 +334,11 @@ class Configuration (object):
 			return False
 
 		if name == 'configuration':
-			if  command == 'neighbor':
+			if command == 'neighbor':
 				if self._multi_neighbor(scope,tokens[1:]):
 					return self._make_neighbor(scope)
 				return False
-			if  command == 'group':
+			if command == 'group':
 				if len(tokens) != 2:
 					self._error = 'syntax: group <name> { <options> }'
 					if self.debug: raise
@@ -346,7 +346,7 @@ class Configuration (object):
 				return self._multi_group(scope,tokens[1])
 
 		if name == 'group':
-			if  command == 'neighbor':
+			if command == 'neighbor':
 				if self._multi_neighbor(scope,tokens[1:]):
 					return self._make_neighbor(scope)
 				return False
@@ -814,7 +814,7 @@ class Configuration (object):
 			self._error = 'local-address and peer-address must be of the same family'
 			if self.debug: raise
 			return False
-		if self._neighbor.has_key(neighbor.peer_address.ip):
+		if neighbor.peer_address.ip in self._neighbor:
 			self._error = 'duplicate peer definition %s' % neighbor.peer_address.ip
 			if self.debug: raise
 			return False
@@ -989,7 +989,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-		 	r = self._dispatch(scope,'static',['route',],['route',])
+			r = self._dispatch(scope,'static',['route',],['route',])
 			if r is False: return False
 			if r is None: return True
 
@@ -1063,7 +1063,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-		if not scope[-1].has_key('routes'):
+		if 'routes' not in scope[-1]:
 			scope[-1]['routes'] = []
 
 		scope[-1]['routes'].append(route)
@@ -1573,7 +1573,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-		if not scope[-1].has_key('routes'):
+		if 'routes' not in scope[-1]:
 			scope[-1]['routes'] = []
 
 		scope[-1]['routes'].append(flow)
@@ -1847,7 +1847,6 @@ class Configuration (object):
 
 	def decode (self,route):
 		# self check to see if we can decode what we encode
-		from exabgp.structure.utils import dump
 		from exabgp.bgp.message.update import Update
 		from exabgp.bgp.message.open import Open
 		from exabgp.bgp.message.open.capability import Capabilities
@@ -1858,9 +1857,9 @@ class Configuration (object):
 
 		if route.startswith('F'*32):
 			route = route[19*2:]
-			prepend = route[:19*2]
-		else:
-			prepend = ''
+		#	prepend = route[:19*2]
+		#else:
+		#	prepend = ''
 
 		n = self.neighbor[self.neighbor.keys()[0]]
 
@@ -1878,7 +1877,7 @@ class Configuration (object):
 		negociated = Negociated()
 		negociated.sent(o1)
 		negociated.received(o2)
-		grouped = False
+		#grouped = False
 
 		injected = ''.join(chr(int(_,16)) for _ in (route[i*2:(i*2)+2] for i in range(len(route)/2)))
 		# This does not take the BGP header - let's assume we will not break that :)
@@ -1922,7 +1921,7 @@ class Configuration (object):
 		negociated = Negociated()
 		negociated.sent(o1)
 		negociated.received(o2)
-		grouped = False
+		#grouped = False
 
 		for nei in self.neighbor.keys():
 			for family in self.neighbor[nei].families():
@@ -1945,4 +1944,3 @@ class Configuration (object):
 							self.logger.info('recoded hex   %s\n' % dump(pack),'parser')
 		import sys
 		sys.exit(0)
-

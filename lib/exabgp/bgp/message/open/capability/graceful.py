@@ -39,4 +39,3 @@ class Graceful (dict):
 
 	def families (self):
 		return self.keys()
-

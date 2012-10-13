@@ -38,7 +38,7 @@ class Unknown (object):
 # =================================================================== Parameter
 
 class Parameter (int):
-	AUTHENTIFICATION_INFORMATION = 0x01 # Depreciated
+	AUTHENTIFICATION_INFORMATION = 0x01  # Depreciated
 	CAPABILITIES                 = 0x02
 
 	def __str__ (self):
@@ -51,7 +51,7 @@ class Parameter (int):
 
 class Capabilities (dict):
 	def announced (self,capability):
-		return self.has_key(capability)
+		return capability in self
 
 	# XXX: Should we not call the __str__ function of all the created capability classes ?
 	def __str__ (self):
@@ -209,4 +209,3 @@ class Capabilities (dict):
 				else:
 					raise Notify(2,0,'Unknow OPEN parameter %s' % hex(key))
 		return self
-

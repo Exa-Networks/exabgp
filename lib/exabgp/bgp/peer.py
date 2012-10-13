@@ -277,7 +277,7 @@ class Peer (object):
 							for name in self.supervisor.processes.notify(self.neighbor.peer_address):
 								self.supervisor.processes.write(name,'neighbor %s update start\n' % self.neighbor.peer_address)
 								for route in message.routes:
-									self.supervisor.processes.write(name,'neighbor %s %s\n' % (self.neighbor.peer_address,str(route)) )
+									self.supervisor.processes.write(name,'neighbor %s %s\n' % (self.neighbor.peer_address,str(route)))
 								self.supervisor.processes.write(name,'neighbor %s update end\n' % self.neighbor.peer_address)
 						except ProcessError:
 							raise Failure('Could not send message(s) to helper program(s) : %s' % message)
@@ -296,7 +296,7 @@ class Peer (object):
 				#
 
 				elif message.TYPE not in (NOP.TYPE,):
-					 self.logger.message(self.me('<< %d' % ord(message.TYPE)))
+					self.logger.message(self.me('<< %d' % ord(message.TYPE)))
 
 				#
 				# GIVE INFORMATION ON THE NUMBER OF ROUTES SEEN

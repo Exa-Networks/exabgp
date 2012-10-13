@@ -24,7 +24,7 @@ class ASPath (Attribute):
 		self.as_set = as_set
 		self.segments = ''
 		self.packed = {True:'',False:''}
-		self.index = index # the original packed data, use for indexing
+		self.index = index  # the original packed data, use for indexing
 		self._str = ''
 
 	def _segment (self,seg_type,values,asn4):
@@ -62,7 +62,7 @@ class ASPath (Attribute):
 					string = '[ %s %s]' % ((' '.join([str(_) for _ in self.as_seq])),'( %s ) ' % (' '.join([str(_) for _ in self.as_set])))
 				else:
 					string = '[ %s ]' % ' '.join([str(_) for _ in self.as_seq])
-			else: # lseq == 0
+			else:  # lseq == 0
 				string = '[ ]'
 			self._str = string
 		return self._str

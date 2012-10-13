@@ -31,5 +31,3 @@ def NamedFragment (name):
 	if fragment == 'first-fragment': return _Fragment(_Fragment.FIRST)
 	if fragment == 'last-fragment':  return _Fragment(_Fragment.LAST)
 	raise ValueError('invalid fragment name %s' % fragment)
-
-

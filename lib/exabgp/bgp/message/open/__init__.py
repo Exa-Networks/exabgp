@@ -46,6 +46,3 @@ class Open (Message):
 		router_id = "%d.%d.%d.%d" % (numeric>>24,(numeric>>16)&0xFF,(numeric>>8)&0xFF,numeric&0xFF)
 		capabilities = Capabilities().factory(data[9:])
 		return self.new(version,asn,router_id,capabilities,hold_time)
-
-
-

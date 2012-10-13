@@ -327,4 +327,3 @@ class Supervisor (object):
 		key = peer.neighbor.name()
 		if key in self._peers:
 			del self._peers[key]
-

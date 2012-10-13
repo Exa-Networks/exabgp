@@ -31,7 +31,7 @@ class Inet (object):
 	_UNICAST = SAFI(SAFI.unicast)
 	_MULTICAST = SAFI(SAFI.multicast)
 
-	_multicast_range = set(range(224,240)) # 239 is last
+	_multicast_range = set(range(224,240))  # 239 is last
 
 	"""An IP in the 4 bytes format"""
 	# README: yep, we should surely change this _ name here
@@ -72,4 +72,3 @@ class Inet (object):
 
 	def __eq__ (self,other):
 		return self.packed == other.packed and self.safi == other.safi
-

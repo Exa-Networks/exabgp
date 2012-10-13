@@ -10,7 +10,7 @@ import math
 
 from struct import pack,unpack
 from exabgp.protocol.family import AFI,SAFI
-from exabgp.protocol.ip.inet import Inet,inet
+from exabgp.protocol.ip.inet import Inet
 
 from exabgp.protocol.ip.address import Address
 from exabgp.bgp.message.update.attribute.attributes import Attributes
@@ -190,7 +190,7 @@ def BGPNLRI (afi,safi,bgp,has_multiple_path):
 			label = int(unpack('!L',chr(0) + bgp[:3])[0])
 			bgp = bgp[3:]
 			labels.append(label>>4)
-			mask -= 24 # 3 bytes
+			mask -= 24  # 3 bytes
 			if label & 1:
 				break
 			# This is a route withdrawal, or next-hop
@@ -198,7 +198,7 @@ def BGPNLRI (afi,safi,bgp,has_multiple_path):
 				break
 
 	if SAFI(safi).has_rd():
-		mask -= 8*8 # the 8 bytes of the route distinguisher
+		mask -= 8*8  # the 8 bytes of the route distinguisher
 		rd = bgp[:8]
 		bgp = bgp[8:]
 
@@ -249,7 +249,7 @@ class Route (object):
 
 class RouteBGP (Route):
 	def __init__ (self,nlri,action):
-		self.action = action	# announce, announced, withdraw or withdrawn
+		self.action = action  # announce, announced, withdraw or withdrawn
 		Route.__init__(self,nlri)
 
 	def __str__ (self):

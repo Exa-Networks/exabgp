@@ -64,15 +64,15 @@ class Update (Message):
 
 	def withdraw (self,negociated=None):
 		if negociated:
-			asn4 = negociated.asn4
-			local_as = negociated.local_as
-			peer_as = negociated.peer_as
+			#asn4 = negociated.asn4
+			#local_as = negociated.local_as
+			#peer_as = negociated.peer_as
 			addpath = negociated.addpath
 			msg_size = negociated.msg_size
 		else:
-			asn4 = False
-			local_as = None
-			peer_as = None
+			#asn4 = False
+			#local_as = None
+			#peer_as = None
 			addpath = False
 			msg_size = 4077
 

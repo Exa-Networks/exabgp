@@ -68,7 +68,7 @@ class Attributes (dict):
 		self._str = ''
 
 	def has (self,k):
-		return self.has_key(k)
+		return k in self
 
 	def get (self,attributeid,data):
 		if data in self.cache.setdefault(attributeid,{}):
@@ -486,7 +486,7 @@ class Attributes (dict):
 
 		except IndexError:
 			raise Notify(3,11,'not enough data to decode AS_PATH or AS4_PATH')
-		except error: # struct
+		except error:  # struct
 			raise Notify(3,11,'not enough data to decode AS_PATH or AS4_PATH')
 
 		return klass(as_seq,as_set,backup)
@@ -496,5 +496,3 @@ class Attributes (dict):
 
 	def __new_ASPath4 (self,data):
 		return self.__new_aspaths(data,True,AS4Path)
-
-

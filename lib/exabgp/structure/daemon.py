@@ -171,4 +171,3 @@ class Daemon (object):
 #				maxfd = MAXFD
 #		else:
 #			maxfd = MAXFD
-

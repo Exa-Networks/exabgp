@@ -72,5 +72,3 @@ class Table (object):
 			t = self._minus[index]
 			if t < when:
 				del self._minus[index]
-
-

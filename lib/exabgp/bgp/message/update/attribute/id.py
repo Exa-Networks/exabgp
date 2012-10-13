@@ -20,15 +20,15 @@ class AttributeID (int):
 	COMMUNITY          = 0x08
 	# RFC 4456
 	ORIGINATOR_ID      = 0x09
-	CLUSTER_LIST       = 0x0A # 10
+	CLUSTER_LIST       = 0x0A  # 10
 	# RFC 4760
-	MP_REACH_NLRI      = 0x0E # 14
-	MP_UNREACH_NLRI    = 0x0F # 15
+	MP_REACH_NLRI      = 0x0E  # 14
+	MP_UNREACH_NLRI    = 0x0F  # 15
 	# RFC 4360
-	EXTENDED_COMMUNITY = 0x10 # 16
+	EXTENDED_COMMUNITY = 0x10  # 16
 	# RFC 4893
-	AS4_PATH           = 0x11 # 17
-	AS4_AGGREGATOR     = 0x12 # 18
+	AS4_PATH           = 0x11  # 17
+	AS4_AGGREGATOR     = 0x12  # 18
 
 	INTERNAL_WITHDRAW  = 0xFFFD
 	INTERNAL_WATCHDOG  = 0xFFFE
@@ -60,5 +60,3 @@ class AttributeID (int):
 
 	def __str__ (self):
 		return self._str.get(self,'unknown-attribute-%s' % hex(self))
-
-

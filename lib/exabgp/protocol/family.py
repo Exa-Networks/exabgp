@@ -16,8 +16,8 @@ class AFI (int):
 	ipv6 = 0x02
 
 	Family = {
-		ipv4 : 0x02, # socket.AF_INET,
-		ipv6 : 0x30, # socket.AF_INET6,
+		ipv4 : 0x02,  # socket.AF_INET,
+		ipv6 : 0x30,  # socket.AF_INET6,
 	}
 
 	def __str__ (self):

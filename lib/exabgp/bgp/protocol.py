@@ -112,7 +112,7 @@ class Protocol (object):
 		msg_length = unpack('!H',raw_length)[0]
 		msg = data[18]
 
-		if ( msg_length < 19 or msg_length > 4096):
+		if (msg_length < 19 or msg_length > 4096):
 			# BAD Message Length
 			raise Notify(1,2)
 
@@ -290,7 +290,7 @@ class Protocol (object):
 					raise Failure('Can not send BGP update larger than %d bytes on this connection.' % size)
 				if len(chunk) + len(data) <= size:
 					chunk += data
- 					number += 1
+					number += 1
 					continue
 				yield number,chunk
 				chunk = data

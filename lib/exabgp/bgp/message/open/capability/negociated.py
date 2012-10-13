@@ -108,4 +108,3 @@ class RequirePath (object):
 
 	def receive (self,afi,safi):
 		return self._receive.get((afi,safi),False)
-

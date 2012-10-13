@@ -19,7 +19,7 @@ class ICMPType (int):
 	ROUTER_SOLICIT           = 0x0A
 	TIME_EXCEEDED            = 0x0B
 	PARAMETER_PROBLEM        = 0x0C
-	TIMESTAMP_REQUEST        = 0x0D # wonder why junos call all the other ones _REQUEST but not this one
+	TIMESTAMP_REQUEST        = 0x0D  # wonder why junos call all the other ones _REQUEST but not this one
 	TIMESTAMP_REPLY          = 0x0E
 	INFO_REQUEST             = 0x0F
 	INFO_REPLY               = 0x10

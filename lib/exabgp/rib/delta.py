@@ -28,7 +28,7 @@ class Delta (object):
 		# table.changed always returns routes to remove before routes to add
 		for action,route in self.table.changed(self.last):
 			if action == '':
-				self.last = route # when action is '' route is a timestamp
+				self.last = route  # when action is '' route is a timestamp
 				continue
 
 			if action == '+':
@@ -54,7 +54,7 @@ class Delta (object):
 		# table.changed always returns routes to remove before routes to add
 		for action,route in self.table.changed(self.last):
 			if action == '':
-				self.last = route # when action is '' route is a timestamp
+				self.last = route  # when action is '' route is a timestamp
 				continue
 			grouped[action].setdefault(str(route.attributes),[]).append(route)
 
@@ -80,4 +80,3 @@ class Delta (object):
 			group += 1
 			for update in Update().new(routes).withdraw(negociated):
 				yield update
-

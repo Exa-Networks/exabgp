@@ -19,4 +19,3 @@ class MultiProtocol (list):
 		for v in self:
 			rs.append(pack('!H',v[0]) + pack('!H',v[1]))
 		return rs
-

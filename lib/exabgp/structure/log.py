@@ -261,4 +261,3 @@ if __name__ == '__main__':
 	logger.wire('wire packet content')
 	logger.message('message exchanged')
 	logger.debug('debug test')
-
