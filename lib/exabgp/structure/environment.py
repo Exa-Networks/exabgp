@@ -237,6 +237,9 @@ defaults = {
 		'timeout' : (value.integer,value.nop,'1',  'time we will wait on select (can help with unstable BGP multihop)\n'
 		                                           '%sVERY dangerous use only if you understand BGP very well.' % (' '* 34)),
 	},
+	'cache' : {
+		'attributes'  :  (value.boolean,value.lower,'false', 'do not cache received routes attributes for faster parsing'),
+	},
 	# Here for internal use
 	'internal' : {
 		'name'    : (value.nop,value.nop,'ExaBGP', 'name'),

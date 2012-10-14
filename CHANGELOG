@@ -6,6 +6,9 @@ Version explained:
 Version 3.0.11 - -th of --------- 2012
  * Fix: add support for IPv6 MD5SUM
     reported by: Eiichiro Watanabe (with a patch, thank you)
+ * Improvement: add possibility to disable route attribute caching to reduce memory usage
+               (over a few hundred Mb per full routing tables)
+    requested by Daniel Piekacz
 
 Version 3.0.10 - 6th of September 2012
  * Fix: not removing duplicate route correctly (same nlri different attributes) (issue 7)
@@ -216,7 +219,7 @@ Version 2.0.1 - 8th of December 2011
 
 Version 2.0.0 - 3rd of December 2011 (experimental version)
  * Improvement: can set flowspec communities
-    requested by Yiming Gong 
+    requested by Yiming Gong
  * Improvement: incoming route parsing for processing by an external application
     requested by Daniel Piekacz (and others)
  * Improvment: Add profiling features to find bottlenecks
@@ -253,7 +256,7 @@ Version 1.3.0 - 2nd of May 2011
  * Improvement: better handling of BGP timer for keepalive
  * Improvement: refuse to run as root, try to run as nobody automatically, uid/gid set to the user defined by env USER otherwise
  * Removed: the old wiki documentation
- * Improvement: Debian Packaging (author and maintainer: Henry-Nicolas Tourneur - thank you) 
+ * Improvement: Debian Packaging (author and maintainer: Henry-Nicolas Tourneur - thank you)
  * Change: renamed env variable DAEMON to DAEMONIZE (to prevent name clash with Debian)
  * Improvement: added env variable PDB if set the program will call pdb, the python debugger, on program fault
  * Improvement: it is now possible to get some routes withdrawn from an external process (see watchdog example conf.)
@@ -300,7 +303,7 @@ Version 1.0.2 - 22nd of October 2010
  * Improvement: only try to generate UPDATE messages if the configuration was changed (save quite some CPU as the algorithm is really naive)
  * Fix : a neighbor configuration change could have been undetected on SIGHUP/SIGALRM
     reported by: Yann Berthier
- * Fix : reloading the configuration did not detect the removed routes 
+ * Fix : reloading the configuration did not detect the removed routes
     reported by Renaud Chaput
  * Fix : a bug in the format of the UPDATE for route withdrawal causing Cisco (and not Quagga) to tear the session
     reported by Renaud Chaput

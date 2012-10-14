@@ -9,6 +9,7 @@ Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 from struct import unpack,error
 
 from exabgp.structure.utils import dump
+from exabgp.structure.environment import load
 
 from exabgp.protocol.family import AFI,SAFI
 
@@ -55,6 +56,7 @@ class MultiAttributes (list):
 
 class Attributes (dict):
 	routeFactory = None
+	cache_attributes = load().cache.attributes
 
 	cache = {
 		# There can only be one, build it now :)
@@ -71,6 +73,8 @@ class Attributes (dict):
 		return k in self
 
 	def get (self,attributeid,data):
+		if not self.cache_attributes:
+			return False
 		if data in self.cache.setdefault(attributeid,{}):
 			self.add(self.cache[attributeid][data])
 			return True
