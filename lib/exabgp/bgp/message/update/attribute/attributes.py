@@ -56,7 +56,6 @@ class MultiAttributes (list):
 
 class Attributes (dict):
 	routeFactory = None
-	cache_attributes = load().cache.attributes
 
 	cache = {
 		# There can only be one, build it now :)
@@ -68,6 +67,7 @@ class Attributes (dict):
 
 	def __init__ (self):
 		self._str = ''
+		self.cache_attributes = load().cache.attributes
 
 	def has (self,k):
 		return k in self
