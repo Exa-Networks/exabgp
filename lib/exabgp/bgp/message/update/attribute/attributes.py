@@ -82,7 +82,7 @@ class Attributes (dict):
 
 	def add (self,attribute,data=None):
 		self._str = ''
-		if data:
+		if data and self.cache_attributes:
 			self.cache[attribute.ID][data] = attribute
 		if attribute.MULTIPLE:
 			if self.has(attribute.ID):
