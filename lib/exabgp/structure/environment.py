@@ -238,7 +238,7 @@ defaults = {
 		                                           '%sVERY dangerous use only if you understand BGP very well.' % (' '* 34)),
 	},
 	'cache' : {
-		'attributes'  :  (value.boolean,value.lower,'false', 'do not cache received routes attributes for faster parsing'),
+		'attributes'  :  (value.boolean,value.lower,'true', 'do not cache received routes attributes for faster parsing'),
 	},
 	# Here for internal use
 	'internal' : {
