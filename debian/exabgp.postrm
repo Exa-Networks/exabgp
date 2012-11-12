@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/bash -e
 
 . /usr/share/debconf/confmodule
 
@@ -7,6 +7,12 @@ if dpkg-maintscript-helper supports rm_conffile 2>/dev/null; then
     FILE_TWO="/etc/exabgp/processes/watchdog-1.sh"
     if ! egrep -q "$FILE_ONE" /etc/exabgp/exabgp.conf 2> /dev/null ; then dpkg-maintscript-helper rm_conffile "$FILE_ONE" -- "$@" ; fi
     if ! egrep -q "$FILE_TWO" /etc/exabgp/exabgp.conf 2> /dev/null ; then dpkg-maintscript-helper rm_conffile "$FILE_TWO" -- "$@" ; fi
+fi
+
+# Remove exabgp.env when run in purge mode
+if [ "$1" == "purge" ]; then
+    rm -rf /etc/exabgp/exabgp.env
+    ucf --purge /etc/exabgp/exabgp.env
 fi
 
 #DEBHELPER#

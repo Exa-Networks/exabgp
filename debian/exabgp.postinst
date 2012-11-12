@@ -3,6 +3,32 @@
 . /usr/share/debconf/confmodule
 db_version 2.0
 
+CONFIGFILE="/etc/exabgp/exabgp.env"
+TMPCONF="/etc/exabgp/exabgp.env.dpkg-tmp"
+
+gen_env_config() {
+    echo "$1"
+    trap 'rm -f $TMPCONF' TERM INT EXIT QUIT
+    exabgp -fi >> "$TMPCONF" 2>/dev/null
+    sed -i "s#nobody#exabgp#" "$TMPCONF"
+    ucf --debconf-ok $TMPCONF $CONFIGFILE
+    rm -f $TMPCONF
+}
+
+restore_user_settings() {
+    if [ -f /etc/default/exabgp.dpkg-old ] ; then
+	. /etc/default/exabgp.dpkg-old
+	sed -i "s#EXABGPRUN=\"no#EXABGPRUN=\"$EXABGPRUN#" /etc/default/exabgp
+    	sed -i "s#ETC=\"/etc/exabgp/#ETC=\"$ETC#" /etc/default/exabgp
+    	sed -i "s#DAEMON_OPTS=\"/etc/exabgp/exabgp.conf#DAEMON_OPTS=\"$DAEMON_OPTS#" /etc/default/exabgp
+    elif [ -f /etc/default/exabgp.dpkg-dist ] ; then
+	. /etc/default/exabgp
+	sed -i "s#EXABGPRUN=\"no#EXABGPRUN=\"$EXABGPRUN#" /etc/default/exabgp.dpkg-dist
+    	sed -i "s#ETC=\"/etc/exabgp/#ETC=\"$ETC#" /etc/default/exabgp.dpkg-dist
+    	sed -i "s#DAEMON_OPTS=\"/etc/exabgp/exabgp.conf#DAEMON_OPTS=\"$DAEMON_OPTS#" /etc/default/exabgp.dpkg-dist
+    fi
+}
+
 if dpkg-maintscript-helper supports mv_conffile 2>/dev/null; then
     FILE_ONE="/etc/exabgp/processes/dynamic-1.sh"
     FILE_TWO="/etc/exabgp/processes/watchdog-1.sh"
@@ -15,7 +41,18 @@ case "$1" in
 configure)
     adduser --quiet --system --group --disabled-login --home /var/run/exabgp exabgp
     # The script will be started through the DEBHELPER script called hereunder.
-    if [ ! -z "$2" ] && [ -e /var/run/exabgp/exabgp.pid ]; then invoke-rc.d exabgp stop ; fi
+    if [ ! -z "$2" ] ; then
+	if  dpkg --compare-versions "$2" lt 3.0.0 ; then
+		# Upgrade from an older version
+		restore_user_settings
+    		gen_env_config "ExaBGP: Migrating your old configuration data to the new file format."
+		if [ -f /etc/default/exabgp.dpkg-dist ] ; then mv /etc/default/exabgp.dpkg-dist /etc/default/exabgp ; fi
+	fi
+    	if [ -e /var/run/exabgp/exabgp.pid ]; then invoke-rc.d exabgp stop ; fi
+    else
+	# First package installation
+    	gen_env_config "ExaBGP: Generating the default configuration for environment variables (/etc/exabgp/exabgp.env)."
+    fi
     ;;
 esac
 
