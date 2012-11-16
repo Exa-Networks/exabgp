@@ -23,6 +23,7 @@ from exabgp.bgp.message.update.attribute.aspath import ASPath,AS4Path
 from exabgp.bgp.message.update.attribute.nexthop import NextHop
 from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
+from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
@@ -59,8 +60,12 @@ class Attributes (dict):
 
 	cache = {
 		# There can only be one, build it now :)
-		AID.ATOMIC_AGGREGATE : { '' : AtomicAggregate() }
-		# XXX: Build the three Origin too ?
+		AID.ATOMIC_AGGREGATE : { '' : AtomicAggregate() },
+		AID.ORIGIN : {
+			Origin(Origin.IGP).pack() : Origin(Origin.IGP),
+			Origin(Origin.EGP).pack() : Origin(Origin.EGP),
+			Origin(Origin.INCOMPLETE).pack() : Origin(Origin.INCOMPLETE),
+		}
 	}
 
 	autocomplete = True
