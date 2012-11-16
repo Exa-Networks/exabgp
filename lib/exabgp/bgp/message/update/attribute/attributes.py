@@ -77,9 +77,7 @@ class Attributes (dict):
 	def has (self,k):
 		return k in self
 
-	def get (self,attributeid,data):
-		if not self.cache_attributes:
-			return False
+	def add_cached (self,attributeid,data):
 		if data in self.cache.setdefault(attributeid,{}):
 			self.add(self.cache[attributeid][data])
 			return True
@@ -229,7 +227,8 @@ class Attributes (dict):
 		logger.parser(LazyFormat("parsing flag %x type %02x (%s) len %02x %s" % (flag,int(code),code,length,'payload ' if length else ''),dump,data[:length]))
 
 		if code == AID.ORIGIN:
-			if not self.get(code,attribute):
+			# This if block should never be called anymore ...
+			if not self.add_cached(code,attribute):
 				self.add(Origin(ord(attribute)),attribute)
 			return self._factory(next)
 
@@ -238,67 +237,68 @@ class Attributes (dict):
 			if length:
 				# we store the AS4_PATH as AS_PATH, do not over-write
 				if not self.has(code):
-					if not self.get(code,attribute):
+					if not self.add_cached(code,attribute):
 						self.add(self.__new_ASPath(attribute),attribute)
 			return self._factory(next)
 
 		if code == AID.AS4_PATH:
 			if length:
 				# ignore the AS4_PATH on new spekers as required by RFC 4893 section 4.1
-				if not self.negociated.asn4 and not self.get(code,attribute):
+				if not self.negociated.asn4:
 					# This replace the old AS_PATH
-					self.add(self.__new_ASPath4(attribute),attribute)
+					if not self.add_cached(code,attribute):
+						self.add(self.__new_ASPath4(attribute),attribute)
 			return self._factory(next)
 
 		if code == AID.NEXT_HOP:
-			if not self.get(code,attribute):
+			if not self.add_cached(code,attribute):
 				self.add(NextHop(AFI.ipv4,SAFI.unicast_multicast,attribute),attribute)
 			return self._factory(next)
 
 		if code == AID.MED:
-			if not self.get(code,attribute):
+			if not self.add_cached(code,attribute):
 				self.add(MED(attribute),attribute)
 			return self._factory(next)
 
 		if code == AID.LOCAL_PREF:
-			if not self.get(code,attribute):
+			if not self.add_cached(code,attribute):
 				self.add(LocalPreference(attribute),attribute)
 			return self._factory(next)
 
 		if code == AID.ATOMIC_AGGREGATE:
-			if not self.get(AID.ATOMIC_AGGREGATE,attribute):
+			if not self.add_cached(code,attribute):
 				raise Notify(3,2,'invalid ATOMIC_AGGREGATE %s' % [hex(ord(_)) for _ in attribute])
 			return self._factory(next)
 
 		if code == AID.AGGREGATOR:
 			# AS4_AGGREGATOR are stored as AGGREGATOR - so do not overwrite if exists
 			if not self.has(code):
-				if not self.get(code,attribute):
+				if not self.add_cached(AID.AGGREGATOR,attribute):
 					self.add(Aggregator(attribute),attribute)
 			return self._factory(next)
 
 		if code == AID.AS4_AGGREGATOR:
-			if not self.get(AID.AGGREGATOR,attribute):
+			if not self.add_cached(AID.AGGREGATOR,attribute):
 				self.add(Aggregator(attribute),attribute)
 			return self._factory(next)
 
 		if code == AID.COMMUNITY:
-			if not self.get(code,attribute):
+			if not self.add_cached(code,attribute):
 				self.add(self.__new_communities(attribute),attribute)
 			return self._factory(next)
 
 		if code == AID.ORIGINATOR_ID:
-			if not self.get(code,attribute):
+			if not self.add_cached(code,attribute):
 				self.add(OriginatorID(AFI.ipv4,SAFI.unicast,data[:4]),attribute)
 			return self._factory(next)
 
 		if code == AID.CLUSTER_LIST:
-			if not self.get(code,attribute):
+			if not self.add_cached(code,attribute):
 				self.add(ClusterList(attribute),attribute)
 			return self._factory(next)
 
 		if code == AID.EXTENDED_COMMUNITY:
-			if not self.get(code,attribute):
+			if not self.add_cached(code,attribute):
 				self.add(self.__new_extended_communities(attribute),attribute)
 			return self._factory(next)
 
@@ -407,7 +407,7 @@ class Attributes (dict):
 		key = "%s:%s" % (as2path.index, as4path.index)
 
 		# found a cache copy
-		if self.get(AID.AS_PATH,key):
+		if self.add_cached(AID.AS_PATH,key):
 			return
 
 		as_seq = []
