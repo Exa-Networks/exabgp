@@ -932,8 +932,8 @@ class Configuration (object):
 	def _set_holdtime (self,scope,command,value):
 		try:
 			holdtime = HoldTime(value[0])
-			if holdtime < 0:
-				raise ValueError('holdtime can not be negative')
+			if holdtime < 3 and holdtime != 0:
+				raise ValueError('holdtime must be zero or at least three seconds')
 			if holdtime >= pow(2,16):
 				raise ValueError('holdtime must be smaller than %d' % pow(2,16))
 			scope[-1][command] = holdtime

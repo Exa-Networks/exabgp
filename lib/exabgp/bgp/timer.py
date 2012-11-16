@@ -10,6 +10,7 @@ import time
 
 from exabgp.structure.log import Logger
 from exabgp.bgp.message.nop import NOP
+from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notify
 
 # Track the time for keepalive updates
@@ -37,8 +38,14 @@ class Timer (object):
 			raise Notify(self.code,self.subcode,self.message)
 		if message.TYPE != NOP.TYPE:
 			self.last_read = time.time()
+		if not self.holdtime:
+			if message.TYPE != KeepAlive.TYPE:
+				raise Notify(self.code,self.subcode,'Holdtime is zero but we got a KEEPALIVE')
 
 	def keepalive (self):
+		if not self.holdtime:
+			return False
+
 		left = int(self.last_sent + self.holdtime.keepalive() - time.time())
 		self.logger.timers(self.me('Sending Timer %d second(s) left' % left))
 

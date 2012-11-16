@@ -6,6 +6,7 @@ Version explained:
 Version 3.0.11 - -th of --------- 2012
  * Fix: add support for IPv6 MD5SUM
     reported by: Eiichiro Watanabe (with a patch, thank you)
+ * Fix: correctly support keepalive timer of zero
  * Improvement: add possibility to disable route attribute caching to reduce memory usage
                (over a few hundred Mb per full routing tables)
     requested by Daniel Piekacz
