@@ -13,6 +13,11 @@ from exabgp.structure.environment import EnvError,load,iter_ini,iter_env,LOG,def
 # import before the fork to improve copy on write memory savings
 from exabgp.structure.supervisor import Supervisor
 
+import string
+
+def is_hex (s):
+	return all(c in string.hexdigits for c in s)
+
 def __exit(memory,code):
 	if memory:
 		from exabgp.leak import objgraph
@@ -106,9 +111,15 @@ def main ():
 
 	for arg in sys.argv[1:]:
 		if next:
-			arguments[next] = arg
-			next = ''
-			continue
+			if next == 'decode':
+				if is_hex(arg):
+					arguments[next] += arg
+					continue
+				next = ''
+			else:
+				arguments[next] = arg
+				next = ''
+				continue
 		if arg in ['-c','--conf']:
 			next = 'folder'
 			continue
