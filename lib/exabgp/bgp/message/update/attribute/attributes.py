@@ -387,7 +387,7 @@ class Attributes (dict):
 
 			while data:
 				route = self.routeFactory(afi,safi,data,addpath,'announced')
-				if not route.attributes.get(AID.NEXT_HOP,nh):
+				if not route.attributes.add_cached(AID.NEXT_HOP,nh):
 					route.attributes.add(NextHop(afi,safi,nh),nh)
 				self.mp_announce.append(route)
 				data = data[len(route.nlri):]
