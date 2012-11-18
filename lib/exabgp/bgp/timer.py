@@ -32,15 +32,15 @@ class Timer (object):
 		self.last_sent = time.time()
 
 	def tick (self,message=_NOP):
-		left = int(self.last_read  + self.holdtime - time.time())
-		self.logger.timers(self.me('Receive Timer %d second(s) left' % left))
-		if left <= 0:
-			raise Notify(self.code,self.subcode,self.message)
 		if message.TYPE != NOP.TYPE:
 			self.last_read = time.time()
-		if not self.holdtime:
-			if message.TYPE != KeepAlive.TYPE:
-				raise Notify(self.code,self.subcode,'Holdtime is zero but we got a KEEPALIVE')
+		if self.holdtime:
+			left = int(self.last_read  + self.holdtime - time.time())
+			self.logger.timers(self.me('Receive Timer %d second(s) left' % left))
+			if left <= 0:
+				raise Notify(self.code,self.subcode,self.message)
+		elif message.TYPE == KeepAlive.TYPE:
+			raise Notify(2,6,'Holdtime is zero and we got a keepalive message')
 
 	def keepalive (self):
 		if not self.holdtime:
