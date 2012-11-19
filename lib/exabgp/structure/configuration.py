@@ -29,8 +29,8 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 
-from exabgp.bgp.nlri.route import Route,NLRI,PathInfo,Labels,RouteDistinguisher,pack_int
-from exabgp.bgp.nlri.flow import BinaryOperator,NumericOperator,Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
+from exabgp.bgp.message.update.nlri.route import Route,NLRI,PathInfo,Labels,RouteDistinguisher,pack_int
+from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute.origin import Origin
