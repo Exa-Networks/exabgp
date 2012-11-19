@@ -7,7 +7,7 @@ Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message import Message
-from exabgp.bgp.message.nlri.eor import RouteEOR,announcedRouteEOR
+from exabgp.bgp.nlri.eor import RouteEOR,announcedRouteEOR
 
 # =================================================================== End-Of-RIB
 # not technically a different message type but easier to treat as one

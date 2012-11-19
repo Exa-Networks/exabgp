@@ -9,7 +9,7 @@ Copyright (c) 2010-2012 Exa Networks. All rights reserved.
 
 import unittest
 
-from exabgp.bgp.message.nlri.flow import *
+from exabgp.bgp.nlri.flow import *
 from exabgp.protocol.ip.inet import *
 from exabgp.bgp.message.update.attribute.communities import *
 

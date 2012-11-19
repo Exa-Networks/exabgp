@@ -15,7 +15,7 @@ from exabgp.protocol.family import AFI,SAFI
 
 from exabgp.bgp.message.open.asn import ASN,AS_TRANS
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.nlri.eor import RouteEOR
+from exabgp.bgp.nlri.eor import RouteEOR
 from exabgp.bgp.message.update.attribute.id import AttributeID as AID
 from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.origin import Origin

@@ -15,7 +15,7 @@ from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
 from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute.attributes import Attributes
-from exabgp.bgp.message.nlri.route import RouteBGP,BGPNLRI,routeFactory
+from exabgp.bgp.nlri.route import RouteBGP,BGPNLRI,routeFactory
 from exabgp.bgp.message.notification import Notify
 
 # =================================================================== Update
