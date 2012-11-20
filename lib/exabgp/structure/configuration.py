@@ -1351,18 +1351,21 @@ class Configuration (object):
 		else:
 			low = data.lower()
 			if low == 'no-export':
-				data = Community.NO_EXPORT
+				return Community(Community.NO_EXPORT)
 			elif low == 'no-advertise':
-				data = Community.NO_ADVERTISE
+				return Community(Community.NO_ADVERTISE)
 			elif low == 'no-export-subconfed':
-				data = Community.NO_EXPORT_SUBCONFED
+				return Community(Community.NO_EXPORT_SUBCONFED)
 			# no-peer is not a correct syntax but I am sure someone will make the mistake :)
 			elif low == 'nopeer' or low == 'no-peer':
-				data = Community.NO_PEER
-			value = unpack('!L',data)[0]
-			if value >= pow(2,32):
-				raise ValueError('invalid community %s (too large)' % data)
-			return Community(pack('!L',value))
+				return Community(Community.NO_PEER)
+			elif data.isdigit():
+				value = unpack('!L',data)[0]
+				if value >= pow(2,32):
+					raise ValueError('invalid community %s (too large)' % data)
+					return Community(pack('!L',value))
+			else:
+				raise ValueError('invalid community name %s' % data)
 
 	def _route_originator_id (self,scope,tokens):
 		try:
