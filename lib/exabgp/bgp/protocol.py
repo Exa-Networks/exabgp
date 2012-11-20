@@ -186,7 +186,7 @@ class Protocol (object):
 		if message.router_id == self.neighbor.router_id and message.asn == self.neighbor.local_as:
 			raise Notify(2,3,'BGP Indendifier collision (%s) on IBGP according to RFC 6286' % message.router_id)
 
-		if message.hold_time < 3:
+		if message.hold_time and message.hold_time < 3:
 			raise Notify(2,6,'Hold Time is invalid (%d)' % message.hold_time)
 
 		if self.negociated.multisession not in (True,False):
