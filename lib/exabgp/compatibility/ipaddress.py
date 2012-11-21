@@ -1052,7 +1052,7 @@ class _BaseV4:
         try:
             return int.from_bytes(map(self._parse_octet, octets), 'big')
         except ValueError as exc:
-            raise AddressValueError("%s in %r" % (exc, ip_str)) from None
+            raise AddressValueError("%s in %r" % (exc, ip_str))
 
     def _parse_octet(self, octet_str):
         """Convert a decimal octet into an integer.
@@ -1513,7 +1513,7 @@ class _BaseV6:
             try:
                 ipv4_int = IPv4Address(parts.pop())._ip
             except AddressValueError as exc:
-                raise AddressValueError("%s in %r" % (exc, ip_str)) from None
+                raise AddressValueError("%s in %r" % (exc, ip_str))
             parts.append('%x' % ((ipv4_int >> 16) & 0xFFFF))
             parts.append('%x' % (ipv4_int & 0xFFFF))
 
@@ -1585,7 +1585,7 @@ class _BaseV6:
                 ip_int |= self._parse_hextet(parts[i])
             return ip_int
         except ValueError as exc:
-            raise AddressValueError("%s in %r" % (exc, ip_str)) from None
+            raise AddressValueError("%s in %r" % (exc, ip_str))
 
     def _parse_hextet(self, hextet_str):
         """Convert an IPv6 hextet string into an integer.
