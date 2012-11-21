@@ -3,7 +3,7 @@ exabgp (3.0.11-1) unstable; urgency=low
   * New upstream release
   * Closes: #687134 (debconf abuse)
 
- -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Mon, 12 Nov 2012 18:19:00 +0000
+ -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Mon, 21 Nov 2012 18:19:00 +0000
 
 exabgp (3.0.10-2) UNRELEASED; urgency=low
 
