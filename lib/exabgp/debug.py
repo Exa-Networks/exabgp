@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-configuration.py
+debug.py
 
 Created by Thomas Mangin on 2011-03-29.
 Copyright (c) 2011-2012 Exa Networks. All rights reserved.

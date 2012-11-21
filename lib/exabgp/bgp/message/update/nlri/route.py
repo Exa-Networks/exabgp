@@ -131,7 +131,10 @@ class BGPPrefix (Inet):
 
 	# The API requires addpath, but it is irrelevant here.
 	def pack (self,addpath=None):
-		return chr(self.mask) + self.packed[:mask_to_bytes[self.mask]]
+		return chr(self.mask) + self.prefix()
+
+	def prefix (self):
+		return self.packed[:mask_to_bytes[self.mask]]
 
 	def __len__ (self):
 		return mask_to_bytes[self.mask] + 1
