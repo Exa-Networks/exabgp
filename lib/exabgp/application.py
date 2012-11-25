@@ -45,7 +45,7 @@ def help (comment=''):
 	sys.stdout.write(' -de, --diff-env  : display non-default configurations values using the env format\n')
 	sys.stdout.write('  -d, --debug     : turn on all subsystems debugging\n'
 	                 '                    shortcut for exabgp.log.all=true exabgp.log.level=DEBUG\n'
-	                 '                    one of : EMERG,ALERT,CRITICAL,ERROR,WARNING,NOTICE,INFO,DEBUG')
+	                 '                    one of : EMERG,ALERT,CRITICAL,ERROR,WARNING,NOTICE,INFO,DEBUG\n')
 	sys.stdout.write('  -p, --pdb       : start the python debugger on serious logging and on SIGTERM\n'
 	                 '                    shortcut for exabgp.pdb.enable=true\n')
 	sys.stdout.write('  -m, --memory    : display memory usage information on exit\n')
