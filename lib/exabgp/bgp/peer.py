@@ -380,16 +380,17 @@ class Peer (object):
 		#
 
 		except Notify,e:
-			self.logger.error(self.me('Sending Notification (%d,%d) to peer [%s] %s' % (e.code,e.subcode,str(e),e.data)),'supervisor')
+			self.logger.error(self.me('>> NOTIFICATION (%d,%d) to peer [%s] %s' % (e.code,e.subcode,str(e),e.data)),'supervisor')
 			self.bgp.clear_buffer()
 			try:
 				self.bgp.new_notification(e)
 			except Failure:
+				self.logger.error(self.me('NOTIFICATION NOT SENT','supervisor'))
 				pass
 			try:
 				self.bgp.close('notification sent (%d,%d) [%s] %s' % (e.code,e.subcode,str(e),e.data))
 			except Failure:
-				pass
+				self.logger.error(self.me('issue cleaning session','supervisor'))
 			return
 
 		#
