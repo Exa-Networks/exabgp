@@ -267,6 +267,7 @@ class Configuration (object):
 		r = []
 		config = ''
 		for line in text:
+			self.logger.configuration('loading | %s' % line.rstrip())
 			replaced = line.strip().replace('\t',' ').replace(']',' ]').replace('[','[ ').replace(')',' )').replace('(','( ').lower()
 			config += line
 			if not replaced:
