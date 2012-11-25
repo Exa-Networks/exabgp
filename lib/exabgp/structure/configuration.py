@@ -90,7 +90,7 @@ class Configuration (object):
 	'  label [ 100 200 ];\n' \
 	'  aggregator ( 65000:10.0.0.10 )\n' \
 	'  split /24\n' \
-	'  watchdog watchog-name\n' \
+	'  watchdog watchdog-name\n' \
 	'  withdraw\n' \
 	'}\n' \
 	'\n' \
@@ -111,7 +111,7 @@ class Configuration (object):
 	' label 150' \
 	' aggregator' \
 	' split /24' \
-	' watchdog watchog-name' \
+	' watchdog watchdog-name' \
 	' withdraw' \
 	';\n' \
 
