@@ -719,8 +719,11 @@ class Configuration (object):
 	# route grouping with watchdog
 
 	def _route_watchdog (self,scope,tokens):
+		w = tokens.pop(0)
+		if w.lower() in ['announce','withdraw']:
+			raise ValueError('invalid watchdog name %s' % w)
 		try:
-			scope[-1]['routes'][-1].attributes.add(Watchdog(tokens.pop(0)))
+			scope[-1]['routes'][-1].attributes.add(Watchdog(w))
 			return True
 		except ValueError:
 			self._error = self._str_route_error

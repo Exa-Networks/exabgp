@@ -44,7 +44,7 @@ class Protocol (object):
 		self.connection = connection
 		self.negociated = Negociated()
 
-		self._delta = Delta(Table(peer))
+		self.delta = Delta(Table(peer))
 		self._messages = []
 		self._frozen = 0
 		# The message size is the whole BGP message _without_ headers
@@ -74,7 +74,6 @@ class Protocol (object):
 					raise Failure('Could not send message(s) to helper program(s) : %s' % message)
 
 	def close (self,reason='unspecified'):
-		#self._delta.last = 0
 		if self.connection:
 			# must be first otherwise we could have a loop caused by the raise in the below
 			self.connection.close()
@@ -238,7 +237,7 @@ class Protocol (object):
 
 	def new_update (self):
 		# XXX: This should really be calculated once only
-		for number in self._announce('UPDATE',self._delta.updates(self.negociated,self.neighbor.group_updates)):
+		for number in self._announce('UPDATE',self.peer.bgp.delta.updates(self.negociated,self.neighbor.group_updates)):
 			yield number
 
 	def new_eors (self):

@@ -25,7 +25,7 @@ class Table (object):
 
 	# This interface is very good for the file change but not if you want to update from network
 	def recalculate (self):
-		routes = self.peer.neighbor.filtered_routes()
+		routes = self.peer.neighbor.routes()
 		for index in self._plus.keys():
 			if index not in routes:
 				self._remove(index)

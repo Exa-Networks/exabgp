@@ -30,7 +30,6 @@ class Supervisor (object):
 		self.processes = None
 		self.configuration = Configuration(configuration)
 
-		self.watchdogs = {}
 		self._peers = {}
 		self._shutdown = False
 		self._reload = False
@@ -196,7 +195,15 @@ class Supervisor (object):
 						name = parts[2]
 					except IndexError:
 						name = service
-					self.watchdogs[name] = parts[0]
+					if parts[0] == 'announce':
+						for neighbor in self.configuration.neighbor:
+							self.configuration.neighbor[neighbor].watchdog.announce(name)
+					elif parts[0] == 'withdraw':
+						for neighbor in self.configuration.neighbor:
+							self.configuration.neighbor[neighbor].watchdog.withdraw(name)
+					else:
+						# should never happen
+						pass
 					self._route_update = True
 
 				# route announcement / withdrawal
@@ -304,7 +311,6 @@ class Supervisor (object):
 
 		for key in self.configuration.neighbor.keys():
 			neighbor = self.configuration.neighbor[key]
-			neighbor.watchdog(self.watchdogs)
 			self._peers[key].reload(neighbor.every_routes())
 		self.logger.supervisor("Updated peers dynamic routes successfully")
 

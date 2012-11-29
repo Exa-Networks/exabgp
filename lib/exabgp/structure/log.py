@@ -250,7 +250,7 @@ class _Logger (object):
 			getattr(self,recorder)(message,'parser')
 
 def Logger ():
-	if _Logger._instance:
+	if _Logger._instance is not None:
 		return _Logger._instance
 	instance = _Logger()
 	_Logger._instance = instance

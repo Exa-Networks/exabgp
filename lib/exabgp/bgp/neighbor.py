@@ -13,10 +13,16 @@ from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.capability import AddPath
 from exabgp.bgp.message.update.attribute.id import AttributeID
 
+from exabgp.rib.watchdog import Watchdog
+
 from exabgp.structure.log import Logger
 
 # The definition of a neighbor (from reading the configuration)
 class Neighbor (object):
+	# This need to be global, all neighbor share the same data !
+	# It allows us to use the information when performing global routing table update calculation
+	watchdog = Watchdog()
+
 	def __init__ (self):
 		self.logger = Logger()
 		self.description = ''
@@ -44,7 +50,6 @@ class Neighbor (object):
 
 		self._families = []
 		self._routes = {}
-		self._watchdog = {}
 
 	def name (self):
 		if self.multisession:
@@ -57,32 +62,23 @@ class Neighbor (object):
 		# this list() is important .. as we use the function to modify self._families
 		return list(self._families)
 
-	def watchdog (self,watchdog):
-		self._watchdog = copy(watchdog)
-
 	def every_routes (self):
 		for family in list(self._routes.keys()):
 			for route in self._routes[family]:
 				yield route
 
-	def filtered_routes (self):
+	def routes (self):
 		# This function returns a hash and not a list as "in" tests are O(n) with lists and O(1) with hash
 		# and with ten thousands routes this makes an enormous difference (60 seconds to 2)
+
+		def _routes (self):
+			for family in list(self._routes.keys()):
+				for route in self._routes[family]:
+					yield route
+
 		routes = {}
-		for family in list(self._routes.keys()):
-			for route in self._routes[family]:
-				withdrawn = route.attributes.pop(AttributeID.INTERNAL_WITHDRAW,None)
-				if withdrawn is not None:
-					self.logger.rib('skipping initial announcement of %s' % route)
-					watchdog = route.attributes.get(AttributeID.INTERNAL_WATCHDOG,None)
-					if watchdog in self._watchdog:
-						self._watchdog[watchdog] == 'withdraw'
-					continue
-				watchdog = route.attributes.get(AttributeID.INTERNAL_WATCHDOG,None)
-				if watchdog in self._watchdog:
-					if self._watchdog[watchdog] == 'withdraw':
-						continue
-				routes[route.index()] = route
+		for route in self.watchdog.filtered(_routes(self)):
+			routes[route.index()] = route
 		return routes
 
 	def add_family (self,family):
@@ -96,6 +92,7 @@ class Neighbor (object):
 				del self._routes[family]
 
 	def add_route (self,route):
+		self.watchdog.integrate(route)
 		self._routes.setdefault((route.nlri.afi,route.nlri.safi),[]).append(route)
 
 	def remove_route (self,route):

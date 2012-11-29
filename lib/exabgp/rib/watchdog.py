@@ -7,11 +7,11 @@ Created by Thomas Mangin on 2012-11-25.
 Copyright (c) 2012 Exa Networks. All rights reserved.
 """
 
-import time
-
 from exabgp.bgp.message.update.attribute.id import AttributeID
 
-class WatchdogStatus (dict):
+class _Status (dict):
+	_instance = None
+	
 	def flick (self,watchdog):
 		if watchdog not in self:
 			self[watchdog] = True
@@ -22,58 +22,53 @@ class WatchdogStatus (dict):
 	def enable (self,watchdog):
 		self[watchdog] = True
 
+def Status ():
+	if _Status._instance is None:
+		_Status._instance = _Status()
+	return _Status._instance
 
 class DisabledRoute (dict):
-	def disable (self,index,watchdog):
+	def add (self,index,watchdog):
 		self[index] = watchdog
 
-	def enable (self,watchdog):
+	def remove (self,watchdog):
 		# make a copy of the data so we can modify it in the loop
-		for index,w in self.iteritems()[:]:
-			if w == watchdog:
+		for index in self.keys()[:]:
+			if self[index] == watchdog:
 				del self[index]
 
 
 class Watchdog (object):
 	def __init__ (self):
-		self.watchdog = WatchogStatus()
-		self.disabled = DisabledRoute()
-		self.routes = {}
+		self.status = Status()
+		self.routes = DisabledRoute()
 
-	def set (self,route):
-		# note it is a POP, not a GET
-		watchdog = route.attributes.pop(AttributeID.INTERNAL_WATCHDOG,None)
+	def integrate (self,route):
+		watchdog = route.attributes.get(AttributeID.INTERNAL_WATCHDOG,None)
 		if not watchdog:
 			# should never happen though !
 			return
-		self.watchdog.flick(watchdog)
+		self.status.flick(watchdog)
 
 		index = route.index()
-		self.routes[index] = watchdog
 
-		# note it is a POP, not a GET
-		withdrawn = route.attributes.pop(AttributeID.INTERNAL_WITHDRAW,None)
+		withdrawn = route.attributes.get(AttributeID.INTERNAL_WITHDRAW,None)
 		if withdrawn:
-			self.disabled.disable(index)
+			self.routes.add(index,watchdog)
 
 	def announce (self,watchdog):
-		for index,route in self.routes[watchdog].iteritems():
-			if not self.watchdog[watchdog]:
-				self.watchdog.enable(watchdog)
-			self.disabled.enable(watchdog)
+		self.status.enable(watchdog)
+		self.routes.remove(watchdog)
 
 	def withdraw (self,watchdog):
-		for index,route in self.routes[watchdog].iteritems():
-			if self.watchdog[watchdog]:
-				self.watchdog.disable(watchdog)
-			# the route will now be disabled thanks to the watchdog only
-			self.disabled.enable(watchdog)
+		self.status.disable(watchdog)
+		self.routes.remove(watchdog)
 
 	def filtered (self,routes_generator):
 		for route in routes_generator:
 			index = route.index()
-			watchdog = self.routes[index]
-			if index in self.disabled:
-				continue
-			if self.watchdog[watchdog]:
+			watchdog = self.routes.get(index,None)
+			if not watchdog:
+				yield route
+			elif self.status[watchdog] and index not in self.routes:
 				yield route
