@@ -6,7 +6,7 @@ Version explained:
 Version 3.0.12 - --th of -------- 2012
  * Fix: watchdog feature
     reported by: Ryan Steinmetz
- * Improvement: MD5 support on FreeBSD
+ * Improvement: MD5 support on FreeBSD (issue 14)
     patch by: Ryan Steinmetz (thank you)
 
 Version 3.0.11 - 21st of November 2012
