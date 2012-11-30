@@ -956,7 +956,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		if not md5:
-			self._error = 'md5 requires the md5 password as an argument (quoted or unquoted)'
+			self._error = 'md5 requires the md5 password as an argument (quoted or unquoted).  FreeBSD users should use "kernel" as the argument.'
 			if self.debug: raise
 			return False
 		scope[-1][command] = md5

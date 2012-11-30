@@ -3,6 +3,12 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.0.12 - --th of -------- 2012
+ * Fix: watchdog feature
+    reported by: Ryan Steinmetz
+ * Improvement: MD5 support on FreeBSD
+    patch by: Ryan Steinmetz (thank you)
+
 Version 3.0.11 - 21st of November 2012
  * Fix: add support for IPv6 MD5SUM
     reported by: Eiichiro Watanabe (with a patch, thank you)
@@ -14,7 +20,7 @@ Version 3.0.11 - 21st of November 2012
 
 Version 3.0.10 - 6th of September 2012
  * Fix: not removing duplicate route correctly (same nlri different attributes) (issue 7)
-    reported by: Reggie Yam (with a patch, thank you)
+    patch by: Reggie Yam (thank you)
 
 Version 3.0.9 - 5th of September 2012
  * Fix: problem when parsing ASN which are not fitting in a Python integer

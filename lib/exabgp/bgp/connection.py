@@ -8,6 +8,7 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 
 #import os
 #import sys
+import platform
 import struct
 import time
 import socket
@@ -81,27 +82,50 @@ class Connection (object):
 			raise Failure('Could not bind to local ip %s - %s' % (local.ip,str(e)))
 
 		if md5:
-			try:
-				TCP_MD5SIG = 14
-				TCP_MD5SIG_MAXKEYLEN = 80
+			os = platform.system()
+			if os == 'FreeBSD':
+				if md5 != 'kernel':
+					raise Failure(
+						'FreeBSD requires that you set your MD5 key via ipsec.conf.\n'
+						'Something like:\n'
+						'flush;\n'
+						'add <local ip> <peer ip> tcp 0x1000 -A tcp-md5 "password";'
+						)
+				try:
+					TCP_MD5SIG = 0x10
+					self.io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, 1)
+				except socket.error,e:
+					self.close()
+					raise Failure(
+						'FreeBSD requires that you rebuild your kernel to enable TCP MD5 Signatures:\n'
+						'options         IPSEC\n'
+						'options         TCP_SIGNATURE\n'
+						'device          crypto\n'
+					)
+			elif os == 'Linux':
+				try:
+					TCP_MD5SIG = 14
+					TCP_MD5SIG_MAXKEYLEN = 80
 
-				n_port = socket.htons(179)
-				if peer.afi == AFI.ipv4:
-					SS_PADSIZE = 120
-					n_addr = socket.inet_pton(socket.AF_INET, peer.ip)
-					tcp_md5sig = 'HH4s%dx2xH4x%ds' % (SS_PADSIZE, TCP_MD5SIG_MAXKEYLEN)
-					md5sig = struct.pack(tcp_md5sig, socket.AF_INET, n_port, n_addr, len(md5), md5)
-				if peer.afi == AFI.ipv6:
-					SS_PADSIZE = 100
-					SIN6_FLOWINFO = 0
-					SIN6_SCOPE_ID = 0
-					n_addr = socket.inet_pton(socket.AF_INET6, peer.ip)
-					tcp_md5sig = 'HHI16sI%dx2xH4x%ds' % (SS_PADSIZE, TCP_MD5SIG_MAXKEYLEN)
-					md5sig = struct.pack(tcp_md5sig, socket.AF_INET6, n_port, SIN6_FLOWINFO, n_addr, SIN6_SCOPE_ID, len(md5), md5)
-				self.io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, md5sig)
-			except socket.error,e:
-				self.close()
-				raise Failure('This OS does not support TCP_MD5SIG, you can not use MD5 : %s' % str(e))
+					n_port = socket.htons(179)
+					if peer.afi == AFI.ipv4:
+						SS_PADSIZE = 120
+						n_addr = socket.inet_pton(socket.AF_INET, peer.ip)
+						tcp_md5sig = 'HH4s%dx2xH4x%ds' % (SS_PADSIZE, TCP_MD5SIG_MAXKEYLEN)
+						md5sig = struct.pack(tcp_md5sig, socket.AF_INET, n_port, n_addr, len(md5), md5)
+					if peer.afi == AFI.ipv6:
+						SS_PADSIZE = 100
+						SIN6_FLOWINFO = 0
+						SIN6_SCOPE_ID = 0
+						n_addr = socket.inet_pton(socket.AF_INET6, peer.ip)
+						tcp_md5sig = 'HHI16sI%dx2xH4x%ds' % (SS_PADSIZE, TCP_MD5SIG_MAXKEYLEN)
+						md5sig = struct.pack(tcp_md5sig, socket.AF_INET6, n_port, SIN6_FLOWINFO, n_addr, SIN6_SCOPE_ID, len(md5), md5)
+					self.io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, md5sig)
+				except socket.error,e:
+					self.close()
+					raise Failure('This linux machine does not support TCP_MD5SIG, you can not use MD5 : %s' % str(e))
+			else:
+				raise Failure('ExaBGP has no MD5 support for %s' % os)
 
 		# None (ttl-security unset) or zero (maximum TTL) is the same thing
 		if ttl:
