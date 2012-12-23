@@ -159,16 +159,14 @@ class Supervisor (object):
 			self.logger.error(self.configuration.error,'configuration')
 			return
 
-		for key in self._peers.keys():
-			if key not in self.configuration.neighbor.keys():
-				neighbor = self.configuration.neighbor[key]
-				self.logger.supervisor("Removing Peer %s" % neighbor.name())
-				self._peers[key].stop()
+		for key, peer in self._peers.items():
+			if key not in self.configuration.neighbor:
+				self.logger.supervisor("Removing Peer %s" % peer.neighbor.name())
+				peer.stop()
 
-		for key in self.configuration.neighbor.keys():
-			neighbor = self.configuration.neighbor[key]
+		for key, neighbor in self.configuration.neighbor.items():
 			# new peer
-			if key not in self._peers.keys():
+			if key not in self._peers:
 				self.logger.supervisor("New Peer %s" % neighbor.name())
 				peer = Peer(neighbor,self)
 				self._peers[key] = peer

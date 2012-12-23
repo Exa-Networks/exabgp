@@ -6,6 +6,8 @@ Version explained:
 Version 3.0.12 - --th of -------- 2012
  * Fix: watchdog feature
     reported by: Ryan Steinmetz
+ * Fix: problem with SIGHUP when deleting peer
+    patch by: Justin Azoff (thank you)
  * Improvement: MD5 support on FreeBSD (issue 14)
     patch by: Ryan Steinmetz (thank you)
 
