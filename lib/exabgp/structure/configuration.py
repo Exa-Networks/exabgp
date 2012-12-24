@@ -40,7 +40,7 @@ from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
-from exabgp.bgp.message.update.attribute.communities import Community,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_RouteTargetCommunity_00,to_RouteTargetCommunity_01
+from exabgp.bgp.message.update.attribute.communities import cachedCommunity,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_RouteTargetCommunity_00,to_RouteTargetCommunity_01
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 
@@ -1346,28 +1346,28 @@ class Configuration (object):
 				raise ValueError('invalid community %s (prefix too large)' % data)
 			if suffix >= pow(2,16):
 				raise ValueError('invalid community %s (suffix too large)' % data)
-			return Community(pack('!L',(prefix<<16) + suffix))
+			return cachedCommunity(pack('!L',(prefix<<16) + suffix))
 		elif len(data) >=2 and data[1] in 'xX':
 			value = long(data,16)
 			if value >= pow(2,32):
 				raise ValueError('invalid community %s (too large)' % data)
-			return Community(pack('!L',value))
+			return cachedCommunity(pack('!L',value))
 		else:
 			low = data.lower()
 			if low == 'no-export':
-				return Community(Community.NO_EXPORT)
+				return cachedCommunity(Community.NO_EXPORT)
 			elif low == 'no-advertise':
-				return Community(Community.NO_ADVERTISE)
+				return cachedCommunity(Community.NO_ADVERTISE)
 			elif low == 'no-export-subconfed':
-				return Community(Community.NO_EXPORT_SUBCONFED)
+				return cachedCommunity(Community.NO_EXPORT_SUBCONFED)
 			# no-peer is not a correct syntax but I am sure someone will make the mistake :)
 			elif low == 'nopeer' or low == 'no-peer':
-				return Community(Community.NO_PEER)
+				return cachedCommunity(Community.NO_PEER)
 			elif data.isdigit():
 				value = unpack('!L',data)[0]
 				if value >= pow(2,32):
 					raise ValueError('invalid community %s (too large)' % data)
-					return Community(pack('!L',value))
+					return cachedCommunity(pack('!L',value))
 			else:
 				raise ValueError('invalid community name %s' % data)
 

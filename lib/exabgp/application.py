@@ -229,6 +229,9 @@ def main ():
 			logger.error('the argument passed as configuration is not a file','configuration')
 			sys.exit(1)
 
+	from exabgp.bgp.message.update.attribute.communities import Community
+	Community.caching = env.cache.attributes
+
 	if len(configurations) == 1:
 		run(env,comment,configuration)
 

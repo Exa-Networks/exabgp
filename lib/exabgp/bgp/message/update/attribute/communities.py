@@ -19,6 +19,9 @@ class Community (object):
 	NO_EXPORT_SUBCONFED = pack('!L',0xFFFFFF03)
 	NO_PEER             = pack('!L',0xFFFFFF04)
 
+	cache = {}
+	caching = False
+
 	def __init__ (self,community):
 		self.community = community
 		if community == self.NO_EXPORT:
@@ -42,6 +45,22 @@ class Community (object):
 
 	def __eq__ (self,other):
 		return self.community == other.community
+
+def cachedCommunity (community):
+	if community in Community.cache:
+		return Community.cache[community]
+	instance = Community(community)
+	if Community.caching:
+		Community.cache[community] = instance
+	return instance
+
+# Always cache well-known communities, they will be used a lot
+if not Community.cache:
+	Community.cache[Community.NO_EXPORT] = Community(Community.NO_EXPORT)
+	Community.cache[Community.NO_ADVERTISE] = Community(Community.NO_ADVERTISE)
+	Community.cache[Community.NO_EXPORT_SUBCONFED] = Community(Community.NO_EXPORT_SUBCONFED)
+	Community.cache[Community.NO_PEER] = Community(Community.NO_PEER)
+
 
 # =================================================================== Communities (8)
 

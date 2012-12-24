@@ -10,6 +10,8 @@ Version 3.0.12 - --th of -------- 2012
     patch by: Justin Azoff (thank you)
  * Improvement: MD5 support on FreeBSD (issue 14)
     patch by: Ryan Steinmetz (thank you)
+ * Improvement: caching of Community
+    requested by: Justin Azoff (with benchmarking gains report,thank you)
 
 Version 3.0.11 - 21st of November 2012
  * Fix: add support for IPv6 MD5SUM
