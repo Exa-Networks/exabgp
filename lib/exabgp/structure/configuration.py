@@ -40,7 +40,7 @@ from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
-from exabgp.bgp.message.update.attribute.communities import cachedCommunity,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_RouteTargetCommunity_00,to_RouteTargetCommunity_01
+from exabgp.bgp.message.update.attribute.communities import Community,cachedCommunity,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_RouteTargetCommunity_00,to_RouteTargetCommunity_01
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 
