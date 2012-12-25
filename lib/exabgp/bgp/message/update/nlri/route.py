@@ -243,6 +243,12 @@ class Route (object):
 	def __str__ (self):
 		return "route %s%s" % (str(self.nlri),str(self.attributes))
 
+	def __hash__(self):
+		return hash(str(self))
+
+	def __eq__(self, other):
+		return str(self) == str(other)
+
 	def extensive (self):
 		return "%s %s%s" % (str(Address(self.nlri.afi,self.nlri.safi)),str(self.nlri),str(self.attributes))
 

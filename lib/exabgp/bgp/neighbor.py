@@ -93,15 +93,15 @@ class Neighbor (object):
 
 	def add_route (self,route):
 		self.watchdog.integrate(route)
-		self._routes.setdefault((route.nlri.afi,route.nlri.safi),[]).append(route)
+		self._routes.setdefault((route.nlri.afi,route.nlri.safi),set()).add(route)
 
 	def remove_route (self,route):
-		removed = False
-		str_route = str(route.nlri)
-		for r in self._routes.get((route.nlri.afi,route.nlri.safi),[]):
-			if str(r.nlri) == str_route:
-				removed = True
-				self._routes[(route.nlri.afi,route.nlri.safi)].remove(r)
+		try :
+			routes = self._routes[(route.nlri.afi,route.nlri.safi)]
+			routes.remove(route)
+			removed = True
+		except KeyError:
+			removed = False
 		return removed
 
 	def set_routes (self,routes):
@@ -109,7 +109,7 @@ class Neighbor (object):
 		# then the generator will return an empty content when ran, so we can not use add_route
 		f = {}
 		for route in routes:
-			f.setdefault((route.nlri.afi,route.nlri.safi),[]).append(route)
+			f.setdefault((route.nlri.afi,route.nlri.safi),set()).add(route)
 		self._routes = f
 
 	def missing (self):
