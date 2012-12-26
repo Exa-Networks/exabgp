@@ -32,7 +32,6 @@ Notes
 - Some of the match condition of flows currently take list or numeric tests, they should always take both, refactor
 - We can not parse flows (yet)
 - reading stderr from forked process and displaying via the self.logger class
-- Do not announce route of a AFI/SAFI pair if the pair was not received on the OPEN by the peer (done ?)
 - NotificationID
 - For the first run, add a grouping of route BEFORE the OPEN negociation to not cause issues with OPEN
 - allow per per announcement of routes from the helper program
