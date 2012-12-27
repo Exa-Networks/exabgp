@@ -239,6 +239,7 @@ defaults = {
 	},
 	'cache' : {
 		'attributes'  :  (value.boolean,value.lower,'true', 'cache routes attributes (configuration and wire) for faster parsing'),
+		'nexthops'    :  (value.boolean,value.lower,'true', 'cache routes next-hops'),
 	},
 	# Here for internal use
 	'internal' : {

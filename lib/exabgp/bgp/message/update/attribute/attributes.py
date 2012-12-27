@@ -20,7 +20,7 @@ from exabgp.bgp.message.update.attribute.id import AttributeID as AID
 from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import ASPath,AS4Path
-from exabgp.bgp.message.update.attribute.nexthop import NextHop
+from exabgp.bgp.message.update.attribute.nexthop import cachedNextHop
 from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.origin import Origin
@@ -252,7 +252,7 @@ class Attributes (dict):
 
 		if code == AID.NEXT_HOP:
 			if not self.add_cached(code,attribute):
-				self.add(NextHop(AFI.ipv4,SAFI.unicast_multicast,attribute),attribute)
+				self.add(cachedNextHop(AFI.ipv4,SAFI.unicast_multicast,attribute),attribute)
 			return self._factory(next)
 
 		if code == AID.MED:
@@ -388,7 +388,7 @@ class Attributes (dict):
 			while data:
 				route = self.routeFactory(afi,safi,data,addpath,'announced')
 				if not route.attributes.add_cached(AID.NEXT_HOP,nh):
-					route.attributes.add(NextHop(afi,safi,nh),nh)
+					route.attributes.add(cachedNextHop(afi,safi,nh),nh)
 				self.mp_announce.append(route)
 				data = data[len(route.nlri):]
 			return self._factory(next)

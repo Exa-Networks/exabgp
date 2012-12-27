@@ -10,7 +10,7 @@ Version 3.0.12 - --th of -------- 2012
     patch by: Justin Azoff (thank you)
  * Improvement: MD5 support on FreeBSD (issue 14)
     patch by: Ryan Steinmetz (thank you)
- * Improvement: caching of Community
+ * Improvement: caching of Community and Next-Hop
     requested by: Justin Azoff (with benchmarking gains report,thank you)
  * Improvement: Store routes in neighbor as set and not list, so removal are O(1)
     patch by: Justin Azoff (thank you)

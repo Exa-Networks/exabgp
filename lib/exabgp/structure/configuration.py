@@ -34,7 +34,7 @@ from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,F
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute.origin import Origin
-from exabgp.bgp.message.update.attribute.nexthop import NextHop
+from exabgp.bgp.message.update.attribute.nexthop import cachedNextHop
 from exabgp.bgp.message.update.attribute.aspath import ASPath
 from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
@@ -1208,7 +1208,7 @@ class Configuration (object):
 
 	def _route_next_hop (self,scope,tokens):
 		try:
-			scope[-1]['routes'][-1].attributes.add(NextHop(*inet(tokens.pop(0))))
+			scope[-1]['routes'][-1].attributes.add(cachedNextHop(*inet(tokens.pop(0))))
 			return True
 		except:
 			self._error = self._str_route_error
