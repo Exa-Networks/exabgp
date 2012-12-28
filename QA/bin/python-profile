@@ -1,0 +1,2 @@
+#!/bin/sh
+python -m cProfile -o stat.prof $*
