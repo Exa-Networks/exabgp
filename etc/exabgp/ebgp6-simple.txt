@@ -1,6 +1,6 @@
 neighbor 2a02:b80::2 {
 	description "a quagga test peer over ipv6";
-	router-id 192.168.127.1;
+	router-id 10.0.0.2;
 	local-address 2a02:b80::1;
 	local-as 65500;
 	peer-as 65533;
