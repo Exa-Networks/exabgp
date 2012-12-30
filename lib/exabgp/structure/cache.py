@@ -19,19 +19,19 @@ class Cache (dict):
 		self.last_accessed = int(time.time())
 
 	def cache (self, key, value):
-		if key in self:
-			return value
-
 		now = int(time.time())
+
 		if now - self.last_accessed >= self.cache_life:
 			self.truncate(self.min_items)
 
 		elif len(self) >= self.max_items:
 			self.truncate(self.max_items/2)
 
-		self[key] = value
-		self.ordered.append(key)
+		if key not in self:
+			self.ordered.append(key)
+
 		self.last_accessed = now
+		self[key] = value
 
 		return value
 
@@ -123,8 +123,8 @@ if __name__ == '__main__':
 			self.s6 = self.a + self.b + self.c
 			self.s7 = self.a + self.b
 
-	COUNT = 1000
-	UNIQUE = 500
+	COUNT = 100000
+	UNIQUE = 5000
 
 	samples = set()
 	chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:"|;<>?,./[]{}-=_+!@£$%^&*()'

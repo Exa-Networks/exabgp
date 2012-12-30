@@ -10,6 +10,7 @@ from struct import unpack,error
 
 from exabgp.structure.utils import dump
 from exabgp.structure.environment import load
+from exabgp.structure.cache import Cache
 
 from exabgp.protocol.family import AFI,SAFI
 
@@ -57,18 +58,8 @@ class MultiAttributes (list):
 
 class Attributes (dict):
 	routeFactory = None
-
-	cache = {
-		# There can only be one, build it now :)
-		AID.ATOMIC_AGGREGATE : { '' : AtomicAggregate() },
-		AID.ORIGIN : {
-			Origin(Origin.IGP).pack() : Origin(Origin.IGP),
-			Origin(Origin.EGP).pack() : Origin(Origin.EGP),
-			Origin(Origin.INCOMPLETE).pack() : Origin(Origin.INCOMPLETE),
-		}
-	}
-
 	autocomplete = True
+	cache = {}
 
 	def __init__ (self):
 		self._str = ''
@@ -78,15 +69,15 @@ class Attributes (dict):
 		return k in self
 
 	def add_from_cache (self,attributeid,data):
-		if data in self.cache.setdefault(attributeid,{}):
-			self.add(self.cache[attributeid][data])
+		if data in self.cache.setdefault(attributeid,Cache()):
+			self.add(self.cache[attributeid].retrieve(data))
 			return True
 		return False
 
 	def add (self,attribute,data=None):
 		self._str = ''
 		if data and self.cache_attributes:
-			self.cache[attribute.ID][data] = attribute
+			self.cache[attribute.ID].cache(data,attribute)
 		if attribute.MULTIPLE:
 			if self.has(attribute.ID):
 				self[attribute.ID].append(attribute)
@@ -505,3 +496,19 @@ class Attributes (dict):
 
 	def __new_ASPath4 (self,data):
 		return self.__new_aspaths(data,True,AS4Path)
+
+if not Attributes.cache:
+	for attribute in AID._str:
+		Attributes.cache[attribute] = Cache()
+
+	# There can only be one, build it now :)
+	Attributes.cache[AID.ATOMIC_AGGREGATE][''] = AtomicAggregate()
+	
+	IGP = Origin(Origin.IGP)
+	EGP = Origin(Origin.EGP)
+	INC = Origin(Origin.INCOMPLETE)
+
+	Attributes.cache[AID.ORIGIN][IGP.pack()] = IGP
+	Attributes.cache[AID.ORIGIN][EGP.pack()] = EGP
+	Attributes.cache[AID.ORIGIN][INC.pack()] = INC
+
