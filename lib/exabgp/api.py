@@ -7,6 +7,7 @@ Created by Thomas Mangin on 2012-12-30.
 Copyright (c) 2012 Exa Networks. All rights reserved.
 """
 
+import time
 from itertools import tee
 
 class Text (object):
@@ -51,8 +52,9 @@ class JSON (object):
 		          '"application": "exabgp", '\
 		          '"version": "%s", '\
 		          '"encoder": "%s", ' \
+		          '"time": "%s"' \
 		          '%s' \
-		       '}' % (self.version,self.encoder,content)
+		       '}' % (self.version,self.encoder,time.time(),content)
 
 	def _neighbor (self,neighbor,content):
 		return '"neighbor": { ' \
