@@ -67,6 +67,22 @@ class ASPath (Attribute):
 			self._str = string
 		return self._str
 
+	def json (self):
+		if not self._str:
+			lseq = len(self.as_seq)
+			lset = len(self.as_set)
+			if lseq == 1 and not lset:
+				string = '%d' % self.as_seq[0]
+			elif lseq > 1 :
+				if lset:
+					string = '[ %s, %s]' % ((', '.join([str(_) for _ in self.as_seq])),'( %s ) ' % (', '.join([str(_) for _ in self.as_set])))
+				else:
+					string = '[ %s ]' % ', '.join([str(_) for _ in self.as_seq])
+			else:  # lseq == 0
+				string = '[ ]'
+			self._str = string
+		return self._str
+
 class AS4Path (ASPath):
 	ID = AttributeID.AS4_PATH
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL

@@ -80,11 +80,10 @@ class Protocol (object):
 			self.connection = None
 
 			if self.peer.neighbor.peer_updates:
-				message = 'neighbor %s down - %s\n' % (self.peer.neighbor.peer_address,reason)
 				try:
 					proc = self.peer.supervisor.processes
 					for name in proc.notify(self.neighbor.peer_address):
-						proc.write(name,message)
+						proc.api.down(name,self.peer.neighbor.peer_address,reason)
 				except ProcessError:
 					raise Failure('Could not send message(s) to helper program(s) : %s' % message)
 

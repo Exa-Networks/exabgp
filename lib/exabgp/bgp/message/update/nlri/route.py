@@ -243,6 +243,9 @@ class Route (object):
 	def __str__ (self):
 		return "route %s%s" % (str(self.nlri),str(self.attributes))
 
+	def json (self):
+		return '"%s": { %s }' % (str(self.nlri),self.attributes.json())
+
 	def __hash__(self):
 		return hash(str(self))
 

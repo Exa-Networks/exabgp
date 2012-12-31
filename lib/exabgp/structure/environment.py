@@ -108,6 +108,13 @@ class value (object):
 		return _.lower() in ('1','yes','on','enable','true')
 
 	@staticmethod
+	def api (_):
+		encoder = _.lower()
+		if encoder not in ('text','json'):
+			raise TypeError('invalid encoder')
+		return encoder
+
+	@staticmethod
 	def methods (_):
 		return _.upper().split()
 
@@ -240,6 +247,9 @@ defaults = {
 	'cache' : {
 		'attributes'  :  (value.boolean,value.lower,'true', 'cache routes attributes (configuration and wire) for faster parsing'),
 		'nexthops'    :  (value.boolean,value.lower,'true', 'cache routes next-hops'),
+	},
+	'api' : {
+		'encoder'  :  (value.api,value.lower,'text', 'encoder to use with with external API (text or json)'),
 	},
 	# Here for internal use
 	'internal' : {

@@ -158,6 +158,22 @@ class Attributes (dict):
 
 		return message
 
+	def json (self):
+		r = []
+		if self.has(AID.NEXT_HOP):           r.append('"next-hop": "%s"' % str(self[AID.NEXT_HOP]) )
+		if self.has(AID.ORIGIN):             r.append('"origin": "%s"' % str(self[AID.ORIGIN]))
+		if self.has(AID.AS_PATH):            r.append('"as-path": %s' % self[AID.AS_PATH].json())
+		if self.has(AID.LOCAL_PREF):         r.append('"local-preference": %s' % self[AID.LOCAL_PREF])
+		if self.has(AID.AGGREGATOR):         r.append('"aggregator" : "%s"' % self[AID.AGGREGATOR])
+		if self.has(AID.MED):                r.append('"med": %s' % self[AID.MED])
+		if self.has(AID.COMMUNITY):          r.append('"community": %s' % self[AID.COMMUNITY].json())
+		if self.has(AID.ORIGINATOR_ID):      r.append('"originator-id": "%s"' % str(self[AID.ORIGINATOR_ID]))
+		if self.has(AID.CLUSTER_LIST):       r.append('"cluster-list": %s' % self[AID.CLUSTER_LIST].json())
+		if self.has(AID.EXTENDED_COMMUNITY): r.append('"extended-community": %s' % self[AID.EXTENDED_COMMUNITY].json())
+		if self.has(AID.MP_REACH_NLRI):      r.append('"mp_reach_nlri": "%s"' % str(self[AID.MP_REACH_NLRI]))
+		r.append('"atomic-aggregate": %s' % ('true' if self.has(AID.ATOMIC_AGGREGATE) else 'false'))
+		return ", ".join(r)
+
 	def __str__ (self):
 		if self._str:
 			return self._str
@@ -171,7 +187,7 @@ class Attributes (dict):
 		med = ' med %s' % self[AID.MED] if self.has(AID.MED) else ''
 		communities = ' community %s' % str(self[AID.COMMUNITY]) if self.has(AID.COMMUNITY) else ''
 		originator_id = ' originator-id %s' % str(self[AID.ORIGINATOR_ID]) if self.has(AID.ORIGINATOR_ID) else ''
-		cluster_list = ' cluster-list %s' % str(self[AID.ORIGINATOR_ID]) if self.has(AID.ORIGINATOR_ID) else ''
+		cluster_list = ' cluster-list %s' % str(self[AID.CLUSTER_LIST]) if self.has(AID.CLUSTER_LIST) else ''
 		ecommunities = ' extended-community %s' % str(self[AID.EXTENDED_COMMUNITY]) if self.has(AID.EXTENDED_COMMUNITY) else ''
 		mpr = ' mp_reach_nlri %s' % str(self[AID.MP_REACH_NLRI]) if self.has(AID.MP_REACH_NLRI) else ''
 

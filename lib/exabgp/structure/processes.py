@@ -11,6 +11,11 @@ import time
 import subprocess
 import select
 
+from exabgp.api import Text,JSON
+
+from exabgp.version import version
+from exabgp.structure.environment import load
+
 from exabgp.structure.log import Logger
 
 class ProcessError (Exception):
@@ -28,6 +33,11 @@ class Processes (object):
 		self.logger = Logger()
 		self.supervisor = supervisor
 		self.clean()
+		api = load().api.encoder
+		if api == 'json':
+			self.api = JSON(self.write,version,'unstable - use in production at your own risk')
+		else:
+			self.api = Text(self.write,version,'1.0')
 
 	def clean (self):
 		self._process = {}
@@ -43,7 +53,8 @@ class Processes (object):
 
 	def terminate (self):
 		for name in list(self._process):
-			self.write(name,'shutdown',shutdown=True)
+			self.api.shutdown(name)
+			self.api.silence = True
 		time.sleep(0.1)
 		for name in list(self._process):
 			try:
@@ -131,12 +142,11 @@ class Processes (object):
 				self._start(name)
 		return lines
 
-	def write (self,name,string,shutdown=False):
+	def write (self,name,string):
 		while True:
 			try:
 				self._process[name].stdin.write('%s\r\n' % string)
 			except IOError,e:
-				if shutdown: return True
 				self._broken.append(name)
 				if e.errno == errno.EPIPE:
 					self._broken.append(name)
@@ -151,7 +161,6 @@ class Processes (object):
 		try:
 			self._process[name].stdin.flush()
 		except IOError,e:
-			if shutdown: return True
 			# AFAIK, the buffer should be flushed at the next attempt.
 			self.logger.processes("REPORT TO DEVELOPERS: IOError received while FLUSHING data to helper program %s, retrying" % str(e.errno))
 

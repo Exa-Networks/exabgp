@@ -92,6 +92,9 @@ class Communities (Attribute):
 			return str(self.communities[0])
 		return ""
 
+	def json (self):
+		return "[ %s ]" % ", ".join(str(community) for community in self.communities)
+
 # =================================================================== ECommunity
 
 # http://www.iana.org/assignments/bgp-extended-communities

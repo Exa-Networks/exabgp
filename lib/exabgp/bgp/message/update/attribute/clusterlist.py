@@ -42,3 +42,7 @@ class ClusterList (Attribute):
 		if self._len != 1:
 			return '[ %s ]' % ' '.join([str(_) for _ in self.clusters])
 		return '%s' % self.clusters[0]
+
+	def json (self):
+		return '[ %s ]' % ', '.join([str(_) for _ in self.clusters])
+

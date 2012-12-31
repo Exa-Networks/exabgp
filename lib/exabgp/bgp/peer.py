@@ -207,8 +207,8 @@ class Peer (object):
 			self.logger.network('Connected to peer %s' % self.neighbor.name())
 			if self.neighbor.peer_updates:
 				try:
-					for name in self.supervisor.processes.notify(self.neighbor.peer_address):
-						self.supervisor.processes.write(name,'neighbor %s up\n' % self.neighbor.peer_address)
+					for process in self.supervisor.processes.notify(self.neighbor.peer_address):
+						self.supervisor.processes.api.up(process,self.neighbor.peer_address)
 				except ProcessError:
 					# Can not find any better error code than 6,0 !
 					# XXX: We can not restart the program so this will come back again and again - FIX
@@ -275,10 +275,7 @@ class Peer (object):
 					if self.neighbor.peer_updates:
 						try:
 							for name in self.supervisor.processes.notify(self.neighbor.peer_address):
-								self.supervisor.processes.write(name,'neighbor %s update start\n' % self.neighbor.peer_address)
-								for route in message.routes:
-									self.supervisor.processes.write(name,'neighbor %s %s\n' % (self.neighbor.peer_address,str(route)))
-								self.supervisor.processes.write(name,'neighbor %s update end\n' % self.neighbor.peer_address)
+								self.supervisor.processes.api.routes(name,self.neighbor.peer_address,message.routes)
 						except ProcessError:
 							raise Failure('Could not send message(s) to helper program(s) : %s' % message)
 					else:
