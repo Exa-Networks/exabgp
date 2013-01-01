@@ -36,7 +36,7 @@ class Community (object):
 
 	def json (self):
 		integer = unpack('!L',self.community)[0]
-		return "%d:%d" % (integer >> 16, integer & 0xFFFF)
+		return "[ %d %d ]" % (integer >> 16, integer & 0xFFFF)
 
 	def pack (self):
 		return self.community
@@ -97,7 +97,7 @@ class Communities (Attribute):
 		return ""
 
 	def json (self):
-		return "[ %s ]" % ", ".join('"%s"' % community.json() for community in self.communities)
+		return "[ %s ]" % ", ".join(community.json() for community in self.communities)
 
 # =================================================================== ECommunity
 
