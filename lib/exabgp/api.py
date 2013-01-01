@@ -94,9 +94,9 @@ class JSON (object):
 		minus = ', '.join('"%s"' % str(_.nlri) for _ in withdrawn)
 
 		nlri = '"nlri": { '
-		if plus: nlri += 'announce: [ %s ]' % plus
+		if plus: nlri += '"announce": [ %s ]' % plus
 		if plus and minus: nlri += ', '
-		if minus: nlri+= 'withdraw: [ %s ]' % minus
+		if minus: nlri+= '"withdraw": [ %s ]' % minus
 		nlri += ' }'
 
 		attributes = '"attribute": { %s }' % route.attributes.json()
