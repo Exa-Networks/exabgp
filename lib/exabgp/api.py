@@ -52,9 +52,9 @@ class JSON (object):
 		          '"application": "exabgp", '\
 		          '"version": "%s", '\
 		          '"encoder": "%s", ' \
-		          '"time": "%s", ' \
+		          '"time": %s, ' \
 		          '%s' \
-		       '}' % (self.version,self.encoder,time.time(),content)
+		       '}' % (self.version,self.encoder,long(time.time()),content)
 
 	def _neighbor (self,neighbor,content):
 		return '"neighbor": { ' \
