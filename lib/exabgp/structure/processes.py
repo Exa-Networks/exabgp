@@ -45,72 +45,70 @@ class Processes (object):
 		self._notify = {}
 		self._broken = []
 
-	def _terminate (self,name):
-		self.logger.processes("Terminating process %s" % name)
-		self._process[name].terminate()
-		self._process[name].wait()
-		del self._process[name]
+	def _terminate (self,process):
+		self.logger.processes("Terminating process %s" % process)
+		self._process[process].terminate()
+		self._process[process].wait()
+		del self._process[process]
 
 	def terminate (self):
-		for name in list(self._process):
-			self.api.shutdown(name)
+		for process in list(self._process):
+			self.api.shutdown(process)
 			self.api.silence = True
 		time.sleep(0.1)
-		for name in list(self._process):
+		for process in list(self._process):
 			try:
-				self._terminate(name)
+				self._terminate(process)
 			except OSError:
 				# we most likely received a SIGTERM signal and our child is already dead
-				self.logger.processes("child process %s was already dead" % name)
+				self.logger.processes("child process %s was already dead" % process)
 				pass
 		self.clean()
 
-	def _start (self,name):
+	def _start (self,process):
 		try:
-			if name in self._process:
+			if process in self._process:
 				self.logger.processes("process already running")
 				return
-			proc = self.supervisor.configuration.process
-			if not name in proc:
+			if not process in self.supervisor.configuration.process:
 				self.logger.processes("Can not start process, no configuration for it (anymore ?)")
 				return
 			# Prevent some weird termcap data to be created at the start of the PIPE
 			# \x1b[?1034h (no-eol) (esc)
 			os.environ['TERM']='dumb'
-			self._receive_routes[name] = proc[name]['receive-routes']
-			self._process[name] = subprocess.Popen(proc[name]['run'],
+			self._receive_routes[process] = self.supervisor.configuration.process[process]['receive-routes']
+			self._process[process] = subprocess.Popen(self.supervisor.configuration.process[process]['run'],
 				stdin=subprocess.PIPE,
 				stdout=subprocess.PIPE,
 				preexec_fn=preexec_helper
 				# This flags exists for python 2.7.3 in the documentation but on on my MAC
 				# creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
 			)
-			neighbor = proc[name]['neighbor']
-			self._notify.setdefault(neighbor,[]).append(name)
-			self.logger.processes("Forked process %s" % name)
+			neighbor = self.supervisor.configuration.process[process]['neighbor']
+			self._notify.setdefault(neighbor,[]).append(process)
+			self.logger.processes("Forked process %s" % process)
 		except (subprocess.CalledProcessError,OSError,ValueError),e:
-			self._broken.append(name)
-			self.logger.processes("Could not start process %s" % name)
+			self._broken.append(process)
+			self.logger.processes("Could not start process %s" % process)
 			self.logger.processes("reason: %s" % str(e))
 
 	def start (self):
-		proc = self.supervisor.configuration.process
-		for name in proc:
-			self._start(name)
-		for name in list(self._process):
-			if not name in proc:
-				self._terminate(name)
+		for process in self.supervisor.configuration.process:
+			self._start(process)
+		for process in list(self._process):
+			if not process in self.supervisor.configuration.process:
+				self._terminate(process)
 
 	def notify (self,neighbor):
-		for name in self._notify.get(neighbor,[]):
-			yield name
-		for name in self._notify.get('*',[]):
-			yield name
+		for process in self._notify.get(neighbor,[]):
+			yield process
+		for process in self._notify.get('*',[]):
+			yield process
 
 	def broken (self,neighbor):
 		if self._broken:
-			for name in self._notify.get(neighbor,[]):
-				if name in self._broken:
+			for process in self._notify.get(neighbor,[]):
+				if process in self._broken:
 					return True
 			if '*' in self._broken:
 				return True
@@ -118,9 +116,9 @@ class Processes (object):
 
 	def received (self):
 		lines = {}
-		for name in list(self._process):
+		for process in list(self._process):
 			try:
-				proc = self._process[name]
+				proc = self._process[process]
 				r = True
 				while r:
 					r,_,_ = select.select([proc.stdout,],[],[],0)
@@ -134,22 +132,22 @@ class Processes (object):
 							# there is not data to read
 							r = False
 						else:
-							self.logger.processes("Command from process %s : %s " % (name,line))
-							lines.setdefault(name,[]).append(line)
+							self.logger.processes("Command from process %s : %s " % (process,line))
+							lines.setdefault(process,[]).append(line)
 			except (subprocess.CalledProcessError,OSError,ValueError):
 				self.logger.processes("Issue with the process, terminating it and restarting it")
-				self._terminate(name)
-				self._start(name)
+				self._terminate(process)
+				self._start(process)
 		return lines
 
-	def write (self,name,string):
+	def write (self,process,string):
 		while True:
 			try:
-				self._process[name].stdin.write('%s\r\n' % string)
+				self._process[process].stdin.write('%s\r\n' % string)
 			except IOError,e:
-				self._broken.append(name)
+				self._broken.append(process)
 				if e.errno == errno.EPIPE:
-					self._broken.append(name)
+					self._broken.append(process)
 					self.logger.processes("Issue while sending data to our helper program")
 					raise ProcessError()
 				else:
@@ -159,7 +157,7 @@ class Processes (object):
 			break
 
 		try:
-			self._process[name].stdin.flush()
+			self._process[process].stdin.flush()
 		except IOError,e:
 			# AFAIK, the buffer should be flushed at the next attempt.
 			self.logger.processes("REPORT TO DEVELOPERS: IOError received while FLUSHING data to helper program %s, retrying" % str(e.errno))
@@ -168,6 +166,6 @@ class Processes (object):
 
 	# return all the process which are interrested in route update notification
 	def receive_routes (self):
-		for name in self._process:
-			if self._receive_routes[name]:
-				yield name
+		for process in self._process:
+			if self._receive_routes[process]:
+				yield process

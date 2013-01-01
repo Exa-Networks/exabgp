@@ -67,9 +67,8 @@ class Protocol (object):
 			if self.peer.neighbor.peer_updates:
 				message = 'neighbor %s connected\n' % self.peer.neighbor.peer_address
 				try:
-					proc = self.peer.supervisor.processes
-					for name in proc.notify(self.neighbor.peer_address):
-						proc.write(name,message)
+					for process in self.peer.supervisor.processes.notify(self.neighbor.peer_address):
+						self.peer.supervisor.processes.write(process,message)
 				except ProcessError:
 					raise Failure('Could not send message(s) to helper program(s) : %s' % message)
 
@@ -81,9 +80,8 @@ class Protocol (object):
 
 			if self.peer.neighbor.peer_updates:
 				try:
-					proc = self.peer.supervisor.processes
-					for name in proc.notify(self.neighbor.peer_address):
-						proc.api.down(name,self.peer.neighbor.peer_address,reason)
+					for process in self.peer.supervisor.processes.notify(self.neighbor.peer_address):
+						self.peer.supervisor.processes.api.down(process,self.peer.neighbor.peer_address,reason)
 				except ProcessError:
 					raise Failure('Could not send message(s) to helper program(s) : %s' % message)
 

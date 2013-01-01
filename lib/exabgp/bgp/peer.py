@@ -274,8 +274,8 @@ class Peer (object):
 						self.logger.routes(LazyFormat(self.me(''),str,route))
 					if self.neighbor.peer_updates:
 						try:
-							for name in self.supervisor.processes.notify(self.neighbor.peer_address):
-								self.supervisor.processes.api.routes(name,self.neighbor.peer_address,message.routes)
+							for process in self.supervisor.processes.notify(self.neighbor.peer_address):
+								self.supervisor.processes.api.routes(process,self.neighbor.peer_address,message.routes)
 						except ProcessError:
 							raise Failure('Could not send message(s) to helper program(s) : %s' % message)
 					else:
