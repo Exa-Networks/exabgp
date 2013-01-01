@@ -16,7 +16,7 @@ Version 3.0.12 - --th of -------- 2012
  * Improvement: Store routes in neighbor as set and not list, so removal are O(1)
     patch by: Justin Azoff (thank you)
  * Improvement: Limit the memory used for parsed route caching
- * Improvement: json encoding on the API (issue 17) not tested with flow routes, ipv6 or complex ipv4 routes
+ * Improvement: json encoding on the API (issue 17) not tested with flow routes or complex routes
 
 Version 3.0.11 - 21st of November 2012
  * Fix: add support for IPv6 MD5SUM
