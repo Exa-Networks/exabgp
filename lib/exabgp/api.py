@@ -83,12 +83,24 @@ class JSON (object):
 
 	# all those routes come from the same update, so let's save some parsing and group by attributes
 	def _routes (self,routes):
-		routes,copy = tee(routes,2)
-		route = copy.next()
+		announced = []
+		withdrawn = []
 
-		prefixes = '"nlri": [ %s ]' % ', '.join('"%s"' % str(_.nlri) for _ in routes)
+		for route in routes:
+			if route.action == 'announced': announced.append(route)
+			if route.action == 'withdrawn': withdrawn.append(route)
+
+		plus = ', '.join('"%s"' % str(_.nlri) for _ in announced)
+		minus = ', '.join('"%s"' % str(_.nlri) for _ in withdrawn)
+
+		nlri = '"nlri": { '
+		if plus: nlri += 'announce: [ %s ]' % plus
+		if plus and minus: nlri += ', '
+		if minus: nlri+= 'withdraw: [ %s ]' % minus
+		nlri += ' }'
+
 		attributes = '"attribute": { %s }' % route.attributes.json()
-		return '"update": { %s, %s } ' % (attributes,prefixes)
+		return '"update": { %s, %s } ' % (attributes,nlri)
 
 	def routes (self,process,neighbor,routes):
 		if self.silence: return
