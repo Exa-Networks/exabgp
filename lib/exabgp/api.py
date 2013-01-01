@@ -52,7 +52,7 @@ class JSON (object):
 		          '"application": "exabgp", '\
 		          '"version": "%s", '\
 		          '"encoder": "%s", ' \
-		          '"time": "%s"' \
+		          '"time": "%s", ' \
 		          '%s' \
 		       '}' % (self.version,self.encoder,time.time(),content)
 
