@@ -249,7 +249,7 @@ defaults = {
 		'nexthops'    :  (value.boolean,value.lower,'true', 'cache routes next-hops'),
 	},
 	'api' : {
-		'encoder'  :  (value.api,value.lower,'text', 'encoder to use with with external API (text or json)'),
+		'encoder'  :  (value.api,value.lower,'text', '(experimental) encoder to use with with external API (text or json)'),
 	},
 	# Here for internal use
 	'internal' : {
