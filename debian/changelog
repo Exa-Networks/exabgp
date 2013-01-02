@@ -1,15 +1,22 @@
+exabgp (3.0.12-1) unstable; urgency=low
+  
+  * New upstream release
+  * Closes: #687134 debconf abuse, notice of software behavior take places under
+    NEWS.Debian, not in a debconf screen, information moved accordingly.
+  * Closes: #693338 Japanese translation removed since debconf template is out.
+  * Closes: #697178 Russian translation removed since debconf template is out.
+  * Closes: #689533 UCF-based conf added. 
+    No more manual changes to exabgp.env, thanks to Federico Ceratto.
+            
+
+ -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Wed, 02 Jan 2013 11:42:00 +0000
+
 exabgp (3.0.11-1) unstable; urgency=low
   
   * New upstream release
   * Closes: #687134 (debconf abuse)
 
  -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Mon, 21 Nov 2012 18:19:00 +0000
-
-exabgp (3.0.10-2) UNRELEASED; urgency=low
-
-  * Ucf-based configuration added. Closes: #689533
-
- -- Federico Ceratto <federico.ceratto@gmail.com>  Sun, 04 Nov 2012 17:30:09 +0000
 
 exabgp (3.0.10-1) unstable; urgency=low
   

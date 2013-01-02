@@ -1,0 +1,4 @@
+Starting with ExaBGP 3.0.0, the file /etc/exabgp/exabgp.env is used to store the environment variables to configure the ExaBGP daemon.
+The variables related to the daemon startup (EXABGP_RUN, DAEMON_OPTS and ETC) remain under /etc/default/exabgp.
+This package will autogenerate the exabgp.env file based on your previous configuration.
+If you let DPKG replace /etc/default/exabgp with the package version, the new file will be adapted to include your previous settings.
