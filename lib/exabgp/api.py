@@ -86,18 +86,34 @@ class JSON (object):
 		announced = []
 		withdrawn = []
 
+		plus = {}
+		minus = {}
 		for route in routes:
-			if route.action == 'announced': announced.append(route)
-			if route.action == 'withdrawn': withdrawn.append(route)
+			if route.action == 'announced': 
+				plus.setdefault((route.nlri.afi,route.nlri.safi),[]).append(route)
+			if route.action == 'withdrawn':
+				minus.setdefault((route.nlri.afi,route.nlri.safi),[]).append(route)
 
-		plus = ', '.join('"%s"' % str(_.nlri) for _ in announced)
-		minus = ', '.join('"%s"' % str(_.nlri) for _ in withdrawn)
+		add = []
+		for family in plus:
+			routes = plus[family]
+			s  = '"%s %s": [ ' % (routes[0].nlri.afi,routes[0].nlri.safi)
+			s += ', '.join('"%s"' % str(_.nlri) for _ in routes)
+			s += ' ] '
+			add.append(s)
 
-		nlri = '"nlri": { '
-		if plus: nlri += '"announce": [ %s ]' % plus
-		if plus and minus: nlri += ', '
-		if minus: nlri+= '"withdraw": [ %s ]' % minus
-		nlri += ' }'
+		remove = []
+		for family in minus:
+			route = minus[family]
+			s  = '"%s %s": [ ' % (routes[0].nlri.afi,routes[0].nlri.safi)
+			s += ', '.join('"%s"' % str(_.nlri) for _ in routes)
+			s += ' ] '
+			remove.append(s)
+
+		nlri = ''
+		if add: nlri += '"announce": { %s }' % ', '.join(add)
+		if add and remove: nlri += ', '
+		if remove: nlri+= '"withdraw": { %s }' % ', '.join(remove)
 
 		attributes = '"attribute": { %s }' % route.attributes.json()
 		return '"update": { %s, %s } ' % (attributes,nlri)
