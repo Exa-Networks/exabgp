@@ -9,6 +9,8 @@ Copyright (c) 2012 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
 
+# Global status of a watchdog
+
 class _Status (dict):
 	_instance = None
 	
@@ -27,7 +29,9 @@ def Status ():
 		_Status._instance = _Status()
 	return _Status._instance
 
-class DisabledRoute (dict):
+# Route withdrawn in the configuration file
+
+class Withdrawn (dict):
 	def add (self,index,watchdog):
 		self[index] = watchdog
 
@@ -37,38 +41,46 @@ class DisabledRoute (dict):
 			if self[index] == watchdog:
 				del self[index]
 
+# Watchdog control
 
 class Watchdog (object):
 	def __init__ (self):
 		self.status = Status()
-		self.routes = DisabledRoute()
+		self.withdrawn = Withdrawn()
+		self.watchdog = {}
 
 	def integrate (self,route):
+		index = route.index()
+
+		if index in self.watchdog:
+			# we reloaded the configuration, do not change watchdogs
+			return
+
 		watchdog = route.attributes.get(AttributeID.INTERNAL_WATCHDOG,None)
 		if not watchdog:
 			# should never happen though !
 			return
-		self.status.flick(watchdog)
 
-		index = route.index()
+		self.status.flick(watchdog)
 
 		withdrawn = route.attributes.get(AttributeID.INTERNAL_WITHDRAW,None)
 		if withdrawn:
-			self.routes.add(index,watchdog)
+			self.withdrawn.add(index,watchdog)
+
+		self.watchdog[index] = watchdog
 
 	def announce (self,watchdog):
 		self.status.enable(watchdog)
-		self.routes.remove(watchdog)
+		self.withdrawn.remove(watchdog)
 
 	def withdraw (self,watchdog):
 		self.status.disable(watchdog)
-		self.routes.remove(watchdog)
 
 	def filtered (self,routes_generator):
 		for route in routes_generator:
 			index = route.index()
-			watchdog = self.routes.get(index,None)
+			watchdog = self.watchdog.get(index,None)
 			if not watchdog:
 				yield route
-			elif self.status[watchdog] and index not in self.routes:
+			elif self.status[watchdog] and index not in self.withdrawn:
 				yield route
