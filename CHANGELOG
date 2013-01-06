@@ -5,7 +5,7 @@ Version explained:
 
 Version 3.1.1 - 6th of January 2013
  * Complete Fix: watchdog feature (issue 13)
- * Improvement: JSON API 1.0, flowspec untested
+ * Improvement: JSON API 1.0, flowspec untested (issue 17)
 
 Version 3.1.0 - 2nd of January 2013
  * Partial Fix: watchdog feature
