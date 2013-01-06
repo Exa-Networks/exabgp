@@ -98,8 +98,15 @@ class Neighbor (object):
 	def remove_route (self,route):
 		try :
 			routes = self._routes[(route.nlri.afi,route.nlri.safi)]
-			routes.remove(route)
-			removed = True
+			if route.nlri.afi in (AFI.ipv4,AFI.ipv6):
+				for r in list(routes):
+					if r.nlri == route.nlri and \
+					   r.attributes.get(AttributeID.NEXT_HOP,None) == route.attributes.get(AttributeID.NEXT_HOP,None):
+						routes.remove(r)
+						removed = True
+			else:
+				routes.remove(route)
+				removed = True
 		except KeyError:
 			removed = False
 		return removed
