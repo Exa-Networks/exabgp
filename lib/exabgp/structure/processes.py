@@ -35,7 +35,7 @@ class Processes (object):
 		self.clean()
 		api = load().api.encoder
 		if api == 'json':
-			self.api = JSON(self.write,version,'unstable - use in production at your own risk')
+			self.api = JSON(self.write,version,'1.0')
 		else:
 			self.api = Text(self.write,version,'1.0')
 
