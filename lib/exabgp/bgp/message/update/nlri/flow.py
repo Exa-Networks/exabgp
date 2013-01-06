@@ -198,6 +198,14 @@ class Fragment (IOperationByteShort,NumericString):
 
 # ..........................................................
 
+def _unique ():
+	value = 0
+	while True:
+		yield value
+		value += 1
+
+unique = _unique()
+
 class FlowNLRI (Attributes,Address):
 	def __init__ (self,afi,safi):
 		Attributes.__init__(self)
@@ -267,6 +275,10 @@ class FlowNLRI (Attributes,Address):
 			string.append('%s %s' % (rules[0].NAME,''.join(s[1:])))
 		return ' '.join(string)
 
+	def json (self):
+		# this is a stop gap so flow route parsing does not crash exabgp
+		# delete unique when this is fixed
+		return '"flow-%d": { "string": "%s" }' % (unique.next(),str(self),)
 
 def _next_index ():
 	value = 0
