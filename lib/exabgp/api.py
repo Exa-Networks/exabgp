@@ -97,9 +97,9 @@ class JSON (object):
 		add = []
 		for family in plus:
 			routes = plus[family]
-			s  = '"%s %s": [ ' % (routes[0].nlri.afi,routes[0].nlri.safi)
-			s += ', '.join('"%s"' % str(_.nlri) for _ in routes)
-			s += ' ]'
+			s  = '"%s %s": { ' % (routes[0].nlri.afi,routes[0].nlri.safi)
+			s += ', '.join('%s' % _.nlri.json() for _ in routes)
+			s += ' }'
 			add.append(s)
 
 		remove = []

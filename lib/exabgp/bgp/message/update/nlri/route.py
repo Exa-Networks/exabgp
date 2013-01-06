@@ -162,6 +162,16 @@ class NLRI (BGPPrefix):
 	def __str__ (self):
 		return "%s%s%s%s" % (BGPPrefix.__str__(self),str(self.labels),str(self.path_info),str(self.rd))
 
+	def json (self):
+		label = str(self.labels)
+		pathinfo = str(self.path_info)
+		rd = str(self.rd)
+		
+		str_label = ', "label": "%s"' % label if label else ''
+		str_pathinfo = ', "path-information": "%s"' % pathinfo if pathinfo else ''
+		str_rd = ', "rd": "%s"' % rd if rd else ''
+		return '"%s": { %s%s%s }' % (BGPPrefix.__str__(self),str_label,str_pathinfo,str_rd)
+
 	def pack (self,addpath):
 		if addpath:
 			path_info = self.path_info.pack()
@@ -242,9 +252,6 @@ class Route (object):
 
 	def __str__ (self):
 		return "route %s%s" % (str(self.nlri),str(self.attributes))
-
-	def json (self):
-		return '"%s": { %s }' % (str(self.nlri),self.attributes.json())
 
 	def __hash__(self):
 		return hash(str(self))
