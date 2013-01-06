@@ -3,6 +3,9 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.1.2 - --- of January 2013
+ * Fix: bug with JSON parsing when have label, pathinfo or rd
+
 Version 3.1.1 - 6th of January 2013
  * Complete Fix: watchdog feature (issue 13)
  * Improvement: JSON API 1.0, flowspec untested (issue 17)

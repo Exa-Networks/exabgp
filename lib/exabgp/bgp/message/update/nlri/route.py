@@ -164,13 +164,14 @@ class NLRI (BGPPrefix):
 
 	def json (self):
 		label = str(self.labels)
-		pathinfo = str(self.path_info)
-		rd = str(self.rd)
+		pinfo = str(self.path_info)
+		rdist = str(self.rd)
 		
-		str_label = ', "label": "%s"' % label if label else ''
-		str_pathinfo = ', "path-information": "%s"' % pathinfo if pathinfo else ''
-		str_rd = ', "route-distinguisher": "%s"' % rd if rd else ''
-		return '"%s": { %s%s%s }' % (BGPPrefix.__str__(self),str_label,str_pathinfo,str_rd)
+		rd = []
+		if label: r.append('"label": "%s"' % label)
+		if pinfo: r.append('"path-information": "%s"' % pinfo)
+		if rdist: r.append('"route-distinguisher": "%s"' % rdist)
+		return '"%s": { %s }' % (BGPPrefix.__str__(self),", ".join(r))
 
 	def pack (self,addpath):
 		if addpath:
