@@ -169,7 +169,7 @@ class NLRI (BGPPrefix):
 		
 		str_label = ', "label": "%s"' % label if label else ''
 		str_pathinfo = ', "path-information": "%s"' % pathinfo if pathinfo else ''
-		str_rd = ', "rd": "%s"' % rd if rd else ''
+		str_rd = ', "route-distinguisher": "%s"' % rd if rd else ''
 		return '"%s": { %s%s%s }' % (BGPPrefix.__str__(self),str_label,str_pathinfo,str_rd)
 
 	def pack (self,addpath):
