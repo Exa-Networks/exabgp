@@ -27,7 +27,7 @@ from exabgp.bgp.message.refresh import RouteRefresh
 
 from exabgp.structure.processes import ProcessError
 
-from exabgp.structure.log import Logger
+from exabgp.structure.log import Logger,LazyFormat
 
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000
@@ -69,7 +69,7 @@ class Protocol (object):
 					for process in self.peer.supervisor.processes.notify(self.neighbor.peer_address):
 						self.peer.supervisor.processes.api.connected(process,self.peer.neighbor.peer_address)
 				except ProcessError:
-					raise Failure('Could not send message(s) to helper program(s) : %s' % message)
+					raise Failure('Could not send connected message(s) to helper program(s)')
 
 	def close (self,reason='unspecified'):
 		if self.connection:
@@ -82,30 +82,30 @@ class Protocol (object):
 					for process in self.peer.supervisor.processes.notify(self.neighbor.peer_address):
 						self.peer.supervisor.processes.api.down(process,self.peer.neighbor.peer_address,reason)
 				except ProcessError:
-					raise Failure('Could not send message(s) to helper program(s) : %s' % message)
+					raise Failure('Could not send down message(s) to helper program(s)')
 
 	# Read from network .......................................................
 
-	def read_message (self):
+	def read_message (self,keepalive_comment=''):
 		# This call reset the time for the timeout in
 		if not self.connection.pending(True):
 			return NOP()
 
 		length = 19
-		data = ''
+		header = ''
 		while length:
 			if self.connection.pending():
 				delta = self.connection.read(length)
-				data += delta
+				header += delta
 				length -= len(delta)
 
-		if data[:16] != Message.MARKER:
+		if header[:16] != Message.MARKER:
 			# We are speaking BGP - send us a valid Marker
 			raise Notify(1,1,'The packet received does not contain a BGP marker')
 
-		raw_length = data[16:18]
+		raw_length = header[16:18]
 		msg_length = unpack('!H',raw_length)[0]
-		msg = data[18]
+		msg = header[18]
 
 		if (msg_length < 19 or msg_length > 4096):
 			# BAD Message Length
@@ -122,34 +122,62 @@ class Protocol (object):
 			raise Notify(1,2,'%d has an invalid message length of %d' %(str(msg),msg_length))
 
 		length = msg_length - 19
-		data = ''
+		body = ''
 		while length:
 			if self.connection.pending():
 				delta = self.connection.read(length)
-				data += delta
+				body += delta
 				length -= len(delta)
 
-		if msg == Notification.TYPE:
-			raise Notification().factory(data)
-
 		if msg == KeepAlive.TYPE:
+			self.logger.message(self.me('<< KEEPALIVE%s' % keepalive_comment))
 			return KeepAlive()
 
-		if msg == Open.TYPE:
-			return Open().factory(data)
+		elif msg == Update.TYPE:
+			self.logger.message(self.me('<< UPDATE'))
+	
+			if self.neighbor.api_received_updates:
+				try:
+					for process in self.peer.supervisor.processes.notify(self.neighbor.peer_address):
+						self.peer.supervisor.processes.api.update(process,self.peer.neighbor.peer_address)
+				except ProcessError:
+					raise Failure('Could not send update message(s) to helper program(s)')
 
-		if msg == Update.TYPE:
+			if msg_length == 30 and body.startswith(EOR.PREFIX):
+				return EOR().factory(body)
+
 			if self.neighbor.api_received_routes:
-				if msg_length == 30 and data.startswith(EOR.PREFIX):
-					return EOR().factory(data)
-				update = Update().factory(self.negociated,data)
-				if update.routes:
-					return update
+				update = Update().factory(self.negociated,body)
+
+				for route in update.routes:
+					self.logger.routes(LazyFormat(self.me(''),str,route))
+
+				try:
+					for process in self.peer.supervisor.processes.notify(self.neighbor.peer_address):
+						self.peer.supervisor.processes.api.routes(process,self.neighbor.peer_address,update.routes)
+				except ProcessError:
+					raise Failure('Could not send routes message(s) to helper program(s)')
+				return update
+			else:
+				return Update()
+
+		elif msg == Notification.TYPE:
+			self.logger.message(self.me('<< NOTIFICATION'))
+			raise Notification().factory(body)
+
+		elif msg == Open.TYPE:
+			return Open().factory(body)
+
 
 		if msg == RouteRefresh.TYPE:
-			return RouteRefresh().factory(data)
+			self.logger.message(self.me('<< ROUTE-REFRESH'))
+			return RouteRefresh().factory(body)
+
+		else:
+			self.logger.message(self.me('<< NOP'))
 
 		return NOP().factory(msg)
+
 
 	def read_open (self,_open,ip):
 		message = self.read_message()
@@ -191,12 +219,11 @@ class Protocol (object):
 		return message
 
 	def read_keepalive (self,comment=''):
-		message = self.read_message()
+		message = self.read_message(comment)
 		if message.TYPE == NOP.TYPE:
 			return message
 		if message.TYPE != KeepAlive.TYPE:
 			raise Notify(5,2)
-		self.logger.message(self.me('<< KEEPALIVE%s' % comment))
 		return message
 
 	#

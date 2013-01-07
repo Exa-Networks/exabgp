@@ -21,7 +21,7 @@ from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.protocol import Protocol
 from exabgp.structure.processes import ProcessError
 
-from exabgp.structure.log import Logger,LazyFormat
+from exabgp.structure.log import Logger
 
 # ===================================================================
 # We tried to read data when the connection is not established (as it seems select let us do that !)
@@ -254,46 +254,12 @@ class Peer (object):
 				message = self.bgp.read_message()
 				timer.tick(message)
 
-
-				#
-				# KEEPALIVE
-				#
-
-				if message.TYPE == KeepAlive.TYPE:
-					self.logger.message(self.me('<< KEEPALIVE'))
-
 				#
 				# UPDATE
 				#
 
-				elif message.TYPE == Update.TYPE:
+				if message.TYPE == Update.TYPE:
 					counter.increment(len(message.routes))
-
-					self.logger.message(self.me('<< %s' % str(message)))
-					for route in message.routes:
-						self.logger.routes(LazyFormat(self.me(''),str,route))
-					if self.neighbor.api_received_routes:
-						try:
-							for process in self.supervisor.processes.notify(self.neighbor.peer_address):
-								self.supervisor.processes.api.routes(process,self.neighbor.peer_address,message.routes)
-						except ProcessError:
-							raise Failure('Could not send message(s) to helper program(s) : %s' % message)
-					else:
-						self.logger.message(self.me('<< UPDATE (not parsed)'))
-
-				#
-				# ROUTE REFRESH
-				#
-
-				elif message.TYPE == RouteRefresh.TYPE:
-					self.logger.message(self.me('<< ROUTE-REFRESH'))
-
-				#
-				# NO MESSAGES
-				#
-
-				elif message.TYPE not in (NOP.TYPE,):
-					self.logger.message(self.me('<< %d' % ord(message.TYPE)))
 
 				#
 				# GIVE INFORMATION ON THE NUMBER OF ROUTES SEEN
