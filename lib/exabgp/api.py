@@ -10,6 +10,15 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 import time
 from itertools import tee
 
+from exabgp.structure.utils import dump
+
+def hexstring (value):
+	def spaced (value):
+		for v in value:
+			yield '%02X' % ord(v)
+	return ''.join(spaced(value))
+
+
 class Text (object):
 	def __init__ (self,write,version,encoder):
 		self.write = write
@@ -32,6 +41,10 @@ class Text (object):
 	def shutdown (self,process):
 		if self.silence: return
 		self.write(process,'shutdown')
+
+	def update (self,process,neighbor,header,body):
+		if self.silence: return
+		self.write(process,'neighbor %s update header %s body %s\n' % (neighbor,hexstring(header),hexstring(body)))
 
 	def routes (self,process,neighbor,routes):
 		if self.silence: return
@@ -80,6 +93,10 @@ class JSON (object):
 	def shutdown (self,process):
 		if self.silence: return
 		self.write(process,self._header(self._kv({'notification':'shutdown'})))
+
+	def update (self,process,neighbor,header,body):
+		if self.silence: return
+		self.write(process,self._header(self._neighbor(neighbor,self._kv({'header':hexstring(header),'body':hexstring(body)}))))
 
 	# all those routes come from the same update, so let's save some parsing and group by attributes
 	def _routes (self,routes):

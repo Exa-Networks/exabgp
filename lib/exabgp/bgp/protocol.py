@@ -139,7 +139,7 @@ class Protocol (object):
 			if self.neighbor.api_received_updates:
 				try:
 					for process in self.peer.supervisor.processes.notify(self.neighbor.peer_address):
-						self.peer.supervisor.processes.api.update(process,self.peer.neighbor.peer_address)
+						self.peer.supervisor.processes.api.update(process,self.peer.neighbor.peer_address,header,body)
 				except ProcessError:
 					raise Failure('Could not send update message(s) to helper program(s)')
 
@@ -159,7 +159,7 @@ class Protocol (object):
 					raise Failure('Could not send routes message(s) to helper program(s)')
 				return update
 			else:
-				return Update()
+				return NOP()
 
 		elif msg == Notification.TYPE:
 			self.logger.message(self.me('<< NOTIFICATION'))
