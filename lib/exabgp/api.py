@@ -42,9 +42,13 @@ class Text (object):
 		if self.silence: return
 		self.write(process,'shutdown')
 
-	def received (self,process,neighbor,category,header,body):
+	def receive (self,process,neighbor,category,header,body):
 		if self.silence: return
 		self.write(process,'neighbor %s received %s header %s body %s\n' % (neighbor,ord(category),hexstring(header),hexstring(body)))
+
+	def send (self,process,neighbor,category,header,body):
+		if self.silence: return
+		self.write(process,'neighbor %s sent %s header %s body %s\n' % (neighbor,ord(category),hexstring(header),hexstring(body)))
 
 	def routes (self,process,neighbor,routes):
 		if self.silence: return
@@ -97,9 +101,13 @@ class JSON (object):
 		if self.silence: return
 		self.write(process,self._header(self._kv({'notification':'shutdown'})))
 
-	def received (self,process,neighbor,category,header,body):
+	def receive (self,process,neighbor,category,header,body):
 		if self.silence: return
 		self.write(process,self._header(self._neighbor(neighbor,self._minimalkv({'received':ord(category),'header':hexstring(header),'body':hexstring(body)}))))
+
+	def send (self,process,neighbor,category,header,body):
+		if self.silence: return
+		self.write(process,self._header(self._neighbor(neighbor,self._minimalkv({'sent':ord(category),'header':hexstring(header),'body':hexstring(body)}))))
 
 	# all those routes come from the same update, so let's save some parsing and group by attributes
 	def _routes (self,routes):

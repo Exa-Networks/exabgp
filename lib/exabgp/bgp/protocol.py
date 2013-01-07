@@ -84,6 +84,15 @@ class Protocol (object):
 				except ProcessError:
 					raise Failure('Could not send down message(s) to helper program(s)')
 
+	def write (self,message):
+		if self.neighbor.api_send_packets:
+			try:
+				for process in self.peer.supervisor.processes.notify(self.neighbor.peer_address):
+					self.peer.supervisor.processes.api.send(process,self.peer.neighbor.peer_address,message[18],message[:19],message[19:])
+			except ProcessError:
+				raise Failure('Could not send update message(s) to helper program(s)')
+		return self.connection.write(message)
+
 	# Read from network .......................................................
 
 	def read_message (self,keepalive_comment=''):
@@ -129,10 +138,10 @@ class Protocol (object):
 				body += delta
 				length -= len(delta)
 
-		if self.neighbor.api_received_packets:
+		if self.neighbor.api_receive_packets:
 			try:
 				for process in self.peer.supervisor.processes.notify(self.neighbor.peer_address):
-					self.peer.supervisor.processes.api.received(process,self.peer.neighbor.peer_address,msg,header,body)
+					self.peer.supervisor.processes.api.receive(process,self.peer.neighbor.peer_address,msg,header,body)
 			except ProcessError:
 				raise Failure('Could not send update message(s) to helper program(s)')
 
@@ -146,7 +155,7 @@ class Protocol (object):
 			if msg_length == 30 and body.startswith(EOR.PREFIX):
 				return EOR().factory(body)
 
-			if self.neighbor.api_received_routes:
+			if self.neighbor.api_receive_routes:
 				update = Update().factory(self.negociated,body)
 
 				for route in update.routes:
@@ -242,7 +251,7 @@ class Protocol (object):
 		self.negociated.sent(sent_open)
 
 		# we do not buffer open message in purpose
-		if not self.connection.write(sent_open.message()):
+		if not self.write(sent_open.message()):
 			raise Failure('Could not send open')
 		self.logger.message(self.me('>> %s' % sent_open))
 		return sent_open
@@ -250,7 +259,7 @@ class Protocol (object):
 	def new_keepalive (self,comment=''):
 		k = KeepAlive()
 		m = k.message()
-		written = self.connection.write(m)
+		written = self.write(m)
 		if not written:
 			self.logger.message(self.me('|| buffer not yet empty, adding KEEPALIVE to it'))
 			self._messages.append((1,'KEEPALIVE%s' % comment,m))
@@ -269,7 +278,7 @@ class Protocol (object):
 				pass
 
 	def new_notification (self,notification):
-		return self.connection.write(notification.message())
+		return self.write(notification.message())
 
 	#
 	# Sending / Buffer handling
@@ -296,7 +305,7 @@ class Protocol (object):
 			self.logger.message(self.me("self._messages of %d/%d chunked routes" % (nb_backlog,MAX_BACKLOG)))
 		while self._messages:
 			number,name,update = self._messages[0]
-			if not self.connection.write(update):
+			if not self.write(update):
 				self.logger.message(self.me("|| failed to send %d %s(s) from buffer" % (number,name)))
 				break
 			self._messages.pop(0)
@@ -331,7 +340,7 @@ class Protocol (object):
 			sending = True
 			for number,update in chunked(generator,self.message_size):
 				if sending:
-					if self.connection.write(update):
+					if self.write(update):
 						self.logger.message(self.me('>> %d %s(s)' % (number,name)))
 						yield number
 					else:

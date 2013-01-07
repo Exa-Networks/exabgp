@@ -474,15 +474,16 @@ class Configuration (object):
 			# legacy ...
 			if command == 'parse-routes': 
 				self._set_process_command(scope,'neighbor-changes',tokens[1:])
-				self._set_process_command(scope,'received-routes',tokens[1:])
+				self._set_process_command(scope,'receive-routes',tokens[1:])
 				return True
 			# legacy ...
 			if command == 'peer-updates':
 				self._set_process_command(scope,'neighbor-changes',tokens[1:])
-				self._set_process_command(scope,'received-routes',tokens[1:])
+				self._set_process_command(scope,'receive-routes',tokens[1:])
 			# new interface
-			if command == 'received-packets': return self._set_process_command(scope,'received-packets',tokens[1:])
-			if command == 'received-routes': return self._set_process_command(scope,'received-routes',tokens[1:])
+			if command == 'receive-packets': return self._set_process_command(scope,'receive-packets',tokens[1:])
+			if command == 'send-packets': return self._set_process_command(scope,'send-packets',tokens[1:])
+			if command == 'receive-routes': return self._set_process_command(scope,'receive-routes',tokens[1:])
 			if command == 'neighbor-changes': return self._set_process_command(scope,'neighbor-changes',tokens[1:])
 
 		elif name == 'static':
@@ -498,12 +499,13 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-			r = self._dispatch(scope,'process',[],['run','received-routes','received-packets','neighbor-changes',  'peer-updates','parse-routes'])
+			r = self._dispatch(scope,'process',[],['run','receive-packets','send-packets','receive-routes','neighbor-changes',  'peer-updates','parse-routes'])
 			if r is False: return False
 			if r is None: break
 		self.process.setdefault(tokens[0],{})['run'] = scope[-1].pop('process-run')
-		self.process[tokens[0]]['receive-packets'] = scope[-1].get('received-packets',False)
-		self.process[tokens[0]]['receive-routes'] = scope[-1].get('received-routes',False)
+		self.process[tokens[0]]['receive-packets'] = scope[-1].get('receive-packets',False)
+		self.process[tokens[0]]['send-packets'] = scope[-1].get('receive-packets',False)
+		self.process[tokens[0]]['receive-routes'] = scope[-1].get('receive-routes',False)
 		if 'peer-address' in scope[-1]:
 			self.process[tokens[0]]['neighbor'] = scope[-1]['peer-address']
 		else:
@@ -793,8 +795,9 @@ class Configuration (object):
 			v = local_scope.get('hold-time','')
 			if v: neighbor.hold_time = v
 
-			neighbor.api_received_packets = local_scope.get('received-packets',False)
-			neighbor.api_received_routes = local_scope.get('received-routes',False)
+			neighbor.api_receive_packets = local_scope.get('receive-packets',False)
+			neighbor.api_send_packets = local_scope.get('send-packets',False)
+			neighbor.api_receive_routes = local_scope.get('receive-routes',False)
 			neighbor.api_neighbor_changes = local_scope.get('neighbor-changes',False)
 
 			v = local_scope.get('routes',[])
