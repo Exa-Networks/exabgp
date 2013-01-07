@@ -3,7 +3,7 @@
 debug.py
 
 Created by Thomas Mangin on 2011-03-29.
-Copyright (c) 2011-2012 Exa Networks. All rights reserved.
+Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
 import os

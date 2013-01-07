@@ -3,7 +3,7 @@
 notification.py
 
 Created by Thomas Mangin on 2009-11-05.
-Copyright (c) 2009-2012 Exa Networks. All rights reserved.
+Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message import Failure, Message

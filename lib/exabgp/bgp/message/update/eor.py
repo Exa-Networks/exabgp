@@ -3,7 +3,7 @@
 eor.py
 
 Created by Thomas Mangin on 2010-01-16.
-Copyright (c) 2010-2012 Exa Networks. All rights reserved.
+Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message import Message
