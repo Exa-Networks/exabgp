@@ -43,8 +43,8 @@ def configuration (etc):
 
 setup(name='exabgp',
 	version=version,
-	description='software defined networking with BGP',
-	long_description="A BGP software which can be used to announce IPv4/IPv6/MPLS/Flow routes, manipulate received routes/generate routes though third party plugins/applications",
+	description='BGP swiss army knife',
+	long_description="Control your network using BGP from any commodity servers and reap the benefit of software defined networking without OpenFlow. Receive parsed BGP updates in a friendly form (plain text or JSON) and manipulate them with simple scripts.",
 	author='Thomas Mangin',
 	author_email='thomas.mangin@exa-networks.co.uk',
 	url='http://code.google.com/p/exabgp/',
