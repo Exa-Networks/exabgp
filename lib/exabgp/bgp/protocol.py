@@ -129,6 +129,13 @@ class Protocol (object):
 				body += delta
 				length -= len(delta)
 
+		if self.neighbor.api_received_packets:
+			try:
+				for process in self.peer.supervisor.processes.notify(self.neighbor.peer_address):
+					self.peer.supervisor.processes.api.received(process,self.peer.neighbor.peer_address,msg,header,body)
+			except ProcessError:
+				raise Failure('Could not send update message(s) to helper program(s)')
+
 		if msg == KeepAlive.TYPE:
 			self.logger.message(self.me('<< KEEPALIVE%s' % keepalive_comment))
 			return KeepAlive()
@@ -136,13 +143,6 @@ class Protocol (object):
 		elif msg == Update.TYPE:
 			self.logger.message(self.me('<< UPDATE'))
 	
-			if self.neighbor.api_received_updates:
-				try:
-					for process in self.peer.supervisor.processes.notify(self.neighbor.peer_address):
-						self.peer.supervisor.processes.api.update(process,self.peer.neighbor.peer_address,header,body)
-				except ProcessError:
-					raise Failure('Could not send update message(s) to helper program(s)')
-
 			if msg_length == 30 and body.startswith(EOR.PREFIX):
 				return EOR().factory(body)
 

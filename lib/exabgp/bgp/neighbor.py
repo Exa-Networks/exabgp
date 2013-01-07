@@ -40,7 +40,7 @@ class Neighbor (object):
 
 		# processes
 		self.api_neighbor_changes = None
-		self.api_received_updates = None
+		self.api_received_packets = None
 		self.api_received_routes = None
 
 		# capability
