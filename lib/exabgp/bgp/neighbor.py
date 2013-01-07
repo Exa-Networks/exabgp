@@ -39,8 +39,9 @@ class Neighbor (object):
 		self.group_updates = None
 
 		# processes
-		self.parse_routes = None
-		self.peer_updates = None
+		self.api_neighbor_changes = None
+		self.api_received_updates = None
+		self.api_received_routes = None
 
 		# capability
 		self.route_refresh = False

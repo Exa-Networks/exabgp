@@ -21,7 +21,7 @@ neighbor 10.0.0.3 {
   }
 
 	process parsed-route-backend {
-		parse-routes;
+		received-routes;
 		run etc/exabgp/processes/syslog-1.py;
 	}
 

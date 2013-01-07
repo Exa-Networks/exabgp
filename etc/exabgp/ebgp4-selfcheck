@@ -16,8 +16,8 @@ neighbor 1.2.3.4 {
 	}
 
 	process parsed-route-backend {
-		parse-routes;
-		peer-updates;
+		neighbor-changes;
+		received-routes;
 		run etc/exabgp/processes/syslog-1.py;
 	}
 

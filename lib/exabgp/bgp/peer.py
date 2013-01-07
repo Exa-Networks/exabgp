@@ -205,7 +205,7 @@ class Peer (object):
 			#
 
 			self.logger.network('Connected to peer %s' % self.neighbor.name())
-			if self.neighbor.peer_updates:
+			if self.neighbor.api_neighbor_changes:
 				try:
 					for process in self.supervisor.processes.notify(self.neighbor.peer_address):
 						self.supervisor.processes.api.up(process,self.neighbor.peer_address)
@@ -272,7 +272,7 @@ class Peer (object):
 					self.logger.message(self.me('<< %s' % str(message)))
 					for route in message.routes:
 						self.logger.routes(LazyFormat(self.me(''),str,route))
-					if self.neighbor.peer_updates:
+					if self.neighbor.api_received_routes:
 						try:
 							for process in self.supervisor.processes.notify(self.neighbor.peer_address):
 								self.supervisor.processes.api.routes(process,self.neighbor.peer_address,message.routes)

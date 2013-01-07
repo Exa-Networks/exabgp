@@ -64,11 +64,10 @@ class Protocol (object):
 			ttl = self.neighbor.ttl
 			self.connection = Connection(peer,local,md5,ttl)
 
-			if self.peer.neighbor.peer_updates:
-				message = 'neighbor %s connected\n' % self.peer.neighbor.peer_address
+			if self.peer.neighbor.api_neighbor_changes:
 				try:
 					for process in self.peer.supervisor.processes.notify(self.neighbor.peer_address):
-						self.peer.supervisor.processes.write(process,message)
+						self.peer.supervisor.processes.api.connected(process,self.peer.neighbor.peer_address)
 				except ProcessError:
 					raise Failure('Could not send message(s) to helper program(s) : %s' % message)
 
@@ -78,7 +77,7 @@ class Protocol (object):
 			self.connection.close()
 			self.connection = None
 
-			if self.peer.neighbor.peer_updates:
+			if self.peer.neighbor.api_neighbor_changes:
 				try:
 					for process in self.peer.supervisor.processes.notify(self.neighbor.peer_address):
 						self.peer.supervisor.processes.api.down(process,self.peer.neighbor.peer_address,reason)
@@ -140,7 +139,7 @@ class Protocol (object):
 			return Open().factory(data)
 
 		if msg == Update.TYPE:
-			if self.neighbor.parse_routes:
+			if self.neighbor.api_received_routes:
 				if msg_length == 30 and data.startswith(EOR.PREFIX):
 					return EOR().factory(data)
 				update = Update().factory(self.negociated,data)

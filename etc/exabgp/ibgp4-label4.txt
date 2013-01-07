@@ -7,8 +7,8 @@ neighbor 10.0.0.10 {
 	hold-time 180;
 
 	process parsed-route-backend {
-		parse-routes;
-		peer-updates;
+		neighbor-changes;
+		received-routes;
 		run etc/exabgp/processes/syslog-1.py;
 	}
 
