@@ -125,7 +125,8 @@ class JSON (object):
 		if add and remove: nlri += ', '
 		if remove: nlri+= '"withdraw": { %s }' % ', '.join(remove)
 
-		attributes = '"attribute": { %s }' % route.attributes.json()
+		attr = route.attributes.json()
+		attributes = '' if not attr else '"attribute": { %s }' % attr
 		return '"update": { %s, %s } ' % (attributes,nlri)
 
 	def routes (self,neighbor,routes):
