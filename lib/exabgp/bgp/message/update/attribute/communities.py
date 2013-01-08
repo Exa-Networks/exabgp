@@ -152,7 +152,7 @@ class ECommunity (object):
 		return self.community
 
 	def json (self):
-		return '[ %s, %s, %s, %s, %s, %s ]' % unpack('!BBBBBB',self.community)
+		return '[ %s, %s, %s, %s, %s, %s, %s, %s ]' % unpack('!BBBBBBBB',self.community)
 
 	def __str__ (self):
 		# 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0F
