@@ -31,12 +31,10 @@ class Community (object):
 		elif community == self.NO_EXPORT_SUBCONFED:
 			self._str = 'no-export-subconfed'
 		else:
-			integer = unpack('!L',community)[0]
-			self._str = "%d:%d" % (integer >> 16, integer & 0xFFFF)
+			self._str = "%d:%d" % unpack('!HH',self.community)
 
 	def json (self):
-		integer = unpack('!L',self.community)[0]
-		return "[ %d, %d ]" % (integer >> 16, integer & 0xFFFF)
+		return "[ %d, %d ]" % unpack('!HH',self.community)
 
 	def pack (self):
 		return self.community
@@ -152,6 +150,9 @@ class ECommunity (object):
 
 	def pack (self):
 		return self.community
+
+	def json (self):
+		return '[ %s, %s, %s, %s, %s, %s ]' % unpack('!BBBBBB',self.community)
 
 	def __str__ (self):
 		# 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0F
