@@ -107,7 +107,7 @@ class JSON (object):
 
 	def send (self,process,neighbor,category,header,body):
 		if self.silence: return
-		self.write(process,self._header(self._neighbor(neighbor,self._minimalkv({'sent':ord(category),'header':hexstring(header),'body':hexstring(body)}))))
+		self.write(process,self._header(self._neighbor(neighbor,'"update": { %s } ' % self._minimalkv({'sent':ord(category),'header':hexstring(header),'body':hexstring(body)}))))
 
 	# all those routes come from the same update, so let's save some parsing and group by attributes
 	def _routes (self,routes):
