@@ -103,7 +103,7 @@ class JSON (object):
 
 	def receive (self,process,neighbor,category,header,body):
 		if self.silence: return
-		self.write(process,self._header(self._neighbor(neighbor,self._minimalkv({'received':ord(category),'header':hexstring(header),'body':hexstring(body)}))))
+		self.write(process,self._header(self._neighbor(neighbor,'"update": { %s } ' % self._minimalkv({'received':ord(category),'header':hexstring(header),'body':hexstring(body)}))))
 
 	def send (self,process,neighbor,category,header,body):
 		if self.silence: return
