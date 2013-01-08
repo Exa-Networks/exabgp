@@ -1,0 +1,26 @@
+group test {
+	process parsed-route-backend {
+		run etc/exabgp/processes/syslog-1.py;
+		api-encoder json;
+	}
+
+
+	neighbor 10.0.0.3 {
+		description "will pass received routes to the program";
+		router-id 10.0.0.2;
+		local-address 10.0.0.2;
+		local-as 65533;
+		peer-as 65533;
+		hold-time 180;
+
+		process {
+			neighbor-changes;
+    	send-packets;
+    	receive-packets;
+    	receive-routes;
+		}
+
+		static {
+		}
+	}
+}

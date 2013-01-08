@@ -8,6 +8,7 @@ Version 3.1.2 -
  * Change: tidy process command name (keeping compatibility)
  * Improvement: pass raw update message to the API
  * Improvement: better control of the API message passed
+ * Improvement: allow/make work a global process for multiples peers
 
 Version 3.1.1 - 6th of January 2013
  * Complete Fix: watchdog feature (issue 13)

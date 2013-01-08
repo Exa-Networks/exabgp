@@ -37,13 +37,7 @@ class Processes (object):
 	def clean (self):
 		self._process = {}
 		self._api = {}
-		self._event = {
-			'receive-packets' : {},
-			'send-packets': {},
-			'receive-routes': {},
-			'neighbor-changes': {},
-			'api-encoder': {},
-		}
+		self._api_encoder = {}
 		self._neighbor_process = {}
 		self._broken = []
 
@@ -56,7 +50,7 @@ class Processes (object):
 	def terminate (self):
 		for process in list(self._process):
 			if not self.silence:
-				self._write(process,self._api[process].shutdown())
+				self._write(process,self._api_encoder[process].shutdown())
 		self.silence = True
 		time.sleep(0.1)
 		for process in list(self._process):
@@ -77,27 +71,26 @@ class Processes (object):
 				self.logger.processes("Can not start process, no configuration for it (anymore ?)")
 				return
 
-			api = self.supervisor.configuration.process[process]['api-encoder']
-			self._api[process] = JSON('1.0') if api == 'json' else Text('1.0')
-
-			self._event['receive-packets'][process] = self.supervisor.configuration.process[process]['receive-packets']
-			self._event['send-packets'][process] = self.supervisor.configuration.process[process]['send-packets']
-			self._event['receive-routes'][process] = self.supervisor.configuration.process[process]['receive-routes']
-			self._event['neighbor-changes'][process] = self.supervisor.configuration.process[process]['neighbor-changes']			
-
 			# Prevent some weird termcap data to be created at the start of the PIPE
 			# \x1b[?1034h (no-eol) (esc)
 			os.environ['TERM']='dumb'
-			self._process[process] = subprocess.Popen(self.supervisor.configuration.process[process]['run'],
-				stdin=subprocess.PIPE,
-				stdout=subprocess.PIPE,
-				preexec_fn=preexec_helper
-				# This flags exists for python 2.7.3 in the documentation but on on my MAC
-				# creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
-			)
+			
+			run = self.supervisor.configuration.process[process].get('run','')
+			if run:
+				api = self.supervisor.configuration.process[process]['api-encoder']
+				self._api_encoder[process] = JSON('1.0') if api == 'json' else Text('1.0')
+
+				self._process[process] = subprocess.Popen(run,
+					stdin=subprocess.PIPE,
+					stdout=subprocess.PIPE,
+					preexec_fn=preexec_helper
+					# This flags exists for python 2.7.3 in the documentation but on on my MAC
+					# creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+				)
+				self.logger.processes("Forked process %s" % process)
+
 			neighbor = self.supervisor.configuration.process[process]['neighbor']
 			self._neighbor_process.setdefault(neighbor,[]).append(process)
-			self.logger.processes("Forked process %s" % process)
 		except (subprocess.CalledProcessError,OSError,ValueError),e:
 			self._broken.append(process)
 			self.logger.processes("Could not start process %s" % process)
@@ -112,11 +105,11 @@ class Processes (object):
 
 	def broken (self,neighbor):
 		if self._broken:
+			if '*' in self._broken:
+				return True
 			for process in self._neighbor_process.get(neighbor,[]):
 				if process in self._broken:
 					return True
-			if '*' in self._broken:
-				return True
 		return False
 
 	def received (self):
@@ -171,44 +164,39 @@ class Processes (object):
 
 	def _notify (self,neighbor,event):
 		for process in self._neighbor_process.get(neighbor,[]):
-			if process in self._event[event]:
+			if process in self._process:
 				yield process
 		for process in self._neighbor_process.get('*',[]):
-			if process in self._event[event]:
-				yield process
-
-	def _notify_all (self):
-		for neighbor in self._neighbor_process:
-			for process in self._neighbor_process[neighbor]:
+			if process in self._process:
 				yield process
 
 	def up (self,neighbor):
 		if self.silence: return
 		for process in self._notify(neighbor,'neighbor-changes'):
-			self._write(process,self._api[process].up(neighbor))
+			self._write(process,self._api_encoder[process].up(neighbor))
 
 	def connected (self,neighbor):
 		if self.silence: return
 		for process in self._notify(neighbor,'neighbor-changes'):
-			self._write(process,self._api[process].connected(neighbor))
+			self._write(process,self._api_encoder[process].connected(neighbor))
 
 	def down (self,neighbor,reason=''):
 		if self.silence: return
 		for process in self._notify(neighbor,'neighbor-changes'):
-			self._write(process,self._api[process].down(neighbor))
+			self._write(process,self._api_encoder[process].down(neighbor))
 
 	def receive (self,neighbor,category,header,body):
 		if self.silence: return
 		for process in self._notify(neighbor,'receive-packets'):
-			self._write(process,self._api[process].receive(neighbor,category,header,body))
+			self._write(process,self._api_encoder[process].receive(neighbor,category,header,body))
 
 	def send (self,neighbor,category,header,body):
 		if self.silence: return
 		for process in self._notify(neighbor,'send-packets'):
-			self._write(process,self._api[process].send(neighbor,category,header,body))
+			self._write(process,self._api_encoder[process].send(neighbor,category,header,body))
 
 	def routes (self,neighbor,routes):
 		if self.silence: return
 		for process in self._notify(neighbor,'receive-routes'):
-			self._write(process,self._api[process].routes(neighbor,routes))
+			self._write(process,self._api_encoder[process].routes(neighbor,routes))
 

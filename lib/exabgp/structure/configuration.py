@@ -9,6 +9,8 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 import os
 import sys
 import stat
+import time
+
 from pprint import pformat
 from copy import deepcopy
 from struct import pack,unpack
@@ -496,24 +498,19 @@ class Configuration (object):
 	# Programs used to control exabgp
 
 	def _multi_process (self,scope,tokens):
-		if len(tokens) != 1:
-			self._error = self._str_process_error
-			if self.debug: raise
-			return False
 		while True:
 			r = self._dispatch(scope,'process',[],['run','api-encoder','receive-packets','send-packets','receive-routes','neighbor-changes',  'peer-updates','parse-routes'])
 			if r is False: return False
 			if r is None: break
-		self.process.setdefault(tokens[0],{})['run'] = scope[-1].pop('process-run')
-		self.process[tokens[0]]['receive-packets'] = scope[-1].get('receive-packets',False)
-		self.process[tokens[0]]['send-packets'] = scope[-1].get('receive-packets',False)
-		self.process[tokens[0]]['receive-routes'] = scope[-1].get('receive-routes',False)
-		self.process[tokens[0]]['neighbor-changes'] = scope[-1].get('neighbor-changes',False)
-		self.process[tokens[0]]['api-encoder'] = scope[-1].get('api-encoder','') or self.api_encoder
-		if 'peer-address' in scope[-1]:
-			self.process[tokens[0]]['neighbor'] = scope[-1]['peer-address']
-		else:
-			self.process[tokens[0]]['neighbor'] = '*'
+
+		name = tokens[0] if len(tokens) >= 1 else 'conf-only-%s' % str(time.time())[-6:]
+		self.process.setdefault(name,{})['neighbor'] = scope[-1]['peer-address'] if 'peer-address' in scope[-1] else '*'
+		
+		run = scope[-1].pop('process-run','')
+		if run:
+			self.process[name]['api-encoder'] = scope[-1].get('api-encoder','') or self.api_encoder
+			self.process[name]['run'] = run
+
 		return True
 
 	def _set_process_command (self,scope,command,value):
