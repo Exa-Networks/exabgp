@@ -163,6 +163,7 @@ class Configuration (object):
 
 	def __init__ (self,fname,text=False):
 		self.debug = load().debug.configuration
+		self.api_encoder = load().api.encoder
 
 		self.logger = Logger()
 		self._text = text
@@ -481,6 +482,7 @@ class Configuration (object):
 				self._set_process_command(scope,'neighbor-changes',tokens[1:])
 				self._set_process_command(scope,'receive-routes',tokens[1:])
 			# new interface
+			if command == 'api-encoder': return self._set_process_encoder(scope,'api-encoder',tokens[1:])
 			if command == 'receive-packets': return self._set_process_command(scope,'receive-packets',tokens[1:])
 			if command == 'send-packets': return self._set_process_command(scope,'send-packets',tokens[1:])
 			if command == 'receive-routes': return self._set_process_command(scope,'receive-routes',tokens[1:])
@@ -499,13 +501,15 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-			r = self._dispatch(scope,'process',[],['run','receive-packets','send-packets','receive-routes','neighbor-changes',  'peer-updates','parse-routes'])
+			r = self._dispatch(scope,'process',[],['run','api-encoder','receive-packets','send-packets','receive-routes','neighbor-changes',  'peer-updates','parse-routes'])
 			if r is False: return False
 			if r is None: break
 		self.process.setdefault(tokens[0],{})['run'] = scope[-1].pop('process-run')
 		self.process[tokens[0]]['receive-packets'] = scope[-1].get('receive-packets',False)
 		self.process[tokens[0]]['send-packets'] = scope[-1].get('receive-packets',False)
 		self.process[tokens[0]]['receive-routes'] = scope[-1].get('receive-routes',False)
+		self.process[tokens[0]]['neighbor-changes'] = scope[-1].get('neighbor-changes',False)
+		self.process[tokens[0]]['api-encoder'] = scope[-1].get('api-encoder','') or self.api_encoder
 		if 'peer-address' in scope[-1]:
 			self.process[tokens[0]]['neighbor'] = scope[-1]['peer-address']
 		else:
@@ -515,6 +519,15 @@ class Configuration (object):
 	def _set_process_command (self,scope,command,value):
 		scope[-1][command] = True
 		return True
+
+	def _set_process_encoder (self,scope,command,value):
+		if value and value[0] in ('text','json'):
+			scope[-1][command] = value[0]
+			return True
+
+		self._error = self._str_process_error
+		if self.debug: raise
+		return False
 
 	def _set_process_run (self,scope,command,value):
 		line = ' '.join(value).strip()

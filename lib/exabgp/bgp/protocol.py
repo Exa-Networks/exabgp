@@ -66,8 +66,7 @@ class Protocol (object):
 
 			if self.peer.neighbor.api_neighbor_changes:
 				try:
-					for process in self.peer.supervisor.processes.notify(self.neighbor.peer_address):
-						self.peer.supervisor.processes.api.connected(process,self.peer.neighbor.peer_address)
+					self.peer.supervisor.processes.connected(self.peer.neighbor.peer_address)
 				except ProcessError:
 					raise Failure('Could not send connected message(s) to helper program(s)')
 
@@ -79,16 +78,14 @@ class Protocol (object):
 
 			if self.peer.neighbor.api_neighbor_changes:
 				try:
-					for process in self.peer.supervisor.processes.notify(self.neighbor.peer_address):
-						self.peer.supervisor.processes.api.down(process,self.peer.neighbor.peer_address,reason)
+					self.peer.supervisor.processes.down(self.peer.neighbor.peer_address,reason)
 				except ProcessError:
 					raise Failure('Could not send down message(s) to helper program(s)')
 
 	def write (self,message):
 		if self.neighbor.api_send_packets:
 			try:
-				for process in self.peer.supervisor.processes.notify(self.neighbor.peer_address):
-					self.peer.supervisor.processes.api.send(process,self.peer.neighbor.peer_address,message[18],message[:19],message[19:])
+				self.peer.supervisor.processes.send(self.peer.neighbor.peer_address,message[18],message[:19],message[19:])
 			except ProcessError:
 				raise Failure('Could not send update message(s) to helper program(s)')
 		return self.connection.write(message)
@@ -140,8 +137,7 @@ class Protocol (object):
 
 		if self.neighbor.api_receive_packets:
 			try:
-				for process in self.peer.supervisor.processes.notify(self.neighbor.peer_address):
-					self.peer.supervisor.processes.api.receive(process,self.peer.neighbor.peer_address,msg,header,body)
+				self.peer.supervisor.processes.receive(self.peer.neighbor.peer_address,msg,header,body)
 			except ProcessError:
 				raise Failure('Could not send update message(s) to helper program(s)')
 
@@ -162,8 +158,7 @@ class Protocol (object):
 					self.logger.routes(LazyFormat(self.me(''),str,route))
 
 				try:
-					for process in self.peer.supervisor.processes.notify(self.neighbor.peer_address):
-						self.peer.supervisor.processes.api.routes(process,self.neighbor.peer_address,update.routes)
+					self.peer.supervisor.processes.routes(self.neighbor.peer_address,update.routes)
 				except ProcessError:
 					raise Failure('Could not send routes message(s) to helper program(s)')
 				return update

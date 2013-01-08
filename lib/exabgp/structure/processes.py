@@ -14,7 +14,6 @@ import select
 from exabgp.api import Text,JSON
 
 from exabgp.version import version
-from exabgp.structure.environment import load
 
 from exabgp.structure.log import Logger
 
@@ -33,16 +32,19 @@ class Processes (object):
 		self.logger = Logger()
 		self.supervisor = supervisor
 		self.clean()
-		api = load().api.encoder
-		if api == 'json':
-			self.api = JSON(self.write,version,'1.0')
-		else:
-			self.api = Text(self.write,version,'1.0')
+		self.silence = False
 
 	def clean (self):
 		self._process = {}
-		self._receive_routes = {}
-		self._notify = {}
+		self._api = {}
+		self._event = {
+			'receive-packets' : {},
+			'send-packets': {},
+			'receive-routes': {},
+			'neighbor-changes': {},
+			'api-encoder': {},
+		}
+		self._neighbor_process = {}
 		self._broken = []
 
 	def _terminate (self,process):
@@ -53,8 +55,9 @@ class Processes (object):
 
 	def terminate (self):
 		for process in list(self._process):
-			self.api.shutdown(process)
-			self.api.silence = True
+			if not self.silence:
+				self._write(process,self._api[process].shutdown())
+		self.silence = True
 		time.sleep(0.1)
 		for process in list(self._process):
 			try:
@@ -73,10 +76,18 @@ class Processes (object):
 			if not process in self.supervisor.configuration.process:
 				self.logger.processes("Can not start process, no configuration for it (anymore ?)")
 				return
+
+			api = self.supervisor.configuration.process[process]['api-encoder']
+			self._api[process] = JSON('1.0') if api == 'json' else Text('1.0')
+
+			self._event['receive-packets'][process] = self.supervisor.configuration.process[process]['receive-packets']
+			self._event['send-packets'][process] = self.supervisor.configuration.process[process]['send-packets']
+			self._event['receive-routes'][process] = self.supervisor.configuration.process[process]['receive-routes']
+			self._event['neighbor-changes'][process] = self.supervisor.configuration.process[process]['neighbor-changes']			
+
 			# Prevent some weird termcap data to be created at the start of the PIPE
 			# \x1b[?1034h (no-eol) (esc)
 			os.environ['TERM']='dumb'
-			self._receive_routes[process] = self.supervisor.configuration.process[process]['receive-routes']
 			self._process[process] = subprocess.Popen(self.supervisor.configuration.process[process]['run'],
 				stdin=subprocess.PIPE,
 				stdout=subprocess.PIPE,
@@ -85,7 +96,7 @@ class Processes (object):
 				# creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
 			)
 			neighbor = self.supervisor.configuration.process[process]['neighbor']
-			self._notify.setdefault(neighbor,[]).append(process)
+			self._neighbor_process.setdefault(neighbor,[]).append(process)
 			self.logger.processes("Forked process %s" % process)
 		except (subprocess.CalledProcessError,OSError,ValueError),e:
 			self._broken.append(process)
@@ -99,15 +110,9 @@ class Processes (object):
 			if not process in self.supervisor.configuration.process:
 				self._terminate(process)
 
-	def notify (self,neighbor):
-		for process in self._notify.get(neighbor,[]):
-			yield process
-		for process in self._notify.get('*',[]):
-			yield process
-
 	def broken (self,neighbor):
 		if self._broken:
-			for process in self._notify.get(neighbor,[]):
+			for process in self._neighbor_process.get(neighbor,[]):
 				if process in self._broken:
 					return True
 			if '*' in self._broken:
@@ -140,7 +145,7 @@ class Processes (object):
 				self._start(process)
 		return lines
 
-	def write (self,process,string):
+	def _write (self,process,string):
 		while True:
 			try:
 				self._process[process].stdin.write('%s\r\n' % string)
@@ -164,8 +169,46 @@ class Processes (object):
 
 		return True
 
-	# return all the process which are interrested in route update notification
-	def receive_routes (self):
-		for process in self._process:
-			if self._receive_routes[process]:
+	def _notify (self,neighbor,event):
+		for process in self._neighbor_process.get(neighbor,[]):
+			if process in self._event[event]:
 				yield process
+		for process in self._neighbor_process.get('*',[]):
+			if process in self._event[event]:
+				yield process
+
+	def _notify_all (self):
+		for neighbor in self._neighbor_process:
+			for process in self._neighbor_process[neighbor]:
+				yield process
+
+	def up (self,neighbor):
+		if self.silence: return
+		for process in self._notify(neighbor,'neighbor-changes'):
+			self._write(process,self._api[process].up(neighbor))
+
+	def connected (self,neighbor):
+		if self.silence: return
+		for process in self._notify(neighbor,'neighbor-changes'):
+			self._write(process,self._api[process].connected(neighbor))
+
+	def down (self,neighbor,reason=''):
+		if self.silence: return
+		for process in self._notify(neighbor,'neighbor-changes'):
+			self._write(process,self._api[process].down(neighbor))
+
+	def receive (self,neighbor,category,header,body):
+		if self.silence: return
+		for process in self._notify(neighbor,'receive-packets'):
+			self._write(process,self._api[process].receive(neighbor,category,header,body))
+
+	def send (self,neighbor,category,header,body):
+		if self.silence: return
+		for process in self._notify(neighbor,'send-packets'):
+			self._write(process,self._api[process].send(neighbor,category,header,body))
+
+	def routes (self,neighbor,routes):
+		if self.silence: return
+		for process in self._notify(neighbor,'receive-routes'):
+			self._write(process,self._api[process].routes(neighbor,routes))
+
