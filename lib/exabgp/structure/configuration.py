@@ -512,15 +512,13 @@ class Configuration (object):
 				self._error = self._str_process_error
 				if self.debug: raise
 				return False
+			self.process[name]['api-encoder'] = scope[-1].get('api-encoder','') or self.api_encoder
+			self.process[name]['run'] = run
+			return True
 		elif len(tokens):
 			self._error = self._str_process_error
 			if self.debug: raise
 			return False
-
-			self.process[name]['api-encoder'] = scope[-1].get('api-encoder','') or self.api_encoder
-			self.process[name]['run'] = run
-
-		return True
 
 	def _set_process_command (self,scope,command,value):
 		scope[-1][command] = True
