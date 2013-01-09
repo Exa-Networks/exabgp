@@ -508,6 +508,10 @@ class Configuration (object):
 		
 		run = scope[-1].pop('process-run','')
 		if run:
+			if len(tokens) != 1:
+				self._error = self._str_process_error
+				if self.debug: raise
+				return False
 			self.process[name]['api-encoder'] = scope[-1].get('api-encoder','') or self.api_encoder
 			self.process[name]['run'] = run
 
