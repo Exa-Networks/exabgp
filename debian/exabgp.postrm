@@ -1,4 +1,6 @@
-#!/bin/bash -e
+#!/bin/sh
+
+set -e
 
 . /usr/share/debconf/confmodule
 
@@ -10,10 +12,28 @@ if dpkg-maintscript-helper supports rm_conffile 2>/dev/null; then
 fi
 
 # Remove exabgp.env when run in purge mode
-if [ "$1" == "purge" ]; then
-    rm -rf /etc/exabgp/exabgp.env
-    ucf --purge /etc/exabgp/exabgp.env
-fi
+case "$1" in
+    purge)
+        # UCF bits taken from UCF example
+        # we mimic dpkg as closely as possible, so we remove configuration
+        # files with dpkg backup extensions too:
+        ### Some of the following is from Tore Anderson:
+        for ext in '~' '%' .bak .ucf-new .ucf-old .ucf-dist;  do
+            rm -f /etc/exabgp/exabgp.env$ext
+        done
+ 
+        # remove the configuration file itself
+        rm -f /etc/exabgp/exabgp.env
+
+        # and finally clear it out from the ucf database
+        if which ucf >/dev/null; then
+            ucf --purge /etc/exabgp/exabgp.env
+        fi    
+        if which ucfr >/dev/null; then
+            ucfr --purge exabgp /etc/exabgp/exabgp.env
+        fi   
+        ;;
+esac
 
 #DEBHELPER#
 
