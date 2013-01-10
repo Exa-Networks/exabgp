@@ -3,12 +3,12 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
-Version 3.1.2 - 
+Version 3.1.2 - 10th of January 2013
  * Copyright: updated all copyright notice (welcome to 2013)
  * Change: tidy process command name (keeping compatibility)
  * Improvement: pass raw update message to the API
  * Improvement: better control of the API message passed
- * Improvement: allow/make work a global process for multiples peers
+ * Improvement: allow/make work a global process for multiples peers (partial compatibility kept)
 
 Version 3.1.1 - 6th of January 2013
  * Complete Fix: watchdog feature (issue 13)
