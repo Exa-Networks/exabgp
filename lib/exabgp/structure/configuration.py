@@ -892,6 +892,11 @@ class Configuration (object):
 				self._neighbor[m_neighbor.name()] = m_neighbor
 		else:
 			self._neighbor[neighbor.name()] = neighbor
+
+		for line in str(neighbor).split('\n'):
+			self.logger.configuration(line)
+		self.logger.configuration("\n")
+
 		return True
 
 

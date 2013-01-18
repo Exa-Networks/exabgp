@@ -12,6 +12,13 @@ from itertools import tee
 
 from exabgp.structure.utils import dump
 
+class APIOptions (object):
+	def __init__ (self):
+		self.neighbor_changes = False
+		self.receive_packets = False
+		self.send_packets = False
+		self.receive_routes = False
+
 def hexstring (value):
 	def spaced (value):
 		for v in value:

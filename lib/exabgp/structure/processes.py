@@ -11,10 +11,9 @@ import time
 import subprocess
 import select
 
-from exabgp.api import Text,JSON
-
 from exabgp.version import version
 
+from exabgp.structure.api import Text,JSON
 from exabgp.structure.log import Logger
 
 class ProcessError (Exception):

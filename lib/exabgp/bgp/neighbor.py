@@ -11,16 +11,11 @@ from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.capability import AddPath
 from exabgp.bgp.message.update.attribute.id import AttributeID
 
+from exabgp.structure.api import APIOptions
+
 from exabgp.rib.watchdog import Watchdog
 
 from exabgp.structure.log import Logger
-
-class API (object):
-	def __init__ (self):
-		self.neighbor_changes = False
-		self.receive_packets = False
-		self.send_packets = False
-		self.receive_routes = False
 
 # The definition of a neighbor (from reading the configuration)
 class Neighbor (object):
@@ -43,7 +38,7 @@ class Neighbor (object):
 		self.ttl = None
 		self.group_updates = None
 
-		self.api = API()
+		self.api = APIOptions()
 
 		# capability
 		self.route_refresh = False
@@ -151,10 +146,13 @@ class Neighbor (object):
 	def __ne__(self, other):
 		return not (self == other)
 
-	def __str__ (self):
-		routes = ''
-		for route in self.every_routes():
-			routes += '\n    %s' % route
+	def pprint (self,with_routes=True):
+		routes=''
+		if with_routes:
+			routes += '\nstatic { '
+			for route in self.every_routes():
+				routes += '\n    %s' % route
+			route += '\n}'
 
 		families = ''
 		for afi,safi in self.families():
@@ -181,9 +179,7 @@ neighbor %s {
   family {%s
   }
   process {
-%s  }
-  static { %s
-  }
+%s  }%s
 }""" % (
 	self.peer_address,
 	self.description,
@@ -204,3 +200,6 @@ neighbor %s {
 	api,
 	routes
 )
+
+	def __str__ (self):
+		return self.pprint(False)
