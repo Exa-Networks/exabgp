@@ -77,7 +77,7 @@ class Processes (object):
 			
 			run = self.supervisor.configuration.process[process].get('run','')
 			if run:
-				api = self.supervisor.configuration.process[process]['api-encoder']
+				api = self.supervisor.configuration.process[process]['encoder']
 				self._api_encoder[process] = JSON('1.0') if api == 'json' else Text('1.0')
 
 				self._process[process] = subprocess.Popen(run,

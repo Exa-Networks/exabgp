@@ -64,7 +64,7 @@ class Protocol (object):
 			ttl = self.neighbor.ttl
 			self.connection = Connection(peer,local,md5,ttl)
 
-			if self.peer.neighbor.api_neighbor_changes:
+			if self.peer.neighbor.api.neighbor_changes:
 				try:
 					self.peer.supervisor.processes.connected(self.peer.neighbor.peer_address)
 				except ProcessError:
@@ -76,14 +76,14 @@ class Protocol (object):
 			self.connection.close()
 			self.connection = None
 
-			if self.peer.neighbor.api_neighbor_changes:
+			if self.peer.neighbor.api.neighbor_changes:
 				try:
 					self.peer.supervisor.processes.down(self.peer.neighbor.peer_address,reason)
 				except ProcessError:
 					raise Failure('Could not send down message(s) to helper program(s)')
 
 	def write (self,message):
-		if self.neighbor.api_send_packets:
+		if self.neighbor.api.send_packets:
 			try:
 				self.peer.supervisor.processes.send(self.peer.neighbor.peer_address,message[18],message[:19],message[19:])
 			except ProcessError:
@@ -135,7 +135,7 @@ class Protocol (object):
 				body += delta
 				length -= len(delta)
 
-		if self.neighbor.api_receive_packets:
+		if self.neighbor.api.receive_packets:
 			try:
 				self.peer.supervisor.processes.receive(self.peer.neighbor.peer_address,msg,header,body)
 			except ProcessError:
@@ -147,11 +147,11 @@ class Protocol (object):
 
 		elif msg == Update.TYPE:
 			self.logger.message(self.me('<< UPDATE'))
-	
+
 			if msg_length == 30 and body.startswith(EOR.PREFIX):
 				return EOR().factory(body)
 
-			if self.neighbor.api_receive_routes:
+			if self.neighbor.api.receive_routes:
 				update = Update().factory(self.negociated,body)
 
 				for route in update.routes:

@@ -93,13 +93,10 @@ class JSON (object):
 
 	# all those routes come from the same update, so let's save some parsing and group by attributes
 	def _routes (self,routes):
-		announced = []
-		withdrawn = []
-
 		plus = {}
 		minus = {}
 		for route in routes:
-			if route.action == 'announced': 
+			if route.action == 'announced':
 				plus.setdefault((route.nlri.afi,route.nlri.safi),[]).append(route)
 			if route.action == 'withdrawn':
 				minus.setdefault((route.nlri.afi,route.nlri.safi),[]).append(route)

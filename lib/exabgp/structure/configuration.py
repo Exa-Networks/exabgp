@@ -475,7 +475,7 @@ class Configuration (object):
 		elif name == 'process':
 			if command == 'run': return self._set_process_run(scope,'process-run',tokens[1:])
 			# legacy ...
-			if command == 'parse-routes': 
+			if command == 'parse-routes':
 				self._set_process_command(scope,'neighbor-changes',tokens[1:])
 				self._set_process_command(scope,'receive-routes',tokens[1:])
 				return True
@@ -484,7 +484,7 @@ class Configuration (object):
 				self._set_process_command(scope,'neighbor-changes',tokens[1:])
 				self._set_process_command(scope,'receive-routes',tokens[1:])
 			# new interface
-			if command == 'api-encoder': return self._set_process_encoder(scope,'api-encoder',tokens[1:])
+			if command == 'encoder': return self._set_process_encoder(scope,'encoder',tokens[1:])
 			if command == 'receive-packets': return self._set_process_command(scope,'receive-packets',tokens[1:])
 			if command == 'send-packets': return self._set_process_command(scope,'send-packets',tokens[1:])
 			if command == 'receive-routes': return self._set_process_command(scope,'receive-routes',tokens[1:])
@@ -499,20 +499,20 @@ class Configuration (object):
 
 	def _multi_process (self,scope,tokens):
 		while True:
-			r = self._dispatch(scope,'process',[],['run','api-encoder','receive-packets','send-packets','receive-routes','neighbor-changes',  'peer-updates','parse-routes'])
+			r = self._dispatch(scope,'process',[],['run','encoder','receive-packets','send-packets','receive-routes','neighbor-changes',  'peer-updates','parse-routes'])
 			if r is False: return False
 			if r is None: break
 
 		name = tokens[0] if len(tokens) >= 1 else 'conf-only-%s' % str(time.time())[-6:]
 		self.process.setdefault(name,{})['neighbor'] = scope[-1]['peer-address'] if 'peer-address' in scope[-1] else '*'
-		
+
 		run = scope[-1].pop('process-run','')
 		if run:
 			if len(tokens) != 1:
 				self._error = self._str_process_error
 				if self.debug: raise
 				return False
-			self.process[name]['api-encoder'] = scope[-1].get('api-encoder','') or self.api_encoder
+			self.process[name]['encoder'] = scope[-1].get('encoder','') or self.api_encoder
 			self.process[name]['run'] = run
 			return True
 		elif len(tokens):
@@ -812,18 +812,18 @@ class Configuration (object):
 			v = local_scope.get('hold-time','')
 			if v: neighbor.hold_time = v
 
-			neighbor.api_receive_packets = local_scope.get('receive-packets',False)
-			neighbor.api_send_packets = local_scope.get('send-packets',False)
-			neighbor.api_receive_routes = local_scope.get('receive-routes',False)
-			neighbor.api_neighbor_changes = local_scope.get('neighbor-changes',False)
-
 			v = local_scope.get('routes',[])
 			for route in v:
 				# This add the family to neighbor.families()
 				neighbor.add_route(route)
 
-		# drop the neighbor
-		local_scope = scope.pop(-1)
+		for local_scope in (scope[0],scope[-1]):
+			neighbor.api.receive_packets |= local_scope.get('receive-packets',False)
+			neighbor.api.send_packets |= local_scope.get('send-packets',False)
+			neighbor.api.receive_routes |= local_scope.get('receive-routes',False)
+			neighbor.api.neighbor_changes |= local_scope.get('neighbor-changes',False)
+
+		local_scope = scope[-1]
 		neighbor.description = local_scope.get('description','')
 
 		neighbor.md5 = local_scope.get('md5',None)

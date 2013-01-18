@@ -6,8 +6,6 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from copy import copy
-
 from exabgp.protocol.family import AFI
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.capability import AddPath
@@ -16,6 +14,13 @@ from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.rib.watchdog import Watchdog
 
 from exabgp.structure.log import Logger
+
+class API (object):
+	def __init__ (self):
+		self.neighbor_changes = False
+		self.receive_packets = False
+		self.send_packets = False
+		self.receive_routes = False
 
 # The definition of a neighbor (from reading the configuration)
 class Neighbor (object):
@@ -38,11 +43,7 @@ class Neighbor (object):
 		self.ttl = None
 		self.group_updates = None
 
-		# processes
-		self.api_neighbor_changes = None
-		self.api_receive_packets = None
-		self.api_send_packets = None
-		self.api_receive_routes = None
+		self.api = API()
 
 		# capability
 		self.route_refresh = False
@@ -157,8 +158,14 @@ class Neighbor (object):
 
 		families = ''
 		for afi,safi in self.families():
-			families += '\n    %s %s' % (afi.name(),safi.name())
+			families += '\n    %s %s;' % (afi.name(),safi.name())
 
+		_api  = []
+		_api.extend(['    neighbor-changes;\n',] if self.api.neighbor_changes else [])
+		_api.extend(['    receive-packets;\n',]  if self.api.receive_packets else [])
+		_api.extend(['    send-packets;\n',]     if self.api.send_packets else [])
+		_api.extend(['    receive-routes;\n',]   if self.api.receive_routes else [])
+		api = ''.join(_api)
 
 		return """\
 neighbor %s {
@@ -173,6 +180,8 @@ neighbor %s {
 %s%s%s%s%s  }
   family {%s
   }
+  process {
+%s  }
   static { %s
   }
 }""" % (
@@ -192,5 +201,6 @@ neighbor %s {
 	'    add-path %s;\n' % AddPath.string[self.add_path] if self.add_path else '',
 	'    multi-session;\n' if self.multisession else '',
 	families,
+	api,
 	routes
 )

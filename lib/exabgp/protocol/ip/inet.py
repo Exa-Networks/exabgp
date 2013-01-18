@@ -72,3 +72,6 @@ class Inet (object):
 
 	def __eq__ (self,other):
 		return self.packed == other.packed and self.safi == other.safi
+
+	def __repr__ (self):
+		return "<%s value %s>" % (str(self.__class__).split("'")[1].split('.')[-1],str(self))
