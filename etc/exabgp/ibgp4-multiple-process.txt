@@ -1,7 +1,7 @@
 group test {
 	process parsed-route-backend {
 		run etc/exabgp/processes/syslog-1.py;
-		api-encoder json;
+		encoder json;
 	}
 
 
