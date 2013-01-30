@@ -44,5 +44,4 @@ class ClusterList (Attribute):
 		return '%s' % self.clusters[0]
 
 	def json (self):
-		return '[ %s ]' % ', '.join([str(_) for _ in self.clusters])
-
+		return '[ %s ]' % ', '.join(['"%s"' % str(_) for _ in self.clusters])
