@@ -118,7 +118,7 @@ class JSON (object):
 
 		remove = []
 		for family in minus:
-			route = minus[family]
+			routes = minus[family]
 			s  = '"%s %s": [ ' % (routes[0].nlri.afi,routes[0].nlri.safi)
 			s += ', '.join('"%s"' % str(_.nlri) for _ in routes)
 			s += ' ]'

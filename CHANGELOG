@@ -4,7 +4,7 @@ Version explained:
  bug   : increase on bug or incremental changes
 
 Version 3.1.3 -
- * Fix: JSON encoding for cluster-list
+ * Fix: JSON bugs (encoding for cluster-list, withdrawn routes)
     patch by: Vincent Bernat
 
 Version 3.1.2 - 10th of January 2013
