@@ -1,4 +1,4 @@
-version="3.1.2"
+version="3.1.3"
 
 # Do not change the first line as it is parsed by scripts
 

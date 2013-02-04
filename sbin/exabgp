@@ -15,7 +15,7 @@ case $dirname in
 	;;
 esac
 
-export PYTHONPATH=$path/lib:/usr/share/exabgp/lib/3.1.2
+export PYTHONPATH=$path/lib:/usr/share/exabgp/lib/3.1.3
 
 if [ "$INTERPRETER" != "" ]
 then
