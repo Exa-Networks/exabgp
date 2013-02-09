@@ -73,11 +73,11 @@ class Processes (object):
 			# Prevent some weird termcap data to be created at the start of the PIPE
 			# \x1b[?1034h (no-eol) (esc)
 			os.environ['TERM']='dumb'
-			
+
 			run = self.supervisor.configuration.process[process].get('run','')
 			if run:
 				api = self.supervisor.configuration.process[process]['encoder']
-				self._api_encoder[process] = JSON('1.0') if api == 'json' else Text('1.0')
+				self._api_encoder[process] = JSON('2.0') if api == 'json' else Text('1.0')
 
 				self._process[process] = subprocess.Popen(run,
 					stdin=subprocess.PIPE,

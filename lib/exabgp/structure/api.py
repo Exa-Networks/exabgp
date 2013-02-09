@@ -61,12 +61,10 @@ class JSON (object):
 
 	def _header (self,content):
 		return '{ '\
-		          '"application": "exabgp", '\
-		          '"version": "%s", '\
-		          '"encoder": "%s", ' \
+		          '"exabgp": "%s", '\
 		          '"time": %s, ' \
 		          '%s' \
-		       '}' % (self.version,self.version,long(time.time()),content)
+		       '}' % (self.version,long(time.time()),content)
 
 	def _neighbor (self,neighbor,content):
 		return '"neighbor": { ' \
