@@ -170,7 +170,6 @@ class Attributes (dict):
 		if self.has(AID.ORIGINATOR_ID):      r.append('"originator-id": "%s"' % str(self[AID.ORIGINATOR_ID]))
 		if self.has(AID.CLUSTER_LIST):       r.append('"cluster-list": %s' % self[AID.CLUSTER_LIST].json())
 		if self.has(AID.EXTENDED_COMMUNITY): r.append('"extended-community": %s' % self[AID.EXTENDED_COMMUNITY].json())
-		if self.has(AID.MP_REACH_NLRI):      r.append('"mp_reach_nlri": "%s"' % str(self[AID.MP_REACH_NLRI]))
 		r.append('"atomic-aggregate": %s' % ('true' if self.has(AID.ATOMIC_AGGREGATE) else 'false'))
 		return ", ".join(r)
 
@@ -189,10 +188,9 @@ class Attributes (dict):
 		originator_id = ' originator-id %s' % str(self[AID.ORIGINATOR_ID]) if self.has(AID.ORIGINATOR_ID) else ''
 		cluster_list = ' cluster-list %s' % str(self[AID.CLUSTER_LIST]) if self.has(AID.CLUSTER_LIST) else ''
 		ecommunities = ' extended-community %s' % str(self[AID.EXTENDED_COMMUNITY]) if self.has(AID.EXTENDED_COMMUNITY) else ''
-		mpr = ' mp_reach_nlri %s' % str(self[AID.MP_REACH_NLRI]) if self.has(AID.MP_REACH_NLRI) else ''
 
-		self._str = "%s%s%s%s%s%s%s%s%s%s%s%s" % (
-			next_hop,origin,aspath,local_pref,atomic,aggregator,med,communities,ecommunities,mpr,originator_id,cluster_list
+		self._str = "%s%s%s%s%s%s%s%s%s%s%s" % (
+			next_hop,origin,aspath,local_pref,atomic,aggregator,med,communities,ecommunities,originator_id,cluster_list
 		)
 		return self._str
 
@@ -519,7 +517,7 @@ if not Attributes.cache:
 
 	# There can only be one, build it now :)
 	Attributes.cache[AID.ATOMIC_AGGREGATE][''] = AtomicAggregate()
-	
+
 	IGP = Origin(Origin.IGP)
 	EGP = Origin(Origin.EGP)
 	INC = Origin(Origin.INCOMPLETE)
