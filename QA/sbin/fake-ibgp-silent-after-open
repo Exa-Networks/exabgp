@@ -1,0 +1,38 @@
+#!/usr/bin/env python
+
+import asyncore
+import socket
+from struct import unpack
+
+class BGPHandler(asyncore.dispatcher_with_send):
+	def read_message (self):
+		print "have data, want 19"
+		header = self.recv(19)
+		length = unpack('!H',header[16:18])[0]
+		print "length is ", length
+		body = self.recv(length)
+		return header,body
+
+	def handle_read (self):
+		# reply with a IBGP response with the same capability (just changing routerID)
+		header,body = self.read_message()
+		routerid = chr((ord(body[8])+1) & 0xFF)
+		self.send(header+body[:8]+routerid+body[9:])
+
+class BGPServer(asyncore.dispatcher):
+	def __init__(self, host, port):
+		asyncore.dispatcher.__init__(self)
+		self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+		self.set_reuse_addr()
+		self.bind((host, port))
+		self.listen(5)
+
+	def handle_accept(self):
+		pair = self.accept()
+		if pair is not None:
+			sock, addr = pair
+			print "new BGP connection from", addr
+			handler = BGPHandler(sock)
+
+server = BGPServer('localhost', 179)
+asyncore.loop()
