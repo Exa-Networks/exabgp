@@ -172,6 +172,8 @@ class Peer (object):
 			while opn.TYPE == NOP.TYPE:
 				opn = self.bgp.read_open(_open,self.neighbor.peer_address.ip)
 				opentimer.tick()
+				if not self._running:
+					return
 				yield None
 
 			#
@@ -190,6 +192,8 @@ class Peer (object):
 				# KEEPALIVE or NOP
 				if message.TYPE == KeepAlive.TYPE:
 					break
+				if not self._running:
+					return
 				yield None
 
 			#
