@@ -4,20 +4,34 @@ import asyncore
 import socket
 from struct import unpack
 
+def dump (value):
+	def spaced (value):
+		even = None
+		for v in value:
+			if even is False:
+				yield ' '
+			yield '%02X' % ord(v)
+			even = not even
+	return ''.join(spaced(value))
+
 class BGPHandler(asyncore.dispatcher_with_send):
 	def read_message (self):
-		print "have data, want 19"
 		header = self.recv(19)
+		print "read header", dump(header)
 		length = unpack('!H',header[16:18])[0]
-		print "length is ", length
+		print "waiting for", length, "bytes"
 		body = self.recv(length)
+		print "read body  ", dump(body)
 		return header,body
 
 	def handle_read (self):
 		# reply with a IBGP response with the same capability (just changing routerID)
+		print "reading open"
 		header,body = self.read_message()
 		routerid = chr((ord(body[8])+1) & 0xFF)
-		self.send(header+body[:8]+routerid+body[9:])
+		o = header+body[:8]+routerid+body[9:]
+		print "sending open", dump(o)
+		self.send(o)
 
 class BGPServer(asyncore.dispatcher):
 	def __init__(self, host, port):
