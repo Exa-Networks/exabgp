@@ -180,7 +180,7 @@ class Peer (object):
 			# Start keeping keepalive timer
 			#
 
-			timer = Timer(self.me,self.bgp.negociated.holdtime,4,0)
+			timer = Timer(self.me,self.bgp.negotiated.holdtime,4,0)
 
 			#
 			# READ KEEPALIVE
@@ -227,7 +227,7 @@ class Peer (object):
 			for count in self.bgp.new_update():
 				yield True
 
-			if self.bgp.negociated.families:
+			if self.bgp.negotiated.families:
 				self.bgp.new_eors()
 			else:
 				# If we are not sending an EOR, send a keepalive as soon as when finished
@@ -317,7 +317,7 @@ class Peer (object):
 
 			if self.neighbor.graceful_restart and opn.capabilities.announced(CapabilityID.GRACEFUL_RESTART):
 				self.logger.error('Closing the connection without notification','supervisor')
-				self.bgp.close('graceful restarted negociated, closing without sending any notification')
+				self.bgp.close('graceful restarted negotiated, closing without sending any notification')
 				return
 
 			#

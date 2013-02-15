@@ -1892,7 +1892,7 @@ class Configuration (object):
 		from exabgp.bgp.message.update import Update
 		from exabgp.bgp.message.open import Open
 		from exabgp.bgp.message.open.capability import Capabilities
-		from exabgp.bgp.message.open.capability.negociated import Negociated
+		from exabgp.bgp.message.open.capability.negotiated import Negotiated
 		from exabgp.bgp.message.open.capability.id import CapabilityID
 
 		self.logger.info('\ndecoding routes in configuration','parser')
@@ -1916,14 +1916,14 @@ class Configuration (object):
 
 		o1 = Open().new(4,n.local_as,str(n.local_address),capa,180)
 		o2 = Open().new(4,n.peer_as,str(n.peer_address),capa,180)
-		negociated = Negociated()
-		negociated.sent(o1)
-		negociated.received(o2)
+		negotiated = Negotiated()
+		negotiated.sent(o1)
+		negotiated.received(o2)
 		#grouped = False
 
 		injected = ''.join(chr(int(_,16)) for _ in (route[i*2:(i*2)+2] for i in range(len(route)/2)))
 		# This does not take the BGP header - let's assume we will not break that :)
-		update = Update().factory(negociated,injected)
+		update = Update().factory(negotiated,injected)
 		self.logger.info('','parser')
 		for route in update.routes:
 			self.logger.info('decoded route %s' % route.extensive(),'parser')
@@ -1942,7 +1942,7 @@ class Configuration (object):
 		from exabgp.bgp.message.update import Update
 		from exabgp.bgp.message.open import Open
 		from exabgp.bgp.message.open.capability import Capabilities
-		from exabgp.bgp.message.open.capability.negociated import Negociated
+		from exabgp.bgp.message.open.capability.negotiated import Negotiated
 		from exabgp.bgp.message.open.capability.id import CapabilityID
 
 		self.logger.info('\ndecoding routes in configuration','parser')
@@ -1960,9 +1960,9 @@ class Configuration (object):
 
 		o1 = Open().new(4,n.local_as,str(n.local_address),capa,180)
 		o2 = Open().new(4,n.peer_as,str(n.peer_address),capa,180)
-		negociated = Negociated()
-		negociated.sent(o1)
-		negociated.received(o2)
+		negotiated = Negotiated()
+		negotiated.sent(o1)
+		negotiated.received(o2)
 		#grouped = False
 
 		for nei in self.neighbor.keys():
@@ -1972,12 +1972,12 @@ class Configuration (object):
 				for route in self.neighbor[nei]._routes[family]:
 					str1 = route.extensive()
 					update = Update().new([route])
-					packed = update.announce(negociated)
+					packed = update.announce(negotiated)
 					self.logger.info('parsed route requires %d updates' % len(packed),'parser')
 					for pack in packed:
 						self.logger.info('update size is %d' % len(pack),'parser')
 						# This does not take the BGP header - let's assume we will not break that :)
-						update = Update().factory(negociated,pack[19:])
+						update = Update().factory(negotiated,pack[19:])
 						self.logger.info('','parser')
 						for route in update.routes:
 							str2 = route.extensive()

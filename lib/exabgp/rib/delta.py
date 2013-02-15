@@ -17,14 +17,14 @@ class Delta (object):
 		self.table = table
 		self.last = 0
 
-	def updates  (self,negociated,grouped):
+	def updates  (self,negotiated,grouped):
 		self.table.recalculate()
 		if grouped:
-			return self.group_updates (negociated)
+			return self.group_updates (negotiated)
 		else:
-			return self.simple_updates (negociated)
+			return self.simple_updates (negotiated)
 
-	def simple_updates (self,negociated):
+	def simple_updates (self,negotiated):
 		# table.changed always returns routes to remove before routes to add
 		for action,route in self.table.changed(self.last):
 			if action == '':
@@ -33,18 +33,18 @@ class Delta (object):
 
 			if action == '+':
 				self.logger.rib('announcing %s' % route)
-				for update in Update().new([route]).announce(negociated):
+				for update in Update().new([route]).announce(negotiated):
 					yield update
 			elif action == '*':
 				self.logger.rib('updating %s' % route)
-				for update in Update().new([route]).announce(negociated):
+				for update in Update().new([route]).announce(negotiated):
 					yield update
 			elif action == '-':
 				self.logger.rib('withdrawing %s' % route)
-				for update in Update().new([route]).withdraw(negociated):
+				for update in Update().new([route]).withdraw(negotiated):
 					yield update
 
-	def group_updates (self,negociated):
+	def group_updates (self,negotiated):
 		grouped = {
 			'+' : {},
 			'*' : {},
@@ -64,19 +64,19 @@ class Delta (object):
 			for route in routes:
 				self.logger.rib('announcing group %d %s' % (group,route))
 			group += 1
-			for update in Update().new(routes).announce(negociated):
+			for update in Update().new(routes).announce(negotiated):
 				yield update
 		for attributes in grouped['*']:
 			routes = grouped['*'][attributes]
 			for route in routes:
 				self.logger.rib('updating group %d %s' % (group,route))
 			group += 1
-			for update in Update().new(routes).update(negociated):
+			for update in Update().new(routes).update(negotiated):
 				yield update
 		for attributes in grouped['*']:
 			routes = grouped['*'][attributes]
 			for route in routes:
 				self.logger.rib('updating group %d %s' % (group,route))
 			group += 1
-			for update in Update().new(routes).withdraw(negociated):
+			for update in Update().new(routes).withdraw(negotiated):
 				yield update

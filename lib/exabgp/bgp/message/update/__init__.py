@@ -32,13 +32,13 @@ class Update (Message):
 		return self
 
 	# The routes MUST have the same attributes ...
-	def announce (self,negociated):
-		asn4 = negociated.asn4
-		local_as = negociated.local_as
-		peer_as = negociated.peer_as
-		addpath = negociated.addpath
-		msg_size = negociated.msg_size
-		addpath = negociated.addpath.send(self.afi,self.safi)
+	def announce (self,negotiated):
+		asn4 = negotiated.asn4
+		local_as = negotiated.local_as
+		peer_as = negotiated.peer_as
+		addpath = negotiated.addpath
+		msg_size = negotiated.msg_size
+		addpath = negotiated.addpath.send(self.afi,self.safi)
 
 		if self.afi == AFI.ipv4 and self.safi in [SAFI.unicast, SAFI.multicast]:
 			nlri = ''.join([route.nlri.pack(addpath) for route in self.routes])
@@ -54,21 +54,21 @@ class Update (Message):
 			right = self.routes[len(self.routes)/2:]
 			packed = []
 			self.routes = left
-			packed.extend(self.announce(negociated))
+			packed.extend(self.announce(negotiated))
 			self.routes = right
-			packed.extend(self.announce(negociated))
+			packed.extend(self.announce(negotiated))
 			self.routes = routes
 			return packed
 		return [packed]
 
 
-	def withdraw (self,negociated=None):
-		if negociated:
-			#asn4 = negociated.asn4
-			#local_as = negociated.local_as
-			#peer_as = negociated.peer_as
-			addpath = negociated.addpath
-			msg_size = negociated.msg_size
+	def withdraw (self,negotiated=None):
+		if negotiated:
+			#asn4 = negotiated.asn4
+			#local_as = negotiated.local_as
+			#peer_as = negotiated.peer_as
+			addpath = negotiated.addpath
+			msg_size = negotiated.msg_size
 		else:
 			#asn4 = False
 			#local_as = None
@@ -90,15 +90,15 @@ class Update (Message):
 			right = self.routes[len(self.routes)/2:]
 			packed = []
 			self.routes = left
-			packed.extend(self.withdraw(negociated))
+			packed.extend(self.withdraw(negotiated))
 			self.routes = right
-			packed.extend(self.withdraw(negociated))
+			packed.extend(self.withdraw(negotiated))
 			self.routes = routes
 			return packed
 		return [packed]
 
 
-	def factory (self,negociated,data):
+	def factory (self,negotiated,data):
 		length = len(data)
 
 		lw,withdrawn,data = defix(data)
@@ -116,10 +116,10 @@ class Update (Message):
 
 		attributes = Attributes()
 		attributes.routeFactory = routeFactory
-		attributes.factory(negociated,attribute)
+		attributes.factory(negotiated,attribute)
 
 		# Is the peer going to send us some Path Information with the route (AddPath)
-		addpath = negociated.addpath.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
+		addpath = negotiated.addpath.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
 
 		routes = []
 		while withdrawn:

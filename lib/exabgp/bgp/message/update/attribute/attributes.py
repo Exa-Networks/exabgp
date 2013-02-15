@@ -195,13 +195,13 @@ class Attributes (dict):
 		return self._str
 
 
-	def factory (self,negociated,data):
+	def factory (self,negotiated,data):
 		try:
 			# XXX: hackish for now
 			self.mp_announce = []
 			self.mp_withdraw = []
 
-			self.negociated = negociated
+			self.negotiated = negotiated
 			self._factory(data)
 			if AID.AS_PATH in self and AID.AS4_PATH in self:
 				self.__merge_attributes()
@@ -249,7 +249,7 @@ class Attributes (dict):
 		if code == AID.AS4_PATH:
 			if length:
 				# ignore the AS4_PATH on new spekers as required by RFC 4893 section 4.1
-				if not self.negociated.asn4:
+				if not self.negotiated.asn4:
 					# This replace the old AS_PATH
 					if not self.add_from_cache(code,attribute):
 						self.add(self.__new_ASPath4(attribute),attribute)
@@ -314,11 +314,11 @@ class Attributes (dict):
 			offset = 3
 			data = data[offset:]
 
-			if (afi,safi) not in self.negociated.families:
-				raise Notify(3,0,'presented a non-negociated family %d/%d' % (afi,safi))
+			if (afi,safi) not in self.negotiated.families:
+				raise Notify(3,0,'presented a non-negotiated family %d/%d' % (afi,safi))
 
 			# Is the peer going to send us some Path Information with the route (AddPath)
-			addpath = self.negociated.addpath.receive(afi,safi)
+			addpath = self.negotiated.addpath.receive(afi,safi)
 
 			# XXX: we do assume that it is an EOR. most likely harmless
 			if not data:
@@ -339,8 +339,8 @@ class Attributes (dict):
 			offset = 3
 
 			# we do not want to accept unknown families
-			if (afi,safi) not in self.negociated.families:
-				raise Notify(3,0,'presented a non-negociated family %d/%d' % (afi,safi))
+			if (afi,safi) not in self.negotiated.families:
+				raise Notify(3,0,'presented a non-negotiated family %d/%d' % (afi,safi))
 
 			# -- Reading length of next-hop
 			len_nh = ord(data[offset])
@@ -385,7 +385,7 @@ class Attributes (dict):
 				raise Notify(3,0,'the reserved bit of MP_REACH_NLRI is not zero')
 
 			# Is the peer going to send us some Path Information with the route (AddPath)
-			addpath = self.negociated.addpath.receive(afi,safi)
+			addpath = self.negotiated.addpath.receive(afi,safi)
 
 			# Reading the NLRIs
 			data = data[offset:]
@@ -506,7 +506,7 @@ class Attributes (dict):
 		return klass(as_seq,as_set,backup)
 
 	def __new_ASPath (self,data):
-		return self.__new_aspaths(data,self.negociated.asn4,ASPath)
+		return self.__new_aspaths(data,self.negotiated.asn4,ASPath)
 
 	def __new_ASPath4 (self,data):
 		return self.__new_aspaths(data,True,AS4Path)

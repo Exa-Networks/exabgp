@@ -28,7 +28,7 @@ class EOR (Message):
 		self.routes.append(announcedRouteEOR(data))
 		return self
 
-	def updates (self,negociated):
+	def updates (self,negotiated):
 		for eor in self.routes:
 			yield self._message(eor.pack())
 

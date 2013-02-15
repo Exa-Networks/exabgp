@@ -18,7 +18,7 @@ from exabgp.bgp.message.nop import NOP
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.capability import Capabilities
-from exabgp.bgp.message.open.capability.negociated import Negociated
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.eor import EOR
 from exabgp.bgp.message.keepalive import KeepAlive
@@ -42,7 +42,7 @@ class Protocol (object):
 		self.peer = peer
 		self.neighbor = peer.neighbor
 		self.connection = connection
-		self.negociated = Negociated()
+		self.negotiated = Negotiated()
 
 		self.delta = Delta(Table(peer))
 		self._messages = []
@@ -152,7 +152,7 @@ class Protocol (object):
 				return EOR().factory(body)
 
 			if self.neighbor.api.receive_routes:
-				update = Update().factory(self.negociated,body)
+				update = Update().factory(self.negotiated,body)
 
 				for route in update.routes:
 					self.logger.routes(LazyFormat(self.me(''),str,route))
@@ -192,16 +192,16 @@ class Protocol (object):
 		if message.TYPE != Open.TYPE:
 			raise Notify(5,1,'The first packet recevied is not an open message (%s)' % message)
 
-		self.negociated.received(message)
+		self.negotiated.received(message)
 
-		if not self.negociated.asn4:
+		if not self.negotiated.asn4:
 			if self.neighbor.local_as.asn4():
 				raise Notify(2,0,'peer does not speak ASN4, we are stuck')
 			else:
 				# we will use RFC 4893 to convey new ASN to the peer
-				self.negociated.asn4
+				self.negotiated.asn4
 
-		if self.negociated.peer_as != self.neighbor.peer_as:
+		if self.negotiated.peer_as != self.neighbor.peer_as:
 			raise Notify(2,2,'ASN in OPEN (%d) did not match ASN expected (%d)' % (message.asn,self.neighbor.peer_as))
 
 		# RFC 6286 : http://tools.ietf.org/html/rfc6286
@@ -216,8 +216,8 @@ class Protocol (object):
 		if message.hold_time and message.hold_time < 3:
 			raise Notify(2,6,'Hold Time is invalid (%d)' % message.hold_time)
 
-		if self.negociated.multisession not in (True,False):
-			raise Notify(*self.negociated.multisession)
+		if self.negotiated.multisession not in (True,False):
+			raise Notify(*self.negotiated.multisession)
 
 		self.logger.message(self.me('<< %s' % message))
 		return message
@@ -243,7 +243,7 @@ class Protocol (object):
 			self.neighbor.hold_time
 		)
 
-		self.negociated.sent(sent_open)
+		self.negotiated.sent(sent_open)
 
 		# we do not buffer open message in purpose
 		if not self.write(sent_open.message()):
@@ -264,12 +264,12 @@ class Protocol (object):
 
 	def new_update (self):
 		# XXX: This should really be calculated once only
-		for number in self._announce('UPDATE',self.peer.bgp.delta.updates(self.negociated,self.neighbor.group_updates)):
+		for number in self._announce('UPDATE',self.peer.bgp.delta.updates(self.negotiated,self.neighbor.group_updates)):
 			yield number
 
 	def new_eors (self):
-		eor = EOR().new(self.negociated.families)
-		for answer in self._announce(str(eor),eor.updates(self.negociated)):
+		eor = EOR().new(self.negotiated.families)
+		for answer in self._announce(str(eor),eor.updates(self.negotiated)):
 				pass
 
 	def new_notification (self,notification):
@@ -291,9 +291,9 @@ class Protocol (object):
 		if self._messages:
 			if not self._frozen:
 				self._frozen = time.time()
-			if self._frozen and self._frozen + self.negociated.holdtime < time.time():
+			if self._frozen and self._frozen + self.negotiated.holdtime < time.time():
 				raise Failure('peer %s not reading on his socket (or not fast at all) - killing session' % self.neighbor.peer_as)
-			self.logger.message(self.me("unable to send route for %d second (maximum allowed %d)" % (time.time()-self._frozen,self.negociated.holdtime)))
+			self.logger.message(self.me("unable to send route for %d second (maximum allowed %d)" % (time.time()-self._frozen,self.negotiated.holdtime)))
 			nb_backlog = len(self._messages)
 			if nb_backlog > MAX_BACKLOG:
 				raise Failure('over %d chunked routes buffered for peer %s - killing session' % (MAX_BACKLOG,self.neighbor.peer_as))

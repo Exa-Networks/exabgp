@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-negociated.py
+negotiated.py
 
 Created by Thomas Mangin on 2012-07-19.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
@@ -11,7 +11,7 @@ from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.capability.id import CapabilityID as CID
 
 
-class Negociated (object):
+class Negotiated (object):
 	def __init__ (self):
 		self.sent_open = None
 		self.received_open = None
