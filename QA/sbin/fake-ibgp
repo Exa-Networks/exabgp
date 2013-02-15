@@ -26,7 +26,44 @@ def dump (value):
 	return ''.join(spaced(value))
 
 class BGPHandler(asyncore.dispatcher_with_send):
-	def setup (self):
+	wire = False
+	update = True
+
+	_name = {
+		chr(1) : 'OPEN',
+		chr(2) : 'UPDATE',
+		chr(3) : 'NOTIFICATION',
+		chr(4) : 'KEEPALIVE',
+	}
+
+	def isupdate (self,header):
+		return header[18] == chr(2)
+
+	def name (self,header):
+		return self._name.get(header[18],'SOME WEIRD RFC PACKET')
+
+	def routes (self,body):
+		len_w = unpack('!H',body[0:2])[0]
+		len_a = unpack('!H',body[2+len_w:2+len_w+2])[0]
+		prefixes = [ord(_) for _ in body[2+len_w + 2+len_a:]]
+
+		if not prefixes:
+			yield 'route in mpnlri'
+
+		while prefixes:
+			l = prefixes.pop(0)
+			r = [0,0,0,0]
+			for index in range(4):
+				if index*8 >= l: break
+				r[index] = prefixes.pop(0)
+			yield '.'.join(str(_) for _ in r) + '/' + str(l)
+
+	def announce (self,*args):
+		print self.ip, self.port, ' '.join(str(_) for _ in args) if len(args) > 1 else args[0]
+
+	def setup (self,ip,port):
+		self.ip = ip
+		self.port = port
 		self.handle_read = self.handle_open
 		return self
 
@@ -36,11 +73,11 @@ class BGPHandler(asyncore.dispatcher_with_send):
 			try:
 				left = 19-len(header)
 				header += self.recv(left)
-				print "read message header", dump(header)
-				if left: print "missing", left
+				if self.wire: self.announce("read message header",dump(header))
+				if self.wire and left: self.announce("missing", left)
 				if left == 19-len(header): # ugly
 					# the TCP session is gone.
-					print "TCP closed"
+					self.announce("TCP connection closed")
 					self.close()
 					return None,None
 			except socket.error, e:
@@ -48,42 +85,43 @@ class BGPHandler(asyncore.dispatcher_with_send):
 					continue
 				raise e
 
-#		print "read header", dump(header)
+		self.announce("read", self.name(header))
+
 		length = unpack('!H',header[16:18])[0] - 19
-#		print "waiting for", length, "bytes"
+		if self.wire: self.announce("waiting for", length, "bytes")
 
 		body = ''
 		while len(body) != length:
 			try:
 				left = length-len(body)
 				body += self.recv(left)
-				print "read message body  ", dump(body)
-				if left: print "missing", left
+				if self.wire: self.announce("read message body  ", dump(body))
+				if self.wire and left: self.announce("missing", left)
 			except socket.error, e:
 				if e.args[0] in (errno.EWOULDBLOCK,errno.EAGAIN):
 					continue
 				raise e
 
-#		print "read body  ", dump(body)
+		if self.isupdate(header):
+			self.announce("--->", ', '.join(self.routes(body)))
+
 		return header,body
 
 	def handle_open (self):
 		# reply with a IBGP response with the same capability (just changing routerID)
-		print "reading open"
 		header,body = self.read_message()
 		routerid = chr((ord(body[8])+1) & 0xFF)
 		o = header+body[:8]+routerid+body[9:]
-		print "sending open", dump(o)
+		self.announce("sending open")
 		self.send(o)
-		print "Sending keepalive", dump(keepalive)
+		self.announce("sending keepalive")
 		self.send(keepalive)
 		self.handle_read = self.handle_keepalive
 
 	def handle_keepalive (self):
-		print "reading whatever was sent"
 		header,body = self.read_message()
 		if header is not None:
-			print "sending keepalive"
+			self.announce("sending keepalive")
 			self.send(keepalive)
 
 class BGPServer(asyncore.dispatcher):
@@ -99,7 +137,7 @@ class BGPServer(asyncore.dispatcher):
 		if pair is not None:
 			sock, addr = pair
 			print "new BGP connection from", addr
-			handler = BGPHandler(sock).setup()
+			handler = BGPHandler(sock).setup(*addr)
 
 server = BGPServer('localhost', 179)
 asyncore.loop()
