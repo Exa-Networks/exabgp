@@ -5,16 +5,6 @@ import socket
 import errno
 from struct import unpack
 
-#FFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFF 0013 04
-
-keepalive = chr(0xFF)*16 + chr(0x0) + chr(0x13) + chr(0x4)
-
-#!/usr/bin/env python
-
-import asyncore
-import socket
-from struct import unpack
-
 def dump (value):
 	def spaced (value):
 		even = None
@@ -28,6 +18,8 @@ def dump (value):
 class BGPHandler(asyncore.dispatcher_with_send):
 	wire = False
 	update = True
+
+	keepalive = chr(0xFF)*16 + chr(0x0) + chr(0x13) + chr(0x4)
 
 	_name = {
 		chr(1) : 'OPEN',
@@ -48,7 +40,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		prefixes = [ord(_) for _ in body[2+len_w + 2+len_a:]]
 
 		if not prefixes:
-			yield 'route in mpnlri'
+			yield 'no ipv4 announcement'
 
 		while prefixes:
 			l = prefixes.pop(0)
@@ -115,14 +107,14 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		self.announce("sending open")
 		self.send(o)
 		self.announce("sending keepalive")
-		self.send(keepalive)
+		self.send(self.keepalive)
 		self.handle_read = self.handle_keepalive
 
 	def handle_keepalive (self):
 		header,body = self.read_message()
 		if header is not None:
 			self.announce("sending keepalive")
-			self.send(keepalive)
+			self.send(self.keepalive)
 
 class BGPServer(asyncore.dispatcher):
 	def __init__(self, host, port):
