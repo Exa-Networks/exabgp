@@ -242,7 +242,7 @@ class Configuration (object):
 		scope = [{}]
 		if not self._single_static_route(scope,tokens[1:]):
 			return None
-		return scope[0]['routes'][0]
+		return scope[0]['routes']
 
 	def parse_api_flow (self,command):
 		self._tokens = self._tokenise(' '.join(self._cleaned(command).split(' ')[2:]).split('\\n'))
@@ -251,7 +251,7 @@ class Configuration (object):
 			return None
 		if not self._check_flow_route(scope):
 			return None
-		return scope[0]['routes'][0]
+		return scope[0]['routes']
 
 	def add_route_all_peers (self,route):
 		for neighbor in self.neighbor:

@@ -206,44 +206,48 @@ class Supervisor (object):
 
 				# route announcement / withdrawal
 				elif command.startswith('announce route'):
-					route = self.configuration.parse_api_route(command)
-					if not route:
+					routes = self.configuration.parse_api_route(command)
+					if not routes:
 						self.logger.warning("Command could not parse route in : %s" % command,'supervisor')
 					else:
-						self.configuration.remove_route_all_peers(route)
-						self.configuration.add_route_all_peers(route)
+						for route in routes:
+							self.configuration.remove_route_all_peers(route)
+							self.configuration.add_route_all_peers(route)
 						self._route_update = True
 
 				elif command.startswith('withdraw route'):
-					route = self.configuration.parse_api_route(command)
-					if not route:
+					routes = self.configuration.parse_api_route(command)
+					if not routes:
 						self.logger.warning("Command could not parse route in : %s" % command,'supervisor')
 					else:
-						if self.configuration.remove_route_all_peers(route):
-							self.logger.supervisor("Command success, route found and removed : %s" % route)
+						for route in routes:
+							if self.configuration.remove_route_all_peers(route):
+								self.logger.supervisor("Command success, route found and removed : %s" % route)
 							self._route_update = True
 						else:
 							self.logger.warning("Command failure, route not found : %s" % route,'supervisor')
 
 				# flow announcement / withdrawal
 				elif command.startswith('announce flow'):
-					flow = self.configuration.parse_api_flow(command)
-					if not flow:
+					flows = self.configuration.parse_api_flow(command)
+					if not flows:
 						self.logger.supervisor("Command could not parse flow in : %s" % command)
 					else:
-						self.configuration.add_route_all_peers(flow)
+						for flow in flows:
+							self.configuration.add_route_all_peers(flow)
 						self._route_update = True
 
 				elif command.startswith('withdraw flow'):
-					flow = self.configuration.parse_api_flow(command)
-					if not flow:
+					flows = self.configuration.parse_api_flow(command)
+					if not flows:
 						self.logger.supervisor("Command could not parse flow in : %s" % command)
 					else:
-						if self.configuration.remove_route_all_peers(flow):
-							self.logger.supervisor("Command success, flow found and removed : %s" % flow)
-							self._route_update = True
-						else:
-							self.logger.supervisor("Command failure, flow not found : %s" % flow)
+						for flow in flows:
+							if self.configuration.remove_route_all_peers(flow):
+								self.logger.supervisor("Command success, flow found and removed : %s" % flow)
+								self._route_update = True
+							else:
+								self.logger.supervisor("Command failure, flow not found : %s" % flow)
 
 				# commands
 				elif command in ['reload','restart','shutdown','version']:
