@@ -95,6 +95,7 @@ class Neighbor (object):
 
 	def remove_route (self,route):
 		try :
+			removed = False
 			routes = self._routes[(route.nlri.afi,route.nlri.safi)]
 			if route.nlri.afi in (AFI.ipv4,AFI.ipv6):
 				for r in list(routes):
