@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import glob
+import subprocess
+
+from os import path
+
+def main ():
+	location = path.realpath(__file__)
+
+	exabgp = path.abspath(path.join(location,'..','..','..','sbin','exabgp'))
+	if not path.isfile(exabgp):
+		print "could not find exabgp"
+
+	runtest = path.abspath(path.join(location,'..','..','runtest'))
+	if not path.isdir(runtest):
+		sys.exit('could not find test folder')
+
+	sequence_daemon = path.abspath(path.join(location,'..','..','sbin','ibgp-ipv4-announcement-sequence'))
+	if not path.isfile(sequence_daemon):
+		sys.exit('could not find the sequence daemon')
+
+	for configuration in glob.glob(path.join(runtest,'*.conf')):
+		sequence_file = configuration.replace('.conf','.sequence')
+		if path.isfile(sequence_file):
+			with open(sequence_file,'r') as content:
+				messages = ' '.join(_.strip() for _ in content.readlines())
+			check_sequence(exabgp,configuration,sequence_daemon,messages)
+		else:
+			print "no sequence test for", configuration
+			continue
+
+def check_sequence(exabgp,configuration,daemon,messages):
+	os.environ['exabgp.tcp.once'] = 'true'
+
+	print "sequence check for", configuration
+
+	print "starting daemon"
+	daemon = subprocess.Popen([daemon,] + messages.split(), stdout=subprocess.PIPE)
+
+	print "starting exabgp"
+	exabgp = subprocess.Popen([exabgp, configuration], stdout=subprocess.PIPE)
+
+	exabgp_output = exabgp.communicate()[0]
+	daemon_output = daemon.communicate()[0]
+
+	if 'ok - succesful' not in daemon_output:
+		print 'exabgp:\n', exabgp_output, '\n'
+		print 'daemon:\n', daemon_output, '\n'
+	else:
+		print "succesful\n"
+
+main()
