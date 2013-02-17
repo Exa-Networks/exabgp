@@ -233,8 +233,8 @@ class Configuration (object):
 
 		return True
 
-	def parse_single_route (self,command):
-		tokens = command.split(' ')[1:]
+	def parse_api_route (self,command):
+		tokens = self._cleaned(command).split(' ')[1:]
 		if len(tokens) < 4:
 			return False
 		if tokens[0] != 'route':
@@ -244,8 +244,8 @@ class Configuration (object):
 			return None
 		return scope[0]['routes'][0]
 
-	def parse_single_flow (self,command):
-		self._tokens = self._tokenise(' '.join(command.split(' ')[2:]).split('\\n'))
+	def parse_api_flow (self,command):
+		self._tokens = self._tokenise(' '.join(self._cleaned(command).split(' ')[2:]).split('\\n'))
 		scope = [{}]
 		if not self._dispatch(scope,'flow',['route',],[]):
 			return None
@@ -266,7 +266,7 @@ class Configuration (object):
 
 	# Tokenisation
 
-	def cleaned (self,line):
+	def _cleaned (self,line):
 		return line.strip().replace('\t',' ').replace(']',' ]').replace('[','[ ').replace(')',' )').replace('(','( ').lower()
 
 	def _tokenise (self,text):
@@ -274,7 +274,7 @@ class Configuration (object):
 		config = ''
 		for line in text:
 			self.logger.configuration('loading | %s' % line.rstrip())
-			replaced = self.cleaned(line)
+			replaced = self._cleaned(line)
 			config += line
 			if not replaced:
 				continue

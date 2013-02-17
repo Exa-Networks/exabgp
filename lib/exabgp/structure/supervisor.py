@@ -206,7 +206,7 @@ class Supervisor (object):
 
 				# route announcement / withdrawal
 				elif command.startswith('announce route'):
-					route = self.configuration.parse_single_route(self.configuration.cleaned(command))
+					route = self.configuration.parse_api_route(command)
 					if not route:
 						self.logger.warning("Command could not parse route in : %s" % command,'supervisor')
 					else:
@@ -215,7 +215,7 @@ class Supervisor (object):
 						self._route_update = True
 
 				elif command.startswith('withdraw route'):
-					route = self.configuration.parse_single_route(self.configuration.cleaned(command))
+					route = self.configuration.parse_api_route(command)
 					if not route:
 						self.logger.warning("Command could not parse route in : %s" % command,'supervisor')
 					else:
@@ -227,7 +227,7 @@ class Supervisor (object):
 
 				# flow announcement / withdrawal
 				elif command.startswith('announce flow'):
-					flow = self.configuration.parse_single_flow(self.configuration.cleaned(command))
+					flow = self.configuration.parse_api_flow(command)
 					if not flow:
 						self.logger.supervisor("Command could not parse flow in : %s" % command)
 					else:
@@ -235,7 +235,7 @@ class Supervisor (object):
 						self._route_update = True
 
 				elif command.startswith('withdraw flow'):
-					flow = self.configuration.parse_single_flow(self.configuration.cleaned(command))
+					flow = self.configuration.parse_api_flow(command)
 					if not flow:
 						self.logger.supervisor("Command could not parse flow in : %s" % command)
 					else:
