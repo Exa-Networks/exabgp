@@ -11,7 +11,11 @@ Version 3.1.4 - --th of ---- 2013
  * Fix: fix relative path from exabgp
  * Fix: bug in api code causing crash
  * Fix: did not cleanup routes from the api before tokenisation
+    reported by: Lorenzo Murillo
  * Fix: did not split routes from the api
+    reported by: Lorenzo Murillo
+ * Fix: when the api program was sending message too fast, some were missed.
+    reported by: Lorenzo Murillo
 
 Version 3.1.3 - 4th of Febuary 2013
  * Fix: JSON bugs (encoding for cluster-list, withdrawn routes)

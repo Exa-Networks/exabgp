@@ -10,6 +10,7 @@ import errno
 import time
 import subprocess
 import select
+import fcntl
 
 from exabgp.version import version
 
@@ -86,6 +87,8 @@ class Processes (object):
 					# This flags exists for python 2.7.3 in the documentation but on on my MAC
 					# creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
 				)
+				fcntl.fcntl(self._process[process].stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
+
 				self.logger.processes("Forked process %s" % process)
 
 			neighbor = self.supervisor.configuration.process[process]['neighbor']
@@ -116,21 +119,22 @@ class Processes (object):
 		for process in list(self._process):
 			try:
 				proc = self._process[process]
-				r = True
-				while r:
-					r,_,_ = select.select([proc.stdout,],[],[],0)
-					if r:
-						# XXX: readline is blocking, so we are taking the assuption that it will not block
-						# XXX: most likely not going to but perhaps the code should be more robust ?
-						line = proc.stdout.readline().rstrip()
-						if not line:
-							# It seems that when we send ^C this is passed to the children to
-							# And if they do not intercept it correctly, select.select returns but
-							# there is not data to read
-							r = False
-						else:
-							self.logger.processes("Command from process %s : %s " % (process,line))
-							lines.setdefault(process,[]).append(line)
+				r,_,_ = select.select([proc.stdout,],[],[],0)
+				if r:
+					try:
+						while True:
+							line = proc.stdout.readline().rstrip()
+							if line:
+								self.logger.processes("Command from process %s : %s " % (process,line))
+								lines.setdefault(process,[]).append(line)
+							else:
+								self.logger.processes("The process died, trying to respawn it")
+								self._terminate(process)
+								self._start(process)
+								break
+					except IOError,e:
+						if e.errno != errno.EAGAIN: # no more data
+							self.logger.processes("unexpected errno received from forked process: %d [%s]" % (e.errno,errno.errorcode[e.errno]))
 			except (subprocess.CalledProcessError,OSError,ValueError):
 				self.logger.processes("Issue with the process, terminating it and restarting it")
 				self._terminate(process)
