@@ -266,12 +266,15 @@ class Configuration (object):
 
 	# Tokenisation
 
+	def cleaned (self,line):
+		return line.strip().replace('\t',' ').replace(']',' ]').replace('[','[ ').replace(')',' )').replace('(','( ').lower()
+
 	def _tokenise (self,text):
 		r = []
 		config = ''
 		for line in text:
 			self.logger.configuration('loading | %s' % line.rstrip())
-			replaced = line.strip().replace('\t',' ').replace(']',' ]').replace('[','[ ').replace(')',' )').replace('(','( ').lower()
+			replaced = self.cleaned(line)
 			config += line
 			if not replaced:
 				continue
