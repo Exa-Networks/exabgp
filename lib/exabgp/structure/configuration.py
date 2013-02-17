@@ -483,6 +483,7 @@ class Configuration (object):
 			if command == 'peer-updates':
 				self._set_process_command(scope,'neighbor-changes',tokens[1:])
 				self._set_process_command(scope,'receive-routes',tokens[1:])
+				return True
 			# new interface
 			if command == 'encoder': return self._set_process_encoder(scope,'encoder',tokens[1:])
 			if command == 'receive-packets': return self._set_process_command(scope,'receive-packets',tokens[1:])
