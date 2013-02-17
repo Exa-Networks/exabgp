@@ -58,8 +58,21 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		self.ip = ip
 		self.port = port
 		self.handle_read = self.handle_open
-		self.messages = messages
+		self.sequence = {}
+		for rule in messages:
+			sequence,announcement = rule.split(':',1)
+			self.sequence.setdefault(sequence,[]).append(announcement)
+		self.update_sequence()
 		return self
+
+	def update_sequence (self):
+		keys = sorted(list(self.sequence))
+		if keys:
+			key = keys[0]
+			self.messages = self.sequence[key]
+			del self.sequence[key]
+			return True
+		return False
 
 	def read_message (self):
 		header = ''
@@ -103,15 +116,18 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		header,body = self.read_message()
 
 		if self.isupdate(header):
-			for route in self.routes(body):
-				message = self.messages.pop(0)
-				if message != route:
-					self.announce('mismatch,message:',message,'route:',route)
+			for announcement in self.routes(body):
+				if announcement in self.messages:
+					self.messages.remove(announcement)
+				else:
+					self.announce('unexpected announcement:',announcement)
+					self.announce('valid options were:',', '.join(self.messages))
 					sys.exit(1)
 
 				if not self.messages:
-					self.announce('ok - succesful')
-					sys.exit(0)
+					if not self.update_sequence():
+						self.announce('ok - succesful')
+						sys.exit(0)
 
 		if header is not None:
 			self.send(self.keepalive)
@@ -153,8 +169,9 @@ def drop ():
 
 def main ():
 	if len(sys.argv) <= 1:
-		print 'a list of expected route announcement/withdrawl in the format announce:ipv4-route withdraw:ipv4-route'
-		print 'for example:',sys.argv[0],'announce:10.0.0.0/8 announce:192.0.2.0/24 withdraw:10.0.0.0/8'
+		print 'a list of expected route announcement/withdrawl in the format <number>:announce:<ipv4-route> <number>:withdraw:<ipv4-route>'
+		print 'for example:',sys.argv[0],'1:announce:10.0.0.0/8 1:announce:192.0.2.0/24 2:withdraw:10.0.0.0/8'
+		print 'routes with the same <number> can arrive in any order'
 		sys.exit(1)
 
 	server = BGPServer('localhost',179,sys.argv[1:])
