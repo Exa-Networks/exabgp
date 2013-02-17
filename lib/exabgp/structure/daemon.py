@@ -28,6 +28,7 @@ class Daemon (object):
 		self.logger = Logger()
 
 		self.supervisor = supervisor
+
 		os.chdir('/')
 		#os.umask(0)
 		os.umask(0137)

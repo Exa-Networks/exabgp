@@ -554,7 +554,7 @@ class Configuration (object):
 				path = [os.environ.get('ETC','etc'),] + parts[2:]
 				prg = os.path.join(*path)
 			else:
-				prg = os.path.join(os.getcwd(),prg)
+				prg = os.path.abspath(os.path.join(os.path.dirname(self._fname),prg))
 		if not os.path.exists(prg):
 			self._error = 'can not locate the the program "%s"' % prg
 			if self.debug: raise
