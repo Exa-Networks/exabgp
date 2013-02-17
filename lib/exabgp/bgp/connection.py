@@ -37,6 +37,10 @@ errno_fatal = set((
 	errno.ECONNABORTED, errno.EPIPE,
 ))
 
+# we could not connect to the peer
+class NotConnected (Exception):
+	pass
+
 class Connection (object):
 	def __init__ (self,peer,local,md5,ttl):
 		# If the OS tells us we have data on the socket, we should never have to wait more than READ_TIMEOUT to be able to read it.
@@ -51,7 +55,7 @@ class Connection (object):
 		self.logger.wire("Opening connection to %s" % self.peer)
 
 		if peer.afi != local.afi:
-			raise Failure('The local IP and peer IP must be of the same family (both IPv4 or both IPv6)')
+			raise NotConnected('The local IP and peer IP must be of the same family (both IPv4 or both IPv6)')
 
 		try:
 			if peer.afi == AFI.ipv4:
@@ -79,13 +83,13 @@ class Connection (object):
 				self.io.bind((local.ip,0,0,0))
 		except socket.error,e:
 			self.close()
-			raise Failure('Could not bind to local ip %s - %s' % (local.ip,str(e)))
+			raise NotConnected('Could not bind to local ip %s - %s' % (local.ip,str(e)))
 
 		if md5:
 			os = platform.system()
 			if os == 'FreeBSD':
 				if md5 != 'kernel':
-					raise Failure(
+					raise NotConnected(
 						'FreeBSD requires that you set your MD5 key via ipsec.conf.\n'
 						'Something like:\n'
 						'flush;\n'
@@ -96,7 +100,7 @@ class Connection (object):
 					self.io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, 1)
 				except socket.error,e:
 					self.close()
-					raise Failure(
+					raise NotConnected(
 						'FreeBSD requires that you rebuild your kernel to enable TCP MD5 Signatures:\n'
 						'options         IPSEC\n'
 						'options         TCP_SIGNATURE\n'
@@ -123,9 +127,9 @@ class Connection (object):
 					self.io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, md5sig)
 				except socket.error,e:
 					self.close()
-					raise Failure('This linux machine does not support TCP_MD5SIG, you can not use MD5 : %s' % str(e))
+					raise NotConnected('This linux machine does not support TCP_MD5SIG, you can not use MD5 : %s' % str(e))
 			else:
-				raise Failure('ExaBGP has no MD5 support for %s' % os)
+				raise NotConnected('ExaBGP has no MD5 support for %s' % os)
 
 		# None (ttl-security unset) or zero (maximum TTL) is the same thing
 		if ttl:
@@ -133,7 +137,7 @@ class Connection (object):
 				self.io.setsockopt(socket.IPPROTO_IP,socket.IP_TTL, 20)
 			except socket.error,e:
 				self.close()
-				raise Failure('This OS does not support IP_TTL (ttl-security), you can not use MD5 : %s' % str(e))
+				raise NotConnected('This OS does not support IP_TTL (ttl-security), you can not use MD5 : %s' % str(e))
 
 		try:
 			if peer.afi == AFI.ipv4:
@@ -143,7 +147,7 @@ class Connection (object):
 			self.io.setblocking(0)
 		except socket.error, e:
 			self.close()
-			raise Failure('Could not connect to peer (if you use MD5, check your passwords): %s' % str(e))
+			raise NotConnected('Could not connect to peer (if you use MD5, check your passwords): %s' % str(e))
 
 		try:
 			try:

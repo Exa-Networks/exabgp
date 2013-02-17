@@ -243,6 +243,7 @@ defaults = {
 	'tcp' : {
 		'timeout' : (value.integer,value.nop,'1',  'time we will wait on select (can help with unstable BGP multihop)\n'
 		                                           '%sVERY dangerous use only if you understand BGP very well.' % (' '* 34)),
+		'once': (value.boolean,value.lower,'false','only one tcp connection attempt per peer (for debuging scripts)'),
 	},
 	'cache' : {
 		'attributes'  :  (value.boolean,value.lower,'true', 'cache routes attributes (configuration and wire) for faster parsing'),
@@ -261,7 +262,7 @@ defaults = {
 		'memory' : (value.boolean,value.lower,'false','command line option --memory'),
 		'configuration' : (value.boolean,value.lower,'false','undocumented option: raise when parsing configuration errors'),
 		'selfcheck' : (value.unquote,value.quote,'','does a self check on the configuration file'),
-		'route' : (value.unquote,value.quote,'','decode the route using the configuration')
+		'route' : (value.unquote,value.quote,'','decode the route using the configuration'),
 	},
 }
 

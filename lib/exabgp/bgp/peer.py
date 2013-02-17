@@ -19,15 +19,11 @@ from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notification, Notify
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.protocol import Protocol
+from exabgp.bgp.connection import NotConnected
 from exabgp.structure.processes import ProcessError
 
+from exabgp.structure.environment import load
 from exabgp.structure.log import Logger
-
-# ===================================================================
-# We tried to read data when the connection is not established (as it seems select let us do that !)
-
-class NotConnected (Exception):
-	pass
 
 # reporting the number of routes we saw
 class RouteCounter (object):
@@ -83,6 +79,9 @@ class Peer (object):
 
 		# We have routes following a reload (or we just started)
 		self._have_routes = True
+
+		# We only to try to connect via TCP once
+		self.once = load().tcp.once
 
 	def _reset_skip (self):
 		# We are currently not skipping connection attempts
@@ -338,6 +337,12 @@ class Peer (object):
 				self.bgp.close('could not connect to the peer')
 			except Failure:
 				pass
+
+			# we tried to connect once, it failed, we stop
+			if self.once:
+				self.logger.error('only one attempt to connect is allowed, stoping the peer','supervisor')
+				self.stop()
+
 			return
 
 		#
