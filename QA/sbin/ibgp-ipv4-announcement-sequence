@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import os
+import pwd
 import sys
 import asyncore
 import socket
@@ -129,6 +131,26 @@ class BGPServer (asyncore.dispatcher):
 			sock,addr = pair
 			handler = BGPHandler(sock).setup(*addr,messages=self.messages)
 
+def drop ():
+	uid = os.getuid()
+	gid = os.getgid()
+
+	if uid and gid:
+		return
+
+	for name in ['nobody',]:
+		try:
+			user = pwd.getpwnam(name)
+			nuid = int(user.pw_uid)
+			ngid = int(user.pw_uid)
+		except KeyError:
+			pass
+
+	if not gid:
+		os.setgid(ngid)
+	if not uid:
+		os.setuid(nuid)
+
 def main ():
 	if len(sys.argv) <= 1:
 		print 'a list of expected route announcement/withdrawl in the format announce:ipv4-route withdraw:ipv4-route'
@@ -136,6 +158,7 @@ def main ():
 		sys.exit(1)
 
 	server = BGPServer('localhost',179,sys.argv[1:])
+	drop()
 	asyncore.loop()
 
 if __name__ == '__main__':

@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import os
+import pwd
 import asyncore
 import socket
 import errno
@@ -131,5 +133,26 @@ class BGPServer(asyncore.dispatcher):
 			print "new BGP connection from", addr
 			handler = BGPHandler(sock).setup(*addr)
 
+def drop ():
+	uid = os.getuid()
+	gid = os.getgid()
+
+	if uid and gid:
+		return
+
+	for name in ['nobody',]:
+		try:
+			user = pwd.getpwnam(name)
+			nuid = int(user.pw_uid)
+			ngid = int(user.pw_uid)
+		except KeyError:
+			pass
+
+	if not gid:
+		os.setgid(ngid)
+	if not uid:
+		os.setuid(nuid)
+
 server = BGPServer('localhost', 179)
+drop()
 asyncore.loop()
