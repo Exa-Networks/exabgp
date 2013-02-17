@@ -3,15 +3,18 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
-Version 3.1.3 - 4th of Febuary 2013
- * Fix: JSON bugs (encoding for cluster-list, withdrawn routes)
-    patch by: Vincent Bernat
+Version 3.1.4 - --th of ---- 2013
  * Fix: Learn to spell negotiated (issue 21)
     reported by: Ian Wells
  * Feature: option to only attempt one TCP connection per peer (required by unittesting code)
  * Fix: a bug in code in charge of parsing legacy API names
  * Fix: fix relative path from exabgp
  * Fix: bug in api code causing crash
+ * Fix: did not cleanup route entered from api for tokeniser
+
+Version 3.1.3 - 4th of Febuary 2013
+ * Fix: JSON bugs (encoding for cluster-list, withdrawn routes)
+    patch by: Vincent Bernat
 
 Version 3.1.2 - 10th of January 2013
  * Copyright: updated all copyright notice (welcome to 2013)
