@@ -50,7 +50,7 @@ class Processes (object):
 	def terminate (self):
 		for process in list(self._process):
 			if not self.silence:
-				self._write(process,self._api_encoder[process].shutdown())
+				self.write(process,self._api_encoder[process].shutdown())
 		self.silence = True
 		time.sleep(0.1)
 		for process in list(self._process):
@@ -143,7 +143,7 @@ class Processes (object):
 				self._start(process)
 		return lines
 
-	def _write (self,process,string):
+	def write (self,process,string):
 		while True:
 			try:
 				self._process[process].stdin.write('%s\r\n' % string)
@@ -178,30 +178,30 @@ class Processes (object):
 	def up (self,neighbor):
 		if self.silence: return
 		for process in self._notify(neighbor,'neighbor-changes'):
-			self._write(process,self._api_encoder[process].up(neighbor))
+			self.write(process,self._api_encoder[process].up(neighbor))
 
 	def connected (self,neighbor):
 		if self.silence: return
 		for process in self._notify(neighbor,'neighbor-changes'):
-			self._write(process,self._api_encoder[process].connected(neighbor))
+			self.write(process,self._api_encoder[process].connected(neighbor))
 
 	def down (self,neighbor,reason=''):
 		if self.silence: return
 		for process in self._notify(neighbor,'neighbor-changes'):
-			self._write(process,self._api_encoder[process].down(neighbor))
+			self.write(process,self._api_encoder[process].down(neighbor))
 
 	def receive (self,neighbor,category,header,body):
 		if self.silence: return
 		for process in self._notify(neighbor,'receive-packets'):
-			self._write(process,self._api_encoder[process].receive(neighbor,category,header,body))
+			self.write(process,self._api_encoder[process].receive(neighbor,category,header,body))
 
 	def send (self,neighbor,category,header,body):
 		if self.silence: return
 		for process in self._notify(neighbor,'send-packets'):
-			self._write(process,self._api_encoder[process].send(neighbor,category,header,body))
+			self.write(process,self._api_encoder[process].send(neighbor,category,header,body))
 
 	def routes (self,neighbor,routes):
 		if self.silence: return
 		for process in self._notify(neighbor,'receive-routes'):
-			self._write(process,self._api_encoder[process].routes(neighbor,routes))
+			self.write(process,self._api_encoder[process].routes(neighbor,routes))
 
