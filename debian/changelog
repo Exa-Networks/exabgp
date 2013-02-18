@@ -1,3 +1,8 @@
+exabgp (3.1.4-1) unstable; urgency=low
+  * New upstream release
+
+ -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Mon, 18 Feb 2013 10:13:00 +0000
+
 exabgp (3.1.3-1) unstable; urgency=low
   * New upstream release
   * Closes: #697742 incorrect ucf usage in postrm script.

@@ -3,7 +3,7 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
-Version 3.1.4 - --th of ---- 2013
+Version 3.1.4 - 18th of Febuary 2013
  * Fix: Learn to spell negotiated (issue 21)
     reported by: Ian Wells
  * Feature: option to only attempt one TCP connection per peer (required by unittesting code)
