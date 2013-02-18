@@ -260,52 +260,52 @@ class Supervisor (object):
 				else:
 					self.logger.warning("Command from process not understood : %s" % command,'supervisor')
 
-	def commands (self,commands):
-		def _answer (service,string):
-			self.processes.write(service,string)
-			self.logger.supervisor('Responding to %s : %s' % (service,string))
+	def _answer (self,service,string):
+		self.processes.write(service,string)
+		self.logger.supervisor('Responding to %s : %s' % (service,string))
 
+	def commands (self,commands):
 		for service in commands:
 			for command in commands[service]:
 				if command == 'shutdown':
 					self._shutdown = True
-					_answer(service,'shutdown in progress')
+					self._answer(service,'shutdown in progress')
 					continue
 				if command == 'reload':
 					self._reload = True
-					_answer(service,'reload in progress')
+					self._answer(service,'reload in progress')
 					continue
 				if command == 'restart':
 					self._restart = True
-					_answer(service,'restart in progress')
+					self._answer(service,'restart in progress')
 					continue
 				if command == 'version':
-					_answer(service,'exabgp %s' % version)
+					self._answer(service,'exabgp %s' % version)
 					continue
 
 				if command == 'show neighbors':
-					_answer(service,'This command holds ExaBGP, do not be surprised if it takes ages and then cause peers to drop ...\n')
+					self._answer(service,'This command holds ExaBGP, do not be surprised if it takes ages and then cause peers to drop ...\n')
 					for key in self.configuration.neighbor.keys():
 						neighbor = self.configuration.neighbor[key]
 						for line in str(neighbor).split('\n'):
-							_answer(service,line)
+							self._answer(service,line)
 
 				elif command == 'show routes':
-					_answer(service,'This command holds ExaBGP, do not be surprised if it takes ages and then cause peers to drop ...\n')
+					self._answer(service,'This command holds ExaBGP, do not be surprised if it takes ages and then cause peers to drop ...\n')
 					for key in self.configuration.neighbor.keys():
 						neighbor = self.configuration.neighbor[key]
 						for route in neighbor.every_routes():
-							_answer(service,'neighbor %s %s' % (neighbor.local_address,route))
+							self._answer(service,'neighbor %s %s' % (neighbor.local_address,route))
 
 				elif command == 'show routes extensive':
-					_answer(service,'This command holds ExaBGP, do not be surprised if it takes ages and then cause peers to drop ...\n')
+					self._answer(service,'This command holds ExaBGP, do not be surprised if it takes ages and then cause peers to drop ...\n')
 					for key in self.configuration.neighbor.keys():
 						neighbor = self.configuration.neighbor[key]
 						for route in neighbor.every_routes():
-							_answer(service,'neighbor %s %s' % (neighbor.name(),route.extensive()))
+							self._answer(service,'neighbor %s %s' % (neighbor.name(),route.extensive()))
 
 				else:
-					_answer(service,'unknown command %s' % command)
+					self._answer(service,'unknown command %s' % command)
 
 	def route_update (self):
 		"""the process ran and we need to figure what routes to changes"""

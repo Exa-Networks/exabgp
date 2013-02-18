@@ -3,6 +3,10 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.1.5 - 18th of Febuary 2013
+ * Fix: function name broking some features
+    reported by: Lorenzo Murillo
+
 Version 3.1.4 - 18th of Febuary 2013
  * Fix: Learn to spell negotiated (issue 21)
     reported by: Ian Wells
@@ -10,11 +14,11 @@ Version 3.1.4 - 18th of Febuary 2013
  * Fix: a bug in code in charge of parsing legacy API names
  * Fix: fix relative path from exabgp
  * Fix: bug in api code causing crash
- * Fix: did not cleanup routes from the api before tokenisation
+ * Fix: did not cleanup routes from the api before tokenisation (issue 22)
     reported by: Lorenzo Murillo
- * Fix: did not split routes from the api
+ * Fix: did not split routes from the api (issue 22)
     reported by: Lorenzo Murillo
- * Fix: when the api program was sending message too fast, some were missed.
+ * Fix: when the api program was sending message too fast, some were missed (issue 22)
     reported by: Lorenzo Murillo
  * Fix: make peer name more unique (adding asn, and router-id) to prevent to router configuration to merge
  * Feature: restart the API program if we lost its file descriptor
