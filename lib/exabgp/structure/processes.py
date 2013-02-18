@@ -133,7 +133,9 @@ class Processes (object):
 								self._start(process)
 								break
 					except IOError,e:
-						if e.errno != errno.EAGAIN: # no more data
+						if e.errno == errno.EINTR: # call interrupted
+							pass # we most likely have data, we will try to read them a the next loop iteration
+						elif e.errno != errno.EAGAIN: # no more data
 							self.logger.processes("unexpected errno received from forked process: %d [%s]" % (e.errno,errno.errorcode[e.errno]))
 			except (subprocess.CalledProcessError,OSError,ValueError):
 				self.logger.processes("Issue with the process, terminating it and restarting it")
