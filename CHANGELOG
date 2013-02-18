@@ -4,7 +4,7 @@ Version explained:
  bug   : increase on bug or incremental changes
 
 Version 3.1.5 - 18th of Febuary 2013
- * Fix: function name broking some features
+ * Fix: function name broking some features (issue 23)
     reported by: Lorenzo Murillo
 
 Version 3.1.4 - 18th of Febuary 2013
