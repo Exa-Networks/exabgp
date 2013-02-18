@@ -126,7 +126,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 				if not self.messages:
 					if not self.update_sequence():
-						self.announce('ok - succesful')
+						self.announce('successful')
 						sys.exit(0)
 
 		if header is not None:
@@ -174,9 +174,13 @@ def main ():
 		print 'routes with the same <number> can arrive in any order'
 		sys.exit(1)
 
-	server = BGPServer('localhost',179,sys.argv[1:])
-	drop()
-	asyncore.loop()
+	try:
+		server = BGPServer('localhost',179,sys.argv[1:])
+		drop()
+		asyncore.loop()
+	except socket.error,e:
+		if e.errno == errno.EACCES:
+			print "failure: could not bind to port 179 - most likely not run as root"
 
 if __name__ == '__main__':
 	main()

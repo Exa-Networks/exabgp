@@ -4,8 +4,16 @@ import os
 import sys
 import glob
 import subprocess
+import signal
 
 from os import path
+
+
+class Alarm(Exception):
+	pass
+
+def alarm_handler(signum, frame):
+	raise Alarm()
 
 def main ():
 	location = path.realpath(__file__)
@@ -29,27 +37,45 @@ def main ():
 				messages = ' '.join(_.strip() for _ in content.readlines())
 			check_sequence(exabgp,configuration,sequence_daemon,messages)
 		else:
-			print "no sequence test for", configuration
+			print "sequence check for", configuration
+			print "skip (no sequence data)\n"
 			continue
 
 def check_sequence(exabgp,configuration,daemon,messages):
 	os.environ['exabgp.tcp.once'] = 'true'
 
-	print "sequence check for", configuration
+	timeout = 15 # seconds
 
-	print "starting daemon"
-	daemon = subprocess.Popen([daemon,] + messages.split(), stdout=subprocess.PIPE)
+	try:
+		signal.signal(signal.SIGALRM, alarm_handler)
+		signal.alarm(timeout)
 
-	print "starting exabgp"
-	exabgp = subprocess.Popen([exabgp, configuration], stdout=subprocess.PIPE)
+		print "sequence check for", configuration
+		print "will wait for completion for %d seconds" % timeout
 
-	exabgp_output = exabgp.communicate()[0]
-	daemon_output = daemon.communicate()[0]
+		print "starting daemon",
+		daemon = subprocess.Popen([daemon,] + messages.split(), stdout=subprocess.PIPE)
 
-	if 'ok - succesful' not in daemon_output:
+		print ", exabgp"
+		exabgp = subprocess.Popen([exabgp, configuration], stdout=subprocess.PIPE)
+
+		exabgp_output = exabgp.communicate()[0]
+		daemon_output = daemon.communicate()[0]
+	except Alarm:
+		exabgp_output = 'exabgp still running'
+		daemon_output = 'still waiting for data after %d seconds' % timeout
+
+		for pid in [daemon.pid, exabgp.pid]:
+			try:
+				os.kill(pid,signal.SIGTERM)
+			except OSError,e:
+				pass
+
+	if 'successful' in daemon_output:
+		print "successful\n"
+	else:
+		print "failure\n"
 		print 'exabgp:\n', exabgp_output, '\n'
 		print 'daemon:\n', daemon_output, '\n'
-	else:
-		print "succesful\n"
 
 main()
