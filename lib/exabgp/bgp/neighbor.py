@@ -54,7 +54,7 @@ class Neighbor (object):
 			session = "/ ".join("%s-%s" % (afi,safi) for (afi,safi) in self.families())
 		else:
 			session = 'in-open'
-		return "%s local-ip %s family-allowed %s" % (self.peer_address,self.local_address,session)
+		return "%s local-ip %s local-as %s peer-as %s router-id %s family-allowed %s" % (self.peer_address,self.local_address,self.local_as,self.peer_as,self.router_id,session)
 
 	def families (self):
 		# this list() is important .. as we use the function to modify self._families
