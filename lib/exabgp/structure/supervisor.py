@@ -222,10 +222,10 @@ class Supervisor (object):
 					else:
 						for route in routes:
 							if self.configuration.remove_route_all_peers(route):
-								self.logger.supervisor("Command success, route found and removed : %s" % route)
+								self.logger.supervisor("Route found and removed : %s" % route)
 							self._route_update = True
-						else:
-							self.logger.warning("Command failure, route not found : %s" % route,'supervisor')
+						if not self._route_update:
+							self.logger.warning("Could not find route : %s" % route,'supervisor')
 
 				# flow announcement / withdrawal
 				elif command.startswith('announce flow'):
@@ -246,8 +246,8 @@ class Supervisor (object):
 							if self.configuration.remove_route_all_peers(flow):
 								self.logger.supervisor("Command success, flow found and removed : %s" % flow)
 								self._route_update = True
-							else:
-								self.logger.supervisor("Command failure, flow not found : %s" % flow)
+							if not self._route_update:
+								self.logger.supervisor("Could not find flow : %s" % flow)
 
 				# commands
 				elif command in ['reload','restart','shutdown','version']:
