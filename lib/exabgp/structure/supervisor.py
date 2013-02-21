@@ -213,6 +213,7 @@ class Supervisor (object):
 						for route in routes:
 							self.configuration.remove_route_all_peers(route)
 							self.configuration.add_route_all_peers(route)
+							self.logger.warning("Route added : %s" % route,'supervisor')
 						self._route_update = True
 
 				elif command.startswith('withdraw route'):
