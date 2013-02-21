@@ -31,3 +31,6 @@ class Attribute (object):
 
 	def __eq__ (self,other):
 		return self.ID == other.ID
+
+	def __ne__ (self,other):
+		return self.ID != other.ID

@@ -162,6 +162,12 @@ class NLRI (BGPPrefix):
 	def __str__ (self):
 		return "%s%s%s%s" % (BGPPrefix.__str__(self),str(self.labels),str(self.path_info),str(self.rd))
 
+	def __eq__ (self,other):
+		return str(self) == str(other)
+
+	def __ne__ (self,other):
+		return not self.__eq__(other)
+
 	def json (self):
 		label = str(self.labels)
 		pinfo = str(self.path_info)
@@ -259,6 +265,9 @@ class Route (object):
 
 	def __eq__(self, other):
 		return str(self) == str(other)
+
+	def __ne__ (self,other):
+		return not self.__eq__(other)
 
 	def extensive (self):
 		return "%s %s%s" % (str(Address(self.nlri.afi,self.nlri.safi)),str(self.nlri),str(self.attributes))

@@ -36,12 +36,7 @@ class Table (object):
 	def _add (self,route):
 		index = route.index()
 		if index in self._plus:
-			# XXX:
-			# XXX: Route has a __eq__ function but we have to implicitely call str() for the test to work
-			# XXX: WHY ! oH WHY !
-			# XXX:
-			#if route != self._plus[prefix][1]:
-			if str(route) != str(self._plus[index][1]):
+			if route != self._plus[index][1]:
 				self._plus[index] = (time.time(),route,'*')
 			return
 		self._plus[index] = (time.time(),route,'+')

@@ -48,6 +48,9 @@ class Community (object):
 	def __eq__ (self,other):
 		return self.community == other.community
 
+	def __ne__ (self,other):
+		return self.community != other.community
+
 def cachedCommunity (community):
 	if community in Community.cache:
 		return Community.cache[community]

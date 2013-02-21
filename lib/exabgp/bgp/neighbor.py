@@ -145,7 +145,7 @@ class Neighbor (object):
 			self.families() == other.families()
 
 	def __ne__(self, other):
-		return not (self == other)
+		return not self.__eq__(other)
 
 	def pprint (self,with_routes=True):
 		routes=''
