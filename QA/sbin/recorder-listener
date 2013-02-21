@@ -1,0 +1,79 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import pwd
+import asyncore
+import socket
+import errno
+from struct import unpack
+
+def dump (value):
+	def spaced (value):
+		even = None
+		for v in value:
+			if even is False:
+				yield ' '
+			yield '%02X' % ord(v)
+			even = not even
+	return ''.join(spaced(value))
+
+class RecordHandler(asyncore.dispatcher_with_send):
+	def setup (self,name):
+		self.record = open(name,'w')
+
+	def handle_read (self):
+		while True:
+			count = 0
+			even = False
+			byte = self.recv(1)
+			self.record.write('%02X' % ord(byte))
+			count = (count + 1) % 8
+			if not count:
+				self.record.write('\n')
+				even = False
+			else:
+				even != even
+				if even:
+					self.record.write(' ')
+
+class RecordServer(asyncore.dispatcher):
+	def __init__(self, host, port,name):
+		asyncore.dispatcher.__init__(self)
+		self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
+		self.set_reuse_addr()
+		self.bind((host, port))
+		self.listen(5)
+		self.name = name
+
+	def handle_accept(self):
+		pair = self.accept()
+		if pair is not None:
+			sock, addr = pair
+			print "new BGP connection from", addr
+			handler = RecordHandler(sock).setup(self.name)
+
+def drop ():
+	uid = os.getuid()
+	gid = os.getgid()
+
+	if uid and gid:
+		return
+
+	for name in ['nobody',]:
+		try:
+			user = pwd.getpwnam(name)
+			nuid = int(user.pw_uid)
+			ngid = int(user.pw_uid)
+		except KeyError:
+			pass
+
+	if not gid:
+		os.setgid(ngid)
+	if not uid:
+		os.setuid(nuid)
+
+# IP, port, file
+server = RecordServer(sys.argv[1], int(sys.argv[2]), sys.argv[3])
+drop()
+asyncore.loop()

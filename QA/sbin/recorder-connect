@@ -1,0 +1,69 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import pwd
+import asyncore
+import socket
+import errno
+from struct import unpack
+
+def dump (value):
+	def spaced (value):
+		even = None
+		for v in value:
+			if even is False:
+				yield ' '
+			yield '%02X' % ord(v)
+			even = not even
+	return ''.join(spaced(value))
+
+def drop ():
+	uid = os.getuid()
+	gid = os.getgid()
+
+	if uid and gid:
+		return
+
+	for name in ['nobody',]:
+		try:
+			user = pwd.getpwnam(name)
+			nuid = int(user.pw_uid)
+			ngid = int(user.pw_uid)
+		except KeyError:
+			pass
+
+	if not gid:
+		os.setgid(ngid)
+	if not uid:
+		os.setuid(nuid)
+
+
+drop()
+
+# Create a TCP/IP socket
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# Connect the socket to the port on the server given by the caller
+server_address = (sys.argv[1], int(sys.argv[2]))
+print >>sys.stderr, 'connecting to %s port %s' % server_address
+sock.connect(server_address)
+
+with open(sys.argv[3]) as record:
+	try:
+		while True:
+			count = 0
+			even = False
+			byte = self.recv(1)
+			if byte == '': break
+			record.write('%02X' % ord(byte))
+			count = (count + 1) % 8
+			if not count:
+				record.write('\n')
+				even = False
+			else:
+				even != even
+				if even:
+					record.write(' ')
+	finally:
+		sock.close()
