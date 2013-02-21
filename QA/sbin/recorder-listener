@@ -3,6 +3,7 @@
 import os
 import sys
 import pwd
+import time
 import asyncore
 import socket
 import errno
@@ -19,23 +20,40 @@ def dump (value):
 	return ''.join(spaced(value))
 
 class RecordHandler(asyncore.dispatcher_with_send):
-	def setup (self,name):
-		self.record = open(name,'w')
+	def setup (self,name,ip,port):
+		now = time.strftime("%a-%d-%b-%Y-%H:%M:%S", time.gmtime())
+		self.record = open("%s-%s" % (name,now),'w')
+		self.record.write('Connection from %s:%d\n' % (ip,port))
 
 	def handle_read (self):
+		count = 0
+		space = False
 		while True:
-			count = 0
-			even = False
-			byte = self.recv(1)
-			self.record.write('%02X' % ord(byte))
-			count = (count + 1) % 8
-			if not count:
-				self.record.write('\n')
-				even = False
-			else:
-				even != even
-				if even:
+			try:
+				bytes = self.recv(1024)
+			except socket.error, e:
+				if e.errno in (errno.EWOULDBLOCK,errno.EAGAIN):
+					continue
+				raise e
+			if not bytes:
+				print "connection closed"
+				break
+
+			print "recv(%d)" % len(bytes),
+
+			for byte in bytes:
+				self.record.write('%02X' % ord(byte))
+				count = (count + 1) % 32
+				if not count:
+					self.record.write('\n')
+					space = False
+					continue
+				if space:
 					self.record.write(' ')
+				space = not space
+			self.record.flush()
+
+		self.record.close()
 
 class RecordServer(asyncore.dispatcher):
 	def __init__(self, host, port,name):
@@ -49,9 +67,9 @@ class RecordServer(asyncore.dispatcher):
 	def handle_accept(self):
 		pair = self.accept()
 		if pair is not None:
-			sock, addr = pair
-			print "new BGP connection from", addr
-			handler = RecordHandler(sock).setup(self.name)
+			sock, (ip,port) = pair
+			print "new BGP connection from %s:%d" % (ip, port)
+			handler = RecordHandler(sock).setup(self.name,ip,port)
 
 def drop ():
 	uid = os.getuid()
