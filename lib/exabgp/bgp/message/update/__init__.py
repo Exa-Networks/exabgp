@@ -67,7 +67,7 @@ class Update (Message):
 			#asn4 = negotiated.asn4
 			#local_as = negotiated.local_as
 			#peer_as = negotiated.peer_as
-			addpath = negotiated.addpath
+			addpath = negotiated.addpath.send(self.afi,self.safi)
 			msg_size = negotiated.msg_size
 		else:
 			#asn4 = False
