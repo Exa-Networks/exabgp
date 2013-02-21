@@ -37,18 +37,27 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 	def routes (self,body):
 		len_w = unpack('!H',body[0:2])[0]
+		withdrawn = [ord(_) for _ in body[2:2+len_w]]
 		len_a = unpack('!H',body[2+len_w:2+len_w+2])[0]
-		prefixes = [ord(_) for _ in body[2+len_w + 2+len_a:]]
+		announced = [ord(_) for _ in body[2+len_w + 2+len_a:]]
 
-		if not prefixes:
+		if not withdrawn and not announced:
 			yield ''
 
-		while prefixes:
-			l = prefixes.pop(0)
+		while withdrawn:
+			l = withdrawn.pop(0)
 			r = [0,0,0,0]
 			for index in range(4):
 				if index*8 >= l: break
-				r[index] = prefixes.pop(0)
+				r[index] = withdrawn.pop(0)
+			yield 'withdraw:%s' % '.'.join(str(_) for _ in r) + '/' + str(l)
+
+		while announced:
+			l = announced.pop(0)
+			r = [0,0,0,0]
+			for index in range(4):
+				if index*8 >= l: break
+				r[index] = announced.pop(0)
 			yield 'announce:%s' % '.'.join(str(_) for _ in r) + '/' + str(l)
 
 	def announce (self,*args):
@@ -82,7 +91,6 @@ class BGPHandler(asyncore.dispatcher_with_send):
 				header += self.recv(left)
 				if left == 19-len(header): # ugly
 					# the TCP session is gone.
-					self.close()
 					return None,None
 			except socket.error,e:
 				if e.args[0] in (errno.EWOULDBLOCK,errno.EAGAIN):
@@ -115,10 +123,20 @@ class BGPHandler(asyncore.dispatcher_with_send):
 	def handle_keepalive (self):
 		header,body = self.read_message()
 
+		if header is None:
+			self.announce('connection closed')
+			self.close()
+			return
+
+		print dump(body)
 		if self.isupdate(header):
 			for announcement in self.routes(body):
+				if not announcement: # skip unknows message and EOR
+					self.announce('skip announcement for body :',dump(body))
+					continue
 				if announcement in self.messages:
 					self.messages.remove(announcement)
+					self.announce('announcement received:',announcement)
 				else:
 					self.announce('unexpected announcement:',announcement)
 					self.announce('valid options were:',', '.join(self.messages))
@@ -129,8 +147,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 						self.announce('successful')
 						sys.exit(0)
 
-		if header is not None:
-			self.send(self.keepalive)
+		self.send(self.keepalive)
 
 class BGPServer (asyncore.dispatcher):
 	def __init__ (self,host,port,messages):
@@ -181,6 +198,10 @@ def main ():
 	except socket.error,e:
 		if e.errno == errno.EACCES:
 			print "failure: could not bind to port 179 - most likely not run as root"
+		elif e.errno == errno.EADDRINUSE:
+			print "failure: could not bind to port 179 - port already in use"
+		else:
+			print "failure", str(e)
 
 if __name__ == '__main__':
 	main()
