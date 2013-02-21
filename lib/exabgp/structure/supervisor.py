@@ -223,7 +223,7 @@ class Supervisor (object):
 					else:
 						for route in routes:
 							if self.configuration.remove_route_all_peers(route):
-								self.logger.supervisor("Route found and removed : %s" % route)
+								self.logger.supervisor("Route found : %s" % route)
 							self._route_update = True
 						if not self._route_update:
 							self.logger.warning("Could not find route : %s" % route,'supervisor')
