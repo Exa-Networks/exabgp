@@ -2,6 +2,8 @@ This is an informal roadmap - no promise, just here to remind me what I want to 
 
 ROADMAP
 
+Remove .packed for Inet and all its subclass as we now had addpath getting in the way.
+
 In no particular order:
 - keep route grouping provided by the routers who sent them to us.
 - create a capability section under neighbor for capability negociation options

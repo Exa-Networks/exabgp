@@ -273,7 +273,7 @@ class Route (object):
 		return "%s %s%s" % (str(Address(self.nlri.afi,self.nlri.safi)),str(self.nlri),str(self.attributes))
 
 	def index (self):
-		return self.nlri.packed+self.nlri.rd.rd
+		return self.nlri.pack(True)+self.nlri.rd.rd
 
 
 class RouteBGP (Route):
