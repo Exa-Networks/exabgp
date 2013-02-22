@@ -18,7 +18,9 @@ except socket.error:
 
 with open(sys.argv[3],'r') as record:
 	try:
-		for data in record.read(10240):
+		while True:
+			data = record.read(10240)
+			print "read", len(data)
 			if not data: break
 			sock.send(data)
 	finally:
