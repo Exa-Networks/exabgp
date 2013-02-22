@@ -103,4 +103,7 @@ def drop ():
 # IP, port, file
 server = RecordServer(sys.argv[1], int(sys.argv[2]), sys.argv[3])
 drop()
-asyncore.loop()
+try:
+	asyncore.loop()
+except KeyboardInterrupt:
+	pass
