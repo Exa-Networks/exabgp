@@ -20,10 +20,13 @@ def dump (value):
 	return ''.join(spaced(value))
 
 class RecordHandler(asyncore.dispatcher_with_send):
+	raw = True
+
 	def setup (self,name,ip,port):
 		now = time.strftime("%a-%d-%b-%Y-%H:%M:%S", time.gmtime())
 		self.record = open("%s-%s" % (name,now),'w')
-		self.record.write('Connection from %s:%d\n' % (ip,port))
+		if not self.raw:
+			self.record.write('Connection from %s:%d\n' % (ip,port))
 
 	def handle_read (self):
 		try:
@@ -46,6 +49,13 @@ class RecordHandler(asyncore.dispatcher_with_send):
 				else:
 					print "%d" % len(bytes),
 				sys.stdout.flush()
+
+				if self.raw:
+					self.record.write(bytes)
+					self.record.flush()
+					if not bytes:
+						break
+					continue
 
 				for byte in bytes:
 					self.record.write('%02X' % ord(byte))
