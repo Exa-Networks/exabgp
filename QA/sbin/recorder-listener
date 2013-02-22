@@ -26,34 +26,43 @@ class RecordHandler(asyncore.dispatcher_with_send):
 		self.record.write('Connection from %s:%d\n' % (ip,port))
 
 	def handle_read (self):
-		count = 0
-		space = False
-		while True:
-			try:
-				bytes = self.recv(1024)
-			except socket.error, e:
-				if e.errno in (errno.EWOULDBLOCK,errno.EAGAIN):
-					continue
-				raise e
-			if not bytes:
-				print "connection closed"
-				break
+		try:
+			_read_size = 10240
+			count = 0
+			space = False
+			while True:
+				try:
+					bytes = self.recv(_read_size)
+				except socket.error, e:
+					if e.errno in (errno.EWOULDBLOCK,errno.EAGAIN):
+						continue
+					raise e
+				if not bytes:
+					print "connection closed"
+					break
 
-			print "recv(%d)" % len(bytes),
+				if len(bytes) == _read_size:
+					print '.',
+				else:
+					print "%d" % len(bytes),
+				sys.stdout.flush()
 
-			for byte in bytes:
-				self.record.write('%02X' % ord(byte))
-				count = (count + 1) % 32
-				if not count:
-					self.record.write('\n')
-					space = False
-					continue
-				if space:
-					self.record.write(' ')
-				space = not space
-			self.record.flush()
+				for byte in bytes:
+					self.record.write('%02X' % ord(byte))
+					count = (count + 1) % 32
+					if not count:
+						self.record.write('\n')
+						space = False
+						continue
+					if space:
+						self.record.write(' ')
+					space = not space
+				self.record.flush()
 
-		self.record.close()
+			self.record.close()
+		except KeyboardInterrupt:
+			self.record.close()
+			self.close()
 
 class RecordServer(asyncore.dispatcher):
 	def __init__(self, host, port,name):
