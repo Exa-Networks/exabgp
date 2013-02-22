@@ -55,7 +55,7 @@ else
 	INTERPRETER=python
 fi
 
-APPLICATIONS=`$INTERPRETER -c "import sys,os; print ' '.join(os.path.join(_,'exabgp','application.py') for _ in sys.path if os.path.isfile('/'.join((_,'exabgp/application.py'))))"`
+APPLICATIONS=`$INTERPRETER -c "import sys,os; print ' '.join(os.path.join(_,'exabgp','application/bgp.py') for _ in sys.path if os.path.isfile('/'.join((_,'exabgp/application/bgp.py'))))"`
 APPLICATION=`echo $APPLICATIONS | awk '{ print $1; }'`
 
 exec $INTERPRETER -m exabgp.debug $APPLICATION -c $path/etc/exabgp $*
