@@ -46,7 +46,7 @@ def main ():
 def check_sequence(exabgp,configuration,daemon,messages):
 	os.environ['exabgp.tcp.once'] = 'true'
 
-	timeout = 5 # seconds
+	timeout = 10 # seconds
 
 	try:
 		signal.signal(signal.SIGALRM, alarm_handler)
@@ -55,13 +55,13 @@ def check_sequence(exabgp,configuration,daemon,messages):
 		print "sequence check for", configuration
 		print "will wait for completion for %d seconds" % timeout
 
-		command = [daemon,] + messages.split()
-		print "starting daemon", ' '.join(command)
-		daemon = subprocess.Popen(command, stdout=subprocess.PIPE)
+		command_daemon = [daemon,] + messages.split()
+		print "starting daemon,",
+		daemon = subprocess.Popen(command_daemon, stdout=subprocess.PIPE)
 
-		command = [exabgp, configuration]
-		print "starting exabgp", ' '.join(command)
-		exabgp = subprocess.Popen(command, stdout=subprocess.PIPE)
+		command_exabgp = [exabgp, configuration]
+		print "exabgp"
+		exabgp = subprocess.Popen(command_exabgp, stdout=subprocess.PIPE)
 
 		exabgp_output = exabgp.communicate()[0]
 		daemon_output = daemon.communicate()[0]
@@ -81,5 +81,10 @@ def check_sequence(exabgp,configuration,daemon,messages):
 		print "failure\n"
 		print 'exabgp:\n', exabgp_output
 		print 'daemon:\n', daemon_output
+		print
+		print "command lines were:"
+		print ">", ' '.join(command_daemon)
+		print ">", ' '.join(command_exabgp)
+		print
 
 main()
