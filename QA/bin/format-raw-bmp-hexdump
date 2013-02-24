@@ -1,0 +1,26 @@
+#!/usr/bin/env python
+
+import sys
+
+if len(sys.argv) < 3:
+	print "usage : bmp-format raw-file pretty-file"
+	sys.exit(1)
+
+memory = open(sys.argv[0]).read()
+# Yes this can use lots of memory 
+parts = memory.split(chr(255)*16)
+# And that split - even more (but it is fast)
+
+with open(sys.argv[1],'w') as out:
+	while parts:
+		part = parts.pop(0)
+		if len(part) > 44:
+			data = ''.join('%02X' % ord(_) for _ in part[:-44])
+			data += '\n'
+			data += ''.join('%02X' % ord(_) for _ in part[-44:])
+		else:
+			data = ''.join('%02X' % ord(_) for _ in part)
+		if parts:
+			data += '\n' + 'F'*16
+		out.write(data)
+
