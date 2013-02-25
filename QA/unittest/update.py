@@ -9,6 +9,9 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 import unittest
 
+from exabgp.structure.environment import load
+load('absent')
+
 from exabgp.bgp.message.update.update import *
 from exabgp.bgp.message.update.attribute.communities import to_Community, Community, Communities
 

@@ -9,6 +9,9 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 import unittest
 
+from exabgp.structure.environment import load
+load('absent')
+
 from exabgp.bgp.message.open import Open,Capabilities,new_Open
 from exabgp.bgp.message.notification import Notification
 from exabgp.bgp.message.keepalive import KeepAlive,new_KeepAlive

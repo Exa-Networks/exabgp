@@ -8,6 +8,10 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 import unittest
+
+from exabgp.structure.environment import load
+load('absent')
+
 from exabgp.structure.configuration import Configuration
 from exabgp.structure.supervisor import Supervisor
 

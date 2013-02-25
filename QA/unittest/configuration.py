@@ -9,7 +9,11 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 import unittest
 
-from exabgp.configuration import Configuration
+from exabgp.structure.environment import load
+load('absent')
+
+from exabgp.structure.configuration import Configuration
+
 
 class TestConfiguration (unittest.TestCase):
 	def setUp(self):
@@ -308,4 +312,3 @@ neighbor 192.168.127.128 {
 
 if __name__ == '__main__':
 	unittest.main()
-

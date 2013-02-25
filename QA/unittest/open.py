@@ -9,6 +9,9 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 import unittest
 
+from exabgp.structure.environment import load
+load('absent')
+
 from exabgp.bgp.message.open import *
 
 class TestData (unittest.TestCase):
