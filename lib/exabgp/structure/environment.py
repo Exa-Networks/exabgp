@@ -283,11 +283,26 @@ class Store (dict):
 
 
 def _env (conf):
-	location = os.path.join(os.sep,*os.path.join(value.location.split(os.sep)))
-	while location:
-		location, directory = os.path.split(location)
+	here = os.path.join(os.sep,*os.path.join(value.location.split(os.sep)))
+
+	location, directory = os.path.split(here)
+	while directory:
 		if directory == 'lib':
+			location = os.path.join(location,'lib')
 			break
+		location, directory = os.path.split(location)
+	# we did not break - ie, we did not find the location in the normal path.
+	else:
+		# let's try to see if we are running from the QA folder (for unittesting)
+		location, directory = os.path.split(here)
+		while directory:
+			if directory == 'QA':
+				location = os.path.join(location,'lib')
+				break
+			location, directory = os.path.split(location)
+		else:
+			# oh ! bad, let set the path to something ...
+			location = '/lib'
 
 	_conf_paths = []
 	if conf:
