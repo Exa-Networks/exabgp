@@ -17,7 +17,7 @@ from struct import pack,unpack
 
 from exabgp.structure.environment import load
 
-from exabgp.protocol.family import AFI,SAFI
+from exabgp.protocol.family import AFI,SAFI,known_families
 
 from exabgp.bgp.neighbor import Neighbor
 
@@ -660,18 +660,6 @@ class Configuration (object):
 		self._family = True
 		return True
 
-	def _all_families (self):
-		# it can not be a generator
-		families = []
-		families.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
-		families.append((AFI(AFI.ipv4),SAFI(SAFI.multicast)))
-		families.append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
-		families.append((AFI(AFI.ipv4),SAFI(SAFI.mpls_vpn)))
-		families.append((AFI(AFI.ipv4),SAFI(SAFI.flow_ipv4)))
-		families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
-		families.append((AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)))
-		return families
-
 	# capacity
 
 	def _multi_capability (self,scope,tokens):
@@ -863,7 +851,7 @@ class Configuration (object):
 			# announce what is needed, and no more, no need to have lots of TCP session doing nothing
 			families = neighbor.families()
 		elif openfamilies in ('all','everything'):
-			families = self._all_families()
+			families = known_families()
 		# only announce what you have as routes
 		elif openfamilies == 'minimal':
 			families = neighbor.families()
@@ -1910,7 +1898,7 @@ class Configuration (object):
 		n = self.neighbor[self.neighbor.keys()[0]]
 
 		path = {}
-		for f in self._all_families():
+		for f in known_families():
 			if n.add_path:
 				path[f] = n.add_path
 
@@ -1954,7 +1942,7 @@ class Configuration (object):
 		n = self.neighbor[self.neighbor.keys()[0]]
 
 		path = {}
-		for f in self._all_families():
+		for f in known_families():
 			if n.add_path:
 				path[f] = n.add_path
 

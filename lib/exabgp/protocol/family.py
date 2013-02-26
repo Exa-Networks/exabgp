@@ -85,3 +85,16 @@ class SAFI (int):
 
 	def has_rd (self):
 		return self in (self.mpls_vpn,)
+
+
+def known_families ():
+	# it can not be a generator
+	families = []
+	families.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
+	families.append((AFI(AFI.ipv4),SAFI(SAFI.multicast)))
+	families.append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
+	families.append((AFI(AFI.ipv4),SAFI(SAFI.mpls_vpn)))
+	families.append((AFI(AFI.ipv4),SAFI(SAFI.flow_ipv4)))
+	families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+	families.append((AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)))
+	return families
