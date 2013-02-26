@@ -8,7 +8,6 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
 import os
-import sys
 
 import pwd
 import socket
@@ -17,19 +16,13 @@ import errno
 import asyncore
 
 from struct import unpack
+
+from exabgp.structure.api import JSON
+from exabgp.bgp.message.update import Update
+
 from exabgp.bmp.header import Header
 from exabgp.bmp.message import Message
-
-def dump (value):
-	def spaced (value):
-		even = None
-		for v in value:
-			if even is False:
-				yield ' '
-			yield '%02X' % ord(v)
-			even = not even
-	return ''.join(spaced(value))
-
+from exabgp.bmp.negotiated import FakeNegotiated
 
 class BMPHandler (asyncore.dispatcher_with_send):
 	wire = False
@@ -46,6 +39,7 @@ class BMPHandler (asyncore.dispatcher_with_send):
 		}
 		self.ip = ip
 		self.port = port
+		self.json = JSON('2.0')
 		return self
 
 	def _read_data (self,number):
@@ -80,23 +74,28 @@ class BMPHandler (asyncore.dispatcher_with_send):
 	def handle_read (self):
 		header = Header(self._read_data(44))
 		if not header.validate():
-			print "invalid header"
+			print "closeing tcp connection following an invalid header"
 			self.close()
-
-		for h in dir(header):
-			if h.startswith('_'):
-				continue
-			print h, getattr(header,h)
-
 		self.handle[header.message](header)
+
+		# for h in dir(header):
+		# 	if h.startswith('_'):
+		# 		continue
+		# 	print h, getattr(header,h)
 
 	def _route (self,header):
 		bgp_header = self._read_data(19)
 		length = unpack('!H',bgp_header[16:18])[0] - 19
-		print "length",length
 		bgp_body = self._read_data(length)
-		print dump(bgp_header)
-		print dump(bgp_body)
+
+		asn4 = True
+		negotiated = FakeNegotiated(header,asn4)
+		update = Update().factory(negotiated,bgp_body)
+		if False:
+			for route in update.routes:
+				print 'decoded route %s' % route.extensive(),'parser'
+		else:
+			print self.json.update(update.routes)
 
 	def _statistics (self,header):
 		pass
@@ -141,6 +140,10 @@ def drop ():
 
 server = BMPServer('localhost', 1790)
 drop()
+
+from exabgp.structure.environment import load
+env = load('')
+
 try:
 	asyncore.loop()
 except:

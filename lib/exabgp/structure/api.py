@@ -100,6 +100,7 @@ class JSON (object):
 	def _routes (self,routes):
 		plus = {}
 		minus = {}
+		route = None
 		for route in routes:
 			if route.action == 'announced':
 				plus.setdefault((route.nlri.afi,route.nlri.safi),[]).append(route)
@@ -132,3 +133,7 @@ class JSON (object):
 
 	def routes (self,neighbor,routes):
 		return self._header(self._neighbor(neighbor,self._routes(routes)))
+
+	def update (self,routes):
+		return self._header(self._routes(routes))
+
