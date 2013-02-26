@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+# encoding: utf-8
+"""
+peer.py
+
+Created by Thomas Mangin on 2013-02-20.
+Copyright (c) 2009-2012 Exa Networks. All rights reserved.
+"""
 
 import os
 import sys
@@ -10,6 +17,8 @@ import errno
 import asyncore
 
 from struct import unpack
+from exabgp.bmp.header import Header
+from exabgp.bmp.message import Message
 
 def dump (value):
 	def spaced (value):
@@ -21,73 +30,6 @@ def dump (value):
 			even = not even
 	return ''.join(spaced(value))
 
-class MessageType (int):
-	ROUTE_MONITORING = 0
-	STATISTICS_REPORT = 1
-	PEER_DOWN_NOTIFICATION = 2
-
-	_str = {
-		0 : 'route monitoring', 
-		1 : 'statistics report',
-		2 : 'peer down notification',
-	}
-
-	def __str__ (self):
-		return self._str.get(self,'unknow %d' % self)
-
-class PeerType (int):
-	_str = {
-		0 : 'global', 
-		1 : 'L3 VPN',
-	}
-
-	def __str__ (self):
-		return self._str.get(self,'unknow %d' % self)
-
-class PeerFlag (int):
-	_v4v6 = 0b10000000
-
-	def ipv4 (self):
-		return not self & self._v4v6
-
-	def ipv6 (self):
-		return bool(self & self._v4v6)
-
-stat = {
-	0: "prefixes rejected by inbound policy",
-	1: "(known) duplicate prefix advertisements",
-	2: "(known) duplicate withdraws",
-	3: "updates invalidated due to CLUSTER_LIST loop",
-	4: "updates invalidated due to AS_PATH loop",
-}
-
-peer = {
-	1: "Local system closed session, notification sent",
-	2: "Local system closed session, no notification",
-	3: "Remote system closed session, notification sent",
-	4: "Remote system closed session, no notification",
-}
-
-
-class Header (object):
-	def __init__ (self,data):
-		self.version = ord(data[0])
-		self.msg_type = MessageType(ord(data[1]))
-		self.peer_type = PeerType(ord(data[2]))
-		self.peer_flag = PeerFlag(ord(data[3]))
-		self.peer_distinguisher = unpack('!L',data[4:8])[0]
-		if self.peer_flag.ipv4(): self.peer_address = socket.inet_ntop(socket.AF_INET, data[24:28])
-		if self.peer_flag.ipv6(): self.peer_address = peer_address = socket.inet_ntop(socket.AF_INET6, data[12:28])
-		self.peer_as = unpack('!L',data[28:32])[0]
-		self.peer_id = socket.inet_ntop(socket.AF_INET, data[32:36])
-		self.time_sec = unpack('!L',data[36:40])[0]
-		self.time_micro_sec = unpack('!L',data[40:44])[0]
-
-	def validate (self):
-		if self.version != 1: return False
-		if self.msg_type not in (0,1,2): return False
-		if self.peer_type not in (0,1): return False
-		return True
 
 class BMPHandler (asyncore.dispatcher_with_send):
 	wire = False
@@ -98,9 +40,9 @@ class BMPHandler (asyncore.dispatcher_with_send):
 
 	def setup (self,ip,port):
 		self.handle = {
-			MessageType.ROUTE_MONITORING : self._route,
-			MessageType.STATISTICS_REPORT : self._statistics,
-			MessageType.PEER_DOWN_NOTIFICATION : self._peer,
+			Message.ROUTE_MONITORING : self._route,
+			Message.STATISTICS_REPORT : self._statistics,
+			Message.PEER_DOWN_NOTIFICATION : self._peer,
 		}
 		self.ip = ip
 		self.port = port
@@ -113,8 +55,8 @@ class BMPHandler (asyncore.dispatcher_with_send):
 			try:
 				r,_,_ = select.select([self], [], [], 1.0)
 			except select.error,e:
-				raise KeyboardInterrupt('SIGNAL received in select')
-				
+				return None
+
 			if not r:
 				continue
 
@@ -129,7 +71,6 @@ class BMPHandler (asyncore.dispatcher_with_send):
 			header += data
 
 			if left and not data:
-				import pdb; pdb.set_trace()
 				# the TCP session is gone.
 				self.announce("TCP connection closed")
 				self.close()
@@ -147,7 +88,7 @@ class BMPHandler (asyncore.dispatcher_with_send):
 				continue
 			print h, getattr(header,h)
 
-		self.handle[header.msg_type](header)
+		self.handle[header.message](header)
 
 	def _route (self,header):
 		bgp_header = self._read_data(19)
