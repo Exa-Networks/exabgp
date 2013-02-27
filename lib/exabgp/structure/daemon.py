@@ -21,9 +21,9 @@ MAXFD = 2048
 class Daemon (object):
 
 	def __init__ (self,supervisor):
-		self.pid = environment.load().daemon.pid
-		self.user = environment.load().daemon.user
-		self.daemonize = environment.load().daemon.daemonize
+		self.pid = environment.settings().daemon.pid
+		self.user = environment.settings().daemon.user
+		self.daemonize = environment.settings().daemon.daemonize
 
 		self.logger = Logger()
 
@@ -123,7 +123,7 @@ class Daemon (object):
 		if not self.daemonize:
 			return
 
-		log = environment.load().log
+		log = environment.settings().log
 		if log.enable and log.destination.lower() in ('stdout','stderr'):
 			self.logger.daemon('ExaBGP can not fork when logs are going to %s' % log.destination.lower(),'critical')
 			return

@@ -63,7 +63,7 @@ class Attributes (dict):
 
 	def __init__ (self):
 		self._str = ''
-		self.cache_attributes = environment.load().cache.attributes
+		self.cache_attributes = environment.settings().cache.attributes
 
 	def has (self,k):
 		return k in self

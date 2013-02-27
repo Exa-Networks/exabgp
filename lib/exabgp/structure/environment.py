@@ -29,20 +29,23 @@ class environment (object):
 	configuration = {}
 
 	# the final parsed settings
-	settings = None
+	_settings = None
 
 	location = os.path.normpath(sys.argv[0]) if sys.argv[0].startswith('/') else os.path.normpath(os.path.join(os.getcwd(),sys.argv[0]))
 	log_levels = ['EMERG', 'ALERT', 'CRIT', 'CRITICAL', 'ERR', 'ERROR', 'WARNING', 'NOTICE', 'INFO', 'DEBUG']
 
 	@staticmethod
-	def load (conf=None):
-		if environment.settings:
-			return environment.settings
-		if conf is None:
-			raise RuntimeError('You can not have an import using load() before main() initialised it')
-		environment.settings = _env(conf)
-		return environment.settings
+	def setup (conf=None):
+		if environment._settings:
+			raise RuntimeError('You already initialised the environment')
+		environment._settings = _env(conf)
+		return environment._settings
 
+	@staticmethod
+	def settings (conf=None):
+		if not environment._settings:
+			raise RuntimeError('You can not have an import using settings() before main() initialised environment')
+		return environment._settings
 
 	@staticmethod
 	def root (path):

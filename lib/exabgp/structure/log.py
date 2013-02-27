@@ -77,7 +77,7 @@ class _Logger (object):
 		return self._format(ts,level,source,message)
 
 	def __init__ (self):
-		command = environment.load()
+		command = environment.settings()
 		self.short = command.log.short
 		self.level = command.log.level
 

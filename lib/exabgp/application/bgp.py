@@ -218,7 +218,7 @@ def main ():
 	}
 
 	try:
-		env = environment.load(envfile)
+		env = environment.setup(envfile)
 	except environment.Error,e:
 		print >> sys.stderr, 'configuration issue,', str(e)
 		sys.exit(1)

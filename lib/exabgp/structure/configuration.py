@@ -164,8 +164,8 @@ class Configuration (object):
 	'        }\n'
 
 	def __init__ (self,fname,text=False):
-		self.debug = environment.load().debug.configuration
-		self.api_encoder = environment.load().api.encoder
+		self.debug = environment.settings().debug.configuration
+		self.api_encoder = environment.settings().api.encoder
 
 		self.logger = Logger()
 		self._text = text
@@ -223,11 +223,11 @@ class Configuration (object):
 
 		self.neighbor = self._neighbor
 
-		if environment.load().debug.route:
-			self.decode(environment.load().debug.route)
+		if environment.settings().debug.route:
+			self.decode(environment.settings().debug.route)
 			sys.exit(0)
 
-		if environment.load().debug.selfcheck:
+		if environment.settings().debug.selfcheck:
 			self.selfcheck()
 			sys.exit(0)
 

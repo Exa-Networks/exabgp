@@ -45,7 +45,7 @@ class Connection (object):
 	def __init__ (self,peer,local,md5,ttl):
 		# If the OS tells us we have data on the socket, we should never have to wait more than READ_TIMEOUT to be able to read it.
 		# However real life says that on some OS we do ... So let the user control this value
-		self.READ_TIMEOUT = environment.load().tcp.timeout
+		self.READ_TIMEOUT = environment.settings().tcp.timeout
 
 		self.logger = Logger()
 		self.io = None

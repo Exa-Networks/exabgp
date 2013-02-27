@@ -81,7 +81,7 @@ class Peer (object):
 		self._have_routes = True
 
 		# We only to try to connect via TCP once
-		self.once = environment.load().tcp.once
+		self.once = environment.settings().tcp.once
 
 	def _reset_skip (self):
 		# We are currently not skipping connection attempts
