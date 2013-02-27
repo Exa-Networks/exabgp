@@ -153,6 +153,7 @@ def main ():
 
 	from exabgp.structure.environment import environment
 
+	environment.application = 'exabgp'
 	environment.configuration = {
 		'profile' : {
 			'enable'        : (environment.boolean,environment.lower,'false',    'toggle profiling of the code'),

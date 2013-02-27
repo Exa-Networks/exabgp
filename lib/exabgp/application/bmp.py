@@ -31,14 +31,17 @@ class BMPHandler (asyncore.dispatcher_with_send):
 	update = True
 
 	def announce (self,*args):
-		print self.ip, self.port, ' '.join(str(_) for _ in args) if len(args) > 1 else args[0]
+		print >> self.fd, self.ip, self.port, ' '.join(str(_) for _ in args) if len(args) > 1 else args[0]
 
-	def setup (self,ip,port):
+	def setup (self,env,ip,port):
 		self.handle = {
 			Message.ROUTE_MONITORING : self._route,
 			Message.STATISTICS_REPORT : self._statistics,
 			Message.PEER_DOWN_NOTIFICATION : self._peer,
 		}
+		self.asn4 = env.bmp.asn4
+		self.use_json = env.bmp.json
+		self.fd = env.fd
 		self.ip = ip
 		self.port = port
 		self.json = JSON('2.0')
@@ -68,7 +71,7 @@ class BMPHandler (asyncore.dispatcher_with_send):
 
 			if left and not data:
 				# the TCP session is gone.
-				self.announce("TCP connection closed")
+				print "TCP connection closed"
 				self.close()
 				return None
 		return header
@@ -79,31 +82,20 @@ class BMPHandler (asyncore.dispatcher_with_send):
 			print "closeing tcp connection following an invalid header"
 			self.close()
 
-		try:
-			self.handle[header.message](header)
-		except Exception,e:
-			# Yep, this is not yet production quality code ..
-			import pdb; pdb.set_trace()
-			pass
-
-		# for h in dir(header):
-		# 	if h.startswith('_'):
-		# 		continue
-		# 	print h, getattr(header,h)
+		self.handle[header.message](header)
 
 	def _route (self,header):
 		bgp_header = self._read_data(19)
 		length = unpack('!H',bgp_header[16:18])[0] - 19
 		bgp_body = self._read_data(length)
 
-		asn4 = True
-		negotiated = FakeNegotiated(header,asn4)
+		negotiated = FakeNegotiated(header,self.asn4)
 		update = Update().factory(negotiated,bgp_body)
-		if False:
-			for route in update.routes:
-				print 'decoded route %s' % route.extensive(),'parser'
+		if self.use_json:
+			print >> self.fd, self.json.update(update.routes)
 		else:
-			print self.json.update(update.routes)
+			for route in update.routes:
+				print >> self.fd, route.extensive()
 
 	def _statistics (self,header):
 		pass
@@ -112,7 +104,10 @@ class BMPHandler (asyncore.dispatcher_with_send):
 		pass
 
 class BMPServer(asyncore.dispatcher):
-	def __init__(self, host, port):
+	def __init__(self, env):
+		self.env = env
+		host = env.bmp.host
+		port = env.bmp.port
 		asyncore.dispatcher.__init__(self)
 		self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.set_reuse_addr()
@@ -124,7 +119,7 @@ class BMPServer(asyncore.dispatcher):
 		if pair is not None:
 			sock, addr = pair
 			print "new BGP connection from", addr
-			handler = BMPHandler(sock).setup(*addr)
+			handler = BMPHandler(sock).setup(self.env,*addr)
 
 def drop ():
 	uid = os.getuid()
@@ -146,14 +141,19 @@ def drop ():
 	if not uid:
 		os.setuid(nuid)
 
-server = BMPServer('localhost', 1790)
-drop()
 
 from exabgp.structure.environment import environment
 
+environment.application = 'exabmp'
 environment.configuration = {
 	'pdb' : {
 		'enable'        : (environment.boolean,environment.lower,'false',    'on program fault, start pdb the python interactive debugger'),
+	},
+	'bmp' : {
+		'host' : (environment.nop,environment.nop,'localhost', 'port for the daemon to listen on'),
+		'port' : (environment.integer,environment.nop,'1790',  'port for the daemon to listen on'),
+		'asn4' : (environment.boolean,environment.lower,'true', 'are the route received by bmp in RFC4893 format'),
+		'json' : (environment.boolean,environment.lower,'true', 'use json encoding of parsed route'),
 	},
 # 	'daemon' : {
 # #		'identifier'    : (environment.unquote,environment.nop,'ExaBGP',     'a name for the log (to diferenciate multiple instances more easily)'),
@@ -204,6 +204,16 @@ environment.configuration = {
 }
 
 env = environment.setup('')
+
+try:
+	os.dup2(2,3)
+	env.fd = os.fdopen(3, "w+")
+except:
+	print "can not setup a descriptor of FD 3 for route display"
+	sys.exit(1)
+
+server = BMPServer(env)
+drop()
 
 try:
 	asyncore.loop()

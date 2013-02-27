@@ -25,6 +25,8 @@ class environment (object):
 	class Error (Exception):
 		pass
 
+	application = 'unset'
+
 	# the configuration to be set by the program
 	configuration = {}
 
@@ -35,14 +37,14 @@ class environment (object):
 	log_levels = ['EMERG', 'ALERT', 'CRIT', 'CRITICAL', 'ERR', 'ERROR', 'WARNING', 'NOTICE', 'INFO', 'DEBUG']
 
 	@staticmethod
-	def setup (conf=None):
+	def setup (conf):
 		if environment._settings:
 			raise RuntimeError('You already initialised the environment')
 		environment._settings = _env(conf)
 		return environment._settings
 
 	@staticmethod
-	def settings (conf=None):
+	def settings ():
 		if not environment._settings:
 			raise RuntimeError('You can not have an import using settings() before main() initialised environment')
 		return environment._settings
@@ -168,12 +170,16 @@ class environment (object):
 	@staticmethod
 	def syslog_value (log):
 		if log not in environment.log_levels:
+			if log == 'CRITICAL': log = 'CRIT'
+			if log == 'ERROR': log = 'ERR'
 			raise TypeError('invalid log level %s' % log)
 		return getattr(syslog,'LOG_%s'%log)
 
 	@staticmethod
 	def syslog_name (log):
 		for name in environment.log_levels:
+			if name == 'CRITICAL': name = 'CRIT'
+			if name == 'ERROR': name = 'ERR'
 			if getattr(syslog,'LOG_%s'%name) == log:
 				return name
 		raise TypeError('invalid log level %s' % log)
@@ -186,16 +192,16 @@ class environment (object):
 			for option in sorted(environment.configuration[section]):
 				values = environment.configuration[section][option]
 				default = "'%s'" % values[2] if values[1] in (environment.list,environment.path,environment.quote,environment.syslog) else values[2]
-				yield 'exabgp.%s.%s %s: %s. default (%s)' % (section,option,' '*(20-len(section)-len(option)),values[3],default)
+				yield '%s.%s.%s %s: %s. default (%s)' % (environment.application,section,option,' '*(20-len(section)-len(option)),values[3],default)
 
 	@staticmethod
 	def iter_ini (diff=False):
-		for section in sorted(__env):
+		for section in sorted(environment._settings):
 			if section in ('internal','debug'):
 				continue
-			header = '\n[exabgp.%s]' % section
-			for k in sorted(__env[section]):
-				v = __env[section][k]
+			header = '\n[%s.%s]' % (environment.application,section)
+			for k in sorted(environment._settings[section]):
+				v = environment._settings[section][k]
 				if diff and environment.configuration[section][k][0](environment.configuration[section][k][2]) == v:
 					continue
 				if header:
@@ -205,16 +211,16 @@ class environment (object):
 
 	@staticmethod
 	def iter_env (diff=False):
-		for section,values in __env.items():
+		for section,values in environment._settings.items():
 			if section in ('internal','debug'):
 				continue
 			for k,v in values.items():
 				if diff and environment.configuration[section][k][0](environment.configuration[section][k][2]) == v:
 					continue
 				if environment.configuration[section][k][1] == environment.quote:
-					yield "exabgp.%s.%s='%s'" % (section,k,v)
+					yield "%s.%s.%s='%s'" % (environment.application,section,k,v)
 					continue
-				yield "exabgp.%s.%s=%s" % (section,k,environment.configuration[section][k][1](v))
+				yield "%s.%s.%s=%s" % (environment.application,section,k,environment.configuration[section][k][1](v))
 
 
 	# Compatibility with 2.0.x
@@ -330,8 +336,8 @@ def _env (conf):
 	if conf:
 		_conf_paths.append(os.path.abspath(os.path.normpath(conf)))
 	if location:
-		_conf_paths.append(os.path.normpath(os.path.join(location,'etc','exabgp','exabgp.env')))
-	_conf_paths.append(os.path.normpath(os.path.join('/','etc','exabgp','exabgp.env')))
+		_conf_paths.append(os.path.normpath(os.path.join(location,'etc',environment.application,'%s.env' % environment.application)))
+	_conf_paths.append(os.path.normpath(os.path.join('/','etc',environment.application,'%s.env' % environment.application)))
 
 	env = Store()
 	ini = ConfigParser.ConfigParser()
@@ -346,7 +352,7 @@ def _env (conf):
 		for option in default:
 			convert = default[option][0]
 			try:
-				proxy_section = 'exabgp.%s' % section
+				proxy_section = '%s.%s' % (environment.application,section)
 				env_name = '%s.%s' % (proxy_section,option)
 				rep_name = env_name.replace('.','_')
 
