@@ -64,7 +64,8 @@ class BMPHandler (asyncore.dispatcher_with_send):
 			except socket.error, e:
 				if e.args[0] in (errno.EWOULDBLOCK,errno.EAGAIN):
 					continue
-				raise e
+				print "problem reading on socket", str(e)
+				return None
 
 			left -= len(data)
 			header += data
@@ -77,7 +78,11 @@ class BMPHandler (asyncore.dispatcher_with_send):
 		return header
 
 	def handle_read (self):
-		header = Header(self._read_data(44))
+		data = self._read_data(44)
+		if data is None:
+			self.close()
+			return
+		header = Header(data)
 		if not header.validate():
 			print "closeing tcp connection following an invalid header"
 			self.close()
@@ -86,13 +91,19 @@ class BMPHandler (asyncore.dispatcher_with_send):
 
 	def _route (self,header):
 		bgp_header = self._read_data(19)
+		if bgp_header is None:
+			self.close()
+			return
 		length = unpack('!H',bgp_header[16:18])[0] - 19
 		bgp_body = self._read_data(length)
+		if bgp_body is None:
+			self.close()
+			return
 
 		negotiated = FakeNegotiated(header,self.asn4)
 		update = Update().factory(negotiated,bgp_body)
 		if self.use_json:
-			print >> self.fd, self.json.update(update.routes)
+			print >> self.fd, self.json.bmp(self.ip,update.routes)
 		else:
 			for route in update.routes:
 				print >> self.fd, route.extensive()

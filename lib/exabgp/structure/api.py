@@ -72,6 +72,12 @@ class JSON (object):
 		         '%s' \
 		       '} '% (neighbor,content)
 
+	def _bmp (self,neighbor,content):
+		return '"bmp": { ' \
+		         '"ip": "%s", ' \
+		         '%s' \
+		       '} '% (neighbor,content)
+
 	def _kv (self,extra):
 		return ", ".join('"%s": "%s"' % (_,__) for (_,__) in extra.iteritems()) + ' '
 
@@ -134,6 +140,6 @@ class JSON (object):
 	def routes (self,neighbor,routes):
 		return self._header(self._neighbor(neighbor,self._routes(routes)))
 
-	def update (self,routes):
-		return self._header(self._routes(routes))
+	def bmp (self,bmp,routes):
+		return self._header(self._bmp(bmp,self._routes(routes)))
 
