@@ -8,6 +8,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 import os
 import sys
+import syslog
 
 from exabgp.version import version
 # import before the fork to improve copy on write memory savings
@@ -150,7 +151,7 @@ def main ():
 	else:
 		envfile = arguments['env']
 
-	from exabgp.structure.environment import environment,load,EnvError,LOG
+	from exabgp.structure.environment import environment,load,EnvError
 
 	environment.configuration = {
 		'profile' : {
@@ -262,7 +263,7 @@ def main ():
 			env.profile.enable = True
 		if arg in ['-d','--debug']:
 			env.log.all = True
-			env.log.level=LOG.DEBUG
+			env.log.level=syslog.LOG_DEBUG
 		if arg in ['-p','--pdb']:
 			# The following may fail on old version of python (but is required for debug.py)
 			os.environ['PDB'] = 'true'

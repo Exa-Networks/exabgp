@@ -12,47 +12,12 @@ Copyright (c) 2011 Exa Networks. All rights reserved.
 
 import os
 import sys
-import syslog
 import pwd
+import syslog
 
 class EnvError (Exception):
 	pass
 
-class LOG:
-	EMERG    = syslog.LOG_EMERG,
-	ALERT    = syslog.LOG_ALERT,
-	CRIT     = syslog.LOG_CRIT,
-	CRITICAL = syslog.LOG_CRIT,
-	ERR      = syslog.LOG_ERR,
-	ERROR    = syslog.LOG_ERR,
-	WARNING  = syslog.LOG_WARNING,
-	NOTICE   = syslog.LOG_NOTICE,
-	INFO     = syslog.LOG_INFO,
-	DEBUG    = syslog.LOG_DEBUG,
-
-syslog_name_value = {
-	'EMERG'    : LOG.EMERG,
-	'ALERT'    : LOG.ALERT,
-	'CRIT'     : LOG.CRIT,
-	'CRITICAL' : LOG.CRIT,
-	'ERR'      : LOG.ERR,
-	'ERROR'    : LOG.ERR,
-	'WARNING'  : LOG.WARNING,
-	'NOTICE'   : LOG.NOTICE,
-	'INFO'     : LOG.INFO,
-	'DEBUG'    : LOG.DEBUG,
-}
-
-syslog_value_name = {
-	LOG.EMERG    : 'EMERG',
-	LOG.ALERT    : 'ALERT',
-	LOG.CRIT     : 'CRIT',
-	LOG.ERR      : 'ERR',
-	LOG.WARNING  : 'WARNING',
-	LOG.NOTICE   : 'NOTICE',
-	LOG.INFO     : 'INFO',
-	LOG.DEBUG    : 'DEBUG',
-}
 
 class NoneDict (dict):
 	def __getitem__ (self,name):
@@ -61,7 +26,9 @@ nonedict = NoneDict()
 
 class environment (object):
 	configuration = {}
+
 	location = os.path.normpath(sys.argv[0]) if sys.argv[0].startswith('/') else os.path.normpath(os.path.join(os.getcwd(),sys.argv[0]))
+	log_levels = ['EMERG', 'ALERT', 'CRIT', 'CRITICAL', 'ERR', 'ERROR', 'WARNING', 'NOTICE', 'INFO', 'DEBUG']
 
 	@staticmethod
 	def root (path):
@@ -182,22 +149,17 @@ class environment (object):
 		raise TypeError('invalid redirector protocol %s, options are url or header' % name)
 
 	@staticmethod
-	def syslog_int (log):
-		if log not in syslog_name_value:
-			raise TypeError('invalid log level %s' % log)
-		return syslog_name_value[log]
-
-	@staticmethod
 	def syslog_value (log):
-		if log not in syslog_name_value:
+		if log not in environment.log_levels:
 			raise TypeError('invalid log level %s' % log)
-		return syslog_name_value[log]
+		return getattr(syslog,'LOG_%s'%log)
 
 	@staticmethod
 	def syslog_name (log):
-		if log not in syslog_value_name:
-			raise TypeError('invalid log level %s' % log)
-		return syslog_value_name[log]
+		for name in environment.log_levels:
+			if getattr(syslog,'LOG_%s'%name) == log:
+				return name
+		raise TypeError('invalid log level %s' % log)
 
 	@staticmethod
 	def default ():
