@@ -330,7 +330,7 @@ class Peer (object):
 		#
 
 		except NotConnected, e:
-			self.logger.error('we can not connect to the peer %s' % str(e),'supervisor')
+			self.logger.network('we can not connect to the peer, reason : %s' % str(e).lower())
 			self._more_skip()
 			self.bgp.clear_buffer()
 			try:
@@ -340,7 +340,7 @@ class Peer (object):
 
 			# we tried to connect once, it failed, we stop
 			if self.once:
-				self.logger.error('only one attempt to connect is allowed, stoping the peer','supervisor')
+				self.logger.network('only one attempt to connect is allowed, stoping the peer')
 				self.stop()
 
 			return
