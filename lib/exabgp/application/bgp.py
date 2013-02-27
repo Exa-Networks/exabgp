@@ -9,7 +9,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 import os
 import sys
 
-from exabgp.structure.environment import EnvError,load,iter_ini,iter_env,LOG,default
+from exabgp.version import version
 # import before the fork to improve copy on write memory savings
 from exabgp.structure.supervisor import Supervisor
 
@@ -86,7 +86,9 @@ def help (comment=''):
 	sys.stdout.write('Valid configuration options are :\n')
 	sys.stdout.write('\n')
 
-	for line in default():
+	from exabgp.structure.environment import environment
+
+	for line in environment.default():
 			sys.stdout.write(' - %s\n' % line)
 	sys.stdout.write('\n')
 	sys.stdout.write(comment)
@@ -148,6 +150,72 @@ def main ():
 	else:
 		envfile = arguments['env']
 
+	from exabgp.structure.environment import environment,load,EnvError,LOG
+
+	environment.configuration = {
+		'profile' : {
+			'enable'        : (environment.boolean,environment.lower,'false',    'toggle profiling of the code'),
+			'file'          : (environment.unquote,environment.quote,'',         'profiling result file, none means stdout, no overwriting'),
+		},
+		'pdb' : {
+			'enable'        : (environment.boolean,environment.lower,'false',    'on program fault, start pdb the python interactive debugger'),
+		},
+		'daemon' : {
+	#		'identifier'    : (environment.unquote,environment.nop,'ExaBGP',     'a name for the log (to diferenciate multiple instances more easily)'),
+			'pid'           : (environment.unquote,environment.quote,'',         'where to save the pid if we manage it'),
+			'user'          : (environment.user,environment.quote,'nobody',      'user to run as'),
+			'daemonize'     : (environment.boolean,environment.lower,'false',    'should we run in the background'),
+		},
+		'log' : {
+			'enable'        : (environment.boolean,environment.lower,'true',     'enable logging'),
+			'level'         : (environment.syslog_value,environment.syslog_name,'INFO', 'log message with at least the priority SYSLOG.<level>'),
+			'destination'   : (environment.unquote,environment.quote,'stdout', 'where logging should log\n' \
+			                  '                                  syslog (or no setting) sends the data to the local syslog syslog\n' \
+			                  '                                  host:<location> sends the data to a remote syslog server\n' \
+			                  '                                  stdout sends the data to stdout\n' \
+			                  '                                  stderr sends the data to stderr\n' \
+			                  '                                  <filename> send the data to a file' \
+			),
+			'all'           : (environment.boolean,environment.lower,'false',    'report debug information for everything'),
+			'configuration' : (environment.boolean,environment.lower,'false',    'report command parsing'),
+			'supervisor'    : (environment.boolean,environment.lower,'true',     'report signal received, command reload'),
+			'daemon'        : (environment.boolean,environment.lower,'true',     'report pid change, forking, ...'),
+			'processes'     : (environment.boolean,environment.lower,'true',     'report handling of forked processes'),
+			'network'       : (environment.boolean,environment.lower,'true',     'report networking information (TCP/IP, network state,...)'),
+			'packets'       : (environment.boolean,environment.lower,'false',    'report BGP packets sent and received'),
+			'rib'           : (environment.boolean,environment.lower,'false',    'report change in locally configured routes'),
+			'message'       : (environment.boolean,environment.lower,'false',    'report changes in route announcement on config reload'),
+			'timers'        : (environment.boolean,environment.lower,'false',    'report keepalives timers'),
+			'routes'        : (environment.boolean,environment.lower,'false',    'report received routes'),
+			'parser'        : (environment.boolean,environment.lower,'false',    'report BGP message parsing details'),
+			'short'         : (environment.boolean,environment.lower,'false',    'use short log format (not prepended with time,level,pid and source)'),
+		},
+		'tcp' : {
+			'timeout' : (environment.integer,environment.nop,'1',  'time we will wait on select (can help with unstable BGP multihop)\n'
+			                                           '%sVERY dangerous use only if you understand BGP very well.' % (' '* 34)),
+			'once': (environment.boolean,environment.lower,'false','only one tcp connection attempt per peer (for debuging scripts)'),
+		},
+		'cache' : {
+			'attributes'  :  (environment.boolean,environment.lower,'true', 'cache routes attributes (configuration and wire) for faster parsing'),
+			'nexthops'    :  (environment.boolean,environment.lower,'true', 'cache routes next-hops'),
+		},
+		'api' : {
+			'encoder'  :  (environment.api,environment.lower,'text', '(experimental) encoder to use with with external API (text or json)'),
+		},
+		# Here for internal use
+		'internal' : {
+			'name'    : (environment.nop,environment.nop,'ExaBGP', 'name'),
+			'version' : (environment.nop,environment.nop,version,  'version'),
+		},
+		# Here for internal use
+		'debug' : {
+			'memory' : (environment.boolean,environment.lower,'false','command line option --memory'),
+			'configuration' : (environment.boolean,environment.lower,'false','undocumented option: raise when parsing configuration errors'),
+			'selfcheck' : (environment.unquote,environment.quote,'','does a self check on the configuration file'),
+			'route' : (environment.unquote,environment.quote,'','decode the route using the configuration'),
+		},
+	}
+
 	try:
 		env = load(envfile)
 	except EnvError,e:
@@ -174,20 +242,20 @@ def main ():
 			help(comment)
 			sys.exit(0)
 		if arg in ['-fi','--full-ini']:
-			for line in iter_ini():
+			for line in environment.iter_ini():
 				print line
 			sys.exit(0)
 		if arg in ['-fe','--full-env']:
 			print
-			for line in iter_env():
+			for line in environment.iter_env():
 				print line
 			sys.exit(0)
 		if arg in ['-di','--diff-ini']:
-			for line in iter_ini(True):
+			for line in environment.iter_ini(True):
 				print line
 			sys.exit(0)
 		if arg in ['-de','--diff-env']:
-			for line in iter_env(True):
+			for line in environment.iter_env(True):
 				print line
 			sys.exit(0)
 		if arg in ['--profile',]:

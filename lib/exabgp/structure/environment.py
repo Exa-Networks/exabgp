@@ -15,8 +15,6 @@ import sys
 import syslog
 import pwd
 
-from exabgp.version import version
-
 class EnvError (Exception):
 	pass
 
@@ -56,19 +54,18 @@ syslog_value_name = {
 	LOG.DEBUG    : 'DEBUG',
 }
 
-
-
 class NoneDict (dict):
 	def __getitem__ (self,name):
 		return None
 nonedict = NoneDict()
 
-class value (object):
+class environment (object):
+	configuration = {}
 	location = os.path.normpath(sys.argv[0]) if sys.argv[0].startswith('/') else os.path.normpath(os.path.join(os.getcwd(),sys.argv[0]))
 
 	@staticmethod
 	def root (path):
-		roots = value.location.split(os.sep)
+		roots = environment.location.split(os.sep)
 		location = []
 		for index in range(len(roots)-1,-1,-1):
 			if roots[index] == 'lib':
@@ -78,7 +75,7 @@ class value (object):
 		root = os.path.join(*location)
 		paths = [
 			os.path.normpath(os.path.join(os.path.join(os.sep,root,path))),
-			os.path.normpath(os.path.expanduser(value.unquote(path))),
+			os.path.normpath(os.path.expanduser(environment.unquote(path))),
 			os.path.normpath(os.path.join('/',path)),
 		]
 		return paths
@@ -138,7 +135,7 @@ class value (object):
 
 	@staticmethod
 	def folder(path):
-		paths = value.root(path)
+		paths = environment.root(path)
 		options = [path for path in paths if os.path.exists(path)]
 		if not options: raise TypeError('%s does not exists' % path)
 		first = options[0]
@@ -159,19 +156,19 @@ class value (object):
 
 	@staticmethod
 	def conf(path):
-		first = value.folder(path)
+		first = environment.folder(path)
 		if not os.path.isfile(first): raise TypeError('%s is not a file' % path)
 		return first
 
 	@staticmethod
 	def exe (path):
-		first = value.conf(path)
+		first = environment.conf(path)
 		if not os.access(first, os.X_OK): raise TypeError('%s is not an executable' % first)
 		return first
 
 	@staticmethod
 	def syslog (path):
-		path = value.unquote(path)
+		path = environment.unquote(path)
 		if path in ('stdout','stderr'):
 			return path
 		if path.startswith('host:'):
@@ -202,69 +199,44 @@ class value (object):
 			raise TypeError('invalid log level %s' % log)
 		return syslog_value_name[log]
 
-defaults = {
-	'profile' : {
-		'enable'        : (value.boolean,value.lower,'false',    'toggle profiling of the code'),
-		'file'          : (value.unquote,value.quote,'',         'profiling result file, none means stdout, no overwriting'),
-	},
-	'pdb' : {
-		'enable'        : (value.boolean,value.lower,'false',    'on program fault, start pdb the python interactive debugger'),
-	},
-	'daemon' : {
-#		'identifier'    : (value.unquote,value.nop,'ExaBGP',     'a name for the log (to diferenciate multiple instances more easily)'),
-		'pid'           : (value.unquote,value.quote,'',         'where to save the pid if we manage it'),
-		'user'          : (value.user,value.quote,'nobody',      'user to run as'),
-		'daemonize'     : (value.boolean,value.lower,'false',    'should we run in the background'),
-	},
-	'log' : {
-		'enable'        : (value.boolean,value.lower,'true',     'enable logging'),
-		'level'         : (value.syslog_value,value.syslog_name,'INFO', 'log message with at least the priority SYSLOG.<level>'),
-		'destination'   : (value.unquote,value.quote,'stdout', 'where logging should log\n' \
-		                  '                                  syslog (or no setting) sends the data to the local syslog syslog\n' \
-		                  '                                  host:<location> sends the data to a remote syslog server\n' \
-		                  '                                  stdout sends the data to stdout\n' \
-		                  '                                  stderr sends the data to stderr\n' \
-		                  '                                  <filename> send the data to a file' \
-		),
-		'all'           : (value.boolean,value.lower,'false',    'report debug information for everything'),
-		'configuration' : (value.boolean,value.lower,'false',    'report command parsing'),
-		'supervisor'    : (value.boolean,value.lower,'true',     'report signal received, command reload'),
-		'daemon'        : (value.boolean,value.lower,'true',     'report pid change, forking, ...'),
-		'processes'     : (value.boolean,value.lower,'true',     'report handling of forked processes'),
-		'network'       : (value.boolean,value.lower,'true',     'report networking information (TCP/IP, network state,...)'),
-		'packets'       : (value.boolean,value.lower,'false',    'report BGP packets sent and received'),
-		'rib'           : (value.boolean,value.lower,'false',    'report change in locally configured routes'),
-		'message'       : (value.boolean,value.lower,'false',    'report changes in route announcement on config reload'),
-		'timers'        : (value.boolean,value.lower,'false',    'report keepalives timers'),
-		'routes'        : (value.boolean,value.lower,'false',    'report received routes'),
-		'parser'        : (value.boolean,value.lower,'false',    'report BGP message parsing details'),
-		'short'         : (value.boolean,value.lower,'false',    'use short log format (not prepended with time,level,pid and source)'),
-	},
-	'tcp' : {
-		'timeout' : (value.integer,value.nop,'1',  'time we will wait on select (can help with unstable BGP multihop)\n'
-		                                           '%sVERY dangerous use only if you understand BGP very well.' % (' '* 34)),
-		'once': (value.boolean,value.lower,'false','only one tcp connection attempt per peer (for debuging scripts)'),
-	},
-	'cache' : {
-		'attributes'  :  (value.boolean,value.lower,'true', 'cache routes attributes (configuration and wire) for faster parsing'),
-		'nexthops'    :  (value.boolean,value.lower,'true', 'cache routes next-hops'),
-	},
-	'api' : {
-		'encoder'  :  (value.api,value.lower,'text', '(experimental) encoder to use with with external API (text or json)'),
-	},
-	# Here for internal use
-	'internal' : {
-		'name'    : (value.nop,value.nop,'ExaBGP', 'name'),
-		'version' : (value.nop,value.nop,version,  'version'),
-	},
-	# Here for internal use
-	'debug' : {
-		'memory' : (value.boolean,value.lower,'false','command line option --memory'),
-		'configuration' : (value.boolean,value.lower,'false','undocumented option: raise when parsing configuration errors'),
-		'selfcheck' : (value.unquote,value.quote,'','does a self check on the configuration file'),
-		'route' : (value.unquote,value.quote,'','decode the route using the configuration'),
-	},
-}
+	@staticmethod
+	def default ():
+		for section in sorted(environment.configuration):
+			if section in ('internal','debug'):
+				continue
+			for option in sorted(environment.configuration[section]):
+				values = environment.configuration[section][option]
+				default = "'%s'" % values[2] if values[1] in (environment.list,environment.path,environment.quote,environment.syslog) else values[2]
+				yield 'exabgp.%s.%s %s: %s. default (%s)' % (section,option,' '*(20-len(section)-len(option)),values[3],default)
+
+	@staticmethod
+	def iter_ini (diff=False):
+		for section in sorted(__env):
+			if section in ('internal','debug'):
+				continue
+			header = '\n[exabgp.%s]' % section
+			for k in sorted(__env[section]):
+				v = __env[section][k]
+				if diff and environment.configuration[section][k][0](environment.configuration[section][k][2]) == v:
+					continue
+				if header:
+					yield header
+					header = ''
+				yield '%s = %s' % (k,environment.configuration[section][k][1](v))
+
+	@staticmethod
+	def iter_env (diff=False):
+		for section,values in __env.items():
+			if section in ('internal','debug'):
+				continue
+			for k,v in values.items():
+				if diff and environment.configuration[section][k][0](environment.configuration[section][k][2]) == v:
+					continue
+				if environment.configuration[section][k][1] == environment.quote:
+					yield "exabgp.%s.%s='%s'" % (section,k,v)
+					continue
+				yield "exabgp.%s.%s=%s" % (section,k,environment.configuration[section][k][1](v))
+
 
 import ConfigParser
 
@@ -283,7 +255,7 @@ class Store (dict):
 
 
 def _env (conf):
-	here = os.path.join(os.sep,*os.path.join(value.location.split(os.sep)))
+	here = os.path.join(os.sep,*os.path.join(environment.location.split(os.sep)))
 
 	location, directory = os.path.split(here)
 	while directory:
@@ -318,8 +290,8 @@ def _env (conf):
 	if ini_files:
 		ini.read(ini_files[0])
 
-	for section in defaults:
-		default = defaults[section]
+	for section in environment.configuration:
+		default = environment.configuration[section]
 
 		for option in default:
 			convert = default[option][0]
@@ -333,7 +305,7 @@ def _env (conf):
 				elif rep_name in os.environ:
 					conf = os.environ.get(rep_name)
 				else:
-					conf = value.unquote(ini.get(proxy_section,option,nonedict))
+					conf = environment.unquote(ini.get(proxy_section,option,nonedict))
 					# name without an = or : in the configuration and no value
 					if conf == None:
 						conf = default[option][2]
@@ -357,42 +329,6 @@ def load (conf=None):
 		raise RuntimeError('You can not have an import using load() before main() initialised it')
 	__env = _env(conf)
 	return __env
-
-def default ():
-	for section in sorted(defaults):
-		if section in ('internal','debug'):
-			continue
-		for option in sorted(defaults[section]):
-			values = defaults[section][option]
-			default = "'%s'" % values[2] if values[1] in (value.list,value.path,value.quote,value.syslog) else values[2]
-			yield 'exabgp.%s.%s %s: %s. default (%s)' % (section,option,' '*(20-len(section)-len(option)),values[3],default)
-
-def iter_ini (diff=False):
-	for section in sorted(__env):
-		if section in ('internal','debug'):
-			continue
-		header = '\n[exabgp.%s]' % section
-		for k in sorted(__env[section]):
-			v = __env[section][k]
-			if diff and defaults[section][k][0](defaults[section][k][2]) == v:
-				continue
-			if header:
-				yield header
-				header = ''
-			yield '%s = %s' % (k,defaults[section][k][1](v))
-
-def iter_env (diff=False):
-	for section,values in __env.items():
-		if section in ('internal','debug'):
-			continue
-		for k,v in values.items():
-			if diff and defaults[section][k][0](defaults[section][k][2]) == v:
-				continue
-			if defaults[section][k][1] == value.quote:
-				yield "exabgp.%s.%s='%s'" % (section,k,v)
-				continue
-			yield "exabgp.%s.%s=%s" % (section,k,defaults[section][k][1](v))
-
 
 # Compatibility with 2.0.x
 def _compatibility (env):
