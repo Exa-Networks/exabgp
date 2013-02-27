@@ -15,16 +15,15 @@ import sys
 import pwd
 import syslog
 
-class EnvError (Exception):
-	pass
-
-
 class NoneDict (dict):
 	def __getitem__ (self,name):
 		return None
 nonedict = NoneDict()
 
 class environment (object):
+	class Error (Exception):
+		pass
+
 	configuration = {}
 
 	location = os.path.normpath(sys.argv[0]) if sys.argv[0].startswith('/') else os.path.normpath(os.path.join(os.getcwd(),sys.argv[0]))
@@ -276,7 +275,7 @@ def _env (conf):
 			try:
 				env.setdefault(section,Store())[option] = convert(conf)
 			except TypeError:
-				raise EnvError('invalid value for %s.%s : %s' % (section,option,conf))
+				raise environment.Error('invalid value for %s.%s : %s' % (section,option,conf))
 
 	return _compatibility(env)
 
