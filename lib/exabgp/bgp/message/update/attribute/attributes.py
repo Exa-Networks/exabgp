@@ -9,7 +9,7 @@ Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 from struct import unpack,error
 
 from exabgp.structure.utils import dump
-from exabgp.structure.environment import load
+from exabgp.structure.environment import environment
 from exabgp.structure.cache import Cache
 
 from exabgp.protocol.family import AFI,SAFI
@@ -63,7 +63,7 @@ class Attributes (dict):
 
 	def __init__ (self):
 		self._str = ''
-		self.cache_attributes = load().cache.attributes
+		self.cache_attributes = environment.load().cache.attributes
 
 	def has (self,k):
 		return k in self

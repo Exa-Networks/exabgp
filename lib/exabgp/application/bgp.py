@@ -151,7 +151,7 @@ def main ():
 	else:
 		envfile = arguments['env']
 
-	from exabgp.structure.environment import environment,load
+	from exabgp.structure.environment import environment
 
 	environment.configuration = {
 		'profile' : {
@@ -218,7 +218,7 @@ def main ():
 	}
 
 	try:
-		env = load(envfile)
+		env = environment.load(envfile)
 	except environment.Error,e:
 		print >> sys.stderr, 'configuration issue,', str(e)
 		sys.exit(1)

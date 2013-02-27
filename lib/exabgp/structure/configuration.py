@@ -15,7 +15,7 @@ from pprint import pformat
 from copy import deepcopy
 from struct import pack,unpack
 
-from exabgp.structure.environment import load
+from exabgp.structure.environment import environment
 
 from exabgp.protocol.family import AFI,SAFI,known_families
 
@@ -164,8 +164,8 @@ class Configuration (object):
 	'        }\n'
 
 	def __init__ (self,fname,text=False):
-		self.debug = load().debug.configuration
-		self.api_encoder = load().api.encoder
+		self.debug = environment.load().debug.configuration
+		self.api_encoder = environment.load().api.encoder
 
 		self.logger = Logger()
 		self._text = text
@@ -223,11 +223,11 @@ class Configuration (object):
 
 		self.neighbor = self._neighbor
 
-		if load().debug.route:
-			self.decode(load().debug.route)
+		if environment.load().debug.route:
+			self.decode(environment.load().debug.route)
 			sys.exit(0)
 
-		if load().debug.selfcheck:
+		if environment.load().debug.selfcheck:
 			self.selfcheck()
 			sys.exit(0)
 

@@ -22,7 +22,7 @@ from exabgp.bgp.protocol import Protocol
 from exabgp.bgp.connection import NotConnected
 from exabgp.structure.processes import ProcessError
 
-from exabgp.structure.environment import load
+from exabgp.structure.environment import environment
 from exabgp.structure.log import Logger
 
 # reporting the number of routes we saw
@@ -81,7 +81,7 @@ class Peer (object):
 		self._have_routes = True
 
 		# We only to try to connect via TCP once
-		self.once = load().tcp.once
+		self.once = environment.load().tcp.once
 
 	def _reset_skip (self):
 		# We are currently not skipping connection attempts

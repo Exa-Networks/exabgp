@@ -13,7 +13,7 @@ import syslog
 import logging
 import logging.handlers
 
-from exabgp.structure.environment import load
+from exabgp.structure.environment import environment
 
 level_value = {
 #	'emmergency' : syslog.LOG_EMERG,
@@ -77,7 +77,7 @@ class _Logger (object):
 		return self._format(ts,level,source,message)
 
 	def __init__ (self):
-		command = load()
+		command = environment.load()
 		self.short = command.log.short
 		self.level = command.log.level
 

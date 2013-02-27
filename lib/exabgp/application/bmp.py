@@ -141,8 +141,8 @@ def drop ():
 server = BMPServer('localhost', 1790)
 drop()
 
-from exabgp.structure.environment import load
-env = load('')
+from exabgp.structure.environment import environment
+env = environment.load('')
 
 try:
 	asyncore.loop()
