@@ -194,7 +194,7 @@ def main ():
 		},
 		'tcp' : {
 			'timeout' : (environment.integer,environment.nop,'1',  'time we will wait on select (can help with unstable BGP multihop)\n'
-			                                           '%sVERY dangerous use only if you understand BGP very well.' % (' '* 34)),
+			                                                       '%sVERY dangerous use only if you understand BGP very well.' % (' '* 34)),
 			'once': (environment.boolean,environment.lower,'false','only one tcp connection attempt per peer (for debuging scripts)'),
 		},
 		'cache' : {
@@ -337,7 +337,6 @@ def main ():
 		logger.supervisor('Can not fork, errno %d : %s' % (e.errno,e.strerror),'critical')
 
 def run (env,comment,configuration,pid=0):
-	from exabgp.structure.supervisor import Supervisor
 	from exabgp.structure.log import Logger
 	logger = Logger()
 

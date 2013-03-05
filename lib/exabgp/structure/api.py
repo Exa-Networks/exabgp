@@ -8,9 +8,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 import time
-from itertools import tee
 
-from exabgp.structure.utils import dump
 
 class APIOptions (object):
 	def __init__ (self):

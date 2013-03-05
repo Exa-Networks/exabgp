@@ -172,7 +172,7 @@ class NLRI (BGPPrefix):
 		label = str(self.labels)
 		pinfo = str(self.path_info)
 		rdist = str(self.rd)
-		
+
 		r = []
 		if label: r.append('"label": "%s"' % label)
 		if pinfo: r.append('"path-information": "%s"' % pinfo)

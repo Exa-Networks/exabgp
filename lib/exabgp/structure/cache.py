@@ -46,7 +46,7 @@ class Cache (dict):
 			self.last_accessed = now
 
 		return res
-	
+
 	def truncate (self, pos):
 		pos = len(self.ordered) - pos
 		expiring = self.ordered[:pos]
@@ -130,7 +130,7 @@ if __name__ == '__main__':
 	chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:"|;<>?,./[]{}-=_+!@£$%^&*()'
 
 	from random import choice
-	
+
 	while len(samples) != UNIQUE:
 		samples.add(choice(chars)+choice(chars)+choice(chars)+choice(chars)+choice(chars))
 
@@ -161,7 +161,7 @@ if __name__ == '__main__':
 
 		end = time.time()
 		time2 = end-start
-	
+
 		print "time cached  %d" % time2
 		print "speedup %.3f" % (time1/time2)
 		print

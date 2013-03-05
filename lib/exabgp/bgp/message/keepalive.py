@@ -18,4 +18,3 @@ class KeepAlive (Message):
 
 	def __str__ (self):
 		return "KEEPALIVE"
-

@@ -12,6 +12,8 @@ This code is not fully following PEP8, we do not enforce/follow the following :
          The extra line should start with tabs to the point of indentation and finish with space, so the 
          alignment does not change when tabs spaces are changes (from 1 to 8 for example)
 
+  E201 - whitespace after '{'
+  E202 - whitespace before ')'
   E203 - whitespace before ','
   E211 - whitespace before '('
   E225 - missing whitespace around operator

@@ -8,6 +8,7 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
 import os
+import sys
 
 import pwd
 import socket

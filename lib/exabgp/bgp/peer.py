@@ -17,7 +17,7 @@ from exabgp.bgp.message.open.capability.id import CapabilityID
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notification, Notify
-from exabgp.bgp.message.refresh import RouteRefresh
+#from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.protocol import Protocol
 from exabgp.bgp.connection import NotConnected
 from exabgp.structure.processes import ProcessError

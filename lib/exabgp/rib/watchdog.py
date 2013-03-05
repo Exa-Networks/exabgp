@@ -13,7 +13,7 @@ from exabgp.bgp.message.update.attribute.id import AttributeID
 
 class _Status (dict):
 	_instance = None
-	
+
 	def flick (self,watchdog):
 		if watchdog not in self:
 			self[watchdog] = True

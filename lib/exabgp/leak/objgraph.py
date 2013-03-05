@@ -4,9 +4,9 @@ Ad-hoc tools for drawing Python object reference graphs with graphviz.
 This module is more useful as a repository of sample code and ideas, than
 as a finished product.  For documentation and background, read
 
-  http://mg.pov.lt/blog/hunting-python-memleaks.html
-  http://mg.pov.lt/blog/python-object-graphs.html
-  http://mg.pov.lt/blog/object-graphs-with-graphviz.html
+	http://mg.pov.lt/blog/hunting-python-memleaks.html
+	http://mg.pov.lt/blog/python-object-graphs.html
+	http://mg.pov.lt/blog/object-graphs-with-graphviz.html
 
 in that order.  Then use pydoc to read the docstrings, as there were
 improvements made since those blog posts.
@@ -101,8 +101,7 @@ def show_most_common_types(limit=10):
 	Note that classes with the same name but defined in different modules
 	will be lumped together.
 	"""
-	stats = sorted(typestats().items(), key=operator.itemgetter(1),
-				   reverse=True)
+	stats = sorted(typestats().items(), key=operator.itemgetter(1), reverse=True)
 	if limit:
 		stats = stats[:limit]
 	width = max(len(name) for name, count in stats)
@@ -186,11 +185,11 @@ def find_backref_chain(obj, predicate, max_depth=20, extra_ignore=()):
 					depth[id(source)] = tdepth + 1
 					parent[id(source)] = target
 					queue.append(source)
-	return None # not found
+	return None  # not found
 
 
 def show_backrefs(objs, max_depth=3, extra_ignore=(), filter=None, too_many=10,
-				  highlight=None):
+					highlight=None):
 	"""Generate an object reference graph ending at ``objs``
 
 	The graph will show you what objects refer to ``objs``, directly and
@@ -220,12 +219,12 @@ def show_backrefs(objs, max_depth=3, extra_ignore=(), filter=None, too_many=10,
 
 	"""
 	show_graph(objs, max_depth=max_depth, extra_ignore=extra_ignore,
-			   filter=filter, too_many=too_many, highlight=highlight,
-			   edge_func=gc.get_referrers, swap_source_target=False)
+				filter=filter, too_many=too_many, highlight=highlight,
+				edge_func=gc.get_referrers, swap_source_target=False)
 
 
 def show_refs(objs, max_depth=3, extra_ignore=(), filter=None, too_many=10,
-			  highlight=None):
+				highlight=None):
 	"""Generate an object reference graph starting at ``objs``
 
 	The graph will show you what objects are reachable from ``objs``, directly
@@ -255,16 +254,16 @@ def show_refs(objs, max_depth=3, extra_ignore=(), filter=None, too_many=10,
 
 	"""
 	show_graph(objs, max_depth=max_depth, extra_ignore=extra_ignore,
-			   filter=filter, too_many=too_many, highlight=highlight,
-			   edge_func=gc.get_referents, swap_source_target=True)
+				filter=filter, too_many=too_many, highlight=highlight,
+				edge_func=gc.get_referents, swap_source_target=True)
 
 #
 # Internal helpers
 #
 
 def show_graph(objs, edge_func, swap_source_target,
-			   max_depth=3, extra_ignore=(), filter=None, too_many=10,
-			   highlight=None):
+				max_depth=3, extra_ignore=(), filter=None, too_many=10,
+				highlight=None):
 	if not isinstance(objs, (list, tuple)):
 		objs = [objs]
 	f = file('objects.dot', 'w')
@@ -341,8 +340,7 @@ def obj_node_id(obj):
 
 
 def obj_label(obj, depth):
-	return quote(type(obj).__name__ + ':\n' +
-				 safe_repr(obj))
+	return quote(type(obj).__name__ + ':\n' + safe_repr(obj))
 
 
 def quote(s):
@@ -396,4 +394,3 @@ def edge_label(source, target):
 				else:
 					return ' [label="%s"]' % quote(safe_repr(k))
 	return ''
-

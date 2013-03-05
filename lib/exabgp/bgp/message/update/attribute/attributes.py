@@ -24,7 +24,6 @@ from exabgp.bgp.message.update.attribute.aspath import ASPath,AS4Path
 from exabgp.bgp.message.update.attribute.nexthop import cachedNextHop
 from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
-from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
@@ -160,7 +159,7 @@ class Attributes (dict):
 
 	def json (self):
 		r = []
-		if self.has(AID.NEXT_HOP):           r.append('"next-hop": "%s"' % str(self[AID.NEXT_HOP]) )
+		if self.has(AID.NEXT_HOP):           r.append('"next-hop": "%s"' % str(self[AID.NEXT_HOP]))
 		if self.has(AID.ORIGIN):             r.append('"origin": "%s"' % str(self[AID.ORIGIN]))
 		if self.has(AID.AS_PATH):            r.append('"as-path": %s' % self[AID.AS_PATH].json())
 		if self.has(AID.LOCAL_PREF):         r.append('"local-preference": %s' % self[AID.LOCAL_PREF])

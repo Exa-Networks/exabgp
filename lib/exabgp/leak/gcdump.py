@@ -30,21 +30,3 @@ def dump():
 			pass
 
 		print
-
-class tmp(object):
-	def __init__(self):
-		a = 0
-
-if __name__=="__main__":
-	import gc
-	gc.enable()
-	gc.set_debug(gc.DEBUG_LEAK)
-
-	# make a leak
-	l = [tmp()]
-	l.append(l)
-	del l
-
-	dump_garbage()
-
-

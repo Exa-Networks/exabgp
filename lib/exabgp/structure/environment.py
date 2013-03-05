@@ -373,5 +373,3 @@ def _env (conf):
 				raise environment.Error('invalid value for %s.%s : %s' % (section,option,conf))
 
 	return environment._compatibility(env)
-
-
