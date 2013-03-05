@@ -69,13 +69,15 @@ class Withdrawn (object):
 def save_juniper (data):
 	number = int(data)
 	if number > 65535:
-		return 65535
+		raise ValueError(Configuration._str_max_packet_length)
 	return number
 
 class Configuration (object):
 	TTL_SECURITY = 255
 
 #	'  hold-time 180;\n' \
+
+	_str_max_packet_length = "cloudflare already found that max-packet length should be 65535 for you .."
 
 	_str_route_error = \
 	'community, extended-communities and as-path can take a single community as parameter.\n' \
@@ -1743,10 +1745,7 @@ class Configuration (object):
 				while test:
 					operator,_ = self._operator(test)
 					value,test = self._value(_)
-					try:
-						number = int(value)
-					except ValueError:
-						number = converter(value)
+					number = converter(value)
 					scope[-1]['routes'][-1].add_or(klass(AND|operator,number))
 					if test:
 						if test[0] == '&':
@@ -1757,8 +1756,8 @@ class Configuration (object):
 						else:
 							raise ValueError("Unknown binary operator %s" % test[0])
 			return True
-		except ValueError:
-			self._error = self._str_route_error
+		except ValueError,e:
+			self._error = self._str_route_error + str(e)
 			if self.debug: raise
 			return False
 
