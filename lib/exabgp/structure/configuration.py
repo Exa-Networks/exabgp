@@ -66,18 +66,34 @@ class Withdrawn (object):
 	ID = AttributeID.INTERNAL_WITHDRAW
 	MULTIPLE = False
 
-def save_juniper (data):
+
+def convert_length (data):
 	number = int(data)
 	if number > 65535:
-		raise ValueError(Configuration._str_max_packet_length)
+		raise ValueError(Configuration._str_bad_length)
 	return number
+
+def convert_port (data):
+	number = int(data)
+	if number < 0 or number > 65535:
+		raise ValueError(Configuration._str_bad_port)
+	return number
+
+def convert_dscp (data):
+	number = int(data)
+	if number < 0 or number > 65535:
+		raise ValueError(Configuration._str_bad_dscp)
+	return number
+
 
 class Configuration (object):
 	TTL_SECURITY = 255
 
 #	'  hold-time 180;\n' \
 
-	_str_max_packet_length = "cloudflare already found that max-packet length should be 65535 for you .."
+	_str_bad_length = "cloudflare already found that invalid max-packet length for for you .."
+	_str_bad_flow = "you tried to filter a flow using an invalid port for a component .."
+	_str_bad_dscp = "you tried to filter a flow using an invalid dscp for a component .."
 
 	_str_route_error = \
 	'community, extended-communities and as-path can take a single community as parameter.\n' \
@@ -1799,16 +1815,16 @@ class Configuration (object):
 		return self._flow_generic_list(scope,tokens,converter,klass)
 
 	def _flow_route_anyport (self,scope,tokens):
-		return self._flow_generic_condition(scope,tokens,int,AnyPort)
+		return self._flow_generic_condition(scope,tokens,convert_port,AnyPort)
 
 	def _flow_route_source_port (self,scope,tokens):
-		return self._flow_generic_condition(scope,tokens,int,SourcePort)
+		return self._flow_generic_condition(scope,tokens,convert_port,SourcePort)
 
 	def _flow_route_destination_port (self,scope,tokens):
-		return self._flow_generic_condition(scope,tokens,int,DestinationPort)
+		return self._flow_generic_condition(scope,tokens,convert_port,DestinationPort)
 
 	def _flow_route_packet_length (self,scope,tokens):
-		return self._flow_generic_condition(scope,tokens,save_juniper,PacketLength)
+		return self._flow_generic_condition(scope,tokens,convert_length,PacketLength)
 
 	def _flow_route_tcp_flags (self,scope,tokens):
 		return self._flow_generic_list(scope,tokens,NamedTCPFlags,TCPFlag)
@@ -1826,7 +1842,7 @@ class Configuration (object):
 		return self._flow_generic_list(scope,tokens,NamedFragment,Fragment)
 
 	def _flow_route_dscp (self,scope,tokens):
-		return self._flow_generic_condition(scope,tokens,int,DSCP)
+		return self._flow_generic_condition(scope,tokens,convert_dscp,DSCP)
 
 	def _flow_route_discard (self,scope,tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
