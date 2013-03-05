@@ -66,6 +66,12 @@ class Withdrawn (object):
 	ID = AttributeID.INTERNAL_WITHDRAW
 	MULTIPLE = False
 
+def save_juniper (data):
+	number = int(data)
+	if number > 65535:
+		return 65535
+	return number
+
 class Configuration (object):
 	TTL_SECURITY = 255
 
@@ -1803,7 +1809,7 @@ class Configuration (object):
 		return self._flow_generic_condition(scope,tokens,int,DestinationPort)
 
 	def _flow_route_packet_length (self,scope,tokens):
-		return self._flow_generic_condition(scope,tokens,int,PacketLength)
+		return self._flow_generic_condition(scope,tokens,save_juniper,PacketLength)
 
 	def _flow_route_tcp_flags (self,scope,tokens):
 		return self._flow_generic_list(scope,tokens,NamedTCPFlags,TCPFlag)
