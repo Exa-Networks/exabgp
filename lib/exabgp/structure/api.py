@@ -57,6 +57,9 @@ class JSON (object):
 	def __init__ (self,version):
 		self.version = version
 
+	def _string (self,_):
+		return '%s' % _ if issubclass(_,int) or issubclass(_,long) else '"%s"' %_
+
 	def _header (self,content):
 		return '{ '\
 		          '"exabgp": "%s", '\
@@ -77,10 +80,10 @@ class JSON (object):
 		       '} '% (neighbor,content)
 
 	def _kv (self,extra):
-		return ", ".join('"%s": "%s"' % (_,__) for (_,__) in extra.iteritems()) + ' '
+		return ", ".join('"%s": %s' % (_,self._string(__)) for (_,__) in extra.iteritems()) + ' '
 
 	def _minimalkv (self,extra):
-		return ", ".join('"%s": "%s"' % (_,__) for (_,__) in extra.iteritems() if __) + ' '
+		return ", ".join('"%s": %s' % (_,self._string(__)) for (_,__) in extra.iteritems() if __) + ' '
 
 	def up (self,neighbor):
 		return self._header(self._neighbor(neighbor,self._kv({'state':'up'})))
