@@ -61,23 +61,26 @@ class JSON (object):
 		return '%s' % _ if issubclass(_,int) or issubclass(_,long) else '"%s"' %_
 
 	def _header (self,content):
-		return '{ '\
-		          '"exabgp": "%s", '\
-		          '"time": %s, ' \
-		          '%s' \
-		       '}' % (self.version,long(time.time()),content)
+		return \
+		'{ '\
+			'"exabgp": "%s", '\
+			'"time": %s, ' \
+			'%s' \
+		'}' % (self.version,long(time.time()),content)
 
 	def _neighbor (self,neighbor,content):
-		return '"neighbor": { ' \
-		         '"ip": "%s", ' \
-		         '%s' \
-		       '} '% (neighbor,content)
+		return \
+		'"neighbor": { ' \
+			'"ip": "%s", ' \
+			'%s' \
+		'} '% (neighbor,content)
 
 	def _bmp (self,neighbor,content):
-		return '"bmp": { ' \
-		         '"ip": "%s", ' \
-		         '%s' \
-		       '} '% (neighbor,content)
+		return \
+		'"bmp": { ' \
+			'"ip": "%s", ' \
+			'%s' \
+		'} '% (neighbor,content)
 
 	def _kv (self,extra):
 		return ", ".join('"%s": %s' % (_,self._string(__)) for (_,__) in extra.iteritems()) + ' '
