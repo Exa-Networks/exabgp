@@ -5,7 +5,8 @@ Version explained:
 
 Version 3.1.7 - th of 2013
  * Fix: api only get bgp session negotiation messages if neighbor-changes is set
- * Fix: json quoted integer and long by mistake 
+ * Fix: json quoted integer and long by mistake
+ * Fix: json used coma with no data to separate
 
 Version 3.1.6 - 8th of March 2013
  * Fix: unclear log entry when removing route using API
