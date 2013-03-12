@@ -5,15 +5,18 @@ Version explained:
 
 Version 3.1.7 - th of 2013
  * Fix: api only get bgp session negotiation messages if neighbor-changes is set
+    reported by: Lorenzo Murillo
  * Fix: json quoted integer and long by mistake
- * Fix: json used coma with no data to separate
+    reported by: Lorenzo Murillo
+ * Fix: json used comma with no data to separate
+    reported by: Lorenzo Murillo
 
 Version 3.1.6 - 8th of March 2013
  * Fix: unclear log entry when removing route using API
     reported by: Lorenzo Murillo
  * Fix: withdrawn routes were always prepended with add-path information
  * Fix: bad withdrawal of routes (issue 11)
- * Fix: more sanity checking when parsing flow routes 
+ * Fix: more sanity checking when parsing flow routes
  * Change: split configuration code to not be exabgp only
  * Feature: add a very simple BMP deamon (version 1 of the draft)
 
