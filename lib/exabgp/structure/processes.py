@@ -12,8 +12,6 @@ import subprocess
 import select
 import fcntl
 
-from exabgp.version import version
-
 from exabgp.structure.api import Text,JSON
 from exabgp.structure.log import Logger
 
