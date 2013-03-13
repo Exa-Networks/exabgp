@@ -20,9 +20,9 @@ class Delta (object):
 	def updates  (self,negotiated,grouped):
 		self.table.recalculate()
 		if grouped:
-			return self.group_updates (negotiated)
+			return self.group_updates(negotiated)
 		else:
-			return self.simple_updates (negotiated)
+			return self.simple_updates(negotiated)
 
 	def simple_updates (self,negotiated):
 		# table.changed always returns routes to remove before routes to add

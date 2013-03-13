@@ -58,7 +58,7 @@ class JSON (object):
 		self.version = version
 
 	def _string (self,_):
-		return '%s' % _ if issubclass(_,int) or issubclass(_,long) else '"%s"' %_
+		return '%s' % _ if issubclass(_.__class__,int) or issubclass(_.__class__,long) else '"%s"' %_
 
 	def _header (self,content):
 		return \
