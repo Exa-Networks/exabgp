@@ -75,7 +75,7 @@ class ASPath (Attribute):
 				string = '%d' % self.as_seq[0]
 			elif lseq > 1 :
 				if lset:
-					string = '[ %s, %s]' % ((', '.join([str(_) for _ in self.as_seq])),'( %s ) ' % (', '.join([str(_) for _ in self.as_set])))
+					string = '[ [ %s ], [ %s ] ]' % ((', '.join([str(_) for _ in self.as_seq])),', '.join([str(_) for _ in self.as_set]))
 				else:
 					string = '[ %s ]' % ', '.join([str(_) for _ in self.as_seq])
 			else:  # lseq == 0
