@@ -115,5 +115,5 @@ server = RecordServer(sys.argv[1], int(sys.argv[2]), sys.argv[3])
 drop()
 try:
 	asyncore.loop()
-except KeyboardInterrupt:
+except (KeyboardInterrupt,SystemExit):
 	pass

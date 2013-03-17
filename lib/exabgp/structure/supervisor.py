@@ -131,6 +131,9 @@ class Supervisor (object):
 			except KeyboardInterrupt:
 				self.logger.info("^C received",'supervisor')
 				self._shutdown = True
+			except SystemExit:
+				self.logger.info("exiting",'supervisor')
+				self._shutdown = True
 			except IOError:
 				self.logger.warning("I/O Error received, most likely ^C during IO",'supervisor')
 				self._shutdown = True
