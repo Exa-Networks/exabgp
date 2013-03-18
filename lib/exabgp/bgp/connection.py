@@ -231,7 +231,7 @@ class Connection (object):
 				except socket.error,e:
 					if e.args[0] in errno_block:
 						if sent == 0:
-							self.logger.wire("%15s problem sending message, errno EAGAIN, will retry later" % self.peer)
+							self.logger.wire("%15s problem sending message, errno %s, will retry later" % (errno.errorcode[e.args[0]],self.peer))
 							return False
 						else:
 							self.logger.wire("%15s problem sending mid-way through a message, trying to complete" % self.peer)
