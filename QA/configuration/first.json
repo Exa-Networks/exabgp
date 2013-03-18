@@ -3,7 +3,7 @@
 	"_": "every key starting with an _ is ignored, but kept",
   "_0": "it can be useful to add comment in the configuration file",
   "_1": "keep in mind that the configuration has no ordering",
-	"exabgp": "4.0",
+	"exabgp": 4,
 	"neighbor": {
 		"_": "will pass received routes to the program",
 		"tcp": {
@@ -82,42 +82,44 @@
 			"extended-community": []
 		}
 	},
-	"filtering-condition": {
-		"simple-ddos": {
-			"source": "10.0.0.1/32",
-			"destination": "192.168.0.1/32",
-			"port": [[["=",80]]],
-			"protocol": "tcp"
+	"flow" : {
+		"filtering-condition": {
+			"simple-ddos": {
+				"source": "10.0.0.1/32",
+				"destination": "192.168.0.1/32",
+				"port": [[["=",80]]],
+				"protocol": "tcp"
+			},
+			"port-block": {
+				"port": [ [["=",80 ]],[["=",8080]] ],
+				"destination-port": [ [[">",8080],["<",8088]], [["=",3128]] ],
+				"source-port": [[[">",1024]]],
+				"protocol": [ "tcp", "udp" ]
+			},
+			"complex-attack": {
+				"packet-length": [ [[">",200],["<",300]], [[">",400],["<",500]] ],
+				"_fragment": ["not-a-fragment"],
+				"fragment": ["first-fragment","last-fragment" ],
+				"_icmp-type": [ "unreachable", "echo-request", "echo-reply" ],
+				"icmp-code": [ "host-unreachable", "network-unreachable" ],
+				"tcp-flags": [ "urgent", "rst" ],
+				"dscp": [ 10, 20 ]
+			}
 		},
-		"port-block": {
-			"port": [ [["=",80 ]],[["=",8080]] ],
-			"destination-port": [ [[">",8080],["<",8088]], [["=",3128]] ],
-			"source-port": [[[">",1024]]],
-			"protocol": [ "tcp", "udp" ]
-		},
-		"complex-attack": {
-			"packet-length": [ [[">",200],["<",300]], [[">",400],["<",500]] ],
-			"_fragment": ["not-a-fragment"],
-			"fragment": ["first-fragment","last-fragment" ],
-			"_icmp-type": [ "unreachable", "echo-request", "echo-reply" ],
-			"icmp-code": [ "host-unreachable", "network-unreachable" ],
-			"tcp-flags": [ "urgent", "rst" ],
-			"dscp": [ 10, 20 ]
-		}
-	},
-	"fitering-action": {
-		"make-it-slow": {
-				"rate-limit": 9600
-		},
-		"drop-it": {
-				"discard": true
-		},
-		"send-it-elsewhere": {
-				"redirect": [65500,12345]
-		},
-		"send-it-community": {
-			"redirect": ["1.2.3.4",5678],
-			"community": [[30740,0], [30740,30740]]
+		"fitering-action": {
+			"make-it-slow": {
+					"rate-limit": 9600
+			},
+			"drop-it": {
+					"discard": true
+			},
+			"send-it-elsewhere": {
+					"redirect": [65500,12345]
+			},
+			"send-it-community": {
+				"redirect": ["1.2.3.4",5678],
+				"community": [[30740,0], [30740,30740]]
+			}
 		}
 	},
 	"updates": {

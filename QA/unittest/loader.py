@@ -26,10 +26,15 @@ class TestLoader (unittest.TestCase):
 		for exaname in glob.glob('%s/*.exa' % self.folder):
 			jsonname = '%s.json' % exaname[:-4]
 			exa = read(exaname)
-			json = read(jsonname)
-			if not exa or not json:
+			jsn = read(jsonname)
+			if not exa or not jsn:
 				self.fail('parsing of %s or %s did not return a valid dictionary' % (exaname,jsonname))
-			if exa != json:
+
+			# import json
+			# print json.dumps(exa, sort_keys=True,indent=3,separators=(',', ': '))
+			# print
+
+			if exa != jsn:
 				self.fail('parsing of %s and/or %s did not return the expect result' % (exaname,jsonname))
 
 if __name__ == '__main__':
