@@ -213,7 +213,13 @@ def _to_FlowCommunity (action,data):
 
 # rate is bytes/seconds
 def to_FlowTrafficRate (asn,rate):
-	return _to_FlowCommunity (0x8006,pack('!H',asn)[:2]+pack('!f',rate))
+	return _to_FlowCommunity (0x8006,pack('!H',asn) + pack('!f',rate))
+
+def to_FlowRedirectASN (asn,number):
+	return _to_FlowCommunity (0x8008,pack('!H',asn) + pack('!L',number))
+
+def to_FlowRedirectIP (ip,number):
+	return _to_FlowCommunity (0x8008,pack('!L',ip) + pack('!H',number))
 
 def to_RouteOriginCommunity (asn,number,hightype=0x01):
 	return ECommunity(chr(hightype) + chr(0x03) + pack('!H',asn) + pack('!L',number))
