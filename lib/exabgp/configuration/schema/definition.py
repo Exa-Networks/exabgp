@@ -17,8 +17,26 @@ class Enumeration (object):
 				return name
 
 
-TYPE = Enumeration ('boolean','int8','int16','int32','string','list','dictionary','ip','ipv4','ipv6','reference','references')
-PRESENCE = Enumeration('optional','mandatory')
+TYPE = Enumeration (
+	'error',
+	'boolean',
+	'int8',
+	'int16',
+	'int32',
+	'string',
+	'list',
+	'dictionary',
+	'ip',
+	'ipv4',
+	'ipv6',
+	'reference',
+	'references'
+)
+
+PRESENCE = Enumeration(
+	'optional',
+	'mandatory'
+)
 
 def check_boolean (data,root,keys):
 	return type(data) == type(True)
@@ -59,9 +77,9 @@ CHECK = {
 }
 
 class OrderedDict (dict):
-	def __init__(self, *args, **kwargs):
-		dict.__init__(self, *args, **kwargs)
-		self._order = self.keys()
+	def __init__(self, args):
+		dict.__init__(self, args)
+		self._order = [_ for _,__ in args]
 
 	def __setitem__(self, key, value):
 		dict.__setitem__(self, key, value)
@@ -79,6 +97,9 @@ class OrderedDict (dict):
 	def ordered_items(self):
 		return [(key,self[key]) for key in self._order]
 
+	def keys(self):
+		return self.order()
+
 definition = (TYPE.dictionary, PRESENCE.mandatory, OrderedDict((
 	('exabgp' , (TYPE.int8, PRESENCE.mandatory, [4,])),
 	('neighbor' , (TYPE.dictionary, PRESENCE.mandatory, OrderedDict((
@@ -86,7 +107,7 @@ definition = (TYPE.dictionary, PRESENCE.mandatory, OrderedDict((
 			('local' , (TYPE.ip, PRESENCE.mandatory , None)),
 			('peer' , (TYPE.ip, PRESENCE.mandatory , None)),
 			('ttl-security' , (TYPE.boolean, PRESENCE.optional , None)),
-			('md5' , (TYPE.string, PRESENCE.optional , None)),
+			('md5' , (TYPE.string, PRESENCE.optional , None))
 		)))),
 		('api' , (TYPE.dictionary, PRESENCE.optional, OrderedDict((
 			('<*>' , (TYPE.list, PRESENCE.mandatory, ['neighbor-changes','send-packets','receive-packets','receive-routes'])),
@@ -105,7 +126,7 @@ definition = (TYPE.dictionary, PRESENCE.mandatory, OrderedDict((
 					('inet6' , (TYPE.list, PRESENCE.optional, ['unicast','flow'])),
 					('alias' , (TYPE.string, PRESENCE.optional, ['all','minimal'])),
 				)))),
-				('asn4' , (TYPE.int32, PRESENCE.optional , None)),
+				('asn4' , (TYPE.boolean, PRESENCE.optional , None)),
 				('route-refresh' , (TYPE.boolean, PRESENCE.optional , None)),
 				('graceful-restart' , (TYPE.boolean, PRESENCE.optional , None)),
 				('multi-session' , (TYPE.boolean, PRESENCE.optional , None)),
@@ -249,13 +270,17 @@ from exabgp.configuration.loader import read
 
 json = read('/Users/thomas/source/hg/exabgp/tip/QA/configuration/first.exa')
 
-def validate (root,json,definition,keys=[]):
+def validate (root,json,definition,location=[]):
 	kind,presence,compare = definition
 
+	if kind == TYPE.error:
+		print compare, ' '.join(location)
+		return False
+
 	# ignore missing optional elements
-	if presence == PRESENCE.optional and not json:
-		print "not present"
-		return True
+	if not json:
+		print '/'.join(location), 'not present'
+		return presence == PRESENCE.optional
 
 	# for dictionary check all the elements inside
 	if kind == TYPE.dictionary:
@@ -268,6 +293,10 @@ def validate (root,json,definition,keys=[]):
 				print "skipping", key
 				continue
 
+			if key in ['announce','attributes']:
+				print "skipping", key
+				continue
+
 			if type(json) != type({}):
 				print "bad data, not a dict", json
 				return False
@@ -277,13 +306,13 @@ def validate (root,json,definition,keys=[]):
 				wildcard = False
 				continue
 
-			print "checking", key
-			if not validate(root,json.get(key,None),compare[key],keys + [key]):
+			subtest = compare.get(key,compare.get('<*>',(TYPE.error,None,'problem validating configuration')))
+			if not validate(root,json.get(key,None),subtest,location + [key]):
 				return False
 		return True
 
 	# check that the value is well in the list
-	if not CHECK[kind](json,definition[2],keys):
+	if not CHECK[kind](json,definition[2],location):
 		import pdb; pdb.set_trace()
 		return False
 
