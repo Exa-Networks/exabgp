@@ -29,8 +29,6 @@ TYPE = Enumeration (
 	'ip',
 	'ipv4',
 	'ipv6',
-	'reference',
-	'references',
 )
 
 PRESENCE = Enumeration(
@@ -53,10 +51,6 @@ def check_list (data):
 	return type(data) == type([])
 def check_dict (data):
 	return type(data) == type({})
-def check_reference (data):
-	return True
-def check_references (data):
-	return True
 
 
 CHECK_TYPE = {
@@ -67,8 +61,6 @@ CHECK_TYPE = {
 	TYPE.string : check_string,
 	TYPE.list : check_list,
 	TYPE.dictionary : check_dict,
-	TYPE.reference : check_reference,  # a reference to another key
-	TYPE.references : check_references,  # a list of references to other keys
 }
 
 # DATA CHECK
@@ -156,7 +148,7 @@ attributes = OrderedDict((
 ))
 
 definition = (TYPE.dictionary, PRESENCE.mandatory, OrderedDict((
-	('exabgp' , (TYPE.int8, PRESENCE.mandatory, [4,])),
+	('exabgp' , (TYPE.int8, PRESENCE.mandatory, [3,4,])),
 	('neighbor' , (TYPE.dictionary, PRESENCE.mandatory, OrderedDict((
 		('tcp' , (TYPE.dictionary, PRESENCE.mandatory, OrderedDict((
 			('local' , (TYPE.string, PRESENCE.mandatory , check_ip)),
@@ -188,7 +180,7 @@ definition = (TYPE.dictionary, PRESENCE.mandatory, OrderedDict((
 				('add-path' , (TYPE.boolean, PRESENCE.optional , check_nop)),
 			))))
 		)))),
-		('announce' , (TYPE.references, PRESENCE.optional,'attributes.updates.prefix.*'))
+		('announce' , (TYPE.list, PRESENCE.optional,'attributes.updates.prefix.*'))
 	)))),
 	('api' , (TYPE.dictionary, PRESENCE.optional, OrderedDict((
 		('<*>' , (TYPE.dictionary, PRESENCE.optional, OrderedDict((
@@ -236,7 +228,7 @@ definition = (TYPE.dictionary, PRESENCE.mandatory, OrderedDict((
 		)))),
 		('flow' , (TYPE.dictionary, PRESENCE.optional, OrderedDict((
 			('<*>' , (TYPE.dictionary, PRESENCE.optional, OrderedDict((  # name of the dos
-				('<*>' , (TYPE.reference, PRESENCE.mandatory, 'flow.filtering-action.*')),
+				('<*>' , (TYPE.list, PRESENCE.mandatory, 'flow.filtering-action.*')),
 			)))),
 		)))),
 	)))),
@@ -267,7 +259,7 @@ def validate (root,json,definition,location=[]):
 
 	# ignore missing optional elements
 	if not json:
-		print ' / '.join(location), 'not present'
+		#print ' / '.join(location), 'not present'
 		return presence == PRESENCE.optional
 
 	# check that the value of the right type
@@ -285,10 +277,6 @@ def validate (root,json,definition,location=[]):
 				print "skipping", key
 				continue
 
-			if key in ['announce','flow']:
-				print "skipping", key
-				continue
-
 			if type(json) != type({}):
 				print "bad data, not a dict", json
 				return False
@@ -298,7 +286,7 @@ def validate (root,json,definition,location=[]):
 				wildcard = False
 				continue
 
-			print 'key',key
+			print " "*len(location) + key
 			subtest = valid.get(key,valid.get('<*>',(TYPE.error,None,'problem validating configuration')))
 			if not validate(root,json.get(key,None),subtest,location + [key]):
 				return False
@@ -317,6 +305,11 @@ def validate (root,json,definition,location=[]):
 			for data in json:
 				if not data in valid:
 					return False
+			return True
+		# This is a reference
+		elif type(valid) == type(''):
+			print "reference", valid
+			# TODO: reference checking
 			return True
 		# no idea what the data is - so something is wrong with the program
 		else:
