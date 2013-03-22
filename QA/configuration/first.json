@@ -106,7 +106,7 @@
 				"dscp": [ 10, 20 ]
 			}
 		},
-		"fitering-action": {
+		"filtering-action": {
 			"make-it-slow": {
 					"rate-limit": 9600
 			},
