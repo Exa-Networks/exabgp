@@ -16,7 +16,7 @@ unexport LDFLAGS
 	dh $@ --with python2 
 
 override_dh_auto_install: 
-	python setup.py install --root=debian/exabgp --install-layout=deb --install-data=/ --install-lib=/usr/share/exabgp/lib/3.1.7 --install-scripts=/usr/sbin
+	python setup.py install --root=debian/exabgp --install-layout=deb --install-data=/ --install-lib=/usr/share/exabgp/lib/3.1.8 --install-scripts=/usr/sbin
 	dh_installdirs
 	rm $(CURDIR)/debian/exabgp/etc/exabgp/*
 	install -m 644 $(CURDIR)/debian/exabgp.conf $(CURDIR)/debian/exabgp/etc/exabgp/exabgp.conf
