@@ -146,9 +146,9 @@
 				"simple-attributes": {
 					"10.0.0.0/16": {
 						"_": "those three can be defined everywhere too, but require the right capability",
-						"label": "0",
-						"path-information": "0",
-						"route-distinguisher": "0",
+						"label": [0, 1],
+						"path-information": 0,
+						"route-distinguisher": "1:0.0.0.0",
 						"split": 24
 					}
 				}

@@ -9,11 +9,11 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from exabgp.structure.enumeration import Enumeration
 
 TYPE = Enumeration (
-	'boolean',     # -  1
-	'integer',     # -  2
-	'string',      # -  4
-	'list',        # -  8
-	'dictionary',  # - 16
+	'boolean',  # -  1
+	'integer',  # -  2
+	'string',   # -  4
+	'array',    # -  8
+	'object',   # - 16
 )
 
 PRESENCE = Enumeration(
@@ -28,17 +28,18 @@ def integer (data):
 	return type(data) == type(0)
 def string (data):
 	return type(data) == type(u'') or type(data) == type('')
-def list (data):
+def array (data):
 	return type(data) == type([])
-def dict (data):
+def object (data):
 	return type(data) == type({})
+# XXX: Not very good to redefine the keyword object, but this class uses no OO ...
 
 CHECK_TYPE = {
 	TYPE.boolean : boolean,
 	TYPE.integer : integer,
 	TYPE.string : string,
-	TYPE.list : list,
-	TYPE.dictionary : dict,
+	TYPE.array : array,
+	TYPE.object : dict,
 }
 
 def kind (kind,data):
@@ -84,21 +85,100 @@ def ipv4_range (data):
 		return False
 	return True
 
-def asn (data):
-	return data >= 1
+def asn16 (data):
+	return data >= 1 and data < pow(2,16)
+def asn32 (data):
+	return data >= 1 and data < pow(2,32)
+asn = asn32
+
+def md5 (data):
+	return len(data) <= 18
+
+def localpreference (data):
+	return uint32(data)
+
+def med (data):
+	return uint32(data)
+
+def originator (data):
+	return ipv4(data)
+
+def distinguisher (data):
+	parts = data.split(':')
+	if len(parts) != 2:
+		return False
+	_,__ = parts
+	return (_.isdigit() and asn16(int(_)) and ipv4(__)) or (ipv4(_) and __.isdigit() and asn16(int(__)))
+
+def pathinformation (data):
+	if integer(data):
+		return uint32(data)
+	if string(data):
+		return ipv4(data)
+	return False
+
+def watchdog (data):
+	return ' ' not in data  # TODO: improve
+
+def split (data):
+	return range6(data)
+
 
 # LIST DATA CHECK
+# Those function need to perform type checks before using the data
+
+
 def aspath (data):
 	return type(data) == type(0) and data < pow(2,32)
+
+def assequence (data):
+	return type(data) == type(0) and data < pow(2,32)
+
 def community (data):
-	return type(data) == type([]) and \
-		len(data) == 2 and \
-			type(data[0]) == type(0) and \
-			type(data[1]) == type(0)
+	if integer(data):
+		return uint32(data)
+	if string(data) and data.lower() in ('no-export', 'no-advertise', 'no-export-subconfed', 'nopeer', 'no-peer'):
+		return True
+	return array(data) and len(data) == 2 and \
+		integer(data[0]) and integer(data[1]) and \
+		asn16(data[0]) and uint16(data[1])
+
+def extendedcommunity (data):  # TODO: improve, incomplete see http://tools.ietf.org/rfc/rfc4360.txt
+	if integer(data):
+		return True
+	if string(data) and data.count(':') == 2:
+		_,__,___ = data.split(':')
+		if _.lower() not in ('origin','target'):
+			return False
+		return (__.isdigit() and asn16(__) and ipv4(___)) or (ipv4(__) and ___.isdigit() and asn16(___))
+	return False
+
+def label (data):
+	return integer(data) and \
+		data >= 0 and data < pow(2,20)  # XXX: SHOULD be taken from Label class
+
+def clusterlist (data):
+	return integer(data) and uint8(data)
+
+def aggregator (data):
+	if not array(data):
+		return False
+	if len(data) == 0:
+		return True
+	if len(data) == 2:
+		return \
+			integer(data[0]) and string(data[1]) and \
+			asn(data[0]) and ipv4(data[1])
+	return False
+
 def dscp (data):
 	return integer(data) and uint8(data)
 
+
 # FLOW DATA CHECK
+#
+
+
 def flow_ipv4_range (data):  # TODO
 	return True
 def flow_port (data):  # TODO
