@@ -4,46 +4,48 @@
   _0: "it can be useful to add comment in the configuration file"
 	_1: "keep in mind that the configuration has no ordering"
   # to make it easier, the simplejson format allows lines of comments too
-	exabgp: 4
+	exabgp: 3
 
 	neighbor {
-		_: "will pass received routes to the program"
-		tcp {
-			local: "82.219.212.34"
-			peer: "195.8.215.15"
-			ttl-security: false
-			md5: "secret"
-		}
-		api {
-			syslog-text: [ "receive-routes" ]
-			syslog-json: [ "neighbor-changes","send-packets","receive-packets","receive-routes" ]
-		}
-		session {
-			router-id: "82.219.212.34"
-			hold-time: 180
-			asn {
-				local: 65500
-				peer: 65500
+		first-peer {
+			_: "will pass received routes to the program"
+			tcp {
+				local: "82.219.212.34"
+				peer: "195.8.215.15"
+				ttl-security: false
+				md5: "secret"
 			}
-			capability {
-				family {
-					inet4: ["unicast","multicast","nlri-mpls","mpls-vpn","flow-vpnv4","flow"]
-					inet6: ["unicast"]
-					_inet: ["unicast","flow"]
-					_alias: "all"
-					_alias: "minimal"
+			api {
+				syslog-text: [ "receive-routes" ]
+				syslog-json: [ "neighbor-changes","send-packets","receive-packets","receive-routes" ]
+			}
+			session {
+				router-id: "82.219.212.34"
+				hold-time: 180
+				asn {
+					local: 65500
+					peer: 65500
 				}
-				asn4: true
-				route-refresh: true
-				graceful-restart: false
-				multi-session: false
-				add-path: false
+				capability {
+					family {
+						inet4: ["unicast","multicast","nlri-mpls","mpls-vpn","flow-vpnv4","flow"]
+						inet6: ["unicast"]
+						_inet: ["unicast","flow"]
+						_alias: "all"
+						_alias: "minimal"
+					}
+					asn4: true
+					route-refresh: true
+					graceful-restart: false
+					multi-session: false
+					add-path: false
+				}
 			}
+			announce: [
+				"local-routes"
+				"off-goes-the-ddos"
+			]
 		}
-		announce: [
-			"local-routes"
-			"off-goes-the-ddos"
-		]
 	}
 
 	api {
@@ -68,7 +70,7 @@
 			atomic-aggregate: false
 			originator-id: "10.0.0.1"
 			med: 10
-			community: [[3356,2], [3356,22], [3356,86], [3356,500], [3356,666], [3356,2064]]
+			community: [[3356,2], [3356,22], [3356,86], [3356,500], [3356,666], [3356,2064], "no-export"]
 			cluster-list: []
 			extended-community: []
 		}

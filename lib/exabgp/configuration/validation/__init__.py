@@ -20,6 +20,7 @@ class ValidationError (Exception):
 	type_error = 'the data is of the wrong type'
 	internal_error = 'invalid configuration definition (internal error)'
 	configuration_error = 'missing configuration information'
+	conflicting_error = 'conflicting configuration'
 
 	def __init__ (self,location,message):
 		self.location = location
@@ -51,39 +52,41 @@ _attributes = OrderedDict((
 ))
 
 _definition = (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
-	('exabgp' , (TYPE.integer, PRESENCE.mandatory, '', [3,4,])),
+	('exabgp' , (TYPE.integer, PRESENCE.mandatory, '', [3,])),
 	('neighbor' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
-		('tcp' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
-			('local' , (TYPE.string, PRESENCE.mandatory, '', check.ip)),
-			('peer' , (TYPE.string, PRESENCE.mandatory, '', check.ip)),
-			('ttl-security' , (TYPE.integer, PRESENCE.optional, '', check.uint8)),
-			('md5' , (TYPE.string, PRESENCE.optional, '', check.md5))
-		)))),
-		('api' , (TYPE.object, PRESENCE.optional, 'api', OrderedDict((
-			('<*>' , (TYPE.array, PRESENCE.mandatory, '', ['neighbor-changes','send-packets','receive-packets','receive-routes'])),
-		)))),
-		('session' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
-			('router-id' , (TYPE.string, PRESENCE.mandatory, '', check.ipv4)),
-			('hold-time' , (TYPE.integer, PRESENCE.mandatory, '', check.uint16)),
-			('asn' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
-				('local' , (TYPE.integer, PRESENCE.mandatory, '', check.uint32)),
-				('peer' , (TYPE.integer, PRESENCE.mandatory, '', check.uint32)),
+		('<*>' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
+			('tcp' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
+				('local' , (TYPE.string, PRESENCE.mandatory, '', check.ip)),
+				('peer' , (TYPE.string, PRESENCE.mandatory, '', check.ip)),
+				('ttl-security' , (TYPE.integer, PRESENCE.optional, '', check.uint8)),
+				('md5' , (TYPE.string, PRESENCE.optional, '', check.md5))
 			)))),
-			('capability' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
-				('family' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
-					('inet'  , (TYPE.array, PRESENCE.optional, '', ['unicast','multicast','nlri-mpls','mpls-vpn','flow-vpnv4','flow'])),
-					('inet4' , (TYPE.array, PRESENCE.optional, '', ['unicast','multicast','nlri-mpls','mpls-vpn','flow-vpnv4','flow'])),
-					('inet6' , (TYPE.array, PRESENCE.optional, '', ['unicast','flow'])),
-					('alias' , (TYPE.string, PRESENCE.optional, '', ['all','minimal'])),
+			('api' , (TYPE.object, PRESENCE.optional, 'api', OrderedDict((
+				('<*>' , (TYPE.array, PRESENCE.mandatory, '', ['neighbor-changes','send-packets','receive-packets','receive-routes'])),
+			)))),
+			('session' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
+				('router-id' , (TYPE.string, PRESENCE.mandatory, '', check.ipv4)),
+				('hold-time' , (TYPE.integer, PRESENCE.mandatory, '', check.uint16)),
+				('asn' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
+					('local' , (TYPE.integer, PRESENCE.mandatory, '', check.uint32)),
+					('peer' , (TYPE.integer, PRESENCE.mandatory, '', check.uint32)),
 				)))),
-				('asn4' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
-				('route-refresh' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
-				('graceful-restart' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
-				('multi-session' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
-				('add-path' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
-			))))
+				('capability' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
+					('family' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
+						('inet'  , (TYPE.array, PRESENCE.optional, '', ['unicast','multicast','nlri-mpls','mpls-vpn','flow-vpnv4','flow'])),
+						('inet4' , (TYPE.array, PRESENCE.optional, '', ['unicast','multicast','nlri-mpls','mpls-vpn','flow-vpnv4','flow'])),
+						('inet6' , (TYPE.array, PRESENCE.optional, '', ['unicast','flow'])),
+						('alias' , (TYPE.string, PRESENCE.optional, '', ['all','minimal'])),
+					)))),
+					('asn4' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
+					('route-refresh' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
+					('graceful-restart' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
+					('multi-session' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
+					('add-path' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
+				)))),
+			)))),
+			('announce' , (TYPE.array, PRESENCE.optional, ['updates,prefix','updates,flow'], check.string)),
 		)))),
-		('announce' , (TYPE.array, PRESENCE.optional, ['updates,prefix','updates,flow'], check.string)),
 	)))),
 	('api' , (TYPE.object, PRESENCE.optional, 'api', OrderedDict((
 		('<*>' , (TYPE.object, PRESENCE.optional, '', OrderedDict((
@@ -243,19 +246,28 @@ def _validate (root,json,definition,location=[]):
 
 	_reference (root,references,json,location)
 
-
+def _inet (json):
+	conflicts = {
+		'alias': ['inet','inet4','inet6'],
+		'inet': ['inet4','inet6']
+	}
+	for name in json['neighbor']:
+		inet = [_ for _ in json['neighbor'][name]['session']['capability']['family'].keys() if not _.startswith('_')]
+		for conflict in conflicts:
+			if conflict in inet:
+				raise ValidationError(['neighbor',name,'session','capability','family'], ValidationError.conflicting_error)
 
 def validation (json):
 	_validate(json,json,_definition)
+	_inet(json)
 
 def main ():
 	global DEBUG
 	DEBUG = True
 	from exabgp.configuration.loader import read
 	try:
-		validation(
-			read('/Users/thomas/source/hg/exabgp/tip/QA/configuration/first.exa')
-		)
+		json = read('/Users/thomas/source/hg/exabgp/tip/QA/configuration/first.exa')
+		validation(json)
 		print "validation succesful"
 	except ValidationError,e:
 		print "validation failed", str(e)
