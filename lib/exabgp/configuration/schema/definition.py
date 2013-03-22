@@ -103,19 +103,22 @@ def check_asn (data):
 def check_aspath (data):
 	return type(data) == type(0) and data < pow(2,32)
 def check_community (data):
-	return type(data) == type([]) and len(data) == 2 and type(data[0]) == type(0) and type(data[1]) == type(0)
+	return type(data) == type([]) and \
+		len(data) == 2 and \
+			type(data[0]) == type(0) and \
+			type(data[1]) == type(0)
 def check_dscp (data):
 	return check_integer(data) and check_uint8(data)
 
 # FLOW DATA CHECK
-def check_flow_ipv4_range (data):
+def check_flow_ipv4_range (data):  # TODO
 	return True
-def check_flow_port (data):
+def check_flow_port (data):  # TODO
 	return True
-def check_flow_length (data):
+def check_flow_length (data):  # TODO
 	return True
 
-def check_redirect (data):
+def check_redirect (data):  # TODO
 	return True
 
 
@@ -192,9 +195,9 @@ definition = (TYPE.dictionary, PRESENCE.mandatory, '', OrderedDict((
 				('add-path' , (TYPE.boolean, PRESENCE.optional, '', check_nop)),
 			))))
 		)))),
-		('announce' , (TYPE.list, PRESENCE.optional, 'updates.prefix', check_string)),
+		('announce' , (TYPE.list, PRESENCE.optional, ['updates.prefix','updates.flow'], check_string)),
 	)))),
-	('api' , (TYPE.dictionary, PRESENCE.optional, '', OrderedDict((
+	('api' , (TYPE.dictionary, PRESENCE.optional, 'api', OrderedDict((
 		('<*>' , (TYPE.dictionary, PRESENCE.optional, '', OrderedDict((
 			('encoder' , (TYPE.string, PRESENCE.optional, '', ['json','text'])),
 			('program' , (TYPE.string, PRESENCE.mandatory, '', check_nop)),
@@ -216,7 +219,7 @@ definition = (TYPE.dictionary, PRESENCE.mandatory, '', OrderedDict((
 				('packet-fragment' , (TYPE.list|TYPE.string, PRESENCE.optional, '', ['first-fragment', 'last-fragment', 'not-a-fragment'])),  # TODO : missing fragment types
 				('icmp-type' , (TYPE.list|TYPE.string, PRESENCE.optional, '', ['unreachable', 'echo-request', 'echo-reply'])),  # TODO : missing type
 				('icmp-code' , (TYPE.list|TYPE.string, PRESENCE.optional, '', ['host-unreachable', 'network-unreachable'])),  # TODO : missing  code
-				('tcp-flags' , (TYPE.list|TYPE.string, PRESENCE.optional, '', ['urgent', 'rst'])),  # TODO : missing flags
+				('tcp-flags' , (TYPE.list|TYPE.string, PRESENCE.optional, '', ['fin', 'syn', 'rst', 'push', 'ack', 'urgent'])),
 				('dscp' , (TYPE.list|TYPE.integer, PRESENCE.optional, '', check_dscp)),
 				# MISSING SOME MORE ?
 			)))),
@@ -232,14 +235,14 @@ definition = (TYPE.dictionary, PRESENCE.mandatory, '', OrderedDict((
 	)))),
 	('updates' , (TYPE.dictionary, PRESENCE.optional, '', OrderedDict((
 		('prefix' , (TYPE.dictionary, PRESENCE.optional, '', OrderedDict((
-			('<*>' , (TYPE.dictionary, PRESENCE.optional, '', OrderedDict((  # name of route
+			('<*>' , (TYPE.dictionary, PRESENCE.optional, 'attributes', OrderedDict((  # name of route
 				('<*>' , (TYPE.dictionary, PRESENCE.mandatory, '', OrderedDict((  # name of attributes referenced
 					('<*>' , (TYPE.dictionary, PRESENCE.optional, '', attributes)),  # prefix
 				)))),
 			)))),
 		)))),
 		('flow' , (TYPE.dictionary, PRESENCE.optional, '', OrderedDict((
-			('<*>' , (TYPE.dictionary, PRESENCE.optional, '', OrderedDict((  # name of the dos
+			('<*>' , (TYPE.dictionary, PRESENCE.optional, 'flow.filtering-condition', OrderedDict((  # name of the dos
 				('<*>' , (TYPE.string, PRESENCE.mandatory, 'flow.filtering-action', check_nop)),
 			)))),
 		)))),
@@ -258,25 +261,33 @@ def check_reference (root,references,json):
 	ref = references if check_list(references) else [references,]
 	jsn = json if check_list(json) else json.keys() if check_dict(json) else [json,]
 
+	valid = []
 	for reference in ref:
 		compare = root
 		for path in reference.split('.'):
 			compare = compare.get(path,{})
+		# prevent name conflict where we can not resolve which object is referenced.
+		add = compare.keys()
+		for k in add:
+			if k in valid:
+				return False
+		valid.extend(add)
 
-		for option in jsn:
-			if option in compare:
-				return True
-	return False
+	for option in jsn:
+		if not option in valid:
+			return False
+
+	return True
 
 def validate (root,json,definition,location=[]):
-	kind,presence,references,valid = definition
+	kind,presence,references,contextual = definition
+
 	# kind, the type of data possible
 	# presence, indicate if the data is mandatory or not
 	# reference, if the name is a reference to another key
 	# valid, a subdefinition or the check to run
 
 	if kind == TYPE.error:
-		if DEBUG: print 'error reported', valid, ' '.join(location)
 		return False
 
 	# ignore missing optional elements
@@ -290,7 +301,8 @@ def validate (root,json,definition,location=[]):
 
 	# for dictionary check all the elements inside
 	if kind & TYPE.dictionary and check_dict(json):
-		keys = valid.keys()
+		subdefinition = contextual
+		keys = subdefinition.keys()
 		wildcard = True
 
 		while keys:
@@ -308,26 +320,27 @@ def validate (root,json,definition,location=[]):
 				wildcard = False
 				continue
 
-			if not check_reference(root,references,json):
+			if not check_reference (root,references,json):
 				return False
 
-			if DEBUG: print " "*len(location) + key
-			subtest = valid.get(key,valid.get('<*>',(TYPE.error,None,'problem validating configuration')))
+			if DEBUG: print "  "*len(location) + key
+			star = subdefinition.get('<*>',(TYPE.error,None,'','','problem validating configuration',None))
+			subtest = subdefinition.get(key,star)
 			if not validate(root,json.get(key,None),subtest,location + [key]):
 				return False
 
 	# for list check all the element inside
 	elif kind & TYPE.list and check_list(json):
-		check = valid
+		check = contextual
 		# This is a function
 		if hasattr(check, '__call__'):
 			for data in json:
 				if not check(data):
 					return False
 		# This is a list of valid option
-		elif type(valid) == type([]):
+		elif type(check) == type([]):
 			for data in json:
-				if not data in valid:
+				if not data in check:
 					return False
 		# no idea what the data is - so something is wrong with the program
 		else:
@@ -335,24 +348,21 @@ def validate (root,json,definition,location=[]):
 
 	# for non container object check the value
 	else:
-		check = valid
+		check = contextual
 		# check that the value of the data
 		if hasattr(check, '__call__'):
 			if not check(json):
 				return False
 		# a list of valid option
-		elif type(valid) == type([]):
-			if not json in valid:
+		elif type(check) == type([]):
+			if not json in check:
 				return False
 		else:
 			return False
 
+	if not check_reference (root,references,json):
+		return False
 
-	return check_reference (root,references,json)
-	# if not reference:
-	# 	return False
-	# if not json in reference:
-	# 	return False
+	return True
 
 print validate(json,json,definition)
-

@@ -33,3 +33,4 @@ def NamedTCPFlags (name):
 	if flag == 'ack':    return TCPFlags(TCPFlags.ACK)
 	if flag == 'urgent': return TCPFlags(TCPFlags.URGENT)
 	raise ValueError('invalid flag name %s' % flag)
+
