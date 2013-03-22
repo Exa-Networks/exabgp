@@ -143,7 +143,6 @@ _definition = (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
 	)))),
 )))
 
-
 def _reference (root,references,json,location):
 	if not references:
 		return
@@ -189,22 +188,21 @@ def _validate (root,json,definition,location=[]):
 	if kind & TYPE.object and check.object(json):
 		subdefinition = contextual
 		keys = subdefinition.keys()
-		wildcard = True
 
 		while keys:
-			key = keys.pop()
+			key = keys.pop(0)
+			if DEBUG: print "  "*len(location) + key
+
 			if key.startswith('_'):
 				continue
 
 			if type(json) != type({}):
 				raise ValidationError(location, ValidationError.configuration_error)
 
-			if key == '<*>' and wildcard:
-				keys = json.keys()
-				wildcard = False
+			if key == '<*>':
+				keys = json.keys() + keys
 				continue
 
-			if DEBUG: print "  "*len(location) + key
 			_reference (root,references,json,location)
 
 			star = subdefinition.get('<*>',None)

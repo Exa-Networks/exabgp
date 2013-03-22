@@ -21,11 +21,17 @@ class OrderedDict (dict):
 		dict.__delitem__(self, key)
 		self._order.remove(key)
 
-	def order(self):
+	def keys (self):
 		return self._order[:]
 
-	def ordered_items(self):
-		return [(key,self[key]) for key in self._order]
+	def __iter__ (self):
+		return self.__next__()
 
-	def keys(self):
-		return self.order()
+	def __next__ (self):
+		for k in self._order[:]:
+			yield k
+
+if __name__ == '__main__':
+	d = OrderedDict(((10,'ten'),(8,'eight'),(6,'six'),(4,'four'),(2,'two'),(0,'boom')))
+	for k in d:
+		print k
