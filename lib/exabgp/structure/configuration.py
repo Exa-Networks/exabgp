@@ -1259,7 +1259,14 @@ class Configuration (object):
 
 	def _route_next_hop (self,scope,tokens):
 		try:
-			scope[-1]['routes'][-1].attributes.add(cachedNextHop(*inet(tokens.pop(0))))
+			# next-hop self is unsupported
+			ip = tokens.pop(0)
+			if ip.lower() == 'self':
+				la = scope[-1]['local-address']
+				nh = la.afi,la.safi,la.pack()
+			else:
+				nh = inet(ip)
+			scope[-1]['routes'][-1].attributes.add(cachedNextHop(*nh))
 			return True
 		except:
 			self._error = self._str_route_error

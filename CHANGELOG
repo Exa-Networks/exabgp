@@ -5,6 +5,7 @@ Version explained:
 
 Version 3.1.8 - th of 2013
  * Fix: bad encoding of extended community for FlowSpec redirect
+ * Feature: unsupported before the next configuration format 'next-hop self', the neighbor MUST be defined first
 
 Version 3.1.7 - 18th of March 2013
  * Fix: api only get bgp session negotiation messages if neighbor-changes is set
