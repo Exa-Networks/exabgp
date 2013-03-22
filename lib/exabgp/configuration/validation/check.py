@@ -9,17 +9,16 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from exabgp.structure.enumeration import Enumeration
 
 TYPE = Enumeration (
-	'error',       #  0
-	'boolean',     #  1
-	'integer',     #  2
-	'string',      #  4
-	'list',        #  8
-	'dictionary',  # 16
+	'boolean',     # -  1
+	'integer',     # -  2
+	'string',      # -  4
+	'list',        # -  8
+	'dictionary',  # - 16
 )
 
 PRESENCE = Enumeration(
-	'optional',   # 0
-	'mandatory',  # 1
+	'optional',   # -  1
+	'mandatory',  # -  2
 )
 
 # TYPE CHECK

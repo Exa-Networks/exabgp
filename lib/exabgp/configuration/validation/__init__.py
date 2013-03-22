@@ -17,7 +17,16 @@ TYPE=check.TYPE
 PRESENCE=check.PRESENCE
 
 class ValidationError (Exception):
-	pass
+	type_error = 'the data is of the wrong type'
+	internal_error = 'invalid configuration definition (internal error)'
+	configuration_error = 'missing configuration information'
+
+	def __init__ (self,location,message):
+		self.location = location
+		self.message = message
+
+	def __str__ (self):
+		return ','.join(self.location) + ' : ' + self.message
 
 _attributes = OrderedDict((
 	('next-hop', (TYPE.string, PRESENCE.optional, '', check.ipv4)),
@@ -67,7 +76,7 @@ _definition = (TYPE.dictionary, PRESENCE.mandatory, '', OrderedDict((
 				('add-path' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
 			))))
 		)))),
-		('announce' , (TYPE.list, PRESENCE.optional, ['updates.prefix','updates.flow'], check.string)),
+		('announce' , (TYPE.list, PRESENCE.optional, ['updates,prefix','updates,flow'], check.string)),
 	)))),
 	('api' , (TYPE.dictionary, PRESENCE.optional, 'api', OrderedDict((
 		('<*>' , (TYPE.dictionary, PRESENCE.optional, '', OrderedDict((
@@ -116,17 +125,17 @@ _definition = (TYPE.dictionary, PRESENCE.mandatory, '', OrderedDict((
 			)))),
 		)))),
 		('flow' , (TYPE.dictionary, PRESENCE.optional, '', OrderedDict((
-			('<*>' , (TYPE.dictionary, PRESENCE.optional, 'flow.filtering-condition', OrderedDict((  # name of the dos
-				('<*>' , (TYPE.string, PRESENCE.mandatory, 'flow.filtering-action', check.nop)),
+			('<*>' , (TYPE.dictionary, PRESENCE.optional, 'flow,filtering-condition', OrderedDict((  # name of the dos
+				('<*>' , (TYPE.string, PRESENCE.mandatory, 'flow,filtering-action', check.nop)),
 			)))),
 		)))),
 	)))),
 )))
 
 
-def _reference (root,references,json):
+def _reference (root,references,json,location):
 	if not references:
-		return True
+		return
 
 	ref = references if check.list(references) else [references,]
 	jsn = json if check.list(json) else json.keys() if check.dict(json) else [json,]
@@ -134,40 +143,36 @@ def _reference (root,references,json):
 	valid = []
 	for reference in ref:
 		compare = root
-		for path in reference.split('.'):
+		for path in reference.split(','):
 			compare = compare.get(path,{})
 		# prevent name conflict where we can not resolve which object is referenced.
 		add = compare.keys()
 		for k in add:
 			if k in valid:
+				raise ValidationError(location, "duplicate reference in " % ', '.join(references))
+
 				return False
 		valid.extend(add)
 
 	for option in jsn:
 		if not option in valid:
-			return False
+			destination = ' or '.join(references) if type(references) == type ([]) else references
+			raise ValidationError(location, "the referenced data in %s is not present" % destination)
 
 	return True
 
 def _validate (root,json,definition,location=[]):
 	kind,presence,references,contextual = definition
 
-	# kind, the type of data possible
-	# presence, indicate if the data is mandatory or not
-	# reference, if the name is a reference to another key
-	# valid, a subdefinition or the check to run
-
-	if kind == TYPE.error:
-		return False
-
 	# ignore missing optional elements
 	if not json:
-		#print ' / '.join(location), 'not present'
-		return presence == PRESENCE.optional
+		if presence == PRESENCE.mandatory:
+			raise ValidationError(location, ValidationError.configuration_error)
+		return
 
 	# check that the value of the right type
 	if not check.kind(kind,json):
-		return False
+		raise ValidationError(location, ValidationError.type_error)
 
 	# for dictionary check all the elements inside
 	if kind & TYPE.dictionary and check.dict(json):
@@ -181,22 +186,21 @@ def _validate (root,json,definition,location=[]):
 				continue
 
 			if type(json) != type({}):
-				print "bad data, not a dict", json
-				return False
+				raise ValidationError(location, ValidationError.configuration_error)
 
 			if key == '<*>' and wildcard:
 				keys = json.keys()
 				wildcard = False
 				continue
 
-			if not _reference (root,references,json):
-				return False
-
 			if DEBUG: print "  "*len(location) + key
-			star = subdefinition.get('<*>',(TYPE.error,None,'','','problem validating configuration',None))
+			_reference (root,references,json,location)
+
+			star = subdefinition.get('<*>',None)
 			subtest = subdefinition.get(key,star)
-			if not _validate(root,json.get(key,None),subtest,location + [key]):
-				return False
+			if subtest is None:
+				raise ValidationError(location, ValidationError.configuration_error)
+			_validate(root,json.get(key,None),subtest,location + [key])
 
 	# for list check all the element inside
 	elif kind & TYPE.list and check.list(json):
@@ -205,15 +209,15 @@ def _validate (root,json,definition,location=[]):
 		if hasattr(test, '__call__'):
 			for data in json:
 				if not test(data):
-					return False
+					raise ValidationError(location, ValidationError.type_error)
 		# This is a list of valid option
 		elif type(test) == type([]):
 			for data in json:
 				if not data in test:
-					return False
+					raise ValidationError(location, ValidationError.type_error)
 		# no idea what the data is - so something is wrong with the program
 		else:
-			return False
+			raise ValidationError(location,ValidationError.internal_error)
 
 	# for non container object check the value
 	else:
@@ -221,24 +225,23 @@ def _validate (root,json,definition,location=[]):
 		# check that the value of the data
 		if hasattr(test, '__call__'):
 			if not test(json):
-				return False
+				raise ValidationError(location, ValidationError.type_error)
 		# a list of valid option
 		elif type(test) == type([]):
 			if not json in test:
-				return False
+				raise ValidationError(location, ValidationError.type_error)
 		else:
-			return False
+			raise ValidationError(location,ValidationError.internal_error)
 
-	if not _reference (root,references,json):
-		return False
+	_reference (root,references,json,location)
 
-	return True
 
 
 def validation (json):
-	return _validate(json,json,_definition)
+	_validate(json,json,_definition)
 
 def main ():
+	global DEBUG
 	DEBUG = True
 	from exabgp.configuration.loader import read
 	try:
@@ -248,6 +251,7 @@ def main ():
 		print "validation succesful"
 	except ValidationError,e:
 		print "validation failed", str(e)
+		raise
 
 if __name__ == '__main__':
 	main()
