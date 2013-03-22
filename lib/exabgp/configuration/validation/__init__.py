@@ -118,8 +118,9 @@ _definition = (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
 			('<*>' , (TYPE.object, PRESENCE.optional, '', OrderedDict((
 				('rate-limit' , (TYPE.integer, PRESENCE.optional, '', check.float)),
 				('discard' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
-				('redirect' , (TYPE.array, PRESENCE.optional, '', check.redirect)),
+				('redirect' , (TYPE.string, PRESENCE.optional, '', check.redirect)),
 				('community' , (TYPE.array , PRESENCE.optional, '', check.community)),
+				('extended-community' , (TYPE.array , PRESENCE.optional, '', check.extendedcommunity)),
 			)))),
 		)))),
 	)))),

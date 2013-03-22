@@ -71,19 +71,24 @@ def ipv6 (data):  # XXX: improve
 	return type(data) == type(u'') and ':' in data
 
 def range4 (data):
-	return type(data) == type(0) and data > 0 and data <= 32
+	return data > 0 and data <= 32
 def range6 (data):
-	return type(data) == type(0) and data > 0 and data <= 128
+	return data > 0 and data <= 128
 
 def ipv4_range (data):
 	if not data.count('/') == 1:
 		return False
-	ip,r = data
+	ip,r = data.split('/')
 	if not ipv4(ip):
 		return False
-	if not range4(r):
+	if not r.isdigit():
+		return False
+	if not range4(int(r)):
 		return False
 	return True
+
+def port (data):
+	return data >= 0 and data < pow(2,16)
 
 def asn16 (data):
 	return data >= 1 and data < pow(2,16)
@@ -129,10 +134,10 @@ def split (data):
 
 
 def aspath (data):
-	return type(data) == type(0) and data < pow(2,32)
+	return integer(data) and data < pow(2,32)
 
 def assequence (data):
-	return type(data) == type(0) and data < pow(2,32)
+	return integer(data) and data < pow(2,32)
 
 def community (data):
 	if integer(data):
@@ -179,13 +184,39 @@ def dscp (data):
 #
 
 
-def flow_ipv4_range (data):  # TODO
-	return True
-def flow_port (data):  # TODO
-	return True
-def flow_length (data):  # TODO
+def flow_ipv4_range (data):
+	if array(data):
+		for r in data:
+			if not ipv4_range(r):
+				return False
+	if string(data):
+		return ipv4_range(data)
+	return False
+
+
+def _flow_numeric (data,check):
+	if not array(data):
+		return False
+	for et in data:
+		if not (array(et) and len(et) == 2 and et[0] in (u'>', u'<', u'=',u'>=', u'<=') and integer(et[1]) and check(et[1])):
+			return False
 	return True
 
-def redirect (data):  # TODO
-	return True
+def flow_port (data):
+	return _flow_numeric(data,port)
+
+def _length (data):
+	return uint16(data)
+
+def flow_length (data):
+	return _flow_numeric(data,_length)
+
+def redirect (data):  # TODO: check that we are not too restrictive with our asn() calls
+	parts = data.split(':')
+	if len(parts) != 2:
+		return False
+	_,__ = parts
+	if not __.isdigit() and asn16(int(__)):
+		return False
+	return ipv4(_) or (_.isdigit() and asn16(int(_)))
 

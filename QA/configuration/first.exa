@@ -120,10 +120,10 @@
 					discard: true
 			}
 			send-it-elsewhere {
-					redirect: [65500,12345]
+					redirect: "65500:12345"
 			}
 			send-it-community {
-				redirect: ["1.2.3.4",5678]
+				redirect: "1.2.3.4:5678"
 				community: [[30740,0], [30740,30740]]
 			}
 		}
