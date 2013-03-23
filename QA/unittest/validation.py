@@ -196,7 +196,7 @@ tail = """ \
 }
 """
 
-def _make_config(size=100000):
+def _make_config(size=20000):
 	name = tempfile.mkstemp(suffix='.exa')[1]
 	print 'creating',name
 	with open(name,'w') as f:
@@ -208,6 +208,11 @@ def _make_config(size=100000):
 		f.write(tail)
 	print 'created'
 	return name
+
+from exabgp.memory.profiler import profile
+@profile
+def size(data):
+	pass
 
 class TestData (unittest.TestCase):
 
@@ -221,6 +226,7 @@ class TestData (unittest.TestCase):
 		try:
 			json = read(name)
 			validation(json)
+			size(json)
 		except ValidationError:
 			self.fail('configuration parsing failed')
 		finally:

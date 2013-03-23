@@ -21,7 +21,7 @@ def is_hex (s):
 
 def __exit(memory,code):
 	if memory:
-		from exabgp.leak import objgraph
+		from exabgp.memory import objgraph
 		print "memory utilisation"
 		print
 		print objgraph.show_most_common_types(limit=20)
