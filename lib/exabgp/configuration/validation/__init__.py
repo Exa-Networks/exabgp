@@ -10,6 +10,8 @@ __all__ = ["validation", "ValidationError"]
 
 DEBUG = False
 
+from collections import deque
+
 from exabgp.structure.ordereddict import OrderedDict
 from exabgp.configuration.validation import check
 
@@ -187,10 +189,10 @@ def _validate (root,json,definition,location=[]):
 	# for object check all the elements inside
 	if kind & TYPE.object and check.object(json):
 		subdefinition = contextual
-		keys = subdefinition.keys()
+		keys = deque(subdefinition.keys())
 
 		while keys:
-			key = keys.pop(0)
+			key = keys.popleft()
 			if DEBUG: print "  "*len(location) + key
 
 			if key.startswith('_'):
@@ -200,7 +202,7 @@ def _validate (root,json,definition,location=[]):
 				raise ValidationError(location, ValidationError.configuration_error)
 
 			if key == '<*>':
-				keys = json.keys() + keys
+				keys.extendleft(json.keys())
 				continue
 
 			_reference (root,references,json,location)
@@ -258,18 +260,3 @@ def _inet (json):
 def validation (json):
 	_validate(json,json,_definition)
 	_inet(json)
-
-def main ():
-	global DEBUG
-	DEBUG = True
-	from exabgp.configuration.loader import read
-	try:
-		json = read('/Users/thomas/source/hg/exabgp/tip/QA/configuration/first.exa')
-		validation(json)
-		print "validation succesful"
-	except ValidationError,e:
-		print "validation failed", str(e)
-		raise
-
-if __name__ == '__main__':
-	main()

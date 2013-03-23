@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2013-03-18.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 '''
 
+# This is only an hack until we drop support for python version < 2.7
+
 class OrderedDict (dict):
 	def __init__(self, args):
 		dict.__init__(self, args)
@@ -22,13 +24,13 @@ class OrderedDict (dict):
 		self._order.remove(key)
 
 	def keys (self):
-		return self._order[:]
+		return self._order
 
 	def __iter__ (self):
 		return self.__next__()
 
 	def __next__ (self):
-		for k in self._order[:]:
+		for k in self._order:
 			yield k
 
 if __name__ == '__main__':

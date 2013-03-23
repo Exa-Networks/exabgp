@@ -112,28 +112,27 @@ class Reader (object):
 
 	def read (self,number=0):
 		try:
-			data = ''
 			last = self.format(self.left,self.file.next())
-			data = self.left + last
+			data = [self.left, last]
 			while not number or len(data) < number:
 				new = self.file.next()
 				if self.skip(new):
 					continue
-				data += self.format(last,new)
+				data.append(self.format(last,new))
 				last = new
 
 			if number:
-				self.left = data[number:]
-				return data[:number]
+				sdata = ''.join(data)
+				self.left = sdata[number:]
+				return sdata[:number]
 
-			return data
+			return ''.join(data)
 		except StopIteration:
 			if self.left:
-				data = self.left
-				self.left = ''
-				return data
+				self.left, returned = '', self.left
+				return returned
 			else:
-				return data
+				return ''.join(data)
 
 def read (fname):
 	"""
