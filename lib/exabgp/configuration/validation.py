@@ -10,10 +10,9 @@ __all__ = ["validation", "ValidationError"]
 
 DEBUG = False
 
-from collections import deque
+from collections import deque, OrderedDict
 
-from exabgp.structure.ordereddict import OrderedDict
-from exabgp.configuration.validation import check
+from exabgp.configuration import check
 
 TYPE=check.TYPE
 PRESENCE=check.PRESENCE
@@ -58,12 +57,12 @@ _definition = (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
 	('neighbor' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
 		('<*>' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
 			('tcp' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
-				('local' , (TYPE.string, PRESENCE.mandatory, '', check.ip)),
-				('peer' , (TYPE.string, PRESENCE.mandatory, '', check.ip)),
+				('bind' , (TYPE.string, PRESENCE.mandatory, '', check.ip)),
+				('connect' , (TYPE.string, PRESENCE.mandatory, '', check.ip)),
 				('ttl-security' , (TYPE.integer, PRESENCE.optional, '', check.uint8)),
 				('md5' , (TYPE.string, PRESENCE.optional, '', check.md5))
 			)))),
-			('api' , (TYPE.object, PRESENCE.optional, 'api', OrderedDict((
+			('api' , (TYPE.object, PRESENCE.optional, 'apis', OrderedDict((
 				('<*>' , (TYPE.array, PRESENCE.mandatory, '', ['neighbor-changes','send-packets','receive-packets','receive-routes'])),
 			)))),
 			('session' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
@@ -90,7 +89,7 @@ _definition = (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
 			('announce' , (TYPE.array, PRESENCE.optional, ['updates,prefix','updates,flow'], check.string)),
 		)))),
 	)))),
-	('api' , (TYPE.object, PRESENCE.optional, 'api', OrderedDict((
+	('apis' , (TYPE.object, PRESENCE.optional, '', OrderedDict((
 		('<*>' , (TYPE.object, PRESENCE.optional, '', OrderedDict((
 			('encoder' , (TYPE.string, PRESENCE.optional, '', ['json','text'])),
 			('program' , (TYPE.string, PRESENCE.mandatory, '', check.nop)),
@@ -144,6 +143,35 @@ _definition = (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
 		)))),
 	)))),
 )))
+
+
+# Lookup in the definition all the keyword we used to make sure that users can not use them
+# This allows us to be able to index on those words and to be sure of the underlying data
+
+_reserved_keywords = set()
+def _reserved (reserved_keywords,definition):
+	kind,_,_,od = definition
+
+	if kind & TYPE.object:
+		for key in od:
+			reserved_keywords.update([key])
+			_reserved(reserved_keywords,od[key])
+_reserved(_reserved_keywords,_definition)
+
+# Name are are long string and cause high memory usage use integer instead
+# regenreate the _definition with indexes
+
+_indexes_byname = dict()
+_indexes_byid = dict()
+for index,name in enumerate(_reserved_keywords):
+	_indexes_byname[name] = index
+	_indexes_byid[id] = name
+
+
+# TODO: Now need to rewrite the whole definiton to use the indexes
+# TODO: and update the reference to do to the lookup in _indexes_by...
+
+# check that the configuration has the reference
 
 def _reference (root,references,json,location):
 	if not references:

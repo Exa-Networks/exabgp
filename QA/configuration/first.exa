@@ -10,8 +10,8 @@
 		first-peer {
 			_: "will pass received routes to the program"
 			tcp {
-				local: "82.219.212.34"
-				peer: "195.8.215.15"
+				bind: "82.219.212.34"
+				connect: "195.8.215.15"
 				ttl-security: false
 				md5: "secret"
 			}
@@ -48,7 +48,7 @@
 		}
 	}
 
-	api {
+	apis {
 		_: "the names defined here can be used in the neighbors"
 		syslog-json {
 			encoder: "json"
@@ -89,7 +89,7 @@
 		}
 	}
 
-	flow {
+	flows {
 		filtering-condition {
 			simple-ddos {
 				source: "10.0.0.1/32"
