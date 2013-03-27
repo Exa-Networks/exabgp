@@ -189,7 +189,7 @@ neighbor %s {
 	self.local_as,
 	self.peer_as,
 	self.hold_time,
-	'  group-updates: %s;\n' % self.group_update if self.group_updates else '',
+	'  group-updates: %s;\n' % self.group_updates if self.group_updates else '',
 	'  md5: %d;\n' % self.ttl if self.ttl else '',
 	'  ttl-security: %d;\n' % self.ttl if self.ttl else '',
 	'    asn4 enable;\n' if self.asn4 else '    asn4 disable;\n',
