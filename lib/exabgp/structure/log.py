@@ -146,7 +146,9 @@ class _Logger (object):
 				print self._prefixed(level,source,line)
 				sys.stdout.flush()
 
-	def error (self,message,source='',level='ERROR'):
+	def error (self,message,source='',level='ERR'):
+		if level.upper() == 'ERROR':
+			level == 'ERR'
 		for line in message.split('\n'):
 			if self._syslog:
 				self._syslog.error(self._prefixed(level,source,line))
@@ -154,7 +156,9 @@ class _Logger (object):
 				print self._prefixed(level,source,line)
 				sys.stdout.flush()
 
-	def critical (self,message,source='',level='CRITICAL'):
+	def critical (self,message,source='',level='CRIT'):
+		if level.upper() == 'CRITICAL':
+			level = 'CRIT'
 		for line in message.split('\n'):
 			if self._syslog:
 				self._syslog.critical(self._prefixed(level,source,line))
