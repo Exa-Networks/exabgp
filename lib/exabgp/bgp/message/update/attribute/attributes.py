@@ -130,8 +130,7 @@ class Attributes (dict):
 				message += self[AID.NEXT_HOP].pack()
 
 		if AID.MED in self:
-			if local_asn != peer_asn:
-				message += self[AID.MED].pack()
+			message += self[AID.MED].pack()
 
 		if ibgp:
 			if AID.LOCAL_PREF in self:
