@@ -3,6 +3,9 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.1.10 - 8th of April 2013
+ * Change: relax a rule and let MED propagate on IBGP
+
 Version 3.1.9 - 27th of March 2013
  * Fix: bug in logging
  * Fix: typo in neighbor printing
