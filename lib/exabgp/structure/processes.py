@@ -113,7 +113,7 @@ class Processes (object):
 		return False
 
 	def received (self):
-		lines = {}
+		lines = []
 		for process in list(self._process):
 			try:
 				proc = self._process[process]
@@ -124,7 +124,7 @@ class Processes (object):
 							line = proc.stdout.readline().rstrip()
 							if line:
 								self.logger.processes("Command from process %s : %s " % (process,line))
-								lines.setdefault(process,[]).append(line)
+								lines.append((process,line))
 							else:
 								self.logger.processes("The process died, trying to respawn it")
 								self._terminate(process)

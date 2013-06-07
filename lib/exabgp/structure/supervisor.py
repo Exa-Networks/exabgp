@@ -35,8 +35,9 @@ class Supervisor (object):
 		self._reload = False
 		self._restart = False
 		self._route_update = False
-		self._commands = {}
 		self._saved_pid = False
+		self._commands = []
+		self._pending = []
 
 		signal.signal(signal.SIGTERM, self.sigterm)
 		signal.signal(signal.SIGHUP, self.sighup)
@@ -75,8 +76,6 @@ class Supervisor (object):
 				while self._peers:
 					start = time.time()
 
-					self.handle_commands(self.processes.received())
-
 					if self._shutdown:
 						self._shutdown = False
 						self.shutdown()
@@ -89,9 +88,9 @@ class Supervisor (object):
 					elif self._route_update:
 						self._route_update = False
 						self.route_update()
-					elif self._commands:
-						self.commands(self._commands)
-						self._commands = {}
+					else:
+						self.commands(self.processes.received())
+						self._pending = list(self.run_pending(self._pending))
 
 					reload_completed = True
 					# Handle all connection
@@ -114,7 +113,13 @@ class Supervisor (object):
 							reload_completed = False
 							ios=[]
 							break
+
 					duration = time.time() - start
+
+					while duration < 1.0 and self._pending:
+						self._pending = list(self.run_pending(self._pending))
+						duration = time.time() - start
+
 					if ios:
 						try:
 							read,_,_ = select.select(ios,[],[],max(supervisor_speed-duration,0))
@@ -186,130 +191,176 @@ class Supervisor (object):
 		# This only starts once ...
 		self.processes.start()
 
-	def handle_commands (self,commands):
-		for service in commands:
-			for command in commands[service]:
-				# watchdog
-				if command.startswith('announce watchdog') or command.startswith('withdraw watchdog'):
-					parts = command.split(' ')
-					try:
-						name = parts[2]
-					except IndexError:
-						name = service
-					if parts[0] == 'announce':
-						for neighbor in self.configuration.neighbor:
-							self.configuration.neighbor[neighbor].watchdog.announce(name)
-					elif parts[0] == 'withdraw':
-						for neighbor in self.configuration.neighbor:
-							self.configuration.neighbor[neighbor].watchdog.withdraw(name)
-					else:
-						# should never happen
-						pass
-					self._route_update = True
+	def run_pending (self,pending):
+		more = True
+		for generator in pending:
+			try:
+				if more:
+					more = generator.next()
+				yield generator
+			except StopIteration:
+				pass
 
-				# route announcement / withdrawal
-				elif command.startswith('announce route'):
-					routes = self.configuration.parse_api_route(command)
-					if not routes:
-						self.logger.warning("Command could not parse route in : %s" % command,'supervisor')
-					else:
-						for route in routes:
-							self.configuration.remove_route_all_peers(route)
-							self.configuration.add_route_all_peers(route)
-							self.logger.warning("Route added : %s" % route,'supervisor')
-						self._route_update = True
+	def commands (self,commands):
+		self._commands.extend(commands)
 
-				elif command.startswith('withdraw route'):
-					routes = self.configuration.parse_api_route(command)
-					if not routes:
-						self.logger.warning("Command could not parse route in : %s" % command,'supervisor')
-					else:
-						for route in routes:
-							if self.configuration.remove_route_all_peers(route):
-								self.logger.supervisor("Route found : %s" % route)
-							self._route_update = True
-						if not self._route_update:
-							self.logger.warning("Could not find route : %s" % route,'supervisor')
+		if not self._commands:
+			return
 
-				# flow announcement / withdrawal
-				elif command.startswith('announce flow'):
-					flows = self.configuration.parse_api_flow(command)
-					if not flows:
-						self.logger.supervisor("Command could not parse flow in : %s" % command)
-					else:
-						for flow in flows:
-							self.configuration.add_route_all_peers(flow)
-						self._route_update = True
+		service,command = self._commands.pop(0)
 
-				elif command.startswith('withdraw flow'):
-					flows = self.configuration.parse_api_flow(command)
-					if not flows:
-						self.logger.supervisor("Command could not parse flow in : %s" % command)
-					else:
-						for flow in flows:
-							if self.configuration.remove_route_all_peers(flow):
-								self.logger.supervisor("Command success, flow found and removed : %s" % flow)
-								self._route_update = True
-							if not self._route_update:
-								self.logger.supervisor("Could not find flow : %s" % flow)
+		if command == 'shutdown':
+			self._shutdown = True
+			self._pending = []
+			self._commands = []
+			self._answer(service,'shutdown in progress')
+			return
 
-				# commands
-				elif command in ['reload','restart','shutdown','version']:
-					self._commands.setdefault(service,[]).append(command)
+		if command == 'reload':
+			self._reload = True
+			self._pending = []
+			self._commands = []
+			self._answer(service,'reload in progress')
+			return
 
-				elif command.startswith('show '):
-					self._commands.setdefault(service,[]).append(command)
+		if command == 'restart':
+			self._restart = True
+			self._pending = []
+			self._commands = []
+			self._answer(service,'restart in progress')
+			return
 
-				# unknown
+		if command == 'version':
+			self._answer(service,'exabgp %s' % version)
+			return
+
+		if command == 'show neighbors':
+			def _show_neighbor (self):
+				for key in self.configuration.neighbor.keys():
+					neighbor = self.configuration.neighbor[key]
+					for line in str(neighbor).split('\n'):
+						self._answer(service,line)
+						yield True
+			self._pending.append(_show_neighbor(self))
+			return
+
+		if command == 'show routes':
+			def _show_route (self):
+				for key in self.configuration.neighbor.keys():
+					neighbor = self.configuration.neighbor[key]
+					for route in list(neighbor.every_routes()):
+						self._answer(service,'neighbor %s %s' % (neighbor.local_address,route))
+						yield True
+			self._pending.append(_show_route(self))
+			return
+
+		if command == 'show routes extensive':
+			def _show_extensive (self):
+				for key in self.configuration.neighbor.keys():
+					neighbor = self.configuration.neighbor[key]
+					for route in list(neighbor.every_routes()):
+						self._answer(service,'neighbor %s %s' % (neighbor.name(),route.extensive()))
+						yield True
+			self._pending.append(_show_extensive(self))
+			return
+
+		# watchdog
+		if command.startswith('announce watchdog') or command.startswith('withdraw watchdog'):
+			parts = command.split(' ')
+			try:
+				name = parts[2]
+			except IndexError:
+				name = service
+			if parts[0] == 'announce':
+				for neighbor in self.configuration.neighbor:
+					self.configuration.neighbor[neighbor].watchdog.announce(name)
+			elif parts[0] == 'withdraw':
+				for neighbor in self.configuration.neighbor:
+					self.configuration.neighbor[neighbor].watchdog.withdraw(name)
+			else:
+				# should never happen
+				pass
+			self._route_update = True
+			return
+
+		# route announcement / withdrawal
+		if command.startswith('announce route'):
+			def _announce_route (self):
+				routes = self.configuration.parse_api_route(command)
+				if not routes:
+					self.logger.warning("Command could not parse route in : %s" % command,'supervisor')
+					yield True
 				else:
-					self.logger.warning("Command from process not understood : %s" % command,'supervisor')
+					for route in routes:
+						self.configuration.remove_route_all_peers(route)
+						self.configuration.add_route_all_peers(route)
+						self.logger.warning("Route added : %s" % route,'supervisor')
+						yield False
+					self._route_update = True
+					yield False
+			self._pending.append(_announce_route(self))
+			return
+
+		if command.startswith('withdraw route'):
+			def _withdraw_route (self):
+				routes = self.configuration.parse_api_route(command)
+				if not routes:
+					self.logger.warning("Command could not parse route in : %s" % command,'supervisor')
+					yield True
+				else:
+					for route in routes:
+						if self.configuration.remove_route_all_peers(route):
+							self.logger.supervisor("Route found : %s" % route)
+							yield False
+						else:
+							self.logger.warning("Could not find route : %s" % route,'supervisor')
+							yield False
+					self._route_update = True
+			self._pending.append(_withdraw_route(self))
+			return
+
+		# flow announcement / withdrawal
+		if command.startswith('announce flow'):
+			def _announce_flow (self):
+				flows = self.configuration.parse_api_flow(command)
+				if not flows:
+					self.logger.supervisor("Command could not parse flow in : %s" % command)
+					yield True
+				else:
+					for flow in flows:
+						self.configuration.add_route_all_peers(flow)
+						yield False
+					self._route_update = True
+			self._pending.append(_announce_flow(self))
+			return
+
+		if command.startswith('withdraw flow'):
+			def _withdraw_flow (self):
+				flows = self.configuration.parse_api_flow(command)
+				if not flows:
+					self.logger.supervisor("Command could not parse flow in : %s" % command)
+					yield True
+				else:
+					found = False
+					for flow in flows:
+						if self.configuration.remove_route_all_peers(flow):
+							self.logger.supervisor("Command success, flow found and removed : %s" % flow)
+							yield False
+						else:
+							self.logger.supervisor("Could not find flow : %s" % flow)
+							yield False
+					self._route_update = True
+			self._pending.append(_withdraw_flow(self))
+			return
+
+		# unknown
+		self.logger.warning("Command from process not understood : %s" % command,'supervisor')
+
 
 	def _answer (self,service,string):
 		self.processes.write(service,string)
 		self.logger.supervisor('Responding to %s : %s' % (service,string))
 
-	def commands (self,commands):
-		for service in commands:
-			for command in commands[service]:
-				if command == 'shutdown':
-					self._shutdown = True
-					self._answer(service,'shutdown in progress')
-					continue
-				if command == 'reload':
-					self._reload = True
-					self._answer(service,'reload in progress')
-					continue
-				if command == 'restart':
-					self._restart = True
-					self._answer(service,'restart in progress')
-					continue
-				if command == 'version':
-					self._answer(service,'exabgp %s' % version)
-					continue
-
-				if command == 'show neighbors':
-					self._answer(service,'This command holds ExaBGP, do not be surprised if it takes ages and then cause peers to drop ...\n')
-					for key in self.configuration.neighbor.keys():
-						neighbor = self.configuration.neighbor[key]
-						for line in str(neighbor).split('\n'):
-							self._answer(service,line)
-
-				elif command == 'show routes':
-					self._answer(service,'This command holds ExaBGP, do not be surprised if it takes ages and then cause peers to drop ...\n')
-					for key in self.configuration.neighbor.keys():
-						neighbor = self.configuration.neighbor[key]
-						for route in neighbor.every_routes():
-							self._answer(service,'neighbor %s %s' % (neighbor.local_address,route))
-
-				elif command == 'show routes extensive':
-					self._answer(service,'This command holds ExaBGP, do not be surprised if it takes ages and then cause peers to drop ...\n')
-					for key in self.configuration.neighbor.keys():
-						neighbor = self.configuration.neighbor[key]
-						for route in neighbor.every_routes():
-							self._answer(service,'neighbor %s %s' % (neighbor.name(),route.extensive()))
-
-				else:
-					self._answer(service,'unknown command %s' % command)
 
 	def route_update (self):
 		"""the process ran and we need to figure what routes to changes"""
