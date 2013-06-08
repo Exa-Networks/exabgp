@@ -125,6 +125,7 @@ class Supervisor (object):
 
 					while self.schedule(self.processes.received()) or self._pending:
 						self._pending = list(self.run_pending(self._pending))
+
 						duration = time.time() - start
 						if duration >= 1.0:
 							break
@@ -139,6 +140,7 @@ class Supervisor (object):
 					else:
 						if duration < supervisor_speed:
 							time.sleep(max(supervisor_speed-duration,0))
+
 				self.processes.terminate()
 				self.daemon.removepid()
 				break
