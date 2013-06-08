@@ -88,9 +88,13 @@ class Supervisor (object):
 					elif self._route_update:
 						self._route_update = False
 						self.route_update()
-					else:
-						self.commands(self.processes.received())
+
+					while self.schedule(self.processes.received()) or self._pending:
 						self._pending = list(self.run_pending(self._pending))
+
+						duration = time.time() - start
+						if duration >= 0.5:
+							break
 
 					reload_completed = True
 					# Handle all connection
@@ -101,24 +105,29 @@ class Supervisor (object):
 							peer = self._peers[key]
 							# there was no routes to send for this peer, we performed keepalive checks
 							if peer.run() is not True:
-								# no need to come back to it before a a full cycle
 								if peer.bgp and peer.bgp.connection:
 									ios.append(peer.bgp.connection.io)
+								# no need to come back to it before a a full cycle
 								peers.remove(key)
-						# otherwise process as many routes as we can within a second for the remaining peers
+
 						duration = time.time() - start
-						# RFC state that we MUST not more than one KEEPALIVE / sec
-						# And doing less could cause the session to drop
 						if duration >= 1.0:
 							reload_completed = False
 							ios=[]
 							break
 
-					duration = time.time() - start
+					# append here after reading as if read fails due to a dead process
+					# we may respawn the process which changes the FD
+					ios.extend(self.processes.fds())
 
-					while duration < 1.0 and self._pending:
+					# RFC state that we MUST not send more than one KEEPALIVE / sec
+					# And doing less could cause the session to drop
+
+					while self.schedule(self.processes.received()) or self._pending:
 						self._pending = list(self.run_pending(self._pending))
 						duration = time.time() - start
+						if duration >= 1.0:
+							break
 
 					if ios:
 						try:
@@ -192,6 +201,8 @@ class Supervisor (object):
 		self.processes.start()
 
 	def run_pending (self,pending):
+		# generators can return True or False, False mean they do not want more
+		# generators to be return (route updates)
 		more = True
 		for generator in pending:
 			try:
@@ -201,11 +212,11 @@ class Supervisor (object):
 			except StopIteration:
 				pass
 
-	def commands (self,commands):
+	def schedule (self,commands):
 		self._commands.extend(commands)
 
 		if not self._commands:
-			return
+			return False
 
 		service,command = self._commands.pop(0)
 
@@ -214,25 +225,25 @@ class Supervisor (object):
 			self._pending = []
 			self._commands = []
 			self._answer(service,'shutdown in progress')
-			return
+			return True
 
 		if command == 'reload':
 			self._reload = True
 			self._pending = []
 			self._commands = []
 			self._answer(service,'reload in progress')
-			return
+			return True
 
 		if command == 'restart':
 			self._restart = True
 			self._pending = []
 			self._commands = []
 			self._answer(service,'restart in progress')
-			return
+			return True
 
 		if command == 'version':
 			self._answer(service,'exabgp %s' % version)
-			return
+			return True
 
 		if command == 'show neighbors':
 			def _show_neighbor (self):
@@ -242,7 +253,7 @@ class Supervisor (object):
 						self._answer(service,line)
 						yield True
 			self._pending.append(_show_neighbor(self))
-			return
+			return True
 
 		if command == 'show routes':
 			def _show_route (self):
@@ -252,7 +263,7 @@ class Supervisor (object):
 						self._answer(service,'neighbor %s %s' % (neighbor.local_address,route))
 						yield True
 			self._pending.append(_show_route(self))
-			return
+			return True
 
 		if command == 'show routes extensive':
 			def _show_extensive (self):
@@ -262,26 +273,36 @@ class Supervisor (object):
 						self._answer(service,'neighbor %s %s' % (neighbor.name(),route.extensive()))
 						yield True
 			self._pending.append(_show_extensive(self))
-			return
+			return True
 
 		# watchdog
-		if command.startswith('announce watchdog') or command.startswith('withdraw watchdog'):
-			parts = command.split(' ')
-			try:
-				name = parts[2]
-			except IndexError:
-				name = service
-			if parts[0] == 'announce':
+		if command.startswith('announce watchdog'):
+			def _announce_watchdog (self,name):
 				for neighbor in self.configuration.neighbor:
 					self.configuration.neighbor[neighbor].watchdog.announce(name)
-			elif parts[0] == 'withdraw':
+					yield False
+				self._route_update = True
+			try:
+				name = command.split(' ')[2]
+			except IndexError:
+				name = service
+			self._pending.append(_announce_watchdog(self,name))
+			return True
+
+		# watchdog
+		if command.startswith('withdraw watchdog'):
+			def _withdraw_watchdog (self,name):
 				for neighbor in self.configuration.neighbor:
 					self.configuration.neighbor[neighbor].watchdog.withdraw(name)
-			else:
-				# should never happen
-				pass
-			self._route_update = True
-			return
+					yield False
+				self._route_update = True
+			try:
+				name = command.split(' ')[2]
+			except IndexError:
+				name = service
+			self._pending.append(_withdraw_watchdog(self,name))
+			return True
+
 
 		# route announcement / withdrawal
 		if command.startswith('announce route'):
@@ -297,9 +318,8 @@ class Supervisor (object):
 						self.logger.warning("Route added : %s" % route,'supervisor')
 						yield False
 					self._route_update = True
-					yield False
 			self._pending.append(_announce_route(self))
-			return
+			return True
 
 		if command.startswith('withdraw route'):
 			def _withdraw_route (self):
@@ -310,14 +330,14 @@ class Supervisor (object):
 				else:
 					for route in routes:
 						if self.configuration.remove_route_all_peers(route):
-							self.logger.supervisor("Route found : %s" % route)
+							self.logger.supervisor("Route found and removed : %s" % route)
 							yield False
 						else:
-							self.logger.warning("Could not find route : %s" % route,'supervisor')
+							self.logger.warning("Could not find therefore remove route : %s" % route,'supervisor')
 							yield False
 					self._route_update = True
 			self._pending.append(_withdraw_route(self))
-			return
+			return True
 
 		# flow announcement / withdrawal
 		if command.startswith('announce flow'):
@@ -328,11 +348,13 @@ class Supervisor (object):
 					yield True
 				else:
 					for flow in flows:
+						self.configuration.remove_route_all_peers(flow)
 						self.configuration.add_route_all_peers(flow)
+						self.logger.warning("Flow added : %s" % flow,'supervisor')
 						yield False
 					self._route_update = True
 			self._pending.append(_announce_flow(self))
-			return
+			return True
 
 		if command.startswith('withdraw flow'):
 			def _withdraw_flow (self):
@@ -341,21 +363,20 @@ class Supervisor (object):
 					self.logger.supervisor("Command could not parse flow in : %s" % command)
 					yield True
 				else:
-					found = False
 					for flow in flows:
 						if self.configuration.remove_route_all_peers(flow):
-							self.logger.supervisor("Command success, flow found and removed : %s" % flow)
+							self.logger.supervisor("Flow found and removed : %s" % flow)
 							yield False
 						else:
-							self.logger.supervisor("Could not find flow : %s" % flow)
+							self.logger.warning("Could not find therefore remove flow : %s" % flow,'supervisor')
 							yield False
 					self._route_update = True
 			self._pending.append(_withdraw_flow(self))
-			return
+			return True
 
 		# unknown
 		self.logger.warning("Command from process not understood : %s" % command,'supervisor')
-
+		return False
 
 	def _answer (self,service,string):
 		self.processes.write(service,string)

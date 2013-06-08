@@ -112,6 +112,9 @@ class Processes (object):
 					return True
 		return False
 
+	def fds (self):
+		return [self._process[process].stdout for process in self._process]
+
 	def received (self):
 		lines = []
 		for process in list(self._process):
@@ -120,16 +123,14 @@ class Processes (object):
 				r,_,_ = select.select([proc.stdout,],[],[],0)
 				if r:
 					try:
-						while True:
-							line = proc.stdout.readline().rstrip()
-							if line:
-								self.logger.processes("Command from process %s : %s " % (process,line))
-								lines.append((process,line))
-							else:
-								self.logger.processes("The process died, trying to respawn it")
-								self._terminate(process)
-								self._start(process)
-								break
+						line = proc.stdout.readline().rstrip()
+						if line:
+							self.logger.processes("Command from process %s : %s " % (process,line))
+							lines.append((process,line))
+						else:
+							self.logger.processes("The process died, trying to respawn it")
+							self._terminate(process)
+							self._start(process)
 					except IOError,e:
 						if e.errno == errno.EINTR:  # call interrupted
 							pass  # we most likely have data, we will try to read them a the next loop iteration
