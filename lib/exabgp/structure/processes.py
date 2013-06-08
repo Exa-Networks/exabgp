@@ -26,6 +26,10 @@ def preexec_helper ():
 	#signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 class Processes (object):
+	# how many time can a process can respawn in the time interval
+	respawn_number = 5
+	respawn_timemask = 0xFFFFFF - pow(2,6) + 1  # '0b111111111111111111000000' (around a minute, 63 seconds)
+
 	def __init__ (self,supervisor):
 		self.logger = Logger()
 		self.supervisor = supervisor
@@ -38,6 +42,7 @@ class Processes (object):
 		self._api_encoder = {}
 		self._neighbor_process = {}
 		self._broken = []
+		self._respawning = {}
 
 	def _terminate (self,process):
 		self.logger.processes("Terminating process %s" % process)
@@ -48,7 +53,10 @@ class Processes (object):
 	def terminate (self):
 		for process in list(self._process):
 			if not self.silence:
-				self.write(process,self._api_encoder[process].shutdown())
+				try:
+					self.write(process,self._api_encoder[process].shutdown())
+				except ProcessError:
+					pass
 		self.silence = True
 		time.sleep(0.1)
 		for process in list(self._process):
@@ -88,6 +96,21 @@ class Processes (object):
 				fcntl.fcntl(self._process[process].stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
 
 				self.logger.processes("Forked process %s" % process)
+
+				around_now = int(time.time()) & self.respawn_timemask
+				if process in self._respawning:
+					if around_now in self._respawning[process]:
+						self._respawning[process][around_now] += 1
+						# we are respawning too fast
+						if self._respawning[process][around_now] > self.respawn_number:
+							self.logger.critical("Too many respawn for %s (%d) terminating program" % (process,self.respawn_number),'processes')
+							raise ProcessError()
+					else:
+						# reset long time since last respawn
+						self._respawning[process] = {around_now: 1}
+				else:
+					# record respawing
+					self._respawning[process] = {around_now: 1}
 
 			neighbor = self.supervisor.configuration.process[process]['neighbor']
 			self._neighbor_process.setdefault(neighbor,[]).append(process)

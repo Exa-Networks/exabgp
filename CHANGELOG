@@ -6,6 +6,8 @@ Version explained:
 Version 3.1.11 - 2nd of May 2013
  * Fix/Improvement: prevent exabgp api command to block the main loop if very long (issue 29)
  * Improvement: better sharing of available time between api and peers
+ * Fix: a bug when trying to stop exabgp and a worker process is unstable
+ * Improvement: count how many time a worker crashed and stop the application it is unstable (5 restart in 64 seconds)
 
 Version 3.1.10 - 2nd of May 2013
  * Change: the JSON format of ASPath
