@@ -636,7 +636,13 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-		safi = tokens.pop(0)
+		try:
+			safi = tokens.pop(0)
+		except IndexError:
+			self._error = 'missing family safi'
+			if self.debug: raise
+			return False
+
 		if safi == 'unicast':
 			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
 		elif safi == 'multicast':
