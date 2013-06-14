@@ -108,6 +108,7 @@ class Communities (Attribute):
 def to_ExtendedCommunity (data):
 	command,ga,la = data.split(':')
 
+	header = chr(0x00)
 	if command == 'origin':
 		subtype = chr(0x03)
 	elif command == 'target':
@@ -119,12 +120,10 @@ def to_ExtendedCommunity (data):
 	lc = la.count('.')
 	if gc == 0 and lc == 3:
 		# ASN first, IP second
-		header = chr(0x40)
 		global_admin = pack('!H',int(ga))
 		local_admin = pack('!BBBB',*[int(_) for _ in la.split('.')])
 	elif gc == 3 and lc == 0:
 		# IP first, ASN second
-		header = chr(0x41)
 		global_admin = pack('!BBBB',*[int(_) for _ in ga.split('.')])
 		local_admin = pack('!H',int(la))
 	else:
