@@ -107,7 +107,6 @@ class Peer (object):
 	def reload (self,routes):
 		self.neighbor.set_routes(routes)
 		self._have_routes = True
-		self._clear_routes_buffer = True
 		self._reset_skip()
 
 	def restart (self,restart_neighbor=None):
@@ -115,6 +114,7 @@ class Peer (object):
 		self._running = False
 		self._restart = True
 		self._restarted = True
+		self._clear_routes_buffer = True
 		self._neighbor = restart_neighbor
 		self._reset_skip()
 
