@@ -262,6 +262,8 @@ def main ():
 			sys.exit(0)
 		if arg in ['--profile',]:
 			env.profile.enable = True
+		if arg in ['--once','-1',]:
+			env.tcp.once = True
 		if arg in ['-d','--debug']:
 			env.log.all = True
 			env.log.level=syslog.LOG_DEBUG
