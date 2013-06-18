@@ -3,7 +3,11 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
-Version 3.1.12 - May 2013
+Version 3.1.13 - 2013
+ * Fix: only clear buffered routes on restart and not reload (bug never reported)
+ * Improvement: more regression testing
+
+Version 3.1.12 - 16 May 2013
  * Fix: could crash when a family safi was not defined in the peer family group instead of exiting with an error
  * Fix: a bug in the generation of extended community (target and origin)
 

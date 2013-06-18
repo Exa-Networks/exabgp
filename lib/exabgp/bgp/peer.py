@@ -273,9 +273,9 @@ class Peer (object):
 				# IF WE RELOADED, CLEAR THE BUFFER WE MAY HAVE QUEUED AND NOT YET SENT
 				#
 
-				if self._clear_routes_buffer:
-					self._clear_routes_buffer = False
-					self.bgp.clear_buffer()
+				# if self._clear_routes_buffer:
+				# 	self._clear_routes_buffer = False
+				# 	self.bgp.clear_buffer()
 
 				#
 				# GIVE INFORMATION ON THE NB OF BUFFERED ROUTES
