@@ -76,7 +76,9 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		for rule in messages:
 			sequence,announcement = rule.split(':',1)
 			if announcement.startswith('raw:'):
-				announcement = 'raw:' + ''.join(announcement[4:].replace(':',''))[38:]
+				raw = ''.join(announcement[4:].replace(':',''))
+				stream = raw[38:] if raw.startswith('F'*16) else raw
+				announcement = 'raw:' + stream
 				self.raw = True
 			self.sequence.setdefault(sequence,[]).append(announcement)
 		self.update_sequence()
