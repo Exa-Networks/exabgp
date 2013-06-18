@@ -18,7 +18,7 @@ def dump (value):
 	return ''.join(spaced(value))
 
 class BGPHandler(asyncore.dispatcher_with_send):
-	wire = False
+	wire = not not os.environ.get('wire','')
 	update = True
 
 	keepalive = chr(0xFF)*16 + chr(0x0) + chr(0x13) + chr(0x4)
