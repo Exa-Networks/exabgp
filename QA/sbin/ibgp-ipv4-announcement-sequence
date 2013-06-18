@@ -8,6 +8,9 @@ import socket
 import errno
 from struct import unpack
 
+def bytestream (value):
+	return ''.join(['%02X' % ord(_) for _ in value])
+
 def dump (value):
 	def spaced (value):
 		even = None
@@ -17,6 +20,7 @@ def dump (value):
 			yield '%02X' % ord(v)
 			even = not even
 	return ''.join(spaced(value))
+
 
 class BGPHandler(asyncore.dispatcher_with_send):
 
@@ -42,7 +46,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		announced = [ord(_) for _ in body[2+len_w + 2+len_a:]]
 
 		if not withdrawn and not announced:
-			yield ''
+			yield '','raw:%s' % bytestream(body)
 
 		while withdrawn:
 			l = withdrawn.pop(0)
@@ -50,7 +54,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 			for index in range(4):
 				if index*8 >= l: break
 				r[index] = withdrawn.pop(0)
-			yield 'withdraw:%s' % '.'.join(str(_) for _ in r) + '/' + str(l)
+			yield 'withdraw:%s' % '.'.join(str(_) for _ in r) + '/' + str(l), 'raw:%s' % bytestream(body)
 
 		while announced:
 			l = announced.pop(0)
@@ -58,7 +62,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 			for index in range(4):
 				if index*8 >= l: break
 				r[index] = announced.pop(0)
-			yield 'announce:%s' % '.'.join(str(_) for _ in r) + '/' + str(l)
+			yield 'announce:%s' % '.'.join(str(_) for _ in r) + '/' + str(l), 'raw:%s' % bytestream(body)
 
 	def announce (self,*args):
 		print self.ip,self.port,' '.join(str(_) for _ in args) if len(args) > 1 else args[0]
@@ -68,8 +72,12 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		self.port = port
 		self.handle_read = self.handle_open
 		self.sequence = {}
+		self.raw = False
 		for rule in messages:
 			sequence,announcement = rule.split(':',1)
+			if announcement.startswith('raw:'):
+				announcement = 'raw:' + ''.join(announcement[4:].replace(':',''))[38:]
+				self.raw = True
 			self.sequence.setdefault(sequence,[]).append(announcement)
 		self.update_sequence()
 		return self
@@ -89,7 +97,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 			try:
 				left = 19-len(header)
 				header += self.recv(left)
-				if left == 19-len(header): # ugly
+				if left == 19-len(header):  # ugly
 					# the TCP session is gone.
 					return None,None
 			except socket.error,e:
@@ -130,10 +138,13 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 		print dump(body)
 		if self.isupdate(header):
-			for announcement in self.routes(body):
-				if not announcement: # skip unknows message and EOR
+			for parsed,raw in self.routes(body):
+				announcement = raw if self.raw else parsed
+
+				if not announcement:  # skip unknows message and EOR
 					self.announce('skip announcement for body :',dump(body))
 					continue
+
 				if announcement in self.messages:
 					self.messages.remove(announcement)
 					self.announce('announcement received:',announcement)
@@ -186,8 +197,8 @@ def drop ():
 
 def main ():
 	if len(sys.argv) <= 1:
-		print 'a list of expected route announcement/withdrawl in the format <number>:announce:<ipv4-route> <number>:withdraw:<ipv4-route>'
-		print 'for example:',sys.argv[0],'1:announce:10.0.0.0/8 1:announce:192.0.2.0/24 2:withdraw:10.0.0.0/8'
+		print 'a list of expected route announcement/withdrawl in the format <number>:announce:<ipv4-route> <number>:withdraw:<ipv4-route> <number>:raw:<exabgp hex dump : separated>'
+		print 'for example:',sys.argv[0],'1:announce:10.0.0.0/8 1:announce:192.0.2.0/24 2:withdraw:10.0.0.0/8 '
 		print 'routes with the same <number> can arrive in any order'
 		sys.exit(1)
 
