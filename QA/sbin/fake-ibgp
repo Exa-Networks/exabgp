@@ -67,9 +67,9 @@ class BGPHandler(asyncore.dispatcher_with_send):
 			try:
 				left = 19-len(header)
 				header += self.recv(left)
-				if self.wire: self.announce("read message header",dump(header))
-				if self.wire and left: self.announce("missing", left)
-				if left == 19-len(header): # ugly
+				if self.wire: self.announce("HEADER ",dump(header))
+				if self.wire and len(header) != 19: self.announce("left", 19-len(header))
+				if left == 19-len(header):  # ugly
 					# the TCP session is gone.
 					self.announce("TCP connection closed")
 					self.close()
@@ -85,11 +85,12 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		if self.wire: self.announce("waiting for", length, "bytes")
 
 		body = ''
+		left = length
 		while len(body) != length:
 			try:
-				left = length-len(body)
 				body += self.recv(left)
-				if self.wire: self.announce("read message body  ", dump(body))
+				left = length-len(body)
+				if self.wire: self.announce("BODY   ", dump(body))
 				if self.wire and left: self.announce("missing", left)
 			except socket.error, e:
 				if e.args[0] in (errno.EWOULDBLOCK,errno.EAGAIN):

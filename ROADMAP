@@ -35,9 +35,12 @@ Notes
 - allow per per announcement of routes from the helper program
 - on unhandled exception, stop all the workers
 - look at tox http://tox.testrun.org/latest/
+- cache attributes and use reference in route
+- have a compiled configuration format with no parsing of route but raw data ?
+- need to check if we can prevent the duplication of the peer routes (which are already defined in the neighbor)
+- peer.reload should it be called peer.route_update (just have a guard to prevent route update when reloading the configuration)
 
 Important
 * write the documentation, and do not rely on the example and the site wiki (argh ...)
 * rewrite the unittesting which is really missing.
 * look at all the XXX: in the code
-~      

@@ -5,6 +5,7 @@ Version explained:
 
 Version 3.1.13 - 2013
  * Fix: only clear buffered routes on restart and not reload (bug never reported)
+ * Fix: an issue when parsing EOR
  * Improvement: more regression testing
 
 Version 3.1.12 - 16 May 2013

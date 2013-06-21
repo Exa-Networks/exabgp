@@ -149,7 +149,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 				if announcement in self.messages:
 					self.messages.remove(announcement)
-					self.announce('announcement received:',announcement)
+					self.announce('expected announcement received:',announcement)
 				else:
 					self.announce('unexpected announcement:',announcement)
 					self.announce('valid options were:',', '.join(self.messages))
@@ -169,7 +169,7 @@ class BGPServer (asyncore.dispatcher):
 		self.set_reuse_addr()
 		self.bind((host,port))
 		self.listen(5)
-		self.messages = messages
+		self.messages = [message for message in messages if message.count(':')]
 
 	def handle_accept (self):
 		pair = self.accept()

@@ -6,40 +6,6 @@ import time
 announce_flow_1 = '''\
 announce flow route {
 	match {
-		source 10.0.0.2/32;
-		destination 10.0.0.3/32;
-		destination-port =3128;
-		protocol tcp;
-	}
-	then {
-		rate-limit 9600;
-	}
-}'''.replace('\n','\\n')
-
-
-withdraw_flow_1 = '''\
-withdraw flow route {
-	match {
-		source 10.0.0.2/32;
-		destination 10.0.0.3/32;
-		destination-port =3128;
-		protocol tcp;
-	}
-	then {
-		rate-limit 9600;
-	}
-}'''.replace('\n','\\n')
-
-# flow 2
-# announcing ipv4 flow-ipv4 destination 192.168.0.1/32 source 10.0.0.1/32 protocol =UDP =TCP port =80 =8080 destination-port >8080&<8088 =3128 source-port >1024 extended-community 0x8006000046160000
-# FFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFF 005E 0200 0000 4740 0101 0040 0200 4005 0400 0000 64C0 1008 8006 0000 4616 0000 800E 2B00 0185 0000 2501 20C0 A800 0102 200A 0000 0103 0111 8106 0401 5091 1F90 0512 1F90 541F 9891 0C38 0692 0400
-
-# FFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFF 0031 0200 0000 1A80 0F17 0001 8513 0120 0A00 0003 0220 0A00 0002 0381 0605 910C 38
-# 0000 0035 4001 0100 4002 0040 0504 0000 0064 C010 0880 0600 0046 1600 0080 0E19 0001 8500 0013 0120 0A00 0003 0220 0A00 0002 0381 0605 910C 38
-
-announce_flow_2 = '''\
-announce flow route {
-	match {
 		source 10.0.0.1/32;
 		destination 192.168.0.1/32;
 		port =80 =8080;
@@ -52,17 +18,52 @@ announce flow route {
 	}
 }'''.replace('\n','\\n')
 
+
+announce_flow_2 = '''\
+announce flow route {
+	match {
+		source 10.0.0.2/32;
+		destination 10.0.0.3/32;
+		destination-port =3128;
+		protocol tcp;
+	}
+	then {
+		rate-limit 9600;
+	}
+}'''.replace('\n','\\n')
+
+
+withdraw_flow_2 = '''\
+withdraw flow route {
+	match {
+		source 10.0.0.2/32;
+		destination 10.0.0.3/32;
+		destination-port =3128;
+		protocol tcp;
+	}
+	then {
+		rate-limit 9600;
+	}
+}'''.replace('\n','\\n')
+
+
 messages = [
+announce_flow_2,
+withdraw_flow_2,
 announce_flow_1,
-withdraw_flow_1,
-announce_flow_2
+'sleep',
+announce_flow_2,
+'sleep',
+withdraw_flow_2,
 ]
 
 while messages:
 	message = messages.pop(0)
-	sys.stdout.write( message + '\n')
-	sys.stdout.flush()
-	time.sleep(0.1)
+	if message == 'sleep':
+		time.sleep(2)
+	else:
+		sys.stdout.write( message + '\n')
+		sys.stdout.flush()
 
 while True:
 	time.sleep(1)
