@@ -17,12 +17,16 @@ class RouteEOR (object):
 	def __init__ (self,afi,safi,action):
 		self.nlri = Address(afi,safi)
 		self.action = action
+		self.attributes = None  # API compatibility with Route
 
 	def pack (self):
 		return self.PREFIX + self.nlri.afi.pack() + self.nlri.safi.pack()
 
 	def __str__ (self):
 		return '%s eor %d/%d (%s %s)' % (self.action,self.nlri.afi,self.nlri.safi,self.nlri.afi,self.nlri.safi)
+
+	def extensive (self):
+		return str(self)
 
 def announcedRouteEOR (data):
 	return RouteEOR(unpack('!H',data[-4:-2])[0],unpack('!H',data[-2:])[0],'announced')
