@@ -8,6 +8,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 __all__ = ["validation", "ValidationError"]
 
+FORMAT = 3
 DEBUG = False
 
 from collections import deque, OrderedDict
@@ -53,7 +54,7 @@ _attributes = OrderedDict((
 ))
 
 _definition = (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
-	('exabgp' , (TYPE.integer, PRESENCE.mandatory, '', [3,])),
+	('exabgp' , (TYPE.integer, PRESENCE.mandatory, '', [FORMAT,])),
 	('neighbor' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
 		('<*>' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
 			('tcp' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
