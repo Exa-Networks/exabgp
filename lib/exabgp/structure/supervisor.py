@@ -197,7 +197,7 @@ class Supervisor (object):
 				# set the new neighbor with the new routes
 				else:
 					self.logger.supervisor("Updating routes for peer %s" % str(key))
-					self._peers[key].reload(neighbor.every_routes())
+					self._peers[key].reload(neighbor)
 		self.logger.warning("Loaded new configuration successfully",'configuration')
 		# This only starts once ...
 		self.processes.start()
@@ -391,7 +391,7 @@ class Supervisor (object):
 
 		for key in self.configuration.neighbor.keys():
 			neighbor = self.configuration.neighbor[key]
-			self._peers[key].reload(neighbor.every_routes())
+			self._peers[key].reload(neighbor)
 		self.logger.supervisor("Updated peers dynamic routes successfully")
 
 	def restart (self):
