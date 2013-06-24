@@ -277,15 +277,17 @@ class Configuration (object):
 			return None
 		return scope[0]['routes']
 
-	def add_route_all_peers (self,route):
+	def add_route_to_peers (self,route,peer):
 		for neighbor in self.neighbor:
-			self.neighbor[neighbor].add_route(route)
+			if peer is None or neighbor.peer_address == peer:
+				self.neighbor[neighbor].add_route(route)
 
-	def remove_route_all_peers (self,route):
+	def remove_route_from_peers (self,route,peer):
 		result = False
 		for neighbor in self.neighbor:
-			if self.neighbor[neighbor].remove_route(route):
-				result = True
+			if peer is None or neighbor.peer_address == peer:
+				if self.neighbor[neighbor].remove_route(route):
+					result = True
 		return result
 
 	# Tokenisation

@@ -307,74 +307,95 @@ class Supervisor (object):
 
 
 		# route announcement / withdrawal
-		if command.startswith('announce route'):
-			def _announce_route (self):
+		if 'announce route' in command:
+			def _announce_route (self,command,peer):
 				routes = self.configuration.parse_api_route(command)
 				if not routes:
 					self.logger.warning("Command could not parse route in : %s" % command,'supervisor')
 					yield True
 				else:
 					for route in routes:
-						self.configuration.remove_route_all_peers(route)
-						self.configuration.add_route_all_peers(route)
+						self.configuration.remove_route_from_peers(route,peer)
+						self.configuration.add_route_to_peers(route,peer)
 						self.logger.warning("Route added : %s" % route,'supervisor')
 						yield False
 					self._route_update = True
-			self._pending.append(_announce_route(self))
-			return True
 
-		if command.startswith('withdraw route'):
-			def _withdraw_route (self):
+			if command.startswith('announce route'):
+				self._pending.append(_announce_route(self,command,None))
+				return True
+			if command.startswith('neighbor '):
+				_,peer,command = command.split(' ',2)
+				self._pending.append(_announce_route(self,command,peer))
+				return True
+
+		if 'withdraw route' in command:
+			def _withdraw_route (self,command,peer):
 				routes = self.configuration.parse_api_route(command)
 				if not routes:
 					self.logger.warning("Command could not parse route in : %s" % command,'supervisor')
 					yield True
 				else:
 					for route in routes:
-						if self.configuration.remove_route_all_peers(route):
+						if self.configuration.remove_route_from_peers(route,peer):
 							self.logger.supervisor("Route found and removed : %s" % route)
 							yield False
 						else:
 							self.logger.warning("Could not find therefore remove route : %s" % route,'supervisor')
 							yield False
 					self._route_update = True
-			self._pending.append(_withdraw_route(self))
-			return True
+			if command.startswith('withdraw route'):
+				self._pending.append(_withdraw_route(self,command,None))
+				return True
+			if command.startswith('neighbor '):
+				_,peer,command = command.split(' ',2)
+				self._pending.append(_withdraw_route(self,command,peer))
+				return True
 
 		# flow announcement / withdrawal
-		if command.startswith('announce flow'):
-			def _announce_flow (self):
+		if 'announce flow' in command:
+			def _announce_flow (self,command,peer):
 				flows = self.configuration.parse_api_flow(command)
 				if not flows:
 					self.logger.supervisor("Command could not parse flow in : %s" % command)
 					yield True
 				else:
 					for flow in flows:
-						self.configuration.remove_route_all_peers(flow)
-						self.configuration.add_route_all_peers(flow)
+						self.configuration.remove_route_from_peers(flow,peer)
+						self.configuration.add_route_to_peers(flow,peer)
 						self.logger.warning("Flow added : %s" % flow,'supervisor')
 						yield False
 					self._route_update = True
-			self._pending.append(_announce_flow(self))
-			return True
+			if command.startswith('announce flow'):
+				self._pending.append(_announce_flow(self,command,None))
+				return True
+			if command.startswith('neighbor '):
+				_,peer,command = command.split(' ',2)
+				self._pending.append(_announce_flow(self,command,peer))
+				return True
 
-		if command.startswith('withdraw flow'):
-			def _withdraw_flow (self):
+		if 'withdraw flow' in command:
+			def _withdraw_flow (self,command,peer):
 				flows = self.configuration.parse_api_flow(command)
 				if not flows:
 					self.logger.supervisor("Command could not parse flow in : %s" % command)
 					yield True
 				else:
 					for flow in flows:
-						if self.configuration.remove_route_all_peers(flow):
+						if self.configuration.remove_route_from_peers(flow,peer):
 							self.logger.supervisor("Flow found and removed : %s" % flow)
 							yield False
 						else:
 							self.logger.warning("Could not find therefore remove flow : %s" % flow,'supervisor')
 							yield False
 					self._route_update = True
-			self._pending.append(_withdraw_flow(self))
-			return True
+			if command.startswith('withdraw flow'):
+				self._pending.append(_withdraw_flow(self,command,None))
+				return True
+			if command.startswith('neighbor '):
+				_,peer,command = command.split(' ',2)
+				self._pending.append(_withdraw_flow(self,command,peer))
+				return True
 
 		# unknown
 		self.logger.warning("Command from process not understood : %s" % command,'supervisor')
@@ -388,7 +409,6 @@ class Supervisor (object):
 	def route_update (self):
 		"""the process ran and we need to figure what routes to changes"""
 		self.logger.supervisor("Performing dynamic route update")
-
 		for key in self.configuration.neighbor.keys():
 			neighbor = self.configuration.neighbor[key]
 			self._peers[key].reload(neighbor)
