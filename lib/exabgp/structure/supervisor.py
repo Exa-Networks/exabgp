@@ -72,7 +72,7 @@ class Supervisor (object):
 		# did we complete the run of updates caused by the last SIGHUP ?
 		reload_completed = True
 
-		wait = environment.settings().tcp.timeout
+		wait = environment.settings().tcp.delay
 		if wait:
 			sleeptime = (wait * 60) - int(time.time()) % (wait * 60)
 			self.logger.error("waiting for %d seconds before connecting" % sleeptime)
