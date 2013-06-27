@@ -18,6 +18,7 @@ from exabgp.structure.configuration import Configuration
 from exabgp.bgp.peer import Peer
 from exabgp.bgp.connection import errno_block
 
+from exabgp.structure.environment import environment
 from exabgp.structure.log import Logger
 
 class Supervisor (object):
@@ -70,6 +71,12 @@ class Supervisor (object):
 
 		# did we complete the run of updates caused by the last SIGHUP ?
 		reload_completed = True
+
+		wait = environment.settings().tcp.timeout
+		if wait:
+			sleeptime = (wait * 60) - int(time.time()) % (wait * 60)
+			self.logger.error("waiting for %d seconds before connecting" % sleeptime)
+			time.sleep(float(sleeptime))
 
 		while True:
 			try:

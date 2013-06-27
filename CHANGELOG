@@ -8,6 +8,7 @@ Version 3.1.13 - 2013
  * Fix: an issue when parsing EOR
  * Improvement: more regression testing
  * Improvement: allow to control which neighbor will get its routes removed
+ * Improvement: allow delayed connections
 
 Version 3.1.12 - 16 May 2013
  * Fix: could crash when a family safi was not defined in the peer family group instead of exiting with an error

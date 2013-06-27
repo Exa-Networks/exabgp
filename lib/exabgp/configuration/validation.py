@@ -13,7 +13,7 @@ DEBUG = False
 
 from collections import deque, OrderedDict
 
-from exabgp.configuration import check
+from exabgp.data import check
 
 TYPE=check.TYPE
 PRESENCE=check.PRESENCE

@@ -196,6 +196,7 @@ def main ():
 			'timeout' : (environment.integer,environment.nop,'1',  'time we will wait on select (can help with unstable BGP multihop)\n'
 			                                                       '%sVERY dangerous use only if you understand BGP very well.' % (' '* 34)),
 			'once': (environment.boolean,environment.lower,'false','only one tcp connection attempt per peer (for debuging scripts)'),
+			'delay': (environment.integer,environment.nop,'0','start to announce route when the minutes in the hours is a modulo of this number'),
 		},
 		'cache' : {
 			'attributes'  :  (environment.boolean,environment.lower,'true', 'cache routes attributes (configuration and wire) for faster parsing'),
