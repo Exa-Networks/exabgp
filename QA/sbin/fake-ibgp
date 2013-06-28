@@ -59,6 +59,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		self.ip = ip
 		self.port = port
 		self.handle_read = self.handle_open
+		self.update_count = 0
 		return self
 
 	def read_message (self):
@@ -97,8 +98,10 @@ class BGPHandler(asyncore.dispatcher_with_send):
 					continue
 				raise e
 
+		self.update_count += 1
+
 		if self.isupdate(header):
-			self.announce("--->", ', '.join(self.routes(body)))
+			self.announce("%-6d --->" % self.update_count, ', '.join(self.routes(body)))
 
 		return header,body
 
