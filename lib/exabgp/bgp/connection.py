@@ -29,12 +29,16 @@ errno_block = set((
 	errno.EINPROGRESS, errno.EALREADY,
 	errno.EAGAIN, errno.EWOULDBLOCK,
 	errno.EINTR, errno.EDEADLK,
+	errno.EBUSY, errno.ENOBUFS,
+	errno.ENOMEM,
 ))
 
 errno_fatal = set((
-	errno.EBADF, errno.ECONNRESET,
-	errno.ENOTCONN, errno.ESHUTDOWN,
 	errno.ECONNABORTED, errno.EPIPE,
+	errno.ECONNREFUSED, errno.EBADF,
+	errno.ESHUTDOWN, errno.ENOTCONN,
+	errno.ECONNRESET, errno.ETIMEDOUT,
+	errno.EINVAL, errno.EHOSTUNREACH,
 ))
 
 # we could not connect to the peer
