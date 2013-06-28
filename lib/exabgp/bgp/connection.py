@@ -43,9 +43,10 @@ class NotConnected (Exception):
 
 class Connection (object):
 	def __init__ (self,peer,local,md5,ttl):
-		# If the OS tells us we have data on the socket, we should never have to wait more than READ_TIMEOUT to be able to read it.
+		# If the OS tells us we have data on the socket, we should never have to wait more than read_timeout to be able to read it.
 		# However real life says that on some OS we do ... So let the user control this value
-		self.READ_TIMEOUT = environment.settings().tcp.timeout
+		self.read_timeout = environment.settings().tcp.timeout
+		self.async = not environment.settings().tcp.block
 
 		self.logger = Logger()
 		self.io = None
@@ -166,8 +167,8 @@ class Connection (object):
 			if not self._loop_start:
 				self._loop_start = time.time()
 			else:
-				if self._loop_start + self.READ_TIMEOUT < time.time():
-					raise Failure('Waited for data on a socket for more than %d second(s)' % self.READ_TIMEOUT)
+				if self._loop_start + self.read_timeout < time.time():
+					raise Failure('Waited for data on a socket for more than %d second(s)' % self.read_timeout)
 		try:
 			r,_,_ = select.select([self.io,],[],[],0)
 		except select.error,e:
@@ -179,15 +180,21 @@ class Connection (object):
 		return False
 
 	def ready (self):
-		try:
-			_,w,_ = select.select([],[self.io,],[],0)
-		except select.error,e:
-			errno,message = e.args
-			if errno in errno_block:
-				return False
-			raise
-		if not w: return False
-		return True
+		while True:
+			try:
+				_,w,_ = select.select([],[self.io,],[],0)
+			except select.error,e:
+				eno,message = e.args
+				if eno in errno_block:
+					if self.async:
+						return False
+					continue
+				raise
+			if not w:
+				if self.async:
+					return False
+				continue
+			return True
 
 	def read (self,number):
 		if not self.io:

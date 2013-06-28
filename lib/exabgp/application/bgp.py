@@ -193,10 +193,12 @@ def main ():
 			'short'         : (environment.boolean,environment.lower,'false',    'use short log format (not prepended with time,level,pid and source)'),
 		},
 		'tcp' : {
-			'timeout' : (environment.integer,environment.nop,'1',  'time we will wait on select (can help with unstable BGP multihop)\n'
-			                                                       '%sVERY dangerous use only if you understand BGP very well.' % (' '* 34)),
-			'once': (environment.boolean,environment.lower,'false','only one tcp connection attempt per peer (for debuging scripts)'),
-			'delay': (environment.integer,environment.nop,'0','start to announce route when the minutes in the hours is a modulo of this number'),
+			'timeout' : (environment.integer,environment.nop,'1',   'time we will wait on select (can help with unstable BGP multihop)\n'
+			                                                        '%sVERY dangerous use only if you understand BGP very well.' % (' '* 34)),
+			'once': (environment.boolean,environment.lower,'false', 'only one tcp connection attempt per peer (for debuging scripts)'),
+			'delay': (environment.integer,environment.nop,'0',      'start to announce route when the minutes in the hours is a modulo of this number'),
+			'block': (environment.boolean,environment.lower,'false','if write would block, do not buffer and wait until socket becomes available\n'
+			                                                        '%s(here to help stress testing, do not use if you have multiple peers defined' % (' '* 34)),
 		},
 		'cache' : {
 			'attributes'  :  (environment.boolean,environment.lower,'true', 'cache routes attributes (configuration and wire) for faster parsing'),
