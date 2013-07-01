@@ -315,7 +315,7 @@ class Supervisor (object):
 
 		def extract_peers (separator,command):
 			restrict,command = command.split(separator)
-			command = 'withdraw ' + command
+			command = separator + command
 			neighbor,peers = restrict.split(' ',1)
 			peers = [_.strip() for _ in peers.split(',') if _]
 			return command, peers
