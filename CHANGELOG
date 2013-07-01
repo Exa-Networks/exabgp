@@ -8,8 +8,10 @@ Version 3.1.13 - 2013
  * Fix: an issue when parsing EOR
  * Improvement: use less memory on route change calculation
  * Improvement: more regression testing
- * Improvement: allow to control which neighbor will get its routes removed
+ * Improvement: allow to control which neighbor will get API notification
     requested by: Parag Jain
+ * Improvement: allow to control which neighbors will get API notification
+    requested by: Petr Lapukhov
  * Improvement: allow delayed connections
     requested by: David Freeman
  * Improvement: block on busy socket for performance testing

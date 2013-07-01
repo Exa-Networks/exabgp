@@ -282,10 +282,10 @@ class Configuration (object):
 			if peer is None or neighbor.peer_address == peer:
 				self.neighbor[neighbor].add_route(route)
 
-	def remove_route_from_peers (self,route,peer):
+	def remove_route_from_peers (self,route,peers):
 		result = False
 		for neighbor in self.neighbor:
-			if peer is None or neighbor.peer_address == peer:
+			if peers is None or neighbor.peer_address in peers:
 				if self.neighbor[neighbor].remove_route(route):
 					result = True
 		return result
