@@ -1595,7 +1595,7 @@ class Configuration (object):
 			if '.' in prefix:
 				bytes = [chr(0),chr(1)]
 				bytes.extend([chr(int(_)) for _ in prefix.split('.')])
-				bytes.extend([suffix>>8,suffix&0xFF])
+				bytes.extend([chr(suffix>>8),chr(suffix&0xFF)])
 				rd = ''.join(bytes)
 			else:
 				number = int(prefix)

@@ -6,6 +6,8 @@ Version explained:
 Version 3.1.13 - 2013
  * Fix: only clear buffered routes on restart and not reload (bug never reported)
  * Fix: an issue when parsing EOR
+ * Fix: bug with RD community genration
+    reported by: Parag Jain
  * Improvement: use less memory on route change calculation
  * Improvement: more regression testing
  * Improvement: allow to control which neighbor will get API notification
