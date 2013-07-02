@@ -148,4 +148,4 @@ def convert (fname):
 	Can raise InvalidFormat and all file related exceptions such as IOError
 	"""
 	with Reader(fname) as reader:
-		reader.read()
+		return reader.read()
