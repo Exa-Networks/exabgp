@@ -18,6 +18,8 @@ Version 3.1.13 - 2013
     requested by: David Freeman
  * Improvement: block on busy socket for performance testing
     requested by: David Freeman
+ * Fix/Improvement: only announce routes for the negociated family on a connection
+    requested by: Andrew Hoyos
 
 Version 3.1.12 - 16 May 2013
  * Fix: could crash when a family safi was not defined in the peer family group instead of exiting with an error

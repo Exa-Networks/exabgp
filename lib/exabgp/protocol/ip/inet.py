@@ -64,6 +64,9 @@ class Inet (object):
 	def pack (self):
 		return self.packed
 
+	def family (self):
+		return (self.afi,self.safi)
+
 	def __len__ (self):
 		return len(self.packed)
 

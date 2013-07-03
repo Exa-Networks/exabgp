@@ -41,11 +41,18 @@ class Update (Message):
 		addpath = negotiated.addpath.send(self.afi,self.safi)
 
 		if self.afi == AFI.ipv4 and self.safi in [SAFI.unicast, SAFI.multicast]:
-			nlri = ''.join([route.nlri.pack(addpath) for route in self.routes])
+			nlri = ''.join([route.nlri.pack(addpath) for route in self.routes if route.nlri.family() in negotiated.families])
 			mp = ''
 		else:
 			nlri = ''
-			mp = MPRNLRI(self.routes).pack(addpath)
+			if self.routes[0].nlri.family() in negotiated.families:
+				mp = MPRNLRI(self.routes).pack(addpath)
+			else:
+				mp = ''
+
+		if not nlri and not mp:
+			return ''
+
 		attr = self.attributes.pack(asn4,local_as,peer_as)
 		packed = self._message(prefix('') + prefix(attr + mp) + nlri)
 		if len(packed) > msg_size:
