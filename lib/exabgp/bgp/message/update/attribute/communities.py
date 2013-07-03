@@ -106,7 +106,15 @@ class Communities (Attribute):
 
 # MUST ONLY raise ValueError
 def to_ExtendedCommunity (data):
-	command,ga,la = data.split(':')
+	nb_separators = data.count(':')
+	if nb_separators == 2:
+		command,ga,la = data.split(':')
+	elif nb_separators == 1:
+		command = 'target'
+		ga,la = data.split(':')
+	else:
+		raise ValueError('invalid extended community %s (only origin or target are supported) ' % command)
+
 
 	header = chr(0x00)
 	if command == 'origin':
