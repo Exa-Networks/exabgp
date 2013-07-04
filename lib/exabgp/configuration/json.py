@@ -142,6 +142,8 @@ def parser (tokeniser,container):
 					return Decimal(token) if '.' in token else int(token)
 		except ValueError:
 			raise UnexpectedData(line,position,token)
+		except StopIteration:
+			return ''
 
 	def iterate_dict(next):
 		line,position,key = next()
@@ -182,10 +184,10 @@ def parser (tokeniser,container):
 	return content(tokeniser)
 
 
-def json (fname,container=lambda _:dict):
-	with open(fname,'r') as stream:
-		return parser(tokens(stream),container)
+def load (stream,container=lambda _:dict):
+	return parser(tokens(stream),container)
 
+__all__ = [load,]
 
 if __name__ == '__main__':
-	print json ('small.json')
+	print load(open('small.json','rb'))
