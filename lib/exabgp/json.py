@@ -60,10 +60,6 @@ def unescape(s):
 			yield esc
 		start = pos + 1
 
-def json (fname):
-	with open(fname,'r') as stream:
-		parser(tokens(stream))
-
 @cofunction
 def tokens (stream):
 	spaces = [' ', '\t', '\r', '\n']
@@ -111,14 +107,18 @@ def tokens (stream):
 				word += char
 				nb_chars += 1
 
-def parser (tokeniser):
+def parser (tokeniser,container):
+	# Yes, you can add attributes to function ...
+	tokeniser.path = []
+
 	def content(next):
 		try:
 			while True:
 				line,position,token = next()
 
 				if token == '{':
-					d = dict()
+					klass = container(next.path)
+					d = klass()
 					for key,value in iterate_dict(next):
 						d[key] = value
 					return d
@@ -154,7 +154,9 @@ def parser (tokeniser):
 				if colon != ':':
 					raise UnexpectedData(line,position,colon)
 
+				next.path.append(key)
 				yield key[1:-1],content(next)
+				next.path.pop()
 
 				line,position,separator = next()
 				if separator == '}':
@@ -177,30 +179,13 @@ def parser (tokeniser):
 
 				value = content(next)
 
-	# while True:
-	# 	print tokeniser()
+	return content(tokeniser)
 
-	print content(tokeniser)
+
+def json (fname,container=lambda _:dict):
+	with open(fname,'r') as stream:
+		return parser(tokens(stream),container)
+
 
 if __name__ == '__main__':
-	json ('small.json')
-
-# def stringlexem(self):
-#	 start = self.pos + 1
-#	 while True:
-#		 try:
-#			 end = self.buffer.index('"', start)
-#			 escpos = end - 1
-#			 while self.buffer[escpos] == '\\':
-#				 escpos -= 1
-#			 if (end - escpos) % 2 == 0:
-#				 start = end + 1
-#			 else:
-#				 result = self.buffer[self.pos:end + 1]
-#				 self.pos = end + 1
-#				 return result
-#		 except ValueError:
-#			 old_len = len(self.buffer)
-#			 self.buffer += self.f.read(BUFSIZE).decode('utf-8')
-#			 if len(self.buffer) == old_len:
-#				 raise common.IncompleteJSONError()
+	print json ('small.json')
