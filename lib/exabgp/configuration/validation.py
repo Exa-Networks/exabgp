@@ -65,7 +65,7 @@ _definition = (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
 				('ttl-security' , (TYPE.integer, PRESENCE.optional, '', check.uint8)),
 				('md5' , (TYPE.string, PRESENCE.optional, '', check.md5))
 			)))),
-			('api' , (TYPE.object, PRESENCE.optional, 'apis', OrderedDict((
+			('api' , (TYPE.object, PRESENCE.optional, 'api', OrderedDict((
 				('<*>' , (TYPE.array, PRESENCE.mandatory, '', ['neighbor-changes','send-packets','receive-packets','receive-routes'])),
 			)))),
 			('session' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
@@ -89,16 +89,16 @@ _definition = (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
 					('add-path' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
 				)))),
 			)))),
-			('announce' , (TYPE.array, PRESENCE.optional, ['updates,prefix','updates,flow'], check.string)),
+			('announce' , (TYPE.array, PRESENCE.optional, ['update,prefix','update,flow'], check.string)),
 		)))),
 	)))),
-	('apis' , (TYPE.object, PRESENCE.optional, '', OrderedDict((
+	('api' , (TYPE.object, PRESENCE.optional, '', OrderedDict((
 		('<*>' , (TYPE.object, PRESENCE.optional, '', OrderedDict((
 			('encoder' , (TYPE.string, PRESENCE.optional, '', ['json','text'])),
 			('program' , (TYPE.string, PRESENCE.mandatory, '', check.nop)),
 		)))),
 	)))),
-	('attributes' , (TYPE.object, PRESENCE.optional, '', OrderedDict((
+	('attribute' , (TYPE.object, PRESENCE.optional, '', OrderedDict((
 		('<*>' , (TYPE.object, PRESENCE.optional, '', _attributes)),
 	)))),
 	('flow' , (TYPE.object, PRESENCE.optional, '', OrderedDict((
@@ -131,9 +131,9 @@ _definition = (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
 			)))),
 		)))),
 	)))),
-	('updates' , (TYPE.object, PRESENCE.optional, '', OrderedDict((
+	('update' , (TYPE.object, PRESENCE.optional, '', OrderedDict((
 		('prefix' , (TYPE.object, PRESENCE.optional, '', OrderedDict((
-			('<*>' , (TYPE.object, PRESENCE.optional, 'attributes', OrderedDict((  # name of route
+			('<*>' , (TYPE.object, PRESENCE.optional, 'attribute', OrderedDict((  # name of route
 				('<*>' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((  # name of attributes referenced
 					('<*>' , (TYPE.object, PRESENCE.optional, '', _attributes)),  # prefix
 				)))),

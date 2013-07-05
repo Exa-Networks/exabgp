@@ -28,9 +28,8 @@ neighbor = """\
  {
 			_: "will pass received routes to the program"
 			tcp {
-				local: "82.219.212.34"
-				peer: "195.8.215.15"
 				bind: "82.219.212.34"
+				connect: "195.8.215.15"
 				ttl-security: false
 				md5: "secret"
 			}
@@ -83,7 +82,7 @@ tail = """ \
 		}
 	}
 
-	attributes {
+	attribute {
 		normal-ebgp-attributes {
 			origin: "igp"
 			as-path: [ 3356, 1239, 38040, 9737 ]
@@ -153,7 +152,7 @@ tail = """ \
 		}
 	}
 
-	updates {
+	update {
 		prefix {
 			local-routes {
 				normal-ebgp-attributes {
@@ -219,6 +218,9 @@ def size(data):
 def test (nb_neighbor):
 	from exabgp.configuration.loader import load
 	from exabgp.configuration.validation import validation,ValidationError
+
+	print 'testing with %d neighbors' % nb_neighbor
+
 	try:
 		name = _make_config(nb_neighbor)
 	except:
@@ -250,12 +252,11 @@ class TestData (unittest.TestCase):
 		if result: self.fail(result)
 
 	def test_2 (self):
-		result = cProfile.run('test(2)')
+		result = cProfile.run('test(20000)')
 		if result: self.fail(result)
 
 if __name__ == '__main__':
-	print test(2)
-	#unittest.main()
+	unittest.main()
 
 
 	# import cProfile
