@@ -91,8 +91,8 @@ class Reader (object):
 	"""
 	def __init__ (self,fname):
 		self.file = open(fname,'rb')
-		self.left = ''
-		self.formated = ''
+		self.last = ''      # the last line we read from the file
+		self.formated = ''  # the formated data we have already converted
 
 		name = ''.join(self.file.readline().split())
 		if not name.startswith('#syntax:'):
@@ -121,15 +121,18 @@ class Reader (object):
 			self.file = None
 
 	def read (self,number=0):
+		# we already done the work, just return the small chunks
 		if number and len(self.formated) >= number:
 			returned, self.formated = self.formated[:number], self.formated[number:]
 			return returned
 
 		data = bytearray()
+
 		try:
-			last = self.format(self.left,self.file.next())
-			data += self.left
-			data += last
+			# restore / init the last line seen
+			last = self.last
+
+			# reading up to number bytes or until EOF which will raise StopIteration
 			while not number or len(data) < number:
 				new = self.file.next()
 				if self.skip(new):
@@ -137,22 +140,25 @@ class Reader (object):
 				data += self.format(last,new)
 				last = new
 
+			# save the last line seen for the next call
+			self.last = last
+
 			if number:
-				# XXX: only convert on return ?
-				returned, self.formated = bytes(data[:number]), bytes(data[number:])
+				complete = self.formated + bytes(data)
+				returned, self.formated = complete[:number], complete[number:]
 				return returned
 
 			return bytes(data)
 		except StopIteration:
-			if self.left:
-				if number and len(self.left) >= number:
-					returned, self.formated,self.left = self.left[:number], self.left[number:], ''
-					return returned
-				else:
-					returned,self.left,self.formated = self.left, '', ''
-					return returned
+			# we can come here twice : on EOF and again
+			# to empty self.formated when its len becomes smaller than number
+			complete = self.formated + bytes(data)
+			if number:
+				returned, self.formated = complete[:number], complete[number:]
+				return returned
 			else:
-				return bytes(data)
+				self.formated = ''
+				return complete
 
 	def readline (self, limit=-1):
 		returned = bytearray()
@@ -178,7 +184,7 @@ class Reader (object):
 
 	__next__ = next
 
-def read (fname):
+def load (fname):
 	"""
 	Convert a exa configuration format to its dictionary representation
 	Can raise InvalidFormat and all file related exceptions such as IOError
@@ -186,10 +192,12 @@ def read (fname):
 	with Reader(fname) as reader:
 		return json.load(reader)
 
-def convert (fname):
+def parse (fname):
 	"""
 	Convert a exa configuration format to its json representation
 	Can raise InvalidFormat and all file related exceptions such as IOError
 	"""
 	with Reader(fname) as reader:
 		return reader.read()
+
+__all__ = [load,parse,InvalidFormat]

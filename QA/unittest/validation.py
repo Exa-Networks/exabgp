@@ -10,6 +10,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 import unittest
 import tempfile
 import os
+import cProfile
 
 head = """\
 #syntax: simplejson
@@ -29,6 +30,7 @@ neighbor = """\
 			tcp {
 				local: "82.219.212.34"
 				peer: "195.8.215.15"
+				bind: "82.219.212.34"
 				ttl-security: false
 				md5: "secret"
 			}
@@ -196,12 +198,12 @@ tail = """ \
 }
 """
 
-def _make_config(size=20000):
+def _make_config(nb_neighbor):
 	name = tempfile.mkstemp(suffix='.exa')[1]
-	print 'creating',name
+	print 'creating configuration file with %d peers : %s' % (nb_neighbor,name)
 	with open(name,'w') as f:
 		f.write(head)
-		for _ in xrange(100000):
+		for _ in xrange(nb_neighbor):
 			neighbor_name = '\t\tn-%d' % _
 			f.write(neighbor_name)
 			f.write(neighbor)
@@ -214,29 +216,47 @@ from exabgp.memory.profiler import profile
 def size(data):
 	pass
 
+def test (nb_neighbor):
+	from exabgp.configuration.loader import load
+	from exabgp.configuration.validation import validation,ValidationError
+	try:
+		name = _make_config(nb_neighbor)
+	except:
+		return 'could not create temp file'
+	try:
+		json = load(name)
+	except ValidationError,e:
+		os.remove(name)
+		return 'configuration parsing failed (parse) %s' % str(e)
+	try:
+		validation(json)
+	except ValidationError,e:
+		os.remove(name)
+		return 'configuration parsing failed (validation) %s' % str(e)
+
+	try:
+		size(json)
+	except ValidationError,e:
+		return 'configuration parsing failed (size) %s' % str(e)
+	finally:
+		os.remove(name)
+	return ''
+
+
 class TestData (unittest.TestCase):
 
 	def test_1 (self):
-		from exabgp.configuration.loader import read
-		from exabgp.configuration.validation import validation,ValidationError
-		try:
-			name = _make_config()
-		except:
-			self.fail('could not create temp file')
-		try:
-			json = read(name)
-			validation(json)
-			size(json)
-		except ValidationError:
-			self.fail('configuration parsing failed')
-		finally:
-			os.remove(name)
+		result = test(2)
+		if result: self.fail(result)
+
+	def test_2 (self):
+		result = cProfile.run('test(2)')
+		if result: self.fail(result)
 
 if __name__ == '__main__':
-	# unittest.main()
+	print test(2)
+	#unittest.main()
 
-	import cProfile
-	cProfile.run('unittest.main()')
 
 	# import cProfile
 	# print 'profiling'

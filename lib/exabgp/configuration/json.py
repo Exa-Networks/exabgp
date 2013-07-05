@@ -6,33 +6,18 @@ Created by Thomas Mangin on 2013-07-01.
 Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
-from functools import wraps
 from decimal import Decimal
 
-def cofunction(function):
-	@wraps(function)
-	def start(*args, **kwargs):
-		generator = function(*args, **kwargs)
-		return lambda: generator.next()
-	return start
-
-def cojoin (function):
-	@wraps(function)
-	def start (*args, **kwargs):
-		return ''.join(function(*args, **kwargs))
-	return start
+from exabgp import coroutine
 
 class JSONError(Exception):
-	pass
-
-class IncompleteJSONError(JSONError):
 	pass
 
 class UnexpectedData(JSONError):
 	def __init__(self, line, position, token):
 		super(UnexpectedData, self).__init__('Unexpected data at line %d position %d : "%s"' % (line,position,token))
 
-@cojoin
+@coroutine.join
 def unescape(s):
 	start = 0
 	while start < len(s):
@@ -60,7 +45,7 @@ def unescape(s):
 			yield esc
 		start = pos + 1
 
-@cofunction
+@coroutine.each
 def tokens (stream):
 	spaces = [' ', '\t', '\r', '\n']
 	strings = ['"', "'"]
@@ -187,7 +172,4 @@ def parser (tokeniser,container):
 def load (stream,container=lambda _:dict):
 	return parser(tokens(stream),container)
 
-__all__ = [load,]
-
-if __name__ == '__main__':
-	print load(open('small.json','rb'))
+__all__ = [load,JSONError,UnexpectedData]

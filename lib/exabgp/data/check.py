@@ -9,11 +9,12 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from exabgp.structure.enumeration import Enumeration
 
 TYPE = Enumeration (
-	'boolean',  # -  1
-	'integer',  # -  2
-	'string',   # -  4
-	'array',    # -  8
-	'object',   # - 16
+	'null',     # -  1
+	'boolean',  # -  2
+	'integer',  # -  4
+	'string',   # -  8
+	'array',    # - 16
+	'object',   # - 32
 )
 
 PRESENCE = Enumeration(
@@ -22,6 +23,8 @@ PRESENCE = Enumeration(
 )
 
 # TYPE CHECK
+def null (data):
+	return type(data) == type(None)
 def boolean (data):
 	return type(data) == type(True)
 def integer (data):
@@ -35,11 +38,12 @@ def object (data):
 # XXX: Not very good to redefine the keyword object, but this class uses no OO ...
 
 CHECK_TYPE = {
+	TYPE.null : null,
 	TYPE.boolean : boolean,
 	TYPE.integer : integer,
 	TYPE.string : string,
 	TYPE.array : array,
-	TYPE.object : dict,
+	TYPE.object : object,
 }
 
 def kind (kind,data):
@@ -66,9 +70,9 @@ def ip (data,):
 	return ipv4(data) or ipv6(data)
 
 def ipv4 (data):  # XXX: improve
-	return type(data) == type(u'') and data.count('.') == 3
+	return string(data) and data.count('.') == 3
 def ipv6 (data):  # XXX: improve
-	return type(data) == type(u'') and ':' in data
+	return string(data) and ':' in data
 
 def range4 (data):
 	return data > 0 and data <= 32
@@ -198,7 +202,7 @@ def _flow_numeric (data,check):
 	if not array(data):
 		return False
 	for et in data:
-		if not (array(et) and len(et) == 2 and et[0] in (u'>', u'<', u'=',u'>=', u'<=') and integer(et[1]) and check(et[1])):
+		if not (array(et) and len(et) == 2 and et[0] in ('>', '<', '=','>=', '<=') and integer(et[1]) and check(et[1])):
 			return False
 	return True
 

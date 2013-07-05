@@ -19,17 +19,19 @@ TYPE=check.TYPE
 PRESENCE=check.PRESENCE
 
 class ValidationError (Exception):
-	type_error = 'the data is of the wrong type'
 	internal_error = 'invalid configuration definition (internal error)'
-	configuration_error = 'missing configuration information'
-	conflicting_error = 'conflicting configuration'
+	mandatory_error = 'missing mandatory configuration field'
+	type_error = 'the data for this configuration option is not what was expected'
+	configuration_error = 'the configuration is missing this information'
+	conflicting_error = 'the configuration has conflicting information'
 
 	def __init__ (self,location,message):
 		self.location = location
 		self.message = message
 
 	def __str__ (self):
-		return ','.join(self.location) + ' : ' + self.message
+		location = ','.join(self.location) if self.location else 'root'
+		return 'location ' + location + ' : ' + self.message
 
 _attributes = OrderedDict((
 	('next-hop', (TYPE.string, PRESENCE.optional, '', check.ipv4)),
@@ -208,7 +210,7 @@ def _validate (root,json,definition,location=[]):
 	# ignore missing optional elements
 	if not json:
 		if presence == PRESENCE.mandatory:
-			raise ValidationError(location, ValidationError.configuration_error)
+			raise ValidationError(location, ValidationError.mandatory_error)
 		return
 
 	# check that the value of the right type
@@ -228,7 +230,7 @@ def _validate (root,json,definition,location=[]):
 				continue
 
 			if type(json) != type({}):
-				raise ValidationError(location, ValidationError.configuration_error)
+				raise ValidationError(location, ValidationError.type_error)
 
 			if key == '<*>':
 				keys.extendleft(json.keys())
