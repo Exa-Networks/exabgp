@@ -199,16 +199,23 @@ tail = """ \
 
 def _make_config(nb_neighbor):
 	name = tempfile.mkstemp(suffix='.exa')[1]
-	print 'creating configuration file with %d peers : %s' % (nb_neighbor,name)
-	with open(name,'w') as f:
-		f.write(head)
-		for _ in xrange(nb_neighbor):
-			neighbor_name = '\t\tn-%d' % _
-			f.write(neighbor_name)
-			f.write(neighbor)
-		f.write(tail)
-	print 'created'
+	print 'creating configuration file with %d peers : %s' % (nb_neighbor,name),
+	try:
+		with open(name,'w') as f:
+			f.write(head)
+			for _ in xrange(nb_neighbor):
+				neighbor_name = '\t\tn-%d' % _
+				f.write(neighbor_name)
+				f.write(neighbor)
+			f.write(tail)
+		print 'done'
+	except Exception:
+		print 'failed'
+		return ''
 	return name
+
+from exabgp.configuration.validation import validation,ValidationError
+from exabgp.configuration.loader import load
 
 from exabgp.memory.profiler import profile
 @profile
@@ -216,44 +223,51 @@ def size(data):
 	pass
 
 def test (nb_neighbor):
-	from exabgp.configuration.loader import load
-	from exabgp.configuration.validation import validation,ValidationError
-
 	print 'testing with %d neighbors' % nb_neighbor
 
-	try:
-		name = _make_config(nb_neighbor)
-	except:
-		return 'could not create temp file'
+	name = _make_config(nb_neighbor)
+	if not name:
+		return False,'could not create temporary file'
+
 	try:
 		json = load(name)
 	except ValidationError,e:
 		os.remove(name)
-		return 'configuration parsing failed (parse) %s' % str(e)
+		return False,'configuration parsing failed (parse) %s' % str(e)
 	try:
 		validation(json)
 	except ValidationError,e:
-		os.remove(name)
-		return 'configuration parsing failed (validation) %s' % str(e)
+		return False,'configuration parsing failed (validation) %s' % str(e)
 
 	try:
-		size(json)
-	except ValidationError,e:
-		return 'configuration parsing failed (size) %s' % str(e)
-	finally:
 		os.remove(name)
-	return ''
+		print 'deleted %s' % name
+	except:
+		return False,'could not delete temp file'
 
+	return True,json
+
+def profiled (nb_neighbor):
+	ok , returned = test(nb_neighbor)
+	if ok:
+		try:
+			size(returned)
+		except ValidationError,e:
+			print 'configuration parsing failed (size) %s' % str(e)
+		return ''
+	else:
+		print 'profiling failed'
 
 class TestData (unittest.TestCase):
 
 	def test_1 (self):
-		result = test(2)
-		if result: self.fail(result)
+		if not os.environ.get('profile',False):
+			ok, reason = test(2)
+			if not ok: self.fail(reason)
 
 	def test_2 (self):
-		result = cProfile.run('test(20000)')
-		if result: self.fail(result)
+		if not not os.environ.get('profile',False):
+			cProfile.run('profiled(20000)')
 
 if __name__ == '__main__':
 	unittest.main()
