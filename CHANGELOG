@@ -4,7 +4,7 @@ Version explained:
  bug   : increase on bug or incremental changes
 
 Version 3.1.14
- * Improvement: allow to generate NOTIFICATION messages though the API
+ * Improvement: allow to generate NOTIFICATION messages through the API
     requested by: Parag Jain
 
 Version 3.1.13 - 6th July 2013
