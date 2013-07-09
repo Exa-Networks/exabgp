@@ -278,14 +278,17 @@ class Configuration (object):
 		return scope[0]['routes']
 
 	def add_route_to_peers (self,route,peers):
+		result = False
 		for neighbor in self.neighbor:
-			if peers is None or neighbor.peer_address in peers:
-				self.neighbor[neighbor].add_route(route)
+			if peers is None or neighbor in peers:
+				if self.neighbor[neighbor].add_route(route):
+					result = True
+		return result
 
 	def remove_route_from_peers (self,route,peers):
 		result = False
 		for neighbor in self.neighbor:
-			if peers is None or neighbor.peer_address in peers:
+			if peers is None or neighbor in peers:
 				if self.neighbor[neighbor].remove_route(route):
 					result = True
 		return result

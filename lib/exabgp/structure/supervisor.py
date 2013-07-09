@@ -312,14 +312,52 @@ class Supervisor (object):
 			self._pending.append(_withdraw_watchdog(self,name))
 			return True
 
+		def extract_neighbors (command):
+			"""return a list of neighbor definition : the neighbor definition is a list of string which are in the neighbor indexing string"""
+			returned = []
+			definition = []
+			neighbor,remaining = command.split(' ',1)
+			if neighbor != 'neighbor':
+				return [],command
 
-		def extract_peers (separator,command):
-			restrict,command = command.split(separator)
-			command = separator + command
-			neighbor,peers = restrict.split(' ',1)
-			peers = [_.strip() for _ in peers.split(',') if _]
-			return command, peers
+			ip,command = remaining.split(' ',1)
+			definition.append('%s %s' % (neighbor,ip))
 
+			while True:
+				try:
+					key,value,remaining = command.split(' ',2)
+				except ValueError:
+					key,value = command.split(' ',1)
+				if key == ',':
+					returned.apppend(definition)
+					_,command = command.split(' ',1)
+					continue
+				if key not in ['local-ip','local-as','peer-as','router-id','family-allowed']:
+					if definition:
+						returned.append(definition)
+					break
+				definition.append('%s %s' % (key,value))
+				command = remaining
+
+			return returned,command
+
+		def match_neighbor (description,name):
+			for string in description:
+				if not string in name:
+					return False
+			return True
+
+		def match_neighbors (description,peers):
+			"returns the sublist of peers matching the description passed, or None if no description is given"
+			if not description:
+				return None
+
+			returned = []
+			for key in peers:
+				for description in descriptions:
+					if match_neighbor(description,key):
+						returned.append(key)
+			return returned
 
 		# route announcement / withdrawal
 		if 'announce route' in command:
@@ -332,17 +370,21 @@ class Supervisor (object):
 					for route in routes:
 						self.configuration.remove_route_from_peers(route,peers)
 						self.configuration.add_route_to_peers(route,peers)
-						self.logger.warning("Route added : %s" % route,'supervisor')
+						self.logger.warning("Route added to  %s : %s" % (', '.join(peers if peers else []),route),'supervisor')
 						yield False
 					self._route_update = True
 
-			if command.startswith('announce route'):
-				self._pending.append(_announce_route(self,command,None))
-				return True
-			if command.startswith('neighbor '):
-				command,peers = extract_peers('announce',command)
+			try:
+				descriptions,command = extract_neighbors(command)
+				peers = match_neighbors(descriptions,self._peers)
 				self._pending.append(_announce_route(self,command,peers))
+				if peers == []:
+					self.logger.warning('no neighbor matching the command : %s' % command,'supervisor')
 				return True
+			except ValueError:
+				pass
+			except IndexError:
+				pass
 
 		if 'withdraw route' in command:
 			def _withdraw_route (self,command,peers):
@@ -359,13 +401,18 @@ class Supervisor (object):
 							self.logger.warning("Could not find therefore remove route : %s" % route,'supervisor')
 							yield False
 					self._route_update = True
-			if command.startswith('withdraw route'):
-				self._pending.append(_withdraw_route(self,command,None))
-				return True
-			if command.startswith('neighbor '):
-				command,peers = extract_peers('withdraw',command)
+
+			try:
+				descriptions,command = extract_neighbors(command)
+				peers = match_neighbors(descriptions,self._peers)
 				self._pending.append(_withdraw_route(self,command,peers))
+				if peers == []:
+					self.logger.warning('no neighbor matching the command : %s' % command,'supervisor')
 				return True
+			except ValueError:
+				pass
+			except IndexError:
+				pass
 
 		# flow announcement / withdrawal
 		if 'announce flow' in command:
@@ -381,13 +428,18 @@ class Supervisor (object):
 						self.logger.warning("Flow added : %s" % flow,'supervisor')
 						yield False
 					self._route_update = True
-			if command.startswith('announce flow'):
-				self._pending.append(_announce_flow(self,command,None))
-				return True
-			if command.startswith('neighbor '):
-				command,peers = extract_peers('announce',command)
+
+			try:
+				descriptions,command = extract_neighbors(command)
+				peers = match_neighbors(descriptions,self._peers)
 				self._pending.append(_announce_flow(self,command,peers))
+				if peers == []:
+					self.logger.warning('no neighbor matching the command : %s' % command,'supervisor')
 				return True
+			except ValueError:
+				pass
+			except IndexError:
+				pass
 
 		if 'withdraw flow' in command:
 			def _withdraw_flow (self,command,peers):
@@ -404,37 +456,34 @@ class Supervisor (object):
 							self.logger.warning("Could not find therefore remove flow : %s" % flow,'supervisor')
 							yield False
 					self._route_update = True
-			if command.startswith('withdraw flow'):
-				self._pending.append(_withdraw_flow(self,command,None))
-				return True
-			if command.startswith('neighbor '):
-				command,peers = extract_peers('withdraw',command)
+
+			try:
+				descriptions,command = extract_neighbors(command)
+				peers = match_neighbors(descriptions,self._peers)
 				self._pending.append(_withdraw_flow(self,command,peers))
+				if peers == []:
+					self.logger.warning('no neighbor matching the command : %s' % command,'supervisor')
 				return True
+			except ValueError:
+				pass
+			except IndexError:
+				pass
 
 		# route announcement / withdrawal
 		if 'teardown' in command:
-			if command.startswith('teardown '):
-				try:
-					_,code = command.split(' ',1)
-					for key in self._peers:
-						self._peers[key].teardown(int(code))
-					self.logger.warning('teardown scheduled for %s' % name,'supervisor')
-					return True
-				except ValueError:
-					pass
-
-			if command.startswith('neighbor '):
-				try:
-					neighborg,ip,teardown,code = command.split(' ')
-					for name in self._peers:
-						if ip in name:
-							self._peers[name].teardown(int(code),[ip,])
-							self.logger.warning('teardown scheduled','supervisor')
-							return True
-					self.logger.warning('teardown peer not found','supervisor')
-				except (IndexError,ValueError):
-					pass
+			try:
+				descriptions,command = extract_neighbors(command)
+				_,code = command.split(' ',1)
+				for key in self._peers:
+					for description in descriptions:
+						if match_neighbor(description,key):
+							self._peers[key].teardown(int(code))
+							self.logger.warning('teardown scheduled for %s' % ' '.join(description),'supervisor')
+				return True
+			except ValueError:
+				pass
+			except IndexError:
+				pass
 
 		# unknown
 		self.logger.warning("Command from process not understood : %s" % command,'supervisor')
@@ -472,3 +521,5 @@ class Supervisor (object):
 		key = peer.neighbor.name()
 		if key in self._peers:
 			del self._peers[key]
+
+

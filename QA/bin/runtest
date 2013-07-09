@@ -87,4 +87,13 @@ def check_sequence(exabgp,configuration,daemon,messages):
 		print "> sudo", ' '.join(command_daemon)
 		print
 
-main()
+def check (main):
+	uid = os.getuid()
+	gid = os.getgid()
+
+	if uid and gid:
+		print 'you need to have root privileges to bind to port 79'
+		sys.exit(1)
+	main()
+
+check(main)
