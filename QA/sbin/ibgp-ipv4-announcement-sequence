@@ -33,8 +33,14 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		chr(4) : 'KEEPALIVE',
 	}
 
+	def kind (self,header):
+		return header[18]
+
 	def isupdate (self,header):
 		return header[18] == chr(2)
+
+	def isnotification (self,header):
+		return header[18] == chr(4)
 
 	def name (self,header):
 		return self._name.get(header[18],'SOME WEIRD RFC PACKET')
@@ -46,7 +52,10 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		announced = [ord(_) for _ in body[2+len_w + 2+len_a:]]
 
 		if not withdrawn and not announced:
-			yield '','raw:%s' % bytestream(body)
+			if len(body) == 11:
+				yield 'eor:%d:%d' % (ord(body[-2]),ord(body[-1])),'raw:%s' % bytestream(body)
+			else:  # undecoded MP route
+				yield 'mp:','raw:%s' % bytestream(body)
 
 		while withdrawn:
 			l = withdrawn.pop(0)
@@ -64,12 +73,16 @@ class BGPHandler(asyncore.dispatcher_with_send):
 				r[index] = announced.pop(0)
 			yield 'announce:%s' % '.'.join(str(_) for _ in r) + '/' + str(l), 'raw:%s' % bytestream(body)
 
+	def notification (self,body):
+		yield 'notification:%d,%d' % (ord(body[0]),ord(body[1])), 'raw:%s' % bytestream(body)
+
 	def announce (self,*args):
 		print self.ip,self.port,' '.join(str(_) for _ in args) if len(args) > 1 else args[0]
 
-	def setup (self,ip,port,messages):
+	def setup (self,ip,port,messages,exit):
 		self.ip = ip
 		self.port = port
+		self.exit = exit
 		self.handle_read = self.handle_open
 		self.sequence = {}
 		self.raw = False
@@ -138,12 +151,17 @@ class BGPHandler(asyncore.dispatcher_with_send):
 			self.close()
 			return
 
-		print dump(body)
-		if self.isupdate(header):
-			for parsed,raw in self.routes(body):
+		parser = self._decoder.get(self.kind(header),None)
+
+		if parser:
+			for parsed,raw in parser(self,body):
 				announcement = raw if self.raw else parsed
 
-				if not announcement:  # skip unknows message and EOR
+				if announcement.startswith('eor:'):  # skip EOR
+					self.announce('skip eor',announcement)
+					continue
+
+				if announcement.startswith('mp:'):  # skip unparsed MP
 					self.announce('skip announcement for body :',dump(body))
 					continue
 
@@ -151,16 +169,26 @@ class BGPHandler(asyncore.dispatcher_with_send):
 					self.messages.remove(announcement)
 					self.announce('expected announcement received:',announcement)
 				else:
-					self.announce('unexpected announcement:',announcement)
+					if raw:
+						self.announce('unexpected announcement:','%s %s' % (bytestream(header),bytestream(body)))
+					else:
+						self.announce('unexpected announcement:',announcement)
+
 					self.announce('valid options were:',', '.join(self.messages))
 					sys.exit(1)
 
 				if not self.messages:
 					if not self.update_sequence():
-						self.announce('successful')
-						sys.exit(0)
+						if self.exit:
+							self.announce('successful')
+							sys.exit(0)
 
 		self.send(self.keepalive)
+
+	_decoder= {
+		chr(2) : routes,
+		chr(3) : notification,
+	}
 
 class BGPServer (asyncore.dispatcher):
 	def __init__ (self,host,port,messages):
@@ -169,13 +197,37 @@ class BGPServer (asyncore.dispatcher):
 		self.set_reuse_addr()
 		self.bind((host,port))
 		self.listen(5)
-		self.messages = [message for message in messages if message.count(':')]
+
+		self.messages = {}
+
+		for message in messages:
+			if message[0].isalpha():
+				index,content = message[:1].upper(), message[1:]
+			else:
+				index,content = 'A',message
+			self.messages.setdefault(index,[]).append(content)
 
 	def handle_accept (self):
+		messages = None
+		for number in range(ord('A'),ord('Z')+1):
+			letter = chr(number)
+			if letter in self.messages:
+				messages = self.messages[letter]
+				del self.messages[letter]
+				break
+
+		if not messages:
+			print 'not enough data'
+			sys.exit(1)
+		else:
+			print 'using', messages
+
+		exit = not len(self.messages.keys())
+
 		pair = self.accept()
 		if pair is not None:
 			sock,addr = pair
-			handler = BGPHandler(sock).setup(*addr,messages=self.messages)
+			handler = BGPHandler(sock).setup(*addr,messages=messages,exit=exit)
 
 def drop ():
 	uid = os.getuid()

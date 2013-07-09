@@ -74,11 +74,11 @@ class Peer (object):
 		self._restarted = FORCE_GRACEFUL
 		self._reset_skip()
 
-		# We want to clear the buffer of unsent routes
-		self._clear_routes_buffer = None
-
 		# We have routes following a reload (or we just started)
 		self._have_routes = True
+
+		# We have been asked to teardown the session with this code
+		self._teardown = None
 
 		# We only to try to connect via TCP once
 		self.once = environment.settings().tcp.once
@@ -114,8 +114,13 @@ class Peer (object):
 		self._running = False
 		self._restart = True
 		self._restarted = True
-		self._clear_routes_buffer = True
 		self._neighbor = restart_neighbor
+		self._reset_skip()
+
+	def teardown (self,code,restart=True):
+		self._running = False
+		self._restart = restart
+		self._teardown = code
 		self._reset_skip()
 
 	def run (self):
@@ -149,9 +154,6 @@ class Peer (object):
 			self.bgp.connect()
 
 			self._reset_skip()
-
-			# The reload() function is called before we get it and it will set this value we do not want on startup
-			self._clear_routes_buffer = False
 
 			#
 			# SEND OPEN
@@ -270,14 +272,6 @@ class Peer (object):
 				counter.display()
 
 				#
-				# IF WE RELOADED, CLEAR THE BUFFER WE MAY HAVE QUEUED AND NOT YET SENT
-				#
-
-				# if self._clear_routes_buffer:
-				# 	self._clear_routes_buffer = False
-				# 	self.bgp.clear_buffer()
-
-				#
 				# GIVE INFORMATION ON THE NB OF BUFFERED ROUTES
 				#
 
@@ -323,6 +317,10 @@ class Peer (object):
 			#
 			# NOTIFYING OUR PEER OF THE SHUTDOWN
 			#
+
+			if self._teardown:
+				code, self._teardown = self._teardown, None
+				raise Notify(6,code)
 
 			raise Notify(6,3)
 

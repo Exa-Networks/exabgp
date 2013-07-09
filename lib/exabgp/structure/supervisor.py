@@ -412,6 +412,30 @@ class Supervisor (object):
 				self._pending.append(_withdraw_flow(self,command,peers))
 				return True
 
+		# route announcement / withdrawal
+		if 'teardown' in command:
+			if command.startswith('teardown '):
+				try:
+					_,code = command.split(' ',1)
+					for key in self._peers:
+						self._peers[key].teardown(int(code))
+					self.logger.warning('teardown scheduled for %s' % name,'supervisor')
+					return True
+				except ValueError:
+					pass
+
+			if command.startswith('neighbor '):
+				try:
+					neighborg,ip,teardown,code = command.split(' ')
+					for name in self._peers:
+						if ip in name:
+							self._peers[name].teardown(int(code),[ip,])
+							self.logger.warning('teardown scheduled','supervisor')
+							return True
+					self.logger.warning('teardown peer not found','supervisor')
+				except (IndexError,ValueError):
+					pass
+
 		# unknown
 		self.logger.warning("Command from process not understood : %s" % command,'supervisor')
 		return False

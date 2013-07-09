@@ -3,6 +3,10 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.1.14
+ * Improvement: allow to generate NOTIFICATION messages though the API
+    requested by: Parag Jain
+
 Version 3.1.13 - 6th July 2013
  * Fix: only clear buffered routes on restart and not reload (bug never reported)
  * Fix: an issue when parsing EOR

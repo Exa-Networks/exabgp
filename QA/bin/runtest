@@ -36,7 +36,7 @@ def main ():
 		sequence_file = configuration.replace('.conf','.sequence')
 		if path.isfile(sequence_file):
 			with open(sequence_file,'r') as content:
-				messages = ' '.join(_.strip() for _ in content.readlines())
+				messages = ' '.join(_.strip() for _ in content.readlines() if '#' not in _)
 			check_sequence(exabgp,configuration,sequence_daemon,messages)
 		else:
 			print "sequence check for", configuration
@@ -46,7 +46,7 @@ def main ():
 def check_sequence(exabgp,configuration,daemon,messages):
 	os.environ['exabgp.tcp.once'] = 'true'
 
-	timeout = 10 # seconds
+	timeout = 10  # seconds
 
 	try:
 		signal.signal(signal.SIGALRM, alarm_handler)
@@ -72,7 +72,7 @@ def check_sequence(exabgp,configuration,daemon,messages):
 		for pid in [daemon.pid, exabgp.pid]:
 			try:
 				os.kill(pid,signal.SIGTERM)
-			except OSError,e:
+			except OSError:
 				pass
 
 	if 'successful' in daemon_output:
@@ -83,8 +83,8 @@ def check_sequence(exabgp,configuration,daemon,messages):
 		print 'daemon:\n', daemon_output
 		print
 		print "command lines were:"
-		print ">", ' '.join(command_daemon)
 		print ">", ' '.join(command_exabgp)
+		print "> sudo", ' '.join(command_daemon)
 		print
 
 main()

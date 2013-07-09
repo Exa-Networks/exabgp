@@ -99,7 +99,9 @@ class Notification (Message,Failure):
 # A Notification we need to inform our peer of.
 
 class Notify (Notification):
-	def __init__ (self,code,subcode,data=''):
+	def __init__ (self,code,subcode,data=None):
+		if data is None:
+			data = self._str_subcode.get((code,subcode),'unknown notification type')
 		Notification.__init__(self)
 		self.new(code,subcode,data)
 
