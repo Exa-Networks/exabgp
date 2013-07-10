@@ -1,0 +1,22 @@
+#!/usr/bin/env python
+
+import sys
+import time
+
+messages = [
+'announce route 1.0.0.0/24 next-hop 101.1.101.1 med 200 community [2:1]',
+'neighbor 127.0.0.1 announce route 1.1.0.0/24 next-hop 101.1.101.1',
+'neighbor 127.0.0.1 local-as 1 family-allowed inet4-unicast announce route 1.2.0.0/24 next-hop 101.1.101.1',
+'neighbor 127.0.0.1 local-as 1 family-allowed in-open announce route 9.9.9.9/24 next-hop 101.1.101.1',
+'neighbor 127.0.0.1 local-as 1 peer-as 1 local-ip 127.0.0.1 router-id 1.2.3.4 announce route 1.3.0.0/24 next-hop 101.1.101.1',
+]
+
+while messages:
+	message = messages.pop(0)
+	sys.stdout.write( message + '\n')
+	sys.stdout.flush()
+	time.sleep(0.1)
+
+while True:
+	time.sleep(1)
+
