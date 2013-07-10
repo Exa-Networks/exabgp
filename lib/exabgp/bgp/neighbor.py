@@ -50,7 +50,7 @@ class Neighbor (object):
 
 	def name (self):
 		if self.multisession:
-			session = '/'.join("%s-%s" % (afi,safi) for (afi,safi) in self.families())
+			session = '/'.join("%s-%s" % (afi.name(),safi.name()) for (afi,safi) in self.families())
 		else:
 			session = 'in-open'
 		return "neighbor %s local-ip %s local-as %s peer-as %s router-id %s family-allowed %s" % (self.peer_address,self.local_address,self.local_as,self.peer_as,self.router_id,session)
