@@ -57,15 +57,27 @@ class Negotiated (object):
 		self.multisession = sent_capa.announced(CID.MULTISESSION_BGP) and recv_capa.announced(CID.MULTISESSION_BGP)
 
 		if self.multisession:
-			# local and remote sessionid
-			l_sid = set(sent_capa[CID.MULTISESSION_BGP])
-			# Empty capability is the same as MultiProtocol (which is what we send)
-			r_sid = set(recv_capa[CID.MULTISESSION_BGP]) if recv_capa[CID.MULTISESSION_BGP] else set(recv_capa[CID.MULTIPROTOCOL_EXTENSIONS])
+			sent_ms_capa = set(sent_capa[CID.MULTISESSION_BGP])
+			recv_ms_capa = set(recv_capa[CID.MULTISESSION_BGP])
+
+			if sent_ms_capa == set([]):
+				sent_ms_capa = set([CID.MULTIPROTOCOL_EXTENSIONS])
+			if recv_ms_capa == set([]):
+				recv_ms_capa = set([CID.MULTIPROTOCOL_EXTENSIONS])
+
+			if sent_ms_capa != recv_ms_capa:
+				self.multisession = (2,8,'multisession, our peer did not reply with the same sessionid')
 
 			# The way we implement MS-BGP, we only send one MP per session
-			if l_sid.intersection(r_sid) != l_sid:
-				self.multisession = (2,8,'peer did not reply with the sessionid we sent')
-			# We can not collide due to the way we generate the configuration
+			# therefore we can not collide due to the way we generate the configuration
+
+			for capa in sent_ms_capa:
+				# no need to check that the capability exists, we generated it
+				# checked it is what we sent and only send MULTIPROTOCOL_EXTENSIONS
+				if sent_capa[capa] != recv_capa[capa]:
+					self.multisession = (2,8,'when checking session id, capability %s did not match' % str(capa))
+					break
+
 		elif sent_capa.announced(CID.MULTISESSION_BGP):
 			self.multisession = (2,9,'multisession is mandatory with this peer')
 

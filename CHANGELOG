@@ -9,6 +9,7 @@ Version 3.1.14
  * Improvement: new syntax for the multiple neighbor announcement created in 3.1.13
     Allow to filter on more than the IP address
     requested by: Petr Lapukhov
+ * Fix: potential issue with multisession collision detection
 
 Version 3.1.13 - 6th July 2013
  * Fix: only clear buffered routes on restart and not reload (bug never reported)
