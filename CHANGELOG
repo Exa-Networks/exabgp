@@ -10,6 +10,7 @@ Version 3.1.14
     Allow to filter on more than the IP address
     requested by: Petr Lapukhov
  * Fix: potential issue with multisession collision detection
+ * Fix: with multisession recent python would refuse to copy an route due to a lock in logger of the neighbor object
 
 Version 3.1.13 - 6th July 2013
  * Fix: only clear buffered routes on restart and not reload (bug never reported)

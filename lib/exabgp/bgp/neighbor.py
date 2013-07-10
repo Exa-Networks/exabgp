@@ -15,7 +15,6 @@ from exabgp.structure.api import APIOptions
 
 from exabgp.rib.watchdog import Watchdog
 
-from exabgp.structure.log import Logger
 
 # The definition of a neighbor (from reading the configuration)
 class Neighbor (object):
@@ -24,7 +23,7 @@ class Neighbor (object):
 	watchdog = Watchdog()
 
 	def __init__ (self):
-		self.logger = Logger()
+		# self.logger should not be used here as long as we do use deepcopy as it contains a Lock
 		self.description = ''
 		self.router_id = None
 		self.local_address = None
