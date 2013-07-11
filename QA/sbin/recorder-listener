@@ -7,9 +7,8 @@ import time
 import asyncore
 import socket
 import errno
-from struct import unpack
 
-def dump (value):
+def od (value):
 	def spaced (value):
 		even = None
 		for v in value:

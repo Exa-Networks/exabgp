@@ -1980,7 +1980,7 @@ class Configuration (object):
 
 	def selfcheck (self):
 		# self check to see if we can decode what we encode
-		from exabgp.structure.utils import dump
+		from exabgp.util.od import od
 		from exabgp.bgp.message.update import Update
 		from exabgp.bgp.message.open import Open
 		from exabgp.bgp.message.open.capability import Capabilities
@@ -2025,6 +2025,6 @@ class Configuration (object):
 							str2 = route.extensive()
 							self.logger.info('parsed  route %s' % str1,'parser')
 							self.logger.info('recoded route %s' % str2,'parser')
-							self.logger.info('recoded hex   %s\n' % dump(pack),'parser')
+							self.logger.info('recoded hex   %s\n' % od(pack),'parser')
 		import sys
 		sys.exit(0)

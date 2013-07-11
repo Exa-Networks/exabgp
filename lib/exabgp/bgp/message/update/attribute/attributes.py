@@ -8,7 +8,7 @@ Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 
 from struct import unpack,error
 
-from exabgp.structure.utils import dump
+from exabgp.util.od import od
 from exabgp.structure.environment import environment
 from exabgp.structure.cache import Cache
 
@@ -227,7 +227,7 @@ class Attributes (dict):
 		attribute = data[:length]
 
 		logger = Logger()
-		logger.parser(LazyFormat("parsing flag %x type %02x (%s) len %02x %s" % (flag,int(code),code,length,'payload ' if length else ''),dump,data[:length]))
+		logger.parser(LazyFormat("parsing flag %x type %02x (%s) len %02x %s" % (flag,int(code),code,length,'payload ' if length else ''),od,data[:length]))
 
 		if code == AID.ORIGIN:
 			# This if block should never be called anymore ...

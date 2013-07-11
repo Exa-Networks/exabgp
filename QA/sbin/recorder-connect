@@ -3,12 +3,9 @@
 import os
 import sys
 import pwd
-import asyncore
 import socket
-import errno
-from struct import unpack
 
-def dump (value):
+def od (value):
 	def spaced (value):
 		even = None
 		for v in value:
@@ -54,7 +51,7 @@ with open(sys.argv[3]) as record:
 		while True:
 			count = 0
 			even = False
-			byte = self.recv(1)
+			byte = sock.recv(1)
 			if byte == '': break
 			record.write('%02X' % ord(byte))
 			count = (count + 1) % 8

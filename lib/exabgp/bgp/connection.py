@@ -19,7 +19,8 @@ import select
 
 from exabgp.structure.environment import environment
 
-from exabgp.structure.utils import dump,trace
+from exabgp.util.od import od
+from exabgp.util.trace import trace
 from exabgp.protocol.family import AFI
 from exabgp.bgp.message import Failure
 
@@ -209,7 +210,7 @@ class Connection (object):
 			if not r:
 				# The socket was closed - no data is available anymore (the caller will call .close() on us)
 				raise Failure('The TCP connection is closed')
-			self.logger.wire(LazyFormat("Peer %15s RECV " % self.peer,dump,r))
+			self.logger.wire(LazyFormat("Peer %15s RECV " % self.peer,od,r))
 			return r
 		except socket.timeout,e:
 			self.close()
@@ -227,7 +228,7 @@ class Connection (object):
 		if not self.ready():
 			return False
 		try:
-			self.logger.wire(LazyFormat("Peer %15s SENT " % self.peer,dump,data))
+			self.logger.wire(LazyFormat("Peer %15s SENT " % self.peer,od,data))
 			# we can not use sendall as in case of network buffer filling
 			# it does raise and does not let you know how much was sent
 			sent = 0

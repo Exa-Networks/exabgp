@@ -8,8 +8,6 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from struct import unpack
 
-from exabgp.structure.utils import hexa
-
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.id import CapabilityID
@@ -19,6 +17,9 @@ from exabgp.bgp.message.open.capability.graceful import Graceful
 from exabgp.bgp.message.open.capability.ms import MultiSession
 from exabgp.bgp.message.open.capability.addpath import AddPath
 from exabgp.bgp.message.notification import Notify
+
+def hexa (value):
+	return "%s" % [(hex(ord(_))) for _ in value]
 
 # =================================================================== Unknown
 
