@@ -4,12 +4,10 @@ host, port = "localhost", 9999
 
 import os
 import sys
-import readline
 import signal
 import socket
 import time
 import select
-import signal
 
 from SocketServer import TCPServer,StreamRequestHandler
 
@@ -20,19 +18,17 @@ def read_command(rfile,wfile,prompt):
 	def timeout_handler(signum, frame):
 		raise TimeoutException()
 
-	n = wfile.fileno()
-
-	signal.signal(signal.SIGALRM, timeout_handler) 
+	signal.signal(signal.SIGALRM, timeout_handler)
 	signal.alarm(1)
 
 	try:
 		if prompt:
 			wfile.write('\n> ')
 		c = rfile.readline()
-		signal.alarm(0)
 	except TimeoutException:
+		c = ''
+	finally:
 		signal.alarm(0)
-		return ''
 
 	return c.strip()
 
@@ -126,7 +122,7 @@ class Control (StreamRequestHandler):
 
 			try:
 				r,_,_ = select.select([sys.stdin], [], [], 1.0)
-			except select.error,e:
+			except select.error:
 				raise KeyboardInterrupt('SIGNAL received in select')
 
 			if r:
@@ -137,12 +133,15 @@ class Control (StreamRequestHandler):
 				# From http://stackoverflow.com/questions/5486717/python-select-doesnt-signal-all-input-from-pipe
 				# Note that internally file.readlines([size]) loops and invokes the read() syscall more than once, attempting to fill an internal buffer of size. The first call to read() will immediately return, since select() indicated the fd was readable. However the 2nd call will block until data is available, which defeats the purpose of using select. In any case it is tricky to use file.readlines([size]) in an asynchronous app.
 				response = os.read(sys.stdin.fileno(),4096)
+				# this should not happen as select informed us of data to read but it seems it does
+				if not response:
+					break
 				self.wfile.write(response)
 				prompt = True
 				time.sleep(0.1)
 				try:
 					r,_,_ = select.select([sys.stdin], [], [], 1.0)
-				except select.error,e:
+				except select.error:
 					raise KeyboardInterrupt('SIGNAL received in select')
 			continue
 
