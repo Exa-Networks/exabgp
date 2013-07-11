@@ -13,7 +13,7 @@ from exabgp.structure.environment import environment
 env = environment.setup('')
 
 from exabgp.structure.configuration import Configuration
-from exabgp.reactor.supervisor import Supervisor
+from exabgp.reactor import Reactor
 
 class TestPeer (unittest.TestCase):
 	text_configuration = """\
@@ -35,8 +35,8 @@ neighbor 192.0.2.181 {
 		self.assertEqual(self.configuration.reload(),True,"could not read the configuration, run the configuration unittest")
 
 	def test_connection (self):
-		supervisor = Supervisor(self.configuration)
-		supervisor.run()
+		reactor = Reactor(self.configuration)
+		reactor.run()
 		#self.failIf()
 
 if __name__ == '__main__':

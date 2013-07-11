@@ -20,14 +20,14 @@ MAXFD = 2048
 
 class Daemon (object):
 
-	def __init__ (self,supervisor):
+	def __init__ (self,reactor):
 		self.pid = environment.settings().daemon.pid
 		self.user = environment.settings().daemon.user
 		self.daemonize = environment.settings().daemon.daemonize
 
 		self.logger = Logger()
 
-		self.supervisor = supervisor
+		self.reactor = reactor
 
 		os.chdir('/')
 		#os.umask(0)
@@ -152,7 +152,7 @@ class Daemon (object):
 				if pid > 0:
 					os._exit(0)
 			except OSError, e:
-				self.logger.supervisor('Can not fork, errno %d : %s' % (e.errno,e.strerror),'critical')
+				self.logger.reactor('Can not fork, errno %d : %s' % (e.errno,e.strerror),'critical')
 
 		# do not detach if we are already supervised or run by init like process
 		if self._is_socket(sys.__stdin__.fileno()) or os.getppid() == 1:

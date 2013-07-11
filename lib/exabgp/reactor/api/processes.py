@@ -30,9 +30,9 @@ class Processes (object):
 	respawn_number = 5
 	respawn_timemask = 0xFFFFFF - pow(2,6) + 1  # '0b111111111111111111000000' (around a minute, 63 seconds)
 
-	def __init__ (self,supervisor):
+	def __init__ (self,reactor):
 		self.logger = Logger()
-		self.supervisor = supervisor
+		self.reactor = reactor
 		self.clean()
 		self.silence = False
 
@@ -73,7 +73,7 @@ class Processes (object):
 			if process in self._process:
 				self.logger.processes("process already running")
 				return
-			if not process in self.supervisor.configuration.process:
+			if not process in self.reactor.configuration.process:
 				self.logger.processes("Can not start process, no configuration for it (anymore ?)")
 				return
 
@@ -81,9 +81,9 @@ class Processes (object):
 			# \x1b[?1034h (no-eol) (esc)
 			os.environ['TERM']='dumb'
 
-			run = self.supervisor.configuration.process[process].get('run','')
+			run = self.reactor.configuration.process[process].get('run','')
 			if run:
-				api = self.supervisor.configuration.process[process]['encoder']
+				api = self.reactor.configuration.process[process]['encoder']
 				self._api_encoder[process] = JSON('2.0') if api == 'json' else Text('1.0')
 
 				self._process[process] = subprocess.Popen(run,
@@ -112,7 +112,7 @@ class Processes (object):
 					# record respawing
 					self._respawning[process] = {around_now: 1}
 
-			neighbor = self.supervisor.configuration.process[process]['neighbor']
+			neighbor = self.reactor.configuration.process[process]['neighbor']
 			self._neighbor_process.setdefault(neighbor,[]).append(process)
 		except (subprocess.CalledProcessError,OSError,ValueError),e:
 			self._broken.append(process)
@@ -120,12 +120,12 @@ class Processes (object):
 			self.logger.processes("reason: %s" % str(e))
 
 	def start (self,restart=False):
-		for process in self.supervisor.configuration.process:
+		for process in self.reactor.configuration.process:
 			if restart:
 				self._terminate(process)
 			self._start(process)
 		for process in list(self._process):
-			if not process in self.supervisor.configuration.process:
+			if not process in self.reactor.configuration.process:
 				self._terminate(process)
 
 	def broken (self,neighbor):

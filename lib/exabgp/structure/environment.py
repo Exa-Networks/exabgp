@@ -239,7 +239,7 @@ class environment (object):
 			env.log.destination=syslog
 
 		if os.environ.get('DEBUG_SUPERVISOR','').lower() in ['1','yes']:
-			env.log.supervisor = True
+			env.log.reactor = True
 		if os.environ.get('DEBUG_DAEMON','').lower() in ['1','yes']:
 			env.log.daemon = True
 		if os.environ.get('DEBUG_PROCESSES','').lower() in ['1','yes']:
@@ -264,7 +264,7 @@ class environment (object):
 		if os.environ.get('DEBUG_ALL','').lower() in ['1','yes']:
 			env.log.all = True
 		if os.environ.get('DEBUG_CORE','').lower() in ['1','yes']:
-			env.log.supervisor = True
+			env.log.reactor = True
 			env.log.daemon = True
 			env.log.processes = True
 			env.log.message = True

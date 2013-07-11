@@ -185,7 +185,7 @@ environment.configuration = {
 		),
 		'all'           : (environment.boolean,environment.lower,'false',    'report debug information for everything'),
 		'configuration' : (environment.boolean,environment.lower,'false',    'report command parsing'),
-		'supervisor'    : (environment.boolean,environment.lower,'true',     'report signal received, command reload'),
+		'reactor'       : (environment.boolean,environment.lower,'true',     'report signal received, command reload'),
 		'daemon'        : (environment.boolean,environment.lower,'true',     'report pid change, forking, ...'),
 		'processes'     : (environment.boolean,environment.lower,'true',     'report handling of forked processes'),
 		'network'       : (environment.boolean,environment.lower,'true',     'report networking information (TCP/IP, network state,...)'),

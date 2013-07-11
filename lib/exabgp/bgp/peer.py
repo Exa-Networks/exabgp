@@ -42,7 +42,7 @@ class RouteCounter (object):
 			self.last_update = time.time()
 			if self.count > self.last_count:
 				self.last_count = self.count
-				self.logger.supervisor(self.me('processed %d routes' % self.count))
+				self.logger.reactor(self.me('processed %d routes' % self.count))
 
 	def increment (self,count):
 		self.count += count
@@ -56,9 +56,9 @@ FORCE_GRACEFUL = True
 # Present a File like interface to socket.socket
 
 class Peer (object):
-	def __init__ (self,neighbor,supervisor):
+	def __init__ (self,neighbor,reactor):
 		self.logger = Logger()
-		self.supervisor = supervisor
+		self.reactor = reactor
 		self.neighbor = neighbor
 		# The next restart neighbor definition
 		self._neighbor = None
@@ -141,11 +141,11 @@ class Peer (object):
 			self._loop = self._run()
 		else:
 			self.bgp.close('safety shutdown before unregistering peer, session should already be closed, report if seen in anywhere')
-			self.supervisor.unschedule(self)
+			self.reactor.unschedule(self)
 
 	def _run (self):
 		try:
-			if self.supervisor.processes.broken(self.neighbor.peer_address):
+			if self.reactor.processes.broken(self.neighbor.peer_address):
 				# XXX: we should perhaps try to restart the process ??
 				self.logger.error('ExaBGP lost the helper process for this peer - stopping','process')
 				self._running = False
@@ -212,7 +212,7 @@ class Peer (object):
 			self.logger.network('Connected to peer %s' % self.neighbor.name())
 			if self.neighbor.api.neighbor_changes:
 				try:
-					self.supervisor.processes.up(self.neighbor.peer_address)
+					self.reactor.processes.up(self.neighbor.peer_address)
 				except ProcessError:
 					# Can not find any better error code than 6,0 !
 					# XXX: We can not restart the program so this will come back again and again - FIX
@@ -277,7 +277,7 @@ class Peer (object):
 
 				nb_pending = self.bgp.buffered()
 				if nb_pending:
-					self.logger.supervisor(self.me('BUFFERED MESSAGES  (%d)' % nb_pending))
+					self.logger.reactor(self.me('BUFFERED MESSAGES  (%d)' % nb_pending))
 					count = 0
 
 				#
@@ -288,7 +288,7 @@ class Peer (object):
 
 				if self._have_routes:
 					self._have_routes = False
-					self.logger.supervisor(self.me('checking for new routes to send'))
+					self.logger.reactor(self.me('checking for new routes to send'))
 
 					for count in self.bgp.new_update():
 						yield True
@@ -310,7 +310,7 @@ class Peer (object):
 			#
 
 			if self.neighbor.graceful_restart and opn.capabilities.announced(CapabilityID.GRACEFUL_RESTART):
-				self.logger.error('Closing the connection without notification','supervisor')
+				self.logger.error('Closing the connection without notification','reactor')
 				self.bgp.close('graceful restarted negotiated, closing without sending any notification')
 				return
 
@@ -349,17 +349,17 @@ class Peer (object):
 		#
 
 		except Notify,e:
-			self.logger.error(self.me('>> NOTIFICATION (%d,%d) to peer [%s] %s' % (e.code,e.subcode,str(e),e.data)),'supervisor')
+			self.logger.error(self.me('>> NOTIFICATION (%d,%d) to peer [%s] %s' % (e.code,e.subcode,str(e),e.data)),'reactor')
 			self.bgp.clear_buffer()
 			try:
 				self.bgp.new_notification(e)
 			except Failure:
-				self.logger.error(self.me('NOTIFICATION NOT SENT','supervisor'))
+				self.logger.error(self.me('NOTIFICATION NOT SENT','reactor'))
 				pass
 			try:
 				self.bgp.close('notification sent (%d,%d) [%s] %s' % (e.code,e.subcode,str(e),e.data))
 			except Failure:
-				self.logger.error(self.me('issue cleaning session','supervisor'))
+				self.logger.error(self.me('issue cleaning session','reactor'))
 			return
 
 		#
@@ -367,7 +367,7 @@ class Peer (object):
 		#
 
 		except Notification, e:
-			self.logger.error(self.me('Received Notification (%d,%d) %s' % (e.code,e.subcode,str(e))),'supervisor')
+			self.logger.error(self.me('Received Notification (%d,%d) %s' % (e.code,e.subcode,str(e))),'reactor')
 			self.bgp.clear_buffer()
 			try:
 				self.bgp.close('notification received (%d,%d) %s' % (e.code,e.subcode,str(e)))
@@ -380,7 +380,7 @@ class Peer (object):
 		#
 
 		except Failure, e:
-			self.logger.error(self.me(str(e)),'supervisor')
+			self.logger.error(self.me(str(e)),'reactor')
 			self._more_skip()
 			self.bgp.clear_buffer()
 			try:
@@ -394,7 +394,7 @@ class Peer (object):
 		#
 
 		except Exception, e:
-			self.logger.error(self.me('UNHANDLED EXCEPTION'),'supervisor')
+			self.logger.error(self.me('UNHANDLED EXCEPTION'),'reactor')
 			self._more_skip()
 			self.bgp.clear_buffer()
 			# XXX: we need to read this from the env.
@@ -402,6 +402,6 @@ class Peer (object):
 				traceback.print_exc(file=sys.stdout)
 				raise
 			else:
-				self.logger.error(self.me(str(e)),'supervisor')
+				self.logger.error(self.me(str(e)),'reactor')
 			if self.bgp: self.bgp.close('internal problem %s' % str(e))
 			return

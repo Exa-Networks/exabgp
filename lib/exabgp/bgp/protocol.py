@@ -66,7 +66,7 @@ class Protocol (object):
 
 			if self.peer.neighbor.api.neighbor_changes:
 				try:
-					self.peer.supervisor.processes.connected(self.peer.neighbor.peer_address)
+					self.peer.reactor.processes.connected(self.peer.neighbor.peer_address)
 				except ProcessError:
 					raise Failure('Could not send connected message(s) to helper program(s)')
 
@@ -78,14 +78,14 @@ class Protocol (object):
 
 			if self.peer.neighbor.api.neighbor_changes:
 				try:
-					self.peer.supervisor.processes.down(self.peer.neighbor.peer_address,reason)
+					self.peer.reactor.processes.down(self.peer.neighbor.peer_address,reason)
 				except ProcessError:
 					raise Failure('Could not send down message(s) to helper program(s)')
 
 	def write (self,message):
 		if self.neighbor.api.send_packets:
 			try:
-				self.peer.supervisor.processes.send(self.peer.neighbor.peer_address,message[18],message[:19],message[19:])
+				self.peer.reactor.processes.send(self.peer.neighbor.peer_address,message[18],message[:19],message[19:])
 			except ProcessError:
 				raise Failure('Could not send update message(s) to helper program(s)')
 		return self.connection.write(message)
@@ -137,7 +137,7 @@ class Protocol (object):
 
 		if self.neighbor.api.receive_packets:
 			try:
-				self.peer.supervisor.processes.receive(self.peer.neighbor.peer_address,msg,header,body)
+				self.peer.reactor.processes.receive(self.peer.neighbor.peer_address,msg,header,body)
 			except ProcessError:
 				raise Failure('Could not send update message(s) to helper program(s)')
 
@@ -158,7 +158,7 @@ class Protocol (object):
 					self.logger.routes(LazyFormat(self.me(''),str,route))
 
 				try:
-					self.peer.supervisor.processes.routes(self.neighbor.peer_address,update.routes)
+					self.peer.reactor.processes.routes(self.neighbor.peer_address,update.routes)
 				except ProcessError:
 					raise Failure('Could not send routes message(s) to helper program(s)')
 				return update

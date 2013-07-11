@@ -12,7 +12,7 @@ import syslog
 
 from exabgp.version import version
 # import before the fork to improve copy on write memory savings
-from exabgp.reactor.supervisor import Supervisor
+from exabgp.reactor import Reactor
 
 import string
 
@@ -29,7 +29,7 @@ def __exit(memory,code):
 		print
 		print "generating memory utilisation graph"
 		print
-		obj = objgraph.by_type('Supervisor')
+		obj = objgraph.by_type('Reactor')
 		objgraph.show_backrefs([obj], max_depth=10)
 	sys.exit(code)
 
@@ -180,7 +180,7 @@ def main ():
 			),
 			'all'           : (environment.boolean,environment.lower,'false',    'report debug information for everything'),
 			'configuration' : (environment.boolean,environment.lower,'false',    'report command parsing'),
-			'supervisor'    : (environment.boolean,environment.lower,'true',     'report signal received, command reload'),
+			'reactor'       : (environment.boolean,environment.lower,'true',     'report signal received, command reload'),
 			'daemon'        : (environment.boolean,environment.lower,'true',     'report pid change, forking, ...'),
 			'processes'     : (environment.boolean,environment.lower,'true',     'report handling of forked processes'),
 			'network'       : (environment.boolean,environment.lower,'true',     'report networking information (TCP/IP, network state,...)'),
@@ -339,7 +339,7 @@ def main ():
 	except OSError, e:
 		from exabgp.structure.log import Logger
 		logger = Logger()
-		logger.supervisor('Can not fork, errno %d : %s' % (e.errno,e.strerror),'critical')
+		logger.reactor('Can not fork, errno %d : %s' % (e.errno,e.strerror),'critical')
 
 def run (env,comment,configuration,pid=0):
 	from exabgp.structure.log import Logger
@@ -349,7 +349,7 @@ def run (env,comment,configuration,pid=0):
 		logger.info(comment,'configuration')
 
 	if not env.profile.enable:
-		Supervisor(configuration).run()
+		Reactor(configuration).run()
 		__exit(env.debug.memory,0)
 
 	try:
@@ -358,7 +358,7 @@ def run (env,comment,configuration,pid=0):
 		import profile
 
 	if not env.profile.file or env.profile.file == 'stdout':
-		profile.run('Supervisor(configuration).run()')
+		profile.run('Reactor(configuration).run()')
 		__exit(env.debug.memory,0)
 
 	if pid:
@@ -374,13 +374,13 @@ def run (env,comment,configuration,pid=0):
 
 	if not notice:
 		logger.info('profiling ....','profile')
-		profile.run('Supervisor(configuration).run()',filename=profile_name)
+		profile.run('Reactor(configuration).run()',filename=profile_name)
 		__exit(env.debug.memory,0)
 	else:
 		logger.info("-"*len(notice),'profile')
 		logger.info(notice,'profile')
 		logger.info("-"*len(notice),'profile')
-		Supervisor(configuration).run()
+		Reactor(configuration).run()
 		__exit(env.debug.memory,0)
 
 

@@ -14,6 +14,7 @@ Version 3.1.14
     patch by: Vincent Bernat
  * Fix: potential issue with multisession collision detection
  * Fix: with multisession recent python would refuse to copy an route due to a lock in logger of the neighbor object
+ * Compatibility: supervisor was renamed reactor
 
 Version 3.1.13 - 6th July 2013
  * Fix: only clear buffered routes on restart and not reload (bug never reported)
