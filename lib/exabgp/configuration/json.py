@@ -8,7 +8,7 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 
 from decimal import Decimal
 
-from exabgp import coroutine
+from exabgp.util import coroutine
 
 class JSONError(Exception):
 	pass
