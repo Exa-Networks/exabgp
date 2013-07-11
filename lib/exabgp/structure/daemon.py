@@ -101,9 +101,27 @@ class Daemon (object):
 				os.setgid(ngid)
 			if not uid:
 				os.setuid(nuid)
-			return False
+
+			cuid = os.getuid()
+			ceid = os.geteuid()
+			cgid = os.getgid()
+
+			if cuid < 0:
+				cuid = (1<<32) + cuid
+
+			if cgid < 0:
+				cgid = (1<<32) + cgid
+
+			if ceid < 0:
+				ceid = (1<<32) + ceid
+
+			if nuid != cuid or nuid != ceid or ngid != cgid:
+				return True
+
 		except OSError:
 			return True
+
+		return False
 
 	def _is_socket (self,fd):
 		try:
