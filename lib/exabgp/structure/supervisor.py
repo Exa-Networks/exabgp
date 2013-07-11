@@ -34,6 +34,7 @@ class Supervisor (object):
 		self._peers = {}
 		self._shutdown = False
 		self._reload = False
+		self._reload_processes = False
 		self._restart = False
 		self._route_update = False
 		self._saved_pid = False
@@ -43,6 +44,7 @@ class Supervisor (object):
 		signal.signal(signal.SIGTERM, self.sigterm)
 		signal.signal(signal.SIGHUP, self.sighup)
 		signal.signal(signal.SIGALRM, self.sigalrm)
+		signal.signal(signal.SIGUSR1, self.sigusr1)
 
 	def sigterm (self,signum, frame):
 		self.logger.info("SIG TERM received",'supervisor')
@@ -55,6 +57,11 @@ class Supervisor (object):
 	def sigalrm (self,signum, frame):
 		self.logger.info("SIG ALRM received",'supervisor')
 		self._restart = True
+
+	def sigusr1 (self,signum, frame):
+		self.logger.info("SIG USR1 received",'supervisor')
+		self._reload = True
+		self._reload_processes = True
 
 	def run (self,supervisor_speed=0.5):
 		if self.daemon.drop_privileges():
@@ -88,7 +95,8 @@ class Supervisor (object):
 						self.shutdown()
 					elif self._reload and reload_completed:
 						self._reload = False
-						self.reload()
+						self.reload(self._reload_processes)
+						self._reload_processes = False
 					elif self._restart:
 						self._restart = False
 						self.restart()
@@ -175,7 +183,7 @@ class Supervisor (object):
 		for key in self._peers.keys():
 			self._peers[key].stop()
 
-	def reload (self):
+	def reload (self,restart=False):
 		"""reload the configuration and send to the peer the route which changed"""
 		self.logger.info("Performing reload of exabgp %s" % version,'supervisor')
 
@@ -207,7 +215,7 @@ class Supervisor (object):
 					self._peers[key].reload(neighbor)
 		self.logger.warning("Loaded new configuration successfully",'configuration')
 		# This only starts once ...
-		self.processes.start()
+		self.processes.start(restart)
 
 	def run_pending (self,pending):
 		# generators can return True or False, False mean they do not want more

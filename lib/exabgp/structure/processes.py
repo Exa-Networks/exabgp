@@ -119,8 +119,10 @@ class Processes (object):
 			self.logger.processes("Could not start process %s" % process)
 			self.logger.processes("reason: %s" % str(e))
 
-	def start (self):
+	def start (self,restart=False):
 		for process in self.supervisor.configuration.process:
+			if restart:
+				self._terminate(process)
 			self._start(process)
 		for process in list(self._process):
 			if not process in self.supervisor.configuration.process:

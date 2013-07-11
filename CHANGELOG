@@ -10,6 +10,8 @@ Version 3.1.14
     Allow to filter on more than the IP address
     requested by: Petr Lapukhov
  * Improvement: better uid/euid/gid change check
+ * Improvement: allow to reload with restart of helper process with SIGUSR1
+    patch by: Vincent Bernat
  * Fix: potential issue with multisession collision detection
  * Fix: with multisession recent python would refuse to copy an route due to a lock in logger of the neighbor object
 
