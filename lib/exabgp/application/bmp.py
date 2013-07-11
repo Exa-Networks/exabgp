@@ -13,13 +13,12 @@ import sys
 import pwd
 import socket
 import select
-import errno
 import asyncore
 
 from struct import unpack
 
 from exabgp.version import version
-
+from exabgp.util.error import error
 from exabgp.reactor.api.encoding import JSON
 from exabgp.bgp.message.update import Update
 
@@ -63,7 +62,7 @@ class BMPHandler (asyncore.dispatcher_with_send):
 			try:
 				data = self.recv(left)
 			except socket.error, e:
-				if e.args[0] in (errno.EWOULDBLOCK,errno.EAGAIN):
+				if e.args[0] in error.block:
 					continue
 				print "problem reading on socket", str(e)
 				return None

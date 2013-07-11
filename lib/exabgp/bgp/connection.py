@@ -6,41 +6,21 @@ Created by Thomas Mangin on 2009-09-06.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-#import os
-#import sys
 import platform
 import struct
 import time
 import socket
-#import fcntl
-import errno
 import select
-#import array
 
 from exabgp.configuration.environment import environment
 
 from exabgp.util.od import od
 from exabgp.util.trace import trace
+from exabgp.util.error import error,errno
 from exabgp.protocol.family import AFI
 from exabgp.bgp.message import Failure
 
 from exabgp.logger import Logger,LazyFormat
-
-errno_block = set((
-	errno.EINPROGRESS, errno.EALREADY,
-	errno.EAGAIN, errno.EWOULDBLOCK,
-	errno.EINTR, errno.EDEADLK,
-	errno.EBUSY, errno.ENOBUFS,
-	errno.ENOMEM,
-))
-
-errno_fatal = set((
-	errno.ECONNABORTED, errno.EPIPE,
-	errno.ECONNREFUSED, errno.EBADF,
-	errno.ESHUTDOWN, errno.ENOTCONN,
-	errno.ECONNRESET, errno.ETIMEDOUT,
-	errno.EINVAL, errno.EHOSTUNREACH,
-))
 
 # we could not connect to the peer
 class NotConnected (Exception):
@@ -178,7 +158,7 @@ class Connection (object):
 			r,_,_ = select.select([self.io,],[],[],0)
 		except select.error,e:
 			errno,message = e.args
-			if errno in errno_block:
+			if errno in error.block:
 				return False
 			raise
 		if r: return True
@@ -190,7 +170,7 @@ class Connection (object):
 				_,w,_ = select.select([],[self.io,],[],0)
 			except select.error,e:
 				eno,message = e.args
-				if eno in errno_block:
+				if eno in error.block:
 					if self.async:
 						return False
 					continue
@@ -241,7 +221,7 @@ class Connection (object):
 						raise Failure('lost TCP session')
 					sent += nb
 				except socket.error,e:
-					if e.args[0] in errno_block:
+					if e.args[0] in error.block:
 						if sent == 0:
 							self.logger.wire("%15s problem sending message, errno %s, will retry later" % (errno.errorcode[e.args[0]],self.peer))
 							return False
@@ -256,7 +236,7 @@ class Connection (object):
 		except socket.error, e:
 			# Must never happen as we are performing a select before the write
 			#failure = getattr(e,'errno',None)
-			#if failure in errno_block:
+			#if failure in error.block:
 			#	return False
 			self.close()
 			self.logger.wire("%15s %s" % (self.peer,trace()))

@@ -15,7 +15,7 @@ from exabgp.version import version
 from exabgp.reactor.daemon import Daemon
 from exabgp.reactor.api.processes import Processes,ProcessError
 from exabgp.bgp.peer import Peer
-from exabgp.bgp.connection import errno_block
+from exabgp.util.error import error
 
 from exabgp.configuration.file import Configuration
 from exabgp.configuration.environment import environment
@@ -151,7 +151,7 @@ class Reactor (object):
 							read,_,_ = select.select(ios,[],[],max(reactor_speed-duration,0))
 						except select.error,e:
 							errno,message = e.args
-							if not errno in errno_block:
+							if not errno in error.block:
 								raise
 					else:
 						if duration < reactor_speed:
