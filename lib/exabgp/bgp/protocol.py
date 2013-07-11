@@ -27,7 +27,7 @@ from exabgp.bgp.message.refresh import RouteRefresh
 
 from exabgp.reactor.api.processes import ProcessError
 
-from exabgp.structure.log import Logger,LazyFormat
+from exabgp.logger import Logger,LazyFormat
 
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000

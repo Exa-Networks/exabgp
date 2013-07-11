@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2013-03-18.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 '''
 
-from exabgp.structure.enumeration import Enumeration
+from exabgp.util.enumeration import Enumeration
 
 TYPE = Enumeration (
 	'null',     # -  1

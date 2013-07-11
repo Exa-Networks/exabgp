@@ -87,7 +87,7 @@ def help (comment=''):
 	sys.stdout.write('Valid configuration options are :\n')
 	sys.stdout.write('\n')
 
-	from exabgp.structure.environment import environment
+	from exabgp.configuration.environment import environment
 
 	for line in environment.default():
 			sys.stdout.write(' - %s\n' % line)
@@ -151,7 +151,7 @@ def main ():
 	else:
 		envfile = arguments['env']
 
-	from exabgp.structure.environment import environment
+	from exabgp.configuration.environment import environment
 
 	environment.application = 'exabgp'
 	environment.configuration = {
@@ -281,7 +281,7 @@ def main ():
 			env.debug.memory = True
 
 	if parse_error:
-		from exabgp.structure.log import Logger
+		from exabgp.logger import Logger
 		logger = Logger()
 		logger.error(parse_error,'configuration')
 		sys.exit(1)
@@ -292,14 +292,14 @@ def main ():
 		for f in arguments['file']:
 			configurations.append(os.path.realpath(os.path.normpath(f)))
 	else:
-		from exabgp.structure.log import Logger
+		from exabgp.logger import Logger
 		logger = Logger()
 		logger.error('no configuration file provided','configuration')
 		sys.exit(1)
 
 	for configuration in configurations:
 		if not os.path.isfile(configuration):
-			from exabgp.structure.log import Logger
+			from exabgp.logger import Logger
 			logger = Logger()
 			logger.error('the argument passed as configuration is not a file','configuration')
 			sys.exit(1)
@@ -314,7 +314,7 @@ def main ():
 		run(env,comment,configuration)
 
 	if not (env.log.destination in ('syslog','stdout','stderr') or env.log.destination.startswith('host:')):
-		from exabgp.structure.log import Logger
+		from exabgp.logger import Logger
 		logger = Logger()
 		logger.error('can not log to files when running multiple configuration (as we fork)','configuration')
 		sys.exit(1)
@@ -337,12 +337,12 @@ def main ():
 		for pid in pids:
 			os.waitpid(pid,0)
 	except OSError, e:
-		from exabgp.structure.log import Logger
+		from exabgp.logger import Logger
 		logger = Logger()
 		logger.reactor('Can not fork, errno %d : %s' % (e.errno,e.strerror),'critical')
 
 def run (env,comment,configuration,pid=0):
-	from exabgp.structure.log import Logger
+	from exabgp.logger import Logger
 	logger = Logger()
 
 	if comment:

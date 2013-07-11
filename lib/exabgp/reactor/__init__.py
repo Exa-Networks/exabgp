@@ -14,12 +14,13 @@ from exabgp.version import version
 
 from exabgp.reactor.daemon import Daemon
 from exabgp.reactor.api.processes import Processes,ProcessError
-from exabgp.structure.configuration import Configuration
 from exabgp.bgp.peer import Peer
 from exabgp.bgp.connection import errno_block
 
-from exabgp.structure.environment import environment
-from exabgp.structure.log import Logger
+from exabgp.configuration.file import Configuration
+from exabgp.configuration.environment import environment
+
+from exabgp.logger import Logger
 
 class Reactor (object):
 	# [hex(ord(c)) for c in os.popen('clear').read()]

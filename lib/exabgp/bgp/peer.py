@@ -22,8 +22,8 @@ from exabgp.bgp.protocol import Protocol
 from exabgp.bgp.connection import NotConnected
 from exabgp.reactor.api.processes import ProcessError
 
-from exabgp.structure.environment import environment
-from exabgp.structure.log import Logger
+from exabgp.configuration.environment import environment
+from exabgp.logger import Logger
 
 # reporting the number of routes we saw
 class RouteCounter (object):

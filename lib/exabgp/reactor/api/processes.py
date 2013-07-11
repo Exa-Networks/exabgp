@@ -13,7 +13,7 @@ import select
 import fcntl
 
 from exabgp.reactor.api.encoding import Text,JSON
-from exabgp.structure.log import Logger
+from exabgp.logger import Logger
 
 class ProcessError (Exception):
 	pass

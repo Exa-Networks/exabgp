@@ -12,9 +12,9 @@ import pwd
 import errno
 import socket
 
-from exabgp.structure.environment import environment
+from exabgp.configuration.environment import environment
 
-from exabgp.structure.log import Logger
+from exabgp.logger import Logger
 
 MAXFD = 2048
 

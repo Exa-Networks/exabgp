@@ -9,10 +9,10 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 import unittest
 
-from exabgp.structure.environment import environment
+from exabgp.configuration.environment import environment
 env = environment.setup('')
 
-from exabgp.structure.configuration import Configuration
+from exabgp.configuration.file import Configuration
 
 
 class TestConfiguration (unittest.TestCase):

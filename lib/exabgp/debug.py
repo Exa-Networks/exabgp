@@ -11,7 +11,7 @@ import sys
 
 def bug_report (type, value, trace):
 	import traceback
-	from exabgp.structure.log import Logger
+	from exabgp.logger import Logger
 	logger = Logger()
 
 	print

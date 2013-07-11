@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from exabgp.structure.environment import environment
+from exabgp.configuration.environment import environment
 env = environment.setup('')
 
 header = [

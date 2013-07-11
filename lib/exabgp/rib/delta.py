@@ -8,7 +8,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.update import Update
 
-from exabgp.structure.log import Logger
+from exabgp.logger import Logger
 
 
 class Delta (object):

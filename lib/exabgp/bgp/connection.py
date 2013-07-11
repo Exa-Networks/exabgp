@@ -17,14 +17,14 @@ import errno
 import select
 #import array
 
-from exabgp.structure.environment import environment
+from exabgp.configuration.environment import environment
 
 from exabgp.util.od import od
 from exabgp.util.trace import trace
 from exabgp.protocol.family import AFI
 from exabgp.bgp.message import Failure
 
-from exabgp.structure.log import Logger,LazyFormat
+from exabgp.logger import Logger,LazyFormat
 
 errno_block = set((
 	errno.EINPROGRESS, errno.EALREADY,

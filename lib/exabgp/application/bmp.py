@@ -154,7 +154,7 @@ def drop ():
 		os.setuid(nuid)
 
 
-from exabgp.structure.environment import environment
+from exabgp.configuration.environment import environment
 
 environment.application = 'exabmp'
 environment.configuration = {

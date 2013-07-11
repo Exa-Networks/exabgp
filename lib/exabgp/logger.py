@@ -13,7 +13,7 @@ import syslog
 import logging
 import logging.handlers
 
-from exabgp.structure.environment import environment
+from exabgp.configuration.environment import environment
 
 _short = {
 	'CRITICAL': 'CRIT',

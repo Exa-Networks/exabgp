@@ -9,8 +9,8 @@ Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 from struct import unpack,error
 
 from exabgp.util.od import od
-from exabgp.structure.environment import environment
-from exabgp.structure.cache import Cache
+from exabgp.configuration.environment import environment
+from exabgp.util.cache import Cache
 
 from exabgp.protocol.family import AFI,SAFI
 
@@ -30,7 +30,7 @@ from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 from exabgp.bgp.message.update.attribute.communities import cachedCommunity,Communities,ECommunity,ECommunities
 
-from exabgp.structure.log import Logger,LazyFormat
+from exabgp.logger import Logger,LazyFormat
 
 
 # =================================================================== Attributes

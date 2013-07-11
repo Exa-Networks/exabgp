@@ -15,7 +15,7 @@ from pprint import pformat
 from copy import deepcopy
 from struct import pack,unpack
 
-from exabgp.structure.environment import environment
+from exabgp.configuration.environment import environment
 
 from exabgp.protocol.family import AFI,SAFI,known_families
 
@@ -46,7 +46,7 @@ from exabgp.bgp.message.update.attribute.communities import Community,cachedComm
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 
-from exabgp.structure.log import Logger
+from exabgp.logger import Logger
 
 # Duck class, faking part of the Attribute interface
 # We add this to routes when when need o split a route in smaller route

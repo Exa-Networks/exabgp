@@ -9,7 +9,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 import unittest
 
-from exabgp.structure.environment import environment
+from exabgp.configuration.environment import environment
 env = environment.setup('')
 
 from exabgp.protocol.family import AFI,SAFI
