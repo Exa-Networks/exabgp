@@ -243,6 +243,9 @@ def main ():
 	for arg in sys.argv[1:]:
 		if arg in ['--',]:
 			break
+		if arg in ['-v','--version']:
+			sys.stdout.write(version)
+			sys.exit(0)
 		if arg in ['-h','--help']:
 			help(comment)
 			sys.exit(0)
