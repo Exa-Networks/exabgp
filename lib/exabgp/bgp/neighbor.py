@@ -11,7 +11,7 @@ from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.capability import AddPath
 from exabgp.bgp.message.update.attribute.id import AttributeID
 
-from exabgp.structure.api import APIOptions
+from exabgp.reactor.api.encoding import APIOptions
 
 from exabgp.rib.watchdog import Watchdog
 

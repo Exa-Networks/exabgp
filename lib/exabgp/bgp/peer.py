@@ -20,7 +20,7 @@ from exabgp.bgp.message.notification import Notification, Notify
 #from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.protocol import Protocol
 from exabgp.bgp.connection import NotConnected
-from exabgp.structure.processes import ProcessError
+from exabgp.reactor.api.processes import ProcessError
 
 from exabgp.structure.environment import environment
 from exabgp.structure.log import Logger

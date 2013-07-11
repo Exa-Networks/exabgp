@@ -25,7 +25,7 @@ from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notification, Notify
 from exabgp.bgp.message.refresh import RouteRefresh
 
-from exabgp.structure.processes import ProcessError
+from exabgp.reactor.api.processes import ProcessError
 
 from exabgp.structure.log import Logger,LazyFormat
 

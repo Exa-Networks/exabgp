@@ -12,7 +12,7 @@ import subprocess
 import select
 import fcntl
 
-from exabgp.structure.api import Text,JSON
+from exabgp.reactor.api.encoding import Text,JSON
 from exabgp.structure.log import Logger
 
 class ProcessError (Exception):

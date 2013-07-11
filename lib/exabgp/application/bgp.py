@@ -12,7 +12,7 @@ import syslog
 
 from exabgp.version import version
 # import before the fork to improve copy on write memory savings
-from exabgp.structure.supervisor import Supervisor
+from exabgp.reactor.supervisor import Supervisor
 
 import string
 

@@ -12,8 +12,8 @@ import select
 
 from exabgp.version import version
 
-from exabgp.structure.daemon import Daemon
-from exabgp.structure.processes import Processes,ProcessError
+from exabgp.reactor.daemon import Daemon
+from exabgp.reactor.api.processes import Processes,ProcessError
 from exabgp.structure.configuration import Configuration
 from exabgp.bgp.peer import Peer
 from exabgp.bgp.connection import errno_block
