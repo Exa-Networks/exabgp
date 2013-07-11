@@ -39,6 +39,7 @@ Notes
 - have a compiled configuration format with no parsing of route but raw data ?
 - need to check if we can prevent the duplication of the peer routes (which are already defined in the neighbor)
 - peer.reload should it be called peer.route_update (just have a guard to prevent route update when reloading the configuration)
+- do we need to have a guard to prevent route update when reloading the configuration
 
 Important
 * write the documentation, and do not rely on the example and the site wiki (argh ...)
