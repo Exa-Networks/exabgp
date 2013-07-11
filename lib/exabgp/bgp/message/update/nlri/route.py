@@ -228,7 +228,10 @@ def BGPNLRI (afi,safi,bgp,has_multiple_path):
 	if not bgp and mask:
 		raise Notify(3,10,'not enough data for the mask provided to decode the NLRI')
 
-	size = mask_to_bytes[mask]
+	size = mask_to_bytes.get(mask,None)
+	if size is None:
+		import pdb; pdb.set_trace()
+		raise Notify(3,10,'invalid netmask found when decoding NLRI')
 
 	if len(bgp) < size:
 		raise Notify(3,10,'could not decode route with AFI %d sand SAFI %d' % (afi,safi))

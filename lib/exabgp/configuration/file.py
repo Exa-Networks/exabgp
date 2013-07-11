@@ -1931,20 +1931,6 @@ class Configuration (object):
 
 		self.logger.info('\ndecoding routes in configuration','parser')
 
-		if route.startswith('F'*32):
-			kind = route[37]  # 18*2+1
-			route = route[19*2:]
-
-			if kind == '2':
-				self.logger.info('the route is an update','parser')
-				klass = Update
-			else:
-				self.logger.info('the route is not an update (%s) - aborting' % kind,'parser')
-				sys.exit(1)
-		else:
-			self.logger.info('header missing, assuming this route is an update','parser')
-			klass = Update
-
 		n = self.neighbor[self.neighbor.keys()[0]]
 
 		path = {}
@@ -1963,12 +1949,32 @@ class Configuration (object):
 		negotiated.received(o2)
 		#grouped = False
 
-		injected = ''.join(chr(int(_,16)) for _ in (route[i*2:(i*2)+2] for i in range(len(route)/2)))
-		# This does not take the BGP header - let's assume we will not break that :)
-		update = klass().factory(negotiated,injected)
-		self.logger.info('','parser')
-		for route in update.routes:
-			self.logger.info('decoded route %s' % route.extensive(),'parser')
+		raw = ''.join(chr(int(_,16)) for _ in (route[i*2:(i*2)+2] for i in range(len(route)/2)))
+
+		while raw:
+			if raw.startswith('\xff'*16):
+				kind = ord(raw[18])
+				size = (ord(raw[16]) << 16) + (ord(raw[17]))
+
+				injected,raw = raw[19:size],raw[size:]
+
+				if kind == 2:
+					self.logger.info('the route is an update','parser')
+					klass = Update
+				else:
+					self.logger.info('the route is not an update (%d) - aborting' % kind,'parser')
+					sys.exit(1)
+			else:
+				self.logger.info('header missing, assuming this route is ONE update','parser')
+				klass = Update
+				injected,raw = raw,''
+
+			# This does not take the BGP header - let's assume we will not break that :)
+			update = klass().factory(negotiated,injected)
+			self.logger.info('','parser')
+			for route in update.routes:
+				self.logger.info('decoded route %s' % route.extensive(),'parser')
+
 		import sys
 		sys.exit(0)
 
