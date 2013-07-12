@@ -15,6 +15,8 @@ import sys
 import pwd
 import syslog
 
+from exabgp.util.ip import isip
+
 class NoneDict (dict):
 	def __getitem__ (self,name):
 		return None
@@ -108,6 +110,11 @@ class environment (object):
 	@staticmethod
 	def lower (_):
 		return str(_).lower()
+
+	@staticmethod
+	def ip (_):
+		if isip(_): return _
+		raise TypeError('ip %s is invalid' % _)
 
 	@staticmethod
 	def user (_):

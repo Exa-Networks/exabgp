@@ -69,16 +69,16 @@ class Reactor (object):
 		self._reload_processes = True
 
 	def run (self,reactor_speed=0.5):
-		ips = ['127.0.0.1',]
-
-		if ips:
-			self.listener = Listener(ips,179)
+		if environment.settings().tcp.listen:
+			ip = environment.settings().tcp.bind
+			self.listener = Listener([ip,],179)
 			try:
 				self.listener.start()
 			except NetworkError,e:
 				if os.geteuid() != 0:
 					self.logger.critical("You most likely need to run ExaBGP as root to bind to port 179",'reactor')
 				return
+			self.logger.critical("Listening on %s:179" % ip,'reactor')
 
 		if self.daemon.drop_privileges():
 			self.logger.critical("Could not drop privileges to '%s' refusing to run as root" % self.daemon.user,'reactor')
@@ -183,8 +183,8 @@ class Reactor (object):
 								clients = self.listener.connections()
 
 							try:
-								data,ip = clients()
-								print '\n',ip,od(data),'\n'
+								message,ip = clients()
+								#print '\n',ip,od(message),'\n'
 							except StopIteration:
 								clients = None
 								break

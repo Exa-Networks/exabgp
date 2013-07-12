@@ -11,38 +11,19 @@ import socket
 
 from exabgp.util.coroutine import each
 from exabgp.util.error import error,errno
+from exabgp.util.ip import isipv4,isipv6
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.logger import Logger
 
-# START --------- To move in util ---------------
-
-def isipv4(address):
-	try:
-		socket.inet_pton(socket.AF_INET, address)
-		return True
-	except socket.error:
-		return False
-
-def isipv6(address):
-	try:
-		socket.inet_pton(socket.AF_INET6, address)
-		return True
-	except socket.error:
-		return False
-
-def isip(address):
-	return isipv4(address) or isipv6(address)
-
-# END --------- To move in util ---------------
 
 class NetworkError (Exception): pass
 class BindingError (NetworkError): pass
 class AcceptError  (NetworkError): pass
 
 class Listener (object):
-	MAX_OPEN_WAIT = 20.0  # seconds
+	MAX_OPEN_WAIT = 10.0  # seconds
 	HEADER_LEN = 19  # bytes
 
 	open_bye = Notify(2,0,'we do not accept incoming connection - thanks for calling').message()
@@ -66,7 +47,6 @@ class Listener (object):
 				s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
 				try:
 					s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-					s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
 				except AttributeError:
 					pass
 				s.bind((ip,port,0,0))
@@ -74,7 +54,6 @@ class Listener (object):
 				s = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
 				try:
 					s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-					s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
 				except AttributeError:
 					pass
 				s.bind((ip,port))
@@ -131,7 +110,6 @@ class Listener (object):
 		for sock,(then,ip,stage,to_read,received) in self._connected.items():
 			try:
 				data = sock.recv(to_read)
-				print "read", len(data)
 				to_read -= len(data)
 				received += data
 
@@ -158,7 +136,6 @@ class Listener (object):
 						self._delete(sock)
 						continue
 					to_read = size - self.HEADER_LEN
-					print 'to_read', to_read
 					self._connected[sock] = (then,ip,'body',to_read,received)
 					continue
 

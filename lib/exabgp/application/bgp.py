@@ -199,6 +199,11 @@ def main ():
 			'delay': (environment.integer,environment.nop,'0',      'start to announce route when the minutes in the hours is a modulo of this number'),
 			'block': (environment.boolean,environment.lower,'false','if write would block, do not buffer and wait until socket becomes available\n'
 			                                                        '%s(here to help stress testing, do not use if you have multiple peers defined' % (' '* 34)),
+#		},
+#		'--name--' : {
+			'listen': (environment.boolean,environment.lower,'false', '(experimental) should exabgp listen for incoming connections'),
+			'bind': (environment.ip,environment.nop,'0.0.0.0', '(experimental) IP to bind on when listening'),
+			'acl': (environment.boolean,environment.lower,'', '(experimental) unimplemented'),
 		},
 		'cache' : {
 			'attributes'  :  (environment.boolean,environment.lower,'true', 'cache routes attributes (configuration and wire) for faster parsing'),
