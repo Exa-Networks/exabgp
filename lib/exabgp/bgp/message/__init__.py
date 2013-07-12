@@ -35,13 +35,21 @@ class Message (Exception):
 	class Type:
 		OPEN          = 0x01  # .   1
 		UPDATE        = 0x02  # .   2
-		NOTIFICATION  = 0x04  # .   4
-		KEEPALIVE     = 0x08  # .   8
-		ROUTE_REFRESH = 0x10  # .  16
-		LIST          = 0x20  # .  32
-		HEADER        = 0x40  # .  64
-		GENERAL       = 0x80  # . 128
-		#LOCALRIB    = 0x100  # . 256
+		NOTIFICATION  = 0x03  # .   3
+		KEEPALIVE     = 0x04  # .   4
+		ROUTE_REFRESH = 0x05  # .   5
+		#LIST          = 0x20  # .  32
+		#HEADER        = 0x40  # .  64
+		#GENERAL       = 0x80  # . 128
+		#LOCALRIB      = 0x100  # . 256
+
+	Length = {
+		Type.OPEN          : (int.__gt__,29),
+		Type.UPDATE        : (int.__gt__,23),
+		Type.NOTIFICATION  : (int.__gt__,21),
+		Type.KEEPALIVE     : (int.__eq__,19),
+		Type.ROUTE_REFRESH : (int.__eq__,23),
+	}
 
 	def __init__ (self):
 		if self.TYPE is None:
@@ -49,27 +57,23 @@ class Message (Exception):
 			return
 
 		code = ord(self.TYPE)
-		result = []
 
-		if code & self.Type.OPEN:
-			result.append('OPEN')
-		if code & self.Type.UPDATE:
-			result.append('UPDATE')
-		if code & self.Type.NOTIFICATION:
-			result.append('NOTIFICATION')
-		if code & self.Type.KEEPALIVE:
-			result.append('KEEPALIVE')
-		if code & self.Type.ROUTE_REFRESH:
-			result.append('ROUTE_REFRESH')
-		if code & self.Type.LIST:
-			result.append('LIST')
-		if code & self.Type.HEADER:
-			result.append('HEADER')
-		if code & self.Type.GENERAL:
-			result.append('GENERAL')
-
-		if result:
-			self._str = ' '.join(result)
+		if code == self.Type.OPEN:
+			self._str = 'OPEN'
+		elif code == self.Type.UPDATE:
+			self._str = 'UPDATE'
+		elif code == self.Type.NOTIFICATION:
+			self._str = 'NOTIFICATION'
+		elif code == self.Type.KEEPALIVE:
+			self._str = 'KEEPALIVE'
+		elif code == self.Type.ROUTE_REFRESH:
+			self._str = 'ROUTE_REFRESH'
+		# if code & self.Type.LIST:
+		# 	self._str = 'LIST'
+		# if code & self.Type.HEADER:
+		# 	self._str = 'HEADER'
+		# if code & self.Type.GENERAL:
+		# 	self._str = 'GENERAL'
 		else:
 			self._str = 'UNKNOWN (%d)' % code
 

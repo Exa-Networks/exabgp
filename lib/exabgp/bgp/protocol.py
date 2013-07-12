@@ -117,15 +117,10 @@ class Protocol (object):
 			# BAD Message Length
 			raise Notify(1,2)
 
-		if (
-			(msg == Open.TYPE and msg_length < 29) or
-			(msg == Update.TYPE and msg_length < 23) or
-			(msg == Notification.TYPE and msg_length < 21) or
-			(msg == KeepAlive.TYPE and msg_length != 19) or
-			(msg == RouteRefresh.TYPE and msg_length != 23)
-		):
+		validator,value = Message.Length.get(ord(msg),(lambda:True,None))
+		if not validator(msg_length,value):
 			# MUST send the faulty msg_length back
-			raise Notify(1,2,'%d has an invalid message length of %d' %(str(msg),msg_length))
+			raise Notify(1,2,'%s has an invalid message length of %d' %(str(msg),msg_length))
 
 		length = msg_length - 19
 		body = ''
