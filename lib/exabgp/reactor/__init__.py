@@ -192,14 +192,29 @@ class Reactor (object):
 					except KeyboardInterrupt:
 						pass
 			except SystemExit:
-				self._shutdown = True
-				self.logger.info("exiting",'reactor')
+				while True:
+					try:
+						self._shutdown = True
+						self.logger.info("exiting",'reactor')
+						break
+					except KeyboardInterrupt:
+						pass
 			except IOError:
-				self._shutdown = True
-				self.logger.warning("I/O Error received, most likely ^C during IO",'reactor')
+				while True:
+					try:
+						self._shutdown = True
+						self.logger.warning("I/O Error received, most likely ^C during IO",'reactor')
+						break
+					except KeyboardInterrupt:
+						pass
 			except ProcessError:
-				self._shutdown = True
-				self.logger.error("Problem when sending message(s) to helper program, stopping",'reactor')
+				while True:
+					try:
+						self._shutdown = True
+						self.logger.error("Problem when sending message(s) to helper program, stopping",'reactor')
+						break
+					except KeyboardInterrupt:
+						pass
 #				from exabgp.leak import objgraph
 #				print objgraph.show_most_common_types(limit=20)
 #				import random
