@@ -139,10 +139,11 @@ class Listener (object):
 					self._connected[sock] = (then,ip,'body',to_read,received)
 					continue
 
+				peer = sock.getpeername()
 				self._reply(sock,self.open_bye)
 				self._delete(sock)
 
-				yield received,ip  # XXX: must the the socket remove end IP
+				yield received,(ip,179),peer
 			except socket.error,e:
 				if e.errno in error.block:
 					if now - then > self.MAX_OPEN_WAIT:

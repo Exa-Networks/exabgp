@@ -183,8 +183,8 @@ class Reactor (object):
 								clients = self.listener.connections()
 
 							try:
-								message,ip = clients()
-								#print '\n',ip,od(message),'\n'
+								message,local,peer = clients()
+								#print '\n',ip,local,peer,od(message),'\n'
 							except StopIteration:
 								clients = None
 								break
