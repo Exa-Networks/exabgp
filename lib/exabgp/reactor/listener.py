@@ -9,6 +9,7 @@ Copyright (c) 2013-2013 Exa Networks. All rights reserved.
 import time
 import socket
 
+from exabgp.util.coroutine import each
 from exabgp.util.error import error,errno
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.notification import Notify
@@ -121,6 +122,7 @@ class Listener (object):
 			self.logger.critical(str(e))
 			raise e
 
+	@each
 	def connections (self):
 		now = time.time()
 		for sock,ip in self._connections():
@@ -160,7 +162,10 @@ class Listener (object):
 					self._connected[sock] = (then,ip,'body',to_read,received)
 					continue
 
-				yield sock,received,ip  # XXX: must the the socket remove end IP
+				self._reply(sock,self.open_bye)
+				self._delete(sock)
+
+				yield received,ip  # XXX: must the the socket remove end IP
 			except socket.error,e:
 				if e.errno in error.block:
 					if now - then > self.MAX_OPEN_WAIT:

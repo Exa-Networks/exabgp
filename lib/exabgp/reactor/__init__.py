@@ -18,6 +18,7 @@ from exabgp.reactor.listener import Listener,NetworkError
 from exabgp.reactor.api.processes import Processes,ProcessError
 from exabgp.bgp.peer import Peer
 from exabgp.util.error import error
+from exabgp.util.od import od
 
 from exabgp.configuration.file import Configuration
 from exabgp.configuration.environment import environment
@@ -32,6 +33,7 @@ class Reactor (object):
 		self.logger = Logger()
 		self.daemon = Daemon(self)
 		self.processes = None
+		self.listener = None
 		self.configuration = Configuration(configuration)
 
 		self._peers = {}
@@ -101,6 +103,8 @@ class Reactor (object):
 			self.logger.error("waiting for %d seconds before connecting" % sleeptime)
 			time.sleep(float(sleeptime))
 
+		clients = None
+
 		while True:
 			try:
 				while self._peers:
@@ -168,17 +172,26 @@ class Reactor (object):
 							errno,message = e.args
 							if not errno in error.block:
 								raise
-					elif self.listener:
-						inloop = True
-						while inloop:
-							for s,data,ip in listener.connections():
-								inloop = False
-								break
-						s.send(Listener.open_bye)
-						listener.stop()
 
-						if duration < reactor_speed:
-							time.sleep(max(reactor_speed-duration,0))
+					if self.listener:
+						while True:
+							duration = time.time() - start
+							if duration >= 1.0:
+								break
+
+							if not clients:
+								clients = self.listener.connections()
+
+							try:
+								data,ip = clients()
+								print '\n',ip,od(data),'\n'
+							except StopIteration:
+								clients = None
+								break
+
+					duration = time.time() - start
+					if duration < reactor_speed:
+						time.sleep(max(reactor_speed-duration,0))
 
 				self.processes.terminate()
 				self.daemon.removepid()
@@ -224,6 +237,8 @@ class Reactor (object):
 	def shutdown (self):
 		"""terminate all the current BGP connections"""
 		self.logger.info("Performing shutdown",'reactor')
+		if self.listener:
+			self.listener.stop()
 		for key in self._peers.keys():
 			self._peers[key].stop()
 
