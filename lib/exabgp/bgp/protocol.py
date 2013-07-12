@@ -113,14 +113,14 @@ class Protocol (object):
 		msg_length = unpack('!H',raw_length)[0]
 		msg = header[18]
 
-		if (msg_length < 19 or msg_length > 4096):
+		if (msg_length > 4096):
 			# BAD Message Length
-			raise Notify(1,2)
+			raise Notify(1,2,'%s has an invalid message length of %d' %(Message().name(ord(msg)),msg_length))
 
-		validator,value = Message.Length.get(ord(msg),(lambda:True,None))
+		validator,value = Message.Length.get(ord(msg),(int.__ge__,19))
 		if not validator(msg_length,value):
 			# MUST send the faulty msg_length back
-			raise Notify(1,2,'%s has an invalid message length of %d' %(str(msg),msg_length))
+			raise Notify(1,2,'%s has an invalid message length of %d' %(Message().name(ord(msg)),msg_length))
 
 		length = msg_length - 19
 		body = ''

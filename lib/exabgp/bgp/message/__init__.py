@@ -52,36 +52,37 @@ class Message (Exception):
 	}
 
 	def __init__ (self):
-		if self.TYPE is None:
-			self._str = 'UNKNOWN (invalid code)'
-			return
+		self._str = None
 
-		code = ord(self.TYPE)
+	def name (self,code):
+		if code is None:
+			return 'UNKNOWN (invalid code)'
 
 		if code == self.Type.OPEN:
-			self._str = 'OPEN'
+			return 'OPEN'
 		elif code == self.Type.UPDATE:
-			self._str = 'UPDATE'
+			return 'UPDATE'
 		elif code == self.Type.NOTIFICATION:
-			self._str = 'NOTIFICATION'
+			return 'NOTIFICATION'
 		elif code == self.Type.KEEPALIVE:
-			self._str = 'KEEPALIVE'
+			return 'KEEPALIVE'
 		elif code == self.Type.ROUTE_REFRESH:
-			self._str = 'ROUTE_REFRESH'
+			return 'ROUTE_REFRESH'
 		# if code & self.Type.LIST:
 		# 	self._str = 'LIST'
 		# if code & self.Type.HEADER:
 		# 	self._str = 'HEADER'
 		# if code & self.Type.GENERAL:
 		# 	self._str = 'GENERAL'
-		else:
-			self._str = 'UNKNOWN (%d)' % code
+		return 'UNKNOWN (%d)' % code
 
 	def _message (self,message=""):
 		message_len = pack('!H',19+len(message))
 		return "%s%s%s%s" % (self.MARKER,message_len,self.TYPE,message)
 
 	def __str__ (self):
+		if not self._str:
+			self._str = self.name(ord(self.TYPE))
 		return self._str
 
 class Failure (Exception):
