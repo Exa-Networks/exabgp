@@ -87,6 +87,9 @@ class Notification (Message,Failure):
 	def factory (self,data):
 		return self.new(ord(data[0]),ord(data[1]),data[2:])
 
+	def message (self):
+		return self._message()
+
 	def __str__ (self):
 		return "%s / %s%s" % (
 			self._str_code.get(self.code,'unknown error'),

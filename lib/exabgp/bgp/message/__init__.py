@@ -29,7 +29,7 @@ def prefix (data):
 
 class Message (Exception):
 	TYPE = None
-
+	HEADER_LEN = 19
 	MARKER = chr(0xff)*16
 
 	class Type:

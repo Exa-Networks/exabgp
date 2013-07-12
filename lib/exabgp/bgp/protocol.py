@@ -97,7 +97,7 @@ class Protocol (object):
 		if not self.connection.pending(True):
 			return NOP()
 
-		length = 19
+		length = Message.HEADER_LEN
 		header = ''
 		while length:
 			if self.connection.pending():
@@ -190,6 +190,7 @@ class Protocol (object):
 			return message
 
 		if message.TYPE != Open.TYPE:
+			import pdb; pdb.set_trace()
 			raise Notify(5,1,'The first packet recevied is not an open message (%s)' % message)
 
 		self.negotiated.received(message)
