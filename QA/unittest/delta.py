@@ -19,7 +19,7 @@ from exabgp.bgp.message.update import Update,Attributes
 
 from exabgp.rib.table import Table
 from exabgp.rib.delta import Delta
-from exabgp.bgp.protocol import Protocol
+from exabgp.reactor.protocol import Protocol
 from exabgp.bgp.neighbor import Neighbor
 
 from StringIO import StringIO

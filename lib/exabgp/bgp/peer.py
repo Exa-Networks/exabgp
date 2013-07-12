@@ -18,8 +18,8 @@ from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notification, Notify
 #from exabgp.bgp.message.refresh import RouteRefresh
-from exabgp.bgp.protocol import Protocol
-from exabgp.bgp.connection import NotConnected
+from exabgp.reactor.protocol import Protocol
+from exabgp.reactor.connection import NotConnected
 from exabgp.reactor.api.processes import ProcessError
 
 from exabgp.configuration.environment import environment

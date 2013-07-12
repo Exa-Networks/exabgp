@@ -12,7 +12,7 @@ from struct import unpack
 from exabgp.rib.table import Table
 from exabgp.rib.delta import Delta
 
-from exabgp.bgp.connection import Connection
+from exabgp.reactor.connection import Connection
 from exabgp.bgp.message import Message,Failure
 from exabgp.bgp.message.nop import NOP
 from exabgp.bgp.message.open import Open

@@ -17,7 +17,7 @@ from exabgp.bgp.message.notification import Notification
 from exabgp.bgp.message.keepalive import KeepAlive,new_KeepAlive
 from exabgp.bgp.message.update import Update,Attributes,new_Update
 
-from exabgp.bgp.protocol import Protocol
+from exabgp.reactor.protocol import Protocol
 from exabgp.bgp.neighbor import Neighbor
 
 from StringIO import StringIO

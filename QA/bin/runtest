@@ -46,7 +46,7 @@ def main ():
 def check_sequence(exabgp,configuration,daemon,messages):
 	os.environ['exabgp.tcp.once'] = 'true'
 
-	timeout = 10  # seconds
+	timeout = 15  # seconds
 
 	try:
 		signal.signal(signal.SIGALRM, alarm_handler)
