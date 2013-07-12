@@ -14,6 +14,7 @@ Version 3.2.0
     patch by: Vincent Bernat
  * Improvement: --decode can now be passed multiple messages to decode
  * Improvement: -v,--version returns ExaBGP's version
+ * Improvement: be more robust on ^C
  * Fix: potential issue with multisession collision detection
  * Fix: with multisession recent python would refuse to copy an route due to a lock in logger of the neighbor object
  * Fix: could not handle NOTICATION sent during the OPEN negotiation stage

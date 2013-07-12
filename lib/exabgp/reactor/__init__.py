@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2012-06-10.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
+import os
 import time
 import signal
 import select
@@ -13,6 +14,7 @@ import select
 from exabgp.version import version
 
 from exabgp.reactor.daemon import Daemon
+from exabgp.reactor.listener import Listener,NetworkError
 from exabgp.reactor.api.processes import Processes,ProcessError
 from exabgp.bgp.peer import Peer
 from exabgp.util.error import error
@@ -65,11 +67,24 @@ class Reactor (object):
 		self._reload_processes = True
 
 	def run (self,reactor_speed=0.5):
+		ips = ['127.0.0.1',]
+
+		if ips:
+			self.listener = Listener(ips,179)
+			try:
+				self.listener.start()
+			except NetworkError,e:
+				if os.geteuid() != 0:
+					self.logger.critical("You most likely need to run ExaBGP as root to bind to port 179",'reactor')
+				return
+
 		if self.daemon.drop_privileges():
-			self.logger.error("Could not drop privileges to '%s' refusing to run as root" % self.daemon.user,'reactor')
-			self.logger.error("Set the environmemnt value exabgp.daemon.user to change the unprivileged user",'reactor')
+			self.logger.critical("Could not drop privileges to '%s' refusing to run as root" % self.daemon.user,'reactor')
+			self.logger.critical("Set the environmemnt value exabgp.daemon.user to change the unprivileged user",'reactor')
 			return
+
 		self.daemon.daemonise()
+
 		if not self.daemon.savepid():
 			self.logger.error('could not update PID, not starting','reactor')
 
@@ -153,7 +168,15 @@ class Reactor (object):
 							errno,message = e.args
 							if not errno in error.block:
 								raise
-					else:
+					elif self.listener:
+						inloop = True
+						while inloop:
+							for s,data,ip in listener.connections():
+								inloop = False
+								break
+						s.send(Listener.open_bye)
+						listener.stop()
+
 						if duration < reactor_speed:
 							time.sleep(max(reactor_speed-duration,0))
 
@@ -161,17 +184,22 @@ class Reactor (object):
 				self.daemon.removepid()
 				break
 			except KeyboardInterrupt:
-				self.logger.info("^C received",'reactor')
-				self._shutdown = True
+				while True:
+					try:
+						self._shutdown = True
+						self.logger.info("^C received",'reactor')
+						break
+					except KeyboardInterrupt:
+						pass
 			except SystemExit:
+				self._shutdown = True
 				self.logger.info("exiting",'reactor')
-				self._shutdown = True
 			except IOError:
+				self._shutdown = True
 				self.logger.warning("I/O Error received, most likely ^C during IO",'reactor')
-				self._shutdown = True
 			except ProcessError:
-				self.logger.error("Problem when sending message(s) to helper program, stopping",'reactor')
 				self._shutdown = True
+				self.logger.error("Problem when sending message(s) to helper program, stopping",'reactor')
 #				from exabgp.leak import objgraph
 #				print objgraph.show_most_common_types(limit=20)
 #				import random

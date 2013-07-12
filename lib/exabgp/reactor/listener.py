@@ -13,12 +13,7 @@ from exabgp.util.error import error,errno
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.notification import Notify
 
-#from exabgp.logger import Logger
-import sys
-class Logger:
-	critical = sys.stdout.write
-
-
+from exabgp.logger import Logger
 
 # START --------- To move in util ---------------
 
@@ -90,9 +85,9 @@ class Listener (object):
 			return s
 		except socket.error, e:
 			if e.args[0] == errno.EADDRINUSE:
-				raise BindingError('could not listen, port already in use %s:%d' % (ip,self._port))
+				raise BindingError('could not listen on %s:%d, the port already in use by another application' % (ip,self._port))
 			elif e.args[0] == errno.EADDRNOTAVAIL:
-				raise BindingError('could not listen, invalid address %s:%d' % (ip,self._port))
+				raise BindingError('could not listen on %s:%d, this is an invalid address' % (ip,self._port))
 			else:
 				raise BindingError('could not listen on %s:%d - %s' % (ip,self._port,str(e)))
 
@@ -194,14 +189,3 @@ class Listener (object):
 
 		self._sockets = {}
 		self.serving = False
-
-
-listener = Listener(['127.0.0.1',],179)
-listener.start()
-inloop = True
-while inloop:
-	for s,data,ip in listener.connections():
-		inloop = False
-		break
-s.send(Listener.open_bye)
-listener.stop()
