@@ -25,27 +25,7 @@ from exabgp.reactor.api.processes import ProcessError
 from exabgp.configuration.environment import environment
 from exabgp.logger import Logger
 
-# reporting the number of routes we saw
-class RouteCounter (object):
-	def __init__ (self,me,interval=3):
-		self.logger = Logger()
-
-		self.me = me
-		self.interval = interval
-		self.last_update = time.time()
-		self.count = 0
-		self.last_count = 0
-
-	def display (self):
-		left = int(self.last_update  + self.interval - time.time())
-		if left <=0:
-			self.last_update = time.time()
-			if self.count > self.last_count:
-				self.last_count = self.count
-				self.logger.reactor(self.me('processed %d routes' % self.count))
-
-	def increment (self,count):
-		self.count += count
+from exabgp.util.counter import Counter
 
 # As we can not know if this is our first start or not, this flag is used to
 # always make the program act like it was recovering from a failure
@@ -241,7 +221,7 @@ class Peer (object):
 			# MAIN UPDATE LOOP
 			#
 
-			counter = RouteCounter(self.me)
+			counter = Counter(self.logger,self.me)
 
 			while self._running:
 				#
