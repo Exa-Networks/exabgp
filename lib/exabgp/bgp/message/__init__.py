@@ -84,6 +84,3 @@ class Message (Exception):
 		if not self._str:
 			self._str = self.name(ord(self.TYPE))
 		return self._str
-
-class Failure (Exception):
-	pass

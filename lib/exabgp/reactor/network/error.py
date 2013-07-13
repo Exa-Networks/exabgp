@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-errno.py
+error.py
 
 Created by Thomas Mangin on 2013-07-11.
 Copyright (c) 2013-2013 Exa Networks. All rights reserved.
@@ -28,3 +28,14 @@ class error:
 	unavailable = set((
 		errno.ECONNREFUSED, errno.EHOSTUNREACH,
 	))
+
+class NetworkError (Exception): pass
+class BindingError (NetworkError): pass
+class AcceptError  (NetworkError): pass
+class NotConnected (NetworkError): pass
+class MD5Error     (NetworkError): pass
+class NagleError   (NetworkError): pass
+class TTLError     (NetworkError): pass
+class AsyncError   (NetworkError): pass
+class TooSlowError (NetworkError): pass
+class SizeError    (NetworkError): pass

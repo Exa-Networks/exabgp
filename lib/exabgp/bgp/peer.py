@@ -11,7 +11,6 @@ import time
 import traceback
 
 from exabgp.bgp.timer import Timer
-from exabgp.bgp.message import Failure
 from exabgp.bgp.message.nop import NOP
 from exabgp.bgp.message.open.capability.id import CapabilityID
 from exabgp.bgp.message.update import Update
@@ -19,7 +18,7 @@ from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notification, Notify
 #from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.reactor.protocol import Protocol
-from exabgp.reactor.connection import NotConnected
+from exabgp.reactor.network.error import NetworkError
 from exabgp.reactor.api.processes import ProcessError
 
 from exabgp.configuration.environment import environment
@@ -308,14 +307,11 @@ class Peer (object):
 		# CONNECTION FAILURE, UPDATING TIMERS FOR BACK-OFF
 		#
 
-		except NotConnected, e:
+		except NetworkError, e:
 			self.logger.network('we can not connect to the peer, reason : %s' % str(e).lower())
 			self._more_skip()
 			self.bgp.clear_buffer()
-			try:
-				self.bgp.close('could not connect to the peer')
-			except Failure:
-				pass
+			self.bgp.close('could not connect to the peer')
 
 			# we tried to connect once, it failed, we stop
 			if self.once:
@@ -333,13 +329,10 @@ class Peer (object):
 			self.bgp.clear_buffer()
 			try:
 				self.bgp.new_notification(e)
-			except Failure:
+			except (NetworkError,ProcessError):
 				self.logger.error(self.me('NOTIFICATION NOT SENT','reactor'))
 				pass
-			try:
-				self.bgp.close('notification sent (%d,%d) [%s] %s' % (e.code,e.subcode,str(e),e.data))
-			except Failure:
-				self.logger.error(self.me('issue cleaning session','reactor'))
+			self.bgp.close('notification sent (%d,%d) [%s] %s' % (e.code,e.subcode,str(e),e.data))
 			return
 
 		#
@@ -349,24 +342,18 @@ class Peer (object):
 		except Notification, e:
 			self.logger.error(self.me('Received Notification (%d,%d) %s' % (e.code,e.subcode,str(e))),'reactor')
 			self.bgp.clear_buffer()
-			try:
-				self.bgp.close('notification received (%d,%d) %s' % (e.code,e.subcode,str(e)))
-			except Failure:
-				pass
+			self.bgp.close('notification received (%d,%d) %s' % (e.code,e.subcode,str(e)))
 			return
 
 		#
-		# OTHER FAILURES
+		# PROBLEM WRITING TO OUR FORKED PROCESSES
 		#
 
-		except Failure, e:
+		except ProcessError, e:
 			self.logger.error(self.me(str(e)),'reactor')
 			self._more_skip()
 			self.bgp.clear_buffer()
-			try:
-				self.bgp.close('failure %s' % str(e))
-			except Failure:
-				pass
+			self.bgp.close('failure %s' % str(e))
 			return
 
 		#

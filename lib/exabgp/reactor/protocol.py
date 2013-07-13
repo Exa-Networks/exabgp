@@ -12,8 +12,10 @@ from struct import unpack
 from exabgp.rib.table import Table
 from exabgp.rib.delta import Delta
 
-from exabgp.reactor.connection import Connection
-from exabgp.bgp.message import Message,Failure
+from exabgp.reactor.network.outgoing import Outgoing
+from exabgp.reactor.network.error import NetworkError,TooSlowError,SizeError
+
+from exabgp.bgp.message import Message
 from exabgp.bgp.message.nop import NOP
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open.routerid import RouterID
@@ -62,13 +64,10 @@ class Protocol (object):
 			local = self.neighbor.local_address
 			md5 = self.neighbor.md5
 			ttl = self.neighbor.ttl
-			self.connection = Connection(peer,local,md5,ttl)
+			self.connection = Outgoing(peer,local,md5,ttl)
 
 			if self.peer.neighbor.api.neighbor_changes:
-				try:
-					self.peer.reactor.processes.connected(self.peer.neighbor.peer_address)
-				except ProcessError:
-					raise Failure('Could not send connected message(s) to helper program(s)')
+				self.peer.reactor.processes.connected(self.peer.neighbor.peer_address)
 
 	def close (self,reason='unspecified'):
 		if self.connection:
@@ -76,18 +75,16 @@ class Protocol (object):
 			self.connection.close()
 			self.connection = None
 
-			if self.peer.neighbor.api.neighbor_changes:
-				try:
+			try:
+				if self.peer.neighbor.api.neighbor_changes:
 					self.peer.reactor.processes.down(self.peer.neighbor.peer_address,reason)
-				except ProcessError:
-					raise Failure('Could not send down message(s) to helper program(s)')
+			except ProcessError:
+				self.logger.message(self.me('could not send notification of neighbor close to API'))
+
 
 	def write (self,message):
 		if self.neighbor.api.send_packets:
-			try:
-				self.peer.reactor.processes.send(self.peer.neighbor.peer_address,message[18],message[:19],message[19:])
-			except ProcessError:
-				raise Failure('Could not send update message(s) to helper program(s)')
+			self.peer.reactor.processes.send(self.peer.neighbor.peer_address,message[18],message[:19],message[19:])
 		return self.connection.write(message)
 
 	# Read from network .......................................................
@@ -131,10 +128,7 @@ class Protocol (object):
 				length -= len(delta)
 
 		if self.neighbor.api.receive_packets:
-			try:
-				self.peer.reactor.processes.receive(self.peer.neighbor.peer_address,msg,header,body)
-			except ProcessError:
-				raise Failure('Could not send update message(s) to helper program(s)')
+			self.peer.reactor.processes.receive(self.peer.neighbor.peer_address,msg,header,body)
 
 		if msg == KeepAlive.TYPE:
 			self.logger.message(self.me('<< KEEPALIVE%s' % keepalive_comment))
@@ -152,10 +146,7 @@ class Protocol (object):
 				for route in update.routes:
 					self.logger.routes(LazyFormat(self.me(''),str,route))
 
-				try:
-					self.peer.reactor.processes.routes(self.neighbor.peer_address,update.routes)
-				except ProcessError:
-					raise Failure('Could not send routes message(s) to helper program(s)')
+				self.peer.reactor.processes.routes(self.neighbor.peer_address,update.routes)
 				return update
 			else:
 				return NOP()
@@ -242,7 +233,7 @@ class Protocol (object):
 
 		# we do not buffer open message in purpose
 		if not self.write(sent_open.message()):
-			raise Failure('Could not send open')
+			raise NetworkError('Could not send open')
 		self.logger.message(self.me('>> %s' % sent_open))
 		return sent_open
 
@@ -287,11 +278,11 @@ class Protocol (object):
 			if not self._frozen:
 				self._frozen = time.time()
 			if self._frozen and self._frozen + self.negotiated.holdtime < time.time():
-				raise Failure('peer %s not reading on his socket (or not fast at all) - killing session' % self.neighbor.peer_as)
+				raise TooSlowError('peer %s not reading on his socket (or not fast at all) - killing session' % self.neighbor.peer_as)
 			self.logger.message(self.me("unable to send route for %d second (maximum allowed %d)" % (time.time()-self._frozen,self.negotiated.holdtime)))
 			nb_backlog = len(self._messages)
 			if nb_backlog > MAX_BACKLOG:
-				raise Failure('over %d chunked routes buffered for peer %s - killing session' % (MAX_BACKLOG,self.neighbor.peer_as))
+				raise NetworkError('over %d chunked routes buffered for peer %s - killing session' % (MAX_BACKLOG,self.neighbor.peer_as))
 			self.logger.message(self.me("self._messages of %d/%d chunked routes" % (nb_backlog,MAX_BACKLOG)))
 		while self._messages:
 			number,name,update = self._messages[0]
@@ -308,7 +299,7 @@ class Protocol (object):
 			number = 0
 			for data in generator:
 				if len(data) > size:
-					raise Failure('Can not send BGP update larger than %d bytes on this connection.' % size)
+					raise SizeError('Can not send BGP update larger than %d bytes on this connection.' % size)
 				if len(chunk) + len(data) <= size:
 					chunk += data
 					number += 1

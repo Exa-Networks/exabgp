@@ -9,14 +9,14 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from struct import unpack
 
 from exabgp.protocol.family import AFI,SAFI
-from exabgp.bgp.message import Failure, Message
+from exabgp.bgp.message import Message
 from exabgp.bgp.message.notification import Notify
 
 # =================================================================== Notification
 # A Notification received from our peer.
 # RFC 4271 Section 4.5
 
-class RouteRefresh (Message,Failure):
+class RouteRefresh (Message):
 	TYPE = chr(0x05)
 
 	def __init__ (self):

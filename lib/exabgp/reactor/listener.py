@@ -10,7 +10,7 @@ import time
 import socket
 
 from exabgp.util.coroutine import each
-from exabgp.util.error import error,errno
+from exabgp.reactor.network.error import error,errno
 from exabgp.util.ip import isipv4,isipv6
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.notification import Notify

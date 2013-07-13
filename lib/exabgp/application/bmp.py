@@ -18,7 +18,7 @@ import asyncore
 from struct import unpack
 
 from exabgp.version import version
-from exabgp.util.error import error
+from exabgp.reactor.network.error import error
 from exabgp.reactor.api.encoding import JSON
 from exabgp.bgp.message.update import Update
 

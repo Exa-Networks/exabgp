@@ -6,13 +6,13 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from exabgp.bgp.message import Failure, Message
+from exabgp.bgp.message import Message
 
 # =================================================================== Notification
 # A Notification received from our peer.
 # RFC 4271 Section 4.5
 
-class Notification (Message,Failure):
+class Notification (Message):
 	TYPE = chr(0x03)
 
 	_str_code = {
