@@ -8,11 +8,10 @@ neighbor 1.2.3.4 {
 	add-path send/receive;
 
 	family {
-		inet unicast;
-		inet4 nlri-mpls;
-		inet4 mpls-vpn;
-		inet6 unicast;
-		inet6 mpls-vpn;
+		ipv4 nlri-mpls;
+		ipv4 mpls-vpn;
+		ipv6 unicast;
+		ipv6 mpls-vpn;
 	}
 
 	process parsed-route-backend {
@@ -31,7 +30,7 @@ neighbor 1.2.3.4 {
 		}
 		route 82.219.0.0/24 {
 			label [ 12345 5678 ];
-			# 17 34 51 68 -> 0x11 0x22 0x33 0x44 
+			# 17 34 51 68 -> 0x11 0x22 0x33 0x44
 			next-hop 127.0.0.1;
 			origin igp;
 			# 610800471 -> 0x24681357
@@ -50,7 +49,7 @@ neighbor 1.2.3.4 {
 		}
 		route 82.219.0.0/16 {
 			label [ 12345 5678 ];
-			# 17 34 51 68 -> 0x11 0x22 0x33 0x44 
+			# 17 34 51 68 -> 0x11 0x22 0x33 0x44
 			path-information 17.34.51.68;
 			next-hop 127.0.0.1;
 			origin igp;

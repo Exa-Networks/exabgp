@@ -494,6 +494,8 @@ class Configuration (object):
 			if command == 'inet': return self._set_family_inet4(scope,tokens[1:])
 			if command == 'inet4': return self._set_family_inet4(scope,tokens[1:])
 			if command == 'inet6': return self._set_family_inet6(scope,tokens[1:])
+			if command == 'ipv4': return self._set_family_ipv4(scope,tokens[1:])
+			if command == 'ipv6': return self._set_family_ipv6(scope,tokens[1:])
 			if command == 'minimal': return self._set_family_minimal(scope,tokens[1:])
 			if command == 'all': return self._set_family_all(scope,tokens[1:])
 
@@ -636,6 +638,10 @@ class Configuration (object):
 		return True
 
 	def _set_family_inet4 (self,scope,tokens):
+		self.logger.error("the word inet4 is deprecated, please use ipv4 instead")
+		return self._set_family_ipv4 (scope,tokens)
+
+	def _set_family_ipv4 (self,scope,tokens):
 		if self._family:
 			self._error = 'inet/inet4 can not be used with all or minimal'
 			if self.debug: raise
@@ -663,6 +669,10 @@ class Configuration (object):
 		return True
 
 	def _set_family_inet6 (self,scope,tokens):
+		self.logger.error("the word inet6 is deprecated, please use ipv6 instead")
+		return self._set_family_ipv6 (scope,tokens)
+
+	def _set_family_ipv6 (self,scope,tokens):
 		if self._family:
 			self._error = 'inet6 can not be used with all or minimal'
 			if self.debug: raise

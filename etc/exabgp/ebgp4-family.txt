@@ -7,15 +7,14 @@ neighbor 10.0.0.3 {
 	hold-time 180;
 
   family {
-		# inet unicast;
-		# inet4 unicast;
-		# inet4 multicast;
-		# inet4 nlri-mpls;
-		# inet4 mpls-vpn;
-		# inet6 unicast;
-		# inet4 flow-vpnv4
-		# ... or 
-		# inet4 flow;
+		# ipv4 unicast;
+		# ipv4 multicast;
+		# ipv4 nlri-mpls;
+		# ipv4 mpls-vpn;
+		# ipv6 unicast;
+		# ipv4 flow-vpnv4
+		# ... or
+		# ipv4 flow;
 		all;
 		#minimal;
   }

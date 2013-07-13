@@ -1133,7 +1133,7 @@ neighbor 10.0.0.3 {
         route 81.182.200.92/32 next-hop 10.0.0.2;
 
 	### 2010-04-01
-	# OrgName:    New Dream Network, LLC 
+	# OrgName:    New Dream Network, LLC
 	# OrgID:      NDN
 	# Address:    417 Associated Rd.
 	# Address:    PMB #257
@@ -1195,7 +1195,7 @@ neighbor 10.0.0.3 {
 	route 85.17.82.87/32 next-hop 10.0.0.2;
 
 	### 2010-04-08
-	# OrgName:    ThePlanet.com Internet Services, Inc. 
+	# OrgName:    ThePlanet.com Internet Services, Inc.
 	# OrgID:      TPCM
 	# Address:    315 Capitol
 	# Address:    Suite 205
@@ -1206,7 +1206,7 @@ neighbor 10.0.0.3 {
         route 174.120.248.130/32 next-hop 10.0.0.2;
 
 	# dreamhost flood GET /id/
-	# OrgName:    New Dream Network, LLC 
+	# OrgName:    New Dream Network, LLC
 	# OrgID:      NDN
 	# Address:    417 Associated Rd.
 	# Address:    PMB #257
@@ -1218,7 +1218,7 @@ neighbor 10.0.0.3 {
         route 208.113.160.23/32 next-hop 10.0.0.2;
 
 	# amazon flood GET /id/
-	# OrgName:    Amazon.com, Inc. 
+	# OrgName:    Amazon.com, Inc.
 	# OrgID:      AMAZO-4
 	# Address:    Amazon Web Services, Elastic Compute Cloud, EC2
 	# Address:    1200 12th Avenue South
@@ -1246,7 +1246,7 @@ neighbor 10.0.0.3 {
 	#route 88.186.77.102/32 next-hop 10.0.0.2;
 
 	### 2010-04-10
-	# http://www.puritysearch.net/ 
+	# http://www.puritysearch.net/
 	# inetnum:        91.205.96.0 - 91.205.99.255
 	# netname:        todayhost-NL
 	# descr:          Todayhost limited
@@ -1301,9 +1301,9 @@ neighbor 10.0.0.3 {
 	route 115.52.226.74/32 next-hop 10.0.0.2;
 
 	### 2010-04-16
-	# BellSouth.net Inc. BELLSNET-BLK6 (NET-65-0-0-0-1) 
+	# BellSouth.net Inc. BELLSNET-BLK6 (NET-65-0-0-0-1)
 	#                               65.0.0.0 - 65.15.255.255
-	# CAE ADSL EEUA BLS-65-4-96-0-1003020941 (NET-65-4-96-0-1) 
+	# CAE ADSL EEUA BLS-65-4-96-0-1003020941 (NET-65-4-96-0-1)
 	#                               65.4.96.0 - 65.4.127.255
 	route 65.4.108.250/32 next-hop 10.0.0.2;
 
@@ -1349,7 +1349,7 @@ neighbor 10.0.0.3 {
 
 	### 2010-04-27
 	# flood on rss, wrong keywords
-	# Network Information:            
+	# Network Information:
 	# a. [Network Number]             210.224.0.192/26
 	# b. [Network Name]               HETEML-JP
 	# g. [Organization]               paperboy&co. Inc.
@@ -1403,7 +1403,7 @@ neighbor 10.0.0.3 {
         route 203.162.21.221/32 next-hop 10.0.0.2;
 
 	# flood
-	# inetnum:      121.8.0.0 - 121.15.255.255      
+	# inetnum:      121.8.0.0 - 121.15.255.255
 	# netname:      CHINANET-GD
 	# descr:        CHINANET Guangdong province network
 	# descr:        China Telecom
@@ -1419,7 +1419,7 @@ neighbor 10.0.0.3 {
         route 120.126.16.237/32 next-hop 10.0.0.2;
 
 	# flood
-	# OrgName:    SoftLayer Technologies Inc. 
+	# OrgName:    SoftLayer Technologies Inc.
 	# OrgID:      SOFTL
 	# Address:    1950 N Stemmons Freeway
 	# City:       Dallas
@@ -1455,7 +1455,7 @@ neighbor 10.0.0.3 {
         route 79.217.104.59/32 next-hop 10.0.0.2;
         route 79.217.99.59/32 next-hop 10.0.0.2;
         route 79.217.82.221/32 next-hop 10.0.0.2;
-        route 79.217.124.54/32 next-hop 10.0.0.2;  
+        route 79.217.124.54/32 next-hop 10.0.0.2;
         route 79.217.119.241/32 next-hop 10.0.0.2;
         route 79.217.99.41/32 next-hop 10.0.0.2;
         route 79.217.57.132/32 next-hop 10.0.0.2;
@@ -1513,7 +1513,7 @@ neighbor 10.0.0.3 {
         route 115.99.11.80/32 next-hop 10.0.0.2;
 
 	# flood
-	# OrgName:    SoftLayer Technologies Inc. 
+	# OrgName:    SoftLayer Technologies Inc.
 	# OrgID:      SOFTL
 	# Address:    1950 N Stemmons Freeway
 	# City:       Dallas
@@ -1586,7 +1586,7 @@ neighbor 10.0.0.3 {
 	# descr:          SONATEL Societe Nationale Des Telecommunications Du Senegal
 	# country:        SN
         route 41.214.12.12/32 next-hop 10.0.0.2;
-	
+
 	# flood
 	# inetnum:        94.155.50.0 - 94.155.51.255
 	# netname:        GlobalNet-Kardjali
@@ -1783,7 +1783,7 @@ neighbor 10.0.0.3 {
 	# SpiderPic, with wrong User Agent (googlebot)
 	# Address:    Amazon Web Services, Elastic Compute Cloud, EC2
         route 184.73.220.15/32 next-hop 10.0.0.2;
-        route 184.73.236.109/32 next-hop 10.0.0.2;  
+        route 184.73.236.109/32 next-hop 10.0.0.2;
 
 	# flood
 	# inetnum:        78.50.192.0 - 78.53.159.255
@@ -1793,7 +1793,7 @@ neighbor 10.0.0.3 {
 	# country:        DE
         route 78.51.171.142/32 next-hop 10.0.0.2;
 
-	# MJ12bot/v1.3.3	
+	# MJ12bot/v1.3.3
 	# inetnum:      195.190.116.0 - 195.190.116.127
 	# netname:      EMegnit
 	# descr:        ElectroMagnit Ltd
@@ -1801,13 +1801,13 @@ neighbor 10.0.0.3 {
         route 195.190.116.2/32 next-hop 10.0.0.2;
 
         # MJ12bot/v1.3.3
-	# Charter Communications DLT-MN-71-10-64 (NET-71-10-64-0-1) 
+	# Charter Communications DLT-MN-71-10-64 (NET-71-10-64-0-1)
 	#                                   71.10.64.0 - 71.10.79.255
-	# Charter Communications CC04 (NET-71-8-0-0-1) 
+	# Charter Communications CC04 (NET-71-8-0-0-1)
 	#                                   71.8.0.0 - 71.15.255.255
         route 71.10.64.30/32 next-hop 10.0.0.2;
         route 74.111.12.39/32 next-hop 10.0.0.2;
-        route 205.209.170.2/32 next-hop 10.0.0.2;   
+        route 205.209.170.2/32 next-hop 10.0.0.2;
 
 	# Sogou web spider
 	# inetnum:      220.181.0.0 - 220.181.255.255
@@ -1885,7 +1885,7 @@ neighbor 10.0.0.3 {
         route 78.46.72.56/32 next-hop 10.0.0.2;
 
 	# rss flood
-	# inetnum:      121.208.0.0 - 121.223.255.255 
+	# inetnum:      121.208.0.0 - 121.223.255.255
 	# netname:      TELSTRAINTERNET45-AU
 	# descr:        Telstra Internet
 	# descr:        Locked Bag 5744
@@ -1995,9 +1995,9 @@ neighbor 10.0.0.3 {
 
 	### 2010-07-03
 	# flood
-	# AT&T Internet Services SBCIS-SBIS-6BLK (NET-75-0-0-0-1) 
+	# AT&T Internet Services SBCIS-SBIS-6BLK (NET-75-0-0-0-1)
 	#                                   75.0.0.0 - 75.63.255.255
-	# PPPoX Pool - BRAS16 LSANCA.1229452 SBCIS-110306132952 (NET-75-51-80-0-1) 
+	# PPPoX Pool - BRAS16 LSANCA.1229452 SBCIS-110306132952 (NET-75-51-80-0-1)
 	#                                   75.51.80.0 - 75.51.95.255
         route 75.51.85.249/32 next-hop 10.0.0.2;
 
@@ -2013,17 +2013,17 @@ neighbor 10.0.0.3 {
         route 212.110.183.8/32 next-hop 10.0.0.2;
 
 	# Nobis Technology Group, LLC NETBLK-NOBIS-TECHNOLOGY-GROUP-08
-	# (NET-173-234-0-0-1) 
+	# (NET-173-234-0-0-1)
 	#                                  173.234.0.0 - 173.234.255.255
 	# Ubiquity Server Solutions Atlanta NETBLK-UBIQUITY-ATLANTA-173-234-84-0
-	# (NET-173-234-84-0-1) 
+	# (NET-173-234-84-0-1)
 	#                                   173.234.84.0 - 173.234.87.255
         route 173.234.86.167/32 next-hop 10.0.0.2;
         route 173.234.73.70/32 next-hop 10.0.0.2;
-        route 173.234.86.191/32 next-hop 10.0.0.2;             
-        route 173.234.78.139/32 next-hop 10.0.0.2;             
+        route 173.234.86.191/32 next-hop 10.0.0.2;
+        route 173.234.78.139/32 next-hop 10.0.0.2;
 
-	# OrgName:    Network Operations Center Inc. 
+	# OrgName:    Network Operations Center Inc.
 	# OrgID:      NOC
 	# Address:    PO Box 591
 	# City:       Scranton
@@ -2032,7 +2032,7 @@ neighbor 10.0.0.3 {
 	# Country:    US
         route 64.120.248.147/32 next-hop 10.0.0.2;
 
-	# OrgName:    DirectSpace Networks, LLC. 
+	# OrgName:    DirectSpace Networks, LLC.
 	# OrgID:      DIREC-104
 	# Address:    921 SW Washington St
 	# Address:    Suite 325
@@ -2040,14 +2040,14 @@ neighbor 10.0.0.3 {
 	# StateProv:  OR
         route 174.140.169.145/32 next-hop 10.0.0.2;
 
-	# Steadfast Networks STEADFAST-4 (NET-69-162-128-0-1) 
+	# Steadfast Networks STEADFAST-4 (NET-69-162-128-0-1)
 	#                                   69.162.128.0 - 69.162.191.255
-	# Steadfast Networks STEADFAST-NYC-3 (NET-69-162-146-0-1) 
+	# Steadfast Networks STEADFAST-NYC-3 (NET-69-162-146-0-1)
 	#                                   69.162.146.0 - 69.162.147.255
         route 69.162.147.240/32 next-hop 10.0.0.2;
 
 	### 2010-07-07
-	# OrgName:    GoGrid 
+	# OrgName:    GoGrid
 	# OrgID:      SERVE-47
 	# Address:    2 Harrison Street
 	# Address:    Suite 200
@@ -2071,9 +2071,9 @@ neighbor 10.0.0.3 {
         route 113.116.58.189/32 next-hop 10.0.0.2;
 
 	# leech
-	# eNET Inc. ENET-XLHOST-5 (NET-173-244-160-0-1) 
+	# eNET Inc. ENET-XLHOST-5 (NET-173-244-160-0-1)
 	#                                   173.244.160.0 - 173.244.191.255
-	# XLHost.com Inc XLHOST-KRACHEV-9107 (NET-173-244-164-128-1) 
+	# XLHost.com Inc XLHOST-KRACHEV-9107 (NET-173-244-164-128-1)
 	#                                   173.244.164.128 - 173.244.164.135
         route 173.244.164.130/32 next-hop 10.0.0.2;
 
@@ -2115,18 +2115,18 @@ neighbor 10.0.0.3 {
         route 81.213.145.136/32 next-hop 10.0.0.2;
 
 	# flood
-	# HostMySite HOSTMYSITE (NET-65-36-128-0-1) 
+	# HostMySite HOSTMYSITE (NET-65-36-128-0-1)
 	#                                   65.36.128.0 - 65.36.255.255
-	# InternetSeer.com Corp. INTERNETSEER (NET-65-36-241-0-1) 
+	# InternetSeer.com Corp. INTERNETSEER (NET-65-36-241-0-1)
 	#                                   65.36.241.0 - 65.36.241.255
         route 65.36.241.52/32 next-hop 10.0.0.2;
 
 
 	# MJ12bot/v1.3.3
-	# Optimum Online NETBLK-OOL-6BLK (NET-69-112-0-0-1) 
+	# Optimum Online NETBLK-OOL-6BLK (NET-69-112-0-0-1)
 	#                                   69.112.0.0 - 69.127.255.255
 	# Optimum Online (Cablevision Systems) OOL-CPE-FRHDNJ-69-115-240-0-22
-	# (NET-69-115-240-0-1) 
+	# (NET-69-115-240-0-1)
 	#                                   69.115.240.0 - 69.115.243.255
         route 69.115.241.123/32 next-hop 10.0.0.2;
 
@@ -2445,7 +2445,7 @@ neighbor 10.0.0.3 {
 	# zoom
 	# inetnum:        87.243.150.0 - 87.243.150.255
 	# netname:        AINET-JUDENBURG
-	# descr:          Ainet Telekommunikations-Netzwerk Betriebs GmbH
+	# descr:          Aip Telekommunikations-Netzwerk Betriebs GmbH
 	# country:        AT
         route 87.243.150.229/32 next-hop 10.0.0.2;
 
@@ -2461,7 +2461,7 @@ neighbor 10.0.0.3 {
 	# ownerid:     CL-VPNS-LACNIC
 	# responsible: Italo Sambuceti
 	# address:     Reyes Lavalle, 3340, 4th floor
-	# address:     6760335 - Santiago - 
+	# address:     6760335 - Santiago -
 	# country:     CL
         route 200.120.251.218/32 next-hop 10.0.0.2;
 
@@ -2609,7 +2609,7 @@ neighbor 10.0.0.3 {
 	### 2010-09-10
 	# AT&T Internet Services SBCIS-SBIS-6BLK (NET-75-0-0-0-1) 75.0.0.0 - 75.63.255.255
 	# rback34a.irvnca.20060310 SBC07500422400020060310153453 (NET-75-4-224-0-1) 75.4.224.0 - 75.4.239.255
-        route 75.4.237.69/32 next-hop 10.0.0.2;   
+        route 75.4.237.69/32 next-hop 10.0.0.2;
 
 	### 2010-09-13
 	# inetnum:        175.144.0.0 - 175.145.255.255
@@ -2777,7 +2777,7 @@ neighbor 10.0.0.3 {
 	# inetnum:        222.87.63.0 - 222.87.109.255
 	# netname:        CHINANET-GZ
 	# country:        CN
-        route 222.87.107.151/32 next-hop 10.0.0.2;  
+        route 222.87.107.151/32 next-hop 10.0.0.2;
 
 	# inetnum:     190.68/15
 	# status:      allocated
@@ -2785,7 +2785,7 @@ neighbor 10.0.0.3 {
 	# ownerid:     CO-CTSE-LACNIC
 	# responsible: Administradores Internet
 	# address:     Transversal, 49, 105-84
-	# address:     N - BOGOTA - 
+	# address:     N - BOGOTA -
 	# country:     CO
         route 190.69.3.12/32 next-hop 10.0.0.2;
 
@@ -2903,9 +2903,9 @@ neighbor 10.0.0.3 {
 	# baiduspider, not aware of nofollow directives
 	# on china and japan IPs, browse all subdomains, several filters, etc...
 	# and some on old IPs, not announced in DNS anymore
-        route 119.63.198.0/24 next-hop 10.0.0.2; 
+        route 119.63.198.0/24 next-hop 10.0.0.2;
         route 123.125.66.0/24 next-hop 10.0.0.2;
-        route 220.181.7.0/24 next-hop 10.0.0.2; 
+        route 220.181.7.0/24 next-hop 10.0.0.2;
     }
 
 }

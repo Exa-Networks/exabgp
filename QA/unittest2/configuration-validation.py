@@ -46,8 +46,8 @@ neighbor = """\
 				}
 				capability {
 					family {
-						inet4: ["unicast","multicast","nlri-mpls","mpls-vpn","flow-vpnv4","flow"]
-						inet6: ["unicast"]
+						ipv4: ["unicast","multicast","nlri-mpls","mpls-vpn","flow-vpnv4","flow"]
+						ipv6: ["unicast"]
 						_inet: ["unicast","flow"]
 						_alias: "all"
 						_alias: "minimal"

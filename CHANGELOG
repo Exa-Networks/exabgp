@@ -19,6 +19,7 @@ Version 3.2.0
  * Fix: with multisession recent python would refuse to copy an route due to a lock in logger of the neighbor object
  * Fix: could not handle NOTICATION sent during the OPEN negotiation stage
  * Compatibility: supervisor was renamed reactor
+ * Compatibility: the word inet4/inet6 are now replaced by ipv4/ipv6
 
 Version 3.1.13 - 6th July 2013
  * Fix: only clear buffered routes on restart and not reload (bug never reported)

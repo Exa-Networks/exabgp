@@ -6,7 +6,7 @@ neighbor 10.0.0.3 {
 	peer-as 65533;
 
 	family {
-		inet4 unicast;
+		ipv4 unicast;
 	}
 
 	# control route(s) announcement every second, return down or up on it stdout to reflect route announcement change
