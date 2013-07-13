@@ -184,7 +184,7 @@ class Reactor (object):
 
 							try:
 								message,local,peer = clients()
-								#print '\n',ip,local,peer,od(message),'\n'
+								print '\n',ip,local,peer,od(message),'\n'
 							except StopIteration:
 								clients = None
 								break

@@ -105,46 +105,45 @@ class Listener (object):
 	@each
 	def connections (self):
 		now = time.time()
-		for sock,ip in self._connections():
-			self._connected[sock] = (now,ip,'header',self.HEADER_LEN,'')
+		for connection in self._connections():
+			self._connected[connection] = (now,'header',self.HEADER_LEN,'')
 
-		for sock,(then,ip,stage,to_read,received) in self._connected.items():
+		for connection,(then,stage,to_read,received) in self._connected.items():
 			try:
-				data = sock.recv(to_read)
+				data = connection.read(to_read)
 				to_read -= len(data)
 				received += data
 
 				if now - then > self.MAX_OPEN_WAIT:
-					self._delete(sock)
+					self._delete(connection)
 					continue
 
 				if to_read:
-					self._connected[sock] = (then,ip,stage,to_read,received)
+					self._connected[connection] = (then,stage,to_read,received)
 					continue
 
 				if stage == 'header':
 					if received[:16] != '\xFF' * 16:
-						self._reply(sock,self.open_invalid_header)
-						self._delete(sock)
+						self._reply(connection,self.open_invalid_header)
+						self._delete(connection)
 						continue
 					if received[18] != Open.TYPE:
-						self._reply(sock,self.open_invalid_type)
-						self._delete(sock)
+						self._reply(connection,self.open_invalid_type)
+						self._delete(connection)
 						continue
 					size = (ord(data[16]) << 16) + ord(data[17])
 					if size < 29:
-						self._reply(sock,self.open_invalid_size)
-						self._delete(sock)
+						self._reply(connection,self.open_invalid_size)
+						self._delete(connection)
 						continue
 					to_read = size - self.HEADER_LEN
-					self._connected[sock] = (then,ip,'body',to_read,received)
+					self._connected[connection] = (then,'body',to_read,received)
 					continue
 
-				peer = sock.getpeername()
-				self._reply(sock,self.open_bye)
-				self._delete(sock)
+				self._reply(connection,self.open_bye)
+				self._delete(connection)
 
-				yield received,(ip,179),peer
+				yield received,connection.local,connection.peer
 			except socket.error,e:
 				if e.errno in error.block:
 					if now - then > self.MAX_OPEN_WAIT:
@@ -159,7 +158,7 @@ class Listener (object):
 
 	def _reply (self,sock,message):
 		try:
-			sock.send(message)
+			sock.write(message)
 		except socket.error:
 			pass
 

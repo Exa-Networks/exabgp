@@ -6,7 +6,6 @@ class Outgoing (Connection):
 	def __init__ (self,afi,peer,local,md5,ttl):
 		Connection.__init__(self,afi,peer,local)
 
-		# peer and local are type Inet
 		self.logger.wire("Connection to %s" % self.peer)
 
 		try:
