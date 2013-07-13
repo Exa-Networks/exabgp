@@ -9,9 +9,11 @@ Copyright (c) 2013-2013 Exa Networks. All rights reserved.
 import time
 import socket
 
+from exabgp.protocol.family import AFI
 from exabgp.util.coroutine import each
-from exabgp.reactor.network.error import error,errno
 from exabgp.util.ip import isipv4,isipv6
+from exabgp.reactor.network.error import error,errno
+from exabgp.reactor.network.incoming import Incoming
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.notification import Notify
 
@@ -87,11 +89,10 @@ class Listener (object):
 			return
 
 		try:
-			for sock in self._sockets:
+			for sock,(host,_) in self._sockets.items():
 				try:
-					s, (ip,port) = sock.accept()
-					s.setblocking(0)
-					yield s, ip
+					io, (ip,port) = sock.accept()
+					yield Incoming(AFI.ipv4,ip,host,io)
 					break
 				except socket.error, e:
 					if e.errno in error.block:

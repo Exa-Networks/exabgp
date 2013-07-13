@@ -64,7 +64,7 @@ class Protocol (object):
 			local = self.neighbor.local_address
 			md5 = self.neighbor.md5
 			ttl = self.neighbor.ttl
-			self.connection = Outgoing(peer,local,md5,ttl)
+			self.connection = Outgoing(peer.afi,peer.ip,local.ip,md5,ttl)
 
 			if self.peer.neighbor.api.neighbor_changes:
 				self.peer.reactor.processes.connected(self.peer.neighbor.peer_address)
