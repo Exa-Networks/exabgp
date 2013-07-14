@@ -9,6 +9,8 @@ Copyright (c) 2013-2013 Exa Networks. All rights reserved.
 import time
 import socket
 
+from exabgp.util.errstr import errstr
+
 from exabgp.protocol.family import AFI
 from exabgp.util.coroutine import each
 from exabgp.util.ip import isipv4,isipv6
@@ -71,7 +73,7 @@ class Listener (object):
 			elif e.args[0] == errno.EADDRNOTAVAIL:
 				raise BindingError('could not listen on %s:%d, this is an invalid address' % (ip,self._port))
 			else:
-				raise BindingError('could not listen on %s:%d - %s' % (ip,self._port,str(e)))
+				raise BindingError('could not listen on %s:%d (%s)' % (ip,self._port,errstr(e)))
 
 	def start (self):
 		try:
@@ -97,7 +99,7 @@ class Listener (object):
 				except socket.error, e:
 					if e.errno in error.block:
 						continue
-					raise AcceptError('could not accept a new connection %s' % str(e))
+					raise AcceptError('could not accept a new connection (%s)' % errstr(e))
 		except NetworkError,e:
 			self.logger.critical(str(e))
 			raise e
@@ -147,7 +149,7 @@ class Listener (object):
 			except socket.error,e:
 				if e.errno in error.block:
 					if now - then > self.MAX_OPEN_WAIT:
-						self._delete(sock)
+						self._delete(connection)
 
 	def _delete (self,sock):
 		self._connected.pop(sock)

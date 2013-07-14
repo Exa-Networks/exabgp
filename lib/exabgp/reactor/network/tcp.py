@@ -10,6 +10,8 @@ import struct
 import socket
 import platform
 
+from exabgp.util.errstr import errstr
+
 from exabgp.protocol.family import AFI
 from exabgp.reactor.network.error import errno
 
@@ -52,8 +54,8 @@ def connect (io,ip,afi,md5):
 		if e.errno == errno.EINPROGRESS:
 			return
 		if md5:
-			raise NotConnected('Could not connect to peer %s (check your MD5 passwords): %s' % (ip,str(e)))
-		raise NotConnected('Could not connect to peer %s: %s' % (ip,str(e)))
+			raise NotConnected('Could not connect to peer %s, check your MD5 password (%s)' % (ip,errstr(e)))
+		raise NotConnected('Could not connect to peer %s (%s)' % (ip,errstr(e)))
 
 
 def MD5 (io,ip,afi,md5):
@@ -97,7 +99,7 @@ def MD5 (io,ip,afi,md5):
 					md5sig = struct.pack(tcp_md5sig, socket.AF_INET6, n_port, SIN6_FLOWINFO, n_addr, SIN6_SCOPE_ID, len(md5), md5)
 				io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, md5sig)
 			except socket.error,e:
-				raise MD5Error('This linux machine does not support TCP_MD5SIG, you can not use MD5 : %s' % str(e))
+				raise MD5Error('This linux machine does not support TCP_MD5SIG, you can not use MD5 (%s)' % errstr(e))
 		else:
 			raise MD5Error('ExaBGP has no MD5 support for %s' % os)
 
@@ -114,13 +116,13 @@ def TTL (io,ip,ttl):
 		try:
 			io.setsockopt(socket.IPPROTO_IP,socket.IP_TTL, 20)
 		except socket.error,e:
-			raise TTLError('This OS does not support IP_TTL (ttl-security) for %s: %s' % (ip,str(e)))
+			raise TTLError('This OS does not support IP_TTL (ttl-security) for %s (%s)' % (ip,errstr(e)))
 
 def async (io,ip):
 	try:
 		io.setblocking(0)
 	except socket.error, e:
-		raise AsyncError('could not set socket non-blocking for %s: %s' % (ip,str(e)))
+		raise AsyncError('could not set socket non-blocking for %s (%s)' % (ip,errstr(e)))
 
 # try:
 # 	try:

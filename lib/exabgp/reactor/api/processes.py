@@ -12,6 +12,8 @@ import subprocess
 import select
 import fcntl
 
+from exabgp.util.errstr import errstr
+
 from exabgp.reactor.api.encoding import Text,JSON
 from exabgp.logger import Logger
 
@@ -160,7 +162,7 @@ class Processes (object):
 						if e.errno == errno.EINTR:  # call interrupted
 							pass  # we most likely have data, we will try to read them a the next loop iteration
 						elif e.errno != errno.EAGAIN:  # no more data
-							self.logger.processes("unexpected errno received from forked process: %d [%s]" % (e.errno,errno.errorcode[e.errno]))
+							self.logger.processes("unexpected errno received from forked process (%s)" % errstr(e))
 			except (subprocess.CalledProcessError,OSError,ValueError):
 				self.logger.processes("Issue with the process, terminating it and restarting it")
 				self._terminate(process)
@@ -179,7 +181,7 @@ class Processes (object):
 					raise ProcessError()
 				else:
 					# Could it have been caused by a signal ? What to do.
-					self.logger.processes("REPORT TO DEVELOPERS: IOError received while SENDING data to helper program %s, retrying" % str(e.errno))
+					self.logger.processes("Error received while SENDING data to helper program, retrying (%s)" % errstr(e))
 					continue
 			break
 
@@ -187,7 +189,7 @@ class Processes (object):
 			self._process[process].stdin.flush()
 		except IOError,e:
 			# AFAIK, the buffer should be flushed at the next attempt.
-			self.logger.processes("REPORT TO DEVELOPERS: IOError received while FLUSHING data to helper program %s, retrying" % str(e.errno))
+			self.logger.processes("Error received while FLUSHING data to helper program, retrying (%s)" % errstr(e))
 
 		return True
 

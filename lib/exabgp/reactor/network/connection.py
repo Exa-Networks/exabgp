@@ -15,7 +15,7 @@ from exabgp.configuration.environment import environment
 
 from exabgp.util.od import od
 from exabgp.util.trace import trace
-from exabgp.util.coroutine import each
+from exabgp.util.errstr import errstr
 
 from exabgp.logger import Logger,FakeLogger,LazyFormat
 
@@ -24,9 +24,6 @@ from exabgp.bgp.message import Message
 from exabgp.reactor.network.error import error,errno,NetworkError,TooSlowError,NotConnected,LostConnection
 
 from .error import *
-
-def strerrno (e):
-	return '[errno %s], %s' % (errno.errorcode[e.args[0]],str(e))
 
 class Connection (object):
 	def __init__ (self,afi,peer,local):
@@ -131,13 +128,13 @@ class Connection (object):
 		except socket.timeout,e:
 			self.close()
 			self.logger.wire("%15s peer is too slow" % self.peer)
-			raise TooSlowError('Timeout while reading data from the network: %s ' % strerrno(e))
+			raise TooSlowError('Timeout while reading data from the network (%s)' % errstr(e))
 		except socket.error,e:
 			self.close()
 			self.logger.wire("%15s undefined error on socket" % self.peer)
 			if e.args[0] == errno.EPIPE:
 				raise LostConnection('Lost the TCP connection')
-			raise NetworkError('Problem while reading data from the network: %s ' % strerrno(e))
+			raise NetworkError('Problem while reading data from the network (%s)' % errstr(e))
 
 	def writer (self,data):
 		if not self.io:
@@ -170,10 +167,10 @@ class Connection (object):
 					yield False
 				except socket.error,e:
 					if e.args[0] not in error.block:
-						self.logger.wire("%15s problem sending message, errno %s" % (self.peer,str(e.args[0])))
-						raise NetworkError('Problem while reading data from the network: %s ' % strerrno(e))
+						self.logger.wire("%15s problem sending message (%s)" % (self.peer,errstr(e)))
+						raise NetworkError('Problem while reading data from the network (%s)' % errstr(e))
 					if sent == 0:
-						self.logger.wire("%15s problem sending message, errno %s, will retry later" % (self.peer,errno.errorcode[e.args[0]]))
+						self.logger.wire("%15s problem sending message, will retry later (%s)" % (self.peer,errstr(e)))
 						yield False
 					else:
 						self.logger.wire("%15s blocking io problem mid-way sending through a message, trying to complete" % self.peer)
@@ -192,7 +189,7 @@ class Connection (object):
 				# The TCP connection is gone.
 				raise NetworkError('Broken TCP connection')
 			else:
-				raise NetworkError('Problem while writing data to the network: %s' % strerrno(e))
+				raise NetworkError('Problem while writing data to the network (%s)' % errstr(e))
 
 	def reader (self):
 		header = ''
