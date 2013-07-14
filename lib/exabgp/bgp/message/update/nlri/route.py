@@ -230,7 +230,6 @@ def BGPNLRI (afi,safi,bgp,has_multiple_path):
 
 	size = mask_to_bytes.get(mask,None)
 	if size is None:
-		import pdb; pdb.set_trace()
 		raise Notify(3,10,'invalid netmask found when decoding NLRI')
 
 	if len(bgp) < size:
