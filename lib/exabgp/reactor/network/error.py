@@ -29,13 +29,14 @@ class error:
 		errno.ECONNREFUSED, errno.EHOSTUNREACH,
 	))
 
-class NetworkError (Exception): pass
-class BindingError (NetworkError): pass
-class AcceptError  (NetworkError): pass
-class NotConnected (NetworkError): pass
-class MD5Error     (NetworkError): pass
-class NagleError   (NetworkError): pass
-class TTLError     (NetworkError): pass
-class AsyncError   (NetworkError): pass
-class TooSlowError (NetworkError): pass
-class SizeError    (NetworkError): pass
+class NetworkError   (Exception): pass
+class BindingError   (NetworkError): pass
+class AcceptError    (NetworkError): pass
+class NotConnected   (NetworkError): pass
+class LostConnection (NetworkError): pass
+class MD5Error       (NetworkError): pass
+class NagleError     (NetworkError): pass
+class TTLError       (NetworkError): pass
+class AsyncError     (NetworkError): pass
+class TooSlowError   (NetworkError): pass
+class SizeError      (NetworkError): pass

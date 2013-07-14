@@ -197,8 +197,6 @@ def main ():
 			                                                        '%sVERY dangerous use only if you understand BGP very well.' % (' '* 34)),
 			'once': (environment.boolean,environment.lower,'false', 'only one tcp connection attempt per peer (for debuging scripts)'),
 			'delay': (environment.integer,environment.nop,'0',      'start to announce route when the minutes in the hours is a modulo of this number'),
-			'block': (environment.boolean,environment.lower,'false','if write would block, do not buffer and wait until socket becomes available\n'
-			                                                        '%s(here to help stress testing, do not use if you have multiple peers defined' % (' '* 34)),
 #		},
 #		'--name--' : {
 			'listen': (environment.boolean,environment.lower,'false', '(experimental) should exabgp listen for incoming connections'),

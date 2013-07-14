@@ -165,14 +165,6 @@ class Reactor (object):
 						if duration >= 1.0:
 							break
 
-					if ios:
-						try:
-							read,_,_ = select.select(ios,[],[],max(reactor_speed-duration,0))
-						except select.error,e:
-							errno,message = e.args
-							if not errno in error.block:
-								raise
-
 					if self.listener:
 						while True:
 							duration = time.time() - start
@@ -188,6 +180,14 @@ class Reactor (object):
 							except StopIteration:
 								clients = None
 								break
+
+					if ios:
+						try:
+							read,_,_ = select.select(ios,[],[],max(reactor_speed-duration,0))
+						except select.error,e:
+							errno,message = e.args
+							if not errno in error.block:
+								raise
 
 					duration = time.time() - start
 					if duration < reactor_speed:
@@ -437,7 +437,7 @@ class Reactor (object):
 					for route in routes:
 						self.configuration.remove_route_from_peers(route,peers)
 						self.configuration.add_route_to_peers(route,peers)
-						self.logger.warning("Route added to  %s : %s" % (', '.join(peers if peers else []),route),'reactor')
+						self.logger.warning("Route added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',route),'reactor')
 						yield False
 					self._route_update = True
 

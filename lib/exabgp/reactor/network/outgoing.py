@@ -3,7 +3,7 @@ from .tcp import create,bind,connect,MD5,nagle,TTL,async
 from .error import NetworkError,NotConnected
 
 class Outgoing (Connection):
-	def __init__ (self,afi,peer,local,md5,ttl):
+	def __init__ (self,afi,peer,local,md5='',ttl=None):
 		Connection.__init__(self,afi,peer,local)
 
 		self.logger.wire("Connection to %s" % self.peer)

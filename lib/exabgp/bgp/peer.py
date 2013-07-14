@@ -11,10 +11,10 @@ import time
 import traceback
 
 from exabgp.bgp.timer import Timer
-from exabgp.bgp.message.nop import NOP
+from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability.id import CapabilityID
+from exabgp.bgp.message.nop import NOP
 from exabgp.bgp.message.update import Update
-from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notification, Notify
 #from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.reactor.protocol import Protocol
@@ -22,7 +22,7 @@ from exabgp.reactor.network.error import NetworkError
 from exabgp.reactor.api.processes import ProcessError
 
 from exabgp.configuration.environment import environment
-from exabgp.logger import Logger
+from exabgp.logger import Logger,FakeLogger
 
 from exabgp.util.counter import Counter
 
@@ -36,7 +36,14 @@ FORCE_GRACEFUL = True
 
 class Peer (object):
 	def __init__ (self,neighbor,reactor):
-		self.logger = Logger()
+		try:
+			self.logger = Logger()
+			# We only to try to connect via TCP once
+			self.once = environment.settings().tcp.once
+		except RuntimeError:
+			self.logger = FakeLogger()
+			self.once = True
+
 		self.reactor = reactor
 		self.neighbor = neighbor
 		# The next restart neighbor definition
@@ -59,8 +66,6 @@ class Peer (object):
 		# We have been asked to teardown the session with this code
 		self._teardown = None
 
-		# We only to try to connect via TCP once
-		self.once = environment.settings().tcp.once
 
 	def _reset_skip (self):
 		# We are currently not skipping connection attempts
@@ -123,6 +128,8 @@ class Peer (object):
 			self.reactor.unschedule(self)
 
 	def _run (self):
+		"yield True if we want the reactor to give us back the hand with the same peer loop, None if we do not have any more work to do"
+
 		try:
 			if self.reactor.processes.broken(self.neighbor.peer_address):
 				# XXX: we should perhaps try to restart the process ??
@@ -134,60 +141,43 @@ class Peer (object):
 
 			self._reset_skip()
 
-			#
-			# SEND OPEN
-			#
+			new_routes = None
 
-			_open = self.bgp.new_open(self._restarted)
-			yield None
+			# send OPEN
+			for _open in self.bgp.new_open(self._restarted):
+				yield True
 
-			#
-			# READ OPEN
-			#
-
-			# XXX: put that timer timer in the configuration
+			# Read OPEN
+			# XXX: FIXME: put that timer timer in the configuration
 			opentimer = Timer(self.me,10.0,1,1,'waited for open too long')
-			opn = NOP()
 
-			while opn.TYPE == NOP.TYPE:
-				opn = self.bgp.read_open(_open,self.neighbor.peer_address.ip)
+			for opn in self.bgp.read_open(_open,self.neighbor.peer_address.ip):
 				opentimer.tick()
 				if not self._running:
-					return
+					break
+				# XXX: FIXME: change the whole code to use the ord and not the chr version
+				if ord(opn.TYPE) not in [Message.Type.NOP,Message.Type.OPEN]:
+					raise opn
 				yield None
 
-			#
 			# Start keeping keepalive timer
-			#
-
 			timer = Timer(self.me,self.bgp.negotiated.holdtime,4,0)
 
-			#
-			# READ KEEPALIVE
-			#
-
-			while True:
-				message = self.bgp.read_keepalive(' (OPENCONFIRM)')
+			# Read KEEPALIVE
+			for message in self.bgp.read_keepalive(' (OPENCONFIRM)'):
 				timer.tick(message)
-				# KEEPALIVE or NOP
-				if message.TYPE == KeepAlive.TYPE:
-					break
 				if not self._running:
-					return
+					break
+				if ord(message.TYPE) not in [Message.Type.NOP,Message.Type.KEEPALIVE]:
+					raise message
 				yield None
 
-			#
-			# SEND KEEPALIVE
-			#
-
-			message = self.bgp.new_keepalive(' (ESTABLISHED)')
-			yield True
+			# Send KEEPALIVE
+			for sent in self.bgp.new_keepalive(' (ESTABLISHED)'):
+				yield True
 
 
-			#
-			# ANNOUNCE TO THE PROCESS BGP IS UP
-			#
-
+			# Announce to the process BGP is up
 			self.logger.network('Connected to peer %s' % self.neighbor.name())
 			if self.neighbor.api.neighbor_changes:
 				try:
@@ -199,22 +189,21 @@ class Peer (object):
 					raise Notify(6,0,'ExaBGP Internal error, sorry.')
 
 
-			#
-			# SENDING OUR ROUTING TABLE
-			#
-
+			# Sending our routing table
 			# Dict with for each AFI/SAFI pair if we should announce ADDPATH Path Identifier
-
 			for count in self.bgp.new_update():
 				yield True
 
+			# Send EOR to let our peer know he can perform a RIB update
 			if self.bgp.negotiated.families:
-				self.bgp.new_eors()
+				for _ in self.bgp.new_eors():
+					yield True
 			else:
 				# If we are not sending an EOR, send a keepalive as soon as when finished
 				# So the other routers knows that we have no (more) routes to send ...
 				# (is that behaviour documented somewhere ??)
-				c,k = self.bgp.new_keepalive('KEEPALIVE (EOR)')
+				for _ in self.bgp.new_keepalive('KEEPALIVE (EOR)'):
+					yield True
 
 			#
 			# MAIN UPDATE LOOP
@@ -222,148 +211,100 @@ class Peer (object):
 
 			counter = Counter(self.logger,self.me)
 
+			print "+"*40
+			print self._running
+			print "+"*40
+
 			while self._running:
-				#
-				# SEND KEEPALIVES
-				#
+				for message in self.bgp.read_message():
+					# SEND KEEPALIVES
+					timer.tick(message)
+					if timer.keepalive():
+						self.bgp.new_keepalive()
 
-				if timer.keepalive():
-					self.bgp.new_keepalive()
+					# Received update
+					if message.TYPE == Update.TYPE:
+						counter.increment(len(message.routes))
 
-				#
-				# READ MESSAGE
-				#
+					# Give information on the number of routes seen
+					counter.display()
 
-				message = self.bgp.read_message()
-				timer.tick(message)
+					# Need to send update
+					if self._have_routes and not new_routes:
+						self._have_routes = False
+						new_routes = self.bgp.new_update()
 
-				#
-				# UPDATE
-				#
+					while new_routes:
+						try:
+							new_routes.next()
+						except StopIteration:
+							new_routes = None
 
-				if message.TYPE == Update.TYPE:
-					counter.increment(len(message.routes))
+					# Go to other Peers
+					yield True if new_routes or message.TYPE != NOP.TYPE else None
 
-				#
-				# GIVE INFORMATION ON THE NUMBER OF ROUTES SEEN
-				#
+					# read_message will loop until new message arrives with NOP
+					if not self._running:
+						break
 
-				counter.display()
-
-				#
-				# GIVE INFORMATION ON THE NB OF BUFFERED ROUTES
-				#
-
-				nb_pending = self.bgp.buffered()
-				if nb_pending:
-					self.logger.reactor(self.me('BUFFERED MESSAGES  (%d)' % nb_pending))
-					count = 0
-
-				#
-				# SEND UPDATES (NEW OR BUFFERED)
-				#
-
-				# If we have reloaded, reset the RIB information
-
-				if self._have_routes:
-					self._have_routes = False
-					self.logger.reactor(self.me('checking for new routes to send'))
-
-					for count in self.bgp.new_update():
-						yield True
-
-				# emptying the buffer of routes
-
-				elif self.bgp.buffered():
-					for count in self.bgp.new_update():
-						yield True
-
-				#
-				# Go to other Peers
-				#
-
-				yield None
-
-			#
-			# IF GRACEFUL RESTART, SILENT SHUTDOWN
-			#
-
+			# If graceful restart, silent shutdown
 			if self.neighbor.graceful_restart and opn.capabilities.announced(CapabilityID.GRACEFUL_RESTART):
-				self.logger.error('Closing the connection without notification','reactor')
+				self.logger.error('Closing the connection without notification','network')
 				self.bgp.close('graceful restarted negotiated, closing without sending any notification')
 				return
 
-			#
-			# NOTIFYING OUR PEER OF THE SHUTDOWN
-			#
-
+			# notify our peer of the shutdown
 			if self._teardown:
 				code, self._teardown = self._teardown, None
 				raise Notify(6,code)
-
 			raise Notify(6,3)
 
-		#
 		# CONNECTION FAILURE, UPDATING TIMERS FOR BACK-OFF
-		#
-
 		except NetworkError, e:
-			self.logger.network('we can not connect to the peer, reason : %s' % str(e).lower())
+			self.logger.network('can not write to the peer, reason : %s' % str(e))
 			self._more_skip()
-			self.bgp.clear_buffer()
 			self.bgp.close('could not connect to the peer')
 
 			# we tried to connect once, it failed, we stop
 			if self.once:
 				self.logger.network('only one attempt to connect is allowed, stoping the peer')
 				self.stop()
-
 			return
 
-		#
 		# NOTIFY THE PEER OF AN ERROR
-		#
-
 		except Notify,e:
-			self.logger.error(self.me('>> NOTIFICATION (%d,%d) to peer [%s] %s' % (e.code,e.subcode,str(e),e.data)),'reactor')
-			self.bgp.clear_buffer()
 			try:
 				self.bgp.new_notification(e)
 			except (NetworkError,ProcessError):
-				self.logger.error(self.me('NOTIFICATION NOT SENT','reactor'))
+				self.logger.error(self.me('NOTIFICATION NOT SENT','network'))
 				pass
 			self.bgp.close('notification sent (%d,%d) [%s] %s' % (e.code,e.subcode,str(e),e.data))
 			return
 
-		#
 		# THE PEER NOTIFIED US OF AN ERROR
-		#
-
 		except Notification, e:
 			self.logger.error(self.me('Received Notification (%d,%d) %s' % (e.code,e.subcode,str(e))),'reactor')
-			self.bgp.clear_buffer()
 			self.bgp.close('notification received (%d,%d) %s' % (e.code,e.subcode,str(e)))
 			return
 
-		#
-		# PROBLEM WRITING TO OUR FORKED PROCESSES
-		#
+		# RECEIVED a Message TYPE we did not expect
+		except Message, e:
+			# XXX: FIXME: return better information about the message in question
+			self.logger.error(self.me('Received unexpected message','network'))
+			self.bgp.close('unexpected message received')
+			return
 
+		# PROBLEM WRITING TO OUR FORKED PROCESSES
 		except ProcessError, e:
 			self.logger.error(self.me(str(e)),'reactor')
 			self._more_skip()
-			self.bgp.clear_buffer()
 			self.bgp.close('failure %s' % str(e))
 			return
 
-		#
 		# UNHANDLED PROBLEMS
-		#
-
 		except Exception, e:
 			self.logger.error(self.me('UNHANDLED EXCEPTION'),'reactor')
 			self._more_skip()
-			self.bgp.clear_buffer()
 			# XXX: we need to read this from the env.
 			if True:
 				traceback.print_exc(file=sys.stdout)

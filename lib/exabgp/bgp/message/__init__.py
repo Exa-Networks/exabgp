@@ -29,10 +29,13 @@ def prefix (data):
 
 class Message (Exception):
 	TYPE = None
-	HEADER_LEN = 19
+
 	MARKER = chr(0xff)*16
+	HEADER_LEN = 19
+	MAX_LEN = 4096
 
 	class Type:
+		NOP           = 0x00  # .   0 - internal
 		OPEN          = 0x01  # .   1
 		UPDATE        = 0x02  # .   2
 		NOTIFICATION  = 0x03  # .   3
@@ -44,11 +47,11 @@ class Message (Exception):
 		#LOCALRIB      = 0x100  # . 256
 
 	Length = {
-		Type.OPEN          : (int.__gt__,29),
-		Type.UPDATE        : (int.__gt__,23),
-		Type.NOTIFICATION  : (int.__gt__,21),
-		Type.KEEPALIVE     : (int.__eq__,19),
-		Type.ROUTE_REFRESH : (int.__eq__,23),
+		Type.OPEN          : lambda _ : _ >= 29,
+		Type.UPDATE        : lambda _ : _ >= 23,
+		Type.NOTIFICATION  : lambda _ : _ >= 21,
+		Type.KEEPALIVE     : lambda _ : _ == 19,
+		Type.ROUTE_REFRESH : lambda _ : _ == 23,
 	}
 
 	def __init__ (self):

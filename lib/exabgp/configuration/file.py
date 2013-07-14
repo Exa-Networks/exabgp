@@ -173,12 +173,12 @@ class Configuration (object):
 	'          all;       # default if not family block is present, announce all we know\n' \
 	'          minimal    # use the AFI/SAFI required to announce the routes in the configuration\n' \
 	'          \n' \
-	'          [inet|inet4] unicast;\n' \
-	'          [inet|inet4] multicast;\n' \
-	'          [inet|inet4] nlri-mpls;\n' \
-	'          [inet|inet4] mpls-vpn;\n' \
-	'          [inet|inet4] flow-vpnv4;\n' \
-	'          inet6 unicast;\n' \
+	'          ipv4 unicast;\n' \
+	'          ipv4 multicast;\n' \
+	'          ipv4 nlri-mpls;\n' \
+	'          ipv4 mpls-vpn;\n' \
+	'          ipv4 flow-vpnv4;\n' \
+	'          ipv6 unicast;\n' \
 	'        }\n'
 
 	_str_capa_error = \
@@ -631,7 +631,7 @@ class Configuration (object):
 		self._family = False
 		scope[-1]['families'] = []
 		while True:
-			r = self._dispatch(scope,'family',[],['inet','inet4','inet6','minimal','all'])
+			r = self._dispatch(scope,'family',[],['inet','inet4','inet6','ipv4','ipv6','minimal','all'])
 			if r is False: return False
 			if r is None: break
 		self._family = False
@@ -643,7 +643,7 @@ class Configuration (object):
 
 	def _set_family_ipv4 (self,scope,tokens):
 		if self._family:
-			self._error = 'inet/inet4 can not be used with all or minimal'
+			self._error = 'ipv4 can not be used with all or minimal'
 			if self.debug: raise
 			return False
 
@@ -674,7 +674,7 @@ class Configuration (object):
 
 	def _set_family_ipv6 (self,scope,tokens):
 		if self._family:
-			self._error = 'inet6 can not be used with all or minimal'
+			self._error = 'ipv6 can not be used with all or minimal'
 			if self.debug: raise
 			return False
 

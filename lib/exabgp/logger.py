@@ -254,6 +254,10 @@ def Logger ():
 	_Logger._instance = instance
 	return instance
 
+class FakeLogger:
+	def __getattr__ (self,name):
+		return lambda data,_=None: sys.stdout.write('Fake logger [%s]\n' % str(data))
+
 if __name__ == '__main__':
 	logger = Logger()
 	logger.wire('wire packet content')

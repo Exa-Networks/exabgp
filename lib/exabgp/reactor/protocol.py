@@ -6,14 +6,11 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-import time
-from struct import unpack
-
 from exabgp.rib.table import Table
 from exabgp.rib.delta import Delta
 
 from exabgp.reactor.network.outgoing import Outgoing
-from exabgp.reactor.network.error import NetworkError,TooSlowError,SizeError
+from exabgp.reactor.network.error import SizeError
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.nop import NOP
@@ -29,28 +26,29 @@ from exabgp.bgp.message.refresh import RouteRefresh
 
 from exabgp.reactor.api.processes import ProcessError
 
-from exabgp.logger import Logger,LazyFormat
+from exabgp.logger import Logger,FakeLogger,LazyFormat
 
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000
-
-# README: Move all the old packet decoding in another file to clean up the includes here, as it is not used anyway
 
 class Protocol (object):
 	decode = True
 
 	def __init__ (self,peer,connection=None):
-		self.logger = Logger()
+		try:
+			self.logger = Logger()
+		except RuntimeError:
+			self.logger = FakeLogger()
 		self.peer = peer
 		self.neighbor = peer.neighbor
 		self.connection = connection
 		self.negotiated = Negotiated()
 
 		self.delta = Delta(Table(peer))
-		self._messages = []
-		self._frozen = 0
+
+		# XXX: FIXME: check the the -19 is correct (but it is harmless)
 		# The message size is the whole BGP message _without_ headers
-		self.message_size = 4096-19
+		self.message_size = Message.MAX_LEN-Message.HEADER_LEN
 
 	# XXX: we use self.peer.neighbor.peer_address when we could use self.neighbor.peer_address
 
@@ -85,60 +83,28 @@ class Protocol (object):
 	def write (self,message):
 		if self.neighbor.api.send_packets:
 			self.peer.reactor.processes.send(self.peer.neighbor.peer_address,message[18],message[:19],message[19:])
-		return self.connection.write(message)
+		for boolean in self.connection.writer(message):
+			yield boolean
 
 	# Read from network .......................................................
 
 	def read_message (self,keepalive_comment=''):
-		# This call reset the time for the timeout in
-		if not self.connection.pending(True):
-			return NOP()
-
-		length = Message.HEADER_LEN
-		header = ''
-		while length:
-			if self.connection.pending():
-				delta = self.connection.read(length)
-				header += delta
-				length -= len(delta)
-
-		if header[:16] != Message.MARKER:
-			# We are speaking BGP - send us a valid Marker
-			raise Notify(1,1,'The packet received does not contain a BGP marker')
-
-		raw_length = header[16:18]
-		msg_length = unpack('!H',raw_length)[0]
-		msg = header[18]
-
-		if (msg_length > 4096):
-			# BAD Message Length
-			raise Notify(1,2,'%s has an invalid message length of %d' %(Message().name(ord(msg)),msg_length))
-
-		validator,value = Message.Length.get(ord(msg),(int.__ge__,19))
-		if not validator(msg_length,value):
-			# MUST send the faulty msg_length back
-			raise Notify(1,2,'%s has an invalid message length of %d' %(Message().name(ord(msg)),msg_length))
-
-		length = msg_length - 19
-		body = ''
-		while length:
-			if self.connection.pending():
-				delta = self.connection.read(length)
-				body += delta
-				length -= len(delta)
+		try:
+			for length,msg,header,body in self.connection.reader():
+				if not length:
+					yield NOP()
+		except ValueError,e:
+			code,subcode,string = str(e).split(' ',2)
+			raise Notify(int(code),int(subcode),string)
 
 		if self.neighbor.api.receive_packets:
 			self.peer.reactor.processes.receive(self.peer.neighbor.peer_address,msg,header,body)
 
-		if msg == KeepAlive.TYPE:
-			self.logger.message(self.me('<< KEEPALIVE%s' % keepalive_comment))
-			return KeepAlive()
-
-		elif msg == Update.TYPE:
+		if msg == Message.Type.UPDATE:
 			self.logger.message(self.me('<< UPDATE'))
 
-			if msg_length == 30 and body.startswith(EOR.PREFIX):
-				return EOR().factory(body)
+			if length == 30 and body.startswith(EOR.PREFIX):
+				yield EOR().factory(body)
 
 			if self.neighbor.api.receive_routes:
 				update = Update().factory(self.negotiated,body)
@@ -147,33 +113,36 @@ class Protocol (object):
 					self.logger.routes(LazyFormat(self.me(''),str,route))
 
 				self.peer.reactor.processes.routes(self.neighbor.peer_address,update.routes)
-				return update
+				yield update
 			else:
-				return NOP()
+				yield NOP()
 
-		elif msg == Notification.TYPE:
+		elif msg == Message.Type.KEEPALIVE:
+			self.logger.message(self.me('<< KEEPALIVE%s' % keepalive_comment))
+			yield KeepAlive()
+
+		elif msg == Message.Type.NOTIFICATION:
 			self.logger.message(self.me('<< NOTIFICATION'))
-			raise Notification().factory(body)
+			yield Notification().factory(body)
 
-		elif msg == Open.TYPE:
-			return Open().factory(body)
-
-
-		if msg == RouteRefresh.TYPE:
+		elif msg == Message.Type.ROUTE_REFRESH:
 			self.logger.message(self.me('<< ROUTE-REFRESH'))
-			return RouteRefresh().factory(body)
+			yield RouteRefresh().factory(body)
+
+		elif msg == Message.Type.OPEN:
+			yield Open().factory(body)
 
 		else:
-			self.logger.message(self.me('<< NOP'))
-
-		return NOP().factory(msg)
+			self.logger.message(self.me('<< NOP (unknow type %d)' % msg))
+			yield NOP().factory(msg)
 
 
 	def read_open (self,_open,ip):
-		message = self.read_message()
-
-		if message.TYPE == NOP.TYPE:
-			return message
+		for message in self.read_message():
+			if message.TYPE == NOP.TYPE:
+				yield message
+			else:
+				break
 
 		if message.TYPE != Open.TYPE:
 			raise Notify(5,1,'The first packet recevied is not an open message (%s)' % message)
@@ -203,18 +172,24 @@ class Protocol (object):
 			raise Notify(2,6,'Hold Time is invalid (%d)' % message.hold_time)
 
 		if self.negotiated.multisession not in (True,False):
+			# XXX: FIXME: should we not use a string and perform a split like we do elswhere ?
+			# XXX: FIXME: or should we use this trick in the other case ?
 			raise Notify(*self.negotiated.multisession)
 
 		self.logger.message(self.me('<< %s' % message))
-		return message
+		yield message
 
 	def read_keepalive (self,comment=''):
-		message = self.read_message(comment)
-		if message.TYPE == NOP.TYPE:
-			return message
+		for message in self.read_message(comment):
+			if message.TYPE == NOP.TYPE:
+				yield message
+			else:
+				break
+
 		if message.TYPE != KeepAlive.TYPE:
 			raise Notify(5,2)
-		return message
+
+		yield message
 
 	#
 	# Sending message to peer
@@ -232,66 +207,40 @@ class Protocol (object):
 		self.negotiated.sent(sent_open)
 
 		# we do not buffer open message in purpose
-		if not self.write(sent_open.message()):
-			raise NetworkError('Could not send open')
+		for _ in self.write(sent_open.message()):
+			yield NOP()
+
 		self.logger.message(self.me('>> %s' % sent_open))
-		return sent_open
+		yield sent_open
 
 	def new_keepalive (self,comment=''):
-		k = KeepAlive()
-		m = k.message()
-		written = self.write(m)
-		if not written:
-			self.logger.message(self.me('|| buffer not yet empty, adding KEEPALIVE to it'))
-			self._messages.append((1,'KEEPALIVE%s' % comment,m))
-		else:
-			self.logger.message(self.me('>> KEEPALIVE%s' % comment))
-		return k
+		keepalive = KeepAlive()
 
+		for _ in self.write(keepalive.message()):
+			yield NOP()
+
+		self.logger.message(self.me('>> KEEPALIVE%s' % comment))
+		yield keepalive
+
+	def new_notification (self,notification):
+		for _ in self.write(notification.message()):
+			yield NOP()
+		self.logger.error(self.me('>> NOTIFICATION (%d,%d,"%s")' % (notification.code,notification.subcode,notification.data)))
+		yield notification
+
+	# XXX: FIXME: for half of the functions we return numbers for the other half Message object.
+	# XXX: FIXME: consider picking one or the other
 	def new_update (self):
 		# XXX: This should really be calculated once only
 		for number in self._announce('UPDATE',self.peer.bgp.delta.updates(self.negotiated,self.neighbor.group_updates)):
 			yield number
 
+	# XXX: FIXME: for half of the functions we return numbers for the other half Message object.
+	# XXX: FIXME: consider picking one or the other
 	def new_eors (self):
 		eor = EOR().new(self.negotiated.families)
-		for answer in self._announce(str(eor),eor.updates(self.negotiated)):
-				pass
-
-	def new_notification (self,notification):
-		return self.write(notification.message())
-
-	#
-	# Sending / Buffer handling
-	#
-
-	def clear_buffer (self):
-		self.logger.message(self.me('clearing MESSAGE(s) buffer'))
-		self._messages = []
-
-	def buffered (self):
-		return len(self._messages)
-
-	def _backlog (self):
-		# performance only to remove inference
-		if self._messages:
-			if not self._frozen:
-				self._frozen = time.time()
-			if self._frozen and self._frozen + self.negotiated.holdtime < time.time():
-				raise TooSlowError('peer %s not reading on his socket (or not fast at all) - killing session' % self.neighbor.peer_as)
-			self.logger.message(self.me("unable to send route for %d second (maximum allowed %d)" % (time.time()-self._frozen,self.negotiated.holdtime)))
-			nb_backlog = len(self._messages)
-			if nb_backlog > MAX_BACKLOG:
-				raise NetworkError('over %d chunked routes buffered for peer %s - killing session' % (MAX_BACKLOG,self.neighbor.peer_as))
-			self.logger.message(self.me("self._messages of %d/%d chunked routes" % (nb_backlog,MAX_BACKLOG)))
-		while self._messages:
-			number,name,update = self._messages[0]
-			if not self.write(update):
-				self.logger.message(self.me("|| failed to send %d %s(s) from buffer" % (number,name)))
-				break
-			self._messages.pop(0)
-			self._frozen = 0
-			yield name,number
+		for number in self._announce(str(eor),eor.updates(self.negotiated)):
+			yield number
 
 	def _announce (self,name,generator):
 		def chunked (generator,size):
@@ -310,25 +259,10 @@ class Protocol (object):
 			if chunk:
 				yield number,chunk
 
-		if self._messages:
-			for number,update in chunked(generator,self.message_size):
-					self.logger.message(self.me('|| adding %d  %s(s) to existing buffer' % (number,name)))
-					self._messages.append((number,name,update))
-			for name,number in self._backlog():
-				self.logger.message(self.me('>> %d buffered %s(s)' % (number,name)))
-				yield number
-		else:
-			sending = True
-			for number,update in chunked(generator,self.message_size):
-				if sending:
-					if self.write(update):
-						self.logger.message(self.me('>> %d %s(s)' % (number,name)))
-						yield number
-					else:
-						self.logger.message(self.me('|| could not send %d %s(s), buffering' % (number,name)))
-						self._messages.append((number,name,update))
-						sending = False
+		for number,update in chunked(generator,self.message_size):
+			for boolean in self.write(update):
+				if boolean:
+					self.logger.message(self.me('>> %d %s(s)' % (number,name)))
+					yield number
 				else:
-					self.logger.message(self.me('|| buffering the rest of the %s(s) (%d)' % (name,number)))
-					self._messages.append((number,name,update))
 					yield 0

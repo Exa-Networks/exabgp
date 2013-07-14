@@ -79,13 +79,14 @@ class BGPHandler(asyncore.dispatcher_with_send):
 	def announce (self,*args):
 		print self.ip,self.port,' '.join(str(_) for _ in args) if len(args) > 1 else args[0]
 
-	def setup (self,ip,port,messages,exit):
+	def setup (self,ip,port,letter,messages,exit):
 		self.ip = ip
 		self.port = port
 		self.exit = exit
 		self.handle_read = self.handle_open
 		self.sequence = {}
 		self.raw = False
+		self.letter = letter
 		for rule in messages:
 			sequence,announcement = rule.split(':',1)
 			if announcement.startswith('raw:'):
@@ -102,6 +103,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		if keys:
 			key = keys[0]
 			self.messages = self.sequence[key]
+			self.step = key
 			del self.sequence[key]
 			return True
 		return False
@@ -167,10 +169,10 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 				if announcement in self.messages:
 					self.messages.remove(announcement)
-					self.announce('expected announcement received:',announcement)
+					self.announce('expected announcement received (%s%s):' % (self.letter,self.step),announcement)
 				else:
 					if raw:
-						self.announce('unexpected announcement:','%s %s' % (bytestream(header),bytestream(body)))
+						self.announce('unexpected announcement (%s%s):' % (self.letter,self.step),'%s %s' % (bytestream(header),bytestream(body)))
 					else:
 						self.announce('unexpected announcement:',announcement)
 
@@ -215,6 +217,8 @@ class BGPServer (asyncore.dispatcher):
 				messages = self.messages[letter]
 				del self.messages[letter]
 				break
+		else:
+			letter = ''
 
 		if not messages:
 			print 'not enough data'
@@ -227,7 +231,7 @@ class BGPServer (asyncore.dispatcher):
 		pair = self.accept()
 		if pair is not None:
 			sock,addr = pair
-			handler = BGPHandler(sock).setup(*addr,messages=messages,exit=exit)
+			handler = BGPHandler(sock).setup(*addr,letter=letter,messages=messages,exit=exit)
 
 def drop ():
 	uid = os.getuid()
