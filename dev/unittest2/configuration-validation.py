@@ -32,6 +32,7 @@ neighbor = """\
 				connect: "195.8.215.15"
 				ttl-security: false
 				md5: "secret"
+				passive: false
 			}
 			api {
 				syslog-text: [ "receive-routes" ]

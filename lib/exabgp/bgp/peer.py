@@ -122,142 +122,152 @@ class Peer (object):
 				self.neighbor = self._neighbor
 				self._neighbor = None
 			self._running = True
-			self._loop = self._run()
+			if not self.neighbor.passive:
+				self._loop = self._run()
+			else:
+				self._loop = self._wait()
 		else:
 			self.bgp.close('safety shutdown before unregistering peer, session should already be closed, report if seen in anywhere')
 			self.reactor.unschedule(self)
+
+	def _wait (self):
+		self.bgp = Protocol(self)
+
+		while self._running:
+			yield
+
+	def _connect (self):
+		if self.reactor.processes.broken(self.neighbor.peer_address):
+			# XXX: we should perhaps try to restart the process ??
+			self.logger.error('ExaBGP lost the helper process for this peer - stopping','process')
+			self._running = False
+
+		self.bgp = Protocol(self)
+		self.bgp.connect()
+
+		self._reset_skip()
+
+		# send OPEN
+		for _open in self.bgp.new_open(self._restarted):
+			yield True
+
+		# Read OPEN
+		# XXX: FIXME: put that timer timer in the configuration
+		opentimer = Timer(self.me,10.0,1,1,'waited for open too long')
+
+		for message in self.bgp.read_open(_open,self.neighbor.peer_address.ip):
+			opentimer.tick()
+			if not self._running:
+				break
+			# XXX: FIXME: change the whole code to use the ord and not the chr version
+			if ord(message.TYPE) not in [Message.Type.NOP,Message.Type.OPEN]:
+				raise message
+			yield None
+
+		self.open = message
+
+		# Start keeping keepalive timer
+		self.timer = Timer(self.me,self.bgp.negotiated.holdtime,4,0)
+
+		# Read KEEPALIVE
+		for message in self.bgp.read_keepalive(' (OPENCONFIRM)'):
+			self.timer.tick(message)
+			if not self._running:
+				break
+			if ord(message.TYPE) not in [Message.Type.NOP,Message.Type.KEEPALIVE]:
+				raise message
+			yield None
+
+		# Send KEEPALIVE
+		for sent in self.bgp.new_keepalive(' (ESTABLISHED)'):
+			yield True
+
+
+		# Announce to the process BGP is up
+		self.logger.network('Connected to peer %s' % self.neighbor.name())
+		if self.neighbor.api.neighbor_changes:
+			try:
+				self.reactor.processes.up(self.neighbor.peer_address)
+			except ProcessError:
+				# Can not find any better error code than 6,0 !
+				# XXX: We can not restart the program so this will come back again and again - FIX
+				# XXX: In the main loop we do exit on this kind of error
+				raise Notify(6,0,'ExaBGP Internal error, sorry.')
+
+
+		# Sending our routing table
+		# Dict with for each AFI/SAFI pair if we should announce ADDPATH Path Identifier
+		for count in self.bgp.new_update():
+			yield True
+
+		# Send EOR to let our peer know he can perform a RIB update
+		if self.bgp.negotiated.families:
+			for _ in self.bgp.new_eors():
+				yield True
+		else:
+			# If we are not sending an EOR, send a keepalive as soon as when finished
+			# So the other routers knows that we have no (more) routes to send ...
+			# (is that behaviour documented somewhere ??)
+			for _ in self.bgp.new_keepalive('KEEPALIVE (EOR)'):
+				yield True
+
+	def _connected (self):
+		new_routes = None
+		counter = Counter(self.logger,self.me)
+
+		while self._running:
+			for message in self.bgp.read_message():
+				# SEND KEEPALIVES
+				self.timer.tick(message)
+				if self.timer.keepalive():
+					self.bgp.new_keepalive()
+
+				# Received update
+				if message.TYPE == Update.TYPE:
+					counter.increment(len(message.routes))
+
+				# Give information on the number of routes seen
+				counter.display()
+
+				# Need to send update
+				if self._have_routes and not new_routes:
+					self._have_routes = False
+					new_routes = self.bgp.new_update()
+
+				while new_routes:
+					try:
+						new_routes.next()
+					except StopIteration:
+						new_routes = None
+
+				# Go to other Peers
+				yield True if new_routes or message.TYPE != NOP.TYPE else None
+
+				# read_message will loop until new message arrives with NOP
+				if not self._running:
+					break
+
+		# If graceful restart, silent shutdown
+		if self.neighbor.graceful_restart and self.open.capabilities.announced(CapabilityID.GRACEFUL_RESTART):
+			self.logger.error('Closing the connection without notification','network')
+			self.bgp.close('graceful restarted negotiated, closing without sending any notification')
+			return
+
+		# notify our peer of the shutdown
+		if self._teardown:
+			code, self._teardown = self._teardown, None
+			raise Notify(6,code)
+		raise Notify(6,3)
 
 	def _run (self):
 		"yield True if we want the reactor to give us back the hand with the same peer loop, None if we do not have any more work to do"
 
 		try:
-			if self.reactor.processes.broken(self.neighbor.peer_address):
-				# XXX: we should perhaps try to restart the process ??
-				self.logger.error('ExaBGP lost the helper process for this peer - stopping','process')
-				self._running = False
+			for event in self._connect():
+				yield event
 
-			self.bgp = Protocol(self)
-			self.bgp.connect()
-
-			self._reset_skip()
-
-			new_routes = None
-
-			# send OPEN
-			for _open in self.bgp.new_open(self._restarted):
-				yield True
-
-			# Read OPEN
-			# XXX: FIXME: put that timer timer in the configuration
-			opentimer = Timer(self.me,10.0,1,1,'waited for open too long')
-
-			for opn in self.bgp.read_open(_open,self.neighbor.peer_address.ip):
-				opentimer.tick()
-				if not self._running:
-					break
-				# XXX: FIXME: change the whole code to use the ord and not the chr version
-				if ord(opn.TYPE) not in [Message.Type.NOP,Message.Type.OPEN]:
-					raise opn
-				yield None
-
-			# Start keeping keepalive timer
-			timer = Timer(self.me,self.bgp.negotiated.holdtime,4,0)
-
-			# Read KEEPALIVE
-			for message in self.bgp.read_keepalive(' (OPENCONFIRM)'):
-				timer.tick(message)
-				if not self._running:
-					break
-				if ord(message.TYPE) not in [Message.Type.NOP,Message.Type.KEEPALIVE]:
-					raise message
-				yield None
-
-			# Send KEEPALIVE
-			for sent in self.bgp.new_keepalive(' (ESTABLISHED)'):
-				yield True
-
-
-			# Announce to the process BGP is up
-			self.logger.network('Connected to peer %s' % self.neighbor.name())
-			if self.neighbor.api.neighbor_changes:
-				try:
-					self.reactor.processes.up(self.neighbor.peer_address)
-				except ProcessError:
-					# Can not find any better error code than 6,0 !
-					# XXX: We can not restart the program so this will come back again and again - FIX
-					# XXX: In the main loop we do exit on this kind of error
-					raise Notify(6,0,'ExaBGP Internal error, sorry.')
-
-
-			# Sending our routing table
-			# Dict with for each AFI/SAFI pair if we should announce ADDPATH Path Identifier
-			for count in self.bgp.new_update():
-				yield True
-
-			# Send EOR to let our peer know he can perform a RIB update
-			if self.bgp.negotiated.families:
-				for _ in self.bgp.new_eors():
-					yield True
-			else:
-				# If we are not sending an EOR, send a keepalive as soon as when finished
-				# So the other routers knows that we have no (more) routes to send ...
-				# (is that behaviour documented somewhere ??)
-				for _ in self.bgp.new_keepalive('KEEPALIVE (EOR)'):
-					yield True
-
-			#
-			# MAIN UPDATE LOOP
-			#
-
-			counter = Counter(self.logger,self.me)
-
-			print "+"*40
-			print self._running
-			print "+"*40
-
-			while self._running:
-				for message in self.bgp.read_message():
-					# SEND KEEPALIVES
-					timer.tick(message)
-					if timer.keepalive():
-						self.bgp.new_keepalive()
-
-					# Received update
-					if message.TYPE == Update.TYPE:
-						counter.increment(len(message.routes))
-
-					# Give information on the number of routes seen
-					counter.display()
-
-					# Need to send update
-					if self._have_routes and not new_routes:
-						self._have_routes = False
-						new_routes = self.bgp.new_update()
-
-					while new_routes:
-						try:
-							new_routes.next()
-						except StopIteration:
-							new_routes = None
-
-					# Go to other Peers
-					yield True if new_routes or message.TYPE != NOP.TYPE else None
-
-					# read_message will loop until new message arrives with NOP
-					if not self._running:
-						break
-
-			# If graceful restart, silent shutdown
-			if self.neighbor.graceful_restart and opn.capabilities.announced(CapabilityID.GRACEFUL_RESTART):
-				self.logger.error('Closing the connection without notification','network')
-				self.bgp.close('graceful restarted negotiated, closing without sending any notification')
-				return
-
-			# notify our peer of the shutdown
-			if self._teardown:
-				code, self._teardown = self._teardown, None
-				raise Notify(6,code)
-			raise Notify(6,3)
+			for event in self._connected():
+				yield event
 
 		# CONNECTION FAILURE, UPDATING TIMERS FOR BACK-OFF
 		except NetworkError, e:

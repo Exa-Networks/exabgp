@@ -480,6 +480,7 @@ class Configuration (object):
 			if command == 'local-address': return self._set_ip(scope,'local-address',tokens[1:])
 			if command == 'local-as': return self._set_asn(scope,'local-as',tokens[1:])
 			if command == 'peer-as': return self._set_asn(scope,'peer-as',tokens[1:])
+			if command == 'passive': return self._set_passive(scope,'passive',tokens[1:])
 			if command == 'hold-time': return self._set_holdtime(scope,'hold-time',tokens[1:])
 			if command == 'md5': return self._set_md5(scope,'md5',tokens[1:])
 			if command == 'ttl-security': return self._set_ttl(scope,'ttl-security',tokens[1:])
@@ -808,7 +809,7 @@ class Configuration (object):
 	def _multi_group (self,scope,address):
 		scope.append({})
 		while True:
-			r = self._dispatch(scope,'group',['static','flow','neighbor','process','family','capability'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','route-refresh','asn4'])
+			r = self._dispatch(scope,'group',['static','flow','neighbor','process','family','capability'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','route-refresh','asn4'])
 			if r is False:
 				return False
 			if r is None:
@@ -846,6 +847,8 @@ class Configuration (object):
 			if v: neighbor.local_as = v
 			v = local_scope.get('peer-as','')
 			if v: neighbor.peer_as = v
+			v = local_scope.get('passive',False)
+			if v: neighbor.passive = v
 			v = local_scope.get('hold-time','')
 			if v: neighbor.hold_time = v
 
@@ -1003,6 +1006,15 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		scope[-1][command] = ip
+		return True
+
+	def _set_passive (self,scope,command,value):
+		if value:
+			self._error = '"%s" is an invalid for passive' % ' '.join(value)
+			if self.debug: raise
+			return False
+
+		scope[-1][command] = True
 		return True
 
 	def _set_holdtime (self,scope,command,value):

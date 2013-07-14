@@ -30,6 +30,7 @@ class Neighbor (object):
 		self.peer_address = None
 		self.peer_as = None
 		self.local_as = None
+		self.passive = None
 		self.hold_time = HoldTime(180)
 		self.asn4 = None
 		self.add_path = 0
@@ -140,6 +141,7 @@ class Neighbor (object):
 			self.local_as == other.local_as and \
 			self.peer_address == other.peer_address and \
 			self.peer_as == other.peer_as and \
+			self.passive == other.passive and \
 			self.hold_time == other.hold_time and \
 			self.md5 == other.md5 and \
 			self.ttl == other.ttl and \
@@ -178,7 +180,7 @@ neighbor %s {
   router-id %s;
   local-address %s;
   local-as %s;
-  peer-as %s;
+  peer-as %s;%s
   hold-time %s;
 %s%s%s
   capability {
@@ -194,6 +196,7 @@ neighbor %s {
 	self.local_address,
 	self.local_as,
 	self.peer_as,
+	'\n  passive;\n' if self.passive else '',
 	self.hold_time,
 	'  group-updates: %s;\n' % self.group_updates if self.group_updates else '',
 	'  md5: %d;\n' % self.ttl if self.ttl else '',

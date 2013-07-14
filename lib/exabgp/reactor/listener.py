@@ -14,17 +14,13 @@ from exabgp.util.errstr import errstr
 from exabgp.protocol.family import AFI
 from exabgp.util.coroutine import each
 from exabgp.util.ip import isipv4,isipv6
-from exabgp.reactor.network.error import error,errno
+from exabgp.reactor.network.error import error,errno,NetworkError,BindingError,AcceptError
 from exabgp.reactor.network.incoming import Incoming
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.logger import Logger
 
-
-class NetworkError (Exception): pass
-class BindingError (NetworkError): pass
-class AcceptError  (NetworkError): pass
 
 class Listener (object):
 	MAX_OPEN_WAIT = 10.0  # seconds

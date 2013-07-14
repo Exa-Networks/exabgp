@@ -63,7 +63,8 @@ _definition = (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
 				('bind' , (TYPE.string, PRESENCE.mandatory, '', check.ip)),
 				('connect' , (TYPE.string, PRESENCE.mandatory, '', check.ip)),
 				('ttl-security' , (TYPE.integer, PRESENCE.optional, '', check.uint8)),
-				('md5' , (TYPE.string, PRESENCE.optional, '', check.md5))
+				('md5' , (TYPE.string, PRESENCE.optional, '', check.md5)),
+				('passive' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
 			)))),
 			('api' , (TYPE.object, PRESENCE.optional, 'api', OrderedDict((
 				('<*>' , (TYPE.array, PRESENCE.mandatory, '', ['neighbor-changes','send-packets','receive-packets','receive-routes'])),
