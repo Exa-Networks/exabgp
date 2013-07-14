@@ -331,7 +331,7 @@ def _env (conf):
 		# let's try to see if we are running from the QA folder (for unittesting)
 		location, directory = os.path.split(here)
 		while directory:
-			if directory == 'QA':
+			if directory == 'dev':
 				location = os.path.join(location,'lib')
 				break
 			location, directory = os.path.split(location)
