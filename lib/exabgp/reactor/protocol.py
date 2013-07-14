@@ -31,6 +31,8 @@ from exabgp.logger import Logger,FakeLogger,LazyFormat
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000
 
+_NOP = NOP()
+
 class Protocol (object):
 	decode = True
 
@@ -92,7 +94,7 @@ class Protocol (object):
 		try:
 			for length,msg,header,body in self.connection.reader():
 				if not length:
-					yield NOP()
+					yield _NOP
 		except ValueError,e:
 			code,subcode,string = str(e).split(' ',2)
 			raise Notify(int(code),int(subcode),string)
@@ -115,7 +117,7 @@ class Protocol (object):
 				self.peer.reactor.processes.routes(self.neighbor.peer_address,update.routes)
 				yield update
 			else:
-				yield NOP()
+				yield _NOP
 
 		elif msg == Message.Type.KEEPALIVE:
 			self.logger.message(self.me('<< KEEPALIVE%s' % keepalive_comment))
@@ -208,7 +210,7 @@ class Protocol (object):
 
 		# we do not buffer open message in purpose
 		for _ in self.write(sent_open.message()):
-			yield NOP()
+			yield _NOP
 
 		self.logger.message(self.me('>> %s' % sent_open))
 		yield sent_open
@@ -217,14 +219,14 @@ class Protocol (object):
 		keepalive = KeepAlive()
 
 		for _ in self.write(keepalive.message()):
-			yield NOP()
+			yield _NOP
 
 		self.logger.message(self.me('>> KEEPALIVE%s' % comment))
 		yield keepalive
 
 	def new_notification (self,notification):
 		for _ in self.write(notification.message()):
-			yield NOP()
+			yield _NOP
 		self.logger.error(self.me('>> NOTIFICATION (%d,%d,"%s")' % (notification.code,notification.subcode,notification.data)))
 		yield notification
 
