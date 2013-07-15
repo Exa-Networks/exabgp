@@ -32,6 +32,8 @@ from exabgp.util.counter import Counter
 # OPEN Graceful Restart Capability
 FORCE_GRACEFUL = True
 
+class Interruped (Exception): pass
+
 # Present a File like interface to socket.socket
 
 class Peer (object):
@@ -129,44 +131,21 @@ class Peer (object):
 			self.bgp.close('safety shutdown before unregistering peer, session should already be closed, report if seen in anywhere')
 			self.reactor.unschedule(self)
 
-	def incoming (self,io):
+	def incoming (self,incoming):
 		self._peered = True
-		self.io = io
+		self.bgp = Protocol(self)
+		self.bgp.accept(incoming)
 
 	def _accept (self):
-		self.bgp = Protocol(self)
-
+		# waiting for a connection
 		while self._running and not self._peered:
-			print '\nNOTHING TO DO\n'
 			yield None
-
-		while self._running:
-			print '\nNEED TO START WORKING\n'
-			yield None
-
-	def _connect (self):
-		if self.reactor.processes.broken(self.neighbor.peer_address):
-			# XXX: we should perhaps try to restart the process ??
-			self.logger.error('ExaBGP lost the helper process for this peer - stopping','process')
-			self._running = False
-
-		print '\nSTART\n'
-		self.bgp = Protocol(self)
-		print '\nBEFORE\n'
-		self.bgp.connect()
-		print '\nAFTER\n'
-
-		self._reset_skip()
-
-		# send OPEN
-		for _open in self.bgp.new_open(self._restarted):
-			yield True
 
 		# Read OPEN
 		# XXX: FIXME: put that timer timer in the configuration
 		opentimer = Timer(self.me,10.0,1,1,'waited for open too long')
 
-		for message in self.bgp.read_open(_open,self.neighbor.peer_address.ip):
+		for message in self.bgp.read_open(self.neighbor.peer_address.ip):
 			opentimer.tick()
 			if not self._running:
 				break
@@ -179,10 +158,26 @@ class Peer (object):
 		if ord(message.TYPE) == Message.Type.NOP:
 			raise KeyboardInterrupt()
 
-		self.open = message
+		# send OPEN
+		for _open in self.bgp.new_open(self._restarted):
+			yield True
+
+		# the generator was interrupted
+		if ord(message.TYPE) == Message.Type.NOP:
+			raise KeyboardInterrupt()
+
+		self.bgp.negotiate()
 
 		# Start keeping keepalive timer
 		self.timer = Timer(self.me,self.bgp.negotiated.holdtime,4,0)
+
+		# Send KEEPALIVE
+		for message in self.bgp.new_keepalive(' (ESTABLISHED)'):
+			yield True
+
+		# the generator was interrupted
+		if ord(message.TYPE) == Message.Type.NOP:
+			raise KeyboardInterrupt()
 
 		# Read KEEPALIVE
 		for message in self.bgp.read_keepalive(' (OPENCONFIRM)'):
@@ -192,14 +187,6 @@ class Peer (object):
 			if ord(message.TYPE) not in [Message.Type.NOP,Message.Type.KEEPALIVE]:
 				raise message
 			yield None
-
-		# the generator was interrupted
-		if ord(message.TYPE) == Message.Type.NOP:
-			raise KeyboardInterrupt()
-
-		# Send KEEPALIVE
-		for message in self.bgp.new_keepalive(' (ESTABLISHED)'):
-			yield True
 
 		# the generator was interrupted
 		if ord(message.TYPE) == Message.Type.NOP:
@@ -241,6 +228,105 @@ class Peer (object):
 		if ord(message.TYPE) == Message.Type.NOP:
 			raise KeyboardInterrupt()
 
+	def _connect (self):
+		if self.reactor.processes.broken(self.neighbor.peer_address):
+			# XXX: we should perhaps try to restart the process ??
+			self.logger.error('ExaBGP lost the helper process for this peer - stopping','process')
+			self._running = False
+
+		self.bgp = Protocol(self)
+		self.bgp.connect()
+
+		self._reset_skip()
+
+		# send OPEN
+		for _open in self.bgp.new_open(self._restarted):
+			yield True
+
+		# Read OPEN
+		# XXX: FIXME: put that timer timer in the configuration
+		opentimer = Timer(self.me,10.0,1,1,'waited for open too long')
+
+		for message in self.bgp.read_open(self.neighbor.peer_address.ip):
+			opentimer.tick()
+			if not self._running:
+				break
+			# XXX: FIXME: change the whole code to use the ord and not the chr version
+			if ord(message.TYPE) not in [Message.Type.NOP,Message.Type.OPEN]:
+				raise message
+			yield None
+
+		# the generator was interrupted
+		if ord(message.TYPE) == Message.Type.NOP:
+			import pdb; pdb.set_trace()
+			raise KeyboardInterrupt()
+
+		self.bgp.negotiate()
+
+		# Start keeping keepalive timer
+		self.timer = Timer(self.me,self.bgp.negotiated.holdtime,4,0)
+
+		# Read KEEPALIVE
+		for message in self.bgp.read_keepalive(' (OPENCONFIRM)'):
+			self.timer.tick(message)
+			if not self._running:
+				break
+			if ord(message.TYPE) not in [Message.Type.NOP,Message.Type.KEEPALIVE]:
+				raise message
+			yield None
+
+		# the generator was interrupted
+		if ord(message.TYPE) == Message.Type.NOP:
+			import pdb; pdb.set_trace()
+			raise KeyboardInterrupt()
+
+		# Send KEEPALIVE
+		for message in self.bgp.new_keepalive(' (ESTABLISHED)'):
+			yield True
+
+		# the generator was interrupted
+		if ord(message.TYPE) == Message.Type.NOP:
+			import pdb; pdb.set_trace()
+			raise KeyboardInterrupt()
+
+		# Announce to the process BGP is up
+		self.logger.network('Connected to peer %s' % self.neighbor.name())
+		if self.neighbor.api.neighbor_changes:
+			try:
+				self.reactor.processes.up(self.neighbor.peer_address)
+			except ProcessError:
+				# Can not find any better error code than 6,0 !
+				# XXX: We can not restart the program so this will come back again and again - FIX
+				# XXX: In the main loop we do exit on this kind of error
+				raise Notify(6,0,'ExaBGP Internal error, sorry.')
+
+
+		# Sending our routing table
+		# Dict with for each AFI/SAFI pair if we should announce ADDPATH Path Identifier
+		for message in self.bgp.new_update():
+			yield True
+
+		# the generator was interrupted
+		if ord(message.TYPE) == Message.Type.NOP:
+			import pdb; pdb.set_trace()
+			raise KeyboardInterrupt()
+
+		# Send EOR to let our peer know he can perform a RIB update
+		if self.bgp.negotiated.families:
+			for message in self.bgp.new_eors():
+				yield True
+		else:
+			# If we are not sending an EOR, send a keepalive as soon as when finished
+			# So the other routers knows that we have no (more) routes to send ...
+			# (is that behaviour documented somewhere ??)
+			for message in self.bgp.new_keepalive('KEEPALIVE (EOR)'):
+				yield True
+
+		# the generator was interrupted
+		if ord(message.TYPE) == Message.Type.NOP:
+			import pdb; pdb.set_trace()
+			raise KeyboardInterrupt()
+
 	def _connected (self):
 		new_routes = None
 		counter = Counter(self.logger,self.me)
@@ -264,15 +350,11 @@ class Peer (object):
 					self._have_routes = False
 					new_routes = self.bgp.new_update()
 
-				while new_routes:
+				if new_routes:
 					try:
-						message = new_routes.next()
+						new_routes.next()
 					except StopIteration:
 						new_routes = None
-
-				# the generator was interrupted
-				if ord(message.TYPE) == Message.Type.NOP:
-					raise KeyboardInterrupt()
 
 				# Go to other Peers
 				yield True if new_routes or message.TYPE != NOP.TYPE else None
@@ -281,12 +363,8 @@ class Peer (object):
 				if not self._running:
 					break
 
-			# the generator was interrupted
-			if ord(message.TYPE) == Message.Type.NOP:
-				raise KeyboardInterrupt()
-
 		# If graceful restart, silent shutdown
-		if self.neighbor.graceful_restart and self.open.capabilities.announced(CapabilityID.GRACEFUL_RESTART):
+		if self.neighbor.graceful_restart and self.bgp.open_sent.capabilities.announced(CapabilityID.GRACEFUL_RESTART):
 			self.logger.error('Closing the connection without notification','network')
 			self.bgp.close('graceful restarted negotiated, closing without sending any notification')
 			return
@@ -313,6 +391,8 @@ class Peer (object):
 
 		# CONNECTION FAILURE, UPDATING TIMERS FOR BACK-OFF
 		except NetworkError, e:
+			self._loop = None
+			self._peered = False
 			self.logger.network('can not write to the peer, reason : %s' % str(e))
 			self._more_skip()
 			self.bgp.close('could not connect to the peer')
@@ -325,6 +405,8 @@ class Peer (object):
 
 		# NOTIFY THE PEER OF AN ERROR
 		except Notify,e:
+			self._loop = None
+			self._peered = False
 			try:
 				self.bgp.new_notification(e)
 			except (NetworkError,ProcessError):
@@ -335,6 +417,8 @@ class Peer (object):
 
 		# THE PEER NOTIFIED US OF AN ERROR
 		except Notification, e:
+			self._loop = None
+			self._peered = False
 			self.logger.error(self.me('Received Notification (%d,%d) %s' % (e.code,e.subcode,str(e))),'reactor')
 			self.bgp.close('notification received (%d,%d) %s' % (e.code,e.subcode,str(e)))
 			return
@@ -342,19 +426,34 @@ class Peer (object):
 		# RECEIVED a Message TYPE we did not expect
 		except Message, e:
 			# XXX: FIXME: return better information about the message in question
+			self._loop = None
+			self._peered = False
 			self.logger.error(self.me('Received unexpected message','network'))
 			self.bgp.close('unexpected message received')
 			return
 
 		# PROBLEM WRITING TO OUR FORKED PROCESSES
 		except ProcessError, e:
+			self._loop = None
+			self._peered = False
 			self.logger.error(self.me(str(e)),'reactor')
 			self._more_skip()
 			self.bgp.close('failure %s' % str(e))
 			return
 
+		# MOST LIKELY ^C DURING A LOOP
+		except Interruped, e:
+			self._loop = None
+			self._peered = False
+			self.logger.error(self.me(str(e)),'reactor')
+			self._more_skip()
+			self.bgp.close('interruped %s' % str(e))
+			return
+
 		# UNHANDLED PROBLEMS
 		except Exception, e:
+			self._loop = None
+			self._peered = False
 			self.logger.error(self.me('UNHANDLED EXCEPTION'),'reactor')
 			self._more_skip()
 			# XXX: we need to read this from the env.

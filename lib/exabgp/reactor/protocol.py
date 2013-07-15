@@ -37,17 +37,16 @@ _UPDATE = Update()
 class Protocol (object):
 	decode = True
 
-	def __init__ (self,peer,connection=None):
+	def __init__ (self,peer):
 		try:
 			self.logger = Logger()
 		except RuntimeError:
 			self.logger = FakeLogger()
 		self.peer = peer
 		self.neighbor = peer.neighbor
-		self.connection = connection
 		self.negotiated = Negotiated()
-
 		self.delta = Delta(Table(peer))
+		self.connection = None
 
 		# XXX: FIXME: check the the -19 is correct (but it is harmless)
 		# The message size is the whole BGP message _without_ headers
@@ -57,6 +56,13 @@ class Protocol (object):
 
 	def me (self,message):
 		return "Peer %15s ASN %-7s %s" % (self.peer.neighbor.peer_address,self.peer.neighbor.peer_as,message)
+
+	def accept (self,incoming):
+		if not self.connection:
+			self.connection = incoming
+
+		if self.peer.neighbor.api.neighbor_changes:
+			self.peer.reactor.processes.connected(self.peer.neighbor.peer_address)
 
 	def connect (self):
 		# allows to test the protocol code using modified StringIO with a extra 'pending' function
@@ -139,8 +145,35 @@ class Protocol (object):
 			self.logger.message(self.me('<< NOP (unknow type %d)' % msg))
 			yield NOP().factory(msg)
 
+	def negotiate (self):
+		if not self.negotiated.asn4:
+			if self.neighbor.local_as.asn4():
+				raise Notify(2,0,'peer does not speak ASN4, we are stuck')
+			else:
+				# we will use RFC 4893 to convey new ASN to the peer
+				self.negotiated.asn4
 
-	def read_open (self,_open,ip):
+		if self.negotiated.peer_as != self.neighbor.peer_as:
+			raise Notify(2,2,'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.received_open.asn,self.neighbor.peer_as))
+
+		# RFC 6286 : http://tools.ietf.org/html/rfc6286
+		#if message.router_id == RouterID('0.0.0.0'):
+		#	message.router_id = RouterID(ip)
+		if self.received_open.router_id == RouterID('0.0.0.0'):
+			raise Notify(2,3,'0.0.0.0 is an invalid router_id according to RFC6286')
+
+		if self.received_open.router_id == self.neighbor.router_id and self.received_open.asn == self.neighbor.local_as:
+			raise Notify(2,3,'BGP Indendifier collision (%s) on IBGP according to RFC 6286' % self.received_open.router_id)
+
+		if self.received_open.hold_time and self.received_open.hold_time < 3:
+			raise Notify(2,6,'Hold Time is invalid (%d)' % self.received_open.hold_time)
+
+		if self.negotiated.multisession not in (True,False):
+			# XXX: FIXME: should we not use a string and perform a split like we do elswhere ?
+			# XXX: FIXME: or should we use this trick in the other case ?
+			raise Notify(*self.negotiated.multisession)
+
+	def read_open (self,ip):
 		for message in self.read_message():
 			if message.TYPE == NOP.TYPE:
 				yield message
@@ -150,34 +183,9 @@ class Protocol (object):
 		if message.TYPE != Open.TYPE:
 			raise Notify(5,1,'The first packet recevied is not an open message (%s)' % message)
 
+		self.received_open = message
+
 		self.negotiated.received(message)
-
-		if not self.negotiated.asn4:
-			if self.neighbor.local_as.asn4():
-				raise Notify(2,0,'peer does not speak ASN4, we are stuck')
-			else:
-				# we will use RFC 4893 to convey new ASN to the peer
-				self.negotiated.asn4
-
-		if self.negotiated.peer_as != self.neighbor.peer_as:
-			raise Notify(2,2,'ASN in OPEN (%d) did not match ASN expected (%d)' % (message.asn,self.neighbor.peer_as))
-
-		# RFC 6286 : http://tools.ietf.org/html/rfc6286
-		#if message.router_id == RouterID('0.0.0.0'):
-		#	message.router_id = RouterID(ip)
-		if message.router_id == RouterID('0.0.0.0'):
-			raise Notify(2,3,'0.0.0.0 is an invalid router_id according to RFC6286')
-
-		if message.router_id == self.neighbor.router_id and message.asn == self.neighbor.local_as:
-			raise Notify(2,3,'BGP Indendifier collision (%s) on IBGP according to RFC 6286' % message.router_id)
-
-		if message.hold_time and message.hold_time < 3:
-			raise Notify(2,6,'Hold Time is invalid (%d)' % message.hold_time)
-
-		if self.negotiated.multisession not in (True,False):
-			# XXX: FIXME: should we not use a string and perform a split like we do elswhere ?
-			# XXX: FIXME: or should we use this trick in the other case ?
-			raise Notify(*self.negotiated.multisession)
 
 		self.logger.message(self.me('<< %s' % message))
 		yield message
@@ -199,7 +207,7 @@ class Protocol (object):
 	#
 
 	def new_open (self,restarted):
-		sent_open = Open().new(
+		self.sent_open = Open().new(
 			4,
 			self.neighbor.local_as,
 			self.neighbor.router_id.ip,
@@ -207,14 +215,14 @@ class Protocol (object):
 			self.neighbor.hold_time
 		)
 
-		self.negotiated.sent(sent_open)
+		self.negotiated.sent(self.sent_open)
 
 		# we do not buffer open message in purpose
-		for _ in self.write(sent_open.message()):
+		for _ in self.write(self.sent_open.message()):
 			yield _NOP
 
-		self.logger.message(self.me('>> %s' % sent_open))
-		yield sent_open
+		self.logger.message(self.me('>> %s' % self.sent_open))
+		yield self.sent_open
 
 	def new_keepalive (self,comment=''):
 		keepalive = KeepAlive()

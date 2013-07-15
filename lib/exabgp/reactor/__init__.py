@@ -175,9 +175,6 @@ class Reactor (object):
 									found = True
 									break
 							if not found:
-								print '-------------------------- FOUND'
-								pass
-							else:
 								bgp.notification(2,2,'peer not configured')
 								bgp.close()
 
