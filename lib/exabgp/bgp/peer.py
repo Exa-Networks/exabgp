@@ -66,6 +66,8 @@ class Peer (object):
 		# We have been asked to teardown the session with this code
 		self._teardown = None
 
+		# A peer connected to us and we need to associate the socket to us
+		self._peered = False
 
 	def _reset_skip (self):
 		# We are currently not skipping connection attempts
@@ -122,19 +124,25 @@ class Peer (object):
 				self.neighbor = self._neighbor
 				self._neighbor = None
 			self._running = True
-			if not self.neighbor.passive:
-				self._loop = self._run()
-			else:
-				self._loop = self._wait()
+			self._loop = self._run()
 		else:
 			self.bgp.close('safety shutdown before unregistering peer, session should already be closed, report if seen in anywhere')
 			self.reactor.unschedule(self)
 
-	def _wait (self):
+	def incoming (self,io):
+		self._peered = True
+		self.io = io
+
+	def _accept (self):
 		self.bgp = Protocol(self)
 
+		while self._running and not self._peered:
+			print '\nNOTHING TO DO\n'
+			yield None
+
 		while self._running:
-			yield
+			print '\nNEED TO START WORKING\n'
+			yield None
 
 	def _connect (self):
 		if self.reactor.processes.broken(self.neighbor.peer_address):
@@ -142,8 +150,11 @@ class Peer (object):
 			self.logger.error('ExaBGP lost the helper process for this peer - stopping','process')
 			self._running = False
 
+		print '\nSTART\n'
 		self.bgp = Protocol(self)
+		print '\nBEFORE\n'
 		self.bgp.connect()
+		print '\nAFTER\n'
 
 		self._reset_skip()
 
@@ -164,6 +175,10 @@ class Peer (object):
 				raise message
 			yield None
 
+		# the generator was interrupted
+		if ord(message.TYPE) == Message.Type.NOP:
+			raise KeyboardInterrupt()
+
 		self.open = message
 
 		# Start keeping keepalive timer
@@ -178,10 +193,17 @@ class Peer (object):
 				raise message
 			yield None
 
+		# the generator was interrupted
+		if ord(message.TYPE) == Message.Type.NOP:
+			raise KeyboardInterrupt()
+
 		# Send KEEPALIVE
-		for sent in self.bgp.new_keepalive(' (ESTABLISHED)'):
+		for message in self.bgp.new_keepalive(' (ESTABLISHED)'):
 			yield True
 
+		# the generator was interrupted
+		if ord(message.TYPE) == Message.Type.NOP:
+			raise KeyboardInterrupt()
 
 		# Announce to the process BGP is up
 		self.logger.network('Connected to peer %s' % self.neighbor.name())
@@ -197,19 +219,27 @@ class Peer (object):
 
 		# Sending our routing table
 		# Dict with for each AFI/SAFI pair if we should announce ADDPATH Path Identifier
-		for count in self.bgp.new_update():
+		for message in self.bgp.new_update():
 			yield True
+
+		# the generator was interrupted
+		if ord(message.TYPE) == Message.Type.NOP:
+			raise KeyboardInterrupt()
 
 		# Send EOR to let our peer know he can perform a RIB update
 		if self.bgp.negotiated.families:
-			for _ in self.bgp.new_eors():
+			for message in self.bgp.new_eors():
 				yield True
 		else:
 			# If we are not sending an EOR, send a keepalive as soon as when finished
 			# So the other routers knows that we have no (more) routes to send ...
 			# (is that behaviour documented somewhere ??)
-			for _ in self.bgp.new_keepalive('KEEPALIVE (EOR)'):
+			for message in self.bgp.new_keepalive('KEEPALIVE (EOR)'):
 				yield True
+
+		# the generator was interrupted
+		if ord(message.TYPE) == Message.Type.NOP:
+			raise KeyboardInterrupt()
 
 	def _connected (self):
 		new_routes = None
@@ -236,9 +266,13 @@ class Peer (object):
 
 				while new_routes:
 					try:
-						new_routes.next()
+						message = new_routes.next()
 					except StopIteration:
 						new_routes = None
+
+				# the generator was interrupted
+				if ord(message.TYPE) == Message.Type.NOP:
+					raise KeyboardInterrupt()
 
 				# Go to other Peers
 				yield True if new_routes or message.TYPE != NOP.TYPE else None
@@ -246,6 +280,10 @@ class Peer (object):
 				# read_message will loop until new message arrives with NOP
 				if not self._running:
 					break
+
+			# the generator was interrupted
+			if ord(message.TYPE) == Message.Type.NOP:
+				raise KeyboardInterrupt()
 
 		# If graceful restart, silent shutdown
 		if self.neighbor.graceful_restart and self.open.capabilities.announced(CapabilityID.GRACEFUL_RESTART):
@@ -263,8 +301,12 @@ class Peer (object):
 		"yield True if we want the reactor to give us back the hand with the same peer loop, None if we do not have any more work to do"
 
 		try:
-			for event in self._connect():
-				yield event
+			if self.neighbor.passive:
+				for event in self._accept():
+					yield event
+			else:
+				for event in self._connect():
+					yield event
 
 			for event in self._connected():
 				yield event

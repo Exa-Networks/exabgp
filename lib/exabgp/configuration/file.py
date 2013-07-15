@@ -955,7 +955,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-			r = self._dispatch(scope,'neighbor',['static','flow','process','family','capability'],['description','router-id','local-address','local-as','peer-as','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','asn4'])
+			r = self._dispatch(scope,'neighbor',['static','flow','process','family','capability'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','asn4'])
 			if r is False: return False
 			if r is None: return True
 

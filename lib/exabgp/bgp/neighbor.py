@@ -30,7 +30,6 @@ class Neighbor (object):
 		self.peer_address = None
 		self.peer_as = None
 		self.local_as = None
-		self.passive = None
 		self.hold_time = HoldTime(180)
 		self.asn4 = None
 		self.add_path = 0
@@ -39,6 +38,8 @@ class Neighbor (object):
 		self.group_updates = None
 
 		self.api = APIOptions()
+
+		self.passive = False
 
 		# capability
 		self.route_refresh = False

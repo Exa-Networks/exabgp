@@ -12,24 +12,24 @@ import socket
 from exabgp.util.errstr import errstr
 
 from exabgp.protocol.family import AFI
-from exabgp.util.coroutine import each
+#from exabgp.util.coroutine import each
 from exabgp.util.ip import isipv4,isipv6
 from exabgp.reactor.network.error import error,errno,NetworkError,BindingError,AcceptError
 from exabgp.reactor.network.incoming import Incoming
-from exabgp.bgp.message.open import Open
-from exabgp.bgp.message.notification import Notify
+#from exabgp.bgp.message.open import Open
+#from exabgp.bgp.message.notification import Notify
 
 from exabgp.logger import Logger
 
 
 class Listener (object):
-	MAX_OPEN_WAIT = 10.0  # seconds
-	HEADER_LEN = 19  # bytes
+	# MAX_OPEN_WAIT = 10.0  # seconds
+	# HEADER_LEN = 19  # bytes
 
-	open_bye = Notify(2,0,'we do not accept incoming connection - thanks for calling').message()
-	open_invalid_header = Notify(2,0,'invalid OPEN message (16 first bytes are not 0xFF)').message()
-	open_invalid_type   = Notify(2,0,'invalid OPEN message (it is not an OPEN message)').message()
-	open_invalid_size   = Notify(2,0,'invalid OPEN message (invalid size in message)').message()
+	# open_bye = Notify(2,0,'we do not accept incoming connection - thanks for calling').message()
+	# open_invalid_header = Notify(2,0,'invalid OPEN message (16 first bytes are not 0xFF)').message()
+	# open_invalid_type   = Notify(2,0,'invalid OPEN message (it is not an OPEN message)').message()
+	# open_invalid_size   = Notify(2,0,'invalid OPEN message (invalid size in message)').message()
 
 	def __init__ (self,hosts,port,backlog=200):
 		self._hosts = hosts
@@ -38,7 +38,7 @@ class Listener (object):
 
 		self.serving = False
 		self._sockets = {}
-		self._connected = {}
+		#self._connected = {}
 		self.logger = Logger()
 
 	def _bind (self,ip,port):
@@ -81,16 +81,19 @@ class Listener (object):
 		except NetworkError,e:
 				self.logger.critical(str(e))
 				raise e
+		self.serving = True
 
-	def _connections (self):
+	def connected (self):
 		if not self.serving:
 			return
 
 		try:
 			for sock,(host,_) in self._sockets.items():
 				try:
-					io, (ip,port) = sock.accept()
-					yield Incoming(AFI.ipv4,ip,host,io)
+					io, _ = sock.accept()
+					local_ip,local_port = io.getpeername()
+					remote_ip,remote_port = io.getsockname()
+					yield Incoming(AFI.ipv4,remote_ip,local_ip,io)
 					break
 				except socket.error, e:
 					if e.errno in error.block:
@@ -100,52 +103,52 @@ class Listener (object):
 			self.logger.critical(str(e))
 			raise e
 
-	@each
-	def connections (self):
-		now = time.time()
-		for connection in self._connections():
-			self._connected[connection] = (now,'header',self.HEADER_LEN,'')
+	# @each
+	# def connections (self):
+	# 	now = time.time()
+	# 	for connection in self._connections():
+	# 		self._connected[connection] = (now,'header',self.HEADER_LEN,'')
 
-		for connection,(then,stage,to_read,received) in self._connected.items():
-			try:
-				data = connection.read(to_read)
-				to_read -= len(data)
-				received += data
+	# 	for connection,(then,stage,to_read,received) in self._connected.items():
+	# 		try:
+	# 			data = connection.read(to_read)
+	# 			to_read -= len(data)
+	# 			received += data
 
-				if now - then > self.MAX_OPEN_WAIT:
-					self._delete(connection)
-					continue
+	# 			if now - then > self.MAX_OPEN_WAIT:
+	# 				self._delete(connection)
+	# 				continue
 
-				if to_read:
-					self._connected[connection] = (then,stage,to_read,received)
-					continue
+	# 			if to_read:
+	# 				self._connected[connection] = (then,stage,to_read,received)
+	# 				continue
 
-				if stage == 'header':
-					if received[:16] != '\xFF' * 16:
-						self._reply(connection,self.open_invalid_header)
-						self._delete(connection)
-						continue
-					if received[18] != Open.TYPE:
-						self._reply(connection,self.open_invalid_type)
-						self._delete(connection)
-						continue
-					size = (ord(data[16]) << 16) + ord(data[17])
-					if size < 29:
-						self._reply(connection,self.open_invalid_size)
-						self._delete(connection)
-						continue
-					to_read = size - self.HEADER_LEN
-					self._connected[connection] = (then,'body',to_read,received)
-					continue
+	# 			if stage == 'header':
+	# 				if received[:16] != '\xFF' * 16:
+	# 					self._reply(connection,self.open_invalid_header)
+	# 					self._delete(connection)
+	# 					continue
+	# 				if received[18] != Open.TYPE:
+	# 					self._reply(connection,self.open_invalid_type)
+	# 					self._delete(connection)
+	# 					continue
+	# 				size = (ord(data[16]) << 16) + ord(data[17])
+	# 				if size < 29:
+	# 					self._reply(connection,self.open_invalid_size)
+	# 					self._delete(connection)
+	# 					continue
+	# 				to_read = size - self.HEADER_LEN
+	# 				self._connected[connection] = (then,'body',to_read,received)
+	# 				continue
 
-				self._reply(connection,self.open_bye)
-				self._delete(connection)
+	# 			self._reply(connection,self.open_bye)
+	# 			self._delete(connection)
 
-				yield received,connection.local,connection.peer
-			except socket.error,e:
-				if e.errno in error.block:
-					if now - then > self.MAX_OPEN_WAIT:
-						self._delete(connection)
+	# 			yield received,connection.local,connection.peer
+	# 		except socket.error,e:
+	# 			if e.errno in error.block:
+	# 				if now - then > self.MAX_OPEN_WAIT:
+	# 					self._delete(connection)
 
 	def _delete (self,sock):
 		self._connected.pop(sock)
@@ -154,11 +157,11 @@ class Listener (object):
 		except socket.error:
 			pass
 
-	def _reply (self,sock,message):
-		try:
-			sock.write(message)
-		except socket.error:
-			pass
+	# def _reply (self,sock,message):
+	# 	try:
+	# 		sock.write(message)
+	# 	except socket.error:
+	# 		pass
 
 	def stop (self):
 		if not self.serving:

@@ -166,32 +166,35 @@ class Reactor (object):
 							break
 
 					if self.listener:
-						while True:
-							duration = time.time() - start
-							if duration >= 1.0:
-								break
-
-							if not clients:
-								clients = self.listener.connections()
-
-							try:
-								message,local,peer = clients()
-								print '\n',ip,local,peer,od(message),'\n'
-							except StopIteration:
-								clients = None
-								break
+						for bgp in self.listener.connected():
+							found = False
+							for key, neighbor in self.configuration.neighbor.items():
+								# XXX: FIXME: Inet can only be compared to Inet
+								if bgp.local == str(neighbor.local_address) and bgp.peer == str(neighbor.peer_address):
+									self._peers[key].incoming(bgp)
+									found = True
+									break
+							if not found:
+								print '-------------------------- FOUND'
+								pass
+							else:
+								bgp.notification(2,2,'peer not configured')
+								bgp.close()
 
 					if ios:
+						duration = time.time() - start
+						if duration >= 1.0:
+							break
 						try:
 							read,_,_ = select.select(ios,[],[],max(reactor_speed-duration,0))
 						except select.error,e:
 							errno,message = e.args
 							if not errno in error.block:
 								raise
-
-					duration = time.time() - start
-					if duration < reactor_speed:
-						time.sleep(max(reactor_speed-duration,0))
+					else:
+						duration = time.time() - start
+						if duration < reactor_speed:
+							time.sleep(max(reactor_speed-duration,0))
 
 				self.processes.terminate()
 				self.daemon.removepid()

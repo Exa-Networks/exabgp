@@ -46,6 +46,7 @@ class Connection (object):
 		self._reading = None
 		self._writing = None
 		self._buffer = ''
+		self.io = None
 
 	def close (self):
 		try:

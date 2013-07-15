@@ -32,6 +32,7 @@ from exabgp.logger import Logger,FakeLogger,LazyFormat
 MAX_BACKLOG = 15000
 
 _NOP = NOP()
+_UPDATE = Update()
 
 class Protocol (object):
 	decode = True
@@ -230,19 +231,17 @@ class Protocol (object):
 		self.logger.error(self.me('>> NOTIFICATION (%d,%d,"%s")' % (notification.code,notification.subcode,notification.data)))
 		yield notification
 
-	# XXX: FIXME: for half of the functions we return numbers for the other half Message object.
-	# XXX: FIXME: consider picking one or the other
 	def new_update (self):
 		# XXX: This should really be calculated once only
-		for number in self._announce('UPDATE',self.peer.bgp.delta.updates(self.negotiated,self.neighbor.group_updates)):
-			yield number
+		for _ in self._announce('UPDATE',self.peer.bgp.delta.updates(self.negotiated,self.neighbor.group_updates)):
+			yield _NOP
+		yield _UPDATE
 
-	# XXX: FIXME: for half of the functions we return numbers for the other half Message object.
-	# XXX: FIXME: consider picking one or the other
 	def new_eors (self):
 		eor = EOR().new(self.negotiated.families)
-		for number in self._announce(str(eor),eor.updates(self.negotiated)):
-			yield number
+		for _ in self._announce(str(eor),eor.updates(self.negotiated)):
+			yield _NOP
+		yield _UPDATE
 
 	def _announce (self,name,generator):
 		def chunked (generator,size):
