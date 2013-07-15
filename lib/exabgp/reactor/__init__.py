@@ -18,7 +18,6 @@ from exabgp.reactor.listener import Listener,NetworkError
 from exabgp.reactor.api.processes import Processes,ProcessError
 from exabgp.bgp.peer import Peer
 from exabgp.reactor.network.error import error
-from exabgp.util.od import od
 
 from exabgp.configuration.file import Configuration
 from exabgp.configuration.environment import environment

@@ -32,7 +32,7 @@ from exabgp.util.counter import Counter
 # OPEN Graceful Restart Capability
 FORCE_GRACEFUL = True
 
-class Interruped (Exception): pass
+class Interrupted (Exception): pass
 
 # Present a File like interface to socket.socket
 
@@ -156,7 +156,7 @@ class Peer (object):
 
 		# the generator was interrupted
 		if ord(message.TYPE) == Message.Type.NOP:
-			raise KeyboardInterrupt()
+			raise Interrupted()
 
 		# send OPEN
 		for _open in self.bgp.new_open(self._restarted):
@@ -164,7 +164,7 @@ class Peer (object):
 
 		# the generator was interrupted
 		if ord(message.TYPE) == Message.Type.NOP:
-			raise KeyboardInterrupt()
+			raise Interrupted()
 
 		self.bgp.negotiate()
 
@@ -177,7 +177,7 @@ class Peer (object):
 
 		# the generator was interrupted
 		if ord(message.TYPE) == Message.Type.NOP:
-			raise KeyboardInterrupt()
+			raise Interrupted()
 
 		# Read KEEPALIVE
 		for message in self.bgp.read_keepalive(' (OPENCONFIRM)'):
@@ -190,7 +190,7 @@ class Peer (object):
 
 		# the generator was interrupted
 		if ord(message.TYPE) == Message.Type.NOP:
-			raise KeyboardInterrupt()
+			raise Interrupted()
 
 		# Announce to the process BGP is up
 		self.logger.network('Connected to peer %s' % self.neighbor.name())
@@ -211,7 +211,7 @@ class Peer (object):
 
 		# the generator was interrupted
 		if ord(message.TYPE) == Message.Type.NOP:
-			raise KeyboardInterrupt()
+			raise Interrupted()
 
 		# Send EOR to let our peer know he can perform a RIB update
 		if self.bgp.negotiated.families:
@@ -226,7 +226,7 @@ class Peer (object):
 
 		# the generator was interrupted
 		if ord(message.TYPE) == Message.Type.NOP:
-			raise KeyboardInterrupt()
+			raise Interrupted()
 
 	def _connect (self):
 		if self.reactor.processes.broken(self.neighbor.peer_address):
@@ -258,8 +258,7 @@ class Peer (object):
 
 		# the generator was interrupted
 		if ord(message.TYPE) == Message.Type.NOP:
-			import pdb; pdb.set_trace()
-			raise KeyboardInterrupt()
+			raise Interrupted()
 
 		self.bgp.negotiate()
 
@@ -277,8 +276,7 @@ class Peer (object):
 
 		# the generator was interrupted
 		if ord(message.TYPE) == Message.Type.NOP:
-			import pdb; pdb.set_trace()
-			raise KeyboardInterrupt()
+			raise Interrupted()
 
 		# Send KEEPALIVE
 		for message in self.bgp.new_keepalive(' (ESTABLISHED)'):
@@ -286,8 +284,7 @@ class Peer (object):
 
 		# the generator was interrupted
 		if ord(message.TYPE) == Message.Type.NOP:
-			import pdb; pdb.set_trace()
-			raise KeyboardInterrupt()
+			raise Interrupted()
 
 		# Announce to the process BGP is up
 		self.logger.network('Connected to peer %s' % self.neighbor.name())
@@ -308,8 +305,7 @@ class Peer (object):
 
 		# the generator was interrupted
 		if ord(message.TYPE) == Message.Type.NOP:
-			import pdb; pdb.set_trace()
-			raise KeyboardInterrupt()
+			raise Interrupted()
 
 		# Send EOR to let our peer know he can perform a RIB update
 		if self.bgp.negotiated.families:
@@ -324,8 +320,7 @@ class Peer (object):
 
 		# the generator was interrupted
 		if ord(message.TYPE) == Message.Type.NOP:
-			import pdb; pdb.set_trace()
-			raise KeyboardInterrupt()
+			raise Interrupted()
 
 	def _connected (self):
 		new_routes = None
