@@ -50,21 +50,26 @@ class Reactor (object):
 		signal.signal(signal.SIGHUP, self.sighup)
 		signal.signal(signal.SIGALRM, self.sigalrm)
 		signal.signal(signal.SIGUSR1, self.sigusr1)
+		signal.signal(signal.SIGUSR2, self.sigusr2)
 
 	def sigterm (self,signum, frame):
-		self.logger.info("SIG TERM received",'reactor')
+		self.logger.info("SIG TERM received - shutdown",'reactor')
 		self._shutdown = True
 
 	def sighup (self,signum, frame):
-		self.logger.info("SIG HUP received",'reactor')
-		self._reload = True
+		self.logger.info("SIG HUP received - shutdown",'reactor')
+		self._shutdown = True
 
 	def sigalrm (self,signum, frame):
-		self.logger.info("SIG ALRM received",'reactor')
+		self.logger.info("SIG ALRM received - restart",'reactor')
 		self._restart = True
 
 	def sigusr1 (self,signum, frame):
-		self.logger.info("SIG USR1 received",'reactor')
+		self.logger.info("SIG USR1 received - reload configuration",'reactor')
+		self._reload = True
+
+	def sigusr2 (self,signum, frame):
+		self.logger.info("SIG USR2 received - reload configuration and processes",'reactor')
 		self._reload = True
 		self._reload_processes = True
 
@@ -94,7 +99,7 @@ class Reactor (object):
 		self.processes = Processes(self)
 		self.reload()
 
-		# did we complete the run of updates caused by the last SIGHUP ?
+		# did we complete the run of updates caused by the last SIGUSR1/SIGUSR2 ?
 		reload_completed = True
 
 		wait = environment.settings().tcp.delay
@@ -102,8 +107,6 @@ class Reactor (object):
 			sleeptime = (wait * 60) - int(time.time()) % (wait * 60)
 			self.logger.error("waiting for %d seconds before connecting" % sleeptime)
 			time.sleep(float(sleeptime))
-
-		clients = None
 
 		while True:
 			try:
