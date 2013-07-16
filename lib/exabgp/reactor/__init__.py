@@ -27,6 +27,7 @@ from exabgp.logger import Logger
 class Reactor (object):
 	# [hex(ord(c)) for c in os.popen('clear').read()]
 	clear = ''.join([chr(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a']])
+	reactor_speed = 1.0
 
 	def __init__ (self,configuration):
 		self.logger = Logger()
@@ -67,7 +68,7 @@ class Reactor (object):
 		self._reload = True
 		self._reload_processes = True
 
-	def run (self,reactor_speed=0.5):
+	def run (self):
 		if environment.settings().tcp.listen:
 			ip = environment.settings().tcp.bind
 			self.listener = Listener([ip,],179)
@@ -145,7 +146,7 @@ class Reactor (object):
 								peers.remove(key)
 
 						duration = time.time() - start
-						if duration >= 1.0:
+						if duration >= self.reactor_speed:
 							reload_completed = False
 							ios=[]
 							break
@@ -161,7 +162,7 @@ class Reactor (object):
 						self._pending = list(self.run_pending(self._pending))
 
 						duration = time.time() - start
-						if duration >= 1.0:
+						if duration >= self.reactor_speed:
 							break
 
 					if self.listener:
@@ -179,18 +180,17 @@ class Reactor (object):
 
 					if ios:
 						duration = time.time() - start
-						if duration >= 1.0:
-							break
-						try:
-							read,_,_ = select.select(ios,[],[],max(reactor_speed-duration,0))
-						except select.error,e:
-							errno,message = e.args
-							if not errno in error.block:
-								raise
+						if duration < self.reactor_speed:
+							try:
+								read,_,_ = select.select(ios,[],[],max(self.reactor_speed-duration,0))
+							except select.error,e:
+								errno,message = e.args
+								if not errno in error.block:
+									raise e
 					else:
 						duration = time.time() - start
-						if duration < reactor_speed:
-							time.sleep(max(reactor_speed-duration,0))
+						if duration < self.reactor_speed:
+							time.sleep(max(self.reactor_speed-duration,0))
 
 				self.processes.terminate()
 				self.daemon.removepid()
@@ -224,6 +224,14 @@ class Reactor (object):
 					try:
 						self._shutdown = True
 						self.logger.error("Problem when sending message(s) to helper program, stopping",'reactor')
+						break
+					except KeyboardInterrupt:
+						pass
+			except select.error,e:
+				while True:
+					try:
+						self._shutdown = True
+						self.logger.error("problem using select, stopping",'reactor')
 						break
 					except KeyboardInterrupt:
 						pass
