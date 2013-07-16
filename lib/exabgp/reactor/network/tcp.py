@@ -35,7 +35,7 @@ def create (afi):
 		raise NotConnected('Could not create socket')
 	return io
 
-def bind (ip,io,afi):
+def bind (io,ip,afi):
 	try:
 		if afi == AFI.ipv4:
 			io.bind((ip,0))
