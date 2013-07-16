@@ -442,7 +442,8 @@ class Peer (object):
 			return
 
 		# MOST LIKELY ^C DURING A LOOP
-		except Interruped, e:
+		except Interrupted, e:
+			self._state = 'idle'
 			self._loop = None
 			self._peered = False
 			self.logger.error(self.me(str(e)),'reactor')
