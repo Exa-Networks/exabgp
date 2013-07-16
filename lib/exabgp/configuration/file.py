@@ -1334,6 +1334,8 @@ class Configuration (object):
 						self._error = self._str_route_error
 						if self.debug: raise
 						return False
+					if asn == '':
+						continue
 					if asn == '(':
 						while True:
 							try:
@@ -1483,6 +1485,8 @@ class Configuration (object):
 						self._error = self._str_route_error
 						if self.debug: raise
 						return False
+					if clusterid == '':
+						continue
 					if clusterid == ']':
 						break
 					_list += ''.join([chr(int(_)) for _ in clusterid.split('.')])
@@ -1510,6 +1514,8 @@ class Configuration (object):
 						self._error = self._str_route_error
 						if self.debug: raise
 						return False
+					if community == '':
+						continue
 					if community == ']':
 						break
 					communities.add(self._parse_community(scope,community))
@@ -1550,6 +1556,8 @@ class Configuration (object):
 						self._error = self._str_route_error
 						if self.debug: raise
 						return False
+					if extended_community == '':
+						continue
 					if extended_community == ']':
 						break
 					extended_communities.add(self._parse_extended_community(scope,extended_community))
@@ -1587,6 +1595,8 @@ class Configuration (object):
 						self._error = self._str_route_error
 						if self.debug: raise
 						return False
+					if label == '':
+						continue
 					if label == ']':
 						break
 					labels.append(int(label))
@@ -1825,6 +1835,8 @@ class Configuration (object):
 			if name == '[':
 				while True:
 					name = tokens.pop(0)
+					if name == '':
+						continue
 					if name == ']':
 						break
 					try:

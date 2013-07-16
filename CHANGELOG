@@ -19,6 +19,8 @@ Version 3.2.0
  * Fix: potential issue with multisession collision detection
  * Fix: with multisession recent python would refuse to copy an route due to a lock in logger of the neighbor object
  * Fix: could not handle NOTICATION sent during the OPEN negotiation stage
+ * Fix: extra spaces in the configuration could cause bad parsing
+    reported by: Parag Jain (with a patch for the RD case - thank you)
  * Compatibility: supervisor was renamed reactor
  * Compatibility: the word inet4/inet6 are now replaced by ipv4/ipv6
  * Compatibility: the option exabgp.tcp.block was removed following the networking code change
