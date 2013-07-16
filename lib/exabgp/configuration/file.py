@@ -1344,6 +1344,8 @@ class Configuration (object):
 								self._error = self._str_route_error
 								if self.debug: raise
 								return False
+							if asn == '':
+								continue
 							if asn == ')':
 								break
 							as_set.append(self._newASN(asn))
