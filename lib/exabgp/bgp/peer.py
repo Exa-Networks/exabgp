@@ -328,14 +328,19 @@ class Peer (object):
 
 		while self._running:
 			for message in self.bgp.read_message():
-				# SEND KEEPALIVES
-				self.timer.tick(message)
-				if self.timer.keepalive():
-					self.bgp.new_keepalive()
-
 				# Received update
 				if message.TYPE == Update.TYPE:
 					counter.increment(len(message.routes))
+
+				# SEND KEEPALIVES
+				self.timer.tick(message)
+				if self.timer.keepalive():
+					for message in self.bgp.new_keepalive():
+						yield True
+
+					# the generator was interrupted
+					if ord(message.TYPE) == Message.Type.NOP:
+						raise Interrupted()
 
 				# Give information on the number of routes seen
 				counter.display()
