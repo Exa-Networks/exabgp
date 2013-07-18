@@ -26,6 +26,8 @@ from exabgp.reactor.network.error import error,errno,NetworkError,TooSlowError,N
 from .error import *
 
 class Connection (object):
+	direction = 'undefined'
+
 	def __init__ (self,afi,peer,local):
 		# peer and local are strings of the IP
 
@@ -48,6 +50,12 @@ class Connection (object):
 		self._buffer = ''
 		self.io = None
 		self.established = False
+
+	# Just in case ..
+	def __del__ (self):
+		if self.io:
+			self.logger.critical("Connection to %s was not explicitely closed, closed by GC" % self.peer)
+			self.close()
 
 	def close (self):
 		try:

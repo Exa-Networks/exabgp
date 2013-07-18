@@ -73,11 +73,12 @@ class Inet (object):
 	def __str__ (self):
 		return self.ip
 
-	def __eq__ (self,other):
-		return self.packed == other.packed and self.safi == other.safi
-
-	def __ne__ (self,other):
-		return not self.__eq__(other)
+	def __cmp__ (self,other):
+		if self.packed == other.packed:
+			return 0
+		if self.packed < other.packed:
+			return -1
+		return 1
 
 	def __repr__ (self):
 		return "<%s value %s>" % (str(self.__class__).split("'")[1].split('.')[-1],str(self))

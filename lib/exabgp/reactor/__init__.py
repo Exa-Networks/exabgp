@@ -13,6 +13,7 @@ import select
 
 from exabgp.version import version
 
+from exabgp.util.errstr import errstr
 from exabgp.reactor.daemon import Daemon
 from exabgp.reactor.listener import Listener,NetworkError
 from exabgp.reactor.api.processes import Processes,ProcessError
@@ -74,15 +75,20 @@ class Reactor (object):
 		self._reload_processes = True
 
 	def run (self):
-		if environment.settings().tcp.listen:
+		if environment.settings().tcp.bind:
 			ip = environment.settings().tcp.bind
-			self.listener = Listener([ip,],179)
+			port = environment.settings().tcp.port
+
 			try:
+				self.listener = Listener([ip,],port)
 				self.listener.start()
 			except NetworkError,e:
+				self.listener = None
 				if os.geteuid() != 0:
 					self.logger.critical("You most likely need to run ExaBGP as root to bind to port 179",'reactor')
-				return
+				else:
+					self.logger.critical("Can not bind to %s:%d (%s)" % (ip,port,errstr(e)),'reactor')
+				self.logger.critical("ExaBGP will not accept incoming connections",'reactor')
 			self.logger.critical("Listening on %s:179" % ip,'reactor')
 
 		if self.daemon.drop_privileges():
@@ -141,10 +147,12 @@ class Reactor (object):
 					while peers:
 						for key in peers[:]:
 							peer = self._peers[key]
-							# there was no routes to send for this peer, we performed keepalive checks
+							# peer.run returns:
+							# * True if it wants to be called again
+							# * None if it should be called again but has no work atm
+							# * False if it is finished and is closing down, or restarting
 							if peer.run() is not True:
-								if peer.bgp and peer.bgp.connection:
-									ios.append(peer.bgp.connection.io)
+								ios.extend(peer.ios())
 								# no need to come back to it before a a full cycle
 								peers.remove(key)
 
@@ -169,17 +177,17 @@ class Reactor (object):
 							break
 
 					if self.listener:
-						for bgp in self.listener.connected():
+						for connection in self.listener.connected():
 							found = False
 							for key, neighbor in self.configuration.neighbor.items():
 								# XXX: FIXME: Inet can only be compared to Inet
-								if bgp.local == str(neighbor.local_address) and bgp.peer == str(neighbor.peer_address):
-									self._peers[key].incoming(bgp)
+								if connection.local == str(neighbor.local_address) and connection.peer == str(neighbor.peer_address):
+									self._peers[key].incoming(connection)
 									found = True
 									break
 							if not found:
-								bgp.notification(2,2,'peer not configured')
-								bgp.close()
+								connection.notification(2,2,'peer not configured')
+								connection.close()
 
 					if ios:
 						duration = time.time() - start
@@ -287,8 +295,6 @@ class Reactor (object):
 		self.processes.start(restart)
 
 	def run_pending (self,pending):
-		# generators can return True or False, False mean they do not want more
-		# generators to be return (route updates)
 		more = True
 		for generator in pending:
 			try:

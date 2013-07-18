@@ -16,6 +16,8 @@ def alarm_handler(signum, frame):
 	raise Alarm()
 
 def main ():
+	os.environ['exabgp.tcp.bind'] = ''
+
 	location = path.realpath(__file__)
 
 	exabgp = path.abspath(path.join(location,'..','..','..','sbin','exabgp'))

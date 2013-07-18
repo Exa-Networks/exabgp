@@ -117,6 +117,11 @@ class environment (object):
 		raise TypeError('ip %s is invalid' % _)
 
 	@staticmethod
+	def optional_ip (_):
+		if not _ or isip(_): return _
+		raise TypeError('ip %s is invalid' % _)
+
+	@staticmethod
 	def user (_):
 		# XXX: incomplete
 		try:

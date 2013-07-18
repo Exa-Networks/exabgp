@@ -24,13 +24,11 @@ class Negotiated (object):
 		self.msg_size = 4096-19
 
 	def sent (self,sent_open):
-		#print "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS"
 		self.sent_open = sent_open
 		if self.received_open:
 			self._negociate()
 
 	def received (self,received_open):
-		#print "RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR"
 		self.received_open = received_open
 		if self.sent_open:
 			self._negociate()

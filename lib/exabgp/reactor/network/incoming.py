@@ -7,6 +7,8 @@ from .error import NetworkError,NotConnected
 from exabgp.bgp.message.notification import Notify
 
 class Incoming (Connection):
+	direction = 'incoming'
+
 	def __init__ (self,afi,peer,local,io):
 		Connection.__init__(self,afi,peer,local)
 

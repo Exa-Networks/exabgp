@@ -3,6 +3,8 @@ from .tcp import create,bind,connect,MD5,nagle,TTL,async
 from .error import NetworkError,NotConnected
 
 class Outgoing (Connection):
+	direction = 'outgoing'
+
 	def __init__ (self,afi,peer,local,md5='',ttl=None):
 		Connection.__init__(self,afi,peer,local)
 

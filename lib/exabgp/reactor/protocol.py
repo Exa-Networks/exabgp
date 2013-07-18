@@ -159,13 +159,13 @@ class Protocol (object):
 		# RFC 6286 : http://tools.ietf.org/html/rfc6286
 		#if message.router_id == RouterID('0.0.0.0'):
 		#	message.router_id = RouterID(ip)
-		if self.received_open.router_id == RouterID('0.0.0.0'):
+		if self.negotiated.received_open.router_id == RouterID('0.0.0.0'):
 			raise Notify(2,3,'0.0.0.0 is an invalid router_id according to RFC6286')
 
-		if self.received_open.router_id == self.neighbor.router_id and self.received_open.asn == self.neighbor.local_as:
+		if self.negotiated.received_open.router_id == self.neighbor.router_id and self.received_open.asn == self.neighbor.local_as:
 			raise Notify(2,3,'BGP Indendifier collision (%s) on IBGP according to RFC 6286' % self.received_open.router_id)
 
-		if self.received_open.hold_time and self.received_open.hold_time < 3:
+		if self.negotiated.received_open.hold_time and self.negotiated.received_open.hold_time < 3:
 			raise Notify(2,6,'Hold Time is invalid (%d)' % self.received_open.hold_time)
 
 		if self.negotiated.multisession not in (True,False):
@@ -174,21 +174,17 @@ class Protocol (object):
 			raise Notify(*self.negotiated.multisession)
 
 	def read_open (self,ip):
-		for message in self.read_message():
-			if message.TYPE == NOP.TYPE:
-				yield message
+		for received_open in self.read_message():
+			if received_open.TYPE == NOP.TYPE:
+				yield received_open
 			else:
 				break
 
-		if message.TYPE != Open.TYPE:
-			raise Notify(5,1,'The first packet recevied is not an open message (%s)' % message)
+		if received_open.TYPE != Open.TYPE:
+			raise Notify(5,1,'The first packet recevied is not an open message (%s)' % received_open)
 
-		self.received_open = message
-
-		self.negotiated.received(message)
-
-		self.logger.message(self.me('<< %s' % message))
-		yield message
+		self.logger.message(self.me('<< %s' % received_open))
+		yield received_open
 
 	def read_keepalive (self,comment=''):
 		for message in self.read_message(comment):
@@ -207,7 +203,7 @@ class Protocol (object):
 	#
 
 	def new_open (self,restarted):
-		self.sent_open = Open().new(
+		sent_open = Open().new(
 			4,
 			self.neighbor.local_as,
 			self.neighbor.router_id.ip,
@@ -215,14 +211,12 @@ class Protocol (object):
 			self.neighbor.hold_time
 		)
 
-		self.negotiated.sent(self.sent_open)
-
 		# we do not buffer open message in purpose
-		for _ in self.write(self.sent_open.message()):
+		for _ in self.write(sent_open.message()):
 			yield _NOP
 
-		self.logger.message(self.me('>> %s' % self.sent_open))
-		yield self.sent_open
+		self.logger.message(self.me('>> %s' % sent_open))
+		yield sent_open
 
 	def new_keepalive (self,comment=''):
 		keepalive = KeepAlive()
@@ -241,7 +235,7 @@ class Protocol (object):
 
 	def new_update (self):
 		# XXX: This should really be calculated once only
-		for _ in self._announce('UPDATE',self.peer.bgp.delta.updates(self.negotiated,self.neighbor.group_updates)):
+		for _ in self._announce('UPDATE',self.peer.proto.delta.updates(self.negotiated,self.neighbor.group_updates)):
 			yield _NOP
 		yield _UPDATE
 
