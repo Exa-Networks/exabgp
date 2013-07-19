@@ -21,6 +21,7 @@ Version 3.2.0
  * Fix: could not handle NOTICATION sent during the OPEN negotiation stage
  * Fix: extra spaces in the configuration could cause bad parsing
     reported by: Parag Jain (with a patch for the RD case - thank you)
+    reported by: Vincent Bernat (with an alternate solution)
  * Fix: ExaBGP would not connect if the OS did not implement SO_REUSEPORT
     reported by: Vincent Bernat
  * Fix: the configuration would not handle run program with upper case or spaces
