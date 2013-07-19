@@ -315,7 +315,7 @@ class Configuration (object):
 					password = password[:-1]
 				r.append(['md5',password,';'])
 			elif replaced[:3] == 'run':
-				r.append([t for t in replaced[:-1].split(' ') if t] + [replaced[-1]])
+				r.append([t for t in replaced[:-1].split(' ',1) if t] + [replaced[-1]])
 			else:
 				r.append([t.lower() for t in replaced[:-1].split(' ') if t] + [replaced[-1]])
 		self.logger.config(config)
