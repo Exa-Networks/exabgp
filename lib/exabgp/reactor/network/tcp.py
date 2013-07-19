@@ -25,11 +25,11 @@ def create (afi):
 			io = socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
 		try:
 			io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-		except AttributeError:
+		except (socket.error,AttributeError):
 			pass
 		try:
 			io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-		except AttributeError:
+		except (socket.error,AttributeError):
 			pass
 	except socket.error:
 		raise NotConnected('Could not create socket')
@@ -107,7 +107,7 @@ def nagle (io,ip):
 	try:
 		# diable Nagle's algorithm (no grouping of packets)
 		io.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-	except AttributeError:
+	except (socket.error,AttributeError):
 		raise NagleError("Could not disable nagle's algorithm for %s" % ip)
 
 def TTL (io,ip,ttl):
