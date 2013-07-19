@@ -21,6 +21,12 @@ Version 3.2.0
  * Fix: could not handle NOTICATION sent during the OPEN negotiation stage
  * Fix: extra spaces in the configuration could cause bad parsing
     reported by: Parag Jain (with a patch for the RD case - thank you)
+ * Fix: ExaBGP would not connect if the OS did not implement SO_REUSEPORT
+    reported by: Vincent Bernat
+ * Fix: the configuration would not handle run program with upper case or spaces
+    reported by: Vincent Bernat
+ * Fix: bug in the networking code
+    patch by: Vincent Bernat
  * Compatibility: supervisor was renamed reactor
  * Compatibility: the word inet4/inet6 are now replaced by ipv4/ipv6
  * Compatibility: the option exabgp.tcp.block was removed following the networking code change

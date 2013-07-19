@@ -154,7 +154,7 @@ class Protocol (object):
 				self.negotiated.asn4
 
 		if self.negotiated.peer_as != self.neighbor.peer_as:
-			raise Notify(2,2,'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.received_open.asn,self.neighbor.peer_as))
+			raise Notify(2,2,'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.negotiated.received_open.asn,self.neighbor.peer_as))
 
 		# RFC 6286 : http://tools.ietf.org/html/rfc6286
 		#if message.router_id == RouterID('0.0.0.0'):
@@ -162,11 +162,11 @@ class Protocol (object):
 		if self.negotiated.received_open.router_id == RouterID('0.0.0.0'):
 			raise Notify(2,3,'0.0.0.0 is an invalid router_id according to RFC6286')
 
-		if self.negotiated.received_open.router_id == self.neighbor.router_id and self.received_open.asn == self.neighbor.local_as:
-			raise Notify(2,3,'BGP Indendifier collision (%s) on IBGP according to RFC 6286' % self.received_open.router_id)
+		if self.negotiated.received_open.router_id == self.neighbor.router_id and self.negotiated.received_open.asn == self.neighbor.local_as:
+			raise Notify(2,3,'BGP Indendifier collision (%s) on IBGP according to RFC 6286' % self.negotiated.received_open.router_id)
 
 		if self.negotiated.received_open.hold_time and self.negotiated.received_open.hold_time < 3:
-			raise Notify(2,6,'Hold Time is invalid (%d)' % self.received_open.hold_time)
+			raise Notify(2,6,'Hold Time is invalid (%d)' % self.negotiated.received_open.hold_time)
 
 		if self.negotiated.multisession not in (True,False):
 			# XXX: FIXME: should we not use a string and perform a split like we do elswhere ?
