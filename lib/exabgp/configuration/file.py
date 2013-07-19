@@ -296,7 +296,7 @@ class Configuration (object):
 	# Tokenisation
 
 	def _cleaned (self,line):
-		return line.strip().replace('\t',' ').replace(']',' ]').replace('[','[ ').replace(')',' )').replace('(','( ').lower()
+		return line.strip().replace('\t',' ').replace(']',' ]').replace('[','[ ').replace(')',' )').replace('(','( ')
 
 	def _tokenise (self,text):
 		r = []
@@ -314,8 +314,10 @@ class Configuration (object):
 				if password[-1] == ';':
 					password = password[:-1]
 				r.append(['md5',password,';'])
-			else:
+			elif replaced[:3] == 'run':
 				r.append([t for t in replaced[:-1].split(' ') if t] + [replaced[-1]])
+			else:
+				r.append([t.lower() for t in replaced[:-1].split(' ') if t] + [replaced[-1]])
 		self.logger.config(config)
 		return r
 
