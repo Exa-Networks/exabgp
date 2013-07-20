@@ -206,6 +206,9 @@ def main ():
 			'port': (environment.integer,environment.nop,'179', 'port to bind on when listening'),
 			'acl': (environment.boolean,environment.lower,'', '(experimental) unimplemented'),
 		},
+		'bgp' : {
+			'openwait': (environment.integer,environment.nop,'60','how many second we wait for an open once the TCP session is established'),
+		},
 		'cache' : {
 			'attributes'  :  (environment.boolean,environment.lower,'true', 'cache routes attributes (configuration and wire) for faster parsing'),
 			'nexthops'    :  (environment.boolean,environment.lower,'true', 'cache routes next-hops'),

@@ -26,6 +26,7 @@ from exabgp.logger import Logger,FakeLogger
 
 from exabgp.util.counter import Counter
 
+from exabgp.configuration.environment import environment
 
 from exabgp.util.enumeration import Enumeration
 
@@ -203,8 +204,8 @@ class Peer (object):
 			return
 
 		# Read OPEN
-		# XXX: FIXME: put that timer timer in the configuration
-		opentimer = Timer(self.me,10.0,1,1,'waited for open too long')
+		wait = environment.settings().bgp.openwait
+		opentimer = Timer(self.me,wait,1,1,'waited for open too long, we do not like stuck in active')
 
 		for message in self._out_proto.read_open(self.neighbor.peer_address.ip):
 			# XXX: FIXME: this should return data and we should raise here
@@ -295,8 +296,8 @@ class Peer (object):
 		self._out_state = STATE.opensent
 
 		# Read OPEN
-		# XXX: FIXME: put that timer timer in the configuration
-		opentimer = Timer(self.me,10.0,1,1,'waited for open too long')
+		wait = environment.settings().bgp.openwait
+		opentimer = Timer(self.me,wait,1,1,'waited for open too long, we do not like stuck in active')
 
 		for message in self._out_proto.read_open(self.neighbor.peer_address.ip):
 			opentimer.tick(message)
