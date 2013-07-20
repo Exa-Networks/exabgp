@@ -26,7 +26,17 @@ from exabgp.logger import Logger,FakeLogger
 
 from exabgp.util.counter import Counter
 
-# XXX: FIXME: _state should be enumerations
+
+from exabgp.util.enumeration import Enumeration
+
+STATE = Enumeration (
+	'idle',
+	'active',
+	'connect',
+	'opensent',
+	'openconfirm',
+	'established',
+)
 
 # As we can not know if this is our first start or not, this flag is used to
 # always make the program act like it was recovering from a failure
@@ -77,8 +87,8 @@ class Peer (object):
 		self._accepted = False
 
 		# the BGP session state
-		self._in_state = 'idle'
-		self._out_state = 'idle'
+		self._in_state = STATE.idle
+		self._out_state = STATE.idle
 
 	def _reset_skip (self):
 		# We are currently not skipping connection attempts
@@ -171,7 +181,7 @@ class Peer (object):
 			self.reactor.unschedule(self)
 
 	def incoming (self,incoming):
-		if self._out_state != 'established':
+		if self._out_state != STATE.established:
 			self._accepted = True
 			self._out_proto = Protocol(self)
 			self._out_proto.accept(incoming)
@@ -238,7 +248,7 @@ class Peer (object):
 		if ord(message.TYPE) == Message.Type.NOP:
 			raise Interrupted()
 
-		self._state = 'openconfirm'
+		self._state = STATE.openconfirm
 
 		# Start keeping keepalive timer
 		self.timer = Timer(self.me,self._out_proto.negotiated.holdtime,4,0)
@@ -257,7 +267,7 @@ class Peer (object):
 		if ord(message.TYPE) == Message.Type.NOP:
 			raise Interrupted()
 
-		self._out_state = 'established'
+		self._out_state = STATE.established
 
 
 	def _connect (self):
@@ -271,7 +281,7 @@ class Peer (object):
 		self._out_proto = Protocol(self)
 		self._out_proto.connect()
 		self._reset_skip()
-		self._out_state = 'connect'
+		self._out_state = STATE.connect
 
 		# send OPEN
 		for message in self._out_proto.new_open(self._restarted):
@@ -282,7 +292,7 @@ class Peer (object):
 			raise Interrupted()
 
 		self._out_proto.negotiated.sent(message)
-		self._out_state = 'opensent'
+		self._out_state = STATE.opensent
 
 		# Read OPEN
 		# XXX: FIXME: put that timer timer in the configuration
@@ -304,7 +314,7 @@ class Peer (object):
 		self._out_proto.negotiated.received(message)
 		self._out_proto.negotiate()
 
-		self._state = 'openconfirm'
+		self._state = STATE.openconfirm
 
 		# Start keeping keepalive timer
 		self.timer = Timer(self.me,self._out_proto.negotiated.holdtime,4,0)
@@ -330,7 +340,7 @@ class Peer (object):
 		if ord(message.TYPE) == Message.Type.NOP:
 			raise Interrupted()
 
-		self._out_state = 'established'
+		self._out_state = STATE.established
 
 
 
@@ -451,8 +461,8 @@ class Peer (object):
 
 		# CONNECTION FAILURE
 		except NetworkError, e:
-			self._in_state = 'idle'
-			self._out_state = 'idle'
+			self._in_state = STATE.idle
+			self._out_state = STATE.idle
 			self._in_loop = None
 			self._out_loop = None
 			self._accepted = False
@@ -478,8 +488,8 @@ class Peer (object):
 
 		# NOTIFY THE PEER OF AN ERROR
 		except Notify,e:
-			self._in_state = 'idle'
-			self._out_state = 'idle'
+			self._in_state = STATE.idle
+			self._out_state = STATE.idle
 			self._in_loop = None
 			self._out_loop = None
 			self._accepted = False
@@ -502,8 +512,8 @@ class Peer (object):
 
 		# THE PEER NOTIFIED US OF AN ERROR
 		except Notification, e:
-			self._in_state = 'idle'
-			self._out_state = 'idle'
+			self._in_state = STATE.idle
+			self._out_state = STATE.idle
 			self._in_loop = None
 			self._out_loop = None
 			self._accepted = False
@@ -523,8 +533,8 @@ class Peer (object):
 		# RECEIVED a Message TYPE we did not expect
 		except Message, e:
 			# XXX: FIXME: return better information about the message in question
-			self._in_state = 'idle'
-			self._out_state = 'idle'
+			self._in_state = STATE.idle
+			self._out_state = STATE.idle
 			self._in_loop = None
 			self._out_loop = None
 			self._accepted = False
@@ -543,8 +553,8 @@ class Peer (object):
 
 		# PROBLEM WRITING TO OUR FORKED PROCESSES
 		except ProcessError, e:
-			self._in_state = 'idle'
-			self._out_state = 'idle'
+			self._in_state = STATE.idle
+			self._out_state = STATE.idle
 			self._in_loop = None
 			self._out_loop = None
 			self._accepted = False
@@ -563,8 +573,8 @@ class Peer (object):
 
 		# MOST LIKELY ^C DURING A LOOP
 		except Interrupted, e:
-			self._in_state = 'idle'
-			self._out_state = 'idle'
+			self._in_state = STATE.idle
+			self._out_state = STATE.idle
 			self._in_loop = None
 			self._out_loop = None
 			self._accepted = False
@@ -583,8 +593,8 @@ class Peer (object):
 
 		# UNHANDLED PROBLEMS
 		except Exception, e:
-			self._in_state = 'idle'
-			self._out_state = 'idle'
+			self._in_state = STATE.idle
+			self._out_state = STATE.idle
 			self._in_loop = None
 			self._out_loop = None
 			self._accepted = False
