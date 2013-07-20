@@ -495,18 +495,22 @@ class Peer (object):
 			self._out_loop = None
 			self._accepted = False
 
-			try:
-				self._out_proto.new_notification(n)
-			except (NetworkError,ProcessError):
-				self.logger.error(self.me('NOTIFICATION NOT SENT','network'))
-				pass
-
 			if self._out_proto:
-				self._out_proto.close('n sent (%d,%d) [%s] %s' % (n.code,n.subcode,str(n),n.data))
+				try:
+					self._out_proto.new_notification(n)
+				except (NetworkError,ProcessError):
+					self.logger.error(self.me('NOTIFICATION NOT SENT','network'))
+					pass
+				self._out_proto.close('notification sent (%d,%d) [%s] %s' % (n.code,n.subcode,str(n),n.data))
 			self._out_proto = None
 
 			if self._in_proto:
-				self._in_proto.close('n sent (%d,%d) [%s] %s' % (n.code,n.subcode,str(n),n.data))
+				try:
+					self._in_proto.new_notification(n)
+				except (NetworkError,ProcessError):
+					self.logger.error(self.me('NOTIFICATION NOT SENT','network'))
+					pass
+				self._in_proto.close('notification sent (%d,%d) [%s] %s' % (n.code,n.subcode,str(n),n.data))
 			self._in_proto = None
 
 			return
