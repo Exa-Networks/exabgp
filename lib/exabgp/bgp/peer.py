@@ -224,9 +224,7 @@ class Peer (object):
 			raise Interrupted()
 
 		self._in_proto.negotiated.sent(message)
-
-		# Start keeping keepalive timer
-		self.timer = Timer(self.me,self._out_proto.negotiated.holdtime,4,0)
+		self._in_proto.negotiate()
 
 		# Send KEEPALIVE
 		for message in self._out_proto.new_keepalive(' (ESTABLISHED)'):
@@ -240,6 +238,9 @@ class Peer (object):
 			raise Interrupted()
 
 		self._state = 'openconfirm'
+
+		# Start keeping keepalive timer
+		self.timer = Timer(self.me,self._out_proto.negotiated.holdtime,4,0)
 
 		# Read KEEPALIVE
 		for message in self._out_proto.read_keepalive(' (OPENCONFIRM)'):
@@ -255,7 +256,6 @@ class Peer (object):
 		if ord(message.TYPE) == Message.Type.NOP:
 			raise Interrupted()
 
-		self._in_proto.negotiate()
 		self._out_state = 'established'
 
 
@@ -301,6 +301,8 @@ class Peer (object):
 			raise Interrupted()
 
 		self._out_proto.negotiated.received(message)
+		self._out_proto.negotiate()
+
 		self._state = 'openconfirm'
 
 		# Start keeping keepalive timer
@@ -327,7 +329,6 @@ class Peer (object):
 		if ord(message.TYPE) == Message.Type.NOP:
 			raise Interrupted()
 
-		self._out_proto.negotiate()
 		self._out_state = 'established'
 
 
@@ -344,38 +345,7 @@ class Peer (object):
 				# XXX: In the main loop we do exit on this kind of error
 				raise Notify(6,0,'ExaBGP Internal error, sorry.')
 
-		# Sending our routing table
-		# Dict with for each AFI/SAFI pair if we should announce ADDPATH Path Identifier
-		for message in self.proto.new_update():
-			if not self._running:
-				yield False
-				return
-			yield True
-
-		# the generator was interrupted
-		if ord(message.TYPE) == Message.Type.NOP:
-			raise Interrupted()
-
-		# Send EOR to let our peer know he can perform a RIB update
-		if self.proto.negotiated.families:
-			for message in self.proto.new_eors():
-				if not self._running:
-					yield False
-					return
-				yield True
-		else:
-			# If we are not sending an EOR, send a keepalive as soon as when finished
-			# So the other routers knows that we have no (more) routes to send ...
-			# (is that behaviour documented somewhere ??)
-			for message in self.proto.new_keepalive('KEEPALIVE (EOR)'):
-				if not self._running:
-					yield False
-					return
-				yield True
-
-		# the generator was interrupted
-		if ord(message.TYPE) == Message.Type.NOP:
-			raise Interrupted()
+		first_loop = True
 
 		new_routes = None
 		counter = Counter(self.logger,self.me)
@@ -409,6 +379,29 @@ class Peer (object):
 						new_routes.next()
 					except StopIteration:
 						new_routes = None
+
+						if first_loop:
+							first_loop = False
+							# Send EOR to let our peer know he can perform a RIB update
+							if self.proto.negotiated.families:
+								for eor in self.proto.new_eors():
+									if not self._running:
+										yield False
+										return
+									yield True
+							else:
+								# If we are not sending an EOR, send a keepalive as soon as when finished
+								# So the other routers knows that we have no (more) routes to send ...
+								# (is that behaviour documented somewhere ??)
+								for eor in self.proto.new_keepalive('KEEPALIVE (EOR)'):
+									if not self._running:
+										yield False
+										return
+									yield True
+
+							# the generator was interrupted
+							if ord(eor.TYPE) == Message.Type.NOP:
+								raise Interrupted()
 
 				# Go to other Peers
 				yield True if new_routes or message.TYPE != NOP.TYPE else None

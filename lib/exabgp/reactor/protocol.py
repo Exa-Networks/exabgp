@@ -145,6 +145,7 @@ class Protocol (object):
 			self.logger.message(self.me('<< NOP (unknow type %d)' % msg))
 			yield NOP().factory(msg)
 
+	# XXX: FIXME: this should really be moved into Negotiated with only the raise being done here
 	def negotiate (self):
 		if not self.negotiated.asn4:
 			if self.neighbor.local_as.asn4():
