@@ -236,7 +236,7 @@ class Peer (object):
 			raise Interrupted()
 
 		self._in_proto.negotiated.sent(message)
-		self._in_proto.negotiate()
+		self._in_proto.validate_open()
 
 		# Send KEEPALIVE
 		for message in self._out_proto.new_keepalive(' (ESTABLISHED)'):
@@ -313,7 +313,7 @@ class Peer (object):
 			raise Interrupted()
 
 		self._out_proto.negotiated.received(message)
-		self._out_proto.negotiate()
+		self._out_proto.validate_open()
 
 		self._state = STATE.openconfirm
 

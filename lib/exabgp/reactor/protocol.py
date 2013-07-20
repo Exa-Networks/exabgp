@@ -16,7 +16,6 @@ from exabgp.bgp.message import Message
 from exabgp.bgp.message.nop import NOP
 from exabgp.bgp.message.unknown import Unknown
 from exabgp.bgp.message.open import Open
-from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update import Update
@@ -147,34 +146,10 @@ class Protocol (object):
 			self.logger.message(self.me('<< NOP (unknow type %d)' % msg))
 			yield Unknown().factory(msg)
 
-	# XXX: FIXME: this should really be moved into Negotiated with only the raise being done here
-	def negotiate (self):
-		if not self.negotiated.asn4:
-			if self.neighbor.local_as.asn4():
-				raise Notify(2,0,'peer does not speak ASN4, we are stuck')
-			else:
-				# we will use RFC 4893 to convey new ASN to the peer
-				self.negotiated.asn4
-
-		if self.negotiated.peer_as != self.neighbor.peer_as:
-			raise Notify(2,2,'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.negotiated.received_open.asn,self.neighbor.peer_as))
-
-		# RFC 6286 : http://tools.ietf.org/html/rfc6286
-		#if message.router_id == RouterID('0.0.0.0'):
-		#	message.router_id = RouterID(ip)
-		if self.negotiated.received_open.router_id == RouterID('0.0.0.0'):
-			raise Notify(2,3,'0.0.0.0 is an invalid router_id according to RFC6286')
-
-		if self.negotiated.received_open.router_id == self.neighbor.router_id and self.negotiated.received_open.asn == self.neighbor.local_as:
-			raise Notify(2,3,'BGP Indendifier collision (%s) on IBGP according to RFC 6286' % self.negotiated.received_open.router_id)
-
-		if self.negotiated.received_open.hold_time and self.negotiated.received_open.hold_time < 3:
-			raise Notify(2,6,'Hold Time is invalid (%d)' % self.negotiated.received_open.hold_time)
-
-		if self.negotiated.multisession not in (True,False):
-			# XXX: FIXME: should we not use a string and perform a split like we do elswhere ?
-			# XXX: FIXME: or should we use this trick in the other case ?
-			raise Notify(*self.negotiated.multisession)
+	def validate_open (self):
+		error = self.negotiated.validate(self.neighbor)
+		if error is not None:
+			raise Notify(*error)
 
 	def read_open (self,ip):
 		for received_open in self.read_message():

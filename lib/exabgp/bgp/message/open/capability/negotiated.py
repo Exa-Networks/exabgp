@@ -9,6 +9,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from exabgp.bgp.message.open.asn import ASN,AS_TRANS
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.capability.id import CapabilityID as CID
+from exabgp.bgp.message.open.routerid import RouterID
 
 
 class Negotiated (object):
@@ -88,6 +89,36 @@ class Negotiated (object):
 		#and sent_open.capabilities.announced(CID.EXTENDED_MESSAGE):
 		#	if self.peer.bgp.received_open_size:
 		#		self.received_open_size = self.peer.bgp.received_open_size - 19
+
+	def validate (self,neighbor):
+		if not self.asn4:
+			if neighbor.local_as.asn4():
+				return (2,0,'peer does not speak ASN4, we are stuck')
+			else:
+				# we will use RFC 4893 to convey new ASN to the peer
+				self.asn4
+
+		if self.peer_as != neighbor.peer_as:
+			return (2,2,'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.received_open.asn,neighbor.peer_as))
+
+		# RFC 6286 : http://tools.ietf.org/html/rfc6286
+		#if message.router_id == RouterID('0.0.0.0'):
+		#	message.router_id = RouterID(ip)
+		if self.received_open.router_id == RouterID('0.0.0.0'):
+			return (2,3,'0.0.0.0 is an invalid router_id according to RFC6286')
+
+		if self.received_open.router_id == neighbor.router_id and self.received_open.asn == neighbor.local_as:
+			return (2,3,'BGP Indendifier collision (%s) on IBGP according to RFC 6286' % self.received_open.router_id)
+
+		if self.received_open.hold_time and self.received_open.hold_time < 3:
+			return (2,6,'Hold Time is invalid (%d)' % self.received_open.hold_time)
+
+		if self.multisession not in (True,False):
+			# XXX: FIXME: should we not use a string and perform a split like we do elswhere ?
+			# XXX: FIXME: or should we use this trick in the other case ?
+			return self.multisession
+
+		return None
 
 # =================================================================== RequirePath
 
