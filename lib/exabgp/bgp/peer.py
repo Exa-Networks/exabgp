@@ -601,12 +601,7 @@ class Peer (object):
 
 			self.logger.error(self.me('UNHANDLED EXCEPTION'),'reactor')
 
-			# XXX: FIXME: we need to read this from the env.
-			if True:
-				traceback.print_exc(file=sys.stdout)
-				raise
-			else:
-				self.logger.error(self.me(str(e)),'reactor')
+			self.logger.error(self.me(str(e)),'reactor')
 
 			if self._out_proto:
 				self._out_proto.close('unhandled problem, please report to developers %s' % str(e))
@@ -615,5 +610,10 @@ class Peer (object):
 			if self._in_proto:
 				self._in_proto.close('unhandled problem, please report to developers %s' % str(e))
 			self._in_proto = None
+
+			try:
+				traceback.print_exc(file=sys.stderr)
+			except:
+				pass
 
 			return
