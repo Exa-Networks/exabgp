@@ -488,7 +488,7 @@ class Peer (object):
 			return
 
 		# NOTIFY THE PEER OF AN ERROR
-		except Notify,e:
+		except Notify, n:
 			self._in_state = STATE.idle
 			self._out_state = STATE.idle
 			self._in_loop = None
@@ -496,51 +496,50 @@ class Peer (object):
 			self._accepted = False
 
 			try:
-				self._out_proto.new_notification(e)
+				self._out_proto.new_n(n)
 			except (NetworkError,ProcessError):
 				self.logger.error(self.me('NOTIFICATION NOT SENT','network'))
 				pass
 
 			if self._out_proto:
-				self._out_proto.close('notification sent (%d,%d) [%s] %s' % (e.code,e.subcode,str(e),e.data))
+				self._out_proto.close('n sent (%d,%d) [%s] %s' % (n.code,n.subcode,str(n),n.data))
 			self._out_proto = None
 
 			if self._in_proto:
-				self._in_proto.close('notification sent (%d,%d) [%s] %s' % (e.code,e.subcode,str(e),e.data))
+				self._in_proto.close('n sent (%d,%d) [%s] %s' % (n.code,n.subcode,str(n),n.data))
 			self._in_proto = None
 
 			return
 
 		# THE PEER NOTIFIED US OF AN ERROR
-		except Notification, e:
+		except Notification, n:
 			self._in_state = STATE.idle
 			self._out_state = STATE.idle
 			self._in_loop = None
 			self._out_loop = None
 			self._accepted = False
 
-			self.logger.error(self.me('Received Notification (%d,%d) %s' % (e.code,e.subcode,str(e))),'reactor')
+			self.logger.error(self.me('Received Notification (%d,%d) %s' % (n.code,n.subcode,str(n))),'reactor')
 
 			if self._out_proto:
-				self._out_proto.close('notification received (%d,%d) %s' % (e.code,e.subcode,str(e)))
+				self._out_proto.close('notification received (%d,%d) %s' % (n.code,n.subcode,str(n)))
 			self._out_proto = None
 
 			if self._in_proto:
-				self._in_proto.close('notification received (%d,%d) %s' % (e.code,e.subcode,str(e)))
+				self._in_proto.close('notification received (%d,%d) %s' % (n.code,n.subcode,str(n)))
 			self._in_proto = None
 
 			return
 
 		# RECEIVED a Message TYPE we did not expect
-		except Message, e:
-			# XXX: FIXME: return better information about the message in question
+		except Message, m:
 			self._in_state = STATE.idle
 			self._out_state = STATE.idle
 			self._in_loop = None
 			self._out_loop = None
 			self._accepted = False
 
-			self.logger.error(self.me('Received unexpected message','network'))
+			self.logger.error(self.me('Received unexpected message %s' % m.name(),'network'))
 
 			if self._out_proto:
 				self._out_proto.close('unexpected message received')
