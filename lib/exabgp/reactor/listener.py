@@ -42,6 +42,7 @@ class Listener (object):
 		self.logger = Logger()
 
 	def _bind (self,ip,port):
+		self.logger.critical('Listening for BGP sessions on %s:%d' % (ip,port))
 		try:
 			if isipv6(ip):
 				s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)

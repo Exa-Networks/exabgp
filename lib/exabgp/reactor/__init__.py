@@ -83,13 +83,13 @@ class Reactor (object):
 				self.listener = Listener([ip,],port)
 				self.listener.start()
 			except NetworkError,e:
+				self.logger.critical("ExaBGP will not accept incoming connections",'reactor')
 				self.listener = None
-				if os.geteuid() != 0:
-					self.logger.critical("You most likely need to run ExaBGP as root to bind to port 179",'reactor')
+				if os.geteuid() != 0 and port <= 1024:
+					self.logger.critical("You most likely need to run ExaBGP as root to bind to port %d" % port,'reactor')
 				else:
 					self.logger.critical("Can not bind to %s:%d (%s)" % (ip,port,errstr(e)),'reactor')
-				self.logger.critical("ExaBGP will not accept incoming connections",'reactor')
-			self.logger.critical("Listening on %s:179" % ip,'reactor')
+			self.logger.critical("Listening on %s:%d" % (ip,port),'reactor')
 
 		if self.daemon.drop_privileges():
 			self.logger.critical("Could not drop privileges to '%s' refusing to run as root" % self.daemon.user,'reactor')

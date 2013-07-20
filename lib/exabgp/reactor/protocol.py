@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
+import os
+
 from exabgp.rib.table import Table
 from exabgp.rib.delta import Delta
 
@@ -48,6 +50,8 @@ class Protocol (object):
 		self.negotiated = Negotiated()
 		self.delta = Delta(Table(peer))
 		self.connection = None
+		port = os.environ.get('exabgp.tcp.port','')
+		self.port = int(port) if port.isdigit() else 179
 
 		# XXX: FIXME: check the the -19 is correct (but it is harmless)
 		# The message size is the whole BGP message _without_ headers
@@ -72,7 +76,7 @@ class Protocol (object):
 			local = self.neighbor.local_address
 			md5 = self.neighbor.md5
 			ttl = self.neighbor.ttl
-			self.connection = Outgoing(peer.afi,peer.ip,local.ip,md5,ttl)
+			self.connection = Outgoing(peer.afi,peer.ip,local.ip,self.port,md5,ttl)
 
 			if self.peer.neighbor.api.neighbor_changes:
 				self.peer.reactor.processes.connected(self.peer.neighbor.peer_address)

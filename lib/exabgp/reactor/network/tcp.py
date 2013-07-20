@@ -44,21 +44,21 @@ def bind (io,ip,afi):
 	except socket.error,e:
 		raise BindingError('Could not bind to local ip %s - %s' % (ip,str(e)))
 
-def connect (io,ip,afi,md5):
+def connect (io,ip,port,afi,md5):
 	try:
 		if afi == AFI.ipv4:
-			io.connect((ip,179))
+			io.connect((ip,port))
 		if afi == AFI.ipv6:
-			io.connect((ip,179,0,0))
+			io.connect((ip,port,0,0))
 	except socket.error, e:
 		if e.errno == errno.EINPROGRESS:
 			return
 		if md5:
-			raise NotConnected('Could not connect to peer %s, check your MD5 password (%s)' % (ip,errstr(e)))
-		raise NotConnected('Could not connect to peer %s (%s)' % (ip,errstr(e)))
+			raise NotConnected('Could not connect to peer %s:%d, check your MD5 password (%s)' % (ip,port,errstr(e)))
+		raise NotConnected('Could not connect to peer %s:%d (%s)' % (ip,port,errstr(e)))
 
 
-def MD5 (io,ip,afi,md5):
+def MD5 (io,ip,port,afi,md5):
 	if md5:
 		os = platform.system()
 		if os == 'FreeBSD':
@@ -84,7 +84,7 @@ def MD5 (io,ip,afi,md5):
 				TCP_MD5SIG = 14
 				TCP_MD5SIG_MAXKEYLEN = 80
 
-				n_port = socket.htons(179)
+				n_port = socket.htons(port)
 				if afi == AFI.ipv4:
 					SS_PADSIZE = 120
 					n_addr = socket.inet_pton(socket.AF_INET, ip)

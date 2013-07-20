@@ -48,5 +48,5 @@ class BGPServer(asyncore.dispatcher):
 			print "new BGP connection from", addr
 			handler = BGPHandler(sock)
 
-server = BGPServer('localhost', 179)
+server = BGPServer('localhost', int(os.environ.get('exabgp.tcp.port','179')))
 asyncore.loop()

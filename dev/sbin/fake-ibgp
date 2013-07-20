@@ -135,7 +135,7 @@ class BGPServer(asyncore.dispatcher):
 		if pair is not None:
 			sock, addr = pair
 			print "new BGP connection from", addr
-			handler = BGPHandler(sock).setup(*addr)
+			BGPHandler(sock).setup(*addr)
 
 def drop ():
 	uid = os.getuid()
@@ -157,6 +157,6 @@ def drop ():
 	if not uid:
 		os.setuid(nuid)
 
-server = BGPServer('localhost', 179)
+server = BGPServer('localhost', int(os.environ.get('exabgp.tcp.port','179')))
 drop()
 asyncore.loop()

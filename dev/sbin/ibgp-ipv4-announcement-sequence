@@ -261,17 +261,16 @@ def main ():
 		sys.exit(1)
 
 	try:
-		server = BGPServer('localhost',179,sys.argv[1:])
+		BGPServer('localhost',int(os.environ.get('exabgp.tcp.port','179')),sys.argv[1:])
 		drop()
 		asyncore.loop()
 	except socket.error,e:
 		if e.errno == errno.EACCES:
-			print "failure: could not bind to port 179 - most likely not run as root"
+			print "failure: could not bind to port %s - most likely not run as root" % os.environ.get('exabgp.tcp.port','179')
 		elif e.errno == errno.EADDRINUSE:
-			print "failure: could not bind to port 179 - port already in use"
+			print "failure: could not bind to port %s - port already in use" % os.environ.get('exabgp.tcp.port','179')
 		else:
 			print "failure", str(e)
 
 if __name__ == '__main__':
 	main()
-

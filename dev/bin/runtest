@@ -16,8 +16,6 @@ def alarm_handler(signum, frame):
 	raise Alarm()
 
 def main ():
-	os.environ['exabgp.tcp.bind'] = ''
-
 	location = path.realpath(__file__)
 
 	exabgp = path.abspath(path.join(location,'..','..','..','sbin','exabgp'))
@@ -90,10 +88,18 @@ def check_sequence(exabgp,configuration,daemon,messages):
 		print
 
 def check (main):
+	os.environ['exabgp.tcp.bind'] = ''
+	if not os.environ.get('exabgp.tcp.port',None):
+		os.environ['exabgp.tcp.port'] = '1790'
+
 	uid = os.getuid()
 	gid = os.getgid()
 
-	if uid and gid:
+	port = os.environ['exabgp.tcp.port']
+	if not port.isdigit():
+		print 'invalid port value %s' % port
+
+	if uid and gid and int(port) <= 1024:
 		print 'you need to have root privileges to bind to port 79'
 		sys.exit(1)
 	main()
