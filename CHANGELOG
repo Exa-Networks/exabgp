@@ -28,6 +28,8 @@ Version 3.2.0
     reported by: Vincent Bernat
  * Fix: bug in the networking code
     patch by: Vincent Bernat
+ * Fix: an issue with received timer expiring when it should not have
+    reported by: Eric Cables
  * Compatibility: supervisor was renamed reactor
  * Compatibility: the word inet4/inet6 are now replaced by ipv4/ipv6
  * Compatibility: the option exabgp.tcp.block was removed following the networking code change

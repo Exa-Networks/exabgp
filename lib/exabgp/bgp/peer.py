@@ -197,7 +197,8 @@ class Peer (object):
 		opentimer = Timer(self.me,10.0,1,1,'waited for open too long')
 
 		for message in self._out_proto.read_open(self.neighbor.peer_address.ip):
-			opentimer.tick()
+			# XXX: FIXME: this should return data and we should raise here
+			opentimer.tick(message)
 			if not self._running:
 				yield False
 				return
@@ -288,7 +289,7 @@ class Peer (object):
 		opentimer = Timer(self.me,10.0,1,1,'waited for open too long')
 
 		for message in self._out_proto.read_open(self.neighbor.peer_address.ip):
-			opentimer.tick()
+			opentimer.tick(message)
 			if not self._running:
 				break
 			# XXX: FIXME: change the whole code to use the ord and not the chr version
@@ -356,8 +357,9 @@ class Peer (object):
 				if message.TYPE == Update.TYPE:
 					counter.increment(len(message.routes))
 
-				# SEND KEEPALIVES
 				self.timer.tick(message)
+
+				# SEND KEEPALIVES
 				if self.timer.keepalive():
 					for message in self.proto.new_keepalive():
 						yield True

@@ -14,6 +14,7 @@ from exabgp.reactor.network.error import SizeError
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.nop import NOP
+from exabgp.bgp.message.unknown import Unknown
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.capability import Capabilities
@@ -33,6 +34,7 @@ MAX_BACKLOG = 15000
 
 _NOP = NOP()
 _UPDATE = Update()
+_UNKNOWN = Unknown()
 
 class Protocol (object):
 	decode = True
@@ -124,7 +126,7 @@ class Protocol (object):
 				self.peer.reactor.processes.routes(self.neighbor.peer_address,update.routes)
 				yield update
 			else:
-				yield _NOP
+				yield _UNKNOWN
 
 		elif msg == Message.Type.KEEPALIVE:
 			self.logger.message(self.me('<< KEEPALIVE%s' % keepalive_comment))
@@ -143,7 +145,7 @@ class Protocol (object):
 
 		else:
 			self.logger.message(self.me('<< NOP (unknow type %d)' % msg))
-			yield NOP().factory(msg)
+			yield Unknown().factory(msg)
 
 	# XXX: FIXME: this should really be moved into Negotiated with only the raise being done here
 	def negotiate (self):

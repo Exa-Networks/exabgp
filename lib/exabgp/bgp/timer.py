@@ -31,8 +31,8 @@ class Timer (object):
 		self.last_read = time.time()
 		self.last_sent = time.time()
 
-	def tick (self,message=_NOP):
-		if message.TYPE != NOP.TYPE:
+	def tick (self,message=_NOP,ignore=_NOP.TYPE):
+		if message.TYPE != ignore:
 			self.last_read = time.time()
 		if self.holdtime:
 			left = int(self.last_read  + self.holdtime - time.time())
