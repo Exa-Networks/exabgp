@@ -271,7 +271,7 @@ class Peer (object):
 
 
 	def _connect (self):
-		#print '\nCONNECT\n'
+		self._state = STATE.active
 
 		if self.reactor.processes.broken(self.neighbor.peer_address):
 			# XXX: we should perhaps try to restart the process ??
