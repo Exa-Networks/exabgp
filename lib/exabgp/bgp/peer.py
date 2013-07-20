@@ -496,7 +496,7 @@ class Peer (object):
 			self._accepted = False
 
 			try:
-				self._out_proto.new_n(n)
+				self._out_proto.new_notification(n)
 			except (NetworkError,ProcessError):
 				self.logger.error(self.me('NOTIFICATION NOT SENT','network'))
 				pass
