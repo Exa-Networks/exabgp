@@ -21,7 +21,7 @@ from exabgp.logger import Logger,FakeLogger,LazyFormat
 
 from exabgp.bgp.message import Message
 
-from exabgp.reactor.network.error import error,errno,NetworkError,TooSlowError,NotConnected,LostConnection
+from exabgp.reactor.network.error import error,errno,NetworkError,TooSlowError,NotConnected,LostConnection,NotifyError
 
 from .error import *
 
@@ -209,18 +209,18 @@ class Connection (object):
 				yield 0,0,'',''
 
 		if not header.startswith(Message.MARKER):
-			raise ValueError('1 1 The packet received does not contain a BGP marker')
+			raise NotifyError(1,1,'The packet received does not contain a BGP marker')
 
 		msg = ord(header[18])
 		length = unpack('!H',header[16:18])[0]
 
 		if length < Message.HEADER_LEN or length > Message.MAX_LEN:
-			raise ValueError('1 2 %s has an invalid message length of %d' %(Message().name(msg),length))
+			raise NotifyError(1,2,'%s has an invalid message length of %d' %(Message().name(msg),length))
 
 		validator = Message.Length.get(msg,lambda _ : _ >= 19)
 		if not validator(length):
 			# MUST send the faulty msg_length back
-			raise ValueError('1 2 %s has an invalid message length of %d' %(Message().name(msg),msg_length))
+			raise NotifyError(1,2,'%s has an invalid message length of %d' %(Message().name(msg),msg_length))
 
 		body = ''
 		number = length - Message.HEADER_LEN

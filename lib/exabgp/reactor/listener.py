@@ -22,14 +22,6 @@ from exabgp.logger import Logger
 
 
 class Listener (object):
-	# MAX_OPEN_WAIT = 10.0  # seconds
-	# HEADER_LEN = 19  # bytes
-
-	# open_bye = Notify(2,0,'we do not accept incoming connection - thanks for calling').message()
-	# open_invalid_header = Notify(2,0,'invalid OPEN message (16 first bytes are not 0xFF)').message()
-	# open_invalid_type   = Notify(2,0,'invalid OPEN message (it is not an OPEN message)').message()
-	# open_invalid_size   = Notify(2,0,'invalid OPEN message (invalid size in message)').message()
-
 	def __init__ (self,hosts,port,backlog=200):
 		self._hosts = hosts
 		self._port = port

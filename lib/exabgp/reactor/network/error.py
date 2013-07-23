@@ -40,3 +40,9 @@ class TTLError       (NetworkError): pass
 class AsyncError     (NetworkError): pass
 class TooSlowError   (NetworkError): pass
 class SizeError      (NetworkError): pass
+
+class NotifyError    (Exception):
+	def __init__ (self,code,subcode,msg):
+		self.code = code
+		self.subcode = subcode
+		Exception.__init__(self,msg)

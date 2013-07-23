@@ -12,7 +12,7 @@ from exabgp.rib.table import Table
 from exabgp.rib.delta import Delta
 
 from exabgp.reactor.network.outgoing import Outgoing
-from exabgp.reactor.network.error import SizeError
+from exabgp.reactor.network.error import SizeError,NotifyError
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.nop import NOP
@@ -108,9 +108,8 @@ class Protocol (object):
 			for length,msg,header,body in self.connection.reader():
 				if not length:
 					yield _NOP
-		except ValueError,e:
-			code,subcode,string = str(e).split(' ',2)
-			raise Notify(int(code),int(subcode),string)
+		except NotifyError,n:
+			raise Notify(n.code,n.subcode,str(n))
 
 		if self.neighbor.api.receive_packets:
 			self.peer.reactor.processes.receive(self.peer.neighbor.peer_address,msg,header,body)
