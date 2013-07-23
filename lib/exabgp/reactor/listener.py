@@ -6,7 +6,6 @@ Created by Thomas Mangin on 2013-07-11.
 Copyright (c) 2013-2013 Exa Networks. All rights reserved.
 """
 
-import time
 import socket
 
 from exabgp.util.errstr import errstr
@@ -42,7 +41,6 @@ class Listener (object):
 		self.logger = Logger()
 
 	def _bind (self,ip,port):
-		self.logger.critical('Listening for BGP sessions on %s:%d' % (ip,port))
 		try:
 			if isipv6(ip):
 				s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
@@ -84,6 +82,7 @@ class Listener (object):
 				raise e
 		self.serving = True
 
+	# @each
 	def connected (self):
 		if not self.serving:
 			return
@@ -103,66 +102,6 @@ class Listener (object):
 		except NetworkError,e:
 			self.logger.critical(str(e))
 			raise e
-
-	# @each
-	# def connections (self):
-	# 	now = time.time()
-	# 	for connection in self._connections():
-	# 		self._connected[connection] = (now,'header',self.HEADER_LEN,'')
-
-	# 	for connection,(then,stage,to_read,received) in self._connected.items():
-	# 		try:
-	# 			data = connection.read(to_read)
-	# 			to_read -= len(data)
-	# 			received += data
-
-	# 			if now - then > self.MAX_OPEN_WAIT:
-	# 				self._delete(connection)
-	# 				continue
-
-	# 			if to_read:
-	# 				self._connected[connection] = (then,stage,to_read,received)
-	# 				continue
-
-	# 			if stage == 'header':
-	# 				if received[:16] != '\xFF' * 16:
-	# 					self._reply(connection,self.open_invalid_header)
-	# 					self._delete(connection)
-	# 					continue
-	# 				if received[18] != Open.TYPE:
-	# 					self._reply(connection,self.open_invalid_type)
-	# 					self._delete(connection)
-	# 					continue
-	# 				size = (ord(data[16]) << 16) + ord(data[17])
-	# 				if size < 29:
-	# 					self._reply(connection,self.open_invalid_size)
-	# 					self._delete(connection)
-	# 					continue
-	# 				to_read = size - self.HEADER_LEN
-	# 				self._connected[connection] = (then,'body',to_read,received)
-	# 				continue
-
-	# 			self._reply(connection,self.open_bye)
-	# 			self._delete(connection)
-
-	# 			yield received,connection.local,connection.peer
-	# 		except socket.error,e:
-	# 			if e.errno in error.block:
-	# 				if now - then > self.MAX_OPEN_WAIT:
-	# 					self._delete(connection)
-
-	def _delete (self,sock):
-		self._connected.pop(sock)
-		try:
-			sock.close()
-		except socket.error:
-			pass
-
-	# def _reply (self,sock,message):
-	# 	try:
-	# 		sock.write(message)
-	# 	except socket.error:
-	# 		pass
 
 	def stop (self):
 		if not self.serving:

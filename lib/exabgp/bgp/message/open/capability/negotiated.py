@@ -107,8 +107,10 @@ class Negotiated (object):
 		if self.received_open.router_id == RouterID('0.0.0.0'):
 			return (2,3,'0.0.0.0 is an invalid router_id according to RFC6286')
 
-		if self.received_open.router_id == neighbor.router_id and self.received_open.asn == neighbor.local_as:
-			return (2,3,'BGP Indendifier collision (%s) on IBGP according to RFC 6286' % self.received_open.router_id)
+		if self.received_open.asn == neighbor.local_as:
+			# router-id must be unique within an ASN
+			if self.received_open.router_id == neighbor.router_id:
+				return (2,3,'BGP Indendifier collision (%s) on IBGP according to RFC 6286' % self.received_open.router_id)
 
 		if self.received_open.hold_time and self.received_open.hold_time < 3:
 			return (2,6,'Hold Time is invalid (%d)' % self.received_open.hold_time)

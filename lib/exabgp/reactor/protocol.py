@@ -82,6 +82,7 @@ class Protocol (object):
 				self.peer.reactor.processes.connected(self.peer.neighbor.peer_address)
 
 	def close (self,reason='unspecified'):
+		self.logger.info(self.me(reason))
 		if self.connection:
 			# must be first otherwise we could have a loop caused by the raise in the below
 			self.connection.close()

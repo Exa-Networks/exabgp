@@ -172,11 +172,11 @@ class BGPHandler(asyncore.dispatcher_with_send):
 					self.announce('expected announcement received (%s%s):' % (self.letter,self.step),announcement)
 				else:
 					if raw:
-						self.announce('unexpected announcement (%s%s):' % (self.letter,self.step),'%s %s' % (bytestream(header),bytestream(body)))
+						self.announce('\n','unexpected announcement (%s%s):' % (self.letter,self.step),'%s %s' % (bytestream(header),bytestream(body)))
 					else:
-						self.announce('unexpected announcement:',announcement)
+						self.announce('\n','unexpected announcement:',announcement)
 
-					self.announce('valid options were:',', '.join(self.messages))
+					self.announce('valid options were:',', '.join(self.messages),'\n')
 					sys.exit(1)
 
 				if not self.messages:
@@ -217,11 +217,9 @@ class BGPServer (asyncore.dispatcher):
 				messages = self.messages[letter]
 				del self.messages[letter]
 				break
-		else:
-			letter = ''
 
 		if not messages:
-			print 'not enough data'
+			print 'we used all the test data available, can not handle this new connection'
 			sys.exit(1)
 		else:
 			print 'using', messages

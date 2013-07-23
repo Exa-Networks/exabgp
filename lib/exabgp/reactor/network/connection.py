@@ -54,12 +54,12 @@ class Connection (object):
 	# Just in case ..
 	def __del__ (self):
 		if self.io:
-			self.logger.critical("Connection to %s was not explicitely closed, closed by GC" % self.peer)
+			self.logger.critical("FIX ! Connection to %s was not explicitely closed, closed by GC" % self.peer)
 			self.close()
 
 	def close (self):
 		try:
-			self.logger.wire("Closing connection to %s" % self.peer)
+			self.logger.wire("Closing connection local %s peer %s" % (self.local,self.peer))
 			if self.io:
 				self.io.close()
 				self.io = None
@@ -131,7 +131,7 @@ class Connection (object):
 				if not read:
 					self.close()
 					self.logger.wire("%15s lost TCP session with peer" % self.peer)
-					raise LostConnection('Lost the TCP connection')
+					raise LostConnection('the TCP connection was closed by the remote end')
 				yield read
 			self.logger.wire(LazyFormat("Peer %15s RECEIVED " % self.peer,od,read))
 			self._reading = None
@@ -143,7 +143,7 @@ class Connection (object):
 			self.close()
 			self.logger.wire("%15s undefined error on socket" % self.peer)
 			if e.args[0] == errno.EPIPE:
-				raise LostConnection('Lost the TCP connection')
+				raise LostConnection('issue reading on the socket: %s' % errstr(e))
 			raise NetworkError('Problem while reading data from the network (%s)' % errstr(e))
 
 	def writer (self,data):

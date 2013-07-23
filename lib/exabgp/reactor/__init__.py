@@ -31,6 +31,9 @@ class Reactor (object):
 	reactor_speed = 1.0
 
 	def __init__ (self,configuration):
+		self.ip = environment.settings().tcp.bind
+		self.port = environment.settings().tcp.port
+
 		self.logger = Logger()
 		self.daemon = Daemon(self)
 		self.processes = None
@@ -75,21 +78,18 @@ class Reactor (object):
 		self._reload_processes = True
 
 	def run (self):
-		if environment.settings().tcp.bind:
-			ip = environment.settings().tcp.bind
-			port = environment.settings().tcp.port
-
+		if self.ip:
 			try:
-				self.listener = Listener([ip,],port)
+				self.listener = Listener([self.ip,],self.port)
 				self.listener.start()
 			except NetworkError,e:
 				self.logger.critical("ExaBGP will not accept incoming connections",'reactor')
 				self.listener = None
-				if os.geteuid() != 0 and port <= 1024:
-					self.logger.critical("You most likely need to run ExaBGP as root to bind to port %d" % port,'reactor')
+				if os.geteuid() != 0 and self.port <= 1024:
+					self.logger.critical("You most likely need to run ExaBGP as root to bind to port %d" % self.port,'reactor')
 				else:
-					self.logger.critical("Can not bind to %s:%d (%s)" % (ip,port,errstr(e)),'reactor')
-			self.logger.critical("Listening on %s:%d" % (ip,port),'reactor')
+					self.logger.critical("Can not bind to %s:%d (%s)" % (self.ip,self.port,errstr(e)),'reactor')
+			self.logger.info("Listening for BGP session(s) on %s:%d" % (self.ip,self.port),'reactor')
 
 		if self.daemon.drop_privileges():
 			self.logger.critical("Could not drop privileges to '%s' refusing to run as root" % self.daemon.user,'reactor')
@@ -140,27 +140,29 @@ class Reactor (object):
 						if duration >= 0.5:
 							break
 
-					reload_completed = True
 					# Handle all connection
 					peers = self._peers.keys()
 					ios = []
 					while peers:
 						for key in peers[:]:
 							peer = self._peers[key]
-							# peer.run returns:
+							action = peer.run()
+							# .run() returns:
 							# * True if it wants to be called again
 							# * None if it should be called again but has no work atm
 							# * False if it is finished and is closing down, or restarting
-							if peer.run() is not True:
+							if action is not True:
 								ios.extend(peer.ios())
 								# no need to come back to it before a a full cycle
 								peers.remove(key)
 
 						duration = time.time() - start
 						if duration >= self.reactor_speed:
-							reload_completed = False
 							ios=[]
 							break
+
+					if not peers:
+						reload_completed = True
 
 					# append here after reading as if read fails due to a dead process
 					# we may respawn the process which changes the FD
@@ -178,15 +180,29 @@ class Reactor (object):
 
 					if self.listener:
 						for connection in self.listener.connected():
+							# found
+							# * False, not peer found for this TCP connection
+							# * True, peer found
+							# * None, conflict found for this TCP connections
 							found = False
-							for key, neighbor in self.configuration.neighbor.items():
+							for key in self._peers:
+								peer = self._peers[key]
+								neighbor = peer.neighbor
 								# XXX: FIXME: Inet can only be compared to Inet
-								if connection.local == str(neighbor.local_address) and connection.peer == str(neighbor.peer_address):
-									self._peers[key].incoming(connection)
-									found = True
+								if connection.local == str(neighbor.peer_address) and connection.peer == str(neighbor.local_address):
+									if peer.incoming(connection):
+										found = True
+										break
+									found = None
 									break
-							if not found:
-								connection.notification(2,2,'peer not configured')
+
+							if found is False:
+								self.logger.info("no session configured for  %s - %s" % (connection.local,connection.peer),'reactor')
+								connection.notification(6,3,'no session configured for the peer')
+								connection.close()
+							elif found is None:
+								self.logger.info("could not accept connection %s - %s" % (connection.local,connection.peer),'reactor')
+								connection.notification(6,5,'could not accept the connection')
 								connection.close()
 
 					if ios:
