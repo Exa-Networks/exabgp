@@ -59,7 +59,7 @@ class Connection (object):
 
 	def close (self):
 		try:
-			self.logger.wire("Closing connection local %s peer %s" % (self.local,self.peer))
+			self.logger.wire("Closing connection from %s to %s" % (self.local,self.peer))
 			if self.io:
 				self.io.close()
 				self.io = None
@@ -133,7 +133,7 @@ class Connection (object):
 					self.logger.wire("%15s lost TCP session with peer" % self.peer)
 					raise LostConnection('the TCP connection was closed by the remote end')
 				yield read
-			self.logger.wire(LazyFormat("Peer %15s RECEIVED " % self.peer,od,read))
+			self.logger.wire(LazyFormat("%-32s RECEIVED " % ('%s / %s' % (self.local,self.peer)),od,read))
 			self._reading = None
 		except socket.timeout,e:
 			self.close()
@@ -155,7 +155,7 @@ class Connection (object):
 			yield False
 			return
 		try:
-			self.logger.wire(LazyFormat("Peer %15s SENDING " % self.peer,od,data))
+			self.logger.wire(LazyFormat("%-32s SENDING " % ('%s / %s' % (self.local,self.peer)),od,data))
 			# we can not use sendall as in case of network buffer filling
 			# it does raise and does not let you know how much was sent
 			sent = 0
