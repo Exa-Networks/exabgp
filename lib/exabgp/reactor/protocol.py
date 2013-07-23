@@ -103,7 +103,7 @@ class Protocol (object):
 
 	# Read from network .......................................................
 
-	def read_message (self,keepalive_comment=''):
+	def read_message (self,comment=''):
 		try:
 			for length,msg,header,body in self.connection.reader():
 				if not length:
@@ -132,7 +132,7 @@ class Protocol (object):
 				yield _UNKNOWN
 
 		elif msg == Message.Type.KEEPALIVE:
-			self.logger.message(self.me('<< KEEPALIVE%s' % keepalive_comment))
+			self.logger.message(self.me('<< KEEPALIVE%s' % (' (%s)' % comment if comment else '')))
 			yield KeepAlive()
 
 		elif msg == Message.Type.NOTIFICATION:
@@ -206,7 +206,8 @@ class Protocol (object):
 		for _ in self.write(keepalive.message()):
 			yield _NOP
 
-		self.logger.message(self.me('>> KEEPALIVE%s' % comment))
+		self.logger.message(self.me('>> KEEPALIVE%s' % (' (%s)' % comment if comment else '')))
+
 		yield keepalive
 
 	def new_notification (self,notification):

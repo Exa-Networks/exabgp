@@ -148,6 +148,7 @@ class Peer (object):
 			except StopIteration:
 				# we only start the generator when we get a connection
 				self._in_loop = False
+
 		elif self._in_loop is None:
 			self._in_loop = self._run('in')
 			rin = True
@@ -231,7 +232,7 @@ class Peer (object):
 		self._in_proto.validate_open()
 
 		# Send KEEPALIVE
-		for message in self._in_proto.new_keepalive(' (ESTABLISHED)'):
+		for message in self._in_proto.new_keepalive('ESTABLISHED'):
 			if not self._running:
 				yield False
 				return
@@ -247,7 +248,7 @@ class Peer (object):
 		self.timer = Timer(self.me,self._in_proto.negotiated.holdtime,4,0)
 
 		# Read KEEPALIVE
-		for message in self._in_proto.read_keepalive(' (OPENCONFIRM)'):
+		for message in self._in_proto.read_keepalive('OPENCONFIRM'):
 			self.timer.tick(message)
 			if not self._running:
 				yield False
@@ -260,7 +261,7 @@ class Peer (object):
 		if ord(message.TYPE) == Message.Type.NOP:
 			raise Interrupted()
 
-		self._out_state = STATE.established
+		self._in_state = STATE.established
 		# let the caller know that we were sucesfull
 		yield True
 
@@ -317,7 +318,7 @@ class Peer (object):
 		self.timer = Timer(self.me,self._out_proto.negotiated.holdtime,4,0)
 
 		# Read KEEPALIVE
-		for message in self._out_proto.read_keepalive(' (OPENCONFIRM)'):
+		for message in self._out_proto.read_keepalive('OPENCONFIRM'):
 			self.timer.tick(message)
 			if not self._running:
 				break
@@ -330,7 +331,7 @@ class Peer (object):
 			raise Interrupted()
 
 		# Send KEEPALIVE
-		for message in self._out_proto.new_keepalive(' (ESTABLISHED)'):
+		for message in self._out_proto.new_keepalive('ESTABLISHED'):
 			yield True
 
 		# the generator was interrupted
@@ -405,7 +406,7 @@ class Peer (object):
 								# If we are not sending an EOR, send a keepalive as soon as when finished
 								# So the other routers knows that we have no (more) routes to send ...
 								# (is that behaviour documented somewhere ??)
-								for eor in self.proto.new_keepalive('KEEPALIVE (EOR)'):
+								for eor in self.proto.new_keepalive('EOR'):
 									if not self._running:
 										yield False
 										return
