@@ -7,6 +7,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 import os
+import sys
 import time
 import signal
 import select
@@ -83,12 +84,14 @@ class Reactor (object):
 				self.listener = Listener([self.ip,],self.port)
 				self.listener.start()
 			except NetworkError,e:
-				self.logger.critical("ExaBGP will not accept incoming connections",'reactor')
 				self.listener = None
 				if os.geteuid() != 0 and self.port <= 1024:
-					self.logger.critical("You most likely need to run ExaBGP as root to bind to port %d" % self.port,'reactor')
+					self.logger.critical("Can not bind to %s:%d, you may need to run ExaBGP as root" % (self.ip,self.port),'reactor')
 				else:
 					self.logger.critical("Can not bind to %s:%d (%s)" % (self.ip,self.port,errstr(e)),'reactor')
+				self.logger.critical("unset exabgp.tcp.bind if you do not want listen for incoming connections",'reactor')
+				self.logger.critical("and check that no other daemon is already binding to port %d" % self.port,'reactor')
+				sys.exit(1)
 			self.logger.info("Listening for BGP session(s) on %s:%d" % (self.ip,self.port),'reactor')
 
 		if self.daemon.drop_privileges():
