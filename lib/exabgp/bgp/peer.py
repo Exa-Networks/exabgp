@@ -150,6 +150,7 @@ class Peer (object):
 				self._in_loop = False
 		elif self._in_loop is None:
 			self._in_loop = self._run('in')
+			rin = True
 
 		if self._out_loop:
 			try:
@@ -163,6 +164,7 @@ class Peer (object):
 				self._out_loop = False
 			else:
 				self._out_loop = self._run('out')
+				rout = True
 
 		if not self._in_loop and not self._out_loop:
 			if self._restart:
