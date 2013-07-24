@@ -48,6 +48,7 @@ withdraw flow route {
 
 
 messages = [
+'sleep',
 announce_flow_2,
 withdraw_flow_2,
 announce_flow_1,
