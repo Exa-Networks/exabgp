@@ -209,18 +209,16 @@ class Reactor (object):
 								connection.close()
 
 					if ios:
-						duration = time.time() - start
-						if duration < self.reactor_speed:
-							try:
-								read,_,_ = select.select(ios,[],[],max(self.reactor_speed-duration,0))
-							except select.error,e:
-								errno,message = e.args
-								if not errno in error.block:
-									raise e
-					else:
-						duration = time.time() - start
-						if duration < self.reactor_speed:
-							time.sleep(max(self.reactor_speed-duration,0))
+						try:
+							read,_,_ = select.select(ios,[],[],wait)
+						except select.error,e:
+							errno,message = e.args
+							if not errno in error.block:
+								raise e
+
+					wait = max(start+self.reactor_speed-time.time(),0.0)
+					if wait:
+						time.sleep(wait)
 
 				self.processes.terminate()
 				self.daemon.removepid()
@@ -623,5 +621,3 @@ class Reactor (object):
 		key = peer.neighbor.name()
 		if key in self._peers:
 			del self._peers[key]
-
-

@@ -166,6 +166,7 @@ class Peer (object):
 			except StopIteration:
 				# let's retry and connect once more
 				self._out_loop = None
+
 		elif self._out_loop is None:
 			if self.neighbor.passive:
 				self._out_loop = False
