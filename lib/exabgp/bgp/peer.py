@@ -103,7 +103,13 @@ class Peer (object):
 			self._next_skip = 60
 
 	def me (self,message):
-		return "Peer %15s ASN %-7s %s" % (self.neighbor.peer_address,self.neighbor.peer_as,message)
+		return "peer %s ASN %-7s %s" % (self.neighbor.peer_address,self.neighbor.peer_as,message)
+
+	def wrout (self,message):
+		return "%s %s" % (self._out_proto.connection.name(),self.me(message))
+
+	def wrin (self,message):
+		return "%s %s" % (self._in_proto.connection.name(),self.me(message))
 
 	def stop (self):
 		self._running = False
@@ -198,7 +204,7 @@ class Peer (object):
 
 		# Read OPEN
 		wait = environment.settings().bgp.openwait
-		opentimer = Timer(self.me,wait,1,1,'waited for open too long, we do not like stuck in active')
+		opentimer = Timer(self.wrin,wait,1,1,'waited for open too long, we do not like stuck in active')
 
 		for message in self._in_proto.read_open(self.neighbor.peer_address.ip):
 			# XXX: FIXME: this should return data and we should raise here
@@ -245,7 +251,7 @@ class Peer (object):
 		self._state = STATE.openconfirm
 
 		# Start keeping keepalive timer
-		self.timer = Timer(self.me,self._in_proto.negotiated.holdtime,4,0)
+		self.timer = Timer(self.wrin,self._in_proto.negotiated.holdtime,4,0)
 
 		# Read KEEPALIVE
 		for message in self._in_proto.read_keepalive('OPENCONFIRM'):
@@ -294,7 +300,7 @@ class Peer (object):
 
 		# Read OPEN
 		wait = environment.settings().bgp.openwait
-		opentimer = Timer(self.me,wait,1,1,'waited for open too long, we do not like stuck in active')
+		opentimer = Timer(self.wrout,wait,1,1,'waited for open too long, we do not like stuck in active')
 
 		for message in self._out_proto.read_open(self.neighbor.peer_address.ip):
 			opentimer.tick(message)
@@ -315,7 +321,7 @@ class Peer (object):
 		self._state = STATE.openconfirm
 
 		# Start keeping keepalive timer
-		self.timer = Timer(self.me,self._out_proto.negotiated.holdtime,4,0)
+		self.timer = Timer(self.wrout,self._out_proto.negotiated.holdtime,4,0)
 
 		# Read KEEPALIVE
 		for message in self._out_proto.read_keepalive('OPENCONFIRM'):
@@ -360,7 +366,11 @@ class Peer (object):
 		first_loop = True
 
 		new_routes = None
-		counter = Counter(self.logger,self.me)
+
+		if self.proto.connection.direction == 'in':
+			counter = Counter(self.logger,self.wrin)
+		else:
+			counter = Counter(self.logger,self.wrout)
 
 		while self._running:
 			for message in self.proto.read_message():
@@ -494,7 +504,7 @@ class Peer (object):
 				try:
 					self._out_proto.new_notification(n)
 				except (NetworkError,ProcessError):
-					self.logger.error(self.me('NOTIFICATION NOT SENT','network'))
+					self.logger.error(self.wrout('NOTIFICATION NOT SENT','network'))
 					pass
 				self._out_proto.close('notification sent (%d,%d) [%s] %s' % (n.code,n.subcode,str(n),n.data))
 				self._out_proto = None
@@ -503,7 +513,7 @@ class Peer (object):
 				try:
 					self._in_proto.new_notification(n)
 				except (NetworkError,ProcessError):
-					self.logger.error(self.me('NOTIFICATION NOT SENT','network'))
+					self.logger.error(self.wrin('NOTIFICATION NOT SENT','network'))
 					pass
 				self._in_proto.close('notification sent (%d,%d) [%s] %s' % (n.code,n.subcode,str(n),n.data))
 				self._in_proto = None
@@ -517,7 +527,7 @@ class Peer (object):
 			self._in_loop = False
 			self._out_loop = None
 
-			self.logger.error(self.me('Received Notification (%d,%d) %s' % (n.code,n.subcode,str(n))),'reactor')
+			self.logger.error(self.me('received Notification (%d,%d) %s' % (n.code,n.subcode,str(n))),'reactor')
 
 			if self._out_proto:
 				self._out_proto.close('notification received (%d,%d) %s' % (n.code,n.subcode,str(n)))
@@ -536,7 +546,7 @@ class Peer (object):
 			self._in_loop = False
 			self._out_loop = None
 
-			self.logger.error(self.me('Received unexpected message %s' % m.name(),'network'))
+			self.logger.error(self.me('received unexpected message %s' % m.name(),'network'))
 
 			if self._out_proto:
 				self._out_proto.close('unexpected message received')
