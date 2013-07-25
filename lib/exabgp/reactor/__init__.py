@@ -209,16 +209,17 @@ class Reactor (object):
 								connection.close()
 
 					if ios:
+						delay = max(start+self.reactor_speed-time.time(),0.0)
 						try:
-							read,_,_ = select.select(ios,[],[],wait)
+							read,_,_ = select.select(ios,[],[],delay)
 						except select.error,e:
 							errno,message = e.args
 							if not errno in error.block:
 								raise e
 
-					wait = max(start+self.reactor_speed-time.time(),0.0)
-					if wait:
-						time.sleep(wait)
+					delay = max(start+self.reactor_speed-time.time(),0.0)
+					if delay:
+						time.sleep(delay)
 
 				self.processes.terminate()
 				self.daemon.removepid()
