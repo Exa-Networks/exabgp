@@ -6,6 +6,7 @@ import asyncore
 import socket
 import errno
 from struct import unpack
+import time
 
 def od (value):
 	def spaced (value):
@@ -60,6 +61,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		self.port = port
 		self.handle_read = self.handle_open
 		self.update_count = 0
+		self.time = time.time()
 		return self
 
 	def read_message (self):
@@ -101,7 +103,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		self.update_count += 1
 
 		if self.isupdate(header):
-			self.announce("%-6d --->" % self.update_count, ', '.join(self.routes(body)))
+			self.announce("received %-6d updates (%6d/sec) " % (self.update_count, self.update_count / (time.time()-self.time)) ,  ', '.join(self.routes(body)))
 
 		return header,body
 
@@ -157,6 +159,9 @@ def drop ():
 	if not uid:
 		os.setuid(nuid)
 
-server = BGPServer('localhost', int(os.environ.get('exabgp.tcp.port','179')))
-drop()
-asyncore.loop()
+try:
+	server = BGPServer('localhost', int(os.environ.get('exabgp.tcp.port','179')))
+	drop()
+	asyncore.loop()
+except socket.error:
+	print 'need root right to bind to port 179'

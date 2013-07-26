@@ -1,0 +1,6 @@
+#!/bin/sh
+
+ip=`ifconfig | grep -A5 en0 | grep "inet " | awk '{ print $2; }'`
+cat first.template | sed -e "s/IP/$ip/" > first.conf
+
+env exabgp.tcp.bind="127.0.0.1" exabgp.tcp.port=1790 ../../../sbin/exabgp first.conf -d
