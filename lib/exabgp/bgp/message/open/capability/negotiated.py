@@ -17,6 +17,8 @@ class Negotiated (object):
 		self.sent_open = None
 		self.received_open = None
 
+		self.holdtime = HoldTime(0)
+		self.local_as = ASN(0)
 		self.peer_as = ASN(0)
 		self.families = []
 		self.asn4 = False
