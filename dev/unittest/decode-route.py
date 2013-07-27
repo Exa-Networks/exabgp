@@ -195,7 +195,7 @@ route = header + body
 
 from StringIO import StringIO
 from exabgp.reactor.protocol import Protocol
-from exabgp.bgp.peer import Peer
+from exabgp.reactor.peer import Peer
 from exabgp.bgp.neighbor import Neighbor
 
 class Connection (StringIO):

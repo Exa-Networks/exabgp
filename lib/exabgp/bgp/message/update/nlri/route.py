@@ -13,7 +13,7 @@ from exabgp.protocol.family import AFI,SAFI
 from exabgp.protocol.ip.inet import Inet
 
 from exabgp.protocol.ip.address import Address
-from exabgp.bgp.message.update.attribute.attributes import Attributes
+from exabgp.bgp.message.update.attributes import Attributes
 
 from exabgp.bgp.message.notification import Notify
 

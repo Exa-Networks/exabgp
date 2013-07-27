@@ -523,4 +523,3 @@ if not Attributes.cache:
 	Attributes.cache[AID.ORIGIN][IGP.pack()] = IGP
 	Attributes.cache[AID.ORIGIN][EGP.pack()] = EGP
 	Attributes.cache[AID.ORIGIN][INC.pack()] = INC
-
