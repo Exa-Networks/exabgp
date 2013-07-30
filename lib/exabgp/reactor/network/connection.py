@@ -77,11 +77,6 @@ class Connection (object):
 
 	def reading (self):
 		while True:
-			if self._reading and time.time() > self._reading + self.read_timeout:
-				self.close()
-				self.logger.wire("%s %s peer is too slow" % (self.name(),self.peer))
-				raise TooSlowError('Waited for data on a socket for more than %d second(s)' % self.read_timeout)
-
 			try:
 				r,_,_ = select.select([self.io,],[],[],0)
 			except select.error,e:
@@ -97,11 +92,6 @@ class Connection (object):
 
 	def writing (self):
 		while True:
-			if self._writing and time.time() > self._writing + self.read_timeout:
-				self.close()
-				self.logger.wire("%s %s peer is too slow" % (self.name(),self.peer))
-				raise TooSlowError('Waited for data on a socket for more than %d second(s)' % self.read_timeout)
-
 			try:
 				_,w,_ = select.select([],[self.io,],[],0)
 			except select.error,e:
