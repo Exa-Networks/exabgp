@@ -192,22 +192,7 @@ class Attributes (dict):
 		)
 		return self._str
 
-
-	def factory (self,negotiated,data):
-		try:
-			# XXX: hackish for now
-			self.mp_announce = []
-			self.mp_withdraw = []
-
-			self.negotiated = negotiated
-			self._factory(data)
-			if AID.AS_PATH in self and AID.AS4_PATH in self:
-				self.__merge_attributes()
-			return self
-		except IndexError:
-			raise Notify(3,2,data)
-
-	def _factory (self,data):
+	def factory (self,data):
 		if not data:
 			return self
 
@@ -523,3 +508,20 @@ if not Attributes.cache:
 	Attributes.cache[AID.ORIGIN][IGP.pack()] = IGP
 	Attributes.cache[AID.ORIGIN][EGP.pack()] = EGP
 	Attributes.cache[AID.ORIGIN][INC.pack()] = INC
+
+
+def AttributesFactory (routefactory,negotiated,data):
+	try:
+		attributes = Attributes()
+		attributes.routeFactory = routefactory
+		# XXX: hackish for now
+		attributes.mp_announce = []
+		attributes.mp_withdraw = []
+
+		attributes.negotiated = negotiated
+		attributes.factory(data)
+		if AID.AS_PATH in attributes and AID.AS4_PATH in attributes:
+			attributes.__merge_attributes()
+		return attributes
+	except IndexError:
+		raise Notify(3,2,data)

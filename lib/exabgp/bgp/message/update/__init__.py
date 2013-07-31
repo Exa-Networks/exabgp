@@ -14,7 +14,7 @@ from exabgp.bgp.message import Message,prefix,defix
 from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
 from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
 from exabgp.bgp.message.update.attribute.id import AttributeID
-from exabgp.bgp.message.update.attributes import Attributes
+from exabgp.bgp.message.update.attributes import AttributesFactory
 from exabgp.bgp.message.update.nlri.route import RouteBGP,BGPNLRI,routeFactory
 from exabgp.bgp.message.notification import Notify
 
@@ -105,57 +105,55 @@ class Update (Message):
 		return [packed]
 
 
-	def factory (self,negotiated,data):
-		length = len(data)
+def UpdateFactory (negotiated,data):
+	length = len(data)
 
-		lw,withdrawn,data = defix(data)
+	lw,withdrawn,data = defix(data)
 
-		if len(withdrawn) != lw:
-			raise Notify(3,1,'invalid withdrawn routes length, not enough data available')
+	if len(withdrawn) != lw:
+		raise Notify(3,1,'invalid withdrawn routes length, not enough data available')
 
-		la,attribute,announced = defix(data)
+	la,attribute,announced = defix(data)
 
-		if len(attribute) != la:
-			raise Notify(3,1,'invalid total path attribute length, not enough data available')
+	if len(attribute) != la:
+		raise Notify(3,1,'invalid total path attribute length, not enough data available')
 
-		if 2 + lw + 2+ la + len(announced) != length:
-			raise Notify(3,1,'error in BGP message lenght, not enough data for the size announced')
+	if 2 + lw + 2+ la + len(announced) != length:
+		raise Notify(3,1,'error in BGP message lenght, not enough data for the size announced')
 
-		attributes = Attributes()
-		attributes.routeFactory = routeFactory
-		attributes.factory(negotiated,attribute)
+	attributes = AttributesFactory(routeFactory,negotiated,attribute)
 
-		# Is the peer going to send us some Path Information with the route (AddPath)
-		addpath = negotiated.addpath.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
+	# Is the peer going to send us some Path Information with the route (AddPath)
+	addpath = negotiated.addpath.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
 
-		routes = []
-		while withdrawn:
-			nlri = BGPNLRI(AFI.ipv4,SAFI.unicast_multicast,withdrawn,addpath)
-			route = RouteBGP(nlri,'withdrawn')
-			route.attributes = attributes
-			withdrawn = withdrawn[len(nlri):]
-			routes.append(route)
+	routes = []
+	while withdrawn:
+		nlri = BGPNLRI(AFI.ipv4,SAFI.unicast_multicast,withdrawn,addpath)
+		route = RouteBGP(nlri,'withdrawn')
+		route.attributes = attributes
+		withdrawn = withdrawn[len(nlri):]
+		routes.append(route)
 
-		while announced:
-			nlri = BGPNLRI(AFI.ipv4,SAFI.unicast_multicast,announced,addpath)
-			route = RouteBGP(nlri,'announced')
-			route.attributes = attributes
-			announced = announced[len(nlri):]
-			routes.append(route)
+	while announced:
+		nlri = BGPNLRI(AFI.ipv4,SAFI.unicast_multicast,announced,addpath)
+		route = RouteBGP(nlri,'announced')
+		route.attributes = attributes
+		announced = announced[len(nlri):]
+		routes.append(route)
 
-		next_hop_attributes = {}
+	next_hop_attributes = {}
 
-		for route in attributes.mp_withdraw:
-			routes.append(route)
+	for route in attributes.mp_withdraw:
+		routes.append(route)
 
-		for route in attributes.mp_announce:
-			next_hop = route.attributes[AttributeID.NEXT_HOP]
-			str_hop = str(next_hop)
-			if not str_hop in next_hop_attributes:
-				attr = deepcopy(attributes)
-				attr[AttributeID.NEXT_HOP] = next_hop
-				next_hop_attributes[str_hop] = attr
-			route.attributes = next_hop_attributes[str_hop]
-			routes.append(route)
+	for route in attributes.mp_announce:
+		next_hop = route.attributes[AttributeID.NEXT_HOP]
+		str_hop = str(next_hop)
+		if not str_hop in next_hop_attributes:
+			attr = deepcopy(attributes)
+			attr[AttributeID.NEXT_HOP] = next_hop
+			next_hop_attributes[str_hop] = attr
+		route.attributes = next_hop_attributes[str_hop]
+		routes.append(route)
 
-		return self.new(routes)
+	return Update().new(routes)

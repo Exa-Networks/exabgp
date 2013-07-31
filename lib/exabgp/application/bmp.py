@@ -20,7 +20,7 @@ from struct import unpack
 from exabgp.version import version
 from exabgp.reactor.network.error import error
 from exabgp.reactor.api.encoding import JSON
-from exabgp.bgp.message.update import Update
+from exabgp.bgp.message.update import UpdateFactory
 
 from exabgp.bmp.header import Header
 from exabgp.bmp.message import Message
@@ -101,7 +101,7 @@ class BMPHandler (asyncore.dispatcher_with_send):
 			return
 
 		negotiated = FakeNegotiated(header,self.asn4)
-		update = Update().factory(negotiated,bgp_body)
+		update = UpdateFactory(negotiated,bgp_body)
 		if self.use_json:
 			print >> self.fd, self.json.bmp(self.ip,update.routes)
 		else:
