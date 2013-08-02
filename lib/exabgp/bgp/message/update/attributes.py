@@ -384,7 +384,7 @@ class Attributes (dict):
 		logger.parser('ignoring attribute')
 		return self._factory(next)
 
-	def __merge_attributes (self):
+	def merge_attributes (self):
 		as2path = self[AID.AS_PATH]
 		as4path = self[AID.AS4_PATH]
 		self.remove(AID.AS_PATH)
@@ -521,7 +521,7 @@ def AttributesFactory (routefactory,negotiated,data):
 		attributes.negotiated = negotiated
 		attributes.factory(data)
 		if AID.AS_PATH in attributes and AID.AS4_PATH in attributes:
-			attributes.__merge_attributes()
+			attributes.merge_attributes()
 		return attributes
 	except IndexError:
 		raise Notify(3,2,data)
