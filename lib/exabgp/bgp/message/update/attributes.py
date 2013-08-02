@@ -33,7 +33,6 @@ from exabgp.bgp.message.update.attribute.communities import cachedCommunity,Comm
 
 from exabgp.logger import Logger,LazyFormat
 
-
 # =================================================================== Attributes
 
 class MultiAttributes (list):
@@ -63,6 +62,7 @@ class Attributes (dict):
 
 	def __init__ (self):
 		self._str = ''
+		self._json = ''
 		self.cache_attributes = environment.settings().cache.attributes
 		self.cacheable = True
 		self.seennlri = False
@@ -78,6 +78,7 @@ class Attributes (dict):
 
 	def add (self,attribute,data=None):
 		self._str = ''
+		self._json = ''
 		if data and self.cache_attributes:
 			self.cache[attribute.ID].cache(data,attribute)
 		if attribute.MULTIPLE:
@@ -160,39 +161,42 @@ class Attributes (dict):
 		return message
 
 	def json (self):
-		r = []
-		if self.has(AID.NEXT_HOP):           r.append('"next-hop": "%s"' % str(self[AID.NEXT_HOP]))
-		if self.has(AID.ORIGIN):             r.append('"origin": "%s"' % str(self[AID.ORIGIN]))
-		if self.has(AID.AS_PATH):            r.append('"as-path": %s' % self[AID.AS_PATH].json())
-		if self.has(AID.LOCAL_PREF):         r.append('"local-preference": %s' % self[AID.LOCAL_PREF])
-		if self.has(AID.AGGREGATOR):         r.append('"aggregator" : "%s"' % self[AID.AGGREGATOR])
-		if self.has(AID.MED):                r.append('"med": %s' % self[AID.MED])
-		if self.has(AID.COMMUNITY):          r.append('"community": %s' % self[AID.COMMUNITY].json())
-		if self.has(AID.ORIGINATOR_ID):      r.append('"originator-id": "%s"' % str(self[AID.ORIGINATOR_ID]))
-		if self.has(AID.CLUSTER_LIST):       r.append('"cluster-list": %s' % self[AID.CLUSTER_LIST].json())
-		if self.has(AID.EXTENDED_COMMUNITY): r.append('"extended-community": %s' % self[AID.EXTENDED_COMMUNITY].json())
-		r.append('"atomic-aggregate": %s' % ('true' if self.has(AID.ATOMIC_AGGREGATE) else 'false'))
-		return ", ".join(r)
+		if not self._json:
+			def generate (self):
+				for code in sorted(self.keys() + [AID.ATOMIC_AGGREGATE,]):
+					if code in (AID.INTERNAL_SPLIT, AID.INTERNAL_WATCHDOG, AID.INTERNAL_WITHDRAW):
+						continue
+					if code in AID.representation:
+						how, default, name, presentation = AID.representation[code]
+						if how == 'boolean':
+							yield '"%s": %s' % (name, 'true' if self.has(code) else 'false')
+						elif how == 'string':
+							yield '"%s": "%s"' % (name, presentation % str(self[code]))
+						else:
+							yield '"%s": %s' % (name, presentation % str(self[code]))
+					else:
+						yield '"attribute-0x%02X-0x%02X": %s' % (code,self[code].FLAG,str(self[code]))
+			self._json = ', '.join(generate(self))
+		return self._json
 
 	def __str__ (self):
-		if self._str:
-			return self._str
-
-		next_hop = ' next-hop %s' % str(self[AID.NEXT_HOP]) if self.has(AID.NEXT_HOP) else ''
-		origin = ' origin %s' % str(self[AID.ORIGIN]) if self.has(AID.ORIGIN) else ''
-		aspath = ' as-path %s' % str(self[AID.AS_PATH]) if self.has(AID.AS_PATH) else ''
-		local_pref = ' local-preference %s' % self[AID.LOCAL_PREF] if self.has(AID.LOCAL_PREF) else ''
-		aggregator = ' aggregator ( %s )' % self[AID.AGGREGATOR] if self.has(AID.AGGREGATOR) else ''
-		atomic = ' atomic-aggregate' if self.has(AID.ATOMIC_AGGREGATE) else ''
-		med = ' med %s' % self[AID.MED] if self.has(AID.MED) else ''
-		communities = ' community %s' % str(self[AID.COMMUNITY]) if self.has(AID.COMMUNITY) else ''
-		originator_id = ' originator-id %s' % str(self[AID.ORIGINATOR_ID]) if self.has(AID.ORIGINATOR_ID) else ''
-		cluster_list = ' cluster-list %s' % str(self[AID.CLUSTER_LIST]) if self.has(AID.CLUSTER_LIST) else ''
-		ecommunities = ' extended-community %s' % str(self[AID.EXTENDED_COMMUNITY]) if self.has(AID.EXTENDED_COMMUNITY) else ''
-
-		self._str = "%s%s%s%s%s%s%s%s%s%s%s" % (
-			next_hop,origin,aspath,local_pref,atomic,aggregator,med,communities,ecommunities,originator_id,cluster_list
-		)
+		if not self._str:
+			def generate (self):
+				for code in sorted(self.keys()):
+					# XXX: FIXME: really we should have a INTERNAL attribute in the classes
+					if code in (AID.INTERNAL_SPLIT, AID.INTERNAL_WATCHDOG, AID.INTERNAL_WITHDRAW):
+						continue
+					if code in AID.representation:
+						how, default, name, presentation = AID.representation[code]
+						if how == 'boolean':
+							yield name
+						else:
+							yield '%s %s' % (name, presentation % str(self[code]))
+					else:
+						import pdb; pdb.set_trace()
+						yield "attribute [ 0x%02X 0x%02X %s ]" % (code,self[code].FLAG,str(self[code]))
+			# XXX: FIXME: remove this ' ' + ? should it be done by the caller ?
+			self._str = ' ' + ' '.join(generate(self))
 		return self._str
 
 	def factory (self,data):
