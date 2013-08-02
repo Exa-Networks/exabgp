@@ -64,6 +64,8 @@ class Attributes (dict):
 	def __init__ (self):
 		self._str = ''
 		self.cache_attributes = environment.settings().cache.attributes
+		self.cacheable = True
+		self.seennlri = False
 
 	def has (self,k):
 		return k in self
@@ -215,6 +217,9 @@ class Attributes (dict):
 		logger = Logger()
 		logger.parser(LazyFormat("parsing flag %x type %02x (%s) len %02x %s" % (flag,int(code),code,length,'payload ' if length else ''),od,data[:length]))
 
+		if self.seennlri and code not in (AID.MP_REACH_NLRI, AID.MP_UNREACH_NLRI):
+			self.cacheable = False
+
 		if code == AID.ORIGIN:
 			# This if block should never be called anymore ...
 			if not self.add_from_cache(code,attribute):
@@ -292,6 +297,8 @@ class Attributes (dict):
 			return self._factory(next)
 
 		if code == AID.MP_UNREACH_NLRI:
+			self.seennlri = True
+
 			# -- Reading AFI/SAFI
 			data = data[:length]
 			afi,safi = unpack('!HB',data[:3])
@@ -317,6 +324,8 @@ class Attributes (dict):
 			return self._factory(next)
 
 		if code == AID.MP_REACH_NLRI:
+			self.seennlri = True
+
 			data = data[:length]
 			# -- Reading AFI/SAFI
 			afi,safi = unpack('!HB',data[:3])
