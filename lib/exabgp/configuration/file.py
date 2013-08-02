@@ -1952,7 +1952,7 @@ class Configuration (object):
 	def decode (self,route):
 		# self check to see if we can decode what we encode
 		import sys
-		from exabgp.bgp.message.update import Update
+		from exabgp.bgp.message.update import UpdateFactory
 		from exabgp.bgp.message.open import Open
 		from exabgp.bgp.message.open.capability import Capabilities
 		from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -1989,17 +1989,17 @@ class Configuration (object):
 
 				if kind == 2:
 					self.logger.info('the route is an update','parser')
-					klass = Update
+					factory = UpdateFactory
 				else:
 					self.logger.info('the route is not an update (%d) - aborting' % kind,'parser')
 					sys.exit(1)
 			else:
 				self.logger.info('header missing, assuming this route is ONE update','parser')
-				klass = Update
+				factory = UpdateFactory
 				injected,raw = raw,''
 
 			# This does not take the BGP header - let's assume we will not break that :)
-			update = klass().factory(negotiated,injected)
+			update = factory(negotiated,injected)
 			self.logger.info('','parser')
 			for route in update.routes:
 				self.logger.info('decoded route %s' % route.extensive(),'parser')
