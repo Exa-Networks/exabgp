@@ -45,6 +45,7 @@ from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.communities import Community,cachedCommunity,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_FlowRedirectASN,to_FlowRedirectIP
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
+from exabgp.bgp.message.update.attribute.unknown import Unknown
 
 from exabgp.logger import Logger
 
@@ -458,6 +459,7 @@ class Configuration (object):
 
 			if command == 'community': return self._route_community(scope,tokens[1:])
 			if command == 'extended-community': return self._route_extended_community(scope,tokens[1:])
+			if command == 'attribute': self._route_generic_attribute(scope,tokens[1:])
 
 		elif name == 'flow-match':
 			if command == 'source': return self._flow_source(scope,tokens[1:])
@@ -1286,6 +1288,10 @@ class Configuration (object):
 				if self._route_watchdog(scope,tokens):
 					continue
 				return False
+			if command == 'attribute':
+				if self._route_generic_attribute(scope,tokens):
+					continue
+				return False
 			return False
 
 		if not have_next_hop:
@@ -1296,6 +1302,46 @@ class Configuration (object):
 		return self._split_last_route(scope)
 
 	# Command Route
+
+	def _route_generic_attribute (self,scope,tokens):
+		try:
+			start = tokens.pop(0)
+			code = tokens.pop(0).lower()
+			flag = tokens.pop(0).lower()
+			data = tokens.pop(0).lower()
+			end = tokens.pop(0)
+
+			if (start,end) != ('[',']'):
+				self._error = self._str_route_error
+				if self.debug: raise
+				return False
+
+			if not code.startswith('0x'):
+				self._error = self._str_route_error
+				if self.debug: raise
+				return False
+			code = int(code[2:],16)
+
+			if not flag.startswith('0x'):
+				self._error = self._str_route_error
+				if self.debug: raise
+				return False
+			flag = int(flag[2:],16)
+
+			if not data.startswith('0x'):
+				self._error = self._str_route_error
+				if self.debug: raise
+				return False
+			raw = ''
+			for i in range(2,len(data),2):
+				raw += chr(int(data[i:i+2],16))
+
+			scope[-1]['routes'][-1].attributes.add(Unknown(code,flag,raw))
+			return True
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
 
 	def _route_next_hop (self,scope,tokens):
 		try:

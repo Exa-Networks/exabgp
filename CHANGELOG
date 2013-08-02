@@ -17,6 +17,8 @@ Version 3.2.0
  * Improvement: be more robust on ^C
  * Improvement: totally rewrote the networking code, it now better deal with blocking write and not not need buffering
  * Improvement: user controlled open wait timer
+ * Improvement: handle unknown transitive attributes
+ * Improvement: allow the generation of generic attributes
  * Fix: potential issue with multisession collision detection
  * Fix: with multisession recent python would refuse to copy an route due to a lock in logger of the neighbor object
  * Fix: could not handle NOTICATION sent during the OPEN negotiation stage

@@ -58,5 +58,26 @@ class AttributeID (int):
 		0xffff: 'internal-split',
 	}
 
+	representation = {
+		#	key:  (how, default, name, presentation),
+		NEXT_HOP           : ('string',  '', 'next-hop', '%s'),
+		ORIGIN             : ('string',  '', 'origin', '%s'),
+		AS_PATH            : ('list',    '', 'as-path', '%s'),
+		LOCAL_PREF         : ('integer', '', 'local-preference', '%s'),
+		AGGREGATOR         : ('string',  '', 'aggregator', '( %s )'),
+		ATOMIC_AGGREGATE   : ('boolean', '', 'atomic-aggregate', '%s'),
+		MED                : ('integer', '', 'med', '%s'),
+		COMMUNITY          : ('list',    '', 'community', '%s'),
+		ORIGINATOR_ID      : ('inet',    '', 'originator-id', '%s'),
+		CLUSTER_LIST       : ('list',    '', 'cluster-list', '%s'),
+		EXTENDED_COMMUNITY : ('list',    '', 'extended-community', '%s'),
+	}
+
+	STRING = [_ for _ in representation if representation[_][0] == 'string']
+	INTEGER = [_ for _ in representation if representation[_][0] == 'integer']
+	LIST = [_ for _ in representation if representation[_][0] == 'list']
+	BOOLEAN = [_ for _ in representation if representation[_][0] == 'boolean']
+	INET = [_ for _ in representation if representation[_][0] == 'inet']
+
 	def __str__ (self):
 		return self._str.get(self,'unknown-attribute-%s' % hex(self))
