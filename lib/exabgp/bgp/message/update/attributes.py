@@ -28,6 +28,7 @@ from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
+from exabgp.bgp.message.update.attribute.unknown import Unknown
 from exabgp.bgp.message.update.attribute.communities import cachedCommunity,Communities,ECommunity,ECommunities
 
 from exabgp.logger import Logger,LazyFormat
@@ -381,7 +382,12 @@ class Attributes (dict):
 				data = data[len(route.nlri):]
 			return self._factory(next)
 
-		logger.parser('ignoring attribute')
+		if flag & Flag.TRANSITIVE:
+			if not self.add_from_cache(code,attribute):
+				self.add(Unknown(code,flag,attribute),attribute)
+			return self._factory(next)
+
+		logger.parser('ignoring non-transitive attribute')
 		return self._factory(next)
 
 	def merge_attributes (self):
