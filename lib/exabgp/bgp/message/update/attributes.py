@@ -224,7 +224,7 @@ class Attributes (dict):
 			# This if block should never be called anymore ...
 			if not self.add_from_cache(code,attribute):
 				self.add(Origin(ord(attribute)),attribute)
-			return self._factory(next)
+			return self.factory(next)
 
 		# only 2-4% of duplicated data - is it worth to cache ?
 		if code == AID.AS_PATH:
@@ -233,7 +233,7 @@ class Attributes (dict):
 				if not self.has(code):
 					if not self.add_from_cache(code,attribute):
 						self.add(self.__new_ASPath(attribute),attribute)
-			return self._factory(next)
+			return self.factory(next)
 
 		if code == AID.AS4_PATH:
 			if length:
@@ -242,59 +242,59 @@ class Attributes (dict):
 					# This replace the old AS_PATH
 					if not self.add_from_cache(code,attribute):
 						self.add(self.__new_ASPath4(attribute),attribute)
-			return self._factory(next)
+			return self.factory(next)
 
 		if code == AID.NEXT_HOP:
 			if not self.add_from_cache(code,attribute):
 				self.add(cachedNextHop(AFI.ipv4,SAFI.unicast_multicast,attribute),attribute)
-			return self._factory(next)
+			return self.factory(next)
 
 		if code == AID.MED:
 			if not self.add_from_cache(code,attribute):
 				self.add(MED(attribute),attribute)
-			return self._factory(next)
+			return self.factory(next)
 
 		if code == AID.LOCAL_PREF:
 			if not self.add_from_cache(code,attribute):
 				self.add(LocalPreference(attribute),attribute)
-			return self._factory(next)
+			return self.factory(next)
 
 		if code == AID.ATOMIC_AGGREGATE:
 			if not self.add_from_cache(code,attribute):
 				raise Notify(3,2,'invalid ATOMIC_AGGREGATE %s' % [hex(ord(_)) for _ in attribute])
-			return self._factory(next)
+			return self.factory(next)
 
 		if code == AID.AGGREGATOR:
 			# AS4_AGGREGATOR are stored as AGGREGATOR - so do not overwrite if exists
 			if not self.has(code):
 				if not self.add_from_cache(AID.AGGREGATOR,attribute):
 					self.add(Aggregator(attribute),attribute)
-			return self._factory(next)
+			return self.factory(next)
 
 		if code == AID.AS4_AGGREGATOR:
 			if not self.add_from_cache(AID.AGGREGATOR,attribute):
 				self.add(Aggregator(attribute),attribute)
-			return self._factory(next)
+			return self.factory(next)
 
 		if code == AID.COMMUNITY:
 			if not self.add_from_cache(code,attribute):
 				self.add(self.__new_communities(attribute),attribute)
-			return self._factory(next)
+			return self.factory(next)
 
 		if code == AID.ORIGINATOR_ID:
 			if not self.add_from_cache(code,attribute):
 				self.add(OriginatorID(AFI.ipv4,SAFI.unicast,data[:4]),attribute)
-			return self._factory(next)
+			return self.factory(next)
 
 		if code == AID.CLUSTER_LIST:
 			if not self.add_from_cache(code,attribute):
 				self.add(ClusterList(attribute),attribute)
-			return self._factory(next)
+			return self.factory(next)
 
 		if code == AID.EXTENDED_COMMUNITY:
 			if not self.add_from_cache(code,attribute):
 				self.add(self.__new_extended_communities(attribute),attribute)
-			return self._factory(next)
+			return self.factory(next)
 
 		if code == AID.MP_UNREACH_NLRI:
 			self.seennlri = True
@@ -314,14 +314,14 @@ class Attributes (dict):
 			# XXX: we do assume that it is an EOR. most likely harmless
 			if not data:
 				self.mp_withdraw.append(RouteEOR(afi,safi,'announced'))
-				return self._factory(next)
+				return self.factory(next)
 
 			while data:
 				route = self.routeFactory(afi,safi,data,addpath,'withdrawn')
 				route.attributes = self
 				self.mp_withdraw.append(route)
 				data = data[len(route.nlri):]
-			return self._factory(next)
+			return self.factory(next)
 
 		if code == AID.MP_REACH_NLRI:
 			self.seennlri = True
@@ -389,15 +389,15 @@ class Attributes (dict):
 					route.attributes.add(cachedNextHop(afi,safi,nh),nh)
 				self.mp_announce.append(route)
 				data = data[len(route.nlri):]
-			return self._factory(next)
+			return self.factory(next)
 
 		if flag & Flag.TRANSITIVE:
 			if not self.add_from_cache(code,attribute):
 				self.add(Unknown(code,flag,attribute),attribute)
-			return self._factory(next)
+			return self.factory(next)
 
 		logger.parser('ignoring non-transitive attribute')
-		return self._factory(next)
+		return self.factory(next)
 
 	def merge_attributes (self):
 		as2path = self[AID.AS_PATH]
