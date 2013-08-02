@@ -239,6 +239,7 @@ def main ():
 	if arguments['decode']:
 		env.log.parser = True
 		env.debug.route = arguments['decode']
+		env.tcp.bind = ''
 
 	if 'profile' in arguments:
 		env.profile.enable = True
