@@ -25,4 +25,11 @@ class Unknown (Attribute):
 		return len(self.data)
 
 	def __str__ (self):
-		return self._str
+		r = ''
+		even = None
+		for v in self.data:
+			if even is False:
+				r += ' '
+			r += '%02X' % ord(v)
+			even = not even
+		return '[ %s ]' % r
