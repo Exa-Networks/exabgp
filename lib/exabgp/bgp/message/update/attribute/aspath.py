@@ -9,6 +9,8 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute import Flag,Attribute
 
+from exabgp.bgp.message.open.asn import AS_TRANS
+
 # =================================================================== ASPath (2)
 
 class ASPath (Attribute):
@@ -43,10 +45,23 @@ class ASPath (Attribute):
 			segments += self._segment(self.AS_SET,self.as_set,asn4)
 		return segments
 
-	def pack (self,asn4):
+	def _pack (self,asn4):
 		if not self.packed[asn4]:
 			self.packed[asn4] = self._attribute(self._segments(asn4))
 		return self.packed[asn4]
+
+	def pack (self,asn4):
+		# if the peer does not understand ASN4, we need to build a transitive AS4_PATH
+		if asn4:
+			return self._pack(True)
+
+		as2_seq = [_ if not _.asn4() else AS_TRANS for _ in self.as_seq]
+		as2_set = [_ if not _.asn4() else AS_TRANS for _ in self.as_set]
+
+		message = ASPath(as2_seq,as2_set)._pack(False)
+		if AS_TRANS in as2_seq or AS_TRANS in as2_set:
+			message += AS4Path(self.as_seq,self.as_set)._pack()
+		return message
 
 	def __len__ (self):
 		raise RuntimeError('it makes no sense to ask for the size of this object')

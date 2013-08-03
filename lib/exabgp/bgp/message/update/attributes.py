@@ -14,7 +14,7 @@ from exabgp.util.cache import Cache
 
 from exabgp.protocol.family import AFI,SAFI
 
-from exabgp.bgp.message.open.asn import ASN,AS_TRANS
+from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.eor import RouteEOR
 from exabgp.bgp.message.update.attribute.id import AttributeID as AID
@@ -22,7 +22,7 @@ from exabgp.bgp.message.update.attribute.flag import Flag
 
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import ASPath,AS4Path
-from exabgp.bgp.message.update.attribute.nexthop import cachedNextHop,NextHop
+from exabgp.bgp.message.update.attribute.nexthop import cachedNextHop
 from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
@@ -59,7 +59,6 @@ class MultiAttributes (list):
 
 class Attributes (dict):
 	routeFactory = None
-	autocomplete = True
 	cache = {}
 
 	lookup = {
@@ -130,40 +129,46 @@ class Attributes (dict):
 	def remove (self,attrid):
 		self.pop(attrid)
 
-	def _as_path (self,asn4,asp):
-		# if the peer does not understand ASN4, we need to build a transitive AS4_PATH
-		if asn4:
-			return asp.pack(True)
-
-		as2_seq = [_ if not _.asn4() else AS_TRANS for _ in asp.as_seq]
-		as2_set = [_ if not _.asn4() else AS_TRANS for _ in asp.as_set]
-
-		message = ASPath(as2_seq,as2_set).pack(False)
-		if AS_TRANS in as2_seq or AS_TRANS in as2_set:
-			message += AS4Path(asp.as_seq,asp.as_set).pack()
-		return message
-
 	def pack (self,asn4,local_asn,peer_asn):
 		ibgp = (local_asn == peer_asn)
 		# we do not store or send MED
 		message = ''
 
+		# default = {
+		# 	AID.ORIGIN:  lambda l,r: Origin(Origin.IGP).pack(),
+		# 	AID.AS_PATH: lambda l,r: ASPath([],[]) if l == r else ASPath([local_asn,],[]),
+		# }
+
+		# check = {
+		# 	AID.NEXT_HOP: lambda nh: nh.afi() == AFI.ipv4
+		# }
+
+		# for code in [AID.ORIGIN,]:
+		# 	if code in self:
+		# 		if code in check:
+		# 			if check[code](self[code]):
+		# 				message += self[code].pack()
+		# 				continue
+		# 		else:
+		# 			message += self[code].pack()
+		# 			continue
+		# 	else:
+		# 		if code in default:
+		# 			message += default[code](local_asn,peer_asn)
+
 		if AID.ORIGIN in self:
 			message += self[AID.ORIGIN].pack()
-		elif self.autocomplete:
+		else:
 			message += Origin(Origin.IGP).pack()
 
 		if AID.AS_PATH in self:
 			asp = self[AID.AS_PATH]
 			message += self._as_path(asn4,asp)
-		elif self.autocomplete:
-			if ibgp:
-				asp = ASPath([],[])
-			else:
-				asp = ASPath([local_asn,],[])
-			message += self._as_path(asn4,asp)
 		else:
-			raise RuntimeError('Generated routes must always have an AS_PATH ')
+			if ibgp:
+				message += ASPath([],[]).pack(asn4)
+			else:
+				message += ASPath([local_asn,],[]).pack(asn4)
 
 		if AID.NEXT_HOP in self:
 			if self[AID.NEXT_HOP].afi() == AFI.ipv4:
@@ -181,8 +186,7 @@ class Attributes (dict):
 
 		# This generate both AGGREGATOR and AS4_AGGREGATOR
 		if AID.AGGREGATOR in self:
-			aggregator = self[AID.AGGREGATOR]
-			message += aggregator.pack(asn4)
+			message += self[AID.AGGREGATOR].pack(asn4)
 
 		for attribute in [
 			AID.ATOMIC_AGGREGATE,
