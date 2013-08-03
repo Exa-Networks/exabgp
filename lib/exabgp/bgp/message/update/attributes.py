@@ -19,17 +19,19 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.eor import RouteEOR
 from exabgp.bgp.message.update.attribute.id import AttributeID as AID
 from exabgp.bgp.message.update.attribute.flag import Flag
+
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import ASPath,AS4Path
 from exabgp.bgp.message.update.attribute.nexthop import cachedNextHop
 from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
-from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
+from exabgp.bgp.message.update.attribute.aggregator import Aggregator
+from exabgp.bgp.message.update.attribute.communities import cachedCommunity,Communities,ECommunity,ECommunities
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
+
 from exabgp.bgp.message.update.attribute.unknown import Unknown
-from exabgp.bgp.message.update.attribute.communities import cachedCommunity,Communities,ECommunity,ECommunities
 
 from exabgp.logger import Logger,LazyFormat
 
@@ -59,6 +61,42 @@ class Attributes (dict):
 	routeFactory = None
 	autocomplete = True
 	cache = {}
+
+	lookup = {
+		AID.ORIGIN             : Origin,              # 1
+		AID.AS_PATH            : ASPath,              # 2
+		# NextHop                                     # 3
+		AID.MED                : MED,                 # 4
+		AID.LOCAL_PREF         : LocalPreference,     # 5
+		AID.ATOMIC_AGGREGATE   : AtomicAggregate,     # 6
+		AID.AGGREGATOR         : Aggregator,          # 7
+		AID.COMMUNITY          : Communities,         # 8
+		AID.ORIGINATOR_ID      : OriginatorID,        # 9
+		AID.CLUSTER_LIST       : ClusterList,         # 10
+		AID.EXTENDED_COMMUNITY : ECommunities,        # 16
+		AID.AS4_PATH           : AS4Path,             # 17
+		AID.AS4_AGGREGATOR     : Aggregator,          # 18
+	}
+
+	representation = {
+		#	key:  (how, default, name, presentation),
+		AID.ORIGIN             : ('string',  '', 'origin', '%s'),
+		AID.AS_PATH            : ('list',    '', 'as-path', '%s'),
+		AID.NEXT_HOP           : ('string',  '', 'next-hop', '%s'),
+		AID.MED                : ('integer', '', 'med', '%s'),
+		AID.LOCAL_PREF         : ('integer', '', 'local-preference', '%s'),
+		AID.ATOMIC_AGGREGATE   : ('boolean', '', 'atomic-aggregate', '%s'),
+		AID.AGGREGATOR         : ('string',  '', 'aggregator', '( %s )'),
+		AID.COMMUNITY          : ('list',    '', 'community', '%s'),
+		AID.ORIGINATOR_ID      : ('inet',    '', 'originator-id', '%s'),
+		AID.CLUSTER_LIST       : ('list',    '', 'cluster-list', '%s'),
+		AID.EXTENDED_COMMUNITY : ('list',    '', 'extended-community', '%s'),
+	}
+
+	# STRING = [_ for _ in representation if representation[_][0] == 'string']
+	# INTEGER = [_ for _ in representation if representation[_][0] == 'integer']
+	# LIST = [_ for _ in representation if representation[_][0] == 'list']
+	# BOOLEAN = [_ for _ in representation if representation[_][0] == 'boolean']
 
 	def __init__ (self):
 		self._str = ''
@@ -158,6 +196,11 @@ class Attributes (dict):
 			if attribute in self:
 				message += self[attribute].pack()
 
+		for attribute in self:
+			if attribute in [AID.ORIGIN, AID.AS_PATH, AID.NEXT_HOP, AID.MED, AID.LOCAL_PREF,AID.AGGREGATOR, AID.ATOMIC_AGGREGATE, AID.COMMUNITY, AID.ORIGINATOR_ID, AID.CLUSTER_LIST, AID.EXTENDED_COMMUNITY]:
+				pass
+			message += self[attribute].pack()
+
 		return message
 
 	def json (self):
@@ -166,8 +209,8 @@ class Attributes (dict):
 				for code in sorted(self.keys() + [AID.ATOMIC_AGGREGATE,]):
 					if code in (AID.INTERNAL_SPLIT, AID.INTERNAL_WATCHDOG, AID.INTERNAL_WITHDRAW):
 						continue
-					if code in AID.representation:
-						how, default, name, presentation = AID.representation[code]
+					if code in self.representation:
+						how, default, name, presentation = self.representation[code]
 						if how == 'boolean':
 							yield '"%s": %s' % (name, 'true' if self.has(code) else 'false')
 						elif how == 'string':
@@ -186,14 +229,13 @@ class Attributes (dict):
 					# XXX: FIXME: really we should have a INTERNAL attribute in the classes
 					if code in (AID.INTERNAL_SPLIT, AID.INTERNAL_WATCHDOG, AID.INTERNAL_WITHDRAW):
 						continue
-					if code in AID.representation:
-						how, default, name, presentation = AID.representation[code]
+					if code in self.representation:
+						how, default, name, presentation = self.representation[code]
 						if how == 'boolean':
 							yield name
 						else:
 							yield '%s %s' % (name, presentation % str(self[code]))
 					else:
-						import pdb; pdb.set_trace()
 						yield "attribute [ 0x%02X 0x%02X %s ]" % (code,self[code].FLAG,str(self[code]))
 			# XXX: FIXME: remove this ' ' + ? should it be done by the caller ?
 			self._str = ' ' + ' '.join(generate(self))

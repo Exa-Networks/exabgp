@@ -30,9 +30,10 @@ class Aggregator (Attribute):
 
 	def pack (self,asn4,as4agg=False):
 		if as4agg:
+			backup = self.ID
 			self.ID = AttributeID.AS4_AGGREGATOR
 			packed = self._attribute(self.asn.pack(True)+self.speaker.pack())
-			self.ID = AttributeID.AGGREGATOR
+			self.ID = backup
 			return packed
 		elif asn4:
 			return self._attribute(self.asn.pack(True)+self.speaker.pack())

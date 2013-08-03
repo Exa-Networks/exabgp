@@ -47,6 +47,8 @@ from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 from exabgp.bgp.message.update.attribute.unknown import Unknown
 
+from exabgp.bgp.message.update.attributes import Attributes
+
 from exabgp.logger import Logger
 
 # Duck class, faking part of the Attribute interface
@@ -1335,6 +1337,11 @@ class Configuration (object):
 			raw = ''
 			for i in range(2,len(data),2):
 				raw += chr(int(data[i:i+2],16))
+
+			for (ID,klass) in Attributes.lookup.iteritems():
+				if code == ID and flag == klass.FLAG:
+					scope[-1]['routes'][-1].attributes.add(klass(raw))
+					return True
 
 			scope[-1]['routes'][-1].attributes.add(Unknown(code,flag,raw))
 			return True
