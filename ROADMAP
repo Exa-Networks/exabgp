@@ -40,7 +40,6 @@ Notes
 - need to check if we can prevent the duplication of the peer routes (which are already defined in the neighbor)
 - peer.reload should it be called peer.route_update (just have a guard to prevent route update when reloading the configuration)
 - do we need to have a guard to prevent route update when reloading the configuration
-- change the pack API so all the generation can be made in a loop
 
 Important
 * write the documentation, and do not rely on the example and the site wiki (argh ...)

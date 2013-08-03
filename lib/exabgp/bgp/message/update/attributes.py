@@ -35,6 +35,12 @@ from exabgp.bgp.message.update.attribute.unknown import Unknown
 
 from exabgp.logger import Logger,LazyFormat
 
+class _NOTHING (object):
+	def pack (self,asn4=None):
+		return ''
+
+NOTHING = _NOTHING()
+
 # =================================================================== Attributes
 
 class MultiAttributes (list):
@@ -130,80 +136,34 @@ class Attributes (dict):
 		self.pop(attrid)
 
 	def pack (self,asn4,local_asn,peer_asn):
-		ibgp = (local_asn == peer_asn)
-		# we do not store or send MED
 		message = ''
 
-		# default = {
-		# 	AID.ORIGIN:  lambda l,r: Origin(Origin.IGP).pack(),
-		# 	AID.AS_PATH: lambda l,r: ASPath([],[]) if l == r else ASPath([local_asn,],[]),
-		# }
+		default = {
+			AID.ORIGIN:     lambda l,r: Origin(Origin.IGP),
+			AID.AS_PATH:    lambda l,r: ASPath([],[]) if l == r else ASPath([local_asn,],[]),
+			AID.LOCAL_PREF: lambda l,r: LocalPreference('\x00\x00\x00d') if l == r else NOTHING,
+		}
 
-		# check = {
-		# 	AID.NEXT_HOP: lambda nh: nh.afi() == AFI.ipv4
-		# }
+		check = {
+			AID.NEXT_HOP:   lambda l,r,nh: nh.afi() == AFI.ipv4,
+			AID.LOCAL_PREF: lambda l,r,nh: l == r,
+		}
 
-		# for code in [AID.ORIGIN,]:
-		# 	if code in self:
-		# 		if code in check:
-		# 			if check[code](self[code]):
-		# 				message += self[code].pack()
-		# 				continue
-		# 		else:
-		# 			message += self[code].pack()
-		# 			continue
-		# 	else:
-		# 		if code in default:
-		# 			message += default[code](local_asn,peer_asn)
-
-		if AID.ORIGIN in self:
-			message += self[AID.ORIGIN].pack()
-		else:
-			message += Origin(Origin.IGP).pack()
-
-		if AID.AS_PATH in self:
-			asp = self[AID.AS_PATH]
-			message += self._as_path(asn4,asp)
-		else:
-			if ibgp:
-				message += ASPath([],[]).pack(asn4)
-			else:
-				message += ASPath([local_asn,],[]).pack(asn4)
-
-		if AID.NEXT_HOP in self:
-			if self[AID.NEXT_HOP].afi() == AFI.ipv4:
-				message += self[AID.NEXT_HOP].pack()
-
-		if AID.MED in self:
-			message += self[AID.MED].pack()
-
-		if ibgp:
-			if AID.LOCAL_PREF in self:
-				message += self[AID.LOCAL_PREF].pack()
-			else:
-				# '\x00\x00\x00d' is 100 packed in long network bytes order
-				message += LocalPreference('\x00\x00\x00d').pack()
-
-		# This generate both AGGREGATOR and AS4_AGGREGATOR
-		if AID.AGGREGATOR in self:
-			message += self[AID.AGGREGATOR].pack(asn4)
-
-		for attribute in [
-			AID.ATOMIC_AGGREGATE,
-			AID.COMMUNITY,
-			AID.ORIGINATOR_ID,
-			AID.CLUSTER_LIST,
-			AID.EXTENDED_COMMUNITY
-		]:
-			if attribute in self:
-				message += self[attribute].pack()
-
-		for attribute in self:
-			if attribute in (AID.INTERNAL_SPLIT, AID.INTERNAL_WATCHDOG, AID.INTERNAL_WITHDRAW):
+		# AGGREGATOR generate both AGGREGATOR and AS4_AGGREGATOR
+		for code in sorted(set(self.keys() + default.keys())):
+			if code in (AID.INTERNAL_SPLIT, AID.INTERNAL_WATCHDOG, AID.INTERNAL_WITHDRAW):
 				continue
-			if attribute in (AID.ORIGIN, AID.AS_PATH, AID.NEXT_HOP, AID.MED, AID.LOCAL_PREF,AID.AGGREGATOR, AID.ATOMIC_AGGREGATE, AID.COMMUNITY, AID.ORIGINATOR_ID, AID.CLUSTER_LIST, AID.EXTENDED_COMMUNITY):
-				continue
-			message += self[attribute].pack()
+			if code in self:
+				if code in check:
+					if check[code](local_asn,peer_asn,self[code]):
+						message += self[code].pack(asn4)
+						continue
+				else:
+					message += self[code].pack(asn4)
+					continue
+			else:
+				if code in default:
+					message += default[code](local_asn,peer_asn).pack(asn4)
 
 		return message
 
