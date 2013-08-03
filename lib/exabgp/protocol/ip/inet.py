@@ -26,6 +26,14 @@ def inet (ip):
 	safi = _detect_safi(ip)
 	return afi,safi,socket.inet_pton(Inet._af[afi],ip)
 
+def pton (ip):
+	afi = _detect_afi(ip)
+	return socket.inet_pton(Inet._af[afi],ip)
+
+def rawinet (packed):
+	afi = AFI.ipv4 if len(packed) == 4 else AFI.ipv6
+	safi = SAFI.multicast if ord(packed[0]) in Inet._multicast_range else SAFI.unicast
+	return afi,safi,packed
 
 class Inet (object):
 	_UNICAST = SAFI(SAFI.unicast)

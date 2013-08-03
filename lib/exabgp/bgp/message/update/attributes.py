@@ -22,7 +22,7 @@ from exabgp.bgp.message.update.attribute.flag import Flag
 
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import ASPath,AS4Path
-from exabgp.bgp.message.update.attribute.nexthop import cachedNextHop
+from exabgp.bgp.message.update.attribute.nexthop import cachedNextHop,NextHop
 from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
@@ -166,9 +166,7 @@ class Attributes (dict):
 			raise RuntimeError('Generated routes must always have an AS_PATH ')
 
 		if AID.NEXT_HOP in self:
-			afi = self[AID.NEXT_HOP].afi
-			safi = self[AID.NEXT_HOP].safi
-			if afi == AFI.ipv4 and safi in [SAFI.unicast, SAFI.multicast]:
+			if self[AID.NEXT_HOP].afi() == AFI.ipv4:
 				message += self[AID.NEXT_HOP].pack()
 
 		if AID.MED in self:
@@ -293,8 +291,9 @@ class Attributes (dict):
 			return self.factory(next)
 
 		if code == AID.NEXT_HOP:
+			# XXX: FIXME: we are double caching the NH (once in the class, once here)
 			if not self.add_from_cache(code,attribute):
-				self.add(cachedNextHop(AFI.ipv4,SAFI.unicast_multicast,attribute),attribute)
+				self.add(cachedNextHop(attribute),attribute)
 			return self.factory(next)
 
 		if code == AID.MED:
@@ -434,7 +433,7 @@ class Attributes (dict):
 			while data:
 				route = self.routeFactory(afi,safi,data,addpath,'announced')
 				if not route.attributes.add_from_cache(AID.NEXT_HOP,nh):
-					route.attributes.add(cachedNextHop(afi,safi,nh),nh)
+					route.attributes.add(cachedNextHop(nh),nh)
 				self.mp_announce.append(route)
 				data = data[len(route.nlri):]
 			return self.factory(next)

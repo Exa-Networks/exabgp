@@ -22,7 +22,7 @@ from exabgp.protocol.family import AFI,SAFI,known_families
 from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.protocol import NamedProtocol
-from exabgp.protocol.ip.inet import Inet,inet
+from exabgp.protocol.ip.inet import Inet,inet,pton
 from exabgp.protocol.ip.icmp import NamedICMPType,NamedICMPCode
 from exabgp.protocol.ip.fragment import NamedFragment
 from exabgp.protocol.ip.tcp.flags import NamedTCPFlags
@@ -1356,10 +1356,10 @@ class Configuration (object):
 			ip = tokens.pop(0)
 			if ip.lower() == 'self':
 				la = scope[-1]['local-address']
-				nh = la.afi,la.safi,la.pack()
+				nh = la.pack()
 			else:
-				nh = inet(ip)
-			scope[-1]['routes'][-1].attributes.add(cachedNextHop(*nh))
+				nh = pton(ip)
+			scope[-1]['routes'][-1].attributes.add(cachedNextHop(nh))
 			return True
 		except:
 			self._error = self._str_route_error
