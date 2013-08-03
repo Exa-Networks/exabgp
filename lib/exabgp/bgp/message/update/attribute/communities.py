@@ -36,7 +36,7 @@ class Community (object):
 	def json (self):
 		return "[ %d, %d ]" % unpack('!HH',self.community)
 
-	def pack (self):
+	def pack (self,asn4=None):
 		return self.community
 
 	def __str__ (self):
@@ -84,7 +84,7 @@ class Communities (Attribute):
 	def add(self,data):
 		return self.communities.append(data)
 
-	def pack (self):
+	def pack (self,asn4=None):
 		if len(self.communities):
 			return self._attribute(''.join([c.pack() for c in self.communities]))
 		return ''
@@ -158,7 +158,7 @@ class ECommunity (object):
 	def transitive (self):
 		return not not (self.community[0] & 0x40)
 
-	def pack (self):
+	def pack (self,asn4=None):
 		return self.community
 
 	def json (self):

@@ -45,7 +45,7 @@ class MultiAttributes (list):
 		self.MULTIPLE = True
 		self.append(attribute)
 
-	def pack (self):
+	def pack (self,asn4=None):
 		r = []
 		for attribute in self:
 			r.append(attribute.pack())

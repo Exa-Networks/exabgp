@@ -103,5 +103,5 @@ class AS4Path (ASPath):
 	ID = AttributeID.AS4_PATH
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
 
-	def pack (self):
+	def pack (self,asn4=None):
 		ASPath.pack(self,True)

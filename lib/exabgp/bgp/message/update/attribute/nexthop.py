@@ -44,7 +44,7 @@ class NextHop (Attribute):
 		self._str = ''
 		self._afi = None
 
-	def pack (self):
+	def pack (self,asn4=None):
 		return self._attribute(self.packed)
 
 	def afi (self):

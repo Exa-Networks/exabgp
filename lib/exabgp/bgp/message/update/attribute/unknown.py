@@ -18,7 +18,7 @@ class Unknown (Attribute):
 		self.FLAG = flag
 		self.data = data
 
-	def pack (self):
+	def pack (self,asn4=None):
 		return self._attribute(self.data)
 
 	def __len__ (self):

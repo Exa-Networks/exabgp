@@ -23,7 +23,7 @@ class Origin (Attribute):
 	def __init__ (self,origin):
 		self.origin = origin
 
-	def pack (self):
+	def pack (self,asn4=None):
 		return self._attribute(chr(self.origin))
 
 	def __len__ (self):

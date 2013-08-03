@@ -32,7 +32,7 @@ class ClusterList (Attribute):
 		# XXX: are we doing the work for nothing ?
 		self.packed = self._attribute(''.join([_.pack() for _ in self.clusters]))
 
-	def pack (self):
+	def pack (self,asn4=None):
 		return self.packed
 
 	def __len__ (self):

@@ -22,7 +22,7 @@ class LocalPreference (Attribute):
 		self.localpref = self._attribute(localpref)
 		self._str = str(unpack('!L',localpref)[0])
 
-	def pack (self):
+	def pack (self,asn4=None):
 		return self.localpref
 
 	def __len__ (self):

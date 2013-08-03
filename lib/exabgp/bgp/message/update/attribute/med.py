@@ -22,7 +22,7 @@ class MED (Attribute):
 		self.med = self._attribute(med)
 		self._str = str(unpack('!L',med)[0])
 
-	def pack (self):
+	def pack (self,asn4=None):
 		return self.med
 
 	def __len__ (self):

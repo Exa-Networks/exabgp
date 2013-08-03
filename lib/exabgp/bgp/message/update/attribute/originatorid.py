@@ -23,5 +23,8 @@ class OriginatorID (Attribute,Inet):
 		# This override Inet.pack too.
 		self.packed = self._attribute(Inet.pack(self))
 
+	def pack (self,asn4=None):
+		return Inet.pack(self)
+
 	def __str__ (self):
 		return Inet.__str__(self)
