@@ -197,8 +197,10 @@ class Attributes (dict):
 				message += self[attribute].pack()
 
 		for attribute in self:
-			if attribute in [AID.ORIGIN, AID.AS_PATH, AID.NEXT_HOP, AID.MED, AID.LOCAL_PREF,AID.AGGREGATOR, AID.ATOMIC_AGGREGATE, AID.COMMUNITY, AID.ORIGINATOR_ID, AID.CLUSTER_LIST, AID.EXTENDED_COMMUNITY]:
-				pass
+			if attribute in (AID.INTERNAL_SPLIT, AID.INTERNAL_WATCHDOG, AID.INTERNAL_WITHDRAW):
+				continue
+			if attribute in (AID.ORIGIN, AID.AS_PATH, AID.NEXT_HOP, AID.MED, AID.LOCAL_PREF,AID.AGGREGATOR, AID.ATOMIC_AGGREGATE, AID.COMMUNITY, AID.ORIGINATOR_ID, AID.CLUSTER_LIST, AID.EXTENDED_COMMUNITY):
+				continue
 			message += self[attribute].pack()
 
 		return message
