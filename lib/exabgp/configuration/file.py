@@ -2069,11 +2069,12 @@ class Configuration (object):
 	def selfcheck (self):
 		# self check to see if we can decode what we encode
 		from exabgp.util.od import od
-		from exabgp.bgp.message.update import Update
+		from exabgp.bgp.message.update import Update,UpdateFactory
 		from exabgp.bgp.message.open import Open
 		from exabgp.bgp.message.open.capability import Capabilities
 		from exabgp.bgp.message.open.capability.negotiated import Negotiated
 		from exabgp.bgp.message.open.capability.id import CapabilityID
+		from exabgp.bgp.message.notification import Notify
 
 		self.logger.info('\ndecoding routes in configuration','parser')
 
@@ -2107,12 +2108,19 @@ class Configuration (object):
 					for pack in packed:
 						self.logger.info('update size is %d' % len(pack),'parser')
 						# This does not take the BGP header - let's assume we will not break that :)
-						update = Update().factory(negotiated,pack[19:])
-						self.logger.info('','parser')
-						for route in update.routes:
-							str2 = route.extensive()
-							self.logger.info('parsed  route %s' % str1,'parser')
-							self.logger.info('recoded route %s' % str2,'parser')
-							self.logger.info('recoded hex   %s\n' % od(pack),'parser')
+						try:
+							update = UpdateFactory(negotiated,pack[19:])
+							self.logger.info('','parser')
+							for route in update.routes:
+								str2 = route.extensive()
+								self.logger.info('parsed  route %s' % str1,'parser')
+								self.logger.info('recoded route %s' % str2,'parser')
+								self.logger.info('recoded hex   %s\n' % od(pack),'parser')
+						except Notify,e:
+							# we do not decode Flow Routes
+							if e.code == 3 and e.subcode == 2:
+								continue
+							raise e
+
 		import sys
 		sys.exit(0)

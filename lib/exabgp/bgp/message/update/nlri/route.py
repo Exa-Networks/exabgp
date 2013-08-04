@@ -287,4 +287,6 @@ class RouteBGP (Route):
 		return "%s %s" % (self.action,Route.__str__(self))
 
 def routeFactory(afi,safi,data,path_info,state):
+	if safi in (133,134):
+		raise Notify(3,2,'unimplemented')
 	return RouteBGP(BGPNLRI(afi,safi,data,path_info),state)

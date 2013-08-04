@@ -19,6 +19,8 @@ Version 3.2.0
  * Improvement: user controlled open wait timer
  * Improvement: handle unknown transitive attributes
  * Improvement: allow the generation of generic attributes
+ * Improvement: faster parsing of consecutive updates with the same attributes
+ * Improvement: more regression testing
  * Fix: potential issue with multisession collision detection
  * Fix: with multisession recent python would refuse to copy an route due to a lock in logger of the neighbor object
  * Fix: could not handle NOTICATION sent during the OPEN negotiation stage
@@ -33,6 +35,7 @@ Version 3.2.0
     patch by: Vincent Bernat
  * Fix: an issue with received timer expiring when it should not have
     reported by: Eric Cables
+ * Fix: do not try to parse Flow Route when perforing self-check (ExaBGP regression suite)
  * Compatibility: supervisor was renamed reactor
  * Compatibility: the word inet4/inet6 are now replaced by ipv4/ipv6
  * Compatibility: the option exabgp.tcp.block was removed following the networking code change
