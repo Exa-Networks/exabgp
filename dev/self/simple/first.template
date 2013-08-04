@@ -7,10 +7,15 @@ group test {
 	graceful-restart 1200;
 
 	static {
-		route 11.0.0.0/8 next-hop 1.1.1.1;
-		route 22.0.0.0/8 next-hop 1.1.1.1;
-		route 33.0.0.0/8 next-hop 1.1.1.1;
-		route 44.0.0.0/8 next-hop 1.1.1.1;
+		route 11.0.0.0/8 next-hop 1.1.1.1 med 100 as-path [ 1 2 3 4 ];
+		route 22.0.0.0/8 next-hop 1.1.1.1 med 100 as-path [ 1 2 3 4 ];
+		route 33.0.0.0/8 next-hop 1.1.1.1 med 100 as-path [ 1 2 3 4 ];
+		route 44.0.0.0/8 next-hop 1.1.1.1 med 100 as-path [ 1 2 3 4 ];
+		route 55.0.0.0/8 next-hop 1.1.1.1 med 100 as-path [ 1 2 3 4 ];
+		route 66.0.0.0/8 next-hop 1.1.1.1 med 150 as-path [ 1 2 3 4 ];
+		route 77.0.0.0/8 next-hop 1.1.1.2 med 150 as-path [ 1 2 3 4 ];
+		route 88.0.0.0/8 next-hop 1.1.1.2 med 150 as-path [ 1 2 3 4 ];
+		route 99.0.0.0/8 next-hop 1.1.1.2 med 150 as-path [ 1 2 3 4 ];
 	}
 
 	neighbor IP {
