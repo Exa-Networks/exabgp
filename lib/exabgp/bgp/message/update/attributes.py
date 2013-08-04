@@ -65,7 +65,10 @@ class MultiAttributes (list):
 
 class Attributes (dict):
 	routeFactory = None
+	# A cache of parsed attributes
 	cache = {}
+	# A previously parsed object
+	cached = None
 
 	lookup = {
 		AID.ORIGIN             : Origin,              # 1
@@ -104,11 +107,17 @@ class Attributes (dict):
 	# BOOLEAN = [_ for _ in representation if representation[_][0] == 'boolean']
 
 	def __init__ (self):
+		# cached representation of the object
 		self._str = ''
 		self._json = ''
+		# We should cache the attributes parsed
 		self.cache_attributes = environment.settings().cache.attributes
+		# some of the attributes are MP_REACH_NLRI or MP_UNREACH_NLRI
+		self.hasmp = 0
+		# The parsed attributes have no mp routes and/or those are last
 		self.cacheable = True
-		self.seennlri = False
+		# for the last route, the part of the attributes which are not routes we can use for fast caching
+		self.prefix = ''
 
 	def has (self,k):
 		return k in self
@@ -206,6 +215,10 @@ class Attributes (dict):
 		return self._str
 
 	def factory (self,data):
+		self.cached = self._factory(data)
+		return self.cached
+
+	def _factory (self,data):
 		if not data:
 			return self
 
@@ -220,15 +233,19 @@ class Attributes (dict):
 			length = ord(data[2])
 			offset = 3
 
+		if self.hasmp:
+			if code not in (AID.MP_REACH_NLRI, AID.MP_UNREACH_NLRI):
+				self.cacheable = False
+				self.prefix = ''
+		else:
+			self.prefix += data[:offset+length]
+
 		data = data[offset:]
 		next = data[length:]
 		attribute = data[:length]
 
 		logger = Logger()
 		logger.parser(LazyFormat("parsing flag %x type %02x (%s) len %02x %s" % (flag,int(code),code,length,'payload ' if length else ''),od,data[:length]))
-
-		if self.seennlri and code not in (AID.MP_REACH_NLRI, AID.MP_UNREACH_NLRI):
-			self.cacheable = False
 
 		if code == AID.ORIGIN:
 			# This if block should never be called anymore ...
@@ -308,7 +325,8 @@ class Attributes (dict):
 			return self.factory(next)
 
 		if code == AID.MP_UNREACH_NLRI:
-			self.seennlri = True
+			self.hasmp = True
+
 
 			# -- Reading AFI/SAFI
 			data = data[:length]
@@ -335,7 +353,7 @@ class Attributes (dict):
 			return self.factory(next)
 
 		if code == AID.MP_REACH_NLRI:
-			self.seennlri = True
+			self.hasmp = True
 
 			data = data[:length]
 			# -- Reading AFI/SAFI
@@ -538,7 +556,14 @@ if not Attributes.cache:
 
 def AttributesFactory (routefactory,negotiated,data):
 	try:
-		attributes = Attributes()
+		# caching and checking the last attribute parsed as nice implementation group them :-)
+		if Attributes.cached and Attributes.cached.cacheable and data.startswith(Attributes.cached.prefix):
+			attributes = Attributes.cached
+			data = data[len(attributes.prefix):]
+		else:
+			attributes = Attributes()
+			Attributes.cached = attributes
+
 		attributes.routeFactory = routefactory
 		# XXX: hackish for now
 		attributes.mp_announce = []
