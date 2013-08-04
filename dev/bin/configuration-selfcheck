@@ -1,0 +1,30 @@
+#!/bin/sh
+
+dirname=`dirname $0`
+
+case $dirname in
+	/*)
+		cd $dirname/.. > /dev/null
+		path=`pwd`
+		cd - > /dev/null
+	;;
+	*)
+		cd `pwd`/$dirname/.. > /dev/null
+		path=`pwd`
+		cd - > /dev/null
+	;;
+esac
+
+export PYTHONPATH=$path/lib
+
+for conf in `ls $path/runtest/*conf`
+do
+	env exabgp.tcp.bind='' exabgp.debug.selfcheck=1 $path/../sbin/exabgp $conf > /dev/null 2> /dev/null
+	if [ $? -eq 0 ]
+	then
+		echo ok $conf
+	else
+		echo failed $conf
+		echo "env exabgp.tcp.bind='' exabgp.debug.selfcheck=1 $path/../sbin/exabgp $conf -p"
+	fi
+done
