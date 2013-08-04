@@ -37,6 +37,8 @@ Version 3.2.0
  * Compatibility: the word inet4/inet6 are now replaced by ipv4/ipv6
  * Compatibility: the option exabgp.tcp.block was removed following the networking code change
  * Compatibility: reload the configuration with SIGUSR1, reload configuration and processes with SIGUSR2
+ * Compatinility: using SIGHUP will now TERMINATE ExaBGP and not reload the configuration
+    reported by: Daniel Bradshaw (issue 32)
 
 Version 3.1.13 - 6th July 2013
  * Fix: only clear buffered routes on restart and not reload (bug never reported)

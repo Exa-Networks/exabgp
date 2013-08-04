@@ -88,6 +88,8 @@ def help (comment=''):
 	sys.stdout.write(' - SIGLARM : retart ExaBGP\n')
 	sys.stdout.write(' - SIGUSR1 : reload the configuration\n')
 	sys.stdout.write(' - SIGUSR2 : reload the configuration and the forked processes\n')
+	sys.stdout.write(' - SIGTERM : terminate ExaBGP\n')
+	sys.stdout.write(' - SIGHUP  : terminate ExaBGP (does NOT reload the configuration anymore)\n')
 	sys.stdout.write('\n')
 	sys.stdout.write('Valid configuration options are :\n')
 	sys.stdout.write('\n')
