@@ -650,7 +650,7 @@ class Configuration (object):
 		return True
 
 	def _set_family_inet4 (self,scope,tokens):
-		self.logger.error("the word inet4 is deprecated, please use ipv4 instead")
+		self.logger.configuration("the word inet4 is deprecated, please use ipv4 instead",'error')
 		return self._set_family_ipv4 (scope,tokens)
 
 	def _set_family_ipv4 (self,scope,tokens):
@@ -681,7 +681,7 @@ class Configuration (object):
 		return True
 
 	def _set_family_inet6 (self,scope,tokens):
-		self.logger.error("the word inet6 is deprecated, please use ipv6 instead")
+		self.logger.configuration("the word inet6 is deprecated, please use ipv6 instead",'error')
 		return self._set_family_ipv6 (scope,tokens)
 
 	def _set_family_ipv6 (self,scope,tokens):
@@ -1959,10 +1959,10 @@ class Configuration (object):
 		try:
 			speed = int(tokens[0])
 			if speed < 9600 and speed != 0:
-				self.logger.warning("rate-limiting flow under 9600 bytes per seconds may not work",'configuration')
+				self.logger.configuration("rate-limiting flow under 9600 bytes per seconds may not work",'warning')
 			if speed > 1000000000000:
 				speed = 1000000000000
-				self.logger.warning("rate-limiting changed for 1 000 000 000 000 bytes from %s" % tokens[0],'configuration')
+				self.logger.configuration("rate-limiting changed for 1 000 000 000 000 bytes from %s" % tokens[0],'warning')
 			scope[-1]['routes'][-1].add_action(to_FlowTrafficRate(ASN(0),speed))
 			return True
 		except ValueError:
@@ -2011,7 +2011,7 @@ class Configuration (object):
 		from exabgp.bgp.message.open.capability.negotiated import Negotiated
 		from exabgp.bgp.message.open.capability.id import CapabilityID
 
-		self.logger.info('\ndecoding routes in configuration','parser')
+		self.logger.parser('\ndecoding routes in configuration')
 
 		n = self.neighbor[self.neighbor.keys()[0]]
 
@@ -2041,21 +2041,21 @@ class Configuration (object):
 				injected,raw = raw[19:size],raw[size:]
 
 				if kind == 2:
-					self.logger.info('the route is an update','parser')
+					self.logger.parser('the route is an update')
 					factory = UpdateFactory
 				else:
-					self.logger.info('the route is not an update (%d) - aborting' % kind,'parser')
+					self.logger.parser('the route is not an update (%d) - aborting' % kind)
 					sys.exit(1)
 			else:
-				self.logger.info('header missing, assuming this route is ONE update','parser')
+				self.logger.parser('header missing, assuming this route is ONE update')
 				factory = UpdateFactory
 				injected,raw = raw,''
 
 			# This does not take the BGP header - let's assume we will not break that :)
 			update = factory(negotiated,injected)
-			self.logger.info('','parser')
+			self.logger.parser('')  # new line
 			for route in update.routes:
-				self.logger.info('decoded route %s' % route.extensive(),'parser')
+				self.logger.parser('decoded route %s' % route.extensive())
 
 		import sys
 		sys.exit(0)
@@ -2076,7 +2076,7 @@ class Configuration (object):
 		from exabgp.bgp.message.open.capability.id import CapabilityID
 		from exabgp.bgp.message.notification import Notify
 
-		self.logger.info('\ndecoding routes in configuration','parser')
+		self.logger.parser('\ndecoding routes in configuration')
 
 		n = self.neighbor[self.neighbor.keys()[0]]
 
@@ -2104,18 +2104,18 @@ class Configuration (object):
 					str1 = route.extensive()
 					update = Update().new([route])
 					packed = update.announce(negotiated)
-					self.logger.info('parsed route requires %d updates' % len(packed),'parser')
+					self.logger.parser('parsed route requires %d updates' % len(packed))
 					for pack in packed:
-						self.logger.info('update size is %d' % len(pack),'parser')
+						self.logger.parser('update size is %d' % len(pack))
 						# This does not take the BGP header - let's assume we will not break that :)
 						try:
 							update = UpdateFactory(negotiated,pack[19:])
-							self.logger.info('','parser')
+							self.logger.parser('')  # new line
 							for route in update.routes:
 								str2 = route.extensive()
-								self.logger.info('parsed  route %s' % str1,'parser')
-								self.logger.info('recoded route %s' % str2,'parser')
-								self.logger.info('recoded hex   %s\n' % od(pack),'parser')
+								self.logger.parser('parsed  route %s' % str1)
+								self.logger.parser('recoded route %s' % str2)
+								self.logger.parser('recoded hex   %s\n' % od(pack))
 						except Notify,e:
 							# we do not decode Flow Routes
 							if e.code == 3 and e.subcode == 2:

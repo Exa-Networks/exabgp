@@ -105,7 +105,7 @@ class Processes (object):
 						self._respawning[process][around_now] += 1
 						# we are respawning too fast
 						if self._respawning[process][around_now] > self.respawn_number:
-							self.logger.critical("Too many respawn for %s (%d) terminating program" % (process,self.respawn_number),'processes')
+							self.logger.processes("Too many respawn for %s (%d) terminating program" % (process,self.respawn_number),'critical')
 							raise ProcessError()
 					else:
 						# reset long time since last respawn

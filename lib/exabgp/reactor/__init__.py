@@ -58,23 +58,23 @@ class Reactor (object):
 		signal.signal(signal.SIGUSR2, self.sigusr2)
 
 	def sigterm (self,signum, frame):
-		self.logger.info("SIG TERM received - shutdown",'reactor')
+		self.logger.reactor("SIG TERM received - shutdown")
 		self._shutdown = True
 
 	def sighup (self,signum, frame):
-		self.logger.info("SIG HUP received - shutdown",'reactor')
+		self.logger.reactor("SIG HUP received - shutdown")
 		self._shutdown = True
 
 	def sigalrm (self,signum, frame):
-		self.logger.info("SIG ALRM received - restart",'reactor')
+		self.logger.reactor("SIG ALRM received - restart")
 		self._restart = True
 
 	def sigusr1 (self,signum, frame):
-		self.logger.info("SIG USR1 received - reload configuration",'reactor')
+		self.logger.reactor("SIG USR1 received - reload configuration")
 		self._reload = True
 
 	def sigusr2 (self,signum, frame):
-		self.logger.info("SIG USR2 received - reload configuration and processes",'reactor')
+		self.logger.reactor("SIG USR2 received - reload configuration and processes")
 		self._reload = True
 		self._reload_processes = True
 
@@ -86,23 +86,23 @@ class Reactor (object):
 			except NetworkError,e:
 				self.listener = None
 				if os.geteuid() != 0 and self.port <= 1024:
-					self.logger.critical("Can not bind to %s:%d, you may need to run ExaBGP as root" % (self.ip,self.port),'reactor')
+					self.logger.reactor("Can not bind to %s:%d, you may need to run ExaBGP as root" % (self.ip,self.port),'critical')
 				else:
-					self.logger.critical("Can not bind to %s:%d (%s)" % (self.ip,self.port,errstr(e)),'reactor')
-				self.logger.critical("unset exabgp.tcp.bind if you do not want listen for incoming connections",'reactor')
-				self.logger.critical("and check that no other daemon is already binding to port %d" % self.port,'reactor')
+					self.logger.reactor("Can not bind to %s:%d (%s)" % (self.ip,self.port,errstr(e)),'critical')
+				self.logger.reactor("unset exabgp.tcp.bind if you do not want listen for incoming connections",'critical')
+				self.logger.reactor("and check that no other daemon is already binding to port %d" % self.port,'critical')
 				sys.exit(1)
-			self.logger.info("Listening for BGP session(s) on %s:%d" % (self.ip,self.port),'reactor')
+			self.logger.reactor("Listening for BGP session(s) on %s:%d" % (self.ip,self.port))
 
 		if self.daemon.drop_privileges():
-			self.logger.critical("Could not drop privileges to '%s' refusing to run as root" % self.daemon.user,'reactor')
-			self.logger.critical("Set the environmemnt value exabgp.daemon.user to change the unprivileged user",'reactor')
+			self.logger.reactor("Could not drop privileges to '%s' refusing to run as root" % self.daemon.user,'critical')
+			self.logger.reactor("Set the environmemnt value exabgp.daemon.user to change the unprivileged user",'critical')
 			return
 
 		self.daemon.daemonise()
 
 		if not self.daemon.savepid():
-			self.logger.error('could not update PID, not starting','reactor')
+			self.logger.reactor('could not update PID, not starting','error')
 
 		# Make sure we create processes one we have dropped privileges and closed file descriptor
 		self.processes = Processes(self)
@@ -114,7 +114,7 @@ class Reactor (object):
 		wait = environment.settings().tcp.delay
 		if wait:
 			sleeptime = (wait * 60) - int(time.time()) % (wait * 60)
-			self.logger.error("waiting for %d seconds before connecting" % sleeptime)
+			self.logger.reactor("waiting for %d seconds before connecting" % sleeptime)
 			time.sleep(float(sleeptime))
 
 		while True:
@@ -200,11 +200,11 @@ class Reactor (object):
 									break
 
 							if found is False:
-								self.logger.info("no session configured for  %s - %s" % (connection.local,connection.peer),'reactor')
+								self.logger.reactor("no session configured for  %s - %s" % (connection.local,connection.peer))
 								connection.notification(6,3,'no session configured for the peer')
 								connection.close()
 							elif found is None:
-								self.logger.info("could not accept connection %s - %s" % (connection.local,connection.peer),'reactor')
+								self.logger.reactor("could not accept connection %s - %s" % (connection.local,connection.peer))
 								connection.notification(6,5,'could not accept the connection')
 								connection.close()
 
@@ -228,7 +228,7 @@ class Reactor (object):
 				while True:
 					try:
 						self._shutdown = True
-						self.logger.info("^C received",'reactor')
+						self.logger.reactor("^C received")
 						break
 					except KeyboardInterrupt:
 						pass
@@ -236,7 +236,7 @@ class Reactor (object):
 				while True:
 					try:
 						self._shutdown = True
-						self.logger.info("exiting",'reactor')
+						self.logger.reactor("exiting")
 						break
 					except KeyboardInterrupt:
 						pass
@@ -244,7 +244,7 @@ class Reactor (object):
 				while True:
 					try:
 						self._shutdown = True
-						self.logger.warning("I/O Error received, most likely ^C during IO",'reactor')
+						self.logger.reactor("I/O Error received, most likely ^C during IO",'warning')
 						break
 					except KeyboardInterrupt:
 						pass
@@ -252,7 +252,7 @@ class Reactor (object):
 				while True:
 					try:
 						self._shutdown = True
-						self.logger.error("Problem when sending message(s) to helper program, stopping",'reactor')
+						self.logger.reactor("Problem when sending message(s) to helper program, stopping",'error')
 						break
 					except KeyboardInterrupt:
 						pass
@@ -260,7 +260,7 @@ class Reactor (object):
 				while True:
 					try:
 						self._shutdown = True
-						self.logger.error("problem using select, stopping",'reactor')
+						self.logger.reactor("problem using select, stopping",'error')
 						break
 					except KeyboardInterrupt:
 						pass
@@ -272,7 +272,7 @@ class Reactor (object):
 
 	def shutdown (self):
 		"""terminate all the current BGP connections"""
-		self.logger.info("Performing shutdown",'reactor')
+		self.logger.reactor("Performing shutdown")
 		if self.listener:
 			self.listener.stop()
 		for key in self._peers.keys():
@@ -280,12 +280,12 @@ class Reactor (object):
 
 	def reload (self,restart=False):
 		"""reload the configuration and send to the peer the route which changed"""
-		self.logger.info("Performing reload of exabgp %s" % version,'reactor')
+		self.logger.reactor("Performing reload of exabgp %s" % version)
 
 		reloaded = self.configuration.reload()
 		if not reloaded:
-			self.logger.error("Problem with the configuration file, no change done",'configuration')
-			self.logger.error(self.configuration.error,'configuration')
+			self.logger.configuration("Problem with the configuration file, no change done",'error')
+			self.logger.configuration(self.configuration.error,'error')
 			return
 
 		for key, peer in self._peers.items():
@@ -308,7 +308,7 @@ class Reactor (object):
 				else:
 					self.logger.reactor("Updating routes for peer %s" % str(key))
 					self._peers[key].reload(neighbor)
-		self.logger.warning("Loaded new configuration successfully",'configuration')
+		self.logger.configuration("Loaded new configuration successfully",'warning')
 		# This only starts once ...
 		self.processes.start(restart)
 

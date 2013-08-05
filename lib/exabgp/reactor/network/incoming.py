@@ -27,7 +27,7 @@ class Incoming (Connection):
 			notification = Notify(code,subcode,message).message()
 			for boolean in self.writer(notification):
 				yield False
-			self.logger.error(self.me('>> NOTIFICATION (%d,%d,"%s")' % (notification.code,notification.subcode,notification.data)))
+			self.logger.message(self.me('>> NOTIFICATION (%d,%d,"%s")' % (notification.code,notification.subcode,notification.data)),'error')
 			yield True
 		except NetworkError:
 			pass  # This is only be used when closing session due to unconfigured peers - so issues do not matter

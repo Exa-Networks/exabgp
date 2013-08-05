@@ -70,7 +70,7 @@ class Listener (object):
 					self._sockets[s] = (host,self._port)
 			self.serving = True
 		except NetworkError,e:
-				self.logger.critical(str(e))
+				self.logger.network(str(e),'critical')
 				raise e
 		self.serving = True
 
@@ -92,7 +92,7 @@ class Listener (object):
 						continue
 					raise AcceptError('could not accept a new connection (%s)' % errstr(e))
 		except NetworkError,e:
-			self.logger.critical(str(e))
+			self.logger.network(str(e),'critical')
 			raise e
 
 	def stop (self):
@@ -100,7 +100,7 @@ class Listener (object):
 			return
 
 		for sock,(ip,port) in self._sockets.items():
-			self.logger.critical('stop listening on %s:%d' % (ip,port))
+			self.logger.network('stop listening on %s:%d' % (ip,port),'critical')
 			sock.close()
 
 		self._sockets = {}

@@ -82,7 +82,7 @@ class Protocol (object):
 				self.peer.reactor.processes.connected(self.peer.neighbor.peer_address)
 
 	def close (self,reason='unspecified'):
-		self.logger.info(self.me(reason))
+		self.logger.network(self.me(reason))
 		if self.connection:
 			# must be first otherwise we could have a loop caused by the raise in the below
 			self.connection.close()
@@ -213,7 +213,7 @@ class Protocol (object):
 	def new_notification (self,notification):
 		for _ in self.write(notification.message()):
 			yield _NOP
-		self.logger.error(self.me('>> NOTIFICATION (%d,%d,"%s")' % (notification.code,notification.subcode,notification.data)))
+		self.logger.message(self.me('>> NOTIFICATION (%d,%d,"%s")' % (notification.code,notification.subcode,notification.data)))
 		yield notification
 
 	def new_update (self):

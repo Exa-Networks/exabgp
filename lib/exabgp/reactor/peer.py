@@ -280,7 +280,7 @@ class Peer (object):
 
 		if self.reactor.processes.broken(self.neighbor.peer_address):
 			# XXX: we should perhaps try to restart the process ??
-			self.logger.error('ExaBGP lost the helper process for this peer - stopping','process')
+			self.logger.process('ExaBGP lost the helper process for this peer - stopping','error')
 			self._running = False
 
 		self._out_proto = Protocol(self)
@@ -436,7 +436,7 @@ class Peer (object):
 
 		# If graceful restart, silent shutdown
 		if self.neighbor.graceful_restart and self.proto.negotiated.sent_open.capabilities.announced(CapabilityID.GRACEFUL_RESTART):
-			self.logger.error('Closing the session without notification','network')
+			self.logger.network('Closing the session without notification','error')
 			self.proto.close('graceful restarted negotiated, closing without sending any notification')
 			return
 
@@ -505,7 +505,7 @@ class Peer (object):
 				try:
 					self._out_proto.new_notification(n)
 				except (NetworkError,ProcessError):
-					self.logger.error(self.wrout('NOTIFICATION NOT SENT','network'))
+					self.logger.network(self.wrout('NOTIFICATION NOT SENT','error'))
 					pass
 				self._out_proto.close('notification sent (%d,%d) [%s] %s' % (n.code,n.subcode,str(n),n.data))
 				self._out_proto = None
@@ -514,7 +514,7 @@ class Peer (object):
 				try:
 					self._in_proto.new_notification(n)
 				except (NetworkError,ProcessError):
-					self.logger.error(self.wrin('NOTIFICATION NOT SENT','network'))
+					self.logger.network(self.wrin('NOTIFICATION NOT SENT','error'))
 					pass
 				self._in_proto.close('notification sent (%d,%d) [%s] %s' % (n.code,n.subcode,str(n),n.data))
 				self._in_proto = None
@@ -528,7 +528,7 @@ class Peer (object):
 			self._in_loop = False
 			self._out_loop = None
 
-			self.logger.error(self.me('received Notification (%d,%d) %s' % (n.code,n.subcode,str(n))),'reactor')
+			self.logger.reactor(self.me('received Notification (%d,%d) %s' % (n.code,n.subcode,str(n))),'warning')
 
 			if self._out_proto:
 				self._out_proto.close('notification received (%d,%d) %s' % (n.code,n.subcode,str(n)))
@@ -547,7 +547,7 @@ class Peer (object):
 			self._in_loop = False
 			self._out_loop = None
 
-			self.logger.error(self.me('received unexpected message %s' % m.name(),'network'))
+			self.logger.network(self.me('received unexpected message %s' % m.name(),'error'))
 
 			if self._out_proto:
 				self._out_proto.close('unexpected message received')
@@ -566,7 +566,7 @@ class Peer (object):
 			self._in_loop = False
 			self._out_loop = None
 
-			self.logger.error(self.me(str(e)),'reactor')
+			self.logger.reactor(self.me(str(e)),'error')
 
 			if self._out_proto:
 				self._out_proto.close('failure %s' % str(e))
@@ -585,7 +585,7 @@ class Peer (object):
 			self._in_loop = False
 			self._out_loop = None
 
-			self.logger.error(self.me(str(e)),'reactor')
+			self.logger.reactor(self.me(str(e)),'error')
 
 			if self._out_proto:
 				self._out_proto.close('interruped %s' % str(e))
@@ -604,8 +604,8 @@ class Peer (object):
 			self._in_loop = False
 			self._out_loop = None
 
+			# Those messages can not be filtered in purpose
 			self.logger.error(self.me('UNHANDLED EXCEPTION'),'reactor')
-
 			self.logger.error(self.me(str(e)),'reactor')
 
 			if self._out_proto:

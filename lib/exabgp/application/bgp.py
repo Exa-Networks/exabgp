@@ -298,7 +298,7 @@ def main ():
 	if parse_error:
 		from exabgp.logger import Logger
 		logger = Logger()
-		logger.error(parse_error,'configuration')
+		logger.configuration(parse_error,'error')
 		sys.exit(1)
 
 	configurations = []
@@ -309,14 +309,14 @@ def main ():
 	else:
 		from exabgp.logger import Logger
 		logger = Logger()
-		logger.error('no configuration file provided','configuration')
+		logger.configuration('no configuration file provided','error')
 		sys.exit(1)
 
 	for configuration in configurations:
 		if not os.path.isfile(configuration):
 			from exabgp.logger import Logger
 			logger = Logger()
-			logger.error('the argument passed as configuration is not a file','configuration')
+			logger.configuration('the argument passed as configuration is not a file','error')
 			sys.exit(1)
 
 	from exabgp.bgp.message.update.attribute.nexthop import NextHop
@@ -331,7 +331,7 @@ def main ():
 	if not (env.log.destination in ('syslog','stdout','stderr') or env.log.destination.startswith('host:')):
 		from exabgp.logger import Logger
 		logger = Logger()
-		logger.error('can not log to files when running multiple configuration (as we fork)','configuration')
+		logger.configuration('can not log to files when running multiple configuration (as we fork)','error')
 		sys.exit(1)
 
 	try:
@@ -361,7 +361,7 @@ def run (env,comment,configuration,pid=0):
 	logger = Logger()
 
 	if comment:
-		logger.info(comment,'configuration')
+		logger.configuration(comment)
 
 	if not env.profile.enable:
 		Reactor(configuration).run()
@@ -388,13 +388,13 @@ def run (env,comment,configuration,pid=0):
 		notice = 'profile can not use this filename as outpout, it already exists (%s)' % profile_name
 
 	if not notice:
-		logger.info('profiling ....','profile')
+		logger.profile('profiling ....')
 		profile.run('Reactor(configuration).run()',filename=profile_name)
 		__exit(env.debug.memory,0)
 	else:
-		logger.info("-"*len(notice),'profile')
-		logger.info(notice,'profile')
-		logger.info("-"*len(notice),'profile')
+		logger.profile("-"*len(notice))
+		logger.profile(notice)
+		logger.profile("-"*len(notice))
 		Reactor(configuration).run()
 		__exit(env.debug.memory,0)
 
