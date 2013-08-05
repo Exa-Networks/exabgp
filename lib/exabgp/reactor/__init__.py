@@ -465,13 +465,13 @@ class Reactor (object):
 			def _announce_route (self,command,peers):
 				routes = self.configuration.parse_api_route(command)
 				if not routes:
-					self.logger.warning("Command could not parse route in : %s" % command,'reactor')
+					self.logger.reactor("Command could not parse route in : %s" % command,'warning')
 					yield True
 				else:
 					for route in routes:
 						self.configuration.remove_route_from_peers(route,peers)
 						self.configuration.add_route_to_peers(route,peers)
-						self.logger.warning("Route added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',route),'reactor')
+						self.logger.reactor("Route added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',route))
 						yield False
 					self._route_update = True
 
@@ -480,7 +480,7 @@ class Reactor (object):
 				peers = match_neighbors(descriptions,self._peers)
 				self._pending.append(_announce_route(self,command,peers))
 				if peers == []:
-					self.logger.warning('no neighbor matching the command : %s' % command,'reactor')
+					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 				return True
 			except ValueError:
 				pass
@@ -491,7 +491,7 @@ class Reactor (object):
 			def _withdraw_route (self,command,peers):
 				routes = self.configuration.parse_api_route(command)
 				if not routes:
-					self.logger.warning("Command could not parse route in : %s" % command,'reactor')
+					self.logger.reactor("Command could not parse route in : %s" % command,'warning')
 					yield True
 				else:
 					for route in routes:
@@ -499,7 +499,7 @@ class Reactor (object):
 							self.logger.reactor("Route found and removed : %s" % route)
 							yield False
 						else:
-							self.logger.warning("Could not find therefore remove route : %s" % route,'reactor')
+							self.logger.reactor("Could not find therefore remove route : %s" % route,'warning')
 							yield False
 					self._route_update = True
 
@@ -508,7 +508,7 @@ class Reactor (object):
 				peers = match_neighbors(descriptions,self._peers)
 				self._pending.append(_withdraw_route(self,command,peers))
 				if peers == []:
-					self.logger.warning('no neighbor matching the command : %s' % command,'reactor')
+					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 				return True
 			except ValueError:
 				pass
@@ -526,7 +526,7 @@ class Reactor (object):
 					for flow in flows:
 						self.configuration.remove_route_from_peers(flow,peers)
 						self.configuration.add_route_to_peers(flow,peers)
-						self.logger.warning("Flow added : %s" % flow,'reactor')
+						self.logger.reactor("Flow added : %s" % flow)
 						yield False
 					self._route_update = True
 
@@ -535,7 +535,7 @@ class Reactor (object):
 				peers = match_neighbors(descriptions,self._peers)
 				self._pending.append(_announce_flow(self,command,peers))
 				if peers == []:
-					self.logger.warning('no neighbor matching the command : %s' % command,'reactor')
+					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 				return True
 			except ValueError:
 				pass
@@ -554,7 +554,7 @@ class Reactor (object):
 							self.logger.reactor("Flow found and removed : %s" % flow)
 							yield False
 						else:
-							self.logger.warning("Could not find therefore remove flow : %s" % flow,'reactor')
+							self.logger.reactor("Could not find therefore remove flow : %s" % flow,'warning')
 							yield False
 					self._route_update = True
 
@@ -563,7 +563,7 @@ class Reactor (object):
 				peers = match_neighbors(descriptions,self._peers)
 				self._pending.append(_withdraw_flow(self,command,peers))
 				if peers == []:
-					self.logger.warning('no neighbor matching the command : %s' % command,'reactor')
+					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 				return True
 			except ValueError:
 				pass
@@ -579,7 +579,7 @@ class Reactor (object):
 					for description in descriptions:
 						if match_neighbor(description,key):
 							self._peers[key].teardown(int(code))
-							self.logger.warning('teardown scheduled for %s' % ' '.join(description),'reactor')
+							self.logger.reactor('teardown scheduled for %s' % ' '.join(description))
 				return True
 			except ValueError:
 				pass
@@ -587,7 +587,7 @@ class Reactor (object):
 				pass
 
 		# unknown
-		self.logger.warning("Command from process not understood : %s" % command,'reactor')
+		self.logger.reactor("Command from process not understood : %s" % command,'warning')
 		return False
 
 	def _answer (self,service,string):
@@ -605,7 +605,7 @@ class Reactor (object):
 
 	def restart (self):
 		"""kill the BGP session and restart it"""
-		self.logger.info("Performing restart of exabgp %s" % version,'reactor')
+		self.logger.reactor("Performing restart of exabgp %s" % version)
 		self.configuration.reload()
 
 		for key in self._peers.keys():
