@@ -7,7 +7,7 @@ group test {
 	graceful-restart 1200;
 
 	process similate-the-intenet {
-		run ./api-internet.py 500;
+		run ./api-internet.py 500000 20;
 	}
 
 	neighbor 127.0.0.1 {

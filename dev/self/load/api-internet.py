@@ -9,14 +9,20 @@ def write (data):
 	sys.stdout.flush()
 
 def main ():
-	default = '65536'
-	param = (sys.argv + [default,])[1]
-
-	if not param.isdigit():
-		write('please give a valid number')
+	if len(sys.argv) < 2:
+		print "%s <number of routes> <updates per second thereafter>"
 		sys.exit(1)
 
-	number = int(param) & 0x00FFFFFF
+	initial = sys.argv[1]
+	thereafter = sys.argv[2]
+
+	if not initial.isdigit() or not thereafter.isdigit():
+		write('please give valid numbers')
+		sys.exit(1)
+
+	# Limit to sane numbers :-)
+	number = int(initial) & 0x00FFFFFF
+	after = int(thereafter) & 0x0000FFFF
 
 	range1 = (number >> 16) & 0xFF
 	range2 = (number >>  8) & 0xFF
@@ -40,10 +46,16 @@ def main ():
 		generated = '%d.%d.%d.%d' % (random.randint(1,200),range1,range2,ip3)
 		ip[generated] = random.choice(nexthop)
 
+	count = 0
 
 	# initial table dump
 	for k,v in ip.iteritems():
-		write('announce route %s next-hop %s' % (k,v))
+		count += 1
+		write('announce route %s next-hop %s med 1%02d as-path [ 100 101 102 103 104 105 106 107 108 109 110 ]' % (k,v,len(k)))
+		if count % 100 == 0:
+			sys.stderr.write('initial : announced %d\n' % count)
+
+	count &= 0xFFFFFFFe
 
 	# modify routes forever
 	while True:
@@ -52,13 +64,17 @@ def main ():
 
 		for k,v in ip.iteritems():
 			changed[k] = v
-			if not random.randint(0,100):
+			if not random.randint(0,after):
 				break
 
 		for k,v in changed.iteritems():
-			write('withdraw route %s next-hop %s' % (k,v))
+			count += 2
+			write('withdraw route %s next-hop %s med 1%02d as-path [ 100 101 102 103 104 105 106 107 108 109 110 ]' % (k,v,len(k)))
 			ip[k] = random.choice(nexthop)
-			write('announce route %s next-hop %s' % (k,ip[k]))
+			write('announce route %s next-hop %s med 1%02d as-path [ 100 101 102 103 104 105 106 107 108 109 110 ]' % (k,ip[k],len(k)))
+			if count % 100 == 0:
+				sys.stderr.write('updates : announced %d\n' % count)
+
 
 		time.sleep(time.time()-now+1.0)
 

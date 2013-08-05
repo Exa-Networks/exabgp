@@ -6,6 +6,11 @@ group test {
 	hold-time 180;
 	graceful-restart 1200;
 
+	process similate-the-intenet {
+		receive-routes;
+		run ./dump-to-screen.py 100 20;
+	}
+
 	neighbor IP {
 		description "router 2 with four routes";
 		router-id 127.0.0.0;
