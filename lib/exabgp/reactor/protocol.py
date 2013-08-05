@@ -20,7 +20,7 @@ from exabgp.bgp.message.unknown import Unknown
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.message.update import Update
+from exabgp.bgp.message.update import Update,UpdateFactory
 from exabgp.bgp.message.update.eor import EOR
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notification, Notify
@@ -121,7 +121,7 @@ class Protocol (object):
 				yield EOR().factory(body)
 
 			if self.neighbor.api.receive_routes:
-				update = Update().factory(self.negotiated,body)
+				update = UpdateFactory(self.negotiated,body)
 
 				for route in update.routes:
 					self.logger.routes(LazyFormat(self.me(''),str,route))
