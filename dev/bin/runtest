@@ -83,8 +83,8 @@ def check_sequence(exabgp,configuration,daemon,messages):
 		print 'daemon:\n', daemon_output
 		print
 		print "command lines were:"
-		print "> env exabgp.tcp.bind=''", ' '.join(command_exabgp)
-		print "> sudo", ' '.join(command_daemon)
+		print "> env exabgp.tcp.port=1790 exabgp.tcp.bind=''", ' '.join(command_exabgp)
+		print "> env exabgp.tcp.port=1790", ' '.join(command_daemon)
 		print
 
 def check (main):
