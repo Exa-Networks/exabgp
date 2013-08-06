@@ -7,6 +7,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 import time
+import random
 import socket
 import select
 from struct import unpack
@@ -36,10 +37,11 @@ class Connection (object):
 		# However real life says that on some OS we do ... So let the user control this value
 		try:
 			self.read_timeout = environment.settings().tcp.timeout
+			self.defensive = environment.settings().debug.defensive
 			self.logger = Logger()
 		except RuntimeError:
-			self.logger = FakeLogger
 			self.read_timeout = 1
+			self.defensive = True
 			self.logger = FakeLogger()
 
 		self.afi = afi
@@ -106,6 +108,7 @@ class Connection (object):
 			return w != []
 
 	def _reader (self,number):
+		# The function must not be called if it does not return with no data with a smaller size as parameter
 		if not self.io:
 			self.close()
 			raise NotConnected('Trying to read on a close TCP conncetion')
@@ -114,34 +117,47 @@ class Connection (object):
 			return
 		while not self.reading():
 			yield ''
-		try:
-			read = ''
-			while number:
-				if self._reading is None:
-					self._reading = time.time()
-				elif time.time() > self._reading + self.read_timeout:
+		data = ''
+		while True:
+			try:
+				while True:
+					if self._reading is None:
+						self._reading = time.time()
+					elif time.time() > self._reading + self.read_timeout:
+						self.close()
+						self.logger.wire("%s %s peer is too slow" % (self.name(),self.peer))
+						raise TooSlowError('Waited to read for data on a socket for more than %d second(s)' % self.read_timeout)
+
+					if self.defensive and random.randint(0,2):
+						raise socket.error(errno.EAGAIN,'raising network error in purpose')
+
+					read = self.io.recv(number)
+					if not read:
+						self.close()
+						self.logger.wire("%s %s lost TCP session with peer" % (self.name(),self.peer))
+						raise LostConnection('the TCP connection was closed by the remote end')
+
+					data += read
+					number -= len(read)
+					if not number:
+						self.logger.wire(LazyFormat("%s %-32s RECEIVED " % (self.name(),'%s / %s' % (self.local,self.peer)),od,read))
+						self._reading = None
+						yield data
+						return
+			except socket.timeout,e:
+				self.close()
+				self.logger.wire("%s %s peer is too slow" % (self.name(),self.peer))
+				raise TooSlowError('Timeout while reading data from the network (%s)' % errstr(e))
+			except socket.error,e:
+				if e.args[0] in error.block:
+					self.logger.wire("%s %s blocking io problem mid-way through reading a message, trying to complete" % (self.name(),self.peer),'debug')
+				elif e.args[0] in error.fatal:
 					self.close()
-					self.logger.wire("%s %s peer is too slow" % (self.name(),self.peer))
-					raise TooSlowError('Waited for data on a socket for more than %d second(s)' % self.read_timeout)
-				read = self.io.recv(number)
-				number -= len(read)
-				if not read:
-					self.close()
-					self.logger.wire("%s %s lost TCP session with peer" % (self.name(),self.peer))
-					raise LostConnection('the TCP connection was closed by the remote end')
-				yield read
-			self.logger.wire(LazyFormat("%s %-32s RECEIVED " % (self.name(),'%s / %s' % (self.local,self.peer)),od,read))
-			self._reading = None
-		except socket.timeout,e:
-			self.close()
-			self.logger.wire("%s %s peer is too slow" % (self.name(),self.peer))
-			raise TooSlowError('Timeout while reading data from the network (%s)' % errstr(e))
-		except socket.error,e:
-			self.close()
-			self.logger.wire("%s %s undefined error on socket" % (self.name(),self.peer))
-			if e.args[0] == errno.EPIPE:
-				raise LostConnection('issue reading on the socket: %s' % errstr(e))
-			raise NetworkError('Problem while reading data from the network (%s)' % errstr(e))
+					raise LostConnection('issue reading on the socket: %s' % errstr(e))
+				# what error could it be !
+				else:
+					self.logger.wire("%s %s undefined error reading on socket" % (self.name(),self.peer))
+					raise NetworkError('Problem while reading data from the network (%s)' % errstr(e))
 
 	def writer (self,data):
 		if not self.io:
@@ -151,58 +167,55 @@ class Connection (object):
 		if not self.writing():
 			yield False
 			return
-		try:
-			self.logger.wire(LazyFormat("%s %-32s SENDING " % (self.name(),'%s / %s' % (self.local,self.peer)),od,data))
-			# we can not use sendall as in case of network buffer filling
-			# it does raise and does not let you know how much was sent
-			sent = 0
-			length = len(data)
-			while sent < length:
-				if self._writing is None:
-					self._writing = time.time()
-				elif time.time() > self._writing + self.read_timeout:
-					self.close()
-					self.logger.wire("%s %s peer is too slow" % (self.name(),self.peer))
-					raise TooSlowError('Waited for data on a socket for more than %d second(s)' % self.read_timeout)
-				try:
-					nb = self.io.send(data[sent:])
+		self.logger.wire(LazyFormat("%s %-32s SENDING " % (self.name(),'%s / %s' % (self.local,self.peer)),od,data))
+		# The first while is here to setup the try/catch block once as it is very expensive
+		while True:
+			try:
+				while True:
+					if self._writing is None:
+						self._writing = time.time()
+					elif time.time() > self._writing + self.read_timeout:
+						self.close()
+						self.logger.wire("%s %s peer is too slow" % (self.name(),self.peer))
+						raise TooSlowError('Waited to write for data on a socket for more than %d second(s)' % self.read_timeout)
+
+					if self.defensive and random.randint(0,2):
+						raise socket.error(errno.EAGAIN,'raising network error in purpose')
+
+					# we can not use sendall as in case of network buffer filling
+					# it does raise and does not let you know how much was sent
+					nb = self.io.send(data)
 					if not nb:
 						self.close()
 						self.logger.wire("%s %s lost TCP connection with peer" % (self.name(),self.peer))
 						raise LostConnection('lost the TCP connection')
-					sent += nb
+
+					data = data[nb:]
+					if not data:
+						self._writing = None
+						yield True
+						return
 					yield False
-				except socket.error,e:
-					if e.args[0] not in error.block:
-						self.logger.wire("%s %s problem sending message (%s)" % (self.name(),self.peer,errstr(e)))
-						raise NetworkError('Problem while reading data from the network (%s)' % errstr(e))
-					if sent == 0:
-						self.logger.wire("%s %s problem sending message, will retry later (%s)" % (self.name(),self.peer,errstr(e)))
-						yield False
-					else:
-						self.logger.wire("%s %s blocking io problem mid-way sending through a message, trying to complete" % (self.name(),self.peer))
-						yield False
-			self._writing = None
-			yield True
-			return
-		except socket.error, e:
-			# Must never happen as we are performing a select before the write
-			#failure = getattr(e,'errno',None)
-			#if failure in error.block:
-			#	return False
-			self.close()
-			self.logger.wire("%s %s %s" % (self.name(),self.peer,trace()))
-			if e.errno == errno.EPIPE:
-				# The TCP connection is gone.
-				raise NetworkError('Broken TCP connection')
-			else:
-				raise NetworkError('Problem while writing data to the network (%s)' % errstr(e))
+			except socket.error,e:
+				if e.args[0] in error.block:
+					self.logger.wire("%s %s blocking io problem mid-way through sending a message, trying to complete" % (self.name(),self.peer),'debug')
+				elif e.errno == errno.EPIPE:
+					# The TCP connection is gone.
+					self.close()
+					raise NetworkError('Broken TCP connection')
+				elif e.args[0] in error.fatal:
+					self.close()
+					self.logger.wire("%s %s problem sending message (%s)" % (self.name(),self.peer,errstr(e)))
+					raise NetworkError('Problem while writing data to the network (%s)' % errstr(e))
+				# what error could it be !
+				else:
+					self.logger.wire("%s %s undefined error writing on socket" % (self.name(),self.peer))
+					yield False
 
 	def reader (self):
-		header = ''
-		for part in self._reader(Message.HEADER_LEN):
-			header += part
-			if len(header) != Message.HEADER_LEN:
+		# _reader returns the whole number requested or nothing and then stops
+		for header in self._reader(Message.HEADER_LEN):
+			if not header:
 				yield 0,0,'',''
 
 		if not header.startswith(Message.MARKER):
@@ -219,11 +232,10 @@ class Connection (object):
 			# MUST send the faulty msg_length back
 			raise NotifyError(1,2,'%s has an invalid message length of %d' %(Message().name(msg),msg_length))
 
-		body = ''
 		number = length - Message.HEADER_LEN
-		for part in self._reader(number):
-			body += part
-			if len(body) != number:
+
+		for body in self._reader(number):
+			if not body:
 				yield 0,0,'',''
 
 		yield length,msg,header,body

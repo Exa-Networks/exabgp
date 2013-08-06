@@ -229,6 +229,7 @@ def main ():
 			'configuration' : (environment.boolean,environment.lower,'false','undocumented option: raise when parsing configuration errors'),
 			'selfcheck' : (environment.unquote,environment.quote,'','does a self check on the configuration file'),
 			'route' : (environment.unquote,environment.quote,'','decode the route using the configuration'),
+			'defensive' : (environment.boolean,environment.lower,'false', 'generate random fault in the code in purpose'),
 		},
 	}
 

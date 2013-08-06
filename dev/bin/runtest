@@ -45,6 +45,7 @@ def main ():
 
 def check_sequence(exabgp,configuration,daemon,messages):
 	os.environ['exabgp.tcp.once'] = 'true'
+	os.environ['exabgp.debug.defensive'] = 'true'
 
 	timeout = 15  # seconds
 
@@ -83,7 +84,7 @@ def check_sequence(exabgp,configuration,daemon,messages):
 		print 'daemon:\n', daemon_output
 		print
 		print "command lines were:"
-		print "> env exabgp.tcp.port=1790 exabgp.tcp.bind=''", ' '.join(command_exabgp)
+		print "> env exabgp.tcp.port=1790 exabgp.debug.defensive=true exabgp.tcp.once=true exabgp.tcp.bind=''", ' '.join(command_exabgp)
 		print "> env exabgp.tcp.port=1790", ' '.join(command_daemon)
 		print
 
