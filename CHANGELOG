@@ -3,7 +3,7 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
-Version 3.2.x
+Version 3.2.3
  * Fix: an issue in the 3.2.x series when the socket return a non-fatal error
     reported by: Daniel Bradshaw
  * Fix: an issue when the code would not behave correctly on network error
