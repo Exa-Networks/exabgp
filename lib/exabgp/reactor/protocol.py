@@ -118,11 +118,13 @@ class Protocol (object):
 			self.logger.message(self.me('<< UPDATE'))
 
 			if length == 30 and body.startswith(EOR.PREFIX):
-				yield EOR().factory(body)
-
-			if self.neighbor.api.receive_routes:
+				update = EOR().factory(body)
+			elif self.neighbor.api.receive_routes:
 				update = UpdateFactory(self.negotiated,body)
+			else:
+				update = None
 
+			if update:
 				for route in update.routes:
 					self.logger.routes(LazyFormat(self.me(''),str,route))
 
