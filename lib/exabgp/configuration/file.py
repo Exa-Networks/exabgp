@@ -27,11 +27,15 @@ from exabgp.protocol.ip.icmp import NamedICMPType,NamedICMPCode
 from exabgp.protocol.ip.fragment import NamedFragment
 from exabgp.protocol.ip.tcp.flags import NamedTCPFlags
 
+from exabgp.bgp.message.direction import OUT
+
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 
-from exabgp.bgp.message.update.nlri.route import Route,NLRI,PathInfo,Labels,RouteDistinguisher,pack_int
+from exabgp.bgp.message.update.nlri import pack_int  # XXX: FIXME: really ?
+from exabgp.bgp.message.update.nlri.route import Route
+from exabgp.bgp.message.update.nlri.bgp import NLRI,PathInfo,Labels,RouteDistinguisher
 from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
@@ -1126,6 +1130,7 @@ class Configuration (object):
 		labels = route.nlri.labels
 		rd = route.nlri.rd
 		path_info = route.nlri.path_info
+		nexthop = route.nlri.nexthop
 
 		route.mask = split
 		route.nlri = None
@@ -1133,7 +1138,7 @@ class Configuration (object):
 		for _ in range(number):
 			r = deepcopy(route)
 			# update ip to the next route, this recalculate the "ip" field of the Inet class
-			r.nlri = NLRI(afi,safi,pack_int(afi,ip,split),split)
+			r.nlri = NLRI(afi,safi,pack_int(afi,ip,split),split,nexthop,OUT.announce)
 			r.nlri.labels = labels
 			r.nlri.rd = rd
 			r.nlri.path_info = path_info
@@ -1156,7 +1161,7 @@ class Configuration (object):
 		except ValueError:
 			mask = '32'
 		try:
-			route = Route(NLRI(*inet(ip),mask=mask))
+			route = Route(NLRI(*inet(ip),mask=mask,nexthop=None,action=OUT.announce),OUT.announce)
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise
@@ -1360,6 +1365,8 @@ class Configuration (object):
 			else:
 				nh = pton(ip)
 			scope[-1]['routes'][-1].attributes.add(cachedNextHop(nh))
+			scope[-1]['routes'][-1].nlri.nexthop = cachedNextHop(nh)
+
 			return True
 		except:
 			self._error = self._str_route_error
@@ -2069,7 +2076,8 @@ class Configuration (object):
 	def selfcheck (self):
 		# self check to see if we can decode what we encode
 		from exabgp.util.od import od
-		from exabgp.bgp.message.update import Update,UpdateFactory
+		from exabgp.bgp.message.update import Update
+		from exabgp.bgp.message.update.factory import UpdateFactory
 		from exabgp.bgp.message.open import Open
 		from exabgp.bgp.message.open.capability import Capabilities
 		from exabgp.bgp.message.open.capability.negotiated import Negotiated

@@ -186,7 +186,7 @@ def main ():
 			                  '                                  <filename> send the data to a file' \
 			),
 			'all'           : (environment.boolean,environment.lower,'false',    'report debug information for everything'),
-			'configuration' : (environment.boolean,environment.lower,'false',    'report command parsing'),
+			'configuration' : (environment.boolean,environment.lower,'true',     'report command parsing'),
 			'reactor'       : (environment.boolean,environment.lower,'true',     'report signal received, command reload'),
 			'daemon'        : (environment.boolean,environment.lower,'true',     'report pid change, forking, ...'),
 			'processes'     : (environment.boolean,environment.lower,'true',     'report handling of forked processes'),

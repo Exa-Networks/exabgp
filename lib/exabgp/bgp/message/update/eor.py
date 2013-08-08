@@ -7,6 +7,7 @@ Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message import Message
+from exabgp.bgp.message.direction import OUT
 from exabgp.bgp.message.update.nlri.eor import RouteEOR,announcedRouteEOR
 
 # =================================================================== End-Of-RIB
@@ -21,7 +22,7 @@ class EOR (Message):
 
 	def new (self,families):
 		for afi,safi in families:
-			self.routes.append(RouteEOR(afi,safi,'announce'))
+			self.routes.append(RouteEOR(afi,safi,OUT.announce))
 		return self
 
 	def factory(self,data):

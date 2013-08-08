@@ -267,7 +267,7 @@ class Reactor (object):
 #				from exabgp.leak import objgraph
 #				print objgraph.show_most_common_types(limit=20)
 #				import random
-#				obj = objgraph.by_type('RouteBGP')[random.randint(0,2000)]
+#				obj = objgraph.by_type('Route')[random.randint(0,2000)]
 #				objgraph.show_backrefs([obj], max_depth=10)
 
 	def shutdown (self):

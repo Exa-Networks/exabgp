@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-route.py
+eor.py
 
 Created by Thomas Mangin on 2012-07-20.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from struct import unpack
-
+from exabgp.bgp.message.direction import IN
 from exabgp.protocol.ip.address import Address
 
 class RouteEOR (object):
@@ -29,4 +29,4 @@ class RouteEOR (object):
 		return str(self)
 
 def announcedRouteEOR (data):
-	return RouteEOR(unpack('!H',data[-4:-2])[0],unpack('!H',data[-2:])[0],'announced')
+	return RouteEOR(unpack('!H',data[-4:-2])[0],unpack('!H',data[-2:])[0],IN.announced)

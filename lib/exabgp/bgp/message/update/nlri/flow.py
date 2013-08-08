@@ -10,7 +10,7 @@ from struct import pack
 
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.protocol.ip.address import Address
-from exabgp.bgp.message.update.nlri.route import BGPPrefix
+from exabgp.bgp.message.update.nlri import GenericNLRI
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attributes import Attributes
 from exabgp.bgp.message.update.attribute.communities import ECommunities
@@ -26,8 +26,8 @@ class IComponent (object):
 
 class CommonOperator:
 	# power (2,x) is the same as 1 << x which is what the RFC say the len is
-	power = { 0:1, 1:2, 2:4, 3:8, }
-	rewop = { 1:0, 2:1, 4:2, 8:3, }
+	power = {0:1, 1:2, 2:4, 3:8,}
+	rewop = {1:0, 2:1, 4:2, 8:3,}
 	len_position = 0x30
 
 	EOL       = 0x80
@@ -61,7 +61,7 @@ class IPrefix (IComponent):
 
 	def __init__ (self,ipv4,netmask):
 		raw = ''.join(chr(int(_)) for _ in ipv4.split('.'))
-		self.nlri = BGPPrefix(AFI.ipv4,SAFI.flow_ipv4,raw,netmask)
+		self.nlri = GenericNLRI(AFI.ipv4,SAFI.flow_ipv4,raw,netmask)
 
 	def pack (self):
 		raw = self.nlri.pack(addpath=False)
@@ -120,7 +120,7 @@ class NumericString (object):
 	}
 
 	def __str__ (self):
-		return "%s%s" % (self._string[self.operations & (CommonOperator.EOL ^ 0xFF) ], self.value)
+		return "%s%s" % (self._string[self.operations & (CommonOperator.EOL ^ 0xFF)], self.value)
 
 class BinaryString (object):
 	_string = {
@@ -131,7 +131,7 @@ class BinaryString (object):
 	}
 
 	def __str__ (self):
-		return "%s%s" % (self._string[self.operations & (CommonOperator.EOL ^ 0xFF) ], self.value)
+		return "%s%s" % (self._string[self.operations & (CommonOperator.EOL ^ 0xFF)], self.value)
 
 # Components ..............................
 

@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-set.py
+attributes/__init__.py
 
 Created by Thomas Mangin on 2010-01-16.
 Copyright (c) 2009-2013  Exa Networks. All rights reserved.
@@ -14,12 +14,14 @@ from exabgp.util.cache import Cache
 
 from exabgp.protocol.family import AFI,SAFI
 
+from exabgp.bgp.message.direction import IN
+
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.eor import RouteEOR
+
 from exabgp.bgp.message.update.attribute.id import AttributeID as AID
 from exabgp.bgp.message.update.attribute.flag import Flag
-
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import ASPath,AS4Path
 from exabgp.bgp.message.update.attribute.nexthop import cachedNextHop
@@ -64,7 +66,8 @@ class MultiAttributes (list):
 		return 'MultiAttibutes(%s)' % ' '.join(str(_) for _ in self)
 
 class Attributes (dict):
-	routeFactory = None
+	# we need this to not create an include loop !
+	nlriFactory = None
 	# A cache of parsed attributes
 	cache = {}
 	# A previously parsed object
@@ -342,14 +345,17 @@ class Attributes (dict):
 
 			# XXX: we do assume that it is an EOR. most likely harmless
 			if not data:
-				self.mp_withdraw.append(RouteEOR(afi,safi,'announced'))
+				self.mp_withdraw.append(RouteEOR(afi,safi,IN.announced))
 				return self.factory(next)
 
 			while data:
-				route = self.routeFactory(afi,safi,data,addpath,'withdrawn')
-				route.attributes = self
-				self.mp_withdraw.append(route)
-				data = data[len(route.nlri):]
+				# route = self.nlriFactory(afi,safi,data,addpath,IN.withdrawn)
+				# route.attributes = self
+				# self.mp_withdraw.append(route)
+				# data = data[len(route.nlri):]
+				nlri = self.nlriFactory(afi,safi,data,addpath,None,IN.withdrawn)
+				self.mp_withdraw.append(nlri)
+				data = data[len(nlri):]
 			return self.factory(next)
 
 		if code == AID.MP_REACH_NLRI:
@@ -413,11 +419,14 @@ class Attributes (dict):
 			data = data[offset:]
 
 			while data:
-				route = self.routeFactory(afi,safi,data,addpath,'announced')
-				if not route.attributes.add_from_cache(AID.NEXT_HOP,nh):
-					route.attributes.add(cachedNextHop(nh),nh)
-				self.mp_announce.append(route)
-				data = data[len(route.nlri):]
+				# route = self.nlriFactory(afi,safi,data,addpath,IN.announced)
+				# if not route.attributes.add_from_cache(AID.NEXT_HOP,nh):
+				# 	route.attributes.add(cachedNextHop(nh),nh)
+				# self.mp_announce.append(route)
+				# data = data[len(route.nlri):]
+				nlri = self.nlriFactory(afi,safi,data,addpath,nh,IN.announced)
+				self.mp_announce.append(nlri)
+				data = data[len(nlri):]
 			return self.factory(next)
 
 		if flag & Flag.TRANSITIVE:
@@ -552,27 +561,3 @@ if not Attributes.cache:
 	Attributes.cache[AID.ORIGIN][IGP.pack()] = IGP
 	Attributes.cache[AID.ORIGIN][EGP.pack()] = EGP
 	Attributes.cache[AID.ORIGIN][INC.pack()] = INC
-
-
-def AttributesFactory (routefactory,negotiated,data):
-	try:
-		# caching and checking the last attribute parsed as nice implementation group them :-)
-		if Attributes.cached and Attributes.cached.cacheable and data.startswith(Attributes.cached.prefix):
-			attributes = Attributes.cached
-			data = data[len(attributes.prefix):]
-		else:
-			attributes = Attributes()
-			Attributes.cached = attributes
-
-		attributes.routeFactory = routefactory
-		# XXX: hackish for now
-		attributes.mp_announce = []
-		attributes.mp_withdraw = []
-
-		attributes.negotiated = negotiated
-		attributes.factory(data)
-		if AID.AS_PATH in attributes and AID.AS4_PATH in attributes:
-			attributes.merge_attributes()
-		return attributes
-	except IndexError:
-		raise Notify(3,2,data)

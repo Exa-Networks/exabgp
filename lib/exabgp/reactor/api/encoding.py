@@ -9,6 +9,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 import time
 
+from exabgp.bgp.message.direction import IN
 
 class APIOptions (object):
 	def __init__ (self):
@@ -112,9 +113,9 @@ class JSON (object):
 		minus = {}
 		route = None
 		for route in routes:
-			if route.action == 'announced':
+			if route.action == IN.announced:
 				plus.setdefault((route.nlri.afi,route.nlri.safi),[]).append(route)
-			if route.action == 'withdrawn':
+			if route.action == IN.withdrawn:
 				minus.setdefault((route.nlri.afi,route.nlri.safi),[]).append(route)
 
 		add = []
@@ -148,4 +149,3 @@ class JSON (object):
 
 	def bmp (self,bmp,routes):
 		return self._header(self._bmp(bmp,self._routes(routes)))
-
