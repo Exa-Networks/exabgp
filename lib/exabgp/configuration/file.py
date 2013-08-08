@@ -33,10 +33,10 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 
+from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.nlri import pack_int  # XXX: FIXME: really ?
-from exabgp.bgp.message.update.nlri.route import Route
 from exabgp.bgp.message.update.nlri.bgp import NLRI,PathInfo,Labels,RouteDistinguisher
-from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,Flow,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
+from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,FlowNLRI,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute.origin import Origin
@@ -273,7 +273,7 @@ class Configuration (object):
 		scope = [{}]
 		if not self._single_static_route(scope,tokens[1:]):
 			return None
-		return scope[0]['routes']
+		return scope[0]['updates']
 
 	def parse_api_flow (self,command):
 		self._tokens = self._tokenise(' '.join(self._cleaned(command).split(' ')[2:]).split('\\n'))
@@ -282,21 +282,21 @@ class Configuration (object):
 			return None
 		if not self._check_flow_route(scope):
 			return None
-		return scope[0]['routes']
+		return scope[0]['updates']
 
-	def add_route_to_peers (self,route,peers):
+	def add_route_to_peers (self,update,peers):
 		result = False
 		for neighbor in self.neighbor:
 			if peers is None or neighbor in peers:
-				if self.neighbor[neighbor].add_route(route):
+				if self.neighbor[neighbor].add_route(update):
 					result = True
 		return result
 
-	def remove_route_from_peers (self,route,peers):
+	def remove_route_from_peers (self,update,peers):
 		result = False
 		for neighbor in self.neighbor:
 			if peers is None or neighbor in peers:
-				if self.neighbor[neighbor].remove_route(route):
+				if self.neighbor[neighbor].remove_route(update):
 					result = True
 		return result
 
@@ -803,7 +803,7 @@ class Configuration (object):
 		if w.lower() in ['announce','withdraw']:
 			raise ValueError('invalid watchdog name %s' % w)
 		try:
-			scope[-1]['routes'][-1].attributes.add(Watchdog(w))
+			scope[-1]['updates'][-1].attributes.add(Watchdog(w))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -812,7 +812,7 @@ class Configuration (object):
 
 	def _route_withdraw (self,scope,tokens):
 		try:
-			scope[-1]['routes'][-1].attributes.add(Withdrawn())
+			scope[-1]['updates'][-1].attributes.add(Withdrawn())
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -867,10 +867,10 @@ class Configuration (object):
 			v = local_scope.get('hold-time','')
 			if v: neighbor.hold_time = v
 
-			v = local_scope.get('routes',[])
-			for route in v:
+			v = local_scope.get('updates',[])
+			for update in v:
 				# This add the family to neighbor.families()
-				neighbor.add_route(route)
+				neighbor.add_route(update)
 
 		for local_scope in (scope[0],scope[-1]):
 			neighbor.api.receive_packets |= local_scope.get('receive-packets',False)
@@ -1100,52 +1100,51 @@ class Configuration (object):
 
 	def _split_last_route (self,scope):
 		# if the route does not need to be broken in smaller routes, return
-		route = scope[-1]['routes'][-1]
-		if not AttributeID.INTERNAL_SPLIT in route.attributes:
+		update = scope[-1]['updates'][-1]
+		if not AttributeID.INTERNAL_SPLIT in update.attributes:
 			return True
 
 		# ignore if the request is for an aggregate, or the same size
-		mask = route.nlri.mask
-		split = route.attributes[AttributeID.INTERNAL_SPLIT]
+		mask = update.nlri[0].mask
+		split = update.attributes[AttributeID.INTERNAL_SPLIT]
 		if mask >= split:
 			return True
 
 		# get a local copy of the route
-		route = scope[-1]['routes'].pop(-1)
+		update = scope[-1]['updates'].pop(-1)
 
 		# calculate the number of IP in the /<size> of the new route
-		increment = pow(2,(len(route.nlri.packed)*8) - split)
+		increment = pow(2,(len(update.nlris[0].packed)*8) - split)
 		# how many new routes are we going to create from the initial one
-		number = pow(2,split - route.nlri.mask)
+		number = pow(2,split - update.nlris[0].mask)
 
 		# convert the IP into a integer/long
 		ip = 0
-		for c in route.nlri.packed:
+		for c in update.nlris[0].packed:
 			ip = ip << 8
 			ip += ord(c)
 
-		afi = route.nlri.afi
-		safi = route.nlri.safi
+		afi = update.nlris[0].afi
+		safi = update.nlris[0].safi
 		# Really ugly
-		labels = route.nlri.labels
-		rd = route.nlri.rd
-		path_info = route.nlri.path_info
-		nexthop = route.nlri.nexthop
+		labels = update.nlris[0].labels
+		rd = update.nlris[0].rd
+		path_info = update.nlris[0].path_info
+		nexthop = update.nlris[0].nexthop
 
-		route.mask = split
-		route.nlri = None
+		update.mask = split
+		update.nlri = None
 		# generate the new routes
 		for _ in range(number):
-			r = deepcopy(route)
 			# update ip to the next route, this recalculate the "ip" field of the Inet class
-			r.nlri = NLRI(afi,safi,pack_int(afi,ip,split),split,nexthop,OUT.announce)
-			r.nlri.labels = labels
-			r.nlri.rd = rd
-			r.nlri.path_info = path_info
+			nlri = NLRI(afi,safi,pack_int(afi,ip,split),split,nexthop,OUT.announce)
+			nlri.labels = labels
+			nlri.rd = rd
+			nlri.path_info = path_info
 			# next ip
 			ip += increment
 			# save route
-			scope[-1]['routes'].append(r)
+			scope[-1]['updates'].append(Update().new(nlri,update.attributes))
 
 		return True
 
@@ -1161,33 +1160,34 @@ class Configuration (object):
 		except ValueError:
 			mask = '32'
 		try:
-			route = Route(NLRI(*inet(ip),mask=mask,nexthop=None,action=OUT.announce),OUT.announce)
+			update = Update().new([NLRI(*inet(ip),mask=mask,nexthop=None,action=OUT.announce)],Attributes())
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
 
-		if 'routes' not in scope[-1]:
-			scope[-1]['routes'] = []
+		if 'updates' not in scope[-1]:
+			scope[-1]['updates'] = []
 
-		scope[-1]['routes'].append(route)
+		scope[-1]['updates'].append(update)
 		return True
 
 	def pop_last_static_route (self,scope):
-		route = scope[-1]['routes'][-1]
-		scope[-1]['routes'] = scope[-1]['routes'][:-1]
-		return route
+		update = scope[-1]['updates'][-1]
+		scope[-1]['updates'] = scope[-1]['updates'][:-1]
+		return update
 
-	def remove_route (self,route,scope):
-		for r in scope[-1]['routes']:
-			if r == route:
-				scope[-1]['routes'].remove(r)
+	# XXX: FIXME: ???
+	def remove_route (self,update,scope):
+		for u in scope[-1]['updates']:
+			if u == update:
+				scope[-1]['updates'].remove(u)
 				return True
 		return False
 
 	def _check_static_route (self,scope):
-		route = scope[-1]['routes'][-1]
-		if not route.attributes.has(AttributeID.NEXT_HOP):
+		update = scope[-1]['updates'][-1]
+		if not update.attributes.has(AttributeID.NEXT_HOP):
 			self._error = 'syntax: route IP/MASK { next-hop IP; }'
 			if self.debug: raise
 			return False
@@ -1345,10 +1345,10 @@ class Configuration (object):
 
 			for (ID,klass) in Attributes.lookup.iteritems():
 				if code == ID and flag == klass.FLAG:
-					scope[-1]['routes'][-1].attributes.add(klass(raw))
+					scope[-1]['updates'][-1].attributes.add(klass(raw))
 					return True
 
-			scope[-1]['routes'][-1].attributes.add(Unknown(code,flag,raw))
+			scope[-1]['updates'][-1].attributes.add(Unknown(code,flag,raw))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -1356,7 +1356,7 @@ class Configuration (object):
 			return False
 
 	def _route_next_hop (self,scope,tokens):
-		if scope[-1]['routes'][-1].attributes.get(AttributeID.NEXT_HOP,None):
+		if scope[-1]['updates'][-1].attributes.get(AttributeID.NEXT_HOP,None):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
@@ -1369,13 +1369,16 @@ class Configuration (object):
 				nh = la.pack()
 			else:
 				nh = pton(ip)
-			scope[-1]['routes'][-1].nlri.nexthop = cachedNextHop(nh)
 
-			afi = scope[-1]['routes'][-1].nlri.afi
-			safi = scope[-1]['routes'][-1].nlri.safi
+			update = scope[-1]['updates'][-1]
+			nlri = update.nlris[0]
+			afi = nlri.afi
+			safi = nlri.safi
+
+			nlri.nexthop = cachedNextHop(nh)
 
 			if afi == AFI.ipv4 and safi in (SAFI.unicast,SAFI.multicast):
-				scope[-1]['routes'][-1].attributes.add(cachedNextHop(nh))
+				update.attributes.add(cachedNextHop(nh))
 
 			return True
 		except:
@@ -1386,13 +1389,13 @@ class Configuration (object):
 	def _route_origin (self,scope,tokens):
 		data = tokens.pop(0).lower()
 		if data == 'igp':
-			scope[-1]['routes'][-1].attributes.add(Origin(Origin.IGP))
+			scope[-1]['updates'][-1].attributes.add(Origin(Origin.IGP))
 			return True
 		if data == 'egp':
-			scope[-1]['routes'][-1].attributes.add(Origin(Origin.EGP))
+			scope[-1]['updates'][-1].attributes.add(Origin(Origin.EGP))
 			return True
 		if data == 'incomplete':
-			scope[-1]['routes'][-1].attributes.add(Origin(Origin.INCOMPLETE))
+			scope[-1]['updates'][-1].attributes.add(Origin(Origin.INCOMPLETE))
 			return True
 		self._error = self._str_route_error
 		if self.debug: raise
@@ -1433,12 +1436,12 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
-		scope[-1]['routes'][-1].attributes.add(ASPath(as_seq,as_set))
+		scope[-1]['updates'][-1].attributes.add(ASPath(as_seq,as_set))
 		return True
 
 	def _route_med (self,scope,tokens):
 		try:
-			scope[-1]['routes'][-1].attributes.add(MED(pack('!L',int(tokens.pop(0)))))
+			scope[-1]['updates'][-1].attributes.add(MED(pack('!L',int(tokens.pop(0)))))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -1447,7 +1450,7 @@ class Configuration (object):
 
 	def _route_local_preference (self,scope,tokens):
 		try:
-			scope[-1]['routes'][-1].attributes.add(LocalPreference(pack('!L',int(tokens.pop(0)))))
+			scope[-1]['updates'][-1].attributes.add(LocalPreference(pack('!L',int(tokens.pop(0)))))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -1456,7 +1459,7 @@ class Configuration (object):
 
 	def _route_atomic_aggregate (self,scope,tokens):
 		try:
-			scope[-1]['routes'][-1].attributes.add(AtomicAggregate())
+			scope[-1]['updates'][-1].attributes.add(AtomicAggregate())
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -1489,16 +1492,16 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-		scope[-1]['routes'][-1].attributes.add(Aggregator(local_as.pack(True)+local_address.pack()))
+		scope[-1]['updates'][-1].attributes.add(Aggregator(local_as.pack(True)+local_address.pack()))
 		return True
 
 	def _route_path_information (self,scope,tokens):
 		try:
 			pi = tokens.pop(0)
 			if pi.isdigit():
-				scope[-1]['routes'][-1].nlri.path_info = PathInfo(integer=int(pi))
+				scope[-1]['updates'][-1].nlri.path_info = PathInfo(integer=int(pi))
 			else:
-				scope[-1]['routes'][-1].nlri.path_info = PathInfo(ip=pi)
+				scope[-1]['updates'][-1].nlri.path_info = PathInfo(ip=pi)
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -1541,7 +1544,7 @@ class Configuration (object):
 
 	def _route_originator_id (self,scope,tokens):
 		try:
-			scope[-1]['routes'][-1].attributes.add(OriginatorID(*inet(tokens.pop(0))))
+			scope[-1]['updates'][-1].attributes.add(OriginatorID(*inet(tokens.pop(0))))
 			return True
 		except:
 			self._error = self._str_route_error
@@ -1572,7 +1575,7 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
-		scope[-1]['routes'][-1].attributes.add(clusterlist)
+		scope[-1]['updates'][-1].attributes.add(clusterlist)
 		return True
 
 	def _route_community (self,scope,tokens):
@@ -1596,7 +1599,7 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
-		scope[-1]['routes'][-1].attributes.add(communities)
+		scope[-1]['updates'][-1].attributes.add(communities)
 		return True
 
 	def _parse_extended_community (self,scope,data):
@@ -1636,7 +1639,7 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
-		scope[-1]['routes'][-1].attributes.add(extended_communities)
+		scope[-1]['updates'][-1].attributes.add(extended_communities)
 		return True
 
 
@@ -1645,7 +1648,7 @@ class Configuration (object):
 			size = tokens.pop(0)
 			if not size or size[0] != '/':
 				raise ValueError('route "as" require a CIDR')
-			scope[-1]['routes'][-1].attributes.add(Split(int(size[1:])))
+			scope[-1]['updates'][-1].attributes.add(Split(int(size[1:])))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -1674,7 +1677,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-		nlri = scope[-1]['routes'][-1].nlri
+		nlri = scope[-1]['updates'][-1].nlri
 		if not nlri.safi.has_label():
 			nlri.safi = SAFI(SAFI.nlri_mpls)
 		nlri.labels = Labels(labels)
@@ -1708,7 +1711,7 @@ class Configuration (object):
 				else:
 					raise ValueError('invalid route-distinguisher %s' % data)
 
-			nlri = scope[-1]['routes'][-1].nlri
+			nlri = scope[-1]['updates'][-1].nlri
 			# overwrite nlri-mpls
 			nlri.safi = SAFI(SAFI.mpls_vpn)
 			nlri.rd = RouteDistinguisher(rd)
@@ -1742,16 +1745,18 @@ class Configuration (object):
 		self._flow_state = 'match'
 
 		try:
-			flow = Flow()
+			attributes = Attributes()
+			attributes[AttributeID.EXTENDED_COMMUNITY] = ECommunities()
+			flow = Update().new([FlowNLRI(),],attributes)
 		except ValueError:
 			self._error = self._str_flow_error
 			if self.debug: raise
 			return False
 
-		if 'routes' not in scope[-1]:
-			scope[-1]['routes'] = []
+		if 'updates' not in scope[-1]:
+			scope[-1]['updates'] = []
 
-		scope[-1]['routes'].append(flow)
+		scope[-1]['updates'].append(flow)
 		return True
 
 	def _check_flow_route (self,scope):
@@ -1824,7 +1829,7 @@ class Configuration (object):
 	def _flow_source (self,scope,tokens):
 		try:
 			ip,nm = tokens.pop(0).split('/')
-			scope[-1]['routes'][-1].add_and(Source(ip,nm))
+			scope[-1]['updates'][-1].nlris[-1].add_and(Source(ip,nm))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -1834,7 +1839,7 @@ class Configuration (object):
 	def _flow_destination (self,scope,tokens):
 		try:
 			ip,nm = tokens.pop(0).split('/')
-			scope[-1]['routes'][-1].add_and(Destination(ip,nm))
+			scope[-1]['updates'][-1].nlris[-1].add_and(Destination(ip,nm))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -1879,7 +1884,7 @@ class Configuration (object):
 					operator,_ = self._operator(test)
 					value,test = self._value(_)
 					number = converter(value)
-					scope[-1]['routes'][-1].add_or(klass(AND|operator,number))
+					scope[-1]['updates'][-1].nlris[-1].add_or(klass(AND|operator,number))
 					if test:
 						if test[0] == '&':
 							AND = BinaryOperator.AND
@@ -1909,7 +1914,7 @@ class Configuration (object):
 							number = int(name)
 						except ValueError:
 							number = converter(name)
-						scope[-1]['routes'][-1].add_or(klass(NumericOperator.EQ|AND,number))
+						scope[-1]['updates'][-1].nlris[-1].add_or(klass(NumericOperator.EQ|AND,number))
 					except IndexError:
 						self._error = self._str_flow_error
 						if self.debug: raise
@@ -1919,7 +1924,7 @@ class Configuration (object):
 					number = int(name)
 				except ValueError:
 					number = converter(name)
-				scope[-1]['routes'][-1].add_or(klass(NumericOperator.EQ|AND,number))
+				scope[-1]['updates'][-1].nlris[-1].add_or(klass(NumericOperator.EQ|AND,number))
 		except ValueError:
 			self._error = self._str_flow_error
 			if self.debug: raise
@@ -1964,7 +1969,7 @@ class Configuration (object):
 	def _flow_route_discard (self,scope,tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
-			scope[-1]['routes'][-1].add_action(to_FlowTrafficRate(ASN(0),0))
+			scope[-1]['updates'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowTrafficRate(ASN(0),0))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -1980,7 +1985,7 @@ class Configuration (object):
 			if speed > 1000000000000:
 				speed = 1000000000000
 				self.logger.configuration("rate-limiting changed for 1 000 000 000 000 bytes from %s" % tokens[0],'warning')
-			scope[-1]['routes'][-1].add_action(to_FlowTrafficRate(ASN(0),speed))
+			scope[-1]['updates'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowTrafficRate(ASN(0),speed))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -2002,7 +2007,7 @@ class Configuration (object):
 				number = int(suffix)
 				if number >= pow(2,16):
 					raise ValueError('number is too large, max 16 bits %s' % number)
-				scope[-1]['routes'][-1].add_action(to_FlowRedirectIP(ipn,number))
+				scope[-1]['updates'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirectIP(ipn,number))
 				return True
 			else:
 				asn = int(prefix)
@@ -2011,7 +2016,7 @@ class Configuration (object):
 					raise ValueError('asn is a 32 bits number, it can only be 16 bit %s' % route_target)
 				if route_target >= pow(2,32):
 					raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
-				scope[-1]['routes'][-1].add_action(to_FlowRedirectASN(asn,route_target))
+				scope[-1]['updates'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirectASN(asn,route_target))
 				return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -2019,7 +2024,7 @@ class Configuration (object):
 			return False
 
 
-	def decode (self,route):
+	def decode (self,update):
 		# self check to see if we can decode what we encode
 		import sys
 		from exabgp.bgp.message.update import UpdateFactory
@@ -2048,7 +2053,7 @@ class Configuration (object):
 		negotiated.received(o2)
 		#grouped = False
 
-		raw = ''.join(chr(int(_,16)) for _ in (route[i*2:(i*2)+2] for i in range(len(route)/2)))
+		raw = ''.join(chr(int(_,16)) for _ in (update[i*2:(i*2)+2] for i in range(len(update)/2)))
 
 		while raw:
 			if raw.startswith('\xff'*16):
@@ -2058,21 +2063,21 @@ class Configuration (object):
 				injected,raw = raw[19:size],raw[size:]
 
 				if kind == 2:
-					self.logger.parser('the route is an update')
+					self.logger.parser('the message is an update')
 					factory = UpdateFactory
 				else:
-					self.logger.parser('the route is not an update (%d) - aborting' % kind)
+					self.logger.parser('the message is not an update (%d) - aborting' % kind)
 					sys.exit(1)
 			else:
-				self.logger.parser('header missing, assuming this route is ONE update')
+				self.logger.parser('header missing, assuming this message is ONE update')
 				factory = UpdateFactory
 				injected,raw = raw,''
 
 			# This does not take the BGP header - let's assume we will not break that :)
 			update = factory(negotiated,injected)
 			self.logger.parser('')  # new line
-			for route in update.routes:
-				self.logger.parser('decoded route %s' % route.extensive())
+			for number in range(len(update.nlris)):
+				self.logger.parser('decoded update %s' % update.extensive(number))
 
 		import sys
 		sys.exit(0)
@@ -2118,27 +2123,28 @@ class Configuration (object):
 			for family in self.neighbor[nei].families():
 				if not family in self.neighbor[nei]._routes:
 					continue
-				for route in self.neighbor[nei]._routes[family]:
-					str1 = route.extensive()
-					update = Update().new([route])
-					packed = update.announce(negotiated)
-					self.logger.parser('parsed route requires %d updates' % len(packed))
-					for pack in packed:
-						self.logger.parser('update size is %d' % len(pack))
-						# This does not take the BGP header - let's assume we will not break that :)
-						try:
-							update = UpdateFactory(negotiated,pack[19:])
-							self.logger.parser('')  # new line
-							for route in update.routes:
-								str2 = route.extensive()
+				for update in self.neighbor[nei]._routes[family]:
+					for number in range(len(update.nlris)):
+						nlri = update.nlris[number]
+						str1 = update.extensive(number)
+						update = Update().new([nlri],update.attributes)
+						packed_updates = update.announce(negotiated)
+						self.logger.parser('parsed route requires %d updates' % len(packed_updates))
+						for pack in packed_updates:
+							self.logger.parser('update size is %d' % len(pack))
+							# This does not take the BGP header - let's assume we will not break that :)
+							try:
+								generated = UpdateFactory(negotiated,pack[19:])
+								self.logger.parser('')  # new line
+								str2 = generated.extensive(0)
 								self.logger.parser('parsed  route %s' % str1)
 								self.logger.parser('recoded route %s' % str2)
 								self.logger.parser('recoded hex   %s\n' % od(pack))
-						except Notify,e:
-							# we do not decode Flow Routes
-							if e.code == 3 and e.subcode == 2:
-								continue
-							raise e
+							except Notify,e:
+								# we do not decode Flow Routes
+								if e.code == 3 and e.subcode == 2:
+									continue
+								raise e
 
 		import sys
 		sys.exit(0)

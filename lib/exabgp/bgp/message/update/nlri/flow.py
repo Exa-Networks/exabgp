@@ -207,7 +207,11 @@ def _unique ():
 unique = _unique()
 
 class FlowNLRI (Attributes,Address):
-	def __init__ (self,afi,safi):
+	# conform to the API used in UPDATE
+	class rd: rd = ''
+	nexthop = None
+
+	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ipv4):
 		Attributes.__init__(self)
 		Address.__init__(self,afi,safi)
 		self.rules = {}
@@ -289,27 +293,27 @@ def _next_index ():
 next_index = _next_index()
 
 
-class Flow (object):
-	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ipv4):
-		self.attributes = Attributes()
-		self.nlri = FlowNLRI(afi,safi)
-		self.attributes[AttributeID.EXTENDED_COMMUNITY] = ECommunities()
-		self.packed = next_index.next()
+# class Flow (object):
+# 	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ipv4):
+# 		self.attributes = Attributes()
+# 		self.nlris = [FlowNLRI(afi,safi),]
+# 		self.attributes[AttributeID.EXTENDED_COMMUNITY] = ECommunities()
+# 		self.packed = next_index.next()
 
-	def index (self):
-		return self.packed
+# 	def index (self,number=None):
+# 		return self.packed
 
-	def add_and (self,rule):
-		return self.nlri.add_and(rule)
+# 	def add_and (self,rule):
+# 		return self.nlris[0].add_and(rule)
 
-	def add_or (self,rule):
-		return self.nlri.add_or(rule)
+# 	def add_or (self,rule):
+# 		return self.nlris[0].add_or(rule)
 
-	def add_action (self,community):
-		self.attributes[AttributeID.EXTENDED_COMMUNITY].add(community)
+# 	def add_action (self,community):
+# 		self.attributes[AttributeID.EXTENDED_COMMUNITY].add(community)
 
-	def __str__ (self):
-		return "%s %s%s" % (Address.__str__(self.nlri),str(self.nlri),str(self.attributes))
+# 	def __str__ (self):
+# 		return "%s %s%s" % (Address.__str__(self.nlris[0]),str(self.nlris[0]),str(self.attributes))
 
-	def extensive (self):
-		return str(self)
+# 	def extensive (self,number=None):
+# 		return str(self)

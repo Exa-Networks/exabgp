@@ -17,24 +17,39 @@ class MPRNLRI (Attribute):
 	ID = AttributeID.MP_REACH_NLRI
 	MULTIPLE = True
 
-	def __init__ (self,routes):
+	def __init__ (self,nlris):
 		# all the routes must have the same next-hop
-		self.routes = routes
+		self.nlris = nlris
 
 	def pack (self,addpath):
-		next_hop = ''
-		# EOR do not have any next_hop
-		if self.routes[0].attributes.has(AttributeID.NEXT_HOP):
-			# we do not want a next_hop attribute packed (with the _attribute()) but just the next_hop itself
-			next_hop = self.routes[0].attributes[AttributeID.NEXT_HOP].packed
-			if self.routes[0].nlri.safi.has_rd():
-				next_hop = chr(0)*8 + next_hop
-		routes = ''.join([route.nlri.pack(addpath) for route in self.routes])
-		return self._attribute(
-			self.routes[0].nlri.afi.pack() + self.routes[0].nlri.safi.pack() +
-			chr(len(next_hop)) + next_hop +
-			chr(0) + routes
-		)
+		if not self.nlris:
+			return ''
+
+		mpnlri = {}
+		for nlri in self.nlris:
+			if nlri.nexthop:
+				# .packed and not .pack()
+				# we do not want a next_hop attribute packed (with the _attribute()) but just the next_hop itself
+				if nlri.safi.has_rd():
+					nexthop = chr(0)*8 + nlri.nexthop.packed
+				else:
+					nexthop = nlri.nexthop.packed
+			else:
+				# EOR do not have any next_hop
+				nexthop = ''
+
+			# mpunli[afi,safi][nexthop] = nlri
+			mpnlri.setdefault((nlri.afi.pack(),nlri.safi.pack()),{}).setdefault(nexthop,[]).append(nlri.pack(addpath))
+
+		r = ''
+		for (pafi,psafi),data in mpnlri.iteritems():
+			for nexthop,nlris in data.iteritems():
+				r += self._attribute(
+					pafi + psafi +
+					chr(len(nexthop)) + nexthop +
+					chr(0) + ''.join(nlris)
+				)
+		return r
 
 	def __len__ (self):
 		return len(self.pack())

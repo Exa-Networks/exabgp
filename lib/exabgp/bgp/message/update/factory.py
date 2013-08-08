@@ -14,12 +14,13 @@ from exabgp.bgp.message.direction import IN
 from exabgp.bgp.message.update.attribute.id import AttributeID as AID
 
 from exabgp.bgp.message.update import Update
-from exabgp.bgp.message.update.nlri.route import Route
+#from exabgp.bgp.message.update.nlri.route import Route
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.nlri.factory import NLRIFactory
 from exabgp.bgp.message.update.attributes.factory import AttributesFactory
 
+# XXX: FIXME: this can raise ValueError = check it is well intercepted
 def UpdateFactory (negotiated,data):
 	length = len(data)
 
@@ -42,34 +43,21 @@ def UpdateFactory (negotiated,data):
 	addpath = negotiated.addpath.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
 	nh = attributes.get(AID.NEXT_HOP,None)
 
-	routes = []
+	nlris = []
 	while withdrawn:
 		nlri = NLRIFactory(AFI.ipv4,SAFI.unicast_multicast,withdrawn,addpath,nh,IN.withdrawn)
-		route = Route(nlri,IN.withdrawn)
-		route.attributes = attributes
 		withdrawn = withdrawn[len(nlri):]
-		routes.append(route)
+		nlris.append(nlri)
 
 	while announced:
 		nlri = NLRIFactory(AFI.ipv4,SAFI.unicast_multicast,announced,addpath,nh,IN.announced)
-		route = Route(nlri,IN.announced)
-		route.attributes = attributes
 		announced = announced[len(nlri):]
-		routes.append(route)
-
-	# next_hop_attributes = {}
+		nlris.append(nlri)
 
 	for nlri in attributes.mp_withdraw:
-		routes.append(Route(nlri,IN.withdrawn))
+		nlris.append(nlri)
 
 	for nlri in attributes.mp_announce:
-		# next_hop = route.attributes[AttributeID.NEXT_HOP]
-		# str_hop = str(next_hop)
-		# if not str_hop in next_hop_attributes:
-		# 	attr = deepcopy(attributes)
-		# 	attr[AttributeID.NEXT_HOP] = next_hop
-		# 	next_hop_attributes[str_hop] = attr
-		# route.attributes = next_hop_attributes[str_hop]
-		routes.append(Route(nlri,IN.announced))
+		nlris.append(nlri)
 
-	return Update().new(routes)
+	return Update().new(nlris,attributes)

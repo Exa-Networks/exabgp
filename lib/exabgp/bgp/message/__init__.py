@@ -55,35 +55,36 @@ class Message (Exception):
 	}
 
 	def __init__ (self):
-		self._str = None
+		self._name = None
 
 	def name (self,code):
-		if code is None:
-			return 'UNKNOWN (invalid code)'
+		if not self._name:
+			if code is None:
+				self._name = 'UNKNOWN (invalid code)'
+			elif code == self.Type.OPEN:
+				self._name = 'OPEN'
+			elif code == self.Type.UPDATE:
+				self._name = 'UPDATE'
+			elif code == self.Type.NOTIFICATION:
+				self._name = 'NOTIFICATION'
+			elif code == self.Type.KEEPALIVE:
+				self._name = 'KEEPALIVE'
+			elif code == self.Type.ROUTE_REFRESH:
+				self._name = 'ROUTE_REFRESH'
+			# if code & self.Type.LIST:
+			# 	self._str = 'LIST'
+			# if code & self.Type.HEADER:
+			# 	self._str = 'HEADER'
+			# if code & self.Type.GENERAL:
+			# 	self._str = 'GENERAL'
+			else:
+				self._name = 'UNKNOWN (%d)' % code
 
-		if code == self.Type.OPEN:
-			return 'OPEN'
-		elif code == self.Type.UPDATE:
-			return 'UPDATE'
-		elif code == self.Type.NOTIFICATION:
-			return 'NOTIFICATION'
-		elif code == self.Type.KEEPALIVE:
-			return 'KEEPALIVE'
-		elif code == self.Type.ROUTE_REFRESH:
-			return 'ROUTE_REFRESH'
-		# if code & self.Type.LIST:
-		# 	self._str = 'LIST'
-		# if code & self.Type.HEADER:
-		# 	self._str = 'HEADER'
-		# if code & self.Type.GENERAL:
-		# 	self._str = 'GENERAL'
-		return 'UNKNOWN (%d)' % code
+		return self._name
 
 	def _message (self,message=""):
 		message_len = pack('!H',19+len(message))
 		return "%s%s%s%s" % (self.MARKER,message_len,self.TYPE,message)
 
 	def __str__ (self):
-		if not self._str:
-			self._str = self.name(ord(self.TYPE))
-		return self._str
+		raise RuntimeError('do not call __str__ on a Message')

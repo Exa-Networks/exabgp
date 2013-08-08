@@ -49,21 +49,24 @@ class Watchdog (object):
 		self.withdrawn = Withdrawn()
 		self.watchdog = {}
 
-	def integrate (self,route):
-		index = route.index()
+	def integrate (self,update):
+		# making sure we are not broking the code silently
+		assert (len(update.nlris) == 1)
+
+		index = update.index(0)
 
 		if index in self.watchdog:
 			# we reloaded the configuration, do not change watchdogs
 			return
 
-		watchdog = route.attributes.get(AttributeID.INTERNAL_WATCHDOG,None)
+		watchdog = update.attributes.get(AttributeID.INTERNAL_WATCHDOG,None)
 		if not watchdog:
 			# should never happen though !
 			return
 
 		self.status.flick(watchdog)
 
-		withdrawn = route.attributes.get(AttributeID.INTERNAL_WITHDRAW,None)
+		withdrawn = update.attributes.get(AttributeID.INTERNAL_WITHDRAW,None)
 		if withdrawn:
 			self.withdrawn.add(index,watchdog)
 

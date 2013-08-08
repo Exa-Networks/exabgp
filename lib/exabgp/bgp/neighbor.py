@@ -7,6 +7,8 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from exabgp.protocol.family import AFI
+
+from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.capability import AddPath
 from exabgp.bgp.message.update.attribute.id import AttributeID
@@ -96,9 +98,12 @@ class Neighbor (object):
 			if family in self._routes:
 				del self._routes[family]
 
-	def add_route (self,route):
-		self.watchdog.integrate(route)
-		self._routes.setdefault((route.nlri.afi,route.nlri.safi),set()).add(route)
+	def add_route (self,update):
+		## XXX: FIXME: we are breaking the update in multiple to make it work for the moment.
+		self.watchdog.integrate(update)
+		print "\n\nsplitting update in many for the moment\n\n"
+		for nlri in update.nlris:
+			self._routes.setdefault((nlri.afi,nlri.safi),set()).add(Update().new([nlri],update.attributes))
 		return True
 
 	def remove_route (self,route):
@@ -107,8 +112,7 @@ class Neighbor (object):
 			routes = self._routes[(route.nlri.afi,route.nlri.safi)]
 			if route.nlri.afi in (AFI.ipv4,AFI.ipv6):
 				for r in list(routes):
-					if r.nlri == route.nlri and \
-					   r.attributes.get(AttributeID.NEXT_HOP,None) == route.attributes.get(AttributeID.NEXT_HOP,None):
+					if r.nlri == route.nlri and r.attributes.get(AttributeID.NEXT_HOP,None) == route.attributes.get(AttributeID.NEXT_HOP,None):
 						routes.remove(r)
 						removed = True
 			else:
@@ -156,13 +160,14 @@ class Neighbor (object):
 	def __ne__(self, other):
 		return not self.__eq__(other)
 
-	def pprint (self,with_routes=True):
-		routes=''
-		if with_routes:
-			routes += '\nstatic { '
-			for route in self.every_routes():
-				routes += '\n    %s' % route
-			route += '\n}'
+	def pprint (self,with_updates=True):
+		updates=''
+		if with_updates:
+			updates += '\nstatic { '
+			for updates in self.every_routes():
+				for n in range(len(updates)):
+					updates += '\n    %s' % updates.extensive(n)
+			updates += '\n}'
 
 		families = ''
 		for afi,safi in self.families():
@@ -209,7 +214,7 @@ neighbor %s {
 	'    multi-session;\n' if self.multisession else '',
 	families,
 	api,
-	routes
+	updates
 )
 
 	def __str__ (self):

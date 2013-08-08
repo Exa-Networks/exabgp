@@ -11,12 +11,18 @@ from struct import unpack
 from exabgp.bgp.message.direction import IN
 from exabgp.protocol.ip.address import Address
 
+class FakeNLRI (Address):
+	nexthop = None
+
+	def __init__ (self,afi,safi,action):
+		self.action = action
+		Address.__init__(self,afi,safi)
+
 class RouteEOR (object):
 	PREFIX = '\x00\x00\x00\x07\x90\x0f\x00\x03'
 
 	def __init__ (self,afi,safi,action):
-		self.nlri = Address(afi,safi)
-		self.action = action
+		self.nlri = FakeNLRI(afi,safi,action)
 		self.attributes = None  # API compatibility with Route
 
 	def pack (self):

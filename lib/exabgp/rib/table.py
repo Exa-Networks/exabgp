@@ -33,13 +33,15 @@ class Table (object):
 			self._add(routes[route])
 		return self
 
-	def _add (self,route):
-		index = route.index()
+	def _add (self,update):
+		# XXX: XXX: XXX: FIXME: JUST TEMP - REALLY
+		print "\n\nTHIS CODE IS BUGGY and ONLY ALLOW SINGLE NLRI UPDATE\n\n"
+		index = update.index(0)
 		if index in self._plus:
-			if route != self._plus[index][1]:
-				self._plus[index] = (time.time(),route,'*')
+			if update != self._plus[index][1]:
+				self._plus[index] = (time.time(),update,'*')
 			return
-		self._plus[index] = (time.time(),route,'+')
+		self._plus[index] = (time.time(),update,'+')
 
 	def _remove (self,index):
 		if index in self._plus:

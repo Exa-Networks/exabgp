@@ -19,8 +19,11 @@ export PYTHONPATH=$path/lib
 
 for conf in `ls $path/runtest/*conf`
 do
-	env exabgp.tcp.bind='' exabgp.debug.selfcheck=1 $path/../sbin/exabgp $conf > /dev/null 2> /dev/null
-	if [ $? -eq 0 ]
+	result=`env exabgp.tcp.bind='' exabgp.debug.selfcheck=1 $path/../sbin/exabgp $conf 2>&1`
+	retcode=$?
+	problem=`echo $result | grep 'Problem with the configuration file'`
+
+	if [ $retcode -eq 0 ] && [ "$problem" == "" ]
 	then
 		echo ok $conf
 	else

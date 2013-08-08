@@ -40,8 +40,11 @@ Notes
 - need to check if we can prevent the duplication of the peer routes (which are already defined in the neighbor)
 - peer.reload should it be called peer.route_update (just have a guard to prevent route update when reloading the configuration)
 - do we need to have a guard to prevent route update when reloading the configuration
+- expose an API for all the range(len(
+- should we not inherit from Address, make it a container (easier to then use a function to check for IPv4 unicast/multicast)
+- GenericNLRI.__init__ can raise ValueError make sure it does not crash ExaBGP if we get invalid data
 
 Important
 * write the documentation, and do not rely on the example and the site wiki (argh ...)
 * rewrite the unittesting which is really missing.
-* look at all the XXX: in the code
+* look ai all the XXX: in the code
