@@ -1356,6 +1356,11 @@ class Configuration (object):
 			return False
 
 	def _route_next_hop (self,scope,tokens):
+		if scope[-1]['routes'][-1].attributes.get(AttributeID.NEXT_HOP,None):
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+
 		try:
 			# next-hop self is unsupported
 			ip = tokens.pop(0)
@@ -1364,8 +1369,13 @@ class Configuration (object):
 				nh = la.pack()
 			else:
 				nh = pton(ip)
-			scope[-1]['routes'][-1].attributes.add(cachedNextHop(nh))
 			scope[-1]['routes'][-1].nlri.nexthop = cachedNextHop(nh)
+
+			afi = scope[-1]['routes'][-1].nlri.afi
+			safi = scope[-1]['routes'][-1].nlri.safi
+
+			if afi == AFI.ipv4 and safi in (SAFI.unicast,SAFI.multicast):
+				scope[-1]['routes'][-1].attributes.add(cachedNextHop(nh))
 
 			return True
 		except:
