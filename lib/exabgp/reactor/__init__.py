@@ -369,8 +369,9 @@ class Reactor (object):
 			def _show_route (self):
 				for key in self.configuration.neighbor.keys():
 					neighbor = self.configuration.neighbor[key]
-					for route in list(neighbor.every_routes()):
-						self._answer(service,'neighbor %s %s' % (neighbor.local_address,route))
+					for update in list(neighbor.every_updates()):
+						for number in range(len(update.nlris)):
+							self._answer(service,'neighbor %s %s' % (neighbor.local_address,str(update.nlris[number])))
 						yield True
 			self._pending.append(_show_route(self))
 			return True
@@ -379,9 +380,10 @@ class Reactor (object):
 			def _show_extensive (self):
 				for key in self.configuration.neighbor.keys():
 					neighbor = self.configuration.neighbor[key]
-					for route in list(neighbor.every_routes()):
-						self._answer(service,'neighbor %s %s' % (neighbor.name(),route.extensive()))
-						yield True
+					for update in list(neighbor.store.every_updates()):
+						for number in range(len(update.nlris)):
+							self._answer(service,'neighbor %s %s' % (neighbor.name(),update.extensive(number)))
+							yield True
 			self._pending.append(_show_extensive(self))
 			return True
 
@@ -463,15 +465,15 @@ class Reactor (object):
 		# route announcement / withdrawal
 		if 'announce route' in command:
 			def _announce_route (self,command,peers):
-				routes = self.configuration.parse_api_route(command)
-				if not routes:
+				updates = self.configuration.parse_api_route(command)
+				if not updates:
 					self.logger.reactor("Command could not parse route in : %s" % command,'warning')
 					yield True
 				else:
-					for route in routes:
-						self.configuration.remove_route_from_peers(route,peers)
-						self.configuration.add_route_to_peers(route,peers)
-						self.logger.reactor("Route added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',route))
+					for update in updates:
+						self.configuration.remove_update_from_peers(update,peers)
+						self.configuration.add_update_to_peers(update,peers)
+						self.logger.reactor("Route added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',update.extensive(0)))
 						yield False
 					self._route_update = True
 
@@ -489,17 +491,17 @@ class Reactor (object):
 
 		if 'withdraw route' in command:
 			def _withdraw_route (self,command,peers):
-				routes = self.configuration.parse_api_route(command)
-				if not routes:
+				updates = self.configuration.parse_api_route(command)
+				if not updates:
 					self.logger.reactor("Command could not parse route in : %s" % command,'warning')
 					yield True
 				else:
-					for route in routes:
-						if self.configuration.remove_route_from_peers(route,peers):
-							self.logger.reactor("Route found and removed : %s" % route)
+					for update in updates:
+						if self.configuration.remove_update_from_peers(update,peers):
+							self.logger.reactor("Route found and removed : %s" % update.extensive(0))
 							yield False
 						else:
-							self.logger.reactor("Could not find therefore remove route : %s" % route,'warning')
+							self.logger.reactor("Could not find therefore remove route : %s" % update.extensive(0),'warning')
 							yield False
 					self._route_update = True
 
@@ -524,8 +526,8 @@ class Reactor (object):
 					yield True
 				else:
 					for flow in flows:
-						self.configuration.remove_route_from_peers(flow,peers)
-						self.configuration.add_route_to_peers(flow,peers)
+						self.configuration.remove_update_from_peers(flow,peers)
+						self.configuration.add_update_to_peers(flow,peers)
 						self.logger.reactor("Flow added : %s" % flow)
 						yield False
 					self._route_update = True
@@ -550,7 +552,7 @@ class Reactor (object):
 					yield True
 				else:
 					for flow in flows:
-						if self.configuration.remove_route_from_peers(flow,peers):
+						if self.configuration.remove_update_from_peers(flow,peers):
 							self.logger.reactor("Flow found and removed : %s" % flow)
 							yield False
 						else:

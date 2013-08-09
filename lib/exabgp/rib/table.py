@@ -25,28 +25,25 @@ class Table (object):
 
 	# This interface is very good for the file change but not if you want to update from network
 	def recalculate (self):
-		routes = self.peer.neighbor.routes()
+		changes = self.peer.neighbor.store.dump()
+
+		# remove ...
 		for index in self._plus.keys():
-			if index not in routes:
-				self._remove(index)
-		for route in routes:
-			self._add(routes[route])
+			if index not in changes:
+				if index in self._plus:
+					self._minus[index] = (time.time(),self._plus[index][1])
+					del self._plus[index]
+
+		# add ....
+		for index in changes:
+			changed = changes[index]
+			if index in self._plus:
+				if changed != self._plus[index][1]:
+					self._plus[index] = (time.time(),changed,'*')
+			else:
+				self._plus[index] = (time.time(),changed,'+')
+
 		return self
-
-	def _add (self,update):
-		# XXX: XXX: XXX: FIXME: JUST TEMP - REALLY
-		print "\n\nTHIS CODE IS BUGGY and ONLY ALLOW SINGLE NLRI UPDATE\n\n"
-		index = update.index(0)
-		if index in self._plus:
-			if update != self._plus[index][1]:
-				self._plus[index] = (time.time(),update,'*')
-			return
-		self._plus[index] = (time.time(),update,'+')
-
-	def _remove (self,index):
-		if index in self._plus:
-			self._minus[index] = (time.time(),self._plus[index][1])
-			del self._plus[index]
 
 	def changed (self,when):
 		"""table.changed must _always_ returns routes to remove before routes to add and must _always_ finish by the time"""
@@ -54,6 +51,7 @@ class Table (object):
 			t,r = self._minus[index]
 			if when < t:
 				yield ('-',r)
+			# XXX: FIXME: delete the entry in _minus ??
 		for index in self._plus.keys():
 			t,r,o = self._plus[index]
 			if when < t:

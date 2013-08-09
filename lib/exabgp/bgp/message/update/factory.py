@@ -20,7 +20,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.factory import NLRIFactory
 from exabgp.bgp.message.update.attributes.factory import AttributesFactory
 
-# XXX: FIXME: this can raise ValueError = check it is well intercepted
+# XXX: FIXME: this can raise ValueError. IndexError,struct.error (unpack) = check it is well intercepted
 def UpdateFactory (negotiated,data):
 	length = len(data)
 

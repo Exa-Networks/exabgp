@@ -8,10 +8,10 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from exabgp.protocol.family import AFI
 
-from exabgp.bgp.message.update import Update
+from exabgp.rib.store import Store
+
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.capability import AddPath
-from exabgp.bgp.message.update.attribute.id import AttributeID
 
 from exabgp.reactor.api.encoding import APIOptions
 
@@ -50,7 +50,7 @@ class Neighbor (object):
 		self.add_path = None
 
 		self._families = []
-		self._routes = {}
+		self.store = Store(self)
 
 	def name (self):
 		if self.multisession:
@@ -63,25 +63,6 @@ class Neighbor (object):
 		# this list() is important .. as we use the function to modify self._families
 		return list(self._families)
 
-	def every_routes (self):
-		for family in list(self._routes.keys()):
-			for route in self._routes[family]:
-				yield route
-
-	def routes (self):
-		# This function returns a hash and not a list as "in" tests are O(n) with lists and O(1) with hash
-		# and with ten thousands routes this makes an enormous difference (60 seconds to 2)
-
-		def _routes (self):
-			for family in list(self._routes.keys()):
-				for route in self._routes[family]:
-					yield route
-
-		routes = {}
-		for route in self.watchdog.filtered(_routes(self)):
-			routes[route.index()] = route
-		return routes
-
 	def add_family (self,family):
 		# the families MUST be sorted for neighbor indexing name to be predictable for API users
 		if not family in self.families():
@@ -92,43 +73,9 @@ class Neighbor (object):
 				d.setdefault(afi,[]).append(safi)
 			self._families = [(afi,safi) for afi in sorted(d) for safi in sorted(d[afi])]
 
-	def remove_family_and_routes (self,family):
+	def remove_family (self,family):
 		if family in self.families():
 			self._families.remove(family)
-			if family in self._routes:
-				del self._routes[family]
-
-	def add_route (self,update):
-		## XXX: FIXME: we are breaking the update in multiple to make it work for the moment.
-		self.watchdog.integrate(update)
-		print "\n\nsplitting update in many for the moment\n\n"
-		for nlri in update.nlris:
-			self._routes.setdefault((nlri.afi,nlri.safi),set()).add(Update().new([nlri],update.attributes))
-		return True
-
-	def remove_route (self,route):
-		try :
-			removed = False
-			routes = self._routes[(route.nlri.afi,route.nlri.safi)]
-			if route.nlri.afi in (AFI.ipv4,AFI.ipv6):
-				for r in list(routes):
-					if r.nlri == route.nlri and r.attributes.get(AttributeID.NEXT_HOP,None) == route.attributes.get(AttributeID.NEXT_HOP,None):
-						routes.remove(r)
-						removed = True
-			else:
-				routes.remove(route)
-				removed = True
-		except KeyError:
-			removed = False
-		return removed
-
-	def set_routes (self,routes):
-		# routes can be a generator for self.everyroutes, if we delete self._families
-		# then the generator will return an empty content when ran, so we can not use add_route
-		f = {}
-		for route in routes:
-			f.setdefault((route.nlri.afi,route.nlri.safi),set()).add(route)
-		self._routes = f
 
 	def missing (self):
 		if self.local_address is None: return 'local-address'
@@ -164,7 +111,7 @@ class Neighbor (object):
 		updates=''
 		if with_updates:
 			updates += '\nstatic { '
-			for updates in self.every_routes():
+			for updates in self.store.every_updates():
 				for n in range(len(updates)):
 					updates += '\n    %s' % updates.extensive(n)
 			updates += '\n}'

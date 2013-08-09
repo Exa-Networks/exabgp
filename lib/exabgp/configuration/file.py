@@ -284,19 +284,19 @@ class Configuration (object):
 			return None
 		return scope[0]['updates']
 
-	def add_route_to_peers (self,update,peers):
+	def add_update_to_peers (self,update,peers):
 		result = False
 		for neighbor in self.neighbor:
 			if peers is None or neighbor in peers:
-				if self.neighbor[neighbor].add_route(update):
+				if self.neighbor[neighbor].store.add_update(update):
 					result = True
 		return result
 
-	def remove_route_from_peers (self,update,peers):
+	def remove_update_from_peers (self,update,peers):
 		result = False
 		for neighbor in self.neighbor:
 			if peers is None or neighbor in peers:
-				if self.neighbor[neighbor].remove_route(update):
+				if self.neighbor[neighbor].store.remove_update(update):
 					result = True
 		return result
 
@@ -870,7 +870,7 @@ class Configuration (object):
 			v = local_scope.get('updates',[])
 			for update in v:
 				# This add the family to neighbor.families()
-				neighbor.add_route(update)
+				neighbor.store.add_update(update)
 
 		for local_scope in (scope[0],scope[-1]):
 			neighbor.api.receive_packets |= local_scope.get('receive-packets',False)
@@ -939,11 +939,13 @@ class Configuration (object):
 		# create one neighbor object per family for multisession
 		if neighbor.multisession:
 			for family in neighbor.families():
+				# XXX: FIXME: Ok, it works but it takes LOTS of memory ..
 				m_neighbor = deepcopy(neighbor)
 				for f in neighbor.families():
 					if f == family:
 						continue
-					m_neighbor.remove_family_and_routes(f)
+					m_neighbor.remove_family(f)
+					m_neighbor.store.remove_family(f)
 				self._neighbor[m_neighbor.name()] = m_neighbor
 		else:
 			self._neighbor[neighbor.name()] = neighbor
@@ -2027,7 +2029,7 @@ class Configuration (object):
 	def decode (self,update):
 		# self check to see if we can decode what we encode
 		import sys
-		from exabgp.bgp.message.update import UpdateFactory
+		from exabgp.bgp.message.update.factory import UpdateFactory
 		from exabgp.bgp.message.open import Open
 		from exabgp.bgp.message.open.capability import Capabilities
 		from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -2073,8 +2075,15 @@ class Configuration (object):
 				factory = UpdateFactory
 				injected,raw = raw,''
 
-			# This does not take the BGP header - let's assume we will not break that :)
-			update = factory(negotiated,injected)
+			try:
+				# This does not take the BGP header - let's assume we will not break that :)
+				update = factory(negotiated,injected)
+			except KeyboardInterrupt:
+				raise
+			except Exception:
+				self.logger.parser('could not parse the message')
+				raise
+
 			self.logger.parser('')  # new line
 			for number in range(len(update.nlris)):
 				self.logger.parser('decoded update %s' % update.extensive(number))
@@ -2120,31 +2129,28 @@ class Configuration (object):
 		#grouped = False
 
 		for nei in self.neighbor.keys():
-			for family in self.neighbor[nei].families():
-				if not family in self.neighbor[nei]._routes:
-					continue
-				for update in self.neighbor[nei]._routes[family]:
-					for number in range(len(update.nlris)):
-						nlri = update.nlris[number]
-						str1 = update.extensive(number)
-						update = Update().new([nlri],update.attributes)
-						packed_updates = list(update.announce(negotiated))
-						self.logger.parser('parsed route requires %d updates' % len(packed_updates))
-						for pack in packed_updates:
-							self.logger.parser('update size is %d' % len(pack))
-							# This does not take the BGP header - let's assume we will not break that :)
-							try:
-								generated = UpdateFactory(negotiated,pack[19:])
-								self.logger.parser('')  # new line
-								str2 = generated.extensive(0)
-								self.logger.parser('parsed  route %s' % str1)
-								self.logger.parser('recoded route %s' % str2)
-								self.logger.parser('recoded hex   %s\n' % od(pack))
-							except Notify,e:
-								# we do not decode Flow Routes
-								if e.code == 3 and e.subcode == 2:
-									continue
-								raise e
+			for update in self.neighbor[nei].store.every_updates():
+				for number in range(len(update.nlris)):
+					nlri = update.nlris[number]
+					str1 = update.extensive(number)
+					update = Update().new([nlri],update.attributes)
+					packed_updates = list(update.announce(negotiated))
+					self.logger.parser('parsed route requires %d updates' % len(packed_updates))
+					for pack in packed_updates:
+						self.logger.parser('update size is %d' % len(pack))
+						# This does not take the BGP header - let's assume we will not break that :)
+						try:
+							generated = UpdateFactory(negotiated,pack[19:])
+							self.logger.parser('')  # new line
+							str2 = generated.extensive(0)
+							self.logger.parser('parsed  route %s' % str1)
+							self.logger.parser('recoded route %s' % str2)
+							self.logger.parser('recoded hex   %s\n' % od(pack))
+						except Notify,e:
+							# we do not decode Flow Routes
+							if e.code == 3 and e.subcode == 2:
+								continue
+							raise e
 
 		import sys
 		sys.exit(0)

@@ -20,7 +20,7 @@ from struct import unpack
 from exabgp.version import version
 from exabgp.reactor.network.error import error
 from exabgp.reactor.api.encoding import JSON
-from exabgp.bgp.message.update import UpdateFactory
+from exabgp.bgp.message.update.factory import UpdateFactory
 
 from exabgp.bmp.header import Header
 from exabgp.bmp.message import Message

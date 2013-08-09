@@ -25,23 +25,26 @@ class Delta (object):
 			return self.simple_updates(negotiated)
 
 	def simple_updates (self,negotiated):
-		# table.changed always returns routes to remove before routes to add
-		for action,route in self.table.changed(self.last):
+		# table.changed always returns changes to remove before changes to add
+		for action,change in self.table.changed(self.last):
 			if action == '':
-				self.last = route  # when action is '' route is a timestamp
+				self.last = change  # when action is '' change is a timestamp
 				continue
 
+			print "action,change", action, type(change)
+			print "\n\n%s\n\n" % change.nlri
+
 			if action == '+':
-				self.logger.rib('announcing %s' % route)
-				for update in Update().new([route]).announce(negotiated):
+				self.logger.rib('announcing %s %s' % (change.nlri,change.attributes))
+				for update in Update().new([change.nlri],change.attributes).announce(negotiated):
 					yield update
 			elif action == '*':
-				self.logger.rib('updating %s' % route)
-				for update in Update().new([route]).announce(negotiated):
+				self.logger.rib('updating %s %s' % (change.nlri,change.attributes))
+				for update in Update().new([change.nlri],change.attributes).announce(negotiated):
 					yield update
 			elif action == '-':
-				self.logger.rib('withdrawing %s' % route)
-				for update in Update().new([route]).withdraw(negotiated):
+				self.logger.rib('withdrawing %s %s' % (change.nlri,change.attributes)	)
+				for update in Update().new([change.nlri],change.attributes).withdraw(negotiated):
 					yield update
 
 	def group_updates (self,negotiated):
@@ -50,33 +53,37 @@ class Delta (object):
 			'*' : {},
 			'-' : {},
 		}
+		attributes = {}
 
-		# table.changed always returns routes to remove before routes to add
-		for action,route in self.table.changed(self.last):
+		# table.changed always returns changes to remove before changes to add
+		for action,change in self.table.changed(self.last):
 			if action == '':
-				self.last = route  # when action is '' route is a timestamp
+				self.last = change  # when action is '' change is a timestamp
 				continue
-			grouped[action].setdefault(str(route.attributes),[]).append(route)
+			attribute_index = str(change.attributes)
+			grouped[action].setdefault(attribute_index,[]).append(change.nlri)
+			if not attribute_index in attributes:
+				attributes[attribute_index] = change.attributes
 
 		group = 0
-		for attributes in grouped['+']:
-			routes = grouped['+'][attributes]
-			for route in routes:
-				self.logger.rib('announcing group %d %s' % (group,route))
+		for attribute_index in grouped['+']:
+			changes = grouped['+'][attribute_index]
+			for change in changes:
+				self.logger.rib('announcing group %d %s %s' % (group,change.nlri,change.attributes))
 			group += 1
-			for update in Update().new(routes).announce(negotiated):
+			for update in Update().new(changes,attributes[attribute_index]).announce(negotiated):
 				yield update
-		for attributes in grouped['*']:
-			routes = grouped['*'][attributes]
-			for route in routes:
-				self.logger.rib('updating group %d %s' % (group,route))
+		for attribute_index in grouped['*']:
+			changes = grouped['*'][attribute_index]
+			for change in changes:
+				self.logger.rib('updating group %d %s %s' % (group,change.nlri,change.attributes))
 			group += 1
-			for update in Update().new(routes).update(negotiated):
+			for update in Update().new(changes,attributes[attribute_index]).update(negotiated):
 				yield update
-		for attributes in grouped['*']:
-			routes = grouped['*'][attributes]
-			for route in routes:
-				self.logger.rib('updating group %d %s' % (group,route))
+		for attribute_index in grouped['*']:
+			changes = grouped['*'][attribute_index]
+			for change in changes:
+				self.logger.rib('updating group %d %s %s' % (group,change.nlri,change.attributes))
 			group += 1
-			for update in Update().new(routes).withdraw(negotiated):
+			for update in Update().new(changes,attributes[attribute_index]).withdraw(negotiated):
 				yield update

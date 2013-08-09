@@ -50,7 +50,8 @@ class Watchdog (object):
 		self.watchdog = {}
 
 	def integrate (self,update):
-		# making sure we are not broking the code silently
+		# XXX: FIXME: making sure we are not broking the code silently
+		# XXX: As long as we generate one update per route this will still work
 		assert (len(update.nlris) == 1)
 
 		index = update.index(0)
@@ -79,11 +80,12 @@ class Watchdog (object):
 	def withdraw (self,watchdog):
 		self.status.disable(watchdog)
 
-	def filtered (self,routes_generator):
-		for route in routes_generator:
-			index = route.index()
+	def filtered (self,updates_generator):
+		for update in updates_generator:
+			# XXX: FIXME: one nlri per update shortcut
+			index = update.index(0)
 			watchdog = self.watchdog.get(index,None)
 			if not watchdog:
-				yield route
+				yield update
 			elif self.status[watchdog] and index not in self.withdrawn:
-				yield route
+				yield update

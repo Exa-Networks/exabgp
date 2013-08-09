@@ -14,6 +14,7 @@ from exabgp.bgp.message.update.attribute.id import AttributeID as AID
 from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
 from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
 
+from exabgp.bgp.message.notification import Notify
 
 # =================================================================== Update
 
@@ -31,9 +32,9 @@ class Update (Message):
 		asn4 = negotiated.asn4
 		local_as = negotiated.local_as
 		peer_as = negotiated.peer_as
-		msg_size = negotiated.msg_size
 
 		attr = self.attributes.pack(asn4,local_as,peer_as)
+		msg_size = negotiated.msg_size - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
 
 		all_nlri = []
 		sorted_mp = {}
@@ -48,8 +49,6 @@ class Update (Message):
 		if not all_nlri and not sorted_mp:
 			return
 
-		msg_size = msg_size - 2 - 2 - len(attr)  # 2 bytes for each prefix() header
-
 		packed_mp = ''
 		packed_nlri = ''
 
@@ -63,6 +62,8 @@ class Update (Message):
 				while True:
 					packed = mp_packed_generator.next()
 					if len(packed_mp + packed) > msg_size:
+						if not packed_mp:
+							raise Notify(6,0,'attributes size is so large we can not even pack on MPURNLRI')
 						yield self._message(prefix('') + prefix(attr + packed_mp))
 						packed_mp = packed
 					else:
@@ -75,6 +76,8 @@ class Update (Message):
 			nlri = all_nlri.pop()
 			packed = nlri.pack(addpath)
 			if len(packed_mp + packed_nlri + packed) > msg_size:
+				if not packed_nlri and not packed_mp:
+					raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
 				yield self._message(prefix('') + prefix(attr + packed_mp) + packed_nlri)
 				packed_mp = ''
 				packed_nlri = packed
@@ -84,9 +87,10 @@ class Update (Message):
 		if packed_mp or packed_nlri:
 			yield self._message(prefix('') + prefix(attr + packed_mp) + packed_nlri)
 
+	# print ''.join(['%02X' % ord(_) for _ in self._message(prefix('') + prefix(attr + packed_mp) + packed_nlri)])
 
 	def withdraw (self,negotiated=None):
-		msg_size = negotiated.msg_size
+		msg_size = negotiated.msg_size - 4  # 2 bytes for each of the two prefix() header
 
 		#packed_nlri = {}
 		#packed_mp = {}
@@ -104,8 +108,6 @@ class Update (Message):
 		if not all_nlri and not sorted_mp:
 			return
 
-		msg_size = msg_size - 2  # 2 bytes for the prefix() header
-
 		packed_mp = ''
 		packed_nlri = ''
 
@@ -115,6 +117,8 @@ class Update (Message):
 			nlri = all_nlri.pop()
 			packed = nlri.pack(addpath)
 			if len(packed_nlri + packed) > msg_size:
+				if not packed_nlri:
+					raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
 				yield self._message(prefix(packed_nlri))
 				packed_nlri = packed
 			else:
@@ -131,10 +135,12 @@ class Update (Message):
 				while True:
 					packed = mp_packed_generator.next()
 					if len(packed_nlri + packed_mp + packed) > msg_size:
+						if not packed_mp and not packed_nlri:
+							raise Notify(6,0,'attributes size is so large we can not even pack one MPURNLRI')
 						if packed_mp:
 							yield self._message(prefix(packed_nlri) + prefix(packed_mp))
 						else:
-							yield self._message(prefix(packed_nlri))
+							yield self._message(prefix(packed_nlri) + prefix(''))
 						packed_nlri = ''
 						packed_mp = packed
 					else:
@@ -145,8 +151,9 @@ class Update (Message):
 		if packed_mp:
 			yield self._message(prefix(packed_nlri) + prefix(packed_mp))
 		else:
-			yield self._message(prefix('') + prefix(packed_nlri))
+			yield self._message(prefix(packed_nlri) + prefix(''))
 
+	# print ''.join(['%02X' % ord(_) for _ in self._message(prefix(packed_nlri))])
 
 	def extensive (self,number):
 		nlri = self.nlris[number]

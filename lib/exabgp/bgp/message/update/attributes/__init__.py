@@ -349,10 +349,6 @@ class Attributes (dict):
 				return self.factory(next)
 
 			while data:
-				# route = self.nlriFactory(afi,safi,data,addpath,IN.withdrawn)
-				# route.attributes = self
-				# self.mp_withdraw.append(route)
-				# data = data[len(route.nlri):]
 				nlri = self.nlriFactory(afi,safi,data,addpath,None,IN.withdrawn)
 				self.mp_withdraw.append(nlri)
 				data = data[len(nlri):]
