@@ -6,7 +6,6 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from exabgp.protocol.ip.address import Address  # ,AFI,SAFI
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute import Flag,Attribute
 
@@ -21,9 +20,10 @@ class MPRNLRI (Attribute):
 		# all the routes must have the same next-hop
 		self.nlris = nlris
 
-	def pack (self,addpath):
+
+	def packed_attributes (self,addpath):
 		if not self.nlris:
-			return ''
+			return
 
 		mpnlri = {}
 		for nlri in self.nlris:
@@ -41,18 +41,19 @@ class MPRNLRI (Attribute):
 			# mpunli[afi,safi][nexthop] = nlri
 			mpnlri.setdefault((nlri.afi.pack(),nlri.safi.pack()),{}).setdefault(nexthop,[]).append(nlri.pack(addpath))
 
-		r = ''
 		for (pafi,psafi),data in mpnlri.iteritems():
 			for nexthop,nlris in data.iteritems():
-				r += self._attribute(
+				yield self._attribute(
 					pafi + psafi +
 					chr(len(nexthop)) + nexthop +
 					chr(0) + ''.join(nlris)
 				)
-		return r
+
+	def pack (self,addpath):
+		return ''.join(self.packed_attributes(addpath))
 
 	def __len__ (self):
 		return len(self.pack())
 
 	def __str__ (self):
-		return "MP_REACH_NLRI Family %s %d NLRI(s)" % (Address.__str__(self.routes[0]),len(self.routes))
+		return "MP_REACH_NLRI %d NLRI(s)" % len(self.routes)

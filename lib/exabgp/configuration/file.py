@@ -1356,7 +1356,7 @@ class Configuration (object):
 			return False
 
 	def _route_next_hop (self,scope,tokens):
-		if scope[-1]['updates'][-1].attributes.get(AttributeID.NEXT_HOP,None):
+		if scope[-1]['updates'][-1].attributes.has(AttributeID.NEXT_HOP):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
@@ -2128,7 +2128,7 @@ class Configuration (object):
 						nlri = update.nlris[number]
 						str1 = update.extensive(number)
 						update = Update().new([nlri],update.attributes)
-						packed_updates = update.announce(negotiated)
+						packed_updates = list(update.announce(negotiated))
 						self.logger.parser('parsed route requires %d updates' % len(packed_updates))
 						for pack in packed_updates:
 							self.logger.parser('update size is %d' % len(pack))

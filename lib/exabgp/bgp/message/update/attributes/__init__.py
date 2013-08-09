@@ -437,6 +437,7 @@ class Attributes (dict):
 		logger.parser('ignoring non-transitive attribute')
 		return self.factory(next)
 
+
 	def merge_attributes (self):
 		as2path = self[AID.AS_PATH]
 		as4path = self[AID.AS4_PATH]
