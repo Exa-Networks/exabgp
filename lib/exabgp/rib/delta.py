@@ -31,9 +31,6 @@ class Delta (object):
 				self.last = change  # when action is '' change is a timestamp
 				continue
 
-			print "action,change", action, type(change)
-			print "\n\n%s\n\n" % change.nlri
-
 			if action == '+':
 				self.logger.rib('announcing %s %s' % (change.nlri,change.attributes))
 				for update in Update().new([change.nlri],change.attributes).announce(negotiated):

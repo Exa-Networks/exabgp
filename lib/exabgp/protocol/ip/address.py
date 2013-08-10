@@ -18,5 +18,8 @@ class Address (object):
 	def family (self):
 		return (self.afi,self.safi)
 
+	def address (self):
+		return str(self)
+
 	def __str__ (self):
 		return "%s %s" % (str(self.afi),str(self.safi))

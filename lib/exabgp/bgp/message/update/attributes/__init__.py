@@ -147,6 +147,18 @@ class Attributes (dict):
 	def remove (self,attrid):
 		self.pop(attrid)
 
+	def watchdog (self):
+		if AID.INTERNAL_WATCHDOG in self:
+			self.pop(AID.INTERNAL_WATCHDOG)
+			return True
+		return False
+
+	def withdraw (self):
+		if AID.INTERNAL_WITHDRAW in self:
+			self.pop(AID.INTERNAL_WITHDRAW)
+			return True
+		return False
+
 	def pack (self,asn4,local_asn,peer_asn):
 		message = ''
 

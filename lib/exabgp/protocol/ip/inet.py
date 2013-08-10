@@ -9,6 +9,7 @@ Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 import socket
 
 from exabgp.protocol.family import AFI,SAFI
+from exabgp.protocol.ip.address import Address
 
 def _detect_afi(ip):
 	if ip.count(':'):
@@ -35,7 +36,7 @@ def rawinet (packed):
 	safi = SAFI.multicast if ord(packed[0]) in Inet._multicast_range else SAFI.unicast
 	return afi,safi,packed
 
-class Inet (object):
+class Inet (Address):
 	_UNICAST = SAFI(SAFI.unicast)
 	_MULTICAST = SAFI(SAFI.multicast)
 
@@ -59,13 +60,13 @@ class Inet (object):
 	}
 
 	def __init__ (self,afi,safi,packed):
-		self.afi = AFI(afi)
-		if safi:
-			self.safi = SAFI(safi)
+		if safi:  # XXX: FIXME: we use a constant which is zero - reference it explicitly
+			Address.__init__(self,afi,safi)
 		elif ord(packed[0]) in self._multicast_range:
-			self.safi = self._MULTICAST
+			Address.__init__(self,afi,self._MULTICAST)
 		else:
-			self.safi = self._UNICAST
+			Address.__init__(self,afi,self._UNICAST)
+
 		self.packed = packed
 		self.ip = socket.inet_ntop(self._af[self.afi],self.packed)
 

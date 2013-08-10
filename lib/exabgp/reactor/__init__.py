@@ -465,15 +465,15 @@ class Reactor (object):
 		# route announcement / withdrawal
 		if 'announce route' in command:
 			def _announce_route (self,command,peers):
-				updates = self.configuration.parse_api_route(command)
+				changes = self.configuration.parse_api_route(command)
 				if not updates:
 					self.logger.reactor("Command could not parse route in : %s" % command,'warning')
 					yield True
 				else:
-					for update in updates:
-						self.configuration.remove_update_from_peers(update,peers)
-						self.configuration.add_update_to_peers(update,peers)
-						self.logger.reactor("Route added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',update.extensive(0)))
+					for change in changes:
+						self.configuration.remove_change_from_peers(change,peers)
+						self.configuration.add_change_to_peers(change,peers)
+						self.logger.reactor("Route added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
 						yield False
 					self._route_update = True
 
@@ -491,17 +491,17 @@ class Reactor (object):
 
 		if 'withdraw route' in command:
 			def _withdraw_route (self,command,peers):
-				updates = self.configuration.parse_api_route(command)
-				if not updates:
+				changes = self.configuration.parse_api_route(command)
+				if not changes:
 					self.logger.reactor("Command could not parse route in : %s" % command,'warning')
 					yield True
 				else:
-					for update in updates:
-						if self.configuration.remove_update_from_peers(update,peers):
-							self.logger.reactor("Route found and removed : %s" % update.extensive(0))
+					for change in changes:
+						if self.configuration.remove_change_from_peers(change,peers):
+							self.logger.reactor("Route found and removed : %s" % change.extensive())
 							yield False
 						else:
-							self.logger.reactor("Could not find therefore remove route : %s" % update.extensive(0),'warning')
+							self.logger.reactor("Could not find therefore remove route : %s" % change.extensive(),'warning')
 							yield False
 					self._route_update = True
 
@@ -520,15 +520,16 @@ class Reactor (object):
 		# flow announcement / withdrawal
 		if 'announce flow' in command:
 			def _announce_flow (self,command,peers):
-				flows = self.configuration.parse_api_flow(command)
-				if not flows:
+				changes = self.configuration.parse_api_flow(command)
+				if not changes:
 					self.logger.reactor("Command could not parse flow in : %s" % command)
 					yield True
 				else:
-					for flow in flows:
-						self.configuration.remove_update_from_peers(flow,peers)
-						self.configuration.add_update_to_peers(flow,peers)
-						self.logger.reactor("Flow added : %s" % flow)
+					for change in changes:
+						self.configuration.remove_change_from_peers(change,peers)
+						self.configuration.add_change_to_peers(change,peers)
+						# XXX: FIXME: FlowNLRI does not implement the extensive() interface ??
+						self.logger.reactor("Flow added : %s" % change)
 						yield False
 					self._route_update = True
 
@@ -546,17 +547,17 @@ class Reactor (object):
 
 		if 'withdraw flow' in command:
 			def _withdraw_flow (self,command,peers):
-				flows = self.configuration.parse_api_flow(command)
-				if not flows:
+				changes = self.configuration.parse_api_flow(command)
+				if not changes:
 					self.logger.reactor("Command could not parse flow in : %s" % command)
 					yield True
 				else:
-					for flow in flows:
-						if self.configuration.remove_update_from_peers(flow,peers):
-							self.logger.reactor("Flow found and removed : %s" % flow)
+					for change in changes:
+						if self.configuration.remove_change_from_peers(change,peers):
+							self.logger.reactor("Flow found and removed : %s" % change)
 							yield False
 						else:
-							self.logger.reactor("Could not find therefore remove flow : %s" % flow,'warning')
+							self.logger.reactor("Could not find therefore remove flow : %s" % change,'warning')
 							yield False
 					self._route_update = True
 

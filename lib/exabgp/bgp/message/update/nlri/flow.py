@@ -208,7 +208,6 @@ unique = _unique()
 
 class FlowNLRI (Attributes,Address):
 	# conform to the API used in UPDATE
-	class rd: rd = ''
 	nexthop = None
 
 	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ipv4):
@@ -283,6 +282,10 @@ class FlowNLRI (Attributes,Address):
 		# this is a stop gap so flow route parsing does not crash exabgp
 		# delete unique when this is fixed
 		return '"flow-%d": { "string": "%s" }' % (unique.next(),str(self),)
+
+	def index (self):
+		return self.pack()
+
 
 def _next_index ():
 	value = 0

@@ -33,7 +33,6 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 
-from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.nlri import pack_int  # XXX: FIXME: really ?
 from exabgp.bgp.message.update.nlri.bgp import NLRI,PathInfo,Labels,RouteDistinguisher
 from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,FlowNLRI,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
@@ -52,6 +51,8 @@ from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 from exabgp.bgp.message.update.attribute.unknown import Unknown
 
 from exabgp.bgp.message.update.attributes import Attributes
+
+from exabgp.rib.change import Change
 
 from exabgp.logger import Logger
 
@@ -284,19 +285,19 @@ class Configuration (object):
 			return None
 		return scope[0]['updates']
 
-	def add_update_to_peers (self,update,peers):
+	def add_change_to_peers (self,change,peers):
 		result = False
 		for neighbor in self.neighbor:
 			if peers is None or neighbor in peers:
-				if self.neighbor[neighbor].store.add_update(update):
+				if self.neighbor[neighbor].store.add_change(change):
 					result = True
 		return result
 
-	def remove_update_from_peers (self,update,peers):
+	def remove_change_from_peers (self,change,peers):
 		result = False
 		for neighbor in self.neighbor:
 			if peers is None or neighbor in peers:
-				if self.neighbor[neighbor].store.remove_update(update):
+				if self.neighbor[neighbor].store.remove_change(change):
 					result = True
 		return result
 
@@ -868,9 +869,9 @@ class Configuration (object):
 			if v: neighbor.hold_time = v
 
 			v = local_scope.get('updates',[])
-			for update in v:
+			for change in v:
 				# This add the family to neighbor.families()
-				neighbor.store.add_update(update)
+				neighbor.store.add_change(change)
 
 		for local_scope in (scope[0],scope[-1]):
 			neighbor.api.receive_packets |= local_scope.get('receive-packets',False)
@@ -1146,7 +1147,7 @@ class Configuration (object):
 			# next ip
 			ip += increment
 			# save route
-			scope[-1]['updates'].append(Update().new(nlri,update.attributes))
+			scope[-1]['updates'].append(Change(nlri,update.attributes))
 
 		return True
 
@@ -1162,7 +1163,7 @@ class Configuration (object):
 		except ValueError:
 			mask = '32'
 		try:
-			update = Update().new([NLRI(*inet(ip),mask=mask,nexthop=None,action=OUT.announce)],Attributes())
+			update = Change(NLRI(*inet(ip),mask=mask,nexthop=None,action=OUT.announce),Attributes())
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise
@@ -1372,15 +1373,15 @@ class Configuration (object):
 			else:
 				nh = pton(ip)
 
-			update = scope[-1]['updates'][-1]
-			nlri = update.nlris[0]
+			change = scope[-1]['updates'][-1]
+			nlri = change.nlri
 			afi = nlri.afi
 			safi = nlri.safi
 
 			nlri.nexthop = cachedNextHop(nh)
 
 			if afi == AFI.ipv4 and safi in (SAFI.unicast,SAFI.multicast):
-				update.attributes.add(cachedNextHop(nh))
+				change.attributes.add(cachedNextHop(nh))
 
 			return True
 		except:
@@ -1749,7 +1750,7 @@ class Configuration (object):
 		try:
 			attributes = Attributes()
 			attributes[AttributeID.EXTENDED_COMMUNITY] = ECommunities()
-			flow = Update().new([FlowNLRI(),],attributes)
+			flow = Change(FlowNLRI(),attributes)
 		except ValueError:
 			self._error = self._str_flow_error
 			if self.debug: raise
@@ -1831,7 +1832,7 @@ class Configuration (object):
 	def _flow_source (self,scope,tokens):
 		try:
 			ip,nm = tokens.pop(0).split('/')
-			scope[-1]['updates'][-1].nlris[-1].add_and(Source(ip,nm))
+			scope[-1]['updates'][-1].nlri.add_and(Source(ip,nm))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -1841,7 +1842,7 @@ class Configuration (object):
 	def _flow_destination (self,scope,tokens):
 		try:
 			ip,nm = tokens.pop(0).split('/')
-			scope[-1]['updates'][-1].nlris[-1].add_and(Destination(ip,nm))
+			scope[-1]['updates'][-1].nlri.add_and(Destination(ip,nm))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -1886,7 +1887,7 @@ class Configuration (object):
 					operator,_ = self._operator(test)
 					value,test = self._value(_)
 					number = converter(value)
-					scope[-1]['updates'][-1].nlris[-1].add_or(klass(AND|operator,number))
+					scope[-1]['updates'][-1].nlri.add_or(klass(AND|operator,number))
 					if test:
 						if test[0] == '&':
 							AND = BinaryOperator.AND
@@ -1916,7 +1917,7 @@ class Configuration (object):
 							number = int(name)
 						except ValueError:
 							number = converter(name)
-						scope[-1]['updates'][-1].nlris[-1].add_or(klass(NumericOperator.EQ|AND,number))
+						scope[-1]['updates'][-1].nlri.add_or(klass(NumericOperator.EQ|AND,number))
 					except IndexError:
 						self._error = self._str_flow_error
 						if self.debug: raise
@@ -1926,7 +1927,7 @@ class Configuration (object):
 					number = int(name)
 				except ValueError:
 					number = converter(name)
-				scope[-1]['updates'][-1].nlris[-1].add_or(klass(NumericOperator.EQ|AND,number))
+				scope[-1]['updates'][-1].nlri.add_or(klass(NumericOperator.EQ|AND,number))
 		except ValueError:
 			self._error = self._str_flow_error
 			if self.debug: raise
@@ -2086,7 +2087,7 @@ class Configuration (object):
 
 			self.logger.parser('')  # new line
 			for number in range(len(update.nlris)):
-				self.logger.parser('decoded update %s' % update.extensive(number))
+				self.logger.parser('decoded update %s %s' % (update.nlris[0].action,update.extensive(number)))
 
 		import sys
 		sys.exit(0)
@@ -2107,6 +2108,8 @@ class Configuration (object):
 		from exabgp.bgp.message.open.capability.negotiated import Negotiated
 		from exabgp.bgp.message.open.capability.id import CapabilityID
 		from exabgp.bgp.message.notification import Notify
+
+		from exabgp.rib.change import Change
 
 		self.logger.parser('\ndecoding routes in configuration')
 
@@ -2129,28 +2132,26 @@ class Configuration (object):
 		#grouped = False
 
 		for nei in self.neighbor.keys():
-			for update in self.neighbor[nei].store.every_updates():
-				for number in range(len(update.nlris)):
-					nlri = update.nlris[number]
-					str1 = update.extensive(number)
-					update = Update().new([nlri],update.attributes)
-					packed_updates = list(update.announce(negotiated))
-					self.logger.parser('parsed route requires %d updates' % len(packed_updates))
-					for pack in packed_updates:
-						self.logger.parser('update size is %d' % len(pack))
-						# This does not take the BGP header - let's assume we will not break that :)
-						try:
-							generated = UpdateFactory(negotiated,pack[19:])
-							self.logger.parser('')  # new line
-							str2 = generated.extensive(0)
-							self.logger.parser('parsed  route %s' % str1)
-							self.logger.parser('recoded route %s' % str2)
-							self.logger.parser('recoded hex   %s\n' % od(pack))
-						except Notify,e:
-							# we do not decode Flow Routes
-							if e.code == 3 and e.subcode == 2:
-								continue
-							raise e
+			for change in self.neighbor[nei].store.every_updates():
+				str1 = change.extensive()
+				update = Update().new([change.nlri],change.attributes)
+				packed_updates = list(update.announce(negotiated))
+				self.logger.parser('parsed route requires %d updates' % len(packed_updates))
+				for pack in packed_updates:
+					self.logger.parser('update size is %d' % len(pack))
+					# This does not take the BGP header - let's assume we will not break that :)
+					try:
+						generated = UpdateFactory(negotiated,pack[19:])
+						self.logger.parser('')  # new line
+						str2 = Change(generated.nlris[0],generated.attributes).extensive()
+						self.logger.parser('parsed  route %s' % str1)
+						self.logger.parser('recoded route %s' % str2)
+						self.logger.parser('recoded hex   %s\n' % od(pack))
+					except Notify,e:
+						# we do not decode Flow Routes
+						if e.code == 3 and e.subcode == 2:
+							continue
+						raise e
 
 		import sys
 		sys.exit(0)

@@ -26,7 +26,6 @@ class Update (Message):
 		self.attributes = attributes
 		return self
 
-
 	# The routes MUST have the same attributes ...
 	def announce (self,negotiated):
 		asn4 = negotiated.asn4
@@ -153,16 +152,11 @@ class Update (Message):
 		else:
 			yield self._message(prefix(packed_nlri) + prefix(''))
 
-	# print ''.join(['%02X' % ord(_) for _ in self._message(prefix(packed_nlri))])
-
-	def extensive (self,number):
-		nlri = self.nlris[number]
-		return "%s %s%s" % (str(Address(nlri.afi,nlri.safi)),str(nlri),str(self.attributes))
+	# print ''.join(['%02X' % ord(_) for _ in self._message(prefix(packed_nlri) + prefix(''))])
 
 	def index (self,number):
-		nlri = self.nlris[number]
-		return nlri.pack(True)+nlri.rd.rd
+		raise RuntimeError('is it really needed ?')
+		return self.nlris[number].index()
 
 	def __str__ (self):
-		print "\n\nTO REMOVE\n\n"
 		return '\n'.join([self.extensive(_) for _ in range(len(self.nlris))])

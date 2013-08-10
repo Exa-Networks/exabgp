@@ -30,7 +30,7 @@ def main ():
 	if not path.isfile(sequence_daemon):
 		sys.exit('could not find the sequence daemon')
 
-	match = '*' if len(sys.argv) < 2 else sys.argv[1]
+	match = '*' if len(sys.argv) < 2 else sys.argv[1].split('.')[0]
 
 	for configuration in glob.glob(path.join(runtest,'%s.conf' % match)):
 		sequence_file = configuration.replace('.conf','.sequence')

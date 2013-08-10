@@ -30,13 +30,11 @@ class Table (object):
 		# remove ...
 		for index in self._plus.keys():
 			if index not in changes:
-				if index in self._plus:
-					self._minus[index] = (time.time(),self._plus[index][1])
-					del self._plus[index]
+				self._minus[index] = (time.time(),self._plus[index][1])
+				del self._plus[index]
 
 		# add ....
-		for index in changes:
-			changed = changes[index]
+		for index,changed in changes.iteritems():
 			if index in self._plus:
 				if changed != self._plus[index][1]:
 					self._plus[index] = (time.time(),changed,'*')
@@ -51,7 +49,7 @@ class Table (object):
 			t,r = self._minus[index]
 			if when < t:
 				yield ('-',r)
-			# XXX: FIXME: delete the entry in _minus ??
+		# XXX: FIXME: delete the entry in _minus ??
 		for index in self._plus.keys():
 			t,r,o = self._plus[index]
 			if when < t:

@@ -158,6 +158,10 @@ class NLRI (GenericNLRI):
 		else:
 			return path_info + GenericNLRI.pack(self)
 
+	def index (self):
+		return self.pack(True)+self.rd.rd
+
+
 # Generate an NLRI from a BGP packet receive
 def BGPNLRI (afi,safi,bgp,has_multiple_path,nexthop,action):
 	labels = []
