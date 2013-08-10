@@ -369,9 +369,8 @@ class Reactor (object):
 			def _show_route (self):
 				for key in self.configuration.neighbor.keys():
 					neighbor = self.configuration.neighbor[key]
-					for update in list(neighbor.every_updates()):
-						for number in range(len(update.nlris)):
-							self._answer(service,'neighbor %s %s' % (neighbor.local_address,str(update.nlris[number])))
+					for change in list(neighbor.store.every_changes()):
+						self._answer(service,'neighbor %s %s' % (neighbor.local_address,str(change.nlri)))
 						yield True
 			self._pending.append(_show_route(self))
 			return True
@@ -380,10 +379,9 @@ class Reactor (object):
 			def _show_extensive (self):
 				for key in self.configuration.neighbor.keys():
 					neighbor = self.configuration.neighbor[key]
-					for update in list(neighbor.store.every_updates()):
-						for number in range(len(update.nlris)):
-							self._answer(service,'neighbor %s %s' % (neighbor.name(),update.extensive(number)))
-							yield True
+					for change in list(neighbor.store.every_changes()):
+						self._answer(service,'neighbor %s %s' % (neighbor.name(),change.extensive()))
+						yield True
 			self._pending.append(_show_extensive(self))
 			return True
 
@@ -464,9 +462,9 @@ class Reactor (object):
 
 		# route announcement / withdrawal
 		if 'announce route' in command:
-			def _announce_route (self,command,peers):
+			def _announce_change (self,command,peers):
 				changes = self.configuration.parse_api_route(command)
-				if not updates:
+				if not changes:
 					self.logger.reactor("Command could not parse route in : %s" % command,'warning')
 					yield True
 				else:
@@ -480,7 +478,7 @@ class Reactor (object):
 			try:
 				descriptions,command = extract_neighbors(command)
 				peers = match_neighbors(descriptions,self._peers)
-				self._pending.append(_announce_route(self,command,peers))
+				self._pending.append(_announce_change(self,command,peers))
 				if peers == []:
 					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 				return True
@@ -490,7 +488,7 @@ class Reactor (object):
 				pass
 
 		if 'withdraw route' in command:
-			def _withdraw_route (self,command,peers):
+			def _withdraw_change (self,command,peers):
 				changes = self.configuration.parse_api_route(command)
 				if not changes:
 					self.logger.reactor("Command could not parse route in : %s" % command,'warning')
@@ -508,7 +506,7 @@ class Reactor (object):
 			try:
 				descriptions,command = extract_neighbors(command)
 				peers = match_neighbors(descriptions,self._peers)
-				self._pending.append(_withdraw_route(self,command,peers))
+				self._pending.append(_withdraw_change(self,command,peers))
 				if peers == []:
 					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 				return True
@@ -528,8 +526,7 @@ class Reactor (object):
 					for change in changes:
 						self.configuration.remove_change_from_peers(change,peers)
 						self.configuration.add_change_to_peers(change,peers)
-						# XXX: FIXME: FlowNLRI does not implement the extensive() interface ??
-						self.logger.reactor("Flow added : %s" % change)
+						self.logger.reactor("Flow added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
 						yield False
 					self._route_update = True
 
@@ -554,10 +551,10 @@ class Reactor (object):
 				else:
 					for change in changes:
 						if self.configuration.remove_change_from_peers(change,peers):
-							self.logger.reactor("Flow found and removed : %s" % change)
+							self.logger.reactor("Flow found and removed : %s" % change.extensive())
 							yield False
 						else:
-							self.logger.reactor("Could not find therefore remove flow : %s" % change,'warning')
+							self.logger.reactor("Could not find therefore remove flow : %s" % change.extensive(),'warning')
 							yield False
 					self._route_update = True
 

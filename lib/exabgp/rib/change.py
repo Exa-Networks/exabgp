@@ -22,6 +22,7 @@ class Change (object):
 
 	def extensive (self):
 		# If you change this you must change as well extensive in Update
-		return "%s %s%s" % (self.nlri.address(),str(self.nlri),str(self.attributes))
+		return "%s%s" % (str(self.nlri),str(self.attributes))
 
-
+	def __str__ (self):
+		return self.extensive()

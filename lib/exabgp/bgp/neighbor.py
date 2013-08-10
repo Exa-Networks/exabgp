@@ -107,14 +107,13 @@ class Neighbor (object):
 	def __ne__(self, other):
 		return not self.__eq__(other)
 
-	def pprint (self,with_updates=True):
-		updates=''
-		if with_updates:
-			updates += '\nstatic { '
-			for updates in self.store.every_updates():
-				for n in range(len(updates)):
-					updates += '\n    %s' % updates.extensive(n)
-			updates += '\n}'
+	def pprint (self,with_changes=True):
+		changes=''
+		if with_changes:
+			changes += '\nstatic { '
+			for changes in self.store.every_changes():
+				changes += '\n    %s' % changes.extensive(n)
+			changes += '\n}'
 
 		families = ''
 		for afi,safi in self.families():
@@ -161,7 +160,7 @@ neighbor %s {
 	'    multi-session;\n' if self.multisession else '',
 	families,
 	api,
-	updates
+	changes
 )
 
 	def __str__ (self):

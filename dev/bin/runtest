@@ -30,7 +30,7 @@ def main ():
 	if not path.isfile(sequence_daemon):
 		sys.exit('could not find the sequence daemon')
 
-	match = '*' if len(sys.argv) < 2 else sys.argv[1].split('.')[0]
+	match = '*' if len(sys.argv) < 2 else sys.argv[1].split('/')[-1].split('.')[0]
 
 	for configuration in glob.glob(path.join(runtest,'%s.conf' % match)):
 		sequence_file = configuration.replace('.conf','.sequence')
@@ -47,7 +47,7 @@ def check_sequence(exabgp,configuration,daemon,messages):
 	os.environ['exabgp.tcp.once'] = 'true'
 	os.environ['exabgp.debug.defensive'] = 'true'
 
-	timeout = 15  # seconds
+	timeout = 30  # seconds
 
 	try:
 		signal.signal(signal.SIGALRM, alarm_handler)

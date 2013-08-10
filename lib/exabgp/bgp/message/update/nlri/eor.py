@@ -29,10 +29,10 @@ class RouteEOR (object):
 		return self.PREFIX + self.nlri.afi.pack() + self.nlri.safi.pack()
 
 	def __str__ (self):
-		return '%s eor %d/%d (%s %s)' % (self.action,self.nlri.afi,self.nlri.safi,self.nlri.afi,self.nlri.safi)
+		return self.extensive()
 
 	def extensive (self):
-		return str(self)
+		return '%s eor %d/%d (%s %s)' % (self.action,self.nlri.afi,self.nlri.safi,self.nlri.afi,self.nlri.safi)
 
 def announcedRouteEOR (data):
 	return RouteEOR(unpack('!H',data[-4:-2])[0],unpack('!H',data[-2:])[0],IN.announced)

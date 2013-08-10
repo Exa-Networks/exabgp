@@ -10,10 +10,8 @@ from struct import pack
 
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.protocol.ip.address import Address
-from exabgp.bgp.message.update.nlri import GenericNLRI
-from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attributes import Attributes
-from exabgp.bgp.message.update.attribute.communities import ECommunities
+from exabgp.bgp.message.update.nlri.prefix import Prefix
 from exabgp.bgp.message.notification import Notify
 
 
@@ -61,7 +59,7 @@ class IPrefix (IComponent):
 
 	def __init__ (self,ipv4,netmask):
 		raw = ''.join(chr(int(_)) for _ in ipv4.split('.'))
-		self.nlri = GenericNLRI(AFI.ipv4,SAFI.flow_ipv4,raw,netmask)
+		self.nlri = Prefix(AFI.ipv4,SAFI.flow_ipv4,raw,netmask)
 
 	def pack (self):
 		raw = self.nlri.pack(addpath=False)
@@ -265,7 +263,7 @@ class FlowNLRI (Attributes,Address):
 			data = "%s" % chr(0)
 		return data
 
-	def __str__ (self):
+	def extensive (self):
 		string = []
 		for _,rules in self.rules.iteritems():
 			s = []
@@ -277,6 +275,9 @@ class FlowNLRI (Attributes,Address):
 					s.append(str(rule))
 			string.append('%s %s' % (rules[0].NAME,''.join(s[1:])))
 		return ' '.join(string)
+
+	def __str__ (self):
+		return self.extensive()
 
 	def json (self):
 		# this is a stop gap so flow route parsing does not crash exabgp
@@ -294,29 +295,3 @@ def _next_index ():
 		value += 1
 
 next_index = _next_index()
-
-
-# class Flow (object):
-# 	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ipv4):
-# 		self.attributes = Attributes()
-# 		self.nlris = [FlowNLRI(afi,safi),]
-# 		self.attributes[AttributeID.EXTENDED_COMMUNITY] = ECommunities()
-# 		self.packed = next_index.next()
-
-# 	def index (self,number=None):
-# 		return self.packed
-
-# 	def add_and (self,rule):
-# 		return self.nlris[0].add_and(rule)
-
-# 	def add_or (self,rule):
-# 		return self.nlris[0].add_or(rule)
-
-# 	def add_action (self,community):
-# 		self.attributes[AttributeID.EXTENDED_COMMUNITY].add(community)
-
-# 	def __str__ (self):
-# 		return "%s %s%s" % (Address.__str__(self.nlris[0]),str(self.nlris[0]),str(self.attributes))
-
-# 	def extensive (self,number=None):
-# 		return str(self)

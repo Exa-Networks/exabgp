@@ -169,7 +169,7 @@ class Attributes (dict):
 		}
 
 		check = {
-			AID.NEXT_HOP:   lambda l,r,nh: nh.afi() == AFI.ipv4,
+			AID.NEXT_HOP:   lambda l,r,nh: nh.afi == AFI.ipv4,
 			AID.LOCAL_PREF: lambda l,r,nh: l == r,
 		}
 
@@ -215,7 +215,7 @@ class Attributes (dict):
 			def generate (self):
 				for code in sorted(self.keys()):
 					# XXX: FIXME: really we should have a INTERNAL attribute in the classes
-					if code in (AID.INTERNAL_SPLIT, AID.INTERNAL_WATCHDOG, AID.INTERNAL_WITHDRAW):
+					if code in (AID.INTERNAL_SPLIT, AID.INTERNAL_WATCHDOG, AID.INTERNAL_WITHDRAW, AID.NEXT_HOP):
 						continue
 					if code in self.representation:
 						how, default, name, presentation = self.representation[code]
@@ -364,6 +364,8 @@ class Attributes (dict):
 				nlri = self.nlriFactory(afi,safi,data,addpath,None,IN.withdrawn)
 				self.mp_withdraw.append(nlri)
 				data = data[len(nlri):]
+				logger.parser(LazyFormat("parsed withdraw mp nlri %s payload " % nlri,od,data[:len(nlri)]))
+
 			return self.factory(next)
 
 		if code == AID.MP_REACH_NLRI:
@@ -435,6 +437,7 @@ class Attributes (dict):
 				nlri = self.nlriFactory(afi,safi,data,addpath,nh,IN.announced)
 				self.mp_announce.append(nlri)
 				data = data[len(nlri):]
+				logger.parser(LazyFormat("parsed announce mp nlri %s payload " % nlri,od,data[:len(nlri)]))
 			return self.factory(next)
 
 		if flag & Flag.TRANSITIVE:

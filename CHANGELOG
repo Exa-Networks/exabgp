@@ -7,7 +7,9 @@ Version 3.2.3
  * Fix: an issue in the 3.2.x series when the socket return a non-fatal error
     reported by: Daniel Bradshaw
  * Fix: an issue when the code would not behave correctly on network error
+ * Fix: some issues when encoding vpnv4 routes
  * Improvement: implemented some defensive coding practice (enable with exabgp.debug.defensive)
+ * Compatibility: JSON next-hop for the route is not in the attribute anymore but the NLRI
 
 Version 3.2.2
  * Improvement: allow to generate NOTIFICATION messages through the API

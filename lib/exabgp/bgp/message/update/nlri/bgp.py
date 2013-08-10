@@ -9,9 +9,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from struct import pack,unpack
 from exabgp.protocol.family import AFI,SAFI
 
-from exabgp.bgp.message.update.nlri import mask_to_bytes,GenericNLRI
-
-from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.nlri.prefix import mask_to_bytes,Prefix
 
 class PathInfo (object):
 	def __init__ (self,integer=None,ip=None,packed=None):
@@ -105,7 +103,7 @@ class RouteDistinguisher (object):
 _NoRD = RouteDistinguisher('')
 
 
-class NLRI (GenericNLRI):
+class NLRI (Prefix):
 	def __init__(self,afi,safi,packed,mask,nexthop,action):
 		self.path_info = _NoPathInfo
 		self.labels = _NoLabels
@@ -113,7 +111,7 @@ class NLRI (GenericNLRI):
 		self.nexthop = nexthop
 		self.action = action
 
-		GenericNLRI.__init__(self,afi,safi,packed,mask)
+		Prefix.__init__(self,afi,safi,packed,mask)
 
 	def has_label (self):
 		if self.afi == AFI.ipv4 and self.safi in (SAFI.nlri_mpls,SAFI.mpls_vpn):
@@ -127,7 +125,8 @@ class NLRI (GenericNLRI):
 		return 1 + prefix_len + mask_to_bytes[self.mask]
 
 	def __str__ (self):
-		return "%s%s%s%s" % (GenericNLRI.__str__(self),str(self.labels),str(self.path_info),str(self.rd))
+		nexthop = " next-hop %s" % self.nexthop.inet() if self.nexthop else ''
+		return "%s%s%s%s%s" % (self.prefix(),nexthop,str(self.labels),str(self.path_info),str(self.rd))
 
 	def __eq__ (self,other):
 		return str(self) == str(other)
@@ -139,12 +138,14 @@ class NLRI (GenericNLRI):
 		label = str(self.labels)
 		pinfo = str(self.path_info)
 		rdist = str(self.rd)
+		nxthp = self.nexthop.inet()
 
 		r = []
 		if label: r.append('"label": "%s"' % label)
 		if pinfo: r.append('"path-information": "%s"' % pinfo)
 		if rdist: r.append('"route-distinguisher": "%s"' % rdist)
-		return '"%s": { %s }' % (GenericNLRI.__str__(self),", ".join(r))
+		if nxthp: r.append('"next-hop": "%s"' % nxthp)
+		return '"%s": { %s }' % (self.prefix(),", ".join(r))
 
 	def pack (self,addpath):
 		if addpath:
@@ -156,70 +157,7 @@ class NLRI (GenericNLRI):
 			length = len(self.labels)*8 + len(self.rd)*8 + self.mask
 			return path_info + chr(length) + self.labels.pack() + self.rd.pack() + self.packed[:mask_to_bytes[self.mask]]
 		else:
-			return path_info + GenericNLRI.pack(self)
+			return path_info + Prefix.pack(self)
 
 	def index (self):
 		return self.pack(True)+self.rd.rd
-
-
-# Generate an NLRI from a BGP packet receive
-def BGPNLRI (afi,safi,bgp,has_multiple_path,nexthop,action):
-	labels = []
-	rd = ''
-
-	if has_multiple_path:
-		path_identifier = bgp[:4]
-		bgp = bgp[4:]
-	else:
-		path_identifier = ''
-
-	mask = ord(bgp[0])
-	bgp = bgp[1:]
-
-	if SAFI(safi).has_label():
-		while bgp and mask >= 8:
-			label = int(unpack('!L',chr(0) + bgp[:3])[0])
-			bgp = bgp[3:]
-			labels.append(label>>4)
-			mask -= 24  # 3 bytes
-			if label & 1:
-				break
-			# This is a route withdrawal, or next-hop
-			if label == 0x000000 or label == 0x80000:
-				break
-
-	if SAFI(safi).has_rd():
-		mask -= 8*8  # the 8 bytes of the route distinguisher
-		rd = bgp[:8]
-		bgp = bgp[8:]
-
-	if mask < 0:
-		raise Notify(3,10,'invalid length in NLRI prefix')
-
-	if not bgp and mask:
-		raise Notify(3,10,'not enough data for the mask provided to decode the NLRI')
-
-	size = mask_to_bytes.get(mask,None)
-	if size is None:
-		raise Notify(3,10,'invalid netmask found when decoding NLRI')
-
-	if len(bgp) < size:
-		raise Notify(3,10,'could not decode route with AFI %d sand SAFI %d' % (afi,safi))
-
-	network = bgp[:size]
-	# XXX: The padding calculation should really go into the NLRI class
-	padding = '\0'*(NLRI.length[afi]-size)
-	prefix = network + padding
-	nlri = NLRI(afi,safi,prefix,mask,nexthop,action)
-
-	# XXX: Not the best interface but will do for now
-	if safi:
-		nlri.safi = SAFI(safi)
-
-	if path_identifier:
-		nlri.path_info = PathInfo(packed=path_identifier)
-	if labels:
-		nlri.labels = Labels(labels)
-	if rd:
-		nlri.rd = RouteDistinguisher(rd)
-	return nlri

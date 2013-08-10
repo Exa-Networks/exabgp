@@ -6,8 +6,6 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from exabgp.rib.change import Change
-
 class Store (object):
 	def __init__ (self,neighbor):
 		#self.nlris = {}
@@ -15,7 +13,7 @@ class Store (object):
 		self._announced = {}
 		self.neighbor = neighbor
 
-	def every_updates (self):
+	def every_changes (self):
 		for family in list(self._announced.keys()):
 			for update in self._announced[family]:
 				yield update

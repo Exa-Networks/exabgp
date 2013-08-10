@@ -23,6 +23,9 @@ from exabgp.bgp.message.update.attribute import Flag,Attribute
 # 	return instance
 
 def cachedNextHop (packed):
+	if not packed:
+		return packed
+
 	if packed in NextHop.cache:
 		return NextHop.cache[packed]
 	instance = NextHop(packed)
@@ -31,7 +34,7 @@ def cachedNextHop (packed):
 		NextHop.cache[packed] = instance
 	return instance
 
-class NextHop (Attribute):
+class NextHop (Attribute,Inet):
 	ID = AttributeID.NEXT_HOP
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
@@ -40,23 +43,7 @@ class NextHop (Attribute):
 	caching = False
 
 	def __init__ (self,packed):
-		self.packed = packed
-		self._str = ''
-		self._afi = None
+		Inet.__init__(self,*rawinet(packed))
 
 	def pack (self,asn4=None):
 		return self._attribute(self.packed)
-
-	def afi (self):
-		if not self._afi:
-			inet = Inet(*rawinet(self.packed))
-			self._str = str(inet)
-			self._afi = inet.afi
-		return self._afi
-
-	def __str__ (self):
-		if not self._str:
-			inet = Inet(*rawinet(self.packed))
-			self._str = str(inet)
-			self._afi = inet.afi
-		return self._str

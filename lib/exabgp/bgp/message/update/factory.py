@@ -20,7 +20,10 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.factory import NLRIFactory
 from exabgp.bgp.message.update.attributes.factory import AttributesFactory
 
-# XXX: FIXME: this can raise ValueError. IndexError,struct.error (unpack) = check it is well intercepted
+from exabgp.util.od import od
+from exabgp.logger import Logger,LazyFormat
+
+# XXX: FIXME: this can raise ValueError. IndexError,TypeError, struct.error (unpack) = check it is well intercepted
 def UpdateFactory (negotiated,data):
 	length = len(data)
 
@@ -41,16 +44,22 @@ def UpdateFactory (negotiated,data):
 
 	# Is the peer going to send us some Path Information with the route (AddPath)
 	addpath = negotiated.addpath.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
-	nh = attributes.get(AID.NEXT_HOP,None)
+	nho = attributes.get(AID.NEXT_HOP,None)
+	nh = nho.packed if nho else None
+
+	logger = Logger()
 
 	nlris = []
 	while withdrawn:
 		nlri = NLRIFactory(AFI.ipv4,SAFI.unicast_multicast,withdrawn,addpath,nh,IN.withdrawn)
+		print len(nlri)
+		logger.parser(LazyFormat("parsed withdraw nlri %s payload " % nlri,od,withdrawn[:len(nlri)]))
 		withdrawn = withdrawn[len(nlri):]
 		nlris.append(nlri)
 
 	while announced:
 		nlri = NLRIFactory(AFI.ipv4,SAFI.unicast_multicast,announced,addpath,nh,IN.announced)
+		logger.parser(LazyFormat("parsed announce nlri %s payload " % nlri,od,announced[:len(nlri)]))
 		announced = announced[len(nlri):]
 		nlris.append(nlri)
 

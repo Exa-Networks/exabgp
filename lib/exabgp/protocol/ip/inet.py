@@ -79,8 +79,11 @@ class Inet (Address):
 	def __len__ (self):
 		return len(self.packed)
 
-	def __str__ (self):
+	def inet (self):
 		return self.ip
+
+	def __str__ (self):
+		return self.inet()
 
 	def __cmp__ (self,other):
 		if self.packed == other.packed:

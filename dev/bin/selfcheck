@@ -28,6 +28,6 @@ do
 		echo ok $conf
 	else
 		echo failed $conf
-		echo "env exabgp.tcp.bind='' exabgp.debug.selfcheck=1 $path/../sbin/exabgp $conf -p"
+		echo "env exabgp.tcp.bind='' exabgp.debug.selfcheck=1 exabgp.debug.configuration=1 $path/../sbin/exabgp $conf -p"
 	fi
 done
