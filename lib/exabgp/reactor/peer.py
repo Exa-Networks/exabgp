@@ -299,6 +299,14 @@ class Peer (object):
 		self._out_proto.negotiated.sent(message)
 		self._out_state = STATE.opensent
 
+		# Send KEEPALIVE
+		for message in self._out_proto.new_keepalive('ESTABLISHED'):
+			yield True
+
+		# the generator was interrupted
+		if ord(message.TYPE) == Message.Type.NOP:
+			raise Interrupted()
+
 		# Read OPEN
 		wait = environment.settings().bgp.openwait
 		opentimer = Timer(self.wrout,wait,1,1,'waited for open too long, we do not like stuck in active')
@@ -332,14 +340,6 @@ class Peer (object):
 			if ord(message.TYPE) not in [Message.Type.NOP,Message.Type.KEEPALIVE]:
 				raise message
 			yield None
-
-		# the generator was interrupted
-		if ord(message.TYPE) == Message.Type.NOP:
-			raise Interrupted()
-
-		# Send KEEPALIVE
-		for message in self._out_proto.new_keepalive('ESTABLISHED'):
-			yield True
 
 		# the generator was interrupted
 		if ord(message.TYPE) == Message.Type.NOP:
