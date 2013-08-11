@@ -18,7 +18,7 @@ from exabgp.bgp.message.direction import IN
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.nlri.eor import RouteEOR
+from exabgp.bgp.message.update.nlri.eor import NLRIEOR
 
 from exabgp.bgp.message.update.attribute.id import AttributeID as AID
 from exabgp.bgp.message.update.attribute.flag import Flag
@@ -356,7 +356,7 @@ class Attributes (dict):
 
 			# XXX: we do assume that it is an EOR. most likely harmless
 			if not data:
-				self.mp_withdraw.append(RouteEOR(afi,safi,IN.announced))
+				self.mp_withdraw.append(NLRIEOR(afi,safi,IN.announced))
 				return self.factory(next)
 
 			while data:

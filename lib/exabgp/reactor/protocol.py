@@ -119,7 +119,7 @@ class Protocol (object):
 			self.logger.message(self.me('<< UPDATE'))
 
 			if length == 30 and body.startswith(EOR.PREFIX):
-				update = EOR().factory(body)
+				update = EOR(body)
 			elif self.neighbor.api.receive_routes:
 				update = UpdateFactory(self.negotiated,body)
 			else:

@@ -49,7 +49,7 @@ Notes
 - store -> sent (to have another one for received Change(s) later)
 - we do not need to do a linear scan on route search, just look for the index in the dict (BIG save)
 - accelerate reactor
-- fix RouteEOR
+- make sure on peer reload we are clearly the routes already sent to the peer to force a resend
 
 Important
 * write the documentation, and do not rely on the example and the site wiki (argh ...)
