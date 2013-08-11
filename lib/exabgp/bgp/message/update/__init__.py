@@ -7,7 +7,6 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from exabgp.protocol.family import AFI,SAFI
-from exabgp.protocol.ip.address import Address
 
 from exabgp.bgp.message import Message,prefix
 from exabgp.bgp.message.update.attribute.id import AttributeID as AID

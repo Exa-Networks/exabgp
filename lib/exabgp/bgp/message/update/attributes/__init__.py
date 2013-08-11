@@ -149,9 +149,8 @@ class Attributes (dict):
 
 	def watchdog (self):
 		if AID.INTERNAL_WATCHDOG in self:
-			self.pop(AID.INTERNAL_WATCHDOG)
-			return True
-		return False
+			return self.pop(AID.INTERNAL_WATCHDOG)
+		return None
 
 	def withdraw (self):
 		if AID.INTERNAL_WITHDRAW in self:

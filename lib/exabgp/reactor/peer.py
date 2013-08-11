@@ -377,7 +377,7 @@ class Peer (object):
 			for message in self.proto.read_message():
 				# Received update
 				if message.TYPE == Update.TYPE:
-					counter.increment(len(message.routes))
+					counter.increment(len(message.nlris))
 
 				self.timer.tick(message)
 

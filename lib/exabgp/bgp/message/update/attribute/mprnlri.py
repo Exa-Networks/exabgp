@@ -56,4 +56,4 @@ class MPRNLRI (Attribute):
 		return len(self.pack())
 
 	def __str__ (self):
-		return "MP_REACH_NLRI %d NLRI(s)" % len(self.routes)
+		return "MP_REACH_NLRI %d NLRI(s)" % len(self.nlris)

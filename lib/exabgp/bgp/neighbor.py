@@ -8,22 +8,15 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from exabgp.protocol.family import AFI
 
-from exabgp.rib.store import Store
-
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.capability import AddPath
 
 from exabgp.reactor.api.encoding import APIOptions
 
-from exabgp.rib.watchdog import Watchdog
-
+from exabgp.rib import RIB
 
 # The definition of a neighbor (from reading the configuration)
 class Neighbor (object):
-	# This need to be global, all neighbor share the same data !
-	# It allows us to use the information when performing global routing table update calculation
-	watchdog = Watchdog()
-
 	def __init__ (self):
 		# self.logger should not be used here as long as we do use deepcopy as it contains a Lock
 		self.description = ''
@@ -50,7 +43,7 @@ class Neighbor (object):
 		self.add_path = None
 
 		self._families = []
-		self.store = Store(self)
+		self.rib = RIB()
 
 	def name (self):
 		if self.multisession:
@@ -111,8 +104,8 @@ class Neighbor (object):
 		changes=''
 		if with_changes:
 			changes += '\nstatic { '
-			for changes in self.store.every_changes():
-				changes += '\n    %s' % changes.extensive(n)
+			for changes in self.rib.outgoing.every_changes():
+				changes += '\n    %s' % changes.extensive()
 			changes += '\n}'
 
 		families = ''

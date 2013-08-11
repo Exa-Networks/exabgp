@@ -8,7 +8,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from struct import unpack
-from exabgp.bgp.message.direction import IN
+from exabgp.bgp.message.direction import IN,OUT
 from exabgp.protocol.ip.address import Address
 
 class FakeNLRI (Address):
@@ -24,6 +24,7 @@ class RouteEOR (object):
 	def __init__ (self,afi,safi,action):
 		self.nlri = FakeNLRI(afi,safi,action)
 		self.attributes = None  # API compatibility with Route
+		self.action = OUT.announce
 
 	def pack (self):
 		return self.PREFIX + self.nlri.afi.pack() + self.nlri.safi.pack()

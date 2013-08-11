@@ -25,7 +25,7 @@ class Table (object):
 
 	# This interface is very good for the file change but not if you want to update from network
 	def recalculate (self):
-		changes = self.peer.neighbor.store.dump()
+		changes = self.peer.neighbor.rib.outgoing.dump()
 
 		# remove ...
 		for index in self._plus.keys():

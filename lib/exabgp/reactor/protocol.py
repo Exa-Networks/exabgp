@@ -126,10 +126,10 @@ class Protocol (object):
 				update = None
 
 			if update:
-				for route in update.routes:
-					self.logger.routes(LazyFormat(self.me(''),str,route))
+				for nlri in update.nlris:
+					self.logger.routes(LazyFormat(self.me(''),str,nlri))
 
-				self.peer.reactor.processes.routes(self.neighbor.peer_address,update.routes)
+				self.peer.reactor.processes.update(self.neighbor.peer_address,update)
 				yield update
 			else:
 				yield _UNKNOWN

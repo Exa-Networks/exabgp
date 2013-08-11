@@ -47,10 +47,11 @@ class Text (object):
 	def send (self,neighbor,category,header,body):
 		return 'neighbor %s sent %s header %s body %s\n' % (neighbor,ord(category),hexstring(header),hexstring(body))
 
-	def routes (self,neighbor,routes):
+	def update (self,neighbor,update):
 		r = 'neighbor %s update start\n' % neighbor
-		for route in routes:
-			r += 'neighbor %s %s\n' % (neighbor,str(route))
+		attributes = str(update.attributes)
+		for nlri in update.nlris:
+			r += 'neighbor %s announced route %s%s\n' % (neighbor,str(nlri),attributes)
 		r += 'neighbor %s update end\n' % neighbor
 		return r
 
@@ -107,30 +108,29 @@ class JSON (object):
 	def send (self,neighbor,category,header,body):
 		return self._header(self._neighbor(neighbor,'"update": { %s } ' % self._minimalkv({'sent':ord(category),'header':hexstring(header),'body':hexstring(body)})))
 
-	# all those routes come from the same update, so let's save some parsing and group by attributes
-	def _routes (self,routes):
+	def _update (self,update):
 		plus = {}
 		minus = {}
 		route = None
-		for route in routes:
-			if route.action == IN.announced:
-				plus.setdefault((route.nlri.afi,route.nlri.safi),[]).append(route)
-			if route.action == IN.withdrawn:
-				minus.setdefault((route.nlri.afi,route.nlri.safi),[]).append(route)
+		for nlri in update.nlris:
+			if nlri.action == IN.announced:
+				plus.setdefault((nlri.afi,nlri.safi),[]).append(nlri)
+			if nlri.action == IN.withdrawn:
+				minus.setdefault((nlri.afi,nlri.safi),[]).append(nlri)
 
 		add = []
 		for family in plus:
-			routes = plus[family]
-			s  = '"%s %s": { ' % (routes[0].nlri.afi,routes[0].nlri.safi)
-			s += ', '.join('%s' % _.nlri.json() for _ in routes)
+			nlris = plus[family]
+			s  = '"%s %s": { ' % family
+			s += ', '.join('%s' % nlri.json() for nlri in nlris)
 			s += ' }'
 			add.append(s)
 
 		remove = []
 		for family in minus:
-			routes = minus[family]
-			s  = '"%s %s": [ ' % (routes[0].nlri.afi,routes[0].nlri.safi)
-			s += ', '.join('"%s"' % str(_.nlri) for _ in routes)
+			nlris = minus[family]
+			s  = '"%s %s": [ ' % family
+			s += ', '.join('"%s"' % str(nlri) for nlri in nlris)
 			s += ' ]'
 			remove.append(s)
 
@@ -139,13 +139,13 @@ class JSON (object):
 		if add and remove: nlri += ', '
 		if remove: nlri+= '"withdraw": { %s }' % ', '.join(remove)
 
-		attributes = '' if not route or not route.attributes else '"attribute": { %s }' % route.attributes.json()
+		attributes = '' if not update.attributes else '"attribute": { %s }' % update.attributes.json()
 		if not attributes or not nlri:
 			return '"update": { %s%s } ' % (attributes,nlri)
 		return '"update": { %s, %s } ' % (attributes,nlri)
 
-	def routes (self,neighbor,routes):
-		return self._header(self._neighbor(neighbor,self._routes(routes)))
+	def update (self,neighbor,update):
+		return self._header(self._neighbor(neighbor,self._update(update)))
 
 	def bmp (self,bmp,routes):
 		return self._header(self._bmp(bmp,self._routes(routes)))

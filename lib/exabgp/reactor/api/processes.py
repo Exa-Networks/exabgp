@@ -226,7 +226,7 @@ class Processes (object):
 		for process in self._notify(neighbor,'send-packets'):
 			self.write(process,self._api_encoder[process].send(neighbor,category,header,body))
 
-	def routes (self,neighbor,routes):
+	def update (self,neighbor,update):
 		if self.silence: return
 		for process in self._notify(neighbor,'receive-routes'):
-			self.write(process,self._api_encoder[process].routes(neighbor,routes))
+			self.write(process,self._api_encoder[process].update(neighbor,update))

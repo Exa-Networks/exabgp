@@ -292,7 +292,7 @@ class Configuration (object):
 		result = False
 		for neighbor in self.neighbor:
 			if peers is None or neighbor in peers:
-				if self.neighbor[neighbor].store.add_change(change):
+				if self.neighbor[neighbor].rib.outgoing.add_change(change):
 					result = True
 		return result
 
@@ -300,7 +300,7 @@ class Configuration (object):
 		result = False
 		for neighbor in self.neighbor:
 			if peers is None or neighbor in peers:
-				if self.neighbor[neighbor].store.remove_change(change):
+				if self.neighbor[neighbor].rib.outgoing.remove_change(change):
 					result = True
 		return result
 
@@ -874,7 +874,7 @@ class Configuration (object):
 			v = local_scope.get('route',[])
 			for change in v:
 				# This add the family to neighbor.families()
-				neighbor.store.add_change(change)
+				neighbor.rib.outgoing.add_change(change)
 
 		for local_scope in (scope[0],scope[-1]):
 			neighbor.api.receive_packets |= local_scope.get('receive-packets',False)
@@ -949,7 +949,7 @@ class Configuration (object):
 					if f == family:
 						continue
 					m_neighbor.remove_family(f)
-					m_neighbor.store.remove_family(f)
+					m_neighbor.rib.outgoing.remove_family(f)
 				self._neighbor[m_neighbor.name()] = m_neighbor
 		else:
 			self._neighbor[neighbor.name()] = neighbor
@@ -2139,7 +2139,7 @@ class Configuration (object):
 		#grouped = False
 
 		for nei in self.neighbor.keys():
-			for change in self.neighbor[nei].store.every_changes():
+			for change in self.neighbor[nei].rib.outgoing.every_changes():
 				str1 = change.extensive()
 				update = Update().new([change.nlri],change.attributes)
 				packed_updates = list(update.announce(negotiated))

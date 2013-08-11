@@ -37,4 +37,4 @@ class MPURNLRI (Attribute):
 		return len(self.pack())
 
 	def __str__ (self):
-		return "MP_UNREACH_NLRI %d NLRI(s)" % len(self.routes)
+		return "MP_UNREACH_NLRI %d NLRI(s)" % len(self.nlris)

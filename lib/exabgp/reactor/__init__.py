@@ -14,7 +14,6 @@ import select
 
 from exabgp.version import version
 
-from exabgp.util.errstr import errstr
 from exabgp.reactor.daemon import Daemon
 from exabgp.reactor.listener import Listener,NetworkError
 from exabgp.reactor.api.processes import Processes,ProcessError
@@ -88,7 +87,7 @@ class Reactor (object):
 				if os.geteuid() != 0 and self.port <= 1024:
 					self.logger.reactor("Can not bind to %s:%d, you may need to run ExaBGP as root" % (self.ip,self.port),'critical')
 				else:
-					self.logger.reactor("Can not bind to %s:%d (%s)" % (self.ip,self.port,errstr(e)),'critical')
+					self.logger.reactor("Can not bind to %s:%d (%s)" % (self.ip,self.port,str(e)),'critical')
 				self.logger.reactor("unset exabgp.tcp.bind if you do not want listen for incoming connections",'critical')
 				self.logger.reactor("and check that no other daemon is already binding to port %d" % self.port,'critical')
 				sys.exit(1)
@@ -148,6 +147,7 @@ class Reactor (object):
 					ios = []
 					while peers:
 						for key in peers[:]:
+							# XXX: FIXME: when shutting down this can raise a KeyError ! HOW !
 							peer = self._peers[key]
 							action = peer.run()
 							# .run() returns:
@@ -369,7 +369,7 @@ class Reactor (object):
 			def _show_route (self):
 				for key in self.configuration.neighbor.keys():
 					neighbor = self.configuration.neighbor[key]
-					for change in list(neighbor.store.every_changes()):
+					for change in list(neighbor.rib.outgoing.every_changes()):
 						self._answer(service,'neighbor %s %s' % (neighbor.local_address,str(change.nlri)))
 						yield True
 			self._pending.append(_show_route(self))
@@ -379,7 +379,7 @@ class Reactor (object):
 			def _show_extensive (self):
 				for key in self.configuration.neighbor.keys():
 					neighbor = self.configuration.neighbor[key]
-					for change in list(neighbor.store.every_changes()):
+					for change in list(neighbor.rib.outgoing.every_changes()):
 						self._answer(service,'neighbor %s %s' % (neighbor.name(),change.extensive()))
 						yield True
 			self._pending.append(_show_extensive(self))
@@ -389,7 +389,7 @@ class Reactor (object):
 		if command.startswith('announce watchdog'):
 			def _announce_watchdog (self,name):
 				for neighbor in self.configuration.neighbor:
-					self.configuration.neighbor[neighbor].watchdog.announce(name)
+					self.configuration.neighbor[neighbor].rib.watchdog.announce(name)
 					yield False
 				self._route_update = True
 			try:
@@ -403,7 +403,7 @@ class Reactor (object):
 		if command.startswith('withdraw watchdog'):
 			def _withdraw_watchdog (self,name):
 				for neighbor in self.configuration.neighbor:
-					self.configuration.neighbor[neighbor].watchdog.withdraw(name)
+					self.configuration.neighbor[neighbor].rib.watchdog.withdraw(name)
 					yield False
 				self._route_update = True
 			try:

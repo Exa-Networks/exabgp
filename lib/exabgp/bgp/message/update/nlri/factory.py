@@ -16,7 +16,6 @@ from exabgp.bgp.message.update.attribute.nexthop import cachedNextHop
 
 def NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
 	if safi in (133,134):
-		import pdb; pdb.set_trace()
 		raise Notify(3,2,'unimplemented')
 	else:
 		return _NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action)

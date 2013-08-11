@@ -18,19 +18,20 @@ class EOR (Message):
 	PREFIX = RouteEOR.PREFIX
 
 	def __init__ (self):
-		self.routes = []
+		self.nlris = []
+		self.attributes = ''  # XXX: FIXME: ugly should be Attributes()
 
 	def new (self,families):
 		for afi,safi in families:
-			self.routes.append(RouteEOR(afi,safi,OUT.announce))
+			self.nlris.append(RouteEOR(afi,safi,OUT.announce))
 		return self
 
 	def factory(self,data):
-		self.routes.append(announcedRouteEOR(data))
+		self.nlris.append(announcedRouteEOR(data))
 		return self
 
 	def updates (self,negotiated):
-		for eor in self.routes:
+		for eor in self.nlris:
 			yield self._message(eor.pack())
 
 	def __str__ (self):
