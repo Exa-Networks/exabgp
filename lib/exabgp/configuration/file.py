@@ -958,7 +958,7 @@ class Configuration (object):
 				for change in changes:
 					if change.nlri.family() in families:
 						# This add the family to neighbor.families()
-						neighbor.rib.outgoing.add_change(change)
+						neighbor.rib.outgoing.insert_change_watchdog(change)
 				self._neighbor[m_neighbor.name()] = m_neighbor
 		else:
 			neighbor.make_rib()
@@ -966,7 +966,7 @@ class Configuration (object):
 			for change in changes:
 				if change.nlri.family() in families:
 					# This add the family to neighbor.families()
-					neighbor.rib.outgoing.add_change(change)
+					neighbor.rib.outgoing.insert_change_watchdog(change)
 			self._neighbor[neighbor.name()] = neighbor
 
 		for line in str(neighbor).split('\n'):

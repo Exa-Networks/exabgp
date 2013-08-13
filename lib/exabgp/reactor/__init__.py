@@ -384,7 +384,7 @@ class Reactor (object):
 		if command.startswith('announce watchdog'):
 			def _announce_watchdog (self,name):
 				for neighbor in self.configuration.neighbor:
-					self.configuration.neighbor[neighbor].rib.watchdog.announce(name)
+					self.configuration.neighbor[neighbor].rib.outgoing.announce_watchdog(name)
 					yield False
 				self._route_update = True
 			try:
@@ -398,7 +398,7 @@ class Reactor (object):
 		if command.startswith('withdraw watchdog'):
 			def _withdraw_watchdog (self,name):
 				for neighbor in self.configuration.neighbor:
-					self.configuration.neighbor[neighbor].rib.watchdog.withdraw(name)
+					self.configuration.neighbor[neighbor].rib.outgoing.withdraw_watchdog(name)
 					yield False
 				self._route_update = True
 			try:

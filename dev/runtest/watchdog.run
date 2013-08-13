@@ -3,13 +3,13 @@
 import sys
 import time
 
-time.sleep(10.0)
+time.sleep(4.0)
 
 while True:
 	print "announce watchdog dnsr"
 	sys.stdout.flush()
-	time.sleep(1.1)
+	time.sleep(2.0)
 
 	print "withdraw watchdog dnsr"
 	sys.stdout.flush()
-	time.sleep(1.1)
+	time.sleep(2.0)

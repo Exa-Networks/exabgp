@@ -12,9 +12,9 @@ from exabgp.bgp.message.update import Update
 # XXX: FIXME: we would not have to use so many setdefault if we pre-filled the dicts with the families
 
 class Store (object):
-	def __init__ (self,watchdog,cache=True):
+	def __init__ (self,cache=True):
 		# XXX: FIXME: we can decide to not cache the routes we seen and let the backend do it for us and save the memory
-		self._watchdog = watchdog
+		self._watchdog = {}
 		self.cache = cache
 		self._announced = {}
 		self._cache_attribute = {}
@@ -24,9 +24,10 @@ class Store (object):
 
 	def every_changes (self):
 		# we use list() to make a snapshot of the data at the time we run the command
-		for family in list(self._watchdog.filtered(self._announced.keys())):
+		for family in list(self._announced.keys()):
 			for change in self._announced[family].values():
-				yield change
+				if change.nlri.action == OUT.announce:
+					yield change
 
 	def dump (self):
 		# This function returns a hash and not a list as "in" tests are O(n) with lists and O(1) with hash
@@ -34,21 +35,40 @@ class Store (object):
 		changes = {}
 		for family in self._announced.keys():
 			for change in self._announced[family].values():
-				changes[change.index()] = change
+				if change.nlri.action == OUT.announce:
+					changes[change.index()] = change
 		return changes
-
 
 	def resend_known (self):
 		for change in self.every_changes():
 			self.insert_change(change,True)
 
-
-	def add_change (self,change):
+	def insert_change_watchdog (self,change):
 		watchdog = change.attributes.watchdog()
 		withdraw = change.attributes.withdraw()
-		self._watchdog.integrate(change,watchdog,withdraw)
+		if watchdog:
+			if withdraw:
+				self._watchdog.setdefault(watchdog,{})[change.nlri.index()] = ('-', change)
+				return True
+			self._watchdog.setdefault(watchdog,{})[change.nlri.index()] = ('+', change)
 		self.insert_change(change)
 		return True
+
+	def announce_watchdog (self,watchdog):
+		if watchdog in self._watchdog:
+			for (state,change) in self._watchdog[watchdog].values():
+				if state == '-':
+					change.nlri.action = OUT.announce
+					self.insert_change(change)
+					self._watchdog[watchdog][change.nlri.index()] = ('+',change)
+
+	def withdraw_watchdog (self,watchdog):
+		if watchdog in self._watchdog:
+			for (state,change) in self._watchdog[watchdog].values():
+				if state == '+':
+					change.nlri.action = OUT.withdraw
+					self.insert_change(change)
+					self._watchdog[watchdog][change.nlri.index()] = ('-',change)
 
 	def insert_change (self,change,force=False):
 		# WARNING : this function can run while we are in the updates() loop
@@ -97,12 +117,6 @@ class Store (object):
 		return True
 
 	def updates (self,grouped):
-
-		# changes = self._watchdog.announce()
-		# if changes:
-		# 	for change in changes:
-		# 		yield Update().new(change.nlri,change.attributes)
-
 		dict_sorted = self._modify_sorted
 		dict_nlri = self._modify_nlri
 		dict_attr = self._cache_attribute
