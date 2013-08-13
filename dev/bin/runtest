@@ -56,7 +56,6 @@ def main ():
 		else:
 			print "sequence check for", configuration
 			print "skip (no sequence data)\n"
-			print "\n"*4
 			continue
 
 def check_sequence(exabgp,configuration,daemon,fname):
@@ -95,14 +94,16 @@ def check_sequence(exabgp,configuration,daemon,fname):
 	if 'successful' in daemon_output:
 		print "successful\n"
 	else:
+		print "\n"*4
 		print "failure\n"
-		print 'exabgp:\n', exabgp_output
-		print 'daemon:\n', daemon_output
 		print
 		print "command lines were:"
 		print "> env exabgp.tcp.port=1790 exabgp.debug.defensive=true exabgp.tcp.once=true exabgp.tcp.bind=''", ' '.join(command_exabgp)
 		print "> env exabgp.tcp.port=1790", ' '.join(command_daemon)
 		print
+		print 'exabgp:\n', exabgp_output
+		print 'daemon:\n', daemon_output
+		print "\n"*4
 
 def check (main):
 	os.environ['exabgp.tcp.bind'] = ''

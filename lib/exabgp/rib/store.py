@@ -47,6 +47,7 @@ class Store (object):
 		watchdog = change.attributes.watchdog()
 		withdraw = change.attributes.withdraw()
 		self._watchdog.integrate(change,watchdog,withdraw)
+		self.insert_change(change)
 		return True
 
 	def insert_change (self,change,force=False):
