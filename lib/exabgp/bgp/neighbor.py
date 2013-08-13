@@ -107,7 +107,7 @@ class Neighbor (object):
 		changes=''
 		if with_changes:
 			changes += '\nstatic { '
-			for changes in self.rib.outgoing.every_changes():
+			for changes in self.rib.incoming.every_changes():
 				changes += '\n    %s' % changes.extensive()
 			changes += '\n}'
 

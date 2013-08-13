@@ -6,13 +6,13 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from exabgp.bgp.message.direction import OUT
+from exabgp.bgp.message.direction import IN,OUT
 from exabgp.bgp.message.update import Update
 
 # XXX: FIXME: we would not have to use so many setdefault if we pre-filled the dicts with the families
 
 class Store (object):
-	def __init__ (self,cache=True):
+	def __init__ (self,cache):
 		# XXX: FIXME: we can decide to not cache the routes we seen and let the backend do it for us and save the memory
 		self._watchdog = {}
 		self.cache = cache
@@ -69,6 +69,14 @@ class Store (object):
 					change.nlri.action = OUT.withdraw
 					self.insert_change(change)
 					self._watchdog[watchdog][change.nlri.index()] = ('-',change)
+
+	def insert_received (self,change):
+		if not self.cache:
+			return
+		elif change.nlri.action == IN.announced:
+			self._announced[change.nlri.index()] = change
+		else:
+			self._announced.pop(change.nlri.index(),None)
 
 	def insert_change (self,change,force=False):
 		# WARNING : this function can run while we are in the updates() loop

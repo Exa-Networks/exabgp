@@ -16,5 +16,5 @@ class RIB:
 			return self.ribs[name]
 		self.ribs[name] = self
 
-		self.incoming = Store()
-		self.outgoing = Store()
+		self.incoming = Store(False)
+		self.outgoing = Store(True)

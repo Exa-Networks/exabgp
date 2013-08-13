@@ -25,6 +25,7 @@ from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.factory import UpdateFactory
 
 from exabgp.reactor.api.processes import ProcessError
+from exabgp.rib.change import Change
 
 from exabgp.logger import Logger,FakeLogger,LazyFormat
 
@@ -122,6 +123,7 @@ class Protocol (object):
 				return
 
 			for nlri in update.nlris:
+				self.neighbor.rib.incoming.insert_received(Change(nlri,update.attributes))
 				self.logger.routes(LazyFormat(self.me(''),str,nlri))
 
 			self.peer.reactor.processes.update(self.neighbor.peer_address,update)

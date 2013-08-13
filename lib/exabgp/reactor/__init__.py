@@ -364,7 +364,7 @@ class Reactor (object):
 			def _show_route (self):
 				for key in self.configuration.neighbor.keys():
 					neighbor = self.configuration.neighbor[key]
-					for change in list(neighbor.rib.outgoing.every_changes()):
+					for change in list(neighbor.rib.incoming.every_changes()):
 						self._answer(service,'neighbor %s %s' % (neighbor.local_address,str(change.nlri)))
 						yield True
 			self._pending.append(_show_route(self))
@@ -374,7 +374,7 @@ class Reactor (object):
 			def _show_extensive (self):
 				for key in self.configuration.neighbor.keys():
 					neighbor = self.configuration.neighbor[key]
-					for change in list(neighbor.rib.outgoing.every_changes()):
+					for change in list(neighbor.rib.incoming.every_changes()):
 						self._answer(service,'neighbor %s %s' % (neighbor.name(),change.extensive()))
 						yield True
 			self._pending.append(_show_extensive(self))
