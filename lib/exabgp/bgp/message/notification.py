@@ -78,17 +78,11 @@ class Notification (Message):
 		(6,8) : "Out of Resources",
 	}
 
-	def new (self,code,subcode,data=''):
+	def __init__ (self,code,subcode,data=''):
 		self.code = code
 		self.subcode = subcode
 		self.data = data
 		return self
-
-	def factory (self,data):
-		return self.new(ord(data[0]),ord(data[1]),data[2:])
-
-	def message (self):
-		return self._message()
 
 	def __str__ (self):
 		return "%s / %s%s" % (
@@ -98,6 +92,11 @@ class Notification (Message):
 		)
 
 
+def NotificationFactory (self,data):
+	return Notification(ord(data[0]),ord(data[1]),data[2:])
+
+
+
 # =================================================================== Notify
 # A Notification we need to inform our peer of.
 
@@ -105,8 +104,7 @@ class Notify (Notification):
 	def __init__ (self,code,subcode,data=None):
 		if data is None:
 			data = self._str_subcode.get((code,subcode),'unknown notification type')
-		Notification.__init__(self)
-		self.new(code,subcode,data)
+		Notification.__init__(self,code,subcode,data)
 
 	def message (self):
-		return self._message("%s%s%s" % (chr(self.code),chr(self.subcode),self.data))
+		return Message.message(self,"%s%s%s" % (chr(self.code),chr(self.subcode),self.data))

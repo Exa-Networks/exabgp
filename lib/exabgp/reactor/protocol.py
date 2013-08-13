@@ -13,14 +13,14 @@ from exabgp.reactor.network.error import NotifyError
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.nop import NOP
-from exabgp.bgp.message.unknown import Unknown
-from exabgp.bgp.message.open import Open
+from exabgp.bgp.message.unknown import UnknownMessageFactory
+from exabgp.bgp.message.open import Open,OpenFactory
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.message.update import Update,announce
-from exabgp.bgp.message.update.eor import EOR
+from exabgp.bgp.message.update import Update,messages
+from exabgp.bgp.message.update.eor import EOR,EORFactory
 from exabgp.bgp.message.keepalive import KeepAlive
-from exabgp.bgp.message.notification import Notification, Notify
+from exabgp.bgp.message.notification import NotificationFactory, Notify
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.factory import UpdateFactory
 
@@ -32,8 +32,7 @@ from exabgp.logger import Logger,FakeLogger,LazyFormat
 MAX_BACKLOG = 15000
 
 _NOP = NOP()
-_UPDATE = Update()
-_UNKNOWN = Unknown()
+_UPDATE = Update([],'')
 
 class Protocol (object):
 	decode = True
@@ -115,20 +114,18 @@ class Protocol (object):
 			self.logger.message(self.me('<< UPDATE'))
 
 			if length == 30 and body.startswith(EOR.PREFIX):
-				update = EOR(body)
+				update = EORFactory(body)
 			elif self.neighbor.api.receive_routes:
 				update = UpdateFactory(self.negotiated,body)
 			else:
-				update = None
+				yield _NOP
+				return
 
-			if update:
-				for nlri in update.nlris:
-					self.logger.routes(LazyFormat(self.me(''),str,nlri))
+			for nlri in update.nlris:
+				self.logger.routes(LazyFormat(self.me(''),str,nlri))
 
-				self.peer.reactor.processes.update(self.neighbor.peer_address,update)
-				yield update
-			else:
-				yield _UNKNOWN
+			self.peer.reactor.processes.update(self.neighbor.peer_address,update)
+			yield update
 
 		elif msg == Message.Type.KEEPALIVE:
 			self.logger.message(self.me('<< KEEPALIVE%s' % (' (%s)' % comment if comment else '')))
@@ -136,18 +133,19 @@ class Protocol (object):
 
 		elif msg == Message.Type.NOTIFICATION:
 			self.logger.message(self.me('<< NOTIFICATION'))
-			yield Notification().factory(body)
+			yield NotificationFactory(body)
 
 		elif msg == Message.Type.ROUTE_REFRESH:
 			self.logger.message(self.me('<< ROUTE-REFRESH'))
-			yield RouteRefresh().factory(body)
+			# not doing anything with the Data we do not handle route refresh
+			yield RouteRefresh()
 
 		elif msg == Message.Type.OPEN:
-			yield Open().factory(body)
+			yield OpenFactory(body)
 
 		else:
 			self.logger.message(self.me('<< NOP (unknow type %d)' % msg))
-			yield Unknown().factory(msg)
+			yield UnknownMessageFactory(msg)
 
 	def validate_open (self):
 		error = self.negotiated.validate(self.neighbor)
@@ -184,7 +182,7 @@ class Protocol (object):
 	#
 
 	def new_open (self,restarted):
-		sent_open = Open().new(
+		sent_open = Open(
 			4,
 			self.neighbor.local_as,
 			self.neighbor.router_id.ip,
@@ -218,7 +216,7 @@ class Protocol (object):
 	def new_update (self):
 		number = 0
 		for update in self.neighbor.rib.outgoing.updates(self.neighbor.group_updates):
-			for message in announce(update,self.negotiated):
+			for message in messages(update,self.negotiated):
 				number += 1
 				for boolean in self.write(message):
 					# boolean is a transient network error we already announced
@@ -229,11 +227,11 @@ class Protocol (object):
 	def new_eors (self):
 		# Send EOR to let our peer know he can perform a RIB update
 		if self.negotiated.families:
-			eor = EOR().new(self.negotiated.families)
-			for message in eor.updates():
-				for boolean in self.write(message):
+			for afi,safi in self.negotiated.families:
+				eor = EOR(afi,safi).message()
+				for _ in self.write(eor):
 					yield _NOP
-			yield _UPDATE
+				yield _UPDATE
 		else:
 			# If we are not sending an EOR, send a keepalive as soon as when finished
 			# So the other routers knows that we have no (more) routes to send ...

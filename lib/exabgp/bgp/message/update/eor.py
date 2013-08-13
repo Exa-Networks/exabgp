@@ -10,6 +10,7 @@ from struct import unpack
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.direction import IN,OUT
 from exabgp.bgp.message.update.nlri.eor import NLRIEOR
+from exabgp.bgp.message.update.attributes import Attributes
 
 # =================================================================== End-Of-RIB
 # not technically a different message type but easier to treat as one
@@ -21,21 +22,17 @@ class EOR (Message):
 	TYPE = chr(0x02)  # it is an update
 	PREFIX = '\x00\x00\x00\x07\x90\x0f\x00\x03'
 
-	def __init__ (self,data=None):
-		self.nlris = [] if data is None else [NLRIEOR(_short(data[-3:-1]),ord(data[-1]),IN.announced)]
-		self.attributes = ''  # XXX: FIXME: to be clean it should be Attributes()
+	def __init__ (self,afi,safi,action=OUT.announce):
+		self.nlris = [NLRIEOR(afi,safi,action),]
+		self.attributes = Attributes()
 
-	def new (self,families):
-		for afi,safi in families:
-			self.nlris.append(NLRIEOR(afi,safi,OUT.announce))
-		return self
-
-	def updates (self,negotiated=None):
-		for eor in self.nlris:
-			yield self._message(self.PREFIX + eor.pack())
+	def message (self,negotiated=None):
+		return Message.message(self,self.PREFIX + self.nlris[0].pack())
 
 	def __str__ (self):
 		return 'EOR'
 
 def EORFactory (data):
-	return EOR()
+	afi  = _short(data[-3:-1])
+	safi = ord(data[-1])
+	return EOR(afi,safi,IN.announced)

@@ -68,4 +68,4 @@ def UpdateFactory (negotiated,data):
 	for nlri in attributes.mp_announce:
 		nlris.append(nlri)
 
-	return Update().new(nlris,attributes)
+	return Update(nlris,attributes)

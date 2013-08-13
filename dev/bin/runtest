@@ -37,12 +37,11 @@ def main ():
 		reverse = reversed if sys.argv[2].startswith('rev') else lambda _:_
 		skip = 0 if not sys.argv[2].isdigit() else int(sys.argv[2])
 	else:
-		reversed = lambda _:_
+		reverse = lambda _:_
 		skip =0
 
 	confs = glob.glob(path.join(runtest,'%s.conf' % match.replace('all','*')))
-	print 'reversed file order'
-	confs = reversed(confs)
+	confs = reverse(confs)
 
 	for configuration in confs:
 		if skip:

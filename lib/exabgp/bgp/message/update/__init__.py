@@ -20,10 +20,9 @@ from exabgp.bgp.message.notification import Notify
 class Update (Message):
 	TYPE = chr(0x02)
 
-	def new (self,nlris,attributes):
+	def __init__ (self,nlris,attributes):
 		self.nlris = nlris
 		self.attributes = attributes
-		return self
 
 	def __str__ (self):
 		return '\n'.join(['%s%s' % (str(self.nlris[n]),str(self.attributes)) for n in range(len(self.nlris))])
@@ -33,7 +32,7 @@ class Update (Message):
 # XXX: FIXME: calculate size progressively to not have to do it every time
 # XXX: FIXME: we could as well track when packed_del, packed_mp_del, etc
 # XXX: FIXME: are emptied and therefore when we can save calculations
-def announce (update,negotiated):
+def messages (update,negotiated):
 	attributes = ''
 
 	asn4 = negotiated.asn4
@@ -84,7 +83,7 @@ def announce (update,negotiated):
 		if len(packed_del + packed) > msg_size:
 			if not packed_del:
 				raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
-			yield update._message(prefix(packed_del))
+			yield update.message(prefix(packed_del))
 			packed_del = packed
 		else:
 			packed_del += packed
@@ -104,7 +103,7 @@ def announce (update,negotiated):
 				if len(packed_del + packed_mp_del + packed) > msg_size:
 					if not packed_mp_del and not packed_del:
 						raise Notify(6,0,'attributes size is so large we can not even pack one MPURNLRI')
-					yield update._message(prefix(packed_del) + prefix(packed_mp_del))
+					yield update.message(prefix(packed_del) + prefix(packed_mp_del))
 					packed_del = ''
 					packed_mp_del = packed
 				else:
@@ -118,7 +117,7 @@ def announce (update,negotiated):
 	if add_mp:
 		msg_size = negotiated.msg_size - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
 	if len(packed_del + packed_mp_del) > msg_size:
-		yield update._message(prefix(packed_del) + prefix(packed_mp_del))
+		yield update.message(prefix(packed_del) + prefix(packed_mp_del))
 		packed_del = ''
 		packed_mp_del = ''
 
@@ -136,7 +135,7 @@ def announce (update,negotiated):
 				if len(packed_del + packed_mp_del + packed_mp_add + packed) > msg_size:
 					if not packed_mp_add and not packed_mp_del and not packed_del:
 						raise Notify(6,0,'attributes size is so large we can not even pack on MPURNLRI')
-					yield update._message(prefix(packed_del) + prefix(attributes + packed_mp_del + packed_mp_add))
+					yield update.message(prefix(packed_del) + prefix(attributes + packed_mp_del + packed_mp_add))
 					packed_del = ''
 					packed_mp_del = ''
 					packed_mp_add = packed
@@ -166,10 +165,10 @@ def announce (update,negotiated):
 			if not packed_add and not packed_mp_add and not packed_mp_del and not packed_del:
 				raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
 			if packed_mp_add:
-				yield update._message(prefix(packed_del) + prefix(attributes + packed_mp_del + packed_mp_add) + packed_add)
+				yield update.message(prefix(packed_del) + prefix(attributes + packed_mp_del + packed_mp_add) + packed_add)
 				msg_size = negotiated.msg_size - 2 - 2  # 2 bytes for each of the two prefix() header
 			else:
-				yield update._message(prefix(packed_del) + prefix(packed_mp_del) + packed_add)
+				yield update.message(prefix(packed_del) + prefix(packed_mp_del) + packed_add)
 			packed_del = ''
 			packed_mp_del = ''
 			packed_mp_add = ''
@@ -179,6 +178,4 @@ def announce (update,negotiated):
 			packed_add += packed
 			attributes = attr
 
-	yield update._message(prefix(packed_del) + prefix(attributes + packed_mp_del + packed_mp_add) + packed_add)
-
-# print ''.join(['%02X' % ord(_) for _ in update._message(prefix(packed_nlri) + prefix(''))])
+	yield update.message(prefix(packed_del) + prefix(attributes + packed_mp_del + packed_mp_add) + packed_add)

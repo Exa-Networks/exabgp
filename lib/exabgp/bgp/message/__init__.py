@@ -28,8 +28,6 @@ def prefix (data):
 	return '%s%s' % (pack('!H',len(data)),data)
 
 class Message (Exception):
-	TYPE = None
-
 	MARKER = chr(0xff)*16
 	HEADER_LEN = 19
 	MAX_LEN = 4096
@@ -55,6 +53,8 @@ class Message (Exception):
 	}
 
 	def __init__ (self):
+		# if we define TYPE outside __init__ as otherwsie we can not dynamically create different UnknownMessage
+		# self.TYPE = None
 		self._name = None
 
 	def name (self,code):
@@ -82,7 +82,7 @@ class Message (Exception):
 
 		return self._name
 
-	def _message (self,message=""):
+	def message (self,message=""):
 		message_len = pack('!H',19+len(message))
 		return "%s%s%s%s" % (self.MARKER,message_len,self.TYPE,message)
 

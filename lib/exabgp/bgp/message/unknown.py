@@ -8,19 +8,18 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message import Message
 
-class Unknown (Message):
+class UnknownMessage (Message):
 	# Make sure we have a value, which is not defined in any RFC !
-	TYPE = chr(0xFF)
 
-	def __init__ (self,data=''):
-		self.factory(data)
-
-	def factory (self,data):
+	def __init__ (self,code,data=''):
+		self.TYPE = code
 		self.data = data
-		return self
 
 	def message (self):
-		return self._message(self.data)
+		return Message.message(self,self.data)
 
 	def __str__ (self):
 		return "UNKNOWN"
+
+def UnknownMessageFactory (data):
+	return UnknownMessage(data)

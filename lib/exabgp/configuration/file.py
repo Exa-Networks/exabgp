@@ -2068,8 +2068,8 @@ class Configuration (object):
 		capa[CapabilityID.ADD_PATH] = path
 		capa[CapabilityID.MULTIPROTOCOL_EXTENSIONS] = n.families()
 
-		o1 = Open().new(4,n.local_as,str(n.local_address),capa,180)
-		o2 = Open().new(4,n.peer_as,str(n.peer_address),capa,180)
+		o1 = Open(4,n.local_as,str(n.local_address),capa,180)
+		o2 = Open(4,n.peer_as,str(n.peer_address),capa,180)
 		negotiated = Negotiated()
 		negotiated.sent(o1)
 		negotiated.received(o2)
@@ -2123,7 +2123,7 @@ class Configuration (object):
 	def selfcheck (self):
 		# self check to see if we can decode what we encode
 		from exabgp.util.od import od
-		from exabgp.bgp.message.update import Update,announce
+		from exabgp.bgp.message.update import Update,messages
 		from exabgp.bgp.message.update.factory import UpdateFactory
 		from exabgp.bgp.message.open import Open
 		from exabgp.bgp.message.open.capability import Capabilities
@@ -2146,8 +2146,8 @@ class Configuration (object):
 		capa[CapabilityID.ADD_PATH] = path
 		capa[CapabilityID.MULTIPROTOCOL_EXTENSIONS] = n.families()
 
-		o1 = Open().new(4,n.local_as,str(n.local_address),capa,180)
-		o2 = Open().new(4,n.peer_as,str(n.peer_address),capa,180)
+		o1 = Open(4,n.local_as,str(n.local_address),capa,180)
+		o2 = Open(4,n.peer_as,str(n.peer_address),capa,180)
 		negotiated = Negotiated()
 		negotiated.sent(o1)
 		negotiated.received(o2)
@@ -2156,8 +2156,8 @@ class Configuration (object):
 		for nei in self.neighbor.keys():
 			for change in self.neighbor[nei].rib.outgoing.every_changes():
 				str1 = change.extensive()
-				update = Update().new([change.nlri],change.attributes)
-				packed_updates = list(announce(update,negotiated))
+				update = Update([change.nlri],change.attributes)
+				packed_updates = list(messages(update,negotiated))
 				self.logger.parser('parsed route requires %d updates' % len(packed_updates))
 				for pack in packed_updates:
 					self.logger.parser('update size is %d' % len(pack))

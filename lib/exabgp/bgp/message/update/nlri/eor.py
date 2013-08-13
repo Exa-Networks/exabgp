@@ -14,7 +14,6 @@ class NLRIEOR (Address):
 
 	def __init__ (self,afi,safi,action):
 		Address.__init__(self,afi,safi)
-		self.attributes = None  # API compatibility with Route
 		self.action = action
 
 	def pack (self):

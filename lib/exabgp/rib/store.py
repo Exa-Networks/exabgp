@@ -129,7 +129,7 @@ class Store (object):
 			dict_del = dict_sorted[attr_index]
 
 			if grouped:
-				yield Update().new([dict_nlri[nlri_index].nlri for nlri_index in dict_new_nlri],attributes)
+				yield Update([dict_nlri[nlri_index].nlri for nlri_index in dict_new_nlri],attributes)
 				for change in changed:
 					nlri_index = change.nlri.index()
 					del dict_del[nlri_index]
@@ -137,7 +137,7 @@ class Store (object):
 			else:
 				for change in changed:
 					nlri = change.nlri
-					yield Update().new([nlri,],attributes)
+					yield Update([nlri,],attributes)
 					nlri_index = nlri.index()
 					del dict_del[nlri_index]
 					del dict_nlri[nlri_index]
