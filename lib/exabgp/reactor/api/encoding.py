@@ -111,12 +111,11 @@ class JSON (object):
 	def _update (self,update):
 		plus = {}
 		minus = {}
-		route = None
 		for nlri in update.nlris:
 			if nlri.action == IN.announced:
-				plus.setdefault((nlri.afi,nlri.safi),[]).append(nlri)
+				plus.setdefault(nlri.family(),[]).append(nlri)
 			if nlri.action == IN.withdrawn:
-				minus.setdefault((nlri.afi,nlri.safi),[]).append(nlri)
+				minus.setdefault(nlri.family(),[]).append(nlri)
 
 		add = []
 		for family in plus:

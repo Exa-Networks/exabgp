@@ -59,9 +59,9 @@ def announce (update,negotiated):
 					del_nlri.append(nlri)
 			else:
 				if nlri.action == OUT.announce:
-					add_mp.setdefault((nlri.afi,nlri.safi),[]).append(nlri)
+					add_mp.setdefault(nlri.family(),[]).append(nlri)
 				else:
-					del_mp.setdefault((nlri.afi,nlri.safi),[]).append(nlri)
+					del_mp.setdefault(nlri.family(),[]).append(nlri)
 
 	if not add_nlri and not del_nlri and not add_mp and not del_mp:
 		return

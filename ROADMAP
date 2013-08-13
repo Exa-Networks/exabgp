@@ -43,13 +43,10 @@ Notes
 - Use Change and not Update in the configuration file
 - should we not inherit from Address, make it a container (easier to then use a function to check for IPv4 unicast/multicast)
 - Prefix.__init__ can raise ValueError make sure it does not crash ExaBGP if we get invalid data
-- everywhere we look for the afi,safi pair, we should use the function of Address
 - cache generated nlri and attributes (with and without asn4)
 - move caching of attributes into class like next-hop and cache attributes in Attributes and store them in Store (instead of clumpsy code)
-- store -> sent (to have another one for received Change(s) later)
-- we do not need to do a linear scan on route search, just look for the index in the dict (BIG save)
 - accelerate reactor
-- change all announcement to be function and not class method (and change name .:p)
+- change all announcement like announce in Update to be function and not class method (and change name .:p)
 
 Important
 * write the documentation, and do not rely on the example and the site wiki (argh ...)
