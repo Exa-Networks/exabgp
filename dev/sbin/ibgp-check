@@ -222,7 +222,7 @@ class BGPServer (asyncore.dispatcher):
 			print 'we used all the test data available, can not handle this new connection'
 			sys.exit(1)
 		else:
-			print 'using', messages
+			print 'using :\n', '\n'.join(messages), '\n'
 
 		exit = not len(self.messages.keys())
 
@@ -259,7 +259,13 @@ def main ():
 		sys.exit(1)
 
 	try:
-		BGPServer('localhost',int(os.environ.get('exabgp.tcp.port','179')),sys.argv[1:])
+		with open(sys.argv[1]) as content:
+			messages = [_.strip() for _ in content.readlines() if _.strip() and '#' not in _]
+	except IOError:
+		print 'coud not open file', sys.argv[1]
+
+	try:
+		BGPServer('localhost',int(os.environ.get('exabgp.tcp.port','179')),messages)
 		drop()
 		asyncore.loop()
 	except socket.error,e:

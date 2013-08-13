@@ -26,24 +26,40 @@ def main ():
 	if not path.isdir(runtest):
 		sys.exit('could not find test folder')
 
-	sequence_daemon = path.abspath(path.join(location,'..','..','sbin','ibgp-ipv4-announcement-sequence'))
+	sequence_daemon = path.abspath(path.join(location,'..','..','sbin','ibgp-check'))
 	if not path.isfile(sequence_daemon):
 		sys.exit('could not find the sequence daemon')
 
 	match = '*' if len(sys.argv) < 2 else sys.argv[1].split('/')[-1].split('.')[0]
+	if match == 'all': match = '*'
 
-	for configuration in glob.glob(path.join(runtest,'%s.conf' % match)):
+	if len(sys.argv) >= 3:
+		reverse = reversed if sys.argv[2].startswith('rev') else lambda _:_
+		skip = 0 if not sys.argv[2].isdigit() else int(sys.argv[2])
+	else:
+		reversed = lambda _:_
+		skip =0
+
+	confs = glob.glob(path.join(runtest,'%s.conf' % match.replace('all','*')))
+	print 'reversed file order'
+	confs = reversed(confs)
+
+	for configuration in confs:
+		if skip:
+			print 'skiped ',configuration
+			skip -= 1
+			continue
+
 		sequence_file = configuration.replace('.conf','.sequence')
 		if path.isfile(sequence_file):
-			with open(sequence_file,'r') as content:
-				messages = ' '.join(_.strip() for _ in content.readlines() if '#' not in _)
-			check_sequence(exabgp,configuration,sequence_daemon,messages)
+			check_sequence(exabgp,configuration,sequence_daemon,sequence_file)
 		else:
 			print "sequence check for", configuration
 			print "skip (no sequence data)\n"
+			print "\n"*4
 			continue
 
-def check_sequence(exabgp,configuration,daemon,messages):
+def check_sequence(exabgp,configuration,daemon,fname):
 	os.environ['exabgp.tcp.once'] = 'true'
 	os.environ['exabgp.debug.defensive'] = 'true'
 
@@ -56,7 +72,7 @@ def check_sequence(exabgp,configuration,daemon,messages):
 		print "sequence check for", configuration
 		print "will wait for completion for %d seconds" % timeout
 
-		command_daemon = [daemon,] + messages.split()
+		command_daemon = [daemon,fname]
 		print "starting daemon,",
 		daemon = subprocess.Popen(command_daemon, stdout=subprocess.PIPE)
 
