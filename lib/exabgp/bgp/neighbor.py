@@ -43,7 +43,10 @@ class Neighbor (object):
 		self.add_path = None
 
 		self._families = []
-		self.rib = RIB()
+		self.rib = None
+
+	def make_rib (self):
+		self.rib = RIB(self.name())
 
 	def name (self):
 		if self.multisession:

@@ -61,7 +61,7 @@ withdraw_flow_2,
 while messages:
 	message = messages.pop(0)
 	if message == 'sleep':
-		time.sleep(2)
+		time.sleep(3)
 	else:
 		sys.stdout.write( message + '\n')
 		sys.stdout.flush()

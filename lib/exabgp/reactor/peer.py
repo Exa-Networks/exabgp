@@ -80,7 +80,9 @@ class Peer (object):
 		self._restarted = FORCE_GRACEFUL
 		self._reset_skip()
 
-		# We have routes following a reload (or we just started)
+		# We want to send all the known routes
+		self._resend_routes = True
+		# We have new routes for the peers
 		self._have_routes = True
 
 		# We have been asked to teardown the session with this code
@@ -117,16 +119,19 @@ class Peer (object):
 		self._restarted = False
 		self._reset_skip()
 
-	def reload (self,neighbor):
-		self.neighbor = neighbor
-		self._have_routes = True
+	def resend (self):
+		self._resend_routes = True
 		self._reset_skip()
+
+	def send_new (self):
+		self._have_routes = True
 
 	def restart (self,restart_neighbor=None):
 		# we want to tear down the session and re-establish it
 		self._running = False
 		self._restart = True
 		self._restarted = True
+		self._resend_routes = True
 		self._neighbor = restart_neighbor
 		self._reset_skip()
 
@@ -364,14 +369,15 @@ class Peer (object):
 				# XXX: In the main loop we do exit on this kind of error
 				raise Notify(6,0,'ExaBGP Internal error, sorry.')
 
-		first_loop = True
-
+		send_eor = False
 		new_routes = None
 
 		if self.proto.connection.direction == 'in':
 			counter = Counter(self.logger,self.wrin)
 		else:
 			counter = Counter(self.logger,self.wrout)
+
+		self._resend_routes = True
 
 		while self._running:
 			for message in self.proto.read_message():
@@ -393,39 +399,41 @@ class Peer (object):
 				# Give information on the number of routes seen
 				counter.display()
 
+				# Take the routes already sent to that peer and resend them
+				if self._resend_routes:
+					self._resend_routes = False
+					self.neighbor.rib.outgoing.resend_known()
+					self._have_routes = True
+
 				# Need to send update
 				if self._have_routes and not new_routes:
 					self._have_routes = False
+					# XXX: FIXME: in proto really ?
 					new_routes = self.proto.new_update()
 
 				if new_routes:
 					try:
-						new_routes.next()
+						# This can raise a NetworkError
+						update = new_routes.next()
 					except StopIteration:
 						new_routes = None
+						send_eor = True
 
-						if first_loop:
-							first_loop = False
-							# Send EOR to let our peer know he can perform a RIB update
-							if self.proto.negotiated.families:
-								for eor in self.proto.new_eors():
-									if not self._running:
-										yield False
-										return
-									yield True
-							else:
-								# If we are not sending an EOR, send a keepalive as soon as when finished
-								# So the other routers knows that we have no (more) routes to send ...
-								# (is that behaviour documented somewhere ??)
-								for eor in self.proto.new_keepalive('EOR'):
-									if not self._running:
-										yield False
-										return
-									yield True
+						# the generator was interrupted
+						if ord(update.TYPE) == Message.Type.NOP:
+							raise Interrupted()
+				elif send_eor:
+					send_eor = False
+					for eor in self.proto.new_eors():
+						if not self._running:
+							yield False
+							return
+						yield True
+					self.logger.message(self.me('>> EOR(s)'))
 
-							# the generator was interrupted
-							if ord(eor.TYPE) == Message.Type.NOP:
-								raise Interrupted()
+					# the generator was interrupted
+					if ord(eor.TYPE) == Message.Type.NOP:
+						raise Interrupted()
 
 				# Go to other Peers
 				yield True if new_routes or message.TYPE != NOP.TYPE else None

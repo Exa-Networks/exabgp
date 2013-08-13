@@ -3,7 +3,7 @@
 import sys
 import time
 
-time.sleep(4.0)
+time.sleep(10.0)
 
 while True:
 	print "announce watchdog dnsr"

@@ -52,7 +52,6 @@ def UpdateFactory (negotiated,data):
 	nlris = []
 	while withdrawn:
 		nlri = NLRIFactory(AFI.ipv4,SAFI.unicast_multicast,withdrawn,addpath,nh,IN.withdrawn)
-		print len(nlri)
 		logger.parser(LazyFormat("parsed withdraw nlri %s payload " % nlri,od,withdrawn[:len(nlri)]))
 		withdrawn = withdrawn[len(nlri):]
 		nlris.append(nlri)

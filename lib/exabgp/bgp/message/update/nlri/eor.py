@@ -24,4 +24,4 @@ class NLRIEOR (Address):
 		return self.extensive()
 
 	def extensive (self):
-		return '%s eor %d/%d (%s %s)' % (self.action,self.afi,self.safi,self.afi,self.safi)
+		return 'eor %d/%d (%s %s)' % (self.afi,self.safi,self.afi,self.safi)

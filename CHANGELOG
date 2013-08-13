@@ -8,6 +8,7 @@ Version 3.2.3
     reported by: Daniel Bradshaw
  * Fix: an issue when the code would not behave correctly on network error
  * Fix: some issues when encoding vpnv4 routes
+ * Fix: change the behaviour of the main peer loop (should behave more like expected - no bug reported tho)
  * Improvement: implemented some defensive coding practice (enable with exabgp.debug.defensive)
  * Compatibility: JSON next-hop for the route is not in the attribute anymore but the NLRI
 

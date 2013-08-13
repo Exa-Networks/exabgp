@@ -46,9 +46,10 @@ class Watchdog (object):
 		self.status = Status()
 		self.withdrawn = Withdrawn()
 		self.watchdog = {}
+		self._announce = []
 
 	def integrate (self,change,watchdog,withdraw):
-		index = change.index()
+		index = change.nlri.index()
 
 		if index in self.watchdog:
 			# we reloaded the configuration, do not change watchdogs
@@ -72,11 +73,19 @@ class Watchdog (object):
 	def withdraw (self,watchdog):
 		self.status.disable(watchdog)
 
+	def filter (self,change):
+		index = change.nlri.index()
+
+		if index in self.withdrawn:
+			return True
+
+		watchdog = self.watchdog.get(index,None)
+		if not watchdog:
+			return False
+
+		return self.status[watchdog]
+
 	def filtered (self,changes_generator):
 		for change in changes_generator:
-			index = change.index()
-			watchdog = self.watchdog.get(index,None)
-			if not watchdog:
-				yield change
-			elif self.status[watchdog] and index not in self.withdrawn:
-				yield change
+			#if not self.filter(change):
+			yield change

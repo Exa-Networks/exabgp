@@ -10,6 +10,7 @@ from struct import pack
 
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.protocol.ip.address import Address
+from exabgp.bgp.message.direction import OUT
 from exabgp.bgp.message.update.attributes import Attributes
 from exabgp.bgp.message.update.nlri.prefix import Prefix
 from exabgp.bgp.message.notification import Notify
@@ -212,6 +213,7 @@ class FlowNLRI (Attributes,Address):
 		Attributes.__init__(self)
 		Address.__init__(self,afi,safi)
 		self.rules = {}
+		self.action = OUT.announce
 
 	def add_and (self,rule):
 		ID = rule.ID

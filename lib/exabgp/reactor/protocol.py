@@ -8,11 +8,8 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 import os
 
-from exabgp.rib.table import Table
-from exabgp.rib.delta import Delta
-
 from exabgp.reactor.network.outgoing import Outgoing
-from exabgp.reactor.network.error import SizeError,NotifyError
+from exabgp.reactor.network.error import NotifyError
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.nop import NOP
@@ -20,7 +17,7 @@ from exabgp.bgp.message.unknown import Unknown
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.message.update import Update
+from exabgp.bgp.message.update import Update,announce
 from exabgp.bgp.message.update.eor import EOR
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notification, Notify
@@ -49,7 +46,6 @@ class Protocol (object):
 		self.peer = peer
 		self.neighbor = peer.neighbor
 		self.negotiated = Negotiated()
-		self.delta = Delta(Table(peer))
 		self.connection = None
 		port = os.environ.get('exabgp.tcp.port','')
 		self.port = int(port) if port.isdigit() else 179
@@ -220,38 +216,28 @@ class Protocol (object):
 		yield notification
 
 	def new_update (self):
-		# XXX: This should really be calculated once only
-		for _ in self._announce('UPDATE',self.peer.proto.delta.updates(self.negotiated,self.neighbor.group_updates)):
-			yield _NOP
+		number = 0
+		for update in self.neighbor.rib.outgoing.updates(self.neighbor.group_updates):
+			for message in announce(update,self.negotiated):
+				number += 1
+				for boolean in self.write(message):
+					# boolean is a transient network error we already announced
+					yield _NOP
+		self.logger.message(self.me('>> %d UPDATE(s)' % number))
 		yield _UPDATE
 
 	def new_eors (self):
-		eor = EOR().new(self.negotiated.families)
-		for _ in self._announce(str(eor),eor.updates(self.negotiated)):
-			yield _NOP
-		yield _UPDATE
-
-	def _announce (self,name,generator):
-		def chunked (generator,size):
-			chunk = ''
-			number = 0
-			for data in generator:
-				if len(data) > size:
-					raise SizeError('Can not send BGP update larger than %d bytes on this connection.' % size)
-				if len(chunk) + len(data) <= size:
-					chunk += data
-					number += 1
-					continue
-				yield number,chunk
-				chunk = data
-				number = 1
-			if chunk:
-				yield number,chunk
-
-		for number,update in chunked(generator,self.message_size):
-			for boolean in self.write(update):
-				if boolean:
-					self.logger.message(self.me('>> %d %s(s)' % (number,name)))
-					yield number
-				else:
-					yield 0
+		# Send EOR to let our peer know he can perform a RIB update
+		if self.negotiated.families:
+			eor = EOR().new(self.negotiated.families)
+			for message in eor.updates():
+				for boolean in self.write(message):
+					yield _NOP
+			yield _UPDATE
+		else:
+			# If we are not sending an EOR, send a keepalive as soon as when finished
+			# So the other routers knows that we have no (more) routes to send ...
+			# (is that behaviour documented somewhere ??)
+			for eor in self.new_keepalive('EOR'):
+				yield _NOP
+			yield _UPDATE

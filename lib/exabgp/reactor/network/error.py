@@ -39,7 +39,7 @@ class NagleError     (NetworkError): pass
 class TTLError       (NetworkError): pass
 class AsyncError     (NetworkError): pass
 class TooSlowError   (NetworkError): pass
-class SizeError      (NetworkError): pass
+class SizeError      (NetworkError): pass  # not used atm - can not generate message due to size
 
 class NotifyError    (Exception):
 	def __init__ (self,code,subcode,msg):

@@ -299,15 +299,10 @@ class Reactor (object):
 				self.logger.reactor("New Peer %s" % neighbor.name())
 				peer = Peer(neighbor,self)
 				self._peers[key] = peer
-			else:
-				# check if the neighbor definition are the same (BUT NOT THE ROUTES)
-				if self._peers[key].neighbor != neighbor:
-					self.logger.reactor("Peer definition change, restarting %s" % str(key))
-					self._peers[key].restart(neighbor)
-				# set the new neighbor with the new routes
-				else:
-					self.logger.reactor("Updating routes for peer %s" % str(key))
-					self._peers[key].reload(neighbor)
+			# check if the neighbor definition are the same (BUT NOT THE ROUTES)
+			elif self._peers[key].neighbor != neighbor:
+				self.logger.reactor("Peer definition change, restarting %s" % str(key))
+				self._peers[key].restart(neighbor)
 		self.logger.configuration("Loaded new configuration successfully",'warning')
 		# This only starts once ...
 		self.processes.start(restart)
@@ -463,14 +458,13 @@ class Reactor (object):
 		# route announcement / withdrawal
 		if 'announce route' in command:
 			def _announce_change (self,command,peers):
-				changes = self.configuration.parse_api_route(command)
+				changes = self.configuration.parse_api_route(command,'announce')
 				if not changes:
 					self.logger.reactor("Command could not parse route in : %s" % command,'warning')
 					yield True
 				else:
 					for change in changes:
-						self.configuration.remove_change_from_peers(change,peers)
-						self.configuration.add_change_to_peers(change,peers)
+						self.configuration.change_to_peers(change,peers)
 						self.logger.reactor("Route added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
 						yield False
 					self._route_update = True
@@ -489,13 +483,13 @@ class Reactor (object):
 
 		if 'withdraw route' in command:
 			def _withdraw_change (self,command,peers):
-				changes = self.configuration.parse_api_route(command)
+				changes = self.configuration.parse_api_route(command,'withdraw')
 				if not changes:
 					self.logger.reactor("Command could not parse route in : %s" % command,'warning')
 					yield True
 				else:
 					for change in changes:
-						if self.configuration.remove_change_from_peers(change,peers):
+						if self.configuration.change_to_peers(change,peers):
 							self.logger.reactor("Route found and removed : %s" % change.extensive())
 							yield False
 						else:
@@ -518,14 +512,13 @@ class Reactor (object):
 		# flow announcement / withdrawal
 		if 'announce flow' in command:
 			def _announce_flow (self,command,peers):
-				changes = self.configuration.parse_api_flow(command)
+				changes = self.configuration.parse_api_flow(command,'announce')
 				if not changes:
 					self.logger.reactor("Command could not parse flow in : %s" % command)
 					yield True
 				else:
 					for change in changes:
-						self.configuration.remove_change_from_peers(change,peers)
-						self.configuration.add_change_to_peers(change,peers)
+						self.configuration.change_to_peers(change,peers)
 						self.logger.reactor("Flow added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
 						yield False
 					self._route_update = True
@@ -544,13 +537,13 @@ class Reactor (object):
 
 		if 'withdraw flow' in command:
 			def _withdraw_flow (self,command,peers):
-				changes = self.configuration.parse_api_flow(command)
+				changes = self.configuration.parse_api_flow(command,'withdraw')
 				if not changes:
 					self.logger.reactor("Command could not parse flow in : %s" % command)
 					yield True
 				else:
 					for change in changes:
-						if self.configuration.remove_change_from_peers(change,peers):
+						if self.configuration.change_to_peers(change,peers):
 							self.logger.reactor("Flow found and removed : %s" % change.extensive())
 							yield False
 						else:
@@ -599,8 +592,7 @@ class Reactor (object):
 		"""the process ran and we need to figure what routes to changes"""
 		self.logger.reactor("Performing dynamic route update")
 		for key in self.configuration.neighbor.keys():
-			neighbor = self.configuration.neighbor[key]
-			self._peers[key].reload(neighbor)
+			self._peers[key].send_new()
 		self.logger.reactor("Updated peers dynamic routes successfully")
 
 	def restart (self):

@@ -268,7 +268,7 @@ class Configuration (object):
 
 		return True
 
-	def parse_api_route (self,command):
+	def parse_api_route (self,command,action):
 		tokens = self._cleaned(command).split(' ')[1:]
 		if len(tokens) < 4:
 			return False
@@ -277,31 +277,36 @@ class Configuration (object):
 		scope = [{}]
 		if not self._single_static_route(scope,tokens[1:]):
 			return None
-		return scope[0]['route']
+		changes = scope[0]['route']
+		if action == 'withdraw':
+			for change in changes:
+				change.nlri.action = OUT.withdraw
+		return changes
 
-	def parse_api_flow (self,command):
+	def parse_api_flow (self,command,action):
 		self._tokens = self._tokenise(' '.join(self._cleaned(command).split(' ')[2:]).split('\\n'))
 		scope = [{}]
 		if not self._dispatch(scope,'flow',['route',],[]):
 			return None
 		if not self._check_flow_route(scope):
 			return None
-		return scope[0]['route']
+		changes = scope[0]['route']
+		if action == 'withdraw':
+			for change in changes:
+				change.nlri.action = OUT.withdraw
+		return changes
 
-	def add_change_to_peers (self,change,peers):
+	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
+	def change_to_peers (self,change,peers):
 		result = False
 		for neighbor in self.neighbor:
 			if peers is None or neighbor in peers:
-				if self.neighbor[neighbor].rib.outgoing.add_change(change):
-					result = True
-		return result
-
-	def remove_change_from_peers (self,change,peers):
-		result = False
-		for neighbor in self.neighbor:
-			if peers is None or neighbor in peers:
-				if self.neighbor[neighbor].rib.outgoing.remove_change(change):
-					result = True
+				if change.nlri.family() in self.neighbor[neighbor].families():
+					if self.neighbor[neighbor].rib.outgoing.insert_change(change):
+						result = True
+				else:
+					self.logger.configuration('the route family is not configured on neighbor','error')
+					return False
 		return result
 
 	# Tokenisation
@@ -871,10 +876,7 @@ class Configuration (object):
 			v = local_scope.get('hold-time','')
 			if v: neighbor.hold_time = v
 
-			v = local_scope.get('route',[])
-			for change in v:
-				# This add the family to neighbor.families()
-				neighbor.rib.outgoing.add_change(change)
+			changes = local_scope.get('route',[])
 
 		for local_scope in (scope[0],scope[-1]):
 			neighbor.api.receive_packets |= local_scope.get('receive-packets',False)
@@ -948,10 +950,23 @@ class Configuration (object):
 				for f in neighbor.families():
 					if f == family:
 						continue
-					m_neighbor.remove_family(f)
 					m_neighbor.rib.outgoing.remove_family(f)
+
+				m_neighbor.make_rib()
+
+				families = neighbor.families()
+				for change in changes:
+					if change.nlri.family() in families:
+						# This add the family to neighbor.families()
+						neighbor.rib.outgoing.add_change(change)
 				self._neighbor[m_neighbor.name()] = m_neighbor
 		else:
+			neighbor.make_rib()
+			families = neighbor.families()
+			for change in changes:
+				if change.nlri.family() in families:
+					# This add the family to neighbor.families()
+					neighbor.rib.outgoing.add_change(change)
 			self._neighbor[neighbor.name()] = neighbor
 
 		for line in str(neighbor).split('\n'):
@@ -2108,7 +2123,7 @@ class Configuration (object):
 	def selfcheck (self):
 		# self check to see if we can decode what we encode
 		from exabgp.util.od import od
-		from exabgp.bgp.message.update import Update
+		from exabgp.bgp.message.update import Update,announce
 		from exabgp.bgp.message.update.factory import UpdateFactory
 		from exabgp.bgp.message.open import Open
 		from exabgp.bgp.message.open.capability import Capabilities
@@ -2142,7 +2157,7 @@ class Configuration (object):
 			for change in self.neighbor[nei].rib.outgoing.every_changes():
 				str1 = change.extensive()
 				update = Update().new([change.nlri],change.attributes)
-				packed_updates = list(update.announce(negotiated))
+				packed_updates = list(announce(update,negotiated))
 				self.logger.parser('parsed route requires %d updates' % len(packed_updates))
 				for pack in packed_updates:
 					self.logger.parser('update size is %d' % len(pack))

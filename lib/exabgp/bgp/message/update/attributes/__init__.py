@@ -112,6 +112,7 @@ class Attributes (dict):
 	def __init__ (self):
 		# cached representation of the object
 		self._str = ''
+		self._idx = ''
 		self._json = ''
 		# We should cache the attributes parsed
 		self.cache_attributes = environment.settings().cache.attributes
@@ -227,6 +228,12 @@ class Attributes (dict):
 			# XXX: FIXME: remove this ' ' + ? should it be done by the caller ?
 			self._str = ' ' + ' '.join(generate(self))
 		return self._str
+
+	def index (self):
+		# XXX: FIXME: something a little bit smaller memory wise ?
+		if not self._idx:
+			self._idx = str(self) + str(self[AID.NEXT_HOP]) if AID.NEXT_HOP in self else str(self)
+		return self._idx
 
 	def factory (self,data):
 		self.cached = self._factory(data)

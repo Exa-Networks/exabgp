@@ -30,7 +30,7 @@ class EOR (Message):
 			self.nlris.append(NLRIEOR(afi,safi,OUT.announce))
 		return self
 
-	def updates (self,negotiated):
+	def updates (self,negotiated=None):
 		for eor in self.nlris:
 			yield self._message(self.PREFIX + eor.pack())
 

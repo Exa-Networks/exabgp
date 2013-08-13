@@ -9,7 +9,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from exabgp.protocol.family import AFI,SAFI
 
 from exabgp.bgp.message import Message,prefix
-from exabgp.bgp.message.update.attribute.id import AttributeID as AID
+from exabgp.bgp.message.direction import OUT
 from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
 from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
 
@@ -25,137 +25,160 @@ class Update (Message):
 		self.attributes = attributes
 		return self
 
-	# The routes MUST have the same attributes ...
-	def announce (self,negotiated):
-		asn4 = negotiated.asn4
-		local_as = negotiated.local_as
-		peer_as = negotiated.peer_as
-
-		attr = self.attributes.pack(asn4,local_as,peer_as)
-		msg_size = negotiated.msg_size - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
-
-		all_nlri = []
-		sorted_mp = {}
-
-		for nlri in self.nlris:
-			if nlri.family() in negotiated.families:
-				if nlri.afi == AFI.ipv4 and nlri.safi in [SAFI.unicast, SAFI.multicast] and nlri.nexthop == self.attributes.get(AID.NEXT_HOP,None):
-					all_nlri.append(nlri)
-				else:
-					sorted_mp.setdefault((nlri.afi,nlri.safi),[]).append(nlri)
-
-		if not all_nlri and not sorted_mp:
-			return
-
-		packed_mp = ''
-		packed_nlri = ''
-
-		families = sorted_mp.keys()
-		while families:
-			family = families.pop()
-			mps = sorted_mp[family]
-			addpath = negotiated.addpath.send(*family)
-			mp_packed_generator = MPRNLRI(mps).packed_attributes(addpath)
-			try:
-				while True:
-					packed = mp_packed_generator.next()
-					if len(packed_mp + packed) > msg_size:
-						if not packed_mp:
-							raise Notify(6,0,'attributes size is so large we can not even pack on MPURNLRI')
-						yield self._message(prefix('') + prefix(attr + packed_mp))
-						packed_mp = packed
-					else:
-						packed_mp += packed
-			except StopIteration:
-				pass
-
-		addpath = negotiated.addpath.send(AFI.ipv4,SAFI.unicast)
-		while all_nlri:
-			nlri = all_nlri.pop()
-			packed = nlri.pack(addpath)
-			if len(packed_mp + packed_nlri + packed) > msg_size:
-				if not packed_nlri and not packed_mp:
-					raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
-				yield self._message(prefix('') + prefix(attr + packed_mp) + packed_nlri)
-				packed_mp = ''
-				packed_nlri = packed
-			else:
-				packed_nlri += packed
-
-		if packed_mp or packed_nlri:
-			yield self._message(prefix('') + prefix(attr + packed_mp) + packed_nlri)
-
-	# print ''.join(['%02X' % ord(_) for _ in self._message(prefix('') + prefix(attr + packed_mp) + packed_nlri)])
-
-	def withdraw (self,negotiated=None):
-		msg_size = negotiated.msg_size - 4  # 2 bytes for each of the two prefix() header
-
-		#packed_nlri = {}
-		#packed_mp = {}
-
-		all_nlri = []
-		sorted_mp = {}
-
-		for nlri in self.nlris:
-			if nlri.family() in negotiated.families:
-				if nlri.afi == AFI.ipv4 and nlri.safi in [SAFI.unicast, SAFI.multicast]:
-					all_nlri.append(nlri)
-				else:
-					sorted_mp.setdefault((nlri.afi,nlri.safi),[]).append(nlri)
-
-		if not all_nlri and not sorted_mp:
-			return
-
-		packed_mp = ''
-		packed_nlri = ''
-
-		addpath = negotiated.addpath.send(AFI.ipv4,SAFI.unicast)
-
-		while all_nlri:
-			nlri = all_nlri.pop()
-			packed = nlri.pack(addpath)
-			if len(packed_nlri + packed) > msg_size:
-				if not packed_nlri:
-					raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
-				yield self._message(prefix(packed_nlri))
-				packed_nlri = packed
-			else:
-				packed_nlri += packed
-
-
-		families = sorted_mp.keys()
-		while families:
-			family = families.pop()
-			mps = sorted_mp[family]
-			addpath = negotiated.addpath.send(*family)
-			mp_packed_generator = MPURNLRI(mps).packed_attributes(addpath)
-			try:
-				while True:
-					packed = mp_packed_generator.next()
-					if len(packed_nlri + packed_mp + packed) > msg_size:
-						if not packed_mp and not packed_nlri:
-							raise Notify(6,0,'attributes size is so large we can not even pack one MPURNLRI')
-						if packed_mp:
-							yield self._message(prefix(packed_nlri) + prefix(packed_mp))
-						else:
-							yield self._message(prefix(packed_nlri) + prefix(''))
-						packed_nlri = ''
-						packed_mp = packed
-					else:
-						packed_mp += packed
-			except StopIteration:
-				pass
-
-		if packed_mp:
-			yield self._message(prefix(packed_nlri) + prefix(packed_mp))
-		else:
-			yield self._message(prefix(packed_nlri) + prefix(''))
-
-	# print ''.join(['%02X' % ord(_) for _ in self._message(prefix(packed_nlri) + prefix(''))])
-
-	def index (self,number):
-		raise RuntimeError('is it really needed ?')
-		return self.nlris[number].index()
-
 	def __str__ (self):
-		return '\n'.join([self.extensive(_) for _ in range(len(self.nlris))])
+		return '\n'.join(['%s%s' % (str(self.nlris[n]),str(self.attributes)) for n in range(len(self.nlris))])
+
+
+# The routes MUST have the same attributes ...
+# XXX: FIXME: calculate size progressively to not have to do it every time
+# XXX: FIXME: we could as well track when packed_del, packed_mp_del, etc
+# XXX: FIXME: are emptied and therefore when we can save calculations
+def announce (update,negotiated):
+	attributes = ''
+
+	asn4 = negotiated.asn4
+	local_as = negotiated.local_as
+	peer_as = negotiated.peer_as
+
+	attr = update.attributes.pack(asn4,local_as,peer_as)
+	msg_size = negotiated.msg_size - 2 - 2  # 2 bytes for each of the two prefix() header
+
+	# sort the nlris
+
+	add_nlri = []
+	del_nlri = []
+	add_mp = {}
+	del_mp = {}
+
+	for nlri in update.nlris:
+		if nlri.family() in negotiated.families:
+			if nlri.afi == AFI.ipv4 and nlri.safi in [SAFI.unicast, SAFI.multicast]:
+				if nlri.action == OUT.announce:
+					add_nlri.append(nlri)
+				else:
+					del_nlri.append(nlri)
+			else:
+				if nlri.action == OUT.announce:
+					add_mp.setdefault((nlri.afi,nlri.safi),[]).append(nlri)
+				else:
+					del_mp.setdefault((nlri.afi,nlri.safi),[]).append(nlri)
+
+	if not add_nlri and not del_nlri and not add_mp and not del_mp:
+		return
+
+	# generate the message
+
+	packed_del = ''
+	packed_mp_del = ''
+	packed_mp_add = ''
+	packed_add = ''
+
+
+	# withdrawn IPv4
+
+	addpath = negotiated.addpath.send(AFI.ipv4,SAFI.unicast)
+
+	while del_nlri:
+		nlri = del_nlri.pop()
+		packed = nlri.pack(addpath)
+		if len(packed_del + packed) > msg_size:
+			if not packed_del:
+				raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
+			yield update._message(prefix(packed_del))
+			packed_del = packed
+		else:
+			packed_del += packed
+
+
+	# withdrawn MP
+
+	families = del_mp.keys()
+	while families:
+		family = families.pop()
+		mps = del_mp[family]
+		addpath = negotiated.addpath.send(*family)
+		mp_packed_generator = MPURNLRI(mps).packed_attributes(addpath)
+		try:
+			while True:
+				packed = mp_packed_generator.next()
+				if len(packed_del + packed_mp_del + packed) > msg_size:
+					if not packed_mp_del and not packed_del:
+						raise Notify(6,0,'attributes size is so large we can not even pack one MPURNLRI')
+					yield update._message(prefix(packed_del) + prefix(packed_mp_del))
+					packed_del = ''
+					packed_mp_del = packed
+				else:
+					packed_mp_del += packed
+		except StopIteration:
+			pass
+
+	# we have some MPRUNLRI so we need to add the attributes, recalculate
+	# and make sure we do not overflow
+
+	if add_mp:
+		msg_size = negotiated.msg_size - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
+	if len(packed_del + packed_mp_del) > msg_size:
+		yield update._message(prefix(packed_del) + prefix(packed_mp_del))
+		packed_del = ''
+		packed_mp_del = ''
+
+	# add MP
+
+	families = add_mp.keys()
+	while families:
+		family = families.pop()
+		mps = add_mp[family]
+		addpath = negotiated.addpath.send(*family)
+		mp_packed_generator = MPRNLRI(mps).packed_attributes(addpath)
+		try:
+			while True:
+				packed = mp_packed_generator.next()
+				if len(packed_del + packed_mp_del + packed_mp_add + packed) > msg_size:
+					if not packed_mp_add and not packed_mp_del and not packed_del:
+						raise Notify(6,0,'attributes size is so large we can not even pack on MPURNLRI')
+					yield update._message(prefix(packed_del) + prefix(attributes + packed_mp_del + packed_mp_add))
+					packed_del = ''
+					packed_mp_del = ''
+					packed_mp_add = packed
+					if family not in ((AFI.ipv4,SAFI.flow_ipv4),(AFI.ipv4,SAFI.flow_vpnv4)):
+						attributes = attr
+					else:
+						attributes = ''
+				else:
+					packed_mp_add += packed
+					if family not in ((AFI.ipv4,SAFI.flow_ipv4),(AFI.ipv4,SAFI.flow_vpnv4)):
+						attributes = attr
+		except StopIteration:
+			pass
+
+	# recalculate size if we do not have any more attributes to send
+
+	if not packed_mp_add:
+		msg_size = negotiated.msg_size - 2 - 2  # 2 bytes for each of the two prefix() header
+
+	# ADD Ipv4
+
+	addpath = negotiated.addpath.send(AFI.ipv4,SAFI.unicast)
+	while add_nlri:
+		nlri = add_nlri.pop()
+		packed = nlri.pack(addpath)
+		if len(packed_del + packed_mp_del + packed_mp_add + packed_add + packed) > msg_size:
+			if not packed_add and not packed_mp_add and not packed_mp_del and not packed_del:
+				raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
+			if packed_mp_add:
+				yield update._message(prefix(packed_del) + prefix(attributes + packed_mp_del + packed_mp_add) + packed_add)
+				msg_size = negotiated.msg_size - 2 - 2  # 2 bytes for each of the two prefix() header
+			else:
+				yield update._message(prefix(packed_del) + prefix(packed_mp_del) + packed_add)
+			packed_del = ''
+			packed_mp_del = ''
+			packed_mp_add = ''
+			packed_add = packed
+			attributes = attr
+		else:
+			packed_add += packed
+			attributes = attr
+
+	yield update._message(prefix(packed_del) + prefix(attributes + packed_mp_del + packed_mp_add) + packed_add)
+
+# print ''.join(['%02X' % ord(_) for _ in update._message(prefix(packed_nlri) + prefix(''))])
