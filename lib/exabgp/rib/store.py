@@ -48,27 +48,27 @@ class Store (object):
 		withdraw = change.attributes.withdraw()
 		if watchdog:
 			if withdraw:
-				self._watchdog.setdefault(watchdog,{})[change.nlri.index()] = ('-', change)
+				self._watchdog.setdefault(watchdog,{}).setdefault('-',{})[change.nlri.index()] = change
 				return True
-			self._watchdog.setdefault(watchdog,{})[change.nlri.index()] = ('+', change)
+			self._watchdog.setdefault(watchdog,{}).setdefault('+',{})[change.nlri.index()] = change
 		self.insert_change(change)
 		return True
 
 	def announce_watchdog (self,watchdog):
 		if watchdog in self._watchdog:
-			for (state,change) in self._watchdog[watchdog].values():
-				if state == '-':
-					change.nlri.action = OUT.announce
-					self.insert_change(change)
-					self._watchdog[watchdog][change.nlri.index()] = ('+',change)
+			for change in self._watchdog[watchdog].get('-',{}).values():
+				change.nlri.action = OUT.announce
+				self.insert_change(change)
+				self._watchdog[watchdog].setdefault('+',{})[change.nlri.index()] = change
+				self._watchdog[watchdog]['-'].pop(change.nlri.index())
 
 	def withdraw_watchdog (self,watchdog):
 		if watchdog in self._watchdog:
-			for (state,change) in self._watchdog[watchdog].values():
-				if state == '+':
-					change.nlri.action = OUT.withdraw
-					self.insert_change(change)
-					self._watchdog[watchdog][change.nlri.index()] = ('-',change)
+			for change in self._watchdog[watchdog].get('+',{}).values():
+				change.nlri.action = OUT.withdraw
+				self.insert_change(change)
+				self._watchdog[watchdog].setdefault('-',{})[change.nlri.index()] = change
+				self._watchdog[watchdog]['+'].pop(change.nlri.index())
 
 	def insert_received (self,change):
 		if not self.cache:

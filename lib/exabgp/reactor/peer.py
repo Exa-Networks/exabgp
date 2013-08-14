@@ -408,13 +408,16 @@ class Peer (object):
 				# Need to send update
 				if self._have_routes and not new_routes:
 					self._have_routes = False
-					# XXX: FIXME: in proto really ?
+					# XXX: in proto really. hum to think about ?
 					new_routes = self.proto.new_update()
 
 				if new_routes:
 					try:
-						# This can raise a NetworkError
-						update = new_routes.next()
+						count = 100
+						while count:
+							# This can raise a NetworkError
+							update = new_routes.next()
+							count -= 1
 					except StopIteration:
 						new_routes = None
 						send_eor = True
@@ -596,11 +599,11 @@ class Peer (object):
 			self.logger.reactor(self.me(str(e)),'error')
 
 			if self._out_proto:
-				self._out_proto.close('interruped %s' % str(e))
+				self._out_proto.close('interrupted %s' % str(e))
 				self._out_proto = None
 
 			if self._in_proto:
-				self._in_proto.close('interruped %s' % str(e))
+				self._in_proto.close('interrupted %s' % str(e))
 				self._in_proto = None
 
 			return
