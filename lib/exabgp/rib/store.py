@@ -102,7 +102,7 @@ class Store (object):
 		dict_nlri = self._modify_nlri
 		dict_attr = self._cache_attribute
 
-		if change_nlri_index in dict_nlri and not force:
+		if change_nlri_index in dict_nlri:
 			old_attr_index = dict_nlri[change_nlri_index].attributes.index()
 			# pop removes the entry
 			old_change = dict_nlri.pop(change_nlri_index)
@@ -110,7 +110,7 @@ class Store (object):
 			del dict_sorted[old_attr_index][change_nlri_index]
 			if not dict_sorted[old_attr_index]:
 				del dict_sorted[old_attr_index]
-			if old_change.nlri.action == OUT.announce and change.nlri.action == OUT.withdraw:
+			if not force and old_change.nlri.action == OUT.announce and change.nlri.action == OUT.withdraw:
 				return True
 
 		dict_sorted.setdefault(change_attr_index,{})[change_nlri_index] = change
@@ -130,25 +130,33 @@ class Store (object):
 		dict_attr = self._cache_attribute
 
 		for attr_index,dict_new_nlri in list(dict_sorted.iteritems()):
+			if not dict_new_nlri:
+				continue
+
 			attributes = dict_attr[attr_index].attributes
 
 			# we NEED the copy provided by list() here as clear_sent or insert_change can be called while we iterate
 			changed = list(dict_new_nlri.itervalues())
-			dict_del = dict_sorted[attr_index]
 
 			if grouped:
-				yield Update([dict_nlri[nlri_index].nlri for nlri_index in dict_new_nlri],attributes)
+				update = Update([dict_nlri[nlri_index].nlri for nlri_index in dict_new_nlri],attributes)
 				for change in changed:
 					nlri_index = change.nlri.index()
-					del dict_del[nlri_index]
+					del dict_new_nlri[nlri_index]
 					del dict_nlri[nlri_index]
+				# only yield once we have a consistent state, otherwise it will go wrong
+				# as we will try to modify things we are using
+				yield update
 			else:
+				updates = [Update([change.nlri,],attributes) for change in changed]
 				for change in changed:
-					nlri = change.nlri
-					yield Update([nlri,],attributes)
-					nlri_index = nlri.index()
-					del dict_del[nlri_index]
+					nlri_index = change.nlri.index()
+					del dict_new_nlri[nlri_index]
 					del dict_nlri[nlri_index]
+				# only yield once we have a consistent state, otherwise it will go wrong
+				# as we will try to modify things we are using
+				for update in updates:
+					yield update
 
 			if self.cache:
 				announced = self._announced
@@ -160,12 +168,7 @@ class Store (object):
 						if family in announced:
 							announced[family].pop(change.nlri.index(),None)
 
-		# cleanup, as we can not be sure it was not modified when we were running
-		if not self._modify_nlri:
-			self._modify_sorted = {}
-
-
 	def clear_sent (self):
-		# WARNING : this function can run while we are in the updates() loop
+		# WARNING : this function can run while we are in the updates() loop too !
 		self._modify_nlri = {}
 		self._modify_sorted = {}
