@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-capability.py
+capability/__init__.py
 
 Created by Thomas Mangin on 2012-07-17.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
@@ -23,7 +23,7 @@ def hexa (value):
 
 # =================================================================== Unknown
 
-class Unknown (object):
+class UnknownCapability (object):
 	def __init__ (self,value,raw=''):
 		self.value = value
 		self.raw = raw
@@ -210,7 +210,7 @@ def CapabilitiesFactory (data):
 							value_ad = value_ad[4:]
 
 					if k not in capabilities:
-						capabilities[k] = Unknown(k,[ord(_) for _ in capv])
+						capabilities[k] = UnknownCapability(k,[ord(_) for _ in capv])
 			else:
 				raise Notify(2,0,'Unknow OPEN parameter %s' % hex(key))
 	return capabilities

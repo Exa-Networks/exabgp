@@ -10,7 +10,7 @@ from exabgp.bgp.message.update.attribute import Attribute
 
 # =================================================================== MED (4)
 
-class Unknown (Attribute):
+class UnknownAttribute (Attribute):
 	MULTIPLE = False
 
 	def __init__ (self,code,flag,data):

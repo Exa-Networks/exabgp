@@ -111,7 +111,7 @@ def messages (update,negotiated):
 		except StopIteration:
 			pass
 
-	# we have some MPRUNLRI so we need to add the attributes, recalculate
+	# we have some MPRNLRI so we need to add the attributes, recalculate
 	# and make sure we do not overflow
 
 	if add_mp:

@@ -10,12 +10,14 @@ Version 3.2.3
  * Fix: some issues when encoding vpnv4 routes
  * Fix: change the behaviour of the main peer loop (should behave more like expected - no bug reported tho)
  * Fix: many small fixes
+ * Fix: bad encoding of FlowSpec Fragments
  * Improvement: implemented some defensive coding practice (enable with exabgp.debug.defensive)
  * Improvement: IO code now fully non blocking on read and write
  * Improvement: new update code generation can really group NLRI in one update packet
  * Improvement: massive code cleanup, much easier to read
  * Improvement: new RIB code (inbound and outbound tables) much faster
  * Improvement: total rewrite of the watchdog feature now extremely scalable
+ * Improvement: detect invalid netmask on route parsing
  * Compatibility: JSON next-hop for the route is not in the attribute anymore but the NLRI
 
 Version 3.2.2

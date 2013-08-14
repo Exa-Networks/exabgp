@@ -23,7 +23,7 @@ class IComponent (object):
 	# should have an interface for serialisation and put it here
 	pass
 
-class CommonOperator:
+class CommonOperator (object):
 	# power (2,x) is the same as 1 << x which is what the RFC say the len is
 	power = {0:1, 1:2, 2:4, 3:8,}
 	rewop = {1:0, 2:1, 4:2, 8:3,}
@@ -192,8 +192,38 @@ class DSCP (IOperationByteShort,NumericString):
 
 # BinaryOperator
 class Fragment (IOperationByteShort,NumericString):
-	ID = 0x0D
+	ID = 0x0C
 	NAME = 'fragment'
+
+# ..........................................................
+
+decode = {}
+factory = {}
+
+for content in dir():
+	klass = globals().get(content,None)
+	if not isinstance(klass,type(IComponent)):
+		continue
+	if not issubclass(klass,IComponent):
+		continue
+	ID = getattr(klass,'ID',None)
+	if not ID:
+		continue
+	factory[ID] = klass
+	name = getattr(klass,'NAME')
+
+	if issubclass(klass, IOperation):
+		decode[ID] = 'operation'
+		if issubclass(klass, BinaryString):
+			decode[ID] = 'binary'
+		elif issubclass(klass, NumericString):
+			decode[ID] = 'numeric'
+		else:
+			raise RuntimeError('invliad class defined (string)')
+	elif issubclass(klass, IPrefix):
+		decode[ID] = 'prefix'
+	else:
+		raise RuntimeError('unvalid class defined (type)')
 
 # ..........................................................
 

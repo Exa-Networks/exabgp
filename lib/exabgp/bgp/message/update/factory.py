@@ -49,12 +49,18 @@ def UpdateFactory (negotiated,data):
 
 	logger = Logger()
 
+	if not withdrawn:
+		logger.parser(LazyFormat("parsed no withdraw nlri",od,''))
+
 	nlris = []
 	while withdrawn:
 		nlri = NLRIFactory(AFI.ipv4,SAFI.unicast_multicast,withdrawn,addpath,nh,IN.withdrawn)
 		logger.parser(LazyFormat("parsed withdraw nlri %s payload " % nlri,od,withdrawn[:len(nlri)]))
 		withdrawn = withdrawn[len(nlri):]
 		nlris.append(nlri)
+
+	if not announced:
+		logger.parser(LazyFormat("parsed no announced nlri",od,''))
 
 	while announced:
 		nlri = NLRIFactory(AFI.ipv4,SAFI.unicast_multicast,announced,addpath,nh,IN.announced)

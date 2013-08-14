@@ -33,6 +33,7 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 
+from exabgp.bgp.message.update.nlri.prefix import Prefix
 from exabgp.bgp.message.update.nlri.bgp import NLRI,PathInfo,Labels,RouteDistinguisher
 from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,FlowNLRI,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
 
@@ -47,7 +48,7 @@ from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.communities import Community,cachedCommunity,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_FlowRedirectASN,to_FlowRedirectIP
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
-from exabgp.bgp.message.update.attribute.unknown import Unknown
+from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
 
 from exabgp.bgp.message.update.attributes import Attributes
 
@@ -1183,6 +1184,11 @@ class Configuration (object):
 		try:
 			# nexthop must be false and its str return nothing .. an empty string does that
 			update = Change(NLRI(*inet(ip),mask=mask,nexthop=None,action=OUT.announce),Attributes())
+
+			if len(Prefix.pack(update.nlri)) != len(update.nlri):
+				self._error = 'invalid mask for this prefix %s' % str(update.nlri)
+				if self.debug: raise
+				return False
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise
@@ -1370,7 +1376,7 @@ class Configuration (object):
 					scope[-1]['route'][-1].attributes.add(klass(raw))
 					return True
 
-			scope[-1]['route'][-1].attributes.add(Unknown(code,flag,raw))
+			scope[-1]['route'][-1].attributes.add(UnknownAttribute(code,flag,raw))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -2055,6 +2061,8 @@ class Configuration (object):
 		from exabgp.bgp.message.open.capability.negotiated import Negotiated
 		from exabgp.bgp.message.open.capability.id import CapabilityID
 
+		self.logger._parser = True
+
 		self.logger.parser('\ndecoding routes in configuration')
 
 		n = self.neighbor[self.neighbor.keys()[0]]
@@ -2121,6 +2129,7 @@ class Configuration (object):
 #		injected = '\x00\x00\x00\x07\x90\x0f\x00\x03\x00\x02\x01'
 
 	def selfcheck (self):
+		import sys
 		# self check to see if we can decode what we encode
 		from exabgp.util.od import od
 		from exabgp.bgp.message.update import Update,messages
@@ -2132,6 +2141,8 @@ class Configuration (object):
 		from exabgp.bgp.message.notification import Notify
 
 		from exabgp.rib.change import Change
+
+		self.logger._parser = True
 
 		self.logger.parser('\ndecoding routes in configuration')
 
@@ -2154,26 +2165,67 @@ class Configuration (object):
 		#grouped = False
 
 		for nei in self.neighbor.keys():
-			for change in self.neighbor[nei].rib.outgoing.every_changes():
-				str1 = change.extensive()
-				update = Update([change.nlri],change.attributes)
-				packed_updates = list(messages(update,negotiated))
-				self.logger.parser('parsed route requires %d updates' % len(packed_updates))
-				for pack in packed_updates:
-					self.logger.parser('update size is %d' % len(pack))
-					# This does not take the BGP header - let's assume we will not break that :)
-					try:
-						generated = UpdateFactory(negotiated,pack[19:])
-						self.logger.parser('')  # new line
-						str2 = Change(generated.nlris[0],generated.attributes).extensive()
-						self.logger.parser('parsed  route %s' % str1)
-						self.logger.parser('recoded route %s' % str2)
-						self.logger.parser('recoded hex   %s\n' % od(pack))
-					except Notify,e:
-						# we do not decode Flow Routes
-						if e.code == 3 and e.subcode == 2:
-							continue
-						raise e
+			for update in self.neighbor[nei].rib.outgoing.updates(False):
+				pass
+
+			for change1 in self.neighbor[nei].rib.outgoing.every_changes():
+				str1 = change1.extensive()
+				packed = list(messages(Update([change1.nlri],change1.attributes),negotiated))
+				pack1 = packed[0]
+
+				self.logger.parser('parsed route requires %d updates' % len(packed))
+				self.logger.parser('update size is %d' % len(pack1))
+
+				self.logger.parser('parsed  route %s' % str1)
+				self.logger.parser('parsed  hex   %s' % od(pack1))
+
+				# This does not take the BGP header - let's assume we will not break that :)
+				try:
+					self.logger.parser('')  # new line
+
+					pack1s = pack1[19:] if pack1.startswith('\xFF'*16) else pack1
+					update = UpdateFactory(negotiated,pack1s)
+
+					change2 = Change(update.nlris[0],update.attributes)
+					str2 = change2.extensive()
+					pack2 = list(messages(Update([update.nlris[0]],update.attributes),negotiated))[0]
+
+					self.logger.parser('recoded route %s' % str2)
+					self.logger.parser('recoded hex   %s' % od(pack2))
+
+					str1r = str1.replace(' med 100','').replace(' local-preference 100','').replace(' origin igp','')
+					str2r = str2.replace(' med 100','').replace(' local-preference 100','').replace(' origin igp','')
+
+					skip = False
+
+					if str1r != str2r:
+						if 'attribute [' in str1r and ' 0x00 ' in str1r:
+							# we do not decode non-transitive attributes
+							self.logger.parser('skipping string check on udpate with non-transitive attribute(s)')
+							skip = True
+						else:
+							self.logger.parser('strings are different:')
+							self.logger.parser('[%s]'%str1r)
+							self.logger.parser('[%s]'%str2r)
+							sys.exit(1)
+					else:
+							self.logger.parser('strings are fine')
+
+					if skip:
+						self.logger.parser('skipping encoding for update with non-transitive attribute(s)')
+					elif pack1 != pack2:
+						self.logger.parser('encoding are different')
+						self.logger.parser('[%s]'%od(pack1))
+						self.logger.parser('[%s]'%od(pack2))
+						sys.exit(1)
+					else:
+						self.logger.parser('encoding is fine')
+
+
+				except Notify,e:
+					print 'failed due to notification'
+					print str(e)
+					sys.exit(1)
 
 		import sys
 		sys.exit(0)

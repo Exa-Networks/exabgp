@@ -33,7 +33,7 @@ from exabgp.bgp.message.update.attribute.communities import cachedCommunity,Comm
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 
-from exabgp.bgp.message.update.attribute.unknown import Unknown
+from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
 
 from exabgp.logger import Logger,LazyFormat
 
@@ -222,11 +222,11 @@ class Attributes (dict):
 						if how == 'boolean':
 							yield name
 						else:
-							yield '%s %s' % (name, presentation % str(self[code]))
+							yield ' %s %s' % (name, presentation % str(self[code]))
 					else:
-						yield "attribute [ 0x%02X 0x%02X %s ]" % (code,self[code].FLAG,str(self[code]))
+						yield ' attribute [ 0x%02X 0x%02X %s ]' % (code,self[code].FLAG,str(self[code]))
 			# XXX: FIXME: remove this ' ' + ? should it be done by the caller ?
-			self._str = ' ' + ' '.join(generate(self))
+			self._str = ''.join(generate(self))
 		return self._str
 
 	def index (self):
@@ -448,7 +448,7 @@ class Attributes (dict):
 
 		if flag & Flag.TRANSITIVE:
 			if not self.add_from_cache(code,attribute):
-				self.add(Unknown(code,flag,attribute),attribute)
+				self.add(UnknownAttribute(code,flag,attribute),attribute)
 			return self.factory(next)
 
 		logger.parser('ignoring non-transitive attribute')

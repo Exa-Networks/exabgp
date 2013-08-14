@@ -13,8 +13,10 @@ from exabgp.bgp.message.update.attribute.flag import Flag
 # =================================================================== Attribute
 
 class Attribute (object):
-	ID   = 0x00
-	FLAG = 0x00
+	# we need to define ID and FLAG inside of the subclasses
+	# otherwise we can not dynamically create different UnknownAttribute
+	# ID   = 0x00
+	# FLAG = 0x00
 
 	def _attribute (self,value):
 		flag = self.FLAG

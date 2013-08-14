@@ -28,6 +28,10 @@ def prefix (data):
 	return '%s%s' % (pack('!H',len(data)),data)
 
 class Message (Exception):
+	# we need to define TYPE inside __init__ of the subclasses
+	# otherwise we can not dynamically create different UnknownMessage
+	# TYPE = None
+
 	MARKER = chr(0xff)*16
 	HEADER_LEN = 19
 	MAX_LEN = 4096
@@ -53,8 +57,6 @@ class Message (Exception):
 	}
 
 	def __init__ (self):
-		# if we define TYPE outside __init__ as otherwsie we can not dynamically create different UnknownMessage
-		# self.TYPE = None
 		self._name = None
 
 	def name (self,code):
