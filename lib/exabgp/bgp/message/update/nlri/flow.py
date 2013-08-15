@@ -11,14 +11,13 @@ from struct import pack,unpack
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.protocol.ip.address import Address
 from exabgp.bgp.message.direction import OUT
-from exabgp.bgp.message.update.attributes import Attributes
 from exabgp.bgp.message.update.nlri.prefix import Prefix
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.protocol import Protocol,NamedProtocol
 from exabgp.protocol.ip.icmp import ICMPType,ICMPCode,NamedICMPType,NamedICMPCode
 from exabgp.protocol.ip.fragment import Fragment,NamedFragment
-from exabgp.protocol.ip.tcp.flags import TCPFlag,NamedTCPFlag
+from exabgp.protocol.ip.tcp.flag import TCPFlag,NamedTCPFlag
 
 # =================================================================== Flow Components
 
@@ -148,26 +147,8 @@ class NumericString (object):
 		NumericOperator.AND|NumericOperator.GT|NumericOperator.EQ : '&>=',
 	}
 
-	# _operators = {
-	# 	NumericOperator.LT   : [NumericOperator.LT,],
-	# 	NumericOperator.GT   : [NumericOperator.GT,],
-	# 	NumericOperator.EQ   : [NumericOperator.EQ,],
-	# 	NumericOperator.LT|NumericOperator.EQ : [NumericOperator.LT,NumericOperator.EQ],
-	# 	NumericOperator.GT|NumericOperator.EQ : [NumericOperator.GT,NumericOperator.EQ],
-
-	# 	NumericOperator.AND|NumericOperator.LT   : [NumericOperator.AND,NumericOperator.LT],
-	# 	NumericOperator.AND|NumericOperator.GT   : [NumericOperator.AND,NumericOperator.GT],
-	# 	NumericOperator.AND|NumericOperator.EQ   : [NumericOperator.AND,NumericOperator.EQ],
-	# 	NumericOperator.AND|NumericOperator.LT|NumericOperator.EQ : [NumericOperator.AND,NumericOperator.LT,NumericOperator.EQ],
-	# 	NumericOperator.AND|NumericOperator.GT|NumericOperator.EQ : [NumericOperator.AND,NumericOperator.GT,NumericOperator.EQ],
-	# }
-
-
 	def __str__ (self):
 		return "%s%s" % (self._string[self.operations & (CommonOperator.EOL ^ 0xFF)], self.value)
-
-	# def new (operator):
-	# 	return _operators[self.operations & (CommonOperator.EOL ^ 0xFF)], operator
 
 
 class BinaryString (object):
