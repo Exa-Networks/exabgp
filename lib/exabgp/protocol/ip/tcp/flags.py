@@ -7,7 +7,7 @@ Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 """
 
 # http://www.iana.org/assignments/tcp-header-flags
-class TCPFlags (int):
+class TCPFlag (int):
 	FIN    = 0x1
 	SYN    = 0x2
 	RST  = 0x4
@@ -24,13 +24,12 @@ class TCPFlags (int):
 		if self == self.URGENT: return 'urgent'
 		return 'invalid tcp flag %d' % int.__str__(self)
 
-def NamedTCPFlags (name):
+def NamedTCPFlag (name):
 	flag = name.lower()
-	if flag == 'fin':    return TCPFlags(TCPFlags.FIN)
-	if flag == 'syn':    return TCPFlags(TCPFlags.SYN)
-	if flag == 'rst':    return TCPFlags(TCPFlags.RST)
-	if flag == 'push':   return TCPFlags(TCPFlags.PUSH)
-	if flag == 'ack':    return TCPFlags(TCPFlags.ACK)
-	if flag == 'urgent': return TCPFlags(TCPFlags.URGENT)
+	if flag == 'fin':    return TCPFlag(TCPFlag.FIN)
+	if flag == 'syn':    return TCPFlag(TCPFlag.SYN)
+	if flag == 'rst':    return TCPFlag(TCPFlag.RST)
+	if flag == 'push':   return TCPFlag(TCPFlag.PUSH)
+	if flag == 'ack':    return TCPFlag(TCPFlag.ACK)
+	if flag == 'urgent': return TCPFlag(TCPFlag.URGENT)
 	raise ValueError('invalid flag name %s' % flag)
-

@@ -21,12 +21,7 @@ from exabgp.protocol.family import AFI,SAFI,known_families
 
 from exabgp.bgp.neighbor import Neighbor
 
-from exabgp.protocol import NamedProtocol
 from exabgp.protocol.ip.inet import Inet,inet,pton
-from exabgp.protocol.ip.icmp import NamedICMPType,NamedICMPCode
-from exabgp.protocol.ip.fragment import NamedFragment
-from exabgp.protocol.ip.tcp.flags import NamedTCPFlags
-
 from exabgp.bgp.message.direction import OUT
 
 from exabgp.bgp.message.open.asn import ASN
@@ -35,7 +30,7 @@ from exabgp.bgp.message.open.routerid import RouterID
 
 from exabgp.bgp.message.update.nlri.prefix import Prefix
 from exabgp.bgp.message.update.nlri.bgp import NLRI,PathInfo,Labels,RouteDistinguisher
-from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,FlowNLRI,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
+from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,FlowNLRI,FlowSource,FlowDestination,FlowSourcePort,FlowDestinationPort,FlowAnyPort,FlowIPProtocol,FlowTCPFlag,FlowFragment,FlowPacketLength,FlowICMPType,FlowICMPCode,FlowDSCP
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute.origin import Origin
@@ -75,24 +70,6 @@ class Withdrawn (object):
 	MULTIPLE = False
 
 
-def convert_length (data):
-	number = int(data)
-	if number > 65535:
-		raise ValueError(Configuration._str_bad_length)
-	return number
-
-def convert_port (data):
-	number = int(data)
-	if number < 0 or number > 65535:
-		raise ValueError(Configuration._str_bad_port)
-	return number
-
-def convert_dscp (data):
-	number = int(data)
-	if number < 0 or number > 65535:
-		raise ValueError(Configuration._str_bad_dscp)
-	return number
-
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
 def pack_int (afi,integer,mask):
 	return ''.join([chr((integer>>(offset*8)) & 0xff) for offset in range(Inet.length[afi]-1,-1,-1)])
@@ -103,9 +80,7 @@ class Configuration (object):
 
 #	'  hold-time 180;\n' \
 
-	_str_bad_length = "cloudflare already found that invalid max-packet length for for you .."
 	_str_bad_flow = "you tried to filter a flow using an invalid port for a component .."
-	_str_bad_dscp = "you tried to filter a flow using an invalid dscp for a component .."
 
 	_str_route_error = \
 	'community, extended-communities and as-path can take a single community as parameter.\n' \
@@ -1857,7 +1832,8 @@ class Configuration (object):
 	def _flow_source (self,scope,tokens):
 		try:
 			ip,nm = tokens.pop(0).split('/')
-			scope[-1]['route'][-1].nlri.add_and(Source(ip,nm))
+			raw = ''.join(chr(int(_)) for _ in ip.split('.'))
+			scope[-1]['route'][-1].nlri.add_and(FlowSource(raw,nm))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -1867,7 +1843,8 @@ class Configuration (object):
 	def _flow_destination (self,scope,tokens):
 		try:
 			ip,nm = tokens.pop(0).split('/')
-			scope[-1]['route'][-1].nlri.add_and(Destination(ip,nm))
+			raw = ''.join(chr(int(_)) for _ in ip.split('.'))
+			scope[-1]['route'][-1].nlri.add_and(FlowDestination(raw,nm))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -1904,15 +1881,14 @@ class Configuration (object):
 		return string[:l],string[l:]
 
 	# parse =80 or >80 or <25 or &>10<20
-	def _flow_generic_expression (self,scope,tokens,converter,klass):
+	def _flow_generic_expression (self,scope,tokens,klass):
 		try:
 			for test in tokens:
 				AND = BinaryOperator.NOP
 				while test:
 					operator,_ = self._operator(test)
 					value,test = self._value(_)
-					number = converter(value)
-					scope[-1]['route'][-1].nlri.add_or(klass(AND|operator,number))
+					scope[-1]['route'][-1].nlri.add_or(klass(AND|operator,klass.converter(value)))
 					if test:
 						if test[0] == '&':
 							AND = BinaryOperator.AND
@@ -1928,7 +1904,7 @@ class Configuration (object):
 			return False
 
 	# parse [ content1 content2 content3 ]
-	def _flow_generic_list (self,scope,tokens,converter,klass):
+	def _flow_generic_list (self,scope,tokens,klass):
 		name = tokens.pop(0)
 		AND = BinaryOperator.NOP
 		try:
@@ -1938,61 +1914,53 @@ class Configuration (object):
 					if name == ']':
 						break
 					try:
-						try:
-							number = int(name)
-						except ValueError:
-							number = converter(name)
-						scope[-1]['route'][-1].nlri.add_or(klass(NumericOperator.EQ|AND,number))
+						scope[-1]['route'][-1].nlri.add_or(klass(NumericOperator.EQ|AND,klass.converter(name)))
 					except IndexError:
 						self._error = self._str_flow_error
 						if self.debug: raise
 						return False
 			else:
-				try:
-					number = int(name)
-				except ValueError:
-					number = converter(name)
-				scope[-1]['route'][-1].nlri.add_or(klass(NumericOperator.EQ|AND,number))
+				scope[-1]['route'][-1].nlri.add_or(klass(NumericOperator.EQ|AND,klass.converter(name)))
 		except ValueError:
 			self._error = self._str_flow_error
 			if self.debug: raise
 			return False
 		return True
 
-	def _flow_generic_condition (self,scope,tokens,converter,klass):
+	def _flow_generic_condition (self,scope,tokens,klass):
 		if tokens[0][0] in ['=','>','<']:
-			return self._flow_generic_expression(scope,tokens,converter,klass)
-		return self._flow_generic_list(scope,tokens,converter,klass)
+			return self._flow_generic_expression(scope,tokens,klass)
+		return self._flow_generic_list(scope,tokens,klass)
 
 	def _flow_route_anyport (self,scope,tokens):
-		return self._flow_generic_condition(scope,tokens,convert_port,AnyPort)
+		return self._flow_generic_condition(scope,tokens,FlowAnyPort)
 
 	def _flow_route_source_port (self,scope,tokens):
-		return self._flow_generic_condition(scope,tokens,convert_port,SourcePort)
+		return self._flow_generic_condition(scope,tokens,FlowSourcePort)
 
 	def _flow_route_destination_port (self,scope,tokens):
-		return self._flow_generic_condition(scope,tokens,convert_port,DestinationPort)
+		return self._flow_generic_condition(scope,tokens,FlowDestinationPort)
 
 	def _flow_route_packet_length (self,scope,tokens):
-		return self._flow_generic_condition(scope,tokens,convert_length,PacketLength)
+		return self._flow_generic_condition(scope,tokens,FlowPacketLength)
 
 	def _flow_route_tcp_flags (self,scope,tokens):
-		return self._flow_generic_list(scope,tokens,NamedTCPFlags,TCPFlag)
+		return self._flow_generic_list(scope,tokens,FlowTCPFlag)
 
 	def _flow_route_protocol (self,scope,tokens):
-		return self._flow_generic_list(scope,tokens,NamedProtocol,IPProtocol)
+		return self._flow_generic_list(scope,tokens,FlowIPProtocol)
 
 	def _flow_route_icmp_type (self,scope,tokens):
-		return self._flow_generic_list(scope,tokens,NamedICMPType,ICMPType)
+		return self._flow_generic_list(scope,tokens,FlowICMPType)
 
 	def _flow_route_icmp_code (self,scope,tokens):
-		return self._flow_generic_list(scope,tokens,NamedICMPCode,ICMPCode)
+		return self._flow_generic_list(scope,tokens,FlowICMPCode)
 
 	def _flow_route_fragment (self,scope,tokens):
-		return self._flow_generic_list(scope,tokens,NamedFragment,Fragment)
+		return self._flow_generic_list(scope,tokens,FlowFragment)
 
 	def _flow_route_dscp (self,scope,tokens):
-		return self._flow_generic_condition(scope,tokens,convert_dscp,DSCP)
+		return self._flow_generic_condition(scope,tokens,FlowDSCP)
 
 	def _flow_route_discard (self,scope,tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route

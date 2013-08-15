@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2010-01-14.
 Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 """
 
-from struct import pack
+from struct import pack,unpack
 
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.protocol.ip.address import Address
@@ -15,6 +15,10 @@ from exabgp.bgp.message.update.attributes import Attributes
 from exabgp.bgp.message.update.nlri.prefix import Prefix
 from exabgp.bgp.message.notification import Notify
 
+from exabgp.protocol import Protocol,NamedProtocol
+from exabgp.protocol.ip.icmp import ICMPType,ICMPCode,NamedICMPType,NamedICMPCode
+from exabgp.protocol.ip.fragment import Fragment,NamedFragment
+from exabgp.protocol.ip.tcp.flags import TCPFlag,NamedTCPFlag
 
 # =================================================================== Flow Components
 
@@ -29,26 +33,47 @@ class CommonOperator (object):
 	rewop = {1:0, 2:1, 4:2, 8:3,}
 	len_position = 0x30
 
-	EOL       = 0x80
-	AND       = 0x40
+	EOL       = 0x80  # 0b10000000
+	AND       = 0x40  # 0b01000000
+	LEN       = 0x30  # 0b00110000
 	NOP       = 0x00
 
+	OPERATOR  = 0xFF ^ (EOL | LEN)
+
+	@staticmethod
+	def eol (data):
+		return data & CommonOperator.EOL
+
+	@staticmethod
+	def operator (data):
+		return data & CommonOperator.OPERATOR
+
+	@staticmethod
+	def length (data):
+		return 1 << ((data & CommonOperator.LEN) >> 4)
+
 class NumericOperator (CommonOperator):
-#	reserved  = 0x08
-	LT        = 0x04
-	GT        = 0x02
-	EQ        = 0x01
+#	reserved  = 0x08  # 0b00001000
+	LT        = 0x04  # 0b00000100
+	GT        = 0x02  # 0b00000010
+	EQ        = 0x01  # 0b00000001
 
 class BinaryOperator (CommonOperator):
-#	reserved  = 0x0C
-	NOT       = 0x02
-	MATCH     = 0x01
+#	reserved  = 0x0C  # 0b00001100
+	NOT       = 0x02  # 0b00000010
+	MATCH     = 0x01  # 0b00000001
 
 def _len_to_bit (value):
 	return NumericOperator.rewop[value] << 4
 
 def _bit_to_len (value):
 	return NumericOperator.power[(value & CommonOperator.len_position) >> 4]
+
+def _number (string):
+	value = 0
+	for c in string:
+		value = (value << 8) + ord(value)
+	return value
 
 # Interface ..................
 
@@ -58,8 +83,7 @@ class IPrefix (IComponent):
 	ID = None
 	NAME = None
 
-	def __init__ (self,ipv4,netmask):
-		raw = ''.join(chr(int(_)) for _ in ipv4.split('.'))
+	def __init__ (self,raw,netmask):
 		self.nlri = Prefix(AFI.ipv4,SAFI.flow_ipv4,raw,netmask)
 
 	def pack (self):
@@ -95,11 +119,17 @@ class IOperationByte (IOperation):
 	def encode (self,value):
 		return 1,chr(value)
 
+	def decode (self,bgp):
+		return ord(bgp[0]),bgp[1:]
+
 class IOperationByteShort (IOperation):
 	def encode (self,value):
 		if value < (1<<8):
 			return 1,chr(value)
 		return 2,pack('!H',value)
+
+	def decode (self,bgp):
+		return unpack('!H',bgp[:2])[0],bgp[2:]
 
 # String representation for Numeric and Binary Tests
 
@@ -118,8 +148,27 @@ class NumericString (object):
 		NumericOperator.AND|NumericOperator.GT|NumericOperator.EQ : '&>=',
 	}
 
+	# _operators = {
+	# 	NumericOperator.LT   : [NumericOperator.LT,],
+	# 	NumericOperator.GT   : [NumericOperator.GT,],
+	# 	NumericOperator.EQ   : [NumericOperator.EQ,],
+	# 	NumericOperator.LT|NumericOperator.EQ : [NumericOperator.LT,NumericOperator.EQ],
+	# 	NumericOperator.GT|NumericOperator.EQ : [NumericOperator.GT,NumericOperator.EQ],
+
+	# 	NumericOperator.AND|NumericOperator.LT   : [NumericOperator.AND,NumericOperator.LT],
+	# 	NumericOperator.AND|NumericOperator.GT   : [NumericOperator.AND,NumericOperator.GT],
+	# 	NumericOperator.AND|NumericOperator.EQ   : [NumericOperator.AND,NumericOperator.EQ],
+	# 	NumericOperator.AND|NumericOperator.LT|NumericOperator.EQ : [NumericOperator.AND,NumericOperator.LT,NumericOperator.EQ],
+	# 	NumericOperator.AND|NumericOperator.GT|NumericOperator.EQ : [NumericOperator.AND,NumericOperator.GT,NumericOperator.EQ],
+	# }
+
+
 	def __str__ (self):
 		return "%s%s" % (self._string[self.operations & (CommonOperator.EOL ^ 0xFF)], self.value)
+
+	# def new (operator):
+	# 	return _operators[self.operations & (CommonOperator.EOL ^ 0xFF)], operator
+
 
 class BinaryString (object):
 	_string = {
@@ -134,66 +183,120 @@ class BinaryString (object):
 
 # Components ..............................
 
+def converter (function,klass=int):
+	def _integer (value):
+		try:
+			return klass(value)
+		except ValueError:
+			return function(value)
+	return _integer
+
+def decoder (function,klass=int):
+	def _inner (value):
+		return klass(function(value))
+	return _inner
+
+def PacketLength (data):
+	_str_bad_length = "cloudflare already found that invalid max-packet length for for you .."
+	number = int(data)
+	if number > 65535:
+		raise ValueError(_str_bad_length)
+	return number
+
+def PortValue (data):
+	_str_bad_port = "you tried to set an invalid port number .."
+	number = int(data)
+	if number < 0 or number > 65535:
+		raise ValueError(_str_bad_port)
+	return number
+
+def DSCPValue (data):
+	_str_bad_dscp = "you tried to filter a flow using an invalid dscp for a component .."
+	number = int(data)
+	if number < 0 or number > 65535:
+		raise ValueError(_str_bad_dscp)
+	return number
+
 # Prefix
-class Destination (IPrefix):
+class FlowDestination (IPrefix):
 	ID = 0x01
 	NAME = 'destination'
 
 # Prefix
-class Source (IPrefix):
+class FlowSource (IPrefix):
 	ID = 0x02
 	NAME = 'source'
 
 # NumericOperator
-class IPProtocol (IOperationByte,NumericString):
+class FlowIPProtocol (IOperationByte,NumericString):
 	ID  = 0x03
 	NAME = 'protocol'
+	converter = staticmethod(converter(NamedProtocol,Protocol))
+	decoder = staticmethod(decoder(ord,Protocol))
 
 # NumericOperator
-class AnyPort (IOperationByteShort,NumericString):
+class FlowAnyPort (IOperationByteShort,NumericString):
 	ID  = 0x04
 	NAME = 'port'
+	converter = staticmethod(converter(PortValue))
+	decoder = staticmethod(_number)
 
 # NumericOperator
-class DestinationPort (IOperationByteShort,NumericString):
+class FlowDestinationPort (IOperationByteShort,NumericString):
 	ID  = 0x05
 	NAME = 'destination-port'
+	converter = staticmethod(converter(PortValue))
+	decoder = staticmethod(_number)
 
 # NumericOperator
-class SourcePort (IOperationByteShort,NumericString):
+class FlowSourcePort (IOperationByteShort,NumericString):
 	ID  = 0x06
 	NAME = 'source-port'
+	converter = staticmethod(converter(PortValue))
+	decoder = staticmethod(_number)
 
 # BinaryOperator
-class ICMPType (IOperationByte,BinaryString):
+class FlowICMPType (IOperationByte,BinaryString):
 	ID = 0x07
 	NAME = 'icmp-type'
+	converter = staticmethod(converter(NamedICMPType))
+	decoder = staticmethod(decoder(_number,ICMPType))
 
 # BinaryOperator
-class ICMPCode (IOperationByte,BinaryString):
+class FlowICMPCode (IOperationByte,BinaryString):
 	ID = 0x08
 	NAME = 'icmp-code'
+	converter = staticmethod(converter(NamedICMPCode))
+	decoder = staticmethod(decoder(_number,ICMPCode))
 
 # BinaryOperator
-class TCPFlag (IOperationByte,BinaryString):
+class FlowTCPFlag (IOperationByte,BinaryString):
 	ID = 0x09
 	NAME = 'tcp-flags'
+	converter = staticmethod(converter(NamedTCPFlag))
+	decoder = staticmethod(decoder(ord,TCPFlag))
 
 # NumericOperator
-class PacketLength (IOperationByteShort,NumericString):
+class FlowPacketLength (IOperationByteShort,NumericString):
 	ID = 0x0A
 	NAME = 'packet-length'
+	converter = staticmethod(converter(PacketLength))
+	decoder = staticmethod(_number)
 
 # NumericOperator
 # RFC2474
-class DSCP (IOperationByteShort,NumericString):
+class FlowDSCP (IOperationByteShort,NumericString):
 	ID = 0x0B
 	NAME = 'dscp'
+	converter = staticmethod(converter(DSCPValue))
+	decoder = staticmethod(_number)
 
 # BinaryOperator
-class Fragment (IOperationByteShort,NumericString):
+class FlowFragment (IOperationByteShort,NumericString):
 	ID = 0x0C
 	NAME = 'fragment'
+	converter = staticmethod(converter(NamedFragment))
+	decoder = staticmethod(decoder(ord,Fragment))
 
 # ..........................................................
 
@@ -213,7 +316,6 @@ for content in dir():
 	name = getattr(klass,'NAME')
 
 	if issubclass(klass, IOperation):
-		decode[ID] = 'operation'
 		if issubclass(klass, BinaryString):
 			decode[ID] = 'binary'
 		elif issubclass(klass, NumericString):
@@ -235,15 +337,17 @@ def _unique ():
 
 unique = _unique()
 
-class FlowNLRI (Attributes,Address):
+class FlowNLRI (Address,dict):
 	# conform to the API used in UPDATE
 	nexthop = None
 
 	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ipv4):
-		Attributes.__init__(self)
 		Address.__init__(self,afi,safi)
 		self.rules = {}
 		self.action = OUT.announce
+
+	def __len__ (self):
+		return len(self.pack())
 
 	def add_and (self,rule):
 		ID = rule.ID
@@ -257,7 +361,7 @@ class FlowNLRI (Attributes,Address):
 	def add_or (self,rule):
 		ID = rule.ID
 		# This test currently always fails (we do not call add_or with Source/Destinations).
-		if ID in [Destination.ID, Source.ID]:
+		if ID in [FlowDestination.ID, FlowSource.ID]:
 			return False
 		if ID in self.rules:
 			rule.first = False

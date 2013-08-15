@@ -8,7 +8,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 # =================================================================== Fragment
 
-class _Fragment (int):
+class Fragment (int):
 #	reserved  = 0xF0
 	DONT      = 0x08
 	IS        = 0x40
@@ -25,9 +25,9 @@ class _Fragment (int):
 
 def NamedFragment (name):
 	fragment = name.lower()
-	if fragment == 'not-a-fragment': return _Fragment(0x00)
-	if fragment == 'dont-fragment':  return _Fragment(_Fragment.DONT)
-	if fragment == 'is-fragment':    return _Fragment(_Fragment.IS)
-	if fragment == 'first-fragment': return _Fragment(_Fragment.FIRST)
-	if fragment == 'last-fragment':  return _Fragment(_Fragment.LAST)
+	if fragment == 'not-a-fragment': return Fragment(0x00)
+	if fragment == 'dont-fragment':  return Fragment(Fragment.DONT)
+	if fragment == 'is-fragment':    return Fragment(Fragment.IS)
+	if fragment == 'first-fragment': return Fragment(Fragment.FIRST)
+	if fragment == 'last-fragment':  return Fragment(Fragment.LAST)
 	raise ValueError('invalid fragment name %s' % fragment)

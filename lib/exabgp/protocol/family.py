@@ -84,7 +84,7 @@ class SAFI (int):
 		return self in (self.nlri_mpls,self.mpls_vpn)
 
 	def has_rd (self):
-		return self in (self.mpls_vpn,)
+		return self in (self.mpls_vpn,self.flow_vpnv4)
 
 
 def known_families ():

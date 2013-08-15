@@ -11,8 +11,7 @@ from exabgp.bgp.message.notification import Notify
 from struct import unpack
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.update.nlri.bgp import NLRI,PathInfo,Labels,RouteDistinguisher,mask_to_bytes
-from exabgp.bgp.message.update.nlri.flow import FlowNLRI,decode,factory
-# BinaryOperator,NumericOperator,FlowNLRI,Source,Destination,SourcePort,DestinationPort,AnyPort,IPProtocol,TCPFlag,Fragment,PacketLength,ICMPType,ICMPCode,DSCP
+from exabgp.bgp.message.update.nlri.flow import FlowNLRI,decode,factory,CommonOperator
 from exabgp.bgp.message.update.attribute.nexthop import cachedNextHop
 
 
@@ -22,6 +21,11 @@ def NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
 	else:
 		return _NLRIFactory(afi,safi,bgp,has_multiple_path,nexthop,action)
 
+def number (string):
+	value = 0
+	for c in string:
+		value = (value << 8) + ord(c)
+	return value
 
 def nlrifactory (afi,safi,bgp):
 	labels = []
@@ -60,19 +64,50 @@ def nlrifactory (afi,safi,bgp):
 	if len(bgp) < size:
 		raise Notify(3,10,'could not decode route with AFI %d sand SAFI %d' % (afi,safi))
 
-	network = bgp[:size]
+	network,bgp = bgp[:size],bgp[size:]
 	padding = '\0'*(NLRI.length[afi]-size)
 	prefix = network + padding
 
 	return labels,rd,mask,size,prefix,bgp
 
 def _FlowNLRIFactory (afi,safi,bgp):
-	what,bgp = ord(bgp[0]),bgp[1:]
+	length,bgp = ord(bgp[0]),bgp[1:]
 
-	print factory[what]
-	print decode[what]
+	if length & 0xF0 == 0xF0:  # bigger than 240
+		extra,bgp = ord(bgp[0]),bgp[1:]
+		length = ((length & 0x0F) << 16) + extra
 
+	if length > len(bgp):
+		raise Notify(3,10,'invalid length at the start of the the flow')
+
+	bgp = bgp[:length]
 	nlri = FlowNLRI(afi,safi)
+
+	while bgp:
+		what,bgp = ord(bgp[0]),bgp[1:]
+		if what not in decode:
+			raise Notify(3,10,'unknown flowspec component')
+
+		decoder = decode[what]
+		klass = factory[what]
+
+		# XXX: FIXME: do not leave a print here
+		print 'parsing flow', klass.NAME
+
+		if decoder == 'prefix':
+			_,rd,mask,size,prefix,bgp = nlrifactory(afi,safi,bgp)
+			nlri.add_and(klass(prefix,mask))
+		else:
+			loop = True
+			while loop:
+				byte,bgp = ord(bgp[0]),bgp[1:]
+				loop = CommonOperator.eol(byte)
+				operator = CommonOperator.operator(byte)
+				length = CommonOperator.length(byte)
+				value,bgp = bgp[:length],bgp[length:]
+				#import pdb; pdb.set_trace()
+				#nlri.add_and(klass(operator,klass.decoder(value)))
+
 
 	return nlri
 
