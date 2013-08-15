@@ -43,7 +43,7 @@ class ICMPType (int):
 		if self == ICMPType.TIMESTAMP_REQUEST:        return 'timestamp'
 		if self == ICMPType.TIMESTAMP_REPLY:          return 'timestamp-reply'
 		if self == ICMPType.DESTINATION_UNREACHEABLE: return 'unreachable'
-		return 'invalid icmp type %d' % int.__str__(self)
+		return 'invalid icmp type %d' % int(self)
 
 def NamedICMPType (name):
 	icmp = name.lower()
@@ -100,7 +100,7 @@ class ICMPCode (int):
 	IP_HEADER_BAD                         = 0x2
 
 	def __str__ (self):
-		return 'icmp code %d' % int.__str__(self)
+		return 'icmp code %d' % int(self)
 
 def NamedICMPCode (name):
 	icmp = name.lower()

@@ -39,7 +39,6 @@ def messages (update,negotiated):
 	local_as = negotiated.local_as
 	peer_as = negotiated.peer_as
 
-	attr = update.attributes.pack(asn4,local_as,peer_as)
 	msg_size = negotiated.msg_size - 2 - 2  # 2 bytes for each of the two prefix() header
 
 	# sort the nlris
@@ -64,6 +63,15 @@ def messages (update,negotiated):
 
 	if not add_nlri and not del_nlri and not add_mp and not del_mp:
 		return
+
+	if add_nlri or add_mp:
+		add_default = False
+		for afi,safi in add_mp:
+			if safi not in (SAFI.flow_ipv4,SAFI.flow_vpnv4):
+				add_default = True
+		attr = update.attributes.pack(asn4,local_as,peer_as,add_default)
+	else:
+		attr = ''
 
 	# generate the message
 
@@ -145,8 +153,7 @@ def messages (update,negotiated):
 						attributes = ''
 				else:
 					packed_mp_add += packed
-					if family not in ((AFI.ipv4,SAFI.flow_ipv4),(AFI.ipv4,SAFI.flow_vpnv4)):
-						attributes = attr
+					attributes = attr
 		except StopIteration:
 			pass
 

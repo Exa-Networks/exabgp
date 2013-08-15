@@ -20,7 +20,7 @@ class Prefix (Inet):
 	# have a .bgp with the bgp wire format of the prefix
 
 	def __init__(self,afi,safi,packed,mask):
-		self.mask = int(mask)
+		self.mask = mask
 		Inet.__init__(self,afi,safi,packed)
 
 	def __str__ (self):

@@ -21,7 +21,7 @@ class Fragment (int):
 		if self == self.IS:    return 'is-fragment'
 		if self == self.FIRST: return 'first-fragment'
 		if self == self.LAST:  return 'last-fragment'
-		return 'unknown fragment value %d' % int.__str__(self)
+		return 'unknown fragment value %d' % int(self)
 
 def NamedFragment (name):
 	fragment = name.lower()

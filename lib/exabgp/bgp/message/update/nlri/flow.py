@@ -71,7 +71,7 @@ def _bit_to_len (value):
 def _number (string):
 	value = 0
 	for c in string:
-		value = (value << 8) + ord(value)
+		value = (value << 8) + ord(c)
 	return value
 
 # Interface ..................
@@ -85,7 +85,7 @@ class IPrefix (IComponent):
 	def __init__ (self,raw,netmask):
 		self.nlri = Prefix(AFI.ipv4,SAFI.flow_ipv4,raw,netmask)
 
-	def pack (self):
+	def pack (self,first=None):
 		raw = self.nlri.pack(addpath=False)
 		return "%s%s" % (chr(self.ID),raw)
 
@@ -98,16 +98,19 @@ class IOperation (IComponent):
 	def __init__ (self,operations,value):
 		self.operations = operations
 		self.value = value
-		self.first = True
+		self.first = None  # handled by pack/str
 
-	def pack (self):
+	def pack (self,first):
 		l,v = self.encode(self.value)
 		op = self.operations | _len_to_bit(l)
-		if self.first:
+		if first:
 			return "%s%s%s" % (chr(self.ID),chr(op),v)
 		return "%s%s" % (chr(op),v)
 
 	def encode (self,value):
+		raise NotImplemented('this method must be implemented by subclasses')
+
+	def decode (self,value):
 		raise NotImplemented('this method must be implemented by subclasses')
 
 #class IOperationIPv4 (IOperation):
@@ -318,7 +321,7 @@ def _unique ():
 
 unique = _unique()
 
-class FlowNLRI (Address,dict):
+class FlowNLRI (Address):
 	# conform to the API used in UPDATE
 	nexthop = None
 
@@ -333,19 +336,12 @@ class FlowNLRI (Address,dict):
 	def add_and (self,rule):
 		ID = rule.ID
 		if ID in self.rules:
-			rule.first = False
-			# Source and Destination do not use operations, it is just here to make the code simpler
 			self.rules[ID][-1].operations |= CommonOperator.AND
 		self.rules.setdefault(ID,[]).append(rule)
 		return True
 
 	def add_or (self,rule):
 		ID = rule.ID
-		# This test currently always fails (we do not call add_or with Source/Destinations).
-		if ID in [FlowDestination.ID, FlowSource.ID]:
-			return False
-		if ID in self.rules:
-			rule.first = False
 		self.rules.setdefault(ID,[]).append(rule)
 		return True
 
@@ -369,7 +365,7 @@ class FlowNLRI (Address,dict):
 			for rule in rules:
 				ordered_rules.append(rule)
 
-		components = ''.join([rule.pack() for rule in ordered_rules])
+		components = ''.join(rule.pack(not idx) for (idx,rule) in enumerate(ordered_rules))
 		l = len(components)
 		if l < 0xF0:
 			data = "%s%s" % (chr(l),components)
@@ -382,15 +378,15 @@ class FlowNLRI (Address,dict):
 
 	def extensive (self):
 		string = []
-		for _,rules in self.rules.iteritems():
+		for rules in self.rules.itervalues():
 			s = []
-			for rule in rules:
-				if rule.operations & NumericOperator.AND:
-					s.append(str(rule))
+			for idx,rule in enumerate(rules):
+				if idx and rule.operations & NumericOperator.AND:
+					s.append('&')
 				else:
 					s.append(' ')
-					s.append(str(rule))
-			string.append('%s %s' % (rules[0].NAME,''.join(s[1:])))
+				s.append(rule)
+			string.append('%s%s' % (rules[0].NAME,''.join(str(_) for _ in s)))
 		return ' '.join(string)
 
 	def __str__ (self):

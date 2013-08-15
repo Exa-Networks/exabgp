@@ -36,7 +36,7 @@ class Protocol (int):
 		if self == Protocol.IPIP:    return 'IPIP'
 		if self == Protocol.PIM:     return 'PIM'
 		if self == Protocol.SCTP:    return 'SCTP'
-		return "unknown protocol %d" % int.__str__(self)
+		return "unknown protocol %d" % int(self)
 
 	def pack (self):
 		return chr(self)

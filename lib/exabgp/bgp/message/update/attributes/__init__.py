@@ -159,7 +159,7 @@ class Attributes (dict):
 			return True
 		return False
 
-	def pack (self,asn4,local_asn,peer_asn):
+	def pack (self,asn4,local_asn,peer_asn,with_default=True):
 		message = ''
 
 		default = {
@@ -173,8 +173,13 @@ class Attributes (dict):
 			AID.LOCAL_PREF: lambda l,r,nh: l == r,
 		}
 
+		if with_default:
+			keys = set(self.keys() + default.keys())
+		else:
+			keys = set(self.keys())
+
 		# AGGREGATOR generate both AGGREGATOR and AS4_AGGREGATOR
-		for code in sorted(set(self.keys() + default.keys())):
+		for code in sorted(keys):
 			if code in (AID.INTERNAL_SPLIT, AID.INTERNAL_WATCHDOG, AID.INTERNAL_WITHDRAW):
 				continue
 			if code in self:

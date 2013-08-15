@@ -14,6 +14,8 @@ from exabgp.bgp.message.update.nlri.bgp import NLRI,PathInfo,Labels,RouteDisting
 from exabgp.bgp.message.update.nlri.flow import FlowNLRI,decode,factory,CommonOperator
 from exabgp.bgp.message.update.attribute.nexthop import cachedNextHop
 
+from exabgp.util.od import od
+from exabgp.logger import Logger,LazyFormat
 
 def NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
 	if safi in (133,134):
@@ -21,13 +23,7 @@ def NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
 	else:
 		return _NLRIFactory(afi,safi,bgp,has_multiple_path,nexthop,action)
 
-def number (string):
-	value = 0
-	for c in string:
-		value = (value << 8) + ord(c)
-	return value
-
-def nlrifactory (afi,safi,bgp):
+def _nlrifactory (afi,safi,bgp):
 	labels = []
 	rd = ''
 
@@ -71,6 +67,8 @@ def nlrifactory (afi,safi,bgp):
 	return labels,rd,mask,size,prefix,bgp
 
 def _FlowNLRIFactory (afi,safi,bgp):
+	logger = Logger()
+
 	length,bgp = ord(bgp[0]),bgp[1:]
 
 	if length & 0xF0 == 0xF0:  # bigger than 240
@@ -83,6 +81,8 @@ def _FlowNLRIFactory (afi,safi,bgp):
 	bgp = bgp[:length]
 	nlri = FlowNLRI(afi,safi)
 
+	logger.parser(LazyFormat("parsing flow nlri payload ",od,bgp))
+
 	while bgp:
 		what,bgp = ord(bgp[0]),bgp[1:]
 		if what not in decode:
@@ -91,23 +91,23 @@ def _FlowNLRIFactory (afi,safi,bgp):
 		decoder = decode[what]
 		klass = factory[what]
 
-		# XXX: FIXME: do not leave a print here
-		print 'parsing flow', klass.NAME
-
 		if decoder == 'prefix':
-			_,rd,mask,size,prefix,bgp = nlrifactory(afi,safi,bgp)
-			nlri.add_and(klass(prefix,mask))
+			_,rd,mask,size,prefix,left = _nlrifactory(afi,safi,bgp)
+			adding = klass(prefix,mask)
+			nlri.add_and(adding)
+			logger.parser(LazyFormat("added flow %s (%s) payload " % (klass.NAME,adding),od,bgp[:-len(left)]))
+			bgp = left
 		else:
-			loop = True
-			while loop:
+			end = False
+			while not end:
 				byte,bgp = ord(bgp[0]),bgp[1:]
-				loop = CommonOperator.eol(byte)
+				end = CommonOperator.eol(byte)
 				operator = CommonOperator.operator(byte)
 				length = CommonOperator.length(byte)
 				value,bgp = bgp[:length],bgp[length:]
-				#import pdb; pdb.set_trace()
-				#nlri.add_and(klass(operator,klass.decoder(value)))
-
+				adding = klass.decoder(value)
+				nlri.add_or(klass(operator,adding))
+				logger.parser(LazyFormat("added flow %s operator %d len %d (%s) payload " % (klass.NAME,byte,length,adding),od,value))
 
 	return nlri
 
@@ -118,7 +118,7 @@ def _NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
 	else:
 		path_identifier = ''
 
-	labels,rd,mask,size,prefix,bgp = nlrifactory(afi,safi,bgp)
+	labels,rd,mask,size,prefix,bgp = _nlrifactory(afi,safi,bgp)
 
 	nlri = NLRI(afi,safi,prefix,mask,cachedNextHop(nexthop),action)
 

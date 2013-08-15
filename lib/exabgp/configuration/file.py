@@ -1833,7 +1833,7 @@ class Configuration (object):
 		try:
 			ip,nm = tokens.pop(0).split('/')
 			raw = ''.join(chr(int(_)) for _ in ip.split('.'))
-			scope[-1]['route'][-1].nlri.add_and(FlowSource(raw,nm))
+			scope[-1]['route'][-1].nlri.add_or(FlowSource(raw,int(nm)))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -1844,7 +1844,7 @@ class Configuration (object):
 		try:
 			ip,nm = tokens.pop(0).split('/')
 			raw = ''.join(chr(int(_)) for _ in ip.split('.'))
-			scope[-1]['route'][-1].nlri.add_and(FlowDestination(raw,nm))
+			scope[-1]['route'][-1].nlri.add_or(FlowDestination(raw,int(nm)))
 			return True
 		except ValueError:
 			self._error = self._str_route_error

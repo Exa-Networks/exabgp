@@ -22,7 +22,7 @@ class TCPFlag (int):
 		if self == self.PUSH:   return 'push'
 		if self == self.ACK:    return 'ack'
 		if self == self.URGENT: return 'urgent'
-		return 'invalid tcp flag %d' % int.__str__(self)
+		return 'invalid tcp flag %d' % int(self)
 
 def NamedTCPFlag (name):
 	flag = name.lower()

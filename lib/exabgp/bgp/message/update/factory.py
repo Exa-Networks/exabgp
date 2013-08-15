@@ -25,6 +25,8 @@ from exabgp.logger import Logger,LazyFormat
 
 # XXX: FIXME: this can raise ValueError. IndexError,TypeError, struct.error (unpack) = check it is well intercepted
 def UpdateFactory (negotiated,data):
+	logger = Logger()
+
 	length = len(data)
 
 	lw,withdrawn,data = defix(data)
@@ -46,8 +48,6 @@ def UpdateFactory (negotiated,data):
 	addpath = negotiated.addpath.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
 	nho = attributes.get(AID.NEXT_HOP,None)
 	nh = nho.packed if nho else None
-
-	logger = Logger()
 
 	if not withdrawn:
 		logger.parser(LazyFormat("parsed no withdraw nlri",od,''))
