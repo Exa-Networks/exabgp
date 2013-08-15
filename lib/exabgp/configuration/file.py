@@ -1154,8 +1154,9 @@ class Configuration (object):
 			return False
 		try:
 			ip,mask = ip.split('/')
+			mask = int(mask)
 		except ValueError:
-			mask = '32'
+			mask = 32
 		try:
 			# nexthop must be false and its str return nothing .. an empty string does that
 			update = Change(NLRI(*inet(ip),mask=mask,nexthop=None,action=OUT.announce),Attributes())
