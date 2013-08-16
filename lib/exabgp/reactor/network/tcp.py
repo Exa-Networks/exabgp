@@ -134,6 +134,7 @@ def ready (io):
 			yield False
 		except select.error:
 			yield False
+			return
 	yield True
 
 # try:

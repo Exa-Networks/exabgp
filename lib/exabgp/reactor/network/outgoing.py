@@ -42,6 +42,7 @@ class Outgoing (Connection):
 		finally:
 			if connected is not True:
 				yield False
+				return
 
 		nagle(self.io,self.peer)
 		TTL(self.io,self.peer,self.ttl)
