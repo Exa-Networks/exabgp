@@ -82,7 +82,6 @@ class Notification (Message):
 		self.code = code
 		self.subcode = subcode
 		self.data = data
-		return self
 
 	def __str__ (self):
 		return "%s / %s%s" % (
@@ -92,7 +91,7 @@ class Notification (Message):
 		)
 
 
-def NotificationFactory (self,data):
+def NotificationFactory (data):
 	return Notification(ord(data[0]),ord(data[1]),data[2:])
 
 
