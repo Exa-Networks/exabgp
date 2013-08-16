@@ -289,7 +289,20 @@ class Peer (object):
 			self._running = False
 
 		self._out_proto = Protocol(self)
-		self._out_proto.connect()
+		generator = self._out_proto.connect()
+
+		connected = False
+		try:
+			while True:
+				connected = generator.next()
+				if connected:
+					break
+				yield True
+		finally:
+			if connected is not True:
+				yield False
+				return
+
 		self._reset_skip()
 		self._out_state = STATE.connect
 

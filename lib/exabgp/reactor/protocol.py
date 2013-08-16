@@ -75,8 +75,22 @@ class Protocol (object):
 			ttl = self.neighbor.ttl
 			self.connection = Outgoing(peer.afi,peer.ip,local.ip,self.port,md5,ttl)
 
+			connected = False
+			try:
+				generator = self.connection.connected()
+				while True:
+					connected = generator.next()
+					if connected:
+						break
+					yield False
+			finally:
+				if not connected:
+					raise NotConnected('connect failed')
+
 			if self.peer.neighbor.api.neighbor_changes:
 				self.peer.reactor.processes.connected(self.peer.neighbor.peer_address)
+
+			yield True
 
 	def close (self,reason='unspecified'):
 		self.logger.network(self.me(reason))

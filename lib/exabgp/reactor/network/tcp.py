@@ -8,6 +8,7 @@ Copyright (c) 2013-2013 Exa Networks. All rights reserved.
 
 import struct
 import socket
+import select
 import platform
 
 from exabgp.util.errstr import errstr
@@ -123,6 +124,17 @@ def async (io,ip):
 		io.setblocking(0)
 	except socket.error, e:
 		raise AsyncError('could not set socket non-blocking for %s (%s)' % (ip,errstr(e)))
+
+def ready (io):
+	while True:
+		try:
+			_,w,_ = select.select([],[io,],[],0)
+			if w:
+				break
+			yield False
+		except select.error:
+			yield False
+	yield True
 
 # try:
 # 	try:

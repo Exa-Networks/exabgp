@@ -11,6 +11,10 @@ Version 3.2.3
  * Fix: change the behaviour of the main peer loop (should behave more like expected - no bug reported tho)
  * Fix: many small fixes
  * Fix: bad encoding of FlowSpec Fragments
+ * Fix: async not called before connect
+    reported by: Vincent Bernat (with a very good hint for the patch)
+ * Fix: bad function defintions
+    patch by: Vincent Bernat
  * Improvement: implemented some defensive coding practice (enable with exabgp.debug.defensive)
  * Improvement: IO code now fully non blocking on read and write
  * Improvement: new update code generation can really group NLRI in one update packet
