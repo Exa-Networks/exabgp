@@ -85,7 +85,7 @@ class IPrefix (IComponent):
 	def __init__ (self,raw,netmask):
 		self.nlri = Prefix(AFI.ipv4,SAFI.flow_ipv4,raw,netmask)
 
-	def pack (self,first=None):
+	def pack (self):
 		raw = self.nlri.pack(addpath=False)
 		return "%s%s" % (chr(self.ID),raw)
 
@@ -100,11 +100,9 @@ class IOperation (IComponent):
 		self.value = value
 		self.first = None  # handled by pack/str
 
-	def pack (self,first):
+	def pack (self):
 		l,v = self.encode(self.value)
 		op = self.operations | _len_to_bit(l)
-		if first:
-			return "%s%s%s" % (chr(self.ID),chr(op),v)
 		return "%s%s" % (chr(op),v)
 
 	def encode (self,value):
@@ -333,39 +331,31 @@ class FlowNLRI (Address):
 	def __len__ (self):
 		return len(self.pack())
 
-	def add_and (self,rule):
+	def add (self,rule):
 		ID = rule.ID
-		if ID in self.rules:
-			self.rules[ID][-1].operations |= CommonOperator.AND
-		self.rules.setdefault(ID,[]).append(rule)
-		return True
-
-	def add_or (self,rule):
-		ID = rule.ID
+		if ID in self.rules and ID in (FlowDestination.ID,FlowSource.ID):
+			return False
 		self.rules.setdefault(ID,[]).append(rule)
 		return True
 
 	# The API requires addpath, but it is irrelevant here.
 	def pack (self,addpath=None):
 		ordered_rules = []
-
 		# the order is a RFC requirement
-		IDS = self.rules.keys()
-		IDS.sort()
-
-		for ID in IDS:
+		for ID in sorted(self.rules.keys()):
 			rules = self.rules[ID]
 			# for each component get all the operation to do
 			# the format use does not prevent two opposing rules meaning that no packet can ever match
 			for rule in rules:
-				# clear the EOL if it has been set (it should not have been done.)
 				rule.operations &= (CommonOperator.EOL ^ 0xFF)
-			# and add it to the last rule
 			rules[-1].operations |= CommonOperator.EOL
-			for rule in rules:
-				ordered_rules.append(rule)
+			# and add it to the last rule
+			if ID not in (FlowDestination.ID,FlowSource.ID):
+				ordered_rules.append(chr(ID))
+			ordered_rules.append(''.join(rule.pack() for rule in rules))
 
-		components = ''.join(rule.pack(not idx) for (idx,rule) in enumerate(ordered_rules))
+		components = ''.join(ordered_rules)
+
 		l = len(components)
 		if l < 0xF0:
 			data = "%s%s" % (chr(l),components)
@@ -381,12 +371,10 @@ class FlowNLRI (Address):
 		for rules in self.rules.itervalues():
 			s = []
 			for idx,rule in enumerate(rules):
-				if idx and rule.operations & NumericOperator.AND:
-					s.append('&')
-				else:
+				if idx and not rule.operations & NumericOperator.AND:
 					s.append(' ')
 				s.append(rule)
-			string.append('%s%s' % (rules[0].NAME,''.join(str(_) for _ in s)))
+			string.append('%s %s' % (rules[0].NAME,''.join(str(_) for _ in s)))
 		return ' '.join(string)
 
 	def __str__ (self):

@@ -1834,23 +1834,31 @@ class Configuration (object):
 		try:
 			ip,nm = tokens.pop(0).split('/')
 			raw = ''.join(chr(int(_)) for _ in ip.split('.'))
-			scope[-1]['route'][-1].nlri.add_or(FlowSource(raw,int(nm)))
-			return True
 		except ValueError:
-			self._error = self._str_route_error
+			self._error = self._str_flow_error
 			if self.debug: raise
 			return False
+
+		if not scope[-1]['route'][-1].nlri.add(FlowSource(raw,int(nm))):
+			self._error = 'Flow can only have one destination'
+			if self.debug: raise ValueError(self._error)
+			return False
+		return True
 
 	def _flow_destination (self,scope,tokens):
 		try:
 			ip,nm = tokens.pop(0).split('/')
 			raw = ''.join(chr(int(_)) for _ in ip.split('.'))
-			scope[-1]['route'][-1].nlri.add_or(FlowDestination(raw,int(nm)))
-			return True
 		except ValueError:
-			self._error = self._str_route_error
+			self._error = self._str_flow_error
 			if self.debug: raise
 			return False
+
+		if not scope[-1]['route'][-1].nlri.add(FlowDestination(raw,int(nm))):
+			self._error = 'Flow can only have one destination'
+			if self.debug: raise ValueError(self._error)
+			return False
+		return True
 
 	# to parse the port configuration of flow
 
@@ -1889,7 +1897,7 @@ class Configuration (object):
 				while test:
 					operator,_ = self._operator(test)
 					value,test = self._value(_)
-					scope[-1]['route'][-1].nlri.add_or(klass(AND|operator,klass.converter(value)))
+					scope[-1]['route'][-1].nlri.add(klass(AND|operator,klass.converter(value)))
 					if test:
 						if test[0] == '&':
 							AND = BinaryOperator.AND
@@ -1915,13 +1923,13 @@ class Configuration (object):
 					if name == ']':
 						break
 					try:
-						scope[-1]['route'][-1].nlri.add_or(klass(NumericOperator.EQ|AND,klass.converter(name)))
+						scope[-1]['route'][-1].nlri.add(klass(NumericOperator.EQ|AND,klass.converter(name)))
 					except IndexError:
 						self._error = self._str_flow_error
 						if self.debug: raise
 						return False
 			else:
-				scope[-1]['route'][-1].nlri.add_or(klass(NumericOperator.EQ|AND,klass.converter(name)))
+				scope[-1]['route'][-1].nlri.add(klass(NumericOperator.EQ|AND,klass.converter(name)))
 		except ValueError:
 			self._error = self._str_flow_error
 			if self.debug: raise

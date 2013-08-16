@@ -69,6 +69,8 @@ def _nlrifactory (afi,safi,bgp):
 def _FlowNLRIFactory (afi,safi,bgp):
 	logger = Logger()
 
+	total = len(bgp)
+
 	length,bgp = ord(bgp[0]),bgp[1:]
 
 	if length & 0xF0 == 0xF0:  # bigger than 240
@@ -83,10 +85,17 @@ def _FlowNLRIFactory (afi,safi,bgp):
 
 	logger.parser(LazyFormat("parsing flow nlri payload ",od,bgp))
 
+	seen = []
+
 	while bgp:
 		what,bgp = ord(bgp[0]),bgp[1:]
+
 		if what not in decode:
-			raise Notify(3,10,'unknown flowspec component')
+			raise Notify(3,10,'unknown flowspec component received %d' % what)
+
+		seen.append(what)
+		if sorted(seen) != seen:
+			raise Notify(3,10,'components are not sent in the right order %s' % seen)
 
 		decoder = decode[what]
 		klass = factory[what]
@@ -94,7 +103,7 @@ def _FlowNLRIFactory (afi,safi,bgp):
 		if decoder == 'prefix':
 			_,rd,mask,size,prefix,left = _nlrifactory(afi,safi,bgp)
 			adding = klass(prefix,mask)
-			nlri.add_and(adding)
+			nlri.add(adding)
 			logger.parser(LazyFormat("added flow %s (%s) payload " % (klass.NAME,adding),od,bgp[:-len(left)]))
 			bgp = left
 		else:
@@ -106,19 +115,21 @@ def _FlowNLRIFactory (afi,safi,bgp):
 				length = CommonOperator.length(byte)
 				value,bgp = bgp[:length],bgp[length:]
 				adding = klass.decoder(value)
-				nlri.add_or(klass(operator,adding))
-				logger.parser(LazyFormat("added flow %s operator %d len %d (%s) payload " % (klass.NAME,byte,length,adding),od,value))
+				nlri.add(klass(operator,adding))
+				logger.parser(LazyFormat("added flow %s (%s) operator %d len %d payload " % (klass.NAME,adding,byte,length),od,value))
 
-	return nlri
+	return total-len(bgp),nlri
 
 def _NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
 	if has_multiple_path:
 		path_identifier = bgp[:4]
 		bgp = bgp[4:]
+		length = 4
 	else:
 		path_identifier = ''
+		length = 0
 
-	labels,rd,mask,size,prefix,bgp = _nlrifactory(afi,safi,bgp)
+	labels,rd,mask,size,prefix,left = _nlrifactory(afi,safi,bgp)
 
 	nlri = NLRI(afi,safi,prefix,mask,cachedNextHop(nexthop),action)
 
@@ -129,4 +140,4 @@ def _NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
 	if rd:
 		nlri.rd = RouteDistinguisher(rd)
 
-	return nlri
+	return length + len(bgp) - len(left),nlri

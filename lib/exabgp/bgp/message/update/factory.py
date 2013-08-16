@@ -40,7 +40,7 @@ def UpdateFactory (negotiated,data):
 		raise Notify(3,1,'invalid total path attribute length, not enough data available')
 
 	if 2 + lw + 2+ la + len(announced) != length:
-		raise Notify(3,1,'error in BGP message lenght, not enough data for the size announced')
+		raise Notify(3,1,'error in BGP message length, not enough data for the size announced')
 
 	attributes = AttributesFactory(NLRIFactory,negotiated,attribute)
 
@@ -54,18 +54,18 @@ def UpdateFactory (negotiated,data):
 
 	nlris = []
 	while withdrawn:
-		nlri = NLRIFactory(AFI.ipv4,SAFI.unicast_multicast,withdrawn,addpath,nh,IN.withdrawn)
+		length,nlri = NLRIFactory(AFI.ipv4,SAFI.unicast_multicast,withdrawn,addpath,nh,IN.withdrawn)
 		logger.parser(LazyFormat("parsed withdraw nlri %s payload " % nlri,od,withdrawn[:len(nlri)]))
-		withdrawn = withdrawn[len(nlri):]
+		withdrawn = withdrawn[length:]
 		nlris.append(nlri)
 
 	if not announced:
 		logger.parser(LazyFormat("parsed no announced nlri",od,''))
 
 	while announced:
-		nlri = NLRIFactory(AFI.ipv4,SAFI.unicast_multicast,announced,addpath,nh,IN.announced)
+		length,nlri = NLRIFactory(AFI.ipv4,SAFI.unicast_multicast,announced,addpath,nh,IN.announced)
 		logger.parser(LazyFormat("parsed announce nlri %s payload " % nlri,od,announced[:len(nlri)]))
-		announced = announced[len(nlri):]
+		announced = announced[length:]
 		nlris.append(nlri)
 
 	for nlri in attributes.mp_withdraw:

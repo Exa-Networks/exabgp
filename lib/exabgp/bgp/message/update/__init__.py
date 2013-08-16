@@ -64,7 +64,9 @@ def messages (update,negotiated):
 	if not add_nlri and not del_nlri and not add_mp and not del_mp:
 		return
 
-	if add_nlri or add_mp:
+	if add_nlri:
+		attr = update.attributes.pack(asn4,local_as,peer_as,True)
+	elif add_mp:
 		add_default = False
 		for afi,safi in add_mp:
 			if safi not in (SAFI.flow_ipv4,SAFI.flow_vpnv4):

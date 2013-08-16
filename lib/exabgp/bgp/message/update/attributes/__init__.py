@@ -372,10 +372,10 @@ class Attributes (dict):
 				return self.factory(next)
 
 			while data:
-				nlri = self.nlriFactory(afi,safi,data,addpath,None,IN.withdrawn)
+				length,nlri = self.nlriFactory(afi,safi,data,addpath,None,IN.withdrawn)
 				self.mp_withdraw.append(nlri)
-				data = data[len(nlri):]
-				logger.parser(LazyFormat("parsed withdraw mp nlri %s payload " % nlri,od,data[:len(nlri)]))
+				data = data[length:]
+				logger.parser(LazyFormat("parsed withdraw mp nlri %s payload " % nlri,od,data[:length]))
 
 			return self.factory(next)
 
@@ -417,6 +417,7 @@ class Attributes (dict):
 					rd = 8
 				size = 16
 
+			# XXX: FIXME: --------------------- MUST GET IT FROM CACHE
 			# -- Reading next-hop
 			nh = data[offset+rd:offset+rd+size]
 
@@ -440,15 +441,10 @@ class Attributes (dict):
 			data = data[offset:]
 
 			while data:
-				# route = self.nlriFactory(afi,safi,data,addpath,IN.announced)
-				# if not route.attributes.add_from_cache(AID.NEXT_HOP,nh):
-				# 	route.attributes.add(cachedNextHop(nh),nh)
-				# self.mp_announce.append(route)
-				# data = data[len(route.nlri):]
-				nlri = self.nlriFactory(afi,safi,data,addpath,nh,IN.announced)
+				length,nlri = self.nlriFactory(afi,safi,data,addpath,nh,IN.announced)
 				self.mp_announce.append(nlri)
-				data = data[len(nlri):]
-				logger.parser(LazyFormat("parsed announce mp nlri %s payload " % nlri,od,data[:len(nlri)]))
+				logger.parser(LazyFormat("parsed announce mp nlri %s payload " % nlri,od,data[:length]))
+				data = data[length:]
 			return self.factory(next)
 
 		if flag & Flag.TRANSITIVE:

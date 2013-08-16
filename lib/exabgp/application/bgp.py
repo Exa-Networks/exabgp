@@ -17,7 +17,7 @@ from exabgp.reactor import Reactor
 import string
 
 def is_hex (s):
-	return all(c in string.hexdigits for c in s)
+	return all(c in string.hexdigits or c == ':' for c in s)
 
 def __exit(memory,code):
 	if memory:
@@ -123,7 +123,7 @@ def main ():
 		if next:
 			if next == 'decode':
 				if is_hex(arg):
-					arguments[next] += arg
+					arguments[next] += arg.replace(':','')
 					continue
 				next = ''
 			else:
