@@ -3,6 +3,21 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.2.5
+ * Improvement: FlowSpec decoding (ExaBGP can decode incoming FlowSpec)
+ * Improvement: detect invalid netmask on route parsing
+ * Improvement: "next-hop self" is supported via the API
+ * Fix: async connect issues
+    reported by: Vincent Bernat (with very good advice for the patch)
+ * Fix: bad function defintions
+    patch by: Vincent Bernat
+
+Version 3.2.4
+ * Improvement: new update code generation can really group NLRI in one update packet
+ * Improvement: massive code cleanup, much easier to read
+ * Improvement: new RIB code (inbound and outbound tables) much faster
+ * Compatibility: JSON next-hop for the route is not in the attribute anymore but the NLRI
+
 Version 3.2.3
  * Fix: an issue in the 3.2.x series when the socket return a non-fatal error
     reported by: Daniel Bradshaw
@@ -11,18 +26,9 @@ Version 3.2.3
  * Fix: change the behaviour of the main peer loop (should behave more like expected - no bug reported tho)
  * Fix: many small fixes
  * Fix: bad encoding of FlowSpec Fragments
- * Fix: async not called before connect
-    reported by: Vincent Bernat (with a very good hint for the patch)
- * Fix: bad function defintions
-    patch by: Vincent Bernat
  * Improvement: implemented some defensive coding practice (enable with exabgp.debug.defensive)
  * Improvement: IO code now fully non blocking on read and write
- * Improvement: new update code generation can really group NLRI in one update packet
- * Improvement: massive code cleanup, much easier to read
- * Improvement: new RIB code (inbound and outbound tables) much faster
  * Improvement: total rewrite of the watchdog feature now extremely scalable
- * Improvement: detect invalid netmask on route parsing
- * Compatibility: JSON next-hop for the route is not in the attribute anymore but the NLRI
 
 Version 3.2.2
  * Improvement: allow to generate NOTIFICATION messages through the API

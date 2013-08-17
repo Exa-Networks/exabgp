@@ -14,7 +14,7 @@ import platform
 from exabgp.util.errstr import errstr
 
 from exabgp.protocol.family import AFI
-from exabgp.reactor.network.error import errno
+from exabgp.reactor.network.error import errno,error
 
 from .error import NotConnected,BindingError,MD5Error,NagleError,TTLError,AsyncError
 
@@ -129,13 +129,21 @@ def ready (io):
 	while True:
 		try:
 			_,w,_ = select.select([],[io,],[],0)
-			if w:
-				break
-			yield False
+			if not w:
+				yield False
+				continue
+			err = io.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+			if not err:
+				yield True
+				return
+			elif err in error.block:
+				yield False
+			else:
+				yield False
+				return
 		except select.error:
 			yield False
 			return
-	yield True
 
 # try:
 # 	try:
