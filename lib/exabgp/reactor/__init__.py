@@ -446,7 +446,7 @@ class Reactor (object):
 		def match_neighbors (description,peers):
 			"returns the sublist of peers matching the description passed, or None if no description is given"
 			if not description:
-				return None
+				return peers.keys()
 
 			returned = []
 			for key in peers:
@@ -457,14 +457,14 @@ class Reactor (object):
 
 		# route announcement / withdrawal
 		if 'announce route' in command:
-			def _announce_change (self,command,peers):
-				changes = self.configuration.parse_api_route(command,'announce')
+			def _announce_change (self,command,nexthops):
+				changes = self.configuration.parse_api_route(command,nexthops,'announce')
 				if not changes:
 					self.logger.reactor("Command could not parse route in : %s" % command,'warning')
 					yield True
 				else:
-					for change in changes:
-						self.configuration.change_to_peers(change,peers)
+					for (peer,change) in changes:
+						self.configuration.change_to_peers(change,[peer,])
 						self.logger.reactor("Route added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
 						yield False
 					self._route_update = True
@@ -472,9 +472,11 @@ class Reactor (object):
 			try:
 				descriptions,command = extract_neighbors(command)
 				peers = match_neighbors(descriptions,self._peers)
-				self._pending.append(_announce_change(self,command,peers))
 				if peers == []:
 					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+					return False
+				nexthops = dict((peer,self._peers[peer].neighbor.local_address) for peer in peers)
+				self._pending.append(_announce_change(self,command,nexthops))
 				return True
 			except ValueError:
 				pass
@@ -482,14 +484,14 @@ class Reactor (object):
 				pass
 
 		if 'withdraw route' in command:
-			def _withdraw_change (self,command,peers):
-				changes = self.configuration.parse_api_route(command,'withdraw')
+			def _withdraw_change (self,command,nexthops):
+				changes = self.configuration.parse_api_route(command,nexthops,'withdraw')
 				if not changes:
 					self.logger.reactor("Command could not parse route in : %s" % command,'warning')
 					yield True
 				else:
-					for change in changes:
-						if self.configuration.change_to_peers(change,peers):
+					for (peer,change) in changes:
+						if self.configuration.change_to_peers(change,[peer,]):
 							self.logger.reactor("Route found and removed : %s" % change.extensive())
 							yield False
 						else:
@@ -500,9 +502,11 @@ class Reactor (object):
 			try:
 				descriptions,command = extract_neighbors(command)
 				peers = match_neighbors(descriptions,self._peers)
-				self._pending.append(_withdraw_change(self,command,peers))
 				if peers == []:
 					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+					return False
+				nexthops = dict((peer,self._peers[peer].neighbor.local_address) for peer in peers)
+				self._pending.append(_withdraw_change(self,command,nexthops))
 				return True
 			except ValueError:
 				pass
@@ -526,9 +530,10 @@ class Reactor (object):
 			try:
 				descriptions,command = extract_neighbors(command)
 				peers = match_neighbors(descriptions,self._peers)
-				self._pending.append(_announce_flow(self,command,peers))
 				if peers == []:
 					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+					return False
+				self._pending.append(_announce_flow(self,command,peers))
 				return True
 			except ValueError:
 				pass
@@ -554,9 +559,10 @@ class Reactor (object):
 			try:
 				descriptions,command = extract_neighbors(command)
 				peers = match_neighbors(descriptions,self._peers)
-				self._pending.append(_withdraw_flow(self,command,peers))
 				if peers == []:
 					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+					return False
+				self._pending.append(_withdraw_flow(self,command,peers))
 				return True
 			except ValueError:
 				pass

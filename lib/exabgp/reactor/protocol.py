@@ -237,7 +237,8 @@ class Protocol (object):
 				for boolean in self.write(message):
 					# boolean is a transient network error we already announced
 					yield _NOP
-		self.logger.message(self.me('>> %d UPDATE(s)' % number))
+		if number:
+			self.logger.message(self.me('>> %d UPDATE(s)' % number))
 		yield _UPDATE
 
 	def new_eors (self):

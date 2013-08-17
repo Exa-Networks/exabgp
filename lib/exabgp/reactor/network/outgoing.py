@@ -8,7 +8,7 @@ class Outgoing (Connection):
 	def __init__ (self,afi,peer,local,port=179,md5='',ttl=None):
 		Connection.__init__(self,afi,peer,local)
 
-		self.logger.wire("Connection to %s" % self.peer)
+		self.logger.wire("Attempting connection to %s" % self.peer)
 
 		self.peer = peer
 		self.ttl = ttl

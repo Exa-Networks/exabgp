@@ -36,9 +36,11 @@ def main ():
 	if len(sys.argv) >= 3:
 		reverse = reversed if sys.argv[2].startswith('rev') else lambda _:_
 		skip = 0 if not sys.argv[2].isdigit() else int(sys.argv[2])
+		show = True if sys.argv[2] == 'show' else False
 	else:
 		reverse = lambda _:_
-		skip =0
+		skip = 0
+		show = False
 
 	confs = glob.glob(path.join(runtest,'%s.conf' % match.replace('all','*')))
 	confs = reverse(confs)
@@ -51,30 +53,36 @@ def main ():
 
 		sequence_file = configuration.replace('.conf','.sequence')
 		if path.isfile(sequence_file):
-			check_sequence(exabgp,configuration,sequence_daemon,sequence_file)
+			check_sequence(exabgp,configuration,sequence_daemon,sequence_file,show)
 		else:
 			print "sequence check for", configuration
 			print "skip (no sequence data)\n"
 			continue
 
-def check_sequence(exabgp,configuration,daemon,fname):
+def check_sequence(exabgp,configuration,daemon,fname,show):
 	os.environ['exabgp.tcp.once'] = 'true'
 	os.environ['exabgp.debug.defensive'] = 'true'
 
 	timeout = 30  # seconds
 
+	class Exit (Exception): pass
+
 	try:
+		command_daemon = [daemon,fname]
+		command_exabgp = [exabgp, configuration]
+
+		if show:
+			raise Exit()
+
 		signal.signal(signal.SIGALRM, alarm_handler)
 		signal.alarm(timeout)
 
 		print "sequence check for", configuration
 		print "will wait for completion for %d seconds" % timeout
 
-		command_daemon = [daemon,fname]
 		print "starting daemon,",
 		daemon = subprocess.Popen(command_daemon, stdout=subprocess.PIPE)
 
-		command_exabgp = [exabgp, configuration]
 		print "exabgp"
 		exabgp = subprocess.Popen(command_exabgp, stdout=subprocess.PIPE)
 
@@ -89,16 +97,26 @@ def check_sequence(exabgp,configuration,daemon,fname):
 				os.kill(pid,signal.SIGTERM)
 			except OSError:
 				pass
+	except Exit:
+		exabgp_output = ''
+		daemon_output = ''
 
-	if 'successful' in daemon_output:
+	def commands (command_exabgp,command_daemon):
+		r = ""
+		r += "command lines are:\n\n"
+		r += "> env exabgp.tcp.port=1790 exabgp.debug.defensive=true exabgp.tcp.once=true exabgp.tcp.bind='' " + ' '.join(command_exabgp) + '\n\n'
+		r += '> env exabgp.tcp.port=1790 ' + ' '.join(command_daemon)
+		return r
+
+	if show:
+		print commands(command_exabgp,command_daemon)
+	elif 'successful' in daemon_output:
 		print "successful\n"
 	else:
 		print "\n"*4
 		print "failure\n"
 		print
-		print "command lines were:"
-		print "> env exabgp.tcp.port=1790 exabgp.debug.defensive=true exabgp.tcp.once=true exabgp.tcp.bind=''", ' '.join(command_exabgp)
-		print "> env exabgp.tcp.port=1790", ' '.join(command_daemon)
+		print commands(command_exabgp,command_daemon)
 		print
 		print 'exabgp:\n', exabgp_output
 		print 'daemon:\n', daemon_output

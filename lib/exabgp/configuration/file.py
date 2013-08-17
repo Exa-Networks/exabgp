@@ -10,6 +10,7 @@ import os
 import sys
 import stat
 import time
+import socket
 
 from pprint import pformat
 from copy import deepcopy
@@ -194,6 +195,7 @@ class Configuration (object):
 		self._error = ''
 		self._number = 1
 		self._flow_state = 'out'
+		self._nexthopself = None
 
 	# Public Interface
 
@@ -244,18 +246,32 @@ class Configuration (object):
 
 		return True
 
-	def parse_api_route (self,command,action):
+	def parse_api_route (self,command,peers,action):
 		tokens = self._cleaned(command).split(' ')[1:]
 		if len(tokens) < 4:
 			return False
 		if tokens[0] != 'route':
 			return False
-		scope = [{}]
-		if not self._single_static_route(scope,tokens[1:]):
-			return None
-		changes = scope[0]['route']
+		changes = []
+		if 'self' in command:
+			for peer,nexthop in peers.iteritems():
+				scope = [{}]
+				self._nexthopself = nexthop
+				if not self._single_static_route(scope,tokens[1:]):
+					self._nexthopself = None
+					return None
+				for change in scope[0]['route']:
+					changes.append((peer,change))
+			self._nexthopself = None
+		else:
+			scope = [{}]
+			if not self._single_static_route(scope,tokens[1:]):
+				return None
+			for peer in peers:
+				for change in scope[0]['route']:
+					changes.append((peer,change))
 		if action == 'withdraw':
-			for change in changes:
+			for (peer,change) in changes:
 				change.nlri.action = OUT.withdraw
 		return changes
 
@@ -276,7 +292,7 @@ class Configuration (object):
 	def change_to_peers (self,change,peers):
 		result = False
 		for neighbor in self.neighbor:
-			if peers is None or neighbor in peers:
+			if neighbor in peers:
 				if change.nlri.family() in self.neighbor[neighbor].families():
 					if self.neighbor[neighbor].rib.outgoing.insert_change(change):
 						result = True
@@ -962,7 +978,7 @@ class Configuration (object):
 		scope.append({})
 		try:
 			scope[-1]['peer-address'] = Inet(*inet(address))
-		except:
+		except (IndexError,ValueError,socket.error):
 			self._error = '"%s" is not a valid IP address' % address
 			if self.debug: raise
 			return False
@@ -1013,7 +1029,7 @@ class Configuration (object):
 	def _set_ip (self,scope,command,value):
 		try:
 			ip = Inet(*inet(value[0]))
-		except (IndexError,ValueError):
+		except (IndexError,ValueError,socket.error):
 			self._error = '"%s" is an invalid IP address' % ' '.join(value)
 			if self.debug: raise
 			return False
@@ -1369,7 +1385,14 @@ class Configuration (object):
 			# next-hop self is unsupported
 			ip = tokens.pop(0)
 			if ip.lower() == 'self':
-				la = scope[-1]['local-address']
+				if 'local-address' in scope[-1]:
+					la = scope[-1]['local-address']
+				elif self._nexthopself:
+					la = self._nexthopself
+				else:
+					self._error = 'next-hop self can only be specified with a neighbor'
+					if self.debug: raise ValueError(self._error)
+					return False
 				nh = la.pack()
 			else:
 				nh = pton(ip)
