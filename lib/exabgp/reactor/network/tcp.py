@@ -18,6 +18,8 @@ from exabgp.reactor.network.error import errno,error
 
 from .error import NotConnected,BindingError,MD5Error,NagleError,TTLError,AsyncError
 
+from exabgp.logger import Logger
+
 def create (afi):
 	try:
 		if afi == AFI.ipv4:
@@ -126,10 +128,13 @@ def async (io,ip):
 		raise AsyncError('could not set socket non-blocking for %s (%s)' % (ip,errstr(e)))
 
 def ready (io):
+	logger = Logger()
+
 	while True:
 		try:
 			_,w,_ = select.select([],[io,],[],0)
 			if not w:
+				logger.network('connect not completed yet, socket not ready','warning')
 				yield False
 				continue
 			err = io.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
@@ -137,8 +142,10 @@ def ready (io):
 				yield True
 				return
 			elif err in error.block:
+				logger.network('connect attempt failed, retrying, reason %s' % errno.errorcode[err],'warning')
 				yield False
 			else:
+				logger.network('connect attempt failed, reason %s' % errno.errorcode[err],'error')
 				yield False
 				return
 		except select.error:
