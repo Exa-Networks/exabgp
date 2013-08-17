@@ -26,6 +26,8 @@ from exabgp.bmp.header import Header
 from exabgp.bmp.message import Message
 from exabgp.bmp.negotiated import FakeNegotiated
 
+from exabgp.rib.change import Change
+
 class BMPHandler (asyncore.dispatcher_with_send):
 	wire = False
 	update = True
@@ -103,7 +105,7 @@ class BMPHandler (asyncore.dispatcher_with_send):
 		negotiated = FakeNegotiated(header,self.asn4)
 		update = UpdateFactory(negotiated,bgp_body)
 		if self.use_json:
-			print >> self.fd, self.json.bmp(self.ip,update.routes)
+			print >> self.fd, self.json.bmp(self.ip,update)
 		else:
 			for route in update.routes:
 				print >> self.fd, route.extensive()

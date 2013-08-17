@@ -146,5 +146,5 @@ class JSON (object):
 	def update (self,neighbor,update):
 		return self._header(self._neighbor(neighbor,self._update(update)))
 
-	def bmp (self,bmp,routes):
-		return self._header(self._bmp(bmp,self._routes(routes)))
+	def bmp (self,bmp,update):
+		return self._header(self._bmp(bmp,self._update(update)))
