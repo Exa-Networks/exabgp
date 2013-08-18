@@ -2060,6 +2060,7 @@ class Configuration (object):
 		from exabgp.bgp.message.open.capability import Capabilities
 		from exabgp.bgp.message.open.capability.negotiated import Negotiated
 		from exabgp.bgp.message.open.capability.id import CapabilityID
+		from exabgp.bgp.message.notification import Notify
 
 		self.logger._parser = True
 
@@ -2110,9 +2111,14 @@ class Configuration (object):
 				update = factory(negotiated,injected)
 			except KeyboardInterrupt:
 				raise
-			except Exception:
+			except Notify,e:
 				self.logger.parser('could not parse the message')
-				raise
+				self.logger.parser(str(e))
+				sys.exit(1)
+			except Exception,e:
+				self.logger.parser('could not parse the message')
+				self.logger.parser(str(e))
+				sys.exit(1)
 
 			self.logger.parser('')  # new line
 			for number in range(len(update.nlris)):
