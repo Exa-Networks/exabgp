@@ -50,7 +50,7 @@ class _Logger (object):
 	# we use os.pid everytime as we may fork and the class is instance before it
 
 	def pdb (self,level):
-		if level in ['CRITICAL','critical']:
+		if self._pdb and level in ['CRITICAL','critical']:
 			import pdb
 			pdb.set_trace()
 
