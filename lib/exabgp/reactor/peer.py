@@ -8,7 +8,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 import sys
 import time
-import traceback
+#import traceback
 
 from exabgp.bgp.timer import Timer
 from exabgp.bgp.message import Message
@@ -25,6 +25,7 @@ from exabgp.configuration.environment import environment
 from exabgp.logger import Logger,FakeLogger
 
 from exabgp.util.counter import Counter
+from exabgp.util.trace import trace
 
 from exabgp.util.enumeration import Enumeration
 
@@ -165,7 +166,7 @@ class Peer (object):
 				# this is event driven by new connection - see self.incoming()
 				self._in_loop = False
 
-		elif self._in_loop is None:
+		elif self._in_loop is None and self._running:
 			self._in_loop = self._run('in')
 			in_back = True
 
@@ -176,7 +177,7 @@ class Peer (object):
 				# let's retry and connect once more
 				self._out_loop = None
 
-		elif self._out_loop is None:
+		elif self._out_loop is None and self._running:
 			if self.neighbor.passive:
 				self._out_loop = False
 			# do not connect too often and only if we are not already connected
@@ -191,12 +192,13 @@ class Peer (object):
 					self.neighbor = self._neighbor
 					self._neighbor = None
 				self._running = True
-			else:
-				self.reactor.unschedule(self)
 
 		# we want to come back immediatly
 		if True in [in_back,out_back]:
 			return True
+
+		if not self._running and not self._in_loop and not self._out_loop:
+			return False
 		return None
 
 	def incoming (self,incoming):
@@ -644,6 +646,7 @@ class Peer (object):
 			self.logger.error(self.me('UNHANDLED EXCEPTION'),'reactor')
 			self.logger.error(self.me(str(type(e))),'reactor')
 			self.logger.error(self.me(str(e)),'reactor')
+			self.logger.error(trace())
 
 			if self._out_proto:
 				self._out_proto.close('unhandled problem, please report to developers %s' % str(e))
@@ -653,9 +656,9 @@ class Peer (object):
 				self._in_proto.close('unhandled problem, please report to developers %s' % str(e))
 				self._in_proto = None
 
-			try:
-				traceback.pin_backt_exc(file=sys.stderr)
-			except:
-				pass
+			# try:
+			# 	traceback.pin_backt_exc(file=sys.stderr)
+			# except:
+			# 	pass
 
 			return

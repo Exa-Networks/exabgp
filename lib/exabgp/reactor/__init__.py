@@ -147,14 +147,16 @@ class Reactor (object):
 					ios = []
 					while peers:
 						for key in peers[:]:
-							# XXX: FIXME: when shutting down this can raise a KeyError ! HOW !
 							peer = self._peers[key]
 							action = peer.run()
 							# .run() returns:
 							# * True if it wants to be called again
 							# * None if it should be called again but has no work atm
 							# * False if it is finished and is closing down, or restarting
-							if action is not True:
+							if action is False:
+								self.unschedule(peer)
+								peers.remove(key)
+							elif action is not True:
 								ios.extend(peer.ios())
 								# no need to come back to it before a a full cycle
 								peers.remove(key)
