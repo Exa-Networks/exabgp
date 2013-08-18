@@ -9,6 +9,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 import os
 import sys
 import syslog
+import argparse
 
 from exabgp.version import version
 # import before the fork to improve copy on write memory savings
@@ -33,67 +34,6 @@ def __exit(memory,code):
 		objgraph.show_backrefs([obj], max_depth=10)
 	sys.exit(code)
 
-
-def help (comment=''):
-	sys.stdout.write('usage:\n exabgp [options] <bgp configuration file1> <more optional configuration files>\n')
-	sys.stdout.write('\n')
-	sys.stdout.write('  -h, --help      : this help\n')
-	sys.stdout.write('  -c, --conf      : configuration folder\n')
-	sys.stdout.write('  -e, --env       : configuration file with environment value (ini format)\n')
-	sys.stdout.write(' -fi, --full-ini  : display the configuration using the ini format\n')
-	sys.stdout.write(' -fe, --full-env  : display the configuration using the env format\n')
-	sys.stdout.write(' -di, --diff-ini  : display non-default configurations values using the ini format\n')
-	sys.stdout.write(' -de, --diff-env  : display non-default configurations values using the env format\n')
-	sys.stdout.write('  -d, --debug     : turn on all subsystems debugging\n'
-	                 '                    shortcut for exabgp.log.all=true exabgp.log.level=DEBUG\n'
-	                 '                    one of : EMERG,ALERT,CRITICAL,ERROR,WARNING,NOTICE,INFO,DEBUG\n')
-	sys.stdout.write('  -p, --pdb       : start the python debugger on serious logging and on SIGTERM\n'
-	                 '                    shortcut for exabgp.pdb.enable=true\n')
-	sys.stdout.write('  -m, --memory    : display memory usage information on exit\n')
-	sys.stdout.write('  -t, --test      : perform a configuration validity check only\n')
-	sys.stdout.write(' --decode <route> : decode a the raw route packet in hexadecimal string')
-	sys.stdout.write(' --profile <file> : enable profiling\n'
-	                 '                    shortcut for exabgp.profile.enable=true exabgp.profle=file=<file>\n')
-
-	sys.stdout.write('\n')
-	sys.stdout.write('ExaBGP will automatically look for its configuration file (in windows ini format)\n')
-	sys.stdout.write(' - in the etc/exabgp folder located within the extracted tar.gz \n')
-	sys.stdout.write(' - in /etc/exabgp/exabgp.env\n')
-	sys.stdout.write('\n')
-	sys.stdout.write('Individual configuration options can be set using environment variables, such as :\n')
-	sys.stdout.write('   > env exabgp.daemon.daemonize=true ./sbin/exabgp\n')
-	sys.stdout.write('or > env exabgp.daemon.daemonize=true ./sbin/exabgp\n')
-	sys.stdout.write('or > export exabgp.daemon.daemonize=true; ./sbin/exabgp\n')
-	sys.stdout.write('\n')
-	sys.stdout.write('Multiple environment values can be set\n')
-	sys.stdout.write('and the order of preference is :\n')
-	sys.stdout.write(' - 1 : command line environment value using dot separated notation\n')
-	sys.stdout.write(' - 2 : exported value from the shell using dot separated notation\n')
-	sys.stdout.write(' - 3 : command line environment value using underscore separated notation\n')
-	sys.stdout.write(' - 4 : exported value from the shell using underscore separated notation\n')
-	sys.stdout.write(' - 5 : the value in the ini configuration file\n')
-	sys.stdout.write(' - 6 : the built-in defaults\n')
-	sys.stdout.write('\n')
-	sys.stdout.write('For example :\n')
-	sys.stdout.write('> env exabgp.profile.enable=true \\\n')
-	sys.stdout.write('      exabgp.profile.file=~/profile.log  \\\n')
-	sys.stdout.write('      exabgp.log.packets=true \\\n')
-	sys.stdout.write('      exabgp.log.destination=host:127.0.0.1 \\\n')
-	sys.stdout.write('      exabgp.daemon.user=wheel \\\n')
-	sys.stdout.write('      exabgp.daemon.daemonize=true \\\n')
-	sys.stdout.write('      exabgp.daemon.pid=/var/run/exabpg.pid \\\n')
-	sys.stdout.write('   ./bin/exabgp ./etc/bgp/configuration.txt\n')
-	sys.stdout.write('\n')
-	sys.stdout.write('The program configuration can be controlled using signals:\n')
-	sys.stdout.write(' - SIGLARM : restart ExaBGP\n')
-	sys.stdout.write(' - SIGUSR1 : reload the configuration\n')
-	sys.stdout.write(' - SIGUSR2 : reload the configuration and the forked processes\n')
-	sys.stdout.write(' - SIGTERM : terminate ExaBGP\n')
-	sys.stdout.write(' - SIGHUP  : terminate ExaBGP (does NOT reload the configuration anymore)\n')
-	sys.stdout.write('\n')
-	sys.stdout.write('Valid configuration options are :\n')
-	sys.stdout.write('\n')
-
 	from exabgp.configuration.environment import environment
 
 	for line in environment.default():
@@ -109,54 +49,165 @@ def main ():
 	if main != 2 or secondary < 5:
 		sys.exit('This program can not work (is not tested) with your python version (< 2.5 or >= 3.0)')
 
-	next = ''
-	arguments = {
-		'decode' : '',
-		'folder' : '',
-		'file' : [],
-		'env' : 'exabgp.env',
-	}
+	parser = argparse.ArgumentParser(
+		prog='exabgp',
+		description='The BGP swiss army knife of networking',
+		epilog="""
+ExaBGP will automatically look for its configuration file (in windows ini format)
+ - in the etc/exabgp folder located within the extracted tar.gz
+ - in /etc/exabgp/exabgp.env
 
-	parse_error = ''
+Individual configuration options can be set using environment variables, such as :
+   > env exabgp.daemon.daemonize=true ./sbin/exabgp
+or > env exabgp.daemon.daemonize=true ./sbin/exabgp
+or > export exabgp.daemon.daemonize=true; ./sbin/exabgp
 
-	for arg in sys.argv[1:]:
-		if next:
-			if next == 'decode':
-				if is_hex(arg):
-					arguments[next] += arg.replace(':','')
-					continue
-				next = ''
-			else:
-				arguments[next] = arg
-				next = ''
-				continue
-		if arg in ['-c','--conf']:
-			next = 'folder'
-			continue
-		if arg in ['-e','--env']:
-			next = 'env'
-			continue
-		if arg in ['--profile',]:
-			next = 'profile'
-			continue
-		if arg in ['--decode',]:
-			next = 'decode'
-			continue
-		if arg.startswith('-'):
-			continue
-		arguments['file'].append(arg)
-		continue
+Multiple environment values can be set
+and the order of preference is :
+ - 1 : command line environment value using dot separated notation
+ - 2 : exported value from the shell using dot separated notation
+ - 3 : command line environment value using underscore separated notation
+ - 4 : exported value from the shell using underscore separated notation
+ - 5 : the value in the ini configuration file
+ - 6 : the built-in defaults
 
-	if arguments['folder']:
-		etc = os.path.realpath(os.path.normpath(arguments['folder']))
+For example :
+> env exabgp.profile.enable=true \\
+      exabgp.profile.file=~/profile.log  \\
+      exabgp.log.packets=true \\
+      exabgp.log.destination=host:127.0.0.1 \\
+      exabgp.daemon.user=wheel \\
+      exabgp.daemon.daemonize=true \\
+      exabgp.daemon.pid=/var/run/exabpg.pid \\
+   ./bin/exabgp ./etc/bgp/configuration.txt
+
+The program configuration can be controlled using signals:
+ - SIGLARM : restart ExaBGP
+ - SIGUSR1 : reload the configuration
+ - SIGUSR2 : reload the configuration and the forked processes
+ - SIGTERM : terminate ExaBGP
+ - SIGHUP  : terminate ExaBGP (does NOT reload the configuration anymore)
+
+""",
+		formatter_class=argparse.RawTextHelpFormatter
+	)
+
+	parser.add_argument(
+		'configuration',
+		nargs='*',
+		help='peer and route configuration file'
+	)
+
+	parser.add_argument(
+		"--version", "-v",
+		action="store_true", default=False,
+		help="shows ExaBGP version"
+	)
+	parser.add_argument(
+		"--folder", "-f",
+		help="configuration folder"
+	)
+	parser.add_argument(
+		"--env", "-e",
+		default='exabgp.env',
+		help="environement configuration file"
+	)
+
+	g = parser.add_mutually_exclusive_group()
+	g.add_argument(
+		"--diff-env", "-de",
+		action="store_true", default=False,
+		help="display non-default configurations values using the env format"
+	)
+	g.add_argument(
+		"--full-env", "-fe",
+		action="store_true", default=False,
+		help="display the configuration using the env format"
+	)
+	g.add_argument(
+		"--full-ini", "-fi",
+		action="store_true", default=False,
+		help="display the configuration using the ini format"
+	)
+	g.add_argument(
+		"--diff-ini", "-di",
+		action="store_true", default=False,
+		help="display non-default configurations values using the ini format"
+	)
+
+	g = parser.add_argument_group("debugging")
+	g.add_argument(
+		"--debug", "-d",
+		action="store_true", default=False,
+		help="start the python debugger on serious logging and on SIGTERM\n"
+		"shortcut for exabgp.log.all=true exabgp.log.level=DEBUG"
+	)
+	g.add_argument(
+		"--once", "-1",
+		action="store_true", default=False,
+		help="only perform one attempt to connect to peers (used for debugging)"
+	)
+	g.add_argument(
+		"--pdb", "-p",
+		action="store_true", default=False,
+		help="fire the debugger on critical logging, SIGTERM, and exceptions\n"
+		"shortcut for exabgp.pdb.enable=true\n"
+	)
+	g.add_argument(
+		"--memory", '-s',  # can not be -m it conflict with python -m for modules
+		action="store_true", default=False,
+		help="display memory usage information on exit"
+	)
+	g.add_argument(
+		"--profile",
+		metavar="PROFILE",
+		help="enable profiling\n"
+		"shortcut for exabgp.profile.enable=true exabgp.profle=file=<file>"
+	)
+	g.add_argument(
+		"--test", "-t",
+		action="store_true", default=False,
+		help="perform a configuration validity check only"
+	)
+	g.add_argument(
+		"--decode", '-x',  # can not be -d it conflicts with --debug
+		metavar="HEX_MESSAGE",
+		help="decode a the raw route packet in hexadecimal string"
+	)
+
+
+	options = parser.parse_args()
+
+	if options.version:
+		sys.stdout.write(version)
+		sys.exit(0)
+
+	if options.decode:
+		if not is_hex(options.decode):
+			parser.print_help()
+			print "\n\n" \
+					"The BGP message must be an hexadecimal string." \
+					"all colon or spaces are ignored, here is one example ie:\n" \
+					" --decode 001E0200000007900F0003000101\n" \
+					" --decode 001E:02:0000:0007:900F:0003:0001:01\n" \
+					" --deocde FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001E0200000007900F0003000101\n" \
+					" --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:0000:0007:900F:0003:0001:01\n" \
+					" --decode 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF 001E02 00000007900F0003000101'\n"
+			sys.exit(1)
+		decode = options.decode.replace(' ','').replace(':','')
+	else:
+		decode = ''
+
+	if options.folder:
+		etc = os.path.realpath(os.path.normpath(options.folder))
 	else:
 		etc = os.path.realpath(os.path.normpath(os.environ.get('ETC','etc')))
 	os.environ['ETC'] = etc
 
-	if not arguments['env'].startswith('/'):
-		envfile = '%s/%s' % (etc,arguments['env'])
+	if not options.env.startswith('/'):
+		envfile = '%s/%s' % (etc,options.env)
 	else:
-		envfile = arguments['env']
+		envfile = options.env
 
 	from exabgp.configuration.environment import environment
 
@@ -225,9 +276,10 @@ def main ():
 		},
 		# Here for internal use
 		'debug' : {
+			'pdb' : (environment.boolean,environment.lower,'false','enable python debugger on errors'),
 			'memory' : (environment.boolean,environment.lower,'false','command line option --memory'),
 			'configuration' : (environment.boolean,environment.lower,'false','undocumented option: raise when parsing configuration errors'),
-			'selfcheck' : (environment.unquote,environment.quote,'','does a self check on the configuration file'),
+			'selfcheck' : (environment.boolean,environment.lower,'false','does a self check on the configuration file'),
 			'route' : (environment.unquote,environment.quote,'','decode the route using the configuration'),
 			'defensive' : (environment.boolean,environment.lower,'false', 'generate random fault in the code in purpose'),
 		},
@@ -239,73 +291,70 @@ def main ():
 		print >> sys.stderr, 'configuration issue,', str(e)
 		sys.exit(1)
 
-	if arguments['decode']:
+	if options.decode:
 		env.log.parser = True
-		env.debug.route = arguments['decode']
+		env.debug.route = decode
 		env.tcp.bind = ''
 
-	if 'profile' in arguments:
+	if options.profile:
 		env.profile.enable = True
-		env.profile.file = arguments['profile']
+		if options.profile.lower() in ['1','true']:
+			env.profile.file = True
+		elif options.profile.lower() in ['0','false']:
+			env.profile.file = False
+		else:
+			env.profile.file = options.profile
 
 	if envfile and not os.path.isfile(envfile):
 		comment = 'environment file missing\ngenerate it using "exabgp -fi > %s"' % envfile
 	else:
 		comment = ''
 
-	for arg in sys.argv[1:]:
-		if arg in ['--',]:
-			break
-		if arg in ['-v','--version']:
-			sys.stdout.write(version)
-			sys.exit(0)
-		if arg in ['-h','--help']:
-			help(comment)
-			sys.exit(0)
-		if arg in ['-fi','--full-ini']:
-			for line in environment.iter_ini():
-				print line
-			sys.exit(0)
-		if arg in ['-fe','--full-env']:
-			print
-			for line in environment.iter_env():
-				print line
-			sys.exit(0)
-		if arg in ['-di','--diff-ini']:
-			for line in environment.iter_ini(True):
-				print line
-			sys.exit(0)
-		if arg in ['-de','--diff-env']:
-			for line in environment.iter_env(True):
-				print line
-			sys.exit(0)
-		if arg in ['--profile',]:
-			env.profile.enable = True
-		if arg in ['--once','-1',]:
-			env.tcp.once = True
-		if arg in ['-d','--debug']:
-			env.log.all = True
-			env.log.level=syslog.LOG_DEBUG
-		if arg in ['-p','--pdb']:
-			# The following may fail on old version of python (but is required for debug.py)
-			os.environ['PDB'] = 'true'
-			env.debug.pdb = True
-		if arg in ['-t','--test']:
-			env.debug.selfcheck = True
-			env.log.parser = True
-		if arg in ['-m','--memory']:
-			env.debug.memory = True
+	if options.full_ini:
+		for line in environment.iter_ini():
+			print line
+		sys.exit(0)
 
-	if parse_error:
-		from exabgp.logger import Logger
-		logger = Logger()
-		logger.configuration(parse_error,'error')
-		sys.exit(1)
+	if options.full_env:
+		print
+		for line in environment.iter_env():
+			print line
+		sys.exit(0)
+
+	if options.diff_ini:
+		for line in environment.iter_ini(True):
+			print line
+		sys.exit(0)
+
+	if options.diff_env:
+		for line in environment.iter_env(True):
+			print line
+		sys.exit(0)
+
+	if options.once:
+		env.tcp.once = True
+
+	if options.debug:
+		env.log.all = True
+		env.log.level=syslog.LOG_DEBUG
+
+	if options.pdb:
+		# The following may fail on old version of python (but is required for debug.py)
+		os.environ['PDB'] = 'true'
+		env.debug.pdb = True
+
+	if options.test:
+		env.debug.selfcheck = True
+		env.log.parser = True
+
+	if options.memory:
+		env.debug.memory = True
+
 
 	configurations = []
 	# check the file only once that we have parsed all the command line options and allowed them to run
-	if arguments['file']:
-		for f in arguments['file']:
+	if options.configuration:
+		for f in options.configuration:
 			configurations.append(os.path.realpath(os.path.normpath(f)))
 	else:
 		from exabgp.logger import Logger
