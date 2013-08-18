@@ -498,6 +498,7 @@ class Peer (object):
 			if event is False:
 				raise NetworkError('closing down')
 			if event is not True:
+				self._more_skip()
 				raise Interrupted('can not %s connection' % 'establish' if direction == 'out' else 'accept')
 
 			for event in self._main(direction):
