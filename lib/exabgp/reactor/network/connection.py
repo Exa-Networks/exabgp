@@ -60,7 +60,7 @@ class Connection (object):
 	# Just in case ..
 	def __del__ (self):
 		if self.io:
-			self.logger.network("%s FIX ! connection to %s was not explicitely closed, closed by GC" % (self.name(),self.peer),'critical')
+			self.logger.network("%s connection to %s closed" % (self.name(),self.peer),'info')
 			self.close()
 
 	def name (self):

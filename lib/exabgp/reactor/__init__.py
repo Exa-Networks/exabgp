@@ -316,6 +316,10 @@ class Reactor (object):
 				yield generator
 			except StopIteration:
 				pass
+			except KeyboardInterrupt:
+				self._shutdown = True
+				self.logger.reactor("^C received",'error')
+				break
 
 	def schedule (self,commands):
 		self._commands.extend(commands)

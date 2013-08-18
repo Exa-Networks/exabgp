@@ -26,23 +26,24 @@ class Outgoing (Connection):
 			self.init = False
 			self.close()
 
-	def connected (self):
+	def establish (self):
 		if not self.init:
 			yield False
 			return
 
-		connected = False
 		try:
 			generator = ready(self.io)
 			while True:
 				connected = generator.next()
-				if connected is True:
-					break
-				yield False
-		finally:
-			if connected is not True:
-				yield False
+				if not connected:
+					yield False
+					continue
+				yield True
 				return
+		except StopIteration:
+			# self.io MUST NOT be closed here, it is closed by the caller
+			yield False
+			return
 
 		nagle(self.io,self.peer)
 		TTL(self.io,self.peer,self.ttl)

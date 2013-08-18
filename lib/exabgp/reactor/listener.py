@@ -100,7 +100,7 @@ class Listener (object):
 			return
 
 		for sock,(ip,port) in self._sockets.items():
-			self.logger.network('stop listening on %s:%d' % (ip,port),'critical')
+			self.logger.network('stop listening on %s:%d' % (ip,port),'info')
 			sock.close()
 
 		self._sockets = {}

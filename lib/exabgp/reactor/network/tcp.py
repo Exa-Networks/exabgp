@@ -129,12 +129,17 @@ def async (io,ip):
 
 def ready (io):
 	logger = Logger()
+	warned = False
+	count = 10
 
 	while True:
 		try:
 			_,w,_ = select.select([],[io,],[],0)
 			if not w:
-				logger.network('connect not completed yet, socket not ready','warning')
+				count -= 1
+				if not warned and not count:
+					logger.network('attempting to accept connections, socket not ready','warning')
+					warned = True
 				yield False
 				continue
 			err = io.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
@@ -145,7 +150,6 @@ def ready (io):
 				logger.network('connect attempt failed, retrying, reason %s' % errno.errorcode[err],'warning')
 				yield False
 			else:
-				logger.network('connect attempt failed, reason %s' % errno.errorcode[err],'error')
 				yield False
 				return
 		except select.error:

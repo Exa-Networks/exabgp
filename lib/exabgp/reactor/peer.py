@@ -92,6 +92,10 @@ class Peer (object):
 		self._in_state = STATE.idle
 		self._out_state = STATE.idle
 
+		# the protocol in use
+		self.proto = None
+
+
 	def _reset_skip (self):
 		# We are currently not skipping connection attempts
 		self._skip_time = 0
@@ -150,24 +154,24 @@ class Peer (object):
 		return ios
 
 	def run (self):
-		rin = None
-		rout = None
+		in_back = None
+		out_back = None
 
 		if self._in_loop:
 			try:
-				rin = self._in_loop.next()
+				in_back = self._in_loop.next()
 			except StopIteration:
-				# we only start the generator when we get a connection
+				# finished for some reason, do not restart
+				# this is event driven by new connection - see self.incoming()
 				self._in_loop = False
 
 		elif self._in_loop is None:
 			self._in_loop = self._run('in')
-			rin = True
+			in_back = True
 
 		if self._out_loop:
 			try:
-				if self._skip_time < time.time():
-					rout = self._out_loop.next()
+				out_back = self._out_loop.next()
 			except StopIteration:
 				# let's retry and connect once more
 				self._out_loop = None
@@ -175,9 +179,10 @@ class Peer (object):
 		elif self._out_loop is None:
 			if self.neighbor.passive:
 				self._out_loop = False
-			else:
+			# do not connect too often and only if we are not already connected
+			elif self._skip_time < time.time() and self._in_state != STATE.established:
 				self._out_loop = self._run('out')
-				rout = True
+				out_back = True
 
 		if not self._in_loop and not self._out_loop:
 			if self._restart:
@@ -187,11 +192,10 @@ class Peer (object):
 					self._neighbor = None
 				self._running = True
 			else:
-				if self._out_proto: self._out_proto.close('FIX ! safety shutdown before unregistering peer, session should already be closed, report if seen in anywhere')
-				if self._in_proto: self._in_proto.close('FIX ! safety shutdown before unregistering peer, session should already be closed, report if seen in anywhere')
 				self.reactor.unschedule(self)
 
-		if True in [rin,rout]:
+		# we want to come back immediatly
+		if True in [in_back,out_back]:
 			return True
 		return None
 
@@ -293,14 +297,14 @@ class Peer (object):
 
 		connected = False
 		try:
-			while True:
+			while not connected:
 				connected = generator.next()
-				if connected:
-					break
+				# we want to come back as soon as possible
 				yield True
-		finally:
-			if connected is not True:
-				yield False
+		except StopIteration:
+			# we want to come back when we can
+			if not connected:
+				yield None
 				return
 
 		self._reset_skip()
@@ -368,11 +372,16 @@ class Peer (object):
 		yield True
 
 
-	def _connected (self):
+	def _main (self,direction):
 		"yield True if we want to come back to it asap, None if nothing urgent, and False if stopped"
 
+		if direction == 'in':
+			self.proto = self._in_proto
+		else:
+			self.proto = self._out_proto
+
 		# Announce to the process BGP is up
-		self.logger.network('Connected to peer %s' % self.neighbor.name())
+		self.logger.network('Connected to peer %s (%s)' % (self.neighbor.name(),direction))
 		if self.neighbor.api.neighbor_changes:
 			try:
 				self.reactor.processes.up(self.neighbor.peer_address)
@@ -462,7 +471,7 @@ class Peer (object):
 		if self.neighbor.graceful_restart and self.proto.negotiated.sent_open.capabilities.announced(CapabilityID.GRACEFUL_RESTART):
 			self.logger.network('Closing the session without notification','error')
 			self.proto.close('graceful restarted negotiated, closing without sending any notification')
-			return
+			raise NetworkError('closing')
 
 		# notify our peer of the shutdown
 		if self._teardown:
@@ -477,19 +486,21 @@ class Peer (object):
 			if direction == 'in':
 				for event in self._accept():
 					yield event
-				self.proto = self._in_proto
 			elif direction == 'out':
 				for event in self._connect():
 					yield event
-				self.proto = self._out_proto
 			else:
 				raise RuntimeError('The programmer done a mistake, please report this issue')
 
-			# if False, it mean the session initiation failed
-			if not event:
-				return
+			# False it means that we finished the reactor
+			# True means that we finished nicely
+			# None means that we we interrupted
+			if event is False:
+				raise NetworkError('closing down')
+			if event is not True:
+				raise Interrupted('can not %s connection' % 'establish' if direction == 'out' else 'accept')
 
-			for event in self._connected():
+			for event in self._main(direction):
 				yield event
 
 		# CONNECTION FAILURE
@@ -505,11 +516,11 @@ class Peer (object):
 			self.logger.network('connection issue, reason : %s' % str(e))
 
 			if self._in_proto:
-				self._in_proto.close('connection failure : %s' % str(e))
+				self._in_proto.close('closing incoming connection')
 				self._in_proto = None
 
 			if self._out_proto:
-				self._out_proto.close('connection failure : %s' % str(e))
+				self._out_proto.close('closing outgoing connection')
 				self._out_proto = None
 
 			# we tried to connect once, it failed, we stop
@@ -612,11 +623,11 @@ class Peer (object):
 			self.logger.reactor(self.me(str(e)),'error')
 
 			if self._out_proto:
-				self._out_proto.close('interrupted %s' % str(e))
+				self._out_proto.close('%s' % str(e))
 				self._out_proto = None
 
 			if self._in_proto:
-				self._in_proto.close('interrupted %s' % str(e))
+				self._in_proto.close('%s' % str(e))
 				self._in_proto = None
 
 			return
@@ -630,6 +641,7 @@ class Peer (object):
 
 			# Those messages can not be filtered in purpose
 			self.logger.error(self.me('UNHANDLED EXCEPTION'),'reactor')
+			self.logger.error(self.me(str(type(e))),'reactor')
 			self.logger.error(self.me(str(e)),'reactor')
 
 			if self._out_proto:
@@ -641,7 +653,7 @@ class Peer (object):
 				self._in_proto = None
 
 			try:
-				traceback.print_exc(file=sys.stderr)
+				traceback.pin_backt_exc(file=sys.stderr)
 			except:
 				pass
 

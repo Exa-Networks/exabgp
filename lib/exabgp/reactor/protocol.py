@@ -77,22 +77,23 @@ class Protocol (object):
 
 			connected = False
 			try:
-				generator = self.connection.connected()
+				generator = self.connection.establish()
 				while True:
 					connected = generator.next()
-					if connected:
-						break
-					yield False
-			finally:
-				if not connected:
-					raise NotConnected('connect failed')
+					if not connected:
+						yield False
+						continue
+					if self.peer.neighbor.api.neighbor_changes:
+						self.peer.reactor.processes.connected(self.peer.neighbor.peer_address)
+					yield True
+					return
+			except StopIteration:
+				# close called by the caller
+				# self.close('could not connect to remote end')
+				yield False
+				return
 
-			if self.peer.neighbor.api.neighbor_changes:
-				self.peer.reactor.processes.connected(self.peer.neighbor.peer_address)
-
-			yield True
-
-	def close (self,reason='unspecified'):
+	def close (self,reason='protocol closed, reason unspecified'):
 		self.logger.network(self.me(reason))
 		if self.connection:
 			# must be first otherwise we could have a loop caused by the raise in the below
