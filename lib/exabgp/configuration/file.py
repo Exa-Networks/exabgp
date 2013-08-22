@@ -876,6 +876,9 @@ class Configuration (object):
 			neighbor.api.receive_routes |= local_scope.get('receive-routes',False)
 			neighbor.api.neighbor_changes |= local_scope.get('neighbor-changes',False)
 
+		if not neighbor.router_id:
+			neighbor.router_id = neighbor.local_address
+
 		local_scope = scope[-1]
 		neighbor.description = local_scope.get('description','')
 
