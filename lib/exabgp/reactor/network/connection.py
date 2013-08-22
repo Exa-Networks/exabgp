@@ -125,7 +125,7 @@ class Connection (object):
 						self._reading = time.time()
 					elif time.time() > self._reading + self.read_timeout:
 						self.close()
-						self.logger.wire("%s %s peer is too slow" % (self.name(),self.peer))
+						self.logger.wire("%s %s peer is too slow (we were told there was data on the socket but we can not read up to what should be there)" % (self.name(),self.peer))
 						raise TooSlowError('Waited to read for data on a socket for more than %d second(s)' % self.read_timeout)
 
 					if self.defensive and random.randint(0,2):
@@ -150,7 +150,7 @@ class Connection (object):
 				raise TooSlowError('Timeout while reading data from the network (%s)' % errstr(e))
 			except socket.error,e:
 				if e.args[0] in error.block:
-					self.logger.wire("%s %s blocking io problem mid-way through reading a message, trying to complete" % (self.name(),self.peer),'debug')
+					self.logger.wire("%s %s blocking io problem mid-way through reading a message %s, trying to complete" % (self.name(),self.peer,errstr(e)),'debug')
 				elif e.args[0] in error.fatal:
 					self.close()
 					raise LostConnection('issue reading on the socket: %s' % errstr(e))
@@ -198,7 +198,7 @@ class Connection (object):
 					yield False
 			except socket.error,e:
 				if e.args[0] in error.block:
-					self.logger.wire("%s %s blocking io problem mid-way through sending a message, trying to complete" % (self.name(),self.peer),'debug')
+					self.logger.wire("%s %s blocking io problem mid-way through writing a message %s, trying to complete" % (self.name(),self.peer,errstr(e)),'debug')
 				elif e.errno == errno.EPIPE:
 					# The TCP connection is gone.
 					self.close()

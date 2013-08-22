@@ -201,7 +201,9 @@ class Reactor (object):
 									found = None
 									break
 
-							if found is False:
+							if found:
+								self.logger.reactor("accepted connection from  %s - %s" % (connection.local,connection.peer))
+							elif found is False:
 								self.logger.reactor("no session configured for  %s - %s" % (connection.local,connection.peer))
 								connection.notification(6,3,'no session configured for the peer')
 								connection.close()

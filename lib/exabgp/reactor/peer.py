@@ -196,26 +196,27 @@ class Peer (object):
 				ios.append(proto.connection.io)
 		return ios
 
-	def incoming (self,incoming):
-		proto = self._['in']['proto']
-		if proto is not None:
+	def incoming (self,connection):
+		# Let's be clear BGP state machine definition is a mess !
+		# By not sending the OPEN we are avoiding the brainfucked collision
+
+		if self._state != STATE.idle:
 			return False
 
-		self._['in']['proto'] = Protocol(self).accept(incoming)
+		self._['in']['proto'] = Protocol(self).accept(connection)
+		if self._['in']['loop'] not in [False, None, True]:
+			self.logger.network('WARNING, show never happen protocol is a generator on accepted incoming connection !')
+			self.logger.network(str(self._['in']['loop']))
+			self.logger.network(str(self._state))
+
+		# Let's make sure we do some work with this connection
 		self._['in']['loop'] = None
+		self._state = STATE.connect
 		return True
 
 	def _accept (self):
 		"yield True if we want to come back to it asap, None if nothing urgent, and False if stopped"
 
-		# Let's be clear BGP state machine definition is a mess !
-		# By not sending the OPEN we are avoiding the brainfucked collision
-
-		# if self._state != STATE.idle:
-		# 	yield False
-		# 	return
-
-		self._state = STATE.connect
 		# we can do this as Protocol is a mutable object
 		proto = self._['in']['proto']
 
@@ -482,14 +483,14 @@ class Peer (object):
 						self.logger.network(self._output(direction,'NOTIFICATION NOT SENT','error'))
 						pass
 			self._init()
-			self._reset('notification sent (%d,%d) [%s] %s' % (n.code,n.subcode),n)
+			self._reset('notification sent (%d,%d)' % (n.code,n.subcode),n)
 			return
 
 		# THE PEER NOTIFIED US OF AN ERROR
 		except Notification, n:
 			self.logger.reactor(self.me('received Notification (%d,%d) %s' % (n.code,n.subcode,str(n))),'warning')
 			self._init()
-			self._reset('notification received (%d,%d) %s' % (n.code,n.subcode),n)
+			self._reset('notification received (%d,%d)' % (n.code,n.subcode),n)
 			return
 
 		# RECEIVED a Message TYPE we did not expect

@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2013-07-13.
 Copyright (c) 2013-2013 Exa Networks. All rights reserved.
 """
 
+import time
 import struct
 import socket
 import select
@@ -130,20 +131,21 @@ def async (io,ip):
 def ready (io):
 	logger = Logger()
 	warned = False
-	count = 10
+	start = time.time()
 
 	while True:
 		try:
 			_,w,_ = select.select([],[io,],[],0)
 			if not w:
-				count -= 1
-				if not warned and not count:
+				if not warned and time.time()-start > 1.0:
 					logger.network('attempting to accept connections, socket not ready','warning')
 					warned = True
 				yield False
 				continue
 			err = io.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
 			if not err:
+				if warned:
+					logger.network('incoming socket ready','warning')
 				yield True
 				return
 			elif err in error.block:
