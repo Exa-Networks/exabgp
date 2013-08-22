@@ -60,11 +60,13 @@ class Protocol (object):
 		return "Peer %15s ASN %-7s %s" % (self.peer.neighbor.peer_address,self.peer.neighbor.peer_as,message)
 
 	def accept (self,incoming):
-		if not self.connection:
-			self.connection = incoming
+		self.connection = incoming
 
 		if self.peer.neighbor.api.neighbor_changes:
 			self.peer.reactor.processes.connected(self.peer.neighbor.peer_address)
+
+		# very important - as we use this function on __init__
+		return self
 
 	def connect (self):
 		# allows to test the protocol code using modified StringIO with a extra 'pending' function
@@ -134,7 +136,7 @@ class Protocol (object):
 			elif self.neighbor.api.receive_routes:
 				update = UpdateFactory(self.negotiated,body)
 			else:
-				yield _NOP
+				yield _UPDATE
 				return
 
 			for nlri in update.nlris:

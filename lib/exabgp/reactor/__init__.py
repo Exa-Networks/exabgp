@@ -157,7 +157,7 @@ class Reactor (object):
 								self.unschedule(peer)
 								peers.remove(key)
 							elif action is not True:
-								ios.extend(peer.ios())
+								ios.extend(peer.sockets())
 								# no need to come back to it before a a full cycle
 								peers.remove(key)
 

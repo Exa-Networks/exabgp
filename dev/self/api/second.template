@@ -8,6 +8,7 @@ group test {
 
 	process dump-all-text {
 		receive-routes;
+		neighbor-changes;
 		run ./check-all-ok-text;
 	}
 

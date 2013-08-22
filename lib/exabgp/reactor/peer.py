@@ -45,6 +45,8 @@ STATE = Enumeration (
 FORCE_GRACEFUL = True
 
 class Interrupted (Exception): pass
+class CollisionIn (Exception): pass
+class CollisionOut (Exception): pass
 
 # Present a File like interface to socket.socket
 
@@ -54,6 +56,7 @@ class Peer (object):
 			self.logger = Logger()
 			# We only to try to connect via TCP once
 			self.once = environment.settings().tcp.once
+			self.bind = True if environment.settings().tcp.bind else False
 		except RuntimeError:
 			self.logger = FakeLogger()
 			self.once = True
@@ -62,16 +65,6 @@ class Peer (object):
 		self.neighbor = neighbor
 		# The next restart neighbor definition
 		self._neighbor = None
-
-		self._out_proto = None
-		self._in_proto = None
-
-		# _loop can be :
-		# * False, the generator for this direction is down
-		# * Generator, the code to run to connect or accept the connection
-		# * None, the generator must be re-created
-		self._in_loop = False
-		self._out_loop = None
 
 		# The peer message should be processed
 		self._running = True
@@ -89,34 +82,81 @@ class Peer (object):
 		# We have been asked to teardown the session with this code
 		self._teardown = None
 
-		# the BGP session state
-		self._in_state = STATE.idle
-		self._out_state = STATE.idle
-
-		# the protocol in use
+		# the protocol in use when the session is established
 		self.proto = None
 
+		# BGP state information
+		self._state = STATE.idle
+
+
+		self._ = {'in':{},'out':{}}
+
+		# value to reset 'loop' to
+		self._['in']['enabled'] = False
+		self._['out']['enabled'] = None if not self.neighbor.passive else False
+
+		# the networking code
+		self._['out']['proto'] = None
+		self._['in']['proto'] = None
+
+		# the networking code
+		self._['out']['code'] = self._connect
+		self._['in']['code'] = self._accept
+
+		self._init()
+
+	# setup
+
+	def _init (self):
+		# the BGP session state
+		self._state = STATE.idle
+
+		# the generator used by the main code
+		# * False, the generator for this direction is down
+		# * Generator, the code to run to connect or accept the connection
+		# * None, the generator must be re-created
+		self._['in']['loop'] = self._['in']['enabled']
+		self._['out']['loop'] = self._['out']['enabled']
+
+	def _reset (self,message,error):
+		if self._['out']['proto']:
+			self._['out']['proto'].close('%s %s' % (message,str(error)))
+		self._['out']['proto'] = None
+
+		if self._['in']['proto']:
+			self._['in']['proto'].close('%s %s' % (message,str(error)))
+		self._['in']['proto'] = None
+
+	# connection delay
 
 	def _reset_skip (self):
 		# We are currently not skipping connection attempts
-		self._skip_time = 0
+		self._skip_time = time.time()
 		# when we can not connect to a peer how many time (in loop) should we back-off
 		self._next_skip = 0
 
-	def _more_skip (self):
+	def _more_skip (self,direction):
+		if direction != 'out':
+			return
 		self._skip_time = time.time() + self._next_skip
 		self._next_skip = int(1+ self._next_skip*1.2)
 		if self._next_skip > 60:
 			self._next_skip = 60
 
+	# logging
+
 	def me (self,message):
 		return "peer %s ASN %-7s %s" % (self.neighbor.peer_address,self.neighbor.peer_as,message)
 
-	def wrout (self,message):
-		return "%s %s" % (self._out_proto.connection.name(),self.me(message))
+	def _output (self,direction,message):
+		return "%s %s" % (self._[direction]['proto'].connection.name(),self.me(message))
 
-	def wrin (self,message):
-		return "%s %s" % (self._in_proto.connection.name(),self.me(message))
+	def _log (self,direction):
+		def inner (message):
+			return self._output(direction,message)
+		return inner
+
+	# control
 
 	def stop (self):
 		self._running = False
@@ -146,140 +186,75 @@ class Peer (object):
 		self._teardown = code
 		self._reset_skip()
 
-	def ios (self):
+	# sockets we must monitor
+
+	def sockets (self):
 		ios = []
-		if self._out_proto and self._out_proto.connection and self._out_proto.connection.io:
-			ios.append(self._out_proto.connection.io)
-		if self._in_proto and self._in_proto.connection and self._in_proto.connection.io:
-			ios.append(self._in_proto.connection.io)
+		for direction in ['in','out']:
+			proto = self._[direction]['proto']
+			if proto and proto.connection and proto.connection.io:
+				ios.append(proto.connection.io)
 		return ios
 
-	def run (self):
-		in_back = None
-		out_back = None
-
-		if self._in_loop:
-			try:
-				in_back = self._in_loop.next()
-			except StopIteration:
-				# finished for some reason, do not restart
-				# this is event driven by new connection - see self.incoming()
-				self._in_loop = False
-
-		elif self._in_loop is None and self._running:
-			self._in_loop = self._run('in')
-			in_back = True
-
-		if self._out_loop:
-			try:
-				out_back = self._out_loop.next()
-			except StopIteration:
-				# let's retry and connect once more
-				self._out_loop = None
-
-		elif self._out_loop is None and self._running:
-			if self.neighbor.passive:
-				self._out_loop = False
-			# do not connect too often and only if we are not already connected
-			elif self._skip_time < time.time() and self._in_state != STATE.established:
-				self._out_loop = self._run('out')
-				out_back = True
-
-		if not self._in_loop and not self._out_loop:
-			if self._restart:
-				# If we are restarting, and the neighbor definition is different, update the neighbor
-				if self._neighbor:
-					self.neighbor = self._neighbor
-					self._neighbor = None
-				self._running = True
-
-		# we want to come back immediatly
-		if True in [in_back,out_back]:
-			return True
-
-		if not self._running and not self._in_loop and not self._out_loop:
-			return False
-		return None
-
 	def incoming (self,incoming):
-		if self._out_state != STATE.established and self._in_state == STATE.idle:
-			self._in_proto = Protocol(self)
-			self._in_proto.accept(incoming)
-			self._in_loop = None
-			return True
-		return False
+		proto = self._['in']['proto']
+		if proto is not None:
+			return False
+
+		self._['in']['proto'] = Protocol(self).accept(incoming)
+		self._['in']['loop'] = None
+		return True
 
 	def _accept (self):
 		"yield True if we want to come back to it asap, None if nothing urgent, and False if stopped"
 
-		self._in_state = STATE.active
+		# Let's be clear BGP state machine definition is a mess !
+		# By not sending the OPEN we are avoiding the brainfucked collision
+
+		# if self._state != STATE.idle:
+		# 	yield False
+		# 	return
+
+		self._state = STATE.connect
+		# we can do this as Protocol is a mutable object
+		proto = self._['in']['proto']
+
+		# send OPEN
+		# Only yield if we have not the open, otherwise the reactor can run the other connection
+		# which would be bad as we need to set the state without going to the other peer
+		for message in proto.new_open(self._restarted):
+			if ord(message.TYPE) == Message.Type.NOP:
+				yield True
+
+		self._state = STATE.opensent
+		proto.negotiated.sent(message)
+
+		# Send KEEPALIVE
+		for message in self._['in']['proto'].new_keepalive('ESTABLISHED'):
+			yield True
 
 		# Read OPEN
 		wait = environment.settings().bgp.openwait
-		opentimer = Timer(self.wrin,wait,1,1,'waited for open too long, we do not like stuck in active')
-
-		for message in self._in_proto.read_open(self.neighbor.peer_address.ip):
-			# XXX: FIXME: this should return data and we should raise here
+		opentimer = Timer(self._log('in'),wait,1,1,'waited for open too long, we do not like stuck in active')
+		# Only yield if we have not the open, otherwise the reactor can run the other connection
+		# which would be bad as we need to do the collission check without going to the other peer
+		for message in proto.read_open(self.neighbor.peer_address.ip):
 			opentimer.tick(message)
-			if not self._running:
-				yield False
-				return
-			# XXX: FIXME: change the whole code to use the ord and not the chr version
-			if ord(message.TYPE) not in [Message.Type.NOP,Message.Type.OPEN]:
-				raise message
-			yield None
-
-		# the generator was interrupted
-		if ord(message.TYPE) == Message.Type.NOP:
-			raise Interrupted()
-
-		self._in_proto.negotiated.received(message)
-
-		# send OPEN
-		for message in self._in_proto.new_open(self._restarted):
-			if not self._running:
-				yield False
-				return
-			yield True
-
-		# the generator was interrupted
-		if ord(message.TYPE) == Message.Type.NOP:
-			raise Interrupted()
-
-		self._in_proto.negotiated.sent(message)
-		self._in_proto.validate_open()
-
-		# Send KEEPALIVE
-		for message in self._in_proto.new_keepalive('ESTABLISHED'):
-			if not self._running:
-				yield False
-				return
-			yield True
-
-		# the generator was interrupted
-		if ord(message.TYPE) == Message.Type.NOP:
-			raise Interrupted()
+			if ord(message.TYPE) == Message.Type.NOP:
+				yield None
 
 		self._state = STATE.openconfirm
+		proto.negotiated.received(message)
+		proto.validate_open()
 
 		# Start keeping keepalive timer
-		self.timer = Timer(self.wrin,self._in_proto.negotiated.holdtime,4,0)
-
+		self.timer = Timer(self._log('in'),proto.negotiated.holdtime,4,0)
 		# Read KEEPALIVE
-		for message in self._in_proto.read_keepalive('OPENCONFIRM'):
+		for message in proto.read_keepalive('OPENCONFIRM'):
 			self.timer.tick(message)
-			if not self._running:
-				yield False
-				return
-			if ord(message.TYPE) not in [Message.Type.NOP,Message.Type.KEEPALIVE]:
-				raise message
 			yield None
 
-		# the generator was interrupted
-		if ord(message.TYPE) == Message.Type.NOP:
-			raise Interrupted()
-
-		self._in_state = STATE.established
+		self._state = STATE.established
 		# let the caller know that we were sucesfull
 		yield True
 
@@ -287,15 +262,33 @@ class Peer (object):
 	def _connect (self):
 		"yield True if we want to come back to it asap, None if nothing urgent, and False if stopped"
 
-		self._state = STATE.active
+		# Let's be clear BGP state machine definition is a mess !
+		# By not sending the OPEN we are avoiding the brainfucked collision
 
-		if self.reactor.processes.broken(self.neighbor.peer_address):
-			# XXX: we should perhaps try to restart the process ??
-			self.logger.process('ExaBGP lost the helper process for this peer - stopping','error')
-			self._running = False
+		# if self._state != STATE.idle:
+		# 	yield False
+		# 	return
 
-		self._out_proto = Protocol(self)
-		generator = self._out_proto.connect()
+		# 	local_id = self.neighbor.router_id.packed
+		# 	remote_id = self.proto.negotiated.received_open.router_id.packed
+
+		# 	if local_id < remote_id:
+		# 		# close already exist
+		# 		self._['out']['proto'].close('collision local id < remote id')
+		# 		self._['out']['proto'] = None
+		# 		yield False
+		# 		return
+		# 	else:
+		# 		# close new connection
+		# 		self._['in']['proto'].close('collision local id < remote id')
+		# 		self._['in']['proto'] = None
+		# 		yield False
+		# 		return
+
+		# try to establish the outgoing connection
+
+		proto = Protocol(self)
+		generator = proto.connect()
 
 		connected = False
 		try:
@@ -309,78 +302,59 @@ class Peer (object):
 				yield None
 				return
 
+		# Connection arrived before we could establish !
+		if self._state != STATE.idle:
+			yield False
+			return
+
+		self._state = STATE.connect
+		self._['out']['proto'] = proto
 		self._reset_skip()
-		self._out_state = STATE.connect
 
 		# send OPEN
-		for message in self._out_proto.new_open(self._restarted):
-			yield True
+		# Only yield if we have not the open, otherwise the reactor can run the other connection
+		# which would be bad as we need to set the state without going to the other peer
+		for message in proto.new_open(self._restarted):
+			if ord(message.TYPE) == Message.Type.NOP:
+				yield True
 
-		# the generator was interrupted
-		if ord(message.TYPE) == Message.Type.NOP:
-			raise Interrupted()
-
-		self._out_proto.negotiated.sent(message)
-		self._out_state = STATE.opensent
+		self._state = STATE.opensent
+		proto.negotiated.sent(message)
 
 		# Send KEEPALIVE
-		for message in self._out_proto.new_keepalive('ESTABLISHED'):
+		for message in proto.new_keepalive('ESTABLISHED'):
 			yield True
-
-		# the generator was interrupted
-		if ord(message.TYPE) == Message.Type.NOP:
-			raise Interrupted()
 
 		# Read OPEN
 		wait = environment.settings().bgp.openwait
-		opentimer = Timer(self.wrout,wait,1,1,'waited for open too long, we do not like stuck in active')
-
-		for message in self._out_proto.read_open(self.neighbor.peer_address.ip):
+		opentimer = Timer(self._log('out'),wait,1,1,'waited for open too long, we do not like stuck in active')
+		for message in self._['out']['proto'].read_open(self.neighbor.peer_address.ip):
 			opentimer.tick(message)
-			if not self._running:
-				break
 			# XXX: FIXME: change the whole code to use the ord and not the chr version
-			if ord(message.TYPE) not in [Message.Type.NOP,Message.Type.OPEN]:
-				raise message
-			yield None
-
-		# the generator was interrupted
-		if ord(message.TYPE) == Message.Type.NOP:
-			raise Interrupted()
-
-		self._out_proto.negotiated.received(message)
-		self._out_proto.validate_open()
+			# Only yield if we have not the open, otherwise the reactor can run the other connection
+			# which would be bad as we need to do the collission check
+			if ord(message.TYPE) == Message.Type.NOP:
+				yield None
 
 		self._state = STATE.openconfirm
+		self._['out']['proto'].negotiated.received(message)
+		self._['out']['proto'].validate_open()
 
 		# Start keeping keepalive timer
-		self.timer = Timer(self.wrout,self._out_proto.negotiated.holdtime,4,0)
-
+		self.timer = Timer(self._log('out'),self._['out']['proto'].negotiated.holdtime,4,0)
 		# Read KEEPALIVE
-		for message in self._out_proto.read_keepalive('OPENCONFIRM'):
+		for message in self._['out']['proto'].read_keepalive('OPENCONFIRM'):
 			self.timer.tick(message)
-			if not self._running:
-				break
-			if ord(message.TYPE) not in [Message.Type.NOP,Message.Type.KEEPALIVE]:
-				raise message
 			yield None
 
-		# the generator was interrupted
-		if ord(message.TYPE) == Message.Type.NOP:
-			raise Interrupted()
-
-		self._out_state = STATE.established
+		self._state = STATE.established
 		# let the caller know that we were sucesfull
 		yield True
-
 
 	def _main (self,direction):
 		"yield True if we want to come back to it asap, None if nothing urgent, and False if stopped"
 
-		if direction == 'in':
-			self.proto = self._in_proto
-		else:
-			self.proto = self._out_proto
+		self.proto = self._[direction]['proto']
 
 		# Announce to the process BGP is up
 		self.logger.network('Connected to peer %s (%s)' % (self.neighbor.name(),direction))
@@ -396,10 +370,7 @@ class Peer (object):
 		send_eor = False
 		new_routes = None
 
-		if self.proto.connection.direction == 'in':
-			counter = Counter(self.logger,self.wrin)
-		else:
-			counter = Counter(self.logger,self.wrout)
+		counter = Counter(self.logger,self._log(direction))
 
 		self._resend_routes = True
 
@@ -415,10 +386,6 @@ class Peer (object):
 				if self.timer.keepalive():
 					for message in self.proto.new_keepalive():
 						yield True
-
-					# the generator was interrupted
-					if ord(message.TYPE) == Message.Type.NOP:
-						raise Interrupted()
 
 				# Give information on the number of routes seen
 				counter.display()
@@ -437,18 +404,15 @@ class Peer (object):
 
 				if new_routes:
 					try:
-						count = 100
+						count = 20
 						while count:
 							# This can raise a NetworkError
-							update = new_routes.next()
+							new_routes.next()
 							count -= 1
 					except StopIteration:
 						new_routes = None
 						send_eor = True
 
-						# the generator was interrupted
-						if ord(update.TYPE) == Message.Type.NOP:
-							raise Interrupted()
 				elif send_eor:
 					send_eor = False
 					for eor in self.proto.new_eors():
@@ -457,10 +421,6 @@ class Peer (object):
 							return
 						yield True
 					self.logger.message(self.me('>> EOR(s)'))
-
-					# the generator was interrupted
-					if ord(eor.TYPE) == Message.Type.NOP:
-						raise Interrupted()
 
 				# Go to other Peers
 				yield True if new_routes or message.TYPE != NOP.TYPE else None
@@ -485,22 +445,14 @@ class Peer (object):
 		"yield True if we want the reactor to give us back the hand with the same peer loop, None if we do not have any more work to do"
 
 		try:
-			if direction == 'in':
-				for event in self._accept():
-					yield event
-			elif direction == 'out':
-				for event in self._connect():
-					yield event
-			else:
-				raise RuntimeError('The programmer done a mistake, please report this issue')
+			for event in self._[direction]['code']():
+				yield event
 
 			# False it means that we finished the reactor
 			# True means that we finished nicely
-			# None means that we we interrupted
-			if event is False:
-				raise NetworkError('closing down')
+			# None means that we were interrupted ??
 			if event is not True:
-				self._more_skip()
+				self._more_skip(direction)
 				raise Interrupted('can not %s connection' % 'establish' if direction == 'out' else 'accept')
 
 			for event in self._main(direction):
@@ -508,23 +460,11 @@ class Peer (object):
 
 		# CONNECTION FAILURE
 		except NetworkError, e:
-			self._in_state = STATE.idle
-			self._out_state = STATE.idle
-			self._in_loop = False
-			self._out_loop = None
+			self._init()
+			self._reset('closing connection','')
 
 			# UPDATING TIMERS FOR BACK-OFF as we most likely failed to connect
-			self._more_skip()
-
-			self.logger.network('connection issue, reason : %s' % str(e))
-
-			if self._in_proto:
-				self._in_proto.close('closing incoming connection')
-				self._in_proto = None
-
-			if self._out_proto:
-				self._out_proto.close('closing outgoing connection')
-				self._out_proto = None
+			self._more_skip(direction)
 
 			# we tried to connect once, it failed, we stop
 			if self.once:
@@ -534,131 +474,114 @@ class Peer (object):
 
 		# NOTIFY THE PEER OF AN ERROR
 		except Notify, n:
-			self._in_state = STATE.idle
-			self._out_state = STATE.idle
-			self._in_loop = False
-			self._out_loop = None
-
-			if self._out_proto:
-				try:
-					self._out_proto.new_notification(n)
-				except (NetworkError,ProcessError):
-					self.logger.network(self.wrout('NOTIFICATION NOT SENT','error'))
-					pass
-				self._out_proto.close('notification sent (%d,%d) [%s] %s' % (n.code,n.subcode,str(n),n.data))
-				self._out_proto = None
-
-			if self._in_proto:
-				try:
-					self._in_proto.new_notification(n)
-				except (NetworkError,ProcessError):
-					self.logger.network(self.wrin('NOTIFICATION NOT SENT','error'))
-					pass
-				self._in_proto.close('notification sent (%d,%d) [%s] %s' % (n.code,n.subcode,str(n),n.data))
-				self._in_proto = None
-
+			for direction in ['in','out']:
+				if self._[direction]['proto']:
+					try:
+						self._[direction]['proto'].new_notification(n)
+					except (NetworkError,ProcessError):
+						self.logger.network(self._output(direction,'NOTIFICATION NOT SENT','error'))
+						pass
+			self._init()
+			self._reset('notification sent (%d,%d) [%s] %s' % (n.code,n.subcode),n)
 			return
 
 		# THE PEER NOTIFIED US OF AN ERROR
 		except Notification, n:
-			self._in_state = STATE.idle
-			self._out_state = STATE.idle
-			self._in_loop = False
-			self._out_loop = None
-
 			self.logger.reactor(self.me('received Notification (%d,%d) %s' % (n.code,n.subcode,str(n))),'warning')
-
-			if self._out_proto:
-				self._out_proto.close('notification received (%d,%d) %s' % (n.code,n.subcode,str(n)))
-				self._out_proto = None
-
-			if self._in_proto:
-				self._in_proto.close('notification received (%d,%d) %s' % (n.code,n.subcode,str(n)))
-				self._in_proto = None
-
+			self._init()
+			self._reset('notification received (%d,%d) %s' % (n.code,n.subcode),n)
 			return
 
 		# RECEIVED a Message TYPE we did not expect
 		except Message, m:
-			self._in_state = STATE.idle
-			self._out_state = STATE.idle
-			self._in_loop = False
-			self._out_loop = None
-
 			self.logger.network(self.me('received unexpected message %s' % m.name(),'error'))
-
-			if self._out_proto:
-				self._out_proto.close('unexpected message received')
-				self._out_proto = None
-
-			if self._in_proto:
-				self._in_proto.close('unexpected message received')
-				self._in_proto = None
-
+			self._init()
+			self._reset('unexpected message received',m)
 			return
 
 		# PROBLEM WRITING TO OUR FORKED PROCESSES
 		except ProcessError, e:
-			self._in_state = STATE.idle
-			self._out_state = STATE.idle
-			self._in_loop = False
-			self._out_loop = None
-
 			self.logger.reactor(self.me(str(e)),'error')
-
-			if self._out_proto:
-				self._out_proto.close('failure %s' % str(e))
-				self._out_proto = None
-
-			if self._in_proto:
-				self._in_proto.close('failure %s' % str(e))
-				self._in_proto = None
-
+			self._init()
+			self._reset('process problem',e)
 			return
 
-		# MOST LIKELY ^C DURING A LOOP
+		# ....
 		except Interrupted, e:
-			self._in_state = STATE.idle
-			self._out_state = STATE.idle
-			self._in_loop = False
-			self._out_loop = None
-
-			self.logger.reactor(self.me(str(e)),'error')
-
-			if self._out_proto:
-				self._out_proto.close('%s' % str(e))
-				self._out_proto = None
-
-			if self._in_proto:
-				self._in_proto.close('%s' % str(e))
-				self._in_proto = None
-
+			self.logger.reactor(self.me(str(e)),'info')
+			self._init()
+			self._reset('',e)
 			return
 
 		# UNHANDLED PROBLEMS
 		except Exception, e:
-			self._in_state = STATE.idle
-			self._out_state = STATE.idle
-			self._in_loop = False
-			self._out_loop = None
-
 			# Those messages can not be filtered in purpose
-			self.logger.error(self.me('UNHANDLED EXCEPTION'),'reactor')
+			self.logger.error(self.me('UNHANDLED PROBLEM, please report'),'reactor')
 			self.logger.error(self.me(str(type(e))),'reactor')
 			self.logger.error(self.me(str(e)),'reactor')
 			self.logger.error(trace())
 
-			if self._out_proto:
-				self._out_proto.close('unhandled problem, please report to developers %s' % str(e))
-				self._out_proto = None
-
-			if self._in_proto:
-				self._in_proto.close('unhandled problem, please report to developers %s' % str(e))
-				self._in_proto = None
-
-			# try:
-			# 	traceback.pin_backt_exc(file=sys.stderr)
-			# except:
-			# 	pass
-
+			self._init()
+			self._reset('',e)
 			return
+
+	# loop
+
+	def run (self):
+		if self.reactor.processes.broken(self.neighbor.peer_address):
+			# XXX: we should perhaps try to restart the process ??
+			self.logger.process('ExaBGP lost the helper process for this peer - stopping','error')
+			self._running = False
+
+		elif self._running:
+			back = None
+
+			for direction in ['in','out']:
+				loop = self._[direction]['loop']
+
+				if loop:
+					try:
+						r = loop.next()
+						if r is True:
+							back = True
+						elif r is False:
+							# two False, exiting
+							if back is False:
+								return False
+							back = False
+					except StopIteration:
+						# should we restart when finished
+						# the other side is established : no
+						# incoming connection: no,  as it is event driven by new socket
+						# outgoing connection: yes, if the peer close we re-init
+
+						if self._state == STATE.established:
+							self._[direction]['loop'] = False
+						else:
+							self._[direction]['loop'] = self._[direction]['enabled']
+
+				elif loop is None:
+					if self._state == STATE.established:
+						loop = False
+						continue
+					if direction == 'out' and self._skip_time > time.time():
+						continue
+					self._[direction]['loop'] = self._run(direction)
+
+					back = True
+
+			return back
+
+		# not running
+		elif self._restart:
+			# If we are restarting, and the neighbor definition is different, update the neighbor
+			if self._neighbor:
+				self.neighbor = self._neighbor
+				self._neighbor = None
+
+			self._running = True
+			return True
+
+		# not running, and not restarting
+		else:
+			return False
