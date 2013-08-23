@@ -84,15 +84,10 @@ class Peer (object):
 
 		self._ = {'in':{},'out':{}}
 
-		self._init()
-
-	# setup
-
-	def _init (self):
 		self._['in']['state'] = STATE.idle
 		self._['out']['state'] = STATE.idle
 
-		# value to reset 'loop' to
+		# value to reset 'generator' to
 		self._['in']['enabled'] = False
 		self._['out']['enabled'] = None if not self.neighbor.passive else False
 
@@ -108,19 +103,27 @@ class Peer (object):
 		# * False, the generator for this direction is down
 		# * Generator, the code to run to connect or accept the connection
 		# * None, the generator must be re-created
-		self._['in']['loop'] = self._['in']['enabled']
-		self._['out']['loop'] = self._['out']['enabled']
-
-		self._['in']['running'] = True
-		self._['out']['running'] = True
+		self._['in']['generator'] = self._['in']['enabled']
+		self._['out']['generator'] = self._['out']['enabled']
 
 	def _reset (self,direction,message='',error=''):
-		if self._[direction]['proto']:
-			self._[direction]['proto'].close('%s loop reset %s %s' % (direction,message,str(error)))
-		self._[direction]['proto'] = None
-		self._[direction]['loop'] = self._[direction]['enabled']
 		self._[direction]['state'] = STATE.idle
-		self._more_skip(direction)
+
+		if self._restart:
+			if self._[direction]['proto']:
+				self._[direction]['proto'].close('%s loop reset %s %s' % (direction,message,str(error)))
+			self._[direction]['proto'] = None
+			self._[direction]['generator'] = self._[direction]['enabled']
+			self._teardown = None
+			self._more_skip(direction)
+
+			# If we are restarting, and the neighbor definition is different, update the neighbor
+			if self._neighbor:
+				self.neighbor = self._neighbor
+				self._neighbor = None
+		else:
+			self._[direction]['generator'] = False
+			self._[direction]['proto'] = None
 
 	# connection delay
 
@@ -154,8 +157,7 @@ class Peer (object):
 	# control
 
 	def stop (self):
-		self._['in']['running'] = False
-		self._['out']['running'] = False
+		self._teardown = 3
 		self._restart = False
 		self._restarted = False
 		self._reset_skip()
@@ -169,8 +171,7 @@ class Peer (object):
 
 	def restart (self,restart_neighbor=None):
 		# we want to tear down the session and re-establish it
-		self._['in']['running'] = False
-		self._['out']['running'] = False
+		self._teardown = 3
 		self._restart = True
 		self._restarted = True
 		self._resend_routes = True
@@ -178,8 +179,6 @@ class Peer (object):
 		self._reset_skip()
 
 	def teardown (self,code,restart=True):
-		self._['in']['running'] = False
-		self._['out']['running'] = False
 		self._restart = restart
 		self._teardown = code
 		self._reset_skip()
@@ -202,7 +201,7 @@ class Peer (object):
 
 		self._['in']['proto'] = Protocol(self).accept(connection)
 		# Let's make sure we do some work with this connection
-		self._['in']['loop'] = None
+		self._['in']['generator'] = None
 		self._['in']['state'] = STATE.connect
 		return True
 
@@ -343,10 +342,8 @@ class Peer (object):
 	def _main (self,direction):
 		"yield True if we want to come back to it asap, None if nothing urgent, and False if stopped"
 
-		if not self._[direction]['running']:
-			stop = Interrupted()
-			stop.direction = direction
-			raise stop
+		if self._teardown:
+			raise Notify(6,3)
 
 		proto = self._[direction]['proto']
 
@@ -368,7 +365,7 @@ class Peer (object):
 
 		self._resend_routes = True
 
-		while self._[direction]['running']:
+		while not self._teardown:
 			for message in proto.read_message():
 				# Received update
 				if message.TYPE == Update.TYPE:
@@ -417,7 +414,7 @@ class Peer (object):
 				yield ACTION.immediate if new_routes or message.TYPE != NOP.TYPE else ACTION.later
 
 				# read_message will loop until new message arrives with NOP
-				if not self._[direction]['running']:
+				if self._teardown:
 					break
 
 		# If graceful restart, silent shutdown
@@ -427,10 +424,7 @@ class Peer (object):
 			raise NetworkError('closing')
 
 		# notify our peer of the shutdown
-		if self._teardown:
-			code, self._teardown = self._teardown, None
-			raise Notify(6,code)
-		raise Notify(6,3)
+		raise Notify(6,self._teardown)
 
 	def _run (self,direction):
 		"yield True if we want the reactor to give us back the hand with the same peer loop, None if we do not have any more work to do"
@@ -444,7 +438,7 @@ class Peer (object):
 
 		# CONNECTION FAILURE
 		except NetworkError, e:
-			self._reset(direction,'closing %s connection')
+			self._reset(direction,'closing connection')
 
 			# we tried to connect once, it failed, we stop
 			if self.once:
@@ -498,64 +492,45 @@ class Peer (object):
 	# loop
 
 	def run (self):
-		directions = []
-		if self._['in']['running']: directions.append('in')
-		if self._['out']['running']: directions.append('out')
-
-		if directions:
-			if self.reactor.processes.broken(self.neighbor.peer_address):
-				# XXX: we should perhaps try to restart the process ??
-				self.logger.process('ExaBGP lost the helper process for this peer - stopping','error')
-				self._running = False
-
-			back = False
-
-			for direction in directions:
-				opposite = 'out' if direction == 'in' else 'in'
-
-				loop = self._[direction]['loop']
-				if loop:
-					try:
-						# This generator only stops when it raises
-						r = loop.next()
-						status = 'immediate callback' if r is True else 'when possible' if r is None else 'stopped' if r is False else 'running'
-						self.logger.network('%s loop %s, state is %s' % (direction,status,self._[direction]['state']),'debug')
-						if r == ACTION.immediate:
-							back = True
-						if r == ACTION.later:
-							back = back or None
-					except StopIteration:
-						# Trying to run a closed loop
-						self._[direction]['loop'] = self._[direction]['enabled']
-						back = True
-
-				elif loop is None:
-					if self._[opposite]['state'] in [STATE.openconfirm,STATE.established]:
-						self.logger.network('%s loop, stopping, other one is established' % direction,'debug')
-						self._[direction]['loop'] = False
-						back = True
-						continue
-					if direction == 'out' and self._skip_time > time.time():
-						self.logger.network('%s loop, skipping, not time yet' % direction,'debug')
-						back = None
-						continue
-					self.logger.network('%s loop, intialising' % direction,'debug')
-					self._[direction]['loop'] = self._run(direction)
-					back = True
-
-			return back
-
-		# not running
-		elif self._restart:
-			# If we are restarting, and the neighbor definition is different, update the neighbor
-			if self._neighbor:
-				self.neighbor = self._neighbor
-				self._neighbor = None
-
-			self._['in']['running'] = True
-			self._['out']['running'] = True
+		if self.reactor.processes.broken(self.neighbor.peer_address):
+			# XXX: we should perhaps try to restart the process ??
+			self.logger.process('ExaBGP lost the helper process for this peer - stopping','error')
+			self.stop()
 			return True
 
-		# not running, and not restarting
-		else:
-			return False
+		back = False
+
+		for direction in ['in','out']:
+			opposite = 'out' if direction == 'in' else 'in'
+
+			generator = self._[direction]['generator']
+			if generator:
+				try:
+					# This generator only stops when it raises
+					r = generator.next()
+					status = 'immediate callback' if r is True else 'when possible' if r is None else 'stopped' if r is False else 'running'
+					self.logger.network('%s loop %s, state is %s' % (direction,status,self._[direction]['state']),'debug')
+					if r == ACTION.immediate:
+						back = True
+					if r == ACTION.later:
+						back = back or None
+				except StopIteration:
+					# Trying to run a closed loop
+					self._[direction]['generator'] = None if self._restart else False
+					back = True
+
+			elif generator is None:
+				if self._[opposite]['state'] in [STATE.openconfirm,STATE.established]:
+					self.logger.network('%s loop, stopping, other one is established' % direction,'debug')
+					self._[direction]['generator'] = False
+					back = True
+					continue
+				if direction == 'out' and self._skip_time > time.time():
+					self.logger.network('%s loop, skipping, not time yet' % direction,'debug')
+					back = None
+					continue
+				self.logger.network('%s loop, intialising' % direction,'debug')
+				self._[direction]['generator'] = self._run(direction)
+				back = True
+
+		return back
