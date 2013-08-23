@@ -208,7 +208,7 @@ class Reactor (object):
 								connection.notification(6,3,'no session configured for the peer')
 								connection.close()
 							elif found is None:
-								self.logger.reactor("could not accept connection %s - %s" % (connection.local,connection.peer))
+								self.logger.reactor("connection refused (already connected to the peer) %s - %s" % (connection.local,connection.peer))
 								connection.notification(6,5,'could not accept the connection')
 								connection.close()
 

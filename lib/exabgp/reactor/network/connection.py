@@ -15,7 +15,6 @@ from struct import unpack
 from exabgp.configuration.environment import environment
 
 from exabgp.util.od import od
-from exabgp.util.trace import trace
 from exabgp.util.errstr import errstr
 
 from exabgp.logger import Logger,FakeLogger,LazyFormat
