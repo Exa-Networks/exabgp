@@ -114,6 +114,9 @@ class Connection (object):
 		if number == 0:
 			yield ''
 			return
+		# XXX: one of the socket option is to recover the size of the buffer
+		# XXX: we could use it to not have to put together the string with multiple reads
+		# XXX: and get rid of the self.read_timeout option
 		while not self.reading():
 			yield ''
 		data = ''

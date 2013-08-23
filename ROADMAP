@@ -5,50 +5,30 @@ ROADMAP
 Remove .packed for Inet and all its subclass as we now had addpath getting in the way.
 
 In no particular order:
-- keep route grouping provided by the routers who sent them to us.
-- create a capability section under neighbor for capability negociation options
-- per neighbor route announcement
-- MRT compatible helpers
 - provide an helper program able to read MRT dumps and announce them too.
 - route refresh
 - operational draft support
-- fix code testing coverage
 - provide easy integration with http://www.spamhaus.org/bgpf/ and http://www.spamhaus.org/drop/
 - let the forked process indicate when it has finished and do not kill it before then
-- make sure all the capabilities are printed when the neighbor is printed
-- move the generation of the route when the delta is done in an object with the peer info to display the route change in the log
-- improve the Route objects API
-- all the Message classes should have the API new() and factory() and empty __init__
-- change the way we store the routes to be per attributes and next-hop to save memory and faster update generation
 - split the neighborg api message sent from the forked process
-- improve the API around the Route class. Do we need Route ? Update should be enough as an Update with one NLRI is a route.
-
-Notes
 - if we define the same route twice in the configuration we will/may send them both .. 
 - Attributes / MultiAttributes API ?
 - warn if an as-path has the router ASN on an ibgp connection
 - some of the match condition of flows currently take list or numeric tests, they should always take both, refactor
-- we can not parse flows (yet)
 - reading stderr from forked process and displaying via the self.logger class
 - NotificationID
-- for the first run, add a grouping of route BEFORE the OPEN negociation to not cause issues with OPEN
-- allow per per announcement of routes from the helper program
 - on unhandled exception, stop all the workers
 - look at tox http://tox.testrun.org/latest/
-- cache attributes and use reference in route
 - have a compiled configuration format with no parsing of route but raw data ?
 - need to check if we can prevent the duplication of the peer routes (which are already defined in the neighbor)
 - peer.reload should it be called peer.route_update (just have a guard to prevent route update when reloading the configuration)
 - do we need to have a guard to prevent route update when reloading the configuration
-- Use Change and not Update in the configuration file
-- should we not inherit from Address, make it a container (easier to then use a function to check for IPv4 unicast/multicast)
-- Prefix.__init__ can raise ValueError make sure it does not crash ExaBGP if we get invalid data
+- Prefix.__init__ can raise ValueError make sure it is well handled
 - cache generated nlri and attributes (with and without asn4)
-- move caching of attributes into class like next-hop and cache attributes in Attributes and store them in Store (instead of clumpsy code)
-- accelerate reactor
 - change all announcement like announce in Update to be function and not class method (and change name .:p)
+- move logic code in read_message into peer main loop
+- detect duplicate logging lines and just announce the number of repeat
 
 Important
 * write the documentation, and do not rely on the example and the site wiki (argh ...)
-* rewrite the unittesting which is really missing.
-* look ai all the XXX: in the code
+* look ai all the XXX: and XXX: FIXME: in the code

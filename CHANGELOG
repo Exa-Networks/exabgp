@@ -7,6 +7,7 @@ Version 3.2.5
  * Improvement: FlowSpec decoding (ExaBGP can decode incoming FlowSpec)
  * Improvement: detect invalid netmask on route parsing
  * Improvement: "next-hop self" is supported via the API
+ * Improvement: can accept incoming connect and perform collision detection
  * Fix: async connect issues
     reported by: Vincent Bernat (with very good advice for the patch)
  * Fix: bad function defintions

@@ -139,6 +139,7 @@ class Protocol (object):
 				yield _UPDATE
 				return
 
+			# XXX: FIXME: really this should be in the Peer loop :-)
 			for nlri in update.nlris:
 				self.neighbor.rib.incoming.insert_received(Change(nlri,update.attributes))
 				self.logger.routes(LazyFormat(self.me(''),str,nlri))
