@@ -150,7 +150,7 @@ def timed (message):
 	return "%s | %-8s | %-6d | %-13s | %s" % (now,'FORKED',os.getpid(),'tcp-server',message)
 
 def sig (signum, frame):
-	# outch rude but pervent silly trace on exit if waiting for a read on stdin :p
+	# outch rude but prevent silly trace on exit if waiting for a read on stdin :p
 	os.kill(os.getpid(),signal.SIGKILL)
 
 signal.signal(signal.SIGINT, sig)

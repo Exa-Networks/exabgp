@@ -17,7 +17,7 @@ from exabgp.version import version
 from exabgp.reactor.daemon import Daemon
 from exabgp.reactor.listener import Listener,NetworkError
 from exabgp.reactor.api.processes import Processes,ProcessError
-from exabgp.reactor.peer import Peer
+from exabgp.reactor.peer import Peer,ACTION
 from exabgp.reactor.network.error import error
 
 from exabgp.configuration.file import Configuration
@@ -153,10 +153,10 @@ class Reactor (object):
 							# * True if it wants to be called again
 							# * None if it should be called again but has no work atm
 							# * False if it is finished and is closing down, or restarting
-							if action is False:
+							if action == ACTION.close:
 								self.unschedule(peer)
 								peers.remove(key)
-							elif action is not True:
+							elif action == ACTION.later:
 								ios.extend(peer.sockets())
 								# no need to come back to it before a a full cycle
 								peers.remove(key)

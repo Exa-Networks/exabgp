@@ -38,8 +38,9 @@ STATE = Enumeration (
 )
 
 ACTION = Enumeration (
-	'immediate',
+	'close',
 	'later',
+	'immediate',
 	)
 
 # As we can not know if this is our first start or not, this flag is used to
@@ -275,6 +276,9 @@ class Peer (object):
 				# we want to come back as soon as possible
 				yield ACTION.immediate
 		except StopIteration:
+			# Connection failed
+			if not connected:
+				proto.close('connection to peer failed')
 			# A connection arrived before we could establish !
 			if not connected or self._['in']['proto']:
 				stop = Interrupted()
@@ -428,7 +432,6 @@ class Peer (object):
 
 	def _run (self,direction):
 		"yield True if we want the reactor to give us back the hand with the same peer loop, None if we do not have any more work to do"
-
 		try:
 			for action in self._[direction]['code']():
 				yield action
@@ -488,7 +491,6 @@ class Peer (object):
 
 			self._reset(direction)
 			return
-
 	# loop
 
 	def run (self):
@@ -498,7 +500,7 @@ class Peer (object):
 			self.stop()
 			return True
 
-		back = False
+		back = ACTION.later if self._restart else ACTION.close
 
 		for direction in ['in','out']:
 			opposite = 'out' if direction == 'in' else 'in'
@@ -511,26 +513,25 @@ class Peer (object):
 					status = 'immediate callback' if r is True else 'when possible' if r is None else 'stopped' if r is False else 'running'
 					self.logger.network('%s loop %s, state is %s' % (direction,status,self._[direction]['state']),'debug')
 					if r == ACTION.immediate:
-						back = True
-					if r == ACTION.later:
-						back = back or None
+						back = ACTION.immediate
+					elif r == ACTION.later:
+						back == ACTION.later if back != ACTION.immediate else ACTION.immediate
 				except StopIteration:
-					# Trying to run a closed loop
-					self._[direction]['generator'] = None if self._restart else False
-					back = True
+					# Trying to run a closed loop, no point continuing
+					self._[direction]['generator'] = self._[direction]['enabled']
 
 			elif generator is None:
 				if self._[opposite]['state'] in [STATE.openconfirm,STATE.established]:
 					self.logger.network('%s loop, stopping, other one is established' % direction,'debug')
 					self._[direction]['generator'] = False
-					back = True
 					continue
 				if direction == 'out' and self._skip_time > time.time():
 					self.logger.network('%s loop, skipping, not time yet' % direction,'debug')
-					back = None
+					back = ACTION.later
 					continue
-				self.logger.network('%s loop, intialising' % direction,'debug')
-				self._[direction]['generator'] = self._run(direction)
-				back = True
+				if self._restart:
+					self.logger.network('%s loop, intialising' % direction,'debug')
+					self._[direction]['generator'] = self._run(direction)
+					back = ACTION.immediate
 
 		return back
