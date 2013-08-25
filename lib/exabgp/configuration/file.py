@@ -31,7 +31,7 @@ from exabgp.bgp.message.open.routerid import RouterID
 
 from exabgp.bgp.message.update.nlri.prefix import Prefix
 from exabgp.bgp.message.update.nlri.bgp import NLRI,PathInfo,Labels,RouteDistinguisher
-from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,FlowNLRI,FlowSource,FlowDestination,FlowSourcePort,FlowDestinationPort,FlowAnyPort,FlowIPProtocol,FlowTCPFlag,FlowFragment,FlowPacketLength,FlowICMPType,FlowICMPCode,FlowDSCP
+from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,FlowNLRI,Flow4Source,Flow4Destination,FlowSourcePort,FlowDestinationPort,FlowAnyPort,FlowIP4Protocol,FlowTCPFlag,FlowFragment,FlowPacketLength,FlowICMPType,FlowICMPCode,FlowDSCP
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute.origin import Origin
@@ -686,8 +686,13 @@ class Configuration (object):
 			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
 		elif safi == 'mpls-vpn':
 			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.mpls_vpn)))
-		elif safi in ('flow-vpnv4','flow'):
-			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.flow_ipv4)))
+		elif safi == 'flow-vpnv4':
+			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.flow_ip)))
+		elif safi == 'flow-vpnv6':
+			scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.flow_ip)))
+		elif safi in ('flow-vpn','flow'):
+			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.flow_ip)))
+			scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.flow_ip)))
 		else:
 			return False
 		return True
@@ -1872,7 +1877,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-		if not scope[-1]['route'][-1].nlri.add(FlowSource(raw,int(nm))):
+		if not scope[-1]['route'][-1].nlri.add(Flow4Source(raw,int(nm))):
 			self._error = 'Flow can only have one destination'
 			if self.debug: raise ValueError(self._error)
 			return False
@@ -1887,7 +1892,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-		if not scope[-1]['route'][-1].nlri.add(FlowDestination(raw,int(nm))):
+		if not scope[-1]['route'][-1].nlri.add(Flow4Destination(raw,int(nm))):
 			self._error = 'Flow can only have one destination'
 			if self.debug: raise ValueError(self._error)
 			return False
@@ -1990,7 +1995,7 @@ class Configuration (object):
 		return self._flow_generic_list(scope,tokens,FlowTCPFlag)
 
 	def _flow_route_protocol (self,scope,tokens):
-		return self._flow_generic_list(scope,tokens,FlowIPProtocol)
+		return self._flow_generic_list(scope,tokens,FlowIP4Protocol)
 
 	def _flow_route_icmp_type (self,scope,tokens):
 		return self._flow_generic_list(scope,tokens,FlowICMPType)

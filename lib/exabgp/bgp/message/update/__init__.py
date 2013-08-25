@@ -69,7 +69,7 @@ def messages (update,negotiated):
 	elif add_mp:
 		add_default = False
 		for afi,safi in add_mp:
-			if safi not in (SAFI.flow_ipv4,SAFI.flow_vpnv4):
+			if safi not in (SAFI.flow_ip,SAFI.flow_vpn):
 				add_default = True
 		attr = update.attributes.pack(asn4,local_as,peer_as,add_default)
 	else:
@@ -149,7 +149,7 @@ def messages (update,negotiated):
 					packed_del = ''
 					packed_mp_del = ''
 					packed_mp_add = packed
-					if family not in ((AFI.ipv4,SAFI.flow_ipv4),(AFI.ipv4,SAFI.flow_vpnv4)):
+					if family not in ((AFI.ipv4,SAFI.flow_ip),(AFI.ipv4,SAFI.flow_vpn)):
 						attributes = attr
 					else:
 						attributes = ''

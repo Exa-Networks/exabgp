@@ -79,11 +79,10 @@ def _number (string):
 class IPrefix (IComponent):
 	# not used, just present for simplying the nlri generation
 	operations = 0x0
-	ID = None
 	NAME = None
 
 	def __init__ (self,raw,netmask):
-		self.nlri = Prefix(AFI.ipv4,SAFI.flow_ipv4,raw,netmask)
+		self.nlri = Prefix(self.afi,SAFI.flow_ip,raw,netmask)
 
 	def pack (self):
 		raw = self.nlri.pack(addpath=False)
@@ -91,6 +90,11 @@ class IPrefix (IComponent):
 
 	def __str__ (self):
 		return str(self.nlri)
+
+class IPrefix4 (IPrefix):
+	afi = AFI.ipv4
+
+
 
 class IOperation (IComponent):
 	# need to implement encode which encode the value of the operator
@@ -199,18 +203,26 @@ def DSCPValue (data):
 		raise ValueError(_str_bad_dscp)
 	return number
 
-# Prefix
-class FlowDestination (IPrefix):
+# Protocol Shared
+
+class FlowDestination (object):
 	ID = 0x01
 	NAME = 'destination'
 
-# Prefix
-class FlowSource (IPrefix):
+class FlowSource (object):
 	ID = 0x02
 	NAME = 'source'
 
+# Prefix
+class Flow4Destination (IPrefix4,FlowDestination):
+	pass
+
+# Prefix
+class Flow4Source (IPrefix4,FlowSource):
+	pass
+
 # NumericOperator
-class FlowIPProtocol (IOperationByte,NumericString):
+class FlowIP4Protocol (IOperationByte,NumericString):
 	ID  = 0x03
 	NAME = 'protocol'
 	converter = staticmethod(converter(NamedProtocol,Protocol))
@@ -303,7 +315,7 @@ for content in dir():
 		elif issubclass(klass, NumericString):
 			decode[ID] = 'numeric'
 		else:
-			raise RuntimeError('invliad class defined (string)')
+			raise RuntimeError('invalid class defined (string)')
 	elif issubclass(klass, IPrefix):
 		decode[ID] = 'prefix'
 	else:
@@ -320,7 +332,7 @@ def _unique ():
 unique = _unique()
 
 class FlowNLRI (Address):
-	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ipv4):
+	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ip):
 		Address.__init__(self,afi,safi)
 		self.rules = {}
 		self.action = OUT.announce

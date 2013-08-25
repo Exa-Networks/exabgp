@@ -56,8 +56,8 @@ class SAFI (int):
 	mpls_vpn = 128              # [RFC4364]
 #	mcast_bgp_mpls_vpn = 129    # [RFC2547]
 #	rt = 132                    # [RFC4684]
-	flow_ipv4 = 133             # [RFC5575]
-	flow_vpnv4 = 134            # [RFC5575]
+	flow_ip = 133               # [RFC5575]
+	flow_vpn = 134              # [RFC5575]
 #
 #	vpn_ad = 140                # [draft-ietf-l3vpn-bgpvpn-auto]
 #
@@ -84,7 +84,7 @@ class SAFI (int):
 		return self in (self.nlri_mpls,self.mpls_vpn)
 
 	def has_rd (self):
-		return self in (self.mpls_vpn,self.flow_vpnv4)
+		return self in (self.mpls_vpn,self.flow_vpn)
 
 
 def known_families ():
@@ -94,7 +94,7 @@ def known_families ():
 	families.append((AFI(AFI.ipv4),SAFI(SAFI.multicast)))
 	families.append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
 	families.append((AFI(AFI.ipv4),SAFI(SAFI.mpls_vpn)))
-	families.append((AFI(AFI.ipv4),SAFI(SAFI.flow_ipv4)))
+	families.append((AFI(AFI.ipv4),SAFI(SAFI.flow_ip)))
 	families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
 	families.append((AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)))
 	return families
