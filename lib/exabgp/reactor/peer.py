@@ -362,7 +362,7 @@ class Peer (object):
 				# XXX: In the main loop we do exit on this kind of error
 				raise Notify(6,0,'ExaBGP Internal error, sorry.')
 
-		send_eor = False
+		send_eor = True
 		new_routes = None
 
 		counter = Counter(self.logger,self._log(direction))
@@ -406,7 +406,6 @@ class Peer (object):
 							count -= 1
 					except StopIteration:
 						new_routes = None
-						send_eor = True
 
 				elif send_eor:
 					send_eor = False
