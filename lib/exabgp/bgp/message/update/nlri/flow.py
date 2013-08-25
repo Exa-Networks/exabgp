@@ -320,13 +320,11 @@ def _unique ():
 unique = _unique()
 
 class FlowNLRI (Address):
-	# conform to the API used in UPDATE
-	nexthop = None
-
 	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ipv4):
 		Address.__init__(self,afi,safi)
 		self.rules = {}
 		self.action = OUT.announce
+		self.nexthop = None
 
 	def __len__ (self):
 		return len(self.pack())
@@ -375,7 +373,7 @@ class FlowNLRI (Address):
 					s.append(' ')
 				s.append(rule)
 			string.append('%s %s' % (rules[0].NAME,''.join(str(_) for _ in s)))
-		return ' '.join(string)
+		return 'flow ' + ' '.join(string)
 
 	def __str__ (self):
 		return self.extensive()

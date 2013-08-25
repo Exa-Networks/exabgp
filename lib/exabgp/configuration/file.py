@@ -41,7 +41,7 @@ from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
-from exabgp.bgp.message.update.attribute.communities import Community,cachedCommunity,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_FlowRedirectASN,to_FlowRedirectIP
+from exabgp.bgp.message.update.attribute.communities import Community,cachedCommunity,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_FlowRedirectVRFASN,to_FlowRedirectVRFIP
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
@@ -2038,7 +2038,7 @@ class Configuration (object):
 				number = int(suffix)
 				if number >= pow(2,16):
 					raise ValueError('number is too large, max 16 bits %s' % number)
-				scope[-1]['route'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirectIP(ipn,number))
+				scope[-1]['route'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirectVRFIP(ipn,number))
 				return True
 			else:
 				asn = int(prefix)
@@ -2047,7 +2047,7 @@ class Configuration (object):
 					raise ValueError('asn is a 32 bits number, it can only be 16 bit %s' % route_target)
 				if route_target >= pow(2,32):
 					raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
-				scope[-1]['route'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirectASN(asn,route_target))
+				scope[-1]['route'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirectVRFASN(asn,route_target))
 				return True
 		except ValueError:
 			self._error = self._str_route_error

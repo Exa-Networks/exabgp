@@ -173,26 +173,41 @@ class ECommunity (object):
 			if community_type in (0x00,0x02):
 				asn = unpack('!H',self.community[2:4])[0]
 				ip = ip = '%s.%s.%s.%s' % unpack('!BBBB',self.community[4:])
-				return "target:%d:%s" % (asn,ip)
+				return "extended-community target:%d:%s" % (asn,ip)
 			if community_type == 0x01:
 				ip = '%s.%s.%s.%s' % unpack('!BBBB',self.community[2:6])
 				asn = unpack('!H',self.community[6:])[0]
-				return "target:%s:%d" % (ip,asn)
+				return "extended-community target:%s:%d" % (ip,asn)
 		# Origin
 		if community_stype == 0x03:
 			if community_type in (0x00,0x02):
 				asn = unpack('!H',self.community[2:4])[0]
 				ip = unpack('!L',self.community[4:])[0]
-				return "origin:%d:%s" % (asn,ip)
+				return "extended-community origin:%d:%s" % (asn,ip)
 			if community_type == 0x01:
 				ip = '%s.%s.%s.%s' % unpack('!BBBB',self.community[2:6])
 				asn = unpack('!H',self.community[6:])[0]
-				return "origin:%s:%d" % (ip,asn)
-		h = 0x00
-		for byte in self.community:
-			h <<= 8
-			h += ord(byte)
-		return "0x%016X" % h
+				return "extended-community origin:%s:%d" % (ip,asn)
+
+		# Traffic rate
+		if self.community.startswith('\x80\x06'):
+			speed = unpack('!f',self.community[4:])[0]
+			if speed == 0.0:
+				return 'discard'
+			return 'rate-limit %d' % speed
+		# redirect
+		elif self.community.startswith('\x80\x08'):
+			return 'redirect %d:%d' % (unpack('!H',self.community[2:4])[0],unpack('!L',self.community[4:])[0])
+		elif self.community.startswith('\x80\x09'):
+			return 'mark-dscp %d' % ord(self.community[-1])
+		elif self.community.startswith():
+			pass
+		else:
+			h = 0x00
+			for byte in self.community:
+				h <<= 8
+				h += ord(byte)
+			return "0x%016X" % h
 
 	def __len__ (self):
 		return 8
@@ -222,11 +237,20 @@ def _to_FlowCommunity (action,data):
 def to_FlowTrafficRate (asn,rate):
 	return _to_FlowCommunity (0x8006,pack('!H',asn) + pack('!f',rate))
 
-def to_FlowRedirectASN (asn,number):
+def to_FlowTrafficAction (asn,sample,terminal):
+	number = 0
+	if terminal: number += 0x1
+	if sample: number += 0x2
+	return _to_FlowCommunity (0x8007,'\x00\x00\x00\x00\x00' + chr(number))
+
+def to_FlowRedirectVRFASN (asn,number):
 	return _to_FlowCommunity (0x8008,pack('!H',asn) + pack('!L',number))
 
-def to_FlowRedirectIP (ip,number):
+def to_FlowRedirectVRFIP (ip,number):
 	return _to_FlowCommunity (0x8008,pack('!L',ip) + pack('!H',number))
+
+def to_FlowTrafficMark (ip,dscp):
+	return _to_FlowCommunity (0x8009,'\x00\x00\x00\x00\x00' + chr(dscp))
 
 def to_RouteOriginCommunity (asn,number,hightype=0x01):
 	return ECommunity(chr(hightype) + chr(0x03) + pack('!H',asn) + pack('!L',number))
@@ -239,22 +263,6 @@ def to_RouteTargetCommunity_00 (asn,number):
 def to_RouteTargetCommunity_01 (ipn,number):
 	return ECommunity(chr(0x01) + chr(0x02) + pack('!L',ipn) + pack('!H',number))
 
-#def to_FlowAction (sample,terminal):
-#	bitmask = chr(0)
-#	if terminal: bitmask += 0x01
-#	if sample: bitmask += 0x02
-#	return _to_FlowCommunity (0x8007,chr(0)*5+bitmask)
-#
-## take a string representing a 6 bytes long hexacedimal number like "0x123456789ABC"
-#def to_FlowRedirect (bitmask):
-#	route_target = ''
-#	for p in range(2,14,2): # 2,4,6,8,10,12
-#		route_target += chr(int(bitmask[p:p+2],16))
-#	return _to_FlowCommunity (0x8008,route_target)
-#
-#def to_FlowMark (dscp):
-#	return _to_FlowCommunity (0x8009,chr(0)*5 + chr(dscp))
-#
 #def to_ASCommunity (subtype,asn,data,transitive):
 #	r = chr(0x00)
 #	if transitive: r += chr(0x40)
