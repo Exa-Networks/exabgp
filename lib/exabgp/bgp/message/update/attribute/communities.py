@@ -200,8 +200,10 @@ class ECommunity (object):
 			return 'redirect %d:%d' % (unpack('!H',self.community[2:4])[0],unpack('!L',self.community[4:])[0])
 		elif self.community.startswith('\x80\x09'):
 			return 'mark-dscp %d' % ord(self.community[-1])
-		elif self.community.startswith():
-			pass
+		elif self.community.startswith('\x80\x00'):
+			if self.community[-1] == '\x00':
+				return 'redirect-to-nexthop'
+			return 'copy-to-nexthop'
 		else:
 			h = 0x00
 			for byte in self.community:
@@ -242,6 +244,10 @@ def to_FlowTrafficAction (asn,sample,terminal):
 	if terminal: number += 0x1
 	if sample: number += 0x2
 	return _to_FlowCommunity (0x8007,'\x00\x00\x00\x00\x00' + chr(number))
+
+def to_FlowRedirect (copy):
+	payload = '\x00\x00\x00\x00\x00\x01' if copy else '\x00\x00\x00\x00\x00\x00'
+	return _to_FlowCommunity (0x8000,payload)
 
 def to_FlowRedirectVRFASN (asn,number):
 	return _to_FlowCommunity (0x8008,pack('!H',asn) + pack('!L',number))

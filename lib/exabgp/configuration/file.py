@@ -41,7 +41,7 @@ from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
-from exabgp.bgp.message.update.attribute.communities import Community,cachedCommunity,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_FlowRedirectVRFASN,to_FlowRedirectVRFIP
+from exabgp.bgp.message.update.attribute.communities import Community,cachedCommunity,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_FlowRedirectVRFASN,to_FlowRedirectVRFIP,to_FlowRedirect
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
@@ -139,13 +139,15 @@ class Configuration (object):
 	'             destination-port =80 =3128 >8080&<8088;\n' \
 	'             protocol [ udp tcp ];\n' \
 	'             fragment [ not-a-fragment dont-fragment is-fragment first-fragment last-fragment ];\n' \
-	'             packet-length >200&<300 >400&<500;'
+	'             packet-length >200&<300 >400&<500;\n' \
 	'          }\n' \
 	'          then {\n' \
 	'             discard;\n' \
 	'             rate-limit 9600;\n' \
 	'             redirect 30740:12345;\n' \
 	'             redirect 1.2.3.4:5678;\n' \
+	'             redirect 1.2.3.4;\n' \
+	'             copy 1.2.3.4;\n' \
 	'          }\n' \
 	'        }\n\n' \
 	'one or more match term, one action\n' \
@@ -486,6 +488,7 @@ class Configuration (object):
 			if command == 'discard': return self._flow_route_discard(scope,tokens[1:])
 			if command == 'rate-limit': return self._flow_route_rate_limit(scope,tokens[1:])
 			if command == 'redirect': return self._flow_route_redirect(scope,tokens[1:])
+			if command == 'copy': return self._flow_route_copy(scope,tokens[1:])
 
 			if command == 'community': return self._route_community(scope,tokens[1:])
 			if command == 'extended-community': return self._route_extended_community(scope,tokens[1:])
@@ -1849,7 +1852,7 @@ class Configuration (object):
 		self._flow_state = 'out'
 
 		while True:
-			r = self._dispatch(scope,'flow-then',[],['discard','rate-limit','redirect','community'])
+			r = self._dispatch(scope,'flow-then',[],['discard','rate-limit','redirect','copy','community'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -2026,29 +2029,65 @@ class Configuration (object):
 	def _flow_route_redirect (self,scope,tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
-			prefix,suffix=tokens[0].split(':',1)
-			if prefix.count('.'):
-				ip = prefix.split('.')
-				if len(ip) != 4:
-					raise ValueError('invalid IP %s' % prefix)
-				ipn = 0
-				while ip:
-					ipn <<= 8
-					ipn += int(ip.pop(0))
-				number = int(suffix)
-				if number >= pow(2,16):
-					raise ValueError('number is too large, max 16 bits %s' % number)
-				scope[-1]['route'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirectVRFIP(ipn,number))
-				return True
+			if tokens[0].count(':') == 1:
+				prefix,suffix=tokens[0].split(':',1)
+				if prefix.count('.'):
+					ip = prefix.split('.')
+					if len(ip) != 4:
+						raise ValueError('invalid IP %s' % prefix)
+					ipn = 0
+					while ip:
+						ipn <<= 8
+						ipn += int(ip.pop(0))
+					number = int(suffix)
+					if number >= pow(2,16):
+						raise ValueError('number is too large, max 16 bits %s' % number)
+					scope[-1]['route'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirectVRFIP(ipn,number))
+					return True
+				else:
+					asn = int(prefix)
+					route_target = int(suffix)
+					if asn >= pow(2,16):
+						raise ValueError('asn is a 32 bits number, it can only be 16 bit %s' % route_target)
+					if route_target >= pow(2,32):
+						raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
+					scope[-1]['route'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirectVRFASN(asn,route_target))
+					return True
 			else:
-				asn = int(prefix)
-				route_target = int(suffix)
-				if asn >= pow(2,16):
-					raise ValueError('asn is a 32 bits number, it can only be 16 bit %s' % route_target)
-				if route_target >= pow(2,32):
-					raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
-				scope[-1]['route'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirectVRFASN(asn,route_target))
+				if scope[-1]['route'][-1].attributes.has(AttributeID.NEXT_HOP):
+					self._error = self._str_flow_error
+					if self.debug: raise
+					return False
+
+				ip = tokens.pop(0)
+				nh = pton(ip)
+				change = scope[-1]['route'][-1]
+				change.nlri.nexthop = cachedNextHop(nh)
+				change.attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirect(False))
+				change.attributes.add(cachedNextHop(nh))
 				return True
+
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+
+	def _flow_route_copy (self,scope,tokens):
+		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
+		try:
+			if scope[-1]['route'][-1].attributes.has(AttributeID.NEXT_HOP):
+				self._error = self._str_flow_error
+				if self.debug: raise
+				return False
+
+			ip = tokens.pop(0)
+			nh = pton(ip)
+			change = scope[-1]['route'][-1]
+			change.nlri.nexthop = cachedNextHop(nh)
+			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirect(True))
+			change.attributes.add(cachedNextHop(nh))
+			return True
+
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise

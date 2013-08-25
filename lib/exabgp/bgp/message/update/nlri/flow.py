@@ -373,7 +373,8 @@ class FlowNLRI (Address):
 					s.append(' ')
 				s.append(rule)
 			string.append('%s %s' % (rules[0].NAME,''.join(str(_) for _ in s)))
-		return 'flow ' + ' '.join(string)
+		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
+		return 'flow ' + ' '.join(string) + nexthop
 
 	def __str__ (self):
 		return self.extensive()
