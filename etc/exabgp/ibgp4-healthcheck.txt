@@ -1,0 +1,18 @@
+neighbor 10.0.0.3 {
+        description "will announce a route to a service";
+        router-id 198.111.227.39;
+        local-address 10.0.0.2;
+        local-as 65533;
+        peer-as 65533;
+
+        # Check if the service is available to announce a route to
+        # it. Since the purpose is high availability, it is expected
+        # that another host is present with a similar
+        # configuration. IP address for the service is expected to be
+        # configured on the loopback interface. You can run the
+        # healthcheck process manually to check if it works as
+        # expected (-h flag will give you available options)
+        process service-nginx {
+                run etc/exabgp/processes/healthcheck.py -s --name nginx --cmd "curl --fail --verbose --max-time 2 http://localhost" --start-ip 0;
+        }
+}
