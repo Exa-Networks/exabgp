@@ -41,7 +41,7 @@ from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
-from exabgp.bgp.message.update.attribute.communities import Community,cachedCommunity,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_FlowRedirectVRFASN,to_FlowRedirectVRFIP,to_FlowRedirect
+from exabgp.bgp.message.update.attribute.communities import Community,cachedCommunity,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_FlowRedirectVRFASN,to_FlowRedirectVRFIP,to_FlowRedirect,to_FlowTrafficMark
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
@@ -148,6 +148,7 @@ class Configuration (object):
 	'             redirect 1.2.3.4:5678;\n' \
 	'             redirect 1.2.3.4;\n' \
 	'             copy 1.2.3.4;\n' \
+	'             mark 123;\n' \
 	'          }\n' \
 	'        }\n\n' \
 	'one or more match term, one action\n' \
@@ -489,6 +490,7 @@ class Configuration (object):
 			if command == 'rate-limit': return self._flow_route_rate_limit(scope,tokens[1:])
 			if command == 'redirect': return self._flow_route_redirect(scope,tokens[1:])
 			if command == 'copy': return self._flow_route_copy(scope,tokens[1:])
+			if command == 'mark': return self._flow_route_mark(scope,tokens[1:])
 
 			if command == 'community': return self._route_community(scope,tokens[1:])
 			if command == 'extended-community': return self._route_extended_community(scope,tokens[1:])
@@ -1852,7 +1854,7 @@ class Configuration (object):
 		self._flow_state = 'out'
 
 		while True:
-			r = self._dispatch(scope,'flow-then',[],['discard','rate-limit','redirect','copy','community'])
+			r = self._dispatch(scope,'flow-then',[],['discard','rate-limit','redirect','copy','mark','community'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -2089,7 +2091,26 @@ class Configuration (object):
 			return True
 
 		except ValueError:
-			self._error = self._str_route_error
+			self._error = self._str_flow_error
+			if self.debug: raise
+			return False
+
+	def _flow_route_mark (self,scope,tokens):
+		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
+		try:
+			dscp = int(tokens.pop(0))
+
+			if dscp < 0 or dscp > 0b111111:
+				self._error = self._str_flow_error
+				if self.debug: raise
+				return False
+
+			change = scope[-1]['route'][-1]
+			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowTrafficMark(dscp))
+			return True
+
+		except ValueError:
+			self._error = self._str_flow_error
 			if self.debug: raise
 			return False
 

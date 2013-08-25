@@ -199,7 +199,7 @@ class ECommunity (object):
 		elif self.community.startswith('\x80\x08'):
 			return 'redirect %d:%d' % (unpack('!H',self.community[2:4])[0],unpack('!L',self.community[4:])[0])
 		elif self.community.startswith('\x80\x09'):
-			return 'mark-dscp %d' % ord(self.community[-1])
+			return 'mark %d' % ord(self.community[-1])
 		elif self.community.startswith('\x80\x00'):
 			if self.community[-1] == '\x00':
 				return 'redirect-to-nexthop'
@@ -255,7 +255,7 @@ def to_FlowRedirectVRFASN (asn,number):
 def to_FlowRedirectVRFIP (ip,number):
 	return _to_FlowCommunity (0x8008,pack('!L',ip) + pack('!H',number))
 
-def to_FlowTrafficMark (ip,dscp):
+def to_FlowTrafficMark (dscp):
 	return _to_FlowCommunity (0x8009,'\x00\x00\x00\x00\x00' + chr(dscp))
 
 def to_RouteOriginCommunity (asn,number,hightype=0x01):
