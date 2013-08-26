@@ -12,7 +12,7 @@ neighbor 10.0.0.3 {
 		# ipv4 nlri-mpls;
 		# ipv4 mpls-vpn;
 		# ipv6 unicast;
-		# ipv4 flow-vpnv4
+		# ipv4 flow-vpn
 		# ... or
 		# ipv4 flow;
 		all;

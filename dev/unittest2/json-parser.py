@@ -40,7 +40,7 @@ configuration = """
 				},
 				"capability": {
 					"family": {
-						"ipv4": ["unicast","multicast","nlri-mpls","mpls-vpn","flow-vpnv4","flow"],
+						"ipv4": ["unicast","multicast","nlri-mpls","mpls-vpn","flow-vpn","flow"],
 						"ipv6": ["unicast"],
 						"_ip": ["unicast","flow"],
 						"_alias": "all",

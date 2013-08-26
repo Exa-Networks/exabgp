@@ -172,8 +172,11 @@ class Configuration (object):
 	'          ipv4 multicast;\n' \
 	'          ipv4 nlri-mpls;\n' \
 	'          ipv4 mpls-vpn;\n' \
-	'          ipv4 flow-vpnv4;\n' \
+	'          ipv4 flow;\n' \
+	'          ipv4 flow-vpn;\n' \
 	'          ipv6 unicast;\n' \
+	'          ipv6 flow;\n' \
+	'          ipv6 flow-vpn;\n' \
 	'        }\n'
 
 	_str_capa_error = \

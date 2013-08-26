@@ -78,7 +78,7 @@ _definition = (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
 				)))),
 				('capability' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
 					('family' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
-						('ipv4' , (TYPE.array, PRESENCE.optional, '', ['unicast','multicast','nlri-mpls','mpls-vpn','flow-vpnv4','flow'])),
+						('ipv4' , (TYPE.array, PRESENCE.optional, '', ['unicast','multicast','nlri-mpls','mpls-vpn','flow-vpn','flow'])),
 						('ipv6' , (TYPE.array, PRESENCE.optional, '', ['unicast','flow'])),
 						('alias' , (TYPE.string, PRESENCE.optional, '', ['all','minimal'])),
 					)))),
