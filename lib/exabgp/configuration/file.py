@@ -437,6 +437,10 @@ class Configuration (object):
 				return False
 
 		if name == 'flow-route':
+			# if command == 'vpn':
+			# 	if self._flow_safi(scope,tokens[1:]):
+			# 		return True
+			# 	return False
 			if command == 'match':
 				if self._multi_match(scope,tokens[1:]):
 					return True
@@ -708,23 +712,28 @@ class Configuration (object):
 		return self._set_family_ipv6 (scope,tokens)
 
 	def _set_family_ipv6 (self,scope,tokens):
-		if self._family:
-			self._error = 'ipv6 can not be used with all or minimal'
+		try:
+			if self._family:
+				self._error = 'ipv6 can not be used with all or minimal'
+				if self.debug: raise
+				return False
+
+			safi = tokens.pop(0)
+			if safi == 'unicast':
+				scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+			elif safi == 'mpls-vpn':
+				scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)))
+			elif safi in ('flow'):
+				scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.flow_ip)))
+			elif safi == 'flow-vpn':
+				scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.flow_vpn)))
+			else:
+				return False
+			return True
+		except (IndexError,ValueError):
+			self._error = 'missing safi'
 			if self.debug: raise
 			return False
-
-		safi = tokens.pop(0)
-		if safi == 'unicast':
-			scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
-		elif safi == 'mpls-vpn':
-			scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)))
-		elif safi in ('flow'):
-			scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.flow_ip)))
-		elif safi == 'flow-vpn':
-			scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.flow_vpn)))
-		else:
-			return False
-		return True
 
 	def _set_family_minimal (self,scope,tokens):
 		if scope[-1]['families']:
@@ -822,9 +831,15 @@ class Configuration (object):
 	# route grouping with watchdog
 
 	def _route_watchdog (self,scope,tokens):
-		w = tokens.pop(0)
-		if w.lower() in ['announce','withdraw']:
-			raise ValueError('invalid watchdog name %s' % w)
+		try:
+			w = tokens.pop(0)
+			if w.lower() in ['announce','withdraw']:
+				raise ValueError('invalid watchdog name %s' % w)
+		except IndexError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+
 		try:
 			scope[-1]['route'][-1].attributes.add(Watchdog(w))
 			return True
@@ -1395,7 +1410,7 @@ class Configuration (object):
 
 			scope[-1]['route'][-1].attributes.add(UnknownAttribute(code,flag,raw))
 			return True
-		except ValueError:
+		except (IndexError,ValueError):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
@@ -1439,19 +1454,24 @@ class Configuration (object):
 			return False
 
 	def _route_origin (self,scope,tokens):
-		data = tokens.pop(0).lower()
-		if data == 'igp':
-			scope[-1]['route'][-1].attributes.add(Origin(Origin.IGP))
-			return True
-		if data == 'egp':
-			scope[-1]['route'][-1].attributes.add(Origin(Origin.EGP))
-			return True
-		if data == 'incomplete':
-			scope[-1]['route'][-1].attributes.add(Origin(Origin.INCOMPLETE))
-			return True
-		self._error = self._str_route_error
-		if self.debug: raise
-		return False
+		try:
+			data = tokens.pop(0).lower()
+			if data == 'igp':
+				scope[-1]['route'][-1].attributes.add(Origin(Origin.IGP))
+				return True
+			if data == 'egp':
+				scope[-1]['route'][-1].attributes.add(Origin(Origin.EGP))
+				return True
+			if data == 'incomplete':
+				scope[-1]['route'][-1].attributes.add(Origin(Origin.INCOMPLETE))
+				return True
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+		except IndexError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
 
 	def _route_aspath (self,scope,tokens):
 		as_seq = []
@@ -1484,7 +1504,7 @@ class Configuration (object):
 					as_seq.append(self._newASN(asn))
 			else:
 				as_seq.append(self._newASN(asn))
-		except ValueError:
+		except (IndexError,ValueError):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
@@ -1495,7 +1515,7 @@ class Configuration (object):
 		try:
 			scope[-1]['route'][-1].attributes.add(MED(pack('!L',int(tokens.pop(0)))))
 			return True
-		except ValueError:
+		except (IndexError,ValueError):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
@@ -1504,7 +1524,7 @@ class Configuration (object):
 		try:
 			scope[-1]['route'][-1].attributes.add(LocalPreference(pack('!L',int(tokens.pop(0)))))
 			return True
-		except ValueError:
+		except (IndexError,ValueError):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
@@ -1811,6 +1831,14 @@ class Configuration (object):
 		scope[-1]['route'].append(flow)
 		return True
 
+	# def _flow_safi (self,scope,tokens):
+	# 	if len(tokens) > 1:
+	# 		self._error = self._str_flow_error
+	# 		if self.debug: raise
+	# 		return False
+
+	# 	rd = tokens.pop(0)
+
 	def _check_flow_route (self,scope):
 		self.logger.configuration('warning: no check on flows are implemented')
 		return True
@@ -1902,7 +1930,7 @@ class Configuration (object):
 					return False
 			return True
 
-		except ValueError:
+		except (IndexError,ValueError):
 			self._error = self._str_flow_error
 			if self.debug: raise
 			return False
@@ -1932,7 +1960,7 @@ class Configuration (object):
 					return False
 			return True
 
-		except ValueError:
+		except (IndexError,ValueError):
 			self._error = self._str_flow_error
 			if self.debug: raise
 			return False
@@ -1994,9 +2022,9 @@ class Configuration (object):
 
 	# parse [ content1 content2 content3 ]
 	def _flow_generic_list (self,scope,tokens,klass):
-		name = tokens.pop(0)
-		AND = BinaryOperator.NOP
 		try:
+			name = tokens.pop(0)
+			AND = BinaryOperator.NOP
 			if name == '[':
 				while True:
 					name = tokens.pop(0)
@@ -2012,7 +2040,7 @@ class Configuration (object):
 						return False
 			else:
 				scope[-1]['route'][-1].nlri.add(klass(NumericOperator.EQ|AND,klass.converter(name)))
-		except ValueError:
+		except (IndexError,ValueError):
 			self._error = self._str_flow_error
 			if self.debug: raise
 			return False
@@ -2129,7 +2157,7 @@ class Configuration (object):
 				change.attributes.add(cachedNextHop(nh))
 				return True
 
-		except ValueError:
+		except (IndexError,ValueError):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
@@ -2150,7 +2178,7 @@ class Configuration (object):
 			change.attributes.add(cachedNextHop(nh))
 			return True
 
-		except ValueError:
+		except (IndexError,ValueError):
 			self._error = self._str_flow_error
 			if self.debug: raise
 			return False
@@ -2168,24 +2196,29 @@ class Configuration (object):
 			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowTrafficMark(dscp))
 			return True
 
-		except ValueError:
+		except (IndexError,ValueError):
 			self._error = self._str_flow_error
 			if self.debug: raise
 			return False
 
 	def _flow_route_action (self,scope,tokens):
-		action = tokens.pop(0)
-		sample = 'sample' in action
-		terminal = 'terminal' in action
+		try:
+			action = tokens.pop(0)
+			sample = 'sample' in action
+			terminal = 'terminal' in action
 
-		if not sample and not terminal:
+			if not sample and not terminal:
+				self._error = self._str_flow_error
+				if self.debug: raise
+				return False
+
+			change = scope[-1]['route'][-1]
+			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowTrafficAction(sample,terminal))
+			return True
+		except (IndexError,ValueError):
 			self._error = self._str_flow_error
 			if self.debug: raise
 			return False
-
-		change = scope[-1]['route'][-1]
-		change.attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowTrafficAction(sample,terminal))
-		return True
 
 
 	def decode (self,update):
