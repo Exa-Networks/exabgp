@@ -9,7 +9,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from exabgp.bgp.message.notification import Notify
 
 from struct import unpack
-from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import AFI,SAFI
 from exabgp.bgp.message.update.nlri.bgp import NLRI,PathInfo,Labels,RouteDistinguisher,mask_to_bytes
 from exabgp.bgp.message.update.nlri.flow import FlowNLRI,decode,factory,CommonOperator
 from exabgp.bgp.message.update.attribute.nexthop import cachedNextHop
@@ -90,22 +90,33 @@ def _FlowNLRIFactory (afi,safi,bgp):
 	while bgp:
 		what,bgp = ord(bgp[0]),bgp[1:]
 
-		if what not in decode:
-			raise Notify(3,10,'unknown flowspec component received %d' % what)
+		if what not in decode.get(afi,{}):
+			raise Notify(3,10,'unknown flowspec component received for address family %d' % what)
 
 		seen.append(what)
 		if sorted(seen) != seen:
 			raise Notify(3,10,'components are not sent in the right order %s' % seen)
 
-		decoder = decode[what]
-		klass = factory[what]
+		decoder = decode[afi][what]
+		klass = factory[afi][what]
 
 		if decoder == 'prefix':
-			_,rd,mask,size,prefix,left = _nlrifactory(afi,safi,bgp)
-			adding = klass(prefix,mask)
-			nlri.add(adding)
-			logger.parser(LazyFormat("added flow %s (%s) payload " % (klass.NAME,adding),od,bgp[:-len(left)]))
-			bgp = left
+			if afi == AFI.ipv4:
+				_,rd,mask,size,prefix,left = _nlrifactory(afi,safi,bgp)
+				adding = klass(prefix,mask)
+				if not nlri.add(adding):
+					raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
+				logger.parser(LazyFormat("added flow %s (%s) payload " % (klass.NAME,adding),od,bgp[:-len(left)]))
+				bgp = left
+			else:
+				byte,bgp = bgp[1],bgp[0]+bgp[2:]
+				offset = ord(byte)
+				_,rd,mask,size,prefix,left = _nlrifactory(afi,safi,bgp)
+				adding = klass(prefix,mask,offset)
+				if not nlri.add(adding):
+					raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
+				logger.parser(LazyFormat("added flow %s (%s) payload " % (klass.NAME,adding),od,bgp[:-len(left)]))
+				bgp = left
 		else:
 			end = False
 			while not end:

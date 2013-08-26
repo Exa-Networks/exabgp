@@ -74,12 +74,26 @@ def _number (string):
 		value = (value << 8) + ord(c)
 	return value
 
+# def short (value):
+# 	return (ord(value[0]) << 8) + ord(value[1])
+
 # Interface ..................
 
-class IPrefix (IComponent):
+class IPv4 (object):
+	afi = AFI.ipv4
+
+class IPv6 (object):
+	afi = AFI.ipv6
+
+class IPrefix (object):
+	pass
+
+# Prococol
+
+class IPrefix4 (IPrefix,IComponent,IPv4):
 	# not used, just present for simplying the nlri generation
 	operations = 0x0
-	NAME = None
+	# NAME
 
 	def __init__ (self,raw,netmask):
 		self.nlri = Prefix(self.afi,SAFI.flow_ip,raw,netmask)
@@ -91,9 +105,21 @@ class IPrefix (IComponent):
 	def __str__ (self):
 		return str(self.nlri)
 
-class IPrefix4 (IPrefix):
-	afi = AFI.ipv4
+class IPrefix6 (IPrefix,IComponent,IPv6):
+	# not used, just present for simplying the nlri generation
+	operations = 0x0
+	# NAME
 
+	def __init__ (self,raw,netmask,offset):
+		self.nlri = Prefix(self.afi,SAFI.flow_ip,raw,netmask)
+		self.offset = offset
+
+	def pack (self):
+		raw = self.nlri.packed_ip()
+		return "%s%s%s%s" % (chr(self.ID),chr(self.nlri.mask),chr(self.offset),raw)
+
+	def __str__ (self):
+		return "%s/%s" % (self.nlri,self.offset)
 
 
 class IOperation (IComponent):
@@ -185,22 +211,36 @@ def decoder (function,klass=int):
 def PacketLength (data):
 	_str_bad_length = "cloudflare already found that invalid max-packet length for for you .."
 	number = int(data)
-	if number > 65535:
+	if number > 0xFFFF:
 		raise ValueError(_str_bad_length)
 	return number
 
 def PortValue (data):
 	_str_bad_port = "you tried to set an invalid port number .."
 	number = int(data)
-	if number < 0 or number > 65535:
+	if number < 0 or number > 0xFFFF:
 		raise ValueError(_str_bad_port)
 	return number
 
 def DSCPValue (data):
 	_str_bad_dscp = "you tried to filter a flow using an invalid dscp for a component .."
 	number = int(data)
-	if number < 0 or number > 65535:
+	if number < 0 or number > 0xFFFF:
 		raise ValueError(_str_bad_dscp)
+	return number
+
+def ClassValue (data):
+	_str_bad_class = "you tried to filter a flow using an invalid traffic class for a component .."
+	number = int(data)
+	if number < 0 or number > 0xFFFF:
+		raise ValueError(_str_bad_class)
+	return number
+
+def LabelValue (data):
+	_str_bad_label = "you tried to filter a flow using an invalid traffic label for a component .."
+	number = int(data)
+	if number < 0 or number > 0xFFFFF:  # 20 bits 5 bytes
+		raise ValueError(_str_bad_label)
 	return number
 
 # Protocol Shared
@@ -221,81 +261,101 @@ class Flow4Destination (IPrefix4,FlowDestination):
 class Flow4Source (IPrefix4,FlowSource):
 	pass
 
-# NumericOperator
-class FlowIP4Protocol (IOperationByte,NumericString):
+# Prefix
+class Flow6Destination (IPrefix6,FlowDestination):
+	pass
+
+# Prefix
+class Flow6Source (IPrefix6,FlowSource):
+	pass
+
+class FlowIPProtocol (IOperationByte,NumericString,IPv4):
 	ID  = 0x03
 	NAME = 'protocol'
 	converter = staticmethod(converter(NamedProtocol,Protocol))
 	decoder = staticmethod(decoder(ord,Protocol))
 
-# NumericOperator
-class FlowAnyPort (IOperationByteShort,NumericString):
+class FlowNextHeader (IOperationByte,NumericString,IPv6):
+	ID  = 0x03
+	NAME = 'next-header'
+	converter = staticmethod(converter(NamedProtocol,Protocol))
+	decoder = staticmethod(decoder(ord,Protocol))
+
+class FlowAnyPort (IOperationByteShort,NumericString,IPv4,IPv6):
 	ID  = 0x04
 	NAME = 'port'
 	converter = staticmethod(converter(PortValue))
 	decoder = staticmethod(_number)
 
-# NumericOperator
-class FlowDestinationPort (IOperationByteShort,NumericString):
+class FlowDestinationPort (IOperationByteShort,NumericString,IPv4,IPv6):
 	ID  = 0x05
 	NAME = 'destination-port'
 	converter = staticmethod(converter(PortValue))
 	decoder = staticmethod(_number)
 
-# NumericOperator
-class FlowSourcePort (IOperationByteShort,NumericString):
+class FlowSourcePort (IOperationByteShort,NumericString,IPv4,IPv6):
 	ID  = 0x06
 	NAME = 'source-port'
 	converter = staticmethod(converter(PortValue))
 	decoder = staticmethod(_number)
 
-# BinaryOperator
-class FlowICMPType (IOperationByte,BinaryString):
+class FlowICMPType (IOperationByte,BinaryString,IPv4,IPv6):
 	ID = 0x07
 	NAME = 'icmp-type'
 	converter = staticmethod(converter(NamedICMPType))
 	decoder = staticmethod(decoder(_number,ICMPType))
 
-# BinaryOperator
-class FlowICMPCode (IOperationByte,BinaryString):
+class FlowICMPCode (IOperationByte,BinaryString,IPv4,IPv6):
 	ID = 0x08
 	NAME = 'icmp-code'
 	converter = staticmethod(converter(NamedICMPCode))
 	decoder = staticmethod(decoder(_number,ICMPCode))
 
-# BinaryOperator
-class FlowTCPFlag (IOperationByte,BinaryString):
+class FlowTCPFlag (IOperationByte,BinaryString,IPv4,IPv6):
 	ID = 0x09
 	NAME = 'tcp-flags'
 	converter = staticmethod(converter(NamedTCPFlag))
 	decoder = staticmethod(decoder(ord,TCPFlag))
 
-# NumericOperator
-class FlowPacketLength (IOperationByteShort,NumericString):
+class FlowPacketLength (IOperationByteShort,NumericString,IPv4,IPv6):
 	ID = 0x0A
 	NAME = 'packet-length'
 	converter = staticmethod(converter(PacketLength))
 	decoder = staticmethod(_number)
 
-# NumericOperator
 # RFC2474
-class FlowDSCP (IOperationByteShort,NumericString):
+class FlowDSCP (IOperationByteShort,NumericString,IPv4):
 	ID = 0x0B
 	NAME = 'dscp'
 	converter = staticmethod(converter(DSCPValue))
 	decoder = staticmethod(_number)
 
+# RFC2460
+class FlowTrafficClass (IOperationByte,NumericString,IPv6):
+	ID = 0x0B
+	NAME = 'traffic-class'
+	converter = staticmethod(converter(ClassValue))
+	decoder = staticmethod(_number)
+
 # BinaryOperator
-class FlowFragment (IOperationByteShort,NumericString):
+class FlowFragment (IOperationByteShort,NumericString,IPv4):
 	ID = 0x0C
 	NAME = 'fragment'
 	converter = staticmethod(converter(NamedFragment))
 	decoder = staticmethod(decoder(ord,Fragment))
 
+# draft-raszuk-idr-flow-spec-v6-01
+class FlowFlowLabel (IOperationByteShort,NumericString,IPv6):
+	ID = 0x0D
+	NAME = 'flow-label'
+	converter = staticmethod(converter(LabelValue))
+	decoder = staticmethod(_number)
+
+
 # ..........................................................
 
-decode = {}
-factory = {}
+decode = {AFI.ipv4: {}, AFI.ipv6: {}}
+factory = {AFI.ipv4: {}, AFI.ipv6: {}}
 
 for content in dir():
 	klass = globals().get(content,None)
@@ -303,21 +363,27 @@ for content in dir():
 		continue
 	if not issubclass(klass,IComponent):
 		continue
+	if issubclass(klass,IPv4):
+		afi = AFI.ipv4
+	elif issubclass(klass,IPv6):
+		afi = AFI.ipv6
+	else:
+		continue
 	ID = getattr(klass,'ID',None)
 	if not ID:
 		continue
-	factory[ID] = klass
+	factory[afi][ID] = klass
 	name = getattr(klass,'NAME')
 
 	if issubclass(klass, IOperation):
 		if issubclass(klass, BinaryString):
-			decode[ID] = 'binary'
+			decode[afi][ID] = 'binary'
 		elif issubclass(klass, NumericString):
-			decode[ID] = 'numeric'
+			decode[afi][ID] = 'numeric'
 		else:
 			raise RuntimeError('invalid class defined (string)')
 	elif issubclass(klass, IPrefix):
-		decode[ID] = 'prefix'
+		decode[afi][ID] = 'prefix'
 	else:
 		raise RuntimeError('unvalid class defined (type)')
 
@@ -343,8 +409,16 @@ class FlowNLRI (Address):
 
 	def add (self,rule):
 		ID = rule.ID
-		if ID in self.rules and ID in (FlowDestination.ID,FlowSource.ID):
-			return False
+		if ID in (FlowDestination.ID,FlowSource.ID):
+			if ID in self.rules:
+				return False
+			if ID == FlowDestination.ID:
+				pair = self.rules.get(FlowSource.ID,[])
+			else:
+				pair = self.rules.get(FlowDestination.ID,[])
+			if pair:
+				if rule.afi != pair[0].afi:
+					return False
 		self.rules.setdefault(ID,[]).append(rule)
 		return True
 
@@ -378,9 +452,11 @@ class FlowNLRI (Address):
 
 	def extensive (self):
 		string = []
-		for rules in self.rules.itervalues():
+		for index in sorted(self.rules):
+			rules = self.rules[index]
 			s = []
 			for idx,rule in enumerate(rules):
+				# only add ' ' after the first element
 				if idx and not rule.operations & NumericOperator.AND:
 					s.append(' ')
 				s.append(rule)

@@ -31,7 +31,7 @@ from exabgp.bgp.message.open.routerid import RouterID
 
 from exabgp.bgp.message.update.nlri.prefix import Prefix
 from exabgp.bgp.message.update.nlri.bgp import NLRI,PathInfo,Labels,RouteDistinguisher
-from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,FlowNLRI,Flow4Source,Flow4Destination,FlowSourcePort,FlowDestinationPort,FlowAnyPort,FlowIP4Protocol,FlowTCPFlag,FlowFragment,FlowPacketLength,FlowICMPType,FlowICMPCode,FlowDSCP
+from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,FlowNLRI,Flow4Source,Flow4Destination,Flow6Source,Flow6Destination,FlowSourcePort,FlowDestinationPort,FlowAnyPort,FlowIPProtocol,FlowNextHeader,FlowTCPFlag,FlowFragment,FlowPacketLength,FlowICMPType,FlowICMPCode,FlowDSCP,FlowTrafficClass,FlowFlowLabel
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute.origin import Origin
@@ -133,13 +133,16 @@ class Configuration (object):
 	'syntax: flow {\n' \
 	'          match {\n' \
 	'             source 10.0.0.0/24;\n' \
+	'             source ::1/128/0;\n' \
 	'             destination 10.0.1.0/24;\n' \
 	'             port 25;\n' \
 	'             source-port >1024\n' \
 	'             destination-port =80 =3128 >8080&<8088;\n' \
-	'             protocol [ udp tcp ];\n' \
-	'             fragment [ not-a-fragment dont-fragment is-fragment first-fragment last-fragment ];\n' \
+	'             protocol [ udp tcp ];  (ipv4 only)\n' \
+	'             next-header [ udp tcp ]; (ipv6 only)\n' \
+	'             fragment [ not-a-fragment dont-fragment is-fragment first-fragment last-fragment ]; (ipv4 only)\n' \
 	'             packet-length >200&<300 >400&<500;\n' \
+	'             flow-label >100&<2000; (ipv6 only)\n' \
 	'          }\n' \
 	'          then {\n' \
 	'             discard;\n' \
@@ -479,12 +482,15 @@ class Configuration (object):
 			if command == 'source-port': return self._flow_route_source_port(scope,tokens[1:])
 			if command == 'destination-port': return self._flow_route_destination_port(scope,tokens[1:])
 			if command == 'protocol': return self._flow_route_protocol(scope,tokens[1:])
+			if command == 'next-header': return self._flow_route_next_header(scope,tokens[1:])
 			if command == 'tcp-flags': return self._flow_route_tcp_flags(scope,tokens[1:])
 			if command == 'icmp-type': return self._flow_route_icmp_type(scope,tokens[1:])
 			if command == 'icmp-code': return self._flow_route_icmp_code(scope,tokens[1:])
 			if command == 'fragment': return self._flow_route_fragment(scope,tokens[1:])
 			if command == 'dscp': return self._flow_route_dscp(scope,tokens[1:])
+			if command == 'traffic-class': return self._flow_route_traffic_class(scope,tokens[1:])
 			if command == 'packet-length': return self._flow_route_packet_length(scope,tokens[1:])
+			if command == 'flow-label': return self._flow_route_flow_label(scope,tokens[1:])
 
 		elif name == 'flow-then':
 			if command == 'discard': return self._flow_route_discard(scope,tokens[1:])
@@ -686,13 +692,10 @@ class Configuration (object):
 			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
 		elif safi == 'mpls-vpn':
 			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.mpls_vpn)))
-		elif safi == 'flow-vpnv4':
+		elif safi in ('flow'):
 			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.flow_ip)))
-		elif safi == 'flow-vpnv6':
-			scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.flow_ip)))
-		elif safi in ('flow-vpn','flow'):
-			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.flow_ip)))
-			scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.flow_ip)))
+		elif safi == 'flow-vpn':
+			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.flow_vpn)))
 		else:
 			return False
 		return True
@@ -712,6 +715,10 @@ class Configuration (object):
 			scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
 		elif safi == 'mpls-vpn':
 			scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)))
+		elif safi in ('flow'):
+			scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.flow_ip)))
+		elif safi == 'flow-vpn':
+			scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.flow_vpn)))
 		else:
 			return False
 		return True
@@ -1842,7 +1849,7 @@ class Configuration (object):
 		self._flow_state = 'then'
 
 		while True:
-			r = self._dispatch(scope,'flow-match',[],['source','destination','port','source-port','destination-port','protocol','tcp-flags','icmp-type','icmp-code','fragment','dscp','packet-length'])
+			r = self._dispatch(scope,'flow-match',[],['source','destination','port','source-port','destination-port','protocol','next-header','tcp-flags','icmp-type','icmp-code','fragment','dscp','traffic-class','packet-length','flow-label'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -1870,33 +1877,63 @@ class Configuration (object):
 
 	def _flow_source (self,scope,tokens):
 		try:
-			ip,nm = tokens.pop(0).split('/')
-			raw = ''.join(chr(int(_)) for _ in ip.split('.'))
+			data = tokens.pop(0)
+			if data.count('/') == 1:
+				ip,netmask = data.split('/')
+				raw = ''.join(chr(int(_)) for _ in ip.split('.'))
+
+				if not scope[-1]['route'][-1].nlri.add(Flow4Source(raw,int(netmask))):
+					self._error = 'Flow can only have one destination'
+					if self.debug: raise ValueError(self._error)
+					return False
+
+			else:
+				ip,netmask,offset = data.split('/')
+				afi,safi,raw = inet(ip)
+				change = scope[-1]['route'][-1]
+				# XXX: This is ugly
+				change.nlri.afi = AFI(AFI.ipv6)
+				if not change.nlri.add(Flow6Source(raw,int(netmask),int(offset))):
+					self._error = 'Flow can only have one destination'
+					if self.debug: raise ValueError(self._error)
+					return False
+			return True
+
 		except ValueError:
 			self._error = self._str_flow_error
 			if self.debug: raise
 			return False
 
-		if not scope[-1]['route'][-1].nlri.add(Flow4Source(raw,int(nm))):
-			self._error = 'Flow can only have one destination'
-			if self.debug: raise ValueError(self._error)
-			return False
-		return True
 
 	def _flow_destination (self,scope,tokens):
 		try:
-			ip,nm = tokens.pop(0).split('/')
-			raw = ''.join(chr(int(_)) for _ in ip.split('.'))
+			data = tokens.pop(0)
+			if data.count('/') == 1:
+				ip,netmask = data.split('/')
+				raw = ''.join(chr(int(_)) for _ in ip.split('.'))
+
+				if not scope[-1]['route'][-1].nlri.add(Flow4Destination(raw,int(netmask))):
+					self._error = 'Flow can only have one destination'
+					if self.debug: raise ValueError(self._error)
+					return False
+
+			else:
+				ip,netmask,offset = data.split('/')
+				afi,safi,raw = inet(ip)
+				change = scope[-1]['route'][-1]
+				# XXX: This is ugly
+				change.nlri.afi = AFI(AFI.ipv6)
+				if not change.nlri.add(Flow6Destination(raw,int(netmask),int(offset))):
+					self._error = 'Flow can only have one destination'
+					if self.debug: raise ValueError(self._error)
+					return False
+			return True
+
 		except ValueError:
 			self._error = self._str_flow_error
 			if self.debug: raise
 			return False
 
-		if not scope[-1]['route'][-1].nlri.add(Flow4Destination(raw,int(nm))):
-			self._error = 'Flow can only have one destination'
-			if self.debug: raise ValueError(self._error)
-			return False
-		return True
 
 	# to parse the port configuration of flow
 
@@ -1935,7 +1972,9 @@ class Configuration (object):
 				while test:
 					operator,_ = self._operator(test)
 					value,test = self._value(_)
-					scope[-1]['route'][-1].nlri.add(klass(AND|operator,klass.converter(value)))
+					nlri = scope[-1]['route'][-1].nlri
+					# XXX : should do a check that the rule is valid for the family
+					nlri.add(klass(AND|operator,klass.converter(value)))
 					if test:
 						if test[0] == '&':
 							AND = BinaryOperator.AND
@@ -1961,7 +2000,9 @@ class Configuration (object):
 					if name == ']':
 						break
 					try:
-						scope[-1]['route'][-1].nlri.add(klass(NumericOperator.EQ|AND,klass.converter(name)))
+						nlri = scope[-1]['route'][-1].nlri
+						# XXX : should do a check that the rule is valid for the family
+						nlri.add(klass(NumericOperator.EQ|AND,klass.converter(name)))
 					except IndexError:
 						self._error = self._str_flow_error
 						if self.debug: raise
@@ -1995,7 +2036,10 @@ class Configuration (object):
 		return self._flow_generic_list(scope,tokens,FlowTCPFlag)
 
 	def _flow_route_protocol (self,scope,tokens):
-		return self._flow_generic_list(scope,tokens,FlowIP4Protocol)
+		return self._flow_generic_list(scope,tokens,FlowIPProtocol)
+
+	def _flow_route_next_header (self,scope,tokens):
+		return self._flow_generic_list(scope,tokens,FlowNextHeader)
 
 	def _flow_route_icmp_type (self,scope,tokens):
 		return self._flow_generic_list(scope,tokens,FlowICMPType)
@@ -2008,6 +2052,12 @@ class Configuration (object):
 
 	def _flow_route_dscp (self,scope,tokens):
 		return self._flow_generic_condition(scope,tokens,FlowDSCP)
+
+	def _flow_route_traffic_class (self,scope,tokens):
+		return self._flow_generic_condition(scope,tokens,FlowTrafficClass)
+
+	def _flow_route_flow_label (self,scope,tokens):
+		return self._flow_generic_condition(scope,tokens,FlowFlowLabel)
 
 	def _flow_route_discard (self,scope,tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route

@@ -95,6 +95,9 @@ def known_families ():
 	families.append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
 	families.append((AFI(AFI.ipv4),SAFI(SAFI.mpls_vpn)))
 	families.append((AFI(AFI.ipv4),SAFI(SAFI.flow_ip)))
+	families.append((AFI(AFI.ipv4),SAFI(SAFI.flow_vpn)))
 	families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
 	families.append((AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)))
+	families.append((AFI(AFI.ipv6),SAFI(SAFI.flow_ip)))
+	families.append((AFI(AFI.ipv6),SAFI(SAFI.flow_vpn)))
 	return families
