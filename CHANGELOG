@@ -12,6 +12,7 @@ Version 3.2.5
  * Improvement: add missing DCSP marking from RFC 5575 (flowspec)
  * Improvement: add missing traffic-action from RFC 5575 (flowspec)
  * Improvement: add support for draft-raszuk-idr-flow-spec-v6-01
+ * Improvement: complete RFC 5575 by providing support for flow-vpn
  * Fix: async connect issues
     reported by: Vincent Bernat (with very good advice for the patch)
  * Fix: bad function defintions

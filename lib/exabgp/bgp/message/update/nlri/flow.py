@@ -13,6 +13,7 @@ from exabgp.protocol.ip.address import Address
 from exabgp.bgp.message.direction import OUT
 from exabgp.bgp.message.update.nlri.prefix import Prefix
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.nlri.bgp import RouteDistinguisher
 
 from exabgp.protocol import Protocol,NamedProtocol
 from exabgp.protocol.ip.icmp import ICMPType,ICMPCode,NamedICMPType,NamedICMPCode
@@ -398,11 +399,12 @@ def _unique ():
 unique = _unique()
 
 class FlowNLRI (Address):
-	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ip):
+	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ip,rd=None):
 		Address.__init__(self,afi,safi)
 		self.rules = {}
 		self.action = OUT.announce
 		self.nexthop = None
+		self.rd = rd
 
 	def __len__ (self):
 		return len(self.pack())
@@ -440,6 +442,9 @@ class FlowNLRI (Address):
 
 		components = ''.join(ordered_rules)
 
+		if self.safi.has_rd():
+			components = self.rd.pack() + components
+
 		l = len(components)
 		if l < 0xF0:
 			data = "%s%s" % (chr(l),components)
@@ -448,6 +453,7 @@ class FlowNLRI (Address):
 		else:
 			raise Notify("rule too big for NLRI - how to handle this - does this work ?")
 			data = "%s" % chr(0)
+
 		return data
 
 	def extensive (self):
@@ -462,7 +468,8 @@ class FlowNLRI (Address):
 				s.append(rule)
 			string.append('%s %s' % (rules[0].NAME,''.join(str(_) for _ in s)))
 		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
-		return 'flow ' + ' '.join(string) + nexthop
+		rd = str(self.rd) if self.rd else ' '
+		return 'flow' + rd + ' ' + ' '.join(string) + nexthop
 
 	def __str__ (self):
 		return self.extensive()

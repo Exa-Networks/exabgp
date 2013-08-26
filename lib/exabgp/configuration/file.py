@@ -131,30 +131,33 @@ class Configuration (object):
 
 	_str_flow_error = \
 	'syntax: flow {\n' \
-	'          match {\n' \
-	'             source 10.0.0.0/24;\n' \
-	'             source ::1/128/0;\n' \
-	'             destination 10.0.1.0/24;\n' \
-	'             port 25;\n' \
-	'             source-port >1024\n' \
-	'             destination-port =80 =3128 >8080&<8088;\n' \
-	'             protocol [ udp tcp ];  (ipv4 only)\n' \
-	'             next-header [ udp tcp ]; (ipv6 only)\n' \
-	'             fragment [ not-a-fragment dont-fragment is-fragment first-fragment last-fragment ]; (ipv4 only)\n' \
-	'             packet-length >200&<300 >400&<500;\n' \
-	'             flow-label >100&<2000; (ipv6 only)\n' \
-	'          }\n' \
-	'          then {\n' \
-	'             discard;\n' \
-	'             rate-limit 9600;\n' \
-	'             redirect 30740:12345;\n' \
-	'             redirect 1.2.3.4:5678;\n' \
-	'             redirect 1.2.3.4;\n' \
-	'             copy 1.2.3.4;\n' \
-	'             mark 123;\n' \
-	'             action sample|terminal|sample-terminal;\n' \
-	'          }\n' \
-	'        }\n\n' \
+	'   route give-me-a-name\n' \
+	'      route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535; (optional)\n' \
+	'      match {\n' \
+	'         source 10.0.0.0/24;\n' \
+	'         source ::1/128/0;\n' \
+	'         destination 10.0.1.0/24;\n' \
+	'         port 25;\n' \
+	'         source-port >1024\n' \
+	'         destination-port =80 =3128 >8080&<8088;\n' \
+	'         protocol [ udp tcp ];  (ipv4 only)\n' \
+	'         next-header [ udp tcp ]; (ipv6 only)\n' \
+	'         fragment [ not-a-fragment dont-fragment is-fragment first-fragment last-fragment ]; (ipv4 only)\n' \
+	'         packet-length >200&<300 >400&<500;\n' \
+	'         flow-label >100&<2000; (ipv6 only)\n' \
+	'      }\n' \
+	'      then {\n' \
+	'         discard;\n' \
+	'         rate-limit 9600;\n' \
+	'         redirect 30740:12345;\n' \
+	'         redirect 1.2.3.4:5678;\n' \
+	'         redirect 1.2.3.4;\n' \
+	'         copy 1.2.3.4;\n' \
+	'         mark 123;\n' \
+	'         action sample|terminal|sample-terminal;\n' \
+	'      }\n' \
+	'   }\n' \
+	'}\n\n' \
 	'one or more match term, one action\n' \
 	'fragment code is totally untested\n' \
 
@@ -437,10 +440,6 @@ class Configuration (object):
 				return False
 
 		if name == 'flow-route':
-			# if command == 'vpn':
-			# 	if self._flow_safi(scope,tokens[1:]):
-			# 		return True
-			# 	return False
 			if command == 'match':
 				if self._multi_match(scope,tokens[1:]):
 					return True
@@ -473,7 +472,7 @@ class Configuration (object):
 			if command == 'cluster-list': return self._route_cluster_list(scope,tokens[1:])
 			if command == 'split': return self._route_split(scope,tokens[1:])
 			if command == 'label': return self._route_label(scope,tokens[1:])
-			if command in ('rd','route-distinguisher'): return self._route_rd(scope,tokens[1:])
+			if command in ('rd','route-distinguisher'): return self._route_rd(scope,tokens[1:],SAFI.mpls_vpn)
 			if command == 'watchdog': return self._route_watchdog(scope,tokens[1:])
 			# withdrawn is here to not break legacy code
 			if command in ('withdraw','withdrawn'): return self._route_withdraw(scope,tokens[1:])
@@ -481,6 +480,9 @@ class Configuration (object):
 			if command == 'community': return self._route_community(scope,tokens[1:])
 			if command == 'extended-community': return self._route_extended_community(scope,tokens[1:])
 			if command == 'attribute': self._route_generic_attribute(scope,tokens[1:])
+
+		elif name == 'flow-route':
+			if command in ('rd','route-distinguisher'): return self._route_rd(scope,tokens[1:],SAFI.flow_vpn)
 
 		elif name == 'flow-match':
 			if command == 'source': return self._flow_source(scope,tokens[1:])
@@ -1755,7 +1757,7 @@ class Configuration (object):
 		nlri.labels = Labels(labels)
 		return True
 
-	def _route_rd (self,scope,tokens):
+	def _route_rd (self,scope,tokens,safi):
 		try:
 			try:
 				data = tokens.pop(0)
@@ -1785,7 +1787,7 @@ class Configuration (object):
 
 			nlri = scope[-1]['route'][-1].nlri
 			# overwrite nlri-mpls
-			nlri.safi = SAFI(SAFI.mpls_vpn)
+			nlri.safi = SAFI(safi)
 			nlri.rd = RouteDistinguisher(rd)
 			return True
 		except ValueError:
@@ -1831,14 +1833,6 @@ class Configuration (object):
 		scope[-1]['route'].append(flow)
 		return True
 
-	# def _flow_safi (self,scope,tokens):
-	# 	if len(tokens) > 1:
-	# 		self._error = self._str_flow_error
-	# 		if self.debug: raise
-	# 		return False
-
-	# 	rd = tokens.pop(0)
-
 	def _check_flow_route (self,scope):
 		self.logger.configuration('warning: no check on flows are implemented')
 		return True
@@ -1853,7 +1847,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch(scope,'flow-route',['match','then'],[])
+			r = self._dispatch(scope,'flow-route',['match','then'],['rd','route-distinguisher'])
 			if r is False: return False
 			if r is None: break
 

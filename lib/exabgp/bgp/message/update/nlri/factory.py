@@ -68,9 +68,9 @@ def _nlrifactory (afi,safi,bgp):
 
 def _FlowNLRIFactory (afi,safi,bgp):
 	logger = Logger()
+	logger.parser(LazyFormat("parsing flow nlri payload ",od,bgp))
 
 	total = len(bgp)
-
 	length,bgp = ord(bgp[0]),bgp[1:]
 
 	if length & 0xF0 == 0xF0:  # bigger than 240
@@ -83,7 +83,9 @@ def _FlowNLRIFactory (afi,safi,bgp):
 	bgp = bgp[:length]
 	nlri = FlowNLRI(afi,safi)
 
-	logger.parser(LazyFormat("parsing flow nlri payload ",od,bgp))
+	if safi == SAFI.flow_vpn:
+		nlri.rd = RouteDistinguisher(bgp[:8])
+		bgp = bgp[8:]
 
 	seen = []
 
