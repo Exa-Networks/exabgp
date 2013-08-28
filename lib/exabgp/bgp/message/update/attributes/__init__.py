@@ -402,18 +402,30 @@ class Attributes (dict):
 				if safi in (SAFI.unicast,SAFI.multicast):
 					if len_nh != 4:
 						raise Notify(3,0,'invalid ipv4 unicast/multicast next-hop length %d expected 4' % len_nh)
-				if safi in (SAFI.mpls_vpn,):
+				elif safi in (SAFI.mpls_vpn,):
 					if len_nh != 12:
 						raise Notify(3,0,'invalid ipv4 mpls_vpn next-hop length %d expected 12' % len_nh)
 					rd = 8
+				elif safi in (SAFI.flow_ip,):
+					if len_nh not in (0,4):
+						raise Notify(3,0,'invalid ipv4 flow_ip next-hop length %d expected 4' % len_nh)
+				elif safi in (SAFI.flow_vpn,):
+					if len_nh not in (0,4):
+						raise Notify(3,0,'invalid ipv4 flow_vpn next-hop length %d expected 4' % len_nh)
 			elif afi == AFI.ipv6:
 				if safi in (SAFI.unicast,):
 					if len_nh not in (16,32):
 						raise Notify(3,0,'invalid ipv6 unicast next-hop length %d expected 16 or 32' % len_nh)
-				if safi in (SAFI.mpls_vpn,):
+				elif safi in (SAFI.mpls_vpn,):
 					if len_nh not in (24,40):
 						raise Notify(3,0,'invalid ipv6 mpls_vpn next-hop length %d expected 24 or 40' % len_nh)
 					rd = 8
+				elif safi in (SAFI.flow_ip,):
+					if len_nh not in (0,16,32):
+						raise Notify(3,0,'invalid ipv6 flow_ip next-hop length %d expected 0, 16 or 32' % len_nh)
+				elif safi in (SAFI.flow_vpn,):
+					if len_nh not in (0,16,32):
+						raise Notify(3,0,'invalid ipv6 flow_vpn next-hop length %d expected 0, 16 or 32' % len_nh)
 			size = len_nh - rd
 
 			# XXX: FIXME: GET IT FROM CACHE HERE ?
