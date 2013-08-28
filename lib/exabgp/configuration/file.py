@@ -133,6 +133,7 @@ class Configuration (object):
 	'syntax: flow {\n' \
 	'   route give-me-a-name\n' \
 	'      route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535; (optional)\n' \
+	'      next-hop 1.2.3.4; (to use with redirect-to-nexthop)\n' \
 	'      match {\n' \
 	'         source 10.0.0.0/24;\n' \
 	'         source ::1/128/0;\n' \
@@ -152,6 +153,7 @@ class Configuration (object):
 	'         redirect 30740:12345;\n' \
 	'         redirect 1.2.3.4:5678;\n' \
 	'         redirect 1.2.3.4;\n' \
+	'         redirect-next-hop;\n' \
 	'         copy 1.2.3.4;\n' \
 	'         mark 123;\n' \
 	'         action sample|terminal|sample-terminal;\n' \
@@ -483,6 +485,7 @@ class Configuration (object):
 
 		elif name == 'flow-route':
 			if command in ('rd','route-distinguisher'): return self._route_rd(scope,tokens[1:],SAFI.flow_vpn)
+			if command == 'next-hop': return self._flow_route_next_hop(scope,tokens[1:])
 
 		elif name == 'flow-match':
 			if command == 'source': return self._flow_source(scope,tokens[1:])
@@ -505,6 +508,7 @@ class Configuration (object):
 			if command == 'discard': return self._flow_route_discard(scope,tokens[1:])
 			if command == 'rate-limit': return self._flow_route_rate_limit(scope,tokens[1:])
 			if command == 'redirect': return self._flow_route_redirect(scope,tokens[1:])
+			if command == 'redirect-to-nexthop': return self._flow_route_redirect_next_hop(scope,tokens[1:])
 			if command == 'copy': return self._flow_route_copy(scope,tokens[1:])
 			if command == 'mark': return self._flow_route_mark(scope,tokens[1:])
 			if command == 'action': return self._flow_route_action(scope,tokens[1:])
@@ -1847,7 +1851,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch(scope,'flow-route',['match','then'],['rd','route-distinguisher'])
+			r = self._dispatch(scope,'flow-route',['match','then'],['rd','route-distinguisher','next-hop'])
 			if r is False: return False
 			if r is None: break
 
@@ -1893,7 +1897,7 @@ class Configuration (object):
 		self._flow_state = 'out'
 
 		while True:
-			r = self._dispatch(scope,'flow-then',[],['discard','rate-limit','redirect','copy','mark','action','community'])
+			r = self._dispatch(scope,'flow-then',[],['discard','rate-limit','redirect','copy','redirect-to-nexthop','mark','action','community'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -2084,6 +2088,26 @@ class Configuration (object):
 	def _flow_route_flow_label (self,scope,tokens):
 		return self._flow_generic_condition(scope,tokens,FlowFlowLabel)
 
+	def _flow_route_next_hop (self,scope,tokens):
+		try:
+			change = scope[-1]['route'][-1]
+
+			if change.nlri.nexthop:
+				self._error = self._str_flow_error
+				if self.debug: raise
+				return False
+
+			ip = tokens.pop(0)
+			nh = pton(ip)
+			change.nlri.nexthop = cachedNextHop(nh)
+			return True
+
+		except (IndexError,ValueError):
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+
+
 	def _flow_route_discard (self,scope,tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
@@ -2111,7 +2135,6 @@ class Configuration (object):
 			return False
 
 	def _flow_route_redirect (self,scope,tokens):
-		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
 			if tokens[0].count(':') == 1:
 				prefix,suffix=tokens[0].split(':',1)
@@ -2138,18 +2161,34 @@ class Configuration (object):
 					scope[-1]['route'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirectVRFASN(asn,route_target))
 					return True
 			else:
-				if scope[-1]['route'][-1].attributes.has(AttributeID.NEXT_HOP):
+				change = scope[-1]['route'][-1]
+				if change.nlri.nexthop:
 					self._error = self._str_flow_error
 					if self.debug: raise
 					return False
 
 				ip = tokens.pop(0)
 				nh = pton(ip)
-				change = scope[-1]['route'][-1]
 				change.nlri.nexthop = cachedNextHop(nh)
 				change.attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirect(False))
-				change.attributes.add(cachedNextHop(nh))
 				return True
+
+		except (IndexError,ValueError):
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+
+	def _flow_route_redirect_next_hop (self,scope,tokens):
+		try:
+			change = scope[-1]['route'][-1]
+
+			if not change.nlri.nexthop:
+				self._error = self._str_flow_error
+				if self.debug: raise
+				return False
+
+			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirect(False))
+			return True
 
 		except (IndexError,ValueError):
 			self._error = self._str_route_error
