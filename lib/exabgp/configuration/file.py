@@ -1354,7 +1354,7 @@ class Configuration (object):
 					continue
 				return False
 			if command in ('rd','route-distinguisher'):
-				if self._route_rd(scope,tokens):
+				if self._route_rd(scope,tokens,SAFI.mpls_vpn):
 					continue
 				return False
 			if command == 'watchdog':
