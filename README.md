@@ -106,8 +106,8 @@ This programs does not have any dependences on any third party libraries and wil
 Get it
 ------
 
-	> wget https://github.com/Thomas-Mangin/exabgp/archive/3.2.5.tgz
-	> tar zxvf 3.2.5.tgz
+	> wget https://github.com/Thomas-Mangin/exabgp/archive/3.2.5.tar.gz
+	> tar zxvf 3.2.5.tar.gz
 	> cd exabgp-3.2.5
 	> ./sbin/exabgp --help
 
