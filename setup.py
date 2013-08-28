@@ -53,7 +53,7 @@ setup(name='exabgp',
 	package_dir = {'': 'lib'},
 	packages=packages('lib'),
 	scripts=['sbin/exabgp',],
-	download_url='https://github.com/Thomas-Mangin/exabgp/archive/%s.zip' % version,
+	download_url='https://github.com/Thomas-Mangin/exabgp/archive/%s.tar.gz' % version,
 	data_files=[
 		('etc/exabgp',configuration('etc/exabgp')),
 		('usr/lib/systemd/system',configuration('etc/systemd')),
