@@ -406,7 +406,6 @@ class Attributes (dict):
 					if len_nh != 12:
 						raise Notify(3,0,'invalid ipv4 mpls_vpn next-hop length %d expected 12' % len_nh)
 					rd = 8
-				size = 4
 			elif afi == AFI.ipv6:
 				if safi in (SAFI.unicast,):
 					if len_nh not in (16,32):
@@ -415,13 +414,12 @@ class Attributes (dict):
 					if len_nh not in (24,40):
 						raise Notify(3,0,'invalid ipv6 mpls_vpn next-hop length %d expected 24 or 40' % len_nh)
 					rd = 8
-				size = 16
+			size = len_nh - rd
 
-			# XXX: FIXME: --------------------- MUST GET IT FROM CACHE
-			# -- Reading next-hop
+			# XXX: FIXME: GET IT FROM CACHE HERE ?
 			nh = data[offset+rd:offset+rd+size]
 
-			# chech the RD is well zeo
+			# chech the RD is well zero
 			if rd and sum([int(ord(_)) for _ in data[offset:8]]) != 0:
 				raise Notify(3,0,"MP_REACH_NLRI next-hop's route-distinguisher must be zero")
 

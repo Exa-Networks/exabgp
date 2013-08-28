@@ -19,7 +19,7 @@ from exabgp.logger import Logger,LazyFormat
 
 def NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
 	if safi in (133,134):
-		return _FlowNLRIFactory(afi,safi,bgp)
+		return _FlowNLRIFactory(afi,safi,nexthop,bgp)
 	else:
 		return _NLRIFactory(afi,safi,bgp,has_multiple_path,nexthop,action)
 
@@ -66,7 +66,7 @@ def _nlrifactory (afi,safi,bgp):
 
 	return labels,rd,mask,size,prefix,bgp
 
-def _FlowNLRIFactory (afi,safi,bgp):
+def _FlowNLRIFactory (afi,safi,nexthop,bgp):
 	logger = Logger()
 	logger.parser(LazyFormat("parsing flow nlri payload ",od,bgp))
 
@@ -82,6 +82,9 @@ def _FlowNLRIFactory (afi,safi,bgp):
 
 	bgp = bgp[:length]
 	nlri = FlowNLRI(afi,safi)
+
+	if nexthop:
+		nlri.nexthop = cachedNextHop(nexthop)
 
 	if safi == SAFI.flow_vpn:
 		nlri.rd = RouteDistinguisher(bgp[:8])

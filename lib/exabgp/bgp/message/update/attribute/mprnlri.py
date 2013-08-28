@@ -35,7 +35,7 @@ class MPRNLRI (Attribute):
 				else:
 					nexthop = nlri.nexthop.packed
 			else:
-				# EOR do not have any next_hop
+				# EOR fo not and Flow may not have any next_hop
 				nexthop = ''
 
 			# mpunli[afi,safi][nexthop] = nlri

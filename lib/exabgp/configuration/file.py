@@ -2208,7 +2208,6 @@ class Configuration (object):
 			change = scope[-1]['route'][-1]
 			change.nlri.nexthop = cachedNextHop(nh)
 			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirect(True))
-			change.attributes.add(cachedNextHop(nh))
 			return True
 
 		except (IndexError,ValueError):
@@ -2428,7 +2427,7 @@ class Configuration (object):
 						sys.exit(1)
 					else:
 						self.logger.parser('encoding is fine')
-
+						self.logger.parser('----------------------------------------')
 
 				except Notify,e:
 					print 'failed due to notification'
