@@ -8,7 +8,7 @@ Presentation
 
 Control your network using [BGP](http://www.ietf.org/rfc/rfc4271.txt) from any commodity servers and reap the benefit of software defined networking without [OpenFlow](http://www.wired.com/wiredenterprise/2012/04/going-with-the-flow-google/)
 
-The list of supported RFC is available [here](http://code.google.com/p/exabgp/wiki/RFC)
+The list of supported RFC is available [here](https://github.com/Thomas-Mangin/exabgp/wiki/RFC-Information)
 
 Receive parsed BGP updates in a friendly form (plain text or JSON) and manipulate them with shell scripts, for example this [looking glass](https://code.google.com/p/gixlg/wiki/sample_maps) use ExaBGP, PHP and MySQL and let you see how a prefix is routed through your network.
 
@@ -21,7 +21,7 @@ These organisations told us they use ExaBGP :
 [MICROSOFT](http://www.nanog.org/sites/default/files/wed.general.brainslug.lapukhov.20.pdf)
 [DAILYMOTION](https://twitter.com/fgabut)
 [BBC](http://www.bbc.co.uk/)
-[WIKIMEDIA](https://code.google.com/p/exabgp/issues/detail?id=4)
+[WIKIMEDIA](https://github.com/Thomas-Mangin/exabgp/issues/4)
 [AMSIX](https://ripe64.ripe.net/presentations/49-Follow_Up_AMS-IX_route-server_test_Euro-IX_20th_RIPE64.pdf)
 [NEO TELECOM](http://media.frnog.org/FRnOG_18/FRnOG_18-6.pdf)
 [VIDEOPLATZA](http://www.videoplaza.com/wp-content/uploads/2013/04/Junior-Operations-Engineer-Spring-2013.pdf)
@@ -93,9 +93,10 @@ Keep up to date, follow our [**google community**](https://plus.google.com/u/0/c
 
 Please consult any of :
 
- * the [changelog](http://code.google.com/p/exabgp/wiki/changelog) or [RFC compliance](http://code.google.com/p/exabgp/wiki/RFC) pages
- * the [wiki](http://code.google.com/p/exabgp/wiki/Home) and [the FAQ](http://code.google.com/p/exabgp/wiki/FAQ)
- * some [talks and presentations, ...](http://code.google.com/p/exabgp/wiki/related)
+ * the [changelog](https://raw.github.com/Thomas-Mangin/exabgp/master/CHANGELOG)
+ * or [RFC compliance](https://github.com/Thomas-Mangin/exabgp/wiki/RFC-Information) pages
+ * the [wiki](https://github.com/Thomas-Mangin/exabgp/wiki) with some some talks and presentations, ...
+ * and [the FAQ](https://github.com/Thomas-Mangin/exabgp/wiki/FAQ)
 
 Development is done on python 2.7, the code is kept compatible with python 2.4 in ExaBGP 2.x.x and python 2.5 in ExaBGP 3.1.x.
 ExaBGP 3.2.x will rely on python 2.7, and we are likely to required python 3.4+ for ExaBGP 4.x.x
