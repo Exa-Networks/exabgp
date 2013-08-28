@@ -234,15 +234,18 @@ class Peer (object):
 		proto.validate_open()
 
 		if self._['out']['state'] == STATE.openconfirm:
+			self.logger.network('incoming connection finds the outgoing connection is in openconfirm')
 			local_id = self.neighbor.router_id.packed
 			remote_id = proto.negotiated.received_open.router_id.packed
 
 			if local_id < remote_id:
 				# close already exist
+				self.logger.network('closing the outgoing connection')
 				self._reset('out','collision local id < remote id')
 				yield ACTION.immediate
 			else:
 				# close new connection
+				self.logger.network('aborting the incoming connection')
 				stop = Interrupted()
 				stop.direction = 'in'
 				raise stop
@@ -314,16 +317,19 @@ class Peer (object):
 		proto.negotiated.received(message)
 		proto.validate_open()
 
-		if self._['out']['state'] == STATE.openconfirm:
+		if self._['in']['state'] == STATE.openconfirm:
+			self.logger.network('outgoing connection finds the incoming connection is in openconfirm')
 			local_id = self.neighbor.router_id.packed
 			remote_id = proto.negotiated.received_open.router_id.packed
 
 			if local_id < remote_id:
 				# close already exist
+				self.logger.network('closing the incoming connection')
 				self._reset('in','collision local id < remote id')
 				yield ACTION.immediate
 			else:
 				# close new connection
+				self.logger.network('aborting the outgoing connection')
 				stop = Interrupted()
 				stop.direction = 'out'
 				raise stop
