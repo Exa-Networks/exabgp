@@ -99,8 +99,9 @@ class Protocol (object):
 				return
 
 	def close (self,reason='protocol closed, reason unspecified'):
-		self.logger.network(self.me(reason))
 		if self.connection:
+			self.logger.network(self.me(reason))
+
 			# must be first otherwise we could have a loop caused by the raise in the below
 			self.connection.close()
 			self.connection = None
