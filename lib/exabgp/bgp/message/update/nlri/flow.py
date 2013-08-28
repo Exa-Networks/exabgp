@@ -442,7 +442,7 @@ class FlowNLRI (Address):
 
 		components = ''.join(ordered_rules)
 
-		if self.safi.has_rd():
+		if self.safi == SAFI.flow_vpn:
 			components = self.rd.pack() + components
 
 		l = len(components)
