@@ -1,12 +1,12 @@
 In all the examples stored under /usr/share/doc/exabgp/examples you will
 see how you can connect to different BGP speakers and use the features of ExaBGP.
 
-However, In case you would mind how to complete your setup on the network side, 
+However, In case you would mind how to complete your setup on the network side,
 here is an IETF paper explaining RTBH and showing examples on different vendor platform.
 
 http://tools.ietf.org/html/draft-ietf-opsec-blackhole-urpf-00
 
 For more information please look at ExaBGP's FAQ or the related talks/slide page of its wiki.
 
-http://code.google.com/p/exabgp/wiki/FAQ
-http://code.google.com/p/exabgp/wiki/related
+https://github.com/Thomas-Mangin/exabgp/wiki
+https://github.com/Thomas-Mangin/exabgp/wiki/FAQ
