@@ -106,9 +106,9 @@ This programs does not have any dependences on any third party libraries and wil
 Get it
 ------
 
-	> wget http://exabgp.googlecode.com/files/exabgp-3.1.12.tgz
-	> tar zxvf exabgp-3.1.12.tgz
-	> cd exabgp-3.1.12
+	> wget https://github.com/Thomas-Mangin/exabgp/archive/3.2.5.tgz
+	> tar zxvf 3.2.5.tgz
+	> cd exabgp-3.2.5
 	> ./sbin/exabgp --help
 
 Related Projects
