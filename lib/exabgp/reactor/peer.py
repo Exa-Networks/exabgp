@@ -20,8 +20,10 @@ from exabgp.reactor.protocol import Protocol
 from exabgp.reactor.network.error import NetworkError
 from exabgp.reactor.api.processes import ProcessError
 
+from exabgp.rib.change import Change
+
 from exabgp.configuration.environment import environment
-from exabgp.logger import Logger,FakeLogger
+from exabgp.logger import Logger,FakeLogger,LazyFormat
 
 from exabgp.util.counter import Counter
 from exabgp.util.trace import trace
@@ -380,6 +382,12 @@ class Peer (object):
 				# Received update
 				if message.TYPE == Update.TYPE:
 					counter.increment(len(message.nlris))
+
+					for nlri in message.nlris:
+						self.neighbor.rib.incoming.insert_received(Change(nlri,message.attributes))
+						self.logger.routes(LazyFormat(self.me(''),str,nlri))
+
+					self.reactor.processes.update(self.neighbor.peer_address,message)
 
 				self.timer.tick(message)
 

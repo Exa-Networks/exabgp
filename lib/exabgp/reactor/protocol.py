@@ -25,9 +25,8 @@ from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.factory import UpdateFactory
 
 from exabgp.reactor.api.processes import ProcessError
-from exabgp.rib.change import Change
 
-from exabgp.logger import Logger,FakeLogger,LazyFormat
+from exabgp.logger import Logger,FakeLogger
 
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000
@@ -140,15 +139,7 @@ class Protocol (object):
 			elif self.neighbor.api.receive_routes:
 				update = UpdateFactory(self.negotiated,body)
 			else:
-				yield _UPDATE
-				return
-
-			# XXX: FIXME: really this should be in the Peer loop :-)
-			for nlri in update.nlris:
-				self.neighbor.rib.incoming.insert_received(Change(nlri,update.attributes))
-				self.logger.routes(LazyFormat(self.me(''),str,nlri))
-
-			self.peer.reactor.processes.update(self.neighbor.peer_address,update)
+				update = _UPDATE
 			yield update
 
 		elif msg == Message.Type.KEEPALIVE:
