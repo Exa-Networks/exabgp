@@ -241,12 +241,10 @@ class Peer (object):
 			remote_id = proto.negotiated.received_open.router_id.packed
 
 			if local_id < remote_id:
-				# close already exist
 				self.logger.network('closing the outgoing connection')
 				self._reset('out','collision local id < remote id')
 				yield ACTION.immediate
 			else:
-				# close new connection
 				self.logger.network('aborting the incoming connection')
 				stop = Interrupted()
 				stop.direction = 'in'
@@ -325,16 +323,14 @@ class Peer (object):
 			remote_id = proto.negotiated.received_open.router_id.packed
 
 			if local_id < remote_id:
-				# close already exist
-				self.logger.network('closing the incoming connection')
-				self._reset('in','collision local id < remote id')
-				yield ACTION.immediate
-			else:
-				# close new connection
 				self.logger.network('aborting the outgoing connection')
 				stop = Interrupted()
 				stop.direction = 'out'
 				raise stop
+			else:
+				self.logger.network('closing the incoming connection')
+				self._reset('in','collision local id < remote id')
+				yield ACTION.immediate
 
 		# Send KEEPALIVE
 		for message in proto.new_keepalive('OPENCONFIRM'):
