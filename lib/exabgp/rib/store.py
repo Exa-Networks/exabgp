@@ -102,6 +102,7 @@ class Store (object):
 		dict_nlri = self._modify_nlri
 		dict_attr = self._cache_attribute
 
+		# Removing a route befone we had time to announe it ?
 		if change_nlri_index in dict_nlri:
 			old_attr_index = dict_nlri[change_nlri_index].attributes.index()
 			# pop removes the entry
@@ -110,19 +111,16 @@ class Store (object):
 			del dict_sorted[old_attr_index][change_nlri_index]
 			if not dict_sorted[old_attr_index]:
 				del dict_sorted[old_attr_index]
-			if not force and old_change.nlri.action == OUT.announce and change.nlri.action == OUT.withdraw:
-				return True
+			# Route removed before announcement, all goo
+			if old_change.nlri.action == OUT.announce and change.nlri.action == OUT.withdraw:
+				return
 
+		# Add the route to the list to be announced
 		dict_sorted.setdefault(change_attr_index,{})[change_nlri_index] = change
 		dict_nlri[change_nlri_index] = change
 		if change_attr_index not in dict_attr:
 			dict_attr[change_attr_index] = change
 
-		if change.nlri.action == OUT.withdraw:
-			if not self.cache:
-				return True
-			return change_nlri_index in self._announced or change_nlri_index in dict_nlri
-		return True
 
 	def updates (self,grouped):
 		dict_sorted = self._modify_sorted
