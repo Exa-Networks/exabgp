@@ -41,9 +41,9 @@ class Store (object):
 
 	def resend_known (self):
 		for change in self.every_changes():
-			self.insert_change(change,True)
+			self.insert_announced(change,True)
 
-	def insert_change_watchdog (self,change):
+	def insert_announced_watchdog (self,change):
 		watchdog = change.attributes.watchdog()
 		withdraw = change.attributes.withdraw()
 		if watchdog:
@@ -51,14 +51,14 @@ class Store (object):
 				self._watchdog.setdefault(watchdog,{}).setdefault('-',{})[change.nlri.index()] = change
 				return True
 			self._watchdog.setdefault(watchdog,{}).setdefault('+',{})[change.nlri.index()] = change
-		self.insert_change(change)
+		self.insert_announced(change)
 		return True
 
 	def announce_watchdog (self,watchdog):
 		if watchdog in self._watchdog:
 			for change in self._watchdog[watchdog].get('-',{}).values():
 				change.nlri.action = OUT.announce
-				self.insert_change(change)
+				self.insert_announced(change)
 				self._watchdog[watchdog].setdefault('+',{})[change.nlri.index()] = change
 				self._watchdog[watchdog]['-'].pop(change.nlri.index())
 
@@ -66,7 +66,7 @@ class Store (object):
 		if watchdog in self._watchdog:
 			for change in self._watchdog[watchdog].get('+',{}).values():
 				change.nlri.action = OUT.withdraw
-				self.insert_change(change)
+				self.insert_announced(change)
 				self._watchdog[watchdog].setdefault('-',{})[change.nlri.index()] = change
 				self._watchdog[watchdog]['+'].pop(change.nlri.index())
 
@@ -78,7 +78,7 @@ class Store (object):
 		else:
 			self._announced.pop(change.nlri.index(),None)
 
-	def insert_change (self,change,force=False):
+	def insert_announced (self,change,force=False):
 		# WARNING : this function can run while we are in the updates() loop
 
 		# self._announced[fanily][nlri-index] = change
@@ -135,7 +135,7 @@ class Store (object):
 
 			attributes = dict_attr[attr_index].attributes
 
-			# we NEED the copy provided by list() here as clear_sent or insert_change can be called while we iterate
+			# we NEED the copy provided by list() here as clear_sent or insert_announced can be called while we iterate
 			changed = list(dict_new_nlri.itervalues())
 
 			if grouped:

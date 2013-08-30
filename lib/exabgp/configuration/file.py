@@ -309,7 +309,7 @@ class Configuration (object):
 		for neighbor in self.neighbor:
 			if neighbor in peers:
 				if change.nlri.family() in self.neighbor[neighbor].families():
-					if self.neighbor[neighbor].rib.outgoing.insert_change(change):
+					if self.neighbor[neighbor].rib.outgoing.insert_announced(change):
 						result = True
 				else:
 					self.logger.configuration('the route family is not configured on neighbor','error')
@@ -996,7 +996,7 @@ class Configuration (object):
 				for change in changes:
 					if change.nlri.family() in families:
 						# This add the family to neighbor.families()
-						neighbor.rib.outgoing.insert_change_watchdog(change)
+						neighbor.rib.outgoing.insert_announced_watchdog(change)
 				self._neighbor[m_neighbor.name()] = m_neighbor
 		else:
 			neighbor.make_rib()
@@ -1004,7 +1004,7 @@ class Configuration (object):
 			for change in changes:
 				if change.nlri.family() in families:
 					# This add the family to neighbor.families()
-					neighbor.rib.outgoing.insert_change_watchdog(change)
+					neighbor.rib.outgoing.insert_announced_watchdog(change)
 			self._neighbor[neighbor.name()] = neighbor
 
 		for line in str(neighbor).split('\n'):
