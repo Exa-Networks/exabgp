@@ -102,7 +102,7 @@ class Store (object):
 		dict_nlri = self._modify_nlri
 		dict_attr = self._cache_attribute
 
-		# Removing a route befone we had time to announe it ?
+		# removing a route befone we had time to announe it ?
 		if change_nlri_index in dict_nlri:
 			old_attr_index = dict_nlri[change_nlri_index].attributes.index()
 			# pop removes the entry
@@ -111,11 +111,11 @@ class Store (object):
 			del dict_sorted[old_attr_index][change_nlri_index]
 			if not dict_sorted[old_attr_index]:
 				del dict_sorted[old_attr_index]
-			# Route removed before announcement, all goo
+			# route removed before announcement, all goo
 			if old_change.nlri.action == OUT.announce and change.nlri.action == OUT.withdraw:
 				return
 
-		# Add the route to the list to be announced
+		# add the route to the list to be announced
 		dict_sorted.setdefault(change_attr_index,{})[change_nlri_index] = change
 		dict_nlri[change_nlri_index] = change
 		if change_attr_index not in dict_attr:
@@ -127,20 +127,38 @@ class Store (object):
 		dict_nlri = self._modify_nlri
 		dict_attr = self._cache_attribute
 
-		for attr_index,dict_new_nlri in list(dict_sorted.iteritems()):
-			if not dict_new_nlri:
+		for attr_index,full_dict_change in list(dict_sorted.iteritems()):
+			if self.cache:
+				dict_change = {}
+				for nlri_index,change in full_dict_change.iteritems():
+					family = change.nlri.family()
+					announced = self._announced.get(family,{})
+					if change.nlri.action == OUT.announce:
+						if nlri_index in announced:
+							old_change = announced[nlri_index]
+							# it is a duplicate route
+							if old_change.attributes.index() == change.attributes.index():
+								continue
+					elif change.nlri.action == OUT.withdraw:
+						if nlri_index not in announced:
+							continue
+					dict_change[nlri_index] = change
+			else:
+				dict_change = full_dict_change
+
+			if not dict_change:
 				continue
 
 			attributes = dict_attr[attr_index].attributes
 
 			# we NEED the copy provided by list() here as clear_sent or insert_announced can be called while we iterate
-			changed = list(dict_new_nlri.itervalues())
+			changed = list(dict_change.itervalues())
 
 			if grouped:
-				update = Update([dict_nlri[nlri_index].nlri for nlri_index in dict_new_nlri],attributes)
+				update = Update([dict_nlri[nlri_index].nlri for nlri_index in dict_change],attributes)
 				for change in changed:
 					nlri_index = change.nlri.index()
-					del dict_new_nlri[nlri_index]
+					del dict_change[nlri_index]
 					del dict_nlri[nlri_index]
 				# only yield once we have a consistent state, otherwise it will go wrong
 				# as we will try to modify things we are using
@@ -149,7 +167,7 @@ class Store (object):
 				updates = [Update([change.nlri,],attributes) for change in changed]
 				for change in changed:
 					nlri_index = change.nlri.index()
-					del dict_new_nlri[nlri_index]
+					del dict_change[nlri_index]
 					del dict_nlri[nlri_index]
 				# only yield once we have a consistent state, otherwise it will go wrong
 				# as we will try to modify things we are using
