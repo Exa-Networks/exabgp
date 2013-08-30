@@ -3,3 +3,5 @@
 /build/
 /dist/
 /sdist/
+
+.DS_Store
