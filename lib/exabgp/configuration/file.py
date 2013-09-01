@@ -275,7 +275,7 @@ class Configuration (object):
 				if not self._single_static_route(scope,tokens[1:]):
 					self._nexthopself = None
 					return None
-				for change in scope[0]['route']:
+				for change in scope[0]['announce']:
 					changes.append((peer,change))
 			self._nexthopself = None
 		else:
@@ -283,7 +283,7 @@ class Configuration (object):
 			if not self._single_static_route(scope,tokens[1:]):
 				return None
 			for peer in peers:
-				for change in scope[0]['route']:
+				for change in scope[0]['announce']:
 					changes.append((peer,change))
 		if action == 'withdraw':
 			for (peer,change) in changes:
@@ -297,7 +297,7 @@ class Configuration (object):
 			return None
 		if not self._check_flow_route(scope):
 			return None
-		changes = scope[0]['route']
+		changes = scope[0]['announce']
 		if action == 'withdraw':
 			for change in changes:
 				change.nlri.action = OUT.withdraw
@@ -847,7 +847,7 @@ class Configuration (object):
 			return False
 
 		try:
-			scope[-1]['route'][-1].attributes.add(Watchdog(w))
+			scope[-1]['announce'][-1].attributes.add(Watchdog(w))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -856,7 +856,7 @@ class Configuration (object):
 
 	def _route_withdraw (self,scope,tokens):
 		try:
-			scope[-1]['route'][-1].attributes.add(Withdrawn())
+			scope[-1]['announce'][-1].attributes.add(Withdrawn())
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -1159,7 +1159,7 @@ class Configuration (object):
 
 	def _split_last_route (self,scope):
 		# if the route does not need to be broken in smaller routes, return
-		change = scope[-1]['route'][-1]
+		change = scope[-1]['announce'][-1]
 		if not AttributeID.INTERNAL_SPLIT in change.attributes:
 			return True
 
@@ -1170,7 +1170,7 @@ class Configuration (object):
 			return True
 
 		# get a local copy of the route
-		change = scope[-1]['route'].pop(-1)
+		change = scope[-1]['announce'].pop(-1)
 
 		# calculate the number of IP in the /<size> of the new route
 		increment = pow(2,(len(change.nlri.packed)*8) - split)
@@ -1203,7 +1203,7 @@ class Configuration (object):
 			# next ip
 			ip += increment
 			# save route
-			scope[-1]['route'].append(Change(nlri,change.attributes))
+			scope[-1]['announce'].append(Change(nlri,change.attributes))
 
 		return True
 
@@ -1233,26 +1233,26 @@ class Configuration (object):
 			return False
 
 		if 'route' not in scope[-1]:
-			scope[-1]['route'] = []
+			scope[-1]['announce'] = []
 
-		scope[-1]['route'].append(update)
+		scope[-1]['announce'].append(update)
 		return True
 
 	def pop_last_static_route (self,scope):
-		update = scope[-1]['route'][-1]
-		scope[-1]['route'] = scope[-1]['route'][:-1]
+		update = scope[-1]['announce'][-1]
+		scope[-1]['announce'] = scope[-1]['announce'][:-1]
 		return update
 
 	# XXX: FIXME: ???
 	def remove_route (self,update,scope):
-		for u in scope[-1]['route']:
+		for u in scope[-1]['announce']:
 			if u == update:
-				scope[-1]['route'].remove(u)
+				scope[-1]['announce'].remove(u)
 				return True
 		return False
 
 	def _check_static_route (self,scope):
-		update = scope[-1]['route'][-1]
+		update = scope[-1]['announce'][-1]
 		if not update.attributes.has(AttributeID.NEXT_HOP):
 			self._error = 'syntax: route IP/MASK { next-hop IP; }'
 			if self.debug: raise
@@ -1411,10 +1411,10 @@ class Configuration (object):
 
 			for (ID,klass) in Attributes.lookup.iteritems():
 				if code == ID and flag == klass.FLAG:
-					scope[-1]['route'][-1].attributes.add(klass(raw))
+					scope[-1]['announce'][-1].attributes.add(klass(raw))
 					return True
 
-			scope[-1]['route'][-1].attributes.add(UnknownAttribute(code,flag,raw))
+			scope[-1]['announce'][-1].attributes.add(UnknownAttribute(code,flag,raw))
 			return True
 		except (IndexError,ValueError):
 			self._error = self._str_route_error
@@ -1422,7 +1422,7 @@ class Configuration (object):
 			return False
 
 	def _route_next_hop (self,scope,tokens):
-		if scope[-1]['route'][-1].attributes.has(AttributeID.NEXT_HOP):
+		if scope[-1]['announce'][-1].attributes.has(AttributeID.NEXT_HOP):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
@@ -1443,7 +1443,7 @@ class Configuration (object):
 			else:
 				nh = pton(ip)
 
-			change = scope[-1]['route'][-1]
+			change = scope[-1]['announce'][-1]
 			nlri = change.nlri
 			afi = nlri.afi
 			safi = nlri.safi
@@ -1463,13 +1463,13 @@ class Configuration (object):
 		try:
 			data = tokens.pop(0).lower()
 			if data == 'igp':
-				scope[-1]['route'][-1].attributes.add(Origin(Origin.IGP))
+				scope[-1]['announce'][-1].attributes.add(Origin(Origin.IGP))
 				return True
 			if data == 'egp':
-				scope[-1]['route'][-1].attributes.add(Origin(Origin.EGP))
+				scope[-1]['announce'][-1].attributes.add(Origin(Origin.EGP))
 				return True
 			if data == 'incomplete':
-				scope[-1]['route'][-1].attributes.add(Origin(Origin.INCOMPLETE))
+				scope[-1]['announce'][-1].attributes.add(Origin(Origin.INCOMPLETE))
 				return True
 			self._error = self._str_route_error
 			if self.debug: raise
@@ -1514,12 +1514,12 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
-		scope[-1]['route'][-1].attributes.add(ASPath(as_seq,as_set))
+		scope[-1]['announce'][-1].attributes.add(ASPath(as_seq,as_set))
 		return True
 
 	def _route_med (self,scope,tokens):
 		try:
-			scope[-1]['route'][-1].attributes.add(MED(pack('!L',int(tokens.pop(0)))))
+			scope[-1]['announce'][-1].attributes.add(MED(pack('!L',int(tokens.pop(0)))))
 			return True
 		except (IndexError,ValueError):
 			self._error = self._str_route_error
@@ -1528,7 +1528,7 @@ class Configuration (object):
 
 	def _route_local_preference (self,scope,tokens):
 		try:
-			scope[-1]['route'][-1].attributes.add(LocalPreference(pack('!L',int(tokens.pop(0)))))
+			scope[-1]['announce'][-1].attributes.add(LocalPreference(pack('!L',int(tokens.pop(0)))))
 			return True
 		except (IndexError,ValueError):
 			self._error = self._str_route_error
@@ -1537,7 +1537,7 @@ class Configuration (object):
 
 	def _route_atomic_aggregate (self,scope,tokens):
 		try:
-			scope[-1]['route'][-1].attributes.add(AtomicAggregate())
+			scope[-1]['announce'][-1].attributes.add(AtomicAggregate())
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -1570,16 +1570,16 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-		scope[-1]['route'][-1].attributes.add(Aggregator(local_as.pack(True)+local_address.pack()))
+		scope[-1]['announce'][-1].attributes.add(Aggregator(local_as.pack(True)+local_address.pack()))
 		return True
 
 	def _route_path_information (self,scope,tokens):
 		try:
 			pi = tokens.pop(0)
 			if pi.isdigit():
-				scope[-1]['route'][-1].nlri.path_info = PathInfo(integer=int(pi))
+				scope[-1]['announce'][-1].nlri.path_info = PathInfo(integer=int(pi))
 			else:
-				scope[-1]['route'][-1].nlri.path_info = PathInfo(ip=pi)
+				scope[-1]['announce'][-1].nlri.path_info = PathInfo(ip=pi)
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -1622,7 +1622,7 @@ class Configuration (object):
 
 	def _route_originator_id (self,scope,tokens):
 		try:
-			scope[-1]['route'][-1].attributes.add(OriginatorID(*inet(tokens.pop(0))))
+			scope[-1]['announce'][-1].attributes.add(OriginatorID(*inet(tokens.pop(0))))
 			return True
 		except:
 			self._error = self._str_route_error
@@ -1653,7 +1653,7 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
-		scope[-1]['route'][-1].attributes.add(clusterlist)
+		scope[-1]['announce'][-1].attributes.add(clusterlist)
 		return True
 
 	def _route_community (self,scope,tokens):
@@ -1677,7 +1677,7 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
-		scope[-1]['route'][-1].attributes.add(communities)
+		scope[-1]['announce'][-1].attributes.add(communities)
 		return True
 
 	def _parse_extended_community (self,scope,data):
@@ -1717,7 +1717,7 @@ class Configuration (object):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
-		scope[-1]['route'][-1].attributes.add(extended_communities)
+		scope[-1]['announce'][-1].attributes.add(extended_communities)
 		return True
 
 
@@ -1726,7 +1726,7 @@ class Configuration (object):
 			size = tokens.pop(0)
 			if not size or size[0] != '/':
 				raise ValueError('route "as" require a CIDR')
-			scope[-1]['route'][-1].attributes.add(Split(int(size[1:])))
+			scope[-1]['announce'][-1].attributes.add(Split(int(size[1:])))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -1755,7 +1755,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-		nlri = scope[-1]['route'][-1].nlri
+		nlri = scope[-1]['announce'][-1].nlri
 		if not nlri.safi.has_label():
 			nlri.safi = SAFI(SAFI.nlri_mpls)
 		nlri.labels = Labels(labels)
@@ -1789,7 +1789,7 @@ class Configuration (object):
 				else:
 					raise ValueError('invalid route-distinguisher %s' % data)
 
-			nlri = scope[-1]['route'][-1].nlri
+			nlri = scope[-1]['announce'][-1].nlri
 			# overwrite nlri-mpls
 			nlri.safi = SAFI(safi)
 			nlri.rd = RouteDistinguisher(rd)
@@ -1832,9 +1832,9 @@ class Configuration (object):
 			return False
 
 		if 'route' not in scope[-1]:
-			scope[-1]['route'] = []
+			scope[-1]['announce'] = []
 
-		scope[-1]['route'].append(flow)
+		scope[-1]['announce'].append(flow)
 		return True
 
 	def _check_flow_route (self,scope):
@@ -1911,7 +1911,7 @@ class Configuration (object):
 				ip,netmask = data.split('/')
 				raw = ''.join(chr(int(_)) for _ in ip.split('.'))
 
-				if not scope[-1]['route'][-1].nlri.add(Flow4Source(raw,int(netmask))):
+				if not scope[-1]['announce'][-1].nlri.add(Flow4Source(raw,int(netmask))):
 					self._error = 'Flow can only have one destination'
 					if self.debug: raise ValueError(self._error)
 					return False
@@ -1919,7 +1919,7 @@ class Configuration (object):
 			else:
 				ip,netmask,offset = data.split('/')
 				afi,safi,raw = inet(ip)
-				change = scope[-1]['route'][-1]
+				change = scope[-1]['announce'][-1]
 				# XXX: This is ugly
 				change.nlri.afi = AFI(AFI.ipv6)
 				if not change.nlri.add(Flow6Source(raw,int(netmask),int(offset))):
@@ -1941,7 +1941,7 @@ class Configuration (object):
 				ip,netmask = data.split('/')
 				raw = ''.join(chr(int(_)) for _ in ip.split('.'))
 
-				if not scope[-1]['route'][-1].nlri.add(Flow4Destination(raw,int(netmask))):
+				if not scope[-1]['announce'][-1].nlri.add(Flow4Destination(raw,int(netmask))):
 					self._error = 'Flow can only have one destination'
 					if self.debug: raise ValueError(self._error)
 					return False
@@ -1949,7 +1949,7 @@ class Configuration (object):
 			else:
 				ip,netmask,offset = data.split('/')
 				afi,safi,raw = inet(ip)
-				change = scope[-1]['route'][-1]
+				change = scope[-1]['announce'][-1]
 				# XXX: This is ugly
 				change.nlri.afi = AFI(AFI.ipv6)
 				if not change.nlri.add(Flow6Destination(raw,int(netmask),int(offset))):
@@ -2001,7 +2001,7 @@ class Configuration (object):
 				while test:
 					operator,_ = self._operator(test)
 					value,test = self._value(_)
-					nlri = scope[-1]['route'][-1].nlri
+					nlri = scope[-1]['announce'][-1].nlri
 					# XXX : should do a check that the rule is valid for the family
 					nlri.add(klass(AND|operator,klass.converter(value)))
 					if test:
@@ -2029,7 +2029,7 @@ class Configuration (object):
 					if name == ']':
 						break
 					try:
-						nlri = scope[-1]['route'][-1].nlri
+						nlri = scope[-1]['announce'][-1].nlri
 						# XXX : should do a check that the rule is valid for the family
 						nlri.add(klass(NumericOperator.EQ|AND,klass.converter(name)))
 					except IndexError:
@@ -2037,7 +2037,7 @@ class Configuration (object):
 						if self.debug: raise
 						return False
 			else:
-				scope[-1]['route'][-1].nlri.add(klass(NumericOperator.EQ|AND,klass.converter(name)))
+				scope[-1]['announce'][-1].nlri.add(klass(NumericOperator.EQ|AND,klass.converter(name)))
 		except (IndexError,ValueError):
 			self._error = self._str_flow_error
 			if self.debug: raise
@@ -2090,7 +2090,7 @@ class Configuration (object):
 
 	def _flow_route_next_hop (self,scope,tokens):
 		try:
-			change = scope[-1]['route'][-1]
+			change = scope[-1]['announce'][-1]
 
 			if change.nlri.nexthop:
 				self._error = self._str_flow_error
@@ -2111,7 +2111,7 @@ class Configuration (object):
 	def _flow_route_discard (self,scope,tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
-			scope[-1]['route'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowTrafficRate(ASN(0),0))
+			scope[-1]['announce'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowTrafficRate(ASN(0),0))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -2127,7 +2127,7 @@ class Configuration (object):
 			if speed > 1000000000000:
 				speed = 1000000000000
 				self.logger.configuration("rate-limiting changed for 1 000 000 000 000 bytes from %s" % tokens[0],'warning')
-			scope[-1]['route'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowTrafficRate(ASN(0),speed))
+			scope[-1]['announce'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowTrafficRate(ASN(0),speed))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -2149,7 +2149,7 @@ class Configuration (object):
 					number = int(suffix)
 					if number >= pow(2,16):
 						raise ValueError('number is too large, max 16 bits %s' % number)
-					scope[-1]['route'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirectVRFIP(ipn,number))
+					scope[-1]['announce'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirectVRFIP(ipn,number))
 					return True
 				else:
 					asn = int(prefix)
@@ -2158,10 +2158,10 @@ class Configuration (object):
 						raise ValueError('asn is a 32 bits number, it can only be 16 bit %s' % route_target)
 					if route_target >= pow(2,32):
 						raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
-					scope[-1]['route'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirectVRFASN(asn,route_target))
+					scope[-1]['announce'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirectVRFASN(asn,route_target))
 					return True
 			else:
-				change = scope[-1]['route'][-1]
+				change = scope[-1]['announce'][-1]
 				if change.nlri.nexthop:
 					self._error = self._str_flow_error
 					if self.debug: raise
@@ -2180,7 +2180,7 @@ class Configuration (object):
 
 	def _flow_route_redirect_next_hop (self,scope,tokens):
 		try:
-			change = scope[-1]['route'][-1]
+			change = scope[-1]['announce'][-1]
 
 			if not change.nlri.nexthop:
 				self._error = self._str_flow_error
@@ -2198,14 +2198,14 @@ class Configuration (object):
 	def _flow_route_copy (self,scope,tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
-			if scope[-1]['route'][-1].attributes.has(AttributeID.NEXT_HOP):
+			if scope[-1]['announce'][-1].attributes.has(AttributeID.NEXT_HOP):
 				self._error = self._str_flow_error
 				if self.debug: raise
 				return False
 
 			ip = tokens.pop(0)
 			nh = pton(ip)
-			change = scope[-1]['route'][-1]
+			change = scope[-1]['announce'][-1]
 			change.nlri.nexthop = cachedNextHop(nh)
 			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirect(True))
 			return True
@@ -2224,7 +2224,7 @@ class Configuration (object):
 				if self.debug: raise
 				return False
 
-			change = scope[-1]['route'][-1]
+			change = scope[-1]['announce'][-1]
 			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowTrafficMark(dscp))
 			return True
 
@@ -2244,7 +2244,7 @@ class Configuration (object):
 				if self.debug: raise
 				return False
 
-			change = scope[-1]['route'][-1]
+			change = scope[-1]['announce'][-1]
 			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowTrafficAction(sample,terminal))
 			return True
 		except (IndexError,ValueError):
