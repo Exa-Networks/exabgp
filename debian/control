@@ -3,7 +3,7 @@ Maintainer: Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>
 Section: net
 Priority: optional
 Build-Depends: debhelper (>= 8.9.11~), python
-Standards-Version: 3.9.3
+Standards-Version: 3.9.4
 X-Python-Version: >= 2.6.6-7~
 Homepage: https://github.com/Thomas-Mangin/exabgp
 
