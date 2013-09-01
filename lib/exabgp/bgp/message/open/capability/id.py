@@ -25,6 +25,7 @@ class CapabilityID (object):
 	# 128-255   Reserved for Private Use [RFC5492]
 	MULTISESSION_BGP         = 0x83  # What Cisco really use for Multisession (yes this is a reserved range in prod !)
 
+	OPERATIONAL              = 0xC8  # David used 200 for its Quagga patch https://github.com/lochiiconnectivity/quagga-advisory/blob/master/quagga.advisory.patch
 	EXTENDED_MESSAGE         = -1    # No yet defined by draft http://tools.ietf.org/html/draft-ietf-idr-extended-messages-02.txt
 
 	unassigned = range(70,128)

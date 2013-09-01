@@ -1,0 +1,448 @@
+
+
+
+IDR Working Group                                         R. Raszuk, Ed.
+Internet-Draft                                              NTT MCL Inc.
+Updates: RFC5575 (if approved)                              B. Pithawala
+Intended status: Standards Track                           Cisco Systems
+Expires: October 31, 2012                                   D. McPherson
+                                                          Verisign, Inc.
+                                                          April 29, 2012
+
+
+           Dissemination of Flow Specification Rules for IPv6
+                     draft-ietf-idr-flow-spec-v6-03
+
+Abstract
+
+   Dissemination of Flow Specification Rules [RFC5575] provides a
+   protocol extension for propagation of traffic flow information for
+   the purpose of rate limiting or filtering.  The [RFC5575] specifies
+   those extensions for IPv4 protocol data packets.
+
+   This specification extends the current [RFC5575] and defines changes
+   to the original document in order to make it also usable and
+   applicable to IPv6 data packets.
+
+Status of this Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at http://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on October 31, 2012.
+
+Copyright Notice
+
+   Copyright (c) 2012 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (http://trustee.ietf.org/license-info) in effect on the date of
+
+
+
+Raszuk, et al.          Expires October 31, 2012                [Page 1]
+
+Internet-Draft         draft-ietf-idr-flow-spec-v6            April 2012
+
+
+   publication of this document.  Please review these documents
+   carefully, as they describe your rights and restrictions with respect
+   to this document.  Code Components extracted from this document must
+   include Simplified BSD License text as described in Section 4.e of
+   the Trust Legal Provisions and are provided without warranty as
+   described in the Simplified BSD License.
+
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . . . 3
+   2.  IPv6 Flow Specification encoding in BGP . . . . . . . . . . . . 3
+   3.  IPv6 Flow Specification types changes . . . . . . . . . . . . . 4
+   4.  IPv6 Flow Specification Traffic Filtering Action changes  . . . 5
+   5.  Security considerations . . . . . . . . . . . . . . . . . . . . 6
+   6.  IANA Considerations . . . . . . . . . . . . . . . . . . . . . . 6
+   7.  Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . 7
+   8.  References  . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+     8.1.  Normative References  . . . . . . . . . . . . . . . . . . . 7
+     8.2.  Informative References  . . . . . . . . . . . . . . . . . . 7
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . . . 7
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Raszuk, et al.          Expires October 31, 2012                [Page 2]
+
+Internet-Draft         draft-ietf-idr-flow-spec-v6            April 2012
+
+
+1.  Introduction
+
+   The growing amount of IPv6 traffic in private and public networks
+   requires the extension of tools used in the IPv4 only networks to be
+   also capable of supporting IPv6 data packets.
+
+   In this document authors analyze the differences of IPv6 [RFC2460]
+   flows description from those of traditional IPv4 packets and propose
+   subset of new encoding formats to enable Dissemination of Flow
+   Specification Rules [RFC5575] for IPv6.
+
+   This specification should be treated as an extension of base
+   [RFC5575] specification and not its replacement.  It only defines the
+   delta changes required to support IPv6 while all other definitions
+   and operation mechanisms of Dissemination of Flow Specification Rules
+   will remain in the main specification and will not be repeated here.
+
+
+2.  IPv6 Flow Specification encoding in BGP
+
+   The [RFC5575] defines a new SAFIs (133 for IPv4) and (134 for VPNv4)
+   applications in order to carry corresponding to each such application
+   flow specification.
+
+   This document will redefine the [RFC5575] SAFIs in order to make them
+   AFI specific and applicable to both IPv4 and IPv6 applications.
+
+   The following changes are defined:
+
+      "SAFI 133 for IPv4 dissemination of flow specification rules" to
+      now be defined as "SAFI 133 for dissemination of unicast flow
+      specification rules"
+
+      "SAFI 134 for VPNv4 dissemination of flow specification rules" to
+      now be defined as "SAFI 134 for dissemination of L3VPN flow
+      specification rules"
+
+   For both SAFIs the indication to which address family they are
+   referring to will be recognized by AFI value (AFI=1 for IPv4 or
+   VPNv4, AFI=2 for IPv6 and VPNv6 respectively).  Such modification is
+   fully backwards compatible with existing implementation and
+   production deployments.
+
+   It needs to be observed that such choice of proposed encoding is
+   compatible with filter validation against routing reachability
+   information as described in section 6 of RFC5575.  Validation tables
+   will now be performed according to the following rules.
+
+
+
+
+Raszuk, et al.          Expires October 31, 2012                [Page 3]
+
+Internet-Draft         draft-ietf-idr-flow-spec-v6            April 2012
+
+
+      Flow specification received over AFI/SAFI=1/133 will be validated
+      against routing reachability received over AFI/SAFI=1/1
+
+      Flow specification received over AFI/SAFI=1/134 will be validated
+      against routing reachability received over AFI/SAFI=1/128
+
+      Flow specification received over AFI/SAFI=2/133 will be validated
+      against routing reachability received over AFI/SAFI=2/1
+
+      Flow specification received over AFI/SAFI=2/134 will be validated
+      against routing reachability received over AFI/SAFI=2/128
+
+
+3.  IPv6 Flow Specification types changes
+
+   The following component types are redefined or added for the purpose
+   of accommodating new IPv6 header encoding.  Unless otherwise stated
+   all other types as defined in RFC5575 apply to IPv6 packets as is.
+
+   Type 1 - Destination IPv6 Prefix
+
+      Encoding: <type (1 octet), prefix length (1 octet), prefix offset
+      (1 octet), prefix>
+
+      Defines the destination prefix to match.  Prefix offset has been
+      defined to allow for flexible match on the part of the IPv6
+      address where we want to skip (don't care) of N first bits of the
+      address.  This can be especially useful where part of the IPv6
+      address consists of embedded IPv4 address and match needs to
+      happen only on the part of embedded IPv4 address.  The default
+      value for prefix offset is 0x00 (match on all bits as indicated by
+      prefix length).  Otherwise prefixes are encoded as in BGP UPDATE
+      messages, a length in bits is followed by enough octets to contain
+      the prefix information.
+
+   Type 2 - Source IPv6 Prefix
+
+      Encoding: <type (1 octet), prefix length (1 octet), prefix offset
+      (1 octet), prefix>
+
+      Defines the source prefix to match.  Prefix offset has been
+      defined to allow for flexible match on the part of the IPv6
+      address where we want to skip (don't care) of N first bits of the
+      address.  This can be especially useful where part of the IPv6
+      address consists of embedded IPv4 address and match needs to
+      happen only on the part of embedded IPv4 address.  The default
+      value for prefix offset is 0x00 (match on all bits as indicated by
+      prefix length).  Otherwise prefixes are encoded as in BGP UPDATE
+
+
+
+Raszuk, et al.          Expires October 31, 2012                [Page 4]
+
+Internet-Draft         draft-ietf-idr-flow-spec-v6            April 2012
+
+
+      messages, a length in bits is followed by enough octets to contain
+      the prefix information.
+
+   Type 3 - Next Header
+
+      Encoding: <type (1 octet), [op, value]+>
+
+      Contains a set of {operator, value} pairs that are used to match
+      the last Next Header value octet in IPv6 packets.  The operator
+      byte is encoded as specified in component type 3 of [RFC5575].
+
+      While IPv6 allows for more then one Next Header field in the
+      packet the main goal of Type 3 flow specification component is to
+      match on the subsequent IP protocol value.  Therefor the
+      definition is limited to match only on last Next Header field in
+      the packet.
+
+   Type 11 - Traffic Class
+
+      Encoding: <type (1 octet), [op, value]+>
+
+      Contains a set of {operator, value} pairs that are used to match
+      the Traffic Class 8-bit field [RFC2460] encoded in a single
+      octet.The operator byte is encoded as specified in component type
+      3 of [RFC5575].
+
+   Type 12 - Fragment - Not supported for AFI=2
+
+      This type is not supported for AFI=2 as in IPv6 fragmentation does
+      not happen in the network.
+
+   Type 13 - Flow Label - New type
+
+      Encoding: <type (1 octet), [op, value]+>
+
+      Contains a set of {operator, value} pairs that are used to match
+      the 20-bit Flow Label field [RFC2460].The operator byte is encoded
+      as specified in the component type 3 of [RFC5575].
+
+
+4.  IPv6 Flow Specification Traffic Filtering Action changes
+
+   One of the traffic filtering actions which can be expressed by BGP
+   extended community is defined in [RFC5575] as traffic-marking.  This
+   extended community type is of value: 0x8009.
+
+   For the purpose of making it compatible with IPv6 header action
+   expressed by presence of this extended community has been modified to
+
+
+
+Raszuk, et al.          Expires October 31, 2012                [Page 5]
+
+Internet-Draft         draft-ietf-idr-flow-spec-v6            April 2012
+
+
+   read:
+
+   Traffic Marking: The traffic marking extended community instructs a
+   system to modify first 6 bits of Traffic Class field as (recommended
+   by [RFC2474]) of a transiting IPv6 packet to the corresponding value.
+   This extended community is encoded as a sequence of 42 zero bits
+   followed by the 6 bits overwriting DSCP portion of Traffic Class
+   value.
+
+
+5.  Security considerations
+
+   No new security issues are introduced to the BGP protocol by this
+   specification.
+
+
+6.  IANA Considerations
+
+   IANA is requested to rename currently defined SAFI 133 and SAFI 134
+   per [RFC5575] to read:
+
+
+   133     Dissemination of flow specification rules
+   134     L3VPN dissemination of flow specification rules
+
+   IANA is requested to create and maintain a new registry entitled:
+   "Flow Spec IPv6 Component Types".  The following component types have
+   been registered:
+
+
+   Type 1 - Destination IPv6 Prefix
+   Type 2 - Source IPv6 Prefix
+   Type 3 - Next Header
+   Type 4 - Port
+   Type 5 - Destination port
+   Type 6 - Source port
+   Type 7 - ICMP type
+   Type 8 - ICMP code
+   Type 9 - TCP flags
+   Type 10 - Packet length
+   Type 11 - Traffic Class
+   Type 12 - Reserved
+   Type 13 - Flow Label
+
+
+
+
+
+
+
+
+Raszuk, et al.          Expires October 31, 2012                [Page 6]
+
+Internet-Draft         draft-ietf-idr-flow-spec-v6            April 2012
+
+
+7.  Acknowledgments
+
+   Authors would like to thank Pedro Marques, Hannes Gredler and Bruno
+   Rijsman and Brian Carpenter for their valuable input.
+
+
+8.  References
+
+8.1.  Normative References
+
+   [I-D.ietf-6man-flow-3697bis]
+              Amante, S., Carpenter, B., Jiang, S., and J. Rajahalme,
+              "IPv6 Flow Label Specification",
+              draft-ietf-6man-flow-3697bis-07 (work in progress),
+              July 2011.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119, March 1997.
+
+   [RFC2460]  Deering, S. and R. Hinden, "Internet Protocol, Version 6
+              (IPv6) Specification", RFC 2460, December 1998.
+
+   [RFC2474]  Nichols, K., Blake, S., Baker, F., and D. Black,
+              "Definition of the Differentiated Services Field (DS
+              Field) in the IPv4 and IPv6 Headers", RFC 2474,
+              December 1998.
+
+   [RFC4271]  Rekhter, Y., Li, T., and S. Hares, "A Border Gateway
+              Protocol 4 (BGP-4)", RFC 4271, January 2006.
+
+   [RFC5492]  Scudder, J. and R. Chandra, "Capabilities Advertisement
+              with BGP-4", RFC 5492, February 2009.
+
+   [RFC5575]  Marques, P., Sheth, N., Raszuk, R., Greene, B., Mauch, J.,
+              and D. McPherson, "Dissemination of Flow Specification
+              Rules", RFC 5575, August 2009.
+
+8.2.  Informative References
+
+   [RFC5095]  Abley, J., Savola, P., and G. Neville-Neil, "Deprecation
+              of Type 0 Routing Headers in IPv6", RFC 5095,
+              December 2007.
+
+
+
+
+
+
+
+
+
+Raszuk, et al.          Expires October 31, 2012                [Page 7]
+
+Internet-Draft         draft-ietf-idr-flow-spec-v6            April 2012
+
+
+Authors' Addresses
+
+   Robert Raszuk (editor)
+   NTT MCL Inc.
+   101 S Ellsworth Avenue Suite 350
+   San Mateo, CA  94401
+   US
+
+   Email: robert@raszuk.net
+
+
+   Burjiz Pithawala
+   Cisco Systems
+   170 West Tasman Drive
+   San Jose, CA  95134
+   US
+
+   Email: bpithaw@cisco.com
+
+
+   Danny McPherson
+   Verisign, Inc.
+
+
+   Email: dmcpherson@verisign.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Raszuk, et al.          Expires October 31, 2012                [Page 8]
+
