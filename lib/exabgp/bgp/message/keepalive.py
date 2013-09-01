@@ -11,7 +11,7 @@ from exabgp.bgp.message import Message
 # =================================================================== KeepAlive
 
 class KeepAlive (Message):
-	TYPE = chr(0x04)
+	TYPE = chr(Message.Type.KEEPALIVE)
 
 	def __str__ (self):
 		return "KEEPALIVE"

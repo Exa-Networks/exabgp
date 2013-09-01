@@ -13,7 +13,7 @@ from exabgp.bgp.message import Message
 # RFC 4271 Section 4.5
 
 class Notification (Message):
-	TYPE = chr(0x03)
+	TYPE = chr(Message.Type.NOTIFICATION)
 
 	_str_code = {
 		1 : "Message header error",

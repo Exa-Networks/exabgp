@@ -18,7 +18,7 @@ from exabgp.bgp.message.notification import Notify
 # =================================================================== Update
 
 class Update (Message):
-	TYPE = chr(0x02)
+	TYPE = chr(Message.Type.UPDATE)
 
 	def __init__ (self,nlris,attributes):
 		self.nlris = nlris

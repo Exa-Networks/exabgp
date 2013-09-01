@@ -19,7 +19,7 @@ from exabgp.bgp.message.notification import Notify
 # =================================================================== Open
 
 class Open (Message):
-	TYPE = chr(0x01)
+	TYPE = chr(Message.Type.OPEN)
 
 	def __init__ (self,version,asn,router_id,capabilities,hold_time):
 		self.version = Version(version)
