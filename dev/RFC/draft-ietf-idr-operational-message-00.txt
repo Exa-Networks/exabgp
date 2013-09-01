@@ -1,159 +1,6 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
-<head profile="http://dublincore.org/documents/2008/08/04/dc-html/">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <meta name="robots" content="index,follow" />
-    <meta name="creator" content="rfcmarkup version 1.104" />
-    <link rel="schema.DC" href="http://purl.org/dc/elements/1.1/" />
-<meta name="DC.Identifier" content="urn:ietf:id:ietf-idr-operational-message" />
-<meta name="DC.Description.Abstract" content="The BGP Version 4 routing protocol (RFC4271) is now used in many ways,\ncrossing boundaries of administrative and technical responsibility.\nThe protocol lacks an operational messaging plane which could be\nutilised to diagnose, troubleshoot and inform upon various conditions\nacross these boundaries, securely, during protocol operation, without\ndisruption.  This document proposes a new BGP message type, the\nOPERATIONAL message, which can be used to effect such a messaging\nplane for use both between and within Autonomous Systems." />
-<meta name="DC.Creator" content="Raszuk, Robert" />
-<meta name="DC.Creator" content="Freedman, David" />
-<meta name="DC.Creator" content="Shakir, Rob" />
-<meta name="DC.Date.Issued" content="2012-03-13" />
-<meta name="DC.Title" content="BGP OPERATIONAL Message" />
 
-    <link rel="icon" href="/images/id.png" type="image/png" />
-    <link rel="shortcut icon" href="/images/id.png" type="image/png" />
-    <title>draft-ietf-idr-operational-message-00 - BGP OPERATIONAL Message</title>
-    
-    
-    <style type="text/css">
-	body {
-	    margin: 0px 8px;
-            font-size: 1em;
-	}
-        h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
-	    font-weight: bold;
-            line-height: 0pt;
-            display: inline;
-            white-space: pre;
-            font-family: monospace;
-            font-size: 1em;
-	    font-weight: bold;
-        }
-        pre {
-            font-size: 1em;
-            margin-top: 0px;
-            margin-bottom: 0px;
-        }
-	.pre {
-	    white-space: pre;
-	    font-family: monospace;
-	}
-	.header{
-	    font-weight: bold;
-	}
-        .newpage {
-            page-break-before: always;
-        }
-        .invisible {
-            text-decoration: none;
-            color: white;
-        }
-        a.selflink {
-          color: black;
-          text-decoration: none;
-        }
-        @media print {
-            body {
-                font-family: monospace;
-                font-size: 10.5pt;
-            }
-            h1, h2, h3, h4, h5, h6 {
-                font-size: 1em;
-            }
-        
-            a:link, a:visited {
-                color: inherit;
-                text-decoration: none;
-            }
-            .noprint {
-                display: none;
-            }
-        }
-	@media screen {
-	    .grey, .grey a:link, .grey a:visited {
-		color: #777;
-	    }
-            .docinfo {
-                background-color: #EEE;
-            }
-            .top {
-                border-top: 7px solid #EEE;
-            }
-            .bgwhite  { background-color: white; }
-            .bgred    { background-color: #F44; }
-            .bggrey   { background-color: #666; }
-            .bgbrown  { background-color: #840; }            
-            .bgorange { background-color: #FA0; }
-            .bgyellow { background-color: #EE0; }
-            .bgmagenta{ background-color: #F4F; }
-            .bgblue   { background-color: #66F; }
-            .bgcyan   { background-color: #4DD; }
-            .bggreen  { background-color: #4F4; }
 
-            .legend   { font-size: 90%; }
-            .cplate   { font-size: 70%; border: solid grey 1px; }
-	}
-    </style>
-    <!--[if IE]>
-    <style>
-    body {
-       font-size: 13px;
-       margin: 10px 10px;
-    }
-    </style>
-    <![endif]-->
 
-    <script type="text/javascript"><!--
-    function addHeaderTags() {
-	var spans = document.getElementsByTagName("span");
-	for (var i=0; i < spans.length; i++) {
-	    var elem = spans[i];
-	    if (elem) {
-		var level = elem.getAttribute("class");
-                if (level == "h1" || level == "h2" || level == "h3" || level == "h4" || level == "h5" || level == "h6") {
-                    elem.innerHTML = "<"+level+">"+elem.innerHTML+"</"+level+">";		
-                }
-	    }
-	}
-    }
-    var legend_html = "Colour legend:<br />      <table>         <tr><td>Unknown:</td>                   <td><span class='cplate bgwhite'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Draft:</td>                     <td><span class='cplate bgred'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Informational:</td>             <td><span class='cplate bgorange'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Experimental:</td>              <td><span class='cplate bgyellow'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Best Common Practice:</td>      <td><span class='cplate bgmagenta'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Proposed Standard:</td>         <td><span class='cplate bgblue'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Draft Standard (old designation):</td> <td><span class='cplate bgcyan'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Internet Standard:</td>         <td><span class='cplate bggreen'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Historic:</td>                  <td><span class='cplate bggrey'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Obsolete:</td>                  <td><span class='cplate bgbrown'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>     </table>";
-    function showElem(id) {
-        var elem = document.getElementById(id);
-        elem.innerHTML = eval(id+"_html");
-        elem.style.visibility='visible';
-    }
-    function hideElem(id) {
-        var elem = document.getElementById(id);
-        elem.style.visibility='hidden';        
-        elem.innerHTML = "";
-    }
-    // -->
-    </script>
-</head>
-<body onload="addHeaderTags()">
-   <div style="height: 13px;">
-      <div onmouseover="this.style.cursor='pointer';"
-         onclick="showElem('legend');"
-         onmouseout="hideElem('legend')"
-	 style="height: 6px; position: absolute;"
-         class="pre noprint docinfo bgred"
-         title="Click for colour legend." >                                                                        </div>
-      <div id="legend"
-           class="docinfo noprint pre legend"
-           style="position:absolute; top: 4px; left: 4ex; visibility:hidden; background-color: white; padding: 4px 9px 5px 7px; border: solid #345 1px; "
-           onmouseover="showElem('legend');"
-           onmouseout="hideElem('legend');">
-      </div>
-   </div>
-<span class="pre noprint docinfo top">[<a href="../html/" title="Document search and retrieval page">Docs</a>] [<a href="http://tools.ietf.org/id/draft-ietf-idr-operational-message-00.txt" title="Plaintext version of this document">txt</a>|<a href="/pdf/draft-ietf-idr-operational-message-00.txt" title="PDF version of this document">pdf</a>] [<a href='https://datatracker.ietf.org/doc/draft-ietf-idr-operational-message' title='IESG Datatracker information for this document'>Tracker</a>] [<a href="../wg/idr" title="The working group handling this document">WG</a>] [<a href="mailto:draft-ietf-idr-operational-message@tools.ietf.org?subject=draft-ietf-idr-operational-message%20" title="Send email to the document authors">Email</a>] [<a href="/idnits?url=http://tools.ietf.org/id/draft-ietf-idr-operational-message-00.txt" title="Run an idnits check of this document">Nits</a>]                          </span><br />
-<span class="pre noprint docinfo">                                                                        </span><br />
-<span class="pre noprint docinfo">Versions: <a href="./draft-ietf-idr-operational-message-00">00</a>                                                            </span><br />
-<span class="pre noprint docinfo">                                                                        </span><br />
-<pre>
 IDR Working Group                                            D. Freedman
 Internet-Draft                                                  Claranet
 Intended status: Standards Track                               R. Raszuk
@@ -163,12 +10,12 @@ Expires: September 1, 2012                                  NTT MCL Inc.
                                                        February 29, 2012
 
 
-                        <span class="h1">BGP OPERATIONAL Message</span>
-                 <span class="h1">draft-ietf-idr-operational-message-00</span>
+                        BGP OPERATIONAL Message
+                 draft-ietf-idr-operational-message-00
 
 Abstract
 
-   The BGP Version 4 routing protocol (<a href="./rfc4271">RFC4271</a>) is now used in many
+   The BGP Version 4 routing protocol (RFC4271) is now used in many
    ways, crossing boundaries of administrative and technical
    responsibility.
 
@@ -184,12 +31,12 @@ Abstract
 Status of this Memo
 
    This Internet-Draft is submitted in full conformance with the
-   provisions of <a href="./bcp78">BCP 78</a> and <a href="./bcp79">BCP 79</a>.
+   provisions of BCP 78 and BCP 79.
 
    Internet-Drafts are working documents of the Internet Engineering
    Task Force (IETF).  Note that other groups may also distribute
    working documents as Internet-Drafts.  The list of current Internet-
-   Drafts is at <a href="http://datatracker.ietf.org/drafts/current/">http://datatracker.ietf.org/drafts/current/</a>.
+   Drafts is at http://datatracker.ietf.org/drafts/current/.
 
    Internet-Drafts are draft documents valid for a maximum of six months
    and may be updated, replaced, or obsoleted by other documents at any
@@ -205,49 +52,49 @@ Copyright Notice
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012               [Page 1]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-2" id="page-2" href="#page-2" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012               [Page 1]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
-   This document is subject to <a href="./bcp78">BCP 78</a> and the IETF Trust's Legal
+   This document is subject to BCP 78 and the IETF Trust's Legal
    Provisions Relating to IETF Documents
-   (<a href="http://trustee.ietf.org/license-info">http://trustee.ietf.org/license-info</a>) in effect on the date of
+   (http://trustee.ietf.org/license-info) in effect on the date of
    publication of this document.  Please review these documents
    carefully, as they describe your rights and restrictions with respect
    to this document.  Code Components extracted from this document must
-   include Simplified BSD License text as described in <a href="#section-4">Section 4</a>.e of
+   include Simplified BSD License text as described in Section 4.e of
    the Trust Legal Provisions and are provided without warranty as
    described in the Simplified BSD License.
 
 
 Table of Contents
 
-   <a href="#section-1">1</a>.  Introduction . . . . . . . . . . . . . . . . . . . . . . . . .  <a href="#page-3">3</a>
-   <a href="#section-2">2</a>.  Applications . . . . . . . . . . . . . . . . . . . . . . . . .  <a href="#page-4">4</a>
-   <a href="#section-3">3</a>.  BGP OPERATIONAL message  . . . . . . . . . . . . . . . . . . .  <a href="#page-5">5</a>
-     <a href="#section-3.1">3.1</a>.  BGP OPERATIONAL message capability . . . . . . . . . . . .  <a href="#page-5">5</a>
-     <a href="#section-3.2">3.2</a>.  BGP OPERATIONAL message encoding . . . . . . . . . . . . .  <a href="#page-5">5</a>
-     <a href="#section-3.3">3.3</a>.  PRI Format . . . . . . . . . . . . . . . . . . . . . . . .  <a href="#page-6">6</a>
-     <a href="#section-3.4">3.4</a>.  BGP OPERATIONAL message TLVs . . . . . . . . . . . . . . .  <a href="#page-9">9</a>
-       <a href="#section-3.4.1">3.4.1</a>.  ADVISE TLVs  . . . . . . . . . . . . . . . . . . . . .  <a href="#page-9">9</a>
-       <a href="#section-3.4.2">3.4.2</a>.  STATE TLVs . . . . . . . . . . . . . . . . . . . . . . <a href="#page-10">10</a>
-       <a href="#section-3.4.3">3.4.3</a>.  DUMP TLVs  . . . . . . . . . . . . . . . . . . . . . . <a href="#page-12">12</a>
-       <a href="#section-3.4.4">3.4.4</a>.  CONTROL TLVs . . . . . . . . . . . . . . . . . . . . . <a href="#page-13">13</a>
-   <a href="#section-4">4</a>.  Use of the ADVISE TLVs . . . . . . . . . . . . . . . . . . . . <a href="#page-16">16</a>
-   <a href="#section-5">5</a>.  Use of the STATE TLVs  . . . . . . . . . . . . . . . . . . . . <a href="#page-18">18</a>
+   1.  Introduction . . . . . . . . . . . . . . . . . . . . . . . . .  3
+   2.  Applications . . . . . . . . . . . . . . . . . . . . . . . . .  4
+   3.  BGP OPERATIONAL message  . . . . . . . . . . . . . . . . . . .  5
+     3.1.  BGP OPERATIONAL message capability . . . . . . . . . . . .  5
+     3.2.  BGP OPERATIONAL message encoding . . . . . . . . . . . . .  5
+     3.3.  PRI Format . . . . . . . . . . . . . . . . . . . . . . . .  6
+     3.4.  BGP OPERATIONAL message TLVs . . . . . . . . . . . . . . .  9
+       3.4.1.  ADVISE TLVs  . . . . . . . . . . . . . . . . . . . . .  9
+       3.4.2.  STATE TLVs . . . . . . . . . . . . . . . . . . . . . . 10
+       3.4.3.  DUMP TLVs  . . . . . . . . . . . . . . . . . . . . . . 12
+       3.4.4.  CONTROL TLVs . . . . . . . . . . . . . . . . . . . . . 13
+   4.  Use of the ADVISE TLVs . . . . . . . . . . . . . . . . . . . . 16
+   5.  Use of the STATE TLVs  . . . . . . . . . . . . . . . . . . . . 18
      5.1.  Utilising STATE TLVs for Cross-Domain Debugging
-           Functionality  . . . . . . . . . . . . . . . . . . . . . . <a href="#page-18">18</a>
-     <a href="#section-5.2">5.2</a>.  Utilising STATE TLVs in the context of Error Handling  . . <a href="#page-18">18</a>
-   <a href="#section-6">6</a>.  Use of the DUMP TLVs . . . . . . . . . . . . . . . . . . . . . <a href="#page-20">20</a>
-   <a href="#section-7">7</a>.  Error Handling . . . . . . . . . . . . . . . . . . . . . . . . <a href="#page-22">22</a>
-   <a href="#section-8">8</a>.  Security considerations  . . . . . . . . . . . . . . . . . . . <a href="#page-23">23</a>
-   <a href="#section-9">9</a>.  IANA Considerations  . . . . . . . . . . . . . . . . . . . . . <a href="#page-24">24</a>
-   <a href="#section-10">10</a>. Acknowledgements . . . . . . . . . . . . . . . . . . . . . . . <a href="#page-26">26</a>
-   <a href="#section-11">11</a>. References . . . . . . . . . . . . . . . . . . . . . . . . . . <a href="#page-27">27</a>
-     <a href="#section-11.1">11.1</a>. Normative References . . . . . . . . . . . . . . . . . . . <a href="#page-27">27</a>
-     <a href="#section-11.2">11.2</a>. Informative References . . . . . . . . . . . . . . . . . . <a href="#page-27">27</a>
-   Authors' Addresses . . . . . . . . . . . . . . . . . . . . . . . . <a href="#page-29">29</a>
+           Functionality  . . . . . . . . . . . . . . . . . . . . . . 18
+     5.2.  Utilising STATE TLVs in the context of Error Handling  . . 18
+   6.  Use of the DUMP TLVs . . . . . . . . . . . . . . . . . . . . . 20
+   7.  Error Handling . . . . . . . . . . . . . . . . . . . . . . . . 22
+   8.  Security considerations  . . . . . . . . . . . . . . . . . . . 23
+   9.  IANA Considerations  . . . . . . . . . . . . . . . . . . . . . 24
+   10. Acknowledgements . . . . . . . . . . . . . . . . . . . . . . . 26
+   11. References . . . . . . . . . . . . . . . . . . . . . . . . . . 27
+     11.1. Normative References . . . . . . . . . . . . . . . . . . . 27
+     11.2. Informative References . . . . . . . . . . . . . . . . . . 27
+   Authors' Addresses . . . . . . . . . . . . . . . . . . . . . . . . 29
 
 
 
@@ -261,12 +108,12 @@ Table of Contents
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012               [Page 2]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-3" id="page-3" href="#page-3" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012               [Page 2]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
-<span class="h2"><a class="selflink" name="section-1" href="#section-1">1</a>.  Introduction</span>
+1.  Introduction
 
    In this document, a new BGP message type, the OPERATIONAL message is
    defined, creating a communication channel over which messages can be
@@ -283,7 +130,7 @@ Table of Contents
    order to troubleshoot session malfunctions.
 
    The use of OPERATIONAL messages will be negotiated by BGP Capability
-   [<a href="./rfc5492" title="&quot;Capabilities Advertisement with BGP-4&quot;">RFC5492</a>], since the messages are in-band with the BGP session, they
+   [RFC5492], since the messages are in-band with the BGP session, they
    can be assumed to either be authenticated as originating directly
    from the BGP neighbor.
 
@@ -317,12 +164,12 @@ Table of Contents
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012               [Page 3]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-4" id="page-4" href="#page-4" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012               [Page 3]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
-<span class="h2"><a class="selflink" name="section-2" href="#section-2">2</a>.  Applications</span>
+2.  Applications
 
    The authors would like to propose three main applications which BGP
    OPERATIONAL TLVs are designed to address.  New TLVs can be easily
@@ -336,7 +183,7 @@ Table of Contents
       passed, cross boundary to operators, to inform them of past or
       upcoming error conditions, or provide other relevant, in-band
       operational information.  The "Advisory Demand Message" ADM
-      (<a href="#section-3.4.1.1">Section 3.4.1.1</a>) is an example of this.
+      (Section 3.4.1.1) is an example of this.
 
    o  STATE TLVs, designed to carry information about BGP state across
       BGP neighbors, including both per-neighbor and global counters.
@@ -373,19 +220,19 @@ Table of Contents
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012               [Page 4]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-5" id="page-5" href="#page-5" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012               [Page 4]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
-<span class="h2"><a class="selflink" name="section-3" href="#section-3">3</a>.  BGP OPERATIONAL message</span>
+3.  BGP OPERATIONAL message
 
-<span class="h3"><a class="selflink" name="section-3.1" href="#section-3.1">3.1</a>.  BGP OPERATIONAL message capability</span>
+3.1.  BGP OPERATIONAL message capability
 
    A BGP speaker that is willing to exchange BGP OPERATIONAL Messages
    with a neighbor should advertise the new OPERATIONAL Message
    Capability to the neighbor using BGP Capabilities advertisement
-   [<a href="./rfc5492" title="&quot;Capabilities Advertisement with BGP-4&quot;">RFC5492</a>] .  A BGP speaker may send an OPERATIONAL message to its
+   [RFC5492] .  A BGP speaker may send an OPERATIONAL message to its
    neighbor only if it has received the OPERATIONAL message capability
    from them.
 
@@ -406,13 +253,13 @@ Table of Contents
 
                  OPERATIONAL message BGP Capability Format
 
-<span class="h3"><a class="selflink" name="section-3.2" href="#section-3.2">3.2</a>.  BGP OPERATIONAL message encoding</span>
+3.2.  BGP OPERATIONAL message encoding
 
-   The BGP message as defined [<a href="./rfc4271" title="&quot;A Border Gateway Protocol 4 (BGP-4)&quot;">RFC4271</a>] consists of a fixed-size header
+   The BGP message as defined [RFC4271] consists of a fixed-size header
    followed by two octet length field and one octet of type value.  The
    RFC limits the maximum message size to 4096 octets.  As one of the
    applications of BGP OPERATIONAL message (through the MUD
-   (<a href="#section-3.4.3.3">Section 3.4.3.3</a>) message) is to be able to carry an entire,
+   (Section 3.4.3.3) message) is to be able to carry an entire,
    potentially malformed BGP UPDATE, this specification mandates that
    when the neighbor has negotiated the BGP OPERATIONAL message
    capability, any further BGP message which may be subject to enclosure
@@ -429,9 +276,9 @@ Table of Contents
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012               [Page 5]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-6" id="page-6" href="#page-6" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012               [Page 5]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
      0                   1                   2                   3
@@ -465,14 +312,14 @@ Table of Contents
    reply messages in order to correlate requests with their associated
    replies.
 
-<span class="h3"><a class="selflink" name="section-3.3" href="#section-3.3">3.3</a>.  PRI Format</span>
+3.3.  PRI Format
 
    Prefix Reachability Indicators (PRI) are used to represent prefix
    NLRI and BGP attributes in a request and only prefix NLRI in a
    response, in this draft.
 
-   Each PRI is encoded as a 3-tuple of the form &lt;Flags, Payload Type,
-   Payload&gt; whose fields are described below:
+   Each PRI is encoded as a 3-tuple of the form <Flags, Payload Type,
+   Payload> whose fields are described below:
 
 
 
@@ -485,9 +332,9 @@ Table of Contents
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012               [Page 6]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-7" id="page-7" href="#page-7" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012               [Page 6]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
      0                   1                   2                   3
@@ -541,9 +388,9 @@ Table of Contents
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012               [Page 7]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-8" id="page-8" href="#page-8" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012               [Page 7]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
       ad) L Bit:
@@ -567,26 +414,26 @@ Table of Contents
 
       bb) Type 1 - Next Hop:
          The payload contains a Next Hop address, appropriate for the
-         AFI/SAFI.  When used in an SSQ (<a href="#section-3.4.2.7">Section 3.4.2.7</a>) message the
+         AFI/SAFI.  When used in an SSQ (Section 3.4.2.7) message the
          response is expected to contain prefixes from the selected RIBs
          which contain this next-hop in their next-hop attribute.
 
       bc) Type 2 - AS Number:
          The payload contains a 16 or 32 bit AS number (as defined in
-         [<a href="./rfc4893" title="&quot;BGP Support for Four-octet AS Number Space&quot;">RFC4893</a>]), when used in an SSQ message the response is
+         [RFC4893]), when used in an SSQ message the response is
          expected to contain prefixes from the selected RIBs which
          contain this AS number in their AS_PATH or AS4_PATH (as
          appropriate) attributes.
 
       bc) Type 3 - Standard Community:
          The payload contains a standard community (as defined in
-         [<a href="./rfc1997" title="&quot;BGP Communities Attribute&quot;">RFC1997</a>]), when used in an SSQ message the response is
+         [RFC1997]), when used in an SSQ message the response is
          expected to contain prefixes from the selected RIBs which
          contain this standard community in their communities attribute.
 
       bd) Type 4 - Extended Community:
          The payload contains an extended community (as defined in
-         [<a href="./rfc4360" title="&quot;BGP Extended Communities Attribute&quot;">RFC4360</a>]), when used in an SSQ message the response is
+         [RFC4360]), when used in an SSQ message the response is
          expected to contain prefixes from the selected RIBs which
          contain this standard community in their extended communities
          attribute.
@@ -597,9 +444,9 @@ Table of Contents
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012               [Page 8]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-9" id="page-9" href="#page-9" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012               [Page 8]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
       be) Types 5-65535 - Reserved:
@@ -619,19 +466,19 @@ Table of Contents
    An implementation MUST NOT send a PRI in response with no NLRI (type
    0) payload, this is considered to be invalid.  If the implementation
    wishes to signal that a request did not yield a any valid results an
-   implementation MAY respond with an NS TLV (<a href="#section-3.4.4.2">Section 3.4.4.2</a>), using
+   implementation MAY respond with an NS TLV (Section 3.4.4.2), using
    the "Not Found" subcode, for example.
 
-<span class="h3"><a class="selflink" name="section-3.4" href="#section-3.4">3.4</a>.  BGP OPERATIONAL message TLVs</span>
+3.4.  BGP OPERATIONAL message TLVs
 
-<span class="h4"><a class="selflink" name="section-3.4.1" href="#section-3.4.1">3.4.1</a>.  ADVISE TLVs</span>
+3.4.1.  ADVISE TLVs
 
    ADVISE TLVs convey human readable information to be passed, cross
    boundary to operators, to inform them of past or upcoming error
    conditions, or provide other relevant, in-band operational
    information.
 
-<span class="h5"><a class="selflink" name="section-3.4.1.1" href="#section-3.4.1.1">3.4.1.1</a>.  Advisory Demand Message (ADM)</span>
+3.4.1.1.  Advisory Demand Message (ADM)
 
    TYPE: 1 - ADM
 
@@ -644,7 +491,7 @@ Table of Contents
    Implementations SHOULD provide their users the ability to transmit a
    free form text message generated by user input.
 
-<span class="h5"><a class="selflink" name="section-3.4.1.2" href="#section-3.4.1.2">3.4.1.2</a>.  Advisory Static Message (ASM)</span>
+3.4.1.2.  Advisory Static Message (ASM)
 
    TYPE: 2 - ASM
 
@@ -653,9 +500,9 @@ Table of Contents
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012               [Page 9]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-10" id="page-10" href="#page-10" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012               [Page 9]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
    USE: To carry a message, on demand, comprised of a string of UTF-8
@@ -671,91 +518,91 @@ Table of Contents
    Implementations SHOULD provide their users the ability to transmit a
    free form text message generated by user input.
 
-<span class="h4"><a class="selflink" name="section-3.4.2" href="#section-3.4.2">3.4.2</a>.  STATE TLVs</span>
+3.4.2.  STATE TLVs
 
    STATE TLVs reflect, on demand, the internal state of a BGP neighbor
    as seen from the other neighbor's perspective.
 
-<span class="h5"><a class="selflink" name="section-3.4.2.1" href="#section-3.4.2.1">3.4.2.1</a>.  Reachable Prefix Count Request (RPCQ)</span>
+3.4.2.1.  Reachable Prefix Count Request (RPCQ)
 
    TYPE: 3 - RPCQ
 
    LENGTH: 3 Octets (AFI+SAFI) + Sequence Number
 
-   USE: Sent to the neighbor to request that an RPCP (<a href="#section-3.4.2.2">Section 3.4.2.2</a>)
+   USE: Sent to the neighbor to request that an RPCP (Section 3.4.2.2)
    message is generated in response.
 
-<span class="h5"><a class="selflink" name="section-3.4.2.2" href="#section-3.4.2.2">3.4.2.2</a>.  Reachable Prefix Count Reply (RPCP)</span>
+3.4.2.2.  Reachable Prefix Count Reply (RPCP)
 
    TYPE: 4 - RPCP
 
    LENGTH: 3 Octets (AFI+SAFI) + Sequence Number + 4 Octet RX Prefix
    Counter (RXC) + 4 Octet TX Prefix Counter (TXC)
 
-   USE: Sent in reply to an RPCQ (<a href="#section-3.4.2.1">Section 3.4.2.1</a>) message from a
+   USE: Sent in reply to an RPCQ (Section 3.4.2.1) message from a
    neighbor, RXC is populated with the number of reachable prefixes
    accepted from the peer and TXC with the number of prefixes to be
    transmitted to the peer for the AFI/SAFI.
 
-<span class="h5"><a class="selflink" name="section-3.4.2.3" href="#section-3.4.2.3">3.4.2.3</a>.  Adj-Rib-Out Prefix Count Request (APCQ)</span>
+3.4.2.3.  Adj-Rib-Out Prefix Count Request (APCQ)
 
    TYPE: 5 - APCQ
 
    LENGTH: 3 Octets(AFI+SAFI) + Sequence Number
 
-   USE: Sent to the neighbor to request that an APCP (<a href="#section-3.4.2.4">Section 3.4.2.4</a>)
+   USE: Sent to the neighbor to request that an APCP (Section 3.4.2.4)
    message is generated in response.
 
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012              [Page 10]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-11" id="page-11" href="#page-11" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012              [Page 10]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
    APCQ can be used as a simple mechanism when an implementation does
    not permit or support the use of RPCQ.
 
-<span class="h5"><a class="selflink" name="section-3.4.2.4" href="#section-3.4.2.4">3.4.2.4</a>.  Adj-Rib-Out Prefix Count Reply (APCP)</span>
+3.4.2.4.  Adj-Rib-Out Prefix Count Reply (APCP)
 
    TYPE: 6 - APCP
 
    LENGTH: 3 Octets(AFI+SAFI) + Sequence Number + 4 Octet TX Prefix
    Counter (TXC)
 
-   USE: Sent in reply to an APCQ (<a href="#section-3.4.2.3">Section 3.4.2.3</a>) message from a
+   USE: Sent in reply to an APCQ (Section 3.4.2.3) message from a
    neighbor, TXC is populated with the number of prefixes held in the
    Adj-Rib-Out for the neighbor for the AFI/SAFI.
 
-<span class="h5"><a class="selflink" name="section-3.4.2.5" href="#section-3.4.2.5">3.4.2.5</a>.  BGP Loc-Rib Prefix Count Request (LPCQ)</span>
+3.4.2.5.  BGP Loc-Rib Prefix Count Request (LPCQ)
 
    TYPE: 7 - LPCQ
 
    LENGTH: 3 Octets(AFI+SAFI) + Sequence Number
 
-   USE: Sent to the peer to request that an LPCP (<a href="#section-3.4.2.6">Section 3.4.2.6</a>)
+   USE: Sent to the peer to request that an LPCP (Section 3.4.2.6)
    message is generated in response.
 
-<span class="h5"><a class="selflink" name="section-3.4.2.6" href="#section-3.4.2.6">3.4.2.6</a>.  BGP Loc-Rib Prefix Count Reply (LPCP)</span>
+3.4.2.6.  BGP Loc-Rib Prefix Count Reply (LPCP)
 
    TYPE: 8 - LPCP
 
    LENGTH: 3 Octets(AFI+SAFI) + Sequence Number + 4 Octet Loc-Rib
    Counter (LC)
 
-   USE: Sent in reply to an LPCQ (<a href="#section-3.4.2.5">Section 3.4.2.5</a>) message from a
+   USE: Sent in reply to an LPCQ (Section 3.4.2.5) message from a
    neighbor, LC is populated with the number of prefixes held in the
    entire Loc-Rib for the AFI/SAFI.
 
-<span class="h5"><a class="selflink" name="section-3.4.2.7" href="#section-3.4.2.7">3.4.2.7</a>.  Simple State Request (SSQ)</span>
+3.4.2.7.  Simple State Request (SSQ)
 
    TYPE: 9 - SSQ
 
    LENGTH: 3 Octets(AFI+SAFI) + Sequence Number + Single request PRI
    (Variable)
 
-   USE: Using a PRI as a request form (See <a href="#section-3.3">Section 3.3</a>), an
+   USE: Using a PRI as a request form (See Section 3.3), an
    implementation can be asked to return information about prefixes
    found in various RIBs.
 
@@ -765,31 +612,31 @@ Table of Contents
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012              [Page 11]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-12" id="page-12" href="#page-12" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012              [Page 11]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
    field.
 
    An implementation MAY respond to an SSQ TLV in with an SSP (See
-   <a href="#section-3.4.3.4">Section 3.4.3.4</a>) TLV (containing the appropriate data).  An
+   Section 3.4.3.4) TLV (containing the appropriate data).  An
    implementation MAY also respond to an SSQ with an NS TLV (with the
    appropriate subcode set) indicating why there will not be an SSP TLV
    in response.  An implementation MAY also not respond at all (See
-   <a href="#section-8">Section 8</a>).
+   Section 8).
 
-<span class="h4"><a class="selflink" name="section-3.4.3" href="#section-3.4.3">3.4.3</a>.  DUMP TLVs</span>
+3.4.3.  DUMP TLVs
 
    DUMP TLVs provide data in both structured and unstructured formats in
    response to events, for use in debugging scenarios.
 
-<span class="h5"><a class="selflink" name="section-3.4.3.1" href="#section-3.4.3.1">3.4.3.1</a>.  Dropped Update Prefixes (DUP)</span>
+3.4.3.1.  Dropped Update Prefixes (DUP)
 
    TYPE: 10 - DUP
 
    LENGTH: 3 Octets(AFI+SAFI) + Variable number of dropped UPDATE Prefix
-   Reachability Indicators (PRI) (See <a href="#section-3.3">Section 3.3</a>)
+   Reachability Indicators (PRI) (See Section 3.3)
 
    USE: To report to a neighbor a structured set of prefix reachability
    indicators retrievable from the last dropped UPDATE message, sent in
@@ -803,12 +650,12 @@ Table of Contents
    cleared (unreachable), housing the rescued unreachable NLRI as
    payload.
 
-<span class="h5"><a class="selflink" name="section-3.4.3.2" href="#section-3.4.3.2">3.4.3.2</a>.  Malformed Update Prefixes (MUP)</span>
+3.4.3.2.  Malformed Update Prefixes (MUP)
 
    TYPE: 11 - MUP
 
    LENGTH: 3 Octets(AFI+SAFI) + Variable number of dropped update Prefix
-   Reachability Indicators (PRI) (See <a href="#section-3.3">Section 3.3</a>) due to UPDATE
+   Reachability Indicators (PRI) (See Section 3.3) due to UPDATE
    Malformation.
 
    USE: To report to a neighbor a structured set of prefix reachability
@@ -816,19 +663,19 @@ Table of Contents
    malformation, sent in response to an UPDATE message which was not
    well formed and not accepted by the neighbor, where a NOTIFICATION
    message was not sent.  A MUP TLV may accompany a MUD
-   (<a href="#section-3.4.3.3">Section 3.4.3.3</a>) TLV.
+   (Section 3.4.3.3) TLV.
 
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012              [Page 12]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-13" id="page-13" href="#page-13" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012              [Page 12]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
-   See the example from <a href="#section-3.4.3.1">Section 3.4.3.1</a>.
+   See the example from Section 3.4.3.1.
 
-<span class="h5"><a class="selflink" name="section-3.4.3.3" href="#section-3.4.3.3">3.4.3.3</a>.  Malformed Update Dump (MUD)</span>
+3.4.3.3.  Malformed Update Dump (MUD)
 
    TYPE: 12 - MUD
 
@@ -839,18 +686,18 @@ Table of Contents
    through malformation, sent in response to an UPDATE message which was
    not well formed and not accepted by the neighbor, where a
    NOTIFICATION message was not sent.  A MUD TLV may accompany a MUP
-   (<a href="#section-3.4.3.2">Section 3.4.3.2</a>) TLV.
+   (Section 3.4.3.2) TLV.
 
-<span class="h5"><a class="selflink" name="section-3.4.3.4" href="#section-3.4.3.4">3.4.3.4</a>.  Simple State Response (SSP)</span>
+3.4.3.4.  Simple State Response (SSP)
 
    TYPE: 13 - SSP
 
    LENGTH: 3 Octets(AFI+SAFI) + Sequence Number + Single Response PRI
    (Variable)
 
-   USE: Using a PRI as a response form (See <a href="#section-3.3">Section 3.3</a>), an
+   USE: Using a PRI as a response form (See Section 3.3), an
    implementation uses the SSP TLV to return a response to an SSQ (See
-   <a href="#section-3.4.2.7">Section 3.4.2.7</a>) TLV which should contain information about prefixes
+   Section 3.4.2.7) TLV which should contain information about prefixes
    found in various RIBs.  These RIBs should be walked to extract the
    information according to local policy.
 
@@ -862,7 +709,7 @@ Table of Contents
    (containing the appropriate data).  An implementation MAY also
    respond to an SSQ with an NS TLV (with the appropriate subcode set)
    indicating why there will not be an SSP TLV in response.  An
-   implementation MAY also not respond at all (See <a href="#section-8">Section 8</a>).
+   implementation MAY also not respond at all (See Section 8).
 
    If no data is found to satisfy a query which is permitted to be
    answered, an implementation MAY respond with an NS TLV with the
@@ -870,22 +717,22 @@ Table of Contents
    the query.  An implementation MUST NOT send a PRI in response with no
    NLRI payload, this is considered to be invalid.
 
-<span class="h4"><a class="selflink" name="section-3.4.4" href="#section-3.4.4">3.4.4</a>.  CONTROL TLVs</span>
+3.4.4.  CONTROL TLVs
 
    CONTROL TLVs satisfy control mechanism messaging between neighbors,
    they are used for such functions as to refuse messages and
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012              [Page 13]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-14" id="page-14" href="#page-14" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012              [Page 13]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
    dynamically signal OPERATIONAL capabilities to neighbors during
    operation.
 
-<span class="h5"><a class="selflink" name="section-3.4.4.1" href="#section-3.4.4.1">3.4.4.1</a>.  Max Permitted (MP)</span>
+3.4.4.1.  Max Permitted (MP)
 
    TYPE: 65534 - MP
 
@@ -893,7 +740,7 @@ Table of Contents
 
    USE: The Max Permitted TLV is used to signal to the neighbor the
    maximum number of OPERATIONAL messages that will be accepted in a
-   second of time (see <a href="#section-8">Section 8</a>, Security Considerations), an
+   second of time (see Section 8, Security Considerations), an
    implementation MUST, on receipt of an MP TLV, ensure that it does not
    exceed the rate specified in the MP TLV for sending OPERATIONAL
    messages to the neighbor, for the duration of the session.
@@ -902,9 +749,9 @@ Table of Contents
    lifetime, updating the maximum acceptable rate
 
    MP TLVs MAY be rate limited by the receiver as part of OPERATIONAL
-   rate limiting (see <a href="#section-8">Section 8</a>, Security Considerations).
+   rate limiting (see Section 8, Security Considerations).
 
-<span class="h5"><a class="selflink" name="section-3.4.4.2" href="#section-3.4.4.2">3.4.4.2</a>.  Not Satisfied (NS)</span>
+3.4.4.2.  Not Satisfied (NS)
 
    TYPE: 65535 - NS
 
@@ -928,14 +775,14 @@ Table of Contents
    0x03 - Max query frequency exceeded:  Used to signal to the neighbor
       that the request has exceeded the rate at which the neighbor finds
       acceptable for the implementation to transmit requests at, see
-      <a href="#section-3.4.4.1">Section 3.4.4.1</a> (MP TLV) and <a href="#section-8">Section 8</a> and (Security
+      Section 3.4.4.1 (MP TLV) and Section 8 and (Security
       Considerations) for more information.
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012              [Page 14]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-15" id="page-15" href="#page-15" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012              [Page 14]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
    0x04 - Administratively prohibited:  Used to signal to the neighbor
@@ -956,7 +803,7 @@ Table of Contents
       response with no NLRI payload, this is considered to be invalid.
 
    NS TLVs MAY be rate limited by the receiver as part of OPERATIONAL
-   rate limiting (see <a href="#section-8">Section 8</a>, Security Considerations).
+   rate limiting (see Section 8, Security Considerations).
 
 
 
@@ -989,12 +836,12 @@ Table of Contents
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012              [Page 15]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-16" id="page-16" href="#page-16" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012              [Page 15]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
-<span class="h2"><a class="selflink" name="section-4" href="#section-4">4</a>.  Use of the ADVISE TLVs</span>
+4.  Use of the ADVISE TLVs
 
    The BGP routing protocol is used with external as well as internal
    neighbors to propagate route advertisements.  In the case of external
@@ -1045,9 +892,9 @@ Table of Contents
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012              [Page 16]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-17" id="page-17" href="#page-17" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012              [Page 16]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
    message just prior to initiating the maintenance specifying what
@@ -1101,12 +948,12 @@ Table of Contents
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012              [Page 17]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-18" id="page-18" href="#page-18" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012              [Page 17]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
-<span class="h2"><a class="selflink" name="section-5" href="#section-5">5</a>.  Use of the STATE TLVs</span>
+5.  Use of the STATE TLVs
 
    At the current time, the BGP-4 protocol, provides no mechanism by
    which the state of a remote system can be examined.  Increasingly, as
@@ -1116,7 +963,7 @@ Table of Contents
    there are two sets of applications envisaged to be implemented
    utilising the STATE TLVs of the OPERATIONAL message.
 
-<span class="h3"><a class="selflink" name="section-5.1" href="#section-5.1">5.1</a>.  Utilising STATE TLVs for Cross-Domain Debugging Functionality</span>
+5.1.  Utilising STATE TLVs for Cross-Domain Debugging Functionality
 
    In numerous cases, autonomous system boundaries represent a
    demarcation point between operational teams - in these cases,
@@ -1138,7 +985,7 @@ Table of Contents
 
    An example of the use of such a mechanism is on BGP-4 sessions making
    up a network-network interconnection carrying Layer 3 MPLS VPN
-   [<a href="./rfc4364" title="&quot;BGP/MPLS IP Virtual Private Networks (VPNs)&quot;">RFC4364</a>] services - in these cases, such NNIs may be between
+   [RFC4364] services - in these cases, such NNIs may be between
    particular administrative teams of the same network provider.  The
    OPERATIONAL SSQ is intended to provide a simple query language that
    can be utilised to receive the subset of routing information that
@@ -1150,16 +997,16 @@ Table of Contents
    incorrect information to be identified without direct interaction
    between humans.
 
-<span class="h3"><a class="selflink" name="section-5.2" href="#section-5.2">5.2</a>.  Utilising STATE TLVs in the context of Error Handling</span>
+5.2.  Utilising STATE TLVs in the context of Error Handling
 
    The enhancements to the BGP-4 protocol intended to provide more
-   targeted error handling described in [<a href="#ref-I-D.ietf-idr-error-handling">I-D.ietf-idr-error-handling</a>]
+   targeted error handling described in [I-D.ietf-idr-error-handling]
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012              [Page 18]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-19" id="page-19" href="#page-19" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012              [Page 18]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
    provide a number of cases whereby NLRI that are contained in
@@ -1213,12 +1060,12 @@ Table of Contents
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012              [Page 19]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-20" id="page-20" href="#page-20" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012              [Page 19]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
-<span class="h2"><a class="selflink" name="section-6" href="#section-6">6</a>.  Use of the DUMP TLVs</span>
+6.  Use of the DUMP TLVs
 
    Where a notable condition is experienced by a BGP-4 speaker,
    currently a limited set of responses are available to the speaker to
@@ -1232,7 +1079,7 @@ Table of Contents
    system, or the information is of note to the remote BGP speaker,
    there is no means to communicate the detection of an erroneous
    condition to the remote device.  As described in
-   [<a href="#ref-I-D.ietf-grow-ops-reqs-for-bgp-error-handling">I-D.ietf-grow-ops-reqs-for-bgp-error-handling</a>] such conditions are
+   [I-D.ietf-grow-ops-reqs-for-bgp-error-handling] such conditions are
    likely to occur within the context of the handling of erroneous
    UPDATE messages.
 
@@ -1269,13 +1116,13 @@ Table of Contents
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012              [Page 20]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-21" id="page-21" href="#page-21" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012              [Page 20]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
    transmitted to a remote system.  The operational requirements
-   presented in [<a href="#ref-I-D.ietf-grow-ops-reqs-for-bgp-error-handling">I-D.ietf-grow-ops-reqs-for-bgp-error-handling</a>] describe
+   presented in [I-D.ietf-grow-ops-reqs-for-bgp-error-handling] describe
    the operational advantage of logging a copy of such a message
    locally, however, where the message is erroneous due to a bug in the
    formation or transmission of the message by the sender, and the error
@@ -1325,12 +1172,12 @@ Table of Contents
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012              [Page 21]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-22" id="page-22" href="#page-22" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012              [Page 21]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
-<span class="h2"><a class="selflink" name="section-7" href="#section-7">7</a>.  Error Handling</span>
+7.  Error Handling
 
    An implementation MUST NOT send an OPERATIONAL message to a neighbor
    in response to an erroneous or malformed OPERATIONAL message.  Any
@@ -1381,18 +1228,18 @@ Table of Contents
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012              [Page 22]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-23" id="page-23" href="#page-23" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012              [Page 22]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
-<span class="h2"><a class="selflink" name="section-8" href="#section-8">8</a>.  Security considerations</span>
+8.  Security considerations
 
    No new security issues are introduced to the BGP protocol by this
    specification.
 
    Where a request type is not supported or allowed by an implementation
-   for some reason, the implementation MAY send an NS (<a href="#section-3.4.4.2">Section 3.4.4.2</a>)
+   for some reason, the implementation MAY send an NS (Section 3.4.4.2)
    TLV in response, the Error subcode of this TLV SHOULD be set
    according to the reason that this request will not be responded to.
 
@@ -1407,7 +1254,7 @@ Table of Contents
    all, this is the suggested course of action when rate-limiting the
    sending of responses to a neighbor.
 
-   An implementation MAY send an MP (<a href="#section-3.4.4.1">Section 3.4.4.1</a>) TLV to indicate
+   An implementation MAY send an MP (Section 3.4.4.1) TLV to indicate
    the maximum rate at which it will accept OPERATIONAL messages from a
    neighbor, upon receipt of this TLV the sender MUST ensure it does not
    transmit above this rate for the duration of the session.
@@ -1417,7 +1264,7 @@ Table of Contents
    such, though the implementation need not reply to the request.
 
    Implementations MUST provide a mechanism for preventing access to
-   information requested by SSR (<a href="#section-3.4.2.7">Section 3.4.2.7</a>) messages for the
+   information requested by SSR (Section 3.4.2.7) messages for the
    operator.  Implementations SHOULD ensure that responses concerning
    the Loc-RIB (PRI with L-Bit set or responses which would set the
    L-Bit) are filtered in the default configuration.
@@ -1437,12 +1284,12 @@ Table of Contents
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012              [Page 23]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-24" id="page-24" href="#page-24" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012              [Page 23]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
-<span class="h2"><a class="selflink" name="section-9" href="#section-9">9</a>.  IANA Considerations</span>
+9.  IANA Considerations
 
    IANA is requested to allocate a type code for the OPERATIONAL message
    from the BGP Message Types registry, as well as requesting a type
@@ -1493,9 +1340,9 @@ Table of Contents
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012              [Page 24]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-25" id="page-25" href="#page-25" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012              [Page 24]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
    CONTROL:
@@ -1549,15 +1396,15 @@ Table of Contents
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012              [Page 25]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-26" id="page-26" href="#page-26" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012              [Page 25]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
-<span class="h2"><a class="selflink" name="section-10" href="#section-10">10</a>.  Acknowledgements</span>
+10.  Acknowledgements
 
-   This memo is based on existing works [<a href="#ref-I-D.ietf-idr-advisory">I-D.ietf-idr-advisory</a>] and
-   [<a href="#ref-I-D.raszuk-bgp-diagnostic-message">I-D.raszuk-bgp-diagnostic-message</a>] which describe a number of
+   This memo is based on existing works [I-D.ietf-idr-advisory] and
+   [I-D.raszuk-bgp-diagnostic-message] which describe a number of
    operational message types documented here.  The authors would like to
    thank Enke Chen, Bruno Decraene, Alton Lo, Tom Scholl, John Scudder
    and Richard Steenbergen for their valuable input.
@@ -1605,98 +1452,98 @@ Table of Contents
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012              [Page 26]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-27" id="page-27" href="#page-27" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012              [Page 26]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
-<span class="h2"><a class="selflink" name="section-11" href="#section-11">11</a>.  References</span>
+11.  References
 
-<span class="h3"><a class="selflink" name="section-11.1" href="#section-11.1">11.1</a>.  Normative References</span>
+11.1.  Normative References
 
-   [<a name="ref-RFC1997" id="ref-RFC1997">RFC1997</a>]  Chandrasekeran, R., Traina, P., and T. Li, "BGP
-              Communities Attribute", <a href="./rfc1997">RFC 1997</a>, August 1996.
+   [RFC1997]  Chandrasekeran, R., Traina, P., and T. Li, "BGP
+              Communities Attribute", RFC 1997, August 1996.
 
-   [<a name="ref-RFC2119" id="ref-RFC2119">RFC2119</a>]  Bradner, S., "Key words for use in RFCs to Indicate
-              Requirement Levels", <a href="./bcp14">BCP 14</a>, <a href="./rfc2119">RFC 2119</a>, March 1997.
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119, March 1997.
 
-   [<a name="ref-RFC4271" id="ref-RFC4271">RFC4271</a>]  Rekhter, Y., Li, T., and S. Hares, "A Border Gateway
-              Protocol 4 (BGP-4)", <a href="./rfc4271">RFC 4271</a>, January 2006.
+   [RFC4271]  Rekhter, Y., Li, T., and S. Hares, "A Border Gateway
+              Protocol 4 (BGP-4)", RFC 4271, January 2006.
 
-   [<a name="ref-RFC4360" id="ref-RFC4360">RFC4360</a>]  Sangli, S., Tappan, D., and Y. Rekhter, "BGP Extended
-              Communities Attribute", <a href="./rfc4360">RFC 4360</a>, February 2006.
+   [RFC4360]  Sangli, S., Tappan, D., and Y. Rekhter, "BGP Extended
+              Communities Attribute", RFC 4360, February 2006.
 
-   [<a name="ref-RFC4760" id="ref-RFC4760">RFC4760</a>]  Bates, T., Chandra, R., Katz, D., and Y. Rekhter,
-              "Multiprotocol Extensions for BGP-4", <a href="./rfc4760">RFC 4760</a>,
+   [RFC4760]  Bates, T., Chandra, R., Katz, D., and Y. Rekhter,
+              "Multiprotocol Extensions for BGP-4", RFC 4760,
               January 2007.
 
-   [<a name="ref-RFC4893" id="ref-RFC4893">RFC4893</a>]  Vohra, Q. and E. Chen, "BGP Support for Four-octet AS
-              Number Space", <a href="./rfc4893">RFC 4893</a>, May 2007.
+   [RFC4893]  Vohra, Q. and E. Chen, "BGP Support for Four-octet AS
+              Number Space", RFC 4893, May 2007.
 
-   [<a name="ref-RFC5492" id="ref-RFC5492">RFC5492</a>]  Scudder, J. and R. Chandra, "Capabilities Advertisement
-              with BGP-4", <a href="./rfc5492">RFC 5492</a>, February 2009.
+   [RFC5492]  Scudder, J. and R. Chandra, "Capabilities Advertisement
+              with BGP-4", RFC 5492, February 2009.
 
-<span class="h3"><a class="selflink" name="section-11.2" href="#section-11.2">11.2</a>.  Informative References</span>
+11.2.  Informative References
 
-   [<a name="ref-I-D.ietf-grow-ops-reqs-for-bgp-error-handling" id="ref-I-D.ietf-grow-ops-reqs-for-bgp-error-handling">I-D.ietf-grow-ops-reqs-for-bgp-error-handling</a>]
+   [I-D.ietf-grow-ops-reqs-for-bgp-error-handling]
               Shakir, R., "Operational Requirements for Enhanced Error
               Handling Behaviour in BGP-4",
-              <a href="./draft-ietf-grow-ops-reqs-for-bgp-error-handling-02">draft-ietf-grow-ops-reqs-for-bgp-error-handling-02</a> (work
+              draft-ietf-grow-ops-reqs-for-bgp-error-handling-02 (work
               in progress), October 2011.
 
-   [<a name="ref-I-D.ietf-idr-advisory" id="ref-I-D.ietf-idr-advisory">I-D.ietf-idr-advisory</a>]
+   [I-D.ietf-idr-advisory]
               Scholl, T., Scudder, J., Steenbergen, R., and D. Freedman,
-              "BGP Advisory Message", <a href="./draft-ietf-idr-advisory-00">draft-ietf-idr-advisory-00</a> (work
+              "BGP Advisory Message", draft-ietf-idr-advisory-00 (work
               in progress), October 2009.
 
-   [<a name="ref-I-D.ietf-idr-error-handling" id="ref-I-D.ietf-idr-error-handling">I-D.ietf-idr-error-handling</a>]
+   [I-D.ietf-idr-error-handling]
               Scudder, J., Chen, E., Mohapatra, P., and K. Patel,
               "Revised Error Handling for BGP UPDATE Messages",
-              <a href="./draft-ietf-idr-error-handling-01">draft-ietf-idr-error-handling-01</a> (work in progress),
+              draft-ietf-idr-error-handling-01 (work in progress),
               December 2011.
 
-   [<a name="ref-I-D.jasinska-ix-bgp-route-server" id="ref-I-D.jasinska-ix-bgp-route-server">I-D.jasinska-ix-bgp-route-server</a>]
+   [I-D.jasinska-ix-bgp-route-server]
               Jasinska, E., Hilliard, N., Raszuk, R., and N. Bakker,
               "Internet Exchange Route Server",
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012              [Page 27]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-28" id="page-28" href="#page-28" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012              [Page 27]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
-              <a href="./draft-jasinska-ix-bgp-route-server-03">draft-jasinska-ix-bgp-route-server-03</a> (work in progress),
+              draft-jasinska-ix-bgp-route-server-03 (work in progress),
               October 2011.
 
-   [<a name="ref-I-D.nalawade-bgp-inform" id="ref-I-D.nalawade-bgp-inform">I-D.nalawade-bgp-inform</a>]
+   [I-D.nalawade-bgp-inform]
               Nalawade, G., Scudder, J., and D. Ward, "BGPv4 INFORM
-              message", <a href="./draft-nalawade-bgp-inform-02">draft-nalawade-bgp-inform-02</a> (work in progress),
+              message", draft-nalawade-bgp-inform-02 (work in progress),
               August 2002.
 
-   [<a name="ref-I-D.nalawade-bgp-soft-notify" id="ref-I-D.nalawade-bgp-soft-notify">I-D.nalawade-bgp-soft-notify</a>]
+   [I-D.nalawade-bgp-soft-notify]
               Nalawade, G., "BGPv4 Soft-Notification Message",
-              <a href="./draft-nalawade-bgp-soft-notify-01">draft-nalawade-bgp-soft-notify-01</a> (work in progress),
+              draft-nalawade-bgp-soft-notify-01 (work in progress),
               July 2005.
 
-   [<a name="ref-I-D.raszuk-bgp-diagnostic-message" id="ref-I-D.raszuk-bgp-diagnostic-message">I-D.raszuk-bgp-diagnostic-message</a>]
+   [I-D.raszuk-bgp-diagnostic-message]
               Raszuk, R., Chen, E., and B. Decraene, "BGP Diagnostic
-              Message", <a href="./draft-raszuk-bgp-diagnostic-message-02">draft-raszuk-bgp-diagnostic-message-02</a> (work in
+              Message", draft-raszuk-bgp-diagnostic-message-02 (work in
               progress), March 2011.
 
-   [<a name="ref-I-D.retana-bgp-security-state-diagnostic" id="ref-I-D.retana-bgp-security-state-diagnostic">I-D.retana-bgp-security-state-diagnostic</a>]
+   [I-D.retana-bgp-security-state-diagnostic]
               Retana, A. and R. Raszuk, "BGP Security State Diagnostic
-              Message", <a href="./draft-retana-bgp-security-state-diagnostic-00">draft-retana-bgp-security-state-diagnostic-00</a>
+              Message", draft-retana-bgp-security-state-diagnostic-00
               (work in progress), March 2011.
 
-   [<a name="ref-I-D.shakir-idr-ops-reqs-for-bgp-error-handling" id="ref-I-D.shakir-idr-ops-reqs-for-bgp-error-handling">I-D.shakir-idr-ops-reqs-for-bgp-error-handling</a>]
+   [I-D.shakir-idr-ops-reqs-for-bgp-error-handling]
               Shakir, R., "Operational Requirements for Enhanced Error
               Handling Behaviour in BGP-4",
-              <a href="./draft-shakir-idr-ops-reqs-for-bgp-error-handling-01">draft-shakir-idr-ops-reqs-for-bgp-error-handling-01</a> (work
+              draft-shakir-idr-ops-reqs-for-bgp-error-handling-01 (work
               in progress), February 2011.
 
-   [<a name="ref-RFC4364" id="ref-RFC4364">RFC4364</a>]  Rosen, E. and Y. Rekhter, "BGP/MPLS IP Virtual Private
-              Networks (VPNs)", <a href="./rfc4364">RFC 4364</a>, February 2006.
+   [RFC4364]  Rosen, E. and Y. Rekhter, "BGP/MPLS IP Virtual Private
+              Networks (VPNs)", RFC 4364, February 2006.
 
 
 
@@ -1717,9 +1564,9 @@ Table of Contents
 
 
 
-<span class="grey">Freedman, et al.        Expires September 1, 2012              [Page 28]</span>
-</pre><!--NewPage--><pre class='newpage'><a name="page-29" id="page-29" href="#page-29" class="invisible"> </a>
-<span class="grey">Internet-Draft           bgp-operational-message           February 2012</span>
+Freedman, et al.        Expires September 1, 2012              [Page 28]
+
+Internet-Draft           bgp-operational-message           February 2012
 
 
 Authors' Addresses
@@ -1751,7 +1598,7 @@ Authors' Addresses
    UK
 
    Email: rob.shakir@bt.com
-   URI:   <a href="http://www.bt.com/">http://www.bt.com/</a>
+   URI:   http://www.bt.com/
 
 
 
@@ -1774,9 +1621,4 @@ Authors' Addresses
 
 
 Freedman, et al.        Expires September 1, 2012              [Page 29]
-
-</pre><br />
-<span class="noprint"><small><small>Html markup produced by rfcmarkup 1.104, available from
-<a href="http://tools.ietf.org/tools/rfcmarkup/">http://tools.ietf.org/tools/rfcmarkup/</a>
-</small></small></span>
-</body></html>
+
