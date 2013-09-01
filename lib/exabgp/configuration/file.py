@@ -911,7 +911,7 @@ class Configuration (object):
 			v = local_scope.get('hold-time','')
 			if v: neighbor.hold_time = v
 
-			changes = local_scope.get('route',[])
+			changes = local_scope.get('announce',[])
 
 		for local_scope in (scope[0],scope[-1]):
 			neighbor.api.receive_packets |= local_scope.get('receive-packets',False)
@@ -1232,7 +1232,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-		if 'route' not in scope[-1]:
+		if 'announce' not in scope[-1]:
 			scope[-1]['announce'] = []
 
 		scope[-1]['announce'].append(update)
@@ -1831,7 +1831,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-		if 'route' not in scope[-1]:
+		if 'announce' not in scope[-1]:
 			scope[-1]['announce'] = []
 
 		scope[-1]['announce'].append(flow)
