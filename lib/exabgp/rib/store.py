@@ -41,7 +41,8 @@ class Store (object):
 
 	def resend_known (self):
 		for change in self.every_changes():
-			self.insert_announced(change,True)
+			self.insert_announced(change)
+		self._announced = {}
 
 	def insert_announced_watchdog (self,change):
 		watchdog = change.attributes.watchdog()
@@ -78,7 +79,7 @@ class Store (object):
 		else:
 			self._announced.pop(change.nlri.index(),None)
 
-	def insert_announced (self,change,force=False):
+	def insert_announced (self,change):
 		# WARNING : this function can run while we are in the updates() loop
 
 		# self._announced[fanily][nlri-index] = change

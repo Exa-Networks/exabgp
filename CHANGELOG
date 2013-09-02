@@ -5,6 +5,7 @@ Version explained:
 
 Version 3.2.7
  * Fix: do not try to read empty body, causing loop delay
+ * Fix: correctly re-send routes between restart
 
 Version 3.2.6
  * Fix: bug in collision detection
