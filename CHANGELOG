@@ -6,6 +6,7 @@ Version explained:
 Version 3.2.6
  * Fix: bug in collision detection
  * Fix: prevent re-announcement of identical routes
+ * Fix: do not try to read empty body, causing loop delay
 
 Version 3.2.5
  * Improvement: FlowSpec decoding (ExaBGP can decode incoming FlowSpec)

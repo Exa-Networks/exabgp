@@ -236,6 +236,10 @@ class Connection (object):
 
 		number = length - Message.HEADER_LEN
 
+		if not number:
+			yield length,msg,header,''
+			return
+
 		for body in self._reader(number):
 			if not body:
 				yield 0,0,'',''
