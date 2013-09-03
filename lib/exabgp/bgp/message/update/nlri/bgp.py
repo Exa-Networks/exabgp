@@ -26,6 +26,9 @@ class PathInfo (object):
 	def __len__ (self):
 		return len(self.value)
 
+	def json (self):
+		return '"path-information": "%s"' % '.'.join([str(ord(_)) for _ in self.value])
+
 	def __str__ (self):
 		if self.value:
 			return ' path-information %s' % '.'.join([str(ord(_)) for _ in self.value])
@@ -61,6 +64,12 @@ class Labels (object):
 	def __len__ (self):
 		return self._len
 
+	def json (self):
+		if self._len > 1:
+			return '"label": [ %s ]' % ', '.join([str(_) for _ in self.labels])
+		else:
+			return ''
+
 	def __str__ (self):
 		if self._len > 1:
 			return ' label [ %s ]' % ' '.join([str(_) for _ in self.labels])
@@ -82,10 +91,7 @@ class RouteDistinguisher (object):
 	def __len__ (self):
 		return self._len
 
-	def __str__ (self):
-		if not self.rd:
-			return ''
-
+	def _str (self):
 		t,c1,c2,c3 = unpack('!HHHH',self.rd)
 		if t == 0:
 			rd = '%d:%d' % (c1,(c2<<16)+c3)
@@ -95,10 +101,13 @@ class RouteDistinguisher (object):
 			rd = '%d:%d' % ((c1<<16)+c2,c3)
 		else:
 			rd = str(self.rd)
+		return rd
 
-		if self.rd:
-			return ' route-distinguisher %s' % rd
-		return ''
+	def json (self):
+		return '"route-distinguisher": "%s"' % self._str()
+
+	def __str__ (self):
+		return ' route-distinguisher %s' % self._str()
 
 _NoRD = RouteDistinguisher('')
 
@@ -135,16 +144,15 @@ class NLRI (Prefix):
 		return not self.__eq__(other)
 
 	def json (self):
-		label = str(self.labels)
-		pinfo = str(self.path_info)
-		rdist = str(self.rd)
-		nxthp = self.nexthop.inet()
+		label = self.labels.json()
+		pinfo = self.path_info.json()
+		rdist = self.rd.json()
 
 		r = []
-		if label: r.append('"label": "%s"' % label)
-		if pinfo: r.append('"path-information": "%s"' % pinfo)
-		if rdist: r.append('"route-distinguisher": "%s"' % rdist)
-		if nxthp: r.append('"next-hop": "%s"' % nxthp)
+		if self.labels: r.append(label)
+		if self.path_info: r.append(pinfo)
+		if self.rd: r.append(rdist)
+		if self.nexthop: r.append('"next-hop": "%s"' % self.nexthop.inet())
 		return '"%s": { %s }' % (self.prefix(),", ".join(r))
 
 	def pack (self,addpath):

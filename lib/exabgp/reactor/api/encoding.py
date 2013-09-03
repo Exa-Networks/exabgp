@@ -128,9 +128,9 @@ class JSON (object):
 		remove = []
 		for family in minus:
 			nlris = minus[family]
-			s  = '"%s %s": [ ' % family
-			s += ', '.join('"%s"' % str(nlri) for nlri in nlris)
-			s += ' ]'
+			s  = '"%s %s": { ' % family
+			s += ', '.join('%s' % nlri.json() for nlri in nlris)
+			s += ' }'
 			remove.append(s)
 
 		nlri = ''
