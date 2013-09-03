@@ -254,7 +254,7 @@ The program configuration can be controlled using signals:
 			                                                        '%sVERY dangerous use only if you understand BGP very well.' % (' '* 34)),
 			'once': (environment.boolean,environment.lower,'false', 'only one tcp connection attempt per peer (for debuging scripts)'),
 			'delay': (environment.integer,environment.nop,'0',      'start to announce route when the minutes in the hours is a modulo of this number'),
-			'bind': (environment.optional_ip,environment.nop,'', 'IP to bind on when listening (no ip to disable)'),
+			'bind': (environment.optional_ip,environment.quote,'', 'IP to bind on when listening (no ip to disable)'),
 			'port': (environment.integer,environment.nop,'179', 'port to bind on when listening'),
 			'acl': (environment.boolean,environment.lower,'', '(experimental) unimplemented'),
 		},
