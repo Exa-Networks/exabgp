@@ -121,7 +121,7 @@ class JSON (object):
 		for family in plus:
 			nlris = plus[family]
 			s  = '"%s %s": { ' % family
-			s += ', '.join('%s' % nlri.json() for nlri in nlris)
+			s += ', '.join('%s' % str(nlri) for nlri in nlris)
 			s += ' }'
 			add.append(s)
 
