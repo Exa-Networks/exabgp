@@ -92,7 +92,7 @@ def parse():
                    help="when a state change is about to occur, wait N seconds between each healthcheck")
     g.add_argument("--timeout", "-t", metavar='N',
                    default=5,
-                   type=float,
+                   type=int,
                    help="wait N seconds for the check command to execute")
     g.add_argument("--rise", metavar='N',
                    default=3,
