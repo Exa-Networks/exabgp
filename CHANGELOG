@@ -7,6 +7,7 @@ Version 3.2.9
  * Fix: some json generation issue
     reported by: Peter Spikings
  * Fix: bad decoding of withdrawn routes with label ( checking 0x80000 and not 0x800000 )
+ * Fix: only treat 0x800000 as special for route withdrawal
  * Improvement: decode shows the JSON representation of updates
 
 Version 3.2.8

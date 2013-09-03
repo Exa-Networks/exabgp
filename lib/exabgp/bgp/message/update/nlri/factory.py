@@ -14,16 +14,18 @@ from exabgp.bgp.message.update.nlri.bgp import NLRI,PathInfo,Labels,RouteDisting
 from exabgp.bgp.message.update.nlri.flow import FlowNLRI,decode,factory,CommonOperator
 from exabgp.bgp.message.update.attribute.nexthop import cachedNextHop
 
+from exabgp.bgp.message.direction import IN
+
 from exabgp.util.od import od
 from exabgp.logger import Logger,LazyFormat
 
 def NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
 	if safi in (133,134):
-		return _FlowNLRIFactory(afi,safi,nexthop,bgp)
+		return _FlowNLRIFactory(afi,safi,nexthop,bgp,action)
 	else:
 		return _NLRIFactory(afi,safi,bgp,has_multiple_path,nexthop,action)
 
-def _nlrifactory (afi,safi,bgp):
+def _nlrifactory (afi,safi,bgp,action):
 	labels = []
 	rd = ''
 
@@ -39,8 +41,7 @@ def _nlrifactory (afi,safi,bgp):
 			# The last bit is set for the last label
 			labels.append(label>>4)
 			# This is a route withdrawal
-			if label == 0x800000:
-				# XXX: FIXME: how many implementation would fail like this is if multiple label are sent after this one
+			if label == 0x800000 and action == IN.withdrawn:
 				break
 			# This is a next-hop
 			if label == 0x000000:
@@ -72,7 +73,7 @@ def _nlrifactory (afi,safi,bgp):
 
 	return labels,rd,mask,size,prefix,bgp
 
-def _FlowNLRIFactory (afi,safi,nexthop,bgp):
+def _FlowNLRIFactory (afi,safi,nexthop,bgp,action):
 	logger = Logger()
 	logger.parser(LazyFormat("parsing flow nlri payload ",od,bgp))
 
@@ -113,7 +114,7 @@ def _FlowNLRIFactory (afi,safi,nexthop,bgp):
 
 		if decoder == 'prefix':
 			if afi == AFI.ipv4:
-				_,rd,mask,size,prefix,left = _nlrifactory(afi,safi,bgp)
+				_,rd,mask,size,prefix,left = _nlrifactory(afi,safi,bgp,action)
 				adding = klass(prefix,mask)
 				if not nlri.add(adding):
 					raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
@@ -122,7 +123,7 @@ def _FlowNLRIFactory (afi,safi,nexthop,bgp):
 			else:
 				byte,bgp = bgp[1],bgp[0]+bgp[2:]
 				offset = ord(byte)
-				_,rd,mask,size,prefix,left = _nlrifactory(afi,safi,bgp)
+				_,rd,mask,size,prefix,left = _nlrifactory(afi,safi,bgp,action)
 				adding = klass(prefix,mask,offset)
 				if not nlri.add(adding):
 					raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
@@ -151,7 +152,7 @@ def _NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
 		path_identifier = ''
 		length = 0
 
-	labels,rd,mask,size,prefix,left = _nlrifactory(afi,safi,bgp)
+	labels,rd,mask,size,prefix,left = _nlrifactory(afi,safi,bgp,action)
 
 	nlri = NLRI(afi,safi,prefix,mask,cachedNextHop(nexthop),action)
 
