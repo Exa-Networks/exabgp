@@ -9,6 +9,7 @@ Version 3.2.9
  * Fix: bad decoding of withdrawn routes with label ( checking 0x80000 and not 0x800000 )
  * Fix: only treat 0x800000 as special for route withdrawal
  * Fix: we could believe we were already connected when we were not
+ * Fix: handle when ExaBGP daftly connects to iself
  * Improvement: decode shows the JSON representation of updates
 
 Version 3.2.8
