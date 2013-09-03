@@ -24,3 +24,6 @@ class NLRIEOR (Address):
 
 	def extensive (self):
 		return 'eor %d/%d (%s %s)' % (self.afi,self.safi,self.afi,self.safi)
+
+	def json (self):
+		return '"eor": { "afi" : %d, "safi" : %d }' % (self.afi,self.safi)
