@@ -198,7 +198,7 @@ class Peer (object):
 
 	def incoming (self,connection):
 		# if the other side fails, we go back to idle
-		if self._['in']['proto'] and self._['in']['proto'] is not True:
+		if self._['in']['proto'] not in (True,False,None):
 			self.logger.network('we already have a peer at this address')
 			return False
 
