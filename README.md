@@ -1,6 +1,8 @@
 ExaBGP
 ======
 
+**ExaBGP 3.2 is now stable !**
+
 Software Defined Networking without marketing
 
 Presentation
@@ -35,36 +37,13 @@ Should you need commercial support in order to deploy ExaBGP in your organisatio
 
 Want to know how the code is changing ? follow our [Google + Community page](https://plus.google.com/communities/108249711110699351497) where we discuss current developments. You can as well follow us on twitter, or subscribe to our low volume mailing list.
 
-Help
-----
-
-Should you need any help or have any question, please post on our [mailing-list](http://groups.google.com/group/exabgp-users) or ask on our [G+ community](https://plus.google.com/u/0/communities/108249711110699351497)
-
-News
-----
-
-The configuration file format changed slightly from 3.0.x to 3.1.x, effort were made to make sure the previous configuration format would still work, however users are encouraged to check their configuration files.
-
-July 6th 2013, released ExaBGP 3.1.13
-
- * Fix: only clear buffered routes on restart and not reload (bug never reported)
- * Fix: an issue when parsing EOR
- * Fix: bug with RD community genration (reported by: Parag Jain)
- * Fix/Improvement: only announce routes for the negociated family on a connection (requested by: Andrew Hoyos)
- * Improvement: use less memory on route change calculation
- * Improvement: more regression testing
- * Improvement: allow to control which neighbor will get API notification (requested by: Parag Jain)
- * Improvement: allow API notifications to multiple neighbors (requested by: Petr Lapukhov
- * Improvement: allow delayed connections (requested by: David Freeman)
- * Improvement: block on busy socket for performance testing (requested by: David Freeman)
-
 Features
 --------
 
  * announce BGP route to IPv4 or IPv6 routers with a JunOS looking configuration file
    * **IPv4**/**IPv6** (unicast, multicast, nlri-mpls, *mpls-vpn*) routes with arbitrary next-hops
    * **MPLS** (route-distinguisher), RFC 4659 (vpnv6)
-   * **flow routes** (see flow spec [http://tools.ietf.org/html/rfc5575 RFC 5575])
+   * **flow routes** (see [RFC 5575](http://tools.ietf.org/html/rfc5575 RFC 5575))
    * support for many recent drafts (multi-session, add-path, IPv6 FlowSpec, ...)
  * generate BGP updates from third party applications
  * parse BGP and generate BGP updates from your own program **simply**
@@ -76,6 +55,37 @@ Features
 
 ExaBGP does **not** perform any **FIB manipulation**, however it can call an application which will perform them.
 Please look at [BIRD](http://bird.network.cz/) if this is what you are looking for.
+
+News
+----
+
+## RFC / drafts support
+
+ * complete RFC 5575 by :
+   * providing support for **flow-vpn**
+    * adding DCSP marking
+    * adding traffic-action
+ * implemented **draft-raszuk-idr-flow-spec-v6-03**
+ * implemented **draft-ietf-idr-flowspec-redirect-ip-00.txt**
+
+## New features include
+
+ * **An external program to announce a service** ( Thank you Vincent ! )
+ * ExaBGP can **accept incoming connections** ( not production ready ! )
+ * ExaBGP can decode incoming Flow routes
+ * using "next-hop self" is supported via the API
+ * new update code generation can *group multiple NLRI*, from different families, in one update packet
+ * **NOTIFICATION** message generation using the API
+ * API message control (limit diffusion to a subset of peers)
+ * better --decode option to find out what a hex dump of a route mean 
+ * new internals ... many, including
+    * large rewrite of non-optimal code
+    * new non-blocking reactor 
+    * new Adj-RIB-In and Adj-RIB-Out with scalable watchdog feature
+ * many small fixes, see the full CHANGELOG
+ * and more ....
+
+The configuration file format changed slightly from 3.1.x to 3.2.x, effort were made to make sure the previous configuration format would still work, however users are encouraged to check their configuration files.
 
 Usage
 -----
@@ -89,7 +99,9 @@ Usage
 More information
 ----------------
 
-Keep up to date, follow our [**google community**](https://plus.google.com/u/0/communities/108249711110699351497) or [**twitter**](https://twitter.com/#!/search/exabgp).
+Should you need any help or have any question, please post on our [mailing-list](http://groups.google.com/group/exabgp-users) or ask on our [G+ community](https://plus.google.com/u/0/communities/108249711110699351497)
+
+Follow our [**google community**](https://plus.google.com/u/0/communities/108249711110699351497) or [**twitter**](https://twitter.com/#!/search/exabgp).
 
 Please consult any of :
 
