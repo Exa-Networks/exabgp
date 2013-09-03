@@ -104,9 +104,13 @@ class RouteDistinguisher (object):
 		return rd
 
 	def json (self):
+		if not self.rd:
+			return ''
 		return '"route-distinguisher": "%s"' % self._str()
 
 	def __str__ (self):
+		if not self.rd:
+			return ''
 		return ' route-distinguisher %s' % self._str()
 
 _NoRD = RouteDistinguisher('')
