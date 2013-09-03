@@ -170,11 +170,10 @@ The program configuration can be controlled using signals:
 		help="perform a configuration validity check only"
 	)
 	g.add_argument(
-		"--decode", '-x',  # can not be -d it conflicts with --debug
+		"--decode", "-x",  # can not be -d it conflicts with --debug
 		metavar="HEX_MESSAGE",
-		help="decode a the raw route packet in hexadecimal string"
+		help="decode a raw route packet in hexadecimal string"
 	)
-
 
 	options = parser.parse_args()
 

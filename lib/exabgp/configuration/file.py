@@ -2262,6 +2262,7 @@ class Configuration (object):
 		from exabgp.bgp.message.open.capability.negotiated import Negotiated
 		from exabgp.bgp.message.open.capability.id import CapabilityID
 		from exabgp.bgp.message.notification import Notify
+		from exabgp.reactor.api.encoding import JSON
 
 		self.logger._parser = True
 
@@ -2325,7 +2326,7 @@ class Configuration (object):
 			for number in range(len(update.nlris)):
 				change = Change(update.nlris[number],update.attributes)
 				self.logger.parser('decoded %s %s %s' % (decoding,change.nlri.action,change.extensive()))
-
+			self.logger.parser('update json %s' % JSON('1.0').update(n,update))
 		import sys
 		sys.exit(0)
 

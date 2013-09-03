@@ -5,7 +5,9 @@ Version explained:
 
 Version 3.2.9
  * Fix: some json generation issue
-    reported by: github user pspikings
+    reported by: Peter Spikings
+ * Fix: bad decoding of withdrawn routes with label ( checking 0x80000 and not 0x800000 )
+ * Improvement: decode shows the JSON representation of updates
 
 Version 3.2.8
  * Fix: correctly re-send routes between restart
