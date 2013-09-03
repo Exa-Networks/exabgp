@@ -34,12 +34,18 @@ def _nlrifactory (afi,safi,bgp):
 		while bgp and mask >= 8:
 			label = int(unpack('!L',chr(0) + bgp[:3])[0])
 			bgp = bgp[3:]
-			labels.append(label>>4)
 			mask -= 24  # 3 bytes
-			if label & 1:
+			# The last 4 bits are the bottom of Stack
+			# The last bit is set for the last label
+			labels.append(label>>4)
+			# This is a route withdrawal
+			if label == 0x800000:
+				# XXX: FIXME: how many implementation would fail like this is if multiple label are sent after this one
 				break
-			# This is a route withdrawal, or next-hop
-			if label == 0x000000 or label == 0x80000:
+			# This is a next-hop
+			if label == 0x000000:
+				break
+			if label & 1:
 				break
 
 	if SAFI(safi).has_rd():
