@@ -1,12 +1,10 @@
-ExaBGP
-======
-
-**ExaBGP 3.2 is now stable !**
+#ExaBGP
 
 Software Defined Networking without marketing
 
-Presentation
-------------
+**ExaBGP 3.2 is out !**
+
+##Presentation
 
 Control your network using [BGP](http://www.ietf.org/rfc/rfc4271.txt) from any commodity servers and reap the benefit of software defined networking without [OpenFlow](http://www.wired.com/wiredenterprise/2012/04/going-with-the-flow-google/)
 
@@ -37,8 +35,7 @@ Should you need commercial support in order to deploy ExaBGP in your organisatio
 
 Want to know how the code is changing ? follow our [Google + Community page](https://plus.google.com/communities/108249711110699351497) where we discuss current developments. You can as well follow us on twitter, or subscribe to our low volume mailing list.
 
-Features
---------
+##Features
 
  * announce BGP route to IPv4 or IPv6 routers with a JunOS looking configuration file
    * **IPv4**/**IPv6** (unicast, multicast, nlri-mpls, *mpls-vpn*) routes with arbitrary next-hops
@@ -56,10 +53,9 @@ Features
 ExaBGP does **not** perform any **FIB manipulation**, however it can call an application which will perform them.
 Please look at [BIRD](http://bird.network.cz/) if this is what you are looking for.
 
-News
-----
+##News
 
-## RFC / drafts support
+### RFC / drafts support
 
  * complete RFC 5575 by :
    * providing support for **flow-vpn**
@@ -68,7 +64,7 @@ News
  * implemented **draft-raszuk-idr-flow-spec-v6-03**
  * implemented **draft-ietf-idr-flowspec-redirect-ip-00.txt**
 
-## New features include
+### New features include
 
  * **An external program to announce a service** ( Thank you Vincent ! )
  * ExaBGP can **accept incoming connections** ( not production ready ! )
@@ -87,8 +83,7 @@ News
 
 The configuration file format changed slightly from 3.1.x to 3.2.x, effort were made to make sure the previous configuration format would still work, however users are encouraged to check their configuration files.
 
-Usage
------
+##Usage
 
  * [Stop DDOS](http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf) using FlowSpec
  * [AnyCast](http://blog.iweb-hosting.co.uk/blog/2012/01/27/using-bgp-to-serve-high-availability-dns/) servers
@@ -96,8 +91,7 @@ Usage
  * [Looking-Glass](https://code.google.com/p/gixlg/)  using MySQL backend
  * Many more ...
 
-More information
-----------------
+##More information
 
 Should you need any help or have any question, please post on our [mailing-list](http://groups.google.com/group/exabgp-users) or ask on our [G+ community](https://plus.google.com/u/0/communities/108249711110699351497)
 
@@ -115,16 +109,15 @@ ExaBGP 3.2.x will rely on python 2.7, and we are likely to required python 3.4+ 
 
 This programs does not have any dependences on any third party libraries and will run out of the box on any Unix system.
 
-Get it
-------
+## Get it
+```sh
+> wget https://github.com/Thomas-Mangin/exabgp/archive/3.2.5.tar.gz
+> tar zxvf 3.2.5.tar.gz
+> cd exabgp-3.2.5
+> ./sbin/exabgp --help
+```
 
-	> wget https://github.com/Thomas-Mangin/exabgp/archive/3.2.5.tar.gz
-	> tar zxvf 3.2.5.tar.gz
-	> cd exabgp-3.2.5
-	> ./sbin/exabgp --help
-
-Related Projects
-----------------
+##Related Projects
 
  * [GIXLG](https://code.google.com/p/gixlg/) a looking glass with visualisation using ExaBGP
  * [BGPAPI](https://github.com/abh/bgpapi) an HTTP API to ExaBGP
