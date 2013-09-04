@@ -100,6 +100,8 @@ class Capabilities (dict):
 			ap_families = []
 			if (AFI(AFI.ipv4),SAFI(SAFI.unicast)) in families:
 				ap_families.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
+			if (AFI(AFI.ipv6),SAFI(SAFI.unicast)) in families:
+				ap_families.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
 			if (AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)) in families:
 				ap_families.append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
 			#if (AFI(AFI.ipv6),SAFI(SAFI.unicast)) in families:
