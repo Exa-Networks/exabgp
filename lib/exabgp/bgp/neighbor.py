@@ -50,9 +50,6 @@ class Neighbor (object):
 		self.operational = None
 		self.messages = deque()
 
-		self.operational = None
-		self.messages = deque()
-
 	def make_rib (self):
 		self.rib = RIB(self.name())
 

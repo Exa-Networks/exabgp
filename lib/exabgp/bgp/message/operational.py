@@ -69,6 +69,9 @@ class Operational (Message):
 		return Message.message(self,"%s%s%s" % (self.what.pack(),pack('!H',len(self.data)),self.data))
 
 	def __str__ (self):
+		return self.extensive()
+
+	def extensive (self):
 		return 'operational %s' % self.name
 
 class OperationalFamily (Operational):
@@ -101,8 +104,8 @@ class NS:
 				'%s%s' % (sequence,self.ERROR_SUBCODE)
 			)
 
-		def __str__ (self):
-			return 'Operational NS %s %s/%s' % (self.name,self.afi,self.safi)
+		def extensive (self):
+			return 'operational NS %s %s/%s' % (self.name,self.afi,self.safi)
 
 
 	class Malformed (_NS):
@@ -131,7 +134,11 @@ class NS:
 
 
 class Advisory:
-	class ADM (OperationalFamily):
+	class _Advisory (OperationalFamily):
+		def extensive (self):
+			return 'operational %s afi %s safi %s "%s"' % (self.name,self.afi,self.safi,self.data)
+
+	class ADM (_Advisory):
 		name = 'ADM'
 
 		def __init__ (self,afi,safi,utf8):
@@ -144,7 +151,7 @@ class Advisory:
 				utf8.encode('utf-8')
 			)
 
-	class ASM (OperationalFamily):
+	class ASM (_Advisory):
 		name = 'ASM'
 
 		def __init__ (self,afi,safi,utf8):
@@ -152,7 +159,7 @@ class Advisory:
 				utf8 = utf8[:MAX_ADVISORY-3] + '...'
 			OperationalFamily.__init__(
 				self,
-				OperationalType.ADM,
+				OperationalType.ASM,
 				afi,safi,
 				utf8.encode('utf-8')
 			)

@@ -279,14 +279,14 @@ class Configuration (object):
 				self._nexthopself = nexthop
 				if not self._single_static_route(scope,tokens[1:]):
 					self._nexthopself = None
-					return None
+					return False
 				for change in scope[0]['announce']:
 					changes.append((peer,change))
 			self._nexthopself = None
 		else:
 			scope = [{}]
 			if not self._single_static_route(scope,tokens[1:]):
-				return None
+				return False
 			for peer in peers:
 				for change in scope[0]['announce']:
 					changes.append((peer,change))
@@ -299,14 +299,43 @@ class Configuration (object):
 		self._tokens = self._tokenise(' '.join(self._cleaned(command).split(' ')[2:]).split('\\n'))
 		scope = [{}]
 		if not self._dispatch(scope,'flow',['route',],[]):
-			return None
+			return False
 		if not self._check_flow_route(scope):
-			return None
+			return False
 		changes = scope[0]['announce']
 		if action == 'withdraw':
 			for change in changes:
 				change.nlri.action = OUT.withdraw
 		return changes
+
+	def parse_api_operational (self,command):
+		tokens = self._cleaned(command).split(' ',2)
+		if tokens[0] != 'operational':
+			return False
+		if tokens[1] == 'adm':
+			return self._parse_api_operational_adm(tokens)
+		elif tokens[1] == 'asm':
+			return self._parse_api_operational_asm(tokens)
+		else:
+			return False
+
+	def _parse_api_operational_asm (self,tokens):
+		if tokens[2][0] != tokens[2][-1]:
+			return False
+		scope = [{}]
+		if not self._single_operational_asm(scope,tokens[2:]):
+			return False
+		operational = scope[0]['operational'][0]
+		return operational
+
+	def _parse_api_operational_adm (self,tokens):
+		if tokens[2][0] != tokens[2][-1]:
+			return False
+		scope = [{}]
+		if not self._single_operational_adm(scope,tokens[2:]):
+			return False
+		operational = scope[0]['operational'][0]
+		return operational
 
 	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
 	def change_to_peers (self,change,peers):
@@ -315,6 +344,19 @@ class Configuration (object):
 			if neighbor in peers:
 				if change.nlri.family() in self.neighbor[neighbor].families():
 					self.neighbor[neighbor].rib.outgoing.insert_announced(change)
+					result = True
+				else:
+					self.logger.configuration('the route family is not configured on neighbor','error')
+					return False
+		return result
+
+	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
+	def operational_to_peers (self,operational,peers):
+		result = False
+		for neighbor in self.neighbor:
+			if neighbor in peers:
+				if operational.family() in self.neighbor[neighbor].families():
+					self.neighbor[neighbor].messages.append(operational)
 					result = True
 				else:
 					self.logger.configuration('the route family is not configured on neighbor','error')
@@ -554,7 +596,7 @@ class Configuration (object):
 			if command == 'route-refresh': return self._set_routerefresh(scope,'route-refresh',tokens[1:])
 			if command == 'graceful-restart': return self._set_gracefulrestart(scope,'graceful-restart',tokens[1:])
 			if command == 'multi-session': return self._set_multisession(scope,'multi-session',tokens[1:])
-			if command == 'operational': return self._set_operational(scope,'operational',tokens[1:])
+			if command == 'operational': return self._set_operational(scope,'capa-operational',tokens[1:])
 			if command == 'add-path': return self._set_addpath(scope,'add-path',tokens[1:])
 			if command == 'asn4': return self._set_asn4(scope,'asn4',tokens[1:])
 
@@ -930,7 +972,7 @@ class Configuration (object):
 			if v: neighbor.hold_time = v
 
 			changes = local_scope.get('announce',[])
-			messages = local_scope.get('tlv',[])
+			messages = local_scope.get('operational',[])
 
 		for local_scope in (scope[0],scope[-1]):
 			neighbor.api.receive_packets |= local_scope.get('receive-packets',False)
@@ -955,7 +997,7 @@ class Configuration (object):
 			# README: Should it be a subclass of int ?
 			neighbor.graceful_restart = int(neighbor.hold_time)
 		neighbor.multisession = local_scope.get('multi-session',False)
-		neighbor.operational = local_scope.get('operational',False)
+		neighbor.operational = local_scope.get('capa-operational',False)
 		neighbor.add_path = local_scope.get('add-path',0)
 		neighbor.asn4 = local_scope.get('asn4',True)
 
@@ -2304,11 +2346,11 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-		if 'tlv' not in scope[-1]:
-			scope[-1]['tlv'] = []
+		if 'operational' not in scope[-1]:
+			scope[-1]['operational'] = []
 
 		# iterate on each family for the peer if multiprotocol is set.
-		scope[-1]['tlv'].append(klass(AFI(AFI.ipv4),SAFI(SAFI.unicast),string))
+		scope[-1]['operational'].append(klass(AFI(AFI.ipv4),SAFI(SAFI.unicast),string))
 		return True
 
 	def _single_operational_asm (self,scope,value):

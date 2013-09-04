@@ -3,13 +3,6 @@
 import os
 import sys
 import time
-import syslog
-
-def _prefixed (level,message):
-	now = time.strftime('%a, %d %b %Y %H:%M:%S',time.localtime())
-	return "%s %-8s %-6d %s" % (now,level,os.getpid(),message)
-
-syslog.openlog("ExaBGP")
 
 # When the parent dies we are seeing continual newlines, so we only access so many before stopping
 counter = 0

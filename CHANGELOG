@@ -14,8 +14,11 @@ Version 3.2.9
  * Fix: we could believe we were already connected when we were not
  * Fix: handle when ExaBGP daftly connects to iself
  * Fix: did not parse add-path capability correctly (only registered the last family sent)
+    reported Ryan Steinmetz
+ * Fix: ASM messages were sent as ADM
  * Improvement: decode shows the JSON representation of updates
  * Improvement: start of support for draft-ietf-idr-operational-message-00
+ * Improvement: allow operational advisory message using the API
 
 Version 3.2.8
  * Fix: correctly re-send routes between restart

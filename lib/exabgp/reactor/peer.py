@@ -374,12 +374,6 @@ class Peer (object):
 		self._resend_routes = True
 
 		while not self._teardown:
-			if self.neighbor.operational:
-				operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
-				if operational:
-					for message in proto.new_operational(operational):
-						yield ACTION.immediate
-
 			for message in proto.read_message():
 				# Received update
 				if message.TYPE == Update.TYPE:
@@ -395,6 +389,12 @@ class Peer (object):
 				if self.timer.keepalive():
 					for message in proto.new_keepalive():
 						yield ACTION.immediate
+
+				if self.neighbor.operational:
+					operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
+					if operational:
+						for message in proto.new_operational(operational):
+							yield ACTION.immediate
 
 				# Give information on the number of routes seen
 				counter.display()
