@@ -13,7 +13,7 @@ from exabgp.bgp.message import Message
 
 # =================================================================== Operational
 
-MAX_ADVISORY = 2000  # 2K
+MAX_ADVISORY = 2048  # 2K
 
 class Type (int):
 	def pack (self,asn4=None):
