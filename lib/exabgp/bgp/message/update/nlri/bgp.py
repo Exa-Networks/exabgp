@@ -14,29 +14,29 @@ from exabgp.bgp.message.update.nlri.prefix import mask_to_bytes,Prefix
 class PathInfo (object):
 	def __init__ (self,integer=None,ip=None,packed=None):
 		if packed:
-			self.value = packed
+			self.path_info = packed
 		elif ip:
-			self.value = ''.join([chr(int(_)) for _ in ip.split('.')])
+			self.path_info = ''.join([chr(int(_)) for _ in ip.split('.')])
 		elif integer:
-			self.value = ''.join([chr((integer>>offset) & 0xff) for offset in [24,16,8,0]])
+			self.path_info = ''.join([chr((integer>>offset) & 0xff) for offset in [24,16,8,0]])
 		else:
-			self.value = ''
+			self.path_info = ''
 		#sum(int(a)<<offset for (a,offset) in zip(ip.split('.'), range(24, -8, -8)))
 
 	def __len__ (self):
-		return len(self.value)
+		return len(self.path_info)
 
 	def json (self):
-		return '"path-information": "%s"' % '.'.join([str(ord(_)) for _ in self.value])
+		return '"path-information": "%s"' % '.'.join([str(ord(_)) for _ in self.path_info])
 
 	def __str__ (self):
-		if self.value:
-			return ' path-information %s' % '.'.join([str(ord(_)) for _ in self.value])
+		if self.path_info:
+			return ' path-information %s' % '.'.join([str(ord(_)) for _ in self.path_info])
 		return ''
 
 	def pack (self):
-		if self.value:
-			return self.value
+		if self.path_info:
+			return self.path_info
 		return '\x00\x00\x00\x00'
 
 _NoPathInfo = PathInfo()
@@ -172,4 +172,4 @@ class NLRI (Prefix):
 			return path_info + Prefix.pack(self)
 
 	def index (self):
-		return self.pack(True)+self.rd.rd
+		return self.pack(True)+self.rd.rd+self.path_info.path_info
