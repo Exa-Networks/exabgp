@@ -205,7 +205,8 @@ def CapabilitiesFactory (data):
 						continue
 
 					if k == CapabilityID.ADD_PATH:
-						capabilities[k] = AddPath()
+						if k not in capabilities:
+							capabilities[k] = AddPath()
 						value_ad = capv
 						while value_ad:
 							afi = AFI(unpack('!H',value_ad[:2])[0])

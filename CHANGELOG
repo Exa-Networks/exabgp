@@ -10,6 +10,7 @@ Version 3.2.9
  * Fix: only treat 0x800000 as special for route withdrawal
  * Fix: we could believe we were already connected when we were not
  * Fix: handle when ExaBGP daftly connects to iself
+ * Fix: did not parse add-path capability correctly (only registered the last family sent)
  * Improvement: decode shows the JSON representation of updates
 
 Version 3.2.8

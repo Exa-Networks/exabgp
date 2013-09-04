@@ -58,20 +58,30 @@ class BGPHandler(asyncore.dispatcher_with_send):
 				yield 'mp:','raw:%s' % bytestream(body)
 
 		while withdrawn:
-			l = withdrawn.pop(0)
+			if len(announced) > 4:
+				path=announced[:4]
+				announced = announced[4:]
+			else:
+				path=['','','','']
+			m = withdrawn.pop(0)
 			r = [0,0,0,0]
 			for index in range(4):
-				if index*8 >= l: break
+				if index*8 >= m: break
 				r[index] = withdrawn.pop(0)
-			yield 'withdraw:%s' % '.'.join(str(_) for _ in r) + '/' + str(l), 'raw:%s' % bytestream(body)
+			yield 'withdraw:%s' % '.'.join(str(_) for _ in r) + '/' + str(m), 'raw:%s' % bytestream(body)
 
 		while announced:
-			l = announced.pop(0)
+			if len(announced) > 4:
+				path=announced[:4]
+				announced = announced[4:]
+			else:
+				path=['','','','']
+			m = announced.pop(0)
 			r = [0,0,0,0]
 			for index in range(4):
-				if index*8 >= l: break
+				if index*8 >= m: break
 				r[index] = announced.pop(0)
-			yield 'announce:%s' % '.'.join(str(_) for _ in r) + '/' + str(l), 'raw:%s' % bytestream(body)
+			yield 'announce:%s' % '.'.join(str(_) for _ in r) + '/' + str(m), 'raw:%s' % bytestream(body)
 
 	def notification (self,body):
 		yield 'notification:%d,%d' % (ord(body[0]),ord(body[1])), 'raw:%s' % bytestream(body)

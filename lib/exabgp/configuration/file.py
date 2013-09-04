@@ -188,11 +188,11 @@ class Configuration (object):
 
 	_str_capa_error = \
 	'syntax: capability {\n' \
-	'          graceful-restart <time in second>;\n'
+	'          graceful-restart <time in second>;\n' \
 	'          asn4 enable|disable;\n' \
 	'          add-path disable|send|receive|send/receive;\n' \
-	'          multi-session enable|disable;\n'
-	'          operational enable|disable;\n'
+	'          multi-session enable|disable;\n' \
+	'          operational enable|disable;\n' \
 	'        }\n'
 
 	def __init__ (self,fname,text=False):
@@ -827,8 +827,8 @@ class Configuration (object):
 				raise ValueError('invalid add-path')
 			scope[-1][command] = apv
 			return True
-		except ValueError:
-			self._error = '"%s" is an invalid add-path' % ' '.join(value)
+		except (ValueError,IndexError):
+			self._error = '"%s" is an invalid add-path' % ' '.join(value) + '\n' + self._str_capa_error
 			if self.debug: raise
 			return False
 
@@ -956,7 +956,7 @@ class Configuration (object):
 			neighbor.graceful_restart = int(neighbor.hold_time)
 		neighbor.multisession = local_scope.get('multi-session',False)
 		neighbor.operational = local_scope.get('operational',False)
-		neighbor.add_path = local_scope.get('add-path','')
+		neighbor.add_path = local_scope.get('add-path',0)
 		neighbor.asn4 = local_scope.get('asn4',True)
 
 		missing = neighbor.missing()
