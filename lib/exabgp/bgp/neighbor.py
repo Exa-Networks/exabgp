@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
+from collections import deque
+
 from exabgp.protocol.family import AFI
 
 from exabgp.bgp.message.open.holdtime import HoldTime
@@ -44,6 +46,12 @@ class Neighbor (object):
 
 		self._families = []
 		self.rib = None
+
+		self.operational = None
+		self.messages = deque()
+
+		self.operational = None
+		self.messages = deque()
 
 	def make_rib (self):
 		self.rib = RIB(self.name())
@@ -97,6 +105,7 @@ class Neighbor (object):
 			self.graceful_restart == other.graceful_restart and \
 			self.multisession == other.multisession and \
 			self.add_path == other.add_path and \
+			self.operational == other.operational and \
 			self.group_updates == other.group_updates and \
 			self.families() == other.families()
 
@@ -116,10 +125,11 @@ class Neighbor (object):
 			families += '\n    %s %s;' % (afi.name(),safi.name())
 
 		_api  = []
-		_api.extend(['    neighbor-changes;\n',] if self.api.neighbor_changes else [])
-		_api.extend(['    receive-packets;\n',]  if self.api.receive_packets else [])
-		_api.extend(['    send-packets;\n',]     if self.api.send_packets else [])
-		_api.extend(['    receive-routes;\n',]   if self.api.receive_routes else [])
+		_api.extend(['    neighbor-changes;\n',]    if self.api.neighbor_changes else [])
+		_api.extend(['    receive-packets;\n',]     if self.api.receive_packets else [])
+		_api.extend(['    send-packets;\n',]        if self.api.send_packets else [])
+		_api.extend(['    receive-routes;\n',]      if self.api.receive_routes else [])
+		_api.extend(['    receive-operational;\n',] if self.api.receive_operational else [])
 		api = ''.join(_api)
 
 		return """\
@@ -132,7 +142,7 @@ neighbor %s {
   hold-time %s;
 %s%s%s
   capability {
-%s%s%s%s%s  }
+%s%s%s%s%s%s  }
   family {%s
   }
   process {
@@ -154,6 +164,7 @@ neighbor %s {
 	'    graceful-restart %s;\n' % self.graceful_restart if self.graceful_restart else '',
 	'    add-path %s;\n' % AddPath.string[self.add_path] if self.add_path else '',
 	'    multi-session;\n' if self.multisession else '',
+	'    operational;\n' if self.operational else '',
 	families,
 	api,
 	changes

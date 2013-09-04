@@ -17,6 +17,7 @@ class APIOptions (object):
 		self.receive_packets = False
 		self.send_packets = False
 		self.receive_routes = False
+		self.receive_operational = False
 
 def hexstring (value):
 	def spaced (value):
@@ -54,6 +55,10 @@ class Text (object):
 			r += 'neighbor %s announced route %s%s\n' % (neighbor,str(nlri),attributes)
 		r += 'neighbor %s update end\n' % neighbor
 		return r
+
+	def operational (self,neighbor,operational):
+		return 'neighbor %s operational %s afi %s safi %s %s' % (neighbor,operational.name,operational.afi,operational.safi,operational.data)
+
 
 class JSON (object):
 	def __init__ (self,version):
@@ -143,8 +148,14 @@ class JSON (object):
 			return '"update": { %s%s } ' % (attributes,nlri)
 		return '"update": { %s, %s } ' % (attributes,nlri)
 
+	def _operational (self,operational):
+		return '"operational": { "name": "%s", "afi": "%s", "safi": "%s", "data": "%s"' % (operational.name,operational.afi,operational.safi,operational.data)
+
 	def update (self,neighbor,update):
 		return self._header(self._neighbor(neighbor,self._update(update)))
 
 	def bmp (self,bmp,update):
 		return self._header(self._bmp(bmp,self._update(update)))
+
+	def operational (self,neighbor,operational):
+		return self._header(self._neighbor(neighbor,self._operational(operational)))

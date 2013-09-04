@@ -23,6 +23,7 @@ from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import NotificationFactory, Notify
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.factory import UpdateFactory
+from exabgp.bgp.message.operational import OperationalFactory
 
 from exabgp.reactor.api.processes import ProcessError
 
@@ -136,8 +137,12 @@ class Protocol (object):
 
 			if length == 30 and body.startswith(EOR.PREFIX):
 				update = EORFactory(body)
+				if self.neighbor.api.receive_routes:
+					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update)
 			elif self.neighbor.api.receive_routes:
 				update = UpdateFactory(self.negotiated,body)
+				if self.neighbor.api.receive_routes:
+					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update)
 			else:
 				update = _UPDATE
 			yield update
@@ -154,6 +159,11 @@ class Protocol (object):
 			self.logger.message(self.me('<< ROUTE-REFRESH'))
 			# not doing anything with the Data we do not handle route refresh
 			yield RouteRefresh()
+
+		elif msg == Message.Type.OPERATIONAL:
+			operational = OperationalFactory(body)
+			self.peer.reactor.processes.operational(self.peer.neighbor.peer_address,operational)
+			yield operational
 
 		elif msg == Message.Type.OPEN:
 			yield OpenFactory(body)
@@ -255,3 +265,9 @@ class Protocol (object):
 			for eor in self.new_keepalive('EOR'):
 				yield _NOP
 			yield _UPDATE
+
+	def new_operational (self,operational):
+		for _ in self.write(operational.message()):
+			yield _NOP
+		self.logger.message(self.me('>> OPERATIONAL %s' % str(operational)))
+		yield operational

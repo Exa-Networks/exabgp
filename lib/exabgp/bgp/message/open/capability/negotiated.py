@@ -25,6 +25,7 @@ class Negotiated (object):
 		self.addpath = None
 		self.multisession = False
 		self.msg_size = 4096-19
+		self.operational = False
 
 	def sent (self,sent_open):
 		self.sent_open = sent_open
@@ -46,6 +47,7 @@ class Negotiated (object):
 
 		self.addpath = RequirePath(self.sent_open,self.received_open)
 		self.asn4 = sent_capa.announced(CID.FOUR_BYTES_ASN) and recv_capa.announced(CID.FOUR_BYTES_ASN)
+		self.operational = sent_capa.announced(CID.OPERATIONAL) and recv_capa.announced(CID.OPERATIONAL)
 
 		self.local_as = self.sent_open.asn
 		self.peer_as = self.received_open.asn

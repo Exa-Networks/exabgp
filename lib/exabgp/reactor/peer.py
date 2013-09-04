@@ -374,6 +374,12 @@ class Peer (object):
 		self._resend_routes = True
 
 		while not self._teardown:
+			if self.neighbor.operational:
+				operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
+				if operational:
+					for message in proto.new_operational(operational):
+						yield ACTION.immediate
+
 			for message in proto.read_message():
 				# Received update
 				if message.TYPE == Update.TYPE:
@@ -382,8 +388,6 @@ class Peer (object):
 					for nlri in message.nlris:
 						self.neighbor.rib.incoming.insert_received(Change(nlri,message.attributes))
 						self.logger.routes(LazyFormat(self.me(''),str,nlri))
-
-					self.reactor.processes.update(self.neighbor.peer_address,message)
 
 				self.timer.tick(message)
 

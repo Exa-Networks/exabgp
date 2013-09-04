@@ -230,3 +230,8 @@ class Processes (object):
 		if self.silence: return
 		for process in self._notify(neighbor,'receive-routes'):
 			self.write(process,self._api_encoder[process].update(neighbor,update))
+
+	def operational (self,neighbor,operational):
+		if self.silence: return
+		for process in self._notify(neighbor,'receive-operational'):
+			self.write(process,self._api_encoder[process].operational(neighbor,operational))

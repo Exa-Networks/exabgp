@@ -43,6 +43,7 @@ class Message (Exception):
 		NOTIFICATION  = 0x03  # .   3
 		KEEPALIVE     = 0x04  # .   4
 		ROUTE_REFRESH = 0x05  # .   5
+		OPERATIONAL   = 0x06  # .   6
 		#LIST          = 0x20  # .  32
 		#HEADER        = 0x40  # .  64
 		#GENERAL       = 0x80  # . 128
@@ -73,6 +74,8 @@ class Message (Exception):
 				self._name = 'KEEPALIVE'
 			elif code == self.Type.ROUTE_REFRESH:
 				self._name = 'ROUTE_REFRESH'
+			elif code == self.Type.OPERATIONAL:
+				self._name = 'OPERATIONAL'
 			# if code & self.Type.LIST:
 			# 	self._str = 'LIST'
 			# if code & self.Type.HEADER:

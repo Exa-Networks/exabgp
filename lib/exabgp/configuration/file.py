@@ -46,6 +46,8 @@ from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
 
+from exabgp.bgp.message.operational import MAX_ADVISORY,Advisory
+
 from exabgp.bgp.message.update.attributes import Attributes
 
 from exabgp.rib.change import Change
@@ -186,8 +188,11 @@ class Configuration (object):
 
 	_str_capa_error = \
 	'syntax: capability {\n' \
+	'          graceful-restart <time in second>;\n'
 	'          asn4 enable|disable;\n' \
 	'          add-path disable|send|receive|send/receive;\n' \
+	'          multi-session enable|disable;\n'
+	'          operational enable|disable;\n'
 	'        }\n'
 
 	def __init__ (self,fname,text=False):
@@ -337,11 +342,12 @@ class Configuration (object):
 				continue
 			if replaced.startswith('#'):
 				continue
-			if replaced[:3] == 'md5':
-				password = line.strip()[3:].strip()
-				if password[-1] == ';':
-					password = password[:-1]
-				r.append(['md5',password,';'])
+			command = replaced[:3]
+			if command in ('md5','asm','adm'):
+				string = line.strip()[3:].strip()
+				if string[-1] == ';':
+					string = string[:-1]
+				r.append([command,string,';'])
 			elif replaced[:3] == 'run':
 				r.append([t for t in replaced[:-1].split(' ',1) if t] + [replaced[-1]])
 			else:
@@ -421,6 +427,7 @@ class Configuration (object):
 			if command == 'process': return self._multi_process(scope,tokens[1:])
 			if command == 'family': return self._multi_family(scope,tokens[1:])
 			if command == 'capability': return self._multi_capability(scope,tokens[1:])
+			if command == 'operational': return self._multi_operational(scope,tokens[1:])
 
 		if name == 'neighbor':
 			if command == 'static': return self._multi_static(scope,tokens[1:])
@@ -428,6 +435,7 @@ class Configuration (object):
 			if command == 'process': return self._multi_process(scope,tokens[1:])
 			if command == 'family': return self._multi_family(scope,tokens[1:])
 			if command == 'capability': return self._multi_capability(scope,tokens[1:])
+			if command == 'operational': return self._multi_operational(scope,tokens[1:])
 
 		if name == 'static':
 			if command == 'route':
@@ -546,6 +554,7 @@ class Configuration (object):
 			if command == 'route-refresh': return self._set_routerefresh(scope,'route-refresh',tokens[1:])
 			if command == 'graceful-restart': return self._set_gracefulrestart(scope,'graceful-restart',tokens[1:])
 			if command == 'multi-session': return self._set_multisession(scope,'multi-session',tokens[1:])
+			if command == 'operational': return self._set_operational(scope,'operational',tokens[1:])
 			if command == 'add-path': return self._set_addpath(scope,'add-path',tokens[1:])
 			if command == 'asn4': return self._set_asn4(scope,'asn4',tokens[1:])
 
@@ -567,9 +576,14 @@ class Configuration (object):
 			if command == 'send-packets': return self._set_process_command(scope,'send-packets',tokens[1:])
 			if command == 'receive-routes': return self._set_process_command(scope,'receive-routes',tokens[1:])
 			if command == 'neighbor-changes': return self._set_process_command(scope,'neighbor-changes',tokens[1:])
+			if command == 'receive-operational': return self._set_process_command(scope,'receive-operational',tokens[1:])
 
 		elif name == 'static':
 			if command == 'route': return self._single_static_route(scope,tokens[1:])
+
+		elif name == 'operational':
+			if command == 'adm': return self._single_operational_adm(scope,tokens[1:])
+			if command == 'asm': return self._single_operational_asm(scope,tokens[1:])
 
 		return False
 
@@ -577,7 +591,7 @@ class Configuration (object):
 
 	def _multi_process (self,scope,tokens):
 		while True:
-			r = self._dispatch(scope,'process',[],['run','encoder','receive-packets','send-packets','receive-routes','neighbor-changes',  'peer-updates','parse-routes'])
+			r = self._dispatch(scope,'process',[],['run','encoder','receive-packets','send-packets','receive-routes','receive-operational','neighbor-changes',  'peer-updates','parse-routes'])
 			if r is False: return False
 			if r is None: break
 
@@ -765,7 +779,7 @@ class Configuration (object):
 		# we know all the families we should use
 		self._capability = False
 		while True:
-			r = self._dispatch(scope,'capability',[],['route-refresh','graceful-restart','multi-session','add-path','asn4'])
+			r = self._dispatch(scope,'capability',[],['route-refresh','graceful-restart','multi-session','operational','add-path','asn4'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -794,6 +808,10 @@ class Configuration (object):
 		return True
 
 	def _set_multisession (self,scope,command,value):
+		scope[-1][command] = True
+		return True
+
+	def _set_operational (self,scope,command,value):
 		scope[-1][command] = True
 		return True
 
@@ -868,7 +886,7 @@ class Configuration (object):
 	def _multi_group (self,scope,address):
 		scope.append({})
 		while True:
-			r = self._dispatch(scope,'group',['static','flow','neighbor','process','family','capability'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','route-refresh','asn4'])
+			r = self._dispatch(scope,'group',['static','flow','neighbor','process','family','capability','operational'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','route-refresh','asn4'])
 			if r is False:
 				return False
 			if r is None:
@@ -912,11 +930,13 @@ class Configuration (object):
 			if v: neighbor.hold_time = v
 
 			changes = local_scope.get('announce',[])
+			messages = local_scope.get('tlv',[])
 
 		for local_scope in (scope[0],scope[-1]):
 			neighbor.api.receive_packets |= local_scope.get('receive-packets',False)
 			neighbor.api.send_packets |= local_scope.get('send-packets',False)
 			neighbor.api.receive_routes |= local_scope.get('receive-routes',False)
+			neighbor.api.receive_operational |= local_scope.get('receive-operational',False)
 			neighbor.api.neighbor_changes |= local_scope.get('neighbor-changes',False)
 
 		if not neighbor.router_id:
@@ -935,6 +955,7 @@ class Configuration (object):
 			# README: Should it be a subclass of int ?
 			neighbor.graceful_restart = int(neighbor.hold_time)
 		neighbor.multisession = local_scope.get('multi-session',False)
+		neighbor.operational = local_scope.get('operational',False)
 		neighbor.add_path = local_scope.get('add-path','')
 		neighbor.asn4 = local_scope.get('asn4',True)
 
@@ -997,6 +1018,9 @@ class Configuration (object):
 					if change.nlri.family() in families:
 						# This add the family to neighbor.families()
 						neighbor.rib.outgoing.insert_announced_watchdog(change)
+				for message in messages:
+					if message.family() in families:
+						neighbor.messages.append(message)
 				self._neighbor[m_neighbor.name()] = m_neighbor
 		else:
 			neighbor.make_rib()
@@ -1005,6 +1029,9 @@ class Configuration (object):
 				if change.nlri.family() in families:
 					# This add the family to neighbor.families()
 					neighbor.rib.outgoing.insert_announced_watchdog(change)
+			for message in messages:
+				if message.family() in families:
+					neighbor.messages.append(message)
 			self._neighbor[neighbor.name()] = neighbor
 
 		for line in str(neighbor).split('\n'):
@@ -1029,7 +1056,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-			r = self._dispatch(scope,'neighbor',['static','flow','process','family','capability'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','asn4'])
+			r = self._dispatch(scope,'neighbor',['static','flow','process','family','capability','operational'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','asn4'])
 			if r is False: return False
 			if r is None: return True
 
@@ -2252,6 +2279,45 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
+	#  Group Static ................
+
+	def _multi_operational (self,scope,tokens):
+		if len(tokens) != 0:
+			self._error = 'syntax: operational { command; command; ... }'
+			if self.debug: raise
+			return False
+		while True:
+			r = self._dispatch(scope,'operational',[],['asm','adm'])
+			if r is False: return False
+			if r is None: return True
+
+	def _single_advisory (self,klass,scope,value):
+		string = value[0]
+		if len(string) > 2 and string[0] == string[-1] and string[0] in ['"',"'"]:
+			string = string[1:-1]
+		if len(string) > MAX_ADVISORY:
+			self._error = 'asm must be no larger than %d characters' % MAX_ADVISORY
+			if self.debug: raise
+			return False
+		if not string:
+			self._error = 'asm requires the string as an argument (quoted or unquoted).'
+			if self.debug: raise
+			return False
+
+		if 'tlv' not in scope[-1]:
+			scope[-1]['tlv'] = []
+
+		# iterate on each family for the peer if multiprotocol is set.
+		scope[-1]['tlv'].append(klass(AFI(AFI.ipv4),SAFI(SAFI.unicast),string))
+		return True
+
+	def _single_operational_asm (self,scope,value):
+		return self._single_advisory(Advisory.ASM,scope,value)
+
+	def _single_operational_adm (self,scope,value):
+		return self._single_advisory(Advisory.ADM,scope,value)
+
+	# ..............................
 
 	def decode (self,update):
 		# self check to see if we can decode what we encode

@@ -16,6 +16,7 @@ from exabgp.bgp.message.open.capability.refresh import RouteRefresh
 from exabgp.bgp.message.open.capability.graceful import Graceful
 from exabgp.bgp.message.open.capability.ms import MultiSession
 from exabgp.bgp.message.open.capability.addpath import AddPath
+from exabgp.bgp.message.open.capability.operational import Operational
 from exabgp.bgp.message.notification import Notify
 
 def hexa (value):
@@ -74,6 +75,8 @@ class Capabilities (dict):
 				r += ['Multi Session']
 			elif key == CapabilityID.ADD_PATH:
 				r += [str(self[key])]
+			elif key in CapabilityID.OPERATIONAL:
+				r += ['Operational']
 			elif key in CapabilityID.reserved:
 				r += ['private use capability %d' % key]
 			elif key in CapabilityID.unassigned:
@@ -210,6 +213,10 @@ def CapabilitiesFactory (data):
 							sr = ord(value_ad[3])
 							capabilities[k].add_path(afi,safi,sr)
 							value_ad = value_ad[4:]
+
+					if k == CapabilityID.OPERATIONAL:
+						capabilities[k] = Operational()
+						continue
 
 					if k not in capabilities:
 						capabilities[k] = UnknownCapability(k,[ord(_) for _ in capv])
