@@ -22,7 +22,7 @@ class Negotiated (object):
 		self.peer_as = ASN(0)
 		self.families = []
 		self.asn4 = False
-		self.addpath = None
+		self.addpath = RequirePath()
 		self.multisession = False
 		self.msg_size = 4096-19
 		self.operational = False
@@ -45,7 +45,7 @@ class Negotiated (object):
 
 		self.holdtime = HoldTime(min(self.sent_open.hold_time,self.received_open.hold_time))
 
-		self.addpath = RequirePath(self.sent_open,self.received_open)
+		self.addpath.setup(self.sent_open,self.received_open)
 		self.asn4 = sent_capa.announced(CID.FOUR_BYTES_ASN) and recv_capa.announced(CID.FOUR_BYTES_ASN)
 		self.operational = sent_capa.announced(CID.OPERATIONAL) and recv_capa.announced(CID.OPERATIONAL)
 
@@ -133,7 +133,11 @@ class RequirePath (object):
 	ACCEPT = 1
 	ANNOUNCE = 2
 
-	def __init__(self,received_open,sent_open):
+	def __init__ (self):
+		self._send = {}
+		self._receive = {}
+
+	def setup (self,received_open,sent_open):
 		# A Dict always returning False
 		class FalseDict (dict):
 			def __getitem__(self,key):
@@ -141,9 +145,6 @@ class RequirePath (object):
 
 		receive = received_open.capabilities.get(CID.ADD_PATH,FalseDict())
 		send = sent_open.capabilities.get(CID.ADD_PATH,FalseDict())
-
-		self._send = {}
-		self._receive = {}
 
 		# python 2.4 compatibility mean no simple union but using sets.Set
 		union = []
