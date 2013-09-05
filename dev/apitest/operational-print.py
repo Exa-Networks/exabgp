@@ -18,7 +18,8 @@ while True:
 
 		counter = 0
 
-		print >> sys.stderr, '-'*80, '\n', line, '\n', '-'*80
+		send = '\n%s %s %s\n' % ( '-'*10, line, '-'*10 )
+		print >> sys.stderr, send
 	except KeyboardInterrupt:
 		pass
 	except IOError:

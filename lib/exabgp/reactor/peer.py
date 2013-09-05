@@ -368,13 +368,26 @@ class Peer (object):
 
 		send_eor = True
 		new_routes = None
+		self._resend_routes = True
+
+		# Every last asm message should be re-announced on restart
+		for family in self.neighbor.asm:
+			if family in self.neighbor.families():
+				self.neighbor.messages.appendleft(self.neighbor.asm[family])
 
 		counter = Counter(self.logger,self._log(direction))
-
-		self._resend_routes = True
+		need_keepalive = False
+		keepalive = None
+		operational = None
 
 		while not self._teardown:
 			for message in proto.read_message():
+				# Update timer
+				self.timer.tick(message)
+
+				# Give information on the number of routes seen
+				counter.display()
+
 				# Received update
 				if message.TYPE == Update.TYPE:
 					counter.increment(len(message.nlris))
@@ -383,21 +396,31 @@ class Peer (object):
 						self.neighbor.rib.incoming.insert_received(Change(nlri,message.attributes))
 						self.logger.routes(LazyFormat(self.me(''),str,nlri))
 
-				self.timer.tick(message)
-
 				# SEND KEEPALIVES
-				if self.timer.keepalive():
-					for message in proto.new_keepalive():
-						yield ACTION.immediate
+				need_keepalive |= self.timer.keepalive()
 
+				if need_keepalive and not keepalive:
+					keepalive = proto.new_keepalive()
+					need_keepalive = False
+
+				if keepalive:
+					try:
+						keepalive.next()
+					except StopIteration:
+						keepalive = None
+
+				# SEND OPERATIONAL
 				if self.neighbor.operational:
-					operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
-					if operational:
-						for message in proto.new_operational(operational):
-							yield ACTION.immediate
+					if not operational:
+						new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
+						if new_operational:
+							operational = proto.new_operational(new_operational)
 
-				# Give information on the number of routes seen
-				counter.display()
+					if operational:
+						try:
+							operational.next()
+						except StopIteration:
+							operational = None
 
 				# Take the routes already sent to that peer and resend them
 				if self._resend_routes:

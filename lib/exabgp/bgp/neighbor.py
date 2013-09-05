@@ -48,6 +48,7 @@ class Neighbor (object):
 		self.rib = None
 
 		self.operational = None
+		self.asm = dict()
 		self.messages = deque()
 
 	def make_rib (self):

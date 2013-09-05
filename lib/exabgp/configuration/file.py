@@ -368,6 +368,8 @@ class Configuration (object):
 		for neighbor in self.neighbor:
 			if neighbor in peers:
 				if operational.family() in self.neighbor[neighbor].families():
+					if operational.name == 'ASM':
+						self.neighbor[neighbor].asm[operational.family()] = operational
 					self.neighbor[neighbor].messages.append(operational)
 					result = True
 				else:
@@ -1074,7 +1076,10 @@ class Configuration (object):
 						neighbor.rib.outgoing.insert_announced_watchdog(change)
 				for message in messages:
 					if message.family() in families:
-						neighbor.messages.append(message)
+						if message.name == 'ASM':
+							neighbor.asm[message.family()] = message
+						else:
+							neighbor.messages.append(message)
 				self._neighbor[m_neighbor.name()] = m_neighbor
 		else:
 			neighbor.make_rib()
@@ -1085,7 +1090,10 @@ class Configuration (object):
 					neighbor.rib.outgoing.insert_announced_watchdog(change)
 			for message in messages:
 				if message.family() in families:
-					neighbor.messages.append(message)
+					if message.name == 'ASM':
+						neighbor.asm[message.family()] = message
+					else:
+						neighbor.messages.append(message)
 			self._neighbor[neighbor.name()] = neighbor
 
 		for line in str(neighbor).split('\n'):
