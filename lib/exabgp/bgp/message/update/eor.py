@@ -26,8 +26,8 @@ class EOR (Message):
 		self.nlris = [NLRIEOR(afi,safi,action),]
 		self.attributes = Attributes()
 
-	def message (self,negotiated=None):
-		return Message.message(self,self.PREFIX + self.nlris[0].pack())
+	def message (self):
+		return self._message(self,self.PREFIX + self.nlris[0].pack())
 
 	def __str__ (self):
 		return 'EOR'
