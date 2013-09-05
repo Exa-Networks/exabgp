@@ -58,11 +58,9 @@ class BGPHandler(asyncore.dispatcher_with_send):
 				yield 'mp:','raw:%s' % bytestream(body)
 
 		while withdrawn:
-			if len(announced) > 4:
-				path=announced[:4]
-				announced = announced[4:]
-			else:
-				path=['','','','']
+			if len(withdrawn) > 5:
+				yield '', 'raw:%s' % bytestream(body)
+				break
 			m = withdrawn.pop(0)
 			r = [0,0,0,0]
 			for index in range(4):
@@ -71,11 +69,9 @@ class BGPHandler(asyncore.dispatcher_with_send):
 			yield 'withdraw:%s' % '.'.join(str(_) for _ in r) + '/' + str(m), 'raw:%s' % bytestream(body)
 
 		while announced:
-			if len(announced) > 4:
-				path=announced[:4]
-				announced = announced[4:]
-			else:
-				path=['','','','']
+			if len(announced) > 5:
+				yield '', 'raw:%s' % bytestream(body)
+				break
 			m = announced.pop(0)
 			r = [0,0,0,0]
 			for index in range(4):
