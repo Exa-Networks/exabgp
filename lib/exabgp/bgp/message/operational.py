@@ -17,7 +17,7 @@ from exabgp.bgp.message import Message
 MAX_ADVISORY = 2048  # 2K
 
 class Type (int):
-	def pack (self,asn4=None):
+	def pack (self):
 		return pack('!H',self)
 
 	def extract (self):

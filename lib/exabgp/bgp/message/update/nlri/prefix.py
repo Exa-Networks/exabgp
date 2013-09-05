@@ -29,8 +29,7 @@ class Prefix (Inet):
 	def prefix (self):
 		return "%s/%s" % (self.ip,self.mask)
 
-	# The API requires addpath, but it is irrelevant here.
-	def pack (self,addpath=None):
+	def pack (self):
 		return chr(self.mask) + self.packed[:mask_to_bytes[self.mask]]
 
 	def packed_ip(self):

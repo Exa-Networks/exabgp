@@ -100,7 +100,7 @@ class IPrefix4 (IPrefix,IComponent,IPv4):
 		self.nlri = Prefix(self.afi,SAFI.flow_ip,raw,netmask)
 
 	def pack (self):
-		raw = self.nlri.pack(addpath=False)
+		raw = self.nlri.pack()
 		return "%s%s" % (chr(self.ID),raw)
 
 	def __str__ (self):
