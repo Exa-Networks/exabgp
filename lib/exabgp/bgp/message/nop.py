@@ -12,7 +12,7 @@ class NOP (Message):
 	TYPE = chr(Message.Type.NOP)
 
 	def message (self):
-		return Message.message(self,self.data)
+		return self._message(self.data)
 
 	def __str__ (self):
 		return "NOP"

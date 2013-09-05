@@ -106,4 +106,8 @@ class Notify (Notification):
 		Notification.__init__(self,code,subcode,data)
 
 	def message (self):
-		return Message.message(self,"%s%s%s" % (chr(self.code),chr(self.subcode),self.data))
+		return self._message("%s%s%s" % (
+			chr(self.code),
+			chr(self.subcode),
+			self.data
+		))

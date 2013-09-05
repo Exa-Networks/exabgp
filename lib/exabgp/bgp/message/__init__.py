@@ -87,9 +87,12 @@ class Message (Exception):
 
 		return self._name
 
-	def message (self,message=""):
+	def _message (self,message):
 		message_len = pack('!H',19+len(message))
 		return "%s%s%s%s" % (self.MARKER,message_len,self.TYPE,message)
+
+	def message (self):
+		raise RuntimeError('message not implemented in subclasses')
 
 	def __str__ (self):
 		raise RuntimeError('do not call __str__ on a Message')

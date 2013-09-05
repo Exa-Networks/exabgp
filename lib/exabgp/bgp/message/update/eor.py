@@ -27,7 +27,9 @@ class EOR (Message):
 		self.attributes = Attributes()
 
 	def message (self):
-		return self._message(self,self.PREFIX + self.nlris[0].pack())
+		return self._message(
+			self.PREFIX + self.nlris[0].pack()
+		)
 
 	def __str__ (self):
 		return 'EOR'

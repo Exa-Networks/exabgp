@@ -59,7 +59,11 @@ class Operational (Message):
 		self.data = data
 
 	def message (self):
-		return Message.message(self,"%s%s%s" % (self.what.pack(),pack('!H',len(self.data)),self.data))
+		return self._message("%s%s%s" % (
+			self.what.pack(),
+			pack('!H',len(self.data)),
+			self.data
+		))
 
 	def __str__ (self):
 		return self.extensive()

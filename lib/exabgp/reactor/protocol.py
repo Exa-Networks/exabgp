@@ -17,7 +17,7 @@ from exabgp.bgp.message.unknown import UnknownMessageFactory
 from exabgp.bgp.message.open import Open,OpenFactory
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.message.update import Update,messages
+from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.eor import EOR,EORFactory
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import NotificationFactory, Notify
@@ -241,7 +241,7 @@ class Protocol (object):
 	def new_update (self):
 		number = 0
 		for update in self.neighbor.rib.outgoing.updates(self.neighbor.group_updates):
-			for message in messages(update,self.negotiated):
+			for message in update.messages(self.negotiated):
 				number += 1
 				for boolean in self.write(message):
 					# boolean is a transient network error we already announced

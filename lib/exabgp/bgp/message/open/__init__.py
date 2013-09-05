@@ -29,7 +29,13 @@ class Open (Message):
 		self.capabilities = capabilities
 
 	def message (self):
-		return Message.message(self,"%s%s%s%s%s" % (self.version.pack(),self.asn.trans(),self.hold_time.pack(),self.router_id.pack(),self.capabilities.pack()))
+		return self._message("%s%s%s%s%s" % (
+			self.version.pack(),
+			self.asn.trans(),
+			self.hold_time.pack(),
+			self.router_id.pack(),
+			self.capabilities.pack()
+		))
 
 	def __str__ (self):
 		return "OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]" % (self.version, self.asn, self.hold_time, self.router_id,self.capabilities)

@@ -2448,7 +2448,7 @@ class Configuration (object):
 		import sys
 		# self check to see if we can decode what we encode
 		from exabgp.util.od import od
-		from exabgp.bgp.message.update import Update,messages
+		from exabgp.bgp.message.update import Update
 		from exabgp.bgp.message.update.factory import UpdateFactory
 		from exabgp.bgp.message.open import Open
 		from exabgp.bgp.message.open.capability import Capabilities
@@ -2486,7 +2486,7 @@ class Configuration (object):
 
 			for change1 in self.neighbor[nei].rib.outgoing.every_changes():
 				str1 = change1.extensive()
-				packed = list(messages(Update([change1.nlri],change1.attributes),negotiated))
+				packed = list(Update([change1.nlri],change1.attributes).messages(negotiated))
 				pack1 = packed[0]
 
 				self.logger.parser('parsed route requires %d updates' % len(packed))
@@ -2504,7 +2504,7 @@ class Configuration (object):
 
 					change2 = Change(update.nlris[0],update.attributes)
 					str2 = change2.extensive()
-					pack2 = list(messages(Update([update.nlris[0]],update.attributes),negotiated))[0]
+					pack2 = list(Update([update.nlris[0]],update.attributes).messages(negotiated))[0]
 
 					self.logger.parser('recoded route %s' % str2)
 					self.logger.parser('recoded hex   %s' % od(pack2))
