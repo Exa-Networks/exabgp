@@ -313,29 +313,41 @@ class Configuration (object):
 		if tokens[0] != 'operational':
 			return False
 		if tokens[1] == 'adm':
-			return self._parse_api_operational_adm(tokens)
+			return self._parse_api_operational_adm(tokens[2])
 		elif tokens[1] == 'asm':
-			return self._parse_api_operational_asm(tokens)
+			return self._parse_api_operational_asm(tokens[2])
+		elif tokens[1] == 'rpcq':
+			return self._parse_api_operational_rpcq(tokens[2])
 		else:
 			return False
 
-	def _parse_api_operational_asm (self,tokens):
-		if tokens[2][0] != tokens[2][-1]:
-			return False
+	def _parse_api_operational_asm (self,string):
 		scope = [{}]
-		if not self._single_operational_asm(scope,tokens[2:]):
+		if not self._single_operational_asm(scope,string):
 			return False
 		operational = scope[0]['operational'][0]
 		return operational
 
-	def _parse_api_operational_adm (self,tokens):
-		if tokens[2][0] != tokens[2][-1]:
+	def _parse_api_operational_adm (self,string):
+		tokens = self._cleaned(string).split(' ',4)
+		if len(tokens) != 5:
+			return False
+		if tokens[4][0] != tokens[4][-1]:
 			return False
 		scope = [{}]
-		if not self._single_operational_adm(scope,tokens[2:]):
+		if not self._single_operational_adm(scope,string):
 			return False
 		operational = scope[0]['operational'][0]
 		return operational
+
+	def _parse_api_operational_rpcq (self,string):
+		tokens = self._cleaned(string).split(' ',2)
+		scope = [{}]
+		if not self._single_operational_rpcq(scope,tokens):
+			return False
+		operational = scope[0]['operational'][0]
+		return operational
+
 
 	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
 	def change_to_peers (self,change,peers):
@@ -385,7 +397,7 @@ class Configuration (object):
 			if replaced.startswith('#'):
 				continue
 			command = replaced[:3]
-			if command in ('md5','asm','adm'):
+			if command in ('md5','asm'):
 				string = line.strip()[3:].strip()
 				if string[-1] == ';':
 					string = string[:-1]
@@ -624,8 +636,8 @@ class Configuration (object):
 			if command == 'route': return self._single_static_route(scope,tokens[1:])
 
 		elif name == 'operational':
-			if command == 'adm': return self._single_operational_adm(scope,tokens[1:])
-			if command == 'asm': return self._single_operational_asm(scope,tokens[1:])
+			if command == 'asm': return self._single_operational_asm(scope,tokens[1])
+			# it does not make sense to have adm
 
 		return False
 
@@ -2329,20 +2341,35 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-			r = self._dispatch(scope,'operational',[],['asm','adm'])
+			r = self._dispatch(scope,'operational',[],['asm','rpcp'])
 			if r is False: return False
 			if r is None: return True
 
 	def _single_advisory (self,klass,scope,value):
-		string = value[0]
+		tokens = self._cleaned(value).split(' ',4)
+		if len(tokens) != 5:
+			self._error = 'invalid advisory syntax'
+			return False
+		if tokens[0] != 'afi' or tokens[2] != 'safi':
+			self._error = 'invalid advisory syntax'
+			return False
+		afi = AFI.value(tokens[1])
+		if afi is None:
+			self._error = 'invalid advisory syntax'
+			return False
+		safi = SAFI.value(tokens[3])
+		if safi is None:
+			self._error = 'invalid advisory syntax'
+			return False
+		string = tokens[4]
 		if len(string) > 2 and string[0] == string[-1] and string[0] in ['"',"'"]:
 			string = string[1:-1]
 		if len(string) > MAX_ADVISORY:
-			self._error = 'asm must be no larger than %d characters' % MAX_ADVISORY
+			self._error = 'advisory must be no larger than %d characters' % MAX_ADVISORY
 			if self.debug: raise
 			return False
 		if not string:
-			self._error = 'asm requires the string as an argument (quoted or unquoted).'
+			self._error = 'advisory requires the string as an argument (quoted or unquoted).'
 			if self.debug: raise
 			return False
 
@@ -2350,7 +2377,7 @@ class Configuration (object):
 			scope[-1]['operational'] = []
 
 		# iterate on each family for the peer if multiprotocol is set.
-		scope[-1]['operational'].append(klass(AFI(AFI.ipv4),SAFI(SAFI.unicast),string))
+		scope[-1]['operational'].append(klass(afi,safi,string))
 		return True
 
 	def _single_operational_asm (self,scope,value):

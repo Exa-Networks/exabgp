@@ -33,6 +33,12 @@ class AFI (int):
 	def pack (self):
 		return pack('!H',self)
 
+	@staticmethod
+	def value (name):
+		if name == "ipv4": return AFI.ipv4
+		if name == "ipv6": return AFI.ipv6
+		return None
+
 # =================================================================== SAFI
 
 # http://www.iana.org/assignments/safi-namespace
@@ -86,6 +92,15 @@ class SAFI (int):
 	def has_rd (self):
 		return self in (self.mpls_vpn,)  # technically self.flow_vpn has an RD but it is not an NLRI
 
+	@staticmethod
+	def value (name):
+		if name == "unicast"  : return 0x01
+		if name == "multicast": return 0x02
+		if name == "nlri-mpls": return 0x04
+		if name == "mpls-vpn" : return 0x80
+		if name == "flow"     : return 0x85
+		if name == "flow-vpn" : return 0x86
+		return None
 
 def known_families ():
 	# it can not be a generator

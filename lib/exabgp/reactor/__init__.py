@@ -618,6 +618,32 @@ class Reactor (object):
 			except IndexError:
 				pass
 
+		if 'operational rpcq' in command:
+			def _announce_rpcq (self,command,peers):
+				operational = self.configuration.parse_api_operational(command)
+				if not operational:
+					self.logger.reactor("Command could not parse operational command : %s" % command)
+					yield True
+				else:
+					self.configuration.operational_to_peers(operational,peers)
+					self.logger.reactor("operational message sent to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',operational.extensive()))
+					yield False
+					self._route_update = True
+
+			try:
+				descriptions,command = extract_neighbors(command)
+				peers = match_neighbors(descriptions,self._peers)
+				if peers == []:
+					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+					return False
+				self._pending.append(_announce_advisory(self,command,peers))
+				return True
+			except ValueError:
+				pass
+			except IndexError:
+				pass
+
+
 		# unknown
 		self.logger.reactor("Command from process not understood : %s" % command,'warning')
 		return False

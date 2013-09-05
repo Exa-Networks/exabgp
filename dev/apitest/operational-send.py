@@ -11,15 +11,11 @@ while True:
 	try:
 		time.sleep(1)
 		if counter % 2:
-			print 'operational adm "this is dynamic message #%d"' % counter
+			print 'operational adm afi ipv4 safi unicast "this is dynamic message #%d"' % counter
 			sys.stdout.flush()
-			print >> sys.stderr, 'operational adm "this is dynamic message #%d"' % counter
-			sys.stderr.flush()
 		else:
-			print 'operational asm "we SHOULD not send asm from the API"'
+			print 'operational asm afi ipv4 safi unicast "we SHOULD not send asm from the API"'
 			sys.stdout.flush()
-			print >> sys.stderr, 'operational asm "we SHOULD not send asm from the API"'
-			sys.stderr.flush()
 
 		counter += 1
 	except KeyboardInterrupt:
