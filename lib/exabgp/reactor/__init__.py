@@ -595,7 +595,7 @@ class Reactor (object):
 
 		if 'operational adm' in command or 'operational asm' in command:
 			def _announce_advisory (self,command,peers):
-				operational = self.configuration.parse_api_operational(command)
+				operational = self.configuration.parse_api_operational_advisory(command)
 				if not operational:
 					self.logger.reactor("Command could not parse operational command : %s" % command)
 					yield True
@@ -620,7 +620,7 @@ class Reactor (object):
 
 		if 'operational rpcq' in command:
 			def _announce_rpcq (self,command,peers):
-				operational = self.configuration.parse_api_operational(command)
+				operational = self.configuration.parse_api_operational_state(command)
 				if not operational:
 					self.logger.reactor("Command could not parse operational command : %s" % command)
 					yield True
@@ -636,7 +636,7 @@ class Reactor (object):
 				if peers == []:
 					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 					return False
-				self._pending.append(_announce_advisory(self,command,peers))
+				self._pending.append(_announce_rpcq(self,command,peers))
 				return True
 			except ValueError:
 				pass

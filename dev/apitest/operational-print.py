@@ -20,6 +20,7 @@ while True:
 
 		send = '\n%s %s %s\n' % ( '-'*10, line, '-'*10 )
 		print >> sys.stderr, send
+		sys.stderr.flush()
 	except KeyboardInterrupt:
 		pass
 	except IOError:

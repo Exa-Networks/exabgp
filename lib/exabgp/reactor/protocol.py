@@ -162,7 +162,10 @@ class Protocol (object):
 
 		elif msg == Message.Type.OPERATIONAL:
 			operational = OperationalFactory(body)
-			self.peer.reactor.processes.operational(self.peer.neighbor.peer_address,operational)
+			if operational.has_routerid:
+				self.peer.reactor.processes.operational_sequence(self.peer.neighbor.peer_address,operational)
+			else:
+				self.peer.reactor.processes.operational(self.peer.neighbor.peer_address,operational)
 			yield operational
 
 		elif msg == Message.Type.OPEN:
@@ -266,8 +269,8 @@ class Protocol (object):
 				yield _NOP
 			yield _UPDATE
 
-	def new_operational (self,operational):
-		for _ in self.write(operational.message()):
+	def new_operational (self,operational,negotiated):
+		for _ in self.write(operational.message(negotiated)):
 			yield _NOP
 		self.logger.message(self.me('>> OPERATIONAL %s' % str(operational)))
 		yield operational

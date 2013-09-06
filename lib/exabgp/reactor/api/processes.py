@@ -235,3 +235,8 @@ class Processes (object):
 		if self.silence: return
 		for process in self._notify(neighbor,'receive-operational'):
 			self.write(process,self._api_encoder[process].operational(neighbor,operational))
+
+	def operational_sequence (self,neighbor,operational):
+		if self.silence: return
+		for process in self._notify(neighbor,'receive-operational'):
+			self.write(process,self._api_encoder[process].operational_sequence(neighbor,operational))

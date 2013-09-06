@@ -11,6 +11,8 @@ counter = 1
 # and the message received just before we go to the established loop will be printed twice
 time.sleep(4)
 
+print 'operational rpcq afi ipv4 safi unicast sequence %d' % counter
+
 while True:
 	try:
 		time.sleep(1)
@@ -20,9 +22,6 @@ while True:
 		else:
 			print 'operational asm afi ipv4 safi unicast "we SHOULD not send asm from the API"'
 			sys.stdout.flush()
-
-		#if counter % 3:
-		#	print 'operational rpcq afi ipv4 safi unicast sequence %d' % counter
 
 		counter += 1
 	except KeyboardInterrupt:

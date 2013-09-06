@@ -59,6 +59,9 @@ class Text (object):
 	def operational (self,neighbor,operational):
 		return 'neighbor %s operational %s afi %s safi %s %s' % (neighbor,operational.name,operational.afi,operational.safi,operational.data)
 
+	def operational_sequence (self,neighbor,operational):
+		return 'neighbor %s operational %s afi %s safi %s router-id %s sequence %d %s' % (neighbor,operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.data)
+
 
 class JSON (object):
 	def __init__ (self,version):
@@ -151,6 +154,9 @@ class JSON (object):
 	def _operational (self,operational):
 		return '"operational": { "name": "%s", "afi": "%s", "safi": "%s", "data": "%s"' % (operational.name,operational.afi,operational.safi,operational.data)
 
+	def _operational_sequence (self,operational):
+		return '"operational": { "name": "%s", "afi": "%s", "safi": "%s", "router-id": "%s", "sequence": %d, "data": "%s"' % (operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.data)
+
 	def update (self,neighbor,update):
 		return self._header(self._neighbor(neighbor,self._update(update)))
 
@@ -159,3 +165,6 @@ class JSON (object):
 
 	def operational (self,neighbor,operational):
 		return self._header(self._neighbor(neighbor,self._operational(operational)))
+
+	def operational_sequence (self,neighbor,operational):
+		return self._header(self._neighbor(neighbor,self._operational_state(operational)))

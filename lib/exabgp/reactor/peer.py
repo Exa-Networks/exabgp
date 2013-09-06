@@ -414,7 +414,7 @@ class Peer (object):
 					if not operational:
 						new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
 						if new_operational:
-							operational = proto.new_operational(new_operational)
+							operational = proto.new_operational(new_operational,proto.negotiated)
 
 					if operational:
 						try:
@@ -451,7 +451,7 @@ class Peer (object):
 					self.logger.message(self.me('>> EOR(s)'))
 
 				# Go to other Peers
-				yield ACTION.immediate if new_routes or message.TYPE != NOP.TYPE else ACTION.later
+				yield ACTION.immediate if new_routes or message.TYPE != NOP.TYPE or self.neighbor.messages else ACTION.later
 
 				# read_message will loop until new message arrives with NOP
 				if self._teardown:
