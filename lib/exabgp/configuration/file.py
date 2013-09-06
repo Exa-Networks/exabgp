@@ -348,6 +348,10 @@ class Configuration (object):
 			return False
 		if tokens[1] == 'rpcq':
 			return self._parse_api_operational_rpcq(tokens[2])
+		elif tokens[1] == 'apcq':
+			return self._parse_api_operational_apcq(tokens[2])
+		elif tokens[1] == 'lpcq':
+			return self._parse_api_operational_lpcq(tokens[2])
 		else:
 			return False
 
@@ -357,6 +361,21 @@ class Configuration (object):
 			return False
 		operational = scope[0]['operational'][0]
 		return operational
+
+	def _parse_api_operational_apcq (self,string):
+		scope = [{}]
+		if not self._single_operational_apcq(scope,string):
+			return False
+		operational = scope[0]['operational'][0]
+		return operational
+
+	def _parse_api_operational_lpcq (self,string):
+		scope = [{}]
+		if not self._single_operational_lpcq(scope,string):
+			return False
+		operational = scope[0]['operational'][0]
+		return operational
+
 
 	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
 	def change_to_peers (self,change,peers):
@@ -2446,6 +2465,12 @@ class Configuration (object):
 
 	def _single_operational_rpcq (self,scope,value):
 		return self._single_state(State.RPCQ,scope,value)
+
+	def _single_operational_apcq (self,scope,value):
+		return self._single_state(State.APCQ,scope,value)
+
+	def _single_operational_lpcq (self,scope,value):
+		return self._single_state(State.LPCQ,scope,value)
 
 	# ..............................
 

@@ -203,12 +203,13 @@ class Advisory:
 
 
 class State:
-	class RPCQ (SequencedOperationalFamily):
-		name = 'RPCQ'
+	class _Query (SequencedOperationalFamily):
+		name = None
+		code = None
 
 		def __init__ (self,afi,safi,routerid,sequence):
 			SequencedOperationalFamily.__init__(
-				self,OperationalType.RPCQ,
+				self,self.code,
 				afi,safi,
 				routerid,sequence
 			)
@@ -217,6 +218,19 @@ class State:
 			if self._routerid and self._sequence:
 				return 'operational %s afi %s safi %s router-id %s sequence %d' % (self.name,self.afi,self.safi,self._routerid,self._sequence)
 			return 'operational %s afi %s safi %s' % (self.name,self.afi,self.safi)
+
+	class RPCQ (_Query):
+		name = 'RPCQ'
+		code = OperationalType.RPCQ
+
+	class APCQ (_Query):
+		name = 'APCQ'
+		code = OperationalType.APCQ
+
+	class LPCQ (_Query):
+		name = 'LPCQ'
+		code = OperationalType.LPCQ
+
 
 	class RPCP (SequencedOperationalFamily):
 		name = 'RPCP'
@@ -241,6 +255,11 @@ class State:
 class Dump:
 	pass
 
+_decode_operation_query = {
+	OperationalType.RPCQ: State.RPCQ,
+	OperationalType.APCQ: State.APCQ,
+	OperationalType.LPCQ: State.LPCQ,
+}
 
 def OperationalFactory (data):
 	what = Type(unpack('!H',data[0:2])[0])
@@ -256,12 +275,12 @@ def OperationalFactory (data):
 		safi = ord(data[6])
 		data = data[7:length+4]
 		return Advisory.ASM(afi,safi,data)
-	elif what == OperationalType.RPCQ:
+	elif what in _decode_operation_query:
 		afi = unpack('!H',data[4:6])[0]
 		safi = ord(data[6])
 		routerid = RouterID('.'.join(str(ord(_)) for _ in data[7:11]))
 		sequence = unpack('!L',data[11:15])[0]
-		return State.RPCQ(afi,safi,routerid,sequence)
+		return _decode_operation_query[what](afi,safi,routerid,sequence)
 	elif what == OperationalType.RPCP:
 		afi = unpack('!H',data[4:6])[0]
 		safi = ord(data[6])

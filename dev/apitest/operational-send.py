@@ -12,6 +12,13 @@ counter = 1
 time.sleep(4)
 
 print 'operational rpcq afi ipv4 safi unicast sequence %d' % counter
+time.sleep(1)
+
+print 'operational apcq afi ipv4 safi unicast sequence %d' % counter
+time.sleep(1)
+
+print 'operational lpcq afi ipv4 safi unicast sequence %d' % counter
+time.sleep(1)
 
 while True:
 	try:

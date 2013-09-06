@@ -618,8 +618,8 @@ class Reactor (object):
 			except IndexError:
 				pass
 
-		if 'operational rpcq' in command:
-			def _announce_rpcq (self,command,peers):
+		if 'operational rpcq ' in command or 'operational apcq ' in command or 'operational lpcq ' in command:
+			def _announce_query (self,command,peers):
 				operational = self.configuration.parse_api_operational_state(command)
 				if not operational:
 					self.logger.reactor("Command could not parse operational command : %s" % command)
@@ -636,7 +636,7 @@ class Reactor (object):
 				if peers == []:
 					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 					return False
-				self._pending.append(_announce_rpcq(self,command,peers))
+				self._pending.append(_announce_query(self,command,peers))
 				return True
 			except ValueError:
 				pass
