@@ -12,7 +12,7 @@ The list of supported RFC is available [here](https://github.com/Thomas-Mangin/e
 
 Receive parsed BGP updates in a friendly form (plain text or JSON) and manipulate them with shell scripts, for example this [looking glass](https://code.google.com/p/gixlg/wiki/sample_maps) use ExaBGP, PHP and MySQL and let you see how a prefix is routed through your network.
 
-This program is packaged for **Debian**, **Ubuntu**, **ArchLinux**, **Mint**, **FreeBSD** and **OSX**. Unless you need the latest version, please consider using your distribution's.
+This program is packaged for **Debian**, **Ubuntu**, **ArchLinux**, **Mint**, **FreeBSD**, **OSX**, **OmniOS**. Unless you need the latest version, please consider using your distribution's.
 
 If you are using ExaBGP from source (or mercurial), it **does not need to be installed** on your server ( using "python setup.py install" ) and will run from the extracted archive, or your local git repository. It allows to run several versions at the same time without conflict.
 
