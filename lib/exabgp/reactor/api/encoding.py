@@ -56,12 +56,37 @@ class Text (object):
 		r += 'neighbor %s update end\n' % neighbor
 		return r
 
-	def operational (self,neighbor,operational):
-		return 'neighbor %s operational %s afi %s safi %s %s' % (neighbor,operational.name,operational.afi,operational.safi,operational.data)
+	def _operational_advisory (self,neighbor,operational):
+		return 'neighbor %s operational %s afi %s safi %s advisory "%s"' % (
+			neighbor,operational.name,operational.afi,operational.safi,operational.data
+		)
 
-	def operational_sequence (self,neighbor,operational):
-		return 'neighbor %s operational %s afi %s safi %s router-id %s sequence %d %s' % (neighbor,operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.data)
+	def _operational_query (self,neighbor,operational):
+		return 'neighbor %s operational %s afi %s safi %s' % (
+			neighbor,operational.name,operational.afi,operational.safi
+		)
 
+	def _operational_counter (self,neighbor,operational):
+		return 'neighbor %s operational %s afi %s safi %s router-id %s sequence %d counter %d' % (
+			neighbor,operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.counter
+		)
+
+	def _operational_interface (self,neighbor,operational):
+		return 'neighbor %s operational %s afi %s safi %s router-id %s sequence %d rxc %d txc %d' % (
+			neighbor,operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.rxc,operational.txc
+		)
+
+	def operational (self,neighbor,what,operational):
+		if what == 'advisory':
+			return self._operational_advisory(neighbor,operational)
+		elif what == 'query':
+			return self._operational_query(neighbor,operational)
+		elif what == 'counter':
+			return self._operational_counter(neighbor,operational)
+		elif what == 'interface':
+			return self._operational_interface(neighbor,operational)
+		else:
+			raise RuntimeError('the code is broken, we are trying to print a unknown type of operational message')
 
 class JSON (object):
 	def __init__ (self,version):
@@ -151,20 +176,60 @@ class JSON (object):
 			return '"update": { %s%s } ' % (attributes,nlri)
 		return '"update": { %s, %s } ' % (attributes,nlri)
 
-	def _operational (self,operational):
-		return '"operational": { "name": "%s", "afi": "%s", "safi": "%s", "data": "%s"' % (operational.name,operational.afi,operational.safi,operational.data)
-
-	def _operational_sequence (self,operational):
-		return '"operational": { "name": "%s", "afi": "%s", "safi": "%s", "router-id": "%s", "sequence": %d, "data": "%s"' % (operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.data)
-
 	def update (self,neighbor,update):
 		return self._header(self._neighbor(neighbor,self._update(update)))
 
 	def bmp (self,bmp,update):
 		return self._header(self._bmp(bmp,self._update(update)))
 
-	def operational (self,neighbor,operational):
-		return self._header(self._neighbor(neighbor,self._operational(operational)))
+	def _operational_advisory (self,neighbor,operational):
+		return self._header(
+			self._neighbor(
+				neighbor,
+				'"operational": { "name": "%s", "afi": "%s", "safi": "%s", "advisory": "%s"' % (
+					operational.name,operational.afi,operational.safi,operational.data
+				)
+			)
+		)
 
-	def operational_sequence (self,neighbor,operational):
-		return self._header(self._neighbor(neighbor,self._operational_state(operational)))
+	def _operational_query (self,neighbor,operational):
+		return self._header(
+			self._neighbor(
+				neighbor,
+				'"operational": { "name": "%s", "afi": "%s", "safi": "%s"' % (
+					operational.name,operational.afi,operational.safi
+				)
+			)
+		)
+
+	def _operational_counter (self,neighbor,operational):
+		return self._header(
+			self._neighbor(
+				neighbor,
+				'"operational": { "name": "%s", "afi": "%s", "safi": "%s", "router-id": "%s", "sequence": %d, "counter": %d' % (
+					operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.counter
+				)
+			)
+		)
+
+	def _operational_interface (self,neighbor,operational):
+		return self._header(
+			self._neighbor(
+				neighbor,
+				'"operational": { "name": "%s", "afi": "%s", "safi": "%s", "router-id": "%s", "sequence": %d, "rxc": "%s", "txc": "%s"' % (
+					operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.rxc,operational.txc
+				)
+			)
+		)
+
+	def operational (self,neighbor,what,operational):
+		if what == 'advisory':
+			return self._operational_advisory(neighbor,operational)
+		elif what == 'query':
+			return self._operational_query(neighbor,operational)
+		elif what == 'counter':
+			return self._operational_counter(neighbor,operational)
+		elif what == 'interface':
+			return self._operational_interface(neighbor,operational)
+		else:
+			raise RuntimeError('the code is broken, we are trying to print a unknown type of operational message')

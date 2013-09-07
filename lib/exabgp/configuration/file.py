@@ -46,7 +46,7 @@ from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
 
-from exabgp.bgp.message.operational import MAX_ADVISORY,Advisory,State
+from exabgp.bgp.message.operational import MAX_ADVISORY,Advisory,Query,Response
 
 from exabgp.bgp.message.update.attributes import Attributes
 
@@ -308,74 +308,44 @@ class Configuration (object):
 				change.nlri.action = OUT.withdraw
 		return changes
 
-	# operational advisory
+	# operational
 
-	def parse_api_operational_advisory (self,command):
+	def parse_api_operational (self,command):
 		tokens = self._cleaned(command).split(' ',2)
-		if tokens[0] != 'operational':
+		scope = [{}]
+
+		if len(tokens) != 3:
 			return False
-		if tokens[1] == 'adm':
-			return self._parse_api_operational_adm(tokens[2])
-		elif tokens[1] == 'asm':
-			return self._parse_api_operational_asm(tokens[2])
+
+		operational = tokens[0].lower()
+		what = tokens[1].lower()
+
+		if operational != 'operational':
+			return False
+
+		if what == 'asm':
+			if not self._single_operational(Advisory.ASM,scope,['afi','safi','advisory'],tokens[2]):
+				return False
+		elif what == 'adm':
+			if not self._single_operational(Advisory.ADM,scope,['afi','safi','advisory'],tokens[2]):
+				return False
+		elif what == 'rpcq':
+			if not self._single_operational(Query.RPCQ,scope,['afi','safi','sequence'],tokens[2]):
+				return False
+		elif what == 'rpcp':
+			if not self._single_operational(Response.RPCP,scope,['afi','safi','sequence','rxc','txc'],tokens[2]):
+				return False
+		elif what == 'apcq':
+			if not self._single_operational(Query.APCQ,scope,['afi','safi','sequence'],tokens[2]):
+				return False
+		elif what == 'lpcq':
+			if not self._single_operational(Query.LPCQ,scope,['afi','safi','sequence'],tokens[2]):
+				return False
 		else:
 			return False
 
-	def _parse_api_operational_asm (self,string):
-		scope = [{}]
-		if not self._single_operational_asm(scope,string):
-			return False
 		operational = scope[0]['operational'][0]
 		return operational
-
-	def _parse_api_operational_adm (self,string):
-		tokens = self._cleaned(string).split(' ',4)
-		if len(tokens) != 5:
-			return False
-		if tokens[4][0] != tokens[4][-1]:
-			return False
-		scope = [{}]
-		if not self._single_operational_adm(scope,string):
-			return False
-		operational = scope[0]['operational'][0]
-		return operational
-
-	# operational state
-
-	def parse_api_operational_state (self,command):
-		tokens = self._cleaned(command).split(' ',2)
-		if tokens[0] != 'operational':
-			return False
-		if tokens[1] == 'rpcq':
-			return self._parse_api_operational_rpcq(tokens[2])
-		elif tokens[1] == 'apcq':
-			return self._parse_api_operational_apcq(tokens[2])
-		elif tokens[1] == 'lpcq':
-			return self._parse_api_operational_lpcq(tokens[2])
-		else:
-			return False
-
-	def _parse_api_operational_rpcq (self,string):
-		scope = [{}]
-		if not self._single_operational_rpcq(scope,string):
-			return False
-		operational = scope[0]['operational'][0]
-		return operational
-
-	def _parse_api_operational_apcq (self,string):
-		scope = [{}]
-		if not self._single_operational_apcq(scope,string):
-			return False
-		operational = scope[0]['operational'][0]
-		return operational
-
-	def _parse_api_operational_lpcq (self,string):
-		scope = [{}]
-		if not self._single_operational_lpcq(scope,string):
-			return False
-		operational = scope[0]['operational'][0]
-		return operational
-
 
 	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
 	def change_to_peers (self,change,peers):
@@ -667,7 +637,6 @@ class Configuration (object):
 
 		elif name == 'operational':
 			if command == 'asm': return self._single_operational_asm(scope,tokens[1])
-			if command == 'rpcq': return self._single_operational_rpcq(scope,tokens[1])
 			# it does not make sense to have adm
 
 		return False
@@ -2370,7 +2339,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-	#  Group Static ................
+	#  Group Operational ................
 
 	def _multi_operational (self,scope,tokens):
 		if len(tokens) != 0:
@@ -2378,99 +2347,76 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-			r = self._dispatch(scope,'operational',[],['asm','rpcp'])
+			r = self._dispatch(scope,'operational',[],['asm',])
 			if r is False: return False
 			if r is None: return True
 
-	def _single_advisory (self,klass,scope,value):
-		tokens = self._cleaned(value).split(' ',4)
-		if len(tokens) != 5:
-			self._error = 'invalid advisory syntax'
-			return False
-		if tokens[0] != 'afi' or tokens[2] != 'safi':
-			self._error = 'invalid advisory syntax'
-			return False
-		afi = AFI.value(tokens[1])
-		if afi is None:
-			self._error = 'invalid advisory syntax'
-			return False
-		safi = SAFI.value(tokens[3])
-		if safi is None:
-			self._error = 'invalid advisory syntax'
-			return False
-		string = tokens[4]
-		if len(string) > 2 and string[0] == string[-1] and string[0] in ['"',"'"]:
-			string = string[1:-1]
-		if len(string) > MAX_ADVISORY:
-			self._error = 'advisory must be no larger than %d characters' % MAX_ADVISORY
-			if self.debug: raise
-			return False
-		if not string:
-			self._error = 'advisory requires the string as an argument (quoted or unquoted).'
-			if self.debug: raise
-			return False
-
-		if 'operational' not in scope[-1]:
-			scope[-1]['operational'] = []
-
-		# iterate on each family for the peer if multiprotocol is set.
-		scope[-1]['operational'].append(klass(afi,safi,string))
-		return True
 
 	def _single_operational_asm (self,scope,value):
-		return self._single_advisory(Advisory.ASM,scope,value)
+		#return self._single_advisory(Advisory.ASM,scope,value)
+		return self._single_operational(Advisory.ASM,scope,['afi','safi','advisory'],value)
 
-	def _single_operational_adm (self,scope,value):
-		return self._single_advisory(Advisory.ADM,scope,value)
+	def _single_operational (self,klass,scope,parameters,value):
+		def utf8 (string): return string.encode('utf-8')[1:-1]
 
-	def _single_state (self,klass,scope,value):
-		tokens = self._cleaned(value).split(' ',5)
-		if len(tokens) not in (4,6):
-			self._error = 'invalid advisory syntax'
+		convert = {
+			'afi': AFI.value,
+			'safi': SAFI.value,
+			'sequence': int,
+			'rxc': int,
+			'txc': int,
+			'advisory': utf8
+		}
+
+		def valid    (_): return True
+		def u32      (_): return int(_) <= 0xFFFFFFFF
+		def u64      (_): return long(_) <= 0xFFFFFFFFFFFFFFFF
+		def advisory (_): return len(_.encode('utf-8')) <= MAX_ADVISORY + 2  # the two quotes
+
+		validate = {
+			'afi': AFI.value,
+			'safi': SAFI.value,
+			'sequence': u32,
+			'txc': u64,
+			'rxc': u64,
+		}
+
+		number = len(parameters)*2
+		tokens = self._cleaned(value).split(' ',number-1)
+		if len(tokens) != number:
+			self._error = 'invalid operational syntax, wrong number of arguments'
 			return False
-		if tokens[0] != 'afi' or tokens[2] != 'safi':
-			self._error = 'invalid advisory syntax'
-			return False
-		afi = AFI.value(tokens[1])
-		if afi is None:
-			self._error = 'invalid advisory syntax'
-			return False
-		safi = SAFI.value(tokens[3])
-		if safi is None:
-			self._error = 'invalid advisory syntax'
-			return False
-		if len(tokens) == 6:
-			if tokens[4] != 'sequence':
-				self._error = 'invalid advisory syntax'
+
+		data = {}
+
+		while tokens and parameters:
+			expected = parameters.pop(0)
+			command = tokens.pop(0)
+			value = tokens.pop(0)
+
+			if command != expected:
+				self._error = 'invalid operational syntax, unknown argument %s' % command
 				return False
-			number = tokens[5]
-			if not number.isdigit():
-				self._error = 'state include a sequence number'
-				if self.debug: raise
+			if not validate.get(command,valid)(value):
+				self._error = 'invalid operational value, %s' % command
 				return False
-			sequence = int(number)
-			if sequence > 0b1111111111111111:
-				self._error = 'state sequence must be smaller than 2^16'
-				if self.debug: raise
-				return False
-		else:
-			sequence = None
+
+			data[command] = convert[command](value)
+
+		if tokens or parameters:
+			self._error = 'invalid advisory syntax, missing argument(s) %s' % ', '.join(parameters)
+			return False
+
+		if 'routerid' not in data:
+			data['routerid'] = None
 
 		if 'operational' not in scope[-1]:
 			scope[-1]['operational'] = []
 
 		# iterate on each family for the peer if multiprotocol is set.
-		scope[-1]['operational'].append(klass(afi,safi,None,None))
+		scope[-1]['operational'].append(klass(**data))
 		return True
 
-	def _single_operational_rpcq (self,scope,value):
-		return self._single_state(State.RPCQ,scope,value)
-
-	def _single_operational_apcq (self,scope,value):
-		return self._single_state(State.APCQ,scope,value)
-
-	def _single_operational_lpcq (self,scope,value):
-		return self._single_state(State.LPCQ,scope,value)
 
 	# ..............................
 

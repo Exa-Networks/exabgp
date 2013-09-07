@@ -12,10 +12,15 @@ counter = 1
 time.sleep(4)
 
 print 'operational rpcq afi ipv4 safi unicast sequence %d' % counter
+print 'operational rpcp afi ipv4 safi unicast sequence %d rxc 100 txc 200' % counter
 time.sleep(1)
+
+counter += 1
 
 print 'operational apcq afi ipv4 safi unicast sequence %d' % counter
 time.sleep(1)
+
+counter += 1
 
 print 'operational lpcq afi ipv4 safi unicast sequence %d' % counter
 time.sleep(1)
@@ -24,10 +29,10 @@ while True:
 	try:
 		time.sleep(1)
 		if counter % 2:
-			print 'operational adm afi ipv4 safi unicast "this is dynamic message #%d"' % counter
+			print 'operational adm afi ipv4 safi unicast advisory "this is dynamic message #%d"' % counter
 			sys.stdout.flush()
 		else:
-			print 'operational asm afi ipv4 safi unicast "we SHOULD not send asm from the API"'
+			print 'operational asm afi ipv4 safi unicast advisory "we SHOULD not send asm from the API"'
 			sys.stdout.flush()
 
 		counter += 1

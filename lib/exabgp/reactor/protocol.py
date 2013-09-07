@@ -23,7 +23,7 @@ from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import NotificationFactory, Notify
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.factory import UpdateFactory
-from exabgp.bgp.message.operational import OperationalFactory
+from exabgp.bgp.message.operational import Operational,OperationalFactory,OperationalGroup
 
 from exabgp.reactor.api.processes import ProcessError
 
@@ -34,6 +34,7 @@ MAX_BACKLOG = 15000
 
 _NOP = NOP()
 _UPDATE = Update([],'')
+_OPERATIONAL = Operational(0x00)
 
 class Protocol (object):
 	decode = True
@@ -161,11 +162,12 @@ class Protocol (object):
 			yield RouteRefresh()
 
 		elif msg == Message.Type.OPERATIONAL:
-			operational = OperationalFactory(body)
-			if operational.has_routerid:
-				self.peer.reactor.processes.operational_sequence(self.peer.neighbor.peer_address,operational)
+			if self.peer.neighbor.operational:
+				operational = OperationalFactory(body)
+				what = OperationalGroup[operational.what][0]
+				self.peer.reactor.processes.operational(self.peer.neighbor.peer_address,what,operational)
 			else:
-				self.peer.reactor.processes.operational(self.peer.neighbor.peer_address,operational)
+				operational = _OPERATIONAL
 			yield operational
 
 		elif msg == Message.Type.OPEN:
