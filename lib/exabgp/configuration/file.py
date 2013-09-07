@@ -16,6 +16,8 @@ from pprint import pformat
 from copy import deepcopy
 from struct import pack,unpack
 
+from exabgp.util.ip import isipv4
+
 from exabgp.configuration.environment import environment
 
 from exabgp.protocol.family import AFI,SAFI,known_families
@@ -338,8 +340,14 @@ class Configuration (object):
 		elif what == 'apcq':
 			if not self._single_operational(Query.APCQ,scope,['afi','safi','sequence'],tokens[2]):
 				return False
+		elif what == 'apcp':
+			if not self._single_operational(Response.APCP,scope,['afi','safi','sequence','counter'],tokens[2]):
+				return False
 		elif what == 'lpcq':
 			if not self._single_operational(Query.LPCQ,scope,['afi','safi','sequence'],tokens[2]):
+				return False
+		elif what == 'lpcp':
+			if not self._single_operational(Response.LPCP,scope,['afi','safi','sequence','counter'],tokens[2]):
 				return False
 		else:
 			return False
@@ -2363,8 +2371,9 @@ class Configuration (object):
 			'afi': AFI.value,
 			'safi': SAFI.value,
 			'sequence': int,
-			'rxc': int,
-			'txc': int,
+			'counter': long,
+			'rxc': long,
+			'txc': long,
 			'advisory': utf8
 		}
 
@@ -2379,6 +2388,7 @@ class Configuration (object):
 			'sequence': u32,
 			'txc': u64,
 			'rxc': u64,
+			'counter': u64,
 		}
 
 		number = len(parameters)*2
@@ -2390,15 +2400,24 @@ class Configuration (object):
 		data = {}
 
 		while tokens and parameters:
-			expected = parameters.pop(0)
-			command = tokens.pop(0)
+			command = tokens.pop(0).lower()
 			value = tokens.pop(0)
+
+			if command == 'router-id':
+				if isipv4(value):
+					data['routerid'] = RouterID(value)
+				else:
+					self._error = 'invalid operational value for %s' % command
+					return False
+				continue
+
+			expected = parameters.pop(0)
 
 			if command != expected:
 				self._error = 'invalid operational syntax, unknown argument %s' % command
 				return False
 			if not validate.get(command,valid)(value):
-				self._error = 'invalid operational value, %s' % command
+				self._error = 'invalid operational value for %s' % command
 				return False
 
 			data[command] = convert[command](value)

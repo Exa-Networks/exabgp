@@ -593,8 +593,7 @@ class Reactor (object):
 			except IndexError:
 				pass
 
-		if command.startswith('operational ') and command[12:16].lower() in ('asm ','adm ','rpcq','rpcp','apcq','lpcq'):
-
+		if command.startswith('operational ') and (command.split() + ['safe'])[1].lower() in ('asm','adm','rpcq','rpcp','apcq','apcp','lpcq','lpcp'):
 			def _announce_operational (self,command,peers):
 				operational = self.configuration.parse_api_operational(command)
 				if not operational:

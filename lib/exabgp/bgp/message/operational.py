@@ -223,7 +223,7 @@ class Query:
 				return 'operational %s afi %s safi %s router-id %s sequence %d' % (
 					self.name,
 					self.afi,self.safi,
-					self._routerid,self._sequence
+					self._routerid,self._sequence,
 				)
 			return 'operational %s afi %s safi %s' % (self.name,self.afi,self.safi)
 
@@ -262,8 +262,33 @@ class Response:
 				self.rxc,self.txc
 			)
 
-	class APCP: pass
-	class LPCP: pass
+	class _Counter (SequencedOperationalFamily):
+		def __init__ (self,afi,safi,routerid,sequence,counter):
+			self.counter = counter
+			SequencedOperationalFamily.__init__(
+				self,self.code,
+				afi,safi,
+				routerid,sequence,
+				pack('!L',counter)
+			)
+
+		def extensive (self):
+			if self._routerid and self._sequence:
+				return 'operational %s afi %s safi %s router-id %s sequence %d counter %d' % (
+					self.name,
+					self.afi,self.safi,
+					self._routerid,self._sequence,
+					self.counter
+				)
+			return 'operational %s afi %s safi %s counter %d' % (self.name,self.afi,self.safi,self.counter)
+
+	class APCP (_Counter):
+		name = 'RPCP'
+		code = OperationalType.APCP
+
+	class LPCP (_Counter):
+		name = 'RPCP'
+		code = OperationalType.LPCP
 
 # c = State.RPCQ(1,1,'82.219.0.1',10)
 # print c.extensive()
@@ -278,11 +303,12 @@ OperationalGroup = {
 	OperationalType.ASM: ('advisory', Advisory.ASM),
 
 	OperationalType.RPCQ: ('query', Query.RPCQ),
-	OperationalType.APCQ: ('query', Query.APCQ),
-	OperationalType.LPCQ: ('query', Query.LPCQ),
-
 	OperationalType.RPCP: ('interface', Response.RPCP),
+
+	OperationalType.APCQ: ('query', Query.APCQ),
 	OperationalType.APCP: ('counter', Response.APCP),
+
+	OperationalType.LPCQ: ('query', Query.LPCQ),
 	OperationalType.LPCP: ('counter', Response.LPCP),
 }
 

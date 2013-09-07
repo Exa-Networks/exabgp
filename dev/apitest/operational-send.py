@@ -9,7 +9,7 @@ counter = 1
 
 # sleep a little bit or we will never see the asm in the configuration file
 # and the message received just before we go to the established loop will be printed twice
-time.sleep(4)
+time.sleep(1)
 
 print 'operational rpcq afi ipv4 safi unicast sequence %d' % counter
 print 'operational rpcp afi ipv4 safi unicast sequence %d rxc 100 txc 200' % counter
@@ -18,11 +18,13 @@ time.sleep(1)
 counter += 1
 
 print 'operational apcq afi ipv4 safi unicast sequence %d' % counter
+print 'operational apcp afi ipv4 safi unicast sequence %d counter 150' % counter
 time.sleep(1)
 
 counter += 1
 
 print 'operational lpcq afi ipv4 safi unicast sequence %d' % counter
+print 'operational lpcp afi ipv4 safi unicast sequence %d counter 250' % counter
 time.sleep(1)
 
 while True:
