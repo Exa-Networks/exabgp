@@ -490,7 +490,15 @@ class Peer (object):
 			for direction in ['in','out']:
 				if self._[direction]['proto']:
 					try:
-						self._[direction]['proto'].new_notification(n)
+						generator = self._[direction]['proto'].new_notification(n)
+						try:
+							maximum = 20
+							while maximum:
+								generator.next()
+								maximum -= 1
+								yield ACTION.immediate if maximum > 10 else ACTION.later
+						except StopIteration:
+							pass
 					except (NetworkError,ProcessError):
 						self.logger.network(self._output(direction,'NOTIFICATION NOT SENT','error'))
 						pass
