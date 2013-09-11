@@ -7,7 +7,7 @@ then
 fi
 if [ "$ip" == "" ]
 then
-	ip=`ifconfig | grep -A10 vnic0 | grep "inet " | head -1 awk '{ print $2; }'`
+	ip=`ifconfig | grep -A10 vnic0 | grep "inet " | head -1 | awk '{ print $2; }'`
 fi
 if [ "$ip" != "" ]
 then
