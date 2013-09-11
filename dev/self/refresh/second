@@ -1,0 +1,18 @@
+#!/bin/sh
+
+ip=`ifconfig | grep -A10 en0 | grep "inet " | head -1 | awk '{ print $2; }'`
+if [ "$ip" == "" ]
+then
+	ip=`ifconfig | grep -A10 en1 | grep "inet " | head -1 | awk '{ print $2; }'`
+fi
+if [ "$ip" == "" ]
+then
+	ip=`ifconfig | grep -A10 vnic0 | grep "inet " | head -1 | awk '{ print $2; }'`
+fi
+if [ "$ip" != "" ]
+then
+	cat second.template | sed -e "s/IP/$ip/" > second.conf
+	env exabgp.log.processes=false exabgp.log.reactor=false exabgp.tcp.bind="$ip" exabgp.tcp.port=1790 ../../../sbin/exabgp second.conf -d
+else
+	echo "get some IP somewhere on this machine please"
+fi

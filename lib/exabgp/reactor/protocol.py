@@ -276,3 +276,9 @@ class Protocol (object):
 			yield _NOP
 		self.logger.message(self.me('>> OPERATIONAL %s' % str(operational)))
 		yield operational
+
+	def new_refresh (self,refresh,negotiated):
+		for _ in self.write(refresh.message(negotiated)):
+			yield _NOP
+		self.logger.message(self.me('>> OPERATIONAL %s' % str(refresh)))
+		yield refresh

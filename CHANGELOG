@@ -7,6 +7,7 @@ Version 3.2.10
  * Fix: was not announcing add-path for IPv6 unicast
  * Fix: we were not sending the Notification messages
     reported by: Hideaki HAYASHI
+ * Improvement: add support for route-refresh (RFC 2918)
 
 Version 3.2.9
  * Fix: some json generation issue

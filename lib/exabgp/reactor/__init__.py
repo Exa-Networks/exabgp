@@ -464,7 +464,7 @@ class Reactor (object):
 			return returned
 
 		# route announcement / withdrawal
-		if 'announce route' in command:
+		if 'announce route ' in command:
 			def _announce_change (self,command,nexthops):
 				changes = self.configuration.parse_api_route(command,nexthops,'announce')
 				if not changes:
@@ -587,6 +587,31 @@ class Reactor (object):
 						if match_neighbor(description,key):
 							self._peers[key].teardown(int(code))
 							self.logger.reactor('teardown scheduled for %s' % ' '.join(description))
+				return True
+			except ValueError:
+				pass
+			except IndexError:
+				pass
+
+		if 'announce route-refresh' in command:
+			def _announce_refresh (self,command,peers):
+				rr = self.configuration.parse_api_refresh(command)
+				if not rr:
+					self.logger.reactor("Command could not parse flow in : %s" % command)
+					yield True
+				else:
+					self.configuration.refresh_to_peers(rr,peers)
+					self.logger.reactor("Sent to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',rr.extensive()))
+					yield False
+					self._route_update = True
+
+			try:
+				descriptions,command = extract_neighbors(command)
+				peers = match_neighbors(descriptions,self._peers)
+				if peers == []:
+					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+					return False
+				self._pending.append(_announce_refresh(self,command,peers))
 				return True
 			except ValueError:
 				pass

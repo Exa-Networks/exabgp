@@ -49,10 +49,11 @@ class Neighbor (object):
 
 		self.operational = None
 		self.asm = dict()
-		self.messages = deque()
 
 	def make_rib (self):
 		self.rib = RIB(self.name())
+		self.messages = deque()
+		self.refresh = deque()
 
 	def name (self):
 		if self.multisession:

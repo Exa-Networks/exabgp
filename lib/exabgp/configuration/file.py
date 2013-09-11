@@ -53,6 +53,7 @@ from exabgp.bgp.message.operational import MAX_ADVISORY,Advisory,Query,Response
 from exabgp.bgp.message.update.attributes import Attributes
 
 from exabgp.rib.change import Change
+from exabgp.bgp.message.refresh import RouteRefresh
 
 from exabgp.logger import Logger
 
@@ -310,6 +311,19 @@ class Configuration (object):
 				change.nlri.action = OUT.withdraw
 		return changes
 
+	def parse_api_refresh (self,command):
+		tokens = self._cleaned(command).split(' ')[2:]
+		families = []
+		if len(tokens) % 2:
+			return False
+		while tokens:
+			afi = AFI.value(tokens.pop(0))
+			safi = SAFI.value(tokens.pop(0))
+			if afi is None or safi is None:
+				return False
+			families.append((afi,safi))
+		return RouteRefresh().new(families)
+
 	# operational
 
 	def parse_api_operational (self,command):
@@ -357,30 +371,43 @@ class Configuration (object):
 
 	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
 	def change_to_peers (self,change,peers):
-		result = False
+		result = True
 		for neighbor in self.neighbor:
 			if neighbor in peers:
 				if change.nlri.family() in self.neighbor[neighbor].families():
 					self.neighbor[neighbor].rib.outgoing.insert_announced(change)
-					result = True
 				else:
 					self.logger.configuration('the route family is not configured on neighbor','error')
-					return False
+					result = False
 		return result
 
 	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
 	def operational_to_peers (self,operational,peers):
-		result = False
+		result = True
 		for neighbor in self.neighbor:
 			if neighbor in peers:
 				if operational.family() in self.neighbor[neighbor].families():
 					if operational.name == 'ASM':
 						self.neighbor[neighbor].asm[operational.family()] = operational
 					self.neighbor[neighbor].messages.append(operational)
-					result = True
 				else:
 					self.logger.configuration('the route family is not configured on neighbor','error')
-					return False
+					result = False
+		return result
+
+	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
+	def refresh_to_peers (self,refresh,peers):
+		result = True
+		for neighbor in self.neighbor:
+			if neighbor in peers:
+				families = []
+				for family in refresh.families():
+					if family not in self.neighbor[neighbor].families():
+						families.append(family)
+					if families:
+						self.neighbor[neighbor].refresh.append(refresh.__class__().new(families))
+					else:
+						result = False
 		return result
 
 	# Tokenisation

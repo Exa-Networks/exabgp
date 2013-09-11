@@ -12,9 +12,10 @@ class RIB:
 	ribs = {}
 
 	def __init__ (self,name):
-		if name in self.ribs:
-			return self.ribs[name]
-		self.ribs[name] = self
-
-		self.incoming = Store(False)
-		self.outgoing = Store(True)
+		if name not in self.ribs:
+			self.ribs[name] = self
+			self.incoming = Store(False)
+			self.outgoing = Store(True)
+		else:
+			self.incoming = self.ribs[name].incoming
+			self.outgoing = self.ribs[name].outgoing

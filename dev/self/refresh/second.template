@@ -1,0 +1,26 @@
+#route 77.93.35.15/32 next-hop 10.0.0.2;
+
+group test {
+	local-as 65533;
+	peer-as 65533;
+	hold-time 180;
+
+	capability {
+		route-refresh;
+		graceful-restart 1200;
+	}
+
+	family {
+		ipv4 unicast;
+	}
+
+	static {
+		route 1.0.0.0/24 next-hop 9.9.9.9 split /25;
+	}
+
+	neighbor 127.0.0.1 {
+		description "router 2 with four routes";
+		router-id 128.0.0.0;
+		local-address IP;
+	}
+}

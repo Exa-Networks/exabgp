@@ -14,8 +14,8 @@ from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability.id import CapabilityID
 from exabgp.bgp.message.nop import NOP
 from exabgp.bgp.message.update import Update
+from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.notification import Notification, Notify
-#from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.reactor.protocol import Protocol
 from exabgp.reactor.network.error import NetworkError
 from exabgp.reactor.api.processes import ProcessError
@@ -119,6 +119,7 @@ class Peer (object):
 			self._[direction]['generator'] = self._[direction]['enabled']
 			self._teardown = None
 			self._more_skip(direction)
+			self.neighbor.make_rib()  # clear the RIB and pending messages
 
 			# If we are restarting, and the neighbor definition is different, update the neighbor
 			if self._neighbor:
@@ -379,6 +380,7 @@ class Peer (object):
 		need_keepalive = False
 		keepalive = None
 		operational = None
+		refresh = None
 
 		while not self._teardown:
 			for message in proto.read_message():
@@ -395,6 +397,8 @@ class Peer (object):
 					for nlri in message.nlris:
 						self.neighbor.rib.incoming.insert_received(Change(nlri,message.attributes))
 						self.logger.routes(LazyFormat(self.me(''),str,nlri))
+				elif message.TYPE == RouteRefresh.TYPE and self.neighbor.route_refresh:
+					self._resend_routes = True
 
 				# SEND KEEPALIVES
 				need_keepalive |= self.timer.keepalive()
@@ -421,6 +425,19 @@ class Peer (object):
 							operational.next()
 						except StopIteration:
 							operational = None
+
+				# SEND REFRESH
+				if self.neighbor.route_refresh:
+					if not refresh:
+						new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
+						if new_refresh:
+							refresh = proto.new_refresh(new_refresh,proto.negotiated)
+
+					if refresh:
+						try:
+							refresh.next()
+						except StopIteration:
+							refresh = None
 
 				# Take the routes already sent to that peer and resend them
 				if self._resend_routes:
@@ -556,8 +573,13 @@ class Peer (object):
 				try:
 					# This generator only stops when it raises
 					r = generator.next()
-					status = 'immediate callback' if r is True else 'when possible' if r is None else 'stopped' if r is False else 'running'
-					self.logger.network('%s loop %s, state is %s' % (direction,status,self._[direction]['state']),'debug')
+
+					if r is ACTION.immediate: status = 'immediate callback'
+					elif r is ACTION.later:   status = 'when possible'
+					elif r is ACTION.close:   status = 'stop'
+					else: status = 'buggy'
+					self.logger.network('%s loop %18s, state is %s' % (direction,status,self._[direction]['state']),'debug')
+
 					if r == ACTION.immediate:
 						back = ACTION.immediate
 					elif r == ACTION.later:
