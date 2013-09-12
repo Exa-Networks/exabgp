@@ -103,6 +103,13 @@ class Control (StreamRequestHandler):
 				self.wfile.flush()
 				prompt = True
 
+			elif command.startswith('neighbor '):
+				sys.stdout.write('%s\n' % command)
+				sys.stdout.flush()
+				self.wfile.write('neighbor %s requested\n' % command.split(' ')[1])
+				self.wfile.flush()
+				prompt = True
+
 			elif command.startswith('show '):
 				sys.stdout.write('%s\n' % command)
 				sys.stdout.flush()

@@ -28,6 +28,7 @@ In no particular order:
 - change all announcement like announce in Update to be function and not class method (and change name .:p)
 - move logic code in read_message into peer main loop
 - detect duplicate logging lines and just announce the number of repeat
+- in neighbor store all the message in a dict and not rib, operation and route-refresh
 
 Important
 * write the documentation, and do not rely on the example and the site wiki (argh ...)
