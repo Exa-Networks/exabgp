@@ -133,6 +133,9 @@ class NLRI (Prefix):
 			return True
 		return False
 
+	def prefix (self):
+		return "%s%s" % (Prefix.prefix(self),str(self.path_info))
+
 	def __len__ (self):
 		prefix_len = len(self.path_info) + len(self.labels) + len(self.rd)
 		return 1 + prefix_len + mask_to_bytes[self.mask]
@@ -147,16 +150,17 @@ class NLRI (Prefix):
 	def __ne__ (self,other):
 		return not self.__eq__(other)
 
-	def json (self):
+	def json (self,announced=True):
 		label = self.labels.json()
 		pinfo = self.path_info.json()
 		rdist = self.rd.json()
 
 		r = []
-		if self.labels: r.append(label)
+		if announced:
+			if self.labels: r.append(label)
+			if self.rd: r.append(rdist)
+			if self.nexthop: r.append('"next-hop": "%s"' % self.nexthop.inet())
 		if self.path_info: r.append(pinfo)
-		if self.rd: r.append(rdist)
-		if self.nexthop: r.append('"next-hop": "%s"' % self.nexthop.inet())
 		return '"%s": { %s }' % (self.prefix(),", ".join(r))
 
 	def pack (self,addpath):
