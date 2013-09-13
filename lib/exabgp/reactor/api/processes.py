@@ -172,7 +172,7 @@ class Processes (object):
 	def write (self,process,string):
 		while True:
 			try:
-				self._process[process].stdin.write('%s\r\n' % string)
+				self._process[process].stdin.write('%s\n' % string)
 			except IOError,e:
 				self._broken.append(process)
 				if e.errno == errno.EPIPE:
