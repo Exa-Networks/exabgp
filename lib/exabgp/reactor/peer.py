@@ -517,7 +517,7 @@ class Peer (object):
 						except StopIteration:
 							pass
 					except (NetworkError,ProcessError):
-						self.logger.network(self._output(direction,'NOTIFICATION NOT SENT','error'))
+						self.logger.network(self._output(direction,'NOTIFICATION NOT SENT'),'error')
 						pass
 					self._reset(direction,'notification sent (%d,%d)' % (n.code,n.subcode),n)
 				else:
