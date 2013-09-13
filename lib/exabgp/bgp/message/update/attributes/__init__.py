@@ -225,7 +225,7 @@ class Attributes (dict):
 					if code in self.representation:
 						how, default, name, presentation = self.representation[code]
 						if how == 'boolean':
-							yield name
+							yield ' %s' % name
 						else:
 							yield ' %s %s' % (name, presentation % str(self[code]))
 					else:

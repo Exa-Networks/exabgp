@@ -6,6 +6,7 @@ Version explained:
 Version 3.2.11
  * Improvement: the TCP server allows 'neighbor' commands
     patch by: Hideaki HAYASHI
+ * Fix: bug in generating string, missing space
 
 Version 3.2.10
  * Fix: was not announcing add-path for IPv6 unicast
