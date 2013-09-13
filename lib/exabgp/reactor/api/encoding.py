@@ -52,7 +52,10 @@ class Text (object):
 		r = 'neighbor %s update start\n' % neighbor
 		attributes = str(update.attributes)
 		for nlri in update.nlris:
-			r += 'neighbor %s announced route %s%s\n' % (neighbor,str(nlri),attributes)
+			if nlri.action == IN.announced:
+				r += 'neighbor %s announced route %s%s\n' % (neighbor,str(nlri),attributes)
+			else:
+				r += 'neighbor %s withdrawn route %s\n' % (neighbor,str(nlri))
 		r += 'neighbor %s update end\n' % neighbor
 		return r
 
