@@ -15,6 +15,13 @@ from exabgp.bgp.message import Message
 # A Notification received from our peer.
 # RFC 4271 Section 4.5
 
+class Reserved (int):
+	def __str__ (self):
+		if self == 0: return 'query'
+		if self == 1: return 'begin'
+		if self == 2: return 'end'
+		return 'invalid'
+
 class RouteRefresh (Message):
 	TYPE = chr(Message.Type.ROUTE_REFRESH)
 
@@ -25,7 +32,7 @@ class RouteRefresh (Message):
 	def __init__ (self,afi,safi,reserved=0):
 		self.afi = AFI(afi)
 		self.safi = SAFI(safi)
-		self.reserved = reserved
+		self.reserved = Reserved(reserved)
 
 	def messages (self,negotitated):
 		return [self._message('%s%s%s' % (self.afi.pack(),chr(self.reserved),self.safi.pack())),]

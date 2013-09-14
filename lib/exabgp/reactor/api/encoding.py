@@ -59,6 +59,11 @@ class Text (object):
 		r += 'neighbor %s update end\n' % neighbor
 		return r
 
+	def refresh (self,neighbor,refresh):
+		return 'neighbor %s route-refresh afi %s safi %s %s' % (
+			neighbor,refresh.afi,refresh.safi,refresh.reserved
+		)
+
 	def _operational_advisory (self,neighbor,operational):
 		return 'neighbor %s operational %s afi %s safi %s advisory "%s"' % (
 			neighbor,operational.name,operational.afi,operational.safi,operational.data
@@ -90,11 +95,6 @@ class Text (object):
 			return self._operational_interface(neighbor,operational)
 		else:
 			raise RuntimeError('the code is broken, we are trying to print a unknown type of operational message')
-
-	def refresh (self,neighbor,refresh):
-		return 'neighbor %s route-refresh afi %s safi %s reserved %d' % (
-			neighbor,refresh.afi,refresh.safi,refresh.reserved
-		)
 
 class JSON (object):
 	def __init__ (self,version):
@@ -187,6 +187,16 @@ class JSON (object):
 	def update (self,neighbor,update):
 		return self._header(self._neighbor(neighbor,self._update(update)))
 
+	def refresh (self,neighbor,refresh):
+		return self._header(
+			self._neighbor(
+				neighbor,
+				'"route-refresh": { "afi": "%s", "safi": "%s", "subtype": "%s"' % (
+					refresh.afi,refresh.safi,refresh.reserved
+				)
+			)
+		)
+
 	def bmp (self,bmp,update):
 		return self._header(self._bmp(bmp,self._update(update)))
 
@@ -241,13 +251,3 @@ class JSON (object):
 			return self._operational_interface(neighbor,operational)
 		else:
 			raise RuntimeError('the code is broken, we are trying to print a unknown type of operational message')
-
-	def refresh (self,neighbor,refresh):
-		return self._header(
-			self._neighbor(
-				neighbor,
-				'"route-refresh": { "afi": "%s", "safi": "%s", "reserved": %d' % (
-					refresh.afi,refresh.safi,refresh.reserved
-				)
-			)
-		)
