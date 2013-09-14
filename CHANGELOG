@@ -11,6 +11,7 @@ Version 3.2.11
  * Fix: bug in generating API string, withdrawn reported as invalid announced
  * Fix: bug in generating API string, withdawn was missing Path-Information
  * Fix: route refresh implementation issues
+ * Fix: a bug with capability parsing introduced with operational
 
 Version 3.2.10
  * Fix: was not announcing add-path for IPv6 unicast

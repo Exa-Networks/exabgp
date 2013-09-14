@@ -77,7 +77,7 @@ class Capabilities (dict):
 				r += ['Multi Session']
 			elif key == CapabilityID.ADD_PATH:
 				r += [str(self[key])]
-			elif key in CapabilityID.OPERATIONAL:
+			elif key == CapabilityID.OPERATIONAL:
 				r += ['Operational']
 			elif key in CapabilityID.reserved:
 				r += ['private use capability %d' % key]
