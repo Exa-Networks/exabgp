@@ -126,6 +126,6 @@ This programs does not have any dependences on any third party libraries and wil
 
 And some self promotion :
 
- * [ExaProxy](http://code.google.com/p/exaproxy) A non-caching HTTP proxy able to perform complex headers and answers manipulations
+ * [ExaProxy](http://code.google.com/p/exaproxy) A non-caching HTTP proxy able to perform complex header manipulations
 
 My [blog](http://thomas.mangin.com/categories/networking.html) may contain some BGP related information, but I tend to post more on [G+](https://plus.google.com/u/0/communities/108249711110699351497) than I blog.
