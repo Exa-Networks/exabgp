@@ -6,11 +6,10 @@ Created by Thomas Mangin on 2012-07-19.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from struct import unpack,pack
+from struct import unpack
 
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.bgp.message import Message
-from exabgp.bgp.message.notification import Notify
 
 # =================================================================== Notification
 # A Notification received from our peer.
@@ -19,30 +18,23 @@ from exabgp.bgp.message.notification import Notify
 class RouteRefresh (Message):
 	TYPE = chr(Message.Type.ROUTE_REFRESH)
 
-	def __init__ (self):
-		self._families = []
-
-	def new (self,families):
-		self._families = families
-		return self
+	def __init__ (self,afi,safi,reserved=0):
+		self.afi = AFI(afi)
+		self.safi = SAFI(safi)
+		self.reserved = reserved
 
 	def message (self,data):
-		return self._message(
-			''.join(['%s%s' % (pack('!H',afi),pack('!H',safi)) for (afi,safi) in self._families])
-		)
-
-	def factory (self,data):
-		while len(data) >= 4:
-			afi,safi = unpack('!HH',data[4:])
-			self._families.append(AFI(afi),SAFI(safi))
-		if data:
-			raise Notify(2,0,'trailing data while parsing route-refresh')
+		return self._message('%s%s%s' % (self.afi.pack(),chr(self.reserved),self.safi.pack()))
 
 	def __str__ (self):
 		return "REFRESH"
 
 	def extensive (self):
-		return "route refresh %s" % ','.join(['%s %s' % (afi,safi) for (afi,safi) in self._families])
+		return 'route refresh %s/%d/%s' % (self.afi,self.reserved,self.safi)
 
 	def families (self):
 		return self._families[:]
+
+def RouteRefreshFactory (data):
+	afi,reserved,safi = unpack('!HBB',data)
+	return RouteRefresh(afi,safi,reserved)

@@ -370,6 +370,7 @@ class Peer (object):
 		send_eor = True
 		new_routes = None
 		self._resend_routes = True
+		send_families = []
 
 		# Every last asm message should be re-announced on restart
 		for family in self.neighbor.asm:
@@ -399,6 +400,7 @@ class Peer (object):
 						self.logger.routes(LazyFormat(self.me(''),str,nlri))
 				elif message.TYPE == RouteRefresh.TYPE and self.neighbor.route_refresh:
 					self._resend_routes = True
+					send_families.append((message.afi,message.safi))
 
 				# SEND KEEPALIVES
 				need_keepalive |= self.timer.keepalive()
@@ -442,8 +444,9 @@ class Peer (object):
 				# Take the routes already sent to that peer and resend them
 				if self._resend_routes:
 					self._resend_routes = False
-					self.neighbor.rib.outgoing.resend_known()
+					self.neighbor.rib.outgoing.resend_known(send_families)
 					self._have_routes = True
+					send_families = []
 
 				# Need to send update
 				if self._have_routes and not new_routes:

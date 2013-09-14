@@ -22,9 +22,11 @@ class Store (object):
 		self._modify_sorted = {}
 
 
-	def every_changes (self):
+	def every_changes (self,families=None):
 		# we use list() to make a snapshot of the data at the time we run the command
 		for family in list(self._announced.keys()):
+			if families is not None and family not in families:
+				continue
 			for change in self._announced[family].values():
 				if change.nlri.action == OUT.announce:
 					yield change
@@ -39,10 +41,15 @@ class Store (object):
 					changes[change.index()] = change
 		return changes
 
-	def resend_known (self):
-		for change in self.every_changes():
+	def resend_known (self,families):
+		for change in self.every_changes(families):
 			self.insert_announced(change)
-		self._announced = {}
+		if families is None:
+			self._announced = {}
+		else:
+			for family in self._announced:
+				if family in families:
+					self._announced[family] = {}
 
 	def insert_announced_watchdog (self,change):
 		watchdog = change.attributes.watchdog()

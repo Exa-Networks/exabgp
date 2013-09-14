@@ -21,7 +21,7 @@ from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.eor import EOR,EORFactory
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import NotificationFactory, Notify
-from exabgp.bgp.message.refresh import RouteRefresh
+from exabgp.bgp.message.refresh import RouteRefreshFactory
 from exabgp.bgp.message.update.factory import UpdateFactory
 from exabgp.bgp.message.operational import Operational,OperationalFactory,OperationalGroup
 
@@ -159,7 +159,7 @@ class Protocol (object):
 		elif msg == Message.Type.ROUTE_REFRESH:
 			self.logger.message(self.me('<< ROUTE-REFRESH'))
 			# not doing anything with the Data we do not handle route refresh
-			yield RouteRefresh()
+			yield RouteRefreshFactory(body)
 
 		elif msg == Message.Type.OPERATIONAL:
 			if self.peer.neighbor.operational:

@@ -313,16 +313,13 @@ class Configuration (object):
 
 	def parse_api_refresh (self,command):
 		tokens = self._cleaned(command).split(' ')[2:]
-		families = []
-		if len(tokens) % 2:
+		if len(tokens) != 2:
 			return False
-		while tokens:
-			afi = AFI.value(tokens.pop(0))
-			safi = SAFI.value(tokens.pop(0))
-			if afi is None or safi is None:
-				return False
-			families.append((afi,safi))
-		return RouteRefresh().new(families)
+		afi = AFI.value(tokens.pop(0))
+		safi = SAFI.value(tokens.pop(0))
+		if afi is None or safi is None:
+			return False
+		return RouteRefresh(afi,safi)
 
 	# operational
 
@@ -400,14 +397,11 @@ class Configuration (object):
 		result = True
 		for neighbor in self.neighbor:
 			if neighbor in peers:
-				families = []
-				for family in refresh.families():
-					if family not in self.neighbor[neighbor].families():
-						families.append(family)
-					if families:
-						self.neighbor[neighbor].refresh.append(refresh.__class__().new(families))
-					else:
-						result = False
+				family = (refresh.afi,refresh.safi)
+				if family in self.neighbor[neighbor].families():
+					self.neighbor[neighbor].refresh.append(refresh.__class__(refresh.afi,refresh.safi))
+				else:
+					result = False
 		return result
 
 	# Tokenisation
