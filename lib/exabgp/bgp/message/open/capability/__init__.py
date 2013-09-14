@@ -12,7 +12,7 @@ from exabgp.protocol.family import AFI,SAFI
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.id import CapabilityID
 from exabgp.bgp.message.open.capability.mp import MultiProtocol
-from exabgp.bgp.message.open.capability.refresh import RouteRefresh
+from exabgp.bgp.message.open.capability.refresh import RouteRefresh,EnhancedRouteRefresh
 from exabgp.bgp.message.open.capability.graceful import Graceful
 from exabgp.bgp.message.open.capability.ms import MultiSession
 from exabgp.bgp.message.open.capability.addpath import AddPath
@@ -65,6 +65,8 @@ class Capabilities (dict):
 				r += [str(self[key])]
 			elif key == CapabilityID.CISCO_ROUTE_REFRESH:
 				r += ['Cisco Route Refresh']
+			elif key == CapabilityID.ENHANCED_ROUTE_REFRESH:
+				r += ['Enhanced Route Refresh']
 			elif key == CapabilityID.GRACEFUL_RESTART:
 				r += ['Graceful Restart']
 			elif key == CapabilityID.FOUR_BYTES_ASN:
@@ -115,7 +117,8 @@ class Capabilities (dict):
 				self[CapabilityID.GRACEFUL_RESTART] = Graceful(0x0,graceful,[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in families])
 
 		if neighbor.route_refresh:
-			self[CapabilityID.ROUTE_REFRESH] = RouteRefresh(families)
+			self[CapabilityID.ROUTE_REFRESH] = RouteRefresh()
+			self[CapabilityID.ENHANCED_ROUTE_REFRESH] = EnhancedRouteRefresh()
 
 		# MUST be the last key added
 		if neighbor.multisession:
@@ -190,12 +193,16 @@ def CapabilitiesFactory (data):
 						capabilities[k] = ASN(unpack('!L',capv[:4])[0])
 						continue
 
+					if k == CapabilityID.CISCO_ROUTE_REFRESH:
+						capabilities[k] = RouteRefresh()
+						continue
+
 					if k == CapabilityID.ROUTE_REFRESH:
 						capabilities[k] = RouteRefresh()
 						continue
 
-					if k == CapabilityID.CISCO_ROUTE_REFRESH:
-						capabilities[k] = RouteRefresh()
+					if k == CapabilityID.ENHANCED_ROUTE_REFRESH:
+						capabilities[k] = EnhancedRouteRefresh()
 						continue
 
 					if k == CapabilityID.MULTISESSION_BGP:
