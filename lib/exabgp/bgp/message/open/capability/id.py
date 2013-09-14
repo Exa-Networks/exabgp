@@ -31,3 +31,6 @@ class CapabilityID (object):
 
 	unassigned = range(70,128)
 	reserved = range(128,256)
+
+from exabgp.util.enumeration import Enumeration
+REFRESH = Enumeration ('absent','normal','enhanced')

@@ -13,11 +13,11 @@ class RouteRefresh (object):
 		return 'Route Refresh'
 
 	def extract (self):
-		return []
+		return ['']
 
 class EnhancedRouteRefresh (object):
 	def __str__ (self):
 		return 'Enhanced Route Refresh'
 
 	def extract (self):
-		return []
+		return ['']

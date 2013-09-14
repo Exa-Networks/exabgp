@@ -91,6 +91,11 @@ class Text (object):
 		else:
 			raise RuntimeError('the code is broken, we are trying to print a unknown type of operational message')
 
+	def refresh (self,neighbor,refresh):
+		return 'neighbor %s route-refresh afi %s safi %s reserved %d' % (
+			neighbor,refresh.afi,refresh.safi,refresh.reserved
+		)
+
 class JSON (object):
 	def __init__ (self,version):
 		self.version = version
@@ -236,3 +241,13 @@ class JSON (object):
 			return self._operational_interface(neighbor,operational)
 		else:
 			raise RuntimeError('the code is broken, we are trying to print a unknown type of operational message')
+
+	def refresh (self,neighbor,refresh):
+		return self._header(
+			self._neighbor(
+				neighbor,
+				'"route-refresh": { "afi": "%s", "safi": "%s", "reserved": %d' % (
+					refresh.afi,refresh.safi,refresh.reserved
+				)
+			)
+		)

@@ -8,6 +8,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.direction import IN,OUT
 from exabgp.bgp.message.update import Update
+from exabgp.bgp.message.refresh import RouteRefresh
 
 # XXX: FIXME: we would not have to use so many setdefault if we pre-filled the dicts with the families
 
@@ -20,7 +21,8 @@ class Store (object):
 		self._cache_attribute = {}
 		self._modify_nlri = {}
 		self._modify_sorted = {}
-
+		self._enhanced_refresh_start = []
+		self._enhanced_refresh_delay = []
 
 	def every_changes (self,families=None):
 		# we use list() to make a snapshot of the data at the time we run the command
@@ -41,15 +43,21 @@ class Store (object):
 					changes[change.index()] = change
 		return changes
 
-	def resend_known (self,families):
+	def resend_known (self,families,enhanced_refresh_negotiated):
 		for change in self.every_changes(families):
-			self.insert_announced(change)
+			self.insert_announced(change,True)
 		if families is None:
+			seen_families = self._announced.keys()
 			self._announced = {}
+			if enhanced_refresh_negotiated:
+				for family in seen_families:
+					self._enhanced_refresh_start.append(family)
 		else:
 			for family in self._announced:
 				if family in families:
 					self._announced[family] = {}
+					if enhanced_refresh_negotiated:
+						self._enhanced_refresh_start.append(family)
 
 	def insert_announced_watchdog (self,change):
 		watchdog = change.attributes.watchdog()
@@ -86,7 +94,7 @@ class Store (object):
 		else:
 			self._announced.pop(change.nlri.index(),None)
 
-	def insert_announced (self,change):
+	def insert_announced (self,change,force=False):
 		# WARNING : this function can run while we are in the updates() loop
 
 		# self._announced[fanily][nlri-index] = change
@@ -102,6 +110,10 @@ class Store (object):
 		# import traceback
 		# traceback.print_stack()
 		# print "inserting", change.extensive()
+
+		if not force and self._enhanced_refresh_start:
+			self._enhanced_refresh_delay.append(change)
+			return
 
 		change_nlri_index = change.nlri.index()
 		change_attr_index = change.attributes.index()
@@ -131,6 +143,12 @@ class Store (object):
 
 
 	def updates (self,grouped):
+		rr_announced = []
+
+		for afi,safi in self._enhanced_refresh_start:
+			rr_announced.append((afi,safi))
+			yield RouteRefresh(afi,safi,RouteRefresh.start)
+
 		dict_sorted = self._modify_sorted
 		dict_nlri = self._modify_nlri
 		dict_attr = self._cache_attribute
@@ -191,6 +209,18 @@ class Store (object):
 						family = change.nlri.family()
 						if family in announced:
 							announced[family].pop(change.nlri.index(),None)
+
+		if rr_announced:
+			for afi,safi in rr_announced:
+				self._enhanced_refresh_start.remove((afi,safi))
+				yield RouteRefresh(afi,safi,RouteRefresh.end)
+
+			for change in self._enhanced_refresh_delay:
+				self.insert_announced(change,True)
+			self.enhanced_refresh_delay = []
+
+			for update in self.updates(grouped):
+				yield update
 
 	def clear_sent (self):
 		# WARNING : this function can run while we are in the updates() loop too !

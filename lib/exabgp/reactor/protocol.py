@@ -16,12 +16,13 @@ from exabgp.bgp.message.nop import NOP
 from exabgp.bgp.message.unknown import UnknownMessageFactory
 from exabgp.bgp.message.open import Open,OpenFactory
 from exabgp.bgp.message.open.capability import Capabilities
+from exabgp.bgp.message.open.capability.id import REFRESH
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.eor import EOR,EORFactory
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import NotificationFactory, Notify
-from exabgp.bgp.message.refresh import RouteRefreshFactory
+from exabgp.bgp.message.refresh import RouteRefresh,RouteRefreshFactory
 from exabgp.bgp.message.update.factory import UpdateFactory
 from exabgp.bgp.message.operational import Operational,OperationalFactory,OperationalGroup
 
@@ -157,9 +158,17 @@ class Protocol (object):
 			yield NotificationFactory(body)
 
 		elif msg == Message.Type.ROUTE_REFRESH:
-			self.logger.message(self.me('<< ROUTE-REFRESH'))
-			# not doing anything with the Data we do not handle route refresh
-			yield RouteRefreshFactory(body)
+			if self.negotiated.refresh != REFRESH.absent:
+				self.logger.message(self.me('<< ROUTE-REFRESH'))
+				refresh = RouteRefreshFactory(body)
+				if self.neighbor.api.receive_routes:
+					if refresh.reserved in (RouteRefresh.start,RouteRefresh.end):
+						self.peer.reactor.processes.refresh(self.peer.neighbor.peer_address,refresh)
+			else:
+				# XXX: FIXME: really should raise, we are too nice
+				self.logger.message(self.me('<< NOP (un-negotiated type %d)' % msg))
+				refresh = UnknownMessageFactory(body)
+			yield refresh
 
 		elif msg == Message.Type.OPERATIONAL:
 			if self.peer.neighbor.operational:
@@ -174,6 +183,7 @@ class Protocol (object):
 			yield OpenFactory(body)
 
 		else:
+			# XXX: FIXME: really should raise, we are too nice
 			self.logger.message(self.me('<< NOP (unknow type %d)' % msg))
 			yield UnknownMessageFactory(msg)
 
@@ -278,7 +288,8 @@ class Protocol (object):
 		yield operational
 
 	def new_refresh (self,refresh,negotiated):
-		for _ in self.write(refresh.message(negotiated)):
-			yield _NOP
-		self.logger.message(self.me('>> OPERATIONAL %s' % str(refresh)))
-		yield refresh
+		for refresh in refresh.messages(negotiated):
+			for _ in self.write(refresh):
+				yield _NOP
+			self.logger.message(self.me('>> REFRESH %s' % str(refresh)))
+			yield refresh

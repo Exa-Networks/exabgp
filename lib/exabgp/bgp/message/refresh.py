@@ -18,13 +18,17 @@ from exabgp.bgp.message import Message
 class RouteRefresh (Message):
 	TYPE = chr(Message.Type.ROUTE_REFRESH)
 
+	request = 0
+	start = 1
+	end = 2
+
 	def __init__ (self,afi,safi,reserved=0):
 		self.afi = AFI(afi)
 		self.safi = SAFI(safi)
 		self.reserved = reserved
 
-	def message (self,data):
-		return self._message('%s%s%s' % (self.afi.pack(),chr(self.reserved),self.safi.pack()))
+	def messages (self,negotitated):
+		return [self._message('%s%s%s' % (self.afi.pack(),chr(self.reserved),self.safi.pack())),]
 
 	def __str__ (self):
 		return "REFRESH"

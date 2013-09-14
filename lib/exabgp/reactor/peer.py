@@ -11,7 +11,7 @@ import time
 
 from exabgp.bgp.timer import Timer
 from exabgp.bgp.message import Message
-from exabgp.bgp.message.open.capability.id import CapabilityID
+from exabgp.bgp.message.open.capability.id import CapabilityID,REFRESH
 from exabgp.bgp.message.nop import NOP
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.refresh import RouteRefresh
@@ -398,9 +398,10 @@ class Peer (object):
 					for nlri in message.nlris:
 						self.neighbor.rib.incoming.insert_received(Change(nlri,message.attributes))
 						self.logger.routes(LazyFormat(self.me(''),str,nlri))
-				elif message.TYPE == RouteRefresh.TYPE and self.neighbor.route_refresh:
-					self._resend_routes = True
-					send_families.append((message.afi,message.safi))
+				elif message.TYPE == RouteRefresh.TYPE:
+					if message.reserved == RouteRefresh.request:
+						self._resend_routes = True
+						send_families.append((message.afi,message.safi))
 
 				# SEND KEEPALIVES
 				need_keepalive |= self.timer.keepalive()
@@ -433,7 +434,8 @@ class Peer (object):
 					if not refresh:
 						new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
 						if new_refresh:
-							refresh = proto.new_refresh(new_refresh,proto.negotiated)
+							enhanced_negotiated = True if proto.negotiated.refresh == REFRESH.enhanced else False
+							refresh = proto.new_refresh(new_refresh,enhanced_negotiated)
 
 					if refresh:
 						try:
@@ -444,7 +446,7 @@ class Peer (object):
 				# Take the routes already sent to that peer and resend them
 				if self._resend_routes:
 					self._resend_routes = False
-					self.neighbor.rib.outgoing.resend_known(send_families)
+					self.neighbor.rib.outgoing.resend_known(send_families,proto.negotiated.refresh)
 					self._have_routes = True
 					send_families = []
 

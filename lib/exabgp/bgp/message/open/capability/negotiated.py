@@ -8,9 +8,8 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.open.asn import ASN,AS_TRANS
 from exabgp.bgp.message.open.holdtime import HoldTime
-from exabgp.bgp.message.open.capability.id import CapabilityID as CID
+from exabgp.bgp.message.open.capability.id import CapabilityID as CID,REFRESH
 from exabgp.bgp.message.open.routerid import RouterID
-
 
 class Negotiated (object):
 	def __init__ (self):
@@ -26,6 +25,7 @@ class Negotiated (object):
 		self.multisession = False
 		self.msg_size = 4096-19
 		self.operational = False
+		self.refresh = REFRESH.absent
 
 	def sent (self,sent_open):
 		self.sent_open = sent_open
@@ -60,6 +60,11 @@ class Negotiated (object):
 			for family in recv_capa[CID.MULTIPROTOCOL_EXTENSIONS]:
 				if family in sent_capa[CID.MULTIPROTOCOL_EXTENSIONS]:
 					self.families.append(family)
+
+		if recv_capa.announced(CID.ENHANCED_ROUTE_REFRESH) and sent_capa.announced(CID.ENHANCED_ROUTE_REFRESH):
+			self.refresh=REFRESH.enhanced
+		elif recv_capa.announced(CID.ROUTE_REFRESH) and sent_capa.announced(CID.ROUTE_REFRESH):
+			self.refresh=REFRESH.normal
 
 		self.multisession = sent_capa.announced(CID.MULTISESSION_BGP) and recv_capa.announced(CID.MULTISESSION_BGP)
 

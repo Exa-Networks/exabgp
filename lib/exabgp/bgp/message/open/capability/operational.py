@@ -13,4 +13,4 @@ class Operational (list):
 		return 'Operational'
 
 	def extract (self):
-		return []
+		return ['']

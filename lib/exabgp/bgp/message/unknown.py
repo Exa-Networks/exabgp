@@ -22,4 +22,4 @@ class UnknownMessage (Message):
 		return "UNKNOWN"
 
 def UnknownMessageFactory (data):
-	return UnknownMessage(data)
+	return UnknownMessage(0xFF,data)
