@@ -1,71 +1,71 @@
-#ExaBGP
+#ExaBGP 
 
-Software Defined Networking without marketing
+##Summary
 
-**ExaBGP 3.2 is out !**
+Unlike [BIRD](http://bird.network.cz/) or [QUAGGA](www.quagga.net/), [ExaBGP](http://github.com/thomas-mangin/exabgp) was not designed to transform a general purpose server into a router, but to allow engineers to control their [BGP](http://tools.ietf.org/html/rfc4271) network easily.
+I like to think of it as [Software Defined Networking](http://www.wired.com/wiredenterprise/2012/04/going-with-the-flow-google/) using commodity routers.
 
-##Presentation
+[ExaBGP](http://github.com/thomas-mangin/exabgp) transform [BGP](http://www.ietf.org/rfc/rfc4271.txt) messages into friendly plain text or JSON which can be easily manipulate by scripts.
 
-Control your network using [BGP](http://www.ietf.org/rfc/rfc4271.txt) from any commodity servers and reap the benefit of software defined networking without [OpenFlow](http://www.wired.com/wiredenterprise/2012/04/going-with-the-flow-google/)
+It allows the creation of tools such as :
+ * this [advanced looking glass](https://code.google.com/p/gixlg/wiki/sample_maps) graphically display the routing of prefix
+ * this [high availability tool](http://vincent.bernat.im/en/blog/2013-exabgp-highavailability.html) which automatically isolate dead server / broken services
+ * [DDOS mitigation](http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf)
+ * or for [anycasting](http://blog.iweb-hosting.co.uk/blog/2012/01/27/using-bgp-to-serve-high-availability-dns/)
 
-The list of supported RFC is available [here](https://github.com/Thomas-Mangin/exabgp/wiki/RFC-Information)
+So have a look and take control your network using [BGP](http://www.ietf.org/rfc/rfc4271.txt) from any commodity servers.
 
-Receive parsed BGP updates in a friendly form (plain text or JSON) and manipulate them with shell scripts, for example this [looking glass](https://code.google.com/p/gixlg/wiki/sample_maps) use ExaBGP, PHP and MySQL and let you see how a prefix is routed through your network.
+##More information
 
 This program is packaged for **Debian**, **Ubuntu**, **ArchLinux**, **Mint**, **FreeBSD**, **OSX**, **OmniOS**. Unless you need the latest version, please consider using your distribution's.
 
-If you are using ExaBGP from source (or mercurial), it **does not need to be installed** on your server ( using "python setup.py install" ) and will run from the extracted archive, or your local git repository. It allows to run several versions at the same time without conflict.
+If you are using [ExaBGP](http://github.com/thomas-mangin/exabgp) from source (or git), it **does not need to be installed** on your server ( using "python setup.py install" ). Simply run [ExaBGP](http://github.com/thomas-mangin/exabgp) from the extracted archive, or your local git repository. It allows to run several versions at the same time without conflict.
 
-These organisations told us they use ExaBGP :
-[FACEBOOK](http://velocityconf.com/velocity2013/public/schedule/detail/28410)
-[MICROSOFT](http://www.nanog.org/sites/default/files/wed.general.brainslug.lapukhov.20.pdf)
-[DAILYMOTION](https://twitter.com/fgabut)
-[BBC](http://www.bbc.co.uk/)
-[WIKIMEDIA](https://github.com/Thomas-Mangin/exabgp/issues/4)
-[AMSIX](https://ripe64.ripe.net/presentations/49-Follow_Up_AMS-IX_route-server_test_Euro-IX_20th_RIPE64.pdf)
-[NEO TELECOM](http://media.frnog.org/FRnOG_18/FRnOG_18-6.pdf)
-[VIDEOPLATZA](http://www.videoplaza.com/wp-content/uploads/2013/04/Junior-Operations-Engineer-Spring-2013.pdf)
-[ALCATEL LUCENT](http://www.nanog.org/sites/default/files/wed.general.trafficdiversion.serodio.10.pdf)
-and many researchers
+The list of supported RFC is available [here](https://github.com/Thomas-Mangin/exabgp/wiki/RFC-Information)
+
+##Who is using it ?
+
+These organisations are speaking of, or using ExaBGP:
+[FACEBOOK](http://velocityconf.com/velocity2013/public/schedule/detail/28410),
+[MICROSOFT](http://www.nanog.org/sites/default/files/wed.general.brainslug.lapukhov.20.pdf),
+[DAILYMOTION](https://twitter.com/fgabut),
+[BBC](http://www.bbc.co.uk/),
+[WIKIMEDIA](https://github.com/Thomas-Mangin/exabgp/issues/4),
+[AMSIX](https://ripe64.ripe.net/presentations/49-Follow_Up_AMS-IX_route-server_test_Euro-IX_20th_RIPE64.pdf),
+[NEO TELECOM](http://media.frnog.org/FRnOG_18/FRnOG_18-6.pdf),
+[VIDEOPLATZA](http://www.videoplaza.com/wp-content/uploads/2013/04/Junior-Operations-Engineer-Spring-2013.pdf),
+[ALCATEL LUCENT](http://www.nanog.org/sites/default/files/wed.general.trafficdiversion.serodio.10.pdf),
+[CLOUDFLARE](http://www.slideshare.net/TomPaseka/flowspec-apf-2013)
+many researchers
 [1](http://typo3.change-project.eu/fileadmin/publications/Deliverables/CHANGE_Deliverable_D4-3_Revised.pdf)
 [2](http://www.cs.cornell.edu/projects/quicksilver/public_pdfs/tcpr.pdf)
 [3](http://docs.di.fc.ul.pt/jspui/bitstream/10455/6703/1/Disserta%C3%A7%C3%A3o%20de%20mestrado%20do%20S%C3%A9rgio%20Miguel%20Geraldes%20de%20oliveira%20Serrano_Nov-2010.pdf)
-
-Should you need commercial support in order to deploy ExaBGP in your organisation, please feel free to contact Exa Networks using sales AT exa-networks DOT co DOT uk
+and many are simply quietly using it ...
 
 Want to know how the code is changing ? follow our [Google + Community page](https://plus.google.com/communities/108249711110699351497) where we discuss current developments. You can as well follow us on twitter, or subscribe to our low volume mailing list.
 
 ##Features
 
- * announce BGP route to IPv4 or IPv6 routers with a JunOS looking configuration file
-   * **IPv4**/**IPv6** (unicast, multicast, nlri-mpls, *mpls-vpn*) routes with arbitrary next-hops
-   * **MPLS** (route-distinguisher), RFC 4659 (vpnv6)
-   * **flow routes** (see [RFC 5575](http://tools.ietf.org/html/rfc5575 RFC 5575))
-   * support for many recent drafts (multi-session, add-path, IPv6 FlowSpec, ...)
- * generate BGP updates from third party applications
- * parse BGP and generate BGP updates from your own program **simply**
-   * track changes in the global routing table or your network.
-   * temporary route redirection (adding more specific routes with different next-hop)
-   * injection of flow routes to handle DDOS
  * runs on any Unix server (has no dependencies).
- * BSD licence, integrate ExaBGP in your own application stack !
+ * receive / send routes using your own scripts or a JunOS looking configuration file
+   * **IPv4**/**IPv6** (unicast, multicast, nlri-mpls, *mpls-vpn*) routes with arbitrary next-hops
+   * **MPLS** (route-distinguisher), [RFC 4659](http://tools.ietf.org/html/rfc4659 RFC 4659) (vpnv6)
+   * **flow routes** (complete [RFC 5575](http://tools.ietf.org/html/rfc5575 RFC 5575) support)
+ * support for many recent drafts
+   * **[draft-raszuk-idr-flow-spec-v6-03](http://tools.ietf.org/html/draft-ietf-idr-flow-spec-v6-03)**
+   * **[draft-ietf-idr-flowspec-redirect-ip-00](http://tools.ietf.org/html/draft-ietf-idr-flowspec-redirect-ip-00)**
+   * **[draft-ietf-idr-add-paths-08](http://tools.ietf.org/html/draft-ietf-idr-add-paths-08)**
+   * **[draft-ietf-idr-bgp-multisession-07](http://tools.ietf.org/html/draft-ietf-idr-bgp-multisession-07)**
+   * **[draft-keyur-bgp-enhanced-route-refresh-00](http://tools.ietf.org/html/draft-keyur-bgp-enhanced-route-refresh-00)**
+   * **[draft-scudder-bmp-01](http://tools.ietf.org/html/draft-scudder-bmp-01)**
+ * BSD licence, integrate [ExaBGP](http://github.com/thomas-mangin/exabgp) in your own application stack - no strings attached !
 
-ExaBGP does **not** perform any **FIB manipulation**, however it can call an application which will perform them.
-Please look at [BIRD](http://bird.network.cz/) if this is what you are looking for.
+[ExaBGP](http://github.com/thomas-mangin/exabgp) does **not** perform any **FIB manipulation**, you will need to write your own LocalRIB and FIB code if this what you need the feature, or simpler, use another open source BGP daemon.
 
-##News
+### New features coming of 3.2 include
 
-### RFC / drafts support
-
- * complete RFC 5575 by :
-   * providing support for **flow-vpn**
-    * adding DCSP marking
-    * adding traffic-action
- * implemented **draft-raszuk-idr-flow-spec-v6-03**
- * implemented **draft-ietf-idr-flowspec-redirect-ip-00.txt**
-
-### New features include
-
+ * enhance route refresh support (still in development)
+ * Fully RFC 5575 support
  * **An external program to announce a service** ( Thank you Vincent ! )
  * ExaBGP can **accept incoming connections** ( not production ready ! )
  * ExaBGP can decode incoming Flow routes
@@ -82,14 +82,6 @@ Please look at [BIRD](http://bird.network.cz/) if this is what you are looking f
  * and more ....
 
 The configuration file format changed slightly from 3.1.x to 3.2.x, effort were made to make sure the previous configuration format would still work, however users are encouraged to check their configuration files.
-
-##Usage
-
- * [Stop DDOS](http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf) using FlowSpec
- * [AnyCast](http://blog.iweb-hosting.co.uk/blog/2012/01/27/using-bgp-to-serve-high-availability-dns/) servers
- * [High-Availability across Datacenters](http://thomas.mangin.com/data/pdf/RIPE%2063%20-%20Mangin%20-%20BGP.pdf) without any global L2 domains
- * [Looking-Glass](https://code.google.com/p/gixlg/)  using MySQL backend
- * Many more ...
 
 ##More information
 
@@ -111,11 +103,15 @@ This programs does not have any dependences on any third party libraries and wil
 
 ## Get it
 ```sh
-> wget https://github.com/Thomas-Mangin/exabgp/archive/3.2.5.tar.gz
-> tar zxvf 3.2.5.tar.gz
-> cd exabgp-3.2.5
+> wget https://github.com/Thomas-Mangin/exabgp/archive/3.2.10.tar.gz
+> tar zxvf 3.2.10.tar.gz
+> cd exabgp-3.2.10
 > ./sbin/exabgp --help
 ```
+
+##Commercial support
+
+Should you feel a need for commercial support in order to deploy ExaBGP in your organisation, please feel free to contact Exa Networks using sales AT exa-networks DOT co DOT uk
 
 ##Related Projects
 
