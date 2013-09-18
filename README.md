@@ -3,7 +3,7 @@
 ##Summary
 
 Unlike [BIRD](http://bird.network.cz/) or [QUAGGA](www.quagga.net/), [ExaBGP](http://github.com/thomas-mangin/exabgp) was not designed to transform a general purpose server into a router, but to allow engineers to control their [BGP](http://tools.ietf.org/html/rfc4271) network easily.
-I like to think of it as [Software Defined Networking](http://www.wired.com/wiredenterprise/2012/04/going-with-the-flow-google/) for people with "commodity" routers.
+Think of it as [Software Defined Networking](http://www.wired.com/wiredenterprise/2012/04/going-with-the-flow-google/) for people with "commodity" routers.
 
 [ExaBGP](http://github.com/thomas-mangin/exabgp) transform [BGP](http://www.ietf.org/rfc/rfc4271.txt) messages into friendly plain text or JSON which can be easily manipulate by scripts.
 
@@ -11,9 +11,9 @@ It allows the creation of tools such as :
  * this [advanced looking glass](https://code.google.com/p/gixlg/wiki/sample_maps) graphically display the routing of prefix
  * this [high availability tool](http://vincent.bernat.im/en/blog/2013-exabgp-highavailability.html) which automatically isolate dead server / broken services
  * [DDOS mitigation](http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf)
- * or for [anycasting](http://blog.iweb-hosting.co.uk/blog/2012/01/27/using-bgp-to-serve-high-availability-dns/)
+ * an [anycasted](http://blog.iweb-hosting.co.uk/blog/2012/01/27/using-bgp-to-serve-high-availability-dns/) server
 
-So have a look and take control your network using [BGP](http://www.ietf.org/rfc/rfc4271.txt) from any commodity servers.
+So have a look and take control your network from any commodity servers.
 
 ##More information
 
@@ -40,20 +40,23 @@ These organisations are speaking of, or using, [ExaBGP](http://github.com/thomas
 [NEO TELECOM](http://media.frnog.org/FRnOG_18/FRnOG_18-6.pdf),
 [VIDEOPLATZA](http://www.videoplaza.com/wp-content/uploads/2013/04/Junior-Operations-Engineer-Spring-2013.pdf),
 [ALCATEL LUCENT](http://www.nanog.org/sites/default/files/wed.general.trafficdiversion.serodio.10.pdf),
-[CLOUDFLARE](http://www.slideshare.net/TomPaseka/flowspec-apf-2013)
-some researchers
+[CLOUDFLARE](http://www.slideshare.net/TomPaseka/flowspec-apf-2013),
+researchers
 [[1]](http://typo3.change-project.eu/fileadmin/publications/Deliverables/CHANGE_Deliverable_D4-3_Revised.pdf)
 [[2]](http://www.cs.cornell.edu/projects/quicksilver/public_pdfs/tcpr.pdf)
-[[3]](http://docs.di.fc.ul.pt/jspui/bitstream/10455/6703/1/Disserta%C3%A7%C3%A3o%20de%20mestrado%20do%20S%C3%A9rgio%20Miguel%20Geraldes%20de%20oliveira%20Serrano_Nov-2010.pdf)
-and many more who are happily using it ...
+[[3]](http://docs.di.fc.ul.pt/jspui/bitstream/10455/6703/1/Disserta%C3%A7%C3%A3o%20de%20mestrado%20do%20S%C3%A9rgio%20Miguel%20Geraldes%20de%20oliveira%20Serrano_Nov-2010.pdf),
+and perhaps you too soon ...
 
-Want to know how the code is changing ? follow our [Google + Community page](https://plus.google.com/communities/108249711110699351497) where we discuss current developments. You can as well follow us on twitter, or subscribe to our low volume mailing list.
+##BUG
 
-##More information
+No software is perfect, so should you encounter a bug please [report it](https://github.com/Thomas-Mangin/exabgp/issues?labels=bug&page=1&state=open) so we can resolve it.
 
-Should you need any help or have any question, please post on our [mailing-list](http://groups.google.com/group/exabgp-users) or ask on our [G+ community](https://plus.google.com/u/0/communities/108249711110699351497)
+##Curious
 
-Follow our [**google community**](https://plus.google.com/u/0/communities/108249711110699351497) or [**twitter**](https://twitter.com/#!/search/exabgp).
+Want to know how the code is changing ? Have a question ?
+
+follow our [Google + Community page](https://plus.google.com/communities/108249711110699351497) where we discuss current developments. You can as well follow us on twitter, or subscribe to our low volume [mailing list](http://groups.google.com/group/exabgp-users).
+You can as well keep an eye on what we are doing on [**twitter**](https://twitter.com/#!/search/exabgp).
 
 Please consult any of :
 
@@ -62,10 +65,17 @@ Please consult any of :
  * the [wiki](https://github.com/Thomas-Mangin/exabgp/wiki) with some some talks and presentations, ...
  * and [the FAQ](https://github.com/Thomas-Mangin/exabgp/wiki/FAQ)
 
-Development is done on python 2.7, the code is kept compatible with python 2.4 in ExaBGP 2.x.x and python 2.5 in ExaBGP 3.1.x.
-ExaBGP 3.2.x will rely on python 2.7, and we are likely to required python 3.4+ for ExaBGP 4.x.x
+This programs **does not have any dependences on any third party libraries** and will run out of the box on any Unix system with a recent version of python installed.
 
-This programs does not have any dependences on any third party libraries and will run out of the box on any Unix system.
+Development is done on python 2.7, the code is kept compatible with python 2.4 in ExaBGP 2.x.x and python 2.5 in ExaBGP 3.1.x.
+ExaBGP 3.2.x does rely on python 2.7 (but installing argparse with 2.6 works too), and we are likely to required python 3.4+ for ExaBGP 4.x.x
+
+```sh
+> »› python --version
+Python 2.6.7
+> pip install argparse
+```
+
 
 ##Features
 
@@ -124,4 +134,4 @@ And some self promotion :
 
  * [ExaProxy](http://code.google.com/p/exaproxy) A non-caching HTTP proxy able to perform complex header manipulations
 
-My [blog](http://thomas.mangin.com/categories/networking.html) may contain some BGP related information, but I tend to post more on [G+](https://plus.google.com/u/0/communities/108249711110699351497) than I blog.
+My [blog](http://thomas.mangin.com/categories/networking.html) may contain some BGP related information, but I tend to post more on [G+](https://plus.google.com/u/0/communities/108249711110699351497) about ExaBGP than I blog.
