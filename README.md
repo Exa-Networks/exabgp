@@ -56,7 +56,7 @@ No software is perfect, so should you encounter a bug please [report it](https:/
 Want to know how the code is changing ? Have a question ?
 
 follow our [Google + Community page](https://plus.google.com/communities/108249711110699351497) where we discuss current developments. You can as well follow us on twitter, or subscribe to our low volume [mailing list](http://groups.google.com/group/exabgp-users).
-You can as well keep an eye on what we are doing on [**twitter**](https://twitter.com/#!/search/exabgp).
+You can as well keep an eye on what we are doing on [twitter](https://twitter.com/#!/search/exabgp).
 
 Please consult any of :
 
@@ -87,17 +87,17 @@ Python 2.6.7
    * **MPLS** (route-distinguisher), [RFC 4659](http://tools.ietf.org/html/rfc4659 RFC 4659) (vpnv6)
    * **flow routes** (complete [RFC 5575](http://tools.ietf.org/html/rfc5575 RFC 5575) support)
  * support for many recent drafts
-   * **[draft-raszuk-idr-flow-spec-v6-03](http://tools.ietf.org/html/draft-ietf-idr-flow-spec-v6-03)**
-   * **[draft-ietf-idr-flowspec-redirect-ip-00](http://tools.ietf.org/html/draft-ietf-idr-flowspec-redirect-ip-00)**
-   * **[draft-ietf-idr-add-paths-08](http://tools.ietf.org/html/draft-ietf-idr-add-paths-08)**
-   * **[draft-ietf-idr-bgp-multisession-07](http://tools.ietf.org/html/draft-ietf-idr-bgp-multisession-07)**
-   * **[draft-keyur-bgp-enhanced-route-refresh-00](http://tools.ietf.org/html/draft-keyur-bgp-enhanced-route-refresh-00)**
-   * **[draft-scudder-bmp-01](http://tools.ietf.org/html/draft-scudder-bmp-01)**
+   * [draft-raszuk-idr-flow-spec-v6-03](http://tools.ietf.org/html/draft-ietf-idr-flow-spec-v6-03)
+   * [draft-ietf-idr-flowspec-redirect-ip-00](http://tools.ietf.org/html/draft-ietf-idr-flowspec-redirect-ip-00)
+   * [draft-ietf-idr-add-paths-08](http://tools.ietf.org/html/draft-ietf-idr-add-paths-08)
+   * [draft-ietf-idr-bgp-multisession-07](http://tools.ietf.org/html/draft-ietf-idr-bgp-multisession-07)
+   * [draft-keyur-bgp-enhanced-route-refresh-00](http://tools.ietf.org/html/draft-keyur-bgp-enhanced-route-refresh-00)
+   * [draft-scudder-bmp-01](http://tools.ietf.org/html/draft-scudder-bmp-01)
  * BSD licence, integrate [ExaBGP](http://github.com/thomas-mangin/exabgp) in your own application stack - no strings attached !
 
 [ExaBGP](http://github.com/thomas-mangin/exabgp) does **not** perform any **FIB manipulation**, you will need to write your own LocalRIB and FIB code if this what you need the feature, or simpler, use another open source BGP daemon.
 
-### since 3.2 stable ...
+### new on 3.2 stable ...
 
  * enhance route refresh support (still in development)
  * Ful RFC 5575 support, can decode incoming Flow routes
