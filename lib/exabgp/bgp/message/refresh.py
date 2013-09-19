@@ -50,7 +50,6 @@ class RouteRefresh (Message):
 def RouteRefreshFactory (data):
 	try:
 		afi,reserved,safi = unpack('!HBB',data)
-		import pdb; pdb.set_trace()
 	except error:
 		raise Notify(7,1,'invalid route-refresh message')
 	if reserved not in (0,1,2):
