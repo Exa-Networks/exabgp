@@ -7,6 +7,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message.direction import IN,OUT
+from exabgp.bgp.message.open.capability.id import REFRESH
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.refresh import RouteRefresh
 
@@ -50,14 +51,14 @@ class Store (object):
 		if families is None:
 			seen_families = self._announced.keys()
 			self._announced = {}
-			if enhanced_refresh_negotiated:
+			if enhanced_refresh_negotiated == REFRESH.enhanced:
 				for family in seen_families:
 					self._enhanced_refresh_start.append(family)
 		else:
 			for family in self.families:
 				if family in families:
 					self._announced[family] = {}
-					if enhanced_refresh_negotiated:
+					if enhanced_refresh_negotiated == REFRESH.enhanced:
 						self._enhanced_refresh_start.append(family)
 
 	def insert_announced_watchdog (self,change):
