@@ -1354,14 +1354,6 @@ class Configuration (object):
 		scope[-1]['announce'].append(update)
 		return True
 
-	# XXX: FIXME: ???
-	def remove_route (self,update,scope):
-		for u in scope[-1]['announce']:
-			if u == update:
-				scope[-1]['announce'].remove(u)
-				return True
-		return False
-
 	def _check_static_route (self,scope):
 		update = scope[-1]['announce'][-1]
 		if not update.attributes.has(AttributeID.NEXT_HOP):
