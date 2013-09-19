@@ -1354,11 +1354,6 @@ class Configuration (object):
 		scope[-1]['announce'].append(update)
 		return True
 
-	def pop_last_static_route (self,scope):
-		update = scope[-1]['announce'][-1]
-		scope[-1]['announce'] = scope[-1]['announce'][:-1]
-		return update
-
 	# XXX: FIXME: ???
 	def remove_route (self,update,scope):
 		for u in scope[-1]['announce']:
