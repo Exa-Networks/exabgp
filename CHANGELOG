@@ -7,6 +7,7 @@ Version 3.2.11
  * Improvement: the TCP server allows 'neighbor' commands
     patch by: Hideaki HAYASHI
  * Improvement: Enhanced route refresh initial implementation
+    thanks to: Hideaki HAYASHI for reporting an issue before the release
  * Fix: bug in generating API string, missing space
  * Fix: bug in generating API string, withdrawn reported as invalid announced
  * Fix: bug in generating API string, withdawn was missing Path-Information

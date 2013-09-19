@@ -13,10 +13,11 @@ from exabgp.bgp.message.refresh import RouteRefresh
 # XXX: FIXME: we would not have to use so many setdefault if we pre-filled the dicts with the families
 
 class Store (object):
-	def __init__ (self,cache):
+	def __init__ (self,cache,families):
 		# XXX: FIXME: we can decide to not cache the routes we seen and let the backend do it for us and save the memory
 		self._watchdog = {}
 		self.cache = cache
+		self.families = families
 		self._announced = {}
 		self._cache_attribute = {}
 		self._modify_nlri = {}
@@ -53,7 +54,7 @@ class Store (object):
 				for family in seen_families:
 					self._enhanced_refresh_start.append(family)
 		else:
-			for family in self._announced:
+			for family in self.families:
 				if family in families:
 					self._announced[family] = {}
 					if enhanced_refresh_negotiated:

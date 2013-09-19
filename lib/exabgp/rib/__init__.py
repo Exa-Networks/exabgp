@@ -11,11 +11,11 @@ from exabgp.rib.store import Store
 class RIB:
 	ribs = {}
 
-	def __init__ (self,name):
+	def __init__ (self,name,families):
 		if name not in self.ribs:
 			self.ribs[name] = self
-			self.incoming = Store(False)
-			self.outgoing = Store(True)
+			self.incoming = Store(False,families)
+			self.outgoing = Store(True,families)
 		else:
 			self.incoming = self.ribs[name].incoming
 			self.outgoing = self.ribs[name].outgoing

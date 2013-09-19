@@ -51,7 +51,7 @@ class Neighbor (object):
 		self.asm = dict()
 
 	def make_rib (self):
-		self.rib = RIB(self.name())
+		self.rib = RIB(self.name(),self._families)
 		self.messages = deque()
 		self.refresh = deque()
 
