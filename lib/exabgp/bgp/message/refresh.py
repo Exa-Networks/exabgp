@@ -6,10 +6,11 @@ Created by Thomas Mangin on 2012-07-19.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from struct import unpack
+from struct import unpack,error
 
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.bgp.message import Message
+from exabgp.bgp.message.notification import Notify
 
 # =================================================================== Notification
 # A Notification received from our peer.
@@ -47,5 +48,11 @@ class RouteRefresh (Message):
 		return self._families[:]
 
 def RouteRefreshFactory (data):
-	afi,reserved,safi = unpack('!HBB',data)
+	try:
+		afi,reserved,safi = unpack('!HBB',data)
+		import pdb; pdb.set_trace()
+	except error:
+		raise Notify(7,1,'invalid route-refresh message')
+	if reserved not in (0,1,2):
+		raise Notify(7,2,'invalid route-refresh message subtype')
 	return RouteRefresh(afi,safi,reserved)
