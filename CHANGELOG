@@ -14,6 +14,8 @@ Version 3.2.11
  * Fix: route refresh implementation issues
  * Fix: a bug with capability parsing introduced with operational
    reported by: M. Brent Busby
+ * Fix: be more aggressive on reconnection (3.2 was slower than 3.1)
+   reported by: Sascha Schumann
 
 Version 3.2.10
  * Fix: was not announcing add-path for IPv6 unicast

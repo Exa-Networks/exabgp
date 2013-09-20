@@ -312,7 +312,7 @@ class Peer (object):
 			# Only yield if we have not the open, otherwise the reactor can run the other connection
 			# which would be bad as we need to do the collission check
 			if ord(message.TYPE) == Message.Type.NOP:
-				yield ACTION.later
+				yield ACTION.immediate
 
 		self._['out']['state'] = STATE.openconfirm
 		proto.negotiated.received(message)
@@ -342,7 +342,7 @@ class Peer (object):
 		# Read KEEPALIVE
 		for message in self._['out']['proto'].read_keepalive('ESTABLISHED'):
 			self.timer.tick(message)
-			yield ACTION.later
+			yield ACTION.immediate
 
 		self._['out']['state'] = STATE.established
 		# let the caller know that we were sucesfull
