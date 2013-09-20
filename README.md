@@ -1,4 +1,4 @@
-#ExaBGP 
+#ExaBGP
 
 ##Summary
 
@@ -22,9 +22,9 @@ This program is packaged for **Debian**, **Ubuntu**, **ArchLinux**, **Mint**, **
 If you are using [ExaBGP](http://github.com/thomas-mangin/exabgp) from source (or git), it **does not need to be installed** on your server ( using "python setup.py install" ). Simply run [ExaBGP](http://github.com/thomas-mangin/exabgp) from the extracted archive, or your local git repository. It allows to run several versions at the same time without conflict.
 
 ```sh
-> wget https://github.com/Thomas-Mangin/exabgp/archive/3.2.10.tar.gz
-> tar zxvf 3.2.10.tar.gz
-> cd exabgp-3.2.10
+> wget https://github.com/Thomas-Mangin/exabgp/archive/3.2.11.tar.gz
+> tar zxvf 3.2.11.tar.gz
+> cd exabgp-3.2.11
 > ./sbin/exabgp --help
 ```
 
@@ -107,10 +107,10 @@ Python 2.6.7
  * new update code generation can *group multiple NLRI*, from different families, in one update packet
  * **NOTIFICATION** message generation using the API
  * API message control (limit diffusion to a subset of peers)
- * better --decode option to find out what a hex dump of a route mean 
+ * better --decode option to find out what a hex dump of a route mean
  * new internals ... many, including
     * large rewrite of non-optimal code
-    * new non-blocking reactor 
+    * new non-blocking reactor
     * new Adj-RIB-In and Adj-RIB-Out with scalable watchdog feature
  * many small fixes, see the full CHANGELOG
  * and more ....

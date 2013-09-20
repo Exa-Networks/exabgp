@@ -6,16 +6,16 @@ Version explained:
 Version 3.2.11
  * Improvement: the TCP server allows 'neighbor' commands
     patch by: Hideaki HAYASHI
- * Improvement: Enhanced route refresh initial implementation
-    thanks to: Hideaki HAYASHI for reporting an issue before the release
+ * Improvement: initial Enhanced route refresh initial implementation
+    thanks to: Hideaki HAYASHI for reporting an issue before the release (some border cases still exist)
  * Fix: bug in generating API string, missing space
  * Fix: bug in generating API string, withdrawn reported as invalid announced
  * Fix: bug in generating API string, withdawn was missing Path-Information
  * Fix: route refresh implementation issues
  * Fix: a bug with capability parsing introduced with operational
-   reported by: M. Brent Busby
+    reported by: M. Brent Busby
  * Fix: be more aggressive on reconnection (3.2 was slower than 3.1)
-   reported by: Sascha Schumann
+    reported by: Sascha Schumann
 
 Version 3.2.10
  * Fix: was not announcing add-path for IPv6 unicast
