@@ -3,6 +3,9 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.2.12
+ * Fix: the signal for reload were wrong in the debian script
+
 Version 3.2.11
  * Improvement: the TCP server allows 'neighbor' commands
     patch by: Hideaki HAYASHI
