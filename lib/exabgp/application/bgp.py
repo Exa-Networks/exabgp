@@ -34,13 +34,6 @@ def __exit(memory,code):
 		objgraph.show_backrefs([obj], max_depth=10)
 	sys.exit(code)
 
-	from exabgp.configuration.environment import environment
-
-	for line in environment.default():
-			sys.stdout.write(' - %s\n' % line)
-	sys.stdout.write('\n')
-	sys.stdout.write(comment)
-	sys.stdout.write('\n')
 
 def main ():
 	main = int(sys.version[0])
@@ -52,6 +45,7 @@ def main ():
 	parser = argparse.ArgumentParser(
 		prog='exabgp',
 		description='The BGP swiss army knife of networking',
+		add_help=False,
 		epilog="""
 ExaBGP will automatically look for its configuration file (in windows ini format)
  - in the etc/exabgp folder located within the extracted tar.gz
@@ -87,9 +81,15 @@ The program configuration can be controlled using signals:
  - SIGUSR2 : reload the configuration and the forked processes
  - SIGTERM : terminate ExaBGP
  - SIGHUP  : terminate ExaBGP (does NOT reload the configuration anymore)
-
 """,
 		formatter_class=argparse.RawTextHelpFormatter
+	)
+
+	g = parser.add_mutually_exclusive_group()
+	g.add_argument(
+		"--help", "-h",
+		action="store_true", default=False,
+		help="exabgp manual page"
 	)
 
 	parser.add_argument(
@@ -110,7 +110,7 @@ The program configuration can be controlled using signals:
 	parser.add_argument(
 		"--env", "-e",
 		default='exabgp.env',
-		help="environement configuration file"
+		help="environment configuration file"
 	)
 
 	g = parser.add_mutually_exclusive_group()
@@ -287,8 +287,14 @@ The program configuration can be controlled using signals:
 	try:
 		env = environment.setup(envfile)
 	except environment.Error,e:
-		print >> sys.stderr, 'configuration issue,', str(e)
+		parser.print_help()
+		print '\nconfiguration issue,', str(e)
 		sys.exit(1)
+
+	if options.help:
+		parser.print_help()
+		print '\n\nEnvironment values are:\n' + '\n'.join(' - %s' % _ for _ in environment.default())
+		sys.exit(0)
 
 	if options.decode:
 		env.log.parser = True
@@ -356,9 +362,8 @@ The program configuration can be controlled using signals:
 		for f in options.configuration:
 			configurations.append(os.path.realpath(os.path.normpath(f)))
 	else:
-		from exabgp.logger import Logger
-		logger = Logger()
-		logger.configuration('no configuration file provided','error')
+		parser.print_help()
+		print '\nno configuration file provided'
 		sys.exit(1)
 
 	for configuration in configurations:
