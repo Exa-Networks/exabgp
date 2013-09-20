@@ -104,18 +104,18 @@ do_stop()
 }
 
 #
-# Function that sends a SIGHUP to the daemon/service
+# Function that sends a SIGUSR1 to the daemon/service
 #
 do_reload() {
 	if [ "$EXABGPRUN" = "yes" ] || [ "$EXABGPRUN" = "YES" ]; then
-		start-stop-daemon --stop --signal HUP --quiet --pidfile $PIDFILE -c $USER
+		start-stop-daemon --stop --signal USR1 --quiet --pidfile $PIDFILE -c $USER
 		return 0
 	fi
 }
 
 do_force_reload() {
 	if [ "$EXABGPRUN" = "yes" ] || [ "$EXABGPRUN" = "YES" ]; then
-		start-stop-daemon --stop --signal USR1 --quiet --pidfile $PIDFILE -c $USER
+		start-stop-daemon --stop --signal USR2 --quiet --pidfile $PIDFILE -c $USER
 		return 0
 	fi
 }
