@@ -18,7 +18,7 @@ try:
 		print
 		print "-"*80
 		print "-- Please provide the information below on :"
-		print "-- https://github.com/Thomas-Mangin/exabgp/issues"
+		print "-- https://github.com/thomas-mangin/exabgp/issues"
 		print "-"*80
 		print
 		print
@@ -48,7 +48,7 @@ try:
 		print
 		print "-"*80
 		print "-- Please provide the information above on :"
-		print "-- https://github.com/Thomas-Mangin/exabgp/issues"
+		print "-- https://github.com/thomas-mangin/exabgp/issues"
 		print "-"*80
 		print
 		print

@@ -5,7 +5,7 @@ Priority: optional
 Build-Depends: debhelper (>= 8.9.11~), python
 Standards-Version: 3.9.4
 X-Python-Version: >= 2.6.6-7~
-Homepage: https://github.com/Thomas-Mangin/exabgp
+Homepage: https://github.com/thomas-mangin/exabgp
 
 Package: exabgp
 Architecture: all
