@@ -38,14 +38,14 @@ class Listener (object):
 				s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
 				try:
 					s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-				except AttributeError:
+				except (socket.error,AttributeError):
 					pass
 				s.bind((ip,port,0,0))
 			elif isipv4(ip):
 				s = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
 				try:
 					s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-				except AttributeError:
+				except (socket.error,AttributeError):
 					pass
 				s.bind((ip,port))
 			else:
