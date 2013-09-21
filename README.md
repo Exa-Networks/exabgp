@@ -35,7 +35,6 @@ These organisations are speaking of, or using, [ExaBGP](http://github.com/thomas
 [MICROSOFT](http://www.nanog.org/sites/default/files/wed.general.brainslug.lapukhov.20.pdf),
 [DAILYMOTION](https://twitter.com/fgabut),
 [BBC](http://www.bbc.co.uk/),
-[WIKIMEDIA](https://github.com/thomas-mangin/exabgp/issues/4),
 [AMSIX](https://ripe64.ripe.net/presentations/49-Follow_Up_AMS-IX_route-server_test_Euro-IX_20th_RIPE64.pdf),
 [NEO TELECOM](http://media.frnog.org/FRnOG_18/FRnOG_18-6.pdf),
 [VIDEOPLATZA](http://www.videoplaza.com/wp-content/uploads/2013/04/Junior-Operations-Engineer-Spring-2013.pdf),
