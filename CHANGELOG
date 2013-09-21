@@ -5,6 +5,9 @@ Version explained:
 
 Version 3.2.12
  * Fix: the signal for reload were wrong in the debian script
+    reported by: Sascha Schumann
+ * Fix: a critical bug introduce in 3.2.11 when route were not resent on reconnect
+    reported by: Sascha Schumann
 
 Version 3.2.11
  * Improvement: the TCP server allows 'neighbor' commands

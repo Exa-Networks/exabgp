@@ -19,3 +19,4 @@ class RIB:
 		else:
 			self.incoming = self.ribs[name].incoming
 			self.outgoing = self.ribs[name].outgoing
+			self.outgoing.resend_known(None,False)
