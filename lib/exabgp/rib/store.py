@@ -7,7 +7,6 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message.direction import IN,OUT
-from exabgp.bgp.message.open.capability.id import REFRESH
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.refresh import RouteRefresh
 
@@ -34,6 +33,7 @@ class Store (object):
 			for change in self._announced[family].values():
 				if change.nlri.action == OUT.announce:
 					yield change
+			self._announced[family] = {}
 
 	def dump (self):
 		# This function returns a hash and not a list as "in" tests are O(n) with lists and O(1) with hash
@@ -46,20 +46,17 @@ class Store (object):
 		return changes
 
 	def resend_known (self,families,enhanced_refresh):
-		for change in self.every_changes(families):
-			self.insert_announced(change,True)
-		if families is None:
-			seen_families = self._announced.keys()
-			self._announced = {}
-			if enhanced_refresh:
-				for family in seen_families:
+		seen_families = self._announced.keys() if families is None else self.families
+
+		if enhanced_refresh:
+			for family in seen_families:
+				if family not in self._enhanced_refresh_start:
 					self._enhanced_refresh_start.append(family)
+					for change in self.every_changes([family,]):
+						self.insert_announced(change,True)
 		else:
-			for family in self.families:
-				if family in families:
-					self._announced[family] = {}
-					if enhanced_refresh:
-						self._enhanced_refresh_start.append(family)
+			for change in self.every_changes(seen_families):
+				self.insert_announced(change,True)
 
 	def insert_announced_watchdog (self,change):
 		watchdog = change.attributes.watchdog()
