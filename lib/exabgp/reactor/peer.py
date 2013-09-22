@@ -250,7 +250,7 @@ class Peer (object):
 			if local_id < remote_id:
 				self.logger.network('closing the outgoing connection')
 				self._reset('out','collision local id < remote id')
-				yield ACTION.immediate
+				yield ACTION.later
 			else:
 				self.logger.network('aborting the incoming connection')
 				stop = Interrupted()
@@ -318,7 +318,7 @@ class Peer (object):
 			# Only yield if we have not the open, otherwise the reactor can run the other connection
 			# which would be bad as we need to do the collission check
 			if ord(message.TYPE) == Message.Type.NOP:
-				yield ACTION.immediate
+				yield ACTION.later
 
 		self._['out']['state'] = STATE.openconfirm
 		proto.negotiated.received(message)
@@ -337,7 +337,7 @@ class Peer (object):
 			else:
 				self.logger.network('closing the incoming connection')
 				self._reset('in','collision local id < remote id')
-				yield ACTION.immediate
+				yield ACTION.later
 
 		# Send KEEPALIVE
 		for message in proto.new_keepalive('OPENCONFIRM'):

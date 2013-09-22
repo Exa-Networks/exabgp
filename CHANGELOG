@@ -5,6 +5,7 @@ Version explained:
 
 Version 3.2.13
  * Fix: do not send enhanced route refresh BoRR and EoRR on reconnection
+ * Fix: do not take all the CPU when connecting
 
 Version 3.2.12
  * Fix: the signal for reload were wrong in the debian script
