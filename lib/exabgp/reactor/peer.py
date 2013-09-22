@@ -45,6 +45,12 @@ ACTION = Enumeration (
 	'immediate',
 	)
 
+SEND = Enumeration (
+	'done',
+	'normal',
+	'refresh',
+)
+
 # As we can not know if this is our first start or not, this flag is used to
 # always make the program act like it was recovering from a failure
 # If set to FALSE, no EOR and OPEN Flags set for Restart will be set in the
@@ -78,7 +84,7 @@ class Peer (object):
 		self._reset_skip()
 
 		# We want to send all the known routes
-		self._resend_routes = True
+		self._resend_routes = SEND.normal
 		# We have new routes for the peers
 		self._have_routes = True
 
@@ -167,7 +173,7 @@ class Peer (object):
 		self._reset_skip()
 
 	def resend (self):
-		self._resend_routes = True
+		self._resend_routes = SEND.normal
 		self._reset_skip()
 
 	def send_new (self):
@@ -178,7 +184,7 @@ class Peer (object):
 		self._teardown = 3
 		self._restart = True
 		self._restarted = True
-		self._resend_routes = True
+		self._resend_routes = SEND.normal
 		self._neighbor = restart_neighbor
 		self._reset_skip()
 
@@ -369,7 +375,7 @@ class Peer (object):
 
 		send_eor = True
 		new_routes = None
-		self._resend_routes = True
+		self._resend_routes = SEND.normal
 		send_families = []
 
 		# Every last asm message should be re-announced on restart
@@ -400,7 +406,7 @@ class Peer (object):
 						self.logger.routes(LazyFormat(self.me(''),str,nlri))
 				elif message.TYPE == RouteRefresh.TYPE:
 					if message.reserved == RouteRefresh.request:
-						self._resend_routes = True
+						self._resend_routes = SEND.refresh
 						send_families.append((message.afi,message.safi))
 
 				# SEND KEEPALIVES
@@ -444,9 +450,10 @@ class Peer (object):
 							refresh = None
 
 				# Take the routes already sent to that peer and resend them
-				if self._resend_routes:
-					self._resend_routes = False
-					self.neighbor.rib.outgoing.resend_known(send_families,proto.negotiated.refresh)
+				if self._resend_routes != SEND.done:
+					enhanced_refresh = True if self._resend_routes == SEND.refresh and proto.negotiated.refresh == REFRESH.enhanced else False
+					self._resend_routes = SEND.done
+					self.neighbor.rib.outgoing.resend_known(send_families,enhanced_refresh)
 					self._have_routes = True
 					send_families = []
 

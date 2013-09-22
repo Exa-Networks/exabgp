@@ -45,20 +45,20 @@ class Store (object):
 					changes[change.index()] = change
 		return changes
 
-	def resend_known (self,families,enhanced_refresh_negotiated):
+	def resend_known (self,families,enhanced_refresh):
 		for change in self.every_changes(families):
 			self.insert_announced(change,True)
 		if families is None:
 			seen_families = self._announced.keys()
 			self._announced = {}
-			if enhanced_refresh_negotiated == REFRESH.enhanced:
+			if enhanced_refresh:
 				for family in seen_families:
 					self._enhanced_refresh_start.append(family)
 		else:
 			for family in self.families:
 				if family in families:
 					self._announced[family] = {}
-					if enhanced_refresh_negotiated == REFRESH.enhanced:
+					if enhanced_refresh:
 						self._enhanced_refresh_start.append(family)
 
 	def insert_announced_watchdog (self,change):
