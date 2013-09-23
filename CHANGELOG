@@ -3,6 +3,10 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.2.14
+ * Fix: do not leak route between peers
+ * Fix: restore group level static group for all peers thereafter
+
 Version 3.2.13
  * Fix: do not send enhanced route refresh BoRR and EoRR on reconnection
  * Fix: do not take all the CPU when connecting

@@ -982,6 +982,8 @@ class Configuration (object):
 			for key,content in scope[-2].iteritems():
 				if key not in scope[-1]:
 					scope[-1][key] = deepcopy(content)
+				elif key == 'announce':
+					scope[-1][key].extend(scope[-2][key])
 
 		self.logger.configuration("\nPeer configuration complete :")
 		for _key in scope[-1].keys():
@@ -1127,6 +1129,7 @@ class Configuration (object):
 			self.logger.configuration(line)
 		self.logger.configuration("\n")
 
+		scope.pop(-1)
 		return True
 
 
