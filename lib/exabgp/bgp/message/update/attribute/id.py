@@ -29,6 +29,7 @@ class AttributeID (int):
 	# RFC 4893
 	AS4_PATH           = 0x11  # 17
 	AS4_AGGREGATOR     = 0x12  # 18
+	AIGP               = 0x1A  # 26
 
 	INTERNAL_WITHDRAW  = 0xFFFD
 	INTERNAL_WATCHDOG  = 0xFFFE
@@ -53,6 +54,7 @@ class AttributeID (int):
 		0x10: 'extended-community',
 		0x11: 'as4-path',
 		0x12: 'as4-aggregator',
+		0x1a: 'aigp',
 		0xfffd: 'internal-withdraw',
 		0xfffe: 'internal-watchdog',
 		0xffff: 'internal-split',

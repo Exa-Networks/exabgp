@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-attributes.py
+med.py
 
 Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.

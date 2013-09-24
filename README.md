@@ -92,6 +92,7 @@ Python 2.6.7
    * [draft-ietf-idr-bgp-multisession-07](http://tools.ietf.org/html/draft-ietf-idr-bgp-multisession-07)
    * [draft-keyur-bgp-enhanced-route-refresh-00](http://tools.ietf.org/html/draft-keyur-bgp-enhanced-route-refresh-00)
    * [draft-scudder-bmp-01](http://tools.ietf.org/html/draft-scudder-bmp-01)
+   * [draft-ietf-idr-aigp-10.txt](http://tools.ietf.org/html/draft-ietf-idr-aigp-10)
  * BSD licence, integrate [ExaBGP](http://github.com/thomas-mangin/exabgp) in your own application stack - no strings attached !
 
 [ExaBGP](http://github.com/thomas-mangin/exabgp) does **not** perform any **FIB manipulation**, you will need to write your own LocalRIB and FIB code if this what you need the feature, or simpler, use another open source BGP daemon.

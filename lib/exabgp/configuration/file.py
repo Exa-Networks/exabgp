@@ -46,6 +46,7 @@ from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.communities import Community,cachedCommunity,Communities,ECommunity,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_FlowRedirectVRFASN,to_FlowRedirectVRFIP,to_FlowRedirect,to_FlowTrafficMark,to_FlowTrafficAction
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
+from exabgp.bgp.message.update.attribute.aigp import AIGP
 from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
 
 from exabgp.bgp.message.operational import MAX_ADVISORY,Advisory,Query,Response
@@ -556,6 +557,7 @@ class Configuration (object):
 			# For legacy with version 2.0.x
 			if command == 'as-sequence': return self._route_aspath(scope,tokens[1:])
 			if command == 'med': return self._route_med(scope,tokens[1:])
+			if command == 'aigp': return self._route_aigp(scope,tokens[1:])
 			if command == 'next-hop': return self._route_next_hop(scope,tokens[1:])
 			if command == 'local-preference': return self._route_local_preference(scope,tokens[1:])
 			if command == 'atomic-aggregate': return self._route_atomic_aggregate(scope,tokens[1:])
@@ -1375,7 +1377,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','as-sequence','med','local-preference','atomic-aggregate','aggregator','path-information','community','originator-id','cluster-list','extended-community','split','label','rd','route-distinguisher','watchdog','withdraw'])
+			r = self._dispatch(scope,'route',[],['next-hop','origin','as-path','as-sequence','med','aigp','local-preference','atomic-aggregate','aggregator','path-information','community','originator-id','cluster-list','extended-community','split','label','rd','route-distinguisher','watchdog','withdraw'])
 			if r is False: return False
 			if r is None: return self._split_last_route(scope)
 
@@ -1417,6 +1419,10 @@ class Configuration (object):
 				return False
 			if command == 'med':
 				if self._route_med(scope,tokens):
+					continue
+				return False
+			if command == 'aigp':
+				if self._route_aigp(scope,tokens):
 					continue
 				return False
 			if command == 'local-preference':
@@ -1626,6 +1632,15 @@ class Configuration (object):
 	def _route_med (self,scope,tokens):
 		try:
 			scope[-1]['announce'][-1].attributes.add(MED(pack('!L',int(tokens.pop(0)))))
+			return True
+		except (IndexError,ValueError):
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+
+	def _route_aigp (self,scope,tokens):
+		try:
+			scope[-1]['announce'][-1].attributes.add(AIGP('\x01\x00\x0b' + pack('!Q',int(tokens.pop(0)))))
 			return True
 		except (IndexError,ValueError):
 			self._error = self._str_route_error

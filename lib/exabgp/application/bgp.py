@@ -172,6 +172,7 @@ The program configuration can be controlled using signals:
 	g.add_argument(
 		"--decode", "-x",  # can not be -d it conflicts with --debug
 		metavar="HEX_MESSAGE",
+		nargs='+',
 		help="decode a raw route packet in hexadecimal string"
 	)
 
@@ -182,7 +183,8 @@ The program configuration can be controlled using signals:
 		sys.exit(0)
 
 	if options.decode:
-		if not is_hex(options.decode):
+		decode = ''.join(options.decode).replace(':','')
+		if not is_hex(decode):
 			parser.print_help()
 			print "\n\n" \
 					"The BGP message must be an hexadecimal string." \
@@ -193,7 +195,6 @@ The program configuration can be controlled using signals:
 					" --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:0000:0007:900F:0003:0001:01\n" \
 					" --decode 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF 001E02 00000007900F0003000101'\n"
 			sys.exit(1)
-		decode = options.decode.replace(' ','').replace(':','')
 	else:
 		decode = ''
 

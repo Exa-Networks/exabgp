@@ -32,6 +32,7 @@ from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.communities import cachedCommunity,Communities,ECommunity,ECommunities
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
+from exabgp.bgp.message.update.attribute.aigp import AIGP
 
 from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
 
@@ -87,6 +88,7 @@ class Attributes (dict):
 		AID.EXTENDED_COMMUNITY : ECommunities,        # 16
 		AID.AS4_PATH           : AS4Path,             # 17
 		AID.AS4_AGGREGATOR     : Aggregator,          # 18
+		AID.AIGP               : AIGP,                # 26
 	}
 
 	representation = {
@@ -102,6 +104,7 @@ class Attributes (dict):
 		AID.ORIGINATOR_ID      : ('inet',    '', 'originator-id', '%s'),
 		AID.CLUSTER_LIST       : ('list',    '', 'cluster-list', '%s'),
 		AID.EXTENDED_COMMUNITY : ('list',    '', 'extended-community', '%s'),
+		AID.AIGP               : ('integer', '', 'aigp', '%s'),
 	}
 
 	# STRING = [_ for _ in representation if representation[_][0] == 'string']
@@ -348,6 +351,11 @@ class Attributes (dict):
 		if code == AID.EXTENDED_COMMUNITY:
 			if not self.add_from_cache(code,attribute):
 				self.add(self.__new_extended_communities(attribute),attribute)
+			return self.factory(next)
+
+		if code == AID.AIGP:
+			if not self.add_from_cache(code,attribute):
+				self.add(AIGP(attribute),attribute)
 			return self.factory(next)
 
 		if code == AID.MP_UNREACH_NLRI:

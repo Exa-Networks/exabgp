@@ -19,7 +19,7 @@ group test {
 	}
 
 	neighbor IP {
-		description "router 2 with four routes";
+		description "router";
 		router-id 127.0.0.0;
 		local-address 127.0.0.1;
 	}
