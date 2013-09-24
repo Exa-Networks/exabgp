@@ -201,6 +201,7 @@ class Connection (object):
 			except socket.error,e:
 				if e.args[0] in error.block:
 					self.logger.wire("%s %s blocking io problem mid-way through writing a message %s, trying to complete" % (self.name(),self.peer,errstr(e)),'debug')
+					yield False
 				elif e.errno == errno.EPIPE:
 					# The TCP connection is gone.
 					self.close()
