@@ -74,15 +74,12 @@ class Update (Message):
 		else:
 			attr = ''
 
-		attributes = attr
-
 		# generate the message
 
 		packed_del = ''
 		packed_mp_del = ''
 		packed_mp_add = ''
 		packed_add = ''
-
 
 		# withdrawn IPv4
 
@@ -98,7 +95,6 @@ class Update (Message):
 				packed_del = packed
 			else:
 				packed_del += packed
-
 
 		# withdrawn MP
 
@@ -134,43 +130,33 @@ class Update (Message):
 
 		# add MP
 
+		attributes = ''
+
 		families = add_mp.keys()
 		while families:
 			family = families.pop()
 			if family not in ((AFI.ipv4,SAFI.flow_ip),(AFI.ipv4,SAFI.flow_vpn)):
 				attributes = attr
-			if len(packed_del + attributes + packed_mp_del + packed_mp_add + packed) > msg_size:
-				yield self._message(prefix(packed_del) + prefix(attributes + packed_mp_del + packed_mp_add))
-				packed_del = ''
-				packed_mp_del = ''
-				packed_mp_add = ''
 			mps = add_mp[family]
 			addpath = negotiated.addpath.send(*family)
 			mp_packed_generator = MPRNLRI(mps).packed_attributes(addpath)
 			try:
 				while True:
 					packed = mp_packed_generator.next()
-					if len(packed_del + attributes + packed_mp_del + packed_mp_add + packed) > msg_size:
+					if len(packed_del + packed_mp_del + packed_mp_add + packed) > msg_size:
 						if not packed_mp_add and not packed_mp_del and not packed_del:
 							raise Notify(6,0,'attributes size is so large we can not even pack on MPURNLRI')
 						yield self._message(prefix(packed_del) + prefix(attributes + packed_mp_del + packed_mp_add))
 						packed_del = ''
 						packed_mp_del = ''
 						packed_mp_add = packed
-						if family not in ((AFI.ipv4,SAFI.flow_ip),(AFI.ipv4,SAFI.flow_vpn)):
-							attributes = attr
-						else:
-							attributes = ''
 					else:
 						packed_mp_add += packed
-						attributes = attr
 			except StopIteration:
 				pass
 
-		# recalculate size if we do not have any more attributes to send
-
-		if not packed_mp_add:
-			msg_size = negotiated.msg_size - 2 - 2  # 2 bytes for each of the two prefix() header
+		if add_nlri:
+			attributes = attr
 
 		# ADD Ipv4
 
@@ -178,11 +164,11 @@ class Update (Message):
 		while add_nlri:
 			nlri = add_nlri.pop()
 			packed = nlri.pack(addpath)
-			if len(packed_del + attributes + packed_mp_del + packed_mp_add + packed_add + packed) > msg_size:
+			if len(packed_del + packed_mp_del + packed_mp_add + packed_add + packed) > msg_size:
 				if not packed_add and not packed_mp_add and not packed_mp_del and not packed_del:
 					raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
 				if packed_mp_add:
-					yield self._message(prefix(packed_del) + prefix(attributes + packed_mp_del + packed_mp_add) + packed_add)
+					yield self._message(prefix(packed_del) + prefix(attr + packed_mp_del + packed_mp_add) + packed_add)
 					msg_size = negotiated.msg_size - 2 - 2  # 2 bytes for each of the two prefix() header
 				else:
 					yield self._message(prefix(packed_del) + prefix(packed_mp_del) + packed_add)
@@ -190,9 +176,7 @@ class Update (Message):
 				packed_mp_del = ''
 				packed_mp_add = ''
 				packed_add = packed
-				attributes = attr
 			else:
 				packed_add += packed
-				attributes = attr
 
 		yield self._message(prefix(packed_del) + prefix(attributes + packed_mp_del + packed_mp_add) + packed_add)
