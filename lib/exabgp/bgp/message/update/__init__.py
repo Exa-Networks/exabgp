@@ -69,7 +69,10 @@ class Update (Message):
 			for afi,safi in add_mp:
 				if safi not in (SAFI.flow_ip,SAFI.flow_vpn):
 					add_default = True
-			attr = self.attributes.pack(negotiated,add_default)
+			if add_default:
+				attr = self.attributes.pack(negotiated,add_default)
+			else:
+				attr = ''
 		else:
 			attr = ''
 
@@ -134,6 +137,8 @@ class Update (Message):
 		families = add_mp.keys()
 		while families:
 			family = families.pop()
+			if family not in ((AFI.ipv4,SAFI.flow_ip),(AFI.ipv4,SAFI.flow_vpn)):
+				attributes = attr
 			mps = add_mp[family]
 			addpath = negotiated.addpath.send(*family)
 			mp_packed_generator = MPRNLRI(mps).packed_attributes(addpath)

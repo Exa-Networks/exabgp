@@ -6,6 +6,7 @@ Version explained:
 Version 3.2.14
  * Fix: do not leak route between peers
  * Fix: restore group level static group for all peers thereafter
+ * Fix: a bug in group-updates causing attributes to not be included in the update message
  * Improvement: allow to use quote with --decode
  * Improvement: implement draft-ietf-idr-aigp-10
 
