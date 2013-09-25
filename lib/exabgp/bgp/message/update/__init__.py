@@ -35,8 +35,6 @@ class Update (Message):
 	# XXX: FIXME: we could as well track when packed_del, packed_mp_del, etc
 	# XXX: FIXME: are emptied and therefore when we can save calculations
 	def messages (self,negotiated):
-		attributes = ''
-
 		msg_size = negotiated.msg_size - 2 - 2  # 2 bytes for each of the two prefix() header
 
 		# sort the nlris
@@ -75,6 +73,8 @@ class Update (Message):
 				attr = ''
 		else:
 			attr = ''
+
+		attributes = attr
 
 		# generate the message
 
@@ -139,13 +139,18 @@ class Update (Message):
 			family = families.pop()
 			if family not in ((AFI.ipv4,SAFI.flow_ip),(AFI.ipv4,SAFI.flow_vpn)):
 				attributes = attr
+			if len(packed_del + attributes + packed_mp_del + packed_mp_add + packed) > msg_size:
+				yield self._message(prefix(packed_del) + prefix(attributes + packed_mp_del + packed_mp_add))
+				packed_del = ''
+				packed_mp_del = ''
+				packed_mp_add = ''
 			mps = add_mp[family]
 			addpath = negotiated.addpath.send(*family)
 			mp_packed_generator = MPRNLRI(mps).packed_attributes(addpath)
 			try:
 				while True:
 					packed = mp_packed_generator.next()
-					if len(packed_del + packed_mp_del + packed_mp_add + packed) > msg_size:
+					if len(packed_del + attributes + packed_mp_del + packed_mp_add + packed) > msg_size:
 						if not packed_mp_add and not packed_mp_del and not packed_del:
 							raise Notify(6,0,'attributes size is so large we can not even pack on MPURNLRI')
 						yield self._message(prefix(packed_del) + prefix(attributes + packed_mp_del + packed_mp_add))
@@ -173,7 +178,7 @@ class Update (Message):
 		while add_nlri:
 			nlri = add_nlri.pop()
 			packed = nlri.pack(addpath)
-			if len(packed_del + packed_mp_del + packed_mp_add + packed_add + packed) > msg_size:
+			if len(packed_del + attributes + packed_mp_del + packed_mp_add + packed_add + packed) > msg_size:
 				if not packed_add and not packed_mp_add and not packed_mp_del and not packed_del:
 					raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
 				if packed_mp_add:
