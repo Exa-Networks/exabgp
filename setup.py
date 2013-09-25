@@ -55,8 +55,8 @@ setup(name='exabgp',
 	scripts=['sbin/exabgp',],
 	download_url='https://github.com/thomas-mangin/exabgp/archive/%s.tar.gz' % version,
 	data_files=[
-		('etc/exabgp',configuration('etc/exabgp')),
-		('usr/lib/systemd/system',configuration('etc/systemd')),
+		('/etc/exabgp',configuration('etc/exabgp')),
+		('/usr/lib/systemd/system',configuration('etc/systemd')),
 	],
 	classifiers=[
 		'Development Status :: 5 - Production/Stable',
