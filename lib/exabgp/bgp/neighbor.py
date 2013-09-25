@@ -43,6 +43,7 @@ class Neighbor (object):
 		self.graceful_restart = False
 		self.multisession = None
 		self.add_path = None
+		self.aigp = None
 
 		self._families = []
 		self.rib = None
@@ -141,7 +142,7 @@ neighbor %s {
   hold-time %s;
 %s%s%s
   capability {
-%s%s%s%s%s%s  }
+%s%s%s%s%s%s%s  }
   family {%s
   }
   process {
@@ -164,6 +165,7 @@ neighbor %s {
 	'    add-path %s;\n' % AddPath.string[self.add_path] if self.add_path else '',
 	'    multi-session;\n' if self.multisession else '',
 	'    operational;\n' if self.operational else '',
+	'    aigp;\n' if self.aigp else '',
 	families,
 	api,
 	changes

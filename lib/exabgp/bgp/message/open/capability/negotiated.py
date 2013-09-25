@@ -12,7 +12,9 @@ from exabgp.bgp.message.open.capability.id import CapabilityID as CID,REFRESH
 from exabgp.bgp.message.open.routerid import RouterID
 
 class Negotiated (object):
-	def __init__ (self):
+	def __init__ (self,neighbor):
+		self.neighbor = neighbor
+
 		self.sent_open = None
 		self.received_open = None
 
@@ -26,6 +28,7 @@ class Negotiated (object):
 		self.msg_size = 4096-19
 		self.operational = False
 		self.refresh = REFRESH.absent
+		self.aigp = None
 
 	def sent (self,sent_open):
 		self.sent_open = sent_open

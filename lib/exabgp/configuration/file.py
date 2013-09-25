@@ -620,6 +620,7 @@ class Configuration (object):
 			if command == 'md5': return self._set_md5(scope,'md5',tokens[1:])
 			if command == 'ttl-security': return self._set_ttl(scope,'ttl-security',tokens[1:])
 			if command == 'group-updates': return self._set_group_updates(scope,'group-updates',tokens[1:])
+			if command == 'aigp': return self._set_aigp(scope,'aigp',tokens[1:])
 			# deprecated
 			if command == 'route-refresh': return self._set_routerefresh(scope,'route-refresh',tokens[1:])
 			if command == 'graceful-restart': return self._set_gracefulrestart(scope,'graceful-restart',tokens[1:])
@@ -642,6 +643,7 @@ class Configuration (object):
 			if command == 'operational': return self._set_operational(scope,'capa-operational',tokens[1:])
 			if command == 'add-path': return self._set_addpath(scope,'add-path',tokens[1:])
 			if command == 'asn4': return self._set_asn4(scope,'asn4',tokens[1:])
+			if command == 'aigp': return self._set_aigp(scope,'aigp',tokens[1:])
 
 		elif name == 'process':
 			if command == 'run': return self._set_process_run(scope,'process-run',tokens[1:])
@@ -864,7 +866,7 @@ class Configuration (object):
 		# we know all the families we should use
 		self._capability = False
 		while True:
-			r = self._dispatch(scope,'capability',[],['route-refresh','graceful-restart','multi-session','operational','add-path','asn4'])
+			r = self._dispatch(scope,'capability',[],['route-refresh','graceful-restart','multi-session','operational','add-path','asn4','aigp'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -936,6 +938,24 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
+	def _set_aigp (self,scope,command,value):
+		try:
+			if not value:
+				scope[-1][command] = None
+				return True
+			aigp = value[0].lower()
+			if aigp in ('disable','disabled'):
+				scope[-1][command] = False
+				return True
+			if aigp in ('enable','enabled'):
+				scope[-1][command] = True
+				return True
+			self._error = '"%s" is an invalid aigp parameter options are enable (default) and disable)' % ' '.join(value)
+			return False
+		except ValueError:
+			self._error = '"%s" is an invalid aigp parameter options are enable (default) and disable)' % ' '.join(value)
+			if self.debug: raise
+			return False
 
 	# route grouping with watchdog
 
@@ -971,7 +991,7 @@ class Configuration (object):
 	def _multi_group (self,scope,address):
 		scope.append({})
 		while True:
-			r = self._dispatch(scope,'group',['static','flow','neighbor','process','family','capability','operational'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','route-refresh','asn4'])
+			r = self._dispatch(scope,'group',['static','flow','neighbor','process','family','capability','operational'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','route-refresh','asn4','aigp'])
 			if r is False:
 				return False
 			if r is None:
@@ -1045,6 +1065,7 @@ class Configuration (object):
 		neighbor.operational = local_scope.get('capa-operational',False)
 		neighbor.add_path = local_scope.get('add-path',0)
 		neighbor.asn4 = local_scope.get('asn4',True)
+		neighbor.aigp = local_scope.get('aigp',None)
 
 		missing = neighbor.missing()
 		if missing:
@@ -1150,7 +1171,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-			r = self._dispatch(scope,'neighbor',['static','flow','process','family','capability','operational'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','asn4'])
+			r = self._dispatch(scope,'neighbor',['static','flow','process','family','capability','operational'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','asn4','aigp'])
 			if r is False: return False
 			if r is None: return True
 
@@ -2493,7 +2514,7 @@ class Configuration (object):
 
 		o1 = Open(4,n.local_as,str(n.local_address),capa,180)
 		o2 = Open(4,n.peer_as,str(n.peer_address),capa,180)
-		negotiated = Negotiated()
+		negotiated = Negotiated(n)
 		negotiated.sent(o1)
 		negotiated.received(o2)
 		#grouped = False
@@ -2579,7 +2600,7 @@ class Configuration (object):
 
 		o1 = Open(4,n.local_as,str(n.local_address),capa,180)
 		o2 = Open(4,n.peer_as,str(n.peer_address),capa,180)
-		negotiated = Negotiated()
+		negotiated = Negotiated(n)
 		negotiated.sent(o1)
 		negotiated.received(o2)
 		#grouped = False

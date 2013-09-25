@@ -47,7 +47,7 @@ class Protocol (object):
 			self.logger = FakeLogger()
 		self.peer = peer
 		self.neighbor = peer.neighbor
-		self.negotiated = Negotiated()
+		self.negotiated = Negotiated(self.neighbor)
 		self.connection = None
 		port = os.environ.get('exabgp.tcp.port','')
 		self.port = int(port) if port.isdigit() else 179

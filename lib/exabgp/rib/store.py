@@ -189,8 +189,9 @@ class Store (object):
 				# as we will try to modify things we are using
 				yield update
 			else:
-				updates = [Update([change.nlri,],attributes) for change in changed]
+				updates = []
 				for change in changed:
+					updates.append(Update([change.nlri,],attributes))
 					nlri_index = change.nlri.index()
 					del dict_change[nlri_index]
 					del dict_nlri[nlri_index]

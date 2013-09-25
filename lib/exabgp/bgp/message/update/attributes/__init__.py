@@ -162,7 +162,16 @@ class Attributes (dict):
 			return True
 		return False
 
-	def pack (self,asn4,local_asn,peer_asn,with_default=True):
+	def pack (self,negotiated,with_default=True):
+		asn4 = negotiated.asn4
+		local_asn = negotiated.local_as
+		peer_asn = negotiated.peer_as
+
+		if negotiated.neighbor.aigp is None:
+			aigp = True if local_asn == peer_asn else False
+		else:
+			aigp = negotiated.neighbor.aigp
+
 		message = ''
 
 		default = {
@@ -186,6 +195,8 @@ class Attributes (dict):
 			if code in (AID.INTERNAL_SPLIT, AID.INTERNAL_WATCHDOG, AID.INTERNAL_WITHDRAW):
 				continue
 			if code in self:
+				if code == AID.AIGP and not aigp:
+					continue
 				if code in check:
 					if check[code](local_asn,peer_asn,self[code]):
 						message += self[code].pack(asn4)
@@ -354,8 +365,9 @@ class Attributes (dict):
 			return self.factory(next)
 
 		if code == AID.AIGP:
-			if not self.add_from_cache(code,attribute):
-				self.add(AIGP(attribute),attribute)
+			if self.negotiated.neighbor.aigp:
+				if not self.add_from_cache(code,attribute):
+					self.add(AIGP(attribute),attribute)
 			return self.factory(next)
 
 		if code == AID.MP_UNREACH_NLRI:

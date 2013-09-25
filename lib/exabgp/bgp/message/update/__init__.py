@@ -37,10 +37,6 @@ class Update (Message):
 	def messages (self,negotiated):
 		attributes = ''
 
-		asn4 = negotiated.asn4
-		local_as = negotiated.local_as
-		peer_as = negotiated.peer_as
-
 		msg_size = negotiated.msg_size - 2 - 2  # 2 bytes for each of the two prefix() header
 
 		# sort the nlris
@@ -67,13 +63,13 @@ class Update (Message):
 			return
 
 		if add_nlri:
-			attr = self.attributes.pack(asn4,local_as,peer_as,True)
+			attr = self.attributes.pack(negotiated,True)
 		elif add_mp:
 			add_default = False
 			for afi,safi in add_mp:
 				if safi not in (SAFI.flow_ip,SAFI.flow_vpn):
 					add_default = True
-			attr = self.attributes.pack(asn4,local_as,peer_as,add_default)
+			attr = self.attributes.pack(negotiated,add_default)
 		else:
 			attr = ''
 
