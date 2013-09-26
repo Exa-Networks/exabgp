@@ -155,9 +155,6 @@ class Update (Message):
 			except StopIteration:
 				pass
 
-		if add_nlri:
-			attributes = attr
-
 		# ADD Ipv4
 
 		addpath = negotiated.addpath.send(AFI.ipv4,SAFI.unicast)
@@ -171,7 +168,7 @@ class Update (Message):
 					yield self._message(prefix(packed_del) + prefix(attr + packed_mp_del + packed_mp_add) + packed_add)
 					msg_size = negotiated.msg_size - 2 - 2  # 2 bytes for each of the two prefix() header
 				else:
-					yield self._message(prefix(packed_del) + prefix(attributes + packed_mp_del) + packed_add)
+					yield self._message(prefix(packed_del) + prefix(attr + packed_mp_del) + packed_add)
 				packed_del = ''
 				packed_mp_del = ''
 				packed_mp_add = ''
@@ -179,4 +176,4 @@ class Update (Message):
 			else:
 				packed_add += packed
 
-		yield self._message(prefix(packed_del) + prefix(attributes + packed_mp_del + packed_mp_add) + packed_add)
+		yield self._message(prefix(packed_del) + prefix(attr + packed_mp_del + packed_mp_add) + packed_add)
