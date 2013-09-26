@@ -258,7 +258,6 @@ class Protocol (object):
 		for update in self.neighbor.rib.outgoing.updates(self.neighbor.group_updates):
 			for message in update.messages(self.negotiated):
 				number += 1
-				print "message", len(message)
 				for boolean in self.write(message):
 					# boolean is a transient network error we already announced
 					yield _NOP
