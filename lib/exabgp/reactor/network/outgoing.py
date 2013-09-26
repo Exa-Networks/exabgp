@@ -1,5 +1,5 @@
 from .connection import Connection
-from .tcp import create,bind,connect,MD5,nagle,TTL,async,ready,MD5
+from .tcp import create,bind,connect,MD5,nagle,TTL,async,ready
 from .error import NetworkError
 
 class Outgoing (Connection):
@@ -48,5 +48,4 @@ class Outgoing (Connection):
 
 		nagle(self.io,self.peer)
 		TTL(self.io,self.peer,self.ttl)
-		MD5(self.io,self.peer,self.port,self.afi,self.md5)
 		yield True
