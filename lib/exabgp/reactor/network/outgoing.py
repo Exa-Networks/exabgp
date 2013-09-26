@@ -1,5 +1,5 @@
 from .connection import Connection
-from .tcp import create,bind,connect,MD5,nagle,TTL,async,ready
+from .tcp import create,bind,connect,MD5,nagle,TTL,async,ready,MD5
 from .error import NetworkError
 
 class Outgoing (Connection):
@@ -18,6 +18,7 @@ class Outgoing (Connection):
 
 		try:
 			self.io = create(afi)
+			MD5(self.io,peer,port,afi,md5)
 			bind(self.io,local,afi)
 			async(self.io,peer)
 			connect(self.io,peer,port,afi,md5)
