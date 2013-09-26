@@ -171,7 +171,7 @@ class Update (Message):
 					yield self._message(prefix(packed_del) + prefix(attr + packed_mp_del + packed_mp_add) + packed_add)
 					msg_size = negotiated.msg_size - 2 - 2  # 2 bytes for each of the two prefix() header
 				else:
-					yield self._message(prefix(packed_del) + prefix(packed_mp_del) + packed_add)
+					yield self._message(prefix(packed_del) + prefix(attributes + packed_mp_del) + packed_add)
 				packed_del = ''
 				packed_mp_del = ''
 				packed_mp_add = ''
