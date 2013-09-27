@@ -35,8 +35,6 @@ class Update (Message):
 	# XXX: FIXME: we could as well track when packed_del, packed_mp_del, etc
 	# XXX: FIXME: are emptied and therefore when we can save calculations
 	def messages (self,negotiated):
-		msg_size = negotiated.msg_size - 19 - 2 - 2  # 2 bytes for each of the two prefix() header
-
 		# sort the nlris
 
 		add_nlri = []
@@ -83,6 +81,7 @@ class Update (Message):
 
 		# withdrawn IPv4
 
+		msg_size = negotiated.msg_size - 19 - 2 - 2  # 2 bytes for each of the two prefix() header
 		addpath = negotiated.addpath.send(AFI.ipv4,SAFI.unicast)
 
 		while del_nlri:
@@ -157,7 +156,10 @@ class Update (Message):
 
 		# ADD Ipv4
 
+		if add_nlri:
+			msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
 		addpath = negotiated.addpath.send(AFI.ipv4,SAFI.unicast)
+
 		while add_nlri:
 			nlri = add_nlri.pop()
 			packed = nlri.pack(addpath)
