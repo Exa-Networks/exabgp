@@ -116,7 +116,7 @@ class JSON (object):
 		'"neighbor": { ' \
 			'"ip": "%s", ' \
 			'%s' \
-		'} '% (str(neighbor.peer_address),content)
+		'} '% (neighbor,content)
 
 	def _bmp (self,neighbor,content):
 		return \

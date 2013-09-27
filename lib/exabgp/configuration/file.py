@@ -2559,7 +2559,7 @@ class Configuration (object):
 			for number in range(len(update.nlris)):
 				change = Change(update.nlris[number],update.attributes)
 				self.logger.parser('decoded %s %s %s' % (decoding,change.nlri.action,change.extensive()))
-			self.logger.parser('update json %s' % JSON('1.0').update(n,update))
+			self.logger.parser('update json %s' % JSON('1.0').update(str(n.peer_address),update))
 		import sys
 		sys.exit(0)
 
