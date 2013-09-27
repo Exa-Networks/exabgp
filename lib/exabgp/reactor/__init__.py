@@ -500,7 +500,7 @@ class Reactor (object):
 				else:
 					for (peer,change) in changes:
 						if self.configuration.change_to_peers(change,[peer,]):
-							self.logger.reactor("Route found and removed : %s" % change.extensive())
+							self.logger.reactor("Route removed : %s" % change.extensive())
 							yield False
 						else:
 							self.logger.reactor("Could not find therefore remove route : %s" % change.extensive(),'warning')
@@ -515,6 +515,66 @@ class Reactor (object):
 					return False
 				nexthops = dict((peer,self._peers[peer].neighbor.local_address) for peer in peers)
 				self._pending.append(_withdraw_change(self,command,nexthops))
+				return True
+			except ValueError:
+				pass
+			except IndexError:
+				pass
+
+
+		# attribute announcement / withdrawal
+		if 'announce attribute ' in command:
+			def _announce_attribute (self,command,nexthops):
+				changes = self.configuration.parse_api_attribute(command,nexthops,'announce')
+				if not changes:
+					self.logger.reactor("Command could not parse attribute in : %s" % command,'warning')
+					yield True
+				else:
+					for (peers,change) in changes:
+						self.configuration.change_to_peers(change,peers)
+						self.logger.reactor("Route added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
+					yield False
+					self._route_update = True
+
+			try:
+				descriptions,command = extract_neighbors(command)
+				peers = match_neighbors(descriptions,self._peers)
+				if peers == []:
+					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+					return False
+				nexthops = dict((peer,self._peers[peer].neighbor.local_address) for peer in peers)
+				self._pending.append(_announce_attribute(self,command,nexthops))
+				return True
+			except ValueError:
+				pass
+			except IndexError:
+				pass
+
+		# attribute announcement / withdrawal
+		if 'withdraw attribute ' in command:
+			def _withdraw_attribute (self,command,nexthops):
+				changes = self.configuration.parse_api_attribute(command,nexthops,'withdraw')
+				if not changes:
+					self.logger.reactor("Command could not parse attribute in : %s" % command,'warning')
+					yield True
+				else:
+					for (peers,change) in changes:
+						if self.configuration.change_to_peers(change,peers):
+							self.logger.reactor("Route removed : %s" % change.extensive())
+							yield False
+						else:
+							self.logger.reactor("Could not find therefore remove route : %s" % change.extensive(),'warning')
+							yield False
+					self._route_update = True
+
+			try:
+				descriptions,command = extract_neighbors(command)
+				peers = match_neighbors(descriptions,self._peers)
+				if peers == []:
+					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+					return False
+				nexthops = dict((peer,self._peers[peer].neighbor.local_address) for peer in peers)
+				self._pending.append(_withdraw_attribute(self,command,nexthops))
 				return True
 			except ValueError:
 				pass

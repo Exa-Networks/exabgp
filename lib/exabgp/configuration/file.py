@@ -299,6 +299,27 @@ class Configuration (object):
 				change.nlri.action = OUT.withdraw
 		return changes
 
+
+	def parse_api_attribute (self,command,peers,action):
+		# This is a quick solution which does not support next-hop self
+		attribute,nlris = command.split('nlri')
+		route = '%s route 0.0.0.0/0 %s' % (action, ' '.join(attribute.split()[2:]))
+		parsed = self.parse_api_route(route,peers,action)
+		if parsed in (True,False,None):
+			return parsed
+		attributes = parsed[0][1].attributes
+		nexthop = parsed[0][1].nlri.nexthop
+		changes = []
+		for nlri in nlris.split():
+			ip,mask = nlri.split('/')
+			change = Change(NLRI(*inet(ip),mask=int(mask),nexthop=nexthop,action=action),attributes)
+			if action == 'withdraw':
+				change.nlri.action = OUT.withdraw
+			else:
+				change.nlri.action = OUT.announce
+			changes.append((peers.keys(),change))
+		return changes
+
 	def parse_api_flow (self,command,action):
 		self._tokens = self._tokenise(' '.join(self._cleaned(command).split(' ')[2:]).split('\\n'))
 		scope = [{}]
