@@ -152,7 +152,7 @@ class Store (object):
 		dict_nlri = self._modify_nlri
 		dict_attr = self._cache_attribute
 
-		for attr_index,full_dict_change in list(dict_sorted.iteritems()):
+		for attr_index,full_dict_change in dict_sorted.items():
 			if self.cache:
 				dict_change = {}
 				for nlri_index,change in full_dict_change.iteritems():
@@ -183,7 +183,7 @@ class Store (object):
 				update = Update([dict_nlri[nlri_index].nlri for nlri_index in dict_change],attributes)
 				for change in changed:
 					nlri_index = change.nlri.index()
-					del dict_change[nlri_index]
+					del dict_sorted[attr_index][nlri_index]
 					del dict_nlri[nlri_index]
 				# only yield once we have a consistent state, otherwise it will go wrong
 				# as we will try to modify things we are using
@@ -193,7 +193,7 @@ class Store (object):
 				for change in changed:
 					updates.append(Update([change.nlri,],attributes))
 					nlri_index = change.nlri.index()
-					del dict_change[nlri_index]
+					del dict_sorted[attr_index][nlri_index]
 					del dict_nlri[nlri_index]
 				# only yield once we have a consistent state, otherwise it will go wrong
 				# as we will try to modify things we are using
