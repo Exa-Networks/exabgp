@@ -1,4 +1,4 @@
-#ExaBGP
+<img src="https://raw.github.com/wiki/thomas-mangin/exabgp/exabgp.jpg" alt="ExaBGP" width="150px;"/>
 
 ##Summary
 
