@@ -251,7 +251,7 @@ class Attributes (dict):
 	def index (self):
 		# XXX: FIXME: something a little bit smaller memory wise ?
 		if not self._idx:
-			self._idx = str(self) + str(self[AID.NEXT_HOP]) if AID.NEXT_HOP in self else str(self)
+			self._idx = '%s next-hop %s' % (str(self), str(self[AID.NEXT_HOP])) if AID.NEXT_HOP in self else str(self)
 		return self._idx
 
 	def factory (self,data):
