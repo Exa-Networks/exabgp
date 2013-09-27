@@ -1,0 +1,3 @@
+#!/bin/sh
+
+env exabgp.tcp.port=1790 wires=1 ../../bin/ibgp
