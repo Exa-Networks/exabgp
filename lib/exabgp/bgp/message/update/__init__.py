@@ -72,15 +72,9 @@ class Update (Message):
 		else:
 			attr = ''
 
-		# generate the message
-
-		packed_del = ''
-		packed_mp_del = ''
-		packed_mp_add = ''
-		packed_add = ''
-
 		# withdrawn IPv4
 
+		packed_del = ''
 		msg_size = negotiated.msg_size - 19 - 2 - 2  # 2 bytes for each of the two prefix() header
 		addpath = negotiated.addpath.send(AFI.ipv4,SAFI.unicast)
 
@@ -96,6 +90,8 @@ class Update (Message):
 				packed_del += packed
 
 		# withdrawn MP
+
+		packed_mp_del = ''
 
 		families = del_mp.keys()
 		while families:
@@ -117,8 +113,16 @@ class Update (Message):
 			except StopIteration:
 				pass
 
+		# add MP
+
+		# adding routes, so needing attributes
+
+		attributes = ''
+
 		# we have some MPRNLRI so we need to add the attributes, recalculate
 		# and make sure we do not overflow
+
+		packed_mp_add = ''
 
 		if add_mp:
 			msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
@@ -126,10 +130,6 @@ class Update (Message):
 			yield self._message(prefix(packed_del) + prefix(packed_mp_del))
 			packed_del = ''
 			packed_mp_del = ''
-
-		# add MP
-
-		attributes = ''
 
 		families = add_mp.keys()
 		while families:
@@ -156,8 +156,15 @@ class Update (Message):
 
 		# ADD Ipv4
 
+		packed_add = ''
+
 		if add_nlri:
 			msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
+		if len(packed_del + packed_mp_del + packed_mp_add) >= msg_size:
+			yield self._message(prefix(packed_del) + prefix(packed_mp_del))
+			packed_del = ''
+			packed_mp_del = ''
+
 		addpath = negotiated.addpath.send(AFI.ipv4,SAFI.unicast)
 
 		while add_nlri:
