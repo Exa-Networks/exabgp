@@ -87,6 +87,12 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		length = unpack('!H',header[16:18])[0] - 19
 		if self.wire: self.announce("waiting for", length, "bytes")
 
+		if length > 4096 - 19:
+			print "packet"
+			print od(header)
+			print "Invalid length for packet", length
+			sys.exit(1)
+
 		body = ''
 		left = length
 		while len(body) != length:

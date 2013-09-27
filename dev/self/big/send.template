@@ -13,6 +13,7 @@ group test {
 	neighbor 127.0.0.1 {
 		description "router 2 with four routes";
 		router-id 128.0.0.0;
+		group-updates;
 		local-address IP;
 	}
 }

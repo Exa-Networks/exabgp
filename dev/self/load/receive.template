@@ -1,0 +1,19 @@
+#route 77.93.35.15/32 next-hop 10.0.0.2;
+
+group test {
+	local-as 65533;
+	peer-as 65533;
+	hold-time 180;
+	graceful-restart 1200;
+
+	process similate-the-intenet {
+		receive-routes;
+		run ./dump-to-screen.py 100 20;
+	}
+
+	neighbor IP {
+		description "router 2 with four routes";
+		router-id 127.0.0.0;
+		local-address 127.0.0.1;
+	}
+}
