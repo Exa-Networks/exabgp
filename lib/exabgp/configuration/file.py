@@ -1988,7 +1988,6 @@ class Configuration (object):
 		try:
 			attributes = Attributes()
 			attributes[AttributeID.EXTENDED_COMMUNITY] = ECommunities()
-			attributes[AttributeID.ORIGIN] = Origin(Origin.IGP)
 			flow = Change(FlowNLRI(),attributes)
 		except ValueError:
 			self._error = self._str_flow_error

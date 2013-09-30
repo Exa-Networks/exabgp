@@ -58,11 +58,8 @@ class Update (Message):
 		if not add_nlri and not del_nlri and not add_mp and not del_mp:
 			return
 
-		if add_nlri:
+		if add_nlri or add_mp:
 			attr = self.attributes.pack(negotiated,True)
-		elif add_mp:
-			add_default = bool([safi for _,safi in add_mp if safi not in (SAFI.flow_ip,SAFI.flow_vpn)])
-			attr = self.attributes.pack(negotiated,add_default)
 		else:
 			attr = ''
 
@@ -109,10 +106,6 @@ class Update (Message):
 
 		# add MP
 
-		# adding routes, so needing attributes
-
-		attributes = ''
-
 		# we have some MPRNLRI so we need to add the attributes, recalculate
 		# and make sure we do not overflow
 
@@ -128,8 +121,6 @@ class Update (Message):
 		families = add_mp.keys()
 		while families:
 			family = families.pop()
-			if family not in ((AFI.ipv4,SAFI.flow_ip),(AFI.ipv4,SAFI.flow_vpn)):
-				attributes = attr
 			mps = add_mp[family]
 			addpath = negotiated.addpath.send(*family)
 			mp_packed_generator = MPRNLRI(mps).packed_attributes(addpath)
@@ -139,7 +130,7 @@ class Update (Message):
 					if len(packed_del + packed_mp_del + packed_mp_add + packed) >= msg_size:
 						if not packed_mp_add and not packed_mp_del and not packed_del:
 							raise Notify(6,0,'attributes size is so large we can not even pack on MPURNLRI')
-						yield self._message(prefix(packed_del) + prefix(attributes + packed_mp_del + packed_mp_add))
+						yield self._message(prefix(packed_del) + prefix(attr + packed_mp_del + packed_mp_add))
 						packed_del = ''
 						packed_mp_del = ''
 						packed_mp_add = packed
