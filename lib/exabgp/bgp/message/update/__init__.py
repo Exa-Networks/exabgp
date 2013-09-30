@@ -61,14 +61,8 @@ class Update (Message):
 		if add_nlri:
 			attr = self.attributes.pack(negotiated,True)
 		elif add_mp:
-			add_default = False
-			for afi,safi in add_mp:
-				if safi not in (SAFI.flow_ip,SAFI.flow_vpn):
-					add_default = True
-			if add_default:
-				attr = self.attributes.pack(negotiated,add_default)
-			else:
-				attr = ''
+			add_default = bool([safi for _,safi in add_mp if safi not in (SAFI.flow_ip,SAFI.flow_vpn)])
+			attr = self.attributes.pack(negotiated,add_default)
 		else:
 			attr = ''
 
