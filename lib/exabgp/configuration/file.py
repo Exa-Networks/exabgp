@@ -109,6 +109,7 @@ class Configuration (object):
 	'  cluster-list [ 10.10.0.1 10.10.0.2 ];\n' \
 	'  label [ 100 200 ];\n' \
 	'  aggregator ( 65000:10.0.0.10 )\n' \
+	'  aigp 100;\n' \
 	'  split /24\n' \
 	'  watchdog watchdog-name\n' \
 	'  withdraw\n' \
@@ -129,7 +130,8 @@ class Configuration (object):
 	' originator-id 10.0.0.10' \
 	' cluster-list 10.10.0.1' \
 	' label 150' \
-	' aggregator' \
+	' aggregator ( 65000:10.0.0.10 )' \
+	' aigp 100' \
 	' split /24' \
 	' watchdog watchdog-name' \
 	' withdraw' \
