@@ -1988,6 +1988,7 @@ class Configuration (object):
 		try:
 			attributes = Attributes()
 			attributes[AttributeID.EXTENDED_COMMUNITY] = ECommunities()
+			attributes[AttributeID.NEXT_HOP] = cachedNextHop('\x00\x00\x00\x00')
 			flow = Change(FlowNLRI(),attributes)
 		except ValueError:
 			self._error = self._str_flow_error

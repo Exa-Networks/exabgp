@@ -13,7 +13,6 @@ from exabgp.protocol.ip.address import Address
 from exabgp.bgp.message.direction import OUT
 from exabgp.bgp.message.update.nlri.prefix import Prefix
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.nlri.bgp import RouteDistinguisher
 
 from exabgp.protocol import Protocol,NamedProtocol
 from exabgp.protocol.ip.icmp import ICMPType,ICMPCode,NamedICMPType,NamedICMPCode
