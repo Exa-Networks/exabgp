@@ -5,6 +5,8 @@ Version explained:
 
 Version 3.2.16
  * Fix: fix an issue with RIB cache handling
+ * Fix: fix an issue with Flow generation introduced recently
+    thanks to: Quentin Loos for reporting the issue and helping fixing it
 
 Version 3.2.15
  * Fix: a wrong fix introducing a bug in 3.2.14
