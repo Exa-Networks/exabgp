@@ -222,10 +222,15 @@ class Attributes (dict):
 							yield '"%s": %s' % (name, 'true' if self.has(code) else 'false')
 						elif how == 'string':
 							yield '"%s": "%s"' % (name, presentation % str(self[code]))
+						elif how == 'list':
+							yield '"%s": %s' % (name, presentation % self[code].json())
+						elif how == 'inet':
+							yield '"%s": "%s"' % (name, presentation % str(self[code]))
+						# Should never be ran
 						else:
 							yield '"%s": %s' % (name, presentation % str(self[code]))
 					else:
-						yield '"attribute-0x%02X-0x%02X": %s' % (code,self[code].FLAG,str(self[code]))
+						yield '"attribute-0x%02X-0x%02X": "%s"' % (code,self[code].FLAG,str(self[code]))
 			self._json = ', '.join(generate(self))
 		return self._json
 
