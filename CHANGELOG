@@ -10,6 +10,7 @@ Version 3.2.16
  * Fix: on SIGUSR no route withdrawal was performed
     reported by: Sascha Schumann
  * Change: major RIB code modification
+ * Change: match attributes using the flag value as well
 
 Version 3.2.15
  * Fix: a wrong fix introducing a bug in 3.2.14
