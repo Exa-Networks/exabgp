@@ -90,7 +90,7 @@ Python 2.6.7
    * [draft-ietf-idr-flowspec-redirect-ip-00](http://tools.ietf.org/html/draft-ietf-idr-flowspec-redirect-ip-00)
    * [draft-ietf-idr-add-paths-08](http://tools.ietf.org/html/draft-ietf-idr-add-paths-08)
    * [draft-ietf-idr-bgp-multisession-07](http://tools.ietf.org/html/draft-ietf-idr-bgp-multisession-07)
-   * [draft-keyur-bgp-enhanced-route-refresh-00](http://tools.ietf.org/html/draft-keyur-bgp-enhanced-route-refresh-00)
+   * [draft-ietf-idr-bgp-enhanced-route-refresh-04](http://tools.ietf.org/html/draft-ietf-idr-bgp-enhanced-route-refresh-04)
    * [draft-scudder-bmp-01](http://tools.ietf.org/html/draft-scudder-bmp-01)
    * [draft-ietf-idr-aigp-10.txt](http://tools.ietf.org/html/draft-ietf-idr-aigp-10)
  * BSD licence, integrate [ExaBGP](http://github.com/thomas-mangin/exabgp) in your own application stack - no strings attached !
