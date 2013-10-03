@@ -84,7 +84,7 @@ class Peer (object):
 		self._reset_skip()
 
 		# We want to send all the known routes
-		self._resend_routes = SEND.normal
+		self._resend_routes = SEND.done
 		# We have new routes for the peers
 		self._have_routes = True
 
@@ -125,7 +125,7 @@ class Peer (object):
 			self._[direction]['generator'] = self._[direction]['enabled']
 			self._teardown = None
 			self._more_skip(direction)
-			self.neighbor.make_rib()  # clear the RIB and pending messages
+			self.neighbor.rib.reset()
 
 			# If we are restarting, and the neighbor definition is different, update the neighbor
 			if self._neighbor:
@@ -134,6 +134,11 @@ class Peer (object):
 		else:
 			self._[direction]['generator'] = False
 			self._[direction]['proto'] = None
+
+	def _stop (self,direction,message):
+		self._[direction]['generator'] = False
+		self._[direction]['proto'].close('%s loop stop %s' % (direction,message))
+		self._[direction]['proto'] = None
 
 	# connection delay
 
@@ -176,7 +181,9 @@ class Peer (object):
 		self._resend_routes = SEND.normal
 		self._reset_skip()
 
-	def send_new (self):
+	def send_new (self,changes=None):
+		if changes:
+			self.neighbor.rib.outgoing.update(changes)
 		self._have_routes = True
 
 	def restart (self,restart_neighbor=None):
@@ -249,7 +256,7 @@ class Peer (object):
 
 			if local_id < remote_id:
 				self.logger.network('closing the outgoing connection')
-				self._reset('out','collision local id < remote id')
+				self._stop('out','collision local id < remote id')
 				yield ACTION.later
 			else:
 				self.logger.network('aborting the incoming connection')
@@ -336,7 +343,7 @@ class Peer (object):
 				raise stop
 			else:
 				self.logger.network('closing the incoming connection')
-				self._reset('in','collision local id < remote id')
+				self._stop('in','collision local id < remote id')
 				yield ACTION.later
 
 		# Send KEEPALIVE
@@ -453,7 +460,7 @@ class Peer (object):
 				if self._resend_routes != SEND.done:
 					enhanced_refresh = True if self._resend_routes == SEND.refresh and proto.negotiated.refresh == REFRESH.enhanced else False
 					self._resend_routes = SEND.done
-					self.neighbor.rib.outgoing.resend_known(send_families,enhanced_refresh)
+					self.neighbor.rib.resend(send_families,enhanced_refresh)
 					self._have_routes = True
 					send_families = []
 

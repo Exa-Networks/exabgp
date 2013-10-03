@@ -9,14 +9,13 @@ Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 from exabgp.rib.store import Store
 
 class RIB:
-	ribs = {}
+	def __init__ (self,name,families,new=False):
+		self.incoming = Store(False,families)
+		self.outgoing = Store(True,families)
 
-	def __init__ (self,name,families):
-		if name not in self.ribs:
-			self.ribs[name] = self
-			self.incoming = Store(False,families)
-			self.outgoing = Store(True,families)
-		else:
-			self.incoming = self.ribs[name].incoming
-			self.outgoing = self.ribs[name].outgoing
-			self.outgoing.resend_known(None,False)
+	def reset (self):
+		self.incoming.reset()
+		self.outgoing.reset()
+
+	def resend (self,send_families,enhanced_refresh):
+		self.outgoing.resend(send_families,enhanced_refresh)

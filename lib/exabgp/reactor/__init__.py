@@ -287,6 +287,7 @@ class Reactor (object):
 		self.logger.reactor("Performing reload of exabgp %s" % version)
 
 		reloaded = self.configuration.reload()
+		reloaded = self.configuration.reload()
 		if not reloaded:
 			self.logger.configuration("Problem with the configuration file, no change done",'error')
 			self.logger.configuration(self.configuration.error,'error')
@@ -303,10 +304,13 @@ class Reactor (object):
 				self.logger.reactor("New Peer %s" % neighbor.name())
 				peer = Peer(neighbor,self)
 				self._peers[key] = peer
-			# check if the neighbor definition are the same (BUT NOT THE ROUTES)
+			# modified peer
 			elif self._peers[key].neighbor != neighbor:
 				self.logger.reactor("Peer definition change, restarting %s" % str(key))
 				self._peers[key].restart(neighbor)
+			# same peer but perhaps not the routes
+			else:
+				self._peers[key].send_new(neighbor.rib.outgoing.queued_changes())
 		self.logger.configuration("Loaded new configuration successfully",'warning')
 		# This only starts once ...
 		self.processes.start(restart)
@@ -372,7 +376,7 @@ class Reactor (object):
 			def _show_route (self):
 				for key in self.configuration.neighbor.keys():
 					neighbor = self.configuration.neighbor[key]
-					for change in list(neighbor.rib.outgoing.every_changes()):
+					for change in list(neighbor.rib.outgoing.sent_changes()):
 						self._answer(service,'neighbor %s %s' % (neighbor.local_address,str(change.nlri)))
 						yield True
 			self._pending.append(_show_route(self))
@@ -382,7 +386,7 @@ class Reactor (object):
 			def _show_extensive (self):
 				for key in self.configuration.neighbor.keys():
 					neighbor = self.configuration.neighbor[key]
-					for change in list(neighbor.rib.outgoing.every_changes()):
+					for change in list(neighbor.rib.outgoing.sent_changes()):
 						self._answer(service,'neighbor %s %s' % (neighbor.name(),change.extensive()))
 						yield True
 			self._pending.append(_show_extensive(self))

@@ -51,8 +51,21 @@ class Neighbor (object):
 		self.operational = None
 		self.asm = dict()
 
+		self.messages = deque()
+		self.refresh = deque()
+
 	def make_rib (self):
 		self.rib = RIB(self.name(),self._families)
+
+	# will resend all the routes once we reconnect
+	def reset_rib (self):
+		self.rib.reset()
+		self.messages = deque()
+		self.refresh = deque()
+
+	# back to square one, all the routes are removed
+	def clear_rib (self):
+		self.rib.clear()
 		self.messages = deque()
 		self.refresh = deque()
 
@@ -116,7 +129,7 @@ class Neighbor (object):
 		changes=''
 		if with_changes:
 			changes += '\nstatic { '
-			for changes in self.rib.incoming.every_changes():
+			for changes in self.rib.incoming.queued_changes():
 				changes += '\n    %s' % changes.extensive()
 			changes += '\n}'
 

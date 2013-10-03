@@ -39,6 +39,19 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 	def routes (self,body):
 		len_w = unpack('!H',body[0:2])[0]
+		prefixes = [ord(_) for _ in body[2:2+len_w:]]
+
+		if not prefixes:
+			yield 'no ipv4 withdrawal'
+
+		while prefixes:
+			l = prefixes.pop(0)
+			r = [0,0,0,0]
+			for index in range(4):
+				if index*8 >= l: break
+				r[index] = prefixes.pop(0)
+			yield 'withdraw ' + '.'.join(str(_) for _ in r) + '/' + str(l)
+
 		len_a = unpack('!H',body[2+len_w:2+len_w+2])[0]
 		prefixes = [ord(_) for _ in body[2+len_w + 2+len_a:]]
 
@@ -51,7 +64,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 			for index in range(4):
 				if index*8 >= l: break
 				r[index] = prefixes.pop(0)
-			yield '.'.join(str(_) for _ in r) + '/' + str(l)
+			yield 'announce ' + '.'.join(str(_) for _ in r) + '/' + str(l)
 
 	def announce (self,*args):
 		print self.ip, self.port, ' '.join(str(_) for _ in args) if len(args) > 1 else args[0]

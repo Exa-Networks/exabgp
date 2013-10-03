@@ -18,45 +18,71 @@ class Store (object):
 		self._watchdog = {}
 		self.cache = cache
 		self.families = families
-		self._announced = {}
-		self._cache_attribute = {}
-		self._modify_nlri = {}
-		self._modify_sorted = {}
+		self.clear()
+
+	# will resend all the routes once we reconnect
+	def reset (self):
+		# WARNING : this function can run while we are in the updates() loop too !
 		self._enhanced_refresh_start = []
 		self._enhanced_refresh_delay = []
+		for update in self.updates(False): pass
 
-	def every_changes (self,families=None):
+	# back to square one, all the routes are removed
+	def clear (self):
+		self._cache_attribute = {}
+		self._announced = {}
+		self._modify_nlri = {}
+		self._modify_sorted = {}
+		self._changes = None
+		self.reset()
+
+	def sent_changes (self,families=None):
+		# families can be None or []
+		requested_families = self._announced.keys() if not families else set(families).union(self.families)
+
 		# we use list() to make a snapshot of the data at the time we run the command
-		for family in list(self._announced.keys()):
-			if families is not None and family not in families:
-				continue
+		for family in requested_families:
+			for change in self._announced[family].values():
+				if change.nlri.action == OUT.announce:
+					yield change
+
+	def resend (self,families,enhanced_refresh):
+		# families can be None or []
+		requested_families = self._announced.keys() if not families else set(families).union(self.families)
+
+		def _announced (family):
 			for change in self._announced[family].values():
 				if change.nlri.action == OUT.announce:
 					yield change
 			self._announced[family] = {}
 
-	def dump (self):
-		# This function returns a hash and not a list as "in" tests are O(n) with lists and O(1) with hash
-		# and with ten thousands routes this makes an enormous difference (60 seconds to 2)
-		changes = {}
-		for family in self._announced.keys():
-			for change in self._announced[family].values():
-				if change.nlri.action == OUT.announce:
-					changes[change.index()] = change
-		return changes
-
-	def resend_known (self,families,enhanced_refresh):
-		seen_families = self._announced.keys() if families is None else self.families
-
 		if enhanced_refresh:
-			for family in seen_families:
+			for family in requested_families:
 				if family not in self._enhanced_refresh_start:
 					self._enhanced_refresh_start.append(family)
-					for change in self.every_changes([family,]):
+					for change in _announced(family):
 						self.insert_announced(change,True)
 		else:
-			for change in self.every_changes(seen_families):
-				self.insert_announced(change,True)
+			for family in requested_families:
+				for change in _announced(family):
+					self.insert_announced(change,True)
+
+	# def dump (self):
+	# 	# This function returns a hash and not a list as "in" tests are O(n) with lists and O(1) with hash
+	# 	# and with ten thousands routes this makes an enormous difference (60 seconds to 2)
+	# 	changes = {}
+	# 	for family in self._announced.keys():
+	# 		for change in self._announced[family].values():
+	# 			if change.nlri.action == OUT.announce:
+	# 				changes[change.index()] = change
+	# 	return changes
+
+	def queued_changes (self):
+		for change in self._modify_nlri.values():
+			yield change
+
+	def update (self,changes):
+		self._changes = changes
 
 	def insert_announced_watchdog (self,change):
 		watchdog = change.attributes.watchdog()
@@ -142,6 +168,20 @@ class Store (object):
 
 
 	def updates (self,grouped):
+		if self._changes:
+			dict_nlri = self._modify_nlri
+
+			for family in self._announced:
+				for change in self._announced[family].itervalues():
+					if change.index() not in self._modify_nlri:
+						change.nlri.action = OUT.withdraw
+						self.insert_announced(change,True)
+
+			for new in self._changes:
+				self.insert_announced(new,True)
+			self._changes = None
+		# end of changes
+
 		rr_announced = []
 
 		for afi,safi in self._enhanced_refresh_start:
@@ -166,7 +206,8 @@ class Store (object):
 								continue
 					elif change.nlri.action == OUT.withdraw:
 						if nlri_index not in announced:
-							continue
+							if dict_nlri[nlri_index].nlri.action == OUT.announce:
+								continue
 					dict_change[nlri_index] = change
 			else:
 				dict_change = full_dict_change
@@ -176,7 +217,7 @@ class Store (object):
 
 			attributes = dict_attr[attr_index].attributes
 
-			# we NEED the copy provided by list() here as clear_sent or insert_announced can be called while we iterate
+			# we NEED the copy provided by list() here as insert_announced can be called while we iterate
 			changed = list(dict_change.itervalues())
 
 			if grouped:
@@ -221,8 +262,3 @@ class Store (object):
 
 			for update in self.updates(grouped):
 				yield update
-
-	def clear_sent (self):
-		# WARNING : this function can run while we are in the updates() loop too !
-		self._modify_nlri = {}
-		self._modify_sorted = {}

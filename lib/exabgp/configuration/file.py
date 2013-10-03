@@ -2629,10 +2629,10 @@ class Configuration (object):
 		#grouped = False
 
 		for nei in self.neighbor.keys():
-			for update in self.neighbor[nei].rib.outgoing.updates(False):
+			for message in self.neighbor[nei].rib.outgoing.updates(False):
 				pass
 
-			for change1 in self.neighbor[nei].rib.outgoing.every_changes():
+			for change1 in self.neighbor[nei].rib.outgoing.sent_changes():
 				str1 = change1.extensive()
 				packed = list(Update([change1.nlri],change1.attributes).messages(negotiated))
 				pack1 = packed[0]
