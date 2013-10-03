@@ -46,6 +46,13 @@ NOTHING = _NOTHING()
 
 # =================================================================== Attributes
 
+# 0                   1
+# 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |  Attr. Flags  |Attr. Type Code|
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+
 class MultiAttributes (list):
 	def __init__ (self,attribute):
 		list.__init__(self)

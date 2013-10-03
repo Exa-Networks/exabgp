@@ -12,6 +12,13 @@ from exabgp.bgp.message import Message
 # A Notification received from our peer.
 # RFC 4271 Section 4.5
 
+# 0                   1                   2                   3
+# 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# | Error code    | Error subcode |   Data (variable)             |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+
 class Notification (Message):
 	TYPE = chr(Message.Type.NOTIFICATION)
 

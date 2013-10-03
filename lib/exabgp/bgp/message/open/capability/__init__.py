@@ -51,6 +51,14 @@ class Parameter (int):
 # =================================================================== Capabilities
 # http://www.iana.org/assignments/capability-codes/
 
+# +------------------------------+
+# | Capability Code (1 octet)    |
+# +------------------------------+
+# | Capability Length (1 octet)  |
+# +------------------------------+
+# | Capability Value (variable)  |
+# +------------------------------+
+
 class Capabilities (dict):
 	def announced (self,capability):
 		return capability in self

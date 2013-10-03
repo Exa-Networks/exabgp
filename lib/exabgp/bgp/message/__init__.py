@@ -27,6 +27,20 @@ def defix (data):
 def prefix (data):
 	return '%s%s' % (pack('!H',len(data)),data)
 
+# 0                   1                   2                   3
+# 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                                                               |
+# +                                                               +
+# |                                                               |
+# +                                                               +
+# |                           Marker                              |
+# +                                                               +
+# |                                                               |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |          Length               |      Type     |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
 class Message (Exception):
 	# we need to define TYPE inside __init__ of the subclasses
 	# otherwise we can not dynamically create different UnknownMessage

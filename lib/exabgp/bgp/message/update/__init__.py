@@ -17,6 +17,27 @@ from exabgp.bgp.message.notification import Notify
 
 # =================================================================== Update
 
+# +-----------------------------------------------------+
+# |   Withdrawn Routes Length (2 octets)                |
+# +-----------------------------------------------------+
+# |   Withdrawn Routes (variable)                       |
+# +-----------------------------------------------------+
+# |   Total Path Attribute Length (2 octets)            |
+# +-----------------------------------------------------+
+# |   Path Attributes (variable)                        |
+# +-----------------------------------------------------+
+# |   Network Layer Reachability Information (variable) |
+# +-----------------------------------------------------+
+
+# Withdrawn Routes:
+
+# +---------------------------+
+# |   Length (1 octet)        |
+# +---------------------------+
+# |   Prefix (variable)       |
+# +---------------------------+
+
+
 class Update (Message):
 	TYPE = chr(Message.Type.UPDATE)
 
