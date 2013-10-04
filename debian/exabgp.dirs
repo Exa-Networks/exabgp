@@ -1,5 +1,1 @@
-usr/sbin
-usr/share/man/man1
-usr/share/lintian/overrides
-usr/share/doc/exabgp/examples
-
+lib
