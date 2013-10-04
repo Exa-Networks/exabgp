@@ -13,6 +13,18 @@ from exabgp.bgp.message.update.attribute import Flag,Attribute
 
 # =================================================================== AIGP (26)
 
+# 0                   1                   2                   3
+# 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |     Type      |         Length                |               |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+               |
+# ~                                                               ~
+# |                           Value                               |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+..........................
+
+# Length: Two octets encoding the length in octets of the TLV,
+# including the type and length fields.
+
 class TLV (object):
 	def __init__(self,type,value):
 		self.type = type
