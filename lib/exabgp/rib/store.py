@@ -38,7 +38,7 @@ class Store (object):
 
 	def sent_changes (self,families=None):
 		# families can be None or []
-		requested_families = self.families if not families else set(families).union(self.families)
+		requested_families = self.families if not families else set(families).intersection(self.families)
 
 		# we use list() to make a snapshot of the data at the time we run the command
 		for family in requested_families:
@@ -48,7 +48,7 @@ class Store (object):
 
 	def resend (self,families,enhanced_refresh):
 		# families can be None or []
-		requested_families = self.families if not families else set(families).union(self.families)
+		requested_families = self.families if not families else set(families).intersection(self.families)
 
 		def _announced (family):
 			for change in self._announced.get(family,{}).values():
