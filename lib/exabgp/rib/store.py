@@ -38,22 +38,20 @@ class Store (object):
 
 	def sent_changes (self,families=None):
 		# families can be None or []
-		# self._announced.keys() is a subset of set.families
-		requested_families = self._announced.keys() if not families else set(families).union(self._announced.keys())
+		requested_families = self.families if not families else set(families).union(self.families)
 
 		# we use list() to make a snapshot of the data at the time we run the command
 		for family in requested_families:
-			for change in self._announced[family].values():
+			for change in self._announced.get(family,{}).values():
 				if change.nlri.action == OUT.announce:
 					yield change
 
 	def resend (self,families,enhanced_refresh):
 		# families can be None or []
-		# self._announced.keys() is a subset of set.families
-		requested_families = self._announced.keys() if not families else set(families).union(self._announced.keys())
+		requested_families = self.families if not families else set(families).union(self.families)
 
 		def _announced (family):
-			for change in self._announced[family].values():
+			for change in self._announced.get(family,{}).values():
 				if change.nlri.action == OUT.announce:
 					yield change
 			self._announced[family] = {}
