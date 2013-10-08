@@ -5,10 +5,17 @@ Version explained:
 
 Version 3.2.16
  * Fix: fix an issue with RIB cache handling
- * Fix: fix an issue with Flow generation introduced recently
+ * Fix: fix an issue with Flow generation introduced recently (mandatory attributes are mandatory even for Flow Routes)
     thanks to: Quentin Loos for reporting the issue and helping fixing it
- * Fix: on SIGUSR no route withdrawal was performed
+ * Fix: on SIGUSR no route withdrawal update was performed
     reported by: Sascha Schumann
+ * Fix: Do not oversend routes for route refresh
+    reported by: Hideaki HAYASHI
+ * Fix: Bug when route when trying to withdraw an absent route with the API
+    reported by: Peter Bristow
+ * Fix: Malformed JSON message
+    reported by: Robert Barnes
+ * Fix: validate the FLAG of the attribute received (following our own advise on IDR)
  * Change: major RIB code modification
  * Change: match attributes using the flag value as well
 
