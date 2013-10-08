@@ -1,5 +1,5 @@
-exabgp (3.2.15-0) unstable; urgency=low
+exabgp (3.2.16-0) unstable; urgency=low
   
-  * Unreleased package of ExaBGP.
+  * latest ExaBGP release.
 
- -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Sun, 22 Sep 2013 16:00:00 +0000
+ -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Sun, 8 Oct 2013 12:00:00 +0000
