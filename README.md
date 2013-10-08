@@ -37,7 +37,7 @@ These organisations are speaking of, or using, [ExaBGP](http://github.com/thomas
 [BBC](http://www.bbc.co.uk/),
 [AMSIX](https://ripe64.ripe.net/presentations/49-Follow_Up_AMS-IX_route-server_test_Euro-IX_20th_RIPE64.pdf),
 [NEO TELECOM](http://media.frnog.org/FRnOG_18/FRnOG_18-6.pdf),
-[VIDEOPLATZA](http://www.videoplaza.com/wp-content/uploads/2013/04/Junior-Operations-Engineer-Spring-2013.pdf),
+[VIDEOPLAZA](http://www.videoplaza.com),
 [ALCATEL LUCENT](http://www.nanog.org/sites/default/files/wed.general.trafficdiversion.serodio.10.pdf),
 [CLOUDFLARE](http://www.slideshare.net/TomPaseka/flowspec-apf-2013),
 researchers
