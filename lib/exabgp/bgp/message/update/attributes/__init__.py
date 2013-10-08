@@ -497,7 +497,7 @@ class Attributes (dict):
 				self.add(UnknownAttribute(code,flag,attribute),attribute)
 			return self.factory(next)
 
-		logger.parser('ignoring non-transitive attribute')
+		logger.parser('ignoring non-transitive attribute (code 0x%02X, flag 0x%02X' % (code,flag))
 		return self.factory(next)
 
 
