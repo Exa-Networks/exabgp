@@ -32,3 +32,6 @@ class Flag (int):
 		if v:
 			r.append("UNKNOWN %s" % hex(v))
 		return " ".join(r)
+
+	def matches (self,value):
+		return self | 0x10 == value | 0x10

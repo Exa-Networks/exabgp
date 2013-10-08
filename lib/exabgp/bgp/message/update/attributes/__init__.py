@@ -304,14 +304,14 @@ class Attributes (dict):
 		logger = Logger()
 		logger.parser(LazyFormat("parsing flag %x type %02x (%s) len %02x %s" % (flag,int(code),code,length,'payload ' if length else ''),od,data[:length]))
 
-		if code == AID.ORIGIN and flag == Origin.FLAG:
+		if code == AID.ORIGIN and flag.matches(Origin.FLAG):
 			# This if block should never be called anymore ...
 			if not self.add_from_cache(code,attribute):
 				self.add(Origin(ord(attribute)),attribute)
 			return self.factory(next)
 
 		# only 2-4% of duplicated data - is it worth to cache ?
-		if code == AID.AS_PATH and flag == ASPath.FLAG:
+		if code == AID.AS_PATH and flag.matches(ASPath.FLAG):
 			if length:
 				# we store the AS4_PATH as AS_PATH, do not over-write
 				if not self.has(code):
@@ -319,7 +319,7 @@ class Attributes (dict):
 						self.add(self.__new_ASPath(attribute),attribute)
 			return self.factory(next)
 
-		if code == AID.AS4_PATH and flag == AS4Path.FLAG:
+		if code == AID.AS4_PATH and flag.matches(AS4Path.FLAG):
 			if length:
 				# ignore the AS4_PATH on new spekers as required by RFC 4893 section 4.1
 				if not self.negotiated.asn4:
@@ -328,66 +328,66 @@ class Attributes (dict):
 						self.add(self.__new_ASPath4(attribute),attribute)
 			return self.factory(next)
 
-		if code == AID.NEXT_HOP and flag == NextHop.FLAG:
+		if code == AID.NEXT_HOP and flag.matches(NextHop.FLAG):
 			# XXX: FIXME: we are double caching the NH (once in the class, once here)
 			if not self.add_from_cache(code,attribute):
 				self.add(cachedNextHop(attribute),attribute)
 			return self.factory(next)
 
-		if code == AID.MED and flag == MED.FLAG:
+		if code == AID.MED and flag.matches(MED.FLAG):
 			if not self.add_from_cache(code,attribute):
 				self.add(MED(attribute),attribute)
 			return self.factory(next)
 
-		if code == AID.LOCAL_PREF and flag == LocalPreference.FLAG:
+		if code == AID.LOCAL_PREF and flag.matches(LocalPreference.FLAG):
 			if not self.add_from_cache(code,attribute):
 				self.add(LocalPreference(attribute),attribute)
 			return self.factory(next)
 
-		if code == AID.ATOMIC_AGGREGATE and flag == AtomicAggregate.FLAG:
+		if code == AID.ATOMIC_AGGREGATE and flag.matches(AtomicAggregate.FLAG):
 			if not self.add_from_cache(code,attribute):
 				raise Notify(3,2,'invalid ATOMIC_AGGREGATE %s' % [hex(ord(_)) for _ in attribute])
 			return self.factory(next)
 
-		if code == AID.AGGREGATOR and flag == Aggregator.FLAG:
+		if code == AID.AGGREGATOR and flag.matches(Aggregator.FLAG):
 			# AS4_AGGREGATOR are stored as AGGREGATOR - so do not overwrite if exists
 			if not self.has(code):
 				if not self.add_from_cache(AID.AGGREGATOR,attribute):
 					self.add(Aggregator(attribute),attribute)
 			return self.factory(next)
 
-		if code == AID.AS4_AGGREGATOR and Aggregator.FLAG:
+		if code == AID.AS4_AGGREGATOR and Aggregator.FLAG):
 			if not self.add_from_cache(AID.AGGREGATOR,attribute):
 				self.add(Aggregator(attribute),attribute)
 			return self.factory(next)
 
-		if code == AID.COMMUNITY and flag == Communities.FLAG:
+		if code == AID.COMMUNITY and flag.matches(Communities.FLAG):
 			if not self.add_from_cache(code,attribute):
 				self.add(self.__new_communities(attribute),attribute)
 			return self.factory(next)
 
-		if code == AID.ORIGINATOR_ID and flag == OriginatorID.FLAG:
+		if code == AID.ORIGINATOR_ID and flag.matches(OriginatorID.FLAG):
 			if not self.add_from_cache(code,attribute):
 				self.add(OriginatorID(AFI.ipv4,SAFI.unicast,data[:4]),attribute)
 			return self.factory(next)
 
-		if code == AID.CLUSTER_LIST and flag == ClusterList.FLAG:
+		if code == AID.CLUSTER_LIST and flag.matches(ClusterList.FLAG):
 			if not self.add_from_cache(code,attribute):
 				self.add(ClusterList(attribute),attribute)
 			return self.factory(next)
 
-		if code == AID.EXTENDED_COMMUNITY and flag == ECommunities.FLAG:
+		if code == AID.EXTENDED_COMMUNITY and flag.matches(ECommunities.FLAG):
 			if not self.add_from_cache(code,attribute):
 				self.add(self.__new_extended_communities(attribute),attribute)
 			return self.factory(next)
 
-		if code == AID.AIGP and flag == AIGP.FLAG:
+		if code == AID.AIGP and flag.matches(AIGP.FLAG):
 			if self.negotiated.neighbor.aigp:
 				if not self.add_from_cache(code,attribute):
 					self.add(AIGP(attribute),attribute)
 			return self.factory(next)
 
-		if code == AID.MP_UNREACH_NLRI and flag == MPURNLRI.FLAG:
+		if code == AID.MP_UNREACH_NLRI and flag.matches(MPURNLRI.FLAG):
 			self.hasmp = True
 
 
@@ -416,7 +416,7 @@ class Attributes (dict):
 
 			return self.factory(next)
 
-		if code == AID.MP_REACH_NLRI and flag == MPRNLRI.FLAG:
+		if code == AID.MP_REACH_NLRI and flag.matches(MPRNLRI.FLAG):
 			self.hasmp = True
 
 			data = data[:length]
