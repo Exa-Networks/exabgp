@@ -356,7 +356,7 @@ class Attributes (dict):
 					self.add(Aggregator(attribute),attribute)
 			return self.factory(next)
 
-		if code == AID.AS4_AGGREGATOR and flag.matches(Aggregator.FLAG)f:
+		if code == AID.AS4_AGGREGATOR and flag.matches(Aggregator.FLAG):
 			if not self.add_from_cache(AID.AGGREGATOR,attribute):
 				self.add(Aggregator(attribute),attribute)
 			return self.factory(next)
