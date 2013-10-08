@@ -117,6 +117,8 @@ class Attributes (dict):
 		AID.AIGP               : ('integer', '', 'aigp', '%s'),
 	}
 
+	known_attributes = lookup.keys()
+
 	# STRING = [_ for _ in representation if representation[_][0] == 'string']
 	# INTEGER = [_ for _ in representation if representation[_][0] == 'integer']
 	# LIST = [_ for _ in representation if representation[_][0] == 'list']
@@ -493,11 +495,16 @@ class Attributes (dict):
 			return self.factory(next)
 
 		if flag & Flag.TRANSITIVE:
+			if code in self.known_attributes:
+				# XXX: FIXME: we should really close the session
+				logger.parser('ignoring implemented invalid transitive attribute (code 0x%02X, flag 0x%02X)' % (code,flag))
+				return self.factory(next)
+
 			if not self.add_from_cache(code,attribute):
 				self.add(UnknownAttribute(code,flag,attribute),attribute)
 			return self.factory(next)
 
-		logger.parser('ignoring non-transitive attribute (code 0x%02X, flag 0x%02X' % (code,flag))
+		logger.parser('ignoring non-transitive attribute (code 0x%02X, flag 0x%02X)' % (code,flag))
 		return self.factory(next)
 
 

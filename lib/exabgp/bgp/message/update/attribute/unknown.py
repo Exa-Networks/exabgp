@@ -17,6 +17,7 @@ class UnknownAttribute (Attribute):
 		self.ID = code
 		self.FLAG = flag
 		self.data = data
+		self.index = ''
 
 	def pack (self,asn4=None):
 		return self._attribute(self.data)
