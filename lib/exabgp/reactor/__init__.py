@@ -33,7 +33,7 @@ class Reactor (object):
 		self.ip = environment.settings().tcp.bind
 		self.port = environment.settings().tcp.port
 
-		self.max_loop_time = environment.settings().tcp.delay
+		self.max_loop_time = environment.settings().reactor.speed
 		self.half_loop_time = self.max_loop_time / 2
 
 		self.logger = Logger()
