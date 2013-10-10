@@ -28,11 +28,13 @@ from exabgp.logger import Logger
 class Reactor (object):
 	# [hex(ord(c)) for c in os.popen('clear').read()]
 	clear = ''.join([chr(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a']])
-	reactor_speed = 1.0
 
 	def __init__ (self,configuration):
 		self.ip = environment.settings().tcp.bind
 		self.port = environment.settings().tcp.port
+
+		self.max_loop_time = environment.settings().tcp.delay
+		self.half_loop_time = self.max_loop_time / 2
 
 		self.logger = Logger()
 		self.daemon = Daemon(self)
@@ -139,7 +141,7 @@ class Reactor (object):
 						self._pending = list(self.run_pending(self._pending))
 
 						duration = time.time() - start
-						if duration >= 0.5:
+						if duration >= self.half_loop_time:
 							break
 
 					# Handle all connection
@@ -162,7 +164,7 @@ class Reactor (object):
 								peers.remove(key)
 
 						duration = time.time() - start
-						if duration >= self.reactor_speed:
+						if duration >= self.max_loop_time:
 							ios=[]
 							break
 
@@ -180,7 +182,7 @@ class Reactor (object):
 						self._pending = list(self.run_pending(self._pending))
 
 						duration = time.time() - start
-						if duration >= self.reactor_speed:
+						if duration >= self.max_loop_time:
 							break
 
 					if self.listener:
@@ -213,7 +215,7 @@ class Reactor (object):
 								connection.close()
 
 					if ios:
-						delay = max(start+self.reactor_speed-time.time(),0.0)
+						delay = max(start+self.max_loop_time-time.time(),0.0)
 						try:
 							read,_,_ = select.select(ios,[],[],delay)
 						except select.error,e:
@@ -221,7 +223,7 @@ class Reactor (object):
 							if not errno in error.block:
 								raise e
 
-					delay = max(start+self.reactor_speed-time.time(),0.0)
+					delay = max(start+self.max_loop_time-time.time(),0.0)
 					if delay:
 						time.sleep(delay)
 

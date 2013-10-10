@@ -73,6 +73,10 @@ class environment (object):
 		return int(_)
 
 	@staticmethod
+	def real (_):
+		return float(_)
+
+	@staticmethod
 	def lowunquote (_):
 		return _.strip().strip('\'"').lower()
 

@@ -269,6 +269,10 @@ The program configuration can be controlled using signals:
 		'api' : {
 			'encoder'  :  (environment.api,environment.lower,'text', '(experimental) encoder to use with with external API (text or json)'),
 		},
+		'reactor' : {
+			'speed' : (environment.real,environment.nop,'1.0', 'time of one reactor loop\n'
+			                                                   '%suse only if you understand the code.' % (' '* 34)),
+		},
 		# Here for internal use
 		'internal' : {
 			'name'    : (environment.nop,environment.nop,'ExaBGP', 'name'),
