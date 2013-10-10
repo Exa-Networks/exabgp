@@ -181,10 +181,10 @@ class Peer (object):
 		self._resend_routes = SEND.normal
 		self._reset_skip()
 
-	def send_new (self,changes=None):
+	def send_new (self,changes=None,update=None):
 		if changes:
 			self.neighbor.rib.outgoing.update(changes)
-		self._have_routes = True
+		self._have_routes = self.neighbor.flush if update is None else update
 
 	def restart (self,restart_neighbor=None):
 		# we want to tear down the session and re-establish it

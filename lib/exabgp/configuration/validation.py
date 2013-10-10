@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2013-03-18.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 '''
 
+# Missing AIGP, AUTO-FLUSH
+
 __all__ = ["validation", "ValidationError"]
 
 FORMAT = 3

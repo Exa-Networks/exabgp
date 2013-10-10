@@ -33,6 +33,7 @@ class Neighbor (object):
 		self.md5 = None
 		self.ttl = None
 		self.group_updates = None
+		self.flush = None
 
 		self.api = APIOptions()
 
@@ -120,6 +121,7 @@ class Neighbor (object):
 			self.add_path == other.add_path and \
 			self.operational == other.operational and \
 			self.group_updates == other.group_updates and \
+			self.flush == other.flush and \
 			self.families() == other.families()
 
 	def __ne__(self, other):
@@ -153,7 +155,7 @@ neighbor %s {
   local-as %s;
   peer-as %s;%s
   hold-time %s;
-%s%s%s
+%s%s%s%s
   capability {
 %s%s%s%s%s%s%s  }
   family {%s
@@ -170,6 +172,7 @@ neighbor %s {
 	'\n  passive;\n' if self.passive else '',
 	self.hold_time,
 	'  group-updates: %s;\n' % self.group_updates if self.group_updates else '',
+	'  auto-flush: %s;\n' % 'true' if self.flush else 'false',
 	'  md5: %d;\n' % self.ttl if self.ttl else '',
 	'  ttl-security: %d;\n' % self.ttl if self.ttl else '',
 	'    asn4 enable;\n' if self.asn4 else '    asn4 disable;\n',

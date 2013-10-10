@@ -649,6 +649,7 @@ class Configuration (object):
 			if command == 'graceful-restart': return self._set_gracefulrestart(scope,'graceful-restart',tokens[1:])
 			if command == 'multi-session': return self._set_multisession(scope,'multi-session',tokens[1:])
 			if command == 'add-path': return self._set_addpath(scope,'add-path',tokens[1:])
+			if command == 'auto-flush': return self._set_autoflush(scope,'auto-flush',tokens[1:])
 
 		elif name == 'family':
 			if command == 'inet': return self._set_family_inet4(scope,tokens[1:])
@@ -942,6 +943,21 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
+	def _set_autoflush (self,scope,command,value):
+		try:
+			command = value[0].lower()
+			if command == 'true':
+				scope[-1][command] = True
+			elif command == 'false':
+				scope[-1][command] = False
+			else:
+				raise ValueError()
+			return True
+		except (ValueError,IndexError):
+			self._error = 'invalid auto-flush option (valid are true or false'
+			if self.debug: raise
+			return False
+
 	def _set_asn4 (self,scope,command,value):
 		try:
 			if not value:
@@ -1014,7 +1030,7 @@ class Configuration (object):
 	def _multi_group (self,scope,address):
 		scope.append({})
 		while True:
-			r = self._dispatch(scope,'group',['static','flow','neighbor','process','family','capability','operational'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','route-refresh','asn4','aigp'])
+			r = self._dispatch(scope,'group',['static','flow','neighbor','process','family','capability','operational'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','route-refresh','asn4','aigp','auto-flush'])
 			if r is False:
 				return False
 			if r is None:
@@ -1087,6 +1103,7 @@ class Configuration (object):
 		neighbor.multisession = local_scope.get('multi-session',False)
 		neighbor.operational = local_scope.get('capa-operational',False)
 		neighbor.add_path = local_scope.get('add-path',0)
+		neighbor.flush = local_scope.get('auto-flush',True)
 		neighbor.asn4 = local_scope.get('asn4',True)
 		neighbor.aigp = local_scope.get('aigp',None)
 
@@ -1194,7 +1211,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-			r = self._dispatch(scope,'neighbor',['static','flow','process','family','capability','operational'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','asn4','aigp'])
+			r = self._dispatch(scope,'neighbor',['static','flow','process','family','capability','operational'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','asn4','aigp','auto-flush'])
 			if r is False: return False
 			if r is None: return True
 
