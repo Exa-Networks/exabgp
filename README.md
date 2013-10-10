@@ -1,5 +1,3 @@
-<img src="https://raw.github.com/wiki/thomas-mangin/exabgp/exabgp.jpg" alt="ExaBGP" width="150px;"/>
-
 ##Summary
 
 Unlike [BIRD](http://bird.network.cz/) or [Quagga](http://www.quagga.net/), [ExaBGP](http://github.com/thomas-mangin/exabgp) was not designed to transform a general purpose server into a router, but to allow engineers to control their [BGP](http://tools.ietf.org/html/rfc4271) network easily.
