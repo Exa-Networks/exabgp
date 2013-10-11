@@ -6,8 +6,6 @@ Created by Thomas Mangin on 2013-03-18.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 '''
 
-# Missing AIGP, AUTO-FLUSH
-
 __all__ = ["validation", "ValidationError"]
 
 FORMAT = 3
@@ -47,6 +45,7 @@ _attributes = OrderedDict((
 	('atomic-aggregate' , (TYPE.boolean , PRESENCE.optional, '', check.nop)),
 	('community' , (TYPE.array , PRESENCE.optional, '', check.community)),
 	('extended-community' , (TYPE.array , PRESENCE.optional, '', check.extendedcommunity)),
+	('aigp', (TYPE.integer, PRESENCE.optional, '', check.aigp)),
 	('label' , (TYPE.array , PRESENCE.optional, '', check.label)),
 	('cluster-list' , (TYPE.array , PRESENCE.optional, '', check.clusterlist)),
 	('originator-id' , (TYPE.string , PRESENCE.optional, '', check.originator)),
@@ -78,6 +77,10 @@ _definition = (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
 					('local' , (TYPE.integer, PRESENCE.mandatory, '', check.uint32)),
 					('peer' , (TYPE.integer, PRESENCE.mandatory, '', check.uint32)),
 				)))),
+				('feature' , (TYPE.object, PRESENCE.optional, '', OrderedDict((
+					('group-updates' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
+					('auto-flush' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
+				)))),
 				('capability' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
 					('family' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
 						('ipv4' , (TYPE.array, PRESENCE.optional, '', ['unicast','multicast','nlri-mpls','mpls-vpn','flow-vpn','flow'])),
@@ -89,6 +92,7 @@ _definition = (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
 					('graceful-restart' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
 					('multi-session' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
 					('add-path' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
+					('aigp' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
 				)))),
 			)))),
 			('announce' , (TYPE.array, PRESENCE.optional, ['update,prefix','update,flow'], check.string)),

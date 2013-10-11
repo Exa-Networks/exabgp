@@ -109,6 +109,9 @@ def localpreference (data):
 def med (data):
 	return uint32(data)
 
+def aigp (data):
+	return uint32(data)
+
 def originator (data):
 	return ipv4(data)
 
