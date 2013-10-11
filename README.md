@@ -38,11 +38,12 @@ These organisations are speaking of, or using, [ExaBGP](http://github.com/Exa-Ne
 [VIDEOPLAZA](http://www.videoplaza.com),
 [ALCATEL LUCENT](http://www.nanog.org/sites/default/files/wed.general.trafficdiversion.serodio.10.pdf),
 [CLOUDFLARE](http://www.slideshare.net/TomPaseka/flowspec-apf-2013),
+[INTERNAP](http://www.internap.com/),
 researchers
 [[1]](http://typo3.change-project.eu/fileadmin/publications/Deliverables/CHANGE_Deliverable_D4-3_Revised.pdf)
 [[2]](http://www.cs.cornell.edu/projects/quicksilver/public_pdfs/tcpr.pdf)
 [[3]](http://docs.di.fc.ul.pt/jspui/bitstream/10455/6703/1/Disserta%C3%A7%C3%A3o%20de%20mestrado%20do%20S%C3%A9rgio%20Miguel%20Geraldes%20de%20oliveira%20Serrano_Nov-2010.pdf),
-and perhaps you too soon ...
+and please let us know if you use it too and can list you here ...
 
 ##BUG
 
