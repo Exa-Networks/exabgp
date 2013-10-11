@@ -1,9 +1,9 @@
 ##Summary
 
-Unlike [BIRD](http://bird.network.cz/) or [Quagga](http://www.quagga.net/), [ExaBGP](http://github.com/thomas-mangin/exabgp) was not designed to transform a general purpose server into a router, but to allow engineers to control their [BGP](http://tools.ietf.org/html/rfc4271) network easily.
+Unlike [BIRD](http://bird.network.cz/) or [Quagga](http://www.quagga.net/), [ExaBGP](http://github.com/Exa-Networks/exabgp) was not designed to transform a general purpose server into a router, but to allow engineers to control their [BGP](http://tools.ietf.org/html/rfc4271) network easily.
 Think of it as [Software Defined Networking](http://www.wired.com/wiredenterprise/2012/04/going-with-the-flow-google/) for people with "commodity" routers.
 
-[ExaBGP](http://github.com/thomas-mangin/exabgp) transform [BGP](http://www.ietf.org/rfc/rfc4271.txt) messages into friendly plain text or JSON which can be easily manipulate by scripts.
+[ExaBGP](http://github.com/Exa-Networks/exabgp) transform [BGP](http://www.ietf.org/rfc/rfc4271.txt) messages into friendly plain text or JSON which can be easily manipulate by scripts.
 
 It allows the creation of tools such as :
  * this [advanced looking glass](https://code.google.com/p/gixlg/wiki/sample_maps) graphically display the routing of prefix
@@ -17,10 +17,10 @@ So have a look and take control your network from any commodity servers.
 
 This program is packaged for **Debian**, **Ubuntu**, **ArchLinux**, **Mint**, **FreeBSD**, **OSX**, **OmniOS**. Unless you need the latest version, please consider using your distribution's.
 
-If you are using [ExaBGP](http://github.com/thomas-mangin/exabgp) from source (or git), it **does not need to be installed** on your server ( using "python setup.py install" ). Simply run [ExaBGP](http://github.com/thomas-mangin/exabgp) from the extracted archive, or your local git repository. It allows to run several versions at the same time without conflict.
+If you are using [ExaBGP](http://github.com/Exa-Networks/exabgp) from source (or git), it **does not need to be installed** on your server ( using "python setup.py install" ). Simply run [ExaBGP](http://github.com/Exa-Networks/exabgp) from the extracted archive, or your local git repository. It allows to run several versions at the same time without conflict.
 
 ```sh
-> wget https://github.com/thomas-mangin/exabgp/archive/3.2.16.tar.gz
+> wget https://github.com/Exa-Networks/exabgp/archive/3.2.16.tar.gz
 > tar zxvf 3.2.16.tar.gz
 > cd exabgp-3.2.16
 > ./sbin/exabgp --help
@@ -28,7 +28,7 @@ If you are using [ExaBGP](http://github.com/thomas-mangin/exabgp) from source (o
 
 ##Who is using it ?
 
-These organisations are speaking of, or using, [ExaBGP](http://github.com/thomas-mangin/exabgp):
+These organisations are speaking of, or using, [ExaBGP](http://github.com/Exa-Networks/exabgp):
 [FACEBOOK](http://velocityconf.com/velocity2013/public/schedule/detail/28410),
 [MICROSOFT](http://www.nanog.org/sites/default/files/wed.general.brainslug.lapukhov.20.pdf),
 [DAILYMOTION](https://twitter.com/fgabut),
@@ -46,7 +46,7 @@ and perhaps you too soon ...
 
 ##BUG
 
-No software is perfect, so should you encounter a bug please [report it](https://github.com/thomas-mangin/exabgp/issues?labels=bug&page=1&state=open) so we can resolve it.
+No software is perfect, so should you encounter a bug please [report it](https://github.com/Exa-Networks/exabgp/issues?labels=bug&page=1&state=open) so we can resolve it.
 
 ##Curious
 
@@ -57,10 +57,10 @@ You can as well keep an eye on what we are doing on [twitter](https://twitter.co
 
 Please consult any of :
 
- * the [changelog](https://raw.github.com/thomas-mangin/exabgp/master/CHANGELOG)
- * or [RFC compliance](https://github.com/thomas-mangin/exabgp/wiki/RFC-Information) pages
- * the [wiki](https://github.com/thomas-mangin/exabgp/wiki) with some some talks and presentations, ...
- * and [the FAQ](https://github.com/thomas-mangin/exabgp/wiki/FAQ)
+ * the [changelog](https://raw.github.com/Exa-Networks/exabgp/master/CHANGELOG)
+ * or [RFC compliance](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information) pages
+ * the [wiki](https://github.com/Exa-Networks/exabgp/wiki) with some some talks and presentations, ...
+ * and [the FAQ](https://github.com/Exa-Networks/exabgp/wiki/FAQ)
 
 This programs **does not have any dependences on any third party libraries** and will run out of the box on any Unix system with a recent version of python installed.
 
@@ -91,9 +91,9 @@ Python 2.6.7
    * [draft-ietf-idr-bgp-enhanced-route-refresh-04](http://tools.ietf.org/html/draft-ietf-idr-bgp-enhanced-route-refresh-04)
    * [draft-scudder-bmp-01](http://tools.ietf.org/html/draft-scudder-bmp-01)
    * [draft-ietf-idr-aigp-10.txt](http://tools.ietf.org/html/draft-ietf-idr-aigp-10)
- * BSD licence, integrate [ExaBGP](http://github.com/thomas-mangin/exabgp) in your own application stack - no strings attached !
+ * BSD licence, integrate [ExaBGP](http://github.com/Exa-Networks/exabgp) in your own application stack - no strings attached !
 
-[ExaBGP](http://github.com/thomas-mangin/exabgp) does **not** perform any **FIB manipulation**, you will need to write your own LocalRIB and FIB code if this what you need the feature, or simpler, use another open source BGP daemon.
+[ExaBGP](http://github.com/Exa-Networks/exabgp) does **not** perform any **FIB manipulation**, you will need to write your own LocalRIB and FIB code if this what you need the feature, or simpler, use another open source BGP daemon.
 
 ### new on 3.2 stable ...
 
@@ -113,7 +113,7 @@ Python 2.6.7
  * many small fixes, see the full CHANGELOG
  * and more ....
 
-The list of supported RFC is available [here](https://github.com/thomas-mangin/exabgp/wiki/RFC-Information)
+The list of supported RFC is available [here](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information)
 
 The configuration file format changed slightly from 3.1.x to 3.2.x, effort were made to make sure the previous configuration format would still work, however users are encouraged to check their configuration files.
 
