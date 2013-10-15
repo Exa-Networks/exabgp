@@ -954,7 +954,7 @@ class Configuration (object):
 				raise ValueError()
 			return True
 		except (ValueError,IndexError):
-			self._error = 'invalid auto-flush option (valid are true or false'
+			self._error = 'invalid auto-flush command (valid options are true or false)'
 			if self.debug: raise
 			return False
 

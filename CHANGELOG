@@ -5,6 +5,7 @@ Version explained:
 
 Version 3.2.17
  * Feature: make the reactor loop time an option (it allows for a faster flush of routes)
+ * Fix: Keep API routes between SIGUSR
 
 Version 3.2.16
  * Fix: fix an issue with RIB cache handling
