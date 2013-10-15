@@ -226,7 +226,8 @@ class Attributes (dict):
 		if not self._json:
 			def generate (self):
 				for code in sorted(self.keys() + [AID.ATOMIC_AGGREGATE,]):
-					if code in (AID.INTERNAL_SPLIT, AID.INTERNAL_WATCHDOG, AID.INTERNAL_WITHDRAW):
+					# remove the next-hop from the attribute as it is define with the NLRI
+					if code in (AID.NEXT_HOP, AID.INTERNAL_SPLIT, AID.INTERNAL_WATCHDOG, AID.INTERNAL_WITHDRAW):
 						continue
 					if code in self.representation:
 						how, default, name, presentation = self.representation[code]
