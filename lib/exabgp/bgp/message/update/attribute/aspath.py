@@ -70,8 +70,11 @@ class ASPath (Attribute):
 		if not self._str:
 			lseq = len(self.as_seq)
 			lset = len(self.as_set)
-			if lseq == 1 and not lset:
-				string = '%d' % self.as_seq[0]
+			if lseq == 1:
+				if not lset:
+					string = '%d' % self.as_seq[0]
+				else:
+					string = '[ %s %s]' % (self.as_seq[0],'( %s ) ' % (' '.join([str(_) for _ in self.as_set])))
 			elif lseq > 1 :
 				if lset:
 					string = '[ %s %s]' % ((' '.join([str(_) for _ in self.as_seq])),'( %s ) ' % (' '.join([str(_) for _ in self.as_set])))
