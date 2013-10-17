@@ -289,7 +289,7 @@ class Reactor (object):
 		self.logger.reactor("Performing reload of exabgp %s" % version)
 
 		reloaded = self.configuration.reload()
-		reloaded = self.configuration.reload()
+
 		if not reloaded:
 			self.logger.configuration("Problem with the configuration file, no change done",'error')
 			self.logger.configuration(self.configuration.error,'error')
