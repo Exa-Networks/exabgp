@@ -643,13 +643,14 @@ class Configuration (object):
 			if command == 'md5': return self._set_md5(scope,'md5',tokens[1:])
 			if command == 'ttl-security': return self._set_ttl(scope,'ttl-security',tokens[1:])
 			if command == 'group-updates': return self._set_group_updates(scope,'group-updates',tokens[1:])
-			if command == 'aigp': return self._set_aigp(scope,'aigp',tokens[1:])
+			if command == 'aigp': return self._set_boolean(scope,'aigp',tokens[1:],None)
 			# deprecated
-			if command == 'route-refresh': return self._set_routerefresh(scope,'route-refresh',tokens[1:])
+			if command == 'route-refresh': return self._set_boolean(scope,'route-refresh',tokens[1:])
 			if command == 'graceful-restart': return self._set_gracefulrestart(scope,'graceful-restart',tokens[1:])
-			if command == 'multi-session': return self._set_multisession(scope,'multi-session',tokens[1:])
+			if command == 'multi-session': return self._set_boolean(scope,'multi-session',tokens[1:])
 			if command == 'add-path': return self._set_addpath(scope,'add-path',tokens[1:])
-			if command == 'auto-flush': return self._set_autoflush(scope,'auto-flush',tokens[1:])
+			if command == 'auto-flush': return self._set_boolean(scope,'auto-flush',tokens[1:])
+			if command == 'adj-rib-out': return self._set_boolean(scope,'adj-rib-out',tokens[1:])
 
 		elif name == 'family':
 			if command == 'inet': return self._set_family_inet4(scope,tokens[1:])
@@ -661,13 +662,13 @@ class Configuration (object):
 			if command == 'all': return self._set_family_all(scope,tokens[1:])
 
 		elif name == 'capability':
-			if command == 'route-refresh': return self._set_routerefresh(scope,'route-refresh',tokens[1:])
+			if command == 'route-refresh': return self._set_boolean(scope,'route-refresh',tokens[1:])
 			if command == 'graceful-restart': return self._set_gracefulrestart(scope,'graceful-restart',tokens[1:])
-			if command == 'multi-session': return self._set_multisession(scope,'multi-session',tokens[1:])
-			if command == 'operational': return self._set_operational(scope,'capa-operational',tokens[1:])
+			if command == 'multi-session': return self._set_boolean(scope,'multi-session',tokens[1:])
+			if command == 'operational': return self._set_boolean(scope,'capa-operational',tokens[1:])
 			if command == 'add-path': return self._set_addpath(scope,'add-path',tokens[1:])
 			if command == 'asn4': return self._set_asn4(scope,'asn4',tokens[1:])
-			if command == 'aigp': return self._set_aigp(scope,'aigp',tokens[1:])
+			if command == 'aigp': return self._set_boolean(scope,'aigp',tokens[1:],None)
 
 		elif name == 'process':
 			if command == 'run': return self._set_process_run(scope,'process-run',tokens[1:])
@@ -895,10 +896,6 @@ class Configuration (object):
 			if r is None: break
 		return True
 
-	def _set_routerefresh (self,scope,command,value):
-		scope[-1][command] = True
-		return True
-
 	def _set_gracefulrestart (self,scope,command,value):
 		if not len(value):
 			scope[-1][command] = None
@@ -918,14 +915,6 @@ class Configuration (object):
 			return False
 		return True
 
-	def _set_multisession (self,scope,command,value):
-		scope[-1][command] = True
-		return True
-
-	def _set_operational (self,scope,command,value):
-		scope[-1][command] = True
-		return True
-
 	def _set_addpath (self,scope,command,value):
 		try:
 			ap = value[0].lower()
@@ -943,18 +932,18 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-	def _set_autoflush (self,scope,command,value):
+	def _set_boolean (self,scope,command,value,default='true'):
 		try:
-			command = value[0].lower()
-			if command == 'true':
+			boolean = value[0].lower() if value else default
+			if boolean in ('true','enable','enabled'):
 				scope[-1][command] = True
-			elif command == 'false':
+			elif boolean in ('false','disable','disabled'):
 				scope[-1][command] = False
 			else:
 				raise ValueError()
 			return True
 		except (ValueError,IndexError):
-			self._error = 'invalid auto-flush command (valid options are true or false)'
+			self._error = 'invalid %s command (valid options are true or false)' % command
 			if self.debug: raise
 			return False
 
@@ -974,25 +963,6 @@ class Configuration (object):
 			return False
 		except ValueError:
 			self._error = '"%s" is an invalid asn4 parameter options are enable (default) and disable)' % ' '.join(value)
-			if self.debug: raise
-			return False
-
-	def _set_aigp (self,scope,command,value):
-		try:
-			if not value:
-				scope[-1][command] = None
-				return True
-			aigp = value[0].lower()
-			if aigp in ('disable','disabled'):
-				scope[-1][command] = False
-				return True
-			if aigp in ('enable','enabled'):
-				scope[-1][command] = True
-				return True
-			self._error = '"%s" is an invalid aigp parameter options are enable (default) and disable)' % ' '.join(value)
-			return False
-		except ValueError:
-			self._error = '"%s" is an invalid aigp parameter options are enable (default) and disable)' % ' '.join(value)
 			if self.debug: raise
 			return False
 
@@ -1030,7 +1000,7 @@ class Configuration (object):
 	def _multi_group (self,scope,address):
 		scope.append({})
 		while True:
-			r = self._dispatch(scope,'group',['static','flow','neighbor','process','family','capability','operational'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','route-refresh','asn4','aigp','auto-flush'])
+			r = self._dispatch(scope,'group',['static','flow','neighbor','process','family','capability','operational'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','route-refresh','asn4','aigp','auto-flush','adj-rib-out'])
 			if r is False:
 				return False
 			if r is None:
@@ -1104,8 +1074,14 @@ class Configuration (object):
 		neighbor.operational = local_scope.get('capa-operational',False)
 		neighbor.add_path = local_scope.get('add-path',0)
 		neighbor.flush = local_scope.get('auto-flush',True)
+		neighbor.adjribout = local_scope.get('adj-rib-out',True)
 		neighbor.asn4 = local_scope.get('asn4',True)
 		neighbor.aigp = local_scope.get('aigp',None)
+
+		if neighbor.route_refresh and not neighbor.adjribout:
+			self._error = 'incomplete option route-refresh and no adj-rib-out'
+			if self.debug: raise
+			return False
 
 		missing = neighbor.missing()
 		if missing:
@@ -1211,7 +1187,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-			r = self._dispatch(scope,'neighbor',['static','flow','process','family','capability','operational'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','asn4','aigp','auto-flush'])
+			r = self._dispatch(scope,'neighbor',['static','flow','process','family','capability','operational'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','asn4','aigp','auto-flush','adj-rib-out'])
 			if r is False: return False
 			if r is None: return True
 

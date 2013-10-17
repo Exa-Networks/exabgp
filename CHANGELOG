@@ -6,10 +6,12 @@ Version explained:
 Version 3.2.17
  * Feature: make route auto-flush an option with an API call to flush routes on demand
  * Feature: make the reactor loop time an option (it allows for a faster flush of routes)
+ * Feature: allow to disable the Adj-RIB-Out (can save lots of memory if you know what you are going to send)
  * Fix: Keep API routes between SIGUSR
  * Fix: Missing empty added nlri when the update only has withdrawn
     reported by Robert Barnes (and his co-workers) with a patch, thank you !
  * Change: remove next-hop from attributes in JSON as it is given in the announce section
+ * Change: cleanup in configuration parsing
 
 Version 3.2.16
  * Fix: fix an issue with RIB cache handling
