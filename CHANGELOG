@@ -13,6 +13,7 @@ Version 3.2.17
     reported by Robert Barnes (and his co-workers) with a patch, thank you !
  * Fix: Single AS Path with AS Set were reported as empty AS Path and AS Set
     reported by: David Hauweele
+ * Fix: possibly not sending withdrawal when it was required
  * Change: remove next-hop from attributes in JSON as it is given in the announce section
  * Change: cleanup in configuration parsing
 

@@ -122,7 +122,7 @@ class Store (object):
 	def insert_announced (self,change,force=False):
 		# WARNING : this function can run while we are in the updates() loop
 
-		# self._announced[fanily][nlri-index] = change
+		# self._announced[family][nlri-index] = change
 
 		# XXX: FIXME: if we fear a conflict of nlri-index between family (very very unlikely)
 		# XXX: FIXME: then we should preprend the index() with the AFI and SAFI
@@ -158,7 +158,9 @@ class Store (object):
 				del dict_sorted[old_attr_index]
 			# route removed before announcement, all goo
 			if old_change.nlri.action == OUT.announce and change.nlri.action == OUT.withdraw:
-				return
+				# if we cache sent NLRI and this NLRI was never sent before, we do not need to send a withdrawal
+				if self.cache and change_nlri_index not in self._announced[change.nlri.family()]:
+					return
 
 		# add the route to the list to be announced
 		dict_sorted.setdefault(change_attr_index,{})[change_nlri_index] = change
