@@ -15,6 +15,8 @@ Version 3.2.17
     reported by: David Hauweele
  * Fix: possibly not sending withdrawal when it was required
     reported by: David Hauweele
+ * Fix: typo in code causing crash when process went away
+    reported by: Robert Barnes
  * Change: remove next-hop from attributes in JSON as it is given in the announce section
  * Change: cleanup in configuration parsing
 

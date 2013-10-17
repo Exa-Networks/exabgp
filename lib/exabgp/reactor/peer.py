@@ -578,7 +578,7 @@ class Peer (object):
 	def run (self):
 		if self.reactor.processes.broken(self.neighbor.peer_address):
 			# XXX: we should perhaps try to restart the process ??
-			self.logger.process('ExaBGP lost the helper process for this peer - stopping','error')
+			self.logger.processes('ExaBGP lost the helper process for this peer - stopping','error')
 			self.stop()
 			return True
 
