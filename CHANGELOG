@@ -4,6 +4,7 @@ Version explained:
  bug   : increase on bug or incremental changes
 
 Version 3.2.17
+ * Feature: make route auto-flush an option with an API call to flush routes on demand
  * Feature: make the reactor loop time an option (it allows for a faster flush of routes)
  * Fix: Keep API routes between SIGUSR
  * Fix: Missing empty added nlri when the update only has withdrawn
