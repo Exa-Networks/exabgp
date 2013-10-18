@@ -312,6 +312,7 @@ class Reactor (object):
 				self._peers[key].restart(neighbor)
 			# same peer but perhaps not the routes
 			else:
+				import pdb; pdb.set_trace()
 				self._peers[key].send_new(neighbor.rib.outgoing.queued_changes())
 		self.logger.configuration("Loaded new configuration successfully",'warning')
 		# This only starts once ...
