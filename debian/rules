@@ -4,6 +4,6 @@
 	dh $@ --with python2
 
 override_dh_auto_install:
-	dh_auto_install
+	dh_auto_install -- --install-scripts=/usr/sbin
 	rm -rf $(CURDIR)/debian/exabgp/usr/etc
 	mv $(CURDIR)/debian/exabgp/usr/lib/systemd $(CURDIR)/debian/exabgp/lib
