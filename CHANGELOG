@@ -19,6 +19,8 @@ Version 3.2.17
     reported by: Robert Barnes
  * Fix: RouterID MUST be an IPv4
     reported by: Kristopher Beevers
+ * Fix: JSON output on EBGP and IBGP session is not the same
+    reported by: Robert Barnes
  * Change: remove next-hop from attributes in JSON as it is given in the announce section
  * Change: cleanup in configuration parsing
 
