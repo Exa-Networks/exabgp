@@ -134,7 +134,7 @@ class NLRI (Prefix):
 		return False
 
 	def nlri (self):
-		return "%s%s" % (self.prefix(),str(self.path_info))
+		return "%s%s%s%s" % (self.prefix(),str(self.labels),str(self.path_info),str(self.rd))
 
 	def __len__ (self):
 		prefix_len = len(self.path_info) + len(self.labels) + len(self.rd)
