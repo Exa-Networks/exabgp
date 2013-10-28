@@ -141,8 +141,8 @@ class NLRI (Prefix):
 		return 1 + prefix_len + mask_to_bytes[self.mask]
 
 	def __str__ (self):
-		nexthop = " next-hop %s" % self.nexthop.inet() if self.nexthop else ''
-		return "%s%s%s%s%s" % (self.prefix(),nexthop,str(self.labels),str(self.path_info),str(self.rd))
+		nexthop = ' next-hop %s' % self.nexthop.inet() if self.nexthop else ''
+		return "%s%s" % (self.nlri(),nexthop)
 
 	def __eq__ (self,other):
 		return str(self) == str(other)
