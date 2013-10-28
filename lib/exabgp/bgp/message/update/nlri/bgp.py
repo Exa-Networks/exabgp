@@ -142,7 +142,7 @@ class NLRI (Prefix):
 
 	def __str__ (self):
 		nexthop = " next-hop %s" % self.nexthop.inet() if self.nexthop else ''
-		return "%s%s%s%s%s" % (self.nlri(),nexthop,str(self.labels),str(self.path_info),str(self.rd))
+		return "%s%s%s%s%s" % (self.prefix(),nexthop,str(self.labels),str(self.path_info),str(self.rd))
 
 	def __eq__ (self,other):
 		return str(self) == str(other)
