@@ -4,7 +4,29 @@ Version explained:
  bug   : increase on bug or incremental changes
 
 Version 3.2.17
+ * Feature: make route auto-flush an option with an API call to flush routes on demand
  * Feature: make the reactor loop time an option (it allows for a faster flush of routes)
+ * Feature: allow to disable the Adj-RIB-Out (can save lots of memory if you know what you are going to send)
+    requested by: David Hauweele
+ * Fix: Keep API routes between SIGUSR
+ * Fix: Missing empty added nlri when the update only has withdrawn
+    reported by Robert Barnes (and his co-workers) with a patch, thank you !
+ * Fix: Single AS Path with AS Set were reported as empty AS Path and AS Set
+    reported by: David Hauweele
+ * Fix: possibly not sending withdrawal when it was required
+    reported by: David Hauweele
+ * Fix: typo in code causing crash when process went away
+    reported by: Robert Barnes
+ * Fix: RouterID MUST be an IPv4
+    reported by: Kristopher Beevers
+ * Fix: JSON output on EBGP and IBGP session is not the same
+    reported by: Robert Barnes
+ * Fix: route representation with labels and route distinguisher
+ * Fix: do not double remove the BGP header size
+    reported by: Hideaki HAYASHI
+ * Change: remove next-hop from attributes in JSON as it is given in the announce section
+ * Change: cleanup in configuration parsing
+ * Change: the path-information, labels and route distinguisher are now printed before the next-hop
 
 Version 3.2.16
  * Fix: fix an issue with RIB cache handling

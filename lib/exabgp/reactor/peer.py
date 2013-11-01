@@ -460,7 +460,7 @@ class Peer (object):
 				if self._resend_routes != SEND.done:
 					enhanced_refresh = True if self._resend_routes == SEND.refresh and proto.negotiated.refresh == REFRESH.enhanced else False
 					self._resend_routes = SEND.done
-					self.neighbor.rib.resend(send_families,enhanced_refresh)
+					self.neighbor.rib.outgoing.resend(send_families,enhanced_refresh)
 					self._have_routes = True
 					send_families = []
 
@@ -578,7 +578,7 @@ class Peer (object):
 	def run (self):
 		if self.reactor.processes.broken(self.neighbor.peer_address):
 			# XXX: we should perhaps try to restart the process ??
-			self.logger.process('ExaBGP lost the helper process for this peer - stopping','error')
+			self.logger.processes('ExaBGP lost the helper process for this peer - stopping','error')
 			self.stop()
 			return True
 

@@ -133,16 +133,16 @@ class NLRI (Prefix):
 			return True
 		return False
 
-	def prefix (self):
-		return "%s%s" % (Prefix.prefix(self),str(self.path_info))
+	def nlri (self):
+		return "%s%s%s%s" % (self.prefix(),str(self.labels),str(self.path_info),str(self.rd))
 
 	def __len__ (self):
 		prefix_len = len(self.path_info) + len(self.labels) + len(self.rd)
 		return 1 + prefix_len + mask_to_bytes[self.mask]
 
 	def __str__ (self):
-		nexthop = " next-hop %s" % self.nexthop.inet() if self.nexthop else ''
-		return "%s%s%s%s%s" % (self.prefix(),nexthop,str(self.labels),str(self.path_info),str(self.rd))
+		nexthop = ' next-hop %s' % self.nexthop.inet() if self.nexthop else ''
+		return "%s%s" % (self.nlri(),nexthop)
 
 	def __eq__ (self,other):
 		return str(self) == str(other)

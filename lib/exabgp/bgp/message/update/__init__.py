@@ -96,7 +96,7 @@ class Update (Message):
 			if len(packed_del + packed) >= msg_size:
 				if not packed_del:
 					raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
-				yield self._message(prefix(packed_del))
+				yield self._message(prefix(packed_del) + prefix(''))
 				packed_del = packed
 			else:
 				packed_del += packed

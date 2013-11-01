@@ -34,6 +34,7 @@ class Neighbor (object):
 		self.ttl = None
 		self.group_updates = None
 		self.flush = None
+		self.adjribout = None
 
 		self.api = APIOptions()
 
@@ -56,7 +57,7 @@ class Neighbor (object):
 		self.refresh = deque()
 
 	def make_rib (self):
-		self.rib = RIB(self.name(),self._families)
+		self.rib = RIB(self.name(),self.adjribout,self._families)
 
 	# will resend all the routes once we reconnect
 	def reset_rib (self):
@@ -122,6 +123,7 @@ class Neighbor (object):
 			self.operational == other.operational and \
 			self.group_updates == other.group_updates and \
 			self.flush == other.flush and \
+			self.adjribout == other.adjribout and \
 			self.families() == other.families()
 
 	def __ne__(self, other):
@@ -155,7 +157,7 @@ neighbor %s {
   local-as %s;
   peer-as %s;%s
   hold-time %s;
-%s%s%s%s
+%s%s%s%s%s
   capability {
 %s%s%s%s%s%s%s  }
   family {%s
@@ -173,6 +175,7 @@ neighbor %s {
 	self.hold_time,
 	'  group-updates: %s;\n' % self.group_updates if self.group_updates else '',
 	'  auto-flush: %s;\n' % 'true' if self.flush else 'false',
+	'  adj-rib-out: %s;\n' % 'true' if self.adjribout else 'false',
 	'  md5: %d;\n' % self.ttl if self.ttl else '',
 	'  ttl-security: %d;\n' % self.ttl if self.ttl else '',
 	'    asn4 enable;\n' if self.asn4 else '    asn4 disable;\n',

@@ -53,9 +53,9 @@ class Text (object):
 		attributes = str(update.attributes)
 		for nlri in update.nlris:
 			if nlri.action == IN.announced:
-				r += 'neighbor %s announced route %s%s\n' % (neighbor,str(nlri),attributes)
+				r += 'neighbor %s announced route %s%s\n' % (neighbor,nlri.nlri(),attributes)
 			else:
-				r += 'neighbor %s withdrawn route %s\n' % (neighbor,nlri.prefix())
+				r += 'neighbor %s withdrawn route %s\n' % (neighbor,nlri.nlri())
 		r += 'neighbor %s update end\n' % neighbor
 		return r
 

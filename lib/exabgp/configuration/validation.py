@@ -78,8 +78,13 @@ _definition = (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
 					('peer' , (TYPE.integer, PRESENCE.mandatory, '', check.uint32)),
 				)))),
 				('feature' , (TYPE.object, PRESENCE.optional, '', OrderedDict((
-					('group-updates' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
-					('auto-flush' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
+					('updates' , (TYPE.object, PRESENCE.optional, '', OrderedDict((
+						('group' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
+						('flush' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
+					)))),
+					('rib' , (TYPE.object, PRESENCE.optional, '', OrderedDict((
+						('adj-rib-out' , (TYPE.boolean, PRESENCE.optional, '', check.nop)),
+					)))),
 				)))),
 				('capability' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
 					('family' , (TYPE.object, PRESENCE.mandatory, '', OrderedDict((
