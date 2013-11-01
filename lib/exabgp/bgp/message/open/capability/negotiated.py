@@ -25,7 +25,7 @@ class Negotiated (object):
 		self.asn4 = False
 		self.addpath = RequirePath()
 		self.multisession = False
-		self.msg_size = 4096-19
+		self.msg_size = 4096
 		self.operational = False
 		self.refresh = REFRESH.absent
 		self.aigp = None

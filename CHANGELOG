@@ -22,6 +22,8 @@ Version 3.2.17
  * Fix: JSON output on EBGP and IBGP session is not the same
     reported by: Robert Barnes
  * Fix: route representation with labels and route distinguisher
+ * Fix: do not double remove the BGP header size
+    reported by: Hideaki HAYASHI
  * Change: remove next-hop from attributes in JSON as it is given in the announce section
  * Change: cleanup in configuration parsing
  * Change: the path-information, labels and route distinguisher are now printed before the next-hop
