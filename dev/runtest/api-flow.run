@@ -6,22 +6,6 @@ import time
 announce_flow_1 = '''\
 announce flow route {
 	match {
-		source 10.0.0.1/32;
-		destination 192.168.0.1/32;
-		port =80 =8080;
-		destination-port >8080&<8088 =3128;
-		source-port >1024;
-		protocol [ udp tcp ];
-	}
-	then {
-		rate-limit 9600;
-	}
-}'''.replace('\n','\\n')
-
-
-announce_flow_2 = '''\
-announce flow route {
-	match {
 		source 10.0.0.2/32;
 		destination 10.0.0.3/32;
 		destination-port =3128;
@@ -33,7 +17,7 @@ announce flow route {
 }'''.replace('\n','\\n')
 
 
-withdraw_flow_2 = '''\
+withdraw_flow_1 = '''\
 withdraw flow route {
 	match {
 		source 10.0.0.2/32;
@@ -47,15 +31,31 @@ withdraw flow route {
 }'''.replace('\n','\\n')
 
 
+announce_flow_2 = '''\
+announce flow route {
+	match {
+		source 10.0.0.1/32;
+		destination 192.168.0.1/32;
+		port =80 =8080;
+		destination-port >8080&<8088 =3128;
+		source-port >1024;
+		protocol [ udp tcp ];
+	}
+	then {
+		rate-limit 9600;
+	}
+}'''.replace('\n','\\n')
+
+
 messages = [
 'sleep',
+announce_flow_1,
+withdraw_flow_1,
 announce_flow_2,
-withdraw_flow_2,
+'sleep',
 announce_flow_1,
 'sleep',
-announce_flow_2,
-'sleep',
-withdraw_flow_2,
+withdraw_flow_1,
 ]
 
 while messages:
