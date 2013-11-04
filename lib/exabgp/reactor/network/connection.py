@@ -166,9 +166,8 @@ class Connection (object):
 			# XXX: FIXME: Make sure it does not hold the cleanup during the closing of the peering session
 			yield True
 			return
-		if not self.writing():
+		while not self.writing():
 			yield False
-			return
 		self.logger.wire(LazyFormat("%s %-32s SENDING " % (self.name(),'%s / %s' % (self.local,self.peer)),od,data))
 		# The first while is here to setup the try/catch block once as it is very expensive
 		while True:

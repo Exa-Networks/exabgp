@@ -26,6 +26,8 @@ Version 3.2.17
     reported by: Hideaki HAYASHI
  * Fix: parsing flow NLRI, withdrawal were reported as announcement
  * Fix: printing extended communities
+ * Fix: retry when network is blocking (issue 60)
+    reported by: Hideaki HAYASHI
  * Change: remove next-hop from attributes in JSON as it is given in the announce section
  * Change: cleanup in configuration parsing
  * Change: the path-information, labels and route distinguisher are now printed before the next-hop
