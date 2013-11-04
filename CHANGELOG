@@ -25,6 +25,7 @@ Version 3.2.17
  * Fix: do not double remove the BGP header size
     reported by: Hideaki HAYASHI
  * Fix: parsing flow NLRI, withdrawal were reported as announcement
+ * Fix: printing extended communities
  * Change: remove next-hop from attributes in JSON as it is given in the announce section
  * Change: cleanup in configuration parsing
  * Change: the path-information, labels and route distinguisher are now printed before the next-hop

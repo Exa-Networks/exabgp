@@ -173,21 +173,21 @@ class ECommunity (object):
 			if community_type in (0x00,0x02):
 				asn = unpack('!H',self.community[2:4])[0]
 				ip = ip = '%s.%s.%s.%s' % unpack('!BBBB',self.community[4:])
-				return "extended-community target:%d:%s" % (asn,ip)
+				return "target:%d:%s" % (asn,ip)
 			if community_type == 0x01:
 				ip = '%s.%s.%s.%s' % unpack('!BBBB',self.community[2:6])
 				asn = unpack('!H',self.community[6:])[0]
-				return "extended-community target:%s:%d" % (ip,asn)
+				return "target:%s:%d" % (ip,asn)
 		# Origin
 		if community_stype == 0x03:
 			if community_type in (0x00,0x02):
 				asn = unpack('!H',self.community[2:4])[0]
 				ip = unpack('!L',self.community[4:])[0]
-				return "extended-community origin:%d:%s" % (asn,ip)
+				return "origin:%d:%s" % (asn,ip)
 			if community_type == 0x01:
 				ip = '%s.%s.%s.%s' % unpack('!BBBB',self.community[2:6])
 				asn = unpack('!H',self.community[6:])[0]
-				return "extended-community origin:%s:%d" % (ip,asn)
+				return "origin:%s:%d" % (ip,asn)
 
 		# Traffic rate
 		if self.community.startswith('\x80\x06'):
