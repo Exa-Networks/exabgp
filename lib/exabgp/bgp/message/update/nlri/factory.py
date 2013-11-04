@@ -89,6 +89,7 @@ def _FlowNLRIFactory (afi,safi,nexthop,bgp,action):
 
 	bgp = bgp[:length]
 	nlri = FlowNLRI(afi,safi)
+	nlri.action = action
 
 	if nexthop:
 		nlri.nexthop = cachedNextHop(nexthop)

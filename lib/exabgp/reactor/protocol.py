@@ -254,9 +254,10 @@ class Protocol (object):
 		yield notification
 
 	def new_update (self):
+		updates = self.neighbor.rib.outgoing.updates(self.neighbor.group_updates)
 		number = 0
-		for message in self.neighbor.rib.outgoing.updates(self.neighbor.group_updates):
-			for message in message.messages(self.negotiated):
+		for update in updates:
+			for message in update.messages(self.negotiated):
 				number += 1
 				for boolean in self.write(message):
 					# boolean is a transient network error we already announced

@@ -170,7 +170,7 @@ class JSON (object):
 		for family in minus:
 			nlris = minus[family]
 			s  = '"%s %s": { ' % family
-			s += ', '.join('%s' % nlri.json(False) for nlri in nlris)
+			s += ', '.join('%s' % nlri.json() for nlri in nlris)
 			s += ' }'
 			remove.append(s)
 
