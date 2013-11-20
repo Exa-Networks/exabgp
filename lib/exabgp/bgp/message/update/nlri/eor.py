@@ -16,6 +16,9 @@ class NLRIEOR (Address):
 		Address.__init__(self,afi,safi)
 		self.action = action
 
+	def nlri (self):
+		return 'eor %d/%d' % (self.afi,self.safi)
+
 	def pack (self):
 		return self.afi.pack() + self.safi.pack()
 
