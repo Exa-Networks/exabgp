@@ -1398,8 +1398,8 @@ class Configuration (object):
 
 	def _check_static_route (self,scope):
 		update = scope[-1]['announce'][-1]
-		if not update.attributes.has(AttributeID.NEXT_HOP):
-			self._error = 'syntax: route IP/MASK { next-hop IP; }'
+		if not update.nlri.nexthop:
+			self._error = 'syntax: route <ip>/<mask> { next-hop <ip>; }'
 			if self.debug: raise
 			return False
 		return True
@@ -1422,8 +1422,6 @@ class Configuration (object):
 		if len(tokens) <3:
 			return False
 
-		have_next_hop = False
-
 		if not self._insert_static_route(scope,tokens):
 			return False
 
@@ -1439,7 +1437,6 @@ class Configuration (object):
 
 			if command == 'next-hop':
 				if self._route_next_hop(scope,tokens):
-					have_next_hop = True
 					continue
 				return False
 			if command == 'origin':
@@ -1516,9 +1513,7 @@ class Configuration (object):
 				return False
 			return False
 
-		if not have_next_hop:
-			self._error = 'every route requires a next-hop'
-			if self.debug: raise
+		if not self._check_static_route(scope):
 			return False
 
 		return self._split_last_route(scope)
