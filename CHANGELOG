@@ -5,6 +5,8 @@ Version explained:
 
 Version 3.2.19
  * Fix: bug when displaying EOR
+ * Fix: invalid check on next-hop for multi-line routes
+    reported by: Pierre Aubry
  * Improvement: allow digit:digit in extended communities
     requested by: Pierre Aubry
 
