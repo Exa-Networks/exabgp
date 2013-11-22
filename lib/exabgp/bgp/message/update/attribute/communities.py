@@ -124,18 +124,28 @@ def to_ExtendedCommunity (data):
 	else:
 		raise ValueError('invalid extended community %s (only origin or target are supported) ' % command)
 
-	gc = ga.count('.')
-	lc = la.count('.')
-	if gc == 0 and lc == 3:
-		# ASN first, IP second
-		global_admin = pack('!H',int(ga))
-		local_admin = pack('!BBBB',*[int(_) for _ in la.split('.')])
-	elif gc == 3 and lc == 0:
-		# IP first, ASN second
-		global_admin = pack('!BBBB',*[int(_) for _ in ga.split('.')])
-		local_admin = pack('!H',int(la))
+	if '.' in ga or '.' in la:
+		gc = ga.count('.')
+		lc = la.count('.')
+		if gc == 0 and lc == 3:
+			# ASN first, IP second
+			global_admin = pack('!H',int(ga))
+			local_admin = pack('!BBBB',*[int(_) for _ in la.split('.')])
+		elif gc == 3 and lc == 0:
+			# IP first, ASN second
+			global_admin = pack('!BBBB',*[int(_) for _ in ga.split('.')])
+			local_admin = pack('!H',int(la))
+		else:
+			raise ValueError('invalid extended community %s ' % data)
 	else:
-		raise ValueError('invalid extended community %s ' % data)
+		if command == 'target':
+			global_admin = pack('!H',int(ga))
+			local_admin = pack('!I',int(la))
+		elif command == 'origin':
+			global_admin = pack('!I',int(ga))
+			local_admin = pack('!H',int(la))
+		else:
+			raise ValueError('invalid extended community %s (only origin or target are supported) ' % command)
 
 	return ECommunity(header+subtype+global_admin+local_admin)
 

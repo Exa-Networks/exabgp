@@ -5,6 +5,8 @@ Version explained:
 
 Version 3.2.19
  * Fix: bug when displaying EOR
+ * Improvement: allow digit:digit in extended communities
+    requested by: Pierre Aubry
 
 Version 3.2.18
  * Fix: add path for IPv6 was badly negotiated
