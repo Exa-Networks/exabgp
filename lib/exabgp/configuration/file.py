@@ -11,6 +11,7 @@ import sys
 import stat
 import time
 import socket
+import shlex
 
 from pprint import pformat
 from copy import deepcopy
@@ -788,7 +789,7 @@ class Configuration (object):
 			return False
 
 		if args:
-			scope[-1][command] = [prg] + args.split(' ')
+			scope[-1][command] = [prg] + shlex.split(args,' ')
 		else:
 			scope[-1][command] = [prg,]
 		return True
