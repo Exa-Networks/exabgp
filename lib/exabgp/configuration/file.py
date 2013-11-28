@@ -157,6 +157,7 @@ class Configuration (object):
 	'         flow-label >100&<2000; (ipv6 only)\n' \
 	'      }\n' \
 	'      then {\n' \
+	'         accept;\n' \
 	'         discard;\n' \
 	'         rate-limit 9600;\n' \
 	'         redirect 30740:12345;\n' \
