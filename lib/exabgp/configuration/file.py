@@ -622,6 +622,7 @@ class Configuration (object):
 			if command == 'flow-label': return self._flow_route_flow_label(scope,tokens[1:])
 
 		elif name == 'flow-then':
+			if command == 'accept': return self._flow_route_accept(scope,tokens[1:])
 			if command == 'discard': return self._flow_route_discard(scope,tokens[1:])
 			if command == 'rate-limit': return self._flow_route_rate_limit(scope,tokens[1:])
 			if command == 'redirect': return self._flow_route_redirect(scope,tokens[1:])
@@ -2262,6 +2263,8 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
+	def _flow_route_accept (self,scope,tokens):
+		return True
 
 	def _flow_route_discard (self,scope,tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route

@@ -10,6 +10,8 @@ Version 3.2.19
  * Fix: badly parsing command line for run option
     reported by: Allan Feid 
     solution by: Vincent Bernat
+ * Fix: allow the creation of 'allow' flows
+    reported by: Adrian Att
  * Improvement: allow digit:digit in extended communities
     requested by: Pierre Aubry
 
