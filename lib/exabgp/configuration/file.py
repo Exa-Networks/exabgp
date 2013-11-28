@@ -743,7 +743,8 @@ class Configuration (object):
 		if len(line) > 2 and line[0] == line[-1] and line[0] in ['"',"'"]:
 			line = line[1:-1]
 		if ' ' in line:
-			prg,args = line.split(' ',1)
+			args = shlex.split(line,' ')
+			prg,args = args[0],args[1:]
 		else:
 			prg = line
 			args = ''
@@ -789,7 +790,7 @@ class Configuration (object):
 			return False
 
 		if args:
-			scope[-1][command] = [prg] + shlex.split(args,' ')
+			scope[-1][command] = [prg] + args
 		else:
 			scope[-1][command] = [prg,]
 		return True
