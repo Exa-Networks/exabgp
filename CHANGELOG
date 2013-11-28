@@ -11,7 +11,7 @@ Version 3.2.19
     reported by: Allan Feid 
     solution by: Vincent Bernat
  * Fix: allow the creation of 'allow' flows
-    reported by: Adrian Att
+    reported by: Adrian Cepleanu
  * Improvement: allow digit:digit in extended communities
     requested by: Pierre Aubry
 
