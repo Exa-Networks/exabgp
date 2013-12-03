@@ -156,7 +156,7 @@ def parse():
     if options.config is not None:
         # A configuration file has been provided. Read each line and
         # build an equivalent command line.
-        args = sum([ "--{}".format(l.strip()).split("=", 1)
+        args = sum([ "--{0}".format(l.strip()).split("=", 1)
                      for l in options.config.readlines()
                      if not l.strip().startswith("#") and l.strip() ], [])
         args = [ x.strip() for x in args ]
@@ -204,7 +204,7 @@ def loopback_ips():
             addresses.append(ip)
     if not addresses:
         raise RuntimeError("No loopback IP found")
-    logger.debug("Loopback addresses: {}".format(addresses))
+    logger.debug("Loopback addresses: {0}".format(addresses))
     return addresses
 
 def setup_ips(ips):
@@ -212,7 +212,7 @@ def setup_ips(ips):
     existing = set(loopback_ips())
     toadd = set(ips) - existing
     for ip in toadd:
-        logger.debug("Setup loopback IP address {}".format(ip))
+        logger.debug("Setup loopback IP address {0}".format(ip))
         with open(os.devnull, "w") as fnull:
             subprocess.check_call(["ip", "address", "add", str(ip), "dev", "lo"],
                                   stdout = fnull, stderr = fnull)
@@ -231,7 +231,7 @@ def check(cmd, timeout):
         pass
     def alarm_handler(signum, frame):
         raise Alarm()
-    logger.debug("Checking command {}".format(repr(cmd)))
+    logger.debug("Checking command {0}".format(repr(cmd)))
     p = subprocess.Popen(cmd, shell = True,
                          stdout = subprocess.PIPE,
                          stderr = subprocess.STDOUT)
@@ -244,14 +244,14 @@ def check(cmd, timeout):
         if timeout:
             signal.alarm(0)
         if p.returncode != 0:
-            logger.warn("Check command was unsuccessful: {}".format(p.returncode))
+            logger.warn("Check command was unsuccessful: {0}".format(p.returncode))
             if stdout.strip():
-                logger.info("Output of check command: {}".format(stdout))
+                logger.info("Output of check command: {0}".format(stdout))
             return False
-        logger.debug("Command was executed successfully")
+        logger.debug("Command was executed successfully {0} {1}".format(p.returncode, stdout))
         return True
     except Alarm:
-        logger.warn("Timeout ({}) while running check command".format(timeout, cmd))
+        logger.warn("Timeout ({0}) while running check command".format(timeout, cmd))
         p.kill()
         return False
 
@@ -272,17 +272,17 @@ def loop(options):
         """Communicate new state to ExaBGP"""
         if target not in (states.UP, states.DOWN, states.DISABLED):
             return
-        logger.info("send announces for {} state to ExaBGP".format(target))
-        metric = vars(options).get("{}_metric".format(str(target).lower()))
+        logger.info("send announces for {0} state to ExaBGP".format(target))
+        metric = vars(options).get("{0}_metric".format(str(target).lower()))
         for ip in options.ips:
-            announce = "route {}/{} next-hop {} med {}".format(str(ip),
+            announce = "route {0}/{1} next-hop {2} med {3}".format(str(ip),
                                                                ip.max_prefixlen,
                                                                options.next_hop or "self",
                                                                metric)
             if options.community:
                 announce = "{0} community [ {1} ]".format(announce, options.community)
-            logger.debug("exabgp: {}".format(announce))
-            print("announce {}".format(announce))
+            logger.debug("exabgp: {0}".format(announce))
+            print("announce {0}".format(announce))
             metric += options.increase
         sys.stdout.flush()
 
@@ -295,12 +295,12 @@ def loop(options):
             target = states.DOWN
 
         # Log and execute commands
-        logger.debug("Transition to {}".format(str(target)))
+        logger.debug("Transition to {0}".format(str(target)))
         cmds = []
-        cmds.extend(vars(options).get("{}_execute".format(str(target).lower()), []) or [])
+        cmds.extend(vars(options).get("{0}_execute".format(str(target).lower()), []) or [])
         cmds.extend(vars(options).get("execute", []) or [])
         for cmd in cmds:
-            logger.debug("Transition to {}, execute `{}`".format(str(target), cmd))
+            logger.debug("Transition to {0}, execute `{1}`".format(str(target), cmd))
             env = os.environ.copy()
             env.update({ "STATE": str(target) })
             with open(os.devnull, "w") as fnull:
@@ -353,7 +353,7 @@ def loop(options):
                 state = trigger(states.RISING)
                 checks = 1
         else:
-            raise ValueError("Unhandled state: {}".format(str(state)))
+            raise ValueError("Unhandled state: {0}".format(str(state)))
 
         # Send announces. We announce them on a regular basis in case
         # we lose connection with a peer.
@@ -369,7 +369,7 @@ if __name__ == "__main__":
     options = parse()
     setup_logging(options.debug, options.silent, options.name)
     if options.pid:
-        options.pid.write("{}\n".format(os.getpid()))
+        options.pid.write("{0}\n".format(os.getpid()))
         options.pid.close()
     try:
         # Setup IP to use
