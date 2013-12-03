@@ -11,6 +11,7 @@ import sys
 import stat
 import time
 import socket
+import shlex
 
 from pprint import pformat
 from copy import deepcopy
@@ -156,6 +157,7 @@ class Configuration (object):
 	'         flow-label >100&<2000; (ipv6 only)\n' \
 	'      }\n' \
 	'      then {\n' \
+	'         accept;\n' \
 	'         discard;\n' \
 	'         rate-limit 9600;\n' \
 	'         redirect 30740:12345;\n' \
@@ -621,6 +623,7 @@ class Configuration (object):
 			if command == 'flow-label': return self._flow_route_flow_label(scope,tokens[1:])
 
 		elif name == 'flow-then':
+			if command == 'accept': return self._flow_route_accept(scope,tokens[1:])
 			if command == 'discard': return self._flow_route_discard(scope,tokens[1:])
 			if command == 'rate-limit': return self._flow_route_rate_limit(scope,tokens[1:])
 			if command == 'redirect': return self._flow_route_redirect(scope,tokens[1:])
@@ -742,7 +745,8 @@ class Configuration (object):
 		if len(line) > 2 and line[0] == line[-1] and line[0] in ['"',"'"]:
 			line = line[1:-1]
 		if ' ' in line:
-			prg,args = line.split(' ',1)
+			args = shlex.split(line,' ')
+			prg,args = args[0],args[1:]
 		else:
 			prg = line
 			args = ''
@@ -788,7 +792,7 @@ class Configuration (object):
 			return False
 
 		if args:
-			scope[-1][command] = [prg] + args.split(' ')
+			scope[-1][command] = [prg] + args
 		else:
 			scope[-1][command] = [prg,]
 		return True
@@ -2050,7 +2054,7 @@ class Configuration (object):
 		self._flow_state = 'out'
 
 		while True:
-			r = self._dispatch(scope,'flow-then',[],['discard','rate-limit','redirect','copy','redirect-to-nexthop','mark','action','community'])
+			r = self._dispatch(scope,'flow-then',[],['accept','discard','rate-limit','redirect','copy','redirect-to-nexthop','mark','action','community'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -2260,6 +2264,8 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
+	def _flow_route_accept (self,scope,tokens):
+		return True
 
 	def _flow_route_discard (self,scope,tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
