@@ -34,6 +34,7 @@ The left-part of each line is the corresponding long option.
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import string
 import sys
 import os
 import subprocess
@@ -74,6 +75,11 @@ def parse():
     g.add_argument("--silent", "-s", action="store_true",
                    default=False,
                    help="don't log to console")
+    g.add_argument("--syslog", "-S", metavar="FACILITY",
+                   nargs='?',
+                   const="daemon",
+                   default=None,
+                   help="log to syslog using FACILITY, default FACILITY is daemon")
     parser.add_argument("--name", "-n", metavar="NAME",
                         help="name for this healthchecker")
     parser.add_argument("--config", "-F", metavar="FILE", type=open,
@@ -164,16 +170,23 @@ def parse():
         options = parser.parse_args(args)
     return options
 
-def setup_logging(debug, silent, name):
+def setup_logging(debug, silent, name, syslog):
     """Setup logger"""
     logger.setLevel(debug and logging.DEBUG or logging.INFO)
     # To syslog
-    sh = logging.handlers.SysLogHandler(address=str("/dev/log"),
-                                        facility=logging.handlers.SysLogHandler.LOG_DAEMON)
-    sh.setFormatter(logging.Formatter(
-        "healthcheck{0}[{1}]: %(message)s".format(name and "-{0}".format(name) or "",
-                                                os.getpid())))
-    logger.addHandler(sh)
+    if syslog is not None:
+        facility = getattr(logging.handlers.SysLogHandler,
+                           "LOG_{0}".format(string.upper(syslog)))
+        sh = logging.handlers.SysLogHandler(address=str("/dev/log"),
+                                            facility=facility)
+        if name:
+            healthcheck_name = "healthcheck-{0}".format(name)
+        else:
+            healthcheck_name = "healthcheck"
+        sh.setFormatter(logging.Formatter(
+            "{0}[{1}]: %(message)s".format(healthcheck_name,
+                                                    os.getpid())))
+        logger.addHandler(sh)
     # To console
     if sys.stderr.isatty() and not silent:
         ch = logging.StreamHandler()
@@ -367,7 +380,7 @@ def loop(options):
 
 if __name__ == "__main__":
     options = parse()
-    setup_logging(options.debug, options.silent, options.name)
+    setup_logging(options.debug, options.silent, options.name, options.syslog)
     if options.pid:
         options.pid.write("{0}\n".format(os.getpid()))
         options.pid.close()
