@@ -75,11 +75,13 @@ def parse():
     g.add_argument("--silent", "-s", action="store_true",
                    default=False,
                    help="don't log to console")
-    g.add_argument("--syslog", "-S", metavar="FACILITY",
+    g.add_argument("--syslog-facility", "-sF", metavar="FACILITY",
                    nargs='?',
                    const="daemon",
-                   default=None,
+                   default="daemon",
                    help="log to syslog using FACILITY, default FACILITY is daemon")
+    g.add_argument("--no-syslog", action="store_true",
+                   help="disable syslog logging")
     parser.add_argument("--name", "-n", metavar="NAME",
                         help="name for this healthchecker")
     parser.add_argument("--config", "-F", metavar="FILE", type=open,
@@ -170,13 +172,14 @@ def parse():
         options = parser.parse_args(args)
     return options
 
-def setup_logging(debug, silent, name, syslog):
+def setup_logging(debug, silent, name, syslog_facility, syslog):
     """Setup logger"""
     logger.setLevel(debug and logging.DEBUG or logging.INFO)
+    enable_syslog = syslog and not debug
     # To syslog
-    if syslog is not None:
+    if enable_syslog:
         facility = getattr(logging.handlers.SysLogHandler,
-                           "LOG_{0}".format(string.upper(syslog)))
+                           "LOG_{0}".format(string.upper(syslog_facility)))
         sh = logging.handlers.SysLogHandler(address=str("/dev/log"),
                                             facility=facility)
         if name:
@@ -380,7 +383,8 @@ def loop(options):
 
 if __name__ == "__main__":
     options = parse()
-    setup_logging(options.debug, options.silent, options.name, options.syslog)
+    setup_logging(options.debug, options.silent, options.name,
+                  options.syslog_facility, not options.no_syslog)
     if options.pid:
         options.pid.write("{0}\n".format(os.getpid()))
         options.pid.close()
