@@ -168,10 +168,10 @@ def setup_logging(debug, silent, name):
     """Setup logger"""
     logger.setLevel(debug and logging.DEBUG or logging.INFO)
     # To syslog
-    sh = logging.handlers.SysLogHandler(address="/dev/log",
+    sh = logging.handlers.SysLogHandler(address=str("/dev/log"),
                                         facility=logging.handlers.SysLogHandler.LOG_DAEMON)
     sh.setFormatter(logging.Formatter(
-        "healthcheck{}[{}]: %(message)s".format(name and "-{}".format(name) or "",
+        "healthcheck{0}[{1}]: %(message)s".format(name and "-{0}".format(name) or "",
                                                 os.getpid())))
     logger.addHandler(sh)
     # To console
