@@ -12,6 +12,8 @@ Version 3.2.19
     solution by: Vincent Bernat
  * Fix: allow the creation of 'allow' flows
     reported by: Adrian Cepleanu
+ * Fix: bad JSON encoding for EOR
+    reported by: Robert Barnes
  * Improvement: allow digit:digit in extended communities
     requested by: Pierre Aubry
  * Improvement: healtcheck.py, python 2.6 and community support

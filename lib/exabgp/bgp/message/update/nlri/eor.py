@@ -29,4 +29,4 @@ class NLRIEOR (Address):
 		return 'eor %d/%d (%s %s)' % (self.afi,self.safi,self.afi,self.safi)
 
 	def json (self):
-		return '"eor": { "afi" : %s, "safi" : %s }' % (self.afi,self.safi)
+		return '"eor": { "afi" : "%s", "safi" : "%s" }' % (self.afi,self.safi)
