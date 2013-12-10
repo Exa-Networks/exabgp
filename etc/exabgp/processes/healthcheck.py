@@ -145,6 +145,8 @@ def parse():
     g.add_argument("--community", metavar="COMMUNITY",
                    type=str, default=None,
                    help="announce IPs with the supplied community")
+    g.add_argument("--withdraw-on-down", action="store_true",
+                   help="Instead of increasing the metric on health failure, withdraw the route")
 
     g = parser.add_argument_group("reporting")
     g.add_argument("--execute", metavar='CMD',
@@ -298,7 +300,11 @@ def loop(options):
             if options.community:
                 announce = "{0} community [ {1} ]".format(announce, options.community)
             logger.debug("exabgp: {0}".format(announce))
-            print("announce {0}".format(announce))
+            if options.withdraw_on_down:
+                command = "announce" if target is states.UP else "withdraw"
+            else:
+                command = "announce"
+            print("{0} {1}".format(command, announce))
             metric += options.increase
         sys.stdout.flush()
 
