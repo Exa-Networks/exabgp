@@ -43,10 +43,10 @@ class Text (object):
 		return 'shutdown'
 
 	def receive (self,neighbor,category,header,body):
-		return 'neighbor %s received %s header %s body %s\n' % (neighbor,ord(category),hexstring(header),hexstring(body))
+		return 'neighbor %s received %d header %s body %s\n' % (neighbor,category,hexstring(header),hexstring(body))
 
 	def send (self,neighbor,category,header,body):
-		return 'neighbor %s sent %s header %s body %s\n' % (neighbor,ord(category),hexstring(header),hexstring(body))
+		return 'neighbor %s sent %d header %s body %s\n' % (neighbor,category,hexstring(header),hexstring(body))
 
 	def update (self,neighbor,update):
 		r = 'neighbor %s update start\n' % neighbor
@@ -144,10 +144,10 @@ class JSON (object):
 		return self._header(self._kv({'notification':'shutdown'}))
 
 	def receive (self,neighbor,category,header,body):
-		return self._header(self._neighbor(neighbor,'"update": { %s } ' % self._minimalkv({'received':ord(category),'header':hexstring(header),'body':hexstring(body)})))
+		return self._header(self._neighbor(neighbor,'"update": { %s } ' % self._minimalkv({'received':category,'header':hexstring(header),'body':hexstring(body)})))
 
 	def send (self,neighbor,category,header,body):
-		return self._header(self._neighbor(neighbor,'"update": { %s } ' % self._minimalkv({'sent':ord(category),'header':hexstring(header),'body':hexstring(body)})))
+		return self._header(self._neighbor(neighbor,'"update": { %s } ' % self._minimalkv({'sent':category,'header':hexstring(header),'body':hexstring(body)})))
 
 	def _update (self,update):
 		plus = {}
