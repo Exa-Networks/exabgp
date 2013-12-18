@@ -117,7 +117,7 @@ class Protocol (object):
 
 	def write (self,message):
 		if self.neighbor.api.send_packets:
-			self.peer.reactor.processes.send(self.peer.neighbor.peer_address,message[18],message[:19],message[19:])
+			self.peer.reactor.processes.send(self.peer.neighbor.peer_address,ord(message[18]),message[:19],message[19:])
 		for boolean in self.connection.writer(message):
 			yield boolean
 
