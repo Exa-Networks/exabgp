@@ -14,9 +14,7 @@ from distutils.core import setup
 from distutils.util import get_platform
 
 try:
-	f = open('lib/exabgp/version.py','r')
-	version = f.read().strip().split('"')[1]
-	f.close()
+	version = os.popen('git describe --tags').read().strip()
 except Exception,e:
 	print "can not find the 'version.py' file in the repository"
 	sys.exit(1)
