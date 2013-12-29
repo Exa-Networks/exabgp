@@ -439,7 +439,7 @@ class Reactor (object):
 				except ValueError:
 					key,value = command.split(' ',1)
 				if key == ',':
-					returned.apppend(definition)
+					returned.append(definition)
 					_,command = command.split(' ',1)
 					continue
 				if key not in ['local-ip','local-as','peer-as','router-id','family-allowed']:
