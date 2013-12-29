@@ -14,7 +14,7 @@ from distutils.core import setup
 from distutils.util import get_platform
 
 try:
-	version = os.popen('git describe --tags').read().strip()
+	version = os.popen('git describe --tags').read().split('-')[0].strip()
 except Exception,e:
 	print "can not find the 'version.py' file in the repository"
 	sys.exit(1)
