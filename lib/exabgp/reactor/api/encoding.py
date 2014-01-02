@@ -152,18 +152,26 @@ class JSON (object):
 	def _update (self,update):
 		plus = {}
 		minus = {}
+
+		# all the next-hops should be the same but let's not assume it
+
 		for nlri in update.nlris:
+			nexthop = nlri.nexthop.inet()
 			if nlri.action == IN.announced:
-				plus.setdefault(nlri.family(),[]).append(nlri)
+				plus.setdefault(nlri.family(),{}).setdefault(nexthop,[]).append(nlri)
 			if nlri.action == IN.withdrawn:
 				minus.setdefault(nlri.family(),[]).append(nlri)
 
 		add = []
 		for family in plus:
-			nlris = plus[family]
 			s  = '"%s %s": { ' % family
-			s += ', '.join('%s' % nlri.json() for nlri in nlris)
-			s += ' }'
+			m = ''
+			for nexthop in family[family]:
+				nlris = plus[family][nexthop]
+				m += '"%s" : { ' % nexthop
+				m += ', '.join('%s' % nlri.json() for nlri in nlris)
+				m += ' }, '
+			s = m[:-2] + ' }'
 			add.append(s)
 
 		remove = []
