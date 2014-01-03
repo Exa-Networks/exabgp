@@ -7,9 +7,12 @@ Created by Thomas Mangin on 2012-07-20.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
+from exabgp.protocol.family import AFI,SAFI
 from exabgp.protocol.ip.address import Address
 
 class NLRIEOR (Address):
+	PREFIX = '\x00\x00\x00\x07\x90\x0f\x00\x03'
+
 	nexthop = None
 
 	def __init__ (self,afi,safi,action):
@@ -20,7 +23,9 @@ class NLRIEOR (Address):
 		return 'eor %d/%d' % (self.afi,self.safi)
 
 	def pack (self):
-		return self.afi.pack() + self.safi.pack()
+		if self.afi == AFI.ipv4 and self.safi == SAFI.unicast:
+			return '\x00\x00\x00\x00'
+		return self.PREFIX + self.afi.pack() + self.safi.pack()
 
 	def __str__ (self):
 		return self.extensive()

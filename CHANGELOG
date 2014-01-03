@@ -3,17 +3,27 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
-Version 3.2.20
+Version 3.3.0
  * Fix: typo causing issue when parsing multiple neighbor commands
     reported by: Pablo Camarillo Garvia
+ * Fix: bad handling of EOR
+    reported by: Petr Lapukhov
+ * Improvement: allow as-path [ asn asn, [ asn ] ]
  * Other: migrate the setup.py script to work with git (vs hg)
+ * Change: TEXT API format changed and version updated to 3.3.0 (reflect the version when the last change was introduced)
+ * Change: JSON API format changed and version updated to 3.3.0
+ * Change: as-path now returns two JSON keys, 'as-path' and 'as-set'
+ * Change: NLRI are now grouped by next-hop, next-hop removed from the NLRI
+ * Change: raw message use the keyword "message" and not "update"
+ * Change/Fix: JSON for announcement was missing next-hop
+ * Change: on TEXT API, "announced route eor" becomes "announced eor"
 
 Version 3.2.19
  * Fix: bug when displaying EOR
  * Fix: invalid check on next-hop for multi-line routes
     reported by: Pierre Aubry
  * Fix: badly parsing command line for run option
-    reported by: Allan Feid 
+    reported by: Allan Feid
     solution by: Vincent Bernat
  * Fix: allow the creation of 'allow' flows
     reported by: Adrian Cepleanu

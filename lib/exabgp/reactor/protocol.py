@@ -137,7 +137,12 @@ class Protocol (object):
 		if msg == Message.Type.UPDATE:
 			self.logger.message(self.me('<< UPDATE'))
 
-			if length == 30 and body.startswith(EOR.PREFIX):
+			# This could be speed up massively by changing the order of the IF
+			if length == 23:
+				update = EORFactory()
+				if self.neighbor.api.receive_routes:
+					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update)
+			elif length == 30 and body.startswith(EOR.MP):
 				update = EORFactory(body)
 				if self.neighbor.api.receive_routes:
 					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update)

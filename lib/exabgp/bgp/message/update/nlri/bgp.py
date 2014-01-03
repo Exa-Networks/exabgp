@@ -159,7 +159,6 @@ class NLRI (Prefix):
 		if announced:
 			if self.labels: r.append(label)
 			if self.rd: r.append(rdist)
-			if self.nexthop: r.append('"next-hop": "%s"' % self.nexthop.inet())
 		if self.path_info: r.append(pinfo)
 		return '"%s": { %s }' % (self.prefix(),", ".join(r))
 
