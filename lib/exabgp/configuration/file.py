@@ -1631,6 +1631,7 @@ class Configuration (object):
 		as_seq = []
 		as_set = []
 		asn = tokens.pop(0)
+		inset = False
 		try:
 			if asn == '[':
 				while True:
@@ -1640,7 +1641,8 @@ class Configuration (object):
 						self._error = self._str_route_error
 						if self.debug: raise
 						return False
-					if asn == '(':
+					if asn in ('(','['):
+						inset = True
 						while True:
 							try:
 								asn = tokens.pop(0)
@@ -1652,8 +1654,12 @@ class Configuration (object):
 								break
 							as_set.append(self._newASN(asn))
 					if asn == ')':
+						inset = False
 						continue
 					if asn == ']':
+						if inset:
+							inset = False
+							continue
 						break
 					as_seq.append(self._newASN(asn))
 			else:
