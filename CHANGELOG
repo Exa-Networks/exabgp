@@ -6,6 +6,8 @@ Version explained:
 Version 3.2.20
  * Fix: typo causing issue when parsing multiple neighbor commands
     reported by: Pablo Camarillo Garvia
+ * Fix: bad handling of EOR
+    reported by: Petr Lapukhov
  * Other: migrate the setup.py script to work with git (vs hg)
 
 Version 3.2.19
