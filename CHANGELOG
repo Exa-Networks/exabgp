@@ -8,6 +8,7 @@ Version 3.2.20
     reported by: Pablo Camarillo Garvia
  * Fix: bad handling of EOR
     reported by: Petr Lapukhov
+ * Fix: allow as-path [ [ asn asn], [ asn ] ] as a valid syntax (as it is how it is now printed)
  * Other: migrate the setup.py script to work with git (vs hg)
 
 Version 3.2.19

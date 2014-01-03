@@ -1641,6 +1641,8 @@ class Configuration (object):
 						self._error = self._str_route_error
 						if self.debug: raise
 						return False
+					if asn == ',':
+						continue
 					if asn in ('(','['):
 						inset = True
 						while True:
