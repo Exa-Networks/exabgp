@@ -15,6 +15,7 @@ import fcntl
 from exabgp.util.errstr import errstr
 
 from exabgp.reactor.api.encoding import Text,JSON
+from exabgp.configuration.file import formated
 from exabgp.logger import Logger
 
 class ProcessError (Exception):
@@ -152,7 +153,7 @@ class Processes (object):
 						line = proc.stdout.readline().rstrip()
 						if line:
 							self.logger.processes("Command from process %s : %s " % (process,line))
-							yield (process,line)
+							yield (process,formated(line))
 						else:
 							self.logger.processes("The process died, trying to respawn it")
 							self._terminate(process)

@@ -8,6 +8,7 @@ Version 3.3.0
     reported by: Pablo Camarillo Garvia
  * Fix: bad handling of EOR
     reported by: Petr Lapukhov
+ * Fix: multiple bugs with multi neighbor commands
  * Improvement: allow as-path [ asn asn, [ asn ] ]
  * Other: migrate the setup.py script to work with git (vs hg)
  * Change: TEXT API format changed and version updated to 3.3.0 (reflect the version when the last change was introduced)

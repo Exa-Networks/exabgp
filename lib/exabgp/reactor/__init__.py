@@ -424,14 +424,18 @@ class Reactor (object):
 
 		def extract_neighbors (command):
 			"""return a list of neighbor definition : the neighbor definition is a list of string which are in the neighbor indexing string"""
+			# This function returns a list and a string
+			# The first list contains parsed neighbor to match against our defined peers
+			# The string is the command to be run for those peers
+			# The parsed neighbor is a list of the element making the neighbor string so each part can be checked against the neighbor name
+
 			returned = []
-			definition = []
 			neighbor,remaining = command.split(' ',1)
 			if neighbor != 'neighbor':
 				return [],command
 
 			ip,command = remaining.split(' ',1)
-			definition.append('%s %s' % (neighbor,ip))
+			definition = ['neighbor %s' % (ip)]
 
 			while True:
 				try:
@@ -441,8 +445,9 @@ class Reactor (object):
 				if key == ',':
 					returned.append(definition)
 					_,command = command.split(' ',1)
+					definition = []
 					continue
-				if key not in ['local-ip','local-as','peer-as','router-id','family-allowed']:
+				if key not in ['neighbor','local-ip','local-as','peer-as','router-id','family-allowed']:
 					if definition:
 						returned.append(definition)
 					break
@@ -457,16 +462,17 @@ class Reactor (object):
 					return False
 			return True
 
-		def match_neighbors (description,peers):
+		def match_neighbors (descriptions,peers):
 			"returns the sublist of peers matching the description passed, or None if no description is given"
-			if not description:
+			if not descriptions:
 				return peers.keys()
 
 			returned = []
 			for key in peers:
 				for description in descriptions:
 					if match_neighbor(description,key):
-						returned.append(key)
+						if key not in returned:
+							returned.append(key)
 			return returned
 
 		# route announcement / withdrawal
