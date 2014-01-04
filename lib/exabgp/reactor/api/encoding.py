@@ -53,7 +53,11 @@ class Text (object):
 		attributes = str(update.attributes)
 		for nlri in update.nlris:
 			if nlri.action == IN.announced:
-				r += 'neighbor %s announced route %s next-hop %s%s\n' % (neighbor,nlri.nlri(),nlri.nexthop.inet(),attributes)
+				if nlri.nexthop:
+					r += 'neighbor %s announced route %s next-hop %s%s\n' % (neighbor,nlri.nlri(),nlri.nexthop.inet(),attributes)
+				else:
+					# This is an EOR
+					r += 'neighbor %s announced %s %s\n' % (neighbor,nlri.nlri(),attributes)
 			else:
 				r += 'neighbor %s withdrawn route %s\n' % (neighbor,nlri.nlri())
 		r += 'neighbor %s update end\n' % neighbor
@@ -144,26 +148,34 @@ class JSON (object):
 		return self._header(self._kv({'notification':'shutdown'}))
 
 	def receive (self,neighbor,category,header,body):
-		return self._header(self._neighbor(neighbor,'"update": { %s } ' % self._minimalkv({'received':category,'header':hexstring(header),'body':hexstring(body)})))
+		return self._header(self._neighbor(neighbor,'"message": { %s } ' % self._minimalkv({'received':category,'header':hexstring(header),'body':hexstring(body)})))
 
 	def send (self,neighbor,category,header,body):
-		return self._header(self._neighbor(neighbor,'"update": { %s } ' % self._minimalkv({'sent':category,'header':hexstring(header),'body':hexstring(body)})))
+		return self._header(self._neighbor(neighbor,'"message": { %s } ' % self._minimalkv({'sent':category,'header':hexstring(header),'body':hexstring(body)})))
 
 	def _update (self,update):
 		plus = {}
 		minus = {}
+
+		# all the next-hops should be the same but let's not assume it
+
 		for nlri in update.nlris:
+			nexthop = nlri.nexthop.inet() if nlri.nexthop else 'null'
 			if nlri.action == IN.announced:
-				plus.setdefault(nlri.family(),[]).append(nlri)
+				plus.setdefault(nlri.family(),{}).setdefault(nexthop,[]).append(nlri)
 			if nlri.action == IN.withdrawn:
 				minus.setdefault(nlri.family(),[]).append(nlri)
 
 		add = []
 		for family in plus:
-			nlris = plus[family]
 			s  = '"%s %s": { ' % family
-			s += ', '.join('%s' % nlri.json() for nlri in nlris)
-			s += ' }'
+			m = ''
+			for nexthop in plus[family]:
+				nlris = plus[family][nexthop]
+				m += '"%s" : { ' % nexthop
+				m += ', '.join('%s' % nlri.json() for nlri in nlris)
+				m += ' }, '
+			s = m[:-2]
 			add.append(s)
 
 		remove = []

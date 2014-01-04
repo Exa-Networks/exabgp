@@ -7,6 +7,8 @@ Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 """
 from struct import unpack
 
+from exabgp.protocol.family import AFI,SAFI
+
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.direction import IN,OUT
 from exabgp.bgp.message.update.nlri.eor import NLRIEOR
@@ -20,7 +22,7 @@ def _short (data):
 
 class EOR (Message):
 	TYPE = chr(0x02)  # it is an update
-	PREFIX = '\x00\x00\x00\x07\x90\x0f\x00\x03'
+	MP = NLRIEOR.PREFIX
 
 	def __init__ (self,afi,safi,action=OUT.announce):
 		self.nlris = [NLRIEOR(afi,safi,action),]
@@ -28,13 +30,14 @@ class EOR (Message):
 
 	def message (self):
 		return self._message(
-			self.PREFIX + self.nlris[0].pack()
+			self.nlris[0].pack()
 		)
 
 	def __str__ (self):
 		return 'EOR'
 
-def EORFactory (data):
+# default IPv4 unicast
+def EORFactory (data='\x00\x01\x02'):
 	afi  = _short(data[-3:-1])
 	safi = ord(data[-1])
 	return EOR(afi,safi,IN.announced)

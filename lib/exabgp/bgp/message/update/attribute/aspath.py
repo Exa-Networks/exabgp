@@ -28,6 +28,7 @@ class ASPath (Attribute):
 		self.packed = {True:'',False:''}
 		self.index = index  # the original packed data, use for indexing
 		self._str = ''
+		self._json = {}
 
 	def _segment (self,seg_type,values,asn4):
 		l = len(values)
@@ -85,22 +86,23 @@ class ASPath (Attribute):
 			self._str = string
 		return self._str
 
-	def json (self):
-		if not self._str:
-			lseq = len(self.as_seq)
-			lset = len(self.as_set)
-			if lseq:
-				if lset:
-					string = '[ [ %s ], [ %s ] ]' % ((', '.join([str(_) for _ in self.as_seq])),', '.join([str(_) for _ in self.as_set]))
+	def json (self,name):
+		if name not in self._json:
+			if name == 'as-path':
+				if self.as_seq:
+					self._json[name] = '[ %s ]' % ', '.join([str(_) for _ in self.as_seq])
 				else:
-					string = '[ [ %s ], [ ] ]' % ', '.join([str(_) for _ in self.as_seq])
-			else:  # lseq == 0
-				if lset:
-					string = '[ [ ], [ %s ] ]' % ', '.join([str(_) for _ in self.as_set])
+					self._json[name] = '[]'
+			elif name == 'as-set':
+				if self.as_set:
+					self._json[name] = '[ %s ]' % ', '.join([str(_) for _ in self.as_set])
 				else:
-					string = '[ [ ], [ ] ]'
-			self._str = string
-		return self._str
+					self._json[name] = ''
+			else:
+				# very wrong ,,,,
+				return "[ 'bug in ExaBGP\'s code' ]"
+		return self._json[name]
+
 
 class AS4Path (ASPath):
 	ID = AttributeID.AS4_PATH

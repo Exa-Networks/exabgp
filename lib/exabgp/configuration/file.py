@@ -82,6 +82,14 @@ class Withdrawn (object):
 def pack_int (afi,integer,mask):
 	return ''.join([chr((integer>>(offset*8)) & 0xff) for offset in range(Inet.length[afi]-1,-1,-1)])
 
+def formated (line):
+	changed_line = '#'
+	new_line = line.strip().replace('\t',' ').replace(']',' ]').replace('[','[ ').replace(')',' )').replace('(','( ').replace(',',' , ')
+	while new_line != changed_line:
+		changed_line = new_line
+		new_line = new_line.replace('  ',' ')
+	return new_line
+
 
 class Configuration (object):
 	TTL_SECURITY = 255
@@ -275,7 +283,7 @@ class Configuration (object):
 		return True
 
 	def parse_api_route (self,command,peers,action):
-		tokens = self._cleaned(command).split(' ')[1:]
+		tokens = formated(command).split(' ')[1:]
 		if len(tokens) < 4:
 			return False
 		if tokens[0] != 'route':
@@ -325,7 +333,7 @@ class Configuration (object):
 		return changes
 
 	def parse_api_flow (self,command,action):
-		self._tokens = self._tokenise(' '.join(self._cleaned(command).split(' ')[2:]).split('\\n'))
+		self._tokens = self._tokenise(' '.join(formated(command).split(' ')[2:]).split('\\n'))
 		scope = [{}]
 		if not self._dispatch(scope,'flow',['route',],[]):
 			return False
@@ -338,7 +346,7 @@ class Configuration (object):
 		return changes
 
 	def parse_api_refresh (self,command):
-		tokens = self._cleaned(command).split(' ')[2:]
+		tokens = formated(command).split(' ')[2:]
 		if len(tokens) != 2:
 			return False
 		afi = AFI.value(tokens.pop(0))
@@ -350,7 +358,7 @@ class Configuration (object):
 	# operational
 
 	def parse_api_operational (self,command):
-		tokens = self._cleaned(command).split(' ',2)
+		tokens = formated(command).split(' ',2)
 		scope = [{}]
 
 		if len(tokens) != 3:
@@ -432,20 +440,12 @@ class Configuration (object):
 
 	# Tokenisation
 
-	def _cleaned (self,line):
-		changed_line = '#'
-		new_line = line.strip().replace('\t',' ').replace(']',' ]').replace('[','[ ').replace(')',' )').replace('(','( ')
-		while new_line != changed_line:
-			changed_line = new_line
-			new_line = new_line.replace('  ',' ')
-		return new_line
-
 	def _tokenise (self,text):
 		r = []
 		config = ''
 		for line in text:
 			self.logger.configuration('loading | %s' % line.rstrip())
-			replaced = self._cleaned(line)
+			replaced = formated(line)
 			config += line
 			if not replaced:
 				continue
@@ -1631,6 +1631,7 @@ class Configuration (object):
 		as_seq = []
 		as_set = []
 		asn = tokens.pop(0)
+		inset = False
 		try:
 			if asn == '[':
 				while True:
@@ -1640,7 +1641,10 @@ class Configuration (object):
 						self._error = self._str_route_error
 						if self.debug: raise
 						return False
-					if asn == '(':
+					if asn == ',':
+						continue
+					if asn in ('(','['):
+						inset = True
 						while True:
 							try:
 								asn = tokens.pop(0)
@@ -1652,8 +1656,12 @@ class Configuration (object):
 								break
 							as_set.append(self._newASN(asn))
 					if asn == ')':
+						inset = False
 						continue
 					if asn == ']':
+						if inset:
+							inset = False
+							continue
 						break
 					as_seq.append(self._newASN(asn))
 			else:
@@ -2456,7 +2464,7 @@ class Configuration (object):
 		}
 
 		number = len(parameters)*2
-		tokens = self._cleaned(value).split(' ',number-1)
+		tokens = formated(value).split(' ',number-1)
 		if len(tokens) != number:
 			self._error = 'invalid operational syntax, wrong number of arguments'
 			return False

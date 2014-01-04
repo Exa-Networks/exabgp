@@ -104,7 +104,7 @@ class Attributes (dict):
 	representation = {
 		#	key:  (how, default, name, presentation),
 		AID.ORIGIN             : ('string',  '', 'origin', '%s'),
-		AID.AS_PATH            : ('list',    '', 'as-path', '%s'),
+		AID.AS_PATH            : ('multiple','', ('as-path','as-set'), '%s'),
 		AID.NEXT_HOP           : ('string',  '', 'next-hop', '%s'),
 		AID.MED                : ('integer', '', 'med', '%s'),
 		AID.LOCAL_PREF         : ('integer', '', 'local-preference', '%s'),
@@ -237,6 +237,11 @@ class Attributes (dict):
 							yield '"%s": "%s"' % (name, presentation % str(self[code]))
 						elif how == 'list':
 							yield '"%s": %s' % (name, presentation % self[code].json())
+						elif how == 'multiple':
+							for n in name:
+								value = self[code].json(n)
+								if value:
+									yield '"%s": %s' % (n, presentation % value)
 						elif how == 'inet':
 							yield '"%s": "%s"' % (name, presentation % str(self[code]))
 						# Should never be ran
