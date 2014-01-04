@@ -1,7 +1,7 @@
 ##Summary
 
-Unlike [BIRD](http://bird.network.cz/) or [Quagga](http://www.quagga.net/), [ExaBGP](http://github.com/Exa-Networks/exabgp) was not designed to transform a general purpose server into a router, but to allow engineers to control their [BGP](http://tools.ietf.org/html/rfc4271) network easily.
-Think of it as [Software Defined Networking](http://www.wired.com/wiredenterprise/2012/04/going-with-the-flow-google/) for people with "commodity" routers.
+Unlike [BIRD](http://bird.network.cz/) or [Quagga](http://www.quagga.net/), [ExaBGP](http://github.com/Exa-Networks/exabgp) was not designed to transform a general purpose server into a router, but to allow engineers to control their network easily.
+Think of it as [Software Defined Networking](http://www.wired.com/wiredenterprise/2012/04/going-with-the-flow-google/) for people with usual [BGP](http://tools.ietf.org/html/rfc4271) routers.
 
 [ExaBGP](http://github.com/Exa-Networks/exabgp) transform [BGP](http://www.ietf.org/rfc/rfc4271.txt) messages into friendly plain text or JSON which can be easily manipulate by scripts.
 
@@ -11,7 +11,7 @@ It allows the creation of tools such as :
  * [DDOS mitigation](http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf)
  * an [anycasted](http://blog.iweb-hosting.co.uk/blog/2012/01/27/using-bgp-to-serve-high-availability-dns/) server
 
-So have a look and take control your network from any commodity servers.
+So have a look and take control your network from any unix servers.
 
 ##More information
 
@@ -25,6 +25,8 @@ If you are using [ExaBGP](http://github.com/Exa-Networks/exabgp) from source (or
 > cd exabgp-3.2.19
 > ./sbin/exabgp --help
 ```
+
+My [blog](http://thomas.mangin.com/categories/networking.html) may contain some BGP related information, but I tend to post more on [G+](https://plus.google.com/u/0/communities/108249711110699351497) about ExaBGP than I blog.
 
 ##Who is using it ?
 
@@ -66,7 +68,7 @@ Please consult any of :
 This programs **does not have any dependences on any third party libraries** and will run out of the box on any Unix system with a recent version of python installed.
 
 Development is done on python 2.7, the code is kept compatible with python 2.4 in ExaBGP 2.x.x and python 2.5 in ExaBGP 3.1.x.
-ExaBGP 3.2.x does rely on python 2.7 (but installing argparse with 2.6 works too), and we are likely to required python 3.4+ for ExaBGP 4.x.x
+ExaBGP 3.2.x and 3.3.x rely on python 2.7 (as it uses argparse), and we are likely to required python 3.4+ for ExaBGP 4.x.x
 
 ```sh
 > »› python --version
@@ -98,7 +100,7 @@ Python 2.6.7
 
 ### new on 3.2 stable ...
 
- * enhance route refresh support (still in development)
+ * enhance route refresh support
  * Ful RFC 5575 support, can decode incoming Flow routes
  * **An external program to announce a service** ( Thank you Vincent ! )
  * **accept incoming connections**
@@ -133,4 +135,3 @@ And some self promotion :
 
  * [ExaProxy](http://code.google.com/p/exaproxy) A non-caching HTTP proxy able to perform complex header manipulations
 
-My [blog](http://thomas.mangin.com/categories/networking.html) may contain some BGP related information, but I tend to post more on [G+](https://plus.google.com/u/0/communities/108249711110699351497) about ExaBGP than I blog.
