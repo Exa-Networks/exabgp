@@ -71,7 +71,7 @@ Development is done on python 2.7, the code is kept compatible with python 2.4 i
 ExaBGP 3.2.x and 3.3.x rely on python 2.7 (as it uses argparse), and we are likely to required python 3.4+ for ExaBGP 4.x.x
 
 ```sh
-> »› python --version
+> python --version
 Python 2.6.7
 > pip install argparse
 ```
