@@ -90,7 +90,7 @@ class Daemon (object):
 		try:
 			user = pwd.getpwnam(self.user)
 			nuid = int(user.pw_uid)
-			ngid = int(user.pw_uid)
+			ngid = int(user.pw_gid)
 		except KeyError:
 			return True
 
