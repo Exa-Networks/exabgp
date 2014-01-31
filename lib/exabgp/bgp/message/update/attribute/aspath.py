@@ -18,19 +18,23 @@ from exabgp.bgp.message.notification import Notify
 # only 2-4% of duplicated data therefore it is not worth to cache
 
 class ASPath (Attribute):
-	AS_SET      = 0x01
-	AS_SEQUENCE = 0x02
-	ASN4        = False
+	AS_SET             = 0x01
+	AS_SEQUENCE        = 0x02
+	AS_CONFED_SEQUENCE = 0x03
+	AS_CONFED_SET      = 0x04
+	ASN4               = False
 
 	ID = Attribute.ID.AS_PATH
 	FLAG = Attribute.Flag.TRANSITIVE
 	MULTIPLE = False
 
-	__slots__ = ['as_seq','as_set','segments','packed','index','_str','_json']
+	__slots__ = ['as_seq','as_set','as_cseq','as_cset','segments','packed','index','_str','_json']
 
-	def __init__ (self,as_sequence,as_set,index=None):
+	def __init__ (self,as_sequence,as_set,as_conf_sequence=[],as_conf_set=[],index=None):
 		self.as_seq = as_sequence
 		self.as_set = as_set
+		self.as_cseq = as_conf_sequence
+		self.as_cset = as_conf_set
 		self.segments = ''
 		self.packed = {True:'',False:''}
 		self.index = index  # the original packed data, use for indexing
@@ -58,8 +62,12 @@ class ASPath (Attribute):
 
 	def _segments (self,negotiated):
 		segments = ''
+		if self.as_cseq:
+			segments += self._segment(self.AS_CONFED_SEQUENCE,self.as_cseq,negotiated)
+		if self.as_cset:
+			segments += self._segment(self.AS_CONFED_SET,self.as_cset,negotiated)
 		if self.as_seq:
-			segments = self._segment(self.AS_SEQUENCE,self.as_seq,negotiated)
+			segments += self._segment(self.AS_SEQUENCE,self.as_seq,negotiated)
 		if self.as_set:
 			segments += self._segment(self.AS_SET,self.as_set,negotiated)
 		return segments
@@ -78,54 +86,58 @@ class ASPath (Attribute):
 		as2_seq = [_ if not _.asn4() else AS_TRANS for _ in self.as_seq]
 		as2_set = [_ if not _.asn4() else AS_TRANS for _ in self.as_set]
 
-		message = ASPath(as2_seq,as2_set)._pack(negotiated)
+		message = ASPath(as2_seq,as2_set,self.as_conf_sequence,self.as_conf_set)._pack(negotiated)
 		if AS_TRANS in as2_seq or AS_TRANS in as2_set:
-			message += AS4Path(self.as_seq,self.as_set)._pack(negotiated,True)
+			message += AS4Path(self.as_seq,self.as_set,self.as_conf_sequence,self.as_conf_set)._pack(negotiated,True)
 		return message
 
 	def __len__ (self):
 		raise RuntimeError('it makes no sense to ask for the size of this object')
 
-	def __str__ (self):
+	def __str__ (self,confed=False):
+		if self.as_cseq or self.as_cset:
+			return self.string(self.as_seq,self.as_set) + self.string(self.as_cseq,self.as_cset)
+		return self.string(self.as_seq,self.as_set)
+
+	def string (self,aseq,aset):
 		if not self._str:
-			lseq = len(self.as_seq)
-			lset = len(self.as_set)
+			lseq = len(aseq)
+			lset = len(aset)
 			if lseq == 1:
 				if not lset:
-					string = '%d' % self.as_seq[0]
+					string = '%d' % aseq[0]
 				else:
-					string = '[ %s %s]' % (self.as_seq[0],'( %s ) ' % (' '.join([str(_) for _ in self.as_set])))
+					string = '[ %s %s]' % (aseq[0],'( %s ) ' % (' '.join([str(_) for _ in aset])))
 			elif lseq > 1 :
 				if lset:
-					string = '[ %s %s]' % ((' '.join([str(_) for _ in self.as_seq])),'( %s ) ' % (' '.join([str(_) for _ in self.as_set])))
+					string = '[ %s %s]' % ((' '.join([str(_) for _ in aseq])),'( %s ) ' % (' '.join([str(_) for _ in aset])))
 				else:
-					string = '[ %s ]' % ' '.join([str(_) for _ in self.as_seq])
+					string = '[ %s ]' % ' '.join([str(_) for _ in aseq])
 			else:  # lseq == 0
 				string = '[ ]'
 			self._str = string
 		return self._str
 
 	def json (self,name):
-		if name not in self._json:
-			if name == 'as-path':
-				if self.as_seq:
-					self._json[name] = '[ %s ]' % ', '.join([str(_) for _ in self.as_seq])
-				else:
-					self._json[name] = '[]'
-			elif name == 'as-set':
-				if self.as_set:
-					self._json[name] = '[ %s ]' % ', '.join([str(_) for _ in self.as_set])
-				else:
-					self._json[name] = ''
-			else:
-				# very wrong ,,,,
-				return "[ 'bug in ExaBGP\'s code' ]"
+		match = {
+			#                               data , default representation
+			'as-path'            : (self.as_seq  , '[]'),
+			'as-set'             : (self.as_set  , ''),
+			'confederation-path' : (self.as_cseq , '[]'),
+			'confederation-set'  : (self.as_cset , ''),
+		}
+
+		data,default = match[name]
+		self._json[name] = '[ %s ]' % ', '.join([str(_) for _ in data]) if data else default
 		return self._json[name]
 
 	@classmethod
 	def __new_aspaths (cls,data,asn4,klass=None):
 		as_set = []
 		as_seq = []
+		as_cset = []
+		as_cseq = []
+
 		backup = data
 
 		unpacker = {
@@ -139,6 +151,8 @@ class ASPath (Attribute):
 		as_choice = {
 			ASPath.AS_SEQUENCE : as_seq,
 			ASPath.AS_SET      : as_set,
+			ASPath.AS_CONFED_SEQUENCE : as_cseq,
+			ASPath.AS_CONFED_SET      : as_cset,
 		}
 
 		upr = unpacker[asn4]
@@ -150,7 +164,7 @@ class ASPath (Attribute):
 				stype = ord(data[0])
 				slen  = ord(data[1])
 
-				if stype not in (ASPath.AS_SET, ASPath.AS_SEQUENCE):
+				if stype not in (ASPath.AS_SET, ASPath.AS_SEQUENCE, ASPath.AS_CONFED_SEQUENCE, ASPath.AS_CONFED_SET):
 					raise Notify(3,11,'invalid AS Path type sent %d' % stype)
 
 				end = 2+(slen*length)
@@ -169,8 +183,8 @@ class ASPath (Attribute):
 			raise Notify(3,11,'not enough data to decode AS_PATH or AS4_PATH')
 
 		if klass:
-			return klass(as_seq,as_set,backup)
-		return cls(as_seq,as_set,backup)
+			return klass(as_seq,as_set,as_cseq,as_cset,backup)
+		return cls(as_seq,as_set,as_cseq,as_cset,backup)
 
 	@classmethod
 	def unpack (cls,data,negotiated):

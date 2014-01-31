@@ -19,6 +19,8 @@ Version 3.4.4
     requested by: Tim Epkes
  * Fix: bug when process writes multiple lines
     reported by: Ilya Voronin
+ * Feature: accept packet with confedation (RFC 3065)
+    requested by: oriordan (with a patch, thank you)
 
 Version 3.4.3
  * Fix: JSON message increment
