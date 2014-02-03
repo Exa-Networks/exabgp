@@ -145,16 +145,15 @@ class Reactor (object):
 							break
 
 					# Handle all connection
-					peers = self._peers.keys()
 					ios = []
 					while peers:
 						for key in peers[:]:
 							peer = self._peers[key]
 							action = peer.run()
-							# .run() returns:
-							# * True if it wants to be called again
-							# * None if it should be called again but has no work atm
-							# * False if it is finished and is closing down, or restarting
+							# .run() returns an ACTION enum:
+							# * immediate if it wants to be called again
+							# * later if it should be called again but has no work atm
+							# * close if it is finished and is closing down, or restarting
 							if action == ACTION.close:
 								self.unschedule(peer)
 								peers.remove(key)
@@ -214,18 +213,23 @@ class Reactor (object):
 								connection.notification(6,5,'could not accept the connection')
 								connection.close()
 
-					if ios:
-						delay = max(start+self.max_loop_time-time.time(),0.0)
-						try:
-							read,_,_ = select.select(ios,[],[],delay)
-						except select.error,e:
-							errno,message = e.args
-							if not errno in error.block:
-								raise e
-
 					delay = max(start+self.max_loop_time-time.time(),0.0)
+
+					# if we are not already late in this loop !
 					if delay:
-						time.sleep(delay)
+						# some peers indicated that they wished to be called later
+						# so we are waiting for an update on their socket / pipe for up to the rest of the second
+						if ios:
+							# print "delay",delay,"waiting on fd"
+							try:
+								read,_,_ = select.select(ios,[],[],delay)
+							except select.error,e:
+								errno,message = e.args
+								if not errno in error.block:
+									raise e
+						else:
+							# print "delay",delay,"sleeping"
+							time.sleep(delay)
 
 				self.processes.terminate()
 				self.daemon.removepid()
