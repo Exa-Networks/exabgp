@@ -9,13 +9,11 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 import time
 
 from exabgp.logger import Logger
-from exabgp.bgp.message.nop import NOP
+from exabgp.bgp.message.nop import _NOP
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notify
 
 # Track the time for keepalive updates
-
-_NOP = NOP()
 
 class Timer (object):
 	def __init__ (self,me,holdtime,code,subcode,message=''):
