@@ -13,6 +13,7 @@ from exabgp.bgp.timer import Timer
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability.id import CapabilityID,REFRESH
 from exabgp.bgp.message.nop import NOP
+from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.notification import Notification, Notify
@@ -114,6 +115,8 @@ class Peer (object):
 		# * None, the generator must be re-created
 		self._['in']['generator'] = self._['in']['enabled']
 		self._['out']['generator'] = self._['out']['enabled']
+
+		self._generator_keepalive = None
 
 	def _reset (self,direction,message='',error=''):
 		self._[direction]['state'] = STATE.idle
@@ -222,6 +225,9 @@ class Peer (object):
 		self._['in']['state'] = STATE.connect
 		return True
 
+	def established (self):
+		return self._['in']['state'] == STATE.established or self._['out']['state'] == STATE.established
+
 	def _accept (self):
 		# we can do this as Protocol is a mutable object
 		proto = self._['in']['proto']
@@ -278,7 +284,6 @@ class Peer (object):
 		self._['in']['state'] = STATE.established
 		# let the caller know that we were sucesfull
 		yield ACTION.immediate
-
 
 	def _connect (self):
 		# try to establish the outgoing connection
@@ -361,6 +366,60 @@ class Peer (object):
 		# let the caller know that we were sucesfull
 		yield ACTION.immediate
 
+	def _keepalive (self,direction):
+		# yield :
+		#  True  if we just sent the keepalive
+		#  None  if we are working as we should
+		#  False if something went wrong
+
+		yield 'ready'
+
+		need_keepalive = False
+		generator = None
+		last = NOP
+
+		while not self._teardown:
+			# SEND KEEPALIVES
+			need_keepalive |= self.timer.keepalive()
+
+			if need_keepalive and not generator:
+				proto = self._[direction]['proto']
+				if not proto:
+					yield False
+					break
+				generator = proto.new_keepalive()
+				need_keepalive = False
+
+			if generator:
+				try:
+					last = generator.next()
+					if last.TYPE == KeepAlive.TYPE:
+						# close the generator and rasie a StopIteration
+						generator.next()
+					yield None
+				except (NetworkError,ProcessError):
+					yield False
+					break
+				except StopIteration:
+					generator = None
+					if last.TYPE != KeepAlive.TYPE:
+						self._generator_keepalive = False
+						yield False
+						break
+					yield True
+			else:
+				yield None
+
+	def keepalive (self):
+		generator = self._generator_keepalive
+		if generator:
+			# XXX: CRITICAL : this code needs the same exception than the one protecting the main loop
+			try:
+				return generator.next()
+			except StopIteration:
+				pass
+		return self._generator_keepalive is None
+
 	def _main (self,direction):
 		"yield True if we want to come back to it asap, None if nothing urgent, and False if stopped"
 
@@ -368,6 +427,9 @@ class Peer (object):
 			raise Notify(6,3)
 
 		proto = self._[direction]['proto']
+
+		# Initialise the keepalive
+		self._generator_keepalive = self._keepalive(direction)
 
 		# Announce to the process BGP is up
 		self.logger.network('Connected to peer %s (%s)' % (self.neighbor.name(),direction))
@@ -391,8 +453,6 @@ class Peer (object):
 				self.neighbor.messages.appendleft(self.neighbor.asm[family])
 
 		counter = Counter(self.logger,self._log(direction))
-		need_keepalive = False
-		keepalive = None
 		operational = None
 		refresh = None
 
@@ -415,19 +475,6 @@ class Peer (object):
 					if message.reserved == RouteRefresh.request:
 						self._resend_routes = SEND.refresh
 						send_families.append((message.afi,message.safi))
-
-				# SEND KEEPALIVES
-				need_keepalive |= self.timer.keepalive()
-
-				if need_keepalive and not keepalive:
-					keepalive = proto.new_keepalive()
-					need_keepalive = False
-
-				if keepalive:
-					try:
-						keepalive.next()
-					except StopIteration:
-						keepalive = None
 
 				# SEND OPERATIONAL
 				if self.neighbor.operational:

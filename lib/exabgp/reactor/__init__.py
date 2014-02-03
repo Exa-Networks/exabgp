@@ -137,6 +137,16 @@ class Reactor (object):
 						self._route_update = False
 						self.route_update()
 
+					peers = self._peers.keys()
+
+					# handle keepalive first and foremost
+					for key in peers:
+						peer = self._peers[key]
+						if peer.established():
+							if peer.keepalive() is False:
+								self.logger.reactor("problem with keepalive for peer %s " % peer.neighbor.name(),'error')
+								# unschedule the peer
+
 					while self.schedule(self.processes.received()) or self._pending:
 						self._pending = list(self.run_pending(self._pending))
 
@@ -220,15 +230,14 @@ class Reactor (object):
 						# some peers indicated that they wished to be called later
 						# so we are waiting for an update on their socket / pipe for up to the rest of the second
 						if ios:
-							# print "delay",delay,"waiting on fd"
 							try:
 								read,_,_ = select.select(ios,[],[],delay)
 							except select.error,e:
 								errno,message = e.args
 								if not errno in error.block:
 									raise e
+							# we can still loop here very fast if something goes wrogn with the FD
 						else:
-							# print "delay",delay,"sleeping"
 							time.sleep(delay)
 
 				self.processes.terminate()

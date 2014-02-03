@@ -38,14 +38,14 @@ class Timer (object):
 			if left <= 0:
 				raise Notify(self.code,self.subcode,self.message)
 		elif message.TYPE == KeepAlive.TYPE:
-			raise Notify(2,6,'Holdtime is zero and we got a keepalive message')
+			raise Notify(2,6,'Negotiated holdtime was zero, it was invalid to send us a keepalive messages')
 
 	def keepalive (self):
 		if not self.holdtime:
 			return False
 
 		left = int(self.last_sent + self.holdtime.keepalive() - time.time())
-		self.logger.timers(self.me('Sending Timer %d second(s) left' % left))
+		self.logger.timers(self.me('Send Timer %d second(s) left' % left))
 
 		if left <= 0:
 			self.last_sent = time.time()
