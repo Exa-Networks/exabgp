@@ -79,20 +79,20 @@ class Daemon (object):
 		"""returns true if we are left with insecure privileges"""
 		# os.name can be ['posix', 'nt', 'os2', 'ce', 'java', 'riscos']
 		if os.name not in ['posix',]:
-			return False
+			return True
 
 		uid = os.getuid()
 		gid = os.getgid()
 
 		if uid and gid:
-			return False
+			return True
 
 		try:
 			user = pwd.getpwnam(self.user)
 			nuid = int(user.pw_uid)
 			ngid = int(user.pw_gid)
 		except KeyError:
-			return True
+			return False
 
 		# not sure you can change your gid if you do not have a pid of zero
 		try:
@@ -116,12 +116,12 @@ class Daemon (object):
 				ceid = (1<<32) + ceid
 
 			if nuid != cuid or nuid != ceid or ngid != cgid:
-				return True
+				return False
 
 		except OSError:
-			return True
+			return False
 
-		return False
+		return True
 
 	def _is_socket (self,fd):
 		try:

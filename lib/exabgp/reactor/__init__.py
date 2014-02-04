@@ -95,9 +95,14 @@ class Reactor (object):
 				sys.exit(1)
 			self.logger.reactor("Listening for BGP session(s) on %s:%d" % (self.ip,self.port))
 
-		if self.daemon.drop_privileges():
+		if not self.daemon.drop_privileges():
 			self.logger.reactor("Could not drop privileges to '%s' refusing to run as root" % self.daemon.user,'critical')
 			self.logger.reactor("Set the environmemnt value exabgp.daemon.user to change the unprivileged user",'critical')
+			return
+
+		# This is required to make sure we can write in the log location as we now have dropped root privileges
+		if not self.logger.restart():
+			self.logger.reactor("Could not setup the logger, aborting",'critical')
 			return
 
 		self.daemon.daemonise()

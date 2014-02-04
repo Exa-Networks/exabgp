@@ -3,13 +3,18 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.3.1
+ * Fix: typo using uid instead gid (could prevent dropping privileges !)
+   reported by: Adrian (with a merge request, thank you)
+ * Fix: prevent ExaBGP to start if the log folder is not writeable by the user
+
 Version 3.3.0
  * Fix: typo causing issue when parsing multiple neighbor commands
     reported by: Pablo Camarillo Garvia
  * Fix: bad handling of EOR
     reported by: Petr Lapukhov
  * Fix: multiple bugs with multi neighbor commands
- * Improvement: allow as-path [ asn asn, [ asn ] ]
+ * Feature: allow as-path [ asn asn, [ asn ] ]
  * Other: migrate the setup.py script to work with git (vs hg)
  * Change: TEXT API format changed and version updated to 3.3.0 (reflect the version when the last change was introduced)
  * Change: JSON API format changed and version updated to 3.3.0
@@ -32,9 +37,9 @@ Version 3.2.19
     reported by: Robert Barnes
  * Fix: API message encoding
     patch by: Daniel Neiter
- * Improvement: allow digit:digit in extended communities
+ * Feature: allow digit:digit in extended communities
     requested by: Pierre Aubry
- * Improvement: healtcheck.py, python 2.6 and community support
+ * Feature: healtcheck.py, python 2.6 and community support
     pulled from: Allan Feid
 
 Version 3.2.18
@@ -96,8 +101,8 @@ Version 3.2.14
  * Fix: a bug when update large than 4096 could be generated with group-updates
  * Fix: an issue with JSON generation
  * Fix: MD5 support had been removed by error from 3.2
- * Improvement: allow to use quote with --decode
- * Improvement: implement draft-ietf-idr-aigp-10
+ * Feature: allow to use quote with --decode
+ * Feature: implement draft-ietf-idr-aigp-10
 
 Version 3.2.13
  * Fix: do not send enhanced route refresh BoRR and EoRR on reconnection
@@ -110,9 +115,9 @@ Version 3.2.12
     reported by: Sascha Schumann
 
 Version 3.2.11
- * Improvement: the TCP server allows 'neighbor' commands
+ * Feature: the TCP server allows 'neighbor' commands
     patch by: Hideaki HAYASHI
- * Improvement: initial Enhanced route refresh initial implementation
+ * Feature: initial Enhanced route refresh initial implementation
     thanks to: Hideaki HAYASHI for reporting an issue before the release (some border cases still exist)
  * Fix: bug in generating API string, missing space
  * Fix: bug in generating API string, withdrawn reported as invalid announced
@@ -127,7 +132,7 @@ Version 3.2.10
  * Fix: was not announcing add-path for IPv6 unicast
  * Fix: we were not sending the Notification messages
     reported by: Hideaki HAYASHI
- * Improvement: add support for route-refresh (RFC 2918)
+ * Feature: add support for route-refresh (RFC 2918)
 
 Version 3.2.9
  * Fix: some json generation issue
@@ -139,9 +144,9 @@ Version 3.2.9
  * Fix: did not parse add-path capability correctly (only registered the last family sent)
     reported Ryan Steinmetz
  * Fix: ASM messages were sent as ADM
- * Improvement: decode shows the JSON representation of updates
- * Improvement: start of support for draft-ietf-idr-operational-message-00
- * Improvement: allow operational advisory message using the API
+ * Feature: decode shows the JSON representation of updates
+ * Feature: start of support for draft-ietf-idr-operational-message-00
+ * Feature: allow operational advisory message using the API
 
 Version 3.2.8
  * Fix: correctly re-send routes between restart
@@ -154,15 +159,15 @@ Version 3.2.6
  * Fix: prevent re-announcement of identical routes
 
 Version 3.2.5
- * Improvement: FlowSpec decoding (ExaBGP can decode incoming FlowSpec)
- * Improvement: detect invalid netmask on route parsing
- * Improvement: "next-hop self" is supported via the API
- * Improvement: can accept incoming connect and perform collision detection
- * Improvement: add support for draft-ietf-idr-flowspec-redirect-ip-00.txt
- * Improvement: add missing DCSP marking from RFC 5575 (flowspec)
- * Improvement: add missing traffic-action from RFC 5575 (flowspec)
- * Improvement: add support for draft-raszuk-idr-flow-spec-v6-03
- * Improvement: complete RFC 5575 by providing support for flow-vpn
+ * Feature: FlowSpec decoding (ExaBGP can decode incoming FlowSpec)
+ * Feature: detect invalid netmask on route parsing
+ * Feature: "next-hop self" is supported via the API
+ * Feature: can accept incoming connect and perform collision detection
+ * Feature: add support for draft-ietf-idr-flowspec-redirect-ip-00.txt
+ * Feature: add missing DCSP marking from RFC 5575 (flowspec)
+ * Feature: add missing traffic-action from RFC 5575 (flowspec)
+ * Feature: add support for draft-raszuk-idr-flow-spec-v6-03
+ * Feature: complete RFC 5575 by providing support for flow-vpn
  * Fix: async connect issues
     reported by: Vincent Bernat (with very good advice for the patch)
  * Fix: bad function defintions
@@ -171,9 +176,9 @@ Version 3.2.5
  * Compatibility: -c becomes -f (it should not be used by users anyway)
 
 Version 3.2.4
- * Improvement: new update code generation can really group NLRI in one update packet
- * Improvement: massive code cleanup, much easier to read
- * Improvement: new RIB code (inbound and outbound tables) much faster
+ * Feature: new update code generation can really group NLRI in one update packet
+ * Feature: massive code cleanup, much easier to read
+ * Feature: new RIB code (inbound and outbound tables) much faster
  * Compatibility: JSON next-hop for the route is not in the attribute anymore but the NLRI
 
 Version 3.2.3
@@ -184,28 +189,28 @@ Version 3.2.3
  * Fix: change the behaviour of the main peer loop (should behave more like expected - no bug reported tho)
  * Fix: many small fixes
  * Fix: bad encoding of FlowSpec Fragments
- * Improvement: implemented some defensive coding practice (enable with exabgp.debug.defensive)
- * Improvement: IO code now fully non blocking on read and write
- * Improvement: total rewrite of the watchdog feature now extremely scalable
+ * Feature: implemented some defensive coding practice (enable with exabgp.debug.defensive)
+ * Feature: IO code now fully non blocking on read and write
+ * Feature: total rewrite of the watchdog feature now extremely scalable
 
 Version 3.2.2
- * Improvement: allow to generate NOTIFICATION messages through the API
+ * Feature: allow to generate NOTIFICATION messages through the API
     requested by: Parag Jain
- * Improvement: new syntax for the multiple neighbor announcement created in 3.1.13
+ * Feature: new syntax for the multiple neighbor announcement created in 3.1.13
     Allow to filter on more than the IP address
     requested by: Petr Lapukhov
- * Improvement: better uid/euid/gid change check
- * Improvement: allow to reload with restart of helper process with SIGUSR1
+ * Feature: better uid/euid/gid change check
+ * Feature: allow to reload with restart of helper process with SIGUSR1
     patch by: Vincent Bernat
- * Improvement: --decode can now be passed multiple messages to decode
- * Improvement: -v,--version returns ExaBGP's version
- * Improvement: be more robust on ^C
- * Improvement: totally rewrote the networking code, it now better deal with blocking write and not not need buffering
- * Improvement: user controlled open wait timer
- * Improvement: handle unknown transitive attributes
- * Improvement: allow the generation of generic attributes
- * Improvement: faster parsing of consecutive updates with the same attributes
- * Improvement: more regression testing
+ * Feature: --decode can now be passed multiple messages to decode
+ * Feature: -v,--version returns ExaBGP's version
+ * Feature: be more robust on ^C
+ * Feature: totally rewrote the networking code, it now better deal with blocking write and not not need buffering
+ * Feature: user controlled open wait timer
+ * Feature: handle unknown transitive attributes
+ * Feature: allow the generation of generic attributes
+ * Feature: faster parsing of consecutive updates with the same attributes
+ * Feature: more regression testing
  * Fix: potential issue with multisession collision detection
  * Fix: with multisession recent python would refuse to copy an route due to a lock in logger of the neighbor object
  * Fix: could not handle NOTICATION sent during the OPEN negotiation stage
@@ -233,17 +238,17 @@ Version 3.1.13 - 6th July 2013
  * Fix: an issue when parsing EOR
  * Fix: bug with RD community genration
     reported by: Parag Jain
- * Improvement: use less memory on route change calculation
- * Improvement: more regression testing
- * Improvement: allow to control which neighbor will get API notification
+ * Feature: use less memory on route change calculation
+ * Feature: more regression testing
+ * Feature: allow to control which neighbor will get API notification
     requested by: Parag Jain
- * Improvement: allow to control which neighbors will get API notification
+ * Feature: allow to control which neighbors will get API notification
     requested by: Petr Lapukhov
- * Improvement: allow delayed connections
+ * Feature: allow delayed connections
     requested by: David Freeman
- * Improvement: block on busy socket for performance testing
+ * Feature: block on busy socket for performance testing
     requested by: David Freeman
- * Fix/Improvement: only announce routes for the negociated family on a connection
+ * Fix/Feature: only announce routes for the negociated family on a connection
     requested by: Andrew Hoyos
 
 Version 3.1.12 - 16th May 2013
@@ -251,10 +256,10 @@ Version 3.1.12 - 16th May 2013
  * Fix: a bug in the generation of extended community (target and origin)
 
 Version 3.1.11 - 2nd of May 2013
- * Fix/Improvement: prevent exabgp api command to block the main loop if very long (issue 29)
- * Improvement: better sharing of available time between api and peers
+ * Fix/Feature: prevent exabgp api command to block the main loop if very long (issue 29)
+ * Feature: better sharing of available time between api and peers
  * Fix: a bug when trying to stop exabgp and a worker process is unstable
- * Improvement: count how many time a worker crashed and stop the application it is unstable (5 restart in 64 seconds)
+ * Feature: count how many time a worker crashed and stop the application it is unstable (5 restart in 64 seconds)
 
 Version 3.1.10 - 2nd of May 2013
  * Change: the JSON format of ASPath
@@ -316,14 +321,14 @@ Version 3.1.3 - 4th of Febuary 2013
 Version 3.1.2 - 10th of January 2013
  * Copyright: updated all copyright notice (welcome to 2013)
  * Change: tidy process command name (keeping compatibility)
- * Improvement: pass raw update message to the API
- * Improvement: better control of the API message passed
- * Improvement: allow/make work a global process for multiples peers (partial compatibility kept)
+ * Feature: pass raw update message to the API
+ * Feature: better control of the API message passed
+ * Feature: allow/make work a global process for multiples peers (partial compatibility kept)
 
 Version 3.1.1 - 6th of January 2013
  * Complete Fix: watchdog feature (issue 13)
- * Improvement: JSON API 1.0, flowspec untested (issue 17)
- * Improvement: allow to remove routes by only providing the nlri and next hop (issue 16)
+ * Feature: JSON API 1.0, flowspec untested (issue 17)
+ * Feature: allow to remove routes by only providing the nlri and next hop (issue 16)
 
 Version 3.1.0 - 2nd of January 2013
  * Partial Fix: watchdog feature
@@ -331,21 +336,21 @@ Version 3.1.0 - 2nd of January 2013
  * Fix: problem with SIGHUP when deleting peer
     patch by: Justin Azoff (thank you)
  * Fix: cluster-list attribute was not passed to api correctly
- * Improvement: MD5 support on FreeBSD (issue 14)
+ * Feature: MD5 support on FreeBSD (issue 14)
     patch by: Ryan Steinmetz (thank you)
- * Improvement: caching of Community and Next-Hop
+ * Feature: caching of Community and Next-Hop
     requested by: Justin Azoff (with benchmarking gains report,thank you)
- * Improvement: Store routes in neighbor as set and not list, so removal are O(1)
+ * Feature: Store routes in neighbor as set and not list, so removal are O(1)
     patch by: Justin Azoff (thank you)
- * Improvement: (experimental) Limit the memory used for parsed route caching
- * Improvement: (experimental) json encoding on the API (issue 17) not tested with flow routes or complex routes
+ * Feature: (experimental) Limit the memory used for parsed route caching
+ * Feature: (experimental) json encoding on the API (issue 17) not tested with flow routes or complex routes
 
 Version 3.0.11 - 21st of November 2012
  * Fix: add support for IPv6 MD5SUM
     reported by: Eiichiro Watanabe (with a patch, thank you)
  * Fix: RFC compliance, supporting keepalive timer of zero
  * Fix: parsing an invalid community string could cause a program crash
- * Improvement: add possibility to disable route attribute caching to reduce memory usage
+ * Feature: add possibility to disable route attribute caching to reduce memory usage
                (over a few hundred Mb saved per full routing tables)
     requested by Daniel Piekacz
 
@@ -362,10 +367,10 @@ Version 3.0.8 - 28th of August 2012
  * Fix: bug in printing neighbor objects
  * Fix: the first route of any MultiProtocol Update did not get its attributes set
  * Fix: safi on extensive route printing
- * Improvement: change the packet dump format to be cisco like
+ * Feature: change the packet dump format to be cisco like
  * Change: added configuration self-checking (-t, --test)
- * Improvement: added parsing of raw update in command line (--decode)
- * Improvement: add a capability to disable asn4 support (useful when decoding routes)
+ * Feature: added parsing of raw update in command line (--decode)
+ * Feature: add a capability to disable asn4 support (useful when decoding routes)
 
 Version 3.0.7 - 19th of August 2012
  * Fix: parser had a bug with multiple flow routes
@@ -377,7 +382,7 @@ Version 3.0.6 - 5th of August 2012
  * Fix: withdrawing routes via helper program (issue 5)
 
 Version 3.0.5 - 22 of July 2012
- * Improvement: suppor for systemd
+ * Feature: suppor for systemd
     patch by: Sébastien Luttringer
  * Fix: some unexpected verbosity when use the exabgp shell script on some OSes
     patch by: Sébastien Luttringer
@@ -403,11 +408,11 @@ Version 3.0.4 - 19 of July 2012
  * Fix: do not run our forked program as the caller but the suid user (fix bug when daemonizing too)
  * Fix: bug when daemonizing and not using syslog
  * Fix: handle gracefully ^C during configuration load/reload
- * Improvement: prevent SIGINT to reach the forked programs
- * Improvement: allow multiple configuration files, which forks multiple main loops
- * Improvement: send a "shutdown" message before terminating the worker processes
- * Improvement: group-updates option in neighbor which group routes with the same attributes in one update
- * Improvement: announce to helpers the start and end of update
+ * Feature: prevent SIGINT to reach the forked programs
+ * Feature: allow multiple configuration files, which forks multiple main loops
+ * Feature: send a "shutdown" message before terminating the worker processes
+ * Feature: group-updates option in neighbor which group routes with the same attributes in one update
+ * Feature: announce to helpers the start and end of update
 
 Version 3.0.3 - 17 of July 2012 (unreleased experimental version)
  * Fix: bug in ASN4 path reconstruction
@@ -416,8 +421,8 @@ Version 3.0.3 - 17 of July 2012 (unreleased experimental version)
  * Fix: massive CPU saving - only check for new route to announce when we have some
  * Fix: route buffering when sending many routes over slow connection/to slow routers was broken
     reported by Simon Woodhead (thank you for the testbed to debug it)
- * Improvement: in the way we store route in memory for the route delta on config change
- * Improvement: better reporting of message buffering
+ * Feature: in the way we store route in memory for the route delta on config change
+ * Feature: better reporting of message buffering
  * CHANGE: The way the routes as-path is printed/parsed (final for the 3.x.x)
 
 Version 3.0.2 - 16 of July 2012 (unreleased experimental version)
@@ -430,16 +435,16 @@ Version 3.0.2 - 16 of July 2012 (unreleased experimental version)
  * CHANGE: restructuration of file hierarchy
 
 Version 3.0.1 - 14 of July 2012 (unreleased experimental version)
- * Improvement: caching of parsed attributes of route received (saving memory and CPU)
- * Improvement: do not generate complex string with packet data if not printed
- * Improvement: all objects are storing data in the wire format when possible
- * Improvement: add AGGREGATOR and AS4_AGGREGATOR support
+ * Feature: caching of parsed attributes of route received (saving memory and CPU)
+ * Feature: do not generate complex string with packet data if not printed
+ * Feature: all objects are storing data in the wire format when possible
+ * Feature: add AGGREGATOR and AS4_AGGREGATOR support
     requested by: Rishabh Goel <rgoel@internap.com>
- * Improvement: add ATOMIC_AGGREGATE support
+ * Feature: add ATOMIC_AGGREGATE support
     requested by Rishabh Goel
- * Improvement: faster configuration parsing
- * Improvement: bring compatibility mode for option with 2.0.x
- * Improvement: support for RFC 4659 BGP-MPLS IP VPN Extension for IPv6 VPN
+ * Feature: faster configuration parsing
+ * Feature: bring compatibility mode for option with 2.0.x
+ * Feature: support for RFC 4659 BGP-MPLS IP VPN Extension for IPv6 VPN
  * Fix: harmless bug in the EOR generation
  * Fix: missing family announcement in open when autogenerated with option "all"
  * Fix: silly bug in profiling
@@ -480,22 +485,22 @@ Version 3.0.0 - 13 of July 2012 (unreleased experimental version)
  * Fix: bug when trying to daemonise ExaBGP, caused by unclosed FD
     reported by Ryan Lane (with a patch, thank you)
  * Fix: parse correctly routes with empty AS-SET or AS-SEQUENCE
- * Improvement: hidden option to change BGP select timeout (use at your own risk - do not ask me where it is - it is hidden)
- * Improvement: announce EOR even if Graceful-Restart was not negotiated but only MultiProtocol
- * Improvement: implementation of draft-ietf-idr-bgp-multisession-06
+ * Feature: hidden option to change BGP select timeout (use at your own risk - do not ask me where it is - it is hidden)
+ * Feature: announce EOR even if Graceful-Restart was not negotiated but only MultiProtocol
+ * Feature: implementation of draft-ietf-idr-bgp-multisession-06
     use capability 131 (and not 68) for multisession to achieve interop with Cisco
- * Improvement: following RFC 6608 new notification codes
- * Improvement: to the logging code and message filtering
- * Improvement: support RFC 3765 (NOPEER community)
- * Improvement: support for draft-ietf-idr-add-paths-07 (even IPv6 even if it is not supported by anyone)
+ * Feature: following RFC 6608 new notification codes
+ * Feature: to the logging code and message filtering
+ * Feature: support RFC 3765 (NOPEER community)
+ * Feature: support for draft-ietf-idr-add-paths-07 (even IPv6 even if it is not supported by anyone)
     requested by: Rishabh Goel (Thank you for giving me a BGP session to an XR)
- * Improvement: support for RFC 4456 (BGP Route Reflection: An Alternative to Full Mesh Internal BGP (IBGP))
+ * Feature: support for RFC 4456 (BGP Route Reflection: An Alternative to Full Mesh Internal BGP (IBGP))
     more exactly the generation and parsing of originator-id and cluster-list attributes
     requested by Rishabh Goel
- * Improvement: add tcp timeout control for connection over very slow ebgp multihop (dangerous, use with care)
- * Improvement: control of the MP families announced in the OPEN message
- * Improvement: support for RFC 3107 and 4364 (Carrying Label Information in BGP-4)
- * Improvement: selfcheck, allow to check if the routes we generate pass our own parser
+ * Feature: add tcp timeout control for connection over very slow ebgp multihop (dangerous, use with care)
+ * Feature: control of the MP families announced in the OPEN message
+ * Feature: support for RFC 3107 and 4364 (Carrying Label Information in BGP-4)
+ * Feature: selfcheck, allow to check if the routes we generate pass our own parser
 
 Version 2.0.8 - 31 of March 2012 (stable version)
  * Fix: the update grouping could cause message up to "header size" bigger than allowed.
@@ -506,11 +511,11 @@ Version 2.0.7 - 24 of March 2012
  * Note: Only released for debian (again :p)
 
 Version 2.0.6 - 28 of Febuary 2012 (stable version)
- * Improvement: update grouping up to 4096 bytes
+ * Feature: update grouping up to 4096 bytes
  * Fix: debian packaging issue
 
 Version 2.0.5 - 10 of Febuary 2012
- * Improvement: allow named community
+ * Feature: allow named community
  * Fix: bad flowspec component size calculation for large flow routes
  * Fix: bad attribute generation for attributes bigger than 256 chars
  * Fix: allows to pass arguments to the helper programs
@@ -520,23 +525,23 @@ Version 2.0.4 - 1st of Febuary 2012
  * Fix: sending any signal stoped the program instead of reloading
 
 Version 2.0.3 - 1st of Febuary 2012
- * Improvement: now sending help "neighbor <ip> up" when a neighbor goes up
+ * Feature: now sending help "neighbor <ip> up" when a neighbor goes up
  * Fix: now sending correctly "neighbor <ip> down" when a neighbor goes down
  * Fix: a bug when parsing "split" configuration
  * Fix: sending routes faster than a router can accept does not cause the BGP session to go down
     problem found by Eric Nghia Nguyen Duy (thank you for giving me access to his lab to fix the issue)
- * Improvement: Buffering message we can not send if sockets return a transient failure
- * Improvement: Limiting how long and how deep the buffer are kept before we kill the session
+ * Feature: Buffering message we can not send if sockets return a transient failure
+ * Feature: Limiting how long and how deep the buffer are kept before we kill the session
  * Fix: under load we could receive partial messages, read until we have it all
  * Fix: we were not always sending the 'down' message to handlers
  * Fix: handle signal during select
  * Internal Change: how we read from socket
  * User Change: new DEBUG_CORE option (alias for DEBUG_SUPERVISOR, DEBUG_DAEMON, DEBUG_PROCESS, DEBUG_MESSAGE, DEBUG_TIMER, DEBUG_ROUTE)
  * User Change: DEBUG_ROUTES is deprecated please use DEBUG_ROUTE (2.0.x release with have both values)
- * Improvement: Parsing AS4_PATH message and merging AS_PATH when required
+ * Feature: Parsing AS4_PATH message and merging AS_PATH when required
  * Fix: possible problem with session establishment
- * Improvement: extendeded community are available in the configuration file
- * Improvement: printed routes now include extended community information
+ * Feature: extendeded community are available in the configuration file
+ * Feature: printed routes now include extended community information
  * Fix: bad route generation for OLD BGP speakers, previously not including 2 bytes ASN in the AS4_PATH
 
 Version 2.0.2 - 1st of January 2012
@@ -557,9 +562,9 @@ Version 2.0.1 - 8th of December 2011
     (issue 3) reported by  Sebastien Luttringer
 
 Version 2.0.0 - 3rd of December 2011 (experimental version)
- * Improvement: can set flowspec communities
+ * Feature: can set flowspec communities
     requested by Yiming Gong
- * Improvement: incoming route parsing for processing by an external application
+ * Feature: incoming route parsing for processing by an external application
     requested by Daniel Piekacz (and others)
  * Improvment: Add profiling features to find bottlenecks
  * Improvment: Code speedup following profiling
@@ -570,12 +575,12 @@ Version 2.0.0 - 3rd of December 2011 (experimental version)
  * User Change : move all external processes in the exabgp configuration folder
 
 Version 1.3.4 - 21th of September 2011 (stable version)
- * Improvement: added support for asdot/asdot+
+ * Feature: added support for asdot/asdot+
     requested by jonlooney (with a patch - thank you)
  * Fix: when the pid file could not be written, the daemon was crashing on exit
 
 Version 1.3.3 - 25th of June 2011
- * Improvement: massive speed improvement when reloading with many routes (60 to 2 seconds with 10k routes)
+ * Feature: massive speed improvement when reloading with many routes (60 to 2 seconds with 10k routes)
     reported by Martin Baum (with proof of concept patch)
 
 Version 1.3.2 - 23rd of June 2011
@@ -584,49 +589,49 @@ Version 1.3.2 - 23rd of June 2011
 
 Version 1.3.1 - 3rd of May 2011
  * Fix bug in configuration parsing introduce just before 1.3.0
- * Improvement: make tcp-server implement all the internal API available
+ * Feature: make tcp-server implement all the internal API available
 
 Version 1.3.0 - 2nd of May 2011
- * Improvement: reduce likelyness of route update recalculation causing us to not send keepalive in time
+ * Feature: reduce likelyness of route update recalculation causing us to not send keepalive in time
  * Fix: introduced a bug in neighbor printing
  * Fix: we were trying to send a KEEPALIVE after the initial routes, but it was not going
  * Fix: a work around a python bug with TCP was not implemented everywhere
- * Improvement: adding a 'ttl-security' to allow to explicit setup of TCP TTL
- * Improvement: better handling of BGP timer for keepalive
- * Improvement: refuse to run as root, try to run as nobody automatically, uid/gid set to the user defined by env USER otherwise
+ * Feature: adding a 'ttl-security' to allow to explicit setup of TCP TTL
+ * Feature: better handling of BGP timer for keepalive
+ * Feature: refuse to run as root, try to run as nobody automatically, uid/gid set to the user defined by env USER otherwise
  * Removed: the old wiki documentation
- * Improvement: Debian Packaging (author and maintainer: Henry-Nicolas Tourneur - thank you)
+ * Feature: Debian Packaging (author and maintainer: Henry-Nicolas Tourneur - thank you)
  * Change: renamed env variable DAEMON to DAEMONIZE (to prevent name clash with Debian)
- * Improvement: added env variable PDB if set the program will call pdb, the python debugger, on program fault
- * Improvement: it is now possible to get some routes withdrawn from an external process (see watchdog example conf.)
+ * Feature: added env variable PDB if set the program will call pdb, the python debugger, on program fault
+ * Feature: it is now possible to get some routes withdrawn from an external process (see watchdog example conf.)
     warning: this code is not yet considered production ready, expect some bugs for complex configurations
- * Improvement: it is now possible to modify the configuration without reload from external proccess (see process example conf.)
+ * Feature: it is now possible to modify the configuration without reload from external proccess (see process example conf.)
     warning: this code is not yet considered production ready, expect some bugs for complex configurations
  * Fix: make sure we can setup a session even if no route (ie: AFI/SAFI families for Mulitprotocol) are in the configuration
  * Fix: many small bug fixes, simple code refactorisation, ...
 
 Version 1.2.0 - 25th of January 2011
- * Improvement: Allow to break route in more specific (ie define a /22 and get 4x /24 announced)
+ * Feature: Allow to break route in more specific (ie define a /22 and get 4x /24 announced)
                 This is useful when blackholing traffic to make sure no routes more specific are received from your network peer/transit
     requested by : Renaud Chaput
- * Improvement: Save the program PID into a file (set the PID= environment value with the file path)
+ * Feature: Save the program PID into a file (set the PID= environment value with the file path)
     requested by : Renaud Chaput
- * Improvement: Add syslog support (env SYSLOG= nothing for local syslog, a file name (auto-rotate) or host:<host> for remote syslog)
+ * Feature: Add syslog support (env SYSLOG= nothing for local syslog, a file name (auto-rotate) or host:<host> for remote syslog)
     requested by : Josh Ward
- * Improvement: Can now daemonise (env DAEMON= detach and send the program in the background)
+ * Feature: Can now daemonise (env DAEMON= detach and send the program in the background)
     requested by : Josh Ward
- * Improvement: Selection of what subsystems to log, more readable logs (well, less unreadeable to be exact)
- * Improvement: Create a new "group" in the configuration to share routes and configuration options between neighbors
+ * Feature: Selection of what subsystems to log, more readable logs (well, less unreadeable to be exact)
+ * Feature: Create a new "group" in the configuration to share routes and configuration options between neighbors
     requested by : Multiple people
  * Fix: non detection of MD5 change on configuration reload
- * Improvement: support distutil with a setup.py file for easy installation
+ * Feature: support distutil with a setup.py file for easy installation
 
 Version 1.1.0 - 10th of January 2011
- * Improvement: Tested and completed TCP MD5 signature
+ * Feature: Tested and completed TCP MD5 signature
     contribution: MD5 TCP code by David Farrar
 
 Version 1.0.4 - 8th of January 2011
- * Improvement: can now toggle debuging using environment values (DEBUG_CONFIGURATION, DEBUG_SUPERVISOR, DEBUG_WIRE)
+ * Feature: can now toggle debuging using environment values (DEBUG_CONFIGURATION, DEBUG_SUPERVISOR, DEBUG_WIRE)
  * Fix: some change to the AS_PATH generation code (some routers did not accept empty AS_PATH as it was encoded before)
     reported by: R.P. Aditya
  * Fix: some interoperability issue with openbgpd (could not parse their OPEN message)
@@ -635,11 +640,11 @@ Version 1.0.4 - 8th of January 2011
 
 Version 1.0.3 - 6th of January 2011
  * Fix: missing default localpref on IBGP session if not specified on the route
- * Improvement: more verbose messages in case of OPEN negociation issue
+ * Feature: more verbose messages in case of OPEN negociation issue
  * Fix: typo preventing 4 Bytes ASN to work
 
 Version 1.0.2 - 22nd of October 2010
- * Improvement: only try to generate UPDATE messages if the configuration was changed (save quite some CPU as the algorithm is really naive)
+ * Feature: only try to generate UPDATE messages if the configuration was changed (save quite some CPU as the algorithm is really naive)
  * Fix : a neighbor configuration change could have been undetected on SIGHUP/SIGALRM
     reported by: Yann Berthier
  * Fix : reloading the configuration did not detect the removed routes
