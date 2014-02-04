@@ -8,6 +8,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 import os
 import sys
+import stat
 import time
 import syslog
 import logging
@@ -46,6 +47,7 @@ class _Logger (object):
 
 	_config = ''
 	_pid = os.getpid()
+	_cwd = os.getcwd()
 
 	# we use os.pid everytime as we may fork and the class is instance before it
 
@@ -99,7 +101,27 @@ class _Logger (object):
 		if not command.log.enable:
 			return
 
-		destination = command.log.destination
+		self.destination = command.log.destination
+
+		self.restart(True)
+
+	def _can_write (self,location):
+		try:
+			s  = os.stat(os.path.dirname(location))
+		except OSError:
+			return None
+		mode = s[stat.ST_MODE]
+		uid  = os.geteuid()
+		gid  = os.getegid()
+
+		return not not (
+			((s[stat.ST_UID] == uid) and (mode & stat.S_IWUSR)) or
+			((s[stat.ST_GID] == gid) and (mode & stat.S_IWGRP)) or
+			(mode & stat.S_IWOTH)
+		)
+
+	def restart (self,first=False):
+		destination = 'stderr' if first else self.destination
 
 		try:
 			if destination in ('','syslog'):
@@ -110,23 +132,59 @@ class _Logger (object):
 				if not os.path.exists(address):
 					address = ('localhost', 514)
 				handler = logging.handlers.SysLogHandler(address)
-			elif destination.lower().startswith('host:'):
+
+				self._syslog = logging.getLogger()
+				self._syslog.setLevel(logging.DEBUG)
+				self._syslog.addHandler(handler)
+				return True
+
+			if destination.lower().startswith('host:'):
 				# If the address is invalid, each syslog call will print an error.
 				# See how it can be avoided, as the socket error is encapsulated and not returned
 				address = (destination[5:].strip(), 514)
 				handler = logging.handlers.SysLogHandler(address)
+
+				self._syslog = logging.getLogger()
+				self._syslog.setLevel(logging.DEBUG)
+				self._syslog.addHandler(handler)
+				return True
+
+			if destination.lower() == 'stdout':
+				handler = logging.StreamHandler(sys.stdout)
+
+				self._syslog = logging.getLogger()
+				self._syslog.setLevel(logging.DEBUG)
+				self._syslog.addHandler(handler)
+				return True
+
+			if destination.lower() == 'stderr':
+				handler = logging.StreamHandler(sys.stderr)
+
+				self._syslog = logging.getLogger()
+				self._syslog.setLevel(logging.DEBUG)
+				self._syslog.addHandler(handler)
+				return True
+
+			# folder
+			logfile = os.path.realpath(os.path.normpath(os.path.join(self._cwd,destination)))
+			can = self._can_write(logfile)
+			if can is True:
+				handler = logging.handlers.RotatingFileHandler(logfile, maxBytes=5*1024*1024, backupCount=5)
+			elif can is None:
+				self.critical('ExaBGP can not access (perhaps as it does not exist) the log folder provided','logger')
+				return False
 			else:
-				if destination.lower() == 'stdout':
-					handler = logging.StreamHandler(sys.stdout)
-				elif destination.lower() == 'stderr':
-					handler = logging.StreamHandler(sys.stderr)
-				else:
-					handler = logging.handlers.RotatingFileHandler(destination, maxBytes=5*1024*1024, backupCount=5)
+				self.critical('ExaBGP does not have the right to write in the requested log directory','logger')
+				return False
+
 			self._syslog = logging.getLogger()
 			self._syslog.setLevel(logging.DEBUG)
 			self._syslog.addHandler(handler)
+			return True
+
 		except IOError:
-			self.critical('Can not use SYSLOG, failing back to stdout')
+			self.critical('Can not set logging (are stdout/stderr closed?)','logger')
+			return False
 
 	def debug (self,message,source='',level='DEBUG'):
 		for line in message.split('\n'):
