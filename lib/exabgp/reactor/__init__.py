@@ -100,6 +100,11 @@ class Reactor (object):
 			self.logger.reactor("Set the environmemnt value exabgp.daemon.user to change the unprivileged user",'critical')
 			return
 
+		# This is required to make sure we can write in the log location as we now have dropped root privileges
+		if not self.logger.restart():
+			self.logger.reactor("Could not setup the logger, aborting",'critical')
+			return
+
 		self.daemon.daemonise()
 
 		if not self.daemon.savepid():
