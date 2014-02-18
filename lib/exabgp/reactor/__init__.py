@@ -142,6 +142,16 @@ class Reactor (object):
 						self._route_update = False
 						self.route_update()
 
+					peers = self._peers.keys()
+
+					# handle keepalive first and foremost
+					for key in peers:
+						peer = self._peers[key]
+						if peer.established():
+							if peer.keepalive() is False:
+								self.logger.reactor("problem with keepalive for peer %s " % peer.neighbor.name(),'error')
+								# unschedule the peer
+
 					while self.schedule(self.processes.received()) or self._pending:
 						self._pending = list(self.run_pending(self._pending))
 
@@ -150,16 +160,15 @@ class Reactor (object):
 							break
 
 					# Handle all connection
-					peers = self._peers.keys()
 					ios = []
 					while peers:
 						for key in peers[:]:
 							peer = self._peers[key]
 							action = peer.run()
-							# .run() returns:
-							# * True if it wants to be called again
-							# * None if it should be called again but has no work atm
-							# * False if it is finished and is closing down, or restarting
+							# .run() returns an ACTION enum:
+							# * immediate if it wants to be called again
+							# * later if it should be called again but has no work atm
+							# * close if it is finished and is closing down, or restarting
 							if action == ACTION.close:
 								self.unschedule(peer)
 								peers.remove(key)
@@ -219,18 +228,22 @@ class Reactor (object):
 								connection.notification(6,5,'could not accept the connection')
 								connection.close()
 
-					if ios:
-						delay = max(start+self.max_loop_time-time.time(),0.0)
-						try:
-							read,_,_ = select.select(ios,[],[],delay)
-						except select.error,e:
-							errno,message = e.args
-							if not errno in error.block:
-								raise e
-
 					delay = max(start+self.max_loop_time-time.time(),0.0)
+
+					# if we are not already late in this loop !
 					if delay:
-						time.sleep(delay)
+						# some peers indicated that they wished to be called later
+						# so we are waiting for an update on their socket / pipe for up to the rest of the second
+						if ios:
+							try:
+								read,_,_ = select.select(ios,[],[],delay)
+							except select.error,e:
+								errno,message = e.args
+								if not errno in error.block:
+									raise e
+							# we can still loop here very fast if something goes wrogn with the FD
+						else:
+							time.sleep(delay)
 
 				self.processes.terminate()
 				self.daemon.removepid()

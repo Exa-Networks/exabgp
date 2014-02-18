@@ -19,3 +19,5 @@ class NOP (Message):
 
 def NOPFactory (self):
 	return NOP()
+
+_NOP = NOP()

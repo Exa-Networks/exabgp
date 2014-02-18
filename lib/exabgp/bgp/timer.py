@@ -9,13 +9,11 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 import time
 
 from exabgp.logger import Logger
-from exabgp.bgp.message.nop import NOP
+from exabgp.bgp.message.nop import _NOP
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notify
 
 # Track the time for keepalive updates
-
-_NOP = NOP()
 
 class Timer (object):
 	def __init__ (self,me,holdtime,code,subcode,message=''):
@@ -40,14 +38,14 @@ class Timer (object):
 			if left <= 0:
 				raise Notify(self.code,self.subcode,self.message)
 		elif message.TYPE == KeepAlive.TYPE:
-			raise Notify(2,6,'Holdtime is zero and we got a keepalive message')
+			raise Notify(2,6,'Negotiated holdtime was zero, it was invalid to send us a keepalive messages')
 
 	def keepalive (self):
 		if not self.holdtime:
 			return False
 
 		left = int(self.last_sent + self.holdtime.keepalive() - time.time())
-		self.logger.timers(self.me('Sending Timer %d second(s) left' % left))
+		self.logger.timers(self.me('Send Timer %d second(s) left' % left))
 
 		if left <= 0:
 			self.last_sent = time.time()

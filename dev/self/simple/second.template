@@ -3,7 +3,7 @@
 group test {
 	local-as 65534;
 	peer-as 65533;
-	hold-time 180;
+	hold-time 9;
 	graceful-restart 1200;
 
 	family {
