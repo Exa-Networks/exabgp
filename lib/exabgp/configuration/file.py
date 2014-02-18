@@ -645,8 +645,8 @@ class Configuration (object):
 			if command == 'hold-time': return self._set_holdtime(scope,'hold-time',tokens[1:])
 			if command == 'md5': return self._set_md5(scope,'md5',tokens[1:])
 			if command == 'ttl-security': return self._set_ttl(scope,'ttl-security',tokens[1:])
-			if command == 'group-updates': return self._set_group_updates(scope,'group-updates',tokens[1:])
-			if command == 'aigp': return self._set_boolean(scope,'aigp',tokens[1:],None)
+			if command == 'group-updates': return self._set_boolean(scope,'group-updates',tokens[1:],'unset')
+			if command == 'aigp': return self._set_boolean(scope,'aigp',tokens[1:],'false')
 			# deprecated
 			if command == 'route-refresh': return self._set_boolean(scope,'route-refresh',tokens[1:])
 			if command == 'graceful-restart': return self._set_gracefulrestart(scope,'graceful-restart',tokens[1:])
@@ -671,7 +671,7 @@ class Configuration (object):
 			if command == 'operational': return self._set_boolean(scope,'capa-operational',tokens[1:])
 			if command == 'add-path': return self._set_addpath(scope,'add-path',tokens[1:])
 			if command == 'asn4': return self._set_asn4(scope,'asn4',tokens[1:])
-			if command == 'aigp': return self._set_boolean(scope,'aigp',tokens[1:],None)
+			if command == 'aigp': return self._set_boolean(scope,'aigp',tokens[1:],'false')
 
 		elif name == 'process':
 			if command == 'run': return self._set_process_run(scope,'process-run',tokens[1:])
@@ -943,6 +943,8 @@ class Configuration (object):
 				scope[-1][command] = True
 			elif boolean in ('false','disable','disabled'):
 				scope[-1][command] = False
+			elif boolean in ('unset',):
+				scope[-1][command] = None
 			else:
 				raise ValueError()
 			return True
@@ -1129,6 +1131,12 @@ class Configuration (object):
 				# we are modifying the data used by .families() here
 				neighbor.add_family(family)
 
+		if neighbor.group_updates is None:
+			neighbor.group_updates = False
+			self.logger.configuration('-'*80,'warning')
+			self.logger.configuration('group-updates not enabled for peer %s, it surely should, the default will change to true soon' % neighbor.peer_address,'warning')
+			self.logger.configuration('-'*80,'warning')
+
 		# create one neighbor object per family for multisession
 		if neighbor.multisession:
 			for family in neighbor.families():
@@ -1299,10 +1307,6 @@ class Configuration (object):
 			self._error = '"%s" is an invalid ttl-security' % ' '.join(value)
 			if self.debug: raise
 			return False
-		return True
-
-	def _set_group_updates (self,scope,command,value):
-		scope[-1][command] = True
 		return True
 
 	#  Group Static ................
