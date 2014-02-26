@@ -6,6 +6,9 @@ Version explained:
 Version 3.3.1
  * Fix: typo using uid instead gid (could prevent dropping privileges !)
    reported by: Adrian (with a merge request, thank you)
+ * Change: performing KeepAlive handling as first action
+ * Fix: issue when removing some routes
+    reported by: Adrian (backb1 on github)
 
 Version 3.3.0
  * Fix: typo causing issue when parsing multiple neighbor commands
