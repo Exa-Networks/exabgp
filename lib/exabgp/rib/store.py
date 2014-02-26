@@ -159,7 +159,7 @@ class Store (object):
 			# route removed before announcement, all goo
 			if old_change.nlri.action == OUT.announce and change.nlri.action == OUT.withdraw:
 				# if we cache sent NLRI and this NLRI was never sent before, we do not need to send a withdrawal
-				if self.cache and change_nlri_index not in self._announced[change.nlri.family()]:
+				if self.cache and change_nlri_index not in self._announced.get(change.nlri.family(),{}):
 					return
 
 		# add the route to the list to be announced
