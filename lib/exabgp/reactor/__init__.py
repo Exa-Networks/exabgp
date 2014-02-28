@@ -34,7 +34,6 @@ class Reactor (object):
 		self.port = environment.settings().tcp.port
 
 		self.max_loop_time = environment.settings().reactor.speed
-		self.half_loop_time = self.max_loop_time / 2
 
 		self.logger = Logger()
 		self.daemon = Daemon(self)
@@ -152,13 +151,6 @@ class Reactor (object):
 								self.logger.reactor("problem with keepalive for peer %s " % peer.neighbor.name(),'error')
 								# unschedule the peer
 
-					while self.schedule(self.processes.received()) or self._pending:
-						self._pending = list(self.run_pending(self._pending))
-
-						duration = time.time() - start
-						if duration >= self.half_loop_time:
-							break
-
 					# Handle all connection
 					ios = []
 					while peers:
@@ -176,6 +168,10 @@ class Reactor (object):
 								ios.extend(peer.sockets())
 								# no need to come back to it before a a full cycle
 								peers.remove(key)
+
+							# give some time to our local processes
+							if self.schedule(self.processes.received()) or self._pending:
+								self._pending = list(self.run_pending(self._pending))
 
 						duration = time.time() - start
 						if duration >= self.max_loop_time:
