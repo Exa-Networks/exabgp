@@ -645,7 +645,7 @@ class Configuration (object):
 			if command == 'hold-time': return self._set_holdtime(scope,'hold-time',tokens[1:])
 			if command == 'md5': return self._set_md5(scope,'md5',tokens[1:])
 			if command == 'ttl-security': return self._set_ttl(scope,'ttl-security',tokens[1:])
-			if command == 'group-updates': return self._set_boolean(scope,'group-updates',tokens[1:],'unset')
+			if command == 'group-updates': return self._set_boolean(scope,'group-updates',tokens[1:],'true')
 			if command == 'aigp': return self._set_boolean(scope,'aigp',tokens[1:],'false')
 			# deprecated
 			if command == 'route-refresh': return self._set_boolean(scope,'route-refresh',tokens[1:])
@@ -1069,7 +1069,7 @@ class Configuration (object):
 
 		neighbor.md5 = local_scope.get('md5',None)
 		neighbor.ttl = local_scope.get('ttl-security',None)
-		neighbor.group_updates = local_scope.get('group-updates',False)
+		neighbor.group_updates = local_scope.get('group-updates',None)
 
 		neighbor.route_refresh = local_scope.get('route-refresh',0)
 		neighbor.graceful_restart = local_scope.get('graceful-restart',0)
