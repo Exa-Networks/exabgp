@@ -236,7 +236,7 @@ class Attributes (dict):
 						elif how == 'string':
 							yield '"%s": "%s"' % (name, presentation % str(self[code]))
 						elif how == 'list':
-							yield '"%s": %s' % (name, presentation % self[code].json())
+							yield '"%s": %s' % (name[0], presentation % self[code].json())
 						elif how == 'multiple':
 							for n in name:
 								value = self[code].json(n)

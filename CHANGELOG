@@ -10,6 +10,7 @@ Version 3.3.1
  * Fix: configuration defaults for booleans ( and warns when group-updates is not enabled );
  * Fix: issue when removing some routes
     reported by: Adrian (backb1 on github)
+ * Fix: bad printing of route as-path
  * Change: performing KeepAlive handling as first action
  * Change: time is provided as an high resolution real number and not an integer
 
