@@ -7,6 +7,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 import os
+import re
 import sys
 import time
 import signal
@@ -472,7 +473,7 @@ class Reactor (object):
 
 		def match_neighbor (description,name):
 			for string in description:
-				if not string in name:
+				if re.search('(^|\s)%s($|\s)' % (string,), key) is None:
 					return False
 			return True
 
