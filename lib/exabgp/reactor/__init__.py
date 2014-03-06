@@ -473,7 +473,7 @@ class Reactor (object):
 
 		def match_neighbor (description,name):
 			for string in description:
-				if re.search('(^|\s)%s($|\s)' % (string,), key) is None:
+				if re.search('^\s?%s\s?$' % string.replace('.','\.'), name) is None:
 					return False
 			return True
 
