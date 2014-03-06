@@ -218,30 +218,33 @@ class Connection (object):
 		# _reader returns the whole number requested or nothing and then stops
 		for header in self._reader(Message.HEADER_LEN):
 			if not header:
-				yield 0,0,'',''
+				yield 0,0,'','',None
 
 		if not header.startswith(Message.MARKER):
-			raise NotifyError(1,1,'The packet received does not contain a BGP marker')
+			yield 0,0,header,'',NotifyError(1,1,'The packet received does not contain a BGP marker')
+			return
 
 		msg = ord(header[18])
 		length = unpack('!H',header[16:18])[0]
 
 		if length < Message.HEADER_LEN or length > Message.MAX_LEN:
-			raise NotifyError(1,2,'%s has an invalid message length of %d' %(Message().name(msg),length))
+			yield length,0,header,'',NotifyError(1,2,'%s has an invalid message length of %d' %(Message().name(msg),length))
+			return
 
 		validator = Message.Length.get(msg,lambda _ : _ >= 19)
 		if not validator(length):
 			# MUST send the faulty msg_length back
-			raise NotifyError(1,2,'%s has an invalid message length of %d' %(Message().name(msg),msg_length))
+			yield length,0,header,'',NotifyError(1,2,'%s has an invalid message length of %d' %(Message().name(msg),msg_length))
+			return
 
 		number = length - Message.HEADER_LEN
 
 		if not number:
-			yield length,msg,header,''
+			yield length,msg,header,'',None
 			return
 
 		for body in self._reader(number):
 			if not body:
-				yield 0,0,'',''
+				yield 0,0,'','',None
 
-		yield length,msg,header,body
+		yield length,msg,header,body,None
