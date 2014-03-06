@@ -30,7 +30,7 @@ class Store (object):
 	# back to square one, all the routes are removed
 	def clear (self):
 		self._cache_attribute = {}
-		self._announced = {}
+		self._seen = {}
 		self._modify_nlri = {}
 		self._modify_sorted = {}
 		self._changes = None
@@ -42,7 +42,7 @@ class Store (object):
 
 		# we use list() to make a snapshot of the data at the time we run the command
 		for family in requested_families:
-			for change in self._announced.get(family,{}).values():
+			for change in self._seen.get(family,{}).values():
 				if change.nlri.action == OUT.announce:
 					yield change
 
@@ -51,10 +51,10 @@ class Store (object):
 		requested_families = self.families if not families else set(families).intersection(self.families)
 
 		def _announced (family):
-			for change in self._announced.get(family,{}).values():
+			for change in self._seen.get(family,{}).values():
 				if change.nlri.action == OUT.announce:
 					yield change
-			self._announced[family] = {}
+			self._seen[family] = {}
 
 		if enhanced_refresh:
 			for family in requested_families:
@@ -71,8 +71,8 @@ class Store (object):
 	# 	# This function returns a hash and not a list as "in" tests are O(n) with lists and O(1) with hash
 	# 	# and with ten thousands routes this makes an enormous difference (60 seconds to 2)
 	# 	changes = {}
-	# 	for family in self._announced.keys():
-	# 		for change in self._announced[family].values():
+	# 	for family in self._seen.keys():
+	# 		for change in self._seen[family].values():
 	# 			if change.nlri.action == OUT.announce:
 	# 				changes[change.index()] = change
 	# 	return changes
@@ -115,14 +115,14 @@ class Store (object):
 		if not self.cache:
 			return
 		elif change.nlri.action == IN.announced:
-			self._announced[change.nlri.index()] = change
+			self._seen[change.nlri.index()] = change
 		else:
-			self._announced.pop(change.nlri.index(),None)
+			self._seen.pop(change.nlri.index(),None)
 
 	def insert_announced (self,change,force=False):
 		# WARNING : this function can run while we are in the updates() loop
 
-		# self._announced[family][nlri-index] = change
+		# self._seen[family][nlri-index] = change
 
 		# XXX: FIXME: if we fear a conflict of nlri-index between family (very very unlikely)
 		# XXX: FIXME: then we should preprend the index() with the AFI and SAFI
@@ -159,7 +159,7 @@ class Store (object):
 			# route removed before announcement, all goo
 			if old_change.nlri.action == OUT.announce and change.nlri.action == OUT.withdraw:
 				# if we cache sent NLRI and this NLRI was never sent before, we do not need to send a withdrawal
-				if self.cache and change_nlri_index not in self._announced.get(change.nlri.family(),{}):
+				if self.cache and change_nlri_index not in self._seen.get(change.nlri.family(),{}):
 					return
 
 		# add the route to the list to be announced
@@ -173,8 +173,8 @@ class Store (object):
 		if self._changes:
 			dict_nlri = self._modify_nlri
 
-			for family in self._announced:
-				for change in self._announced[family].itervalues():
+			for family in self._seen:
+				for change in self._seen[family].itervalues():
 					if change.index() not in self._modify_nlri:
 						change.nlri.action = OUT.withdraw
 						self.insert_announced(change,True)
@@ -199,7 +199,7 @@ class Store (object):
 				dict_change = {}
 				for nlri_index,change in full_dict_change.iteritems():
 					family = change.nlri.family()
-					announced = self._announced.get(family,{})
+					announced = self._seen.get(family,{})
 					if change.nlri.action == OUT.announce:
 						if nlri_index in announced:
 							old_change = announced[nlri_index]
@@ -244,7 +244,7 @@ class Store (object):
 					yield update
 
 			if self.cache:
-				announced = self._announced
+				announced = self._seen
 				for change in changed:
 					if change.nlri.action == OUT.announce:
 						announced.setdefault(change.nlri.family(),{})[change.nlri.index()] = change

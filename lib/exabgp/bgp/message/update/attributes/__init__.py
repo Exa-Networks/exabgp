@@ -263,6 +263,8 @@ class Attributes (dict):
 						how, default, name, presentation = self.representation[code]
 						if how == 'boolean':
 							yield ' %s' % name
+						elif how == 'multiple':
+							yield ' %s %s' % (name[0], presentation % str(self[code]))
 						else:
 							yield ' %s %s' % (name, presentation % str(self[code]))
 					else:

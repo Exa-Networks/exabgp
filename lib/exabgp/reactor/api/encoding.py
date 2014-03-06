@@ -113,7 +113,7 @@ class JSON (object):
 			'"exabgp": "%s", '\
 			'"time": %s, ' \
 			'%s' \
-		'}' % (self.version,long(time.time()),content)
+		'}' % (self.version,time.time(),content)
 
 	def _neighbor (self,neighbor,content):
 		return \
