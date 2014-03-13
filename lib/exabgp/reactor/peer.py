@@ -560,7 +560,7 @@ class Peer (object):
 
 		# CONNECTION FAILURE
 		except NetworkError, e:
-			self._reset(direction,'closing connection (%s)' % str(e))
+			self._reset(direction,'closing connection',e)
 
 			# we tried to connect once, it failed, we stop
 			if self.once:
