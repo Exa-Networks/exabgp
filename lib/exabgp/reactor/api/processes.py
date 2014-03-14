@@ -150,14 +150,16 @@ class Processes (object):
 				r,_,_ = select.select([proc.stdout,],[],[],0)
 				if r:
 					try:
-						line = proc.stdout.readline().rstrip()
-						if line:
-							self.logger.processes("Command from process %s : %s " % (process,line))
-							yield (process,formated(line))
-						else:
-							self.logger.processes("The process died, trying to respawn it")
-							self._terminate(process)
-							self._start(process)
+						for line in proc.stdout:
+							line = line.rstrip()
+							if line:
+								self.logger.processes("Command from process %s : %s " % (process,line))
+								yield (process,formated(line))
+							else:
+								self.logger.processes("The process died, trying to respawn it")
+								self._terminate(process)
+								self._start(process)
+								break
 					except IOError,e:
 						if e.errno == errno.EINTR:  # call interrupted
 							pass  # we most likely have data, we will try to read them a the next loop iteration
