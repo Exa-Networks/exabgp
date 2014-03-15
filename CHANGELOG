@@ -9,7 +9,7 @@ Version 3.3.1
  * Fix: prevent ExaBGP to start if the log folder is not writeable by the user
  * Fix: configuration defaults for booleans ( and warns when group-updates is not enabled );
  * Fix: issue when removing some routes
-    reported by: Adrian (backb1 on github)
+    reported by: Adrian Gämperli (backb1 on github)
  * Fix: bad printing of route as-path
  * Fix: neighbor matching was too permissive
     reported by: Adrian Gämperli (with a merge request, thank you)
@@ -17,6 +17,8 @@ Version 3.3.1
     reported by: Adrian Gämperli (with a merge request, thank you)
  * Change: performing KeepAlive handling as first action
  * Change: time is provided as an high resolution real number and not an integer
+ * Debian package update by:
+    Henry-Nicolas Tourneur
 
 Version 3.3.0
  * Fix: typo causing issue when parsing multiple neighbor commands
