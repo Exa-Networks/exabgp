@@ -1,3 +1,11 @@
+exabgp (3.3.1-1) unstable; urgency=low
+
+  * latest ExaBGP release.
+  * Closes: #726066 Debian packaging improvements proposed by Vincent Bernat
+  * Closes: #703774 not existent rundir (/var/run/exabgp) after reboot
+
+ -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Sat, 8 Mar 2014 19:07:00 +0000
+
 exabgp (3.3.0-0) unstable; urgency=low
 
   * latest ExaBGP release.
