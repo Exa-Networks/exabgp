@@ -2,9 +2,9 @@ Source: exabgp
 Maintainer: Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>
 Section: net
 Priority: optional
-Build-Depends: debhelper (>= 8.9.11~), python (>= 2.6.6-7~)
-Standards-Version: 3.9.4
-X-Python-Version: >= 2.6
+Build-Depends: debhelper (>= 9), python (>= 2.7)
+Standards-Version: 3.9.5
+X-Python-Version: >= 2.7
 Homepage: https://github.com/Exa-Networks/exabgp
 
 Package: exabgp
