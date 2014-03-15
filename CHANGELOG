@@ -13,6 +13,8 @@ Version 3.3.1
  * Fix: bad printing of route as-path
  * Fix: neighbor matching was too permissive
     reported by: Adrian Gämperli (with a merge request, thank you)
+ * Fix: under load ExaBGP could miss some commands sent through the API
+    reported by: Adrian Gämperli (with a merge request, thank you)
  * Change: performing KeepAlive handling as first action
  * Change: time is provided as an high resolution real number and not an integer
 
