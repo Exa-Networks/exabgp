@@ -240,28 +240,6 @@ class Query:
 		code = OperationalType.LPCQ
 
 class Response:
-	class RPCP (SequencedOperationalFamily):
-		name = 'RPCP'
-		code = OperationalType.RPCP
-
-		def __init__ (self,afi,safi,routerid,sequence,rxc,txc):
-			self.rxc = rxc
-			self.txc = txc
-			SequencedOperationalFamily.__init__(
-				self,self.code,
-				afi,safi,
-				routerid,sequence,
-				'%s%s' % (pack('!L',rxc),pack('!L',txc))
-			)
-
-		def extensive (self):
-			return 'operational %s afi %s safi %s router-id %s sequence %d rxc %d txc %d' % (
-				self.name,
-				self.afi,self.safi,
-				self.routerid,self.sequence,
-				self.rxc,self.txc
-			)
-
 	class _Counter (SequencedOperationalFamily):
 		def __init__ (self,afi,safi,routerid,sequence,counter):
 			self.counter = counter
@@ -282,12 +260,16 @@ class Response:
 				)
 			return 'operational %s afi %s safi %s counter %d' % (self.name,self.afi,self.safi,self.counter)
 
-	class APCP (_Counter):
+	class RPCP (_Counter):
 		name = 'RPCP'
+		code = OperationalType.RPCP
+
+	class APCP (_Counter):
+		name = 'APCP'
 		code = OperationalType.APCP
 
 	class LPCP (_Counter):
-		name = 'RPCP'
+		name = 'LPCP'
 		code = OperationalType.LPCP
 
 # c = State.RPCQ(1,1,'82.219.0.1',10)
@@ -303,7 +285,7 @@ OperationalGroup = {
 	OperationalType.ASM: ('advisory', Advisory.ASM),
 
 	OperationalType.RPCQ: ('query', Query.RPCQ),
-	OperationalType.RPCP: ('interface', Response.RPCP),
+	OperationalType.RPCP: ('counter', Response.RPCP),
 
 	OperationalType.APCQ: ('query', Query.APCQ),
 	OperationalType.APCP: ('counter', Response.APCP),
@@ -336,13 +318,5 @@ def OperationalFactory (data):
 		sequence = unpack('!L',data[11:15])[0]
 		counter = unpack('!L',data[15:19])[0]
 		return klass(afi,safi,routerid,sequence,counter)
-	elif decode == 'interface':
-		afi = unpack('!H',data[4:6])[0]
-		safi = ord(data[6])
-		routerid = RouterID('.'.join(str(ord(_)) for _ in data[7:11]))
-		sequence = unpack('!L',data[11:15])[0]
-		rxc = unpack('!L',data[15:19])[0]
-		txc = unpack('!L',data[19:23])[0]
-		return klass(afi,safi,routerid,sequence,rxc,txc)
 	else:
 		print 'ignoring ATM this kind of message'

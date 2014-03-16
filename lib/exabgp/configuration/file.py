@@ -380,7 +380,7 @@ class Configuration (object):
 			if not self._single_operational(Query.RPCQ,scope,['afi','safi','sequence'],tokens[2]):
 				return False
 		elif what == 'rpcp':
-			if not self._single_operational(Response.RPCP,scope,['afi','safi','sequence','rxc','txc'],tokens[2]):
+			if not self._single_operational(Response.RPCP,scope,['afi','safi','sequence','counter'],tokens[2]):
 				return False
 		elif what == 'apcq':
 			if not self._single_operational(Query.APCQ,scope,['afi','safi','sequence'],tokens[2]):
@@ -2448,8 +2448,6 @@ class Configuration (object):
 			'safi': SAFI.value,
 			'sequence': int,
 			'counter': long,
-			'rxc': long,
-			'txc': long,
 			'advisory': utf8
 		}
 
@@ -2462,8 +2460,6 @@ class Configuration (object):
 			'afi': AFI.value,
 			'safi': SAFI.value,
 			'sequence': u32,
-			'txc': u64,
-			'rxc': u64,
 			'counter': u64,
 		}
 
