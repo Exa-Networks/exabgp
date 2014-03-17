@@ -1,6 +1,7 @@
 exabgp (3.3.1-1) unstable; urgency=low
 
   * New upstream release
+  * Bump python minimal required version (2.7)
   * Closes: #726066 Debian packaging improvements proposed by Vincent Bernat
   * Closes: #703774 not existent rundir (/var/run/exabgp) after reboot
 
