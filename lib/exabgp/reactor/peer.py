@@ -564,7 +564,7 @@ class Peer (object):
 
 			# we tried to connect once, it failed, we stop
 			if self.once:
-				self.logger.network('only one attempt to connect is allowed, stoping the peer')
+				self.logger.network('only one attempt to connect is allowed, stopping the peer')
 				self.stop()
 			return
 

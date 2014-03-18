@@ -83,11 +83,6 @@ class Text (object):
 			neighbor,operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.counter
 		)
 
-	def _operational_interface (self,neighbor,operational):
-		return 'neighbor %s operational %s afi %s safi %s router-id %s sequence %d rxc %d txc %d' % (
-			neighbor,operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.rxc,operational.txc
-		)
-
 	def operational (self,neighbor,what,operational):
 		if what == 'advisory':
 			return self._operational_advisory(neighbor,operational)
@@ -238,16 +233,6 @@ class JSON (object):
 				neighbor,
 				'"operational": { "name": "%s", "afi": "%s", "safi": "%s", "router-id": "%s", "sequence": %d, "counter": %d' % (
 					operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.counter
-				)
-			)
-		)
-
-	def _operational_interface (self,neighbor,operational):
-		return self._header(
-			self._neighbor(
-				neighbor,
-				'"operational": { "name": "%s", "afi": "%s", "safi": "%s", "router-id": "%s", "sequence": %d, "rxc": "%s", "txc": "%s"' % (
-					operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.rxc,operational.txc
 				)
 			)
 		)
