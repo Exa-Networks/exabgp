@@ -3,8 +3,8 @@ Description=ExaBGP
 After=network.target
 
 [Service]
-Environment=exabgp.daemon.daemonize=false
-Environment=exabgp.log.destination=stdout
+Environment=exabgp_daemon_daemonize=false
+Environment=exabgp_log_destination=stdout
 ExecStart=/usr/sbin/exabgp /etc/exabgp/exabgp.conf
 
 [Install]
