@@ -217,20 +217,20 @@ class Processes (object):
 		for process in self._notify(neighbor,'neighbor-changes'):
 			self.write(process,self._api_encoder[process].down(neighbor))
 
-	def receive (self,neighbor,category,header,body):
+	def receive (self,neighbor,category,header,body,COUNTER_MESSAGES):
 		if self.silence: return
 		for process in self._notify(neighbor,'receive-packets'):
-			self.write(process,self._api_encoder[process].receive(neighbor,category,header,body))
+			self.write(process,self._api_encoder[process].receive(neighbor,category,header,body,COUNTER_MESSAGES))
 
 	def send (self,neighbor,category,header,body):
 		if self.silence: return
 		for process in self._notify(neighbor,'send-packets'):
 			self.write(process,self._api_encoder[process].send(neighbor,category,header,body))
 
-	def update (self,neighbor,update):
+	def update (self,neighbor,update,COUNTER_MESSAGES):
 		if self.silence: return
 		for process in self._notify(neighbor,'receive-routes'):
-			self.write(process,self._api_encoder[process].update(neighbor,update))
+			self.write(process,self._api_encoder[process].update(neighbor,update,COUNTER_MESSAGES))
 
 	def refresh (self,neighbor,refresh):
 		if self.silence: return

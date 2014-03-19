@@ -35,6 +35,7 @@ MAX_BACKLOG = 15000
 
 _UPDATE = Update([],'')
 _OPERATIONAL = Operational(0x00)
+COUNTER_MESSAGES = 0
 
 class Protocol (object):
 	decode = True
@@ -123,16 +124,18 @@ class Protocol (object):
 	# Read from network .......................................................
 
 	def read_message (self,comment=''):
+		global COUNTER_MESSAGES
+		COUNTER_MESSAGES += 1
 		for length,msg,header,body,notify in self.connection.reader():
 			if notify:
 				if self.neighbor.api.receive_packets:
-					self.peer.reactor.processes.receive(self.peer.neighbor.peer_address,msg,header,body)
+					self.peer.reactor.processes.receive(self.peer.neighbor.peer_address,msg,header,body,COUNTER_MESSAGES)
 				raise Notify(notify.code,notify.subcode,str(notify))
 			if not length:
 				yield _NOP
 
 		if self.neighbor.api.receive_packets:
-			self.peer.reactor.processes.receive(self.peer.neighbor.peer_address,msg,header,body)
+			self.peer.reactor.processes.receive(self.peer.neighbor.peer_address,msg,header,body,COUNTER_MESSAGES)
 
 		if msg == Message.Type.UPDATE:
 			self.logger.message(self.me('<< UPDATE'))
@@ -141,15 +144,15 @@ class Protocol (object):
 			if length == 23:
 				update = EORFactory()
 				if self.neighbor.api.receive_routes:
-					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update)
+					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update,COUNTER_MESSAGES)
 			elif length == 30 and body.startswith(EOR.MP):
 				update = EORFactory(body)
 				if self.neighbor.api.receive_routes:
-					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update)
+					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update.COUNTER_MESSAGES)
 			elif self.neighbor.api.receive_routes:
 				update = UpdateFactory(self.negotiated,body)
 				if self.neighbor.api.receive_routes:
-					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update)
+					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update,COUNTER_MESSAGES)
 			else:
 				update = _UPDATE
 			yield update
