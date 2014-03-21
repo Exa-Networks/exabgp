@@ -102,14 +102,15 @@ class JSON (object):
 	def _string (self,_):
 		return '%s' % _ if issubclass(_.__class__,int) or issubclass(_.__class__,long) else '"%s"' %_
 
-	def _header (self,content,COUNTER_MESSAGES=-1):
+	def _header (self,content,counter_messages=-1,ppid=-1):
 		return \
 		'{ '\
 			'"exabgp": "%s", '\
 			'"time": %s, ' \
 			'"counter": %s, ' \
+			'"ppid": %s, ' \
 			'%s' \
-		'}' % (self.version,time.time(),COUNTER_MESSAGES,content)
+		'}' % (self.version,time.time(),counter_messages,ppid,content)
 
 	def _neighbor (self,neighbor,content):
 		return \
@@ -143,8 +144,8 @@ class JSON (object):
 	def shutdown (self):
 		return self._header(self._kv({'notification':'shutdown'}))
 
-	def receive (self,neighbor,category,header,body,COUNTER_MESSAGES):
-		return self._header(self._neighbor(neighbor,'"message": { %s } ' % self._minimalkv({'received':category,'header':hexstring(header),'body':hexstring(body)})),COUNTER_MESSAGES)
+	def receive (self,neighbor,category,header,body,counter_messages):
+		return self._header(self._neighbor(neighbor,'"message": { %s } ' % self._minimalkv({'received':category,'header':hexstring(header),'body':hexstring(body)})),counter_messages)
 
 	def send (self,neighbor,category,header,body):
 		return self._header(self._neighbor(neighbor,'"message": { %s } ' % self._minimalkv({'sent':category,'header':hexstring(header),'body':hexstring(body)})))
@@ -192,8 +193,8 @@ class JSON (object):
 			return '"update": { %s%s } ' % (attributes,nlri)
 		return '"update": { %s, %s } ' % (attributes,nlri)
 
-	def update (self,neighbor,update,COUNTER_MESSAGES):
-		return self._header(self._neighbor(neighbor,self._update(update)),COUNTER_MESSAGES)
+	def update (self,neighbor,update,counter_messages,ppid):
+		return self._header(self._neighbor(neighbor,self._update(update)),counter_messages,ppid)
 
 	def refresh (self,neighbor,refresh):
 		return self._header(

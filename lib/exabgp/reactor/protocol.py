@@ -7,6 +7,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 import os
+import socket
 
 from exabgp.reactor.network.outgoing import Outgoing
 from exabgp.reactor.network.error import NotifyError
@@ -35,10 +36,11 @@ MAX_BACKLOG = 15000
 
 _UPDATE = Update([],'')
 _OPERATIONAL = Operational(0x00)
-COUNTER_MESSAGES = 0
 
 class Protocol (object):
 	decode = True
+	counter_messages = 0
+	ppid = str(socket.gethostname())+'_'+str(os.getppid())
 
 	def __init__ (self,peer):
 		try:
@@ -51,6 +53,7 @@ class Protocol (object):
 		self.connection = None
 		port = os.environ.get('exabgp.tcp.port','')
 		self.port = int(port) if port.isdigit() else 179
+		
 
 		# XXX: FIXME: check the the -19 is correct (but it is harmless)
 		# The message size is the whole BGP message _without_ headers
@@ -124,18 +127,17 @@ class Protocol (object):
 	# Read from network .......................................................
 
 	def read_message (self,comment=''):
-		global COUNTER_MESSAGES
-		COUNTER_MESSAGES += 1
+		self.counter_messages += 1
 		for length,msg,header,body,notify in self.connection.reader():
 			if notify:
 				if self.neighbor.api.receive_packets:
-					self.peer.reactor.processes.receive(self.peer.neighbor.peer_address,msg,header,body,COUNTER_MESSAGES)
+					self.peer.reactor.processes.receive(self.peer.neighbor.peer_address,msg,header,body,self.counter_messages)
 				raise Notify(notify.code,notify.subcode,str(notify))
 			if not length:
 				yield _NOP
 
 		if self.neighbor.api.receive_packets:
-			self.peer.reactor.processes.receive(self.peer.neighbor.peer_address,msg,header,body,COUNTER_MESSAGES)
+			self.peer.reactor.processes.receive(self.peer.neighbor.peer_address,msg,header,body,self.counter_messages)
 
 		if msg == Message.Type.UPDATE:
 			self.logger.message(self.me('<< UPDATE'))
@@ -144,15 +146,15 @@ class Protocol (object):
 			if length == 23:
 				update = EORFactory()
 				if self.neighbor.api.receive_routes:
-					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update,COUNTER_MESSAGES)
+					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update,self.counter_messages,self.ppid)
 			elif length == 30 and body.startswith(EOR.MP):
 				update = EORFactory(body)
 				if self.neighbor.api.receive_routes:
-					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update.COUNTER_MESSAGES)
+					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update.self.counter_messages,self.ppid)
 			elif self.neighbor.api.receive_routes:
 				update = UpdateFactory(self.negotiated,body)
 				if self.neighbor.api.receive_routes:
-					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update,COUNTER_MESSAGES)
+					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update,self.counter_messages,self.ppid)
 			else:
 				update = _UPDATE
 			yield update
