@@ -20,9 +20,9 @@ This program is packaged for **Debian**, **Ubuntu**, **ArchLinux**, **Gentoo**, 
 If you are using [ExaBGP](http://github.com/Exa-Networks/exabgp) from source (or git), it **does not need to be installed** on your server ( using "python setup.py install" ). Simply run [ExaBGP](http://github.com/Exa-Networks/exabgp) from the extracted archive, or your local git repository. It allows to run several versions at the same time without conflict.
 
 ```sh
-> wget https://github.com/Exa-Networks/exabgp/archive/3.3.0.tar.gz
-> tar zxvf 3.3.0.tar.gz
-> cd exabgp-3.3.0
+> wget https://github.com/Exa-Networks/exabgp/archive/3.3.2.tar.gz
+> tar zxvf 3.3.2.tar.gz
+> cd exabgp-3.3.2
 > ./sbin/exabgp --help
 ```
 
