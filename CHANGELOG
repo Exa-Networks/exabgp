@@ -3,6 +3,9 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.3.3
+ * Improvement: better handling of NOTIFICATION received during OPEN negotiation
+
 Version 3.3.2
  * Fix: work toward working operational-01
    patch by: David Freedman
