@@ -71,7 +71,7 @@ class Protocol (object):
 		self.connection = incoming
 
 		if self.peer.neighbor.api.neighbor_changes:
-			self.peer.reactor.processes.connected(self.peer.neighbor.peer_address)
+			self.peer.reactor.processes.connected(self.peer.neighbor.peer_address,self.counter_messages,self.ppid)
 
 		# very important - as we use this function on __init__
 		return self
@@ -94,7 +94,7 @@ class Protocol (object):
 						yield False
 						continue
 					if self.peer.neighbor.api.neighbor_changes:
-						self.peer.reactor.processes.connected(self.peer.neighbor.peer_address)
+						self.peer.reactor.processes.connected(self.peer.neighbor.peer_address,self.counter_messages,self.ppid)
 					yield True
 					return
 			except StopIteration:
@@ -113,14 +113,14 @@ class Protocol (object):
 
 			try:
 				if self.peer.neighbor.api.neighbor_changes:
-					self.peer.reactor.processes.down(self.peer.neighbor.peer_address,reason)
+					self.peer.reactor.processes.down(self.peer.neighbor.peer_address,self.counter_messages,self.ppid,reason)
 			except ProcessError:
 				self.logger.message(self.me('could not send notification of neighbor close to API'))
 
 
 	def write (self,message):
 		if self.neighbor.api.send_packets:
-			self.peer.reactor.processes.send(self.peer.neighbor.peer_address,ord(message[18]),message[:19],message[19:])
+			self.peer.reactor.processes.send(self.peer.neighbor.peer_address,ord(message[18]),message[:19],message[19:],self.counter_messages,self.ppid)
 		for boolean in self.connection.writer(message):
 			yield boolean
 
@@ -175,7 +175,7 @@ class Protocol (object):
 				refresh = RouteRefreshFactory(body)
 				if self.neighbor.api.receive_routes:
 					if refresh.reserved in (RouteRefresh.start,RouteRefresh.end):
-						self.peer.reactor.processes.refresh(self.peer.neighbor.peer_address,refresh)
+						self.peer.reactor.processes.refresh(self.peer.neighbor.peer_address,refresh,self.counter_messages,self.ppid)
 			else:
 				# XXX: FIXME: really should raise, we are too nice
 				self.logger.message(self.me('<< NOP (un-negotiated type %d)' % msg))
@@ -186,7 +186,7 @@ class Protocol (object):
 			if self.peer.neighbor.operational:
 				operational = OperationalFactory(body)
 				what = OperationalGroup[operational.what][0]
-				self.peer.reactor.processes.operational(self.peer.neighbor.peer_address,what,operational)
+				self.peer.reactor.processes.operational(self.peer.neighbor.peer_address,what,operational,self.counter_messages,self.ppid)
 			else:
 				operational = _OPERATIONAL
 			yield operational

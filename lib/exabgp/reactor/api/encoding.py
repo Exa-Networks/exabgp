@@ -152,14 +152,14 @@ class JSON (object):
 	def _minimalkv (self,extra):
 		return ", ".join('"%s": %s' % (_,self._string(__)) for (_,__) in extra.iteritems() if __) + ' '
 
-	def up (self,neighbor):
-		return self._header(self._neighbor(neighbor,self._kv({'state':'up'})),type_of_message='state')
+	def up (self,neighbor,counter_messages,ppid):
+		return self._header(self._neighbor(neighbor,self._kv({'state':'up'})),counter_messages=counter_messages,ppid=ppid,type_of_message='state')
 
-	def connected (self,neighbor):
-		return self._header(self._neighbor(neighbor,self._kv({'state':'connected'})),type_of_message='state')
+	def connected (self,neighbor,counter_messages,ppid):
+		return self._header(self._neighbor(neighbor,self._kv({'state':'connected'})),counter_messages=counter_messages,ppid=ppid,type_of_message='state')
 
-	def down (self,neighbor,reason=''):
-		return self._header(self._neighbor(neighbor,self._kv({'state':'down','reason':reason})),type_of_message='state')
+	def down (self,neighbor,counter_messages,ppid,reason=''):
+		return self._header(self._neighbor(neighbor,self._kv({'state':'down','reason':reason})),counter_messages=counter_messages,ppid=ppid,type_of_message='state')
 
 	def shutdown (self,ppid_recv):
 		return self._header(self._kv({'notification':'shutdown'}),ppid=ppid_recv,type_of_message='default')
@@ -173,8 +173,8 @@ class JSON (object):
 	def open (self,neighbor,category,header,body,counter_messages,sent_open,from_ip,ppid):
 		return self._header(self._neighbor(neighbor,'"message": { %s } ' % self._minimalkv({'received':category,'header':hexstring(header),'body':hexstring(body), 'sent_open':sent_open, 'from_ip':from_ip})),counter_messages,ppid,type_of_message='open')
 
-	def send (self,neighbor,category,header,body):
-		return self._header(self._neighbor(neighbor,'"message": { %s } ' % self._minimalkv({'sent':category,'header':hexstring(header),'body':hexstring(body)})))
+	def send (self,neighbor,category,header,body,counter_messages,ppid):
+		return self._header(self._neighbor(neighbor,'"message": { %s } ' % self._minimalkv({'sent':category,'header':hexstring(header),'body':hexstring(body)})),counter_messages=counter_messages,ppid=ppid)
 
 	def _update (self,update):
 		plus = {}
@@ -222,7 +222,7 @@ class JSON (object):
 	def update (self,neighbor,update,msg,header,body,counter_messages,ppid):
 		return self._header_update(self._neighbor(neighbor,self._update(update)),msg,header,body,counter_messages,ppid,type_of_message='update')
 
-	def refresh (self,neighbor,refresh):
+	def refresh (self,neighbor,refresh,counter_messages,ppid):
 		return self._header(
 			self._neighbor(
 				neighbor,
@@ -230,7 +230,7 @@ class JSON (object):
 					refresh.afi,refresh.safi,refresh.reserved
 				)
 			)
-		)
+		,counter_messages=counter_messages,ppid=ppid)
 
 	def bmp (self,bmp,update):
 		return self._header(self._bmp(bmp,self._update(update)))

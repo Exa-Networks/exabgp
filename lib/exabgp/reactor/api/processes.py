@@ -204,20 +204,20 @@ class Processes (object):
 			if process in self._process:
 				yield process
 
-	def up (self,neighbor):
+	def up (self,neighbor,counter_messages=-1,ppid=None):
 		if self.silence: return
 		for process in self._notify(neighbor,'neighbor-changes'):
-			self.write(process,self._api_encoder[process].up(neighbor))
+			self.write(process,self._api_encoder[process].up(neighbor,counter_messages,ppid=(ppid if ppid else self.ppid)))
 
-	def connected (self,neighbor):
+	def connected (self,neighbor,counter_messages,ppid):
 		if self.silence: return
 		for process in self._notify(neighbor,'neighbor-changes'):
-			self.write(process,self._api_encoder[process].connected(neighbor))
+			self.write(process,self._api_encoder[process].connected(neighbor,counter_messages,ppid))
 
-	def down (self,neighbor,reason=''):
+	def down (self,neighbor,counter_messages,ppid,reason=''):
 		if self.silence: return
 		for process in self._notify(neighbor,'neighbor-changes'):
-			self.write(process,self._api_encoder[process].down(neighbor))
+			self.write(process,self._api_encoder[process].down(neighbor,counter_messages,ppid,reason))
 
 	def receive (self,neighbor,category,header,body,counter_messages,ppid,notify='none'):
 		if self.silence: return
@@ -234,22 +234,22 @@ class Processes (object):
 		for process in self._notify(neighbor,'receive-opens'):
 			self.write(process,self._api_encoder[process].open(neighbor,category,header,body,counter_messages,sent_open,from_ip,ppid))
 
-	def send (self,neighbor,category,header,body):
+	def send (self,neighbor,category,header,body,counter_messages,ppid):
 		if self.silence: return
 		for process in self._notify(neighbor,'send-packets'):
-			self.write(process,self._api_encoder[process].send(neighbor,category,header,body))
+			self.write(process,self._api_encoder[process].send(neighbor,category,header,body,counter_messages,ppid))
 
 	def update (self,neighbor,update,msg,header,body,counter_messages,ppid):
 		if self.silence: return
 		for process in self._notify(neighbor,'receive-routes'):
 			self.write(process,self._api_encoder[process].update(neighbor,update,msg,header,body,counter_messages,ppid))
 
-	def refresh (self,neighbor,refresh):
+	def refresh (self,neighbor,refresh,counter_messages,ppid):
 		if self.silence: return
 		for process in self._notify(neighbor,'receive-routes'):
-			self.write(process,self._api_encoder[process].refresh(neighbor,refresh))
+			self.write(process,self._api_encoder[process].refresh(neighbor,refresh,counter_messages,ppid))
 
-	def operational (self,neighbor,what,operational):
+	def operational (self,neighbor,what,operational,counter_messages,ppid):
 		if self.silence: return
 		for process in self._notify(neighbor,'receive-operational'):
-			self.write(process,self._api_encoder[process].operational(neighbor,what,operational))
+			self.write(process,self._api_encoder[process].operational(neighbor,what,operational,counter_messages,ppid))
