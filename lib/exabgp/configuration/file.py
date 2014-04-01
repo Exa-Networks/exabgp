@@ -692,6 +692,9 @@ class Configuration (object):
 			if command == 'receive-routes': return self._set_process_command(scope,'receive-routes',tokens[1:])
 			if command == 'neighbor-changes': return self._set_process_command(scope,'neighbor-changes',tokens[1:])
 			if command == 'receive-operational': return self._set_process_command(scope,'receive-operational',tokens[1:])
+			if command == 'receive-keepalives': return self._set_process_command(scope,'receive-keepalives',tokens[1:])
+			if command == 'receive-opens': return self._set_process_command(scope,'receive-opens',tokens[1:])
+			
 
 		elif name == 'static':
 			if command == 'route': return self._single_static_route(scope,tokens[1:])
@@ -706,7 +709,7 @@ class Configuration (object):
 
 	def _multi_process (self,scope,tokens):
 		while True:
-			r = self._dispatch(scope,'process',[],['run','encoder','receive-packets','send-packets','receive-routes','receive-operational','neighbor-changes',  'peer-updates','parse-routes'])
+			r = self._dispatch(scope,'process',[],['run','encoder','receive-packets','send-packets','receive-routes','receive-operational','neighbor-changes',  'peer-updates','parse-routes', 'receive-keepalives', 'receive-opens'])
 			if r is False: return False
 			if r is None: break
 
@@ -1060,6 +1063,8 @@ class Configuration (object):
 			neighbor.api.receive_routes |= local_scope.get('receive-routes',False)
 			neighbor.api.receive_operational |= local_scope.get('receive-operational',False)
 			neighbor.api.neighbor_changes |= local_scope.get('neighbor-changes',False)
+			neighbor.api.receive_keepalives |= local_scope.get('receive-keepalives',False)
+			neighbor.api.receive_opens |= local_scope.get('receive-opens',False)
 
 		if not neighbor.router_id:
 			neighbor.router_id = neighbor.local_address
