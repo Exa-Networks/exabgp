@@ -18,6 +18,8 @@ class APIOptions (object):
 		self.send_packets = False
 		self.receive_routes = False
 		self.receive_operational = False
+		self.receive_keepalives = False
+		self.receive_opens = False
 
 def hexstring (value):
 	def spaced (value):
@@ -30,25 +32,31 @@ class Text (object):
 	def __init__ (self,version):
 		self.version = version
 
-	def up (self,neighbor):
+	def up (self,neighbor,counter_messages,ppid):
 		return 'neighbor %s up\n' % neighbor
 
-	def connected (self,neighbor):
+	def connected (self,neighbor,counter_messages,ppid):
 		return 'neighbor %s connected\n' % neighbor
 
-	def down (self,neighbor,reason=''):
+	def down (self,neighbor,counter_messages,ppid,reason=''):
 		return 'neighbor %s down - %s\n' % (neighbor,reason)
 
-	def shutdown (self):
+	def shutdown (self,ppid_recv):
 		return 'shutdown'
 
-	def receive (self,neighbor,category,header,body):
+	def receive (self,neighbor,category,header,body,counter_messages,ppid,notify_recv):
 		return 'neighbor %s received %d header %s body %s\n' % (neighbor,category,hexstring(header),hexstring(body))
+	
+	def keepalive (self,neighbor,category,header,body,counter_messages,ppid):
+		pass
+	
+	def open (self,neighbor,category,header,body,counter_messages,sent_open,from_ip,ppid):
+		pass
 
-	def send (self,neighbor,category,header,body):
+	def send (self,neighbor,category,header,body,counter_messages,ppid):
 		return 'neighbor %s sent %d header %s body %s\n' % (neighbor,category,hexstring(header),hexstring(body))
 
-	def update (self,neighbor,update):
+	def update (self,neighbor,update,msg,header,body,counter_messages,ppid):
 		r = 'neighbor %s update start\n' % neighbor
 		attributes = str(update.attributes)
 		for nlri in update.nlris:
@@ -63,7 +71,7 @@ class Text (object):
 		r += 'neighbor %s update end\n' % neighbor
 		return r
 
-	def refresh (self,neighbor,refresh):
+	def refresh (self,neighbor,refresh,counter_messages,ppid):
 		return 'neighbor %s route-refresh afi %s safi %s %s' % (
 			neighbor,refresh.afi,refresh.safi,refresh.reserved
 		)
@@ -83,7 +91,7 @@ class Text (object):
 			neighbor,operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.counter
 		)
 
-	def operational (self,neighbor,what,operational):
+	def operational (self,neighbor,what,operational,counter_messages,ppid):
 		if what == 'advisory':
 			return self._operational_advisory(neighbor,operational)
 		elif what == 'query':
@@ -102,13 +110,33 @@ class JSON (object):
 	def _string (self,_):
 		return '%s' % _ if issubclass(_.__class__,int) or issubclass(_.__class__,long) else '"%s"' %_
 
-	def _header (self,content):
+
+	def _header_update (self,content,msg,header,body,counter_messages=-1,ppid=-1,type_of_message='none',notify='none'):
 		return \
 		'{ '\
 			'"exabgp": "%s", '\
 			'"time": %s, ' \
+			'"counter": %s, ' \
+			'"ppid": "%s", ' \
+			'"type_of_message": "%s", ' \
+			'"notify": "%s", ' \
+			'"received": %s, ' \
+			'"header": "%s", ' \
+			'"body": "%s", ' \
 			'%s' \
-		'}' % (self.version,time.time(),content)
+			'}' % (self.version,time.time(),counter_messages,ppid,type_of_message,notify,msg,hexstring(header),hexstring(body),content)
+
+	def _header (self,content,counter_messages=-1,ppid=-1,type_of_message='none',notify='none'):
+		return \
+		'{ '\
+			'"exabgp": "%s", '\
+			'"time": %s, ' \
+			'"counter": %s, ' \
+			'"ppid": "%s", ' \
+			'"type_of_message": "%s", ' \
+			'"notify": "%s", ' \
+			'%s' \
+		'}' % (self.version,time.time(),counter_messages,ppid,type_of_message,notify,content)
 
 	def _neighbor (self,neighbor,content):
 		return \
@@ -130,23 +158,29 @@ class JSON (object):
 	def _minimalkv (self,extra):
 		return ", ".join('"%s": %s' % (_,self._string(__)) for (_,__) in extra.iteritems() if __) + ' '
 
-	def up (self,neighbor):
-		return self._header(self._neighbor(neighbor,self._kv({'state':'up'})))
+	def up (self,neighbor,counter_messages,ppid):
+		return self._header(self._neighbor(neighbor,self._kv({'state':'up'})),counter_messages=counter_messages,ppid=ppid,type_of_message='state')
 
-	def connected (self,neighbor):
-		return self._header(self._neighbor(neighbor,self._kv({'state':'connected'})))
+	def connected (self,neighbor,counter_messages,ppid):
+		return self._header(self._neighbor(neighbor,self._kv({'state':'connected'})),counter_messages=counter_messages,ppid=ppid,type_of_message='state')
 
-	def down (self,neighbor,reason=''):
-		return self._header(self._neighbor(neighbor,self._kv({'state':'down','reason':reason})))
+	def down (self,neighbor,counter_messages,ppid,reason=''):
+		return self._header(self._neighbor(neighbor,self._kv({'state':'down','reason':reason})),counter_messages=counter_messages,ppid=ppid,type_of_message='state')
 
-	def shutdown (self):
-		return self._header(self._kv({'notification':'shutdown'}))
+	def shutdown (self,ppid_recv):
+		return self._header(self._kv({'notification':'shutdown'}),ppid=ppid_recv,type_of_message='default')
 
-	def receive (self,neighbor,category,header,body):
-		return self._header(self._neighbor(neighbor,'"message": { %s } ' % self._minimalkv({'received':category,'header':hexstring(header),'body':hexstring(body)})))
+	def receive (self,neighbor,category,header,body,counter_messages,ppid,notify_recv):
+		return self._header(self._neighbor(neighbor,'"message": { %s } ' % self._minimalkv({'received':category,'header':hexstring(header),'body':hexstring(body)})),counter_messages,ppid,type_of_message='raw',notify=notify_recv)
+	
+	def keepalive (self,neighbor,category,header,body,counter_messages,ppid):
+		return self._header(self._neighbor(neighbor,'"message": { %s } ' % self._minimalkv({'received':category,'header':hexstring(header),'body':hexstring(body)})),counter_messages,ppid,type_of_message='keepalive')
+	
+	def open (self,neighbor,category,header,body,counter_messages,sent_open,from_ip,ppid):
+		return self._header(self._neighbor(neighbor,'"message": { %s } ' % self._minimalkv({'received':category,'header':hexstring(header),'body':hexstring(body), 'sent_open':sent_open, 'from_ip':from_ip})),counter_messages,ppid,type_of_message='open')
 
-	def send (self,neighbor,category,header,body):
-		return self._header(self._neighbor(neighbor,'"message": { %s } ' % self._minimalkv({'sent':category,'header':hexstring(header),'body':hexstring(body)})))
+	def send (self,neighbor,category,header,body,counter_messages,ppid):
+		return self._header(self._neighbor(neighbor,'"message": { %s } ' % self._minimalkv({'sent':category,'header':hexstring(header),'body':hexstring(body)})),counter_messages=counter_messages,ppid=ppid)
 
 	def _update (self,update):
 		plus = {}
@@ -191,10 +225,10 @@ class JSON (object):
 			return '"update": { %s%s } ' % (attributes,nlri)
 		return '"update": { %s, %s } ' % (attributes,nlri)
 
-	def update (self,neighbor,update):
-		return self._header(self._neighbor(neighbor,self._update(update)))
+	def update (self,neighbor,update,msg,header,body,counter_messages,ppid):
+		return self._header_update(self._neighbor(neighbor,self._update(update)),msg,header,body,counter_messages,ppid,type_of_message='update')
 
-	def refresh (self,neighbor,refresh):
+	def refresh (self,neighbor,refresh,counter_messages,ppid):
 		return self._header(
 			self._neighbor(
 				neighbor,
@@ -202,7 +236,7 @@ class JSON (object):
 					refresh.afi,refresh.safi,refresh.reserved
 				)
 			)
-		)
+		,counter_messages=counter_messages,ppid=ppid)
 
 	def bmp (self,bmp,update):
 		return self._header(self._bmp(bmp,self._update(update)))
@@ -237,7 +271,7 @@ class JSON (object):
 			)
 		)
 
-	def operational (self,neighbor,what,operational):
+	def operational (self,neighbor,what,operational,counter_messages,ppid):
 		if what == 'advisory':
 			return self._operational_advisory(neighbor,operational)
 		elif what == 'query':
