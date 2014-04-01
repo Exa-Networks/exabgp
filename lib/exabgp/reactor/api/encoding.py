@@ -32,25 +32,31 @@ class Text (object):
 	def __init__ (self,version):
 		self.version = version
 
-	def up (self,neighbor):
+	def up (self,neighbor,counter_messages,ppid):
 		return 'neighbor %s up\n' % neighbor
 
-	def connected (self,neighbor):
+	def connected (self,neighbor,counter_messages,ppid):
 		return 'neighbor %s connected\n' % neighbor
 
-	def down (self,neighbor,reason=''):
+	def down (self,neighbor,counter_messages,ppid,reason=''):
 		return 'neighbor %s down - %s\n' % (neighbor,reason)
 
-	def shutdown (self):
+	def shutdown (self,ppid_recv):
 		return 'shutdown'
 
-	def receive (self,neighbor,category,header,body):
+	def receive (self,neighbor,category,header,body,counter_messages,ppid,notify_recv):
 		return 'neighbor %s received %d header %s body %s\n' % (neighbor,category,hexstring(header),hexstring(body))
+	
+	def keepalive (self,neighbor,category,header,body,counter_messages,ppid):
+		pass
+	
+	def open (self,neighbor,category,header,body,counter_messages,sent_open,from_ip,ppid):
+		pass
 
-	def send (self,neighbor,category,header,body):
+	def send (self,neighbor,category,header,body,counter_messages,ppid):
 		return 'neighbor %s sent %d header %s body %s\n' % (neighbor,category,hexstring(header),hexstring(body))
 
-	def update (self,neighbor,update):
+	def update (self,neighbor,update,msg,header,body,counter_messages,ppid):
 		r = 'neighbor %s update start\n' % neighbor
 		attributes = str(update.attributes)
 		for nlri in update.nlris:
@@ -65,7 +71,7 @@ class Text (object):
 		r += 'neighbor %s update end\n' % neighbor
 		return r
 
-	def refresh (self,neighbor,refresh):
+	def refresh (self,neighbor,refresh,counter_messages,ppid):
 		return 'neighbor %s route-refresh afi %s safi %s %s' % (
 			neighbor,refresh.afi,refresh.safi,refresh.reserved
 		)
@@ -85,7 +91,7 @@ class Text (object):
 			neighbor,operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.counter
 		)
 
-	def operational (self,neighbor,what,operational):
+	def operational (self,neighbor,what,operational,counter_messages,ppid):
 		if what == 'advisory':
 			return self._operational_advisory(neighbor,operational)
 		elif what == 'query':
@@ -265,7 +271,7 @@ class JSON (object):
 			)
 		)
 
-	def operational (self,neighbor,what,operational):
+	def operational (self,neighbor,what,operational,counter_messages,ppid):
 		if what == 'advisory':
 			return self._operational_advisory(neighbor,operational)
 		elif what == 'query':
