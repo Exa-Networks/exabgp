@@ -11,6 +11,7 @@ import time
 import subprocess
 import select
 import fcntl
+import socket
 
 from exabgp.util.errstr import errstr
 
@@ -32,6 +33,7 @@ class Processes (object):
 	# how many time can a process can respawn in the time interval
 	respawn_number = 5
 	respawn_timemask = 0xFFFFFF - pow(2,6) + 1  # '0b111111111111111111000000' (around a minute, 63 seconds)
+	ppid = str(socket.gethostname())+'_'+str(os.getppid())
 
 	def __init__ (self,reactor):
 		self.logger = Logger()
@@ -57,7 +59,7 @@ class Processes (object):
 		for process in list(self._process):
 			if not self.silence:
 				try:
-					self.write(process,self._api_encoder[process].shutdown())
+					self.write(process,self._api_encoder[process].shutdown(self.ppid))
 				except ProcessError:
 					pass
 		self.silence = True
@@ -217,20 +219,30 @@ class Processes (object):
 		for process in self._notify(neighbor,'neighbor-changes'):
 			self.write(process,self._api_encoder[process].down(neighbor))
 
-	def receive (self,neighbor,category,header,body,counter_messages):
+	def receive (self,neighbor,category,header,body,counter_messages,ppid,notify='none'):
 		if self.silence: return
 		for process in self._notify(neighbor,'receive-packets'):
-			self.write(process,self._api_encoder[process].receive(neighbor,category,header,body,counter_messages))
+			self.write(process,self._api_encoder[process].receive(neighbor,category,header,body,counter_messages,ppid,notify))
+			
+	def keepalive (self,neighbor,category,header,body,counter_messages,ppid):
+		if self.silence: return
+		for process in self._notify(neighbor,'receive-keepalives'):
+			self.write(process,self._api_encoder[process].keepalive(neighbor,category,header,body,counter_messages,ppid))
+			
+	def open (self,neighbor,category,header,body,counter_messages,sent_open,from_ip,ppid):
+		if self.silence: return
+		for process in self._notify(neighbor,'receive-opens'):
+			self.write(process,self._api_encoder[process].open(neighbor,category,header,body,counter_messages,sent_open,from_ip,ppid))
 
 	def send (self,neighbor,category,header,body):
 		if self.silence: return
 		for process in self._notify(neighbor,'send-packets'):
 			self.write(process,self._api_encoder[process].send(neighbor,category,header,body))
 
-	def update (self,neighbor,update,counter_messages,ppid):
+	def update (self,neighbor,update,msg,header,body,counter_messages,ppid):
 		if self.silence: return
 		for process in self._notify(neighbor,'receive-routes'):
-			self.write(process,self._api_encoder[process].update(neighbor,update,counter_messages,ppid))
+			self.write(process,self._api_encoder[process].update(neighbor,update,msg,header,body,counter_messages,ppid))
 
 	def refresh (self,neighbor,refresh):
 		if self.silence: return

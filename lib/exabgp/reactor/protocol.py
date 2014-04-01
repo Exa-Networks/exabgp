@@ -37,6 +37,7 @@ MAX_BACKLOG = 15000
 _UPDATE = Update([],'')
 _OPERATIONAL = Operational(0x00)
 
+
 class Protocol (object):
 	decode = True
 	counter_messages = 0
@@ -53,7 +54,6 @@ class Protocol (object):
 		self.connection = None
 		port = os.environ.get('exabgp.tcp.port','')
 		self.port = int(port) if port.isdigit() else 179
-		
 
 		# XXX: FIXME: check the the -19 is correct (but it is harmless)
 		# The message size is the whole BGP message _without_ headers
@@ -131,13 +131,13 @@ class Protocol (object):
 		for length,msg,header,body,notify in self.connection.reader():
 			if notify:
 				if self.neighbor.api.receive_packets:
-					self.peer.reactor.processes.receive(self.peer.neighbor.peer_address,msg,header,body,self.counter_messages)
+					self.peer.reactor.processes.receive(self.peer.neighbor.peer_address,msg,header,body,self.counter_messages,self.ppid,notify)
 				raise Notify(notify.code,notify.subcode,str(notify))
 			if not length:
 				yield _NOP
 
 		if self.neighbor.api.receive_packets:
-			self.peer.reactor.processes.receive(self.peer.neighbor.peer_address,msg,header,body,self.counter_messages)
+			self.peer.reactor.processes.receive(self.peer.neighbor.peer_address,msg,header,body,self.counter_messages,self.ppid)
 
 		if msg == Message.Type.UPDATE:
 			self.logger.message(self.me('<< UPDATE'))
@@ -146,21 +146,23 @@ class Protocol (object):
 			if length == 23:
 				update = EORFactory()
 				if self.neighbor.api.receive_routes:
-					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update,self.counter_messages,self.ppid)
+					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update,msg,header,body,self.counter_messages,self.ppid)
 			elif length == 30 and body.startswith(EOR.MP):
 				update = EORFactory(body)
 				if self.neighbor.api.receive_routes:
-					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update.self.counter_messages,self.ppid)
+					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update,msg,header,body,self.counter_messages,self.ppid)
 			elif self.neighbor.api.receive_routes:
 				update = UpdateFactory(self.negotiated,body)
 				if self.neighbor.api.receive_routes:
-					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update,self.counter_messages,self.ppid)
+					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update,msg,header,body,self.counter_messages,self.ppid)
 			else:
 				update = _UPDATE
 			yield update
 
 		elif msg == Message.Type.KEEPALIVE:
 			self.logger.message(self.me('<< KEEPALIVE%s' % (' (%s)' % comment if comment else '')))
+			if self.neighbor.api.receive_keepalives:
+				self.peer.reactor.processes.keepalive(self.peer.neighbor.peer_address,msg,header,body,self.counter_messages,self.ppid)
 			yield KeepAlive()
 
 		elif msg == Message.Type.NOTIFICATION:
@@ -190,6 +192,10 @@ class Protocol (object):
 			yield operational
 
 		elif msg == Message.Type.OPEN:
+			if self.neighbor.api.receive_opens:
+				open_message = OpenFactory(body)
+				from_ip = self.peer.neighbor.peer_address
+				self.peer.reactor.processes.open(self.peer.neighbor.peer_address,msg,header,body,self.counter_messages,open_message,from_ip,self.ppid)
 			yield OpenFactory(body)
 
 		else:
@@ -245,6 +251,12 @@ class Protocol (object):
 			yield _NOP
 
 		self.logger.message(self.me('>> %s' % sent_open))
+		if self.neighbor.api.receive_opens:
+				from_ip = self.neighbor.router_id.ip
+				msg=Message.Type.OPEN
+				sent_marker, sent_length,sent_type,sent_message=sent_open.message_extra()
+				sent_header = '%s%s%s' % (sent_marker,sent_length,sent_type)
+				self.peer.reactor.processes.open(self.peer.neighbor.peer_address,msg,sent_header,sent_message,self.counter_messages,sent_open,from_ip,self.ppid)
 		yield sent_open
 
 	def new_keepalive (self,comment=''):
