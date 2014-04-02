@@ -11,7 +11,6 @@ import time
 import subprocess
 import select
 import fcntl
-import socket
 
 from exabgp.util.errstr import errstr
 
@@ -33,7 +32,6 @@ class Processes (object):
 	# how many time can a process can respawn in the time interval
 	respawn_number = 5
 	respawn_timemask = 0xFFFFFF - pow(2,6) + 1  # '0b111111111111111111000000' (around a minute, 63 seconds)
-	ppid = str(socket.gethostname())+'_'+str(os.getppid())
 
 	def __init__ (self,reactor):
 		self.logger = Logger()
@@ -59,7 +57,8 @@ class Processes (object):
 		for process in list(self._process):
 			if not self.silence:
 				try:
-					self.write(process,self._api_encoder[process].shutdown(self.ppid))
+					neighbor = self.reactor.configuration.process[process]['neighbor']
+					self.write(process,self._api_encoder[process].shutdown(neighbor))
 				except ProcessError:
 					pass
 		self.silence = True
@@ -204,52 +203,67 @@ class Processes (object):
 			if process in self._process:
 				yield process
 
-	def up (self,neighbor,counter_messages=-1,ppid=None):
+	def reset (self,peer):
 		if self.silence: return
-		for process in self._notify(neighbor,'neighbor-changes'):
-			self.write(process,self._api_encoder[process].up(neighbor,counter_messages,ppid=(ppid if ppid else self.ppid)))
+		for process in self._notify(peer.neighbor.peer_address,'*'):
+			self.write(process,self._api_encoder[process].reset(peer))
 
-	def connected (self,neighbor,counter_messages,ppid):
+	def increase (self,peer):
 		if self.silence: return
-		for process in self._notify(neighbor,'neighbor-changes'):
-			self.write(process,self._api_encoder[process].connected(neighbor,counter_messages,ppid))
+		for process in self._notify(peer.neighbor.peer_address,'*'):
+			self.write(process,self._api_encoder[process].increase(peer))
 
-	def down (self,neighbor,counter_messages,ppid,reason=''):
+	def up (self,peer):
 		if self.silence: return
-		for process in self._notify(neighbor,'neighbor-changes'):
-			self.write(process,self._api_encoder[process].down(neighbor,counter_messages,ppid,reason))
+		for process in self._notify(peer.neighbor.peer_address,'neighbor-changes'):
+			self.write(process,self._api_encoder[process].up(peer))
 
-	def receive (self,neighbor,category,header,body,counter_messages,ppid,notify='none'):
+	def connected (self,peer):
 		if self.silence: return
-		for process in self._notify(neighbor,'receive-packets'):
-			self.write(process,self._api_encoder[process].receive(neighbor,category,header,body,counter_messages,ppid,notify))
-			
-	def keepalive (self,neighbor,category,header,body,counter_messages,ppid):
-		if self.silence: return
-		for process in self._notify(neighbor,'receive-keepalives'):
-			self.write(process,self._api_encoder[process].keepalive(neighbor,category,header,body,counter_messages,ppid))
-			
-	def open (self,neighbor,category,header,body,counter_messages,sent_open,from_ip,ppid):
-		if self.silence: return
-		for process in self._notify(neighbor,'receive-opens'):
-			self.write(process,self._api_encoder[process].open(neighbor,category,header,body,counter_messages,sent_open,from_ip,ppid))
+		for process in self._notify(peer.neighbor.peer_address,'neighbor-changes'):
+			self.write(process,self._api_encoder[process].connected(peer))
 
-	def send (self,neighbor,category,header,body,counter_messages,ppid):
+	def down (self,peer,reason):
 		if self.silence: return
-		for process in self._notify(neighbor,'send-packets'):
-			self.write(process,self._api_encoder[process].send(neighbor,category,header,body,counter_messages,ppid))
+		for process in self._notify(peer.neighbor.peer_address,'neighbor-changes'):
+			self.write(process,self._api_encoder[process].down(peer,reason))
 
-	def update (self,neighbor,update,msg,header,body,counter_messages,ppid):
+	def notification (self,peer,code,subcode,data):
 		if self.silence: return
-		for process in self._notify(neighbor,'receive-routes'):
-			self.write(process,self._api_encoder[process].update(neighbor,update,msg,header,body,counter_messages,ppid))
+		for process in self._notify(peer.neighbor.peer_address,'neighbor-changes'):
+			self.write(process,self._api_encoder[process].notification(peer,code,subcode,data))
 
-	def refresh (self,neighbor,refresh,counter_messages,ppid):
+	def receive (self,peer,category,header,body):
 		if self.silence: return
-		for process in self._notify(neighbor,'receive-routes'):
-			self.write(process,self._api_encoder[process].refresh(neighbor,refresh,counter_messages,ppid))
+		for process in self._notify(peer.neighbor.peer_address,'receive-packets'):
+			self.write(process,self._api_encoder[process].receive(peer,category,header,body))
 
-	def operational (self,neighbor,what,operational,counter_messages,ppid):
+	def keepalive (self,peer,category,header,body):
 		if self.silence: return
-		for process in self._notify(neighbor,'receive-operational'):
-			self.write(process,self._api_encoder[process].operational(neighbor,what,operational,counter_messages,ppid))
+		for process in self._notify(peer.neighbor.peer_address,'receive-keepalives'):
+			self.write(process,self._api_encoder[process].keepalive(peer))
+
+	def open (self,peer,direction,open_msg):
+		if self.silence: return
+		for process in self._notify(peer.neighbor.peer_address,'receive-opens'):
+			self.write(process,self._api_encoder[process].open(peer,direction,open_msg))
+
+	def send (self,peer,category,header,body):
+		if self.silence: return
+		for process in self._notify(peer.neighbor.peer_address,'send-packets'):
+			self.write(process,self._api_encoder[process].send(peer,category,header,body))
+
+	def update (self,peer,update):
+		if self.silence: return
+		for process in self._notify(peer.neighbor.peer_address,'receive-routes'):
+			self.write(process,self._api_encoder[process].update(peer,update))
+
+	def refresh (self,peer,refresh):
+		if self.silence: return
+		for process in self._notify(peer.neighbor.peer_address,'receive-refresh'):
+			self.write(process,self._api_encoder[process].refresh(peer,refresh))
+
+	def operational (self,peer,what,operational):
+		if self.silence: return
+		for process in self._notify(peer.neighbor.peer_address,'receive-operational'):
+			self.write(process,self._api_encoder[process].operational(peer,what,operational))

@@ -40,8 +40,6 @@ _OPERATIONAL = Operational(0x00)
 
 class Protocol (object):
 	decode = True
-	counter_messages = 0
-	ppid = str(socket.gethostname())+'_'+str(os.getppid())
 
 	def __init__ (self,peer):
 		try:
@@ -70,8 +68,9 @@ class Protocol (object):
 	def accept (self,incoming):
 		self.connection = incoming
 
+		self.peer.reactor.processes.reset(self.peer)
 		if self.peer.neighbor.api.neighbor_changes:
-			self.peer.reactor.processes.connected(self.peer.neighbor.peer_address,self.counter_messages,self.ppid)
+			self.peer.reactor.processes.connected(self.peer)
 
 		# very important - as we use this function on __init__
 		return self
@@ -93,8 +92,9 @@ class Protocol (object):
 					if not connected:
 						yield False
 						continue
+					self.peer.reactor.processes.reset(self.peer)
 					if self.peer.neighbor.api.neighbor_changes:
-						self.peer.reactor.processes.connected(self.peer.neighbor.peer_address,self.counter_messages,self.ppid)
+						self.peer.reactor.processes.connected(self.peer)
 					yield True
 					return
 			except StopIteration:
@@ -113,31 +113,35 @@ class Protocol (object):
 
 			try:
 				if self.peer.neighbor.api.neighbor_changes:
-					self.peer.reactor.processes.down(self.peer.neighbor.peer_address,self.counter_messages,self.ppid,reason)
+					self.peer.reactor.processes.down(self.peer,reason)
 			except ProcessError:
 				self.logger.message(self.me('could not send notification of neighbor close to API'))
 
 
 	def write (self,message):
 		if self.neighbor.api.send_packets:
-			self.peer.reactor.processes.send(self.peer.neighbor.peer_address,ord(message[18]),message[:19],message[19:],self.counter_messages,self.ppid)
+			self.peer.reactor.processes.send(self.peer,ord(message[18]),message[:19],message[19:])
 		for boolean in self.connection.writer(message):
 			yield boolean
 
 	# Read from network .......................................................
 
 	def read_message (self,comment=''):
-		self.counter_messages += 1
+		self.peer.reactor.processes.increase(self.peer)
+
 		for length,msg,header,body,notify in self.connection.reader():
 			if notify:
 				if self.neighbor.api.receive_packets:
-					self.peer.reactor.processes.receive(self.peer.neighbor.peer_address,msg,header,body,self.counter_messages,self.ppid,notify)
+					self.peer.reactor.processes.receive(self.peer,msg,header,body)
+				if self.neighbor.api.receive_notifications:
+					self.peer.reactor.processes.notification(self.peer,notify.code,notify.subcode,str(notify))
+				# XXX: is notify not already Notify class ?
 				raise Notify(notify.code,notify.subcode,str(notify))
 			if not length:
 				yield _NOP
 
 		if self.neighbor.api.receive_packets:
-			self.peer.reactor.processes.receive(self.peer.neighbor.peer_address,msg,header,body,self.counter_messages,self.ppid)
+			self.peer.reactor.processes.receive(self.peer,msg,header,body)
 
 		if msg == Message.Type.UPDATE:
 			self.logger.message(self.me('<< UPDATE'))
@@ -145,16 +149,15 @@ class Protocol (object):
 			# This could be speed up massively by changing the order of the IF
 			if length == 23:
 				update = EORFactory()
-				if self.neighbor.api.receive_routes:
-					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update,msg,header,body,self.counter_messages,self.ppid)
+				if self.neighbor.api.receive_updates:
+					self.peer.reactor.processes.update(self.peer,update)
 			elif length == 30 and body.startswith(EOR.MP):
 				update = EORFactory(body)
-				if self.neighbor.api.receive_routes:
-					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update,msg,header,body,self.counter_messages,self.ppid)
-			elif self.neighbor.api.receive_routes:
+				if self.neighbor.api.receive_updates:
+					self.peer.reactor.processes.update(self.peer,update)
+			elif self.neighbor.api.receive_updates:
 				update = UpdateFactory(self.negotiated,body)
-				if self.neighbor.api.receive_routes:
-					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update,msg,header,body,self.counter_messages,self.ppid)
+				self.peer.reactor.processes.update(self.peer,update)
 			else:
 				update = _UPDATE
 			yield update
@@ -162,7 +165,7 @@ class Protocol (object):
 		elif msg == Message.Type.KEEPALIVE:
 			self.logger.message(self.me('<< KEEPALIVE%s' % (' (%s)' % comment if comment else '')))
 			if self.neighbor.api.receive_keepalives:
-				self.peer.reactor.processes.keepalive(self.peer.neighbor.peer_address,msg,header,body,self.counter_messages,self.ppid)
+				self.peer.reactor.processes.keepalive(self.peer,msg,header,body)
 			yield KeepAlive()
 
 		elif msg == Message.Type.NOTIFICATION:
@@ -173,9 +176,9 @@ class Protocol (object):
 			if self.negotiated.refresh != REFRESH.absent:
 				self.logger.message(self.me('<< ROUTE-REFRESH'))
 				refresh = RouteRefreshFactory(body)
-				if self.neighbor.api.receive_routes:
+				if self.neighbor.api.receive_refresh:
 					if refresh.reserved in (RouteRefresh.start,RouteRefresh.end):
-						self.peer.reactor.processes.refresh(self.peer.neighbor.peer_address,refresh,self.counter_messages,self.ppid)
+						self.peer.reactor.processes.refresh(self.peer,refresh)
 			else:
 				# XXX: FIXME: really should raise, we are too nice
 				self.logger.message(self.me('<< NOP (un-negotiated type %d)' % msg))
@@ -186,7 +189,7 @@ class Protocol (object):
 			if self.peer.neighbor.operational:
 				operational = OperationalFactory(body)
 				what = OperationalGroup[operational.what][0]
-				self.peer.reactor.processes.operational(self.peer.neighbor.peer_address,what,operational,self.counter_messages,self.ppid)
+				self.peer.reactor.processes.operational(self.peer,what,operational)
 			else:
 				operational = _OPERATIONAL
 			yield operational
@@ -194,8 +197,7 @@ class Protocol (object):
 		elif msg == Message.Type.OPEN:
 			if self.neighbor.api.receive_opens:
 				open_message = OpenFactory(body)
-				from_ip = self.peer.neighbor.peer_address
-				self.peer.reactor.processes.open(self.peer.neighbor.peer_address,msg,header,body,self.counter_messages,open_message,from_ip,self.ppid)
+				self.peer.reactor.processes.open(self.peer,'received',open_message)
 			yield OpenFactory(body)
 
 		else:
@@ -254,11 +256,7 @@ class Protocol (object):
 
 		self.logger.message(self.me('>> %s' % sent_open))
 		if self.neighbor.api.receive_opens:
-				from_ip = self.neighbor.router_id.ip
-				msg=Message.Type.OPEN
-				sent_marker, sent_length,sent_type,sent_message=sent_open.message_extra()
-				sent_header = '%s%s%s' % (sent_marker,sent_length,sent_type)
-				self.peer.reactor.processes.open(self.peer.neighbor.peer_address,msg,sent_header,sent_message,self.counter_messages,sent_open,from_ip,self.ppid)
+			self.peer.reactor.processes.open(self.peer,'sent',sent_open)
 		yield sent_open
 
 	def new_keepalive (self,comment=''):

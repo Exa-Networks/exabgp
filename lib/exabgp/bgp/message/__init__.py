@@ -74,6 +74,24 @@ class Message (Exception):
 	def __init__ (self):
 		self._name = None
 
+	@staticmethod
+	def string (code):
+		if code is None:
+			return 'invalid'
+		if code == Message.Type.OPEN:
+			return 'open'
+		if code == Message.Type.UPDATE:
+			return 'update'
+		if code == Message.Type.NOTIFICATION:
+			return 'notification'
+		if code == Message.Type.KEEPALIVE:
+			return 'keepalive'
+		if code == Message.Type.ROUTE_REFRESH:
+			return 'route refresh'
+		if code == Message.Type.OPERATIONAL:
+			return 'operational'
+		return 'unknown'
+
 	def name (self,code):
 		if not self._name:
 			if code is None:
@@ -104,10 +122,6 @@ class Message (Exception):
 	def _message (self,message):
 		message_len = pack('!H',19+len(message))
 		return "%s%s%s%s" % (self.MARKER,message_len,self.TYPE,message)
-	
-	def _message_extra (self,message):
-		message_len = pack('!H',19+len(message))
-		return (self.MARKER,message_len,self.TYPE,message)
 
 	def message (self):
 		raise RuntimeError('message not implemented in subclasses')

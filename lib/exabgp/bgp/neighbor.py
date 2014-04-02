@@ -6,6 +6,9 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
+import os
+import socket
+
 from collections import deque
 
 from exabgp.protocol.family import AFI
@@ -55,6 +58,12 @@ class Neighbor (object):
 
 		self.messages = deque()
 		self.refresh = deque()
+
+		# It is possible to :
+		# - have multiple exabgp toward one peer on the same host ( use of pid )
+		# - have more than once connection toward a peer
+		# - each connection has it own neihgbor (hence why identificator is not in Protocol)
+		self.identificator = '%s_%d_%s' % (socket.gethostname(),os.getppid(),self.peer_address)
 
 	def make_rib (self):
 		self.rib = RIB(self.name(),self.adjribout,self._families)
@@ -142,11 +151,15 @@ class Neighbor (object):
 			families += '\n    %s %s;' % (afi.name(),safi.name())
 
 		_api  = []
-		_api.extend(['    neighbor-changes;\n',]    if self.api.neighbor_changes else [])
-		_api.extend(['    receive-packets;\n',]     if self.api.receive_packets else [])
-		_api.extend(['    send-packets;\n',]        if self.api.send_packets else [])
-		_api.extend(['    receive-routes;\n',]      if self.api.receive_routes else [])
-		_api.extend(['    receive-operational;\n',] if self.api.receive_operational else [])
+		_api.extend(['    receive-packets;\n',]       if self.api.receive_packets else [])
+		_api.extend(['    send-packets;\n',]          if self.api.send_packets else [])
+		_api.extend(['    neighbor-changes;\n',]      if self.api.neighbor_changes else [])
+		_api.extend(['    receive-notifications;\n',] if self.api.receive_notifications else [])
+		_api.extend(['    receive-open;\n',]          if self.api.receive_notifications else [])
+		_api.extend(['    receive-keepalives;\n',]    if self.api.receive_keepalives else [])
+		_api.extend(['    receive-updates;\n',]       if self.api.receive_updates else [])
+		_api.extend(['    receive-refresh;\n',]       if self.api.receive_refresh else [])
+		_api.extend(['    receive-operational;\n',]   if self.api.receive_operational else [])
 		api = ''.join(_api)
 
 		return """\
