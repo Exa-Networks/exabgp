@@ -63,6 +63,15 @@ class Open (Message):
 			self.router_id.pack(),
 			self.capabilities.pack()
 		))
+		
+	def message_extra (self):
+		return self._message_extra("%s%s%s%s%s" % (
+			self.version.pack(),
+			self.asn.trans(),
+			self.hold_time.pack(),
+			self.router_id.pack(),
+			self.capabilities.pack()
+		))
 
 	def __str__ (self):
 		return "OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]" % (self.version, self.asn, self.hold_time, self.router_id,self.capabilities)

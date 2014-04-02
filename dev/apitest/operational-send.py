@@ -12,7 +12,7 @@ counter = 1
 time.sleep(1)
 
 print 'operational rpcq afi ipv4 safi unicast sequence %d' % counter
-print 'operational rpcp afi ipv4 safi unicast sequence %d rxc 100 txc 200' % counter
+print 'operational rpcp afi ipv4 safi unicast sequence %d counter 200' % counter
 time.sleep(1)
 
 counter += 1
