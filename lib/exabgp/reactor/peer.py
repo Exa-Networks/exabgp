@@ -296,7 +296,7 @@ class Peer (object):
 			while not connected:
 				connected = generator.next()
 				# we want to come back as soon as possible
-				yield ACTION.immediate
+				yield ACTION.later
 		except StopIteration:
 			# Connection failed
 			if not connected:
