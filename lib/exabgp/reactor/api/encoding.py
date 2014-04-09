@@ -290,7 +290,7 @@ class JSON (object):
 		return self._header(
 			self._neighbor(
 				peer,
-				'"route-refresh": { "afi": "%s", "safi": "%s", "subtype": "%s"' % (
+				'"route-refresh": { "afi": "%s", "safi": "%s", "subtype": "%s" }' % (
 					refresh.afi,refresh.safi,refresh.reserved
 				)
 			)
