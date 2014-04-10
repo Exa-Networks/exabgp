@@ -1087,8 +1087,8 @@ class Configuration (object):
 				neighbor.api.receive_notifications |= local_scope.get('receive-notifications',False)
 				neighbor.api.receive_opens |= local_scope.get('receive-opens',False)
 				neighbor.api.receive_keepalives |= local_scope.get('receive-keepalives',False)
-				neighbor.api.receive_udpates |= local_scope.get('receive-updates',False)
-				neighbor.api.receive_udpates |= local_scope.get('receive-routes',False)
+				neighbor.api.receive_updates |= local_scope.get('receive-updates',False)
+				neighbor.api.receive_updates |= local_scope.get('receive-routes',False)
 				neighbor.api.receive_refresh |= local_scope.get('receive-refresh',False)
 				neighbor.api.receive_refresh |= local_scope.get('receive-routes',False)
 				neighbor.api.receive_operational |= local_scope.get('receive-operational',False)
@@ -2699,7 +2699,7 @@ class Configuration (object):
 					if str1r != str2r:
 						if 'attribute [' in str1r and ' 0x00 ' in str1r:
 							# we do not decode non-transitive attributes
-							self.logger.parser('skipping string check on udpate with non-transitive attribute(s)')
+							self.logger.parser('skipping string check on update with non-transitive attribute(s)')
 							skip = True
 						else:
 							self.logger.parser('strings are different:')
