@@ -3,8 +3,18 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
-Version 3.3.3
+
+Version 3.4.0
  * Improvement: better handling of NOTIFICATION received during OPEN negotiation
+ * Feature: more detailed JSON objects
+    initial patch from: 
+ * Fix: Do not reconnect too fast when connection fails
+    reported by: Robert Barnes
+ * Fix: Invalid JSON object for route-refresh
+    reported by: Robert Barnes
+ * Change: new commands for the configuration of the API
+ * Change: JSON objects now include a unique neighbor identifier
+ * Change: JSON objects now include a counter for unique message id
 
 Version 3.3.2
  * Fix: work toward working operational-01
