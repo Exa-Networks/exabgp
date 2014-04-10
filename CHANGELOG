@@ -7,7 +7,7 @@ Version explained:
 Version 3.4.0
  * Improvement: better handling of NOTIFICATION received during OPEN negotiation
  * Feature: more detailed JSON objects
-    initial patch from: 
+    initial patch from: Wouter Miltenburg
  * Fix: Do not reconnect too fast when connection fails
     reported by: Robert Barnes
  * Fix: Invalid JSON object for route-refresh
