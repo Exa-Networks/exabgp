@@ -200,7 +200,7 @@ class JSON (object):
 				'subcode' : subcode,
 				'data'    : hexstring(data),
 			})
-		}),peer.neighbor.identificator,self.count())
+		}),peer.neighbor.identificator,self.count(peer))
 
 	def receive (self,peer,category,header,body):
 		return self._header(self._neighbor(peer,self._kv({
@@ -210,12 +210,12 @@ class JSON (object):
 				'header'   : hexstring(header),
 				'body'     : hexstring(body),
 			})
-		})),peer.neighbor.identificator,self.count())
+		})),peer.neighbor.identificator,self.count(peer))
 
 	def keepalive (self,peer):
 		return self._header(self._neighbor(peer,self._kv({
 			'type'   : 'keepalive',
-		})),peer.neighbor.identificator,self.count())
+		})),peer.neighbor.identificator,self.count(peer))
 
 	def open (self,peer,direction,sent_open):
 		return self._header(self._neighbor(peer,self._kv({
@@ -228,7 +228,7 @@ class JSON (object):
 				'router_id'    : sent_open.router_id,
 				'capabilities' : '{ %s } ' % self._kv(sent_open.capabilities),
 			})
-		})),peer.neighbor.identificator,self.count())
+		})),peer.neighbor.identificator,self.count(peer))
 
 	def send (self,peer,category,header,body):
 		return self._header(self._neighbor(peer,self._kv({
@@ -238,7 +238,7 @@ class JSON (object):
 				'header' : hexstring(header),
 				'body'   : hexstring(body),
 			})
-		})),peer.neighbor.identificator,self.count())
+		})),peer.neighbor.identificator,self.count(peer))
 
 	def _update (self,update):
 		plus = {}
@@ -284,7 +284,7 @@ class JSON (object):
 		return '"update": { %s, %s } ' % (attributes,nlri)
 
 	def update (self,peer,update):
-		return self._header(self._neighbor(peer,self._update(update)),peer.neighbor.identificator,self.count())
+		return self._header(self._neighbor(peer,self._update(update)),peer.neighbor.identificator,self.count(peer))
 
 	def refresh (self,peer,refresh):
 		return self._header(
@@ -294,7 +294,7 @@ class JSON (object):
 					refresh.afi,refresh.safi,refresh.reserved
 				)
 			)
-		,peer.neighbor.identificator,self.count())
+		,peer.neighbor.identificator,self.count(peer))
 
 	def bmp (self,bmp,update):
 		return self._header(self._bmp(bmp,self._update(update)))
@@ -307,7 +307,7 @@ class JSON (object):
 					operational.name,operational.afi,operational.safi,operational.data
 				)
 			)
-		,peer.neighbor.identificator,self.count())
+		,peer.neighbor.identificator,self.count(peer))
 
 	def _operational_query (self,peer,operational):
 		return self._header(
@@ -317,7 +317,7 @@ class JSON (object):
 					operational.name,operational.afi,operational.safi
 				)
 			)
-		,peer.neighbor.identificator,self.count())
+		,peer.neighbor.identificator,self.count(peer))
 
 	def _operational_counter (self,peer,operational):
 		return self._header(
@@ -327,7 +327,7 @@ class JSON (object):
 					operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.counter
 				)
 			)
-		,peer.neighbor.identificator,self.count())
+		,peer.neighbor.identificator,self.count(peer))
 
 	def operational (self,peer,what,operational):
 		if what == 'advisory':
