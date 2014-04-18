@@ -154,16 +154,13 @@ class Protocol (object):
 				update = EORFactory()
 				if self.neighbor.api.receive_updates:
 					self.peer.reactor.processes.update(self.peer,update)
-				self.logger.message(self.me(update.messages(self.negotiated)))
 			elif length == 30 and body.startswith(EOR.MP):
 				update = EORFactory(body)
 				if self.neighbor.api.receive_updates:
 					self.peer.reactor.processes.update(self.peer,update)
-				self.logger.message(self.me(update.messages(self.negotiated)))
 			elif self.neighbor.api.receive_updates:
 				update = UpdateFactory(self.negotiated,body)
 				self.peer.reactor.processes.update(self.peer,update)
-				self.logger.message(self.me(update.messages(self.negotiated)))
 			elif self.log_routes:
 				update = UpdateFactory(self.negotiated,body)
 			else:
