@@ -50,12 +50,15 @@ class Protocol (object):
 		self.neighbor = peer.neighbor
 		self.negotiated = Negotiated(self.neighbor)
 		self.connection = None
-		port = os.environ.get('exabgp.tcp.port','')
+		port = os.environ.get('exabgp.tcp.port','') or os.environ.get('exabgp_tcp_port','')
 		self.port = int(port) if port.isdigit() else 179
 
 		# XXX: FIXME: check the the -19 is correct (but it is harmless)
 		# The message size is the whole BGP message _without_ headers
 		self.message_size = Message.MAX_LEN-Message.HEADER_LEN
+
+		from exabgp.configuration.environment import environment
+		self.log_routes = environment.settings().log.routes
 
 	# XXX: we use self.peer.neighbor.peer_address when we could use self.neighbor.peer_address
 
@@ -151,13 +154,18 @@ class Protocol (object):
 				update = EORFactory()
 				if self.neighbor.api.receive_updates:
 					self.peer.reactor.processes.update(self.peer,update)
+				self.logger.message(self.me(update.messages(self.negotiated)))
 			elif length == 30 and body.startswith(EOR.MP):
 				update = EORFactory(body)
 				if self.neighbor.api.receive_updates:
 					self.peer.reactor.processes.update(self.peer,update)
+				self.logger.message(self.me(update.messages(self.negotiated)))
 			elif self.neighbor.api.receive_updates:
 				update = UpdateFactory(self.negotiated,body)
 				self.peer.reactor.processes.update(self.peer,update)
+				self.logger.message(self.me(update.messages(self.negotiated)))
+			elif self.log_routes:
+				update = UpdateFactory(self.negotiated,body)
 			else:
 				update = _UPDATE
 			yield update

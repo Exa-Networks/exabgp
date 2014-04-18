@@ -455,6 +455,7 @@ class Peer (object):
 		counter = Counter(self.logger,self._log(direction))
 		operational = None
 		refresh = None
+		number = 0
 
 		while not self._teardown:
 			for message in proto.read_message():
@@ -467,10 +468,14 @@ class Peer (object):
 				# Received update
 				if message.TYPE == Update.TYPE:
 					counter.increment(len(message.nlris))
+					number += 1
+
+					self.logger.routes(LazyFormat(self.me('<< UPDATE (%d)' % number),lambda _: "%s%s" % (' attributes' if _ else '',_),message.attributes))
 
 					for nlri in message.nlris:
 						self.neighbor.rib.incoming.insert_received(Change(nlri,message.attributes))
-						self.logger.routes(LazyFormat(self.me(''),str,nlri))
+						self.logger.routes(LazyFormat(self.me('<< UPDATE (%d) nlri ' % number),str,nlri))
+
 				elif message.TYPE == RouteRefresh.TYPE:
 					if message.reserved == RouteRefresh.request:
 						self._resend_routes = SEND.refresh
