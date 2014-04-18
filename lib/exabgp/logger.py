@@ -121,7 +121,13 @@ class _Logger (object):
 		)
 
 	def restart (self,first=False):
-		destination = 'stderr' if first else self.destination
+		if first:
+			destination = 'stderr'
+		else:
+			if self._syslog:
+				for handler in self._syslog.handlers:
+					self._syslog.removeHandler(handler)
+			destination = self.destination
 
 		try:
 			if destination in ('','syslog'):
