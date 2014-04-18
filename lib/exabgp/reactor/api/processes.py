@@ -206,12 +206,16 @@ class Processes (object):
 	def reset (self,peer):
 		if self.silence: return
 		for process in self._notify(peer.neighbor.peer_address,'*'):
-			self.write(process,self._api_encoder[process].reset(peer))
+			data = self._api_encoder[process].reset(peer)
+			if data:
+				self.write(process,data)
 
 	def increase (self,peer):
 		if self.silence: return
 		for process in self._notify(peer.neighbor.peer_address,'*'):
-			self.write(process,self._api_encoder[process].increase(peer))
+			data = self._api_encoder[process].increase(peer)
+			if data:
+				self.write(process,data)
 
 	def up (self,peer):
 		if self.silence: return

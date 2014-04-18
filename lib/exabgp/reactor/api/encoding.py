@@ -37,10 +37,10 @@ class Text (object):
 		self.version = version
 
 	def reset (self,peer):
-		pass
+		return None
 
 	def increase (self,peer):
-		pass
+		return None
 
 	def up (self,peer):
 		return 'neighbor %s up\n' % peer.neighbor.peer_address
