@@ -120,6 +120,7 @@ class Connection (object):
 		while not self.reading():
 			yield ''
 		data = ''
+		reported = ''
 		while True:
 			try:
 				while True:
@@ -152,7 +153,10 @@ class Connection (object):
 				raise TooSlowError('Timeout while reading data from the network (%s)' % errstr(e))
 			except socket.error,e:
 				if e.args[0] in error.block:
-					self.logger.wire("%s %s blocking io problem mid-way through reading a message %s, trying to complete" % (self.name(),self.peer,errstr(e)),'debug')
+					message = "%s %s blocking io problem mid-way through reading a message %s, trying to complete" % (self.name(),self.peer,errstr(e))
+					if message != reported:
+						reported = message
+						self.logger.wire(message,'debug')
 				elif e.args[0] in error.fatal:
 					self.close()
 					raise LostConnection('issue reading on the socket: %s' % errstr(e))
