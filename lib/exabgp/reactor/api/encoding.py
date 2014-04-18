@@ -12,6 +12,8 @@ import time
 from exabgp.bgp.message.direction import IN
 from exabgp.bgp.message import Message
 
+from exabgp.configuration.environment import environment
+
 class APIOptions (object):
 	def __init__ (self):
 		self.receive_packets = False
@@ -118,11 +120,14 @@ class Text (object):
 			raise RuntimeError('the code is broken, we are trying to print a unknown type of operational message')
 
 
+def nop (_): return _
+
 class JSON (object):
 	_counter = {}
 
-	def __init__ (self,version):
+	def __init__ (self,version,highres=False):
 		self.version = version
+		self.time = nop if highres else int
 
 	def reset (self,peer):
 		self._counter[peer.neighbor.peer_address] = 0
@@ -145,7 +150,7 @@ class JSON (object):
 			'"exabgp": "%s", '\
 			'"time": %s, ' \
 			'%s%s%s' \
-		'}' % (self.version,time.time(),identificator,counter,content)
+		'}' % (self.version,self.time(time.time()),identificator,counter,content)
 
 	def _neighbor (self,peer,content):
 		return \

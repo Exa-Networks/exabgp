@@ -15,6 +15,7 @@ Version 3.4.0
  * Change: new commands for the configuration of the API
  * Change: JSON objects now include a unique neighbor identifier
  * Change: JSON objects now include a counter for unique message id
+ * Compatibility: restoring integer as default time, high resolution must be enabled to not break older installations
 
 Version 3.3.2
  * Fix: work toward working operational-01
