@@ -223,6 +223,7 @@ class Protocol (object):
 
 		if received_open.TYPE == Notification.TYPE:
 			raise received_open
+
 		if received_open.TYPE != Open.TYPE:
 			raise Notify(5,1,'The first packet recevied is not an open message (%s)' % received_open)
 

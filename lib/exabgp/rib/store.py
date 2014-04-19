@@ -82,8 +82,8 @@ class Store (object):
 			yield change
 
 	def replace (self,changes):
-		self._changes = changes
 		self.reset()
+		self._changes = changes
 
 	def insert_announced_watchdog (self,change):
 		watchdog = change.attributes.watchdog()
