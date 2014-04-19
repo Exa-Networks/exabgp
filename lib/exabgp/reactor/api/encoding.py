@@ -136,7 +136,7 @@ class JSON (object):
 		self._counter[peer.neighbor.peer_address] += 1
 
 	def count (self,peer):
-		return self._counter[peer.neighbor.peer_address]
+		return self._counter.get(peer.neighbor.peer_address,0)
 
 	def _string (self,_):
 		return '%s' % _ if issubclass(_.__class__,int) or issubclass(_.__class__,long) else '"%s"' % _
