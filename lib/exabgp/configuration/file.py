@@ -2552,6 +2552,7 @@ class Configuration (object):
 		from exabgp.bgp.message.open.capability.negotiated import Negotiated
 		from exabgp.bgp.message.open.capability.id import CapabilityID
 		from exabgp.bgp.message.notification import Notify
+		from exabgp.reactor.peer import Peer
 		from exabgp.reactor.api.encoding import JSON
 
 		self.logger._parser = True
@@ -2559,6 +2560,7 @@ class Configuration (object):
 		self.logger.parser('\ndecoding routes in configuration')
 
 		n = self.neighbor[self.neighbor.keys()[0]]
+		p = Peer(n,None)
 
 		path = {}
 		for f in known_families():
@@ -2616,7 +2618,7 @@ class Configuration (object):
 			for number in range(len(update.nlris)):
 				change = Change(update.nlris[number],update.attributes)
 				self.logger.parser('decoded %s %s %s' % (decoding,change.nlri.action,change.extensive()))
-			self.logger.parser('update json %s' % JSON('3.4.0').update(str(n.peer_address),update))
+			self.logger.parser('update json %s' % JSON('3.4.0').update(p,update))
 		import sys
 		sys.exit(0)
 
