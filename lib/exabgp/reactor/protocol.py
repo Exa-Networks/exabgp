@@ -7,10 +7,9 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 import os
-import socket
 
 from exabgp.reactor.network.outgoing import Outgoing
-from exabgp.reactor.network.error import NotifyError
+#from exabgp.reactor.network.error import NotifyError
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.nop import NOP,_NOP
@@ -236,6 +235,9 @@ class Protocol (object):
 				yield message
 			else:
 				break
+
+		if message.TYPE == Notification.TYPE:
+			raise message
 
 		if message.TYPE != KeepAlive.TYPE:
 			raise Notify(5,2)

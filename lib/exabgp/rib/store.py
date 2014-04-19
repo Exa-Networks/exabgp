@@ -81,8 +81,9 @@ class Store (object):
 		for change in self._modify_nlri.values():
 			yield change
 
-	def update (self,changes):
+	def replace (self,changes):
 		self._changes = changes
+		self.reset()
 
 	def insert_announced_watchdog (self,change):
 		watchdog = change.attributes.watchdog()

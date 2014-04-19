@@ -186,7 +186,7 @@ class Peer (object):
 
 	def send_new (self,changes=None,update=None):
 		if changes:
-			self.neighbor.rib.outgoing.update(changes)
+			self.neighbor.rib.outgoing.replace(changes)
 		self._have_routes = self.neighbor.flush if update is None else update
 
 	def restart (self,restart_neighbor=None):
