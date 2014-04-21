@@ -41,18 +41,6 @@ do {
         $routes[$row["prefix"]]["community"] = $row["community"];
     }
     
-    
-    /*
-    
-    // THIS IS TEST DATA.  REMOVE WHEN YOU HAVE THE DB QUERY WORKING.
-    
-	$routes["192.168.1.1/32"]["next_hop"] = "192.0.2.1";
-	$routes["192.168.1.1/32"]["community"] = "56595:666";
-	
-	$routes["192.168.1.2/32"]["next_hop"] =	"192.0.2.1";
-	$routes["192.168.1.2/32"]["community"] = "56595:666";
-	
-	*/
 
 
 	// COMPARE ROUTES
