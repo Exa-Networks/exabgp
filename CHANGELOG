@@ -19,6 +19,7 @@ Version 3.4.0
  * Change: JSON objects now include a unique neighbor identifier
  * Change: JSON objects now include a counter for unique message id
  * Compatibility: restoring integer as default time, high resolution must be enabled to not break older installations
+ * Incorporating NETBSD compatibility patches
 
 Version 3.3.2
  * Fix: work toward working operational-01
