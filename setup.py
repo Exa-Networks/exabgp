@@ -48,7 +48,7 @@ if os_name == 'NetBSD':
 		('bin/exabgp',configuration('etc/exabgp')),
 	]
 else:
-	files_defintion = [
+	files_definition = [
 		('etc/exabgp',configuration('etc/exabgp')),
 		('/usr/lib/systemd/system',configuration('etc/systemd')),
 	]
