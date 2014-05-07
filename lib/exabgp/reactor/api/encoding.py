@@ -291,7 +291,7 @@ class JSON (object):
 	def update (self,peer,update):	
 		return self._header(self._neighbor(peer,self._kv({
 			'type'   : 'update',
-			'message': '{ %s }' % self._update(update)})),peer.neighbor.identificator,self.count(peer))
+			'message': '{ %s }' % self._update(update)})),peer.neighbor.identificator(),self.count(peer))
 
 	def refresh (self,peer,refresh):
 		return self._header(
