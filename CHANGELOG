@@ -15,6 +15,7 @@ Version 3.4.0
  * Fix: We were not reporting the NLRI of the route received when exabgp.log.routes was set
  * Fix: accept exabgp_tcp_port as configuration option and not only exabgp.tcp.port
  * Fix: duplicate line output
+ * Fix: bad refactorisation which caused an bad ASN4 bug
  * Change: new commands for the configuration of the API
  * Change: JSON objects now include a unique neighbor identifier
  * Change: JSON objects now include a counter for unique message id
