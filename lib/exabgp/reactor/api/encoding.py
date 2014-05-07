@@ -139,7 +139,7 @@ class JSON (object):
 		return self._counter.get(peer.neighbor.peer_address,0)
 
 	def _string (self,_):
-		return '%s' % _ if issubclass(_.__class__,int) or issubclass(_.__class__,long) else '"%s"' % _
+		return '%s' % _ if issubclass(_.__class__,int) or issubclass(_.__class__,long) or ('{' in str(_)) else '"%s"' % _
 
 	def _header (self,content,ident=None,count=None):
 		identificator = '"id": "%s", ' % ident if ident else ''
@@ -288,8 +288,10 @@ class JSON (object):
 			return '"update": { %s%s } ' % (attributes,nlri)
 		return '"update": { %s, %s } ' % (attributes,nlri)
 
-	def update (self,peer,update):
-		return self._header(self._neighbor(peer,self._update(update)),peer.neighbor.identificator(),self.count(peer))
+	def update (self,peer,update):	
+		return self._header(self._neighbor(peer,self._kv({
+			'type'   : 'update',
+			'message': '{ %s }' % self._update(update)})),peer.neighbor.identificator,self.count(peer))
 
 	def refresh (self,peer,refresh):
 		return self._header(
