@@ -59,11 +59,13 @@ class Neighbor (object):
 		self.messages = deque()
 		self.refresh = deque()
 
+
+	def identificator (self):
 		# It is possible to :
 		# - have multiple exabgp toward one peer on the same host ( use of pid )
 		# - have more than once connection toward a peer
 		# - each connection has it own neihgbor (hence why identificator is not in Protocol)
-		self.identificator = '%s_%d_%s' % (socket.gethostname(),os.getppid(),self.peer_address)
+		return '%s_%d_%s' % (socket.gethostname(),os.getppid(),self.peer_address)
 
 	def make_rib (self):
 		self.rib = RIB(self.name(),self.adjribout,self._families)
