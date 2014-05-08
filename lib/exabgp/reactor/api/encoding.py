@@ -37,6 +37,12 @@ def hexstring (value):
 class Text (object):
 	def __init__ (self,version):
 		self.version = version
+		
+	def _header_body(self,header,body):
+		header = 'header %s' % hexstring(header) if header else ''
+		body = 'body %s' % hexstring(body) if body else ''
+		
+		return ' '.join([header,body])
 
 	def reset (self,peer):
 		return None
@@ -62,16 +68,16 @@ class Text (object):
 	def receive (self,peer,category,header,body):
 		return 'neighbor %s received %d header %s body %s\n' % (peer.neighbor.peer_address,category,hexstring(header),hexstring(body))
 
-	def keepalive (self,peer):
-		return 'neighbor %s keepalive\n' % peer.neighbor.peer_address
+	def keepalive (self,peer,header,body):
+		return 'neighbor %s keepalive %s\n' % (peer.neighbor.peer_address,self._header_body(header,body))
 
-	def open (self,peer,direction,sent_open):
-		return 'neighbor %s open direction %s version %d asn %d hold_time %s router_id %s capabilities [%s]\n' % (peer.neighbor.peer_address,direction,sent_open.version, sent_open.asn, sent_open.hold_time, sent_open.router_id,str(sent_open.capabilities).lower())
+	def open (self,peer,direction,sent_open,header,body):
+		return 'neighbor %s open direction %s version %d asn %d hold_time %s router_id %s capabilities [%s] %s\n' % (peer.neighbor.peer_address,direction,sent_open.version, sent_open.asn, sent_open.hold_time, sent_open.router_id,str(sent_open.capabilities).lower(),self._header_body(header,body))
 
 	def send (self,peer,category,header,body):
 		return 'neighbor %s sent %d header %s body %s\n' % (peer.neighbor.peer_address,category,hexstring(header),hexstring(body))
 
-	def update (self,peer,update):
+	def update (self,peer,update,header,body):	
 		neighbor = peer.neighbor.peer_address
 		r = 'neighbor %s update start\n' % neighbor
 		attributes = str(update.attributes)
@@ -84,12 +90,16 @@ class Text (object):
 					r += 'neighbor %s announced %s %s\n' % (neighbor,nlri.nlri(),attributes)
 			else:
 				r += 'neighbor %s withdrawn route %s\n' % (neighbor,nlri.nlri())
+		if header or body:
+			r += '%s\n' % self._header_body(header,body)
 		r += 'neighbor %s update end\n' % neighbor
 		return r
 
-	def refresh (self,peer,refresh):
-		return 'neighbor %s route-refresh afi %s safi %s %s' % (
-			peer.neighbor.peer_address,refresh.afi,refresh.safi,refresh.reserved
+	def refresh (self,peer,refresh,header,body):
+		header = 'header %s' % hexstring(header) if header else ''
+		body = 'body %s' % hexstring(body) if body else ''
+		return 'neighbor %s route-refresh afi %s safi %s %s %s\n' % (
+			peer.neighbor.peer_address,refresh.afi,refresh.safi,refresh.reserved,self._header_body(header,body)
 		)
 
 	def _operational_advisory (self,peer,operational):
