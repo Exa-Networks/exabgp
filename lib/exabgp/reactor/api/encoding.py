@@ -130,13 +130,13 @@ class JSON (object):
 		self.time = nop if highres else int
 
 	def reset (self,peer):
-		self._counter[peer.neighbor.peer_address] = 0
+		self._counter[peer.neighbor.peer_address] = 1
 
 	def increase (self,peer):
 		self._counter[peer.neighbor.peer_address] += 1
 
 	def count (self,peer):
-		return self._counter.get(peer.neighbor.peer_address,0)
+		return self._counter.get(peer.neighbor.peer_address,1)
 
 	def _string (self,_):
 		return '%s' % _ if issubclass(_.__class__,int) or issubclass(_.__class__,long) or ('{' in str(_)) else '"%s"' % _
