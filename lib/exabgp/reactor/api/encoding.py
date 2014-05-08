@@ -203,7 +203,7 @@ class JSON (object):
 			'type'   : 'state',
 			'state'  : 'down',
 			'reason' : reason,
-		})),'','',peer.neighbor.indentificator())
+		})),'','',peer.neighbor.identificator())
 
 	def shutdown (self,ppid):
 		return self._header(self._kv({
