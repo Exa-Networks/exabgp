@@ -190,26 +190,26 @@ class JSON (object):
 		return self._header(self._neighbor(peer,self._kv({
 			'type'  : 'state',
 			'state' : 'up',
-		})),'','',peer.neighbor.identificator())
+		})),'','',peer.neighbor.identificator(),self.count(peer))
 
 	def connected (self,peer):
 		return self._header(self._neighbor(peer,self._kv({
 			'type'  : 'state',
 			'state' : 'connected',
-		})),'','',peer.neighbor.identificator())
+		})),'','',peer.neighbor.identificator(),self.count(peer))
 
 	def down (self,peer,reason=''):
 		return self._header(self._neighbor(peer,self._kv({
 			'type'   : 'state',
 			'state'  : 'down',
 			'reason' : reason,
-		})),'','',peer.neighbor.identificator())
+		})),'','',peer.neighbor.identificator(),self.count(peer))
 
 	def shutdown (self,ppid):
 		return self._header(self._kv({
 			'type'         : 'notification',
 			'notification' : 'shutdown',
-		}),'','',ppid)
+		}),'','',ppid,1)
 
 	def notification (self,peer,code,subcode,data):
 		return self._header(self._kv({
