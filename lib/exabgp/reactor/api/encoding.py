@@ -141,16 +141,18 @@ class JSON (object):
 	def _string (self,_):
 		return '%s' % _ if issubclass(_.__class__,int) or issubclass(_.__class__,long) or ('{' in str(_)) else '"%s"' % _
 
-	def _header (self,content,ident=None,count=None):
+	def _header (self,content,ident=None,count=None,header=None,body=None):
 		identificator = '"id": "%s", ' % ident if ident else ''
 		counter = '"counter": %s, ' % count if count else ''
+		header = '"header": "%s", ' % hexstring(header) if header else ''
+		body = '"body": "%s", ' % hexstring(body) if body else ''
 
 		return \
 		'{ '\
 			'"exabgp": "%s", '\
 			'"time": %s, ' \
-			'%s%s%s' \
-		'}' % (self.version,self.time(time.time()),identificator,counter,content)
+			'%s%s%s%s%s' \
+		'}' % (self.version,self.time(time.time()),identificator,counter,header,body,content)
 
 	def _neighbor (self,peer,content):
 		return \
@@ -217,12 +219,12 @@ class JSON (object):
 			})
 		})),peer.neighbor.identificator(),self.count(peer))
 
-	def keepalive (self,peer):
+	def keepalive (self,peer,header,body):
 		return self._header(self._neighbor(peer,self._kv({
 			'type'   : 'keepalive',
-		})),peer.neighbor.identificator(),self.count(peer))
+		})),peer.neighbor.identificator(),self.count(peer),header,body)
 
-	def open (self,peer,direction,sent_open):
+	def open (self,peer,direction,sent_open,header,body):
 		return self._header(self._neighbor(peer,self._kv({
 			'type'      : 'open',
 			'direction' : direction,
@@ -233,7 +235,7 @@ class JSON (object):
 				'router_id'    : sent_open.router_id,
 				'capabilities' : '{ %s } ' % self._kv(sent_open.capabilities),
 			})
-		})),peer.neighbor.identificator(),self.count(peer))
+		})),peer.neighbor.identificator(),self.count(peer),header,body)
 
 	def send (self,peer,category,header,body):
 		return self._header(self._neighbor(peer,self._kv({
@@ -288,12 +290,12 @@ class JSON (object):
 			return '"update": { %s%s } ' % (attributes,nlri)
 		return '"update": { %s, %s } ' % (attributes,nlri)
 
-	def update (self,peer,update):	
+	def update (self,peer,update,header,body):	
 		return self._header(self._neighbor(peer,self._kv({
 			'type'   : 'update',
-			'message': '{ %s }' % self._update(update)})),peer.neighbor.identificator(),self.count(peer))
+			'message': '{ %s }' % self._update(update)})),peer.neighbor.identificator(),self.count(peer),header=header,body=body)
 
-	def refresh (self,peer,refresh):
+	def refresh (self,peer,refresh,header,body):
 		return self._header(
 			self._neighbor(
 				peer,
@@ -301,7 +303,7 @@ class JSON (object):
 					refresh.afi,refresh.safi,refresh.reserved
 				)
 			)
-		,peer.neighbor.identificator(),self.count(peer))
+		,peer.neighbor.identificator(),self.count(peer),header,body)
 
 	def bmp (self,bmp,update):
 		return self._header(self._bmp(bmp,self._update(update)))

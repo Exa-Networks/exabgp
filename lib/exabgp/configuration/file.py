@@ -711,6 +711,7 @@ class Configuration (object):
 			if command == 'receive-refresh': return self._set_process_command(scope,'receive-refresh',tokens[1:])
 			if command == 'receive-updates': return self._set_process_command(scope,'receive-updates',tokens[1:])
 			if command == 'receive-operational': return self._set_process_command(scope,'receive-operational',tokens[1:])
+			if command == 'receive-parsed-and-raw': return self._set_process_command(scope,'receive-parsed-and-raw',tokens[1:])
 
 
 		elif name == 'static':
@@ -726,7 +727,7 @@ class Configuration (object):
 
 	def _multi_process (self,scope,tokens):
 		while True:
-			r = self._dispatch(scope,'process',[],['run','encoder','receive-parsed','receive-packets','send-packets','receive-routes','receive-updates','receive-refresh','receive-operational','neighbor-changes',  'peer-updates','parse-routes', 'receive-keepalives', 'receive-opens','receive-notifications'])
+			r = self._dispatch(scope,'process',[],['run','encoder','receive-parsed','receive-packets','receive-parsed-and-raw','send-packets','receive-routes','receive-updates','receive-refresh','receive-operational','neighbor-changes',  'peer-updates','parse-routes', 'receive-keepalives', 'receive-opens','receive-notifications'])
 			if r is False: return False
 			if r is None: break
 
@@ -1079,6 +1080,7 @@ class Configuration (object):
 			neighbor.api.send_packets |= local_scope.get('send-packets',False)
 
 			neighbor.api.neighbor_changes |= local_scope.get('neighbor-changes',False)
+			neighbor.api.parsed_and_raw = local_scope.get('receive-parsed-and-raw',False)
 
 			receive_parsed  = local_scope.get('receive-parsed',False)
 			receive_parsed |= local_scope.get('receive-routes',False)
