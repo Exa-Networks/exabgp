@@ -37,6 +37,14 @@ def hexstring (value):
 class Text (object):
 	def __init__ (self,version):
 		self.version = version
+		
+	def _header_body(self,header,body):
+		header = ' header %s' % hexstring(header) if header else ''
+		body = ' body %s' % hexstring(body) if body else ''
+		
+		total_string = header+body if body else header
+		
+		return total_string
 
 	def reset (self,peer):
 		return None
@@ -62,16 +70,16 @@ class Text (object):
 	def receive (self,peer,category,header,body):
 		return 'neighbor %s received %d header %s body %s\n' % (peer.neighbor.peer_address,category,hexstring(header),hexstring(body))
 
-	def keepalive (self,peer):
-		return 'neighbor %s keepalive\n' % peer.neighbor.peer_address
+	def keepalive (self,peer,header,body):
+		return 'neighbor %s keepalive%s\n' % (peer.neighbor.peer_address,self._header_body(header,body))
 
-	def open (self,peer,direction,sent_open):
-		return 'neighbor %s open direction %s version %d asn %d hold_time %s router_id %s capabilities [%s]\n' % (peer.neighbor.peer_address,direction,sent_open.version, sent_open.asn, sent_open.hold_time, sent_open.router_id,str(sent_open.capabilities).lower())
+	def open (self,peer,direction,sent_open,header,body):
+		return 'neighbor %s open direction %s version %d asn %d hold_time %s router_id %s capabilities [%s]%s\n' % (peer.neighbor.peer_address,direction,sent_open.version, sent_open.asn, sent_open.hold_time, sent_open.router_id,str(sent_open.capabilities).lower(),self._header_body(header,body))
 
 	def send (self,peer,category,header,body):
 		return 'neighbor %s sent %d header %s body %s\n' % (peer.neighbor.peer_address,category,hexstring(header),hexstring(body))
 
-	def update (self,peer,update):
+	def update (self,peer,update,header,body):	
 		neighbor = peer.neighbor.peer_address
 		r = 'neighbor %s update start\n' % neighbor
 		attributes = str(update.attributes)
@@ -84,38 +92,42 @@ class Text (object):
 					r += 'neighbor %s announced %s %s\n' % (neighbor,nlri.nlri(),attributes)
 			else:
 				r += 'neighbor %s withdrawn route %s\n' % (neighbor,nlri.nlri())
+		if header or body:
+			r += '%s\n' % self._header_body(header,body)
 		r += 'neighbor %s update end\n' % neighbor
 		return r
 
-	def refresh (self,peer,refresh):
-		return 'neighbor %s route-refresh afi %s safi %s %s' % (
-			peer.neighbor.peer_address,refresh.afi,refresh.safi,refresh.reserved
+	def refresh (self,peer,refresh,header,body):
+		header = 'header %s' % hexstring(header) if header else ''
+		body = 'body %s' % hexstring(body) if body else ''
+		return 'neighbor %s route-refresh afi %s safi %s %s%s\n' % (
+			peer.neighbor.peer_address,refresh.afi,refresh.safi,refresh.reserved,self._header_body(header,body)
 		)
 
-	def _operational_advisory (self,peer,operational):
-		return 'neighbor %s operational %s afi %s safi %s advisory "%s"' % (
-			peer.neighbor.peer_address,operational.name,operational.afi,operational.safi,operational.data
+	def _operational_advisory (self,peer,operational,header,body):
+		return 'neighbor %s operational %s afi %s safi %s advisory "%s"%s' % (
+			peer.neighbor.peer_address,operational.name,operational.afi,operational.safi,operational.data,self._header_body(header,body)
 		)
 
-	def _operational_query (self,peer,operational):
-		return 'neighbor %s operational %s afi %s safi %s' % (
-			peer.neighbor.peer_address,operational.name,operational.afi,operational.safi
+	def _operational_query (self,peer,operational,header,body):
+		return 'neighbor %s operational %s afi %s safi %s%s' % (
+			peer.neighbor.peer_address,operational.name,operational.afi,operational.safi,self._header_body(header,body)
 		)
 
-	def _operational_counter (self,peer,operational):
-		return 'neighbor %s operational %s afi %s safi %s router-id %s sequence %d counter %d' % (
-			peer.neighbor.peer_address,operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.counter
+	def _operational_counter (self,peer,operational,header,body):
+		return 'neighbor %s operational %s afi %s safi %s router-id %s sequence %d counter %d%s' % (
+			peer.neighbor.peer_address,operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.counter,self._header_body(header,body)
 		)
 
-	def operational (self,peer,what,operational):
+	def operational (self,peer,what,operational,header,body):
 		if what == 'advisory':
-			return self._operational_advisory(peer,operational)
+			return self._operational_advisory(peer,operational,header,body)
 		elif what == 'query':
-			return self._operational_query(peer,operational)
+			return self._operational_query(peer,operational,header,body)
 		elif what == 'counter':
-			return self._operational_counter(peer,operational)
-		elif what == 'interface':
-			return self._operational_interface(peer,operational)
+			return self._operational_counter(peer,operational,header,body)
+#		elif what == 'interface':
+#			return self._operational_interface(peer,operational)
 		else:
 			raise RuntimeError('the code is broken, we are trying to print a unknown type of operational message')
 
@@ -141,16 +153,18 @@ class JSON (object):
 	def _string (self,_):
 		return '%s' % _ if issubclass(_.__class__,int) or issubclass(_.__class__,long) or ('{' in str(_)) else '"%s"' % _
 
-	def _header (self,content,ident=None,count=None):
+	def _header (self,content,header,body,ident=None,count=None):
 		identificator = '"id": "%s", ' % ident if ident else ''
 		counter = '"counter": %s, ' % count if count else ''
+		header = '"header": "%s", ' % hexstring(header) if header else ''
+		body = '"body": "%s", ' % hexstring(body) if body else ''
 
 		return \
 		'{ '\
 			'"exabgp": "%s", '\
 			'"time": %s, ' \
-			'%s%s%s' \
-		'}' % (self.version,self.time(time.time()),identificator,counter,content)
+			'%s%s%s%s%s' \
+		'}' % (self.version,self.time(time.time()),identificator,counter,header,body,content)
 
 	def _neighbor (self,peer,content):
 		return \
@@ -176,26 +190,26 @@ class JSON (object):
 		return self._header(self._neighbor(peer,self._kv({
 			'type'  : 'state',
 			'state' : 'up',
-		})),peer.neighbor.identificator())
+		})),'','',peer.neighbor.identificator())
 
 	def connected (self,peer):
 		return self._header(self._neighbor(peer,self._kv({
 			'type'  : 'state',
 			'state' : 'connected',
-		})),peer.neighbor.identificator())
+		})),'','',peer.neighbor.identificator())
 
 	def down (self,peer,reason=''):
 		return self._header(self._neighbor(peer,self._kv({
 			'type'   : 'state',
 			'state'  : 'down',
 			'reason' : reason,
-		})),peer.neighbor.indentificator)
+		})),'','',peer.neighbor.identificator())
 
 	def shutdown (self,ppid):
 		return self._header(self._kv({
 			'type'         : 'notification',
 			'notification' : 'shutdown',
-		}),ppid)
+		}),'','',ppid)
 
 	def notification (self,peer,code,subcode,data):
 		return self._header(self._kv({
@@ -205,7 +219,7 @@ class JSON (object):
 				'subcode' : subcode,
 				'data'    : hexstring(data),
 			})
-		}),peer.neighbor.identificator(),self.count(peer))
+		}),'','',peer.neighbor.identificator(),self.count(peer))
 
 	def receive (self,peer,category,header,body):
 		return self._header(self._neighbor(peer,self._kv({
@@ -215,14 +229,14 @@ class JSON (object):
 				'header'   : hexstring(header),
 				'body'     : hexstring(body),
 			})
-		})),peer.neighbor.identificator(),self.count(peer))
+		})),'','',peer.neighbor.identificator(),self.count(peer))
 
-	def keepalive (self,peer):
+	def keepalive (self,peer,header,body):
 		return self._header(self._neighbor(peer,self._kv({
 			'type'   : 'keepalive',
-		})),peer.neighbor.identificator(),self.count(peer))
+		})),header,body,peer.neighbor.identificator(),self.count(peer))
 
-	def open (self,peer,direction,sent_open):
+	def open (self,peer,direction,sent_open,header,body):
 		return self._header(self._neighbor(peer,self._kv({
 			'type'      : 'open',
 			'direction' : direction,
@@ -233,7 +247,7 @@ class JSON (object):
 				'router_id'    : sent_open.router_id,
 				'capabilities' : '{ %s } ' % self._kv(sent_open.capabilities),
 			})
-		})),peer.neighbor.identificator(),self.count(peer))
+		})),header,body,peer.neighbor.identificator(),self.count(peer))
 
 	def send (self,peer,category,header,body):
 		return self._header(self._neighbor(peer,self._kv({
@@ -243,7 +257,7 @@ class JSON (object):
 				'header' : hexstring(header),
 				'body'   : hexstring(body),
 			})
-		})),peer.neighbor.identificator(),self.count(peer))
+		})),'','',peer.neighbor.identificator(),self.count(peer))
 
 	def _update (self,update):
 		plus = {}
@@ -288,12 +302,12 @@ class JSON (object):
 			return '"update": { %s%s } ' % (attributes,nlri)
 		return '"update": { %s, %s } ' % (attributes,nlri)
 
-	def update (self,peer,update):	
+	def update (self,peer,update,header,body):	
 		return self._header(self._neighbor(peer,self._kv({
 			'type'   : 'update',
-			'message': '{ %s }' % self._update(update)})),peer.neighbor.identificator(),self.count(peer))
+			'message': '{ %s }' % self._update(update)})),header,body,peer.neighbor.identificator(),self.count(peer))
 
-	def refresh (self,peer,refresh):
+	def refresh (self,peer,refresh,header,body):
 		return self._header(
 			self._neighbor(
 				peer,
@@ -301,12 +315,12 @@ class JSON (object):
 					refresh.afi,refresh.safi,refresh.reserved
 				)
 			)
-		,peer.neighbor.identificator(),self.count(peer))
+		,header,body,peer.neighbor.identificator(),self.count(peer))
 
 	def bmp (self,bmp,update):
-		return self._header(self._bmp(bmp,self._update(update)))
+		return self._header(self._bmp(bmp,self._update(update)),'','')
 
-	def _operational_advisory (self,peer,operational):
+	def _operational_advisory (self,peer,operational,header,body):
 		return self._header(
 			self._neighbor(
 				peer.neighbor.peer_address,
@@ -314,9 +328,9 @@ class JSON (object):
 					operational.name,operational.afi,operational.safi,operational.data
 				)
 			)
-		,peer.neighbor.identificator(),self.count(peer))
+		,header,body,peer.neighbor.identificator(),self.count(peer))
 
-	def _operational_query (self,peer,operational):
+	def _operational_query (self,peer,operational,header,body):
 		return self._header(
 			self._neighbor(
 				peer.neighbor.peer_address,
@@ -324,9 +338,9 @@ class JSON (object):
 					operational.name,operational.afi,operational.safi
 				)
 			)
-		,peer.neighbor.identificator(),self.count(peer))
+		,header,body,peer.neighbor.identificator(),self.count(peer))
 
-	def _operational_counter (self,peer,operational):
+	def _operational_counter (self,peer,operational,header,body):
 		return self._header(
 			self._neighbor(
 				peer.neighbor.peer_address,
@@ -334,15 +348,15 @@ class JSON (object):
 					operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.counter
 				)
 			)
-		,peer.neighbor.identificator(),self.count(peer))
+		,header,body,peer.neighbor.identificator(),self.count(peer))
 
-	def operational (self,peer,what,operational):
+	def operational (self,peer,what,operational,header,body):
 		if what == 'advisory':
-			return self._operational_advisory(peer,operational)
+			return self._operational_advisory(peer,operational,header,body)
 		elif what == 'query':
-			return self._operational_query(peer,operational)
+			return self._operational_query(peer,operational,header,body)
 		elif what == 'counter':
-			return self._operational_counter(peer,operational)
+			return self._operational_counter(peer,operational,header,body)
 #		elif what == 'interface':
 #			return self._operational_interface(peer,operational)
 		else:
