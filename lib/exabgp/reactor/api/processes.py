@@ -245,12 +245,12 @@ class Processes (object):
 		for process in self._notify(peer.neighbor.peer_address,'receive-packets'):
 			self.write(process,self._api_encoder[process].receive(peer,category,header,body))
 
-	def keepalive (self,peer,category,header=None,body=None):
+	def keepalive (self,peer,category,header,body):
 		if self.silence: return
 		for process in self._notify(peer.neighbor.peer_address,'receive-keepalives'):
 			self.write(process,self._api_encoder[process].keepalive(peer,header,body))
 
-	def open (self,peer,direction,open_msg,header=None,body=None):
+	def open (self,peer,direction,open_msg,header,body):
 		if self.silence: return
 		for process in self._notify(peer.neighbor.peer_address,'receive-opens'):
 			self.write(process,self._api_encoder[process].open(peer,direction,open_msg,header,body))
@@ -260,12 +260,12 @@ class Processes (object):
 		for process in self._notify(peer.neighbor.peer_address,'send-packets'):
 			self.write(process,self._api_encoder[process].send(peer,category,header,body))
 
-	def update (self,peer,update,header=None,body=None):
+	def update (self,peer,update,header,body):
 		if self.silence: return
 		for process in self._notify(peer.neighbor.peer_address,'receive-routes'):
 			self.write(process,self._api_encoder[process].update(peer,update,header,body))
 
-	def refresh (self,peer,refresh,header=None,body=None):
+	def refresh (self,peer,refresh,header,body):
 		if self.silence: return
 		for process in self._notify(peer.neighbor.peer_address,'receive-refresh'):
 			self.write(process,self._api_encoder[process].refresh(peer,refresh,header,body))

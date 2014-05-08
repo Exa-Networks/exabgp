@@ -152,23 +152,23 @@ class Protocol (object):
 			if length == 23:
 				update = EORFactory()
 				if self.neighbor.api.receive_updates:
-					if self.neighbor.api.parsed_and_raw:
+					if self.neighbor.api.merge_parsed_and_raw:
 						self.peer.reactor.processes.update(self.peer,update,header,body)
 					else:
-						self.peer.reactor.processes.update(self.peer,update)
+						self.peer.reactor.processes.update(self.peer,update,'','')
 			elif length == 30 and body.startswith(EOR.MP):
 				update = EORFactory(body)
 				if self.neighbor.api.receive_updates:
-					if self.neighbor.api.parsed_and_raw:
+					if self.neighbor.api.merge_parsed_and_raw:
 						self.peer.reactor.processes.update(self.peer,update,header,body)
 					else:
-						self.peer.reactor.processes.update(self.peer,update)
+						self.peer.reactor.processes.update(self.peer,update,'','')
 			elif self.neighbor.api.receive_updates:
 				update = UpdateFactory(self.negotiated,body)
-				if self.neighbor.api.parsed_and_raw:
+				if self.neighbor.api.merge_parsed_and_raw:
 					self.peer.reactor.processes.update(self.peer,update,header,body)
 				else:
-					self.peer.reactor.processes.update(self.peer,update)
+					self.peer.reactor.processes.update(self.peer,update,'','')
 			elif self.log_routes:
 				update = UpdateFactory(self.negotiated,body)
 			else:
@@ -178,10 +178,10 @@ class Protocol (object):
 		elif msg == Message.Type.KEEPALIVE:
 			self.logger.message(self.me('<< KEEPALIVE%s' % (' (%s)' % comment if comment else '')))
 			if self.neighbor.api.receive_keepalives:
-				if self.neighbor.api.parsed_and_raw:
+				if self.neighbor.api.merge_parsed_and_raw:
 					self.peer.reactor.processes.keepalive(self.peer,msg,header,body)
 				else:
-					self.peer.reactor.processes.keepalive(self.peer,msg)
+					self.peer.reactor.processes.keepalive(self.peer,msg,'','')
 			yield KeepAlive()
 
 		elif msg == Message.Type.NOTIFICATION:
@@ -194,10 +194,10 @@ class Protocol (object):
 				refresh = RouteRefreshFactory(body)
 				if self.neighbor.api.receive_refresh:
 					if refresh.reserved in (RouteRefresh.start,RouteRefresh.end):
-						if self.neighbor.api.parsed_and_raw:
+						if self.neighbor.api.merge_parsed_and_raw:
 							self.peer.reactor.process.refresh(self.peer,refresh,header,body)
 						else:
-							self.peer.reactor.processes.refresh(self.peer,refresh)
+							self.peer.reactor.processes.refresh(self.peer,refresh,'','')
 			else:
 				# XXX: FIXME: really should raise, we are too nice
 				self.logger.message(self.me('<< NOP (un-negotiated type %d)' % msg))
@@ -216,10 +216,10 @@ class Protocol (object):
 		elif msg == Message.Type.OPEN:
 			if self.neighbor.api.receive_opens:
 				open_message = OpenFactory(body)
-				if self.neighbor.api.parsed_and_raw:
+				if self.neighbor.api.merge_parsed_and_raw:
 					self.peer.reactor.processes.open(self.peer,'received',open_message,header,body)
 				else:
-					self.peer.reactor.processes.open(self.peer,'received',open_message)
+					self.peer.reactor.processes.open(self.peer,'received',open_message,'','')
 			yield OpenFactory(body)
 
 		else:
@@ -283,12 +283,12 @@ class Protocol (object):
 
 		self.logger.message(self.me('>> %s' % sent_open))
 		if self.neighbor.api.receive_opens:
-			if self.neighbor.api.parsed_and_raw:
+			if self.neighbor.api.merge_parsed_and_raw:
 				header = msg_send[0:38]
 				body = msg_send[38:]
 				self.peer.reactor.processes.open(self.peer,'sent',sent_open,header,body)
 			else:
-				self.peer.reactor.processes.open(self.peer,'sent',sent_open)
+				self.peer.reactor.processes.open(self.peer,'sent',sent_open,'','')
 		yield sent_open
 
 	def new_keepalive (self,comment=''):
