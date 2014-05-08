@@ -270,7 +270,7 @@ class Processes (object):
 		for process in self._notify(peer.neighbor.peer_address,'receive-refresh'):
 			self.write(process,self._api_encoder[process].refresh(peer,refresh,header,body))
 
-	def operational (self,peer,what,operational):
+	def operational (self,peer,what,operational,header,body):
 		if self.silence: return
 		for process in self._notify(peer.neighbor.peer_address,'receive-operational'):
-			self.write(process,self._api_encoder[process].operational(peer,what,operational))
+			self.write(process,self._api_encoder[process].operational(peer,what,operational,header,body))

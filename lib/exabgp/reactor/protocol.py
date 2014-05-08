@@ -152,20 +152,20 @@ class Protocol (object):
 			if length == 23:
 				update = EORFactory()
 				if self.neighbor.api.receive_updates:
-					if self.neighbor.api.merge_parsed_and_raw:
+					if self.neighbor.api.receive_complete_updates:
 						self.peer.reactor.processes.update(self.peer,update,header,body)
 					else:
 						self.peer.reactor.processes.update(self.peer,update,'','')
 			elif length == 30 and body.startswith(EOR.MP):
 				update = EORFactory(body)
 				if self.neighbor.api.receive_updates:
-					if self.neighbor.api.merge_parsed_and_raw:
+					if self.neighbor.api.receive_complete_updates:
 						self.peer.reactor.processes.update(self.peer,update,header,body)
 					else:
 						self.peer.reactor.processes.update(self.peer,update,'','')
 			elif self.neighbor.api.receive_updates:
 				update = UpdateFactory(self.negotiated,body)
-				if self.neighbor.api.merge_parsed_and_raw:
+				if self.neighbor.api.receive_complete_updates:
 					self.peer.reactor.processes.update(self.peer,update,header,body)
 				else:
 					self.peer.reactor.processes.update(self.peer,update,'','')
@@ -178,7 +178,7 @@ class Protocol (object):
 		elif msg == Message.Type.KEEPALIVE:
 			self.logger.message(self.me('<< KEEPALIVE%s' % (' (%s)' % comment if comment else '')))
 			if self.neighbor.api.receive_keepalives:
-				if self.neighbor.api.merge_parsed_and_raw:
+				if self.neighbor.api.receive_complete_updates:
 					self.peer.reactor.processes.keepalive(self.peer,msg,header,body)
 				else:
 					self.peer.reactor.processes.keepalive(self.peer,msg,'','')
@@ -194,7 +194,7 @@ class Protocol (object):
 				refresh = RouteRefreshFactory(body)
 				if self.neighbor.api.receive_refresh:
 					if refresh.reserved in (RouteRefresh.start,RouteRefresh.end):
-						if self.neighbor.api.merge_parsed_and_raw:
+						if self.neighbor.api.receive_complete_updates:
 							self.peer.reactor.process.refresh(self.peer,refresh,header,body)
 						else:
 							self.peer.reactor.processes.refresh(self.peer,refresh,'','')
@@ -208,7 +208,10 @@ class Protocol (object):
 			if self.peer.neighbor.operational:
 				operational = OperationalFactory(body)
 				what = OperationalGroup[operational.what][0]
-				self.peer.reactor.processes.operational(self.peer,what,operational)
+				if self.neighbor.api.receive_complete_updates:
+					self.peer.reactor.processes.operational(self.peer,what,operational,header,body)
+				else:
+					self.peer.reactor.processes.operational(self.peer,what,operational,'','')
 			else:
 				operational = _OPERATIONAL
 			yield operational
@@ -216,7 +219,7 @@ class Protocol (object):
 		elif msg == Message.Type.OPEN:
 			if self.neighbor.api.receive_opens:
 				open_message = OpenFactory(body)
-				if self.neighbor.api.merge_parsed_and_raw:
+				if self.neighbor.api.receive_complete_updates:
 					self.peer.reactor.processes.open(self.peer,'received',open_message,header,body)
 				else:
 					self.peer.reactor.processes.open(self.peer,'received',open_message,'','')
@@ -283,7 +286,7 @@ class Protocol (object):
 
 		self.logger.message(self.me('>> %s' % sent_open))
 		if self.neighbor.api.receive_opens:
-			if self.neighbor.api.merge_parsed_and_raw:
+			if self.neighbor.api.receive_complete_updates:
 				header = msg_send[0:38]
 				body = msg_send[38:]
 				self.peer.reactor.processes.open(self.peer,'sent',sent_open,header,body)
