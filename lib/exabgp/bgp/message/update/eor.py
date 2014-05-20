@@ -37,7 +37,7 @@ class EOR (Message):
 		return 'EOR'
 
 # default IPv4 unicast
-def EORFactory (data='\x00\x01\x02'):
+def EORFactory (data='\x00\x01\x01'):
 	afi  = _short(data[-3:-1])
 	safi = ord(data[-1])
 	return EOR(afi,safi,IN.announced)
