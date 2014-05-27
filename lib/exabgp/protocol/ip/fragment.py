@@ -8,12 +8,24 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 # =================================================================== Fragment
 
+# Uses bitmask operand format defined above.
+#   0   1   2   3   4   5   6   7
+# +---+---+---+---+---+---+---+---+
+# |   Reserved    |LF |FF |IsF|DF |
+# +---+---+---+---+---+---+---+---+
+#
+# Bitmask values:
+# +  Bit 7 - Don't fragment (DF)
+# +  Bit 6 - Is a fragment (IsF)
+# +  Bit 5 - First fragment (FF)
+# +  Bit 4 - Last fragment (LF)
+
 class Fragment (int):
 #	reserved  = 0xF0
-	DONT      = 0x08
-	IS        = 0x40
-	FIRST     = 0x20
-	LAST      = 0x10
+	LAST      = 0x08
+	FIRST     = 0x04
+	IS        = 0x02
+	DONT      = 0x01
 
 	def __str__ (self):
 		if self == 0x00:       return 'not-a-fragment'

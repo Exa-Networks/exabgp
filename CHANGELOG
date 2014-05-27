@@ -18,6 +18,8 @@ Version 3.4.0
  * Fix: bad refactorisation which caused an bad ASN4 bug
  * Fix: change EOR from IPv4 multicast (mistake) to IPv4 unicast
     reported by: Mark Treacy
+ * Fix: bad encoding of flow fragment encoding
+    reported by: Andrei-Marius Radu
  * Change: new commands for the configuration of the API
  * Change: JSON objects now include a unique neighbor identifier
  * Change: JSON objects now include a counter for unique message id
