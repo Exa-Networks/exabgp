@@ -1,3 +1,21 @@
+##this fork includes:
+inital support for the l2vpn vpls family (25,65):
+(right now we can parse incomming msgs):
+example:
+
+Jun 10 17:43:16 tehnerd-test2-devbox5 ExaBGP: Tue, 10 Jun 2014 17:43:16 INFO     6488   neighbor 192.168.201.2 update start
+Jun 10 17:43:16 tehnerd-test2-devbox5 ExaBGP: Tue, 10 Jun 2014 17:43:16 INFO     6488   neighbor 192.168.201.2 announced route l2vpn:ve:3:base:262145:offset:1:size:8rd:470719909855282 next-hop 172.30.5.4 origin igp local-preference 100 originator-id 172.30.5.4 cluster-list [ 172.30.0.1 1.1.1.1 ] extended-community [ target:54591:0.0.0.6 0x800A130000000064 ]
+Jun 10 17:43:16 tehnerd-test2-devbox5 ExaBGP: Tue, 10 Jun 2014 17:43:16 INFO     6488   neighbor 192.168.201.2 update end
+Jun 10 17:43:16 tehnerd-test2-devbox5 ExaBGP: Tue, 10 Jun 2014 17:43:16 INFO     6488   neighbor 192.168.201.2 update start
+Jun 10 17:43:16 tehnerd-test2-devbox5 ExaBGP: Tue, 10 Jun 2014 17:43:16 INFO     6488   neighbor 192.168.201.2 announced route l2vpn:ve:3:base:262145:offset:1:size:8rd:470719909789745 next-hop 172.30.5.3 origin igp local-preference 100 originator-id 172.30.5.3 cluster-list [ 172.30.0.1 1.1.1.1 ] extended-community [ target:54591:0.0.0.6 0x800A130000000064 ]
+Jun 10 17:43:16 tehnerd-test2-devbox5 ExaBGP: Tue, 10 Jun 2014 17:43:16 INFO     6488   neighbor 192.168.201.2 update end
+Jun 10 17:43:16 tehnerd-test2-devbox5 ExaBGP: Tue, 10 Jun 2014 17:43:16 INFO     6488   neighbor 192.168.201.2 update start
+Jun 10 17:43:16 tehnerd-test2-devbox5 ExaBGP: Tue, 10 Jun 2014 17:43:16 INFO     6488   neighbor 192.168.201.2 announced route l2vpn:ve:2:base:262145:offset:1:size:8rd:470719909724208 next-hop 172.30.5.2 origin igp local-preference 100 originator-id 172.30.5.2 cluster-list [ 172.30.0.1 1.1.1.1 ] extended-community [ target:54591:0.0.0.6 0x800A130000000064 ]
+Jun 10 17:43:16 tehnerd-test2-devbox5 ExaBGP: Tue, 10 Jun 2014 17:43:16 INFO     6488   neighbor 192.168.201.2 update end
+
+TODO:
+parse extended l2vpn community
+add support for the generation of vpls routes
 ##Summary
 
 Unlike [BIRD](http://bird.network.cz/) or [Quagga](http://www.quagga.net/), [ExaBGP](http://github.com/Exa-Networks/exabgp) was not designed to transform a general purpose server into a router, but to allow engineers to control their network easily.
