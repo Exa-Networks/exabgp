@@ -93,10 +93,10 @@ class SAFI (int):
         return chr(self)
 
     def has_label (self):
-        return self in (self.nlri_mpls,self.mpls_vpn, self.vpls)
+        return self in (self.nlri_mpls,self.mpls_vpn)
 
     def has_rd (self):
-        return self in (self.mpls_vpn, self.vpls)  # technically self.flow_vpn has an RD but it is not an NLRI
+        return self in (self.mpls_vpn,)  # technically self.flow_vpn and vpls has an RD but it is not an NLRI
 
     @staticmethod
     def value (name):
