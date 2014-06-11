@@ -112,8 +112,12 @@ def to_ExtendedCommunity (data):
     elif nb_separators == 1:
         command = 'target'
         ga,la = data.split(':')
+    elif nb_separators == 8:
+        #this is l2info community
+        data = data.split(':')
+        command = data[0]
     else:
-        raise ValueError('invalid extended community %s (only origin or target are supported) ' % command)
+        raise ValueError('invalid extended community %s (only origin,target or L2info are supported) ' % command)
 
 
     header = chr(0x00)
@@ -121,8 +125,20 @@ def to_ExtendedCommunity (data):
         subtype = chr(0x03)
     elif command == 'target':
         subtype = chr(0x02)
+    elif command == 'l2info':
+        header = chr(0x80)
+        subtype = chr(0x0A)
     else:
-        raise ValueError('invalid extended community %s (only origin or target are supported) ' % command)
+        raise ValueError('invalid extended community %s (only origin,target or L2info are supported) ' % command)
+    
+    if command == 'l2info':
+        encap_type = pack('!B',int(data[2]))
+        control_flags = pack('!B',int(data[4]))
+        mtu = pack('!H',int(data[6]))
+        site_pref = pack('!H',int(data[8]))
+        return ECommunity(header+subtype+encap_type+control_flags+
+                          mtu+site_pref)
+        
 
     if '.' in ga or '.' in la:
         gc = ga.count('.')
@@ -145,7 +161,7 @@ def to_ExtendedCommunity (data):
             global_admin = pack('!I',int(ga))
             local_admin = pack('!H',int(la))
         else:
-            raise ValueError('invalid extended community %s (only origin or target are supported) ' % command)
+            raise ValueError('invalid extended community %s (only origin,target or L2info are supported) ' % command)
 
     return ECommunity(header+subtype+global_admin+local_admin)
 
