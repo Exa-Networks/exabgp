@@ -92,12 +92,18 @@ class Notification (Message):
 		self.code = code
 		self.subcode = subcode
 		self.data = data
+		
+	def hexstring (self,value):
+		def spaced (value):
+			for v in value:
+				yield '%02X' % ord(v)
+		return ''.join(spaced(value))
 
 	def __str__ (self):
 		return "%s / %s%s" % (
 			self._str_code.get(self.code,'unknown error'),
 			self._str_subcode.get((self.code,self.subcode),'unknow reason'),
-			'%s' % ('/ %s' % self.data if self.data else '')
+			'%s' % ('/ %s' % self.hexstring(self.data) if self.data else '')
 		)
 
 
