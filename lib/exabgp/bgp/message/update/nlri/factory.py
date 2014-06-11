@@ -19,7 +19,6 @@ from exabgp.bgp.message.direction import IN
 
 from exabgp.util.od import od
 from exabgp.logger import Logger,LazyFormat
-import pdb
 
 def NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
     if safi in (133,134):

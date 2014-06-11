@@ -4,7 +4,6 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.direction import OUT
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.protocol.ip.address import Address
-import pdb
 
 
 class L2vpn(object):

@@ -13,7 +13,6 @@ import time
 import socket
 import shlex
 
-import pdb
 
 from pprint import pformat
 from copy import deepcopy
