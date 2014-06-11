@@ -14,10 +14,10 @@ from exabgp.bgp.message.update.attribute import Flag,Attribute
 # =================================================================== Community
 
 class Community (object):
-	NO_EXPORT           = pack('!L',0xFFFFFF01)
-	NO_ADVERTISE        = pack('!L',0xFFFFFF02)
+	NO_EXPORT			= pack('!L',0xFFFFFF01)
+	NO_ADVERTISE		= pack('!L',0xFFFFFF02)
 	NO_EXPORT_SUBCONFED = pack('!L',0xFFFFFF03)
-	NO_PEER             = pack('!L',0xFFFFFF04)
+	NO_PEER				= pack('!L',0xFFFFFF04)
 
 	cache = {}
 	caching = False
@@ -112,8 +112,12 @@ def to_ExtendedCommunity (data):
 	elif nb_separators == 1:
 		command = 'target'
 		ga,la = data.split(':')
+	elif nb_separators == 8:
+		#this is l2info community
+		data = data.split(':')
+		command = data[0]
 	else:
-		raise ValueError('invalid extended community %s (only origin or target are supported) ' % command)
+		raise ValueError('invalid extended community %s (only origin,target or L2info are supported) ' % command)
 
 
 	header = chr(0x00)
@@ -121,8 +125,20 @@ def to_ExtendedCommunity (data):
 		subtype = chr(0x03)
 	elif command == 'target':
 		subtype = chr(0x02)
+	elif command == 'l2info':
+		header = chr(0x80)
+		subtype = chr(0x0A)
 	else:
-		raise ValueError('invalid extended community %s (only origin or target are supported) ' % command)
+		raise ValueError('invalid extended community %s (only origin,target or L2info are supported) ' % command)
+	
+	if command == 'l2info':
+		encap_type = pack('!B',int(data[2]))
+		control_flags = pack('!B',int(data[4]))
+		mtu = pack('!H',int(data[6]))
+		site_pref = pack('!H',int(data[8]))
+		return ECommunity(header+subtype+encap_type+control_flags+
+						  mtu+site_pref)
+		
 
 	if '.' in ga or '.' in la:
 		gc = ga.count('.')
@@ -145,7 +161,7 @@ def to_ExtendedCommunity (data):
 			global_admin = pack('!I',int(ga))
 			local_admin = pack('!H',int(la))
 		else:
-			raise ValueError('invalid extended community %s (only origin or target are supported) ' % command)
+			raise ValueError('invalid extended community %s (only origin,target or L2info are supported) ' % command)
 
 	return ECommunity(header+subtype+global_admin+local_admin)
 
@@ -199,6 +215,16 @@ class ECommunity (object):
 				asn = unpack('!H',self.community[6:])[0]
 				return "origin:%s:%d" % (ip,asn)
 
+		#Layer2 Info Extended Community
+		if community_stype == 0x0A:
+			if community_type == 0x00:
+				encaps = unpack('!B',self.community[2:3])[0]
+				control_flag = unpack('!B',self.community[3:4])[0]
+				l2mtu = unpack('!H',self.community[4:6])[0]
+				#juniper uses reserved(rfc4761) as a site preference
+				reserved = unpack('!H',self.community[6:8])[0]
+				return "L2info:encaps:%s:flag:%s:mtu:%s:site-pref:%s"%(encaps,
+						control_flag, l2mtu, reserved)
 		# Traffic rate
 		if self.community.startswith('\x80\x06'):
 			speed = unpack('!f',self.community[4:])[0]

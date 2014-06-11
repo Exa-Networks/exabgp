@@ -13,6 +13,7 @@ import time
 import socket
 import shlex
 
+
 from pprint import pformat
 from copy import deepcopy
 from struct import pack,unpack
@@ -34,6 +35,7 @@ from exabgp.bgp.message.open.routerid import RouterID
 
 from exabgp.bgp.message.update.nlri.prefix import Prefix
 from exabgp.bgp.message.update.nlri.bgp import NLRI,PathInfo,Labels,RouteDistinguisher
+from exabgp.bgp.message.update.nlri.l2vpn import L2vpnNLRI
 from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,FlowNLRI,Flow4Source,Flow4Destination,Flow6Source,Flow6Destination,FlowSourcePort,FlowDestinationPort,FlowAnyPort,FlowIPProtocol,FlowNextHeader,FlowTCPFlag,FlowFragment,FlowPacketLength,FlowICMPType,FlowICMPCode,FlowDSCP,FlowTrafficClass,FlowFlowLabel
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
@@ -148,68 +150,92 @@ class Configuration (object):
 
 	_str_flow_error = \
 	'syntax: flow {\n' \
-	'   route give-me-a-name\n' \
-	'      route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535; (optional)\n' \
-	'      next-hop 1.2.3.4; (to use with redirect-to-nexthop)\n' \
-	'      match {\n' \
-	'         source 10.0.0.0/24;\n' \
-	'         source ::1/128/0;\n' \
-	'         destination 10.0.1.0/24;\n' \
-	'         port 25;\n' \
-	'         source-port >1024\n' \
-	'         destination-port =80 =3128 >8080&<8088;\n' \
-	'         protocol [ udp tcp ];  (ipv4 only)\n' \
-	'         next-header [ udp tcp ]; (ipv6 only)\n' \
-	'         fragment [ not-a-fragment dont-fragment is-fragment first-fragment last-fragment ]; (ipv4 only)\n' \
-	'         packet-length >200&<300 >400&<500;\n' \
-	'         flow-label >100&<2000; (ipv6 only)\n' \
-	'      }\n' \
-	'      then {\n' \
-	'         accept;\n' \
-	'         discard;\n' \
-	'         rate-limit 9600;\n' \
-	'         redirect 30740:12345;\n' \
-	'         redirect 1.2.3.4:5678;\n' \
-	'         redirect 1.2.3.4;\n' \
-	'         redirect-next-hop;\n' \
-	'         copy 1.2.3.4;\n' \
-	'         mark 123;\n' \
-	'         action sample|terminal|sample-terminal;\n' \
-	'      }\n' \
-	'   }\n' \
+	'	route give-me-a-name\n' \
+	'	   route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535; (optional)\n' \
+	'	   next-hop 1.2.3.4; (to use with redirect-to-nexthop)\n' \
+	'	   match {\n' \
+	'		  source 10.0.0.0/24;\n' \
+	'		  source ::1/128/0;\n' \
+	'		  destination 10.0.1.0/24;\n' \
+	'		  port 25;\n' \
+	'		  source-port >1024\n' \
+	'		  destination-port =80 =3128 >8080&<8088;\n' \
+	'		  protocol [ udp tcp ];  (ipv4 only)\n' \
+	'		  next-header [ udp tcp ]; (ipv6 only)\n' \
+	'		  fragment [ not-a-fragment dont-fragment is-fragment first-fragment last-fragment ]; (ipv4 only)\n' \
+	'		  packet-length >200&<300 >400&<500;\n' \
+	'		  flow-label >100&<2000; (ipv6 only)\n' \
+	'	   }\n' \
+	'	   then {\n' \
+	'		  accept;\n' \
+	'		  discard;\n' \
+	'		  rate-limit 9600;\n' \
+	'		  redirect 30740:12345;\n' \
+	'		  redirect 1.2.3.4:5678;\n' \
+	'		  redirect 1.2.3.4;\n' \
+	'		  redirect-next-hop;\n' \
+	'		  copy 1.2.3.4;\n' \
+	'		  mark 123;\n' \
+	'		  action sample|terminal|sample-terminal;\n' \
+	'	   }\n' \
+	'	}\n' \
 	'}\n\n' \
 	'one or more match term, one action\n' \
 	'fragment code is totally untested\n' \
 
+	_str_l2vpn_error = \
+	'syntax: l2vpn {\n' \
+	'route site_name {\n' \
+	'  route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535' \
+	'  next-hop 192.0.1.254;\n' \
+	'  origin IGP|EGP|INCOMPLETE;\n' \
+	'  as-path [ as as as as] ;\n' \
+	'  med 100;\n' \
+	'  local-preference 100;\n' \
+	'  community [ 65000 65001 65002 ];\n' \
+	'  extended-community [ target:1234:5.6.7.8 target:1.2.3.4:5678 origin:1234:5.6.7.8 origin:1.2.3.4:5678 0x0002FDE800000001 l2info:encaps:19:control_flag:0:mtu:1500:site_preference:111 ]\n' \
+	'  originator-id 10.0.0.10;\n' \
+	'  cluster-list [ 10.10.0.1 10.10.0.2 ];\n' \
+	'  ve <vpls endpoint id; interger>;\n' \
+	'  block_offset <interger>;\n' \
+	'  block_size <integer>;\n' \
+	'  label_base <integer>;\n' \
+	'}\n' \
+
+	'}\n\n' \
+	'code is totally untested. for lab only. it works with Juniper...\n' \
+
+
+
 	_str_process_error = \
 	'syntax: process name-of-process {\n' \
-	'          run /path/to/command with its args;\n' \
-	'        }\n\n' \
+	'		   run /path/to/command with its args;\n' \
+	'		 }\n\n' \
 
 	_str_family_error = \
 	'syntax: family {\n' \
-	'          all;       # default if not family block is present, announce all we know\n' \
-	'          minimal    # use the AFI/SAFI required to announce the routes in the configuration\n' \
-	'          \n' \
-	'          ipv4 unicast;\n' \
-	'          ipv4 multicast;\n' \
-	'          ipv4 nlri-mpls;\n' \
-	'          ipv4 mpls-vpn;\n' \
-	'          ipv4 flow;\n' \
-	'          ipv4 flow-vpn;\n' \
-	'          ipv6 unicast;\n' \
-	'          ipv6 flow;\n' \
-	'          ipv6 flow-vpn;\n' \
-	'        }\n'
+	'		   all;		  # default if not family block is present, announce all we know\n' \
+	'		   minimal	  # use the AFI/SAFI required to announce the routes in the configuration\n' \
+	'		   \n' \
+	'		   ipv4 unicast;\n' \
+	'		   ipv4 multicast;\n' \
+	'		   ipv4 nlri-mpls;\n' \
+	'		   ipv4 mpls-vpn;\n' \
+	'		   ipv4 flow;\n' \
+	'		   ipv4 flow-vpn;\n' \
+	'		   ipv6 unicast;\n' \
+	'		   ipv6 flow;\n' \
+	'		   ipv6 flow-vpn;\n' \
+	'		 }\n'
 
 	_str_capa_error = \
 	'syntax: capability {\n' \
-	'          graceful-restart <time in second>;\n' \
-	'          asn4 enable|disable;\n' \
-	'          add-path disable|send|receive|send/receive;\n' \
-	'          multi-session enable|disable;\n' \
-	'          operational enable|disable;\n' \
-	'        }\n'
+	'		   graceful-restart <time in second>;\n' \
+	'		   asn4 enable|disable;\n' \
+	'		   add-path disable|send|receive|send/receive;\n' \
+	'		   multi-session enable|disable;\n' \
+	'		   operational enable|disable;\n' \
+	'		 }\n'
 
 	def __init__ (self,fname,text=False):
 		self.debug = environment.settings().debug.configuration
@@ -490,7 +516,7 @@ class Configuration (object):
 			return False
 		self.logger.configuration('analysing tokens %s ' % str(tokens))
 		self.logger.configuration('  valid block options %s' % str(multi))
-		self.logger.configuration('  valid parameters    %s' % str(single))
+		self.logger.configuration('  valid parameters	 %s' % str(single))
 		end = tokens[-1]
 		if multi and end == '{':
 			self._location.append(tokens[0])
@@ -533,6 +559,7 @@ class Configuration (object):
 				return False
 			if command == 'static': return self._multi_static(scope,tokens[1:])
 			if command == 'flow': return self._multi_flow(scope,tokens[1:])
+			if command == 'l2vpn': return self._multi_l2vpn(scope,tokens[1:])
 			if command == 'process': return self._multi_process(scope,tokens[1:])
 			if command == 'family': return self._multi_family(scope,tokens[1:])
 			if command == 'capability': return self._multi_capability(scope,tokens[1:])
@@ -541,6 +568,7 @@ class Configuration (object):
 		if name == 'neighbor':
 			if command == 'static': return self._multi_static(scope,tokens[1:])
 			if command == 'flow': return self._multi_flow(scope,tokens[1:])
+			if command == 'l2vpn': return self._multi_l2vpn(scope,tokens[1:])
 			if command == 'process': return self._multi_process(scope,tokens[1:])
 			if command == 'family': return self._multi_family(scope,tokens[1:])
 			if command == 'capability': return self._multi_capability(scope,tokens[1:])
@@ -557,6 +585,13 @@ class Configuration (object):
 				if self._multi_flow_route(scope,tokens[1:]):
 					return self._check_flow_route(scope)
 				return False
+
+		if name == 'l2vpn':
+			if command == 'route':
+				if self._multi_l2vpn_route(scope,tokens[1:]):
+					return self._check_l2vpn_route(scope)
+				return False
+
 
 		if name == 'flow-route':
 			if command == 'match':
@@ -600,6 +635,26 @@ class Configuration (object):
 			if command == 'community': return self._route_community(scope,tokens[1:])
 			if command == 'extended-community': return self._route_extended_community(scope,tokens[1:])
 			if command == 'attribute': self._route_generic_attribute(scope,tokens[1:])
+
+		elif name == 'l2vpn':
+			if command == 'origin': return self._route_origin(scope,tokens[1:])
+			if command == 'as-path': return self._route_aspath(scope,tokens[1:])
+			# For legacy with version 2.0.x
+			if command == 'med': return self._route_med(scope,tokens[1:])
+			if command == 'next-hop': return self._flow_route_next_hop(scope,tokens[1:])
+			if command == 'local-preference': return self._route_local_preference(scope,tokens[1:])
+			if command == 'originator-id': return self._route_originator_id(scope,tokens[1:])
+			if command == 'cluster-list': return self._route_cluster_list(scope,tokens[1:])
+			if command in ('rd','route-distinguisher'): return self._route_rd(scope,tokens[1:],SAFI.vpls)
+			# withdrawn is here to not break legacy code
+			if command in ('withdraw','withdrawn'): return self._route_withdraw(scope,tokens[1:])
+			if command == 'community': return self._route_community(scope,tokens[1:])
+			if command == 'extended-community': return self._route_extended_community(scope,tokens[1:])
+			if command == 've': return self._route_l2vpn_ve(scope,tokens[1:])
+			if command == 'block_offset': return self._route_l2vpn_block_offset(scope,tokens[1:])
+			if command == 'block_size': return self._route_l2vpn_block_size(scope,tokens[1:])
+			if command == 'label_base': return self._route_l2vpn_label_base(scope,tokens[1:])
+
 
 		elif name == 'flow-route':
 			if command in ('rd','route-distinguisher'): return self._route_rd(scope,tokens[1:],SAFI.flow_vpn)
@@ -706,7 +761,7 @@ class Configuration (object):
 
 	def _multi_process (self,scope,tokens):
 		while True:
-			r = self._dispatch(scope,'process',[],['run','encoder','receive-packets','send-packets','receive-routes','receive-operational','neighbor-changes',  'peer-updates','parse-routes'])
+			r = self._dispatch(scope,'process',[],['run','encoder','receive-packets','send-packets','receive-routes','receive-operational','neighbor-changes',	'peer-updates','parse-routes'])
 			if r is False: return False
 			if r is None: break
 
@@ -1006,7 +1061,7 @@ class Configuration (object):
 	def _multi_group (self,scope,address):
 		scope.append({})
 		while True:
-			r = self._dispatch(scope,'group',['static','flow','neighbor','process','family','capability','operational'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','route-refresh','asn4','aigp','auto-flush','adj-rib-out'])
+			r = self._dispatch(scope,'group',['static','flow','l2vpn','neighbor','process','family','capability','operational'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','route-refresh','asn4','aigp','auto-flush','adj-rib-out'])
 			if r is False:
 				return False
 			if r is None:
@@ -1199,7 +1254,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 		while True:
-			r = self._dispatch(scope,'neighbor',['static','flow','process','family','capability','operational'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','asn4','aigp','auto-flush','adj-rib-out'])
+			r = self._dispatch(scope,'neighbor',['static','flow','l2vpn','process','family','capability','operational'],['description','router-id','local-address','local-as','peer-as','passive','hold-time','add-path','graceful-restart','md5','ttl-security','multi-session','group-updates','asn4','aigp','auto-flush','adj-rib-out'])
 			if r is False: return False
 			if r is None: return True
 
@@ -1968,6 +2023,62 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
+	#l2vpn vpls part
+
+	def _multi_l2vpn (self,scope,tokens):
+		if len(tokens) != 0:
+			self._error = self._str_l2vpn_error
+			if self.debug: raise
+			return False
+		while True:
+			r = self._dispatch(scope,'l2vpn',['route',],[])
+			if r is False: return False
+			if r is None: break
+		return True
+
+	def _insert_l2vpn_route (self,scope,tokens=None):
+		try:
+			attributes = Attributes()
+			attributes[AttributeID.EXTENDED_COMMUNITY] = ECommunities()
+			l2vpn_route = Change(L2vpnNLRI.blank_init_out(),attributes)
+		except ValueError:
+			self._error = self._str_l2vpn_error
+			if self.debug: raise
+			return False
+
+		if 'announce' not in scope[-1]:
+			scope[-1]['announce'] = []
+
+		scope[-1]['announce'].append(l2vpn_route)
+		return True
+
+	def _multi_l2vpn_route (self,scope,tokens):
+		if len(tokens) > 1:
+			self._error = self._str_l2vpn_error
+			if self.debug: raise
+			return False
+
+		if not self._insert_l2vpn_route(scope):
+			return False
+
+		while True:
+			r = self._dispatch(scope,'l2vpn',[],['next-hop','origin','as-path',
+							'med','local-preference','community',
+							'originator-id','cluster-list','extended-community',
+							'rd','route-distinguisher','withdraw','ve',
+							'block_offset','block_size','label_base'])
+			if r is False: return False
+			if r is None: break
+
+		if self._flow_state != 'out':
+			self._error = self._str_flow_error
+			if self.debug: raise
+			return False
+
+		return True
+
+
+
 
 	# Group Flow  ........
 
@@ -2010,6 +2121,12 @@ class Configuration (object):
 		self.logger.configuration('warning: no check on flows are implemented')
 		return True
 
+	def _check_l2vpn_route (self,scope):
+		self.logger.configuration('warning: no check on l2vpn routes are implemented')
+		return True
+
+
+
 	def _multi_flow_route (self,scope,tokens):
 		if len(tokens) > 1:
 			self._error = self._str_flow_error
@@ -2030,6 +2147,28 @@ class Configuration (object):
 			return False
 
 		return True
+
+	def _route_l2vpn_ve(self, scope, token):
+		nlri = scope[-1]['announce'][-1].nlri
+		nlri.nlri.ve = int(token[0])
+		return True
+
+	def _route_l2vpn_block_size(self, scope, token):
+		nlri = scope[-1]['announce'][-1].nlri
+		nlri.nlri.block_size = int(token[0])
+		return True
+
+	def _route_l2vpn_block_offset(self, scope, token):
+		nlri = scope[-1]['announce'][-1].nlri
+		nlri.nlri.block_offset = int(token[0])
+		return True
+
+	def _route_l2vpn_label_base(self, scope, token):
+		nlri = scope[-1]['announce'][-1].nlri
+		nlri.nlri.label_base = int(token[0])
+		return True
+
+
 
 	# ..........................................
 
@@ -2451,9 +2590,9 @@ class Configuration (object):
 			'advisory': utf8
 		}
 
-		def valid    (_): return True
-		def u32      (_): return int(_) <= 0xFFFFFFFF
-		def u64      (_): return long(_) <= 0xFFFFFFFFFFFFFFFF
+		def valid	 (_): return True
+		def u32		 (_): return int(_) <= 0xFFFFFFFF
+		def u64		 (_): return long(_) <= 0xFFFFFFFFFFFFFFFF
 		def advisory (_): return len(_.encode('utf-8')) <= MAX_ADVISORY + 2  # the two quotes
 
 		validate = {
@@ -2580,7 +2719,7 @@ class Configuration (object):
 				self.logger.parser(str(e))
 				sys.exit(1)
 
-			self.logger.parser('')  # new line
+			self.logger.parser('')	# new line
 			for number in range(len(update.nlris)):
 				change = Change(update.nlris[number],update.attributes)
 				self.logger.parser('decoded %s %s %s' % (decoding,change.nlri.action,change.extensive()))
@@ -2642,12 +2781,12 @@ class Configuration (object):
 				self.logger.parser('parsed route requires %d updates' % len(packed))
 				self.logger.parser('update size is %d' % len(pack1))
 
-				self.logger.parser('parsed  route %s' % str1)
-				self.logger.parser('parsed  hex   %s' % od(pack1))
+				self.logger.parser('parsed	route %s' % str1)
+				self.logger.parser('parsed	hex   %s' % od(pack1))
 
 				# This does not take the BGP header - let's assume we will not break that :)
 				try:
-					self.logger.parser('')  # new line
+					self.logger.parser('')	# new line
 
 					pack1s = pack1[19:] if pack1.startswith('\xFF'*16) else pack1
 					update = UpdateFactory(negotiated,pack1s)
