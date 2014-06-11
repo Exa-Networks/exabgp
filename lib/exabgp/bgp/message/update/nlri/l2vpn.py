@@ -67,6 +67,6 @@ class L2vpnNLRI(Address):
         ve = pack('!H',self.nlri.ve)
         block_offset = pack('!H',self.nlri.block_offset)
         block_size = pack('!H',self.nlri.block_size)
-        label_base = pack('!I',self.nlri.label_base)[1:4]
+        label_base = pack('!I',self.nlri.label_base<<12)[0:3]
         data = msg_len+rd+ve+block_offset+block_size+label_base
         return data

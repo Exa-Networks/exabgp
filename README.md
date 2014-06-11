@@ -1,22 +1,3 @@
-##this fork includes:
-inital support for the l2vpn vpls family (25,65):
-(right now we can parse incomming msgs and communities):
-example:
-```sh
-Jun 10 18:35:59 tehnerd-test2-devbox5 ExaBGP: Tue, 10 Jun 2014 18:35:59 INFO     7726   neighbor 192.168.201.2 update start
-Jun 10 18:35:59 tehnerd-test2-devbox5 ExaBGP: Tue, 10 Jun 2014 18:35:59 INFO     7726   neighbor 192.168.201.2 announced route l2vpn:ve:3:base:262145:offset:1:size:8: route-distinguisher 172.30.5.4:50 next-hop 172.30.5.4 origin igp local-preference 100 originator-id 172.30.5.4 cluster-list [ 172.30.0.1 1.1.1.1 ] extended-community [ target:54591:0.0.0.6 L2info:encaps:19:flag:0:mtu:0:site-pref:100 ]
-Jun 10 18:35:59 tehnerd-test2-devbox5 ExaBGP: Tue, 10 Jun 2014 18:35:59 INFO     7726   neighbor 192.168.201.2 update end
-Jun 10 18:35:59 tehnerd-test2-devbox5 ExaBGP: Tue, 10 Jun 2014 18:35:59 INFO     7726   neighbor 192.168.201.2 update start
-Jun 10 18:35:59 tehnerd-test2-devbox5 ExaBGP: Tue, 10 Jun 2014 18:35:59 INFO     7726   neighbor 192.168.201.2 announced route l2vpn:ve:3:base:262145:offset:1:size:8: route-distinguisher 172.30.5.3:49 next-hop 172.30.5.3 origin igp local-preference 100 originator-id 172.30.5.3 cluster-list [ 172.30.0.1 1.1.1.1 ] extended-community [ target:54591:0.0.0.6 L2info:encaps:19:flag:0:mtu:0:site-pref:100 ]
-Jun 10 18:35:59 tehnerd-test2-devbox5 ExaBGP: Tue, 10 Jun 2014 18:35:59 INFO     7726   neighbor 192.168.201.2 update end
-Jun 10 18:35:59 tehnerd-test2-devbox5 ExaBGP: Tue, 10 Jun 2014 18:35:59 INFO     7726   neighbor 192.168.201.2 update start
-Jun 10 18:35:59 tehnerd-test2-devbox5 ExaBGP: Tue, 10 Jun 2014 18:35:59 INFO     7726   neighbor 192.168.201.2 announced route l2vpn:ve:2:base:262145:offset:1:size:8: route-distinguisher 172.30.5.2:48 next-hop 172.30.5.2 origin igp local-preference 100 originator-id 172.30.5.2 cluster-list [ 172.30.0.1 1.1.1.1 ] extended-community [ target:54591:0.0.0.6 L2info:encaps:19:flag:0:mtu:0:site-pref:100 ]
-Jun 10 18:35:59 tehnerd-test2-devbox5 ExaBGP: Tue, 10 Jun 2014 18:35:59 INFO     7726   neighbor 192.168.201.2 update end
-
-```
-
-TODO:
-add support for the generation of vpls routes
 ##Summary
 
 Unlike [BIRD](http://bird.network.cz/) or [Quagga](http://www.quagga.net/), [ExaBGP](http://github.com/Exa-Networks/exabgp) was not designed to transform a general purpose server into a router, but to allow engineers to control their network easily.

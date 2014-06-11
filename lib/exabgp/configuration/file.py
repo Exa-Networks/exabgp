@@ -186,30 +186,25 @@ class Configuration (object):
 
     _str_l2vpn_error = \
     'syntax: l2vpn {\n' \
-    'route 10.0.0.1/22 {\n' \
-    '  path-information 0.0.0.1;\n' \
+    'route site_name {\n' \
     '  route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535' \
     '  next-hop 192.0.1.254;\n' \
     '  origin IGP|EGP|INCOMPLETE;\n' \
-    '  as-path [ AS-SEQUENCE-ASN1 AS-SEQUENCE-ASN2 ( AS-SET-ASN3 )] ;\n' \
+    '  as-path [ as as as as] ;\n' \
     '  med 100;\n' \
     '  local-preference 100;\n' \
-    '  atomic-aggregate;\n' \
     '  community [ 65000 65001 65002 ];\n' \
-    '  extended-community [ target:1234:5.6.7.8 target:1.2.3.4:5678 origin:1234:5.6.7.8 origin:1.2.3.4:5678 0x0002FDE800000001 ]\n' \
+    '  extended-community [ target:1234:5.6.7.8 target:1.2.3.4:5678 origin:1234:5.6.7.8 origin:1.2.3.4:5678 0x0002FDE800000001 l2info:encaps:19:control_flag:0:mtu:1500:site_preference:111 ]\n' \
     '  originator-id 10.0.0.10;\n' \
     '  cluster-list [ 10.10.0.1 10.10.0.2 ];\n' \
-    '  label [ 100 200 ];\n' \
-    '  aggregator ( 65000:10.0.0.10 )\n' \
-    '  aigp 100;\n' \
-    '  split /24\n' \
-    '  watchdog watchdog-name\n' \
-    '  withdraw\n' \
+    '  ve <vpls endpoint id; interger>;\n' \
+    '  block_offset <interger>;\n' \
+    '  block_size <integer>;\n' \
+    '  label_base <integer>;\n' \
     '}\n' \
 
     '}\n\n' \
-    'one or more match term, one action\n' \
-    'fragment code is totally untested\n' \
+    'code is totally untested. for lab only. it works with Juniper...\n' \
 
 
 
