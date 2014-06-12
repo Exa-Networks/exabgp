@@ -20,6 +20,8 @@ Version 3.4.0
     reported by: Mark Treacy
  * Fix: bad encoding of flow fragment encoding
     reported by: Andrei-Marius Radu
+ * Fix: bad reporting of process open sending
+    reported by: Mark Treacy (with patch, thank you)
  * Change: new commands for the configuration of the API
  * Change: JSON objects now include a unique neighbor identifier
  * Change: JSON objects now include a counter for unique message id

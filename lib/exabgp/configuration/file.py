@@ -722,10 +722,10 @@ class Configuration (object):
 				return True
 
 		elif name == 'send':  # process / send
-			if command == 'message': return self._set_process_command(scope,'send-packets',tokens[1:])
+			if command == 'packets': return self._set_process_command(scope,'send-packets',tokens[1:])
 
 		elif name == 'receive':  # process / receive
-			if command == 'message': return self._set_process_command(scope,'send-packets',tokens[1:])
+			if command == 'packets': return self._set_process_command(scope,'receive-packets',tokens[1:])
 			if command == 'parsed': return self._set_process_command(scope,'receive-parsed',tokens[1:])
 			if command == 'consolidate': return self._set_process_command(scope,'consolidate',tokens[1:])
 
@@ -2133,7 +2133,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch(scope,'receive',[],['message','parsed','consolidate','neighbor-changes','notification','open','keepalive','update','refresh','operational'])
+			r = self._dispatch(scope,'receive',[],['packets','parsed','consolidate','neighbor-changes','notification','open','keepalive','update','refresh','operational'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -2145,7 +2145,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch(scope,'send',[],['message'])
+			r = self._dispatch(scope,'send',[],['packets'])
 			if r is False: return False
 			if r is None: break
 		return True
