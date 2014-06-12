@@ -156,6 +156,8 @@ class Neighbor (object):
 
 		_receive.extend(['      parsed;\n',]           if self.api.receive_parsed else [])
 		_receive.extend(['      message;\n',]          if self.api.receive_packets else [])
+		_receive.extend(['      consolidate;\n',]      if self.api.consolidate else [])
+
 		_receive.extend(['      neighbor-changes;\n',] if self.api.neighbor_changes else [])
 		_receive.extend(['      notification;\n',]     if self.api.receive_notifications else [])
 		_receive.extend(['      open;\n',]             if self.api.receive_notifications else [])

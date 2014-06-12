@@ -2133,7 +2133,7 @@ class Configuration (object):
 			return False
 
 		while True:
-			r = self._dispatch(scope,'receive',[],['message','parsed','consolidate','notification','open','keepalive','update','refresh','operational'])
+			r = self._dispatch(scope,'receive',[],['message','parsed','consolidate','neighbor-changes','notification','open','keepalive','update','refresh','operational'])
 			if r is False: return False
 			if r is None: break
 		return True
