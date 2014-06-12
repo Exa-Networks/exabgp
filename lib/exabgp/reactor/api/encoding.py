@@ -16,6 +16,8 @@ class APIOptions (object):
 	def __init__ (self):
 		self.receive_parsed = False
 		self.receive_packets = False
+		self.consolidate = False
+
 		self.send_packets = False
 
 		self.neighbor_changes = False
