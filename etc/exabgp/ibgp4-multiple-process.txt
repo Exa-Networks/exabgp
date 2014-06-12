@@ -14,10 +14,16 @@ group test {
 		hold-time 180;
 
 		process {
-			neighbor-changes;
-    	send-packets;
-    	receive-packets;
-    	receive-routes;
+			receive {
+				parsed;
+				message;
+
+				update;
+				neighbor-changes;
+			}
+			send {
+				message;
+			}
 		}
 
 		static {

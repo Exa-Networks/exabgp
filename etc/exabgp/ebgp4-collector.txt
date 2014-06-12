@@ -7,7 +7,10 @@ neighbor 10.0.0.3 {
 	hold-time 180;
 
 	process parsed-route-backend {
-		receive-routes;
+		receive {
+			parsed;
+			update;
+		}
 		run contrib/daniel.piekacz/collector.py 10.0.0.3 collector collector collector;
 	}
 

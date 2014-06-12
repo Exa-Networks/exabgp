@@ -8,7 +8,10 @@ neighbor 10.0.0.3 {
 	multi-session;
 
 	process parsed-route-backend {
-		receive-routes;
+		receive {
+			parsed;
+			update;
+		}
 		run etc/exabgp/processes/syslog-1.py;
 	}
 

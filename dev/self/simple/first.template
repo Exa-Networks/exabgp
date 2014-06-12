@@ -11,7 +11,10 @@ group test {
 	}
 
  	process parsed-route-backend {
- 		receive-routes;
+		receive {
+			parsed;
+			updates;
+		}
  		run ./log-syslog.py;
  	}
 

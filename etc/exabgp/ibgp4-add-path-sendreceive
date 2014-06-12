@@ -8,14 +8,17 @@ neighbor 82.219.119.133 {
 	add-path send/receive;
 
 	process parsed-route-backend {
-		neighbor-changes;
-		receive-routes;
+		receive {
+			parsed;
+			update;
+			neighbor-changes;
+		}
 		run etc/exabgp/processes/syslog-1.py;
 	}
 
 	static {
 		route 82.219.0.0/16 {
-			# 17 34 51 68 -> 0x11 0x22 0x33 0x44 
+			# 17 34 51 68 -> 0x11 0x22 0x33 0x44
       path-information 17.34.51.68;
 			next-hop 127.0.0.1;
 			origin igp;

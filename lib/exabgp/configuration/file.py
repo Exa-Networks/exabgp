@@ -675,44 +675,57 @@ class Configuration (object):
 
 		elif name == 'process':
 			if command == 'run': return self._set_process_run(scope,'process-run',tokens[1:])
+			if command == 'encoder': return self._set_process_encoder(scope,'encoder',tokens[1:])
+
 			# legacy ...
+
 			if command == 'parse-routes':
+				self._set_process_command(scope,'receive-parsed',tokens[1:])
 				self._set_process_command(scope,'neighbor-changes',tokens[1:])
-				self._set_process_command(scope,'receive-routes',tokens[1:])
-				self._set_process_command(scope,'receive-updates',tokens[1:])
-				return True
-			# legacy ...
-			if command == 'peer-updates':
-				self._set_process_command(scope,'neighbor-changes',tokens[1:])
-				self._set_process_command(scope,'receive-routes',tokens[1:])
 				self._set_process_command(scope,'receive-updates',tokens[1:])
 				return True
 
-			# legacy
+			if command == 'peer-updates':
+				self._set_process_command(scope,'receive-parsed',tokens[1:])
+				self._set_process_command(scope,'neighbor-changes',tokens[1:])
+				self._set_process_command(scope,'receive-updates',tokens[1:])
+				return True
+
+			if command == 'send-packets':
+				return self._set_process_command(scope,'send-packets',tokens[1:])
+
+			if command == 'neighbor-changes':
+				return self._set_process_command(scope,'neighbor-changes',tokens[1:])
+
+			if command == 'receive-packets':
+				return self._set_process_command(scope,'receive-packets',tokens[1:])
+
 			if command == 'receive-routes':
 				self._set_process_command(scope,'receive-parsed',tokens[1:])
 				self._set_process_command(scope,'receive-updates',tokens[1:])
+				self._set_process_command(scope,'receive-refresh',tokens[1:])
 				return True
 
-			# legacy
-			if command == 'receive-routes': return self._set_process_command(scope,'receive-routes',tokens[1:])
+			if command == 'receive-operational':
+				self._set_process_command(scope,'receive-parsed',tokens[1:])
+				self._set_process_command(scope,'receive-operational',tokens[1:])
+				return True
 
-			# new interface
-			if command == 'encoder': return self._set_process_encoder(scope,'encoder',tokens[1:])
+		elif name == 'send':  # process / send
+			if command == 'message': return self._set_process_command(scope,'send-packets',tokens[1:])
 
-			if command == 'receive-parsed': return self._set_process_command(scope,'receive-parsed',tokens[1:])
-			if command == 'receive-packets': return self._set_process_command(scope,'receive-packets',tokens[1:])
-			if command == 'send-packets': return self._set_process_command(scope,'send-packets',tokens[1:])
+		elif name == 'receive':  # process / receive
+			if command == 'message': return self._set_process_command(scope,'send-packets',tokens[1:])
+			if command == 'parsed': return self._set_process_command(scope,'receive-parsed',tokens[1:])
+			if command == 'consolidate': return self._set_process_command(scope,'consolidate',tokens[1:])
 
 			if command == 'neighbor-changes': return self._set_process_command(scope,'neighbor-changes',tokens[1:])
-			if command == 'receive-notifications': return self._set_process_command(scope,'receive-notifications',tokens[1:])
-			if command == 'receive-opens': return self._set_process_command(scope,'receive-opens',tokens[1:])
-			if command == 'receive-keepalives': return self._set_process_command(scope,'receive-keepalives',tokens[1:])
-			if command == 'receive-refresh': return self._set_process_command(scope,'receive-refresh',tokens[1:])
-			if command == 'receive-updates': return self._set_process_command(scope,'receive-updates',tokens[1:])
-			if command == 'receive-operational': return self._set_process_command(scope,'receive-operational',tokens[1:])
-			if command == 'receive-complete-updates': return self._set_process_command(scope,'receive-complete-updates',tokens[1:])
-
+			if command == 'notification': return self._set_process_command(scope,'receive-notifications',tokens[1:])
+			if command == 'open': return self._set_process_command(scope,'receive-opens',tokens[1:])
+			if command == 'keepalive': return self._set_process_command(scope,'receive-keepalives',tokens[1:])
+			if command == 'refresh': return self._set_process_command(scope,'receive-refresh',tokens[1:])
+			if command == 'update': return self._set_process_command(scope,'receive-updates',tokens[1:])
+			if command == 'operational': return self._set_process_command(scope,'receive-operational',tokens[1:])
 
 		elif name == 'static':
 			if command == 'route': return self._single_static_route(scope,tokens[1:])
@@ -727,7 +740,7 @@ class Configuration (object):
 
 	def _multi_process (self,scope,tokens):
 		while True:
-			r = self._dispatch(scope,'process',[],['run','encoder','receive-parsed','receive-packets','receive-complete-updates','send-packets','receive-routes','receive-updates','receive-refresh','receive-operational','neighbor-changes',  'peer-updates','parse-routes', 'receive-keepalives', 'receive-opens','receive-notifications'])
+			r = self._dispatch(scope,'process',['send','receive'],['run','encoder','receive-parsed','receive-packets','receive-complete-updates','send-packets','receive-routes','receive-updates','receive-refresh','receive-operational','neighbor-changes',  'peer-updates','parse-routes'])
 			if r is False: return False
 			if r is None: break
 
@@ -1080,19 +1093,16 @@ class Configuration (object):
 			neighbor.api.send_packets |= local_scope.get('send-packets',False)
 
 			neighbor.api.neighbor_changes |= local_scope.get('neighbor-changes',False)
-			neighbor.api.receive_complete_updates = local_scope.get('receive-complete-updates',False)
+			neighbor.api.consolidate = local_scope.get('consolidate',False)
 
 			receive_parsed  = local_scope.get('receive-parsed',False)
-			receive_parsed |= local_scope.get('receive-routes',False)
 
 			if receive_parsed:
 				neighbor.api.receive_notifications |= local_scope.get('receive-notifications',False)
 				neighbor.api.receive_opens |= local_scope.get('receive-opens',False)
 				neighbor.api.receive_keepalives |= local_scope.get('receive-keepalives',False)
 				neighbor.api.receive_updates |= local_scope.get('receive-updates',False)
-				neighbor.api.receive_updates |= local_scope.get('receive-routes',False)
 				neighbor.api.receive_refresh |= local_scope.get('receive-refresh',False)
-				neighbor.api.receive_refresh |= local_scope.get('receive-routes',False)
 				neighbor.api.receive_operational |= local_scope.get('receive-operational',False)
 
 		if not neighbor.router_id:

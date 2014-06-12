@@ -7,15 +7,18 @@ neighbor 10.0.0.10 {
 	hold-time 180;
 
 	process parsed-route-backend {
-		neighbor-changes;
-		receive-routes;
+		receive {
+			parsed;
+			update;
+			neighbor-changes;
+		}
 		run etc/exabgp/processes/syslog-1.py;
 	}
 
 	static {
 		route 82.219.0.0/24 {
       label [ 12345 5678 ];
-			# 17 34 51 68 -> 0x11 0x22 0x33 0x44 
+			# 17 34 51 68 -> 0x11 0x22 0x33 0x44
 			next-hop 127.0.0.1;
 			origin igp;
 			as-path [ 30740 30740 30740 30740 30740 30740 30740 ];
@@ -27,7 +30,7 @@ neighbor 10.0.0.10 {
 		}
 		route 82.219.0.0/16 {
       label [ 12345 5678 ];
-			# 17 34 51 68 -> 0x11 0x22 0x33 0x44 
+			# 17 34 51 68 -> 0x11 0x22 0x33 0x44
       path-information 17.34.51.68;
 			next-hop 127.0.0.1;
 			origin igp;
