@@ -12,10 +12,9 @@ import time
 from exabgp.bgp.message.direction import IN
 from exabgp.bgp.message import Message
 
-from exabgp.configuration.environment import environment
-
 class APIOptions (object):
 	def __init__ (self):
+		self.receive_parsed = False
 		self.receive_packets = False
 		self.send_packets = False
 
@@ -37,13 +36,13 @@ def hexstring (value):
 class Text (object):
 	def __init__ (self,version):
 		self.version = version
-		
+
 	def _header_body(self,header,body):
 		header = ' header %s' % hexstring(header) if header else ''
 		body = ' body %s' % hexstring(body) if body else ''
-		
+
 		total_string = header+body if body else header
-		
+
 		return total_string
 
 	def reset (self,peer):
@@ -79,7 +78,7 @@ class Text (object):
 	def send (self,peer,category,header,body):
 		return 'neighbor %s sent %d header %s body %s\n' % (peer.neighbor.peer_address,category,hexstring(header),hexstring(body))
 
-	def update (self,peer,update,header,body):	
+	def update (self,peer,update,header,body):
 		neighbor = peer.neighbor.peer_address
 		r = 'neighbor %s update start\n' % neighbor
 		attributes = str(update.attributes)
@@ -302,7 +301,7 @@ class JSON (object):
 			return '"update": { %s%s } ' % (attributes,nlri)
 		return '"update": { %s, %s } ' % (attributes,nlri)
 
-	def update (self,peer,update,header,body):	
+	def update (self,peer,update,header,body):
 		return self._header(self._neighbor(peer,self._kv({
 			'type'   : 'update',
 			'message': '{ %s }' % self._update(update)})),header,body,peer.neighbor.identificator(),self.count(peer))

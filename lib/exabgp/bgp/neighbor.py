@@ -152,17 +152,22 @@ class Neighbor (object):
 		for afi,safi in self.families():
 			families += '\n    %s %s;' % (afi.name(),safi.name())
 
-		_api  = []
-		_api.extend(['    receive-packets;\n',]       if self.api.receive_packets else [])
-		_api.extend(['    send-packets;\n',]          if self.api.send_packets else [])
-		_api.extend(['    neighbor-changes;\n',]      if self.api.neighbor_changes else [])
-		_api.extend(['    receive-notifications;\n',] if self.api.receive_notifications else [])
-		_api.extend(['    receive-open;\n',]          if self.api.receive_notifications else [])
-		_api.extend(['    receive-keepalives;\n',]    if self.api.receive_keepalives else [])
-		_api.extend(['    receive-updates;\n',]       if self.api.receive_updates else [])
-		_api.extend(['    receive-refresh;\n',]       if self.api.receive_refresh else [])
-		_api.extend(['    receive-operational;\n',]   if self.api.receive_operational else [])
-		api = ''.join(_api)
+		_receive  = []
+
+		_receive.extend(['      parsed;\n',]           if self.api.receive_parsed else [])
+		_receive.extend(['      message;\n',]          if self.api.receive_packets else [])
+		_receive.extend(['      neighbor-changes;\n',] if self.api.neighbor_changes else [])
+		_receive.extend(['      notification;\n',]     if self.api.receive_notifications else [])
+		_receive.extend(['      open;\n',]             if self.api.receive_notifications else [])
+		_receive.extend(['      keepalive;\n',]        if self.api.receive_keepalives else [])
+		_receive.extend(['      update;\n',]           if self.api.receive_updates else [])
+		_receive.extend(['      refresh;\n',]          if self.api.receive_refresh else [])
+		_receive.extend(['      operational;\n',]      if self.api.receive_operational else [])
+		receive = ''.join(_receive)
+
+		_send = []
+		_send.extend(['      messages;\n',]          if self.api.send_packets else [])
+		send = ''.join(_send)
 
 		return """\
 neighbor %s {
@@ -178,7 +183,7 @@ neighbor %s {
   family {%s
   }
   process {
-%s  }%s
+%s%s  }%s
 }""" % (
 	self.peer_address,
 	self.description,
@@ -201,7 +206,8 @@ neighbor %s {
 	'    operational;\n' if self.operational else '',
 	'    aigp;\n' if self.aigp else '',
 	families,
-	api,
+	'    receive {\n%s    }\n' % receive if receive else '',
+	'    send {\n%s    }\n' % send if send else '',
 	changes
 )
 
