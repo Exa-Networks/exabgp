@@ -282,7 +282,8 @@ class JSON (object):
 				m += '"%s" : { ' % nexthop
 				m += ', '.join('%s' % nlri.json() for nlri in nlris)
 				m += ' }, '
-			s = m[:-2]
+			s += m[:-2]
+			s += ' }'
 			add.append(s)
 
 		remove = []
