@@ -5,10 +5,10 @@ Version explained:
 
 
 Version 3.4.0
- * Improvement: better handling of NOTIFICATION received during OPEN negotiation
- * Improvement: add support for extended-attribute for FlowSpec
+ * Feature: add support for extended-attribute for FlowSpec
  * Feature: more detailed JSON objects
     initial patch from: Wouter Miltenburg
+ * Improvement: better handling of NOTIFICATION received during OPEN negotiation
  * Fix: Do not reconnect too fast when connection fails
     reported by: Robert Barnes
  * Fix: Invalid JSON object for route-refresh
@@ -23,11 +23,13 @@ Version 3.4.0
     reported by: Andrei-Marius Radu
  * Fix: bad reporting of process open sending
     reported by: Mark Treacy (with patch, thank you)
+ * Fix: Incorporating NETBSD compatibility patches
  * Change: new commands for the configuration of the API
  * Change: JSON objects now include a unique neighbor identifier
  * Change: JSON objects now include a counter for unique message id
+ * Change: JSON objects now include a "type" to now how to best parse them
+ * Compatibility: JSON re-introduced the family under the "announce" section ( removed by mistake )
  * Compatibility: restoring integer as default time, high resolution must be enabled to not break older installations
- * Incorporating NETBSD compatibility patches
 
 Version 3.3.2
  * Fix: work toward working operational-01
