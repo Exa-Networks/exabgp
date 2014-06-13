@@ -6,6 +6,7 @@ Version explained:
 
 Version 3.4.0
  * Improvement: better handling of NOTIFICATION received during OPEN negotiation
+ * Improvement: add support for extended-attribute for FlowSpec
  * Feature: more detailed JSON objects
     initial patch from: Wouter Miltenburg
  * Fix: Do not reconnect too fast when connection fails

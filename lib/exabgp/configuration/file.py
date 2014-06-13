@@ -2119,7 +2119,7 @@ class Configuration (object):
 		self._flow_state = 'out'
 
 		while True:
-			r = self._dispatch(scope,'flow-then',[],['accept','discard','rate-limit','redirect','copy','redirect-to-nexthop','mark','action','community'])
+			r = self._dispatch(scope,'flow-then',[],['accept','discard','rate-limit','redirect','copy','redirect-to-nexthop','mark','action','community','extended-community'])
 			if r is False: return False
 			if r is None: break
 		return True
