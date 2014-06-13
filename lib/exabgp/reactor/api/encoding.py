@@ -154,25 +154,27 @@ class JSON (object):
 	def _string (self,_):
 		return '%s' % _ if issubclass(_.__class__,int) or issubclass(_.__class__,long) or ('{' in str(_)) else '"%s"' % _
 
-	def _header (self,content,header,body,ident=None,count=None):
+	def _header (self,content,header,body,ident=None,count=None,type=None):
 		identificator = '"id": "%s", ' % ident if ident else ''
 		counter = '"counter": %s, ' % count if count else ''
 		header = '"header": "%s", ' % hexstring(header) if header else ''
 		body = '"body": "%s", ' % hexstring(body) if body else ''
+		type = '"type": "%s",' % type if type else 'default'
 
 		return \
 		'{ '\
 			'"exabgp": "%s", '\
 			'"time": %s, ' \
-			'%s%s%s%s%s' \
-		'}' % (self.version,self.time(time.time()),identificator,counter,header,body,content)
+			'%s%s%s%s%s%s' \
+		'}' % (self.version,self.time(time.time()),identificator,counter,type,header,body,content)
 
 	def _neighbor (self,peer,content):
+		peer_neighbor_adress='"ip": "%s", ' % peer.neighbor.peer_address if content else '"ip": "%s" ' % peer.neighbor.peer_address
 		return \
 		'"neighbor": { ' \
-			'"ip": "%s", ' \
 			'%s' \
-		'} '% (peer.neighbor.peer_address,content)
+			'%s' \
+		'} '% (peer_neighbor_adress,content)
 
 	def _bmp (self,neighbor,content):
 		return \
@@ -189,57 +191,48 @@ class JSON (object):
 
 	def up (self,peer):
 		return self._header(self._neighbor(peer,self._kv({
-			'type'  : 'state',
 			'state' : 'up',
-		})),'','',peer.neighbor.identificator(),self.count(peer))
+		})),'','',peer.neighbor.identificator(),self.count(peer),type='state')
 
 	def connected (self,peer):
 		return self._header(self._neighbor(peer,self._kv({
-			'type'  : 'state',
 			'state' : 'connected',
-		})),'','',peer.neighbor.identificator(),self.count(peer))
+		})),'','',peer.neighbor.identificator(),self.count(peer),type='state')
 
 	def down (self,peer,reason=''):
 		return self._header(self._neighbor(peer,self._kv({
-			'type'   : 'state',
 			'state'  : 'down',
 			'reason' : reason,
-		})),'','',peer.neighbor.identificator(),self.count(peer))
+		})),'','',peer.neighbor.identificator(),self.count(peer),type='state')
 
 	def shutdown (self,ppid):
 		return self._header(self._kv({
-			'type'         : 'notification',
 			'notification' : 'shutdown',
-		}),'','',ppid,1)
+		}),'','',ppid,1,type='notification')
 
 	def notification (self,peer,code,subcode,data):
 		return self._header(self._kv({
-			'type'         : 'notification',
 			'notification' : '{ %s } ' % self._kv({
 				'code'    : code,
 				'subcode' : subcode,
 				'data'    : hexstring(data),
 			})
-		}),'','',peer.neighbor.identificator(),self.count(peer))
+		}),'','',peer.neighbor.identificator(),self.count(peer),type='notification')
 
 	def receive (self,peer,category,header,body):
 		return self._header(self._neighbor(peer,self._kv({
-			'type'   : 'raw',
 			'message': '{ %s } ' % self._kv({
 				'received' : category,
 				'header'   : hexstring(header),
 				'body'     : hexstring(body),
 			})
-		})),'','',peer.neighbor.identificator(),self.count(peer))
+		})),'','',peer.neighbor.identificator(),self.count(peer),type='raw')
 
 	def keepalive (self,peer,header,body):
-		return self._header(self._neighbor(peer,self._kv({
-			'type'   : 'keepalive',
-		})),header,body,peer.neighbor.identificator(),self.count(peer))
+		return self._header(self._neighbor(peer,''),header,body,peer.neighbor.identificator(),self.count(peer),type='keepalive')
 
 	def open (self,peer,direction,sent_open,header,body):
 		return self._header(self._neighbor(peer,self._kv({
-			'type'      : 'open',
 			'direction' : direction,
 			'open':'{ %s } ' % self._kv({
 				'version'      : sent_open.version,
@@ -248,17 +241,16 @@ class JSON (object):
 				'router_id'    : sent_open.router_id,
 				'capabilities' : '{ %s } ' % self._kv(sent_open.capabilities),
 			})
-		})),header,body,peer.neighbor.identificator(),self.count(peer))
+		})),header,body,peer.neighbor.identificator(),self.count(peer),type='open')
 
 	def send (self,peer,category,header,body):
 		return self._header(self._neighbor(peer,self._kv({
-			'type'   : Message.string(category),
 			'message':'{ %s } ' % self._kv({
 				'sent'   : category,
 				'header' : hexstring(header),
 				'body'   : hexstring(body),
 			})
-		})),'','',peer.neighbor.identificator(),self.count(peer))
+		})),'','',peer.neighbor.identificator(),self.count(peer),type=Message.string(category))
 
 	def _update (self,update):
 		plus = {}
@@ -303,10 +295,9 @@ class JSON (object):
 			return '"update": { %s%s } ' % (attributes,nlri)
 		return '"update": { %s, %s } ' % (attributes,nlri)
 
-	def update (self,peer,update,header,body):
+	def update (self,peer,update,header,body):	
 		return self._header(self._neighbor(peer,self._kv({
-			'type'   : 'update',
-			'message': '{ %s }' % self._update(update)})),header,body,peer.neighbor.identificator(),self.count(peer))
+			'message': '{ %s }' % self._update(update)})),header,body,peer.neighbor.identificator(),self.count(peer),type='update')
 
 	def refresh (self,peer,refresh,header,body):
 		return self._header(
@@ -316,10 +307,10 @@ class JSON (object):
 					refresh.afi,refresh.safi,refresh.reserved
 				)
 			)
-		,header,body,peer.neighbor.identificator(),self.count(peer))
+		,header,body,peer.neighbor.identificator(),self.count(peer),state='refresh')
 
 	def bmp (self,bmp,update):
-		return self._header(self._bmp(bmp,self._update(update)),'','')
+		return self._header(self._bmp(bmp,self._update(update)),'','',state='bmp')
 
 	def _operational_advisory (self,peer,operational,header,body):
 		return self._header(
@@ -329,7 +320,7 @@ class JSON (object):
 					operational.name,operational.afi,operational.safi,operational.data
 				)
 			)
-		,header,body,peer.neighbor.identificator(),self.count(peer))
+		,header,body,peer.neighbor.identificator(),self.count(peer),type='operational')
 
 	def _operational_query (self,peer,operational,header,body):
 		return self._header(
@@ -339,7 +330,7 @@ class JSON (object):
 					operational.name,operational.afi,operational.safi
 				)
 			)
-		,header,body,peer.neighbor.identificator(),self.count(peer))
+		,header,body,peer.neighbor.identificator(),self.count(peer),type='operational')
 
 	def _operational_counter (self,peer,operational,header,body):
 		return self._header(
@@ -349,7 +340,7 @@ class JSON (object):
 					operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.counter
 				)
 			)
-		,header,body,peer.neighbor.identificator(),self.count(peer))
+		,header,body,peer.neighbor.identificator(),self.count(peer),type='operational')
 
 	def operational (self,peer,what,operational,header,body):
 		if what == 'advisory':
