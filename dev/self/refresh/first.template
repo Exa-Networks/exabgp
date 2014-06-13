@@ -15,7 +15,10 @@ group test {
 	}
 
 	process similate-the-intenet {
-		receive-routes;
+		receive {
+			parsed;
+			updates;
+		}
 		run ./re-ask.py;
 	}
 

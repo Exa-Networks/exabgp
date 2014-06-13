@@ -8,8 +8,10 @@ neighbor 82.219.119.133 {
 	add-path receive;
 
 	process parsed-route-backend {
-		neighbor-changes;
-		receive-routes;
+		receive {
+			update;
+			neighbor-changes;
+		}
 		run etc/exabgp/processes/syslog-1.py;
 	}
 

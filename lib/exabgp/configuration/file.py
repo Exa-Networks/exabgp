@@ -567,6 +567,16 @@ class Configuration (object):
 				if self._multi_then(scope,tokens[1:]):
 					return True
 				return False
+
+		if name == 'process':
+			if command == 'receive':
+				if self._multi_receive(scope,tokens[1:]):
+					return True
+				return False
+			if command == 'send':
+				if self._multi_send(scope,tokens[1:]):
+					return True
+				return False
 		return False
 
 	def _single_line (self,scope,name,tokens,valid):
@@ -675,23 +685,57 @@ class Configuration (object):
 
 		elif name == 'process':
 			if command == 'run': return self._set_process_run(scope,'process-run',tokens[1:])
-			# legacy ...
-			if command == 'parse-routes':
-				self._set_process_command(scope,'neighbor-changes',tokens[1:])
-				self._set_process_command(scope,'receive-routes',tokens[1:])
-				return True
-			# legacy ...
-			if command == 'peer-updates':
-				self._set_process_command(scope,'neighbor-changes',tokens[1:])
-				self._set_process_command(scope,'receive-routes',tokens[1:])
-				return True
-			# new interface
 			if command == 'encoder': return self._set_process_encoder(scope,'encoder',tokens[1:])
-			if command == 'receive-packets': return self._set_process_command(scope,'receive-packets',tokens[1:])
-			if command == 'send-packets': return self._set_process_command(scope,'send-packets',tokens[1:])
-			if command == 'receive-routes': return self._set_process_command(scope,'receive-routes',tokens[1:])
+
+			# legacy ...
+
+			if command == 'parse-routes':
+				self._set_process_command(scope,'receive-parsed',tokens[1:])
+				self._set_process_command(scope,'neighbor-changes',tokens[1:])
+				self._set_process_command(scope,'receive-updates',tokens[1:])
+				return True
+
+			if command == 'peer-updates':
+				self._set_process_command(scope,'receive-parsed',tokens[1:])
+				self._set_process_command(scope,'neighbor-changes',tokens[1:])
+				self._set_process_command(scope,'receive-updates',tokens[1:])
+				return True
+
+			if command == 'send-packets':
+				return self._set_process_command(scope,'send-packets',tokens[1:])
+
+			if command == 'neighbor-changes':
+				return self._set_process_command(scope,'neighbor-changes',tokens[1:])
+
+			if command == 'receive-packets':
+				return self._set_process_command(scope,'receive-packets',tokens[1:])
+
+			if command == 'receive-routes':
+				self._set_process_command(scope,'receive-parsed',tokens[1:])
+				self._set_process_command(scope,'receive-updates',tokens[1:])
+				self._set_process_command(scope,'receive-refresh',tokens[1:])
+				return True
+
+			if command == 'receive-operational':
+				self._set_process_command(scope,'receive-parsed',tokens[1:])
+				self._set_process_command(scope,'receive-operational',tokens[1:])
+				return True
+
+		elif name == 'send':  # process / send
+			if command == 'packets': return self._set_process_command(scope,'send-packets',tokens[1:])
+
+		elif name == 'receive':  # process / receive
+			if command == 'packets': return self._set_process_command(scope,'receive-packets',tokens[1:])
+			if command == 'parsed': return self._set_process_command(scope,'receive-parsed',tokens[1:])
+			if command == 'consolidate': return self._set_process_command(scope,'consolidate',tokens[1:])
+
 			if command == 'neighbor-changes': return self._set_process_command(scope,'neighbor-changes',tokens[1:])
-			if command == 'receive-operational': return self._set_process_command(scope,'receive-operational',tokens[1:])
+			if command == 'notification': return self._set_process_command(scope,'receive-notifications',tokens[1:])
+			if command == 'open': return self._set_process_command(scope,'receive-opens',tokens[1:])
+			if command == 'keepalive': return self._set_process_command(scope,'receive-keepalives',tokens[1:])
+			if command == 'refresh': return self._set_process_command(scope,'receive-refresh',tokens[1:])
+			if command == 'update': return self._set_process_command(scope,'receive-updates',tokens[1:])
+			if command == 'operational': return self._set_process_command(scope,'receive-operational',tokens[1:])
 
 		elif name == 'static':
 			if command == 'route': return self._single_static_route(scope,tokens[1:])
@@ -706,7 +750,7 @@ class Configuration (object):
 
 	def _multi_process (self,scope,tokens):
 		while True:
-			r = self._dispatch(scope,'process',[],['run','encoder','receive-packets','send-packets','receive-routes','receive-operational','neighbor-changes',  'peer-updates','parse-routes'])
+			r = self._dispatch(scope,'process',['send','receive'],['run','encoder','receive-parsed','receive-packets','receive-complete-updates','send-packets','receive-routes','receive-updates','receive-refresh','receive-operational','neighbor-changes',  'peer-updates','parse-routes'])
 			if r is False: return False
 			if r is None: break
 
@@ -1057,9 +1101,18 @@ class Configuration (object):
 		for local_scope in (scope[0],scope[-1]):
 			neighbor.api.receive_packets |= local_scope.get('receive-packets',False)
 			neighbor.api.send_packets |= local_scope.get('send-packets',False)
-			neighbor.api.receive_routes |= local_scope.get('receive-routes',False)
-			neighbor.api.receive_operational |= local_scope.get('receive-operational',False)
+
 			neighbor.api.neighbor_changes |= local_scope.get('neighbor-changes',False)
+			neighbor.api.consolidate = local_scope.get('consolidate',False)
+
+			neighbor.api.receive_parsed  = local_scope.get('receive-parsed',False)
+
+			neighbor.api.receive_notifications |= local_scope.get('receive-notifications',False)
+			neighbor.api.receive_opens |= local_scope.get('receive-opens',False)
+			neighbor.api.receive_keepalives |= local_scope.get('receive-keepalives',False)
+			neighbor.api.receive_updates |= local_scope.get('receive-updates',False)
+			neighbor.api.receive_refresh |= local_scope.get('receive-refresh',False)
+			neighbor.api.receive_operational |= local_scope.get('receive-operational',False)
 
 		if not neighbor.router_id:
 			neighbor.router_id = neighbor.local_address
@@ -2066,7 +2119,33 @@ class Configuration (object):
 		self._flow_state = 'out'
 
 		while True:
-			r = self._dispatch(scope,'flow-then',[],['accept','discard','rate-limit','redirect','copy','redirect-to-nexthop','mark','action','community'])
+			r = self._dispatch(scope,'flow-then',[],['accept','discard','rate-limit','redirect','copy','redirect-to-nexthop','mark','action','community','extended-community'])
+			if r is False: return False
+			if r is None: break
+		return True
+
+	# ..........................................
+
+	def _multi_receive (self,scope,tokens):
+		if len(tokens) != 0:
+			self._error = self._str_flow_error
+			if self.debug: raise
+			return False
+
+		while True:
+			r = self._dispatch(scope,'receive',[],['packets','parsed','consolidate','neighbor-changes','notification','open','keepalive','update','refresh','operational'])
+			if r is False: return False
+			if r is None: break
+		return True
+
+	def _multi_send (self,scope,tokens):
+		if len(tokens) != 0:
+			self._error = self._str_flow_error
+			if self.debug: raise
+			return False
+
+		while True:
+			r = self._dispatch(scope,'send',[],['packets'])
 			if r is False: return False
 			if r is None: break
 		return True
@@ -2520,6 +2599,7 @@ class Configuration (object):
 		from exabgp.bgp.message.open.capability.negotiated import Negotiated
 		from exabgp.bgp.message.open.capability.id import CapabilityID
 		from exabgp.bgp.message.notification import Notify
+		from exabgp.reactor.peer import Peer
 		from exabgp.reactor.api.encoding import JSON
 
 		self.logger._parser = True
@@ -2527,6 +2607,7 @@ class Configuration (object):
 		self.logger.parser('\ndecoding routes in configuration')
 
 		n = self.neighbor[self.neighbor.keys()[0]]
+		p = Peer(n,None)
 
 		path = {}
 		for f in known_families():
@@ -2584,7 +2665,7 @@ class Configuration (object):
 			for number in range(len(update.nlris)):
 				change = Change(update.nlris[number],update.attributes)
 				self.logger.parser('decoded %s %s %s' % (decoding,change.nlri.action,change.extensive()))
-			self.logger.parser('update json %s' % JSON('1.0').update(str(n.peer_address),update))
+			self.logger.parser('update json %s' % JSON('3.4.0').update(p,update))
 		import sys
 		sys.exit(0)
 
@@ -2667,7 +2748,7 @@ class Configuration (object):
 					if str1r != str2r:
 						if 'attribute [' in str1r and ' 0x00 ' in str1r:
 							# we do not decode non-transitive attributes
-							self.logger.parser('skipping string check on udpate with non-transitive attribute(s)')
+							self.logger.parser('skipping string check on update with non-transitive attribute(s)')
 							skip = True
 						else:
 							self.logger.parser('strings are different:')

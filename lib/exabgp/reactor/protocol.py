@@ -9,7 +9,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 import os
 
 from exabgp.reactor.network.outgoing import Outgoing
-from exabgp.reactor.network.error import NotifyError
+#from exabgp.reactor.network.error import NotifyError
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.nop import NOP,_NOP
@@ -21,7 +21,7 @@ from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.eor import EOR,EORFactory
 from exabgp.bgp.message.keepalive import KeepAlive
-from exabgp.bgp.message.notification import NotificationFactory, Notify
+from exabgp.bgp.message.notification import NotificationFactory, Notification, Notify
 from exabgp.bgp.message.refresh import RouteRefresh,RouteRefreshFactory
 from exabgp.bgp.message.update.factory import UpdateFactory
 from exabgp.bgp.message.operational import Operational,OperationalFactory,OperationalGroup
@@ -36,6 +36,7 @@ MAX_BACKLOG = 15000
 _UPDATE = Update([],'')
 _OPERATIONAL = Operational(0x00)
 
+
 class Protocol (object):
 	decode = True
 
@@ -48,12 +49,15 @@ class Protocol (object):
 		self.neighbor = peer.neighbor
 		self.negotiated = Negotiated(self.neighbor)
 		self.connection = None
-		port = os.environ.get('exabgp.tcp.port','')
+		port = os.environ.get('exabgp.tcp.port','') or os.environ.get('exabgp_tcp_port','')
 		self.port = int(port) if port.isdigit() else 179
 
 		# XXX: FIXME: check the the -19 is correct (but it is harmless)
 		# The message size is the whole BGP message _without_ headers
 		self.message_size = Message.MAX_LEN-Message.HEADER_LEN
+
+		from exabgp.configuration.environment import environment
+		self.log_routes = environment.settings().log.routes
 
 	# XXX: we use self.peer.neighbor.peer_address when we could use self.neighbor.peer_address
 
@@ -66,8 +70,9 @@ class Protocol (object):
 	def accept (self,incoming):
 		self.connection = incoming
 
+		self.peer.reactor.processes.reset(self.peer)
 		if self.peer.neighbor.api.neighbor_changes:
-			self.peer.reactor.processes.connected(self.peer.neighbor.peer_address)
+			self.peer.reactor.processes.connected(self.peer)
 
 		# very important - as we use this function on __init__
 		return self
@@ -89,8 +94,9 @@ class Protocol (object):
 					if not connected:
 						yield False
 						continue
+					self.peer.reactor.processes.reset(self.peer)
 					if self.peer.neighbor.api.neighbor_changes:
-						self.peer.reactor.processes.connected(self.peer.neighbor.peer_address)
+						self.peer.reactor.processes.connected(self.peer)
 					yield True
 					return
 			except StopIteration:
@@ -109,30 +115,35 @@ class Protocol (object):
 
 			try:
 				if self.peer.neighbor.api.neighbor_changes:
-					self.peer.reactor.processes.down(self.peer.neighbor.peer_address,reason)
+					self.peer.reactor.processes.down(self.peer,reason)
 			except ProcessError:
 				self.logger.message(self.me('could not send notification of neighbor close to API'))
 
 
 	def write (self,message):
 		if self.neighbor.api.send_packets:
-			self.peer.reactor.processes.send(self.peer.neighbor.peer_address,ord(message[18]),message[:19],message[19:])
+			self.peer.reactor.processes.send(self.peer,ord(message[18]),message[:19],message[19:])
 		for boolean in self.connection.writer(message):
 			yield boolean
 
 	# Read from network .......................................................
 
 	def read_message (self,comment=''):
+		self.peer.reactor.processes.increase(self.peer)
+
 		for length,msg,header,body,notify in self.connection.reader():
 			if notify:
 				if self.neighbor.api.receive_packets:
-					self.peer.reactor.processes.receive(self.peer.neighbor.peer_address,msg,header,body)
+					self.peer.reactor.processes.receive(self.peer,msg,header,body)
+				if self.neighbor.api.receive_notifications:
+					self.peer.reactor.processes.notification(self.peer,notify.code,notify.subcode,str(notify))
+				# XXX: is notify not already Notify class ?
 				raise Notify(notify.code,notify.subcode,str(notify))
 			if not length:
 				yield _NOP
 
 		if self.neighbor.api.receive_packets:
-			self.peer.reactor.processes.receive(self.peer.neighbor.peer_address,msg,header,body)
+			self.peer.reactor.processes.receive(self.peer,msg,header,body)
 
 		if msg == Message.Type.UPDATE:
 			self.logger.message(self.me('<< UPDATE'))
@@ -140,22 +151,37 @@ class Protocol (object):
 			# This could be speed up massively by changing the order of the IF
 			if length == 23:
 				update = EORFactory()
-				if self.neighbor.api.receive_routes:
-					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update)
+				if self.neighbor.api.receive_updates:
+					if self.neighbor.api.consolidate:
+						self.peer.reactor.processes.update(self.peer,update,header,body)
+					else:
+						self.peer.reactor.processes.update(self.peer,update,'','')
 			elif length == 30 and body.startswith(EOR.MP):
 				update = EORFactory(body)
-				if self.neighbor.api.receive_routes:
-					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update)
-			elif self.neighbor.api.receive_routes:
+				if self.neighbor.api.receive_updates:
+					if self.neighbor.api.consolidate:
+						self.peer.reactor.processes.update(self.peer,update,header,body)
+					else:
+						self.peer.reactor.processes.update(self.peer,update,'','')
+			elif self.neighbor.api.receive_updates:
 				update = UpdateFactory(self.negotiated,body)
-				if self.neighbor.api.receive_routes:
-					self.peer.reactor.processes.update(self.peer.neighbor.peer_address,update)
+				if self.neighbor.api.consolidate:
+					self.peer.reactor.processes.update(self.peer,update,header,body)
+				else:
+					self.peer.reactor.processes.update(self.peer,update,'','')
+			elif self.log_routes:
+				update = UpdateFactory(self.negotiated,body)
 			else:
 				update = _UPDATE
 			yield update
 
 		elif msg == Message.Type.KEEPALIVE:
 			self.logger.message(self.me('<< KEEPALIVE%s' % (' (%s)' % comment if comment else '')))
+			if self.neighbor.api.receive_keepalives:
+				if self.neighbor.api.consolidate:
+					self.peer.reactor.processes.keepalive(self.peer,msg,header,body)
+				else:
+					self.peer.reactor.processes.keepalive(self.peer,msg,'','')
 			yield KeepAlive()
 
 		elif msg == Message.Type.NOTIFICATION:
@@ -166,9 +192,12 @@ class Protocol (object):
 			if self.negotiated.refresh != REFRESH.absent:
 				self.logger.message(self.me('<< ROUTE-REFRESH'))
 				refresh = RouteRefreshFactory(body)
-				if self.neighbor.api.receive_routes:
+				if self.neighbor.api.receive_refresh:
 					if refresh.reserved in (RouteRefresh.start,RouteRefresh.end):
-						self.peer.reactor.processes.refresh(self.peer.neighbor.peer_address,refresh)
+						if self.neighbor.api.consolidate:
+							self.peer.reactor.process.refresh(self.peer,refresh,header,body)
+						else:
+							self.peer.reactor.processes.refresh(self.peer,refresh,'','')
 			else:
 				# XXX: FIXME: really should raise, we are too nice
 				self.logger.message(self.me('<< NOP (un-negotiated type %d)' % msg))
@@ -179,12 +208,21 @@ class Protocol (object):
 			if self.peer.neighbor.operational:
 				operational = OperationalFactory(body)
 				what = OperationalGroup[operational.what][0]
-				self.peer.reactor.processes.operational(self.peer.neighbor.peer_address,what,operational)
+				if self.neighbor.api.consolidate:
+					self.peer.reactor.processes.operational(self.peer,what,operational,header,body)
+				else:
+					self.peer.reactor.processes.operational(self.peer,what,operational,'','')
 			else:
 				operational = _OPERATIONAL
 			yield operational
 
 		elif msg == Message.Type.OPEN:
+			if self.neighbor.api.receive_opens:
+				open_message = OpenFactory(body)
+				if self.neighbor.api.consolidate:
+					self.peer.reactor.processes.open(self.peer,'received',open_message,header,body)
+				else:
+					self.peer.reactor.processes.open(self.peer,'received',open_message,'','')
 			yield OpenFactory(body)
 
 		else:
@@ -204,6 +242,9 @@ class Protocol (object):
 			else:
 				break
 
+		if received_open.TYPE == Notification.TYPE:
+			raise received_open
+
 		if received_open.TYPE != Open.TYPE:
 			raise Notify(5,1,'The first packet recevied is not an open message (%s)' % received_open)
 
@@ -216,6 +257,9 @@ class Protocol (object):
 				yield message
 			else:
 				break
+
+		if message.TYPE == Notification.TYPE:
+			raise message
 
 		if message.TYPE != KeepAlive.TYPE:
 			raise Notify(5,2)
@@ -236,10 +280,18 @@ class Protocol (object):
 		)
 
 		# we do not buffer open message in purpose
-		for _ in self.write(sent_open.message()):
+		msg_send = sent_open.message()
+		for _ in self.write(msg_send):
 			yield _NOP
 
 		self.logger.message(self.me('>> %s' % sent_open))
+		if self.neighbor.api.receive_opens:
+			if self.neighbor.api.consolidate:
+				header = msg_send[0:38]
+				body = msg_send[38:]
+				self.peer.reactor.processes.open(self.peer,'sent',sent_open,header,body)
+			else:
+				self.peer.reactor.processes.open(self.peer,'sent',sent_open,'','')
 		yield sent_open
 
 	def new_keepalive (self,comment=''):

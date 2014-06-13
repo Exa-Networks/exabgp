@@ -267,7 +267,8 @@ The program configuration can be controlled using signals:
 			'nexthops'    :  (environment.boolean,environment.lower,'true', 'cache routes next-hops'),
 		},
 		'api' : {
-			'encoder'  :  (environment.api,environment.lower,'text', '(experimental) encoder to use with with external API (text or json)'),
+			'encoder'  :  (environment.api,environment.lower,'text', '(experimental) default encoder to use with with external API (text or json)'),
+			'highres'  :  (environment.boolean,environment.lower,'false','should we use highres timer in JSON')
 		},
 		'reactor' : {
 			'speed' : (environment.real,environment.nop,'1.0', 'time of one reactor loop\n'

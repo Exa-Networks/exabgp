@@ -24,7 +24,7 @@ do
 	retcode=$?
 	problem=`echo $result | grep 'Problem with the configuration file'`
 
-	if [ $retcode -eq 0 ] && [ "$problem" == "" ]
+	if [ $retcode -eq 0 ] && [ "$problem" = "" ]
 	then
 		printf "\rok\n"
 	else

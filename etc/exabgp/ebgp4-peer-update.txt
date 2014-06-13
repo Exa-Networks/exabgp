@@ -8,7 +8,9 @@ neighbor 10.0.0.3 {
 
 	# Use the forking watchdog system to run a tcp-server
 	process tcp-control {
-		receive-routes;
+		receive {
+			update;
+		}
 		run etc/exabgp/processes/tcp-server;
 	}
 

@@ -186,7 +186,7 @@ class Peer (object):
 
 	def send_new (self,changes=None,update=None):
 		if changes:
-			self.neighbor.rib.outgoing.update(changes)
+			self.neighbor.rib.outgoing.replace(changes)
 		self._have_routes = self.neighbor.flush if update is None else update
 
 	def restart (self,restart_neighbor=None):
@@ -296,7 +296,7 @@ class Peer (object):
 			while not connected:
 				connected = generator.next()
 				# we want to come back as soon as possible
-				yield ACTION.immediate
+				yield ACTION.later
 		except StopIteration:
 			# Connection failed
 			if not connected:
@@ -435,7 +435,7 @@ class Peer (object):
 		self.logger.network('Connected to peer %s (%s)' % (self.neighbor.name(),direction))
 		if self.neighbor.api.neighbor_changes:
 			try:
-				self.reactor.processes.up(self.neighbor.peer_address)
+				self.reactor.processes.up(self)
 			except ProcessError:
 				# Can not find any better error code than 6,0 !
 				# XXX: We can not restart the program so this will come back again and again - FIX
@@ -455,6 +455,7 @@ class Peer (object):
 		counter = Counter(self.logger,self._log(direction))
 		operational = None
 		refresh = None
+		number = 0
 
 		while not self._teardown:
 			for message in proto.read_message():
@@ -467,10 +468,14 @@ class Peer (object):
 				# Received update
 				if message.TYPE == Update.TYPE:
 					counter.increment(len(message.nlris))
+					number += 1
+
+					self.logger.routes(LazyFormat(self.me('<< UPDATE (%d)' % number),lambda _: "%s%s" % (' attributes' if _ else '',_),message.attributes))
 
 					for nlri in message.nlris:
 						self.neighbor.rib.incoming.insert_received(Change(nlri,message.attributes))
-						self.logger.routes(LazyFormat(self.me(''),str,nlri))
+						self.logger.routes(LazyFormat(self.me('<< UPDATE (%d) nlri ' % number),str,nlri))
+
 				elif message.TYPE == RouteRefresh.TYPE:
 					if message.reserved == RouteRefresh.request:
 						self._resend_routes = SEND.refresh

@@ -7,7 +7,10 @@ group test {
 	graceful-restart 1200;
 
 	process similate-the-intenet {
-		receive-routes;
+		receive {
+			parsed;
+			updates;
+		}
 		run ./dump-to-screen.py 100 20;
 	}
 

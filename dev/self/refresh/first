@@ -1,11 +1,11 @@
 #!/bin/sh
 
 ip=`ifconfig | grep -A10 en0 | grep "inet " | head -1 | awk '{ print $2; }'`
-if [ "$ip" == "" ]
+if [ "$ip" = "" ]
 then
 	ip=`ifconfig | grep -A10 en1 | grep "inet " | head -1 | awk '{ print $2; }'`
 fi
-if [ "$ip" == "" ]
+if [ "$ip" = "" ]
 then
 	ip=`ifconfig | grep -A10 vnic0 | grep "inet " | head -1 | awk '{ print $2; }'`
 fi

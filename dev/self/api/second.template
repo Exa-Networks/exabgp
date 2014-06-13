@@ -7,15 +7,14 @@ group test {
 	graceful-restart 1200;
 
 	process dump-all-text {
-		receive-routes;
-		neighbor-changes;
+		receive {
+			parsed;
+
+			updates;
+			neighbor-changes;
+		}
 		run ./check-all-ok-text;
 	}
-
-#	process dump-all-json {
-#		receive-routes;
-#		run ./check-all-ok-json;
-#	}
 
 	neighbor 127.0.0.1 {
 		description "router 2 with four routes";

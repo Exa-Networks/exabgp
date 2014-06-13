@@ -8,6 +8,12 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message import Message
 
+def hexstring (self,value):
+	def spaced (value):
+		for v in value:
+			yield '%02X' % ord(v)
+	return ''.join(spaced(value))
+
 # =================================================================== Notification
 # A Notification received from our peer.
 # RFC 4271 Section 4.5
@@ -17,7 +23,6 @@ from exabgp.bgp.message import Message
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 # | Error code    | Error subcode |   Data (variable)             |
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
 
 class Notification (Message):
 	TYPE = chr(Message.Type.NOTIFICATION)
@@ -97,9 +102,8 @@ class Notification (Message):
 		return "%s / %s%s" % (
 			self._str_code.get(self.code,'unknown error'),
 			self._str_subcode.get((self.code,self.subcode),'unknow reason'),
-			'%s' % ('/ %s' % self.data if self.data else '')
+			'%s' % ('/ %s' % hexstring(self.data) if self.data else '')
 		)
-
 
 def NotificationFactory (data):
 	return Notification(ord(data[0]),ord(data[1]),data[2:])
