@@ -2293,22 +2293,22 @@ class Configuration (object):
 
 	def _route_l2vpn_endpoint(self, scope, token):
 		nlri = scope[-1]['announce'][-1].nlri
-		nlri.nlri.ve = int(token[0])
+		nlri.nlri.setVE(token[0])
 		return True
 
 	def _route_l2vpn_block_size(self, scope, token):
 		nlri = scope[-1]['announce'][-1].nlri
-		nlri.nlri.block_size = int(token[0])
+		nlri.nlri.setBlockSize(token[0])
 		return True
 
 	def _route_l2vpn_block_offset(self, scope, token):
 		nlri = scope[-1]['announce'][-1].nlri
-		nlri.nlri.block_offset = int(token[0])
+		nlri.nlri.setBlockOffset(token[0])
 		return True
 
 	def _route_l2vpn_label_base(self, scope, token):
 		nlri = scope[-1]['announce'][-1].nlri
-		nlri.nlri.label_base = int(token[0])
+		nlri.nlri.setLabelBase(token[0])
 		return True
 
 

@@ -15,6 +15,43 @@ class L2VPN(object):
 		self.block_size = block_size
 		self.ve = ve
 
+
+	def setLabelBase(self,data):
+		_str_bad_label = "you tried to config invalid label"
+		number = int(data)
+		if self.block_size:
+			block_size = self.block_size
+		else:
+			block_size = 0
+		if number < 0 or number > (0xFFFFF - block_size):  # 20 bits 5 bytes
+			raise ValueError(_str_bad_label)
+		self.label_base = number
+		return True
+
+	def setBlockOffset(self,data):
+		_str_bad_offset = "you tried to config invalid block-offset"
+		number = int(data)
+		if number < 0 or number > 0xFFFF:
+			raise ValueError(_str_bad_offset)
+		self.block_offset = number
+		return True
+
+	def setBlockSize(self,data):
+		_str_bad_size = "you tried to config invalid block size"
+		number = int(data)
+		if number < 0 or number > 0xFFFF:
+			raise ValueError(_str_bad_size)
+		self.block_size = number
+		return True
+
+	def setVE(self,data):
+		_str_bad_size = "you tried to config invalid ve id"
+		number = int(data)
+		if number < 0 or number > 0xFFFF:
+			raise ValueError(_str_bad_size)
+		self.ve = number
+		return True
+
 	@classmethod
 	def from_packet (cls,bgp):
 		msg_len = unpack('!H',bgp[0:2])[0]
