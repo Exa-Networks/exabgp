@@ -2262,6 +2262,9 @@ class Configuration (object):
 		return True
 
 	def _check_l2vpn_route (self,scope):
+		nlri = scope[-1]['announce'][-1].nlri
+		if not nlri.rd or not nlri.nlri.checkValues():
+			return False
 		self.logger.configuration('warning: no check on l2vpn routes are implemented')
 		return True
 
