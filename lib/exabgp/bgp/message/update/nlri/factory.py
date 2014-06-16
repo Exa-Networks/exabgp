@@ -12,7 +12,7 @@ from struct import unpack
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.bgp.message.update.nlri.bgp import NLRI,PathInfo,Labels,RouteDistinguisher,mask_to_bytes
 from exabgp.bgp.message.update.nlri.flow import FlowNLRI,decode,factory,CommonOperator
-from exabgp.bgp.message.update.nlri.l2vpn import L2vpnNLRI
+from exabgp.bgp.message.update.nlri.l2vpn import L2VPNNLRI
 from exabgp.bgp.message.update.attribute.nexthop import cachedNextHop
 
 from exabgp.bgp.message.direction import IN
@@ -20,11 +20,13 @@ from exabgp.bgp.message.direction import IN
 from exabgp.util.od import od
 from exabgp.logger import Logger,LazyFormat
 
+logger = None
+
 def NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
 	if safi in (133,134):
 		return _FlowNLRIFactory(afi,safi,nexthop,bgp,action)
 	elif safi in (65,):
-		return _L2vpnNLRIFactory(afi,safi,nexthop,bgp,action)
+		return _L2VPNNLRIFactory(afi,safi,nexthop,bgp,action)
 	else:
 		return _NLRIFactory(afi,safi,bgp,has_multiple_path,nexthop,action)
 
@@ -39,7 +41,7 @@ def _nlrifactory (afi,safi,bgp,action):
 		while bgp and mask >= 8:
 			label = int(unpack('!L',chr(0) + bgp[:3])[0])
 			bgp = bgp[3:]
-			mask -= 24	# 3 bytes
+			mask -= 24  	# 3 bytes
 			# The last 4 bits are the bottom of Stack
 			# The last bit is set for the last label
 			labels.append(label>>4)
@@ -76,17 +78,21 @@ def _nlrifactory (afi,safi,bgp,action):
 
 	return labels,rd,mask,size,prefix,bgp
 
-def _L2vpnNLRIFactory(afi,safi,nexthop,bgp,action):
-	logger = Logger()
+def _L2VPNNLRIFactory(afi,safi,nexthop,bgp,action):
+	global logger
+	if logger is None:
+		logger = Logger()
 	logger.parser(LazyFormat("parsing l2vpn nlri payload ",od,bgp))
 	if nexthop:
 		nexthop = cachedNextHop(nexthop)
-	nlri = L2vpnNLRI(bgp, action, nexthop)
+	nlri = L2VPNNLRI(bgp, action, nexthop)
 	return len(bgp), nlri
 
 
 def _FlowNLRIFactory (afi,safi,nexthop,bgp,action):
-	logger = Logger()
+	global logger
+	if logger is None:
+		logger = Logger()
 	logger.parser(LazyFormat("parsing flow nlri payload ",od,bgp))
 
 	total = len(bgp)

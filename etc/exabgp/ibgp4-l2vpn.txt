@@ -20,14 +20,15 @@ neighbor 192.168.201.2 {
             med 2000;
             rd 192.168.201.1:123;
             community [ 54591:123];
-            extended-community [ target:54591:6 l2info:encaps:19:control_flag:0:mtu:1500:site_preference:111];
+            # l2info: encaps:control-flag:mtu:site-preference
+            extended-community [ target:54591:6 l2info:19:0:1500:111];
             originator-id 192.168.22.1;
             cluster-list [ 3.3.3.3 192.168.201.1 ];
             #l2vpn part
-            ve 5;
-            block_offset 1;
-            block_size 8;
-            label_base 10702;
+            vpls-endpoint 5;
+            vpls-block-offset 1;
+            vpls-block-size 8;
+            vpls-label-base 10702;
         }
         route site5 {
             next-hop 192.168.201.1;
@@ -37,14 +38,15 @@ neighbor 192.168.201.2 {
             med 2000;
             rd 192.168.201.1:124;
             community [ 54591:123];
-            extended-community [ target:54591:7 l2info:encaps:19:control_flag:0:mtu:1500:site_preference:111];
+            # l2info: encaps:control-flag:mtu:site-preference
+            extended-community [ target:54591:6 l2info:19:0:1500:111];
             originator-id 192.168.22.1;
             cluster-list [ 3.3.3.3 192.168.201.1 ];
             #l2vpn part
-            ve 5;
-            block_offset 1;
-            block_size 8;
-            label_base 10732;
+            vpls-endpoint 5;
+            vpls-block-offset 1;
+            vpls-block-size 8;
+            vpls-label-base 10732;
         }
 
     }

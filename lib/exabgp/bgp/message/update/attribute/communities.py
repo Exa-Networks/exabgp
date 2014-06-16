@@ -14,10 +14,10 @@ from exabgp.bgp.message.update.attribute import Flag,Attribute
 # =================================================================== Community
 
 class Community (object):
-	NO_EXPORT			= pack('!L',0xFFFFFF01)
-	NO_ADVERTISE		= pack('!L',0xFFFFFF02)
-	NO_EXPORT_SUBCONFED	= pack('!L',0xFFFFFF03)
-	NO_PEER				= pack('!L',0xFFFFFF04)
+	NO_EXPORT            = pack('!L',0xFFFFFF01)
+	NO_ADVERTISE         = pack('!L',0xFFFFFF02)
+	NO_EXPORT_SUBCONFED  = pack('!L',0xFFFFFF03)
+	NO_PEER              = pack('!L',0xFFFFFF04)
 
 	cache = {}
 	caching = False
@@ -112,7 +112,7 @@ def to_ExtendedCommunity (data):
 	elif nb_separators == 1:
 		command = 'target'
 		ga,la = data.split(':')
-	elif nb_separators == 8:
+	elif nb_separators == 4:
 		#this is l2info community
 		data = data.split(':')
 		command = data[0]
@@ -132,12 +132,11 @@ def to_ExtendedCommunity (data):
 		raise ValueError('invalid extended community %s (only origin,target or l2info are supported) ' % command)
 
 	if command == 'l2info':
-		encap_type = pack('!B',int(data[2]))
-		control_flags = pack('!B',int(data[4]))
-		mtu = pack('!H',int(data[6]))
-		site_pref = pack('!H',int(data[8]))
-		return ECommunity(header+subtype+encap_type+control_flags+
-						  mtu+site_pref)
+		encap_type = pack('!B',int(data[1]))
+		control_flags = pack('!B',int(data[2]))
+		mtu = pack('!H',int(data[3]))
+		site_pref = pack('!H',int(data[4]))
+		return ECommunity(header+subtype+encap_type+control_flags+mtu+site_pref)
 
 
 	if '.' in ga or '.' in la:
@@ -215,7 +214,7 @@ class ECommunity (object):
 				asn = unpack('!H',self.community[6:])[0]
 				return "origin:%s:%d" % (ip,asn)
 
-		#Layer2 Info Extended Community
+		# Layer2 Info Extended Community
 		if community_stype == 0x0A:
 			if community_type == 0x00:
 				encaps = unpack('!B',self.community[2:3])[0]
@@ -223,7 +222,7 @@ class ECommunity (object):
 				l2mtu = unpack('!H',self.community[4:6])[0]
 				#juniper uses reserved(rfc4761) as a site preference
 				reserved = unpack('!H',self.community[6:8])[0]
-				return "L2info:encaps:%s:flag:%s:mtu:%s:site-pref:%s"%(encaps,
+				return "L2info:%s:%s:%s:%s"%(encaps,
 						control_flag, l2mtu, reserved)
 
 

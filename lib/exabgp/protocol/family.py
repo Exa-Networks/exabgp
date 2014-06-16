@@ -17,9 +17,9 @@ class AFI (int):
 	l2vpn = 0x19
 
 	Family = {
-		ipv4 : 0x02,  # socket.AF_INET,
-		ipv6 : 0x30,  # socket.AF_INET6,
-		l2vpn : 0x02, # l2vpn info over ipv4 session
+		ipv4 : 0x02,   # socket.AF_INET,
+		ipv6 : 0x30,   # socket.AF_INET6,
+		l2vpn : 0x02,  # l2vpn info over ipv4 session
 	}
 
 	def __str__ (self):
@@ -95,7 +95,7 @@ class SAFI (int):
 		return self in (self.nlri_mpls,self.mpls_vpn)
 
 	def has_rd (self):
-		return self in (self.mpls_vpn,)  # technically self.flow_vpn and self.vpls has an RD but it is not an NLRI
+		return self in (self.mpls_vpn,self.vpls)  # technically self.flow_vpn and self.vpls has an RD but it is not an NLRI
 
 	@staticmethod
 	def value (name):
@@ -105,7 +105,7 @@ class SAFI (int):
 		if name == "mpls-vpn" : return 0x80
 		if name == "flow"     : return 0x85
 		if name == "flow-vpn" : return 0x86
-		if name == "vpls" : return 0x41
+		if name == "vpls"     : return 0x41
 		return None
 
 def known_families ():
