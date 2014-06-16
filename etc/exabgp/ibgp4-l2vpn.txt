@@ -1,0 +1,51 @@
+neighbor 192.168.201.2 {
+    process parsed-route-backend {
+        receive-routes;
+        run etc/exabgp/processes/syslog-1.py;
+    }
+
+	description "parsing l2vpn vpls routes";
+	router-id 192.168.201.1;
+	local-address 192.168.201.1;
+	local-as 54591;
+	peer-as 54591;
+	hold-time 180;
+
+    l2vpn {
+        route site4 {
+            next-hop 192.168.201.1;
+            origin igp;
+            as-path [ 30740 30740 30740 30740 30740 30740 30740 ];
+            local-preference 1;
+            med 2000;
+            rd 192.168.201.1:123;
+            community [ 54591:123];
+            extended-community [ target:54591:6 l2info:encaps:19:control_flag:0:mtu:1500:site_preference:111];
+            originator-id 192.168.22.1;
+            cluster-list [ 3.3.3.3 192.168.201.1 ];
+            #l2vpn part
+            ve 5;
+            block_offset 1;
+            block_size 8;
+            label_base 10702;
+        }
+        route site5 {
+            next-hop 192.168.201.1;
+            origin igp;
+            as-path [ 30740 30740 30740 30740 30740 30740 30740 ];
+            local-preference 1;
+            med 2000;
+            rd 192.168.201.1:124;
+            community [ 54591:123];
+            extended-community [ target:54591:7 l2info:encaps:19:control_flag:0:mtu:1500:site_preference:111];
+            originator-id 192.168.22.1;
+            cluster-list [ 3.3.3.3 192.168.201.1 ];
+            #l2vpn part
+            ve 5;
+            block_offset 1;
+            block_size 8;
+            label_base 10732;
+        }
+
+    }
+}

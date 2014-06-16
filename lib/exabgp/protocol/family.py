@@ -14,20 +14,24 @@ from struct import pack
 class AFI (int):
 	ipv4 = 0x01
 	ipv6 = 0x02
+	l2vpn = 0x19
 
 	Family = {
 		ipv4 : 0x02,  # socket.AF_INET,
 		ipv6 : 0x30,  # socket.AF_INET6,
+		l2vpn : 0x02, # l2vpn info over ipv4 session
 	}
 
 	def __str__ (self):
 		if self == 0x01: return "ipv4"
 		if self == 0x02: return "ipv6"
+		if self == 0x19: return "l2vpn"
 		return "unknown afi"
 
 	def name (self):
 		if self == 0x01: return "inet4"
 		if self == 0x02: return "inet6"
+		if self == 0x19: return "l2vpn"
 		return "unknown afi"
 
 	def pack (self):
@@ -53,7 +57,7 @@ class SAFI (int):
 #	encapsulation = 7           # [RFC5512]
 #
 #	tunel = 64                  # [Nalawade]
-#	vpls = 65                   # [RFC4761]
+	vpls = 65                   # [RFC4761]
 #	bgp_mdt = 66                # [Nalawade]
 #	bgp_4over6 = 67             # [Cui]
 #	bgp_6over4 = 67             # [Cui]
@@ -78,6 +82,7 @@ class SAFI (int):
 		if self == 0x80: return "mpls-vpn"
 		if self == 0x85: return "flow"
 		if self == 0x86: return "flow-vpn"
+		if self == 0x41: return "vpls"
 		return "unknown safi"
 
 	def __str__ (self):
@@ -90,7 +95,7 @@ class SAFI (int):
 		return self in (self.nlri_mpls,self.mpls_vpn)
 
 	def has_rd (self):
-		return self in (self.mpls_vpn,)  # technically self.flow_vpn has an RD but it is not an NLRI
+		return self in (self.mpls_vpn,)  # technically self.flow_vpn and self.vpls has an RD but it is not an NLRI
 
 	@staticmethod
 	def value (name):
@@ -100,6 +105,7 @@ class SAFI (int):
 		if name == "mpls-vpn" : return 0x80
 		if name == "flow"     : return 0x85
 		if name == "flow-vpn" : return 0x86
+		if name == "vpls" : return 0x41
 		return None
 
 def known_families ():
@@ -115,4 +121,5 @@ def known_families ():
 	families.append((AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)))
 	families.append((AFI(AFI.ipv6),SAFI(SAFI.flow_ip)))
 	families.append((AFI(AFI.ipv6),SAFI(SAFI.flow_vpn)))
+	families.append((AFI(AFI.l2vpn),SAFI(SAFI.vpls)))
 	return families
