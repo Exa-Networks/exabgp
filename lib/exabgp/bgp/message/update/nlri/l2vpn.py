@@ -6,13 +6,13 @@ from exabgp.protocol.family import AFI,SAFI
 from exabgp.protocol.ip.address import Address
 
 
-class L2VPN(object):
+class L2VPN (object):
 	'''
 	all parameters are mandatory, however want to be able to init w/o knowing everything
 	in advance. actual check that all of them are configured in configuration.file
 	_check_l2vpn_route() and checkValues()
 	'''
-	def __init__(self,rd=None,label_base=None,block_offset=None,block_size=None,ve=None):
+	def __init__ (self,rd=None,label_base=None,block_offset=None,block_size=None,ve=None):
 		self.rd = rd
 		self.label_base = label_base
 		self.block_offset = block_offset
@@ -20,7 +20,7 @@ class L2VPN(object):
 		self.ve = ve
 
 
-	def setLabelBase(self,data):
+	def setLabelBase (self,data):
 		_str_bad_label = "you tried to config invalid label"
 		number = int(data)
 		if self.block_size:
@@ -32,7 +32,7 @@ class L2VPN(object):
 		self.label_base = number
 		return True
 
-	def setBlockOffset(self,data):
+	def setBlockOffset (self,data):
 		_str_bad_offset = "you tried to config invalid block-offset"
 		number = int(data)
 		if number < 0 or number > 0xFFFF:
@@ -40,7 +40,7 @@ class L2VPN(object):
 		self.block_offset = number
 		return True
 
-	def setBlockSize(self,data):
+	def setBlockSize (self,data):
 		_str_bad_size = "you tried to config invalid block size"
 		number = int(data)
 		if number < 0 or number > 0xFFFF:
@@ -48,15 +48,15 @@ class L2VPN(object):
 		self.block_size = number
 		return True
 
-	def setVE(self,data):
+	def setVE (self,data):
 		_str_bad_size = "you tried to config invalid ve id"
 		number = int(data)
 		if number < 0 or number > 0xFFFF:
 			raise ValueError(_str_bad_size)
 		self.ve = number
 		return True
-	
-	def checkValues(self):
+
+	def checkValues (self):
 		if (self.ve and self.label_base and self.block_offset
 			and self.block_size):
 			return True

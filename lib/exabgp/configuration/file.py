@@ -123,10 +123,6 @@ class Configuration (object):
 	'   split /24\n' \
 	'   watchdog watchdog-name\n' \
 	'   withdraw\n' \
-	'   vpls-endpoint <vpls endpoint id; interger>;\n' \
-	'   vpls-block-offset <interger>;\n' \
-	'   vpls-block-size <integer>;\n' \
-	'   vpls-label-base <integer>;\n' \
 	'}\n' \
 	'\n' \
 	'syntax:\n' \
@@ -149,15 +145,15 @@ class Configuration (object):
 	' split /24' \
 	' watchdog watchdog-name' \
 	' withdraw' \
-	' vpls-endpoint <vpls endpoint id; interger>' \
-	' vpls-block-offset <interger>' \
-	' vpls-block-size <integer>' \
-	' vpls-label-base <integer>' \
-	';\n' \
+	';\n'
 
 	_str_l2vpn_error = \
 	'syntax:\n' \
-	'route site_name {\n' \
+	'vpls site_name {\n' \
+	'   endpoint <vpls endpoint id; interger>' \
+	'   block-offset <interger>' \
+	'   block-size <integer>' \
+	'   label-base <integer>' \
 	'   route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535' \
 	'   next-hop 192.0.1.254;\n' \
 	'   origin IGP|EGP|INCOMPLETE;\n' \
@@ -165,15 +161,28 @@ class Configuration (object):
 	'   med 100;\n' \
 	'   local-preference 100;\n' \
 	'   community [ 65000 65001 65002 ];\n' \
-	'   extended-community [ target:1234:5.6.7.8 target:1.2.3.4:5678 origin:1234:5.6.7.8 origin:1.2.3.4:5678 0x0002FDE800000001 l2info:encaps:19:control_flag:0:mtu:1500:site_preference:111 ]\n' \
+	'   extended-community [ target:1234:5.6.7.8 target:1.2.3.4:5678 origin:1234:5.6.7.8 origin:1.2.3.4:5678 0x0002FDE800000001 l2info:19:0:1500:111 ]\n' \
 	'   originator-id 10.0.0.10;\n' \
 	'   cluster-list [ 10.10.0.1 10.10.0.2 ];\n' \
-	'   vpls-endpoint <interger>;\n' \
-	'   vpls-block-offset <interger>;\n' \
-	'   vpls-block-size <integer>;\n' \
-	'   vpls-label-base <integer>;\n' \
 	'}\n' \
-	'code is totally untested. for lab only. it works with Juniper...\n' \
+	'\n' \
+	'syntax:\n' \
+	'vpls' \
+	' endpoint <vpls endpoint id; interger>' \
+	' block-offset <interger>' \
+	' block-size <integer>' \
+	' label-base <integer>' \
+	' route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535' \
+	' next-hop 192.0.1.254' \
+	' origin IGP|EGP|INCOMPLETE' \
+	' as-path [ as as as as]' \
+	' med 100' \
+	' local-preference 100' \
+	' community [ 65000 65001 65002 ]' \
+	' extended-community [ target:1234:5.6.7.8 target:1.2.3.4:5678 origin:1234:5.6.7.8 origin:1.2.3.4:5678 0x0002FDE800000001 l2info:19:0:1500:111 ]' \
+	' originator-id 10.0.0.10' \
+	' cluster-list [ 10.10.0.1 10.10.0.2 ]' \
+	'\n'
 
 	_str_flow_error = \
 	'syntax:\n' \
@@ -657,6 +666,10 @@ class Configuration (object):
 			if command == 'attribute': self._route_generic_attribute(scope,tokens[1:])
 
 		elif name == 'l2vpn':
+			if command == 'endpoint': return self._route_l2vpn_endpoint(scope,tokens[1:])
+			if command == 'block-offset': return self._route_l2vpn_block_offset(scope,tokens[1:])
+			if command == 'block-size': return self._route_l2vpn_block_size(scope,tokens[1:])
+			if command == 'label-base': return self._route_l2vpn_label_base(scope,tokens[1:])
 			if command == 'origin': return self._route_origin(scope,tokens[1:])
 			if command == 'as-path': return self._route_aspath(scope,tokens[1:])
 			# For legacy with version 2.0.x
@@ -670,10 +683,6 @@ class Configuration (object):
 			if command in ('withdraw','withdrawn'): return self._route_withdraw(scope,tokens[1:])
 			if command == 'community': return self._route_community(scope,tokens[1:])
 			if command == 'extended-community': return self._route_extended_community(scope,tokens[1:])
-			if command == 'vpls-endpoint': return self._route_l2vpn_endpoint(scope,tokens[1:])
-			if command == 'vpls-block-offset': return self._route_l2vpn_block_offset(scope,tokens[1:])
-			if command == 'vpls-block-size': return self._route_l2vpn_block_size(scope,tokens[1:])
-			if command == 'vpls-label-base': return self._route_l2vpn_label_base(scope,tokens[1:])
 
 		elif name == 'flow-route':
 			if command in ('rd','route-distinguisher'): return self._route_rd(scope,tokens[1:],SAFI.flow_vpn)
@@ -1711,11 +1720,12 @@ class Configuration (object):
 
 	def _single_l2vpn_route (self,scope,tokens):
 		#TODO: actual length?(like rd+lb+bo+ve+bs+rd; 14 or so)
-		if len(tokens) <3:
+		if len(tokens) < 3:
 			return False
 
 		if not self._insert_l2vpn_route(scope,tokens):
 			return False
+
 		while len(tokens):
 			command = tokens.pop(0)
 			if command == 'withdraw':
@@ -1766,29 +1776,27 @@ class Configuration (object):
 				if self._route_rd(scope,tokens,SAFI.vpls):
 					continue
 				return False
-			if command == 'vpls-endpoint':
+			if command == 'endpoint':
 				if self._route_l2vpn_endpoint(scope,tokens):
 					continue
 				return False
-			if command == 'vpls-block-offset':
+			if command == 'block-offset':
 				if self._route_l2vpn_block_offset(scope,tokens):
 					continue
 				return False
-			if command == 'vpls-block-size':
+			if command == 'block-size':
 				if self._route_l2vpn_block_size(scope,tokens):
 					continue
 				return False
-			if command == 'vpls-label-base':
+			if command == 'label-base':
 				if self._route_l2vpn_label_base(scope,tokens):
 					continue
 				return False
 			return False
+
 		if not self._check_l2vpn_route(scope):
 			return False
-
 		return True
-
-
 
 	# Command Route
 
@@ -2284,8 +2292,8 @@ class Configuration (object):
 					'next-hop','origin','as-path','med','local-preference',
 					'community','originator-id','cluster-list','extended-community',
 					'rd','route-distinguisher','withdraw',
-					'vpls-endpoint','vpls-block-offset',
-					'vpls-block-size','vpls-label-base'
+					'endpoint','block-offset',
+					'block-size','label-base'
 				]
 			)
 			if r is False: return False

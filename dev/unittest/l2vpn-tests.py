@@ -4,12 +4,10 @@ import unittest
 from exabgp.bgp.message.update.nlri.l2vpn import L2VPNNLRI, L2VPN
 from exabgp.bgp.message.update.attribute.communities import *
 from exabgp.bgp.message.update.nlri.bgp import RouteDistinguisher
-from struct import pack
-import pdb
 
-class TestL2VPN(unittest.TestCase):
+class TestL2VPN (unittest.TestCase):
 	@staticmethod
-	def generate_rd(rd):
+	def generate_rd (rd):
 		"""
 		only ip:num is supported atm.code from configure.file
 		"""
@@ -22,7 +20,7 @@ class TestL2VPN(unittest.TestCase):
 		bin_rd = ''.join(bytes)
 		return RouteDistinguisher(bin_rd)
 
-	def setUp(self):
+	def setUp (self):
 		'''
 		l2vpn:endpoint:3:base:262145:offset:1:size:8: route-distinguisher 172.30.5.4:13
 		l2vpn:endpoint:3:base:262145:offset:1:size:8: route-distinguisher 172.30.5.3:11
@@ -37,7 +35,7 @@ class TestL2VPN(unittest.TestCase):
 		'''
 		self.encoded_ext_community = bytearray.fromhex('0002 D53F 0000 0006 800A 1300 0000 0064')
 
-	def test_l2vpn_decode(self):
+	def test_l2vpn_decode (self):
 		'''
 		we do know what routes Juniper sends us
 		and we testing decoded values against it
@@ -55,7 +53,7 @@ class TestL2VPN(unittest.TestCase):
 		self.assertEqual(l2vpn_route2.label_base,262145)
 		self.assertEqual(l2vpn_route2.block_size,8)
 
-	def test_l2vpn_encode(self):
+	def test_l2vpn_encode (self):
 		'''
 		we are encoding routes and testing em against what we have recvd from
 		Juniper
@@ -68,14 +66,18 @@ class TestL2VPN(unittest.TestCase):
 		(packing with 0x1 20bit labels to 24bit and we dont do it; so to pass this tests we dont
 		include last 4bits in assert(which are 0x0 in our case and 0x1 in junipers)
 		'''
-		self.assertEqual(encoded_l2vpn.pack().encode('hex')[0:37],
-										 str(self.encoded_l2vpn_nlri1).encode('hex')[0:37])
+		self.assertEqual(
+			encoded_l2vpn.pack().encode('hex')[0:37],
+			str(self.encoded_l2vpn_nlri1).encode('hex')[0:37]
+		)
 		encoded_l2vpn.nlri = self.decoded_l2vpn_nlri2
 		encoded_l2vpn.rd = self.decoded_l2vpn_nlri2.rd
-		self.assertEqual(encoded_l2vpn.pack().encode('hex')[0:37],
-										 str(self.encoded_l2vpn_nlri2).encode('hex')[0:37])
+		self.assertEqual(
+			encoded_l2vpn.pack().encode('hex')[0:37],
+			str(self.encoded_l2vpn_nlri2).encode('hex')[0:37]
+		)
 
-	def test_l2info_community_decode(self):
+	def test_l2info_community_decode (self):
 		'''
 		Juniper sends us both target and l2info; so we test only against
 		l2info.
@@ -83,7 +85,7 @@ class TestL2VPN(unittest.TestCase):
 		l2info_com = ECommunity(str(self.encoded_ext_community)[8:16])
 		self.assertEqual(l2info_com,to_ExtendedCommunity('l2info:19:0:0:100'))
 
-	def test_l2info_community_encode(self):
+	def test_l2info_community_encode (self):
 		l2info_com_encoded = to_ExtendedCommunity('l2info:19:0:0:100')
 		self.assertEqual(l2info_com_encoded.pack(),str(self.encoded_ext_community)[8:16])
 
