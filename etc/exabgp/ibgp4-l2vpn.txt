@@ -13,6 +13,11 @@ neighbor 192.168.201.2 {
 
 	l2vpn {
 		vpls site4 {
+			endpoint 5;
+			base 10702;
+			offset 1;
+			size 8;
+
 			next-hop 192.168.201.1;
 			origin igp;
 			as-path [ 30740 30740 30740 30740 30740 30740 30740 ];
@@ -24,13 +29,13 @@ neighbor 192.168.201.2 {
 			extended-community [ target:54591:6 l2info:19:0:1500:111];
 			originator-id 192.168.22.1;
 			cluster-list [ 3.3.3.3 192.168.201.1 ];
-			#l2vpn part
-			endpoint 5;
-			block-offset 1;
-			block-size 8;
-			label-base 10702;
 		}
 		vpls site5 {
+			endpoint 5;
+			base 10732;
+			offset 1;
+			size 8;
+
 			next-hop 192.168.201.1;
 			origin igp;
 			as-path [ 30740 30740 30740 30740 30740 30740 30740 ];
@@ -42,11 +47,6 @@ neighbor 192.168.201.2 {
 			extended-community [ target:54591:6 l2info:19:0:1500:111];
 			originator-id 192.168.22.1;
 			cluster-list [ 3.3.3.3 192.168.201.1 ];
-			#l2vpn part
-			endpoint 5;
-			block-offset 1;
-			block-size 8;
-			label-base 10732;
 		}
 
 	}

@@ -151,9 +151,9 @@ class Configuration (object):
 	'syntax:\n' \
 	'vpls site_name {\n' \
 	'   endpoint <vpls endpoint id; interger>' \
-	'   block-offset <interger>' \
-	'   block-size <integer>' \
-	'   label-base <integer>' \
+	'   base <label base; integer>' \
+	'   offset <block offet; interger>' \
+	'   size <blocl size; integer>' \
 	'   route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535' \
 	'   next-hop 192.0.1.254;\n' \
 	'   origin IGP|EGP|INCOMPLETE;\n' \
@@ -164,14 +164,15 @@ class Configuration (object):
 	'   extended-community [ target:1234:5.6.7.8 target:1.2.3.4:5678 origin:1234:5.6.7.8 origin:1.2.3.4:5678 0x0002FDE800000001 l2info:19:0:1500:111 ]\n' \
 	'   originator-id 10.0.0.10;\n' \
 	'   cluster-list [ 10.10.0.1 10.10.0.2 ];\n' \
+	'   withdraw\n' \
 	'}\n' \
 	'\n' \
 	'syntax:\n' \
 	'vpls' \
 	' endpoint <vpls endpoint id; interger>' \
-	' block-offset <interger>' \
-	' block-size <integer>' \
-	' label-base <integer>' \
+	' offset <interger>' \
+	' size <integer>' \
+	' base <integer>' \
 	' route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535' \
 	' next-hop 192.0.1.254' \
 	' origin IGP|EGP|INCOMPLETE' \
@@ -182,6 +183,7 @@ class Configuration (object):
 	' extended-community [ target:1234:5.6.7.8 target:1.2.3.4:5678 origin:1234:5.6.7.8 origin:1.2.3.4:5678 0x0002FDE800000001 l2info:19:0:1500:111 ]' \
 	' originator-id 10.0.0.10' \
 	' cluster-list [ 10.10.0.1 10.10.0.2 ]' \
+	' withdraw' \
 	'\n'
 
 	_str_flow_error = \
@@ -667,9 +669,9 @@ class Configuration (object):
 
 		elif name == 'l2vpn':
 			if command == 'endpoint': return self._route_l2vpn_endpoint(scope,tokens[1:])
-			if command == 'block-offset': return self._route_l2vpn_block_offset(scope,tokens[1:])
-			if command == 'block-size': return self._route_l2vpn_block_size(scope,tokens[1:])
-			if command == 'label-base': return self._route_l2vpn_label_base(scope,tokens[1:])
+			if command == 'offset': return self._route_l2vpn_block_offset(scope,tokens[1:])
+			if command == 'size': return self._route_l2vpn_block_size(scope,tokens[1:])
+			if command == 'base': return self._route_l2vpn_label_base(scope,tokens[1:])
 			if command == 'origin': return self._route_origin(scope,tokens[1:])
 			if command == 'as-path': return self._route_aspath(scope,tokens[1:])
 			# For legacy with version 2.0.x
@@ -1720,7 +1722,7 @@ class Configuration (object):
 
 	def _single_l2vpn_route (self,scope,tokens):
 		#TODO: actual length?(like rd+lb+bo+ve+bs+rd; 14 or so)
-		if len(tokens) < 3:
+		if len(tokens) < 10:
 			return False
 
 		if not self._insert_l2vpn_route(scope,tokens):
@@ -1780,15 +1782,15 @@ class Configuration (object):
 				if self._route_l2vpn_endpoint(scope,tokens):
 					continue
 				return False
-			if command == 'block-offset':
+			if command == 'offset':
 				if self._route_l2vpn_block_offset(scope,tokens):
 					continue
 				return False
-			if command == 'block-size':
+			if command == 'size':
 				if self._route_l2vpn_block_size(scope,tokens):
 					continue
 				return False
-			if command == 'label-base':
+			if command == 'base':
 				if self._route_l2vpn_label_base(scope,tokens):
 					continue
 				return False
@@ -2292,8 +2294,8 @@ class Configuration (object):
 					'next-hop','origin','as-path','med','local-preference',
 					'community','originator-id','cluster-list','extended-community',
 					'rd','route-distinguisher','withdraw',
-					'endpoint','block-offset',
-					'block-size','label-base'
+					'endpoint','offset',
+					'size','base'
 				]
 			)
 			if r is False: return False

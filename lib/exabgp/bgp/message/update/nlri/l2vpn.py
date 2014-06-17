@@ -79,7 +79,7 @@ class L2VPN (object):
 		return cls(rd,label_base,block_offset,block_size,ve)
 
 	def pprint (self):
-		return "l2vpn:endpoint:%s:base:%s:offset:%s:size:%s:%s" % (
+		return "vpls endpoint %s base %s offset %s size %s %s" % (
 			self.ve,
 			self.label_base,
 			self.block_offset,
