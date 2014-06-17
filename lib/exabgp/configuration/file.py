@@ -804,6 +804,9 @@ class Configuration (object):
 		elif name == 'static':
 			if command == 'route': return self._single_static_route(scope,tokens[1:])
 
+		elif name == 'l2vpn':
+			if command == 'vpls': return self._single_l2vpn_route(scope,tokens[1:])
+
 		elif name == 'operational':
 			if command == 'asm': return self._single_operational_asm(scope,tokens[1])
 			# it does not make sense to have adm
@@ -1706,6 +1709,89 @@ class Configuration (object):
 
 		return self._split_last_route(scope)
 
+	def _single_l2vpn_route (self,scope,tokens):
+		#TODO: actual length?(like rd+lb+bo+ve+bs+rd; 14 or so)
+		if len(tokens) <3:
+			return False
+
+		if not self._insert_l2vpn_route(scope,tokens):
+			return False
+
+		while len(tokens):
+			command = tokens.pop(0)
+			if command == 'withdraw':
+				if self._route_withdraw(scope,tokens):
+					continue
+				return False
+
+			if len(tokens) < 1:
+				return False
+
+			if command == 'next-hop':
+				if self._route_next_hop(scope,tokens):
+					continue
+				return False
+			if command == 'origin':
+				if self._route_origin(scope,tokens):
+					continue
+				return False
+			if command == 'as-path':
+				if self._route_aspath(scope,tokens):
+					continue
+				return False
+			if command == 'med':
+				if self._route_med(scope,tokens):
+					continue
+				return False
+			if command == 'local-preference':
+				if self._route_local_preference(scope,tokens):
+					continue
+				return False
+			if command == 'community':
+				if self._route_community(scope,tokens):
+					continue
+				return False
+			if command == 'originator-id':
+				if self._route_originator_id(scope,tokens):
+					continue
+				return False
+			if command == 'cluster-list':
+				if self._route_cluster_list(scope,tokens):
+					continue
+				return False
+			if command == 'extended-community':
+				if self._route_extended_community(scope,tokens):
+					continue
+				return False
+			if command in ('rd','route-distinguisher'):
+				if self._route_rd(scope,tokens,SAFI.mpls_vpn):
+					continue
+				return False
+			if command == 'vpls-endpoint':
+				if self._route_l2vpn_endpoint(scope,tokens):
+					continue
+				return False
+			if command == 'vpls-block-offset':
+				if self._route_l2vpn_block_offset(scope,tokens):
+					continue
+				return False
+			if command == 'vpls-block-size':
+				if self._route_l2vpn_block_size(scope,tokens):
+					continue
+				return False
+			if command == 'vpls-label-base':
+				if self._route_l2vpn_label_base(scope,tokens):
+					continue
+				return False
+			return False
+
+		if not self._check_l2vpn_route(scope):
+			return False
+
+		return self._split_last_route(scope)
+
+
+
 	# Command Route
 
 	def _route_generic_attribute (self,scope,tokens):
@@ -2161,7 +2247,7 @@ class Configuration (object):
 			r = self._dispatch(
 				scope,'l2vpn',
 				['vpls',],
-				[]
+				['vpls',]
 			)
 			if r is False: return False
 			if r is None: break
@@ -2296,22 +2382,22 @@ class Configuration (object):
 
 	def _route_l2vpn_endpoint(self, scope, token):
 		nlri = scope[-1]['announce'][-1].nlri
-		nlri.nlri.setVE(token[0])
+		nlri.nlri.setVE(token.pop(0))
 		return True
 
 	def _route_l2vpn_block_size(self, scope, token):
 		nlri = scope[-1]['announce'][-1].nlri
-		nlri.nlri.setBlockSize(token[0])
+		nlri.nlri.setBlockSize(token.pop(0))
 		return True
 
 	def _route_l2vpn_block_offset(self, scope, token):
 		nlri = scope[-1]['announce'][-1].nlri
-		nlri.nlri.setBlockOffset(token[0])
+		nlri.nlri.setBlockOffset(token.pop(0))
 		return True
 
 	def _route_l2vpn_label_base(self, scope, token):
 		nlri = scope[-1]['announce'][-1].nlri
-		nlri.nlri.setLabelBase(token[0])
+		nlri.nlri.setLabelBase(token.pop(0))
 		return True
 
 
