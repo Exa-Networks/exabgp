@@ -1784,11 +1784,10 @@ class Configuration (object):
 					continue
 				return False
 			return False
-
 		if not self._check_l2vpn_route(scope):
 			return False
 
-		return self._split_last_route(scope)
+		return True
 
 
 
@@ -2292,11 +2291,6 @@ class Configuration (object):
 			)
 			if r is False: return False
 			if r is None: break
-
-		if self._flow_state != 'out':
-			self._error = self._str_flow_error
-			if self.debug: raise
-			return False
 
 		return True
 
