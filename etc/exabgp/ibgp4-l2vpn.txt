@@ -12,7 +12,7 @@ neighbor 192.168.201.2 {
 	hold-time 180;
 
     l2vpn {
-        route site4 {
+        vpls site4 {
             next-hop 192.168.201.1;
             origin igp;
             as-path [ 30740 30740 30740 30740 30740 30740 30740 ];
@@ -30,7 +30,7 @@ neighbor 192.168.201.2 {
             vpls-block-size 8;
             vpls-label-base 10702;
         }
-        route site5 {
+        vpls site5 {
             next-hop 192.168.201.1;
             origin igp;
             as-path [ 30740 30740 30740 30740 30740 30740 30740 ];

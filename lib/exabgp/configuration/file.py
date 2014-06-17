@@ -598,7 +598,7 @@ class Configuration (object):
 				return False
 
 		if name == 'l2vpn':
-			if command == 'route':
+			if command == 'vpls':
 				if self._multi_l2vpn_route(scope,tokens[1:]):
 					return self._check_l2vpn_route(scope)
 				return False
@@ -2160,7 +2160,7 @@ class Configuration (object):
 		while True:
 			r = self._dispatch(
 				scope,'l2vpn',
-				['route',],
+				['vpls',],
 				[]
 			)
 			if r is False: return False
