@@ -1716,7 +1716,6 @@ class Configuration (object):
 
 		if not self._insert_l2vpn_route(scope,tokens):
 			return False
-
 		while len(tokens):
 			command = tokens.pop(0)
 			if command == 'withdraw':
@@ -1764,7 +1763,7 @@ class Configuration (object):
 					continue
 				return False
 			if command in ('rd','route-distinguisher'):
-				if self._route_rd(scope,tokens,SAFI.mpls_vpn):
+				if self._route_rd(scope,tokens,SAFI.vpls):
 					continue
 				return False
 			if command == 'vpls-endpoint':
