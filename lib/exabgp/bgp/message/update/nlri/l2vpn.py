@@ -7,7 +7,11 @@ from exabgp.protocol.ip.address import Address
 
 
 class L2VPN(object):
-	# XXX: really, all the parameters are optional ??
+	'''
+	all parameters are mandatory, however want to be able to init w/o knowing everything
+	in advance. actual check that all of them are configured in configuration.file
+	_check_l2vpn_route() and checkValues()
+	'''
 	def __init__(self,rd=None,label_base=None,block_offset=None,block_size=None,ve=None):
 		self.rd = rd
 		self.label_base = label_base
@@ -51,6 +55,12 @@ class L2VPN(object):
 			raise ValueError(_str_bad_size)
 		self.ve = number
 		return True
+	
+	def checkValues(self):
+		if (self.ve and self.label_base and self.block_offset
+			and self.block_size):
+			return True
+		return False
 
 	@classmethod
 	def from_packet (cls,bgp):
@@ -68,8 +78,7 @@ class L2VPN(object):
 		label_base = unpack('!I',bgp[16:19]+'\x00')[0]>>12
 		return cls(rd,label_base,block_offset,block_size,ve)
 
-	# XXX: This does not look like the right API .. where is that used again ??
-	def nlri (self):
+	def pprint (self):
 		return "l2vpn:endpoint:%s:base:%s:offset:%s:size:%s:%s" % (
 			self.ve,
 			self.label_base,
@@ -79,10 +88,10 @@ class L2VPN(object):
 		)
 
 	def __call__ (self):
-		return self.nlri()
+		return self.pprint()
 
 	def __str__ (self):
-		return self.nlri()
+		return self.pprint()
 
 
 class L2VPNNLRI (Address):
