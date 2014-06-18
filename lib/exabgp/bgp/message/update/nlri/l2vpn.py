@@ -95,7 +95,7 @@ class L2VPN (object):
 
 
 class L2VPNNLRI (Address):
-	def __init__ (self,bgp=None,action=out.announce,nexthop=None):
+	def __init__ (self,bgp=None,action=OUT.announce,nexthop=None):
 		Address.__init__(self,AFI.l2vpn,SAFI.vpls)
 		self.action = action
 		self.nexthop = nexthop
