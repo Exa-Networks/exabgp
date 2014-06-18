@@ -16,7 +16,7 @@ from exabgp.bgp.message.open.asn import AS_TRANS
 class ASPath (Attribute):
 	AS_SET      = 0x01
 	AS_SEQUENCE = 0x02
-	ASN_4       = False
+	ASN4        = False
 
 	ID = AttributeID.AS_PATH
 	FLAG = Flag.TRANSITIVE
