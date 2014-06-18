@@ -51,6 +51,6 @@ class NextHop (Attribute,Inet):
 	def __cmp__(self,other):
 		if not isinstance(other,self.__class__):
 			return -1
-		if self.next_hop.pack() != other.next_hop.pack():
+		if self.pack() != other.pack():
 			return -1
 		return 0
