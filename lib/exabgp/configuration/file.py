@@ -98,7 +98,6 @@ class Configuration (object):
 #	'  hold-time 180;\n' \
 
 	_str_bad_flow = "you tried to filter a flow using an invalid port for a component .."
-
 	_str_route_error = \
 	'community, extended-communities and as-path can take a single community as parameter.\n' \
 	'only next-hop is mandatory\n' \
@@ -262,6 +261,25 @@ class Configuration (object):
 		self.logger = Logger()
 		self._text = text
 		self._fname = fname
+		self._internal_func_matrix = {
+      'endpoint': self._route_l2vpn_endpoint,
+      'offset': self._route_l2vpn_block_offset,
+      'size': self._route_l2vpn_block_size,
+      'base': self._route_l2vpn_label_base,
+      'origin': self._route_origin,
+      'as-path': self._route_aspath,
+      'med': self._route_med,
+      'next-hop': self._flow_route_next_hop,
+      'local-preference': self._route_local_preference,
+      'originator-id': self._route_originator_id,
+      'cluster-list': self._route_cluster_list,
+      'rd': self._route_rd,
+      'route-distinguisher': self._route_rd,
+      'withdraw': self._route_withdraw,
+      'withdrawn': self._route_withdraw,
+      'community': self._route_community,
+      'extended-community': self._route_extended_community,
+  }
 		self._clear()
 
 	def _clear (self):
@@ -668,23 +686,11 @@ class Configuration (object):
 			if command == 'attribute': self._route_generic_attribute(scope,tokens[1:])
 
 		elif name == 'l2vpn':
-			if command == 'endpoint': return self._route_l2vpn_endpoint(scope,tokens[1:])
-			if command == 'offset': return self._route_l2vpn_block_offset(scope,tokens[1:])
-			if command == 'size': return self._route_l2vpn_block_size(scope,tokens[1:])
-			if command == 'base': return self._route_l2vpn_label_base(scope,tokens[1:])
-			if command == 'origin': return self._route_origin(scope,tokens[1:])
-			if command == 'as-path': return self._route_aspath(scope,tokens[1:])
-			# For legacy with version 2.0.x
-			if command == 'med': return self._route_med(scope,tokens[1:])
-			if command == 'next-hop': return self._flow_route_next_hop(scope,tokens[1:])
-			if command == 'local-preference': return self._route_local_preference(scope,tokens[1:])
-			if command == 'originator-id': return self._route_originator_id(scope,tokens[1:])
-			if command == 'cluster-list': return self._route_cluster_list(scope,tokens[1:])
-			if command in ('rd','route-distinguisher'): return self._route_rd(scope,tokens[1:],SAFI.vpls)
-			# withdrawn is here to not break legacy code
-			if command in ('withdraw','withdrawn'): return self._route_withdraw(scope,tokens[1:])
-			if command == 'community': return self._route_community(scope,tokens[1:])
-			if command == 'extended-community': return self._route_extended_community(scope,tokens[1:])
+			if command in self._internal_func_matrix:
+				if command in ('rd','route-distinguisher'):
+					return self._internal_func_matrix[command](scope,tokens[1:],SAFI.vpls)
+				else:
+					return self._internal_func_matrix[command](scope,tokens[1:])
 
 		elif name == 'flow-route':
 			if command in ('rd','route-distinguisher'): return self._route_rd(scope,tokens[1:],SAFI.flow_vpn)
@@ -1730,71 +1736,18 @@ class Configuration (object):
 
 		while len(tokens):
 			command = tokens.pop(0)
-			if command == 'withdraw':
-				if self._route_withdraw(scope,tokens):
-					continue
-				return False
-
 			if len(tokens) < 1:
 				return False
-
-			if command == 'next-hop':
-				if self._route_next_hop(scope,tokens):
-					continue
-				return False
-			if command == 'origin':
-				if self._route_origin(scope,tokens):
-					continue
-				return False
-			if command == 'as-path':
-				if self._route_aspath(scope,tokens):
-					continue
-				return False
-			if command == 'med':
-				if self._route_med(scope,tokens):
-					continue
-				return False
-			if command == 'local-preference':
-				if self._route_local_preference(scope,tokens):
-					continue
-				return False
-			if command == 'community':
-				if self._route_community(scope,tokens):
-					continue
-				return False
-			if command == 'originator-id':
-				if self._route_originator_id(scope,tokens):
-					continue
-				return False
-			if command == 'cluster-list':
-				if self._route_cluster_list(scope,tokens):
-					continue
-				return False
-			if command == 'extended-community':
-				if self._route_extended_community(scope,tokens):
-					continue
-				return False
-			if command in ('rd','route-distinguisher'):
-				if self._route_rd(scope,tokens,SAFI.vpls):
-					continue
-				return False
-			if command == 'endpoint':
-				if self._route_l2vpn_endpoint(scope,tokens):
-					continue
-				return False
-			if command == 'offset':
-				if self._route_l2vpn_block_offset(scope,tokens):
-					continue
-				return False
-			if command == 'size':
-				if self._route_l2vpn_block_size(scope,tokens):
-					continue
-				return False
-			if command == 'base':
-				if self._route_l2vpn_label_base(scope,tokens):
-					continue
-				return False
-			return False
+			if command in self._internal_func_matrix:
+				if command in ('rd','route-distinguisher'):
+					if self._internal_func_matrix[command](scope,tokens,SAFI.vpls):
+						continue
+				else:
+					if self._internal_func_matrix[command](scope,tokens):
+						continue
+			else:
+				return False	
+			return False	
 
 		if not self._check_l2vpn_route(scope):
 			return False
