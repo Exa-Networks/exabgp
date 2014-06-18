@@ -287,6 +287,36 @@ class Configuration (object):
 			'extended-community': self._route_extended_community,
 			'attribute': self._route_generic_attribute,
 		}
+		self._dispatch_flow_cfg = {
+			'rd': self._route_rd,
+			'route-distinguisher': self._route_rd,
+			'next-hop': self._flow_route_next_hop,
+			'source': self._flow_source,
+			'destination': self._flow_destination,
+			'port': self._flow_route_anyport,
+			'source-port': self._flow_route_source_port,
+			'destination-port': self._flow_route_destination_port,
+			'protocol': self._flow_route_protocol,
+			'next-header': self._flow_route_next_header,
+			'tcp-flags': self._flow_route_tcp_flags,
+			'icmp-type': self._flow_route_icmp_type,
+			'icmp-code': self._flow_route_icmp_code,
+			'fragment': self._flow_route_fragment,
+			'dscp': self._flow_route_dscp,
+			'traffic-class': self._flow_route_traffic_class,
+			'packet-length': self._flow_route_packet_length,
+			'flow-label': self._flow_route_flow_label,
+			'accept': self._flow_route_accept,
+			'discard': self._flow_route_discard,
+			'rate-limit': self._flow_route_rate_limit,
+			'redirect': self._flow_route_redirect,
+			'redirect-to-nexthop': self._flow_route_redirect_next_hop,
+			'copy': self._flow_route_copy,
+			'mark': self._flow_route_mark,
+			'action': self._flow_route_action,
+			'community': self._route_community,
+			'extended-community': self._route_extended_community,
+		}
 		self._dispatch_vpls_cfg = {
       'endpoint': self._route_l2vpn_endpoint,
       'offset': self._route_l2vpn_block_offset,
@@ -295,7 +325,7 @@ class Configuration (object):
       'origin': self._route_origin,
       'as-path': self._route_aspath,
       'med': self._route_med,
-      'next-hop': self._flow_route_next_hop,
+      'next-hop': self._route_next_hop,
       'local-preference': self._route_local_preference,
       'originator-id': self._route_originator_id,
       'cluster-list': self._route_cluster_list,
@@ -701,38 +731,19 @@ class Configuration (object):
 					return self._dispatch_vpls_cfg[command](scope,tokens[1:])
 
 		elif name == 'flow-route':
-			if command in ('rd','route-distinguisher'): return self._route_rd(scope,tokens[1:],SAFI.flow_vpn)
-			if command == 'next-hop': return self._flow_route_next_hop(scope,tokens[1:])
+			if command in self._dispatch_flow_cfg:
+				if command in ('rd','route-distinguisher'):
+					return self._dispatch_flow_cfg[command](scope,tokens[1:],SAFI.flow_vpn)
+				else:
+					return self._dispatch_flow_cfg[command](scope,tokens[1:])
 
 		elif name == 'flow-match':
-			if command == 'source': return self._flow_source(scope,tokens[1:])
-			if command == 'destination': return self._flow_destination(scope,tokens[1:])
-			if command == 'port': return self._flow_route_anyport(scope,tokens[1:])
-			if command == 'source-port': return self._flow_route_source_port(scope,tokens[1:])
-			if command == 'destination-port': return self._flow_route_destination_port(scope,tokens[1:])
-			if command == 'protocol': return self._flow_route_protocol(scope,tokens[1:])
-			if command == 'next-header': return self._flow_route_next_header(scope,tokens[1:])
-			if command == 'tcp-flags': return self._flow_route_tcp_flags(scope,tokens[1:])
-			if command == 'icmp-type': return self._flow_route_icmp_type(scope,tokens[1:])
-			if command == 'icmp-code': return self._flow_route_icmp_code(scope,tokens[1:])
-			if command == 'fragment': return self._flow_route_fragment(scope,tokens[1:])
-			if command == 'dscp': return self._flow_route_dscp(scope,tokens[1:])
-			if command == 'traffic-class': return self._flow_route_traffic_class(scope,tokens[1:])
-			if command == 'packet-length': return self._flow_route_packet_length(scope,tokens[1:])
-			if command == 'flow-label': return self._flow_route_flow_label(scope,tokens[1:])
+			if command in self._dispatch_flow_cfg:
+					return self._dispatch_flow_cfg[command](scope,tokens[1:])
 
 		elif name == 'flow-then':
-			if command == 'accept': return self._flow_route_accept(scope,tokens[1:])
-			if command == 'discard': return self._flow_route_discard(scope,tokens[1:])
-			if command == 'rate-limit': return self._flow_route_rate_limit(scope,tokens[1:])
-			if command == 'redirect': return self._flow_route_redirect(scope,tokens[1:])
-			if command == 'redirect-to-nexthop': return self._flow_route_redirect_next_hop(scope,tokens[1:])
-			if command == 'copy': return self._flow_route_copy(scope,tokens[1:])
-			if command == 'mark': return self._flow_route_mark(scope,tokens[1:])
-			if command == 'action': return self._flow_route_action(scope,tokens[1:])
-
-			if command == 'community': return self._route_community(scope,tokens[1:])
-			if command == 'extended-community': return self._route_extended_community(scope,tokens[1:])
+			if command in self._dispatch_flow_cfg:
+					return self._dispatch_flow_cfg[command](scope,tokens[1:])
 
 		if name in ('neighbor','group'):
 			if command == 'description': return self._set_description(scope,tokens[1:])
