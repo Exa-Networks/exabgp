@@ -261,7 +261,33 @@ class Configuration (object):
 		self.logger = Logger()
 		self._text = text
 		self._fname = fname
-		self._internal_func_matrix = {
+		self._dispatch_route_cfg = {
+			'origin': self._route_origin,
+			'as-path': self._route_aspath,
+			# For legacy with version 2.0.x
+			'as-sequence': self._route_aspath,
+			'med': self._route_med,
+			'aigp': self._route_aigp,
+			'next-hop': self._route_next_hop,
+			'local-preference': self._route_local_preference,
+			'atomic-aggregate': self._route_atomic_aggregate,
+			'aggregator': self._route_aggregator,
+			'path-information': self._route_path_information,
+			'originator-id': self._route_originator_id,
+			'cluster-list': self._route_cluster_list,
+			'split': self._route_split,
+			'label': self._route_label,
+			'rd': self._route_rd,
+			'route-distinguisher': self._route_rd,
+			'watchdog': self._route_watchdog,
+			# withdrawn is here to not break legacy code
+			'withdraw': self._route_withdraw,
+			'withdrawn': self._route_withdraw,
+			'community': self._route_community,
+			'extended-community': self._route_extended_community,
+			'attribute': self._route_generic_attribute,
+		}
+		self._dispatch_vpls_cfg = {
       'endpoint': self._route_l2vpn_endpoint,
       'offset': self._route_l2vpn_block_offset,
       'size': self._route_l2vpn_block_size,
@@ -279,7 +305,7 @@ class Configuration (object):
       'withdrawn': self._route_withdraw,
       'community': self._route_community,
       'extended-community': self._route_extended_community,
-  }
+  	}
 		self._clear()
 
 	def _clear (self):
@@ -661,36 +687,18 @@ class Configuration (object):
 			return False
 
 		elif name == 'route':
-			if command == 'origin': return self._route_origin(scope,tokens[1:])
-			if command == 'as-path': return self._route_aspath(scope,tokens[1:])
-			# For legacy with version 2.0.x
-			if command == 'as-sequence': return self._route_aspath(scope,tokens[1:])
-			if command == 'med': return self._route_med(scope,tokens[1:])
-			if command == 'aigp': return self._route_aigp(scope,tokens[1:])
-			if command == 'next-hop': return self._route_next_hop(scope,tokens[1:])
-			if command == 'local-preference': return self._route_local_preference(scope,tokens[1:])
-			if command == 'atomic-aggregate': return self._route_atomic_aggregate(scope,tokens[1:])
-			if command == 'aggregator': return self._route_aggregator(scope,tokens[1:])
-			if command == 'path-information': return self._route_path_information(scope,tokens[1:])
-			if command == 'originator-id': return self._route_originator_id(scope,tokens[1:])
-			if command == 'cluster-list': return self._route_cluster_list(scope,tokens[1:])
-			if command == 'split': return self._route_split(scope,tokens[1:])
-			if command == 'label': return self._route_label(scope,tokens[1:])
-			if command in ('rd','route-distinguisher'): return self._route_rd(scope,tokens[1:],SAFI.mpls_vpn)
-			if command == 'watchdog': return self._route_watchdog(scope,tokens[1:])
-			# withdrawn is here to not break legacy code
-			if command in ('withdraw','withdrawn'): return self._route_withdraw(scope,tokens[1:])
-
-			if command == 'community': return self._route_community(scope,tokens[1:])
-			if command == 'extended-community': return self._route_extended_community(scope,tokens[1:])
-			if command == 'attribute': self._route_generic_attribute(scope,tokens[1:])
+			if command in self._dispatch_route_cfg:
+				if command in ('rd','route-distinguisher'):
+					return self._dispatch_route_cfg[command](scope,tokens[1:],SAFI.mpls_vpn)
+				else:
+					return self._dispatch_route_cfg[command](scope,tokens[1:])
 
 		elif name == 'l2vpn':
-			if command in self._internal_func_matrix:
+			if command in self._dispatch_vpls_cfg:
 				if command in ('rd','route-distinguisher'):
-					return self._internal_func_matrix[command](scope,tokens[1:],SAFI.vpls)
+					return self._dispatch_vpls_cfg[command](scope,tokens[1:],SAFI.vpls)
 				else:
-					return self._internal_func_matrix[command](scope,tokens[1:])
+					return self._dispatch_vpls_cfg[command](scope,tokens[1:])
 
 		elif name == 'flow-route':
 			if command in ('rd','route-distinguisher'): return self._route_rd(scope,tokens[1:],SAFI.flow_vpn)
@@ -1635,91 +1643,19 @@ class Configuration (object):
 
 		while len(tokens):
 			command = tokens.pop(0)
-			if command == 'withdraw':
-				if self._route_withdraw(scope,tokens):
-					continue
-				return False
-
 			if len(tokens) < 1:
 				return False
 
-			if command == 'next-hop':
-				if self._route_next_hop(scope,tokens):
-					continue
-				return False
-			if command == 'origin':
-				if self._route_origin(scope,tokens):
-					continue
-				return False
-			if command == 'as-path':
-				if self._route_aspath(scope,tokens):
-					continue
-				return False
-			if command == 'as-sequence':
-				if self._route_aspath(scope,tokens):
-					continue
-				return False
-			if command == 'med':
-				if self._route_med(scope,tokens):
-					continue
-				return False
-			if command == 'aigp':
-				if self._route_aigp(scope,tokens):
-					continue
-				return False
-			if command == 'local-preference':
-				if self._route_local_preference(scope,tokens):
-					continue
-				return False
-			if command == 'atomic-aggregate':
-				if self._route_atomic_aggregate(scope,tokens):
-					continue
-				return False
-			if command == 'aggregator':
-				if self._route_aggregator(scope,tokens):
-					continue
-				return False
-			if command == 'path-information':
-				if self._route_path_information(scope,tokens):
-					continue
-				return False
-			if command == 'community':
-				if self._route_community(scope,tokens):
-					continue
-				return False
-			if command == 'originator-id':
-				if self._route_originator_id(scope,tokens):
-					continue
-				return False
-			if command == 'cluster-list':
-				if self._route_cluster_list(scope,tokens):
-					continue
-				return False
-			if command == 'extended-community':
-				if self._route_extended_community(scope,tokens):
-					continue
-				return False
-			if command == 'split':
-				if self._route_split(scope,tokens):
-					continue
-				return False
-			if command == 'label':
-				if self._route_label(scope,tokens):
-					continue
-				return False
-			if command in ('rd','route-distinguisher'):
-				if self._route_rd(scope,tokens,SAFI.mpls_vpn):
-					continue
-				return False
-			if command == 'watchdog':
-				if self._route_watchdog(scope,tokens):
-					continue
-				return False
-			if command == 'attribute':
-				if self._route_generic_attribute(scope,tokens):
-					continue
-				return False
-			return False
+			if command in self._dispatch_route_cfg:
+				if command in ('rd','route-distinguisher'):
+					if self._dispatch_route_cfg[command](scope,tokens,SAFI.mpls_vpn):
+						continue
+				else:
+					if self._dispatch_route_cfg[command](scope,tokens):
+						continue
+			else:
+				return False	
+			return False	
 
 		if not self._check_static_route(scope):
 			return False
@@ -1738,12 +1674,12 @@ class Configuration (object):
 			command = tokens.pop(0)
 			if len(tokens) < 1:
 				return False
-			if command in self._internal_func_matrix:
+			if command in self._dispatch_vpls_cfg:
 				if command in ('rd','route-distinguisher'):
-					if self._internal_func_matrix[command](scope,tokens,SAFI.vpls):
+					if self._dispatch_vpls_cfg[command](scope,tokens,SAFI.vpls):
 						continue
 				else:
-					if self._internal_func_matrix[command](scope,tokens):
+					if self._dispatch_vpls_cfg[command](scope,tokens):
 						continue
 			else:
 				return False	
