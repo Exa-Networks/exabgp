@@ -37,3 +37,11 @@ class Prefix (Inet):
 
 	def __len__ (self):
 		return mask_to_bytes[self.mask] + 1
+
+	def __eq__(self,other):
+		if not isinstance(other,Prefix):
+			return False
+		return self.pack() == other.pack()
+
+	def __hash__(self):
+		return hash(self.pack())

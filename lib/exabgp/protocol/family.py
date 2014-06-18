@@ -26,7 +26,7 @@ class AFI (int):
 		if self == 0x01: return "ipv4"
 		if self == 0x02: return "ipv6"
 		if self == 0x19: return "l2vpn"
-		return "unknown afi"
+		return "unknown afi %d" % self
 
 	def name (self):
 		if self == 0x01: return "inet4"
@@ -63,9 +63,12 @@ class SAFI (int):
 #	bgp_6over4 = 67             # [Cui]
 #	vpn_adi = 69                # [RFC-ietf-l1vpn-bgp-auto-discovery-05.txt]
 #
+
+	evpn = 70                   # [draft-ietf-l2vpn-evpn]
 	mpls_vpn = 128              # [RFC4364]
 #	mcast_bgp_mpls_vpn = 129    # [RFC2547]
 #	rt = 132                    # [RFC4684]
+	rtc = 132                   # [RFC4684]
 	flow_ip = 133               # [RFC5575]
 	flow_vpn = 134              # [RFC5575]
 #
@@ -79,11 +82,13 @@ class SAFI (int):
 		if self == 0x01: return "unicast"
 		if self == 0x02: return "multicast"
 		if self == 0x04: return "nlri-mpls"
+		if self == 0x46: return "evpn"
 		if self == 0x80: return "mpls-vpn"
+		if self == 0x84: return "rtc"
 		if self == 0x85: return "flow"
 		if self == 0x86: return "flow-vpn"
 		if self == 0x41: return "vpls"
-		return "unknown safi"
+		return "unknown safi %d" % self
 
 	def __str__ (self):
 		return self.name()

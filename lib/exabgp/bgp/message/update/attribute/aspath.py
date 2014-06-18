@@ -16,6 +16,7 @@ from exabgp.bgp.message.open.asn import AS_TRANS
 class ASPath (Attribute):
 	AS_SET      = 0x01
 	AS_SEQUENCE = 0x02
+	ASN_4       = False
 
 	ID = AttributeID.AS_PATH
 	FLAG = Flag.TRANSITIVE
@@ -29,6 +30,17 @@ class ASPath (Attribute):
 		self.index = index  # the original packed data, use for indexing
 		self._str = ''
 		self._json = {}
+
+	def __cmp__(self,other):
+		if not isinstance(other, self.__class__):
+			return -1
+		if self.ASN4 != other.ASN4:
+			return -1
+		if self.as_seq != other.as_seq:
+			return -1
+		if self.as_set != other.as_set:
+			return -1
+		return 0
 
 	def _segment (self,seg_type,values,asn4):
 		l = len(values)
@@ -107,6 +119,7 @@ class ASPath (Attribute):
 class AS4Path (ASPath):
 	ID = AttributeID.AS4_PATH
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
+	ASN4 = True
 
 	def pack (self,asn4=None):
 		ASPath.pack(self,True)

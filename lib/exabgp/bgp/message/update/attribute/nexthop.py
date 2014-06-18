@@ -47,3 +47,10 @@ class NextHop (Attribute,Inet):
 
 	def pack (self,asn4=None):
 		return self._attribute(self.packed)
+
+	def __cmp__(self,other):
+		if not isinstance(other,self.__class__):
+			return -1
+		if self.next_hop.pack() != other.next_hop.pack():
+			return -1
+		return 0

@@ -33,6 +33,13 @@ class Community (object):
 		else:
 			self._str = "%d:%d" % unpack('!HH',self.community)
 
+	def __cmp__ (self,other):
+		if not isinstance(other,self.__class__):
+			return -1
+		if self.community != other.community:
+			return -1
+		return 0
+
 	def json (self):
 		return "[ %d, %d ]" % unpack('!HH',self.community)
 

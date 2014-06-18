@@ -110,7 +110,7 @@ class Connection (object):
 		# The function must not be called if it does not return with no data with a smaller size as parameter
 		if not self.io:
 			self.close()
-			raise NotConnected('Trying to read on a close TCP conncetion')
+			raise NotConnected('Trying to read on a closed TCP conncetion')
 		if number == 0:
 			yield ''
 			return

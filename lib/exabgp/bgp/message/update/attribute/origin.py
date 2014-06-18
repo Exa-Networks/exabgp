@@ -34,3 +34,10 @@ class Origin (Attribute):
 		if self.origin == 0x01: return 'egp'
 		if self.origin == 0x02: return 'incomplete'
 		return 'invalid'
+
+	def __cmp__(self,other):
+		if not isinstance(other,self.__class__):
+			return -1
+		if self.origin != other.origin:
+			return -1
+		return 0

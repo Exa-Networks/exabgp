@@ -23,6 +23,13 @@ class OriginatorID (Attribute,Inet):
 		# This override Inet.pack too.
 		self.packed = self._attribute(Inet.pack(self))
 
+	def __cmp__(self,other):
+		if not isinstance(other,self.__class__):
+			return -1
+		if self.packed != other.packed:
+			return -1
+		return 0
+
 	def pack (self,asn4=None):
 		return Inet.pack(self)
 
