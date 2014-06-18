@@ -95,16 +95,11 @@ class L2VPN (object):
 
 
 class L2VPNNLRI (Address):
-	def __init__ (self,bgp,action,nexthop,parse=True):
+	def __init__ (self,bgp=None,action=out.announce,nexthop=None):
 		Address.__init__(self,AFI.l2vpn,SAFI.vpls)
 		self.action = action
 		self.nexthop = nexthop
-		self.nlri = L2VPN.from_packet(bgp) if parse is True else L2VPN()
-
-	# XXX: not the best name ....
-	@classmethod
-	def blank_init_out (cls):
-		return cls(None,OUT.announce,None,False)
+		self.nlri = L2VPN.from_packet(bgp) if bgp else L2VPN()
 
 	def index (self):
 		return self.pack()

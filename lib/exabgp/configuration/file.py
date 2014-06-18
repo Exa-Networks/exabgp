@@ -2171,7 +2171,7 @@ class Configuration (object):
 		try:
 			attributes = Attributes()
 			attributes[AttributeID.EXTENDED_COMMUNITY] = ECommunities()
-			l2vpn_route = Change(L2VPNNLRI.blank_init_out(),attributes)
+			l2vpn_route = Change(L2VPNNLRI(),attributes)
 		except ValueError:
 			self._error = self._str_l2vpn_error
 			if self.debug: raise
