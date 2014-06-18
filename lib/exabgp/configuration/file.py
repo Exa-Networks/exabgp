@@ -318,24 +318,24 @@ class Configuration (object):
 			'extended-community': self._route_extended_community,
 		}
 		self._dispatch_vpls_cfg = {
-      'endpoint': self._route_l2vpn_endpoint,
-      'offset': self._route_l2vpn_block_offset,
-      'size': self._route_l2vpn_block_size,
-      'base': self._route_l2vpn_label_base,
-      'origin': self._route_origin,
-      'as-path': self._route_aspath,
-      'med': self._route_med,
-      'next-hop': self._route_next_hop,
-      'local-preference': self._route_local_preference,
-      'originator-id': self._route_originator_id,
-      'cluster-list': self._route_cluster_list,
-      'rd': self._route_rd,
-      'route-distinguisher': self._route_rd,
-      'withdraw': self._route_withdraw,
-      'withdrawn': self._route_withdraw,
-      'community': self._route_community,
-      'extended-community': self._route_extended_community,
-  	}
+			'endpoint': self._route_l2vpn_endpoint,
+			'offset': self._route_l2vpn_block_offset,
+			'size': self._route_l2vpn_block_size,
+			'base': self._route_l2vpn_label_base,
+			'origin': self._route_origin,
+			'as-path': self._route_aspath,
+			'med': self._route_med,
+			'next-hop': self._route_next_hop,
+			'local-preference': self._route_local_preference,
+			'originator-id': self._route_originator_id,
+			'cluster-list': self._route_cluster_list,
+			'rd': self._route_rd,
+			'route-distinguisher': self._route_rd,
+			'withdraw': self._route_withdraw,
+			'withdrawn': self._route_withdraw,
+			'community': self._route_community,
+			'extended-community': self._route_extended_community,
+		}
 		self._clear()
 
 	def _clear (self):
@@ -1654,6 +1654,12 @@ class Configuration (object):
 
 		while len(tokens):
 			command = tokens.pop(0)
+
+			if command in ('withdraw','withdrawn'):
+				if self._route_withdraw(scope,tokens):
+					continue
+				return False
+
 			if len(tokens) < 1:
 				return False
 
@@ -1665,8 +1671,8 @@ class Configuration (object):
 					if self._dispatch_route_cfg[command](scope,tokens):
 						continue
 			else:
-				return False	
-			return False	
+				return False
+			return False
 
 		if not self._check_static_route(scope):
 			return False
@@ -1693,8 +1699,8 @@ class Configuration (object):
 					if self._dispatch_vpls_cfg[command](scope,tokens):
 						continue
 			else:
-				return False	
-			return False	
+				return False
+			return False
 
 		if not self._check_l2vpn_route(scope):
 			return False
