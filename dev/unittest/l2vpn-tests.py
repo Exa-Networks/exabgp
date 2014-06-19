@@ -58,23 +58,18 @@ class TestL2VPN (unittest.TestCase):
 		we are encoding routes and testing em against what we have recvd from
 		Juniper
 		'''
-		encoded_l2vpn = L2VPNNLRI.blank_init_out()
+		encoded_l2vpn = L2VPNNLRI()
 		encoded_l2vpn.nlri = self.decoded_l2vpn_nlri1
 		encoded_l2vpn.rd = self.decoded_l2vpn_nlri1.rd
-		'''
-		it seems that juniper packs labels as a pack('!I',(self.nlri.label_base<<12)|0x111)[0:3]
-		(packing with 0x1 20bit labels to 24bit and we dont do it; so to pass this tests we dont
-		include last 4bits in assert(which are 0x0 in our case and 0x1 in junipers)
-		'''
 		self.assertEqual(
-			encoded_l2vpn.pack().encode('hex')[0:37],
-			str(self.encoded_l2vpn_nlri1).encode('hex')[0:37]
+			encoded_l2vpn.pack().encode('hex'),
+			str(self.encoded_l2vpn_nlri1).encode('hex')
 		)
 		encoded_l2vpn.nlri = self.decoded_l2vpn_nlri2
 		encoded_l2vpn.rd = self.decoded_l2vpn_nlri2.rd
 		self.assertEqual(
-			encoded_l2vpn.pack().encode('hex')[0:37],
-			str(self.encoded_l2vpn_nlri2).encode('hex')[0:37]
+			encoded_l2vpn.pack().encode('hex'),
+			str(self.encoded_l2vpn_nlri2).encode('hex')
 		)
 
 	def test_l2info_community_decode (self):
