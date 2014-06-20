@@ -6,7 +6,10 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
+import socket
 from struct import pack,unpack
+
+from exabgp.structure.asn import ASN
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute import Flag,Attribute
@@ -195,6 +198,7 @@ class ECommunity (object):
 		community_stype = ord(self.community[1])
 		# Target
 		if community_stype == 0x02:
+			#return repr(RouteTarget.unpack(self.community))
 			if community_type in (0x00,0x02):
 				asn = unpack('!H',self.community[2:4])[0]
 				ip = ip = '%s.%s.%s.%s' % unpack('!BBBB',self.community[4:])
@@ -213,6 +217,10 @@ class ECommunity (object):
 				ip = '%s.%s.%s.%s' % unpack('!BBBB',self.community[2:6])
 				asn = unpack('!H',self.community[6:])[0]
 				return "origin:%s:%d" % (ip,asn)
+
+		# # Encapsulation
+		# if community_stype == 0x0c:
+		# 	return repr(Encapsulation.unpack(self.community))
 
 		# Layer2 Info Extended Community
 		if community_stype == 0x0A:
@@ -259,6 +267,145 @@ class ECommunity (object):
 
 	def __cmp__ (self,other):
 		return cmp(self.pack(),other.pack())
+
+	# @staticmethod
+	# def unpack (data):
+	# 	community_stype = ord(data[1])
+	# 	if community_stype == 0x02:
+	# 		return RouteTarget.unpack(data)
+	# 	elif community_stype == 0x0c:
+	# 		return Encapsulation.unpack(data)
+	# 	else:
+	# 		return ECommunity(data)
+
+# ================================================================== RouteTarget
+
+class RouteTarget (ECommunity):
+
+	def __init__ (self,asn,ip,number):
+		assert (asn is None or ip is None)
+		assert (asn is not None or ip is not None)
+
+		if not asn is None:
+			self.asn = asn
+			self.number = number
+			self.ip = ""
+		else:
+			self.ip = ip
+			self.number = number
+			self.asn = 0
+
+		self.community = self.pack()
+
+	def pack (self):
+		if self.asn is not None:
+			# type could also be 0x02 -> FIXME check RFC
+			#return pack( 'BB!H!L', 0x00,0x02, self.asn, self.number)
+			return pack('!BBHL',0x00,0x02,self.asn,self.number)
+		else:
+			encoded_ip = socket.inet_pton(socket.AF_INET,self.ip)
+			return pack('!BB4sH',0x01,0x02,encoded_ip,self.number)
+
+	def __str__ (self):
+		if self.asn is not None:
+			return "target:%s:%d" % (str(self.asn), self.number)
+		else:
+			return "target:%s:%d" % (self.ip, self.number)
+
+	def __cmp__ (self,other):
+		if not isinstance(other,self.__class__):
+			return -1
+		if self.asn != other.asn:
+			return -1
+		if self.ip != other.ip:
+			return -1
+		if self.number != other.number:
+			return -1
+		return 0
+
+	def __hash__ (self):
+		return hash(self.community)
+
+	@staticmethod
+	def unpack(data):
+		type_  = ord(data[0]) & 0x0F
+		stype = ord(data[1])
+		data = data[2:]
+
+		if stype == 0x02:  # XXX: FIXME: unclean
+			if type_ in (0x00,0x02):
+				asn,number = unpack('!HL',data[:6])
+				return RouteTarget(ASN(asn),None,number)
+			if type_ == 0x01:
+				ip = socket.inet_ntop(data[0:4])
+				number = unpack('!H',data[4:6])[0]
+				return RouteTarget(None,ip,number)
+
+
+# ================================================================ Encapsulation
+
+# RFC 5512, section 4.5
+
+class Encapsulation (ECommunity):
+	ECommunity_TYPE = 0x03
+	ECommunity_SUBTYPE = 0x0c
+
+	DEFAULT=0
+	L2TPv3=1
+	GRE=2
+	VXLAN=3  # as in draft-sd-l2vpn-evpn-overlay-02, but value collides with reserved values in RFC5566
+	NVGRE=4  # ditto
+	IPIP=7
+
+	encapType2String = {
+		L2TPv3: "L2TPv3",
+		GRE:    "GRE",
+		VXLAN:  "VXLAN",
+		NVGRE:  "NVGRE",
+		IPIP:   "IP-in-IP",
+		DEFAULT:"Default"
+	}
+
+	def __init__ (self,tunnel_type):
+		self.tunnel_type = tunnel_type
+		self.community = self.pack()
+
+	def __str__ (self):
+		if self.tunnel_type in Encapsulation.encapType2String:
+			return "Encap:" + Encapsulation.encapType2String[self.tunnel_type]
+		return "Encap:(unknown:%d)" % self.tunnel_type
+
+	def __hash__ (self):
+		return hash(self.community)
+
+	def __cmp__ (self,other):
+		if not isinstance(other,self.__class__):
+			return -1
+		if self.tunnel_type != other.tunnel_type:
+			return -1
+		return 0
+
+	def pack (self):
+		return pack("!BBHHH",
+				Encapsulation.ECommunity_TYPE,
+				Encapsulation.ECommunity_SUBTYPE,
+				0,
+				0,
+				self.tunnel_type)
+
+	@staticmethod
+	def unpack (data):
+		type_  = ord(data[0]) & 0x0F
+		stype = ord(data[1])
+		data = data[2:]
+
+		assert(type_==Encapsulation.ECommunity_TYPE)
+		assert(stype==Encapsulation.ECommunity_SUBTYPE)
+		assert(len(data)==6)
+
+		tunnel_type=unpack('!H',data[4:6])[0]
+
+		return Encapsulation(tunnel_type)
 
 # =================================================================== ECommunities (16)
 
