@@ -13,7 +13,7 @@ from exabgp.configuration.environment import environment
 env = environment.setup('')
 
 from exabgp.bgp.message.update.update import *
-from exabgp.bgp.message.update.attribute.communities import to_Community, Community, Communities
+from exabgp.bgp.message.update.attribute.community import to_Community, Community, Communities
 
 class TestData (unittest.TestCase):
 	def test_2_prefix (self):

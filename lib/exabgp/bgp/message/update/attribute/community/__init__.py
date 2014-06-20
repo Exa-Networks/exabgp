@@ -9,7 +9,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 import socket
 from struct import pack,unpack
 
-from exabgp.structure.asn import ASN
+from exabgp.bgp.message.open.asn import ASN
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute import Flag,Attribute

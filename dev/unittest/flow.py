@@ -14,7 +14,7 @@ env = environment.setup('')
 
 from exabgp.bgp.message.update.nlri.flow import *
 from exabgp.protocol.ip.inet import *
-from exabgp.bgp.message.update.attribute.communities import *
+from exabgp.bgp.message.update.attribute.community import *
 
 
 class TestFlow (unittest.TestCase):
