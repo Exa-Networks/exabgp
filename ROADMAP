@@ -5,6 +5,7 @@ ROADMAP
 Remove .packed for Inet and all its subclass as we now had addpath getting in the way.
 
 In no particular order:
+- Following the integration of Orange's code, we now have an unpack() API to create object, we should generalise its use
 - provide an helper program able to read MRT dumps and announce them too.
 - route refresh
 - operational draft support

@@ -15,17 +15,17 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
 
-# ================================================================== RouteTarget
+# ================================================================== Origin
 
 
-class RouteTarget (ExtendedCommunity):
-	COMMUNITY_SUBTYPE = 0x02
+class Origin (ExtendedCommunity):
+	COMMUNITY_SUBTYPE = 0x01
 
 	def __hash__ (self):
 		return hash(self.community)
 
 	def __cmp__ (self,other):
-		if not isinstance(other,RouteTarget):
+		if not isinstance(other,Origin):
 			return -1
 		if self.asn != other.asn:
 			return -1
@@ -34,10 +34,10 @@ class RouteTarget (ExtendedCommunity):
 		return 0
 
 
-# ================================================================ RouteTargetIP
+# ================================================================ OriginIP
 
 
-class RouteTargetIPASN (RouteTarget):
+class OriginIPASN (Origin):
 	COMMUNITY_TYPE = 0x01
 
 	# XXX: FIXME: Decide between IP and number and keep one
@@ -58,15 +58,15 @@ class RouteTargetIPASN (RouteTarget):
 	def unpack (data):
 		ip = socket.inet_ntop(socket.AF_INET,data[2:6])
 		asn = unpack('!4sH',data[6:8])[0]
-		return RouteTargetIPASN(ip,asn,data[:8])
+		return OriginIPASN(ip,asn,data[:8])
 
-RouteTargetIPASN._known[chr(RouteTargetIPASN.COMMUNITY_TYPE)+chr(RouteTargetIPASN.COMMUNITY_SUBTYPE)] = RouteTargetIPASN
-
-
-# =============================================================== RouteTargetASN
+OriginIPASN._known[chr(OriginIPASN.COMMUNITY_TYPE)+chr(OriginIPASN.COMMUNITY_SUBTYPE)] = OriginIPASN
 
 
-class RouteTargetASNIP (RouteTarget):
+# =============================================================== OriginASN
+
+
+class OriginASNIP (Origin):
 	COMMUNITY_TYPE = 0x00
 
 	# XXX: FIXME: Decide between IP and number and keep one
@@ -87,6 +87,6 @@ class RouteTargetASNIP (RouteTarget):
 	def unpack(data):
 		asn = unpack('!H',data[2:4])
 		ip = socket.inet_ntop(socket.AF_INET,data[4:8])
-		return RouteTargetASNIP(ASN(asn),ip,data[:8])
+		return OriginASNIP(ASN(asn),ip,data[:8])
 
-RouteTargetASNIP._known[chr(RouteTargetASNIP.COMMUNITY_TYPE)+chr(RouteTargetASNIP.COMMUNITY_SUBTYPE)] = RouteTargetASNIP
+OriginASNIP._known[chr(OriginASNIP.COMMUNITY_TYPE)+chr(OriginASNIP.COMMUNITY_SUBTYPE)] = OriginASNIP

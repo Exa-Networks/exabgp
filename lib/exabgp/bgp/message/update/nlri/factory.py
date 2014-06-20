@@ -13,6 +13,8 @@ from exabgp.protocol.family import AFI,SAFI
 from exabgp.bgp.message.update.nlri.bgp import NLRI,PathInfo,Labels,RouteDistinguisher,mask_to_bytes
 from exabgp.bgp.message.update.nlri.flow import FlowNLRI,decode,factory,CommonOperator
 from exabgp.bgp.message.update.nlri.l2vpn import L2VPNNLRI
+#from exabgp.bgp.message.update.nlri.mpls import VPNLabelledPrefix,RouteTargetConstraint
+
 from exabgp.bgp.message.update.attribute.nexthop import cachedNextHop
 
 from exabgp.bgp.message.direction import IN
@@ -23,12 +25,20 @@ from exabgp.logger import Logger,LazyFormat
 logger = None
 
 def NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
-	if safi in (133,134):
+	if safi in (SAFI.flow_ip,SAFI.flow_vpn):
 		return _FlowNLRIFactory(afi,safi,nexthop,bgp,action)
-	elif safi in (65,):
+
+	if safi in (SAFI.vpls,):
 		return _L2VPNNLRIFactory(afi,safi,nexthop,bgp,action)
-	else:
-		return _NLRIFactory(afi,safi,bgp,has_multiple_path,nexthop,action)
+
+	# if afi in (AFI.ipv4,) and safi in (SAFI.mpls_vpn,):
+	# 	return VPNLabelledPrefix.unpack(afi,safi,bgp)
+
+	# if afi == AFI.ipv4 and safi == SAFI.rtc:
+	# 	return RouteTargetConstraint.unpack(afi,safi,bgp)
+
+	return _NLRIFactory(afi,safi,bgp,has_multiple_path,nexthop,action)
+
 
 def _nlrifactory (afi,safi,bgp,action):
 	labels = []

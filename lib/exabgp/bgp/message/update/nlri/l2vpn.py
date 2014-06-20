@@ -33,9 +33,9 @@ class L2VPN (object):
 		anyway, this is somehow hacking; but i can parse real msg with it
 		"""
 		label_base = unpack('!I',bgp[16:19]+'\x00')[0]>>12
-		return cls(rd,label_base,block_offset,block_size,ve)
+		return L2VPN(rd,label_base,block_offset,block_size,ve)
 
-	def pprint (self):
+	def extensive (self):
 		return "vpls endpoint %s base %s offset %s size %s %s" % (
 			self.ve,
 			self.label_base,
@@ -45,10 +45,10 @@ class L2VPN (object):
 		)
 
 	def __call__ (self):
-		return self.pprint()
+		return self.extensive()
 
 	def __str__ (self):
-		return self.pprint()
+		return self.extensive()
 
 
 class L2VPNNLRI (Address):
@@ -67,6 +67,5 @@ class L2VPNNLRI (Address):
 		ve = pack('!H',self.nlri.ve)
 		block_offset = pack('!H',self.nlri.block_offset)
 		block_size = pack('!H',self.nlri.block_size)
-		label_base = pack('!I',(self.nlri.label_base<<12)|0x111)[0:3]
-		data = msg_len+rd+ve+block_offset+block_size+label_base
-		return data
+		label_base = pack('!I',self.nlri.label_base<<12|0x111)[0:3]
+		return msg_len+rd+ve+block_offset+block_size+label_base

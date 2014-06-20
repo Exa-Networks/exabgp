@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2010-01-16.
 Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 """
 
+import collections
 from struct import unpack,error
 
 from exabgp.util.od import od
@@ -34,6 +35,7 @@ from exabgp.bgp.message.update.attribute.community.normal import cachedCommunity
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
+#from exabgp.bgp.message.update.attribute.pmsi import PMSI
 from exabgp.bgp.message.update.attribute.aigp import AIGP
 
 from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
@@ -100,6 +102,7 @@ class Attributes (dict):
 		AID.EXTENDED_COMMUNITY : ECommunities,        # 16
 		AID.AS4_PATH           : AS4Path,             # 17
 		AID.AS4_AGGREGATOR     : Aggregator,          # 18
+#		AID.PMSI_TUNNEL        : PMSI,                # 22
 		AID.AIGP               : AIGP,                # 26
 	}
 
@@ -116,6 +119,7 @@ class Attributes (dict):
 		AID.ORIGINATOR_ID      : ('inet',    '', 'originator-id', '%s'),
 		AID.CLUSTER_LIST       : ('list',    '', 'cluster-list', '%s'),
 		AID.EXTENDED_COMMUNITY : ('list',    '', 'extended-community', '%s'),
+#		AID.PMSI_TUNNEL        : ('string',  '', 'pmsi', '%s'),
 		AID.AIGP               : ('integer', '', 'aigp', '%s'),
 	}
 
@@ -390,6 +394,11 @@ class Attributes (dict):
 			if not self.add_from_cache(code,attribute):
 				self.add(self.__new_extended_communities(attribute),attribute)
 			return self.factory(next)
+
+		# if code == AID.PMSI_TUNNEL:
+		# 	if not self.add_from_cache(code,attribute):
+		# 		self.add(PMSI.unpack(attribute))
+		# 	return self._AttributesFactory(next)
 
 		if code == AID.AIGP and flag.matches(AIGP.FLAG):
 			if self.negotiated.neighbor.aigp:

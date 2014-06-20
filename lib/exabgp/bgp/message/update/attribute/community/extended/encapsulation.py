@@ -4,11 +4,13 @@ encapsulation.py
 
 Created by Thomas Mangin on 2014-06-20.
 Copyright (c) 2014-2014 Orange. All rights reserved.
+Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
 from struct import pack,unpack
 
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+
 
 # ================================================================ Encapsulation
 

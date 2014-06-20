@@ -16,6 +16,8 @@ class ExtendedCommunity (object):
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
 	MULTIPLE = False
 
+	_known = {}
+
 	# size of value for data (boolean: is extended)
 	length_value = {False:7, True:6}
 	name = {False: 'regular', True: 'extended'}
@@ -112,12 +114,9 @@ class ExtendedCommunity (object):
 	def __cmp__ (self,other):
 		return cmp(self.pack(),other.pack())
 
-	# @staticmethod
-	# def unpack (data):
-	# 	community_stype = ord(data[1])
-	# 	if community_stype == 0x02:
-	# 		return RouteTarget.unpack(data)
-	# 	elif community_stype == 0x0c:
-	# 		return Encapsulation.unpack(data)
-	# 	else:
-	# 		return ExtendedCommunity(data)
+	@staticmethod
+	def unpack (data):
+		community = ord(data[:2]) & 0x0FFF
+		if community in ExtendedCommunity._known:
+			return ExtendedCommunity._known[community].unpack(data)
+		return ExtendedCommunity(data)
