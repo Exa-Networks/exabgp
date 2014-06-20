@@ -6,7 +6,11 @@ Created by Thomas Mangin on 2012-07-07.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
+import socket
+
+from exabgp.protocol.family import AFI,SAFI
 from exabgp.protocol.ip.inet import Inet
+
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute import Flag,Attribute
 
@@ -35,3 +39,8 @@ class OriginatorID (Attribute,Inet):
 
 	def __str__ (self):
 		return Inet.__str__(self)
+
+	@staticmethod
+	def unpack (data):
+		ip = socket.inet_ntop(socket.AF_INET,data[0:4])
+		return OriginatorID(AFI.ipv4,SAFI.unicast,ip)
