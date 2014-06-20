@@ -62,8 +62,8 @@ class L2VPN (object):
 			return True
 		return False
 
-	@classmethod
-	def unpack (cls,bgp):
+	@staticmethod
+	def unpack (bgp):
 		msg_len = unpack('!H',bgp[0:2])[0]
 		if msg_len+2 != len(bgp):
 			raise Notify(3,10,'invalid length of l2vpn msg')
