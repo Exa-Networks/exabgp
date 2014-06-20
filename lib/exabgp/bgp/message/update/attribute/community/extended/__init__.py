@@ -11,11 +11,7 @@ from struct import unpack
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute import Flag
 
-# from exabgp.bgp.message.update.attribute.community.extended.community import *
-# from exabgp.bgp.message.update.attribute.community.extended.encapsulation import *
-# from exabgp.bgp.message.update.attribute.community.extended.rt import *
-
-class ECommunity (object):
+class ExtendedCommunity (object):
 	ID = AttributeID.EXTENDED_COMMUNITY
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
 	MULTIPLE = False
@@ -124,4 +120,4 @@ class ECommunity (object):
 	# 	elif community_stype == 0x0c:
 	# 		return Encapsulation.unpack(data)
 	# 	else:
-	# 		return ECommunity(data)
+	# 		return ExtendedCommunity(data)

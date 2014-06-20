@@ -77,7 +77,7 @@ class TestL2VPN (unittest.TestCase):
 		Juniper sends us both target and l2info; so we test only against
 		l2info.
 		'''
-		l2info_com = ECommunity(str(self.encoded_ext_community)[8:16])
+		l2info_com = ExtendedCommunity(str(self.encoded_ext_community)[8:16])
 		self.assertEqual(l2info_com,to_ExtendedCommunity('l2info:19:0:0:100'))
 
 	def test_l2info_community_encode (self):

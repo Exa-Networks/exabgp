@@ -8,15 +8,15 @@ Copyright (c) 2014-2014 Orange. All rights reserved.
 
 from struct import pack,unpack
 
-from exabgp.bgp.message.update.attribute.community.extended import ECommunity
+from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
 # ================================================================ Encapsulation
 
 # RFC 5512, section 4.5
 
-class Encapsulation (ECommunity):
-	ECommunity_TYPE = 0x03
-	ECommunity_SUBTYPE = 0x0c
+class Encapsulation (ExtendedCommunity):
+	COMMUNITY_TYPE = 0x03
+	COMMUNITY_SUBTYPE = 0x0c
 
 	DEFAULT=0
 	L2TPv3=1
@@ -55,8 +55,8 @@ class Encapsulation (ECommunity):
 
 	def pack (self):
 		return pack("!BBHHH",
-			Encapsulation.ECommunity_TYPE,
-			Encapsulation.ECommunity_SUBTYPE,
+			Encapsulation.COMMUNITY_TYPE,
+			Encapsulation.COMMUNITY_SUBTYPE,
 			0,
 			0,
 			self.tunnel_type
@@ -69,6 +69,6 @@ class Encapsulation (ECommunity):
 		# type_  = ord(data[0]) & 0x0F
 		# stype = ord(data[1])
 
-		# assert(type_==Encapsulation.ECommunity_TYPE)
-		# assert(stype==Encapsulation.ECommunity_SUBTYPE)
+		# assert(type_==Encapsulation.COMMUNITY_TYPE)
+		# assert(stype==Encapsulation.COMMUNITY_SUBTYPE)
 		# assert(len(data)==6)

@@ -11,11 +11,13 @@ import socket
 from struct import pack,unpack
 
 from exabgp.bgp.message.open.asn import ASN
-from exabgp.bgp.message.update.attribute.community.extended import ECommunity
+from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
 # ================================================================== RouteTarget
 
-class RouteTarget (ECommunity):
+class RouteTarget (ExtendedCommunity):
+	COMMUNITY_TYPE = 0x00
+	COMMUNITY_SUBTYPE = 0x02
 
 	def __init__ (self,asn,ip,number):
 		assert (asn is None or ip is None)

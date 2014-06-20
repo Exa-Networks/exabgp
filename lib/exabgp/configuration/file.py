@@ -46,7 +46,7 @@ from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.community.normal import Community,cachedCommunity
-from exabgp.bgp.message.update.attribute.community.extended import ECommunity
+from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community import Communities,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_FlowRedirectVRFASN,to_FlowRedirectVRFIP,to_FlowRedirect,to_FlowTrafficMark,to_FlowTrafficAction
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
@@ -2047,7 +2047,7 @@ class Configuration (object):
 				raise ValueError('invalid extended community %s' % data)
 			if len(raw) != 8:
 				raise ValueError('invalid extended community %s' % data)
-			return ECommunity(raw)
+			return ExtendedCommunity(raw)
 		elif data.count(':'):
 			return to_ExtendedCommunity(data)
 		else:

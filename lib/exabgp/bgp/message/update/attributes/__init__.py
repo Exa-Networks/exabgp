@@ -31,7 +31,7 @@ from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.community import Communities,ECommunities
 from exabgp.bgp.message.update.attribute.community.normal import cachedCommunity
-from exabgp.bgp.message.update.attribute.community.extended import ECommunity
+from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 from exabgp.bgp.message.update.attribute.aigp import AIGP
@@ -571,7 +571,7 @@ class Attributes (dict):
 		while data:
 			if data and len(data) < 8:
 				raise Notify(3,1,'could not decode extended community %s' % str([hex(ord(_)) for _ in data]))
-			communities.add(ECommunity(data[:8]))
+			communities.add(ExtendedCommunity(data[:8]))
 			data = data[8:]
 		return communities
 

@@ -82,7 +82,7 @@ def to_ExtendedCommunity (data):
 
 	if command == 'l2info':
 		# encaps, control, mtu, site
-		return ECommunity(header+pack('!BBHH',*[int(_) for _ in components]))
+		return ExtendedCommunity(header+pack('!BBHH',*[int(_) for _ in components]))
 
 	if command in ('target','origin'):
 		# global admin, local admin
@@ -93,15 +93,15 @@ def to_ExtendedCommunity (data):
 			lc = la.count('.')
 			if gc == 0 and lc == 3:
 				# ASN first, IP second
-				return ECommunity(header+pack('!HBBBB',int(ga),*[int(_) for _ in la.split('.')]))
+				return ExtendedCommunity(header+pack('!HBBBB',int(ga),*[int(_) for _ in la.split('.')]))
 			if gc == 3 and lc == 0:
 				# IP first, ASN second
-				return ECommunity(header+pack('!BBBBH',*[int(_) for _ in ga.split('.')]+[int(la)]))
+				return ExtendedCommunity(header+pack('!BBBBH',*[int(_) for _ in ga.split('.')]+[int(la)]))
 		else:
 			if command == 'target':
-				return ECommunity(header+pack('!HI',int(ga),int(la)))
+				return ExtendedCommunity(header+pack('!HI',int(ga),int(la)))
 			if command == 'origin':
-				return ECommunity(header+pack('!IH',int(ga),int(la)))
+				return ExtendedCommunity(header+pack('!IH',int(ga),int(la)))
 
 	raise ValueError('invalid extended community %s' % command)
 
@@ -114,18 +114,18 @@ def to_ExtendedCommunity (data):
 #def new_ECommunities (data):
 #	communities = ECommunities()
 #	while data:
-#		ECommunity = unpack(data[:8])
+#		community = unpack(data[:8])
 #		data = data[8:]
-#		communities.add(ECommunity(ECommunity))
+#		communities.add(ExtendedCommunity(community))
 #	return communities
 
 
 # =================================================================== FlowSpec Defined Extended Communities
 
-from exabgp.bgp.message.update.attribute.community.extended import ECommunity
+from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
 def _to_FlowCommunity (action,data):
-	return ECommunity(pack('!H',action) + data[:6])
+	return ExtendedCommunity(pack('!H',action) + data[:6])
 
 # rate is bytes/seconds
 def to_FlowTrafficRate (asn,rate):
@@ -151,31 +151,31 @@ def to_FlowTrafficMark (dscp):
 	return _to_FlowCommunity (0x8009,'\x00\x00\x00\x00\x00' + chr(dscp))
 
 def to_RouteOriginCommunity (asn,number,hightype=0x01):
-	return ECommunity(chr(hightype) + chr(0x03) + pack('!H',asn) + pack('!L',number))
+	return ExtendedCommunity(chr(hightype) + chr(0x03) + pack('!H',asn) + pack('!L',number))
 
 # VRF is ASN:Long
 def to_RouteTargetCommunity_00 (asn,number):
-	return ECommunity(chr(0x00) + chr(0x02) + pack('!H',asn) + pack('!L',number))
+	return ExtendedCommunity(chr(0x00) + chr(0x02) + pack('!H',asn) + pack('!L',number))
 
 # VRF is A.B.C.D:Short
 def to_RouteTargetCommunity_01 (ipn,number):
-	return ECommunity(chr(0x01) + chr(0x02) + pack('!L',ipn) + pack('!H',number))
+	return ExtendedCommunity(chr(0x01) + chr(0x02) + pack('!L',ipn) + pack('!H',number))
 
 #def to_ASCommunity (subtype,asn,data,transitive):
 #	r = chr(0x00)
 #	if transitive: r += chr(0x40)
-#	return ECommunity(r + chr(subtype) + pack('!H',asn) + ''.join([chr(c) for c in data[:4]]))
+#	return ExtendedCommunity(r + chr(subtype) + pack('!H',asn) + ''.join([chr(c) for c in data[:4]]))
 #
 #import socket
 #def toIPv4Community (subtype,data,transitive):
 #	r = chr(0x01)
 #	if transitive: r += chr(0x40)
-#	return ECommunity(r + chr(subtype) + socket.inet_pton(socket.AF_INET,ipv4) + ''.join([chr(c) for c in data[:2]]))
+#	return ExtendedCommunity(r + chr(subtype) + socket.inet_pton(socket.AF_INET,ipv4) + ''.join([chr(c) for c in data[:2]]))
 #
 #def to_OpaqueCommunity (subtype,data,transitive):
 #	r = chr(0x03)
 #	if transitive: r += chr(0x40)
-#	return ECommunity(r + chr(subtype) + ''.join([chr(c) for c in data[:6]]))
+#	return ExtendedCommunity(r + chr(subtype) + ''.join([chr(c) for c in data[:6]]))
 
 # See RFC4360
 # 0x00, 0x02 Number is administrated by a global authority
