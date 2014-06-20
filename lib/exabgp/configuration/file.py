@@ -254,6 +254,12 @@ class Configuration (object):
 	'   operational enable|disable;\n' \
 	'}\n'
 
+
+	_str_vpls_bad_size    = "you tried to configure an invalid l2vpn vpls block-size"
+	_str_vpls_bad_offset  = "you tried to configure an invalid l2vpn vpls block-offset"
+	_str_vpls_bad_label   = "you tried to configure an invalid l2vpn vpls label"
+	_str_vpls_bad_enpoint = "you tried to configure an invalid l2vpn vpls endpoint"
+
 	def __init__ (self,fname,text=False):
 		self.debug = environment.settings().debug.configuration
 		self.api_encoder = environment.settings().api.encoder
@@ -2257,12 +2263,26 @@ class Configuration (object):
 		return True
 
 	def _check_l2vpn_route (self,scope):
-		nlri = scope[-1]['announce'][-1].nlri
-		if not nlri.rd or not nlri.nlri.checkValues():
-			return False
-		self.logger.configuration('warning: no check on l2vpn routes are implemented')
-		return True
+		vpls = scope[-1]['announce'][-1].nlri
 
+		nlri = vpls.nlri
+
+		if nlri.ve is None:
+			raise ValueError(self._str_vpls_bad_enpoint)
+
+		if nlri.label_base is None:
+			raise ValueError(self._str_vpls_bad_label)
+
+		if nlri.block_offset is None:
+			raise ValueError(self._str_vpls_bad_offset)
+
+		if nlri.block_size is None:
+			raise ValueError(self._str_vpls_bad_size)
+
+		if nlri.label_base > (0xFFFFF - nlri.block_size):  # 20 bits 5 bytes
+			raise ValueError(self._str_vpls_bad_label)
+
+		return True
 
 	def _multi_flow_route (self,scope,tokens):
 		if len(tokens) > 1:
@@ -2290,25 +2310,40 @@ class Configuration (object):
 		return True
 
 	def _route_l2vpn_endpoint(self, scope, token):
-		nlri = scope[-1]['announce'][-1].nlri
-		nlri.nlri.setVE(token.pop(0))
+		number = int(token.pop(0))
+		if number < 0 or number > 0xFFFF:
+			raise ValueError(self._str_vpls_bad_enpoint)
+
+		vpls = scope[-1]['announce'][-1].nlri
+		vpls.nlri.ve = number
 		return True
 
 	def _route_l2vpn_block_size(self, scope, token):
-		nlri = scope[-1]['announce'][-1].nlri
-		nlri.nlri.setBlockSize(token.pop(0))
+		number = int(token.pop(0))
+		if number < 0 or number > 0xFFFF:
+			raise ValueError(self._str_vpls_bad_size)
+
+		vpls = scope[-1]['announce'][-1].nlri
+		vpls.nlri.block_size = number
 		return True
 
 	def _route_l2vpn_block_offset(self, scope, token):
-		nlri = scope[-1]['announce'][-1].nlri
-		nlri.nlri.setBlockOffset(token.pop(0))
+		number = int(token.pop(0))
+		if number < 0 or number > 0xFFFF:
+			raise ValueError(self._str_vpls_bad_offset)
+
+		vpls = scope[-1]['announce'][-1].nlri
+		vpls.nlri.block_offset = number
 		return True
 
 	def _route_l2vpn_label_base(self, scope, token):
-		nlri = scope[-1]['announce'][-1].nlri
-		nlri.nlri.setLabelBase(token.pop(0))
-		return True
+		number = int(token.pop(0))
+		if number < 0 or number > 0xFFFF:
+			raise ValueError(self._str_vpls_bad_label)
 
+		vpls = scope[-1]['announce'][-1].nlri
+		vpls.nlri.label_base = number
+		return True
 
 	# ..........................................
 

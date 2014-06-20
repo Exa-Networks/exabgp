@@ -140,7 +140,7 @@ def to_ExtendedCommunity (data):
 
 	if command == 'l2info':
 		# encaps, control, mtu, site
-		return ECommunity(header+pack('!BBHH',*components))
+		return ECommunity(header+pack('!BBHH',*[int(_) for _ in components]))
 
 	if command in ('target','origin'):
 		# global admin, local admin
