@@ -63,7 +63,7 @@ class L2VPN (object):
 		return False
 
 	@classmethod
-	def from_packet (cls,bgp):
+	def unpack (cls,bgp):
 		msg_len = unpack('!H',bgp[0:2])[0]
 		if msg_len+2 != len(bgp):
 			raise Notify(3,10,'invalid length of l2vpn msg')
@@ -99,7 +99,7 @@ class L2VPNNLRI (Address):
 		Address.__init__(self,AFI.l2vpn,SAFI.vpls)
 		self.action = action
 		self.nexthop = nexthop
-		self.nlri = L2VPN.from_packet(bgp) if bgp else L2VPN()
+		self.nlri = L2VPN.unpack(bgp) if bgp else L2VPN()
 
 	def index (self):
 		return self.pack()

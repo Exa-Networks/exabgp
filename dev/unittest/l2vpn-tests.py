@@ -40,8 +40,8 @@ class TestL2VPN (unittest.TestCase):
 		we do know what routes Juniper sends us
 		and we testing decoded values against it
 		'''
-		l2vpn_route1 = L2VPN.from_packet(str(self.encoded_l2vpn_nlri1))
-		l2vpn_route2 = L2VPN.from_packet(str(self.encoded_l2vpn_nlri2))
+		l2vpn_route1 = L2VPN.unpack(str(self.encoded_l2vpn_nlri1))
+		l2vpn_route2 = L2VPN.unpack(str(self.encoded_l2vpn_nlri2))
 		self.assertEqual(l2vpn_route1.ve,3)
 		self.assertEqual(l2vpn_route1.rd._str(),'172.30.5.4:13')
 		self.assertEqual(l2vpn_route1.block_offset,1)
