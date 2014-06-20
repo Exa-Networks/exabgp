@@ -30,7 +30,7 @@ from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
-from exabgp.bgp.message.update.attribute.community import Communities,ECommunities
+from exabgp.bgp.message.update.attribute.community import Communities,ExtendedCommunities
 from exabgp.bgp.message.update.attribute.community.normal import cachedCommunity
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
@@ -89,21 +89,21 @@ class Attributes (dict):
 	cached = None
 
 	lookup = {
-		AID.ORIGIN             : Origin,              # 1
-		AID.AS_PATH            : ASPath,              # 2
-		# NextHop                                     # 3
-		AID.MED                : MED,                 # 4
-		AID.LOCAL_PREF         : LocalPreference,     # 5
-		AID.ATOMIC_AGGREGATE   : AtomicAggregate,     # 6
-		AID.AGGREGATOR         : Aggregator,          # 7
-		AID.COMMUNITY          : Communities,         # 8
-		AID.ORIGINATOR_ID      : OriginatorID,        # 9
-		AID.CLUSTER_LIST       : ClusterList,         # 10
-		AID.EXTENDED_COMMUNITY : ECommunities,        # 16
-		AID.AS4_PATH           : AS4Path,             # 17
-		AID.AS4_AGGREGATOR     : Aggregator,          # 18
-#		AID.PMSI_TUNNEL        : PMSI,                # 22
-		AID.AIGP               : AIGP,                # 26
+		AID.ORIGIN             : Origin,               # 1
+		AID.AS_PATH            : ASPath,               # 2
+		# NextHop                                      # 3
+		AID.MED                : MED,                  # 4
+		AID.LOCAL_PREF         : LocalPreference,      # 5
+		AID.ATOMIC_AGGREGATE   : AtomicAggregate,      # 6
+		AID.AGGREGATOR         : Aggregator,           # 7
+		AID.COMMUNITY          : Communities,          # 8
+		AID.ORIGINATOR_ID      : OriginatorID,         # 9
+		AID.CLUSTER_LIST       : ClusterList,          # 10
+		AID.EXTENDED_COMMUNITY : ExtendedCommunities,  # 16
+		AID.AS4_PATH           : AS4Path,              # 17
+		AID.AS4_AGGREGATOR     : Aggregator,           # 18
+#		AID.PMSI_TUNNEL        : PMSI,                 # 22
+		AID.AIGP               : AIGP,                 # 26
 	}
 
 	representation = {
@@ -390,7 +390,7 @@ class Attributes (dict):
 				self.add(ClusterList(attribute),attribute)
 			return self.factory(next)
 
-		if code == AID.EXTENDED_COMMUNITY and flag.matches(ECommunities.FLAG):
+		if code == AID.EXTENDED_COMMUNITY and flag.matches(ExtendedCommunities.FLAG):
 			if not self.add_from_cache(code,attribute):
 				self.add(self.__new_extended_communities(attribute),attribute)
 			return self.factory(next)
@@ -576,7 +576,7 @@ class Attributes (dict):
 		return communities
 
 	def __new_extended_communities (self,data):
-		communities = ECommunities()
+		communities = ExtendedCommunities()
 		while data:
 			if data and len(data) < 8:
 				raise Notify(3,1,'could not decode extended community %s' % str([hex(ord(_)) for _ in data]))

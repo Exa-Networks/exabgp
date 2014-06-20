@@ -45,7 +45,7 @@ class Communities (Attribute):
 		return "[ %s ]" % ", ".join(community.json() for community in self.communities)
 
 
-class ECommunities (Communities):
+class ExtendedCommunities (Communities):
 	ID = AttributeID.EXTENDED_COMMUNITY
 
 
@@ -106,13 +106,10 @@ def to_ExtendedCommunity (data):
 	raise ValueError('invalid extended community %s' % command)
 
 
+# ===================================================== ExtendedCommunities (16)
 
-
-
-# =================================================================== ECommunities (16)
-
-#def new_ECommunities (data):
-#	communities = ECommunities()
+#def new_ExtendedCommunities (data):
+#	communities = ExtendedCommunities()
 #	while data:
 #		community = unpack(data[:8])
 #		data = data[8:]

@@ -47,7 +47,7 @@ from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.community.normal import Community,cachedCommunity
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
-from exabgp.bgp.message.update.attribute.community import Communities,ECommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_FlowRedirectVRFASN,to_FlowRedirectVRFIP,to_FlowRedirect,to_FlowTrafficMark,to_FlowTrafficAction
+from exabgp.bgp.message.update.attribute.community import Communities,ExtendedCommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_FlowRedirectVRFASN,to_FlowRedirectVRFIP,to_FlowRedirect,to_FlowTrafficMark,to_FlowTrafficAction
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 from exabgp.bgp.message.update.attribute.aigp import AIGP
@@ -2054,7 +2054,7 @@ class Configuration (object):
 			raise ValueError('invalid extended community %s - lc+gc' % data)
 
 	def _route_extended_community (self,scope,tokens):
-		extended_communities = ECommunities()
+		extended_communities = ExtendedCommunities()
 		extended_community = tokens.pop(0)
 		try:
 			if extended_community == '[':
@@ -2178,7 +2178,7 @@ class Configuration (object):
 	def _insert_l2vpn_route (self,scope,tokens=None):
 		try:
 			attributes = Attributes()
-			attributes[AttributeID.EXTENDED_COMMUNITY] = ECommunities()
+			attributes[AttributeID.EXTENDED_COMMUNITY] = ExtendedCommunities()
 			l2vpn_route = Change(L2VPNNLRI(),attributes)
 		except ValueError:
 			self._error = self._str_l2vpn_error
@@ -2247,7 +2247,7 @@ class Configuration (object):
 
 		try:
 			attributes = Attributes()
-			attributes[AttributeID.EXTENDED_COMMUNITY] = ECommunities()
+			attributes[AttributeID.EXTENDED_COMMUNITY] = ExtendedCommunities()
 			flow = Change(FlowNLRI(),attributes)
 		except ValueError:
 			self._error = self._str_flow_error
