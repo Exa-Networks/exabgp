@@ -20,8 +20,8 @@ class RouteTarget (ExtendedCommunity):
 	COMMUNITY_SUBTYPE = 0x02
 
 	def __init__ (self,asn,ip,number):
-		assert (asn is None or ip is None)
-		assert (asn is not None or ip is not None)
+		# assert(asn is None or ip is None)
+		# assert(asn is not None or ip is not None)
 
 		if not asn is None:
 			self.asn = asn
