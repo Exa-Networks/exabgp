@@ -20,30 +20,29 @@ class Encapsulation (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x03
 	COMMUNITY_SUBTYPE = 0x0c
 
-	DEFAULT=0
-	L2TPv3=1
-	GRE=2
-	VXLAN=3  # as in draft-sd-l2vpn-evpn-overlay-02, but value collides with reserved values in RFC5566
-	NVGRE=4  # ditto
-	IPIP=7
+	class Type:
+		DEFAULT = 0x00
+		L2TPv3  = 0x01
+		GRE     = 0x02
+		VXLAN   = 0x03  # draft-sd-l2vpn-evpn-overlay-02, collides with reserved values in RFC5566
+		NVGRE   = 0x04  # draft-sd-l2vpn-evpn-overlay-02, collides with reserved values in RFC5566
+		IPIP    = 0x07
 
-	encapType2String = {
-		L2TPv3: "L2TPv3",
-		GRE:    "GRE",
-		VXLAN:  "VXLAN",
-		NVGRE:  "NVGRE",
-		IPIP:   "IP-in-IP",
-		DEFAULT:"Default"
+	_string = {
+		Type.DEFAULT  : "Default",
+		Type.L2TPv3   : "L2TPv3",
+		Type.GRE      : "GRE",
+		Type.VXLAN    : "VXLAN",
+		Type.NVGRE    : "NVGRE",
+		Type.IPIP     : "IP-in-IP",
 	}
 
-	def __init__ (self,tunnel_type):
+	def __init__ (self,tunnel_type,community=None):
 		self.tunnel_type = tunnel_type
-		self.community = self.pack()
+		self.community = community if community is not None else self.pack()
 
 	def __str__ (self):
-		if self.tunnel_type in Encapsulation.encapType2String:
-			return "Encap:" + Encapsulation.encapType2String[self.tunnel_type]
-		return "Encap:(unknown:%d)" % self.tunnel_type
+		return "Encapsulation: %s" % Encapsulation._string.get(self.tunnel_type,"Encap:(unknown:%d)" % self.tunnel_type)
 
 	def __hash__ (self):
 		return hash(self.community)
@@ -57,8 +56,8 @@ class Encapsulation (ExtendedCommunity):
 
 	def pack (self):
 		return pack("!BBHHH",
-			Encapsulation.COMMUNITY_TYPE,
-			Encapsulation.COMMUNITY_SUBTYPE,
+			self.COMMUNITY_TYPE,
+			self.COMMUNITY_SUBTYPE,
 			0,
 			0,
 			self.tunnel_type
@@ -66,7 +65,7 @@ class Encapsulation (ExtendedCommunity):
 
 	@staticmethod
 	def unpack (data):
-		return Encapsulation(unpack('!H',data[6:8])[0])
+		return Encapsulation(unpack('!H',data[6:8])[0],data[:8])
 
 		# type_  = ord(data[0]) & 0x0F
 		# stype = ord(data[1])
@@ -74,3 +73,5 @@ class Encapsulation (ExtendedCommunity):
 		# assert(type_==Encapsulation.COMMUNITY_TYPE)
 		# assert(stype==Encapsulation.COMMUNITY_SUBTYPE)
 		# assert(len(data)==6)
+
+Encapsulation._known[chr(Encapsulation.COMMUNITY_TYPE)+chr(Encapsulation.COMMUNITY_SUBTYPE)] = Encapsulation
