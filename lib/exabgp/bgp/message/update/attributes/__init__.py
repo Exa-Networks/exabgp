@@ -569,7 +569,7 @@ class Attributes (dict):
 		while data:
 			if data and len(data) < 8:
 				raise Notify(3,1,'could not decode extended community %s' % str([hex(ord(_)) for _ in data]))
-			communities.add(ECommunity(data[:8]))
+			communities.add(ECommunity.unpack(data[:8]))
 			data = data[8:]
 		return communities
 
@@ -625,6 +625,43 @@ class Attributes (dict):
 
 	def __new_ASPath4 (self,data):
 		return self.__new_aspaths(data,True,AS4Path)
+
+	def __hash__(self):
+		# XXX: FIXME: not excellent... :-(
+		return hash(repr(self))
+
+	# test that sets of attributes exactly match
+	# can't rely on __eq__ for this, because __eq__ relies on Attribute.__eq__ which does not look at attributes values
+
+	def sameValuesAs(self,other):
+		# we sort based on string representation since the items do not
+		# necessarily implement __cmp__
+		sorter = lambda x,y: cmp(repr(x), repr(y))
+
+		try:
+			for key in set(self.iterkeys()).union(set(other.iterkeys())):
+				if key == AID.MP_REACH_NLRI:
+					continue
+
+					sval = self[key]
+					oval = other[key]
+
+					# In the case where the attribute is, for instance, a list
+					# we want to compare values independently of the order
+					if isinstance(sval, collections.Iterable):
+						if not isinstance(oval, collections.Iterable):
+							return False
+
+						sval = sorted(sval,sorter)
+						oval = set(oval,sorter)
+
+					if sval != oval:
+						return False
+			return True
+		except KeyError:
+				return False
+
+
 
 if not Attributes.cache:
 	for attribute in AID._str:
