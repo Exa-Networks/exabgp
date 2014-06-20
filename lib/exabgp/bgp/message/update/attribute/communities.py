@@ -111,65 +111,58 @@ class Communities (Attribute):
 
 # http://www.iana.org/assignments/bgp-extended-communities
 
+_known_community = {
+	# header and subheader
+	'target' : chr(0x00)+chr(0x02),
+	'origin' : chr(0x00)+chr(0x03),
+	'l2info' : chr(0x80)+chr(0x0A),
+}
+
+_size_community = {
+	'target' : 2,
+	'origin' : 2,
+	'l2info' : 4,
+}
+
+
 # MUST ONLY raise ValueError
 def to_ExtendedCommunity (data):
-	nb_separators = data.count(':')
-	if nb_separators == 2:
-		command,ga,la = data.split(':')
-	elif nb_separators == 1:
-		command = 'target'
-		ga,la = data.split(':')
-	elif nb_separators == 4:
-		#this is l2info community
-		data = data.split(':')
-		command = data[0]
-	else:
+	components = data.split(':')
+	command = 'target' if len(components) == 2 else components.pop(0)
+
+	if command not in _known_community:
 		raise ValueError('invalid extended community %s (only origin,target or l2info are supported) ' % command)
 
+	if len(components) != _size_community[command]:
+		raise ValueError('invalid extended community %s, expecting %d fields ' % (command,len(components)))
 
-	header = chr(0x00)
-	if command == 'origin':
-		subtype = chr(0x03)
-	elif command == 'target':
-		subtype = chr(0x02)
-	elif command == 'l2info':
-		header = chr(0x80)
-		subtype = chr(0x0A)
-	else:
-		raise ValueError('invalid extended community %s (only origin,target or l2info are supported) ' % command)
+	header = _known_community[command]
 
 	if command == 'l2info':
-		encap_type = pack('!B',int(data[1]))
-		control_flags = pack('!B',int(data[2]))
-		mtu = pack('!H',int(data[3]))
-		site_pref = pack('!H',int(data[4]))
-		return ECommunity(header+subtype+encap_type+control_flags+mtu+site_pref)
+		# encaps, control, mtu, site
+		return ECommunity(header+pack('!BBHH',*components))
 
+	if command in ('target','origin'):
+		# global admin, local admin
+		ga,la = components
 
-	if '.' in ga or '.' in la:
-		gc = ga.count('.')
-		lc = la.count('.')
-		if gc == 0 and lc == 3:
-			# ASN first, IP second
-			global_admin = pack('!H',int(ga))
-			local_admin = pack('!BBBB',*[int(_) for _ in la.split('.')])
-		elif gc == 3 and lc == 0:
-			# IP first, ASN second
-			global_admin = pack('!BBBB',*[int(_) for _ in ga.split('.')])
-			local_admin = pack('!H',int(la))
+		if '.' in ga or '.' in la:
+			gc = ga.count('.')
+			lc = la.count('.')
+			if gc == 0 and lc == 3:
+				# ASN first, IP second
+				return ECommunity(header+pack('!HBBBB',int(ga),*[int(_) for _ in la.split('.')]))
+			if gc == 3 and lc == 0:
+				# IP first, ASN second
+				return ECommunity(header+pack('!BBBBH',*[int(_) for _ in ga.split('.')]+[int(la)]))
 		else:
-			raise ValueError('invalid extended community %s ' % data)
-	else:
-		if command == 'target':
-			global_admin = pack('!H',int(ga))
-			local_admin = pack('!I',int(la))
-		elif command == 'origin':
-			global_admin = pack('!I',int(ga))
-			local_admin = pack('!H',int(la))
-		else:
-			raise ValueError('invalid extended community %s (only origin,target or l2info are supported) ' % command)
+			if command == 'target':
+				return ECommunity(header+pack('!HI',int(ga),int(la)))
+			if command == 'origin':
+				return ECommunity(header+pack('!IH',int(ga),int(la)))
 
-	return ECommunity(header+subtype+global_admin+local_admin)
+	raise ValueError('invalid extended community %s' % command)
+
 
 class ECommunity (object):
 	ID = AttributeID.EXTENDED_COMMUNITY
@@ -225,13 +218,11 @@ class ECommunity (object):
 		if community_stype == 0x0A:
 			if community_type == 0x00:
 				encaps = unpack('!B',self.community[2:3])[0]
-				control_flag = unpack('!B',self.community[3:4])[0]
-				l2mtu = unpack('!H',self.community[4:6])[0]
+				control = unpack('!B',self.community[3:4])[0]
+				mtu = unpack('!H',self.community[4:6])[0]
 				#juniper uses reserved(rfc4761) as a site preference
 				reserved = unpack('!H',self.community[6:8])[0]
-				return "L2info:%s:%s:%s:%s"%(encaps,
-						control_flag, l2mtu, reserved)
-
+				return "L2info:%s:%s:%s:%s"%(encaps,control,mtu,reserved)
 
 		# Traffic rate
 		if self.community.startswith('\x80\x06'):
