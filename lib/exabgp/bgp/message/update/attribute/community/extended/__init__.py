@@ -11,6 +11,8 @@ from struct import unpack
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute import Flag
 
+# XXX: Should subclasses register with transitivity ?
+
 class ExtendedCommunity (object):
 	ID = AttributeID.EXTENDED_COMMUNITY
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
@@ -112,11 +114,13 @@ class ExtendedCommunity (object):
 		return 8
 
 	def __cmp__ (self,other):
+		if not isinstance(other, ExtendedCommunity):
+			return -1
 		return cmp(self.pack(),other.pack())
 
 	@staticmethod
 	def unpack (data):
-		community = ord(data[:2]) & 0x0FFF
+		community = ord(data[:2])  # remove transitivity & 0x0FFF
 		if community in ExtendedCommunity._known:
 			return ExtendedCommunity._known[community].unpack(data)
 		return ExtendedCommunity(data)
