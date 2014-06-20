@@ -382,7 +382,7 @@ The program configuration can be controlled using signals:
 	from exabgp.bgp.message.update.attribute.nexthop import NextHop
 	NextHop.caching = env.cache.nexthops
 
-	from exabgp.bgp.message.update.attribute.community import Community
+	from exabgp.bgp.message.update.attribute.community.normal import Community
 	Community.caching = env.cache.attributes
 
 	if len(configurations) == 1:
