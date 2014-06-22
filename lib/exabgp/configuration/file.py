@@ -34,7 +34,7 @@ from exabgp.bgp.message.open.routerid import RouterID
 
 from exabgp.bgp.message.update.nlri.prefix import Prefix
 from exabgp.bgp.message.update.nlri.bgp import NLRI,PathInfo,Labels,RouteDistinguisher
-from exabgp.bgp.message.update.nlri.l2vpn import VPLSNLRI
+from exabgp.bgp.message.update.nlri.vpls import VPLSNLRI
 from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,FlowNLRI,Flow4Source,Flow4Destination,Flow6Source,Flow6Destination,FlowSourcePort,FlowDestinationPort,FlowAnyPort,FlowIPProtocol,FlowNextHeader,FlowTCPFlag,FlowFragment,FlowPacketLength,FlowICMPType,FlowICMPCode,FlowDSCP,FlowTrafficClass,FlowFlowLabel
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
@@ -151,7 +151,7 @@ class Configuration (object):
 	' withdraw' \
 	';\n'
 
-	_str_l2vpn_error = \
+	_str_vpls_error = \
 	'syntax:\n' \
 	'vpls site_name {\n' \
 	'   endpoint <vpls endpoint id; interger>' \
@@ -329,10 +329,10 @@ class Configuration (object):
 			'extended-community': self._route_extended_community,
 		}
 		self._dispatch_vpls_cfg = {
-			'endpoint': self._route_l2vpn_endpoint,
-			'offset': self._route_l2vpn_block_offset,
-			'size': self._route_l2vpn_block_size,
-			'base': self._route_l2vpn_label_base,
+			'endpoint': self._l2vpn_vpls_endpoint,
+			'offset': self._l2vpn_vpls_block_offset,
+			'size': self._l2vpn_vpls_block_size,
+			'base': self._l2vpn_vpls_label_base,
 			'origin': self._route_origin,
 			'as-path': self._route_aspath,
 			'med': self._route_med,
@@ -456,7 +456,7 @@ class Configuration (object):
 			for peer,nexthop in peers.iteritems():
 				scope = [{}]
 				self._nexthopself = nexthop
-				if not self._single_l2vpn_route(scope,tokens[1:]):
+				if not self._single_l2vpn_vpls(scope,tokens[1:]):
 					self._nexthopself = None
 					return False
 				for change in scope[0]['announce']:
@@ -464,7 +464,7 @@ class Configuration (object):
 			self._nexthopself = None
 		else:
 			scope = [{}]
-			if not self._single_l2vpn_route(scope,tokens[1:]):
+			if not self._single_l2vpn_vpls(scope,tokens[1:]):
 				return False
 			for peer in peers:
 				for change in scope[0]['announce']:
@@ -724,8 +724,8 @@ class Configuration (object):
 
 		if name == 'l2vpn':
 			if command == 'vpls':
-				if self._multi_l2vpn_route(scope,tokens[1:]):
-					return self._check_l2vpn_route(scope)
+				if self._multi_l2vpn_vpls(scope,tokens[1:]):
+					return self._check_l2vpn_vpls(scope)
 				return False
 
 		if name == 'flow-route':
@@ -882,7 +882,7 @@ class Configuration (object):
 			if command == 'route': return self._single_static_route(scope,tokens[1:])
 
 		elif name == 'l2vpn':
-			if command == 'vpls': return self._single_l2vpn_route(scope,tokens[1:])
+			if command == 'vpls': return self._single_l2vpn_vpls(scope,tokens[1:])
 
 		elif name == 'operational':
 			if command == 'asm': return self._single_operational_asm(scope,tokens[1])
@@ -1738,12 +1738,12 @@ class Configuration (object):
 
 		return self._split_last_route(scope)
 
-	def _single_l2vpn_route (self,scope,tokens):
+	def _single_l2vpn_vpls (self,scope,tokens):
 		#TODO: actual length?(like rd+lb+bo+ve+bs+rd; 14 or so)
 		if len(tokens) < 10:
 			return False
 
-		if not self._insert_l2vpn_route(scope,tokens):
+		if not self._insert_l2vpn_vpls(scope,tokens):
 			return False
 
 		while len(tokens):
@@ -1761,7 +1761,7 @@ class Configuration (object):
 				return False
 			return False
 
-		if not self._check_l2vpn_route(scope):
+		if not self._check_l2vpn_vpls(scope):
 			return False
 		return True
 
@@ -2258,7 +2258,7 @@ class Configuration (object):
 
 	def _multi_l2vpn (self,scope,tokens):
 		if len(tokens) != 0:
-			self._error = self._str_l2vpn_error
+			self._error = self._str_vpls_error
 			if self.debug: raise
 			return False
 		while True:
@@ -2271,29 +2271,29 @@ class Configuration (object):
 			if r is None: break
 		return True
 
-	def _insert_l2vpn_route (self,scope,tokens=None):
+	def _insert_l2vpn_vpls (self,scope,tokens=None):
 		try:
 			attributes = Attributes()
 			attributes[AttributeID.EXTENDED_COMMUNITY] = ExtendedCommunities()
-			l2vpn_route = Change(VPLSNLRI(None,None,None,None,None),attributes)
+			change = Change(VPLSNLRI(None,None,None,None,None),attributes)
 		except ValueError:
-			self._error = self._str_l2vpn_error
+			self._error = self._str_vpls_error
 			if self.debug: raise
 			return False
 
 		if 'announce' not in scope[-1]:
 			scope[-1]['announce'] = []
 
-		scope[-1]['announce'].append(l2vpn_route)
+		scope[-1]['announce'].append(change)
 		return True
 
-	def _multi_l2vpn_route (self,scope,tokens):
+	def _multi_l2vpn_vpls (self,scope,tokens):
 		if len(tokens) > 1:
-			self._error = self._str_l2vpn_error
+			self._error = self._str_vpls_error
 			if self.debug: raise
 			return False
 
-		if not self._insert_l2vpn_route(scope):
+		if not self._insert_l2vpn_vpls(scope):
 			return False
 
 		while True:
@@ -2360,7 +2360,7 @@ class Configuration (object):
 		self.logger.configuration('warning: no check on flows are implemented')
 		return True
 
-	def _check_l2vpn_route (self,scope):
+	def _check_l2vpn_vpls (self,scope):
 		nlri = scope[-1]['announce'][-1].nlri
 
 		if nlri.ve is None:
@@ -2405,7 +2405,7 @@ class Configuration (object):
 
 		return True
 
-	def _route_l2vpn_endpoint(self, scope, token):
+	def _l2vpn_vpls_endpoint(self, scope, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			raise ValueError(self._str_vpls_bad_enpoint)
@@ -2414,7 +2414,7 @@ class Configuration (object):
 		vpls.ve = number
 		return True
 
-	def _route_l2vpn_block_size(self, scope, token):
+	def _l2vpn_vpls_block_size(self, scope, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			raise ValueError(self._str_vpls_bad_size)
@@ -2423,7 +2423,7 @@ class Configuration (object):
 		vpls.block_size = number
 		return True
 
-	def _route_l2vpn_block_offset(self, scope, token):
+	def _l2vpn_vpls_block_offset(self, scope, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			raise ValueError(self._str_vpls_bad_offset)
@@ -2432,7 +2432,7 @@ class Configuration (object):
 		vpls.block_offset = number
 		return True
 
-	def _route_l2vpn_label_base(self, scope, token):
+	def _l2vpn_vpls_label_base(self, scope, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			raise ValueError(self._str_vpls_bad_label)

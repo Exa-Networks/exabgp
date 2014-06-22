@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import unittest
-from exabgp.bgp.message.update.nlri.l2vpn import VPLSNLRI, L2VPN
+from exabgp.bgp.message.update.nlri.vpls import VPLSNLRI
 from exabgp.bgp.message.update.attribute.community import *
 from exabgp.bgp.message.update.nlri.bgp import RouteDistinguisher
 

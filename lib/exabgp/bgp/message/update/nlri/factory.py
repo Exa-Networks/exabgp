@@ -12,7 +12,7 @@ from struct import unpack
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.bgp.message.update.nlri.bgp import NLRI,PathInfo,Labels,RouteDistinguisher,mask_to_bytes
 from exabgp.bgp.message.update.nlri.flow import FlowNLRI,decode,factory,CommonOperator
-from exabgp.bgp.message.update.nlri.l2vpn import VPLSNLRI
+from exabgp.bgp.message.update.nlri.vpls import VPLSNLRI
 #from exabgp.bgp.message.update.nlri.mpls import VPNLabelledPrefix,RouteTargetConstraint
 
 from exabgp.bgp.message.update.attribute.nexthop import cachedNextHop
