@@ -2254,9 +2254,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-	# L2VPN (
-	# XXX: FIXME: does not support the single line format ..)
-	# XXX: FIXME: no check are performed on the input data
+	# VPLS
 
 	def _multi_l2vpn (self,scope,tokens):
 		if len(tokens) != 0:
@@ -2377,7 +2375,7 @@ class Configuration (object):
 		if nlri.block_size is None:
 			raise ValueError(self._str_vpls_bad_size)
 
-		if nlri.label_base > (0xFFFFF - nlri.block_size):  # 20 bits 5 bytes
+		if nlri.label_base > (0xFFFFF - nlri.block_size):  # 20 bits, 3 bytes
 			raise ValueError(self._str_vpls_bad_label)
 
 		return True

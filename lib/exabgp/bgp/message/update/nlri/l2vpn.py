@@ -53,12 +53,13 @@ class VPLSNLRI (Address):
 		return '"vpls-%s": { %s }' % (self.unique, content)
 
 	def extensive (self):
-		return "vpls %s endpoint %s base %s offset %s size %s" % (
+		return "vpls%s endpoint %s base %s offset %s size %s %s" % (
 			self.rd,
 			self.ve,
 			self.label_base,
 			self.block_offset,
 			self.block_size,
+			'' if self.nexthop is None else 'next-hop %s' % self.nexthop,
 		)
 
 	def __str__ (self):
@@ -74,11 +75,3 @@ class VPLSNLRI (Address):
 		ve,block_offset,block_size = unpack('!HHH',bgp[10:16])
 		label_base = unpack('!L',bgp[16:19]+'\x00')[0]>>12
 		return VPLSNLRI(rd,ve,label_base,block_offset,block_size)
-
-def _next_index ():
-	value = 0
-	while True:
-		yield str(value)
-		value += 1
-
-next_index = _next_index()

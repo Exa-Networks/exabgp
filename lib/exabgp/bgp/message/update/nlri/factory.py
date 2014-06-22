@@ -25,6 +25,10 @@ from exabgp.logger import Logger,LazyFormat
 logger = None
 
 def NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
+	if safi in (SAFI.unicast, SAFI.multicast):  # XXX: some more are missing
+		if afi in (AFI.ipv4, AFI.ipv6):
+			return _NLRIFactory(afi,safi,bgp,has_multiple_path,nexthop,action)
+
 	if safi in (SAFI.flow_ip,SAFI.flow_vpn):
 		if afi in (AFI.ipv4, AFI.ipv6):
 			return _FlowNLRIFactory(afi,safi,nexthop,bgp,action)
@@ -32,7 +36,7 @@ def NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
 
 	if safi in (SAFI.vpls,):
 		if afi in (AFI.l2vpn,):
-			return _VPLSNLRIFactory(afi,safi,bgp,action)
+			return _VPLSNLRIFactory(afi,safi,nexthop,bgp,action)
 		raise Notify(3,0,'invalid family for VPLSNLRI')
 
 	# if afi in (AFI.ipv4,) and safi in (SAFI.mpls_vpn,):
@@ -94,13 +98,14 @@ def _nlrifactory (afi,safi,bgp,action):
 
 	return labels,rd,mask,size,prefix,bgp
 
-def _VPLSNLRIFactory(afi,safi,bgp,action):
+def _VPLSNLRIFactory(afi,safi,nexthop,bgp,action):
 	global logger
 	if logger is None:
 		logger = Logger()
 	logger.parser(LazyFormat("parsing l2vpn nlri payload ",od,bgp))
 	nlri = VPLSNLRI.unpack(bgp)
 	nlri.action = action
+	nlri.nexthop = cachedNextHop(nexthop)
 	return len(bgp), nlri
 
 
