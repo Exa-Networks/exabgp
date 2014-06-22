@@ -296,7 +296,7 @@ class JSON (object):
 			return '"update": { %s%s } ' % (attributes,nlri)
 		return '"update": { %s, %s } ' % (attributes,nlri)
 
-	def update (self,peer,update,header,body):	
+	def update (self,peer,update,header,body):
 		return self._header(self._neighbor(peer,self._kv({
 			'message': '{ %s }' % self._update(update)})),header,body,peer.neighbor.identificator(),self.count(peer),type='update')
 

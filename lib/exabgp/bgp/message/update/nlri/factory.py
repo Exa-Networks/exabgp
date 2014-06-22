@@ -12,7 +12,7 @@ from struct import unpack
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.bgp.message.update.nlri.bgp import NLRI,PathInfo,Labels,RouteDistinguisher,mask_to_bytes
 from exabgp.bgp.message.update.nlri.flow import FlowNLRI,decode,factory,CommonOperator
-from exabgp.bgp.message.update.nlri.l2vpn import L2VPNNLRI
+from exabgp.bgp.message.update.nlri.l2vpn import VPLSNLRI
 #from exabgp.bgp.message.update.nlri.mpls import VPNLabelledPrefix,RouteTargetConstraint
 
 from exabgp.bgp.message.update.attribute.nexthop import cachedNextHop
@@ -26,10 +26,14 @@ logger = None
 
 def NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
 	if safi in (SAFI.flow_ip,SAFI.flow_vpn):
-		return _FlowNLRIFactory(afi,safi,nexthop,bgp,action)
+		if afi in (AFI.ipv4, AFI.ipv6):
+			return _FlowNLRIFactory(afi,safi,nexthop,bgp,action)
+		raise Notify(3,0,'invalid family for FlowNLRI')
 
 	if safi in (SAFI.vpls,):
-		return _L2VPNNLRIFactory(afi,safi,nexthop,bgp,action)
+		if afi in (AFI.l2vpn,):
+			return _VPLSNLRIFactory(afi,safi,bgp,action)
+		raise Notify(3,0,'invalid family for VPLSNLRI')
 
 	# if afi in (AFI.ipv4,) and safi in (SAFI.mpls_vpn,):
 	# 	return VPNLabelledPrefix.unpack(afi,safi,bgp)
@@ -37,6 +41,8 @@ def NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
 	# if afi == AFI.ipv4 and safi == SAFI.rtc:
 	# 	return RouteTargetConstraint.unpack(afi,safi,bgp)
 
+
+	# XXX: FIXME: More checks here before going here ...
 	return _NLRIFactory(afi,safi,bgp,has_multiple_path,nexthop,action)
 
 
@@ -88,14 +94,13 @@ def _nlrifactory (afi,safi,bgp,action):
 
 	return labels,rd,mask,size,prefix,bgp
 
-def _L2VPNNLRIFactory(afi,safi,nexthop,bgp,action):
+def _VPLSNLRIFactory(afi,safi,bgp,action):
 	global logger
 	if logger is None:
 		logger = Logger()
 	logger.parser(LazyFormat("parsing l2vpn nlri payload ",od,bgp))
-	if nexthop:
-		nexthop = cachedNextHop(nexthop)
-	nlri = L2VPNNLRI(bgp, action, nexthop)
+	nlri = VPLSNLRI.unpack(bgp)
+	nlri.action = action
 	return len(bgp), nlri
 
 

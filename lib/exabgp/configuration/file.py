@@ -34,7 +34,7 @@ from exabgp.bgp.message.open.routerid import RouterID
 
 from exabgp.bgp.message.update.nlri.prefix import Prefix
 from exabgp.bgp.message.update.nlri.bgp import NLRI,PathInfo,Labels,RouteDistinguisher
-from exabgp.bgp.message.update.nlri.l2vpn import L2VPNNLRI
+from exabgp.bgp.message.update.nlri.l2vpn import VPLSNLRI
 from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,FlowNLRI,Flow4Source,Flow4Destination,Flow6Source,Flow6Destination,FlowSourcePort,FlowDestinationPort,FlowAnyPort,FlowIPProtocol,FlowNextHeader,FlowTCPFlag,FlowFragment,FlowPacketLength,FlowICMPType,FlowICMPCode,FlowDSCP,FlowTrafficClass,FlowFlowLabel
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
@@ -2277,7 +2277,7 @@ class Configuration (object):
 		try:
 			attributes = Attributes()
 			attributes[AttributeID.EXTENDED_COMMUNITY] = ExtendedCommunities()
-			l2vpn_route = Change(L2VPNNLRI(),attributes)
+			l2vpn_route = Change(VPLSNLRI(None,None,None,None,None),attributes)
 		except ValueError:
 			self._error = self._str_l2vpn_error
 			if self.debug: raise
@@ -2363,9 +2363,7 @@ class Configuration (object):
 		return True
 
 	def _check_l2vpn_route (self,scope):
-		vpls = scope[-1]['announce'][-1].nlri
-
-		nlri = vpls.nlri
+		nlri = scope[-1]['announce'][-1].nlri
 
 		if nlri.ve is None:
 			raise ValueError(self._str_vpls_bad_enpoint)
@@ -2415,7 +2413,7 @@ class Configuration (object):
 			raise ValueError(self._str_vpls_bad_enpoint)
 
 		vpls = scope[-1]['announce'][-1].nlri
-		vpls.nlri.ve = number
+		vpls.ve = number
 		return True
 
 	def _route_l2vpn_block_size(self, scope, token):
@@ -2424,7 +2422,7 @@ class Configuration (object):
 			raise ValueError(self._str_vpls_bad_size)
 
 		vpls = scope[-1]['announce'][-1].nlri
-		vpls.nlri.block_size = number
+		vpls.block_size = number
 		return True
 
 	def _route_l2vpn_block_offset(self, scope, token):
@@ -2433,7 +2431,7 @@ class Configuration (object):
 			raise ValueError(self._str_vpls_bad_offset)
 
 		vpls = scope[-1]['announce'][-1].nlri
-		vpls.nlri.block_offset = number
+		vpls.block_offset = number
 		return True
 
 	def _route_l2vpn_label_base(self, scope, token):
@@ -2442,7 +2440,7 @@ class Configuration (object):
 			raise ValueError(self._str_vpls_bad_label)
 
 		vpls = scope[-1]['announce'][-1].nlri
-		vpls.nlri.label_base = number
+		vpls.label_base = number
 		return True
 
 	# ..........................................
@@ -3060,7 +3058,7 @@ class Configuration (object):
 			for number in range(len(update.nlris)):
 				change = Change(update.nlris[number],update.attributes)
 				self.logger.parser('decoded %s %s %s' % (decoding,change.nlri.action,change.extensive()))
-			self.logger.parser('update json %s' % JSON('3.4.0').update(p,update))
+			self.logger.parser('update json %s' % JSON('3.4.0').update(p,update,'',''))
 		import sys
 		sys.exit(0)
 

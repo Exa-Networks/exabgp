@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import unittest
-from exabgp.bgp.message.update.nlri.l2vpn import L2VPNNLRI, L2VPN
+from exabgp.bgp.message.update.nlri.l2vpn import VPLSNLRI, L2VPN
 from exabgp.bgp.message.update.attribute.community import *
 from exabgp.bgp.message.update.nlri.bgp import RouteDistinguisher
 
@@ -58,7 +58,7 @@ class TestL2VPN (unittest.TestCase):
 		we are encoding routes and testing em against what we have recvd from
 		Juniper
 		'''
-		encoded_l2vpn = L2VPNNLRI()
+		encoded_l2vpn = VPLSNLRI(None,None,None,None,None)
 		encoded_l2vpn.nlri = self.decoded_l2vpn_nlri1
 		encoded_l2vpn.rd = self.decoded_l2vpn_nlri1.rd
 		self.assertEqual(
