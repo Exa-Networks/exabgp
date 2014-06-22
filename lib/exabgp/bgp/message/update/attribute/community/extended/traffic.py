@@ -164,5 +164,3 @@ TrafficNextHop._known[(TrafficNextHop.COMMUNITY_TYPE&0x0F,TrafficNextHop.COMMUNI
 # 	def unpack (data):
 # 		ip,target = unpack('!4sH',data[2:8])
 # 		return TrafficRedirectIP(socket.inet_ntop(socket.AF_INET,ip),target,data[:8])
-
-

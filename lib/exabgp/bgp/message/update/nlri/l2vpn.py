@@ -62,10 +62,13 @@ class L2VPNNLRI (Address):
 		return self.pack()
 
 	def pack (self, addpath=None):
-		msg_len = pack('!H',17)
-		rd = self.rd.pack()
-		ve = pack('!H',self.nlri.ve)
-		block_offset = pack('!H',self.nlri.block_offset)
-		block_size = pack('!H',self.nlri.block_size)
-		label_base = pack('!I',self.nlri.label_base<<12|0x111)[0:3]
-		return msg_len+rd+ve+block_offset+block_size+label_base
+		return '%s%s%s%s' % (
+			'\x00\x11',  # pack('!H',17)
+			self.rd.pack(),
+			pack('!HHH',
+				self.nlri.ve,
+				self.nlri.block_offset,
+				self.nlri.block_size
+			),
+			pack('!L',self.nlri.label_base<<12|0x111)[0:3]  # no idea ... deserve a comment ...
+		)
