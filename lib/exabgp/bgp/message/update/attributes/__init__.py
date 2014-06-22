@@ -580,7 +580,7 @@ class Attributes (dict):
 		while data:
 			if data and len(data) < 8:
 				raise Notify(3,1,'could not decode extended community %s' % str([hex(ord(_)) for _ in data]))
-			communities.add(ExtendedCommunity(data[:8]))
+			communities.add(ExtendedCommunity.unpack(data[:8]))
 			data = data[8:]
 		return communities
 

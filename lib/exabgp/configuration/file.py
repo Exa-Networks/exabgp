@@ -2047,7 +2047,7 @@ class Configuration (object):
 				raise ValueError('invalid extended community %s' % data)
 			if len(raw) != 8:
 				raise ValueError('invalid extended community %s' % data)
-			return ExtendedCommunity(raw)
+			return ExtendedCommunity.unpack(raw)
 		elif data.count(':'):
 			return to_ExtendedCommunity(data)
 		else:

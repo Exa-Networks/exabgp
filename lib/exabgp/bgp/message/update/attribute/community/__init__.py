@@ -82,7 +82,7 @@ def to_ExtendedCommunity (data):
 
 	if command == 'l2info':
 		# encaps, control, mtu, site
-		return ExtendedCommunity(header+pack('!BBHH',*[int(_) for _ in components]))
+		return ExtendedCommunity.unpack(header+pack('!BBHH',*[int(_) for _ in components]))
 
 	if command in ('target','origin'):
 		# global admin, local admin
@@ -93,15 +93,15 @@ def to_ExtendedCommunity (data):
 			lc = la.count('.')
 			if gc == 0 and lc == 3:
 				# ASN first, IP second
-				return ExtendedCommunity(header+pack('!HBBBB',int(ga),*[int(_) for _ in la.split('.')]))
+				return ExtendedCommunity.unpack(header+pack('!HBBBB',int(ga),*[int(_) for _ in la.split('.')]))
 			if gc == 3 and lc == 0:
 				# IP first, ASN second
-				return ExtendedCommunity(header+pack('!BBBBH',*[int(_) for _ in ga.split('.')]+[int(la)]))
+				return ExtendedCommunity.unpack(header+pack('!BBBBH',*[int(_) for _ in ga.split('.')]+[int(la)]))
 		else:
 			if command == 'target':
-				return ExtendedCommunity(header+pack('!HI',int(ga),int(la)))
+				return ExtendedCommunity.unpack(header+pack('!HI',int(ga),int(la)))
 			if command == 'origin':
-				return ExtendedCommunity(header+pack('!IH',int(ga),int(la)))
+				return ExtendedCommunity.unpack(header+pack('!IH',int(ga),int(la)))
 
 	raise ValueError('invalid extended community %s' % command)
 
@@ -117,12 +117,13 @@ def to_ExtendedCommunity (data):
 #	return communities
 
 
-# =================================================================== FlowSpec Defined Extended Communities
+# ======================================== FlowSpec Defined Extended Communities
+# XXX: FIXME: we should call the right class directly here
 
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
 def _to_FlowCommunity (action,data):
-	return ExtendedCommunity(pack('!H',action) + data[:6])
+	return ExtendedCommunity.unpack(pack('!H',action) + data[:6])
 
 # rate is bytes/seconds
 def to_FlowTrafficRate (asn,rate):
@@ -148,15 +149,15 @@ def to_FlowTrafficMark (dscp):
 	return _to_FlowCommunity (0x8009,'\x00\x00\x00\x00\x00' + chr(dscp))
 
 def to_RouteOriginCommunity (asn,number,hightype=0x01):
-	return ExtendedCommunity(chr(hightype) + chr(0x03) + pack('!H',asn) + pack('!L',number))
+	return ExtendedCommunity.unpack(chr(hightype) + chr(0x03) + pack('!H',asn) + pack('!L',number))
 
 # VRF is ASN:Long
 def to_RouteTargetCommunity_00 (asn,number):
-	return ExtendedCommunity(chr(0x00) + chr(0x02) + pack('!H',asn) + pack('!L',number))
+	return ExtendedCommunity.unpack(chr(0x00) + chr(0x02) + pack('!H',asn) + pack('!L',number))
 
 # VRF is A.B.C.D:Short
 def to_RouteTargetCommunity_01 (ipn,number):
-	return ExtendedCommunity(chr(0x01) + chr(0x02) + pack('!L',ipn) + pack('!H',number))
+	return ExtendedCommunity.unpack(chr(0x01) + chr(0x02) + pack('!L',ipn) + pack('!H',number))
 
 #def to_ASCommunity (subtype,asn,data,transitive):
 #	r = chr(0x00)

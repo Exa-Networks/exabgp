@@ -55,4 +55,4 @@ class Encapsulation (ExtendedCommunity):
 		# assert(stype==Encapsulation.COMMUNITY_SUBTYPE)
 		# assert(len(data)==6)
 
-Encapsulation._known[chr(Encapsulation.COMMUNITY_TYPE&0x0F)+chr(Encapsulation.COMMUNITY_SUBTYPE)] = Encapsulation
+Encapsulation._known[(Encapsulation.COMMUNITY_TYPE&0x0F,Encapsulation.COMMUNITY_SUBTYPE)] = Encapsulation
