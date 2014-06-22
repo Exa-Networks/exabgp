@@ -50,7 +50,7 @@ class RouteTargetASNIP (RouteTarget):
 		asn,ip = unpack('!H4s',data[2:8])
 		return RouteTargetASNIP(ASN(asn),socket.inet_ntop(socket.AF_INET,ip),False,data[:8])
 
-RouteTargetASNIP._known[chr(RouteTargetASNIP.COMMUNITY_TYPE)+chr(RouteTargetASNIP.COMMUNITY_SUBTYPE)] = RouteTargetASNIP
+RouteTargetASNIP._known[chr(RouteTargetASNIP.COMMUNITY_TYPE&0x0F)+chr(RouteTargetASNIP.COMMUNITY_SUBTYPE)] = RouteTargetASNIP
 
 
 # ============================================================= RouteTargetIPASN
@@ -73,7 +73,7 @@ class RouteTargetIPASN (RouteTarget):
 		ip,asn = unpack('!4sH',data[2:8])
 		return RouteTargetIPASN(socket.inet_ntop(socket.AF_INET,ip),ASN(asn),False,data[:8])
 
-RouteTargetIPASN._known[chr(RouteTargetIPASN.COMMUNITY_TYPE)+chr(RouteTargetIPASN.COMMUNITY_SUBTYPE)] = RouteTargetIPASN
+RouteTargetIPASN._known[chr(RouteTargetIPASN.COMMUNITY_TYPE&0x0F)+chr(RouteTargetIPASN.COMMUNITY_SUBTYPE)] = RouteTargetIPASN
 
 
 # ======================================================== RouteTargetASN4Number
@@ -96,4 +96,4 @@ class RouteTargetASN4Number (RouteTarget):
 		asn,number = unpack('!LH',data[2:8])
 		return RouteTargetASN4Number(ASN(asn),number,False,data[:8])
 
-RouteTargetASN4Number._known[chr(RouteTargetASN4Number.COMMUNITY_TYPE)+chr(RouteTargetASN4Number.COMMUNITY_SUBTYPE)] = RouteTargetASN4Number
+RouteTargetASN4Number._known[chr(RouteTargetASN4Number.COMMUNITY_TYPE&0x0F)+chr(RouteTargetASN4Number.COMMUNITY_SUBTYPE)] = RouteTargetASN4Number
