@@ -13,7 +13,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 
 # ============================================================ Layer2Information
-
+# RFC 4761
 
 class L2Info (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x80

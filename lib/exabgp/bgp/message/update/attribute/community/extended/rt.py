@@ -16,7 +16,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 
 # ================================================================== RouteTarget
-
+# RFC 4360 / RFC 7153
 
 class RouteTarget (ExtendedCommunity):
 	COMMUNITY_SUBTYPE = 0x02
@@ -31,7 +31,7 @@ class RouteTarget (ExtendedCommunity):
 
 
 # ============================================================= RouteTargetASNIP
-
+# RFC 4360 / RFC 7153
 
 class RouteTargetASNIP (RouteTarget):
 	COMMUNITY_TYPE = 0x00
@@ -54,7 +54,7 @@ RouteTargetASNIP._known[chr(RouteTargetASNIP.COMMUNITY_TYPE&0x0F)+chr(RouteTarge
 
 
 # ============================================================= RouteTargetIPASN
-
+# RFC 4360 / RFC 7153
 
 class RouteTargetIPASN (RouteTarget):
 	COMMUNITY_TYPE = 0x01
@@ -77,7 +77,7 @@ RouteTargetIPASN._known[chr(RouteTargetIPASN.COMMUNITY_TYPE&0x0F)+chr(RouteTarge
 
 
 # ======================================================== RouteTargetASN4Number
-
+# RFC 4360 / RFC 7153
 
 class RouteTargetASN4Number (RouteTarget):
 	COMMUNITY_TYPE = 0x02

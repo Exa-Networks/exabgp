@@ -16,7 +16,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 
 # ======================================================================= Origin
-
+# RFC 4360 / RFC 7153
 
 class Origin (ExtendedCommunity):
 	COMMUNITY_SUBTYPE = 0x01
@@ -31,7 +31,7 @@ class Origin (ExtendedCommunity):
 
 
 # ================================================================== OriginASNIP
-
+# RFC 4360 / RFC 7153
 
 class OriginASNIP (Origin):
 	COMMUNITY_TYPE = 0x00
@@ -54,7 +54,7 @@ OriginASNIP._known[chr(OriginASNIP.COMMUNITY_TYPE&0x0F)+chr(OriginASNIP.COMMUNIT
 
 
 # ================================================================== OriginIPASN
-
+# RFC 4360 / RFC 7153
 
 class OriginIPASN (Origin):
 	COMMUNITY_TYPE = 0x01
@@ -77,7 +77,7 @@ OriginIPASN._known[chr(OriginIPASN.COMMUNITY_TYPE&0x0F)+chr(OriginIPASN.COMMUNIT
 
 
 # ======================================================== OriginASN4Number
-
+# RFC 4360 / RFC 7153
 
 class OriginASN4Number (Origin):
 	COMMUNITY_TYPE = 0x02
