@@ -45,9 +45,6 @@ class OriginASNIP (Origin):
 	def __str__ (self):
 		return "origin:%s:%d" % (self.asn,self.ip)
 
-	def pack (self):
-		return self.community
-
 	@staticmethod
 	def unpack(data):
 		asn,ip = unpack('!H4s',data[2:8])
@@ -71,9 +68,6 @@ class OriginIPASN (Origin):
 	def __str__ (self):
 		return "origin:%s:%d" % (self.ip, self.asn)
 
-	def pack (self):
-		return self.community
-
 	@staticmethod
 	def unpack (data):
 		ip,asn = unpack('!4sH',data[2:8])
@@ -96,9 +90,6 @@ class OriginASN4Number (Origin):
 
 	def __str__ (self):
 		return "origin:%s:%d" % (self.asn, self.number)
-
-	def pack (self):
-		return self.community
 
 	@staticmethod
 	def unpack (data):

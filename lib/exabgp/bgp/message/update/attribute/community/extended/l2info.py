@@ -24,29 +24,10 @@ class L2Info (ExtendedCommunity):
 		self.control = control
 		self.mtu = mtu
 		self.reserved = reserved
-		self.community = community if community is not None else self.pack()
+		ExtendedCommunity(community if community is not None else pack("!BBLH",0x80,0x0A,0,self.tunnel_type))
 
 	def __str__ (self):
-		return "L2info:%s:%s:%s:%s" % (self.encaps,self.control,self.mtu,self.reserved)
-
-	def __hash__ (self):
-		return hash(self.community)
-
-	def __cmp__ (self,other):
-		if not isinstance(other,self.__class__):
-			return -1
-		if self.tunnel_type != other.tunnel_type:
-			return -1
-		return 0
-
-	def pack (self):
-		return pack("!BBHHH",
-			self.COMMUNITY_TYPE,
-			self.COMMUNITY_SUBTYPE,
-			0,
-			0,
-			self.tunnel_type
-		)
+		return "l2info:%s:%s:%s:%s" % (self.encaps,self.control,self.mtu,self.reserved)
 
 	@staticmethod
 	def unpack (data):
