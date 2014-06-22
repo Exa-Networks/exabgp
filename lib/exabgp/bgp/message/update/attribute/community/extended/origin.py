@@ -40,7 +40,7 @@ class OriginASNIP (Origin):
 	def __init__ (self,asn,ip,transitive,community=None):
 		self.asn = asn
 		self.ip = ip
-		OriginASNIP.__init__(community if community else pack('!BBH4s',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,asn,socket.inet_pton(socket.AF_INET,self.ip)))
+		OriginASNIP.__init__(community if community else pack('!BBH4s',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,asn,socket.inet_pton(socket.AF_INET,ip)))
 
 	def __str__ (self):
 		return "origin:%s:%d" % (self.asn,self.ip)
@@ -63,7 +63,7 @@ class OriginIPASN (Origin):
 	def __init__ (self,asn,ip,transitive,community=None):
 		self.ip = ip
 		self.asn = asn
-		OriginIPASN.__init__(community if community else pack('!BB4sH',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,socket.inet_pton(socket.AF_INET,self.ip),self.asn))
+		OriginIPASN.__init__(community if community else pack('!BB4sH',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,socket.inet_pton(socket.AF_INET,ip),asn))
 
 	def __str__ (self):
 		return "origin:%s:%d" % (self.ip, self.asn)
@@ -86,7 +86,7 @@ class OriginASN4Number (Origin):
 	def __init__ (self,asn,number,transitive,community=None):
 		self.asn = asn
 		self.number = number
-		OriginASN4Number.__init__(community if community else pack('!BBLH',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,self.asn,self.number))
+		OriginASN4Number.__init__(community if community else pack('!BBLH',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,asn,number))
 
 	def __str__ (self):
 		return "origin:%s:%d" % (self.asn, self.number)
