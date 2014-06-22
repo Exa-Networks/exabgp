@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-rt.py
+origin.py
 
 Created by Thomas Mangin on 2014-06-20.
 Copyright (c) 2014-2014 Orange. All rights reserved.
@@ -15,78 +15,94 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
 
-# ================================================================== Origin
+# ======================================================================= Origin
 
 
 class Origin (ExtendedCommunity):
 	COMMUNITY_SUBTYPE = 0x01
 
-	def __hash__ (self):
-		return hash(self.community)
+	@property
+	def la (self):
+		return self.community[2:self.LIMIT]
 
-	def __cmp__ (self,other):
-		if not isinstance(other,Origin):
-			return -1
-		if self.asn != other.asn:
-			return -1
-		if self.ip != other.ip:
-			return -1
-		return 0
+	@property
+	def ga (self):
+		return self.community[self.LIMIT:8]
 
 
-# ================================================================ OriginIP
-
-
-class OriginIPASN (Origin):
-	COMMUNITY_TYPE = 0x01
-
-	# XXX: FIXME: Decide between IP and number and keep one
-
-	def __init__ (self,asn,ip,community=None):
-		self.ip = ip if '.' in str(ip) else socket.inet_ntop(socket.AF_INET,pack('!L',ip))
-		self.asn = asn
-		self.community = community if community is not None else self.pack()
-
-	def __str__ (self):
-		return "target:%s:%d" % (self.ip, self.ip)
-
-	def pack (self):
-		ip = socket.inet_pton(socket.AF_INET,self.ip)
-		return pack('!BB4sH',0x01,0x02,ip,self.asn)
-
-	@staticmethod
-	def unpack (data):
-		ip = socket.inet_ntop(socket.AF_INET,data[2:6])
-		asn = unpack('!4sH',data[6:8])[0]
-		return OriginIPASN(ip,asn,data[:8])
-
-OriginIPASN._known[chr(OriginIPASN.COMMUNITY_TYPE)+chr(OriginIPASN.COMMUNITY_SUBTYPE)] = OriginIPASN
-
-
-# =============================================================== OriginASN
+# ================================================================== OriginASNIP
 
 
 class OriginASNIP (Origin):
 	COMMUNITY_TYPE = 0x00
+	LIMIT = 4
 
-	# XXX: FIXME: Decide between IP and number and keep one
-
-	def __init__ (self,asn,ip,community=None):
+	def __init__ (self,asn,ip,transitive,community=None):
 		self.asn = asn
-		self.ip = ip if '.' in str(ip) else socket.inet_ntop(socket.AF_INET,pack('!L',ip))
-		self.community = community if community is not None else self.pack()
+		self.ip = ip
+		OriginASNIP.__init__(community if community else pack('!BBH4s',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,asn,socket.inet_pton(socket.AF_INET,self.ip)))
 
 	def __str__ (self):
-		return "target:%s:%d" % (str(self.asn), self.ip)
+		return "origin:%s:%d" % (self.asn,self.ip)
 
 	def pack (self):
-		ip = socket.inet_pton(socket.AF_INET,self.ip)
-		return pack('!BBH4s',0x00,0x02,self.asn,ip)
+		return self.community
 
 	@staticmethod
 	def unpack(data):
-		asn = unpack('!H',data[2:4])
-		ip = socket.inet_ntop(socket.AF_INET,data[4:8])
-		return OriginASNIP(ASN(asn),ip,data[:8])
+		asn,ip = unpack('!H4s',data[2:8])
+		return OriginASNIP(ASN(asn),socket.inet_ntop(socket.AF_INET,ip),False,data[:8])
 
 OriginASNIP._known[chr(OriginASNIP.COMMUNITY_TYPE)+chr(OriginASNIP.COMMUNITY_SUBTYPE)] = OriginASNIP
+
+
+# ================================================================== OriginIPASN
+
+
+class OriginIPASN (Origin):
+	COMMUNITY_TYPE = 0x01
+	LIMIT = 6
+
+	def __init__ (self,asn,ip,transitive,community=None):
+		self.ip = ip
+		self.asn = asn
+		OriginIPASN.__init__(community if community else pack('!BB4sH',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,socket.inet_pton(socket.AF_INET,self.ip),self.asn))
+
+	def __str__ (self):
+		return "origin:%s:%d" % (self.ip, self.asn)
+
+	def pack (self):
+		return self.community
+
+	@staticmethod
+	def unpack (data):
+		ip,asn = unpack('!4sH',data[2:8])
+		return OriginIPASN(socket.inet_ntop(socket.AF_INET,ip),ASN(asn),False,data[:8])
+
+OriginIPASN._known[chr(OriginIPASN.COMMUNITY_TYPE)+chr(OriginIPASN.COMMUNITY_SUBTYPE)] = OriginIPASN
+
+
+# ======================================================== OriginASN4Number
+
+
+class OriginASN4Number (Origin):
+	COMMUNITY_TYPE = 0x02
+	LIMIT=6
+
+	def __init__ (self,asn,number,transitive,community=None):
+		self.asn = asn
+		self.number = number
+		OriginASN4Number.__init__(community if community else pack('!BBLH',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,self.asn,self.number))
+
+	def __str__ (self):
+		return "origin:%s:%d" % (self.asn, self.number)
+
+	def pack (self):
+		return self.community
+
+	@staticmethod
+	def unpack (data):
+		asn,number = unpack('!LH',data[2:8])
+		return OriginASN4Number(ASN(asn),number,False,data[:8])
+
+OriginASN4Number._known[chr(OriginASN4Number.COMMUNITY_TYPE)+chr(OriginASN4Number.COMMUNITY_SUBTYPE)] = OriginASN4Number

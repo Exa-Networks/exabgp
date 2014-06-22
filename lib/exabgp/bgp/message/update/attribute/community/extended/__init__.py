@@ -113,14 +113,18 @@ class ExtendedCommunity (object):
 	def __len__ (self):
 		return 8
 
+	def __hash__ (self):
+		return hash(self.community)
+
 	def __cmp__ (self,other):
 		if not isinstance(other, ExtendedCommunity):
 			return -1
-		return cmp(self.pack(),other.pack())
+		return cmp(self.community,other.community)
 
 	@staticmethod
 	def unpack (data):
-		community = ord(data[:2])  # remove transitivity & 0x0FFF
+		# 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0FFF
+		community = ord(data[:2]) & 0x0FFF
 		if community in ExtendedCommunity._known:
 			return ExtendedCommunity._known[community].unpack(data)
 		return ExtendedCommunity(data)
