@@ -782,6 +782,7 @@ class Configuration (object):
 			if command == 'inet6': return self._set_family_inet6(scope,tokens[1:])
 			if command == 'ipv4': return self._set_family_ipv4(scope,tokens[1:])
 			if command == 'ipv6': return self._set_family_ipv6(scope,tokens[1:])
+			if command == 'l2vpn': return self._set_family_l2vpn(scope,tokens[1:])
 			if command == 'minimal': return self._set_family_minimal(scope,tokens[1:])
 			if command == 'all': return self._set_family_all(scope,tokens[1:])
 
@@ -977,7 +978,7 @@ class Configuration (object):
 			r = self._dispatch(
 				scope,'family',
 				[],
-				['inet','inet4','inet6','ipv4','ipv6','minimal','all']
+				['inet','inet4','inet6','ipv4','ipv6','l2vpn','minimal','all']
 			)
 			if r is False: return False
 			if r is None: break
@@ -1037,6 +1038,24 @@ class Configuration (object):
 				scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.flow_ip)))
 			elif safi == 'flow-vpn':
 				scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.flow_vpn)))
+			else:
+				return False
+			return True
+		except (IndexError,ValueError):
+			self._error = 'missing safi'
+			if self.debug: raise
+			return False
+
+	def _set_family_l2vpn (self,scope,tokens):
+		try:
+			if self._family:
+				self._error = 'l2vpn can not be used with all or minimal'
+				if self.debug: raise
+				return False
+
+			safi = tokens.pop(0)
+			if safi == 'vpls':
+				scope[-1]['families'].append((AFI(AFI.l2vpn),SAFI(SAFI.vpls)))
 			else:
 				return False
 			return True
