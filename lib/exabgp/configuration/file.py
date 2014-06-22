@@ -445,6 +445,35 @@ class Configuration (object):
 		return changes
 
 
+	def parse_api_vpls (self,command,peers,action):
+		tokens = formated(command).split(' ')[1:]
+		if len(tokens) < 4:
+			return False
+		if tokens[0] != 'vpls':
+			return False
+		changes = []
+		if 'self' in command:
+			for peer,nexthop in peers.iteritems():
+				scope = [{}]
+				self._nexthopself = nexthop
+				if not self._single_l2vpn_route(scope,tokens[1:]):
+					self._nexthopself = None
+					return False
+				for change in scope[0]['announce']:
+					changes.append((peer,change))
+			self._nexthopself = None
+		else:
+			scope = [{}]
+			if not self._single_l2vpn_route(scope,tokens[1:]):
+				return False
+			for peer in peers:
+				for change in scope[0]['announce']:
+					changes.append((peer,change))
+		if action == 'withdraw':
+			for (peer,change) in changes:
+				change.nlri.action = OUT.withdraw
+		return changes
+
 	def parse_api_attribute (self,command,peers,action):
 		# This is a quick solution which does not support next-hop self
 		attribute,nlris = command.split('nlri')

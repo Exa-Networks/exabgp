@@ -520,6 +520,36 @@ class Reactor (object):
 			except IndexError:
 				pass
 
+		# vpls announcement / withdrawal
+		if 'announce vpls ' in command:
+			def _announce_vpls (self,command,nexthops):
+				changes = self.configuration.parse_api_vpls(command,nexthops,'announce')
+				if not changes:
+					self.logger.reactor("Command could not parse vpls in : %s" % command,'warning')
+					yield True
+				else:
+					peers = []
+					for (peer,change) in changes:
+						peers.append(peer)
+						self.configuration.change_to_peers(change,[peer,])
+						yield False
+					self.logger.reactor("Vpls added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
+					self._route_update = True
+
+			try:
+				descriptions,command = extract_neighbors(command)
+				peers = match_neighbors(descriptions,self._peers)
+				if peers == []:
+					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+					return False
+				nexthops = dict((peer,self._peers[peer].neighbor.local_address) for peer in peers)
+				self._pending.append(_announce_vpls(self,command,nexthops))
+				return True
+			except ValueError:
+				pass
+			except IndexError:
+				pass
+
 		# route announcement / withdrawal
 		if 'flush route' in command:  # This allows flush routes with a s to work
 			def _flush (self,peers):
@@ -540,8 +570,38 @@ class Reactor (object):
 			except IndexError:
 				pass
 
-		if 'withdraw route' in command:
+		if 'withdraw vpls' in command:
 			def _withdraw_change (self,command,nexthops):
+				changes = self.configuration.parse_api_vpls(command,nexthops,'withdraw')
+				if not changes:
+					self.logger.reactor("Command could not parse vpls in : %s" % command,'warning')
+					yield True
+				else:
+					for (peer,change) in changes:
+						if self.configuration.change_to_peers(change,[peer,]):
+							self.logger.reactor("Vpls removed : %s" % change.extensive())
+							yield False
+						else:
+							self.logger.reactor("Could not find therefore remove vpls : %s" % change.extensive(),'warning')
+							yield False
+					self._route_update = True
+
+			try:
+				descriptions,command = extract_neighbors(command)
+				peers = match_neighbors(descriptions,self._peers)
+				if peers == []:
+					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+					return False
+				nexthops = dict((peer,self._peers[peer].neighbor.local_address) for peer in peers)
+				self._pending.append(_withdraw_change(self,command,nexthops))
+				return True
+			except ValueError:
+				pass
+			except IndexError:
+				pass
+
+		if 'withdraw vpls' in command:
+			def _withdraw_vpls (self,command,nexthops):
 				changes = self.configuration.parse_api_route(command,nexthops,'withdraw')
 				if not changes:
 					self.logger.reactor("Command could not parse route in : %s" % command,'warning')
@@ -563,13 +623,12 @@ class Reactor (object):
 					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 					return False
 				nexthops = dict((peer,self._peers[peer].neighbor.local_address) for peer in peers)
-				self._pending.append(_withdraw_change(self,command,nexthops))
+				self._pending.append(_withdraw_vpls(self,command,nexthops))
 				return True
 			except ValueError:
 				pass
 			except IndexError:
 				pass
-
 
 		# attribute announcement / withdrawal
 		if 'announce attribute ' in command:
