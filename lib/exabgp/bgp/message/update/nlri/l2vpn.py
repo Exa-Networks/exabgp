@@ -5,6 +5,13 @@ from exabgp.bgp.message.direction import OUT
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.protocol.ip.address import Address
 
+def _unique ():
+	value = 0
+	while True:
+		yield value
+		value += 1
+
+unique = _unique()
 
 class VPLSNLRI (Address):
 	def __init__ (self,rd,ve,label_base,block_offset,block_size):
@@ -16,6 +23,7 @@ class VPLSNLRI (Address):
 		self.block_offset = block_offset
 		self.block_size = block_size
 		self.ve = ve
+		self.unique = unique.next()
 
 	def index (self):
 		return self.pack()
@@ -37,11 +45,12 @@ class VPLSNLRI (Address):
 	def json (self):
 		content = ','.join([
 			self.rd.json(),
+			'"endpoint": "%s"' % self.ve,
 			'"base": "%s"' % self.block_offset,
 			'"offset": "%s"' % self.block_size,
 			'"size": "%s"' % self.label_base,
 		])
-		return '"%s": { %s }' % (self.ve, content)
+		return '"vpls-%s": { %s }' % (self.unique, content)
 
 	def extensive (self):
 		return "vpls %s endpoint %s base %s offset %s size %s" % (
@@ -65,3 +74,11 @@ class VPLSNLRI (Address):
 		ve,block_offset,block_size = unpack('!HHH',bgp[10:16])
 		label_base = unpack('!L',bgp[16:19]+'\x00')[0]>>12
 		return VPLSNLRI(rd,ve,label_base,block_offset,block_size)
+
+def _next_index ():
+	value = 0
+	while True:
+		yield str(value)
+		value += 1
+
+next_index = _next_index()

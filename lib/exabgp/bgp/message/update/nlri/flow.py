@@ -404,6 +404,7 @@ class FlowNLRI (Address):
 		self.action = OUT.announce
 		self.nexthop = None
 		self.rd = rd
+		self.unique = unique.next()
 
 	def __len__ (self):
 		return len(self.pack())
@@ -476,16 +477,7 @@ class FlowNLRI (Address):
 	def json (self):
 		# this is a stop gap so flow route parsing does not crash exabgp
 		# delete unique when this is fixed
-		return '"flow-%d": { "string": "%s" }' % (unique.next(),str(self),)
+		return '"flow-%d": { "string": "%s" }' % (self.unique,str(self),)
 
 	def index (self):
 		return self.pack()
-
-
-def _next_index ():
-	value = 0
-	while True:
-		yield str(value)
-		value += 1
-
-next_index = _next_index()
