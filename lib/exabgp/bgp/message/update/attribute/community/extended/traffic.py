@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2014-06-21.
 Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
+import socket
 from struct import pack,unpack
 
 from exabgp.bgp.message.open.asn import ASN
@@ -22,7 +23,7 @@ class TrafficRate (ExtendedCommunity):
 	def __init__ (self,asn,rate,community=None):
 		self.asn = asn
 		self.rate = rate
-		ExtendedCommunity(community if community is not None else pack("!BBHf",0x80,0x06,asn,rate))
+		ExtendedCommunity.__init__(self,community if community is not None else pack("!BBHf",0x80,0x06,asn,rate))
 
 	def __str__ (self):
 		return "rate-limit %d" % self.rate
@@ -55,8 +56,8 @@ class TrafficAction (ExtendedCommunity):
 	def __init__ (self,sample,terminal,community=None):
 		self.sample = sample
 		self.terminal = terminal
-		bitmask = self._sample[sample] & self._terminal[terminal]
-		ExtendedCommunity(community if community is not None else pack('!BBLBB',0x80,0x07,0,0,0,bitmask))
+		bitmask = self._sample[sample] | self._terminal[terminal]
+		ExtendedCommunity.__init__(self,community if community is not None else pack('!BBLBB',0x80,0x07,0,0,bitmask))
 
 	def __str__ (self):
 		s = []
@@ -84,7 +85,7 @@ class TrafficRedirect (ExtendedCommunity):
 	def __init__ (self,asn,target,community=None):
 		self.asn = asn
 		self.target = target
-		ExtendedCommunity(community if community is not None else pack("!BBHL",0x80,0x08,asn,target))
+		ExtendedCommunity.__init__(self,community if community is not None else pack("!BBHL",0x80,0x08,asn,target))
 
 	def __str__ (self):
 		return "redirect %d:%d" % (self.asn,self.target)
@@ -106,7 +107,7 @@ class TrafficMark (ExtendedCommunity):
 
 	def __init__ (self,dscp,community=None):
 		self.dscp = dscp
-		ExtendedCommunity(community if community is not None else pack("!BBLBB",0x80,0x08,0,0,dscp))
+		ExtendedCommunity.__init__(self,community if community is not None else pack("!BBLBB",0x80,0x09,0,0,dscp))
 
 	def __str__ (self):
 		return "mark %d" % self.dscp
@@ -128,7 +129,7 @@ class TrafficNextHop (ExtendedCommunity):
 
 	def __init__ (self,copy,community=None):
 		self.copy = copy
-		ExtendedCommunity(community if community is not None else pack("!BBLH",0x80,0x00,0,1 if copy else 0))
+		ExtendedCommunity.__init__(self,community if community is not None else pack("!BBLH",0x80,0x00,0,1 if copy else 0))
 
 	def __str__ (self):
 		return "copy-to-nexthop" if self.copy else "redirect-to-nexthop"
@@ -139,3 +140,29 @@ class TrafficNextHop (ExtendedCommunity):
 		return TrafficNextHop(bool(bit & 0x01),data[:8])
 
 TrafficNextHop._known[(TrafficNextHop.COMMUNITY_TYPE&0x0F,TrafficNextHop.COMMUNITY_SUBTYPE)] = TrafficNextHop
+
+
+# ============================================================ TrafficRedirectIP
+# RFC 5575
+# If we need to provide the <IP>:<ASN> form for the FlowSpec Redirect ...
+
+# TrafficRedirectASN = TrafficRedirect
+
+# class TrafficRedirectIP (ExtendedCommunity):
+# 	COMMUNITY_TYPE = 0x80
+# 	COMMUNITY_SUBTYPE = 0x08
+
+# 	def __init__ (self,ip,target,community=None):
+# 		self.ip = ip
+# 		self.target = target
+# 		ExtendedCommunity.__init__(self,community if community is not None else pack("!BB4sH",0x80,0x08,socket.inet_pton(socket.AF_INET,ip),target))
+
+# 	def __str__ (self):
+# 		return "redirect %s:%d" % (self.ip,self.target)
+
+# 	@staticmethod
+# 	def unpack (data):
+# 		ip,target = unpack('!4sH',data[2:8])
+# 		return TrafficRedirectIP(socket.inet_ntop(socket.AF_INET,ip),target,data[:8])
+
+

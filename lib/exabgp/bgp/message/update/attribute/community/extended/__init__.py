@@ -61,7 +61,7 @@ class ExtendedCommunity (object):
 	@staticmethod
 	def unpack (data):
 		# 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0FFF
-		community = (ord(data[1])&0xFF,ord(data[1]))
+		community = (ord(data[0])&0x0F,ord(data[1]))
 		if community in ExtendedCommunity._known:
 			return ExtendedCommunity._known[community].unpack(data)
 		return ExtendedCommunity(data)

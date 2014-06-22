@@ -47,7 +47,10 @@ from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.community.normal import Community,cachedCommunity
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
-from exabgp.bgp.message.update.attribute.community import Communities,ExtendedCommunities,to_ExtendedCommunity,to_FlowTrafficRate,to_FlowRedirectVRFASN,to_FlowRedirectVRFIP,to_FlowRedirect,to_FlowTrafficMark,to_FlowTrafficAction
+
+from exabgp.bgp.message.update.attribute.community import Communities,ExtendedCommunities
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate,TrafficAction,TrafficRedirect,TrafficMark,TrafficNextHop
+
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 from exabgp.bgp.message.update.attribute.aigp import AIGP
@@ -2049,7 +2052,54 @@ class Configuration (object):
 				raise ValueError('invalid extended community %s' % data)
 			return ExtendedCommunity.unpack(raw)
 		elif data.count(':'):
-			return to_ExtendedCommunity(data)
+			_known_community = {
+				# header and subheader
+				'target' : chr(0x00)+chr(0x02),
+				'origin' : chr(0x00)+chr(0x03),
+				'l2info' : chr(0x80)+chr(0x0A),
+			}
+
+			_size_community = {
+				'target' : 2,
+				'origin' : 2,
+				'l2info' : 4,
+			}
+
+			components = data.split(':')
+			command = 'target' if len(components) == 2 else components.pop(0)
+
+			if command not in _known_community:
+				raise ValueError('invalid extended community %s (only origin,target or l2info are supported) ' % command)
+
+			if len(components) != _size_community[command]:
+				raise ValueError('invalid extended community %s, expecting %d fields ' % (command,len(components)))
+
+			header = _known_community[command]
+
+			if command == 'l2info':
+				# encaps, control, mtu, site
+				return ExtendedCommunity.unpack(header+pack('!BBHH',*[int(_) for _ in components]))
+
+			if command in ('target','origin'):
+				# global admin, local admin
+				ga,la = components
+
+				if '.' in ga or '.' in la:
+					gc = ga.count('.')
+					lc = la.count('.')
+					if gc == 0 and lc == 3:
+						# ASN first, IP second
+						return ExtendedCommunity.unpack(header+pack('!HBBBB',int(ga),*[int(_) for _ in la.split('.')]))
+					if gc == 3 and lc == 0:
+						# IP first, ASN second
+						return ExtendedCommunity.unpack(header+pack('!BBBBH',*[int(_) for _ in ga.split('.')]+[int(la)]))
+				else:
+					if command == 'target':
+						return ExtendedCommunity.unpack(header+pack('!HI',int(ga),int(la)))
+					if command == 'origin':
+						return ExtendedCommunity.unpack(header+pack('!IH',int(ga),int(la)))
+
+			raise ValueError('invalid extended community %s' % command)
 		else:
 			raise ValueError('invalid extended community %s - lc+gc' % data)
 
@@ -2655,7 +2705,7 @@ class Configuration (object):
 	def _flow_route_discard (self,scope,tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
-			scope[-1]['announce'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowTrafficRate(ASN(0),0))
+			scope[-1]['announce'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficRate(ASN(0),0))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -2671,7 +2721,7 @@ class Configuration (object):
 			if speed > 1000000000000:
 				speed = 1000000000000
 				self.logger.configuration("rate-limiting changed for 1 000 000 000 000 bytes from %s" % tokens[0],'warning')
-			scope[-1]['announce'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowTrafficRate(ASN(0),speed))
+			scope[-1]['announce'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficRate(ASN(0),speed))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -2683,18 +2733,17 @@ class Configuration (object):
 			if tokens[0].count(':') == 1:
 				prefix,suffix=tokens[0].split(':',1)
 				if prefix.count('.'):
-					ip = prefix.split('.')
-					if len(ip) != 4:
-						raise ValueError('invalid IP %s' % prefix)
-					ipn = 0
-					while ip:
-						ipn <<= 8
-						ipn += int(ip.pop(0))
-					number = int(suffix)
-					if number >= pow(2,16):
-						raise ValueError('number is too large, max 16 bits %s' % number)
-					scope[-1]['announce'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirectVRFIP(ipn,number))
-					return True
+					raise ValueError('this format has been deprecaded as it does not make sense and it is not supported by other vendors')
+					# ip = prefix.split('.')
+					# if len(ip) != 4:
+					# 	raise ValueError('invalid IP %s' % prefix)
+					# if False in [_.isdigit() and int(_) >=0 and int(_) <=255 for _ in ip]:
+					# 	raise ValueError('invalid IP %s' % prefix)
+					# number = int(suffix)
+					# if number >= pow(2,16):
+					# 	raise ValueError('number is too large, max 16 bits %s' % number)
+					# scope[-1]['announce'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficRedirectIP(prefix,number))
+					# return True
 				else:
 					asn = int(prefix)
 					route_target = int(suffix)
@@ -2702,7 +2751,7 @@ class Configuration (object):
 						raise ValueError('asn is a 32 bits number, it can only be 16 bit %s' % route_target)
 					if route_target >= pow(2,32):
 						raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
-					scope[-1]['announce'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirectVRFASN(asn,route_target))
+					scope[-1]['announce'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficRedirect(asn,route_target))
 					return True
 			else:
 				change = scope[-1]['announce'][-1]
@@ -2714,7 +2763,7 @@ class Configuration (object):
 				ip = tokens.pop(0)
 				nh = pton(ip)
 				change.nlri.nexthop = cachedNextHop(nh)
-				change.attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirect(False))
+				change.attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficNextHop(False))
 				return True
 
 		except (IndexError,ValueError):
@@ -2731,7 +2780,7 @@ class Configuration (object):
 				if self.debug: raise
 				return False
 
-			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirect(False))
+			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficNextHop(False))
 			return True
 
 		except (IndexError,ValueError):
@@ -2751,7 +2800,7 @@ class Configuration (object):
 			nh = pton(ip)
 			change = scope[-1]['announce'][-1]
 			change.nlri.nexthop = cachedNextHop(nh)
-			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowRedirect(True))
+			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficNextHop(True))
 			return True
 
 		except (IndexError,ValueError):
@@ -2769,7 +2818,7 @@ class Configuration (object):
 				return False
 
 			change = scope[-1]['announce'][-1]
-			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowTrafficMark(dscp))
+			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficMark(dscp))
 			return True
 
 		except (IndexError,ValueError):
@@ -2789,7 +2838,7 @@ class Configuration (object):
 				return False
 
 			change = scope[-1]['announce'][-1]
-			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(to_FlowTrafficAction(sample,terminal))
+			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficAction(sample,terminal))
 			return True
 		except (IndexError,ValueError):
 			self._error = self._str_flow_error
