@@ -13,12 +13,11 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 
 # ================================================================ Encapsulation
-
-# RFC 5512, section 4.5
+# RFC 5512
 
 class Encapsulation (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x03
-	COMMUNITY_SUBTYPE = 0x0c
+	COMMUNITY_SUBTYPE = 0x0C
 
 	class Type:
 		DEFAULT = 0x00
@@ -39,33 +38,15 @@ class Encapsulation (ExtendedCommunity):
 
 	def __init__ (self,tunnel_type,community=None):
 		self.tunnel_type = tunnel_type
-		self.community = community if community is not None else self.pack()
+		ExtendedCommunity.__init__(community if community is not None else pack("!BBLH",0x03,0x0C,0,self.tunnel_type))
 
 	def __str__ (self):
 		return "Encapsulation: %s" % Encapsulation._string.get(self.tunnel_type,"Encap:(unknown:%d)" % self.tunnel_type)
 
-	def __hash__ (self):
-		return hash(self.community)
-
-	def __cmp__ (self,other):
-		if not isinstance(other,self.__class__):
-			return -1
-		if self.tunnel_type != other.tunnel_type:
-			return -1
-		return 0
-
-	def pack (self):
-		return pack("!BBHHH",
-			self.COMMUNITY_TYPE,
-			self.COMMUNITY_SUBTYPE,
-			0,
-			0,
-			self.tunnel_type
-		)
-
 	@staticmethod
 	def unpack (data):
-		return Encapsulation(unpack('!H',data[6:8])[0],data[:8])
+		tunnel, = unpack('!H',data[6:8])
+		return Encapsulation(tunnel,data[:8])
 
 		# type_  = ord(data[0]) & 0x0F
 		# stype = ord(data[1])
@@ -74,4 +55,4 @@ class Encapsulation (ExtendedCommunity):
 		# assert(stype==Encapsulation.COMMUNITY_SUBTYPE)
 		# assert(len(data)==6)
 
-Encapsulation._known[chr(Encapsulation.COMMUNITY_TYPE)+chr(Encapsulation.COMMUNITY_SUBTYPE)] = Encapsulation
+Encapsulation._known[chr(Encapsulation.COMMUNITY_TYPE&0x0F)+chr(Encapsulation.COMMUNITY_SUBTYPE)] = Encapsulation
