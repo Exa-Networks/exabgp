@@ -6,28 +6,25 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2014 Exa Networks. All rights reserved.
 """
 
+# check to see if we can decode what we encode
+
+import sys
+
 from exabgp.protocol.family import known_families
 
-# ASN4 merge test
-#		injected = ['0x0', '0x0', '0x0', '0x2e', '0x40', '0x1', '0x1', '0x0', '0x40', '0x2', '0x8', '0x2', '0x3', '0x78', '0x14', '0xab', '0xe9', '0x5b', '0xa0', '0x40', '0x3', '0x4', '0x52', '0xdb', '0x0', '0x4f', '0xc0', '0x8', '0x8', '0x78', '0x14', '0xc9', '0x46', '0x78', '0x14', '0xfd', '0xea', '0xe0', '0x11', '0xa', '0x2', '0x2', '0x0', '0x0', '0xab', '0xe9', '0x0', '0x3', '0x5', '0x54', '0x17', '0x9f', '0x65', '0x9e', '0x15', '0x9f', '0x65', '0x80', '0x18', '0x9f', '0x65', '0x9f']
-# EOR
-#		injected = '\x00\x00\x00\x07\x90\x0f\x00\x03\x00\x02\x01'
+from exabgp.util.od import od
+from exabgp.bgp.message.update import Update
+from exabgp.bgp.message.update.factory import UpdateFactory
+from exabgp.bgp.message.open import Open
+from exabgp.bgp.message.open.capability import Capabilities
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.open.capability.id import CapabilityID
+from exabgp.bgp.message.notification import Notify
 
+from exabgp.rib.change import Change
+from exabgp.logger import Logger
 
 def check (neighbor):
-	import sys
-	# self check to see if we can decode what we encode
-	from exabgp.util.od import od
-	from exabgp.bgp.message.update import Update
-	from exabgp.bgp.message.update.factory import UpdateFactory
-	from exabgp.bgp.message.open import Open
-	from exabgp.bgp.message.open.capability import Capabilities
-	from exabgp.bgp.message.open.capability.negotiated import Negotiated
-	from exabgp.bgp.message.open.capability.id import CapabilityID
-	from exabgp.bgp.message.notification import Notify
-
-	from exabgp.rib.change import Change
-	from exabgp.logger import Logger
 
 	logger = Logger()
 
