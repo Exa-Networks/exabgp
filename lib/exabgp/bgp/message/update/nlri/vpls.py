@@ -1,3 +1,12 @@
+# encoding: utf-8
+"""
+vpls.py
+
+Created by Nikita Shirokov on 2014-06-16.
+Copyright (c) 2014-2014 Nikita Shirokov. All rights reserved.
+Copyright (c) 2014-2014 Exa Networks. All rights reserved.
+"""
+
 from struct import unpack, pack
 from exabgp.bgp.message.update.nlri.bgp import RouteDistinguisher
 from exabgp.bgp.message.notification import Notify
