@@ -20,6 +20,10 @@ class ExtendedCommunity (object):
 
 	_known = {}
 
+	@classmethod
+	def register (klass):
+		klass._known[(klass.COMMUNITY_TYPE&0x0F,klass.COMMUNITY_SUBTYPE)] = klass
+
 	# size of value for data (boolean: is extended)
 	length_value = {False:7, True:6}
 	name = {False: 'regular', True: 'extended'}

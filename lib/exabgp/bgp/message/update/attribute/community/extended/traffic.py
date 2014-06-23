@@ -33,7 +33,7 @@ class TrafficRate (ExtendedCommunity):
 		asn,rate = unpack('!Hf',data[2:8])
 		return TrafficRate(ASN(asn),rate,data[:8])
 
-TrafficRate._known[(TrafficRate.COMMUNITY_TYPE&0x0F,TrafficRate.COMMUNITY_SUBTYPE)] = TrafficRate
+TrafficRate.register()
 
 
 # ================================================================ TrafficAction
@@ -72,7 +72,7 @@ class TrafficAction (ExtendedCommunity):
 		terminal = bool(bit & 0x01)
 		return TrafficAction(sample,terminal,data[:8])
 
-TrafficAction._known[(TrafficAction.COMMUNITY_TYPE&0x0F,TrafficAction.COMMUNITY_SUBTYPE)] = TrafficAction
+TrafficAction.register()
 
 
 # ============================================================== TrafficRedirect
@@ -95,7 +95,7 @@ class TrafficRedirect (ExtendedCommunity):
 		asn,target = unpack('!HL',data[2:8])
 		return TrafficRedirect(ASN(asn),target,data[:8])
 
-TrafficRedirect._known[(TrafficRedirect.COMMUNITY_TYPE&0x0F,TrafficRedirect.COMMUNITY_SUBTYPE)] = TrafficRedirect
+TrafficRedirect.register()
 
 
 # ================================================================== TrafficMark
@@ -117,7 +117,7 @@ class TrafficMark (ExtendedCommunity):
 		dscp, = unpack('!B',data[7])
 		return TrafficMark(dscp,data[:8])
 
-TrafficMark._known[(TrafficMark.COMMUNITY_TYPE&0x0F,TrafficMark.COMMUNITY_SUBTYPE)] = TrafficMark
+TrafficMark.register()
 
 
 # =============================================================== TrafficNextHop
@@ -139,7 +139,7 @@ class TrafficNextHop (ExtendedCommunity):
 		bit, = unpack('!B',data[7])
 		return TrafficNextHop(bool(bit & 0x01),data[:8])
 
-TrafficNextHop._known[(TrafficNextHop.COMMUNITY_TYPE&0x0F,TrafficNextHop.COMMUNITY_SUBTYPE)] = TrafficNextHop
+TrafficNextHop.register()
 
 
 # ============================================================ TrafficRedirectIP

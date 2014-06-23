@@ -34,4 +34,4 @@ class L2Info (ExtendedCommunity):
 		encaps,control,mtu,reserved = unpack('!BBHH',data[2:8])
 		return L2Info(encaps,control,mtu,reserved,data[:8])
 
-L2Info._known[(L2Info.COMMUNITY_TYPE&0x0F,L2Info.COMMUNITY_SUBTYPE)] = L2Info
+L2Info.register()

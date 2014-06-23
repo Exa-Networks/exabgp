@@ -50,7 +50,7 @@ class OriginASNIP (Origin):
 		asn,ip = unpack('!H4s',data[2:8])
 		return OriginASNIP(ASN(asn),socket.inet_ntop(socket.AF_INET,ip),False,data[:8])
 
-OriginASNIP._known[(OriginASNIP.COMMUNITY_TYPE&0x0F,OriginASNIP.COMMUNITY_SUBTYPE)] = OriginASNIP
+OriginASNIP.register()
 
 
 # ================================================================== OriginIPASN
@@ -73,7 +73,7 @@ class OriginIPASN (Origin):
 		ip,asn = unpack('!4sH',data[2:8])
 		return OriginIPASN(socket.inet_ntop(socket.AF_INET,ip),ASN(asn),False,data[:8])
 
-OriginIPASN._known[(OriginIPASN.COMMUNITY_TYPE&0x0F,OriginIPASN.COMMUNITY_SUBTYPE)] = OriginIPASN
+OriginIPASN.register()
 
 
 # ======================================================== OriginASN4Number
@@ -96,4 +96,4 @@ class OriginASN4Number (Origin):
 		asn,number = unpack('!LH',data[2:8])
 		return OriginASN4Number(ASN(asn),number,False,data[:8])
 
-OriginASN4Number._known[(OriginASN4Number.COMMUNITY_TYPE&0x0F,OriginASN4Number.COMMUNITY_SUBTYPE)] = OriginASN4Number
+OriginASN4Number.register()
