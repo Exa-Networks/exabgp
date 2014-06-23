@@ -46,7 +46,7 @@ class VPLSNLRI (Address):
 				self.block_offset,
 				self.block_size
 			),
-			pack('!L',(self.label_base<<12)|0x1)[0:3]  # setting the bottom of stack, should we ?
+			pack('!L',(self.label_base<<4)|0x1)[0:3]  # setting the bottom of stack, should we ?
 		)
 
 	# XXX: FIXME: we need an unique key here.
@@ -82,5 +82,5 @@ class VPLSNLRI (Address):
 			raise Notify(3,10,'l2vpn vpls message length is not consistent with encoded data')
 		rd = RouteDistinguisher(bgp[2:10])
 		ve,block_offset,block_size = unpack('!HHH',bgp[10:16])
-		label_base = unpack('!L',bgp[16:19]+'\x00')[0]>>12
+		label_base = unpack('!L','\x00'+bgp[16:19])[0]>>4
 		return VPLSNLRI(rd,ve,label_base,block_offset,block_size)
