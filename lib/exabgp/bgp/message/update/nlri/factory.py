@@ -25,32 +25,30 @@ from exabgp.logger import Logger,LazyFormat
 logger = None
 
 def NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
-	if safi in (SAFI.unicast, SAFI.multicast):  # XXX: some more are missing
+	if safi in (SAFI.unicast, SAFI.multicast, SAFI.nlri_mpls, SAFI.mpls_vpn):
 		if afi in (AFI.ipv4, AFI.ipv6):
 			return _NLRIFactory(afi,safi,bgp,has_multiple_path,nexthop,action)
+		raise Notify(3,0,'invalid family for inet/mpls')
 
 	if safi in (SAFI.flow_ip,SAFI.flow_vpn):
 		if afi in (AFI.ipv4, AFI.ipv6):
 			return _FlowNLRIFactory(afi,safi,nexthop,bgp,action)
-		raise Notify(3,0,'invalid family for FlowNLRI')
+		raise Notify(3,0,'invalid family for flowspec')
 
 	if safi in (SAFI.vpls,):
 		if afi in (AFI.l2vpn,):
 			return _VPLSNLRIFactory(afi,safi,nexthop,bgp,action)
-		raise Notify(3,0,'invalid family for VPLSNLRI')
+		raise Notify(3,0,'invalid family for vpls')
 
-	# if afi in (AFI.ipv4,) and safi in (SAFI.mpls_vpn,):
-	# 	return VPNLabelledPrefix.unpack(afi,safi,bgp)
+	# if afi == AFI.ipv4:
+	# 	if safi == SAFI.rtc:
+	# 		return RouteTargetConstraint.unpack(afi,safi,bgp)
+	#	raise Notify(3,0,'invalid family for VPLSNLRI')
 
-	# if afi == AFI.ipv4 and safi == SAFI.rtc:
-	# 	return RouteTargetConstraint.unpack(afi,safi,bgp)
-
-
-	# XXX: FIXME: More checks here before going here ...
-	return _NLRIFactory(afi,safi,bgp,has_multiple_path,nexthop,action)
+	raise Notify(3,0,'Unexpcted family received %s/%s' % (afi,safi))
 
 
-def _nlrifactory (afi,safi,bgp,action):
+def _nlri_parser (afi,safi,bgp,action):
 	labels = []
 	rd = ''
 
@@ -153,7 +151,7 @@ def _FlowNLRIFactory (afi,safi,nexthop,bgp,action):
 
 		if decoder == 'prefix':
 			if afi == AFI.ipv4:
-				_,rd,mask,size,prefix,left = _nlrifactory(afi,safi,bgp,action)
+				_,rd,mask,size,prefix,left = _nlri_parser(afi,safi,bgp,action)
 				adding = klass(prefix,mask)
 				if not nlri.add(adding):
 					raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
@@ -162,7 +160,7 @@ def _FlowNLRIFactory (afi,safi,nexthop,bgp,action):
 			else:
 				byte,bgp = bgp[1],bgp[0]+bgp[2:]
 				offset = ord(byte)
-				_,rd,mask,size,prefix,left = _nlrifactory(afi,safi,bgp,action)
+				_,rd,mask,size,prefix,left = _nlri_parser(afi,safi,bgp,action)
 				adding = klass(prefix,mask,offset)
 				if not nlri.add(adding):
 					raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
@@ -191,7 +189,7 @@ def _NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
 		path_identifier = ''
 		length = 0
 
-	labels,rd,mask,size,prefix,left = _nlrifactory(afi,safi,bgp,action)
+	labels,rd,mask,size,prefix,left = _nlri_parser(afi,safi,bgp,action)
 
 	nlri = NLRI(afi,safi,prefix,mask,cachedNextHop(nexthop),action)
 

@@ -11,6 +11,10 @@ from exabgp.protocol.family import AFI,SAFI
 
 from exabgp.bgp.message.update.nlri.prefix import mask_to_bytes,Prefix
 
+
+# ===================================================================== PathInfo
+# RFC draft-ietf-idr-add-paths-09
+
 class PathInfo (object):
 	def __init__ (self,integer=None,ip=None,packed=None):
 		if packed:
@@ -41,6 +45,9 @@ class PathInfo (object):
 
 _NoPathInfo = PathInfo()
 
+
+# ======================================================================= Labels
+# RFC 3107
 
 class Labels (object):
 	biggest = pow(2,20)
@@ -80,6 +87,10 @@ class Labels (object):
 
 _NoLabels = Labels([])
 
+
+# =========================================================== RouteDistinguisher
+# RFC 4364
+
 class RouteDistinguisher (object):
 	def __init__ (self,rd):
 		self.rd = rd
@@ -115,6 +126,9 @@ class RouteDistinguisher (object):
 
 _NoRD = RouteDistinguisher('')
 
+
+# ====================================================== Both MPLS and Inet NLRI
+# RFC ....
 
 class NLRI (Prefix):
 	def __init__(self,afi,safi,packed,mask,nexthop,action):

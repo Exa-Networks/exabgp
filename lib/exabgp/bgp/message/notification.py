@@ -8,7 +8,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message import Message
 
-def hexstring (self,value):
+def hexstring (value):
 	def spaced (value):
 		for v in value:
 			yield '%02X' % ord(v)
