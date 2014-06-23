@@ -25,7 +25,7 @@ from exabgp.logger import Logger,LazyFormat
 logger = None
 
 def NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
-	if safi in (SAFI.unicast, SAFI.multicast, SAFI.nlri_mpls, SAFI.mpls_vpn):
+	if safi in (SAFI.unicast_multicast, SAFI.unicast, SAFI.multicast, SAFI.nlri_mpls, SAFI.mpls_vpn):
 		if afi in (AFI.ipv4, AFI.ipv6):
 			return _NLRIFactory(afi,safi,bgp,has_multiple_path,nexthop,action)
 		raise Notify(3,0,'invalid family for inet/mpls')

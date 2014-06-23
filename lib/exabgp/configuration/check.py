@@ -6,14 +6,9 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2014 Exa Networks. All rights reserved.
 """
 
-# check to see if we can decode what we encode
-
-import sys
+# common
 
 from exabgp.protocol.family import known_families
-
-from exabgp.util.od import od
-from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.factory import UpdateFactory
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open.capability import Capabilities
@@ -21,15 +16,26 @@ from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.open.capability.id import CapabilityID
 from exabgp.bgp.message.notification import Notify
 
-from exabgp.rib.change import Change
-from exabgp.logger import Logger
+# check_neighbor
 
-def check (neighbor):
+from exabgp.util.od import od
+from exabgp.bgp.message.update import Update
+from exabgp.rib.change import Change
+
+# check_update
+
+from exabgp.reactor.peer import Peer
+from exabgp.reactor.api.encoding import JSON
+
+
+# =============================================================== check_neighbor
+# ...
+
+def check_neighbor (neighbor):
+	from exabgp.logger import Logger
 
 	logger = Logger()
-
 	logger._parser = True
-
 	logger.parser('\ndecoding routes in configuration')
 
 	n = neighbor[neighbor.keys()[0]]
@@ -93,7 +99,7 @@ def check (neighbor):
 						logger.parser('strings are different:')
 						logger.parser('[%s]'%str1r)
 						logger.parser('[%s]'%str2r)
-						sys.exit(1)
+						return False
 				else:
 						logger.parser('strings are fine')
 
@@ -103,7 +109,7 @@ def check (neighbor):
 					logger.parser('encoding are different')
 					logger.parser('[%s]'%od(pack1))
 					logger.parser('[%s]'%od(pack2))
-					sys.exit(1)
+					return False
 				else:
 					logger.parser('encoding is fine')
 					logger.parser('----------------------------------------')
@@ -111,7 +117,81 @@ def check (neighbor):
 			except Notify,e:
 				print 'failed due to notification'
 				print str(e)
-				sys.exit(1)
+				return False
 
-	import sys
-	sys.exit(0)
+	return True
+
+
+
+# ================================================================= check_update
+# self check to see if we can decode what we encode
+
+def check_udpate (neighbor,update):
+	from exabgp.logger import Logger
+
+	logger = Logger()
+	logger._parser = True
+	logger.parser('\ndecoding routes in configuration')
+
+	n = neighbor[neighbor.keys()[0]]
+	p = Peer(n,None)
+
+	path = {}
+	for f in known_families():
+		if n.add_path:
+			path[f] = n.add_path
+
+	capa = Capabilities().new(n,False)
+	capa[CapabilityID.ADD_PATH] = path
+	capa[CapabilityID.MULTIPROTOCOL_EXTENSIONS] = n.families()
+
+	o1 = Open(4,n.local_as,str(n.local_address),capa,180)
+	o2 = Open(4,n.peer_as,str(n.peer_address),capa,180)
+	negotiated = Negotiated(n)
+	negotiated.sent(o1)
+	negotiated.received(o2)
+	#grouped = False
+
+	raw = ''.join(chr(int(_,16)) for _ in (update[i*2:(i*2)+2] for i in range(len(update)/2)))
+
+	while raw:
+		if raw.startswith('\xff'*16):
+			kind = ord(raw[18])
+			size = (ord(raw[16]) << 16) + (ord(raw[17]))
+
+			injected,raw = raw[19:size],raw[size:]
+
+			if kind == 2:
+				logger.parser('the message is an update')
+				factory = UpdateFactory
+				decoding = 'update'
+			else:
+				logger.parser('the message is not an update (%d) - aborting' % kind)
+				return False
+		else:
+			logger.parser('header missing, assuming this message is ONE update')
+			factory = UpdateFactory
+			decoding = 'update'
+			injected,raw = raw,''
+
+		try:
+			# This does not take the BGP header - let's assume we will not break that :)
+			update = factory(negotiated,injected)
+		except KeyboardInterrupt:
+			raise
+		except Notify,e:
+			logger.parser('could not parse the message')
+			logger.parser(str(e))
+			return False
+		except Exception,e:
+			logger.parser('could not parse the message')
+			logger.parser(str(e))
+			return False
+
+		logger.parser('')  # new line
+		for number in range(len(update.nlris)):
+			change = Change(update.nlris[number],update.attributes)
+			logger.parser('decoded %s %s %s' % (decoding,change.nlri.action,change.extensive()))
+		logger.parser('update json %s' % JSON('3.4.0').update(p,update,'',''))
+
+	return True

@@ -65,7 +65,6 @@ from exabgp.bgp.message.refresh import RouteRefresh
 
 from exabgp.logger import Logger
 
-from exabgp.configuration.check import check
 
 # Duck class, faking part of the Attribute interface
 # We add this to routes when when need o split a route in smaller route
@@ -408,11 +407,13 @@ class Configuration (object):
 		self.neighbor = self._neighbor
 
 		if environment.settings().debug.route:
-			self.decode(environment.settings().debug.route)
+			from exabgp.configuration.check import check_update
+			check_update(self.neighbor,environment.settings().debug.route)
 			sys.exit(0)
 
 		if environment.settings().debug.selfcheck:
-			check(self.neighbor)
+			from exabgp.configuration.check import check_neighbor
+			check_neighbor(self.neighbor)
 			sys.exit(0)
 
 		return True
