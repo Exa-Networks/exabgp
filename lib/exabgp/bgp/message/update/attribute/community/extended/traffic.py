@@ -6,7 +6,6 @@ Created by Thomas Mangin on 2014-06-21.
 Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
-import socket
 from struct import pack,unpack
 
 from exabgp.bgp.message.open.asn import ASN
@@ -145,6 +144,8 @@ TrafficNextHop.register()
 # ============================================================ TrafficRedirectIP
 # RFC 5575
 # If we need to provide the <IP>:<ASN> form for the FlowSpec Redirect ...
+
+# import socket
 
 # TrafficRedirectASN = TrafficRedirect
 

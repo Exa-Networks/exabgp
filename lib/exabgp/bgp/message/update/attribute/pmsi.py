@@ -7,18 +7,11 @@ Copyright (c) 2014-2014, Orange. All rights reserved.
 """
 
 import socket
-from struct import pack
+from struct import pack,unpack
 
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute import Flag
-
-from exabgp.bgp.message.update.nlri.mpls import LabelStackEntry, NO_LABEL
-
-
-tunnel_types_to_class = dict()
-def register (myclass):
-	tunnel_types_to_class[myclass.subtype] = myclass
 
 
 # http://tools.ietf.org/html/rfc6514#section-5
@@ -33,105 +26,134 @@ def register (myclass):
 #  |  Tunnel Identifier (variable)   |
 #  +---------------------------------+
 
+
+# ========================================================================= PMSI
+# RFC 6514
+
 class PMSI (Attribute):
 	ID = AttributeID.PMSI_TUNNEL
 	FLAG = Flag.OPTIONAL
 	MULTIPLE = False
 
-	def __init__ (self,subtype,label=NO_LABEL,flags=0,packedTunnelId=None):
-		if not isinstance(label,LabelStackEntry):
-			raise Exception("label should be of LabelStackEntry type (is: %s)" % type(label))
+	# TUNNEL_TYPE MUST NOT BE DEFINED HERE ( it allows to set it up as a self. value)
 
-		if label == None:
-			label = NO_LABEL
+	_known = dict()
+	_name = {
+		0 : 'No tunnel',
+		1 : 'RSVP-TE P2MP LSP',
+		2 : 'mLDP P2MP LSP',
+		3 : 'PIM-SSM Tree',
+		4 : 'PIM-SM Tree',
+		5 : 'BIDIR-PIM Tree',
+		6 : 'Ingress Replication',
+		7 : 'mLDP MP2MP LSP',
+	}
 
-		if label.bottomOfStack:
-			raise Exception("label.bottomOfStack should not be set")
+	@classmethod
+	def register (klass):
+		klass._known[klass.TUNNEL_TYPE] = klass
 
-		self.subtype = subtype
-		self.label = label
-		self.pmsi_flags = flags
-		self.packedTunnelId = packedTunnelId
+	def __init__ (self,tunnel,label,flags):
+		self.label = label    # integer
+		self.flags = flags    # integer
+		self.tunnel = tunnel  # tunnel id, packed data
+
+	@staticmethod
+	def name (tunnel_type):
+		return PMSI._name.get(tunnel_type,'unknown')
 
 	def pack(self):
-		if self.packedTunnelId is None:
-			self._computePackedTunnelId()
-		return self._attribute(pack('!BB', self.pmsi_flags, self.subtype) + self.label.pack() + self.packedTunnelId)
+		return self._attribute(
+			pack('!BB3s',
+				self.flags,
+				self.TUNNEL_TYPE,
+				pack('!L',self.label << 4)[1:4]
+			)+ self.tunnel
+		)
 
+	# XXX: FIXME: Orange code had 4 (and another reference to it in the code elsewhere)
 	def __len__ (self):
-		if self.packedTunnelId is None:
-			self._computePackedTunnelId()
-		return 4+len(self.packedTunnelId)
+		return len(self.self.tunnel) + 5  # label:1, tunnel type: 1, MPLS label:3
 
-	def __str__ (self):
-		if self.subtype in tunnel_types_to_class:
-			type_string = tunnel_types_to_class[self.subtype].nickname
-			return "pmsi:%s:%s:[%s]" % (type_string,str(self.pmsi_flags) or '',self.label or "-")
-		else:
-			type_string = "%d" % self.subtype
-			return "pmsi:%s:%s:[%s]:%s" % (type_string,str(self.pmsi_flags) or '',self.label or "-","xxx")
-			#TODO: add hex dump of packedValue
+	def __cmp__(self,other):
+		if not isinstance(other,self.__class__):
+			return -1
+		# if self.TUNNEL_TYPE != other.TUNNEL_TYPE:
+		# 	return -1
+		if self.label != other.label:
+			return -1
+		if self.flags != other.flags:
+			return -1
+		if self.tunnel != other.tunnel:
+			return -1
+		return 0
 
 	def __repr__ (self):
 		return str(self)
 
-	def _computePackedTunnelId(self):
-		raise Exception("Abstract class, cannot compute packedTunnelId")
-
-	def __cmp__(self,o):
-		if not isinstance(o,self.__class__):
-			return -1
-		if self.subtype != o.subtype:
-			return -1
-		if self.label != o.label:
-			return -1
-		if self.pmsi_flags != o.pmsi_flags:
-			return -1
-		if self.packedTunnelId != o.packedTunnelId:
-			return -1
-		return 0
-
-	@staticmethod
-	def unpack(data):
-		#flags
-		flags = ord(data[0])
-		data=data[1:]
-
-		#subtype
-		subtype = ord(data[0])
-		data=data[1:]
-
-		#label
-		label = LabelStackEntry.unpack(data[:3])
-		data=data[3:]
-
-		if subtype in tunnel_types_to_class:
-			return tunnel_types_to_class[subtype].unpack(label,flags,data)
-		else:
-			return PMSI(subtype,label,flags,data)
-
-
-
-class PMSIIngressReplication(PMSI):
-
-	subtype = 6
-	nickname = "IngressReplication"
-
-	def __init__(self,ip,label=NO_LABEL,flags=0):
-		self.ip = ip
-
-		PMSI.__init__(self, self.subtype, label, flags)
+	def prettytunnel (self):
+		return "0x" + ''.join('%02X' % ord(_) for _ in self.tunnel) if self.tunnel else ''
 
 	def __str__ (self):
-		desc = "[%s]" % self.ip
-		return PMSI.__str__(self) + ":" + desc
-
-	def _computePackedTunnelId(self):
-		self.packedTunnelId = socket.inet_pton(socket.AF_INET,self.ip)
+		#TODO: add hex dump of packedValue
+		return "pmsi:%s:%s:%s:%s" % (
+			self.name(self.TUNNEL_TYPE).replace(' ','').lower(),
+			str(self.flags) if self.flags else '-',  # why not use zero (0) ?
+			str(self.label) if self.label else '-',  # what noy use zero (0) ?
+			self.prettytunnel()
+		)
 
 	@staticmethod
-	def unpack(label,flags,data):
-		ip = socket.inet_ntop(socket.AF_INET,data[:4])
-		return PMSIIngressReplication(ip,label,flags)
+	def unknown (subtype,tunnel,label,flags):
+		pmsi = PMSI(tunnel,label,flags)
+		pmsi.TUNNEL_TYPE = subtype
+		return pmsi
 
-register(PMSIIngressReplication)
+	@staticmethod
+	def unpack (data):
+		flags,subtype = unpack('!BB',data[:2])
+		label = unpack('!L','\0'+data[2:5])[0] >> 4
+		# should we check for bottom of stack before the shift ?
+		if subtype in PMSI._known:
+			return PMSI._known[subtype].unpack(data[5:],label,flags)
+		return PMSI.unknown(subtype,data[5:],label,flags)
+
+
+# ================================================================= PMSINoTunnel
+# RFC 6514
+
+class PMSINoTunnel (PMSI):
+	TUNNEL_TYPE = 0
+
+	def __init__ (self,label=0,flags=0):
+		PMSI.__init__(self,'',label,flags)
+
+	def prettytunnel (self):
+		return ''
+
+	@staticmethod
+	def unpack (tunnel,label,flags):
+		return PMSINoTunnel(label,flags)
+
+PMSINoTunnel.register()
+
+
+# ======================================================= PMSIIngressReplication
+# RFC 6514
+
+class PMSIIngressReplication (PMSI):
+	TUNNEL_TYPE = 6
+
+	def __init__ (self,ip,label=0,flags=0,tunnel=None):
+		self.ip = ip
+		PMSI.__init__(self,tunnel if tunnel else socket.inet_pton(socket.AF_INET,self.ip),label,flags)
+
+	def prettytunnel (self):
+		return self.ip
+
+	@staticmethod
+	def unpack (tunnel,label,flags):
+		ip = socket.inet_ntop(socket.AF_INET,tunnel)
+		return PMSIIngressReplication(ip,label,flags,tunnel)
+
+PMSIIngressReplication.register()
