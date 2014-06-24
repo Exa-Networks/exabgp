@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-configuration.py
+parser.py
 
 Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
@@ -13,6 +13,8 @@ from exabgp.configuration.registry import Registry
 
 # required to register the callbacks
 from exabgp.configuration.family import Family
+from exabgp.configuration.capability import Capability
+# end required
 
 class Parser (object):
 	def __init__ (self,fname,text=False):
@@ -28,5 +30,10 @@ class Parser (object):
 			tokeniser = tokens(r)
 			registry.handle(lambda : parser(tokeniser))
 
+		return registry
 
-Parser('/Users/thomas/source/git/exabgp/master/dev/family.txt').reload()
+p = Parser('/Users/thomas/source/git/exabgp/master/dev/test-new-config.txt')
+registry = p.reload()
+
+for klass in registry._klass:
+	print klass, registry._klass[klass].content

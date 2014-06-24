@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-configuration.py
+family.py
 
 Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
@@ -32,22 +32,18 @@ class Family (object):
 
 	def __init__ (self,parser):
 		self.parser = parser
-		self.content = {
-		}
+		self.content = []
 
 	def enter (self,registry,tokeniser):
 		token = tokeniser()
 		if token != '{': raise Exception(self.syntax)
 		if 'families' in self.content:
 			raise Exception('duplicate family blocks')
-		self.content['families'] = []
+		self.content = []
 
 	def exit (self,registry,tokeniser):
 		# no verification to do
 		pass
-		# debug
-		from pprint import pprint
-		pprint(self.content)
 
 	def inet (self,registry,tokeniser):
 		raise Exception("the word inet is deprecated, please use ipv4 instead",'error')
@@ -59,9 +55,9 @@ class Family (object):
 		raise Exception("the word inet6 is deprecated, please use ipv6 instead",'error')
 
 	def _check_conflict (self):
-		if 'all' in self.content['families']:
+		if 'all' in self.content:
 			raise Exception('ipv4 can not be used with all or minimal')
-		if 'minimal' in self.content['families']:
+		if 'minimal' in self.content:
 			raise Exception('ipv4 can not be used with all or minimal')
 
 	def _drop_colon (self,tokeniser):
@@ -73,17 +69,17 @@ class Family (object):
 		safi = tokeniser()
 
 		if safi == 'unicast':
-			self.content['families'].append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
+			self.content.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
 		elif safi == 'multicast':
-			self.content['families'].append((AFI(AFI.ipv4),SAFI(SAFI.multicast)))
+			self.content.append((AFI(AFI.ipv4),SAFI(SAFI.multicast)))
 		elif safi == 'nlri-mpls':
-			self.content['families'].append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
+			self.content.append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
 		elif safi == 'mpls-vpn':
-			self.content['families'].append((AFI(AFI.ipv4),SAFI(SAFI.mpls_vpn)))
+			self.content.append((AFI(AFI.ipv4),SAFI(SAFI.mpls_vpn)))
 		elif safi in ('flow'):
-			self.content['families'].append((AFI(AFI.ipv4),SAFI(SAFI.flow_ip)))
+			self.content.append((AFI(AFI.ipv4),SAFI(SAFI.flow_ip)))
 		elif safi == 'flow-vpn':
-			self.content['families'].append((AFI(AFI.ipv4),SAFI(SAFI.flow_vpn)))
+			self.content.append((AFI(AFI.ipv4),SAFI(SAFI.flow_vpn)))
 		else:
 			raise Exception('unknow family safi %s' % safi)
 
@@ -94,13 +90,13 @@ class Family (object):
 		safi = tokeniser()
 
 		if safi == 'unicast':
-			self.content['families'].append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+			self.content.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
 		elif safi == 'mpls-vpn':
-			self.content['families'].append((AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)))
+			self.content.append((AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)))
 		elif safi in ('flow'):
-			self.content['families'].append((AFI(AFI.ipv6),SAFI(SAFI.flow_ip)))
+			self.content.append((AFI(AFI.ipv6),SAFI(SAFI.flow_ip)))
 		elif safi == 'flow-vpn':
-			self.content['families'].append((AFI(AFI.ipv6),SAFI(SAFI.flow_vpn)))
+			self.content.append((AFI(AFI.ipv6),SAFI(SAFI.flow_vpn)))
 		else:
 			raise Exception('unknow family safi %s' % safi)
 
@@ -112,7 +108,7 @@ class Family (object):
 		safi = tokeniser()
 
 		if safi == 'vpls':
-			self.content['families'].append((AFI(AFI.l2vpn),SAFI(SAFI.vpls)))
+			self.content.append((AFI(AFI.l2vpn),SAFI(SAFI.vpls)))
 		else:
 			raise Exception('unknow family safi %s' % safi)
 
@@ -121,13 +117,13 @@ class Family (object):
 	def all (self,registry,tokeniser):
 		self._check_conflict()
 		# bad, we are changing the type
-		self.content['families'] = 'all'
+		self.content = ['all',]
 		self._drop_colon(tokeniser)
 
 	def minimal (self,registry,tokeniser):
 		self._check_conflict()
 		# bad, we are changing the type
-		self.content['families'] = 'minimal'
+		self.content = ['minimal',]
 		self._drop_colon(tokeniser)
 
 

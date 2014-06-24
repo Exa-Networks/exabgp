@@ -1,3 +1,28 @@
+
+
+# the replace Fxception, and give line etc.
+class Raised (Exception):
+	pass
+
+class Data (object):
+	def boolean (self,tokeniser,default):
+		boolean = tokeniser()
+		if boolean == ';':
+			return default
+		if boolean in ('true','enable','enabled'):
+			value = True
+		elif boolean in ('false','disable','disabled'):
+			value = False
+		elif boolean in ('unset',):
+			value = None
+		else:
+			raise Exception("")
+
+		if tokeniser() != ';':
+			raise Exception("")
+
+		return value
+
 class Registry (object):
 	_location = ['root']
 	_klass = {}
