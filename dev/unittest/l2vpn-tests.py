@@ -27,8 +27,8 @@ class TestL2VPN (unittest.TestCase):
 		'''
 		self.encoded_l2vpn_nlri1 = bytearray.fromhex('0011 0001 AC1E 0504 000D 0003 0001 0008 4000 11')
 		self.encoded_l2vpn_nlri2 = bytearray.fromhex('0011 0001 AC1E 0503 000B 0003 0001 0008 4000 11')
-		self.decoded_l2vpn_nlri1 = L2VPN(TestL2VPN.generate_rd('172.30.5.4:13'),3,262145,1,8)
-		self.decoded_l2vpn_nlri2 = L2VPN(TestL2VPN.generate_rd('172.30.5.3:11'),3,262145,1,8)
+		self.decoded_l2vpn_nlri1 = VPLSNLRI(TestL2VPN.generate_rd('172.30.5.4:13'),3,262145,1,8)
+		self.decoded_l2vpn_nlri2 = VPLSNLRI(TestL2VPN.generate_rd('172.30.5.3:11'),3,262145,1,8)
 		'''
 		output from Juniper
 		Communities: target:54591:6 Layer2-info: encaps: VPLS, control flags:[0x0] , mtu: 0, site preference: 100
@@ -40,18 +40,18 @@ class TestL2VPN (unittest.TestCase):
 		we do know what routes Juniper sends us
 		and we testing decoded values against it
 		'''
-		l2vpn_route1 = L2VPN.unpack(str(self.encoded_l2vpn_nlri1))
-		l2vpn_route2 = L2VPN.unpack(str(self.encoded_l2vpn_nlri2))
+		l2vpn_route1 = VPLSNLRI.unpack(str(self.encoded_l2vpn_nlri1))
+		l2vpn_route2 = VPLSNLRI.unpack(str(self.encoded_l2vpn_nlri2))
 		self.assertEqual(l2vpn_route1.ve,3)
 		self.assertEqual(l2vpn_route1.rd._str(),'172.30.5.4:13')
-		self.assertEqual(l2vpn_route1.block_offset,1)
-		self.assertEqual(l2vpn_route1.label_base,262145)
-		self.assertEqual(l2vpn_route1.block_size,8)
+		self.assertEqual(l2vpn_route1.offset,1)
+		self.assertEqual(l2vpn_route1.base,262145)
+		self.assertEqual(l2vpn_route1.size,8)
 		self.assertEqual(l2vpn_route2.ve,3)
 		self.assertEqual(l2vpn_route2.rd._str(),'172.30.5.3:11')
-		self.assertEqual(l2vpn_route2.block_offset,1)
-		self.assertEqual(l2vpn_route2.label_base,262145)
-		self.assertEqual(l2vpn_route2.block_size,8)
+		self.assertEqual(l2vpn_route2.offset,1)
+		self.assertEqual(l2vpn_route2.base,262145)
+		self.assertEqual(l2vpn_route2.size,8)
 
 	def test_l2vpn_encode (self):
 		'''
@@ -59,8 +59,7 @@ class TestL2VPN (unittest.TestCase):
 		Juniper
 		'''
 		encoded_l2vpn = VPLSNLRI(None,None,None,None,None)
-		encoded_l2vpn.nlri = self.decoded_l2vpn_nlri1
-		encoded_l2vpn.rd = self.decoded_l2vpn_nlri1.rd
+		encoded_l2vpn = self.decoded_l2vpn_nlri1
 		self.assertEqual(
 			encoded_l2vpn.pack().encode('hex'),
 			str(self.encoded_l2vpn_nlri1).encode('hex')
@@ -72,6 +71,8 @@ class TestL2VPN (unittest.TestCase):
 			str(self.encoded_l2vpn_nlri2).encode('hex')
 		)
 
+	# Disable until we refactor the configuation code
+	#
 	# def test_l2info_community_decode (self):
 	# 	'''
 	# 	Juniper sends us both target and l2info; so we test only against

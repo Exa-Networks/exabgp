@@ -23,14 +23,14 @@ def _unique ():
 unique = _unique()
 
 class VPLSNLRI (Address):
-	def __init__ (self,rd,ve,label_base,block_offset,block_size):
+	def __init__ (self,rd,ve,base,offset,size):
 		Address.__init__(self,AFI.l2vpn,SAFI.vpls)
 		self.action = OUT.announce
 		self.nexthop = None
 		self.rd = rd
-		self.label_base = label_base
-		self.block_offset = block_offset
-		self.block_size = block_size
+		self.base = base
+		self.offset = offset
+		self.size = size
 		self.ve = ve
 		self.unique = unique.next()
 
@@ -43,10 +43,10 @@ class VPLSNLRI (Address):
 			self.rd.pack(),
 			pack('!HHH',
 				self.ve,
-				self.block_offset,
-				self.block_size
+				self.offset,
+				self.size
 			),
-			pack('!L',(self.label_base<<4)|0x1)[1:]  # setting the bottom of stack, should we ?
+			pack('!L',(self.base<<4)|0x1)[1:]  # setting the bottom of stack, should we ?
 		)
 
 	# XXX: FIXME: we need an unique key here.
@@ -55,9 +55,9 @@ class VPLSNLRI (Address):
 		content = ','.join([
 			self.rd.json(),
 			'"endpoint": "%s"' % self.ve,
-			'"base": "%s"' % self.block_offset,
-			'"offset": "%s"' % self.block_size,
-			'"size": "%s"' % self.label_base,
+			'"base": "%s"' % self.offset,
+			'"offset": "%s"' % self.size,
+			'"size": "%s"' % self.base,
 		])
 		return '"vpls-%s": { %s }' % (self.unique, content)
 
@@ -65,9 +65,9 @@ class VPLSNLRI (Address):
 		return "vpls%s endpoint %s base %s offset %s size %s %s" % (
 			self.rd,
 			self.ve,
-			self.label_base,
-			self.block_offset,
-			self.block_size,
+			self.base,
+			self.offset,
+			self.size,
 			'' if self.nexthop is None else 'next-hop %s' % self.nexthop,
 		)
 
@@ -81,6 +81,6 @@ class VPLSNLRI (Address):
 		if len(bgp) != length+2:
 			raise Notify(3,10,'l2vpn vpls message length is not consistent with encoded data')
 		rd = RouteDistinguisher(bgp[2:10])
-		ve,block_offset,block_size = unpack('!HHH',bgp[10:16])
-		label_base = unpack('!L','\x00'+bgp[16:19])[0]>>4
-		return VPLSNLRI(rd,ve,label_base,block_offset,block_size)
+		ve,offset,size = unpack('!HHH',bgp[10:16])
+		base = unpack('!L','\x00'+bgp[16:19])[0]>>4
+		return VPLSNLRI(rd,ve,base,offset,size)
