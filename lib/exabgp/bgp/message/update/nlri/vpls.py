@@ -46,7 +46,7 @@ class VPLSNLRI (Address):
 				self.block_offset,
 				self.block_size
 			),
-			pack('!L',(self.label_base<<4)|0x1)[0:3]  # setting the bottom of stack, should we ?
+			pack('!L',(self.label_base<<4)|0x1)[1:]  # setting the bottom of stack, should we ?
 		)
 
 	# XXX: FIXME: we need an unique key here.

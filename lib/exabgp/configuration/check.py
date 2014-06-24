@@ -126,7 +126,7 @@ def check_neighbor (neighbor):
 # ================================================================= check_update
 # self check to see if we can decode what we encode
 
-def check_udpate (neighbor,update):
+def check_update (neighbor,update):
 	from exabgp.logger import Logger
 
 	logger = Logger()
