@@ -6,13 +6,13 @@ Created by Thomas Mangin on 2014-06-22.
 Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.registry import Raised,Registry,Data
+from exabgp.configuration.registry import Raised,Entry,Data
 
 from exabgp.bgp.message.open.capability.id import CapabilityID
 
 # from exabgp.protocol.family import AFI,SAFI,known_families
 
-class Capability (Registry,Data):
+class Capability (Entry,Data):
 	syntax = \
 	'capability {\n' \
 	'   asn4 enable|disable;                         # default enabled\n' \
@@ -75,10 +75,6 @@ class Capability (Registry,Data):
 
 		self.content[CapabilityID.GRACEFUL_RESTART] = duration
 		self._drop_colon(tokeniser)
-
-	def _drop_colon (self,tokeniser):
-		if tokeniser() != ';':
-			raise Raised('missing semi-colon')
 
 	def _check_duplicate (self,key):
 		if key in self.content:

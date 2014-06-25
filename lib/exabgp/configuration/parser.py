@@ -35,5 +35,7 @@ class Parser (object):
 p = Parser('/Users/thomas/source/git/exabgp/master/dev/test-new-config.txt')
 registry = p.reload()
 
-for klass in registry._klass:
-	print klass, registry._klass[klass].content
+from exabgp.configuration.registry import Entry
+
+for klass in Entry._klass:
+	print klass, Entry._klass[klass].content
