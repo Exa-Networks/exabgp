@@ -88,36 +88,50 @@ def tokens (stream):
 				word += char
 				nb_chars += 1
 
-def parser (tokeniser):
-	def content(next):
-		try:
-			while True:
-				line,position,token = next()
+class Tokeniser (object):
+	def __init__ (self,stream):
+		self.tokeniser = tokens(stream)
+		self._rewind = []
 
-				if token == '[':
-					l = []
-					for element in iterate_list(next):
-						l.append(element)
-					return l
-				elif token[0] in ('"',"'"):
-					return unescape(token[1:-1])
-				elif token == 'true':
-					return True
-				elif token == 'false':
-					return False
-				elif token == 'null':
-					return None
-				else:
-					return token
-		except ValueError:
-			raise UnexpectedData(line,position,token)
-		except StopIteration:
-			return ''
+	def __call__ (self):
+		if self._rewind:
+			return self._rewind.pop()
+		return Tokeniser.parser(self.tokeniser)
 
-	def iterate_list(next):
-		token = content(next)
-		while token != ']':
-			yield token
+	def rewind (self,token):
+		self._rewind.append(token)
+
+	@staticmethod
+	def parser (tokeniser):
+		def content(next):
+			try:
+				while True:
+					line,position,token = next()
+
+					if token == '[':
+						l = []
+						for element in iterate_list(next):
+							l.append(element)
+						return l
+					elif token[0] in ('"',"'"):
+						return unescape(token[1:-1])
+					elif token == 'true':
+						return True
+					elif token == 'false':
+						return False
+					elif token == 'null':
+						return None
+					else:
+						return token
+			except ValueError:
+				raise UnexpectedData(line,position,token)
+			except StopIteration:
+				return ''
+
+		def iterate_list(next):
 			token = content(next)
+			while token != ']':
+				yield token
+				token = content(next)
 
-	return content(tokeniser)
+		return content(tokeniser)

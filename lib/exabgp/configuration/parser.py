@@ -7,7 +7,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from exabgp.configuration.io.reader import Reader
-from exabgp.configuration.io.parser import tokens,parser
+from exabgp.configuration.io.parser import Tokeniser
 
 from exabgp.configuration.registry import Registry
 
@@ -28,8 +28,8 @@ class Parser (object):
 		registry = Registry()
 
 		with Reader(self._fname) as r:
-			tokeniser = tokens(r)
-			registry.handle(lambda : parser(tokeniser))
+			tokeniser = Tokeniser(r)
+			registry.handle(tokeniser)
 
 		return registry
 
