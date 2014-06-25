@@ -2,11 +2,11 @@
 """
 family.py
 
-Created by Thomas Mangin on 2009-08-25.
-Copyright (c) 2009-2013 Exa Networks. All rights reserved.
+Created by Thomas Mangin on 2014-06-22.
+Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.registry import Registry
+from exabgp.configuration.registry import Raised,Registry
 
 from exabgp.protocol.family import AFI,SAFI
 
@@ -30,41 +30,40 @@ class Family (Registry):
 		'}\n'
 
 
-	def __init__ (self,parser):
-		self.parser = parser
+	def __init__ (self):
 		self.content = []
 
-	def enter (self,registry,tokeniser):
+	def enter (self,tokeniser):
 		token = tokeniser()
-		if token != '{': raise Exception(self.syntax)
+		if token != '{': raise Raised(self.syntax)
 		if 'families' in self.content:
-			raise Exception('duplicate family blocks')
+			raise Raised('duplicate family blocks')
 		self.content = []
 
-	def exit (self,registry,tokeniser):
+	def exit (self,tokeniser):
 		# no verification to do
 		pass
 
-	def inet (self,registry,tokeniser):
-		raise Exception("the word inet is deprecated, please use ipv4 instead",'error')
+	def inet (self,tokeniser):
+		raise Raised("the word inet is deprecated, please use ipv4 instead",'error')
 
-	def inet4 (self,registry,tokeniser):
-		raise Exception("the word inet4 is deprecated, please use ipv4 instead",'error')
+	def inet4 (self,tokeniser):
+		raise Raised("the word inet4 is deprecated, please use ipv4 instead",'error')
 
-	def inet6 (self,registry,tokeniser):
-		raise Exception("the word inet6 is deprecated, please use ipv6 instead",'error')
+	def inet6 (self,tokeniser):
+		raise Raised("the word inet6 is deprecated, please use ipv6 instead",'error')
 
 	def _check_conflict (self):
 		if 'all' in self.content:
-			raise Exception('ipv4 can not be used with all or minimal')
+			raise Raised('ipv4 can not be used with all or minimal')
 		if 'minimal' in self.content:
-			raise Exception('ipv4 can not be used with all or minimal')
+			raise Raised('ipv4 can not be used with all or minimal')
 
 	def _drop_colon (self,tokeniser):
 		if tokeniser() != ';':
-			raise Exception('missing semi-colon')
+			raise Raised('missing semi-colon')
 
-	def ipv4 (self,registry,tokeniser):
+	def ipv4 (self,tokeniser):
 		self._check_conflict()
 		safi = tokeniser()
 
@@ -81,11 +80,11 @@ class Family (Registry):
 		elif safi == 'flow-vpn':
 			self.content.append((AFI(AFI.ipv4),SAFI(SAFI.flow_vpn)))
 		else:
-			raise Exception('unknow family safi %s' % safi)
+			raise Raised('unknow family safi %s' % safi)
 
 		self._drop_colon(tokeniser)
 
-	def ipv6 (self,registry,tokeniser):
+	def ipv6 (self,tokeniser):
 		self._check_conflict()
 		safi = tokeniser()
 
@@ -98,29 +97,29 @@ class Family (Registry):
 		elif safi == 'flow-vpn':
 			self.content.append((AFI(AFI.ipv6),SAFI(SAFI.flow_vpn)))
 		else:
-			raise Exception('unknow family safi %s' % safi)
+			raise Raised('unknow family safi %s' % safi)
 
 		self._drop_colon(tokeniser)
 
 
-	def l2vpn (self,registry,tokeniser):
+	def l2vpn (self,tokeniser):
 		self._check_conflict()
 		safi = tokeniser()
 
 		if safi == 'vpls':
 			self.content.append((AFI(AFI.l2vpn),SAFI(SAFI.vpls)))
 		else:
-			raise Exception('unknow family safi %s' % safi)
+			raise Raised('unknow family safi %s' % safi)
 
 		self._drop_colon(tokeniser)
 
-	def all (self,registry,tokeniser):
+	def all (self,tokeniser):
 		self._check_conflict()
 		# bad, we are changing the type
 		self.content = ['all',]
 		self._drop_colon(tokeniser)
 
-	def minimal (self,registry,tokeniser):
+	def minimal (self,tokeniser):
 		self._check_conflict()
 		# bad, we are changing the type
 		self.content = ['minimal',]
@@ -128,20 +127,20 @@ class Family (Registry):
 
 	@classmethod
 	def register (cls,location):
-		cls.register_class(cls)
+		cls.register_class()
 
-		cls.register_hook('enter',location,cls,'enter')
-		cls.register_hook('exit',location,cls,'exit')
+		cls.register_hook('enter',location,'enter')
+		cls.register_hook('exit',location,'exit')
 
-		cls.register_hook('action',location+['inet'],Family,'inet')
-		cls.register_hook('action',location+['inet4'],Family,'inet4')
-		cls.register_hook('action',location+['inet6'],Family,'inet6')
-		cls.register_hook('action',location+['ipv4'],Family,'ipv4')
-		cls.register_hook('action',location+['ipv6'],Family,'ipv6')
-		cls.register_hook('action',location+['l2vpn'],Family,'l2vpn')
+		cls.register_hook('action',location+['inet'],'inet')
+		cls.register_hook('action',location+['inet4'],'inet4')
+		cls.register_hook('action',location+['inet6'],'inet6')
+		cls.register_hook('action',location+['ipv4'],'ipv4')
+		cls.register_hook('action',location+['ipv6'],'ipv6')
+		cls.register_hook('action',location+['l2vpn'],'l2vpn')
 
-		cls.register_hook('action',location+['all'],Family,'all')
-		cls.register_hook('action',location+['minimal'],Family,'minimal')
+		cls.register_hook('action',location+['all'],'all')
+		cls.register_hook('action',location+['minimal'],'minimal')
 
 
 Family.register(['family'])

@@ -1,14 +1,12 @@
-from exabgp.bgp.message.open.capability import Capabilities
-
 # encoding: utf-8
 """
 family.py
 
-Created by Thomas Mangin on 2009-08-25.
-Copyright (c) 2009-2013 Exa Networks. All rights reserved.
+Created by Thomas Mangin on 2014-06-22.
+Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.registry import Registry,Data
+from exabgp.configuration.registry import Raised,Registry,Data
 
 from exabgp.bgp.message.open.capability.id import CapabilityID
 
@@ -26,29 +24,28 @@ class Capability (Registry,Data):
 	'   add-path disable|send|receive|send/receive;  # default disabled\n' \
 	'}\n'
 
-	def __init__ (self,parser):
-		self.parser = parser
-		self.content = None
-
-	def enter (self,registry,tokeniser):
-		token = tokeniser()
-		if token != '{': raise Exception(self.syntax)
+	def __init__ (self):
 		self.content = dict()
 
-	def exit (self,registry,tokeniser):
+	def enter (self,tokeniser):
+		token = tokeniser()
+		if token != '{': raise Raised(self.syntax)
+		self.content = dict()
+
+	def exit (self,tokeniser):
 		# no verification to do
 		pass
 
-	def asn4 (self,registry,tokeniser):
+	def asn4 (self,tokeniser):
 		self.content[CapabilityID.FOUR_BYTES_ASN] = self.boolean(tokeniser,True)
 
-	def aigp (self,registry,tokeniser):
+	def aigp (self,tokeniser):
 		self.content[CapabilityID.AIGP] = self.boolean(tokeniser,False)
 
-	def addpath (self,registry,tokeniser):
+	def addpath (self,tokeniser):
 		ap = tokeniser()
 		if ap not in ('receive','send','send/receive','disable','disabled'):
-			raise Exception("")
+			raise Raised("")
 
 		self.content[CapabilityID.ADD_PATH] = 0
 		if ap.endswith('receive'): self.content[CapabilityID.ADD_PATH] += 1
@@ -56,51 +53,51 @@ class Capability (Registry,Data):
 
 		self._drop_colon(tokeniser)
 
-	def operational (self,registry,tokeniser):
+	def operational (self,tokeniser):
 		self.content[CapabilityID.OPERATIONAL] = self.boolean(tokeniser,False)
 
-	def refresh (self,registry,tokeniser):
+	def refresh (self,tokeniser):
 		self.content[CapabilityID.ROUTE_REFRESH] = self.boolean(tokeniser,False)
 
-	def multisession (self,registry,tokeniser):
+	def multisession (self,tokeniser):
 		self.content[CapabilityID.MULTISESSION_BGP] = self.boolean(tokeniser,False)
 
-	def graceful (self,registry,tokeniser):
+	def graceful (self,tokeniser):
 		token = tokeniser()
 		if not token.isdigit():
-			raise Exception("")
+			raise Raised("")
 
 		duration = int(token)
 		if duration < 0:
-			raise Exception("")
+			raise Raised("")
 		if duration > pow(2,16):
-			raise Exception("")
+			raise Raised("")
 
 		self.content[CapabilityID.GRACEFUL_RESTART] = duration
 		self._drop_colon(tokeniser)
 
 	def _drop_colon (self,tokeniser):
 		if tokeniser() != ';':
-			raise Exception('missing semi-colon')
+			raise Raised('missing semi-colon')
 
 	def _check_duplicate (self,key):
 		if key in self.content:
-			raise Exception("")
+			raise Raised("")
 
 	@classmethod
 	def register (cls,location):
-		cls.register_class(cls)
+		cls.register_class()
 
-		cls.register_hook('enter',location,cls,'enter')
-		cls.register_hook('exit',location,cls,'exit')
+		cls.register_hook('enter',location,'enter')
+		cls.register_hook('exit',location,'exit')
 
-		cls.register_hook('action',location+['asn4'],Capability,'asn4')
-		cls.register_hook('action',location+['aigp'],Capability,'aigp')
-		cls.register_hook('action',location+['add-path'],Capability,'addpath')
-		cls.register_hook('action',location+['operational'],Capability,'operational')
-		cls.register_hook('action',location+['route-refresh'],Capability,'refresh')
-		cls.register_hook('action',location+['multi-session'],Capability,'multisession')
-		cls.register_hook('action',location+['graceful-restart'],Capability,'graceful')
+		cls.register_hook('action',location+['asn4'],'asn4')
+		cls.register_hook('action',location+['aigp'],'aigp')
+		cls.register_hook('action',location+['add-path'],'addpath')
+		cls.register_hook('action',location+['operational'],'operational')
+		cls.register_hook('action',location+['route-refresh'],'refresh')
+		cls.register_hook('action',location+['multi-session'],'multisession')
+		cls.register_hook('action',location+['graceful-restart'],'graceful')
 
 
 Capability.register(['capability'])

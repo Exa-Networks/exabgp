@@ -1,4 +1,10 @@
+# encoding: utf-8
+"""
+registry.py
 
+Created by Thomas Mangin on 2014-06-22.
+Copyright (c) 2014-2014 Exa Networks. All rights reserved.
+"""
 
 # the replace Fxception, and give line etc.
 class Raised (Exception):
@@ -13,17 +19,16 @@ class Registry (object):
 		self.stack = []
 
 	@classmethod
-	def register_class (cls,klass):
-		print "class %s registered" % klass.__name__
-		if not klass in cls._klass:
-			cls._klass[klass] = klass(cls)
+	def register_class (cls):
+		print "class %s registered" % cls.__name__
+		if not cls in cls._klass:
+			cls._klass[cls] = cls()
 
 	@classmethod
-	def register_hook (cls,action,position,klass,function):
-		instance = cls._klass[klass]
+	def register_hook (cls,action,position,function):
 		key = '/'.join(position)
-		cls._handler.setdefault(key,{})[action] = getattr(instance,function)
-		print "%-20s %-15s %s.%-10s registered" % (key if key else 'root',action,klass.__name__,function)
+		cls._handler.setdefault(key,{})[action] = getattr(cls,function)
+		print "%-35s %-7s %s.%-20s registered" % (key if key else 'root',action,cls.__name__,function)
 
 	def handle (self,tokeniser):
 		while True:
@@ -52,7 +57,8 @@ class Registry (object):
 
 			if function is not None:
 				print 'hit %s/%s' % (key,section)
-				function(self,tokeniser)
+				instance = self._klass.setdefault(function.im_class,function.im_class())
+				function(instance,tokeniser)
 				continue
 
 			print 'hit %s/%s' % (key)
