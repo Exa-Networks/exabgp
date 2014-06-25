@@ -4,25 +4,6 @@
 class Raised (Exception):
 	pass
 
-class Data (object):
-	def boolean (self,tokeniser,default):
-		boolean = tokeniser()
-		if boolean == ';':
-			return default
-		if boolean in ('true','enable','enabled'):
-			value = True
-		elif boolean in ('false','disable','disabled'):
-			value = False
-		elif boolean in ('unset',):
-			value = None
-		else:
-			raise Exception("")
-
-		if tokeniser() != ';':
-			raise Exception("")
-
-		return value
-
 class Registry (object):
 	_location = ['root']
 	_klass = {}
@@ -31,7 +12,6 @@ class Registry (object):
 	def __init__ (self):
 		self.stack = []
 
-
 	@classmethod
 	def register_class (cls,klass):
 		print "class %s registered" % klass.__name__
@@ -39,7 +19,7 @@ class Registry (object):
 			cls._klass[klass] = klass(cls)
 
 	@classmethod
-	def register (cls,action,position,klass,function):
+	def register_hook (cls,action,position,klass,function):
 		instance = cls._klass[klass]
 		key = '/'.join(position)
 		cls._handler.setdefault(key,{})[action] = getattr(instance,function)
@@ -78,3 +58,23 @@ class Registry (object):
 			print 'hit %s/%s' % (key)
 			# we need the line and position at this level
 			raise Exception('no parser for %s' % token)
+
+
+class Data (object):
+	def boolean (self,tokeniser,default):
+		boolean = tokeniser()
+		if boolean == ';':
+			return default
+		if boolean in ('true','enable','enabled'):
+			value = True
+		elif boolean in ('false','disable','disabled'):
+			value = False
+		elif boolean in ('unset',):
+			value = None
+		else:
+			raise Exception("")
+
+		if tokeniser() != ';':
+			raise Exception("")
+
+		return value

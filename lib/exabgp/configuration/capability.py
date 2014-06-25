@@ -14,7 +14,7 @@ from exabgp.bgp.message.open.capability.id import CapabilityID
 
 # from exabgp.protocol.family import AFI,SAFI,known_families
 
-class Capability (Data):
+class Capability (Registry,Data):
 	syntax = \
 	'capability {\n' \
 	'   asn4 enable|disable;                         # default enabled\n' \
@@ -87,17 +87,20 @@ class Capability (Data):
 		if key in self.content:
 			raise Exception("")
 
-# Not sure about this API yet ..
-Registry.register_class(Capability)
+	@classmethod
+	def register (cls,location):
+		cls.register_class(cls)
 
-# Correct registration
-Registry.register('enter',['capability'],Capability,'enter')
-Registry.register('exit',['capability'],Capability,'exit')
+		cls.register_hook('enter',location,cls,'enter')
+		cls.register_hook('exit',location,cls,'exit')
 
-Registry.register('action',['capability','asn4'],Capability,'asn4')
-Registry.register('action',['capability','aigp'],Capability,'aigp')
-Registry.register('action',['capability','add-path'],Capability,'addpath')
-Registry.register('action',['capability','operational'],Capability,'operational')
-Registry.register('action',['capability','route-refresh'],Capability,'refresh')
-Registry.register('action',['capability','multi-session'],Capability,'multisession')
-Registry.register('action',['capability','graceful-restart'],Capability,'graceful')
+		cls.register_hook('action',location+['asn4'],Capability,'asn4')
+		cls.register_hook('action',location+['aigp'],Capability,'aigp')
+		cls.register_hook('action',location+['add-path'],Capability,'addpath')
+		cls.register_hook('action',location+['operational'],Capability,'operational')
+		cls.register_hook('action',location+['route-refresh'],Capability,'refresh')
+		cls.register_hook('action',location+['multi-session'],Capability,'multisession')
+		cls.register_hook('action',location+['graceful-restart'],Capability,'graceful')
+
+
+Capability.register(['capability'])

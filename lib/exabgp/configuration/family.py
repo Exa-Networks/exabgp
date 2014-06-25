@@ -12,7 +12,7 @@ from exabgp.protocol.family import AFI,SAFI
 
 # from exabgp.protocol.family import AFI,SAFI,known_families
 
-class Family (object):
+class Family (Registry):
 	syntax = \
 		'family {\n' \
 		'#  all;		# default, announce all the families we know\n' \
@@ -126,21 +126,22 @@ class Family (object):
 		self.content = ['minimal',]
 		self._drop_colon(tokeniser)
 
+	@classmethod
+	def register (cls,location):
+		cls.register_class(cls)
 
-# Not sure about this API yet ..
-Registry.register_class(Family)
+		cls.register_hook('enter',location,cls,'enter')
+		cls.register_hook('exit',location,cls,'exit')
 
-# Correct registration
-Registry.register('enter',['family'],Family,'enter')
-Registry.register('exit',['family'],Family,'exit')
+		cls.register_hook('action',location+['inet'],Family,'inet')
+		cls.register_hook('action',location+['inet4'],Family,'inet4')
+		cls.register_hook('action',location+['inet6'],Family,'inet6')
+		cls.register_hook('action',location+['ipv4'],Family,'ipv4')
+		cls.register_hook('action',location+['ipv6'],Family,'ipv6')
+		cls.register_hook('action',location+['l2vpn'],Family,'l2vpn')
 
-Registry.register('action',['family','inet'],Family,'inet')
-Registry.register('action',['family','inet4'],Family,'inet4')
-Registry.register('action',['family','inet6'],Family,'inet6')
-Registry.register('action',['family','ipv4'],Family,'ipv4')
-Registry.register('action',['family','ipv6'],Family,'ipv6')
-Registry.register('action',['family','l2vpn'],Family,'l2vpn')
+		cls.register_hook('action',location+['all'],Family,'all')
+		cls.register_hook('action',location+['minimal'],Family,'minimal')
 
-Registry.register('action',['family','all'],Family,'all')
-Registry.register('action',['family','minimal'],Family,'minimal')
 
+Family.register(['family'])
