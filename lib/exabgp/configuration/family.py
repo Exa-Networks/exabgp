@@ -34,7 +34,6 @@ class Family (Entry,Data):
 		self.content = []
 
 	def enter (self,tokeniser):
-		import pdb; pdb.set_trace()
 		token = tokeniser()
 		if token != '{': raise Raised(self.syntax)
 		if 'families' in self.content:

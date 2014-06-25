@@ -7,7 +7,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from exabgp.configuration.io.reader import Reader
-from exabgp.configuration.io.parser import Tokeniser
+from exabgp.configuration.io.tokeniser import Tokeniser
 
 from exabgp.configuration.registry import Registry
 
