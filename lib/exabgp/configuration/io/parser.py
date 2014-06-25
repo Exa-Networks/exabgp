@@ -99,7 +99,7 @@ def parser (tokeniser):
 					for element in iterate_list(next):
 						l.append(element)
 					return l
-				elif token[0] == '"':
+				elif token[0] in ('"',"'"):
 					return unescape(token[1:-1])
 				elif token == 'true':
 					return True

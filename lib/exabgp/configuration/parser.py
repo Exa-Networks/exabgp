@@ -14,6 +14,7 @@ from exabgp.configuration.registry import Registry
 # required to register the callbacks
 from exabgp.configuration.family import Family
 from exabgp.configuration.capability import Capability
+from exabgp.configuration.process import Process
 # end required
 
 class Parser (object):
