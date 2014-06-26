@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2014-06-22.
 Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.registry import Raised,Entry,Data
+from exabgp.configuration.engine.registry import Raised,Entry,Data
 
 from exabgp.bgp.message.open.capability.id import CapabilityID
 
