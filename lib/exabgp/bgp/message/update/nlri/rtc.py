@@ -2,8 +2,8 @@
 """
 rtc.py
 
-Created by Orange.
-Copyright (c) 2014-2014, Orange. All rights reserved.
+Created by Thomas Morin on 2014-06-10.
+Copyright (c) 2014-2014 Orange. All rights reserved.
 Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
