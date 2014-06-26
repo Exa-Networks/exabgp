@@ -6,37 +6,38 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.engine.reader import Reader
-from exabgp.configuration.engine.tokeniser import Tokeniser
+if __name__ == '__main__':
+	from exabgp.configuration.engine.reader import Reader
+	from exabgp.configuration.engine.tokeniser import Tokeniser
 
-from exabgp.configuration.engine.registry import Registry
+	from exabgp.configuration.engine.registry import Registry
 
-# required to register the callbacks
-from exabgp.configuration.family import Family
-from exabgp.configuration.capability import Capability
-from exabgp.configuration.process import Process
-# end required
+	# required to register the callbacks
+	from exabgp.configuration.family import Family
+	from exabgp.configuration.capability import Capability
+	from exabgp.configuration.process import Process
+	# end required
 
-class Parser (object):
-	def __init__ (self,fname,text=False):
-		#self.debug = environment.settings().debug.configuration
-		#self.logger = Logger()
-		self._text = text
-		self._fname = fname
+	class Parser (object):
+		def __init__ (self,fname,text=False):
+			#self.debug = environment.settings().debug.configuration
+			#self.logger = Logger()
+			self._text = text
+			self._fname = fname
 
-	def reload (self):
-		registry = Registry()
+		def reload (self):
+			registry = Registry()
 
-		with Reader(self._fname) as r:
-			tokeniser = Tokeniser(r)
-			registry.handle(tokeniser)
+			with Reader(self._fname) as r:
+				tokeniser = Tokeniser(r)
+				registry.handle(tokeniser)
 
-		return registry
+			return registry
 
-p = Parser('/Users/thomas/source/git/exabgp/master/dev/test-new-config.txt')
-registry = p.reload()
+	p = Parser('/Users/thomas/source/git/exabgp/master/dev/test-new-config.txt')
+	registry = p.reload()
 
-from exabgp.configuration.engine.registry import Entry
+	from exabgp.configuration.engine.registry import Entry
 
-for klass in Entry._klass:
-	print klass, Entry._klass[klass].content
+	for klass in Entry._klass:
+		print klass, Entry._klass[klass].content
