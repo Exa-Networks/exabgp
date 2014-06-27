@@ -331,9 +331,9 @@ class Configuration (object):
 		}
 		self._dispatch_vpls_cfg = {
 			'endpoint': self._l2vpn_vpls_endpoint,
-			'offset': self._l2vpn_vpls_block_offset,
-			'size': self._l2vpn_vpls_block_size,
-			'base': self._l2vpn_vpls_label_base,
+			'offset': self._l2vpn_vpls_offset,
+			'size': self._l2vpn_vpls_size,
+			'base': self._l2vpn_vpls_base,
 			'origin': self._route_origin,
 			'as-path': self._route_aspath,
 			'med': self._route_med,
@@ -2369,16 +2369,16 @@ class Configuration (object):
 		if nlri.ve is None:
 			raise ValueError(self._str_vpls_bad_enpoint)
 
-		if nlri.label_base is None:
+		if nlri.base is None:
 			raise ValueError(self._str_vpls_bad_label)
 
-		if nlri.block_offset is None:
+		if nlri.offset is None:
 			raise ValueError(self._str_vpls_bad_offset)
 
-		if nlri.block_size is None:
+		if nlri.size is None:
 			raise ValueError(self._str_vpls_bad_size)
 
-		if nlri.label_base > (0xFFFFF - nlri.block_size):  # 20 bits, 3 bytes
+		if nlri.base > (0xFFFFF - nlri.size):  # 20 bits, 3 bytes
 			raise ValueError(self._str_vpls_bad_label)
 
 		return True
@@ -2417,31 +2417,31 @@ class Configuration (object):
 		vpls.ve = number
 		return True
 
-	def _l2vpn_vpls_block_size(self, scope, token):
+	def _l2vpn_vpls_size(self, scope, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			raise ValueError(self._str_vpls_bad_size)
 
 		vpls = scope[-1]['announce'][-1].nlri
-		vpls.block_size = number
+		vpls.size = number
 		return True
 
-	def _l2vpn_vpls_block_offset(self, scope, token):
+	def _l2vpn_vpls_offset(self, scope, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			raise ValueError(self._str_vpls_bad_offset)
 
 		vpls = scope[-1]['announce'][-1].nlri
-		vpls.block_offset = number
+		vpls.offset = number
 		return True
 
-	def _l2vpn_vpls_label_base(self, scope, token):
+	def _l2vpn_vpls_base(self, scope, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			raise ValueError(self._str_vpls_bad_label)
 
 		vpls = scope[-1]['announce'][-1].nlri
-		vpls.label_base = number
+		vpls.base = number
 		return True
 
 	# ..........................................
