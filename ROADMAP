@@ -4,6 +4,13 @@ ROADMAP
 
 Remove .packed for Inet and all its subclass as we now had addpath getting in the way.
 
+Make sure all the attributes stored data is prepended with the attribute headers
+Implement ASPATH unpack
+Implement MP_*REACH unpack
+Implement the register() API with Attributes
+Prefix and Inet should not need explicit AFI,SAFI
+Make sure all attributes have __cmp__ and __hash__ functions
+
 In no particular order:
 - Following the integration of Orange's code, we now have an unpack() API to create object, we should generalise its use
 - provide an helper program able to read MRT dumps and announce them too.
