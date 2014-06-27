@@ -308,13 +308,13 @@ def OperationalFactory (data):
 	elif decode == 'query':
 		afi = unpack('!H',data[4:6])[0]
 		safi = ord(data[6])
-		routerid = RouterID('.'.join(str(ord(_)) for _ in data[7:11]))
+		routerid = RouterID.unpack(data[7:11])
 		sequence = unpack('!L',data[11:15])[0]
 		return klass(afi,safi,routerid,sequence)
 	elif decode == 'counter':
 		afi = unpack('!H',data[4:6])[0]
 		safi = ord(data[6])
-		routerid = RouterID('.'.join(str(ord(_)) for _ in data[7:11]))
+		routerid = RouterID.unpack(data[7:11])
 		sequence = unpack('!L',data[11:15])[0]
 		counter = unpack('!L',data[15:19])[0]
 		return klass(afi,safi,routerid,sequence,counter)
