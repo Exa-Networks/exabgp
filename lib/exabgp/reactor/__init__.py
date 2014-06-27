@@ -570,6 +570,36 @@ class Reactor (object):
 			except IndexError:
 				pass
 
+		if 'withdraw route' in command:
+			def _withdraw_change (self,command,nexthops):
+				changes = self.configuration.parse_api_route(command,nexthops,'withdraw')
+				if not changes:
+					self.logger.reactor("Command could not parse route in : %s" % command,'warning')
+					yield True
+				else:
+					for (peer,change) in changes:
+						if self.configuration.change_to_peers(change,[peer,]):
+							self.logger.reactor("Route removed : %s" % change.extensive())
+							yield False
+						else:
+							self.logger.reactor("Could not find therefore remove route : %s" % change.extensive(),'warning')
+							yield False
+					self._route_update = True
+
+			try:
+				descriptions,command = extract_neighbors(command)
+				peers = match_neighbors(descriptions,self._peers)
+				if peers == []:
+					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+					return False
+				nexthops = dict((peer,self._peers[peer].neighbor.local_address) for peer in peers)
+				self._pending.append(_withdraw_change(self,command,nexthops))
+				return True
+			except ValueError:
+				pass
+			except IndexError:
+				pass
+
 		if 'withdraw vpls' in command:
 			def _withdraw_change (self,command,nexthops):
 				changes = self.configuration.parse_api_vpls(command,nexthops,'withdraw')
@@ -810,7 +840,6 @@ class Reactor (object):
 				pass
 			except IndexError:
 				pass
-
 
 		# unknown
 		self.logger.reactor("Command from process not understood : %s" % command,'warning')
