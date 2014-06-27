@@ -8,7 +8,6 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 import socket
 
-from exabgp.protocol.family import AFI,SAFI
 from exabgp.protocol.ip.inet import Inet
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
@@ -22,10 +21,10 @@ class OriginatorID (Attribute,Inet):
 	MULTIPLE = False
 
 	# Take an IP as value
-	def __init__ (self,afi,safi,ip,packed=None):
+	def __init__ (self,ip,packed=None):
 		if not packed:
 			packed = socket.inet_pton(socket.AF_INET,ip)
-		Inet.__init__(self,afi,safi,packed)
+		Inet.__init__(self,packed)
 		# This override Inet.pack too.
 
 	def __cmp__(self,other):
@@ -44,4 +43,4 @@ class OriginatorID (Attribute,Inet):
 	@staticmethod
 	def unpack (data):
 		ip = socket.inet_ntop(socket.AF_INET,data[:4])
-		return OriginatorID(AFI.ipv4,SAFI.unicast,ip,data)
+		return OriginatorID(ip,data)

@@ -10,10 +10,15 @@ from exabgp.bgp.message.notification import Notify
 
 from struct import unpack
 from exabgp.protocol.family import AFI,SAFI
-from exabgp.bgp.message.update.nlri.bgp import NLRI,PathInfo,Labels,RouteDistinguisher,mask_to_bytes
+from exabgp.protocol.ip.inet import Inet
+from exabgp.bgp.message.update.nlri.prefix import mask_to_bytes
+from exabgp.bgp.message.update.nlri.path import PathPrefix
+from exabgp.bgp.message.update.nlri.mpls import MPLS
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
+from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.flow import FlowNLRI,decode,factory,CommonOperator
 from exabgp.bgp.message.update.nlri.vpls import VPLSNLRI
-#from exabgp.bgp.message.update.nlri.mpls import VPNLabelledPrefix,RouteTargetConstraint
 
 from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
@@ -25,10 +30,15 @@ from exabgp.logger import Logger,LazyFormat
 logger = None
 
 def NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
-	if safi in (SAFI.unicast_multicast, SAFI.unicast, SAFI.multicast, SAFI.nlri_mpls, SAFI.mpls_vpn):
+	if safi in (SAFI.unicast, SAFI.multicast, SAFI.nlri_mpls, SAFI.mpls_vpn):
 		if afi in (AFI.ipv4, AFI.ipv6):
-			return _NLRIFactory(afi,safi,bgp,has_multiple_path,nexthop,action)
-		raise Notify(3,0,'invalid family for inet/mpls')
+			return _PrefixFactory(afi,safi,bgp,has_multiple_path,nexthop,action)
+		raise Notify(3,0,'invalid family for inet')
+
+	if safi in (SAFI.nlri_mpls, SAFI.mpls_vpn):
+		if afi in (AFI.ipv4, AFI.ipv6):
+			return _MPLSFactory(afi,safi,bgp,has_multiple_path,nexthop,action)
+		raise Notify(3,0,'invalid family for mpls')
 
 	if safi in (SAFI.flow_ip,SAFI.flow_vpn):
 		if afi in (AFI.ipv4, AFI.ipv6):
@@ -91,7 +101,7 @@ def _nlri_parser (afi,safi,bgp,action):
 		raise Notify(3,10,'could not decode route with AFI %d sand SAFI %d' % (afi,safi))
 
 	network,bgp = bgp[:size],bgp[size:]
-	padding = '\0'*(NLRI.length[afi]-size)
+	padding = '\0'*(Inet.length[afi]-size)
 	prefix = network + padding
 
 	return labels,rd,mask,size,prefix,bgp
@@ -180,24 +190,32 @@ def _FlowNLRIFactory (afi,safi,nexthop,bgp,action):
 
 	return total-len(bgp),nlri
 
-def _NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
+def _PrefixFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
 	if has_multiple_path:
-		path_identifier = bgp[:4]
+		path_identifier = PathInfo(None,None,bgp[:4])
 		bgp = bgp[4:]
 		length = 4
 	else:
-		path_identifier = ''
+		path_identifier = None
 		length = 0
 
 	labels,rd,mask,size,prefix,left = _nlri_parser(afi,safi,bgp,action)
+	nlri = PathPrefix(afi,safi,prefix,mask,NextHop.unpack(nexthop),action)
+	if has_multiple_path:
+		nlri.path_info = path_identifier
+	return length + len(bgp) - len(left),nlri
 
-	nlri = NLRI(afi,safi,prefix,mask,NextHop.unpack(nexthop),action)
+def _MPLSFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
+	if has_multiple_path:
+		raise Notify(3,0,'we are confused by this AddPath prefix on MPLS')
 
-	if path_identifier:
-		nlri.path_info = PathInfo(packed=path_identifier)
+	labels,rd,mask,size,prefix,left = _nlri_parser(afi,safi,bgp,action)
+
+	nlri = MPLS(afi,safi,prefix,mask,NextHop.unpack(nexthop),action)
+
 	if labels:
 		nlri.labels = Labels(labels)
 	if rd:
 		nlri.rd = RouteDistinguisher(rd)
 
-	return length + len(bgp) - len(left),nlri
+	return len(bgp) - len(left),nlri

@@ -9,7 +9,6 @@ Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 from struct import pack,unpack
 
 from exabgp.protocol.family import AFI,SAFI
-from exabgp.protocol.ip.address import Address
 from exabgp.bgp.message.direction import OUT
 from exabgp.bgp.message.update.nlri.prefix import Prefix
 from exabgp.bgp.message.notification import Notify
@@ -18,6 +17,8 @@ from exabgp.protocol import Protocol,NamedProtocol
 from exabgp.protocol.ip.icmp import ICMPType,ICMPCode,NamedICMPType,NamedICMPCode
 from exabgp.protocol.ip.fragment import Fragment,NamedFragment
 from exabgp.protocol.ip.tcp.flag import TCPFlag,NamedTCPFlag
+
+from exabgp.bgp.message.update.nlri.nlri import NLRI
 
 # =================================================================== Flow Components
 
@@ -96,7 +97,7 @@ class IPrefix4 (IPrefix,IComponent,IPv4):
 	# NAME
 
 	def __init__ (self,raw,netmask):
-		self.nlri = Prefix(self.afi,SAFI.flow_ip,raw,netmask)
+		self.nlri = Prefix(raw,netmask)
 
 	def pack (self):
 		raw = self.nlri.pack()
@@ -111,7 +112,7 @@ class IPrefix6 (IPrefix,IComponent,IPv6):
 	# NAME
 
 	def __init__ (self,raw,netmask,offset):
-		self.nlri = Prefix(self.afi,SAFI.flow_ip,raw,netmask)
+		self.nlri = Prefix(raw,netmask)
 		self.offset = offset
 
 	def pack (self):
@@ -397,9 +398,9 @@ def _unique ():
 
 unique = _unique()
 
-class FlowNLRI (Address):
+class FlowNLRI (NLRI):
 	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ip,rd=None):
-		Address.__init__(self,afi,safi)
+		NLRI.__init__(self,afi,safi)
 		self.rules = {}
 		self.action = OUT.announce
 		self.nexthop = None

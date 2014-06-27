@@ -6,9 +6,6 @@ Created by Thomas Mangin on 2012-07-07.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-import socket
-
-from exabgp.protocol.family import AFI,SAFI
 from exabgp.protocol.ip.inet import Inet
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute import Flag,Attribute
@@ -17,7 +14,7 @@ from exabgp.bgp.message.update.attribute import Flag,Attribute
 
 class ClusterID (Inet):
 	def __init__ (self,ip):
-		Inet.__init__(self,AFI.ipv4,SAFI.unicast,socket.inet_pton(socket.AF_INET,ip))
+		Inet.__init__(self,ip)
 
 
 class ClusterList (Attribute):
@@ -48,6 +45,6 @@ class ClusterList (Attribute):
 	def unpack (cls,data):
 		clusters = []
 		while data:
-			clusters.append(Inet(AFI.ipv4,SAFI.unicast,data[:4]))
+			clusters.append(Inet.unpack(data[:4]))
 			data = data[4:]
 		return cls(clusters)

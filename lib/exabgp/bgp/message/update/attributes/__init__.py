@@ -199,7 +199,7 @@ class Attributes (dict):
 		}
 
 		check = {
-			AID.NEXT_HOP:   lambda l,r,nh: nh.afi == AFI.ipv4,
+			AID.NEXT_HOP:   lambda l,r,nh: nh.ipv4() == True,
 			AID.LOCAL_PREF: lambda l,r,nh: l == r,
 		}
 

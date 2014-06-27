@@ -50,7 +50,6 @@ class AFI (int):
 
 # http://www.iana.org/assignments/safi-namespace
 class SAFI (int):
-	unicast_multicast = 0       # internal
 	unicast = 1                 # [RFC4760]
 	multicast = 2               # [RFC4760]
 #	deprecated = 3              # [RFC4760]

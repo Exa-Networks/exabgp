@@ -7,15 +7,15 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from exabgp.protocol.family import AFI,SAFI
-from exabgp.protocol.ip.address import Address
+from exabgp.bgp.message.update.nlri.nlri import NLRI
 
-class NLRIEOR (Address):
+class NLRIEOR (NLRI):
 	PREFIX = '\x00\x00\x00\x07\x90\x0f\x00\x03'
 
 	nexthop = None
 
 	def __init__ (self,afi,safi,action):
-		Address.__init__(self,afi,safi)
+		NLRI.__init__(self,afi,safi)
 		self.action = action
 
 	def nlri (self):

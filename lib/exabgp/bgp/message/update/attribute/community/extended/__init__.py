@@ -42,7 +42,7 @@ class ExtendedCommunity (object):
 		return self.community
 
 	def json (self):
-		return '[ %s, %s, %s, %s, %s, %s, %s, %s ]' % unpack('!BBBBBBBB',self.community)
+		return '0x' + '%02x'*8 % unpack('!BBBBBBBB',self.community)
 
 	def __str__ (self):
 		h = 0x00

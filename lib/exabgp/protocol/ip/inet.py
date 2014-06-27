@@ -9,10 +9,9 @@ Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 import socket
 
 from exabgp.protocol.family import AFI,SAFI
-from exabgp.protocol.ip.address import Address
 
 def _detect_afi(ip):
-	if ip.count(':'):
+	if ':' in ip:
 		return AFI.ipv6
 	return AFI.ipv4
 
@@ -31,7 +30,7 @@ def pton (ip):
 	afi = _detect_afi(ip)
 	return socket.inet_pton(Inet._af[afi],ip)
 
-class Inet (Address):
+class Inet (object):
 	_UNICAST = SAFI(SAFI.unicast)
 	_MULTICAST = SAFI(SAFI.multicast)
 
@@ -54,22 +53,21 @@ class Inet (Address):
 		AFI.ipv6: 16,
 	}
 
-	def __init__ (self,afi,safi,packed):
-		if safi:  # XXX: FIXME: we use a constant which is zero - reference it explicitly
-			Address.__init__(self,afi,safi)
-		elif ord(packed[0]) in self._multicast_range:
-			Address.__init__(self,afi,self._MULTICAST)
-		else:
-			Address.__init__(self,afi,self._UNICAST)
+	def __init__ (self,ip,packed=None):
+		self.ip = ip
+		self.packed = packed if packed else socket.inet_pton(Inet._af[_detect_afi(ip)],ip)
 
-		self.packed = packed
-		self._ip = None
+	def unicast (self):
+		return not self.multicast()
 
-	@property
-	def ip (self):
-		if not self._ip:
-			self._ip = socket.inet_ntop(self._af[self.afi],self.packed)
-		return self._ip
+	def multicast (self):
+		return ord(self.packed[0]) in set(range(224,240))
+
+	def ipv4 (self):
+		return len(self) == 4
+
+	def ipv6 (self):
+		return len(self) > 4
 
 	def pack (self):
 		return self.packed
@@ -77,11 +75,15 @@ class Inet (Address):
 	def __len__ (self):
 		return len(self.packed)
 
+	# XXX: FIXME: This API should be able to go away
 	def inet (self):
 		return self.ip
 
 	def __str__ (self):
 		return self.ip
+
+	def __repr__ (self):
+		return str(self)
 
 	def __cmp__ (self,other):
 		if self.packed == other.packed:
@@ -90,13 +92,10 @@ class Inet (Address):
 			return -1
 		return 1
 
-	def __repr__ (self):
-		return "<%s value %s>" % (str(self.__class__).split("'")[1].split('.')[-1],str(self))
-
 	@classmethod
 	def unpack (cls,data,klass=None):
 		afi = AFI.ipv4 if len(data) == 4 else AFI.ipv6
-		safi = SAFI.multicast if ord(data[0]) in Inet._multicast_range else SAFI.unicast
+
 		if klass:
-			return klass(afi,safi,data)
-		return cls(afi,safi,data)
+			return klass(socket.inet_ntop(Inet._af[afi],data))
+		return cls(socket.inet_pton(Inet._af[afi],data))

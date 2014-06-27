@@ -32,8 +32,8 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 
-from exabgp.bgp.message.update.nlri.prefix import Prefix
-from exabgp.bgp.message.update.nlri.bgp import NLRI,PathInfo,Labels,RouteDistinguisher
+from exabgp.bgp.message.update.nlri.path import PathPrefix,PathInfo
+from exabgp.bgp.message.update.nlri.mpls import MPLS,Labels,RouteDistinguisher
 from exabgp.bgp.message.update.nlri.vpls import VPLSNLRI
 from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,FlowNLRI,Flow4Source,Flow4Destination,Flow6Source,Flow6Destination,FlowSourcePort,FlowDestinationPort,FlowAnyPort,FlowIPProtocol,FlowNextHeader,FlowTCPFlag,FlowFragment,FlowPacketLength,FlowICMPType,FlowICMPCode,FlowDSCP,FlowTrafficClass,FlowFlowLabel
 
@@ -408,13 +408,15 @@ class Configuration (object):
 
 		if environment.settings().debug.route:
 			from exabgp.configuration.check import check_update
-			check_update(self.neighbor,environment.settings().debug.route)
-			sys.exit(0)
+			if check_update(self.neighbor,environment.settings().debug.route):
+				sys.exit(0)
+			sys.exit(1)
 
 		if environment.settings().debug.selfcheck:
 			from exabgp.configuration.check import check_neighbor
-			check_neighbor(self.neighbor)
-			sys.exit(0)
+			if check_neighbor(self.neighbor):
+				sys.exit(0)
+			sys.exit(1)
 
 		return True
 
@@ -489,7 +491,8 @@ class Configuration (object):
 		changes = []
 		for nlri in nlris.split():
 			ip,mask = nlri.split('/')
-			change = Change(NLRI(*inet(ip),mask=int(mask),nexthop=nexthop,action=action),attributes)
+			klass = PathPrefix if 'path-information' in command else MPLS
+			change = Change(klass(*inet(ip),mask=int(mask),nexthop=nexthop,action=action,path=None),attributes)
 			if action == 'withdraw':
 				change.nlri.action = OUT.withdraw
 			else:
@@ -791,7 +794,7 @@ class Configuration (object):
 		if name in ('neighbor','group'):
 			if command == 'description': return self._set_description(scope,tokens[1:])
 			if command == 'router-id': return self._set_router_id(scope,'router-id',tokens[1:])
-			if command == 'local-address': return self._set_ip(scope,'local-address',tokens[1:])
+			if command == 'local-address': return self._set_router_id(scope,'local-address',tokens[1:])
 			if command == 'local-as': return self._set_asn(scope,'local-as',tokens[1:])
 			if command == 'peer-as': return self._set_asn(scope,'peer-as',tokens[1:])
 			if command == 'passive': return self._set_passive(scope,'passive',tokens[1:])
@@ -1347,15 +1350,15 @@ class Configuration (object):
 		missing = neighbor.missing()
 		if missing:
 			self._error = 'incomplete neighbor, missing %s' % missing
-			if self.debug: raise
+			if self.debug: raise Exception(self._error)
 			return False
 		if neighbor.local_address.afi != neighbor.peer_address.afi:
 			self._error = 'local-address and peer-address must be of the same family'
-			if self.debug: raise
+			if self.debug: raise Exception(self._error)
 			return False
 		if neighbor.peer_address.ip in self._neighbor:
 			self._error = 'duplicate peer definition %s' % neighbor.peer_address.ip
-			if self.debug: raise
+			if self.debug: raise Exception(self._error)
 			return False
 
 		openfamilies = local_scope.get('families','everything')
@@ -1448,7 +1451,7 @@ class Configuration (object):
 		address = tokens[0]
 		scope.append({})
 		try:
-			scope[-1]['peer-address'] = Inet(*inet(address))
+			scope[-1]['peer-address'] = RouterID(address)
 		except (IndexError,ValueError,socket.error):
 			self._error = '"%s" is not a valid IP address' % address
 			if self.debug: raise
@@ -1508,16 +1511,6 @@ class Configuration (object):
 			self._error = '"%s" is an invalid ASN' % ' '.join(value)
 			if self.debug: raise
 			return False
-
-	def _set_ip (self,scope,command,value):
-		try:
-			ip = Inet(*inet(value[0]))
-		except (IndexError,ValueError,socket.error):
-			self._error = '"%s" is an invalid IP address' % ' '.join(value)
-			if self.debug: raise
-			return False
-		scope[-1][command] = ip
-		return True
 
 	def _set_passive (self,scope,command,value):
 		if value:
@@ -1622,10 +1615,14 @@ class Configuration (object):
 
 		afi = change.nlri.afi
 		safi = change.nlri.safi
+
 		# Really ugly
-		labels = change.nlri.labels
-		rd = change.nlri.rd
-		path_info = change.nlri.path_info
+		klass = change.nlri.__class__
+		if klass is PathPrefix:
+			path_info = change.nlri.path_info
+		elif klass is MPLS:
+			labels = change.nlri.labels
+			rd = change.nlri.rd
 		nexthop = change.nlri.nexthop
 
 		change.mask = split
@@ -1633,10 +1630,10 @@ class Configuration (object):
 		# generate the new routes
 		for _ in range(number):
 			# update ip to the next route, this recalculate the "ip" field of the Inet class
-			nlri = NLRI(afi,safi,pack_int(afi,ip,split),split,nexthop,OUT.announce)
-			nlri.labels = labels
-			nlri.rd = rd
-			nlri.path_info = path_info
+			nlri = klass(afi,safi,pack_int(afi,ip,split),split,nexthop,OUT.announce,path_info)
+			if klass is MPLS:
+				nlri.labels = labels
+				nlri.rd = rd
 			# next ip
 			ip += increment
 			# save route
@@ -1657,13 +1654,17 @@ class Configuration (object):
 		except ValueError:
 			mask = 32
 		try:
-			# nexthop must be false and its str return nothing .. an empty string does that
-			update = Change(NLRI(*inet(ip),mask=mask,nexthop=None,action=OUT.announce),Attributes())
+			if 'rd' in tokens:
+				klass = MPLS
+			elif 'route-distinguisher' in tokens:
+				klass = MPLS
+			elif 'labels' in tokens:
+				klass = MPLS
+			else:
+				klass = PathPrefix
 
-			if len(Prefix.pack(update.nlri)) != len(update.nlri):
-				self._error = 'invalid mask for this prefix %s' % str(update.nlri)
-				if self.debug: raise
-				return False
+			# nexthop must be false and its str return nothing .. an empty string does that
+			update = Change(klass(*inet(ip),mask=mask,nexthop=None,action=OUT.announce),Attributes())
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise
@@ -2033,7 +2034,7 @@ class Configuration (object):
 
 	def _route_originator_id (self,scope,tokens):
 		try:
-			scope[-1]['announce'][-1].attributes.add(OriginatorID(AFI.ipv4,SAFI.unicast,tokens.pop(0)))
+			scope[-1]['announce'][-1].attributes.add(OriginatorID.unpack(tokens.pop(0)))
 			return True
 		except:
 			self._error = self._str_route_error
@@ -2621,7 +2622,7 @@ class Configuration (object):
 			else:
 				return operator,string[1:]
 		except IndexError:
-			raise('Invalid expression (too short) %s' % string)
+			raise Exception('Invalid expression (too short) %s' % string)
 
 	def _value (self,string):
 		l = 0

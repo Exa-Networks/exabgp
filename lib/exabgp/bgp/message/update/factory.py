@@ -54,7 +54,7 @@ def UpdateFactory (negotiated,data):
 
 	nlris = []
 	while withdrawn:
-		length,nlri = NLRIFactory(AFI.ipv4,SAFI.unicast_multicast,withdrawn,addpath,nh,IN.withdrawn)
+		length,nlri = NLRIFactory(AFI.ipv4,SAFI.unicast,withdrawn,addpath,nh,IN.withdrawn)
 		logger.parser(LazyFormat("parsed withdraw nlri %s payload " % nlri,od,withdrawn[:len(nlri)]))
 		withdrawn = withdrawn[length:]
 		nlris.append(nlri)
@@ -63,7 +63,7 @@ def UpdateFactory (negotiated,data):
 		logger.parser(LazyFormat("parsed no announced nlri",od,''))
 
 	while announced:
-		length,nlri = NLRIFactory(AFI.ipv4,SAFI.unicast_multicast,announced,addpath,nh,IN.announced)
+		length,nlri = NLRIFactory(AFI.ipv4,SAFI.unicast,announced,addpath,nh,IN.announced)
 		logger.parser(LazyFormat("parsed announce nlri %s payload " % nlri,od,announced[:len(nlri)]))
 		announced = announced[length:]
 		nlris.append(nlri)

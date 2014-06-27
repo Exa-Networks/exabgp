@@ -25,7 +25,9 @@ class PathInfo (object):
 		return len(self.path_info)
 
 	def json (self):
-		return '"path-information": "%s"' % '.'.join([str(ord(_)) for _ in self.path_info])
+		if self.path_info:
+			return '"path-information": "%s"' % '.'.join([str(ord(_)) for _ in self.path_info])
+		return ''
 
 	def __str__ (self):
 		if self.path_info:

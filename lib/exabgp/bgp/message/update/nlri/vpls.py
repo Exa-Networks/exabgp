@@ -8,7 +8,7 @@ Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
 from struct import unpack, pack
-from exabgp.bgp.message.update.nlri.bgp import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.direction import OUT
 from exabgp.protocol.family import AFI,SAFI

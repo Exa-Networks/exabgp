@@ -3,7 +3,7 @@
 import unittest
 from exabgp.bgp.message.update.nlri.vpls import VPLSNLRI
 from exabgp.bgp.message.update.attribute.community import *
-from exabgp.bgp.message.update.nlri.bgp import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 
 class TestL2VPN (unittest.TestCase):
 	@staticmethod

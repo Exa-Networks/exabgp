@@ -115,8 +115,9 @@ def check_neighbor (neighbor):
 					logger.parser('----------------------------------------')
 
 			except Notify,e:
-				print 'failed due to notification'
-				print str(e)
+				logger.parser('----------------------------------------')
+				logger.parser(str(e))
+				logger.parser('----------------------------------------')
 				return False
 
 	return True

@@ -6,7 +6,6 @@ Created by Thomas Mangin on 2012-07-14.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from exabgp.protocol.family import AFI,SAFI
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.protocol.ip.inet import Inet
 
@@ -52,4 +51,4 @@ class Aggregator (Attribute):
 		asn = 0
 		for value in (ord(_) for _ in data[:-4]):
 			asn = (asn << 8) + value
-		return cls(ASN(asn),Inet(AFI.ipv4,SAFI.unicast,data[-4:]))
+		return cls(ASN(asn),Inet.unpack(data[-4:]))
