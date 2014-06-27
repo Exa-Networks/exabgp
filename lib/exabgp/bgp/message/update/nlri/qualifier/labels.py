@@ -6,22 +6,22 @@ Created by Thomas Mangin on 2012-07-08.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from struct import pack
+from struct import pack,unpack
 
 # ======================================================================= Labels
 # RFC 3107
 
 class Labels (object):
-	biggest = pow(2,20)
+	MAX = pow(2,20)-1
 
-	def __init__ (self,labels):
+	def __init__ (self,labels,bos=True):
 		self.labels = labels
 		packed = []
 		for label in labels:
 			# shift to 20 bits of the label to be at the top of three bytes and then truncate.
 			packed.append(pack('!L',label << 4)[1:])
 		# Mark the bottom of stack with the bit
-		if packed:
+		if packed and bos:
 			packed.pop()
 			packed.append(pack('!L',(label << 4)|1)[1:])
 		self.packed = ''.join(packed)
