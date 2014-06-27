@@ -37,18 +37,18 @@ class Notification (Message):
 	}
 
 	_str_subcode = {
-		(1,0) : "Unspecific.",
-		(1,1) : "Connection Not Synchronized.",
-		(1,2) : "Bad Message Length.",
-		(1,3) : "Bad Message Type.",
+		(1,0) : "Unspecific",
+		(1,1) : "Connection Not Synchronized",
+		(1,2) : "Bad Message Length",
+		(1,3) : "Bad Message Type",
 
-		(2,0) : "Unspecific.",
-		(2,1) : "Unsupported Version Number.",
-		(2,2) : "Bad Peer AS.",
-		(2,3) : "Bad BGP Identifier.",
-		(2,4) : "Unsupported Optional Parameter.",
-		(2,5) : "Authentication Notification (Deprecated).",
-		(2,6) : "Unacceptable Hold Time.",
+		(2,0) : "Unspecific",
+		(2,1) : "Unsupported Version Number",
+		(2,2) : "Bad Peer AS",
+		(2,3) : "Bad BGP Identifier",
+		(2,4) : "Unsupported Optional Parameter",
+		(2,5) : "Authentication Notification (Deprecated)",
+		(2,6) : "Unacceptable Hold Time",
 		# RFC 5492
 		(2,7) : "Unsupported Capability",
 
@@ -57,28 +57,28 @@ class Notification (Message):
 		(2,9) : "Grouping Required",
 		(2,10) : "Capability Value Mismatch",
 
-		(3,0) : "Unspecific.",
-		(3,1) : "Malformed Attribute List.",
-		(3,2) : "Unrecognized Well-known Attribute.",
-		(3,3) : "Missing Well-known Attribute.",
-		(3,4) : "Attribute Flags Error.",
-		(3,5) : "Attribute Length Error.",
-		(3,6) : "Invalid ORIGIN Attribute.",
-		(3,7) : "AS Routing Loop.",
-		(3,8) : "Invalid NEXT_HOP Attribute.",
-		(3,9) : "Optional Attribute Error.",
-		(3,10) : "Invalid Network Field.",
-		(3,11) : "Malformed AS_PATH.",
+		(3,0) : "Unspecific",
+		(3,1) : "Malformed Attribute List",
+		(3,2) : "Unrecognized Well-known Attribute",
+		(3,3) : "Missing Well-known Attribute",
+		(3,4) : "Attribute Flags Error",
+		(3,5) : "Attribute Length Error",
+		(3,6) : "Invalid ORIGIN Attribute",
+		(3,7) : "AS Routing Loop",
+		(3,8) : "Invalid NEXT_HOP Attribute",
+		(3,9) : "Optional Attribute Error",
+		(3,10) : "Invalid Network Field",
+		(3,11) : "Malformed AS_PATH",
 
-		(4,0) : "Unspecific.",
+		(4,0) : "Unspecific",
 
-		(5,0) : "Unspecific.",
+		(5,0) : "Unspecific",
 		# RFC 6608
-		(5,1) : "Receive Unexpected Message in OpenSent State.",
-		(5,2) : "Receive Unexpected Message in OpenConfirm State.",
-		(5,3) : "Receive Unexpected Message in Established State.",
+		(5,1) : "Receive Unexpected Message in OpenSent State",
+		(5,2) : "Receive Unexpected Message in OpenConfirm State",
+		(5,3) : "Receive Unexpected Message in Established State",
 
-		(6,0) : "Unspecific.",
+		(6,0) : "Unspecific",
 		# RFC 4486
 		(6,1) : "Maximum Number of Prefixes Reached",
 		(6,2) : "Administrative Shutdown",
@@ -102,7 +102,7 @@ class Notification (Message):
 		return "%s / %s%s" % (
 			self._str_code.get(self.code,'unknown error'),
 			self._str_subcode.get((self.code,self.subcode),'unknow reason'),
-			'%s' % ('/ %s' % hexstring(self.data) if self.data else '')
+			'%s' % (' / %s' % hexstring(self.data) if self.data else '')
 		)
 
 def NotificationFactory (data):
