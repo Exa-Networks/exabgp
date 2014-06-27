@@ -28,6 +28,9 @@ class AFI (int):
 		if self == 0x19: return "l2vpn"
 		return "unknown afi %d" % self
 
+	def __repr__ (self):
+		return str(self)
+
 	def name (self):
 		if self == 0x01: return "inet4"
 		if self == 0x02: return "inet6"
@@ -92,6 +95,9 @@ class SAFI (int):
 
 	def __str__ (self):
 		return self.name()
+
+	def __repr__ (self):
+		return str(self)
 
 	def pack (self):
 		return chr(self)
