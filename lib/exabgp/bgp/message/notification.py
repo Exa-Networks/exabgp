@@ -130,6 +130,5 @@ class Notify (Notification):
 		return "%s / %s%s" % (
 			self._str_code.get(self.code,'unknown error'),
 			self._str_subcode.get((self.code,self.subcode),'unknow reason'),
-			self.data if self.data else 'with no message'
+			' / %s' % (self.data if self.data else '')
 		)
-
