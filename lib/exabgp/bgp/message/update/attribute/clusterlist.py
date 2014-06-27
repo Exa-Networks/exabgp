@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2012-07-07.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
+import socket
+
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.protocol.ip.inet import Inet
 from exabgp.bgp.message.update.attribute.id import AttributeID
@@ -14,8 +16,8 @@ from exabgp.bgp.message.update.attribute import Flag,Attribute
 # ===================================================================
 
 class ClusterID (Inet):
-	def __init__ (self,cluster_id):
-		Inet.__init__(self,AFI.ipv4,SAFI.unicast_multicast,cluster_id)
+	def __init__ (self,ip):
+		Inet.__init__(self,AFI.ipv4,SAFI.unicast,socket.inet_pton(socket.AF_INET,ip))
 
 
 class ClusterList (Attribute):
@@ -23,14 +25,10 @@ class ClusterList (Attribute):
 	FLAG = Flag.OPTIONAL
 	MULTIPLE = False
 
-	def __init__ (self,cluster_ids):
-		self.clusters = []
-		while cluster_ids:
-			self.clusters.append(ClusterID(cluster_ids[:4]))
-			cluster_ids = cluster_ids[4:]
-		self._len = len(self.clusters)*4
-		# XXX: are we doing the work for nothing ?
-		self.packed = self._attribute(''.join([_.pack() for _ in self.clusters]))
+	def __init__ (self,clusters,packed=None):
+		self.clusters = clusters
+		self.packed = self._attribute(packed if packed else ''.join([_.pack() for _ in clusters]))
+		self._len = len(clusters)*4
 
 	def pack (self,asn4=None):
 		return self.packed
@@ -45,3 +43,11 @@ class ClusterList (Attribute):
 
 	def json (self):
 		return '[ %s ]' % ', '.join(['"%s"' % str(_) for _ in self.clusters])
+
+	@classmethod
+	def unpack (cls,data):
+		clusters = []
+		while data:
+			clusters.append(Inet(AFI.ipv4,SAFI.unicast,data[:4]))
+			data = data[4:]
+		return cls(clusters)

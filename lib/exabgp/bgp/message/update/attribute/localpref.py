@@ -37,3 +37,7 @@ class LocalPreference (Attribute):
 		if self.localpref != other.localpref:
 			return -1
 		return 0
+
+	@classmethod
+	def unpack (cls,data):
+		return cls(data)

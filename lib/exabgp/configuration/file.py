@@ -39,7 +39,7 @@ from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,F
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute.origin import Origin
-from exabgp.bgp.message.update.attribute.nexthop import cachedNextHop
+from exabgp.bgp.message.update.attribute.nexthop import NextHop
 from exabgp.bgp.message.update.attribute.aspath import ASPath
 from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
@@ -52,7 +52,7 @@ from exabgp.bgp.message.update.attribute.community import Communities,ExtendedCo
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate,TrafficAction,TrafficRedirect,TrafficMark,TrafficNextHop
 
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
-from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
+from exabgp.bgp.message.update.attribute.clusterlist import ClusterList,ClusterID
 from exabgp.bgp.message.update.attribute.aigp import AIGP
 from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
 
@@ -1842,10 +1842,10 @@ class Configuration (object):
 			afi = nlri.afi
 			safi = nlri.safi
 
-			nlri.nexthop = cachedNextHop(nh)
+			nlri.nexthop = NextHop.unpack(nh)
 
 			if afi == AFI.ipv4 and safi in (SAFI.unicast,SAFI.multicast):
-				change.attributes.add(cachedNextHop(nh))
+				change.attributes.add(NextHop.unpack(nh))
 
 			return True
 		except:
@@ -2033,7 +2033,7 @@ class Configuration (object):
 
 	def _route_originator_id (self,scope,tokens):
 		try:
-			scope[-1]['announce'][-1].attributes.add(OriginatorID(*inet(tokens.pop(0))))
+			scope[-1]['announce'][-1].attributes.add(OriginatorID(AFI.ipv4,SAFI.unicast,tokens.pop(0)))
 			return True
 		except:
 			self._error = self._str_route_error
@@ -2041,7 +2041,7 @@ class Configuration (object):
 			return False
 
 	def _route_cluster_list (self,scope,tokens):
-		_list = ''
+		_list = []
 		clusterid = tokens.pop(0)
 		try:
 			if clusterid == '[':
@@ -2054,9 +2054,9 @@ class Configuration (object):
 						return False
 					if clusterid == ']':
 						break
-					_list += ''.join([chr(int(_)) for _ in clusterid.split('.')])
+					_list.append(ClusterID(clusterid))
 			else:
-				_list = ''.join([chr(int(_)) for _ in clusterid.split('.')])
+				_list.append(ClusterID(clusterid))
 			if not _list:
 				raise ValueError('no cluster-id in the cluster-list')
 			clusterlist = ClusterList(_list)
@@ -2738,7 +2738,7 @@ class Configuration (object):
 
 			ip = tokens.pop(0)
 			nh = pton(ip)
-			change.nlri.nexthop = cachedNextHop(nh)
+			change.nlri.nexthop = NextHop.unpack(nh)
 			return True
 
 		except (IndexError,ValueError):
@@ -2809,7 +2809,7 @@ class Configuration (object):
 
 				ip = tokens.pop(0)
 				nh = pton(ip)
-				change.nlri.nexthop = cachedNextHop(nh)
+				change.nlri.nexthop = NextHop.unpack(nh)
 				change.attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficNextHop(False))
 				return True
 
@@ -2846,7 +2846,7 @@ class Configuration (object):
 			ip = tokens.pop(0)
 			nh = pton(ip)
 			change = scope[-1]['announce'][-1]
-			change.nlri.nexthop = cachedNextHop(nh)
+			change.nlri.nexthop = NextHop.unpack(nh)
 			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficNextHop(True))
 			return True
 

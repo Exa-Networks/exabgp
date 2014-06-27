@@ -110,14 +110,14 @@ class PMSI (Attribute):
 		pmsi.TUNNEL_TYPE = subtype
 		return pmsi
 
-	@staticmethod
-	def unpack (data):
+	@classmethod
+	def unpack (cls,data):
 		flags,subtype = unpack('!BB',data[:2])
 		label = unpack('!L','\0'+data[2:5])[0] >> 4
 		# should we check for bottom of stack before the shift ?
-		if subtype in PMSI._known:
-			return PMSI._known[subtype].unpack(data[5:],label,flags)
-		return PMSI.unknown(subtype,data[5:],label,flags)
+		if subtype in cls._known:
+			return cls._known[subtype].unpack(data[5:],label,flags)
+		return cls.unknown(subtype,data[5:],label,flags)
 
 
 # ================================================================= PMSINoTunnel
@@ -132,9 +132,9 @@ class PMSINoTunnel (PMSI):
 	def prettytunnel (self):
 		return ''
 
-	@staticmethod
-	def unpack (tunnel,label,flags):
-		return PMSINoTunnel(label,flags)
+	@classmethod
+	def unpack (cls,tunnel,label,flags):
+		return cls(label,flags)
 
 PMSINoTunnel.register()
 
@@ -152,9 +152,9 @@ class PMSIIngressReplication (PMSI):
 	def prettytunnel (self):
 		return self.ip
 
-	@staticmethod
-	def unpack (tunnel,label,flags):
+	@classmethod
+	def unpack (cls,tunnel,label,flags):
 		ip = socket.inet_ntop(socket.AF_INET,tunnel)
-		return PMSIIngressReplication(ip,label,flags,tunnel)
+		return cls(ip,label,flags,tunnel)
 
 PMSIIngressReplication.register()

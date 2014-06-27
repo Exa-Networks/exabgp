@@ -44,18 +44,29 @@ def TLVFactory (data):
 def pack_tlv (tlvs):
 	return ''.join('%s%s%s' % (chr(tlv.type),pack('!H',len(tlv.value)+3),tlv.value) for tlv in tlvs)
 
+# def __init__ (self,value):
+# 	self.aigp = unpack('!Q',TLVFactory(value)[0].value)[0]
+# 	self.packed = self._attribute(value)
+
 class AIGP (Attribute):
 	ID = AttributeID.AIGP
 	FLAG = Flag.OPTIONAL
 	MULTIPLE = False
 	TYPES = [1,]
 
-	def __init__ (self,value):
-		self.aigp = unpack('!Q',TLVFactory(value)[0].value)[0]
-		self.packed = self._attribute(value)
+	def __init__ (self,aigp,packed=None):
+		self.aigp = aigp
+		if packed:
+			self.packed = packed
+		else:
+			self.packed = self._attribute(aigp)
 
 	def pack (self,asn4=None):
 		return self.packed
 
 	def __str__ (self):
 		return str(self.aigp)
+
+	@classmethod
+	def unpack (cls,data):
+		cls(unpack('!Q',data[:8] & 0x000000FFFFFFFFFF),data[:8])

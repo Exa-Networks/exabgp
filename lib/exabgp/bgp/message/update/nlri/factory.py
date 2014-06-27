@@ -15,7 +15,7 @@ from exabgp.bgp.message.update.nlri.flow import FlowNLRI,decode,factory,CommonOp
 from exabgp.bgp.message.update.nlri.vpls import VPLSNLRI
 #from exabgp.bgp.message.update.nlri.mpls import VPNLabelledPrefix,RouteTargetConstraint
 
-from exabgp.bgp.message.update.attribute.nexthop import cachedNextHop
+from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
 from exabgp.bgp.message.direction import IN
 
@@ -103,7 +103,7 @@ def _VPLSNLRIFactory(afi,safi,nexthop,bgp,action):
 	logger.parser(LazyFormat("parsing l2vpn nlri payload ",od,bgp))
 	nlri = VPLSNLRI.unpack(bgp)
 	nlri.action = action
-	nlri.nexthop = cachedNextHop(nexthop)
+	nlri.nexthop = NextHop.unpack(nexthop)
 	return len(bgp), nlri
 
 
@@ -128,7 +128,7 @@ def _FlowNLRIFactory (afi,safi,nexthop,bgp,action):
 	nlri.action = action
 
 	if nexthop:
-		nlri.nexthop = cachedNextHop(nexthop)
+		nlri.nexthop = NextHop.unpack(nexthop)
 
 	if safi == SAFI.flow_vpn:
 		nlri.rd = RouteDistinguisher(bgp[:8])
@@ -191,7 +191,7 @@ def _NLRIFactory (afi,safi,bgp,has_multiple_path,nexthop,action):
 
 	labels,rd,mask,size,prefix,left = _nlri_parser(afi,safi,bgp,action)
 
-	nlri = NLRI(afi,safi,prefix,mask,cachedNextHop(nexthop),action)
+	nlri = NLRI(afi,safi,prefix,mask,NextHop.unpack(nexthop),action)
 
 	if path_identifier:
 		nlri.path_info = PathInfo(packed=path_identifier)

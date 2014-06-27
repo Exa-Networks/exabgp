@@ -47,4 +47,14 @@ class Labels (object):
 		else:
 			return ''
 
+	@classmethod
+	def unpack (cls,data):
+		labels = []
+		while True:
+			label = unpack('!L',data[4:])
+			labels.append(label >> 4)
+			if label & 0x001:
+				break
+		return cls(labels,True)
+
 Labels.NOLABEL = Labels([])

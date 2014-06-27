@@ -76,6 +76,10 @@ class ASPath (Attribute):
 			message += AS4Path(self.as_seq,self.as_set)._pack(True)
 		return message
 
+	@classmethod
+	def unpack (data):
+		raise Exception('unimplemented')
+
 	def __len__ (self):
 		raise RuntimeError('it makes no sense to ask for the size of this object')
 

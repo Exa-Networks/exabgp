@@ -6,33 +6,11 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from exabgp.protocol.ip.inet import Inet,rawinet
+from exabgp.protocol.ip.inet import Inet
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute import Flag,Attribute
 
-# =================================================================== NextHop (3)
-
-# from struct import pack
-# def cachedNextHop (afi,safi,packed):
-# 	cache = pack('HB%ss' % len(packed),afi,safi,packed)
-# 	if cache in NextHop.cache:
-# 		return NextHop.cache[cache]
-# 	instance = NextHop(afi,safi,packed)
-# 	if NextHop.caching:
-# 		NextHop.cache[cache] = instance
-# 	return instance
-
-def cachedNextHop (packed):
-	if not packed:
-		return packed
-
-	if packed in NextHop.cache:
-		return NextHop.cache[packed]
-	instance = NextHop(packed)
-
-	if NextHop.caching:
-		NextHop.cache[packed] = instance
-	return instance
+# ================================================================== NextHop (3)
 
 class NextHop (Attribute,Inet):
 	ID = AttributeID.NEXT_HOP
@@ -42,8 +20,7 @@ class NextHop (Attribute,Inet):
 	cache = {}
 	caching = False
 
-	def __init__ (self,packed):
-		Inet.__init__(self,*rawinet(packed))
+	# __init__ inherited from Inet
 
 	def pack (self,asn4=None):
 		return self._attribute(self.packed)
@@ -54,3 +31,17 @@ class NextHop (Attribute,Inet):
 		if self.pack() != other.pack():
 			return -1
 		return 0
+
+	@staticmethod
+	def unpack (data):
+		# XXX: FIXME: this should not be needed ! ?
+		if not data:
+			return data
+
+		if data in NextHop.cache:
+			return NextHop.cache[data]
+		instance = Inet.unpack(data,NextHop)
+
+		if NextHop.caching:
+			NextHop.cache[data] = instance
+		return instance

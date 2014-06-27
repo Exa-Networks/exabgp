@@ -20,14 +20,15 @@ class Origin (Attribute):
 	EGP        = 0x01
 	INCOMPLETE = 0x02
 
-	def __init__ (self,origin):
+	def __init__ (self,origin,packed=None):
 		self.origin = origin
+		self.packed = self._attribute(packed if packed else chr(origin))
 
 	def pack (self,asn4=None):
-		return self._attribute(chr(self.origin))
+		return self.packed
 
 	def __len__ (self):
-		return len(self.pack())
+		return len(self.packed)
 
 	def __str__ (self):
 		if self.origin == 0x00: return 'igp'
@@ -41,3 +42,7 @@ class Origin (Attribute):
 		if self.origin != other.origin:
 			return -1
 		return 0
+
+	@classmethod
+	def unpack (cls,data):
+		return cls(ord(data),data)

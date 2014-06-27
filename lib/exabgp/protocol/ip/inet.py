@@ -31,11 +31,6 @@ def pton (ip):
 	afi = _detect_afi(ip)
 	return socket.inet_pton(Inet._af[afi],ip)
 
-def rawinet (packed):
-	afi = AFI.ipv4 if len(packed) == 4 else AFI.ipv6
-	safi = SAFI.multicast if ord(packed[0]) in Inet._multicast_range else SAFI.unicast
-	return afi,safi,packed
-
 class Inet (Address):
 	_UNICAST = SAFI(SAFI.unicast)
 	_MULTICAST = SAFI(SAFI.multicast)
@@ -68,7 +63,13 @@ class Inet (Address):
 			Address.__init__(self,afi,self._UNICAST)
 
 		self.packed = packed
-		self.ip = socket.inet_ntop(self._af[self.afi],self.packed)
+		self._ip = None
+
+	@property
+	def ip (self):
+		if not self._ip:
+			self._ip = socket.inet_ntop(self._af[self.afi],self.packed)
+		return self._ip
 
 	def pack (self):
 		return self.packed
@@ -80,7 +81,7 @@ class Inet (Address):
 		return self.ip
 
 	def __str__ (self):
-		return self.inet()
+		return self.ip
 
 	def __cmp__ (self,other):
 		if self.packed == other.packed:
@@ -91,3 +92,11 @@ class Inet (Address):
 
 	def __repr__ (self):
 		return "<%s value %s>" % (str(self.__class__).split("'")[1].split('.')[-1],str(self))
+
+	@classmethod
+	def unpack (cls,data,klass=None):
+		afi = AFI.ipv4 if len(data) == 4 else AFI.ipv6
+		safi = SAFI.multicast if ord(data[0]) in Inet._multicast_range else SAFI.unicast
+		if klass:
+			return klass(afi,safi,data)
+		return cls(afi,safi,data)

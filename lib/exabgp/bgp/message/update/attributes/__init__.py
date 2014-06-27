@@ -25,7 +25,7 @@ from exabgp.bgp.message.update.attribute.id import AttributeID as AID
 from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import ASPath,AS4Path
-from exabgp.bgp.message.update.attribute.nexthop import NextHop,cachedNextHop
+from exabgp.bgp.message.update.attribute.nexthop import NextHop
 from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
@@ -321,7 +321,7 @@ class Attributes (dict):
 		if code == AID.ORIGIN and flag.matches(Origin.FLAG):
 			# This if block should never be called anymore ...
 			if not self.add_from_cache(code,attribute):
-				self.add(Origin(ord(attribute)),attribute)
+				self.add(Origin.unpack(attribute),attribute)
 			return self.factory(next)
 
 		# only 2-4% of duplicated data - is it worth to cache ?
@@ -345,12 +345,12 @@ class Attributes (dict):
 		if code == AID.NEXT_HOP and flag.matches(NextHop.FLAG):
 			# XXX: FIXME: we are double caching the NH (once in the class, once here)
 			if not self.add_from_cache(code,attribute):
-				self.add(cachedNextHop(attribute),attribute)
+				self.add(NextHop.unpack(attribute),attribute)
 			return self.factory(next)
 
 		if code == AID.MED and flag.matches(MED.FLAG):
 			if not self.add_from_cache(code,attribute):
-				self.add(MED(attribute),attribute)
+				self.add(MED.unpack(attribute),attribute)
 			return self.factory(next)
 
 		if code == AID.LOCAL_PREF and flag.matches(LocalPreference.FLAG):
@@ -367,7 +367,7 @@ class Attributes (dict):
 			# AS4_AGGREGATOR are stored as AGGREGATOR - so do not overwrite if exists
 			if not self.has(code):
 				if not self.add_from_cache(AID.AGGREGATOR,attribute):
-					self.add(Aggregator(attribute),attribute)
+					self.add(Aggregator.unpack(attribute),attribute)
 			return self.factory(next)
 
 		if code == AID.AS4_AGGREGATOR and flag.matches(Aggregator.FLAG):
@@ -382,12 +382,12 @@ class Attributes (dict):
 
 		if code == AID.ORIGINATOR_ID and flag.matches(OriginatorID.FLAG):
 			if not self.add_from_cache(code,attribute):
-				self.add(OriginatorID(AFI.ipv4,SAFI.unicast,data[:4]),attribute)
+				self.add(OriginatorID.unpack(attribute),attribute)
 			return self.factory(next)
 
 		if code == AID.CLUSTER_LIST and flag.matches(ClusterList.FLAG):
 			if not self.add_from_cache(code,attribute):
-				self.add(ClusterList(attribute),attribute)
+				self.add(ClusterList.unpack(attribute),attribute)
 			return self.factory(next)
 
 		if code == AID.EXTENDED_COMMUNITY and flag.matches(ExtendedCommunities.FLAG):
@@ -403,7 +403,7 @@ class Attributes (dict):
 		if code == AID.AIGP and flag.matches(AIGP.FLAG):
 			if self.negotiated.neighbor.aigp:
 				if not self.add_from_cache(code,attribute):
-					self.add(AIGP(attribute),attribute)
+					self.add(AIGP.unpack(attribute),attribute)
 			return self.factory(next)
 
 		if code == AID.MP_UNREACH_NLRI and flag.matches(MPURNLRI.FLAG):

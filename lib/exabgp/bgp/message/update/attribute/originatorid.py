@@ -22,10 +22,11 @@ class OriginatorID (Attribute,Inet):
 	MULTIPLE = False
 
 	# Take an IP as value
-	def __init__ (self,afi,safi,packed):
+	def __init__ (self,afi,safi,ip,packed=None):
+		if not packed:
+			packed = socket.inet_pton(socket.AF_INET,ip)
 		Inet.__init__(self,afi,safi,packed)
 		# This override Inet.pack too.
-		self.packed = self._attribute(Inet.pack(self))
 
 	def __cmp__(self,other):
 		if not isinstance(other,self.__class__):
@@ -35,12 +36,12 @@ class OriginatorID (Attribute,Inet):
 		return 0
 
 	def pack (self,asn4=None):
-		return Inet.pack(self)
+		return self._attribute(self.packed)
 
 	def __str__ (self):
 		return Inet.__str__(self)
 
 	@staticmethod
 	def unpack (data):
-		ip = socket.inet_ntop(socket.AF_INET,data[0:4])
-		return OriginatorID(AFI.ipv4,SAFI.unicast,ip)
+		ip = socket.inet_ntop(socket.AF_INET,data[:4])
+		return OriginatorID(AFI.ipv4,SAFI.unicast,ip,data)

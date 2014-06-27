@@ -20,13 +20,10 @@ class Aggregator (Attribute):
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
 	MULTIPLE = False
 
-	def __init__ (self,aggregator):
-		asn = 0
-		for value in (ord(_) for _ in aggregator[:-4]):
-			asn = (asn << 8) + value
-		self.asn=ASN(asn)
-		self.speaker=Inet(AFI.ipv4,SAFI.unicast,aggregator[-4:])
-		self._str = '%s:%s' % (self.asn,self.speaker)
+	def __init__ (self,asn,speaker):
+		self.asn = asn
+		self.speaker = speaker
+		self._str = None
 
 	def pack (self,asn4,as4agg=False):
 		if as4agg:
@@ -42,9 +39,17 @@ class Aggregator (Attribute):
 		else:
 			return self._attribute(self.asn.trans()+self.speaker.pack()) + self.pack(True,True)
 
-
 	def __len__ (self):
 		raise RuntimeError('size can be 6 or 8 - we can not say')
 
 	def __str__ (self):
+		if not self._str:
+			self._str = '%s:%s' % (self.asn,self.speaker)
 		return self._str
+
+	@classmethod
+	def unpack (cls,data):
+		asn = 0
+		for value in (ord(_) for _ in data[:-4]):
+			asn = (asn << 8) + value
+		return cls(ASN(asn),Inet(AFI.ipv4,SAFI.unicast,data[-4:]))

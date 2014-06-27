@@ -37,3 +37,10 @@ class MED (Attribute):
 		if self.med != other.med:
 			return -1
 		return 0
+
+	def __hash__ (self):
+		return hash(self.med)
+
+	@classmethod
+	def unpack (cls,data):
+		return cls(data)

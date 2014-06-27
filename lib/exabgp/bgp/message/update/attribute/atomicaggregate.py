@@ -24,3 +24,15 @@ class AtomicAggregate (Attribute):
 
 	def __str__ (self):
 		return ''
+
+	def __cmp__ (self,other):
+		if not isinstance(other,self.__class__):
+			return -1
+		return 0
+
+	def __hash__ (self):
+		return 0
+
+	@classmethod
+	def unpack (cls,data):
+		return cls()
