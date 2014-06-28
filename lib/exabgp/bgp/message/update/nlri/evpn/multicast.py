@@ -1,0 +1,81 @@
+"""
+multicast.py
+
+Created by Thomas Morin on 2014-06-23.
+Copyright (c) 2014-2014 Orange. All rights reserved.
+"""
+
+from exabgp.protocol.ip.inet import Inet
+from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier.etag import ETag
+
+from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
+
+# ===================================================================== EVPNNLRI
+
+# +---------------------------------------+
+# |      RD   (8 octets)                  |
+# +---------------------------------------+
+# |  Ethernet Tag ID (4 octets)           |
+# +---------------------------------------+
+# |  IP Address Length (1 octet)          |
+# +---------------------------------------+
+# |   Originating Router's IP Addr        |
+# |          (4 or 16 octets)             |
+# +---------------------------------------+
+
+class Multicast (EVPN):
+	CODE = 3
+	NAME = "Inclusive Multicast Ethernet Tag"
+	SHORT_NAME = "Multicast"
+
+
+	def __init__(self,rd,etag,ip):
+		self.rd = rd
+		self.etag = etag
+		self.ip = ip
+		EVPN.__init__(self)
+
+	def __str__ (self):
+		return "%s:%s:%s:%s" % (
+			self._prefix(),
+			self.rd,
+			self.etag,
+			self.ip,
+		)
+
+	def __cmp__(self,other):
+		if not isinstance(other,self.__class__):
+			return -1
+		if self.rd != other.rd:
+			return -1
+		if self.etag != other.etag:
+			return -1
+		if self.ip != other.ip:
+			return -1
+		return 0
+
+	# XXX: FIXME: improve for better performance?
+	def __hash__(self):
+		return hash("%s:%s:%s:%s:%s:%s" % (self.afi,self.safi,self.subtype,self.rd,self.etag,self.ip))
+
+	def pack (self):
+		ip = self.ip.pack()
+		return '%s%s%s%s' % (
+			self.rd.pack(),
+			self.etag.pack(),
+			chr(len(ip)) +
+			ip
+		)
+
+	@classmethod
+	def unpack(cls,data):
+		rd = RouteDistinguisher.unpack(data[:8])
+		etag = ETag.unpack(data[8:12])
+		iplen = ord(data[12])
+		ip = Inet.unpack(data[12:12+iplen])
+		if iplen not in (4,16):
+			raise Exception("IP len is %d, but EVPN route currently support only IPv4" % iplen)
+		return cls(rd,etag,ip)
+
+Multicast.register()

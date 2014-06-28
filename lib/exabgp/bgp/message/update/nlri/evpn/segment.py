@@ -1,0 +1,38 @@
+	"""
+segment.py
+
+Created by Thomas Mangin on 2014-06-27.
+Copyright (c) 2014-2014 Exa Networks. All rights reserved.
+"""
+
+# import socket
+# from struct import pack,unpack
+
+# from exabgp.protocol.family import AFI,SAFI
+# from exabgp.bgp.message.update.nlri.qualifier.esi import ESI
+
+# from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
+# from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+
+from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
+
+# ===================================================================== EVPNNLRI
+
+# +---------------------------------------+
+# |      RD   (8 octets)                  |
+# +---------------------------------------+
+# |Ethernet Segment Identifier (10 octets)|
+# +---------------------------------------+
+# |  IP Address Length (1 octet)          |
+# +---------------------------------------+
+# |   Originating Router's IP Addr        |
+# |          (4 or 16 octets)             |
+# +---------------------------------------+
+
+class EthernetSegment (EVPN):
+	CODE = 1
+	NAME = "Ethernet Segment"
+	SHORT_NAME = "Segment"
+
+	def __init__ (**args):
+		raise Exception('unimplemented')
