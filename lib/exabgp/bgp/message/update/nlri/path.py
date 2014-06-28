@@ -9,6 +9,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.prefix import Prefix
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
 class PathPrefix (Prefix,NLRI):
 	def __init__ (self,afi,safi,packed,mask,nexthop,action,path=None):
@@ -38,3 +39,19 @@ class PathPrefix (Prefix,NLRI):
 
 	def __str__ (self):
 		return "%s next-hop %s" % (self.prefix(),self.nexthop)
+
+	@classmethod
+	def unpack (cls,afi,safi,data,addpath,nexthop,action):
+		if addpath:
+			path_identifier = PathInfo(None,None,data[:4])
+			data = data[4:]
+			length = 4
+		else:
+			path_identifier = None
+			length = 0
+
+		labels,rd,mask,size,prefix,left = NLRI._nlri(afi,safi,data,action)
+		nlri = cls(afi,safi,prefix,mask,NextHop.unpack(nexthop),action)
+		if addpath:
+			nlri.path_info = path_identifier
+		return length + len(data) - len(left),nlri

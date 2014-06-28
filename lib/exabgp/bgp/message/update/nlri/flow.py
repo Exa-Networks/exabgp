@@ -19,6 +19,8 @@ from exabgp.protocol.ip.fragment import Fragment,NamedFragment
 from exabgp.protocol.ip.tcp.flag import TCPFlag,NamedTCPFlag
 
 from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.bgp.message.update.attribute.nexthop import NextHop
+from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 
 # =================================================================== Flow Components
 
@@ -482,3 +484,72 @@ class FlowNLRI (NLRI):
 
 	def index (self):
 		return self.pack()
+
+	@classmethod
+	def unpack (cls,afi,safi,nexthop,bgp,action):
+		total = len(bgp)
+		length,bgp = ord(bgp[0]),bgp[1:]
+
+		if length & 0xF0 == 0xF0:  # bigger than 240
+			extra,bgp = ord(bgp[0]),bgp[1:]
+			length = ((length & 0x0F) << 16) + extra
+
+		if length > len(bgp):
+			raise Notify(3,10,'invalid length at the start of the the flow')
+
+		bgp = bgp[:length]
+		nlri = FlowNLRI(afi,safi)
+		nlri.action = action
+
+		if nexthop:
+			nlri.nexthop = NextHop.unpack(nexthop)
+
+		if safi == SAFI.flow_vpn:
+			nlri.rd = RouteDistinguisher(bgp[:8])
+			bgp = bgp[8:]
+
+		seen = []
+
+		while bgp:
+			what,bgp = ord(bgp[0]),bgp[1:]
+
+			if what not in decode.get(afi,{}):
+				raise Notify(3,10,'unknown flowspec component received for address family %d' % what)
+
+			seen.append(what)
+			if sorted(seen) != seen:
+				raise Notify(3,10,'components are not sent in the right order %s' % seen)
+
+			decoder = decode[afi][what]
+			klass = factory[afi][what]
+
+			if decoder == 'prefix':
+				if afi == AFI.ipv4:
+					_,rd,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action)
+					adding = klass(prefix,mask)
+					if not nlri.add(adding):
+						raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
+					# logger.parser(LazyFormat("added flow %s (%s) payload " % (klass.NAME,adding),od,bgp[:-len(left)]))
+					bgp = left
+				else:
+					byte,bgp = bgp[1],bgp[0]+bgp[2:]
+					offset = ord(byte)
+					_,rd,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action)
+					adding = klass(prefix,mask,offset)
+					if not nlri.add(adding):
+						raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
+					# logger.parser(LazyFormat("added flow %s (%s) payload " % (klass.NAME,adding),od,bgp[:-len(left)]))
+					bgp = left
+			else:
+				end = False
+				while not end:
+					byte,bgp = ord(bgp[0]),bgp[1:]
+					end = CommonOperator.eol(byte)
+					operator = CommonOperator.operator(byte)
+					length = CommonOperator.length(byte)
+					value,bgp = bgp[:length],bgp[length:]
+					adding = klass.decoder(value)
+					nlri.add(klass(operator,adding))
+					# logger.parser(LazyFormat("added flow %s (%s) operator %d len %d payload " % (klass.NAME,adding,byte,length),od,value))
+
+		return total-len(bgp),nlri

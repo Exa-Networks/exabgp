@@ -13,6 +13,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.direction import OUT
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.protocol.ip.address import Address
+from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
 def _unique ():
 	value = 0
@@ -75,12 +76,15 @@ class VPLSNLRI (Address):
 		return self.extensive()
 
 	@staticmethod
-	def unpack (bgp):
+	def unpack (cls,afi,safi,nexthop,data,action):
 		# label is 20bits, stored using 3 bytes, 24 bits
-		length, = unpack('!H',bgp[0:2])
-		if len(bgp) != length+2:
+		length, = unpack('!H',data[0:2])
+		if len(data) != length+2:
 			raise Notify(3,10,'l2vpn vpls message length is not consistent with encoded data')
-		rd = RouteDistinguisher(bgp[2:10])
-		ve,offset,size = unpack('!HHH',bgp[10:16])
-		base = unpack('!L','\x00'+bgp[16:19])[0]>>4
-		return VPLSNLRI(rd,ve,base,offset,size)
+		rd = RouteDistinguisher(data[2:10])
+		ve,offset,size = unpack('!HHH',data[10:16])
+		base = unpack('!L','\x00'+data[16:19])[0]>>4
+		nlri = cls(rd,ve,base,offset,size)
+		nlri.action = action
+		nlri.nexthop = NextHop.unpack(nexthop)
+		return len(data), nlri

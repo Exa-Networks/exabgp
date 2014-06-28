@@ -12,6 +12,8 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.prefix import mask_to_bytes,Prefix
 from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+from exabgp.bgp.message.update.attribute.nexthop import NextHop
+
 
 # ====================================================== Both MPLS and Inet NLRI
 # RFC ....
@@ -67,3 +69,13 @@ class MPLS (NLRI,Prefix):
 
 	def index (self):
 		return self.pack()
+
+	@classmethod
+	def unpack (cls,afi,safi,bgp,nexthop,action):
+		labels,rd,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action)
+
+		nlri = cls(afi,safi,prefix,mask,NextHop.unpack(nexthop),action)
+		if labels: nlri.labels = Labels(labels)
+		if rd: nlri.rd = RouteDistinguisher(rd)
+
+		return len(bgp) - len(left),nlri
