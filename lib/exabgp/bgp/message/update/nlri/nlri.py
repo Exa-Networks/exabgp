@@ -7,7 +7,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from struct import unpack
-from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import AFI,SAFI
 from exabgp.protocol.ip.address import Address
 from exabgp.protocol.ip.inet import Inet
 from exabgp.bgp.message.direction import IN
@@ -15,9 +15,13 @@ from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.nlri.prefix import mask_to_bytes
 
+from exabgp.util.od import od
+from exabgp.logger import Logger,LazyFormat
+
 
 class NLRI (Address):
 	_known = dict()
+	logger = None
 
 	def index (self):
 		return '%s%s%s' % (self.afi,self.safi,self.pack())
@@ -27,14 +31,19 @@ class NLRI (Address):
 		raise Exception('unimplemented')
 
 	@classmethod
-	def register (cls):
-		cls._known['%d/%d' % (cls.AFI,cls.SAFI)] = cls
+	def register (cls,afi,safi):
+		cls._known['%d/%d' % (afi,safi)] = cls
 
 	@classmethod
 	def unpack (cls,afi,safi,data,addpath,nexthop,action):
+		if not cls.logger:
+			cls.logger = Logger()
+		cls.logger.parser(LazyFormat("parsing %s/%s nlri payload " % (afi,safi),od,data))
+
 		key = '%d/%d' % (afi,safi)
 		if key in cls._known:
-			cls._known[key].unpack(afi,safi,data,addpath,nexthop,action)
+			return cls._known[key].unpack(afi,safi,data,addpath,nexthop,action)
+		raise Notify(3,0,'trying to decode unknown family %s/%s' % (AFI(afi),SAFI(safi)))
 
 	@staticmethod
 	def _nlri (afi,safi,bgp,action):

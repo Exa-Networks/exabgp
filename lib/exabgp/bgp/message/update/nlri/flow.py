@@ -486,7 +486,7 @@ class FlowNLRI (NLRI):
 		return self.pack()
 
 	@classmethod
-	def unpack (cls,afi,safi,nexthop,bgp,action):
+	def unpack (cls,afi,safi,bgp,has_multiple_path,nexthop,action):
 		total = len(bgp)
 		length,bgp = ord(bgp[0]),bgp[1:]
 
@@ -553,3 +553,7 @@ class FlowNLRI (NLRI):
 					# logger.parser(LazyFormat("added flow %s (%s) operator %d len %d payload " % (klass.NAME,adding,byte,length),od,value))
 
 		return total-len(bgp),nlri
+
+for safi in (SAFI.flow_ip,SAFI.flow_vpn):
+	for afi in (AFI.ipv4, AFI.ipv6):
+		FlowNLRI.register(afi,safi)

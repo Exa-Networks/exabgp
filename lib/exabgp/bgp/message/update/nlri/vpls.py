@@ -8,11 +8,11 @@ Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
 from struct import unpack, pack
-from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
-from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.direction import OUT
 from exabgp.protocol.family import AFI,SAFI
-from exabgp.protocol.ip.address import Address
+from exabgp.bgp.message.direction import OUT
+from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
 def _unique ():
@@ -23,9 +23,9 @@ def _unique ():
 
 unique = _unique()
 
-class VPLSNLRI (Address):
+class VPLSNLRI (NLRI):
 	def __init__ (self,rd,ve,base,offset,size):
-		Address.__init__(self,AFI.l2vpn,SAFI.vpls)
+		NLRI.__init__(self,AFI.l2vpn,SAFI.vpls)
 		self.action = OUT.announce
 		self.nexthop = None
 		self.rd = rd
@@ -88,3 +88,7 @@ class VPLSNLRI (Address):
 		nlri.action = action
 		nlri.nexthop = NextHop.unpack(nexthop)
 		return len(data), nlri
+
+for safi in (SAFI.vpls,):
+	for afi in (AFI.l2vpn,):
+		VPLSNLRI.register(afi,safi)

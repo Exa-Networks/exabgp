@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2014-06-27.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
+from exabgp.protocol.family import AFI,SAFI
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.prefix import Prefix
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
@@ -55,3 +56,7 @@ class PathPrefix (Prefix,NLRI):
 		if addpath:
 			nlri.path_info = path_identifier
 		return length + len(data) - len(left),nlri
+
+for safi in (SAFI.unicast, SAFI.multicast):
+	for afi in (AFI.ipv4, AFI.ipv6):
+		PathPrefix.register(afi,safi)

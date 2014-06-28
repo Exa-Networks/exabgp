@@ -79,3 +79,7 @@ class MPLS (NLRI,Prefix):
 		if rd: nlri.rd = RouteDistinguisher(rd)
 
 		return len(bgp) - len(left),nlri
+
+for safi in (SAFI.nlri_mpls, SAFI.mpls_vpn):
+	for afi in (AFI.ipv4, AFI.ipv6):
+		MPLS.register(afi,safi)
