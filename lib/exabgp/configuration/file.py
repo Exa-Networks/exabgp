@@ -882,6 +882,7 @@ class Configuration (object):
 			if command == 'keepalive': return self._set_process_command(scope,'receive-keepalives',tokens[1:])
 			if command == 'refresh': return self._set_process_command(scope,'receive-refresh',tokens[1:])
 			if command == 'update': return self._set_process_command(scope,'receive-updates',tokens[1:])
+			if command == 'updates': return self._set_process_command(scope,'receive-updates',tokens[1:])
 			if command == 'operational': return self._set_process_command(scope,'receive-operational',tokens[1:])
 
 		elif name == 'static':
