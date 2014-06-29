@@ -32,7 +32,7 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 
-from exabgp.bgp.message.update.nlri.path import PathPrefix,PathInfo
+from exabgp.bgp.message.update.nlri.prefix import Prefix,PathInfo
 from exabgp.bgp.message.update.nlri.mpls import MPLS,Labels,RouteDistinguisher
 from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,Flow,Flow4Source,Flow4Destination,Flow6Source,Flow6Destination,FlowSourcePort,FlowDestinationPort,FlowAnyPort,FlowIPProtocol,FlowNextHeader,FlowTCPFlag,FlowFragment,FlowPacketLength,FlowICMPType,FlowICMPCode,FlowDSCP,FlowTrafficClass,FlowFlowLabel
@@ -491,7 +491,7 @@ class Configuration (object):
 		changes = []
 		for nlri in nlris.split():
 			ip,mask = nlri.split('/')
-			klass = PathPrefix if 'path-information' in command else MPLS
+			klass = Prefix if 'path-information' in command else MPLS
 			change = Change(klass(afi=IP.toafi(ip),safi=IP.tosafi(ip),packed=IP.pton(ip),mask=int(mask),nexthop=nexthop,action=action,path=None),attributes)
 			if action == 'withdraw':
 				change.nlri.action = OUT.withdraw
@@ -1619,7 +1619,7 @@ class Configuration (object):
 
 		# Really ugly
 		klass = change.nlri.__class__
-		if klass is PathPrefix:
+		if klass is Prefix:
 			path_info = change.nlri.path_info
 		elif klass is MPLS:
 			labels = change.nlri.labels
@@ -1662,7 +1662,7 @@ class Configuration (object):
 			elif 'labels' in tokens:
 				klass = MPLS
 			else:
-				klass = PathPrefix
+				klass = Prefix
 
 			# nexthop must be false and its str return nothing .. an empty string does that
 			update = Change(klass(afi=IP.toafi(ip),safi=IP.tosafi(ip),packed=IP.pton(ip),mask=mask,nexthop=None,action=OUT.announce),Attributes())

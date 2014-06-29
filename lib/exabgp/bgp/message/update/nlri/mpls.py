@@ -10,7 +10,7 @@ from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI,SAFI
 
 from exabgp.bgp.message.update.nlri.nlri import NLRI
-from exabgp.bgp.message.update.nlri.prefix import mask_to_bytes,Prefix
+from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 
@@ -18,14 +18,14 @@ from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 # ====================================================== Both MPLS and Inet NLRI
 # RFC ....
 
-class MPLS (NLRI,Prefix):
+class MPLS (NLRI,CIDR):
 	def __init__(self,afi,safi,packed,mask,nexthop,action):
 		self.labels = Labels.NOLABEL
 		self.rd = RouteDistinguisher.NORD
 		self.nexthop = nexthop
 		self.action = action
 		NLRI.__init__(self,afi,safi)
-		Prefix.__init__(self,packed,mask)
+		CIDR.__init__(self,packed,mask)
 
 	def has_label (self):
 		if self.afi == AFI.ipv4 and self.safi in (SAFI.nlri_mpls,SAFI.mpls_vpn):
@@ -65,7 +65,7 @@ class MPLS (NLRI,Prefix):
 			return Prefix.pack(self)
 
 		length = len(self.labels)*8 + len(self.rd)*8 + self.mask
-		return chr(length) + self.labels.pack() + self.rd.pack() + self.packed[:mask_to_bytes[self.mask]]
+		return chr(length) + self.labels.pack() + self.rd.pack() + self.packed
 
 	def index (self):
 		return self.pack()

@@ -1,57 +1,62 @@
 # encoding: utf-8
 """
-prefix.py
+path.py
 
-Created by Thomas Mangin on 2013-08-07.
+Created by Thomas Mangin on 2014-06-27.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-import math
-import socket
+from exabgp.protocol.ip import IP
+from exabgp.protocol.family import AFI,SAFI
+from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.bgp.message.update.nlri.cidr import CIDR
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 
-mask_to_bytes = {}
-for netmask in range(0,129):
-	mask_to_bytes[netmask] = int(math.ceil(float(netmask)/8))
-
-
-class Prefix (object):
-	# have a .raw for the ip
-	# have a .mask for the mask
-	# have a .bgp with the bgp wire format of the prefix
-
-	def __init__(self,packed,mask):
-		self.packed = packed
-		self.mask = mask
-		self._ip = None
-
-	@property
-	def ip (self):
-		if not self._ip:
-			self._ip = socket.inet_ntop(socket.AF_INET if len(self.packed) == 4 else socket.AF_INET6,self.packed)
-		return self._ip
-
-	def __str__ (self):
-		return self.prefix()
+class Prefix (CIDR,NLRI):
+	def __init__ (self,afi,safi,packed,mask,nexthop,action,path=None):
+		self.path_info = PathInfo.NOPATH if path is None else path
+		self.nexthop = nexthop
+		NLRI.__init__(self,afi,safi)
+		CIDR.__init__(self,packed,mask)
+		self.action = action
 
 	def prefix (self):
-		return "%s/%s" % (self.ip,self.mask)
+		return "%s/%s%s" % (self.ip,self.mask,str(self.path_info) if self.path_info is not PathInfo.NOPATH else '')
 
-	def pack (self):
-		return chr(self.mask) + self.packed[:mask_to_bytes[self.mask]]
+	def nlri (self):
+		return "%s/%s%s next-hop %s" % (self.ip,self.mask,str(self.path_info) if self.path_info is not PathInfo.NOPATH else '',self.nexthop)
 
-	def packed_ip(self):
-		return self.packed[:mask_to_bytes[self.mask]]
+	def pack (self,addpath):
+		return self.path_info.pack() + CIDR.pack(self) if addpath else CIDR.pack(self)
+
+	def json (self):
+		return '"%s": { %s }' % (CIDR.pack(self),self.path_info.json())
 
 	def index (self):
-		return self.pack()
+		return self.pack(True)
 
 	def __len__ (self):
-		return mask_to_bytes[self.mask] + 1
+		return CIDR.__len__(self) + len(self.path_info)
 
-	def __eq__(self,other):
-		if not isinstance(other,Prefix):
-			return False
-		return self.pack() == other.pack()
+	def __str__ (self):
+		return "%s next-hop %s" % (self.prefix(),self.nexthop)
 
-	def __hash__(self):
-		return hash(self.pack())
+	@classmethod
+	def unpack (cls,afi,safi,data,addpath,nexthop,action):
+		if addpath:
+			path_identifier = PathInfo(None,None,data[:4])
+			data = data[4:]
+			length = 4
+		else:
+			path_identifier = None
+			length = 0
+
+		labels,rd,mask,size,prefix,left = NLRI._nlri(afi,safi,data,action)
+		nlri = cls(afi,safi,prefix,mask,IP.unpack(nexthop),action)
+		if addpath:
+			nlri.path_info = path_identifier
+		return length + len(data) - len(left),nlri
+
+for safi in (SAFI.unicast, SAFI.multicast):
+	for afi in (AFI.ipv4, AFI.ipv6):
+		Prefix.register(afi,safi)

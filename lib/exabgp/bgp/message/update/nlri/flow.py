@@ -11,8 +11,8 @@ from struct import pack,unpack
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.bgp.message.direction import OUT
-from exabgp.bgp.message.update.nlri.prefix import Prefix
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.nlri.cidr import CIDR
 
 from exabgp.protocol import Protocol,NamedProtocol
 from exabgp.protocol.ip.icmp import ICMPType,ICMPCode,NamedICMPType,NamedICMPCode
@@ -99,7 +99,7 @@ class IPrefix4 (IPrefix,IComponent,IPv4):
 	# NAME
 
 	def __init__ (self,raw,netmask):
-		self.nlri = Prefix(raw,netmask)
+		self.nlri = CIDR(raw,netmask)
 
 	def pack (self):
 		raw = self.nlri.pack()
@@ -114,7 +114,7 @@ class IPrefix6 (IPrefix,IComponent,IPv6):
 	# NAME
 
 	def __init__ (self,raw,netmask,offset):
-		self.nlri = Prefix(raw,netmask)
+		self.nlri = CIDR(raw,netmask)
 		self.offset = offset
 
 	def pack (self):

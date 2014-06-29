@@ -13,7 +13,7 @@ from exabgp.protocol.ip import IP
 from exabgp.bgp.message.direction import IN
 from exabgp.bgp.message.notification import Notify
 
-from exabgp.bgp.message.update.nlri.prefix import mask_to_bytes
+from exabgp.bgp.message.update.nlri.cidr import CIDR
 
 from exabgp.util.od import od
 from exabgp.logger import Logger,LazyFormat
@@ -81,8 +81,8 @@ class NLRI (Address):
 		if not bgp and mask:
 			raise Notify(3,10,'not enough data for the mask provided to decode the NLRI')
 
-		size = mask_to_bytes.get(mask,None)
-		if size is None:
+		size = CIDR.size(mask)
+		if not size:
 			raise Notify(3,10,'invalid netmask found when decoding NLRI')
 
 		if len(bgp) < size:
