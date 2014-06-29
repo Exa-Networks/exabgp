@@ -2520,7 +2520,7 @@ class Configuration (object):
 					'packets','parsed','consolidate',
 					'neighbor-changes',
 					'notification','open','keepalive',
-					'update','refresh','operational'
+					'update','updates','refresh','operational'
 				]
 			)
 			if r is False: return False
