@@ -7,7 +7,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message.open.asn import ASN
-from exabgp.protocol.ip import IP
+from exabgp.protocol.ip import IPv4
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute import Flag,Attribute
@@ -51,4 +51,4 @@ class Aggregator (Attribute):
 		asn = 0
 		for value in (ord(_) for _ in data[:-4]):
 			asn = (asn << 8) + value
-		return cls(ASN(asn),IP.unpack(data[-4:]))
+		return cls(ASN(asn),IPv4.unpack(data[-4:]))

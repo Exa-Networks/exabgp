@@ -25,7 +25,7 @@ from exabgp.protocol.family import AFI,SAFI,known_families
 
 from exabgp.bgp.neighbor import Neighbor
 
-from exabgp.protocol.ip import IP,inet,pton
+from exabgp.protocol.ip import IP
 from exabgp.bgp.message.direction import OUT
 
 from exabgp.bgp.message.open.asn import ASN
@@ -87,7 +87,7 @@ class Withdrawn (object):
 
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
 def pack_int (afi,integer,mask):
-	return ''.join([chr((integer>>(offset*8)) & 0xff) for offset in range(IP.length[afi]-1,-1,-1)])
+	return ''.join([chr((integer>>(offset*8)) & 0xff) for offset in range(IP.length(afi)-1,-1,-1)])
 
 def formated (line):
 	changed_line = '#'
@@ -492,7 +492,7 @@ class Configuration (object):
 		for nlri in nlris.split():
 			ip,mask = nlri.split('/')
 			klass = PathPrefix if 'path-information' in command else MPLS
-			change = Change(klass(*inet(ip),mask=int(mask),nexthop=nexthop,action=action,path=None),attributes)
+			change = Change(klass(afi=IP.toafi(ip),safi=IP.tosafi(ip),packed=IP.pton(ip),mask=int(mask),nexthop=nexthop,action=action,path=None),attributes)
 			if action == 'withdraw':
 				change.nlri.action = OUT.withdraw
 			else:
@@ -1665,7 +1665,7 @@ class Configuration (object):
 				klass = PathPrefix
 
 			# nexthop must be false and its str return nothing .. an empty string does that
-			update = Change(klass(*inet(ip),mask=mask,nexthop=None,action=OUT.announce),Attributes())
+			update = Change(klass(afi=IP.toafi(ip),safi=IP.tosafi(ip),packed=IP.pton(ip),mask=mask,nexthop=None,action=OUT.announce),Attributes())
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise
@@ -1835,19 +1835,19 @@ class Configuration (object):
 					self._error = 'next-hop self can only be specified with a neighbor'
 					if self.debug: raise ValueError(self._error)
 					return False
-				nh = la.pack()
+				nh = IP.unpack(la.pack())
 			else:
-				nh = pton(ip)
+				nh = IP.create(ip)
 
 			change = scope[-1]['announce'][-1]
 			nlri = change.nlri
 			afi = nlri.afi
 			safi = nlri.safi
 
-			nlri.nexthop = NextHop.unpack(nh)
+			nlri.nexthop = nh
 
 			if afi == AFI.ipv4 and safi in (SAFI.unicast,SAFI.multicast):
-				change.attributes.add(NextHop.unpack(nh))
+				change.attributes.add(NextHop(nh.ip,nh.packed))
 
 			return True
 		except:
@@ -2559,11 +2559,9 @@ class Configuration (object):
 
 			else:
 				ip,netmask,offset = data.split('/')
-				afi,safi,raw = inet(ip)
 				change = scope[-1]['announce'][-1]
-				# XXX: This is ugly
 				change.nlri.afi = AFI(AFI.ipv6)
-				if not change.nlri.add(Flow6Source(raw,int(netmask),int(offset))):
+				if not change.nlri.add(Flow6Source(IP.pton(ip),int(netmask),int(offset))):
 					self._error = 'Flow can only have one destination'
 					if self.debug: raise ValueError(self._error)
 					return False
@@ -2589,11 +2587,10 @@ class Configuration (object):
 
 			else:
 				ip,netmask,offset = data.split('/')
-				afi,safi,raw = inet(ip)
 				change = scope[-1]['announce'][-1]
 				# XXX: This is ugly
 				change.nlri.afi = AFI(AFI.ipv6)
-				if not change.nlri.add(Flow6Destination(raw,int(netmask),int(offset))):
+				if not change.nlri.add(Flow6Destination(IP.pton(ip),int(netmask),int(offset))):
 					self._error = 'Flow can only have one destination'
 					if self.debug: raise ValueError(self._error)
 					return False
@@ -2738,9 +2735,7 @@ class Configuration (object):
 				if self.debug: raise
 				return False
 
-			ip = tokens.pop(0)
-			nh = pton(ip)
-			change.nlri.nexthop = NextHop.unpack(nh)
+			change.nlri.nexthop = IP.create(tokens.pop(0))
 			return True
 
 		except (IndexError,ValueError):
@@ -2809,9 +2804,8 @@ class Configuration (object):
 					if self.debug: raise
 					return False
 
-				ip = tokens.pop(0)
-				nh = pton(ip)
-				change.nlri.nexthop = NextHop.unpack(nh)
+				nh = IP.create(tokens.pop(0))
+				change.nlri.nexthop = nh
 				change.attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficNextHop(False))
 				return True
 
@@ -2845,10 +2839,8 @@ class Configuration (object):
 				if self.debug: raise
 				return False
 
-			ip = tokens.pop(0)
-			nh = pton(ip)
 			change = scope[-1]['announce'][-1]
-			change.nlri.nexthop = NextHop.unpack(nh)
+			change.nlri.nexthop = NextHop(tokens.pop(0))
 			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficNextHop(True))
 			return True
 

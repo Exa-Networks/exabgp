@@ -122,6 +122,8 @@ TrafficMark.register()
 # =============================================================== TrafficNextHop
 # draft-simpson-idr-flowspec-redirect-02
 
+# XXX: FIXME: I guess this should be a subclass of NextHop or IP ..
+
 class TrafficNextHop (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x80
 	COMMUNITY_SUBTYPE = 0x00

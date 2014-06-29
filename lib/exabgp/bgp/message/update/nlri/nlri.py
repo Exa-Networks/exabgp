@@ -89,7 +89,7 @@ class NLRI (Address):
 			raise Notify(3,10,'could not decode route with AFI %d sand SAFI %d' % (afi,safi))
 
 		network,bgp = bgp[:size],bgp[size:]
-		padding = '\0'*(IP.length[afi]-size)
+		padding = '\0'*(IP.length(afi)-size)
 		prefix = network + padding
 
 		return labels,rd,mask,size,prefix,bgp

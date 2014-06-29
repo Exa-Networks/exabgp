@@ -25,8 +25,9 @@ class EVPN (object):
 	NAME = 'unknown'
 	SHORT_NAME = 'unknown'
 
-	AFI = AFI(AFI.l2vpn)
-	SAFI = SAFI(SAFI.evpn)
+	# lower case to match the class Address API
+	afi = AFI(AFI.l2vpn)
+	safi = SAFI(SAFI.evpn)
 
 	def __init__(self,packed):
 		self.packed = packed
@@ -59,7 +60,7 @@ class EVPN (object):
 		return 0
 
 	def __hash__(self):
-		return hash("%s:%s:%s:%s" % (self.AFI,self.SAFI,self.CODE,self.packed))
+		return hash("%s:%s:%s:%s" % (self.afi,self.safi,self.CODE,self.packed))
 
 	@classmethod
 	def unpack(cls,data):

@@ -8,6 +8,7 @@ Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 
 from struct import pack,unpack
 
+from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.bgp.message.direction import OUT
 from exabgp.bgp.message.update.nlri.prefix import Prefix
@@ -19,7 +20,6 @@ from exabgp.protocol.ip.fragment import Fragment,NamedFragment
 from exabgp.protocol.ip.tcp.flag import TCPFlag,NamedTCPFlag
 
 from exabgp.bgp.message.update.nlri.nlri import NLRI
-from exabgp.bgp.message.update.attribute.nexthop import NextHop
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 
 # =================================================================== Flow Components
@@ -502,7 +502,7 @@ class Flow (NLRI):
 		nlri.action = action
 
 		if nexthop:
-			nlri.nexthop = NextHop.unpack(nexthop)
+			nlri.nexthop = IP.unpack(nexthop)
 
 		if safi == SAFI.flow_vpn:
 			nlri.rd = RouteDistinguisher(bgp[:8])

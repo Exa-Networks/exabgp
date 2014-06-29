@@ -6,15 +6,15 @@ Created by Thomas Mangin on 2012-07-07.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from exabgp.protocol.ip import IP
+from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute import Flag,Attribute
 
 # ===================================================================
 
-class ClusterID (IP):
+class ClusterID (IPv4):
 	def __init__ (self,ip):
-		IP.__init__(self,ip)
+		IPv4.__init__(self,ip)
 
 
 class ClusterList (Attribute):
@@ -45,6 +45,6 @@ class ClusterList (Attribute):
 	def unpack (cls,data):
 		clusters = []
 		while data:
-			clusters.append(IP.unpack(data[:4]))
+			clusters.append(IPv4.unpack(data[:4]))
 			data = data[4:]
 		return cls(clusters)

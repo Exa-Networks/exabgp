@@ -87,7 +87,7 @@ class Text (object):
 		for nlri in update.nlris:
 			if nlri.action == IN.announced:
 				if nlri.nexthop:
-					r += 'neighbor %s announced route %s next-hop %s%s\n' % (neighbor,nlri.nlri(),nlri.nexthop.inet(),attributes)
+					r += 'neighbor %s announced route %s next-hop %s%s\n' % (neighbor,nlri.nlri(),nlri.nexthop,attributes)
 				else:
 					# This is an EOR
 					r += 'neighbor %s announced %s %s\n' % (neighbor,nlri.nlri(),attributes)
@@ -259,7 +259,7 @@ class JSON (object):
 		# all the next-hops should be the same but let's not assume it
 
 		for nlri in update.nlris:
-			nexthop = nlri.nexthop.inet() if nlri.nexthop else 'null'
+			nexthop = str(nlri.nexthop) if nlri.nexthop else 'null'
 			if nlri.action == IN.announced:
 				plus.setdefault(nlri.family(),{}).setdefault(nexthop,[]).append(nlri)
 			if nlri.action == IN.withdrawn:

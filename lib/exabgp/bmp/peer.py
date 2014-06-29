@@ -7,7 +7,7 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
 from struct import unpack
-from socket import inet_ntop, AF_INET, AF_INET6
+from exabgp.protocol.ip import IPv4,IPv6
 
 class PeerType (int):
 	_str = {
@@ -33,10 +33,10 @@ class Peer (object):
 		self.flag = PeerFlag(ord(data[3]))
 		self.distinguisher = unpack('!L',data[4:8])[0]
 		self.asn = unpack('!L',data[28:32])[0]
-		self.id = inet_ntop(AF_INET, data[32:36])
+		self.id = IPv4.unpack(data[32:36])
 
-		if self.flag.ipv4(): self.peer_address = inet_ntop(AF_INET, data[24:28])
-		if self.flag.ipv6(): self.peer_address = inet_ntop(AF_INET6, data[12:28])
+		if self.flag.ipv4(): self.peer_address = IPv4.unpack(data[24:28])
+		if self.flag.ipv6(): self.peer_address = IPv6.unpack(data[12:28])
 
 	def validate (self):
 		return self.type in (0,1)

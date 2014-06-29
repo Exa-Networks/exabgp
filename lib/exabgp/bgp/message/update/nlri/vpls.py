@@ -8,12 +8,12 @@ Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
 from struct import unpack, pack
+from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.bgp.message.direction import OUT
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
-from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
 def _unique ():
 	value = 0
@@ -86,7 +86,7 @@ class VPLS (NLRI):
 		base = unpack('!L','\x00'+data[16:19])[0]>>4
 		nlri = cls(rd,ve,base,offset,size)
 		nlri.action = action
-		nlri.nexthop = NextHop.unpack(nexthop)
+		nlri.nexthop = IP.unpack(nexthop)
 		return len(data), nlri
 
 for safi in (SAFI.vpls,):

@@ -10,6 +10,11 @@ Implement MP_*REACH unpack
 Implement the register() API with Attributes
 Prefix and Inet should not need explicit AFI,SAFI
 Make sure all attributes have __cmp__ and __hash__ functions
+Multiple classes called IPv4
+Check peer_address as it is now a class - may need an __hash__ function
+Check the .nexthop in VPLS .. why do have one parse there again ? Most likely right but better safe ...
+Where we import socket we should import IP
+
 
 In no particular order:
 - Following the integration of Orange's code, we now have an unpack() API to create object, we should generalise its use

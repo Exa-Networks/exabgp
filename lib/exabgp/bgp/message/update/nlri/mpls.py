@@ -6,13 +6,13 @@ Created by Thomas Mangin on 2012-07-08.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
+from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI,SAFI
 
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.prefix import mask_to_bytes,Prefix
 from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
-from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
 
 # ====================================================== Both MPLS and Inet NLRI
@@ -41,7 +41,7 @@ class MPLS (NLRI,Prefix):
 		return Prefix.__len__(self) + len(self.labels) + len(self.rd)
 
 	def __str__ (self):
-		nexthop = ' next-hop %s' % self.nexthop.inet() if self.nexthop else ''
+		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
 		return "%s%s" % (self.nlri(),nexthop)
 
 	def __eq__ (self,other):
@@ -74,7 +74,7 @@ class MPLS (NLRI,Prefix):
 	def unpack (cls,afi,safi,bgp,nexthop,action):
 		labels,rd,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action)
 
-		nlri = cls(afi,safi,prefix,mask,NextHop.unpack(nexthop),action)
+		nlri = cls(afi,safi,prefix,mask,IP.unpack(nexthop),action)
 		if labels: nlri.labels = Labels(labels)
 		if rd: nlri.rd = RouteDistinguisher(rd)
 

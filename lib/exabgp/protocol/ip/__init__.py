@@ -8,76 +8,71 @@ Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 
 import socket
 
-from exabgp.protocol.family import AFI,SAFI
+from exabgp.protocol.family import AFI, SAFI
 
-def _detect_afi(ip):
-	if ':' in ip:
-		return AFI.ipv6
-	return AFI.ipv4
 
-def _detect_safi (ip):
-	if '.' in ip and int(ip.split('.')[0]) in IP._multicast_range:
-		return SAFI.multicast
-	else:
-		return SAFI.unicast
-
-def inet (ip):
-	afi = _detect_afi(ip)
-	safi = _detect_safi(ip)
-	return afi,safi,socket.inet_pton(IP._af[afi],ip)
-
-def pton (ip):
-	afi = _detect_afi(ip)
-	return socket.inet_pton(IP._af[afi],ip)
+# =========================================================================== IP
+#
 
 class IP (object):
+	_known = dict()
+
 	_UNICAST = SAFI(SAFI.unicast)
 	_MULTICAST = SAFI(SAFI.multicast)
 
-	_multicast_range = set(range(224,240))  # 239 is last
+	_multicast_range = set(range(224,240))  # 239
 
-	"""An IP in the 4 bytes format"""
-	# README: yep, we should surely change this _ name here
-	_af = {
-		AFI.ipv4: socket.AF_INET,
-		AFI.ipv6: socket.AF_INET6,
-	}
+	def __init__ (self):
+		print "You should use IP.create() to use IP"
 
-	_afi = {
-		socket.AF_INET : AFI.ipv4,
-		socket.AF_INET6: AFI.ipv6,
-	}
-
-	length = {
-		AFI.ipv4:  4,
-		AFI.ipv6: 16,
-	}
-
-	def __init__ (self,ip,packed=None):
+	def init (self,ip,packed):
 		self.ip = ip
-		self.packed = packed if packed else socket.inet_pton(IP._af[_detect_afi(ip)],ip)
+		self.packed = packed
 
-	def unicast (self):
-		return not self.multicast()
+	@staticmethod
+	def pton (ip):
+		return socket.inet_pton(IP.toaf(ip),ip)
 
-	def multicast (self):
-		return ord(self.packed[0]) in set(range(224,240))
+	@staticmethod
+	def ntop (data):
+		return socket.inet_ntop(socket.AF_INET if len(data) == 4 else socket.AF_INET6,data)
 
-	def ipv4 (self):
-		return len(self) == 4
+	@staticmethod
+	def toaf (ip):
+		# the orders matters as ::FFFF:<ipv4> is an IPv6 address
+		if ':' in ip:
+			return socket.AF_INET6
+		if '.' in ip:
+			return socket.AF_INET
+		raise Exception('unrecognised ip address %s' % ip)
 
-	def ipv6 (self):
-		return len(self) > 4
+	@staticmethod
+	def toafi (ip):
+		# the orders matters as ::FFFF:<ipv4> is an IPv6 address
+		if ':' in ip:
+			return AFI.ipv6
+		if '.' in ip:
+			return AFI.ipv4
+		raise Exception('unrecognised ip address %s' % ip)
+
+	@staticmethod
+	def tosafi (ip):
+		if ':' in ip:
+			# XXX: FIXME: I assume that ::FFFF:<ip> must be treated unicast
+			# if int(ip.split(':')[-1].split('.')[0]) in IP._multicast_range:
+			return SAFI.unicast
+		elif '.' in ip:
+			if int(ip.split('.')[0]) in IP._multicast_range:
+				return SAFI.multicast
+			return SAFI.unicast
+		raise Exception('unrecognised ip address %s' % ip)
+
+	@staticmethod
+	def length (afi):
+		return 4 if afi == AFI.ipv4 else 16
 
 	def pack (self):
 		return self.packed
-
-	def __len__ (self):
-		return len(self.packed)
-
-	# XXX: FIXME: This API should be able to go away
-	def inet (self):
-		return self.ip
 
 	def __str__ (self):
 		return self.ip
@@ -93,9 +88,93 @@ class IP (object):
 		return 1
 
 	@classmethod
-	def unpack (cls,data,klass=None):
-		afi = AFI.ipv4 if len(data) == 4 else AFI.ipv6
+	def klass (cls,ip):
+		# the orders matters as ::FFFF:<ipv4> is an IPv6 address
+		if ':' in ip:
+			afi = IPv6.afi
+		elif '.' in ip:
+			afi = IPv4.afi
+		else:
+			raise Exception('can not decode this ip address : %s' % ip)
+		if afi in cls._known:
+			return cls._known[afi]
 
+	@classmethod
+	def create (cls,ip,data=None):
+		return cls.klass(ip)(ip,data)
+
+	@classmethod
+	def register (cls):
+		cls._known[cls.afi] = cls
+
+	@classmethod
+	def unpack (cls,data):
+		return cls.create(IP.ntop(data),data)
+
+
+# ========================================================================= IPv4
+#
+
+class IPv4 (IP):
+	# lower case to match the class Address API
+	afi = AFI.ipv4
+
+	def __init__ (self,ip,packed=None):
+		self.init(ip,packed if packed else socket.inet_pton(socket.AF_INET,ip))
+
+	def __len__ (self):
+		return 4
+
+	def unicast (self):
+		return not self.multicast()
+
+	def multicast (self):
+		return ord(self.packed[0]) in set(range(224,240))  # 239 is last
+
+	def ipv4 (self):
+		return True
+
+	def ipv6 (self):
+		return False
+
+	# klass is a trick for NextHop
+	@staticmethod
+	def unpack (data,klass=None):
+		ip = socket.inet_ntop(socket.AF_INET,data)
 		if klass:
-			return klass(socket.inet_ntop(IP._af[afi],data))
-		return cls(socket.inet_pton(IP._af[afi],data))
+			return klass(ip,data)
+		return IPv4(ip,data)
+
+IPv4.register()
+
+
+# ========================================================================= IPv6
+#
+
+class IPv6 (IP):
+	# lower case to match the class Address API
+	afi = AFI.ipv6
+
+	def __init__ (self,ip,packed=None):
+		self.init(ip,packed if packed else socket.inet_pton(socket.AF_INET6,ip))
+
+	def __len__ (self):
+		return 16
+
+	def ipv4 (self):
+		return False
+
+	def ipv6 (self):
+		return True
+
+	def unicast (self):
+		return True
+
+	def multicast (self):
+		return False
+
+	@staticmethod
+	def unpack (data):
+		return IPv6(socket.inet_ntop(socket.AF_INET6,data))
+
+IPv6.register()
