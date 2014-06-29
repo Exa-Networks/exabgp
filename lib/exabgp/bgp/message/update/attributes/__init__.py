@@ -19,7 +19,6 @@ from exabgp.bgp.message.direction import IN
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.nlri.eor import NLRIEOR
 
 from exabgp.bgp.message.update.attribute.id import AttributeID as AID
 from exabgp.bgp.message.update.attribute.flag import Flag
@@ -409,7 +408,6 @@ class Attributes (dict):
 		if code == AID.MP_UNREACH_NLRI and flag.matches(MPURNLRI.FLAG):
 			self.hasmp = True
 
-
 			# -- Reading AFI/SAFI
 			data = data[:length]
 			afi,safi = unpack('!HB',data[:3])
@@ -419,13 +417,11 @@ class Attributes (dict):
 			if (afi,safi) not in self.negotiated.families:
 				raise Notify(3,0,'presented a non-negotiated family %d/%d' % (afi,safi))
 
+			if not data:
+				raise Notify(3,0,'tried to withdraw an EOR for family %d/%d' % (afi,safi))
+
 			# Is the peer going to send us some Path Information with the route (AddPath)
 			addpath = self.negotiated.addpath.receive(afi,safi)
-
-			# XXX: we do assume that it is an EOR. most likely harmless
-			if not data:
-				self.mp_withdraw.append(NLRIEOR(afi,safi,IN.announced))
-				return self.factory(next)
 
 			while data:
 				length,nlri = self.nlriFactory(afi,safi,data,addpath,None,IN.withdrawn)
@@ -505,6 +501,9 @@ class Attributes (dict):
 
 			# Reading the NLRIs
 			data = data[offset:]
+
+			if not data:
+				raise Notify(3,0,'No data to decode in an MPREACHNLRI but it is not an EOR %d/%d' % (afi,safi))
 
 			while data:
 				length,nlri = self.nlriFactory(afi,safi,data,addpath,nh,IN.announced)

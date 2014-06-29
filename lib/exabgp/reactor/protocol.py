@@ -19,7 +19,7 @@ from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.id import REFRESH
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update import Update
-from exabgp.bgp.message.update.eor import EOR,EORFactory
+from exabgp.bgp.message.update.eor import EOR
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import NotificationFactory, Notification, Notify
 from exabgp.bgp.message.refresh import RouteRefresh,RouteRefreshFactory
@@ -150,14 +150,14 @@ class Protocol (object):
 
 			# This could be speed up massively by changing the order of the IF
 			if length == 23:
-				update = EORFactory()
+				update = EOR.unpack()
 				if self.neighbor.api.receive_updates:
 					if self.neighbor.api.consolidate:
 						self.peer.reactor.processes.update(self.peer,update,header,body)
 					else:
 						self.peer.reactor.processes.update(self.peer,update,'','')
-			elif length == 30 and body.startswith(EOR.MP):
-				update = EORFactory(body)
+			elif length == 30 and body.startswith(EOR.NLRI.PREFIX):
+				update = EOR.unpack(body)
 				if self.neighbor.api.receive_updates:
 					if self.neighbor.api.consolidate:
 						self.peer.reactor.processes.update(self.peer,update,header,body)
