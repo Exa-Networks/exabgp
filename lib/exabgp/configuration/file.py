@@ -34,8 +34,8 @@ from exabgp.bgp.message.open.routerid import RouterID
 
 from exabgp.bgp.message.update.nlri.path import PathPrefix,PathInfo
 from exabgp.bgp.message.update.nlri.mpls import MPLS,Labels,RouteDistinguisher
-from exabgp.bgp.message.update.nlri.vpls import VPLSNLRI
-from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,FlowNLRI,Flow4Source,Flow4Destination,Flow6Source,Flow6Destination,FlowSourcePort,FlowDestinationPort,FlowAnyPort,FlowIPProtocol,FlowNextHeader,FlowTCPFlag,FlowFragment,FlowPacketLength,FlowICMPType,FlowICMPCode,FlowDSCP,FlowTrafficClass,FlowFlowLabel
+from exabgp.bgp.message.update.nlri.vpls import VPLS
+from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,Flow,Flow4Source,Flow4Destination,Flow6Source,Flow6Destination,FlowSourcePort,FlowDestinationPort,FlowAnyPort,FlowIPProtocol,FlowNextHeader,FlowTCPFlag,FlowFragment,FlowPacketLength,FlowICMPType,FlowICMPCode,FlowDSCP,FlowTrafficClass,FlowFlowLabel
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute.origin import Origin
@@ -2280,7 +2280,7 @@ class Configuration (object):
 		try:
 			attributes = Attributes()
 			attributes[AttributeID.EXTENDED_COMMUNITY] = ExtendedCommunities()
-			change = Change(VPLSNLRI(None,None,None,None,None),attributes)
+			change = Change(VPLS(None,None,None,None,None),attributes)
 		except ValueError:
 			self._error = self._str_vpls_error
 			if self.debug: raise
@@ -2349,7 +2349,7 @@ class Configuration (object):
 		try:
 			attributes = Attributes()
 			attributes[AttributeID.EXTENDED_COMMUNITY] = ExtendedCommunities()
-			flow = Change(FlowNLRI(),attributes)
+			flow = Change(Flow(),attributes)
 		except ValueError:
 			self._error = self._str_flow_error
 			if self.debug: raise

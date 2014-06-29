@@ -23,7 +23,7 @@ def _unique ():
 
 unique = _unique()
 
-class VPLSNLRI (NLRI):
+class VPLS (NLRI):
 	def __init__ (self,rd,ve,base,offset,size):
 		NLRI.__init__(self,AFI.l2vpn,SAFI.vpls)
 		self.action = OUT.announce
@@ -91,4 +91,4 @@ class VPLSNLRI (NLRI):
 
 for safi in (SAFI.vpls,):
 	for afi in (AFI.l2vpn,):
-		VPLSNLRI.register(afi,safi)
+		VPLS.register(afi,safi)

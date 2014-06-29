@@ -400,7 +400,7 @@ def _unique ():
 
 unique = _unique()
 
-class FlowNLRI (NLRI):
+class Flow (NLRI):
 	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ip,rd=None):
 		NLRI.__init__(self,afi,safi)
 		self.rules = {}
@@ -498,7 +498,7 @@ class FlowNLRI (NLRI):
 			raise Notify(3,10,'invalid length at the start of the the flow')
 
 		bgp = bgp[:length]
-		nlri = FlowNLRI(afi,safi)
+		nlri = Flow(afi,safi)
 		nlri.action = action
 
 		if nexthop:
@@ -556,4 +556,4 @@ class FlowNLRI (NLRI):
 
 for safi in (SAFI.flow_ip,SAFI.flow_vpn):
 	for afi in (AFI.ipv4, AFI.ipv6):
-		FlowNLRI.register(afi,safi)
+		Flow.register(afi,safi)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import unittest
-from exabgp.bgp.message.update.nlri.vpls import VPLSNLRI
+from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.bgp.message.update.attribute.community import *
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 
@@ -27,8 +27,8 @@ class TestL2VPN (unittest.TestCase):
 		'''
 		self.encoded_l2vpn_nlri1 = bytearray.fromhex('0011 0001 AC1E 0504 000D 0003 0001 0008 4000 11')
 		self.encoded_l2vpn_nlri2 = bytearray.fromhex('0011 0001 AC1E 0503 000B 0003 0001 0008 4000 11')
-		self.decoded_l2vpn_nlri1 = VPLSNLRI(TestL2VPN.generate_rd('172.30.5.4:13'),3,262145,1,8)
-		self.decoded_l2vpn_nlri2 = VPLSNLRI(TestL2VPN.generate_rd('172.30.5.3:11'),3,262145,1,8)
+		self.decoded_l2vpn_nlri1 = VPLS(TestL2VPN.generate_rd('172.30.5.4:13'),3,262145,1,8)
+		self.decoded_l2vpn_nlri2 = VPLS(TestL2VPN.generate_rd('172.30.5.3:11'),3,262145,1,8)
 		'''
 		output from Juniper
 		Communities: target:54591:6 Layer2-info: encaps: VPLS, control flags:[0x0] , mtu: 0, site preference: 100
@@ -40,8 +40,8 @@ class TestL2VPN (unittest.TestCase):
 		we do know what routes Juniper sends us
 		and we testing decoded values against it
 		'''
-		l2vpn_route1 = VPLSNLRI.unpack(str(self.encoded_l2vpn_nlri1))
-		l2vpn_route2 = VPLSNLRI.unpack(str(self.encoded_l2vpn_nlri2))
+		l2vpn_route1 = VPLS.unpack(str(self.encoded_l2vpn_nlri1))
+		l2vpn_route2 = VPLS.unpack(str(self.encoded_l2vpn_nlri2))
 		self.assertEqual(l2vpn_route1.ve,3)
 		self.assertEqual(l2vpn_route1.rd._str(),'172.30.5.4:13')
 		self.assertEqual(l2vpn_route1.offset,1)
@@ -58,7 +58,7 @@ class TestL2VPN (unittest.TestCase):
 		we are encoding routes and testing em against what we have recvd from
 		Juniper
 		'''
-		encoded_l2vpn = VPLSNLRI(None,None,None,None,None)
+		encoded_l2vpn = VPLS(None,None,None,None,None)
 		encoded_l2vpn = self.decoded_l2vpn_nlri1
 		self.assertEqual(
 			encoded_l2vpn.pack().encode('hex'),
