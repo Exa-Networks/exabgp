@@ -5,7 +5,7 @@ Created by Thomas Morin on 2014-06-23.
 Copyright (c) 2014-2014 Orange. All rights reserved.
 """
 
-from exabgp.protocol.ip.inet import Inet
+from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.etag import ETag
 
@@ -73,7 +73,7 @@ class Multicast (EVPN):
 		rd = RouteDistinguisher.unpack(data[:8])
 		etag = ETag.unpack(data[8:12])
 		iplen = ord(data[12])
-		ip = Inet.unpack(data[12:12+iplen])
+		ip = IP.unpack(data[12:12+iplen])
 		if iplen not in (4,16):
 			raise Exception("IP len is %d, but EVPN route currently support only IPv4" % iplen)
 		return cls(rd,etag,ip)

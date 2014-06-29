@@ -6,13 +6,13 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from exabgp.protocol.ip.inet import Inet
+from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute import Flag,Attribute
 
 # ================================================================== NextHop (3)
 
-class NextHop (Attribute,Inet):
+class NextHop (Attribute,IP):
 	ID = AttributeID.NEXT_HOP
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
@@ -40,7 +40,7 @@ class NextHop (Attribute,Inet):
 
 		if data in NextHop.cache:
 			return NextHop.cache[data]
-		instance = Inet.unpack(data,NextHop)
+		instance = IP.unpack(data,NextHop)
 
 		if NextHop.caching:
 			NextHop.cache[data] = instance

@@ -9,7 +9,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from struct import unpack
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.protocol.ip.address import Address
-from exabgp.protocol.ip.inet import Inet
+from exabgp.protocol.ip import IP
 from exabgp.bgp.message.direction import IN
 from exabgp.bgp.message.notification import Notify
 
@@ -89,7 +89,7 @@ class NLRI (Address):
 			raise Notify(3,10,'could not decode route with AFI %d sand SAFI %d' % (afi,safi))
 
 		network,bgp = bgp[:size],bgp[size:]
-		padding = '\0'*(Inet.length[afi]-size)
+		padding = '\0'*(IP.length[afi]-size)
 		prefix = network + padding
 
 		return labels,rd,mask,size,prefix,bgp

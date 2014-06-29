@@ -25,7 +25,7 @@ from exabgp.protocol.family import AFI,SAFI,known_families
 
 from exabgp.bgp.neighbor import Neighbor
 
-from exabgp.protocol.ip.inet import Inet,inet,pton
+from exabgp.protocol.ip import IP,inet,pton
 from exabgp.bgp.message.direction import OUT
 
 from exabgp.bgp.message.open.asn import ASN
@@ -87,7 +87,7 @@ class Withdrawn (object):
 
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
 def pack_int (afi,integer,mask):
-	return ''.join([chr((integer>>(offset*8)) & 0xff) for offset in range(Inet.length[afi]-1,-1,-1)])
+	return ''.join([chr((integer>>(offset*8)) & 0xff) for offset in range(IP.length[afi]-1,-1,-1)])
 
 def formated (line):
 	changed_line = '#'
@@ -2035,7 +2035,7 @@ class Configuration (object):
 
 	def _route_originator_id (self,scope,tokens):
 		try:
-			scope[-1]['announce'][-1].attributes.add(OriginatorID.unpack(tokens.pop(0)))
+			scope[-1]['announce'][-1].attributes.add(OriginatorID(tokens.pop(0)))
 			return True
 		except:
 			self._error = self._str_route_error

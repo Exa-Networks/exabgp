@@ -5,7 +5,7 @@ Created by Thomas Morin on 2014-06-23.
 Copyright (c) 2014-2014 Orange. All rights reserved.
 """
 
-from exabgp.protocol.ip.inet import Inet
+from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
 from exabgp.bgp.message.update.nlri.qualifier.esi import ESI
@@ -115,7 +115,7 @@ class MAC (EVPN):
 			raise Exception('invalid IP Address length in %s' % cls.NAME)
 		iplen = length / 8
 
-		ip = Inet.unpack(data[end+1:end+1+iplen])
+		ip = IP.unpack(data[end+1:end+1+iplen])
 		label = Labels.unpack(data[end+1+iplen:])
 
 		return cls(rd,esi,etag,mac,label,ip,data)
