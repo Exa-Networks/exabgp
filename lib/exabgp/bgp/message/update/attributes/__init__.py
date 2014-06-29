@@ -42,6 +42,8 @@ from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
 
 from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
 
+from exabgp.bgp.message.update.nlri.nlri import NLRI
+
 from exabgp.logger import Logger,LazyFormat
 
 class _NOTHING (object):
@@ -80,8 +82,6 @@ class MultiAttributes (list):
 		return 'MultiAttibutes(%s)' % ' '.join(str(_) for _ in self)
 
 class Attributes (dict):
-	# we need this to not create an include loop !
-	nlriFactory = None
 	# A cache of parsed attributes
 	cache = {}
 	# A previously parsed object
@@ -424,7 +424,7 @@ class Attributes (dict):
 			addpath = self.negotiated.addpath.receive(afi,safi)
 
 			while data:
-				length,nlri = self.nlriFactory(afi,safi,data,addpath,None,IN.withdrawn)
+				length,nlri = NLRI.unpack(afi,safi,data,addpath,None,IN.withdrawn)
 				self.mp_withdraw.append(nlri)
 				data = data[length:]
 				logger.parser(LazyFormat("parsed withdraw mp nlri %s payload " % nlri,od,data[:length]))
@@ -506,7 +506,7 @@ class Attributes (dict):
 				raise Notify(3,0,'No data to decode in an MPREACHNLRI but it is not an EOR %d/%d' % (afi,safi))
 
 			while data:
-				length,nlri = self.nlriFactory(afi,safi,data,addpath,nh,IN.announced)
+				length,nlri = NLRI.unpack(afi,safi,data,addpath,nh,IN.announced)
 				self.mp_announce.append(nlri)
 				logger.parser(LazyFormat("parsed announce mp nlri %s payload " % nlri,od,data[:length]))
 				data = data[length:]

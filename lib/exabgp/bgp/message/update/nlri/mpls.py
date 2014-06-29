@@ -38,7 +38,7 @@ class MPLS (NLRI,CIDR):
 		return "%s%s%s" % (self.prefix(),str(self.labels),str(self.rd))
 
 	def __len__ (self):
-		return Prefix.__len__(self) + len(self.labels) + len(self.rd)
+		return CIDR.__len__(self) + len(self.labels) + len(self.rd)
 
 	def __str__ (self):
 		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
@@ -62,16 +62,16 @@ class MPLS (NLRI,CIDR):
 
 	def pack (self,addpath=None):
 		if not self.has_label():
-			return Prefix.pack(self)
+			return CIDR.pack(self)
 
 		length = len(self.labels)*8 + len(self.rd)*8 + self.mask
-		return chr(length) + self.labels.pack() + self.rd.pack() + self.packed
+		return chr(length) + self.labels.pack() + self.rd.pack() + CIDR.packed_ip(self)
 
 	def index (self):
 		return self.pack()
 
 	@classmethod
-	def unpack (cls,afi,safi,bgp,nexthop,action):
+	def unpack (cls,afi,safi,bgp,addpath,nexthop,action):
 		labels,rd,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action)
 
 		nlri = cls(afi,safi,prefix,mask,IP.unpack(nexthop),action)

@@ -17,7 +17,7 @@ from exabgp.bgp.message.update import Update
 #from exabgp.bgp.message.update.nlri.route import Route
 from exabgp.bgp.message.notification import Notify
 
-from exabgp.bgp.message.update.nlri.factory import NLRIFactory
+from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.attributes.factory import AttributesFactory
 
 from exabgp.util.od import od
@@ -42,7 +42,7 @@ def UpdateFactory (negotiated,data):
 	if 2 + lw + 2+ la + len(announced) != length:
 		raise Notify(3,1,'error in BGP message length, not enough data for the size announced')
 
-	attributes = AttributesFactory(NLRIFactory,negotiated,attribute)
+	attributes = AttributesFactory(negotiated,attribute)
 
 	# Is the peer going to send us some Path Information with the route (AddPath)
 	addpath = negotiated.addpath.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
@@ -54,7 +54,7 @@ def UpdateFactory (negotiated,data):
 
 	nlris = []
 	while withdrawn:
-		length,nlri = NLRIFactory(AFI.ipv4,SAFI.unicast,withdrawn,addpath,nh,IN.withdrawn)
+		length,nlri = NLRI.unpack(AFI.ipv4,SAFI.unicast,withdrawn,addpath,nh,IN.withdrawn)
 		logger.parser(LazyFormat("parsed withdraw nlri %s payload " % nlri,od,withdrawn[:len(nlri)]))
 		withdrawn = withdrawn[length:]
 		nlris.append(nlri)
@@ -63,7 +63,7 @@ def UpdateFactory (negotiated,data):
 		logger.parser(LazyFormat("parsed no announced nlri",od,''))
 
 	while announced:
-		length,nlri = NLRIFactory(AFI.ipv4,SAFI.unicast,announced,addpath,nh,IN.announced)
+		length,nlri = NLRI.unpack(AFI.ipv4,SAFI.unicast,announced,addpath,nh,IN.announced)
 		logger.parser(LazyFormat("parsed announce nlri %s payload " % nlri,od,announced[:len(nlri)]))
 		announced = announced[length:]
 		nlris.append(nlri)

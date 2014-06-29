@@ -76,7 +76,7 @@ class VPLS (NLRI):
 		return self.extensive()
 
 	@staticmethod
-	def unpack (cls,afi,safi,nexthop,data,action):
+	def unpack (cls,afi,safi,data,addpath,nexthop,action):
 		# label is 20bits, stored using 3 bytes, 24 bits
 		length, = unpack('!H',data[0:2])
 		if len(data) != length+2:
