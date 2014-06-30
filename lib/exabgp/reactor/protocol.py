@@ -13,7 +13,7 @@ from exabgp.reactor.network.outgoing import Outgoing
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.nop import NOP,_NOP
-from exabgp.bgp.message.unknown import UnknownMessageFactory
+from exabgp.bgp.message.unknown import UnknownMessage
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.id import REFRESH
@@ -200,7 +200,7 @@ class Protocol (object):
 			else:
 				# XXX: FIXME: really should raise, we are too nice
 				self.logger.message(self.me('<< NOP (un-negotiated type %d)' % msg))
-				refresh = UnknownMessageFactory(body)
+				refresh = UnknownMessage.unpack(body)
 			yield refresh
 
 		elif msg == Message.Type.OPERATIONAL:
@@ -226,7 +226,7 @@ class Protocol (object):
 		else:
 			# XXX: FIXME: really should raise, we are too nice
 			self.logger.message(self.me('<< NOP (unknow type %d)' % msg))
-			yield UnknownMessageFactory(msg)
+			yield UnknownMessage.unpack(msg)
 
 	def validate_open (self):
 		error = self.negotiated.validate(self.neighbor)

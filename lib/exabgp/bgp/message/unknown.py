@@ -21,5 +21,6 @@ class UnknownMessage (Message):
 	def __str__ (self):
 		return "UNKNOWN"
 
-def UnknownMessageFactory (data):
-	return UnknownMessage(0xFF,data)
+	@classmethod
+	def unpack (cls,data):
+		return cls(0xFF,data)

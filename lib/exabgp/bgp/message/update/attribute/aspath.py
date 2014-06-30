@@ -77,7 +77,7 @@ class ASPath (Attribute):
 		return message
 
 	@classmethod
-	def unpack (data):
+	def unpack (cls,data):
 		raise Exception('unimplemented')
 
 	def __len__ (self):
