@@ -11,7 +11,7 @@ from struct import pack,unpack
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute import Flag,Attribute
 
-# =================================================================== AIGP (26)
+# ========================================================================== TLV
 
 # 0                   1                   2                   3
 # 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -30,23 +30,23 @@ class TLV (object):
 		self.type = type
 		self.value = value
 
+class TLVS (list):
+	@staticmethod
+	def unpack (data):
+		def loop (data):
+			while data:
+				t = ord(data[0])
+				l = unpack('!H',data[1:3])[0]
+				v,data = data[3:l],data[l:]
+				yield TLV(t,v)
+		return TLVS(list(loop(data)))
 
-def _TLVFactory (data):
-	while data:
-		t = ord(data[0])
-		l = unpack('!H',data[1:3])[0]
-		v,data = data[3:l],data[l:]
-		yield TLV(t,v)
+	def pack (self):
+		return ''.join('%s%s%s' % (chr(tlv.type),pack('!H',len(tlv.value)+3),tlv.value) for tlv in self)
 
-def TLVFactory (data):
-	return list(_TLVFactory(data))
 
-def pack_tlv (tlvs):
-	return ''.join('%s%s%s' % (chr(tlv.type),pack('!H',len(tlv.value)+3),tlv.value) for tlv in tlvs)
-
-# def __init__ (self,value):
-# 	self.aigp = unpack('!Q',TLVFactory(value)[0].value)[0]
-# 	self.packed = self._attribute(value)
+# ==================================================================== AIGP (26)
+#
 
 class AIGP (Attribute):
 	ID = AttributeID.AIGP
