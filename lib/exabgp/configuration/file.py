@@ -58,7 +58,7 @@ from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
 
 from exabgp.bgp.message.operational import MAX_ADVISORY,Advisory,Query,Response
 
-from exabgp.bgp.message.update.attributes import Attributes
+from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.rib.change import Change
 from exabgp.bgp.message.refresh import RouteRefresh

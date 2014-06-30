@@ -10,7 +10,7 @@ from struct import unpack
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.direction import IN,OUT
-from exabgp.bgp.message.update.attributes import Attributes
+from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 
 # =================================================================== End-Of-RIB

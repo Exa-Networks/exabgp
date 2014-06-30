@@ -18,7 +18,7 @@ from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.nlri.nlri import NLRI
-from exabgp.bgp.message.update.attributes.factory import AttributesFactory
+from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.util.od import od
 from exabgp.logger import Logger,LazyFormat
@@ -42,7 +42,7 @@ def UpdateFactory (negotiated,data):
 	if 2 + lw + 2+ la + len(announced) != length:
 		raise Notify(3,1,'error in BGP message length, not enough data for the size announced')
 
-	attributes = AttributesFactory(negotiated,attribute)
+	attributes = Attributes.unpack(negotiated,attribute)
 
 	# Is the peer going to send us some Path Information with the route (AddPath)
 	addpath = negotiated.addpath.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
