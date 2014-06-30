@@ -169,7 +169,7 @@ class JSON (object):
 		'}' % (self.version,self.time(time.time()),identificator,counter,type,header,body,content)
 
 	def _neighbor (self,peer,content):
-		peer_neighbor_adress='"ip": "%s", ' % peer.neighbor.peer_address if content else '"ip": "%s" ' % peer.neighbor.peer_address
+		peer_neighbor_adress='"ip": "%s", ' % peer if content else '"ip": "%s" ' % peer
 		return \
 		'"neighbor": { ' \
 			'%s' \
