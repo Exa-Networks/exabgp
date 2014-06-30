@@ -87,12 +87,12 @@ class Text (object):
 		for nlri in update.nlris:
 			if nlri.action == IN.announced:
 				if nlri.nexthop:
-					r += 'neighbor %s announced route %s next-hop %s%s\n' % (neighbor,nlri.nlri(),nlri.nexthop,attributes)
+					r += 'neighbor %s announced route %s next-hop %s%s\n' % (neighbor,nlri.extensive(),nlri.nexthop,attributes)
 				else:
-					# This is an EOR
-					r += 'neighbor %s announced %s %s\n' % (neighbor,nlri.nlri(),attributes)
+					# This is an EOR or Flow or ... something newer
+					r += 'neighbor %s announced %s %s\n' % (neighbor,nlri.extensive(),attributes)
 			else:
-				r += 'neighbor %s withdrawn route %s\n' % (neighbor,nlri.nlri())
+				r += 'neighbor %s withdrawn route %s\n' % (neighbor,nlri.extensive())
 		if header or body:
 			r += '%s\n' % self._header_body(header,body)
 		r += 'neighbor %s update end\n' % neighbor

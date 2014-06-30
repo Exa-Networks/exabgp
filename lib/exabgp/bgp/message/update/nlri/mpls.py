@@ -34,7 +34,7 @@ class MPLS (NLRI,CIDR):
 			return True
 		return False
 
-	def nlri (self):
+	def extensive (self):
 		return "%s%s%s" % (self.prefix(),str(self.labels),str(self.rd))
 
 	def __len__ (self):
@@ -42,7 +42,7 @@ class MPLS (NLRI,CIDR):
 
 	def __str__ (self):
 		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
-		return "%s%s" % (self.nlri(),nexthop)
+		return "%s%s" % (self.extensive(),nexthop)
 
 	def __eq__ (self,other):
 		return str(self) == str(other)

@@ -29,8 +29,6 @@ class EOR (Message):
 			NLRI.__init__(self,afi,safi)
 			self.action = action
 
-		def nlri (self):
-			return 'eor %d/%d' % (self.afi,self.safi)
 
 		def pack (self):
 			if self.afi == AFI.ipv4 and self.safi == SAFI.unicast:

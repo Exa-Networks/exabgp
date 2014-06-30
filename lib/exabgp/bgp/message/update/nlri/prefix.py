@@ -23,7 +23,7 @@ class Prefix (CIDR,NLRI):
 	def prefix (self):
 		return "%s/%s%s" % (self.ip,self.mask,str(self.path_info) if self.path_info is not PathInfo.NOPATH else '')
 
-	def nlri (self):
+	def extensive (self):
 		return "%s/%s%s next-hop %s" % (self.ip,self.mask,str(self.path_info) if self.path_info is not PathInfo.NOPATH else '',self.nexthop)
 
 	def pack (self,addpath):
