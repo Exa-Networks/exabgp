@@ -17,7 +17,8 @@ class NOP (Message):
 	def __str__ (self):
 		return "NOP"
 
-def NOPFactory (self):
-	return NOP()
+	@classmethod
+	def unpack (self):
+		return NOP()
 
 _NOP = NOP()
