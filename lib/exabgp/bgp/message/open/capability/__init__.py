@@ -104,11 +104,11 @@ class Capabilities (dict):
 	def unpack (data):
 		def _key_values (name,data):
 			if len(data) < 2:
-				raise Notify(2,0,"Bad length for OPEN %s (<2) %s" % (name,hexa(data)))
+				raise Notify(2,0,"Bad length for OPEN %s (<2) %s" % (name,Capability.hex(data)))
 			l = ord(data[1])
 			boundary = l+2
 			if len(data) < boundary:
-				raise Notify(2,0,"Bad length for OPEN %s (buffer underrun) %s" % (name,hexa(data)))
+				raise Notify(2,0,"Bad length for OPEN %s (buffer underrun) %s" % (name,Capability.hex(data)))
 			key = ord(data[0])
 			value = data[2:boundary]
 			rest = data[boundary:]
