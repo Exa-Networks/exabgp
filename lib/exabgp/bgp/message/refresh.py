@@ -47,11 +47,12 @@ class RouteRefresh (Message):
 	def families (self):
 		return self._families[:]
 
-def RouteRefreshFactory (data):
-	try:
-		afi,reserved,safi = unpack('!HBB',data)
-	except error:
-		raise Notify(7,1,'invalid route-refresh message')
-	if reserved not in (0,1,2):
-		raise Notify(7,2,'invalid route-refresh message subtype')
-	return RouteRefresh(afi,safi,reserved)
+	@classmethod
+	def unpack (cls,data):
+		try:
+			afi,reserved,safi = unpack('!HBB',data)
+		except error:
+			raise Notify(7,1,'invalid route-refresh message')
+		if reserved not in (0,1,2):
+			raise Notify(7,2,'invalid route-refresh message subtype')
+		return RouteRefresh(afi,safi,reserved)

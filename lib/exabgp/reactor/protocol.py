@@ -22,7 +22,7 @@ from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.eor import EOR
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notification, Notify
-from exabgp.bgp.message.refresh import RouteRefresh,RouteRefreshFactory
+from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.operational import Operational
 
 from exabgp.reactor.api.processes import ProcessError
@@ -190,7 +190,7 @@ class Protocol (object):
 		elif msg == Message.Type.ROUTE_REFRESH:
 			if self.negotiated.refresh != REFRESH.absent:
 				self.logger.message(self.me('<< ROUTE-REFRESH'))
-				refresh = RouteRefreshFactory(body)
+				refresh = RouteRefresh.unpack(body)
 				if self.neighbor.api.receive_refresh:
 					if refresh.reserved in (RouteRefresh.start,RouteRefresh.end):
 						if self.neighbor.api.consolidate:
