@@ -2981,7 +2981,7 @@ class Configuration (object):
 	def decode (self,update):
 		# self check to see if we can decode what we encode
 		import sys
-		from exabgp.bgp.message.update.factory import UpdateFactory
+		from exabgp.bgp.message.update import Update
 		from exabgp.bgp.message.open import Open
 		from exabgp.bgp.message.open.capability import Capabilities
 		from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -3024,20 +3024,18 @@ class Configuration (object):
 
 				if kind == 2:
 					self.logger.parser('the message is an update')
-					factory = UpdateFactory
 					decoding = 'update'
 				else:
 					self.logger.parser('the message is not an update (%d) - aborting' % kind)
 					sys.exit(1)
 			else:
 				self.logger.parser('header missing, assuming this message is ONE update')
-				factory = UpdateFactory
 				decoding = 'update'
 				injected,raw = raw,''
 
 			try:
 				# This does not take the BGP header - let's assume we will not break that :)
-				update = factory(negotiated,injected)
+				update = Update.unpack(negotiated,injected)
 			except KeyboardInterrupt:
 				raise
 			except Notify,e:

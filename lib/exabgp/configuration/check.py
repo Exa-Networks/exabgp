@@ -9,7 +9,7 @@ Copyright (c) 2009-2014 Exa Networks. All rights reserved.
 # common
 
 from exabgp.protocol.family import known_families
-from exabgp.bgp.message.update.factory import UpdateFactory
+from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -19,7 +19,6 @@ from exabgp.bgp.message.notification import Notify
 # check_neighbor
 
 from exabgp.util.od import od
-from exabgp.bgp.message.update import Update
 from exabgp.rib.change import Change
 
 # check_update
@@ -76,7 +75,7 @@ def check_neighbor (neighbor):
 				logger.parser('')  # new line
 
 				pack1s = pack1[19:] if pack1.startswith('\xFF'*16) else pack1
-				update = UpdateFactory(negotiated,pack1s)
+				update = Update.unpack(negotiated,pack1s)
 
 				change2 = Change(update.nlris[0],update.attributes)
 				str2 = change2.extensive()
