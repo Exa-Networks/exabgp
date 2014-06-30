@@ -14,7 +14,7 @@ from exabgp.reactor.network.outgoing import Outgoing
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.nop import NOP,_NOP
 from exabgp.bgp.message.unknown import UnknownMessageFactory
-from exabgp.bgp.message.open import Open,OpenFactory
+from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.id import REFRESH
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -217,12 +217,12 @@ class Protocol (object):
 
 		elif msg == Message.Type.OPEN:
 			if self.neighbor.api.receive_opens:
-				open_message = OpenFactory(body)
+				open_message = Open.unpack(body)
 				if self.neighbor.api.consolidate:
 					self.peer.reactor.processes.open(self.peer,'received',open_message,header,body)
 				else:
 					self.peer.reactor.processes.open(self.peer,'received',open_message,'','')
-			yield OpenFactory(body)
+			yield Open.unpack(body)
 
 		else:
 			# XXX: FIXME: really should raise, we are too nice

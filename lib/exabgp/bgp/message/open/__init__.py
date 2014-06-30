@@ -67,14 +67,15 @@ class Open (Message):
 	def __str__ (self):
 		return "OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]" % (self.version, self.asn, self.hold_time, self.router_id,self.capabilities)
 
-def OpenFactory (data):
-	version = ord(data[0])
-	if version != 4:
-		# Only version 4 is supported nowdays..
-		raise Notify(2,1,data[0])
-	asn = unpack('!H',data[1:3])[0]
-	hold_time = unpack('!H',data[3:5])[0]
-	numeric = unpack('!L',data[5:9])[0]
-	router_id = "%d.%d.%d.%d" % (numeric>>24,(numeric>>16)&0xFF,(numeric>>8)&0xFF,numeric&0xFF)
-	capabilities = CapabilitiesFactory(data[9:])
-	return Open(version,asn,router_id,capabilities,hold_time)
+	@classmethod
+	def unpack (cls,data):
+		version = ord(data[0])
+		if version != 4:
+			# Only version 4 is supported nowdays..
+			raise Notify(2,1,data[0])
+		asn = unpack('!H',data[1:3])[0]
+		hold_time = unpack('!H',data[3:5])[0]
+		numeric = unpack('!L',data[5:9])[0]
+		router_id = "%d.%d.%d.%d" % (numeric>>24,(numeric>>16)&0xFF,(numeric>>8)&0xFF,numeric&0xFF)
+		capabilities = CapabilitiesFactory(data[9:])
+		return cls(version,asn,router_id,capabilities,hold_time)
