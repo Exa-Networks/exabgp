@@ -14,7 +14,13 @@ from exabgp.bgp.message.open.capability.id import CapabilityID
 #
 
 class MultiSession (Capability,list):
-	# ID defined by register / unpack
+	def __init__ (self):
+		self.ID = CapabilityID.MULTISESSION_BGP
+		list.__init__(self)
+
+	def set (self,data):
+		self.extend(data)
+		return self
 
 	# XXX: FIXME: Looks like we could do with something in this Caoability
 	def __str__ (self):

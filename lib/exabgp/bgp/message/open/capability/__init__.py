@@ -89,7 +89,7 @@ class Capabilities (dict):
 
 		# MUST be the last key added
 		if neighbor.multisession:
-			self[CapabilityID.MULTISESSION_BGP] = MultiSession([CapabilityID.MULTIPROTOCOL_EXTENSIONS])
+			self[CapabilityID.MULTISESSION_BGP] = MultiSession().set([CapabilityID.MULTIPROTOCOL_EXTENSIONS])
 		return self
 
 	def pack (self):

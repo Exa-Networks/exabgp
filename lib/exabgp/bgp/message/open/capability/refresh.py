@@ -13,7 +13,8 @@ from exabgp.bgp.message.open.capability.id import CapabilityID
 #
 
 class RouteRefresh (Capability):
-	# ID defined by register / unpack
+	def __init__ (self):
+		self.ID = CapabilityID.ROUTE_REFRESH
 
 	def __str__ (self):
 		if self.ID == CapabilityID.ROUTE_REFRESH:
