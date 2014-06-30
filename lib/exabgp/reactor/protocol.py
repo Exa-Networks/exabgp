@@ -23,7 +23,7 @@ from exabgp.bgp.message.update.eor import EOR
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import NotificationFactory, Notification, Notify
 from exabgp.bgp.message.refresh import RouteRefresh,RouteRefreshFactory
-from exabgp.bgp.message.operational import Operational,OperationalFactory,OperationalGroup
+from exabgp.bgp.message.operational import Operational
 
 from exabgp.reactor.api.processes import ProcessError
 
@@ -205,12 +205,11 @@ class Protocol (object):
 
 		elif msg == Message.Type.OPERATIONAL:
 			if self.peer.neighbor.operational:
-				operational = OperationalFactory(body)
-				what = OperationalGroup[operational.what][0]
+				operational = Operational.unpack(body)
 				if self.neighbor.api.consolidate:
-					self.peer.reactor.processes.operational(self.peer,what,operational,header,body)
+					self.peer.reactor.processes.operational(self.peer,operational.category,operational,header,body)
 				else:
-					self.peer.reactor.processes.operational(self.peer,what,operational,'','')
+					self.peer.reactor.processes.operational(self.peer,operational.category,operational,'','')
 			else:
 				operational = _OPERATIONAL
 			yield operational
