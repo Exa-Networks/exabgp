@@ -7,14 +7,12 @@ Remove .packed for Inet and all its subclass as we now had addpath getting in th
 Make sure all the attributes stored data is prepended with the attribute headers
 Implement ASPATH unpack
 Implement MP_*REACH unpack
-Implement the register() API with Attributes
-Prefix and Inet should not need explicit AFI,SAFI
 Make sure all attributes have __cmp__ and __hash__ functions
-Multiple classes called IPv4
-Check peer_address as it is now a class - may need an __hash__ function
+Check peer_address as it is now a class - may need an __hash__ function ?
 Check the .nexthop in VPLS .. why do have one parse there again ? Most likely right but better safe ...
 Where we import socket we should import IP
-
+when we raise Exception, most of the time we want to raise Notify - update
+Make sure we RuntimeError if we are double register()ing 
 
 In no particular order:
 - Following the integration of Orange's code, we now have an unpack() API to create object, we should generalise its use

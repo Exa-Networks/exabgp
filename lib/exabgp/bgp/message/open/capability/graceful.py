@@ -6,12 +6,18 @@ Created by Thomas Mangin on 2012-07-17.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from struct import pack
+from struct import pack,unpack
+from exabgp.protocol.family import AFI,SAFI
+from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open.capability.id import CapabilityID
 
-# =================================================================== Graceful (Restart)
+
+# ============================================================ Graceful (Restart)
 # RFC 4727
 
-class Graceful (dict):
+class Graceful (Capability,dict):
+	ID = CapabilityID.GRACEFUL_RESTART
+
 	TIME_MASK     = 0x0FFF
 	FLAG_MASK     = 0xF000
 
@@ -19,12 +25,12 @@ class Graceful (dict):
 	RESTART_STATE = 0x08
 	FORWARDING_STATE = 0x80
 
-	def __init__ (self,restart_flag,restart_time,protos):
-		dict.__init__(self)
+	def set (self,restart_flag,restart_time,protos):
 		self.restart_flag = restart_flag
 		self.restart_time = restart_time & Graceful.TIME_MASK
 		for afi,safi,family_flag in protos:
 			self[(afi,safi)] = family_flag & Graceful.FORWARDING_STATE
+		return self
 
 	def extract (self):
 		restart  = pack('!H',((self.restart_flag << 12) | (self.restart_time & Graceful.TIME_MASK)))
@@ -39,3 +45,21 @@ class Graceful (dict):
 
 	def families (self):
 		return self.keys()
+
+	@staticmethod
+	def unpack (what,instance,data):
+		# XXX: FIXME: should raise if instance was already setup
+		restart = unpack('!H',data[:2])[0]
+		restart_flag = restart >> 12
+		restart_time = restart & Graceful.TIME_MASK
+		data = data[2:]
+		families = []
+		while data:
+			afi = AFI.unpack(data[:2])
+			safi = SAFI.unpack(data[2])
+			flag_family = ord(data[0])
+			families.append((afi,safi,flag_family))
+			data = data[4:]
+		return instance.set(restart_flag,restart_time,families)
+
+Graceful.register()

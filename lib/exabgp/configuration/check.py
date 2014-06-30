@@ -26,6 +26,9 @@ from exabgp.rib.change import Change
 from exabgp.reactor.peer import Peer
 from exabgp.reactor.api.encoding import JSON
 
+# check_notification
+
+from exabgp.bgp.message.notification import Notification
 
 # =============================================================== check_neighbor
 # ...
@@ -123,10 +126,37 @@ def check_neighbor (neighbor):
 
 
 
-# ================================================================= check_update
-# self check to see if we can decode what we encode
+# ================================================================ check_message
+#
 
-def check_update (neighbor,update):
+def check_message (neighbor,message):
+	raw = ''.join(chr(int(_,16)) for _ in (message[i*2:(i*2)+2] for i in range(len(message)/2)))
+
+	if raw.startswith('\xff'*16):
+		kind = ord(raw[18])
+		size = (ord(raw[16]) << 16) + (ord(raw[17]))
+
+		if kind == 1:
+			return check_open(neighbor,raw[18:])
+		elif kind == 2:
+			return check_update(neighbor,raw)
+		elif kind == 3:
+			return check_notification(raw)
+	else:
+		return check_update(neighbor,raw)
+
+
+# ================================================================= check_update
+#
+
+def check_open (neighbor,raw):
+	pass
+
+
+# ================================================================= check_update
+#
+
+def check_update (neighbor,raw):
 	from exabgp.logger import Logger
 
 	logger = Logger()
@@ -151,8 +181,6 @@ def check_update (neighbor,update):
 	negotiated.sent(o1)
 	negotiated.received(o2)
 	#grouped = False
-
-	raw = ''.join(chr(int(_,16)) for _ in (update[i*2:(i*2)+2] for i in range(len(update)/2)))
 
 	while raw:
 		if raw.startswith('\xff'*16):
@@ -192,4 +220,13 @@ def check_update (neighbor,update):
 			logger.parser('decoded %s %s %s' % (decoding,change.nlri.action,change.extensive()))
 		logger.parser('update json %s' % JSON('3.4.0').update(p,update,'',''))
 
+	return True
+
+
+# ================================================================= check_update
+#
+
+def check_notification (raw):
+	notification = Notification.unpack(raw[18:])
+	print notification
 	return True

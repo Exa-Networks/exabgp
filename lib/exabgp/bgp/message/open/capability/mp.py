@@ -7,10 +7,17 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from struct import pack
+from exabgp.protocol.family import AFI,SAFI
+from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open.capability.id import CapabilityID
 
-# =================================================================== MultiProtocol
 
-class MultiProtocol (list):
+# ================================================================ MultiProtocol
+#
+
+class MultiProtocol (Capability,list):
+	ID = CapabilityID.MULTIPROTOCOL_EXTENSIONS
+
 	def __str__ (self):
 		return 'Multiprotocol(' + ','.join(["%s %s" % (str(afi),str(safi)) for (afi,safi) in self]) + ')'
 
@@ -19,3 +26,13 @@ class MultiProtocol (list):
 		for v in self:
 			rs.append(pack('!H',v[0]) + pack('!H',v[1]))
 		return rs
+
+	@staticmethod
+	def unpack (what,instance,data):
+		# XXX: FIXME: we should raise if we have twice the same AFI/SAFI
+		afi = AFI.unpack(data[:2])
+		safi = SAFI.unpack(data[3])
+		instance.append((afi,safi))
+		return instance
+
+MultiProtocol.register()

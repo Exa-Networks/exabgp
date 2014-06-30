@@ -13,7 +13,7 @@ from exabgp.bgp.message.open.version import Version
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
-from exabgp.bgp.message.open.capability import CapabilitiesFactory
+from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.notification import Notify
 
 # =================================================================== Open
@@ -77,5 +77,5 @@ class Open (Message):
 		hold_time = unpack('!H',data[3:5])[0]
 		numeric = unpack('!L',data[5:9])[0]
 		router_id = "%d.%d.%d.%d" % (numeric>>24,(numeric>>16)&0xFF,(numeric>>8)&0xFF,numeric&0xFF)
-		capabilities = CapabilitiesFactory(data[9:])
+		capabilities = Capabilities.unpack(data[9:])
 		return cls(version,asn,router_id,capabilities,hold_time)

@@ -6,18 +6,47 @@ Created by Thomas Mangin on 2012-07-17.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-# =================================================================== RouteRefresh
+from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open.capability.id import CapabilityID
 
-class RouteRefresh (object):
+# ================================================================= RouteRefresh
+#
+
+class RouteRefresh (Capability):
+	# ID defined by register / unpack
+
 	def __str__ (self):
-		return 'Route Refresh'
+		if self.ID == CapabilityID.ROUTE_REFRESH:
+			return 'Route Refresh'
+		return 'Cisco Route Refresh'
 
 	def extract (self):
 		return ['']
 
-class EnhancedRouteRefresh (object):
+	@staticmethod
+	def unpack (capability,instance,data):
+		# XXX: FIXME: we should set that that instance was seen and raise if seen twice
+		return instance
+
+RouteRefresh.register(CapabilityID.ROUTE_REFRESH)
+RouteRefresh.register(CapabilityID.CISCO_ROUTE_REFRESH)
+
+
+# ========================================================= EnhancedRouteRefresh
+#
+
+class EnhancedRouteRefresh (Capability):
+	ID = CapabilityID.ENHANCED_ROUTE_REFRESH
+
 	def __str__ (self):
 		return 'Enhanced Route Refresh'
 
 	def extract (self):
 		return ['']
+
+	@staticmethod
+	def unpack (capability,instance,data):
+		# XXX: FIXME: we should set that that instance was seen and raise if seen twice
+		return instance
+
+EnhancedRouteRefresh.register()

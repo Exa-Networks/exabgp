@@ -7,10 +7,17 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from struct import pack
+from exabgp.protocol.family import AFI,SAFI
+from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open.capability.id import CapabilityID
 
-# =================================================================== AddPath
 
-class AddPath (dict):
+# ====================================================================== AddPath
+#
+
+class AddPath (Capability,dict):
+	ID = CapabilityID.ADD_PATH
+
 	string = {
 		0 : 'disabled',
 		1 : 'receive',
@@ -34,3 +41,16 @@ class AddPath (dict):
 			if self[v]:
 				rs.append(v[0].pack() +v[1].pack() + pack('!B',self[v]))
 		return rs
+
+	@staticmethod
+	def unpack (capability,instance,data):
+		# XXX: FIXME: should check that we have not yet seen the capability
+		while data:
+			afi = AFI.unpack(data[:2])
+			safi = SAFI.unpack(data[2])
+			sr = ord(data[3])
+			instance.add_path(afi,safi,sr)
+			data = data[4:]
+		return instance
+
+AddPath.register()

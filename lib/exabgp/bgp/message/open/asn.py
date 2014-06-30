@@ -7,7 +7,7 @@ Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 """
 
 
-from struct import pack
+from struct import pack,unpack
 
 # =================================================================== ASN
 
@@ -21,6 +21,12 @@ class ASN (long):
 		if asn4:
 			return pack('!L',self)
 		return pack('!H',self)
+
+	@classmethod
+	def unpack (cls,data,klass=None):
+		klass = cls if klass is None else klass
+		asn4 = True if len(data) == 4 else False
+		return klass(unpack('!L' if asn4 else '!H',data)[0])
 
 	def __len__ (self):
 		if self.asn4():

@@ -99,10 +99,11 @@ class Notification (Message):
 		self.data = data
 
 	def __str__ (self):
-		return "%s / %s%s" % (
+		return "%s / %s%s%s" % (
 			self._str_code.get(self.code,'unknown error'),
 			self._str_subcode.get((self.code,self.subcode),'unknow reason'),
-			'%s' % (' / %s' % hexstring(self.data) if self.data else '')
+			'%s' % (' / %s' % hexstring(self.data) if self.data else ''),
+			'%s' % (' / %s' % self.data if self.data else '')
 		)
 
 	@classmethod

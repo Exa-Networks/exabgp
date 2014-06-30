@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2010-01-19.
 Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 """
 
-from struct import pack
+from struct import pack,unpack
 
 # =================================================================== AFI
 
@@ -39,6 +39,10 @@ class AFI (int):
 
 	def pack (self):
 		return pack('!H',self)
+
+	@staticmethod
+	def unpack (data):
+		return AFI(unpack('!H',data)[0])
 
 	@staticmethod
 	def value (name):
@@ -100,6 +104,10 @@ class SAFI (int):
 
 	def pack (self):
 		return chr(self)
+
+	@staticmethod
+	def unpack (data):
+		return SAFI(ord(data))
 
 	def has_label (self):
 		return self in (self.nlri_mpls,self.mpls_vpn)

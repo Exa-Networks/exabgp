@@ -6,14 +6,31 @@ Created by Thomas Mangin on 2012-07-17.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-# =================================================================== MultiSession
+from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open.capability.id import CapabilityID
 
-class MultiSession (list):
+
+# ================================================================= MultiSession
+#
+
+class MultiSession (Capability,list):
+	# ID defined by register / unpack
+
+	# XXX: FIXME: Looks like we could do with something in this Caoability
 	def __str__ (self):
-		return 'Multisession %s' % ' '.join([str(capa) for capa in self])
+		info = ' (RFC)' if self.ID == CapabilityID.MULTISESSION_BGP_RFC else ''
+		return 'Multisession%s %s' % (info,' '.join([str(capa) for capa in self]))
 
 	def extract (self):
 		rs = [chr(0),]
 		for v in self:
 			rs.append(chr(v))
 		return rs
+
+	@staticmethod
+	def unpack (capability,instance,data):
+		# XXX: FIXME: we should set that that instance was seen and raise if seen twice
+		return instance
+
+MultiSession.register(CapabilityID.MULTISESSION_BGP)
+MultiSession.register(CapabilityID.MULTISESSION_BGP_RFC)

@@ -6,6 +6,9 @@ Created by Thomas Mangin on 2012-07-17.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
+
+# ================================================================= CapabilityID
+
 class CapabilityID (object):
 	RESERVED                 = 0x00  # [RFC5492]
 	MULTIPROTOCOL_EXTENSIONS = 0x01  # [RFC2858]

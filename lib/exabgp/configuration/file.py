@@ -407,8 +407,8 @@ class Configuration (object):
 		self.neighbor = self._neighbor
 
 		if environment.settings().debug.route:
-			from exabgp.configuration.check import check_update
-			if check_update(self.neighbor,environment.settings().debug.route):
+			from exabgp.configuration.check import check_message
+			if check_message(self.neighbor,environment.settings().debug.route):
 				sys.exit(0)
 			sys.exit(1)
 
