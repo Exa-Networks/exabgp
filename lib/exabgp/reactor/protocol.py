@@ -207,9 +207,9 @@ class Protocol (object):
 			if self.peer.neighbor.operational:
 				operational = Operational.unpack(body)
 				if self.neighbor.api.consolidate:
-					self.peer.reactor.processes.operational(self.peer,operational.category,operational,header,body)
+					self.peer.reactor.processes.operational(self.peer,operational,header,body)
 				else:
-					self.peer.reactor.processes.operational(self.peer,operational.category,operational,'','')
+					self.peer.reactor.processes.operational(self.peer,operational,'','')
 			else:
 				operational = _OPERATIONAL
 			yield operational
