@@ -23,9 +23,10 @@ class Outgoing (Connection):
 			async(self.io,peer)
 			connect(self.io,peer,port,afi,md5)
 			self.init = True
-		except NetworkError:
+		except NetworkError,e:
 			self.init = False
 			self.close()
+			self.logger.wire("Connection failed, %s" % str(e))
 
 	def establish (self):
 		if not self.init:
