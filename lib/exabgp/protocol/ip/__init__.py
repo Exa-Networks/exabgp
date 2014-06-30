@@ -23,7 +23,7 @@ class IP (object):
 	_multicast_range = set(range(224,240))  # 239
 
 	def __init__ (self):
-		print "You should use IP.create() to use IP"
+		raise Exception("You should use IP.create() to use IP")
 
 	def init (self,ip,packed):
 		self.ip = ip
@@ -81,6 +81,8 @@ class IP (object):
 		return str(self)
 
 	def __cmp__ (self,other):
+		if not isinstance(other, self.__class__):
+			return -1
 		if self.packed == other.packed:
 			return 0
 		if self.packed < other.packed:
@@ -138,12 +140,12 @@ class IPv4 (IP):
 		return False
 
 	# klass is a trick for NextHop
-	@staticmethod
-	def unpack (data,klass=None):
+	@classmethod
+	def unpack (cls,data,klass=None):
 		ip = socket.inet_ntop(socket.AF_INET,data)
 		if klass:
 			return klass(ip,data)
-		return IPv4(ip,data)
+		return cls(ip,data)
 
 IPv4.register()
 
@@ -173,8 +175,8 @@ class IPv6 (IP):
 	def multicast (self):
 		return False
 
-	@staticmethod
-	def unpack (data):
-		return IPv6(socket.inet_ntop(socket.AF_INET6,data))
+	@classmethod
+	def unpack (cls,data):
+		return cls(socket.inet_ntop(socket.AF_INET6,data))
 
 IPv6.register()
