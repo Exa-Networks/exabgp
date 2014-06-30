@@ -163,20 +163,18 @@ def check_update (neighbor,update):
 
 			if kind == 2:
 				logger.parser('the message is an update')
-				factory = UpdateFactory
 				decoding = 'update'
 			else:
 				logger.parser('the message is not an update (%d) - aborting' % kind)
 				return False
 		else:
 			logger.parser('header missing, assuming this message is ONE update')
-			factory = UpdateFactory
 			decoding = 'update'
 			injected,raw = raw,''
 
 		try:
 			# This does not take the BGP header - let's assume we will not break that :)
-			update = factory(negotiated,injected)
+			update = Update.unpack(negotiated,injected)
 		except KeyboardInterrupt:
 			raise
 		except Notify,e:
