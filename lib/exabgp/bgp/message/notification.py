@@ -105,8 +105,9 @@ class Notification (Message):
 			'%s' % (' / %s' % hexstring(self.data) if self.data else '')
 		)
 
-def NotificationFactory (data):
-	return Notification(ord(data[0]),ord(data[1]),data[2:])
+	@classmethod
+	def unpack (cls,data):
+		return cls(ord(data[0]),ord(data[1]),data[2:])
 
 
 

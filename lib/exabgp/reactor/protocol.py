@@ -21,7 +21,7 @@ from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.eor import EOR
 from exabgp.bgp.message.keepalive import KeepAlive
-from exabgp.bgp.message.notification import NotificationFactory, Notification, Notify
+from exabgp.bgp.message.notification import Notification, Notify
 from exabgp.bgp.message.refresh import RouteRefresh,RouteRefreshFactory
 from exabgp.bgp.message.operational import Operational
 
@@ -185,7 +185,7 @@ class Protocol (object):
 
 		elif msg == Message.Type.NOTIFICATION:
 			self.logger.message(self.me('<< NOTIFICATION'))
-			yield NotificationFactory(body)
+			yield Notification.unpack(body)
 
 		elif msg == Message.Type.ROUTE_REFRESH:
 			if self.negotiated.refresh != REFRESH.absent:
