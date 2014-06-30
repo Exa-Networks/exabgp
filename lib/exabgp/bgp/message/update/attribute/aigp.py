@@ -65,7 +65,7 @@ class AIGP (Attribute):
 		return self.packed
 
 	def __str__ (self):
-		return str(self.aigp)
+		return '0x' + ''.join('%02x' % ord(_) for _ in self.aigp[-8:])
 
 	@classmethod
 	def unpack (cls,data):

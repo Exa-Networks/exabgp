@@ -1932,7 +1932,9 @@ class Configuration (object):
 
 	def _route_aigp (self,scope,tokens):
 		try:
-			scope[-1]['announce'][-1].attributes.add(AIGP('\x01\x00\x0b' + pack('!Q',int(tokens.pop(0)))))
+			number = tokens.pop(0)
+			base = 16 if number.lower().startswith('0x') else 10
+			scope[-1]['announce'][-1].attributes.add(AIGP('\x01\x00\x0b' + pack('!Q',int(number,base))))
 			return True
 		except (IndexError,ValueError):
 			self._error = self._str_route_error
