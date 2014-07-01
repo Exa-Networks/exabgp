@@ -1798,7 +1798,7 @@ class Configuration (object):
 
 			for (ID,klass) in Attributes.lookup.iteritems():
 				if code == ID and flag == klass.FLAG:
-					scope[-1]['announce'][-1].attributes.add(klass(raw))
+					scope[-1]['announce'][-1].attributes.add(klass.unpack(raw))
 					return True
 
 			scope[-1]['announce'][-1].attributes.add(UnknownAttribute(code,flag,raw))
@@ -1934,7 +1934,7 @@ class Configuration (object):
 
 	def _route_local_preference (self,scope,tokens):
 		try:
-			scope[-1]['announce'][-1].attributes.add(LocalPreference(pack('!L',int(tokens.pop(0)))))
+			scope[-1]['announce'][-1].attributes.add(LocalPreference(int(tokens.pop(0))))
 			return True
 		except (IndexError,ValueError):
 			self._error = self._str_route_error

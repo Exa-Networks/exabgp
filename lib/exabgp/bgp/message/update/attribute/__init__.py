@@ -231,7 +231,7 @@ class Attributes (dict):
 		default = {
 			AID.ORIGIN:     lambda l,r: Origin(Origin.IGP),
 			AID.AS_PATH:    lambda l,r: ASPath([],[]) if l == r else ASPath([local_asn,],[]),
-			AID.LOCAL_PREF: lambda l,r: LocalPreference('\x00\x00\x00d') if l == r else NOTHING,
+			AID.LOCAL_PREF: lambda l,r: LocalPreference(100) if l == r else NOTHING,
 		}
 
 		check = {
@@ -391,7 +391,7 @@ class Attributes (dict):
 
 		if code == AID.LOCAL_PREF and flag.matches(LocalPreference.FLAG):
 			if not self.add_from_cache(code,attribute):
-				self.add(LocalPreference(attribute),attribute)
+				self.add(LocalPreference.unpack(attribute),attribute)
 			return self.factory(next)
 
 		if code == AID.ATOMIC_AGGREGATE and flag.matches(AtomicAggregate.FLAG):
