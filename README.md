@@ -101,8 +101,8 @@ Python 2.6.7
 
 ### new on 3.2 stable ...
 
- * enhance route refresh support
- * Ful RFC 5575 support, can decode incoming Flow routes
+ * enhanced route refresh support
+ * Full RFC 5575 support, can decode incoming Flow routes
  * **An external program to announce a service** ( Thank you Vincent ! )
  * **accept incoming connections**
  * using "next-hop self" is supported via the API
@@ -134,5 +134,5 @@ Should you feel a need for commercial support in order to deploy ExaBGP in your 
 
 And some self promotion :
 
- * [ExaProxy](http://code.google.com/p/exaproxy) A non-caching HTTP proxy able to perform complex header manipulations
+ * [ExaProxy](https://github.com/Exa-Networks/exaproxy) A non-caching HTTP proxy able to perform complex header manipulations
 

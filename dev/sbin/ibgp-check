@@ -178,7 +178,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 					self.announce('expected announcement received (%s%s):' % (self.letter,self.step),announcement)
 				else:
 					if raw:
-						self.announce('\n','unexpected announcement (%s%s):' % (self.letter,self.step),'%s %s' % (bytestream(header),bytestream(body)))
+						self.announce('\n','unexpected announcement (%s%s):' % (self.letter,self.step),'%s:%s' % (bytestream(header),bytestream(body)))
 					else:
 						self.announce('\n','unexpected announcement:',announcement)
 
