@@ -9,12 +9,11 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 if __name__ == '__main__':
 	from exabgp.configuration.engine.reader import Reader
 	from exabgp.configuration.engine.tokeniser import Tokeniser
-
 	from exabgp.configuration.engine.registry import Registry
 
 	# required to register the callbacks
-	from exabgp.configuration.family import Family
-	from exabgp.configuration.capability import Capability
+	from exabgp.configuration.neighbor.family import Family
+	from exabgp.configuration.neighbor.capability import Capability
 	from exabgp.configuration.process import Process
 	# end required
 
