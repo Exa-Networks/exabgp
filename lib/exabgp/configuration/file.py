@@ -1452,7 +1452,7 @@ class Configuration (object):
 		address = tokens[0]
 		scope.append({})
 		try:
-			scope[-1]['peer-address'] = RouterID(address)
+			scope[-1]['peer-address'] = IP(address)
 		except (IndexError,ValueError,socket.error):
 			self._error = '"%s" is not a valid IP address' % address
 			if self.debug: raise
