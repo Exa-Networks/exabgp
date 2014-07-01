@@ -28,6 +28,7 @@ class IP (object):
 	def init (self,ip,packed):
 		self.ip = ip
 		self.packed = packed
+		return self
 
 	@staticmethod
 	def pton (ip):
