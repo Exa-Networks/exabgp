@@ -30,6 +30,14 @@ class Entry (object):
 		cls._handler.setdefault(key,{})[action] = getattr(cls,function)
 		print "%-35s %-7s %s.%-20s registered" % (key if key else 'root',action,cls.__name__,function)
 
+	def _drop_colon (self,tokeniser):
+		if tokeniser() != ';':
+			raise Raised('missing semi-colon')
+
+	def _drop_parenthesis (self,tokeniser):
+		if tokeniser() != '{':
+			raise Raised('missing semi-colon')
+
 
 class Registry (object):
 	def __init__ (self):
@@ -61,7 +69,7 @@ class Registry (object):
 
 			if token != '}':
 				# we need the line and position at this level
-				raise Exception('no enter or action code registered for %s ( token was %s )' % ('/'.join(self.stack),token))
+				raise Exception('no enter or action code registered for path /%s ( token was %s )' % ('/'.join(self.stack),token))
 
 			if run(self.stack,'exit',self.stack[:-1]):
 				self.stack.pop()
@@ -69,31 +77,3 @@ class Registry (object):
 
 			# we need the line and position at this level
 			raise Exception('no exit code registered for %s' % '/'.join(self.stack))
-
-
-class Data (object):
-	def boolean (self,tokeniser,default):
-		boolean = tokeniser()
-		if boolean == ';':
-			return default
-		if boolean in ('true','enable','enabled'):
-			value = True
-		elif boolean in ('false','disable','disabled'):
-			value = False
-		elif boolean in ('unset',):
-			value = None
-		else:
-			raise Exception("")
-
-		if tokeniser() != ';':
-			raise Exception("")
-
-		return value
-
-	def _drop_colon (self,tokeniser):
-		if tokeniser() != ';':
-			raise Raised('missing semi-colon')
-
-	def _drop_parenthesis (self,tokeniser):
-		if tokeniser() != '{':
-			raise Raised('missing semi-colon')

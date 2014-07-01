@@ -6,13 +6,14 @@ Created by Thomas Mangin on 2014-06-22.
 Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.engine.registry import Raised,Entry,Data
+from exabgp.configuration.engine.registry import Raised,Entry
+from exabgp.configuration.engine.parser import boolean
 
 from exabgp.bgp.message.open.capability.id import CapabilityID
 
 # from exabgp.protocol.family import AFI,SAFI,known_families
 
-class Capability (Entry,Data):
+class Capability (Entry):
 	syntax = \
 	'capability {\n' \
 	'   asn4 enable|disable;                         # default enabled\n' \
@@ -37,10 +38,12 @@ class Capability (Entry,Data):
 		pass
 
 	def asn4 (self,tokeniser):
-		self.content[CapabilityID.FOUR_BYTES_ASN] = self.boolean(tokeniser,True)
+		self.content[CapabilityID.FOUR_BYTES_ASN] = boolean(tokeniser,True)
+		self._drop_colon(tokeniser)
 
 	def aigp (self,tokeniser):
-		self.content[CapabilityID.AIGP] = self.boolean(tokeniser,False)
+		self.content[CapabilityID.AIGP] = boolean(tokeniser,False)
+		self._drop_colon(tokeniser)
 
 	def addpath (self,tokeniser):
 		ap = tokeniser()
@@ -54,13 +57,16 @@ class Capability (Entry,Data):
 		self._drop_colon(tokeniser)
 
 	def operational (self,tokeniser):
-		self.content[CapabilityID.OPERATIONAL] = self.boolean(tokeniser,False)
+		self.content[CapabilityID.OPERATIONAL] = boolean(tokeniser,False)
+		self._drop_colon(tokeniser)
 
 	def refresh (self,tokeniser):
-		self.content[CapabilityID.ROUTE_REFRESH] = self.boolean(tokeniser,False)
+		self.content[CapabilityID.ROUTE_REFRESH] = boolean(tokeniser,False)
+		self._drop_colon(tokeniser)
 
 	def multisession (self,tokeniser):
-		self.content[CapabilityID.MULTISESSION_BGP] = self.boolean(tokeniser,False)
+		self.content[CapabilityID.MULTISESSION_BGP] = boolean(tokeniser,False)
+		self._drop_colon(tokeniser)
 
 	def graceful (self,tokeniser):
 		token = tokeniser()

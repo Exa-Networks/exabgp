@@ -6,13 +6,13 @@ Created by Thomas Mangin on 2014-06-22.
 Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.engine.registry import Raised,Entry,Data
+from exabgp.configuration.engine.registry import Raised,Entry
 
 from exabgp.protocol.family import AFI,SAFI
 
 # from exabgp.protocol.family import AFI,SAFI,known_families
 
-class Family (Entry,Data):
+class Family (Entry):
 	syntax = \
 		'family {\n' \
 		'#  all;		# default, announce all the families we know\n' \

@@ -6,14 +6,14 @@ Created by Thomas Mangin on 2014-06-22.
 Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.engine.registry import Raised,Entry,Data
+from exabgp.configuration.engine.registry import Raised,Entry
 
 import os
 import sys
 import stat
 
 
-class Process (Entry,Data):
+class Process (Entry):
 	syntax = \
 	'process <name> {\n' \
 	'   run </path/to/command with its args>;  # the command can be quoted\n' \

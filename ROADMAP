@@ -6,6 +6,8 @@ Important
 
 ROADMAP
 
+Change the Community to unpack and get rid of cachedCommunity
+
 In no particular order:
 - provide an helper program able to read MRT dumps and announce them too.
 - provide easy integration with http://www.spamhaus.org/bgpf/ and http://www.spamhaus.org/drop/
