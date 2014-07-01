@@ -155,11 +155,11 @@ class Configuration (object):
 	_str_vpls_error = \
 	'syntax:\n' \
 	'vpls site_name {\n' \
-	'   endpoint <vpls endpoint id; interger>' \
-	'   base <label base; integer>' \
-	'   offset <block offet; interger>' \
-	'   size <blocl size; integer>' \
-	'   route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535' \
+	'   endpoint <vpls endpoint id; integer>\n' \
+	'   base <label base; integer>\n' \
+	'   offset <block offet; interger>\n' \
+	'   size <block size; integer>\n' \
+	'   route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535\n' \
 	'   next-hop 192.0.1.254;\n' \
 	'   origin IGP|EGP|INCOMPLETE;\n' \
 	'   as-path [ as as as as] ;\n' \
@@ -170,26 +170,7 @@ class Configuration (object):
 	'   originator-id 10.0.0.10;\n' \
 	'   cluster-list [ 10.10.0.1 10.10.0.2 ];\n' \
 	'   withdraw\n' \
-	'}\n' \
-	'\n' \
-	'syntax:\n' \
-	'vpls' \
-	' endpoint <vpls endpoint id; interger>' \
-	' offset <interger>' \
-	' size <integer>' \
-	' base <integer>' \
-	' route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535' \
-	' next-hop 192.0.1.254' \
-	' origin IGP|EGP|INCOMPLETE' \
-	' as-path [ as as as as]' \
-	' med 100' \
-	' local-preference 100' \
-	' community [ 65000 65001 65002 ]' \
-	' extended-community [ target:1234:5.6.7.8 target:1.2.3.4:5678 origin:1234:5.6.7.8 origin:1.2.3.4:5678 0x0002FDE800000001 l2info:19:0:1500:111 ]' \
-	' originator-id 10.0.0.10' \
-	' cluster-list [ 10.10.0.1 10.10.0.2 ]' \
-	' withdraw' \
-	'\n'
+	'}\n'
 
 	_str_flow_error = \
 	'syntax:\n' \
