@@ -7,9 +7,9 @@ Copyright (c) 2014-2014 Orange. All rights reserved.
 Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
-import socket
 from struct import pack,unpack
 
+from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute import Flag
@@ -147,14 +147,14 @@ class PMSIIngressReplication (PMSI):
 
 	def __init__ (self,ip,label=0,flags=0,tunnel=None):
 		self.ip = ip
-		PMSI.__init__(self,tunnel if tunnel else socket.inet_pton(socket.AF_INET,self.ip),label,flags)
+		PMSI.__init__(self,tunnel if tunnel else IPv4.pton(ip),label,flags)
 
 	def prettytunnel (self):
 		return self.ip
 
 	@classmethod
 	def unpack (cls,tunnel,label,flags):
-		ip = socket.inet_ntop(socket.AF_INET,tunnel)
+		ip = IPv4.ntop(tunnel)
 		return cls(ip,label,flags,tunnel)
 
 PMSIIngressReplication.register()

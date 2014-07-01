@@ -148,6 +148,7 @@ TrafficNextHop.register()
 # If we need to provide the <IP>:<ASN> form for the FlowSpec Redirect ...
 
 # import socket
+# Do not use socket, use IPv4.ntop or pton
 
 # TrafficRedirectASN = TrafficRedirect
 

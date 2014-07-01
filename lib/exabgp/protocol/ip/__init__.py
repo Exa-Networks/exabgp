@@ -139,6 +139,14 @@ class IPv4 (IP):
 	def ipv6 (self):
 		return False
 
+	@staticmethod
+	def pton (ip):
+		return socket.inet_pton(socket.AF_INET,ip)
+
+	@staticmethod
+	def ntop (data):
+		return socket.inet_ntop(socket.AF_INET,data)
+
 	# klass is a trick for NextHop
 	@classmethod
 	def unpack (cls,data,klass=None):
@@ -174,6 +182,15 @@ class IPv6 (IP):
 
 	def multicast (self):
 		return False
+
+	@staticmethod
+	def pton (ip):
+		return socket.inet_pton(socket.AF_INET6,ip)
+
+	@staticmethod
+	def ntop (data):
+		return socket.inet_ntop(socket.AF_INET6,data)
+
 
 	@classmethod
 	def unpack (cls,data):

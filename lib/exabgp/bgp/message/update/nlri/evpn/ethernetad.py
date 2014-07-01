@@ -5,7 +5,6 @@ Created by Thomas Mangin on 2014-06-27.
 Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
-# import socket
 # from struct import pack,unpack
 
 # from exabgp.protocol.family import AFI,SAFI

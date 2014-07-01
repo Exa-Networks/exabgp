@@ -1,24 +1,13 @@
-ahis is an informal roadmap - no promise, just here to remind me what I want to do
+this is an informal roadmap - no promise, just here to remind me what I want to do without going to github
+
+Important
+* write the documentation, and do not rely on the example and the site wiki (argh ...)
+* look ai all the XXX: and XXX: FIXME: in the code
 
 ROADMAP
 
-Remove .packed for Inet and all its subclass as we now had addpath getting in the way.
-
-Make sure all the attributes stored data is prepended with the attribute headers
-Implement ASPATH unpack
-Implement MP_*REACH unpack
-Make sure all attributes have __cmp__ and __hash__ functions
-Check peer_address as it is now a class - may need an __hash__ function ?
-Check the .nexthop in VPLS .. why do have one parse there again ? Most likely right but better safe ...
-Where we import socket we should import IP
-when we raise Exception, most of the time we want to raise Notify - update
-Make sure we RuntimeError if we are double register()ing 
-
 In no particular order:
-- Following the integration of Orange's code, we now have an unpack() API to create object, we should generalise its use
 - provide an helper program able to read MRT dumps and announce them too.
-- route refresh
-- operational draft support
 - provide easy integration with http://www.spamhaus.org/bgpf/ and http://www.spamhaus.org/drop/
 - let the forked process indicate when it has finished and do not kill it before then
 - split the neighborg api message sent from the forked process
@@ -30,17 +19,27 @@ In no particular order:
 - NotificationID
 - on unhandled exception, stop all the workers
 - look at tox http://tox.testrun.org/latest/
-- have a compiled configuration format with no parsing of route but raw data ?
+- have a intermediary compiled configuration format with no parsing of route but raw data ?
 - need to check if we can prevent the duplication of the peer routes (which are already defined in the neighbor)
 - peer.reload should it be called peer.route_update (just have a guard to prevent route update when reloading the configuration)
 - do we need to have a guard to prevent route update when reloading the configuration
-- Prefix.__init__ can raise ValueError make sure it is well handled
 - cache generated nlri and attributes (with and without asn4)
 - change all announcement like announce in Update to be function and not class method (and change name .:p)
-- move logic code in read_message into peer main loop
 - detect duplicate logging lines and just announce the number of repeat
 - in neighbor store all the message in a dict and not rib, operation and route-refresh
+- make sure all the attributes stored data is prepended with the attribute headers
+- implement ASPATH unpack
+- implement MP_*REACH unpack
+- make sure all attributes have __cmp__ and __hash__ functions
+- check peer_address as it is now a class - may need an __hash__ function ?
+- check the .nexthop in VPLS .. why do have one parse there again ? Most likely right but better safe ...
+- when we raise Exception, most of the time we want to raise Notify - update
+- make sure we RuntimeError if we are double register()ing a class
+- the TLV code in AIGP should be updated and used for Capabilities 
+- use an enum/list for the state machine and increment it.
+- have a default med for the neighbor and have this default pass to routes when being announced
+- use our corouting helper function to make the network code easier to read
+- add explicit validation function for every type to call within unpack() and when creating the data, using decorator to check what goes out ?
+- look at using one thread per peer (as with PYPY STM we may hope for better perf ?)
+- improve networking code to be easier to follow, and using outside reactor
 
-Important
-* write the documentation, and do not rely on the example and the site wiki (argh ...)
-* look ai all the XXX: and XXX: FIXME: in the code

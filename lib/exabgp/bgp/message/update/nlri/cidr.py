@@ -7,7 +7,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 import math
-import socket
+from exabgp.protocol.ip import IP
 
 class CIDR (object):
 	_mask_to_bytes = {}
@@ -28,7 +28,7 @@ class CIDR (object):
 	@property
 	def ip (self):
 		if not self._ip:
-			self._ip = socket.inet_ntop(socket.AF_INET if len(self.packed) == 4 else socket.AF_INET6,self.packed)
+			self._ip = IP.ntop(self.packed)
 		return self._ip
 
 	def __str__ (self):

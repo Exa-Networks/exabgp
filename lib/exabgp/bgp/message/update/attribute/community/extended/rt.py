@@ -8,9 +8,9 @@ Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
 
-import socket
 from struct import pack,unpack
 
+from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
@@ -40,7 +40,7 @@ class RouteTargetASNIP (RouteTarget):
 	def __init__ (self,asn,ip,transitive,community=None):
 		self.asn = asn
 		self.ip = ip
-		RouteTargetASNIP.__init__(community if community else pack('!BBH4s',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,asn,socket.inet_pton(socket.AF_INET,ip)))
+		RouteTargetASNIP.__init__(community if community else pack('!BBH4s',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,asn,IPv4.pton(ip)))
 
 	def __str__ (self):
 		return "target:%s:%d" % (self.asn,self.ip)
@@ -48,7 +48,7 @@ class RouteTargetASNIP (RouteTarget):
 	@staticmethod
 	def unpack(data):
 		asn,ip = unpack('!H4s',data[2:8])
-		return RouteTargetASNIP(ASN(asn),socket.inet_ntop(socket.AF_INET,ip),False,data[:8])
+		return RouteTargetASNIP(ASN(asn),IPv4.ntop(ip),False,data[:8])
 
 RouteTargetASNIP.register()
 
@@ -63,7 +63,7 @@ class RouteTargetIPASN (RouteTarget):
 	def __init__ (self,asn,ip,transitive,community=None):
 		self.ip = ip
 		self.asn = asn
-		RouteTargetIPASN.__init__(community if community else pack('!BB4sH',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,socket.inet_pton(socket.AF_INET,ip),asn))
+		RouteTargetIPASN.__init__(community if community else pack('!BB4sH',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,IPv4.pton(ip),asn))
 
 	def __str__ (self):
 		return "target:%s:%d" % (self.ip, self.asn)
@@ -71,7 +71,7 @@ class RouteTargetIPASN (RouteTarget):
 	@staticmethod
 	def unpack (data):
 		ip,asn = unpack('!4sH',data[2:8])
-		return RouteTargetIPASN(socket.inet_ntop(socket.AF_INET,ip),ASN(asn),False,data[:8])
+		return RouteTargetIPASN(IPv4.ntop(ip),ASN(asn),False,data[:8])
 
 RouteTargetIPASN.register()
 
