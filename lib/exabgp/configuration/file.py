@@ -1914,7 +1914,7 @@ class Configuration (object):
 
 	def _route_med (self,scope,tokens):
 		try:
-			scope[-1]['announce'][-1].attributes.add(MED(pack('!L',int(tokens.pop(0)))))
+			scope[-1]['announce'][-1].attributes.add(MED(int(tokens.pop(0))))
 			return True
 		except (IndexError,ValueError):
 			self._error = self._str_route_error

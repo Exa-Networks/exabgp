@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from struct import unpack
+from struct import pack,unpack
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute import Flag,Attribute
@@ -18,18 +18,18 @@ class MED (Attribute):
 	FLAG = Flag.OPTIONAL
 	MULTIPLE = False
 
-	def __init__ (self,med):
-		self.med = self._attribute(med)
-		self._str = str(unpack('!L',med)[0])
+	def __init__ (self,med,packed=None):
+		self.med = med
+		self.packed = self._attribute(packed if packed is not None else pack('!L',med))
 
 	def pack (self,asn4=None):
-		return self.med
+		return self.packed
 
 	def __len__ (self):
 		return 4
 
 	def __str__ (self):
-		return self._str
+		return str(self.med)
 
 	def __cmp__(self,other):
 		if not isinstance(other,self.__class__):
@@ -43,4 +43,4 @@ class MED (Attribute):
 
 	@classmethod
 	def unpack (cls,data):
-		return cls(data)
+		return cls(unpack('!L',data)[0])
