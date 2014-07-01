@@ -408,7 +408,7 @@ class Attributes (dict):
 
 		if code == AID.AS4_AGGREGATOR and flag.matches(Aggregator.FLAG):
 			if not self.add_from_cache(AID.AGGREGATOR,attribute):
-				self.add(Aggregator(attribute),attribute)
+				self.add(Aggregator.unpack(attribute),attribute)
 			return self.factory(next)
 
 		if code == AID.COMMUNITY and flag.matches(Communities.FLAG):
