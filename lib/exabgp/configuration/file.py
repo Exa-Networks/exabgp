@@ -794,7 +794,7 @@ class Configuration (object):
 		if name in ('neighbor','group'):
 			if command == 'description': return self._set_description(scope,tokens[1:])
 			if command == 'router-id': return self._set_router_id(scope,'router-id',tokens[1:])
-			if command == 'local-address': return self._set_router_id(scope,'local-address',tokens[1:])
+			if command == 'local-address': return self._set_ip(scope,'local-address',tokens[1:])
 			if command == 'local-as': return self._set_asn(scope,'local-as',tokens[1:])
 			if command == 'peer-as': return self._set_asn(scope,'peer-as',tokens[1:])
 			if command == 'passive': return self._set_passive(scope,'passive',tokens[1:])
@@ -1479,6 +1479,16 @@ class Configuration (object):
 	def _set_router_id (self,scope,command,value):
 		try:
 			ip = RouterID(value[0])
+		except (IndexError,ValueError):
+			self._error = '"%s" is an invalid IP address' % ' '.join(value)
+			if self.debug: raise
+			return False
+		scope[-1][command] = ip
+		return True
+
+	def _set_ip (self,scope,command,value):
+		try:
+			ip = IP.create(value[0])
 		except (IndexError,ValueError):
 			self._error = '"%s" is an invalid IP address' % ' '.join(value)
 			if self.debug: raise
