@@ -268,7 +268,8 @@ The program configuration can be controlled using signals:
 		},
 		'api' : {
 			'encoder'  :  (environment.api,environment.lower,'text', '(experimental) default encoder to use with with external API (text or json)'),
-			'highres'  :  (environment.boolean,environment.lower,'false','should we use highres timer in JSON')
+			'highres'  :  (environment.boolean,environment.lower,'false','should we use highres timer in JSON'),
+			'respawn'  :  (environment.boolean,environment.lower,'false','should we respawn a helper process if it dies'),
 		},
 		'reactor' : {
 			'speed' : (environment.real,environment.nop,'1.0', 'time of one reactor loop\n'

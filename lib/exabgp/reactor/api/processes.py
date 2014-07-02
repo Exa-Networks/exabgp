@@ -52,7 +52,11 @@ class Processes (object):
 
 	def _terminate (self,process):
 		self.logger.processes("Terminating process %s" % process)
-		self._process[process].terminate()
+		try:
+			self._process[process].terminate()
+		except OSError:
+			# the process is most likely already dead
+			pass
 		self._process[process].wait()
 		del self._process[process]
 
@@ -151,6 +155,10 @@ class Processes (object):
 		for process in list(self._process):
 			try:
 				proc = self._process[process]
+				# proc.poll returns None if the process is still fine
+				# -[signal], like -15, if the process was terminated
+				if proc.poll() is not None and self.reactor.respawn:
+					raise ValueError('child died')
 				r,_,_ = select.select([proc.stdout,],[],[],0)
 				if r:
 					try:
