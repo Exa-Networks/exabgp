@@ -25,9 +25,11 @@ def string (tokeniser):
 	return tokeniser()
 
 def boolean (tokeniser,default):
-	boolean = tokeniser()
-	if boolean == ';':
+	value = tokeniser()
+	if value == ';':
+		tokeniser.rewind(value)
 		return default
+	boolean = value.lower()
 	if boolean in ('true','enable','enabled'):
 		value = True
 	elif boolean in ('false','disable','disabled'):

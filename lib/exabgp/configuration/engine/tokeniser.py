@@ -115,12 +115,12 @@ class Tokeniser (object):
 						return l
 					elif token[0] in ('"',"'"):
 						return unescape(token[1:-1])
-					elif token == 'true':
-						return True
-					elif token == 'false':
-						return False
-					elif token == 'null':
-						return None
+					# elif token == 'true':
+					# 	return True
+					# elif token == 'false':
+					# 	return False
+					# elif token == 'null':
+					# 	return None
 					else:
 						return token
 			except ValueError:

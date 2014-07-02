@@ -11,6 +11,7 @@ Version 3.4.0
  * Feature: support for L2VPN (experimental)
     patch from: Nikita V. Shirokov
  * Improvement: better handling of NOTIFICATION received during OPEN negotiation
+ * Improvement: ExaBGP can restart failed helper process
  * Fix: Do not reconnect too fast when connection fails
     reported by: Robert Barnes
  * Fix: Invalid JSON object for route-refresh

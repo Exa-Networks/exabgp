@@ -7,6 +7,7 @@ Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
 from exabgp.configuration.engine.registry import Raised,Entry
+from exabgp.configuration.engine.parser import boolean
 
 import os
 import sys
@@ -63,6 +64,10 @@ class Process (Entry):
 		if token not in ('text','json'):
 			raise Raised('invalid encoder')
 		self.content['encoder'] = token
+		self._drop_colon(tokeniser)
+
+	def respawn (self,tokeniser):
+		self.content['respawn'] = boolean(tokeniser,False)
 		self._drop_colon(tokeniser)
 
 	def run (self,tokeniser):
@@ -196,6 +201,7 @@ class Process (Entry):
 
 		cls.register_hook('action',location+['run'],'run')
 		cls.register_hook('action',location+['encoder'],'encoder')
+		cls.register_hook('action',location+['respawn'],'respawn')
 
 		cls.register_hook('enter',location+['receive'],'enter')
 
