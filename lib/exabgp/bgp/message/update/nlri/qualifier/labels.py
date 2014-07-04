@@ -14,6 +14,8 @@ from struct import pack,unpack
 class Labels (object):
 	MAX = pow(2,20)-1
 
+	__slots__ = ['labels','packed','_len']
+
 	def __init__ (self,labels,bos=True):
 		self.labels = labels
 		packed = []

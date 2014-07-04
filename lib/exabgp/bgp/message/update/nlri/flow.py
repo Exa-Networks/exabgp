@@ -6,6 +6,9 @@ Created by Thomas Mangin on 2010-01-14.
 Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 """
 
+# Do not use __slots__ here, we never create enough of them to be worth it
+# And it really break complex inheritance
+
 from struct import pack,unpack
 
 from exabgp.protocol.ip import IP

@@ -22,6 +22,8 @@ class IP (object):
 
 	_multicast_range = set(range(224,240))  # 239
 
+	__slots__ = ['ip','packed']
+
 	def __init__ (self):
 		raise Exception("You should use IP.create() to use IP")
 
@@ -122,6 +124,8 @@ class IPv4 (IP):
 	# lower case to match the class Address API
 	afi = AFI.ipv4
 
+	__slots__ = []
+
 	def __init__ (self,ip,packed=None):
 		self.init(ip,packed if packed else socket.inet_pton(socket.AF_INET,ip))
 
@@ -165,6 +169,8 @@ IPv4.register()
 class IPv6 (IP):
 	# lower case to match the class Address API
 	afi = AFI.ipv6
+
+	__slots__ = []
 
 	def __init__ (self,ip,packed=None):
 		self.init(ip,packed if packed else socket.inet_pton(socket.AF_INET6,ip))

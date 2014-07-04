@@ -19,6 +19,8 @@ class Aggregator (Attribute):
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
 	MULTIPLE = False
 
+	__slots__ = ['asn','speaker','_str']
+
 	def __init__ (self,asn,speaker):
 		self.asn = asn
 		self.speaker = speaker

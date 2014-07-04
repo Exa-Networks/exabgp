@@ -27,6 +27,8 @@ class Community (object):
 	cache = {}
 	caching = False
 
+	__slots__ = ['community','_str']
+
 	def __init__ (self,community):
 		self.community = community
 		if community == self.NO_EXPORT:

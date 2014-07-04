@@ -15,7 +15,9 @@ from exabgp.protocol.ip.address import Address
 
 
 class RouteTargetConstraint(Address):
-	# TODO: no support yet for RTC variable length with prefixing
+	# XXX: FIXME: no support yet for RTC variable length with prefixing
+
+	__slots__ = ['origin','rt']
 
 	def __init__(self,afi,safi,origin,rt):
 		Address.__init__(self,afi,safi)

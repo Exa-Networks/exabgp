@@ -10,6 +10,9 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 # RFC draft-ietf-idr-add-paths-09
 
 class PathInfo (object):
+
+	__slots__ = ['path_info']
+
 	def __init__ (self,integer=None,ip=None,packed=None):
 		if packed:
 			self.path_info = packed

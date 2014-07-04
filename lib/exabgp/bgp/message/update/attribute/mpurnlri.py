@@ -16,6 +16,8 @@ class MPURNLRI (Attribute):
 	ID = AttributeID.MP_UNREACH_NLRI
 	MULTIPLE = True
 
+	__slots__ = ['nlris']
+
 	def __init__ (self,nlris):
 		self.nlris = nlris
 

@@ -24,6 +24,9 @@ def _unique ():
 unique = _unique()
 
 class VPLS (NLRI):
+
+	__slots__ = ['action','nexthop','rd','base','offset','size','ve','unique']
+
 	def __init__ (self,rd,ve,base,offset,size):
 		NLRI.__init__(self,AFI.l2vpn,SAFI.vpls)
 		self.action = OUT.announce

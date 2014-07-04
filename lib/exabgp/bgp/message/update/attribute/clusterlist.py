@@ -22,6 +22,8 @@ class ClusterList (Attribute):
 	FLAG = Flag.OPTIONAL
 	MULTIPLE = False
 
+	__slots__ = ['clusters','packed','_len']
+
 	def __init__ (self,clusters,packed=None):
 		self.clusters = clusters
 		self.packed = self._attribute(packed if packed else ''.join([_.pack() for _ in clusters]))

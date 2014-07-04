@@ -37,6 +37,8 @@ class RouteTargetASNIP (RouteTarget):
 	COMMUNITY_TYPE = 0x00
 	LIMIT = 4
 
+	__slots__ = ['asn','ip']
+
 	def __init__ (self,asn,ip,transitive,community=None):
 		self.asn = asn
 		self.ip = ip
@@ -60,6 +62,8 @@ class RouteTargetIPASN (RouteTarget):
 	COMMUNITY_TYPE = 0x01
 	LIMIT = 6
 
+	__slots__ = ['asn','ip']
+
 	def __init__ (self,asn,ip,transitive,community=None):
 		self.ip = ip
 		self.asn = asn
@@ -82,6 +86,8 @@ RouteTargetIPASN.register()
 class RouteTargetASN4Number (RouteTarget):
 	COMMUNITY_TYPE = 0x02
 	LIMIT=6
+
+	__slots__ = ['asn','ip']
 
 	def __init__ (self,asn,number,transitive,community=None):
 		self.asn = asn

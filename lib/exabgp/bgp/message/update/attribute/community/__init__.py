@@ -17,6 +17,8 @@ class Communities (Attribute):
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
 	MULTIPLE = False
 
+	__slots__ = ['communities']
+
 	def __init__ (self,communities=None):
 		# Must be None as = param is only evaluated once
 		if communities:

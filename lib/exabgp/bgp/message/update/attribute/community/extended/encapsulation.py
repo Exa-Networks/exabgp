@@ -36,6 +36,8 @@ class Encapsulation (ExtendedCommunity):
 		Type.IPIP     : "IP-in-IP",
 	}
 
+	__slots__ = ['tunnel_type']
+
 	def __init__ (self,tunnel_type,community=None):
 		self.tunnel_type = tunnel_type
 		ExtendedCommunity.__init__(self,community if community is not None else pack("!BBLH",0x03,0x0C,0,self.tunnel_type))

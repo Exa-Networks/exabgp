@@ -8,9 +8,12 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from exabgp.protocol.family import AFI,SAFI
 
-## =================================================================== Address
+# ====================================================================== Address
+#
 
 class Address (object):
+	__slots__ = ['afi','safi']
+
 	def __init__ (self,afi,safi):
 		self.afi = AFI(afi)
 		self.safi = SAFI(safi)

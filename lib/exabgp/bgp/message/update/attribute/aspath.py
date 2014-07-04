@@ -22,6 +22,8 @@ class ASPath (Attribute):
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 
+	__slots__ = ['as_seq','as_set','segments','packed','index','_str','_json']
+
 	def __init__ (self,as_sequence,as_set,index=None):
 		self.as_seq = as_sequence
 		self.as_set = as_set

@@ -7,6 +7,8 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 class AttributeID (int):
+	__slots__ = []
+
 	# This should move within the classes and not be here
 	# RFC 4271
 	ORIGIN             = 0x01

@@ -13,6 +13,8 @@ from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 
 class Prefix (CIDR,NLRI):
+	__slots__ = ['path_info','nexthop','action']
+
 	def __init__ (self,afi,safi,packed,mask,nexthop,action,path=None):
 		self.path_info = PathInfo.NOPATH if path is None else path
 		self.nexthop = nexthop

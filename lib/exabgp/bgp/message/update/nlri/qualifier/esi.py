@@ -15,6 +15,8 @@ class ESI (object):
 	DEFAULT = ''.join(chr(0) for _ in range(0,10))
 	MAX = ''.join(chr(0xFF) for _ in range(0,10))
 
+	__slots__ = ['esi']
+
 	def __init__ (self,bytes=None):
 		self.esi = self.DEFAULT if bytes is None else bytes
 

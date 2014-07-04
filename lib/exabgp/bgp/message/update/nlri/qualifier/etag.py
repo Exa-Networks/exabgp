@@ -15,6 +15,8 @@ from struct import pack,unpack
 class EthernetTag (object):
 	MAX = pow(2,32)-1
 
+	__slots__ = ['tag']
+
 	def __init__ (self,tag=0):
 		self.tag=tag
 

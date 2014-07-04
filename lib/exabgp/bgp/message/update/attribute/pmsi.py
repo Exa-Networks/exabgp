@@ -50,9 +50,7 @@ class PMSI (Attribute):
 		7 : 'mLDP MP2MP LSP',
 	}
 
-	@classmethod
-	def register (klass):
-		klass._known[klass.TUNNEL_TYPE] = klass
+	__slots__ = ['label','flags','tunnel']
 
 	def __init__ (self,tunnel,label,flags):
 		self.label = label    # integer
@@ -103,6 +101,10 @@ class PMSI (Attribute):
 			str(self.label) if self.label else '-',  # what noy use zero (0) ?
 			self.prettytunnel()
 		)
+
+	@classmethod
+	def register (klass):
+		klass._known[klass.TUNNEL_TYPE] = klass
 
 	@staticmethod
 	def unknown (subtype,tunnel,label,flags):

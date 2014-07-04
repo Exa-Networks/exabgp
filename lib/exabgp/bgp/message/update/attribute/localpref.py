@@ -18,6 +18,8 @@ class LocalPreference (Attribute):
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 
+	__slots__ = ['localpref','packed']
+
 	def __init__ (self,localpref,packed=None):
 		self.localpref = localpref
 		self.packed = self._attribute(packed if packed is not None else pack('!L',localpref))

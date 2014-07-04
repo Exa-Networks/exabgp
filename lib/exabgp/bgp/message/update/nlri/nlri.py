@@ -20,6 +20,8 @@ from exabgp.logger import Logger,LazyFormat
 
 
 class NLRI (Address):
+	__slots__ = []
+
 	_known = dict()
 	logger = None
 

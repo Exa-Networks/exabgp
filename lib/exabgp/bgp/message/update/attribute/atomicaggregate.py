@@ -16,6 +16,8 @@ class AtomicAggregate (Attribute):
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 
+	__slots__ = []
+
 	def pack (self,asn4=None):
 		return self._attribute('')
 

@@ -19,6 +19,8 @@ class TrafficRate (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x80
 	COMMUNITY_SUBTYPE = 0x06
 
+	__slots__ = ['asn','rate']
+
 	def __init__ (self,asn,rate,community=None):
 		self.asn = asn
 		self.rate = rate
@@ -52,6 +54,8 @@ class TrafficAction (ExtendedCommunity):
 		True  : 0x1,
 	}
 
+	__slots__ = ['sample','terminal']
+
 	def __init__ (self,sample,terminal,community=None):
 		self.sample = sample
 		self.terminal = terminal
@@ -81,6 +85,8 @@ class TrafficRedirect (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x80
 	COMMUNITY_SUBTYPE = 0x08
 
+	__slots__ = ['asn','target']
+
 	def __init__ (self,asn,target,community=None):
 		self.asn = asn
 		self.target = target
@@ -103,6 +109,8 @@ TrafficRedirect.register()
 class TrafficMark (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x80
 	COMMUNITY_SUBTYPE = 0x09
+
+	__slots__ = ['dscp']
 
 	def __init__ (self,dscp,community=None):
 		self.dscp = dscp
@@ -127,6 +135,8 @@ TrafficMark.register()
 class TrafficNextHop (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x80
 	COMMUNITY_SUBTYPE = 0x00
+
+	__slots__ = ['copy']
 
 	def __init__ (self,copy,community=None):
 		self.copy = copy

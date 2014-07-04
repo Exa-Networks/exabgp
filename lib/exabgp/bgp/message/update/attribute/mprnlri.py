@@ -16,10 +16,11 @@ class MPRNLRI (Attribute):
 	ID = AttributeID.MP_REACH_NLRI
 	MULTIPLE = True
 
+	__slots__ = ['nlris']
+
 	def __init__ (self,nlris):
 		# all the routes must have the same next-hop
 		self.nlris = nlris
-
 
 	def packed_attributes (self,addpath):
 		if not self.nlris:

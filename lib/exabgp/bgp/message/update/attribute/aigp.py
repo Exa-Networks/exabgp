@@ -26,11 +26,15 @@ from exabgp.bgp.message.update.attribute import Flag,Attribute
 # including the type and length fields.
 
 class TLV (object):
+	__slots__ = ['type','value']
+
 	def __init__(self,type,value):
 		self.type = type
 		self.value = value
 
 class TLVS (list):
+	__slots__ = []
+
 	@staticmethod
 	def unpack (data):
 		def loop (data):
@@ -53,6 +57,8 @@ class AIGP (Attribute):
 	FLAG = Flag.OPTIONAL
 	MULTIPLE = False
 	TYPES = [1,]
+
+	__slots__ = ['aigp','packed']
 
 	def __init__ (self,aigp,packed=None):
 		self.aigp = aigp

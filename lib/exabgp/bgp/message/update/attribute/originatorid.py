@@ -18,5 +18,7 @@ class OriginatorID (Attribute,IPv4):
 	FLAG = Flag.OPTIONAL
 	MULTIPLE = False
 
+	__slots__ = []
+
 	def pack (self,asn4=None):
 		return self._attribute(self.packed)

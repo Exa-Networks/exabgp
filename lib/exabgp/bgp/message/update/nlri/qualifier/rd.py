@@ -12,6 +12,9 @@ from struct import unpack
 # RFC 4364
 
 class RouteDistinguisher (object):
+
+	__slots__ = ['rd','_len']
+
 	def __init__ (self,rd):
 		self.rd = rd
 		self._len = len(self.rd)

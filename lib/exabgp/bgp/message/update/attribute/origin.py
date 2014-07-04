@@ -20,6 +20,8 @@ class Origin (Attribute):
 	EGP        = 0x01
 	INCOMPLETE = 0x02
 
+	__slots__ = ['origin','packed']
+
 	def __init__ (self,origin,packed=None):
 		self.origin = origin
 		self.packed = self._attribute(packed if packed else chr(origin))

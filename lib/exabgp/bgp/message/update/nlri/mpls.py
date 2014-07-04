@@ -19,6 +19,8 @@ from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 # RFC ....
 
 class MPLS (NLRI,CIDR):
+	__slots__ = ['labels','rd','nexthop','action']
+
 	def __init__(self,afi,safi,packed,mask,nexthop,action):
 		self.labels = Labels.NOLABEL
 		self.rd = RouteDistinguisher.NORD

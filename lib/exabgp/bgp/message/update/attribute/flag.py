@@ -14,6 +14,8 @@ class Flag (int):
 	TRANSITIVE      = 0x40  # .  64
 	OPTIONAL        = 0x80  # . 128
 
+	__slots__ = []
+
 	def __str__ (self):
 		r = []
 		v = int(self)
