@@ -14,7 +14,7 @@ class Change (object):
 		self.attributes = attributes
 
 	def index (self):
-		return self.nlri.index()
+		return '%02x%02x' % self.nlri.family() + self.nlri.index()
 
 	def __eq__ (self,other):
 		return self.nlri == other.nlri and self.attributes == other.attributes

@@ -90,9 +90,9 @@ class Store (object):
 		withdraw = change.attributes.withdraw()
 		if watchdog:
 			if withdraw:
-				self._watchdog.setdefault(watchdog,{}).setdefault('-',{})[change.nlri.index()] = change
+				self._watchdog.setdefault(watchdog,{}).setdefault('-',{})[change.index()] = change
 				return True
-			self._watchdog.setdefault(watchdog,{}).setdefault('+',{})[change.nlri.index()] = change
+			self._watchdog.setdefault(watchdog,{}).setdefault('+',{})[change.index()] = change
 		self.insert_announced(change)
 		return True
 
@@ -101,32 +101,30 @@ class Store (object):
 			for change in self._watchdog[watchdog].get('-',{}).values():
 				change.nlri.action = OUT.announce
 				self.insert_announced(change)
-				self._watchdog[watchdog].setdefault('+',{})[change.nlri.index()] = change
-				self._watchdog[watchdog]['-'].pop(change.nlri.index())
+				self._watchdog[watchdog].setdefault('+',{})[change.index()] = change
+				self._watchdog[watchdog]['-'].pop(change.index())
 
 	def withdraw_watchdog (self,watchdog):
 		if watchdog in self._watchdog:
 			for change in self._watchdog[watchdog].get('+',{}).values():
 				change.nlri.action = OUT.withdraw
 				self.insert_announced(change)
-				self._watchdog[watchdog].setdefault('-',{})[change.nlri.index()] = change
-				self._watchdog[watchdog]['+'].pop(change.nlri.index())
+				self._watchdog[watchdog].setdefault('-',{})[change.index()] = change
+				self._watchdog[watchdog]['+'].pop(change.index())
 
 	def insert_received (self,change):
 		if not self.cache:
 			return
 		elif change.nlri.action == IN.announced:
-			self._seen[change.nlri.index()] = change
+			self._seen[change.index()] = change
 		else:
-			self._seen.pop(change.nlri.index(),None)
+			self._seen.pop(change.index(),None)
 
 	def insert_announced (self,change,force=False):
+		# WARNING: do not call change.nlri.index as it does not prepend the family
 		# WARNING : this function can run while we are in the updates() loop
 
 		# self._seen[family][nlri-index] = change
-
-		# XXX: FIXME: if we fear a conflict of nlri-index between family (very very unlikely)
-		# XXX: FIXME: then we should preprend the index() with the AFI and SAFI
 
 		# self._modify_nlri[nlri-index] = change : we are modifying this nlri
 		# self._modify_sorted[attr-index][nlri-index] = change : add or remove the nlri
@@ -141,7 +139,7 @@ class Store (object):
 			self._enhanced_refresh_delay.append(change)
 			return
 
-		change_nlri_index = change.nlri.index()
+		change_nlri_index = change.index()
 		change_attr_index = change.attributes.index()
 
 		dict_sorted = self._modify_sorted
@@ -226,7 +224,7 @@ class Store (object):
 			if grouped:
 				update = Update([dict_nlri[nlri_index].nlri for nlri_index in dict_change],attributes)
 				for change in changed:
-					nlri_index = change.nlri.index()
+					nlri_index = change.index()
 					del dict_sorted[attr_index][nlri_index]
 					del dict_nlri[nlri_index]
 				# only yield once we have a consistent state, otherwise it will go wrong
@@ -236,7 +234,7 @@ class Store (object):
 				updates = []
 				for change in changed:
 					updates.append(Update([change.nlri,],attributes))
-					nlri_index = change.nlri.index()
+					nlri_index = change.index()
 					del dict_sorted[attr_index][nlri_index]
 					del dict_nlri[nlri_index]
 				# only yield once we have a consistent state, otherwise it will go wrong
@@ -248,11 +246,11 @@ class Store (object):
 				announced = self._seen
 				for change in changed:
 					if change.nlri.action == OUT.announce:
-						announced.setdefault(change.nlri.family(),{})[change.nlri.index()] = change
+						announced.setdefault(change.nlri.family(),{})[change.index()] = change
 					else:
 						family = change.nlri.family()
 						if family in announced:
-							announced[family].pop(change.nlri.index(),None)
+							announced[family].pop(change.index(),None)
 
 		if rr_announced:
 			for afi,safi in rr_announced:

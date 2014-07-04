@@ -46,8 +46,9 @@ class CIDR (object):
 	def packed_ip(self):
 		return self.packed[:CIDR.size(self.mask)]
 
-	def index (self):
-		return self.pack()
+	# July 2014: should never be called as it is for the RIB code only
+	# def index (self):
+	# 	return self.pack()
 
 	def __len__ (self):
 		return CIDR.size(self.mask) + 1
