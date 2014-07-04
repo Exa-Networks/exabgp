@@ -1617,7 +1617,7 @@ class Configuration (object):
 			rd = change.nlri.rd
 		nexthop = change.nlri.nexthop
 
-		change.mask = split
+		change.nlri.mask = split
 		change.nlri = None
 		# generate the new routes
 		for _ in range(number):

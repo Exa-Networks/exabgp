@@ -7,6 +7,8 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 class Change (object):
+	__slots__ = ['nlri','attributes']
+
 	def __init__ (self,nlri,attributes):
 		self.nlri = nlri
 		self.attributes = attributes
