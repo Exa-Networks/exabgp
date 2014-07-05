@@ -131,6 +131,7 @@ Should you feel a need for commercial support in order to deploy ExaBGP in your 
  * [BGPAPI](https://github.com/abh/bgpapi) an HTTP API to ExaBGP
  * [ExaBGP Chef Cookbook](https://github.com/hw-cookbooks/exabgp) automate ExaBGP's installation
  * [IOS2ExaBGP](https://github.com/lochiiconnectivity/ios2exa) converts Cisco IOS IPv4 BGP LOC Rib dumps to ExaBGP's format
+ * [exabgp-voipbl](https://github.com/GeertHauwaerts/exabgp-voipbl) advertises local or/and voipbl.org blacklist using unicast or flow route.
 
 And some self promotion :
 
