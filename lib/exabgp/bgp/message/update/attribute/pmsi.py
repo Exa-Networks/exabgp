@@ -35,10 +35,11 @@ class PMSI (Attribute):
 	ID = AttributeID.PMSI_TUNNEL
 	FLAG = Flag.OPTIONAL
 	MULTIPLE = False
+	CACHING = True
 
 	# TUNNEL_TYPE MUST NOT BE DEFINED HERE ( it allows to set it up as a self. value)
 
-	_known = dict()
+	_pmsi_known = dict()
 	_name = {
 		0 : 'No tunnel',
 		1 : 'RSVP-TE P2MP LSP',
@@ -103,23 +104,25 @@ class PMSI (Attribute):
 		)
 
 	@classmethod
-	def register (klass):
-		klass._known[klass.TUNNEL_TYPE] = klass
+	def pmsi_register (klass):
+		klass._pmsi_known[klass.TUNNEL_TYPE] = klass
 
 	@staticmethod
-	def unknown (subtype,tunnel,label,flags):
+	def pmsi_unknown (subtype,tunnel,label,flags):
 		pmsi = PMSI(tunnel,label,flags)
 		pmsi.TUNNEL_TYPE = subtype
 		return pmsi
 
 	@classmethod
-	def unpack (cls,data):
+	def unpack (cls,data,negotiated):
 		flags,subtype = unpack('!BB',data[:2])
 		label = unpack('!L','\0'+data[2:5])[0] >> 4
 		# should we check for bottom of stack before the shift ?
-		if subtype in cls._known:
-			return cls._known[subtype].unpack(data[5:],label,flags)
-		return cls.unknown(subtype,data[5:],label,flags)
+		if subtype in cls._pmsi_known:
+			return cls._pmsi_known[subtype].unpack(data[5:],label,flags)
+		return cls.pmsi_unknown(subtype,data[5:],label,flags)
+
+PMSI.register()
 
 
 # ================================================================= PMSINoTunnel
@@ -138,7 +141,7 @@ class PMSINoTunnel (PMSI):
 	def unpack (cls,tunnel,label,flags):
 		return cls(label,flags)
 
-PMSINoTunnel.register()
+PMSINoTunnel.pmsi_register()
 
 
 # ======================================================= PMSIIngressReplication
@@ -159,4 +162,4 @@ class PMSIIngressReplication (PMSI):
 		ip = IPv4.ntop(tunnel)
 		return cls(ip,label,flags,tunnel)
 
-PMSIIngressReplication.register()
+PMSIIngressReplication.pmsi_register()

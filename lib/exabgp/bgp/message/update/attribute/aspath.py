@@ -6,12 +6,16 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
+from struct import unpack,error
+
+from exabgp.bgp.message.open.asn import ASN,AS_TRANS
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute import Flag,Attribute
+from exabgp.bgp.message.notification import Notify
 
-from exabgp.bgp.message.open.asn import AS_TRANS
 
 # =================================================================== ASPath (2)
+# only 2-4% of duplicated data therefore it is not worth to cache
 
 class ASPath (Attribute):
 	AS_SET      = 0x01
@@ -78,10 +82,6 @@ class ASPath (Attribute):
 			message += AS4Path(self.as_seq,self.as_set)._pack(True)
 		return message
 
-	@classmethod
-	def unpack (cls,data):
-		raise Exception('unimplemented')
-
 	def __len__ (self):
 		raise RuntimeError('it makes no sense to ask for the size of this object')
 
@@ -121,6 +121,62 @@ class ASPath (Attribute):
 				return "[ 'bug in ExaBGP\'s code' ]"
 		return self._json[name]
 
+	@classmethod
+	def __new_aspaths (cls,data,asn4):
+		as_set = []
+		as_seq = []
+		backup = data
+
+		unpacker = {
+			False : '!H',
+			True  : '!L',
+		}
+		size = {
+			False: 2,
+			True : 4,
+		}
+		as_choice = {
+			ASPath.AS_SEQUENCE : as_seq,
+			ASPath.AS_SET      : as_set,
+		}
+
+		upr = unpacker[asn4]
+		length = size[asn4]
+
+		try:
+
+			while data:
+				stype = ord(data[0])
+				slen  = ord(data[1])
+
+				if stype not in (ASPath.AS_SET, ASPath.AS_SEQUENCE):
+					raise Notify(3,11,'invalid AS Path type sent %d' % stype)
+
+				end = 2+(slen*length)
+				sdata = data[2:end]
+				data = data[end:]
+				asns = as_choice[stype]
+
+				for i in range(slen):
+					asn = unpack(upr,sdata[:length])[0]
+					asns.append(ASN(asn))
+					sdata = sdata[length:]
+
+		except IndexError:
+			raise Notify(3,11,'not enough data to decode AS_PATH or AS4_PATH')
+		except error:  # struct
+			raise Notify(3,11,'not enough data to decode AS_PATH or AS4_PATH')
+
+		return cls(as_seq,as_set,backup)
+
+	@classmethod
+	def unpack (cls,data,negotiated):
+		if not data:
+			return None  # ASPath.Empty
+		return cls.__new_aspaths(data,negotiated.asn4,ASPath)
+
+ASPath.Empty = ASPath([],[])
+ASPath.register()
 
 class AS4Path (ASPath):
 	ID = AttributeID.AS4_PATH
@@ -129,3 +185,12 @@ class AS4Path (ASPath):
 
 	def pack (self,asn4=None):
 		ASPath.pack(self,True)
+
+	@classmethod
+	def unpack (cls,data,negotiated):
+		if not data:
+			return None  # AS4Path.Empty
+		return cls.__new_aspaths(data,True,AS4Path)
+
+AS4Path.Empty = AS4Path([],[])
+AS4Path.register()

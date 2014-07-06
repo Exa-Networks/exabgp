@@ -17,6 +17,7 @@ class MED (Attribute):
 	ID = AttributeID.MED
 	FLAG = Flag.OPTIONAL
 	MULTIPLE = False
+	CACHING = True
 
 	__slots__ = ['med','packed']
 
@@ -44,5 +45,7 @@ class MED (Attribute):
 		return hash(self.med)
 
 	@classmethod
-	def unpack (cls,data):
+	def unpack (cls,data,negotiated):
 		return cls(unpack('!L',data)[0])
+
+MED.register()

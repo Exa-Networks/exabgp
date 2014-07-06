@@ -6,7 +6,10 @@ Important
 
 ROADMAP
 
-Change the Community to unpack and get rid of cachedCommunity
+cachedCommunity still exists
+Object created through the configuration should be cached too.
+Instead of passing asn4 to pack, we should pass negotiated, this would remove a special case for AIGP packing
+Extended Attributes should be MultiAttributes
 
 In no particular order:
 - provide an helper program able to read MRT dumps and announce them too.

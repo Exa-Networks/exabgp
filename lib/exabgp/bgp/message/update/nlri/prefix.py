@@ -23,7 +23,7 @@ class Prefix (CIDR,NLRI):
 		self.action = action
 
 	def prefix (self):
-		return "%s/%s%s" % (self.ip,self.mask,str(self.path_info) if self.path_info is not PathInfo.NOPATH else '')
+		return "%s/%s%s" % (CIDR.getip(self),self.mask,str(self.path_info) if self.path_info is not PathInfo.NOPATH else '')
 
 	def extensive (self):
 		return "%s/%s%s next-hop %s" % (self.ip,self.mask,str(self.path_info) if self.path_info is not PathInfo.NOPATH else '',self.nexthop)
@@ -32,7 +32,7 @@ class Prefix (CIDR,NLRI):
 		return self.path_info.pack() + CIDR.pack(self) if addpath else CIDR.pack(self)
 
 	def json (self):
-		return '"%s": { %s }' % (CIDR.pack(self),self.path_info.json())
+		return '"%s": { %s }' % (CIDR.getip(self),self.path_info.json())
 
 	def index (self):
 		return self.pack(True)

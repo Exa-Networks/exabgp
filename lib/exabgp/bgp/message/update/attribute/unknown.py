@@ -8,7 +8,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.update.attribute import Attribute
 
-# =================================================================== MED (4)
+# ============================================================= UnknownAttribute
 
 class UnknownAttribute (Attribute):
 	MULTIPLE = False
@@ -29,3 +29,7 @@ class UnknownAttribute (Attribute):
 
 	def __str__ (self):
 		return '0x' + ''.join('%02x' % ord(_) for _ in self.data)
+
+	@classmethod
+	def unpack (cls,code,flag,data):
+		return cls(code,flag,data)

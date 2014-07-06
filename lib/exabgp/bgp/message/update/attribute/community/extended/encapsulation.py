@@ -57,4 +57,4 @@ class Encapsulation (ExtendedCommunity):
 		# assert(stype==Encapsulation.COMMUNITY_SUBTYPE)
 		# assert(len(data)==6)
 
-Encapsulation.register()
+Encapsulation.register_extended()

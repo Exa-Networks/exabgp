@@ -28,11 +28,12 @@ class CIDR (object):
 		self.mask = mask
 		self._ip = None
 
-	@property
-	def ip (self):
+	def getip (self):
 		if not self._ip:
 			self._ip = IP.ntop(self.packed)
 		return self._ip
+
+	ip = property(getip)
 
 	def __str__ (self):
 		return self.prefix()

@@ -9,14 +9,31 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from struct import pack
 
 from exabgp.bgp.message.update.attribute.flag import Flag
+from exabgp.bgp.message.update.attribute.id import AttributeID as AID
 
-# =================================================================== Attribute
+from exabgp.util.cache import Cache
+
+
+# ==================================================================== Attribute
+#
 
 class Attribute (object):
 	# we need to define ID and FLAG inside of the subclasses
 	# otherwise we can not dynamically create different UnknownAttribute
 	# ID   = 0x00
 	# FLAG = 0x00
+
+	# Should this Attribute be cached
+	CACHING = False
+
+	# Registered subclasses we know how to decode
+	attributes = dict()
+
+	# Are we caching Attributes (configuration)
+	caching = False
+
+	# The attribute cache per attribute ID
+	cache = {}
 
 	def _attribute (self,value):
 		flag = self.FLAG
@@ -37,44 +54,78 @@ class Attribute (object):
 	def __ne__ (self,other):
 		return self.ID != other.ID
 
+	@classmethod
+	def register (cls,attribute_id=None,flag=None):
+		aid = cls.ID if attribute_id is None else attribute_id
+		flg = cls.FLAG | 0x10 if flag is None else flag | 0x10
+		if (aid,flg) in cls.attributes:
+			raise RuntimeError('only one class can be registered per capability')
+		cls.attributes[(aid,flg)] = cls
+
+	@classmethod
+	def registered (cls,attribute_id,flag):
+		return (attribute_id,flag | 0x10) in cls.attributes
+
+	@classmethod
+	def klass (cls,attribute_id,flag):
+		key = (attribute_id,flag | 0x10)
+		if key in cls.attributes:
+			kls = cls.attributes[key]
+			kls.ID = attribute_id
+			return kls
+		raise Notify (2,4,'can not handle attribute id %s' % attribute_id)
+
+	@classmethod
+	def unpack (cls,attribute_id,flag,data,negotiated):
+		cache = cls.caching and cls.CACHING
+
+		if cache and data in cls.cache.get(cls.ID,{}):
+			return cls.cache[cls.ID].retrieve(data)
+
+		key = (attribute_id,flag | 0x10)
+		if key in Attribute.attributes.keys():
+			instance = cls.klass(attribute_id,flag).unpack(data,negotiated)
+
+			if cache:
+				cls.cache.cache[cls.ID].cache(data,instance)
+			return instance
+
+		return UnknownAttribute(attribute_id,flag,data)
+
+	@classmethod
+	def setCache (cls):
+		if not cls.cache:
+			for attribute in AID._str:  # XXX: better way to find the keys ?
+				if attribute not in cls.cache:
+					cls.cache[attribute] = Cache()
+
+Attribute.setCache()
+
 
 import collections
-from struct import unpack,error
+from struct import unpack
 
 from exabgp.util.od import od
 from exabgp.configuration.environment import environment
-from exabgp.util.cache import Cache
 
-from exabgp.protocol.family import AFI,SAFI
-
-from exabgp.bgp.message.direction import IN
-
-from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.notification import Notify
 
-from exabgp.bgp.message.update.attribute.id import AttributeID as AID
-#from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.origin import Origin
-from exabgp.bgp.message.update.attribute.aspath import ASPath,AS4Path
-from exabgp.bgp.message.update.attribute.nexthop import NextHop
-from exabgp.bgp.message.update.attribute.med import MED
+from exabgp.bgp.message.update.attribute.aspath import ASPath  # ,AS4Path
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
-from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
-from exabgp.bgp.message.update.attribute.aggregator import Aggregator
-from exabgp.bgp.message.update.attribute.community import Communities,ExtendedCommunities
-from exabgp.bgp.message.update.attribute.community.normal import cachedCommunity
-from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
-from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
-from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
+# from exabgp.bgp.message.update.attribute.med import MED
+# from exabgp.bgp.message.update.attribute.aggregator import Aggregator
+# from exabgp.bgp.message.update.attribute.community import Communities,ExtendedCommunities
+# from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
+# from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
+# from exabgp.bgp.message.update.attribute.pmsi import PMSI
 #from exabgp.bgp.message.update.attribute.pmsi import PMSI
-from exabgp.bgp.message.update.attribute.aigp import AIGP
+# from exabgp.bgp.message.update.attribute.aigp import AIGP
 
-from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
-from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
+# from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+# from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
 
 from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
-
-from exabgp.bgp.message.update.nlri.nlri import NLRI
 
 from exabgp.logger import Logger,LazyFormat
 
@@ -112,35 +163,39 @@ class MultiAttributes (list):
 		return len(self.pack())
 
 	def __str__ (self):
-		return 'MultiAttibutes(%s)' % ' '.join(str(_) for _ in self)
+		return '%s' % ' '.join(str(_) for _ in self)
+
 
 
 # =================================================================== Attributes
 #
 
+# lookup = {
+# 	AID.ORIGIN             : Origin,               # 1
+# 	AID.AS_PATH            : ASPath,               # 2
+# 	# NextHop                                      # 3
+# 	AID.MED                : MED,                  # 4
+# 	AID.LOCAL_PREF         : LocalPreference,      # 5
+# 	AID.ATOMIC_AGGREGATE   : AtomicAggregate,      # 6
+# 	AID.AGGREGATOR         : Aggregator,           # 7
+# 	AID.COMMUNITY          : Communities,          # 8
+# 	AID.ORIGINATOR_ID      : OriginatorID,         # 9
+# 	AID.CLUSTER_LIST       : ClusterList,          # 10
+# 	AID.EXTENDED_COMMUNITY : ExtendedCommunities,  # 16
+# 	AID.AS4_PATH           : AS4Path,              # 17
+# 	AID.AS4_AGGREGATOR     : Aggregator,           # 18
+# 	AID.PMSI_TUNNEL        : PMSI,                 # 22
+# 	AID.AIGP               : AIGP,                 # 26
+# }
+
 class Attributes (dict):
 	# A cache of parsed attributes
 	cache = {}
-	# A previously parsed object
-	cached = None
 
-	lookup = {
-		AID.ORIGIN             : Origin,               # 1
-		AID.AS_PATH            : ASPath,               # 2
-		# NextHop                                      # 3
-		AID.MED                : MED,                  # 4
-		AID.LOCAL_PREF         : LocalPreference,      # 5
-		AID.ATOMIC_AGGREGATE   : AtomicAggregate,      # 6
-		AID.AGGREGATOR         : Aggregator,           # 7
-		AID.COMMUNITY          : Communities,          # 8
-		AID.ORIGINATOR_ID      : OriginatorID,         # 9
-		AID.CLUSTER_LIST       : ClusterList,          # 10
-		AID.EXTENDED_COMMUNITY : ExtendedCommunities,  # 16
-		AID.AS4_PATH           : AS4Path,              # 17
-		AID.AS4_AGGREGATOR     : Aggregator,           # 18
-#		AID.PMSI_TUNNEL        : PMSI,                 # 22
-		AID.AIGP               : AIGP,                 # 26
-	}
+	# The previously parsed Attributes
+	cached = None
+	# previously parsed attribute, from which cached was made of
+	previous = ''
 
 	representation = {
 		#	key:  (how, default, name, presentation),
@@ -151,55 +206,45 @@ class Attributes (dict):
 		AID.LOCAL_PREF         : ('integer', '', 'local-preference', '%s'),
 		AID.ATOMIC_AGGREGATE   : ('boolean', '', 'atomic-aggregate', '%s'),
 		AID.AGGREGATOR         : ('string',  '', 'aggregator', '( %s )'),
+		AID.AS4_AGGREGATOR     : ('string',  '', 'aggregator', '( %s )'),
 		AID.COMMUNITY          : ('list',    '', 'community', '%s'),
 		AID.ORIGINATOR_ID      : ('inet',    '', 'originator-id', '%s'),
 		AID.CLUSTER_LIST       : ('list',    '', 'cluster-list', '%s'),
 		AID.EXTENDED_COMMUNITY : ('list',    '', 'extended-community', '%s'),
-#		AID.PMSI_TUNNEL        : ('string',  '', 'pmsi', '%s'),
+		AID.PMSI_TUNNEL        : ('string',  '', 'pmsi', '%s'),
 		AID.AIGP               : ('integer', '', 'aigp', '%s'),
 	}
-
-	known_attributes = lookup.keys()
-
-	# STRING = [_ for _ in representation if representation[_][0] == 'string']
-	# INTEGER = [_ for _ in representation if representation[_][0] == 'integer']
-	# LIST = [_ for _ in representation if representation[_][0] == 'list']
-	# BOOLEAN = [_ for _ in representation if representation[_][0] == 'boolean']
 
 	def __init__ (self):
 		# cached representation of the object
 		self._str = ''
 		self._idx = ''
 		self._json = ''
-		# We should cache the attributes parsed
-		self.cache_attributes = environment.settings().cache.attributes
-		# some of the attributes are MP_REACH_NLRI or MP_UNREACH_NLRI
-		self.hasmp = 0
 		# The parsed attributes have no mp routes and/or those are last
 		self.cacheable = True
-		# for the last route, the part of the attributes which are not routes we can use for fast caching
-		self.prefix = ''
+
+		# XXX: FIXME: we should cache the attributes parsed, should it be set elsewhere ?
+		Attribute.cache = environment.settings().cache.attributes
 
 	def has (self,k):
 		return k in self
 
-	def add_from_cache (self,attributeid,data):
-		if data in self.cache.setdefault(attributeid,Cache()):
-			self.add(self.cache[attributeid].retrieve(data))
-			return True
-		return False
-
 	def add (self,attribute,data=None):
+		# we return None as attribute if the unpack code must not generate them
+		if attribute is None:
+			return
+
 		self._str = ''
 		self._json = ''
-		if data and self.cache_attributes:
-			self.cache[attribute.ID].cache(data,attribute)
+
 		if attribute.MULTIPLE:
 			if self.has(attribute.ID):
 				self[attribute.ID].append(attribute)
 			else:
 				self[attribute.ID] = MultiAttributes(attribute)
 		else:
+			if attribute.ID in self:
+				raise Notify(3,0,'multiple attribute for %s' % str(AID(attribute.ID)))
 			self[attribute.ID] = attribute
 
 	def remove (self,attrid):
@@ -321,11 +366,37 @@ class Attributes (dict):
 			self._idx = '%s next-hop %s' % (str(self), str(self[AID.NEXT_HOP])) if AID.NEXT_HOP in self else str(self)
 		return self._idx
 
-	def factory (self,data):
-		self.cached = self._factory(data)
-		return self.cached
+	@classmethod
+	def unpack (cls,data,negotiated):
+		try:
+			if cls.cached:
+				if data == cls.previous:
+					return Attributes.cached
+				elif data.startswith(cls.previous):
+					attributes = Attributes()
+					for key in Attributes.cached:
+						attributes[key] = Attributes.cached[key]
+					attributes.parse(data[len(cls.previous):],negotiated)
+				else:
+					attributes = cls().parse(data,negotiated)
+			else:
+				attributes = cls().parse(data,negotiated)
 
-	def _factory (self,data):
+			if AID.AS_PATH in attributes and AID.AS4_PATH in attributes:
+				attributes.merge_attributes()
+
+			if AID.MP_REACH_NLRI not in attributes and AID.MP_UNREACH_NLRI not in attributes:
+				cls.previous = data
+				cls.cached = attributes
+			else:
+				cls.previous = ''
+				cls.cache = None
+
+			return attributes
+		except IndexError:
+			raise Notify(3,2,data)
+
+	def parse (self,data,negotiated):
 		if not data:
 			return self
 
@@ -340,13 +411,6 @@ class Attributes (dict):
 			length = ord(data[2])
 			offset = 3
 
-		if self.hasmp:
-			if code not in (AID.MP_REACH_NLRI, AID.MP_UNREACH_NLRI):
-				self.cacheable = False
-				self.prefix = ''
-		else:
-			self.prefix += data[:offset+length]
-
 		data = data[offset:]
 		next = data[length:]
 		attribute = data[:length]
@@ -354,213 +418,16 @@ class Attributes (dict):
 		logger = Logger()
 		logger.parser(LazyFormat("parsing flag %x type %02x (%s) len %02x %s" % (flag,int(code),code,length,'payload ' if length else ''),od,data[:length]))
 
-		if code == AID.ORIGIN and flag.matches(Origin.FLAG):
-			# This if block should never be called anymore ...
-			if not self.add_from_cache(code,attribute):
-				self.add(Origin.unpack(attribute),attribute)
-			return self.factory(next)
-
-		# only 2-4% of duplicated data - is it worth to cache ?
-		if code == AID.AS_PATH and flag.matches(ASPath.FLAG):
-			if length:
-				# we store the AS4_PATH as AS_PATH, do not over-write
-				if not self.has(code):
-					if not self.add_from_cache(code,attribute):
-						self.add(self.__new_ASPath(attribute),attribute)
-			return self.factory(next)
-
-		if code == AID.AS4_PATH and flag.matches(AS4Path.FLAG):
-			if length:
-				# ignore the AS4_PATH on new spekers as required by RFC 4893 section 4.1
-				if not self.negotiated.asn4:
-					# This replace the old AS_PATH
-					if not self.add_from_cache(code,attribute):
-						self.add(self.__new_ASPath4(attribute),attribute)
-			return self.factory(next)
-
-		if code == AID.NEXT_HOP and flag.matches(NextHop.FLAG):
-			# XXX: FIXME: we are double caching the NH (once in the class, once here)
-			if not self.add_from_cache(code,attribute):
-				self.add(NextHop.unpack(attribute),attribute)
-			return self.factory(next)
-
-		if code == AID.MED and flag.matches(MED.FLAG):
-			if not self.add_from_cache(code,attribute):
-				self.add(MED.unpack(attribute),attribute)
-			return self.factory(next)
-
-		if code == AID.LOCAL_PREF and flag.matches(LocalPreference.FLAG):
-			if not self.add_from_cache(code,attribute):
-				self.add(LocalPreference.unpack(attribute),attribute)
-			return self.factory(next)
-
-		if code == AID.ATOMIC_AGGREGATE and flag.matches(AtomicAggregate.FLAG):
-			if not self.add_from_cache(code,attribute):
-				raise Notify(3,2,'invalid ATOMIC_AGGREGATE %s' % [hex(ord(_)) for _ in attribute])
-			return self.factory(next)
-
-		if code == AID.AGGREGATOR and flag.matches(Aggregator.FLAG):
-			# AS4_AGGREGATOR are stored as AGGREGATOR - so do not overwrite if exists
-			if not self.has(code):
-				if not self.add_from_cache(AID.AGGREGATOR,attribute):
-					self.add(Aggregator.unpack(attribute),attribute)
-			return self.factory(next)
-
-		if code == AID.AS4_AGGREGATOR and flag.matches(Aggregator.FLAG):
-			if not self.add_from_cache(AID.AGGREGATOR,attribute):
-				self.add(Aggregator.unpack(attribute),attribute)
-			return self.factory(next)
-
-		if code == AID.COMMUNITY and flag.matches(Communities.FLAG):
-			if not self.add_from_cache(code,attribute):
-				self.add(self.__new_communities(attribute),attribute)
-			return self.factory(next)
-
-		if code == AID.ORIGINATOR_ID and flag.matches(OriginatorID.FLAG):
-			if not self.add_from_cache(code,attribute):
-				self.add(OriginatorID.unpack(attribute),attribute)
-			return self.factory(next)
-
-		if code == AID.CLUSTER_LIST and flag.matches(ClusterList.FLAG):
-			if not self.add_from_cache(code,attribute):
-				self.add(ClusterList.unpack(attribute),attribute)
-			return self.factory(next)
-
-		if code == AID.EXTENDED_COMMUNITY and flag.matches(ExtendedCommunities.FLAG):
-			if not self.add_from_cache(code,attribute):
-				self.add(self.__new_extended_communities(attribute),attribute)
-			return self.factory(next)
-
-		# if code == AID.PMSI_TUNNEL:
-		# 	if not self.add_from_cache(code,attribute):
-		# 		self.add(PMSI.unpack(attribute))
-		# 	return self._AttributesFactory(next)
-
-		if code == AID.AIGP and flag.matches(AIGP.FLAG):
-			if self.negotiated.neighbor.aigp:
-				if not self.add_from_cache(code,attribute):
-					self.add(AIGP.unpack(attribute),attribute)
-			return self.factory(next)
-
-		if code == AID.MP_UNREACH_NLRI and flag.matches(MPURNLRI.FLAG):
-			self.hasmp = True
-
-			# -- Reading AFI/SAFI
-			data = data[:length]
-			afi,safi = unpack('!HB',data[:3])
-			offset = 3
-			data = data[offset:]
-
-			if (afi,safi) not in self.negotiated.families:
-				raise Notify(3,0,'presented a non-negotiated family %d/%d' % (afi,safi))
-
-			if not data:
-				raise Notify(3,0,'tried to withdraw an EOR for family %d/%d' % (afi,safi))
-
-			# Is the peer going to send us some Path Information with the route (AddPath)
-			addpath = self.negotiated.addpath.receive(afi,safi)
-
-			while data:
-				length,nlri = NLRI.unpack(afi,safi,data,addpath,None,IN.withdrawn)
-				self.mp_withdraw.append(nlri)
-				data = data[length:]
-				logger.parser(LazyFormat("parsed withdraw mp nlri %s payload " % nlri,od,data[:length]))
-
-			return self.factory(next)
-
-		if code == AID.MP_REACH_NLRI and flag.matches(MPRNLRI.FLAG):
-			self.hasmp = True
-
-			data = data[:length]
-			# -- Reading AFI/SAFI
-			afi,safi = unpack('!HB',data[:3])
-			offset = 3
-
-			# we do not want to accept unknown families
-			if (afi,safi) not in self.negotiated.families:
-				raise Notify(3,0,'presented a non-negotiated family %d/%d' % (afi,safi))
-
-			# -- Reading length of next-hop
-			len_nh = ord(data[offset])
-			offset += 1
-
-			rd = 0
-
-			# check next-hope size
-			if afi == AFI.ipv4:
-				if safi in (SAFI.unicast,SAFI.multicast):
-					if len_nh != 4:
-						raise Notify(3,0,'invalid ipv4 unicast/multicast next-hop length %d expected 4' % len_nh)
-				elif safi in (SAFI.mpls_vpn,):
-					if len_nh != 12:
-						raise Notify(3,0,'invalid ipv4 mpls_vpn next-hop length %d expected 12' % len_nh)
-					rd = 8
-				elif safi in (SAFI.flow_ip,):
-					if len_nh not in (0,4):
-						raise Notify(3,0,'invalid ipv4 flow_ip next-hop length %d expected 4' % len_nh)
-				elif safi in (SAFI.flow_vpn,):
-					if len_nh not in (0,4):
-						raise Notify(3,0,'invalid ipv4 flow_vpn next-hop length %d expected 4' % len_nh)
-			elif afi == AFI.ipv6:
-				if safi in (SAFI.unicast,):
-					if len_nh not in (16,32):
-						raise Notify(3,0,'invalid ipv6 unicast next-hop length %d expected 16 or 32' % len_nh)
-				elif safi in (SAFI.mpls_vpn,):
-					if len_nh not in (24,40):
-						raise Notify(3,0,'invalid ipv6 mpls_vpn next-hop length %d expected 24 or 40' % len_nh)
-					rd = 8
-				elif safi in (SAFI.flow_ip,):
-					if len_nh not in (0,16,32):
-						raise Notify(3,0,'invalid ipv6 flow_ip next-hop length %d expected 0, 16 or 32' % len_nh)
-				elif safi in (SAFI.flow_vpn,):
-					if len_nh not in (0,16,32):
-						raise Notify(3,0,'invalid ipv6 flow_vpn next-hop length %d expected 0, 16 or 32' % len_nh)
-			size = len_nh - rd
-
-			# XXX: FIXME: GET IT FROM CACHE HERE ?
-			nh = data[offset+rd:offset+rd+size]
-
-			# chech the RD is well zero
-			if rd and sum([int(ord(_)) for _ in data[offset:8]]) != 0:
-				raise Notify(3,0,"MP_REACH_NLRI next-hop's route-distinguisher must be zero")
-
-			offset += len_nh
-
-			# Skip a reserved bit as somone had to bug us !
-			reserved = ord(data[offset])
-			offset += 1
-
-			if reserved != 0:
-				raise Notify(3,0,'the reserved bit of MP_REACH_NLRI is not zero')
-
-			# Is the peer going to send us some Path Information with the route (AddPath)
-			addpath = self.negotiated.addpath.receive(afi,safi)
-
-			# Reading the NLRIs
-			data = data[offset:]
-
-			if not data:
-				raise Notify(3,0,'No data to decode in an MPREACHNLRI but it is not an EOR %d/%d' % (afi,safi))
-
-			while data:
-				length,nlri = NLRI.unpack(afi,safi,data,addpath,nh,IN.announced)
-				self.mp_announce.append(nlri)
-				logger.parser(LazyFormat("parsed announce mp nlri %s payload " % nlri,od,data[:length]))
-				data = data[length:]
-			return self.factory(next)
-
-		if flag & Flag.TRANSITIVE:
-			if code in self.known_attributes:
-				# XXX: FIXME: we should really close the session
-				logger.parser('ignoring implemented invalid transitive attribute (code 0x%02X, flag 0x%02X)' % (code,flag))
-				return self.factory(next)
-
-			if not self.add_from_cache(code,attribute):
-				self.add(UnknownAttribute(code,flag,attribute),attribute)
-			return self.factory(next)
-
-		logger.parser('ignoring non-transitive attribute (code 0x%02X, flag 0x%02X)' % (code,flag))
-		return self.factory(next)
+		if Attribute.registered(code,flag):
+			self.add(Attribute.unpack(code,flag,attribute,negotiated))
+			return self.parse(next,negotiated)
+		elif flag & Flag.TRANSITIVE:
+			self.add(UnknownAttribute(code,flag,attribute),attribute)
+			logger.parser('unknown transitive attribute (code 0x%02X, flag 0x%02X)' % (code,flag))
+			return self.parse(next,negotiated)
+		else:
+			logger.parser('ignoring non-transitive attribute (code 0x%02X, flag 0x%02X)' % (code,flag))
+			return self.parse(next,negotiated)
 
 
 	def merge_attributes (self):
@@ -602,76 +469,6 @@ class Attributes (dict):
 		aspath = ASPath(as_seq,as_set)
 		self.add(aspath,key)
 
-	def __new_communities (self,data):
-		communities = Communities()
-		while data:
-			if data and len(data) < 4:
-				raise Notify(3,1,'could not decode community %s' % str([hex(ord(_)) for _ in data]))
-			communities.add(cachedCommunity(data[:4]))
-			data = data[4:]
-		return communities
-
-	def __new_extended_communities (self,data):
-		communities = ExtendedCommunities()
-		while data:
-			if data and len(data) < 8:
-				raise Notify(3,1,'could not decode extended community %s' % str([hex(ord(_)) for _ in data]))
-			communities.add(ExtendedCommunity.unpack(data[:8]))
-			data = data[8:]
-		return communities
-
-	def __new_aspaths (self,data,asn4,klass):
-		as_set = []
-		as_seq = []
-		backup = data
-
-		unpacker = {
-			False : '!H',
-			True  : '!L',
-		}
-		size = {
-			False: 2,
-			True : 4,
-		}
-		as_choice = {
-			ASPath.AS_SEQUENCE : as_seq,
-			ASPath.AS_SET      : as_set,
-		}
-
-		upr = unpacker[asn4]
-		length = size[asn4]
-
-		try:
-
-			while data:
-				stype = ord(data[0])
-				slen  = ord(data[1])
-
-				if stype not in (ASPath.AS_SET, ASPath.AS_SEQUENCE):
-					raise Notify(3,11,'invalid AS Path type sent %d' % stype)
-
-				end = 2+(slen*length)
-				sdata = data[2:end]
-				data = data[end:]
-				asns = as_choice[stype]
-
-				for i in range(slen):
-					asn = unpack(upr,sdata[:length])[0]
-					asns.append(ASN(asn))
-					sdata = sdata[length:]
-
-		except IndexError:
-			raise Notify(3,11,'not enough data to decode AS_PATH or AS4_PATH')
-		except error:  # struct
-			raise Notify(3,11,'not enough data to decode AS_PATH or AS4_PATH')
-
-		return klass(as_seq,as_set,backup)
-
-	def __new_ASPath (self,data):
-		return self.__new_aspaths(data,self.negotiated.asn4,ASPath)
-
-	def __new_ASPath4 (self,data):
-		return self.__new_aspaths(data,True,AS4Path)
 
 	def __hash__(self):
 		# XXX: FIXME: not excellent... :-(
@@ -707,45 +504,3 @@ class Attributes (dict):
 			return True
 		except KeyError:
 				return False
-
-	@staticmethod
-	def unpack (negotiated,data):
-		try:
-			# caching and checking the last attribute parsed as nice implementation group them :-)
-			if Attributes.cached and Attributes.cached.cacheable and data.startswith(Attributes.cached.prefix):
-				attributes = Attributes.cached
-				data = data[len(attributes.prefix):]
-			else:
-				attributes = Attributes()
-				Attributes.cached = attributes
-
-			# XXX: hackish for now
-			attributes.mp_announce = []
-			attributes.mp_withdraw = []
-
-			attributes.negotiated = negotiated
-			attributes.factory(data)
-			if AID.AS_PATH in attributes and AID.AS4_PATH in attributes:
-				attributes.merge_attributes()
-			return attributes
-		except IndexError:
-			raise Notify(3,2,data)
-
-	@staticmethod
-	def setCache ():
-		if not Attributes.cache:
-			for attribute in AID._str:
-				Attributes.cache[attribute] = Cache()
-
-			# There can only be one, build it now :)
-			Attributes.cache[AID.ATOMIC_AGGREGATE][''] = AtomicAggregate()
-
-			IGP = Origin(Origin.IGP)
-			EGP = Origin(Origin.EGP)
-			INC = Origin(Origin.INCOMPLETE)
-
-			Attributes.cache[AID.ORIGIN][IGP.pack()] = IGP
-			Attributes.cache[AID.ORIGIN][EGP.pack()] = EGP
-			Attributes.cache[AID.ORIGIN][INC.pack()] = INC
-
-Attributes.setCache()

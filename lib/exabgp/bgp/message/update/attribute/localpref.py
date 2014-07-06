@@ -17,6 +17,7 @@ class LocalPreference (Attribute):
 	ID = AttributeID.LOCAL_PREF
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
+	CACHING = True
 
 	__slots__ = ['localpref','packed']
 
@@ -41,5 +42,7 @@ class LocalPreference (Attribute):
 		return 0
 
 	@classmethod
-	def unpack (cls,data):
+	def unpack (cls,data,negotiated):
 		return cls(unpack('!L',data)[0],data)
+
+LocalPreference.register()

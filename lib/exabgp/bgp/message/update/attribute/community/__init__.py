@@ -8,8 +8,19 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute import Flag,Attribute
+from exabgp.bgp.message.update.attribute.community.normal import Community
+from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+from exabgp.bgp.message.notification import Notify
 
-# =================================================================== Communities (8)
+# Unused but required for the registration of the classes
+from exabgp.bgp.message.update.attribute.community.extended.encapsulation import Encapsulation
+from exabgp.bgp.message.update.attribute.community.extended.l2info import L2Info
+from exabgp.bgp.message.update.attribute.community.extended.origin import Origin
+from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTarget
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate
+# /required
+
+# ============================================================== Communities (8)
 # http://www.iana.org/assignments/bgp-extended-communities
 
 class Communities (Attribute):
@@ -17,7 +28,7 @@ class Communities (Attribute):
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
 	MULTIPLE = False
 
-	__slots__ = ['communities']
+#	__slots__ = ['communities']
 
 	def __init__ (self,communities=None):
 		# Must be None as = param is only evaluated once
@@ -45,6 +56,33 @@ class Communities (Attribute):
 	def json (self):
 		return "[ %s ]" % ", ".join(community.json() for community in self.communities)
 
+	@staticmethod
+	def unpack (data,negotiated):
+		communities = Communities()
+		while data:
+			if data and len(data) < 4:
+				raise Notify(3,1,'could not decode community %s' % str([hex(ord(_)) for _ in data]))
+			communities.add(Community.unpack(data[:4],negotiated))
+			data = data[4:]
+		return communities
+
+Communities.register()
+
+
+# ===================================================== ExtendedCommunities (16)
+#
 
 class ExtendedCommunities (Communities):
 	ID = AttributeID.EXTENDED_COMMUNITY
+
+	@staticmethod
+	def unpack (data,negotiated):
+		communities = ExtendedCommunities()
+		while data:
+			if data and len(data) < 8:
+				raise Notify(3,1,'could not decode extended community %s' % str([hex(ord(_)) for _ in data]))
+			communities.add(ExtendedCommunity.unpack(data[:8],negotiated))
+			data = data[8:]
+		return communities
+
+ExtendedCommunities.register()

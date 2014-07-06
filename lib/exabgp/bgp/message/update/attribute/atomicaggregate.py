@@ -8,6 +8,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute import Flag,Attribute
+from exabgp.bgp.message.notification import Notify
 
 # =================================================================== AtomicAggregate (6)
 
@@ -15,6 +16,7 @@ class AtomicAggregate (Attribute):
 	ID = AttributeID.ATOMIC_AGGREGATE
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
+	CACHING = True
 
 	__slots__ = []
 
@@ -36,5 +38,15 @@ class AtomicAggregate (Attribute):
 		return 0
 
 	@classmethod
-	def unpack (cls,data):
+	def unpack (cls,data,negotiated):
+		if data:
+			raise Notify(3,2,'invalid ATOMIC_AGGREGATE %s' % [hex(ord(_)) for _ in data])
 		return cls()
+
+	@classmethod
+	def setCache (cls):
+		# There can only be one, build it now :)
+		cls.cache[AttributeID.ATOMIC_AGGREGATE][''] = cls()
+
+AtomicAggregate.register()
+AtomicAggregate.setCache()

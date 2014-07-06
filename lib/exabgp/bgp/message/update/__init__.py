@@ -12,8 +12,8 @@ from exabgp.bgp.message import Message,prefix,defix
 from exabgp.bgp.message.direction import IN,OUT
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.attribute.id import AttributeID as AID
-from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
-from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
+from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI,EMPTY_MPRNLRI
+from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI,EMPTY_MPURNLRI
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
@@ -21,7 +21,8 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.util.od import od
 from exabgp.logger import Logger,LazyFormat
 
-# =================================================================== Update
+
+# ======================================================================= Update
 
 # +-----------------------------------------------------+
 # |   Withdrawn Routes Length (2 octets)                |
@@ -220,7 +221,7 @@ class Update (Message):
 		if 2 + lw + 2+ la + len(announced) != length:
 			raise Notify(3,1,'error in BGP message length, not enough data for the size announced')
 
-		attributes = Attributes.unpack(negotiated,attribute)
+		attributes = Attributes.unpack(attribute,negotiated)
 
 		# Is the peer going to send us some Path Information with the route (AddPath)
 		addpath = negotiated.addpath.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
@@ -246,10 +247,10 @@ class Update (Message):
 			announced = announced[length:]
 			nlris.append(nlri)
 
-		for nlri in attributes.mp_withdraw:
-			nlris.append(nlri)
+		for mpr in attributes.pop(MPURNLRI.ID,[EMPTY_MPURNLRI]):
+			nlris.extend(mpr.nlris)
 
-		for nlri in attributes.mp_announce:
-			nlris.append(nlri)
+		for mpr in attributes.pop(MPRNLRI.ID,[EMPTY_MPRNLRI]):
+			nlris.extend(mpr.nlris)
 
 		return Update(nlris,attributes)

@@ -12,10 +12,14 @@ from exabgp.bgp.message.update.attribute import Flag,Attribute
 
 # ================================================================== NextHop (3)
 
-class NextHop (IPv4,Attribute):
+# The order is important and attribute MUST be first for the righ register to be called
+# At least until we rename them to be more explicit
+
+class NextHop (Attribute,IPv4):
 	ID = AttributeID.NEXT_HOP
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
+	CACHING = True
 
 	cache = {}
 	caching = False
@@ -33,7 +37,7 @@ class NextHop (IPv4,Attribute):
 		return 0
 
 	@staticmethod
-	def unpack (data):
+	def unpack (data,negotiated):
 		if data in NextHop.cache:
 			return NextHop.cache[data]
 		instance = IPv4.unpack(data,NextHop)
@@ -41,3 +45,6 @@ class NextHop (IPv4,Attribute):
 		if NextHop.caching:
 			NextHop.cache[data] = instance
 		return instance
+
+
+NextHop.register()

@@ -16,7 +16,8 @@ def cachedCommunity (community):
 		Community.cache[community] = instance
 	return instance
 
-# =================================================================== Community
+# ==================================================================== Community
+#
 
 class Community (object):
 	NO_EXPORT            = pack('!L',0xFFFFFF01)
@@ -64,6 +65,10 @@ class Community (object):
 
 	def __ne__ (self,other):
 		return self.community != other.community
+
+	@classmethod
+	def unpack (cls,community,negotiated):
+		return cls(community)
 
 
 # Always cache well-known communities, they will be used a lot

@@ -6,13 +6,15 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
+import string
+
 from exabgp.bgp.message import Message
 
 def hexstring (value):
 	def spaced (value):
 		for v in value:
 			yield '%02X' % ord(v)
-	return ''.join(spaced(value))
+	return '0x' + ''.join(spaced(value))
 
 # =================================================================== Notification
 # A Notification received from our peer.
@@ -96,13 +98,12 @@ class Notification (Message):
 	def __init__ (self,code,subcode,data=''):
 		self.code = code
 		self.subcode = subcode
-		self.data = data
+		self.data = data if not len([_ for _ in data if _ not in string.printable]) else hexstring(data)
 
 	def __str__ (self):
-		return "%s / %s%s%s" % (
+		return "%s / %s%s" % (
 			self._str_code.get(self.code,'unknown error'),
 			self._str_subcode.get((self.code,self.subcode),'unknow reason'),
-			'%s' % (' / %s' % hexstring(self.data) if self.data else ''),
 			'%s' % (' / %s' % self.data if self.data else '')
 		)
 
@@ -127,10 +128,3 @@ class Notify (Notification):
 			chr(self.subcode),
 			self.data
 		))
-
-	def __str__ (self):
-		return "%s / %s%s" % (
-			self._str_code.get(self.code,'unknown error'),
-			self._str_subcode.get((self.code,self.subcode),'unknow reason'),
-			' / %s' % (self.data if self.data else '')
-		)

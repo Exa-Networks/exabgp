@@ -21,6 +21,7 @@ class ClusterList (Attribute):
 	ID = AttributeID.CLUSTER_LIST
 	FLAG = Flag.OPTIONAL
 	MULTIPLE = False
+	CACHING = True
 
 	__slots__ = ['clusters','packed','_len']
 
@@ -44,9 +45,11 @@ class ClusterList (Attribute):
 		return '[ %s ]' % ', '.join(['"%s"' % str(_) for _ in self.clusters])
 
 	@classmethod
-	def unpack (cls,data):
+	def unpack (cls,data,negotiated):
 		clusters = []
 		while data:
 			clusters.append(IPv4.unpack(data[:4]))
 			data = data[4:]
 		return cls(clusters)
+
+ClusterList.register()

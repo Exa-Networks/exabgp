@@ -56,6 +56,7 @@ class AIGP (Attribute):
 	ID = AttributeID.AIGP
 	FLAG = Flag.OPTIONAL
 	MULTIPLE = False
+	CACHING = True
 	TYPES = [1,]
 
 	__slots__ = ['aigp','packed']
@@ -74,5 +75,9 @@ class AIGP (Attribute):
 		return '0x' + ''.join('%02x' % ord(_) for _ in self.aigp[-8:])
 
 	@classmethod
-	def unpack (cls,data):
-		cls(unpack('!Q',data[:8] & 0x000000FFFFFFFFFF),data[:8])
+	def unpack (cls,data,negotiated):
+		if not negotiated.neighbor.aigp:
+			return None
+		return cls(unpack('!Q',data[:8] & 0x000000FFFFFFFFFF),data[:8])
+
+AIGP.register()

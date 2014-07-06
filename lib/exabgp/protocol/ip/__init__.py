@@ -152,7 +152,7 @@ class IPv4 (IP):
 	def ntop (data):
 		return socket.inet_ntop(socket.AF_INET,data)
 
-	# klass is a trick for NextHop
+	# klass is a trick for subclasses of IP/IPv4 such as NextHop / OriginatorID
 	@classmethod
 	def unpack (cls,data,klass=None):
 		ip = socket.inet_ntop(socket.AF_INET,data)

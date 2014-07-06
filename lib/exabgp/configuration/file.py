@@ -58,7 +58,7 @@ from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
 
 from exabgp.bgp.message.operational import MAX_ADVISORY,Advisory,Query,Response
 
-from exabgp.bgp.message.update.attribute import Attributes
+from exabgp.bgp.message.update.attribute import Attribute,Attributes
 
 from exabgp.rib.change import Change
 from exabgp.bgp.message.refresh import RouteRefresh
@@ -1796,7 +1796,7 @@ class Configuration (object):
 			for i in range(2,len(data),2):
 				raw += chr(int(data[i:i+2],16))
 
-			for (ID,klass) in Attributes.lookup.iteritems():
+			for ((ID,flag),klass) in Attribute.attributes.iteritems():
 				if code == ID and flag == klass.FLAG:
 					scope[-1]['announce'][-1].attributes.add(klass.unpack(raw))
 					return True
@@ -2096,7 +2096,7 @@ class Configuration (object):
 				raise ValueError('invalid extended community %s' % data)
 			if len(raw) != 8:
 				raise ValueError('invalid extended community %s' % data)
-			return ExtendedCommunity.unpack(raw)
+			return ExtendedCommunity.unpack(raw,None)
 		elif data.count(':'):
 			_known_community = {
 				# header and subheader
@@ -2124,7 +2124,7 @@ class Configuration (object):
 
 			if command == 'l2info':
 				# encaps, control, mtu, site
-				return ExtendedCommunity.unpack(header+pack('!BBHH',*[int(_) for _ in components]))
+				return ExtendedCommunity.unpack(header+pack('!BBHH',*[int(_) for _ in components]),None)
 
 			if command in ('target','origin'):
 				# global admin, local admin
@@ -2135,15 +2135,15 @@ class Configuration (object):
 					lc = la.count('.')
 					if gc == 0 and lc == 3:
 						# ASN first, IP second
-						return ExtendedCommunity.unpack(header+pack('!HBBBB',int(ga),*[int(_) for _ in la.split('.')]))
+						return ExtendedCommunity.unpack(header+pack('!HBBBB',int(ga),*[int(_) for _ in la.split('.')]),None)
 					if gc == 3 and lc == 0:
 						# IP first, ASN second
-						return ExtendedCommunity.unpack(header+pack('!BBBBH',*[int(_) for _ in ga.split('.')]+[int(la)]))
+						return ExtendedCommunity.unpack(header+pack('!BBBBH',*[int(_) for _ in ga.split('.')]+[int(la)]),None)
 				else:
 					if command == 'target':
-						return ExtendedCommunity.unpack(header+pack('!HI',int(ga),int(la)))
+						return ExtendedCommunity.unpack(header+pack('!HI',int(ga),int(la)),None)
 					if command == 'origin':
-						return ExtendedCommunity.unpack(header+pack('!IH',int(ga),int(la)))
+						return ExtendedCommunity.unpack(header+pack('!IH',int(ga),int(la)),None)
 
 			raise ValueError('invalid extended community %s' % command)
 		else:
@@ -2272,7 +2272,6 @@ class Configuration (object):
 	def _insert_l2vpn_vpls (self,scope,tokens=None):
 		try:
 			attributes = Attributes()
-			attributes[AttributeID.EXTENDED_COMMUNITY] = ExtendedCommunities()
 			change = Change(VPLS(None,None,None,None,None),attributes)
 		except ValueError:
 			self._error = self._str_vpls_error

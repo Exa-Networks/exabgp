@@ -149,10 +149,10 @@ def attribute (tokeniser):
 		raise ValueError('invalid attribute, does not ends with ]')
 
 	# XXX: FIXME: class Attribute should have an unpack function which does that
-	from exabgp.bgp.message.update.attribute import Attributes
+	from exabgp.bgp.message.update.attribute import Attribute
 	from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
 
-	for (ID,klass) in Attributes.lookup.iteritems():
+	for ((ID,flag),klass) in Attribute.attributes.iteritems():
 		if code == ID and flag == klass.FLAG:
 			return klass(data)
 	return UnknownAttribute(code,flag,data)
@@ -283,6 +283,7 @@ def aggregator (tokeniser):
 	local_as = ASN(asn)
 	local_address = RouterID(address)
 
+	# XXX: This is buggy it can be an Aggregator4
 	return Aggregator(local_as,local_address)
 
 

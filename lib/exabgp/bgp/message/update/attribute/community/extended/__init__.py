@@ -9,20 +9,24 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from struct import unpack
 
 from exabgp.bgp.message.update.attribute.id import AttributeID
-from exabgp.bgp.message.update.attribute import Flag
+from exabgp.bgp.message.update.attribute import Attribute,Flag
+
+
+# ======================================================= ExtendedCommunity (16)
+#
 
 # XXX: Should subclasses register with transitivity ?
 
-class ExtendedCommunity (object):
+class ExtendedCommunity (Attribute):
 	ID = AttributeID.EXTENDED_COMMUNITY
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
 	MULTIPLE = False
 
-	_known = {}
+	_registered_extended = {}
 
 	@classmethod
-	def register (klass):
-		klass._known[(klass.COMMUNITY_TYPE&0x0F,klass.COMMUNITY_SUBTYPE)] = klass
+	def register_extended (klass):
+		klass._registered_extended[(klass.COMMUNITY_TYPE&0x0F,klass.COMMUNITY_SUBTYPE)] = klass
 
 	# size of value for data (boolean: is extended)
 	length_value = {False:7, True:6}
@@ -65,9 +69,9 @@ class ExtendedCommunity (object):
 		return cmp(self.community,other.community)
 
 	@staticmethod
-	def unpack (data):
+	def unpack (data,negotiated):
 		# 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0FFF
 		community = (ord(data[0])&0x0F,ord(data[1]))
-		if community in ExtendedCommunity._known:
-			return ExtendedCommunity._known[community].unpack(data)
+		if community in ExtendedCommunity._registered_extended:
+			return ExtendedCommunity._registered_extended[community].unpack(data)
 		return ExtendedCommunity(data)

@@ -11,14 +11,21 @@ from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute import Flag,Attribute
 
-# =================================================================== OriginatorID (3)
+# ============================================================== OriginatorID (3)
 
 class OriginatorID (Attribute,IPv4):
 	ID = AttributeID.ORIGINATOR_ID
 	FLAG = Flag.OPTIONAL
 	MULTIPLE = False
+	CACHING = True
 
 	__slots__ = []
 
 	def pack (self,asn4=None):
 		return self._attribute(self.packed)
+
+	@classmethod
+	def unpack (cls,data,negotiated):
+		return IPv4.unpack(data,cls)
+
+OriginatorID.register()

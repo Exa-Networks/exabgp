@@ -15,6 +15,7 @@ class Origin (Attribute):
 	ID = AttributeID.ORIGIN
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
+	CACHING = True
 
 	IGP        = 0x00
 	EGP        = 0x01
@@ -46,5 +47,19 @@ class Origin (Attribute):
 		return 0
 
 	@classmethod
-	def unpack (cls,data):
+	def unpack (cls,data,negotiated):
 		return cls(ord(data),data)
+
+	@classmethod
+	def setCache (cls):
+		# there can only be three, build them now
+		IGP = Origin(Origin.IGP)
+		EGP = Origin(Origin.EGP)
+		INC = Origin(Origin.INCOMPLETE)
+
+		cls.cache[AttributeID.ORIGIN][IGP.pack()] = IGP
+		cls.cache[AttributeID.ORIGIN][EGP.pack()] = EGP
+		cls.cache[AttributeID.ORIGIN][INC.pack()] = INC
+
+Origin.register()
+Origin.setCache()
