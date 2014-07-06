@@ -8,8 +8,10 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from struct import pack,unpack
 
+from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.id import AttributeID
-from exabgp.bgp.message.update.attribute import Flag,Attribute
+
 
 # ========================================================================== TLV
 
@@ -77,7 +79,8 @@ class AIGP (Attribute):
 	@classmethod
 	def unpack (cls,data,negotiated):
 		if not negotiated.neighbor.aigp:
+			# AIGP must only be accepted on configured sessions
 			return None
 		return cls(unpack('!Q',data[:8] & 0x000000FFFFFFFFFF),data[:8])
 
-AIGP.register()
+AIGP.register_attribute()

@@ -29,8 +29,8 @@ class RouteRefresh (Capability):
 		# XXX: FIXME: we should set that that instance was seen and raise if seen twice
 		return instance
 
-RouteRefresh.register(CapabilityID.ROUTE_REFRESH)
-RouteRefresh.register(CapabilityID.CISCO_ROUTE_REFRESH)
+RouteRefresh.register_capability(CapabilityID.ROUTE_REFRESH)
+RouteRefresh.register_capability(CapabilityID.CISCO_ROUTE_REFRESH)
 
 
 # ========================================================= EnhancedRouteRefresh
@@ -50,4 +50,4 @@ class EnhancedRouteRefresh (Capability):
 		# XXX: FIXME: we should set that that instance was seen and raise if seen twice
 		return instance
 
-EnhancedRouteRefresh.register()
+EnhancedRouteRefresh.register_capability()

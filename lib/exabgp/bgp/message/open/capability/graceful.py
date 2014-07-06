@@ -62,4 +62,4 @@ class Graceful (Capability,dict):
 			data = data[4:]
 		return instance.set(restart_flag,restart_time,families)
 
-Graceful.register()
+Graceful.register_capability()

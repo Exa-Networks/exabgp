@@ -9,8 +9,9 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.protocol.ip import IPv4
 
+from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.id import AttributeID
-from exabgp.bgp.message.update.attribute import Flag,Attribute
+from exabgp.bgp.message.update.attribute.flag import Flag
 
 
 # =============================================================== AGGREGATOR (7)
@@ -50,7 +51,7 @@ class Aggregator (Attribute):
 			return cls(ASN.unpack(data[:4]),IPv4.unpack(data[-4:]))
 		return cls(ASN.unpack(data[:2]),IPv4.unpack(data[-4:]))
 
-Aggregator.register()
+Aggregator.register_attribute()
 
 # ============================================================== AGGREGATOR (18)
 
@@ -61,4 +62,4 @@ class Aggregator4 (Aggregator):
 	def pack (self,asn4):
 		return self._attribute(self.asn.pack(True)+self.speaker.pack())
 
-Aggregator4.register()
+Aggregator4.register_attribute()

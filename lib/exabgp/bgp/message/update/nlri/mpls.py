@@ -84,4 +84,4 @@ class MPLS (NLRI,CIDR):
 
 for safi in (SAFI.nlri_mpls, SAFI.mpls_vpn):
 	for afi in (AFI.ipv4, AFI.ipv6):
-		MPLS.register(afi,safi)
+		MPLS.register_nlri(afi,safi)

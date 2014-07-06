@@ -7,8 +7,10 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from exabgp.protocol.ip import IPv4
+from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.id import AttributeID
-from exabgp.bgp.message.update.attribute import Flag,Attribute
+
 
 # ================================================================== NextHop (3)
 
@@ -47,4 +49,4 @@ class NextHop (Attribute,IPv4):
 		return instance
 
 
-NextHop.register()
+NextHop.register_attribute()

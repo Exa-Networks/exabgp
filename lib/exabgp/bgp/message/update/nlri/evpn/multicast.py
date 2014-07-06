@@ -78,4 +78,4 @@ class Multicast (EVPN):
 			raise Exception("IP len is %d, but EVPN route currently support only IPv4" % iplen)
 		return cls(rd,etag,ip)
 
-Multicast.register()
+Multicast.register_evpn()

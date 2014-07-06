@@ -9,8 +9,9 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from struct import unpack,error
 
 from exabgp.bgp.message.open.asn import ASN,AS_TRANS
+from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.id import AttributeID
-from exabgp.bgp.message.update.attribute import Flag,Attribute
 from exabgp.bgp.message.notification import Notify
 
 
@@ -175,8 +176,13 @@ class ASPath (Attribute):
 			return None  # ASPath.Empty
 		return cls.__new_aspaths(data,negotiated.asn4,ASPath)
 
+
 ASPath.Empty = ASPath([],[])
-ASPath.register()
+ASPath.register_attribute()
+
+
+# ================================================================= AS4Path (17)
+#
 
 class AS4Path (ASPath):
 	ID = AttributeID.AS4_PATH
@@ -192,5 +198,6 @@ class AS4Path (ASPath):
 			return None  # AS4Path.Empty
 		return cls.__new_aspaths(data,True,AS4Path)
 
+
 AS4Path.Empty = AS4Path([],[])
-AS4Path.register()
+AS4Path.register_attribute()

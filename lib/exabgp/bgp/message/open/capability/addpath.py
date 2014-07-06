@@ -53,4 +53,4 @@ class AddPath (Capability,dict):
 			data = data[4:]
 		return instance
 
-AddPath.register()
+AddPath.register_capability()

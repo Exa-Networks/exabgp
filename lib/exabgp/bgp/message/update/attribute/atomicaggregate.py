@@ -6,9 +6,11 @@ Created by Thomas Mangin on 2012-07-14.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
+from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.id import AttributeID
-from exabgp.bgp.message.update.attribute import Flag,Attribute
 from exabgp.bgp.message.notification import Notify
+
 
 # =================================================================== AtomicAggregate (6)
 
@@ -48,5 +50,5 @@ class AtomicAggregate (Attribute):
 		# There can only be one, build it now :)
 		cls.cache[AttributeID.ATOMIC_AGGREGATE][''] = cls()
 
-AtomicAggregate.register()
+AtomicAggregate.register_attribute()
 AtomicAggregate.setCache()

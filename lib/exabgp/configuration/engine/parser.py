@@ -152,7 +152,7 @@ def attribute (tokeniser):
 	from exabgp.bgp.message.update.attribute import Attribute
 	from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
 
-	for ((ID,flag),klass) in Attribute.attributes.iteritems():
+	for ((ID,flag),klass) in Attribute.registered_attributes.iteritems():
 		if code == ID and flag == klass.FLAG:
 			return klass(data)
 	return UnknownAttribute(code,flag,data)

@@ -61,4 +61,4 @@ class Prefix (CIDR,NLRI):
 
 for safi in (SAFI.unicast, SAFI.multicast):
 	for afi in (AFI.ipv4, AFI.ipv6):
-		Prefix.register(afi,safi)
+		Prefix.register_nlri(afi,safi)

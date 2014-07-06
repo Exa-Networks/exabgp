@@ -29,4 +29,4 @@ class ASN4 (Capability,ASN):
 		instance = ASN.unpack(data,ASN4)
 		return instance
 
-ASN4.register()
+ASN4.register_capability()

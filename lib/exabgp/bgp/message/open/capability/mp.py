@@ -35,4 +35,4 @@ class MultiProtocol (Capability,list):
 		instance.append((afi,safi))
 		return instance
 
-MultiProtocol.register()
+MultiProtocol.register_capability()

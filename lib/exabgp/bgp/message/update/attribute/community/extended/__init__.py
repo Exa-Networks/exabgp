@@ -22,11 +22,11 @@ class ExtendedCommunity (Attribute):
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
 	MULTIPLE = False
 
-	_registered_extended = {}
+	registered_extended = {}
 
 	@classmethod
 	def register_extended (klass):
-		klass._registered_extended[(klass.COMMUNITY_TYPE&0x0F,klass.COMMUNITY_SUBTYPE)] = klass
+		klass.registered_extended[(klass.COMMUNITY_TYPE&0x0F,klass.COMMUNITY_SUBTYPE)] = klass
 
 	# size of value for data (boolean: is extended)
 	length_value = {False:7, True:6}
@@ -72,6 +72,6 @@ class ExtendedCommunity (Attribute):
 	def unpack (data,negotiated):
 		# 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0FFF
 		community = (ord(data[0])&0x0F,ord(data[1]))
-		if community in ExtendedCommunity._registered_extended:
-			return ExtendedCommunity._registered_extended[community].unpack(data)
+		if community in ExtendedCommunity.registered_extended:
+			return ExtendedCommunity.registered_extended[community].unpack(data)
 		return ExtendedCommunity(data)

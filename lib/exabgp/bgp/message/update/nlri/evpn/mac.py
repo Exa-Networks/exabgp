@@ -120,4 +120,4 @@ class MAC (EVPN):
 
 		return cls(rd,esi,etag,mac,label,ip,data)
 
-MAC.register()
+MAC.register_evpn()

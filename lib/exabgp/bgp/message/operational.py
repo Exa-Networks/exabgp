@@ -61,7 +61,7 @@ class OperationalType:
 #
 
 class Operational (Message):
-	_known = dict()
+	registered_operational = dict()
 
 	TYPE = chr(0x06)  # next free Message Type, as IANA did not assign one yet.
 	has_family = False
@@ -86,15 +86,15 @@ class Operational (Message):
 		return 'operational %s' % self.name
 
 	@classmethod
-	def register (cls):
-		cls._known[cls.code] = (cls.category,cls)
+	def register_operational (cls):
+		cls.registered_operational[cls.code] = (cls.category,cls)
 
 	@classmethod
 	def unpack (cls,data):
 		what = Type(unpack('!H',data[0:2])[0])
 		length = unpack('!H',data[2:4])[0]
 
-		decode,klass = cls._known.get(what,('unknown',None))
+		decode,klass = cls.registered_operational.get(what,('unknown',None))
 
 		if decode == 'advisory':
 			afi = unpack('!H',data[4:6])[0]
@@ -261,15 +261,15 @@ class Advisory:
 				utf8
 			)
 
-Advisory.ADM.register()
-Advisory.ASM.register()
+Advisory.ADM.register_operational()
+Advisory.ASM.register_operational()
 
 # a = Advisory.ADM(1,1,'string 1')
 # print a.extensive()
 # b = Advisory.ASM(1,1,'string 2')
 # print b.extensive()
 
-# =======================================================================- Query
+# ======================================================================== Query
 #
 
 class Query:
@@ -304,9 +304,9 @@ class Query:
 		name = 'LPCQ'
 		code = OperationalType.LPCQ
 
-Query.RPCQ.register()
-Query.APCQ.register()
-Query.LPCQ.register()
+Query.RPCQ.register_operational()
+Query.APCQ.register_operational()
+Query.LPCQ.register_operational()
 
 
 # ===================================================================== Response
@@ -348,9 +348,9 @@ class Response:
 		code = OperationalType.LPCP
 
 
-Response.RPCP.register()
-Response.APCP.register()
-Response.LPCP.register()
+Response.RPCP.register_operational()
+Response.APCP.register_operational()
+Response.LPCP.register_operational()
 
 # c = State.RPCQ(1,1,'82.219.0.1',10)
 # print c.extensive()

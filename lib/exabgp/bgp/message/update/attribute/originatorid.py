@@ -8,8 +8,9 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from exabgp.protocol.ip import IPv4
 
+from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.id import AttributeID
-from exabgp.bgp.message.update.attribute import Flag,Attribute
 
 # ============================================================== OriginatorID (3)
 
@@ -28,4 +29,4 @@ class OriginatorID (Attribute,IPv4):
 	def unpack (cls,data,negotiated):
 		return IPv4.unpack(data,cls)
 
-OriginatorID.register()
+OriginatorID.register_attribute()

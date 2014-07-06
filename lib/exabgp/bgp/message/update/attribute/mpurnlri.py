@@ -8,8 +8,9 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from struct import unpack
 
+from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.id import AttributeID
-from exabgp.bgp.message.update.attribute import Flag,Attribute
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.direction import IN
 
@@ -74,6 +75,6 @@ class MPURNLRI (Attribute):
 
 		return MPURNLRI(nlris)
 
-MPURNLRI.register()
+MPURNLRI.register_attribute()
 
 EMPTY_MPURNLRI = MPURNLRI([])

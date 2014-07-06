@@ -94,4 +94,4 @@ class VPLS (NLRI):
 
 for safi in (SAFI.vpls,):
 	for afi in (AFI.l2vpn,):
-		VPLS.register(afi,safi)
+		VPLS.register_nlri(afi,safi)

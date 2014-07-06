@@ -8,8 +8,10 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from struct import pack,unpack
 
+from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.id import AttributeID
-from exabgp.bgp.message.update.attribute import Flag,Attribute
+
 
 # =================================================================== MED (4)
 
@@ -48,4 +50,4 @@ class MED (Attribute):
 	def unpack (cls,data,negotiated):
 		return cls(unpack('!L',data)[0])
 
-MED.register()
+MED.register_attribute()

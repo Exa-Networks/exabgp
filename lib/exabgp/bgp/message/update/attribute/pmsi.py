@@ -10,9 +10,9 @@ Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 from struct import pack,unpack
 
 from exabgp.protocol.ip import IPv4
-from exabgp.bgp.message.update.attribute import Attribute
+from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.id import AttributeID
-from exabgp.bgp.message.update.attribute import Flag
 
 
 # http://tools.ietf.org/html/rfc6514#section-5
@@ -104,7 +104,7 @@ class PMSI (Attribute):
 		)
 
 	@classmethod
-	def pmsi_register (klass):
+	def register_pmsi (klass):
 		klass._pmsi_known[klass.TUNNEL_TYPE] = klass
 
 	@staticmethod
@@ -122,7 +122,7 @@ class PMSI (Attribute):
 			return cls._pmsi_known[subtype].unpack(data[5:],label,flags)
 		return cls.pmsi_unknown(subtype,data[5:],label,flags)
 
-PMSI.register()
+PMSI.register_attribute()
 
 
 # ================================================================= PMSINoTunnel
@@ -141,7 +141,7 @@ class PMSINoTunnel (PMSI):
 	def unpack (cls,tunnel,label,flags):
 		return cls(label,flags)
 
-PMSINoTunnel.pmsi_register()
+PMSINoTunnel.register_pmsi()
 
 
 # ======================================================= PMSIIngressReplication
@@ -162,4 +162,4 @@ class PMSIIngressReplication (PMSI):
 		ip = IPv4.ntop(tunnel)
 		return cls(ip,label,flags,tunnel)
 
-PMSIIngressReplication.pmsi_register()
+PMSIIngressReplication.register_pmsi()

@@ -30,4 +30,4 @@ class UnknownCapability (Capability):
 	def unpack (capability,instance,data):
 		return instance.set(capability,data)
 
-UnknownCapability.fallback()
+UnknownCapability.fallback_capability()

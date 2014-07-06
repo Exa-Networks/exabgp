@@ -8,7 +8,9 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.update.attribute import Attribute
 
+
 # ============================================================= UnknownAttribute
+#
 
 class UnknownAttribute (Attribute):
 	MULTIPLE = False

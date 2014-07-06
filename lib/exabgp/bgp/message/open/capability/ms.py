@@ -38,5 +38,5 @@ class MultiSession (Capability,list):
 		# XXX: FIXME: we should set that that instance was seen and raise if seen twice
 		return instance
 
-MultiSession.register(CapabilityID.MULTISESSION_BGP)
-MultiSession.register(CapabilityID.MULTISESSION_BGP_RFC)
+MultiSession.register_capability(CapabilityID.MULTISESSION_BGP)
+MultiSession.register_capability(CapabilityID.MULTISESSION_BGP_RFC)

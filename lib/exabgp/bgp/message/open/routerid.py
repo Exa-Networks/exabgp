@@ -16,7 +16,3 @@ class RouterID (IPv4):
 	@classmethod
 	def unpack (cls,data):
 		return cls('.'.join(str(ord(_)) for _ in data),data)
-
-	@classmethod
-	def register (cls,ip):
-		raise Exception('You shall not pass !')

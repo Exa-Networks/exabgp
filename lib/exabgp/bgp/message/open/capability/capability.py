@@ -13,34 +13,34 @@ from exabgp.bgp.message.notification import Notify
 #
 
 class Capability (object):
-	_known = dict()
-	_fallback = None
+	registered_capability = dict()
+	_fallback_capability = None
 
 	@staticmethod
 	def hex (data):
 		return '0x' + ''.join('%02x' % ord(_) for _ in data)
 
 	@classmethod
-	def fallback (cls):
-		if cls._fallback is not None:
+	def fallback_capability (cls):
+		if cls._fallback_capability is not None:
 			raise RuntimeError('only one fallback function can be registered')
-		cls._fallback = cls
+		cls._fallback_capability = cls
 
 	@classmethod
-	def register (cls,capability=None):
+	def register_capability (cls,capability=None):
 		what = cls.ID if capability is None else capability
-		if what in cls._known:
+		if what in cls.registered_capability:
 			raise RuntimeError('only one class can be registered per capability')
-		cls._known[what] = cls
+		cls.registered_capability[what] = cls
 
 	@classmethod
 	def klass (cls,what):
-		if what in cls._known:
-			kls = cls._known[what]
+		if what in cls.registered_capability:
+			kls = cls.registered_capability[what]
 			kls.ID = what
 			return kls
-		if cls._fallback:
-			return cls._fallback
+		if cls._fallback_capability:
+			return cls._fallback_capability
 		raise Notify (2,4,'can not handle capability %s' % what)
 
 	@classmethod

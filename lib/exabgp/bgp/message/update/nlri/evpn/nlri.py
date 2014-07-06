@@ -20,7 +20,7 @@ from exabgp.protocol.family import AFI,SAFI
 # +-----------------------------------+
 
 class EVPN (object):
-	_known = dict()
+	registered_evpn = dict()
 	# CODE : NEED to be defined in the subclasses
 	NAME = 'unknown'
 	SHORT_NAME = 'unknown'
@@ -63,12 +63,16 @@ class EVPN (object):
 		return hash("%s:%s:%s:%s" % (self.afi,self.safi,self.CODE,self.packed))
 
 	@classmethod
+	def register_evpn (cls):
+		cls.registered_evpn[cls.code] = cls
+
+	@classmethod
 	def unpack(cls,data):
 		code = ord(data[0])
 		length = ord(data[1])
 
-		if code in cls._known:
-			return cls._known[code].unpack(data[length+1:])
+		if code in cls.registered_evpn:
+			return cls.registered_evpn[code].unpack(data[length+1:])
 		klass = cls(data[length+1:])
 		klass.CODE = code
 		return klass

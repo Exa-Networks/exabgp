@@ -22,7 +22,7 @@ from exabgp.logger import Logger,LazyFormat
 class NLRI (Address):
 	__slots__ = []
 
-	_known = dict()
+	registered_nlri = dict()
 	logger = None
 
 	def index (self):
@@ -33,8 +33,8 @@ class NLRI (Address):
 		raise Exception('unimplemented')
 
 	@classmethod
-	def register (cls,afi,safi):
-		cls._known['%d/%d' % (afi,safi)] = cls
+	def register_nlri (cls,afi,safi):
+		cls.registered_nlri['%d/%d' % (afi,safi)] = cls
 
 	@classmethod
 	def unpack (cls,afi,safi,data,addpath,nexthop,action):
@@ -43,8 +43,8 @@ class NLRI (Address):
 		cls.logger.parser(LazyFormat("parsing %s/%s nlri payload " % (afi,safi),od,data))
 
 		key = '%d/%d' % (afi,safi)
-		if key in cls._known:
-			return cls._known[key].unpack(afi,safi,data,addpath,nexthop,action)
+		if key in cls.registered_nlri:
+			return cls.registered_nlri[key].unpack(afi,safi,data,addpath,nexthop,action)
 		raise Notify(3,0,'trying to decode unknown family %s/%s' % (AFI(afi),SAFI(safi)))
 
 	@staticmethod
