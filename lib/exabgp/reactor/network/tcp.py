@@ -7,14 +7,16 @@ Copyright (c) 2013-2013 Exa Networks. All rights reserved.
 """
 
 import time
-import struct
 import socket
 import select
 import platform
 
+from struct import pack
+
 from exabgp.util.errstr import errstr
 
 from exabgp.protocol.family import AFI
+from exabgp.protocol.ip import IP
 from exabgp.reactor.network.error import errno,error
 
 from .error import NotConnected,BindingError,MD5Error,NagleError,TTLError,AsyncError
@@ -62,6 +64,31 @@ def connect (io,ip,port,afi,md5):
 		raise NotConnected('Could not connect to peer %s:%d (%s)' % (ip,port,errstr(e)))
 
 
+# http://lxr.free-electrons.com/source/include/uapi/linux/tcp.h#L197
+#
+# #define TCP_MD5SIG_MAXKEYLEN    80
+#
+# struct tcp_md5sig {
+# 	struct __kernel_sockaddr_storage tcpm_addr;     /* address associated */
+# 	__u16   __tcpm_pad1;                            /* zero */
+# 	__u16   tcpm_keylen;                            /* key length */
+# 	__u32   __tcpm_pad2;                            /* zero */
+# 	__u8    tcpm_key[TCP_MD5SIG_MAXKEYLEN];         /* key (binary) */
+# }
+#
+# #define _K_SS_MAXSIZE   128
+#
+# #define _K_SS_ALIGNSIZE (__alignof__ (struct sockaddr *))
+# /* Implementation specific desired alignment */
+#
+# struct __kernel_sockaddr_storage {
+# 	__kernel_sa_family_t    ss_family;              /* address family */
+# 	/* Following field(s) are implementation specific */
+# 	char    __data[_K_SS_MAXSIZE - sizeof(unsigned short)];
+# 	/* space to achieve desired size, */
+# 	/* _SS_MAXSIZE value minus size of ss_family */
+# } __attribute__ ((aligned(_K_SS_ALIGNSIZE)));   /* force desired alignment */
+
 def MD5 (io,ip,port,afi,md5):
 	if md5:
 		os = platform.system()
@@ -83,29 +110,37 @@ def MD5 (io,ip,port,afi,md5):
 					'options         TCP_SIGNATURE\n'
 					'device          crypto\n'
 				)
-		elif os == 'Linux':
+		else:
 			try:
-				TCP_MD5SIG = 14
 				TCP_MD5SIG_MAXKEYLEN = 80
+				key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, len(md5), md5)
 
+				# __kernel_sockaddr_storage
+				n_af   = IP.toaf(ip)
+				n_addr = IP.pton(ip)
 				n_port = socket.htons(port)
+
+				# pack 'x' is padding, so we want the struct
+
 				if afi == AFI.ipv4:
-					SS_PADSIZE = 120
-					n_addr = socket.inet_pton(socket.AF_INET, ip)
-					tcp_md5sig = 'HH4s%dx2xH4x%ds' % (SS_PADSIZE, TCP_MD5SIG_MAXKEYLEN)
-					md5sig = struct.pack(tcp_md5sig, socket.AF_INET, n_port, n_addr, len(md5), md5)
-				if afi == AFI.ipv6:
-					SS_PADSIZE = 100
+					SS_MAXSIZE = 128
+					sockaddr = pack('!H4s%dx' % SS_MAXSIZE, n_port, n_addr)
+				else:
+					SS_MAXSIZE = 100  # XXX: FIXME: should it not be 128
 					SIN6_FLOWINFO = 0
 					SIN6_SCOPE_ID = 0
-					n_addr = socket.inet_pton(socket.AF_INET6, ip)
-					tcp_md5sig = 'HHI16sI%dx2xH4x%ds' % (SS_PADSIZE, TCP_MD5SIG_MAXKEYLEN)
-					md5sig = struct.pack(tcp_md5sig, socket.AF_INET6, n_port, SIN6_FLOWINFO, n_addr, SIN6_SCOPE_ID, len(md5), md5)
-				io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, md5sig)
+					sockaddr = pack('!HI16sI%dx' % SS_MAXSIZE, n_port, SIN6_FLOWINFO, n_addr, SIN6_SCOPE_ID)
+
+				if os == 'Linux':
+					sockaddr = pack('!H',n_af) + sockaddr
+					TCP_MD5SIG = 0x0E  # 14
+				else:
+					sockaddr = pack('!BB',len(key),n_af)
+					TCP_MD5SIG = 0x10  # 16
+
+				io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
 			except socket.error,e:
-				raise MD5Error('This linux machine does not support TCP_MD5SIG, you can not use MD5 (%s)' % errstr(e))
-		else:
-			raise MD5Error('ExaBGP has no MD5 support for %s' % os)
+				raise MD5Error('This OS (%s) does not support TCP_MD5SIG, you can not use MD5 (%s)' % (os,errstr(e)))
 
 def nagle (io,ip):
 	try:
