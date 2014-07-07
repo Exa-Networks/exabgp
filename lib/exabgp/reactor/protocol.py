@@ -13,15 +13,12 @@ from exabgp.reactor.network.outgoing import Outgoing
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.nop import NOP,_NOP
-from exabgp.bgp.message.unknown import UnknownMessage
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open.capability import Capabilities
-from exabgp.bgp.message.open.capability.id import REFRESH
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update import Update,EOR
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notification, Notify
-from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.operational import Operational
 
 from exabgp.reactor.api.processes import ProcessError
@@ -143,74 +140,39 @@ class Protocol (object):
 		if self.neighbor.api.receive_packets:
 			self.peer.reactor.processes.receive(self.peer,msg,header,body)
 
-		if msg == Message.Type.UPDATE:
-			self.logger.message(self.me('<< UPDATE'))
+		if msg == Message.Type.UPDATE and not self.log_routes:
+			yield _UPDATE
+			return
 
-			# This could be speed up massively by changing the order of the IF
-			if self.neighbor.api.receive_updates:
-				update = Update.unpack_message(body,self.negotiated)
-				if self.neighbor.api.consolidate:
-					self.peer.reactor.processes.update(self.peer,update,header,body)
-				else:
-					self.peer.reactor.processes.update(self.peer,update,'','')
-			elif self.log_routes:
-				update = Update.unpack_message(body,self.negotiated)
+		message = Message.unpack_message(msg,body,self.negotiated)
+		self.logger.message(self.me('<< %s' % Message.name(msg)))
+		if self.neighbor.api.receive_message(msg):
+			if self.neighbor.api.consolidate:
+				self.peer.reactor.processes.message(message.TYPE,self.peer,message,header,body)
 			else:
-				update = _UPDATE
-			yield update
+				self.peer.reactor.processes.message(message.TYPE,self.peer,message,'','')
+		yield message
 
-		elif msg == Message.Type.KEEPALIVE:
-			self.logger.message(self.me('<< KEEPALIVE%s' % (' (%s)' % comment if comment else '')))
-			if self.neighbor.api.receive_keepalives:
-				if self.neighbor.api.consolidate:
-					self.peer.reactor.processes.keepalive(self.peer,msg,header,body)
-				else:
-					self.peer.reactor.processes.keepalive(self.peer,msg,'','')
-			yield KeepAlive.unpack_message(body,self.negotiated)
+		return
+		# XXX: FIXME: check it is well 2,4
+		raise Notify(2,4,'unknown message received')
 
-		elif msg == Message.Type.NOTIFICATION:
-			self.logger.message(self.me('<< NOTIFICATION'))
-			yield Notification.unpack_message(body,self.negotiated)
+		# elif msg == Message.Type.ROUTE_REFRESH:
+		# 	if self.negotiated.refresh != REFRESH.absent:
+		# 		self.logger.message(self.me('<< ROUTE-REFRESH'))
+		# 		refresh = RouteRefresh.unpack_message(body,self.negotiated)
+		# 		if self.neighbor.api.receive_refresh:
+		# 			if refresh.reserved in (RouteRefresh.start,RouteRefresh.end):
+		# 				if self.neighbor.api.consolidate:
+		# 					self.peer.reactor.process.refresh(self.peer,refresh,header,body)
+		# 				else:
+		# 					self.peer.reactor.processes.refresh(self.peer,refresh,'','')
+		# 	else:
+		# 		# XXX: FIXME: really should raise, we are too nice
+		# 		self.logger.message(self.me('<< NOP (un-negotiated type %d)' % msg))
+		# 		refresh = UnknownMessage.unpack_message(body,self.negotiated)
+		# 	yield refresh
 
-		elif msg == Message.Type.ROUTE_REFRESH:
-			if self.negotiated.refresh != REFRESH.absent:
-				self.logger.message(self.me('<< ROUTE-REFRESH'))
-				refresh = RouteRefresh.unpack_message(body,self.negotiated)
-				if self.neighbor.api.receive_refresh:
-					if refresh.reserved in (RouteRefresh.start,RouteRefresh.end):
-						if self.neighbor.api.consolidate:
-							self.peer.reactor.process.refresh(self.peer,refresh,header,body)
-						else:
-							self.peer.reactor.processes.refresh(self.peer,refresh,'','')
-			else:
-				# XXX: FIXME: really should raise, we are too nice
-				self.logger.message(self.me('<< NOP (un-negotiated type %d)' % msg))
-				refresh = UnknownMessage.unpack_message(body,self.negotiated)
-			yield refresh
-
-		elif msg == Message.Type.OPERATIONAL:
-			if self.peer.neighbor.operational:
-				operational = Operational.unpack_message(body,self.negotiated)
-				if self.neighbor.api.consolidate:
-					self.peer.reactor.processes.operational(self.peer,operational,header,body)
-				else:
-					self.peer.reactor.processes.operational(self.peer,operational,'','')
-			else:
-				operational = _OPERATIONAL
-			yield operational
-
-		elif msg == Message.Type.OPEN:
-			if self.neighbor.api.receive_opens:
-				open_message = Open.unpack_message(body,self.negotiated)
-				if self.neighbor.api.consolidate:
-					self.peer.reactor.processes.open(self.peer,'received',open_message,header,body)
-				else:
-					self.peer.reactor.processes.open(self.peer,'received',open_message,'','')
-			yield Open.unpack(body)
-
-		else:
-			# XXX: FIXME: check it is well 2,4
-			raise Notify(2,4,'unknown message received')
 
 	def validate_open (self):
 		error = self.negotiated.validate(self.neighbor)

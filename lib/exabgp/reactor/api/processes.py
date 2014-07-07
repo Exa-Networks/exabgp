@@ -14,9 +14,11 @@ import fcntl
 
 from exabgp.util.errstr import errstr
 
-from exabgp.reactor.api.encoding import Text,JSON
 from exabgp.configuration.file import formated
+from exabgp.reactor.api.encoding import Text,JSON
+from exabgp.bgp.message import Message
 from exabgp.logger import Logger
+
 
 class ProcessError (Exception):
 	pass
@@ -32,6 +34,16 @@ class Processes (object):
 	# how many time can a process can respawn in the time interval
 	respawn_number = 5
 	respawn_timemask = 0xFFFFFF - pow(2,6) + 1  # '0b111111111111111111000000' (around a minute, 63 seconds)
+
+	_dispatch = {}
+
+	def register_process (message_id,storage):
+		def closure (f):
+			def wrap (*args):
+				f(*args)
+			return wrap
+		storage[message_id] = closure
+		return closure
 
 	def __init__ (self,reactor):
 		self.logger = Logger()
@@ -243,42 +255,51 @@ class Processes (object):
 		for process in self._notify(peer.neighbor.peer_address,'neighbor-changes'):
 			self.write(process,self._api_encoder[process].down(peer,reason))
 
-	def notification (self,peer,code,subcode,data):
-		if self.silence: return
-		for process in self._notify(peer.neighbor.peer_address,'neighbor-changes'):
-			self.write(process,self._api_encoder[process].notification(peer,code,subcode,data))
-
 	def receive (self,peer,category,header,body):
 		if self.silence: return
 		for process in self._notify(peer.neighbor.peer_address,'receive-packets'):
 			self.write(process,self._api_encoder[process].receive(peer,category,header,body))
-
-	def keepalive (self,peer,category,header,body):
-		if self.silence: return
-		for process in self._notify(peer.neighbor.peer_address,'receive-keepalives'):
-			self.write(process,self._api_encoder[process].keepalive(peer,header,body))
-
-	def open (self,peer,direction,open_msg,header,body):
-		if self.silence: return
-		for process in self._notify(peer.neighbor.peer_address,'receive-opens'):
-			self.write(process,self._api_encoder[process].open(peer,direction,open_msg,header,body))
 
 	def send (self,peer,category,header,body):
 		if self.silence: return
 		for process in self._notify(peer.neighbor.peer_address,'send-packets'):
 			self.write(process,self._api_encoder[process].send(peer,category,header,body))
 
+	@register_process(Message.Type.OPEN,_dispatch)
+	def open (self,peer,direction,open_msg,header,body):
+		if self.silence: return
+		for process in self._notify(peer.neighbor.peer_address,'receive-opens'):
+			self.write(process,self._api_encoder[process].open(peer,direction,open_msg,header,body))
+
+	@register_process(Message.Type.NOTIFICATION,_dispatch)
+	def notification (self,peer,code,subcode,data):
+		if self.silence: return
+		for process in self._notify(peer.neighbor.peer_address,'neighbor-changes'):
+			self.write(process,self._api_encoder[process].notification(peer,code,subcode,data))
+
+	@register_process(Message.Type.KEEPALIVE,_dispatch)
+	def keepalive (self,peer,category,header,body):
+		if self.silence: return
+		for process in self._notify(peer.neighbor.peer_address,'receive-keepalives'):
+			self.write(process,self._api_encoder[process].keepalive(peer,header,body))
+
+	@register_process(Message.Type.UPDATE,_dispatch)
 	def update (self,peer,update,header,body):
 		if self.silence: return
 		for process in self._notify(peer.neighbor.peer_address,'receive-routes'):
 			self.write(process,self._api_encoder[process].update(peer,update,header,body))
 
+	@register_process(Message.Type.ROUTE_REFRESH,_dispatch)
 	def refresh (self,peer,refresh,header,body):
 		if self.silence: return
 		for process in self._notify(peer.neighbor.peer_address,'receive-refresh'):
 			self.write(process,self._api_encoder[process].refresh(peer,refresh,header,body))
 
+	@register_process(Message.Type.OPERATIONAL,_dispatch)
 	def operational (self,peer,operational,header,body):
 		if self.silence: return
 		for process in self._notify(peer.neighbor.peer_address,'receive-operational'):
 			self.write(process,self._api_encoder[process].operational(peer,operational.category,operational,header,body))
+
+	def message (self,message_id,peer,operational,header,body):
+		_dispatch[message_id](peer,operational,header,body)

@@ -13,6 +13,8 @@ from exabgp.bgp.message import Message,IN
 
 class APIOptions (object):
 	def __init__ (self):
+		self._dispatch = {}
+
 		self.receive_parsed = False
 		self.receive_packets = False
 		self.consolidate = False
@@ -26,6 +28,16 @@ class APIOptions (object):
 		self.receive_updates = False
 		self.receive_refresh = False
 		self.receive_operational = False
+
+		self._dispatch[Message.Type.OPEN] = lambda : self.receive_opens
+		self._dispatch[Message.Type.NOTIFICATION] = lambda : self.receive_notifications
+		self._dispatch[Message.Type.KEEPALIVE] = lambda : self.receive_keepalives
+		self._dispatch[Message.Type.UPDATE] = lambda : self.receive_updates
+		self._dispatch[Message.Type.ROUTE_REFRESH] = lambda : self.receive_refresh
+		self._dispatch[Message.Type.OPERATIONAL] = lambda : self.receive_operationals
+
+	def receive_message (self,message_id):
+		return self._dispatch[message_id]()
 
 def hexstring (value):
 	def spaced (value):

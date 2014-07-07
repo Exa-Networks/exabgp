@@ -10,6 +10,7 @@ from struct import pack
 
 
 # =================================================================== BGP States
+#
 
 class State (object):
 	IDLE        = 0x01
@@ -21,6 +22,7 @@ class State (object):
 
 
 # ==================================================================== Direction
+#
 
 from exabgp.util.enumeration import Enumeration
 
@@ -29,7 +31,7 @@ IN  = Enumeration ('announced','withdrawn')
 
 
 # ================================================================== BGP Message
-
+#
 
 # 0                   1                   2                   3
 # 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -70,6 +72,29 @@ class Message (Exception):
 		#GENERAL       = 0x80  # . 128
 		#LOCALRIB      = 0x100  # . 256
 
+	class Name:
+		NOP           = 'NOP'
+		OPEN          = 'OPEN'
+		UPDATE        = 'UPDATE'
+		NOTIFICATION  = 'NOTIFICATION'
+		KEEPALIVE     = 'KEEPALIVE'
+		ROUTE_REFRESH = 'ROUTE_REFRESH'
+		OPERATIONAL   = 'OPERATIONAL'
+
+	_name = {
+		Type.NOP           : 'NOP',
+		Type.OPEN          : 'OPEN',
+		Type.UPDATE        : 'UPDATE',
+		Type.NOTIFICATION  : 'NOTIFICATION',
+		Type.KEEPALIVE     : 'KEEPALIVE',
+		Type.ROUTE_REFRESH : 'ROUTE_REFRESH',
+		Type.OPERATIONAL   : 'OPERATIONAL',
+	}
+
+	@classmethod
+	def name (cls,message_id):
+		return cls._name.get(message_id,'UNKNOWN MESSAGE %d' % message_id)
+
 	Length = {
 		Type.OPEN          : lambda _ : _ >= 29,
 		Type.UPDATE        : lambda _ : _ >= 23,
@@ -99,33 +124,6 @@ class Message (Exception):
 			return 'operational'
 		return 'unknown'
 
-	def name (self,code):
-		if not self._name:
-			if code is None:
-				self._name = 'UNKNOWN (invalid code)'
-			elif code == self.Type.OPEN:
-				self._name = 'OPEN'
-			elif code == self.Type.UPDATE:
-				self._name = 'UPDATE'
-			elif code == self.Type.NOTIFICATION:
-				self._name = 'NOTIFICATION'
-			elif code == self.Type.KEEPALIVE:
-				self._name = 'KEEPALIVE'
-			elif code == self.Type.ROUTE_REFRESH:
-				self._name = 'ROUTE_REFRESH'
-			elif code == self.Type.OPERATIONAL:
-				self._name = 'OPERATIONAL'
-			# if code & self.Type.LIST:
-			# 	self._str = 'LIST'
-			# if code & self.Type.HEADER:
-			# 	self._str = 'HEADER'
-			# if code & self.Type.GENERAL:
-			# 	self._str = 'GENERAL'
-			else:
-				self._name = 'UNKNOWN (%d)' % code
-
-		return self._name
-
 	def _message (self,message):
 		message_len = pack('!H',19+len(message))
 		return "%s%s%s%s" % (self.MARKER,message_len,self.TYPE,message)
@@ -138,16 +136,16 @@ class Message (Exception):
 		what = cls.TYPE if message is None else message
 		if what in cls.registered_message:
 			raise RuntimeError('only one class can be registered per capability')
-		cls.registered_message[what] = cls
+		cls.registered_message[ord(what)] = cls
 
 	@classmethod
 	def klass (cls,what):
-		if what in cls.registered_capability:
+		if what in cls.registered_message:
 			return cls.registered_message[what]
 		raise cls.klass_notify(2,4,'can not handle capability %s' % what)
 
 	@classmethod
 	def unpack_message (cls,message,data,negotiated):
-		if message in cls.register_message:
+		if message in cls.registered_message:
 			return cls.klass(message).unpack_message(data,negotiated)
 		return cls.klass(message).unpack_message(data,negotiated)
