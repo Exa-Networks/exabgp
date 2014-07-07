@@ -10,7 +10,7 @@ Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 from struct import unpack, pack
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI,SAFI
-from exabgp.bgp.message.direction import OUT
+from exabgp.bgp.message import OUT
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher

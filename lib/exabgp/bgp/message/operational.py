@@ -90,7 +90,7 @@ class Operational (Message):
 		cls.registered_operational[cls.code] = (cls.category,cls)
 
 	@classmethod
-	def unpack (cls,data):
+	def unpack_message (cls,data,negotiated):
 		what = Type(unpack('!H',data[0:2])[0])
 		length = unpack('!H',data[2:4])[0]
 
@@ -116,6 +116,8 @@ class Operational (Message):
 			return klass(afi,safi,routerid,sequence,counter)
 		else:
 			print 'ignoring ATM this kind of message'
+
+Operational.register_message()
 
 
 # ============================================================ OperationalFamily

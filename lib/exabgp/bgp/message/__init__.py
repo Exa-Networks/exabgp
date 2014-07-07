@@ -6,9 +6,11 @@ Created by Thomas Mangin on 2010-01-15.
 Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 """
 
-from struct import pack,unpack
+from struct import pack
 
-# We do not implement the RFC State Machine so .. we do not care :D
+
+# =================================================================== BGP States
+
 class State (object):
 	IDLE        = 0x01
 	CONNECT     = 0x02
@@ -18,14 +20,16 @@ class State (object):
 	ESTABLISHED = 0x06
 
 
-# XXX: the name is HORRIBLE, fix this !!
-def defix (data):
-	l = unpack('!H',data[0:2])[0]
-	return l,data[2:l+2],data[l+2:]
+# ==================================================================== Direction
 
-# XXX: the name is HORRIBLE, fix this !!
-def prefix (data):
-	return '%s%s' % (pack('!H',len(data)),data)
+from exabgp.util.enumeration import Enumeration
+
+OUT = Enumeration ('announce','withdraw')
+IN  = Enumeration ('announced','withdrawn')
+
+
+# ================================================================== BGP Message
+
 
 # 0                   1                   2                   3
 # 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -49,6 +53,9 @@ class Message (Exception):
 	MARKER = chr(0xff)*16
 	HEADER_LEN = 19
 	MAX_LEN = 4096
+
+	registered_message = {}
+	klass_notify = None
 
 	class Type:
 		NOP           = 0x00  # .   0 - internal
@@ -126,5 +133,21 @@ class Message (Exception):
 	def message (self):
 		raise RuntimeError('message not implemented in subclasses')
 
-	def __str__ (self):
-		raise RuntimeError('do not call __str__ on a Message')
+	@classmethod
+	def register_message (cls,message=None):
+		what = cls.TYPE if message is None else message
+		if what in cls.registered_message:
+			raise RuntimeError('only one class can be registered per capability')
+		cls.registered_message[what] = cls
+
+	@classmethod
+	def klass (cls,what):
+		if what in cls.registered_capability:
+			return cls.registered_message[what]
+		raise cls.klass_notify(2,4,'can not handle capability %s' % what)
+
+	@classmethod
+	def unpack_message (cls,message,data,negotiated):
+		if message in cls.register_message:
+			return cls.klass(message).unpack_message(data,negotiated)
+		return cls.klass(message).unpack_message(data,negotiated)

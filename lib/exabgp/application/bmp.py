@@ -101,7 +101,7 @@ class BMPHandler (asyncore.dispatcher_with_send):
 			return
 
 		negotiated = FakeNegotiated(header,self.asn4)
-		update = Update.unpack(negotiated,bgp_body)
+		update = Update.unpack_message(bgp_body,negotiated)
 		if self.use_json:
 			print >> self.fd, self.json.bmp(self.ip,update)
 		else:

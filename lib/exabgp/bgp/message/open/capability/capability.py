@@ -45,6 +45,6 @@ class Capability (object):
 
 	@classmethod
 	def unpack (cls,capability,capabilities,data):
-			if capability in capabilities:
-				return cls.klass(capability).unpack(capability,capabilities[capability],data)
-			return cls.klass(capability).unpack(capability,Capability.klass(capability)(),data)
+		if capability in capabilities:
+			return cls.klass(capability).unpack(capability,capabilities[capability],data)
+		return cls.klass(capability).unpack(capability,Capability.klass(capability)(),data)

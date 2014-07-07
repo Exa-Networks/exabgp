@@ -10,11 +10,11 @@ from struct import unpack
 
 from exabgp.protocol.family import AFI,SAFI
 
+from exabgp.bgp.message import IN
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.nlri.nlri import NLRI
-from exabgp.bgp.message.direction import IN
 
 from exabgp.bgp.message.notification import Notify
 

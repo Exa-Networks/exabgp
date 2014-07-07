@@ -78,7 +78,7 @@ def check_neighbor (neighbor):
 				logger.parser('')  # new line
 
 				pack1s = pack1[19:] if pack1.startswith('\xFF'*16) else pack1
-				update = Update.unpack(negotiated,pack1s)
+				update = Update.unpack_message(pack1s,negotiated)
 
 				change2 = Change(update.nlris[0],update.attributes)
 				str2 = change2.extensive()
@@ -203,7 +203,7 @@ def check_update (neighbor,raw):
 
 		try:
 			# This does not take the BGP header - let's assume we will not break that :)
-			update = Update.unpack(negotiated,injected)
+			update = Update.unpack_message(injected,negotiated)
 		except KeyboardInterrupt:
 			raise
 		except Notify,e:
@@ -228,6 +228,7 @@ def check_update (neighbor,raw):
 #
 
 def check_notification (raw):
-	notification = Notification.unpack(raw[18:])
+	notification = Notification.unpack_message(raw[18:],None)
+	# XXX: FIXME: should be using logger here
 	print notification
 	return True

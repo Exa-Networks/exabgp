@@ -18,8 +18,7 @@ from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.id import REFRESH
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.message.update import Update
-from exabgp.bgp.message.update.eor import EOR
+from exabgp.bgp.message.update import Update,EOR
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notification, Notify
 from exabgp.bgp.message.refresh import RouteRefresh
@@ -148,28 +147,14 @@ class Protocol (object):
 			self.logger.message(self.me('<< UPDATE'))
 
 			# This could be speed up massively by changing the order of the IF
-			if length == 23:
-				update = EOR.unpack()
-				if self.neighbor.api.receive_updates:
-					if self.neighbor.api.consolidate:
-						self.peer.reactor.processes.update(self.peer,update,header,body)
-					else:
-						self.peer.reactor.processes.update(self.peer,update,'','')
-			elif length == 30 and body.startswith(EOR.NLRI.PREFIX):
-				update = EOR.unpack(body)
-				if self.neighbor.api.receive_updates:
-					if self.neighbor.api.consolidate:
-						self.peer.reactor.processes.update(self.peer,update,header,body)
-					else:
-						self.peer.reactor.processes.update(self.peer,update,'','')
-			elif self.neighbor.api.receive_updates:
-				update = Update.unpack(self.negotiated,body)
+			if self.neighbor.api.receive_updates:
+				update = Update.unpack_message(body,self.negotiated)
 				if self.neighbor.api.consolidate:
 					self.peer.reactor.processes.update(self.peer,update,header,body)
 				else:
 					self.peer.reactor.processes.update(self.peer,update,'','')
 			elif self.log_routes:
-				update = Update.unpack(self.negotiated,body)
+				update = Update.unpack_message(body,self.negotiated)
 			else:
 				update = _UPDATE
 			yield update
@@ -181,16 +166,16 @@ class Protocol (object):
 					self.peer.reactor.processes.keepalive(self.peer,msg,header,body)
 				else:
 					self.peer.reactor.processes.keepalive(self.peer,msg,'','')
-			yield KeepAlive()
+			yield KeepAlive.unpack_message(body,self.negotiated)
 
 		elif msg == Message.Type.NOTIFICATION:
 			self.logger.message(self.me('<< NOTIFICATION'))
-			yield Notification.unpack(body)
+			yield Notification.unpack_message(body,self.negotiated)
 
 		elif msg == Message.Type.ROUTE_REFRESH:
 			if self.negotiated.refresh != REFRESH.absent:
 				self.logger.message(self.me('<< ROUTE-REFRESH'))
-				refresh = RouteRefresh.unpack(body)
+				refresh = RouteRefresh.unpack_message(body,self.negotiated)
 				if self.neighbor.api.receive_refresh:
 					if refresh.reserved in (RouteRefresh.start,RouteRefresh.end):
 						if self.neighbor.api.consolidate:
@@ -200,12 +185,12 @@ class Protocol (object):
 			else:
 				# XXX: FIXME: really should raise, we are too nice
 				self.logger.message(self.me('<< NOP (un-negotiated type %d)' % msg))
-				refresh = UnknownMessage.unpack(body)
+				refresh = UnknownMessage.unpack_message(body,self.negotiated)
 			yield refresh
 
 		elif msg == Message.Type.OPERATIONAL:
 			if self.peer.neighbor.operational:
-				operational = Operational.unpack(body)
+				operational = Operational.unpack_message(body,self.negotiated)
 				if self.neighbor.api.consolidate:
 					self.peer.reactor.processes.operational(self.peer,operational,header,body)
 				else:
@@ -216,7 +201,7 @@ class Protocol (object):
 
 		elif msg == Message.Type.OPEN:
 			if self.neighbor.api.receive_opens:
-				open_message = Open.unpack(body)
+				open_message = Open.unpack_message(body,self.negotiated)
 				if self.neighbor.api.consolidate:
 					self.peer.reactor.processes.open(self.peer,'received',open_message,header,body)
 				else:
@@ -224,9 +209,8 @@ class Protocol (object):
 			yield Open.unpack(body)
 
 		else:
-			# XXX: FIXME: really should raise, we are too nice
-			self.logger.message(self.me('<< NOP (unknow type %d)' % msg))
-			yield UnknownMessage.unpack(msg)
+			# XXX: FIXME: check it is well 2,4
+			raise Notify(2,4,'unknown message received')
 
 	def validate_open (self):
 		error = self.negotiated.validate(self.neighbor)

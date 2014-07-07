@@ -10,7 +10,7 @@ from struct import unpack
 from exabgp.protocol.family import AFI,SAFI
 from exabgp.protocol.ip.address import Address
 from exabgp.protocol.ip import IP
-from exabgp.bgp.message.direction import IN
+from exabgp.bgp.message import IN
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.nlri.cidr import CIDR

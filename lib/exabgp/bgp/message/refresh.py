@@ -48,7 +48,7 @@ class RouteRefresh (Message):
 		return self._families[:]
 
 	@classmethod
-	def unpack (cls,data):
+	def unpack_message (cls,data,negotitated):
 		try:
 			afi,reserved,safi = unpack('!HBB',data)
 		except error:
@@ -56,3 +56,5 @@ class RouteRefresh (Message):
 		if reserved not in (0,1,2):
 			raise Notify(7,2,'invalid route-refresh message subtype')
 		return RouteRefresh(afi,safi,reserved)
+
+RouteRefresh.register_message()

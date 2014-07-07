@@ -10,13 +10,15 @@ import string
 
 from exabgp.bgp.message import Message
 
+
 def hexstring (value):
 	def spaced (value):
 		for v in value:
 			yield '%02X' % ord(v)
 	return '0x' + ''.join(spaced(value))
 
-# =================================================================== Notification
+
+# ================================================================== Notification
 # A Notification received from our peer.
 # RFC 4271 Section 4.5
 
@@ -108,10 +110,12 @@ class Notification (Message):
 		)
 
 	@classmethod
-	def unpack (cls,data):
+	def unpack_message (cls,data,negotiated):
 		return cls(ord(data[0]),ord(data[1]),data[2:])
 
 
+# Message we receive and decode
+Notification.register_message()
 
 # =================================================================== Notify
 # A Notification we need to inform our peer of.
@@ -128,3 +132,6 @@ class Notify (Notification):
 			chr(self.subcode),
 			self.data
 		))
+
+# Message we send
+Notify.klass_notify = Notify

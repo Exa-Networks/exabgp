@@ -26,7 +26,7 @@ from exabgp.protocol.family import AFI,SAFI,known_families
 from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.protocol.ip import IP
-from exabgp.bgp.message.direction import OUT
+from exabgp.bgp.message import OUT
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime

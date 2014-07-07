@@ -40,3 +40,6 @@ class NextHop (Attribute,IPv4):
 		return IPv4.unpack(data,NextHop)
 
 NextHop.register_attribute()
+
+class NoNextHop (object):
+	packed = None

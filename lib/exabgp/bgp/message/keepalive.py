@@ -18,3 +18,10 @@ class KeepAlive (Message):
 
 	def __str__ (self):
 		return "KEEPALIVE"
+
+	@classmethod
+	def unpack_message (cls,data,negotiated):
+		# XXX: FIXME: raise Notify if data has something
+		return cls()
+
+KeepAlive.register_message()

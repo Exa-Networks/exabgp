@@ -6,10 +6,13 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
+from struct import pack,unpack
+
 from exabgp.protocol.family import AFI,SAFI
 
-from exabgp.bgp.message import Message,prefix,defix
-from exabgp.bgp.message.direction import IN,OUT
+from exabgp.bgp.message import Message,IN,OUT
+from exabgp.bgp.message.update.eor import EOR
+
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.attribute.id import AttributeID as AID
 from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI,EMPTY_MPRNLRI
@@ -17,6 +20,8 @@ from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI,EMPTY_MPURNLRI
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
+
+from exabgp.bgp.message.update.attribute.nexthop import NoNextHop
 
 from exabgp.util.od import od
 from exabgp.logger import Logger,LazyFormat
@@ -57,6 +62,34 @@ class Update (Message):
 	def __str__ (self):
 		return '\n'.join(['%s%s' % (str(self.nlris[n]),str(self.attributes)) for n in range(len(self.nlris))])
 
+
+	@staticmethod
+	def prefix (data):
+		return '%s%s' % (pack('!H',len(data)),data)
+
+	@staticmethod
+	def split (data):
+		length = len(data)
+
+		len_withdrawn = unpack('!H',data[0:2])[0]
+		withdrawn = data[2:len_withdrawn+2]
+
+		if len(withdrawn) != len_withdrawn:
+			raise Notify(3,1,'invalid withdrawn routes length, not enough data available')
+
+		start_attributes = len_withdrawn+4
+		len_attributes = unpack('!H',data[len_withdrawn+2:start_attributes])[0]
+		start_announced = len_withdrawn+len_attributes+4
+		attributes = data[start_attributes:start_announced]
+		announced = data[start_announced:]
+
+		if len(attributes) != len_attributes:
+			raise Notify(3,1,'invalid total path attribute length, not enough data available')
+
+		if 2 + len_withdrawn + 2+ len_attributes + len(announced) != length:
+			raise Notify(3,1,'error in BGP message length, not enough data for the size announced')
+
+		return withdrawn,attributes,announced
 
 	# The routes MUST have the same attributes ...
 	# XXX: FIXME: calculate size progressively to not have to do it every time
@@ -103,7 +136,7 @@ class Update (Message):
 			if len(packed_del + packed) >= msg_size:
 				if not packed_del:
 					raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
-				yield self._message(prefix(packed_del) + prefix(''))
+				yield self._message(Update.prefix(packed_del) + Update.prefix(''))
 				packed_del = packed
 			else:
 				packed_del += packed
@@ -124,7 +157,7 @@ class Update (Message):
 					if len(packed_del + packed_mp_del + packed) >= msg_size:
 						if not packed_mp_del and not packed_del:
 							raise Notify(6,0,'attributes size is so large we can not even pack one MPURNLRI')
-						yield self._message(prefix(packed_del) + prefix(packed_mp_del))
+						yield self._message(Update.prefix(packed_del) + Update.prefix(packed_mp_del))
 						packed_del = ''
 						packed_mp_del = packed
 					else:
@@ -142,7 +175,7 @@ class Update (Message):
 		if add_mp:
 			msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
 		if len(packed_del + packed_mp_del) >= msg_size:
-			yield self._message(prefix(packed_del) + prefix(packed_mp_del))
+			yield self._message(Update.prefix(packed_del) + Update.prefix(packed_mp_del))
 			packed_del = ''
 			packed_mp_del = ''
 
@@ -158,7 +191,7 @@ class Update (Message):
 					if len(packed_del + packed_mp_del + packed_mp_add + packed) >= msg_size:
 						if not packed_mp_add and not packed_mp_del and not packed_del:
 							raise Notify(6,0,'attributes size is so large we can not even pack on MPURNLRI')
-						yield self._message(prefix(packed_del) + prefix(attr + packed_mp_del + packed_mp_add))
+						yield self._message(Update.prefix(packed_del) + Update.prefix(attr + packed_mp_del + packed_mp_add))
 						packed_del = ''
 						packed_mp_del = ''
 						packed_mp_add = packed
@@ -174,7 +207,7 @@ class Update (Message):
 		if add_nlri:
 			msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
 		if len(packed_del + packed_mp_del + packed_mp_add) >= msg_size:
-			yield self._message(prefix(packed_del) + prefix(packed_mp_del))
+			yield self._message(Update.prefix(packed_del) + Update.prefix(packed_mp_del))
 			packed_del = ''
 			packed_mp_del = ''
 
@@ -187,10 +220,10 @@ class Update (Message):
 				if not packed_add and not packed_mp_add and not packed_mp_del and not packed_del:
 					raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
 				if packed_mp_add:
-					yield self._message(prefix(packed_del) + prefix(attr + packed_mp_del + packed_mp_add) + packed_add)
+					yield self._message(Update.prefix(packed_del) + Update.prefix(attr + packed_mp_del + packed_mp_add) + packed_add)
 					msg_size = negotiated.msg_size - 19 - 2 - 2  # 2 bytes for each of the two prefix() header
 				else:
-					yield self._message(prefix(packed_del) + prefix(attr + packed_mp_del) + packed_add)
+					yield self._message(Update.prefix(packed_del) + Update.prefix(attr + packed_mp_del) + packed_add)
 				packed_del = ''
 				packed_mp_del = ''
 				packed_mp_add = ''
@@ -198,51 +231,43 @@ class Update (Message):
 			else:
 				packed_add += packed
 
-		yield self._message(prefix(packed_del) + prefix(attr + packed_mp_del + packed_mp_add) + packed_add)
+		yield self._message(Update.prefix(packed_del) + Update.prefix(attr + packed_mp_del + packed_mp_add) + packed_add)
 
 
 	# XXX: FIXME: this can raise ValueError. IndexError,TypeError, struct.error (unpack) = check it is well intercepted
-	@staticmethod
-	def unpack (negotiated,data):
+	@classmethod
+	def unpack_message (cls,data,negotiated):
 		logger = Logger()
 
 		length = len(data)
 
-		lw,withdrawn,data = defix(data)
+		# This could be speed up massively by changing the order of the IF
+		if length == 23:
+			return EOR.unpack_message()
+		if length == 30 and data.startswith(EOR.NLRI.PREFIX):
+			return EOR.unpack_message(data)
 
-		if len(withdrawn) != lw:
-			raise Notify(3,1,'invalid withdrawn routes length, not enough data available')
+		withdrawn, _attributes, announced = cls.split(data)
+		attributes = Attributes.unpack(_attributes,negotiated)
 
-		la,attribute,announced = defix(data)
-
-		if len(attribute) != la:
-			raise Notify(3,1,'invalid total path attribute length, not enough data available')
-
-		if 2 + lw + 2+ la + len(announced) != length:
-			raise Notify(3,1,'error in BGP message length, not enough data for the size announced')
-
-		attributes = Attributes.unpack(attribute,negotiated)
+		if not withdrawn:
+			logger.parser("no withdrawn NLRI")
+		if not announced:
+			logger.parser("no announced NLRI")
 
 		# Is the peer going to send us some Path Information with the route (AddPath)
 		addpath = negotiated.addpath.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
-		nho = attributes.get(AID.NEXT_HOP,None)
-		nh = nho.packed if nho else None
-
-		if not withdrawn:
-			logger.parser(LazyFormat("parsed no withdraw nlri",od,''))
+		nexthop = attributes.get(AID.NEXT_HOP,NoNextHop).packed  # None for NoNextHop
 
 		nlris = []
 		while withdrawn:
-			length,nlri = NLRI.unpack(AFI.ipv4,SAFI.unicast,withdrawn,addpath,nh,IN.withdrawn)
+			length,nlri = NLRI.unpack(AFI.ipv4,SAFI.unicast,withdrawn,addpath,nexthop,IN.withdrawn)
 			logger.parser(LazyFormat("parsed withdraw nlri %s payload " % nlri,od,withdrawn[:len(nlri)]))
 			withdrawn = withdrawn[length:]
 			nlris.append(nlri)
 
-		if not announced:
-			logger.parser(LazyFormat("parsed no announced nlri",od,''))
-
 		while announced:
-			length,nlri = NLRI.unpack(AFI.ipv4,SAFI.unicast,announced,addpath,nh,IN.announced)
+			length,nlri = NLRI.unpack(AFI.ipv4,SAFI.unicast,announced,addpath,nexthop,IN.announced)
 			logger.parser(LazyFormat("parsed announce nlri %s payload " % nlri,od,announced[:len(nlri)]))
 			announced = announced[length:]
 			nlris.append(nlri)
@@ -254,3 +279,6 @@ class Update (Message):
 			nlris.extend(mpr.nlris)
 
 		return Update(nlris,attributes)
+
+
+Update.register_message()
