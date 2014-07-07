@@ -8,15 +8,9 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from struct import pack,unpack
 
-def cachedCommunity (community):
-	if community in Community.cache:
-		return Community.cache[community]
-	instance = Community(community)
-	if Community.caching:
-		Community.cache[community] = instance
-	return instance
 
-# =================================================================== Community
+# ==================================================================== Community
+#
 
 class Community (object):
 	NO_EXPORT            = pack('!L',0xFFFFFF01)
@@ -25,7 +19,7 @@ class Community (object):
 	NO_PEER              = pack('!L',0xFFFFFF04)
 
 	cache = {}
-	caching = False
+	caching = True
 
 	__slots__ = ['community','_str']
 
@@ -65,6 +59,18 @@ class Community (object):
 	def __ne__ (self,other):
 		return self.community != other.community
 
+	@classmethod
+	def unpack (cls,community,negotiated):
+		return cls(community)
+
+	@classmethod
+	def cached (cls,community):
+		if cls.caching and community in cls.cache:
+			return cls.cache[community]
+		instance = cls(community)
+		if cls.caching:
+			cls.cache[community] = instance
+		return instance
 
 # Always cache well-known communities, they will be used a lot
 if not Community.cache:

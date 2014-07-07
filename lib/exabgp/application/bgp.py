@@ -263,8 +263,8 @@ The program configuration can be controlled using signals:
 			'openwait': (environment.integer,environment.nop,'60','how many second we wait for an open once the TCP session is established'),
 		},
 		'cache' : {
-			'attributes'  :  (environment.boolean,environment.lower,'true', 'cache routes attributes (configuration and wire) for faster parsing'),
-			'nexthops'    :  (environment.boolean,environment.lower,'true', 'cache routes next-hops'),
+			'attributes'  :  (environment.boolean,environment.lower,'true', 'cache all attributes (configuration and wire) for faster parsing'),
+			'nexthops'    :  (environment.boolean,environment.lower,'true', 'cache routes next-hops (deprecated: next-hops are always cached)'),
 		},
 		'api' : {
 			'encoder'  :  (environment.api,environment.lower,'text', '(experimental) default encoder to use with with external API (text or json)'),
@@ -380,11 +380,8 @@ The program configuration can be controlled using signals:
 			logger.configuration('the argument passed as configuration is not a file','error')
 			sys.exit(1)
 
-	from exabgp.bgp.message.update.attribute.nexthop import NextHop
-	NextHop.caching = env.cache.nexthops
-
-	from exabgp.bgp.message.update.attribute.community.normal import Community
-	Community.caching = env.cache.attributes
+	from exabgp.bgp.message.update.attribute.attribute import Attribute
+	Attribute.caching = env.cache.attributes
 
 	if len(configurations) == 1:
 		run(env,comment,configuration)

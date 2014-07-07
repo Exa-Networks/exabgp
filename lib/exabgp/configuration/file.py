@@ -45,7 +45,7 @@ from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
-from exabgp.bgp.message.update.attribute.community.normal import Community,cachedCommunity
+from exabgp.bgp.message.update.attribute.community.community import Community
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
 from exabgp.bgp.message.update.attribute.community import Communities,ExtendedCommunities
@@ -1838,7 +1838,9 @@ class Configuration (object):
 			nlri.nexthop = nh
 
 			if afi == AFI.ipv4 and safi in (SAFI.unicast,SAFI.multicast):
-				change.attributes.add(NextHop(nh.ip,nh.packed))
+				change.attributes.add(Attribute.unpack(NextHop.ID,NextHop.FLAG,nh.packed,None))
+				# NextHop(nh.ip,nh.packed) does not cache the result, using unpack does
+				# change.attributes.add(NextHop(nh.ip,nh.packed))
 
 			return True
 		except:
@@ -2001,28 +2003,28 @@ class Configuration (object):
 				raise ValueError('invalid community %s (prefix too large)' % data)
 			if suffix >= pow(2,16):
 				raise ValueError('invalid community %s (suffix too large)' % data)
-			return cachedCommunity(pack('!L',(prefix<<16) + suffix))
+			return Community.cached(pack('!L',(prefix<<16) + suffix))
 		elif len(data) >=2 and data[1] in 'xX':
 			value = long(data,16)
 			if value >= pow(2,32):
 				raise ValueError('invalid community %s (too large)' % data)
-			return cachedCommunity(pack('!L',value))
+			return Community.cached(pack('!L',value))
 		else:
 			low = data.lower()
 			if low == 'no-export':
-				return cachedCommunity(Community.NO_EXPORT)
+				return Community.cached(Community.NO_EXPORT)
 			elif low == 'no-advertise':
-				return cachedCommunity(Community.NO_ADVERTISE)
+				return Community.cached(Community.NO_ADVERTISE)
 			elif low == 'no-export-subconfed':
-				return cachedCommunity(Community.NO_EXPORT_SUBCONFED)
+				return Community.cached(Community.NO_EXPORT_SUBCONFED)
 			# no-peer is not a correct syntax but I am sure someone will make the mistake :)
 			elif low == 'nopeer' or low == 'no-peer':
-				return cachedCommunity(Community.NO_PEER)
+				return Community.cached(Community.NO_PEER)
 			elif data.isdigit():
 				value = unpack('!L',data)[0]
 				if value >= pow(2,32):
 					raise ValueError('invalid community %s (too large)' % data)
-					return cachedCommunity(pack('!L',value))
+					return Community.cached(pack('!L',value))
 			else:
 				raise ValueError('invalid community name %s' % data)
 

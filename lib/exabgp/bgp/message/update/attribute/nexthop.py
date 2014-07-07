@@ -14,7 +14,7 @@ from exabgp.bgp.message.update.attribute.id import AttributeID
 
 # ================================================================== NextHop (3)
 
-# The order is important and attribute MUST be first for the righ register to be called
+# The inheritance order is important and attribute MUST be first for the righ register to be called
 # At least until we rename them to be more explicit
 
 class NextHop (Attribute,IPv4):
@@ -22,9 +22,6 @@ class NextHop (Attribute,IPv4):
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 	CACHING = True
-
-	cache = {}
-	caching = False
 
 	# __init__ inherited from IPv4
 
@@ -40,13 +37,6 @@ class NextHop (Attribute,IPv4):
 
 	@staticmethod
 	def unpack (data,negotiated):
-		if data in NextHop.cache:
-			return NextHop.cache[data]
-		instance = IPv4.unpack(data,NextHop)
-
-		if NextHop.caching:
-			NextHop.cache[data] = instance
-		return instance
-
+		return IPv4.unpack(data,NextHop)
 
 NextHop.register_attribute()

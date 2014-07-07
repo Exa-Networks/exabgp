@@ -326,7 +326,7 @@ def cluster_list (tokeniser):
 # ==================================================================== Community
 #
 
-from exabgp.bgp.message.update.attribute.community.normal import Community
+from exabgp.bgp.message.update.attribute.community.community import Community
 
 def _community (value):
 	separator = value.find(':')

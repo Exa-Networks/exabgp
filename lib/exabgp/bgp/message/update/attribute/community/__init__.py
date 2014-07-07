@@ -9,7 +9,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.id import AttributeID
-from exabgp.bgp.message.update.attribute.community.normal import Community
+from exabgp.bgp.message.update.attribute.community.community import Community
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.notification import Notify
 

@@ -6,17 +6,15 @@ Important
 
 ROADMAP
 
-cachedCommunity still exists
-Object created through the configuration should be cached too.
 Instead of passing asn4 to pack, we should pass negotiated, this would remove a special case for AIGP packing
-Extended Attributes should be MultiAttributes
+At the end of the configuration parsing clear the Community cache
 
 In no particular order:
 - provide an helper program able to read MRT dumps and announce them too.
 - provide easy integration with http://www.spamhaus.org/bgpf/ and http://www.spamhaus.org/drop/
 - let the forked process indicate when it has finished and do not kill it before then
 - split the neighborg api message sent from the forked process
-- if we define the same route twice in the configuration we will/may send them both .. 
+- if we define the same route twice in the configuration we will/may send them both ..
 - Attributes / MultiAttributes API ?
 - warn if an as-path has the router ASN on an ibgp connection
 - some of the match condition of flows currently take list or numeric tests, they should always take both, refactor
@@ -40,7 +38,7 @@ In no particular order:
 - check the .nexthop in VPLS .. why do have one parse there again ? Most likely right but better safe ...
 - when we raise Exception, most of the time we want to raise Notify - update
 - make sure we RuntimeError if we are double register()ing a class
-- the TLV code in AIGP should be updated and used for Capabilities 
+- the TLV code in AIGP should be updated and used for Capabilities
 - use an enum/list for the state machine and increment it.
 - have a default med for the neighbor and have this default pass to routes when being announced
 - use our corouting helper function to make the network code easier to read
