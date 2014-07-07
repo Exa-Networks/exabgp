@@ -838,6 +838,9 @@ class Configuration (object):
 			if command == 'receive-packets':
 				return self._set_process_command(scope,'receive-packets',tokens[1:])
 
+			if command == 'receive-parsed':
+				return self._set_process_command(scope,'receive-parsed',tokens[1:])
+
 			if command == 'receive-routes':
 				self._set_process_command(scope,'receive-parsed',tokens[1:])
 				self._set_process_command(scope,'receive-updates',tokens[1:])
