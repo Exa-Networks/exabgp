@@ -41,7 +41,7 @@ class Communities (Attribute):
 	def add(self,data):
 		return self.communities.append(data)
 
-	def pack (self,asn4=None):
+	def pack (self,negotiated=None):
 		if len(self.communities):
 			return self._attribute(''.join([c.pack() for c in self.communities]))
 		return ''

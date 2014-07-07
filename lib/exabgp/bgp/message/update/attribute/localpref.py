@@ -27,7 +27,7 @@ class LocalPreference (Attribute):
 		self.localpref = localpref
 		self.packed = self._attribute(packed if packed is not None else pack('!L',localpref))
 
-	def pack (self,asn4=None):
+	def pack (self,negotiated=None):
 		return self.packed
 
 	def __len__ (self):

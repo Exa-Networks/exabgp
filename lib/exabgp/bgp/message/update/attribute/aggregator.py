@@ -29,8 +29,8 @@ class Aggregator (Attribute):
 		self.speaker = speaker
 		self._str = None
 
-	def pack (self,asn4):
-		if asn4:
+	def pack (self,negotiated):
+		if negotiated.asn4:
 			return self._attribute(self.asn.pack(True)+self.speaker.pack())
 		elif not self.asn.asn4():
 			return self._attribute(self.asn.pack(False)+self.speaker.pack())
@@ -59,7 +59,7 @@ class Aggregator4 (Aggregator):
 	ID = AttributeID.AS4_AGGREGATOR
 	__slots__ = ['pack']
 
-	def pack (self,asn4):
+	def pack (self,negotiated):
 		return self._attribute(self.asn.pack(True)+self.speaker.pack())
 
 Aggregator4.register_attribute()

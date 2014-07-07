@@ -29,7 +29,7 @@ class NLRI (Address):
 		return '%s%s%s' % (self.afi,self.safi,self.pack())
 
 	# remove this when code restructure is finished
-	def pack (self):
+	def pack (self,addpath=None):
 		raise Exception('unimplemented')
 
 	@classmethod

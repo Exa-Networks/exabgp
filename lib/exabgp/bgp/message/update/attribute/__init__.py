@@ -25,7 +25,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.logger import Logger,LazyFormat
 
 class _NOTHING (object):
-	def pack (self,asn4=None):
+	def pack (self,negotiated=None):
 		return ''
 
 NOTHING = _NOTHING()
@@ -48,7 +48,7 @@ class MultiAttributes (list):
 		self.MULTIPLE = True
 		self.append(attribute)
 
-	def pack (self,asn4=None):
+	def pack (self,negotiated=None):
 		r = []
 		for attribute in self:
 			r.append(attribute.pack())
@@ -157,14 +157,8 @@ class Attributes (dict):
 		return False
 
 	def pack (self,negotiated,with_default=True):
-		asn4 = negotiated.asn4
 		local_asn = negotiated.local_as
 		peer_asn = negotiated.peer_as
-
-		if negotiated.neighbor.aigp is None:
-			aigp = True if local_asn == peer_asn else False
-		else:
-			aigp = negotiated.neighbor.aigp
 
 		message = ''
 
@@ -184,23 +178,20 @@ class Attributes (dict):
 		else:
 			keys = set(self.keys())
 
-		# AGGREGATOR generate both AGGREGATOR and AS4_AGGREGATOR
 		for code in sorted(keys):
 			if code in (AID.INTERNAL_SPLIT, AID.INTERNAL_WATCHDOG, AID.INTERNAL_WITHDRAW):
 				continue
 			if code in self:
-				if code == AID.AIGP and not aigp:
-					continue
 				if code in check:
 					if check[code](local_asn,peer_asn,self[code]):
-						message += self[code].pack(asn4)
+						message += self[code].pack(negotiated)
 						continue
 				else:
-					message += self[code].pack(asn4)
+					message += self[code].pack(negotiated)
 					continue
 			else:
 				if code in default:
-					message += default[code](local_asn,peer_asn).pack(asn4)
+					message += default[code](local_asn,peer_asn).pack(negotiated)
 
 		return message
 
@@ -316,6 +307,7 @@ class Attributes (dict):
 		if Attribute.registered(code,flag):
 			self.add(Attribute.unpack(code,flag,attribute,negotiated))
 			return self.parse(next,negotiated)
+		# XXX: FIXME: we could use a fallback function here like capability
 		elif flag & Flag.TRANSITIVE:
 			self.add(UnknownAttribute(code,flag,attribute),attribute)
 			logger.parser('unknown transitive attribute (code 0x%02X, flag 0x%02X)' % (code,flag))

@@ -23,7 +23,7 @@ class UnknownAttribute (Attribute):
 		self.data = data
 		self.index = ''
 
-	def pack (self,asn4=None):
+	def pack (self,negotiated=None):
 		return self._attribute(self.data)
 
 	def __len__ (self):

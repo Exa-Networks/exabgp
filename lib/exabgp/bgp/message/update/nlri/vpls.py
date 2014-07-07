@@ -41,7 +41,7 @@ class VPLS (NLRI):
 	def index (self):
 		return self.pack()
 
-	def pack (self, addpath=None):
+	def pack (self,addpath=None):
 		return '%s%s%s%s' % (
 			'\x00\x11',  # pack('!H',17)
 			self.rd.pack(),

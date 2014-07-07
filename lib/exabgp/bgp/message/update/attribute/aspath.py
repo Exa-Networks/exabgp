@@ -49,38 +49,39 @@ class ASPath (Attribute):
 			return -1
 		return 0
 
-	def _segment (self,seg_type,values,asn4):
+	def _segment (self,seg_type,values,negotiated):
 		l = len(values)
 		if l:
 			if l>255:
 				return self._segment(seg_type,values[:255]) + self._segment(seg_type,values[255:])
-			return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack(asn4) for v in values]))
+			return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack(negotiated) for v in values]))
 		return ""
 
-	def _segments (self,asn4):
+	def _segments (self,negotiated):
 		segments = ''
 		if self.as_seq:
-			segments = self._segment(self.AS_SEQUENCE,self.as_seq,asn4)
+			segments = self._segment(self.AS_SEQUENCE,self.as_seq,negotiated)
 		if self.as_set:
-			segments += self._segment(self.AS_SET,self.as_set,asn4)
+			segments += self._segment(self.AS_SET,self.as_set,negotiated)
 		return segments
 
-	def _pack (self,asn4):
+	def _pack (self,negotiated,force_asn4=False):
+		asn4 = True if force_asn4 else negotiated.asn4
 		if not self.packed[asn4]:
-			self.packed[asn4] = self._attribute(self._segments(asn4))
+			self.packed[asn4] = self._attribute(self._segments(negotiated))
 		return self.packed[asn4]
 
-	def pack (self,asn4):
+	def pack (self,negotiated):
 		# if the peer does not understand ASN4, we need to build a transitive AS4_PATH
-		if asn4:
-			return self._pack(True)
+		if negotiated.asn4:
+			return self._pack(negotiated)
 
 		as2_seq = [_ if not _.asn4() else AS_TRANS for _ in self.as_seq]
 		as2_set = [_ if not _.asn4() else AS_TRANS for _ in self.as_set]
 
-		message = ASPath(as2_seq,as2_set)._pack(False)
+		message = ASPath(as2_seq,as2_set)._pack(negotiated)
 		if AS_TRANS in as2_seq or AS_TRANS in as2_set:
-			message += AS4Path(self.as_seq,self.as_set)._pack(True)
+			message += AS4Path(self.as_seq,self.as_set)._pack(negotiated,True)
 		return message
 
 	def __len__ (self):
@@ -189,7 +190,7 @@ class AS4Path (ASPath):
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
 	ASN4 = True
 
-	def pack (self,asn4=None):
+	def pack (self,negotiated=None):
 		ASPath.pack(self,True)
 
 	@classmethod

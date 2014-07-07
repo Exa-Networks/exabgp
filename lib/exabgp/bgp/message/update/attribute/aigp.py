@@ -70,8 +70,12 @@ class AIGP (Attribute):
 		else:
 			self.packed = self._attribute(aigp)
 
-	def pack (self,asn4=None):
-		return self.packed
+	def pack (self,negotiated):
+		if negotiated.neighbor.aigp:
+			return self.packed
+		if negotiated.local_as == negotiated.peer_as:
+			return self.packed
+		return ''
 
 	def __str__ (self):
 		return '0x' + ''.join('%02x' % ord(_) for _ in self.aigp[-8:])

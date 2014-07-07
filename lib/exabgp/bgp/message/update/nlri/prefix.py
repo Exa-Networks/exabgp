@@ -29,7 +29,9 @@ class Prefix (CIDR,NLRI):
 		return "%s/%s%s next-hop %s" % (self.ip,self.mask,str(self.path_info) if self.path_info is not PathInfo.NOPATH else '',self.nexthop)
 
 	def pack (self,addpath):
-		return self.path_info.pack() + CIDR.pack(self) if addpath else CIDR.pack(self)
+		if addpath or True:
+			return self.path_info.pack() + CIDR.pack(self) if addpath else CIDR.pack(self)
+		return CIDR.pack(self) if addpath else CIDR.pack(self)
 
 	def json (self):
 		return '"%s": { %s }' % (CIDR.getip(self),self.path_info.json())

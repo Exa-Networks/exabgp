@@ -32,7 +32,7 @@ class ClusterList (Attribute):
 		self.packed = self._attribute(packed if packed else ''.join([_.pack() for _ in clusters]))
 		self._len = len(clusters)*4
 
-	def pack (self,asn4=None):
+	def pack (self,negotiated=None):
 		return self.packed
 
 	def __len__ (self):

@@ -22,7 +22,7 @@ class AtomicAggregate (Attribute):
 
 	__slots__ = []
 
-	def pack (self,asn4=None):
+	def pack (self,negotiated=None):
 		return self._attribute('')
 
 	def __len__ (self):

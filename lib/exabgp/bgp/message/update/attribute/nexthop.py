@@ -25,7 +25,7 @@ class NextHop (Attribute,IPv4):
 
 	# __init__ inherited from IPv4
 
-	def pack (self,asn4=None):
+	def pack (self,negotiated=None):
 		return self._attribute(self.packed)
 
 	def __cmp__(self,other):

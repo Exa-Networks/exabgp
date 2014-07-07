@@ -10,6 +10,9 @@ import math
 from exabgp.protocol.ip import IP
 
 class CIDR (object):
+	# we can not define slots here as otherwise it conflict in Prefix
+	# __slots__ = ['packed','mask','_ip']
+
 	_mask_to_bytes = {}
 
 	@staticmethod
@@ -19,9 +22,6 @@ class CIDR (object):
 	# have a .raw for the ip
 	# have a .mask for the mask
 	# have a .bgp with the bgp wire format of the prefix
-
-	# we can not define slots here as otherwise it conflict in Prefix
-	# __slots__ = ['packed','mask','_ip']
 
 	def __init__(self,packed,mask):
 		self.packed = packed

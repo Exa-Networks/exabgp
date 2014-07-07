@@ -13,7 +13,7 @@ from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.id import AttributeID
 
 
-# =================================================================== MED (4)
+# ====================================================================== MED (4)
 
 class MED (Attribute):
 	ID = AttributeID.MED
@@ -27,7 +27,7 @@ class MED (Attribute):
 		self.med = med
 		self.packed = self._attribute(packed if packed is not None else pack('!L',med))
 
-	def pack (self,asn4=None):
+	def pack (self,negotiated=None):
 		return self.packed
 
 	def __len__ (self):

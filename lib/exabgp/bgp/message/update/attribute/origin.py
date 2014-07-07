@@ -29,7 +29,7 @@ class Origin (Attribute):
 		self.origin = origin
 		self.packed = self._attribute(packed if packed else chr(origin))
 
-	def pack (self,asn4=None):
+	def pack (self,negotiated=None):
 		return self.packed
 
 	def __len__ (self):

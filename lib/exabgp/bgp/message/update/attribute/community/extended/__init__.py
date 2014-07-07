@@ -44,7 +44,7 @@ class ExtendedCommunity (Attribute):
 	def transitive (self):
 		return not not (self.community[0] & 0x40)
 
-	def pack (self,asn4=None):
+	def pack (self,negotiated=None):
 		return self.community
 
 	def json (self):

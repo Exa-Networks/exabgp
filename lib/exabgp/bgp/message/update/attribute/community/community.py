@@ -44,7 +44,7 @@ class Community (object):
 	def json (self):
 		return "[ %d, %d ]" % unpack('!HH',self.community)
 
-	def pack (self,asn4=None):
+	def pack (self,negotiated=None):
 		return self.community
 
 	def __str__ (self):

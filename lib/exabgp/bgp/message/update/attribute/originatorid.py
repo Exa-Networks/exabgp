@@ -22,7 +22,7 @@ class OriginatorID (Attribute,IPv4):
 
 	__slots__ = []
 
-	def pack (self,asn4=None):
+	def pack (self,negotiated=None):
 		return self._attribute(self.packed)
 
 	@classmethod

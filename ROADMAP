@@ -8,6 +8,8 @@ ROADMAP
 
 Instead of passing asn4 to pack, we should pass negotiated, this would remove a special case for AIGP packing
 At the end of the configuration parsing clear the Community cache
+Use the register API for Message
+rename pack() to pack_<what>()
 
 In no particular order:
 - provide an helper program able to read MRT dumps and announce them too.
