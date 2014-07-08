@@ -45,6 +45,9 @@ class Processes (object):
 		storage[message_id] = closure
 		return closure
 
+	def message (self,message_id,peer,operational,header,body):
+		self._dispatch[message_id](peer,operational,header,body)
+
 	def __init__ (self,reactor):
 		self.logger = Logger()
 		self.reactor = reactor
@@ -300,6 +303,3 @@ class Processes (object):
 		if self.silence: return
 		for process in self._notify(peer.neighbor.peer_address,'receive-operational'):
 			self.write(process,self._api_encoder[process].operational(peer,operational.category,operational,header,body))
-
-	def message (self,message_id,peer,operational,header,body):
-		_dispatch[message_id](peer,operational,header,body)

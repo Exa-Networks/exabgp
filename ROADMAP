@@ -6,11 +6,8 @@ Important
 
 ROADMAP
 
-Instead of passing asn4 to pack, we should pass negotiated, this would remove a special case for AIGP packing
-At the end of the configuration parsing clear the Community cache
-rename pack() to pack_<what>()
-
 In no particular order:
+- At the end of the configuration parsing clear the Community cache
 - provide an helper program able to read MRT dumps and announce them too.
 - provide easy integration with http://www.spamhaus.org/bgpf/ and http://www.spamhaus.org/drop/
 - let the forked process indicate when it has finished and do not kill it before then
