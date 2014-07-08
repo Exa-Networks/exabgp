@@ -10,13 +10,12 @@ from struct import pack,unpack
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
-from exabgp.bgp.message.update.attribute.id import AttributeID
 
 
 # =================================================================== Local Preference (5)
 
 class LocalPreference (Attribute):
-	ID = AttributeID.LOCAL_PREF
+	ID = Attribute.ID.LOCAL_PREF
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 	CACHING = True

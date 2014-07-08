@@ -10,12 +10,11 @@ from exabgp.protocol.ip import IPv4
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
-from exabgp.bgp.message.update.attribute.id import AttributeID
 
 # ============================================================== OriginatorID (3)
 
 class OriginatorID (Attribute,IPv4):
-	ID = AttributeID.ORIGINATOR_ID
+	ID = Attribute.ID.ORIGINATOR_ID
 	FLAG = Flag.OPTIONAL
 	MULTIPLE = False
 	CACHING = True

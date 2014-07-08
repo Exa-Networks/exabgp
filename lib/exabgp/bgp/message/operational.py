@@ -45,7 +45,9 @@ class Operational (Message):
 	has_routerid = False
 	is_fault = False
 
-	class Type:
+	class ID:
+		__slots__ = []
+
 		# ADVISE
 		ADM  = 0x01  # 01: Advisory Demand Message
 		ASM  = 0x02  # 02: Advisory Static Message
@@ -190,7 +192,7 @@ class NS:
 		def __init__ (self,afi,safi,sequence):
 			OperationalFamily.__init__(
 				self,
-				Operational.Type.NS,
+				Operational.ID.NS,
 				afi,safi,
 				'%s%s' % (sequence,self.ERROR_SUBCODE)
 			)
@@ -236,28 +238,28 @@ class Advisory:
 
 	class ADM (_Advisory):
 		name = 'ADM'
-		code = Operational.Type.ADM
+		code = Operational.ID.ADM
 
 		def __init__ (self,afi,safi,advisory,routerid=None):
 			utf8 = advisory.encode('utf-8')
 			if len(utf8) > MAX_ADVISORY:
 				utf8 = utf8[:MAX_ADVISORY-3] + '...'.encode('utf-8')
 			OperationalFamily.__init__(
-				self,Operational.Type.ADM,
+				self,Operational.ID.ADM,
 				afi,safi,
 				utf8
 			)
 
 	class ASM (_Advisory):
 		name = 'ASM'
-		code = Operational.Type.ASM
+		code = Operational.ID.ASM
 
 		def __init__ (self,afi,safi,advisory,routerid=None):
 			utf8 = advisory.encode('utf-8')
 			if len(utf8) > MAX_ADVISORY:
 				utf8 = utf8[:MAX_ADVISORY-3] + '...'.encode('utf-8')
 			OperationalFamily.__init__(
-				self,Operational.Type.ASM,
+				self,Operational.ID.ASM,
 				afi,safi,
 				utf8
 			)
@@ -295,15 +297,15 @@ class Query:
 
 	class RPCQ (_Query):
 		name = 'RPCQ'
-		code = Operational.Type.RPCQ
+		code = Operational.ID.RPCQ
 
 	class APCQ (_Query):
 		name = 'APCQ'
-		code = Operational.Type.APCQ
+		code = Operational.ID.APCQ
 
 	class LPCQ (_Query):
 		name = 'LPCQ'
-		code = Operational.Type.LPCQ
+		code = Operational.ID.LPCQ
 
 Query.RPCQ.register_operational()
 Query.APCQ.register_operational()
@@ -338,15 +340,15 @@ class Response:
 
 	class RPCP (_Counter):
 		name = 'RPCP'
-		code = Operational.Type.RPCP
+		code = Operational.ID.RPCP
 
 	class APCP (_Counter):
 		name = 'APCP'
-		code = Operational.Type.APCP
+		code = Operational.ID.APCP
 
 	class LPCP (_Counter):
 		name = 'LPCP'
-		code = Operational.Type.LPCP
+		code = Operational.ID.LPCP
 
 
 Response.RPCP.register_operational()

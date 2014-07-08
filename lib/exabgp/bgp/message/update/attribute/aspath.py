@@ -11,7 +11,6 @@ from struct import unpack,error
 from exabgp.bgp.message.open.asn import ASN,AS_TRANS
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
-from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.notification import Notify
 
 
@@ -23,7 +22,7 @@ class ASPath (Attribute):
 	AS_SEQUENCE = 0x02
 	ASN4        = False
 
-	ID = AttributeID.AS_PATH
+	ID = Attribute.ID.AS_PATH
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 
@@ -186,7 +185,7 @@ ASPath.register_attribute()
 #
 
 class AS4Path (ASPath):
-	ID = AttributeID.AS4_PATH
+	ID = Attribute.ID.AS4_PATH
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
 	ASN4 = True
 

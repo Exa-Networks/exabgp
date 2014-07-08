@@ -10,7 +10,6 @@ from struct import pack,unpack
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
-from exabgp.bgp.message.update.attribute.id import AttributeID
 
 
 # ========================================================================== TLV
@@ -55,7 +54,7 @@ class TLVS (list):
 #
 
 class AIGP (Attribute):
-	ID = AttributeID.AIGP
+	ID = Attribute.ID.AIGP
 	FLAG = Flag.OPTIONAL
 	MULTIPLE = False
 	CACHING = True

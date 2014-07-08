@@ -10,7 +10,6 @@ from exabgp.protocol.ip import IPv4
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
-from exabgp.bgp.message.update.attribute.id import AttributeID
 
 # ===================================================================
 
@@ -20,7 +19,7 @@ class ClusterID (IPv4):
 
 
 class ClusterList (Attribute):
-	ID = AttributeID.CLUSTER_LIST
+	ID = Attribute.ID.CLUSTER_LIST
 	FLAG = Flag.OPTIONAL
 	MULTIPLE = False
 	CACHING = True

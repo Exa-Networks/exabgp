@@ -14,7 +14,7 @@ from exabgp.bgp.message import Message,IN,OUT
 from exabgp.bgp.message.update.eor import EOR
 
 from exabgp.bgp.message.update.attribute import Attributes
-from exabgp.bgp.message.update.attribute.id import AttributeID as AID
+from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI,EMPTY_MPRNLRI
 from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI,EMPTY_MPURNLRI
 
@@ -258,7 +258,7 @@ class Update (Message):
 
 		# Is the peer going to send us some Path Information with the route (AddPath)
 		addpath = negotiated.addpath.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
-		nexthop = attributes.get(AID.NEXT_HOP,NoNextHop).packed  # None for NoNextHop
+		nexthop = attributes.get(Attribute.ID.NEXT_HOP,NoNextHop).packed  # None for NoNextHop
 
 		nlris = []
 		while withdrawn:

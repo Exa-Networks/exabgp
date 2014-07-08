@@ -145,7 +145,7 @@ class Protocol (object):
 			return
 
 		message = Message.unpack_message(msg,body,self.negotiated)
-		self.logger.message(self.me('<< %s' % Message.name(msg)))
+		self.logger.message(self.me('<< %s' % Message.ID.name(msg)))
 		if self.neighbor.api.receive_message(msg):
 			if self.neighbor.api.consolidate:
 				self.peer.reactor.processes.message(message.TYPE,self.peer,message,header,body)

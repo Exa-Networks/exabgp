@@ -14,7 +14,6 @@ from exabgp.configuration.environment import environment
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
-from exabgp.bgp.message.update.attribute.id import AttributeID as AID
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import ASPath
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
@@ -65,24 +64,6 @@ class MultiAttributes (list):
 # =================================================================== Attributes
 #
 
-# lookup = {
-# 	AID.ORIGIN             : Origin,               # 1
-# 	AID.AS_PATH            : ASPath,               # 2
-# 	# NextHop                                      # 3
-# 	AID.MED                : MED,                  # 4
-# 	AID.LOCAL_PREF         : LocalPreference,      # 5
-# 	AID.ATOMIC_AGGREGATE   : AtomicAggregate,      # 6
-# 	AID.AGGREGATOR         : Aggregator,           # 7
-# 	AID.COMMUNITY          : Communities,          # 8
-# 	AID.ORIGINATOR_ID      : OriginatorID,         # 9
-# 	AID.CLUSTER_LIST       : ClusterList,          # 10
-# 	AID.EXTENDED_COMMUNITY : ExtendedCommunities,  # 16
-# 	AID.AS4_PATH           : AS4Path,              # 17
-# 	AID.AS4_AGGREGATOR     : Aggregator,           # 18
-# 	AID.PMSI_TUNNEL        : PMSI,                 # 22
-# 	AID.AIGP               : AIGP,                 # 26
-# }
-
 class Attributes (dict):
 	# A cache of parsed attributes
 	cache = {}
@@ -94,20 +75,20 @@ class Attributes (dict):
 
 	representation = {
 		#	key:  (how, default, name, presentation),
-		AID.ORIGIN             : ('string',  '', 'origin', '%s'),
-		AID.AS_PATH            : ('multiple','', ('as-path','as-set'), '%s'),
-		AID.NEXT_HOP           : ('string',  '', 'next-hop', '%s'),
-		AID.MED                : ('integer', '', 'med', '%s'),
-		AID.LOCAL_PREF         : ('integer', '', 'local-preference', '%s'),
-		AID.ATOMIC_AGGREGATE   : ('boolean', '', 'atomic-aggregate', '%s'),
-		AID.AGGREGATOR         : ('string',  '', 'aggregator', '( %s )'),
-		AID.AS4_AGGREGATOR     : ('string',  '', 'aggregator', '( %s )'),
-		AID.COMMUNITY          : ('list',    '', 'community', '%s'),
-		AID.ORIGINATOR_ID      : ('inet',    '', 'originator-id', '%s'),
-		AID.CLUSTER_LIST       : ('list',    '', 'cluster-list', '%s'),
-		AID.EXTENDED_COMMUNITY : ('list',    '', 'extended-community', '%s'),
-		AID.PMSI_TUNNEL        : ('string',  '', 'pmsi', '%s'),
-		AID.AIGP               : ('integer', '', 'aigp', '%s'),
+		Attribute.ID.ORIGIN             : ('string',  '', 'origin', '%s'),
+		Attribute.ID.AS_PATH            : ('multiple','', ('as-path','as-set'), '%s'),
+		Attribute.ID.NEXT_HOP           : ('string',  '', 'next-hop', '%s'),
+		Attribute.ID.MED                : ('integer', '', 'med', '%s'),
+		Attribute.ID.LOCAL_PREF         : ('integer', '', 'local-preference', '%s'),
+		Attribute.ID.ATOMIC_AGGREGATE   : ('boolean', '', 'atomic-aggregate', '%s'),
+		Attribute.ID.AGGREGATOR         : ('string',  '', 'aggregator', '( %s )'),
+		Attribute.ID.AS4_AGGREGATOR     : ('string',  '', 'aggregator', '( %s )'),
+		Attribute.ID.COMMUNITY          : ('list',    '', 'community', '%s'),
+		Attribute.ID.ORIGINATOR_ID      : ('inet',    '', 'originator-id', '%s'),
+		Attribute.ID.CLUSTER_LIST       : ('list',    '', 'cluster-list', '%s'),
+		Attribute.ID.EXTENDED_COMMUNITY : ('list',    '', 'extended-community', '%s'),
+		Attribute.ID.PMSI_TUNNEL        : ('string',  '', 'pmsi', '%s'),
+		Attribute.ID.AIGP               : ('integer', '', 'aigp', '%s'),
 	}
 
 	def __init__ (self):
@@ -139,20 +120,20 @@ class Attributes (dict):
 				self[attribute.ID] = MultiAttributes(attribute)
 		else:
 			if attribute.ID in self:
-				raise Notify(3,0,'multiple attribute for %s' % str(AID(attribute.ID)))
+				raise Notify(3,0,'multiple attribute for %s' % str(Attribute.ID(attribute.ID)))
 			self[attribute.ID] = attribute
 
 	def remove (self,attrid):
 		self.pop(attrid)
 
 	def watchdog (self):
-		if AID.INTERNAL_WATCHDOG in self:
-			return self.pop(AID.INTERNAL_WATCHDOG)
+		if Attribute.ID.INTERNAL_WATCHDOG in self:
+			return self.pop(Attribute.ID.INTERNAL_WATCHDOG)
 		return None
 
 	def withdraw (self):
-		if AID.INTERNAL_WITHDRAW in self:
-			self.pop(AID.INTERNAL_WITHDRAW)
+		if Attribute.ID.INTERNAL_WITHDRAW in self:
+			self.pop(Attribute.ID.INTERNAL_WITHDRAW)
 			return True
 		return False
 
@@ -163,14 +144,14 @@ class Attributes (dict):
 		message = ''
 
 		default = {
-			AID.ORIGIN:     lambda l,r: Origin(Origin.IGP),
-			AID.AS_PATH:    lambda l,r: ASPath([],[]) if l == r else ASPath([local_asn,],[]),
-			AID.LOCAL_PREF: lambda l,r: LocalPreference(100) if l == r else NOTHING,
+			Attribute.ID.ORIGIN:     lambda l,r: Origin(Origin.IGP),
+			Attribute.ID.AS_PATH:    lambda l,r: ASPath([],[]) if l == r else ASPath([local_asn,],[]),
+			Attribute.ID.LOCAL_PREF: lambda l,r: LocalPreference(100) if l == r else NOTHING,
 		}
 
 		check = {
-			AID.NEXT_HOP:   lambda l,r,nh: nh.ipv4() == True,
-			AID.LOCAL_PREF: lambda l,r,nh: l == r,
+			Attribute.ID.NEXT_HOP:   lambda l,r,nh: nh.ipv4() == True,
+			Attribute.ID.LOCAL_PREF: lambda l,r,nh: l == r,
 		}
 
 		if with_default:
@@ -179,7 +160,7 @@ class Attributes (dict):
 			keys = set(self.keys())
 
 		for code in sorted(keys):
-			if code in (AID.INTERNAL_SPLIT, AID.INTERNAL_WATCHDOG, AID.INTERNAL_WITHDRAW):
+			if code in (Attribute.ID.INTERNAL_SPLIT, Attribute.ID.INTERNAL_WATCHDOG, Attribute.ID.INTERNAL_WITHDRAW):
 				continue
 			if code in self:
 				if code in check:
@@ -198,9 +179,9 @@ class Attributes (dict):
 	def json (self):
 		if not self._json:
 			def generate (self):
-				for code in sorted(self.keys() + [AID.ATOMIC_AGGREGATE,]):
+				for code in sorted(self.keys() + [Attribute.ID.ATOMIC_AGGREGATE,]):
 					# remove the next-hop from the attribute as it is define with the NLRI
-					if code in (AID.NEXT_HOP, AID.INTERNAL_SPLIT, AID.INTERNAL_WATCHDOG, AID.INTERNAL_WITHDRAW):
+					if code in (Attribute.ID.NEXT_HOP, Attribute.ID.INTERNAL_SPLIT, Attribute.ID.INTERNAL_WATCHDOG, Attribute.ID.INTERNAL_WITHDRAW):
 						continue
 					if code in self.representation:
 						how, default, name, presentation = self.representation[code]
@@ -230,7 +211,7 @@ class Attributes (dict):
 			def generate (self):
 				for code in sorted(self.keys()):
 					# XXX: FIXME: really we should have a INTERNAL attribute in the classes
-					if code in (AID.INTERNAL_SPLIT, AID.INTERNAL_WATCHDOG, AID.INTERNAL_WITHDRAW, AID.NEXT_HOP):
+					if code in (Attribute.ID.INTERNAL_SPLIT, Attribute.ID.INTERNAL_WATCHDOG, Attribute.ID.INTERNAL_WITHDRAW, Attribute.ID.NEXT_HOP):
 						continue
 					if code in self.representation:
 						how, default, name, presentation = self.representation[code]
@@ -249,7 +230,7 @@ class Attributes (dict):
 	def index (self):
 		# XXX: FIXME: something a little bit smaller memory wise ?
 		if not self._idx:
-			self._idx = '%s next-hop %s' % (str(self), str(self[AID.NEXT_HOP])) if AID.NEXT_HOP in self else str(self)
+			self._idx = '%s next-hop %s' % (str(self), str(self[Attribute.ID.NEXT_HOP])) if Attribute.ID.NEXT_HOP in self else str(self)
 		return self._idx
 
 	@classmethod
@@ -268,10 +249,10 @@ class Attributes (dict):
 			else:
 				attributes = cls().parse(data,negotiated)
 
-			if AID.AS_PATH in attributes and AID.AS4_PATH in attributes:
+			if Attribute.ID.AS_PATH in attributes and Attribute.ID.AS4_PATH in attributes:
 				attributes.merge_attributes()
 
-			if AID.MP_REACH_NLRI not in attributes and AID.MP_UNREACH_NLRI not in attributes:
+			if Attribute.ID.MP_REACH_NLRI not in attributes and Attribute.ID.MP_UNREACH_NLRI not in attributes:
 				cls.previous = data
 				cls.cached = attributes
 			else:
@@ -288,7 +269,7 @@ class Attributes (dict):
 
 		# We do not care if the attribute are transitive or not as we do not redistribute
 		flag = Flag(ord(data[0]))
-		code = AID(ord(data[1]))
+		code = Attribute.ID(ord(data[1]))
 
 		if flag & Flag.EXTENDED_LENGTH:
 			length = unpack('!H',data[2:4])[0]
@@ -318,17 +299,17 @@ class Attributes (dict):
 
 
 	def merge_attributes (self):
-		as2path = self[AID.AS_PATH]
-		as4path = self[AID.AS4_PATH]
-		self.remove(AID.AS_PATH)
-		self.remove(AID.AS4_PATH)
+		as2path = self[Attribute.ID.AS_PATH]
+		as4path = self[Attribute.ID.AS4_PATH]
+		self.remove(Attribute.ID.AS_PATH)
+		self.remove(Attribute.ID.AS4_PATH)
 
 		# this key is unique as index length is a two header, plus a number of ASN of size 2 or 4
 		# so adding the : make the length odd and unique
 		key = "%s:%s" % (as2path.index, as4path.index)
 
 		# found a cache copy
-		if self.add_from_cache(AID.AS_PATH,key):
+		if self.add_from_cache(Attribute.ID.AS_PATH,key):
 			return
 
 		as_seq = []
@@ -374,7 +355,7 @@ class Attributes (dict):
 
 		try:
 			for key in set(self.iterkeys()).union(set(other.iterkeys())):
-				if key == AID.MP_REACH_NLRI:
+				if key == Attribute.ID.MP_REACH_NLRI:
 					continue
 
 					sval = self[key]

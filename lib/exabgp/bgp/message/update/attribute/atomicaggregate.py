@@ -8,14 +8,13 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
-from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.notification import Notify
 
 
 # =================================================================== AtomicAggregate (6)
 
 class AtomicAggregate (Attribute):
-	ID = AttributeID.ATOMIC_AGGREGATE
+	ID = Attribute.ID.ATOMIC_AGGREGATE
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 	CACHING = True
@@ -48,7 +47,7 @@ class AtomicAggregate (Attribute):
 	@classmethod
 	def setCache (cls):
 		# There can only be one, build it now :)
-		cls.cache[AttributeID.ATOMIC_AGGREGATE][''] = cls()
+		cls.cache[Attribute.ID.ATOMIC_AGGREGATE][''] = cls()
 
 AtomicAggregate.register_attribute()
 AtomicAggregate.setCache()

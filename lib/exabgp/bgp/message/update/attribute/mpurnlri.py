@@ -11,7 +11,6 @@ from struct import unpack
 from exabgp.bgp.message import IN
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
-from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 
 from exabgp.bgp.message.notification import Notify
@@ -21,7 +20,7 @@ from exabgp.bgp.message.notification import Notify
 
 class MPURNLRI (Attribute):
 	FLAG = Flag.OPTIONAL
-	ID = AttributeID.MP_UNREACH_NLRI
+	ID = Attribute.ID.MP_UNREACH_NLRI
 	MULTIPLE = True
 
 	__slots__ = ['nlris']

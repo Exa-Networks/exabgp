@@ -8,13 +8,12 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
-from exabgp.bgp.message.update.attribute.id import AttributeID
 
 
 # =================================================================== Origin (1)
 
 class Origin (Attribute):
-	ID = AttributeID.ORIGIN
+	ID = Attribute.ID.ORIGIN
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 	CACHING = True
@@ -59,9 +58,9 @@ class Origin (Attribute):
 		EGP = Origin(Origin.EGP)
 		INC = Origin(Origin.INCOMPLETE)
 
-		cls.cache[AttributeID.ORIGIN][IGP.pack()] = IGP
-		cls.cache[AttributeID.ORIGIN][EGP.pack()] = EGP
-		cls.cache[AttributeID.ORIGIN][INC.pack()] = INC
+		cls.cache[Attribute.ID.ORIGIN][IGP.pack()] = IGP
+		cls.cache[Attribute.ID.ORIGIN][EGP.pack()] = EGP
+		cls.cache[Attribute.ID.ORIGIN][INC.pack()] = INC
 
 Origin.register_attribute()
 Origin.setCache()

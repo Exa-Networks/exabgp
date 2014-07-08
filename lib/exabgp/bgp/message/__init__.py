@@ -59,7 +59,9 @@ class Message (Exception):
 	registered_message = {}
 	klass_notify = None
 
-	class ID:
+	class ID (int):
+		__slots__ = []
+
 		NOP           = 0x00  # .   0 - internal
 		OPEN          = 0x01  # .   1
 		UPDATE        = 0x02  # .   2
@@ -72,6 +74,23 @@ class Message (Exception):
 		#GENERAL       = 0x80  # . 128
 		#LOCALRIB      = 0x100  # . 256
 
+		names = {
+			NOP           : 'NOP',
+			OPEN          : 'OPEN',
+			UPDATE        : 'UPDATE',
+			NOTIFICATION  : 'NOTIFICATION',
+			KEEPALIVE     : 'KEEPALIVE',
+			ROUTE_REFRESH : 'ROUTE_REFRESH',
+			OPERATIONAL   : 'OPERATIONAL',
+		}
+
+		def __str__ (self):
+			return self.names.get(self,'UNKNOWN MESSAGE %s' % hex(self))
+
+		@classmethod
+		def name (cls,message_id):
+			return cls.names.get(message_id,'UNKNOWN MESSAGE %s' % hex(message_id))
+
 	class Name:
 		NOP           = 'NOP'
 		OPEN          = 'OPEN'
@@ -81,19 +100,6 @@ class Message (Exception):
 		ROUTE_REFRESH = 'ROUTE_REFRESH'
 		OPERATIONAL   = 'OPERATIONAL'
 
-	_name = {
-		ID.NOP           : 'NOP',
-		ID.OPEN          : 'OPEN',
-		ID.UPDATE        : 'UPDATE',
-		ID.NOTIFICATION  : 'NOTIFICATION',
-		ID.KEEPALIVE     : 'KEEPALIVE',
-		ID.ROUTE_REFRESH : 'ROUTE_REFRESH',
-		ID.OPERATIONAL   : 'OPERATIONAL',
-	}
-
-	@classmethod
-	def name (cls,message_id):
-		return cls._name.get(message_id,'UNKNOWN MESSAGE %d' % message_id)
 
 	Length = {
 		ID.OPEN          : lambda _ : _ >= 29,

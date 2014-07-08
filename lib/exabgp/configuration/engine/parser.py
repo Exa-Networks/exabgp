@@ -114,7 +114,7 @@ def holdtime (tokeniser):
 # ==================================================================== Attribute
 #
 
-from exabgp.bgp.message.update.attribute.id import AttributeID as AID
+from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 def attribute (tokeniser):
 	start = tokeniser()
@@ -149,7 +149,6 @@ def attribute (tokeniser):
 		raise ValueError('invalid attribute, does not ends with ]')
 
 	# XXX: FIXME: class Attribute should have an unpack function which does that
-	from exabgp.bgp.message.update.attribute import Attribute
 	from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
 
 	for ((ID,flag),klass) in Attribute.registered_attributes.iteritems():
@@ -489,7 +488,7 @@ def extended_community (tokeniser):
 
 def watchdog (tokeniser):
 	class Watchdog (str):
-		ID = AID.INTERNAL_WATCHDOG
+		ID = Attribute.ID.INTERNAL_WATCHDOG
 		MULTIPLE = False
 
 	watchdog = tokeniser()
@@ -503,7 +502,7 @@ def watchdog (tokeniser):
 
 def withdraw (tokeniser=None):
 	class Withdrawn (object):
-		ID = AID.INTERNAL_WITHDRAW
+		ID = Attribute.ID.INTERNAL_WITHDRAW
 		MULTIPLE = False
 	return Withdrawn()
 

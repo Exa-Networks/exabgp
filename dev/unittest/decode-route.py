@@ -15,7 +15,7 @@ body = [
 	# Attributes
 	0x0, 0x30, # len attributes (48)
 		0x40, # Flag Transitive
-		0x1, # Code : AttributeID Origin
+		0x1, # Code : Attribute ID Origin
 		0x1, # len
 			0x0, # Origin : IGP
 		0x50, # Flag Transitive + extended length

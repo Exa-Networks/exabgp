@@ -8,8 +8,8 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from struct import unpack
 
-from exabgp.bgp.message.update.attribute.id import AttributeID
-from exabgp.bgp.message.update.attribute import Attribute,Flag
+from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute.flag import Flag
 
 
 # ======================================================= ExtendedCommunity (16)
@@ -18,7 +18,7 @@ from exabgp.bgp.message.update.attribute import Attribute,Flag
 # XXX: Should subclasses register with transitivity ?
 
 class ExtendedCommunity (Attribute):
-	ID = AttributeID.EXTENDED_COMMUNITY
+	ID = Attribute.ID.EXTENDED_COMMUNITY
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
 	MULTIPLE = False
 

@@ -37,7 +37,7 @@ from exabgp.bgp.message.update.nlri.mpls import MPLS,Labels,RouteDistinguisher
 from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,Flow,Flow4Source,Flow4Destination,Flow6Source,Flow6Destination,FlowSourcePort,FlowDestinationPort,FlowAnyPort,FlowIPProtocol,FlowNextHeader,FlowTCPFlag,FlowFragment,FlowPacketLength,FlowICMPType,FlowICMPCode,FlowDSCP,FlowTrafficClass,FlowFlowLabel
 
-from exabgp.bgp.message.update.attribute.id import AttributeID
+from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.nexthop import NextHop
 from exabgp.bgp.message.update.attribute.aspath import ASPath
@@ -58,7 +58,7 @@ from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
 
 from exabgp.bgp.message.operational import MAX_ADVISORY,Advisory,Query,Response
 
-from exabgp.bgp.message.update.attribute import Attribute,Attributes
+from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.rib.change import Change
 from exabgp.bgp.message.refresh import RouteRefresh
@@ -72,16 +72,16 @@ from exabgp.logger import Logger
 # As this is not a real BGP attribute this stays in the configuration file
 
 class Split (int):
-	ID = AttributeID.INTERNAL_SPLIT
+	ID = Attribute.ID.INTERNAL_SPLIT
 	MULTIPLE = False
 
 
 class Watchdog (str):
-	ID = AttributeID.INTERNAL_WATCHDOG
+	ID = Attribute.ID.INTERNAL_WATCHDOG
 	MULTIPLE = False
 
 class Withdrawn (object):
-	ID = AttributeID.INTERNAL_WITHDRAW
+	ID = Attribute.ID.INTERNAL_WITHDRAW
 	MULTIPLE = False
 
 
@@ -1585,12 +1585,12 @@ class Configuration (object):
 	def _split_last_route (self,scope):
 		# if the route does not need to be broken in smaller routes, return
 		change = scope[-1]['announce'][-1]
-		if not AttributeID.INTERNAL_SPLIT in change.attributes:
+		if not Attribute.ID.INTERNAL_SPLIT in change.attributes:
 			return True
 
 		# ignore if the request is for an aggregate, or the same size
 		mask = change.nlri.mask
-		split = change.attributes[AttributeID.INTERNAL_SPLIT]
+		split = change.attributes[Attribute.ID.INTERNAL_SPLIT]
 		if mask >= split:
 			return True
 
@@ -1812,7 +1812,7 @@ class Configuration (object):
 			return False
 
 	def _route_next_hop (self,scope,tokens):
-		if scope[-1]['announce'][-1].attributes.has(AttributeID.NEXT_HOP):
+		if scope[-1]['announce'][-1].attributes.has(Attribute.ID.NEXT_HOP):
 			self._error = self._str_route_error
 			if self.debug: raise
 			return False
@@ -2345,7 +2345,7 @@ class Configuration (object):
 
 		try:
 			attributes = Attributes()
-			attributes[AttributeID.EXTENDED_COMMUNITY] = ExtendedCommunities()
+			attributes[Attribute.ID.EXTENDED_COMMUNITY] = ExtendedCommunities()
 			flow = Change(Flow(),attributes)
 		except ValueError:
 			self._error = self._str_flow_error
@@ -2746,7 +2746,7 @@ class Configuration (object):
 	def _flow_route_discard (self,scope,tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
-			scope[-1]['announce'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficRate(ASN(0),0))
+			scope[-1]['announce'][-1].attributes[Attribute.ID.EXTENDED_COMMUNITY].add(TrafficRate(ASN(0),0))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -2762,7 +2762,7 @@ class Configuration (object):
 			if speed > 1000000000000:
 				speed = 1000000000000
 				self.logger.configuration("rate-limiting changed for 1 000 000 000 000 bytes from %s" % tokens[0],'warning')
-			scope[-1]['announce'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficRate(ASN(0),speed))
+			scope[-1]['announce'][-1].attributes[Attribute.ID.EXTENDED_COMMUNITY].add(TrafficRate(ASN(0),speed))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -2783,7 +2783,7 @@ class Configuration (object):
 					# number = int(suffix)
 					# if number >= pow(2,16):
 					# 	raise ValueError('number is too large, max 16 bits %s' % number)
-					# scope[-1]['announce'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficRedirectIP(prefix,number))
+					# scope[-1]['announce'][-1].attributes[Attribute.ID.EXTENDED_COMMUNITY].add(TrafficRedirectIP(prefix,number))
 					# return True
 				else:
 					asn = int(prefix)
@@ -2792,7 +2792,7 @@ class Configuration (object):
 						raise ValueError('asn is a 32 bits number, it can only be 16 bit %s' % route_target)
 					if route_target >= pow(2,32):
 						raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
-					scope[-1]['announce'][-1].attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficRedirect(asn,route_target))
+					scope[-1]['announce'][-1].attributes[Attribute.ID.EXTENDED_COMMUNITY].add(TrafficRedirect(asn,route_target))
 					return True
 			else:
 				change = scope[-1]['announce'][-1]
@@ -2803,7 +2803,7 @@ class Configuration (object):
 
 				nh = IP.create(tokens.pop(0))
 				change.nlri.nexthop = nh
-				change.attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficNextHop(False))
+				change.attributes[Attribute.ID.EXTENDED_COMMUNITY].add(TrafficNextHop(False))
 				return True
 
 		except (IndexError,ValueError):
@@ -2820,7 +2820,7 @@ class Configuration (object):
 				if self.debug: raise
 				return False
 
-			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficNextHop(False))
+			change.attributes[Attribute.ID.EXTENDED_COMMUNITY].add(TrafficNextHop(False))
 			return True
 
 		except (IndexError,ValueError):
@@ -2831,14 +2831,14 @@ class Configuration (object):
 	def _flow_route_copy (self,scope,tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
-			if scope[-1]['announce'][-1].attributes.has(AttributeID.NEXT_HOP):
+			if scope[-1]['announce'][-1].attributes.has(Attribute.ID.NEXT_HOP):
 				self._error = self._str_flow_error
 				if self.debug: raise
 				return False
 
 			change = scope[-1]['announce'][-1]
 			change.nlri.nexthop = NextHop(tokens.pop(0))
-			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficNextHop(True))
+			change.attributes[Attribute.ID.EXTENDED_COMMUNITY].add(TrafficNextHop(True))
 			return True
 
 		except (IndexError,ValueError):
@@ -2856,7 +2856,7 @@ class Configuration (object):
 				return False
 
 			change = scope[-1]['announce'][-1]
-			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficMark(dscp))
+			change.attributes[Attribute.ID.EXTENDED_COMMUNITY].add(TrafficMark(dscp))
 			return True
 
 		except (IndexError,ValueError):
@@ -2876,7 +2876,7 @@ class Configuration (object):
 				return False
 
 			change = scope[-1]['announce'][-1]
-			change.attributes[AttributeID.EXTENDED_COMMUNITY].add(TrafficAction(sample,terminal))
+			change.attributes[Attribute.ID.EXTENDED_COMMUNITY].add(TrafficAction(sample,terminal))
 			return True
 		except (IndexError,ValueError):
 			self._error = self._str_flow_error

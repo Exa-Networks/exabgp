@@ -8,7 +8,6 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
-from exabgp.bgp.message.update.attribute.id import AttributeID
 from exabgp.bgp.message.update.attribute.community.community import Community
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.notification import Notify
@@ -25,7 +24,7 @@ from exabgp.bgp.message.update.attribute.community.extended.traffic import Traff
 # http://www.iana.org/assignments/bgp-extended-communities
 
 class Communities (Attribute):
-	ID = AttributeID.COMMUNITY
+	ID = Attribute.ID.COMMUNITY
 	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
 	MULTIPLE = False
 
@@ -74,7 +73,7 @@ Communities.register_attribute()
 #
 
 class ExtendedCommunities (Communities):
-	ID = AttributeID.EXTENDED_COMMUNITY
+	ID = Attribute.ID.EXTENDED_COMMUNITY
 
 	@staticmethod
 	def unpack (data,negotiated):

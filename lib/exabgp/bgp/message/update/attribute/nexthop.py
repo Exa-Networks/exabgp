@@ -9,7 +9,6 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
-from exabgp.bgp.message.update.attribute.id import AttributeID
 
 
 # ================================================================== NextHop (3)
@@ -18,7 +17,7 @@ from exabgp.bgp.message.update.attribute.id import AttributeID
 # At least until we rename them to be more explicit
 
 class NextHop (Attribute,IPv4):
-	ID = AttributeID.NEXT_HOP
+	ID = Attribute.ID.NEXT_HOP
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 	CACHING = True
