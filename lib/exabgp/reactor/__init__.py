@@ -21,6 +21,7 @@ from exabgp.reactor.api.processes import Processes,ProcessError
 from exabgp.reactor.peer import Peer,ACTION
 from exabgp.reactor.network.error import error
 
+from exabgp.reactor.api.decoding import Text as Decoder
 from exabgp.configuration.file import Configuration
 from exabgp.configuration.environment import environment
 
@@ -42,6 +43,7 @@ class Reactor (object):
 		self.processes = None
 		self.listener = None
 		self.configuration = Configuration(configuration)
+		self.decoder = Decoder()
 
 		self._peers = {}
 		self._shutdown = False
@@ -494,7 +496,7 @@ class Reactor (object):
 		# route announcement / withdrawal
 		if 'announce route ' in command:
 			def _announce_change (self,command,nexthops):
-				changes = self.configuration.parse_api_route(command,nexthops,'announce')
+				changes = self.decoder.parse_api_route(command,nexthops,'announce')
 				if not changes:
 					self.logger.reactor("Command could not parse route in : %s" % command,'warning')
 					yield True
@@ -524,7 +526,7 @@ class Reactor (object):
 		# vpls announcement / withdrawal
 		if 'announce vpls ' in command:
 			def _announce_vpls (self,command,nexthops):
-				changes = self.configuration.parse_api_vpls(command,nexthops,'announce')
+				changes = self.decoder.parse_api_vpls(command,nexthops,'announce')
 				if not changes:
 					self.logger.reactor("Command could not parse vpls in : %s" % command,'warning')
 					yield True
@@ -573,7 +575,7 @@ class Reactor (object):
 
 		if 'withdraw route' in command:
 			def _withdraw_change (self,command,nexthops):
-				changes = self.configuration.parse_api_route(command,nexthops,'withdraw')
+				changes = self.decoder.parse_api_route(command,nexthops,'withdraw')
 				if not changes:
 					self.logger.reactor("Command could not parse route in : %s" % command,'warning')
 					yield True
@@ -603,7 +605,7 @@ class Reactor (object):
 
 		if 'withdraw vpls' in command:
 			def _withdraw_change (self,command,nexthops):
-				changes = self.configuration.parse_api_vpls(command,nexthops,'withdraw')
+				changes = self.decoder.parse_api_vpls(command,nexthops,'withdraw')
 				if not changes:
 					self.logger.reactor("Command could not parse vpls in : %s" % command,'warning')
 					yield True
@@ -633,7 +635,7 @@ class Reactor (object):
 
 		if 'withdraw vpls' in command:
 			def _withdraw_vpls (self,command,nexthops):
-				changes = self.configuration.parse_api_route(command,nexthops,'withdraw')
+				changes = self.decoder.parse_api_route(command,nexthops,'withdraw')
 				if not changes:
 					self.logger.reactor("Command could not parse route in : %s" % command,'warning')
 					yield True
@@ -664,7 +666,7 @@ class Reactor (object):
 		# attribute announcement / withdrawal
 		if 'announce attribute ' in command:
 			def _announce_attribute (self,command,nexthops):
-				changes = self.configuration.parse_api_attribute(command,nexthops,'announce')
+				changes = self.decoder.parse_api_attribute(command,nexthops,'announce')
 				if not changes:
 					self.logger.reactor("Command could not parse attribute in : %s" % command,'warning')
 					yield True
@@ -692,7 +694,7 @@ class Reactor (object):
 		# attribute announcement / withdrawal
 		if 'withdraw attribute ' in command:
 			def _withdraw_attribute (self,command,nexthops):
-				changes = self.configuration.parse_api_attribute(command,nexthops,'withdraw')
+				changes = self.decoder.parse_api_attribute(command,nexthops,'withdraw')
 				if not changes:
 					self.logger.reactor("Command could not parse attribute in : %s" % command,'warning')
 					yield True
@@ -723,7 +725,7 @@ class Reactor (object):
 		# flow announcement / withdrawal
 		if 'announce flow' in command:
 			def _announce_flow (self,command,peers):
-				changes = self.configuration.parse_api_flow(command,'announce')
+				changes = self.decoder.parse_api_flow(command,'announce')
 				if not changes:
 					self.logger.reactor("Command could not parse flow in : %s" % command)
 					yield True
@@ -749,7 +751,7 @@ class Reactor (object):
 
 		if 'withdraw flow' in command:
 			def _withdraw_flow (self,command,peers):
-				changes = self.configuration.parse_api_flow(command,'withdraw')
+				changes = self.decoder.parse_api_flow(command,'withdraw')
 				if not changes:
 					self.logger.reactor("Command could not parse flow in : %s" % command)
 					yield True
@@ -794,7 +796,7 @@ class Reactor (object):
 
 		if 'announce route-refresh' in command:
 			def _announce_refresh (self,command,peers):
-				rr = self.configuration.parse_api_refresh(command)
+				rr = self.decoder.parse_api_refresh(command)
 				if not rr:
 					self.logger.reactor("Command could not parse flow in : %s" % command)
 					yield True
@@ -819,7 +821,7 @@ class Reactor (object):
 
 		if command.startswith('operational ') and (command.split() + ['safe'])[1].lower() in ('asm','adm','rpcq','rpcp','apcq','apcp','lpcq','lpcp'):
 			def _announce_operational (self,command,peers):
-				operational = self.configuration.parse_api_operational(command)
+				operational = self.decoder.parse_api_operational(command)
 				if not operational:
 					self.logger.reactor("Command could not parse operational command : %s" % command)
 					yield True

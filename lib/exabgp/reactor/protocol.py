@@ -148,9 +148,9 @@ class Protocol (object):
 		self.logger.message(self.me('<< %s' % Message.ID.name(msg)))
 		if self.neighbor.api.receive_message(msg):
 			if self.neighbor.api.consolidate:
-				self.peer.reactor.processes.message(message.TYPE,self.peer,message,header,body)
+				self.peer.reactor.processes.message(msg,self.peer,message,header,body)
 			else:
-				self.peer.reactor.processes.message(message.TYPE,self.peer,message,'','')
+				self.peer.reactor.processes.message(msg,self.peer,message,'','')
 		yield message
 
 		return

@@ -34,7 +34,7 @@ class APIOptions (object):
 		self._dispatch[Message.ID.KEEPALIVE] = lambda : self.receive_keepalives
 		self._dispatch[Message.ID.UPDATE] = lambda : self.receive_updates
 		self._dispatch[Message.ID.ROUTE_REFRESH] = lambda : self.receive_refresh
-		self._dispatch[Message.ID.OPERATIONAL] = lambda : self.receive_operationals
+		self._dispatch[Message.ID.OPERATIONAL] = lambda : self.receive_operational
 
 	def receive_message (self,message_id):
 		return self._dispatch[message_id]()
@@ -113,22 +113,22 @@ class Text (object):
 		header = 'header %s' % hexstring(header) if header else ''
 		body = 'body %s' % hexstring(body) if body else ''
 		return 'neighbor %s route-refresh afi %s safi %s %s%s\n' % (
-			peer.neighbor.peer_address,refresh.afi,refresh.safi,refresh.reserved,self._header_body(header,body)
+			peer,refresh.afi,refresh.safi,refresh.reserved,self._header_body(header,body)
 		)
 
 	def _operational_advisory (self,peer,operational,header,body):
 		return 'neighbor %s operational %s afi %s safi %s advisory "%s"%s' % (
-			peer.neighbor.peer_address,operational.name,operational.afi,operational.safi,operational.data,self._header_body(header,body)
+			peer,operational.name,operational.afi,operational.safi,operational.data,self._header_body(header,body)
 		)
 
 	def _operational_query (self,peer,operational,header,body):
 		return 'neighbor %s operational %s afi %s safi %s%s' % (
-			peer.neighbor.peer_address,operational.name,operational.afi,operational.safi,self._header_body(header,body)
+			peer,operational.name,operational.afi,operational.safi,self._header_body(header,body)
 		)
 
 	def _operational_counter (self,peer,operational,header,body):
 		return 'neighbor %s operational %s afi %s safi %s router-id %s sequence %d counter %d%s' % (
-			peer.neighbor.peer_address,operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.counter,self._header_body(header,body)
+			peer,operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.counter,self._header_body(header,body)
 		)
 
 	def operational (self,peer,what,operational,header,body):
@@ -327,7 +327,7 @@ class JSON (object):
 	def _operational_advisory (self,peer,operational,header,body):
 		return self._header(
 			self._neighbor(
-				peer.neighbor.peer_address,
+				peer,
 				'"operational": { "name": "%s", "afi": "%s", "safi": "%s", "advisory": "%s"' % (
 					operational.name,operational.afi,operational.safi,operational.data
 				)
@@ -337,7 +337,7 @@ class JSON (object):
 	def _operational_query (self,peer,operational,header,body):
 		return self._header(
 			self._neighbor(
-				peer.neighbor.peer_address,
+				peer,
 				'"operational": { "name": "%s", "afi": "%s", "safi": "%s"' % (
 					operational.name,operational.afi,operational.safi
 				)
@@ -347,7 +347,7 @@ class JSON (object):
 	def _operational_counter (self,peer,operational,header,body):
 		return self._header(
 			self._neighbor(
-				peer.neighbor.peer_address,
+				peer,
 				'"operational": { "name": "%s", "afi": "%s", "safi": "%s", "router-id": "%s", "sequence": %d, "counter": %d' % (
 					operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.counter
 				)
