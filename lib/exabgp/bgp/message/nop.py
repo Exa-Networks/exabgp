@@ -9,7 +9,8 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from exabgp.bgp.message import Message
 
 class NOP (Message):
-	TYPE = chr(Message.Type.NOP)
+	ID = Message.ID.NOP
+	TYPE = chr(Message.ID.NOP)
 
 	def message (self):
 		return self._message(self.data)

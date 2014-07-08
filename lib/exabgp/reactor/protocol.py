@@ -140,7 +140,7 @@ class Protocol (object):
 		if self.neighbor.api.receive_packets:
 			self.peer.reactor.processes.receive(self.peer,msg,header,body)
 
-		if msg == Message.Type.UPDATE and not self.log_routes:
+		if msg == Message.ID.UPDATE and not self.log_routes:
 			yield _UPDATE
 			return
 
@@ -157,7 +157,7 @@ class Protocol (object):
 		# XXX: FIXME: check it is well 2,4
 		raise Notify(2,4,'unknown message received')
 
-		# elif msg == Message.Type.ROUTE_REFRESH:
+		# elif msg == Message.ID.ROUTE_REFRESH:
 		# 	if self.negotiated.refresh != REFRESH.absent:
 		# 		self.logger.message(self.me('<< ROUTE-REFRESH'))
 		# 		refresh = RouteRefresh.unpack_message(body,self.negotiated)

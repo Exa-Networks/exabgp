@@ -59,14 +59,14 @@ class Message (Exception):
 	registered_message = {}
 	klass_notify = None
 
-	class Type:
+	class ID:
 		NOP           = 0x00  # .   0 - internal
 		OPEN          = 0x01  # .   1
 		UPDATE        = 0x02  # .   2
 		NOTIFICATION  = 0x03  # .   3
 		KEEPALIVE     = 0x04  # .   4
 		ROUTE_REFRESH = 0x05  # .   5
-		OPERATIONAL   = 0x06  # .   6
+		OPERATIONAL   = 0x06  # .   6  # Not IANA assigned yet
 		#LIST          = 0x20  # .  32
 		#HEADER        = 0x40  # .  64
 		#GENERAL       = 0x80  # . 128
@@ -82,13 +82,13 @@ class Message (Exception):
 		OPERATIONAL   = 'OPERATIONAL'
 
 	_name = {
-		Type.NOP           : 'NOP',
-		Type.OPEN          : 'OPEN',
-		Type.UPDATE        : 'UPDATE',
-		Type.NOTIFICATION  : 'NOTIFICATION',
-		Type.KEEPALIVE     : 'KEEPALIVE',
-		Type.ROUTE_REFRESH : 'ROUTE_REFRESH',
-		Type.OPERATIONAL   : 'OPERATIONAL',
+		ID.NOP           : 'NOP',
+		ID.OPEN          : 'OPEN',
+		ID.UPDATE        : 'UPDATE',
+		ID.NOTIFICATION  : 'NOTIFICATION',
+		ID.KEEPALIVE     : 'KEEPALIVE',
+		ID.ROUTE_REFRESH : 'ROUTE_REFRESH',
+		ID.OPERATIONAL   : 'OPERATIONAL',
 	}
 
 	@classmethod
@@ -96,11 +96,11 @@ class Message (Exception):
 		return cls._name.get(message_id,'UNKNOWN MESSAGE %d' % message_id)
 
 	Length = {
-		Type.OPEN          : lambda _ : _ >= 29,
-		Type.UPDATE        : lambda _ : _ >= 23,
-		Type.NOTIFICATION  : lambda _ : _ >= 21,
-		Type.KEEPALIVE     : lambda _ : _ == 19,
-		Type.ROUTE_REFRESH : lambda _ : _ == 23,
+		ID.OPEN          : lambda _ : _ >= 29,
+		ID.UPDATE        : lambda _ : _ >= 23,
+		ID.NOTIFICATION  : lambda _ : _ >= 21,
+		ID.KEEPALIVE     : lambda _ : _ == 19,
+		ID.ROUTE_REFRESH : lambda _ : _ == 23,
 	}
 
 	def __init__ (self):
@@ -110,17 +110,17 @@ class Message (Exception):
 	def string (code):
 		if code is None:
 			return 'invalid'
-		if code == Message.Type.OPEN:
+		if code == Message.ID.OPEN:
 			return 'open'
-		if code == Message.Type.UPDATE:
+		if code == Message.ID.UPDATE:
 			return 'update'
-		if code == Message.Type.NOTIFICATION:
+		if code == Message.ID.NOTIFICATION:
 			return 'notification'
-		if code == Message.Type.KEEPALIVE:
+		if code == Message.ID.KEEPALIVE:
 			return 'keepalive'
-		if code == Message.Type.ROUTE_REFRESH:
+		if code == Message.ID.ROUTE_REFRESH:
 			return 'route refresh'
-		if code == Message.Type.OPERATIONAL:
+		if code == Message.ID.OPERATIONAL:
 			return 'operational'
 		return 'unknown'
 

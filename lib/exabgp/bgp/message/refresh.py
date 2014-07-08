@@ -24,7 +24,8 @@ class Reserved (int):
 		return 'invalid'
 
 class RouteRefresh (Message):
-	TYPE = chr(Message.Type.ROUTE_REFRESH)
+	ID = Message.ID.ROUTE_REFRESH
+	TYPE = chr(Message.ID.ROUTE_REFRESH)
 
 	request = 0
 	start = 1

@@ -29,7 +29,8 @@ def hexstring (value):
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 class Notification (Message):
-	TYPE = chr(Message.Type.NOTIFICATION)
+	ID = Message.ID.NOTIFICATION
+	TYPE = chr(Message.ID.NOTIFICATION)
 
 	_str_code = {
 		1 : "Message header error",

@@ -265,37 +265,37 @@ class Processes (object):
 		for process in self._notify(peer.neighbor.peer_address,'send-packets'):
 			self.write(process,self._api_encoder[process].send(peer,category,header,body))
 
-	@register_process(Message.Type.OPEN,_dispatch)
+	@register_process(Message.ID.OPEN,_dispatch)
 	def open (self,peer,direction,open_msg,header,body):
 		if self.silence: return
 		for process in self._notify(peer.neighbor.peer_address,'receive-opens'):
 			self.write(process,self._api_encoder[process].open(peer,direction,open_msg,header,body))
 
-	@register_process(Message.Type.NOTIFICATION,_dispatch)
+	@register_process(Message.ID.NOTIFICATION,_dispatch)
 	def notification (self,peer,code,subcode,data):
 		if self.silence: return
 		for process in self._notify(peer.neighbor.peer_address,'neighbor-changes'):
 			self.write(process,self._api_encoder[process].notification(peer,code,subcode,data))
 
-	@register_process(Message.Type.KEEPALIVE,_dispatch)
+	@register_process(Message.ID.KEEPALIVE,_dispatch)
 	def keepalive (self,peer,category,header,body):
 		if self.silence: return
 		for process in self._notify(peer.neighbor.peer_address,'receive-keepalives'):
 			self.write(process,self._api_encoder[process].keepalive(peer,header,body))
 
-	@register_process(Message.Type.UPDATE,_dispatch)
+	@register_process(Message.ID.UPDATE,_dispatch)
 	def update (self,peer,update,header,body):
 		if self.silence: return
 		for process in self._notify(peer.neighbor.peer_address,'receive-routes'):
 			self.write(process,self._api_encoder[process].update(peer,update,header,body))
 
-	@register_process(Message.Type.ROUTE_REFRESH,_dispatch)
+	@register_process(Message.ID.ROUTE_REFRESH,_dispatch)
 	def refresh (self,peer,refresh,header,body):
 		if self.silence: return
 		for process in self._notify(peer.neighbor.peer_address,'receive-refresh'):
 			self.write(process,self._api_encoder[process].refresh(peer,refresh,header,body))
 
-	@register_process(Message.Type.OPERATIONAL,_dispatch)
+	@register_process(Message.ID.OPERATIONAL,_dispatch)
 	def operational (self,peer,operational,header,body):
 		if self.silence: return
 		for process in self._notify(peer.neighbor.peer_address,'receive-operational'):

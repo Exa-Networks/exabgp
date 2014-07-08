@@ -61,9 +61,11 @@ class OperationalType:
 #
 
 class Operational (Message):
+	ID = Message.ID.OPERATIONAL
+	TYPE = chr(Message.ID.OPERATIONAL)
+
 	registered_operational = dict()
 
-	TYPE = chr(0x06)  # next free Message Type, as IANA did not assign one yet.
 	has_family = False
 	has_routerid = False
 	is_fault = False

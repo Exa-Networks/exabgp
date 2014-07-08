@@ -29,12 +29,12 @@ class APIOptions (object):
 		self.receive_refresh = False
 		self.receive_operational = False
 
-		self._dispatch[Message.Type.OPEN] = lambda : self.receive_opens
-		self._dispatch[Message.Type.NOTIFICATION] = lambda : self.receive_notifications
-		self._dispatch[Message.Type.KEEPALIVE] = lambda : self.receive_keepalives
-		self._dispatch[Message.Type.UPDATE] = lambda : self.receive_updates
-		self._dispatch[Message.Type.ROUTE_REFRESH] = lambda : self.receive_refresh
-		self._dispatch[Message.Type.OPERATIONAL] = lambda : self.receive_operationals
+		self._dispatch[Message.ID.OPEN] = lambda : self.receive_opens
+		self._dispatch[Message.ID.NOTIFICATION] = lambda : self.receive_notifications
+		self._dispatch[Message.ID.KEEPALIVE] = lambda : self.receive_keepalives
+		self._dispatch[Message.ID.UPDATE] = lambda : self.receive_updates
+		self._dispatch[Message.ID.ROUTE_REFRESH] = lambda : self.receive_refresh
+		self._dispatch[Message.ID.OPERATIONAL] = lambda : self.receive_operationals
 
 	def receive_message (self,message_id):
 		return self._dispatch[message_id]()

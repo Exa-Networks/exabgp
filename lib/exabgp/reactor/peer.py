@@ -234,7 +234,7 @@ class Peer (object):
 
 		# send OPEN
 		for message in proto.new_open(self._restarted):
-			if ord(message.TYPE) == Message.Type.NOP:
+			if ord(message.TYPE) == Message.ID.NOP:
 				yield ACTION.immediate
 
 		proto.negotiated.sent(message)
@@ -248,7 +248,7 @@ class Peer (object):
 		# which would be bad as we need to do the collission check without going to the other peer
 		for message in proto.read_open(self.neighbor.peer_address.ip):
 			opentimer.tick(message)
-			if ord(message.TYPE) == Message.Type.NOP:
+			if ord(message.TYPE) == Message.ID.NOP:
 				yield ACTION.later
 
 		self._['in']['state'] = STATE.openconfirm
@@ -314,7 +314,7 @@ class Peer (object):
 		# Only yield if we have not the open, otherwise the reactor can run the other connection
 		# which would be bad as we need to set the state without going to the other peer
 		for message in proto.new_open(self._restarted):
-			if ord(message.TYPE) == Message.Type.NOP:
+			if ord(message.TYPE) == Message.ID.NOP:
 				yield ACTION.immediate
 
 		proto.negotiated.sent(message)
@@ -329,7 +329,7 @@ class Peer (object):
 			# XXX: FIXME: change the whole code to use the ord and not the chr version
 			# Only yield if we have not the open, otherwise the reactor can run the other connection
 			# which would be bad as we need to do the collission check
-			if ord(message.TYPE) == Message.Type.NOP:
+			if ord(message.TYPE) == Message.ID.NOP:
 				yield ACTION.later
 
 		self._['out']['state'] = STATE.openconfirm
