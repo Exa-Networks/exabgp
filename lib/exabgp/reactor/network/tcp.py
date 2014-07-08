@@ -17,9 +17,15 @@ from exabgp.util.errstr import errstr
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
-from exabgp.reactor.network.error import errno,error
+from exabgp.reactor.network.error import errno
+from exabgp.reactor.network.error import error
 
-from .error import NotConnected,BindingError,MD5Error,NagleError,TTLError,AsyncError
+from .error import NotConnected
+from .error import BindingError
+from .error import MD5Error
+from .error import NagleError
+from .error import TTLError
+from .error import AsyncError
 
 from exabgp.logger import Logger
 

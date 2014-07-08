@@ -1,8 +1,10 @@
 from exabgp.util.errstr import errstr
 
 from .connection import Connection
-from .tcp import nagle,async
-from .error import NetworkError,NotConnected
+from .tcp import nagle
+from .tcp import async
+from .error import NetworkError
+from .error import NotConnected
 
 from exabgp.bgp.message.notification import Notify
 

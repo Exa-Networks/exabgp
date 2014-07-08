@@ -11,9 +11,9 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 # Generic ======================================================================
 #
 
-
 # As long as pack or unpack is needed here it means our API cleanup is not complete
-from struct import pack,unpack
+from struct import pack
+from struct import unpack
 
 from socket import error as SocketError
 from exabgp.protocol.ip import IP
@@ -301,7 +301,8 @@ def originator_id (tokeniser):
 # ================================================================== ClusterList
 #
 
-from exabgp.bgp.message.update.attribute.clusterlist import ClusterList,ClusterID
+from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
+from exabgp.bgp.message.update.attribute.clusterlist import ClusterID
 
 def cluster_list (tokeniser):
 	clusterids = []

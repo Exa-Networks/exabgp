@@ -6,7 +6,8 @@ Created by Thomas Mangin on 2012-07-19.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from exabgp.bgp.message.open.asn import ASN,AS_TRANS
+from exabgp.bgp.message.open.asn import ASN
+from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.capability.id import CapabilityID as CID,REFRESH
 from exabgp.bgp.message.open.routerid import RouterID

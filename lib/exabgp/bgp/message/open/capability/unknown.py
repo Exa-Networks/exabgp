@@ -9,7 +9,6 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability.id import CapabilityID
 
-
 # ============================================================ UnknownCapability
 #
 

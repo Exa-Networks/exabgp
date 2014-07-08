@@ -17,11 +17,19 @@ from exabgp.configuration.environment import environment
 from exabgp.util.od import od
 from exabgp.util.errstr import errstr
 
-from exabgp.logger import Logger,FakeLogger,LazyFormat
+from exabgp.logger import Logger
+from exabgp.logger import FakeLogger
+from exabgp.logger import LazyFormat
 
 from exabgp.bgp.message import Message
 
-from exabgp.reactor.network.error import error,errno,NetworkError,TooSlowError,NotConnected,LostConnection,NotifyError
+from exabgp.reactor.network.error import error
+from exabgp.reactor.network.error import errno
+from exabgp.reactor.network.error import NetworkError
+from exabgp.reactor.network.error import TooSlowError
+from exabgp.reactor.network.error import NotConnected
+from exabgp.reactor.network.error import LostConnection
+from exabgp.reactor.network.error import NotifyError
 
 from .error import *
 

@@ -13,28 +13,38 @@ from exabgp.configuration.environment import environment
 env = environment.setup('')
 
 from exabgp.bgp.message.update.update import *
-from exabgp.bgp.message.update.attribute.community import to_Community, Community, Communities
+from exabgp.bgp.message.update.attribute.community import to_Community
+from exabgp.bgp.message.update.attribute.community import Community, Communities
 
 class TestData (unittest.TestCase):
 	def test_2_prefix (self):
 		self.assertEqual(str(to_NLRI('10.0.0.0','24')),'10.0.0.0/24')
+
 	def test_6_prefix (self):
 		self.assertEqual(to_NLRI('1.2.3.4','0').pack(),''.join([chr(c) for c in [0,]]))
+
 	def test_7_prefix (self):
 		self.assertEqual(to_NLRI('1.2.3.4','8').pack(),''.join([chr(c) for c in [8,1,]]))
+
 	def test_8_prefix (self):
 		self.assertEqual(to_NLRI('1.2.3.4','16').pack(),''.join([chr(c) for c in [16,1,2]]))
+
 	def test_9_prefix (self):
 		self.assertEqual(to_NLRI('1.2.3.4','24').pack(),''.join([chr(c) for c in [24,1,2,3]]))
+
 	def test_10_prefix (self):
 		self.assertEqual(to_NLRI('1.2.3.4','32').pack(),''.join([chr(c) for c in [32,1,2,3,4]]))
 
+
 	def test_1_community (self):
 		self.assertEqual(Community(256),256)
+
 	def test_2_community (self):
 		self.assertEqual(to_Community('0x100'),256)
+
 	def test_3_community (self):
 		self.assertEqual(to_Community('1:1'),65537)
+
 	def test_4_community (self):
 		communities = Communities()
 		community = to_Community('1:1')

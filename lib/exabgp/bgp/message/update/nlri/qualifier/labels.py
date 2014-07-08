@@ -6,7 +6,8 @@ Created by Thomas Mangin on 2012-07-08.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from struct import pack,unpack
+from struct import pack
+from struct import unpack
 
 # ======================================================================= Labels
 # RFC 3107

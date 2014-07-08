@@ -12,7 +12,6 @@ from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
 
-
 # =============================================================== AGGREGATOR (7)
 
 class Aggregator (Attribute):

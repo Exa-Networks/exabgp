@@ -6,7 +6,10 @@ Created by Thomas Mangin on 2010-01-15.
 Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 """
 
+
+# ===================================================================== Protocol
 # http://www.iana.org/assignments/protocol-numbers/
+
 class Protocol (int):
 	ICMP  = 0x01
 	IGMP  = 0x02

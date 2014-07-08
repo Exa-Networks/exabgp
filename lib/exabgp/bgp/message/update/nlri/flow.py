@@ -9,18 +9,26 @@ Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 # Do not use __slots__ here, we never create enough of them to be worth it
 # And it really break complex inheritance
 
-from struct import pack,unpack
+from struct import pack
+from struct import unpack
 
 from exabgp.protocol.ip import IP
-from exabgp.protocol.family import AFI,SAFI
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 
-from exabgp.protocol import Protocol,NamedProtocol
-from exabgp.protocol.ip.icmp import ICMPType,ICMPCode,NamedICMPType,NamedICMPCode
-from exabgp.protocol.ip.fragment import Fragment,NamedFragment
-from exabgp.protocol.ip.tcp.flag import TCPFlag,NamedTCPFlag
+from exabgp.protocol import Protocol
+from exabgp.protocol import NamedProtocol
+from exabgp.protocol.ip.icmp import ICMPType
+from exabgp.protocol.ip.icmp import ICMPCode
+from exabgp.protocol.ip.icmp import NamedICMPType
+from exabgp.protocol.ip.icmp import NamedICMPCode
+from exabgp.protocol.ip.fragment import Fragment
+from exabgp.protocol.ip.fragment import NamedFragment
+from exabgp.protocol.ip.tcp.flag import TCPFlag
+from exabgp.protocol.ip.tcp.flag import NamedTCPFlag
 
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher

@@ -11,7 +11,6 @@ from struct import unpack
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
 
-
 # ======================================================= ExtendedCommunity (16)
 #
 

@@ -1,11 +1,7 @@
 #!/usr/bin/env python
 
-import os
 import sys
 import socket
-import errno
-from struct import pack,unpack
-import array
 
 try:
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

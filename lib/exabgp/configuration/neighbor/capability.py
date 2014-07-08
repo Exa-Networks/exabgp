@@ -6,12 +6,14 @@ Created by Thomas Mangin on 2014-06-22.
 Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.engine.registry import Raised,Entry
+from exabgp.configuration.engine.registry import Raised
+from exabgp.configuration.engine.registry import Entry
 from exabgp.configuration.engine.parser import boolean
 
 from exabgp.bgp.message.open.capability.id import CapabilityID
 
-# from exabgp.protocol.family import AFI,SAFI,known_families
+# =================================================================== Capability
+#
 
 class Capability (Entry):
 	syntax = \

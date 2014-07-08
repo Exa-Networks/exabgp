@@ -8,8 +8,8 @@ Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 
 import socket
 
-from exabgp.protocol.family import AFI, SAFI
-
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
 
 # =========================================================================== IP
 #

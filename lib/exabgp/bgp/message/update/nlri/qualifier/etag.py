@@ -10,7 +10,8 @@ Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 # TODO: take into account E-VPN specs that specify the role of the first bit of ESI
 # (since draft-ietf-l2vpn-evpn-05)
 
-from struct import pack,unpack
+from struct import pack
+from struct import unpack
 
 class EthernetTag (object):
 	MAX = pow(2,32)-1

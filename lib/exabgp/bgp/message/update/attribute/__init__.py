@@ -21,7 +21,8 @@ from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
 
 from exabgp.bgp.message.notification import Notify
 
-from exabgp.logger import Logger,LazyFormat
+from exabgp.logger import Logger
+from exabgp.logger import LazyFormat
 
 class _NOTHING (object):
 	def pack (self,negotiated=None):

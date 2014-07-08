@@ -16,9 +16,12 @@ import select
 from exabgp.version import version
 
 from exabgp.reactor.daemon import Daemon
-from exabgp.reactor.listener import Listener,NetworkError
-from exabgp.reactor.api.processes import Processes,ProcessError
-from exabgp.reactor.peer import Peer,ACTION
+from exabgp.reactor.listener import Listener
+from exabgp.reactor.listener import NetworkError
+from exabgp.reactor.api.processes import Processes
+from exabgp.reactor.api.processes import ProcessError
+from exabgp.reactor.peer import Peer
+from exabgp.reactor.peer import ACTION
 from exabgp.reactor.network.error import error
 
 from exabgp.reactor.api.decoding import Text as Decoder

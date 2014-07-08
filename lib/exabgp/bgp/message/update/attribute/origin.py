@@ -9,7 +9,6 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
 
-
 # =================================================================== Origin (1)
 
 class Origin (Attribute):

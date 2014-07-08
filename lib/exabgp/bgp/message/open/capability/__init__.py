@@ -6,7 +6,8 @@ Created by Thomas Mangin on 2012-07-17.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from exabgp.protocol.family import AFI,SAFI
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.id import CapabilityID
 from exabgp.bgp.message.notification import Notify
@@ -18,7 +19,8 @@ from exabgp.bgp.message.open.capability.graceful import Graceful
 from exabgp.bgp.message.open.capability.mp import MultiProtocol
 from exabgp.bgp.message.open.capability.ms import MultiSession
 from exabgp.bgp.message.open.capability.operational import Operational
-from exabgp.bgp.message.open.capability.refresh import RouteRefresh,EnhancedRouteRefresh
+from exabgp.bgp.message.open.capability.refresh import RouteRefresh
+from exabgp.bgp.message.open.capability.refresh import EnhancedRouteRefresh
 from exabgp.bgp.message.open.capability.unknown import UnknownCapability
 # /forced import
 

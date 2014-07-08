@@ -9,14 +9,17 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from exabgp.configuration.file import Configuration
 from exabgp.configuration.file import formated
 
-from exabgp.protocol.family import AFI,SAFI
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message import OUT
 
 from exabgp.bgp.message.update.nlri.prefix import Prefix
 from exabgp.bgp.message.update.nlri.mpls import MPLS
 from exabgp.bgp.message.open.capability.refresh import RouteRefresh
-from exabgp.bgp.message.operational import Advisory,Query,Response
+from exabgp.bgp.message.operational import Advisory
+from exabgp.bgp.message.operational import Query
+from exabgp.bgp.message.operational import Response
 
 from exabgp.rib.change import Change
 

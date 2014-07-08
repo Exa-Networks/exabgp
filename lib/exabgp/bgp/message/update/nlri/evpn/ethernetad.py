@@ -5,9 +5,11 @@ Created by Thomas Mangin on 2014-06-27.
 Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
-# from struct import pack,unpack
+# from struct import pack
+# from struct import unpack
 
-# from exabgp.protocol.family import AFI,SAFI
+# from exabgp.protocol.family import AFI
+# from exabgp.protocol.family import SAFI
 # from exabgp.bgp.message.update.nlri.qualifier.esi import ESI
 
 # from exabgp.bgp.message.update.nlri.qualifier.labels import Labels

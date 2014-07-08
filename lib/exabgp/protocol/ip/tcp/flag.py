@@ -6,7 +6,10 @@ Created by Thomas Mangin on 2010-02-04.
 Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 """
 
+
+# ====================================================================== TCPFlag
 # http://www.iana.org/assignments/tcp-header-flags
+
 class TCPFlag (int):
 	FIN    = 0x1
 	SYN    = 0x2

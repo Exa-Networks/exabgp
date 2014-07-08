@@ -10,6 +10,7 @@ Copyright (c) 2011 Exa Networks. All rights reserved.
 # XXX: reloading mid-program not possible
 # XXX: validation for path, file, etc not correctly test (ie surely buggy)
 
+
 import os
 import sys
 import pwd
@@ -17,10 +18,17 @@ import syslog
 
 from exabgp.util.ip import isip
 
+# ===================================================================== NoneDict
+#
+
 class NoneDict (dict):
 	def __getitem__ (self,name):
 		return None
 nonedict = NoneDict()
+
+
+# ================================================================== environment
+# XXX: FIXME: Upper case for class !
 
 class environment (object):
 	# class returned on issues
@@ -310,6 +318,9 @@ class environment (object):
 		return env
 
 
+# ================================================================= ConfigParser
+#
+
 import ConfigParser
 
 class Store (dict):
@@ -325,6 +336,9 @@ class Store (dict):
 	def __setattr__ (self,key,value):
 		return dict.__setitem__(self,key.replace('_','-'),value)
 
+
+# ========================================================================= _env
+#
 
 def _env (conf):
 	here = os.path.join(os.sep,*os.path.join(environment.location.split(os.sep)))

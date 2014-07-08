@@ -14,7 +14,6 @@ from exabgp.bgp.message.notification import Notify
 
 from exabgp.util.cache import Cache
 
-
 # ==================================================================== Attribute
 #
 

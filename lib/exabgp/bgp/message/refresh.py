@@ -6,9 +6,11 @@ Created by Thomas Mangin on 2012-07-19.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from struct import unpack,error
+from struct import unpack
+from struct import error
 
-from exabgp.protocol.family import AFI,SAFI
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.notification import Notify
 

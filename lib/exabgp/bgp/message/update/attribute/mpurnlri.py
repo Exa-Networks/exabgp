@@ -15,7 +15,6 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 
 from exabgp.bgp.message.notification import Notify
 
-
 # ================================================================= MP NLRI (14)
 
 class MPURNLRI (Attribute):

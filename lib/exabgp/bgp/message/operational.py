@@ -6,14 +6,15 @@ Created by Thomas Mangin on 2013-09-01.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from struct import pack,unpack
+from struct import pack
+from struct import unpack
 
-from exabgp.protocol.family import AFI,SAFI
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message import Message
 
-
-# ======================================================================== Type
+# ========================================================================= Type
 #
 
 MAX_ADVISORY = 2048  # 2K

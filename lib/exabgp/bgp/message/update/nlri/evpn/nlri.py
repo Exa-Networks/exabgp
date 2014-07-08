@@ -7,7 +7,8 @@ Copyright (c) 2014-2014 Orange. All rights reserved.
 
 from struct import pack
 
-from exabgp.protocol.family import AFI,SAFI
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
 
 # ========================================================================= EVPN
 

@@ -8,7 +8,8 @@ Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 
 # from struct import unpack
 
-from exabgp.protocol.family import AFI,SAFI
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.nlri.nlri import NLRI

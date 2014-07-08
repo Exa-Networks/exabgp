@@ -12,18 +12,22 @@ from exabgp.reactor.network.outgoing import Outgoing
 #from exabgp.reactor.network.error import NotifyError
 
 from exabgp.bgp.message import Message
-from exabgp.bgp.message.nop import NOP,_NOP
+from exabgp.bgp.message.nop import NOP
+from exabgp.bgp.message.nop import _NOP
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.message.update import Update,EOR
+from exabgp.bgp.message.update import Update
+from exabgp.bgp.message.update import EOR
 from exabgp.bgp.message.keepalive import KeepAlive
-from exabgp.bgp.message.notification import Notification, Notify
+from exabgp.bgp.message.notification import Notification
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.operational import Operational
 
 from exabgp.reactor.api.processes import ProcessError
 
-from exabgp.logger import Logger,FakeLogger
+from exabgp.logger import Logger
+from exabgp.logger import FakeLogger
 
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000

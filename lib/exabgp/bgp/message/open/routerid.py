@@ -8,7 +8,6 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from exabgp.protocol.ip import IPv4
 
-
 # ===================================================================== RouterID
 #
 

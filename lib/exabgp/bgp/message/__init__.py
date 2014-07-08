@@ -8,7 +8,6 @@ Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 
 from struct import pack
 
-
 # =================================================================== BGP States
 #
 

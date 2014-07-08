@@ -6,7 +6,8 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from exabgp.bgp.message import IN,OUT
+from exabgp.bgp.message import IN
+from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.refresh import RouteRefresh
 

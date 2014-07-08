@@ -6,13 +6,14 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from struct import unpack,error
+from struct import unpack
+from struct import error
 
-from exabgp.bgp.message.open.asn import ASN,AS_TRANS
+from exabgp.bgp.message.open.asn import ASN
+from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.notification import Notify
-
 
 # =================================================================== ASPath (2)
 # only 2-4% of duplicated data therefore it is not worth to cache

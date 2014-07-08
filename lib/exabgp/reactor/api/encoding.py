@@ -9,7 +9,8 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 import time
 
-from exabgp.bgp.message import Message,IN
+from exabgp.bgp.message import Message
+from exabgp.bgp.message import IN
 
 class APIOptions (object):
 	def __init__ (self):

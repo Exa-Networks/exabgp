@@ -12,10 +12,14 @@ import unittest
 from exabgp.configuration.environment import environment
 env = environment.setup('')
 
-from exabgp.bgp.message.open import Open,Capabilities,new_Open
+from exabgp.bgp.message.open import Open
+from exabgp.bgp.message.open import Capabilities
+from exabgp.bgp.message.open import new_Open
 from exabgp.bgp.message.notification import Notification
-from exabgp.bgp.message.keepalive import KeepAlive,new_KeepAlive
-from exabgp.bgp.message.update import Update,Attributes
+from exabgp.bgp.message.keepalive import KeepAlive
+from exabgp.bgp.message.keepalive import new_KeepAlive
+from exabgp.bgp.message.update import Update
+from exabgp.bgp.message.update import Attributes
 
 from exabgp.rib.table import Table
 from exabgp.rib.delta import Delta

@@ -9,8 +9,7 @@ Copyright (c) 2013-2013 Exa Networks. All rights reserved.
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability.id import CapabilityID
 
-
-# =================================================================== Operational
+# ================================================================== Operational
 #
 
 class Operational (Capability,list):

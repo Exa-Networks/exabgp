@@ -11,12 +11,14 @@ import time
 
 from exabgp.bgp.timer import Timer
 from exabgp.bgp.message import Message
-from exabgp.bgp.message.open.capability.id import CapabilityID,REFRESH
+from exabgp.bgp.message.open.capability.id import CapabilityID
+from exabgp.bgp.message.open.capability.id import REFRESH
 from exabgp.bgp.message.nop import NOP
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.refresh import RouteRefresh
-from exabgp.bgp.message.notification import Notification, Notify
+from exabgp.bgp.message.notification import Notification
+from exabgp.bgp.message.notification import Notify
 from exabgp.reactor.protocol import Protocol
 from exabgp.reactor.network.error import NetworkError
 from exabgp.reactor.api.processes import ProcessError
@@ -24,7 +26,9 @@ from exabgp.reactor.api.processes import ProcessError
 from exabgp.rib.change import Change
 
 from exabgp.configuration.environment import environment
-from exabgp.logger import Logger,FakeLogger,LazyFormat
+from exabgp.logger import Logger
+from exabgp.logger import FakeLogger
+from exabgp.logger import LazyFormat
 
 from exabgp.util.counter import Counter
 from exabgp.util.trace import trace

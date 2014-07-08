@@ -215,7 +215,8 @@ def _make_config(nb_neighbor):
 		return ''
 	return name
 
-from exabgp.configuration.validation import validation,ValidationError
+from exabgp.configuration.validation import validation
+from exabgp.configuration.validation import ValidationError
 from exabgp.configuration.loader import load
 
 from exabgp.memory.profiler import profile

@@ -7,12 +7,12 @@ Copyright (c) 2014-2014 Orange. All rights reserved.
 Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
-from struct import pack,unpack
+from struct import pack
+from struct import unpack
 
 from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
-
 
 # http://tools.ietf.org/html/rfc6514#section-5
 #

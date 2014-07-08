@@ -7,10 +7,10 @@ Copyright (c) 2014-2014 Orange. All rights reserved.
 Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
-from struct import pack,unpack
+from struct import pack
+from struct import unpack
 
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
-
 
 # ============================================================ Layer2Information
 # RFC 4761

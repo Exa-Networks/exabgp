@@ -1,5 +1,11 @@
 from .connection import Connection
-from .tcp import create,bind,connect,MD5,nagle,TTL,async,ready
+from .tcp import create,bind
+from .tcp import connect
+from .tcp import MD5
+from .tcp import nagle
+from .tcp import TTL
+from .tcp import async
+from .tcp import ready
 from .error import NetworkError
 
 class Outgoing (Connection):

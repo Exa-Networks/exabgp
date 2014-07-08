@@ -6,13 +6,14 @@ Created by Thomas Mangin on 2012-07-17.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from struct import pack,unpack
-from exabgp.protocol.family import AFI,SAFI
+from struct import pack
+from struct import unpack
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability.id import CapabilityID
 
-
-# ============================================================ Graceful (Restart)
+# =========================================================== Graceful (Restart)
 # RFC 4727
 
 class Graceful (Capability,dict):

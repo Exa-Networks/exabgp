@@ -1,11 +1,13 @@
 # encoding: utf-8
-'''
+"""
 ordereddict.py
 
 Created by Thomas Mangin on 2013-03-18.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
-'''
+"""
 
+
+# ================================================================== OrderedDict
 # This is only an hack until we drop support for python version < 2.7
 
 class OrderedDict (dict):

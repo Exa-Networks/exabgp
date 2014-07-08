@@ -12,7 +12,8 @@ import unittest
 from exabgp.configuration.environment import environment
 env = environment.setup('')
 
-from exabgp.protocol.family import AFI,SAFI
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
 from exabgp.protocol.ip.inet import *
 
 class TestData (unittest.TestCase):

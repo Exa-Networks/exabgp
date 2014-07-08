@@ -15,7 +15,8 @@ import fcntl
 from exabgp.util.errstr import errstr
 
 from exabgp.configuration.file import formated
-from exabgp.reactor.api.encoding import Text,JSON
+from exabgp.reactor.api.encoding import Text
+from exabgp.reactor.api.encoding import JSON
 from exabgp.bgp.message import Message
 from exabgp.logger import Logger
 

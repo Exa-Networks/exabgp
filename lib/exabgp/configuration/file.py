@@ -15,13 +15,16 @@ import shlex
 
 from pprint import pformat
 from copy import deepcopy
-from struct import pack,unpack
+from struct import pack
+from struct import unpack
 
 from exabgp.util.ip import isipv4
 
 from exabgp.configuration.environment import environment
 
-from exabgp.protocol.family import AFI,SAFI,known_families
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import known_families
 
 from exabgp.bgp.neighbor import Neighbor
 
@@ -32,10 +35,32 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 
-from exabgp.bgp.message.update.nlri.prefix import Prefix,PathInfo
-from exabgp.bgp.message.update.nlri.mpls import MPLS,Labels,RouteDistinguisher
+from exabgp.bgp.message.update.nlri.prefix import Prefix
+from exabgp.bgp.message.update.nlri.prefix import PathInfo
+from exabgp.bgp.message.update.nlri.mpls import MPLS
+from exabgp.bgp.message.update.nlri.mpls import Labels
+from exabgp.bgp.message.update.nlri.mpls import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.vpls import VPLS
-from exabgp.bgp.message.update.nlri.flow import BinaryOperator,NumericOperator,Flow,Flow4Source,Flow4Destination,Flow6Source,Flow6Destination,FlowSourcePort,FlowDestinationPort,FlowAnyPort,FlowIPProtocol,FlowNextHeader,FlowTCPFlag,FlowFragment,FlowPacketLength,FlowICMPType,FlowICMPCode,FlowDSCP,FlowTrafficClass,FlowFlowLabel
+from exabgp.bgp.message.update.nlri.flow import BinaryOperator
+from exabgp.bgp.message.update.nlri.flow import NumericOperator
+from exabgp.bgp.message.update.nlri.flow import Flow
+from exabgp.bgp.message.update.nlri.flow import Flow4Source
+from exabgp.bgp.message.update.nlri.flow import Flow4Destination
+from exabgp.bgp.message.update.nlri.flow import Flow6Source
+from exabgp.bgp.message.update.nlri.flow import Flow6Destination
+from exabgp.bgp.message.update.nlri.flow import FlowSourcePort
+from exabgp.bgp.message.update.nlri.flow import FlowDestinationPort
+from exabgp.bgp.message.update.nlri.flow import FlowAnyPort
+from exabgp.bgp.message.update.nlri.flow import FlowIPProtocol
+from exabgp.bgp.message.update.nlri.flow import FlowNextHeader
+from exabgp.bgp.message.update.nlri.flow import FlowTCPFlag
+from exabgp.bgp.message.update.nlri.flow import FlowFragment
+from exabgp.bgp.message.update.nlri.flow import FlowPacketLength
+from exabgp.bgp.message.update.nlri.flow import FlowICMPType
+from exabgp.bgp.message.update.nlri.flow import FlowICMPCode
+from exabgp.bgp.message.update.nlri.flow import FlowDSCP
+from exabgp.bgp.message.update.nlri.flow import FlowTrafficClass
+from exabgp.bgp.message.update.nlri.flow import FlowFlowLabel
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.origin import Origin
@@ -48,22 +73,28 @@ from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.community.community import Community
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
-from exabgp.bgp.message.update.attribute.community import Communities,ExtendedCommunities
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate,TrafficAction,TrafficRedirect,TrafficMark,TrafficNextHop
+from exabgp.bgp.message.update.attribute.community import Communities
+from exabgp.bgp.message.update.attribute.community import ExtendedCommunities
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficAction
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirect
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficMark
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficNextHop
 
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
-from exabgp.bgp.message.update.attribute.clusterlist import ClusterList,ClusterID
+from exabgp.bgp.message.update.attribute.clusterlist import ClusterID
+from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 from exabgp.bgp.message.update.attribute.aigp import AIGP
 from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
 
-from exabgp.bgp.message.operational import MAX_ADVISORY,Advisory,Query,Response
+from exabgp.bgp.message.operational import MAX_ADVISORY
+from exabgp.bgp.message.operational import Advisory
 
 from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.rib.change import Change
 
 from exabgp.logger import Logger
-
 
 # Duck class, faking part of the Attribute interface
 # We add this to routes when when need o split a route in smaller route

@@ -7,7 +7,10 @@ Copyright (c) 2009-2012 Exa Networks. All rights reserved.
 """
 
 from struct import unpack
-from exabgp.protocol.ip import IPv4,IPv6
+from exabgp.protocol.ip import IPv4
+from exabgp.protocol.ip import IPv6
+
+# XXX: FIXME: Move this within Peer with the same API as other classes such as Attribute or Message
 
 class PeerType (int):
 	_str = {

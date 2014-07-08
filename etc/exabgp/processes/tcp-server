@@ -9,7 +9,8 @@ import socket
 import time
 import select
 
-from SocketServer import TCPServer,StreamRequestHandler
+from SocketServer import TCPServer
+from SocketServer import StreamRequestHandler
 
 class TimeoutException(Exception):
 	pass

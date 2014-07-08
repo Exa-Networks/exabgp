@@ -10,8 +10,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.notification import Notify
 
-
-# =================================================================== AtomicAggregate (6)
+# ========================================================== AtomicAggregate (6)
 
 class AtomicAggregate (Attribute):
 	ID = Attribute.ID.ATOMIC_AGGREGATE

@@ -6,9 +6,10 @@ Created by Thomas Mangin on 2010-01-15.
 Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 """
 
-# =================================================================== ICMP Code Field
 
+# ============================================================== ICMP Code Field
 # http://www.iana.org/assignments/icmp-parameters
+
 class ICMPType (int):
 	ECHO_REPLY               = 0x00
 	DESTINATION_UNREACHEABLE = 0x03

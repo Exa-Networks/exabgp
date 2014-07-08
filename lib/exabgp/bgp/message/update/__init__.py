@@ -6,17 +6,23 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from struct import pack,unpack
+from struct import pack
+from struct import unpack
 
-from exabgp.protocol.family import AFI,SAFI
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
 
-from exabgp.bgp.message import Message,IN,OUT
+from exabgp.bgp.message import Message
+from exabgp.bgp.message import IN
+from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update.eor import EOR
 
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI,EMPTY_MPRNLRI
-from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI,EMPTY_MPURNLRI
+from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+from exabgp.bgp.message.update.attribute.mprnlri import EMPTY_MPRNLRI
+from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
+from exabgp.bgp.message.update.attribute.mpurnlri import EMPTY_MPURNLRI
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
@@ -24,8 +30,8 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.attribute.nexthop import NoNextHop
 
 from exabgp.util.od import od
-from exabgp.logger import Logger,LazyFormat
-
+from exabgp.logger import Logger
+from exabgp.logger import LazyFormat
 
 # ======================================================================= Update
 

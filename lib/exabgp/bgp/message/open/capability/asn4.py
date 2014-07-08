@@ -10,7 +10,6 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability.id import CapabilityID
 
-
 # ========================================================================= ASN4
 #
 

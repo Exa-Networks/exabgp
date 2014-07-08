@@ -6,13 +6,13 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from struct import pack,unpack
+from struct import pack
+from struct import unpack
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
 
-
-# =================================================================== Local Preference (5)
+# ========================================================= Local Preference (5)
 
 class LocalPreference (Attribute):
 	ID = Attribute.ID.LOCAL_PREF

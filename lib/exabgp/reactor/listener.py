@@ -12,11 +12,14 @@ from exabgp.util.errstr import errstr
 
 from exabgp.protocol.family import AFI
 #from exabgp.util.coroutine import each
-from exabgp.util.ip import isipv4,isipv6
-from exabgp.reactor.network.error import error,errno,NetworkError,BindingError,AcceptError
+from exabgp.util.ip import isipv4
+from exabgp.util.ip import isipv6
+from exabgp.reactor.network.error import error
+from exabgp.reactor.network.error import errno
+from exabgp.reactor.network.error import NetworkError
+from exabgp.reactor.network.error import BindingError
+from exabgp.reactor.network.error import AcceptError
 from exabgp.reactor.network.incoming import Incoming
-#from exabgp.bgp.message.open import Open
-#from exabgp.bgp.message.notification import Notify
 
 from exabgp.logger import Logger
 

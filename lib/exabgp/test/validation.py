@@ -11,7 +11,8 @@ __all__ = ["validation", "ValidationError"]
 FORMAT = 3
 DEBUG = False
 
-from collections import deque, OrderedDict
+from collections import deque
+from collections import OrderedDict
 
 from exabgp.data import check
 
