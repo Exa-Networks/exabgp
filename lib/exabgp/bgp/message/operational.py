@@ -32,31 +32,6 @@ class Type (int):
 		pass
 
 
-# ============================================================== OperationalType
-#
-
-class OperationalType:
-	# ADVISE
-	ADM  = 0x01  # 01: Advisory Demand Message
-	ASM  = 0x02  # 02: Advisory Static Message
-	# STATE
-	RPCQ = 0x03  # 03: Reachable Prefix Count Request
-	RPCP = 0x04  # 04: Reachable Prefix Count Reply
-	APCQ = 0x05  # 05: Adj-Rib-Out Prefix Count Request
-	APCP = 0x06  # 06: Adj-Rib-Out Prefix Count Reply
-	LPCQ = 0x07  # 07: BGP Loc-Rib Prefix Count Request
-	LPCP = 0x08  # 08: BGP Loc-Rib Prefix Count Reply
-	SSQ  = 0x09  # 09: Simple State Request
-	# DUMP
-	DUP  = 0x0A  # 10: Dropped Update Prefixes
-	MUP  = 0x0B  # 11: Malformed Update Prefixes
-	MUD  = 0x0C  # 12: Malformed Update Dump
-	SSP  = 0x0D  # 13: Simple State Response
-	# CONTROL
-	MP   = 0xFFFE  # 65534: Max Permitted
-	NS   = 0xFFFF  # 65535: Not Satisfied
-
-
 # ================================================================== Operational
 #
 
@@ -69,6 +44,28 @@ class Operational (Message):
 	has_family = False
 	has_routerid = False
 	is_fault = False
+
+	class Type:
+		# ADVISE
+		ADM  = 0x01  # 01: Advisory Demand Message
+		ASM  = 0x02  # 02: Advisory Static Message
+		# STATE
+		RPCQ = 0x03  # 03: Reachable Prefix Count Request
+		RPCP = 0x04  # 04: Reachable Prefix Count Reply
+		APCQ = 0x05  # 05: Adj-Rib-Out Prefix Count Request
+		APCP = 0x06  # 06: Adj-Rib-Out Prefix Count Reply
+		LPCQ = 0x07  # 07: BGP Loc-Rib Prefix Count Request
+		LPCP = 0x08  # 08: BGP Loc-Rib Prefix Count Reply
+		SSQ  = 0x09  # 09: Simple State Request
+		# DUMP
+		DUP  = 0x0A  # 10: Dropped Update Prefixes
+		MUP  = 0x0B  # 11: Malformed Update Prefixes
+		MUD  = 0x0C  # 12: Malformed Update Dump
+		SSP  = 0x0D  # 13: Simple State Response
+		# CONTROL
+		MP   = 0xFFFE  # 65534: Max Permitted
+		NS   = 0xFFFF  # 65535: Not Satisfied
+
 
 	def __init__ (self,what):
 		Message.__init__(self)
@@ -193,7 +190,7 @@ class NS:
 		def __init__ (self,afi,safi,sequence):
 			OperationalFamily.__init__(
 				self,
-				OperationalType.NS,
+				Operational.Type.NS,
 				afi,safi,
 				'%s%s' % (sequence,self.ERROR_SUBCODE)
 			)
@@ -239,28 +236,28 @@ class Advisory:
 
 	class ADM (_Advisory):
 		name = 'ADM'
-		code = OperationalType.ADM
+		code = Operational.Type.ADM
 
 		def __init__ (self,afi,safi,advisory,routerid=None):
 			utf8 = advisory.encode('utf-8')
 			if len(utf8) > MAX_ADVISORY:
 				utf8 = utf8[:MAX_ADVISORY-3] + '...'.encode('utf-8')
 			OperationalFamily.__init__(
-				self,OperationalType.ADM,
+				self,Operational.Type.ADM,
 				afi,safi,
 				utf8
 			)
 
 	class ASM (_Advisory):
 		name = 'ASM'
-		code = OperationalType.ASM
+		code = Operational.Type.ASM
 
 		def __init__ (self,afi,safi,advisory,routerid=None):
 			utf8 = advisory.encode('utf-8')
 			if len(utf8) > MAX_ADVISORY:
 				utf8 = utf8[:MAX_ADVISORY-3] + '...'.encode('utf-8')
 			OperationalFamily.__init__(
-				self,OperationalType.ASM,
+				self,Operational.Type.ASM,
 				afi,safi,
 				utf8
 			)
@@ -298,15 +295,15 @@ class Query:
 
 	class RPCQ (_Query):
 		name = 'RPCQ'
-		code = OperationalType.RPCQ
+		code = Operational.Type.RPCQ
 
 	class APCQ (_Query):
 		name = 'APCQ'
-		code = OperationalType.APCQ
+		code = Operational.Type.APCQ
 
 	class LPCQ (_Query):
 		name = 'LPCQ'
-		code = OperationalType.LPCQ
+		code = Operational.Type.LPCQ
 
 Query.RPCQ.register_operational()
 Query.APCQ.register_operational()
@@ -341,15 +338,15 @@ class Response:
 
 	class RPCP (_Counter):
 		name = 'RPCP'
-		code = OperationalType.RPCP
+		code = Operational.Type.RPCP
 
 	class APCP (_Counter):
 		name = 'APCP'
-		code = OperationalType.APCP
+		code = Operational.Type.APCP
 
 	class LPCP (_Counter):
 		name = 'LPCP'
-		code = OperationalType.LPCP
+		code = Operational.Type.LPCP
 
 
 Response.RPCP.register_operational()
