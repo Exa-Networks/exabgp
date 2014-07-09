@@ -333,7 +333,10 @@ class Reactor (object):
 				self._peers[key].restart(neighbor)
 			# same peer but perhaps not the routes
 			else:
-				self._peers[key].send_new(neighbor.rib.outgoing.queued_changes())
+				# finding what route changed and sending the delta is not obvious
+				# self._peers[key].send_new(neighbor.rib.outgoing.queued_changes())
+				self.logger.reactor("restarting %s" % str(key))
+				self._peers[key].restart(neighbor)
 		self.logger.configuration("Loaded new configuration successfully",'warning')
 		# This only starts once ...
 		self.processes.start(restart)
