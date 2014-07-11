@@ -8,7 +8,11 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from struct import unpack
 
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
+
 from exabgp.bgp.message import IN
+
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.nlri.nlri import NLRI
@@ -57,10 +61,10 @@ class MPURNLRI (Attribute):
 		data = data[offset:]
 
 		if (afi,safi) not in negotiated.families:
-			raise Notify(3,0,'presented a non-negotiated family %d/%d' % (afi,safi))
+			raise Notify(3,0,'presented a non-negotiated family %s %s' % (AFI(afi),SAFI(safi)))
 
 		if not data:
-			raise Notify(3,0,'tried to withdraw an EOR for family %d/%d' % (afi,safi))
+			raise Notify(3,0,'tried to withdraw an EOR for family %d %d' % (AFI(afi),SAFI(safi)))
 
 		# Is the peer going to send us some Path Information with the route (AddPath)
 		addpath = negotiated.addpath.receive(afi,safi)

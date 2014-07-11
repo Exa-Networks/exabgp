@@ -1172,20 +1172,20 @@ class Configuration (object):
 			messages = local_scope.get('operational',[])
 
 		for local_scope in (scope[0],scope[-1]):
-			neighbor.api.receive_packets |= local_scope.get('receive-packets',False)
-			neighbor.api.send_packets |= local_scope.get('send-packets',False)
+			neighbor.api.receive_packets(local_scope.get('receive-packets',False))
+			neighbor.api.send_packets(local_scope.get('send-packets',False))
 
-			neighbor.api.neighbor_changes |= local_scope.get('neighbor-changes',False)
-			neighbor.api.consolidate = local_scope.get('consolidate',False)
+			neighbor.api.neighbor_changes(local_scope.get('neighbor-changes',False))
+			neighbor.api.consolidate(local_scope.get('consolidate',False))
 
-			neighbor.api.receive_parsed  = local_scope.get('receive-parsed',False)
+			neighbor.api.receive_parsed(local_scope.get('receive-parsed',False))
 
-			neighbor.api.receive_notifications |= local_scope.get('receive-notifications',False)
-			neighbor.api.receive_opens |= local_scope.get('receive-opens',False)
-			neighbor.api.receive_keepalives |= local_scope.get('receive-keepalives',False)
-			neighbor.api.receive_updates |= local_scope.get('receive-updates',False)
-			neighbor.api.receive_refresh |= local_scope.get('receive-refresh',False)
-			neighbor.api.receive_operational |= local_scope.get('receive-operational',False)
+			neighbor.api.receive_notifications(local_scope.get('receive-notifications',False))
+			neighbor.api.receive_opens(local_scope.get('receive-opens',False))
+			neighbor.api.receive_keepalives(local_scope.get('receive-keepalives',False))
+			neighbor.api.receive_updates(local_scope.get('receive-updates',False))
+			neighbor.api.receive_refresh(local_scope.get('receive-refresh',False))
+			neighbor.api.receive_operational(local_scope.get('receive-operational',False))
 
 		if not neighbor.router_id:
 			neighbor.router_id = neighbor.local_address

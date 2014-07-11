@@ -437,7 +437,7 @@ class Peer (object):
 
 		# Announce to the process BGP is up
 		self.logger.network('Connected to peer %s (%s)' % (self.neighbor.name(),direction))
-		if self.neighbor.api.neighbor_changes:
+		if self.neighbor.api['neighbor-changes']:
 			try:
 				self.reactor.processes.up(self)
 			except ProcessError:
