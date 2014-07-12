@@ -29,6 +29,7 @@ from exabgp.protocol.family import known_families
 from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.protocol.ip import IP
+from exabgp.protocol.ip import NoIP
 from exabgp.bgp.message import OUT
 
 from exabgp.bgp.message.open.asn import ASN
@@ -1501,7 +1502,8 @@ class Configuration (object):
 		elif klass is MPLS:
 			labels = change.nlri.labels
 			rd = change.nlri.rd
-		nexthop = change.nlri.nexthop
+		# packed and not pack() but does not matter atm, it is an IP not a NextHop
+		nexthop = change.nlri.nexthop.packed
 
 		change.nlri.mask = split
 		change.nlri = None
@@ -1556,7 +1558,7 @@ class Configuration (object):
 
 	def _check_static_route (self,scope):
 		update = scope[-1]['announce'][-1]
-		if not update.nlri.nexthop:
+		if update.nlri.nexthop is NoIP:
 			self._error = 'syntax: route <ip>/<mask> { next-hop <ip>; }'
 			if self.debug: raise
 			return False
@@ -2610,7 +2612,7 @@ class Configuration (object):
 		try:
 			change = scope[-1]['announce'][-1]
 
-			if change.nlri.nexthop:
+			if change.nlri.nexthop is not NoIP:
 				self._error = self._str_flow_error
 				if self.debug: raise
 				return False
@@ -2679,7 +2681,7 @@ class Configuration (object):
 					return True
 			else:
 				change = scope[-1]['announce'][-1]
-				if change.nlri.nexthop:
+				if change.nlri.nexthop is not NoIP:
 					self._error = self._str_flow_error
 					if self.debug: raise
 					return False
@@ -2698,7 +2700,7 @@ class Configuration (object):
 		try:
 			change = scope[-1]['announce'][-1]
 
-			if not change.nlri.nexthop:
+			if change.nlri.nexthop is NoIP:
 				self._error = self._str_flow_error
 				if self.debug: raise
 				return False
@@ -2720,7 +2722,7 @@ class Configuration (object):
 				return False
 
 			change = scope[-1]['announce'][-1]
-			change.nlri.nexthop = NextHop(tokens.pop(0))
+			change.nlri.nexthop = IP.create(tokens.pop(0))
 			change.attributes[Attribute.ID.EXTENDED_COMMUNITY].add(TrafficNextHop(True))
 			return True
 

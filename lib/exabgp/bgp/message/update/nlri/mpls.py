@@ -6,10 +6,11 @@ Created by Thomas Mangin on 2012-07-08.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
+from exabgp.protocol.ip import IP
+from exabgp.protocol.ip import NoIP
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
@@ -24,7 +25,7 @@ class MPLS (NLRI,CIDR):
 	def __init__(self,afi,safi,packed,mask,nexthop,action):
 		self.labels = Labels.NOLABEL
 		self.rd = RouteDistinguisher.NORD
-		self.nexthop = nexthop
+		self.nexthop = IP.unpack(nexthop) if nexthop else NoIP
 		self.action = action
 		NLRI.__init__(self,afi,safi)
 		CIDR.__init__(self,packed,mask)
@@ -76,7 +77,7 @@ class MPLS (NLRI,CIDR):
 	def unpack (cls,afi,safi,bgp,addpath,nexthop,action):
 		labels,rd,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action)
 
-		nlri = cls(afi,safi,prefix,mask,IP.unpack(nexthop),action)
+		nlri = cls(afi,safi,prefix,mask,nexthop,action)
 		if labels: nlri.labels = Labels(labels)
 		if rd: nlri.rd = RouteDistinguisher(rd)
 

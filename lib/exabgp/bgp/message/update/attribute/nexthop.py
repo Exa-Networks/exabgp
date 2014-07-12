@@ -6,7 +6,8 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from exabgp.protocol.ip import IPv4
+from exabgp.protocol.ip import IP
+from exabgp.protocol.ip import NoIP
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
 
@@ -15,13 +16,16 @@ from exabgp.bgp.message.update.attribute.flag import Flag
 # The inheritance order is important and attribute MUST be first for the righ register to be called
 # At least until we rename them to be more explicit
 
-class NextHop (Attribute,IPv4):
+class NextHop (Attribute,IP):
 	ID = Attribute.ID.NEXT_HOP
 	FLAG = Flag.TRANSITIVE
 	MULTIPLE = False
 	CACHING = True
 
-	# __init__ inherited from IPv4
+	def __init__ (self,ip,packed=None):
+		# Need to conform to from IP interface
+		self.ip = ip
+		self.packed = packed if packed else IP.create(ip).pack()
 
 	def pack (self,negotiated=None):
 		return self._attribute(self.packed)
@@ -33,11 +37,13 @@ class NextHop (Attribute,IPv4):
 			return -1
 		return 0
 
-	@staticmethod
-	def unpack (data,negotiated):
-		return IPv4.unpack(data,NextHop)
+	@classmethod
+	def unpack (cls,data,negotiated=None):
+		if not data:
+			return NoIP
+		return IP.unpack(data,NextHop)
+
+	def __str__ (self):
+		return IP.__str__(self)
 
 NextHop.register_attribute()
-
-class NoNextHop (object):
-	packed = None

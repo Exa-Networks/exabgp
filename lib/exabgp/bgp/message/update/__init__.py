@@ -9,6 +9,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
+from exabgp.protocol.ip import NoIP
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
@@ -26,8 +27,6 @@ from exabgp.bgp.message.update.attribute.mpurnlri import EMPTY_MPURNLRI
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
-
-from exabgp.bgp.message.update.attribute.nexthop import NoNextHop
 
 from exabgp.util.od import od
 from exabgp.logger import Logger
@@ -155,9 +154,10 @@ class Update (Message):
 		families = del_mp.keys()
 		while families:
 			family = families.pop()
+			afi,safi = family
 			mps = del_mp[family]
 			addpath = negotiated.addpath.send(*family)
-			mp_packed_generator = MPURNLRI(mps).packed_attributes(addpath)
+			mp_packed_generator = MPURNLRI(afi,safi,mps).packed_attributes(addpath)
 			try:
 				while True:
 					packed = mp_packed_generator.next()
@@ -189,9 +189,10 @@ class Update (Message):
 		families = add_mp.keys()
 		while families:
 			family = families.pop()
+			afi,safi = family
 			mps = add_mp[family]
 			addpath = negotiated.addpath.send(*family)
-			mp_packed_generator = MPRNLRI(mps).packed_attributes(addpath)
+			mp_packed_generator = MPRNLRI(afi,safi,mps).packed_attributes(addpath)
 			try:
 				while True:
 					packed = mp_packed_generator.next()
@@ -264,7 +265,9 @@ class Update (Message):
 
 		# Is the peer going to send us some Path Information with the route (AddPath)
 		addpath = negotiated.addpath.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
-		nexthop = attributes.get(Attribute.ID.NEXT_HOP,NoNextHop).packed  # None for NoNextHop
+
+		# empty string for NoIP, the packed IP otherwise (without the 3/4 bytes of attributes headers)
+		nexthop = attributes.get(Attribute.ID.NEXT_HOP,NoIP).packed
 
 		nlris = []
 		while withdrawn:
@@ -279,11 +282,28 @@ class Update (Message):
 			announced = announced[length:]
 			nlris.append(nlri)
 
-		for mpr in attributes.pop(MPURNLRI.ID,[EMPTY_MPURNLRI]):
+		# required for 'is' comparaison
+		UNREACH = [EMPTY_MPURNLRI,]
+		REACH = [EMPTY_MPRNLRI,]
+
+		unreach = attributes.pop(MPURNLRI.ID,UNREACH)
+		reach = attributes.pop(MPRNLRI.ID,REACH)
+
+		for mpr in unreach:
 			nlris.extend(mpr.nlris)
 
-		for mpr in attributes.pop(MPRNLRI.ID,[EMPTY_MPRNLRI]):
+		for mpr in reach:
 			nlris.extend(mpr.nlris)
+
+		if not attributes and not nlris:
+			# Careful do not use == or != as the comparaison does not work
+			if unreach is UNREACH and reach is REACH:
+				return EOR(AFI(AFI.ipv4),SAFI(SAFI.unicast))
+			if unreach is not UNREACH:
+				return EOR(unreach[0].afi,unreach[0].safi)
+			if reach is not REACH:
+				return EOR(reach[0].afi,reach[0].safi)
+			raise RuntimeError('This was not expected')
 
 		return Update(nlris,attributes)
 

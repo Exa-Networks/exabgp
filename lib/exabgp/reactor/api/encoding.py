@@ -308,6 +308,8 @@ class JSON (object):
 			remove.append(s)
 
 		nlri = ''
+		if not add and not remove:  # an EOR
+			return update.nlris[0].json()
 		if add: nlri += '"announce": { %s }' % ', '.join(add)
 		if add and remove: nlri += ', '
 		if remove: nlri+= '"withdraw": { %s }' % ', '.join(remove)
