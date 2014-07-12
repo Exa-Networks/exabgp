@@ -100,7 +100,17 @@ class Text (Configuration):
 		for nlri in nlris.split():
 			ip,mask = nlri.split('/')
 			klass = Prefix if 'path-information' in command else MPLS
-			change = Change(klass(afi=IP.toafi(ip),safi=IP.tosafi(ip),packed=IP.pton(ip),mask=int(mask),nexthop=nexthop,action=action,path=None),attributes)
+			change = Change(
+				klass(
+					afi=IP.toafi(ip),
+					safi=IP.tosafi(ip),
+					packed=IP.pton(ip),
+					mask=int(mask),
+					nexthop=nexthop.packed,
+					action=action
+				)
+				,attributes
+			)
 			if action == 'withdraw':
 				change.nlri.action = OUT.withdraw
 			else:
