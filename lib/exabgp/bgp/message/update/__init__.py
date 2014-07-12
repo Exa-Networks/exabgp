@@ -58,6 +58,7 @@ from exabgp.logger import LazyFormat
 class Update (Message):
 	ID = Message.ID.UPDATE
 	TYPE = chr(Message.ID.UPDATE)
+	EOR = False
 
 	def __init__ (self,nlris,attributes):
 		self.nlris = nlris

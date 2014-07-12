@@ -9,11 +9,10 @@ group test {
 	process dump-all-text {
 		receive {
 			parsed;
-
 			updates;
 			neighbor-changes;
 		}
-		run ./check-all-ok-text;
+		run ./receive.py;
 	}
 
 	neighbor 127.0.0.1 {

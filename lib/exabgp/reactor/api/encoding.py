@@ -106,9 +106,11 @@ class Text (object):
 		r = 'neighbor %s update start\n' % neighbor
 		attributes = str(update.attributes)
 		for nlri in update.nlris:
-			if nlri.action == IN.announced:
+			if nlri.EOR:
+				r += 'neighbor %s announced route %s\n' % (neighbor,nlri.extensive())
+			elif nlri.action == IN.announced:
 				if nlri.nexthop:
-					r += 'neighbor %s announced route %s next-hop %s%s\n' % (neighbor,nlri.extensive(),nlri.nexthop,attributes)
+					r += 'neighbor %s announced route %s%s\n' % (neighbor,nlri.extensive(),attributes)
 				else:
 					# This is an EOR or Flow or ... something newer
 					r += 'neighbor %s announced %s %s\n' % (neighbor,nlri.extensive(),attributes)

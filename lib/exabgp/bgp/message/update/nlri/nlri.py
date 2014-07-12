@@ -24,6 +24,8 @@ from exabgp.logger import LazyFormat
 class NLRI (Address):
 	__slots__ = []
 
+	EOR = False
+
 	registered_nlri = dict()
 	logger = None
 

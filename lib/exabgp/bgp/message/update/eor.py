@@ -23,6 +23,7 @@ class EOR (Message):
 
 	class NLRI (NLRI):
 		PREFIX = '\x00\x00\x00\x07\x90\x0F\x00\x03'
+		EOR = True
 
 		nexthop = None
 
