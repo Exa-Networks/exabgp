@@ -16,7 +16,7 @@ from exabgp.bgp.message import OUT
 
 from exabgp.bgp.message.update.nlri.prefix import Prefix
 from exabgp.bgp.message.update.nlri.mpls import MPLS
-from exabgp.bgp.message.open.capability.refresh import RouteRefresh
+from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.operational import Advisory
 from exabgp.bgp.message.operational import Query
 from exabgp.bgp.message.operational import Response
