@@ -127,7 +127,7 @@ def main ():
 		sys.exit('This program can not work (is not tested) with your python version (< 2.5 or >= 3.0)')
 
 	if options["--version"]:
-		sys.stdout.write(version)
+		print(version)
 		sys.exit(0)
 
 	if options["--decode"]:
