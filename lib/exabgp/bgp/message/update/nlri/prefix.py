@@ -36,7 +36,7 @@ class Prefix (CIDR,NLRI):
 		return CIDR.pack(self) if addpath else CIDR.pack(self)
 
 	def json (self):
-		return '"%s": { %s }' % (CIDR.getip(self),self.path_info.json())
+		return '"%s/%s": { %s }' % (CIDR.getip(self),self.mask,self.path_info.json())
 
 	def index (self):
 		return self.pack(True)
