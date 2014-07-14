@@ -17,11 +17,6 @@ esac
 
 export PYTHONPATH=$path/lib:/usr/share/exabgp/lib/3.3.2
 
-if [ "$INTERPRETER" != "" ]
-then
-	INTERPRETER=`which $INTERPRETER`
-fi
-
 PYPY=`which pypy 2>/dev/null`
 PYTHON27=`which python2.7 2>/dev/null`
 PYTHON26=`which python2.6 2>/dev/null`
@@ -30,7 +25,10 @@ PYTHON24=`which python2.4 2>/dev/null`
 PYTHON2=`which python2 2>/dev/null`
 PYTHON=`which python 2>/dev/null`
 
-if [ -f "$PYPY" ]
+if [ "$INTERPRETER" != "" ]
+then
+	INTERPRETER=`which $INTERPRETER`
+elif [ -f "$PYPY" ]
 then
 	INTERPRETER=$PYPY
 elif [ -f "$PYTHON27" ]
