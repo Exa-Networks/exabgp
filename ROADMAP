@@ -7,6 +7,7 @@ Important
 ROADMAP
 
 In no particular order:
+- We create LOTS of try:except block in schedule() can we fix it and make the code faster
 - Clean the way we use str(), extensive(), string()
 - At the end of the configuration parsing clear the Community cache
 - provide an helper program able to read MRT dumps and announce them too.

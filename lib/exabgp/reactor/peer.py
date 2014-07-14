@@ -649,11 +649,11 @@ class Peer (object):
 					# This generator only stops when it raises
 					r = generator.next()
 
-					if r is ACTION.immediate: status = 'immediate callback'
-					elif r is ACTION.later:   status = 'when possible'
+					if r is ACTION.immediate: status = 'immediately'
+					elif r is ACTION.later:   status = 'next second'
 					elif r is ACTION.close:   status = 'stop'
 					else: status = 'buggy'
-					self.logger.network('%s loop %18s, state is %s' % (direction,status,self._[direction]['state']),'debug')
+					self.logger.network('%s loop %11s, state is %s' % (direction,status,self._[direction]['state']),'debug')
 
 					if r == ACTION.immediate:
 						back = ACTION.immediate

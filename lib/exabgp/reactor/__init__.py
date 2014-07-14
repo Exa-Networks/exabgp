@@ -377,20 +377,19 @@ class Reactor (object):
 
 			# XXX: FIXME: make sure clock change do not cause issues
 			while time.time() < command_deadline:
-				if not self._queue_command():
+				if not self._parse_command():
 					break
 
-			if not self._running:
-				if not self._pending:
-					return
-				self._running = self._pending.popleft()
-
-			try:
+			while time.time() < deadline:
 				# XXX: FIXME: make sure clock change do not cause issues
-				while time.time() < deadline:
+				if not self._running:
+					if not self._pending:
+						return
+					self._running = self._pending.popleft()
+				try:
 					self._running.next()
-			except StopIteration:
-				self._running = None
+				except StopIteration:
+					self._running = None
 
 		except StopIteration:
 			pass
@@ -398,7 +397,7 @@ class Reactor (object):
 			self._shutdown = True
 			self.logger.reactor("^C received",'error')
 
-	def _queue_command (self):
+	def _parse_command (self):
 		if not self._commands:
 			return False
 
