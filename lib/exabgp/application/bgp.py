@@ -9,13 +9,14 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 import os
 import sys
 import syslog
+import string
 import argparse
 
 from exabgp.version import version
 # import before the fork to improve copy on write memory savings
 from exabgp.reactor import Reactor
 
-import string
+from exabgp.dep import lsprofcalltree
 
 def is_hex (s):
 	return all(c in string.hexdigits or c == ':' for c in s)
@@ -446,13 +447,25 @@ def run (env,comment,configuration,pid=0):
 		notice = 'profile can not use this filename as outpout, it already exists (%s)' % profile_name
 
 	if not notice:
-		logger.profile('profiling ....')
-		profile.run('Reactor(configuration).run()',filename=profile_name)
-		__exit(env.debug.memory,0)
+		logger.reactor('profiling ....')
+		pr = profile.Profile()
+		pr.enable()
+		try:
+			Reactor(configuration).run()
+		except:
+			raise
+		finally:
+			pr.disable()
+			kprofile = lsprofcalltree.KCacheGrind(pr)
+
+			with open(profile_name, 'w+') as write:
+				kprofile.output(write)
+
+			__exit(env.debug.memory,0)
 	else:
-		logger.profile("-"*len(notice))
-		logger.profile(notice)
-		logger.profile("-"*len(notice))
+		logger.reactor("-"*len(notice))
+		logger.reactor(notice)
+		logger.reactor("-"*len(notice))
 		Reactor(configuration).run()
 		__exit(env.debug.memory,0)
 
