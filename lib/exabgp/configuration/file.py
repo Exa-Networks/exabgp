@@ -1436,14 +1436,14 @@ class Configuration (object):
 		try:
 			# README: Should it be a subclass of int ?
 			ttl = int(value[0])
-			if ttl < 0:
-				raise ValueError('ttl-security can not be negative')
+			if ttl <= 0:
+				raise ValueError('ttl-security must be a positive number (1-254)')
 			if ttl >= 255:
-				raise ValueError('ttl must be smaller than 256')
+				raise ValueError('ttl must be smaller than 255 (1-254)')
 			scope[-1][command] = ttl
 			return True
 		except ValueError:
-			self._error = '"%s" is an invalid ttl-security' % ' '.join(value)
+			self._error = '"%s" is an invalid ttl-security (1-254)' % ' '.join(value)
 			if self.debug: raise
 			return False
 		return True
