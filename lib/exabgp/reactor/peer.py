@@ -283,7 +283,7 @@ class Peer (object):
 		# Read KEEPALIVE
 		for message in proto.read_keepalive('ESTABLISHED'):
 			self.timer.tick(message)
-			yield ACTION.later
+			yield ACTION.immediate
 
 		self._['in']['state'] = STATE.established
 		# let the caller know that we were sucesfull
