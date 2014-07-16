@@ -269,8 +269,13 @@ class Processes (object):
 		for process in self._notify(peer,'send-packets'):
 			self.write(process,self._api_encoder[process].send(peer,category,header,body))
 
-	def message (self,message_id,peer,operational,header,body):
-		self._dispatch[message_id](self,peer,operational,header,body)
+	def notification (self,peer,code,subcode,data):
+		if self.silence: return
+		for process in self._notify(peer,'neighbor-changes'):
+			self.write(process,self._api_encoder[process].notification(peer,code,subcode,data))
+
+	def message (self,message_id,peer,message,header,body):
+		self._dispatch[message_id](self,peer,message,header,body)
 
 	# registering message functions
 
@@ -287,12 +292,6 @@ class Processes (object):
 		if self.silence: return
 		for process in self._notify(peer,'receive-opens'):
 			self.write(process,self._api_encoder[process].open(peer,direction,open_msg,header,body))
-
-	@register_process(Message.ID.NOTIFICATION,_dispatch)
-	def _notification (self,peer,code,subcode,data):
-		if self.silence: return
-		for process in self._notify(peer,'neighbor-changes'):
-			self.write(process,self._api_encoder[process].notification(peer,code,subcode,data))
 
 	@register_process(Message.ID.KEEPALIVE,_dispatch)
 	def _keepalive (self,peer,category,header,body):

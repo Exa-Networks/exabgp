@@ -238,9 +238,9 @@ class Protocol (object):
 			if self.neighbor.api['consolidate']:
 				header = msg_send[0:38]
 				body = msg_send[38:]
-				self.peer.reactor.processes.open(self.peer,'sent',sent_open,header,body)
+				self.peer.reactor.processes.message(Message.ID.OPEN,self.peer,'sent',sent_open,header,body)
 			else:
-				self.peer.reactor.processes.open(self.peer,'sent',sent_open,'','')
+				self.peer.reactor.processes.message(Message.ID.OPEN,self.peer,'sent',sent_open,'','')
 		yield sent_open
 
 	def new_keepalive (self,comment=''):
