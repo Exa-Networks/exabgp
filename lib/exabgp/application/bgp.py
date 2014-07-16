@@ -89,7 +89,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 import os
 import sys
 import syslog
-import docopt
+from exabgp.dep.docopt import docopt
 
 from exabgp.version import version
 # import before the fork to improve copy on write memory savings
