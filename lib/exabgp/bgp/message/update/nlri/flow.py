@@ -13,6 +13,7 @@ from struct import pack
 from struct import unpack
 
 from exabgp.protocol.ip import IP
+from exabgp.protocol.ip import NoIP
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message import OUT
@@ -412,11 +413,11 @@ def _unique ():
 unique = _unique()
 
 class Flow (NLRI):
-	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ip,rd=None):
+	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ip,nexthop=None,rd=None):
 		NLRI.__init__(self,afi,safi)
 		self.rules = {}
 		self.action = OUT.announce
-		self.nexthop = None
+		self.nexthop = IP.unpack(nexthop) if nexthop else NoIP
 		self.rd = rd
 		self.unique = unique.next()
 
@@ -481,7 +482,7 @@ class Flow (NLRI):
 					s.append(' ')
 				s.append(rule)
 			string.append(' %s %s' % (rules[0].NAME,''.join(str(_) for _ in s)))
-		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
+		nexthop = ' next-hop %s' % self.nexthop if self.nexthop is not NoIP else ''
 		rd = str(self.rd) if self.rd else ''
 		return 'flow' + rd + ''.join(string) + nexthop
 
@@ -509,11 +510,8 @@ class Flow (NLRI):
 			raise Notify(3,10,'invalid length at the start of the the flow')
 
 		bgp = bgp[:length]
-		nlri = Flow(afi,safi)
+		nlri = Flow(afi,safi,nexthop)
 		nlri.action = action
-
-		if nexthop:
-			nlri.nexthop = IP.unpack(nexthop)
 
 		if safi == SAFI.flow_vpn:
 			nlri.rd = RouteDistinguisher(bgp[:8])

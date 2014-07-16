@@ -22,7 +22,8 @@ class EOR (Message):
 	TYPE = chr(0x02)  # it is an update
 
 	class NLRI (NLRI):
-		PREFIX = '\x00\x00\x00\x07\x90\x0f\x00\x03'
+		PREFIX = '\x00\x00\x00\x07\x90\x0F\x00\x03'
+		EOR = True
 
 		nexthop = None
 

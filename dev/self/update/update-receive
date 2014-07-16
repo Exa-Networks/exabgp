@@ -1,0 +1,4 @@
+#!/bin/sh
+
+env exabgp.tcp.bind="127.0.0.1" exabgp.tcp.port=1790  ../../../sbin/exabgp -p -d update-receive.conf $*
+

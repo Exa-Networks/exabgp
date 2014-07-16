@@ -8,8 +8,10 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from struct import unpack
 
+from exabgp.protocol.ip import NoIP
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.protocol.ip.address import Address
 
 from exabgp.bgp.message import IN
 from exabgp.bgp.message.update.attribute.attribute import Attribute
@@ -20,14 +22,15 @@ from exabgp.bgp.message.notification import Notify
 
 # ==================================================== MP Unreacheable NLRI (15)
 
-class MPRNLRI (Attribute):
+class MPRNLRI (Attribute,Address):
 	FLAG = Flag.OPTIONAL
 	ID = Attribute.ID.MP_REACH_NLRI
 	MULTIPLE = True
 
 	__slots__ = ['nlris']
 
-	def __init__ (self,nlris):
+	def __init__ (self,afi,safi,nlris):
+		Address.__init__(self,afi,safi)
 		# all the routes must have the same next-hop
 		self.nlris = nlris
 
@@ -37,16 +40,17 @@ class MPRNLRI (Attribute):
 
 		mpnlri = {}
 		for nlri in self.nlris:
-			if nlri.nexthop:
-				# .packed and not .pack()
+			if nlri.nexthop is NoIP:
+				# EOR and Flow may not have any next_hop
+				nexthop = ''
+			else:
 				# we do not want a next_hop attribute packed (with the _attribute()) but just the next_hop itself
 				if nlri.safi.has_rd():
+					# .packed and not .pack()
 					nexthop = chr(0)*8 + nlri.nexthop.packed
 				else:
+					# .packed and not .pack()
 					nexthop = nlri.nexthop.packed
-			else:
-				# EOR fo not and Flow may not have any next_hop
-				nexthop = ''
 
 			# mpunli[afi,safi][nexthop] = nlri
 			mpnlri.setdefault((nlri.afi.pack(),nlri.safi.pack()),{}).setdefault(nexthop,[]).append(nlri.pack(addpath))
@@ -67,7 +71,7 @@ class MPRNLRI (Attribute):
 		return len(self.pack(False))
 
 	def __str__ (self):
-		return "MP_REACH_NLRI %d NLRI(s)" % len(self.nlris)
+		return "MP_REACH_NLRI for %s %s with %d NLRI(s)" % (self.afi,self.safi,len(self.nlris))
 
 	@classmethod
 	def unpack (cls,data,negotiated):
@@ -148,9 +152,9 @@ class MPRNLRI (Attribute):
 			nlris.append(nlri)
 			#logger.parser(LazyFormat("parsed announce mp nlri %s payload " % nlri,od,data[:length]))
 			data = data[length:]
-		return MPRNLRI(nlris)
+		return cls(afi,safi,nlris)
 
 
 MPRNLRI.register_attribute()
 
-EMPTY_MPRNLRI  = MPRNLRI([])
+EMPTY_MPRNLRI  = MPRNLRI(AFI(AFI.undefined),SAFI(SAFI.undefined),[])

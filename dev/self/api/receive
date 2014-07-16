@@ -11,8 +11,8 @@ then
 fi
 if [ "$ip" != "" ]
 then
-	cat first.template | sed -e "s/IP/$ip/" > first.conf
-	env exabgp.tcp.bind="127.0.0.1" exabgp.tcp.port=1790 ../../../sbin/exabgp first.conf
+	cat receive.template | sed -e "s/IP/$ip/" > receive.conf
+	env exabgp.tcp.bind="$ip" exabgp.tcp.port=1790 ../../../sbin/exabgp receive.conf
 else
 	echo "get some IP somewhere on this machine please"
 fi

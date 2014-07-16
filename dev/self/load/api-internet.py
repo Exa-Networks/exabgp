@@ -52,7 +52,7 @@ def main ():
 	for k,v in ip.iteritems():
 		count += 1
 		write('announce route %s next-hop %s med 1%02d as-path [ 100 101 102 103 104 105 106 107 108 109 110 ]' % (k,v,len(k)))
-		if count % 100 == 0:
+		if count % 10000 == 0:
 			sys.stderr.write('initial : announced %d\n' % count)
 
 	count &= 0xFFFFFFFe

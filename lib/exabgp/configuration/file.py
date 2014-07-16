@@ -29,6 +29,7 @@ from exabgp.protocol.family import known_families
 from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.protocol.ip import IP
+from exabgp.protocol.ip import NoIP
 from exabgp.bgp.message import OUT
 
 from exabgp.bgp.message.open.asn import ASN
@@ -1172,20 +1173,20 @@ class Configuration (object):
 			messages = local_scope.get('operational',[])
 
 		for local_scope in (scope[0],scope[-1]):
-			neighbor.api.receive_packets |= local_scope.get('receive-packets',False)
-			neighbor.api.send_packets |= local_scope.get('send-packets',False)
+			neighbor.api.receive_packets(local_scope.get('receive-packets',False))
+			neighbor.api.send_packets(local_scope.get('send-packets',False))
 
-			neighbor.api.neighbor_changes |= local_scope.get('neighbor-changes',False)
-			neighbor.api.consolidate = local_scope.get('consolidate',False)
+			neighbor.api.neighbor_changes(local_scope.get('neighbor-changes',False))
+			neighbor.api.consolidate(local_scope.get('consolidate',False))
 
-			neighbor.api.receive_parsed  = local_scope.get('receive-parsed',False)
+			neighbor.api.receive_parsed(local_scope.get('receive-parsed',False))
 
-			neighbor.api.receive_notifications |= local_scope.get('receive-notifications',False)
-			neighbor.api.receive_opens |= local_scope.get('receive-opens',False)
-			neighbor.api.receive_keepalives |= local_scope.get('receive-keepalives',False)
-			neighbor.api.receive_updates |= local_scope.get('receive-updates',False)
-			neighbor.api.receive_refresh |= local_scope.get('receive-refresh',False)
-			neighbor.api.receive_operational |= local_scope.get('receive-operational',False)
+			neighbor.api.receive_notifications(local_scope.get('receive-notifications',False))
+			neighbor.api.receive_opens(local_scope.get('receive-opens',False))
+			neighbor.api.receive_keepalives(local_scope.get('receive-keepalives',False))
+			neighbor.api.receive_updates(local_scope.get('receive-updates',False))
+			neighbor.api.receive_refresh(local_scope.get('receive-refresh',False))
+			neighbor.api.receive_operational(local_scope.get('receive-operational',False))
 
 		if not neighbor.router_id:
 			neighbor.router_id = neighbor.local_address
@@ -1435,14 +1436,14 @@ class Configuration (object):
 		try:
 			# README: Should it be a subclass of int ?
 			ttl = int(value[0])
-			if ttl < 0:
-				raise ValueError('ttl-security can not be negative')
+			if ttl <= 0:
+				raise ValueError('ttl-security must be a positive number (1-254)')
 			if ttl >= 255:
-				raise ValueError('ttl must be smaller than 256')
+				raise ValueError('ttl must be smaller than 255 (1-254)')
 			scope[-1][command] = ttl
 			return True
 		except ValueError:
-			self._error = '"%s" is an invalid ttl-security' % ' '.join(value)
+			self._error = '"%s" is an invalid ttl-security (1-254)' % ' '.join(value)
 			if self.debug: raise
 			return False
 		return True
@@ -1501,7 +1502,8 @@ class Configuration (object):
 		elif klass is MPLS:
 			labels = change.nlri.labels
 			rd = change.nlri.rd
-		nexthop = change.nlri.nexthop
+		# packed and not pack() but does not matter atm, it is an IP not a NextHop
+		nexthop = change.nlri.nexthop.packed
 
 		change.nlri.mask = split
 		change.nlri = None
@@ -1556,7 +1558,7 @@ class Configuration (object):
 
 	def _check_static_route (self,scope):
 		update = scope[-1]['announce'][-1]
-		if not update.nlri.nexthop:
+		if update.nlri.nexthop is NoIP:
 			self._error = 'syntax: route <ip>/<mask> { next-hop <ip>; }'
 			if self.debug: raise
 			return False
@@ -2610,7 +2612,7 @@ class Configuration (object):
 		try:
 			change = scope[-1]['announce'][-1]
 
-			if change.nlri.nexthop:
+			if change.nlri.nexthop is not NoIP:
 				self._error = self._str_flow_error
 				if self.debug: raise
 				return False
@@ -2679,7 +2681,7 @@ class Configuration (object):
 					return True
 			else:
 				change = scope[-1]['announce'][-1]
-				if change.nlri.nexthop:
+				if change.nlri.nexthop is not NoIP:
 					self._error = self._str_flow_error
 					if self.debug: raise
 					return False
@@ -2698,7 +2700,7 @@ class Configuration (object):
 		try:
 			change = scope[-1]['announce'][-1]
 
-			if not change.nlri.nexthop:
+			if change.nlri.nexthop is NoIP:
 				self._error = self._str_flow_error
 				if self.debug: raise
 				return False
@@ -2720,7 +2722,7 @@ class Configuration (object):
 				return False
 
 			change = scope[-1]['announce'][-1]
-			change.nlri.nexthop = NextHop(tokens.pop(0))
+			change.nlri.nexthop = IP.create(tokens.pop(0))
 			change.attributes[Attribute.ID.EXTENDED_COMMUNITY].add(TrafficNextHop(True))
 			return True
 

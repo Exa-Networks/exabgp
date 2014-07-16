@@ -13,6 +13,7 @@ from collections import deque
 
 from exabgp.protocol.family import AFI
 
+from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.capability import AddPath
 
@@ -65,7 +66,7 @@ class Neighbor (object):
 		# - have multiple exabgp toward one peer on the same host ( use of pid )
 		# - have more than once connection toward a peer
 		# - each connection has it own neihgbor (hence why identificator is not in Protocol)
-		return '%s_%d_%s' % (socket.gethostname(),os.getppid(),self.peer_address)
+		return '%s_%d_%d_%s' % (socket.gethostname(),os.getpid(),os.getppid(),self.peer_address)
 
 	def make_rib (self):
 		self.rib = RIB(self.name(),self.adjribout,self._families)
@@ -154,21 +155,21 @@ class Neighbor (object):
 
 		_receive  = []
 
-		_receive.extend(['      parsed;\n',]           if self.api.receive_parsed else [])
-		_receive.extend(['      packets;\n',]          if self.api.receive_packets else [])
-		_receive.extend(['      consolidate;\n',]      if self.api.consolidate else [])
+		_receive.extend(['      parsed;\n',]           if self.api['receive_parsed'] else [])
+		_receive.extend(['      packets;\n',]          if self.api['receive_packets'] else [])
+		_receive.extend(['      consolidate;\n',]      if self.api['consolidate'] else [])
 
-		_receive.extend(['      neighbor-changes;\n',] if self.api.neighbor_changes else [])
-		_receive.extend(['      notification;\n',]     if self.api.receive_notifications else [])
-		_receive.extend(['      open;\n',]             if self.api.receive_opens else [])
-		_receive.extend(['      keepalive;\n',]        if self.api.receive_keepalives else [])
-		_receive.extend(['      update;\n',]           if self.api.receive_updates else [])
-		_receive.extend(['      refresh;\n',]          if self.api.receive_refresh else [])
-		_receive.extend(['      operational;\n',]      if self.api.receive_operational else [])
+		_receive.extend(['      neighbor-changes;\n',] if self.api['neighbor_changes'] else [])
+		_receive.extend(['      notification;\n',]     if self.api[Message.ID.NOTIFICATION] else [])
+		_receive.extend(['      open;\n',]             if self.api[Message.ID.OPEN] else [])
+		_receive.extend(['      keepalive;\n',]        if self.api[Message.ID.KEEPALIVE] else [])
+		_receive.extend(['      update;\n',]           if self.api[Message.ID.UPDATE] else [])
+		_receive.extend(['      refresh;\n',]          if self.api[Message.ID.ROUTE_REFRESH] else [])
+		_receive.extend(['      operational;\n',]      if self.api[Message.ID.OPERATIONAL] else [])
 		receive = ''.join(_receive)
 
 		_send = []
-		_send.extend(['      messages;\n',]          if self.api.send_packets else [])
+		_send.extend(['      messages;\n',]          if self.api['send_packets'] else [])
 		send = ''.join(_send)
 
 		return """\

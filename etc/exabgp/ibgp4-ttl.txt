@@ -6,7 +6,7 @@ neighbor 10.0.0.3 {
 	peer-as 65533;
 	hold-time 180;
 	#ttl-security;
-	ttl-security 255;
+	ttl-security 1;
 
 	static {
 		route 172.10.0.0/16 next-hop 192.0.2.1 med 200 community [174:666];

@@ -70,7 +70,7 @@ class Protocol (object):
 		self.connection = incoming
 
 		self.peer.reactor.processes.reset(self.peer)
-		if self.peer.neighbor.api.neighbor_changes:
+		if self.peer.neighbor.api['neighbor-changes']:
 			self.peer.reactor.processes.connected(self.peer)
 
 		# very important - as we use this function on __init__
@@ -94,7 +94,7 @@ class Protocol (object):
 						yield False
 						continue
 					self.peer.reactor.processes.reset(self.peer)
-					if self.peer.neighbor.api.neighbor_changes:
+					if self.peer.neighbor.api['neighbor-changes']:
 						self.peer.reactor.processes.connected(self.peer)
 					yield True
 					return
@@ -113,14 +113,14 @@ class Protocol (object):
 			self.connection = None
 
 			try:
-				if self.peer.neighbor.api.neighbor_changes:
+				if self.peer.neighbor.api['neighbor-changes']:
 					self.peer.reactor.processes.down(self.peer,reason)
 			except ProcessError:
 				self.logger.message(self.me('could not send notification of neighbor close to API'))
 
 
 	def write (self,message):
-		if self.neighbor.api.send_packets:
+		if self.neighbor.api['send-packets'] and not self.neighbor.api['consolidate']:
 			self.peer.reactor.processes.send(self.peer,ord(message[18]),message[:19],message[19:])
 		for boolean in self.connection.writer(message):
 			yield boolean
@@ -132,29 +132,30 @@ class Protocol (object):
 
 		for length,msg,header,body,notify in self.connection.reader():
 			if notify:
-				if self.neighbor.api.receive_packets:
+				if self.neighbor.api['receive-packets']:
 					self.peer.reactor.processes.receive(self.peer,msg,header,body)
-				if self.neighbor.api.receive_notifications:
+				if self.neighbor.api[Message.ID.NOTIFICATION]:
 					self.peer.reactor.processes.notification(self.peer,notify.code,notify.subcode,str(notify))
 				# XXX: is notify not already Notify class ?
 				raise Notify(notify.code,notify.subcode,str(notify))
 			if not length:
 				yield _NOP
 
-		if self.neighbor.api.receive_packets:
+		if self.neighbor.api['receive_packets'] and not self.neighbor.api['consolidate']:
 			self.peer.reactor.processes.receive(self.peer,msg,header,body)
 
-		if msg == Message.ID.UPDATE and not self.log_routes:
+		if msg == Message.ID.UPDATE and not self.neighbor.api['receive-parsed'] and not self.log_routes:
 			yield _UPDATE
 			return
 
 		message = Message.unpack_message(msg,body,self.negotiated)
 		self.logger.message(self.me('<< %s' % Message.ID.name(msg)))
-		if self.neighbor.api.receive_message(msg):
-			if self.neighbor.api.consolidate:
-				self.peer.reactor.processes.message(msg,self.peer,message,header,body)
-			else:
-				self.peer.reactor.processes.message(msg,self.peer,message,'','')
+		if self.neighbor.api[msg]:
+			if self.neighbor.api['receive-parsed']:
+				if self.neighbor.api['consolidate'] and self.neighbor.api['receive-packets']:
+					self.peer.reactor.processes.message(msg,self.peer,message,header,body)
+				else:
+					self.peer.reactor.processes.message(msg,self.peer,message,'','')
 		yield message
 
 		return
@@ -233,8 +234,8 @@ class Protocol (object):
 			yield _NOP
 
 		self.logger.message(self.me('>> %s' % sent_open))
-		if self.neighbor.api.receive_opens:
-			if self.neighbor.api.consolidate:
+		if self.neighbor.api[Message.ID.OPEN]:
+			if self.neighbor.api['consolidate']:
 				header = msg_send[0:38]
 				body = msg_send[38:]
 				self.peer.reactor.processes.open(self.peer,'sent',sent_open,header,body)

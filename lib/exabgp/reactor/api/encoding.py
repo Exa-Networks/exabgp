@@ -12,33 +12,42 @@ import time
 from exabgp.bgp.message import Message
 from exabgp.bgp.message import IN
 
-class APIOptions (object):
-	def __init__ (self):
-		self._dispatch = {}
+class APIOptions (dict):
+	def receive_parsed (self,value):
+		self['receive-parsed'] = self.get('receive-parsed',False) | value
 
-		self.receive_parsed = False
-		self.receive_packets = False
-		self.consolidate = False
+	def receive_packets (self,value):
+		self['receive-packets']  = self.get('receive-packets',False) | value
 
-		self.send_packets = False
+	def consolidate (self,value):
+		self['consolidate'] = self.get('consolidate',False) | value
 
-		self.neighbor_changes = False
-		self.receive_notifications = False
-		self.receive_opens = False
-		self.receive_keepalives = False
-		self.receive_updates = False
-		self.receive_refresh = False
-		self.receive_operational = False
+	def send_packets (self,value):
+		self['send_packets'] = self.get('send_packets',False) | value
 
-		self._dispatch[Message.ID.OPEN] = lambda : self.receive_opens
-		self._dispatch[Message.ID.NOTIFICATION] = lambda : self.receive_notifications
-		self._dispatch[Message.ID.KEEPALIVE] = lambda : self.receive_keepalives
-		self._dispatch[Message.ID.UPDATE] = lambda : self.receive_updates
-		self._dispatch[Message.ID.ROUTE_REFRESH] = lambda : self.receive_refresh
-		self._dispatch[Message.ID.OPERATIONAL] = lambda : self.receive_operational
+	def neighbor_changes (self,value):
+		self['neighbor_changes'] = self.get('neighbor_changes',False) | value
 
-	def receive_message (self,message_id):
-		return self._dispatch[message_id]()
+	def receive_notifications (self,value):
+		self[Message.ID.NOTIFICATION] = self.get(Message.ID.NOTIFICATION,False) | value
+
+	def receive_opens (self,value):
+		self[Message.ID.OPEN] = self.get(Message.ID.OPEN,False) | value
+
+	def receive_keepalives (self,value):
+		self[Message.ID.KEEPALIVE] = self.get(Message.ID.KEEPALIVE,False) | value
+
+	def receive_updates (self,value):
+		self[Message.ID.UPDATE] = self.get(Message.ID.UPDATE,False) | value
+
+	def receive_refresh (self,value):
+		self[Message.ID.ROUTE_REFRESH] = self.get(Message.ID.ROUTE_REFRESH,False) | value
+
+	def receive_operational (self,value):
+		self[Message.ID.OPERATIONAL] = self.get(Message.ID.OPERATIONAL,False) | value
+
+	def __missing__ (self,key):
+		return False
 
 def hexstring (value):
 	def spaced (value):
@@ -97,9 +106,11 @@ class Text (object):
 		r = 'neighbor %s update start\n' % neighbor
 		attributes = str(update.attributes)
 		for nlri in update.nlris:
-			if nlri.action == IN.announced:
+			if nlri.EOR:
+				r += 'neighbor %s announced route %s\n' % (neighbor,nlri.extensive())
+			elif nlri.action == IN.announced:
 				if nlri.nexthop:
-					r += 'neighbor %s announced route %s next-hop %s%s\n' % (neighbor,nlri.extensive(),nlri.nexthop,attributes)
+					r += 'neighbor %s announced route %s%s\n' % (neighbor,nlri.extensive(),attributes)
 				else:
 					# This is an EOR or Flow or ... something newer
 					r += 'neighbor %s announced %s %s\n' % (neighbor,nlri.extensive(),attributes)
@@ -299,6 +310,8 @@ class JSON (object):
 			remove.append(s)
 
 		nlri = ''
+		if not add and not remove:  # an EOR
+			return update.nlris[0].json()
 		if add: nlri += '"announce": { %s }' % ', '.join(add)
 		if add and remove: nlri += ', '
 		if remove: nlri+= '"withdraw": { %s }' % ', '.join(remove)

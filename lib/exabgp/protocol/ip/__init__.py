@@ -70,6 +70,12 @@ class IP (object):
 			return SAFI.unicast
 		raise Exception('unrecognised ip address %s' % ip)
 
+	def ipv4 (self):
+		return True if len(self.packed) == 4 else False
+
+	def ipv6 (self):
+		return False if len(self.packed) == 4 else True
+
 	@staticmethod
 	def length (afi):
 		return 4 if afi == AFI.ipv4 else 16
@@ -105,7 +111,9 @@ class IP (object):
 			return cls._known[afi]
 
 	@classmethod
-	def create (cls,ip,data=None):
+	def create (cls,ip,data=None,klass=None):
+		if klass:
+			return klass(ip,data)
 		return cls.klass(ip)(ip,data)
 
 	@classmethod
@@ -113,9 +121,22 @@ class IP (object):
 		cls._known[cls.afi] = cls
 
 	@classmethod
-	def unpack (cls,data):
-		return cls.create(IP.ntop(data),data)
+	def unpack (cls,data,klass=None):
+		return cls.create(IP.ntop(data),data,klass)
 
+# ========================================================================= NoIP
+#
+
+class _NoIP (object):
+	packed = ''
+
+	def pack (data,negotiated=None):
+		return ''
+
+	def __str__ (self):
+		return 'none'
+
+NoIP = _NoIP()
 
 # ========================================================================= IPv4
 #
@@ -200,7 +221,10 @@ class IPv6 (IP):
 
 
 	@classmethod
-	def unpack (cls,data):
-		return cls(socket.inet_ntop(socket.AF_INET6,data))
+	def unpack (cls,data,klass=None):
+		ip6 = socket.inet_ntop(socket.AF_INET6,data)
+		if klass:
+			return klass(ip6)
+		return cls(ip6)
 
 IPv6.register()

@@ -7,6 +7,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from exabgp.protocol.ip import IP
+from exabgp.protocol.ip import NoIP
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.update.nlri.nlri import NLRI
@@ -18,7 +19,7 @@ class Prefix (CIDR,NLRI):
 
 	def __init__ (self,afi,safi,packed,mask,nexthop,action,path=None):
 		self.path_info = PathInfo.NOPATH if path is None else path
-		self.nexthop = nexthop
+		self.nexthop = IP.unpack(nexthop) if nexthop else NoIP
 		NLRI.__init__(self,afi,safi)
 		CIDR.__init__(self,packed,mask)
 		self.action = action
@@ -35,7 +36,7 @@ class Prefix (CIDR,NLRI):
 		return CIDR.pack(self) if addpath else CIDR.pack(self)
 
 	def json (self):
-		return '"%s": { %s }' % (CIDR.getip(self),self.path_info.json())
+		return '"%s/%s": { %s }' % (CIDR.getip(self),self.mask,self.path_info.json())
 
 	def index (self):
 		return self.pack(True)
@@ -44,7 +45,8 @@ class Prefix (CIDR,NLRI):
 		return CIDR.__len__(self) + len(self.path_info)
 
 	def __str__ (self):
-		return "%s next-hop %s" % (self.prefix(),self.nexthop)
+		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
+		return "%s%s" % (self.prefix(),nexthop)
 
 	@classmethod
 	def unpack (cls,afi,safi,data,addpath,nexthop,action):
@@ -57,7 +59,7 @@ class Prefix (CIDR,NLRI):
 			length = 0
 
 		labels,rd,mask,size,prefix,left = NLRI._nlri(afi,safi,data,action)
-		nlri = cls(afi,safi,prefix,mask,IP.unpack(nexthop),action)
+		nlri = cls(afi,safi,prefix,mask,nexthop,action)
 		if addpath:
 			nlri.path_info = path_identifier
 		return length + len(data) - len(left),nlri

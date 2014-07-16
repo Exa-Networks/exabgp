@@ -124,7 +124,7 @@ class ASPath (Attribute):
 		return self._json[name]
 
 	@classmethod
-	def __new_aspaths (cls,data,asn4):
+	def __new_aspaths (cls,data,asn4,klass=None):
 		as_set = []
 		as_seq = []
 		backup = data
@@ -169,6 +169,8 @@ class ASPath (Attribute):
 		except error:  # struct
 			raise Notify(3,11,'not enough data to decode AS_PATH or AS4_PATH')
 
+		if klass:
+			return klass(as_seq,as_set,backup)
 		return cls(as_seq,as_set,backup)
 
 	@classmethod

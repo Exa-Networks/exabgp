@@ -13,6 +13,8 @@ import time
 import signal
 import select
 
+from collections import deque
+
 from exabgp.version import version
 
 from exabgp.reactor.daemon import Daemon
@@ -55,8 +57,8 @@ class Reactor (object):
 		self._restart = False
 		self._route_update = False
 		self._saved_pid = False
-		self._commands = []
-		self._pending = []
+		self._pending = deque()
+		self._running = None
 
 		signal.signal(signal.SIGTERM, self.sigterm)
 		signal.signal(signal.SIGHUP, self.sighup)
@@ -84,6 +86,18 @@ class Reactor (object):
 		self.logger.reactor("SIG USR2 received - reload configuration and processes")
 		self._reload = True
 		self._reload_processes = True
+
+	def ready (self,ios,sleeptime=0):
+		if not ios:
+			time.sleep(sleeptime)
+			return []
+		try:
+			read,_,_ = select.select(ios,[],[],sleeptime)
+			return read
+		except select.error,e:
+			errno,message = e.args
+			if not errno in error.block:
+				raise e
 
 	def run (self):
 		if self.ip:
@@ -133,6 +147,7 @@ class Reactor (object):
 			try:
 				while self._peers:
 					start = time.time()
+					end = start+self.max_loop_time
 
 					if self._shutdown:
 						self._shutdown = False
@@ -148,59 +163,49 @@ class Reactor (object):
 						self._route_update = False
 						self.route_update()
 
-					peers = self._peers.keys()
 
-					# handle keepalive first and foremost
-					for key in peers:
+					for key in self._peers.keys():
 						peer = self._peers[key]
+
+						# handle keepalive first and foremost
 						if peer.established():
 							if peer.keepalive() is False:
 								self.logger.reactor("problem with keepalive for peer %s " % peer.neighbor.name(),'error')
-								# unschedule the peer
 
-					# Handle all connection
-					ios = []
-					while peers:
-						for key in peers[:]:
+					ios = {}
+					keys = set(self._peers.keys())
+
+					while time.time() < end:
+						for key in list(keys):
 							peer = self._peers[key]
 							action = peer.run()
+
 							# .run() returns an ACTION enum:
 							# * immediate if it wants to be called again
 							# * later if it should be called again but has no work atm
 							# * close if it is finished and is closing down, or restarting
 							if action == ACTION.close:
 								self.unschedule(peer)
-								peers.remove(key)
+								keys.discard(key)
+							# we are loosing this peer, not point to schedule more process work
 							elif action == ACTION.later:
-								ios.extend(peer.sockets())
+								for io in peer.sockets():
+									ios[io] = key
 								# no need to come back to it before a a full cycle
-								peers.remove(key)
+								keys.discard(key)
 
-							# give some time to our local processes
-							if self.schedule(self.processes.received()) or self._pending:
-								self._pending = list(self.run_pending(self._pending))
+						if not self.schedule() and not keys:
+							ready = self.ready(ios.keys() + self.processes.fds(),end-time.time())
+							for io in ready:
+								if io in ios:
+									keys.add(ios[io])
+									del ios[io]
 
-						duration = time.time() - start
-						if duration >= self.max_loop_time:
-							ios=[]
-							break
-
-					if not peers:
+					if not keys:
 						reload_completed = True
-
-					# append here after reading as if read fails due to a dead process
-					# we may respawn the process which changes the FD
-					ios.extend(self.processes.fds())
 
 					# RFC state that we MUST not send more than one KEEPALIVE / sec
 					# And doing less could cause the session to drop
-
-					while self.schedule(self.processes.received()) or self._pending:
-						self._pending = list(self.run_pending(self._pending))
-
-						duration = time.time() - start
-						if duration >= self.max_loop_time:
-							break
 
 					if self.listener:
 						for connection in self.listener.connected():
@@ -230,23 +235,6 @@ class Reactor (object):
 								self.logger.reactor("connection refused (already connected to the peer) %s - %s" % (connection.local,connection.peer))
 								connection.notification(6,5,'could not accept the connection')
 								connection.close()
-
-					delay = max(start+self.max_loop_time-time.time(),0.0)
-
-					# if we are not already late in this loop !
-					if delay:
-						# some peers indicated that they wished to be called later
-						# so we are waiting for an update on their socket / pipe for up to the rest of the second
-						if ios:
-							try:
-								read,_,_ = select.select(ios,[],[],delay)
-							except select.error,e:
-								errno,message = e.args
-								if not errno in error.block:
-									raise e
-							# we can still loop here very fast if something goes wrogn with the FD
-						else:
-							time.sleep(delay)
 
 				self.processes.terminate()
 				self.daemon.removepid()
@@ -333,51 +321,59 @@ class Reactor (object):
 				self._peers[key].restart(neighbor)
 			# same peer but perhaps not the routes
 			else:
-				self._peers[key].send_new(neighbor.rib.outgoing.queued_changes())
+				# finding what route changed and sending the delta is not obvious
+				# self._peers[key].send_new(neighbor.rib.outgoing.queued_changes())
+				self.logger.reactor("restarting %s" % str(key))
+				self._peers[key].restart(neighbor)
 		self.logger.configuration("Loaded new configuration successfully",'warning')
 		# This only starts once ...
 		self.processes.start(restart)
 
-	def run_pending (self,pending):
-		more = True
-		for generator in pending:
+	def schedule (self):
+		try:
+			# read at least on message per process if there is some and parse it
+			for service,command in self.processes.received():
+				self._parse_command(service,command)
+
+			# if we have nothing to do, return or save the work
+			if not self._running:
+				if not self._pending:
+					return False
+				self._running = self._pending.popleft()
+
+			# run it
 			try:
-				if more:
-					more = generator.next()
-				yield generator
+				self._running.next()  # run
+				self._running.next()  # should raise StopIteration in most case
 			except StopIteration:
-				pass
-			except KeyboardInterrupt:
-				self._shutdown = True
-				self.logger.reactor("^C received",'error')
-				break
+				self._running = None
+			return True
 
-	def schedule (self,commands):
-		self._commands.extend(commands)
+		except StopIteration:
+			pass
+		except KeyboardInterrupt:
+			self._shutdown = True
+			self.logger.reactor("^C received",'error')
 
-		if not self._commands:
-			return False
-
-		service,command = self._commands.pop(0)
-
+	def _parse_command (self,service,command):
 		if command == 'shutdown':
 			self._shutdown = True
-			self._pending = []
-			self._commands = []
+			self._pending = deque()
+			self._running = None
 			self._answer(service,'shutdown in progress')
 			return True
 
 		if command == 'reload':
 			self._reload = True
-			self._pending = []
-			self._commands = []
+			self._pending = deque()
+			self._running = None
 			self._answer(service,'reload in progress')
 			return True
 
 		if command == 'restart':
 			self._restart = True
-			self._pending = []
-			self._commands = []
+			self._pending = deque()
+			self._running = None
 			self._answer(service,'restart in progress')
 			return True
 

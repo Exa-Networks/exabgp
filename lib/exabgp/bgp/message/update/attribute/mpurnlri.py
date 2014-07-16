@@ -8,6 +8,10 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from struct import unpack
 
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
+from exabgp.protocol.ip.address import Address
+
 from exabgp.bgp.message import IN
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
@@ -17,14 +21,15 @@ from exabgp.bgp.message.notification import Notify
 
 # ================================================================= MP NLRI (14)
 
-class MPURNLRI (Attribute):
+class MPURNLRI (Attribute,Address):
 	FLAG = Flag.OPTIONAL
 	ID = Attribute.ID.MP_UNREACH_NLRI
 	MULTIPLE = True
 
 	__slots__ = ['nlris']
 
-	def __init__ (self,nlris):
+	def __init__ (self,afi,safi,nlris):
+		Address.__init__(self,afi,safi)
 		self.nlris = nlris
 
 	def packed_attributes (self,addpath):
@@ -45,7 +50,7 @@ class MPURNLRI (Attribute):
 		return len(self.pack())
 
 	def __str__ (self):
-		return "MP_UNREACH_NLRI %d NLRI(s)" % len(self.nlris)
+		return "MP_UNREACH_NLRI for %s %s with %d NLRI(s)" % (self.afi,self.safi,len(self.nlris))
 
 	@classmethod
 	def unpack (cls,data,negotiated):
@@ -57,10 +62,7 @@ class MPURNLRI (Attribute):
 		data = data[offset:]
 
 		if (afi,safi) not in negotiated.families:
-			raise Notify(3,0,'presented a non-negotiated family %d/%d' % (afi,safi))
-
-		if not data:
-			raise Notify(3,0,'tried to withdraw an EOR for family %d/%d' % (afi,safi))
+			raise Notify(3,0,'presented a non-negotiated family %s %s' % (AFI(afi),SAFI(safi)))
 
 		# Is the peer going to send us some Path Information with the route (AddPath)
 		addpath = negotiated.addpath.receive(afi,safi)
@@ -71,8 +73,8 @@ class MPURNLRI (Attribute):
 			data = data[length:]
 			#logger.parser(LazyFormat("parsed withdraw mp nlri %s payload " % nlri,od,data[:length]))
 
-		return MPURNLRI(nlris)
+		return cls(afi,safi,nlris)
 
 MPURNLRI.register_attribute()
 
-EMPTY_MPURNLRI = MPURNLRI([])
+EMPTY_MPURNLRI = MPURNLRI(AFI(AFI.undefined),SAFI(SAFI.undefined),[])

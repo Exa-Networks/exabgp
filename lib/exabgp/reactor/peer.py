@@ -283,7 +283,7 @@ class Peer (object):
 		# Read KEEPALIVE
 		for message in proto.read_keepalive('ESTABLISHED'):
 			self.timer.tick(message)
-			yield ACTION.later
+			yield ACTION.immediate
 
 		self._['in']['state'] = STATE.established
 		# let the caller know that we were sucesfull
@@ -437,7 +437,7 @@ class Peer (object):
 
 		# Announce to the process BGP is up
 		self.logger.network('Connected to peer %s (%s)' % (self.neighbor.name(),direction))
-		if self.neighbor.api.neighbor_changes:
+		if self.neighbor.api['neighbor-changes']:
 			try:
 				self.reactor.processes.up(self)
 			except ProcessError:
@@ -649,11 +649,11 @@ class Peer (object):
 					# This generator only stops when it raises
 					r = generator.next()
 
-					if r is ACTION.immediate: status = 'immediate callback'
-					elif r is ACTION.later:   status = 'when possible'
+					if r is ACTION.immediate: status = 'immediately'
+					elif r is ACTION.later:   status = 'next second'
 					elif r is ACTION.close:   status = 'stop'
 					else: status = 'buggy'
-					self.logger.network('%s loop %18s, state is %s' % (direction,status,self._[direction]['state']),'debug')
+					self.logger.network('%s loop %11s, state is %s' % (direction,status,self._[direction]['state']),'debug')
 
 					if r == ACTION.immediate:
 						back = ACTION.immediate
@@ -675,6 +675,7 @@ class Peer (object):
 				if self._restart:
 					self.logger.network('%s loop, intialising' % direction,'debug')
 					self._[direction]['generator'] = self._run(direction)
-					back = ACTION.immediate
+					back = ACTION.later  # make sure we go through a clean loop
+
 
 		return back

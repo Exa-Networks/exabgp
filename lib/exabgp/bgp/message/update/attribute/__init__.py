@@ -264,6 +264,18 @@ class Attributes (dict):
 		except IndexError:
 			raise Notify(3,2,data)
 
+	@staticmethod
+	def flag_attribute_content (data):
+		flag = Flag(ord(data[0]))
+		attr = Attribute.ID(ord(data[1]))
+
+		if flag & Flag.EXTENDED_LENGTH:
+			length = unpack('!H',data[2:4])[0]
+			return flag, attr, data[4:length+4]
+		else:
+			length = ord(data[2])
+			return flag, attr , data[3:length+3]
+
 	def parse (self,data,negotiated):
 		if not data:
 			return self
