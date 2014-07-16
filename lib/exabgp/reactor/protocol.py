@@ -132,7 +132,7 @@ class Protocol (object):
 
 		for length,msg,header,body,notify in self.connection.reader():
 			if notify:
-				if self.neighbor.api['receive-packets'] and not self.neighbor.api['consolidate']:
+				if self.neighbor.api['receive-packets']:
 					self.peer.reactor.processes.receive(self.peer,msg,header,body)
 				if self.neighbor.api[Message.ID.NOTIFICATION]:
 					self.peer.reactor.processes.notification(self.peer,notify.code,notify.subcode,str(notify))
