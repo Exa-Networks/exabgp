@@ -11,6 +11,7 @@ import time
 import subprocess
 import select
 import fcntl
+import socket
 
 from exabgp.util.errstr import errstr
 
@@ -78,8 +79,8 @@ class Processes (object):
 		for process in list(self._process):
 			if not self.silence:
 				try:
-					neighbor = self.reactor.configuration.process[process]['neighbor']
-					self.write(process,self._api_encoder[process].shutdown(neighbor))
+					ppid = '%s_%d_%d' % (socket.gethostname(),os.getpid(),os.getppid())
+					self.write(process,self._api_encoder[process].shutdown(ppid))
 				except ProcessError:
 					pass
 		self.silence = True

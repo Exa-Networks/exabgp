@@ -83,8 +83,8 @@ class Text (object):
 	def down (self,peer,reason=''):
 		return 'neighbor %s down - %s\n' % (peer.neighbor.peer_address,reason)
 
-	def shutdown (self,peer_address):
-		return 'shutdown %s\n' % peer_address
+	def shutdown (self,ppid):
+		return 'shutdown %s\n' % ppid
 
 	def notification (self,peer,code,subcode,data):
 		return 'notification code %d subcode %d data %s\n' % (code,subcode,hexstring(data))
