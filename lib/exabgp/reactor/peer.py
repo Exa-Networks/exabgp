@@ -675,6 +675,7 @@ class Peer (object):
 				if self._restart:
 					self.logger.network('%s loop, intialising' % direction,'debug')
 					self._[direction]['generator'] = self._run(direction)
-					back = ACTION.immediate
+					back = ACTION.later  # make sure we go through a clean loop
+
 
 		return back
