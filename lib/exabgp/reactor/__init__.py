@@ -535,7 +535,7 @@ class Reactor (object):
 						peers.append(peer)
 						self.configuration.change_to_peers(change,[peer,])
 						yield False
-					self.logger.reactor("Vpls added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
+					self.logger.reactor("vpls added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
 					self._route_update = True
 
 			try:
@@ -611,7 +611,7 @@ class Reactor (object):
 				else:
 					for (peer,change) in changes:
 						if self.configuration.change_to_peers(change,[peer,]):
-							self.logger.reactor("Vpls removed : %s" % change.extensive())
+							self.logger.reactor("vpls removed : %s" % change.extensive())
 							yield False
 						else:
 							self.logger.reactor("Could not find therefore remove vpls : %s" % change.extensive(),'warning')
