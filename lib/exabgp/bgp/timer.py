@@ -15,21 +15,20 @@ from exabgp.bgp.message.notification import Notify
 
 # Track the time for keepalive updates
 
-class Timer (object):
+class ReceiveTimer (object):
 	def __init__ (self,me,holdtime,code,subcode,message=''):
 		self.logger = Logger()
-
 		self.me = me
+
+		self.holdtime = holdtime
+		self.last_read = time.time()
 
 		self.code = code
 		self.subcode = subcode
 		self.message = message
 
-		self.holdtime = holdtime
-		self.last_read = time.time()
-		self.last_sent = time.time()
 
-	def tick (self,message=_NOP,ignore=_NOP.TYPE):
+	def check_ka (self,message=_NOP,ignore=_NOP.TYPE):
 		if message.TYPE != ignore:
 			self.last_read = time.time()
 		if self.holdtime:
@@ -40,7 +39,16 @@ class Timer (object):
 		elif message.TYPE == KeepAlive.TYPE:
 			raise Notify(2,6,'Negotiated holdtime was zero, it was invalid to send us a keepalive messages')
 
-	def keepalive (self):
+
+class SendTimer (object):
+	def __init__ (self,me,holdtime):
+		self.logger = Logger()
+		self.me = me
+
+		self.holdtime = holdtime
+		self.last_sent = time.time()
+
+	def need_ka (self):
 		if not self.holdtime:
 			return False
 

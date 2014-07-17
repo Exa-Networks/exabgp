@@ -9,7 +9,8 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 import time
 #import traceback
 
-from exabgp.bgp.timer import Timer
+from exabgp.bgp.timer import ReceiveTimer
+from exabgp.bgp.timer import SendTimer
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability.id import CapabilityID
 from exabgp.bgp.message.open.capability.id import REFRESH
@@ -169,7 +170,11 @@ class Peer (object):
 		return "peer %s ASN %-7s %s" % (self.neighbor.peer_address,self.neighbor.peer_as,message)
 
 	def _output (self,direction,message):
-		return "%s %s" % (self._[direction]['proto'].connection.name(),self.me(message))
+		if self._[direction]['proto']:
+			return "%s %s" % (self._[direction]['proto'].connection.name(),self.me(message))
+		# Timer messages can try to print before we have a connnection
+		return self.me(message)
+
 
 	def _log (self,direction):
 		def inner (message):
@@ -247,11 +252,11 @@ class Peer (object):
 
 		# Read OPEN
 		wait = environment.settings().bgp.openwait
-		opentimer = Timer(self._log('in'),wait,1,1,'waited for open too long, we do not like stuck in active')
+		opentimer = ReceiveTimer(self._log('in'),wait,1,1,'waited for open too long, we do not like stuck in active')
 		# Only yield if we have not the open, otherwise the reactor can run the other connection
 		# which would be bad as we need to do the collission check without going to the other peer
 		for message in proto.read_open(self.neighbor.peer_address.ip):
-			opentimer.tick(message)
+			opentimer.check_ka(message)
 			if ord(message.TYPE) == Message.ID.NOP:
 				yield ACTION.later
 
@@ -279,10 +284,11 @@ class Peer (object):
 			yield ACTION.immediate
 
 		# Start keeping keepalive timer
-		self.timer = Timer(self._log('in'),proto.negotiated.holdtime,4,0)
+		self.send_timer = SendTimer(self._log('in'),proto.negotiated.holdtime)
+		self.recv_timer = ReceiveTimer(self._log('in'),proto.negotiated.holdtime,4,0)
 		# Read KEEPALIVE
 		for message in proto.read_keepalive('ESTABLISHED'):
-			self.timer.tick(message)
+			self.recv_timer.check_ka(message)
 			yield ACTION.immediate
 
 		self._['in']['state'] = STATE.established
@@ -327,9 +333,9 @@ class Peer (object):
 
 		# Read OPEN
 		wait = environment.settings().bgp.openwait
-		opentimer = Timer(self._log('out'),wait,1,1,'waited for open too long, we do not like stuck in active')
+		opentimer = ReceiveTimer(self._log('out'),wait,1,1,'waited for open too long, we do not like stuck in active')
 		for message in self._['out']['proto'].read_open(self.neighbor.peer_address.ip):
-			opentimer.tick(message)
+			opentimer.check_ka(message)
 			# XXX: FIXME: change the whole code to use the ord and not the chr version
 			# Only yield if we have not the open, otherwise the reactor can run the other connection
 			# which would be bad as we need to do the collission check
@@ -360,10 +366,11 @@ class Peer (object):
 			yield ACTION.immediate
 
 		# Start keeping keepalive timer
-		self.timer = Timer(self._log('out'),self._['out']['proto'].negotiated.holdtime,4,0)
+		self.send_timer = SendTimer(self._log('in'),proto.negotiated.holdtime)
+		self.recv_timer = ReceiveTimer(self._log('in'),proto.negotiated.holdtime,4,0)
 		# Read KEEPALIVE
 		for message in self._['out']['proto'].read_keepalive('ESTABLISHED'):
-			self.timer.tick(message)
+			self.recv_timer.check_ka(message)
 			yield ACTION.immediate
 
 		self._['out']['state'] = STATE.established
@@ -384,7 +391,7 @@ class Peer (object):
 
 		while not self._teardown:
 			# SEND KEEPALIVES
-			need_keepalive |= self.timer.keepalive()
+			need_keepalive |= self.send_timer.need_ka()
 
 			if need_keepalive and not generator:
 				proto = self._[direction]['proto']
@@ -464,7 +471,7 @@ class Peer (object):
 		while not self._teardown:
 			for message in proto.read_message():
 				# Update timer
-				self.timer.tick(message)
+				self.recv_timer.check_ka(message)
 
 				# Give information on the number of routes seen
 				counter.display()
