@@ -98,6 +98,7 @@ class Reactor (object):
 			errno,message = e.args
 			if not errno in error.block:
 				raise e
+			return []
 
 	def run (self):
 		if self.ip:
