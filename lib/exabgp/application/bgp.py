@@ -278,23 +278,23 @@ def main ():
 	else:
 		comment = ''
 
-	if options["--full-ini"]:
+	if options["--full-ini"] or options["--fi"]:
 		for line in environment.iter_ini():
 			print line
 		sys.exit(0)
 
-	if options["--full-env"]:
+	if options["--full-env"] or options["--fe"]:
 		print
 		for line in environment.iter_env():
 			print line
 		sys.exit(0)
 
-	if options["--diff-ini"]:
+	if options["--diff-ini"] or options["--di"]:
 		for line in environment.iter_ini(True):
 			print line
 		sys.exit(0)
 
-	if options["--diff-env"]:
+	if options["--diff-env"] or options["--de"]:
 		for line in environment.iter_env(True):
 			print line
 		sys.exit(0)
