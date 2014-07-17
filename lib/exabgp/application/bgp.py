@@ -3,8 +3,9 @@
 """The BGP swiss army knife of networking
 
 usage: exabgp [--help] [--version] [--folder FOLDER] [--env ENV]
-              [--diff-env | --full-env | --diff-ini | --full-ini] [--debug]
-              [--once] [--pdb] [--memory] [--profile PROFILE] [--test]
+              [[--full-ini | --diff-ini | --full-env | --diff-env] |
+              [--fi | --di | --fe |--de]]
+              [--debug] [--once] [--pdb] [--memory] [--profile PROFILE] [--test]
               [--decode HEX_MESSAGE]...
               [<configuration>...]
 
@@ -17,12 +18,16 @@ optional arguments:
   --folder FOLDER, -f FOLDER
                         configuration folder
   --env ENV, -e ENV     environment configuration file
-  --diff-env, -de       display non-default configurations values using the env
+  --full-ini            display the configuration using the ini format
+  --fi                  (shorthand for above)
+  --diff-ini            display non-default configurations values using the ini
                         format
-  --full-env, -fe       display the configuration using the env format
-  --full-ini, -fi       display the configuration using the ini format
-  --diff-ini, -di       display non-default configurations values using the ini
+  --di                  (shorthand for above)
+  --full-env            display the configuration using the env format
+  --fe                  (shorthand for above)
+  --diff-env            display non-default configurations values using the env
                         format
+  --de                  (shorthand for above)
 
 debugging:
   --debug, -d           start the python debugger on serious logging and on
@@ -120,6 +125,7 @@ def print_help():
 
 def main ():
 	options = docopt.docopt(__doc__, help=False)
+	print(options)
 	
 	main = int(sys.version[0])
 	secondary = int(sys.version[2])
