@@ -7,6 +7,7 @@ Created by Thomas Mangin on 2012-12-30.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
+import os
 import time
 
 from exabgp.bgp.message import Message
@@ -83,8 +84,8 @@ class Text (object):
 	def down (self,peer,reason=''):
 		return 'neighbor %s down - %s\n' % (peer.neighbor.peer_address,reason)
 
-	def shutdown (self,shutdown):
-		return 'shutdown %s\n' % (shutdown)
+	def shutdown (self):
+		return 'shutdown %d %d\n' % (os.getpid(),os.getppid())
 
 	def notification (self,peer,code,subcode,data):
 		return 'notification code %d subcode %d data %s\n' % (code,subcode,hexstring(data))
@@ -228,10 +229,12 @@ class JSON (object):
 			'reason' : reason,
 		})),'','',peer.neighbor.identificator(),self.count(peer),type='state')
 
-	def shutdown (self,pid):
+	def shutdown (self):
 		return self._header(self._kv({
 			'notification' : 'shutdown',
-		}),'','',pid,1,type='notification')
+			'pid'          : os.getpid(),
+			'ppid'         : os.getppid(),
+		}),'','','',1,type='notification')
 
 	def notification (self,peer,code,subcode,data):
 		return self._header(self._kv({
