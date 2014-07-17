@@ -274,8 +274,8 @@ class Processes (object):
 		for process in self._notify(peer,'neighbor-changes'):
 			self.write(process,self._api_encoder[process].notification(peer,code,subcode,data))
 
-	def message (self,message_id,peer,message,header,body):
-		self._dispatch[message_id](self,peer,message,header,body)
+	def message (self,message_id,peer,message,header,*body):
+		self._dispatch[message_id](self,peer,message,header,*body)
 
 	# registering message functions
 
@@ -288,7 +288,7 @@ class Processes (object):
 		return closure
 
 	@register_process(Message.ID.OPEN,_dispatch)
-	def _open (self,peer,direction,open_msg,header,body):
+	def _open (self,peer,open_msg,header,body,direction='received'):
 		if self.silence: return
 		for process in self._notify(peer,'receive-opens'):
 			self.write(process,self._api_encoder[process].open(peer,direction,open_msg,header,body))
