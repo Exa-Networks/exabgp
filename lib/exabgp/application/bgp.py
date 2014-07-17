@@ -1,6 +1,7 @@
 # encoding: utf-8
 
-"""The BGP swiss army knife of networking
+"""\
+The BGP swiss army knife of networking
 
 usage: exabgp [--help] [--version] [--folder FOLDER] [--env ENV]
               [[--full-ini | --diff-ini | --full-env | --diff-env] |
@@ -126,7 +127,7 @@ def print_help():
 def main ():
 	options = docopt.docopt(__doc__, help=False)
 	print(options)
-	
+
 	main = int(sys.version[0])
 	secondary = int(sys.version[2])
 
@@ -274,7 +275,7 @@ def main ():
 			env.profile.file = options["--profile"]
 
 	if envfile and not os.path.isfile(envfile):
-		comment = 'environment file missing\ngenerate it using "exabgp -fi > %s"' % envfile
+		comment = 'environment file missing\ngenerate it using "exabgp --fi > %s"' % envfile
 	else:
 		comment = ''
 

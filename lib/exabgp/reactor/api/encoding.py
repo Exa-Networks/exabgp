@@ -8,6 +8,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 import os
+import socket
 import time
 
 from exabgp.bgp.message import Message
@@ -179,18 +180,20 @@ class JSON (object):
 		return '%s' % _ if issubclass(_.__class__,int) or issubclass(_.__class__,long) or ('{' in str(_)) else '"%s"' % _
 
 	def _header (self,content,header,body,ident=None,count=None,type=None):
-		identificator = '"id": "%s", ' % ident if ident else ''
-		counter = '"counter": %s, ' % count if count else ''
-		header = '"header": "%s", ' % hexstring(header) if header else ''
-		body = '"body": "%s", ' % hexstring(body) if body else ''
-		type = '"type": "%s",' % type if type else 'default'
+		peer     = '"host" : "%s",'   % socket.gethostname()
+		pid      = '"pid" : "%s",'    % os.getpid()
+		ppid     = '"ppid" : "%s",'   % os.getppid()
+		counter  = '"counter": %s, '  % count if count else ''
+		header   = '"header": "%s", ' % hexstring(header) if header else ''
+		body     = '"body": "%s", '   % hexstring(body) if body else ''
+		type     = '"type": "%s",'    % type if type else 'default'
 
 		return \
 		'{ '\
 			'"exabgp": "%s", '\
 			'"time": %s, ' \
-			'%s%s%s%s%s%s' \
-		'}' % (self.version,self.time(time.time()),identificator,counter,type,header,body,content)
+			'%s%s%s%s%s%s%s%s' \
+		'}' % (self.version,self.time(time.time()),peer,pid,ppid,counter,type,header,body,content)
 
 	def _neighbor (self,peer,content):
 		peer_neighbor_adress='"ip": "%s", ' % peer.neighbor.peer_address
@@ -232,8 +235,6 @@ class JSON (object):
 	def shutdown (self):
 		return self._header(self._kv({
 			'notification' : 'shutdown',
-			'pid'          : os.getpid(),
-			'ppid'         : os.getppid(),
 		}),'','','',1,type='notification')
 
 	def notification (self,peer,code,subcode,data):
