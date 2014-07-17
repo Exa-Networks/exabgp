@@ -56,6 +56,8 @@ announce_flow_2,
 announce_flow_1,
 'sleep',
 withdraw_flow_1,
+'sleep',
+announce_flow_1, # to catch if a withdraw 2 is sent
 ]
 
 while messages:
