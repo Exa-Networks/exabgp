@@ -126,7 +126,6 @@ def print_help():
 
 def main ():
 	options = docopt.docopt(__doc__, help=False)
-	print(options)
 
 	main = int(sys.version[0])
 	secondary = int(sys.version[2])
@@ -161,10 +160,9 @@ def main ():
 		etc = os.path.realpath(os.path.normpath(os.environ.get('ETC','etc')))
 	os.environ['ETC'] = etc
 
-	if not options["--env"] or not options["--env"].startswith('/'):
-		envfile = '%s/%s' % (etc, options["--env"])
-	else:
-		envfile = options["--env"]
+	envfile = 'exabgp.env' if not  options["--env"] else options["--env"]
+	if not envfile.startswith('/'):
+		envfile = '%s/%s' % (etc, envfile)
 
 	from exabgp.configuration.environment import environment
 
