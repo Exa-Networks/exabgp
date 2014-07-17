@@ -37,6 +37,8 @@ Version 3.4.0
  * Change: the profile information is now exported in kcachegrind format
  * Compatibility: JSON re-introduced the family under the "announce" section ( removed by mistake )
  * Compatibility: restoring integer as default time, high resolution must be enabled to not break older installations
+ * Change: JSON shutdown object now shows the hostname,PID, and PPID in the id field
+ * Change: Text shutdown object now shows the hostname,PID, and PPID after 'shutdown'
 
 Version 3.3.2
  * Fix: work toward working operational-01

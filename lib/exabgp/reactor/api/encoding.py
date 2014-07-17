@@ -84,7 +84,7 @@ class Text (object):
 		return 'neighbor %s down - %s\n' % (peer.neighbor.peer_address,reason)
 
 	def shutdown (self,shutdown):
-		return 'shutdown %s time: %f\n' % (shutdown,time.time())
+		return 'shutdown %s\n' % (shutdown)
 
 	def notification (self,peer,code,subcode,data):
 		return 'notification code %d subcode %d data %s\n' % (code,subcode,hexstring(data))
@@ -228,10 +228,10 @@ class JSON (object):
 			'reason' : reason,
 		})),'','',peer.neighbor.identificator(),self.count(peer),type='state')
 
-	def shutdown (self,ppid):
+	def shutdown (self,pid):
 		return self._header(self._kv({
 			'notification' : 'shutdown',
-		}),'','',ppid,1,type='notification')
+		}),'','',pid,1,type='notification')
 
 	def notification (self,peer,code,subcode,data):
 		return self._header(self._kv({

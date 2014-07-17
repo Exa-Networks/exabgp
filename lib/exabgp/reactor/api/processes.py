@@ -79,8 +79,8 @@ class Processes (object):
 		for process in list(self._process):
 			if not self.silence:
 				try:
-					ppid = '%s_%d_%d' % (socket.gethostname(),os.getpid(),os.getppid())
-					self.write(process,self._api_encoder[process].shutdown(ppid))
+					pid = '%s_%d_%d' % (socket.gethostname(),os.getpid(),os.getppid())
+					self.write(process,self._api_encoder[process].shutdown(pid))
 				except ProcessError:
 					pass
 		self.silence = True
