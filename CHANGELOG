@@ -34,6 +34,8 @@ Version 3.4.0
  * Change: JSON objects now include a counter for unique message id
  * Change: JSON objects now include a "type" to now how to best parse them
  * Change: JSON new EOR object
+ * Change: slight variation with the command line option names, now using docopt
+    patch from: Michael Robert Watson
  * Change: the profile information is now exported in kcachegrind format
  * Compatibility: JSON re-introduced the family under the "announce" section ( removed by mistake )
  * Compatibility: restoring integer as default time, high resolution must be enabled to not break older installations
