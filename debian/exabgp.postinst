@@ -1,4 +1,4 @@
-#!/bin/sh 
+#!/bin/sh
 
 set -e
 
@@ -11,7 +11,7 @@ TMPCONF="/etc/exabgp/exabgp.env.dpkg-tmp"
 gen_env_config() {
     echo "$1"
     trap 'rm -f $TMPCONF' TERM INT EXIT QUIT
-    exabgp -fi >> "$TMPCONF" 2>/dev/null
+    exabgp --fi >> "$TMPCONF" 2>/dev/null
     sed -i "s#nobody#exabgp#" "$TMPCONF"
     ucf --debconf-ok $TMPCONF $CONFIGFILE
     rm -f $TMPCONF
@@ -36,7 +36,7 @@ if dpkg-maintscript-helper supports mv_conffile 2>/dev/null; then
     FILE_TWO="/etc/exabgp/processes/watchdog-1.sh"
     if ! egrep -q "$FILE_ONE" /etc/exabgp/exabgp.conf 2> /dev/null ; then dpkg-maintscript-helper rm_conffile "$FILE_ONE" -- "$@" ; fi
     if ! egrep -q "$FILE_TWO" /etc/exabgp/exabgp.conf 2> /dev/null ; then dpkg-maintscript-helper rm_conffile "$FILE_TWO" -- "$@" ; fi
-    if [ -d "/etc/exabgp/processes/" ] ; then rmdir /etc/exabgp/processes || true 2>/dev/null ; fi 
+    if [ -d "/etc/exabgp/processes/" ] ; then rmdir /etc/exabgp/processes || true 2>/dev/null ; fi
 fi
 
 case "$1" in
