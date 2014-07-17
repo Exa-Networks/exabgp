@@ -179,21 +179,21 @@ class JSON (object):
 	def _string (self,_):
 		return '%s' % _ if issubclass(_.__class__,int) or issubclass(_.__class__,long) or ('{' in str(_)) else '"%s"' % _
 
-	def _header (self,content,header,body,ident=None,count=None,type=None):
+	def _header (self,content,header,body,ident=None,count=None,atype=None):
 		peer     = '"host" : "%s",'   % socket.gethostname()
 		pid      = '"pid" : "%s",'    % os.getpid()
 		ppid     = '"ppid" : "%s",'   % os.getppid()
 		counter  = '"counter": %s, '  % count if count else ''
 		header   = '"header": "%s", ' % hexstring(header) if header else ''
 		body     = '"body": "%s", '   % hexstring(body) if body else ''
-		type     = '"type": "%s",'    % type if type else 'default'
+		atype    = '"type": "%s",'    % atype if atype else 'default'
 
 		return \
 		'{ '\
 			'"exabgp": "%s", '\
 			'"time": %s, ' \
 			'%s%s%s%s%s%s%s%s' \
-		'}' % (self.version,self.time(time.time()),peer,pid,ppid,counter,type,header,body,content)
+		'}' % (self.version,self.time(time.time()),peer,pid,ppid,counter,atype,header,body,content)
 
 	def _neighbor (self,peer,content):
 		peer_neighbor_adress='"ip": "%s", ' % peer.neighbor.peer_address
