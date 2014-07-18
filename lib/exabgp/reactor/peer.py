@@ -421,10 +421,9 @@ class Peer (object):
 			else:
 				yield None
 
-	def keepalive (self):
+	def send_keepalive (self):
 		generator = self._generator_keepalive
 		if generator:
-			# XXX: CRITICAL : this code needs the same exception than the one protecting the main loop
 			try:
 				return generator.next()
 			except StopIteration:
