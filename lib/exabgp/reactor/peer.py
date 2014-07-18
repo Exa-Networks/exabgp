@@ -405,7 +405,7 @@ class Peer (object):
 				try:
 					last = generator.next()
 					if last.TYPE == KeepAlive.TYPE:
-						# close the generator and rasie a StopIteration
+						# close the generator and raise a StopIteration
 						generator.next()
 					yield None
 				except (NetworkError,ProcessError):
@@ -472,6 +472,9 @@ class Peer (object):
 			for message in proto.read_message():
 				# Update timer
 				self.recv_timer.check_ka(message)
+
+				if self.send_keepalive() is False:
+					self.logger.reactor("problem with keepalive for peer %s " % self.neighbor.name(),'error')
 
 				# Give information on the number of routes seen
 				counter.display()

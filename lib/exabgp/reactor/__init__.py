@@ -164,14 +164,8 @@ class Reactor (object):
 						self._route_update = False
 						self.route_update()
 
-
 					for key in self._peers.keys():
 						peer = self._peers[key]
-
-						# handle keepalive first and foremost
-						if peer.established():
-							if peer.keepalive() is False:
-								self.logger.reactor("problem with keepalive for peer %s " % peer.neighbor.name(),'error')
 
 					ios = {}
 					keys = set(self._peers.keys())
