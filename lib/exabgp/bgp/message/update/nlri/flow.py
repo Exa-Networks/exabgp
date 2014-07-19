@@ -489,10 +489,25 @@ class Flow (NLRI):
 	def __str__ (self):
 		return self.extensive()
 
+	def _json (self):
+		string = []
+		for index in sorted(self.rules):
+			rules = self.rules[index]
+			s = []
+			for idx,rule in enumerate(rules):
+				# only add ' ' after the first element
+				if idx and not rule.operations & NumericOperator.AND:
+					s.append(', ')
+				s.append('"%s"' % rule)
+			string.append(' "%s" : [ %s ]' % (rules[0].NAME,''.join(str(_) for _ in s)))
+		nexthop = ', "next-hop" : "%s"' % self.nexthop if self.nexthop is not NoIP else ''
+		rd = ', %s' % self.rd.json() if self.rd else ''
+		return '{' + rd + ','.join(string) + nexthop + ' }'
+
 	def json (self):
 		# this is a stop gap so flow route parsing does not crash exabgp
 		# delete unique when this is fixed
-		return '"flow-%d": { "string": "%s" }' % (self.unique,str(self),)
+		return '"flow-%d": %s' % (self.unique,self._json())
 
 	def index (self):
 		return self.pack()

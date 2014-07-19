@@ -180,20 +180,20 @@ class JSON (object):
 		return '%s' % _ if issubclass(_.__class__,int) or issubclass(_.__class__,long) or ('{' in str(_)) else '"%s"' % _
 
 	def _header (self,content,header,body,ident=None,count=None,message_type=None):
-		peer     = '"host" : "%s",'   % socket.gethostname()
-		pid      = '"pid" : "%s",'    % os.getpid()
-		ppid     = '"ppid" : "%s",'   % os.getppid()
-		counter  = '"counter": %s, '  % count if count else ''
-		header   = '"header": "%s", ' % hexstring(header) if header else ''
-		body     = '"body": "%s", '   % hexstring(body) if body else ''
-		message_type    = '"type": "%s",'    % message_type if message_type else 'default'
+		peer     = '"host" : "%s", '   % socket.gethostname()
+		pid      = '"pid" : "%s", '    % os.getpid()
+		ppid     = '"ppid" : "%s", '   % os.getppid()
+		counter  = '"counter": %s, '   % count if count else ''
+		header   = '"header": "%s", '  % hexstring(header) if header else ''
+		body     = '"body": "%s", '    % hexstring(body) if body else ''
+		mtype    = '"type": "%s", '    % message_type if message_type else 'default'
 
 		return \
 		'{ '\
 			'"exabgp": "%s", '\
 			'"time": %s, ' \
 			'%s%s%s%s%s%s%s%s' \
-		'}' % (self.version,self.time(time.time()),peer,pid,ppid,counter,message_type,header,body,content)
+		'}' % (self.version,self.time(time.time()),peer,pid,ppid,counter,mtype,header,body,content)
 
 	def _neighbor (self,peer,content):
 		peer_neighbor_adress='"ip": "%s", ' % peer.neighbor.peer_address
@@ -327,7 +327,7 @@ class JSON (object):
 
 	def update (self,peer,update,header,body):
 		return self._header(self._neighbor(peer,self._kv({
-			'message': '{ %s }' % self._update(update)})),header,body,peer.neighbor.identificator(),self.count(peer),message_type='update')
+			'message': '{ %s}' % self._update(update)})),header,body,peer.neighbor.identificator(),self.count(peer),message_type='update')
 
 	def refresh (self,peer,refresh,header,body):
 		return self._header(

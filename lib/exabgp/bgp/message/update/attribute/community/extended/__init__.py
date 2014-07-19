@@ -6,8 +6,6 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from struct import unpack
-
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.flag import Flag
 
@@ -47,7 +45,11 @@ class ExtendedCommunity (Attribute):
 		return self.community
 
 	def json (self):
-		return '0x' + '%02x'*8 % unpack('!BBBBBBBB',self.community)
+		h = 0x00
+		for byte in self.community:
+			h <<= 8
+			h += ord(byte)
+		return "%ld" % h
 
 	def __str__ (self):
 		h = 0x00
