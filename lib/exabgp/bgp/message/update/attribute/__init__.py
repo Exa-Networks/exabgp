@@ -240,7 +240,7 @@ class Attributes (dict):
 			if cls.cached:
 				if data == cls.previous:
 					return Attributes.cached
-				elif data.startswith(cls.previous):
+				elif cls.previous and data.startswith(cls.previous):
 					attributes = Attributes()
 					for key in Attributes.cached:
 						attributes[key] = Attributes.cached[key]
