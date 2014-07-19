@@ -15,8 +15,6 @@ import select
 
 from collections import deque
 
-from exabgp.version import version
-
 from exabgp.reactor.daemon import Daemon
 from exabgp.reactor.listener import Listener
 from exabgp.reactor.listener import NetworkError
@@ -26,10 +24,11 @@ from exabgp.reactor.peer import Peer
 from exabgp.reactor.peer import ACTION
 from exabgp.reactor.network.error import error
 
-from exabgp.reactor.api.decoding import Text as Decoder
+from exabgp.reactor.api.decoding import Decoder
 from exabgp.configuration.file import Configuration
 from exabgp.configuration.environment import environment
 
+from exabgp.version import version
 from exabgp.logger import Logger
 
 class Reactor (object):
@@ -50,12 +49,13 @@ class Reactor (object):
 		self.configuration = Configuration(configuration)
 		self.decoder = Decoder()
 
-		self._peers = {}
+		self.peers = {}
+		self.route_update = False
+
 		self._shutdown = False
 		self._reload = False
 		self._reload_processes = False
 		self._restart = False
-		self._route_update = False
 		self._saved_pid = False
 		self._pending = deque()
 		self._running = None
@@ -146,7 +146,7 @@ class Reactor (object):
 
 		while True:
 			try:
-				while self._peers:
+				while self.peers:
 					start = time.time()
 					end = start+self.max_loop_time
 
@@ -160,19 +160,19 @@ class Reactor (object):
 					elif self._restart:
 						self._restart = False
 						self.restart()
-					elif self._route_update:
-						self._route_update = False
-						self.route_update()
+					elif self.route_update:
+						self.route_update = False
+						self.route_send()
 
-					for key in self._peers.keys():
-						peer = self._peers[key]
+					for key in self.peers.keys():
+						peer = self.peers[key]
 
 					ios = {}
-					keys = set(self._peers.keys())
+					keys = set(self.peers.keys())
 
 					while time.time() < end:
 						for key in list(keys):
-							peer = self._peers[key]
+							peer = self.peers[key]
 							action = peer.run()
 
 							# .run() returns an ACTION enum:
@@ -209,8 +209,8 @@ class Reactor (object):
 							# * True, peer found
 							# * None, conflict found for this TCP connections
 							found = False
-							for key in self._peers:
-								peer = self._peers[key]
+							for key in self.peers:
+								peer = self.peers[key]
 								neighbor = peer.neighbor
 								# XXX: FIXME: Inet can only be compared to Inet
 								if connection.local == str(neighbor.peer_address) and connection.peer == str(neighbor.local_address):
@@ -285,8 +285,8 @@ class Reactor (object):
 		self.logger.reactor("Performing shutdown")
 		if self.listener:
 			self.listener.stop()
-		for key in self._peers.keys():
-			self._peers[key].stop()
+		for key in self.peers.keys():
+			self.peers[key].stop()
 
 	def reload (self,restart=False):
 		"""reload the configuration and send to the peer the route which changed"""
@@ -299,27 +299,27 @@ class Reactor (object):
 			self.logger.configuration(self.configuration.error,'error')
 			return
 
-		for key, peer in self._peers.items():
+		for key, peer in self.peers.items():
 			if key not in self.configuration.neighbor:
 				self.logger.reactor("Removing Peer %s" % peer.neighbor.name())
 				peer.stop()
 
 		for key, neighbor in self.configuration.neighbor.items():
 			# new peer
-			if key not in self._peers:
+			if key not in self.peers:
 				self.logger.reactor("New Peer %s" % neighbor.name())
 				peer = Peer(neighbor,self)
-				self._peers[key] = peer
+				self.peers[key] = peer
 			# modified peer
-			elif self._peers[key].neighbor != neighbor:
+			elif self.peers[key].neighbor != neighbor:
 				self.logger.reactor("Peer definition change, restarting %s" % str(key))
-				self._peers[key].restart(neighbor)
+				self.peers[key].restart(neighbor)
 			# same peer but perhaps not the routes
 			else:
 				# finding what route changed and sending the delta is not obvious
-				# self._peers[key].send_new(neighbor.rib.outgoing.queued_changes())
+				# self.peers[key].send_new(neighbor.rib.outgoing.queued_changes())
 				self.logger.reactor("restarting %s" % str(key))
-				self._peers[key].restart(neighbor)
+				self.peers[key].restart(neighbor)
 		self.logger.configuration("Loaded new configuration successfully",'warning')
 		# This only starts once ...
 		self.processes.start(restart)
@@ -328,7 +328,7 @@ class Reactor (object):
 		try:
 			# read at least on message per process if there is some and parse it
 			for service,command in self.processes.received():
-				self._parse_command(service,command)
+				self.decoder.parse_command(self,service,command)
 
 			# if we have nothing to do, return or save the work
 			if not self._running:
@@ -339,7 +339,9 @@ class Reactor (object):
 			# run it
 			try:
 				self._running.next()  # run
-				self._running.next()  # should raise StopIteration in most case
+				# should raise StopIteration in most case
+					# and prevent us to have to run twice to run one command
+				self._running.next()  # run
 			except StopIteration:
 				self._running = None
 			return True
@@ -350,532 +352,81 @@ class Reactor (object):
 			self._shutdown = True
 			self.logger.reactor("^C received",'error')
 
-	def _parse_command (self,service,command):
-		if command == 'shutdown':
-			self._shutdown = True
-			self._pending = deque()
-			self._running = None
-			self._answer(service,'shutdown in progress')
-			return True
 
-		if command == 'reload':
-			self._reload = True
-			self._pending = deque()
-			self._running = None
-			self._answer(service,'reload in progress')
-			return True
-
-		if command == 'restart':
-			self._restart = True
-			self._pending = deque()
-			self._running = None
-			self._answer(service,'restart in progress')
-			return True
-
-		if command == 'version':
-			self._answer(service,'exabgp %s' % version)
-			return True
-
-		if command == 'show neighbors':
-			def _show_neighbor (self):
-				for key in self.configuration.neighbor.keys():
-					neighbor = self.configuration.neighbor[key]
-					for line in str(neighbor).split('\n'):
-						self._answer(service,line)
-						yield True
-			self._pending.append(_show_neighbor(self))
-			return True
-
-		if command == 'show routes':
-			def _show_route (self):
-				for key in self.configuration.neighbor.keys():
-					neighbor = self.configuration.neighbor[key]
-					for change in list(neighbor.rib.outgoing.sent_changes()):
-						self._answer(service,'neighbor %s %s' % (neighbor.local_address,str(change.nlri)))
-						yield True
-			self._pending.append(_show_route(self))
-			return True
-
-		if command == 'show routes extensive':
-			def _show_extensive (self):
-				for key in self.configuration.neighbor.keys():
-					neighbor = self.configuration.neighbor[key]
-					for change in list(neighbor.rib.outgoing.sent_changes()):
-						self._answer(service,'neighbor %s %s' % (neighbor.name(),change.extensive()))
-						yield True
-			self._pending.append(_show_extensive(self))
-			return True
-
-		# watchdog
-		if command.startswith('announce watchdog'):
-			def _announce_watchdog (self,name):
-				for neighbor in self.configuration.neighbor:
-					self.configuration.neighbor[neighbor].rib.outgoing.announce_watchdog(name)
-					yield False
-				self._route_update = True
-			try:
-				name = command.split(' ')[2]
-			except IndexError:
-				name = service
-			self._pending.append(_announce_watchdog(self,name))
-			return True
-
-		# watchdog
-		if command.startswith('withdraw watchdog'):
-			def _withdraw_watchdog (self,name):
-				for neighbor in self.configuration.neighbor:
-					self.configuration.neighbor[neighbor].rib.outgoing.withdraw_watchdog(name)
-					yield False
-				self._route_update = True
-			try:
-				name = command.split(' ')[2]
-			except IndexError:
-				name = service
-			self._pending.append(_withdraw_watchdog(self,name))
-			return True
-
-		def extract_neighbors (command):
-			"""return a list of neighbor definition : the neighbor definition is a list of string which are in the neighbor indexing string"""
-			# This function returns a list and a string
-			# The first list contains parsed neighbor to match against our defined peers
-			# The string is the command to be run for those peers
-			# The parsed neighbor is a list of the element making the neighbor string so each part can be checked against the neighbor name
-
-			returned = []
-			neighbor,remaining = command.split(' ',1)
-			if neighbor != 'neighbor':
-				return [],command
-
-			ip,command = remaining.split(' ',1)
-			definition = ['neighbor %s' % (ip)]
-
-			while True:
-				try:
-					key,value,remaining = command.split(' ',2)
-				except ValueError:
-					key,value = command.split(' ',1)
-				if key == ',':
-					returned.append(definition)
-					_,command = command.split(' ',1)
-					definition = []
-					continue
-				if key not in ['neighbor','local-ip','local-as','peer-as','router-id','family-allowed']:
-					if definition:
-						returned.append(definition)
-					break
-				definition.append('%s %s' % (key,value))
-				command = remaining
-
-			return returned,command
-
-		def match_neighbor (description,name):
-			for string in description:
-				if re.search('(^|[\s])%s($|[\s,])' % re.escape(string), name) is None:
-					return False
-			return True
-
-		def match_neighbors (descriptions,peers):
-			"returns the sublist of peers matching the description passed, or None if no description is given"
-			if not descriptions:
-				return peers.keys()
-
-			returned = []
-			for key in peers:
-				for description in descriptions:
-					if match_neighbor(description,key):
-						if key not in returned:
-							returned.append(key)
-			return returned
-
-		# route announcement / withdrawal
-		if 'announce route ' in command:
-			def _announce_change (self,command,nexthops):
-				changes = self.decoder.parse_api_route(command,nexthops,'announce')
-				if not changes:
-					self.logger.reactor("Command could not parse route in : %s" % command,'warning')
-					yield True
-				else:
-					peers = []
-					for (peer,change) in changes:
-						peers.append(peer)
-						self.configuration.change_to_peers(change,[peer,])
-						yield False
-					self.logger.reactor("Route added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
-					self._route_update = True
-
-			try:
-				descriptions,command = extract_neighbors(command)
-				peers = match_neighbors(descriptions,self._peers)
-				if peers == []:
-					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
-					return False
-				nexthops = dict((peer,self._peers[peer].neighbor.local_address) for peer in peers)
-				self._pending.append(_announce_change(self,command,nexthops))
-				return True
-			except ValueError:
-				pass
-			except IndexError:
-				pass
-
-		# vpls announcement / withdrawal
-		if 'announce vpls ' in command:
-			def _announce_vpls (self,command,nexthops):
-				changes = self.decoder.parse_api_vpls(command,nexthops,'announce')
-				if not changes:
-					self.logger.reactor("Command could not parse vpls in : %s" % command,'warning')
-					yield True
-				else:
-					peers = []
-					for (peer,change) in changes:
-						peers.append(peer)
-						self.configuration.change_to_peers(change,[peer,])
-						yield False
-					self.logger.reactor("vpls added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
-					self._route_update = True
-
-			try:
-				descriptions,command = extract_neighbors(command)
-				peers = match_neighbors(descriptions,self._peers)
-				if peers == []:
-					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
-					return False
-				nexthops = dict((peer,self._peers[peer].neighbor.local_address) for peer in peers)
-				self._pending.append(_announce_vpls(self,command,nexthops))
-				return True
-			except ValueError:
-				pass
-			except IndexError:
-				pass
-
-		# route announcement / withdrawal
-		if 'flush route' in command:  # This allows flush routes with a s to work
-			def _flush (self,peers):
-				self.logger.reactor("Flushing routes for %s" % ', '.join(peers if peers else []) if peers is not None else 'all peers')
-				yield True
-				self._route_update = True
-
-			try:
-				descriptions,command = extract_neighbors(command)
-				peers = match_neighbors(descriptions,self._peers)
-				if peers == []:
-					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
-					return False
-				self._pending.append(_flush(self,peers))
-				return True
-			except ValueError:
-				pass
-			except IndexError:
-				pass
-
-		if 'withdraw route' in command:
-			def _withdraw_change (self,command,nexthops):
-				changes = self.decoder.parse_api_route(command,nexthops,'withdraw')
-				if not changes:
-					self.logger.reactor("Command could not parse route in : %s" % command,'warning')
-					yield True
-				else:
-					for (peer,change) in changes:
-						if self.configuration.change_to_peers(change,[peer,]):
-							self.logger.reactor("Route removed : %s" % change.extensive())
-							yield False
-						else:
-							self.logger.reactor("Could not find therefore remove route : %s" % change.extensive(),'warning')
-							yield False
-					self._route_update = True
-
-			try:
-				descriptions,command = extract_neighbors(command)
-				peers = match_neighbors(descriptions,self._peers)
-				if peers == []:
-					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
-					return False
-				nexthops = dict((peer,self._peers[peer].neighbor.local_address) for peer in peers)
-				self._pending.append(_withdraw_change(self,command,nexthops))
-				return True
-			except ValueError:
-				pass
-			except IndexError:
-				pass
-
-		if 'withdraw vpls' in command:
-			def _withdraw_change (self,command,nexthops):
-				changes = self.decoder.parse_api_vpls(command,nexthops,'withdraw')
-				if not changes:
-					self.logger.reactor("Command could not parse vpls in : %s" % command,'warning')
-					yield True
-				else:
-					for (peer,change) in changes:
-						if self.configuration.change_to_peers(change,[peer,]):
-							self.logger.reactor("vpls removed : %s" % change.extensive())
-							yield False
-						else:
-							self.logger.reactor("Could not find therefore remove vpls : %s" % change.extensive(),'warning')
-							yield False
-					self._route_update = True
-
-			try:
-				descriptions,command = extract_neighbors(command)
-				peers = match_neighbors(descriptions,self._peers)
-				if peers == []:
-					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
-					return False
-				nexthops = dict((peer,self._peers[peer].neighbor.local_address) for peer in peers)
-				self._pending.append(_withdraw_change(self,command,nexthops))
-				return True
-			except ValueError:
-				pass
-			except IndexError:
-				pass
-
-		if 'withdraw vpls' in command:
-			def _withdraw_vpls (self,command,nexthops):
-				changes = self.decoder.parse_api_route(command,nexthops,'withdraw')
-				if not changes:
-					self.logger.reactor("Command could not parse route in : %s" % command,'warning')
-					yield True
-				else:
-					for (peer,change) in changes:
-						if self.configuration.change_to_peers(change,[peer,]):
-							self.logger.reactor("Route removed : %s" % change.extensive())
-							yield False
-						else:
-							self.logger.reactor("Could not find therefore remove route : %s" % change.extensive(),'warning')
-							yield False
-					self._route_update = True
-
-			try:
-				descriptions,command = extract_neighbors(command)
-				peers = match_neighbors(descriptions,self._peers)
-				if peers == []:
-					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
-					return False
-				nexthops = dict((peer,self._peers[peer].neighbor.local_address) for peer in peers)
-				self._pending.append(_withdraw_vpls(self,command,nexthops))
-				return True
-			except ValueError:
-				pass
-			except IndexError:
-				pass
-
-		# attribute announcement / withdrawal
-		if 'announce attribute ' in command:
-			def _announce_attribute (self,command,nexthops):
-				changes = self.decoder.parse_api_attribute(command,nexthops,'announce')
-				if not changes:
-					self.logger.reactor("Command could not parse attribute in : %s" % command,'warning')
-					yield True
-				else:
-					for (peers,change) in changes:
-						self.configuration.change_to_peers(change,peers)
-						self.logger.reactor("Route added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
-					yield False
-					self._route_update = True
-
-			try:
-				descriptions,command = extract_neighbors(command)
-				peers = match_neighbors(descriptions,self._peers)
-				if peers == []:
-					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
-					return False
-				nexthops = dict((peer,self._peers[peer].neighbor.local_address) for peer in peers)
-				self._pending.append(_announce_attribute(self,command,nexthops))
-				return True
-			except ValueError:
-				pass
-			except IndexError:
-				pass
-
-		# attribute announcement / withdrawal
-		if 'withdraw attribute ' in command:
-			def _withdraw_attribute (self,command,nexthops):
-				changes = self.decoder.parse_api_attribute(command,nexthops,'withdraw')
-				if not changes:
-					self.logger.reactor("Command could not parse attribute in : %s" % command,'warning')
-					yield True
-				else:
-					for (peers,change) in changes:
-						if self.configuration.change_to_peers(change,peers):
-							self.logger.reactor("Route removed : %s" % change.extensive())
-							yield False
-						else:
-							self.logger.reactor("Could not find therefore remove route : %s" % change.extensive(),'warning')
-							yield False
-					self._route_update = True
-
-			try:
-				descriptions,command = extract_neighbors(command)
-				peers = match_neighbors(descriptions,self._peers)
-				if peers == []:
-					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
-					return False
-				nexthops = dict((peer,self._peers[peer].neighbor.local_address) for peer in peers)
-				self._pending.append(_withdraw_attribute(self,command,nexthops))
-				return True
-			except ValueError:
-				pass
-			except IndexError:
-				pass
-
-		# flow announcement / withdrawal
-		if 'announce flow' in command:
-			def _announce_flow (self,command,peers):
-				changes = self.decoder.parse_api_flow(command,'announce')
-				if not changes:
-					self.logger.reactor("Command could not parse flow in : %s" % command)
-					yield True
-				else:
-					for change in changes:
-						self.configuration.change_to_peers(change,peers)
-						self.logger.reactor("Flow added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
-						yield False
-					self._route_update = True
-
-			try:
-				descriptions,command = extract_neighbors(command)
-				peers = match_neighbors(descriptions,self._peers)
-				if peers == []:
-					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
-					return False
-				self._pending.append(_announce_flow(self,command,peers))
-				return True
-			except ValueError:
-				pass
-			except IndexError:
-				pass
-
-		if 'withdraw flow' in command:
-			def _withdraw_flow (self,command,peers):
-				changes = self.decoder.parse_api_flow(command,'withdraw')
-				if not changes:
-					self.logger.reactor("Command could not parse flow in : %s" % command)
-					yield True
-				else:
-					for change in changes:
-						if self.configuration.change_to_peers(change,peers):
-							self.logger.reactor("Flow found and removed : %s" % change.extensive())
-							yield False
-						else:
-							self.logger.reactor("Could not find therefore remove flow : %s" % change.extensive(),'warning')
-							yield False
-					self._route_update = True
-
-			try:
-				descriptions,command = extract_neighbors(command)
-				peers = match_neighbors(descriptions,self._peers)
-				if peers == []:
-					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
-					return False
-				self._pending.append(_withdraw_flow(self,command,peers))
-				return True
-			except ValueError:
-				pass
-			except IndexError:
-				pass
-
-		# route announcement / withdrawal
-		if 'teardown' in command:
-			try:
-				descriptions,command = extract_neighbors(command)
-				_,code = command.split(' ',1)
-				for key in self._peers:
-					for description in descriptions:
-						if match_neighbor(description,key):
-							self._peers[key].teardown(int(code))
-							self.logger.reactor('teardown scheduled for %s' % ' '.join(description))
-				return True
-			except ValueError:
-				pass
-			except IndexError:
-				pass
-
-		if 'announce route-refresh' in command:
-			def _announce_refresh (self,command,peers):
-				rr = self.decoder.parse_api_refresh(command)
-				if not rr:
-					self.logger.reactor("Command could not parse flow in : %s" % command)
-					yield True
-				else:
-					self.configuration.refresh_to_peers(rr,peers)
-					self.logger.reactor("Sent to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',rr.extensive()))
-					yield False
-					self._route_update = True
-
-			try:
-				descriptions,command = extract_neighbors(command)
-				peers = match_neighbors(descriptions,self._peers)
-				if peers == []:
-					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
-					return False
-				self._pending.append(_announce_refresh(self,command,peers))
-				return True
-			except ValueError:
-				pass
-			except IndexError:
-				pass
-
-		if command.startswith('operational ') and (command.split() + ['safe'])[1].lower() in ('asm','adm','rpcq','rpcp','apcq','apcp','lpcq','lpcp'):
-			def _announce_operational (self,command,peers):
-				operational = self.decoder.parse_api_operational(command)
-				if not operational:
-					self.logger.reactor("Command could not parse operational command : %s" % command)
-					yield True
-				else:
-					self.configuration.operational_to_peers(operational,peers)
-					self.logger.reactor("operational message sent to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',operational.extensive()))
-					yield False
-					self._route_update = True
-
-			try:
-				descriptions,command = extract_neighbors(command)
-				peers = match_neighbors(descriptions,self._peers)
-				if peers == []:
-					self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
-					return False
-				self._pending.append(_announce_operational(self,command,peers))
-				return True
-			except ValueError:
-				pass
-			except IndexError:
-				pass
-
-		# unknown
-		self.logger.reactor("Command from process not understood : %s" % command,'warning')
-		return False
-
-	def _answer (self,service,string):
-		self.processes.write(service,string)
-		self.logger.reactor('Responding to %s : %s' % (service,string))
-
-
-	def route_update (self):
+	def route_send (self):
 		"""the process ran and we need to figure what routes to changes"""
 		self.logger.reactor("Performing dynamic route update")
 		for key in self.configuration.neighbor.keys():
-			self._peers[key].send_new()
+			self.peers[key].send_new()
 		self.logger.reactor("Updated peers dynamic routes successfully")
 
 	def route_flush (self):
 		"""we just want to flush any unflushed routes"""
 		self.logger.reactor("Performing route flush")
 		for key in self.configuration.neighbor.keys():
-			self._peers[key].send_new(update=True)
+			self.peers[key].send_new(update=True)
 
 	def restart (self):
 		"""kill the BGP session and restart it"""
 		self.logger.reactor("Performing restart of exabgp %s" % version)
 		self.configuration.reload()
 
-		for key in self._peers.keys():
+		for key in self.peers.keys():
 			if key not in self.configuration.neighbor.keys():
 				neighbor = self.configuration.neighbor[key]
 				self.logger.reactor("Removing Peer %s" % neighbor.name())
-				self._peers[key].stop()
+				self.peers[key].stop()
 			else:
-				self._peers[key].restart()
+				self.peers[key].restart()
 		self.processes.terminate()
 		self.processes.start()
 
 	def unschedule (self,peer):
 		key = peer.neighbor.name()
-		if key in self._peers:
-			del self._peers[key]
+		if key in self.peers:
+			del self.peers[key]
+
+	def answer (self,service,string):
+		self.reactor.processes.write(service,string)
+		self.logger.reactor('Responding to %s : %s' % (service,string))
+
+	def api_shutdown (self):
+		self._shutdown = True
+		self._pending = deque()
+		self._running = None
+
+	def api_reload (self):
+		self._reload = True
+		self._pending = deque()
+		self._running = None
+
+	def api_restart (self):
+		self._restart = True
+		self._pending = deque()
+		self._running = None
+
+	@staticmethod
+	def match_neighbor (description,name):
+		for string in description:
+			if re.search('(^|[\s])%s($|[\s,])' % re.escape(string), name) is None:
+				return False
+		return True
+
+	def match_neighbors (self,descriptions):
+		"returns the sublist of peers matching the description passed, or None if no description is given"
+		if not descriptions:
+			return self.peers.keys()
+
+		returned = []
+		for key in self.peers:
+			for description in descriptions:
+				if Reactor.match_neighbor(description,key):
+					if key not in returned:
+						returned.append(key)
+		return returned
+
+	def nexthops (self,peers):
+		return dict((peer,self.peers[peer].neighbor.local_address) for peer in peers)
+
+	def plan (self,callback):
+		self._pending.append(callback)

@@ -11,7 +11,6 @@ import time
 import subprocess
 import select
 import fcntl
-import socket
 
 from exabgp.util.errstr import errstr
 
