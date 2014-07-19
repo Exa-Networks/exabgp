@@ -58,7 +58,7 @@ debugging:
                         exceptions (shortcut for exabgp.pdb.enable=true)
   --memory, -s          display memory usage information on exit
   --profile PROFILE     enable profiling (shortcut for
-                        exabgp.profile.enable=true exabgp.profle=file=PROFILE)
+                        exabgp.profile.enable=true exabgp.profile.file=PROFILE)
   --test, -t            perform a configuration validity check only
   --decode HEX_MESSAGE, -x HEX_MESSAGE
                         decode a raw route packet in hexadecimal string
