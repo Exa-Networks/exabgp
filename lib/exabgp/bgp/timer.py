@@ -45,17 +45,20 @@ class SendTimer (object):
 		self.logger = Logger()
 		self.me = me
 
-		self.holdtime = holdtime
-		self.last_sent = time.time()
+		self.keepalive = holdtime.keepalive()
+		self.last_sent = int(time.time())
 
 	def need_ka (self):
-		if not self.holdtime:
+		if not self.keepalive:
 			return False
 
-		left = int(self.last_sent + self.holdtime.keepalive() - time.time())
-		self.logger.timers(self.me('Send Timer %d second(s) left' % left))
+		now  = int(time.time())
+		left = self.last_sent + self.keepalive - now
+
+		if now != self.last_sent:
+			self.logger.timers(self.me('Send Timer %d second(s) left' % left))
 
 		if left <= 0:
-			self.last_sent = time.time()
+			self.last_sent = now
 			return True
 		return False

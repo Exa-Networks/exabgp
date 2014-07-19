@@ -65,6 +65,53 @@ FORCE_GRACEFUL = True
 
 class Interrupted (Exception): pass
 
+
+# =========================================================================== KA
+#
+
+class KA (object):
+	def __init__ (self,log,proto):
+		self._generator = self._keepalive(proto)
+		self.send_timer = SendTimer(log,proto.negotiated.holdtime)
+
+	def _keepalive (self,proto):
+		need_ka   = False
+		generator = None
+
+		while True:
+			# SEND KEEPALIVES
+			need_ka |= self.send_timer.need_ka()
+
+			if need_ka:
+				if not generator:
+					generator = proto.new_keepalive()
+					need_ka = False
+
+			if not generator:
+				yield False
+				continue
+
+			try:
+				# try to close the generator and raise a StopIteration in one call
+				generator.next()
+				generator.next()
+				# still running
+				yield True
+			except NetworkError:
+				raise Notify(4,0,'problem with network while trying to send keepalive')
+			except StopIteration:
+				generator = None
+				yield False
+
+	def __call__ (self):
+		#  True  if we need or are trying
+		#  False if we do not need to send one
+		try:
+			return self._generator.next()
+		except StopIteration:
+			raise Notify(4,0,'could not send keepalive')
+
+
 # Present a File like interface to socket.socket
 
 class Peer (object):
@@ -121,8 +168,6 @@ class Peer (object):
 		self._['in']['generator'] = self._['in']['enabled']
 		self._['out']['generator'] = self._['out']['enabled']
 
-		self._generator_keepalive = None
-
 	def _reset (self,direction,message='',error=''):
 		self._[direction]['state'] = STATE.idle
 
@@ -168,18 +213,6 @@ class Peer (object):
 
 	def me (self,message):
 		return "peer %s ASN %-7s %s" % (self.neighbor.peer_address,self.neighbor.peer_as,message)
-
-	def _output (self,direction,message):
-		if self._[direction]['proto']:
-			return "%s %s" % (self._[direction]['proto'].connection.name(),self.me(message))
-		# Timer messages can try to print before we have a connnection
-		return self.me(message)
-
-
-	def _log (self,direction):
-		def inner (message):
-			return self._output(direction,message)
-		return inner
 
 	# control
 
@@ -252,7 +285,7 @@ class Peer (object):
 
 		# Read OPEN
 		wait = environment.settings().bgp.openwait
-		opentimer = ReceiveTimer(self._log('in'),wait,1,1,'waited for open too long, we do not like stuck in active')
+		opentimer = ReceiveTimer(self.me,wait,1,1,'waited for open too long, we do not like stuck in active')
 		# Only yield if we have not the open, otherwise the reactor can run the other connection
 		# which would be bad as we need to do the collission check without going to the other peer
 		for message in proto.read_open(self.neighbor.peer_address.ip):
@@ -284,8 +317,7 @@ class Peer (object):
 			yield ACTION.immediate
 
 		# Start keeping keepalive timer
-		self.send_timer = SendTimer(self._log('in'),proto.negotiated.holdtime)
-		self.recv_timer = ReceiveTimer(self._log('in'),proto.negotiated.holdtime,4,0)
+		self.recv_timer = ReceiveTimer(self.me,proto.negotiated.holdtime,4,0)
 		# Read KEEPALIVE
 		for message in proto.read_keepalive('ESTABLISHED'):
 			self.recv_timer.check_ka(message)
@@ -333,7 +365,7 @@ class Peer (object):
 
 		# Read OPEN
 		wait = environment.settings().bgp.openwait
-		opentimer = ReceiveTimer(self._log('out'),wait,1,1,'waited for open too long, we do not like stuck in active')
+		opentimer = ReceiveTimer(self.me,wait,1,1,'waited for open too long, we do not like stuck in active')
 		for message in self._['out']['proto'].read_open(self.neighbor.peer_address.ip):
 			opentimer.check_ka(message)
 			# XXX: FIXME: change the whole code to use the ord and not the chr version
@@ -366,8 +398,7 @@ class Peer (object):
 			yield ACTION.immediate
 
 		# Start keeping keepalive timer
-		self.send_timer = SendTimer(self._log('in'),proto.negotiated.holdtime)
-		self.recv_timer = ReceiveTimer(self._log('in'),proto.negotiated.holdtime,4,0)
+		self.recv_timer = ReceiveTimer(self.me,proto.negotiated.holdtime,4,0)
 		# Read KEEPALIVE
 		for message in self._['out']['proto'].read_keepalive('ESTABLISHED'):
 			self.recv_timer.check_ka(message)
@@ -377,58 +408,6 @@ class Peer (object):
 		# let the caller know that we were sucesfull
 		yield ACTION.immediate
 
-	def _keepalive (self,direction):
-		# yield :
-		#  True  if we just sent the keepalive
-		#  None  if we are working as we should
-		#  False if something went wrong
-
-		yield 'ready'
-
-		need_keepalive = False
-		generator = None
-		last = NOP
-
-		while not self._teardown:
-			# SEND KEEPALIVES
-			need_keepalive |= self.send_timer.need_ka()
-
-			if need_keepalive and not generator:
-				proto = self._[direction]['proto']
-				if not proto:
-					yield False
-					break
-				generator = proto.new_keepalive()
-				need_keepalive = False
-
-			if generator:
-				try:
-					last = generator.next()
-					if last.TYPE == KeepAlive.TYPE:
-						# close the generator and raise a StopIteration
-						generator.next()
-					yield None
-				except (NetworkError,ProcessError):
-					yield False
-					break
-				except StopIteration:
-					generator = None
-					if last.TYPE != KeepAlive.TYPE:
-						self._generator_keepalive = False
-						yield False
-						break
-					yield True
-			else:
-				yield None
-
-	def send_keepalive (self):
-		generator = self._generator_keepalive
-		if generator:
-			try:
-				return generator.next()
-			except StopIteration:
-				pass
-		return self._generator_keepalive is None
 
 	def _main (self,direction):
 		"yield True if we want to come back to it asap, None if nothing urgent, and False if stopped"
@@ -437,9 +416,6 @@ class Peer (object):
 			raise Notify(6,3)
 
 		proto = self._[direction]['proto']
-
-		# Initialise the keepalive
-		self._generator_keepalive = self._keepalive(direction)
 
 		# Announce to the process BGP is up
 		self.logger.network('Connected to peer %s (%s)' % (self.neighbor.name(),direction))
@@ -462,18 +438,22 @@ class Peer (object):
 			if family in self.neighbor.families():
 				self.neighbor.messages.appendleft(self.neighbor.asm[family])
 
-		counter = Counter(self.logger,self._log(direction))
+		counter = Counter(self.logger,self.me)
 		operational = None
 		refresh = None
 		number = 0
 
+		self.send_ka = KA(self.me,proto)
+
 		while not self._teardown:
 			for message in proto.read_message():
-				# Update timer
 				self.recv_timer.check_ka(message)
 
-				if self.send_keepalive() is False:
-					self.logger.reactor("problem with keepalive for peer %s " % self.neighbor.name(),'error')
+				if self.send_ka() is not False:
+					# we need and will send a keepalive
+					while self.send_ka() is None:
+						print "TRYING ..............."
+						yield ACTION.immediate
 
 				# Give information on the number of routes seen
 				counter.display()
@@ -601,7 +581,7 @@ class Peer (object):
 						except StopIteration:
 							pass
 					except (NetworkError,ProcessError):
-						self.logger.network(self._output(direction,'NOTIFICATION NOT SENT'),'error')
+						self.logger.network(self.me('NOTIFICATION NOT SENT'),'error')
 						pass
 					self._reset(direction,'notification sent (%d,%d)' % (n.code,n.subcode),n)
 				else:
@@ -658,11 +638,11 @@ class Peer (object):
 					# This generator only stops when it raises
 					r = generator.next()
 
-					if r is ACTION.immediate: status = 'immediately'
-					elif r is ACTION.later:   status = 'next second'
-					elif r is ACTION.close:   status = 'stop'
-					else: status = 'buggy'
-					self.logger.network('%s loop %11s, state is %s' % (direction,status,self._[direction]['state']),'debug')
+					### if r is ACTION.immediate: status = 'immediately'
+					### elif r is ACTION.later:   status = 'next second'
+					### elif r is ACTION.close:   status = 'stop'
+					### else: status = 'buggy'
+					### self.logger.network('%s loop %11s, state is %s' % (direction,status,self._[direction]['state']),'debug')
 
 					if r == ACTION.immediate:
 						back = ACTION.immediate
