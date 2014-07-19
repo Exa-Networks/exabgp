@@ -216,7 +216,7 @@ class Decoder (object):
 
 	def parse_command (self,reactor,service,command):
 		for registered in self._dispatch:
-			if command.startswith(registered):
+			if registered in command:
 				return self._dispatch[registered](self,reactor,service,command)
 		self.logger.reactor("Command from process not understood : %s" % command,'warning')
 		return False
