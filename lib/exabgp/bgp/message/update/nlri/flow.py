@@ -499,10 +499,11 @@ class Flow (NLRI):
 				if idx and not rule.operations & NumericOperator.AND:
 					s.append(', ')
 				s.append('"%s"' % rule)
-			string.append(' "%s" : [ %s ]' % (rules[0].NAME,''.join(str(_) for _ in s)))
-		nexthop = ', "next-hop" : "%s"' % self.nexthop if self.nexthop is not NoIP else ''
+			string.append(' "%s": [ %s ]' % (rules[0].NAME,''.join(str(_) for _ in s)))
+		nexthop = ', "next-hop": "%s"' % self.nexthop if self.nexthop is not NoIP else ''
 		rd = ', %s' % self.rd.json() if self.rd else ''
-		return '{' + rd + ','.join(string) + nexthop + ' }'
+		compatibility = ', "string": "%s"' % self.extensive()
+		return '{' + rd + ','.join(string) + nexthop + compatibility +' }'
 
 	def json (self):
 		# this is a stop gap so flow route parsing does not crash exabgp
