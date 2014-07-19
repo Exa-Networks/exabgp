@@ -52,13 +52,15 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		announced = [ord(_) for _ in body[2+len_w + 2+len_a:]]
 
 		if not withdrawn and not announced:
-			if len(body) == 11:
+			if len(body) == 4:
+				yield 'eor:1:1','raw:%s' % bytestream(body)
+			elif len(body) == 11:
 				yield 'eor:%d:%d' % (ord(body[-2]),ord(body[-1])),'raw:%s' % bytestream(body)
 			else:  # undecoded MP route
 				yield 'mp:','raw:%s' % bytestream(body)
 
 		while withdrawn:
-			if len(withdrawn) > 5:
+			if len(withdrawn) > 4:
 				yield '', 'raw:%s' % bytestream(body)
 				break
 			m = withdrawn.pop(0)
@@ -69,7 +71,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 			yield 'withdraw:%s' % '.'.join(str(_) for _ in r) + '/' + str(m), 'raw:%s' % bytestream(body)
 
 		while announced:
-			if len(announced) > 5:
+			if len(announced) > 4:
 				yield '', 'raw:%s' % bytestream(body)
 				break
 			m = announced.pop(0)
