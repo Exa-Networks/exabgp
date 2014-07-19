@@ -1,6 +1,24 @@
 # encoding: utf-8
+"""
+exabgp.py
 
-"""\
+Created by Thomas Mangin on 2009-08-30.
+Copyright (c) 2009 Exa Networks. All rights reserved.
+"""
+
+import os
+import sys
+import string
+import syslog
+
+from exabgp.version import version
+# import before the fork to improve copy on write memory savings
+from exabgp.reactor import Reactor
+
+from exabgp.dep import docopt
+from exabgp.dep import lsprofcalltree
+
+usage = """\
 The BGP swiss army knife of networking
 
 usage: exabgp [--help] [--version] [--folder FOLDER] [--env ENV]
@@ -85,24 +103,6 @@ The program configuration can be controlled using signals:
  * SIGHUP  : terminate ExaBGP (does NOT reload the configuration anymore)
 """
 
-"""
-exabgp.py
-
-Created by Thomas Mangin on 2009-08-30.
-Copyright (c) 2009 Exa Networks. All rights reserved.
-"""
-
-import os
-import sys
-import string
-import syslog
-
-from exabgp.version import version
-# import before the fork to improve copy on write memory savings
-from exabgp.reactor import Reactor
-
-from exabgp.dep import docopt
-from exabgp.dep import lsprofcalltree
 
 def is_hex (s):
 	return all(c in string.hexdigits or c == ':' for c in s)
@@ -121,11 +121,8 @@ def __exit(memory,code):
 		objgraph.show_backrefs([obj], max_depth=10)
 	sys.exit(code)
 
-def print_help():
-	print(__doc__)
-
 def main ():
-	options = docopt.docopt(__doc__, help=False)
+	options = docopt.docopt(usage, help=False)
 
 	main = int(sys.version[0])
 	secondary = int(sys.version[2])
@@ -140,7 +137,8 @@ def main ():
 	if options["--decode"]:
 		decode = ''.join(options["--decode"]).replace(':','').replace(' ','')
 		if not is_hex(decode):
-			print_help()
+			print(usage)
+			print 'Environment values are:\n' + '\n'.join(' - %s' % _ for _ in environment.default())
 			print ("\n\n"
 				   "The BGP message must be an hexadecimal string.\n"
 				   "All colons or spaces are ignored, for example:\n"
@@ -249,13 +247,13 @@ def main ():
 	try:
 		env = environment.setup(envfile)
 	except environment.Error,e:
-		print_help()
+		print(usage)
 		print '\nconfiguration issue,', str(e)
 		sys.exit(1)
 
 	if options["--help"]:
-		print_help()
-		print '\n\nEnvironment values are:\n' + '\n'.join(' - %s' % _ for _ in environment.default())
+		print(usage)
+		print 'Environment values are:\n' + '\n'.join(' - %s' % _ for _ in environment.default())
 		sys.exit(0)
 
 	if options["--decode"]:
@@ -324,7 +322,8 @@ def main ():
 		for f in options["<configuration>"]:
 			configurations.append(os.path.realpath(os.path.normpath(f)))
 	else:
-		print_help()
+		print(usage)
+		print 'Environment values are:\n' + '\n'.join(' - %s' % _ for _ in environment.default())
 		print '\nno configuration file provided'
 		sys.exit(1)
 
