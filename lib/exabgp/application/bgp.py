@@ -5,7 +5,7 @@ The BGP swiss army knife of networking
 
 usage: exabgp [--help] [--version] [--folder FOLDER] [--env ENV]
               [[--full-ini | --diff-ini | --full-env | --diff-env] |
-              [--fi | --di | --fe |--de]]
+              [--fi | --di | --fe | --de]]
               [--debug] [--once] [--pdb] [--memory] [--profile PROFILE] [--test]
               [--decode HEX_MESSAGE]...
               [<configuration>...]
@@ -40,7 +40,7 @@ debugging:
                         exceptions (shortcut for exabgp.pdb.enable=true)
   --memory, -s          display memory usage information on exit
   --profile PROFILE     enable profiling (shortcut for
-                        exabgp.profile.enable=true exabgp.profle=file=<file>)
+                        exabgp.profile.enable=true exabgp.profle.file=PROFILE)
   --test, -t            perform a configuration validity check only
   --decode HEX_MESSAGE, -x HEX_MESSAGE
                         decode a raw route packet in hexadecimal string
