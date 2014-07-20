@@ -7,6 +7,7 @@ Important
 ROADMAP
 
 In no particular order:
+- Counter for what was seen, API to consult it
 - Have named attributes in the configuration for reference
 - We create LOTS of try:except block in schedule() can we fix it and make the code faster
 - Clean the way we use str(), extensive(), string()
