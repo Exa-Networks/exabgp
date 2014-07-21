@@ -20,7 +20,7 @@ class ASN4 (Capability,ASN):
 		ASN.__init__(self,value)
 
 	def __str__ (self):
-		return 'ASN4(%d)' % int(self)
+		return '"ASN4(%d)"' % int(self)
 
 	@staticmethod
 	def unpack (what,instance,data):
