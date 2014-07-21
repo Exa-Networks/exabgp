@@ -5,6 +5,9 @@ Version explained:
 
 Version 3.4.1
  * Fix: on bad JSON message
+    patch from: Wouter Miltenburg
+ * Fix: parsing of default route
+    reported by: Wouter Miltenburg
 
 Version 3.4.0
  * Feature: add support for extended-attribute for FlowSpec
