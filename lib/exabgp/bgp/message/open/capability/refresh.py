@@ -21,6 +21,9 @@ class RouteRefresh (Capability):
 			return 'Route Refresh'
 		return 'Cisco Route Refresh'
 
+	def json (self):
+		return '{ "name": "route-refresh", "variant": "%s" }' % "RFC" if self.ID == CapabilityID.ROUTE_REFRESH else "Cisco"
+
 	def extract (self):
 		return ['']
 
@@ -41,6 +44,9 @@ class EnhancedRouteRefresh (Capability):
 
 	def __str__ (self):
 		return 'Enhanced Route Refresh'
+
+	def json (self):
+		return '{ "name": "enhanced-route-refresh" }'
 
 	def extract (self):
 		return ['']

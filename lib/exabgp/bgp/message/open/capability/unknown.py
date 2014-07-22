@@ -22,6 +22,15 @@ class UnknownCapability (Capability):
 		if self.value in CapabilityID.unassigned: return 'Unassigned %s' % str(self.value)
 		return 'Unknown %s' % str(self.value)
 
+	def json (self):
+		if self.value in CapabilityID.reserved:
+			iana = 'reserved'
+		elif self.value in CapabilityID.unassigned:
+			iana = 'unassigned'
+		else:
+			iana = 'unknown'
+		return '{ "name": "unknown", "iana": "%s", "value": %d, "raw": "%s" }' % (iana,self.value,self.raw)
+
 	def extract (self):
 		return []
 

@@ -35,6 +35,10 @@ class AddPath (Capability,dict):
 	def __str__ (self):
 		return 'AddPath(' + ','.join(["%s %s %s" % (self.string[self[aafi]],xafi,xsafi) for (aafi,xafi,xsafi) in [((afi,safi),str(afi),str(safi)) for (afi,safi) in self]]) + ')'
 
+	def json (self):
+		families = ','.join('"%s/%s": "%s"' % (xafi,xsafi,self.string[self[aafi]]) for (aafi,xafi,xsafi) in (((afi,safi),str(afi),str(safi)) for (afi,safi) in self))
+		return '{ "name": "addpath"%s%s }' % (', ' if families else '', families)
+
 	def extract (self):
 		rs = []
 		for v in self:

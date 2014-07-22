@@ -21,6 +21,9 @@ class MultiProtocol (Capability,list):
 	def __str__ (self):
 		return 'Multiprotocol(' + ','.join(["%s %s" % (str(afi),str(safi)) for (afi,safi) in self]) + ')'
 
+	def json (self):
+		return '{ "name": "multiprotocol", "families": [%s ] }' % ','.join([' "%s/%s"' % (str(afi),str(safi)) for (afi,safi) in self])
+
 	def extract (self):
 		rs = []
 		for v in self:

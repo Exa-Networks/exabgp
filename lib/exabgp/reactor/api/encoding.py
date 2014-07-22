@@ -211,10 +211,13 @@ class JSON (object):
 		'} '% (neighbor,content)
 
 	def _kv (self,extra):
-		return ", ".join('"%s": %s' % (_,self._string(__)) for (_,__) in extra.iteritems()) + ' '
+		return ", ".join('"%s": %s' % (k,self._string(v)) for (k,v) in extra.iteritems())
+
+	def _json_kv (self,extra):
+		return ", ".join('"%s": %s' % (k,v.json()) for (k,v) in extra.iteritems())
 
 	def _minimalkv (self,extra):
-		return ", ".join('"%s": %s' % (_,self._string(__)) for (_,__) in extra.iteritems() if __) + ' '
+		return ", ".join('"%s": %s' % (k,self._string(v)) for (k,v) in extra.iteritems() if v)
 
 	def up (self,peer):
 		return self._header(self._neighbor(peer,self._kv({
@@ -266,7 +269,7 @@ class JSON (object):
 				'asn'          : sent_open.asn,
 				'hold_time'    : sent_open.hold_time,
 				'router_id'    : sent_open.router_id,
-				'capabilities' : '{ %s } ' % self._kv(sent_open.capabilities),
+				'capabilities' : '{ %s }' % self._json_kv(sent_open.capabilities),
 			})
 		})),header,body,peer.neighbor.identificator(),self.count(peer),message_type='open')
 
@@ -298,7 +301,7 @@ class JSON (object):
 			m = ''
 			for nexthop in plus[family]:
 				nlris = plus[family][nexthop]
-				m += '"%s" : { ' % nexthop
+				m += '"%s": { ' % nexthop
 				m += ', '.join('%s' % nlri.json() for nlri in nlris)
 				m += ' }, '
 			s += m[:-2]

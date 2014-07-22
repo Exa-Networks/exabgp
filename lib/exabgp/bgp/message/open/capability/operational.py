@@ -19,6 +19,9 @@ class Operational (Capability,list):
 		# XXX: FIXME: could be more verbose
 		return 'Operational'
 
+	def json (self):
+		return '{ "name": "operational" }'
+
 	def extract (self):
 		return ['']
 

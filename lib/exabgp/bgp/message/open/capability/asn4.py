@@ -28,4 +28,7 @@ class ASN4 (Capability,ASN):
 		instance = ASN.unpack(data,ASN4)
 		return instance
 
+	def json (self):
+		return '{ "name": "asn4", "asn4": %d }' % self
+
 ASN4.register_capability()
