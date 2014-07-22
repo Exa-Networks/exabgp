@@ -8,6 +8,7 @@ time.sleep(3)
 
 while True:
 	line = sys.stdin.readline()
+	time.sleep(1)
 	if line:
 		break
 

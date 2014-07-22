@@ -8,7 +8,7 @@ Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 
 from exabgp.rib.store import Store
 
-class RIB:
+class RIB (object):
 
 	# when we perform a configuration reload using SIGUSR, we must not use the RIB
 	# without the cache, all the updates previously sent via the API are lost

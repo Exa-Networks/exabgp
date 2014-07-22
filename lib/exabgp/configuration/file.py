@@ -1010,6 +1010,8 @@ class Configuration (object):
 			scope[-1][command] = None
 			return True
 		try:
+			if value and value[0] in ('disable','disabled'):
+				return True
 			# README: Should it be a subclass of int ?
 			grace = int(value[0])
 			if grace < 0:
@@ -1264,18 +1266,8 @@ class Configuration (object):
 			self.logger.configuration('group-updates not enabled for peer %s, it surely should, the default will change to true soon' % neighbor.peer_address,'warning')
 			self.logger.configuration('-'*80,'warning')
 
-		# create one neighbor object per family for multisession
-		if neighbor.multisession:
-			for family in neighbor.families():
-				# XXX: FIXME: Ok, it works but it takes LOTS of memory ..
-				m_neighbor = deepcopy(neighbor)
-				for f in neighbor.families():
-					if f == family:
-						continue
-					m_neighbor.rib.outgoing.remove_family(f)
-
-				m_neighbor.make_rib()
-
+		def _init_neighbor (neighbor):
+				neighbor.make_rib()
 				families = neighbor.families()
 				for change in changes:
 					if change.nlri.family() in families:
@@ -1287,26 +1279,27 @@ class Configuration (object):
 							neighbor.asm[message.family()] = message
 						else:
 							neighbor.messages.append(message)
-				self._neighbor[m_neighbor.name()] = m_neighbor
-		else:
-			neighbor.make_rib()
-			families = neighbor.families()
-			for change in changes:
-				if change.nlri.family() in families:
-					# This add the family to neighbor.families()
-					neighbor.rib.outgoing.insert_announced_watchdog(change)
-			for message in messages:
-				if message.family() in families:
-					if message.name == 'ASM':
-						neighbor.asm[message.family()] = message
-					else:
-						neighbor.messages.append(message)
-			self._neighbor[neighbor.name()] = neighbor
+				self._neighbor[neighbor.name()] = neighbor
 
+		# create one neighbor object per family for multisession
+		if neighbor.multisession:
+			for family in neighbor.families():
+				# XXX: FIXME: Ok, it works but it takes LOTS of memory ..
+				m_neighbor = deepcopy(neighbor)
+				for f in neighbor.families():
+					if f == family:
+						continue
+					m_neighbor.rib.outgoing.remove_family(f)
+				_init_neighbor(m_neighbor)
+		else:
+			_init_neighbor(neighbor)
+
+		# display configuration
 		for line in str(neighbor).split('\n'):
 			self.logger.configuration(line)
 		self.logger.configuration("\n")
 
+		# ...
 		scope.pop(-1)
 		return True
 

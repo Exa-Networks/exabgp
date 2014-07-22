@@ -98,6 +98,9 @@ class IP (object):
 			return -1
 		return 1
 
+	def __hash__ (self):
+		return hash(str(self.__class__.__name__) + self.packed)
+
 	@classmethod
 	def klass (cls,ip):
 		# the orders matters as ::FFFF:<ipv4> is an IPv6 address
