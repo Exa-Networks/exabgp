@@ -7,6 +7,7 @@ Important
 ROADMAP
 
 In no particular order:
+- APIOptions should barf if invalid names are used as keys
 - Counter for what was seen, API to consult it
 - Have named attributes in the configuration for reference
 - We create LOTS of try:except block in schedule() can we fix it and make the code faster

@@ -12,6 +12,8 @@ Version 3.4.1
  * Fix: forgot some processes options when printing neighbor
  * Fix: bad function call for API
  * Fix: correct JSON for OPEN
+ * Fix: issues with bad naming of APIOption
+    patch from: Wouter Miltenburg
 
 Version 3.4.0
  * Feature: add support for extended-attribute for FlowSpec
