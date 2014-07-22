@@ -141,7 +141,7 @@ class Protocol (object):
 			if not length:
 				yield _NOP
 
-		if self.neighbor.api['receive_packets'] and not self.neighbor.api['consolidate']:
+		if self.neighbor.api['receive-packets'] and not self.neighbor.api['consolidate']:
 			self.peer.reactor.processes.receive(self.peer,msg,header,body)
 
 		if msg == Message.ID.UPDATE and not self.neighbor.api['receive-parsed'] and not self.log_routes:

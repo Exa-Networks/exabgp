@@ -152,11 +152,11 @@ class Neighbor (object):
 
 		_receive  = []
 
-		_receive.extend(['      parsed;\n',]           if self.api['receive_parsed'] else [])
-		_receive.extend(['      packets;\n',]          if self.api['receive_packets'] else [])
+		_receive.extend(['      parsed;\n',]           if self.api['receive-parsed'] else [])
+		_receive.extend(['      packets;\n',]          if self.api['receive-packets'] else [])
 		_receive.extend(['      consolidate;\n',]      if self.api['consolidate'] else [])
 
-		_receive.extend(['      neighbor-changes;\n',] if self.api['neighbor_changes'] else [])
+		_receive.extend(['      neighbor-changes;\n',] if self.api['neighbor-changes'] else [])
 		_receive.extend(['      notification;\n',]     if self.api[Message.ID.NOTIFICATION] else [])
 		_receive.extend(['      open;\n',]             if self.api[Message.ID.OPEN] else [])
 		_receive.extend(['      keepalive;\n',]        if self.api[Message.ID.KEEPALIVE] else [])
@@ -170,7 +170,7 @@ class Neighbor (object):
 		receive = ''.join(_receive)
 
 		_send = []
-		_send.extend(['      packets;\n',]          if self.api['send_packets'] else [])
+		_send.extend(['      packets;\n',]          if self.api['send-packets'] else [])
 		send = ''.join(_send)
 
 		return """\
