@@ -40,14 +40,10 @@ class Connection (object):
 	def __init__ (self,afi,peer,local):
 		# peer and local are strings of the IP
 
-		# If the OS tells us we have data on the socket, we should never have to wait more than read_timeout to be able to read it.
-		# However real life says that on some OS we do ... So let the user control this value
 		try:
-			self.read_timeout = environment.settings().tcp.timeout
 			self.defensive = environment.settings().debug.defensive
 			self.logger = Logger()
 		except RuntimeError:
-			self.read_timeout = 1
 			self.defensive = True
 			self.logger = FakeLogger()
 
@@ -55,8 +51,6 @@ class Connection (object):
 		self.peer = peer
 		self.local = local
 
-		self._reading = None
-		self._writing = None
 		self._buffer = ''
 		self.io = None
 		self.established = False
@@ -94,9 +88,6 @@ class Connection (object):
 					self.logger.wire("%s %s errno %s on socket" % (self.name(),self.peer,errno.errorcode[e.args[0]]))
 					raise NetworkError('errno %s on socket' % errno.errorcode[e.args[0]])
 				return False
-
-			if r:
-				self._reading = time.time()
 			return r != []
 
 	def writing (self):
@@ -109,9 +100,6 @@ class Connection (object):
 					self.logger.wire("%s %s errno %s on socket" % (self.name(),self.peer,errno.errorcode[e.args[0]]))
 					raise NetworkError('errno %s on socket' % errno.errorcode[e.args[0]])
 				return False
-
-			if w:
-				self._writing = time.time()
 			return w != []
 
 	def _reader (self,number):
@@ -122,9 +110,7 @@ class Connection (object):
 		if number == 0:
 			yield ''
 			return
-		# XXX: one of the socket option is to recover the size of the buffer
-		# XXX: we could use it to not have to put together the string with multiple reads
-		# XXX: and get rid of the self.read_timeout option
+
 		while not self.reading():
 			yield ''
 		data = ''
@@ -132,13 +118,6 @@ class Connection (object):
 		while True:
 			try:
 				while True:
-					if self._reading is None:
-						self._reading = time.time()
-					elif time.time() > self._reading + self.read_timeout:
-						self.close()
-						self.logger.wire("%s %s peer is too slow (we were told there was data on the socket but we can not read up to what should be there)" % (self.name(),self.peer))
-						raise TooSlowError('Waited to read for data on a socket for more than %d second(s)' % self.read_timeout)
-
 					if self.defensive and random.randint(0,2):
 						raise socket.error(errno.EAGAIN,'raising network error in purpose')
 
@@ -152,7 +131,6 @@ class Connection (object):
 					number -= len(read)
 					if not number:
 						self.logger.wire(LazyFormat("%s %-32s RECEIVED " % (self.name(),'%s / %s' % (self.local,self.peer)),od,read))
-						self._reading = None
 						yield data
 						return
 			except socket.timeout,e:
@@ -185,13 +163,6 @@ class Connection (object):
 		while True:
 			try:
 				while True:
-					if self._writing is None:
-						self._writing = time.time()
-					elif time.time() > self._writing + self.read_timeout:
-						self.close()
-						self.logger.wire("%s %s peer is too slow" % (self.name(),self.peer))
-						raise TooSlowError('Waited to write for data on a socket for more than %d second(s)' % self.read_timeout)
-
 					if self.defensive and random.randint(0,2):
 						raise socket.error(errno.EAGAIN,'raising network error in purpose')
 
@@ -205,7 +176,6 @@ class Connection (object):
 
 					data = data[nb:]
 					if not data:
-						self._writing = None
 						yield True
 						return
 					yield False

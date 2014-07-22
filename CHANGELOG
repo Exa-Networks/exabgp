@@ -8,6 +8,7 @@ Version 3.4.1
     patch from: Wouter Miltenburg
  * Fix: parsing of default route
     reported by: Wouter Miltenburg
+ * Fix: remove legacy exabgp.tcp.timeout
 
 Version 3.4.0
  * Feature: add support for extended-attribute for FlowSpec
