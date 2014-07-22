@@ -88,8 +88,6 @@ class NLRI (Address):
 			raise Notify(3,10,'not enough data for the mask provided to decode the NLRI')
 
 		size = CIDR.size(mask)
-		if not size:
-			raise Notify(3,10,'invalid netmask found when decoding NLRI')
 
 		if len(bgp) < size:
 			raise Notify(3,10,'could not decode route with AFI %d sand SAFI %d' % (afi,safi))
