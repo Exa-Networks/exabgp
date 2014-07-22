@@ -163,10 +163,14 @@ class Neighbor (object):
 		_receive.extend(['      update;\n',]           if self.api[Message.ID.UPDATE] else [])
 		_receive.extend(['      refresh;\n',]          if self.api[Message.ID.ROUTE_REFRESH] else [])
 		_receive.extend(['      operational;\n',]      if self.api[Message.ID.OPERATIONAL] else [])
+		_receive.extend(['      parsed;\n',]           if self.api['receive-parsed'] else [])
+		_receive.extend(['      packets;\n',]          if self.api['receive-packets'] else [])
+		_receive.extend(['      consolidate;\n',]      if self.api['consolidate'] else [])
+
 		receive = ''.join(_receive)
 
 		_send = []
-		_send.extend(['      messages;\n',]          if self.api['send_packets'] else [])
+		_send.extend(['      packets;\n',]          if self.api['send_packets'] else [])
 		send = ''.join(_send)
 
 		return """\

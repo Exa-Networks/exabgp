@@ -9,6 +9,7 @@ Version 3.4.1
  * Fix: parsing of default route
     reported by: Wouter Miltenburg
  * Fix: remove legacy exabgp.tcp.timeout
+ * Fix: forgot some processes options when printing neighbor
 
 Version 3.4.0
  * Feature: add support for extended-attribute for FlowSpec
