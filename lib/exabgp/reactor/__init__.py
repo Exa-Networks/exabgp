@@ -387,7 +387,7 @@ class Reactor (object):
 			del self.peers[key]
 
 	def answer (self,service,string):
-		self.reactor.processes.write(service,string)
+		self.processes.write(service,string)
 		self.logger.reactor('Responding to %s : %s' % (service,string))
 
 	def api_shutdown (self):
