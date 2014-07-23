@@ -14,6 +14,7 @@ Version 3.4.1
  * Fix: correct JSON for OPEN
  * Fix: issues with bad naming of APIOption
     patch from: Wouter Miltenburg
+ * Fix: do not try to be clever (and possibly get it wrong) and rely on keepalive timer to detect TCP faults
 
 Version 3.4.0
  * Feature: add support for extended-attribute for FlowSpec
