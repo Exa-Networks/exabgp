@@ -173,7 +173,7 @@ class Peer (object):
 
 		if self._restart:
 			if self._[direction]['proto']:
-				self._[direction]['proto'].close('%s loop reset %s %s' % (direction,message,str(error)))
+				self._[direction]['proto'].close('%s loop, peer reset, message [%s] error[%s]' % (direction,message,str(error)))
 			self._[direction]['proto'] = None
 			self._[direction]['generator'] = self._[direction]['enabled']
 			self._teardown = None
@@ -190,7 +190,7 @@ class Peer (object):
 
 	def _stop (self,direction,message):
 		self._[direction]['generator'] = False
-		self._[direction]['proto'].close('%s loop stop %s' % (direction,message))
+		self._[direction]['proto'].close('%s loop, stop, message [%s]' % (direction,message))
 		self._[direction]['proto'] = None
 
 	# connection delay
