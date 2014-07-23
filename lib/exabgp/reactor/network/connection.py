@@ -120,7 +120,8 @@ class Connection (object):
 				while True:
 					if self.defensive and random.randint(0,2):
 						raise socket.error(errno.EAGAIN,'raising network error in purpose')
-					data += self.io.recv(number)
+					read = self.io.recv(number)
+					data += read
 					number -= len(read)
 					if not number:
 						self.logger.wire(LazyFormat("%s %-32s RECEIVED " % (self.name(),'%s / %s' % (self.local,self.peer)),od,read))
