@@ -50,7 +50,7 @@ class Graceful (Capability,dict):
 		d['name']     = '"graceful restart"'
 		d['time']     = self.restart_time
 		d['address family flags'] = '{ %s} ' % ', '.join('"%s/%s": [ %s]' % (afi,safi,'"restart" ' if family&0x80 else '') for afi,safi,family in [(str(afi),str(safi),self[(afi,safi)]) for (afi,safi) in self.keys()])
-		d['restart flags']    = '[ %s] ' % '"forwarding" ' if self.restart_flag& 0x8 else ''
+		d['restart flags']    = '[ %s] ' % ('"forwarding" ' if self.restart_flag& 0x8 else '')
 
 		return '{ %s} ' % ','.join('"%s": %s' % (k,v) for k,v in d.iteritems())
 
