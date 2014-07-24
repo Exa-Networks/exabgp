@@ -44,7 +44,7 @@ class OriginASNIP (Origin):
 		Origin.__init__(self,community if community else pack('!BBH4s',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,asn,IPv4.pton(ip)))
 
 	def __str__ (self):
-		return "origin:%d:%s" % (self.asn,self.ip)
+		return "origin:%s:%s" % (self.asn,self.ip)
 
 	@staticmethod
 	def unpack(data):
@@ -69,7 +69,7 @@ class OriginIPASN (Origin):
 		Origin.__init__(self,community if community else pack('!BB4sH',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,IPv4.pton(ip),asn))
 
 	def __str__ (self):
-		return "origin:%s:%d" % (self.ip, self.asn)
+		return "origin:%s:%s" % (self.ip, self.asn)
 
 	@staticmethod
 	def unpack (data):
@@ -94,7 +94,7 @@ class OriginASN4Number (Origin):
 		Origin.__init__(self,community if community else pack('!BBLH',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,asn,number))
 
 	def __str__ (self):
-		return "origin:%d:%d" % (self.asn, self.number)
+		return "origin:%s:%s" % (self.asn, self.number)
 
 	@staticmethod
 	def unpack (data):

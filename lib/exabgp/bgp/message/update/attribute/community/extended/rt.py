@@ -69,7 +69,7 @@ class RouteTargetIPASN (RouteTarget):
 		RouteTarget.__init__(self,community if community else pack('!BB4sH',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,IPv4.pton(ip),asn))
 
 	def __str__ (self):
-		return "target:%s:%d" % (self.ip, self.asn)
+		return "target:%s:%s" % (self.ip, self.asn)
 
 	@staticmethod
 	def unpack (data):
@@ -94,7 +94,7 @@ class RouteTargetASN4Number (RouteTarget):
 		RouteTarget.__init__(self,community if community else pack('!BBLH',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,asn,number))
 
 	def __str__ (self):
-		return "target:%d:%d" % (self.asn, self.number)
+		return "target:%d:%s" % (self.asn, self.number)
 
 	@staticmethod
 	def unpack (data):
