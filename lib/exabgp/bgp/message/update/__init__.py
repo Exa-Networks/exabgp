@@ -252,7 +252,7 @@ class Update (Message):
 
 		# This could be speed up massively by changing the order of the IF
 		if length == 23:
-			return EOR.unpack_message()
+			return EOR(AFI.ipv4,SAFI.unicast,IN.announced)
 		if length == 30 and data.startswith(EOR.NLRI.PREFIX):
 			return EOR.unpack_message(data)
 
