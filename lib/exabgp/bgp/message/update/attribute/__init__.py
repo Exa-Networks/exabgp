@@ -100,8 +100,8 @@ class Attributes (dict):
 		# The parsed attributes have no mp routes and/or those are last
 		self.cacheable = True
 
-		# XXX: FIXME: we should cache the attributes parsed, should it be set elsewhere ?
-		Attribute.cache = environment.settings().cache.attributes
+		# XXX: FIXME: surely not the best place for this
+		Attribute.caching = environment.settings().cache.attributes
 
 	def has (self,k):
 		return k in self
@@ -322,7 +322,9 @@ class Attributes (dict):
 		key = "%s:%s" % (as2path.index, as4path.index)
 
 		# found a cache copy
-		if self.add_from_cache(Attribute.ID.AS_PATH,key):
+		cached = Attribute.cache.get(Attribute.ID.AS_PATH,{}).get(key,None)
+		if cached:
+			self.add(cached,key)
 			return
 
 		as_seq = []
