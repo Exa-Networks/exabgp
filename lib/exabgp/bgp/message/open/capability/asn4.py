@@ -29,6 +29,6 @@ class ASN4 (Capability,ASN):
 		return instance
 
 	def json (self):
-		return '{ "name": "asn4", "asn4": %d }' % self
+		return '{ "name": "asn4", "asn4": %d }' % int(self)
 
 ASN4.register_capability()
