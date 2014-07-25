@@ -120,8 +120,14 @@ class Connection (object):
 				while True:
 					if self.defensive and random.randint(0,2):
 						raise socket.error(errno.EAGAIN,'raising network error in purpose')
+
 					read = self.io.recv(number)
+					if not read:
+						self.close()
+						self.logger.wire("%s %s lost TCP session with peer" % (self.name(),self.peer))
+						raise LostConnection('the TCP connection was closed by the remote end')
 					data += read
+
 					number -= len(read)
 					if not number:
 						self.logger.wire(LazyFormat("%s %-32s RECEIVED " % (self.name(),'%s / %s' % (self.local,self.peer)),od,read))
