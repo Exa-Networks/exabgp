@@ -201,6 +201,5 @@ class AS4Path (ASPath):
 			return None  # AS4Path.Empty
 		return cls.__new_aspaths(data,True,AS4Path)
 
-
 AS4Path.Empty = AS4Path([],[])
 AS4Path.register_attribute()

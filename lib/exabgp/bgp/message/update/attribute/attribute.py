@@ -28,6 +28,7 @@ class Attribute (object):
 
 	# Registered subclasses we know how to decode
 	registered_attributes = dict()
+	registered_codes = dict()
 
 	# Are we caching Attributes (configuration)
 	caching = False
@@ -129,18 +130,19 @@ class Attribute (object):
 	@classmethod
 	def register_attribute (cls,attribute_id=None,flag=None):
 		aid = cls.ID if attribute_id is None else attribute_id
-		flg = cls.FLAG | 0x10 if flag is None else flag | 0x10
+		flg = cls.FLAG | Flag.EXTENDED_LENGTH if flag is None else flag | Flag.EXTENDED_LENGTH
 		if (aid,flg) in cls.registered_attributes:
 			raise RuntimeError('only one class can be registered per capability')
 		cls.registered_attributes[(aid,flg)] = cls
+		cls.registered_codes[aid] = cls
 
 	@classmethod
 	def registered (cls,attribute_id,flag):
-		return (attribute_id,flag | 0x10) in cls.registered_attributes
+		return (attribute_id,flag | Flag.EXTENDED_LENGTH) in cls.registered_attributes
 
 	@classmethod
 	def klass (cls,attribute_id,flag):
-		key = (attribute_id,flag | 0x10)
+		key = (attribute_id,flag | Flag.EXTENDED_LENGTH)
 		if key in cls.registered_attributes:
 			kls = cls.registered_attributes[key]
 			kls.ID = attribute_id
@@ -154,7 +156,7 @@ class Attribute (object):
 		if cache and data in cls.cache.get(cls.ID,{}):
 			return cls.cache[cls.ID].retrieve(data)
 
-		key = (attribute_id,flag | 0x10)
+		key = (attribute_id,flag | Flag.EXTENDED_LENGTH)
 		if key in Attribute.registered_attributes.keys():
 			instance = cls.klass(attribute_id,flag).unpack(data,negotiated)
 
