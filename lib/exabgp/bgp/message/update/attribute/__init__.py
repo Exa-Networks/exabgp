@@ -302,14 +302,19 @@ class Attributes (dict):
 			self.add(Attribute.unpack(code,flag,attribute,negotiated))
 			return self.parse(next,negotiated)
 		# XXX: FIXME: we could use a fallback function here like capability
-		elif flag & Flag.TRANSITIVE:
-			self.add(UnknownAttribute(code,flag,attribute),attribute)
-			logger.parser('unknown transitive attribute (code 0x%02X, flag 0x%02X)' % (code,flag))
-			return self.parse(next,negotiated)
-		else:
-			logger.parser('ignoring non-transitive attribute (code 0x%02X, flag 0x%02X)' % (code,flag))
+
+		# ARGH, we got an invalid FLAG ignore the attribute ...
+		if code in Attribute.registered_codes.keys():
+			logger.parser('invalid flag for attribute %s (code 0x%02X, flag 0x%02X)' % (Attribute.names.get(code,'unset'),code,flag))
 			return self.parse(next,negotiated)
 
+		if flag & Flag.TRANSITIVE:
+			logger.parser('unknown transitive attribute (code 0x%02X, flag 0x%02X)' % (code,flag))
+			self.add(UnknownAttribute(code,flag,attribute),attribute)
+			return self.parse(next,negotiated)
+
+		logger.parser('ignoring unknown non-transitive attribute (code 0x%02X, flag 0x%02X)' % (code,flag))
+		return self.parse(next,negotiated)
 
 	def merge_attributes (self):
 		as2path = self[Attribute.ID.AS_PATH]
