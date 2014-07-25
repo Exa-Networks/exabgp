@@ -89,7 +89,7 @@ class Reactor (object):
 
 	def ready (self,ios,sleeptime=0):
 		if not ios:
-			time.sleep(sleeptime)
+			time.sleep(max(0,sleeptime))
 			return []
 		try:
 			read,_,_ = select.select(ios,[],[],sleeptime)

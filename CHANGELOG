@@ -18,6 +18,9 @@ Version 3.4.1
  * Fix: formating issue of extended community
  * Fix: issue with EOR
  * Fix: caching issue
+    reported by: Wouter Miltenburg
+ * Fix: make sure we do not call select with a negative time
+    reported by: Wouter Miltenburg, Daniel Piekacz
 
 Version 3.4.0
  * Feature: add support for extended-attribute for FlowSpec
