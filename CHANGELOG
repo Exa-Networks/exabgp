@@ -21,6 +21,8 @@ Version 3.4.1
     reported by: Wouter Miltenburg
  * Fix: make sure we do not call select with a negative time
     reported by: Wouter Miltenburg, Daniel Piekacz
+ * Fix: handle AS4_PATH with PARTIAL bit set
+    reported by: Daniel Piekacz
 
 Version 3.4.0
  * Feature: add support for extended-attribute for FlowSpec
