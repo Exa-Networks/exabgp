@@ -147,13 +147,11 @@ class Attribute (object):
 			kls = cls.registered_attributes[key]
 			kls.ID = attribute_id
 			return kls
-		# XXX: we do see some AS4_PATH with the partial bit set !!
+		# XXX: we do see some AS4_PATH with the partial instead of transitive bit set !!
 		if attribute_id == Attribute.ID.AS4_PATH:
-			key = (attribute_id,flag | Flag.EXTENDED_LENGTH | Flag.PARTIAL)
-			if key in cls.registered_attributes:
-				kls = cls.registered_attributes[key]
-				kls.ID = attribute_id
-				return kls
+			kls = cls.registered_codes[attribute_id]
+			kls.ID = attribute_id
+			return kls
 		raise Notify (2,4,'can not handle attribute id %s' % attribute_id)
 
 	@classmethod
