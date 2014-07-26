@@ -305,7 +305,7 @@ class Attributes (dict):
 
 		# ARGH, we got an invalid FLAG ignore the attribute ...
 		if code in Attribute.registered_codes.keys():
-			logger.parser('invalid flag for attribute %s (code 0x%02X, flag 0x%02X)' % (Attribute.names.get(code,'unset'),code,flag))
+			logger.parser('invalid flag for attribute %s (code 0x%02X, flag 0x%02X)' % (Attribute.ID.names.get(code,'unset'),code,flag))
 			return self.parse(next,negotiated)
 
 		if flag & Flag.TRANSITIVE:
