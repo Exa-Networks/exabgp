@@ -7,22 +7,21 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message.open.capability import Capability
-from exabgp.bgp.message.open.capability.id import CapabilityID
 
 # ================================================================= RouteRefresh
 #
 
 class RouteRefresh (Capability):
 	def __init__ (self):
-		self.ID = CapabilityID.ROUTE_REFRESH
+		self.ID = Capability.ID.ROUTE_REFRESH
 
 	def __str__ (self):
-		if self.ID == CapabilityID.ROUTE_REFRESH:
+		if self.ID == Capability.ID.ROUTE_REFRESH:
 			return 'Route Refresh'
 		return 'Cisco Route Refresh'
 
 	def json (self):
-		return '{ "name": "route-refresh", "variant": "%s" }' % ('RFC' if self.ID == CapabilityID.ROUTE_REFRESH else 'Cisco')
+		return '{ "name": "route-refresh", "variant": "%s" }' % ('RFC' if self.ID == Capability.ID.ROUTE_REFRESH else 'Cisco')
 
 	def extract (self):
 		return ['']
@@ -32,15 +31,15 @@ class RouteRefresh (Capability):
 		# XXX: FIXME: we should set that that instance was seen and raise if seen twice
 		return instance
 
-RouteRefresh.register_capability(CapabilityID.ROUTE_REFRESH)
-RouteRefresh.register_capability(CapabilityID.CISCO_ROUTE_REFRESH)
+RouteRefresh.register_capability(Capability.ID.ROUTE_REFRESH)
+RouteRefresh.register_capability(Capability.ID.CISCO_ROUTE_REFRESH)
 
 
 # ========================================================= EnhancedRouteRefresh
 #
 
 class EnhancedRouteRefresh (Capability):
-	ID = CapabilityID.ENHANCED_ROUTE_REFRESH
+	ID = Capability.ID.ENHANCED_ROUTE_REFRESH
 
 	def __str__ (self):
 		return 'Enhanced Route Refresh'

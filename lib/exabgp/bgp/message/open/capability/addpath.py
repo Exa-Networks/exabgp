@@ -10,13 +10,12 @@ from struct import pack
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.open.capability import Capability
-from exabgp.bgp.message.open.capability.id import CapabilityID
 
 # ====================================================================== AddPath
 #
 
 class AddPath (Capability,dict):
-	ID = CapabilityID.ADD_PATH
+	ID = Capability.ID.ADD_PATH
 
 	string = {
 		0 : 'disabled',

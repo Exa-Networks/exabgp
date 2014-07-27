@@ -10,13 +10,12 @@ from struct import pack
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.open.capability import Capability
-from exabgp.bgp.message.open.capability.id import CapabilityID
 
 # ================================================================ MultiProtocol
 #
 
 class MultiProtocol (Capability,list):
-	ID = CapabilityID.MULTIPROTOCOL_EXTENSIONS
+	ID = Capability.ID.MULTIPROTOCOL_EXTENSIONS
 
 	def __str__ (self):
 		return 'Multiprotocol(' + ','.join(["%s %s" % (str(afi),str(safi)) for (afi,safi) in self]) + ')'

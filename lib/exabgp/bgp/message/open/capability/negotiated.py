@@ -9,7 +9,8 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.open.holdtime import HoldTime
-from exabgp.bgp.message.open.capability.id import CapabilityID as CID,REFRESH
+from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open.capability import REFRESH
 from exabgp.bgp.message.open.routerid import RouterID
 
 class Negotiated (object):
@@ -50,36 +51,36 @@ class Negotiated (object):
 		self.holdtime = HoldTime(min(self.sent_open.hold_time,self.received_open.hold_time))
 
 		self.addpath.setup(self.sent_open,self.received_open)
-		self.asn4 = sent_capa.announced(CID.FOUR_BYTES_ASN) and recv_capa.announced(CID.FOUR_BYTES_ASN)
-		self.operational = sent_capa.announced(CID.OPERATIONAL) and recv_capa.announced(CID.OPERATIONAL)
+		self.asn4 = sent_capa.announced(Capability.ID.FOUR_BYTES_ASN) and recv_capa.announced(Capability.ID.FOUR_BYTES_ASN)
+		self.operational = sent_capa.announced(Capability.ID.OPERATIONAL) and recv_capa.announced(Capability.ID.OPERATIONAL)
 
 		self.local_as = self.sent_open.asn
 		self.peer_as = self.received_open.asn
 		if self.received_open.asn == AS_TRANS:
-			self.peer_as = recv_capa[CID.FOUR_BYTES_ASN]
+			self.peer_as = recv_capa[Capability.ID.FOUR_BYTES_ASN]
 
 		self.families = []
-		if recv_capa.announced(CID.MULTIPROTOCOL_EXTENSIONS) \
-		and sent_capa.announced(CID.MULTIPROTOCOL_EXTENSIONS):
-			for family in recv_capa[CID.MULTIPROTOCOL_EXTENSIONS]:
-				if family in sent_capa[CID.MULTIPROTOCOL_EXTENSIONS]:
+		if recv_capa.announced(Capability.ID.MULTIPROTOCOL_EXTENSIONS) \
+		and sent_capa.announced(Capability.ID.MULTIPROTOCOL_EXTENSIONS):
+			for family in recv_capa[Capability.ID.MULTIPROTOCOL_EXTENSIONS]:
+				if family in sent_capa[Capability.ID.MULTIPROTOCOL_EXTENSIONS]:
 					self.families.append(family)
 
-		if recv_capa.announced(CID.ENHANCED_ROUTE_REFRESH) and sent_capa.announced(CID.ENHANCED_ROUTE_REFRESH):
+		if recv_capa.announced(Capability.ID.ENHANCED_ROUTE_REFRESH) and sent_capa.announced(Capability.ID.ENHANCED_ROUTE_REFRESH):
 			self.refresh=REFRESH.enhanced
-		elif recv_capa.announced(CID.ROUTE_REFRESH) and sent_capa.announced(CID.ROUTE_REFRESH):
+		elif recv_capa.announced(Capability.ID.ROUTE_REFRESH) and sent_capa.announced(Capability.ID.ROUTE_REFRESH):
 			self.refresh=REFRESH.normal
 
-		self.multisession = sent_capa.announced(CID.MULTISESSION_BGP) and recv_capa.announced(CID.MULTISESSION_BGP)
+		self.multisession = sent_capa.announced(Capability.ID.MULTISESSION_BGP) and recv_capa.announced(Capability.ID.MULTISESSION_BGP)
 
 		if self.multisession:
-			sent_ms_capa = set(sent_capa[CID.MULTISESSION_BGP])
-			recv_ms_capa = set(recv_capa[CID.MULTISESSION_BGP])
+			sent_ms_capa = set(sent_capa[Capability.ID.MULTISESSION_BGP])
+			recv_ms_capa = set(recv_capa[Capability.ID.MULTISESSION_BGP])
 
 			if sent_ms_capa == set([]):
-				sent_ms_capa = set([CID.MULTIPROTOCOL_EXTENSIONS])
+				sent_ms_capa = set([Capability.ID.MULTIPROTOCOL_EXTENSIONS])
 			if recv_ms_capa == set([]):
-				recv_ms_capa = set([CID.MULTIPROTOCOL_EXTENSIONS])
+				recv_ms_capa = set([Capability.ID.MULTIPROTOCOL_EXTENSIONS])
 
 			if sent_ms_capa != recv_ms_capa:
 				self.multisession = (2,8,'multisession, our peer did not reply with the same sessionid')
@@ -94,12 +95,12 @@ class Negotiated (object):
 					self.multisession = (2,8,'when checking session id, capability %s did not match' % str(capa))
 					break
 
-		elif sent_capa.announced(CID.MULTISESSION_BGP):
+		elif sent_capa.announced(Capability.ID.MULTISESSION_BGP):
 			self.multisession = (2,9,'multisession is mandatory with this peer')
 
 		# XXX: Does not work as the capa is not yet defined
-		#if received_open.capabilities.announced(CID.EXTENDED_MESSAGE) \
-		#and sent_open.capabilities.announced(CID.EXTENDED_MESSAGE):
+		#if received_open.capabilities.announced(Capability.ID.EXTENDED_MESSAGE) \
+		#and sent_open.capabilities.announced(Capability.ID.EXTENDED_MESSAGE):
 		#	if self.peer.bgp.received_open_size:
 		#		self.received_open_size = self.peer.bgp.received_open_size - 19
 
@@ -152,8 +153,8 @@ class RequirePath (object):
 			def __getitem__(self,key):
 				return False
 
-		receive = received_open.capabilities.get(CID.ADD_PATH,FalseDict())
-		send = sent_open.capabilities.get(CID.ADD_PATH,FalseDict())
+		receive = received_open.capabilities.get(Capability.ID.ADD_PATH,FalseDict())
+		send = sent_open.capabilities.get(Capability.ID.ADD_PATH,FalseDict())
 
 		# python 2.4 compatibility mean no simple union but using sets.Set
 		union = []

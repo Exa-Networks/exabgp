@@ -11,13 +11,12 @@ from struct import unpack
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.open.capability import Capability
-from exabgp.bgp.message.open.capability.id import CapabilityID
 
 # =========================================================== Graceful (Restart)
 # RFC 4727
 
 class Graceful (Capability,dict):
-	ID = CapabilityID.GRACEFUL_RESTART
+	ID = Capability.ID.GRACEFUL_RESTART
 
 	TIME_MASK     = 0x0FFF
 	FLAG_MASK     = 0xF000

@@ -8,13 +8,12 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability import Capability
-from exabgp.bgp.message.open.capability.id import CapabilityID
 
 # ========================================================================= ASN4
 #
 
 class ASN4 (Capability,ASN):
-	ID = CapabilityID.FOUR_BYTES_ASN
+	ID = Capability.ID.FOUR_BYTES_ASN
 
 	def __init__ (self,value=0):
 		ASN.__init__(self,value)

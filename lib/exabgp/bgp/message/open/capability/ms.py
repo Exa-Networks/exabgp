@@ -7,14 +7,13 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message.open.capability import Capability
-from exabgp.bgp.message.open.capability.id import CapabilityID
 
 # ================================================================= MultiSession
 #
 
 class MultiSession (Capability,list):
 	def __init__ (self):
-		self.ID = CapabilityID.MULTISESSION_BGP
+		self.ID = Capability.ID.MULTISESSION_BGP
 		list.__init__(self)
 
 	def set (self,data):
@@ -23,11 +22,11 @@ class MultiSession (Capability,list):
 
 	# XXX: FIXME: Looks like we could do with something in this Caoability
 	def __str__ (self):
-		info = ' (RFC)' if self.ID == CapabilityID.MULTISESSION_BGP_RFC else ''
+		info = ' (RFC)' if self.ID == Capability.ID.MULTISESSION_BGP_RFC else ''
 		return 'Multisession%s %s' % (info,' '.join([str(capa) for capa in self]))
 
 	def json (self):
-		variant = 'RFC' if self.ID == CapabilityID.MULTISESSION_BGP_RFC else 'Cisco'
+		variant = 'RFC' if self.ID == Capability.ID.MULTISESSION_BGP_RFC else 'Cisco'
 		return '{ "name": "multisession", "variant": "%s" ,"capabilities": [%s ] }' % (variant, ','.join(' %s' % str(capa) for capa in self))
 
 	def extract (self):
@@ -41,5 +40,5 @@ class MultiSession (Capability,list):
 		# XXX: FIXME: we should set that that instance was seen and raise if seen twice
 		return instance
 
-MultiSession.register_capability(CapabilityID.MULTISESSION_BGP)
-MultiSession.register_capability(CapabilityID.MULTISESSION_BGP_RFC)
+MultiSession.register_capability(Capability.ID.MULTISESSION_BGP)
+MultiSession.register_capability(Capability.ID.MULTISESSION_BGP_RFC)

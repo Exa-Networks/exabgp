@@ -12,8 +12,8 @@ import time
 from exabgp.bgp.timer import ReceiveTimer
 from exabgp.bgp.timer import SendTimer
 from exabgp.bgp.message import Message
-from exabgp.bgp.message.open.capability.id import CapabilityID
-from exabgp.bgp.message.open.capability.id import REFRESH
+from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open.capability import REFRESH
 from exabgp.bgp.message.nop import NOP
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.update import Update
@@ -539,7 +539,7 @@ class Peer (object):
 					break
 
 		# If graceful restart, silent shutdown
-		if self.neighbor.graceful_restart and proto.negotiated.sent_open.capabilities.announced(CapabilityID.GRACEFUL_RESTART):
+		if self.neighbor.graceful_restart and proto.negotiated.sent_open.capabilities.announced(Capability.ID.GRACEFUL_RESTART):
 			self.logger.network('Closing the session without notification','error')
 			proto.close('graceful restarted negotiated, closing without sending any notification')
 			raise NetworkError('closing')

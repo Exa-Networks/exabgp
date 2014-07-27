@@ -7,7 +7,6 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message.open.capability import Capability
-from exabgp.bgp.message.open.capability.id import CapabilityID
 
 # ============================================================ UnknownCapability
 #
@@ -18,14 +17,14 @@ class UnknownCapability (Capability):
 		self.raw = raw
 
 	def __str__ (self):
-		if self.value in CapabilityID.reserved: return 'Reserved %s' % str(self.value)
-		if self.value in CapabilityID.unassigned: return 'Unassigned %s' % str(self.value)
+		if self.value in Capability.ID.reserved: return 'Reserved %s' % str(self.value)
+		if self.value in Capability.ID.unassigned: return 'Unassigned %s' % str(self.value)
 		return 'Unknown %s' % str(self.value)
 
 	def json (self):
-		if self.value in CapabilityID.reserved:
+		if self.value in Capability.ID.reserved:
 			iana = 'reserved'
-		elif self.value in CapabilityID.unassigned:
+		elif self.value in Capability.ID.unassigned:
 			iana = 'unassigned'
 		else:
 			iana = 'unknown'

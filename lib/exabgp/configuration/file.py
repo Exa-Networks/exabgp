@@ -2858,9 +2858,9 @@ class Configuration (object):
 		import sys
 		from exabgp.bgp.message.update import Update
 		from exabgp.bgp.message.open import Open
+		from exabgp.bgp.message.open.capability import Capability
 		from exabgp.bgp.message.open.capability import Capabilities
 		from exabgp.bgp.message.open.capability.negotiated import Negotiated
-		from exabgp.bgp.message.open.capability.id import CapabilityID
 		from exabgp.bgp.message.notification import Notify
 		from exabgp.reactor.peer import Peer
 		from exabgp.reactor.api.encoding import JSON
@@ -2878,8 +2878,8 @@ class Configuration (object):
 				path[f] = n.add_path
 
 		capa = Capabilities().new(n,False)
-		capa[CapabilityID.ADD_PATH] = path
-		capa[CapabilityID.MULTIPROTOCOL_EXTENSIONS] = n.families()
+		capa[Capability.ID.ADD_PATH] = path
+		capa[Capability.ID.MULTIPROTOCOL_EXTENSIONS] = n.families()
 
 		o1 = Open(4,n.local_as,str(n.local_address),capa,180)
 		o2 = Open(4,n.peer_as,str(n.peer_address),capa,180)
