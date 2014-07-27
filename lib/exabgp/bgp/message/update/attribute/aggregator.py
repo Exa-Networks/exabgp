@@ -10,13 +10,12 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.protocol.ip import IPv4
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.attribute.flag import Flag
 
 # =============================================================== AGGREGATOR (7)
 
 class Aggregator (Attribute):
 	ID = Attribute.ID.AGGREGATOR
-	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
+	FLAG = Attribute.Flag.TRANSITIVE|Attribute.Flag.OPTIONAL
 	MULTIPLE = False
 	CACHING = True
 

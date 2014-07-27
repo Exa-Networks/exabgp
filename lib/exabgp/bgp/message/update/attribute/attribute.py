@@ -8,8 +8,6 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from struct import pack
 
-from exabgp.bgp.message.update.attribute.flag import Flag
-
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.util.cache import Cache
@@ -39,6 +37,8 @@ class Attribute (object):
 
 	# The attribute cache per attribute ID
 	cache = {}
+
+	# ---------------------------------------------------------------------------
 
 	# XXX : FIXME : The API of ID is a bit different (it can be instanciated)
 	# XXX : FIXME : This is legacy. should we change to not be ?
@@ -111,15 +111,48 @@ class Attribute (object):
 		def name (cls,self):
 			return cls.names.get(self,'unknown-attribute-%s' % hex(self))
 
+	# ---------------------------------------------------------------------------
+
+	class Flag (int):
+		EXTENDED_LENGTH = 0x10  # .  16 - 0001 0000
+		PARTIAL         = 0x20  # .  32 - 0010 0000
+		TRANSITIVE      = 0x40  # .  64 - 0100 0000
+		OPTIONAL        = 0x80  # . 128 - 1000 0000
+
+		__slots__ = []
+
+		def __str__ (self):
+			r = []
+			v = int(self)
+			if v & 0x10:
+				r.append("EXTENDED_LENGTH")
+				v -= 0x10
+			if v & 0x20:
+				r.append("PARTIAL")
+				v -= 0x20
+			if v & 0x40:
+				r.append("TRANSITIVE")
+				v -= 0x40
+			if v & 0x80:
+				r.append("OPTIONAL")
+				v -= 0x80
+			if v:
+				r.append("UNKNOWN %s" % hex(v))
+			return " ".join(r)
+
+		def matches (self,value):
+			return self | 0x10 == value | 0x10
+
+	# ---------------------------------------------------------------------------
 
 	def _attribute (self,value):
 		flag = self.FLAG
-		if flag & Flag.OPTIONAL and not value:
+		if flag & Attribute.Flag.OPTIONAL and not value:
 			return ''
 		length = len(value)
 		if length > 0xFF:
-			flag |= Flag.EXTENDED_LENGTH
-		if flag & Flag.EXTENDED_LENGTH:
+			flag |= Attribute.Flag.EXTENDED_LENGTH
+		if flag & Attribute.Flag.EXTENDED_LENGTH:
 			len_value = pack('!H',length)
 		else:
 			len_value = chr(length)
@@ -134,23 +167,23 @@ class Attribute (object):
 	@classmethod
 	def register_attribute (cls,attribute_id=None,flag=None):
 		aid = cls.ID if attribute_id is None else attribute_id
-		flg = cls.FLAG | Flag.EXTENDED_LENGTH if flag is None else flag | Flag.EXTENDED_LENGTH
+		flg = cls.FLAG | Attribute.Flag.EXTENDED_LENGTH if flag is None else flag | Attribute.Flag.EXTENDED_LENGTH
 		if (aid,flg) in cls.registered_attributes:
 			raise RuntimeError('only one class can be registered per capability')
 		cls.registered_attributes[(aid,flg)] = cls
 		cls.attributes_known.append(aid)
-		if cls.FLAG & Flag.OPTIONAL:
+		if cls.FLAG & Attribute.Flag.OPTIONAL:
 			Attribute.attributes_optional.append(aid)
 		else:
 			Attribute.attributes_well_know.append(aid)
 
 	@classmethod
 	def registered (cls,attribute_id,flag):
-		return (attribute_id,flag | Flag.EXTENDED_LENGTH) in cls.registered_attributes
+		return (attribute_id,flag | Attribute.Flag.EXTENDED_LENGTH) in cls.registered_attributes
 
 	@classmethod
 	def klass (cls,attribute_id,flag):
-		key = (attribute_id,flag | Flag.EXTENDED_LENGTH)
+		key = (attribute_id,flag | Attribute.Flag.EXTENDED_LENGTH)
 		if key in cls.registered_attributes:
 			kls = cls.registered_attributes[key]
 			kls.ID = attribute_id
@@ -169,7 +202,7 @@ class Attribute (object):
 		if cache and data in cls.cache.get(cls.ID,{}):
 			return cls.cache[cls.ID].retrieve(data)
 
-		key = (attribute_id,flag | Flag.EXTENDED_LENGTH)
+		key = (attribute_id,flag | Attribute.Flag.EXTENDED_LENGTH)
 		if key in Attribute.registered_attributes.keys():
 			instance = cls.klass(attribute_id,flag).unpack(data,negotiated)
 

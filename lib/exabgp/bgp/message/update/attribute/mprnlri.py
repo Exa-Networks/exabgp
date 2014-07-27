@@ -15,7 +15,6 @@ from exabgp.protocol.ip.address import Address
 
 from exabgp.bgp.message import IN
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 
 from exabgp.bgp.message.notification import Notify
@@ -23,7 +22,7 @@ from exabgp.bgp.message.notification import Notify
 # ==================================================== MP Unreacheable NLRI (15)
 
 class MPRNLRI (Attribute,Address):
-	FLAG = Flag.OPTIONAL
+	FLAG = Attribute.Flag.OPTIONAL
 	ID = Attribute.ID.MP_REACH_NLRI
 	MULTIPLE = True
 

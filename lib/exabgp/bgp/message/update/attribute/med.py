@@ -10,13 +10,12 @@ from struct import pack
 from struct import unpack
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.attribute.flag import Flag
 
 # ====================================================================== MED (4)
 
 class MED (Attribute):
 	ID = Attribute.ID.MED
-	FLAG = Flag.OPTIONAL
+	FLAG = Attribute.Flag.OPTIONAL
 	MULTIPLE = False
 	CACHING = True
 

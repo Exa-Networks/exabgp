@@ -9,13 +9,12 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from exabgp.protocol.ip import IPv4
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.attribute.flag import Flag
 
 # ============================================================== OriginatorID (3)
 
 class OriginatorID (Attribute,IPv4):
 	ID = Attribute.ID.ORIGINATOR_ID
-	FLAG = Flag.OPTIONAL
+	FLAG = Attribute.Flag.OPTIONAL
 	MULTIPLE = False
 	CACHING = True
 

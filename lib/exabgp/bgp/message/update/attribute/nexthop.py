@@ -9,7 +9,6 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoIP
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.attribute.flag import Flag
 
 # ================================================================== NextHop (3)
 
@@ -18,7 +17,7 @@ from exabgp.bgp.message.update.attribute.flag import Flag
 
 class NextHop (Attribute,IP):
 	ID = Attribute.ID.NEXT_HOP
-	FLAG = Flag.TRANSITIVE
+	FLAG = Attribute.Flag.TRANSITIVE
 	MULTIPLE = False
 	CACHING = True
 

@@ -7,7 +7,6 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.community.community import Community
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.notification import Notify
@@ -25,7 +24,7 @@ from exabgp.bgp.message.update.attribute.community.extended.traffic import Traff
 
 class Communities (Attribute):
 	ID = Attribute.ID.COMMUNITY
-	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
+	FLAG = Attribute.Flag.TRANSITIVE|Attribute.Flag.OPTIONAL
 	MULTIPLE = False
 
 #	__slots__ = ['communities']

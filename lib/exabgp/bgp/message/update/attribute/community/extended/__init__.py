@@ -7,7 +7,6 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.attribute.flag import Flag
 
 # ======================================================= ExtendedCommunity (16)
 #
@@ -16,7 +15,7 @@ from exabgp.bgp.message.update.attribute.flag import Flag
 
 class ExtendedCommunity (Attribute):
 	ID = Attribute.ID.EXTENDED_COMMUNITY
-	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
+	FLAG = Attribute.Flag.TRANSITIVE|Attribute.Flag.OPTIONAL
 	MULTIPLE = False
 
 	registered_extended = {}

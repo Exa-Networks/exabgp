@@ -12,7 +12,6 @@ from struct import error
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.notification import Notify
 
 # =================================================================== ASPath (2)
@@ -24,7 +23,7 @@ class ASPath (Attribute):
 	ASN4        = False
 
 	ID = Attribute.ID.AS_PATH
-	FLAG = Flag.TRANSITIVE
+	FLAG = Attribute.Flag.TRANSITIVE
 	MULTIPLE = False
 
 	__slots__ = ['as_seq','as_set','segments','packed','index','_str','_json']
@@ -189,7 +188,7 @@ ASPath.register_attribute()
 
 class AS4Path (ASPath):
 	ID = Attribute.ID.AS4_PATH
-	FLAG = Flag.TRANSITIVE|Flag.OPTIONAL
+	FLAG = Attribute.Flag.TRANSITIVE|Attribute.Flag.OPTIONAL
 	ASN4 = True
 
 	def pack (self,negotiated=None):

@@ -9,7 +9,6 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 from exabgp.protocol.ip import IPv4
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.attribute.flag import Flag
 
 # ===================================================================
 
@@ -20,7 +19,7 @@ class ClusterID (IPv4):
 
 class ClusterList (Attribute):
 	ID = Attribute.ID.CLUSTER_LIST
-	FLAG = Flag.OPTIONAL
+	FLAG = Attribute.Flag.OPTIONAL
 	MULTIPLE = False
 	CACHING = True
 

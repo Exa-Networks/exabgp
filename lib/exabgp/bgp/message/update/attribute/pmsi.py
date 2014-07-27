@@ -12,7 +12,6 @@ from struct import unpack
 
 from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.attribute.flag import Flag
 
 # http://tools.ietf.org/html/rfc6514#section-5
 #
@@ -32,7 +31,7 @@ from exabgp.bgp.message.update.attribute.flag import Flag
 
 class PMSI (Attribute):
 	ID = Attribute.ID.PMSI_TUNNEL
-	FLAG = Flag.OPTIONAL
+	FLAG = Attribute.Flag.OPTIONAL
 	MULTIPLE = False
 	CACHING = True
 

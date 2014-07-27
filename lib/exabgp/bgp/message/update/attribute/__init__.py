@@ -13,7 +13,6 @@ from exabgp.util.od import od
 from exabgp.configuration.environment import environment
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import ASPath
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
@@ -266,10 +265,10 @@ class Attributes (dict):
 
 	@staticmethod
 	def flag_attribute_content (data):
-		flag = Flag(ord(data[0]))
+		flag = Attribute.Flag(ord(data[0]))
 		attr = Attribute.ID(ord(data[1]))
 
-		if flag & Flag.EXTENDED_LENGTH:
+		if flag & Attribute.Flag.EXTENDED_LENGTH:
 			length = unpack('!H',data[2:4])[0]
 			return flag, attr, data[4:length+4]
 		else:
@@ -281,10 +280,10 @@ class Attributes (dict):
 			return self
 
 		# We do not care if the attribute are transitive or not as we do not redistribute
-		flag = Flag(ord(data[0]))
+		flag = Attribute.Flag(ord(data[0]))
 		aid = Attribute.ID(ord(data[1]))
 
-		if flag & Flag.EXTENDED_LENGTH:
+		if flag & Attribute.Flag.EXTENDED_LENGTH:
 			length = unpack('!H',data[2:4])[0]
 			offset = 4
 		else:
@@ -300,7 +299,7 @@ class Attributes (dict):
 
 		# remove the PARTIAL bit before comparaison if the attribute is optional
 		if aid in Attribute.attributes_optional:
-			aid = aid & (~Flag.PARTIAL & 0xFF)
+			aid = aid & (~Attribute.Flag.PARTIAL & 0xFF)
 
 		# handle the attribute if we know it
 		if Attribute.registered(aid,flag):
@@ -314,9 +313,9 @@ class Attributes (dict):
 			return self.parse(next,negotiated)
 
 		# it is an unknown transitive attribute we need to pass on
-		if flag & Flag.TRANSITIVE:
+		if flag & Attribute.Flag.TRANSITIVE:
 			logger.parser('unknown transitive attribute (aid 0x%02X, flag 0x%02X)' % (aid,flag))
-			self.add(GenericAttribute(aid,flag|Flag.PARTIAL,attribute),attribute)
+			self.add(GenericAttribute(aid,flag|Attribute.Flag.PARTIAL,attribute),attribute)
 			return self.parse(next,negotiated)
 
 		# it is an unknown non-transitive attribute we can ignore.
