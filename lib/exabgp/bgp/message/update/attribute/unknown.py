@@ -7,6 +7,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute.flag import Flag
 
 # ============================================================= UnknownAttribute
 #
@@ -18,7 +19,7 @@ class UnknownAttribute (Attribute):
 
 	def __init__ (self,code,flag,data):
 		self.ID = code
-		self.FLAG = flag
+		self.FLAG = flag | Flag.PARTIAL
 		self.data = data
 		self.index = ''
 
