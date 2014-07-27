@@ -149,12 +149,12 @@ def attribute (tokeniser):
 		raise ValueError('invalid attribute, does not ends with ]')
 
 	# XXX: FIXME: class Attribute should have an unpack function which does that
-	from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
+	from exabgp.bgp.message.update.attribute.unknown import GenericAttribute
 
 	for ((ID,flag),klass) in Attribute.registered_attributes.iteritems():
 		if code == ID and flag == klass.FLAG:
 			return klass(data)
-	return UnknownAttribute(code,flag,data)
+	return GenericAttribute(code,flag,data)
 
 
 # ====================================================================== NextHop

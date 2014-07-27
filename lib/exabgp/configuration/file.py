@@ -86,7 +86,7 @@ from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 from exabgp.bgp.message.update.attribute.aigp import AIGP
-from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
+from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 
 from exabgp.bgp.message.operational import MAX_ADVISORY
 from exabgp.bgp.message.operational import Advisory
@@ -1682,7 +1682,7 @@ class Configuration (object):
 					scope[-1]['announce'][-1].attributes.add(klass.unpack(raw))
 					return True
 
-			scope[-1]['announce'][-1].attributes.add(UnknownAttribute(code,flag,raw))
+			scope[-1]['announce'][-1].attributes.add(GenericAttribute(code,flag,raw))
 			return True
 		except (IndexError,ValueError):
 			self._error = self._str_route_error

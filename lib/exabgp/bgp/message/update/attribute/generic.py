@@ -1,25 +1,24 @@
 # encoding: utf-8
 """
-unknown.py
+generic.py
 
 Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.attribute.flag import Flag
 
-# ============================================================= UnknownAttribute
+# ============================================================= GenericAttribute
 #
 
-class UnknownAttribute (Attribute):
+class GenericAttribute (Attribute):
 	MULTIPLE = False
 
 	__slots__ = ['ID','FLAG','data','index']
 
 	def __init__ (self,code,flag,data):
 		self.ID = code
-		self.FLAG = flag | Flag.PARTIAL
+		self.FLAG = flag
 		self.data = data
 		self.index = ''
 

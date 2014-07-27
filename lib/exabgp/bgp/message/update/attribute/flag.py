@@ -10,10 +10,10 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 # =================================================================== Flag
 
 class Flag (int):
-	EXTENDED_LENGTH = 0x10  # .  16
-	PARTIAL         = 0x20  # .  32
-	TRANSITIVE      = 0x40  # .  64
-	OPTIONAL        = 0x80  # . 128
+	EXTENDED_LENGTH = 0x10  # .  16 - 0001 0000
+	PARTIAL         = 0x20  # .  32 - 0010 0000
+	TRANSITIVE      = 0x40  # .  64 - 0100 0000
+	OPTIONAL        = 0x80  # . 128 - 1000 0000
 
 	__slots__ = []
 

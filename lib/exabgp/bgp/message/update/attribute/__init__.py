@@ -17,7 +17,7 @@ from exabgp.bgp.message.update.attribute.flag import Flag
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import ASPath
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
-from exabgp.bgp.message.update.attribute.unknown import UnknownAttribute
+from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 
 from exabgp.bgp.message.notification import Notify
 
@@ -282,7 +282,7 @@ class Attributes (dict):
 
 		# We do not care if the attribute are transitive or not as we do not redistribute
 		flag = Flag(ord(data[0]))
-		code = Attribute.ID(ord(data[1]))
+		aid = Attribute.ID(ord(data[1]))
 
 		if flag & Flag.EXTENDED_LENGTH:
 			length = unpack('!H',data[2:4])[0]
@@ -296,24 +296,31 @@ class Attributes (dict):
 		attribute = data[:length]
 
 		logger = Logger()
-		logger.parser(LazyFormat("parsing flag %x type %02x (%s) len %02x %s" % (flag,int(code),code,length,'payload ' if length else ''),od,data[:length]))
+		logger.parser(LazyFormat("parsing flag %x type %02x (%s) len %02x %s" % (flag,int(aid),aid,length,'payload ' if length else ''),od,data[:length]))
 
-		if Attribute.registered(code,flag):
-			self.add(Attribute.unpack(code,flag,attribute,negotiated))
+		# remove the PARTIAL bit before comparaison if the attribute is optional
+		if aid in Attribute.attributes_optional:
+			aid = aid & (~Flag.PARTIAL & 0xFF)
+
+		# handle the attribute if we know it
+		if Attribute.registered(aid,flag):
+			self.add(Attribute.unpack(aid,flag,attribute,negotiated))
 			return self.parse(next,negotiated)
 		# XXX: FIXME: we could use a fallback function here like capability
 
-		# ARGH, we got an invalid FLAG ignore the attribute ...
-		if code in Attribute.registered_codes.keys():
-			logger.parser('invalid flag for attribute %s (code 0x%02X, flag 0x%02X)' % (Attribute.ID.names.get(code,'unset'),code,flag))
+		# if we know the attribute but the flag is not what the RFC says.
+		if aid in Attribute.attributes_known:
+			logger.parser('invalid flag for attribute %s (aid 0x%02X, flag 0x%02X)' % (Attribute.ID.names.get(aid,'unset'),aid,flag))
 			return self.parse(next,negotiated)
 
+		# it is an unknown transitive attribute we need to pass on
 		if flag & Flag.TRANSITIVE:
-			logger.parser('unknown transitive attribute (code 0x%02X, flag 0x%02X)' % (code,flag))
-			self.add(UnknownAttribute(code,flag,attribute),attribute)
+			logger.parser('unknown transitive attribute (aid 0x%02X, flag 0x%02X)' % (aid,flag))
+			self.add(GenericAttribute(aid,flag|Flag.PARTIAL,attribute),attribute)
 			return self.parse(next,negotiated)
 
-		logger.parser('ignoring unknown non-transitive attribute (code 0x%02X, flag 0x%02X)' % (code,flag))
+		# it is an unknown non-transitive attribute we can ignore.
+		logger.parser('ignoring unknown non-transitive attribute (aid 0x%02X, flag 0x%02X)' % (aid,flag))
 		return self.parse(next,negotiated)
 
 	def merge_attributes (self):

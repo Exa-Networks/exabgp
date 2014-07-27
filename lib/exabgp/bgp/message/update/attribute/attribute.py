@@ -19,7 +19,7 @@ from exabgp.util.cache import Cache
 
 class Attribute (object):
 	# we need to define ID and FLAG inside of the subclasses
-	# otherwise we can not dynamically create different UnknownAttribute
+	# otherwise we can not dynamically create different GenericAttribute
 	# ID   = 0x00
 	# FLAG = 0x00
 
@@ -28,7 +28,11 @@ class Attribute (object):
 
 	# Registered subclasses we know how to decode
 	registered_attributes = dict()
-	registered_codes = dict()
+
+	# what this implementation knows as attributes
+	attributes_known = []
+	attributes_well_know = []
+	attributes_optional = []
 
 	# Are we caching Attributes (configuration)
 	caching = False
@@ -134,7 +138,11 @@ class Attribute (object):
 		if (aid,flg) in cls.registered_attributes:
 			raise RuntimeError('only one class can be registered per capability')
 		cls.registered_attributes[(aid,flg)] = cls
-		cls.registered_codes[aid] = cls
+		cls.attributes_known.append(aid)
+		if cls.FLAG & Flag.OPTIONAL:
+			Attribute.attributes_optional.append(aid)
+		else:
+			Attribute.attributes_well_know.append(aid)
 
 	@classmethod
 	def registered (cls,attribute_id,flag):
@@ -149,7 +157,7 @@ class Attribute (object):
 			return kls
 		# XXX: we do see some AS4_PATH with the partial instead of transitive bit set !!
 		if attribute_id == Attribute.ID.AS4_PATH:
-			kls = cls.registered_codes[attribute_id]
+			kls = cls.attributes_known[attribute_id]
 			kls.ID = attribute_id
 			return kls
 		raise Notify (2,4,'can not handle attribute id %s' % attribute_id)
