@@ -1677,9 +1677,9 @@ class Configuration (object):
 			for i in range(2,len(data),2):
 				raw += chr(int(data[i:i+2],16))
 
-			for ((ID,flag),klass) in Attribute.registered_attributes.iteritems():
+			for ((ID,_),klass) in Attribute.registered_attributes.iteritems():
 				if code == ID and flag == klass.FLAG:
-					scope[-1]['announce'][-1].attributes.add(klass.unpack(raw))
+					scope[-1]['announce'][-1].attributes.add(klass.unpack(raw,None))
 					return True
 
 			scope[-1]['announce'][-1].attributes.add(GenericAttribute(code,flag,raw))
