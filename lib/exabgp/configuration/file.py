@@ -71,11 +71,11 @@ from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
-from exabgp.bgp.message.update.attribute.community.community import Community
-from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
+from exabgp.bgp.message.update.attribute.community import Community
 from exabgp.bgp.message.update.attribute.community import Communities
 from exabgp.bgp.message.update.attribute.community import ExtendedCommunities
+from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficAction
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirect
