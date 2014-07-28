@@ -24,6 +24,8 @@ Version 3.4.1
  * Fix: handle AS4_PATH with PARTIAL bit set
     reported by: Daniel Piekacz
  * Fix: bug with generic attribute generation
+ * Fix: bad Notification
+    patch from: Wouter Miltenburg
 
 Version 3.4.0
  * Feature: add support for extended-attribute for FlowSpec
