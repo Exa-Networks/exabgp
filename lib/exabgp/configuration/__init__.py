@@ -12,9 +12,9 @@ if __name__ == '__main__':
 	from exabgp.configuration.engine.registry import Registry
 
 	# required to register the callbacks
-	from exabgp.configuration.neighbor.family import Family
-	from exabgp.configuration.neighbor.capability import Capability
-	from exabgp.configuration.process import Process
+	from exabgp.configuration.neighbor.family import SectionFamily
+	from exabgp.configuration.neighbor.capability import SectionCapability
+	from exabgp.configuration.process import SectionProcess
 	# end required
 
 	class Parser (object):

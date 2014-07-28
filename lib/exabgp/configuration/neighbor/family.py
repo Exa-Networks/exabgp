@@ -15,7 +15,7 @@ from exabgp.protocol.family import SAFI
 # ======================================================================= Family
 #
 
-class Family (Entry):
+class SectionFamily (Entry):
 	syntax = \
 		'family {\n' \
 		'#  all;		# default, announce all the families we know\n' \
@@ -146,4 +146,4 @@ class Family (Entry):
 		cls.register_hook('action',location+['minimal'],'minimal')
 
 
-Family.register(['family'])
+SectionFamily.register(['family'])

@@ -15,7 +15,7 @@ from exabgp.bgp.message.open.capability import Capability
 # =================================================================== Capability
 #
 
-class CapabilitySection (Entry):
+class SectionCapability (Entry):
 	syntax = \
 	'capability {\n' \
 	'   asn4 enable|disable;                         # default enabled\n' \
@@ -104,4 +104,4 @@ class CapabilitySection (Entry):
 		cls.register_hook('action',location+['graceful-restart'],'graceful')
 
 
-CapabilitySection.register(['capability'])
+SectionCapability.register(['capability'])

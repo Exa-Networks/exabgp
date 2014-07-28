@@ -17,7 +17,7 @@ import stat
 # ====================================================================== Process
 #
 
-class Process (Entry):
+class SectionProcess (Entry):
 	syntax = \
 	'process <name> {\n' \
 	'   run </path/to/command with its args>;  # the command can be quoted\n' \
@@ -237,7 +237,7 @@ class Process (Entry):
 		cls.register_hook('action',location+['receive-operational'],'_receive_operational')
 
 
-Process.register(['process'])
+SectionProcess.register(['process'])
 
 		# name = tokens[0] if len(tokens) >= 1 else 'conf-only-%s' % str(time.time())[-6:]
 		# self.process.setdefault(name,{})['neighbor'] = scope[-1]['peer-address'] if 'peer-address' in scope[-1] else '*'
