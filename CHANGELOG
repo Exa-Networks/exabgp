@@ -27,6 +27,8 @@ Version 3.4.1
  * Fix: bug with generic attribute generation
  * Fix: bad Notification
     patch from: Wouter Miltenburg
+ * Fix: bad Keepalive JSON message
+    patch from: Wouter Miltenburg
 
 Version 3.4.0
  * Feature: add support for extended-attribute for FlowSpec
