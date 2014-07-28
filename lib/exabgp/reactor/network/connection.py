@@ -216,7 +216,7 @@ class Connection (object):
 		validator = Message.Length.get(msg,lambda _ : _ >= 19)
 		if not validator(length):
 			# MUST send the faulty msg_length back
-			yield length,0,header,'',NotifyError(1,2,'%s has an invalid message length of %d' %(Message().name(msg),msg_length))
+			yield length,0,header,'',NotifyError(1,2,'%s has an invalid message length of %d' %(Message().name(msg),length))
 			return
 
 		number = length - Message.HEADER_LEN
