@@ -88,8 +88,9 @@ class Reactor (object):
 		self._reload_processes = True
 
 	def ready (self,ios,sleeptime=0):
+		sleeptime = max(0,sleeptime)
 		if not ios:
-			time.sleep(max(0,sleeptime))
+			time.sleep(sleeptime)
 			return []
 		try:
 			read,_,_ = select.select(ios,[],[],sleeptime)
