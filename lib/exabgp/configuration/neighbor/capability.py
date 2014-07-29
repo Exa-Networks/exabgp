@@ -89,19 +89,16 @@ class SectionCapability (Entry):
 			raise Raised("")
 
 	@classmethod
-	def register (cls,location):
-		cls.register_class()
+	def register (cls,registry,location):
+		registry.register_class(cls)
 
-		cls.register_hook('enter',location,'enter')
-		cls.register_hook('exit',location,'exit')
+		registry.register_hook(cls,'enter',location,'enter')
+		registry.register_hook(cls,'exit',location,'exit')
 
-		cls.register_hook('action',location+['asn4'],'asn4')
-		cls.register_hook('action',location+['aigp'],'aigp')
-		cls.register_hook('action',location+['add-path'],'addpath')
-		cls.register_hook('action',location+['operational'],'operational')
-		cls.register_hook('action',location+['route-refresh'],'refresh')
-		cls.register_hook('action',location+['multi-session'],'multisession')
-		cls.register_hook('action',location+['graceful-restart'],'graceful')
-
-
-SectionCapability.register(['capability'])
+		registry.register_hook(cls,'action',location+['asn4'],'asn4')
+		registry.register_hook(cls,'action',location+['aigp'],'aigp')
+		registry.register_hook(cls,'action',location+['add-path'],'addpath')
+		registry.register_hook(cls,'action',location+['operational'],'operational')
+		registry.register_hook(cls,'action',location+['route-refresh'],'refresh')
+		registry.register_hook(cls,'action',location+['multi-session'],'multisession')
+		registry.register_hook(cls,'action',location+['graceful-restart'],'graceful')

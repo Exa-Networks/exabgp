@@ -129,21 +129,18 @@ class SectionFamily (Entry):
 		self._drop_colon(tokeniser)
 
 	@classmethod
-	def register (cls,location):
-		cls.register_class()
+	def register (cls,registry,location):
+		registry.register_class(cls)
 
-		cls.register_hook('enter',location,'enter')
-		cls.register_hook('exit',location,'exit')
+		registry.register_hook(cls,'enter',location,'enter')
+		registry.register_hook(cls,'exit',location,'exit')
 
-		cls.register_hook('action',location+['inet'],'inet')
-		cls.register_hook('action',location+['inet4'],'inet4')
-		cls.register_hook('action',location+['inet6'],'inet6')
-		cls.register_hook('action',location+['ipv4'],'ipv4')
-		cls.register_hook('action',location+['ipv6'],'ipv6')
-		cls.register_hook('action',location+['l2vpn'],'l2vpn')
+		registry.register_hook(cls,'action',location+['inet'],'inet')
+		registry.register_hook(cls,'action',location+['inet4'],'inet4')
+		registry.register_hook(cls,'action',location+['inet6'],'inet6')
+		registry.register_hook(cls,'action',location+['ipv4'],'ipv4')
+		registry.register_hook(cls,'action',location+['ipv6'],'ipv6')
+		registry.register_hook(cls,'action',location+['l2vpn'],'l2vpn')
 
-		cls.register_hook('action',location+['all'],'all')
-		cls.register_hook('action',location+['minimal'],'minimal')
-
-
-SectionFamily.register(['family'])
+		registry.register_hook(cls,'action',location+['all'],'all')
+		registry.register_hook(cls,'action',location+['minimal'],'minimal')

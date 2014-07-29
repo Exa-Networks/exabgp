@@ -11,11 +11,9 @@ if __name__ == '__main__':
 	from exabgp.configuration.engine.tokeniser import Tokeniser
 	from exabgp.configuration.engine.registry import Registry
 
-	# required to register the callbacks
 	from exabgp.configuration.neighbor.family import SectionFamily
 	from exabgp.configuration.neighbor.capability import SectionCapability
 	from exabgp.configuration.process import SectionProcess
-	# end required
 
 	class Parser (object):
 		def __init__ (self,fname,text=False):
@@ -26,6 +24,9 @@ if __name__ == '__main__':
 
 		def reload (self):
 			registry = Registry()
+			registry.register(SectionFamily,['family'])
+			registry.register(SectionCapability,['capability'])
+			registry.register(SectionProcess,['process'])
 
 			with Reader(self._fname) as r:
 				tokeniser = Tokeniser(r)
@@ -36,7 +37,5 @@ if __name__ == '__main__':
 	p = Parser('/Users/thomas/source/git/exabgp/master/dev/test-new-config.txt')
 	registry = p.reload()
 
-	from exabgp.configuration.engine.registry import Entry
-
-	for klass in Entry._klass:
-		print klass, Entry._klass[klass].content
+	for klass in registry._klass:
+		print klass, registry._klass[klass].content

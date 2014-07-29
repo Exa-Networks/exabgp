@@ -197,47 +197,46 @@ class SectionProcess (Entry):
 			raise Raised("")
 
 	@classmethod
-	def register (cls,location):
-		cls.register_class()
+	def register (cls,registry,location):
+		registry.register_class(cls)
 
-		cls.register_hook('enter',location,'enter_process')
+		registry.register_hook(cls,'enter',location,'enter_process')
 
-		cls.register_hook('action',location+['run'],'run')
-		cls.register_hook('action',location+['encoder'],'encoder')
-		cls.register_hook('action',location+['respawn'],'respawn')
+		registry.register_hook(cls,'action',location+['run'],'run')
+		registry.register_hook(cls,'action',location+['encoder'],'encoder')
+		registry.register_hook(cls,'action',location+['respawn'],'respawn')
 
-		cls.register_hook('enter',location+['receive'],'enter')
+		registry.register_hook(cls,'enter',location+['receive'],'enter')
 
 		for message in ['notification','open','keepalive','update','refresh','operational']:
-			cls.register_hook('enter',location+['receive',message],'enter')
-			cls.register_hook('action',location+['receive',message,'parsed'],'message')
-			cls.register_hook('action',location+['receive',message,'packets'],'message')
-			cls.register_hook('action',location+['receive',message,'consolidate'],'message')
-			cls.register_hook('exit',location+['receive',message],'exit')
+			registry.register_hook(cls,'enter',location+['receive',message],'enter')
+			registry.register_hook(cls,'action',location+['receive',message,'parsed'],'message')
+			registry.register_hook(cls,'action',location+['receive',message,'packets'],'message')
+			registry.register_hook(cls,'action',location+['receive',message,'consolidate'],'message')
+			registry.register_hook(cls,'exit',location+['receive',message],'exit')
 
-		cls.register_hook('action',location+['receive','neighbor-changes'],'neighbor_changes')
+		registry.register_hook(cls,'action',location+['receive','neighbor-changes'],'neighbor_changes')
 
-		cls.register_hook('exit', location+['receive'],'exit')
+		registry.register_hook(cls,'exit', location+['receive'],'exit')
 
-		cls.register_hook('enter',location+['send'],'enter')
-		cls.register_hook('action',location+['send','packets'],'send_packets')
-		cls.register_hook('exit',location+['send'],'exit')
+		registry.register_hook(cls,'enter',location+['send'],'enter')
+		registry.register_hook(cls,'action',location+['send','packets'],'send_packets')
+		registry.register_hook(cls,'exit',location+['send'],'exit')
 
-		cls.register_hook('exit',location,'exit_process')
+		registry.register_hook(cls,'exit',location,'exit_process')
 
 		# legacy
 
-		cls.register_hook('action',location+['peer-updates'],'_peer_update')
-		cls.register_hook('action',location+['parse-routes'],'_parse_routes')
-		cls.register_hook('action',location+['receive-routes'],'_receive_routes')
-		cls.register_hook('action',location+['receive-packets'],'_receive_packets')
-		cls.register_hook('action',location+['neighbor-changes'],'_receive_neighbor_changes')
-		cls.register_hook('action',location+['receive-updates'],'_receive_update')
-		cls.register_hook('action',location+['receive-refresh'],'_receive_refresh')
-		cls.register_hook('action',location+['receive-operational'],'_receive_operational')
+		registry.register_hook(cls,'action',location+['peer-updates'],'_peer_update')
+		registry.register_hook(cls,'action',location+['parse-routes'],'_parse_routes')
+		registry.register_hook(cls,'action',location+['receive-routes'],'_receive_routes')
+		registry.register_hook(cls,'action',location+['receive-packets'],'_receive_packets')
+		registry.register_hook(cls,'action',location+['neighbor-changes'],'_receive_neighbor_changes')
+		registry.register_hook(cls,'action',location+['receive-updates'],'_receive_update')
+		registry.register_hook(cls,'action',location+['receive-refresh'],'_receive_refresh')
+		registry.register_hook(cls,'action',location+['receive-operational'],'_receive_operational')
 
 
-SectionProcess.register(['process'])
 
 		# name = tokens[0] if len(tokens) >= 1 else 'conf-only-%s' % str(time.time())[-6:]
 		# self.process.setdefault(name,{})['neighbor'] = scope[-1]['peer-address'] if 'peer-address' in scope[-1] else '*'
