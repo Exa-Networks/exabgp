@@ -6,27 +6,29 @@ Think of it as [Software Defined Networking](http://www.wired.com/wiredenterpris
 [ExaBGP](http://github.com/Exa-Networks/exabgp) transform [BGP messages](http://thomas.mangin.com/data/pdf/UKNOF%2015%20-%20Mangin%20-%20Naked%20BGP.pdf) into friendly plain [text or JSON](https://github.com/Exa-Networks/exabgp/wiki/Controlling-ExaBGP-:-API-for-received-messages) which can be easily manipulate by scripts.
 
 It allows the creation of tools such as :
- * this [advanced looking glass](https://code.google.com/p/gixlg/wiki/sample_maps) graphically display the routing of prefix
- * this [high availability tool](http://vincent.bernat.im/en/blog/2013-exabgp-highavailability.html) which automatically isolate dead server / broken services
+ * [advanced looking glasses](https://code.google.com/p/gixlg/wiki/sample_maps) graphically display the routing of prefix
+ * [service high availability](http://vincent.bernat.im/en/blog/2013-exabgp-highavailability.html) which automatically isolate dead server / broken services
  * [DDOS mitigation](http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf)
- * an [anycasted](http://blog.iweb-hosting.co.uk/blog/2012/01/27/using-bgp-to-serve-high-availability-dns/) server
+ * or [anycasted](http://blog.iweb-hosting.co.uk/blog/2012/01/27/using-bgp-to-serve-high-availability-dns/) server
 
 So have a look and take control your network from any unix servers.
 
 ##More information
 
-This program is packaged for **Debian**, **Ubuntu**, **ArchLinux**, **Gentoo**, **Mint**, **FreeBSD**, **OSX**, **OmniOS**. Unless you need the latest version, please consider using your distribution's.
+If you are using [ExaBGP](http://github.com/Exa-Networks/exabgp) from source (or git), it **does not need to be installed** on your server ( using "python setup.py install" ). Simply run [ExaBGP](http://github.com/Exa-Networks/exabgp) from the extracted archive, or your local git repository.
 
-If you are using [ExaBGP](http://github.com/Exa-Networks/exabgp) from source (or git), it **does not need to be installed** on your server ( using "python setup.py install" ). Simply run [ExaBGP](http://github.com/Exa-Networks/exabgp) from the extracted archive, or your local git repository. It allows to run several versions at the same time without conflict.
+This program is packaged for **Debian**, **Ubuntu**, **ArchLinux**, **Gentoo**, **Mint**, **FreeBSD**, **OSX**, **OmniOS**, but some features may only be available on latest and greatest version. Please consider using your distribution's first.
+
+Multiple versions can be used simulteanously without conflict, using them as follow.
 
 ```sh
-> wget https://github.com/Exa-Networks/exabgp/archive/3.4.0.tar.gz
-> tar zxvf 3.4.0.tar.gz
-> cd exabgp-3.4.0
+> wget https://github.com/Exa-Networks/exabgp/archive/3.4.1.tar.gz
+> tar zxvf 3.4.1.tar.gz
+> cd exabgp-3.4.1
 > ./sbin/exabgp --help
 ```
 
-My [blog](http://thomas.mangin.com/categories/networking.html) may contain some BGP related information, but I tend to post more on [G+](https://plus.google.com/u/0/communities/108249711110699351497) about ExaBGP than I blog.
+I regularly post on this [G+ Group](https://plus.google.com/u/0/communities/108249711110699351497) about ExaBGP and sometimes [blog](http://thomas.mangin.com/categories/networking.html) about BGP.
 
 ##Who is using it ?
 
@@ -71,59 +73,55 @@ This programs **does not have any dependences on any third party libraries** and
 Development is done on python 2.7, the code is kept compatible with python 2.4 in ExaBGP 2.x.x and python 2.5 in ExaBGP 3.1.x.
 ExaBGP 3.2.x and 3.3.x rely on python 2.7 (as it uses argparse), and we are likely to required python 3.4+ for ExaBGP 4.x.x
 
-```sh
-> python --version
-Python 2.6.7
-> pip install argparse
-```
-
-
 ##Features
 
 ### known ...
 
  * runs on any Unix server (has no dependencies).
+ * BSD licence, integrate [ExaBGP](http://github.com/Exa-Networks/exabgp) in your own application stack - no strings attached !
  * receive / send routes using your own scripts or a JunOS looking configuration file
    * **IPv4**/**IPv6** (unicast, multicast, nlri-mpls, *mpls-vpn*) routes with arbitrary next-hops
-   * **MPLS** (route-distinguisher), [RFC 4659](http://tools.ietf.org/html/rfc4659 RFC 4659) (vpnv6)
-   * **flow routes** (complete [RFC 5575](http://tools.ietf.org/html/rfc5575 RFC 5575) support)
- * support for many recent drafts
+   * **MPLS** (route-distinguisher), [RFC 4659](http://tools.ietf.org/html/rfc4659) (vpnv6)
+   * **flow routes** (complete [RFC 5575](http://tools.ietf.org/html/rfc5575) support)
+   * **VPLS**, [RFC 4762](http://tools.ietf.org/html/rfc4762) support
+   * **Enhanced Route Refresh**, [RFC 7313](http://tools.ietf.org/html/rfc7313) support
+   * **And [much more](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information)**
+ * support for some drafts
    * [draft-raszuk-idr-flow-spec-v6-03](http://tools.ietf.org/html/draft-ietf-idr-flow-spec-v6-03)
    * [draft-ietf-idr-flowspec-redirect-ip-00](http://tools.ietf.org/html/draft-ietf-idr-flowspec-redirect-ip-00)
    * [draft-ietf-idr-add-paths-08](http://tools.ietf.org/html/draft-ietf-idr-add-paths-08)
-   * [draft-ietf-idr-bgp-multisession-07](http://tools.ietf.org/html/draft-ietf-idr-bgp-multisession-07)
-   * [draft-ietf-idr-bgp-enhanced-route-refresh-04](http://tools.ietf.org/html/draft-ietf-idr-bgp-enhanced-route-refresh-04)
+   * [draft-ietf-idr-bgp-multisession-07](http://tools.ietf.org/html/draft-ietf-idr-bgp-multisession-07) (partial)
    * [draft-scudder-bmp-01](http://tools.ietf.org/html/draft-scudder-bmp-01)
    * [draft-ietf-idr-aigp-10.txt](http://tools.ietf.org/html/draft-ietf-idr-aigp-10)
- * BSD licence, integrate [ExaBGP](http://github.com/Exa-Networks/exabgp) in your own application stack - no strings attached !
 
 [ExaBGP](http://github.com/Exa-Networks/exabgp) does **not** perform any **FIB manipulation**, you will need to write your own LocalRIB and FIB code if this what you need the feature, or simpler, use another open source BGP daemon.
 
-### new on 3.2 stable ...
+### new on 3.4 stable ...
+ * Important speed improvements
+ * **VPLS**, [RFC 4762](http://tools.ietf.org/html/rfc4762) support
+ * Better (but sometimes incompatible) JSON format
+   * new OPEN message
+   * detailled FlowSpec
+   * UPDATE sequence number
+   * new EOR object
+   * possibility to group raw and parsed information in one object
+ * new capability configuration section (kept backward compatibility for this release)
+ * option to respawn dead helper if they die
+ * removal of the option exabgp.tcp.timeout ( not needed anymore )
+ * Large rewrite of UPDATE parsing
+ * Integrate [Orange BAGPIPE](https://github.com/Orange-OpenSource/bagpipe-bgp) work
+   * EVPN NLRI
+   * RTC, encapsulation attributes
+   * not yet exposed through the configuration file
+ * removal of dependency on argparse for python 2.6 ( using docopt )
+ * many bug fixes
+ * and surely more ....
 
- * enhanced route refresh support
- * Full RFC 5575 support, can decode incoming Flow routes
- * **An external program to announce a service** ( Thank you Vincent ! )
- * **accept incoming connections**
- * using "next-hop self" is supported via the API
- * new update code generation can *group multiple NLRI*, from different families, in one update packet
- * **NOTIFICATION** message generation using the API
- * API message control (limit diffusion to a subset of peers)
- * better --decode option to find out what a hex dump of a route mean
- * new internals ... many, including
-    * large rewrite of non-optimal code
-    * new non-blocking reactor
-    * new Adj-RIB-In and Adj-RIB-Out with scalable watchdog feature
- * many small fixes, see the full CHANGELOG
- * and more ....
-
-The list of supported RFC is available [here](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information)
-
-The configuration file format changed slightly from 3.1.x to 3.2.x, effort were made to make sure the previous configuration format would still work, however users are encouraged to check their configuration files.
+The configuration file format changes from version to version effort are made to make sure the previous configuration format should still work, however users are encouraged to check their configuration files after upgrade.
 
 ##Commercial support
 
-Should you feel a need for commercial support in order to deploy ExaBGP in your organisation, please feel free to contact Exa Networks using sales AT exa-networks DOT co DOT uk
+If you have a need for commercial support for ExaBGP, feel free to contact Exa Networks using sales AT exa-networks DOT co DOT uk
 
 ##Related Projects
 
