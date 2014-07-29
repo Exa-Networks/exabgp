@@ -13,6 +13,52 @@ It allows the creation of tools such as :
 
 So have a look and take control your network from any unix servers.
 
+##Features
+
+### Previously on ExaBGP ...
+
+ * runs on any Unix server (has no dependencies).
+ * BSD licence, integrate [ExaBGP](http://github.com/Exa-Networks/exabgp) in your own application stack - no strings attached !
+ * receive / send routes using your own scripts or a JunOS looking configuration file
+   * **IPv4**/**IPv6** (unicast, multicast, nlri-mpls, *mpls-vpn*) routes with arbitrary next-hops
+   * **MPLS** (route-distinguisher), [RFC 4659](http://tools.ietf.org/html/rfc4659) (vpnv6)
+   * **flow routes** (complete [RFC 5575](http://tools.ietf.org/html/rfc5575) support)
+   * **VPLS**, [RFC 4762](http://tools.ietf.org/html/rfc4762) support
+   * **Enhanced Route Refresh**, [RFC 7313](http://tools.ietf.org/html/rfc7313) support
+   * **And [much more](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information)**
+ * support for some drafts
+   * [draft-raszuk-idr-flow-spec-v6-03](http://tools.ietf.org/html/draft-ietf-idr-flow-spec-v6-03)
+   * [draft-ietf-idr-flowspec-redirect-ip-00](http://tools.ietf.org/html/draft-ietf-idr-flowspec-redirect-ip-00)
+   * [draft-ietf-idr-add-paths-08](http://tools.ietf.org/html/draft-ietf-idr-add-paths-08)
+   * [draft-ietf-idr-bgp-multisession-07](http://tools.ietf.org/html/draft-ietf-idr-bgp-multisession-07) (partial)
+   * [draft-scudder-bmp-01](http://tools.ietf.org/html/draft-scudder-bmp-01)
+   * [draft-ietf-idr-aigp-10.txt](http://tools.ietf.org/html/draft-ietf-idr-aigp-10)
+
+[ExaBGP](http://github.com/Exa-Networks/exabgp) does **not** perform any **FIB manipulation**, you will need to write your own LocalRIB and FIB code if this what you need the feature, or simpler, use another open source BGP daemon.
+
+### New on 3.4 stable ...
+ * Important speed improvements
+ * **VPLS**, [RFC 4762](http://tools.ietf.org/html/rfc4762) support
+ * Better (but sometimes incompatible) JSON format
+   * new OPEN message
+   * detailled FlowSpec
+   * UPDATE sequence number
+   * new EOR object
+   * possibility to group raw and parsed information in one object
+ * new capability configuration section (kept backward compatibility for this release)
+ * option to respawn dead helper if they die
+ * removal of the option exabgp.tcp.timeout ( not needed anymore )
+ * Large rewrite of UPDATE parsing
+ * Integrate [Orange BAGPIPE](https://github.com/Orange-OpenSource/bagpipe-bgp) work
+   * EVPN NLRI
+   * RTC, encapsulation attributes
+   * not yet exposed through the configuration file
+ * removal of dependency on argparse for python 2.6 ( using docopt )
+ * many bug fixes
+ * and surely more ....
+
+The configuration file format changes from version to version effort are made to make sure the previous configuration format should still work, however users are encouraged to check their configuration files after upgrade.
+
 ##More information
 
 If you are using [ExaBGP](http://github.com/Exa-Networks/exabgp) from source (or git), it **does not need to be installed** on your server ( using "python setup.py install" ). Simply run [ExaBGP](http://github.com/Exa-Networks/exabgp) from the extracted archive, or your local git repository.
@@ -50,10 +96,6 @@ researchers
 [[3]](http://docs.di.fc.ul.pt/jspui/bitstream/10455/6703/1/Disserta%C3%A7%C3%A3o%20de%20mestrado%20do%20S%C3%A9rgio%20Miguel%20Geraldes%20de%20oliveira%20Serrano_Nov-2010.pdf),
 and please let us know if you use it too and can list you here ...
 
-##BUG
-
-No software is perfect, so should you encounter a bug please [report it](https://github.com/Exa-Networks/exabgp/issues?labels=bug&page=1&state=open) so we can resolve it.
-
 ##Curious
 
 Want to know how the code is changing ? Have a question ?
@@ -73,55 +115,13 @@ This programs **does not have any dependences on any third party libraries** and
 Development is done on python 2.7, the code is kept compatible with python 2.4 in ExaBGP 2.x.x and python 2.5 in ExaBGP 3.1.x.
 ExaBGP 3.2.x and 3.3.x rely on python 2.7 (as it uses argparse), and we are likely to required python 3.4+ for ExaBGP 4.x.x
 
-##Features
-
-### known ...
-
- * runs on any Unix server (has no dependencies).
- * BSD licence, integrate [ExaBGP](http://github.com/Exa-Networks/exabgp) in your own application stack - no strings attached !
- * receive / send routes using your own scripts or a JunOS looking configuration file
-   * **IPv4**/**IPv6** (unicast, multicast, nlri-mpls, *mpls-vpn*) routes with arbitrary next-hops
-   * **MPLS** (route-distinguisher), [RFC 4659](http://tools.ietf.org/html/rfc4659) (vpnv6)
-   * **flow routes** (complete [RFC 5575](http://tools.ietf.org/html/rfc5575) support)
-   * **VPLS**, [RFC 4762](http://tools.ietf.org/html/rfc4762) support
-   * **Enhanced Route Refresh**, [RFC 7313](http://tools.ietf.org/html/rfc7313) support
-   * **And [much more](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information)**
- * support for some drafts
-   * [draft-raszuk-idr-flow-spec-v6-03](http://tools.ietf.org/html/draft-ietf-idr-flow-spec-v6-03)
-   * [draft-ietf-idr-flowspec-redirect-ip-00](http://tools.ietf.org/html/draft-ietf-idr-flowspec-redirect-ip-00)
-   * [draft-ietf-idr-add-paths-08](http://tools.ietf.org/html/draft-ietf-idr-add-paths-08)
-   * [draft-ietf-idr-bgp-multisession-07](http://tools.ietf.org/html/draft-ietf-idr-bgp-multisession-07) (partial)
-   * [draft-scudder-bmp-01](http://tools.ietf.org/html/draft-scudder-bmp-01)
-   * [draft-ietf-idr-aigp-10.txt](http://tools.ietf.org/html/draft-ietf-idr-aigp-10)
-
-[ExaBGP](http://github.com/Exa-Networks/exabgp) does **not** perform any **FIB manipulation**, you will need to write your own LocalRIB and FIB code if this what you need the feature, or simpler, use another open source BGP daemon.
-
-### new on 3.4 stable ...
- * Important speed improvements
- * **VPLS**, [RFC 4762](http://tools.ietf.org/html/rfc4762) support
- * Better (but sometimes incompatible) JSON format
-   * new OPEN message
-   * detailled FlowSpec
-   * UPDATE sequence number
-   * new EOR object
-   * possibility to group raw and parsed information in one object
- * new capability configuration section (kept backward compatibility for this release)
- * option to respawn dead helper if they die
- * removal of the option exabgp.tcp.timeout ( not needed anymore )
- * Large rewrite of UPDATE parsing
- * Integrate [Orange BAGPIPE](https://github.com/Orange-OpenSource/bagpipe-bgp) work
-   * EVPN NLRI
-   * RTC, encapsulation attributes
-   * not yet exposed through the configuration file
- * removal of dependency on argparse for python 2.6 ( using docopt )
- * many bug fixes
- * and surely more ....
-
-The configuration file format changes from version to version effort are made to make sure the previous configuration format should still work, however users are encouraged to check their configuration files after upgrade.
-
 ##Commercial support
 
 If you have a need for commercial support for ExaBGP, feel free to contact Exa Networks using sales AT exa-networks DOT co DOT uk
+
+##BUG
+
+No software is perfect, so should you encounter a bug please [report it](https://github.com/Exa-Networks/exabgp/issues?labels=bug&page=1&state=open) so we can resolve it.
 
 ##Related Projects
 
