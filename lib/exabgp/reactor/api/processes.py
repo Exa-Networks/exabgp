@@ -189,6 +189,10 @@ class Processes (object):
 							pass  # we most likely have data, we will try to read them a the next loop iteration
 						elif e.errno != errno.EAGAIN:  # no more data
 							self.logger.processes("unexpected errno received from forked process (%s)" % errstr(e))
+							# if the program exists we can get an IOError with errno code zero !
+							self.logger.processes("Issue with the process, terminating it and restarting it")
+							self._terminate(process)
+							self._start(process)
 					except StopIteration:
 						pass
 			except (subprocess.CalledProcessError,OSError,ValueError):
