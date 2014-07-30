@@ -1,6 +1,7 @@
 exabgp (3.4.1-1) unstable; urgency=low
 
   * latest ExaBGP release.
+  * Closes: #753829, removed non free material
 
  -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Tue, 29 Jul 2014 11:00:00 +0000
 
