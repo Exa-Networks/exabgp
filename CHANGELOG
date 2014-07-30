@@ -4,6 +4,7 @@ Version explained:
  bug   : increase on bug or incremental changes
 
 Version 3.4.2
+ * Feature: add more information in crash report
  * Fix: problem when trying to report exception errors
 
 Version 3.4.1

@@ -452,7 +452,6 @@ class Peer (object):
 				if self.send_ka() is not False:
 					# we need and will send a keepalive
 					while self.send_ka() is None:
-						print "TRYING ..............."
 						yield ACTION.immediate
 
 				# Give information on the number of routes seen
