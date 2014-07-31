@@ -1493,6 +1493,7 @@ class Configuration (object):
 		if klass is Prefix:
 			path_info = change.nlri.path_info
 		elif klass is MPLS:
+			path_info = None
 			labels = change.nlri.labels
 			rd = change.nlri.rd
 		# packed and not pack() but does not matter atm, it is an IP not a NextHop

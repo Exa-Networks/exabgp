@@ -22,7 +22,7 @@ from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 class MPLS (NLRI,CIDR):
 	__slots__ = ['labels','rd','nexthop','action']
 
-	def __init__(self,afi,safi,packed,mask,nexthop,action):
+	def __init__(self,afi,safi,packed,mask,nexthop,action,path=None):
 		self.labels = Labels.NOLABEL
 		self.rd = RouteDistinguisher.NORD
 		self.nexthop = IP.unpack(nexthop) if nexthop else NoIP
