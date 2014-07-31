@@ -6,6 +6,7 @@ Version explained:
 Version 3.4.2
  * Feature: add more information in crash report
  * Fix: problem when trying to report exception errors
+ * Fix: better handling of on PIPE errors
 
 Version 3.4.1
  * Fix: on bad JSON message

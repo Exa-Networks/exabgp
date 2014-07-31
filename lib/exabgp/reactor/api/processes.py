@@ -13,6 +13,7 @@ import select
 import fcntl
 
 from exabgp.util.errstr import errstr
+from exabgp.reactor.network.error import error
 
 from exabgp.configuration.file import formated
 from exabgp.reactor.api.encoding import Text
@@ -185,14 +186,17 @@ class Processes (object):
 							self._start(process)
 							break
 					except IOError,e:
-						if e.errno == errno.EINTR:  # call interrupted
-							pass  # we most likely have data, we will try to read them a the next loop iteration
-						elif e.errno != errno.EAGAIN:  # no more data
-							self.logger.processes("unexpected errno received from forked process (%s)" % errstr(e))
+						if not e.errno or e.errno in error.fatal:
 							# if the program exists we can get an IOError with errno code zero !
-							self.logger.processes("Issue with the process, terminating it and restarting it")
+							self.logger.processes("Issue with the process' PIPE, terminating it and restarting it")
 							self._terminate(process)
 							self._start(process)
+						elif e.errno in error.block:
+							# we often see errno.EINTR: call interrupted and
+							# we most likely have data, we will try to read them a the next loop iteration
+							pass
+						else:
+							self.logger.processes("unexpected errno received from forked process (%s)" % errstr(e))
 					except StopIteration:
 						pass
 			except (subprocess.CalledProcessError,OSError,ValueError):
