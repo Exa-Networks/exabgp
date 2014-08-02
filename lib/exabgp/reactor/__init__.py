@@ -88,7 +88,9 @@ class Reactor (object):
 		self._reload_processes = True
 
 	def ready (self,ios,sleeptime=0):
-		sleeptime = max(0,sleeptime)
+		# never sleep a negative number of second (if the rounding is negative somewhere)
+		# never sleep more than one second (should the clock time change during two time.time calls)
+		sleeptime = min(max(0.0,sleeptime),1.0)
 		if not ios:
 			time.sleep(sleeptime)
 			return []
