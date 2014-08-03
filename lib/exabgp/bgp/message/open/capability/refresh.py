@@ -32,7 +32,7 @@ class RouteRefresh (Capability):
 		return instance
 
 RouteRefresh.register_capability(Capability.ID.ROUTE_REFRESH)
-RouteRefresh.register_capability(Capability.ID.CISCO_ROUTE_REFRESH)
+RouteRefresh.register_capability(Capability.ID.ROUTE_REFRESH_CISCO)
 
 
 # ========================================================= EnhancedRouteRefresh

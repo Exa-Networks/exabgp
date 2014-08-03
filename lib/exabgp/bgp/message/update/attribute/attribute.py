@@ -78,27 +78,24 @@ class Attribute (object):
 		INTERNAL_SPLIT     = 0xFFFF
 
 		names = {
-			0x01: 'origin',
-			0x02: 'as-path',
-			0x03: 'next-hop',
-			0x04: 'med',
-	#		0x04: 'multi-exit-disc',
-			0x05: 'local-preference',
-			0x06: 'atomic-aggregate',
-			0x07: 'aggregator',
-			0x08: 'community',
-			0x09: 'originator-id',
-			0x0a: 'cluster-list',
-			0x0e: 'mp-reach-nlri',
-			0x0f: 'mp-unreach-nlri',
-	#		0x0e: 'multi-protocol reacheable nlri'
-	#		0x0f: 'multi-protocol unreacheable nlri'
-			0x10: 'extended-community',
-			0x11: 'as4-path',
-			0x12: 'as4-aggregator',
-			0x16: 'pmsi-tunnel',
-			0x17: 'tunnel-encaps',
-			0x1a: 'aigp',
+			ORIGIN             : 'origin',
+			AS_PATH            : 'as-path',
+			NEXT_HOP           : 'next-hop',
+			MED                : 'med',              # multi-exit-disc
+			LOCAL_PREF         : 'local-preference',
+			ATOMIC_AGGREGATE   : 'atomic-aggregate',
+			AGGREGATOR         : 'aggregator',
+			COMMUNITY          : 'community',
+			ORIGINATOR_ID      : 'originator-id',
+			CLUSTER_LIST       : 'cluster-list',
+			MP_REACH_NLRI      : 'mp-reach-nlri',    # multi-protocol reacheable nlri
+			MP_UNREACH_NLRI    : 'mp-unreach-nlri',  # multi-protocol unreacheable nlri
+			EXTENDED_COMMUNITY : 'extended-community',
+			AS4_PATH           : 'as4-path',
+			AS4_AGGREGATOR     : 'as4-aggregator',
+			PMSI_TUNNEL        : 'pmsi-tunnel',
+			TUNNEL_ENCAP       : 'tunnel-encaps',
+			AIGP               : 'aigp',
 			0xfffd: 'internal-withdraw',
 			0xfffe: 'internal-watchdog',
 			0xffff: 'internal-split',
@@ -106,6 +103,9 @@ class Attribute (object):
 
 		def __str__ (self):
 			return self.names.get(self,'unknown-attribute-%s' % hex(self))
+
+		def __repr__ (self):
+			return str(self)
 
 		@classmethod
 		def name (cls,self):

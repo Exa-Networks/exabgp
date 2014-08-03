@@ -86,6 +86,9 @@ class Message (Exception):
 		def __str__ (self):
 			return self.names.get(self,'UNKNOWN MESSAGE %s' % hex(self))
 
+		def __repr__ (self):
+			return str(self)
+
 		@classmethod
 		def name (cls,message_id):
 			return cls.names.get(message_id,'UNKNOWN MESSAGE %s' % hex(message_id))

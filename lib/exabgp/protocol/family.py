@@ -52,6 +52,16 @@ class AFI (int):
 		if name == "ipv6": return AFI.ipv6
 		return None
 
+	@staticmethod
+	def implemented_safi (afi):
+		if afi == 'ipv4':
+			return ['unicast','multicast','nlri-mpls','mpls-vpn','flow','flow-vpn']
+		if afi == 'ipv6':
+			return ['unicast','mpls-vpn','flow','flow-vpn']
+		if afi == 'l2vpn':
+			return ['vpls']
+		return []
+
 # =================================================================== SAFI
 
 # http://www.iana.org/assignments/safi-namespace

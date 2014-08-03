@@ -2880,7 +2880,7 @@ class Configuration (object):
 
 		capa = Capabilities().new(n,False)
 		capa[Capability.ID.ADD_PATH] = path
-		capa[Capability.ID.MULTIPROTOCOL_EXTENSIONS] = n.families()
+		capa[Capability.ID.MULTIPROTOCOL] = n.families()
 
 		o1 = Open(4,n.local_as,str(n.local_address),capa,180)
 		o2 = Open(4,n.peer_as,str(n.peer_address),capa,180)
