@@ -26,9 +26,6 @@ def string (tokeniser):
 
 def boolean (tokeniser,default):
 	value = tokeniser()
-	if value == ';':
-		tokeniser.rewind(value)
-		return default
 	boolean = value.lower()
 	if boolean in ('true','enable','enabled'):
 		value = True
@@ -37,7 +34,8 @@ def boolean (tokeniser,default):
 	elif boolean in ('unset',):
 		value = None
 	else:
-		raise ValueError("invalid boolean definition")
+		tokeniser.rewind(value)
+		return default
 	return value
 
 def md5 (tokeniser):
@@ -52,15 +50,13 @@ def ttl (tokeniser):
 	TTL_SECURITY = 255
 	value = tokeniser()
 
-	if value == ';':
-		tokeniser.rewind(value)
-		return TTL_SECURITY
 
 	# XXX: FIXME: Should it be a subclass of int ?
 	try:
 		ttl = int(value)
 	except ValueError:
-		raise ValueError ('"%s" is an invalid ttl-security' % value)
+		tokeniser.rewind(value)
+		return TTL_SECURITY
 
 	if ttl < 0:
 		raise ValueError('ttl-security can not be negative')

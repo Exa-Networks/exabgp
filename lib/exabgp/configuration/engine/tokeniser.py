@@ -1,8 +1,33 @@
+# encoding: utf-8
+"""
+tokeniser.py
+
+Created by Thomas Mangin on 2014-06-22.
+Copyright (c) 2014-2014 Exa Networks. All rights reserved.
+"""
+
 from exabgp.util import coroutine
+from collections import defaultdict
+
+
+# =============================================================== UnexpectedData
+# reporting issue with the tokenisation
 
 class UnexpectedData (Exception):
 	def __init__(self, line, position, token):
 		super(UnexpectedData, self).__init__('Unexpected data at line %d position %d : "%s"' % (line,position,token))
+
+
+
+# ===================================================================== dictdict
+# an Hardcoded defaultdict with dict as method
+
+class dictdict (defaultdict):
+	def __init__ (self):
+		self.default_factory = dict
+
+
+# convert special caracters
 
 @coroutine.join
 def unescape(s):
@@ -32,14 +57,18 @@ def unescape(s):
 			yield esc
 		start = pos + 1
 
+
+# A coroutine which return the next token, or string if quoted from the stream
+
 @coroutine.each
 def tokens (stream):
-	spaces = [' ','\t','\r','\n']
+	spaces = [' ','\t','\r']
 	strings = ['"', "'"]
-	syntax = [',','[',']','{','}',';']
+	syntax = [',','[',']','{','}']
 	comment = ['#',]
 	nb_lines = 0
 	for line in stream:
+		nb_lines += 1
 		nb_chars = 0
 		quoted = ''
 		word = ''
@@ -88,16 +117,25 @@ def tokens (stream):
 				word += char
 				nb_chars += 1
 
+# ==================================================================== Tokeniser
+# Return the next token from the configuration
+
 class Tokeniser (object):
-	def __init__ (self,stream):
-		self.tokeniser = tokens(stream)
-		self._rewind = []
+	def __init__ (self,name,stream):
+		self.name = name                  # A unique name for this tokenier, so we can have multiple
+		self.tokeniser = tokens(stream)   # A corouting giving us the next toker
+		self._rewind = []                 # Should we want to rewind, the list of to pop first
+
+		# each section can registered named configuration for reference here
+		self.sections = defaultdict(dictdict)
 
 	def __call__ (self):
 		if self._rewind:
 			return self._rewind.pop()
-		return Tokeniser.parser(self.tokeniser)
+		self.line,self.position,self.token = Tokeniser.parser(self.tokeniser)
+		return self.token
 
+	# XXX: FIXME: line and position only work if we only rewind one element
 	def rewind (self,token):
 		self._rewind.append(token)
 
@@ -112,9 +150,9 @@ class Tokeniser (object):
 						l = []
 						for element in iterate_list(next):
 							l.append(element)
-						return l
+						return line,position,l
 					elif token[0] in ('"',"'"):
-						return unescape(token[1:-1])
+						return line,position,unescape(token[1:-1])
 					# elif token == 'true':
 					# 	return True
 					# elif token == 'false':
@@ -122,16 +160,16 @@ class Tokeniser (object):
 					# elif token == 'null':
 					# 	return None
 					else:
-						return token
+						return line,position,token
 			except ValueError:
 				raise UnexpectedData(line,position,token)
 			except StopIteration:
-				return ''
+				return -1,-1,''
 
 		def iterate_list(next):
-			token = content(next)
+			line,position,token = content(next)
 			while token != ']':
-				yield token
-				token = content(next)
+				yield line,position,token
+				line,position,token = content(next)
 
 		return content(tokeniser)

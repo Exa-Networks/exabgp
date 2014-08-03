@@ -14,7 +14,9 @@ from exabgp.bgp.message.notification import Notify
 
 class Capability (object):
 
-	class ID (object):
+	class ID (int):
+		__slots__ = []
+
 		RESERVED                 = 0x00  # [RFC5492]
 		MULTIPROTOCOL            = 0x01  # [RFC2858]
 		ROUTE_REFRESH            = 0x02  # [RFC2918]
@@ -43,6 +45,47 @@ class Capability (object):
 		# Internal
 		AIGP = 0xFF00
 
+		names = {
+			RESERVED                 : 'reserved',
+			MULTIPROTOCOL            : 'multiprotocol',
+			ROUTE_REFRESH            : 'route-refresh',
+			OUTBOUND_ROUTE_FILTERING : 'outbound-route-filtering',
+			MULTIPLE_ROUTES          : 'multiple-routes',
+			EXTENDED_NEXT_HOP        : 'extended-next-hop',
+
+			GRACEFUL_RESTART         : 'graceful-restart',
+			FOUR_BYTES_ASN           : 'asn4',
+
+			DYNAMIC_CAPABILITY       : 'dynamic-capability',
+			MULTISESSION             : 'multi-session',
+			ADD_PATH                 : 'add-path',
+			ENHANCED_ROUTE_REFRESH   : 'enhanced-route-refresh',
+			OPERATIONAL              : 'operational',
+
+			ROUTE_REFRESH_CISCO      : 'cisco-route-refresh',
+			MULTISESSION_CISCO       : 'cisco-multi-sesion',
+
+			AIGP                     : 'aigp',
+		}
+
+		def __str__ (self):
+			name = self.names.get(self,None)
+			if name is None:
+				if self in Capability.ID.unassigned: return 'unassigned-%s' % hex(self)
+				if self in Capability.ID.reserved: return 'reserved-%s' % hex(self)
+				return 'capability-%s' % hex(self)
+			return name
+
+		def __repr__ (self):
+			return str(self)
+
+		@classmethod
+		def name (cls,self):
+			name = cls.names.get(self,None)
+			if name is None:
+				if self in Capability.ID.unassigned: return 'unassigned-%s' % hex(self)
+				if self in Capability.ID.reserved: return 'reserved-%s' % hex(self)
+			return name
 
 	registered_capability = dict()
 	_fallback_capability = None
