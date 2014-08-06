@@ -150,12 +150,17 @@ class Protocol (object):
 
 		message = Message.unpack_message(msg,body,self.negotiated)
 		self.logger.message(self.me('<< %s' % Message.ID.name(msg)))
+
+		if message.TYPE == Notification.TYPE:
+			raise message
+
 		if self.neighbor.api[msg]:
 			if self.neighbor.api['receive-parsed']:
 				if self.neighbor.api['consolidate'] and self.neighbor.api['receive-packets']:
 					self.peer.reactor.processes.message(msg,self.peer,message,header,body)
 				else:
 					self.peer.reactor.processes.message(msg,self.peer,message,'','')
+
 		yield message
 
 		return
@@ -191,9 +196,6 @@ class Protocol (object):
 			else:
 				break
 
-		if received_open.TYPE == Notification.TYPE:
-			raise received_open
-
 		if received_open.TYPE != Open.TYPE:
 			raise Notify(5,1,'The first packet recevied is not an open message (%s)' % received_open)
 
@@ -206,9 +208,6 @@ class Protocol (object):
 				yield message
 			else:
 				break
-
-		if message.TYPE == Notification.TYPE:
-			raise message
 
 		if message.TYPE != KeepAlive.TYPE:
 			raise Notify(5,2)
