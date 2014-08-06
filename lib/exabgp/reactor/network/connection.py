@@ -143,6 +143,7 @@ class Connection (object):
 					if message != reported:
 						reported = message
 						self.logger.wire(message,'debug')
+					yield ''
 				elif e.args[0] in error.fatal:
 					self.close()
 					raise LostConnection('issue reading on the socket: %s' % errstr(e))
