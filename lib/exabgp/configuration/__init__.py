@@ -41,6 +41,15 @@ if __name__ == '__main__':
 	p = Parser('/Users/thomas/source/git/exabgp/experimental/new-format.conf')
 	registry = p.reload()
 
-	print
-	for klass in registry._klass:
-		print '%-20s' % str(klass).split('.')[-1][:-2], registry._klass[klass].content
+	import pprint
+	pp = pprint.PrettyPrinter(indent=3)
+
+	d = SectionBGP.configuration['configuration']['capability']
+	for k,v in d.items():
+		print '%s ' % k
+		pp.pprint(v)
+		print
+
+	# print
+	# for klass in sorted(registry._klass):
+	# 	print '%-20s' % str(klass).split('.')[-1][:-2], registry._klass[klass].content

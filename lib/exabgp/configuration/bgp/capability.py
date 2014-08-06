@@ -11,6 +11,11 @@ from exabgp.configuration.engine.registry import Entry
 from exabgp.configuration.engine.parser import boolean
 
 from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open.capability.mp import MultiProtocol
+
+from exabgp.protocol.family import known_families
+
+from exabgp.configuration.bgp.family import SectionFamily
 
 
 # ============================================================ capability_syntax
@@ -41,11 +46,23 @@ class SectionCapability (Entry):
 	name = 'capability'
 
 	def enter (self,tokeniser):
-		self.content = self.section_name(self.name,tokeniser)
+		self.content = self.create_section(self.name,tokeniser)
+
+		self.content[Capability.ID(Capability.ID.FOUR_BYTES_ASN)] = True
+		self.content[Capability.ID(Capability.ID.AIGP)] = False
+		self.content[Capability.ID(Capability.ID.ADD_PATH)] = 0
+		self.content[Capability.ID(Capability.ID.OPERATIONAL)] = False
+		self.content[Capability.ID(Capability.ID.ROUTE_REFRESH)] = False
+		self.content[Capability.ID(Capability.ID.MULTISESSION_CISCO)] = False
+		self.content[Capability.ID(Capability.ID.GRACEFUL_RESTART)] = 0
 
 	def exit (self,tokeniser):
-		# no verification to do
-		pass
+		if Capability.ID(Capability.ID.MULTIPROTOCOL) not in self.content:
+			self.content[Capability.ID(Capability.ID.MULTIPROTOCOL)] = MultiProtocol(known_families())
+
+	def family (self,tokeniser):
+		data = self.get_section(SectionFamily.name,tokeniser)
+		self.content[Capability.ID(Capability.ID.MULTIPROTOCOL)] = MultiProtocol((afi,safi) for afi in sorted(data) for safi in sorted(data[afi]))
 
 	def asn4 (self,tokeniser):
 		self._check_duplicate(tokeniser,RaisedCapability)
@@ -96,9 +113,12 @@ class SectionCapability (Entry):
 	def register (cls,registry,location):
 		registry.register_class(cls)
 
+		# FamilySection.register(location)
+
 		registry.register_hook(cls,'enter',location,'enter')
 		registry.register_hook(cls,'exit',location,'exit')
 
+		registry.register_hook(cls,'action',location+['family'],'family')
 		registry.register_hook(cls,'action',location+['asn4'],'asn4')
 		registry.register_hook(cls,'action',location+['aigp'],'aigp')
 		registry.register_hook(cls,'action',location+['add-path'],'addpath')
