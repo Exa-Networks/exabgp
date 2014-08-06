@@ -133,6 +133,8 @@ class Connection (object):
 						self.logger.wire(LazyFormat("%s %-32s RECEIVED " % (self.name(),'%s / %s' % (self.local,self.peer)),od,read))
 						yield data
 						return
+					
+					yield ''
 			except socket.timeout,e:
 				self.close()
 				self.logger.wire("%s %s peer is too slow" % (self.name(),self.peer))
