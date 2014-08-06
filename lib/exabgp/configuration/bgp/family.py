@@ -16,25 +16,25 @@ from exabgp.protocol.family import SAFI
 # ================================================================ family_syntax
 
 family_syntax = \
-	'family <name>{\n' \
+	'family <name> {\n' \
 	'   all  # default, announce all the families we know\n' \
 	'\n' \
-	'   ipv4 {\n' \
+	'   ipv4 [\n' \
 	'      unicast\n' \
 	'      multicast\n' \
 	'      nlri-mpls\n' \
 	'      mpls-vpn\n' \
 	'      flow\n' \
 	'      flow-vpn\n' \
-	'   }\n' \
-	'   ipv6 {\n' \
+	'   ]\n' \
+	'   ipv6 [\n' \
 	'      unicast\n' \
 	'      flow\n' \
 	'      flow-vpn\n' \
-	'   }\n' \
-	'   l2vpn {\n' \
+	'   ]\n' \
+	'   l2vpn [\n' \
 	'      vpls\n' \
-	'   }\n' \
+	'   ]\n' \
 	'}\n'
 
 
@@ -52,31 +52,24 @@ class SectionFamily (Entry):
 	name = 'family'
 
 	def enter (self,tokeniser):
-		self.content = self.section_name(self.name,tokeniser)
+		self.content = self.create_section(self.name,tokeniser)
 
 	def exit (self,tokeniser):
 		# no verification to do
 		pass
 
-	def inet (self,tokeniser):
-		raise RaisedFamily(tokeniser,"the word inet is deprecated, please use ipv4 instead")
-
-	def inet4 (self,tokeniser):
-		raise RaisedFamily(tokeniser,"the word inet4 is deprecated, please use ipv4 instead")
-
-	def inet6 (self,tokeniser):
-		raise RaisedFamily(tokeniser,"the word inet6 is deprecated, please use ipv6 instead")
-
-	def _add (self,tokeniser,afi_name,safi_name):
+	def _add (self,tokeniser,afi_name,safi_names):
 		self._check_duplicate(tokeniser,RaisedFamily)
-		if safi_name not in AFI.implemented_safi(afi_name):
-			raise RaisedFamily(tokeniser,'the family pair afi/safi %s/%s is unimplemented' % (afi_name,safi_name))
-		safi = SAFI(SAFI.value(safi_name))
-
 		known = self.content.setdefault(AFI(AFI.value(afi_name)),[])
-		if safi in known:
-			raise RaisedFamily(tokeniser,'afi/safi pair already defined in this family')
-		known.append(safi)
+
+		for safi_name in safi_names:
+			if safi_name not in AFI.implemented_safi(afi_name):
+				raise RaisedFamily(tokeniser,'the family pair afi/safi %s/%s is unimplemented' % (afi_name,safi_name))
+
+			safi = SAFI(SAFI.value(safi_name))
+			if safi in known:
+				raise RaisedFamily(tokeniser,'afi/safi pair already defined in this family')
+			known.append(safi)
 
 	def ipv4 (self,tokeniser):
 		self._add(tokeniser,'ipv4',tokeniser())
@@ -101,8 +94,6 @@ class SectionFamily (Entry):
 		registry.register_hook(cls,'exit',location,'exit')
 
 		for afi in ['ipv4','ipv6','l2vpn']:
-			registry.register_hook(cls,'enter',location+[afi],'unamed_enter')
 			registry.register_hook(cls,'action',location+[afi],afi)
-			registry.register_hook(cls,'exit',location+[afi],'unamed_exit')
 
 		registry.register_hook(cls,'action',location+['all'],'all')

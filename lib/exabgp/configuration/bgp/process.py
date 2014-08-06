@@ -22,16 +22,12 @@ process_syntax = \
 '   run </path/to/command with its args>  # the command can be quoted\n' \
 '   encoder text|json\n' \
 '   received {\n' \
-'     # "message" in notification,open,keepalive,update,refresh,operational\n' \
-'     <message> {\n' \
+'     # "message" in notification,open,keepalive,update,refresh,operational,all\n' \
+'     <message> [\n' \
 '       parsed          # send parsed BGP data for "message"\n' \
 '       packets         # send raw BGP message for "message"\n' \
 '       consolidated    # group parsed and raw information in one JSON object\n' \
-'     }\n' \
-'     neighbor-changes  # state of peer change (up/down)\n' \
-'     parsed            # send parsed BGP data for all messages\n' \
-'     packets           # send raw BGP message for all messages\n' \
-'     consolidated      # group parsed and raw information for all messages\n' \
+'     ]\n' \
 '   }\n' \
 '   sent {\n' \
 '     packets           # send all generated BGP messages\n' \
@@ -53,16 +49,10 @@ class SectionProcess (Entry):
 	name = 'process'
 
 	def enter_process (self,tokeniser):
-		self.content = self.section_name(self.name,tokeniser)
+		self.content = self.create_section(self.name,tokeniser)
 		self.content['encoder'] = 'text'
 
 	def exit_process (self,tokeniser):
-		pass
-
-	def enter (self,tokeniser):
-		self.drop_parenthesis(tokeniser)
-
-	def exit (self,tokeniser):
 		pass
 
 	def encoder (self,tokeniser):
@@ -152,30 +142,33 @@ class SectionProcess (Entry):
 		registry.register_hook(cls,'action',location+['encoder'],'encoder')
 		registry.register_hook(cls,'action',location+['respawn'],'respawn')
 
-		registry.register_hook(cls,'enter',location+['received'],'enter')
+		for received in (location+['received'],):
 
-		registry.register_hook(cls,'enter',location+['received','parsed'],'received_parsed')
-		registry.register_hook(cls,'enter',location+['received','parsed'],'received_packets')
-		registry.register_hook(cls,'enter',location+['received','parsed'],'received_consolidated')
+			registry.register_hook(cls,'enter',received,'unamed_enter')
 
-		for message in ['notification','open','keepalive','update','refresh','operational']:
-			registry.register_hook(cls,'enter',location+['received',message],'enter')
-			registry.register_hook(cls,'action',location+['received',message,'parsed'],'message')
-			registry.register_hook(cls,'action',location+['received',message,'packets'],'message')
-			registry.register_hook(cls,'action',location+['received',message,'consolidated'],'message')
-			registry.register_hook(cls,'exit',location+['received',message],'exit')
+			registry.register_hook(cls,'action',received+['neighbor-changes'],'neighbor_changes')
 
-		registry.register_hook(cls,'action',location+['received','neighbor-changes'],'neighbor_changes')
+			for message in ['notification','open','keepalive','update','refresh','operational']:
+				registry.register_hook(cls,'enter',received+[message],'unamed_enter')
+				registry.register_hook(cls,'action',received+[message,'parsed'],'message')
+				registry.register_hook(cls,'action',received+[message,'packets'],'message')
+				registry.register_hook(cls,'action',received+[message,'consolidated'],'message')
+				registry.register_hook(cls,'exit',received+[message],'unamed_exit')
 
-		registry.register_hook(cls,'exit', location+['received'],'exit')
+			message = 'all'
+			registry.register_hook(cls,'enter',received+[message],'unamed_enter')
+			registry.register_hook(cls,'action',received+[message,'parsed'],'message')
+			registry.register_hook(cls,'action',received+[message,'packets'],'message')
+			registry.register_hook(cls,'action',received+[message,'consolidated'],'message')
+			registry.register_hook(cls,'exit',received+[message],'unamed_exit')
 
-		registry.register_hook(cls,'enter',location+['sent'],'enter')
+			registry.register_hook(cls,'exit', received,'unamed_exit')
+
+		registry.register_hook(cls,'enter',location+['sent'],'unamed_enter')
 		registry.register_hook(cls,'action',location+['sent','packets'],'sent_packets')
-		registry.register_hook(cls,'exit',location+['sent'],'exit')
+		registry.register_hook(cls,'exit',location+['sent'],'unamed_exit')
 
 		registry.register_hook(cls,'exit',location,'exit_process')
-
-
 
 		# name = tokens[0] if len(tokens) >= 1 else 'conf-only-%s' % str(time.time())[-6:]
 		# self.process.setdefault(name,{})['neighbor'] = scope[-1]['peer-address'] if 'peer-address' in scope[-1] else '*'

@@ -9,11 +9,18 @@ Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 from exabgp.configuration.engine.registry import Entry
 
 
+syntax_bgp = """\
+bgp {
+	lots here
+}
+"""
+
 # =================================================================== SectionBGP
 #
 
 class SectionBGP (Entry):
 	content = None
+	syntax = syntax_bgp
 
 	@classmethod
 	def register (cls,registry,location):

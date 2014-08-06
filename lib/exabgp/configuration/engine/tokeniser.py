@@ -7,25 +7,30 @@ Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
 from exabgp.util import coroutine
-from collections import defaultdict
 
 
 # =============================================================== UnexpectedData
 # reporting issue with the tokenisation
 
 class UnexpectedData (Exception):
-	def __init__(self, line, position, token):
-		super(UnexpectedData, self).__init__('Unexpected data at line %d position %d : "%s"' % (line,position,token))
+	tabsize = 3
 
+	def __init__(self, idx_line, idx_position, line, error):
+		self.line = line.replace('\t',' '*self.tabsize)
+		self.error = error
+		self.idx_line = idx_line
+		self.idx_position = idx_position + (self.tabsize-1) * line[:idx_position].count('\t')
 
+		super(UnexpectedData, self).__init__(
+			'\n\n'.join((
+				'problem parsing configuration file line %d position %d' % (idx_line,idx_position),
+				'error message: %s' % error,
+				'%s\n%s' % (self.line,'-'* self.idx_position + '^')
+			))
+		)
 
-# ===================================================================== dictdict
-# an Hardcoded defaultdict with dict as method
-
-class dictdict (defaultdict):
-	def __init__ (self):
-		self.default_factory = dict
-
+	def __str__ (self):
+		return self.args[0]
 
 # convert special caracters
 
@@ -58,11 +63,11 @@ def unescape(s):
 		start = pos + 1
 
 
-# A coroutine which return the next token, or string if quoted from the stream
+# A coroutine which return the producer token, or string if quoted from the stream
 
 @coroutine.each
 def tokens (stream):
-	spaces = [' ','\t','\r']
+	spaces = [' ','\t','\r','\n']
 	strings = ['"', "'"]
 	syntax = [',','[',']','{','}']
 	comment = ['#',]
@@ -76,9 +81,10 @@ def tokens (stream):
 			if char in comment:
 				if quoted:
 					word += char
+					nb_chars += 1
 				else:
 					if word:
-						yield nb_lines,nb_chars,char
+						yield nb_lines,nb_chars,char,line
 						word = ''
 					break
 
@@ -87,17 +93,17 @@ def tokens (stream):
 					word += char
 				else:
 					if word:
-						yield nb_lines,nb_chars,word
+						yield nb_lines,nb_chars,word,line
 						nb_chars += len(word)
 						word = ''
-					yield nb_lines,nb_chars,char
+					yield nb_lines,nb_chars,char,line
 				nb_chars += 1
 
 			elif char in spaces:
 				if quoted:
 					word += char
 				elif word:
-					yield nb_lines,nb_chars,word
+					yield nb_lines,nb_chars,word,line
 					nb_chars += len(word)
 					word = ''
 				nb_chars += 1
@@ -106,7 +112,7 @@ def tokens (stream):
 				word += char
 				if quoted == char:
 					quoted = ''
-					yield nb_lines,nb_chars,word
+					yield nb_lines,nb_chars,word,line
 					nb_chars += len(word) + 1
 					word = ''
 				else:
@@ -118,21 +124,18 @@ def tokens (stream):
 				nb_chars += 1
 
 # ==================================================================== Tokeniser
-# Return the next token from the configuration
+# Return the producer token from the configuration
 
 class Tokeniser (object):
 	def __init__ (self,name,stream):
 		self.name = name                  # A unique name for this tokenier, so we can have multiple
-		self.tokeniser = tokens(stream)   # A corouting giving us the next toker
+		self.tokeniser = tokens(stream)   # A corouting giving us the producer toker
 		self._rewind = []                 # Should we want to rewind, the list of to pop first
-
-		# each section can registered named configuration for reference here
-		self.sections = defaultdict(dictdict)
 
 	def __call__ (self):
 		if self._rewind:
 			return self._rewind.pop()
-		self.line,self.position,self.token = Tokeniser.parser(self.tokeniser)
+		self.idx_line,self.idx_position,self.token,self.line = Tokeniser.parser(self.tokeniser)
 		return self.token
 
 	# XXX: FIXME: line and position only work if we only rewind one element
@@ -141,35 +144,28 @@ class Tokeniser (object):
 
 	@staticmethod
 	def parser (tokeniser):
-		def content(next):
+		def content(producer):
 			try:
 				while True:
-					line,position,token = next()
-
+					idx_line,idx_position,token,line = producer()
 					if token == '[':
-						l = []
-						for element in iterate_list(next):
-							l.append(element)
-						return line,position,l
+						returned = []
+						for token in iterate_list(producer):
+							returned.append(token)
+						return idx_line,idx_position,returned,line
 					elif token[0] in ('"',"'"):
-						return line,position,unescape(token[1:-1])
-					# elif token == 'true':
-					# 	return True
-					# elif token == 'false':
-					# 	return False
-					# elif token == 'null':
-					# 	return None
+						return idx_line,idx_position,unescape(token[1:-1]),line
 					else:
-						return line,position,token
+						return idx_line,idx_position,token,line
 			except ValueError:
-				raise UnexpectedData(line,position,token)
+				raise UnexpectedData(idx_line,idx_position,token,line)
 			except StopIteration:
-				return -1,-1,''
+				return -1,-1,'',''
 
-		def iterate_list(next):
-			line,position,token = content(next)
-			while token != ']':
-				yield line,position,token
-				line,position,token = content(next)
+		def iterate_list(producer):
+			idx_line,idx_position,token,line = producer()
+			while token and token != ']':
+				yield token
+				idx_line,idx_position,token,line = producer()
 
 		return content(tokeniser)
