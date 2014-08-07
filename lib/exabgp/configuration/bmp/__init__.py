@@ -36,5 +36,5 @@ class SectionBMP (Section):
 	def register (cls,registry,location):
 		registry.register_class(cls)
 
-		registry.register_hook(cls,'enter',location,'unamed_enter')
-		registry.register_hook(cls,'exit',location,'unamed_exit')
+		registry.register_hook(cls,'enter',location,'enter_unamed_section')
+		registry.register_hook(cls,'exit',location,'exit_unamed_section')

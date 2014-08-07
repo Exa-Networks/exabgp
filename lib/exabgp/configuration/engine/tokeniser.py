@@ -70,8 +70,7 @@ def tokens (stream):
 					word += char
 				else:
 					if word:
-						yield nb_lines,nb_chars,line,word
-						nb_chars += len(word)
+						yield nb_lines,nb_chars-len(word),line,word
 						word = ''
 					yield nb_lines,nb_chars,line,char
 				nb_chars += 1
@@ -80,7 +79,7 @@ def tokens (stream):
 				if quoted:
 					word += char
 				elif word:
-					yield nb_lines,nb_chars,line,word
+					yield nb_lines,nb_chars-len(word),line,word
 					word = ''
 				nb_chars += 1
 
@@ -88,12 +87,11 @@ def tokens (stream):
 				word += char
 				if quoted == char:
 					quoted = ''
-					yield nb_lines,nb_chars,line,word
-					nb_chars += len(word) + 1
+					yield nb_lines,nb_chars-len(word),line,word
 					word = ''
 				else:
 					quoted = char
-					nb_chars += 1
+				nb_chars += 1
 
 			else:
 				word += char
