@@ -6,7 +6,8 @@ Created by Thomas Mangin on 2014-06-22.
 Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.engine.registry import Raised
+from exabgp.configuration.engine.location import Location
+from exabgp.configuration.engine.raised import Raised
 from exabgp.configuration.engine.section import Section
 from exabgp.configuration.engine.parser import boolean
 
@@ -118,9 +119,9 @@ class SectionProcess (Section):
 		message = self.location[-1]
 		actions = tokeniser()
 
-		for action in actions:
+		for (idx_line,idx_column,line,action) in actions:
 			if action not in valid_options:
-				raise RaisedProcess(tokeniser,'invalid message option %s, valid options are "%s"' % (action,format('", "'.join(valid_options))))
+				raise RaisedProcess(Location(idx_line,idx_column,line),'invalid message option %s, valid options are "%s"' % (action,format('", "'.join(valid_options))))
 
 			messages = valid_messages if message == 'all' else [message]
 
@@ -128,14 +129,14 @@ class SectionProcess (Section):
 				section = self.content.setdefault(direction,{}).setdefault(m,[])
 
 				if action in section:
-					raise RaisedProcess(tokeniser,'duplicate action (%s) for message %s%s' % (
+					raise RaisedProcess(Location(idx_line,idx_column,line),'duplicate action (%s) for message %s%s' % (
 						action,
 						m,
 						" using the alis 'all'" if message == 'all' else ''
 					))
 
 				if 'consolidated' in section and len(section) > 0:
-					raise RaisedProcess(tokeniser,'consolidated can not be used with another keyword')
+					raise RaisedProcess(Location(idx_line,idx_column,line),'consolidated can not be used with another keyword')
 
 				section.append(action)
 
