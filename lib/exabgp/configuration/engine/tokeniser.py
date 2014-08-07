@@ -7,7 +7,8 @@ Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
 from exabgp.util import coroutine
-from exabgp.configuration.engine.raised import UnexpectedData
+from exabgp.configuration.engine.location import Location
+from exabgp.configuration.engine.raised import Raised
 
 # convert special caracters
 
@@ -100,8 +101,10 @@ def tokens (stream):
 # ==================================================================== Tokeniser
 # Return the producer token from the configuration
 
-class Tokeniser (object):
+
+class Tokeniser (Location):
 	def __init__ (self,name,stream):
+		super(Tokeniser,self).__init__()
 		self.name = name                  # A unique name for this tokenier, so we can have multiple
 		self.tokeniser = tokens(stream)   # A corouting giving us the producer toker
 		self._rewind = []                 # Should we want to rewind, the list of to pop first
@@ -109,37 +112,33 @@ class Tokeniser (object):
 	def __call__ (self):
 		if self._rewind:
 			return self._rewind.pop()
-		self.idx_line,self.idx_column,self.line,self.token = Tokeniser.parser(self.tokeniser)
-		return self.token
+		token = self.content(self.tokeniser)
+		return token
 
 	# XXX: FIXME: line and position only work if we only rewind one element
 	def rewind (self,token):
 		self._rewind.append(token)
 
-	@staticmethod
-	def parser (tokeniser):
-		def content(producer):
-			try:
-				while True:
-					idx_line,idx_column,line,token = producer()
-					if token == '[':
-						returned = []
-						for token in iterate_list(producer):
-							returned.append(token)
-						return idx_line,idx_column,line,returned
-					elif token[0] in ('"',"'"):
-						return idx_line,idx_column,line,unescape(token[1:-1])
-					else:
-						return idx_line,idx_column,line,token
-			except ValueError:
-				raise UnexpectedData(idx_line,idx_column,line,token)
-			except StopIteration:
-				return -1,-1,'',''
+	def content (self,producer):
+		try:
+			while True:
+				self.idx_line,self.idx_column,self.line,token = producer()
+				if token == '[':
+					returned = []
+					for token in self.iterate_list(producer):
+						returned.append((self.idx_line,self.idx_column,self.line,token))
+					return returned
+				elif token[0] in ('"',"'"):
+					return unescape(token[1:-1])
+				else:
+					return token
+		except ValueError:
+			raise Raised(Location(self.idx_line,self.idx_column,self.line),'Could not parse %s' % str(token))
+		except StopIteration:
+			return None
 
-		def iterate_list(producer):
-			idx_line,idx_column,line,token = producer()
-			while token and token != ']':
-				yield token
-				idx_line,idx_column,line,token = producer()
-
-		return content(tokeniser)
+	def iterate_list (self,producer):
+		token = self.content(producer)
+		while token and token != ']':
+			yield token
+			token = self.content(producer)

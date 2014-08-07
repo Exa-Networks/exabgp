@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2014-06-22.
 Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
+from exabgp.configuration.engine.location import Location
 from exabgp.configuration.engine.raised import Raised
 from exabgp.configuration.engine.section import Section
 
@@ -62,13 +63,13 @@ class SectionFamily (Section):
 		self._check_duplicate(tokeniser,RaisedFamily)
 		known = self.content.setdefault(AFI(AFI.value(afi_name)),[])
 
-		for safi_name in safi_names:
+		for (idx_line,idx_column,line,safi_name) in safi_names:
 			if safi_name not in AFI.implemented_safi(afi_name):
-				raise RaisedFamily(tokeniser,'the family pair afi/safi %s/%s is unimplemented' % (afi_name,safi_name))
+				raise RaisedFamily(Location(idx_line,idx_column,line),'the family pair afi/safi %s/%s is unimplemented' % (afi_name,safi_name))
 
 			safi = SAFI(SAFI.value(safi_name))
 			if safi in known:
-				raise RaisedFamily(tokeniser,'afi/safi pair already defined in this family')
+				raise RaisedFamily(Location(idx_line,idx_column,line),'afi/safi pair already defined in this family')
 			known.append(safi)
 
 	def ipv4 (self,tokeniser):
