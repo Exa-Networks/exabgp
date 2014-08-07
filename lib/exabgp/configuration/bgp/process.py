@@ -7,7 +7,7 @@ Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
 from exabgp.configuration.engine.registry import Raised
-from exabgp.configuration.engine.registry import Entry
+from exabgp.configuration.engine.section import Section
 from exabgp.configuration.engine.parser import boolean
 
 import os
@@ -15,37 +15,42 @@ import sys
 import stat
 
 
-# =============================================================== process_syntax
+# =============================================================== syntax_process
 
-process_syntax = \
-'process <name> {\n' \
-'   run </path/to/command with its args>  # the command can be quoted\n' \
-'   encoder text|json\n' \
-'   received {\n' \
-'     # "message" in notification,open,keepalive,update,refresh,operational,all\n' \
-'     <message> [\n' \
-'       parsed          # send parsed BGP data for "message"\n' \
-'       packets         # send raw BGP message for "message"\n' \
-'       consolidated    # group parsed and raw information in one JSON object\n' \
-'     ]\n' \
-'   }\n' \
-'   sent {\n' \
-'     packets           # send all generated BGP messages\n' \
-'   }\n' \
-'}\n'
+syntax_process = """\
+process <name> {
+	run </path/to/command with its args>  # the command can be quoted
+	encoder text|json
+	received {
+		# "message" in notification,open,keepalive,update,refresh,operational,all
+		<message> [
+			parsed          # send parsed BGP data for "message"
+			packets         # send raw BGP message for "message"
+			consolidated    # group parsed and raw information in one JSON object
+		]
+		neighbor-changes  # state of peer change (up/down)
+		parsed            # send parsed BGP data for all messages
+		packets           # send raw BGP message for all messages
+		consolidated      # group parsed and raw information for all messages
+	}
+	sent {
+		packets           # send all generated BGP messages
+	}
+}
+""".replace('\t','   ')
 
 
 # ================================================================ RaisedProcess
 
 class RaisedProcess (Raised):
-	syntax = process_syntax
+	syntax = syntax_process
 
 
 # =============================================================== SectionProcess
 #
 
-class SectionProcess (Entry):
-	syntax = process_syntax
+class SectionProcess (Section):
+	syntax = syntax_process
 	name = 'process'
 
 	def enter_process (self,tokeniser):
