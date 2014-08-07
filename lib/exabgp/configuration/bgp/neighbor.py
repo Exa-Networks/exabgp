@@ -7,7 +7,7 @@
 # """
 
 # from exabgp.configuration.engine.registry import Raised
-# from exabgp.configuration.engine.registry import Entry
+# from exabgp.configuration.engine.section import Section
 
 
 # # ============================================================== neighbor_syntax
@@ -32,7 +32,7 @@
 # 	'   l2vpn {\n' \
 # 	'      vpls\n' \
 # 	'   }\n' \
-# 	'}\n'
+# 	'}\n'.replace('\t','   ')
 
 # # =============================================================== RaisedNeighbor
 

@@ -8,7 +8,8 @@ Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 
 from collections import defaultdict
 
-from exabgp.configuration.engine.tokeniser import UnexpectedData
+from exabgp.configuration.engine.raised import Raised
+from exabgp.configuration.engine.section import Section
 
 
 # ===================================================================== dictdict
@@ -18,74 +19,6 @@ class dictdict (defaultdict):
 	def __init__ (self):
 		self.default_factory = dict
 
-
-# ======================================================================= Raised
-# To replace Fxception, and give line etc.
-
-class Raised (UnexpectedData):
-	syntax = ''
-
-	def __init__ (self,tokeniser,message,syntax=''):
-		super(Raised,self).__init__(
-			tokeniser.idx_line,
-			tokeniser.idx_position,
-			tokeniser.line,
-			message
-		)
-		# allow to give the right syntax in using Raised
-		if syntax:
-			self.syntax = syntax
-
-	def __str__ (self):
-		return '\n\n'.join((
-			UnexpectedData.__str__(self),
-			'syntax:\n%s' % self.syntax if self.syntax else '',
-		))
-
-# ======================================================================== Entry
-# The common function all Section should have
-
-class Entry (object):
-	configuration = dict()
-
-	def drop_parenthesis (self,tokeniser):
-		if tokeniser() != '{':
-			raise Raised(tokeniser,'missing semi-colon',self.syntax)
-
-	def create_section (self,section,tokeniser):
-		name = tokeniser()
-		if name == '{': raise Raised(tokeniser,'was expecting section name',self.syntax)
-		self.drop_parenthesis(tokeniser)
-
-		storage = self.configuration[tokeniser.name][section][name]
-		if storage:
-			raise Raised(tokeniser,'the section name %s is not unique' % name,self.syntax)
-		return storage
-
-	def get_section (self,section,tokeniser):
-		name = tokeniser()
-
-		if name == '{':
-			tokeniser.rewind(name)
-			return None
-
-		storage = self.configuration[tokeniser.name][section][name]
-		if storage is None:
-			raise Raised(tokeniser,'the section name %s referenced does not exists' % name,self.syntax)
-		return storage
-
-	def _check_duplicate (self,tokeniser,klass):
-		key = self.location[-3]
-		if key in self.content:
-			raise klass(tokeniser,"duplicate entries for %s" % key)
-
-	def unamed_enter (self,tokeniser):
-		token = tokeniser()
-		if token != '{': raise Raised(tokeniser,'was expecting {',self.syntax)
-
-	def unamed_exit (self,tokeniser):
-		# no verification to do
-		pass
 
 # ===================================================================== Registry
 # The class where all configuration callback are registered to
@@ -115,7 +48,7 @@ class Registry (object):
 
 	def handle (self,tokeniser):
 		# each section can registered named configuration for reference here
-		Entry.configuration[tokeniser.name] = defaultdict(dictdict)
+		Section.configuration[tokeniser.name] = defaultdict(dictdict)
 
 		def run (search,section,location):
 			key = '/'.join(search)

@@ -6,8 +6,8 @@ Created by Thomas Mangin on 2014-06-22.
 Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.engine.registry import Raised
-from exabgp.configuration.engine.registry import Entry
+from exabgp.configuration.engine.raised import Raised
+from exabgp.configuration.engine.section import Section
 from exabgp.configuration.engine.parser import boolean
 
 from exabgp.bgp.message.open.capability import Capability
@@ -18,31 +18,32 @@ from exabgp.protocol.family import known_families
 from exabgp.configuration.bgp.family import SectionFamily
 
 
-# ============================================================ capability_syntax
+# ============================================================ syntax_capability
 
-capability_syntax = \
-'capability <name> {\n' \
-'   asn4 enable|disable                         # default enabled\n' \
-'   aigp enable|disable                         # default disabled\n' \
-'   operational enable|disable                  # default disabled\n' \
-'   multi-session enable|disable                # default disabled\n' \
-'   route-refresh enable|disable                # default disabled\n' \
-'   graceful-restart <time in second>           # default disabled\n' \
-'   add-path disable|send|receive|send/receive  # default disabled\n' \
-'}\n'
+syntax_capability = """\
+capability <name> {
+	asn4 enable|disable                         # default enabled
+	aigp enable|disable                         # default disabled
+	operational enable|disable                  # default disabled
+	multi-session enable|disable                # default disabled
+	route-refresh enable|disable                # default disabled
+	graceful-restart <time in second>           # default disabled
+	add-path disable|send|receive|send/receive  # default disabled
+}
+""".replace('\t','   ')
 
 
 # ============================================================= RaisedCapability
 
 class RaisedCapability (Raised):
-	syntax = capability_syntax
+	syntax = syntax_capability
 
 
 # ============================================================ SectionCapability
 #
 
-class SectionCapability (Entry):
-	syntax = capability_syntax
+class SectionCapability (Section):
+	syntax = syntax_capability
 	name = 'capability'
 
 	def enter (self,tokeniser):

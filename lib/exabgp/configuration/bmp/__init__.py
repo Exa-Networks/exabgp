@@ -10,10 +10,10 @@ from exabgp.configuration.engine.registry import Raised
 from exabgp.configuration.engine.section import Section
 
 
-# =================================================================== bgp_syntax
+# =================================================================== bmp_syntax
 
-syntax_bgp = """\
-bgp {
+syntax_bmp = """\
+bmp {
 	lots here
 }
 """.replace('\t','   ')
@@ -21,16 +21,16 @@ bgp {
 
 # ================================================================ RaisedProcess
 
-class RaisedBGP (Raised):
-	syntax = syntax_bgp
+class RaisedBMP (Raised):
+	syntax = syntax_bmp
 
 
-# =================================================================== SectionBGP
+# =================================================================== SectionBMP
 #
 
-class SectionBGP (Section):
+class SectionBMP (Section):
 	content = None
-	syntax = syntax_bgp
+	syntax = syntax_bmp
 
 	@classmethod
 	def register (cls,registry,location):

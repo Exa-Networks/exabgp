@@ -6,49 +6,49 @@ Created by Thomas Mangin on 2014-06-22.
 Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.engine.registry import Raised
-from exabgp.configuration.engine.registry import Entry
+from exabgp.configuration.engine.raised import Raised
+from exabgp.configuration.engine.section import Section
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 
-# ================================================================ family_syntax
+# ================================================================ syntax_family
 
-family_syntax = \
-	'family <name> {\n' \
-	'   all  # default, announce all the families we know\n' \
-	'\n' \
-	'   ipv4 [\n' \
-	'      unicast\n' \
-	'      multicast\n' \
-	'      nlri-mpls\n' \
-	'      mpls-vpn\n' \
-	'      flow\n' \
-	'      flow-vpn\n' \
-	'   ]\n' \
-	'   ipv6 [\n' \
-	'      unicast\n' \
-	'      flow\n' \
-	'      flow-vpn\n' \
-	'   ]\n' \
-	'   l2vpn [\n' \
-	'      vpls\n' \
-	'   ]\n' \
-	'}\n'
+syntax_family = """\
+family <name> {
+	all  # default, announce all the families we know
 
+	ipv4 [
+		unicast
+		multicast
+		nlri-mpls
+		mpls-vpn
+		flow
+		flow-vpn
+	]
+	ipv6 [
+		unicast
+		flow
+		flow-vpn
+	]
+	l2vpn [
+		vpls
+	]
+}
+""".replace('\t','   ')
 
 # ================================================================= RaisedFamily
 
 class RaisedFamily (Raised):
-	syntax = family_syntax
+	syntax = syntax_family
 
 
 # ================================================================ SectionFamily
 #
 
-class SectionFamily (Entry):
-	syntax = family_syntax
+class SectionFamily (Section):
+	syntax = syntax_family
 	name = 'family'
 
 	def enter (self,tokeniser):
