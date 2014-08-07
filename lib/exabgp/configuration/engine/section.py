@@ -46,11 +46,10 @@ class Section (object):
 		if key in self.content:
 			raise klass(tokeniser,"duplicate entries for %s" % key)
 
-	def unamed_enter (self,tokeniser):
-#		import pdb; pdb.set_trace()
+	def enter_unamed_section (self,tokeniser):
 		token = tokeniser()
 		if token != '{': raise Raised(tokeniser,'was expecting {',self.syntax)
 
-	def unamed_exit (self,tokeniser):
+	def exit_unamed_section (self,tokeniser):
 		# no verification to do
 		pass

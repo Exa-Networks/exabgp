@@ -38,16 +38,18 @@ if __name__ == '__main__':
 
 			return registry
 
-	p = Parser('/Users/thomas/source/git/exabgp/experimental/new-format.conf')
+	p = Parser('/Users/thomas/source/git/exabgp/master/dev/configuration/new.conf')
 	registry = p.reload()
 
 	import pprint
 	pp = pprint.PrettyPrinter(indent=3)
 
-	d = SectionBGP.configuration['configuration']['capability']
-	for k,v in d.items():
-		print '%s ' % k
-		pp.pprint(v)
+	for section in ['capability','process']:
+		d = SectionBGP.configuration['configuration'][section]
+		for k,v in d.items():
+			print '%s %s ' % (section,k)
+			pp.pprint(v)
+			print
 		print
 
 	# print

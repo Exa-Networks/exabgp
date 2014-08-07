@@ -109,13 +109,39 @@ class SectionProcess (Section):
 	# all the action are the same
 
 	def message (self,tokeniser):
-		direction = self.location[-3]
-		message = self.location[-2]
-		action = self.location[-1]
-		self.content.setdefault(direction,{}).setdefault(message,[]).append(action)
+		valid_messages = ['notification','open','keepalive','update','refresh','operational']
+		valid_options = ['parsed','packets','consolidated']
+
+		format = lambda s: (s[::-1].replace(',', ' and'[::-1], 1))[::-1]
+
+		direction = self.location[-2]
+		message = self.location[-1]
+		actions = tokeniser()
+
+		for action in actions:
+			if action not in valid_options:
+				raise RaisedProcess(tokeniser,'invalid message option %s, valid options are "%s"' % (action,format('", "'.join(valid_options))))
+
+			messages = valid_messages if message == 'all' else [message]
+
+			for m in messages:
+				section = self.content.setdefault(direction,{}).setdefault(m,[])
+
+				if action in section:
+					raise RaisedProcess(tokeniser,'duplicate action (%s) for message %s%s' % (
+						action,
+						m,
+						" using the alis 'all'" if message == 'all' else ''
+					))
+
+				if 'consolidated' in section and len(section) > 0:
+					raise RaisedProcess(tokeniser,'consolidated can not be used with another keyword')
+
+				section.append(action)
+
 
 	def neighbor_changes (self,tokeniser):
-		self.content.setdefault('received',{}).setdefault('neighbor-changes',[]).append('negotiated')
+		self.content.setdefault('received',{})['neighbor-changes'] = True
 
 	# reveived global level
 
@@ -149,39 +175,17 @@ class SectionProcess (Section):
 
 		for received in (location+['received'],):
 
-			registry.register_hook(cls,'enter',received,'unamed_enter')
+			registry.register_hook(cls,'enter',received,'enter_unamed_section')
 
 			registry.register_hook(cls,'action',received+['neighbor-changes'],'neighbor_changes')
 
-			for message in ['notification','open','keepalive','update','refresh','operational']:
-				registry.register_hook(cls,'enter',received+[message],'unamed_enter')
-				registry.register_hook(cls,'action',received+[message,'parsed'],'message')
-				registry.register_hook(cls,'action',received+[message,'packets'],'message')
-				registry.register_hook(cls,'action',received+[message,'consolidated'],'message')
-				registry.register_hook(cls,'exit',received+[message],'unamed_exit')
+			for message in ['notification','open','keepalive','update','refresh','operational','all']:
+				registry.register_hook(cls,'action',received+[message],'message')
 
-			message = 'all'
-			registry.register_hook(cls,'enter',received+[message],'unamed_enter')
-			registry.register_hook(cls,'action',received+[message,'parsed'],'message')
-			registry.register_hook(cls,'action',received+[message,'packets'],'message')
-			registry.register_hook(cls,'action',received+[message,'consolidated'],'message')
-			registry.register_hook(cls,'exit',received+[message],'unamed_exit')
+			registry.register_hook(cls,'exit', received,'exit_unamed_section')
 
-			registry.register_hook(cls,'exit', received,'unamed_exit')
-
-		registry.register_hook(cls,'enter',location+['sent'],'unamed_enter')
+		registry.register_hook(cls,'enter',location+['sent'],'enter_unamed_section')
 		registry.register_hook(cls,'action',location+['sent','packets'],'sent_packets')
-		registry.register_hook(cls,'exit',location+['sent'],'unamed_exit')
+		registry.register_hook(cls,'exit',location+['sent'],'exit_unamed_section')
 
 		registry.register_hook(cls,'exit',location,'exit_process')
-
-		# name = tokens[0] if len(tokens) >= 1 else 'conf-only-%s' % str(time.time())[-6:]
-		# self.process.setdefault(name,{})['neighbor'] = scope[-1]['peer-address'] if 'peer-address' in scope[-1] else '*'
-
-		# run = scope[-1].pop('process-run','')
-		# if run:
-		# 	if len(tokens) != 1:
-		# 		self._error = self._str_process_error
-		# 		if self.debug: raise
-		# 		return False
-		# 	return True

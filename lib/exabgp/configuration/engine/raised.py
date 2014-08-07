@@ -12,6 +12,9 @@ Copyright (c) 2014-2014 Exa Networks. All rights reserved.
 class UnexpectedData (Exception):
 	tabsize = 3
 
+	# idx_column is the number of char read
+	# so when it reports zero, it is the first character
+
 	def __init__(self, idx_line, idx_column, line, error):
 		self.error = error.replace('\t',' '*self.tabsize)
 		self.line = line.replace('\t',' '*self.tabsize)
@@ -20,9 +23,9 @@ class UnexpectedData (Exception):
 
 		super(UnexpectedData, self).__init__(
 			'\n\n'.join((
-				'problem parsing configuration file line %d position %d' % (idx_line,idx_column),
+				'problem parsing configuration file line %d position %d' % (idx_line,idx_column+1),
 				'error message: %s' % error,
-				'%s\n%s' % (self.line,'-'* self.idx_column + '^')
+				'%s%s' % (self.line,'-'* self.idx_column + '^')
 			))
 		)
 
