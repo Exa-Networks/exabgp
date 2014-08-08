@@ -15,7 +15,7 @@ case $dirname in
 	;;
 esac
 
-export PYTHONPATH=$path/lib:/usr/share/exabgp/lib/3.4.1
+export PYTHONPATH=$path/lib:/usr/share/exabgp/lib/3.4.2
 
 PYPY=`which pypy 2>/dev/null`
 PYTHON27=`which python2.7 2>/dev/null`

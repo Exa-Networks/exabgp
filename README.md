@@ -68,9 +68,9 @@ This program is packaged for **Debian**, **Ubuntu**, **ArchLinux**, **Gentoo**, 
 Multiple versions can be used simulteanously without conflict, using them as follow.
 
 ```sh
-> wget https://github.com/Exa-Networks/exabgp/archive/3.4.1.tar.gz
-> tar zxvf 3.4.1.tar.gz
-> cd exabgp-3.4.1
+> wget https://github.com/Exa-Networks/exabgp/archive/3.4.2.tar.gz
+> tar zxvf 3.4.2.tar.gz
+> cd exabgp-3.4.2
 > ./sbin/exabgp --help
 ```
 
