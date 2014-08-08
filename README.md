@@ -1,7 +1,11 @@
-##Summary
+##Overview
 
-Unlike [BIRD](http://bird.network.cz/) or [Quagga](http://www.quagga.net/), [ExaBGP](http://github.com/Exa-Networks/exabgp) was not designed to transform a general purpose server into a router, but to allow engineers to control their network easily.
-Think of it as [Software Defined Networking](http://www.wired.com/wiredenterprise/2012/04/going-with-the-flow-google/) for people with usual [BGP](http://tools.ietf.org/html/rfc4271) routers.
+[ExaBGP](http://github.com/Exa-Networks/exabgp) was not designed to transform a general purpose server into a router, but to allow engineers to control their network.
+Think of it as [Software Defined Networking](http://en.wikipedia.org/wiki/Software-defined_networking) using [BGP](http://en.wikipedia.org/wiki/BGP).
+
+This program is packaged for **Debian**, **Ubuntu**, **ArchLinux**, **Gentoo**, **Mint**, **FreeBSD**, **OSX**, **OmniOS**, but some features may only be available on latest version.
+
+[ExaBGP](http://github.com/Exa-Networks/exabgp) does **not** perform any **FIB manipulation**, you will need to write your own LocalRIB and FIB code if this what you need the feature, or simpler, use another open source BGP daemon such as [BIRD](http://bird.network.cz/) or [Quagga](http://www.quagga.net/).
 
 [ExaBGP](http://github.com/Exa-Networks/exabgp) transform [BGP messages](http://thomas.mangin.com/data/pdf/UKNOF%2015%20-%20Mangin%20-%20Naked%20BGP.pdf) into friendly plain [text or JSON](https://github.com/Exa-Networks/exabgp/wiki/Controlling-ExaBGP-:-API-for-received-messages) which can be easily manipulate by scripts.
 
@@ -13,28 +17,87 @@ It allows the creation of tools such as :
 
 So have a look and take control your network from any unix servers.
 
+```sh
+> wget https://github.com/Exa-Networks/exabgp/archive/3.4.2.tar.gz
+> tar zxvf 3.4.2.tar.gz
+> cd exabgp-3.4.2
+> ./sbin/exabgp --help
+```
+
+##Who is using it ?
+
+These organisations have spoken of, or are using/have used [ExaBGP](http://github.com/Exa-Networks/exabgp):
+
+[ALCATEL LUCENT](http://www.nanog.org/sites/default/files/wed.general.trafficdiversion.serodio.10.pdf),
+[AMSIX](https://ripe64.ripe.net/presentations/49-Follow_Up_AMS-IX_route-server_test_Euro-IX_20th_RIPE64.pdf),
+[BBC](http://www.bbc.co.uk/),
+[CLOUDFLARE](http://www.slideshare.net/TomPaseka/flowspec-apf-2013),
+[DAILYMOTION](https://twitter.com/fgabut),
+[FACEBOOK](http://velocityconf.com/velocity2013/public/schedule/detail/28410),
+[INTERNAP](http://www.internap.com/),
+[OPENDNS](http://www.opendns.com/),
+[MICROSOFT](http://www.nanog.org/sites/default/files/wed.general.brainslug.lapukhov.20.pdf),
+[NEO TELECOM](http://media.frnog.org/FRnOG_18/FRnOG_18-6.pdf),
+[RIPE NCC](https://labs.ripe.net/Members/wouter_miltenburg/Researchpaper.pdf)
+[VIDEOPLAZA](http://www.videoplaza.com)
+as well as researchers.
+
+Please let us know if you use it too  ...
+
 ##Features
 
 ### Previously on ExaBGP ...
 
- * runs on any Unix server (has no dependencies).
- * BSD licence, integrate [ExaBGP](http://github.com/Exa-Networks/exabgp) in your own application stack - no strings attached !
- * receive / send routes using your own scripts or a JunOS looking configuration file
-   * **IPv4**/**IPv6** (unicast, multicast, nlri-mpls, *mpls-vpn*) routes with arbitrary next-hops
-   * **MPLS** (route-distinguisher), [RFC 4659](http://tools.ietf.org/html/rfc4659) (vpnv6)
-   * **flow routes** (complete [RFC 5575](http://tools.ietf.org/html/rfc5575) support)
-   * **VPLS**, [RFC 4762](http://tools.ietf.org/html/rfc4762) support
+ * receive / send routes
+   * **IPv4**/**IPv6** support, [RFC 4760](http://www.ietf.org/rfc/rfc4760.txt) routes with arbitrary next-hops
+   * **Flow** support, [RFC 5575](http://tools.ietf.org/html/rfc5575)
+   * **MPLS** support, [RFC 4659](http://tools.ietf.org/html/rfc4659) (with vpnv6)
+   * **VPLS** support, [RFC 4762](http://tools.ietf.org/html/rfc4762)
+   * **ASN4** support, [RFC 4893](http://www.ietf.org/rfc/rfc4893.txt)
+   * **Graceful Restart** support, [RFC 4724](http://www.ietf.org/rfc/rfc4724.txt) support
    * **Enhanced Route Refresh**, [RFC 7313](http://tools.ietf.org/html/rfc7313) support
-   * **And [much more](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information)**
+   * **AIGP**, [RFC 7311](http://tools.ietf.org/html/rfc7311) support
+   * **And [more](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information)**
  * support for some drafts
    * [draft-raszuk-idr-flow-spec-v6-03](http://tools.ietf.org/html/draft-ietf-idr-flow-spec-v6-03)
    * [draft-ietf-idr-flowspec-redirect-ip-00](http://tools.ietf.org/html/draft-ietf-idr-flowspec-redirect-ip-00)
    * [draft-ietf-idr-add-paths-08](http://tools.ietf.org/html/draft-ietf-idr-add-paths-08)
    * [draft-ietf-idr-bgp-multisession-07](http://tools.ietf.org/html/draft-ietf-idr-bgp-multisession-07) (partial)
    * [draft-scudder-bmp-01](http://tools.ietf.org/html/draft-scudder-bmp-01)
-   * [draft-ietf-idr-aigp-10.txt](http://tools.ietf.org/html/draft-ietf-idr-aigp-10)
+ * runs on any Unix server (with no dependencies).
+ * BSD licence, integrate [ExaBGP](http://github.com/Exa-Networks/exabgp) in your own application stack - no strings attached !
 
-[ExaBGP](http://github.com/Exa-Networks/exabgp) does **not** perform any **FIB manipulation**, you will need to write your own LocalRIB and FIB code if this what you need the feature, or simpler, use another open source BGP daemon.
+##More information
+
+If you are using [ExaBGP](http://github.com/Exa-Networks/exabgp) from source (or git), it **does not need to be installed** on your server ( using "python setup.py install" ).
+
+Multiple versions can be used simulteanously without conflict, using them as follow. To do so, please run [ExaBGP](http://github.com/Exa-Networks/exabgp) from its extracted archive, or your local git repository.
+
+##Curious
+
+Want to know how the code is changing ? Have a question ?
+
+I regularly post on [ExaBGP G+ Group](https://plus.google.com/u/0/communities/108249711110699351497) about ExaBGP current developments and sometimes [blog](http://thomas.mangin.com/categories/networking.html) about BGP.
+
+You can as well follow us on twitter, or subscribe to our low volume [mailing list](http://groups.google.com/group/exabgp-users).
+You can as well keep an eye on what we are doing on [twitter](https://twitter.com/#!/search/exabgp).
+
+For more information, please consult any of :
+
+ * the [RFC compliance](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information) pages
+ * the [wiki](https://github.com/Exa-Networks/exabgp/wiki) with some some talks and presentations, ...
+ * and [the FAQ](https://github.com/Exa-Networks/exabgp/wiki/FAQ)
+ * the [changelog](https://raw.github.com/Exa-Networks/exabgp/master/CHANGELOG)
+
+ExaBGP **does not have any dependences on any third party libraries** and will run out of the box on any Unix system with a recent version of python installed.
+
+##Problem ?
+
+No software is perfect, so should you encounter a bug please [report it](https://github.com/Exa-Networks/exabgp/issues?labels=bug&page=1&state=open) so we can help you resolve it.
+
+##Commercial support
+
+ExaBGP is supported through Github [https://github.com/Exa-Networks/exabgp/issues](issue tracker) on a best effort basis. We try to be reactive to any problem raised. However commercial support is available if your organisation requires it.
 
 ### New on 3.4 stable ...
  * Important speed improvements
@@ -58,70 +121,6 @@ So have a look and take control your network from any unix servers.
  * and surely more ....
 
 The configuration file format changes from version to version effort are made to make sure the previous configuration format should still work, however users are encouraged to check their configuration files after upgrade.
-
-##More information
-
-If you are using [ExaBGP](http://github.com/Exa-Networks/exabgp) from source (or git), it **does not need to be installed** on your server ( using "python setup.py install" ). Simply run [ExaBGP](http://github.com/Exa-Networks/exabgp) from the extracted archive, or your local git repository.
-
-This program is packaged for **Debian**, **Ubuntu**, **ArchLinux**, **Gentoo**, **Mint**, **FreeBSD**, **OSX**, **OmniOS**, but some features may only be available on latest and greatest version. Please consider using your distribution's first.
-
-Multiple versions can be used simulteanously without conflict, using them as follow.
-
-```sh
-> wget https://github.com/Exa-Networks/exabgp/archive/3.4.2.tar.gz
-> tar zxvf 3.4.2.tar.gz
-> cd exabgp-3.4.2
-> ./sbin/exabgp --help
-```
-
-I regularly post on this [G+ Group](https://plus.google.com/u/0/communities/108249711110699351497) about ExaBGP and sometimes [blog](http://thomas.mangin.com/categories/networking.html) about BGP.
-
-##Who is using it ?
-
-These organisations are speaking of, or using, [ExaBGP](http://github.com/Exa-Networks/exabgp):
-[FACEBOOK](http://velocityconf.com/velocity2013/public/schedule/detail/28410),
-[MICROSOFT](http://www.nanog.org/sites/default/files/wed.general.brainslug.lapukhov.20.pdf),
-[DAILYMOTION](https://twitter.com/fgabut),
-[BBC](http://www.bbc.co.uk/),
-[AMSIX](https://ripe64.ripe.net/presentations/49-Follow_Up_AMS-IX_route-server_test_Euro-IX_20th_RIPE64.pdf),
-[NEO TELECOM](http://media.frnog.org/FRnOG_18/FRnOG_18-6.pdf),
-[VIDEOPLAZA](http://www.videoplaza.com),
-[ALCATEL LUCENT](http://www.nanog.org/sites/default/files/wed.general.trafficdiversion.serodio.10.pdf),
-[CLOUDFLARE](http://www.slideshare.net/TomPaseka/flowspec-apf-2013),
-[INTERNAP](http://www.internap.com/),
-[OPENDNS](http://www.opendns.com/),
-researchers
-[[1]](http://typo3.change-project.eu/fileadmin/publications/Deliverables/CHANGE_Deliverable_D4-3_Revised.pdf)
-[[2]](http://www.cs.cornell.edu/projects/quicksilver/public_pdfs/tcpr.pdf)
-[[3]](http://docs.di.fc.ul.pt/jspui/bitstream/10455/6703/1/Disserta%C3%A7%C3%A3o%20de%20mestrado%20do%20S%C3%A9rgio%20Miguel%20Geraldes%20de%20oliveira%20Serrano_Nov-2010.pdf),
-and please let us know if you use it too and can list you here ...
-
-##Curious
-
-Want to know how the code is changing ? Have a question ?
-
-follow our [Google + Community page](https://plus.google.com/communities/108249711110699351497) where we discuss current developments. You can as well follow us on twitter, or subscribe to our low volume [mailing list](http://groups.google.com/group/exabgp-users).
-You can as well keep an eye on what we are doing on [twitter](https://twitter.com/#!/search/exabgp).
-
-Please consult any of :
-
- * the [changelog](https://raw.github.com/Exa-Networks/exabgp/master/CHANGELOG)
- * or [RFC compliance](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information) pages
- * the [wiki](https://github.com/Exa-Networks/exabgp/wiki) with some some talks and presentations, ...
- * and [the FAQ](https://github.com/Exa-Networks/exabgp/wiki/FAQ)
-
-This programs **does not have any dependences on any third party libraries** and will run out of the box on any Unix system with a recent version of python installed.
-
-Development is done on python 2.7, the code is kept compatible with python 2.4 in ExaBGP 2.x.x and python 2.5 in ExaBGP 3.1.x.
-ExaBGP 3.2.x and 3.3.x rely on python 2.7 (as it uses argparse), and we are likely to required python 3.4+ for ExaBGP 4.x.x
-
-##Commercial support
-
-If you have a need for commercial support for ExaBGP, feel free to contact Exa Networks using sales AT exa-networks DOT co DOT uk
-
-##BUG
-
-No software is perfect, so should you encounter a bug please [report it](https://github.com/Exa-Networks/exabgp/issues?labels=bug&page=1&state=open) so we can resolve it.
 
 ##Related Projects
 
