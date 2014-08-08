@@ -128,8 +128,6 @@ class Protocol (object):
 	# Read from network .......................................................
 
 	def read_message (self,comment=''):
-		self.peer.reactor.processes.increase(self.peer)
-
 		for length,msg,header,body,notify in self.connection.reader():
 			if notify:
 				if self.neighbor.api['receive-packets']:
