@@ -16,7 +16,7 @@ syntax_bgp = """\
 bgp {
 	lots here
 }
-""".replace('\t','   ')
+"""
 
 
 # ================================================================ RaisedProcess
@@ -29,8 +29,9 @@ class RaisedBGP (Raised):
 #
 
 class SectionBGP (Section):
-	content = None
 	syntax = syntax_bgp
+	name = 'bgp'
+	content = None
 
 	@classmethod
 	def register (cls,registry,location):

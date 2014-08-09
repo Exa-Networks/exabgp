@@ -65,16 +65,26 @@ class Registry (object):
 			token = tokeniser()
 			if not token: break
 
+			# if we have both a section and a action, try the action first
+			if run(self.stack+[token,],'action',self.stack+[token]):
+				continue
+
 			if run(self.stack + [token,],'enter',self.stack):
 				self.stack.append(token)
 				continue
 
-			if run(self.stack+[token,],'action',self.stack+[token]):
-				continue
-
 			if token != '}':
+				print
+				print 'Available paths are .....'
+				print
+				for path in sorted(self._handler):
+					for action in sorted(self._handler[path]):
+						print '/%-40s %s' % (path,action)
+				print '....'
+				print
+				print self.stack+[token,]
 				# we need the line and position at this level
-				raise Raised(tokeniser,'invalid configuration location /%s/%s' % ('/'.join(self.stack),token))
+				raise Raised(tokeniser,'no parser for the location /%s' % ('/'.join(self.stack+[token,])))
 
 			if run(self.stack,'exit',self.stack[:-1]):
 				self.stack.pop()
