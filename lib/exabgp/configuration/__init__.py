@@ -15,6 +15,7 @@ if __name__ == '__main__':
 	from exabgp.configuration.bmp import SectionBMP
 	from exabgp.configuration.bgp.family import SectionFamily
 	from exabgp.configuration.bgp.capability import SectionCapability
+	from exabgp.configuration.bgp.session import SectionSession
 	from exabgp.configuration.bgp.process import SectionProcess
 
 	class Parser (object):
@@ -26,11 +27,13 @@ if __name__ == '__main__':
 
 		def reload (self):
 			registry = Registry()
-			registry.register(SectionBGP,['bgp'])
-			registry.register(SectionFamily,['bgp','family'])
-			registry.register(SectionCapability,['bgp','capability'])
-			registry.register(SectionProcess,['bgp','process'])
-			registry.register(SectionBMP,['bmp'])
+			registry.register(SectionBGP,        ['bgp'])
+			registry.register(SectionFamily,     ['bgp','family'])
+			registry.register(SectionCapability, ['bgp','capability'])
+			registry.register(SectionSession,    ['bgp','session'])
+			registry.register(SectionProcess,    ['bgp','process'])
+
+			registry.register(SectionBMP,        ['bmp'])
 
 			with Reader(self._fname) as r:
 				tokeniser = Tokeniser('configuration',r)
@@ -44,7 +47,7 @@ if __name__ == '__main__':
 	import pprint
 	pp = pprint.PrettyPrinter(indent=3)
 
-	for section in ['capability','process']:
+	for section in ['capability','process','session']:
 		d = SectionBGP.configuration['configuration'][section]
 		for k,v in d.items():
 			print '%s %s ' % (section,k)

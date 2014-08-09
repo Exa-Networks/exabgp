@@ -16,7 +16,7 @@ syntax_bmp = """\
 bmp {
 	lots here
 }
-""".replace('\t','   ')
+"""
 
 
 # ================================================================ RaisedProcess
@@ -29,8 +29,9 @@ class RaisedBMP (Raised):
 #
 
 class SectionBMP (Section):
-	content = None
 	syntax = syntax_bmp
+	name = 'bmp'
+	content = None
 
 	@classmethod
 	def register (cls,registry,location):

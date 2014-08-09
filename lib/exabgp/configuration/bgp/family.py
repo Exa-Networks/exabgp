@@ -37,7 +37,8 @@ family <name> {
 		vpls
 	]
 }
-""".replace('\t','   ')
+"""
+
 
 # ================================================================= RaisedFamily
 
@@ -51,13 +52,6 @@ class RaisedFamily (Raised):
 class SectionFamily (Section):
 	syntax = syntax_family
 	name = 'family'
-
-	def enter (self,tokeniser):
-		self.content = self.create_section(self.name,tokeniser)
-
-	def exit (self,tokeniser):
-		# no verification to do
-		pass
 
 	def _add (self,tokeniser,afi_name,safi_names):
 		self._check_duplicate(tokeniser,RaisedFamily)

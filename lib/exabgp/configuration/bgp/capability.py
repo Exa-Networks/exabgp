@@ -30,7 +30,7 @@ capability <name> {
 	graceful-restart <time in second>           # default disabled
 	add-path disable|send|receive|send/receive  # default disabled
 }
-""".replace('\t','   ')
+"""
 
 
 # ============================================================= RaisedCapability
@@ -47,7 +47,7 @@ class SectionCapability (Section):
 	name = 'capability'
 
 	def enter (self,tokeniser):
-		self.content = self.create_section(self.name,tokeniser)
+		Section.enter(self,tokeniser)
 
 		self.content[Capability.ID(Capability.ID.FOUR_BYTES_ASN)] = True
 		self.content[Capability.ID(Capability.ID.AIGP)] = False
@@ -63,7 +63,10 @@ class SectionCapability (Section):
 
 	def family (self,tokeniser):
 		data = self.get_section(SectionFamily.name,tokeniser)
-		self.content[Capability.ID(Capability.ID.MULTIPROTOCOL)] = MultiProtocol((afi,safi) for afi in sorted(data) for safi in sorted(data[afi]))
+		if data:
+			self.content[Capability.ID(Capability.ID.MULTIPROTOCOL)] = MultiProtocol((afi,safi) for afi in sorted(data) for safi in sorted(data[afi]))
+		else:
+			return False
 
 	def asn4 (self,tokeniser):
 		self._check_duplicate(tokeniser,RaisedCapability)
@@ -119,7 +122,9 @@ class SectionCapability (Section):
 		registry.register_hook(cls,'enter',location,'enter')
 		registry.register_hook(cls,'exit',location,'exit')
 
+		registry.register(SectionFamily,location+['family'])
 		registry.register_hook(cls,'action',location+['family'],'family')
+
 		registry.register_hook(cls,'action',location+['asn4'],'asn4')
 		registry.register_hook(cls,'action',location+['aigp'],'aigp')
 		registry.register_hook(cls,'action',location+['add-path'],'addpath')

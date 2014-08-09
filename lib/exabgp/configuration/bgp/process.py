@@ -38,7 +38,7 @@ process <name> {
 		packets           # send all generated BGP messages
 	}
 }
-""".replace('\t','   ')
+"""
 
 
 # ================================================================ RaisedProcess
@@ -54,12 +54,9 @@ class SectionProcess (Section):
 	syntax = syntax_process
 	name = 'process'
 
-	def enter_process (self,tokeniser):
-		self.content = self.create_section(self.name,tokeniser)
+	def enter (self,tokeniser):
+		Section.enter(self,tokeniser)
 		self.content['encoder'] = 'text'
-
-	def exit_process (self,tokeniser):
-		pass
 
 	def encoder (self,tokeniser):
 		token = tokeniser()
@@ -168,7 +165,7 @@ class SectionProcess (Section):
 	def register (cls,registry,location):
 		registry.register_class(cls)
 
-		registry.register_hook(cls,'enter',location,'enter_process')
+		registry.register_hook(cls,'enter',location,'enter')
 
 		registry.register_hook(cls,'action',location+['run'],'run')
 		registry.register_hook(cls,'action',location+['encoder'],'encoder')
@@ -189,4 +186,4 @@ class SectionProcess (Section):
 		registry.register_hook(cls,'action',location+['sent','packets'],'sent_packets')
 		registry.register_hook(cls,'exit',location+['sent'],'exit_unamed_section')
 
-		registry.register_hook(cls,'exit',location,'exit_process')
+		registry.register_hook(cls,'exit',location,'exit')
