@@ -69,7 +69,6 @@ class Protocol (object):
 	def accept (self,incoming):
 		self.connection = incoming
 
-		self.peer.reactor.processes.reset(self.peer)
 		if self.peer.neighbor.api['neighbor-changes']:
 			self.peer.reactor.processes.connected(self.peer)
 
@@ -93,7 +92,6 @@ class Protocol (object):
 					if not connected:
 						yield False
 						continue
-					self.peer.reactor.processes.reset(self.peer)
 					if self.peer.neighbor.api['neighbor-changes']:
 						self.peer.reactor.processes.connected(self.peer)
 					yield True
