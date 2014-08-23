@@ -171,7 +171,10 @@ class JSON (object):
 		self._counter[peer.neighbor.peer_address] = 1
 
 	def increase (self,peer):
-		self._counter[peer.neighbor.peer_address] += 1
+                if peer.neighbor.peer_address in self._counter:
+                        self._counter[peer.neighbor.peer_address] += 1
+                else:
+                        self._counter[peer.neighbor.peer_address] = 1
 
 	def count (self,peer):
 		return self._counter.get(peer.neighbor.peer_address,1)
