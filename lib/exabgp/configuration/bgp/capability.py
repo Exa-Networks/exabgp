@@ -54,7 +54,7 @@ class SectionCapability (Section):
 		self.content[Capability.ID(Capability.ID.ADD_PATH)] = 0
 		self.content[Capability.ID(Capability.ID.OPERATIONAL)] = False
 		self.content[Capability.ID(Capability.ID.ROUTE_REFRESH)] = False
-		self.content[Capability.ID(Capability.ID.MULTISESSION_CISCO)] = False
+		self.content[Capability.ID(Capability.ID.MULTISESSION)] = False
 		self.content[Capability.ID(Capability.ID.GRACEFUL_RESTART)] = 0
 
 	def exit (self,tokeniser):

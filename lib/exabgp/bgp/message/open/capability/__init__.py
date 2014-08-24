@@ -208,7 +208,7 @@ class Capabilities (dict):
 		# MUST be the last key added
 		if neighbor.multisession:
 			# XXX: FIXME: should it not be the RFC version ?
-			self[Capability.ID.MULTISESSION_CISCO] = MultiSession().set([Capability.ID.MULTIPROTOCOL])
+			self[Capability.ID.MULTISESSION] = MultiSession().set([Capability.ID.MULTIPROTOCOL])
 		return self
 
 	def pack (self):
