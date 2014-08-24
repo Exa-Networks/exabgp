@@ -47,16 +47,15 @@ def md5 (tokeniser):
 	return value
 
 def ttl (tokeniser):
-	TTL_SECURITY = 255
 	value = tokeniser()
-
 
 	# XXX: FIXME: Should it be a subclass of int ?
 	try:
 		ttl = int(value)
 	except ValueError:
-		tokeniser.rewind(value)
-		return TTL_SECURITY
+		if value in ('false','disable','disabled'):
+			return None
+		raise ValueError('invalid ttl-security "%s"' % value)
 
 	if ttl < 0:
 		raise ValueError('ttl-security can not be negative')
