@@ -17,6 +17,7 @@ if __name__ == '__main__':
 	from exabgp.configuration.bgp.capability import SectionCapability
 	from exabgp.configuration.bgp.session import SectionSession
 	from exabgp.configuration.bgp.process import SectionProcess
+	from exabgp.configuration.bgp.neighbor import SectionNeighbor
 
 	class Parser (object):
 		def __init__ (self,fname,text=False):
@@ -32,6 +33,7 @@ if __name__ == '__main__':
 			registry.register(SectionCapability, ['bgp','capability'])
 			registry.register(SectionSession,    ['bgp','session'])
 			registry.register(SectionProcess,    ['bgp','process'])
+			registry.register(SectionNeighbor,   ['bgp','neighbor'])
 
 			registry.register(SectionBMP,        ['bmp'])
 
@@ -47,7 +49,7 @@ if __name__ == '__main__':
 	import pprint
 	pp = pprint.PrettyPrinter(indent=3)
 
-	for section in ['capability','process','session']:
+	for section in ['capability','process','session','neighbor']:
 		d = SectionBGP.configuration['configuration'][section]
 		for k,v in d.items():
 			print '%s %s ' % (section,k)
