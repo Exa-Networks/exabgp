@@ -5,6 +5,7 @@ Version explained:
 
 Version 3.4.3
  * Fix: JSON message increment
+    reported by: Daniel Neiter, with a patch, thank you.
 
 Version 3.4.2
  * Feature: add more information in crash report
