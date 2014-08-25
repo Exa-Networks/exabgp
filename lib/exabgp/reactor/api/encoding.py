@@ -350,7 +350,7 @@ class JSON (object):
 		return self._header(
 			self._neighbor(
 				peer,
-				'"operational": { "name": "%s", "afi": "%s", "safi": "%s", "advisory": "%s"' % (
+				'"operational": { "name": "%s", "afi": "%s", "safi": "%s", "advisory": "%s" }' % (
 					operational.name,operational.afi,operational.safi,operational.data
 				)
 			)
@@ -360,7 +360,7 @@ class JSON (object):
 		return self._header(
 			self._neighbor(
 				peer,
-				'"operational": { "name": "%s", "afi": "%s", "safi": "%s"' % (
+				'"operational": { "name": "%s", "afi": "%s", "safi": "%s" }' % (
 					operational.name,operational.afi,operational.safi
 				)
 			)
