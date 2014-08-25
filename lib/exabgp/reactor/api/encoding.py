@@ -370,7 +370,7 @@ class JSON (object):
 		return self._header(
 			self._neighbor(
 				peer,
-				'"operational": { "name": "%s", "afi": "%s", "safi": "%s", "router-id": "%s", "sequence": %d, "counter": %d' % (
+				'"operational": { "name": "%s", "afi": "%s", "safi": "%s", "router-id": "%s", "sequence": %d, "counter": %d }' % (
 					operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.counter
 				)
 			)
