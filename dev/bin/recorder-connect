@@ -35,6 +35,9 @@ def drop ():
 	if not uid:
 		os.setuid(nuid)
 
+if len(sys.argv) != 4:
+	print sys.argv[0], '<host> <port> <hex file to create>'
+	sys.exit(1)
 
 drop()
 
