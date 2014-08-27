@@ -341,10 +341,10 @@ class JSON (object):
 					refresh.afi,refresh.safi,refresh.reserved
 				)
 			)
-		,header,body,peer.neighbor.identificator(),self.count(peer),state='refresh')
+		,header,body,peer.neighbor.identificator(),self.count(peer),message_type='refresh')
 
 	def bmp (self,bmp,update):
-		return self._header(self._bmp(bmp,self._update(update)),'','',state='bmp')
+		return self._header(self._bmp(bmp,self._update(update)),'','',message_type='bmp')
 
 	def _operational_advisory (self,peer,operational,header,body):
 		return self._header(
