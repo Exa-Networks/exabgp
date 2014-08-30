@@ -78,9 +78,9 @@ class Negotiated (object):
 			recv_ms_capa = set(recv_capa[Capability.ID.MULTISESSION_BGP])
 
 			if sent_ms_capa == set([]):
-				sent_ms_capa = set([Capability.ID.MULTIPROTOCOL_EXTENSIONS])
+				sent_ms_capa = { Capability.ID.MULTIPROTOCOL_EXTENSIONS }
 			if recv_ms_capa == set([]):
-				recv_ms_capa = set([Capability.ID.MULTIPROTOCOL_EXTENSIONS])
+				recv_ms_capa = { Capability.ID.MULTIPROTOCOL_EXTENSIONS }
 
 			if sent_ms_capa != recv_ms_capa:
 				self.multisession = (2,8,'multisession, our peer did not reply with the same sessionid')

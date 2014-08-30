@@ -9,25 +9,25 @@ Copyright (c) 2013-2013 Exa Networks. All rights reserved.
 import errno
 
 class error:
-	block = set((
+	block = {
 		errno.EINPROGRESS, errno.EALREADY,
 		errno.EAGAIN, errno.EWOULDBLOCK,
 		errno.EINTR, errno.EDEADLK,
 		errno.EBUSY, errno.ENOBUFS,
 		errno.ENOMEM,
-	))
+	}
 
-	fatal = set((
+	fatal = {
 		errno.ECONNABORTED, errno.EPIPE,
 		errno.ECONNREFUSED, errno.EBADF,
 		errno.ESHUTDOWN, errno.ENOTCONN,
 		errno.ECONNRESET, errno.ETIMEDOUT,
 		errno.EINVAL,
-	))
+	}
 
-	unavailable = set((
+	unavailable = {
 		errno.ECONNREFUSED, errno.EHOSTUNREACH,
-	))
+	}
 
 class NetworkError   (Exception): pass
 class BindingError   (NetworkError): pass
