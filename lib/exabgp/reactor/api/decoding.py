@@ -398,7 +398,7 @@ class Decoder (object):
 		try:
 			descriptions,command = Decoder.extract_neighbors(command)
 			peers = reactor.match_neighbors(descriptions)
-			if peers == []:
+			if not peers:
 				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 				return False
 			reactor.plan(_callback(self,peers))
@@ -429,7 +429,7 @@ class Decoder (object):
 		try:
 			descriptions,command = Decoder.extract_neighbors(command)
 			peers = reactor.match_neighbors(descriptions)
-			if peers == []:
+			if not peers:
 				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 				return False
 			reactor.plan(_callback(self,command,reactor.nexthops(peers)))
@@ -459,7 +459,7 @@ class Decoder (object):
 		try:
 			descriptions,command = Decoder.extract_neighbors(command)
 			peers = reactor.match_neighbors(descriptions)
-			if peers == []:
+			if not peers:
 				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 				return False
 			reactor.plan(_callback(self,command,reactor.nexthops(peers)))
@@ -490,7 +490,7 @@ class Decoder (object):
 		try:
 			descriptions,command = Decoder.extract_neighbors(command)
 			peers = reactor.match_neighbors(descriptions)
-			if peers == []:
+			if not peers:
 				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 				return False
 			reactor.plan(_callback(self,command,reactor.nexthops(peers)))
@@ -520,7 +520,7 @@ class Decoder (object):
 		try:
 			descriptions,command = Decoder.extract_neighbors(command)
 			peers = reactor.match_neighbors(descriptions)
-			if peers == []:
+			if not peers:
 				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 				return False
 			reactor.plan(_callback(self,command,reactor.nexthops(peers)))
@@ -549,7 +549,7 @@ class Decoder (object):
 		try:
 			descriptions,command = Decoder.extract_neighbors(command)
 			peers = reactor.match_neighbors(descriptions)
-			if peers == []:
+			if not peers:
 				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 				return False
 			reactor.plan(_callback(self,command,reactor.nexthops(peers)))
@@ -579,7 +579,7 @@ class Decoder (object):
 		try:
 			descriptions,command = Decoder.extract_neighbors(command)
 			peers = reactor.match_neighbors(descriptions)
-			if peers == []:
+			if not peers:
 				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 				return False
 			reactor.plan(_callback(self,command,reactor.nexthops(peers)))
@@ -608,7 +608,7 @@ class Decoder (object):
 		try:
 			descriptions,command = Decoder.extract_neighbors(command)
 			peers = reactor.match_neighbors(descriptions)
-			if peers == []:
+			if not peers:
 				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 				return False
 			reactor.plan(_callback(self,command,peers))
@@ -639,7 +639,7 @@ class Decoder (object):
 		try:
 			descriptions,command = Decoder.extract_neighbors(command)
 			peers = reactor.match_neighbors(descriptions)
-			if peers == []:
+			if not peers:
 				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 				return False
 			reactor.plan(_callback(self,command,peers))
@@ -667,7 +667,7 @@ class Decoder (object):
 		try:
 			descriptions,command = Decoder.extract_neighbors(command)
 			peers = reactor.match_neighbors(descriptions)
-			if peers == []:
+			if not peers:
 				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 				return False
 			reactor.plan(_callback(self,command,peers))
@@ -698,7 +698,7 @@ class Decoder (object):
 		try:
 			descriptions,command = Decoder.extract_neighbors(command)
 			peers = reactor.match_neighbors(descriptions)
-			if peers == []:
+			if not peers:
 				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 				return False
 			reactor.plan(_callback(self,command,peers))
