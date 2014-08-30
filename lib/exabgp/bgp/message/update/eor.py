@@ -57,3 +57,8 @@ class EOR (Message):
 
 	def __str__ (self):
 		return 'EOR'
+
+	@classmethod
+	def unpack_message (cls,data,negotiated):
+		header_length = len(EOR.NLRI.PREFIX)
+		return cls(AFI(data[header_length]),SAFI(data[header_length+1:header_length+3]))

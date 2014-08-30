@@ -254,7 +254,7 @@ class Update (Message):
 		if length == 23:
 			return EOR(AFI.ipv4,SAFI.unicast,IN.announced)
 		if length == 30 and data.startswith(EOR.NLRI.PREFIX):
-			return EOR.unpack_message(data)
+			return EOR.unpack_message(data,negotiated)
 
 		withdrawn, _attributes, announced = cls.split(data)
 		attributes = Attributes.unpack(_attributes,negotiated)
