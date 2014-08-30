@@ -175,12 +175,12 @@ environment.configuration = {
 	'log' : {
 		'enable'        : (environment.boolean,environment.lower,'true',     'enable logging'),
 		'level'         : (environment.syslog_value,environment.syslog_name,'INFO', 'log message with at least the priority SYSLOG.<level>'),
-		'destination'   : (environment.unquote,environment.quote,'stdout', 'where logging should log\n' \
-		                  '                                  syslog (or no setting) sends the data to the local syslog syslog\n' \
-		                  '                                  host:<location> sends the data to a remote syslog server\n' \
-		                  '                                  stdout sends the data to stdout\n' \
-		                  '                                  stderr sends the data to stderr\n' \
-		                  '                                  <filename> send the data to a file' \
+		'destination'   : (environment.unquote,environment.quote,'stdout', 'where logging should log\n'
+		                  '                                  syslog (or no setting) sends the data to the local syslog syslog\n'
+		                  '                                  host:<location> sends the data to a remote syslog server\n'
+		                  '                                  stdout sends the data to stdout\n'
+		                  '                                  stderr sends the data to stderr\n'
+		                  '                                  <filename> send the data to a file'
 		),
 		'all'           : (environment.boolean,environment.lower,'false',    'report debug information for everything'),
 		'configuration' : (environment.boolean,environment.lower,'false',    'report command parsing'),
