@@ -384,20 +384,20 @@ class Attributes (dict):
 				if key == Attribute.ID.MP_REACH_NLRI:
 					continue
 
-					sval = self[key]
-					oval = other[key]
+				sval = self[key]
+				oval = other[key]
 
-					# In the case where the attribute is, for instance, a list
-					# we want to compare values independently of the order
-					if isinstance(sval, collections.Iterable):
-						if not isinstance(oval, collections.Iterable):
-							return False
-
-						sval = sorted(sval,sorter)
-						oval = set(oval,sorter)
-
-					if sval != oval:
+				# In the case where the attribute is, for instance, a list
+				# we want to compare values independently of the order
+				if isinstance(sval, collections.Iterable):
+					if not isinstance(oval, collections.Iterable):
 						return False
+
+					sval = sorted(sval,sorter)
+					oval = set(oval,sorter)
+
+				if sval != oval:
+					return False
 			return True
 		except KeyError:
 				return False
