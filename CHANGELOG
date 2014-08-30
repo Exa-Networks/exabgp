@@ -13,6 +13,7 @@ Version 3.4.3
  * Fix: ASPath encoding
  * Fix: possible bad notify call
  * Fix: Aggregator configuration issue
+ * Fix: many potential issues reported by pycharm
 
 Version 3.4.2
  * Feature: add more information in crash report

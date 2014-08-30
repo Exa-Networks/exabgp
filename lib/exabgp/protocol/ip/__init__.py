@@ -133,7 +133,7 @@ class IP (object):
 class _NoIP (object):
 	packed = ''
 
-	def pack (data,negotiated=None):
+	def pack (self,data,negotiated=None):
 		return ''
 
 	def __str__ (self):

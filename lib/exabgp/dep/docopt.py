@@ -161,10 +161,10 @@ class Argument(ChildPattern):
         return None, None
 
     @classmethod
-    def parse(class_, source):
+    def parse(cls, source):
         name = re.findall('(<\S*?>)', source)[0]
         value = re.findall('\[default: (.*)\]', source, flags=re.I)
-        return class_(name, value[0] if value else None)
+        return cls(name, value[0] if value else None)
 
 
 class Command(Argument):
@@ -192,7 +192,7 @@ class Option(ChildPattern):
         self.value = None if value is False and argcount else value
 
     @classmethod
-    def parse(class_, option_description):
+    def parse(cls, option_description):
         short, long, argcount, value = None, None, 0, False
         options, _, description = option_description.strip().partition('  ')
         options = options.replace(',', ' ').replace('=', ' ')
@@ -206,7 +206,7 @@ class Option(ChildPattern):
         if argcount:
             matched = re.findall('\[default: (.*)\]', description, flags=re.I)
             value = matched[0] if matched else None
-        return class_(short, long, argcount, value)
+        return cls(short, long, argcount, value)
 
     def single_match(self, left):
         for n, p in enumerate(left):

@@ -19,7 +19,7 @@ class NOP (Message):
 		return "NOP"
 
 	@classmethod
-	def unpack (self):
+	def unpack (cls):
 		return NOP()
 
 _NOP = NOP()

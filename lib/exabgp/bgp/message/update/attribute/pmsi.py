@@ -102,8 +102,8 @@ class PMSI (Attribute):
 		)
 
 	@classmethod
-	def register_pmsi (klass):
-		klass._pmsi_known[klass.TUNNEL_TYPE] = klass
+	def register_pmsi (cls):
+		cls._pmsi_known[cls.TUNNEL_TYPE] = cls
 
 	@staticmethod
 	def pmsi_unknown (subtype,tunnel,label,flags):
