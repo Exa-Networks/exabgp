@@ -413,7 +413,7 @@ class Reactor (object):
 		return True
 
 	def match_neighbors (self,descriptions):
-		"returns the sublist of peers matching the description passed, or None if no description is given"
+		"""returns the sublist of peers matching the description passed, or None if no description is given"""
 		if not descriptions:
 			return self.peers.keys()
 

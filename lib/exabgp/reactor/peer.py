@@ -410,7 +410,7 @@ class Peer (object):
 
 
 	def _main (self,direction):
-		"yield True if we want to come back to it asap, None if nothing urgent, and False if stopped"
+		"""yield True if we want to come back to it asap, None if nothing urgent, and False if stopped"""
 
 		if self._teardown:
 			raise Notify(6,3)
@@ -547,7 +547,7 @@ class Peer (object):
 		raise Notify(6,self._teardown)
 
 	def _run (self,direction):
-		"yield True if we want the reactor to give us back the hand with the same peer loop, None if we do not have any more work to do"
+		"""yield True if we want the reactor to give us back the hand with the same peer loop, None if we do not have any more work to do"""
 		try:
 			for action in self._[direction]['code']():
 				yield action

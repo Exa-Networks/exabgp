@@ -1,10 +1,10 @@
 # encoding: utf-8
-'''
+"""
 Enumeration.py
 
 Created by Thomas Mangin on 2013-03-18.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
-'''
+"""
 
 # int are immutable once created: can not set ._str in __init__
 class _integer (int):

@@ -7,7 +7,7 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
 class InvalidFormat (Exception):
-	"Raised when the configuration can not be parsed"
+	"""Raised when the configuration can not be parsed"""
 	pass
 
 
