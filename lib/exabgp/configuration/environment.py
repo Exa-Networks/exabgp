@@ -393,7 +393,7 @@ def _env (conf):
 				else:
 					conf = environment.unquote(ini.get(proxy_section,option,nonedict))
 					# name without an = or : in the configuration and no value
-					if conf == None:
+					if conf is None:
 						conf = default[option][2]
 			except (ConfigParser.NoSectionError,ConfigParser.NoOptionError):
 				conf = default[option][2]
