@@ -216,7 +216,7 @@ def _reference (root,references,json,location):
 
 	return True
 
-def _validate (root,json,definition,location=[]):
+def _validate (root,json,definition,location=()):
 	kind,presence,references,contextual = definition
 
 	# ignore missing optional elements

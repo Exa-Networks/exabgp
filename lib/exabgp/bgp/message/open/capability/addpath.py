@@ -24,7 +24,7 @@ class AddPath (Capability,dict):
 		3 : 'send/receive',
 	}
 
-	def __init__ (self,families=[],send_receive=0):
+	def __init__ (self,families=(),send_receive=0):
 		for afi,safi in families:
 			self.add_path(afi,safi,send_receive)
 
