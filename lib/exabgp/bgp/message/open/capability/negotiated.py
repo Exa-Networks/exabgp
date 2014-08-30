@@ -71,11 +71,12 @@ class Negotiated (object):
 		elif recv_capa.announced(Capability.ID.ROUTE_REFRESH) and sent_capa.announced(Capability.ID.ROUTE_REFRESH):
 			self.refresh=REFRESH.normal
 
-		self.multisession = sent_capa.announced(Capability.ID.MULTISESSION_CISCO) and recv_capa.announced(Capability.ID.MULTISESSION_CISCO)
+		self.multisession  = sent_capa.announced(Capability.ID.MULTISESSION) and recv_capa.announced(Capability.ID.MULTISESSION)
+		self.multisession |= sent_capa.announced(Capability.ID.MULTISESSION_CISCO) and recv_capa.announced(Capability.ID.MULTISESSION_CISCO)
 
 		if self.multisession:
-			sent_ms_capa = set(sent_capa[Capability.ID.MULTISESSION_CISCO])
-			recv_ms_capa = set(recv_capa[Capability.ID.MULTISESSION_CISCO])
+			sent_ms_capa = set(sent_capa[Capability.ID.MULTISESSION])
+			recv_ms_capa = set(recv_capa[Capability.ID.MULTISESSION])
 
 			if sent_ms_capa == set([]):
 				sent_ms_capa = { Capability.ID.MULTIPROTOCOL }
@@ -95,7 +96,7 @@ class Negotiated (object):
 					self.multisession = (2,8,'when checking session id, capability %s did not match' % str(capa))
 					break
 
-		elif sent_capa.announced(Capability.ID.MULTISESSION_CISCO):
+		elif sent_capa.announced(Capability.ID.MULTISESSION):
 			self.multisession = (2,9,'multisession is mandatory with this peer')
 
 		# XXX: Does not work as the capa is not yet defined
