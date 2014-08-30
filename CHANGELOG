@@ -11,6 +11,7 @@ Version 3.4.3
  * Fix: JSON message for route-refresh
  * Fix: EOR unpack issue
  * Fix: ASPath encoding
+ * Fix: possible bad notify call
 
 Version 3.4.2
  * Feature: add more information in crash report
