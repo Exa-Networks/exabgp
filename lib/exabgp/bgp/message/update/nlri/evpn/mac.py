@@ -48,7 +48,7 @@ class MAC (EVPN):
 		EVPN.__init__(self,packed if packed else self.pack())
 
 	def __str__ (self):
-		return "%s:%s:%s:%s:%s:%s%s:%s:%s" % (
+		return "%s:%s:%s:%s:%s:%s%s:%s" % (
 			self._prefix(),
 			self.rd,
 			self.esi,

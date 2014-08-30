@@ -64,7 +64,7 @@ class Multicast (EVPN):
 		return '%s%s%s%s' % (
 			self.rd.pack(),
 			self.etag.pack(),
-			chr(len(ip)) +
+			chr(len(ip)),
 			ip
 		)
 
