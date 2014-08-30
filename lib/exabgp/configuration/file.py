@@ -1860,7 +1860,7 @@ class Configuration (object):
 			if self.debug: raise
 			return False
 
-		scope[-1]['announce'][-1].attributes.add(Aggregator(local_as.pack(True)+local_address.pack()))
+		scope[-1]['announce'][-1].attributes.add(Aggregator(local_as,local_address))
 		return True
 
 	def _route_path_information (self,scope,tokens):

@@ -12,6 +12,7 @@ Version 3.4.3
  * Fix: EOR unpack issue
  * Fix: ASPath encoding
  * Fix: possible bad notify call
+ * Fix: Aggregator configuration issue
 
 Version 3.4.2
  * Feature: add more information in crash report
