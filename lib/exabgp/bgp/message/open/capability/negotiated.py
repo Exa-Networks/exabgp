@@ -110,7 +110,8 @@ class Negotiated (object):
 				return (2,0,'peer does not speak ASN4, we are stuck')
 			else:
 				# we will use RFC 4893 to convey new ASN to the peer
-				self.asn4
+				# XXX: FIXME
+				pass
 
 		if self.peer_as != neighbor.peer_as:
 			return (2,2,'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.received_open.asn,neighbor.peer_as))

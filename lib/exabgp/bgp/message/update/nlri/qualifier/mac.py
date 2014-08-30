@@ -26,7 +26,7 @@ class MAC(object):
 		return self.__str__()
 
 	def pack (self):
-		self.packed
+		return self.packed
 
 	# Orange code was returning 10 !
 	def __len__ (self):
