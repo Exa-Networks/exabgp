@@ -126,7 +126,7 @@ class Daemon (object):
 	def _is_socket (self,fd):
 		try:
 			s = socket.fromfd(fd, socket.AF_INET, socket.SOCK_RAW)
-		except ValueError,e:
+		except ValueError:
 			# The file descriptor is closed
 			return False
 		try:

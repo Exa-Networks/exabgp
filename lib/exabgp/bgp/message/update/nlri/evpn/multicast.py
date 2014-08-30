@@ -7,7 +7,7 @@ Copyright (c) 2014-2014 Orange. All rights reserved.
 
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
-from exabgp.bgp.message.update.nlri.qualifier.etag import ETag
+from exabgp.bgp.message.update.nlri.qualifier.etag import EthernetTag
 
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
@@ -71,7 +71,7 @@ class Multicast (EVPN):
 	@classmethod
 	def unpack(cls,data):
 		rd = RouteDistinguisher.unpack(data[:8])
-		etag = ETag.unpack(data[8:12])
+		etag = EthernetTag.unpack(data[8:12])
 		iplen = ord(data[12])
 		ip = IP.unpack(data[12:12+iplen])
 		if iplen not in (4,16):

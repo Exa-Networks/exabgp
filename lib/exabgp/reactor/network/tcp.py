@@ -111,7 +111,7 @@ def MD5 (io,ip,port,afi,md5):
 			try:
 				TCP_MD5SIG = 0x10
 				io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, 1)
-			except socket.error,e:
+			except socket.error:
 				raise MD5Error(
 					'FreeBSD requires that you rebuild your kernel to enable TCP MD5 Signatures:\n'
 					'options         IPSEC\n'

@@ -136,6 +136,7 @@ def check_message (neighbor,message):
 	if raw.startswith('\xff'*16):
 		kind = ord(raw[18])
 		size = (ord(raw[16]) << 16) + (ord(raw[17]))
+		# XXX: FIXME: check size
 
 		if kind == 1:
 			return check_open(neighbor,raw[18:])

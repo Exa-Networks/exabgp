@@ -338,8 +338,8 @@ class Attributes (dict):
 			self.add(cached,key)
 			return
 
-		as_seq = []
-		as_set = []
+		# as_seq = []
+		# as_set = []
 
 		len2 = len(as2path.as_seq)
 		len4 = len(as4path.as_seq)

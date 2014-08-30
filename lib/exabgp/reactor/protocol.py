@@ -84,7 +84,6 @@ class Protocol (object):
 			ttl = self.neighbor.ttl
 			self.connection = Outgoing(peer.afi,peer.ip,local.ip,self.port,md5,ttl)
 
-			connected = False
 			try:
 				generator = self.connection.establish()
 				while True:
@@ -125,7 +124,7 @@ class Protocol (object):
 
 	# Read from network .......................................................
 
-	def read_message (self,comment=''):
+	def read_message (self):
 		for length,msg,header,body,notify in self.connection.reader():
 			if notify:
 				if self.neighbor.api['receive-packets']:
@@ -198,8 +197,8 @@ class Protocol (object):
 		self.logger.message(self.me('<< %s' % received_open))
 		yield received_open
 
-	def read_keepalive (self,comment=''):
-		for message in self.read_message(comment):
+	def read_keepalive (self):
+		for message in self.read_message():
 			if message.TYPE == NOP.TYPE:
 				yield message
 			else:

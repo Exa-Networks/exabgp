@@ -319,7 +319,7 @@ class Peer (object):
 		# Start keeping keepalive timer
 		self.recv_timer = ReceiveTimer(self.me,proto.negotiated.holdtime,4,0)
 		# Read KEEPALIVE
-		for message in proto.read_keepalive('ESTABLISHED'):
+		for message in proto.read_keepalive():
 			self.recv_timer.check_ka(message)
 			yield ACTION.immediate
 
@@ -400,7 +400,7 @@ class Peer (object):
 		# Start keeping keepalive timer
 		self.recv_timer = ReceiveTimer(self.me,proto.negotiated.holdtime,4,0)
 		# Read KEEPALIVE
-		for message in self._['out']['proto'].read_keepalive('ESTABLISHED'):
+		for message in self._['out']['proto'].read_keepalive():
 			self.recv_timer.check_ka(message)
 			yield ACTION.immediate
 
