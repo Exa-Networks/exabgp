@@ -16,7 +16,7 @@ class Capability (object):
 
 	class ID (object):
 		RESERVED                 = 0x00  # [RFC5492]
-		MULTIPROTOCOL_EXTENSIONS = 0x01  # [RFC2858]
+		MULTIPROTOCOL            = 0x01  # [RFC2858]
 		ROUTE_REFRESH            = 0x02  # [RFC2918]
 		OUTBOUND_ROUTE_FILTERING = 0x03  # [RFC5291]
 		MULTIPLE_ROUTES          = 0x04  # [RFC3107]
@@ -26,14 +26,14 @@ class Capability (object):
 		FOUR_BYTES_ASN           = 0x41  # [RFC4893]
 		# 66 Deprecated
 		DYNAMIC_CAPABILITY       = 0x43  # [Chen]
-		MULTISESSION_BGP_RFC     = 0x44  # [draft-ietf-idr-bgp-multisession]
+		MULTISESSION             = 0x44  # [draft-ietf-idr-bgp-multisession]
 		ADD_PATH                 = 0x45  # [draft-ietf-idr-add-paths]
 		ENHANCED_ROUTE_REFRESH   = 0x46  # [draft-ietf-idr-bgp-enhanced-route-refresh]
 		OPERATIONAL              = 0x47  # ExaBGP only ...
 		# 70-127    Unassigned
-		CISCO_ROUTE_REFRESH      = 0x80  # I Can only find reference to this in the router logs
+		ROUTE_REFRESH_CISCO      = 0x80  # I Can only find reference to this in the router logs
 		# 128-255   Reserved for Private Use [RFC5492]
-		MULTISESSION_BGP         = 0x83  # What Cisco really use for Multisession (yes this is a reserved range in prod !)
+		MULTISESSION_CISCO       = 0x83  # What Cisco really use for Multisession (yes this is a reserved range in prod !)
 
 		EXTENDED_MESSAGE         = -1    # No yet defined by draft http://tools.ietf.org/html/draft-ietf-idr-extended-messages-02.txt
 
@@ -135,7 +135,7 @@ class Capabilities (dict):
 
 		mp = MultiProtocol()
 		mp.extend(families)
-		self[Capability.ID.MULTIPROTOCOL_EXTENSIONS] = mp
+		self[Capability.ID.MULTIPROTOCOL] = mp
 
 		if neighbor.asn4:
 			self[Capability.ID.FOUR_BYTES_ASN] = ASN4(neighbor.local_as)
@@ -164,7 +164,8 @@ class Capabilities (dict):
 
 		# MUST be the last key added
 		if neighbor.multisession:
-			self[Capability.ID.MULTISESSION_BGP] = MultiSession().set([Capability.ID.MULTIPROTOCOL_EXTENSIONS])
+			# XXX: FIXME: should it not be the RFC version ?
+			self[Capability.ID.MULTISESSION] = MultiSession().set([Capability.ID.MULTIPROTOCOL])
 		return self
 
 	def pack (self):

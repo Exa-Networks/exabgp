@@ -60,10 +60,10 @@ class Negotiated (object):
 			self.peer_as = recv_capa[Capability.ID.FOUR_BYTES_ASN]
 
 		self.families = []
-		if recv_capa.announced(Capability.ID.MULTIPROTOCOL_EXTENSIONS) \
-		and sent_capa.announced(Capability.ID.MULTIPROTOCOL_EXTENSIONS):
-			for family in recv_capa[Capability.ID.MULTIPROTOCOL_EXTENSIONS]:
-				if family in sent_capa[Capability.ID.MULTIPROTOCOL_EXTENSIONS]:
+		if recv_capa.announced(Capability.ID.MULTIPROTOCOL) \
+		and sent_capa.announced(Capability.ID.MULTIPROTOCOL):
+			for family in recv_capa[Capability.ID.MULTIPROTOCOL]:
+				if family in sent_capa[Capability.ID.MULTIPROTOCOL]:
 					self.families.append(family)
 
 		if recv_capa.announced(Capability.ID.ENHANCED_ROUTE_REFRESH) and sent_capa.announced(Capability.ID.ENHANCED_ROUTE_REFRESH):
@@ -71,16 +71,16 @@ class Negotiated (object):
 		elif recv_capa.announced(Capability.ID.ROUTE_REFRESH) and sent_capa.announced(Capability.ID.ROUTE_REFRESH):
 			self.refresh=REFRESH.normal
 
-		self.multisession = sent_capa.announced(Capability.ID.MULTISESSION_BGP) and recv_capa.announced(Capability.ID.MULTISESSION_BGP)
+		self.multisession = sent_capa.announced(Capability.ID.MULTISESSION_CISCO) and recv_capa.announced(Capability.ID.MULTISESSION_CISCO)
 
 		if self.multisession:
-			sent_ms_capa = set(sent_capa[Capability.ID.MULTISESSION_BGP])
-			recv_ms_capa = set(recv_capa[Capability.ID.MULTISESSION_BGP])
+			sent_ms_capa = set(sent_capa[Capability.ID.MULTISESSION_CISCO])
+			recv_ms_capa = set(recv_capa[Capability.ID.MULTISESSION_CISCO])
 
 			if sent_ms_capa == set([]):
-				sent_ms_capa = { Capability.ID.MULTIPROTOCOL_EXTENSIONS }
+				sent_ms_capa = { Capability.ID.MULTIPROTOCOL }
 			if recv_ms_capa == set([]):
-				recv_ms_capa = { Capability.ID.MULTIPROTOCOL_EXTENSIONS }
+				recv_ms_capa = { Capability.ID.MULTIPROTOCOL }
 
 			if sent_ms_capa != recv_ms_capa:
 				self.multisession = (2,8,'multisession, our peer did not reply with the same sessionid')
@@ -90,12 +90,12 @@ class Negotiated (object):
 
 			for capa in sent_ms_capa:
 				# no need to check that the capability exists, we generated it
-				# checked it is what we sent and only send MULTIPROTOCOL_EXTENSIONS
+				# checked it is what we sent and only send MULTIPROTOCOL
 				if sent_capa[capa] != recv_capa[capa]:
 					self.multisession = (2,8,'when checking session id, capability %s did not match' % str(capa))
 					break
 
-		elif sent_capa.announced(Capability.ID.MULTISESSION_BGP):
+		elif sent_capa.announced(Capability.ID.MULTISESSION_CISCO):
 			self.multisession = (2,9,'multisession is mandatory with this peer')
 
 		# XXX: Does not work as the capa is not yet defined

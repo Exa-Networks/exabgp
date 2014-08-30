@@ -14,6 +14,7 @@ Version 3.4.3
  * Fix: possible bad notify call
  * Fix: Aggregator configuration issue
  * Fix: many potential issues reported by pycharm
+ * Change: use RFC MULTISESSION capability and not CISCO variant anymore
 
 Version 3.4.2
  * Feature: add more information in crash report

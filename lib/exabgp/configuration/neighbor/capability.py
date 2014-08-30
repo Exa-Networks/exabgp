@@ -67,7 +67,7 @@ class SectionCapability (Entry):
 		self._drop_colon(tokeniser)
 
 	def multisession (self,tokeniser):
-		self.content[Capability.ID.MULTISESSION_BGP] = boolean(tokeniser,False)
+		self.content[Capability.ID.MULTISESSION] = boolean(tokeniser,False)
 		self._drop_colon(tokeniser)
 
 	def graceful (self,tokeniser):
