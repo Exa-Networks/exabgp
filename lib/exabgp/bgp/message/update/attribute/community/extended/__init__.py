@@ -69,7 +69,7 @@ class ExtendedCommunity (Attribute):
 		return cmp(self.community,other.community)
 
 	@staticmethod
-	def unpack (data,negotiated):
+	def unpack (data,negotiated=None):
 		# 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0FFF
 		community = (ord(data[0])&0x0F,ord(data[1]))
 		if community in ExtendedCommunity.registered_extended:

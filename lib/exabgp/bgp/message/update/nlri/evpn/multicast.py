@@ -34,7 +34,7 @@ class Multicast (EVPN):
 		self.rd = rd
 		self.etag = etag
 		self.ip = ip
-		EVPN.__init__(self)
+		EVPN.__init__(self,self.pack())
 
 	def __str__ (self):
 		return "%s:%s:%s:%s" % (
