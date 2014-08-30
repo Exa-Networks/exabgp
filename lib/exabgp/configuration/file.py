@@ -1024,7 +1024,6 @@ class Configuration (object):
 			self._error = '"%s" is an invalid graceful-restart time' % ' '.join(value)
 			if self.debug: raise
 			return False
-		return True
 
 	def _set_addpath (self,scope,command,value):
 		try:
@@ -1439,7 +1438,6 @@ class Configuration (object):
 			self._error = '"%s" is an invalid ttl-security (1-254)' % ' '.join(value)
 			if self.debug: raise
 			return False
-		return True
 
 	#  Group Static ................
 
@@ -1906,7 +1904,7 @@ class Configuration (object):
 				value = unpack('!L',data)[0]
 				if value >= pow(2,32):
 					raise ValueError('invalid community %s (too large)' % data)
-					return Community.cached(pack('!L',value))
+					# return Community.cached(pack('!L',value))
 			else:
 				raise ValueError('invalid community name %s' % data)
 

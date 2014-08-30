@@ -467,7 +467,7 @@ class Flow (NLRI):
 			data = "%s%s" % (pack('!H',l | 0xF000),components)
 		else:
 			raise Notify(3,0,"rule too big for NLRI - how to handle this - does this work ?")
-			data = "%s" % chr(0)
+			# data = "%s" % chr(0)
 
 		return data
 

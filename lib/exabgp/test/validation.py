@@ -205,8 +205,7 @@ def _reference (root,references,json,location):
 		for k in add:
 			if k in valid:
 				raise ValidationError(location, "duplicate reference in " % ', '.join(references))
-
-				return False
+				# return False
 		valid.extend(add)
 
 	for option in jsn:

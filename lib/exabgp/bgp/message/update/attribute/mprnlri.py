@@ -67,7 +67,7 @@ class MPRNLRI (Attribute,Address):
 
 	def __len__ (self):
 		raise RuntimeError('we can not give you the size of an MPRNLRI - was it with our witout addpath ?')
-		return len(self.pack(False))
+		# return len(self.pack(False))
 
 	def __str__ (self):
 		return "MP_REACH_NLRI for %s %s with %d NLRI(s)" % (self.afi,self.safi,len(self.nlris))
