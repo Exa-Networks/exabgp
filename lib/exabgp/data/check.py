@@ -58,13 +58,13 @@ def nop (data):
 	return True
 
 def uint8 (data):
-	return data >= 0 and data < pow(2,8)
+	return 0 <= data < pow(2,8)
 def uint16 (data):
-	return data >= 0 and data < pow(2,16)
+	return 0 <= data < pow(2,16)
 def uint32 (data):
-	return data >= 0 and data < pow(2,32)
+	return 0 <= data < pow(2,32)
 def float (data):
-	return data >=0 and data < 3.4 * pow(10,38)  # approximation of max from wikipedia
+	return 0 <= data < 3.4 * pow(10,38)  # approximation of max from wikipedia
 
 def ip (data,):
 	return ipv4(data) or ipv6(data)
@@ -75,9 +75,9 @@ def ipv6 (data):  # XXX: improve
 	return string(data) and ':' in data
 
 def range4 (data):
-	return data > 0 and data <= 32
+	return 0 < data <= 32
 def range6 (data):
-	return data > 0 and data <= 128
+	return 0 < data <= 128
 
 def ipv4_range (data):
 	if not data.count('/') == 1:
@@ -92,12 +92,12 @@ def ipv4_range (data):
 	return True
 
 def port (data):
-	return data >= 0 and data < pow(2,16)
+	return 0 <= data < pow(2,16)
 
 def asn16 (data):
-	return data >= 1 and data < pow(2,16)
+	return 1 <= data < pow(2,16)
 def asn32 (data):
-	return data >= 1 and data < pow(2,32)
+	return 1 <= data < pow(2,32)
 asn = asn32
 
 def md5 (data):
@@ -166,8 +166,7 @@ def extendedcommunity (data):  # TODO: improve, incomplete see http://tools.ietf
 	return False
 
 def label (data):
-	return integer(data) and \
-		data >= 0 and data < pow(2,20)  # XXX: SHOULD be taken from Label class
+	return integer(data) and 0 <= data < pow(2, 20)  # XXX: SHOULD be taken from Label class
 
 def clusterlist (data):
 	return integer(data) and uint8(data)
