@@ -52,7 +52,7 @@ class ASPath (Attribute):
 		l = len(values)
 		if l:
 			if l>255:
-				return self._segment(seg_type,values[:255]) + self._segment(seg_type,values[255:])
+				return self._segment(seg_type,values[:255],negotiated) + self._segment(seg_type,values[255:],negotiated)
 			return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack(negotiated) for v in values]))
 		return ""
 
