@@ -16,37 +16,37 @@ from exabgp.bgp.message import IN
 
 class APIOptions (dict):
 	def receive_parsed (self,value):
-		self['receive-parsed'] = self.get('receive-parsed',False) | value
+		self['receive-parsed'] = self.get('receive-parsed',value)
 
 	def receive_packets (self,value):
-		self['receive-packets']  = self.get('receive-packets',False) | value
+		self['receive-packets']  = self.get('receive-packets',value)
 
 	def consolidate (self,value):
-		self['consolidate'] = self.get('consolidate',False) | value
+		self['consolidate'] = self.get('consolidate',value)
 
 	def send_packets (self,value):
-		self['send-packets'] = self.get('send_packets',False) | value
+		self['send-packets'] = self.get('send_packets',value)
 
 	def neighbor_changes (self,value):
-		self['neighbor-changes'] = self.get('neighbor_changes',False) | value
+		self['neighbor-changes'] = self.get('neighbor_changes',value)
 
 	def receive_notifications (self,value):
-		self[Message.ID.NOTIFICATION] = self.get(Message.ID.NOTIFICATION,False) | value
+		self[Message.ID.NOTIFICATION] = self.get(Message.ID.NOTIFICATION,value)
 
 	def receive_opens (self,value):
-		self[Message.ID.OPEN] = self.get(Message.ID.OPEN,False) | value
+		self[Message.ID.OPEN] = self.get(Message.ID.OPEN,value)
 
 	def receive_keepalives (self,value):
-		self[Message.ID.KEEPALIVE] = self.get(Message.ID.KEEPALIVE,False) | value
+		self[Message.ID.KEEPALIVE] = self.get(Message.ID.KEEPALIVE,value)
 
 	def receive_updates (self,value):
-		self[Message.ID.UPDATE] = self.get(Message.ID.UPDATE,False) | value
+		self[Message.ID.UPDATE] = self.get(Message.ID.UPDATE,value)
 
 	def receive_refresh (self,value):
-		self[Message.ID.ROUTE_REFRESH] = self.get(Message.ID.ROUTE_REFRESH,False) | value
+		self[Message.ID.ROUTE_REFRESH] = self.get(Message.ID.ROUTE_REFRESH,value)
 
 	def receive_operational (self,value):
-		self[Message.ID.OPERATIONAL] = self.get(Message.ID.OPERATIONAL,False) | value
+		self[Message.ID.OPERATIONAL] = self.get(Message.ID.OPERATIONAL,value)
 
 	def __missing__ (self,key):
 		return False
