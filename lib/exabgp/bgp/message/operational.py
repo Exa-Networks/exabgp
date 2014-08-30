@@ -46,7 +46,7 @@ class Operational (Message):
 	has_routerid = False
 	is_fault = False
 
-	class ID:
+	class ID (object):
 		__slots__ = []
 
 		# ADVISE
