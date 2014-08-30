@@ -299,7 +299,7 @@ class Attributes (dict):
 
 		# remove the PARTIAL bit before comparaison if the attribute is optional
 		if aid in Attribute.attributes_optional:
-			aid = aid & (~Attribute.Flag.PARTIAL & 0xFF)
+			aid &= ~Attribute.Flag.PARTIAL & 0xFF
 
 		# handle the attribute if we know it
 		if Attribute.registered(aid,flag):

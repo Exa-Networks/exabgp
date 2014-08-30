@@ -1482,7 +1482,7 @@ class Configuration (object):
 		# convert the IP into a integer/long
 		ip = 0
 		for c in change.nlri.packed:
-			ip = ip << 8
+			ip <<= 8
 			ip += ord(c)
 
 		afi = change.nlri.afi

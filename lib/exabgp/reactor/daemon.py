@@ -107,13 +107,13 @@ class Daemon (object):
 			cgid = os.getgid()
 
 			if cuid < 0:
-				cuid = (1<<32) + cuid
+				cuid += (1 << 32)
 
 			if cgid < 0:
-				cgid = (1<<32) + cgid
+				cgid += (1 << 32)
 
 			if ceid < 0:
-				ceid = (1<<32) + ceid
+				ceid += (1 << 32)
 
 			if nuid != cuid or nuid != ceid or ngid != cgid:
 				return False

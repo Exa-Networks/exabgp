@@ -140,7 +140,7 @@ if __name__ == '__main__':
 
 		start = time.time()
 		for val in xrange(COUNT):
-			val = val % UNIQUE
+			val %= UNIQUE
 			_ = klass(samples[val])
 		end = time.time()
 		time1 = end-start
@@ -151,7 +151,7 @@ if __name__ == '__main__':
 		cache = Cache()
 		start = time.time()
 		for val in xrange(COUNT):
-			val = val % UNIQUE
+			val %= UNIQUE
 
 			if val in cache:
 				_ = cache.retrieve(val)
