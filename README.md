@@ -16,9 +16,9 @@ The program is [BSD licenced](https://github.com/Exa-Networks/exabgp/blob/master
 So have a look and take control your network from any unix servers.
 
 ```sh
-> wget https://github.com/Exa-Networks/exabgp/archive/3.4.2.tar.gz
-> tar zxvf 3.4.2.tar.gz
-> cd exabgp-3.4.2
+> wget https://github.com/Exa-Networks/exabgp/archive/3.4.3.tar.gz
+> tar zxvf 3.4.3.tar.gz
+> cd exabgp-3.4.3
 > ./sbin/exabgp --help
 ```
 
@@ -51,7 +51,7 @@ Please let us know if you use it.
 
 ### Many drafts
 
-[draft-raszuk-idr-flow-spec-v6-03](http://tools.ietf.org/html/draft-ietf-idr-flow-spec-v6-03), [draft-ietf-idr-flowspec-redirect-ip-00](http://tools.ietf.org/html/draft-ietf-idr-flowspec-redirect-ip-00), [draft-ietf-idr-add-paths-08](http://tools.ietf.org/html/draft-ietf-idr-add-paths-08), partial [draft-ietf-idr-bgp-multisession-07](http://tools.ietf.org/html/draft-ietf-idr-bgp-multisession-07), [draft-scudder-bmp-01](http://tools.ietf.org/html/draft-scudder-bmp-01) 
+[draft-raszuk-idr-flow-spec-v6-03](http://tools.ietf.org/html/draft-ietf-idr-flow-spec-v6-03), [draft-ietf-idr-flowspec-redirect-ip-00](http://tools.ietf.org/html/draft-ietf-idr-flowspec-redirect-ip-00), [draft-ietf-idr-add-paths-08](http://tools.ietf.org/html/draft-ietf-idr-add-paths-08), partial [draft-ietf-idr-bgp-multisession-07](http://tools.ietf.org/html/draft-ietf-idr-bgp-multisession-07), [draft-scudder-bmp-01](http://tools.ietf.org/html/draft-scudder-bmp-01)
 
 ##More information
 

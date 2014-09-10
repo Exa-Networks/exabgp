@@ -13,7 +13,11 @@ Version 3.4.3
  * Fix: ASPath encoding
  * Fix: possible bad notify call
  * Fix: Aggregator configuration issue
- * Fix: many potential issues reported by pycharm
+ * Fix: pycharm reported issues
+   * operational, using afi instead of safi
+   * bad function paramters
+   * missing return keyword
+   * many cleanups
  * Change: use RFC MULTISESSION capability and not CISCO variant anymore
 
 Version 3.4.2
