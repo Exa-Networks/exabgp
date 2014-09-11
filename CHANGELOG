@@ -3,6 +3,9 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.4.4
+ * Fix: bug with IPv4 / ipv6 handling
+
 Version 3.4.3
  * Fix: JSON message increment
     reported by: Daniel Neiter, with a patch, thank you.
