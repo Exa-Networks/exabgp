@@ -122,7 +122,8 @@ class MPRNLRI (Attribute,Address):
 		size = len_nh - rd
 
 		# XXX: FIXME: GET IT FROM CACHE HERE ?
-		nh = data[offset+rd:offset+rd+size]
+		nhs = data[offset+rd:offset+rd+size]
+		nexthops = [nhs[pos:pos+16] for pos in range(0,len(nhs),16)]
 
 		# chech the RD is well zero
 		if rd and sum([int(ord(_)) for _ in data[offset:8]]) != 0:
@@ -147,8 +148,9 @@ class MPRNLRI (Attribute,Address):
 			raise Notify(3,0,'No data to decode in an MPREACHNLRI but it is not an EOR %d/%d' % (afi,safi))
 
 		while data:
-			length,nlri = NLRI.unpack(afi,safi,data,addpath,nh,IN.announced)
-			nlris.append(nlri)
+			for nexthop in nexthops:
+				length,nlri = NLRI.unpack(afi,safi,data,addpath,nexthop,IN.announced)
+				nlris.append(nlri)
 			#logger.parser(LazyFormat("parsed announce mp nlri %s payload " % nlri,od,data[:length]))
 			data = data[length:]
 		return cls(afi,safi,nlris)

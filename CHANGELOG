@@ -6,6 +6,7 @@ Version explained:
 Version 3.4.4
  * Fix: bug with IPv4 / ipv6 handling
  * Fix: better peer isolation when parsing messages
+ * Fix: IPv6 decoding when the routes includes link-local
 
 Version 3.4.3
  * Fix: JSON message increment
