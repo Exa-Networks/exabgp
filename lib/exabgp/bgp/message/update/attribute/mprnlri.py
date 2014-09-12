@@ -148,9 +148,14 @@ class MPRNLRI (Attribute,Address):
 			raise Notify(3,0,'No data to decode in an MPREACHNLRI but it is not an EOR %d/%d' % (afi,safi))
 
 		while data:
-			for nexthop in nexthops:
-				length,nlri = NLRI.unpack(afi,safi,data,addpath,nexthop,IN.announced)
+			if nexthops:
+				for nexthop in nexthops:
+					length,nlri = NLRI.unpack(afi,safi,data,addpath,nexthop,IN.announced)
+					nlris.append(nlri)
+			else:
+				length,nlri = NLRI.unpack(afi,safi,data,addpath,'',IN.announced)
 				nlris.append(nlri)
+
 			#logger.parser(LazyFormat("parsed announce mp nlri %s payload " % nlri,od,data[:length]))
 			data = data[length:]
 		return cls(afi,safi,nlris)
