@@ -15,6 +15,7 @@ from exabgp.bgp.message import Message
 from exabgp.bgp.message.nop import NOP
 from exabgp.bgp.message.nop import _NOP
 from exabgp.bgp.message.open import Open
+from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update import Update
@@ -143,8 +144,15 @@ class Protocol (object):
 			yield _UPDATE
 			return
 
-		message = Message.unpack_message(msg,body,self.negotiated)
 		self.logger.message(self.me('<< %s' % Message.ID.name(msg)))
+		try:
+			message = Message.unpack_message(msg,body,self.negotiated)
+		except (KeyboardInterrupt,SystemExit,Notify):
+			raise
+		except Exception,e:
+			self.logger.message(self.me('Could not decode message %s' % Capability.hex(msg)))
+			self.logger.message(self.me('%s' % str(e)))
+			raise Notify(2,0,'can not decode update message %s' % Capability.hex(msg))
 
 		if message.TYPE == Notification.TYPE:
 			raise message

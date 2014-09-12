@@ -3,6 +3,13 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.4.4
+ * Fix: bug with IPv4 / ipv6 handling
+ * Fix: better peer isolation when parsing messages
+ * Fix: IPv6 decoding when the routes includes link-local
+ * Fix: missing text API paramter
+ * Fix: no JSON for Aggregator
+
 Version 3.4.3
  * Fix: JSON message increment
     reported by: Daniel Neiter, with a patch, thank you.

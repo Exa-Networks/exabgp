@@ -177,8 +177,11 @@ def check_update (neighbor,raw):
 	capa[Capability.ID.ADD_PATH] = path
 	capa[Capability.ID.MULTIPROTOCOL] = n.families()
 
-	o1 = Open(4,n.local_as,str(n.local_address),capa,180)
-	o2 = Open(4,n.peer_as,str(n.peer_address),capa,180)
+	routerid_1 = str(n.router_id)
+	routerid_2 = '.'.join(str((int(_)+1)%250) for _ in str(n.router_id).split('.',-1))
+
+	o1 = Open(4,n.local_as,routerid_1,capa,180)
+	o2 = Open(4,n.peer_as,routerid_2,capa,180)
 	negotiated = Negotiated(n)
 	negotiated.sent(o1)
 	negotiated.received(o2)
