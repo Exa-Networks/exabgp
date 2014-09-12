@@ -74,21 +74,21 @@ class Attributes (dict):
 	previous = ''
 
 	representation = {
-		#	key:  (how, default, name, presentation),
-		Attribute.ID.ORIGIN             : ('string',  '', 'origin', '%s'),
-		Attribute.ID.AS_PATH            : ('multiple','', ('as-path','as-set'), '%s'),
-		Attribute.ID.NEXT_HOP           : ('string',  '', 'next-hop', '%s'),
-		Attribute.ID.MED                : ('integer', '', 'med', '%s'),
-		Attribute.ID.LOCAL_PREF         : ('integer', '', 'local-preference', '%s'),
-		Attribute.ID.ATOMIC_AGGREGATE   : ('boolean', '', 'atomic-aggregate', '%s'),
-		Attribute.ID.AGGREGATOR         : ('string',  '', 'aggregator', '( %s )'),
-		Attribute.ID.AS4_AGGREGATOR     : ('string',  '', 'aggregator', '( %s )'),
-		Attribute.ID.COMMUNITY          : ('list',    '', 'community', '%s'),
-		Attribute.ID.ORIGINATOR_ID      : ('inet',    '', 'originator-id', '%s'),
-		Attribute.ID.CLUSTER_LIST       : ('list',    '', 'cluster-list', '%s'),
-		Attribute.ID.EXTENDED_COMMUNITY : ('list',    '', 'extended-community', '%s'),
-		Attribute.ID.PMSI_TUNNEL        : ('string',  '', 'pmsi', '%s'),
-		Attribute.ID.AIGP               : ('integer', '', 'aigp', '%s'),
+		#	key:  (how, default, name, text_presentation, json_presentation),
+		Attribute.ID.ORIGIN             : ('string',  '', 'origin',             '%s',     '%s'),
+		Attribute.ID.AS_PATH            : ('multiple','', ('as-path','as-set'), '%s',     '%s'),
+		Attribute.ID.NEXT_HOP           : ('string',  '', 'next-hop',           '%s',     '%s'),
+		Attribute.ID.MED                : ('integer', '', 'med',                '%s',     '%s'),
+		Attribute.ID.LOCAL_PREF         : ('integer', '', 'local-preference',   '%s',     '%s'),
+		Attribute.ID.ATOMIC_AGGREGATE   : ('boolean', '', 'atomic-aggregate',   '%s',     '%s'),
+		Attribute.ID.AGGREGATOR         : ('string',  '', 'aggregator',         '( %s )', '%s'),
+		Attribute.ID.AS4_AGGREGATOR     : ('string',  '', 'aggregator',         '( %s )', '%s'),
+		Attribute.ID.COMMUNITY          : ('list',    '', 'community',          '%s',     '%s'),
+		Attribute.ID.ORIGINATOR_ID      : ('inet',    '', 'originator-id',      '%s',     '%s'),
+		Attribute.ID.CLUSTER_LIST       : ('list',    '', 'cluster-list',       '%s',     '%s'),
+		Attribute.ID.EXTENDED_COMMUNITY : ('list',    '', 'extended-community', '%s',     '%s'),
+		Attribute.ID.PMSI_TUNNEL        : ('string',  '', 'pmsi',               '%s',     '%s'),
+		Attribute.ID.AIGP               : ('integer', '', 'aigp',               '%s',     '%s'),
 	}
 
 	def __init__ (self):
@@ -184,7 +184,7 @@ class Attributes (dict):
 					if code in (Attribute.ID.NEXT_HOP, Attribute.ID.INTERNAL_SPLIT, Attribute.ID.INTERNAL_WATCHDOG, Attribute.ID.INTERNAL_WITHDRAW):
 						continue
 					if code in self.representation:
-						how, default, name, presentation = self.representation[code]
+						how, default, name, _, presentation = self.representation[code]
 						if how == 'boolean':
 							yield '"%s": %s' % (name, 'true' if self.has(code) else 'false')
 						elif how == 'string':
@@ -214,9 +214,11 @@ class Attributes (dict):
 					if code in (Attribute.ID.INTERNAL_SPLIT, Attribute.ID.INTERNAL_WATCHDOG, Attribute.ID.INTERNAL_WITHDRAW, Attribute.ID.NEXT_HOP):
 						continue
 					if code in self.representation:
-						how, default, name, presentation = self.representation[code]
+						how, default, name, presentation, _ = self.representation[code]
 						if how == 'boolean':
 							yield ' %s' % name
+						elif how == 'list':
+							yield ' %s %s' % (name, presentation % str(self[code]))
 						elif how == 'multiple':
 							yield ' %s %s' % (name[0], presentation % str(self[code]))
 						else:

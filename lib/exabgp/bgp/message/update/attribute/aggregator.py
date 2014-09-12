@@ -42,6 +42,9 @@ class Aggregator (Attribute):
 			self._str = '%s:%s' % (self.asn,self.speaker)
 		return self._str
 
+	def json (self):
+		return '{ "asn" : %d, "speaker" : "%d" }' % (self.asn,self.speaker)
+
 	@classmethod
 	def unpack (cls,data,negotiated):
 		if negotiated.asn4:
