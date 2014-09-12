@@ -215,7 +215,7 @@ class Decoder (object):
 		return closure
 
 	def parse_command (self,reactor,service,command):
-		for registered in self._dispatch:
+		for registered in sorted(self._dispatch, reverse=True):
 			if registered in command:
 				return self._dispatch[registered](self,reactor,service,command)
 		self.logger.reactor("Command from process not understood : %s" % command,'warning')
