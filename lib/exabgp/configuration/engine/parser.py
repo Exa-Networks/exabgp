@@ -418,6 +418,7 @@ def _extended_community (value):
 			'origin' : chr(0x00)+chr(0x03),
 			'l2info' : chr(0x80)+chr(0x0A),
 			'target4' : chr(0x02)+chr(0x02),
+			'origin4' : chr(0x02)+chr(0x03),
 		}
 
 		_size_community = {
@@ -461,7 +462,10 @@ def _extended_community (value):
 					else:
 						return ExtendedCommunity.unpack(header+pack('!HI',int(ga),int(la)))
 				if command == 'origin':
-					return ExtendedCommunity.unpack(header+pack('!IH',int(ga),int(la)))
+					if ga.lower().endswith('l'):
+						return ExtendedCommunity.unpack(_known_community['origin4']+pack('!LH',int(ga),int(la)))
+					else:
+						return ExtendedCommunity.unpack(header+pack('!IH',int(ga),int(la)))
 
 		raise ValueError('invalid extended community %s' % command)
 	else:

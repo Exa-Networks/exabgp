@@ -2025,11 +2025,14 @@ class Configuration (object):
 				else:
 					if command == 'target':
 						if ga.lower().endswith('l'):
-							return ExtendedCommunity.unpack(_known_community['target4']+pack('!LH',int(ga[:-1]),int(la)))
+							return ExtendedCommunity.unpack(_known_community['target4']+pack('!LH',int(ga[:-1]),int(la)), None)
 						else:
 							return ExtendedCommunity.unpack(header+pack('!HI',int(ga),int(la)),None)
 					if command == 'origin':
-						return ExtendedCommunity.unpack(header+pack('!IH',int(ga),int(la)),None)
+						if ga.lower().endswith('l'):
+							return ExtendedCommunity.unpack(_known_community['origin4']+pack('!LH',int(ga),int(la)), None)
+						else:
+							return ExtendedCommunity.unpack(header+pack('!IH',int(ga),int(la)), None)
 
 			raise ValueError('invalid extended community %s' % command)
 		else:

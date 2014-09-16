@@ -94,7 +94,7 @@ class OriginASN4Number (Origin):
 		Origin.__init__(self,community if community else pack('!BBLH',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,asn,number))
 
 	def __str__ (self):
-		return "origin:%s:%s" % (self.asn, self.number)
+		return "origin:%sL:%s" % (self.asn, self.number)
 
 	@staticmethod
 	def unpack (data):
