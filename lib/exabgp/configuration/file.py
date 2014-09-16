@@ -1985,6 +1985,8 @@ class Configuration (object):
 				'target' : chr(0x00)+chr(0x02),
 				'origin' : chr(0x00)+chr(0x03),
 				'l2info' : chr(0x80)+chr(0x0A),
+				'target4' : chr(0x02)+chr(0x02),
+				'origin4' : chr(0x02)+chr(0x03),
 			}
 
 			_size_community = {
@@ -2023,9 +2025,15 @@ class Configuration (object):
 						return ExtendedCommunity.unpack(header+pack('!BBBBH',*[int(_) for _ in ga.split('.')]+[int(la)]),None)
 				else:
 					if command == 'target':
-						return ExtendedCommunity.unpack(header+pack('!HI',int(ga),int(la)),None)
+						if ga.lower().endswith('l'):
+							return ExtendedCommunity.unpack(_known_community['target4']+pack('!LH',int(ga[:-1]),int(la)),None)
+						else:
+							return ExtendedCommunity.unpack(header+pack('!HI',int(ga),int(la)),None)
 					if command == 'origin':
-						return ExtendedCommunity.unpack(header+pack('!IH',int(ga),int(la)),None)
+						if ga.lower().endswith('l'):
+							return ExtendedCommunity.unpack(_known_community['origin4']+pack('!LH',int(ga[:-1]),int(la)),None)
+						else:
+							return ExtendedCommunity.unpack(header+pack('!IH',int(ga),int(la)),None)
 
 			raise ValueError('invalid extended community %s' % command)
 		else:

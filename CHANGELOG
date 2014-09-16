@@ -10,7 +10,9 @@ Version 3.4.4
  * Fix: missing text API paramter
  * Fix: no JSON for Aggregator
  * Fix: show route extensive
-    patch by: lazy404, thank you
+    patch by: Michal Grzedzicki, thank you
+ * Feature: Support 4-Octet AS Specific BGP Extended Community (RFC 5668)
+    path by: Michal Grzedzicki
 
 Version 3.4.3
  * Fix: JSON message increment
