@@ -18,8 +18,6 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 # RFC 4360 / RFC 7153
 
 class RouteTarget (ExtendedCommunity):
-	COMMUNITY_SUBTYPE = 0x02
-
 	@property
 	def la (self):
 		return self.community[2:self.LIMIT]
@@ -34,6 +32,7 @@ class RouteTarget (ExtendedCommunity):
 
 class RouteTargetASNIP (RouteTarget):
 	COMMUNITY_TYPE = 0x00
+	COMMUNITY_SUBTYPE = 0x02
 	LIMIT = 4
 
 	__slots__ = ['asn','ip']
@@ -59,6 +58,7 @@ RouteTargetASNIP.register_extended()
 
 class RouteTargetIPASN (RouteTarget):
 	COMMUNITY_TYPE = 0x01
+	COMMUNITY_SUBTYPE = 0x02
 	LIMIT = 6
 
 	__slots__ = ['asn','ip']
@@ -84,6 +84,7 @@ RouteTargetIPASN.register_extended()
 
 class RouteTargetASN4Number (RouteTarget):
 	COMMUNITY_TYPE = 0x02
+	COMMUNITY_SUBTYPE = 0x02
 	LIMIT=6
 
 	__slots__ = ['asn','ip']

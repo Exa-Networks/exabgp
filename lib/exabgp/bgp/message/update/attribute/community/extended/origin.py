@@ -18,8 +18,6 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 # RFC 4360 / RFC 7153
 
 class Origin (ExtendedCommunity):
-	COMMUNITY_SUBTYPE = 0x01
-
 	@property
 	def la (self):
 		return self.community[2:self.LIMIT]
@@ -34,6 +32,7 @@ class Origin (ExtendedCommunity):
 
 class OriginASNIP (Origin):
 	COMMUNITY_TYPE = 0x00
+	COMMUNITY_SUBTYPE = 0x03
 	LIMIT = 4
 
 	__slots__ = ['asn','ip']
@@ -59,6 +58,7 @@ OriginASNIP.register_extended()
 
 class OriginIPASN (Origin):
 	COMMUNITY_TYPE = 0x01
+	COMMUNITY_SUBTYPE = 0x03
 	LIMIT = 6
 
 	__slots__ = ['asn','ip']
@@ -79,38 +79,18 @@ class OriginIPASN (Origin):
 OriginIPASN.register_extended()
 
 
-# ======================================================== OriginASN4Number
+# ============================================================= OriginASN4Number
 # RFC 4360 / RFC 7153
 
 class OriginASN4Number (Origin):
 	COMMUNITY_TYPE = 0x02
+	COMMUNITY_SUBTYPE = 0x03
 	LIMIT=6
-
-	__slots__ = ['asn','ip']
 
 	def __init__ (self,asn,number,transitive,community=None):
 		self.asn = asn
 		self.number = number
 		Origin.__init__(self,community if community else pack('!BBLH',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,asn,number))
-
-	def __str__ (self):
-		return "origin:%s:%s" % (self.asn, self.number)
-
-	@staticmethod
-	def unpack (data):
-		asn,number = unpack('!LH',data[2:8])
-		return OriginASN4Number(ASN(asn),number,False,data[:8])
-
-OriginASN4Number.register_extended()
-
-# ======================================================== OriginASN4Number32
-# 
-
-class OriginASN4Number32 (OriginASN4Number):
-	COMMUNITY_TYPE = 0x02
-	COMMUNITY_SUBTYPE = 0x03
-
-	LIMIT=6
 
 	def __str__ (self):
 		return "origin:%sL:%s" % (self.asn, self.number)
@@ -120,4 +100,4 @@ class OriginASN4Number32 (OriginASN4Number):
 		asn,number = unpack('!LH',data[2:8])
 		return OriginASN4Number(ASN(asn),number,False,data[:8])
 
-OriginASN4Number32.register_extended()
+OriginASN4Number.register_extended()

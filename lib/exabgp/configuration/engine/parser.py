@@ -414,17 +414,19 @@ def _extended_community (value):
 	elif value.count(':'):
 		_known_community = {
 			# header and subheader
-			'target' : chr(0x00)+chr(0x02),
-			'origin' : chr(0x00)+chr(0x03),
-			'l2info' : chr(0x80)+chr(0x0A),
+			'target'  : chr(0x00)+chr(0x02),
 			'target4' : chr(0x02)+chr(0x02),
+			'origin'  : chr(0x00)+chr(0x03),
 			'origin4' : chr(0x02)+chr(0x03),
+			'l2info'  : chr(0x80)+chr(0x0A),
 		}
 
 		_size_community = {
-			'target' : 2,
-			'origin' : 2,
-			'l2info' : 4,
+			'target'  : 2,
+			'target4' : 2,
+			'origin'  : 2,
+			'origin4' : 2,
+			'l2info'  : 4,
 		}
 
 		components = value.split(':')
@@ -457,12 +459,12 @@ def _extended_community (value):
 					return ExtendedCommunity.unpack(header+pack('!BBBBH',*[int(_) for _ in ga.split('.')]+[int(la)]))
 			else:
 				if command == 'target':
-					if ga.lower().endswith('l'):
+					if ga.upper().endswith('L'):
 						return ExtendedCommunity.unpack(_known_community['target4']+pack('!LH',int(ga[:-1]),int(la)))
 					else:
 						return ExtendedCommunity.unpack(header+pack('!HI',int(ga),int(la)))
 				if command == 'origin':
-					if ga.lower().endswith('l'):
+					if ga.upper().endswith('L'):
 						return ExtendedCommunity.unpack(_known_community['origin4']+pack('!LH',int(ga),int(la)))
 					else:
 						return ExtendedCommunity.unpack(header+pack('!IH',int(ga),int(la)))
