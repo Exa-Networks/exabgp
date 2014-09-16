@@ -417,6 +417,7 @@ def _extended_community (value):
 			'target' : chr(0x00)+chr(0x02),
 			'origin' : chr(0x00)+chr(0x03),
 			'l2info' : chr(0x80)+chr(0x0A),
+                        'target4' : chr(0x02)+chr(0x02),
 		}
 
 		_size_community = {
@@ -455,7 +456,11 @@ def _extended_community (value):
 					return ExtendedCommunity.unpack(header+pack('!BBBBH',*[int(_) for _ in ga.split('.')]+[int(la)]))
 			else:
 				if command == 'target':
-					return ExtendedCommunity.unpack(header+pack('!HI',int(ga),int(la)))
+					if ga.lower().endswith('l'):
+					    return ExtendedCommunity.unpack(_known_community['target4']+pack('!LH',int(ga[:-1]),int(la)))
+					else:
+					    return ExtendedCommunity.unpack(header+pack('!HI',int(ga),int(la)))
+
 				if command == 'origin':
 					return ExtendedCommunity.unpack(header+pack('!IH',int(ga),int(la)))
 
@@ -465,6 +470,8 @@ def _extended_community (value):
 
 
 from exabgp.bgp.message.update.attribute.community import ExtendedCommunities
+
+print _extended_community('target:123455L:55')
 
 # This is the same code as community with a different parser, should be factored
 
