@@ -9,6 +9,8 @@ Version 3.4.4
  * Fix: IPv6 decoding when the routes includes link-local
  * Fix: missing text API paramter
  * Fix: no JSON for Aggregator
+ * Fix: show route extensive
+    patch by: lazy404, thank you
 
 Version 3.4.3
  * Fix: JSON message increment
