@@ -94,7 +94,7 @@ class OriginASN4Number (Origin):
 		Origin.__init__(self,community if community else pack('!BBLH',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,asn,number))
 
 	def __str__ (self):
-		return "origin:%sL:%s" % (self.asn, self.number)
+		return "origin:%s:%s" % (self.asn, self.number)
 
 	@staticmethod
 	def unpack (data):
@@ -102,3 +102,22 @@ class OriginASN4Number (Origin):
 		return OriginASN4Number(ASN(asn),number,False,data[:8])
 
 OriginASN4Number.register_extended()
+
+# ======================================================== OriginASN4Number32
+# 
+
+class OriginASN4Number32 (OriginASN4Number):
+	COMMUNITY_TYPE = 0x02
+	COMMUNITY_SUBTYPE = 0x03
+
+	LIMIT=6
+
+	def __str__ (self):
+		return "origin:%sL:%s" % (self.asn, self.number)
+
+	@staticmethod
+	def unpack (data):
+		asn,number = unpack('!LH',data[2:8])
+		return OriginASN4Number(ASN(asn),number,False,data[:8])
+
+OriginASN4Number32.register_extended()
