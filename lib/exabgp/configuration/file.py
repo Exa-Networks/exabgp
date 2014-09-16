@@ -2025,9 +2025,9 @@ class Configuration (object):
 				else:
 					if command == 'target':
 						if ga.lower().endswith('l'):
-						    return ExtendedCommunity.unpack(_known_community['target4']+pack('!LH',int(ga[:-1]),int(la)))
+							return ExtendedCommunity.unpack(_known_community['target4']+pack('!LH',int(ga[:-1]),int(la)))
 						else:
-						    return ExtendedCommunity.unpack(header+pack('!HI',int(ga),int(la)),None)
+							return ExtendedCommunity.unpack(header+pack('!HI',int(ga),int(la)),None)
 					if command == 'origin':
 						return ExtendedCommunity.unpack(header+pack('!IH',int(ga),int(la)),None)
 
