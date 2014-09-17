@@ -18,6 +18,8 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 # RFC 4360 / RFC 7153
 
 class Origin (ExtendedCommunity):
+	COMMUNITY_SUBTYPE = 0x03
+
 	@property
 	def la (self):
 		return self.community[2:self.LIMIT]
@@ -32,7 +34,6 @@ class Origin (ExtendedCommunity):
 
 class OriginASNIP (Origin):
 	COMMUNITY_TYPE = 0x00
-	COMMUNITY_SUBTYPE = 0x03
 	LIMIT = 4
 
 	__slots__ = ['asn','ip']
@@ -58,7 +59,6 @@ OriginASNIP.register_extended()
 
 class OriginIPASN (Origin):
 	COMMUNITY_TYPE = 0x01
-	COMMUNITY_SUBTYPE = 0x03
 	LIMIT = 6
 
 	__slots__ = ['asn','ip']
@@ -84,7 +84,6 @@ OriginIPASN.register_extended()
 
 class OriginASN4Number (Origin):
 	COMMUNITY_TYPE = 0x02
-	COMMUNITY_SUBTYPE = 0x03
 	LIMIT=6
 
 	def __init__ (self,asn,number,transitive,community=None):
