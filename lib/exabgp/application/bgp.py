@@ -18,6 +18,9 @@ from exabgp.reactor import Reactor
 from exabgp.dep import docopt
 from exabgp.dep import lsprofcalltree
 
+from exabgp.debug import setup_report
+setup_report()
+
 usage = """\
 The BGP swiss army knife of networking
 
@@ -134,33 +137,16 @@ def main ():
 		print(version)
 		sys.exit(0)
 
-	if options["--decode"]:
-		decode = ''.join(options["--decode"]).replace(':','').replace(' ','')
-		if not is_hex(decode):
-			print(usage)
-			print 'Environment values are:\n' + '\n'.join(' - %s' % _ for _ in environment.default())
-			print ("\n\n"
-				   "The BGP message must be an hexadecimal string.\n"
-				   "All colons or spaces are ignored, for example:\n"
-				   " --decode 001E0200000007900F0003000101\n"
-				   " --decode 001E:02:0000:0007:900F:0003:0001:01\n"
-				   " --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001E0200000007900F0003000101\n"
-				   " --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:0000:0007:900F:0003:0001:01\n"
-				   " --decode 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF 001E02 00000007900F0003000101'\n"
-				  )
-			sys.exit(1)
-	else:
-		decode = ''
-
 	if options["--folder"]:
-		etc = os.path.realpath(os.path.normpath(options["--folder"]))
+		folder = os.path.realpath(os.path.normpath(options["--folder"]))
+	elif os.environ.get('ETC',None):
+		folder = os.path.join(os.path.realpath(os.path.normpath(os.environ.get('ETC','etc'))),'exabgp')
 	else:
-		etc = os.path.realpath(os.path.normpath(os.environ.get('ETC','etc')))
-	os.environ['ETC'] = etc
+		folder = '/etc/exabgp'
 
 	envfile = 'exabgp.env' if not  options["--env"] else options["--env"]
 	if not envfile.startswith('/'):
-		envfile = '%s/%s' % (etc, envfile)
+		envfile = '%s/%s' % (folder, envfile)
 
 	from exabgp.configuration.environment import environment
 
@@ -242,6 +228,24 @@ def main ():
 		},
 	}
 
+	if options["--decode"]:
+		decode = ''.join(options["--decode"]).replace(':','').replace(' ','')
+		if not is_hex(decode):
+			print(usage)
+			print 'Environment values are:\n' + '\n'.join(' - %s' % _ for _ in environment.default())
+			print ("\n\n"
+				   "The BGP message must be an hexadecimal string.\n"
+				   "All colons or spaces are ignored, for example:\n"
+				   " --decode 001E0200000007900F0003000101\n"
+				   " --decode 001E:02:0000:0007:900F:0003:0001:01\n"
+				   " --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001E0200000007900F0003000101\n"
+				   " --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:0000:0007:900F:0003:0001:01\n"
+				   " --decode 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF 001E02 00000007900F0003000101'\n"
+				  )
+			sys.exit(1)
+	else:
+		decode = ''
+
 	try:
 		env = environment.setup(envfile)
 	except environment.Error,e:
@@ -318,25 +322,32 @@ def main ():
 	# check the file only once that we have parsed all the command line options and allowed them to run
 	if options["<configuration>"]:
 		for f in options["<configuration>"]:
-			configurations.append(os.path.realpath(os.path.normpath(f)))
+			normalised = os.path.realpath(os.path.normpath(f))
+			if os.path.isfile(normalised):
+				configurations.append(normalised)
+				continue
+			if not f.startswith('etc/exabgp'):
+				continue
+			normalised = os.path.join(folder,f[11:])
+			if os.path.isfile(normalised):
+				configurations.append(normalised)
+				continue
+			from exabgp.logger import Logger
+			logger = Logger()
+			logger.configuration('one of the arguments passed as configuration is not a file (%s)' % f,'error')
+			sys.exit(1)
+
 	else:
 		print(usage)
 		print 'Environment values are:\n' + '\n'.join(' - %s' % _ for _ in environment.default())
 		print '\nno configuration file provided'
 		sys.exit(1)
 
-	for configuration in configurations:
-		if not os.path.isfile(configuration):
-			from exabgp.logger import Logger
-			logger = Logger()
-			logger.configuration('the argument passed as configuration is not a file','error')
-			sys.exit(1)
-
 	from exabgp.bgp.message.update.attribute.attribute import Attribute
 	Attribute.caching = env.cache.attributes
 
 	if len(configurations) == 1:
-		run(env,comment,configuration)
+		run(env,comment,configurations[0])
 
 	if not (env.log.destination in ('syslog','stdout','stderr') or env.log.destination.startswith('host:')):
 		from exabgp.logger import Logger
