@@ -1530,7 +1530,7 @@ class Configuration (object):
 				klass = MPLS
 			elif 'route-distinguisher' in tokens:
 				klass = MPLS
-			elif 'labels' in tokens:
+			elif 'label' in tokens:
 				klass = MPLS
 			else:
 				klass = Prefix
