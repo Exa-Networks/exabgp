@@ -12,7 +12,9 @@ Version 3.4.4
  * Fix: show route extensive
     patch by: Michal Grzedzicki, thank you
  * Fix: 4-Octet AS Specific BGP Extended Community (RFC 5668)
-    path by: Michal Grzedzicki
+    patch by: Michal Grzedzicki
+ * Fix: bug with label encoding
+    patch by: Jesse Mather
 
 Version 3.4.3
  * Fix: JSON message increment
