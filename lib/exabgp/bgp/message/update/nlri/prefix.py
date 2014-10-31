@@ -51,10 +51,10 @@ class Prefix (CIDR,NLRI):
 
 	@classmethod
 	def unpack (cls,afi,safi,data,addpath,nexthop,action):
-		labels,rd,path_identifier,length,mask,size,prefix,left = NLRI._nlri(afi,safi,data,action,addpath)
+		labels,rd,path_identifier,mask,size,prefix,left = NLRI._nlri(afi,safi,data,action,addpath)
 		nlri = cls(afi,safi,prefix,mask,nexthop,action)
 		if path_identifier: nlri.path_info = PathInfo(None,None,path_identifier)
-		return length + len(data) - len(left),nlri
+		return len(data) - len(left),nlri
 
 for safi in (SAFI.unicast, SAFI.multicast):
 	for afi in (AFI.ipv4, AFI.ipv6):

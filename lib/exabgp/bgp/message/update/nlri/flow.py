@@ -550,7 +550,7 @@ class Flow (NLRI):
 
 			if decoder == 'prefix':
 				if afi == AFI.ipv4:
-					_,rd,_,_,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action,False)
+					_,rd,_,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action,False)
 					adding = klass(prefix,mask)
 					if not nlri.add(adding):
 						raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
@@ -559,7 +559,7 @@ class Flow (NLRI):
 				else:
 					byte,bgp = bgp[1],bgp[0]+bgp[2:]
 					offset = ord(byte)
-					_,rd,_,_,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action,False)
+					_,rd,_,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action,False)
 					adding = klass(prefix,mask,offset)
 					if not nlri.add(adding):
 						raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)

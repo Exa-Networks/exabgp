@@ -77,7 +77,7 @@ class MPLS (NLRI,CIDR):
 
 	@classmethod
 	def unpack (cls,afi,safi,bgp,addpath,nexthop,action):
-		labels,rd,path_identifier,length,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action,addpath)
+		labels,rd,path_identifier,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action,addpath)
 
 		nlri = cls(afi,safi,prefix,mask,nexthop,action)
 		if labels: nlri.labels = Labels(labels)
