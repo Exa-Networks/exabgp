@@ -14,6 +14,7 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 
+
 class Prefix (CIDR,NLRI):
 	__slots__ = ['path_info','nexthop','action']
 
@@ -50,18 +51,9 @@ class Prefix (CIDR,NLRI):
 
 	@classmethod
 	def unpack (cls,afi,safi,data,addpath,nexthop,action):
-		if addpath:
-			path_identifier = PathInfo(None,None,data[:4])
-			data = data[4:]
-			length = 4
-		else:
-			path_identifier = None
-			length = 0
-
-		labels,rd,mask,size,prefix,left = NLRI._nlri(afi,safi,data,action)
+		labels,rd,path_identifier,length,mask,size,prefix,left = NLRI._nlri(afi,safi,data,action,addpath)
 		nlri = cls(afi,safi,prefix,mask,nexthop,action)
-		if addpath:
-			nlri.path_info = path_identifier
+		if path_identifier: nlri.path_info = PathInfo(None,None,path_identifier)
 		return length + len(data) - len(left),nlri
 
 for safi in (SAFI.unicast, SAFI.multicast):

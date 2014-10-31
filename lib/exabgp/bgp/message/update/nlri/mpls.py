@@ -15,6 +15,8 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+
 
 # ====================================================== Both MPLS and Inet NLRI
 # RFC ....
@@ -75,11 +77,12 @@ class MPLS (NLRI,CIDR):
 
 	@classmethod
 	def unpack (cls,afi,safi,bgp,addpath,nexthop,action):
-		labels,rd,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action)
+		labels,rd,path_identifier,length,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action,addpath)
 
 		nlri = cls(afi,safi,prefix,mask,nexthop,action)
 		if labels: nlri.labels = Labels(labels)
 		if rd: nlri.rd = RouteDistinguisher(rd)
+		if path_identifier: nlri.path_info = PathInfo(None,None,path_identifier)
 
 		return len(bgp) - len(left),nlri
 

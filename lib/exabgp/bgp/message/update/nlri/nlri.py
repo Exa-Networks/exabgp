@@ -52,9 +52,17 @@ class NLRI (Address):
 		raise Notify(3,0,'trying to decode unknown family %s/%s' % (AFI(afi),SAFI(safi)))
 
 	@staticmethod
-	def _nlri (afi,safi,bgp,action):
+	def _nlri (afi,safi,bgp,action,addpath):
 		labels = []
 		rd = ''
+
+		if addpath:
+			path_identifier = bgp[:4]
+			bgp = bgp[4:]
+			length = 4
+		else:
+			path_identifier = None
+			length = 0
 
 		mask = ord(bgp[0])
 		bgp = bgp[1:]
@@ -96,4 +104,4 @@ class NLRI (Address):
 		padding = '\0'*(IP.length(afi)-size)
 		prefix = network + padding
 
-		return labels,rd,mask,size,prefix,bgp
+		return labels,rd,path_identifier,length,mask,size,prefix,bgp
