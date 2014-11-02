@@ -7,6 +7,7 @@ Important
 ROADMAP
 
 In no particular order:
+- Prefix and MPLS do share MUCH common code and need to be refactored
 - Do not try to respawn helper when we are shutting down because it is down :-)
 - Neighbor.message should be per AFI/SAFI to not have to have a special case for Operational ASM
 - Reactor parse_command need function to add to the command list and consume from it cleanly

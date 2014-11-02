@@ -25,6 +25,7 @@ class MPLS (NLRI,CIDR):
 	__slots__ = ['labels','rd','nexthop','action']
 
 	def __init__(self,afi,safi,packed,mask,nexthop,action,path=None):
+		self.path_info = PathInfo.NOPATH if path is None else path
 		self.labels = Labels.NOLABEL
 		self.rd = RouteDistinguisher.NORD
 		self.nexthop = IP.unpack(nexthop) if nexthop else NoIP
@@ -40,7 +41,7 @@ class MPLS (NLRI,CIDR):
 		return False
 
 	def extensive (self):
-		return "%s%s%s" % (self.prefix(),str(self.labels),str(self.rd))
+		return "%s%s%s%s" % (self.prefix(),str(self.labels),str(self.path_info),str(self.rd))
 
 	def __len__ (self):
 		return CIDR.__len__(self) + len(self.labels) + len(self.rd)
@@ -58,11 +59,13 @@ class MPLS (NLRI,CIDR):
 	def json (self,announced=True):
 		label = self.labels.json()
 		rdist = self.rd.json()
+		pinfo = self.path_info.json()
 
 		r = []
 		if announced:
-			if self.labels: r.append(label)
-			if self.rd: r.append(rdist)
+			if label: r.append(label)
+			if rdist: r.append(rdist)
+			if pinfo: r.append(pinfo)
 		return '"%s": { %s }' % (self.prefix(),", ".join(r))
 
 	def pack (self,addpath=None):
