@@ -176,15 +176,16 @@ class Processes (object):
 				r,_,_ = select.select([proc.stdout,],[],[],0)
 				if r:
 					try:
-						line = proc.stdout.next().rstrip()
-						if line:
-							self.logger.processes("Command from process %s : %s " % (process,line))
-							yield (process,formated(line))
-						else:
-							self.logger.processes("The process died, trying to respawn it")
-							self._terminate(process)
-							self._start(process)
-							break
+						while True:
+							line = proc.stdout.next().rstrip()
+							if line:
+								self.logger.processes("Command from process %s : %s " % (process,line))
+								yield (process,formated(line))
+							else:
+								self.logger.processes("The process died, trying to respawn it")
+								self._terminate(process)
+								self._start(process)
+								break
 					except IOError,e:
 						if not e.errno or e.errno in error.fatal:
 							# if the program exists we can get an IOError with errno code zero !
