@@ -17,6 +17,8 @@ Version 3.4.4
     patch by: Jesse Mather
  * Improvement: add support for add-path with family MPLS
     requested by: Tim Epkes
+ * Fix: bug when process writes multiple lines
+    reported by: Ilya Voronin
 
 Version 3.4.3
  * Fix: JSON message increment
