@@ -166,6 +166,8 @@ class Processes (object):
 		return [self._process[process].stdout for process in self._process]
 
 	def received (self):
+		consumed_data = False
+
 		for process in list(self._process):
 			try:
 				proc = self._process[process]
@@ -178,14 +180,9 @@ class Processes (object):
 					try:
 						while True:
 							line = proc.stdout.next().rstrip()
-							if line:
-								self.logger.processes("Command from process %s : %s " % (process,line))
-								yield (process,formated(line))
-							else:
-								self.logger.processes("The process died, trying to respawn it")
-								self._terminate(process)
-								self._start(process)
-								break
+							consumed_data = True
+							self.logger.processes("Command from process %s : %s " % (process,line))
+							yield (process,formated(line))
 					except IOError,e:
 						if not e.errno or e.errno in error.fatal:
 							# if the program exists we can get an IOError with errno code zero !
@@ -199,7 +196,10 @@ class Processes (object):
 						else:
 							self.logger.processes("unexpected errno received from forked process (%s)" % errstr(e))
 					except StopIteration:
-						pass
+						if not consumed_data:
+							self.logger.processes("The process died, trying to respawn it")
+							self._terminate(process)
+							self._start(process)
 			except (subprocess.CalledProcessError,OSError,ValueError):
 				self.logger.processes("Issue with the process, terminating it and restarting it")
 				self._terminate(process)
