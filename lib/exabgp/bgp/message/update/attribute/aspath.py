@@ -170,7 +170,8 @@ class ASPath (Attribute):
 				end = 2+(slen*length)
 				sdata = data[2:end]
 				data = data[end:]
-				asns = as_choice[stype]
+				# Eat the data and ignore it if the ASPath attribute is know known
+				asns = as_choice.get(stype,[])
 
 				for i in range(slen):
 					asn = unpack(upr,sdata[:length])[0]
