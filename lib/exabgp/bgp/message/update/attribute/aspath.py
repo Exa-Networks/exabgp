@@ -95,28 +95,33 @@ class ASPath (Attribute):
 		raise RuntimeError('it makes no sense to ask for the size of this object')
 
 	def __str__ (self,confed=False):
+		if self._str:
+			return self._str
+
 		if self.as_cseq or self.as_cset:
-			return self.string(self.as_seq,self.as_set) + self.string(self.as_cseq,self.as_cset)
-		return self.string(self.as_seq,self.as_set)
+			string = self.string(self.as_seq,self.as_set) + self.string(self.as_cseq,self.as_cset)
+		else:
+			string = self.string(self.as_seq,self.as_set)
+
+		self._str = string
+		return string
 
 	def string (self,aseq,aset):
-		if not self._str:
-			lseq = len(aseq)
-			lset = len(aset)
-			if lseq == 1:
-				if not lset:
-					string = '%d' % aseq[0]
-				else:
-					string = '[ %s %s]' % (aseq[0],'( %s ) ' % (' '.join([str(_) for _ in aset])))
-			elif lseq > 1 :
-				if lset:
-					string = '[ %s %s]' % ((' '.join([str(_) for _ in aseq])),'( %s ) ' % (' '.join([str(_) for _ in aset])))
-				else:
-					string = '[ %s ]' % ' '.join([str(_) for _ in aseq])
-			else:  # lseq == 0
-				string = '[ ]'
-			self._str = string
-		return self._str
+		lseq = len(aseq)
+		lset = len(aset)
+		if lseq == 1:
+			if not lset:
+				string = '[ %d ]' % aseq[0]
+			else:
+				string = '[ %s %s]' % (aseq[0],'( %s ) ' % (' '.join([str(_) for _ in aset])))
+		elif lseq > 1 :
+			if lset:
+				string = '[ %s %s]' % ((' '.join([str(_) for _ in aseq])),'( %s ) ' % (' '.join([str(_) for _ in aset])))
+			else:
+				string = '[ %s ]' % ' '.join([str(_) for _ in aseq])
+		else:  # lseq == 0
+			string = '[ ]'
+		return string
 
 	def json (self,name):
 		match = {
