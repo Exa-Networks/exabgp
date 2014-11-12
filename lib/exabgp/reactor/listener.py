@@ -25,6 +25,11 @@ from exabgp.logger import Logger
 
 
 class Listener (object):
+	_family_AFI_map = {
+		socket.AF_INET: AFI.ipv4,
+		socket.AF_INET6: AFI.ipv6,
+	}
+
 	def __init__ (self,hosts,port,backlog=200):
 		self._hosts = hosts
 		self._port = port
@@ -86,9 +91,16 @@ class Listener (object):
 			for sock,(host,_) in self._sockets.items():
 				try:
 					io, _ = sock.accept()
-					local_ip,local_port = io.getpeername()
-					remote_ip,remote_port = io.getsockname()
-					yield Incoming(AFI.ipv4,remote_ip,local_ip,io)
+					if sock.family == socket.AF_INET:
+						local_ip,local_port = io.getpeername()
+						remote_ip,remote_port = io.getsockname()
+					elif sock.family == socket.AF_INET6:
+						local_ip,local_port,local_flow,local_scope = io.getpeername()
+						remote_ip,remote_port,remote_flow,remote_scope = io.getsockname()
+					else:
+						raise AcceptError('unexpected address family (%d)' % sock.family)
+					fam = self._family_AFI_map[sock.family]
+					yield Incoming(fam,remote_ip,local_ip,io)
 					break
 				except socket.error, e:
 					if e.errno in error.block:

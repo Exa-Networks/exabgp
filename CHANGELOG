@@ -22,6 +22,8 @@ Version 3.4.4
  * Feature: accept packet with confedation (RFC 3065)
     requested by: oriordan (with a patch, thank you)
  * Fix: do not bark if an unknown ASPath attribute is found
+ * Fix: correctly accept connection on AF_INET6 socket
+    patch by: John W. O'Brien
 
 Version 3.4.3
  * Fix: JSON message increment
