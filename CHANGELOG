@@ -24,6 +24,7 @@ Version 3.4.4
  * Fix: do not bark if an unknown ASPath attribute is found
  * Fix: correctly accept connection on AF_INET6 socket
     patch by: John W. O'Brien
+ * Add framework to debug SIGUSR1 related problems
 
 Version 3.4.3
  * Fix: JSON message increment

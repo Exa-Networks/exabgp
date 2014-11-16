@@ -27,7 +27,9 @@ The BGP swiss army knife of networking
 usage: exabgp [--help] [--version] [--folder FOLDER] [--env ENV]
               [[--full-ini | --diff-ini | --full-env | --diff-env] |
               [--fi | --di | --fe | --de]]
-              [--debug] [--once] [--pdb] [--memory] [--profile PROFILE] [--test]
+              [--debug] [--pdb] [--test]
+              [--once] [--signal TIME]
+              [--memory] [--profile PROFILE]
               [--decode HEX_MESSAGE]...
               [<configuration>...]
 
@@ -55,6 +57,8 @@ debugging:
   --debug, -d           start the python debugger on serious logging and on
                         SIGTERM (shortcut for exabgp.log.all=true
                         exabgp.log.level=DEBUG)
+  --signal TIME         issue a SIGUSR1 to reload the configuraiton after
+                        <time> seconds, only useful for code debugging
   --once, -1            only perform one attempt to connect to peers (used for
                         debugging)
   --pdb, -p             fire the debugger on critical logging, SIGTERM, and
@@ -252,6 +256,27 @@ def main ():
 		print(usage)
 		print '\nconfiguration issue,', str(e)
 		sys.exit(1)
+
+	duration = options["--signal"]
+	if duration and duration.isdigit():
+		pid = os.fork()
+		if pid:
+			import time
+			import signal
+			try:
+				time.sleep(int(duration))
+				os.kill(pid,signal.SIGUSR1)
+			except KeyboardInterrupt:
+				pass
+			try:
+				pid,exit = os.wait()
+				sys.exit(exit)
+			except KeyboardInterrupt:
+				try:
+					pid,exit = os.wait()
+					sys.exit(exit)
+				except:
+					sys.exit(0)
 
 	if options["--help"]:
 		print(usage)
