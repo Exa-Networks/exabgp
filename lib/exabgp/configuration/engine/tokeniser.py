@@ -1,11 +1,19 @@
-from exabgp.util import coroutine
+# encoding: utf-8
+"""
+tokeniser.py
 
-class UnexpectedData (Exception):
-	def __init__(self, line, position, token):
-		super(UnexpectedData, self).__init__('Unexpected data at line %d position %d : "%s"' % (line,position,token))
+Created by Thomas Mangin on 2014-06-22.
+Copyright (c) 2014-2014 Exa Networks. All rights reserved.
+"""
+
+from exabgp.util import coroutine
+from exabgp.configuration.engine.location import Location
+from exabgp.configuration.engine.raised import Raised
+
+# convert special caracters
 
 @coroutine.join
-def unescape(s):
+def unescape (s):
 	start = 0
 	while start < len(s):
 		pos = s.find('\\', start)
@@ -32,14 +40,18 @@ def unescape(s):
 			yield esc
 		start = pos + 1
 
+
+# A coroutine which return the producer token, or string if quoted from the stream
+
 @coroutine.each
 def tokens (stream):
 	spaces = [' ','\t','\r','\n']
 	strings = ['"', "'"]
-	syntax = [',','[',']','{','}',';']
+	syntax = [',','[',']','{','}']
 	comment = ['#',]
 	nb_lines = 0
 	for line in stream:
+		nb_lines += 1
 		nb_chars = 0
 		quoted = ''
 		word = ''
@@ -47,9 +59,10 @@ def tokens (stream):
 			if char in comment:
 				if quoted:
 					word += char
+					nb_chars += 1
 				else:
 					if word:
-						yield nb_lines,nb_chars,char
+						yield nb_lines,nb_chars,line,char
 						word = ''
 					break
 
@@ -58,18 +71,16 @@ def tokens (stream):
 					word += char
 				else:
 					if word:
-						yield nb_lines,nb_chars,word
-						nb_chars += len(word)
+						yield nb_lines,nb_chars-len(word),line,word
 						word = ''
-					yield nb_lines,nb_chars,char
+					yield nb_lines,nb_chars,line,char
 				nb_chars += 1
 
 			elif char in spaces:
 				if quoted:
 					word += char
 				elif word:
-					yield nb_lines,nb_chars,word
-					nb_chars += len(word)
+					yield nb_lines,nb_chars-len(word),line,word
 					word = ''
 				nb_chars += 1
 
@@ -77,61 +88,57 @@ def tokens (stream):
 				word += char
 				if quoted == char:
 					quoted = ''
-					yield nb_lines,nb_chars,word
-					nb_chars += len(word) + 1
+					yield nb_lines,nb_chars-len(word),line,word
 					word = ''
 				else:
 					quoted = char
-					nb_chars += 1
+				nb_chars += 1
 
 			else:
 				word += char
 				nb_chars += 1
 
-class Tokeniser (object):
-	def __init__ (self,stream):
-		self.tokeniser = tokens(stream)
-		self._rewind = []
+# ==================================================================== Tokeniser
+# Return the producer token from the configuration
+
+
+class Tokeniser (Location):
+	def __init__ (self,name,stream):
+		super(Tokeniser,self).__init__()
+		self.name = name                  # A unique name for this tokenier, so we can have multiple
+		self.tokeniser = tokens(stream)   # A corouting giving us the producer toker
+		self._rewind = []                 # Should we want to rewind, the list of to pop first
 
 	def __call__ (self):
 		if self._rewind:
 			return self._rewind.pop()
-		return Tokeniser.parser(self.tokeniser)
+		token = self.content(self.tokeniser)
+		return token
 
+	# XXX: FIXME: line and position only work if we only rewind one element
 	def rewind (self,token):
 		self._rewind.append(token)
 
-	@staticmethod
-	def parser (tokeniser):
-		def content(next):
-			try:
-				while True:
-					line,position,token = next()
+	def content (self,producer):
+		try:
+			while True:
+				self.idx_line,self.idx_column,self.line,token = producer()
+				if token == '[':
+					returned = []
+					for token in self.iterate_list(producer):
+						returned.append((self.idx_line,self.idx_column,self.line,token))
+					return returned
+				elif token[0] in ('"',"'"):
+					return unescape(token[1:-1])
+				else:
+					return token
+		except ValueError:
+			raise Raised(Location(self.idx_line,self.idx_column,self.line),'Could not parse %s' % str(token))
+		except StopIteration:
+			return None
 
-					if token == '[':
-						l = []
-						for element in iterate_list(next):
-							l.append(element)
-						return l
-					elif token[0] in ('"',"'"):
-						return unescape(token[1:-1])
-					# elif token == 'true':
-					# 	return True
-					# elif token == 'false':
-					# 	return False
-					# elif token == 'null':
-					# 	return None
-					else:
-						return token
-			except ValueError:
-				raise UnexpectedData(line,position,token)
-			except StopIteration:
-				return ''
-
-		def iterate_list(next):
-			token = content(next)
-			while token != ']':
-				yield token
-				token = content(next)
-
-		return content(tokeniser)
+	def iterate_list (self,producer):
+		token = self.content(producer)
+		while token and token != ']':
+			yield token
+			token = self.content(producer)
