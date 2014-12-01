@@ -237,7 +237,8 @@ class Attributes (dict):
 	def index (self):
 		# XXX: FIXME: something a little bit smaller memory wise ?
 		if not self._idx:
-			idx = ''.join(self._generate_text(Attribute.ID.MED))
+			# idx = ''.join(self._generate_text(Attribute.ID.MED))
+			idx = ''.join(self._generate_text())
 			self._idx = '%s next-hop %s' % (idx, str(self[Attribute.ID.NEXT_HOP])) if Attribute.ID.NEXT_HOP in self else idx
 		return self._idx
 
