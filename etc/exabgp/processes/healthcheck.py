@@ -326,9 +326,9 @@ def loop(options):
                                                            options.next_hop or "self")
             if command == "announce":
                 announce = "{0} med {1}".format(announce, metric)
-            if options.community:
-                announce = "{0} community [ {1} ]".format(announce,
-                                                          options.community)
+                if options.community:
+                    announce = "{0} community [ {1} ]".format(announce,
+                                                              options.community)
             logger.debug("exabgp: {0} {1}".format(command, announce))
             print("{0} {1}".format(command, announce))
             metric += options.increase
