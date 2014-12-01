@@ -255,6 +255,9 @@ def setup_ips(ips, label):
             subprocess.check_call(cmd,
                                   stdout = fnull, stderr = fnull)
 
+def setpgrp_preexec_fn():
+    os.setpgrp()
+
 def check(cmd, timeout):
     """Check the return code of the given command.
 
@@ -272,7 +275,8 @@ def check(cmd, timeout):
     logger.debug("Checking command {0}".format(repr(cmd)))
     p = subprocess.Popen(cmd, shell = True,
                          stdout = subprocess.PIPE,
-                         stderr = subprocess.STDOUT)
+                         stderr = subprocess.STDOUT,
+                         preexec_fn=setpgrp_preexec_fn)
     if timeout:
         signal.signal(signal.SIGALRM, alarm_handler)
         signal.alarm(timeout)
@@ -290,7 +294,7 @@ def check(cmd, timeout):
         return True
     except Alarm:
         logger.warn("Timeout ({0}) while running check command".format(timeout, cmd))
-        p.kill()
+        os.killpg(p.pid, signal.SIGKILL)
         return False
 
 def loop(options):
