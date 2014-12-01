@@ -91,6 +91,53 @@ class Attributes (dict):
 		Attribute.ID.AIGP               : ('integer', '', 'aigp',               '%s',     '%s'),
 	}
 
+	def _generate_text (self,extra=None):
+		exclude = [Attribute.ID.INTERNAL_SPLIT, Attribute.ID.INTERNAL_WATCHDOG, Attribute.ID.INTERNAL_WITHDRAW, Attribute.ID.NEXT_HOP]
+		if extra:
+			exclude.append(extra)
+		for code in sorted(self.keys()):
+			# XXX: FIXME: really we should have a INTERNAL attribute in the classes
+			if code in exclude:
+				continue
+			if code in self.representation:
+				how, default, name, presentation, _ = self.representation[code]
+				if how == 'boolean':
+					yield ' %s' % name
+				elif how == 'list':
+					yield ' %s %s' % (name, presentation % str(self[code]))
+				elif how == 'multiple':
+					yield ' %s %s' % (name[0], presentation % str(self[code]))
+				else:
+					yield ' %s %s' % (name, presentation % str(self[code]))
+			else:
+				yield ' attribute [ 0x%02X 0x%02X %s ]' % (code,self[code].FLAG,str(self[code]))
+
+	def _generate_json (self):
+		for code in sorted(self.keys() + [Attribute.ID.ATOMIC_AGGREGATE,]):
+			# remove the next-hop from the attribute as it is define with the NLRI
+			if code in (Attribute.ID.NEXT_HOP, Attribute.ID.INTERNAL_SPLIT, Attribute.ID.INTERNAL_WATCHDOG, Attribute.ID.INTERNAL_WITHDRAW):
+				continue
+			if code in self.representation:
+				how, default, name, _, presentation = self.representation[code]
+				if how == 'boolean':
+					yield '"%s": %s' % (name, 'true' if self.has(code) else 'false')
+				elif how == 'string':
+					yield '"%s": "%s"' % (name, presentation % str(self[code]))
+				elif how == 'list':
+					yield '"%s": %s' % (name, presentation % self[code].json())
+				elif how == 'multiple':
+					for n in name:
+						value = self[code].json(n)
+						if value:
+							yield '"%s": %s' % (n, presentation % value)
+				elif how == 'inet':
+					yield '"%s": "%s"' % (name, presentation % str(self[code]))
+				# Should never be ran
+				else:
+					yield '"%s": %s' % (name, presentation % str(self[code]))
+			else:
+				yield '"attribute-0x%02X-0x%02X": "%s"' % (code,self[code].FLAG,str(self[code]))
+
 	def __init__ (self):
 		# cached representation of the object
 		self._str = ''
@@ -178,61 +225,20 @@ class Attributes (dict):
 
 	def json (self):
 		if not self._json:
-			def generate (self):
-				for code in sorted(self.keys() + [Attribute.ID.ATOMIC_AGGREGATE,]):
-					# remove the next-hop from the attribute as it is define with the NLRI
-					if code in (Attribute.ID.NEXT_HOP, Attribute.ID.INTERNAL_SPLIT, Attribute.ID.INTERNAL_WATCHDOG, Attribute.ID.INTERNAL_WITHDRAW):
-						continue
-					if code in self.representation:
-						how, default, name, _, presentation = self.representation[code]
-						if how == 'boolean':
-							yield '"%s": %s' % (name, 'true' if self.has(code) else 'false')
-						elif how == 'string':
-							yield '"%s": "%s"' % (name, presentation % str(self[code]))
-						elif how == 'list':
-							yield '"%s": %s' % (name, presentation % self[code].json())
-						elif how == 'multiple':
-							for n in name:
-								value = self[code].json(n)
-								if value:
-									yield '"%s": %s' % (n, presentation % value)
-						elif how == 'inet':
-							yield '"%s": "%s"' % (name, presentation % str(self[code]))
-						# Should never be ran
-						else:
-							yield '"%s": %s' % (name, presentation % str(self[code]))
-					else:
-						yield '"attribute-0x%02X-0x%02X": "%s"' % (code,self[code].FLAG,str(self[code]))
-			self._json = ', '.join(generate(self))
+			self._json = ', '.join(self._generate_json())
 		return self._json
 
 	def __str__ (self):
 		if not self._str:
-			def generate (self):
-				for code in sorted(self.keys()):
-					# XXX: FIXME: really we should have a INTERNAL attribute in the classes
-					if code in (Attribute.ID.INTERNAL_SPLIT, Attribute.ID.INTERNAL_WATCHDOG, Attribute.ID.INTERNAL_WITHDRAW, Attribute.ID.NEXT_HOP):
-						continue
-					if code in self.representation:
-						how, default, name, presentation, _ = self.representation[code]
-						if how == 'boolean':
-							yield ' %s' % name
-						elif how == 'list':
-							yield ' %s %s' % (name, presentation % str(self[code]))
-						elif how == 'multiple':
-							yield ' %s %s' % (name[0], presentation % str(self[code]))
-						else:
-							yield ' %s %s' % (name, presentation % str(self[code]))
-					else:
-						yield ' attribute [ 0x%02X 0x%02X %s ]' % (code,self[code].FLAG,str(self[code]))
 			# XXX: FIXME: remove this ' ' + ? should it be done by the caller ?
-			self._str = ''.join(generate(self))
+			self._str = ''.join(self._generate_text())
 		return self._str
 
 	def index (self):
 		# XXX: FIXME: something a little bit smaller memory wise ?
 		if not self._idx:
-			self._idx = '%s next-hop %s' % (str(self), str(self[Attribute.ID.NEXT_HOP])) if Attribute.ID.NEXT_HOP in self else str(self)
+			idx = ''.join(self._generate_text(Attribute.ID.MED))
+			self._idx = '%s next-hop %s' % (idx, str(self[Attribute.ID.NEXT_HOP])) if Attribute.ID.NEXT_HOP in self else idx
 		return self._idx
 
 	@classmethod
