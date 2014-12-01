@@ -313,17 +313,19 @@ def loop(options):
         logger.info("send announces for {0} state to ExaBGP".format(target))
         metric = vars(options).get("{0}_metric".format(str(target).lower()))
         for ip in options.ips:
-            announce = "route {0}/{1} next-hop {2} med {3}".format(str(ip),
-                                                               ip.max_prefixlen,
-                                                               options.next_hop or "self",
-                                                               metric)
-            if options.community:
-                announce = "{0} community [ {1} ]".format(announce, options.community)
-            logger.debug("exabgp: {0}".format(announce))
             if options.withdraw_on_down:
                 command = "announce" if target is states.UP else "withdraw"
             else:
                 command = "announce"
+            announce = "route {0}/{1} next-hop {2}".format(str(ip),
+                                                           ip.max_prefixlen,
+                                                           options.next_hop or "self")
+            if command == "announce":
+                announce = "{0} med {1}".format(announce, metric)
+            if options.community:
+                announce = "{0} community [ {1} ]".format(announce,
+                                                          options.community)
+            logger.debug("exabgp: {0} {1}".format(command, announce))
             print("{0} {1}".format(command, announce))
             metric += options.increase
         sys.stdout.flush()
