@@ -833,7 +833,19 @@ class Configuration (object):
 		if prg[0] != '/':
 			if prg.startswith('etc/exabgp'):
 				parts = prg.split('/')
-				path = [os.environ.get('ETC','etc'),] + parts[2:]
+				etc = os.environ.get('ETC','')
+				if not etc:
+					etc = os.environ.get('PWD','')
+				if etc:
+					p = etc.split('/')
+					if p[-1] in ('etc','sbin'):
+						p = p[:-1] + ['etc']
+					else:
+						p += ['etc']
+					etc = '/'.join(p)
+				else:
+					etc = '/etc'
+				path = [etc,] + parts[1:]
 				prg = os.path.join(*path)
 			else:
 				prg = os.path.abspath(os.path.join(os.path.dirname(self._fname),prg))

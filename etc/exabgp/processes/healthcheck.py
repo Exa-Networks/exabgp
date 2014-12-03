@@ -15,7 +15,10 @@ To use, declare this program as a process in your
        peer-as 64497;
     }
     process watch-haproxy {
-       run /etc/exabgp/processes/healthcheck.py --cmd "curl -sf http://127.0.0.1/healthcheck";
+       run /etc/exabgp/processes/healthcheck.py --cmd "curl -sf http://127.0.0.1/healthcheck" --label haproxy;
+    }
+    process watch-mysql {
+       run /etc/exabgp/processes/healthcheck.py --cmd "mysql -u check -e 'SELECT 1'" --label mysql;
     }
 
 Use :option:`--help` to get options accepted by this program. A
@@ -29,6 +32,12 @@ like this::
      command = curl -sf http://127.0.0.1/healthcheck
 
 The left-part of each line is the corresponding long option.
+
+When using label for loopback selection, the provided value should
+match the beginning of the label without the interface prefix. In the
+example above, this means that you should have addresses on lo
+labelled ``lo:haproxy1``, ``lo:haproxy2``, etc.
+
 """
 
 from __future__ import print_function
@@ -127,6 +136,8 @@ def parse():
     g.add_argument("--no-ip-setup",
                    action="store_false", dest="ip_setup",
                    help="don't setup missing IP addresses")
+    g.add_argument("--label", default=None,
+                   help="use the provided label to match loopback addresses")
     g.add_argument("--start-ip", metavar='N',
                    type=int, default=0,
                    help="index of the first IP in the list of IP addresses")
@@ -199,7 +210,7 @@ def setup_logging(debug, silent, name, syslog_facility, syslog):
             "%(levelname)s[%(name)s] %(message)s"))
         logger.addHandler(ch)
 
-def loopback_ips():
+def loopback_ips(label):
     """Retrieve loopback IP addresses"""
     logger.debug("Retrieve loopback IP addresses")
     addresses = []
@@ -207,11 +218,13 @@ def loopback_ips():
     if sys.platform.startswith("linux"):
         # Use "ip" (ifconfig is not able to see all addresses)
         ipre = re.compile(r"^(?P<index>\d+):\s+(?P<name>\S+)\s+inet6?\s+(?P<ip>[\da-f.:]+)/(?P<netmask>\d+)\s+.*")
+        labelre = re.compile(r".*\s+lo:(?P<label>\S+)\s+.*")
         cmd = subprocess.Popen("/sbin/ip -o address show dev lo".split(), shell=False, stdout=subprocess.PIPE)
     else:
         # Try with ifconfig
         ipre = re.compile(r"^\s+inet6?\s+(?P<ip>[\da-f.:]+)\s+(?:netmask 0x(?P<netmask>[0-9a-f]+)|prefixlen (?P<mask>\d+)).*")
         cmd = subprocess.Popen("/sbin/ifconfig lo0".split(), shell=False, stdout=subprocess.PIPE)
+        labelre = re.compile(r"")
     for line in cmd.stdout:
         line = line.decode("ascii", "ignore").strip()
         mo = ipre.match(line)
@@ -219,21 +232,31 @@ def loopback_ips():
             continue
         ip = ip_address(mo.group("ip"))
         if not ip.is_loopback:
+            if label:
+                lmo = labelre.match(line)
+                if not lmo or not lmo.group("label").startswith(label):
+                    continue
             addresses.append(ip)
     if not addresses:
         raise RuntimeError("No loopback IP found")
     logger.debug("Loopback addresses: {0}".format(addresses))
     return addresses
 
-def setup_ips(ips):
+def setup_ips(ips, label):
     """Setup missing IP on loopback interface"""
-    existing = set(loopback_ips())
+    existing = set(loopback_ips(label))
     toadd = set(ips) - existing
     for ip in toadd:
         logger.debug("Setup loopback IP address {0}".format(ip))
         with open(os.devnull, "w") as fnull:
-            subprocess.check_call(["ip", "address", "add", str(ip), "dev", "lo"],
+            cmd = ["ip", "address", "add", str(ip), "dev", "lo"]
+            if label:
+                cmd += ["label", "lo:{0}".format(label)]
+            subprocess.check_call(cmd,
                                   stdout = fnull, stderr = fnull)
+
+def setpgrp_preexec_fn():
+    os.setpgrp()
 
 def check(cmd, timeout):
     """Check the return code of the given command.
@@ -252,7 +275,8 @@ def check(cmd, timeout):
     logger.debug("Checking command {0}".format(repr(cmd)))
     p = subprocess.Popen(cmd, shell = True,
                          stdout = subprocess.PIPE,
-                         stderr = subprocess.STDOUT)
+                         stderr = subprocess.STDOUT,
+                         preexec_fn=setpgrp_preexec_fn)
     if timeout:
         signal.signal(signal.SIGALRM, alarm_handler)
         signal.alarm(timeout)
@@ -270,7 +294,7 @@ def check(cmd, timeout):
         return True
     except Alarm:
         logger.warn("Timeout ({0}) while running check command".format(timeout, cmd))
-        p.kill()
+        os.killpg(p.pid, signal.SIGKILL)
         return False
 
 def loop(options):
@@ -293,17 +317,19 @@ def loop(options):
         logger.info("send announces for {0} state to ExaBGP".format(target))
         metric = vars(options).get("{0}_metric".format(str(target).lower()))
         for ip in options.ips:
-            announce = "route {0}/{1} next-hop {2} med {3}".format(str(ip),
-                                                               ip.max_prefixlen,
-                                                               options.next_hop or "self",
-                                                               metric)
-            if options.community:
-                announce = "{0} community [ {1} ]".format(announce, options.community)
-            logger.debug("exabgp: {0}".format(announce))
             if options.withdraw_on_down:
                 command = "announce" if target is states.UP else "withdraw"
             else:
                 command = "announce"
+            announce = "route {0}/{1} next-hop {2}".format(str(ip),
+                                                           ip.max_prefixlen,
+                                                           options.next_hop or "self")
+            if command == "announce":
+                announce = "{0} med {1}".format(announce, metric)
+                if options.community:
+                    announce = "{0} community [ {1} ]".format(announce,
+                                                              options.community)
+            logger.debug("exabgp: {0} {1}".format(command, announce))
             print("{0} {1}".format(command, announce))
             metric += options.increase
         sys.stdout.flush()
@@ -396,9 +422,9 @@ if __name__ == "__main__":
         options.pid.close()
     try:
         # Setup IP to use
-        options.ips = options.ips or loopback_ips()
+        options.ips = options.ips or loopback_ips(options.label)
         if options.ip_setup:
-            setup_ips(options.ips)
+            setup_ips(options.ips, options.label)
         options.ips = collections.deque(options.ips)
         options.ips.rotate(-options.start_ip)
         options.ips = list(options.ips)

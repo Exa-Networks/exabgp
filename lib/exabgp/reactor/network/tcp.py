@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-setup.py
+tcp.py
 
 Created by Thomas Mangin on 2013-07-13.
 Copyright (c) 2013-2013 Exa Networks. All rights reserved.
@@ -137,7 +137,7 @@ def MD5 (io,ip,port,afi,md5):
 					SS_MAXSIZE_PADDING = 128 - calcsize('HI16sI')  # 28
 					SIN6_FLOWINFO = 0
 					SIN6_SCOPE_ID = 0
-					sockaddr = pack('HI16sI%dx' % SS_MAXSIZE_PADDING, n_af, n_port, SIN6_FLOWINFO, n_addr, SIN6_SCOPE_ID)
+					sockaddr = pack('HHI16sI%dx' % SS_MAXSIZE_PADDING, n_af, n_port, SIN6_FLOWINFO, n_addr, SIN6_SCOPE_ID)
 
 				TCP_MD5SIG_MAXKEYLEN = 80
 				key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, len(md5), md5)

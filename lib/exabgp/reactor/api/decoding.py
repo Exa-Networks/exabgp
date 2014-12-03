@@ -35,6 +35,8 @@ class Text (Configuration):
 
 	def parse_api_route (self,command,peers,action):
 		tokens = formated(command).split(' ')[1:]
+		if len(tokens) == 2 and action == 'withdraw' and 'next-hop' not in tokens:
+			tokens.extend(['next-hop','0.0.0.0'])
 		if len(tokens) < 4:
 			return False
 		if tokens[0] != 'route':
