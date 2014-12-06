@@ -11,4 +11,3 @@ script:
   - set pipefail
   - ./dev/bin/selfcheck | perl -pe 's/^ +//; s/\r/\t\t/g;'
   - ./dev/bin/runtest
-
