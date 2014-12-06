@@ -13,7 +13,7 @@ Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 class TCPFlag (int):
 	FIN    = 0x1
 	SYN    = 0x2
-	RST  = 0x4
+	RST    = 0x4
 	PUSH   = 0x8
 	ACK    = 0x10
 	URGENT = 0x20
