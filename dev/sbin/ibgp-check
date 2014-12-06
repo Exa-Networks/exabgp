@@ -223,7 +223,7 @@ class BGPServer (asyncore.dispatcher):
 		self.sendcap66 = False
 
 		for message in messages:
-			if message.strip() == '!open-sends-cap66':
+			if message.strip() == 'option:open:send-unknown-capability':
 				self.sendcap66 = True
 				continue
 			if message[0].isalpha():
