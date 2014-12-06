@@ -87,9 +87,10 @@ class BGPHandler(asyncore.dispatcher_with_send):
 	def announce (self,*args):
 		print self.ip,self.port,' '.join(str(_) for _ in args) if len(args) > 1 else args[0]
 
-	def setup (self,ip,port,letter,messages,exit):
+	def setup (self,ip,port,letter,messages,sendcap66,exit):
 		self.ip = ip
 		self.port = port
+		self.sendcap66 = sendcap66
 		self.exit = exit
 		self.handle_read = self.handle_open
 		self.sequence = {}
@@ -149,6 +150,16 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		header,body = self.read_message()
 		routerid = chr((ord(body[8])+1) & 0xFF)
 		o = header+body[:8]+routerid+body[9:]
+
+		if self.sendcap66:
+			# hack capability 66 into the message
+			content = 'loremipsum'
+			cap66 = chr(66) + chr(len(content)) + content
+			param = chr(2) + chr(len(cap66)) + cap66
+			print ord(o[9])
+			o = o[:17] + chr(ord(o[17])+len(param)) + o[18:28] + \
+				chr(ord(o[28])+len(param)) + o[29:] + param
+
 		self.send(o)
 		self.send(self.keepalive)
 		self.handle_read = self.handle_keepalive
@@ -209,8 +220,12 @@ class BGPServer (asyncore.dispatcher):
 		self.listen(5)
 
 		self.messages = {}
+		self.sendcap66 = False
 
 		for message in messages:
+			if message.strip() == 'option:open:send-unknown-capability':
+				self.sendcap66 = True
+				continue
 			if message[0].isalpha():
 				index,content = message[:1].upper(), message[1:]
 			else:
@@ -237,7 +252,7 @@ class BGPServer (asyncore.dispatcher):
 		pair = self.accept()
 		if pair is not None:
 			sock,addr = pair
-			handler = BGPHandler(sock).setup(*addr,letter=letter,messages=messages,exit=exit)
+			handler = BGPHandler(sock).setup(*addr,letter=letter,messages=messages,sendcap66=self.sendcap66,exit=exit)
 
 def drop ():
 	uid = os.getuid()
