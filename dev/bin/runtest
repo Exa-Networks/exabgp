@@ -42,7 +42,7 @@ def main ():
 		skip = 0
 		show = False
 
-	confs = glob.glob(path.join(runtest,'%s.conf' % match.replace('all','*')))
+	confs = sorted(glob.glob(path.join(runtest,'%s.conf' % match.replace('all','*'))))
 	confs = reverse(confs)
 
 	success = True
