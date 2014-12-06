@@ -29,6 +29,8 @@ Version 3.4.4
  * Fix: IPv6 MD5
     reported by: Dave J Knight
  * Add framework to debug SIGUSR1 related problems
+ * Fix: do not drop session when receiving an unknown capability
+    patch by: Peter van Dijk (PowerDNS)
 
 Version 3.4.3
  * Fix: JSON message increment
