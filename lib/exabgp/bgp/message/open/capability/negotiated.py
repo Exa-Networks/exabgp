@@ -35,16 +35,16 @@ class Negotiated (object):
 	def sent (self,sent_open):
 		self.sent_open = sent_open
 		if self.received_open:
-			self._negociate()
+			self._negotiate()
 
 	def received (self,received_open):
 		self.received_open = received_open
 		if self.sent_open:
-			self._negociate()
+			self._negotiate()
 		#else:
 		#	import pdb; pdb.set_trace()
 
-	def _negociate (self):
+	def _negotiate (self):
 		sent_capa = self.sent_open.capabilities
 		recv_capa = self.received_open.capabilities
 
