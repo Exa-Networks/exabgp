@@ -1,6 +1,7 @@
 #!/bin/sh
 
 dirname=`dirname $0`
+retval=0
 
 case $dirname in
 	/*)
@@ -31,5 +32,8 @@ do
 		printf "\rfailed\n\n"
 		echo "env exabgp.tcp.bind='' exabgp.debug.selfcheck=true exabgp.debug.configuration=1 $path/../sbin/exabgp $conf -p"
 		printf "\n\n"
+		retval=1
 	fi
 done
+
+exit $retval
