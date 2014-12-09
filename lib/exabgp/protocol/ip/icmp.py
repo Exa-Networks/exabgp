@@ -44,7 +44,7 @@ class ICMPType (int):
 		if self == ICMPType.TIMESTAMP:                return 'timestamp'
 		if self == ICMPType.TIMESTAMP_REPLY:          return 'timestamp-reply'
 		if self == ICMPType.DESTINATION_UNREACHEABLE: return 'unreachable'
-		return 'invalid icmp type %d' % int(self)
+		return 'unknown icmp type %d' % int(self)
 
 def NamedICMPType (name):
 	icmp = name.lower()
@@ -63,7 +63,7 @@ def NamedICMPType (name):
 	if icmp == 'timestamp':            return ICMPType.TIMESTAMP
 	if icmp == 'timestamp-reply':      return ICMPType.TIMESTAMP_REPLY
 	if icmp == 'unreachable':          return ICMPType.DESTINATION_UNREACHEABLE
-	raise ValueError('unknow icmp type %s' % icmp)
+	raise ValueError('unknown icmp type %s' % icmp)
 
 
 # http://www.iana.org/assignments/icmp-parameters
@@ -129,4 +129,4 @@ def NamedICMPCode (name):
 	if icmp == 'source-route-failed':                   return ICMPCode.SOURCE_ROUTE_FAILED
 	if icmp == 'ttl-eq-zero-during-reassembly':         return ICMPCode.TTL_EQ_ZERO_DURING_REASSEMBLY
 	if icmp == 'ttl-eq-zero-during-transit':            return ICMPCode.TTL_EQ_ZERO_DURING_TRANSIT
-	raise ValueError('unknow icmp-code %s' % icmp)
+	raise ValueError('unknown icmp code %s' % icmp)
