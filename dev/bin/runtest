@@ -42,8 +42,10 @@ def main ():
 		skip = 0
 		show = False
 
-	confs = glob.glob(path.join(runtest,'%s.conf' % match.replace('all','*')))
+	confs = sorted(glob.glob(path.join(runtest,'%s.conf' % match.replace('all','*'))))
 	confs = reverse(confs)
+
+	success = True
 
 	for configuration in confs:
 		if skip:
@@ -53,11 +55,17 @@ def main ():
 
 		sequence_file = configuration.replace('.conf','.sequence')
 		if path.isfile(sequence_file):
-			check_sequence(exabgp,configuration,sequence_daemon,sequence_file,show)
+			if check_sequence(exabgp,configuration,sequence_daemon,sequence_file,show) == False:
+				success = False
 		else:
 			print "sequence check for", configuration
 			print "skip (no sequence data)\n"
 			continue
+
+	if success:
+		sys.exit(0)
+	else:
+		sys.exit("one or more tests failed")
 
 def check_sequence(exabgp,configuration,daemon,fname,show):
 	os.environ['exabgp.tcp.once'] = 'true'
@@ -110,8 +118,10 @@ def check_sequence(exabgp,configuration,daemon,fname,show):
 
 	if show:
 		print commands(command_exabgp,command_daemon)
+		return None
 	elif 'successful' in daemon_output:
 		print "successful\n"
+		return True
 	else:
 		print "\n"*4
 		print "failure\n"
@@ -121,6 +131,7 @@ def check_sequence(exabgp,configuration,daemon,fname,show):
 		print 'exabgp:\n', exabgp_output
 		print 'daemon:\n', daemon_output
 		print "\n"*4
+		return False
 
 def check (main):
 	os.environ['exabgp.tcp.bind'] = ''

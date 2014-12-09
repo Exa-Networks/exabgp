@@ -1,6 +1,9 @@
 #!/bin/sh
 
+set -e
+
 dirname=`dirname $0`
+retval=0
 
 case $dirname in
 	/*)
@@ -22,7 +25,7 @@ do
 	printf "       $conf"
 	result=`env exabgp.tcp.bind='' exabgp.debug.selfcheck=true $path/../sbin/exabgp $conf 2>&1`
 	retcode=$?
-	problem=`echo $result | grep 'Problem with the configuration file'`
+	problem=`echo $result | grep 'Problem with the configuration file' || true`
 
 	if [ $retcode -eq 0 ] && [ "$problem" = "" ]
 	then
@@ -31,5 +34,8 @@ do
 		printf "\rfailed\n\n"
 		echo "env exabgp.tcp.bind='' exabgp.debug.selfcheck=true exabgp.debug.configuration=1 $path/../sbin/exabgp $conf -p"
 		printf "\n\n"
+		retval=1
 	fi
 done
+
+exit $retval
