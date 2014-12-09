@@ -20,7 +20,7 @@ class ICMPType (int):
 	ROUTER_SOLICIT           = 0x0A
 	TIME_EXCEEDED            = 0x0B
 	PARAMETER_PROBLEM        = 0x0C
-	TIMESTAMP_REQUEST        = 0x0D  # wonder why junos call all the other ones _REQUEST but not this one
+	TIMESTAMP                = 0x0D
 	TIMESTAMP_REPLY          = 0x0E
 	INFO_REQUEST             = 0x0F
 	INFO_REPLY               = 0x10
@@ -41,29 +41,29 @@ class ICMPType (int):
 		if self == ICMPType.ROUTER_SOLICIT:           return 'router-solicit'
 		if self == ICMPType.SOURCE_QUENCH:            return 'source-quench'
 		if self == ICMPType.TIME_EXCEEDED:            return 'time-exceeded'
-		if self == ICMPType.TIMESTAMP_REQUEST:        return 'timestamp'
+		if self == ICMPType.TIMESTAMP:                return 'timestamp'
 		if self == ICMPType.TIMESTAMP_REPLY:          return 'timestamp-reply'
 		if self == ICMPType.DESTINATION_UNREACHEABLE: return 'unreachable'
-		return 'invalid icmp type %d' % int(self)
+		return 'unknown icmp type %d' % int(self)
 
 def NamedICMPType (name):
 	icmp = name.lower()
-	if icmp == 'echo-reply':          return ICMPType.ECHO_REPLY
-	if icmp == 'echo-request':        return ICMPType.ECHO_REQUEST
-	if icmp == 'info-reply':          return ICMPType.INFO_REPLY
-	if icmp == 'info-request':        return ICMPType.INFO_REQUEST
-	if icmp == 'mask-reply':          return ICMPType.MASK_REPLY
-	if icmp == 'mask-request':        return ICMPType.MASK_REQUEST
-	if icmp == 'parameter-problem':   return ICMPType.PARAMETER_PROBLEM
-	if icmp == 'redirect':            return ICMPType.REDIRECT
-	if icmp == 'router-advertisement':return ICMPType.ROUTER_ADVERTISEMENT
-	if icmp == 'router-solicit':      return ICMPType.ROUTER_SOLICIT
-	if icmp == 'source-quench':       return ICMPType.SOURCE_QUENCH
-	if icmp == 'time-exceeded':       return ICMPType.TIME_EXCEEDED
-	if icmp == 'timestamp':           return ICMPType.TIMESTAMP_REQUEST
-	if icmp == 'timestamp-reply':     return ICMPType.TIMESTAMP_REPLY
-	if icmp == 'unreachable':         return ICMPType.DESTINATION_UNREACHEABLE
-	raise ValueError('unknow icmp type %s' % icmp)
+	if icmp == 'echo-reply':           return ICMPType.ECHO_REPLY
+	if icmp == 'echo-request':         return ICMPType.ECHO_REQUEST
+	if icmp == 'info-reply':           return ICMPType.INFO_REPLY
+	if icmp == 'info-request':         return ICMPType.INFO_REQUEST
+	if icmp == 'mask-reply':           return ICMPType.MASK_REPLY
+	if icmp == 'mask-request':         return ICMPType.MASK_REQUEST
+	if icmp == 'parameter-problem':    return ICMPType.PARAMETER_PROBLEM
+	if icmp == 'redirect':             return ICMPType.REDIRECT
+	if icmp == 'router-advertisement': return ICMPType.ROUTER_ADVERTISEMENT
+	if icmp == 'router-solicit':       return ICMPType.ROUTER_SOLICIT
+	if icmp == 'source-quench':        return ICMPType.SOURCE_QUENCH
+	if icmp == 'time-exceeded':        return ICMPType.TIME_EXCEEDED
+	if icmp == 'timestamp':            return ICMPType.TIMESTAMP
+	if icmp == 'timestamp-reply':      return ICMPType.TIMESTAMP_REPLY
+	if icmp == 'unreachable':          return ICMPType.DESTINATION_UNREACHEABLE
+	raise ValueError('unknown icmp type %s' % icmp)
 
 
 # http://www.iana.org/assignments/icmp-parameters
@@ -129,4 +129,4 @@ def NamedICMPCode (name):
 	if icmp == 'source-route-failed':                   return ICMPCode.SOURCE_ROUTE_FAILED
 	if icmp == 'ttl-eq-zero-during-reassembly':         return ICMPCode.TTL_EQ_ZERO_DURING_REASSEMBLY
 	if icmp == 'ttl-eq-zero-during-transit':            return ICMPCode.TTL_EQ_ZERO_DURING_TRANSIT
-	raise ValueError('unknow icmp-code %s' % icmp)
+	raise ValueError('unknown icmp code %s' % icmp)

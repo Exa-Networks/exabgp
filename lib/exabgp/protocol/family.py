@@ -14,9 +14,9 @@ from struct import unpack
 # http://www.iana.org/assignments/address-family-numbers/
 class AFI (int):
 	undefined = 0x00  # internal
-	ipv4 = 0x01
-	ipv6 = 0x02
-	l2vpn = 0x19
+	ipv4      = 0x01
+	ipv6      = 0x02
+	l2vpn     = 0x19
 
 	Family = {
 		ipv4 : 0x02,   # socket.AF_INET,
