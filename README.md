@@ -3,6 +3,10 @@
 [ExaBGP](http://github.com/Exa-Networks/exabgp) was not designed to transform a general purpose server into a router, but to allow engineers to control their network from commodity servers.
 Think of it as [Software Defined Networking](http://en.wikipedia.org/wiki/Software-defined_networking) using [BGP](http://en.wikipedia.org/wiki/BGP).
 
+[![Build Status](https://travis-ci.org/thomas-mangin/exabgp.svg)](https://travis-ci.org/thomas-mangin/exabgp) Thomas' Master
+
+[![Build Status](https://travis-ci.org/Exa-Networks/exabgp.svg)](https://travis-ci.org/Exa-Networks/exabgp) Exa-Networks' Master
+
 Use cases include:
  * sql backed [looking glasses](https://code.google.com/p/gixlg/wiki/sample_maps) with prefix routing visualisation
  * service [high availability](http://vincent.bernat.im/en/blog/2013-exabgp-highavailability.html) automatically isolating dead server / broken services
