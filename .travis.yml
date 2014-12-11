@@ -8,7 +8,8 @@ install:
   - true
 
 script:
+  - export INTERPRETER=python
   - sbin/exabgp --version
   - set pipefail
-  - ./dev/bin/selfcheck | perl -pe 's/^ +//; s/\r/\t\t/g;'
+  - INTERPRETER=python ./dev/bin/selfcheck | perl -pe 's/^ +//; s/\r/\t\t/g;'
   - ./dev/bin/runtest
