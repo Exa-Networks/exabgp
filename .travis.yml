@@ -8,6 +8,7 @@ install:
   - true
 
 script:
+  - sbin/exabgp --version
   - set pipefail
   - ./dev/bin/selfcheck | perl -pe 's/^ +//; s/\r/\t\t/g;'
   - ./dev/bin/runtest
