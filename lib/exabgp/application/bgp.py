@@ -8,6 +8,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 import os
 import sys
+import platform
 import string
 import syslog
 
@@ -138,7 +139,9 @@ def main ():
 		sys.exit('This program can not work (is not tested) with your python version (< 2.5 or >= 3.0)')
 
 	if options["--version"]:
-		print(version)
+		print 'ExaBGP : %s' % version
+		print 'Python : %s' % sys.version.replace('\n',' ')
+		print 'Uname  : %s' % platform.version()
 		sys.exit(0)
 
 	if options["--folder"]:
