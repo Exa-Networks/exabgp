@@ -788,7 +788,7 @@ class Configuration (object):
 		name = tokens[0] if len(tokens) >= 1 else 'conf-only-%s' % str(time.time())[-6:]
 		self.process.setdefault(name,{})['neighbor'] = scope[-1]['peer-address'] if 'peer-address' in scope[-1] else '*'
 
-		for key in ['neighbor-changes', 'receive-refresh', 'receive-notifications', 'receive-parsed', 'receive-operational', 'receive-updates']:
+		for key in ['neighbor-changes', 'receive-notifications', 'receive-opens', 'receive-keepalives', 'receive-refresh', 'receive-updates', 'receive-operational', 'receive-parsed', 'receive-packets', 'consolidate']:
 			self.process[name][key] = scope[-1].pop(key,False)
 
 		run = scope[-1].pop('process-run','')
@@ -1188,21 +1188,22 @@ class Configuration (object):
 			changes = local_scope.get('announce',[])
 			messages = local_scope.get('operational',[])
 
-		for local_scope in (scope[0],scope[-1]):
-			neighbor.api.receive_packets(local_scope.get('receive-packets',False))
-			neighbor.api.send_packets(local_scope.get('send-packets',False))
+		for name in self.process.keys():
+			process = self.process[name]
+			neighbor.api.receive_packets(process.get('receive-packets',False))
+			neighbor.api.send_packets(process.get('send-packets',False))
 
-			neighbor.api.neighbor_changes(local_scope.get('neighbor-changes',False))
-			neighbor.api.consolidate(local_scope.get('consolidate',False))
+			neighbor.api.neighbor_changes(process.get('neighbor-changes',False))
+			neighbor.api.consolidate(process.get('consolidate',False))
 
-			neighbor.api.receive_parsed(local_scope.get('receive-parsed',False))
+			neighbor.api.receive_parsed(process.get('receive-parsed',False))
 
-			neighbor.api.receive_notifications(local_scope.get('receive-notifications',False))
-			neighbor.api.receive_opens(local_scope.get('receive-opens',False))
-			neighbor.api.receive_keepalives(local_scope.get('receive-keepalives',False))
-			neighbor.api.receive_updates(local_scope.get('receive-updates',False))
-			neighbor.api.receive_refresh(local_scope.get('receive-refresh',False))
-			neighbor.api.receive_operational(local_scope.get('receive-operational',False))
+			neighbor.api.receive_notifications(process.get('receive-notifications',False))
+			neighbor.api.receive_opens(process.get('receive-opens',False))
+			neighbor.api.receive_keepalives(process.get('receive-keepalives',False))
+			neighbor.api.receive_updates(process.get('receive-updates',False))
+			neighbor.api.receive_refresh(process.get('receive-refresh',False))
+			neighbor.api.receive_operational(process.get('receive-operational',False))
 
 		if not neighbor.router_id:
 			neighbor.router_id = neighbor.local_address
