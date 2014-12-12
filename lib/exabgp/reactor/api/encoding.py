@@ -197,12 +197,15 @@ class JSON (object):
 		'}' % (self.version,self.time(time.time()),peer,pid,ppid,counter,mtype,header,body,content)
 
 	def _neighbor (self,peer,content):
-		peer_neighbor_adress='"ip": "%s", ' % peer.neighbor.peer_address if content else '"ip": "%s"' % peer.neighbor.peer_address
+		neighbor = peer.neighbor
+		peer_neighbor_adress='"ip": "%s", ' % neighbor.peer_address
+		peer_local_address='"local_ip": "%s", ' % neighbor.local_address if content else '"local_ip": "%s"' % neighbor.local_address
 		return \
 		'"neighbor": { ' \
 			'%s' \
 			'%s' \
-		'} '% (peer_neighbor_adress,content)
+			'%s' \
+		'} '% (peer_neighbor_adress,peer_local_address,content)
 
 	def _bmp (self,neighbor,content):
 		return \
