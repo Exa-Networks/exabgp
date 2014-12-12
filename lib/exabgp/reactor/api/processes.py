@@ -95,10 +95,11 @@ class Processes (object):
 
 	def _start (self,process):
 		events = self.reactor.configuration.process[process]
-		for event in events:
+		for event,present in events.iteritems():
 			if event in ('run','encoder'):
 				continue
-			self._events.setdefault(process,[]).append(event)
+			if present:
+				self._events.setdefault(process,[]).append(event)
 
 		try:
 			if process in self._process:
