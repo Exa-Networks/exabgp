@@ -186,7 +186,10 @@ def drop ():
 		os.setuid(nuid)
 
 try:
-	server = BGPServer(os.environ.get('exabgp.tcp.bind','localhost'), int(os.environ.get('exabgp.tcp.port','179')),bool(os.environ.get('exabgp.wire.record',False)))
+	port = int(os.environ.get('exabgp.tcp.port',int(os.environ.get('exabgp_tcp_port','179'))))
+	bind = os.environ.get('exabgp.tcp.bind',os.environ.get('exabgp_tcp_bind','localhost'))
+	record = bool(os.environ.get('exabgp.wire.record',os.environ.get('exabgp.wire.record',False)))
+	server = BGPServer(bind,port,record)
 	drop()
 	asyncore.loop()
 except socket.error:
