@@ -35,12 +35,18 @@ class Text (Configuration):
 
 	def parse_api_route (self,command,peers,action):
 		tokens = formated(command).split(' ')[1:]
-		if len(tokens) == 2 and action == 'withdraw' and 'next-hop' not in tokens:
+		lt = len(tokens)
+
+		if lt < 1: return False
+
+		message = tokens[0]
+
+		if message not in ('keepalive','route'):
+			return False
+
+		if lt == 2 and action == 'withdraw' and 'next-hop' not in tokens:
 			tokens.extend(['next-hop','0.0.0.0'])
-		if len(tokens) < 4:
-			return False
-		if tokens[0] != 'route':
-			return False
+
 		changes = []
 		if 'self' in command:
 			for peer,nexthop in peers.iteritems():
@@ -52,13 +58,18 @@ class Text (Configuration):
 				for change in scope[0]['announce']:
 					changes.append((peer,change))
 			self._nexthopself = None
-		else:
+		elif message == 'route':
 			scope = [{}]
 			if not self._single_static_route(scope,tokens[1:]):
 				return False
 			for peer in peers:
 				for change in scope[0]['announce']:
 					changes.append((peer,change))
+		elif message == 'keepalive':
+			for peer in peers:
+				for change in scope[0]['announce']:
+					changes.append((peer,Change(None,None)))
+
 		if action == 'withdraw':
 			for (peer,change) in changes:
 				change.nlri.action = OUT.withdraw
@@ -404,6 +415,37 @@ class Decoder (object):
 				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 				return False
 			reactor.plan(_callback(self,peers))
+			return True
+		except ValueError:
+			return False
+		except IndexError:
+			return False
+
+	# keepalive
+
+	@register_command('announce keepalive',_dispatch,_order)
+	def _announce_keepalive (self,reactor,service,command):
+		def _callback (self,command,nexthops):
+			changes = self.format.parse_api_route(command,nexthops,'announce')
+			if not changes:
+				self.logger.reactor("Command could not parse route in : %s" % command,'warning')
+				yield True
+			else:
+				peers = []
+				for (peer,change) in changes:
+					peers.append(peer)
+					reactor.configuration.change_to_peers(change,[peer,])
+					yield False
+				self.logger.reactor("Route added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
+				reactor.route_update = True
+
+		try:
+			descriptions,command = Decoder.extract_neighbors(command)
+			peers = reactor.match_neighbors(descriptions)
+			if not peers:
+				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+				return False
+			reactor.plan(_callback(self,command,reactor.nexthops(peers)))
 			return True
 		except ValueError:
 			return False

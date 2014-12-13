@@ -87,10 +87,11 @@ class BGPHandler(asyncore.dispatcher_with_send):
 	def announce (self,*args):
 		print self.ip,self.port,' '.join(str(_) for _ in args) if len(args) > 1 else args[0]
 
-	def setup (self,ip,port,letter,messages,sendcap66,exit):
+	def setup (self,ip,port,letter,messages,sendcap66,senddefault,exit):
 		self.ip = ip
 		self.port = port
 		self.sendcap66 = sendcap66
+		self.senddefault = senddefault
 		self.exit = exit
 		self.handle_read = self.handle_open
 		self.sequence = {}
@@ -162,6 +163,8 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 		self.send(o)
 		self.send(self.keepalive)
+		if self.senddefault:
+			self.send(chr(0xFF)*16+chr(0x00)+chr(0x31)+chr(0x02)+chr(0x00)+chr(0x00)+chr(0x00)+chr(0x15)+chr(0x40)+chr(0x01)+chr(0x01)+chr(0x00)+chr(0x40)+chr(0x02)+chr(0x00)+chr(0x40)+chr(0x03)+chr(0x04)+chr(0x7F)+chr(0x00)+chr(0x00)+chr(0x01)+chr(0x40)+chr(0x05)+chr(0x04)+chr(0x00)+chr(0x00)+chr(0x00)+chr(0x64)+chr(0x20)+chr(0x00)+chr(0x00)+chr(0x00)+chr(0x00))
 		self.handle_read = self.handle_keepalive
 
 	def handle_keepalive (self):
@@ -221,11 +224,16 @@ class BGPServer (asyncore.dispatcher):
 
 		self.messages = {}
 		self.sendcap66 = False
+		self.senddefault = False
 
 		for message in messages:
 			if message.strip() == 'option:open:send-unknown-capability':
 				self.sendcap66 = True
 				continue
+			if message.strip() == 'option:update:send-default-route':
+				self.senddefault = True
+				continue
+
 			if message[0].isalpha():
 				index,content = message[:1].upper(), message[1:]
 			else:
@@ -252,7 +260,7 @@ class BGPServer (asyncore.dispatcher):
 		pair = self.accept()
 		if pair is not None:
 			sock,addr = pair
-			handler = BGPHandler(sock).setup(*addr,letter=letter,messages=messages,sendcap66=self.sendcap66,exit=exit)
+			handler = BGPHandler(sock).setup(*addr,letter=letter,messages=messages,sendcap66=self.sendcap66,senddefault=self.senddefault,exit=exit)
 
 def drop ():
 	uid = os.getuid()
