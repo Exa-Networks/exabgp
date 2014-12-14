@@ -446,6 +446,14 @@ class Configuration (object):
 		return result
 
 	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
+	def eor_to_peers (self,family,peers):
+		result = True
+		for neighbor in self.neighbor:
+			if neighbor in peers:
+				self.neighbor[neighbor].eor.append(family)
+		return result
+
+	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
 	def operational_to_peers (self,operational,peers):
 		result = True
 		for neighbor in self.neighbor:

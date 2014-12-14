@@ -52,6 +52,7 @@ class Neighbor (object):
 		self.rib = None
 
 		self.operational = None
+		self.eor = deque()
 		self.asm = dict()
 
 		self.messages = deque()

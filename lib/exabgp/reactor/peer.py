@@ -15,7 +15,6 @@ from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import REFRESH
 from exabgp.bgp.message.nop import NOP
-from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.notification import Notification
@@ -441,6 +440,7 @@ class Peer (object):
 		counter = Counter(self.logger,self.me)
 		operational = None
 		refresh = None
+		command_eor = None
 		number = 0
 
 		self.send_ka = KA(self.me,proto)
@@ -530,8 +530,25 @@ class Peer (object):
 						yield ACTION.immediate
 					self.logger.message(self.me('>> EOR(s)'))
 
-				# Go to other Peers
-				yield ACTION.immediate if new_routes or message.TYPE != NOP.TYPE or self.neighbor.messages else ACTION.later
+				# SEND MANUAL KEEPALIVE (only if we have no more routes to send)
+				elif not command_eor and self.neighbor.eor:
+						new_eor = self.neighbor.eor.popleft()
+						command_eor = proto.new_eors(new_eor.afi,new_eor.safi)
+
+				if command_eor:
+					try:
+						command_eor.next()
+					except StopIteration:
+						command_eor = None
+
+				if new_routes or message.TYPE != NOP.TYPE:
+					yield ACTION.immediate
+				elif self.neighbor.messages or operational:
+					yield ACTION.immediate
+				elif self.neighbor.eor or command_eor:
+					yield ACTION.immediate
+				else:
+					yield ACTION.later
 
 				# read_message will loop until new message arrives with NOP
 				if self._teardown:

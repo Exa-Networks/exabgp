@@ -7,6 +7,7 @@ Important
 ROADMAP
 
 In no particular order:
+- operational in peer ( sending operational message ) should have a generic name so it can be used for other message type
 - Prefix and MPLS do share MUCH common code and need to be refactored
 - Do not try to respawn helper when we are shutting down because it is down :-)
 - Neighbor.message should be per AFI/SAFI to not have to have a special case for Operational ASM

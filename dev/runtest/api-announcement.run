@@ -16,10 +16,9 @@ messages = [
 
 while messages:
 	message = messages.pop(0)
-	sys.stdout.write( message + '\n')
+	sys.stdout.write(message + '\n')
 	sys.stdout.flush()
 	time.sleep(0.1)
 
 while True:
 	time.sleep(1)
-

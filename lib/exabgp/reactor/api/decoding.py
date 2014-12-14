@@ -11,6 +11,7 @@ from exabgp.configuration.file import formated
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import Family
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message import OUT
 
@@ -41,7 +42,7 @@ class Text (Configuration):
 
 		message = tokens[0]
 
-		if message not in ('keepalive','route'):
+		if message not in ('route',):
 			return False
 
 		if lt == 2 and action == 'withdraw' and 'next-hop' not in tokens:
@@ -58,17 +59,13 @@ class Text (Configuration):
 				for change in scope[0]['announce']:
 					changes.append((peer,change))
 			self._nexthopself = None
-		elif message == 'route':
+		else:
 			scope = [{}]
 			if not self._single_static_route(scope,tokens[1:]):
 				return False
 			for peer in peers:
 				for change in scope[0]['announce']:
 					changes.append((peer,change))
-		elif message == 'keepalive':
-			for peer in peers:
-				for change in scope[0]['announce']:
-					changes.append((peer,Change(None,None)))
 
 		if action == 'withdraw':
 			for (peer,change) in changes:
@@ -158,6 +155,26 @@ class Text (Configuration):
 		if afi is None or safi is None:
 			return False
 		return RouteRefresh(afi,safi)
+
+	def parse_api_eor (self,command):
+		tokens = formated(command).split(' ')[2:]
+		lt = len(tokens)
+
+		if not lt:
+			return Family(1,1)
+
+		if lt !=2:
+			return False
+
+		afi = AFI.fromString(tokens[0])
+		if afi == AFI.undefined:
+			return False
+
+		safi = SAFI.fromString(tokens[1])
+		if safi == SAFI.undefined:
+			return False
+
+		return Family(afi,safi)
 
 	def parse_api_operational (self,command):
 		tokens = formated(command).split(' ',2)
@@ -421,37 +438,6 @@ class Decoder (object):
 		except IndexError:
 			return False
 
-	# keepalive
-
-	@register_command('announce keepalive',_dispatch,_order)
-	def _announce_keepalive (self,reactor,service,command):
-		def _callback (self,command,nexthops):
-			changes = self.format.parse_api_route(command,nexthops,'announce')
-			if not changes:
-				self.logger.reactor("Command could not parse route in : %s" % command,'warning')
-				yield True
-			else:
-				peers = []
-				for (peer,change) in changes:
-					peers.append(peer)
-					reactor.configuration.change_to_peers(change,[peer,])
-					yield False
-				self.logger.reactor("Route added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
-				reactor.route_update = True
-
-		try:
-			descriptions,command = Decoder.extract_neighbors(command)
-			peers = reactor.match_neighbors(descriptions)
-			if not peers:
-				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
-				return False
-			reactor.plan(_callback(self,command,reactor.nexthops(peers)))
-			return True
-		except ValueError:
-			return False
-		except IndexError:
-			return False
-
 	# route
 
 	@register_command('announce route',_dispatch,_order)
@@ -678,6 +664,34 @@ class Decoder (object):
 					else:
 						self.logger.reactor("Could not find therefore remove flow : %s" % change.extensive(),'warning')
 						yield False
+				reactor.route_update = True
+
+		try:
+			descriptions,command = Decoder.extract_neighbors(command)
+			peers = reactor.match_neighbors(descriptions)
+			if not peers:
+				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+				return False
+			reactor.plan(_callback(self,command,peers))
+			return True
+		except ValueError:
+			return False
+		except IndexError:
+			return False
+
+	# eor
+
+	@register_command('announce eor',_dispatch,_order)
+	def _announce_eor (self,reactor,service,command):
+		def _callback (self,command,peers):
+			family = self.format.parse_api_eor(command)
+			if not family:
+				self.logger.reactor("Command could not parse eor : %s" % command)
+				yield True
+			else:
+				reactor.configuration.eor_to_peers(family,peers)
+				self.logger.reactor("Sent to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',family.extensive()))
+				yield False
 				reactor.route_update = True
 
 		try:
