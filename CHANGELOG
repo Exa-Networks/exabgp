@@ -9,6 +9,8 @@ Version 3.4.6
     patch by: Ryan Tinianov (pull #199) for the IP
  * Feature: API support for sending eor
     requested by: spakka (issue #109)
+ * Feature: allow routes to have a name (which can be used as comment)
+    requested by: lazy404 (issue #167)
 
 Version 3.4.5
  * Fix: improper distribution of events to process workers

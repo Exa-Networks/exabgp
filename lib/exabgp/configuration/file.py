@@ -115,6 +115,9 @@ class Withdrawn (object):
 	ID = Attribute.ID.INTERNAL_WITHDRAW
 	MULTIPLE = False
 
+class Name (str):
+	ID = Attribute.ID.INTERNAL_NAME
+	MULTIPLE = False
 
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
 def pack_int (afi,integer,mask):
@@ -181,6 +184,7 @@ class Configuration (object):
 	' split /24' \
 	' watchdog watchdog-name' \
 	' withdraw' \
+	' name what-you-want-to-remember-about-the-route' \
 	';\n'
 
 	_str_vpls_error = \
@@ -201,6 +205,7 @@ class Configuration (object):
 	'   originator-id 10.0.0.10;\n' \
 	'   cluster-list [ 10.10.0.1 10.10.0.2 ];\n' \
 	'   withdraw\n' \
+	'   name what-you-want-to-remember-about-the-route\n' \
 	'}\n'
 
 	_str_flow_error = \
@@ -307,6 +312,7 @@ class Configuration (object):
 			# withdrawn is here to not break legacy code
 			'withdraw': self._route_withdraw,
 			'withdrawn': self._route_withdraw,
+			'name': self._route_name,
 			'community': self._route_community,
 			'extended-community': self._route_extended_community,
 			'attribute': self._route_generic_attribute,
@@ -357,6 +363,7 @@ class Configuration (object):
 			'route-distinguisher': self._route_rd,
 			'withdraw': self._route_withdraw,
 			'withdrawn': self._route_withdraw,
+			'name': self._route_name,
 			'community': self._route_community,
 			'extended-community': self._route_extended_community,
 		}
@@ -1124,6 +1131,24 @@ class Configuration (object):
 	def _route_withdraw (self,scope,tokens):
 		try:
 			scope[-1]['announce'][-1].attributes.add(Withdrawn())
+			return True
+		except ValueError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+
+	# Route name
+
+	def _route_name (self,scope,tokens):
+		try:
+			w = tokens.pop(0)
+		except IndexError:
+			self._error = self._str_route_error
+			if self.debug: raise
+			return False
+
+		try:
+			scope[-1]['announce'][-1].attributes.add(Name(w))
 			return True
 		except ValueError:
 			self._error = self._str_route_error

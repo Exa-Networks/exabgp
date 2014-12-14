@@ -89,6 +89,7 @@ class Attributes (dict):
 		Attribute.ID.EXTENDED_COMMUNITY : ('list',    '', 'extended-community', '%s',     '%s'),
 		Attribute.ID.PMSI_TUNNEL        : ('string',  '', 'pmsi',               '%s',     '%s'),
 		Attribute.ID.AIGP               : ('integer', '', 'aigp',               '%s',     '%s'),
+		Attribute.ID.INTERNAL_NAME      : ('string',  '', 'name',               '%s',     '%s'),
 	}
 
 	def _generate_text (self,extra=None):
@@ -207,7 +208,7 @@ class Attributes (dict):
 			keys = set(self.keys())
 
 		for code in sorted(keys):
-			if code in (Attribute.ID.INTERNAL_SPLIT, Attribute.ID.INTERNAL_WATCHDOG, Attribute.ID.INTERNAL_WITHDRAW):
+			if code in (Attribute.ID.INTERNAL_SPLIT, Attribute.ID.INTERNAL_WATCHDOG, Attribute.ID.INTERNAL_WITHDRAW, Attribute.ID.INTERNAL_NAME):
 				continue
 			if code in self:
 				if code in check:

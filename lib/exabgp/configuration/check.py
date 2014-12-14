@@ -90,6 +90,11 @@ def check_neighbor (neighbor):
 				str1r = str1.replace(' med 100','').replace(' local-preference 100','').replace(' origin igp','')
 				str2r = str2.replace(' med 100','').replace(' local-preference 100','').replace(' origin igp','')
 
+				if ' name ' in str1r:
+					parts = str1r.split(' ')
+					pos = parts.index('name')
+					str1r = ' '.join(parts[:pos] + parts[pos+2:])
+
 				skip = False
 
 				if str1r != str2r:

@@ -73,6 +73,7 @@ class Attribute (object):
 		TUNNEL_ENCAP       = 0x17  # 23
 		AIGP               = 0x1A  # 26
 
+		INTERNAL_NAME      = 0xFFFC
 		INTERNAL_WITHDRAW  = 0xFFFD
 		INTERNAL_WATCHDOG  = 0xFFFE
 		INTERNAL_SPLIT     = 0xFFFF
@@ -99,6 +100,7 @@ class Attribute (object):
 			0x16: 'pmsi-tunnel',
 			0x17: 'tunnel-encaps',
 			0x1a: 'aigp',
+			0xfffc: 'internal-name',
 			0xfffd: 'internal-withdraw',
 			0xfffe: 'internal-watchdog',
 			0xffff: 'internal-split',
