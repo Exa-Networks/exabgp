@@ -4,6 +4,8 @@ Version explained:
  bug   : increase on bug or incremental changes
 
 Version 3.4.6
+ * Fix: a badly formated flow route would throw the parser in limbo
+    reported by: NickGudov (issue #203)
  * Feature: JSON now includes ASN (local,peer) and IP (local,IP)
     requested by: jtkdpu (issue #196)
     patch by: Ryan Tinianov (pull #199) for the IP

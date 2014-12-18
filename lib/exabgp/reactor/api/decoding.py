@@ -136,7 +136,7 @@ class Text (Configuration):
 	def parse_api_flow (self,command,action):
 		self._tokens = self._tokenise(' '.join(formated(command).split(' ')[2:]).split('\\n'))
 		scope = [{}]
-		if not self._dispatch(scope,'flow',['route',],[]):
+		if not self._dispatch(scope,'flow',['route',],[],['root']):
 			return False
 		if not self._check_flow_route(scope):
 			return False

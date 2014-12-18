@@ -529,7 +529,10 @@ class Configuration (object):
 	# Flow control ......................
 
 	# name is not used yet but will come really handy if we have name collision :D
-	def _dispatch (self,scope,name,multi,single):
+	def _dispatch (self,scope,name,multi,single,location=None):
+		if location:
+			self._location = location
+			self._flow_state = 'out'
 		try:
 			tokens = self.tokens()
 		except IndexError:
