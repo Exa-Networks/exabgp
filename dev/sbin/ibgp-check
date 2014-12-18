@@ -87,16 +87,13 @@ class BGPHandler(asyncore.dispatcher_with_send):
 	def announce (self,*args):
 		print self.ip,self.port,' '.join(str(_) for _ in args) if len(args) > 1 else args[0]
 
-	def setup (self,ip,port,letter,messages,sendcap66,senddefault,exit):
+	def setup (self,ip,port,messages,options):
 		self.ip = ip
 		self.port = port
-		self.sendcap66 = sendcap66
-		self.senddefault = senddefault
-		self.exit = exit
+		self.options = options
 		self.handle_read = self.handle_open
 		self.sequence = {}
 		self.raw = False
-		self.letter = letter
 		for rule in messages:
 			sequence,announcement = rule.split(':',1)
 			if announcement.startswith('raw:'):
@@ -152,7 +149,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		routerid = chr((ord(body[8])+1) & 0xFF)
 		o = header+body[:8]+routerid+body[9:]
 
-		if self.sendcap66:
+		if self.options['send-unknown-capability']:
 			# hack capability 66 into the message
 			content = 'loremipsum'
 			cap66 = chr(66) + chr(len(content)) + content
@@ -163,8 +160,21 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 		self.send(o)
 		self.send(self.keepalive)
-		if self.senddefault:
-			self.send(chr(0xFF)*16+chr(0x00)+chr(0x31)+chr(0x02)+chr(0x00)+chr(0x00)+chr(0x00)+chr(0x15)+chr(0x40)+chr(0x01)+chr(0x01)+chr(0x00)+chr(0x40)+chr(0x02)+chr(0x00)+chr(0x40)+chr(0x03)+chr(0x04)+chr(0x7F)+chr(0x00)+chr(0x00)+chr(0x01)+chr(0x40)+chr(0x05)+chr(0x04)+chr(0x00)+chr(0x00)+chr(0x00)+chr(0x64)+chr(0x20)+chr(0x00)+chr(0x00)+chr(0x00)+chr(0x00))
+
+		if self.options['send-default-route']:
+			self.send(
+				chr(0xFF)*16+
+				chr(0x00)+chr(0x31)+
+				chr(0x02)+
+				chr(0x00)+chr(0x00)+
+				chr(0x00)+chr(0x15)+
+					chr(0x40)+chr(0x01)+chr(0x01)+chr(0x00)+
+					chr(0x40)+chr(0x02)+chr(0x00)+
+					chr(0x40)+chr(0x03)+chr(0x04)+chr(0x7F)+chr(0x00)+chr(0x00)+chr(0x01)+
+					chr(0x40)+chr(0x05)+chr(0x04)+chr(0x00)+chr(0x00)+chr(0x00)+chr(0x64)+
+				chr(0x20)+chr(0x00)+chr(0x00)+chr(0x00)+chr(0x00)
+			)
+
 		self.handle_read = self.handle_keepalive
 
 	def handle_keepalive (self):
@@ -173,6 +183,9 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		if header is None:
 			self.announce('connection closed')
 			self.close()
+			if self.options['send-notification']:
+				self.announce('successful')
+				sys.exit(0)
 			return
 
 		parser = self._decoder.get(self.kind(header),None)
@@ -191,10 +204,10 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 				if announcement in self.messages:
 					self.messages.remove(announcement)
-					self.announce('expected announcement received (%s%s):' % (self.letter,self.step),announcement)
+					self.announce('expected announcement received (%s%s):' % (self.options['letter'],self.step),announcement)
 				else:
 					if raw:
-						self.announce('\n','unexpected announcement (%s%s):' % (self.letter,self.step),'%s:%s' % (bytestream(header),bytestream(body)))
+						self.announce('\n','unexpected announcement (%s%s):' % (self.options['letter'],self.step),'%s:%s' % (bytestream(header),bytestream(body)))
 					else:
 						self.announce('\n','unexpected announcement:',announcement)
 
@@ -203,11 +216,22 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 				if not self.messages:
 					if not self.update_sequence():
-						if self.exit:
+						if self.options['exit']:
 							self.announce('successful')
 							sys.exit(0)
 
 		self.send(self.keepalive)
+
+		if self.options['send-notification']:
+			notification = 'closing session because we can'
+			self.send(
+				chr(0xFF)*16+
+				chr(0x00)+ chr(19+2+len(notification))+
+				chr(0x03)+
+				chr(0x06)+
+				chr(0x00)+
+				notification
+			)
 
 	_decoder= {
 		chr(2) : routes,
@@ -223,15 +247,22 @@ class BGPServer (asyncore.dispatcher):
 		self.listen(5)
 
 		self.messages = {}
-		self.sendcap66 = False
-		self.senddefault = False
+
+		self.options = {
+			'send-unknown-capability': False,
+			'send-default-route': False,
+			'send-notification': False,
+		}
 
 		for message in messages:
 			if message.strip() == 'option:open:send-unknown-capability':
-				self.sendcap66 = True
+				self.options['send-unknown-capability'] = True
 				continue
 			if message.strip() == 'option:update:send-default-route':
-				self.senddefault = True
+				self.options['send-default-route'] = True
+				continue
+			if message.strip() == 'option:notification:send-notification':
+				self.options['send-notification'] = True
 				continue
 
 			if message[0].isalpha():
@@ -255,12 +286,17 @@ class BGPServer (asyncore.dispatcher):
 		else:
 			print 'using :\n', '\n'.join(messages), '\n'
 
-		exit = not len(self.messages.keys())
+		self.options['exit'] = not len(self.messages.keys())
+		self.options['letter'] = letter
 
 		pair = self.accept()
 		if pair is not None:
 			sock,addr = pair
-			handler = BGPHandler(sock).setup(*addr,letter=letter,messages=messages,sendcap66=self.sendcap66,senddefault=self.senddefault,exit=exit)
+			handler = BGPHandler(sock).setup(
+				*addr,
+				messages=messages,
+				options=self.options
+			)
 
 def drop ():
 	uid = os.getuid()

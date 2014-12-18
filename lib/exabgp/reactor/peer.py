@@ -607,6 +607,11 @@ class Peer (object):
 		# THE PEER NOTIFIED US OF AN ERROR
 		except Notification, n:
 			self._reset(direction,'notification received (%d,%d)' % (n.code,n.subcode),n)
+
+			# we tried to connect once, it failed, we stop
+			if self.once:
+				self.logger.network('only one attempt to connect is allowed, stopping the peer')
+				self.stop()
 			return
 
 		# RECEIVED a Message TYPE we did not expect
