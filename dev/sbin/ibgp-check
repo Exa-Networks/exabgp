@@ -3,9 +3,13 @@
 import os
 import pwd
 import sys
-import asyncore
-import socket
+import time
 import errno
+import socket
+import thread
+import signal
+import asyncore
+import subprocess
 from struct import unpack
 
 def bytestream (value):
@@ -85,7 +89,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		yield 'notification:%d,%d' % (ord(body[0]),ord(body[1])), 'raw:%s' % bytestream(body)
 
 	def announce (self,*args):
-		print self.ip,self.port,' '.join(str(_) for _ in args) if len(args) > 1 else args[0]
+		print '    ',self.ip,self.port,' '.join(str(_) for _ in args) if len(args) > 1 else args[0]
 
 	def setup (self,ip,port,messages,options):
 		self.ip = ip
@@ -195,23 +199,22 @@ class BGPHandler(asyncore.dispatcher_with_send):
 				announcement = raw if self.raw else parsed
 
 				if announcement.startswith('eor:'):  # skip EOR
-					self.announce('skip eor',announcement)
+					self.announce('skipping eor',announcement)
 					continue
 
 				if announcement.startswith('mp:'):  # skip unparsed MP
-					self.announce('skip announcement for body :',dump(body))
+					self.announce('skipping announcement for body :',dump(body))
 					continue
 
 				if announcement in self.messages:
 					self.messages.remove(announcement)
-					self.announce('expected announcement received (%s%s):' % (self.options['letter'],self.step),announcement)
+					self.announce('received (%1s%s):' % (self.options['letter'],self.step),announcement)
 				else:
+					self.announce('expected     :',', '.join(self.messages),'\n')
 					if raw:
-						self.announce('\n','unexpected announcement (%s%s):' % (self.options['letter'],self.step),'%s:%s' % (bytestream(header),bytestream(body)))
+						self.announce('received (%1s%s):' % (self.options['letter'],self.step),'%s:%s' % (bytestream(header),bytestream(body)))
 					else:
-						self.announce('\n','unexpected announcement:',announcement)
-
-					self.announce('valid options were:',', '.join(self.messages),'\n')
+						self.announce('received     :',announcement)
 					sys.exit(1)
 
 				if not self.messages:
@@ -252,6 +255,7 @@ class BGPServer (asyncore.dispatcher):
 			'send-unknown-capability': False,
 			'send-default-route': False,
 			'send-notification': False,
+			'signal-SIGUSR1': 0,
 		}
 
 		for message in messages:
@@ -264,6 +268,22 @@ class BGPServer (asyncore.dispatcher):
 			if message.strip() == 'option:notification:send-notification':
 				self.options['send-notification'] = True
 				continue
+			if message.strip().startswith('option:SIGUSR1:'):
+				def _signal (delay,myself):
+					time.sleep(delay)
+
+					output = subprocess.check_output(
+						"ps 2>&1 | grep bgp.py | grep -v grep | awk '{ print $1; }'",
+						shell=True,
+						stderr=subprocess.STDOUT,
+					)
+					if not output:
+						print 'can not find exabgp process to signal'
+						os.kill(myself,signal.SIGTERM)
+
+					os.kill(int(output),signal.SIGUSR1)
+
+				thread.start_new_thread(_signal,(int(message.split(':')[-1]),os.getpid()))
 
 			if message[0].isalpha():
 				index,content = message[:1].upper(), message[1:]
@@ -284,7 +304,7 @@ class BGPServer (asyncore.dispatcher):
 			print 'we used all the test data available, can not handle this new connection'
 			sys.exit(1)
 		else:
-			print 'using :\n', '\n'.join(messages), '\n'
+			print 'using :\n   ', '\n    '.join(messages),'\n\nconversation:\n'
 
 		self.options['exit'] = not len(self.messages.keys())
 		self.options['letter'] = letter
