@@ -20,7 +20,7 @@ esac
 
 export PYTHONPATH=$path/lib
 
-for conf in `ls $path/runtest/*conf`
+for conf in `ls $path/test/*conf`
 do
 	printf "       $conf"
 	result=`env exabgp.tcp.bind='' exabgp.debug.selfcheck=true $path/../sbin/exabgp $conf 2>&1`

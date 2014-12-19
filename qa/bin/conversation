@@ -22,8 +22,8 @@ def main ():
 	if not path.isfile(exabgp):
 		print "could not find exabgp"
 
-	runtest = path.abspath(path.join(location,'..','..','runtest'))
-	if not path.isdir(runtest):
+	test = path.abspath(path.join(location,'..','..','test'))
+	if not path.isdir(test):
 		sys.exit('could not find test folder')
 
 	sequence_daemon = path.abspath(path.join(location,'..','..','sbin','ibgp-check'))
@@ -42,7 +42,7 @@ def main ():
 		skip = 0
 		show = False
 
-	confs = sorted(glob.glob(path.join(runtest,'%s.conf' % match.replace('all','*'))))
+	confs = sorted(glob.glob(path.join(test,'%s.conf' % match.replace('all','*'))))
 	confs = reverse(confs)
 
 	success = True
@@ -58,8 +58,7 @@ def main ():
 			if check_sequence(exabgp,configuration,sequence_daemon,sequence_file,show) == False:
 				success = False
 		else:
-			print "sequence check for", configuration
-			print "skip (no sequence data)\n"
+			print "skipping        %s\n" % configuration
 			continue
 
 	sys.exit(0 if success else 1)
@@ -73,8 +72,8 @@ def check_sequence(exabgp,configuration,daemon,fname,show):
 	class Exit (Exception): pass
 
 	try:
-		command_daemon = [daemon,fname]
-		command_exabgp = [exabgp, configuration]
+		command_daemon = [daemon, fname]
+		command_exabgp = [exabgp, '-d', configuration]
 
 		if show:
 			raise Exit()
@@ -82,7 +81,7 @@ def check_sequence(exabgp,configuration,daemon,fname,show):
 		signal.signal(signal.SIGALRM, alarm_handler)
 		signal.alarm(timeout)
 
-		print "checking", configuration.split('/')[-1],
+		print "%-15s %s\n" % ('checking',configuration.split('/')[-1]),
 		daemon = subprocess.Popen(command_daemon, stdout=subprocess.PIPE)
 		exabgp = subprocess.Popen(command_exabgp, stdout=subprocess.PIPE)
 
@@ -117,7 +116,7 @@ def check_sequence(exabgp,configuration,daemon,fname,show):
 		print "successful\n"
 		return True
 	else:
-		print "failure\n"
+		print "failure"
 		print
 		print commands(command_exabgp,command_daemon)
 		print

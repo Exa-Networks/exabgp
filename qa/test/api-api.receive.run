@@ -7,11 +7,11 @@ import time
 counter = 0
 
 line = sys.stdin.readline().strip()
-print >> sys.stderr, 'OK, RECEIVED', line
+print >> sys.stderr, 'ok, received', line
 sys.stdout.flush()
 
 if 'keepalive' in line:
-	time.sleep(2) # make sure the other process is faster if it gets any data
+	time.sleep(2)  # make sure the other process is faster if it gets any data
 	print "announce route 0.0.0.0/0 next-hop 1.1.1.1"
 	sys.stdout.flush()
 else:
@@ -21,7 +21,7 @@ else:
 while True:
 	try:
 		line = sys.stdin.readline().strip()
-		print >> sys.stderr, 'OK, RECEIVED', line
+		print >> sys.stderr, 'ok, received', line
 		sys.stderr.flush()
 
 		if line == "":

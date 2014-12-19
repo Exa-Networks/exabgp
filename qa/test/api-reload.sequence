@@ -1,0 +1,4 @@
+option:SIGUSR1:10
+A1:announce:1.0.0.0/24
+A2:announce:2.0.0.0/24
+B1:announce:1.0.0.0/24

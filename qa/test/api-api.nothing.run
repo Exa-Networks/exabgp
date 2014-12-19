@@ -10,7 +10,7 @@ while True:
 		line = sys.stdin.readline().strip()
 
 		if not 'shutdown' in line:
-			print >> sys.stderr, '####### BAD, received data on this worker', line
+			print >> sys.stderr, 'failure, we received data on this worker: ', line
 			sys.stderr.flush()
 
 			print "announce route 6.6.6.6/6 next-hop 9.9.9.9"
