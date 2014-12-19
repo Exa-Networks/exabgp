@@ -1221,7 +1221,7 @@ class Configuration (object):
 			v = local_scope.get('hold-time','')
 			if v: neighbor.hold_time = v
 
-			changes = local_scope.get('announce',[])
+			neighbor.changes = local_scope.get('announce',[])
 			messages = local_scope.get('operational',[])
 
 		for name in self.process.keys():
@@ -1320,7 +1320,7 @@ class Configuration (object):
 		def _init_neighbor (neighbor):
 				neighbor.make_rib()
 				families = neighbor.families()
-				for change in changes:
+				for change in neighbor.changes:
 					if change.nlri.family() in families:
 						# This add the family to neighbor.families()
 						neighbor.rib.outgoing.insert_announced_watchdog(change)

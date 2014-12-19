@@ -49,7 +49,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 	def name (self,header):
 		return self._name.get(header[18],'SOME WEIRD RFC PACKET')
 
-	def routes (self,body):
+	def routes (self,header,body):
 		len_w = unpack('!H',body[0:2])[0]
 		withdrawn = [ord(_) for _ in body[2:2+len_w]]
 		len_a = unpack('!H',body[2+len_w:2+len_w+2])[0]
@@ -57,36 +57,36 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 		if not withdrawn and not announced:
 			if len(body) == 4:
-				yield 'eor:1:1','raw:%s' % bytestream(body)
+				yield 'eor:1:1'
 			elif len(body) == 11:
-				yield 'eor:%d:%d' % (ord(body[-2]),ord(body[-1])),'raw:%s' % bytestream(body)
+				yield 'eor:%d:%d' % (ord(body[-2]),ord(body[-1]))
 			else:  # undecoded MP route
-				yield 'mp:','raw:%s' % bytestream(body)
+				yield 'mp:'
 
 		while withdrawn:
 			if len(withdrawn) > 5:
-				yield '', 'raw:%s' % bytestream(body)
+				yield ''
 				break
 			m = withdrawn.pop(0)
 			r = [0,0,0,0]
 			for index in range(4):
 				if index*8 >= m: break
 				r[index] = withdrawn.pop(0)
-			yield 'withdraw:%s' % '.'.join(str(_) for _ in r) + '/' + str(m), 'raw:%s' % bytestream(body)
+			yield 'withdraw:%s' % '.'.join(str(_) for _ in r) + '/' + str(m)
 
 		while announced:
 			if len(announced) > 5:
-				yield '', 'raw:%s' % bytestream(body)
+				yield ''
 				break
 			m = announced.pop(0)
 			r = [0,0,0,0]
 			for index in range(4):
 				if index*8 >= m: break
 				r[index] = announced.pop(0)
-			yield 'announce:%s' % '.'.join(str(_) for _ in r) + '/' + str(m), 'raw:%s' % bytestream(body)
+			yield 'announce:%s' % '.'.join(str(_) for _ in r) + '/' + str(m)
 
-	def notification (self,body):
-		yield 'notification:%d,%d' % (ord(body[0]),ord(body[1])), 'raw:%s' % bytestream(body)
+	def notification (self,header,body):
+		yield 'notification:%d,%d' % (ord(body[0]),ord(body[1])), bytestream(body)
 
 	def announce (self,*args):
 		print '    ',self.ip,self.port,' '.join(str(_) for _ in args) if len(args) > 1 else args[0]
@@ -101,10 +101,8 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		for rule in messages:
 			sequence,announcement = rule.split(':',1)
 			if announcement.startswith('raw:'):
-				raw = ''.join(announcement[4:].replace(':',''))
-				stream = raw[38:] if raw.startswith('F'*16) else raw
-				announcement = 'raw:' + stream
 				self.raw = True
+				announcement = ''.join(announcement[4:].replace(':',''))
 			self.sequence.setdefault(sequence,[]).append(announcement)
 		self.update_sequence()
 		return self
@@ -158,7 +156,6 @@ class BGPHandler(asyncore.dispatcher_with_send):
 			content = 'loremipsum'
 			cap66 = chr(66) + chr(len(content)) + content
 			param = chr(2) + chr(len(cap66)) + cap66
-			print ord(o[9])
 			o = o[:17] + chr(ord(o[17])+len(param)) + o[18:28] + \
 				chr(ord(o[28])+len(param)) + o[29:] + param
 
@@ -192,29 +189,50 @@ class BGPHandler(asyncore.dispatcher_with_send):
 				sys.exit(0)
 			return
 
-		parser = self._decoder.get(self.kind(header),None)
+		if self.raw:
+			def parser (self,header,body):
+				if body:
+					yield bytestream(header+body)
+		else:
+			parser = self._decoder.get(self.kind(header),None)
 
 		if parser:
-			for parsed,raw in parser(self,body):
-				announcement = raw if self.raw else parsed
-
+			for announcement in parser(self,header,body):
 				if announcement.startswith('eor:'):  # skip EOR
 					self.announce('skipping eor',announcement)
 					continue
 
 				if announcement.startswith('mp:'):  # skip unparsed MP
-					self.announce('skipping announcement for body :',dump(body))
+					self.announce('skipping multiprotocol :',dump(body))
 					continue
 
 				if announcement in self.messages:
 					self.messages.remove(announcement)
 					self.announce('received (%1s%s):' % (self.options['letter'],self.step),announcement)
 				else:
-					self.announce('expected     :',', '.join(self.messages),'\n')
-					if raw:
-						self.announce('received (%1s%s):' % (self.options['letter'],self.step),'%s:%s' % (bytestream(header),bytestream(body)))
+					if self.raw:
+						self.announce('received (%1s%s):' % (self.options['letter'],self.step),'%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:]),bytestream(body)))
 					else:
 						self.announce('received     :',announcement)
+
+					if len(self.messages) > 1:
+						self.announce('expected     :')
+						for message in self.messages:
+							if message.startswith('F'*32):
+								self.announce('               %s:%s:%s' % (message[:32],message[32:38],message[38:]))
+							else:
+								self.announce('               %s' % message)
+					elif self.messages:
+						message = self.messages[0].upper()
+						if message.startswith('F'*32):
+							self.announce('expected     : %s:%s:%s' % (message[:32],message[32:38],message[38:]))
+						else:
+							self.announce('expected     : %s' % message)
+					else:
+						# can happen when the thread is still running
+						self.announce('extra data')
+						sys.exit(1)
+
 					sys.exit(1)
 
 				if not self.messages:
@@ -242,6 +260,9 @@ class BGPHandler(asyncore.dispatcher_with_send):
 	}
 
 class BGPServer (asyncore.dispatcher):
+	def announce (self,*args):
+		print '    ' + ' '.join(str(_) for _ in args) if len(args) > 1 else args[0]
+
 	def __init__ (self,host,port,messages):
 		asyncore.dispatcher.__init__(self)
 		self.create_socket(socket.AF_INET,socket.SOCK_STREAM)
@@ -278,12 +299,19 @@ class BGPServer (asyncore.dispatcher):
 						stderr=subprocess.STDOUT,
 					)
 					if not output:
-						print 'can not find exabgp process to signal'
+						self.announce('can not find exabgp process to signal')
 						os.kill(myself,signal.SIGTERM)
 
-					os.kill(int(output),signal.SIGUSR1)
+					try:
+						self.announce('\n     sending SIGUSR1 to ExaBGP (pid %s)\n' % output.strip())
+						os.kill(int(output),signal.SIGUSR1)
+					except Exception:
+						pass
+					time.sleep(40)
+					thread.exit()
 
 				thread.start_new_thread(_signal,(int(message.split(':')[-1]),os.getpid()))
+				continue
 
 			if message[0].isalpha():
 				index,content = message[:1].upper(), message[1:]
@@ -301,7 +329,7 @@ class BGPServer (asyncore.dispatcher):
 				break
 
 		if not messages:
-			print 'we used all the test data available, can not handle this new connection'
+			self.announce('we used all the test data available, can not handle this new connection')
 			sys.exit(1)
 		else:
 			print 'using :\n   ', '\n    '.join(messages),'\n\nconversation:\n'

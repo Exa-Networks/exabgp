@@ -230,7 +230,7 @@ class Peer (object):
 			self.neighbor.rib.outgoing.replace(changes)
 		self._have_routes = self.neighbor.flush if update is None else update
 
-	def restart (self,restart_neighbor=None):
+	def reestablish (self,restart_neighbor=None):
 		# we want to tear down the session and re-establish it
 		self._teardown = 3
 		self._restart = True
@@ -238,6 +238,13 @@ class Peer (object):
 		self._resend_routes = SEND.normal
 		self._neighbor = restart_neighbor
 		self._reset_skip()
+
+	def reconfigure (self,restart_neighbor=None):
+		# we want to update the route which were in the configuration file
+		self._reconfigure = True
+		self._neighbor = restart_neighbor
+		self._resend_routes = SEND.normal
+		self._neighbor = restart_neighbor
 
 	def teardown (self,code,restart=True):
 		self._restart = restart

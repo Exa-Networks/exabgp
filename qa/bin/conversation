@@ -58,7 +58,7 @@ def main ():
 			if check_sequence(exabgp,configuration,sequence_daemon,sequence_file,show) == False:
 				success = False
 		else:
-			print "skipping        %s\n" % configuration
+			print "checking        %s\nskipped (no sequence data)\n" % configuration.split('/')[-1]
 			continue
 
 	sys.exit(0 if success else 1)
@@ -73,7 +73,7 @@ def check_sequence(exabgp,configuration,daemon,fname,show):
 
 	try:
 		command_daemon = [daemon, fname]
-		command_exabgp = [exabgp, '-d', configuration]
+		command_exabgp = [exabgp, ' -d', configuration]
 
 		if show:
 			raise Exit()
@@ -104,7 +104,7 @@ def check_sequence(exabgp,configuration,daemon,fname,show):
 		r = ""
 		r += "command lines are:\n"
 		r += 'export exabgp_debug_defensive=true\n'
-		r += "> env exabgp.tcp.port=1790 exabgp.tcp.once=true exabgp.tcp.bind='' " + ' '.join(command_exabgp) + '-d\n'
+		r += "> env exabgp.tcp.port=1790 exabgp.tcp.once=true exabgp.tcp.bind='' " + ' '.join(command_exabgp) + '\n'
 		r += '> env exabgp.tcp.port=1790 ' + ' '.join(command_daemon)
 		r += '\n'
 		return r

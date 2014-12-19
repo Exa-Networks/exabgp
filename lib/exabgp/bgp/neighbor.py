@@ -50,6 +50,7 @@ class Neighbor (object):
 
 		self._families = []
 		self.rib = None
+		self.changes = None
 
 		self.operational = None
 		self.eor = deque()

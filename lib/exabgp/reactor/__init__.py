@@ -301,25 +301,24 @@ class Reactor (object):
 
 		for key, peer in self.peers.items():
 			if key not in self.configuration.neighbor:
-				self.logger.reactor("Removing Peer %s" % peer.neighbor.name())
+				self.logger.reactor("Removing peer: %s" % peer.neighbor.name())
 				peer.stop()
 
 		for key, neighbor in self.configuration.neighbor.items():
 			# new peer
 			if key not in self.peers:
-				self.logger.reactor("New Peer %s" % neighbor.name())
+				self.logger.reactor("New peer setup: %s" % neighbor.name())
 				peer = Peer(neighbor,self)
 				self.peers[key] = peer
 			# modified peer
 			elif self.peers[key].neighbor != neighbor:
-				self.logger.reactor("Peer definition change, restarting %s" % str(key))
-				self.peers[key].restart(neighbor)
+				self.logger.reactor("Peer definition change, establishing a new connection for %s" % str(key))
+				self.peers[key].reestablish(neighbor)
 			# same peer but perhaps not the routes
 			else:
 				# finding what route changed and sending the delta is not obvious
-				# self.peers[key].send_new(neighbor.rib.outgoing.queued_changes())
-				self.logger.reactor("restarting %s" % str(key))
-				self.peers[key].restart(neighbor)
+				self.logger.reactor("Peer definition identical, updating peer routes if required for %s" % str(key))
+				self.peers[key].reconfigure(neighbor)
 		self.logger.configuration("Loaded new configuration successfully",'warning')
 		# This only starts once ...
 		self.processes.start(restart)
@@ -377,7 +376,7 @@ class Reactor (object):
 				self.logger.reactor("Removing Peer %s" % neighbor.name())
 				self.peers[key].stop()
 			else:
-				self.peers[key].restart()
+				self.peers[key].reestablish()
 		self.processes.terminate()
 		self.processes.start()
 
