@@ -3,8 +3,9 @@
 import os
 import sys
 import glob
-import subprocess
+import time
 import signal
+import subprocess
 
 from os import path
 
@@ -87,6 +88,7 @@ def check_sequence(group,exabgp,configurations,daemon,fname,show):
 
 		print "%-15s %s\n" % ('checking',group.split('/')[-1].split('.')[0]),
 		daemon = subprocess.Popen(command_daemon, stdout=subprocess.PIPE)
+		time.sleep(3)
 		exabgp = subprocess.Popen(command_exabgp, stdout=subprocess.PIPE)
 
 		exabgp_output = exabgp.communicate()[0]

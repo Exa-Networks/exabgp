@@ -14,3 +14,4 @@ script:
   - set pipefail
   - ./qa/bin/parsing | perl -pe 's/^ +//; s/\r/\t\t/g;'
   - ./qa/bin/conversation
+  - rm etc/exabgp/exabgp.env

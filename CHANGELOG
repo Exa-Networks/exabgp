@@ -17,6 +17,7 @@ Version 3.4.6
  * QA: ExaBGP can take more than one configuration file and on configuration reload rotate between them
  * QA: checking that broken flows do not break the parser
  * QA: checking that configuration routes are well added and removed on SIGUSR1
+ * QA: checking that incoming notifications are handled correctly
 
 Version 3.4.5
  * Fix: improper distribution of events to process workers
