@@ -135,6 +135,8 @@ class Peer (object):
 		self._restarted = FORCE_GRACEFUL
 		self._reset_skip()
 
+		# We want to remove routes which are not in the configuration anymote afte a signal to reload
+		self._reconfigure = True
 		# We want to send all the known routes
 		self._resend_routes = SEND.done
 		# We have new routes for the peers
@@ -506,6 +508,19 @@ class Peer (object):
 							refresh.next()
 						except StopIteration:
 							refresh = None
+
+				# Take the routes already sent to that peer and resend them
+				if self._reconfigure:
+					self._reconfigure = False
+
+					# we are here following a configuration change
+					if self._neighbor:
+						# see what changed in the configuration
+						self.neighbor.rib.outgoing.replace(self._neighbor.backup_changes,self._neighbor.changes)
+						# do not keep the previous routes in memory as they are not useful anymore
+						self._neighbor.backup_changes = []
+
+					self._have_routes = True
 
 				# Take the routes already sent to that peer and resend them
 				if self._resend_routes != SEND.done:

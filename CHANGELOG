@@ -13,6 +13,10 @@ Version 3.4.6
     requested by: spakka (issue #109)
  * Feature: allow routes to have a name (which can be used as comment)
     requested by: lazy404 (issue #167)
+ * QA: moved all testing code (used by travis-ci) in the ./qa folder
+ * QA: ExaBGP can take more than one configuration file and on configuration reload rotate between them
+ * QA: checking that broken flows do not break the parser
+ * QA: checking that configuration routes are well added and removed on SIGUSR1
 
 Version 3.4.5
  * Fix: improper distribution of events to process workers

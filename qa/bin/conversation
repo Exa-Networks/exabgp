@@ -108,7 +108,7 @@ def check_sequence(group,exabgp,configurations,daemon,fname,show):
 		r = ""
 		r += "command lines are:\n"
 		r += 'export exabgp_debug_defensive=true\n'
-		r += "> env exabgp.tcp.port=1790 exabgp.tcp.once=true exabgp.tcp.bind='' " + ' '.join(command_exabgp) + '\n'
+		r += "> env exabgp.tcp.port=1790 exabgp.tcp.once=true exabgp.debug.rotate=true exabgp.tcp.bind='' " + ' '.join(command_exabgp) + '\n'
 		r += '> env exabgp.tcp.port=1790 ' + ' '.join(command_daemon)
 		r += '\n'
 		return r

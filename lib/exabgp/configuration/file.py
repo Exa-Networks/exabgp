@@ -373,11 +373,12 @@ class Configuration (object):
 		self.process = {}
 		self.neighbor = {}
 		self.error = ''
+
 		self._neighbor = {}
+		self._error = ''
 		self._scope = []
 		self._location = ['root']
 		self._line = []
-		self._error = ''
 		self._number = 1
 		self._flow_state = 'out'
 		self._nexthopself = None
@@ -392,9 +393,11 @@ class Configuration (object):
 			return False
 
 	def _reload (self):
+		# taking the first configuration available (FIFO buffer)
 		self._fname = self._configurations.pop(0)
 		self._configurations.append(self._fname)
 
+		# creating the tokeniser for the configuration
 		if self._text:
 			self._tokens = self._tokenise(self._fname.split('\n'))
 		else:
@@ -411,8 +414,15 @@ class Configuration (object):
 				if self.debug: raise
 				return False
 
+		# storing the routes associated with each peer so we can find what changed
+		backup_changes = {}
+		for neighbor in self._neighbor:
+			backup_changes[neighbor] = self._neighbor[neighbor].changes
+
+		# clearing the current configuration to be able to re-parse it
 		self._clear()
 
+		# parsing the configurtion
 		r = False
 		while not self.finished():
 			r = self._dispatch(
@@ -422,18 +432,27 @@ class Configuration (object):
 			)
 			if r is False: break
 
+		# handling possible parsing errors
 		if r not in [True,None]:
 			self.error = "\nsyntax error in section %s\nline %d : %s\n\n%s" % (self._location[-1],self.number(),self.line(),self._error)
 			return False
 
+		# parsing was sucessful, assigning the result
 		self.neighbor = self._neighbor
 
+		# installing in the neighbor what was its previous routes so we can
+		# add/withdraw what need to be
+		for neighbor in self.neighbor:
+			self.neighbor[neighbor].backup_changes = backup_changes.get(neighbor,[])
+
+		# we are not really running the program, just want to ....
 		if environment.settings().debug.route:
 			from exabgp.configuration.check import check_message
 			if check_message(self.neighbor,environment.settings().debug.route):
 				sys.exit(0)
 			sys.exit(1)
 
+		# we are not really running the program, just want check the configuration validity
 		if environment.settings().debug.selfcheck:
 			from exabgp.configuration.check import check_neighbor
 			if check_neighbor(self.neighbor):
@@ -441,7 +460,6 @@ class Configuration (object):
 			sys.exit(1)
 
 		return True
-
 
 	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
 	def change_to_peers (self,change,peers):

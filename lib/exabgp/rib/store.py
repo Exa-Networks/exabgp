@@ -94,21 +94,13 @@ class Store (object):
 		for change in self._modify_nlri.values():
 			yield change
 
-	def replace (self,changes):
-		self.reset()
-		self._changes = changes
+	def replace (self,previous,changes):
+		for change in previous:
+			change.nlri.action = OUT.withdraw
+			self.insert_announced(change,True)
 
-	# def replace (self,changes):
-	# 	def _announced (family):
-	# 		for change in self._seen.get(family,{}).values():
-	# 			if change.nlri.action == OUT.announce:
-	# 				yield change
-	# 		self._seen[family] = {}
-	# 		for family in requested_families:
-	# 			for change in _announced(family):
-	# 				change.nlri.action == OUT.withdraw
-	# 				self.insert_announced(change,True)
-	# 	self._changes = changes
+		for change in changes:
+			self.insert_announced(change,True)
 
 	def insert_announced_watchdog (self,change):
 		watchdog = change.attributes.watchdog()

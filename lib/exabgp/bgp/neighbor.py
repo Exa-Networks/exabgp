@@ -50,7 +50,11 @@ class Neighbor (object):
 
 		self._families = []
 		self.rib = None
-		self.changes = None
+
+		# The routes we have parsed from the configuration
+		self.changes = []
+		# On signal update, the previous routes so we can compare what changed
+		self.backup_changes = []
 
 		self.operational = None
 		self.eor = deque()

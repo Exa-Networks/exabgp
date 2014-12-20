@@ -4,7 +4,7 @@ import sys
 import time
 
 messages = [
-'announce route 2.0.0.0/24 next-hop 3.0.0.0',
+'announce route 3.0.0.0/24 next-hop 4.0.0.0',
 ]
 
 while messages:
