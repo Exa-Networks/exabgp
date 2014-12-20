@@ -283,13 +283,13 @@ class Configuration (object):
 	_str_vpls_bad_label   = "you tried to configure an invalid l2vpn vpls label"
 	_str_vpls_bad_enpoint = "you tried to configure an invalid l2vpn vpls endpoint"
 
-	def __init__ (self,fname,text=False):
+	def __init__ (self,configurations,text=False):
 		self.debug = environment.settings().debug.configuration
 		self.api_encoder = environment.settings().api.encoder
 
 		self.logger = Logger()
 		self._text = text
-		self._fname = fname
+		self._configurations = configurations
 		self._dispatch_route_cfg = {
 			'origin': self._route_origin,
 			'as-path': self._route_aspath,
@@ -392,6 +392,9 @@ class Configuration (object):
 			return False
 
 	def _reload (self):
+		self._fname = self._configurations.pop(0)
+		self._configurations.append(self._fname)
+
 		if self._text:
 			self._tokens = self._tokenise(self._fname.split('\n'))
 		else:

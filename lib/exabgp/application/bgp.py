@@ -258,7 +258,6 @@ def main ():
 	if options["--memory"]:
 		env.debug.memory = True
 
-
 	configurations = []
 	# check the file only once that we have parsed all the command line options and allowed them to run
 	if options["<configuration>"]:
@@ -267,12 +266,11 @@ def main ():
 			if os.path.isfile(normalised):
 				configurations.append(normalised)
 				continue
-			if not f.startswith('etc/exabgp'):
-				continue
-			normalised = os.path.join(folder,f[11:])
-			if os.path.isfile(normalised):
-				configurations.append(normalised)
-				continue
+			if f.startswith('etc/exabgp'):
+				normalised = os.path.join(folder,f[11:])
+				if os.path.isfile(normalised):
+					configurations.append(normalised)
+					continue
 			from exabgp.logger import Logger
 			logger = Logger()
 			logger.configuration('one of the arguments passed as configuration is not a file (%s)' % f,'error')
@@ -287,8 +285,8 @@ def main ():
 	from exabgp.bgp.message.update.attribute.attribute import Attribute
 	Attribute.caching = env.cache.attributes
 
-	if len(configurations) == 1:
-		run(env,comment,configurations[0])
+	if env.debug.rotate or len(configurations) == 1:
+		run(env,comment,configurations)
 
 	if not (env.log.destination in ('syslog','stdout','stderr') or env.log.destination.startswith('host:')):
 		from exabgp.logger import Logger
@@ -302,7 +300,7 @@ def main ():
 		for configuration in configurations:
 			pid = os.fork()
 			if pid == 0:
-				run(env,comment,configuration,os.getpid())
+				run(env,comment,configurations,os.getpid())
 			else:
 				pids.append(pid)
 
@@ -318,7 +316,7 @@ def main ():
 		logger = Logger()
 		logger.reactor('Can not fork, errno %d : %s' % (e.errno,e.strerror),'critical')
 
-def run (env,comment,configuration,pid=0):
+def run (env,comment,configurations,pid=0):
 	from exabgp.logger import Logger
 	logger = Logger()
 
@@ -326,7 +324,7 @@ def run (env,comment,configuration,pid=0):
 		logger.configuration(comment)
 
 	if not env.profile.enable:
-		Reactor(configuration).run()
+		Reactor(configurations).run()
 		__exit(env.debug.memory,0)
 
 	try:
@@ -335,7 +333,7 @@ def run (env,comment,configuration,pid=0):
 		import profile
 
 	if not env.profile.file or env.profile.file == 'stdout':
-		profile.run('Reactor(configuration).run()')
+		profile.run('Reactor(configurations).run()')
 		__exit(env.debug.memory,0)
 
 	if pid:
@@ -354,7 +352,7 @@ def run (env,comment,configuration,pid=0):
 		pr = profile.Profile()
 		pr.enable()
 		try:
-			Reactor(configuration).run()
+			Reactor(configurations).run()
 		except:
 			raise
 		finally:
@@ -369,7 +367,7 @@ def run (env,comment,configuration,pid=0):
 		logger.reactor("-"*len(notice))
 		logger.reactor(notice)
 		logger.reactor("-"*len(notice))
-		Reactor(configuration).run()
+		Reactor(configurations).run()
 		__exit(env.debug.memory,0)
 
 

@@ -35,7 +35,7 @@ class Reactor (object):
 	# [hex(ord(c)) for c in os.popen('clear').read()]
 	clear = ''.join([chr(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a']])
 
-	def __init__ (self,configuration):
+	def __init__ (self,configurations):
 		self.ip = environment.settings().tcp.bind
 		self.port = environment.settings().tcp.port
 		self.respawn = environment.settings().api.respawn
@@ -46,7 +46,7 @@ class Reactor (object):
 		self.daemon = Daemon(self)
 		self.processes = None
 		self.listener = None
-		self.configuration = Configuration(configuration)
+		self.configuration = Configuration(configurations)
 		self.decoder = Decoder()
 
 		self.peers = {}
