@@ -168,8 +168,12 @@ class Attributes (dict):
 				self[attribute.ID] = MultiAttributes(attribute)
 		else:
 			if attribute.ID in self:
-				raise Notify(3,0,'multiple attribute for %s' % str(Attribute.ID(attribute.ID)))
-			self[attribute.ID] = attribute
+				if attribute.ID in (Attribute.ID.EXTENDED_COMMUNITY,):
+					self[attribute.ID].add(attribute)
+				else:
+					raise Notify(3,0,'multiple attribute for %s' % str(Attribute.ID(attribute.ID)))
+			else:
+				self[attribute.ID] = attribute
 
 	def remove (self,attrid):
 		self.pop(attrid)

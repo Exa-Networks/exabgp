@@ -560,9 +560,7 @@ class Configuration (object):
 			self._error = 'configuration file incomplete (most likely missing })'
 			if self.debug: raise
 			return False
-		self.logger.configuration('analysing tokens %s ' % str(tokens))
-		self.logger.configuration('  valid block options %s' % str(multi))
-		self.logger.configuration('  valid parameters    %s' % str(single))
+		self.logger.configuration("parsing | %-13s | '%s'" % (name,"' '".join(tokens)))
 		end = tokens[-1]
 		if multi and end == '{':
 			self._location.append(tokens[0])

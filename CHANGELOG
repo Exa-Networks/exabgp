@@ -6,6 +6,7 @@ Version explained:
 Version 3.4.6
  * Fix: a badly formated flow route would throw the parser in limbo
     reported by: NickGudov (issue #203)
+ * Fix: allow multiple extended attribute (like flow rediction with a origin/target)
  * Feature: JSON now includes ASN (local,peer) and IP (local,IP)
     requested by: jtkdpu (issue #196)
     patch by: Ryan Tinianov (pull #199) for the IP
