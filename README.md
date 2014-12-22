@@ -1,5 +1,6 @@
 ##Overview
 
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Exa-Networks/exabgp?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/Exa-Networks/exabgp.svg)](https://travis-ci.org/Exa-Networks/exabgp)
 
 [ExaBGP](http://github.com/Exa-Networks/exabgp) was not designed to transform a general purpose server into a router, but to allow engineers to control their network from commodity servers.
