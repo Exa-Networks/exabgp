@@ -20,20 +20,22 @@ esac
 
 export PYTHONPATH=$path/lib
 
-for conf in `ls $path/test/*conf`
+cd $path/conf
+names=`ls *.conf`
+cd -
+
+for conf in $names
 do
-	printf "       $conf"
-	result=`env exabgp.tcp.bind='' exabgp.debug.selfcheck=true $path/../sbin/exabgp $conf 2>&1`
+	printf "%-50s " $conf
+	result=`env exabgp.tcp.bind='' exabgp.debug.selfcheck=true $path/../sbin/exabgp $path/conf/$conf 2>&1`
 	retcode=$?
 	problem=`echo $result | grep 'Problem with the configuration file' || true`
 
 	if [ $retcode -eq 0 ] && [ "$problem" = "" ]
 	then
-		printf "\rok\n"
+		printf "ok\n"
 	else
-		printf "\rfailed\n\n"
-		echo "env exabgp.tcp.bind='' exabgp.debug.selfcheck=true exabgp.debug.configuration=1 $path/../sbin/exabgp $conf -p"
-		printf "\n\n"
+		printf "failed\n"
 		retval=1
 	fi
 done

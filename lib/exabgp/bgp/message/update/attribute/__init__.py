@@ -168,10 +168,7 @@ class Attributes (dict):
 				self[attribute.ID] = MultiAttributes(attribute)
 		else:
 			if attribute.ID in self:
-				if attribute.ID in (Attribute.ID.EXTENDED_COMMUNITY,):
-					self[attribute.ID].add(attribute)
-				else:
-					raise Notify(3,0,'multiple attribute for %s' % str(Attribute.ID(attribute.ID)))
+				raise Notify(3,0,'multiple attribute for %s' % str(Attribute.ID(attribute.ID)))
 			else:
 				self[attribute.ID] = attribute
 

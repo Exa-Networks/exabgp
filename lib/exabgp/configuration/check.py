@@ -33,36 +33,41 @@ from exabgp.bgp.message.notification import Notification
 # =============================================================== check_neighbor
 # ...
 
-def check_neighbor (neighbor):
+def check_neighbor (neighbors):
 	from exabgp.logger import Logger
 
 	logger = Logger()
 	logger._parser = True
+
+	if not neighbors:
+		logger.parser('\ncould not find neighbor(s) to check')
+		return False
+
 	logger.parser('\ndecoding routes in configuration')
 
-	n = neighbor[neighbor.keys()[0]]
+	for name in neighbors.keys():
+		neighbor = neighbors[name]
 
-	path = {}
-	for f in known_families():
-		if n.add_path:
-			path[f] = n.add_path
+		path = {}
+		for f in known_families():
+			if neighbor.add_path:
+				path[f] = neighbor.add_path
 
-	capa = Capabilities().new(n,False)
-	capa[Capability.ID.ADD_PATH] = path
-	capa[Capability.ID.MULTIPROTOCOL] = n.families()
+		capa = Capabilities().new(neighbor,False)
+		capa[Capability.ID.ADD_PATH] = path
+		capa[Capability.ID.MULTIPROTOCOL] = neighbor.families()
 
-	o1 = Open(4,n.local_as,str(n.local_address),capa,180)
-	o2 = Open(4,n.peer_as,str(n.peer_address),capa,180)
-	negotiated = Negotiated(n)
-	negotiated.sent(o1)
-	negotiated.received(o2)
-	#grouped = False
+		o1 = Open(4,neighbor.local_as,str(neighbor.local_address),capa,180)
+		o2 = Open(4,neighbor.peer_as,str(neighbor.peer_address),capa,180)
+		negotiated = Negotiated(neighbor)
+		negotiated.sent(o1)
+		negotiated.received(o2)
+		#grouped = False
 
-	for nei in neighbor.keys():
-		for message in neighbor[nei].rib.outgoing.updates(False):
+		for message in neighbor.rib.outgoing.updates(False):
 			pass
 
-		for change1 in neighbor[nei].rib.outgoing.sent_changes():
+		for change1 in neighbor.rib.outgoing.sent_changes():
 			str1 = change1.extensive()
 			packed = list(Update([change1.nlri],change1.attributes).messages(negotiated))
 			pack1 = packed[0]

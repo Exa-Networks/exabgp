@@ -295,7 +295,11 @@ class Reactor (object):
 		reloaded = self.configuration.reload()
 
 		if not reloaded:
+			#
+			# Careful the string below is used but the QA code to check for sucess of failure
 			self.logger.configuration("Problem with the configuration file, no change done",'error')
+			# Careful the string above is used but the QA code to check for sucess of failure
+			#
 			self.logger.configuration(self.configuration.error,'error')
 			return
 

@@ -93,7 +93,7 @@ class TrafficRedirect (ExtendedCommunity):
 		ExtendedCommunity.__init__(self,community if community is not None else pack("!BBHL",0x80,0x08,asn,target))
 
 	def __str__ (self):
-		return "redirect %s:%s" % (self.asn,self.target)
+		return "redirect:%s:%s" % (self.asn,self.target)
 
 	@staticmethod
 	def unpack (data):

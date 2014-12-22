@@ -23,11 +23,11 @@ def main ():
 	if not path.isfile(exabgp):
 		print "could not find exabgp"
 
-	test = path.abspath(path.join(location,'..','..','test'))
-	if not path.isdir(test):
-		sys.exit('could not find test folder')
+	conf = path.abspath(path.join(location,'..','..','conf'))
+	if not path.isdir(conf):
+		sys.exit('could not find conf folder')
 
-	sequence_daemon = path.abspath(path.join(location,'..','..','sbin','ibgp-check'))
+	sequence_daemon = path.abspath(path.join(location,'..','..','sbin','bgp'))
 	if not path.isfile(sequence_daemon):
 		sys.exit('could not find the sequence daemon')
 
@@ -43,7 +43,7 @@ def main ():
 		skip = 0
 		show = False
 
-	groups = sorted(glob.glob(path.join(test,'%s.group' % match.replace('all','*'))))
+	groups = sorted(glob.glob(path.join(conf,'%s.group' % match.replace('all','*'))))
 	groups = reverse(groups)
 
 	success = True

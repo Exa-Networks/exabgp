@@ -7,6 +7,10 @@ Version 3.4.6
  * Fix: a badly formated flow route would throw the parser in limbo
     reported by: NickGudov (issue #203)
  * Fix: allow multiple extended attribute (like flow rediction with a origin/target)
+ * Fix: use ICMP Type and Code when printing flows (respectively using name and number)
+ * Fix: do not use space printing redirect extended community
+ * Fix: not parsing correctly multisession configurations
+ * Feature: use ETC environment variable for configuration location if set
  * Feature: JSON now includes ASN (local,peer) and IP (local,IP)
     requested by: jtkdpu (issue #196)
     patch by: Ryan Tinianov (pull #199) for the IP
@@ -19,6 +23,7 @@ Version 3.4.6
  * QA: checking that broken flows do not break the parser
  * QA: checking that configuration routes are well added and removed on SIGUSR1
  * QA: checking that incoming notifications are handled correctly
+ * QA: moved many sample configuration file from etc/exabgp to the new qa/conf
 
 Version 3.4.5
  * Fix: improper distribution of events to process workers

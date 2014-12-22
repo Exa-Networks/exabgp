@@ -63,6 +63,9 @@ def main ():
 	else:
 		folder = '/etc/exabgp'
 
+	if not os.environ.get('ETC',''):
+		os.environ['ETC'] = folder
+
 	envfile = 'exabgp.env' if not  options["--env"] else options["--env"]
 	if not envfile.startswith('/'):
 		envfile = '%s/%s' % (folder, envfile)
