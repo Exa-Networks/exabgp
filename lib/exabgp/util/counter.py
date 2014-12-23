@@ -5,6 +5,8 @@ counter.py
 From python2.7 standard library
 """
 
+from _abcoll import *
+
 class Counter(dict):
     '''Dict subclass for counting hashable items.  Sometimes called a bag
     or multiset.  Elements are stored as dictionary keys and their counts
