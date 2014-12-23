@@ -14,6 +14,7 @@ script:
   - set pipefail
   - ./qa/bin/parsing
   - ./qa/bin/conversation
+  - coverage run -m unittest discover -s qa/test -p *_test.py
 
 after_success:
   - coveralls

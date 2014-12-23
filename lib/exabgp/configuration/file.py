@@ -13,7 +13,6 @@ import time
 import socket
 import shlex
 
-from pprint import pformat
 from copy import deepcopy
 from struct import pack
 from struct import unpack

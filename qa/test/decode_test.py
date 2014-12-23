@@ -1,13 +1,6 @@
 #!/usr/bin/env python
 
-from exabgp.configuration.environment import environment
-env = environment.setup('')
-
-header = [
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, # marker
-	0x1, 0x37, # len 311 (body is 296 - 296 + 19 = 315 !!)
-	0x2, # type Update
-]
+bodies = []
 
 body = [
 	0x0, 0x0, #len withdrawn routes
@@ -33,7 +26,7 @@ body = [
 		0x4, # len
 			0x7f, 0x0, 0x0, 0x1, # 127.0.0.1
 		0xc0, # 0x40 + 0x80 (Transitive Optional)
-		0x8, # Community
+		0x08, # Community
 		0x8, # Size 8
 			0x78, 0x14, 0x19, 0x35, # 30740:6453
 			0x78, 0x14, 0xfd, 0xeb, # 30740:65003
@@ -104,8 +97,8 @@ body = [
 		0x17, 0x1, 0x0, 0x1a
 ]
 
-
-header = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x1, 0x22, 0x2]
+# asn4, data
+bodies.append((True,body))
 
 body = [
 	0x0, 0x0,
@@ -191,24 +184,117 @@ body = [
 	0x17, 0x1, 0x0, 0x1a
 ]
 
-route = header + body
+# asn4, data
+bodies.append((True,body))
 
-from StringIO import StringIO
-from exabgp.reactor.protocol import Protocol
-from exabgp.reactor.peer import Peer
-from exabgp.bgp.neighbor import Neighbor
+import sys
 
-class Connection (StringIO):
-	def pending (self,**argv):
-		return True
+# Prefix include is required as it perform some AFI/SAFI registration
+from exabgp.bgp.message.update.nlri.prefix import Prefix
 
-cnx = Connection(''.join([chr(_) for _ in route]))
-neibor = Neighbor()
-peer = Peer(neibor,None)
+from exabgp.bgp.message.open.routerid import RouterID
+from exabgp.protocol.ip import IPv4
+from exabgp.bgp.message.open.asn import ASN
+from exabgp.bgp.message.open.holdtime import HoldTime
 
-#import pdb
-#pdb.set_trace()
+from exabgp.protocol.family import known_families
+from exabgp.bgp.message.update import Update
+from exabgp.bgp.message.open import Open
+from exabgp.bgp.message.open.capability import Capabilities
+from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.notification import Notify
 
-proto = Protocol(peer,cnx)
-proto._asn4 = True
-print proto.UpdateFactory(body)
+
+from exabgp.configuration.setup import environment
+env = environment.setup('')
+
+from exabgp.logger import Logger
+logger = Logger()
+
+
+class Neighbor:
+	description = 'a test neighbor'
+	router_id = RouterID('127.0.0.1')
+	local_address = IPv4('127.0.0.1')
+	peer_address = IPv4('127.0.0.1')
+	peer_as = ASN('65500')
+	local_as = ASN('65500')
+	hold_time = HoldTime(180)
+	asn4 = False
+	add_path = 0
+
+	# capability
+	route_refresh = False
+	graceful_restart = False
+	multisession = None
+	add_path = None
+	aigp = None
+
+	@staticmethod
+	def families ():
+		return known_families()
+
+import unittest
+
+# from contextlib import contextmanager
+# @contextmanager
+# def change_cwd(directory):
+#     current_dir = os.path.abspath(os.path.dirname(__file__))
+#     new_dir = os.path.join(current_dir, directory)
+#     old_cwd = os.getcwd()
+#     os.chdir(new_dir)
+#     try:
+#         yield
+#     finally:
+#         os.chdir(old_cwd)
+
+class TestUpdateDecoding (unittest.TestCase):
+	def setUp(self):
+		#env.log.all = True
+		self.negotiated = {}
+
+		for asn4 in (True,False):
+			neighbor = Neighbor()
+			neighbor.asn4 = asn4
+
+			capa = Capabilities().new(neighbor,False)
+			capa[Capability.ID.MULTIPROTOCOL] = neighbor.families()
+
+			# path = {}
+			# for f in known_families():
+			# 	if neighbor.add_path:
+			# 		path[f] = neighbor.add_path
+			# capa[Capability.ID.ADD_PATH] = path
+
+			o1 = Open(4,neighbor.local_as,str(neighbor.local_address),capa,180)
+			o2 = Open(4,neighbor.peer_as,str(neighbor.peer_address),capa,180)
+
+			negotiated = Negotiated(neighbor)
+			negotiated.sent(o1)
+			negotiated.received(o2)
+
+			self.negotiated[asn4] = negotiated
+
+	# size = len(body)+19
+	# header = [0xFF,]*16 + [size >> 8] + [size & 0xFF] + [0x02]
+	# print ''.join('%02X' % _ for _ in header+body
+
+	def test_decoding_udpate_asn (self):
+		try:
+			for asn4,body in bodies:
+				if asn4: continue
+				Update.unpack_message(''.join(chr(_) for _ in body),self.negotiated[asn4])
+		except Notify:
+			self.assertEqual(1,0)
+
+	def test_decoding_udpate_asn4 (self):
+		try:
+			for asn4,body in bodies:
+				if not asn4: continue
+				Update.unpack_message(''.join(chr(_) for _ in body),self.negotiated[asn4])
+		except Notify:
+			self.assertEqual(1,0)
+
+if __name__ == '__main__':
+    unittest.main()

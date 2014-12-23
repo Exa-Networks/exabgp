@@ -1,12 +1,26 @@
+#[run]
+#branch = True
+
 [report]
 exclude_line =
 	pragma: no cover
+	def __repr__
+	if self\.debug
+	raise AssertionError
+	raise NotImplementedError
+	if 0:
+	if False:
+	if __name__ == .__main__.:
 	pass
+
+ignore_errors = True
 
 [run]
 omit =
 	*/__init__.py
-	/qa/*
+	/qa/bin/*
+	/qa/sbin/*
+	/qa/conf/*
 	/dev/*
 	/etc/*
 	/bin/*
@@ -14,3 +28,6 @@ omit =
 	/dist/*
 	/debian/*
 	/service/*
+
+#[path]
+#source =

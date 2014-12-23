@@ -12,11 +12,26 @@ from struct import unpack
 from exabgp.util.od import od
 from exabgp.configuration.environment import environment
 
+# Must be imported for the register API to work
 from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import ASPath
+from exabgp.bgp.message.update.attribute.nexthop import NextHop
+from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
-from exabgp.bgp.message.update.attribute.generic import GenericAttribute
+from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
+from exabgp.bgp.message.update.attribute.aggregator import Aggregator
+from exabgp.bgp.message.update.attribute.community import Community
+from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
+from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
+from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
+from exabgp.bgp.message.update.attribute.community import Community
+from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+from exabgp.bgp.message.update.attribute.pmsi import PMSI
+from exabgp.bgp.message.update.attribute.aigp import AIGP
+# /forced import
 
 from exabgp.bgp.message.notification import Notify
 
@@ -310,7 +325,8 @@ class Attributes (dict):
 
 		# remove the PARTIAL bit before comparaison if the attribute is optional
 		if aid in Attribute.attributes_optional:
-			aid &= ~Attribute.Flag.PARTIAL & 0xFF
+			aid &= Attribute.Flag.MASK_PARTIAL & 0xFF
+			# aid &= ~Attribute.Flag.PARTIAL & 0xFF  # cleaner than above (python use signed integer for ~)
 
 		# handle the attribute if we know it
 		if Attribute.registered(aid,flag):
@@ -318,19 +334,19 @@ class Attributes (dict):
 			return self.parse(next,negotiated)
 		# XXX: FIXME: we could use a fallback function here like capability
 
-		# if we know the attribute but the flag is not what the RFC says.
+		# if we know the attribute but the flag is not what the RFC says. ignore it.
 		if aid in Attribute.attributes_known:
-			logger.parser('invalid flag for attribute %s (aid 0x%02X, flag 0x%02X)' % (Attribute.ID.names.get(aid,'unset'),aid,flag))
+			logger.parser('invalid flag for attribute %s (flag 0x%02X, aid 0x%02X)' % (Attribute.ID.names.get(aid,'unset'),flag,aid))
 			return self.parse(next,negotiated)
 
 		# it is an unknown transitive attribute we need to pass on
 		if flag & Attribute.Flag.TRANSITIVE:
-			logger.parser('unknown transitive attribute (aid 0x%02X, flag 0x%02X)' % (aid,flag))
+			logger.parser('unknown transitive attribute (flag 0x%02X, aid 0x%02X)' % (flag,aid))
 			self.add(GenericAttribute(aid,flag|Attribute.Flag.PARTIAL,attribute),attribute)
 			return self.parse(next,negotiated)
 
 		# it is an unknown non-transitive attribute we can ignore.
-		logger.parser('ignoring unknown non-transitive attribute (aid 0x%02X, flag 0x%02X)' % (aid,flag))
+		logger.parser('ignoring unknown non-transitive attribute (flag 0x%02X, aid 0x%02X)' % (flag,aid))
 		return self.parse(next,negotiated)
 
 	def merge_attributes (self):

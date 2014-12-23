@@ -121,6 +121,11 @@ class Attribute (object):
 		TRANSITIVE      = 0x40  # .  64 - 0100 0000
 		OPTIONAL        = 0x80  # . 128 - 1000 0000
 
+		MASK_EXTENDED   = 0xEF  # . 239 - 1110 1111
+		MASK_PARTIAL    = 0xDF  # . 223 - 1101 1111
+		MASK_TRANSITIVE = 0xBF  # . 191 - 1011 1111
+		MASK_OPTIONAL   = 0x7F  # . 127 - 0111 1111
+
 		__slots__ = []
 
 		def __str__ (self):

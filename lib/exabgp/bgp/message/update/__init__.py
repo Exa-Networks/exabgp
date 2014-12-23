@@ -268,7 +268,10 @@ class Update (Message):
 		addpath = negotiated.addpath.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
 
 		# empty string for NoIP, the packed IP otherwise (without the 3/4 bytes of attributes headers)
-		nexthop = attributes.get(Attribute.ID.NEXT_HOP,NoIP).packed
+		_nexthop = attributes.get(Attribute.ID.NEXT_HOP,None)
+		if _nexthop is None:
+			raise Notify(3,8,'no next-hop present')
+		nexthop = _nexthop.packed
 
 		nlris = []
 		while withdrawn:

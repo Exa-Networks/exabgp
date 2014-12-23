@@ -10,6 +10,7 @@ Version 3.4.6
  * Fix: use ICMP Type and Code when printing flows (respectively using name and number)
  * Fix: do not use space printing redirect extended community
  * Fix: not parsing correctly multisession configurations
+ * Fix: do not fail if the next-hop is absent from the UPDATE (RFC violation from sender)
  * Feature: use ETC environment variable for configuration location if set
  * Feature: JSON now includes ASN (local,peer) and IP (local,IP)
     requested by: jtkdpu (issue #196)
