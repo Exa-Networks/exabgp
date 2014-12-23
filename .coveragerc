@@ -1,0 +1,16 @@
+[report]
+exclude_line =
+	pragma: no cover
+	pass
+
+[run]
+omit =
+	*/__init__.py
+	/qa/*
+	/dev/*
+	/etc/*
+	/bin/*
+	/sbin/*
+	/dist/*
+	/debian/*
+	/service/*

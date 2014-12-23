@@ -30,7 +30,6 @@ from exabgp.logger import Logger
 from exabgp.logger import FakeLogger
 from exabgp.logger import LazyFormat
 
-from exabgp.util.counter import Counter
 from exabgp.util.trace import trace
 
 from exabgp.util.enumeration import Enumeration
@@ -446,7 +445,6 @@ class Peer (object):
 			if family in self.neighbor.families():
 				self.neighbor.messages.appendleft(self.neighbor.asm[family])
 
-		counter = Counter(self.logger,self.me)
 		operational = None
 		refresh = None
 		command_eor = None
@@ -463,12 +461,8 @@ class Peer (object):
 					while self.send_ka() is None:
 						yield ACTION.immediate
 
-				# Give information on the number of routes seen
-				counter.display()
-
 				# Received update
 				if message.TYPE == Update.TYPE:
-					counter.increment(len(message.nlris))
 					number += 1
 
 					self.logger.routes(LazyFormat(self.me('<< UPDATE (%d)' % number),lambda _: "%s%s" % (' attributes' if _ else '',_),message.attributes))

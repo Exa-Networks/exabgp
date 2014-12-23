@@ -5,7 +5,7 @@ python:
   - "pypy"
 
 install:
-  - true
+  - pip install coveralls
 
 script:
   - export INTERPRETER=python
@@ -14,3 +14,8 @@ script:
   - set pipefail
   - ./qa/bin/parsing
   - ./qa/bin/conversation
+
+after_success:
+  - coveralls
+
+sudo: false

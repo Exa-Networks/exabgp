@@ -15,8 +15,6 @@ case $dirname in
 	;;
 esac
 
-echo $path
-
 export PYTHONPATH=$path/lib
 
 if [ "$INTERPRETER" != "" ]
@@ -57,4 +55,8 @@ else
 	INTERPRETER=python
 fi
 
-exec $INTERPRETER $*
+if [ "$#" -eq 0 ];then
+	echo export INTERPRETER=$INTERPRETER
+else
+	exec $INTERPRETER $*
+fi

@@ -8,6 +8,9 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 from collections import deque
 
+# collections.counter is python2.7 only ..
+from exabgp.util.counter import Counter
+
 from exabgp.protocol.family import AFI
 
 from exabgp.bgp.message import Message
@@ -63,6 +66,7 @@ class Neighbor (object):
 		self.messages = deque()
 		self.refresh = deque()
 
+		self.counter = Counter()
 
 	def identificator (self):
 		# It is possible to :
