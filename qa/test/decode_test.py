@@ -203,7 +203,7 @@ from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.message.notification import Notify
+#from exabgp.bgp.message.notification import Notify
 
 
 from exabgp.configuration.setup import environment
@@ -250,7 +250,7 @@ import unittest
 #         os.chdir(old_cwd)
 
 class TestUpdateDecoding (unittest.TestCase):
-	def setUp(self):
+	def setUp (self):
 		#env.log.all = True
 		self.negotiated = {}
 
@@ -281,20 +281,14 @@ class TestUpdateDecoding (unittest.TestCase):
 	# print ''.join('%02X' % _ for _ in header+body
 
 	def test_decoding_udpate_asn (self):
-		try:
-			for asn4,body in bodies:
-				if asn4: continue
-				Update.unpack_message(''.join(chr(_) for _ in body),self.negotiated[asn4])
-		except Notify:
-			self.assertEqual(1,0)
+		for asn4,body in bodies:
+			if asn4: continue
+			Update.unpack_message(''.join(chr(_) for _ in body),self.negotiated[asn4])
 
 	def test_decoding_udpate_asn4 (self):
-		try:
-			for asn4,body in bodies:
-				if not asn4: continue
-				Update.unpack_message(''.join(chr(_) for _ in body),self.negotiated[asn4])
-		except Notify:
-			self.assertEqual(1,0)
+		for asn4,body in bodies:
+			if not asn4: continue
+			Update.unpack_message(''.join(chr(_) for _ in body),self.negotiated[asn4])
 
 if __name__ == '__main__':
     unittest.main()

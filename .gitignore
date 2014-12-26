@@ -6,3 +6,5 @@
 
 .DS_Store
 .coveralls.yml*
+.coverage
+.idea
