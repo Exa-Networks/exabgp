@@ -12,19 +12,108 @@ from exabgp.dep.cmd2 import cmd
 
 from exabgp.version import version
 
-class ExaBGP (cmd.Cmd):
 
-	doc_header = 'doc_header'
-	misc_header = 'misc_header'
-	undoc_header = 'undoc_header'
+
+class Completed (cmd.Cmd):
+	# use_rawinput = False
+	# prompt = ''
+
+	# doc_header = 'doc_header'
+	# misc_header = 'misc_header'
+	# undoc_header = 'undoc_header'
 
 	ruler = '-'
 
-	##
-	## Completion
-	##
+	def __init__ (self,intro):
+		self.prompt = '%s> ' % intro
+		cmd.Cmd.__init__(self)
 
-	_completion = {
+	def completedefault (self, text, line, begidx, endidx):
+		commands = line.split()
+		local = self.completion
+
+		for command in commands:
+			if command in local:
+				local = local[command]
+				continue
+			break
+
+		return [_ for _ in local.keys() if _.startswith(text)]
+
+	def default (self,line):
+		print 'unrecognised syntax: ', line
+
+	def do_EOF (self):
+		return True
+
+
+
+class SubMenu (Completed):
+	def do_exit (self,line):
+		return True
+
+	do_x = do_exit
+
+
+
+class Attribute (SubMenu):
+	chars = ''.join(chr(_) for _ in range(ord('a'),ord('z')+1) + range(ord('0'),ord('9')+1) + [ord ('-')])
+
+	attribute = None
+
+	completion = {
+		'origin' : {
+			'igp': {
+			},
+			'egp': {
+			},
+			'incomplete': {
+			},
+		},
+	}
+
+	def __init__ (self,name):
+		self.name = name
+		SubMenu.__init__(self,'attribute %s' % name)
+
+	def do_origin (self,line):
+		if line in ('igp','egp','incomplete'):
+			self.attribute['origin'] = line
+		else:
+			print 'invalid origin'
+
+	def do_as_path (self,line):
+		pass
+
+	# next-hop
+
+	def do_med (self,line):
+		if not line.isdigit():
+			print 'invalid med, %s is not a number' % line
+			return
+
+		med = int(line)
+		if 0 > med < 65536:
+			print 'invalid med, %s is not a valid number' % line
+		self.attribute['origin'] = line
+
+	# local-preference
+	# atomic-aggregate
+	# aggregator
+	# community
+	# originator-id
+	# cluster-list
+	# extended-community
+	# psmi
+	# aigp
+
+	def do_show (self,line):
+		print 'attribute %s ' % self.name + ' '.join('%s %s' % (key,value) for key,value in self.attribute.iteritems())
+
+
+
+class ExaBGP (Completed):
+	completion = {
 		'announce' : {
 			'route' : {
 			},
@@ -41,6 +130,8 @@ class ExaBGP (cmd.Cmd):
 			'list': {
 			},
 		},
+		'attribute' : {
+		},
 		'show': {
 			'routes' : {
 				'extensive': {
@@ -54,30 +145,6 @@ class ExaBGP (cmd.Cmd):
 		'restart': {
 		},
 	}
-
-	def completedefault (self, text, line, begidx, endidx):
-		commands = line.split()
-		local = self._completion
-
-		for command in commands:
-			if command in local:
-				local = local[command]
-				continue
-			break
-
-		return [_ for _ in local.keys() if _.startswith(text)]
-
-	def default (self,line):
-		print 'unrecognised syntax: ', line
-
-
-	##
-	## prompt
-	##
-
-	# use_rawinput = False
-	# prompt = ''
-	prompt = '\n> '
 
 	def _update_prompt (self):
 		if self._neighbors:
@@ -138,66 +205,33 @@ class ExaBGP (cmd.Cmd):
 		print "neighbor exclude <ip> : remove a particular neighbor"
 		print "neighbor reset        : clear the neighbor previous set "
 
-	##
-	## show
-	##
+	_attribute = {}
 
-	def do_show (self, line):
-		command = line.split()[0]
+	def do_attribute (self,name):
+		if not name:
+			self.help_attribute()
+			return
+		invalid = ''.join([_ for _ in name if _ not in Attribute.chars])
+		if invalid:
+			print 'invalid character(s) in attribute name: %s' % invalid
+			return
+		cli = Attribute(name)
+		cli.attribute = self._attribute.get(name,{})
+		cli.cmdloop()
 
-		if line == 'route':
-			return _show_routes(line)
+	def help_attribute (self):
+		print 'attribute <name>'
 
-		if not line:
-			return help_show()
-
-		print 'not implemented'
-
-
-	def do_exit (self, line):
-		return True
-
-	def do_quit (self, line):
+	def do_quit (self,line):
 		return True
 
 	do_q = do_quit
 
 
-	# def do_prompt (self, line):
-	# 	self.prompt = line + ' '
-
-	def preloop (self):
-		pass
-
-	def precmd (self, line):
-		self.last = line
-		return cmd.Cmd.precmd(self,line)
-
-	def postcmd (self, stop, line):
-		return cmd.Cmd.postcmd(self, stop, line)
-
-	def postloop (self):
-		pass
-
-	def parseline (self, line):
-		ret = cmd.Cmd.parseline(self, line)
-		return ret
-
-	def cmdloop (self, intro=''):
-		return cmd.Cmd.cmdloop(self, intro)
-
-	def onecmd (self, s):
-		return cmd.Cmd.onecmd(self, s)
-
-	def emptyline (self):
-		return cmd.Cmd.emptyline(self)
-
-	def default (self, line):
-		return cmd.Cmd.default(self, line)
 
 if __name__ == '__main__':
 	if len(sys.argv) > 1:
 		ExaBGP().onecmd(' '.join(sys.argv[1:]))
 	else:
-		ExaBGP().cmdloop("""\
-ExaBGP %s CLI""" % version)
+		print "ExaBGP %s CLI" % version
+		ExaBGP('').cmdloop()
