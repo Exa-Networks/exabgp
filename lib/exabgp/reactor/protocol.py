@@ -11,6 +11,8 @@ import os
 from exabgp.reactor.network.outgoing import Outgoing
 #from exabgp.reactor.network.error import NotifyError
 
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.nop import NOP
 from exabgp.bgp.message.nop import _NOP
@@ -274,14 +276,20 @@ class Protocol (object):
 			self.logger.message(self.me('>> %d UPDATE(s)' % number))
 		yield _UPDATE
 
-	def new_eors (self):
+	def new_eor (self,afi,safi):
+		eor = EOR(afi,safi)
+		for _ in self.write(eor.message()):
+			yield _NOP
+		self.logger.message(self.me('>> EOR %s %s' % (afi,safi)))
+		yield eor
+
+	def new_eors (self,afi=AFI.undefined,safi=SAFI.undefined):
 		# Send EOR to let our peer know he can perform a RIB update
 		if self.negotiated.families:
-			for afi,safi in self.negotiated.families:
-				eor = EOR(afi,safi).message()
-				for _ in self.write(eor):
-					yield _NOP
-				yield _UPDATE
+			families = self.negotiated.families if (afi,safi) == (AFI.undefined,SAFI.undefined) else [(afi,safi),]
+			for eor_afi,eor_safi in families:
+				for _ in self.new_eor(eor_afi,eor_safi):
+					yield _
 		else:
 			# If we are not sending an EOR, send a keepalive as soon as when finished
 			# So the other routers knows that we have no (more) routes to send ...

@@ -21,11 +21,11 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 # +  Bit 4 - Last fragment (LF)
 
 class Fragment (int):
-#	reserved  = 0xF0
-	LAST      = 0x08
-	FIRST     = 0x04
-	IS        = 0x02
-	DONT      = 0x01
+#	reserved = 0xF0
+	LAST     = 0x08
+	FIRST    = 0x04
+	IS       = 0x02
+	DONT     = 0x01
 
 	def __str__ (self):
 		if self == 0x00:       return 'not-a-fragment'
@@ -42,4 +42,4 @@ def NamedFragment (name):
 	if fragment == 'is-fragment':    return Fragment(Fragment.IS)
 	if fragment == 'first-fragment': return Fragment(Fragment.FIRST)
 	if fragment == 'last-fragment':  return Fragment(Fragment.LAST)
-	raise ValueError('invalid fragment name %s' % fragment)
+	raise ValueError('unknown fragment name %s' % fragment)

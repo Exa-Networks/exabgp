@@ -5,3 +5,4 @@
 /sdist/
 
 .DS_Store
+.coveralls.yml*

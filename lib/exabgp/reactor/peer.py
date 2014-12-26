@@ -15,7 +15,6 @@ from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import REFRESH
 from exabgp.bgp.message.nop import NOP
-from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.notification import Notification
@@ -31,7 +30,6 @@ from exabgp.logger import Logger
 from exabgp.logger import FakeLogger
 from exabgp.logger import LazyFormat
 
-from exabgp.util.counter import Counter
 from exabgp.util.trace import trace
 
 from exabgp.util.enumeration import Enumeration
@@ -136,6 +134,8 @@ class Peer (object):
 		self._restarted = FORCE_GRACEFUL
 		self._reset_skip()
 
+		# We want to remove routes which are not in the configuration anymote afte a signal to reload
+		self._reconfigure = True
 		# We want to send all the known routes
 		self._resend_routes = SEND.done
 		# We have new routes for the peers
@@ -231,7 +231,7 @@ class Peer (object):
 			self.neighbor.rib.outgoing.replace(changes)
 		self._have_routes = self.neighbor.flush if update is None else update
 
-	def restart (self,restart_neighbor=None):
+	def reestablish (self,restart_neighbor=None):
 		# we want to tear down the session and re-establish it
 		self._teardown = 3
 		self._restart = True
@@ -239,6 +239,13 @@ class Peer (object):
 		self._resend_routes = SEND.normal
 		self._neighbor = restart_neighbor
 		self._reset_skip()
+
+	def reconfigure (self,restart_neighbor=None):
+		# we want to update the route which were in the configuration file
+		self._reconfigure = True
+		self._neighbor = restart_neighbor
+		self._resend_routes = SEND.normal
+		self._neighbor = restart_neighbor
 
 	def teardown (self,code,restart=True):
 		self._restart = restart
@@ -438,9 +445,9 @@ class Peer (object):
 			if family in self.neighbor.families():
 				self.neighbor.messages.appendleft(self.neighbor.asm[family])
 
-		counter = Counter(self.logger,self.me)
 		operational = None
 		refresh = None
+		command_eor = None
 		number = 0
 
 		self.send_ka = KA(self.me,proto)
@@ -454,12 +461,8 @@ class Peer (object):
 					while self.send_ka() is None:
 						yield ACTION.immediate
 
-				# Give information on the number of routes seen
-				counter.display()
-
 				# Received update
 				if message.TYPE == Update.TYPE:
-					counter.increment(len(message.nlris))
 					number += 1
 
 					self.logger.routes(LazyFormat(self.me('<< UPDATE (%d)' % number),lambda _: "%s%s" % (' attributes' if _ else '',_),message.attributes))
@@ -501,6 +504,19 @@ class Peer (object):
 							refresh = None
 
 				# Take the routes already sent to that peer and resend them
+				if self._reconfigure:
+					self._reconfigure = False
+
+					# we are here following a configuration change
+					if self._neighbor:
+						# see what changed in the configuration
+						self.neighbor.rib.outgoing.replace(self._neighbor.backup_changes,self._neighbor.changes)
+						# do not keep the previous routes in memory as they are not useful anymore
+						self._neighbor.backup_changes = []
+
+					self._have_routes = True
+
+				# Take the routes already sent to that peer and resend them
 				if self._resend_routes != SEND.done:
 					enhanced_refresh = True if self._resend_routes == SEND.refresh and proto.negotiated.refresh == REFRESH.enhanced else False
 					self._resend_routes = SEND.done
@@ -530,8 +546,25 @@ class Peer (object):
 						yield ACTION.immediate
 					self.logger.message(self.me('>> EOR(s)'))
 
-				# Go to other Peers
-				yield ACTION.immediate if new_routes or message.TYPE != NOP.TYPE or self.neighbor.messages else ACTION.later
+				# SEND MANUAL KEEPALIVE (only if we have no more routes to send)
+				elif not command_eor and self.neighbor.eor:
+						new_eor = self.neighbor.eor.popleft()
+						command_eor = proto.new_eors(new_eor.afi,new_eor.safi)
+
+				if command_eor:
+					try:
+						command_eor.next()
+					except StopIteration:
+						command_eor = None
+
+				if new_routes or message.TYPE != NOP.TYPE:
+					yield ACTION.immediate
+				elif self.neighbor.messages or operational:
+					yield ACTION.immediate
+				elif self.neighbor.eor or command_eor:
+					yield ACTION.immediate
+				else:
+					yield ACTION.later
 
 				# read_message will loop until new message arrives with NOP
 				if self._teardown:
@@ -590,6 +623,11 @@ class Peer (object):
 		# THE PEER NOTIFIED US OF AN ERROR
 		except Notification, n:
 			self._reset(direction,'notification received (%d,%d)' % (n.code,n.subcode),n)
+
+			# we tried to connect once, it failed, we stop
+			if self.once:
+				self.logger.network('only one attempt to connect is allowed, stopping the peer')
+				self.stop()
 			return
 
 		# RECEIVED a Message TYPE we did not expect

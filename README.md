@@ -1,5 +1,9 @@
 ##Overview
 
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Exa-Networks/exabgp?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Build Status](https://travis-ci.org/Exa-Networks/exabgp.svg)](https://travis-ci.org/Exa-Networks/exabgp)
+[![Coverage Status](https://img.shields.io/coveralls/Exa-Networks/exabgp.svg)](https://coveralls.io/r/Exa-Networks/exabgp)
+
 [ExaBGP](http://github.com/Exa-Networks/exabgp) was not designed to transform a general purpose server into a router, but to allow engineers to control their network from commodity servers.
 Think of it as [Software Defined Networking](http://en.wikipedia.org/wiki/Software-defined_networking) using [BGP](http://en.wikipedia.org/wiki/BGP).
 
@@ -16,9 +20,9 @@ The program is [BSD licenced](https://github.com/Exa-Networks/exabgp/blob/master
 So have a look and take control your network from any unix servers.
 
 ```sh
-> wget https://github.com/Exa-Networks/exabgp/archive/3.4.3.tar.gz
-> tar zxvf 3.4.3.tar.gz
-> cd exabgp-3.4.3
+> wget https://github.com/Exa-Networks/exabgp/archive/3.4.4.tar.gz
+> tar zxvf 3.4.4.tar.gz
+> cd exabgp-3.4.4
 > ./sbin/exabgp --help
 ```
 
@@ -47,7 +51,15 @@ Please let us know if you use it.
 
 ### Extensive RFC support
 
-**IPv6** [RFC 4760](http://www.ietf.org/rfc/rfc4760.txt), **ASN4** [RFC 4893](http://www.ietf.org/rfc/rfc4893.txt), **Flow** [RFC 5575](http://tools.ietf.org/html/rfc5575), **MPLS** [RFC 4659](http://tools.ietf.org/html/rfc4659) (with vpnv6), **VPLS** [RFC 4762](http://tools.ietf.org/html/rfc4762), **Graceful Restart** support, [RFC 4724](http://www.ietf.org/rfc/rfc4724.txt), **Enhanced Route Refresh**, [RFC 7313](http://tools.ietf.org/html/rfc7313), **AIGP**, [RFC 7311](http://tools.ietf.org/html/rfc7311), **[more](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information)**
+**IPv6** [RFC 4760](http://www.ietf.org/rfc/rfc4760.txt),
+**ASN4** [RFC 4893](http://www.ietf.org/rfc/rfc4893.txt),
+**Flow** [RFC 5575](http://tools.ietf.org/html/rfc5575),
+**MPLS** [RFC 4659](http://tools.ietf.org/html/rfc4659) (with vpnv6),
+**VPLS** [RFC 4762](http://tools.ietf.org/html/rfc4762),
+**Graceful Restart** support [RFC 4724](http://www.ietf.org/rfc/rfc4724.txt),
+**Enhanced Route Refresh** [RFC 7313](http://tools.ietf.org/html/rfc7313),
+**AIGP** [RFC 7311](http://tools.ietf.org/html/rfc7311),
+**[more](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information)**
 
 ### Many drafts
 
@@ -76,35 +88,14 @@ For more information, please consult any of :
 
 No software is perfect.
 
-ExaBGP is supported through Github [https://github.com/Exa-Networks/exabgp/issues](issue tracker) on a best effort basis. So should you encounter a bug please [report it](https://github.com/Exa-Networks/exabgp/issues?labels=bug&page=1&state=open) so we can help you resolve it.
+ExaBGP is supported through Github [issue tracker](https://github.com/Exa-Networks/exabgp/issues) on a best effort basis. So should you encounter a bug please [report it](https://github.com/Exa-Networks/exabgp/issues?labels=bug&page=1&state=open) so we can help you resolve it.
 
-##Commercial support
+##Support
 
-We try to be reactive to any problem raised, and hopefully are not too bad at it. However commercial support is available if your organisation requires it.
+We try to be reactive to any problem raised, and hopefully are not too bad at it. Bug will be fixed when reported.
+Some organisation are however enable to deploy an applicatoin without commercial support, therefore it is available if your organisation requires it.
 
-### New on 3.4 stable ...
-
- * Important speed improvements
- * **VPLS**, [RFC 4762](http://tools.ietf.org/html/rfc4762) support
- * Better (but sometimes incompatible) JSON format
-   * new OPEN message
-   * detailled FlowSpec
-   * UPDATE sequence number
-   * new EOR object
-   * possibility to group raw and parsed information in one object
- * new capability configuration section (kept backward compatibility for this release)
- * option to respawn dead helper if they die
- * removal of the option exabgp.tcp.timeout ( not needed anymore )
- * Large rewrite of UPDATE parsing
- * Integrate [Orange BAGPIPE](https://github.com/Orange-OpenSource/bagpipe-bgp) work
-   * EVPN NLRI
-   * RTC, encapsulation attributes
-   * not yet exposed through the configuration file
- * removal of dependency on argparse for python 2.6 ( using docopt )
- * many bug fixes
- * and surely more ....
-
-The configuration file format changes from version to version effort are made to make sure the previous configuration format should still work, however users are encouraged to check their configuration files after upgrade.
+The configuration file format changes from version to version, but effort are made to make sure backward compatibility is kept, however users are encouraged to read the release note and check their setup after upgrade.
 
 ##Related Projects
 

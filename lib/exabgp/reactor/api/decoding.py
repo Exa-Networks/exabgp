@@ -11,6 +11,7 @@ from exabgp.configuration.file import formated
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import Family
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message import OUT
 
@@ -35,12 +36,18 @@ class Text (Configuration):
 
 	def parse_api_route (self,command,peers,action):
 		tokens = formated(command).split(' ')[1:]
-		if len(tokens) == 2 and action == 'withdraw' and 'next-hop' not in tokens:
+		lt = len(tokens)
+
+		if lt < 1: return False
+
+		message = tokens[0]
+
+		if message not in ('route',):
+			return False
+
+		if lt == 2 and action == 'withdraw' and 'next-hop' not in tokens:
 			tokens.extend(['next-hop','0.0.0.0'])
-		if len(tokens) < 4:
-			return False
-		if tokens[0] != 'route':
-			return False
+
 		changes = []
 		if 'self' in command:
 			for peer,nexthop in peers.iteritems():
@@ -59,6 +66,7 @@ class Text (Configuration):
 			for peer in peers:
 				for change in scope[0]['announce']:
 					changes.append((peer,change))
+
 		if action == 'withdraw':
 			for (peer,change) in changes:
 				change.nlri.action = OUT.withdraw
@@ -128,7 +136,7 @@ class Text (Configuration):
 	def parse_api_flow (self,command,action):
 		self._tokens = self._tokenise(' '.join(formated(command).split(' ')[2:]).split('\\n'))
 		scope = [{}]
-		if not self._dispatch(scope,'flow',['route',],[]):
+		if not self._dispatch(scope,'flow',['route',],[],['root']):
 			return False
 		if not self._check_flow_route(scope):
 			return False
@@ -147,6 +155,26 @@ class Text (Configuration):
 		if afi is None or safi is None:
 			return False
 		return RouteRefresh(afi,safi)
+
+	def parse_api_eor (self,command):
+		tokens = formated(command).split(' ')[2:]
+		lt = len(tokens)
+
+		if not lt:
+			return Family(1,1)
+
+		if lt !=2:
+			return False
+
+		afi = AFI.fromString(tokens[0])
+		if afi == AFI.undefined:
+			return False
+
+		safi = SAFI.fromString(tokens[1])
+		if safi == SAFI.undefined:
+			return False
+
+		return Family(afi,safi)
 
 	def parse_api_operational (self,command):
 		tokens = formated(command).split(' ',2)
@@ -636,6 +664,34 @@ class Decoder (object):
 					else:
 						self.logger.reactor("Could not find therefore remove flow : %s" % change.extensive(),'warning')
 						yield False
+				reactor.route_update = True
+
+		try:
+			descriptions,command = Decoder.extract_neighbors(command)
+			peers = reactor.match_neighbors(descriptions)
+			if not peers:
+				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+				return False
+			reactor.plan(_callback(self,command,peers))
+			return True
+		except ValueError:
+			return False
+		except IndexError:
+			return False
+
+	# eor
+
+	@register_command('announce eor',_dispatch,_order)
+	def _announce_eor (self,reactor,service,command):
+		def _callback (self,command,peers):
+			family = self.format.parse_api_eor(command)
+			if not family:
+				self.logger.reactor("Command could not parse eor : %s" % command)
+				yield True
+			else:
+				reactor.configuration.eor_to_peers(family,peers)
+				self.logger.reactor("Sent to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',family.extensive()))
+				yield False
 				reactor.route_update = True
 
 		try:

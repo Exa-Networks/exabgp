@@ -1,0 +1,17 @@
+#!/usr/bin/env python
+
+import sys
+import time
+
+messages = [
+'announce route 3.0.0.0/24 next-hop 4.0.0.0',
+]
+
+while messages:
+	time.sleep(5)
+	message = messages.pop(0)
+	sys.stdout.write(message + '\n')
+	sys.stdout.flush()
+
+while True:
+	time.sleep(1)

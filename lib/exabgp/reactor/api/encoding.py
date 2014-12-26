@@ -16,37 +16,37 @@ from exabgp.bgp.message import IN
 
 class APIOptions (dict):
 	def receive_parsed (self,value):
-		self['receive-parsed'] = self.get('receive-parsed',value)
+		self['receive-parsed'] = self.get('receive-parsed',False) or value
 
 	def receive_packets (self,value):
-		self['receive-packets']  = self.get('receive-packets',value)
+		self['receive-packets']  = self.get('receive-packets',False) or value
 
 	def consolidate (self,value):
-		self['consolidate'] = self.get('consolidate',value)
+		self['consolidate'] = self.get('consolidate',False) or value
 
 	def send_packets (self,value):
-		self['send-packets'] = self.get('send_packets',value)
+		self['send-packets'] = self.get('send_packets',False) or value
 
 	def neighbor_changes (self,value):
-		self['neighbor-changes'] = self.get('neighbor_changes',value)
+		self['neighbor-changes'] = self.get('neighbor_changes',False) or value
 
 	def receive_notifications (self,value):
-		self[Message.ID.NOTIFICATION] = self.get(Message.ID.NOTIFICATION,value)
+		self[Message.ID.NOTIFICATION] = self.get(Message.ID.NOTIFICATION,False) or value
 
 	def receive_opens (self,value):
-		self[Message.ID.OPEN] = self.get(Message.ID.OPEN,value)
+		self[Message.ID.OPEN] = self.get(Message.ID.OPEN,False) or value
 
 	def receive_keepalives (self,value):
-		self[Message.ID.KEEPALIVE] = self.get(Message.ID.KEEPALIVE,value)
+		self[Message.ID.KEEPALIVE] = self.get(Message.ID.KEEPALIVE,False) or value
 
 	def receive_updates (self,value):
-		self[Message.ID.UPDATE] = self.get(Message.ID.UPDATE,value)
+		self[Message.ID.UPDATE] = self.get(Message.ID.UPDATE,False) or value
 
 	def receive_refresh (self,value):
-		self[Message.ID.ROUTE_REFRESH] = self.get(Message.ID.ROUTE_REFRESH,value)
+		self[Message.ID.ROUTE_REFRESH] = self.get(Message.ID.ROUTE_REFRESH,False) or value
 
 	def receive_operational (self,value):
-		self[Message.ID.OPERATIONAL] = self.get(Message.ID.OPERATIONAL,value)
+		self[Message.ID.OPERATIONAL] = self.get(Message.ID.OPERATIONAL,False) or value
 
 	def __missing__ (self,key):
 		return False
@@ -197,12 +197,18 @@ class JSON (object):
 		'}' % (self.version,self.time(time.time()),peer,pid,ppid,counter,mtype,header,body,content)
 
 	def _neighbor (self,peer,content):
-		peer_neighbor_adress='"ip": "%s", ' % peer.neighbor.peer_address if content else '"ip": "%s"' % peer.neighbor.peer_address
+		neighbor = peer.neighbor
+
+		# XXX: ip: is depecated and should be removed (be careful)
+		ip ='"ip": "%s", ' % neighbor.peer_address
+
+		address = '"address": { "local": "%s", "peer": "%s"}, ' % (neighbor.local_address,neighbor.peer_address)
+		asn = '"asn": { "local": "%s", "peer": "%s"}' % (neighbor.local_as,neighbor.peer_as)
+		separator = ', ' if content else ''
 		return \
 		'"neighbor": { ' \
-			'%s' \
-			'%s' \
-		'} '% (peer_neighbor_adress,content)
+			'%s%s%s%s%s' \
+		'} '% (ip,address,asn,separator,content)
 
 	def _bmp (self,neighbor,content):
 		return \

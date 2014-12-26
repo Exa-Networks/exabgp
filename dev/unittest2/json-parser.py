@@ -194,7 +194,7 @@ def _make_config ():
 
 def test ():
 	from exabgp.configuration.json import load
-from exabgp.configuration.json import JSONError
+	from exabgp.configuration.json import JSONError
 
 	try:
 		name = _make_config()

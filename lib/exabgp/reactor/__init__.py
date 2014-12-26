@@ -35,7 +35,7 @@ class Reactor (object):
 	# [hex(ord(c)) for c in os.popen('clear').read()]
 	clear = ''.join([chr(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a']])
 
-	def __init__ (self,configuration):
+	def __init__ (self,configurations):
 		self.ip = environment.settings().tcp.bind
 		self.port = environment.settings().tcp.port
 		self.respawn = environment.settings().api.respawn
@@ -46,7 +46,7 @@ class Reactor (object):
 		self.daemon = Daemon(self)
 		self.processes = None
 		self.listener = None
-		self.configuration = Configuration(configuration)
+		self.configuration = Configuration(configurations)
 		self.decoder = Decoder()
 
 		self.peers = {}
@@ -295,31 +295,34 @@ class Reactor (object):
 		reloaded = self.configuration.reload()
 
 		if not reloaded:
+			#
+			# Careful the string below is used but the QA code to check for sucess of failure
 			self.logger.configuration("Problem with the configuration file, no change done",'error')
+			# Careful the string above is used but the QA code to check for sucess of failure
+			#
 			self.logger.configuration(self.configuration.error,'error')
 			return
 
 		for key, peer in self.peers.items():
 			if key not in self.configuration.neighbor:
-				self.logger.reactor("Removing Peer %s" % peer.neighbor.name())
+				self.logger.reactor("Removing peer: %s" % peer.neighbor.name())
 				peer.stop()
 
 		for key, neighbor in self.configuration.neighbor.items():
 			# new peer
 			if key not in self.peers:
-				self.logger.reactor("New Peer %s" % neighbor.name())
+				self.logger.reactor("New peer setup: %s" % neighbor.name())
 				peer = Peer(neighbor,self)
 				self.peers[key] = peer
 			# modified peer
 			elif self.peers[key].neighbor != neighbor:
-				self.logger.reactor("Peer definition change, restarting %s" % str(key))
-				self.peers[key].restart(neighbor)
+				self.logger.reactor("Peer definition change, establishing a new connection for %s" % str(key))
+				self.peers[key].reestablish(neighbor)
 			# same peer but perhaps not the routes
 			else:
 				# finding what route changed and sending the delta is not obvious
-				# self.peers[key].send_new(neighbor.rib.outgoing.queued_changes())
-				self.logger.reactor("restarting %s" % str(key))
-				self.peers[key].restart(neighbor)
+				self.logger.reactor("Peer definition identical, updating peer routes if required for %s" % str(key))
+				self.peers[key].reconfigure(neighbor)
 		self.logger.configuration("Loaded new configuration successfully",'warning')
 		# This only starts once ...
 		self.processes.start(restart)
@@ -377,7 +380,7 @@ class Reactor (object):
 				self.logger.reactor("Removing Peer %s" % neighbor.name())
 				self.peers[key].stop()
 			else:
-				self.peers[key].restart()
+				self.peers[key].reestablish()
 		self.processes.terminate()
 		self.processes.start()
 

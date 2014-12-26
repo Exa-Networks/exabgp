@@ -95,10 +95,10 @@ class Capability (object):
 		return '0x' + ''.join('%02x' % ord(_) for _ in data)
 
 	@classmethod
-	def fallback_capability (cls):
+	def fallback_capability (cls, imp):
 		if cls._fallback_capability is not None:
 			raise RuntimeError('only one fallback function can be registered')
-		cls._fallback_capability = cls
+		cls._fallback_capability = imp
 
 	@classmethod
 	def register_capability (cls,capability=None):

@@ -8,6 +8,7 @@ Copyright (c) 2009 Exa Networks. All rights reserved.
 
 import os
 import sys
+import platform
 import string
 import syslog
 
@@ -19,97 +20,9 @@ from exabgp.dep import docopt
 from exabgp.dep import lsprofcalltree
 
 from exabgp.debug import setup_report
+from exabgp.configuration.usage import usage
+
 setup_report()
-
-usage = """\
-The BGP swiss army knife of networking
-
-usage: exabgp [--help] [--version] [--folder FOLDER] [--env ENV]
-              [[--full-ini | --diff-ini | --full-env | --diff-env] |
-              [--fi | --di | --fe | --de]]
-              [--debug] [--pdb] [--test]
-              [--once] [--signal TIME]
-              [--memory] [--profile PROFILE]
-              [--decode HEX_MESSAGE]...
-              [<configuration>...]
-
-positional arguments:
-  configuration         peer and route configuration file
-
-optional arguments:
-  --help, -h            exabgp manual page
-  --version, -v         shows ExaBGP version
-  --folder FOLDER, -f FOLDER
-                        configuration folder
-  --env ENV, -e ENV     environment configuration file
-  --full-ini            display the configuration using the ini format
-  --fi                  (shorthand for above)
-  --diff-ini            display non-default configurations values using the ini
-                        format
-  --di                  (shorthand for above)
-  --full-env            display the configuration using the env format
-  --fe                  (shorthand for above)
-  --diff-env            display non-default configurations values using the env
-                        format
-  --de                  (shorthand for above)
-
-debugging:
-  --debug, -d           start the python debugger on serious logging and on
-                        SIGTERM (shortcut for exabgp.log.all=true
-                        exabgp.log.level=DEBUG)
-  --signal TIME         issue a SIGUSR1 to reload the configuraiton after
-                        <time> seconds, only useful for code debugging
-  --once, -1            only perform one attempt to connect to peers (used for
-                        debugging)
-  --pdb, -p             fire the debugger on critical logging, SIGTERM, and
-                        exceptions (shortcut for exabgp.pdb.enable=true)
-  --memory, -s          display memory usage information on exit
-  --profile PROFILE     enable profiling (shortcut for
-                        exabgp.profile.enable=true exabgp.profile.file=PROFILE)
-  --test, -t            perform a configuration validity check only
-  --decode HEX_MESSAGE, -x HEX_MESSAGE
-                        decode a raw route packet in hexadecimal string
-
-
-ExaBGP will automatically look for its configuration file (in windows ini
-format):
- * in the etc/exabgp folder located within the extracted tar.gz
- * in /etc/exabgp/exabgp.env
-
-Individual configuration options can be set using environment variables, such
-as:
- > env exabgp.daemon.daemonize=true ./sbin/exabgp
-or:
- > env exabgp.daemon.daemonize=true ./sbin/exabgp
-or:
- > export exabgp.daemon.daemonize=true; ./sbin/exabgp
-
-Multiple environment values can be set, the order of preference being:
- 1) command line environment value using dot separated notation
- 2) exported value from the shell using dot separated notation
- 3) command line environment value using underscore separated notation
- 4) exported value from the shell using underscore separated notation
- 5) the value in the ini configuration file
- 6) the built-in defaults
-
-For example :
- > env exabgp.profile.enable=true \\
-      exabgp.profile.file=~/profile.log  \\
-      exabgp.log.packets=true \\
-      exabgp.log.destination=host:127.0.0.1 \\
-      exabgp.daemon.user=wheel \\
-      exabgp.daemon.daemonize=true \\
-      exabgp.daemon.pid=/var/run/exabpg.pid \\
- > ./bin/exabgp ./etc/bgp/configuration.txt
-
-The program configuration can be controlled using signals:
- * SIGLARM : restart ExaBGP
- * SIGUSR1 : reload the configuration
- * SIGUSR2 : reload the configuration and the forked processes
- * SIGTERM : terminate ExaBGP
- * SIGHUP  : terminate ExaBGP (does NOT reload the configuration anymore)
-"""
-
 
 def is_hex (s):
 	return all(c in string.hexdigits or c == ':' for c in s)
@@ -138,7 +51,9 @@ def main ():
 		sys.exit('This program can not work (is not tested) with your python version (< 2.5 or >= 3.0)')
 
 	if options["--version"]:
-		print(version)
+		print 'ExaBGP : %s' % version
+		print 'Python : %s' % sys.version.replace('\n',' ')
+		print 'Uname  : %s' % platform.version()
 		sys.exit(0)
 
 	if options["--folder"]:
@@ -148,89 +63,14 @@ def main ():
 	else:
 		folder = '/etc/exabgp'
 
+	if not os.environ.get('ETC',''):
+		os.environ['ETC'] = folder
+
 	envfile = 'exabgp.env' if not  options["--env"] else options["--env"]
 	if not envfile.startswith('/'):
 		envfile = '%s/%s' % (folder, envfile)
 
-	from exabgp.configuration.environment import environment
-
-	environment.application = 'exabgp'
-	environment.configuration = {
-		'profile' : {
-			'enable'        : (environment.boolean,environment.lower,'false',    'toggle profiling of the code'),
-			'file'          : (environment.unquote,environment.quote,'',         'profiling result file, none means stdout, no overwriting'),
-		},
-		'pdb' : {
-			'enable'        : (environment.boolean,environment.lower,'false',    'on program fault, start pdb the python interactive debugger'),
-		},
-		'daemon' : {
-	#		'identifier'    : (environment.unquote,environment.nop,'ExaBGP',     'a name for the log (to diferenciate multiple instances more easily)'),
-			'pid'           : (environment.unquote,environment.quote,'',         'where to save the pid if we manage it'),
-			'user'          : (environment.user,environment.quote,'nobody',      'user to run as'),
-			'daemonize'     : (environment.boolean,environment.lower,'false',    'should we run in the background'),
-		},
-		'log' : {
-			'enable'        : (environment.boolean,environment.lower,'true',     'enable logging'),
-			'level'         : (environment.syslog_value,environment.syslog_name,'INFO', 'log message with at least the priority SYSLOG.<level>'),
-			'destination'   : (environment.unquote,environment.quote,'stdout', 'where logging should log\n' \
-			                  '                                  syslog (or no setting) sends the data to the local syslog syslog\n' \
-			                  '                                  host:<location> sends the data to a remote syslog server\n' \
-			                  '                                  stdout sends the data to stdout\n' \
-			                  '                                  stderr sends the data to stderr\n' \
-			                  '                                  <filename> send the data to a file' \
-			),
-			'all'           : (environment.boolean,environment.lower,'false',    'report debug information for everything'),
-			'configuration' : (environment.boolean,environment.lower,'true',     'report command parsing'),
-			'reactor'       : (environment.boolean,environment.lower,'true',     'report signal received, command reload'),
-			'daemon'        : (environment.boolean,environment.lower,'true',     'report pid change, forking, ...'),
-			'processes'     : (environment.boolean,environment.lower,'true',     'report handling of forked processes'),
-			'network'       : (environment.boolean,environment.lower,'true',     'report networking information (TCP/IP, network state,...)'),
-			'packets'       : (environment.boolean,environment.lower,'false',    'report BGP packets sent and received'),
-			'rib'           : (environment.boolean,environment.lower,'false',    'report change in locally configured routes'),
-			'message'       : (environment.boolean,environment.lower,'false',    'report changes in route announcement on config reload'),
-			'timers'        : (environment.boolean,environment.lower,'false',    'report keepalives timers'),
-			'routes'        : (environment.boolean,environment.lower,'false',    'report received routes'),
-			'parser'        : (environment.boolean,environment.lower,'false',    'report BGP message parsing details'),
-			'short'         : (environment.boolean,environment.lower,'false',    'use short log format (not prepended with time,level,pid and source)'),
-		},
-		'tcp' : {
-			'once': (environment.boolean,environment.lower,'false', 'only one tcp connection attempt per peer (for debuging scripts)'),
-			'delay': (environment.integer,environment.nop,'0',      'start to announce route when the minutes in the hours is a modulo of this number'),
-			'bind': (environment.optional_ip,environment.quote,'', 'IP to bind on when listening (no ip to disable)'),
-			'port': (environment.integer,environment.nop,'179', 'port to bind on when listening'),
-			'acl': (environment.boolean,environment.lower,'', '(experimental) unimplemented'),
-		},
-		'bgp' : {
-			'openwait': (environment.integer,environment.nop,'60','how many second we wait for an open once the TCP session is established'),
-		},
-		'cache' : {
-			'attributes'  :  (environment.boolean,environment.lower,'true', 'cache all attributes (configuration and wire) for faster parsing'),
-			'nexthops'    :  (environment.boolean,environment.lower,'true', 'cache routes next-hops (deprecated: next-hops are always cached)'),
-		},
-		'api' : {
-			'encoder'  :  (environment.api,environment.lower,'text', '(experimental) default encoder to use with with external API (text or json)'),
-			'highres'  :  (environment.boolean,environment.lower,'false','should we use highres timer in JSON'),
-			'respawn'  :  (environment.boolean,environment.lower,'false','should we respawn a helper process if it dies'),
-		},
-		'reactor' : {
-			'speed' : (environment.real,environment.nop,'1.0', 'time of one reactor loop\n'
-			                                                   '%suse only if you understand the code.' % (' '* 34)),
-		},
-		# Here for internal use
-		'internal' : {
-			'name'    : (environment.nop,environment.nop,'ExaBGP', 'name'),
-			'version' : (environment.nop,environment.nop,version,  'version'),
-		},
-		# Here for internal use
-		'debug' : {
-			'pdb' : (environment.boolean,environment.lower,'false','enable python debugger on errors'),
-			'memory' : (environment.boolean,environment.lower,'false','command line option --memory'),
-			'configuration' : (environment.boolean,environment.lower,'false','undocumented option: raise when parsing configuration errors'),
-			'selfcheck' : (environment.boolean,environment.lower,'false','does a self check on the configuration file'),
-			'route' : (environment.unquote,environment.quote,'','decode the route using the configuration'),
-			'defensive' : (environment.boolean,environment.lower,'false', 'generate random fault in the code in purpose'),
-		},
-	}
+	from exabgp.configuration.setup import environment
 
 	if options["--decode"]:
 		decode = ''.join(options["--decode"]).replace(':','').replace(' ','')
@@ -342,7 +182,6 @@ def main ():
 	if options["--memory"]:
 		env.debug.memory = True
 
-
 	configurations = []
 	# check the file only once that we have parsed all the command line options and allowed them to run
 	if options["<configuration>"]:
@@ -351,12 +190,11 @@ def main ():
 			if os.path.isfile(normalised):
 				configurations.append(normalised)
 				continue
-			if not f.startswith('etc/exabgp'):
-				continue
-			normalised = os.path.join(folder,f[11:])
-			if os.path.isfile(normalised):
-				configurations.append(normalised)
-				continue
+			if f.startswith('etc/exabgp'):
+				normalised = os.path.join(folder,f[11:])
+				if os.path.isfile(normalised):
+					configurations.append(normalised)
+					continue
 			from exabgp.logger import Logger
 			logger = Logger()
 			logger.configuration('one of the arguments passed as configuration is not a file (%s)' % f,'error')
@@ -371,8 +209,8 @@ def main ():
 	from exabgp.bgp.message.update.attribute.attribute import Attribute
 	Attribute.caching = env.cache.attributes
 
-	if len(configurations) == 1:
-		run(env,comment,configurations[0])
+	if env.debug.rotate or len(configurations) == 1:
+		run(env,comment,configurations)
 
 	if not (env.log.destination in ('syslog','stdout','stderr') or env.log.destination.startswith('host:')):
 		from exabgp.logger import Logger
@@ -386,7 +224,7 @@ def main ():
 		for configuration in configurations:
 			pid = os.fork()
 			if pid == 0:
-				run(env,comment,configuration,os.getpid())
+				run(env,comment,configurations,os.getpid())
 			else:
 				pids.append(pid)
 
@@ -402,7 +240,7 @@ def main ():
 		logger = Logger()
 		logger.reactor('Can not fork, errno %d : %s' % (e.errno,e.strerror),'critical')
 
-def run (env,comment,configuration,pid=0):
+def run (env,comment,configurations,pid=0):
 	from exabgp.logger import Logger
 	logger = Logger()
 
@@ -410,7 +248,7 @@ def run (env,comment,configuration,pid=0):
 		logger.configuration(comment)
 
 	if not env.profile.enable:
-		Reactor(configuration).run()
+		Reactor(configurations).run()
 		__exit(env.debug.memory,0)
 
 	try:
@@ -419,7 +257,7 @@ def run (env,comment,configuration,pid=0):
 		import profile
 
 	if not env.profile.file or env.profile.file == 'stdout':
-		profile.run('Reactor(configuration).run()')
+		profile.run('Reactor(configurations).run()')
 		__exit(env.debug.memory,0)
 
 	if pid:
@@ -438,7 +276,7 @@ def run (env,comment,configuration,pid=0):
 		pr = profile.Profile()
 		pr.enable()
 		try:
-			Reactor(configuration).run()
+			Reactor(configurations).run()
 		except:
 			raise
 		finally:
@@ -453,7 +291,7 @@ def run (env,comment,configuration,pid=0):
 		logger.reactor("-"*len(notice))
 		logger.reactor(notice)
 		logger.reactor("-"*len(notice))
-		Reactor(configuration).run()
+		Reactor(configurations).run()
 		__exit(env.debug.memory,0)
 
 

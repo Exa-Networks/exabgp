@@ -14,14 +14,20 @@ from struct import unpack
 # http://www.iana.org/assignments/address-family-numbers/
 class AFI (int):
 	undefined = 0x00  # internal
-	ipv4 = 0x01
-	ipv6 = 0x02
-	l2vpn = 0x19
+	ipv4      = 0x01
+	ipv6      = 0x02
+	l2vpn     = 0x19
 
 	Family = {
 		ipv4 : 0x02,   # socket.AF_INET,
 		ipv6 : 0x30,   # socket.AF_INET6,
 		l2vpn : 0x02,  # l2vpn info over ipv4 session
+	}
+
+	names = {
+		'ipv4': ipv4,
+		'ipv6': ipv6,
+		'l2vpn': l2vpn,
 	}
 
 	def __str__ (self):
@@ -62,6 +68,11 @@ class AFI (int):
 			return ['vpls']
 		return []
 
+	@classmethod
+	def fromString (cls,string):
+		return cls.names.get(string,cls.undefined)
+
+
 # =================================================================== SAFI
 
 # http://www.iana.org/assignments/safi-namespace
@@ -96,6 +107,18 @@ class SAFI (int):
 #	private = [_ for _ in range(241,254)]   # [RFC4760]
 #	unassigned = [_ for _ in range(8,64)] + [_ for _ in range(70,128)]
 #	reverved = [0,3] + [130,131] + [_ for _ in range(135,140)] + [_ for _ in range(141,241)] + [255,]    # [RFC4760]
+
+	names = {
+		'unicast': unicast,
+		'multicast': multicast,
+		'nlri-mpls': nlri_mpls,
+		'vpls': vpls,
+		'evpn': evpn,
+		'mpls-vpn': mpls_vpn,
+		'rtc': rtc,
+		'flow': flow_ip,
+		'flow-vpn': flow_vpn,
+	}
 
 	def name (self):
 		if self == 0x01: return "unicast"
@@ -139,6 +162,10 @@ class SAFI (int):
 		if name == "vpls"     : return 0x41
 		return None
 
+	@classmethod
+	def fromString (cls,string):
+		return cls.names.get(string,cls.undefined)
+
 def known_families ():
 	# it can not be a generator
 	families = [
@@ -155,3 +182,14 @@ def known_families ():
 		(AFI(AFI.l2vpn), SAFI(SAFI.vpls))
 	]
 	return families
+
+class Family (object):
+	def __init__(self,afi,safi):
+		self.afi=AFI(afi)
+		self.safi=SAFI(safi)
+
+	def extensive (self):
+		return 'afi %s safi %s' % (self.afi,self.safi)
+
+	def __str__ (self):
+		return 'family %s %s' % (self.afi,self.safi)

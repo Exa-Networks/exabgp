@@ -21,6 +21,18 @@ class Store (object):
 		self.families = families
 		self.clear()
 
+		# clear
+		self._cache_attribute = {}
+		self._seen = {}
+		self._modify_nlri = {}
+		self._modify_sorted = {}
+		self._changes = None
+
+		# clear + reset
+		self._enhanced_refresh_start = []
+		self._enhanced_refresh_delay = []
+
+
 	# will resend all the routes once we reconnect
 	def reset (self):
 		# WARNING : this function can run while we are in the updates() loop too !
@@ -82,9 +94,13 @@ class Store (object):
 		for change in self._modify_nlri.values():
 			yield change
 
-	def replace (self,changes):
-		self.reset()
-		self._changes = changes
+	def replace (self,previous,changes):
+		for change in previous:
+			change.nlri.action = OUT.withdraw
+			self.insert_announced(change,True)
+
+		for change in changes:
+			self.insert_announced(change,True)
 
 	def insert_announced_watchdog (self,change):
 		watchdog = change.attributes.watchdog()
@@ -147,7 +163,7 @@ class Store (object):
 		dict_nlri = self._modify_nlri
 		dict_attr = self._cache_attribute
 
-		# removing a route befone we had time to announe it ?
+		# removing a route before we had time to announce it ?
 		if change_nlri_index in dict_nlri:
 			old_attr_index = dict_nlri[change_nlri_index].attributes.index()
 			# pop removes the entry

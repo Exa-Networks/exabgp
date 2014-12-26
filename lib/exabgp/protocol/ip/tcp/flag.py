@@ -13,7 +13,7 @@ Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 class TCPFlag (int):
 	FIN    = 0x1
 	SYN    = 0x2
-	RST  = 0x4
+	RST    = 0x4
 	PUSH   = 0x8
 	ACK    = 0x10
 	URGENT = 0x20
@@ -25,7 +25,7 @@ class TCPFlag (int):
 		if self == self.PUSH:   return 'push'
 		if self == self.ACK:    return 'ack'
 		if self == self.URGENT: return 'urgent'
-		return 'invalid tcp flag %d' % int(self)
+		return 'unknown tcp flag %d' % int(self)
 
 def NamedTCPFlag (name):
 	flag = name.lower()
@@ -35,4 +35,4 @@ def NamedTCPFlag (name):
 	if flag == 'push':   return TCPFlag(TCPFlag.PUSH)
 	if flag == 'ack':    return TCPFlag(TCPFlag.ACK)
 	if flag == 'urgent': return TCPFlag(TCPFlag.URGENT)
-	raise ValueError('invalid flag name %s' % flag)
+	raise ValueError('unknown tcp flag %s' % flag)

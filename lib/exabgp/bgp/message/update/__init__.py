@@ -268,7 +268,10 @@ class Update (Message):
 		addpath = negotiated.addpath.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
 
 		# empty string for NoIP, the packed IP otherwise (without the 3/4 bytes of attributes headers)
-		nexthop = attributes.get(Attribute.ID.NEXT_HOP,NoIP).packed
+		_nexthop = attributes.get(Attribute.ID.NEXT_HOP,NoIP)
+		nexthop = _nexthop.packed
+
+		# XXX: NEXTHOP MUST NOT be the IP address of the receiving speaker.
 
 		nlris = []
 		while withdrawn:

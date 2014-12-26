@@ -73,6 +73,7 @@ class Attribute (object):
 		TUNNEL_ENCAP       = 0x17  # 23
 		AIGP               = 0x1A  # 26
 
+		INTERNAL_NAME      = 0xFFFC
 		INTERNAL_WITHDRAW  = 0xFFFD
 		INTERNAL_WATCHDOG  = 0xFFFE
 		INTERNAL_SPLIT     = 0xFFFF
@@ -96,9 +97,10 @@ class Attribute (object):
 			PMSI_TUNNEL        : 'pmsi-tunnel',
 			TUNNEL_ENCAP       : 'tunnel-encaps',
 			AIGP               : 'aigp',
-			0xfffd: 'internal-withdraw',
-			0xfffe: 'internal-watchdog',
-			0xffff: 'internal-split',
+			0xfffc             : 'internal-name',
+			0xfffd             : 'internal-withdraw',
+			0xfffe             : 'internal-watchdog',
+			0xffff             : 'internal-split',
 		}
 
 		def __str__ (self):
@@ -118,6 +120,11 @@ class Attribute (object):
 		PARTIAL         = 0x20  # .  32 - 0010 0000
 		TRANSITIVE      = 0x40  # .  64 - 0100 0000
 		OPTIONAL        = 0x80  # . 128 - 1000 0000
+
+		MASK_EXTENDED   = 0xEF  # . 239 - 1110 1111
+		MASK_PARTIAL    = 0xDF  # . 223 - 1101 1111
+		MASK_TRANSITIVE = 0xBF  # . 191 - 1011 1111
+		MASK_OPTIONAL   = 0x7F  # . 127 - 0111 1111
 
 		__slots__ = []
 

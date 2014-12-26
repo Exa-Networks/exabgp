@@ -124,11 +124,11 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 		self.update_count += 1
 
-		if self.isupdate(header):
-			self.announce("received %-6d updates (%6d/sec) " % (self.update_count, self.update_count / (time.time()-self.time)) ,  ', '.join(self.routes(body)))
-
 		if self.record:
 			self.record.write(header+body)
+
+		elif self.isupdate(header):
+			self.announce("received %-6d updates (%6d/sec) " % (self.update_count, self.update_count / (time.time()-self.time)) ,  ', '.join(self.routes(body)))
 
 		return header,body
 
@@ -186,7 +186,10 @@ def drop ():
 		os.setuid(nuid)
 
 try:
-	server = BGPServer('localhost', int(os.environ.get('exabgp.tcp.port','179')),bool(os.environ.get('exabgp.wire.record',False)))
+	port = int(os.environ.get('exabgp.tcp.port',int(os.environ.get('exabgp_tcp_port','179'))))
+	bind = os.environ.get('exabgp.tcp.bind',os.environ.get('exabgp_tcp_bind','localhost'))
+	record = bool(os.environ.get('exabgp.wire.record',os.environ.get('exabgp.wire.record',False)))
+	server = BGPServer(bind,port,record)
 	drop()
 	asyncore.loop()
 except socket.error:
