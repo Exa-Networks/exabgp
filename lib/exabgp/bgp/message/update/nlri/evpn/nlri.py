@@ -65,7 +65,7 @@ class EVPN (object):
 
 	@classmethod
 	def register_evpn (cls):
-		cls.registered_evpn[cls.code] = cls
+		cls.registered_evpn[cls.CODE] = cls
 
 	@classmethod
 	def unpack(cls,data):
