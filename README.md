@@ -1,7 +1,8 @@
 ##Overview
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Exa-Networks/exabgp?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Build Status](https://travis-ci.org/Exa-Networks/exabgp.svg)](https://travis-ci.org/Exa-Networks/exabgp)
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Exa-Networks/exabgp)
+[![PYPI Version](https://pypip.in/v/exabgp/badge.svg)](https://pypi.python.org/pypi/exabgp)
+[![Testing Status](https://travis-ci.org/Exa-Networks/exabgp.svg)](https://travis-ci.org/Exa-Networks/exabgp)
 [![Coverage Status](https://img.shields.io/coveralls/Exa-Networks/exabgp.svg)](https://coveralls.io/r/Exa-Networks/exabgp)
 
 [ExaBGP](http://github.com/Exa-Networks/exabgp) was not designed to transform a general purpose server into a router, but to allow engineers to control their network from commodity servers.
@@ -90,12 +91,12 @@ No software is perfect.
 
 ExaBGP is supported through Github [issue tracker](https://github.com/Exa-Networks/exabgp/issues) on a best effort basis. So should you encounter a bug please [report it](https://github.com/Exa-Networks/exabgp/issues?labels=bug&page=1&state=open) so we can help you resolve it.
 
+The configuration file format changes from version to version, but effort are made to make sure backward compatibility is kept, however users are encouraged to read the release note and check their setup after upgrade.
+
 ##Support
 
 We try to be reactive to any problem raised, and hopefully are not too bad at it. Bug will be fixed when reported.
 Some organisation are however enable to deploy an applicatoin without commercial support, therefore it is available if your organisation requires it.
-
-The configuration file format changes from version to version, but effort are made to make sure backward compatibility is kept, however users are encouraged to read the release note and check their setup after upgrade.
 
 ##Related Projects
 
