@@ -4,28 +4,28 @@
 [report]
 exclude_line =
 	pragma: no cover
+	pass
 	def __repr__
+	if __name__ == .__main__.:
 	if self\.debug
 	raise AssertionError
 	raise NotImplementedError
 	if 0:
 	if False:
-	if __name__ == .__main__.:
-	pass
 
 ignore_errors = True
 
 [run]
 omit =
+	*/python?.?/*
+	*/lib-python/?.?/*.py
+	*/lib_pypy/_*.py
+	*/site-packages/ordereddict.py
+	*/site-packages/nose/*
 	*/__init__.py
-	/qa/bin/*
-	/qa/sbin/*
-	/qa/conf/*
+	/lib/exabgp/dep/*
+	/qa/*
 	/dev/*
-	/etc/*
-	/bin/*
-	/sbin/*
-	/dist/*
 	/debian/*
 	/service/*
 
