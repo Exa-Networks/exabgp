@@ -9,15 +9,128 @@ Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 
 import os
 import sys
+import imp
 import platform
 from distutils.core import setup
 from distutils.util import get_platform
 
-try:
-	version = os.popen('git describe --tags').read().split('-')[0].strip()
-except Exception,e:
-	print "can not find the 'version.py' file in the repository"
-	sys.exit(1)
+
+if sys.argv[-1] == 'help':
+	print """\
+python setup.py help     this help
+python setup.py push     update the version, push to github
+python setup.py release  tag a new version on github, and update pypi
+"""
+	sys.exit(0)
+#
+# Push a new version to github
+#
+
+if sys.argv[-1] == 'push':
+	version_template = """\
+version="%s"
+
+# Do not change the first line as it is parsed by scripts
+
+if __name__ == '__main__':
+	import sys
+	sys.stdout.write(version)
+"""
+
+	git_version = os.popen('git describe --tags').read().strip()
+
+	with open('lib/exabgp/version.py','w') as version_file:
+		version_file.write(version_template % git_version)
+
+	version = imp.load_source('version','lib/exabgp/version.py').version
+
+	if version != git_version:
+		print 'version setting failed'
+		sys.exit(1)
+
+	commit = 'git ci -a -m "updating version to %s"' % git_version
+	push = 'git push'
+
+	ret = os.system(commit)
+	if not ret:
+		print 'failed to commit'
+		sys.exit(ret)
+
+	ret = os.system(push)
+	if not ret:
+		print 'failed to push'
+		sys.exit(ret)
+
+	sys.exit(0)
+
+#
+# Check that that there is no version inconsistancy before any pypi action
+#
+
+if sys.argv[-1] == 'release':
+	try:
+		short_git_version = os.popen('git describe --tags').read().split('-')[0].strip()
+		tags = os.popen('git tag').read().split('-')[0].strip()
+
+		for tag in tags.split('\n'):
+			if tag.strip() == short_git_version:
+				print 'this tag was already released'
+				sys.exit(1)
+
+		file_version = imp.load_source('version','lib/exabgp/version.py').version
+
+		with open('CHANGELOG') as changelog:
+			changelog.next()  # skip the word version on the first line
+			for line in changelog:
+				if 'version' in line.lower():
+					if not file_version in line:
+						print "CHANGELOG version does not match the code/git"
+						print 'new version is:', version
+						print 'CHANGELOG has :', line
+						sys.exit(1)
+					break
+
+		git_version = os.popen('git describe --tags').read().strip()
+
+		if git_version != file_version:
+			status = os.popen('git status')
+			for line in status.split('\n'):
+				if 'modified:' in line and 'version.py' in line:
+					ret = os.system("git ci -a -m 'updating version to %s'" % file_version)
+					if not ret:
+						print 'could not commit version change (%s)' % file_version
+						sys.exit(1)
+					git_version = file_version
+
+		if git_version != file_version:
+			print "No new version. version.py and git do not agree on the version"
+			sys.exit(1)
+
+		ret = os.system("git tag -a %s" % file_version)
+		if not ret:
+			print 'could not tag version (%s)' % file_version
+			sys.exit(1)
+		ret = os.system("git push --tags")
+		if not ret:
+			print 'could not push release version'
+			sys.exit(1)
+
+		ret = os.system("python setup.py sdist upload")
+		if not ret:
+			print 'could not generate egg on pypi'
+			sys.exit(1)
+		ret = os.system("python setup.py bdist_wheel upload")
+		if not ret:
+			print 'could not generate wheel on pypi'
+			sys.exit(1)
+
+	except Exception,e:
+		print "Can not check the version consistancy"
+		sys.exit(1)
+
+	sys.exit(0)
+
+
 
 def packages (lib):
 	def dirs (*path):
