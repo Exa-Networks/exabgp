@@ -21,9 +21,9 @@ The program is [BSD licenced](https://github.com/Exa-Networks/exabgp/blob/master
 So have a look and take control your network from any unix servers.
 
 ```sh
-> wget https://github.com/Exa-Networks/exabgp/archive/3.4.4.tar.gz
-> tar zxvf 3.4.4.tar.gz
-> cd exabgp-3.4.4
+> wget https://github.com/Exa-Networks/exabgp/archive/3.4.5.tar.gz
+> tar zxvf 3.4.5.tar.gz
+> cd exabgp-3.4.5
 > ./sbin/exabgp --help
 ```
 
