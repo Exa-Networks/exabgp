@@ -79,7 +79,7 @@ class SectionProcess (Section):
 				path = [os.environ.get('ETC','etc'),] + parts[2:]
 				prg = os.path.join(*path)
 			else:
-				prg = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(sys.argv[0])),prg))
+				prg = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]),prg))
 
 		if not os.path.exists(prg):
 			raise RaisedProcess(tokeniser,'can not locate the the program "%s"' % prg)

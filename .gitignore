@@ -3,6 +3,7 @@
 /build/
 /dist/
 /sdist/
+/cover/
 
 .DS_Store
 .coveralls.yml*
