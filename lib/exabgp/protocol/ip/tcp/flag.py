@@ -11,10 +11,10 @@ Copyright (c) 2009-2013  Exa Networks. All rights reserved.
 # http://www.iana.org/assignments/tcp-header-flags
 
 class TCPFlag (int):
-	FIN    = 0x1
-	SYN    = 0x2
-	RST    = 0x4
-	PUSH   = 0x8
+	FIN    = 0x01
+	SYN    = 0x02
+	RST    = 0x04
+	PUSH   = 0x08
 	ACK    = 0x10
 	URGENT = 0x20
 

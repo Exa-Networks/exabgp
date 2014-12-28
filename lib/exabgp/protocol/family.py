@@ -109,15 +109,15 @@ class SAFI (int):
 #	reverved = [0,3] + [130,131] + [_ for _ in range(135,140)] + [_ for _ in range(141,241)] + [255,]    # [RFC4760]
 
 	names = {
-		'unicast': unicast,
-		'multicast': multicast,
-		'nlri-mpls': nlri_mpls,
-		'vpls': vpls,
-		'evpn': evpn,
-		'mpls-vpn': mpls_vpn,
-		'rtc': rtc,
-		'flow': flow_ip,
-		'flow-vpn': flow_vpn,
+		'unicast'   : unicast,
+		'multicast' : multicast,
+		'nlri-mpls' : nlri_mpls,
+		'vpls'      : vpls,
+		'evpn'      : evpn,
+		'mpls-vpn'  : mpls_vpn,
+		'rtc'       : rtc,
+		'flow'      : flow_ip,
+		'flow-vpn'  : flow_vpn,
 	}
 
 	def name (self):

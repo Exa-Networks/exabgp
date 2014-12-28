@@ -19,9 +19,9 @@ from exabgp.reactor import Reactor
 from exabgp.dep import docopt
 from exabgp.dep import lsprofcalltree
 
-from exabgp.debug import setup_report
 from exabgp.configuration.usage import usage
 
+from exabgp.debug import setup_report
 setup_report()
 
 def is_hex (s):
