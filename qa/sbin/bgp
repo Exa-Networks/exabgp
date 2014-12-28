@@ -297,21 +297,36 @@ class BGPServer (asyncore.dispatcher):
 			if message.strip().startswith('option:SIGUSR1:'):
 				def _signal (delay,myself):
 					time.sleep(delay)
-
+					name = sys.argv[1].split('/')[-1].split('.')[0]
+					command = "ps a 2>&1 | grep bgp.py | grep %s | grep '.conf' | grep -v grep" % name
 					output = subprocess.check_output(
-						"ps a 2>&1 | grep bgp.py | grep -v grep | awk '{ print $1; }'",
+						command,
 						shell=True,
 						stderr=subprocess.STDOUT,
-					)
+					).strip()
+
 					if not output:
 						self.announce('can not find exabgp process to signal')
+						self.announce(output)
 						os.kill(myself,signal.SIGTERM)
+						return
+
+					processes = [proc.split(' ')[0] for proc in [line.strip() for line in output.split('\n')]]
+					if len(processes) > 1:
+						self.announce('more than one process running, this should not happend, killing everything')
+						self.announce('> %s' % command)
+						self.announce(output)
+						for process in processes:
+							self.announce('terminating %s' % process)
+							os.kill(int(process),signal.SIGTERM)
+						os.kill(myself,signal.SIGTERM)
+						return
 
 					try:
-						self.announce('\n     sending SIGUSR1 to ExaBGP (pid %s)\n' % output.strip())
-						os.kill(int(output),signal.SIGUSR1)
-					except Exception:
-						pass
+						self.announce('\n     sending SIGUSR1 to ExaBGP (pid %s)\n' % processes[0])
+						os.kill(int(processes[0]),signal.SIGUSR1)
+					except Exception,e:
+						self.announce('\n     failed: %s' % str(e))
 					time.sleep(40)
 					thread.exit()
 
