@@ -6,8 +6,10 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2013 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.file import Configuration
-from exabgp.configuration.file import formated
+# This is to break a circular depency chain
+# http://en.wikipedia.org/wiki/Dependency_injection
+from exabgp.configuration.ancient import Configuration
+from exabgp.configuration.ancient import formated
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI

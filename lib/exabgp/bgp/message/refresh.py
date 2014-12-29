@@ -60,4 +60,15 @@ class RouteRefresh (Message):
 			raise Notify(7,2,'invalid route-refresh message subtype')
 		return RouteRefresh(afi,safi,reserved)
 
+	def __eq__ (self,other):
+		if not isinstance(other, RouteRefresh):
+			return False
+		if self.afi != other.afi:
+			return False
+		if self.safi != other.safi:
+			return False
+		if self.reserved != other.reserved:
+			return False
+		return True
+
 RouteRefresh.register_message()

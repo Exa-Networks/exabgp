@@ -31,6 +31,11 @@ class RouteRefresh (Capability):
 		# XXX: FIXME: we should set that that instance was seen and raise if seen twice
 		return instance
 
+	def __eq__ (self,other):
+		if not isinstance(other,RouteRefresh):
+			return False
+		return self.ID == other.ID
+
 RouteRefresh.register_capability(Capability.ID.ROUTE_REFRESH)
 RouteRefresh.register_capability(Capability.ID.ROUTE_REFRESH_CISCO)
 

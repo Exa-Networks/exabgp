@@ -143,14 +143,14 @@ class Message (Exception):
 	def register_message (cls,message=None):
 		what = cls.TYPE if message is None else message
 		if what in cls.registered_message:
-			raise RuntimeError('only one class can be registered per capability')
+			raise RuntimeError('only one class can be registered per message')
 		cls.registered_message[ord(what)] = cls
 
 	@classmethod
 	def klass (cls,what):
 		if what in cls.registered_message:
 			return cls.registered_message[what]
-		raise cls.klass_notify(2,4,'can not handle capability %s' % what)
+		raise cls.klass_notify(2,4,'can not handle message %s' % what)
 
 	@classmethod
 	def unpack_message (cls,message,data,negotiated):

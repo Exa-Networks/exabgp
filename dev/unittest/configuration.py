@@ -12,8 +12,7 @@ import unittest
 from exabgp.configuration.environment import environment
 env = environment.setup('')
 
-from exabgp.configuration.file import Configuration
-
+from exabgp.configuration.ancient import Configuration
 
 class TestConfiguration (unittest.TestCase):
 	def setUp(self):

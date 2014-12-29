@@ -49,7 +49,9 @@ class environment (object):
 	@staticmethod
 	def setup (conf):
 		if environment._settings:
-			raise RuntimeError('You already initialised the environment')
+			# nosetest is performing the setup multiple times, so we can not raise anymore
+			# raise RuntimeError('You already initialised the environment')
+			return environment._settings
 		environment._settings = _env(conf)
 		return environment._settings
 
