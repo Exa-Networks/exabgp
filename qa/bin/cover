@@ -1,0 +1,2 @@
+#/bin/sh
+nosetests --cover-erase --with-coverage --cover-html --pdb

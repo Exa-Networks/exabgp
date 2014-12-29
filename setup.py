@@ -14,6 +14,92 @@ import platform
 from distutils.core import setup
 from distutils.util import get_platform
 
+description_rst = """\
+======
+ExaBGP
+======
+
+.. image:: https://badges.gitter.im/Join%20Chat.png
+   :target: https://gitter.im/Exa-Networks/exabgp
+   :alt: Gitter
+
+.. image:: https://pypip.in/wheel/exabgp/badge.png
+   :target: https://pypi.python.org/pypi/exabgp/
+   :alt: Wheel Status
+
+.. image:: https://pypip.in/download/exabgp/badge.png
+   :target: https://pypi.python.org/pypi/exabgp/
+   :alt: Downloads
+
+.. image:: https://pypip.in/version/exabgp/badge.png
+   :target: https://pypi.python.org/pypi/exabgp/
+   :alt: Latest Version
+
+.. image:: https://img.shields.io/coveralls/Exa-Networks/exabgp.png
+   :target: https://coveralls.io/r/Exa-Networks/exabgp
+   :alt: Coverage
+
+.. image:: https://pypip.in/license/exabgp/badge.png
+   :target: https://pypi.python.org/pypi/exabgp/
+   :alt: License
+
+.. contents:: **Table of Contents**
+   :depth: 2
+
+Introduction
+============
+
+ExaBGP allows engineers to control their network from commodity servers. Think of it as Software Defined Networking using BGP.
+
+It can be used to announce ipv4, ipv6, vpn or flow routes (for DDOS protection) from its configuration file(s).
+ExaBGP can also transform BGP messages into friendly plain text or JSON which can be easily manipulate by scripts and report peer announcements.
+
+Use cases include
+-----------------
+
+- sql backed `looking glass <https://code.google.com/p/gixlg/wiki/sample_maps>`_ with prefix routing visualisation
+- service `high availability <http://vincent.bernat.im/en/blog/2013-exabgp-highavailability.html>`_ automatically isolating dead servers / broken services
+- `DDOS mitigation <http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf>`_ solutions
+- `anycasted <http://blog.iweb-hosting.co.uk/blog/2012/01/27/using-bgp-to-serve-high-availability-dns/>`_ services
+
+Installation
+============
+
+Prerequisites
+-------------
+
+ExaBGP requires python 2.6 or 2.7. It has no external dependencies.
+
+Using pip
+---------
+
+#. Use pip to install the packages:
+
+::
+
+    pip install -U exabgp
+
+
+Without installation
+--------------------
+
+::
+
+    wget https://github.com/Exa-Networks/exabgp/archive/3.4.5.tar.gz
+    tar zxvf 3.4.5.tar.gz
+    cd exabgp-3.4.5
+    ./sbin/exabgp --help
+
+Feedback and getting involved
+=============================
+
+- Google +: https://plus.google.com/u/0/communities/108249711110699351497
+- Twitter: https://twitter.com/#!/search/exabgp
+- Mailing list: http://groups.google.com/group/exabgp-users
+- Issue tracker: https://github.com/Exa-Networks/exabgp/issues
+- Code Repository: https://github.com/Exa-Networks/exabgp
+
+"""
 
 if sys.argv[-1] == 'help':
 	print """\
@@ -22,6 +108,15 @@ python setup.py push     update the version, push to github
 python setup.py release  tag a new version on github, and update pypi
 """
 	sys.exit(0)
+
+#
+# Show python readme.rst
+#
+
+if sys.argv[-1].lower() == 'readme':
+	print description_rst
+	sys.exit(0)
+
 #
 # Push a new version to github
 #
@@ -169,11 +264,12 @@ else:
 setup(name='exabgp',
 	version=version,
 	description='BGP swiss army knife',
-	long_description="Control your network using BGP from any commodity servers and reap the benefit of software defined networking without OpenFlow. Receive parsed BGP updates in a friendly form (plain text or JSON) and manipulate them with simple scripts.",
+	long_description=description_rst,
 	author='Thomas Mangin',
 	author_email='thomas.mangin@exa-networks.co.uk',
 	url='https://github.com/Exa-Networks/exabgp',
 	license="BSD",
+	keywords = 'bgp routing api sdn flowspec',
 	platforms=[get_platform(),],
 	package_dir={'': 'lib'},
 	packages=packages('lib'),

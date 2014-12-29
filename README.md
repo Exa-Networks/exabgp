@@ -4,21 +4,20 @@
 [![PYPI Version](https://pypip.in/v/exabgp/badge.svg)](https://pypi.python.org/pypi/exabgp)
 [![Testing Status](https://travis-ci.org/Exa-Networks/exabgp.svg)](https://travis-ci.org/Exa-Networks/exabgp)
 [![Coverage Status](https://img.shields.io/coveralls/Exa-Networks/exabgp.svg)](https://coveralls.io/r/Exa-Networks/exabgp)
+[![License](https://pypip.in/license/exabgp/badge.png)](https://github.com/Exa-Networks/exabgp/blob/master/COPYRIGHT)
 
-[ExaBGP](http://github.com/Exa-Networks/exabgp) was not designed to transform a general purpose server into a router, but to allow engineers to control their network from commodity servers.
+[ExaBGP](http://github.com/Exa-Networks/exabgp) allows engineers to control their network from commodity servers.
 Think of it as [Software Defined Networking](http://en.wikipedia.org/wiki/Software-defined_networking) using [BGP](http://en.wikipedia.org/wiki/BGP).
 
 Use cases include:
  * sql backed [looking glasses](https://code.google.com/p/gixlg/wiki/sample_maps) with prefix routing visualisation
- * service [high availability](http://vincent.bernat.im/en/blog/2013-exabgp-highavailability.html) automatically isolating dead server / broken services
+ * service [high availability](http://vincent.bernat.im/en/blog/2013-exabgp-highavailability.html) automatically isolating dead servers / broken services
  * [DDOS mitigation](http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf) solutions
- * [anycasted](http://blog.iweb-hosting.co.uk/blog/2012/01/27/using-bgp-to-serve-high-availability-dns/) server
+ * [anycasted](http://blog.iweb-hosting.co.uk/blog/2012/01/27/using-bgp-to-serve-high-availability-dns/) services
 
 The program is [BSD licenced](https://github.com/Exa-Networks/exabgp/blob/master/COPYRIGHT) and packaged for **Debian**, **Ubuntu**, **ArchLinux**, **Gentoo**, **Mint**, **FreeBSD**, **OSX**, **OmniOS**, but some features may only be available on latest version.
 
 [ExaBGP](http://github.com/Exa-Networks/exabgp) transforms [BGP messages](http://thomas.mangin.com/data/pdf/UKNOF%2015%20-%20Mangin%20-%20Naked%20BGP.pdf) into friendly plain [text or JSON](https://github.com/Exa-Networks/exabgp/wiki/Controlling-ExaBGP-:-API-for-received-messages) which can be easily manipulate by scripts, it does **not** perform any **FIB** manipulation. If this what you need, use another open source BGP daemon such as [BIRD](http://bird.network.cz/) or [Quagga](http://www.quagga.net/).
-
-So have a look and take control your network from any unix servers.
 
 ```sh
 > wget https://github.com/Exa-Networks/exabgp/archive/3.4.5.tar.gz
