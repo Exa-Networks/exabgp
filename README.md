@@ -1,9 +1,9 @@
 ##Overview
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Exa-Networks/exabgp)
-[![PYPI Version](https://pypip.in/v/exabgp/badge.svg)](https://pypi.python.org/pypi/exabgp)
-[![Testing Status](https://travis-ci.org/Exa-Networks/exabgp.svg)](https://travis-ci.org/Exa-Networks/exabgp)
-[![Coverage Status](https://img.shields.io/coveralls/Exa-Networks/exabgp.svg)](https://coveralls.io/r/Exa-Networks/exabgp)
+[![Gitter](https://badges.gitter.im/Join%20Chat.png)](https://gitter.im/Exa-Networks/exabgp)
+[![PYPI Version](https://pypip.in/v/exabgp/badge.png)](https://pypi.python.org/pypi/exabgp)
+[![Testing Status](https://travis-ci.org/Exa-Networks/exabgp.png)](https://travis-ci.org/Exa-Networks/exabgp)
+[![Coverage Status](https://img.shields.io/coveralls/Exa-Networks/exabgp.png)](https://coveralls.io/r/Exa-Networks/exabgp)
 [![License](https://pypip.in/license/exabgp/badge.png)](https://github.com/Exa-Networks/exabgp/blob/master/COPYRIGHT)
 
 [ExaBGP](http://github.com/Exa-Networks/exabgp) allows engineers to control their network from commodity servers.
