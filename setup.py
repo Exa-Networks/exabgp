@@ -14,6 +14,8 @@ import platform
 from distutils.core import setup
 from distutils.util import get_platform
 
+dryrun = False
+
 description_rst = """\
 ======
 ExaBGP
@@ -101,6 +103,16 @@ Feedback and getting involved
 
 """
 
+version_template = """\
+version="%s"
+
+# Do not change the first line as it is parsed by scripts
+
+if __name__ == '__main__':
+	import sys
+	sys.stdout.write(version)
+"""
+
 if sys.argv[-1] == 'help':
 	print """\
 python setup.py help     this help
@@ -122,16 +134,6 @@ if sys.argv[-1].lower() == 'readme':
 #
 
 if sys.argv[-1] == 'push':
-	version_template = """\
-version="%s"
-
-# Do not change the first line as it is parsed by scripts
-
-if __name__ == '__main__':
-	import sys
-	sys.stdout.write(version)
-"""
-
 	git_version = os.popen('git describe --tags').read().strip()
 
 	with open('lib/exabgp/version.py','w') as version_file:
@@ -146,13 +148,13 @@ if __name__ == '__main__':
 	commit = 'git ci -a -m "updating version to %s"' % git_version
 	push = 'git push'
 
-	ret = os.system(commit)
-	if not ret:
+	ret = dryrun or os.system(commit)
+	if ret:
 		print 'failed to commit'
 		sys.exit(ret)
 
-	ret = os.system(push)
-	if not ret:
+	ret = dryrun or os.system(push)
+	if ret:
 		print 'failed to push'
 		sys.exit(ret)
 
@@ -163,68 +165,122 @@ if __name__ == '__main__':
 #
 
 if sys.argv[-1] == 'release':
-	try:
-		short_git_version = os.popen('git describe --tags').read().split('-')[0].strip()
-		tags = os.popen('git tag').read().split('-')[0].strip()
+	print 'figuring valid next release version'
 
-		for tag in tags.split('\n'):
-			if tag.strip() == short_git_version:
-				print 'this tag was already released'
+	tags = os.popen('git tag').read().split('-')[0].strip()
+	versions = [[int(_) for _ in tag.split('.')]  for tag in tags.split('\n') if tag.count('.') == 2]
+	latest = sorted(versions)[-1]
+	next = [
+		'.'.join([str(_) for _ in (latest[0], latest[1], latest[2]+1)]),
+		'.'.join([str(_) for _ in (latest[0], latest[1]+1, 0)]),
+		'.'.join([str(_) for _ in (latest[0]+1, 0, 0)]),
+	]
+
+	print 'valid versions are:', ', '.join(next)
+	print 'checking the CHANGELOG uses one of them'
+
+	with open('CHANGELOG') as changelog:
+		changelog.next()  # skip the word version on the first line
+		for line in changelog:
+			if 'version' in line.lower():
+				new = line.split()[1]
+				if new in next:
+					break
+				print 'invalid new version in CHANGELOG'
 				sys.exit(1)
 
-		file_version = imp.load_source('version','lib/exabgp/version.py').version
+	print 'ok, next release is %s' % new
+	print 'checking that this release is not already tagged'
 
-		with open('CHANGELOG') as changelog:
-			changelog.next()  # skip the word version on the first line
-			for line in changelog:
-				if 'version' in line.lower():
-					if not file_version in line:
-						print "CHANGELOG version does not match the code/git"
-						print 'new version is:', version
-						print 'CHANGELOG has :', line
-						sys.exit(1)
-					break
+	if new in tags.split('\n'):
+		print 'this tag was already released'
+		sys.exit(1)
 
-		git_version = os.popen('git describe --tags').read().strip()
+	print 'ok, this is a new release'
+	print 'rewriting lib/exabgp/version.py'
 
-		if git_version != file_version:
-			status = os.popen('git status')
-			for line in status.split('\n'):
-				if 'modified:' in line and 'version.py' in line:
-					ret = os.system("git ci -a -m 'updating version to %s'" % file_version)
-					if not ret:
-						print 'could not commit version change (%s)' % file_version
-						sys.exit(1)
-					git_version = file_version
+	with open('lib/exabgp/version.py','w') as version_file:
+		version_file.write(version_template % new)
 
-		if git_version != file_version:
-			print "No new version. version.py and git do not agree on the version"
+	print 'checking if we need to commit a version.py change'
+
+	commit = None
+	status = os.popen('git status')
+	for line in status.read().split('\n'):
+		if 'modified:' in line:
+			if 'version.py' in line:
+				if commit is None:
+					commit = True
+			else:
+				commit = False
+		elif 'renamed:' in line:
+			commit = False
+
+	if commit is True:
+		command = "git commit -a -m 'updating version to %s'" % new
+		print '>', command
+
+		ret = dryrun or os.system(command)
+		if ret:
+			print 'return code is', ret
+			print 'could not commit version change (%s)' % new
 			sys.exit(1)
+		print 'version.py was updated'
+	elif commit is False:
+		print 'more than one file is modified and need updating, aborting'
+		sys.exit(1)
+	else:  # None
+		print 'version.py was already set'
 
-		ret = os.system("git tag -a %s" % file_version)
-		if not ret:
-			print 'could not tag version (%s)' % file_version
-			sys.exit(1)
-		ret = os.system("git push --tags")
-		if not ret:
-			print 'could not push release version'
-			sys.exit(1)
+	print 'tagging the new version'
+	command = "git tag -a %s -m 'release %s'" % (new,new)
+	print '>', command
 
-		ret = os.system("python setup.py sdist upload")
-		if not ret:
+	ret = dryrun or os.system(command)
+	if ret:
+		print 'return code is', ret
+		print 'could not tag version (%s)' % new
+		sys.exit(1)
+
+	print 'pushing the new tag'
+	command = "git push --tags"
+	print '>', command
+
+	ret = dryrun or os.system(command)
+	if ret:
+		print 'return code is', ret
+		print 'could not push release version'
+		sys.exit(1)
+
+	print
+	print 'updating PyPI'
+
+	try:
+		command = "python setup.py sdist upload"
+		print '>', command
+
+		ret = dryrun or os.system(command)
+		if ret:
+			print 'return code is', ret
 			print 'could not generate egg on pypi'
 			sys.exit(1)
-		ret = os.system("python setup.py bdist_wheel upload")
-		if not ret:
+
+		command = "python setup.py bdist_wheel upload"
+		print '>', command
+
+		ret = dryrun or os.system(command)
+		if ret:
+			print 'return code is', ret
 			print 'could not generate wheel on pypi'
 			sys.exit(1)
 
+		print 'all done.'
+
 	except Exception,e:
-		print "Can not check the version consistancy"
+		print "could not update release, the git state may be in flux .."
 		sys.exit(1)
 
 	sys.exit(0)
-
 
 
 def packages (lib):
