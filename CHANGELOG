@@ -10,6 +10,8 @@ Version 3.4.6
  * Fix: use ICMP Type and Code when printing flows (respectively using name and number)
  * Fix: do not use space printing redirect extended community
  * Fix: not parsing correctly multisession configurations
+ * Fix: bug in ASPath parsing
+    reported by: Terry Hardie (issue #205)
  * Feature: use ETC environment variable for configuration location if set
  * Feature: JSON now includes ASN (local,peer) and IP (local,IP)
     requested by: jtkdpu (issue #196)
@@ -18,7 +20,14 @@ Version 3.4.6
     requested by: spakka (issue #109)
  * Feature: allow routes to have a name (which can be used as comment)
     requested by: lazy404 (issue #167)
+ * Feature: improve release code to prevent version mismatch (issue #202)
+    reported by: Anand Buddhdev
+ * Fix: systemd file is not installed anymore by default (issue #202)
+    to add to the file installation list use "python setup.py install systemd"
+    requested by: Anand Buddhdev
  * QA: moved all testing code (used by travis-ci) in the ./qa folder
+ * QA: added nosetest, updating some of the old unittest code
+ * QA: integrated travis-ci with coveralls.io to have real time code coverage
  * QA: ExaBGP can take more than one configuration file and on configuration reload rotate between them
  * QA: checking that broken flows do not break the parser
  * QA: checking that configuration routes are well added and removed on SIGUSR1

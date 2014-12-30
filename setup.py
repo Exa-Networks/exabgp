@@ -258,8 +258,9 @@ if os_name == 'NetBSD':
 else:
 	files_definition = [
 		('etc/exabgp',configuration('etc/exabgp')),
-		('/usr/lib/systemd/system',configuration('etc/systemd')),
 	]
+	if sys.argv[-1] == 'systemd':
+		files_definition.append(('/usr/lib/systemd/system',configuration('etc/systemd')))
 
 setup(name='exabgp',
 	version=version,
