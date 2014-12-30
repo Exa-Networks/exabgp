@@ -86,9 +86,9 @@ class ASPath (Attribute):
 		as2_seq = [_ if not _.asn4() else AS_TRANS for _ in self.as_seq]
 		as2_set = [_ if not _.asn4() else AS_TRANS for _ in self.as_set]
 
-		message = ASPath(as2_seq,as2_set,self.as_conf_sequence,self.as_conf_set)._pack(negotiated)
+		message = ASPath(as2_seq,as2_set,self.as_cseq,self.as_cset)._pack(negotiated)
 		if AS_TRANS in as2_seq or AS_TRANS in as2_set:
-			message += AS4Path(self.as_seq,self.as_set,self.as_conf_sequence,self.as_conf_set)._pack(negotiated,True)
+			message += AS4Path(self.as_seq,self.as_set,self.as_cseq,self.as_cset)._pack(negotiated,True)
 		return message
 
 	def __len__ (self):
