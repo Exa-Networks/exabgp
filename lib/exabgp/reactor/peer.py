@@ -33,6 +33,8 @@ from exabgp.logger import LazyFormat
 from exabgp.util.trace import trace
 
 from exabgp.util.enumeration import Enumeration
+from exabgp.util.panic import no_panic
+from exabgp.util.panic import footer
 
 STATE = Enumeration (
 	'idle',
@@ -62,7 +64,6 @@ SEND = Enumeration (
 FORCE_GRACEFUL = True
 
 class Interrupted (Exception): pass
-
 
 # =========================================================================== KA
 #
@@ -648,11 +649,15 @@ class Peer (object):
 		# UNHANDLED PROBLEMS
 		except Exception, e:
 			# Those messages can not be filtered in purpose
-			self.logger.error(self.me('UNHANDLED PROBLEM, please report'),'reactor')
-			self.logger.error(self.me(str(type(e))),'reactor')
-			self.logger.error(self.me(str(e)),'reactor')
-			self.logger.error(trace())
-
+			self.logger.raw('\n'.join([
+				no_panic,
+				self.me(''),
+				'',
+				str(type(e)),
+				str(e),
+				trace(),
+				footer
+			]))
 			self._reset(direction)
 			return
 	# loop

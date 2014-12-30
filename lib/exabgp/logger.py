@@ -233,6 +233,14 @@ class _Logger (object):
 				sys.stdout.flush()
 		self.pdb(level)
 
+	def raw (self,message):
+		for line in message.split('\n'):
+			if self._syslog:
+				self._syslog.critical(line)
+			else:
+				print line
+				sys.stdout.flush()
+
 	# show the message on the wire
 	def network (self,message,recorder='info'):
 		up = short(recorder)
