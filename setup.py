@@ -21,7 +21,7 @@ description_rst = """\
 ExaBGP
 ======
 
-.. image:: https://badges.gitter.im/Join%20Chat.png
+.. image:: https://badges.gitter.im/Join%%20Chat.png
    :target: https://gitter.im/Exa-Networks/exabgp
    :alt: Gitter
 
@@ -87,9 +87,9 @@ Without installation
 
 ::
 
-    wget https://github.com/Exa-Networks/exabgp/archive/3.4.5.tar.gz
-    tar zxvf 3.4.5.tar.gz
-    cd exabgp-3.4.5
+    wget https://github.com/Exa-Networks/exabgp/archive/%(version)s.tar.gz
+    tar zxvf %(version)s.tar.gz
+    cd exabgp-%(version)s
     ./sbin/exabgp --help
 
 Feedback and getting involved
@@ -116,8 +116,10 @@ if __name__ == '__main__':
 if sys.argv[-1] == 'help':
 	print """\
 python setup.py help     this help
+python setup.py readme   show the pypi RST readme
 python setup.py push     update the version, push to github
 python setup.py release  tag a new version on github, and update pypi
+python setup.py pypi     create egg/wheel
 """
 	sys.exit(0)
 
@@ -126,7 +128,7 @@ python setup.py release  tag a new version on github, and update pypi
 #
 
 if sys.argv[-1].lower() == 'readme':
-	print description_rst
+	print description_rst % { 'version' : '0.0.0' }
 	sys.exit(0)
 
 #
@@ -183,16 +185,16 @@ if sys.argv[-1] == 'release':
 		changelog.next()  # skip the word version on the first line
 		for line in changelog:
 			if 'version' in line.lower():
-				new = line.split()[1]
-				if new in next:
+				version = line.split()[1]
+				if version in next:
 					break
 				print 'invalid new version in CHANGELOG'
 				sys.exit(1)
 
-	print 'ok, next release is %s' % new
+	print 'ok, next release is %s' % version
 	print 'checking that this release is not already tagged'
 
-	if new in tags.split('\n'):
+	if version in tags.split('\n'):
 		print 'this tag was already released'
 		sys.exit(1)
 
@@ -200,7 +202,7 @@ if sys.argv[-1] == 'release':
 	print 'rewriting lib/exabgp/version.py'
 
 	with open('lib/exabgp/version.py','w') as version_file:
-		version_file.write(version_template % new)
+		version_file.write(version_template % version)
 
 	print 'checking if we need to commit a version.py change'
 
@@ -217,13 +219,13 @@ if sys.argv[-1] == 'release':
 			commit = False
 
 	if commit is True:
-		command = "git commit -a -m 'updating version to %s'" % new
+		command = "git commit -a -m 'updating version to %s'" % version
 		print '>', command
 
 		ret = dryrun or os.system(command)
 		if ret:
 			print 'return code is', ret
-			print 'could not commit version change (%s)' % new
+			print 'could not commit version change (%s)' % version
 			sys.exit(1)
 		print 'version.py was updated'
 	elif commit is False:
@@ -233,16 +235,16 @@ if sys.argv[-1] == 'release':
 		print 'version.py was already set'
 
 	print 'tagging the new version'
-	command = "git tag -a %s -m 'release %s'" % (new,new)
+	command = "git tag -a %s -m 'release %s'" % (version,version)
 	print '>', command
 
 	ret = dryrun or os.system(command)
 	if ret:
 		print 'return code is', ret
-		print 'could not tag version (%s)' % new
+		print 'could not tag version (%s)' % version
 		sys.exit(1)
 
-	print 'pushing the new tag'
+	print 'pushing the new tag to local repo'
 	command = "git push --tags"
 	print '>', command
 
@@ -252,34 +254,39 @@ if sys.argv[-1] == 'release':
 		print 'could not push release version'
 		sys.exit(1)
 
+	print 'pushing the new tag to upstream'
+	command = "git push --tags upstream"
+	print '>', command
+
+	ret = dryrun or os.system(command)
+	if ret:
+		print 'return code is', ret
+		print 'could not push release version'
+		sys.exit(1)
+
+if sys.argv[-1] in ('pypi'):
 	print
 	print 'updating PyPI'
 
-	try:
-		command = "python setup.py sdist upload"
-		print '>', command
+	command = "python setup.py sdist upload"
+	print '>', command
 
-		ret = dryrun or os.system(command)
-		if ret:
-			print 'return code is', ret
-			print 'could not generate egg on pypi'
-			sys.exit(1)
-
-		command = "python setup.py bdist_wheel upload"
-		print '>', command
-
-		ret = dryrun or os.system(command)
-		if ret:
-			print 'return code is', ret
-			print 'could not generate wheel on pypi'
-			sys.exit(1)
-
-		print 'all done.'
-
-	except Exception,e:
-		print "could not update release, the git state may be in flux .."
+	ret = dryrun or os.system(command)
+	if ret:
+		print 'return code is', ret
+		print 'could not generate egg on pypi'
 		sys.exit(1)
 
+	command = "python setup.py bdist_wheel upload"
+	print '>', command
+
+	ret = dryrun or os.system(command)
+	if ret:
+		print 'return code is', ret
+		print 'could not generate wheel on pypi'
+		sys.exit(1)
+
+	print 'all done.'
 	sys.exit(0)
 
 
@@ -318,10 +325,12 @@ else:
 	if sys.argv[-1] == 'systemd':
 		files_definition.append(('/usr/lib/systemd/system',configuration('etc/systemd')))
 
+version = imp.load_source('version','lib/exabgp/version.py').version
+
 setup(name='exabgp',
 	version=version,
 	description='BGP swiss army knife',
-	long_description=description_rst,
+	long_description=description_rst % {'version': version},
 	author='Thomas Mangin',
 	author_email='thomas.mangin@exa-networks.co.uk',
 	url='https://github.com/Exa-Networks/exabgp',
@@ -346,3 +355,4 @@ setup(name='exabgp',
 		'Topic :: Internet',
 	],
 )
+
