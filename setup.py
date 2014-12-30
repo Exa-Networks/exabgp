@@ -11,7 +11,7 @@ import os
 import sys
 import imp
 import platform
-from distutils.core import setup
+from setuptools import setup
 from distutils.util import get_platform
 
 dryrun = False
