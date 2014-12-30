@@ -401,7 +401,7 @@ def main ():
 		with open(sys.argv[1]) as content:
 			messages = [_.strip() for _ in content.readlines() if _.strip() and '#' not in _]
 	except IOError:
-		print 'coud not open file', sys.argv[1]
+		print 'could not open file', sys.argv[1]
 		sys.exit(1)
 
 	try:
