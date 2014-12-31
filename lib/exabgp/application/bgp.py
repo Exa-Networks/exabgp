@@ -60,13 +60,15 @@ def main ():
 		folder = os.path.realpath(os.path.normpath(options["--folder"]))
 	elif os.environ.get('ETC',None):
 		folder = os.path.join(os.path.realpath(os.path.normpath(os.environ.get('ETC','etc'))),'exabgp')
+	elif sys.argv[0] == '/usr/local/bin/exabgp':
+		folder = '/usr/local/etc/exabgp'
 	else:
 		folder = '/etc/exabgp'
 
 	if not os.environ.get('ETC',''):
 		os.environ['ETC'] = folder
 
-	envfile = 'exabgp.env' if not  options["--env"] else options["--env"]
+	envfile = 'exabgp.env' if not options["--env"] else options["--env"]
 	if not envfile.startswith('/'):
 		envfile = '%s/%s' % (folder, envfile)
 

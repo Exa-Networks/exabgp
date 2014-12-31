@@ -339,7 +339,7 @@ setup(name='exabgp',
 	platforms=[get_platform(),],
 	package_dir={'': 'lib'},
 	packages=packages('lib'),
-	scripts=['sbin/exabgp',],
+#	scripts=['sbin/exabgp',],
 	download_url='https://github.com/Exa-Networks/exabgp/archive/%s.tar.gz' % version,
 	data_files=files_definition,
 	classifiers=[
@@ -354,5 +354,10 @@ setup(name='exabgp',
 		'Programming Language :: Python',
 		'Topic :: Internet',
 	],
+	entry_points={
+		'console_scripts': [
+			'exabgp = exabgp.application:run_exabgp',
+		],
+	},
 )
 
