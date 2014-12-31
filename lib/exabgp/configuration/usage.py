@@ -3,7 +3,7 @@
 usage.py
 
 Created by Thomas Mangin on 2014-12-19.
-Copyright (c) 2009 Exa Networks. All rights reserved.
+Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 usage = """\
