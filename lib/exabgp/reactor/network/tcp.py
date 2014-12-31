@@ -3,7 +3,7 @@
 tcp.py
 
 Created by Thomas Mangin on 2013-07-13.
-Copyright (c) 2013-2013 Exa Networks. All rights reserved.
+Copyright (c) 2013-2015 Exa Networks. All rights reserved.
 """
 
 import time

@@ -3,7 +3,7 @@
 cache.py
 
 Created by David Farrar on 2012-12-27.
-Copyright (c) 2009-2013 Exa Networks. All rights reserved.
+Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 import time

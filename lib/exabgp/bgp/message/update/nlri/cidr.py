@@ -3,7 +3,7 @@
 prefix.py
 
 Created by Thomas Mangin on 2013-08-07.
-Copyright (c) 2009-2013 Exa Networks. All rights reserved.
+Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 import math

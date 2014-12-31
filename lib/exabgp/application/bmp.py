@@ -4,7 +4,7 @@
 peer.py
 
 Created by Thomas Mangin on 2013-02-20.
-Copyright (c) 2009-2012 Exa Networks. All rights reserved.
+Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 import os

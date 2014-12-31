@@ -3,8 +3,8 @@
 vpls.py
 
 Created by Nikita Shirokov on 2014-06-16.
-Copyright (c) 2014-2014 Nikita Shirokov. All rights reserved.
-Copyright (c) 2014-2014 Exa Networks. All rights reserved.
+Copyright (c) 2014-2015 Nikita Shirokov. All rights reserved.
+Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 """
 
 from struct import unpack

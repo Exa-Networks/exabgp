@@ -3,7 +3,7 @@
 message.py
 
 Created by Thomas Mangin on 2013-02-26.
-Copyright (c) 2009-2012 Exa Networks. All rights reserved.
+Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 class FakeAddPath (object):

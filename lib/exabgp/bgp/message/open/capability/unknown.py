@@ -3,7 +3,7 @@
 unknown.py
 
 Created by Thomas Mangin on 2014-06-30.
-Copyright (c) 2009-2013 Exa Networks. All rights reserved.
+Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message.open.capability import Capability

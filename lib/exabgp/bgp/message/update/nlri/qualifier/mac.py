@@ -3,8 +3,8 @@
 mac.py
 
 Created by Thomas Mangin on 2012-07-08.
-Copyright (c) 2014-2014 Orange. All rights reserved.
-Copyright (c) 2014-2014 Exa Networks. All rights reserved.
+Copyright (c) 2014-2015 Orange. All rights reserved.
+Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 """
 
 

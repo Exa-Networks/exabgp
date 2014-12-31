@@ -3,7 +3,7 @@
 encapsulation.py
 
 Created by Thomas Mangin on 2014-06-21.
-Copyright (c) 2014-2014 Exa Networks. All rights reserved.
+Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 """
 
 from struct import pack
