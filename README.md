@@ -41,6 +41,7 @@ These organisations have spoken of, or are using/have used [ExaBGP](http://githu
 [MAXCDN](http://blog.maxcdn.com/anycast-ip-routing-used-maxcdn/),
 [MICROSOFT](http://www.nanog.org/sites/default/files/wed.general.brainslug.lapukhov.20.pdf),
 [NEO TELECOM](http://media.frnog.org/FRnOG_18/FRnOG_18-6.pdf),
+[POWERDNS](https://www.powerdns.com/),
 [RIPE NCC](https://labs.ripe.net/Members/wouter_miltenburg/Researchpaper.pdf),
 [VIDEOPLAZA](http://www.videoplaza.com),
 ...
