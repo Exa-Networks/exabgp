@@ -1,3 +1,9 @@
+exabgp (3.4.6-1) unstable; urgency=low
+
+  * latest ExaBGP release.
+
+ -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Fri, 31 Dec 2014 13:00:00 +0000
+
 exabgp (3.4.4-1) unstable; urgency=low
 
   * latest ExaBGP release.
