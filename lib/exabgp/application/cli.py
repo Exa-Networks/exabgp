@@ -160,7 +160,8 @@ class ExaBGP (Completed):
 	def do_last (self, line):
 		"Print the input, replacing '$out' with the output of the last shell command"
 		# Obviously not robust
-		print line.replace('$out', self.last_output)
+		if hasattr(self, 'last_output'):
+			print line.replace('$out', self.last_output)
 
 
 	##
