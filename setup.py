@@ -113,14 +113,35 @@ if __name__ == '__main__':
 	sys.stdout.write(version)
 """
 
+debian_template = """\
+exabgp (%s-1) unstable; urgency=low
+
+  * latest ExaBGP release.
+
+ -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  %s
+
+"""
+
 if sys.argv[-1] == 'help':
 	print """\
 python setup.py help     this help
+python setup.py cleanup  delete left-over file from release
 python setup.py readme   show the pypi RST readme
 python setup.py push     update the version, push to github
 python setup.py release  tag a new version on github, and update pypi
 python setup.py pypi     create egg/wheel
+python setup.py debian   prepend the current version to debian/changelog
 """
+	sys.exit(0)
+
+
+if os.path.exists('lib/exabgp.egg-info'):
+	print 'removing left-over egg'
+	import shutil
+	shutil.rmtree('lib/exabgp.egg-info')
+	sys.exit(1)
+
+if sys.argv[-1] == 'cleanup':
 	sys.exit(0)
 
 #
@@ -160,6 +181,37 @@ if sys.argv[-1] == 'push':
 		print 'failed to push'
 		sys.exit(ret)
 
+	sys.exit(0)
+
+#
+# update the debian changelog
+#
+
+def debian ():
+	from email.utils import formatdate
+
+	if not os.path.exists('debian/changelog'):
+		return False
+
+	version = imp.load_source('version','lib/exabgp/version.py').version
+
+	with open('debian/changelog') as f:
+		content = f.read()
+
+	if '(%s-' % version in content:
+		return False
+
+	with open('debian/changelog','w') as w:
+		w.write(debian_template % (version,formatdate()))
+		w.write(content)
+
+	return True
+
+if sys.argv[-1] == 'debian':
+	if not debian():
+		print 'the current version is already present in the debian/changelog file'
+		sys.exit(1)
+	print 'updated debian/changelog'
 	sys.exit(0)
 
 #
@@ -203,6 +255,11 @@ if sys.argv[-1] == 'release':
 
 	with open('lib/exabgp/version.py','w') as version_file:
 		version_file.write(version_template % version)
+
+	# must be done after version.py's update
+	if not debian():
+		print 'could not update debian/changelog'
+		sys.exit(1)
 
 	print 'checking if we need to commit a version.py change'
 
