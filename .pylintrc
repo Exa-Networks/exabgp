@@ -1,0 +1,250 @@
+[MASTER]
+
+ignore=.git,dep
+
+
+
+[MESSAGES CONTROL]
+
+# Enable only checker(s) with the given id(s). This option conflicts with the
+# disable-checker option
+#enable-checker=
+
+# Enable all checker(s) except those with the given id(s). This option
+# conflicts with the enable-checker option
+#disable-checker=
+
+# Enable all messages in the listed categories (IRCWEF).
+#enable-msg-cat=
+
+# Disable all messages in the listed categories (IRCWEF).
+disable-msg-cat=
+
+# Enable the message(s) with the given id(s).
+#enable-msg=
+
+# Disable the message(s) with the given id(s).
+disable=C0326,W191,E203,E211,E221,E272,E225,E231,E302,E303,E501,E701
+
+# http://pylint-messages.wikidot.com/messages:<CODE>
+#C0326: No space allowed before bracket ( def function (args) )
+
+[REPORTS]
+
+# Set the output format. Available formats are text, parseable, colorized, msvs
+# (visual studio) and html
+#output-format=html
+output-format=colorized
+
+# Put messages in a separate file for each module / package specified on the
+# command line instead of printing them on stdout. Reports (if any) will be
+# written in a file name "pylint_global.[txt|html]".
+files-output=no
+
+# Put messages in a separate file for each module / package specified on the
+# command line instead of printing them on stdout. Reports (if any) will be
+# written in a file name "pylint_global.[txt|html]".
+files-output=no
+
+# Tells wether to display a full report or only the messages
+# reports=no
+reports=yes
+
+# Python expression which should return a note less than 10 (10 is the highest
+# note). You have access to the variables errors warning, statement which
+# respectivly contain the number of errors / warnings messages and the total
+# number of statements analyzed. This is used by the global evaluation report
+# (R0004).
+evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10)
+
+# Add a comment according to your evaluation note. This is used by the global
+# # evaluation report (R0004).
+comment=yes
+
+# msg-template={msg_id}:{line:3d},{column}:{msg}
+
+# Enable the report(s) with the given id(s).
+#enable-report=
+
+# Disable the report(s) with the given id(s).
+#disable-report=
+
+
+
+[BASIC]
+
+# Required attributes for module, separated by a comma
+required-attributes=__version__
+
+# List of builtins function names that should not be used, separated by a comma
+bad-functions=map,filter,apply,input
+
+# Regular expression which should only match correct module names
+module-rgx=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
+
+# Regular expression which should only match correct module level names
+const-rgx=(([A-Z_][A-Z0-9_]*)|(__.*__))$
+
+# Regular expression which should only match correct class names
+class-rgx=[A-Z_][a-zA-Z0-9]+$
+
+# Regular expression which should only match correct function names
+function-rgx=[a-z_][a-z0-9_]{2,30}$
+
+# Regular expression which should only match correct method names
+method-rgx=[a-z_][a-z0-9_]{2,30}$
+
+# Regular expression which should only match correct instance attribute names
+attr-rgx=[a-z_][a-z0-9_]{2,30}$
+
+# Regular expression which should only match correct argument names
+argument-rgx=[a-z_][a-z0-9_]{2,30}$
+
+# Regular expression which should only match correct variable names
+variable-rgx=[a-z_][a-z0-9_]{2,30}$
+
+# Regular expression which should only match correct list comprehension /
+# generator expression variable names
+inlinevar-rgx=[A-Za-z_][A-Za-z0-9_]*$
+
+# Good variable names which should always be accepted, separated by a comma
+good-names=i,j,k,v,l,_
+
+# Bad variable names which should always be refused, separated by a comma
+bad-names=foo,bar,baz,toto,tutu,tata
+
+# Regular expression which should only match functions or classes name which do
+# not require a docstring
+no-docstring-rgx=__.*__
+
+
+[FORMAT]
+
+max-line-length=110
+max-module-lines=1000
+indent-string='\t'
+
+# ignore-long-lines=^.*((https?:)|(pragma:)|(TODO:)).*$
+
+
+[IMPORTS]
+
+deprecated-modules=regsub,string,TERMIOS,Bastion,rexec
+# Create a graph of every (i.e. internal and external) dependencies in the
+# given file (report R0402 must not be disabled)
+import-graph=
+
+# Create a graph of external dependencies in the given file (report R0402 must
+# not be disabled)
+ext-import-graph=
+
+# Create a graph of internal dependencies in the given file (report R0402 must
+# not be disabled)
+int-import-graph=
+
+
+
+[TYPECHECK]
+
+# Tells whether missing members accessed in mixin class should be ignored. A
+# mixin class is detected if its name ends with "mixin" (case insensitive).
+ignore-mixin-members=yes
+
+# List of classes names for which member attributes should not be checked
+# (useful for classes with attributes dynamically set).
+ignored-classes=
+
+# List of members which are set dynamically and missed by pylint inference
+# system, and so shouldn't trigger E0201 when accessed. Python regular
+# expressions are accepted.
+generated-members=
+
+
+
+[MISCELLANEOUS]
+
+notes=FIXME,XXX,TODO
+
+
+
+[SIMILARITIES]
+
+# Minimum lines number of a similarity.
+min-similarity-lines=8
+
+# Ignore comments when computing similarities.
+ignore-comments=yes
+
+# Ignore docstrings when computing similarities.
+ignore-docstrings=yes
+
+# Ignore imports when computing similarities.
+ignore-imports=no
+
+
+
+[VARIABLES]
+
+# Tells whether we should check for unused import in __init__ files.
+init-import=no
+
+# A regular expression matching the beginning of the name of dummy variables
+# (i.e. not used).
+dummy-variables-rgx=_|dummy
+
+# List of additional names supposed to be defined in builtins. Remember that
+# you should avoid to define new builtins when possible.
+additional-builtins=
+
+
+
+[CLASSES]
+
+# List of interface methods to ignore, separated by a comma. This is used for
+# instance to not check methods defines in Zope's Interface base class.
+# ignore-iface-methods=isImplementedBy,deferred,extends,names,namesAndDescriptions,queryDescriptionFor,getBases,getDescriptionFor,getDoc,getName,getTaggedValue,getTaggedValueTags,isEqualOrExtendedBy,setTaggedValue,isImplementedByInstancesOf,adaptWith,is_implemented_by
+
+# List of method names used to declare (i.e. assign) instance attributes.
+# defining-attr-methods=__init__,__new__,setUp
+
+# List of valid names for the first argument in a class method.
+valid-classmethod-first-arg=cls
+
+# List of valid names for the first argument in a metaclass class method.
+valid-metaclass-classmethod-first-arg=mcs
+
+
+
+[DESIGN]
+
+# Maximum number of arguments for function / method
+max-args=5
+
+# Argument names that match this expression will be ignored. Default to name
+# with leading underscore
+ignored-argument-names=_.*
+
+# Maximum number of locals for function / method body
+max-locals=15
+
+# Maximum number of return / yield for function / method body
+max-returns=6
+
+# Maximum number of branch for function / method body
+max-branchs=12
+
+# Maximum number of statements in function / method body
+max-statements=50
+
+# Maximum number of parents for a class (see R0901).
+max-parents=7
+
+# Maximum number of attributes for a class (see R0902).
+max-attributes=7
+
+# Minimum number of public methods for a class (see R0903).
+min-public-methods=2
+
+# Maximum number of public methods for a class (see R0904).
+max-public-methods=20
+

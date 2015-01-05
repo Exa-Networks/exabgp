@@ -4,6 +4,7 @@
 [![PYPI Version](https://pypip.in/v/exabgp/badge.png)](https://pypi.python.org/pypi/exabgp)
 [![Testing Status](https://travis-ci.org/Exa-Networks/exabgp.png)](https://travis-ci.org/Exa-Networks/exabgp)
 [![Coverage Status](https://img.shields.io/coveralls/Exa-Networks/exabgp.png)](https://coveralls.io/r/Exa-Networks/exabgp)
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/Exa-Networks/exabgp/badges/quality-score.png)](https://scrutinizer-ci.com/g/Exa-Networks/exabgp/)
 [![License](https://pypip.in/license/exabgp/badge.png)](https://github.com/Exa-Networks/exabgp/blob/master/COPYRIGHT)
 
 [ExaBGP](http://github.com/Exa-Networks/exabgp) allows engineers to control their network from commodity servers.

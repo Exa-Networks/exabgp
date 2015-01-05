@@ -7,6 +7,7 @@ Version 3.4.7
  * Package: be more pythonic and use enty points with pip installation
  * Package: automatically update debian's changelog on release
  * Fix: issue with aggregator generation
+   reported by: Yan Filyurin
 
 Version 3.4.6
  * Fix: a badly formated flow route would throw the parser in limbo
