@@ -11,6 +11,7 @@ import os
 import sys
 import imp
 import platform
+from shutil import rmtree
 from setuptools import setup
 from distutils.util import get_platform
 
@@ -135,11 +136,14 @@ python setup.py debian   prepend the current version to debian/changelog
 	sys.exit(0)
 
 
-if os.path.exists('lib/exabgp.egg-info'):
-	print 'removing left-over egg'
-	import shutil
-	shutil.rmtree('lib/exabgp.egg-info')
-	sys.exit(1)
+def remove_egg ():
+	if os.path.exists('lib/exabgp.egg-info'):
+		print 'removing left-over egg'
+		rmtree('lib/exabgp.egg-info')
+		return True
+	return False
+
+remove_egg()
 
 if sys.argv[-1] == 'cleanup':
 	sys.exit(0)
@@ -277,7 +281,7 @@ if sys.argv[-1] == 'release':
 
 	if commit is True:
 		command = "git commit -a -m 'updating version to %s'" % version
-		print '>', command
+		print '\n>', command
 
 		ret = dryrun or os.system(command)
 		if ret:
@@ -293,7 +297,7 @@ if sys.argv[-1] == 'release':
 
 	print 'tagging the new version'
 	command = "git tag -a %s -m 'release %s'" % (version,version)
-	print '>', command
+	print '\n>', command
 
 	ret = dryrun or os.system(command)
 	if ret:
@@ -303,7 +307,7 @@ if sys.argv[-1] == 'release':
 
 	print 'pushing the new tag to local repo'
 	command = "git push --tags"
-	print '>', command
+	print '\n>', command
 
 	ret = dryrun or os.system(command)
 	if ret:
@@ -313,20 +317,21 @@ if sys.argv[-1] == 'release':
 
 	print 'pushing the new tag to upstream'
 	command = "git push --tags upstream"
-	print '>', command
+	print '\n>', command
 
 	ret = dryrun or os.system(command)
 	if ret:
 		print 'return code is', ret
 		print 'could not push release version'
 		sys.exit(1)
+	sys.exit(0)
 
 if sys.argv[-1] in ('pypi'):
 	print
 	print 'updating PyPI'
 
 	command = "python setup.py sdist upload"
-	print '>', command
+	print '\n>', command
 
 	ret = dryrun or os.system(command)
 	if ret:
@@ -334,8 +339,10 @@ if sys.argv[-1] in ('pypi'):
 		print 'could not generate egg on pypi'
 		sys.exit(1)
 
+	remove_egg()
+
 	command = "python setup.py bdist_wheel upload"
-	print '>', command
+	print '\n>', command
 
 	ret = dryrun or os.system(command)
 	if ret:
