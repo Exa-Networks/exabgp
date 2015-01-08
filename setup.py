@@ -267,8 +267,8 @@ if sys.argv[-1] == 'release':
 	status = os.popen('git status')
 	for line in status.read().split('\n'):
 		if 'modified:' in line:
-			if 'version.py' in line:
-				if commit is None:
+			if 'lib/exabgp/version.py' in line or 'debian/changelog' in line:
+				if commit is not False:
 					commit = True
 			else:
 				commit = False
