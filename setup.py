@@ -140,8 +140,9 @@ def remove_egg ():
 	if os.path.exists('lib/exabgp.egg-info'):
 		print 'removing left-over egg'
 		rmtree('lib/exabgp.egg-info')
-		return True
-	return False
+	if os.path.exists('build/lib/exabgp'):
+		print 'removing left-over egg'
+		rmtree('build')
 
 remove_egg()
 

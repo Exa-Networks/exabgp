@@ -44,10 +44,10 @@ def __exit(memory,code):
 def main ():
 	options = docopt.docopt(usage, help=False)
 
-	main = int(sys.version[0])
-	secondary = int(sys.version[2])
+	major = int(sys.version[0])
+	minor = int(sys.version[2])
 
-	if main != 2 or secondary < 5:
+	if major != 2 or minor < 5:
 		sys.exit('This program can not work (is not tested) with your python version (< 2.5 or >= 3.0)')
 
 	if options["--version"]:
@@ -77,17 +77,18 @@ def main ():
 	if options["--decode"]:
 		decode = ''.join(options["--decode"]).replace(':','').replace(' ','')
 		if not is_hex(decode):
-			print(usage)
+			print usage
 			print 'Environment values are:\n' + '\n'.join(' - %s' % _ for _ in environment.default())
-			print ("\n\n"
-				   "The BGP message must be an hexadecimal string.\n"
-				   "All colons or spaces are ignored, for example:\n"
-				   " --decode 001E0200000007900F0003000101\n"
-				   " --decode 001E:02:0000:0007:900F:0003:0001:01\n"
-				   " --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001E0200000007900F0003000101\n"
-				   " --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:0000:0007:900F:0003:0001:01\n"
-				   " --decode 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF 001E02 00000007900F0003000101'\n"
-				  )
+			print ""
+			print "The BGP message must be an hexadecimal string."
+			print ""
+			print "All colons or spaces are ignored, for example:"
+			print ""
+			print "  --decode 001E0200000007900F0003000101"
+			print "  --decode 001E:02:0000:0007:900F:0003:0001:01"
+			print "  --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001E0200000007900F0003000101"
+			print "  --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:0000:0007:900F:0003:0001:01"
+			print "  --decode 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF 001E02 00000007900F0003000101'"
 			sys.exit(1)
 	else:
 		decode = ''
@@ -226,7 +227,7 @@ def main ():
 		for configuration in configurations:
 			pid = os.fork()
 			if pid == 0:
-				run(env,comment,configurations,os.getpid())
+				run(env,comment,[configuration],os.getpid())
 			else:
 				pids.append(pid)
 
@@ -255,7 +256,7 @@ def run (env,comment,configurations,pid=0):
 
 	try:
 		import cProfile as profile
-	except:
+	except ImportError:
 		import profile
 
 	if not env.profile.file or env.profile.file == 'stdout':
@@ -275,15 +276,15 @@ def run (env,comment,configurations,pid=0):
 
 	if not notice:
 		logger.reactor('profiling ....')
-		pr = profile.Profile()
-		pr.enable()
+		profiler = profile.Profile()
+		profiler.enable()
 		try:
 			Reactor(configurations).run()
 		except:
 			raise
 		finally:
-			pr.disable()
-			kprofile = lsprofcalltree.KCacheGrind(pr)
+			profiler.disable()
+			kprofile = lsprofcalltree.KCacheGrind(profiler)
 
 			with open(profile_name, 'w+') as write:
 				kprofile.output(write)

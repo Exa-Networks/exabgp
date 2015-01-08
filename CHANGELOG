@@ -3,6 +3,9 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.4.8
+ * Fix: bug with multiple configuration files
+
 Version 3.4.7
  * Package: be more pythonic and use enty points with pip installation
  * Package: automatically update debian's changelog on release

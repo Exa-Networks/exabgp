@@ -24,7 +24,7 @@ disable-msg-cat=
 #enable-msg=
 
 # Disable the message(s) with the given id(s).
-disable=C0326,W191,E203,E211,E221,E272,E225,E231,E302,E303,E501,E701
+disable=C0326,W191,E121,E502,E203,E211,E221,E272,E225,E231,E302,E303,E501,E701
 
 # http://pylint-messages.wikidot.com/messages:<CODE>
 #C0326: No space allowed before bracket ( def function (args) )
@@ -108,7 +108,7 @@ variable-rgx=[a-z_][a-z0-9_]{2,30}$
 inlinevar-rgx=[A-Za-z_][A-Za-z0-9_]*$
 
 # Good variable names which should always be accepted, separated by a comma
-good-names=i,j,k,v,l,_
+good-names=c,f,i,j,e,k,v,l,s,w,_
 
 # Bad variable names which should always be refused, separated by a comma
 bad-names=foo,bar,baz,toto,tutu,tata
