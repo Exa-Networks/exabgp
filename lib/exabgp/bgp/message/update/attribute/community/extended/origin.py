@@ -19,6 +19,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 class Origin (ExtendedCommunity):
 	COMMUNITY_SUBTYPE = 0x03
+	LIMIT = 0  # This is to prevent warnings from scrutinizer
 
 	@property
 	def la (self):

@@ -89,6 +89,6 @@ class MPLS (NLRI,CIDR):
 
 		return len(bgp) - len(left),nlri
 
-for safi in (SAFI.nlri_mpls, SAFI.mpls_vpn):
-	for afi in (AFI.ipv4, AFI.ipv6):
-		MPLS.register_nlri(afi,safi)
+for _safi in (SAFI.nlri_mpls, SAFI.mpls_vpn):
+	for _afi in (AFI.ipv4, AFI.ipv6):
+		MPLS.register_nlri(_afi,_safi)

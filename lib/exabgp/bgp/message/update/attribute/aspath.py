@@ -30,11 +30,11 @@ class ASPath (Attribute):
 
 	__slots__ = ['as_seq','as_set','as_cseq','as_cset','segments','packed','index','_str','_json']
 
-	def __init__ (self,as_sequence,as_set,as_conf_sequence=[],as_conf_set=[],index=None):
+	def __init__ (self,as_sequence,as_set,as_conf_sequence=None,as_conf_set=None,index=None):
 		self.as_seq = as_sequence
 		self.as_set = as_set
-		self.as_cseq = as_conf_sequence
-		self.as_cset = as_conf_set
+		self.as_cseq = as_conf_sequence if as_conf_sequence is not None else []
+		self.as_cset = as_conf_set if as_conf_set is not None else []
 		self.segments = ''
 		self.packed = {True:'',False:''}
 		self.index = index  # the original packed data, use for indexing
@@ -72,7 +72,7 @@ class ASPath (Attribute):
 			segments += self._segment(self.AS_SET,self.as_set,negotiated)
 		return segments
 
-	def _pack (self,negotiated,force_asn4=False):
+	def asn_pack (self,negotiated,force_asn4=False):
 		asn4 = True if force_asn4 else negotiated.asn4
 		if not self.packed[asn4]:
 			self.packed[asn4] = self._attribute(self._segments(negotiated))
@@ -81,14 +81,14 @@ class ASPath (Attribute):
 	def pack (self,negotiated):
 		# if the peer does not understand ASN4, we need to build a transitive AS4_PATH
 		if negotiated.asn4:
-			return self._pack(negotiated)
+			return self.asn_pack(negotiated)
 
 		as2_seq = [_ if not _.asn4() else AS_TRANS for _ in self.as_seq]
 		as2_set = [_ if not _.asn4() else AS_TRANS for _ in self.as_set]
 
-		message = ASPath(as2_seq,as2_set,self.as_cseq,self.as_cset)._pack(negotiated)
+		message = ASPath(as2_seq,as2_set,self.as_cseq,self.as_cset).asn_pack(negotiated,False)
 		if AS_TRANS in as2_seq or AS_TRANS in as2_set:
-			message += AS4Path(self.as_seq,self.as_set,self.as_cseq,self.as_cset)._pack(negotiated,True)
+			message += AS4Path(self.as_seq,self.as_set,self.as_cseq,self.as_cset).asn_pack(negotiated,True)
 		return message
 
 	def __len__ (self):

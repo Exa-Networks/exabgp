@@ -32,8 +32,8 @@ class OrderedDict (dict):
 		return self.__next__()
 
 	def __next__ (self):
-		for k in self._order:
-			yield k
+		for order in self._order:
+			yield order
 
 if __name__ == '__main__':
 	d = OrderedDict(((10,'ten'),(8,'eight'),(6,'six'),(4,'four'),(2,'two'),(0,'boom')))

@@ -19,6 +19,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 class RouteTarget (ExtendedCommunity):
 	COMMUNITY_SUBTYPE = 0x02
+	LIMIT = 0
 
 	@property
 	def la (self):

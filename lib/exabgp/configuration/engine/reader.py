@@ -63,7 +63,7 @@ class Reader (object):
 	def __enter__ (self):
 		return self
 
-	def __exit__(self, type, value, tb):
+	def __exit__(self, dtype, value, tb):
 		if self.file:
 			self.file.close()
 			self.file = None

@@ -47,4 +47,8 @@ class RouteDistinguisher (object):
 			return ''
 		return ' route-distinguisher %s' % self._str()
 
+	@classmethod
+	def unpack (cls,data):
+		return cls(data[:8])
+
 RouteDistinguisher.NORD = RouteDistinguisher('')

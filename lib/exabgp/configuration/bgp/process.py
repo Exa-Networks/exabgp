@@ -110,7 +110,7 @@ class SectionProcess (Section):
 		valid_messages = ['notification','open','keepalive','update','refresh','operational']
 		valid_options = ['parsed','packets','consolidated']
 
-		format = lambda s: (s[::-1].replace(',', ' and'[::-1], 1))[::-1]
+		printf = lambda s: (s[::-1].replace(',', ' and'[::-1], 1))[::-1]
 
 		direction = self.location[-2]
 		message = self.location[-1]
@@ -118,7 +118,7 @@ class SectionProcess (Section):
 
 		for (idx_line,idx_column,line,action) in actions:
 			if action not in valid_options:
-				raise RaisedProcess(Location(idx_line,idx_column,line),'invalid message option %s, valid options are "%s"' % (action,format('", "'.join(valid_options))))
+				raise RaisedProcess(Location(idx_line,idx_column,line),'invalid message option %s, valid options are "%s"' % (action,printf('", "'.join(valid_options))))
 
 			messages = valid_messages if message == 'all' else [message]
 

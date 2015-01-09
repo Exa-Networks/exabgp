@@ -17,8 +17,8 @@ class ESI (object):
 
 	__slots__ = ['esi']
 
-	def __init__ (self,bytes=None):
-		self.esi = self.DEFAULT if bytes is None else bytes
+	def __init__ (self,esi=None):
+		self.esi = self.DEFAULT if esi is None else esi
 
 	def __str__ (self):
 		if self.esi == self.DEFAULT:

@@ -106,8 +106,8 @@ class SectionSession (Section):
 		registry.register_hook(cls,'action',location+['router-id'],'router_id')
 		registry.register_hook(cls,'action',location+['hold-time'],'hold_time')
 
-		asn = location + ['asn']
-		registry.register_hook(cls,'enter',asn,'enter_unamed_section')
-		registry.register_hook(cls,'action',asn+['local'],'local_asn')
-		registry.register_hook(cls,'action',asn+['peer'],'peer_asn')
-		registry.register_hook(cls,'exit', asn,'exit_unamed_section')
+		location += ['asn']
+		registry.register_hook(cls,'enter',location,'enter_unamed_section')
+		registry.register_hook(cls,'action',location+['local'],'local_asn')
+		registry.register_hook(cls,'action',location+['peer'],'peer_asn')
+		registry.register_hook(cls,'exit', location,'exit_unamed_section')

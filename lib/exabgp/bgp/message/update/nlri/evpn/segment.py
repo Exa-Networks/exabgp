@@ -36,5 +36,5 @@ class EthernetSegment (EVPN):
 	NAME = "Ethernet Segment"
 	SHORT_NAME = "Segment"
 
-	def __init__ (**args):
+	def __init__ (self,**args):
 		raise Exception('unimplemented')

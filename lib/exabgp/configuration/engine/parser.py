@@ -26,12 +26,12 @@ def string (tokeniser):
 
 def boolean (tokeniser,default):
 	value = tokeniser()
-	boolean = value.lower()
-	if boolean in ('true','enable','enabled'):
+	status = value.lower()
+	if status in ('true','enable','enabled'):
 		value = True
-	elif boolean in ('false','disable','disabled'):
+	elif status in ('false','disable','disabled'):
 		value = False
-	elif boolean in ('unset',):
+	elif status in ('unset',):
 		value = None
 	else:
 		tokeniser.rewind(value)
@@ -51,27 +51,27 @@ def ttl (tokeniser):
 
 	# XXX: FIXME: Should it be a subclass of int ?
 	try:
-		ttl = int(value)
+		attl = int(value)
 	except ValueError:
 		if value in ('false','disable','disabled'):
 			return None
 		raise ValueError('invalid ttl-security "%s"' % value)
 
-	if ttl < 0:
+	if attl < 0:
 		raise ValueError('ttl-security can not be negative')
-	if ttl >= 255:
+	if attl >= 255:
 		raise ValueError('ttl must be smaller than 256')
-	return ttl
+	return attl
 
 def asn (tokeniser,value=None):
 	value = tokeniser() if value is None else value
 	try:
 		if value.count('.'):
 			high,low = value.split('.',1)
-			asn = (int(high) << 16) + int(low)
+			as_number = (int(high) << 16) + int(low)
 		else:
-			asn = int(value)
-		return ASN(asn)
+			as_number = int(value)
+		return ASN(as_number)
 	except ValueError:
 		raise ValueError('"%s" is an invalid ASN' % value)
 
@@ -88,16 +88,16 @@ def routerid (tokeniser):
 def holdtime (tokeniser):
 	value = tokeniser()
 	try:
-		holdtime = HoldTime(value)
+		hold_time = HoldTime(value)
 	except ValueError:
 		raise ValueError ('"%s" is an invalid hold-time' % value)
 
-	if holdtime < 3 and holdtime != 0:
+	if hold_time < 3 and hold_time != 0:
 		raise ValueError('holdtime must be zero or at least three seconds')
 	# XXX: FIXME: add HoldTime.MAX and reference it ( pow -1 )
-	if holdtime >= pow(2,16):
+	if hold_time >= pow(2,16):
 		raise ValueError('holdtime must be smaller than %d' % pow(2,16))
-	return holdtime
+	return hold_time
 
 
 
@@ -144,7 +144,7 @@ def attribute (tokeniser):
 		raise ValueError('invalid attribute, does not ends with ]')
 
 	# XXX: FIXME: class Attribute should have an unpack function which does that
-	from exabgp.bgp.message.update.attribute.unknown import GenericAttribute
+	from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 
 	for ((ID,flag),klass) in Attribute.registered_attributes.iteritems():
 		if code == ID and flag == klass.FLAG:
@@ -266,7 +266,7 @@ def aggregator (tokeniser):
 		return None
 
 	try:
-		asn,address = tokeniser().split(':')
+		as_number,address = tokeniser().split(':')
 	except (ValueError,IndexError):
 		raise ValueError('invalid aggregator')
 
@@ -274,7 +274,7 @@ def aggregator (tokeniser):
 	if value != ')':
 		raise ValueError('invalid aggregator')
 
-	local_as = ASN(asn)
+	local_as = ASN(as_number)
 	local_address = RouterID(address)
 
 	# XXX: This is buggy it can be an Aggregator4
@@ -497,10 +497,10 @@ def watchdog (tokeniser):
 		ID = Attribute.ID.INTERNAL_WATCHDOG
 		MULTIPLE = False
 
-	watchdog = tokeniser()
-	if watchdog.lower() in ['announce','withdraw']:
-		raise ValueError('invalid watchdog name %s' % watchdog)
-	return Watchdog(watchdog)
+	command = tokeniser()
+	if command.lower() in ['announce','withdraw']:
+		raise ValueError('invalid watchdog name %s' % command)
+	return Watchdog(command)
 
 
 # ===================================================== Fake Attribute: Withdraw
@@ -536,10 +536,10 @@ def rd (tokeniser):
 		# XXX: FIXME: we need much more checks here instead that the blank try/except...
 
 		if '.' in prefix:
-			bytes = [chr(0),chr(1)]
-			bytes.extend([chr(int(_)) for _ in prefix.split('.')])
-			bytes.extend([chr(suffix>>8),chr(suffix&0xFF)])
-			rd = ''.join(bytes)
+			data = [chr(0),chr(1)]
+			data.extend([chr(int(_)) for _ in prefix.split('.')])
+			data.extend([chr(suffix>>8),chr(suffix&0xFF)])
+			rd = ''.join(data)
 		else:
 			number = int(prefix)
 			if number < pow(2,16) and suffix < pow(2,32):

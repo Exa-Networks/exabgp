@@ -86,10 +86,10 @@ class NetLinkRoute (object):
 		self.socket = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, self.NETLINK_ROUTE)
 		self.sequence = Sequence()
 
-	def encode (self, type, seq, flags, body, attributes):
+	def encode (self, dtype, seq, flags, body, attributes):
 		attrs = Attributes().encode(attributes)
 		length = self.Header.LEN + len(attrs) + len(body)
-		return pack(self.Header.PACK, length, type, flags, seq, self.pid) + body + attrs
+		return pack(self.Header.PACK, length, dtype, flags, seq, self.pid) + body + attrs
 
 	def decode (self,data):
 		while data:
@@ -99,11 +99,11 @@ class NetLinkRoute (object):
 			yield self.format(ntype, flags, seq, pid, data[self.Header.LEN:length])
 			data = data[length:]
 
-	def query (self, type, family=socket.AF_UNSPEC):
+	def query (self, dtype, family=socket.AF_UNSPEC):
 		sequence = self.sequence.next()
 
 		message = self.encode(
-			type,
+			dtype,
 			sequence,
 			self.Flags.NLM_F_REQUEST | self.Flags.NLM_F_DUMP,
 			pack('Bxxx', family),
@@ -121,16 +121,16 @@ class NetLinkRoute (object):
 					raise NetLinkError("netlink seq mismatch")
 				if mtype == self.Command.NLMSG_DONE:
 					raise StopIteration()
-				elif type in self.errors:
+				elif dtype in self.errors:
 					raise NetLinkError(self.errors[mtype])
 				else:
 					yield data
 
-	def change (self, type, family=socket.AF_UNSPEC):
+	def change (self, dtype, family=socket.AF_UNSPEC):
 		sequence = self.sequence.next()
 
 		message = self.encode(
-			type,
+			dtype,
 			self.Flags.NLM_F_REQUEST | self.Flags.NLM_F_CREATE,
 			pack('Bxxx', family)
 		)
@@ -146,7 +146,7 @@ class NetLinkRoute (object):
 					raise NetLinkError("netlink seq mismatch")
 				if mtype == self.Command.NLMSG_DONE:
 					raise StopIteration()
-				elif type in self.errors:
+				elif dtype in self.errors:
 					raise NetLinkError(self.errors[mtype])
 				else:
 					yield data
@@ -202,8 +202,8 @@ class _InfoMessage (object):
 		extracted.append(dict(attributes))
 		return self.format(*extracted)
 
-	def extract (self,type):
-		for data in self.route.query(type):
+	def extract (self,atype):
+		for data in self.route.query(atype):
 			yield self.decode(data)
 
 

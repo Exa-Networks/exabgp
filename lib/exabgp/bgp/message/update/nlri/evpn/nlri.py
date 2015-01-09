@@ -22,7 +22,9 @@ from exabgp.protocol.family import SAFI
 
 class EVPN (object):
 	registered_evpn = dict()
-	# CODE : NEED to be defined in the subclasses
+
+	# NEED to be defined in the subclasses
+	CODE = -1
 	NAME = 'unknown'
 	SHORT_NAME = 'unknown'
 
@@ -34,10 +36,10 @@ class EVPN (object):
 		self.packed = packed
 
 	def _prefix (self):
-		return "evpn:%s:" % (self._name.get(self.CODE,'unknown').lower())
+		return "evpn:%s:" % (self.registered_evpn.get(self.CODE,self).SHORT_NAME.lower())
 
 	def __str__ (self):
-		return "evpn:%s:%s" % (self._name.get(self.CODE,'unknown').lower(),'0x' + ''.join('%02x' % ord(_) for _ in self.packed))
+		return "evpn:%s:%s" % (self.registered_evpn.get(self.CODE,self).SHORT_NAME.lower(),'0x' + ''.join('%02x' % ord(_) for _ in self.packed))
 
 	def __repr__(self):
 		return str(self)

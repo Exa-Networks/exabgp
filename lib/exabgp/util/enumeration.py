@@ -18,3 +18,8 @@ class Enumeration (object):
 			number = _integer(pow(2,number))
 			number._str = name
 			setattr(self, name, number)
+
+
+# Taken from Vincent Bernat
+def Enum(*sequential):
+	return type(str("Enum"), (), dict(zip(sequential, sequential)))

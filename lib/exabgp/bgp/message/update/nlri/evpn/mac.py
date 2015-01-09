@@ -38,10 +38,11 @@ class MAC (EVPN):
 	NAME ="MAC/IP advertisement"
 	SHORT_NAME = "MACAdv"
 
-	def __init__(self,rd,esi,etag,mac,label,ip,packed=None):
+	def __init__(self,rd,esi,etag,mac,maclen,label,ip,packed=None):
 		self.rd = rd
 		self.esi = esi
 		self.etag = etag
+		self.maclen = maclen
 		self.mac = mac
 		self.ip = ip
 		self.label = label if label else Labels.NOLABEL
@@ -102,11 +103,11 @@ class MAC (EVPN):
 		rd = RouteDistinguisher.unpack(data[:8])
 		esi = ESI.unpack(data[8:18])
 		etag = EthernetTag.unpack(data[18:22])
-		length = ord(data[22])
+		maclength = ord(data[22])
 
-		if length % 8 != 0:
+		if maclength % 8 != 0:
 			raise Exception('invalid MAC Address length in %s' % cls.NAME)
-		end = 23 + length/8
+		end = 23 + maclength/8
 
 		mac = MAC.unpack(data[23:end])
 
@@ -118,6 +119,6 @@ class MAC (EVPN):
 		ip = IP.unpack(data[end+1:end+1+iplen])
 		label = Labels.unpack(data[end+1+iplen:])
 
-		return cls(rd,esi,etag,mac,label,ip,data)
+		return cls(rd,esi,etag,mac,length,label,ip,data)
 
 MAC.register_evpn()

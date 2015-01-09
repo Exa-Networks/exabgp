@@ -17,9 +17,8 @@ from exabgp.util.cache import Cache
 
 class Attribute (object):
 	# we need to define ID and FLAG inside of the subclasses
-	# otherwise we can not dynamically create different GenericAttribute
-	# ID   = 0x00
-	# FLAG = 0x00
+	ID   = 0x00
+	FLAG = 0x00
 
 	# Should this Attribute be cached
 	CACHING = False
@@ -214,7 +213,7 @@ class Attribute (object):
 			instance = cls.klass(attribute_id,flag).unpack(data,negotiated)
 
 			if cache:
-				cls.cache.cache[cls.ID].cache(data,instance)
+				cls.cache[cls.ID].cache(data,instance)
 			return instance
 
 		raise Notify (2,4,'can not handle attribute id %s' % attribute_id)

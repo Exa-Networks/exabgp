@@ -49,6 +49,7 @@ class Operational (Message):
 	class ID (object):
 		__slots__ = []
 
+		NOP  = 0x00  # Not defined by the RFC
 		# ADVISE
 		ADM  = 0x01  # 01: Advisory Demand Message
 		ASM  = 0x02  # 02: Advisory Static Message
@@ -69,6 +70,10 @@ class Operational (Message):
 		MP   = 0xFFFE  # 65534: Max Permitted
 		NS   = 0xFFFF  # 65535: Not Satisfied
 
+	# XXX: FIXME: should be upper case
+	name = ''
+	category = ''
+	code = ID.NOP
 
 	def __init__ (self,what):
 		Message.__init__(self)
@@ -245,7 +250,7 @@ class Advisory:
 			utf8 = advisory.encode('utf-8')
 			if len(utf8) > MAX_ADVISORY:
 				utf8 = utf8[:MAX_ADVISORY-3] + '...'.encode('utf-8')
-			OperationalFamily.__init__(
+			Advisory._Advisory.__init__(
 				self,Operational.ID.ADM,
 				afi,safi,
 				utf8
@@ -259,7 +264,7 @@ class Advisory:
 			utf8 = advisory.encode('utf-8')
 			if len(utf8) > MAX_ADVISORY:
 				utf8 = utf8[:MAX_ADVISORY-3] + '...'.encode('utf-8')
-			OperationalFamily.__init__(
+			Advisory._Advisory.__init__(
 				self,Operational.ID.ASM,
 				afi,safi,
 				utf8

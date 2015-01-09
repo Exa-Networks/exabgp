@@ -11,13 +11,13 @@ import sys
 from exabgp.util.panic import panic
 from exabgp.util.panic import footer
 
-def bug_report (type, value, trace):
+def bug_report (dtype, value, trace):
 	print panic
 
 	import traceback
 
 	print "-- Traceback\n\n"
-	traceback.print_exception(type,value,trace)
+	traceback.print_exception(dtype,value,trace)
 
 	from exabgp.logger import Logger
 	logger = Logger()
@@ -31,8 +31,8 @@ def bug_report (type, value, trace):
 	print footer
 
 
-def intercept (type, value, trace):
-	bug_report(type, value, trace)
+def intercept (dtype, value, trace):
+	bug_report(dtype, value, trace)
 	if os.environ.get('PDB',None) not in [None,'0','']:
 		import pdb
 		pdb.pm()

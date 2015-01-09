@@ -57,7 +57,7 @@ class Multicast (EVPN):
 
 	# XXX: FIXME: improve for better performance?
 	def __hash__(self):
-		return hash("%s:%s:%s:%s:%s:%s" % (self.afi,self.safi,self.subtype,self.rd,self.etag,self.ip))
+		return hash("%s:%s:%s:%s:%s:%s" % (self.afi,self.safi,self.CODE,self.rd,self.etag,self.ip))
 
 	def pack (self):
 		ip = self.ip.pack()

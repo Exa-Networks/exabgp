@@ -16,9 +16,9 @@ class CIDR (object):
 
 	_mask_to_bytes = {}
 
-	@staticmethod
-	def size (mask):
-		return CIDR._mask_to_bytes.get(mask,0)
+	@classmethod
+	def size (cls,mask):
+		return cls._mask_to_bytes.get(mask,0)
 
 	# have a .raw for the ip
 	# have a .mask for the mask

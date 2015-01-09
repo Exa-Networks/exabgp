@@ -25,9 +25,9 @@ def short (name):
 	return _short.get(name.upper(),name.upper())
 
 class LazyFormat (object):
-	def __init__ (self,prefix,format,message):
+	def __init__ (self,prefix,formater,message):
 		self.prefix = prefix
-		self.format = format
+		self.format = formater
 		self.message = message
 
 	def __str__ (self):

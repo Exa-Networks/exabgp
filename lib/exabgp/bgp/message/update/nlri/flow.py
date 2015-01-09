@@ -106,9 +106,12 @@ class IPrefix (object):
 # Prococol
 
 class IPrefix4 (IPrefix,IComponent,IPv4):
+	# Must be defined in subclasses
+	CODE = -1
+	NAME = ''
+
 	# not used, just present for simplying the nlri generation
 	operations = 0x0
-	# NAME
 
 	def __init__ (self,raw,netmask):
 		self.nlri = CIDR(raw,netmask)
@@ -121,9 +124,12 @@ class IPrefix4 (IPrefix,IComponent,IPv4):
 		return str(self.nlri)
 
 class IPrefix6 (IPrefix,IComponent,IPv6):
+	# Must be defined in subclasses
+	CODE = -1
+	NAME = ''
+
 	# not used, just present for simplying the nlri generation
 	operations = 0x0
-	# NAME
 
 	def __init__ (self,raw,netmask,offset):
 		self.nlri = CIDR(raw,netmask)
@@ -179,6 +185,9 @@ class IOperationByteShort (IOperation):
 # String representation for Numeric and Binary Tests
 
 class NumericString (object):
+	operations = None
+	value = None
+
 	_string = {
 		NumericOperator.LT   : '<',
 		NumericOperator.GT   : '>',
@@ -198,6 +207,9 @@ class NumericString (object):
 
 
 class BinaryString (object):
+	operations = None
+	value = None
+
 	_string = {
 		BinaryOperator.NOT   : '!',
 		BinaryOperator.MATCH : '=',
@@ -373,32 +385,32 @@ decode = {AFI.ipv4: {}, AFI.ipv6: {}}
 factory = {AFI.ipv4: {}, AFI.ipv6: {}}
 
 for content in dir():
-	klass = globals().get(content,None)
-	if not isinstance(klass,type(IComponent)):
+	kls = globals().get(content,None)
+	if not isinstance(kls,type(IComponent)):
 		continue
-	if not issubclass(klass,IComponent):
+	if not issubclass(kls,IComponent):
 		continue
-	if issubclass(klass,IPv4):
-		afi = AFI.ipv4
-	elif issubclass(klass,IPv6):
-		afi = AFI.ipv6
+	if issubclass(kls,IPv4):
+		_afi = AFI.ipv4
+	elif issubclass(kls,IPv6):
+		_afi = AFI.ipv6
 	else:
 		continue
-	ID = getattr(klass,'ID',None)
-	if not ID:
+	_ID = getattr(kls,'ID',None)
+	if not _ID:
 		continue
-	factory[afi][ID] = klass
-	name = getattr(klass,'NAME')
+	factory[_afi][_ID] = kls
+	name = getattr(kls,'NAME')
 
-	if issubclass(klass, IOperation):
-		if issubclass(klass, BinaryString):
-			decode[afi][ID] = 'binary'
-		elif issubclass(klass, NumericString):
-			decode[afi][ID] = 'numeric'
+	if issubclass(kls, IOperation):
+		if issubclass(kls, BinaryString):
+			decode[_afi][_ID] = 'binary'
+		elif issubclass(kls, NumericString):
+			decode[_afi][_ID] = 'numeric'
 		else:
 			raise RuntimeError('invalid class defined (string)')
-	elif issubclass(klass, IPrefix):
-		decode[afi][ID] = 'prefix'
+	elif issubclass(kls, IPrefix):
+		decode[_afi][_ID] = 'prefix'
 	else:
 		raise RuntimeError('unvalid class defined (type)')
 
@@ -545,10 +557,10 @@ class Flow (NLRI):
 			if sorted(seen) != seen:
 				raise Notify(3,10,'components are not sent in the right order %s' % seen)
 
-			decoder = decode[afi][what]
+			decoded = decode[afi][what]
 			klass = factory[afi][what]
 
-			if decoder == 'prefix':
+			if decoded == 'prefix':
 				if afi == AFI.ipv4:
 					_,rd,_,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action,False)
 					adding = klass(prefix,mask)

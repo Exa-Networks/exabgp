@@ -28,8 +28,8 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 class TLV (object):
 	__slots__ = ['type','value']
 
-	def __init__(self,type,value):
-		self.type = type
+	def __init__(self,what,value):
+		self.type = what
 		self.value = value
 
 class TLVS (list):

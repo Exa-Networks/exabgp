@@ -14,10 +14,10 @@ class TestL2VPN (unittest.TestCase):
 		separator = rd.find(':')
 		prefix = rd[:separator]
 		suffix = int(rd[separator+1:])
-		bytes = [chr(0),chr(1)]
-		bytes.extend([chr(int(_)) for _ in prefix.split('.')])
-		bytes.extend([chr(suffix>>8),chr(suffix&0xFF)])
-		bin_rd = ''.join(bytes)
+		data = [chr(0),chr(1)]
+		data.extend([chr(int(_)) for _ in prefix.split('.')])
+		data.extend([chr(suffix>>8),chr(suffix&0xFF)])
+		bin_rd = ''.join(data)
 		return RouteDistinguisher(bin_rd)
 
 	def setUp (self):

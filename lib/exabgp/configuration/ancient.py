@@ -1453,10 +1453,10 @@ class Configuration (object):
 	def _newASN (self,value):
 		if value.count('.'):
 			high,low = value.split('.',1)
-			asn = (int(high) << 16) + int(low)
+			as_number = (int(high) << 16) + int(low)
 		else:
-			asn = int(value)
-		return ASN(asn)
+			as_number = int(value)
+		return ASN(as_number)
 
 	def _set_asn (self,scope,command,value):
 		try:
@@ -2216,10 +2216,10 @@ class Configuration (object):
 				suffix = int(data[separator+1:])
 
 			if '.' in prefix:
-				bytes = [chr(0),chr(1)]
-				bytes.extend([chr(int(_)) for _ in prefix.split('.')])
-				bytes.extend([chr(suffix>>8),chr(suffix&0xFF)])
-				rd = ''.join(bytes)
+				data = [chr(0),chr(1)]
+				data.extend([chr(int(_)) for _ in prefix.split('.')])
+				data.extend([chr(suffix>>8),chr(suffix&0xFF)])
+				rd = ''.join(data)
 			else:
 				number = int(prefix)
 				if number < pow(2,16) and suffix < pow(2,32):
@@ -2949,7 +2949,6 @@ class Configuration (object):
 
 	def decode (self,update):
 		# self check to see if we can decode what we encode
-		import sys
 		from exabgp.bgp.message.update import Update
 		from exabgp.bgp.message.open import Open
 		from exabgp.bgp.message.open.capability import Capability
@@ -3004,7 +3003,7 @@ class Configuration (object):
 
 			try:
 				# This does not take the BGP header - let's assume we will not break that :)
-				update = Update.unpack(negotiated,injected)
+				update = Update.unpack_message(negotiated,injected)
 			except KeyboardInterrupt:
 				raise
 			except Notify,e:

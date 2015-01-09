@@ -260,9 +260,9 @@ class environment (object):
 
 		# PDB : still compatible as a side effect of the code structure
 
-		syslog = os.environ.get('SYSLOG','')
-		if syslog != '':
-			env.log.destination=syslog
+		syslog_env = os.environ.get('SYSLOG','')
+		if syslog_env != '':
+			env.log.destination=syslog_env
 
 		if os.environ.get('DEBUG_SUPERVISOR','').lower() in ['1','yes']:
 			env.log.reactor = True
@@ -301,8 +301,6 @@ class environment (object):
 		pid = os.environ.get('PID','')
 		if pid:
 			env.daemon.pid = pid
-
-		import pwd
 
 		try:
 			me = pwd.getpwuid(os.getuid()).pw_name

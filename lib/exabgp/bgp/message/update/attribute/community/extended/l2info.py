@@ -26,7 +26,8 @@ class L2Info (ExtendedCommunity):
 		self.control = control
 		self.mtu = mtu
 		self.reserved = reserved
-		ExtendedCommunity.__init__(self,community if community is not None else pack("!BBLH",0x80,0x0A,0,self.tunnel_type))
+		# reserved is called preference in draft-ietf-l2vpn-vpls-multihoming-07
+		ExtendedCommunity.__init__(self,community if community is not None else pack("!BBBBHH",0x80,0x0A,encaps,control,mtu,reserved))
 
 	def __str__ (self):
 		return "l2info:%s:%s:%s:%s" % (self.encaps,self.control,self.mtu,self.reserved)

@@ -10,7 +10,7 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
-from exabgp.structure.asn import ASN
+from exabgp.bgp.message.open.asn import ASN
 from exabgp.message.update.attribute.community import RouteTarget
 from exabgp.protocol.ip.address import Address
 

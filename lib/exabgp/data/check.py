@@ -9,12 +9,12 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.util.enumeration import Enumeration
 
 TYPE = Enumeration (
-	'null',     # -  1
-	'boolean',  # -  2
-	'integer',  # -  4
-	'string',   # -  8
-	'array',    # - 16
-	'object',   # - 32
+	'null',       # -  1
+	'boolean',    # -  2
+	'integer',    # -  4
+	'string',     # -  8
+	'array',      # - 16
+	'hashtable',  # - 32
 )
 
 PRESENCE = Enumeration(
@@ -33,7 +33,7 @@ def string (data):
 	return type(data) == type(u'') or type(data) == type('')
 def array (data):
 	return type(data) == type([])
-def object (data):
+def hashtable (data):
 	return type(data) == type({})
 # XXX: Not very good to redefine the keyword object, but this class uses no OO ...
 
@@ -43,7 +43,7 @@ CHECK_TYPE = {
 	TYPE.integer : integer,
 	TYPE.string : string,
 	TYPE.array : array,
-	TYPE.object : object,
+	TYPE.hashtable : hashtable,
 }
 
 def kind (kind,data):

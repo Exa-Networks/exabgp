@@ -34,29 +34,29 @@ class RecordHandler(asyncore.dispatcher_with_send):
 			space = False
 			while True:
 				try:
-					bytes = self.recv(_read_size)
+					data = self.recv(_read_size)
 				except socket.error, e:
 					if e.errno in (errno.EWOULDBLOCK,errno.EAGAIN):
 						continue
 					raise e
-				if not bytes:
+				if not data:
 					print "connection closed"
 					break
 
-				if len(bytes) == _read_size:
+				if len(data) == _read_size:
 					print '.',
 				else:
-					print "%d" % len(bytes),
+					print "%d" % len(data),
 				sys.stdout.flush()
 
 				if self.raw:
-					self.record.write(bytes)
+					self.record.write(data)
 					self.record.flush()
-					if not bytes:
+					if not data:
 						break
 					continue
 
-				for byte in bytes:
+				for byte in data:
 					self.record.write('%02X' % ord(byte))
 					count = (count + 1) % 32
 					if not count:

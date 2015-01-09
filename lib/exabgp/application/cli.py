@@ -23,8 +23,9 @@ class Completed (cmd.Cmd):
 	# undoc_header = 'undoc_header'
 
 	ruler = '-'
+	completion ={}
 
-	def __init__ (self,intro):
+	def __init__ (self,intro=''):
 		self.prompt = '%s> ' % intro
 		cmd.Cmd.__init__(self)
 
@@ -155,13 +156,13 @@ class ExaBGP (Completed):
 	## repeat last command
 	##
 
-	last = 'help'
+	# last = 'help'
 
-	def do_last (self, line):
-		"Print the input, replacing '$out' with the output of the last shell command"
-		# Obviously not robust
-		if hasattr(self, 'last_output'):
-			print line.replace('$out', self.last_output)
+	# def do_last (self, line):
+	# 	"Print the input, replacing '$out' with the output of the last shell command"
+	# 	# Obviously not robust
+	# 	if hasattr(self, 'last_output'):
+	# 		print line.replace('$out', self.last_output)
 
 
 	##

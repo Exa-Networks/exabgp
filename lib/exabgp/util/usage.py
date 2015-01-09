@@ -17,5 +17,5 @@ else:
 	divisor = 1024.0*1024.0/resource.getpagesize()
 
 def usage (label='usage'):
-	usage=resource.getrusage(resource.RUSAGE_SELF)
-	return '%s: usertime=%s systime=%s mem=%s mb' % (label,usage.ru_utime,usage.ru_stime,(usage.ru_maxrss/divisor))
+	rusage=resource.getrusage(resource.RUSAGE_SELF)
+	return '%s: usertime=%s systime=%s mem=%s mb' % (label,rusage.ru_utime,rusage.ru_stime,(rusage.ru_maxrss/divisor))

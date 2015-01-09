@@ -34,6 +34,7 @@ class PMSI (Attribute):
 	FLAG = Attribute.Flag.OPTIONAL
 	MULTIPLE = False
 	CACHING = True
+	TUNNEL_TYPE = -1
 
 	# TUNNEL_TYPE MUST NOT BE DEFINED HERE ( it allows to set it up as a self. value)
 
@@ -71,7 +72,7 @@ class PMSI (Attribute):
 
 	# XXX: FIXME: Orange code had 4 (and another reference to it in the code elsewhere)
 	def __len__ (self):
-		return len(self.self.tunnel) + 5  # label:1, tunnel type: 1, MPLS label:3
+		return len(self.tunnel) + 5  # label:1, tunnel type: 1, MPLS label:3
 
 	def __cmp__(self,other):
 		if not isinstance(other,self.__class__):
