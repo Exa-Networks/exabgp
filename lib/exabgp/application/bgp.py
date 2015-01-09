@@ -29,7 +29,7 @@ def is_hex (s):
 
 def __exit(memory,code):
 	if memory:
-		from exabgp.memory import objgraph
+		from exabgp.dep import objgraph
 		print "memory utilisation"
 		print
 		print objgraph.show_most_common_types(limit=20)
