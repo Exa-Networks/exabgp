@@ -21,6 +21,7 @@ from exabgp.reactor.api.encoding import JSON
 from exabgp.bgp.message import Message
 from exabgp.logger import Logger
 
+# pylint: disable=no-self-argument,not-callable,unused-argument,invalid-name
 
 class ProcessError (Exception):
 	pass
@@ -35,7 +36,8 @@ def preexec_helper ():
 class Processes (object):
 	# how many time can a process can respawn in the time interval
 	respawn_number = 5
-	respawn_timemask = 0xFFFFFF - pow(2,6) + 1  # '0b111111111111111111000000' (around a minute, 63 seconds)
+	respawn_timemask = 0xFFFFFF - pow(2,6) + 1
+	# '0b111111111111111111000000' (around a minute, 63 seconds)
 
 	_dispatch = {}
 
@@ -90,7 +92,7 @@ class Processes (object):
 			except OSError:
 				# we most likely received a SIGTERM signal and our child is already dead
 				self.logger.processes("child process %s was already dead" % process)
-				pass
+
 		self.clean()
 
 	def _start (self,process):
@@ -118,7 +120,8 @@ class Processes (object):
 				api = self.reactor.configuration.process[process]['encoder']
 				self._encoder[process] = JSON('3.4.6',self.highres) if api == 'json' else Text('3.3.2')
 
-				self._process[process] = subprocess.Popen(run,
+				self._process[process] = subprocess.Popen(
+					run,
 					stdin=subprocess.PIPE,
 					stdout=subprocess.PIPE,
 					preexec_fn=preexec_helper
@@ -135,7 +138,10 @@ class Processes (object):
 						self._respawning[process][around_now] += 1
 						# we are respawning too fast
 						if self._respawning[process][around_now] > self.respawn_number:
-							self.logger.processes("Too many respawn for %s (%d) terminating program" % (process,self.respawn_number),'critical')
+							self.logger.processes(
+								"Too many respawn for %s (%d) terminating program" % (process,self.respawn_number),
+								'critical'
+							)
 							raise ProcessError()
 					else:
 						# reset long time since last respawn
@@ -251,89 +257,100 @@ class Processes (object):
 				if event in self._events[process]:
 					yield process
 
+
+	# do not do anything if silenced
+	# no-self-argument
+
+	def silenced (function):
+		def closure (self,*args):
+			if self.silence:
+				return
+			return function(self,*args)
+		return closure
+
+
+	@silenced
 	def reset (self,peer):
-		if self.silence: return
 		for process in self._notify(peer,'*'):
 			data = self._encoder[process].reset(peer)
 			if data:
 				self.write(process,data,peer)
 
+	@silenced
 	def increase (self,peer):
-		if self.silence: return
 		for process in self._notify(peer,'*'):
 			data = self._encoder[process].increase(peer)
 			if data:
 				self.write(process,data,peer)
 
+	# invalid-name
+	@silenced
 	def up (self,peer):
-		if self.silence: return
 		for process in self._notify(peer,'neighbor-changes'):
 			self.write(process,self._encoder[process].up(peer),peer)
 
+	@silenced
 	def connected (self,peer):
-		if self.silence: return
 		for process in self._notify(peer,'neighbor-changes'):
 			self.write(process,self._encoder[process].connected(peer),peer)
 
+	@silenced
 	def down (self,peer,reason):
-		if self.silence: return
 		for process in self._notify(peer,'neighbor-changes'):
 			self.write(process,self._encoder[process].down(peer,reason),peer)
 
+	@silenced
 	def receive (self,peer,category,header,body):
-		if self.silence: return
 		for process in self._notify(peer,'receive-packets'):
 			self.write(process,self._encoder[process].receive(peer,category,header,body),peer)
 
+	@silenced
 	def send (self,peer,category,header,body):
-		if self.silence: return
 		for process in self._notify(peer,'send-packets'):
 			self.write(process,self._encoder[process].send(peer,category,header,body),peer)
 
+	@silenced
 	def notification (self,peer,code,subcode,data):
-		if self.silence: return
 		for process in self._notify(peer,'neighbor-changes'):
 			self.write(process,self._encoder[process].notification(peer,code,subcode,data),peer)
 
+	@silenced
 	def message (self,message_id,peer,message,header,*body):
 		self._dispatch[message_id](self,peer,message,header,*body)
 
 	# registering message functions
+	# no-self-argument
 
 	def register_process (message_id,storage):
-		def closure (f):
+		def closure (function):
 			def wrap (*args):
-				f(*args)
+				function(*args)
 			storage[message_id] = wrap
 			return wrap
 		return closure
 
 	@register_process(Message.ID.OPEN,_dispatch)
 	def _open (self,peer,open_msg,header,body,direction='received'):
-		if self.silence: return
 		for process in self._notify(peer,'receive-opens'):
 			self.write(process,self._encoder[process].open(peer,direction,open_msg,header,body),peer)
 
+	# unused-argument, must keep the API
 	@register_process(Message.ID.KEEPALIVE,_dispatch)
-	def _keepalive (self,peer,category,header,body):
-		if self.silence: return
+	def _keepalive (self,peer,keepalive,header,body):
 		for process in self._notify(peer,'receive-keepalives'):
 			self.write(process,self._encoder[process].keepalive(peer,header,body),peer)
 
 	@register_process(Message.ID.UPDATE,_dispatch)
 	def _update (self,peer,update,header,body):
-		if self.silence: return
 		for process in self._notify(peer,'receive-updates'):
 			self.write(process,self._encoder[process].update(peer,update,header,body),peer)
 
 	@register_process(Message.ID.ROUTE_REFRESH,_dispatch)
 	def _refresh (self,peer,refresh,header,body):
-		if self.silence: return
 		for process in self._notify(peer,'receive-refresh'):
 			self.write(process,self._encoder[process].refresh(peer,refresh,header,body),peer)
 
 	@register_process(Message.ID.OPERATIONAL,_dispatch)
 	def _operational (self,peer,operational,header,body):
-		if self.silence: return
 		for process in self._notify(peer,'receive-operational'):
 			self.write(process,self._encoder[process].operational(peer,operational.category,operational,header,body),peer)
