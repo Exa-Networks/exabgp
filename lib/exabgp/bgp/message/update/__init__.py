@@ -28,7 +28,6 @@ from exabgp.bgp.message.update.attribute.mpurnlri import EMPTY_MPURNLRI
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 
-from exabgp.util.od import od
 from exabgp.logger import Logger
 from exabgp.logger import LazyFormat
 
@@ -276,13 +275,13 @@ class Update (Message):
 		nlris = []
 		while withdrawn:
 			length,nlri = NLRI.unpack(AFI.ipv4,SAFI.unicast,withdrawn,addpath,nexthop,IN.withdrawn)
-			logger.parser(LazyFormat("parsed withdraw nlri %s payload " % nlri,od,withdrawn[:len(nlri)]))
+			logger.parser(LazyFormat("parsed withdraw nlri %s payload " % nlri,withdrawn[:len(nlri)]))
 			withdrawn = withdrawn[length:]
 			nlris.append(nlri)
 
 		while announced:
 			length,nlri = NLRI.unpack(AFI.ipv4,SAFI.unicast,announced,addpath,nexthop,IN.announced)
-			logger.parser(LazyFormat("parsed announce nlri %s payload " % nlri,od,announced[:len(nlri)]))
+			logger.parser(LazyFormat("parsed announce nlri %s payload " % nlri,announced[:len(nlri)]))
 			announced = announced[length:]
 			nlris.append(nlri)
 

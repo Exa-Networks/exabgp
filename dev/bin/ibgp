@@ -9,15 +9,6 @@ import errno
 from struct import unpack
 import time
 
-def od (value):
-	def spaced (value):
-		even = None
-		for v in value:
-			if even is False:
-				yield ' '
-			yield '%02X' % ord(v)
-			even = not even
-	return ''.join(spaced(value))
 
 class BGPHandler(asyncore.dispatcher_with_send):
 	wire = not not os.environ.get('wire','')

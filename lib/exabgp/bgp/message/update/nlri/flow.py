@@ -566,7 +566,7 @@ class Flow (NLRI):
 					adding = klass(prefix,mask)
 					if not nlri.add(adding):
 						raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
-					# logger.parser(LazyFormat("added flow %s (%s) payload " % (klass.NAME,adding),od,bgp[:-len(left)]))
+					# logger.parser(LazyFormat("added flow %s (%s) payload " % (klass.NAME,adding),bgp[:-len(left)]))
 					bgp = left
 				else:
 					byte,bgp = bgp[1],bgp[0]+bgp[2:]
@@ -575,7 +575,7 @@ class Flow (NLRI):
 					adding = klass(prefix,mask,offset)
 					if not nlri.add(adding):
 						raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
-					# logger.parser(LazyFormat("added flow %s (%s) payload " % (klass.NAME,adding),od,bgp[:-len(left)]))
+					# logger.parser(LazyFormat("added flow %s (%s) payload " % (klass.NAME,adding),bgp[:-len(left)]))
 					bgp = left
 			else:
 				end = False
@@ -587,7 +587,7 @@ class Flow (NLRI):
 					value,bgp = bgp[:length],bgp[length:]
 					adding = klass.decoder(value)
 					nlri.add(klass(operator,adding))
-					# logger.parser(LazyFormat("added flow %s (%s) operator %d len %d payload " % (klass.NAME,adding,byte,length),od,value))
+					# logger.parser(LazyFormat("added flow %s (%s) operator %d len %d payload " % (klass.NAME,adding,byte,length),value))
 
 		return total-len(bgp),nlri
 

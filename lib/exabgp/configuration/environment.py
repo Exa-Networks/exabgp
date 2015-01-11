@@ -318,27 +318,11 @@ class environment (object):
 		return env
 
 
-# ================================================================= ConfigParser
+# ========================================================================= _env
 #
 
 import ConfigParser
-
-class Store (dict):
-	def __getitem__ (self,key):
-		return dict.__getitem__(self,key.replace('_','-'))
-
-	def __setitem__ (self,key,value):
-		return dict.__setitem__(self,key.replace('_','-'),value)
-
-	def __getattr__ (self,key):
-		return dict.__getitem__(self,key.replace('_','-'))
-
-	def __setattr__ (self,key,value):
-		return dict.__setitem__(self,key.replace('_','-'),value)
-
-
-# ========================================================================= _env
-#
+from exabgp.util.hashtable import HashTable
 
 def _env (conf):
 	here = os.path.join(os.sep,*os.path.join(environment.location.split(os.sep)))
@@ -369,7 +353,7 @@ def _env (conf):
 		_conf_paths.append(os.path.normpath(os.path.join(location,'etc',environment.application,'%s.env' % environment.application)))
 	_conf_paths.append(os.path.normpath(os.path.join('/','etc',environment.application,'%s.env' % environment.application)))
 
-	env = Store()
+	env = HashTable()
 	ini = ConfigParser.ConfigParser()
 
 	ini_files = [path for path in _conf_paths if os.path.exists(path)]
@@ -398,7 +382,7 @@ def _env (conf):
 			except (ConfigParser.NoSectionError,ConfigParser.NoOptionError):
 				conf = default[option][2]
 			try:
-				env.setdefault(section,Store())[option] = convert(conf)
+				env.setdefault(section,HashTable())[option] = convert(conf)
 			except TypeError:
 				raise environment.Error('invalid value for %s.%s : %s' % (section,option,conf))
 

@@ -4,15 +4,6 @@ import asyncore
 import socket
 from struct import unpack
 
-def od (value):
-	def spaced (value):
-		even = None
-		for v in value:
-			if even is False:
-				yield ' '
-			yield '%02X' % ord(v)
-			even = not even
-	return ''.join(spaced(value))
 
 class BGPHandler(asyncore.dispatcher_with_send):
 	def read_message (self):

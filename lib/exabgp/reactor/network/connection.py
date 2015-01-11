@@ -6,7 +6,6 @@ Created by Thomas Mangin on 2009-09-06.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-import time
 import random
 import socket
 import select
@@ -14,7 +13,6 @@ from struct import unpack
 
 from exabgp.configuration.environment import environment
 
-from exabgp.util.od import od
 from exabgp.util.errstr import errstr
 
 from exabgp.logger import Logger
@@ -130,7 +128,7 @@ class Connection (object):
 
 					number -= len(read)
 					if not number:
-						self.logger.wire(LazyFormat("%s %-32s RECEIVED " % (self.name(),'%s / %s' % (self.local,self.peer)),od,read))
+						self.logger.wire(LazyFormat("%s %-32s RECEIVED " % (self.name(),'%s / %s' % (self.local,self.peer)),read))
 						yield data
 						return
 
@@ -161,7 +159,7 @@ class Connection (object):
 			return
 		while not self.writing():
 			yield False
-		self.logger.wire(LazyFormat("%s %-32s SENDING " % (self.name(),'%s / %s' % (self.local,self.peer)),od,data))
+		self.logger.wire(LazyFormat("%s %-32s SENDING " % (self.name(),'%s / %s' % (self.local,self.peer)),data))
 		# The first while is here to setup the try/catch block once as it is very expensive
 		while True:
 			try:

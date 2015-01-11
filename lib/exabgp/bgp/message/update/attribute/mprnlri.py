@@ -156,7 +156,7 @@ class MPRNLRI (Attribute,Address):
 				length,nlri = NLRI.unpack(afi,safi,data,addpath,'',IN.announced)
 				nlris.append(nlri)
 
-			#logger.parser(LazyFormat("parsed announce mp nlri %s payload " % nlri,od,data[:length]))
+			#logger.parser(LazyFormat("parsed announce mp nlri %s payload " % nlri,data[:length]))
 			data = data[length:]
 		return cls(afi,safi,nlris)
 

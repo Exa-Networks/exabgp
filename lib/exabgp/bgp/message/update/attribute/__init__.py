@@ -9,7 +9,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import collections
 from struct import unpack
 
-from exabgp.util.od import od
 from exabgp.configuration.environment import environment
 
 # Must be imported for the register API to work
@@ -321,7 +320,7 @@ class Attributes (dict):
 		attribute = data[:length]
 
 		logger = Logger()
-		logger.parser(LazyFormat("parsing flag %x type %02x (%s) len %02x %s" % (flag,int(aid),aid,length,'payload ' if length else ''),od,data[:length]))
+		logger.parser(LazyFormat("parsing flag %x type %02x (%s) len %02x %s" % (flag,int(aid),aid,length,'payload ' if length else ''),data[:length]))
 
 		# remove the PARTIAL bit before comparaison if the attribute is optional
 		if aid in Attribute.attributes_optional:

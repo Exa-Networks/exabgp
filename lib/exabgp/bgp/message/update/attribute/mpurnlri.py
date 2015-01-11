@@ -70,7 +70,7 @@ class MPURNLRI (Attribute,Address):
 			length,nlri = NLRI.unpack(afi,safi,data,addpath,None,IN.withdrawn)
 			nlris.append(nlri)
 			data = data[length:]
-			#logger.parser(LazyFormat("parsed withdraw mp nlri %s payload " % nlri,od,data[:length]))
+			#logger.parser(LazyFormat("parsed withdraw mp nlri %s payload " % nlri,data[:length]))
 
 		return cls(afi,safi,nlris)
 

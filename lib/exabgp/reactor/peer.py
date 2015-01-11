@@ -466,11 +466,11 @@ class Peer (object):
 				if message.TYPE == Update.TYPE:
 					number += 1
 
-					self.logger.routes(LazyFormat(self.me('<< UPDATE (%d)' % number),lambda _: "%s%s" % (' attributes' if _ else '',_),message.attributes))
+					self.logger.routes(LazyFormat(self.me('<< UPDATE (%d)' % number),message.attributes,lambda _: "%s%s" % (' attributes' if _ else '',_)))
 
 					for nlri in message.nlris:
 						self.neighbor.rib.incoming.insert_received(Change(nlri,message.attributes))
-						self.logger.routes(LazyFormat(self.me('<< UPDATE (%d) nlri ' % number),str,nlri))
+						self.logger.routes(LazyFormat(self.me('<< UPDATE (%d) nlri ' % number),nlri,str))
 
 				elif message.TYPE == RouteRefresh.TYPE:
 					if message.reserved == RouteRefresh.request:
