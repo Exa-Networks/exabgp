@@ -12,6 +12,7 @@ filter:
         - 'dist/*'
     paths: {  }
 tools:
+    external_code_coverage: true
     python_analyzer:
         enabled: true
         config:
