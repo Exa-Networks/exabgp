@@ -28,6 +28,8 @@ from exabgp.rib.change import Change
 from exabgp.version import version
 from exabgp.logger import Logger
 
+# pylint: disable=unused-argument,no-self-use
+# as we follow an API and this causes these warnings
 
 # ========================================================================= Text
 #
@@ -35,19 +37,21 @@ from exabgp.logger import Logger
 class Text (Configuration):
 	def __init__ (self):
 		Configuration.__init__(self,'','')
+		# part of parent API, done here to remove pylint warning attribute-defined-outside-init
+		self._nexthopself = None
 
 	def parse_api_route (self,command,peers,action):
 		tokens = formated(command).split(' ')[1:]
-		lt = len(tokens)
+		number = len(tokens)
 
-		if lt < 1: return False
+		if number < 1: return False
 
 		message = tokens[0]
 
 		if message not in ('route',):
 			return False
 
-		if lt == 2 and action == 'withdraw' and 'next-hop' not in tokens:
+		if number == 2 and action == 'withdraw' and 'next-hop' not in tokens:
 			tokens.extend(['next-hop','0.0.0.0'])
 
 		changes = []
@@ -160,12 +164,12 @@ class Text (Configuration):
 
 	def parse_api_eor (self,command):
 		tokens = formated(command).split(' ')[2:]
-		lt = len(tokens)
+		number = len(tokens)
 
-		if not lt:
+		if not number:
 			return Family(1,1)
 
-		if lt !=2:
+		if number !=2:
 			return False
 
 		afi = AFI.fromString(tokens[0])
@@ -229,7 +233,6 @@ class Text (Configuration):
 
 class Decoder (object):
 	_dispatch = {}
-	_order = {}
 
 	def __init__ (self):
 		self.logger = Logger()
@@ -237,12 +240,12 @@ class Decoder (object):
 
 	# callaback code
 
-	def register_command (command,storage,order):
-		def closure (f):
+	def register_command (command,storage):
+		def closure (function):
 			def wrap (*args):
-				f(*args)
+				function(*args)
 			storage[command] = wrap
-			order = sorted(storage.keys(),key=len)
+			# order = sorted(storage.keys(),key=len)
 			return wrap
 		return closure
 
@@ -293,33 +296,33 @@ class Decoder (object):
 
 	#
 
-	@register_command('shutdown',_dispatch,_order)
+	@register_command('shutdown',_dispatch)
 	def _shutdown (self,reactor,service,command):
 		reactor.api_shutdown()
 		reactor.answer(service,'shutdown in progress')
 		return True
 
-	@register_command('reload',_dispatch,_order)
+	@register_command('reload',_dispatch)
 	def _reload (self,reactor,service,command):
 		reactor.api_reload()
 		reactor.answer(service,'reload in progress')
 		return True
 
-	@register_command('reload',_dispatch,_order)
+	@register_command('reload',_dispatch)
 	def _restart (self,reactor,service,command):
 		reactor.api_restart()
 		reactor.answer(service,'restart in progress')
 		return True
 
-	@register_command('version',_dispatch,_order)
+	@register_command('version',_dispatch)
 	def _version (self,reactor,service,command):
 		reactor.answer(service,'exabgp %s' % version)
 		return True
 
 	# teardown
 
-	@register_command('teardown',_dispatch,_order)
-	def _t (self,reactor,service,command):
+	@register_command('teardown',_dispatch)
+	def _teardown (self,reactor,service,command):
 		try:
 			descriptions,command = Decoder.extract_neighbors(command)
 			_,code = command.split(' ',1)
@@ -336,7 +339,7 @@ class Decoder (object):
 
 	# show neighbor(s)
 
-	@register_command('show neighbor',_dispatch,_order)
+	@register_command('show neighbor',_dispatch)
 	def _show_neighbor (self,reactor,service,command):
 		def _callback ():
 			for key in reactor.configuration.neighbor.keys():
@@ -348,7 +351,7 @@ class Decoder (object):
 		reactor.plan(_callback())
 		return True
 
-	@register_command('show neighbors',_dispatch,_order)
+	@register_command('show neighbors',_dispatch)
 	def _show_neighbors (self,reactor,service,command):
 		def _callback ():
 			for key in reactor.configuration.neighbor.keys():
@@ -362,7 +365,7 @@ class Decoder (object):
 
 	# show route(s)
 
-	@register_command('show routes',_dispatch,_order)
+	@register_command('show routes',_dispatch)
 	def _show_routes (self,reactor,service,command):
 		def _callback ():
 			for key in reactor.configuration.neighbor.keys():
@@ -374,7 +377,7 @@ class Decoder (object):
 		reactor.plan(_callback())
 		return True
 
-	@register_command('show routes extensive',_dispatch,_order)
+	@register_command('show routes extensive',_dispatch)
 	def _show_routes_extensive (self,reactor,service,command):
 		def _callback ():
 			for key in reactor.configuration.neighbor.keys():
@@ -388,7 +391,7 @@ class Decoder (object):
 
 	# watchdogs
 
-	@register_command('announce watchdog',_dispatch,_order)
+	@register_command('announce watchdog',_dispatch)
 	def _announce_watchdog (self,reactor,service,command):
 		def _callback (name):
 			for neighbor in reactor.configuration.neighbor:
@@ -404,7 +407,7 @@ class Decoder (object):
 		return True
 
 
-	@register_command('withdraw watchdog',_dispatch,_order)
+	@register_command('withdraw watchdog',_dispatch)
 	def _withdraw_watchdog (self,reactor,service,command):
 		def _callback (name):
 			for neighbor in reactor.configuration.neighbor:
@@ -420,7 +423,7 @@ class Decoder (object):
 
 	# flush routes
 
-	@register_command('flush route',_dispatch,_order)
+	@register_command('flush route',_dispatch)
 	def _flush_route (self,reactor,service,command):
 		def _callback (self,peers):
 			self.logger.reactor("Flushing routes for %s" % ', '.join(peers if peers else []) if peers is not None else 'all peers')
@@ -442,7 +445,7 @@ class Decoder (object):
 
 	# route
 
-	@register_command('announce route',_dispatch,_order)
+	@register_command('announce route',_dispatch)
 	def _announce_route (self,reactor,service,command):
 		def _callback (self,command,nexthops):
 			changes = self.format.parse_api_route(command,nexthops,'announce')
@@ -454,8 +457,8 @@ class Decoder (object):
 				for (peer,change) in changes:
 					peers.append(peer)
 					reactor.configuration.change_to_peers(change,[peer,])
+					self.logger.reactor("Route added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
 					yield False
-				self.logger.reactor("Route added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
 				reactor.route_update = True
 
 		try:
@@ -471,7 +474,7 @@ class Decoder (object):
 		except IndexError:
 			return False
 
-	@register_command('withdraw route',_dispatch,_order)
+	@register_command('withdraw route',_dispatch)
 	def _withdraw_route (self,reactor,service,command):
 		def _callback (self,command,nexthops):
 			changes = self.format.parse_api_route(command,nexthops,'withdraw')
@@ -503,7 +506,7 @@ class Decoder (object):
 
 	# vpls
 
-	@register_command('announce vpls',_dispatch,_order)
+	@register_command('announce vpls',_dispatch)
 	def _announce_vpls (self,reactor,service,command):
 		def _callback (self,command,nexthops):
 			changes = self.format.parse_api_vpls(command,nexthops,'announce')
@@ -515,8 +518,8 @@ class Decoder (object):
 				for (peer,change) in changes:
 					peers.append(peer)
 					reactor.configuration.change_to_peers(change,[peer,])
+					self.logger.reactor("vpls added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
 					yield False
-				self.logger.reactor("vpls added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
 				reactor.route_update = True
 
 		try:
@@ -532,7 +535,7 @@ class Decoder (object):
 		except IndexError:
 			return False
 
-	@register_command('withdraw vpls',_dispatch,_order)
+	@register_command('withdraw vpls',_dispatch)
 	def _withdraw_change (self,reactor,service,command):
 		def _callback (self,command,nexthops):
 			changes = self.format.parse_api_vpls(command,nexthops,'withdraw')
@@ -564,7 +567,7 @@ class Decoder (object):
 
 	# attribute
 
-	@register_command('announce attribute',_dispatch,_order)
+	@register_command('announce attribute',_dispatch)
 	def _announce_attribute (self,reactor,service,command):
 		def _callback (self,command,nexthops):
 			changes = self.format.parse_api_attribute(command,nexthops,'announce')
@@ -591,7 +594,7 @@ class Decoder (object):
 		except IndexError:
 			return False
 
-	@register_command('withdraw attribute',_dispatch,_order)
+	@register_command('withdraw attribute',_dispatch)
 	def _withdraw_attribute (self,reactor,service,command):
 		def _callback (self,command,nexthops):
 			changes = self.format.parse_api_attribute(command,nexthops,'withdraw')
@@ -623,7 +626,7 @@ class Decoder (object):
 
 	# flow
 
-	@register_command('announce flow',_dispatch,_order)
+	@register_command('announce flow',_dispatch)
 	def _announce_flow (self,reactor,service,command):
 		def _callback (self,command,peers):
 			changes = self.format.parse_api_flow(command,'announce')
@@ -651,7 +654,7 @@ class Decoder (object):
 			return False
 
 
-	@register_command('withdraw flow',_dispatch,_order)
+	@register_command('withdraw flow',_dispatch)
 	def _withdraw_flow (self,reactor,service,command):
 		def _callback (self,command,peers):
 			changes = self.format.parse_api_flow(command,'withdraw')
@@ -683,7 +686,7 @@ class Decoder (object):
 
 	# eor
 
-	@register_command('announce eor',_dispatch,_order)
+	@register_command('announce eor',_dispatch)
 	def _announce_eor (self,reactor,service,command):
 		def _callback (self,command,peers):
 			family = self.format.parse_api_eor(command)
@@ -711,16 +714,16 @@ class Decoder (object):
 
 	# route-refresh
 
-	@register_command('announce route-refresh',_dispatch,_order)
+	@register_command('announce route-refresh',_dispatch)
 	def _announce_refresh (self,reactor,service,command):
 		def _callback (self,command,peers):
-			rr = self.format.parse_api_refresh(command)
-			if not rr:
+			refresh = self.format.parse_api_refresh(command)
+			if not refresh:
 				self.logger.reactor("Command could not parse flow in : %s" % command)
 				yield True
 			else:
-				reactor.configuration.refresh_to_peers(rr,peers)
-				self.logger.reactor("Sent to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',rr.extensive()))
+				reactor.configuration.refresh_to_peers(refresh,peers)
+				self.logger.reactor("Sent to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',refresh.extensive()))
 				yield False
 				reactor.route_update = True
 
@@ -739,7 +742,7 @@ class Decoder (object):
 
 	# operational
 
-	@register_command('operational',_dispatch,_order)
+	@register_command('operational',_dispatch)
 	def _announce_operational (self,reactor,service,command):
 		def _callback (self,command,peers):
 			operational = self.format.parse_api_operational(command)
@@ -748,7 +751,10 @@ class Decoder (object):
 				yield True
 			else:
 				reactor.configuration.operational_to_peers(operational,peers)
-				self.logger.reactor("operational message sent to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',operational.extensive()))
+				self.logger.reactor("operational message sent to %s : %s" % (
+						', '.join(peers if peers else []) if peers is not None else 'all peers',operational.extensive()
+					)
+				)
 				yield False
 				reactor.route_update = True
 
