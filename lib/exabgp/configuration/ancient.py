@@ -93,7 +93,7 @@ from exabgp.bgp.message.operational import Advisory
 from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.rib.change import Change
-
+from exabgp.reactor.api import control
 from exabgp.logger import Logger
 
 # Duck class, faking part of the Attribute interface
@@ -285,6 +285,7 @@ class Configuration (object):
 	def __init__ (self,configurations,text=False):
 		self.debug = environment.settings().debug.configuration
 		self.api_encoder = environment.settings().api.encoder
+		self.cli_socket = environment.settings().api.socket
 
 		self.logger = Logger()
 		self._text = text
@@ -1251,6 +1252,24 @@ class Configuration (object):
 
 			neighbor.changes = local_scope.get('announce',[])
 			messages = local_scope.get('operational',[])
+
+		# we want to have a socket for the cli
+		if self.cli_socket:
+			self.process['__cli__'] = {
+				'neighbor' : '*',
+				'consolidate': False,
+				'encoder': 'json',
+				'neighbor-changes': False,
+				'receive-keepalives': False,
+				'receive-notifications': False,
+				'receive-opens': False,
+				'receive-operational': False,
+				'receive-packets': False,
+				'receive-parsed': False,
+				'receive-refresh': False,
+				'receive-updates': False,
+				'run' : [ sys.executable, control.__file__, self.cli_socket ]
+			}
 
 		for name in self.process.keys():
 			process = self.process[name]

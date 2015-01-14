@@ -59,13 +59,14 @@ environment.configuration = {
 		'openwait': (environment.integer,environment.nop,'60','how many second we wait for an open once the TCP session is established'),
 	},
 	'cache' : {
-		'attributes'  :  (environment.boolean,environment.lower,'true', 'cache all attributes (configuration and wire) for faster parsing'),
-		'nexthops'    :  (environment.boolean,environment.lower,'true', 'cache routes next-hops (deprecated: next-hops are always cached)'),
+		'attributes'  : (environment.boolean,environment.lower,'true', 'cache all attributes (configuration and wire) for faster parsing'),
+		'nexthops'    : (environment.boolean,environment.lower,'true', 'cache routes next-hops (deprecated: next-hops are always cached)'),
 	},
 	'api' : {
-		'encoder'  :  (environment.api,environment.lower,'text', '(experimental) default encoder to use with with external API (text or json)'),
-		'highres'  :  (environment.boolean,environment.lower,'false','should we use highres timer in JSON'),
-		'respawn'  :  (environment.boolean,environment.lower,'false','should we respawn a helper process if it dies'),
+		'encoder'  : (environment.api,environment.lower,'text', '(experimental) default encoder to use with with external API (text or json)'),
+		'highres'  : (environment.boolean,environment.lower,'false','should we use highres timer in JSON'),
+		'respawn'  : (environment.boolean,environment.lower,'false','should we respawn a helper process if it dies'),
+		'socket'   : (environment.unquote,environment.quote,'','where should we create a socket for remote control'),
 	},
 	'reactor' : {
 		'speed' : (environment.real,environment.nop,'1.0', 'time of one reactor loop\n'
@@ -84,6 +85,6 @@ environment.configuration = {
 		'selfcheck' : (environment.boolean,environment.lower,'false','does a self check on the configuration file'),
 		'route' : (environment.unquote,environment.quote,'','decode the route using the configuration'),
 		'defensive' : (environment.boolean,environment.lower,'false', 'generate random fault in the code in purpose'),
-		'rotate':  (environment.boolean,environment.lower,'false', 'rotate configurations file on reload (signal)'),
+		'rotate': (environment.boolean,environment.lower,'false', 'rotate configurations file on reload (signal)'),
 	},
 }
