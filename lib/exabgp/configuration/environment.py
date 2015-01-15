@@ -217,8 +217,8 @@ class environment (object):
 				continue
 			for option in sorted(environment.configuration[section]):
 				values = environment.configuration[section][option]
-				default = "'%s'" % values[2] if values[1] in (environment.list,environment.path,environment.quote,environment.syslog) else values[2]
-				yield '%s.%s.%s %s: %s. default (%s)' % (environment.application,section,option,' '*(20-len(section)-len(option)),values[3],default)
+				default = "'%s'" % values['value'] if values['write'] in (environment.list,environment.path,environment.quote,environment.syslog) else values['value']
+				yield '%s.%s.%s %s: %s. default (%s)' % (environment.application,section,option,' '*(20-len(section)-len(option)),values['help'],default)
 
 	@staticmethod
 	def iter_ini (diff=False):
@@ -228,12 +228,12 @@ class environment (object):
 			header = '\n[%s.%s]' % (environment.application,section)
 			for k in sorted(environment._settings[section]):
 				v = environment._settings[section][k]
-				if diff and environment.configuration[section][k][0](environment.configuration[section][k][2]) == v:
+				if diff and environment.configuration[section][k]['read'](environment.configuration[section][k]['value']) == v:
 					continue
 				if header:
 					yield header
 					header = ''
-				yield '%s = %s' % (k,environment.configuration[section][k][1](v))
+				yield '%s = %s' % (k,environment.configuration[section][k]['write'](v))
 
 	@staticmethod
 	def iter_env (diff=False):
@@ -241,12 +241,12 @@ class environment (object):
 			if section in ('internal','debug'):
 				continue
 			for k,v in values.items():
-				if diff and environment.configuration[section][k][0](environment.configuration[section][k][2]) == v:
+				if diff and environment.configuration[section][k]['read'](environment.configuration[section][k]['value']) == v:
 					continue
-				if environment.configuration[section][k][1] == environment.quote:
+				if environment.configuration[section][k]['write'] == environment.quote:
 					yield "%s.%s.%s='%s'" % (environment.application,section,k,v)
 					continue
-				yield "%s.%s.%s=%s" % (environment.application,section,k,environment.configuration[section][k][1](v))
+				yield "%s.%s.%s=%s" % (environment.application,section,k,environment.configuration[section][k]['write'](v))
 
 
 	# Compatibility with 2.0.x
@@ -364,7 +364,7 @@ def _env (conf):
 		default = environment.configuration[section]
 
 		for option in default:
-			convert = default[option][0]
+			convert = default[option]['read']
 			try:
 				proxy_section = '%s.%s' % (environment.application,section)
 				env_name = '%s.%s' % (proxy_section,option)
@@ -378,9 +378,9 @@ def _env (conf):
 					conf = environment.unquote(ini.get(proxy_section,option,nonedict))
 					# name without an = or : in the configuration and no value
 					if conf is None:
-						conf = default[option][2]
+						conf = default[option]['value']
 			except (ConfigParser.NoSectionError,ConfigParser.NoOptionError):
-				conf = default[option][2]
+				conf = default[option]['value']
 			try:
 				env.setdefault(section,HashTable())[option] = convert(conf)
 			except TypeError:

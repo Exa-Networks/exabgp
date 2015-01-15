@@ -12,9 +12,9 @@ import socket
 import traceback
 
 class Control (object):
-	def __init__ (self,socket=None,production=True):
+	def __init__ (self,location=None,production=True):
 		from exabgp.configuration.environment import environment
-		self.location = socket or environment.settings().api.socket
+		self.location = location or environment.settings().api.socket
 
 		self.unix = None
 		self.sock = None
@@ -94,11 +94,11 @@ class Control (object):
 
 			looping = True
 			while looping:
-				r,_,_ = select.select(read.keys(),[],[],1)
-				if not r:
+				ready,_,_ = select.select(read.keys(),[],[],1)
+				if not ready:
 					continue
 
-				for fd in read:
+				for fd in ready:
 					r,_,_ = select.select([fd,],[],[],0)
 
 					if r:
@@ -139,5 +139,5 @@ class Control (object):
 			sys.exit(1)
 
 if __name__ == '__main__':
-	location = dict(zip(range(len(sys.argv)),sys.argv)).get(1,'/var/run/exabgp.sock')
-	Control(location).run()
+	LOCATION = dict(zip(range(len(sys.argv)),sys.argv)).get(1,'/var/run/exabgp.sock')
+	Control(LOCATION).run()
