@@ -5,6 +5,8 @@ Version explained:
 
 Version 3.4.7
  * Change: be more pythonic and use enty points with pip installation
+ * Fix: allow generic attribute not only in single line but also in multiple lines
+    patch by: Eiichiro Watanabe (issue #214)
 
 Version 3.4.6
  * Fix: a badly formated flow route would throw the parser in limbo

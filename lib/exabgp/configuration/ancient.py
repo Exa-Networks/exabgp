@@ -1658,7 +1658,7 @@ class Configuration (object):
 					'local-preference','atomic-aggregate','aggregator',
 					'path-information','community','originator-id','cluster-list',
 					'extended-community','split','label','rd','route-distinguisher',
-					'watchdog','withdraw'
+					'watchdog','withdraw','attribute'
 				]
 			)
 			if r is False: return False
