@@ -236,7 +236,7 @@ def loopback_ips(label):
                 lmo = labelre.match(line)
                 if not lmo or not lmo.group("label").startswith(label):
                     continue
-            addresses.append(ip)
+        addresses.append(ip)
     if not addresses:
         raise RuntimeError("No loopback IP found")
     logger.debug("Loopback addresses: {0}".format(addresses))
