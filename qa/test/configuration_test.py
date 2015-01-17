@@ -27,37 +27,32 @@ pp = pprint.PrettyPrinter(indent=3)
 class TestNewConfiguration (unittest.TestCase):
 	def test_parsing (self):
 
-		class Parser (object):
-			def __init__ (self,fname,text=False):
-				#self.debug = environment.settings().debug.configuration
-				#self.logger = Logger()
-				self._text = text
-				self._fname = fname
+		def parse (fname):
+			registry = Registry()
+			registry.register(SectionBGP,        ['bgp'])
+			registry.register(SectionFamily,     ['bgp','family'])
+			registry.register(SectionCapability, ['bgp','capability'])
+			registry.register(SectionSession,    ['bgp','session'])
+			registry.register(SectionProcess,    ['bgp','process'])
+			registry.register(SectionNeighbor,   ['bgp','neighbor'])
 
-			def reload (self):
-				registry = Registry()
-				registry.register(SectionBGP,        ['bgp'])
-				registry.register(SectionFamily,     ['bgp','family'])
-				registry.register(SectionCapability, ['bgp','capability'])
-				registry.register(SectionSession,    ['bgp','session'])
-				registry.register(SectionProcess,    ['bgp','process'])
-				registry.register(SectionNeighbor,   ['bgp','neighbor'])
+			registry.register(SectionBMP,        ['bmp'])
 
-				registry.register(SectionBMP,        ['bmp'])
+			with Reader(fname) as r:
+				tokeniser = Tokeniser('configuration',r)
+				parsed = None
+				while parsed is None:
+					parsed = registry.parse(tokeniser)
 
-				with Reader(self._fname) as r:
-					tokeniser = Tokeniser('configuration',r)
-					registry.handle(tokeniser)
-
-				return registry
+			return parsed
 
 		try:
-			registry = Parser('./qa/new/simple.conf').reload()
+			parsed = parse('./qa/new/simple.conf')
 		except IOError:
-			registry = Parser('../new/simple.conf').reload()
+			parsed = parse('../new/simple.conf')
 
 		for section in ['capability','process','session','neighbor']:
-			d = SectionBGP.configuration['configuration'][section]
+			d = parsed[section]
 			for k,v in d.items():
 				print '%s %s ' % (section,k)
 				pp.pprint(v)
