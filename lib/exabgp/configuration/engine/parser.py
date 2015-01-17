@@ -539,19 +539,19 @@ def rd (tokeniser):
 			data = [chr(0),chr(1)]
 			data.extend([chr(int(_)) for _ in prefix.split('.')])
 			data.extend([chr(suffix>>8),chr(suffix&0xFF)])
-			rd = ''.join(data)
+			distinguisher = ''.join(data)
 		else:
 			number = int(prefix)
 			if number < pow(2,16) and suffix < pow(2,32):
-				rd = chr(0) + chr(0) + pack('!H',number) + pack('!L',suffix)
+				distinguisher = chr(0) + chr(0) + pack('!H',number) + pack('!L',suffix)
 			elif number < pow(2,32) and suffix < pow(2,16):
-				rd = chr(0) + chr(2) + pack('!L',number) + pack('!H',suffix)
+				distinguisher = chr(0) + chr(2) + pack('!L',number) + pack('!H',suffix)
 			else:
 				raise ValueError('invalid route-distinguisher %s' % value)
 	except ValueError:
 		raise ValueError('invalid route-distinguisher %s' % value)
 
-	return RouteDistinguisher(rd)
+	return RouteDistinguisher(distinguisher)
 
 
 # ============================================================== PathInformation

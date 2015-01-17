@@ -13,16 +13,16 @@ from exabgp.configuration.engine.raised import Raised
 # convert special caracters
 
 @coroutine.join
-def unescape (s):
+def unescape (string):
 	start = 0
-	while start < len(s):
-		pos = s.find('\\', start)
+	while start < len(string):
+		pos = string.find('\\', start)
 		if pos == -1:
-			yield s[start:]
+			yield string[start:]
 			break
-		yield s[start:pos]
+		yield string[start:pos]
 		pos += 1
-		esc = s[pos]
+		esc = string[pos]
 		if esc == 'b':
 			yield '\b'
 		elif esc == 'f':
@@ -34,7 +34,7 @@ def unescape (s):
 		elif esc == 't':
 			yield '\t'
 		elif esc == 'u':
-			yield chr(int(s[pos + 1:pos + 5], 16))
+			yield chr(int(string[pos + 1:pos + 5], 16))
 			pos += 4
 		else:
 			yield esc

@@ -27,5 +27,7 @@ class Raised (Exception):
 		if syntax:
 			self.message += '\n\n' + syntax
 
+		Exception.__init__(self)
+
 	def __str__ (self):
 		return self.message

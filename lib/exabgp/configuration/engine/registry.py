@@ -30,16 +30,19 @@ class Registry (object):
 		cls.register(self,location)
 
 	def register_class (self,cls):
-		print "class %s registered" % cls.__name__
+		print
+		print "class %s" % cls.__name__
+		print "-"*40
 		if not cls in self._klass:
 			self._klass[cls] = cls()
+		print
 
 	def register_hook (self,cls,action,position,function):
 		key = '/'.join(position)
 		if action in self._handler:
 			raise Exception('conflicting handlers')
 		self._handler.setdefault(key,{})[action] = getattr(cls,function)
-		print "%-35s %-7s %s.%-20s registered" % (key if key else 'root',action,cls.__name__,function)
+		print "%-50s %-7s %s.%s" % (key if key else 'root',action,cls.__name__,function)
 
 	def iterate (self,tokeniser):
 		# each section can registered named configuration for reference here
@@ -60,12 +63,14 @@ class Registry (object):
 			token = tokeniser()
 			if not token: break
 
+			location = self.stack+[token,]
+
 			# if we have both a section and a action, try the action first
-			if run(self.stack+[token,],'action',self.stack+[token]):
+			if run(location,'action',location):
 				yield None
 				continue
 
-			if run(self.stack + [token,],'enter',self.stack):
+			if run(location,'enter',self.stack):
 				self.stack.append(token)
 				yield None
 				continue
@@ -76,12 +81,12 @@ class Registry (object):
 				print
 				for path in sorted(self._handler):
 					for action in sorted(self._handler[path]):
-						print '/%-40s %s' % (path,action)
+						print '/%-50s %s' % (path,action)
 				print '....'
 				print
-				print self.stack+[token,]
+				print '/'.join(location)
 				# we need the line and position at this level
-				raise Raised(tokeniser,'no parser for the location /%s' % ('/'.join(self.stack+[token,])))
+				raise Raised(tokeniser,'no parser for the location /%s' % ('/'.join(location)))
 
 			if run(self.stack,'exit',self.stack[:-1]):
 				self.stack.pop()

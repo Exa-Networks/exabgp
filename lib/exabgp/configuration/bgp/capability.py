@@ -16,6 +16,7 @@ from exabgp.bgp.message.open.capability.mp import MultiProtocol
 from exabgp.protocol.family import known_families
 
 from exabgp.configuration.bgp.family import SectionFamily
+from exabgp.configuration.bgp.family import syntax_family
 
 
 # ============================================================ syntax_capability
@@ -29,8 +30,11 @@ capability <name> {
 	route-refresh enable|disable                # default disabled
 	graceful-restart <time in second>           # default disabled
 	add-path disable|send|receive|send/receive  # default disabled
+	%s
 }
-"""
+""" % (
+	'\n\t'.join((_.replace(' <name>','') for _ in syntax_family.split('\n')))
+)
 
 
 # ============================================================= RaisedCapability

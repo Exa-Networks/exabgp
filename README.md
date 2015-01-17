@@ -96,8 +96,8 @@ The configuration file format changes from version to version, but effort are ma
 
 ##Support
 
-We try to be reactive to any problem raised, and hopefully are not too bad at it. Bug will be fixed when reported.
-Some organisation are however enable to deploy an applicatoin without commercial support, therefore it is available if your organisation requires it.
+We try to be reactive to any problem raised, and hopefully are not too bad at it.
+Some organisation are however unable to deploy an applicatoin without commercial support, therefore it is available if your organisation requires it but is by no way required.
 
 ##Related Projects
 

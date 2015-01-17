@@ -8,8 +8,6 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 
 from exabgp.configuration.engine.registry import Raised
 
-import time
-import random
 
 # ====================================================================== Section
 # The common function all Section should have
@@ -17,8 +15,6 @@ import random
 class Section (object):
 	configuration = dict()
 	factory = dict()
-
-	unamed = 'unamed-%s' % hash('%s%d' % (time.asctime(),random.randint(1000,9999)))
 
 	def __init__ (self):
 		self.factory[self.name] = self
@@ -42,7 +38,7 @@ class Section (object):
 
 		if name == '{':
 			tokeniser.rewind(name)
-			tokeniser.rewind(self.unamed)
+			tokeniser.rewind('anonymous')
 			return None
 
 		storage = self.configuration[tokeniser.name][section][name]
@@ -50,10 +46,10 @@ class Section (object):
 			raise Raised(tokeniser,'the section name %s referenced does not exists' % name,self.syntax)
 		return storage
 
-	def get_unamed (self,tokeniser,section):
-		if self.unamed in self.configuration[tokeniser.name][section]:
-			storage = self.configuration[tokeniser.name][section][self.unamed]
-			del self.configuration[tokeniser.name][section][self.unamed]
+	def extract (self,section,tokeniser):
+		if 'anonymous' in self.configuration[tokeniser.name][section]:
+			storage = self.configuration[tokeniser.name][section]['anonymous']
+			del self.configuration[tokeniser.name][section]['anonymous']
 			return storage
 		else:
 			return None
@@ -72,10 +68,10 @@ class Section (object):
 		# no verification to do
 		pass
 
-	def enter_unamed_section (self,tokeniser):
+	def enter_anonymous (self,tokeniser):
 		token = tokeniser()
 		if token != '{': raise Raised(tokeniser,'was expecting {',self.syntax)
 
-	def exit_unamed_section (self,tokeniser):
+	def exit_anonymous (self,tokeniser):
 		# no verification to do
 		pass

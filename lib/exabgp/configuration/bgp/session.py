@@ -41,11 +41,12 @@ class SectionSession (Section):
 	name = 'session'
 
 	def exit (self,tokeniser):
-		capability = self.get_unamed(tokeniser,'capability')
+		capability = self.extract('capability',tokeniser)
 		if capability:
 			if 'capability' in self.content:
 				raise RaisedSession(tokeniser,'can not have unamed and named capability in a session')
 			self.content['capability'] = capability
+
 		if 'capability' not in self.content:
 			raise RaisedSession(tokeniser,'section is missing a capability section')
 
@@ -107,7 +108,7 @@ class SectionSession (Section):
 		registry.register_hook(cls,'action',location+['hold-time'],'hold_time')
 
 		location += ['asn']
-		registry.register_hook(cls,'enter',location,'enter_unamed_section')
+		registry.register_hook(cls,'enter',location,'enter_anonymous')
 		registry.register_hook(cls,'action',location+['local'],'local_asn')
 		registry.register_hook(cls,'action',location+['peer'],'peer_asn')
-		registry.register_hook(cls,'exit', location,'exit_unamed_section')
+		registry.register_hook(cls,'exit', location,'exit_anonymous')

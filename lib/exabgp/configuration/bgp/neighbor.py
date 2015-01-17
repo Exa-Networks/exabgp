@@ -111,7 +111,7 @@ class SectionNeighbor (Section):
 		registry.register_hook(cls,'action',location+['announce'],'announce')
 
 		for tcp in (location+['tcp'],):
-			registry.register_hook(cls,'enter',tcp,'enter_unamed_section')
+			registry.register_hook(cls,'enter',tcp,'enter_anonymous')
 			registry.register_hook(cls,'action',tcp+['bind'],'tcp_bind')
 			registry.register_hook(cls,'action',tcp+['connect'],'tcp_connect')
 			registry.register_hook(cls,'action',tcp+['ttl-security'],'tcp_ttl_security')

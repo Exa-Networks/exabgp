@@ -37,5 +37,5 @@ class SectionBGP (Section):
 	def register (cls,registry,location):
 		registry.register_class(cls)
 
-		registry.register_hook(cls,'enter',location,'enter_unamed_section')
-		registry.register_hook(cls,'exit',location,'exit_unamed_section')
+		registry.register_hook(cls,'enter',location,'enter_anonymous')
+		registry.register_hook(cls,'exit',location,'exit_anonymous')
