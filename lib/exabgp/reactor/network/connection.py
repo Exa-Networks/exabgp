@@ -150,7 +150,7 @@ class Connection (object):
 				# what error could it be !
 				else:
 					self.logger.wire("%s %s undefined error reading on socket" % (self.name(),self.peer))
-					raise NetworkError('Problem while reading data from the network (%s)' % errstr(e))
+					raise NetworkError('Problem while reading data from the network (%s)' % errstr(exc))
 
 	def writer (self,data):
 		if not self.io:

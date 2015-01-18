@@ -128,6 +128,9 @@ class Protocol (object):
 	# Read from network .......................................................
 
 	def read_message (self):
+		# This will always be defined by the loop but scope leaking upset scrutinizer/pylint
+		msg_id = None
+
 		for length,msg_id,header,body,notify in self.connection.reader():
 			if notify:
 				if self.neighbor.api['receive-packets']:

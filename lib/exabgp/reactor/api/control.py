@@ -131,7 +131,7 @@ class Control (object):
 		except KeyboardInterrupt:
 			self.cleanup()
 		except Exception,exc:
-			print >> sys.stderr, msg
+			print >> sys.stderr, exc
 			print >> sys.stderr,''
 			traceback.print_exc(file=sys.stderr)
 			sys.stderr.flush()
