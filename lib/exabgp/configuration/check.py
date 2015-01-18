@@ -33,6 +33,7 @@ from exabgp.bgp.message.notification import Notification
 # =============================================================== check_neighbor
 # ...
 
+
 def check_neighbor (neighbors):
 	from exabgp.logger import Logger
 
@@ -62,7 +63,7 @@ def check_neighbor (neighbors):
 		negotiated = Negotiated(neighbor)
 		negotiated.sent(o1)
 		negotiated.received(o2)
-		#grouped = False
+		# grouped = False
 
 		for message in neighbor.rib.outgoing.updates(False):
 			pass
@@ -109,8 +110,8 @@ def check_neighbor (neighbors):
 						skip = True
 					else:
 						logger.parser('strings are different:')
-						logger.parser('[%s]'%str1r)
-						logger.parser('[%s]'%str2r)
+						logger.parser('[%s]' % (str1r))
+						logger.parser('[%s]' % (str2r))
 						return False
 				else:
 						logger.parser('strings are fine')
@@ -119,8 +120,8 @@ def check_neighbor (neighbors):
 					logger.parser('skipping encoding for update with non-transitive attribute(s)')
 				elif pack1 != pack2:
 					logger.parser('encoding are different')
-					logger.parser('[%s]'%od(pack1))
-					logger.parser('[%s]'%od(pack2))
+					logger.parser('[%s]' % (od(pack1)))
+					logger.parser('[%s]' % (od(pack2)))
 					return False
 				else:
 					logger.parser('encoding is fine')
@@ -135,7 +136,6 @@ def check_neighbor (neighbors):
 	return True
 
 
-
 # ================================================================ check_message
 #
 
@@ -145,8 +145,8 @@ def check_message (neighbor,message):
 
 	if raw.startswith('\xff'*16):
 		kind = ord(raw[18])
-		size = (ord(raw[16]) << 16) + (ord(raw[17]))
 		# XXX: FIXME: check size
+		# size = (ord(raw[16]) << 16) + (ord(raw[17]))
 
 		if kind == 1:
 			return check_open(neighbor,raw[18:])
@@ -188,14 +188,14 @@ def check_update (neighbor,raw):
 	capa[Capability.ID.MULTIPROTOCOL] = n.families()
 
 	routerid_1 = str(n.router_id)
-	routerid_2 = '.'.join(str((int(_)+1)%250) for _ in str(n.router_id).split('.',-1))
+	routerid_2 = '.'.join(str((int(_)+1) % 250) for _ in str(n.router_id).split('.',-1))
 
 	o1 = Open(4,n.local_as,routerid_1,capa,180)
 	o2 = Open(4,n.peer_as,routerid_2,capa,180)
 	negotiated = Negotiated(n)
 	negotiated.sent(o1)
 	negotiated.received(o2)
-	#grouped = False
+	# grouped = False
 
 	while raw:
 		if raw.startswith('\xff'*16):

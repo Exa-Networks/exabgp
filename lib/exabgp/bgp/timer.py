@@ -13,7 +13,9 @@ from exabgp.bgp.message.nop import _NOP
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notify
 
+# ================================================================ ReceiveTimer
 # Track the time for keepalive updates
+
 
 class ReceiveTimer (object):
 	def __init__ (self,me,holdtime,code,subcode,message=''):
@@ -26,7 +28,6 @@ class ReceiveTimer (object):
 		self.code = code
 		self.subcode = subcode
 		self.message = message
-
 
 	def check_ka (self,message=_NOP,ignore=_NOP.TYPE):
 		if message.TYPE != ignore:

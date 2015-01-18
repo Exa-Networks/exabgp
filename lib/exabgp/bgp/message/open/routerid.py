@@ -11,6 +11,7 @@ from exabgp.protocol.ip import IPv4
 # ===================================================================== RouterID
 #
 
+
 class RouterID (IPv4):
 	@classmethod
 	def unpack (cls,data):

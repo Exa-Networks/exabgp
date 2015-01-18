@@ -9,6 +9,7 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 # ======================================================================= Raised
 # reporting issue with the tokenisation
 
+
 class Raised (Exception):
 	tabsize = 3
 	syntax = ''
@@ -21,7 +22,7 @@ class Raised (Exception):
 		self.message = '\n\n'.join((
 			'problem parsing configuration file line %d position %d' % (location.idx_line,location.idx_column+1),
 			'error message: %s' % message.replace('\t',' '*self.tabsize),
-			'%s%s' % (self.line,'-'* self.idx_column + '^')
+			'%s%s' % (self.line,'-' * self.idx_column + '^')
 		))
 		# allow to give the right syntax in using Raised
 		if syntax:

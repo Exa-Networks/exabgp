@@ -18,12 +18,17 @@ from exabgp.bgp.message.notification import Notify
 # A Notification received from our peer.
 # RFC 4271 Section 4.5
 
+
 class Reserved (int):
 	def __str__ (self):
-		if self == 0: return 'query'
-		if self == 1: return 'begin'
-		if self == 2: return 'end'
+		if self == 0:
+			return 'query'
+		if self == 1:
+			return 'begin'
+		if self == 2:
+			return 'end'
 		return 'invalid'
+
 
 class RouteRefresh (Message):
 	ID = Message.ID.ROUTE_REFRESH

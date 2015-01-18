@@ -13,7 +13,6 @@ from exabgp.dep.cmd2 import cmd
 from exabgp.version import version
 
 
-
 class Completed (cmd.Cmd):
 	# use_rawinput = False
 	# prompt = ''
@@ -23,7 +22,7 @@ class Completed (cmd.Cmd):
 	# undoc_header = 'undoc_header'
 
 	ruler = '-'
-	completion ={}
+	completion = {}
 
 	def __init__ (self,intro=''):
 		self.prompt = '%s> ' % intro
@@ -48,13 +47,11 @@ class Completed (cmd.Cmd):
 		return True
 
 
-
 class SubMenu (Completed):
 	def do_exit (self,line):
 		return True
 
 	do_x = do_exit
-
 
 
 class Attribute (SubMenu):
@@ -63,7 +60,7 @@ class Attribute (SubMenu):
 	attribute = None
 
 	completion = {
-		'origin' : {
+		'origin':  {
 			'igp': {
 			},
 			'egp': {
@@ -112,13 +109,12 @@ class Attribute (SubMenu):
 		print 'attribute %s ' % self.name + ' '.join('%s %s' % (key,value) for key,value in self.attribute.iteritems())
 
 
-
 class ExaBGP (Completed):
 	completion = {
-		'announce' : {
-			'route' : {
+		'announce':  {
+			'route':  {
 			},
-			'l2vpn' : {
+			'l2vpn':  {
 			},
 		},
 		'neighbor': {
@@ -131,10 +127,10 @@ class ExaBGP (Completed):
 			'list': {
 			},
 		},
-		'attribute' : {
+		'attribute':  {
 		},
 		'show': {
-			'routes' : {
+			'routes':  {
 				'extensive': {
 				},
 				'minimal': {
@@ -152,9 +148,10 @@ class ExaBGP (Completed):
 			self.prompt = '\n# neighbor ' + ', '.join(self._neighbors) + '\n> '
 		else:
 			self.prompt = '\n> '
-	##
-	## repeat last command
-	##
+
+	#
+	# repeat last command
+	#
 
 	# last = 'help'
 
@@ -163,11 +160,6 @@ class ExaBGP (Completed):
 	# 	# Obviously not robust
 	# 	if hasattr(self, 'last_output'):
 	# 		print line.replace('$out', self.last_output)
-
-
-	##
-	##
-	##
 
 	_neighbors = set()
 
@@ -203,9 +195,9 @@ class ExaBGP (Completed):
 			self.help_neighbor()
 
 	def help_neighbor (self):
-		print "neighbor include <ip> : limit the action to the defined neighbors"
-		print "neighbor exclude <ip> : remove a particular neighbor"
-		print "neighbor reset        : clear the neighbor previous set "
+		print "neighbor include <ip>:  limit the action to the defined neighbors"
+		print "neighbor exclude <ip>:  remove a particular neighbor"
+		print "neighbor reset       :  clear the neighbor previous set "
 
 	_attribute = {}
 
@@ -228,7 +220,6 @@ class ExaBGP (Completed):
 		return True
 
 	do_q = do_quit
-
 
 
 if __name__ == '__main__':

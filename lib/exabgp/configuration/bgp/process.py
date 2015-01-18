@@ -110,7 +110,8 @@ class SectionProcess (Section):
 		valid_messages = ['notification','open','keepalive','update','refresh','operational']
 		valid_options = ['parsed','packets','consolidated']
 
-		printf = lambda s: (s[::-1].replace(',', ' and'[::-1], 1))[::-1]
+		def printf (string):
+			return (string[::-1].replace(',', ' and'[::-1], 1))[::-1]
 
 		direction = self.location[-2]
 		message = self.location[-1]
@@ -136,7 +137,6 @@ class SectionProcess (Section):
 					raise RaisedProcess(Location(idx_line,idx_column,line),'consolidated can not be used with another keyword')
 
 				section.append(action)
-
 
 	def neighbor_changes (self,tokeniser):
 		self.content.setdefault('received',{})['neighbor-changes'] = True

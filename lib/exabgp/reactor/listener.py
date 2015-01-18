@@ -11,7 +11,7 @@ import socket
 from exabgp.util.errstr import errstr
 
 from exabgp.protocol.family import AFI
-#from exabgp.util.coroutine import each
+# from exabgp.util.coroutine import each
 from exabgp.util.ip import isipv4
 from exabgp.util.ip import isipv6
 from exabgp.reactor.network.error import error
@@ -37,7 +37,7 @@ class Listener (object):
 
 		self.serving = False
 		self._sockets = {}
-		#self._connected = {}
+		# self._connected = {}
 		self.logger = Logger()
 
 	def _bind (self,ip,port):
@@ -59,7 +59,7 @@ class Listener (object):
 			else:
 				return None
 			s.setblocking(0)
-			##s.settimeout(0.0)
+			# s.settimeout(0.0)
 			s.listen(self._backlog)
 			return s
 		except socket.error,exc:

@@ -31,6 +31,7 @@ from exabgp.configuration.environment import environment
 from exabgp.version import version
 from exabgp.logger import Logger
 
+
 class Reactor (object):
 	# [hex(ord(c)) for c in os.popen('clear').read()]
 	clear = ''.join([chr(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a']])
@@ -99,7 +100,7 @@ class Reactor (object):
 			return read
 		except select.error,exc:
 			errno,message = exc.args
-			if not errno in error.block:
+			if errno not in error.block:
 				raise exc
 			return []
 
@@ -274,11 +275,11 @@ class Reactor (object):
 						break
 					except KeyboardInterrupt:
 						pass
-#				from exabgp.leak import objgraph
-#				print objgraph.show_most_common_types(limit=20)
-#				import random
-#				obj = objgraph.by_type('Route')[random.randint(0,2000)]
-#				objgraph.show_backrefs([obj], max_depth=10)
+				# from exabgp.leak import objgraph
+				# print objgraph.show_most_common_types(limit=20)
+				# import random
+				# obj = objgraph.by_type('Route')[random.randint(0,2000)]
+				# objgraph.show_backrefs([obj], max_depth=10)
 
 	def shutdown (self):
 		"""terminate all the current BGP connections"""
@@ -343,7 +344,7 @@ class Reactor (object):
 			try:
 				self._running.next()  # run
 				# should raise StopIteration in most case
-					# and prevent us to have to run twice to run one command
+				# and prevent us to have to run twice to run one command
 				self._running.next()  # run
 			except StopIteration:
 				self._running = None
@@ -354,7 +355,6 @@ class Reactor (object):
 		except KeyboardInterrupt:
 			self._shutdown = True
 			self.logger.reactor("^C received",'error')
-
 
 	def route_send (self):
 		"""the process ran and we need to figure what routes to changes"""

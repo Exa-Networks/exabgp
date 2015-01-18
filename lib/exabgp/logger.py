@@ -26,8 +26,10 @@ _SHORT = {
 	'ERROR': 'ERR'
 }
 
+
 def short (name):
 	return _SHORT.get(name.upper(),name.upper())
+
 
 def _can_write (location):
 	try:
@@ -43,6 +45,7 @@ def _can_write (location):
 		((s[stat.ST_GID] == gid) and (mode & stat.S_IWGRP)) or
 		(mode & stat.S_IWOTH)
 	)
+
 
 # This delays the evaluation of the od() function which is expensive
 # hence why pylint too-few-public-method is disabled
@@ -70,7 +73,6 @@ class Logger (object):
 	_config = ''
 	_pid = os.getpid()
 	_cwd = os.getcwd()
-
 
 	def __new__ (cls):
 		if cls._instance.get('class',None) is None:
@@ -100,7 +102,8 @@ class Logger (object):
 		self._history.append((timestamp,level,source,message))
 
 	def _format (self,timestamp,level,source,message):
-		if self.short: return message
+		if self.short:
+			return message
 		now = time.strftime('%a, %d %b %Y %H:%M:%S',timestamp)
 		return "%s | %-8s | %-6d | %-13s | %s" % (now,level,self._pid,source,message)
 
@@ -139,7 +142,6 @@ class Logger (object):
 		self.destination = command.log.destination
 
 		self.restart(True)
-
 
 	def _local_syslog (self):
 		if sys.platform == "darwin":
@@ -336,9 +338,12 @@ class Logger (object):
 			getattr(self,recorder.lower())(self,message,'parser')
 		self.pdb(recorder)
 
+
 class FakeLogger (object):
 	def __getattr__ (self,name):
-		return lambda data,_=None: sys.stdout.write('Fake logger [%s]\n' % str(data))
+		def printf (data,_=None):
+			sys.stdout.write('Fake logger [%s]\n' % str(data))
+		return printf
 
 # if __name__ == '__main__':
 # 	logger = Logger()

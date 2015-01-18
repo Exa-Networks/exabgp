@@ -11,6 +11,7 @@ import sys
 from exabgp.util.panic import panic
 from exabgp.util.panic import footer
 
+
 def bug_report (dtype, value, trace):
 	print panic
 
@@ -36,6 +37,7 @@ def intercept (dtype, value, trace):
 	if os.environ.get('PDB',None) not in [None,'0','']:
 		import pdb
 		pdb.pm()
+
 
 def setup_report ():
 	sys.excepthook = intercept

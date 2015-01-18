@@ -12,16 +12,17 @@ from exabgp.configuration import Configuration
 
 from exabgp.configuration.show import SectionShow
 
+
 def parse (command):
 	conf = Configuration()
 	conf.register(SectionShow,['show'])
 	return conf.parse_string(command)
 
-shows = [
+SHOWS = [
 	'show { version }',
 ]
 
-for show in shows:
+for show in SHOWs:
 	parsed = parse(show)
 	print '--'
 	print 'command:',show

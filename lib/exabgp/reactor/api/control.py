@@ -11,6 +11,7 @@ import select
 import socket
 import traceback
 
+
 class Control (object):
 	def __init__ (self,location=None,production=True):
 		from exabgp.configuration.environment import environment
@@ -27,7 +28,6 @@ class Control (object):
 			self.unix.close()
 
 		self.cleanup()
-
 
 	# Can raise IOError
 	def cleanup (self):

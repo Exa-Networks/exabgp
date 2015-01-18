@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2009-09-06.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+
 def od (value):
 	def spaced (value):
 		even = None

@@ -10,6 +10,7 @@ from struct import pack
 
 # =================================================================== HoldTime
 
+
 class HoldTime (int):
 	def pack (self):
 		return pack('!H',self)

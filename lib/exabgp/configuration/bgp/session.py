@@ -54,7 +54,6 @@ class SectionSession (Section):
 		if 'asn' not in self.content:
 			raise RaisedSession(tokeniser,"section is missing a 'asn' section")
 
-
 		capability = self.extract_anonymous('capability',tokeniser)
 		if capability:
 			if 'capability' in self.content:
@@ -63,7 +62,6 @@ class SectionSession (Section):
 
 		if 'capability' not in self.content:
 			raise RaisedSession(tokeniser,"section is missing a 'capability' section")
-
 
 		if 'router-id' not in self.content:
 			# 0.0.0.0 is now a invlid router-id so it will be replaced by the bind ip

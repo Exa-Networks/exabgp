@@ -28,6 +28,7 @@ from exabgp.rib.change import Change
 from exabgp.version import version
 from exabgp.logger import Logger
 
+
 # pylint: disable=unused-argument,no-self-use
 # as we follow an API and this causes these warnings
 
@@ -44,7 +45,8 @@ class Text (Configuration):
 		tokens = formated(command).split(' ')[1:]
 		number = len(tokens)
 
-		if number < 1: return False
+		if number < 1:
+			return False
 
 		message = tokens[0]
 
@@ -77,7 +79,6 @@ class Text (Configuration):
 			for (peer,change) in changes:
 				change.nlri.action = OUT.withdraw
 		return changes
-
 
 	def parse_api_vpls (self,command,peers,action):
 		tokens = formated(command).split(' ')[1:]
@@ -129,8 +130,8 @@ class Text (Configuration):
 					mask=int(mask),
 					nexthop=nexthop.packed,
 					action=action
-				)
-				,attributes
+				),
+				attributes
 			)
 			if action == 'withdraw':
 				change.nlri.action = OUT.withdraw
@@ -169,7 +170,7 @@ class Text (Configuration):
 		if not number:
 			return Family(1,1)
 
-		if number !=2:
+		if number != 2:
 			return False
 
 		afi = AFI.fromString(tokens[0])
@@ -293,9 +294,6 @@ class Decoder (object):
 
 		return returned,command
 
-
-	#
-
 	@register_command('shutdown',_dispatch)
 	def _shutdown (self,reactor,service,command):
 		reactor.api_shutdown()
@@ -405,7 +403,6 @@ class Decoder (object):
 			name = service
 		reactor.plan(_callback(name))
 		return True
-
 
 	@register_command('withdraw watchdog',_dispatch)
 	def _withdraw_watchdog (self,reactor,service,command):
@@ -653,7 +650,6 @@ class Decoder (object):
 		except IndexError:
 			return False
 
-
 	@register_command('withdraw flow',_dispatch)
 	def _withdraw_flow (self,reactor,service,command):
 		def _callback (self,command,peers):
@@ -752,7 +748,7 @@ class Decoder (object):
 			else:
 				reactor.configuration.operational_to_peers(operational,peers)
 				self.logger.reactor("operational message sent to %s : %s" % (
-						', '.join(peers if peers else []) if peers is not None else 'all peers',operational.extensive()
+					', '.join(peers if peers else []) if peers is not None else 'all peers',operational.extensive()
 					)
 				)
 				yield False

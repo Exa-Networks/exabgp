@@ -6,11 +6,13 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+
 class Source (object):
 	UNSET         = 0
 	CONFIGURATION = 1
 	API           = 2
 	NETWORK       = 3
+
 
 class Change (object):
 	SOURCE = Source.UNSET
@@ -37,11 +39,14 @@ class Change (object):
 	def __str__ (self):
 		return self.extensive()
 
+
 class ConfigurationChange (Change):
 	SOURCE = Source.CONFIGURATION
 
+
 class APIChange (Change):
 	SOURCE = Source.API
+
 
 class NetworkChange (Change):
 	SOURCE = Source.NETWORK

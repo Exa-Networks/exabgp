@@ -14,8 +14,10 @@ def display (*args):
 	sys.stdout.write(''.join(str(_) for _ in args))
 	sys.stdout.flush()
 
+
 class Alarm (Exception):
 	pass
+
 
 def alarm_handler (signum, frame):
 	raise Alarm()
@@ -192,4 +194,3 @@ if __name__ == '__main__':
 		success = dispatch(exabgp,daemon,groups,port)
 
 	sys.exit(0 if success else 1)
-

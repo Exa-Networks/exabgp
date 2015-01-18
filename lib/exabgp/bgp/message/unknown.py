@@ -8,6 +8,10 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message import Message
 
+# ================================================================= UnknownMessage
+#
+
+
 class UnknownMessage (Message):
 	# Make sure we have a value, which is not defined in any RFC !
 

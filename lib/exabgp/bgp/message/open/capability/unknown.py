@@ -11,6 +11,7 @@ from exabgp.bgp.message.open.capability import Capability
 # ============================================================ UnknownCapability
 #
 
+
 class UnknownCapability (Capability):
 	def set (self,value,raw=''):
 		self.value = value

@@ -21,17 +21,20 @@ from exabgp.reactor.api.encoding import JSON
 from exabgp.bgp.message import Message
 from exabgp.logger import Logger
 
+
 # pylint: disable=no-self-argument,not-callable,unused-argument,invalid-name
 
 class ProcessError (Exception):
 	pass
 
+
 def preexec_helper ():
 	# make this process a new process group
-	#os.setsid()
+	# os.setsid()
 	# This prevent the signal to be sent to the children (and create a new process group)
 	os.setpgrp()
-	#signal.signal(signal.SIGINT, signal.SIG_IGN)
+	# signal.signal(signal.SIGINT, signal.SIG_IGN)
+
 
 class Processes (object):
 	# how many time can a process can respawn in the time interval
@@ -62,7 +65,7 @@ class Processes (object):
 	def clean (self):
 		self._process = {}
 		self._encoder = {}
-		self._events= {}
+		self._events = {}
 		self._neighbor_process = {}
 		self._broken = []
 		self._respawning = {}
@@ -107,13 +110,13 @@ class Processes (object):
 			if process in self._process:
 				self.logger.processes("process already running")
 				return
-			if not process in self.reactor.configuration.process:
+			if process not in self.reactor.configuration.process:
 				self.logger.processes("Can not start process, no configuration for it (anymore ?)")
 				return
 
 			# Prevent some weird termcap data to be created at the start of the PIPE
 			# \x1b[?1034h (no-eol) (esc)
-			os.environ['TERM']='dumb'
+			os.environ['TERM'] = 'dumb'
 
 			run = self.reactor.configuration.process[process].get('run','')
 			if run:
@@ -163,7 +166,7 @@ class Processes (object):
 				self._terminate(process)
 			self._start(process)
 		for process in list(self._process):
-			if not process in self.reactor.configuration.process:
+			if process not in self.reactor.configuration.process:
 				self._terminate(process)
 
 	def broken (self,neighbor):
@@ -257,7 +260,6 @@ class Processes (object):
 				if event in self._events[process]:
 					yield process
 
-
 	# do not do anything if silenced
 	# no-self-argument
 
@@ -267,7 +269,6 @@ class Processes (object):
 				return
 			return function(self,*args)
 		return closure
-
 
 	@silenced
 	def reset (self,peer):

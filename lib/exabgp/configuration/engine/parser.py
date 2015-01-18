@@ -6,8 +6,6 @@ Created by Thomas Mangin on 2014-07-01.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-
-
 # Generic ======================================================================
 #
 
@@ -21,8 +19,10 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.holdtime import HoldTime
 
+
 def string (tokeniser):
 	return tokeniser()
+
 
 def boolean (tokeniser,default):
 	value = tokeniser()
@@ -38,6 +38,7 @@ def boolean (tokeniser,default):
 		return default
 	return value
 
+
 def md5 (tokeniser):
 	value = tokeniser()
 	if len(value) > 80:
@@ -45,6 +46,7 @@ def md5 (tokeniser):
 	if not value:
 		raise ValueError('value requires the value password as an argument (quoted or unquoted).  FreeBSD users should use "kernel" as the argument.')
 	return value
+
 
 def ttl (tokeniser):
 	value = tokeniser()
@@ -63,6 +65,7 @@ def ttl (tokeniser):
 		raise ValueError('ttl must be smaller than 256')
 	return attl
 
+
 def asn (tokeniser,value=None):
 	value = tokeniser() if value is None else value
 	try:
@@ -75,6 +78,7 @@ def asn (tokeniser,value=None):
 	except ValueError:
 		raise ValueError('"%s" is an invalid ASN' % value)
 
+
 def ip (tokeniser):
 	value = tokeniser()
 	try:
@@ -82,8 +86,10 @@ def ip (tokeniser):
 	except (IndexError,ValueError,SocketError):
 		raise ValueError('"%s" is an invalid IP address' % value)
 
+
 def routerid (tokeniser):
 	return RouterID(tokeniser())
+
 
 def holdtime (tokeniser):
 	value = tokeniser()
@@ -100,8 +106,6 @@ def holdtime (tokeniser):
 	return hold_time
 
 
-
-
 # Attributes ===================================================================
 #
 
@@ -110,6 +114,7 @@ def holdtime (tokeniser):
 #
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
+
 
 def attribute (tokeniser):
 	start = tokeniser()
@@ -157,6 +162,7 @@ def attribute (tokeniser):
 
 from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
+
 def next_hop (tokeniser):
 	value = tokeniser()
 	if value.lower() == 'self':
@@ -170,6 +176,7 @@ def next_hop (tokeniser):
 #
 
 from exabgp.bgp.message.update.attribute.origin import Origin
+
 
 def origin (tokeniser):
 	value = tokeniser().lower()
@@ -187,6 +194,7 @@ def origin (tokeniser):
 
 from exabgp.bgp.message.update.attribute.med import MED
 
+
 def med (tokeniser):
 	value = tokeniser()
 	if not value.isdigit():
@@ -198,6 +206,7 @@ def med (tokeniser):
 #
 
 from exabgp.bgp.message.update.attribute.aspath import ASPath
+
 
 def aspath (tokeniser):
 	as_seq = []
@@ -238,6 +247,7 @@ def aspath (tokeniser):
 
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 
+
 def local_preference (tokeniser):
 	value = tokeniser()
 	if not value.isdigit():
@@ -250,6 +260,7 @@ def local_preference (tokeniser):
 
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 
+
 def atomic_aggregate (tokeniser):
 	return AtomicAggregate()
 
@@ -258,6 +269,7 @@ def atomic_aggregate (tokeniser):
 #
 
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
+
 
 def aggregator (tokeniser):
 	value = tokeniser()
@@ -286,6 +298,7 @@ def aggregator (tokeniser):
 
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 
+
 def originator_id (tokeniser):
 	value = tokeniser()
 	if not value.isdigit():
@@ -298,6 +311,7 @@ def originator_id (tokeniser):
 
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterID
+
 
 def cluster_list (tokeniser):
 	clusterids = []
@@ -323,6 +337,7 @@ def cluster_list (tokeniser):
 
 from exabgp.bgp.message.update.attribute.community import Community
 
+
 def _community (value):
 	separator = value.find(':')
 	if separator > 0:
@@ -342,7 +357,7 @@ def _community (value):
 		if suffix >= pow(2,16):
 			raise ValueError('invalid community %s (suffix too large)' % value)
 
-		return Community(pack('!L',(prefix<<16) + suffix))
+		return Community(pack('!L',(prefix << 16) + suffix))
 
 	elif value[:2].lower() == '0x':
 		value = long(value,16)
@@ -372,6 +387,7 @@ def _community (value):
 
 from exabgp.bgp.message.update.attribute.community import Communities
 
+
 def community (tokeniser):
 	communities = Communities()
 
@@ -393,6 +409,7 @@ def community (tokeniser):
 
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
+
 def _extended_community (value):
 	if value[:2].lower() == '0x':
 		if not len(value) % 2:
@@ -409,19 +426,19 @@ def _extended_community (value):
 	elif value.count(':'):
 		_known_community = {
 			# header and subheader
-			'target'  : chr(0x00)+chr(0x02),
-			'target4' : chr(0x02)+chr(0x02),
-			'origin'  : chr(0x00)+chr(0x03),
-			'origin4' : chr(0x02)+chr(0x03),
-			'l2info'  : chr(0x80)+chr(0x0A),
+			'target':  chr(0x00)+chr(0x02),
+			'target4': chr(0x02)+chr(0x02),
+			'origin':  chr(0x00)+chr(0x03),
+			'origin4': chr(0x02)+chr(0x03),
+			'l2info':  chr(0x80)+chr(0x0A),
 		}
 
 		_size_community = {
-			'target'  : 2,
-			'target4' : 2,
-			'origin'  : 2,
-			'origin4' : 2,
-			'l2info'  : 4,
+			'target':  2,
+			'target4': 2,
+			'origin':  2,
+			'origin4': 2,
+			'l2info':  4,
 		}
 
 		components = value.split(':')
@@ -469,9 +486,10 @@ def _extended_community (value):
 		raise ValueError('invalid extended community %s - lc+gc' % value)
 
 
+# This is the same code as community with a different parser, should be factored
+
 from exabgp.bgp.message.update.attribute.community import ExtendedCommunities
 
-# This is the same code as community with a different parser, should be factored
 
 def extended_community (tokeniser):
 	communities = ExtendedCommunities()
@@ -513,8 +531,6 @@ def withdraw (tokeniser=None):
 	return Withdrawn()
 
 
-
-
 # Qualifiers ===================================================================
 #
 
@@ -523,6 +539,7 @@ def withdraw (tokeniser=None):
 #
 
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+
 
 def rd (tokeniser):
 	try:
@@ -538,7 +555,7 @@ def rd (tokeniser):
 		if '.' in prefix:
 			data = [chr(0),chr(1)]
 			data.extend([chr(int(_)) for _ in prefix.split('.')])
-			data.extend([chr(suffix>>8),chr(suffix&0xFF)])
+			data.extend([chr(suffix >> 8),chr(suffix & 0xFF)])
 			distinguisher = ''.join(data)
 		else:
 			number = int(prefix)
@@ -559,6 +576,7 @@ def rd (tokeniser):
 
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 
+
 def path_information (tokeniser):
 	try:
 		pi = tokeniser()
@@ -573,6 +591,7 @@ def path_information (tokeniser):
 #
 
 from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
+
 
 def label (tokeniser):
 	labels = []

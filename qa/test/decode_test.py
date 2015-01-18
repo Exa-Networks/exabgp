@@ -1,38 +1,41 @@
 #!/usr/bin/env python
 
+# pylint: ignore=E131
+# pylama:ignore=E131
+
 bodies = []
 
 body = [
-	0x0, 0x0, #len withdrawn routes
+	0x0, 0x0,  # len withdrawn routes
 	# No routes to remove
 	# Attributes
-	0x0, 0x30, # len attributes (48)
-		0x40, # Flag Transitive
-		0x1, # Code : Attribute ID Origin
-		0x1, # len
-			0x0, # Origin : IGP
-		0x50, # Flag Transitive + extended length
-		0x2, # Code : AS Path
-		0x0, 0x16, # len 22
-			0x2, # Type (AS_Sequence)
-			0x5, # length (in ASes as every asn is 0x0 0x0 prefixed ASN4 must have been negotiated)
-				0x0, 0x0, 0xfe, 0xb0,		# ASN 65200
-				0x0, 0x0, 0x78, 0x14,		# ASN 30740
-				0x0, 0x0, 0x19, 0x35,		# ASN 6453
-				0x0, 0x0, 0xb, 0x62,		# ASN 2914
-				0x0, 0x0, 0x9, 0xd7,		# ASN 2519
-		0x40, # Flag Transitive
-		0x3, # Code: Next HOP
-		0x4, # len
-			0x7f, 0x0, 0x0, 0x1, # 127.0.0.1
-		0xc0, # 0x40 + 0x80 (Transitive Optional)
-		0x08, # Community
-		0x8, # Size 8
-			0x78, 0x14, 0x19, 0x35, # 30740:6453
-			0x78, 0x14, 0xfd, 0xeb, # 30740:65003
+	0x0, 0x30,  # len attributes (48)
+		0x40,  # Flag Transitive
+		0x1,  # Code : Attribute ID Origin
+		0x1,  # len
+			0x0,  # Origin : IGP
+		0x50,  # Flag Transitive + extended length
+		0x2,  # Code : AS Path
+		0x0, 0x16,  # len 22
+			0x2,  # Type (AS_Sequence)
+			0x5,  # length (in ASes as every asn is 0x0 0x0 prefixed ASN4 must have been negotiated)
+				0x0, 0x0, 0xfe, 0xb0,  # ASN 65200
+				0x0, 0x0, 0x78, 0x14,  # ASN 30740
+				0x0, 0x0, 0x19, 0x35,  # ASN 6453
+				0x0, 0x0, 0xb, 0x62,  # ASN 2914
+				0x0, 0x0, 0x9, 0xd7,  # ASN 2519
+		0x40,  # Flag Transitive
+		0x3,  # Code: Next HOP
+		0x4,  # len
+			0x7f, 0x0, 0x0, 0x1,  # 127.0.0.1
+		0xc0,  # 0x40 + 0x80 (Transitive Optional)
+		0x08,  # Community
+		0x8,  # Size 8
+			0x78, 0x14, 0x19, 0x35,  # 30740:6453
+			0x78, 0x14, 0xfd, 0xeb,  # 30740:65003
 	# routes :
-		0x18, 0x1, 0x0, 0x19, # 1.0.25.0/24
-		0x10, 0xde, 0xe6, # 222.330.0.0/16
+		0x18, 0x1, 0x0, 0x19,  # 1.0.25.0/24
+		0x10, 0xde, 0xe6,  # 222.330.0.0/16
 		0x11, 0xde, 0xe5, 0x80,
 		0x12, 0xde, 0xe5, 0x0,
 		0x10, 0xde, 0xe4,
@@ -187,10 +190,8 @@ body = [
 # asn4, data
 bodies.append((True,body))
 
-import sys
-
 # Prefix include is required as it perform some AFI/SAFI registration
-from exabgp.bgp.message.update.nlri.prefix import Prefix
+from exabgp.bgp.message.update.nlri.prefix import Prefix  # noqa
 
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.protocol.ip import IPv4
@@ -203,7 +204,7 @@ from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-#from exabgp.bgp.message.notification import Notify
+# from exabgp.bgp.message.notification import Notify
 
 
 from exabgp.configuration.setup import environment
@@ -249,9 +250,10 @@ import unittest
 #     finally:
 #         os.chdir(old_cwd)
 
+
 class TestUpdateDecoding (unittest.TestCase):
 	def setUp (self):
-		#env.log.all = True
+		# env.log.all = True
 		self.negotiated = {}
 
 		for asn4 in (True,False):
@@ -282,13 +284,15 @@ class TestUpdateDecoding (unittest.TestCase):
 
 	def test_decoding_udpate_asn (self):
 		for asn4,body in bodies:
-			if asn4: continue
+			if asn4:
+				continue
 			Update.unpack_message(''.join(chr(_) for _ in body),self.negotiated[asn4])
 
 	def test_decoding_udpate_asn4 (self):
 		for asn4,body in bodies:
-			if not asn4: continue
+			if not asn4:
+				continue
 			Update.unpack_message(''.join(chr(_) for _ in body),self.negotiated[asn4])
 
 if __name__ == '__main__':
-    unittest.main()
+	unittest.main()

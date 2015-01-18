@@ -11,6 +11,7 @@ from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.refresh import RouteRefresh
 
+
 # XXX: FIXME: we would not have to use so many setdefault if we pre-filled the dicts with the families
 
 class Store (object):
@@ -32,13 +33,13 @@ class Store (object):
 		self._enhanced_refresh_start = []
 		self._enhanced_refresh_delay = []
 
-
 	# will resend all the routes once we reconnect
 	def reset (self):
 		# WARNING : this function can run while we are in the updates() loop too !
 		self._enhanced_refresh_start = []
 		self._enhanced_refresh_delay = []
-		for update in self.updates(False): pass
+		for update in self.updates(False):
+			pass
 
 	# back to square one, all the routes are removed
 	def clear (self):
@@ -183,7 +184,6 @@ class Store (object):
 		dict_nlri[change_nlri_index] = change
 		if change_attr_index not in dict_attr:
 			dict_attr[change_attr_index] = change
-
 
 	def updates (self,grouped):
 		if self._changes:

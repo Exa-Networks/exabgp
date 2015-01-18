@@ -17,7 +17,6 @@ import asyncore
 
 from struct import unpack
 
-from exabgp.version import version
 from exabgp.reactor.network.error import error
 from exabgp.reactor.api.encoding import JSON
 from exabgp.bgp.message.update import Update
@@ -25,6 +24,7 @@ from exabgp.bgp.message.update import Update
 from exabgp.bmp.header import Header
 from exabgp.bmp.message import Message
 from exabgp.bmp.negotiated import FakeNegotiated
+
 
 class BMPHandler (asyncore.dispatcher_with_send):
 	wire = False
@@ -35,9 +35,9 @@ class BMPHandler (asyncore.dispatcher_with_send):
 
 	def setup (self,env,ip,port):
 		self.handle = {
-			Message.ROUTE_MONITORING : self._route,
-			Message.STATISTICS_REPORT : self._statistics,
-			Message.PEER_DOWN_NOTIFICATION : self._peer,
+			Message.ROUTE_MONITORING:       self._route,
+			Message.STATISTICS_REPORT:      self._statistics,
+			Message.PEER_DOWN_NOTIFICATION: self._peer,
 		}
 		self.asn4 = env.bmp.asn4
 		self.use_json = env.bmp.json
@@ -114,6 +114,7 @@ class BMPHandler (asyncore.dispatcher_with_send):
 	def _peer (self,header):
 		pass
 
+
 class BMPServer(asyncore.dispatcher):
 	def __init__(self, env):
 		self.env = env
@@ -130,7 +131,8 @@ class BMPServer(asyncore.dispatcher):
 		if pair is not None:
 			sock, addr = pair
 			print "new BGP connection from", addr
-			handler = BMPHandler(sock).setup(self.env,*addr)
+			BMPHandler(sock).setup(self.env,*addr)
+
 
 def drop ():
 	uid = os.getuid()
@@ -155,63 +157,167 @@ def drop ():
 
 from exabgp.configuration.environment import environment
 
+dict_space = {
+	'space': ' '*33
+}
+
+help_stdout = """\
+where logging should log
+%(space)s syslog (or no setting) sends the data to the local syslog syslog
+%(space)s host:<location> sends the data to a remote syslog server
+%(space)s stdout sends the data to stdout
+%(space)s stderr sends the data to stderr
+%(space)s <filename> send the data to a file""" % dict_space
+
+
 environment.application = 'exabmp'
 environment.configuration = {
-	'pdb' : {
-		'enable'        : (environment.boolean,environment.lower,'false',    'on program fault, start pdb the python interactive debugger'),
+	'pdb': {
+		'enable': {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'false',
+			'help':  'on program fault, start pdb the python interactive debugger',
+		},
 	},
-	'bmp' : {
-		'host' : (environment.nop,environment.nop,'localhost', 'port for the daemon to listen on'),
-		'port' : (environment.integer,environment.nop,'1790',  'port for the daemon to listen on'),
-		'asn4' : (environment.boolean,environment.lower,'true', 'are the route received by bmp in RFC4893 format'),
-		'json' : (environment.boolean,environment.lower,'true', 'use json encoding of parsed route'),
+	'bmp': {
+		'host': {
+			'read':  environment.nop,
+			'write': environment.nop,
+			'value': 'localhost',
+			'help':  'port for the daemon to listen on',
+		},
+		'port': {
+			'read':  environment.integer,
+			'write': environment.nop,
+			'value': '1790',
+			'help': 'port for the daemon to listen on',
+		},
+		'asn4': {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'true',
+			'help':  'are the route received by bmp in RFC4893 format',
+		},
+		'json': {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'true',
+			'help':  'use json encoding of parsed route',
+		},
 	},
-# 	'daemon' : {
-# #		'identifier'    : (environment.unquote,environment.nop,'ExaBGP',     'a name for the log (to diferenciate multiple instances more easily)'),
-# 		'pid'           : (environment.unquote,environment.quote,'',         'where to save the pid if we manage it'),
-# 		'user'          : (environment.user,environment.quote,'nobody',      'user to run as'),
-# 		'daemonize'     : (environment.boolean,environment.lower,'false',    'should we run in the background'),
-# 	},
-	'log' : {
-		'enable'        : (environment.boolean,environment.lower,'true',     'enable logging'),
-		'level'         : (environment.syslog_value,environment.syslog_name,'INFO', 'log message with at least the priority SYSLOG.<level>'),
-		'destination'   : (environment.unquote,environment.quote,'stdout', 'where logging should log\n'
-		                  '                                  syslog (or no setting) sends the data to the local syslog syslog\n'
-		                  '                                  host:<location> sends the data to a remote syslog server\n'
-		                  '                                  stdout sends the data to stdout\n'
-		                  '                                  stderr sends the data to stderr\n'
-		                  '                                  <filename> send the data to a file'
-		),
-		'all'           : (environment.boolean,environment.lower,'false',    'report debug information for everything'),
-		'configuration' : (environment.boolean,environment.lower,'false',    'report command parsing'),
-		'reactor'       : (environment.boolean,environment.lower,'true',     'report signal received, command reload'),
-		'daemon'        : (environment.boolean,environment.lower,'true',     'report pid change, forking, ...'),
-		'processes'     : (environment.boolean,environment.lower,'true',     'report handling of forked processes'),
-		'network'       : (environment.boolean,environment.lower,'true',     'report networking information (TCP/IP, network state,...)'),
-		'packets'       : (environment.boolean,environment.lower,'false',    'report BGP packets sent and received'),
-		'rib'           : (environment.boolean,environment.lower,'false',    'report change in locally configured routes'),
-		'message'       : (environment.boolean,environment.lower,'false',    'report changes in route announcement on config reload'),
-		'timers'        : (environment.boolean,environment.lower,'false',    'report keepalives timers'),
-		'routes'        : (environment.boolean,environment.lower,'false',    'report received routes'),
-		'parser'        : (environment.boolean,environment.lower,'false',    'report BGP message parsing details'),
-		'short'         : (environment.boolean,environment.lower,'false',    'use short log format (not prepended with time,level,pid and source)'),
+	'log': {
+		'enable':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'true',
+			'help':  'enable logging',
+		},
+		'level':  {
+			'read':  environment.syslog_value,
+			'write': environment.syslog_name,
+			'value': 'INFO',
+			'help':  'log message with at least the priority SYSLOG.<level>',
+		},
+		'destination':  {
+			'read':  environment.unquote,
+			'write': environment.quote,
+			'value': 'stdout',
+			'help':  help_stdout,
+		},
+		'all':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'false',
+			'help':  'report debug information for everything',
+		},
+		'configuration':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'true',
+			'help':  'report command parsing',
+		},
+		'reactor':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'true',
+			'help':  'report signal received, command reload',
+		},
+		'daemon':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'true',
+			'help':  'report pid change, forking, ...',
+		},
+		'processes':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'true',
+			'help':  'report handling of forked processes',
+		},
+		'network':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'true',
+			'help':  'report networking information (TCP/IP, network state,...)',
+		},
+		'packets':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'false',
+			'help':  'report BGP packets sent and received',
+		},
+		'rib':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'false',
+			'help':  'report change in locally configured routes',
+		},
+		'message':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'false',
+			'help':  'report changes in route announcement on config reload',
+		},
+		'timers':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'false',
+			'help':  'report keepalives timers',
+		},
+		'routes':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'false',
+			'help':  'report received routes',
+		},
+		'parser':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'false',
+			'help':  'report BGP message parsing details',
+		},
+		'short':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'false',
+			'help':  'use short log format (not prepended with time,level,pid and source)',
+		},
 	},
-	'cache' : {
-		'attributes'  :  (environment.boolean,environment.lower,'true', 'cache routes attributes (configuration and wire) for faster parsing'),
-		'nexthops'    :  (environment.boolean,environment.lower,'true', 'cache routes next-hops'),
+	'cache': {
+		'attributes':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'true',
+			'help':  'cache all attributes (configuration and wire) for faster parsing',
+		},
+		'nexthops':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'true',
+			'help':  'cache routes next-hops (deprecated: next-hops are always cached)',
+		},
 	},
-	# 'api' : {
-	# 	'encoder'  :  (environment.api,environment.lower,'text', '(experimental) encoder to use with with external API (text or json)'),
-	# },
-	# Here for internal use
-	'internal' : {
-		'name'    : (environment.nop,environment.nop,'ExaBMP', 'name'),
-		'version' : (environment.nop,environment.nop,version,  'version'),
-	},
-	# # Here for internal use
-	# 'debug' : {
-	# 	'memory' : (environment.boolean,environment.lower,'false','command line option --memory'),
-	# },
 }
 
 env = environment.setup('')

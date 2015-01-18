@@ -18,6 +18,7 @@ import syslog
 
 from exabgp.util.ip import isip
 
+
 # ===================================================================== NoneDict
 #
 
@@ -127,12 +128,14 @@ class environment (object):
 
 	@staticmethod
 	def ip (_):
-		if isip(_): return _
+		if isip(_):
+			return _
 		raise TypeError('ip %s is invalid' % _)
 
 	@staticmethod
 	def optional_ip (_):
-		if not _ or isip(_): return _
+		if not _ or isip(_):
+			return _
 		raise TypeError('ip %s is invalid' % _)
 
 	@staticmethod
@@ -148,10 +151,12 @@ class environment (object):
 	@staticmethod
 	def folder(path):
 		paths = environment.root(path)
-		options = [path for path in paths if os.path.exists(path)]
-		if not options: raise TypeError('%s does not exists' % path)
+		options = [p for p in paths if os.path.exists(path)]
+		if not options:
+			raise TypeError('%s does not exists' % path)
 		first = options[0]
-		if not first: raise TypeError('%s does not exists' % first)
+		if not first:
+			raise TypeError('%s does not exists' % first)
 		return first
 
 	@staticmethod
@@ -169,13 +174,15 @@ class environment (object):
 	@staticmethod
 	def conf(path):
 		first = environment.folder(path)
-		if not os.path.isfile(first): raise TypeError('%s is not a file' % path)
+		if not os.path.isfile(first):
+			raise TypeError('%s is not a file' % path)
 		return first
 
 	@staticmethod
 	def exe (path):
 		first = environment.conf(path)
-		if not os.access(first, os.X_OK): raise TypeError('%s is not an executable' % first)
+		if not os.access(first, os.X_OK):
+			raise TypeError('%s is not an executable' % first)
 		return first
 
 	@staticmethod
@@ -196,17 +203,21 @@ class environment (object):
 	@staticmethod
 	def syslog_value (log):
 		if log not in environment.log_levels:
-			if log == 'CRITICAL': log = 'CRIT'
-			if log == 'ERROR': log = 'ERR'
+			if log == 'CRITICAL':
+				log = 'CRIT'
+			if log == 'ERROR':
+				log = 'ERR'
 			raise TypeError('invalid log level %s' % log)
-		return getattr(syslog,'LOG_%s'%log)
+		return getattr(syslog,'LOG_%s' % log)
 
 	@staticmethod
 	def syslog_name (log):
 		for name in environment.log_levels:
-			if name == 'CRITICAL': name = 'CRIT'
-			if name == 'ERROR': name = 'ERR'
-			if getattr(syslog,'LOG_%s'%name) == log:
+			if name == 'CRITICAL':
+				name = 'CRIT'
+			if name == 'ERROR':
+				name = 'ERR'
+			if getattr(syslog,'LOG_%s' % name) == log:
 				return name
 		raise TypeError('invalid log level %s' % log)
 
@@ -248,21 +259,20 @@ class environment (object):
 					continue
 				yield "%s.%s.%s=%s" % (environment.application,section,k,environment.configuration[section][k]['write'](v))
 
-
 	# Compatibility with 2.0.x
 	@staticmethod
 	def _compatibility (env):
 		profile = os.environ.get('PROFILE','')
 		if profile:
-			env.profile.enable=True
+			env.profile.enable = True
 		if profile and profile.lower() not in ['1','true','yes','on','enable']:
-			env.profile.file=profile
+			env.profile.file = profile
 
 		# PDB : still compatible as a side effect of the code structure
 
 		syslog_env = os.environ.get('SYSLOG','')
 		if syslog_env != '':
-			env.log.destination=syslog_env
+			env.log.destination = syslog_env
 
 		if os.environ.get('DEBUG_SUPERVISOR','').lower() in ['1','yes']:
 			env.log.reactor = True
@@ -323,6 +333,7 @@ class environment (object):
 
 import ConfigParser
 from exabgp.util.hashtable import HashTable
+
 
 def _env (conf):
 	here = os.path.join(os.sep,*os.path.join(environment.location.split(os.sep)))

@@ -88,8 +88,10 @@ class SectionCapability (Section):
 			raise RaisedCapability(tokeniser,"%s is not a invalid add-path paramerter, options are %s" % (ap,', '.join(valid_options)))
 
 		self.content[Capability.ID(Capability.ID.ADD_PATH)] = 0
-		if ap.endswith('receive'): self.content[Capability.ID.ADD_PATH] += 1
-		if ap.startswith('send'):  self.content[Capability.ID.ADD_PATH] += 2
+		if ap.endswith('receive'):
+			self.content[Capability.ID.ADD_PATH] += 1
+		if ap.startswith('send'):
+			self.content[Capability.ID.ADD_PATH] += 2
 
 	def operational (self,tokeniser):
 		self._check_duplicate(tokeniser,RaisedCapability)

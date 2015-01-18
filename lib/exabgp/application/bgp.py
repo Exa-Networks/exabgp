@@ -9,7 +9,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import os
 import sys
 import platform
-import string
 import syslog
 
 from exabgp.version import version
@@ -24,8 +23,10 @@ from exabgp.configuration.usage import usage
 from exabgp.debug import setup_report
 setup_report()
 
-def is_hex (s):
-	return all(c in string.hexdigits or c == ':' for c in s)
+
+def is_hex (string):
+	return all(c in string.hexdigits or c == ':' for c in string)
+
 
 def __exit(memory,code):
 	if memory:
@@ -40,6 +41,7 @@ def __exit(memory,code):
 		obj = objgraph.by_type('Reactor')
 		objgraph.show_backrefs([obj], max_depth=10)
 	sys.exit(code)
+
 
 def main ():
 	options = docopt.docopt(usage, help=False)
@@ -96,7 +98,7 @@ def main ():
 	try:
 		env = environment.setup(envfile)
 	except environment.Error,exc:
-		print(usage)
+		print usage
 		print '\nconfiguration issue,', str(exc)
 		sys.exit(1)
 
@@ -171,7 +173,7 @@ def main ():
 
 	if options["--debug"]:
 		env.log.all = True
-		env.log.level=syslog.LOG_DEBUG
+		env.log.level = syslog.LOG_DEBUG
 
 	if options["--pdb"]:
 		# The following may fail on old version of python (but is required for debug.py)
@@ -242,6 +244,7 @@ def main ():
 		from exabgp.logger import Logger
 		logger = Logger()
 		logger.reactor('Can not fork, errno %d : %s' % (exc.errno,exc.strerror),'critical')
+
 
 def run (env,comment,configurations,pid=0):
 	from exabgp.logger import Logger

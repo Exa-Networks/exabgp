@@ -19,6 +19,7 @@ from exabgp.bgp.message import Message
 
 MAX_ADVISORY = 2048  # 2K
 
+
 class Type (int):
 	def pack (self):
 		return pack('!H',self)
@@ -35,6 +36,7 @@ class Type (int):
 
 # ================================================================== Operational
 #
+
 
 class Operational (Message):
 	ID = Message.ID.OPERATIONAL
@@ -130,6 +132,7 @@ Operational.register_message()
 # ============================================================ OperationalFamily
 #
 
+
 class OperationalFamily (Operational):
 	has_family = True
 
@@ -155,6 +158,7 @@ class OperationalFamily (Operational):
 
 # =================================================== SequencedOperationalFamily
 #
+
 
 class SequencedOperationalFamily (OperationalFamily):
 	__sequence_number = {}
@@ -184,6 +188,7 @@ class SequencedOperationalFamily (OperationalFamily):
 # =========================================================================== NS
 #
 
+
 class NS:
 	MALFORMED   = 0x01  # Request TLV Malformed
 	UNSUPPORTED = 0x02  # TLV Unsupported for this neighbor
@@ -205,7 +210,6 @@ class NS:
 
 		def extensive (self):
 			return 'operational NS %s %s/%s' % (self.name,self.afi,self.safi)
-
 
 	class Malformed (_NS):
 		name = 'NS malformed'
@@ -234,6 +238,7 @@ class NS:
 
 # ===================================================================== Advisory
 #
+
 
 class Advisory:
 	class _Advisory (OperationalFamily):
@@ -281,6 +286,7 @@ Advisory.ASM.register_operational()
 # ======================================================================== Query
 #
 
+
 class Query:
 	class _Query (SequencedOperationalFamily):
 		category = 'query'
@@ -320,6 +326,7 @@ Query.LPCQ.register_operational()
 
 # ===================================================================== Response
 #
+
 
 class Response:
 	class _Counter (SequencedOperationalFamily):
@@ -368,6 +375,7 @@ Response.LPCP.register_operational()
 
 # ========================================================================= Dump
 #
+
 
 class Dump:
 	pass

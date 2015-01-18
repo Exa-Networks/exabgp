@@ -94,5 +94,3 @@ The program configuration can be controlled using signals:
  * SIGTERM : terminate ExaBGP
  * SIGHUP  : terminate ExaBGP (does NOT reload the configuration anymore)
 """
-
-

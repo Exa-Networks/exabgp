@@ -8,6 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import time
 
+
 class Cache (dict):
 	def __init__ (self, min_items=10, max_items=2000, cache_life=3600):
 		dict.__init__(self)

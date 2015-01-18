@@ -8,6 +8,10 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message import Message
 
+# ========================================================================= NOP
+#
+
+
 class NOP (Message):
 	ID = Message.ID.NOP
 	TYPE = chr(Message.ID.NOP)

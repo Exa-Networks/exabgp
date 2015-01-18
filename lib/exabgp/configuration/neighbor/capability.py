@@ -12,27 +12,29 @@ from exabgp.configuration.engine.parser import boolean
 
 from exabgp.bgp.message.open.capability import Capability
 
+
 # =================================================================== Capability
 #
 
 class SectionCapability (Entry):
 	syntax = \
-	'capability {\n' \
-	'   asn4 enable|disable;                         # default enabled\n' \
-	'   aigp enable|disable;                         # default disabled\n' \
-	'   operational enable|disable;                  # default disabled\n' \
-	'   multi-session enable|disable;                # default disabled\n' \
-	'   route-refresh enable|disable;                # default disabled\n' \
-	'   graceful-restart <time in second>;           # default disabled\n' \
-	'   add-path disable|send|receive|send/receive;  # default disabled\n' \
-	'}\n'
+		'capability {\n' \
+		'   asn4 enable|disable;                         # default enabled\n' \
+		'   aigp enable|disable;                         # default disabled\n' \
+		'   operational enable|disable;                  # default disabled\n' \
+		'   multi-session enable|disable;                # default disabled\n' \
+		'   route-refresh enable|disable;                # default disabled\n' \
+		'   graceful-restart <time in second>;           # default disabled\n' \
+		'   add-path disable|send|receive|send/receive;  # default disabled\n' \
+		'}\n'
 
 	def __init__ (self):
 		self.content = dict()
 
 	def enter (self,tokeniser):
 		token = tokeniser()
-		if token != '{': raise Raised(self.syntax)
+		if token != '{':
+			raise Raised(self.syntax)
 		self.content = dict()
 
 	def exit (self,tokeniser):
@@ -53,8 +55,10 @@ class SectionCapability (Entry):
 			raise Raised("")
 
 		self.content[Capability.ID.ADD_PATH] = 0
-		if ap.endswith('receive'): self.content[Capability.ID.ADD_PATH] += 1
-		if ap.startswith('send'):  self.content[Capability.ID.ADD_PATH] += 2
+		if ap.endswith('receive'):
+			self.content[Capability.ID.ADD_PATH] += 1
+		if ap.startswith('send'):
+			self.content[Capability.ID.ADD_PATH] += 2
 
 		self._drop_colon(tokeniser)
 

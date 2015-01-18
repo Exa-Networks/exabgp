@@ -8,6 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import errno
 
+
 def errstr (exc):
 	try:
 		code = exc.args[0] if exc.args else exc.errno

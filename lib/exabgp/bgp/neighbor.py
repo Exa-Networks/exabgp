@@ -9,7 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from collections import deque
 
 # collections.counter is python2.7 only ..
-from exabgp.util.counter import Counter
+from exabgp.dep.counter import Counter
 
 from exabgp.protocol.family import AFI
 
@@ -20,6 +20,7 @@ from exabgp.bgp.message.open.capability import AddPath
 from exabgp.reactor.api.encoding import APIOptions
 
 from exabgp.rib import RIB
+
 
 # The definition of a neighbor (from reading the configuration)
 class Neighbor (object):
@@ -103,7 +104,7 @@ class Neighbor (object):
 
 	def add_family (self,family):
 		# the families MUST be sorted for neighbor indexing name to be predictable for API users
-		if not family in self.families():
+		if family not in self.families():
 			afi,safi = family
 			d = dict()
 			d[afi] = [safi,]
@@ -116,11 +117,16 @@ class Neighbor (object):
 			self._families.remove(family)
 
 	def missing (self):
-		if self.local_address is None: return 'local-address'
-		if self.peer_address is None: return 'peer-address'
-		if self.local_as is None: return 'local-as'
-		if self.peer_as is None: return 'peer-as'
-		if self.peer_address.afi == AFI.ipv6 and not self.router_id: return 'router-id'
+		if self.local_address is None:
+			return 'local-address'
+		if self.peer_address is None:
+			return 'peer-address'
+		if self.local_as is None:
+			return 'local-as'
+		if self.peer_as is None:
+			return 'peer-as'
+		if self.peer_address.afi == AFI.ipv6 and not self.router_id:
+			return 'router-id'
 		return ''
 
 	# This function only compares the neighbor BUT NOT ITS ROUTES
@@ -149,7 +155,7 @@ class Neighbor (object):
 		return not self.__eq__(other)
 
 	def pprint (self,with_changes=True):
-		changes=''
+		changes = ''
 		if with_changes:
 			changes += '\nstatic { '
 			for changes in self.rib.incoming.queued_changes():
@@ -160,27 +166,32 @@ class Neighbor (object):
 		for afi,safi in self.families():
 			families += '\n    %s %s;' % (afi.name(),safi.name())
 
+		_extension_receive = {
+			'receive-parsed':         'parsed',
+			'receive-packets':        'packets',
+			'receive-parsed':         'parsed',
+			'consolidate':            'consolidate',
+			'neighbor-changes':       'neighbor-changes',
+			Message.ID.NOTIFICATION:  'notification',
+			Message.ID.OPEN:          'open',
+			Message.ID.KEEPALIVE:     'keepalive',
+			Message.ID.UPDATE:        'update',
+			Message.ID.ROUTE_REFRESH: 'refresh',
+			Message.ID.OPERATIONAL:   'operational',
+		}
+
+		_extension_send = {
+			'send-packets': 'packets',
+		}
+
 		_receive  = []
-
-		_receive.extend(['      parsed;\n',]           if self.api['receive-parsed'] else [])
-		_receive.extend(['      packets;\n',]          if self.api['receive-packets'] else [])
-		_receive.extend(['      consolidate;\n',]      if self.api['consolidate'] else [])
-
-		_receive.extend(['      neighbor-changes;\n',] if self.api['neighbor-changes'] else [])
-		_receive.extend(['      notification;\n',]     if self.api[Message.ID.NOTIFICATION] else [])
-		_receive.extend(['      open;\n',]             if self.api[Message.ID.OPEN] else [])
-		_receive.extend(['      keepalive;\n',]        if self.api[Message.ID.KEEPALIVE] else [])
-		_receive.extend(['      update;\n',]           if self.api[Message.ID.UPDATE] else [])
-		_receive.extend(['      refresh;\n',]          if self.api[Message.ID.ROUTE_REFRESH] else [])
-		_receive.extend(['      operational;\n',]      if self.api[Message.ID.OPERATIONAL] else [])
-		_receive.extend(['      parsed;\n',]           if self.api['receive-parsed'] else [])
-		_receive.extend(['      packets;\n',]          if self.api['receive-packets'] else [])
-		_receive.extend(['      consolidate;\n',]      if self.api['consolidate'] else [])
-
+		for api,name in _extension_receive.items():
+			_receive.extend(['      %s;\n' % name,] if self.api[api] else [])
 		receive = ''.join(_receive)
 
 		_send = []
-		_send.extend(['      packets;\n',]          if self.api['send-packets'] else [])
+		for api,name in _extension_send.items():
+			_send.extend(['      %s;\n' % name,] if self.api[api] else [])
 		send = ''.join(_send)
 
 		return """\
@@ -223,7 +234,7 @@ neighbor %s {
 	'    receive {\n%s    }\n' % receive if receive else '',
 	'    send {\n%s    }\n' % send if send else '',
 	changes
-)
+)  # noqa
 
 	def __str__ (self):
 		return self.pprint(False)

@@ -7,7 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 import time
-#import traceback
+# import traceback
 
 from exabgp.bgp.timer import ReceiveTimer
 from exabgp.bgp.timer import SendTimer
@@ -63,7 +63,10 @@ SEND = Enumeration (
 # OPEN Graceful Restart Capability
 FORCE_GRACEFUL = True
 
-class Interrupted (Exception): pass
+
+class Interrupted (Exception):
+	pass
+
 
 # =========================================================================== KA
 #
@@ -206,7 +209,7 @@ class Peer (object):
 		if direction != 'out':
 			return
 		self._skip_time = time.time() + self._next_skip
-		self._next_skip = int(1+ self._next_skip*1.2)
+		self._next_skip = int(1 + self._next_skip * 1.2)
 		if self._next_skip > 60:
 			self._next_skip = 60
 
@@ -416,10 +419,8 @@ class Peer (object):
 		# let the caller know that we were sucesfull
 		yield ACTION.immediate
 
-
 	def _main (self,direction):
 		"""yield True if we want to come back to it asap, None if nothing urgent, and False if stopped"""
-
 		if self._teardown:
 			raise Notify(6,3)
 
@@ -680,11 +681,11 @@ class Peer (object):
 					# This generator only stops when it raises
 					r = generator.next()
 
-					### if r is ACTION.immediate: status = 'immediately'
-					### elif r is ACTION.later:   status = 'next second'
-					### elif r is ACTION.close:   status = 'stop'
-					### else: status = 'buggy'
-					### self.logger.network('%s loop %11s, state is %s' % (direction,status,self._[direction]['state']),'debug')
+					# if r is ACTION.immediate: status = 'immediately'
+					# elif r is ACTION.later:   status = 'next second'
+					# elif r is ACTION.close:   status = 'stop'
+					# else: status = 'buggy'
+					# self.logger.network('%s loop %11s, state is %s' % (direction,status,self._[direction]['state']),'debug')
 
 					if r == ACTION.immediate:
 						back = ACTION.immediate
@@ -707,6 +708,5 @@ class Peer (object):
 					self.logger.network('%s loop, intialising' % direction,'debug')
 					self._[direction]['generator'] = self._run(direction)
 					back = ACTION.later  # make sure we go through a clean loop
-
 
 		return back

@@ -29,6 +29,7 @@ from .error import AsyncError
 
 from exabgp.logger import Logger
 
+
 def create (afi):
 	try:
 		if afi == AFI.ipv4:
@@ -47,6 +48,7 @@ def create (afi):
 		raise NotConnected('Could not create socket')
 	return io
 
+
 def bind (io,ip,afi):
 	try:
 		if afi == AFI.ipv4:
@@ -55,6 +57,7 @@ def bind (io,ip,afi):
 			io.bind((ip,0,0,0))
 	except socket.error,exc:
 		raise BindingError('Could not bind to local ip %s - %s' % (ip,str(exc)))
+
 
 def connect (io,ip,port,afi,md5):
 	try:
@@ -149,12 +152,14 @@ def MD5 (io,ip,port,afi,md5):
 		else:
 			raise MD5Error('ExaBGP has no MD5 support for %s' % os)
 
+
 def nagle (io,ip):
 	try:
 		# diable Nagle's algorithm (no grouping of packets)
 		io.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 	except (socket.error,AttributeError):
 		raise NagleError("Could not disable nagle's algorithm for %s" % ip)
+
 
 def TTL (io,ip,ttl):
 	# None (ttl-security unset) or zero (maximum TTL) is the same thing
@@ -164,11 +169,13 @@ def TTL (io,ip,ttl):
 		except socket.error,exc:
 			raise TTLError('This OS does not support IP_TTL (ttl-security) for %s (%s)' % (ip,errstr(exc)))
 
+
 def async (io,ip):
 	try:
 		io.setblocking(0)
 	except socket.error,exc:
 		raise AsyncError('could not set socket non-blocking for %s (%s)' % (ip,errstr(exc)))
+
 
 def ready (io):
 	logger = Logger()

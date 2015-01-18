@@ -77,7 +77,7 @@ class Open (Message):
 		asn = unpack('!H',data[1:3])[0]
 		hold_time = unpack('!H',data[3:5])[0]
 		numeric = unpack('!L',data[5:9])[0]
-		router_id = "%d.%d.%d.%d" % (numeric>>24,(numeric>>16)&0xFF,(numeric>>8)&0xFF,numeric&0xFF)
+		router_id = "%d.%d.%d.%d" % (numeric >> 24,(numeric >> 16) & 0xFF,(numeric >> 8) & 0xFF,numeric & 0xFF)
 		capabilities = Capabilities.unpack(data[9:])
 		return cls(version,asn,router_id,capabilities,hold_time)
 

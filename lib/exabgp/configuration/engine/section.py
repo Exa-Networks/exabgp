@@ -11,6 +11,7 @@ from exabgp.configuration.engine.raised import Raised
 # ====================================================================== Section
 # The common function all Section should have
 
+
 class Section (object):
 	configuration = dict()
 	factory = dict()
@@ -24,7 +25,8 @@ class Section (object):
 
 	def create_section (self,section,tokeniser):
 		name = tokeniser()
-		if name == '{': raise Raised(tokeniser,'was expecting section name',self.syntax)
+		if name == '{':
+			raise Raised(tokeniser,'was expecting section name',self.syntax)
 		self.drop_parenthesis(tokeniser)
 		return self.create_content(section,name,tokeniser)
 
@@ -71,7 +73,8 @@ class Section (object):
 
 	def enter_nameless (self,tokeniser):
 		token = tokeniser()
-		if token != '{': raise Raised(tokeniser,'was expecting {',self.syntax)
+		if token != '{':
+			raise Raised(tokeniser,'was expecting {',self.syntax)
 
 	def exit_nameless (self,tokeniser):
 		# no verification to do
@@ -79,7 +82,8 @@ class Section (object):
 
 	def enter_anonymous (self,tokeniser):
 		token = tokeniser()
-		if token != '{': raise Raised(tokeniser,'was expecting {',self.syntax)
+		if token != '{':
+			raise Raised(tokeniser,'was expecting {',self.syntax)
 		self.content = self.create_content(self.name,'anonymous',tokeniser)
 
 	def exit_anonymous (self,tokeniser):

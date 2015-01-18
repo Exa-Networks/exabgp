@@ -9,8 +9,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 # =================================================================== Capability
 #
 
-from exabgp.bgp.message.notification import Notify
-
 
 class Capability (object):
 
@@ -23,7 +21,7 @@ class Capability (object):
 		OUTBOUND_ROUTE_FILTERING = 0x03  # [RFC5291]
 		MULTIPLE_ROUTES          = 0x04  # [RFC3107]
 		EXTENDED_NEXT_HOP        = 0x05  # [RFC5549]
-		#6-63      Unassigned
+		# 6-63      Unassigned
 		GRACEFUL_RESTART         = 0x40  # [RFC4724]
 		FOUR_BYTES_ASN           = 0x41  # [RFC4893]
 		# 66 Deprecated
@@ -46,33 +44,35 @@ class Capability (object):
 		AIGP = 0xFF00
 
 		names = {
-			RESERVED                 : 'reserved',
-			MULTIPROTOCOL            : 'multiprotocol',
-			ROUTE_REFRESH            : 'route-refresh',
-			OUTBOUND_ROUTE_FILTERING : 'outbound-route-filtering',
-			MULTIPLE_ROUTES          : 'multiple-routes',
-			EXTENDED_NEXT_HOP        : 'extended-next-hop',
+			RESERVED:                  'reserved',
+			MULTIPROTOCOL:             'multiprotocol',
+			ROUTE_REFRESH:             'route-refresh',
+			OUTBOUND_ROUTE_FILTERING:  'outbound-route-filtering',
+			MULTIPLE_ROUTES:           'multiple-routes',
+			EXTENDED_NEXT_HOP:         'extended-next-hop',
 
-			GRACEFUL_RESTART         : 'graceful-restart',
-			FOUR_BYTES_ASN           : 'asn4',
+			GRACEFUL_RESTART:          'graceful-restart',
+			FOUR_BYTES_ASN:            'asn4',
 
-			DYNAMIC_CAPABILITY       : 'dynamic-capability',
-			MULTISESSION             : 'multi-session',
-			ADD_PATH                 : 'add-path',
-			ENHANCED_ROUTE_REFRESH   : 'enhanced-route-refresh',
-			OPERATIONAL              : 'operational',
+			DYNAMIC_CAPABILITY:        'dynamic-capability',
+			MULTISESSION:              'multi-session',
+			ADD_PATH:                  'add-path',
+			ENHANCED_ROUTE_REFRESH:    'enhanced-route-refresh',
+			OPERATIONAL:               'operational',
 
-			ROUTE_REFRESH_CISCO      : 'cisco-route-refresh',
-			MULTISESSION_CISCO       : 'cisco-multi-sesion',
+			ROUTE_REFRESH_CISCO:       'cisco-route-refresh',
+			MULTISESSION_CISCO:        'cisco-multi-sesion',
 
-			AIGP                     : 'aigp',
+			AIGP:                      'aigp',
 		}
 
 		def __str__ (self):
 			name = self.names.get(self,None)
 			if name is None:
-				if self in Capability.ID.unassigned: return 'unassigned-%s' % hex(self)
-				if self in Capability.ID.reserved: return 'reserved-%s' % hex(self)
+				if self in Capability.ID.unassigned:
+					return 'unassigned-%s' % hex(self)
+				if self in Capability.ID.reserved:
+					return 'reserved-%s' % hex(self)
 				return 'capability-%s' % hex(self)
 			return name
 
@@ -83,8 +83,10 @@ class Capability (object):
 		def name (cls,self):
 			name = cls.names.get(self,None)
 			if name is None:
-				if self in Capability.ID.unassigned: return 'unassigned-%s' % hex(self)
-				if self in Capability.ID.reserved: return 'reserved-%s' % hex(self)
+				if self in Capability.ID.unassigned:
+					return 'unassigned-%s' % hex(self)
+				if self in Capability.ID.reserved:
+					return 'reserved-%s' % hex(self)
 			return name
 
 	registered_capability = dict()
@@ -131,8 +133,10 @@ class Parameter (int):
 	CAPABILITIES                 = 0x02
 
 	def __str__ (self):
-		if self == 0x01: return "AUTHENTIFICATION INFORMATION"
-		if self == 0x02: return "OPTIONAL"
+		if self == 0x01:
+			return "AUTHENTIFICATION INFORMATION"
+		if self == 0x02:
+			return "OPTIONAL"
 		return 'UNKNOWN'
 
 # =================================================================== Capabilities
@@ -143,15 +147,15 @@ from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.notification import Notify
 
 # Must be imported for the register API to work
-from exabgp.bgp.message.open.capability.addpath import AddPath
-from exabgp.bgp.message.open.capability.asn4 import ASN4
-from exabgp.bgp.message.open.capability.graceful import Graceful
-from exabgp.bgp.message.open.capability.mp import MultiProtocol
-from exabgp.bgp.message.open.capability.ms import MultiSession
-from exabgp.bgp.message.open.capability.operational import Operational
-from exabgp.bgp.message.open.capability.refresh import RouteRefresh
-from exabgp.bgp.message.open.capability.refresh import EnhancedRouteRefresh
-from exabgp.bgp.message.open.capability.unknown import UnknownCapability
+from exabgp.bgp.message.open.capability.addpath import AddPath               # noqa
+from exabgp.bgp.message.open.capability.asn4 import ASN4                     # noqa
+from exabgp.bgp.message.open.capability.graceful import Graceful             # noqa
+from exabgp.bgp.message.open.capability.mp import MultiProtocol              # noqa
+from exabgp.bgp.message.open.capability.ms import MultiSession               # noqa
+from exabgp.bgp.message.open.capability.operational import Operational       # noqa
+from exabgp.bgp.message.open.capability.refresh import RouteRefresh          # noqa
+from exabgp.bgp.message.open.capability.refresh import EnhancedRouteRefresh  # noqa
+from exabgp.bgp.message.open.capability.unknown import UnknownCapability     # noqa
 # /forced import
 
 # +------------------------------+
@@ -161,6 +165,7 @@ from exabgp.bgp.message.open.capability.unknown import UnknownCapability
 # +------------------------------+
 # | Capability Value (variable)  |
 # +------------------------------+
+
 
 class Capabilities (dict):
 	def announced (self,capability):

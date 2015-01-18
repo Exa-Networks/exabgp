@@ -11,6 +11,7 @@ from exabgp.bgp.message.open.capability import Capability
 # ================================================================= RouteRefresh
 #
 
+
 class RouteRefresh (Capability):
 	def __init__ (self):
 		self.ID = Capability.ID.ROUTE_REFRESH
@@ -42,6 +43,7 @@ RouteRefresh.register_capability(Capability.ID.ROUTE_REFRESH_CISCO)
 
 # ========================================================= EnhancedRouteRefresh
 #
+
 
 class EnhancedRouteRefresh (Capability):
 	ID = Capability.ID.ENHANCED_ROUTE_REFRESH

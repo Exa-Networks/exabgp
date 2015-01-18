@@ -6,15 +6,16 @@ Created by Thomas Mangin on 2013-02-26.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+
 class Message (int):
 	ROUTE_MONITORING = 0
 	STATISTICS_REPORT = 1
 	PEER_DOWN_NOTIFICATION = 2
 
 	_str = {
-		0 : 'route monitoring',
-		1 : 'statistics report',
-		2 : 'peer down notification',
+		0: 'route monitoring',
+		1: 'statistics report',
+		2: 'peer down notification',
 	}
 
 	def __str__ (self):

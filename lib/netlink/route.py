@@ -17,11 +17,14 @@ try:
 except AttributeError:
 	raise ImportError('This module only works on unix version with netlink support')
 
+
 class GlobalError (Exception):
 	pass
 
+
 class NetLinkError (GlobalError):
 	pass
+
 
 class _Sequence (object):
 	instance = None
@@ -34,11 +37,13 @@ class _Sequence (object):
 		self._next += 1
 		return self._next
 
+
 def Sequence ():
 	# XXX: should protect this code with a Mutex
 	if not _Sequence.instance:
 		_Sequence.instance = _Sequence()
 	return _Sequence.instance
+
 
 class NetLinkRoute (object):
 	_IGNORE_SEQ_FAULTS = True
@@ -49,7 +54,7 @@ class NetLinkRoute (object):
 	pid = 0  # os.getpid()
 
 	class Header (object):
-		## linux/netlink.h
+		# linux/netlink.h
 		PACK  = 'IHHII'
 		LEN = calcsize(PACK)
 
@@ -78,8 +83,8 @@ class NetLinkRoute (object):
 		NLM_F_APPEND  = 0x800  # Add to end of list
 
 	errors = {
-		Command.NLMSG_ERROR : 'netlink error',
-		Command.NLMSG_OVERRUN : 'netlink overrun',
+		Command.NLMSG_ERROR:   'netlink error',
+		Command.NLMSG_OVERRUN: 'netlink overrun',
 	}
 
 	def __init__ (self):
@@ -155,6 +160,7 @@ class NetLinkRoute (object):
 class AttributesError (GlobalError):
 	pass
 
+
 class Attributes (object):
 	class Header (object):
 		PACK = 'HH'
@@ -186,11 +192,13 @@ class Attributes (object):
 		len = self.Header.LEN + len(payload)
 		raw = pack(self.Header.PACK,len,atype) + payload
 		pad = self.pad(len) - len(raw)
-		if pad: raw += '\0'*pad
+		if pad:
+			raw += '\0'*pad
 		return raw
 
 	def encode (self,attributes):
 		return ''.join([self._encode(k,v) for (k,v) in attributes.items()])
+
 
 class _InfoMessage (object):
 	def __init__ (self,route):
@@ -209,26 +217,26 @@ class _InfoMessage (object):
 
 # 0                   1                   2                   3
 # 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#|   Family    |   Reserved  |          Device Type              |
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#|                     Interface Index                           |
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#|                      Device Flags                             |
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#|                      Change Mask                              |
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |   Family    |   Reserved  |          Device Type              |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                     Interface Index                           |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                      Device Flags                             |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                      Change Mask                              |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 class Link(_InfoMessage):
 	class Header (object):
 		PACK = 'BxHiII'
 		LEN = calcsize(PACK)
 
-	## linux/if_link.h
+	# linux/if_link.h
 	format = namedtuple('Info', 'family type index flags change attributes')
 
 	class Command (object):
-		## linux/rtnetlink.h
+		# linux/rtnetlink.h
 		RTM_NEWLINK = 0x10  # Create a new network interface
 		RTM_DELLINK = 0x11  # Destroy a network interface
 		RTM_GETLINK = 0x12  # Retrieve information about a network interface (ifinfomsg)
@@ -276,13 +284,13 @@ class Link(_InfoMessage):
 		return self.extract(self.Command.RTM_GETLINK)
 
 
-#0                   1                   2                   3
-#0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#|   Family    |     Length    |     Flags     |    Scope      |
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#|                     Interface Index                         |
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# 0                   1                   2                   3
+# 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |   Family    |     Length    |     Flags     |    Scope      |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                     Interface Index                         |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 class Address (_InfoMessage):
 	class Header (object):
@@ -345,19 +353,20 @@ class Address (_InfoMessage):
 	def getAddresses (self):
 		return self.extract(self.Command.RTM_GETADDR)
 
-#0                   1                   2                   3
-#0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#|   Family    |    Reserved1  |           Reserved2           |
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#|                     Interface Index                         |
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#|           State             |     Flags     |     Type      |
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+# 0                   1                   2                   3
+# 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |   Family    |    Reserved1  |           Reserved2           |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                     Interface Index                         |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |           State             |     Flags     |     Type      |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 class Neighbor (_InfoMessage):
 	class Header (object):
-		## linux/if_addr.h
+		# linux/if_addr.h
 		PACK = 'BxxxiHBB'
 		LEN = calcsize(PACK)
 
@@ -402,18 +411,19 @@ class Neighbor (_InfoMessage):
 		return self.extract(self.Command.RTM_GETNEIGH)
 
 
-#0                   1                   2                   3
-#0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#|   Family    |  Src length   |  Dest length  |     TOS       |
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#|  Table ID   |   Protocol    |     Scope     |     Type      |
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#|                          Flags                              |
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# 0                   1                   2                   3
+# 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |   Family    |  Src length   |  Dest length  |     TOS       |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |  Table ID   |   Protocol    |     Scope     |     Type      |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                          Flags                              |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
 class Network (_InfoMessage):
 	class Header (object):
-		## linux/if_addr.h
+		# linux/if_addr.h
 		PACK = '8BI'  # or is it 8Bi ?
 		LEN = calcsize(PACK)
 
@@ -487,30 +497,30 @@ class Network (_InfoMessage):
 			RTA_PREFSRC       = 0x07  # Preferred source address in cases where more than one source address could be used.
 			RTA_METRICS       = 0x08  # Route metrics attributed to route and associated protocols (e.g., RTT, initial TCP window, etc.).
 			RTA_MULTIPATH     = 0x09  # Multipath route next hop's attributes.
-#			RTA_PROTOINFO     = 0x0A  # Firewall based policy routing attribute.
+			# RTA_PROTOINFO   = 0x0A  # Firewall based policy routing attribute.
 			RTA_FLOW          = 0x0B  # Route realm.
 			RTA_CACHEINFO     = 0x0C  # Cached route information.
-#			RTA_SESSION       = 0x0D
-#			RTA_MP_ALGO       = 0x0E
+			# RTA_SESSION     = 0x0D
+			# RTA_MP_ALGO     = 0x0E
 			RTA_TABLE         = 0x0F
 
 	def getRoutes (self):
 		return self.extract(self.Command.RTM_GETROUTE)
 
 
-#0                   1                   2                   3
-#0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#|   Family    |  Reserved1    |         Reserved2             |
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#|                     Interface Index                         |
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#|                      Qdisc handle                           |
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#|                     Parent Qdisc                            |
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#|                        TCM Info                             |
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# 0                   1                   2                   3
+# 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |   Family    |  Reserved1    |         Reserved2             |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                     Interface Index                         |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                      Qdisc handle                           |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                     Parent Qdisc                            |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                        TCM Info                             |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
 class TC (_InfoMessage):
@@ -535,42 +545,42 @@ class TC (_InfoMessage):
 			TCA_STATS2  = 0x07
 
 
-#0                   1                   2                   3
-#0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#|   Mode    |    Reserved1  |           Reserved2             |
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#|                         Range                               |
-#+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# 0                   1                   2                   3
+# 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |   Mode    |    Reserved1  |           Reserved2             |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                         Range                               |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
-#   0                   1                   2                   3
-#   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#   |                       Packet ID                             |
-#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#   |                          Mark                               |
-#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#   |                       timestamp_m                           |
-#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#   |                       timestamp_u                           |
-#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#   |                          hook                               |
-#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#   |                       indev_name                            |
-#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#   |                       outdev_name                           |
-#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#   |           hw_protocol       |        hw_type                |
-#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#   |         hw_addrlen          |           Reserved            |
-#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#   |                       hw_addr                               |
-#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#   |                       data_len                              |
-#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#   |                      Payload . . .                          |
-#   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# 0                   1                   2                   3
+# 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                       Packet ID                             |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                          Mark                               |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                       timestamp_m                           |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                       timestamp_u                           |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                          hook                               |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                       indev_name                            |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                       outdev_name                           |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |           hw_protocol       |        hw_type                |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |         hw_addrlen          |           Reserved            |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                       hw_addr                               |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                       data_len                              |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+# |                      Payload . . .                          |
+# +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
 class Firewall (_InfoMessage):

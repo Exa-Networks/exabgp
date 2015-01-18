@@ -55,4 +55,4 @@ class TestNewConfiguration (unittest.TestCase):
 		# 	print '%-20s' % str(klass).split('.')[-1][:-2], registry._klass[klass].content
 
 if __name__ == '__main__':
-    unittest.main()
+	unittest.main()

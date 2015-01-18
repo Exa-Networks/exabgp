@@ -8,6 +8,7 @@ from .error import NotConnected
 
 from exabgp.bgp.message.notification import Notify
 
+
 class Incoming (Connection):
 	direction = 'incoming'
 

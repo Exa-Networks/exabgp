@@ -13,6 +13,7 @@ from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import REFRESH
 from exabgp.bgp.message.open.routerid import RouterID
 
+
 class Negotiated (object):
 	def __init__ (self,neighbor):
 		self.neighbor = neighbor
@@ -41,8 +42,6 @@ class Negotiated (object):
 		self.received_open = received_open
 		if self.sent_open:
 			self._negotiate()
-		#else:
-		#	import pdb; pdb.set_trace()
 
 	def _negotiate (self):
 		sent_capa = self.sent_open.capabilities
@@ -60,16 +59,17 @@ class Negotiated (object):
 			self.peer_as = recv_capa[Capability.ID.FOUR_BYTES_ASN]
 
 		self.families = []
-		if recv_capa.announced(Capability.ID.MULTIPROTOCOL) \
-		and sent_capa.announced(Capability.ID.MULTIPROTOCOL):
+		if \
+			recv_capa.announced(Capability.ID.MULTIPROTOCOL) and \
+			sent_capa.announced(Capability.ID.MULTIPROTOCOL):
 			for family in recv_capa[Capability.ID.MULTIPROTOCOL]:
 				if family in sent_capa[Capability.ID.MULTIPROTOCOL]:
 					self.families.append(family)
 
 		if recv_capa.announced(Capability.ID.ENHANCED_ROUTE_REFRESH) and sent_capa.announced(Capability.ID.ENHANCED_ROUTE_REFRESH):
-			self.refresh=REFRESH.enhanced
+			self.refresh = REFRESH.enhanced
 		elif recv_capa.announced(Capability.ID.ROUTE_REFRESH) and sent_capa.announced(Capability.ID.ROUTE_REFRESH):
-			self.refresh=REFRESH.normal
+			self.refresh = REFRESH.normal
 
 		self.multisession  = sent_capa.announced(Capability.ID.MULTISESSION) and recv_capa.announced(Capability.ID.MULTISESSION)
 		self.multisession |= sent_capa.announced(Capability.ID.MULTISESSION_CISCO) and recv_capa.announced(Capability.ID.MULTISESSION_CISCO)
@@ -100,10 +100,10 @@ class Negotiated (object):
 			self.multisession = (2,9,'multisession is mandatory with this peer')
 
 		# XXX: Does not work as the capa is not yet defined
-		#if received_open.capabilities.announced(Capability.ID.EXTENDED_MESSAGE) \
-		#and sent_open.capabilities.announced(Capability.ID.EXTENDED_MESSAGE):
-		#	if self.peer.bgp.received_open_size:
-		#		self.received_open_size = self.peer.bgp.received_open_size - 19
+		# if received_open.capabilities.announced(Capability.ID.EXTENDED_MESSAGE) \
+		# and sent_open.capabilities.announced(Capability.ID.EXTENDED_MESSAGE):
+		# 	if self.peer.bgp.received_open_size:
+		# 		self.received_open_size = self.peer.bgp.received_open_size - 19
 
 	def validate (self,neighbor):
 		if not self.asn4:
@@ -118,8 +118,7 @@ class Negotiated (object):
 			return (2,2,'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.received_open.asn,neighbor.peer_as))
 
 		# RFC 6286 : http://tools.ietf.org/html/rfc6286
-		#if message.router_id == RouterID('0.0.0.0'):
-		#	message.router_id = RouterID(ip)
+		# XXX: FIXME: check that router id is not self
 		if self.received_open.router_id == RouterID('0.0.0.0'):
 			return (2,3,'0.0.0.0 is an invalid router_id')
 
@@ -139,6 +138,7 @@ class Negotiated (object):
 		return None
 
 # =================================================================== RequirePath
+
 
 class RequirePath (object):
 	REFUSE = 0

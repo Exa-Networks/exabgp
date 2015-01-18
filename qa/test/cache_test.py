@@ -11,6 +11,7 @@ import unittest
 import time
 from exabgp.util.cache import Cache
 
+
 class TestCache (unittest.TestCase):
 	def test_speed (self):
 		class klass1:

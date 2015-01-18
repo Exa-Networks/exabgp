@@ -14,6 +14,7 @@ from exabgp.protocol.family import SAFI
 # =========================================================================== IP
 #
 
+
 class IP (object):
 	_known = dict()
 
@@ -127,6 +128,7 @@ class IP (object):
 	def unpack (cls,data,klass=None):
 		return cls.create(IP.ntop(data),data,klass)
 
+
 # ========================================================================= NoIP
 #
 
@@ -140,6 +142,7 @@ class _NoIP (object):
 		return 'none'
 
 NoIP = _NoIP()
+
 
 # ========================================================================= IPv4
 #
@@ -221,7 +224,6 @@ class IPv6 (IP):
 	@staticmethod
 	def ntop (data):
 		return socket.inet_ntop(socket.AF_INET6,data)
-
 
 	@classmethod
 	def unpack (cls,data,klass=None):

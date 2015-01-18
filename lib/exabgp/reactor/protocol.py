@@ -9,7 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import os
 
 from exabgp.reactor.network.outgoing import Outgoing
-#from exabgp.reactor.network.error import NotifyError
+# from exabgp.reactor.network.error import NotifyError
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -118,7 +118,6 @@ class Protocol (object):
 			except ProcessError:
 				self.logger.message(self.me('could not send notification of neighbor close to API'))
 
-
 	def write (self,message):
 		if self.neighbor.api['send-packets'] and not self.neighbor.api['consolidate']:
 			self.peer.reactor.processes.send(self.peer,ord(message[18]),message[:19],message[19:])
@@ -190,7 +189,6 @@ class Protocol (object):
 		# 		self.logger.message(self.me('<< NOP (un-negotiated type %d)' % msg))
 		# 		refresh = UnknownMessage.unpack_message(body,self.negotiated)
 		# 	yield refresh
-
 
 	def validate_open (self):
 		error = self.negotiated.validate(self.neighbor)

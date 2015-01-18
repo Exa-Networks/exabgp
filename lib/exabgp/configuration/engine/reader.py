@@ -6,22 +6,27 @@ Created by Thomas Mangin on 2013-03-15.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+
 class InvalidFormat (Exception):
+
 	"""Raised when the configuration can not be parsed"""
+
 	pass
 
 
 class Format (object):
-	"""
+
+	r"""Text formating class
+
 	Store class used to convert the configuration format to json
-	Every configuration file must start with the line "#syntax: <format>\n"
+	Every configuration file must start with the line "#syntax: <format>\\n"
 	where <format> is one of the class defined within format (simplejson or json)
 	"""
 
 	class exabgp (object):
-		"""
-		raw reader without any modification
-		"""
+
+		"""raw reader without any modification"""
+
 		@staticmethod
 		def skip (current):
 			return False
@@ -32,11 +37,14 @@ class Format (object):
 
 
 class Reader (object):
-	"""
-	A file-like object providing a read() method which will convert
-	the configuration in JSON following the format information set at
+
+	"""File like object
+
+	providing a read() method which will convert the configuration
+	in JSON following the format information set at
 	the start of the file with the "#syntax: <format>"
 	"""
+
 	def __init__ (self,fname):
 		self.file = open(fname,'rb')
 		self.last = ''      # the last line we read from the file

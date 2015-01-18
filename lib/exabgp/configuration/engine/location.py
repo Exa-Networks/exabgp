@@ -9,6 +9,7 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 # ===================================================================== Location
 # file location
 
+
 class Location (object):
 	def __init__(self, idx_line=0, idx_column=0, line=''):
 		self.line = line

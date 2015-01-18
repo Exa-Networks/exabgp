@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import StringIO
 import traceback
 
+
 def trace ():
 	buff = StringIO.StringIO()
 	traceback.print_exc(file=buff)

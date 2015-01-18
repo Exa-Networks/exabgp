@@ -11,6 +11,7 @@ from struct import pack
 # =================================================================== BGP States
 #
 
+
 class State (object):
 	IDLE        = 0x01
 	CONNECT     = 0x02
@@ -23,6 +24,7 @@ class State (object):
 # ==================================================================== Direction
 #
 
+
 from exabgp.util.enumeration import Enumeration
 
 OUT = Enumeration ('announce','withdraw')
@@ -31,6 +33,7 @@ IN  = Enumeration ('announced','withdrawn')
 
 # ================================================================== BGP Message
 #
+
 
 # 0                   1                   2                   3
 # 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -68,19 +71,15 @@ class Message (Exception):
 		KEEPALIVE     = 0x04  # .   4
 		ROUTE_REFRESH = 0x05  # .   5
 		OPERATIONAL   = 0x06  # .   6  # Not IANA assigned yet
-		#LIST          = 0x20  # .  32
-		#HEADER        = 0x40  # .  64
-		#GENERAL       = 0x80  # . 128
-		#LOCALRIB      = 0x100  # . 256
 
 		names = {
-			NOP           : 'NOP',
-			OPEN          : 'OPEN',
-			UPDATE        : 'UPDATE',
-			NOTIFICATION  : 'NOTIFICATION',
-			KEEPALIVE     : 'KEEPALIVE',
-			ROUTE_REFRESH : 'ROUTE_REFRESH',
-			OPERATIONAL   : 'OPERATIONAL',
+			NOP:            'NOP',
+			OPEN:           'OPEN',
+			UPDATE:         'UPDATE',
+			NOTIFICATION:   'NOTIFICATION',
+			KEEPALIVE:      'KEEPALIVE',
+			ROUTE_REFRESH:  'ROUTE_REFRESH',
+			OPERATIONAL:    'OPERATIONAL',
 		}
 
 		def __str__ (self):
@@ -102,13 +101,12 @@ class Message (Exception):
 		ROUTE_REFRESH = 'ROUTE_REFRESH'
 		OPERATIONAL   = 'OPERATIONAL'
 
-
 	Length = {
-		ID.OPEN          : lambda _ : _ >= 29,
-		ID.UPDATE        : lambda _ : _ >= 23,
-		ID.NOTIFICATION  : lambda _ : _ >= 21,
-		ID.KEEPALIVE     : lambda _ : _ == 19,
-		ID.ROUTE_REFRESH : lambda _ : _ == 23,
+		ID.OPEN:           lambda _:  _ >= 29,  # noqa
+		ID.UPDATE:         lambda _:  _ >= 23,  # noqa
+		ID.NOTIFICATION:   lambda _:  _ >= 21,  # noqa
+		ID.KEEPALIVE:      lambda _:  _ == 19,  # noqa
+		ID.ROUTE_REFRESH:  lambda _:  _ == 23,  # noqa
 	}
 
 	def __init__ (self):

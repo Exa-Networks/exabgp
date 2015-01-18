@@ -40,7 +40,7 @@ class RaisedNeighbor (Raised):
 
 
 # ============================================================== SectionNeighbor
-#
+
 
 class SectionNeighbor (Section):
 	syntax = syntax_neighbor

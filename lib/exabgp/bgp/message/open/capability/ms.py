@@ -11,6 +11,7 @@ from exabgp.bgp.message.open.capability import Capability
 # ================================================================= MultiSession
 #
 
+
 class MultiSession (Capability,list):
 	def __init__ (self):
 		self.ID = Capability.ID.MULTISESSION

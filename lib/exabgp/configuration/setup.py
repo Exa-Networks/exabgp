@@ -9,291 +9,291 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 from exabgp.configuration.environment import environment
 
 dict_space = {
-	'space' : ' '*33
+	'space':  ' '*33
 }
 
-help_stdout = \
-'where logging should log' \
-'\n%(space)s syslog (or no setting) sends the data to the local syslog syslog' \
-'\n%(space)s host:<location> sends the data to a remote syslog server' \
-'\n%(space)s stdout sends the data to stdout' \
-'\n%(space)s stderr sends the data to stderr' \
-'\n%(space)s <filename> send the data to a file' % dict_space
+help_stdout = """\
+where logging should log
+%(space)s syslog (or no setting) sends the data to the local syslog syslog
+%(space)s host:<location> sends the data to a remote syslog server
+%(space)s stdout sends the data to stdout
+%(space)s stderr sends the data to stderr
+%(space)s <filename> send the data to a file""" % dict_space
 
 
 environment.application = 'exabgp'
 environment.configuration = {
-	'profile' : {
-		'enable' : {
-			'read' : environment.boolean,
+	'profile':  {
+		'enable':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'false',
-			'help' : 'toggle profiling of the code',
+			'help':  'toggle profiling of the code',
 		},
-		'file' : {
-			'read' : environment.unquote,
+		'file':  {
+			'read':  environment.unquote,
 			'write': environment.quote,
 			'value': '',
-			'help' : 'profiling result file, none means stdout, no overwriting',
+			'help':  'profiling result file, none means stdout, no overwriting',
 		},
 	},
-	'pdb' : {
-		'enable' : {
-			'read' : environment.boolean,
+	'pdb':  {
+		'enable':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'false',
-			'help' : 'on program fault, start pdb the python interactive debugger',
+			'help':  'on program fault, start pdb the python interactive debugger',
 		}
 	},
-	'daemon' : {
-		'pid' : {
-			'read' : environment.unquote,
+	'daemon':  {
+		'pid':  {
+			'read':  environment.unquote,
 			'write': environment.quote,
 			'value': '',
-			'help' : 'where to save the pid if we manage it',
+			'help':  'where to save the pid if we manage it',
 		},
-		'user' : {
-			'read' : environment.user,
+		'user':  {
+			'read':  environment.user,
 			'write': environment.quote,
 			'value': 'nobody',
-			'help' : 'user to run as',
+			'help':  'user to run as',
 		},
-		'daemonize' : {
-			'read' : environment.boolean,
+		'daemonize':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'false',
-			'help' : 'should we run in the background',
+			'help':  'should we run in the background',
 		},
 	},
-	'log' : {
-		'enable' : {
-			'read' : environment.boolean,
+	'log':  {
+		'enable':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'true',
-			'help' : 'enable logging',
+			'help':  'enable logging',
 		},
-		'level' : {
-			'read' : environment.syslog_value,
+		'level':  {
+			'read':  environment.syslog_value,
 			'write': environment.syslog_name,
 			'value': 'INFO',
-			'help' : 'log message with at least the priority SYSLOG.<level>',
+			'help':  'log message with at least the priority SYSLOG.<level>',
 		},
-		'destination' : {
-			'read' : environment.unquote,
+		'destination':  {
+			'read':  environment.unquote,
 			'write': environment.quote,
 			'value': 'stdout',
-			'help' : help_stdout,
+			'help':  help_stdout,
 		},
-		'all' : {
-			'read' : environment.boolean,
+		'all':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'false',
-			'help' : 'report debug information for everything',
+			'help':  'report debug information for everything',
 		},
-		'configuration' : {
-			'read' : environment.boolean,
+		'configuration':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'true',
-			'help' : 'report command parsing',
+			'help':  'report command parsing',
 		},
-		'reactor' : {
-			'read' : environment.boolean,
+		'reactor':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'true',
-			'help' : 'report signal received, command reload',
+			'help':  'report signal received, command reload',
 		},
-		'daemon' : {
-			'read' : environment.boolean,
+		'daemon':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'true',
-			'help' : 'report pid change, forking, ...',
+			'help':  'report pid change, forking, ...',
 		},
-		'processes' : {
-			'read' : environment.boolean,
+		'processes':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'true',
-			'help' : 'report handling of forked processes',
+			'help':  'report handling of forked processes',
 		},
-		'network' : {
-			'read' : environment.boolean,
+		'network':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'true',
-			'help' : 'report networking information (TCP/IP, network state,...)',
+			'help':  'report networking information (TCP/IP, network state,...)',
 		},
-		'packets' : {
-			'read' : environment.boolean,
+		'packets':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'false',
-			'help' : 'report BGP packets sent and received',
+			'help':  'report BGP packets sent and received',
 		},
-		'rib' : {
-			'read' : environment.boolean,
+		'rib':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'false',
-			'help' : 'report change in locally configured routes',
+			'help':  'report change in locally configured routes',
 		},
-		'message' : {
-			'read' : environment.boolean,
+		'message':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'false',
-			'help' : 'report changes in route announcement on config reload',
+			'help':  'report changes in route announcement on config reload',
 		},
-		'timers' : {
-			'read' : environment.boolean,
+		'timers':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'false',
-			'help' : 'report keepalives timers',
+			'help':  'report keepalives timers',
 		},
-		'routes' : {
-			'read' : environment.boolean,
+		'routes':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'false',
-			'help' : 'report received routes',
+			'help':  'report received routes',
 		},
-		'parser' : {
-			'read' : environment.boolean,
+		'parser':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'false',
-			'help' : 'report BGP message parsing details',
+			'help':  'report BGP message parsing details',
 		},
-		'short' : {
-			'read' : environment.boolean,
+		'short':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'false',
-			'help' : 'use short log format (not prepended with time,level,pid and source)',
+			'help':  'use short log format (not prepended with time,level,pid and source)',
 		},
 	},
-	'tcp' : {
+	'tcp':  {
 		'once': {
-			'read' : environment.boolean,
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'false',
-			'help' : 'only one tcp connection attempt per peer (for debuging scripts)',
+			'help':  'only one tcp connection attempt per peer (for debuging scripts)',
 		},
 		'delay': {
-			'read' : environment.integer,
+			'read':  environment.integer,
 			'write': environment.nop,
 			'value': '0',
-			'help' : 'start to announce route when the minutes in the hours is a modulo of this number',
+			'help':  'start to announce route when the minutes in the hours is a modulo of this number',
 		},
 		'bind': {
-			'read' : environment.optional_ip,
+			'read':  environment.optional_ip,
 			'write': environment.quote,
 			'value': '',
-			'help' : 'IP to bind on when listening (no ip to disable)',
+			'help':  'IP to bind on when listening (no ip to disable)',
 		},
 		'port': {
-			'read' : environment.integer,
+			'read':  environment.integer,
 			'write': environment.nop,
 			'value': '179',
-			'help' : 'port to bind on when listening',
+			'help':  'port to bind on when listening',
 		},
 		'acl': {
-			'read' : environment.boolean,
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': '',
-			'help' : '(experimental) unimplemented',
+			'help':  '(experimental) unimplemented',
 		},
 	},
-	'bgp' : {
+	'bgp':  {
 		'openwait': {
-			'read' : environment.integer,
+			'read':  environment.integer,
 			'write': environment.nop,
 			'value': '60',
-			'help' : 'how many second we wait for an open once the TCP session is established',
+			'help':  'how many second we wait for an open once the TCP session is established',
 		},
 	},
-	'cache' : {
-		'attributes' : {
-			'read' : environment.boolean,
+	'cache':  {
+		'attributes':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'true',
-			'help' : 'cache all attributes (configuration and wire) for faster parsing',
+			'help':  'cache all attributes (configuration and wire) for faster parsing',
 		},
-		'nexthops' : {
-			'read' : environment.boolean,
+		'nexthops':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'true',
-			'help' : 'cache routes next-hops (deprecated: next-hops are always cached)',
+			'help':  'cache routes next-hops (deprecated: next-hops are always cached)',
 		},
 	},
-	'api' : {
-		'encoder' : {
-			'read' : environment.api,
+	'api':  {
+		'encoder':  {
+			'read':  environment.api,
 			'write': environment.lower,
 			'value': 'text',
-			'help' : '(experimental) default encoder to use with with external API (text or json)',
+			'help':  '(experimental) default encoder to use with with external API (text or json)',
 		},
-		'highres' : {
-			'read' : environment.boolean,
+		'highres':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'false',
-			'help' : 'should we use highres timer in JSON',
+			'help':  'should we use highres timer in JSON',
 		},
-		'respawn' : {
-			'read' : environment.boolean,
+		'respawn':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'false',
-			'help' : 'should we respawn a helper process if it dies',
+			'help':  'should we respawn a helper process if it dies',
 		},
-		'socket' : {
-			'read' : environment.unquote,
+		'socket':  {
+			'read':  environment.unquote,
 			'write': environment.quote,
 			'value': '',
-			'help' : 'where should we create a socket for remote control',
+			'help':  'where should we create a socket for remote control',
 		},
 	},
-	'reactor' : {
-		'speed' : {
-			'read' : environment.real,
+	'reactor':  {
+		'speed':  {
+			'read':  environment.real,
 			'write': environment.nop,
 			'value': '1.0',
-			'help' : 'reactor loop time\n%(space)s use only if you understand the code.' % dict_space,
+			'help':  'reactor loop time\n%(space)s use only if you understand the code.' % dict_space,
 		},
 	},
 	# Here for internal use
-	'debug' : {
-		'pdb' : {
-			'read' : environment.boolean,
+	'debug':  {
+		'pdb':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'false',
-			'help' : 'enable python debugger on errors',
+			'help':  'enable python debugger on errors',
 		},
-		'memory' : {
-			'read' : environment.boolean,
+		'memory':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'false',
-			'help' : 'command line option --memory',
+			'help':  'command line option --memory',
 		},
-		'configuration' : {
-			'read' : environment.boolean,
+		'configuration':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'false',
-			'help' : 'undocumented option: raise when parsing configuration errors',
+			'help':  'undocumented option: raise when parsing configuration errors',
 		},
-		'selfcheck' : {
-			'read' : environment.boolean,
+		'selfcheck':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'false',
-			'help' : 'does a self check on the configuration file',
+			'help':  'does a self check on the configuration file',
 		},
-		'route' : {
-			'read' : environment.unquote,
+		'route':  {
+			'read':  environment.unquote,
 			'write': environment.quote,
 			'value': '',
-			'help' : 'decode the route using the configuration',
+			'help':  'decode the route using the configuration',
 		},
-		'defensive' : {
-			'read' : environment.boolean,
+		'defensive':  {
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'false',
-			'help' : 'generate random fault in the code in purpose',
+			'help':  'generate random fault in the code in purpose',
 		},
 		'rotate': {
-			'read' : environment.boolean,
+			'read':  environment.boolean,
 			'write': environment.lower,
 			'value': 'false',
-			'help' : 'rotate configurations file on reload (signal)',
+			'help':  'rotate configurations file on reload (signal)',
 		},
 	},
 }

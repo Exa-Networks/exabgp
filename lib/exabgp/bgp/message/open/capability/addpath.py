@@ -14,14 +14,15 @@ from exabgp.bgp.message.open.capability import Capability
 # ====================================================================== AddPath
 #
 
+
 class AddPath (Capability,dict):
 	ID = Capability.ID.ADD_PATH
 
 	string = {
-		0 : 'disabled',
-		1 : 'receive',
-		2 : 'send',
-		3 : 'send/receive',
+		0: 'disabled',
+		1: 'receive',
+		2: 'send',
+		3: 'send/receive',
 	}
 
 	def __init__ (self,families=(),send_receive=0):
@@ -42,7 +43,7 @@ class AddPath (Capability,dict):
 		rs = []
 		for v in self:
 			if self[v]:
-				rs.append(v[0].pack() +v[1].pack() + pack('!B',self[v]))
+				rs.append(v[0].pack() + v[1].pack() + pack('!B',self[v]))
 		return rs
 
 	@staticmethod

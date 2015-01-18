@@ -8,6 +8,7 @@ from .tcp import async
 from .tcp import ready
 from .error import NetworkError
 
+
 class Outgoing (Connection):
 	direction = 'outgoing'
 

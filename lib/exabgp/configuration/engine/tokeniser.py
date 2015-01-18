@@ -12,6 +12,7 @@ from exabgp.configuration.engine.raised import Raised
 
 # convert special caracters
 
+
 @coroutine.join
 def unescape (string):
 	start = 0

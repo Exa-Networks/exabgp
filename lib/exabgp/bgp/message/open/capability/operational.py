@@ -11,6 +11,7 @@ from exabgp.bgp.message.open.capability import Capability
 # ================================================================== Operational
 #
 
+
 class Operational (Capability,list):
 	ID = Capability.ID.OPERATIONAL
 

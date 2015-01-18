@@ -8,6 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from exabgp.rib.store import Store
 
+
 class RIB (object):
 
 	# when we perform a configuration reload using SIGUSR, we must not use the RIB

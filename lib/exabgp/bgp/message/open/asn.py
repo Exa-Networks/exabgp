@@ -11,6 +11,7 @@ from struct import unpack
 
 # =================================================================== ASN
 
+
 class ASN (long):
 	def asn4 (self):
 		return self > pow(2,16)

@@ -12,6 +12,7 @@ from exabgp.reactor.api.control import Control
 from exabgp.configuration.setup import environment
 env = environment.setup('')
 
+
 def speak (name,data):
 	time.sleep(0.005)
 	try:
@@ -20,6 +21,7 @@ def speak (name,data):
 		sock.sendall(data)
 	except socket.error:
 		pass
+
 
 class TestControl (unittest.TestCase):
 	def setUp (self):

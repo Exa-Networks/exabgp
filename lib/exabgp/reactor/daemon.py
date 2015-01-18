@@ -18,6 +18,7 @@ from exabgp.logger import Logger
 
 MAXFD = 2048
 
+
 class Daemon (object):
 
 	def __init__ (self,reactor):
@@ -30,7 +31,7 @@ class Daemon (object):
 		self.reactor = reactor
 
 		os.chdir('/')
-		#os.umask(0)
+		# os.umask(0)
 		os.umask(0137)
 
 	def savepid (self):
@@ -76,7 +77,7 @@ class Daemon (object):
 		self.logger.daemon("Removed PIDfile %s" % self.pid)
 
 	def drop_privileges (self):
-		"""returns true if we are left with insecure privileges"""
+		"""return true if we are left with insecure privileges"""
 		# os.name can be ['posix', 'nt', 'os2', 'ce', 'java', 'riscos']
 		if os.name not in ['posix',]:
 			return True
@@ -176,17 +177,17 @@ class Daemon (object):
 		os.dup2(0, 1)
 		os.dup2(0, 2)
 
-#		import resource
-#		if 'linux' in sys.platform:
-#			nofile = resource.RLIMIT_NOFILE
-#		elif 'bsd' in sys.platform:
-#			nofile = resource.RLIMIT_OFILE
-#		else:
-#			self.logger.daemon("For platform %s, can not close FDS before forking" % sys.platform)
-#			nofile = None
-#		if nofile:
-#			maxfd = resource.getrlimit(nofile)[1]
-#			if (maxfd == resource.RLIM_INFINITY):
-#				maxfd = MAXFD
-#		else:
-#			maxfd = MAXFD
+		# import resource
+		# if 'linux' in sys.platform:
+		# 	nofile = resource.RLIMIT_NOFILE
+		# elif 'bsd' in sys.platform:
+		# 	nofile = resource.RLIMIT_OFILE
+		# else:
+		# 	self.logger.daemon("For platform %s, can not close FDS before forking" % sys.platform)
+		# 	nofile = None
+		# if nofile:
+		# 	maxfd = resource.getrlimit(nofile)[1]
+		# 	if (maxfd == resource.RLIM_INFINITY):
+		# 		maxfd = MAXFD
+		# else:
+		# 	maxfd = MAXFD

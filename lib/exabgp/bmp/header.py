@@ -10,6 +10,7 @@ from struct import unpack
 from exabgp.bmp.peer import Peer
 from exabgp.bmp.message import Message
 
+
 class Header (object):
 	def __init__ (self,data):
 		self.version = ord(data[0])
@@ -20,9 +21,12 @@ class Header (object):
 		self.time_micro_sec = unpack('!L',data[40:44])[0]
 
 	def validate (self):
-		if self.version != 1: return False
-		if not self.message.validate(): return False
-		if not self.peer.validate(): return False
+		if self.version != 1:
+			return False
+		if not self.message.validate():
+			return False
+		if not self.peer.validate():
+			return False
 		return True
 
 	def json (self):

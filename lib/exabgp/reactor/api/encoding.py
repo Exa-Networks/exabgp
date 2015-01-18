@@ -14,6 +14,7 @@ import time
 from exabgp.bgp.message import Message
 from exabgp.bgp.message import IN
 
+
 class APIOptions (dict):
 	def receive_parsed (self,value):
 		self['receive-parsed'] = self.get('receive-parsed',False) or value
@@ -50,6 +51,7 @@ class APIOptions (dict):
 
 	def __missing__ (self,key):
 		return False
+
 
 def hexstring (value):
 	def spaced (value):
@@ -152,13 +154,14 @@ class Text (object):
 			return self._operational_query(peer,operational,header,body)
 		elif what == 'counter':
 			return self._operational_counter(peer,operational,header,body)
-#		elif what == 'interface':
-#			return self._operational_interface(peer,operational)
+		# elif what == 'interface':
+		# 	return self._operational_interface(peer,operational)
 		else:
 			raise RuntimeError('the code is broken, we are trying to print a unknown type of operational message')
 
 
 def nop (_): return _
+
 
 class JSON (object):
 	_counter = {}
@@ -190,32 +193,32 @@ class JSON (object):
 		mtype    = '"type": "%s", '    % message_type if message_type else 'default'
 
 		return \
-		'{ '\
+			'{ '\
 			'"exabgp": "%s", '\
 			'"time": %s, ' \
 			'%s%s%s%s%s%s%s%s' \
-		'}' % (self.version,self.time(time.time()),peer,pid,ppid,counter,mtype,header,body,content)
+			'}' % (self.version,self.time(time.time()),peer,pid,ppid,counter,mtype,header,body,content)
 
 	def _neighbor (self,peer,content):
 		neighbor = peer.neighbor
 
 		# XXX: ip: is depecated and should be removed (be careful)
-		ip ='"ip": "%s", ' % neighbor.peer_address
+		ip = '"ip": "%s", ' % neighbor.peer_address
 
 		address = '"address": { "local": "%s", "peer": "%s"}, ' % (neighbor.local_address,neighbor.peer_address)
 		asn = '"asn": { "local": "%s", "peer": "%s"}' % (neighbor.local_as,neighbor.peer_as)
 		separator = ', ' if content else ''
 		return \
-		'"neighbor": { ' \
+			'"neighbor": { ' \
 			'%s%s%s%s%s' \
-		'} '% (ip,address,asn,separator,content)
+			'} ' % (ip,address,asn,separator,content)
 
 	def _bmp (self,neighbor,content):
 		return \
-		'"bmp": { ' \
+			'"bmp": { ' \
 			'"ip": "%s", ' \
 			'%s' \
-		'} '% (neighbor,content)
+			'} ' % (neighbor,content)
 
 	def _kv (self,extra):
 		return ", ".join('"%s": %s' % (k,self._string(v)) for (k,v) in extra.iteritems())
@@ -228,40 +231,40 @@ class JSON (object):
 
 	def up (self,peer):
 		return self._header(self._neighbor(peer,self._kv({
-			'state' : 'up',
+			'state': 'up',
 		})),'','',peer.neighbor.identificator(),self.count(peer),message_type='state')
 
 	def connected (self,peer):
 		return self._header(self._neighbor(peer,self._kv({
-			'state' : 'connected',
+			'state': 'connected',
 		})),'','',peer.neighbor.identificator(),self.count(peer),message_type='state')
 
 	def down (self,peer,reason=''):
 		return self._header(self._neighbor(peer,self._kv({
-			'state'  : 'down',
-			'reason' : reason,
+			'state':  'down',
+			'reason': reason,
 		})),'','',peer.neighbor.identificator(),self.count(peer),message_type='state')
 
 	def shutdown (self):
 		return self._header(self._kv({
-			'notification' : 'shutdown',
+			'notification': 'shutdown',
 		}),'','','',1,message_type='notification')
 
 	def notification (self,peer,code,subcode,data):
 		return self._header(self._kv({
-			'notification' : '{ %s } ' % self._kv({
-				'code'    : code,
-				'subcode' : subcode,
-				'data'    : hexstring(data),
+			'notification': '{ %s } ' % self._kv({
+				'code':    code,
+				'subcode': subcode,
+				'data':    hexstring(data),
 			})
 		}),'','',peer.neighbor.identificator(),self.count(peer),message_type='notification')
 
 	def receive (self,peer,category,header,body):
 		return self._header(self._neighbor(peer,self._kv({
 			'message': '{ %s } ' % self._kv({
-				'received' : category,
-				'header'   : hexstring(header),
-				'body'     : hexstring(body),
+				'received': category,
+				'header':   hexstring(header),
+				'body':     hexstring(body),
 			})
 		})),'','',peer.neighbor.identificator(),self.count(peer),message_type='raw')
 
@@ -270,22 +273,22 @@ class JSON (object):
 
 	def open (self,peer,direction,sent_open,header,body):
 		return self._header(self._neighbor(peer,self._kv({
-			'direction' : direction,
+			'direction': direction,
 			'open':'{ %s } ' % self._kv({
-				'version'      : sent_open.version,
-				'asn'          : sent_open.asn,
-				'hold_time'    : sent_open.hold_time,
-				'router_id'    : sent_open.router_id,
-				'capabilities' : '{ %s }' % self._json_kv(sent_open.capabilities),
+				'version':      sent_open.version,
+				'asn':          sent_open.asn,
+				'hold_time':    sent_open.hold_time,
+				'router_id':    sent_open.router_id,
+				'capabilities': '{ %s }' % self._json_kv(sent_open.capabilities),
 			})
 		})),header,body,peer.neighbor.identificator(),self.count(peer),message_type='open')
 
 	def send (self,peer,category,header,body):
 		return self._header(self._neighbor(peer,self._kv({
 			'message':'{ %s } ' % self._kv({
-				'sent'   : category,
-				'header' : hexstring(header),
-				'body'   : hexstring(body),
+				'sent':   category,
+				'header': hexstring(header),
+				'body':   hexstring(body),
 			})
 		})),'','',peer.neighbor.identificator(),self.count(peer),message_type=Message.string(category))
 
@@ -326,9 +329,12 @@ class JSON (object):
 		nlri = ''
 		if not add and not remove:  # an EOR
 			return update.nlris[0].json()
-		if add: nlri += '"announce": { %s }' % ', '.join(add)
-		if add and remove: nlri += ', '
-		if remove: nlri+= '"withdraw": { %s }' % ', '.join(remove)
+		if add:
+			nlri += '"announce": { %s }' % ', '.join(add)
+		if add and remove:
+			nlri += ', '
+		if remove:
+			nlri += '"withdraw": { %s }' % ', '.join(remove)
 
 		attributes = '' if not update.attributes else '"attribute": { %s }' % update.attributes.json()
 		if not attributes or not nlri:
@@ -346,8 +352,8 @@ class JSON (object):
 				'"route-refresh": { "afi": "%s", "safi": "%s", "subtype": "%s" }' % (
 					refresh.afi,refresh.safi,refresh.reserved
 				)
-			)
-		,header,body,peer.neighbor.identificator(),self.count(peer),message_type='refresh')
+			),
+			header,body,peer.neighbor.identificator(),self.count(peer),message_type='refresh')
 
 	def bmp (self,bmp,update):
 		return self._header(self._bmp(bmp,self._update(update)),'','',message_type='bmp')
@@ -359,8 +365,8 @@ class JSON (object):
 				'"operational": { "name": "%s", "afi": "%s", "safi": "%s", "advisory": "%s" }' % (
 					operational.name,operational.afi,operational.safi,operational.data
 				)
-			)
-		,header,body,peer.neighbor.identificator(),self.count(peer),message_type='operational')
+			),
+			header,body,peer.neighbor.identificator(),self.count(peer),message_type='operational')
 
 	def _operational_query (self,peer,operational,header,body):
 		return self._header(
@@ -369,8 +375,8 @@ class JSON (object):
 				'"operational": { "name": "%s", "afi": "%s", "safi": "%s" }' % (
 					operational.name,operational.afi,operational.safi
 				)
-			)
-		,header,body,peer.neighbor.identificator(),self.count(peer),message_type='operational')
+			),
+			header,body,peer.neighbor.identificator(),self.count(peer),message_type='operational')
 
 	def _operational_counter (self,peer,operational,header,body):
 		return self._header(
@@ -379,8 +385,8 @@ class JSON (object):
 				'"operational": { "name": "%s", "afi": "%s", "safi": "%s", "router-id": "%s", "sequence": %d, "counter": %d }' % (
 					operational.name,operational.afi,operational.safi,operational.routerid,operational.sequence,operational.counter
 				)
-			)
-		,header,body,peer.neighbor.identificator(),self.count(peer),message_type='operational')
+			),
+			header,body,peer.neighbor.identificator(),self.count(peer),message_type='operational')
 
 	def operational (self,peer,what,operational,header,body):
 		if what == 'advisory':
@@ -389,7 +395,7 @@ class JSON (object):
 			return self._operational_query(peer,operational,header,body)
 		elif what == 'counter':
 			return self._operational_counter(peer,operational,header,body)
-#		elif what == 'interface':
-#			return self._operational_interface(peer,operational)
+		# elif what == 'interface':
+		# 	return self._operational_interface(peer,operational)
 		else:
 			raise RuntimeError('the code is broken, we are trying to print a unknown type of operational message')

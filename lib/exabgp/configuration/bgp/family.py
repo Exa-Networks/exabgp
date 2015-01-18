@@ -80,7 +80,6 @@ class SectionFamily (Section):
 			for safi_name in AFI.implemented_safi(afi_name):
 				self._add(tokeniser,afi_name,safi_name)
 
-
 	@classmethod
 	def register (cls,registry,location):
 		registry.register_class(cls)
