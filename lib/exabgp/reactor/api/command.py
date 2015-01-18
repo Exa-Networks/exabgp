@@ -17,11 +17,18 @@ def parse (command):
 	conf.register(SectionShow,['show'])
 	return conf.parse_string(command)
 
-parsed = parse('show { version }')
-for section in parsed.keys():
-	d = parsed[section]
-	for k,v in d.items():
-		print '%s %s ' % (section,k)
-		pp.pprint(v)
+shows = [
+	'show { version }',
+]
+
+for show in shows:
+	parsed = parse(show)
+	print '--'
+	print 'command:',show
+	for section in parsed.keys():
+		d = parsed[section]
+		for k,v in d.items():
+			print 'section %s name %s ' % (section,k)
+			pp.pprint(v)
+			print
 		print
-	print
