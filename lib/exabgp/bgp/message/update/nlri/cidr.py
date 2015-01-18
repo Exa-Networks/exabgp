@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import math
 from exabgp.protocol.ip import IP
 
+
 class CIDR (object):
 	EOR = False
 	# we can not define slots here as otherwise it conflict in Prefix

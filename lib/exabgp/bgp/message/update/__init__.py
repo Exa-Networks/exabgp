@@ -68,7 +68,6 @@ class Update (Message):
 	def __str__ (self):
 		return '\n'.join(['%s%s' % (str(self.nlris[n]),str(self.attributes)) for n in range(len(self.nlris))])
 
-
 	@staticmethod
 	def prefix (data):
 		return '%s%s' % (pack('!H',len(data)),data)
@@ -92,7 +91,7 @@ class Update (Message):
 		if len(attributes) != len_attributes:
 			raise Notify(3,1,'invalid total path attribute length, not enough data available')
 
-		if 2 + len_withdrawn + 2+ len_attributes + len(announced) != length:
+		if 2 + len_withdrawn + 2 + len_attributes + len(announced) != length:
 			raise Notify(3,1,'error in BGP message length, not enough data for the size announced')
 
 		return withdrawn,attributes,announced
@@ -240,7 +239,6 @@ class Update (Message):
 				packed_add += packed
 
 		yield self._message(Update.prefix(packed_del) + Update.prefix(attr + packed_mp_del + packed_mp_add) + packed_add)
-
 
 	# XXX: FIXME: this can raise ValueError. IndexError,TypeError, struct.error (unpack) = check it is well intercepted
 	@classmethod

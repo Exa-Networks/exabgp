@@ -10,6 +10,7 @@ from exabgp.protocol.ip import IPv4
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
+
 # ============================================================== OriginatorID (3)
 
 class OriginatorID (Attribute,IPv4):

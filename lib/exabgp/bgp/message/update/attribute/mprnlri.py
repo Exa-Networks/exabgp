@@ -19,7 +19,9 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 
 from exabgp.bgp.message.notification import Notify
 
+
 # ==================================================== MP Unreacheable NLRI (15)
+#
 
 class MPRNLRI (Attribute,Address):
 	FLAG = Attribute.Flag.OPTIONAL
@@ -156,7 +158,7 @@ class MPRNLRI (Attribute,Address):
 				length,nlri = NLRI.unpack(afi,safi,data,addpath,'',IN.announced)
 				nlris.append(nlri)
 
-			#logger.parser(LazyFormat("parsed announce mp nlri %s payload " % nlri,data[:length]))
+			# logger.parser(LazyFormat("parsed announce mp nlri %s payload " % nlri,data[:length]))
 			data = data[length:]
 		return cls(afi,safi,nlris)
 

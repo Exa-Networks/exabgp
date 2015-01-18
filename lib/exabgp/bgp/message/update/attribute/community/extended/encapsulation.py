@@ -15,6 +15,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 # ================================================================ Encapsulation
 # RFC 5512
 
+
 class Encapsulation (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x03
 	COMMUNITY_SUBTYPE = 0x0C
@@ -32,22 +33,28 @@ class Encapsulation (ExtendedCommunity):
 		MPLS_UDP  = 0x0D
 
 	_string = {
-		Type.DEFAULT  : "Default",
-		Type.L2TPv3   : "L2TPv3",
-		Type.GRE      : "GRE",
-		Type.IPIP     : "IP-in-IP",
-		Type.VXLAN    : "VXLAN",
-		Type.NVGRE    : "NVGRE",
-		Type.MPLS     : "MPLS",
+		Type.DEFAULT:   "Default",
+		Type.L2TPv3:    "L2TPv3",
+		Type.GRE:       "GRE",
+		Type.IPIP:      "IP-in-IP",
+		Type.VXLAN:     "VXLAN",
+		Type.NVGRE:     "NVGRE",
+		Type.MPLS:      "MPLS",
 		Type.VXLAN_GPE: "VXLAN-GPE",
-		Type.MPLS_UDP : "MPLS-in-UDP",
+		Type.MPLS_UDP:  "MPLS-in-UDP",
 	}
 
 	__slots__ = ['tunnel_type']
 
 	def __init__ (self,tunnel_type,community=None):
 		self.tunnel_type = tunnel_type
-		ExtendedCommunity.__init__(self,community if community is not None else pack("!BBLH",0x03,0x0C,0,self.tunnel_type))
+		ExtendedCommunity.__init__(
+			self,community if community is not None else pack(
+				"!BBLH",
+				0x03,0x0C,
+				0,self.tunnel_type
+			)
+		)
 
 	def __str__ (self):
 		return "Encapsulation: %s" % Encapsulation._string.get(self.tunnel_type,"Encap:(unknown:%d)" % self.tunnel_type)

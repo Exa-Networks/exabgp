@@ -40,14 +40,14 @@ class PMSI (Attribute):
 
 	_pmsi_known = dict()
 	_name = {
-		0 : 'No tunnel',
-		1 : 'RSVP-TE P2MP LSP',
-		2 : 'mLDP P2MP LSP',
-		3 : 'PIM-SSM Tree',
-		4 : 'PIM-SM Tree',
-		5 : 'BIDIR-PIM Tree',
-		6 : 'Ingress Replication',
-		7 : 'mLDP MP2MP LSP',
+		0: 'No tunnel',
+		1: 'RSVP-TE P2MP LSP',
+		2: 'mLDP P2MP LSP',
+		3: 'PIM-SSM Tree',
+		4: 'PIM-SM Tree',
+		5: 'BIDIR-PIM Tree',
+		6: 'Ingress Replication',
+		7: 'mLDP MP2MP LSP',
 	}
 
 	__slots__ = ['label','flags','tunnel']
@@ -63,11 +63,12 @@ class PMSI (Attribute):
 
 	def pack(self):
 		return self._attribute(
-			pack('!BB3s',
+			pack(
+				'!BB3s',
 				self.flags,
 				self.TUNNEL_TYPE,
 				pack('!L',self.label << 4)[1:4]
-			)+ self.tunnel
+			) + self.tunnel
 		)
 
 	# XXX: FIXME: Orange code had 4 (and another reference to it in the code elsewhere)
@@ -94,7 +95,7 @@ class PMSI (Attribute):
 		return "0x" + ''.join('%02X' % ord(_) for _ in self.tunnel) if self.tunnel else ''
 
 	def __str__ (self):
-		#TODO: add hex dump of packedValue
+		# TODO: add hex dump of packedValue
 		return "pmsi:%s:%s:%s:%s" % (
 			self.name(self.TUNNEL_TYPE).replace(' ','').lower(),
 			str(self.flags) if self.flags else '-',  # why not use zero (0) ?

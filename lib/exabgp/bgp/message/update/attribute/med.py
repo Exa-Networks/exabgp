@@ -11,7 +11,9 @@ from struct import unpack
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
+
 # ====================================================================== MED (4)
+#
 
 class MED (Attribute):
 	ID = Attribute.ID.MED

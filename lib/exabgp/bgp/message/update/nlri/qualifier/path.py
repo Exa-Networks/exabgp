@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2012-07-08.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+
 # ===================================================================== PathInfo
 # RFC draft-ietf-idr-add-paths-09
 
@@ -19,10 +20,10 @@ class PathInfo (object):
 		elif ip:
 			self.path_info = ''.join([chr(int(_)) for _ in ip.split('.')])
 		elif integer:
-			self.path_info = ''.join([chr((integer>>offset) & 0xff) for offset in [24,16,8,0]])
+			self.path_info = ''.join([chr((integer >> offset) & 0xff) for offset in [24,16,8,0]])
 		else:
 			self.path_info = ''
-		#sum(int(a)<<offset for (a,offset) in zip(ip.split('.'), range(24, -8, -8)))
+		# sum(int(a)<<offset for (a,offset) in zip(ip.split('.'), range(24, -8, -8)))
 
 	def __len__ (self):
 		return len(self.path_info)

@@ -18,6 +18,7 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
+
 # ===================================================================== EVPNNLRI
 
 # +---------------------------------------+

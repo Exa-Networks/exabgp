@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
+
 # ============================================================= GenericAttribute
 #
 

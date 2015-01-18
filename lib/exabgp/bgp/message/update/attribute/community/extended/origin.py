@@ -14,6 +14,7 @@ from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
+
 # ======================================================================= Origin
 # RFC 4360 / RFC 7153
 
@@ -42,7 +43,15 @@ class OriginASNIP (Origin):
 	def __init__ (self,asn,ip,transitive,community=None):
 		self.asn = asn
 		self.ip = ip
-		Origin.__init__(self,community if community else pack('!BBH4s',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,asn,IPv4.pton(ip)))
+		Origin.__init__(
+			self,
+			community if community else pack(
+				'!BBH4s',
+				self.COMMUNITY_TYPE | 0x40 if transitive else self.COMMUNITY_TYPE,0x02,
+				asn,
+				IPv4.pton(ip)
+			)
+		)
 
 	def __str__ (self):
 		return "origin:%s:%s" % (self.asn,self.ip)
@@ -67,7 +76,15 @@ class OriginIPASN (Origin):
 	def __init__ (self,asn,ip,transitive,community=None):
 		self.ip = ip
 		self.asn = asn
-		Origin.__init__(self,community if community else pack('!BB4sH',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,IPv4.pton(ip),asn))
+		Origin.__init__(
+			self,
+			community if community else pack(
+				'!BB4sH',
+				self.COMMUNITY_TYPE | 0x40 if transitive else self.COMMUNITY_TYPE,0x02,
+				IPv4.pton(ip),
+				asn
+			)
+		)
 
 	def __str__ (self):
 		return "origin:%s:%s" % (self.ip, self.asn)
@@ -85,12 +102,20 @@ OriginIPASN.register_extended()
 
 class OriginASN4Number (Origin):
 	COMMUNITY_TYPE = 0x02
-	LIMIT=6
+	LIMIT = 6
 
 	def __init__ (self,asn,number,transitive,community=None):
 		self.asn = asn
 		self.number = number
-		Origin.__init__(self,community if community else pack('!BBLH',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,asn,number))
+		Origin.__init__(
+			self,
+			community if community else pack(
+				'!BBLH',
+				self.COMMUNITY_TYPE | 0x40 if transitive else self.COMMUNITY_TYPE,0x02,
+				asn,
+				number
+			)
+		)
 
 	def __str__ (self):
 		return "origin:%sL:%s" % (self.asn, self.number)

@@ -39,10 +39,10 @@ class MAC(object):
 			return -1
 		return 0
 
-	#XXX: FIXME: improve for better performance ?
+	# XXX: FIXME: improve for better performance ?
 	def __hash__(self):
 		return hash(str(self))
 
-	@staticmethod
-	def unpack(data):
-		':'.join('%02X' % ord(_) for _ in data[:6])
+	@classmethod
+	def unpack(cls,data):
+		return cls(':'.join('%02X' % ord(_) for _ in data[:6]),data[:6])

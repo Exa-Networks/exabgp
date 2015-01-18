@@ -10,6 +10,7 @@ from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoIP
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
+
 # ================================================================== NextHop (3)
 
 # The inheritance order is important and attribute MUST be first for the righ register to be called

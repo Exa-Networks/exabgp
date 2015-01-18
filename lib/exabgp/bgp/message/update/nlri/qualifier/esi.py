@@ -10,6 +10,7 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 # TODO: take into account E-VPN specs that specify the role of the first bit of ESI
 # (since draft-ietf-l2vpn-evpn-05)
 
+
 # Ethernet Segment Identifier
 class ESI (object):
 	DEFAULT = ''.join(chr(0) for _ in range(0,10))

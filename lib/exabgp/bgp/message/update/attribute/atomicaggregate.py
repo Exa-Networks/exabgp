@@ -9,7 +9,9 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.notification import Notify
 
+
 # ========================================================== AtomicAggregate (6)
+#
 
 class AtomicAggregate (Attribute):
 	ID = Attribute.ID.ATOMIC_AGGREGATE

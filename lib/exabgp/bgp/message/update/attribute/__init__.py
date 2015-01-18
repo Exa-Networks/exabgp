@@ -12,30 +12,31 @@ from struct import unpack
 from exabgp.configuration.environment import environment
 
 # Must be imported for the register API to work
-from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.attribute.generic import GenericAttribute
-from exabgp.bgp.message.update.attribute.origin import Origin
-from exabgp.bgp.message.update.attribute.aspath import ASPath
-from exabgp.bgp.message.update.attribute.nexthop import NextHop
-from exabgp.bgp.message.update.attribute.med import MED
-from exabgp.bgp.message.update.attribute.localpref import LocalPreference
-from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
-from exabgp.bgp.message.update.attribute.aggregator import Aggregator
-from exabgp.bgp.message.update.attribute.community import Community
-from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
-from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
-from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
-from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
-#from exabgp.bgp.message.update.attribute.community import Community
-from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
-from exabgp.bgp.message.update.attribute.pmsi import PMSI
-from exabgp.bgp.message.update.attribute.aigp import AIGP
+from exabgp.bgp.message.update.attribute.attribute import Attribute                   # noqa
+from exabgp.bgp.message.update.attribute.generic import GenericAttribute              # noqa
+from exabgp.bgp.message.update.attribute.origin import Origin                         # noqa
+from exabgp.bgp.message.update.attribute.aspath import ASPath                         # noqa
+from exabgp.bgp.message.update.attribute.nexthop import NextHop                       # noqa
+from exabgp.bgp.message.update.attribute.med import MED                               # noqa
+from exabgp.bgp.message.update.attribute.localpref import LocalPreference             # noqa
+from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate       # noqa
+from exabgp.bgp.message.update.attribute.aggregator import Aggregator                 # noqa
+from exabgp.bgp.message.update.attribute.community import Community                   # noqa
+from exabgp.bgp.message.update.attribute.originatorid import OriginatorID             # noqa
+from exabgp.bgp.message.update.attribute.clusterlist import ClusterList               # noqa
+from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI                       # noqa
+from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI                     # noqa
+# from exabgp.bgp.message.update.attribute.community import Community                 # noqa
+from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity  # noqa
+from exabgp.bgp.message.update.attribute.pmsi import PMSI                             # noqa
+from exabgp.bgp.message.update.attribute.aigp import AIGP                             # noqa
 # /forced import
 
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.logger import Logger
 from exabgp.logger import LazyFormat
+
 
 class _NOTHING (object):
 	def pack (self,negotiated=None):
@@ -74,7 +75,6 @@ class MultiAttributes (list):
 		return '%s' % ' '.join(str(_) for _ in self)
 
 
-
 # =================================================================== Attributes
 #
 
@@ -88,22 +88,22 @@ class Attributes (dict):
 	previous = ''
 
 	representation = {
-		#	key:  (how, default, name, text_presentation, json_presentation),
-		Attribute.ID.ORIGIN             : ('string',  '', 'origin',             '%s',     '%s'),
-		Attribute.ID.AS_PATH            : ('multiple','', ('as-path','as-set','confederation-path','confederation-set'), '%s',     '%s'),
-		Attribute.ID.NEXT_HOP           : ('string',  '', 'next-hop',           '%s',     '%s'),
-		Attribute.ID.MED                : ('integer', '', 'med',                '%s',     '%s'),
-		Attribute.ID.LOCAL_PREF         : ('integer', '', 'local-preference',   '%s',     '%s'),
-		Attribute.ID.ATOMIC_AGGREGATE   : ('boolean', '', 'atomic-aggregate',   '%s',     '%s'),
-		Attribute.ID.AGGREGATOR         : ('string',  '', 'aggregator',         '( %s )', '%s'),
-		Attribute.ID.AS4_AGGREGATOR     : ('string',  '', 'aggregator',         '( %s )', '%s'),
-		Attribute.ID.COMMUNITY          : ('list',    '', 'community',          '%s',     '%s'),
-		Attribute.ID.ORIGINATOR_ID      : ('inet',    '', 'originator-id',      '%s',     '%s'),
-		Attribute.ID.CLUSTER_LIST       : ('list',    '', 'cluster-list',       '%s',     '%s'),
-		Attribute.ID.EXTENDED_COMMUNITY : ('list',    '', 'extended-community', '%s',     '%s'),
-		Attribute.ID.PMSI_TUNNEL        : ('string',  '', 'pmsi',               '%s',     '%s'),
-		Attribute.ID.AIGP               : ('integer', '', 'aigp',               '%s',     '%s'),
-		Attribute.ID.INTERNAL_NAME      : ('string',  '', 'name',               '%s',     '%s'),
+		# key:  (how, default, name, text_presentation, json_presentation),
+		Attribute.ID.ORIGIN:             ('string',  '', 'origin',             '%s',     '%s'),
+		Attribute.ID.AS_PATH:            ('multiple','', ('as-path','as-set','confederation-path','confederation-set'), '%s',     '%s'),
+		Attribute.ID.NEXT_HOP:           ('string',  '', 'next-hop',           '%s',     '%s'),
+		Attribute.ID.MED:                ('integer', '', 'med',                '%s',     '%s'),
+		Attribute.ID.LOCAL_PREF:         ('integer', '', 'local-preference',   '%s',     '%s'),
+		Attribute.ID.ATOMIC_AGGREGATE:   ('boolean', '', 'atomic-aggregate',   '%s',     '%s'),
+		Attribute.ID.AGGREGATOR:         ('string',  '', 'aggregator',         '( %s )', '%s'),
+		Attribute.ID.AS4_AGGREGATOR:     ('string',  '', 'aggregator',         '( %s )', '%s'),
+		Attribute.ID.COMMUNITY:          ('list',    '', 'community',          '%s',     '%s'),
+		Attribute.ID.ORIGINATOR_ID:      ('inet',    '', 'originator-id',      '%s',     '%s'),
+		Attribute.ID.CLUSTER_LIST:       ('list',    '', 'cluster-list',       '%s',     '%s'),
+		Attribute.ID.EXTENDED_COMMUNITY: ('list',    '', 'extended-community', '%s',     '%s'),
+		Attribute.ID.PMSI_TUNNEL:        ('string',  '', 'pmsi',               '%s',     '%s'),
+		Attribute.ID.AIGP:               ('integer', '', 'aigp',               '%s',     '%s'),
+		Attribute.ID.INTERNAL_NAME:      ('string',  '', 'name',               '%s',     '%s'),
 	}
 
 	def _generate_text (self,extra=None):
@@ -207,13 +207,13 @@ class Attributes (dict):
 		message = ''
 
 		default = {
-			Attribute.ID.ORIGIN:     lambda l,r: Origin(Origin.IGP),
-			Attribute.ID.AS_PATH:    lambda l,r: ASPath([],[]) if l == r else ASPath([local_asn,],[]),
-			Attribute.ID.LOCAL_PREF: lambda l,r: LocalPreference(100) if l == r else NOTHING,
+			Attribute.ID.ORIGIN:     lambda l,r: Origin(Origin.IGP),                                     # noqa
+			Attribute.ID.AS_PATH:    lambda l,r: ASPath([],[]) if l == r else ASPath([local_asn,],[]),   # noqa
+			Attribute.ID.LOCAL_PREF: lambda l,r: LocalPreference(100) if l == r else NOTHING,            # noqa
 		}
 
 		check = {
-			Attribute.ID.NEXT_HOP:   lambda l,r,nh: nh.ipv4() == True,
+			Attribute.ID.NEXT_HOP:   lambda l,r,nh: nh.ipv4() == True,  # noqa
 			Attribute.ID.LOCAL_PREF: lambda l,r,nh: l == r,
 		}
 
@@ -298,7 +298,7 @@ class Attributes (dict):
 			return flag, attr, data[4:length+4]
 		else:
 			length = ord(data[2])
-			return flag, attr , data[3:length+3]
+			return flag, attr, data[3:length+3]
 
 	def parse (self,data,negotiated):
 		if not data:
@@ -341,7 +341,7 @@ class Attributes (dict):
 		# it is an unknown transitive attribute we need to pass on
 		if flag & Attribute.Flag.TRANSITIVE:
 			logger.parser('unknown transitive attribute (flag 0x%02X, aid 0x%02X)' % (flag,aid))
-			self.add(GenericAttribute(aid,flag|Attribute.Flag.PARTIAL,attribute),attribute)
+			self.add(GenericAttribute(aid,flag | Attribute.Flag.PARTIAL,attribute),attribute)
 			return self.parse(next,negotiated)
 
 		# it is an unknown non-transitive attribute we can ignore.
@@ -355,7 +355,7 @@ class Attributes (dict):
 		self.remove(Attribute.ID.AS4_PATH)
 
 		# this key is unique as index length is a two header, plus a number of ASN of size 2 or 4
-		# so adding the : make the length odd and unique
+		# so adding the: make the length odd and unique
 		key = "%s:%s" % (as2path.index, as4path.index)
 
 		# found a cache copy
@@ -389,11 +389,9 @@ class Attributes (dict):
 		aspath = ASPath(as_seq,as_set)
 		self.add(aspath,key)
 
-
 	def __hash__(self):
 		# XXX: FIXME: not excellent... :-(
 		return hash(repr(self))
-
 
 	# Orange BAGPIPE code ..
 
@@ -403,7 +401,8 @@ class Attributes (dict):
 	def sameValuesAs(self,other):
 		# we sort based on string representation since the items do not
 		# necessarily implement __cmp__
-		sorter = lambda x,y: cmp(repr(x), repr(y))
+		def sorter (x,y):
+			return cmp(repr(x), repr(y))
 
 		try:
 			for key in set(self.iterkeys()).union(set(other.iterkeys())):

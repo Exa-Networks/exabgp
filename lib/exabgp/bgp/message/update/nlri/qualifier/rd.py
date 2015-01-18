@@ -8,6 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from struct import unpack
 
+
 # =========================================================== RouteDistinguisher
 # RFC 4364
 
@@ -28,11 +29,11 @@ class RouteDistinguisher (object):
 	def _str (self):
 		t,c1,c2,c3 = unpack('!HHHH',self.rd)
 		if t == 0:
-			rd = '%d:%d' % (c1,(c2<<16)+c3)
+			rd = '%d:%d' % (c1,(c2 << 16)+c3)
 		elif t == 1:
-			rd = '%d.%d.%d.%d:%d' % (c1>>8,c1&0xFF,c2>>8,c2&0xFF,c3)
+			rd = '%d.%d.%d.%d:%d' % (c1 >> 8,c1 & 0xFF,c2 >> 8,c2 & 0xFF,c3)
 		elif t == 2:
-			rd = '%d:%d' % ((c1<<16)+c2,c3)
+			rd = '%d:%d' % ((c1 << 16) + c2,c3)
 		else:
 			rd = str(self.rd)
 		return rd

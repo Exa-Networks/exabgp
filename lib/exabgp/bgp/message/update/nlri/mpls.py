@@ -63,9 +63,12 @@ class MPLS (NLRI,CIDR):
 
 		r = []
 		if announced:
-			if label: r.append(label)
-			if rdist: r.append(rdist)
-			if pinfo: r.append(pinfo)
+			if label:
+				r.append(label)
+			if rdist:
+				r.append(rdist)
+			if pinfo:
+				r.append(pinfo)
 		return '"%s": { %s }' % (self.prefix(),", ".join(r))
 
 	def pack (self,addpath=None):
@@ -83,9 +86,12 @@ class MPLS (NLRI,CIDR):
 		labels,rd,path_identifier,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action,addpath)
 
 		nlri = cls(afi,safi,prefix,mask,nexthop,action)
-		if labels: nlri.labels = Labels(labels)
-		if rd: nlri.rd = RouteDistinguisher(rd)
-		if path_identifier: nlri.path_info = PathInfo(None,None,path_identifier)
+		if labels:
+			nlri.labels = Labels(labels)
+		if rd:
+			nlri.rd = RouteDistinguisher(rd)
+		if path_identifier:
+			nlri.path_info = PathInfo(None,None,path_identifier)
 
 		return len(bgp) - len(left),nlri
 

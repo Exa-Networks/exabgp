@@ -13,13 +13,14 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
+
 class EthernetTag (object):
 	MAX = pow(2,32)-1
 
 	__slots__ = ['tag']
 
 	def __init__ (self,tag=0):
-		self.tag=tag
+		self.tag = tag
 
 	def __str__ (self):
 		return repr(self.tag)

@@ -129,7 +129,15 @@ class Connection (object):
 
 					number -= len(read)
 					if not number:
-						self.logger.wire(LazyFormat("%s %-32s RECEIVED " % (self.name(),'%s / %s' % (self.local,self.peer)),read))
+						self.logger.wire(
+							LazyFormat(
+								"%s %-32s RECEIVED " % (
+									self.name(),
+									'%s / %s' % (self.local,self.peer)
+								),
+								read
+							)
+						)
 						yield data
 						return
 
@@ -170,20 +178,27 @@ class Connection (object):
 
 					# we can not use sendall as in case of network buffer filling
 					# it does raise and does not let you know how much was sent
-					nb = self.io.send(data)
-					if not nb:
+					number = self.io.send(data)
+					if not number:
 						self.close()
 						self.logger.wire("%s %s lost TCP connection with peer" % (self.name(),self.peer))
 						raise LostConnection('lost the TCP connection')
 
-					data = data[nb:]
+					data = data[number:]
 					if not data:
 						yield True
 						return
 					yield False
 			except socket.error,exc:
 				if exc.args[0] in error.block:
-					self.logger.wire("%s %s blocking io problem mid-way through writing a message %s, trying to complete" % (self.name(),self.peer,errstr(exc)),'debug')
+					self.logger.wire(
+						"%s %s blocking io problem mid-way through writing a message %s, trying to complete" % (
+							self.name(),
+							self.peer,
+							errstr(exc)
+						),
+						'debug'
+					)
 					yield False
 				elif exc.errno == errno.EPIPE:
 					# The TCP connection is gone.
@@ -205,20 +220,23 @@ class Connection (object):
 				yield 0,0,'','',None
 
 		if not header.startswith(Message.MARKER):
-			yield 0,0,header,'',NotifyError(1,1,'The packet received does not contain a BGP marker')
+			report = 'The packet received does not contain a BGP marker'
+			yield 0,0,header,'',NotifyError(1,1,report)
 			return
 
 		msg = ord(header[18])
 		length = unpack('!H',header[16:18])[0]
 
 		if length < Message.HEADER_LEN or length > Message.MAX_LEN:
-			yield length,0,header,'',NotifyError(1,2,'%s has an invalid message length of %d' % (Message().name(msg),length))
+			report = '%s has an invalid message length of %d' % (Message.name(msg),length)
+			yield length,0,header,'',NotifyError(1,2,report)
 			return
 
 		validator = Message.Length.get(msg,lambda _: _ >= 19)
 		if not validator(length):
 			# MUST send the faulty length back
-			yield length,0,header,'',NotifyError(1,2,'%s has an invalid message length of %d' % (Message().name(msg),length))
+			report = '%s has an invalid message length of %d' % (Message.name(msg),length)
+			yield length,0,header,'',NotifyError(1,2,report)
 			return
 
 		number = length - Message.HEADER_LEN

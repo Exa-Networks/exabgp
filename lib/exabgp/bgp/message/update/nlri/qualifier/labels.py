@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
+
 # ======================================================================= Labels
 # RFC 3107
 
@@ -26,7 +27,7 @@ class Labels (object):
 		# Mark the bottom of stack with the bit
 		if packed and bos:
 			packed.pop()
-			packed.append(pack('!L',(label << 4)|1)[1:])
+			packed.append(pack('!L',(label << 4) | 1)[1:])
 		self.packed = ''.join(packed)
 		self._len = len(self.packed)
 

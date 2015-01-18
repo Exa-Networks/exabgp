@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
+
 # ==================================================================== Community
 #
 
@@ -89,20 +90,20 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 from exabgp.bgp.message.notification import Notify
 
 # Unused but required for the registration of the classes
-from exabgp.bgp.message.update.attribute.community.extended.encapsulation import Encapsulation
-from exabgp.bgp.message.update.attribute.community.extended.l2info import L2Info
-from exabgp.bgp.message.update.attribute.community.extended.origin import Origin
-from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTarget
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate
+from exabgp.bgp.message.update.attribute.community.extended.encapsulation import Encapsulation  # noqa
+from exabgp.bgp.message.update.attribute.community.extended.l2info import L2Info                # noqa
+from exabgp.bgp.message.update.attribute.community.extended.origin import Origin                # noqa
+from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTarget               # noqa
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate          # noqa
 # /required
 
 
 class Communities (Attribute):
 	ID = Attribute.ID.COMMUNITY
-	FLAG = Attribute.Flag.TRANSITIVE|Attribute.Flag.OPTIONAL
+	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 	MULTIPLE = False
 
-#	__slots__ = ['communities']
+	# __slots__ = ['communities']
 
 	def __init__ (self,communities=None):
 		# Must be None as = param is only evaluated once

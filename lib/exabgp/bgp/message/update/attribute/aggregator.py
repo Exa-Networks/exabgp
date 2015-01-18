@@ -11,11 +11,13 @@ from exabgp.protocol.ip import IPv4
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
+
 # =============================================================== AGGREGATOR (7)
+#
 
 class Aggregator (Attribute):
 	ID = Attribute.ID.AGGREGATOR
-	FLAG = Attribute.Flag.TRANSITIVE|Attribute.Flag.OPTIONAL
+	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 	MULTIPLE = False
 	CACHING = True
 
@@ -51,7 +53,9 @@ class Aggregator (Attribute):
 
 Aggregator.register_attribute()
 
+
 # ============================================================== AGGREGATOR (18)
+#
 
 class Aggregator4 (Aggregator):
 	ID = Attribute.ID.AS4_AGGREGATOR

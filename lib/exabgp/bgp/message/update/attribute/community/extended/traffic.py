@@ -12,6 +12,7 @@ from struct import unpack
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
+
 # ================================================================== TrafficRate
 # RFC 5575
 
@@ -24,7 +25,14 @@ class TrafficRate (ExtendedCommunity):
 	def __init__ (self,asn,rate,community=None):
 		self.asn = asn
 		self.rate = rate
-		ExtendedCommunity.__init__(self,community if community is not None else pack("!BBHf",0x80,0x06,asn,rate))
+		ExtendedCommunity.__init__(
+			self,
+			community if community is not None else pack(
+				"!BBHf",
+				0x80,0x06,
+				asn,rate
+			)
+		)
 
 	def __str__ (self):
 		return "rate-limit %d" % self.rate
@@ -45,13 +53,13 @@ class TrafficAction (ExtendedCommunity):
 	COMMUNITY_SUBTYPE = 0x07
 
 	_sample = {
-		False : 0x0,
-		True  : 0x2,
+		False: 0x0,
+		True:  0x2,
 	}
 
 	_terminal = {
-		False : 0x0,
-		True  : 0x1,
+		False: 0x0,
+		True:  0x1,
 	}
 
 	__slots__ = ['sample','terminal']
@@ -64,8 +72,10 @@ class TrafficAction (ExtendedCommunity):
 
 	def __str__ (self):
 		s = []
-		if self.sample:   s.append('sample')
-		if self.terminal: s.append('terminal')
+		if self.sample:
+			s.append('sample')
+		if self.terminal:
+			s.append('terminal')
 		return 'action %s' % '-'.join(s)
 
 	@staticmethod
@@ -90,7 +100,14 @@ class TrafficRedirect (ExtendedCommunity):
 	def __init__ (self,asn,target,community=None):
 		self.asn = asn
 		self.target = target
-		ExtendedCommunity.__init__(self,community if community is not None else pack("!BBHL",0x80,0x08,asn,target))
+		ExtendedCommunity.__init__(
+			self,
+			community if community is not None else pack(
+				"!BBHL",
+				0x80,0x08,
+				asn,target
+			)
+		)
 
 	def __str__ (self):
 		return "redirect:%s:%s" % (self.asn,self.target)
@@ -114,7 +131,14 @@ class TrafficMark (ExtendedCommunity):
 
 	def __init__ (self,dscp,community=None):
 		self.dscp = dscp
-		ExtendedCommunity.__init__(self,community if community is not None else pack("!BBLBB",0x80,0x09,0,0,dscp))
+		ExtendedCommunity.__init__(
+			self,
+			community if community is not None else pack(
+				"!BBLBB",
+				0x80,0x09,
+				0,0,dscp
+			)
+		)
 
 	def __str__ (self):
 		return "mark %d" % self.dscp
@@ -140,7 +164,14 @@ class TrafficNextHop (ExtendedCommunity):
 
 	def __init__ (self,copy,community=None):
 		self.copy = copy
-		ExtendedCommunity.__init__(self,community if community is not None else pack("!BBLH",0x80,0x00,0,1 if copy else 0))
+		ExtendedCommunity.__init__(
+			self,
+			community if community is not None else pack(
+				"!BBLH",
+				0x80,0x00,
+				0,1 if copy else 0
+			)
+		)
 
 	def __str__ (self):
 		return "copy-to-nexthop" if self.copy else "redirect-to-nexthop"

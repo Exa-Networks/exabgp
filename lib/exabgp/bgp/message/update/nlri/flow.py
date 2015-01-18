@@ -34,12 +34,14 @@ from exabgp.protocol.ip.tcp.flag import NamedTCPFlag
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 
+
 # =================================================================== Flow Components
 
 class IComponent (object):
 	# all have ID
 	# should have an interface for serialisation and put it here
 	pass
+
 
 class CommonOperator (object):
 	# power (2,x) is the same as 1 << x which is what the RFC say the len is
@@ -66,22 +68,27 @@ class CommonOperator (object):
 	def length (data):
 		return 1 << ((data & CommonOperator.LEN) >> 4)
 
+
 class NumericOperator (CommonOperator):
-#	reserved  = 0x08  # 0b00001000
+	# reserved= 0x08  # 0b00001000
 	LT        = 0x04  # 0b00000100
 	GT        = 0x02  # 0b00000010
 	EQ        = 0x01  # 0b00000001
 
+
 class BinaryOperator (CommonOperator):
-#	reserved  = 0x0C  # 0b00001100
+	# reserved= 0x0C  # 0b00001100
 	NOT       = 0x02  # 0b00000010
 	MATCH     = 0x01  # 0b00000001
+
 
 def _len_to_bit (value):
 	return NumericOperator.rewop[value] << 4
 
+
 def _bit_to_len (value):
 	return NumericOperator.power[(value & CommonOperator.len_position) >> 4]
+
 
 def _number (string):
 	value = 0
@@ -94,14 +101,18 @@ def _number (string):
 
 # Interface ..................
 
+
 class IPv4 (object):
 	afi = AFI.ipv4
+
 
 class IPv6 (object):
 	afi = AFI.ipv6
 
+
 class IPrefix (object):
 	pass
+
 
 # Prococol
 
@@ -122,6 +133,7 @@ class IPrefix4 (IPrefix,IComponent,IPv4):
 
 	def __str__ (self):
 		return str(self.nlri)
+
 
 class IPrefix6 (IPrefix,IComponent,IPv6):
 	# Must be defined in subclasses
@@ -162,9 +174,10 @@ class IOperation (IComponent):
 	def decode (self,value):
 		raise NotImplemented('this method must be implemented by subclasses')
 
-#class IOperationIPv4 (IOperation):
-#	def encode (self,value):
-#		return 4, socket.pton(socket.AF_INET,value)
+
+# class IOperationIPv4 (IOperation):
+# 	def encode (self,value):
+# 		return 4, socket.pton(socket.AF_INET,value)
 
 class IOperationByte (IOperation):
 	def encode (self,value):
@@ -173,14 +186,16 @@ class IOperationByte (IOperation):
 	def decode (self,bgp):
 		return ord(bgp[0]),bgp[1:]
 
+
 class IOperationByteShort (IOperation):
 	def encode (self,value):
-		if value < (1<<8):
+		if value < (1 << 8):
 			return 1,chr(value)
 		return 2,pack('!H',value)
 
 	def decode (self,bgp):
 		return unpack('!H',bgp[:2])[0],bgp[2:]
+
 
 # String representation for Numeric and Binary Tests
 
@@ -189,17 +204,17 @@ class NumericString (object):
 	value = None
 
 	_string = {
-		NumericOperator.LT   : '<',
-		NumericOperator.GT   : '>',
-		NumericOperator.EQ   : '=',
-		NumericOperator.LT|NumericOperator.EQ : '<=',
-		NumericOperator.GT|NumericOperator.EQ : '>=',
+		NumericOperator.LT: '<',
+		NumericOperator.GT: '>',
+		NumericOperator.EQ: '=',
+		NumericOperator.LT | NumericOperator.EQ: '<=',
+		NumericOperator.GT | NumericOperator.EQ: '>=',
 
-		NumericOperator.AND|NumericOperator.LT   : '&<',
-		NumericOperator.AND|NumericOperator.GT   : '&>',
-		NumericOperator.AND|NumericOperator.EQ   : '&=',
-		NumericOperator.AND|NumericOperator.LT|NumericOperator.EQ : '&<=',
-		NumericOperator.AND|NumericOperator.GT|NumericOperator.EQ : '&>=',
+		NumericOperator.AND | NumericOperator.LT: '&<',
+		NumericOperator.AND | NumericOperator.GT: '&>',
+		NumericOperator.AND | NumericOperator.EQ: '&=',
+		NumericOperator.AND | NumericOperator.LT | NumericOperator.EQ: '&<=',
+		NumericOperator.AND | NumericOperator.GT | NumericOperator.EQ: '&>=',
 	}
 
 	def __str__ (self):
@@ -211,14 +226,15 @@ class BinaryString (object):
 	value = None
 
 	_string = {
-		BinaryOperator.NOT   : '!',
-		BinaryOperator.MATCH : '=',
-		BinaryOperator.AND|BinaryOperator.NOT   : '&!',
-		BinaryOperator.AND|BinaryOperator.MATCH : '&=',
+		BinaryOperator.NOT:   '!',
+		BinaryOperator.MATCH: '=',
+		BinaryOperator.AND | BinaryOperator.NOT:   '&!',
+		BinaryOperator.AND | BinaryOperator.MATCH: '&=',
 	}
 
 	def __str__ (self):
 		return "%s%s" % (self._string[self.operations & (CommonOperator.EOL ^ 0xFF)], self.value)
+
 
 # Components ..............................
 
@@ -230,10 +246,12 @@ def converter (function,klass=int):
 			return function(value)
 	return _integer
 
+
 def decoder (function,klass=int):
 	def _inner (value):
 		return klass(function(value))
 	return _inner
+
 
 def PacketLength (data):
 	_str_bad_length = "cloudflare already found that invalid max-packet length for for you .."
@@ -242,12 +260,14 @@ def PacketLength (data):
 		raise ValueError(_str_bad_length)
 	return number
 
+
 def PortValue (data):
 	_str_bad_port = "you tried to set an invalid port number .."
 	number = int(data)
 	if number < 0 or number > 0xFFFF:
 		raise ValueError(_str_bad_port)
 	return number
+
 
 def DSCPValue (data):
 	_str_bad_dscp = "you tried to filter a flow using an invalid dscp for a component .."
@@ -256,12 +276,14 @@ def DSCPValue (data):
 		raise ValueError(_str_bad_dscp)
 	return number
 
+
 def ClassValue (data):
 	_str_bad_class = "you tried to filter a flow using an invalid traffic class for a component .."
 	number = int(data)
 	if number < 0 or number > 0xFFFF:
 		raise ValueError(_str_bad_class)
 	return number
+
 
 def LabelValue (data):
 	_str_bad_label = "you tried to filter a flow using an invalid traffic label for a component .."
@@ -270,31 +292,38 @@ def LabelValue (data):
 		raise ValueError(_str_bad_label)
 	return number
 
+
 # Protocol Shared
 
 class FlowDestination (object):
 	ID = 0x01
 	NAME = 'destination'
 
+
 class FlowSource (object):
 	ID = 0x02
 	NAME = 'source'
+
 
 # Prefix
 class Flow4Destination (IPrefix4,FlowDestination):
 	pass
 
+
 # Prefix
 class Flow4Source (IPrefix4,FlowSource):
 	pass
+
 
 # Prefix
 class Flow6Destination (IPrefix6,FlowDestination):
 	pass
 
+
 # Prefix
 class Flow6Source (IPrefix6,FlowSource):
 	pass
+
 
 class FlowIPProtocol (IOperationByte,NumericString,IPv4):
 	ID  = 0x03
@@ -302,11 +331,13 @@ class FlowIPProtocol (IOperationByte,NumericString,IPv4):
 	converter = staticmethod(converter(NamedProtocol,Protocol))
 	decoder = staticmethod(decoder(ord,Protocol))
 
+
 class FlowNextHeader (IOperationByte,NumericString,IPv6):
 	ID  = 0x03
 	NAME = 'next-header'
 	converter = staticmethod(converter(NamedProtocol,Protocol))
 	decoder = staticmethod(decoder(ord,Protocol))
+
 
 class FlowAnyPort (IOperationByteShort,NumericString,IPv4,IPv6):
 	ID  = 0x04
@@ -314,11 +345,13 @@ class FlowAnyPort (IOperationByteShort,NumericString,IPv4,IPv6):
 	converter = staticmethod(converter(PortValue))
 	decoder = staticmethod(_number)
 
+
 class FlowDestinationPort (IOperationByteShort,NumericString,IPv4,IPv6):
 	ID  = 0x05
 	NAME = 'destination-port'
 	converter = staticmethod(converter(PortValue))
 	decoder = staticmethod(_number)
+
 
 class FlowSourcePort (IOperationByteShort,NumericString,IPv4,IPv6):
 	ID  = 0x06
@@ -326,11 +359,13 @@ class FlowSourcePort (IOperationByteShort,NumericString,IPv4,IPv6):
 	converter = staticmethod(converter(PortValue))
 	decoder = staticmethod(_number)
 
+
 class FlowICMPType (IOperationByte,BinaryString,IPv4,IPv6):
 	ID = 0x07
 	NAME = 'icmp-type'
 	converter = staticmethod(converter(NamedICMPType))
 	decoder = staticmethod(decoder(_number,ICMPType))
+
 
 class FlowICMPCode (IOperationByte,BinaryString,IPv4,IPv6):
 	ID = 0x08
@@ -338,17 +373,20 @@ class FlowICMPCode (IOperationByte,BinaryString,IPv4,IPv6):
 	converter = staticmethod(converter(NamedICMPCode))
 	decoder = staticmethod(decoder(_number,ICMPCode))
 
+
 class FlowTCPFlag (IOperationByte,BinaryString,IPv4,IPv6):
 	ID = 0x09
 	NAME = 'tcp-flags'
 	converter = staticmethod(converter(NamedTCPFlag))
 	decoder = staticmethod(decoder(ord,TCPFlag))
 
+
 class FlowPacketLength (IOperationByteShort,NumericString,IPv4,IPv6):
 	ID = 0x0A
 	NAME = 'packet-length'
 	converter = staticmethod(converter(PacketLength))
 	decoder = staticmethod(_number)
+
 
 # RFC2474
 class FlowDSCP (IOperationByteShort,NumericString,IPv4):
@@ -357,6 +395,7 @@ class FlowDSCP (IOperationByteShort,NumericString,IPv4):
 	converter = staticmethod(converter(DSCPValue))
 	decoder = staticmethod(_number)
 
+
 # RFC2460
 class FlowTrafficClass (IOperationByte,NumericString,IPv6):
 	ID = 0x0B
@@ -364,12 +403,14 @@ class FlowTrafficClass (IOperationByte,NumericString,IPv6):
 	converter = staticmethod(converter(ClassValue))
 	decoder = staticmethod(_number)
 
+
 # BinaryOperator
 class FlowFragment (IOperationByteShort,NumericString,IPv4):
 	ID = 0x0C
 	NAME = 'fragment'
 	converter = staticmethod(converter(NamedFragment))
 	decoder = staticmethod(decoder(ord,Fragment))
+
 
 # draft-raszuk-idr-flow-spec-v6-01
 class FlowFlowLabel (IOperationByteShort,NumericString,IPv6):
@@ -414,6 +455,7 @@ for content in dir():
 	else:
 		raise RuntimeError('unvalid class defined (type)')
 
+
 # ..........................................................
 
 def _unique ():
@@ -422,7 +464,9 @@ def _unique ():
 		yield value
 		value += 1
 
+
 unique = _unique()
+
 
 class Flow (NLRI):
 	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ip,nexthop=None,rd=None):
@@ -515,7 +559,7 @@ class Flow (NLRI):
 		nexthop = ', "next-hop": "%s"' % self.nexthop if self.nexthop is not NoIP else ''
 		rd = ', %s' % self.rd.json() if self.rd else ''
 		compatibility = ', "string": "%s"' % self.extensive()
-		return '{' + rd + ','.join(string) + nexthop + compatibility +' }'
+		return '{' + rd + ','.join(string) + nexthop + compatibility + ' }'
 
 	def json (self):
 		# this is a stop gap so flow route parsing does not crash exabgp

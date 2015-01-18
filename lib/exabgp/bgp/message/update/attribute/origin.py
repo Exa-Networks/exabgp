@@ -8,6 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
+
 # =================================================================== Origin (1)
 
 class Origin (Attribute):
@@ -33,9 +34,12 @@ class Origin (Attribute):
 		return len(self.packed)
 
 	def __str__ (self):
-		if self.origin == 0x00: return 'igp'
-		if self.origin == 0x01: return 'egp'
-		if self.origin == 0x02: return 'incomplete'
+		if self.origin == 0x00:
+			return 'igp'
+		if self.origin == 0x01:
+			return 'egp'
+		if self.origin == 0x02:
+			return 'incomplete'
 		return 'invalid'
 
 	def __cmp__(self,other):

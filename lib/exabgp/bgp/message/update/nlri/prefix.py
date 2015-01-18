@@ -53,7 +53,8 @@ class Prefix (CIDR,NLRI):
 	def unpack (cls,afi,safi,data,addpath,nexthop,action):
 		labels,rd,path_identifier,mask,size,prefix,left = NLRI._nlri(afi,safi,data,action,addpath)
 		nlri = cls(afi,safi,prefix,mask,nexthop,action)
-		if path_identifier: nlri.path_info = PathInfo(None,None,path_identifier)
+		if path_identifier:
+			nlri.path_info = PathInfo(None,None,path_identifier)
 		return len(data) - len(left),nlri
 
 for _safi in (SAFI.unicast, SAFI.multicast):

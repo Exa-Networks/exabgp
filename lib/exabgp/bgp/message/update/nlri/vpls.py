@@ -17,6 +17,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 
+
 def _unique ():
 	value = 0
 	while True:
@@ -24,6 +25,7 @@ def _unique ():
 		value += 1
 
 unique = _unique()
+
 
 class VPLS (NLRI):
 
@@ -47,12 +49,16 @@ class VPLS (NLRI):
 		return '%s%s%s%s' % (
 			'\x00\x11',  # pack('!H',17)
 			self.rd.pack(),
-			pack('!HHH',
+			pack(
+				'!HHH',
 				self.ve,
 				self.offset,
 				self.size
 			),
-			pack('!L',(self.base<<4)|0x1)[1:]  # setting the bottom of stack, should we ?
+			pack(
+				'!L',
+				(self.base << 4) | 0x1
+			)[1:]  # setting the bottom of stack, should we ?
 		)
 
 	# XXX: FIXME: we need an unique key here.
@@ -88,7 +94,7 @@ class VPLS (NLRI):
 			raise Notify(3,10,'l2vpn vpls message length is not consistent with encoded data')
 		rd = RouteDistinguisher(data[2:10])
 		ve,offset,size = unpack('!HHH',data[10:16])
-		base = unpack('!L','\x00'+data[16:19])[0]>>4
+		base = unpack('!L','\x00'+data[16:19])[0] >> 4
 		nlri = cls(rd,ve,base,offset,size)
 		nlri.action = action
 		nlri.nexthop = IP.unpack(nexthop)

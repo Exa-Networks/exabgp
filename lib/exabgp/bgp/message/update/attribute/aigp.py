@@ -11,7 +11,9 @@ from struct import unpack
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
+
 # ========================================================================== TLV
+#
 
 # 0                   1                   2                   3
 # 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -31,6 +33,7 @@ class TLV (object):
 	def __init__(self,what,value):
 		self.type = what
 		self.value = value
+
 
 class TLVS (list):
 	__slots__ = []

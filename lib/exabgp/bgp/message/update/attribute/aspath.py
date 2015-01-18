@@ -14,6 +14,7 @@ from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.notification import Notify
 
+
 # =================================================================== ASPath (2)
 # only 2-4% of duplicated data therefore it is not worth to cache
 
@@ -53,9 +54,9 @@ class ASPath (Attribute):
 		return 0
 
 	def _segment (self,seg_type,values,negotiated):
-		l = len(values)
-		if l:
-			if l>255:
+		length = len(values)
+		if length:
+			if length > 255:
 				return self._segment(seg_type,values[:255],negotiated) + self._segment(seg_type,values[255:],negotiated)
 			return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack(negotiated) for v in values]))
 		return ""
@@ -114,7 +115,7 @@ class ASPath (Attribute):
 				string = '[ %d ]' % aseq[0]
 			else:
 				string = '[ %s %s]' % (aseq[0],'( %s ) ' % (' '.join([str(_) for _ in aset])))
-		elif lseq > 1 :
+		elif lseq > 1:
 			if lset:
 				string = '[ %s %s]' % ((' '.join([str(_) for _ in aseq])),'( %s ) ' % (' '.join([str(_) for _ in aset])))
 			else:
@@ -125,11 +126,11 @@ class ASPath (Attribute):
 
 	def json (self,name):
 		match = {
-			#                               data , default representation
-			'as-path'            : (self.as_seq  , '[]'),
-			'as-set'             : (self.as_set  , ''),
-			'confederation-path' : (self.as_cseq , '[]'),
-			'confederation-set'  : (self.as_cset , ''),
+			# data , default representation
+			'as-path':            (self.as_seq,  '[]'),
+			'as-set':             (self.as_set,  ''),
+			'confederation-path': (self.as_cseq, '[]'),
+			'confederation-set':  (self.as_cset, ''),
 		}
 
 		data,default = match[name]
@@ -146,18 +147,18 @@ class ASPath (Attribute):
 		backup = data
 
 		unpacker = {
-			False : '!H',
-			True  : '!L',
+			False: '!H',
+			True:  '!L',
 		}
 		size = {
 			False: 2,
-			True : 4,
+			True:  4,
 		}
 		as_choice = {
-			ASPath.AS_SEQUENCE : as_seq,
-			ASPath.AS_SET      : as_set,
-			ASPath.AS_CONFED_SEQUENCE : as_cseq,
-			ASPath.AS_CONFED_SET      : as_cset,
+			ASPath.AS_SEQUENCE: as_seq,
+			ASPath.AS_SET:      as_set,
+			ASPath.AS_CONFED_SEQUENCE: as_cseq,
+			ASPath.AS_CONFED_SET:      as_cset,
 		}
 
 		upr = unpacker[asn4]
@@ -208,7 +209,7 @@ ASPath.register_attribute()
 
 class AS4Path (ASPath):
 	ID = Attribute.ID.AS4_PATH
-	FLAG = Attribute.Flag.TRANSITIVE|Attribute.Flag.OPTIONAL
+	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 	ASN4 = True
 
 	def pack (self,negotiated=None):

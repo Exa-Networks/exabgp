@@ -15,6 +15,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 # ============================================================ Layer2Information
 # RFC 4761
 
+
 class L2Info (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x80
 	COMMUNITY_SUBTYPE = 0x0A
@@ -27,7 +28,15 @@ class L2Info (ExtendedCommunity):
 		self.mtu = mtu
 		self.reserved = reserved
 		# reserved is called preference in draft-ietf-l2vpn-vpls-multihoming-07
-		ExtendedCommunity.__init__(self,community if community is not None else pack("!BBBBHH",0x80,0x0A,encaps,control,mtu,reserved))
+		ExtendedCommunity.__init__(
+			self,
+			community if community is not None else pack(
+				"!BBBBHH",
+				0x80,0x0A,
+				encaps,control,
+				mtu,reserved
+			)
+		)
 
 	def __str__ (self):
 		return "l2info:%s:%s:%s:%s" % (self.encaps,self.control,self.mtu,self.reserved)

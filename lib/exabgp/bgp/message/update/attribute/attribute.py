@@ -12,6 +12,7 @@ from exabgp.bgp.message.notification import Notify
 
 from exabgp.util.cache import Cache
 
+
 # ==================================================================== Attribute
 #
 
@@ -39,8 +40,8 @@ class Attribute (object):
 
 	# ---------------------------------------------------------------------------
 
-	# XXX : FIXME : The API of ID is a bit different (it can be instanciated)
-	# XXX : FIXME : This is legacy. should we change to not be ?
+	# XXX: FIXME: The API of ID is a bit different (it can be instanciated)
+	# XXX: FIXME: This is legacy. should we change to not be ?
 	class ID (int):
 		__slots__ = []
 
@@ -78,28 +79,28 @@ class Attribute (object):
 		INTERNAL_SPLIT     = 0xFFFF
 
 		names = {
-			ORIGIN             : 'origin',
-			AS_PATH            : 'as-path',
-			NEXT_HOP           : 'next-hop',
-			MED                : 'med',              # multi-exit-disc
-			LOCAL_PREF         : 'local-preference',
-			ATOMIC_AGGREGATE   : 'atomic-aggregate',
-			AGGREGATOR         : 'aggregator',
-			COMMUNITY          : 'community',
-			ORIGINATOR_ID      : 'originator-id',
-			CLUSTER_LIST       : 'cluster-list',
-			MP_REACH_NLRI      : 'mp-reach-nlri',    # multi-protocol reacheable nlri
-			MP_UNREACH_NLRI    : 'mp-unreach-nlri',  # multi-protocol unreacheable nlri
-			EXTENDED_COMMUNITY : 'extended-community',
-			AS4_PATH           : 'as4-path',
-			AS4_AGGREGATOR     : 'as4-aggregator',
-			PMSI_TUNNEL        : 'pmsi-tunnel',
-			TUNNEL_ENCAP       : 'tunnel-encaps',
-			AIGP               : 'aigp',
-			0xfffc             : 'internal-name',
-			0xfffd             : 'internal-withdraw',
-			0xfffe             : 'internal-watchdog',
-			0xffff             : 'internal-split',
+			ORIGIN:             'origin',
+			AS_PATH:            'as-path',
+			NEXT_HOP:           'next-hop',
+			MED:                'med',              # multi-exit-disc
+			LOCAL_PREF:         'local-preference',
+			ATOMIC_AGGREGATE:   'atomic-aggregate',
+			AGGREGATOR:         'aggregator',
+			COMMUNITY:          'community',
+			ORIGINATOR_ID:      'originator-id',
+			CLUSTER_LIST:       'cluster-list',
+			MP_REACH_NLRI:      'mp-reach-nlri',    # multi-protocol reacheable nlri
+			MP_UNREACH_NLRI:    'mp-unreach-nlri',  # multi-protocol unreacheable nlri
+			EXTENDED_COMMUNITY: 'extended-community',
+			AS4_PATH:           'as4-path',
+			AS4_AGGREGATOR:     'as4-aggregator',
+			PMSI_TUNNEL:        'pmsi-tunnel',
+			TUNNEL_ENCAP:       'tunnel-encaps',
+			AIGP:               'aigp',
+			0xfffc:             'internal-name',
+			0xfffd:             'internal-withdraw',
+			0xfffe:             'internal-watchdog',
+			0xffff:             'internal-split',
 		}
 
 		def __str__ (self):

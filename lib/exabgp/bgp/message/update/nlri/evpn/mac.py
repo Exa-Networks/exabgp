@@ -13,6 +13,7 @@ from exabgp.bgp.message.update.nlri.qualifier.etag import EthernetTag
 
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
+
 # ===================================================================== EVPNNLRI
 
 # +---------------------------------------+
@@ -35,7 +36,7 @@ from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
 class MAC (EVPN):
 	CODE = 2
-	NAME ="MAC/IP advertisement"
+	NAME = "MAC/IP advertisement"
 	SHORT_NAME = "MACAdv"
 
 	def __init__(self,rd,esi,etag,mac,maclen,label,ip,packed=None):

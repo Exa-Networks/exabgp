@@ -18,6 +18,7 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 
 from exabgp.bgp.message.notification import Notify
 
+
 # ================================================================= MP NLRI (14)
 
 class MPURNLRI (Attribute,Address):
@@ -70,7 +71,7 @@ class MPURNLRI (Attribute,Address):
 			length,nlri = NLRI.unpack(afi,safi,data,addpath,None,IN.withdrawn)
 			nlris.append(nlri)
 			data = data[length:]
-			#logger.parser(LazyFormat("parsed withdraw mp nlri %s payload " % nlri,data[:length]))
+			# logger.parser(LazyFormat("parsed withdraw mp nlri %s payload " % nlri,data[:length]))
 
 		return cls(afi,safi,nlris)
 

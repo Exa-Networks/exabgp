@@ -14,6 +14,7 @@ from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
+
 # ================================================================== RouteTarget
 # RFC 4360 / RFC 7153
 
@@ -42,7 +43,14 @@ class RouteTargetASNIP (RouteTarget):
 	def __init__ (self,asn,ip,transitive,community=None):
 		self.asn = asn
 		self.ip = ip
-		RouteTarget.__init__(self,community if community else pack('!BBH4s',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,asn,IPv4.pton(ip)))
+		RouteTarget.__init__(
+			self,
+			community if community else pack(
+				'!BBH4s',
+				self.COMMUNITY_TYPE | 0x40 if transitive else self.COMMUNITY_TYPE,0x02,
+				asn,IPv4.pton(ip)
+			)
+		)
 
 	def __str__ (self):
 		return "target:%d:%s" % (self.asn,self.ip)
@@ -67,7 +75,14 @@ class RouteTargetIPASN (RouteTarget):
 	def __init__ (self,asn,ip,transitive,community=None):
 		self.ip = ip
 		self.asn = asn
-		RouteTarget.__init__(self,community if community else pack('!BB4sH',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,IPv4.pton(ip),asn))
+		RouteTarget.__init__(
+			self,
+			community if community else pack(
+				'!BB4sH',
+				self.COMMUNITY_TYPE | 0x40 if transitive else self.COMMUNITY_TYPE,0x02,
+				IPv4.pton(ip),asn
+			)
+		)
 
 	def __str__ (self):
 		return "target:%s:%s" % (self.ip, self.asn)
@@ -92,7 +107,14 @@ class RouteTargetASN4Number (RouteTarget):
 	def __init__ (self,asn,number,transitive,community=None):
 		self.asn = asn
 		self.number = number
-		RouteTarget.__init__(self,community if community else pack('!BBLH',self.COMMUNITY_TYPE|0x40 if transitive else self.COMMUNITY_TYPE,0x02,asn,number))
+		RouteTarget.__init__(
+			self,
+			community if community else pack(
+				'!BBLH',
+				self.COMMUNITY_TYPE | 0x40 if transitive else self.COMMUNITY_TYPE,0x02,
+				asn,number
+			)
+		)
 
 	def __str__ (self):
 		return "target:%dL:%s" % (self.asn, self.number)

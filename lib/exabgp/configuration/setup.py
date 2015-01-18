@@ -8,17 +8,17 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 
 from exabgp.configuration.environment import environment
 
-dict_space = {
+_SPACE = {
 	'space':  ' '*33
 }
 
-help_stdout = """\
+HELP_STDOUT = """\
 where logging should log
 %(space)s syslog (or no setting) sends the data to the local syslog syslog
 %(space)s host:<location> sends the data to a remote syslog server
 %(space)s stdout sends the data to stdout
 %(space)s stderr sends the data to stderr
-%(space)s <filename> send the data to a file""" % dict_space
+%(space)s <filename> send the data to a file""" % _SPACE
 
 
 environment.application = 'exabgp'
@@ -82,7 +82,7 @@ environment.configuration = {
 			'read':  environment.unquote,
 			'write': environment.quote,
 			'value': 'stdout',
-			'help':  help_stdout,
+			'help':  HELP_STDOUT,
 		},
 		'all':  {
 			'read':  environment.boolean,
@@ -248,7 +248,7 @@ environment.configuration = {
 			'read':  environment.real,
 			'write': environment.nop,
 			'value': '1.0',
-			'help':  'reactor loop time\n%(space)s use only if you understand the code.' % dict_space,
+			'help':  'reactor loop time\n%(space)s use only if you understand the code.' % _SPACE,
 		},
 	},
 	# Here for internal use

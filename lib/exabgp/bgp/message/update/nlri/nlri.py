@@ -71,7 +71,7 @@ class NLRI (Address):
 				mask -= 24  	# 3 bytes
 				# The last 4 bits are the bottom of Stack
 				# The last bit is set for the last label
-				labels.append(label>>4)
+				labels.append(label >> 4)
 				# This is a route withdrawal
 				if label == 0x800000 and action == IN.withdrawn:
 					break
