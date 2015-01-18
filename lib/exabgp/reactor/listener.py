@@ -62,13 +62,13 @@ class Listener (object):
 			##s.settimeout(0.0)
 			s.listen(self._backlog)
 			return s
-		except socket.error, e:
-			if e.args[0] == errno.EADDRINUSE:
+		except socket.error,exc:
+			if exc.args[0] == errno.EADDRINUSE:
 				raise BindingError('could not listen on %s:%d, the port already in use by another application' % (ip,self._port))
-			elif e.args[0] == errno.EADDRNOTAVAIL:
+			elif exc.args[0] == errno.EADDRNOTAVAIL:
 				raise BindingError('could not listen on %s:%d, this is an invalid address' % (ip,self._port))
 			else:
-				raise BindingError('could not listen on %s:%d (%s)' % (ip,self._port,errstr(e)))
+				raise BindingError('could not listen on %s:%d (%s)' % (ip,self._port,errstr(exc)))
 
 	def start (self):
 		try:
@@ -77,9 +77,9 @@ class Listener (object):
 					s = self._bind(host,self._port)
 					self._sockets[s] = (host,self._port)
 			self.serving = True
-		except NetworkError,e:
-				self.logger.network(str(e),'critical')
-				raise e
+		except NetworkError,exc:
+				self.logger.network(str(exc),'critical')
+				raise exc
 		self.serving = True
 
 	# @each
@@ -102,13 +102,13 @@ class Listener (object):
 					fam = self._family_AFI_map[sock.family]
 					yield Incoming(fam,remote_ip,local_ip,io)
 					break
-				except socket.error, e:
-					if e.errno in error.block:
+				except socket.error,exc:
+					if exc.errno in error.block:
 						continue
-					raise AcceptError('could not accept a new connection (%s)' % errstr(e))
-		except NetworkError,e:
-			self.logger.network(str(e),'critical')
-			raise e
+					raise AcceptError('could not accept a new connection (%s)' % errstr(exc))
+		except NetworkError,exc:
+			self.logger.network(str(exc),'critical')
+			raise exc
 
 	def stop (self):
 		if not self.serving:

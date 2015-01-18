@@ -26,10 +26,10 @@ class RecordHandler(asyncore.dispatcher_with_send):
 			while True:
 				try:
 					data = self.recv(_read_size)
-				except socket.error, e:
-					if e.errno in (errno.EWOULDBLOCK,errno.EAGAIN):
+				except socket.error,exc:
+					if exc.errno in (errno.EWOULDBLOCK,errno.EAGAIN):
 						continue
-					raise e
+					raise exc
 				if not data:
 					print "connection closed"
 					break

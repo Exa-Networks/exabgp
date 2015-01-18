@@ -405,8 +405,8 @@ class Configuration (object):
 				f = open(self._fname,'r')
 				self._tokens = self._tokenise(f)
 				f.close()
-			except IOError,e:
-				error = str(e)
+			except IOError,exc:
+				error = str(exc)
 				if error.count(']'):
 					self.error = error.split(']')[1].strip()
 				else:
@@ -2649,8 +2649,8 @@ class Configuration (object):
 						else:
 							raise ValueError("Unknown binary operator %s" % test[0])
 			return True
-		except ValueError,e:
-			self._error = self._str_route_error + str(e)
+		except ValueError,exc:
+			self._error = self._str_route_error + str(exc)
 			if self.debug: raise Exception()
 			return False
 
@@ -3025,13 +3025,13 @@ class Configuration (object):
 				update = Update.unpack_message(negotiated,injected)
 			except KeyboardInterrupt:
 				raise
-			except Notify,e:
+			except Notify,exc:
 				self.logger.parser('could not parse the message')
-				self.logger.parser(str(e))
+				self.logger.parser(str(exc))
 				sys.exit(1)
-			except Exception,e:
+			except Exception,exc:
 				self.logger.parser('could not parse the message')
-				self.logger.parser(str(e))
+				self.logger.parser(str(exc))
 				sys.exit(1)
 
 			self.logger.parser('')  # new line

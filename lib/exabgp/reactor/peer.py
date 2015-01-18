@@ -590,8 +590,8 @@ class Peer (object):
 				yield action
 
 		# CONNECTION FAILURE
-		except NetworkError, e:
-			self._reset(direction,'closing connection',e)
+		except NetworkError,exc:
+			self._reset(direction,'closing connection',exc)
 
 			# we tried to connect once, it failed, we stop
 			if self.once:
@@ -637,8 +637,8 @@ class Peer (object):
 			return
 
 		# PROBLEM WRITING TO OUR FORKED PROCESSES
-		except ProcessError, e:
-			self._reset(direction,'process problem',e)
+		except ProcessError,exc:
+			self._reset(direction,'process problem',exc)
 			return
 
 		# ....
@@ -647,14 +647,14 @@ class Peer (object):
 			return
 
 		# UNHANDLED PROBLEMS
-		except Exception, e:
+		except Exception,exc:
 			# Those messages can not be filtered in purpose
 			self.logger.raw('\n'.join([
 				no_panic,
 				self.me(''),
 				'',
-				str(type(e)),
-				str(e),
+				str(type(exc)),
+				str(exc),
 				trace(),
 				footer
 			]))

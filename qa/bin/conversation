@@ -75,8 +75,8 @@ def check (exabgp,daemon,group,port):
 		except OSError: pass
 		try: exabgp.kill()
 		except OSError: pass
-	except Exception,e:
-		display(str(e))
+	except Exception,exc:
+		display(str(exc))
 
 
 def dispatch (exabgp,daemon,groups,port):
@@ -111,7 +111,7 @@ def dispatch (exabgp,daemon,groups,port):
 							del names[name]
 							out,err = '',''
 							display(name,' ')
-					except (IOError,OSError),e:
+					except (IOError,OSError):
 						success = False
 
 			time.sleep(1)

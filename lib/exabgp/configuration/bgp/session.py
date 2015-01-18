@@ -75,14 +75,14 @@ class SectionSession (Section):
 	def router_id (self,tokeniser):
 		try:
 			self.content['router-id'] = ip(tokeniser)
-		except ValueError,e:
-			raise RaisedSession(tokeniser,'could not parse router-id, %s' % str(e))
+		except ValueError,exc:
+			raise RaisedSession(tokeniser,'could not parse router-id, %s' % str(exc))
 
 	def hold_time (self,tokeniser):
 		try:
 			self.content['hold-time'] = holdtime(tokeniser)
-		except ValueError,e:
-			raise RaisedSession(tokeniser,'could not parse hold-time, %s' % str(e))
+		except ValueError,exc:
+			raise RaisedSession(tokeniser,'could not parse hold-time, %s' % str(exc))
 
 	def asn (self,tokeniser):
 		section = self.get_section(SectionASN.name,tokeniser)

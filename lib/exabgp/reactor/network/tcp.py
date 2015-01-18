@@ -53,8 +53,8 @@ def bind (io,ip,afi):
 			io.bind((ip,0))
 		if afi == AFI.ipv6:
 			io.bind((ip,0,0,0))
-	except socket.error,e:
-		raise BindingError('Could not bind to local ip %s - %s' % (ip,str(e)))
+	except socket.error,exc:
+		raise BindingError('Could not bind to local ip %s - %s' % (ip,str(exc)))
 
 def connect (io,ip,port,afi,md5):
 	try:
@@ -62,12 +62,12 @@ def connect (io,ip,port,afi,md5):
 			io.connect((ip,port))
 		if afi == AFI.ipv6:
 			io.connect((ip,port,0,0))
-	except socket.error, e:
-		if e.errno == errno.EINPROGRESS:
+	except socket.error,exc:
+		if exc.errno == errno.EINPROGRESS:
 			return
 		if md5:
-			raise NotConnected('Could not connect to peer %s:%d, check your MD5 password (%s)' % (ip,port,errstr(e)))
-		raise NotConnected('Could not connect to peer %s:%d (%s)' % (ip,port,errstr(e)))
+			raise NotConnected('Could not connect to peer %s:%d, check your MD5 password (%s)' % (ip,port,errstr(exc)))
+		raise NotConnected('Could not connect to peer %s:%d (%s)' % (ip,port,errstr(exc)))
 
 
 # http://lxr.free-electrons.com/source/include/uapi/linux/tcp.h#L197
@@ -144,8 +144,8 @@ def MD5 (io,ip,port,afi,md5):
 
 				TCP_MD5SIG = 14
 				io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
-			except socket.error,e:
-				raise MD5Error('This linux machine does not support TCP_MD5SIG, you can not use MD5 (%s)' % errstr(e))
+			except socket.error,exc:
+				raise MD5Error('This linux machine does not support TCP_MD5SIG, you can not use MD5 (%s)' % errstr(exc))
 		else:
 			raise MD5Error('ExaBGP has no MD5 support for %s' % os)
 
@@ -161,14 +161,14 @@ def TTL (io,ip,ttl):
 	if ttl:
 		try:
 			io.setsockopt(socket.IPPROTO_IP,socket.IP_TTL, 20)
-		except socket.error,e:
-			raise TTLError('This OS does not support IP_TTL (ttl-security) for %s (%s)' % (ip,errstr(e)))
+		except socket.error,exc:
+			raise TTLError('This OS does not support IP_TTL (ttl-security) for %s (%s)' % (ip,errstr(exc)))
 
 def async (io,ip):
 	try:
 		io.setblocking(0)
-	except socket.error, e:
-		raise AsyncError('could not set socket non-blocking for %s (%s)' % (ip,errstr(e)))
+	except socket.error,exc:
+		raise AsyncError('could not set socket non-blocking for %s (%s)' % (ip,errstr(exc)))
 
 def ready (io):
 	logger = Logger()
@@ -199,13 +199,3 @@ def ready (io):
 		except select.error:
 			yield False
 			return
-
-# try:
-# 	try:
-# 		# Linux / Windows
-# 		self.message_size = io.getsockopt(socket.SOL_SOCKET, socket.SO_MAX_MSG_SIZE)
-# 	except AttributeError:
-# 		# BSD
-# 		self.message_size = io.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
-# except socket.error, e:
-# 	self.message_size = None

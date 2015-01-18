@@ -78,26 +78,26 @@ class SectionNeighbor (Section):
 	def tcp_bind (self,tokeniser):
 		try:
 			self.content['tcp-bind'] = ip(tokeniser)
-		except ValueError,e:
-			raise RaisedNeighbor(tokeniser,'could not parse tcp bind ip, %s' % str(e))
+		except ValueError,exc:
+			raise RaisedNeighbor(tokeniser,'could not parse tcp bind ip, %s' % str(exc))
 
 	def tcp_connect (self,tokeniser):
 		try:
 			self.content['tcp-connect'] = ip(tokeniser)
-		except ValueError,e:
-			raise RaisedNeighbor(tokeniser,'could not parse tcp connect ip, %s' % str(e))
+		except ValueError,exc:
+			raise RaisedNeighbor(tokeniser,'could not parse tcp connect ip, %s' % str(exc))
 
 	def tcp_ttl_security (self,tokeniser):
 		try:
 			self.content['tcp-ttl-security'] = ttl(tokeniser)
-		except ValueError,e:
-			raise RaisedNeighbor(tokeniser,'could not parse tcp ttl, %s' % str(e))
+		except ValueError,exc:
+			raise RaisedNeighbor(tokeniser,'could not parse tcp ttl, %s' % str(exc))
 
 	def tcp_md5 (self,tokeniser):
 		try:
 			self.content['tcp-md5'] = md5(tokeniser)
-		except ValueError,e:
-			raise RaisedNeighbor(tokeniser,'could not parse tcp MD5, %s' % str(e))
+		except ValueError,exc:
+			raise RaisedNeighbor(tokeniser,'could not parse tcp MD5, %s' % str(exc))
 
 	@classmethod
 	def register (cls,registry,location):

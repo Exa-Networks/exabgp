@@ -97,10 +97,10 @@ class Reactor (object):
 		try:
 			read,_,_ = select.select(ios,[],[],sleeptime)
 			return read
-		except select.error,e:
-			errno,message = e.args
+		except select.error,exc:
+			errno,message = exc.args
 			if not errno in error.block:
-				raise e
+				raise exc
 			return []
 
 	def run (self):
@@ -108,12 +108,12 @@ class Reactor (object):
 			try:
 				self.listener = Listener([self.ip,],self.port)
 				self.listener.start()
-			except NetworkError,e:
+			except NetworkError,exc:
 				self.listener = None
 				if os.geteuid() != 0 and self.port <= 1024:
 					self.logger.reactor("Can not bind to %s:%d, you may need to run ExaBGP as root" % (self.ip,self.port),'critical')
 				else:
-					self.logger.reactor("Can not bind to %s:%d (%s)" % (self.ip,self.port,str(e)),'critical')
+					self.logger.reactor("Can not bind to %s:%d (%s)" % (self.ip,self.port,str(exc)),'critical')
 				self.logger.reactor("unset exabgp.tcp.bind if you do not want listen for incoming connections",'critical')
 				self.logger.reactor("and check that no other daemon is already binding to port %d" % self.port,'critical')
 				sys.exit(1)
@@ -266,7 +266,7 @@ class Reactor (object):
 						break
 					except KeyboardInterrupt:
 						pass
-			except select.error,e:
+			except select.error:
 				while True:
 					try:
 						self._shutdown = True

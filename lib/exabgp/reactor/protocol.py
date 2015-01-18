@@ -128,10 +128,10 @@ class Protocol (object):
 	# Read from network .......................................................
 
 	def read_message (self):
-		for length,msg,header,body,notify in self.connection.reader():
+		for length,msg_id,header,body,notify in self.connection.reader():
 			if notify:
 				if self.neighbor.api['receive-packets']:
-					self.peer.reactor.processes.receive(self.peer,msg,header,body)
+					self.peer.reactor.processes.receive(self.peer,msg_id,header,body)
 				if self.neighbor.api[Message.ID.NOTIFICATION]:
 					self.peer.reactor.processes.notification(self.peer,notify.code,notify.subcode,str(notify))
 				# XXX: is notify not already Notify class ?
@@ -140,31 +140,31 @@ class Protocol (object):
 				yield _NOP
 
 		if self.neighbor.api['receive-packets'] and not self.neighbor.api['consolidate']:
-			self.peer.reactor.processes.receive(self.peer,msg,header,body)
+			self.peer.reactor.processes.receive(self.peer,msg_id,header,body)
 
-		if msg == Message.ID.UPDATE and not self.neighbor.api['receive-parsed'] and not self.log_routes:
+		if msg_id == Message.ID.UPDATE and not self.neighbor.api['receive-parsed'] and not self.log_routes:
 			yield _UPDATE
 			return
 
-		self.logger.message(self.me('<< %s' % Message.ID.name(msg)))
+		self.logger.message(self.me('<< %s' % Message.ID.name(msg_id)))
 		try:
-			message = Message.unpack_message(msg,body,self.negotiated)
+			message = Message.unpack_message(msg_id,body,self.negotiated)
 		except (KeyboardInterrupt,SystemExit,Notify):
 			raise
-		except Exception,e:
-			self.logger.message(self.me('Could not decode message %s' % Capability.hex(msg)))
-			self.logger.message(self.me('%s' % str(e)))
-			raise Notify(2,0,'can not decode update message %s' % Capability.hex(msg))
+		except Exception,exc:
+			self.logger.message(self.me('Could not decode message %s' % Capability.hex(msg_id)))
+			self.logger.message(self.me('%s' % str(exc)))
+			raise Notify(2,0,'can not decode update message %s' % Capability.hex(msg_id))
 
 		if message.TYPE == Notification.TYPE:
 			raise message
 
-		if self.neighbor.api[msg]:
+		if self.neighbor.api[msg_id]:
 			if self.neighbor.api['receive-parsed']:
 				if self.neighbor.api['consolidate'] and self.neighbor.api['receive-packets']:
-					self.peer.reactor.processes.message(msg,self.peer,message,header,body)
+					self.peer.reactor.processes.message(msg_id,self.peer,message,header,body)
 				else:
-					self.peer.reactor.processes.message(msg,self.peer,message,'','')
+					self.peer.reactor.processes.message(msg_id,self.peer,message,'','')
 
 		yield message
 

@@ -130,7 +130,7 @@ class Control (object):
 			return self.loop()
 		except KeyboardInterrupt:
 			self.cleanup()
-		except Exception, msg:
+		except Exception,exc:
 			print >> sys.stderr, msg
 			print >> sys.stderr,''
 			traceback.print_exc(file=sys.stderr)

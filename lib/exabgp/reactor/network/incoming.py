@@ -20,9 +20,9 @@ class Incoming (Connection):
 			self.io = io
 			async(self.io,peer)
 			nagle(self.io,peer)
-		except NetworkError,e:
+		except NetworkError,exc:
 			self.close()
-			raise NotConnected(errstr(e))
+			raise NotConnected(errstr(exc))
 
 	# XXX: FIXME: is that code ever called ?
 	def notification (self,code,subcode,message):

@@ -67,8 +67,8 @@ class Daemon (object):
 			return
 		try:
 			os.remove(self.pid)
-		except OSError, e:
-			if e.errno == errno.ENOENT:
+		except OSError,exc:
+			if exc.errno == errno.ENOENT:
 				pass
 			else:
 				self.logger.daemon("Can not remove PIDfile %s" % self.pid,'error')
@@ -131,9 +131,9 @@ class Daemon (object):
 			return False
 		try:
 			s.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
-		except socket.error, e:
+		except socket.error,exc:
 			# It is look like one but it is not a socket ...
-			if e.args[0] == errno.ENOTSOCK:
+			if exc.args[0] == errno.ENOTSOCK:
 				return False
 		return True
 
@@ -151,8 +151,8 @@ class Daemon (object):
 				pid = os.fork()
 				if pid > 0:
 					os._exit(0)
-			except OSError, e:
-				self.logger.reactor('Can not fork, errno %d : %s' % (e.errno,e.strerror),'critical')
+			except OSError,exc:
+				self.logger.reactor('Can not fork, errno %d : %s' % (exc.errno,exc.strerror),'critical')
 
 		# do not detach if we are already supervised or run by init like process
 		if self._is_socket(sys.__stdin__.fileno()) or os.getppid() == 1:

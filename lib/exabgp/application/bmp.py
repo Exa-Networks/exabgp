@@ -53,7 +53,7 @@ class BMPHandler (asyncore.dispatcher_with_send):
 		while left:
 			try:
 				r,_,_ = select.select([self], [], [], 1.0)
-			except select.error,e:
+			except select.error:
 				return None
 
 			if not r:
@@ -61,10 +61,10 @@ class BMPHandler (asyncore.dispatcher_with_send):
 
 			try:
 				data = self.recv(left)
-			except socket.error, e:
-				if e.args[0] in error.block:
+			except socket.error,exc:
+				if exc.args[0] in error.block:
 					continue
-				print "problem reading on socket", str(e)
+				print "problem reading on socket", str(exc)
 				return None
 
 			left -= len(data)

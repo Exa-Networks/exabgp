@@ -95,9 +95,9 @@ def main ():
 
 	try:
 		env = environment.setup(envfile)
-	except environment.Error,e:
+	except environment.Error,exc:
 		print(usage)
-		print '\nconfiguration issue,', str(e)
+		print '\nconfiguration issue,', str(exc)
 		sys.exit(1)
 
 	duration = options["--signal"]
@@ -238,10 +238,10 @@ def main ():
 		# wait for the forked processes
 		for pid in pids:
 			os.waitpid(pid,0)
-	except OSError, e:
+	except OSError,exc:
 		from exabgp.logger import Logger
 		logger = Logger()
-		logger.reactor('Can not fork, errno %d : %s' % (e.errno,e.strerror),'critical')
+		logger.reactor('Can not fork, errno %d : %s' % (exc.errno,exc.strerror),'critical')
 
 def run (env,comment,configurations,pid=0):
 	from exabgp.logger import Logger

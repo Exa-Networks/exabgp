@@ -126,10 +126,10 @@ class BGPHandler(asyncore.dispatcher_with_send):
 				if left == 19-len(header):  # ugly
 					# the TCP session is gone.
 					return None,None
-			except socket.error,e:
-				if e.args[0] in (errno.EWOULDBLOCK,errno.EAGAIN):
+			except socket.error,exc:
+				if exc.args[0] in (errno.EWOULDBLOCK,errno.EAGAIN):
 					continue
-				raise e
+				raise exc
 
 		length = unpack('!H',header[16:18])[0] - 19
 
@@ -138,10 +138,10 @@ class BGPHandler(asyncore.dispatcher_with_send):
 			try:
 				left = length-len(body)
 				body += self.recv(left)
-			except socket.error,e:
-				if e.args[0] in (errno.EWOULDBLOCK,errno.EAGAIN):
+			except socket.error,exc:
+				if exc.args[0] in (errno.EWOULDBLOCK,errno.EAGAIN):
 					continue
-				raise e
+				raise exc
 
 		return header,body
 
@@ -325,8 +325,8 @@ class BGPServer (asyncore.dispatcher):
 					try:
 						self.announce('\n     sending SIGUSR1 to ExaBGP (pid %s)\n' % processes[0])
 						os.kill(int(processes[0]),signal.SIGUSR1)
-					except Exception,e:
-						self.announce('\n     failed: %s' % str(e))
+					except Exception,exc:
+						self.announce('\n     failed: %s' % str(exc))
 					time.sleep(40)
 					thread.exit()
 
@@ -408,13 +408,13 @@ def main ():
 		BGPServer('localhost',int(os.environ.get('exabgp.tcp.port','179')),messages)
 		drop()
 		asyncore.loop()
-	except socket.error,e:
-		if e.errno == errno.EACCES:
+	except socket.error,exc:
+		if exc.errno == errno.EACCES:
 			print "failure: could not bind to port %s - most likely not run as root" % os.environ.get('exabgp.tcp.port','179')
-		elif e.errno == errno.EADDRINUSE:
+		elif exc.errno == errno.EADDRINUSE:
 			print "failure: could not bind to port %s - port already in use" % os.environ.get('exabgp.tcp.port','179')
 		else:
-			print "failure", str(e)
+			print "failure", str(exc)
 
 if __name__ == '__main__':
 	main()

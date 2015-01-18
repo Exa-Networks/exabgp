@@ -126,9 +126,9 @@ def check_neighbor (neighbors):
 					logger.parser('encoding is fine')
 					logger.parser('----------------------------------------')
 
-			except Notify,e:
+			except Notify,exc:
 				logger.parser('----------------------------------------')
-				logger.parser(str(e))
+				logger.parser(str(exc))
 				logger.parser('----------------------------------------')
 				return False
 
@@ -220,13 +220,13 @@ def check_update (neighbor,raw):
 			update = Update.unpack_message(injected,negotiated)
 		except KeyboardInterrupt:
 			raise
-		except Notify,e:
+		except Notify,exc:
 			logger.parser('could not parse the message')
-			logger.parser(str(e))
+			logger.parser(str(exc))
 			return False
-		except Exception,e:
+		except Exception,exc:
 			logger.parser('could not parse the message')
-			logger.parser(str(e))
+			logger.parser(str(exc))
 			return False
 
 		logger.parser('')  # new line

@@ -203,9 +203,9 @@ def test ():
 
 	try:
 		json = load(name)
-	except JSONError,e:
+	except JSONError,exc:
 		os.remove(name)
-		return 'configuration parsing file: %s' % str(e)
+		return 'configuration parsing file: %s' % str(exc)
 
 	del json
 

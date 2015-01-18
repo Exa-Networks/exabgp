@@ -47,14 +47,14 @@ class SectionASN (Section):
 	def local_asn (self,tokeniser):
 		try:
 			self.content['local'] = asn(tokeniser)
-		except ValueError,e:
-			raise RaisedASN(tokeniser,'could not parse local asn, %s' % str(e))
+		except ValueError,exc:
+			raise RaisedASN(tokeniser,'could not parse local asn, %s' % str(exc))
 
 	def peer_asn (self,tokeniser):
 		try:
 			self.content['peer'] = asn(tokeniser)
-		except ValueError,e:
-			raise RaisedASN(tokeniser,'could not parse peer asn, %s' % str(e))
+		except ValueError,exc:
+			raise RaisedASN(tokeniser,'could not parse peer asn, %s' % str(exc))
 
 	@classmethod
 	def register (cls,registry,location):

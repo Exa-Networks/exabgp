@@ -8,7 +8,7 @@ import socket
 import errno
 from struct import unpack
 import time
-
+from exabgp.util.od import od
 
 class BGPHandler(asyncore.dispatcher_with_send):
 	wire = not not os.environ.get('wire','')
@@ -84,10 +84,10 @@ class BGPHandler(asyncore.dispatcher_with_send):
 					self.announce("TCP connection closed")
 					self.close()
 					return None,None
-			except socket.error, e:
-				if e.args[0] in (errno.EWOULDBLOCK,errno.EAGAIN):
+			except socket.error,exc:
+				if exc.args[0] in (errno.EWOULDBLOCK,errno.EAGAIN):
 					continue
-				raise e
+				raise exc
 
 		self.announce("read", self.name(header))
 
@@ -108,10 +108,10 @@ class BGPHandler(asyncore.dispatcher_with_send):
 				left = length-len(body)
 				if self.wire: self.announce("BODY   ", od(body))
 				if self.wire and left: self.announce("missing", left)
-			except socket.error, e:
-				if e.args[0] in (errno.EWOULDBLOCK,errno.EAGAIN):
+			except socket.error,exc:
+				if exc.args[0] in (errno.EWOULDBLOCK,errno.EAGAIN):
 					continue
-				raise e
+				raise exc
 
 		self.update_count += 1
 

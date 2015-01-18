@@ -233,13 +233,13 @@ def test (nb_neighbor):
 
 	try:
 		json = load(name)
-	except ValidationError,e:
+	except ValidationError,exc:
 		os.remove(name)
-		return False,'configuration parsing failed (parse) %s' % str(e)
+		return False,'configuration parsing failed (parse) %s' % str(exc)
 	try:
 		validation(json)
-	except ValidationError,e:
-		return False,'configuration parsing failed (validation) %s' % str(e)
+	except ValidationError,exc:
+		return False,'configuration parsing failed (validation) %s' % str(exc)
 
 	try:
 		os.remove(name)
@@ -254,8 +254,8 @@ def profiled (nb_neighbor):
 	if ok:
 		try:
 			size(returned)
-		except ValidationError,e:
-			print 'configuration parsing failed (size) %s' % str(e)
+		except ValidationError,exc:
+			print 'configuration parsing failed (size) %s' % str(exc)
 		return ''
 	else:
 		print 'profiling failed'

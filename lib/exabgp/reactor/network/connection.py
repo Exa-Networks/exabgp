@@ -71,8 +71,8 @@ class Connection (object):
 			if self.io:
 				self.io.close()
 				self.io = None
-		except KeyboardInterrupt,e:
-			raise e
+		except KeyboardInterrupt,exc:
+			raise exc
 		except:
 			pass
 
@@ -80,11 +80,11 @@ class Connection (object):
 		while True:
 			try:
 				r,_,_ = select.select([self.io,],[],[],0)
-			except select.error,e:
-				if e.args[0] not in error.block:
+			except select.error,exc:
+				if exc.args[0] not in error.block:
 					self.close()
-					self.logger.wire("%s %s errno %s on socket" % (self.name(),self.peer,errno.errorcode[e.args[0]]))
-					raise NetworkError('errno %s on socket' % errno.errorcode[e.args[0]])
+					self.logger.wire("%s %s errno %s on socket" % (self.name(),self.peer,errno.errorcode[exc.args[0]]))
+					raise NetworkError('errno %s on socket' % errno.errorcode[exc.args[0]])
 				return False
 			return r != []
 
@@ -92,11 +92,11 @@ class Connection (object):
 		while True:
 			try:
 				_,w,_ = select.select([],[self.io,],[],0)
-			except select.error,e:
-				if e.args[0] not in error.block:
+			except select.error,exc:
+				if exc.args[0] not in error.block:
 					self.close()
-					self.logger.wire("%s %s errno %s on socket" % (self.name(),self.peer,errno.errorcode[e.args[0]]))
-					raise NetworkError('errno %s on socket' % errno.errorcode[e.args[0]])
+					self.logger.wire("%s %s errno %s on socket" % (self.name(),self.peer,errno.errorcode[exc.args[0]]))
+					raise NetworkError('errno %s on socket' % errno.errorcode[exc.args[0]])
 				return False
 			return w != []
 
@@ -133,20 +133,20 @@ class Connection (object):
 						return
 
 					yield ''
-			except socket.timeout,e:
+			except socket.timeout,exc:
 				self.close()
 				self.logger.wire("%s %s peer is too slow" % (self.name(),self.peer))
-				raise TooSlowError('Timeout while reading data from the network (%s)' % errstr(e))
-			except socket.error,e:
-				if e.args[0] in error.block:
-					message = "%s %s blocking io problem mid-way through reading a message %s, trying to complete" % (self.name(),self.peer,errstr(e))
+				raise TooSlowError('Timeout while reading data from the network (%s)' % errstr(exc))
+			except socket.error,exc:
+				if exc.args[0] in error.block:
+					message = "%s %s blocking io problem mid-way through reading a message %s, trying to complete" % (self.name(),self.peer,errstr(exc))
 					if message != reported:
 						reported = message
 						self.logger.wire(message,'debug')
 					yield ''
-				elif e.args[0] in error.fatal:
+				elif exc.args[0] in error.fatal:
 					self.close()
-					raise LostConnection('issue reading on the socket: %s' % errstr(e))
+					raise LostConnection('issue reading on the socket: %s' % errstr(exc))
 				# what error could it be !
 				else:
 					self.logger.wire("%s %s undefined error reading on socket" % (self.name(),self.peer))
@@ -180,18 +180,18 @@ class Connection (object):
 						yield True
 						return
 					yield False
-			except socket.error,e:
-				if e.args[0] in error.block:
-					self.logger.wire("%s %s blocking io problem mid-way through writing a message %s, trying to complete" % (self.name(),self.peer,errstr(e)),'debug')
+			except socket.error,exc:
+				if exc.args[0] in error.block:
+					self.logger.wire("%s %s blocking io problem mid-way through writing a message %s, trying to complete" % (self.name(),self.peer,errstr(exc)),'debug')
 					yield False
-				elif e.errno == errno.EPIPE:
+				elif exc.errno == errno.EPIPE:
 					# The TCP connection is gone.
 					self.close()
 					raise NetworkError('Broken TCP connection')
-				elif e.args[0] in error.fatal:
+				elif exc.args[0] in error.fatal:
 					self.close()
-					self.logger.wire("%s %s problem sending message (%s)" % (self.name(),self.peer,errstr(e)))
-					raise NetworkError('Problem while writing data to the network (%s)' % errstr(e))
+					self.logger.wire("%s %s problem sending message (%s)" % (self.name(),self.peer,errstr(exc)))
+					raise NetworkError('Problem while writing data to the network (%s)' % errstr(exc))
 				# what error could it be !
 				else:
 					self.logger.wire("%s %s undefined error writing on socket" % (self.name(),self.peer))

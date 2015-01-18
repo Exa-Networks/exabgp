@@ -51,12 +51,12 @@ def _reader ():
 	while True:
 		try:
 			data = sys.stdin.read(4096)
-		except IOError,e:
-			if e.args[0] in errno_block:
+		except IOError,exc:
+			if exc.args[0] in errno_block:
 				yield ''
 				continue
-			elif e.args[0] in errno_fatal:
-				print >> sys.stderr, "fatal error while reading on stdin : %s" % str(e)
+			elif exc.args[0] in errno_fatal:
+				print >> sys.stderr, "fatal error while reading on stdin : %s" % str(exc)
 				sys.exit(1)
 
 
@@ -77,12 +77,12 @@ def write (data='',left=''):
 			number = sys.stdout.write(left)
 			left = left[number:]
 			sys.stdout.flush()
-	except IOError,e:
-		if e.args[0] in errno_block:
+	except IOError,exc:
+		if exc.args[0] in errno_block:
 			return not not left
-		elif e.args[0] in errno_fatal:
+		elif exc.args[0] in errno_fatal:
 			# this may not send anything ...
-			print >> sys.stderr, "fatal error while reading on stdin : %s" % str(e)
+			print >> sys.stderr, "fatal error while reading on stdin : %s" % str(exc)
 			sys.stderr.flush()
 			sys.exit(1)
 
@@ -91,17 +91,17 @@ def write (data='',left=''):
 def read (timeout):
 	try:
 		r, w, x = select.select([sys.stdin], [], [sys.stdin,], timeout)
-	except IOError, e:
-		if e.args[0] in errno_block:
+	except IOError,exc:
+		if exc.args[0] in errno_block:
 			return ''
-		elif e.args[0] in errno_fatal:
+		elif exc.args[0] in errno_fatal:
 			# this may not send anything ...
-			print >> sys.stderr, "fatal error during select : %s" % str(e)
+			print >> sys.stderr, "fatal error during select : %s" % str(exc)
 			sys.stderr.flush()
 			sys.exit(1)
 		else:
 			# this may not send anything ...
-			print >> sys.stderr, "unexpected error during select : %s" % str(e)
+			print >> sys.stderr, "unexpected error during select : %s" % str(exc)
 			sys.stderr.flush()
 			sys.exit(1)
 
@@ -132,5 +132,5 @@ try:
 		elif leftover:
 			# echo back what we got
 			leftover = write()
-except Exception,e:
+except Exception:
 	sync(sys.stdin)

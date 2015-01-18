@@ -152,10 +152,10 @@ class Processes (object):
 
 			neighbor = self.reactor.configuration.process[process]['neighbor']
 			self._neighbor_process.setdefault(neighbor,[]).append(process)
-		except (subprocess.CalledProcessError,OSError,ValueError),e:
+		except (subprocess.CalledProcessError,OSError,ValueError),exc:
 			self._broken.append(process)
 			self.logger.processes("Could not start process %s" % process)
-			self.logger.processes("reason: %s" % str(e))
+			self.logger.processes("reason: %s" % str(exc))
 
 	def start (self,restart=False):
 		for process in self.reactor.configuration.process:
@@ -196,18 +196,18 @@ class Processes (object):
 							consumed_data = True
 							self.logger.processes("Command from process %s : %s " % (process,line))
 							yield (process,formated(line))
-					except IOError,e:
-						if not e.errno or e.errno in error.fatal:
+					except IOError,exc:
+						if not exc.errno or exc.errno in error.fatal:
 							# if the program exists we can get an IOError with errno code zero !
 							self.logger.processes("Issue with the process' PIPE, terminating it and restarting it")
 							self._terminate(process)
 							self._start(process)
-						elif e.errno in error.block:
+						elif exc.errno in error.block:
 							# we often see errno.EINTR: call interrupted and
 							# we most likely have data, we will try to read them a the next loop iteration
 							pass
 						else:
-							self.logger.processes("unexpected errno received from forked process (%s)" % errstr(e))
+							self.logger.processes("unexpected errno received from forked process (%s)" % errstr(exc))
 					except StopIteration:
 						if not consumed_data:
 							self.logger.processes("The process died, trying to respawn it")
@@ -226,23 +226,23 @@ class Processes (object):
 		while True:
 			try:
 				self._process[process].stdin.write('%s\n' % string)
-			except IOError,e:
+			except IOError,exc:
 				self._broken.append(process)
-				if e.errno == errno.EPIPE:
+				if exc.errno == errno.EPIPE:
 					self._broken.append(process)
 					self.logger.processes("Issue while sending data to our helper program")
 					raise ProcessError()
 				else:
 					# Could it have been caused by a signal ? What to do.
-					self.logger.processes("Error received while SENDING data to helper program, retrying (%s)" % errstr(e))
+					self.logger.processes("Error received while SENDING data to helper program, retrying (%s)" % errstr(exc))
 					continue
 			break
 
 		try:
 			self._process[process].stdin.flush()
-		except IOError,e:
+		except IOError,exc:
 			# AFAIK, the buffer should be flushed at the next attempt.
-			self.logger.processes("Error received while FLUSHING data to helper program, retrying (%s)" % errstr(e))
+			self.logger.processes("Error received while FLUSHING data to helper program, retrying (%s)" % errstr(exc))
 
 		return True
 
