@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2014-06-22.
 Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.engine.registry import Raised
+from exabgp.configuration.engine.raised import Raised
 from exabgp.configuration.engine.section import Section
 
 
@@ -37,5 +37,5 @@ class SectionBGP (Section):
 	def register (cls,registry,location):
 		registry.register_class(cls)
 
-		registry.register_hook(cls,'enter',location,'enter_anonymous')
-		registry.register_hook(cls,'exit',location,'exit_anonymous')
+		registry.register_hook(cls,'enter',location,'enter_nameless')
+		registry.register_hook(cls,'exit',location,'exit_nameless')

@@ -8,9 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import unittest
 
-from exabgp.configuration.engine.reader import Reader
-from exabgp.configuration.engine.tokeniser import Tokeniser
-from exabgp.configuration.engine.registry import Registry
+from exabgp.configuration import Configuration
 
 from exabgp.configuration.bgp import SectionBGP
 from exabgp.configuration.bmp import SectionBMP
@@ -28,23 +26,16 @@ class TestNewConfiguration (unittest.TestCase):
 	def test_parsing (self):
 
 		def parse (fname):
-			registry = Registry()
-			registry.register(SectionBGP,        ['bgp'])
-			registry.register(SectionFamily,     ['bgp','family'])
-			registry.register(SectionCapability, ['bgp','capability'])
-			registry.register(SectionSession,    ['bgp','session'])
-			registry.register(SectionProcess,    ['bgp','process'])
-			registry.register(SectionNeighbor,   ['bgp','neighbor'])
+			conf = Configuration()
+			conf.register(SectionBGP,        ['bgp'])
+			conf.register(SectionFamily,     ['bgp','family'])
+			conf.register(SectionCapability, ['bgp','capability'])
+			conf.register(SectionSession,    ['bgp','session'])
+			conf.register(SectionProcess,    ['bgp','process'])
+			conf.register(SectionNeighbor,   ['bgp','neighbor'])
+			conf.register(SectionBMP,        ['bmp'])
 
-			registry.register(SectionBMP,        ['bmp'])
-
-			with Reader(fname) as r:
-				tokeniser = Tokeniser('configuration',r)
-				parsed = None
-				while parsed is None:
-					parsed = registry.parse(tokeniser)
-
-			return parsed
+			return conf.parse_file(fname)
 
 		try:
 			parsed = parse('./qa/new/simple.conf')

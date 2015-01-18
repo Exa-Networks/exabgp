@@ -173,17 +173,17 @@ class SectionProcess (Section):
 
 		for received in (location+['received'],):
 
-			registry.register_hook(cls,'enter',received,'enter_anonymous')
+			registry.register_hook(cls,'enter',received,'enter_nameless')
 
 			registry.register_hook(cls,'action',received+['neighbor-changes'],'neighbor_changes')
 
 			for message in ['notification','open','keepalive','update','refresh','operational','all']:
 				registry.register_hook(cls,'action',received+[message],'message')
 
-			registry.register_hook(cls,'exit', received,'exit_anonymous')
+			registry.register_hook(cls,'exit', received,'exit_nameless')
 
-		registry.register_hook(cls,'enter',location+['sent'],'enter_anonymous')
+		registry.register_hook(cls,'enter',location+['sent'],'enter_nameless')
 		registry.register_hook(cls,'action',location+['sent','packets'],'sent_packets')
-		registry.register_hook(cls,'exit',location+['sent'],'exit_anonymous')
+		registry.register_hook(cls,'exit',location+['sent'],'exit_nameless')
 
 		registry.register_hook(cls,'exit',location,'exit')

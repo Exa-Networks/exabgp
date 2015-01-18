@@ -6,8 +6,7 @@ Created by Thomas Mangin on 2014-06-22.
 Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.engine.registry import Raised
-
+from exabgp.configuration.engine.raised import Raised
 
 # ====================================================================== Section
 # The common function all Section should have
@@ -27,10 +26,12 @@ class Section (object):
 		name = tokeniser()
 		if name == '{': raise Raised(tokeniser,'was expecting section name',self.syntax)
 		self.drop_parenthesis(tokeniser)
+		return self.create_content(section,name,tokeniser)
 
+	def create_content (self,section,name,tokeniser):
 		storage = self.configuration[tokeniser.name][section][name]
 		if storage:
-			raise Raised(tokeniser,'the section name %s is not unique' % name,self.syntax)
+			raise Raised(tokeniser,'the section name %s/%s for %s is not unique' % (section,name,tokeniser.name),self.syntax)
 		return storage
 
 	def get_section (self,section,tokeniser):
@@ -46,7 +47,7 @@ class Section (object):
 			raise Raised(tokeniser,'the section name %s referenced does not exists' % name,self.syntax)
 		return storage
 
-	def extract (self,section,tokeniser):
+	def extract_anonymous (self,section,tokeniser):
 		if 'anonymous' in self.configuration[tokeniser.name][section]:
 			storage = self.configuration[tokeniser.name][section]['anonymous']
 			del self.configuration[tokeniser.name][section]['anonymous']
@@ -68,9 +69,18 @@ class Section (object):
 		# no verification to do
 		pass
 
+	def enter_nameless (self,tokeniser):
+		token = tokeniser()
+		if token != '{': raise Raised(tokeniser,'was expecting {',self.syntax)
+
+	def exit_nameless (self,tokeniser):
+		# no verification to do
+		pass
+
 	def enter_anonymous (self,tokeniser):
 		token = tokeniser()
 		if token != '{': raise Raised(tokeniser,'was expecting {',self.syntax)
+		self.content = self.create_content(self.name,'anonymous',tokeniser)
 
 	def exit_anonymous (self,tokeniser):
 		# no verification to do

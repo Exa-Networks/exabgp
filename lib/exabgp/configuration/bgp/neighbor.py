@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2014-06-22.
 Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.engine.registry import Raised
+from exabgp.configuration.engine.raised import Raised
 from exabgp.configuration.engine.section import Section
 from exabgp.configuration.engine.parser import ip
 from exabgp.configuration.engine.parser import ttl
@@ -111,7 +111,7 @@ class SectionNeighbor (Section):
 		registry.register_hook(cls,'action',location+['announce'],'announce')
 
 		for tcp in (location+['tcp'],):
-			registry.register_hook(cls,'enter',tcp,'enter_anonymous')
+			registry.register_hook(cls,'enter',tcp,'enter_nameless')
 			registry.register_hook(cls,'action',tcp+['bind'],'tcp_bind')
 			registry.register_hook(cls,'action',tcp+['connect'],'tcp_connect')
 			registry.register_hook(cls,'action',tcp+['ttl-security'],'tcp_ttl_security')
