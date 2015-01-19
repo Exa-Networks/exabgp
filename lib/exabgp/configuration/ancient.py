@@ -413,7 +413,7 @@ class Configuration (object):
 					self.error = error.split(']')[1].strip()
 				else:
 					self.error = error
-				if self.debug: raise Exception()  # noqa()
+				if self.debug: raise Exception()  # noqa
 				return False
 
 		# storing the routes associated with each peer so we can find what changed
@@ -561,7 +561,7 @@ class Configuration (object):
 			tokens = self.tokens()
 		except IndexError:
 			self._error = 'configuration file incomplete (most likely missing })'
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		self.logger.configuration("parsing | %-13s | '%s'" % (name,"' '".join(tokens)))
 		end = tokens[-1]
@@ -573,7 +573,7 @@ class Configuration (object):
 		if end == '}':
 			if len(self._location) == 1:
 				self._error = 'closing too many parenthesis'
-				if self.debug: raise Exception()  # noqa()
+				if self.debug: raise Exception()  # noqa
 				return False
 			self._location.pop(-1)
 			return None
@@ -584,7 +584,7 @@ class Configuration (object):
 
 		if valid and command not in valid:
 			self._error = 'option %s in not valid here' % command
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		if name == 'configuration':
@@ -595,7 +595,7 @@ class Configuration (object):
 			if command == 'group':
 				if len(tokens) != 2:
 					self._error = 'syntax: group <name> { <options> }'
-					if self.debug: raise Exception()  # noqa()
+					if self.debug: raise Exception()  # noqa
 					return False
 				return self._multi_group(scope,tokens[1])
 
@@ -678,7 +678,7 @@ class Configuration (object):
 		command = tokens[0]
 		if valid and command not in valid:
 			self._error = 'invalid keyword "%s"' % command
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		elif name == 'route':
@@ -900,14 +900,14 @@ class Configuration (object):
 		if run:
 			if len(tokens) != 1:
 				self._error = self._str_process_error
-				if self.debug: raise Exception()  # noqa()
+				if self.debug: raise Exception()  # noqa
 				return False
 			self.process[name]['encoder'] = scope[-1].get('encoder','') or self.api_encoder
 			self.process[name]['run'] = run
 			return True
 		elif len(tokens):
 			self._error = self._str_process_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _set_process_command (self,scope,command,value):
@@ -920,7 +920,7 @@ class Configuration (object):
 			return True
 
 		self._error = self._str_process_error
-		if self.debug: raise Exception()  # noqa()
+		if self.debug: raise Exception()  # noqa
 		return False
 
 	def _set_process_run (self,scope,command,value):
@@ -936,7 +936,7 @@ class Configuration (object):
 
 		if not prg:
 			self._error = 'prg requires the program to prg as an argument (quoted or unquoted)'
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		if prg[0] != '/':
@@ -969,7 +969,7 @@ class Configuration (object):
 
 		if not os.path.exists(prg):
 			self._error = 'can not locate the the program "%s"' % prg
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		# race conditions are possible, those are sanity checks not security ones ...
@@ -977,12 +977,12 @@ class Configuration (object):
 
 		if stat.S_ISDIR(s.st_mode):
 			self._error = 'can not execute directories "%s"' % prg
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		if s.st_mode & stat.S_ISUID:
 			self._error = 'refusing to run setuid programs "%s"' % prg
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		check = stat.S_IXOTH
@@ -993,7 +993,7 @@ class Configuration (object):
 
 		if not check & s.st_mode:
 			self._error = 'exabgp will not be able to run this program "%s"' % prg
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		if args:
@@ -1028,14 +1028,14 @@ class Configuration (object):
 	def _set_family_ipv4 (self,scope,tokens):
 		if self._family:
 			self._error = 'ipv4 can not be used with all or minimal'
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		try:
 			safi = tokens.pop(0)
 		except IndexError:
 			self._error = 'missing family safi'
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		if safi == 'unicast':
@@ -1062,7 +1062,7 @@ class Configuration (object):
 		try:
 			if self._family:
 				self._error = 'ipv6 can not be used with all or minimal'
-				if self.debug: raise Exception()  # noqa()
+				if self.debug: raise Exception()  # noqa
 				return False
 
 			safi = tokens.pop(0)
@@ -1079,14 +1079,14 @@ class Configuration (object):
 			return True
 		except (IndexError,ValueError):
 			self._error = 'missing safi'
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _set_family_l2vpn (self,scope,tokens):
 		try:
 			if self._family:
 				self._error = 'l2vpn can not be used with all or minimal'
-				if self.debug: raise Exception()  # noqa()
+				if self.debug: raise Exception()  # noqa
 				return False
 
 			safi = tokens.pop(0)
@@ -1097,13 +1097,13 @@ class Configuration (object):
 			return True
 		except (IndexError,ValueError):
 			self._error = 'missing safi'
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _set_family_minimal (self,scope,tokens):
 		if scope[-1]['families']:
 			self._error = 'minimal can not be used with any other options'
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		scope[-1]['families'] = 'minimal'
 		self._family = True
@@ -1112,7 +1112,7 @@ class Configuration (object):
 	def _set_family_all (self,scope,tokens):
 		if scope[-1]['families']:
 			self._error = 'all can not be used with any other options'
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		scope[-1]['families'] = 'all'
 		self._family = True
@@ -1156,7 +1156,7 @@ class Configuration (object):
 			return True
 		except ValueError:
 			self._error = '"%s" is an invalid graceful-restart time' % ' '.join(value)
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _set_addpath (self,scope,command,value):
@@ -1173,7 +1173,7 @@ class Configuration (object):
 			return True
 		except (ValueError,IndexError):
 			self._error = '"%s" is an invalid add-path' % ' '.join(value) + '\n' + self._str_capa_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _set_boolean (self,scope,command,value,default='true'):
@@ -1190,7 +1190,7 @@ class Configuration (object):
 			return True
 		except (ValueError,IndexError):
 			self._error = 'invalid %s command (valid options are true or false)' % command
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _set_asn4 (self,scope,command,value):
@@ -1209,7 +1209,7 @@ class Configuration (object):
 			return False
 		except ValueError:
 			self._error = '"%s" is an invalid asn4 parameter options are enable (default) and disable)' % ' '.join(value)
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	# route grouping with watchdog
@@ -1221,7 +1221,7 @@ class Configuration (object):
 				raise ValueError('invalid watchdog name %s' % w)
 		except IndexError:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		try:
@@ -1229,7 +1229,7 @@ class Configuration (object):
 			return True
 		except ValueError:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _route_withdraw (self,scope,tokens):
@@ -1238,7 +1238,7 @@ class Configuration (object):
 			return True
 		except ValueError:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	# Route name
@@ -1248,7 +1248,7 @@ class Configuration (object):
 			w = tokens.pop(0)
 		except IndexError:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		try:
@@ -1256,7 +1256,7 @@ class Configuration (object):
 			return True
 		except ValueError:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	# Group Neighbor
@@ -1392,7 +1392,7 @@ class Configuration (object):
 
 		if neighbor.route_refresh and not neighbor.adjribout:
 			self._error = 'incomplete option route-refresh and no adj-rib-out'
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		missing = neighbor.missing()
@@ -1433,7 +1433,7 @@ class Configuration (object):
 			if family not in families:
 				afi,safi = family
 				self._error = 'Trying to announce a route of type %s,%s when we are not announcing the family to our peer' % (afi,safi)
-				if self.debug: raise Exception()  # noqa()
+				if self.debug: raise Exception()  # noqa
 				return False
 
 		# add the families to the list of families known
@@ -1487,7 +1487,7 @@ class Configuration (object):
 	def _multi_neighbor (self,scope,tokens):
 		if len(tokens) != 1:
 			self._error = 'syntax: neighbor <ip> { <options> }'
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		address = tokens[0]
@@ -1496,7 +1496,7 @@ class Configuration (object):
 			scope[-1]['peer-address'] = IP.create(address)
 		except (IndexError,ValueError,socket.error):
 			self._error = '"%s" is not a valid IP address' % address
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		while True:
 			r = self._dispatch(
@@ -1524,7 +1524,7 @@ class Configuration (object):
 			ip = RouterID(value[0])
 		except (IndexError,ValueError):
 			self._error = '"%s" is an invalid IP address' % ' '.join(value)
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		scope[-1][command] = ip
 		return True
@@ -1534,7 +1534,7 @@ class Configuration (object):
 			ip = IP.create(value[0])
 		except (IndexError,ValueError):
 			self._error = '"%s" is an invalid IP address' % ' '.join(value)
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		scope[-1][command] = ip
 		return True
@@ -1543,7 +1543,7 @@ class Configuration (object):
 		text = ' '.join(tokens)
 		if len(text) < 2 or text[0] != '"' or text[-1] != '"' or text[1:-1].count('"'):
 			self._error = 'syntax: description "<description>"'
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		scope[-1]['description'] = text[1:-1]
 		return True
@@ -1563,13 +1563,13 @@ class Configuration (object):
 			return True
 		except ValueError:
 			self._error = '"%s" is an invalid ASN' % ' '.join(value)
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _set_passive (self,scope,command,value):
 		if value:
 			self._error = '"%s" is an invalid for passive' % ' '.join(value)
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		scope[-1][command] = True
@@ -1586,7 +1586,7 @@ class Configuration (object):
 			return True
 		except ValueError:
 			self._error = '"%s" is an invalid hold-time' % ' '.join(value)
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _set_md5 (self,scope,command,value):
@@ -1595,11 +1595,11 @@ class Configuration (object):
 			md5 = md5[1:-1]
 		if len(md5) > 80:
 			self._error = 'md5 password must be no larger than 80 characters'
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		if not md5:
 			self._error = 'md5 requires the md5 password as an argument (quoted or unquoted).  FreeBSD users should use "kernel" as the argument.'
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		scope[-1][command] = md5
 		return True
@@ -1619,7 +1619,7 @@ class Configuration (object):
 			return True
 		except ValueError:
 			self._error = '"%s" is an invalid ttl-security (1-254)' % ' '.join(value)
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	#  Group Static ................
@@ -1627,7 +1627,7 @@ class Configuration (object):
 	def _multi_static (self,scope,tokens):
 		if len(tokens) != 0:
 			self._error = 'syntax: static { route; route; ... }'
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		while True:
 			r = self._dispatch(
@@ -1703,7 +1703,7 @@ class Configuration (object):
 			ip = tokens.pop(0)
 		except IndexError:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		try:
 			ip,mask = ip.split('/')
@@ -1724,7 +1724,7 @@ class Configuration (object):
 			update = Change(klass(afi=IP.toafi(ip),safi=IP.tosafi(ip),packed=IP.pton(ip),mask=mask,nexthop=None,action=OUT.announce),Attributes())
 		except ValueError:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		if 'announce' not in scope[-1]:
@@ -1737,14 +1737,14 @@ class Configuration (object):
 		update = scope[-1]['announce'][-1]
 		if update.nlri.nexthop is NoIP:
 			self._error = 'syntax: route <ip>/<mask> { next-hop <ip>; }'
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		return True
 
 	def _multi_static_route (self,scope,tokens):
 		if len(tokens) != 1:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		if not self._insert_static_route(scope,tokens):
@@ -1840,24 +1840,24 @@ class Configuration (object):
 
 			if (start,end) != ('[',']'):
 				self._error = self._str_route_error
-				if self.debug: raise Exception()  # noqa()
+				if self.debug: raise Exception()  # noqa
 				return False
 
 			if not code.startswith('0x'):
 				self._error = self._str_route_error
-				if self.debug: raise Exception()  # noqa()
+				if self.debug: raise Exception()  # noqa
 				return False
 			code = int(code[2:],16)
 
 			if not flag.startswith('0x'):
 				self._error = self._str_route_error
-				if self.debug: raise Exception()  # noqa()
+				if self.debug: raise Exception()  # noqa
 				return False
 			flag = int(flag[2:],16)
 
 			if not data.startswith('0x'):
 				self._error = self._str_route_error
-				if self.debug: raise Exception()  # noqa()
+				if self.debug: raise Exception()  # noqa
 				return False
 			raw = ''
 			for i in range(2,len(data),2):
@@ -1872,13 +1872,13 @@ class Configuration (object):
 			return True
 		except (IndexError,ValueError):
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _route_next_hop (self,scope,tokens):
 		if scope[-1]['announce'][-1].attributes.has(Attribute.ID.NEXT_HOP):
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		try:
@@ -1912,7 +1912,7 @@ class Configuration (object):
 			return True
 		except:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _route_origin (self,scope,tokens):
@@ -1928,11 +1928,11 @@ class Configuration (object):
 				scope[-1]['announce'][-1].attributes.add(Origin(Origin.INCOMPLETE))
 				return True
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		except IndexError:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _route_aspath (self,scope,tokens):
@@ -1947,7 +1947,7 @@ class Configuration (object):
 						asn = tokens.pop(0)
 					except IndexError:
 						self._error = self._str_route_error
-						if self.debug: raise Exception()  # noqa()
+						if self.debug: raise Exception()  # noqa
 						return False
 					if asn == ',':
 						continue
@@ -1958,7 +1958,7 @@ class Configuration (object):
 								asn = tokens.pop(0)
 							except IndexError:
 								self._error = self._str_route_error
-								if self.debug: raise Exception()  # noqa()
+								if self.debug: raise Exception()  # noqa
 								return False
 							if asn == ')':
 								break
@@ -1976,7 +1976,7 @@ class Configuration (object):
 				as_seq.append(self._newASN(asn))
 		except (IndexError,ValueError):
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		scope[-1]['announce'][-1].attributes.add(ASPath(as_seq,as_set))
 		return True
@@ -1987,7 +1987,7 @@ class Configuration (object):
 			return True
 		except (IndexError,ValueError):
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _route_aigp (self,scope,tokens):
@@ -1998,7 +1998,7 @@ class Configuration (object):
 			return True
 		except (IndexError,ValueError):
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _route_local_preference (self,scope,tokens):
@@ -2007,7 +2007,7 @@ class Configuration (object):
 			return True
 		except (IndexError,ValueError):
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _route_atomic_aggregate (self,scope,tokens):
@@ -2016,7 +2016,7 @@ class Configuration (object):
 			return True
 		except ValueError:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _route_aggregator (self,scope,tokens):
@@ -2034,15 +2034,15 @@ class Configuration (object):
 				local_address = scope[-1]['local-address']
 		except (ValueError,IndexError):
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		except KeyError:
 			self._error = 'local-as and/or local-address missing from neighbor/group to make aggregator'
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		except ValueError:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		scope[-1]['announce'][-1].attributes.add(Aggregator(local_as,local_address))
@@ -2058,7 +2058,7 @@ class Configuration (object):
 			return True
 		except ValueError:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _parse_community (self,scope,data):
@@ -2101,7 +2101,7 @@ class Configuration (object):
 			return True
 		except:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _route_cluster_list (self,scope,tokens):
@@ -2114,7 +2114,7 @@ class Configuration (object):
 						clusterid = tokens.pop(0)
 					except IndexError:
 						self._error = self._str_route_error
-						if self.debug: raise Exception()  # noqa()
+						if self.debug: raise Exception()  # noqa
 						return False
 					if clusterid == ']':
 						break
@@ -2126,7 +2126,7 @@ class Configuration (object):
 			clusterlist = ClusterList(_list)
 		except ValueError:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		scope[-1]['announce'][-1].attributes.add(clusterlist)
 		return True
@@ -2141,7 +2141,7 @@ class Configuration (object):
 						community = tokens.pop(0)
 					except IndexError:
 						self._error = self._str_route_error
-						if self.debug: raise Exception()  # noqa()
+						if self.debug: raise Exception()  # noqa
 						return False
 					if community == ']':
 						break
@@ -2150,7 +2150,7 @@ class Configuration (object):
 				communities.add(self._parse_community(scope,community))
 		except ValueError:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		scope[-1]['announce'][-1].attributes.add(communities)
 		return True
@@ -2250,7 +2250,7 @@ class Configuration (object):
 						extended_community = tokens.pop(0)
 					except IndexError:
 						self._error = self._str_route_error
-						if self.debug: raise Exception()  # noqa()
+						if self.debug: raise Exception()  # noqa
 						return False
 					if extended_community == ']':
 						break
@@ -2259,7 +2259,7 @@ class Configuration (object):
 				extended_communities.add(self._parse_extended_community(scope,extended_community))
 		except ValueError:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		return True
 
@@ -2272,7 +2272,7 @@ class Configuration (object):
 			return True
 		except ValueError:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _route_label (self,scope,tokens):
@@ -2285,7 +2285,7 @@ class Configuration (object):
 						label = tokens.pop(0)
 					except IndexError:
 						self._error = self._str_route_error
-						if self.debug: raise Exception()  # noqa()
+						if self.debug: raise Exception()  # noqa
 						return False
 					if label == ']':
 						break
@@ -2294,7 +2294,7 @@ class Configuration (object):
 				labels.append(int(label))
 		except ValueError:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		nlri = scope[-1]['announce'][-1].nlri
@@ -2309,7 +2309,7 @@ class Configuration (object):
 				data = tokens.pop(0)
 			except IndexError:
 				self._error = self._str_route_error
-				if self.debug: raise Exception()  # noqa()
+				if self.debug: raise Exception()  # noqa
 				return False
 
 			separator = data.find(':')
@@ -2338,7 +2338,7 @@ class Configuration (object):
 			return True
 		except ValueError:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	# VPLS
@@ -2346,7 +2346,7 @@ class Configuration (object):
 	def _multi_l2vpn (self,scope,tokens):
 		if len(tokens) != 0:
 			self._error = self._str_vpls_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		while True:
 			r = self._dispatch(
@@ -2366,7 +2366,7 @@ class Configuration (object):
 			change = Change(VPLS(None,None,None,None,None),attributes)
 		except ValueError:
 			self._error = self._str_vpls_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		if 'announce' not in scope[-1]:
@@ -2378,7 +2378,7 @@ class Configuration (object):
 	def _multi_l2vpn_vpls (self,scope,tokens):
 		if len(tokens) > 1:
 			self._error = self._str_vpls_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		if not self._insert_l2vpn_vpls(scope):
@@ -2408,7 +2408,7 @@ class Configuration (object):
 	def _multi_flow (self,scope,tokens):
 		if len(tokens) != 0:
 			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		while True:
@@ -2426,7 +2426,7 @@ class Configuration (object):
 	def _insert_flow_route (self,scope,tokens=None):
 		if self._flow_state != 'out':
 			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		self._flow_state = 'match'
@@ -2437,7 +2437,7 @@ class Configuration (object):
 			flow = Change(Flow(),attributes)
 		except ValueError:
 			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		if 'announce' not in scope[-1]:
@@ -2473,7 +2473,7 @@ class Configuration (object):
 	def _multi_flow_route (self,scope,tokens):
 		if len(tokens) > 1:
 			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		if not self._insert_flow_route(scope):
@@ -2492,7 +2492,7 @@ class Configuration (object):
 
 		if self._flow_state != 'out':
 			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		return True
@@ -2538,12 +2538,12 @@ class Configuration (object):
 	def _multi_match (self,scope,tokens):
 		if len(tokens) != 0:
 			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		if self._flow_state != 'match':
 			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		self._flow_state = 'then'
@@ -2568,12 +2568,12 @@ class Configuration (object):
 	def _multi_then (self,scope,tokens):
 		if len(tokens) != 0:
 			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		if self._flow_state != 'then':
 			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		self._flow_state = 'out'
@@ -2600,7 +2600,7 @@ class Configuration (object):
 	def _multi_receive (self,scope,tokens):
 		if len(tokens) != 0:
 			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		while True:
@@ -2623,7 +2623,7 @@ class Configuration (object):
 	def _multi_send (self,scope,tokens):
 		if len(tokens) != 0:
 			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 		while True:
@@ -2664,7 +2664,7 @@ class Configuration (object):
 
 		except (IndexError,ValueError):
 			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _flow_destination (self,scope,tokens):
@@ -2692,7 +2692,7 @@ class Configuration (object):
 
 		except (IndexError,ValueError):
 			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	# to parse the port configuration of flow
@@ -2746,7 +2746,7 @@ class Configuration (object):
 			return True
 		except ValueError,exc:
 			self._error = self._str_route_error + str(exc)
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	# parse [ content1 content2 content3 ]
@@ -2765,13 +2765,13 @@ class Configuration (object):
 						nlri.add(klass(NumericOperator.EQ | AND,klass.converter(name)))
 					except IndexError:
 						self._error = self._str_flow_error
-						if self.debug: raise Exception()  # noqa()
+						if self.debug: raise Exception()  # noqa
 						return False
 			else:
 				scope[-1]['announce'][-1].nlri.add(klass(NumericOperator.EQ | AND,klass.converter(name)))
 		except (IndexError,ValueError):
 			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		return True
 
@@ -2825,7 +2825,7 @@ class Configuration (object):
 
 			if change.nlri.nexthop is not NoIP:
 				self._error = self._str_flow_error
-				if self.debug: raise Exception()  # noqa()
+				if self.debug: raise Exception()  # noqa
 				return False
 
 			change.nlri.nexthop = IP.create(tokens.pop(0))
@@ -2833,7 +2833,7 @@ class Configuration (object):
 
 		except (IndexError,ValueError):
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _flow_route_accept (self,scope,tokens):
@@ -2846,7 +2846,7 @@ class Configuration (object):
 			return True
 		except ValueError:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _flow_route_rate_limit (self,scope,tokens):
@@ -2862,7 +2862,7 @@ class Configuration (object):
 			return True
 		except ValueError:
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _flow_route_redirect (self,scope,tokens):
@@ -2884,7 +2884,7 @@ class Configuration (object):
 				change = scope[-1]['announce'][-1]
 				if change.nlri.nexthop is not NoIP:
 					self._error = self._str_flow_error
-					if self.debug: raise Exception()  # noqa()
+					if self.debug: raise Exception()  # noqa
 					return False
 
 				nh = IP.create(tokens.pop(0))
@@ -2894,7 +2894,7 @@ class Configuration (object):
 
 		except (IndexError,ValueError):
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _flow_route_redirect_next_hop (self,scope,tokens):
@@ -2903,7 +2903,7 @@ class Configuration (object):
 
 			if change.nlri.nexthop is NoIP:
 				self._error = self._str_flow_error
-				if self.debug: raise Exception()  # noqa()
+				if self.debug: raise Exception()  # noqa
 				return False
 
 			change.attributes[Attribute.ID.EXTENDED_COMMUNITY].add(TrafficNextHop(False))
@@ -2911,7 +2911,7 @@ class Configuration (object):
 
 		except (IndexError,ValueError):
 			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _flow_route_copy (self,scope,tokens):
@@ -2919,7 +2919,7 @@ class Configuration (object):
 		try:
 			if scope[-1]['announce'][-1].attributes.has(Attribute.ID.NEXT_HOP):
 				self._error = self._str_flow_error
-				if self.debug: raise Exception()  # noqa()
+				if self.debug: raise Exception()  # noqa
 				return False
 
 			change = scope[-1]['announce'][-1]
@@ -2929,7 +2929,7 @@ class Configuration (object):
 
 		except (IndexError,ValueError):
 			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _flow_route_mark (self,scope,tokens):
@@ -2938,7 +2938,7 @@ class Configuration (object):
 
 			if dscp < 0 or dscp > 0b111111:
 				self._error = self._str_flow_error
-				if self.debug: raise Exception()  # noqa()
+				if self.debug: raise Exception()  # noqa
 				return False
 
 			change = scope[-1]['announce'][-1]
@@ -2947,7 +2947,7 @@ class Configuration (object):
 
 		except (IndexError,ValueError):
 			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	def _flow_route_action (self,scope,tokens):
@@ -2958,7 +2958,7 @@ class Configuration (object):
 
 			if not sample and not terminal:
 				self._error = self._str_flow_error
-				if self.debug: raise Exception()  # noqa()
+				if self.debug: raise Exception()  # noqa
 				return False
 
 			change = scope[-1]['announce'][-1]
@@ -2966,7 +2966,7 @@ class Configuration (object):
 			return True
 		except (IndexError,ValueError):
 			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 
 	#  Group Operational ................
@@ -2974,7 +2974,7 @@ class Configuration (object):
 	def _multi_operational (self,scope,tokens):
 		if len(tokens) != 0:
 			self._error = 'syntax: operational { command; command; ... }'
-			if self.debug: raise Exception()  # noqa()
+			if self.debug: raise Exception()  # noqa
 			return False
 		while True:
 			r = self._dispatch(
