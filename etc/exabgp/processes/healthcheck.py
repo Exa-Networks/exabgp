@@ -237,8 +237,6 @@ def loopback_ips(label):
                 if not lmo or not lmo.group("label").startswith(label):
                     continue
             addresses.append(ip)
-    if not addresses:
-        raise RuntimeError("No loopback IP found")
     logger.debug("Loopback addresses: {0}".format(addresses))
     return addresses
 
@@ -423,6 +421,8 @@ if __name__ == "__main__":
     try:
         # Setup IP to use
         options.ips = options.ips or loopback_ips(options.label)
+        if not options.ips:
+            raise RuntimeError("No IP found")
         if options.ip_setup:
             setup_ips(options.ips, options.label)
         options.ips = collections.deque(options.ips)
