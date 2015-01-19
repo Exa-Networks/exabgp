@@ -2226,6 +2226,12 @@ class Configuration (object):
 						else:
 							return ExtendedCommunity.unpack(header+pack('!IH',int(ga),int(la)),None)
 
+			if command == 'target4':
+				return ExtendedCommunity.unpack(_known_community['target4']+pack('!LH',int(ga[:-1]),int(la)),None)
+
+			if command == 'orgin4':
+				return ExtendedCommunity.unpack(_known_community['origin4']+pack('!LH',int(ga[:-1]),int(la)),None)
+
 			if command in ('redirect',):
 				ga,la = components
 				return ExtendedCommunity.unpack(header+pack('!HL',int(ga),long(la)),None)

@@ -121,7 +121,7 @@ class Processes (object):
 			run = self.reactor.configuration.process[process].get('run','')
 			if run:
 				api = self.reactor.configuration.process[process]['encoder']
-				self._encoder[process] = JSON('3.4.6',self.highres) if api == 'json' else Text('3.3.2')
+				self._encoder[process] = JSON('3.4.8',self.highres) if api == 'json' else Text('3.3.2')
 
 				self._process[process] = subprocess.Popen(
 					run,
