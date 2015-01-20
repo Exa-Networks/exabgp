@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -e
+set +e
 
 dirname=`dirname $0`
 retval=0
@@ -24,10 +24,13 @@ cd $path/conf
 names=`ls *.conf`
 cd -
 
+export exabgp_tcp_bind=''
+export exabgp_debug_selfcheck=true
+
 for conf in $names
 do
 	printf "%-50s " $conf
-	result=`env exabgp.tcp.bind='' exabgp.debug.selfcheck=true $path/../sbin/exabgp $path/conf/$conf 2>&1`
+	result=`$path/../sbin/exabgp $path/conf/$conf 2>&1`
 	retcode=$?
 	problem=`echo $result | grep 'Problem with the configuration file' || true`
 
@@ -36,6 +39,11 @@ do
 		printf "ok\n"
 	else
 		printf "failed\n"
+		printf "\n"
+		printf "env exabgp.tcp.bind='' exabgp.debug.selfcheck=true $path/../sbin/exabgp $path/conf/$conf 2>&1"
+		printf "\n\n"
+		printf "$result"
+		printf "\n\n"
 		retval=1
 	fi
 done
