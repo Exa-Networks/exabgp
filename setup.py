@@ -105,7 +105,7 @@ Feedback and getting involved
 """
 
 version_template = """\
-version="%s"
+version = "%s"
 
 # Do not change the first line as it is parsed by scripts
 
@@ -425,4 +425,3 @@ setup(name='exabgp',
 		],
 	},
 )
-
