@@ -2224,7 +2224,7 @@ class Configuration (object):
 						if ga.upper().endswith('L'):
 							return ExtendedCommunity.unpack(_known_community['origin4']+pack('!LH',int(ga[:-1]),int(la)),None)
 						else:
-							return ExtendedCommunity.unpack(header+pack('!IH',int(ga),int(la)),None)
+							return ExtendedCommunity.unpack(header+pack('!HI',int(ga),int(la)),None)
 
 			if command == 'target4':
 				return ExtendedCommunity.unpack(_known_community['target4']+pack('!LH',int(ga[:-1]),int(la)),None)

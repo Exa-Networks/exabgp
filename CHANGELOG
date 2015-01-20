@@ -7,6 +7,8 @@ Version 3.4.8
  * Fix: bug with multiple configuration files
  * Fix: allow generic attribute not only in single line but also in multiple lines
     patch by: Eiichiro Watanabe (issue #214)
+ * Fix: issue with parsing extended-community origin
+    reported by: Tim Preston
 
 Version 3.4.7
  * Package: be more pythonic and use enty points with pip installation
