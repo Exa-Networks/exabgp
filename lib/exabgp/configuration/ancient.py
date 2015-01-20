@@ -2156,6 +2156,8 @@ class Configuration (object):
 		return True
 
 	def _parse_extended_community (self,scope,data):
+		SIZE_H = 0xFFFF
+
 		if data[:2].lower() == '0x':
 			try:
 				raw = ''
@@ -2203,7 +2205,8 @@ class Configuration (object):
 
 			if command in ('target','origin'):
 				# global admin, local admin
-				ga,la = components
+				_ga,_la = components
+				ga,la = _ga.upper(),_la.upper()
 
 				if '.' in ga or '.' in la:
 					gc = ga.count('.')
@@ -2215,22 +2218,28 @@ class Configuration (object):
 						# IP first, ASN second
 						return ExtendedCommunity.unpack(header+pack('!BBBBH',*[int(_) for _ in ga.split('.')]+[int(la)]),None)
 				else:
+					iga = int(ga[:-1]) if 'L' in ga else int(ga)
+					ila = int(la[:-1]) if 'L' in la else int(la)
 					if command == 'target':
-						if ga.upper().endswith('L'):
-							return ExtendedCommunity.unpack(_known_community['target4']+pack('!LH',int(ga[:-1]),int(la)),None)
+						if ga.endswith('L') or iga > SIZE_H:
+							return ExtendedCommunity.unpack(_known_community['target4']+pack('!LH',iga,ila),None)
 						else:
-							return ExtendedCommunity.unpack(header+pack('!HI',int(ga),int(la)),None)
+							return ExtendedCommunity.unpack(header+pack('!HI',iga,ila),None)
 					if command == 'origin':
-						if ga.upper().endswith('L'):
-							return ExtendedCommunity.unpack(_known_community['origin4']+pack('!LH',int(ga[:-1]),int(la)),None)
+						if ga.endswith('L') or iga > SIZE_H:
+							return ExtendedCommunity.unpack(_known_community['origin4']+pack('!LH',iga,ila),None)
 						else:
-							return ExtendedCommunity.unpack(header+pack('!HI',int(ga),int(la)),None)
+							return ExtendedCommunity.unpack(header+pack('!HI',iga,ila),None)
 
 			if command == 'target4':
-				return ExtendedCommunity.unpack(_known_community['target4']+pack('!LH',int(ga[:-1]),int(la)),None)
+				iga = int(ga[:-1]) if 'L' in ga else int(ga)
+				ila = int(la[:-1]) if 'L' in la else int(la)
+				return ExtendedCommunity.unpack(_known_community['target4']+pack('!LH',iga,ila),None)
 
 			if command == 'orgin4':
-				return ExtendedCommunity.unpack(_known_community['origin4']+pack('!LH',int(ga[:-1]),int(la)),None)
+				iga = int(ga[:-1]) if 'L' in ga else int(ga)
+				ila = int(la[:-1]) if 'L' in la else int(la)
+				return ExtendedCommunity.unpack(_known_community['origin4']+pack('!LH',iga,ila),None)
 
 			if command in ('redirect',):
 				ga,la = components
