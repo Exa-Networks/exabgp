@@ -22,7 +22,7 @@ SHOWS = [
 	'show { version }',
 ]
 
-for show in SHOWs:
+for show in SHOWS:
 	parsed = parse(show)
 	print '--'
 	print 'command:',show
