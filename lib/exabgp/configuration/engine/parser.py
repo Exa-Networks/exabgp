@@ -479,7 +479,13 @@ def _extended_community (value):
 					if ga.upper().endswith('L'):
 						return ExtendedCommunity.unpack(_known_community['origin4']+pack('!LH',int(ga),int(la)))
 					else:
-						return ExtendedCommunity.unpack(header+pack('!IH',int(ga),int(la)))
+						return ExtendedCommunity.unpack(header+pack('!HI',int(ga),int(la)))
+
+			if command == 'target4':
+				return ExtendedCommunity.unpack(_known_community['target4']+pack('!LH',int(ga[:-1]),int(la)),None)
+
+			if command == 'orgin4':
+				return ExtendedCommunity.unpack(_known_community['origin4']+pack('!LH',int(ga[:-1]),int(la)),None)
 
 		raise ValueError('invalid extended community %s' % command)
 	else:
