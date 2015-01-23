@@ -2088,10 +2088,11 @@ class Configuration (object):
 			elif low == 'nopeer' or low == 'no-peer':
 				return Community.cached(Community.NO_PEER)
 			elif data.isdigit():
-				value = unpack('!L',data)[0]
+				value = long(data)
 				if value >= pow(2,32):
 					raise ValueError('invalid community %s (too large)' % data)
 					# return Community.cached(pack('!L',value))
+				return Community.cached(pack('!L',value))
 			else:
 				raise ValueError('invalid community name %s' % data)
 
