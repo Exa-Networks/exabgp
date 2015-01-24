@@ -1,0 +1,5 @@
+doc-warnings: false
+max-line-length: 120
+ignore-paths:
+  - dev
+  - lib/exabgp/dep
