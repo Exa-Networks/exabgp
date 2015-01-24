@@ -136,8 +136,10 @@ class NetLinkRoute (object):
 
 		message = self.encode(
 			dtype,
+			sequence,
 			self.Flags.NLM_F_REQUEST | self.Flags.NLM_F_CREATE,
-			pack('Bxxx', family)
+			pack('Bxxx', family),
+			{}
 		)
 
 		self.socket.send(message)

@@ -16,7 +16,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 #
 
 class LocalPreference (Attribute):
-	ID = Attribute.ID.LOCAL_PREF
+	ID = Attribute.CODE.LOCAL_PREF
 	FLAG = Attribute.Flag.TRANSITIVE
 	MULTIPLE = False
 	CACHING = True

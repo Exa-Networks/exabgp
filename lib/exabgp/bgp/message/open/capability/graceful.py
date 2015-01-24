@@ -17,7 +17,7 @@ from exabgp.bgp.message.open.capability import Capability
 
 
 class Graceful (Capability,dict):
-	ID = Capability.ID.GRACEFUL_RESTART
+	ID = Capability.CODE.GRACEFUL_RESTART
 
 	TIME_MASK     = 0x0FFF
 	FLAG_MASK     = 0xF000

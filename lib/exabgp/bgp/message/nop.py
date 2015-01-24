@@ -13,8 +13,8 @@ from exabgp.bgp.message import Message
 
 
 class NOP (Message):
-	ID = Message.ID.NOP
-	TYPE = chr(Message.ID.NOP)
+	ID = Message.CODE.NOP
+	TYPE = chr(Message.CODE.NOP)
 
 	def message (self):
 		return self._message(self.data)

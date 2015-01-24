@@ -25,7 +25,7 @@ class ASPath (Attribute):
 	AS_CONFED_SET      = 0x04
 	ASN4               = False
 
-	ID = Attribute.ID.AS_PATH
+	ID = Attribute.CODE.AS_PATH
 	FLAG = Attribute.Flag.TRANSITIVE
 	MULTIPLE = False
 
@@ -208,7 +208,7 @@ ASPath.register_attribute()
 #
 
 class AS4Path (ASPath):
-	ID = Attribute.ID.AS4_PATH
+	ID = Attribute.CODE.AS4_PATH
 	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 	ASN4 = True
 

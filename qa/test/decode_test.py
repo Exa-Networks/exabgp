@@ -261,13 +261,13 @@ class TestUpdateDecoding (unittest.TestCase):
 			neighbor.asn4 = asn4
 
 			capa = Capabilities().new(neighbor,False)
-			capa[Capability.ID.MULTIPROTOCOL] = neighbor.families()
+			capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
 
 			# path = {}
 			# for f in known_families():
 			# 	if neighbor.add_path:
 			# 		path[f] = neighbor.add_path
-			# capa[Capability.ID.ADD_PATH] = path
+			# capa[Capability.CODE.ADD_PATH] = path
 
 			o1 = Open(4,neighbor.local_as,str(neighbor.local_address),capa,180)
 			o2 = Open(4,neighbor.peer_as,str(neighbor.peer_address),capa,180)

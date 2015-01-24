@@ -14,7 +14,7 @@ from exabgp.bgp.message.notification import Notify
 #
 
 class AtomicAggregate (Attribute):
-	ID = Attribute.ID.ATOMIC_AGGREGATE
+	ID = Attribute.CODE.ATOMIC_AGGREGATE
 	FLAG = Attribute.Flag.TRANSITIVE
 	MULTIPLE = False
 	CACHING = True
@@ -47,7 +47,7 @@ class AtomicAggregate (Attribute):
 	@classmethod
 	def setCache (cls):
 		# There can only be one, build it now :)
-		cls.cache[Attribute.ID.ATOMIC_AGGREGATE][''] = cls()
+		cls.cache[Attribute.CODE.ATOMIC_AGGREGATE][''] = cls()
 
 AtomicAggregate.register_attribute()
 AtomicAggregate.setCache()

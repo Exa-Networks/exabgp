@@ -172,12 +172,12 @@ class Neighbor (object):
 			'receive-parsed':         'parsed',
 			'consolidate':            'consolidate',
 			'neighbor-changes':       'neighbor-changes',
-			Message.ID.NOTIFICATION:  'notification',
-			Message.ID.OPEN:          'open',
-			Message.ID.KEEPALIVE:     'keepalive',
-			Message.ID.UPDATE:        'update',
-			Message.ID.ROUTE_REFRESH: 'refresh',
-			Message.ID.OPERATIONAL:   'operational',
+			Message.CODE.NOTIFICATION:  'notification',
+			Message.CODE.OPEN:          'open',
+			Message.CODE.KEEPALIVE:     'keepalive',
+			Message.CODE.UPDATE:        'update',
+			Message.CODE.ROUTE_REFRESH: 'refresh',
+			Message.CODE.OPERATIONAL:   'operational',
 		}
 
 		_extension_send = {

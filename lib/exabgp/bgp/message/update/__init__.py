@@ -55,8 +55,8 @@ from exabgp.logger import LazyFormat
 
 
 class Update (Message):
-	ID = Message.ID.UPDATE
-	TYPE = chr(Message.ID.UPDATE)
+	ID = Message.CODE.UPDATE
+	TYPE = chr(Message.CODE.UPDATE)
 	EOR = False
 
 	def __init__ (self,nlris,attributes):
@@ -265,7 +265,7 @@ class Update (Message):
 		addpath = negotiated.addpath.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
 
 		# empty string for NoIP, the packed IP otherwise (without the 3/4 bytes of attributes headers)
-		_nexthop = attributes.get(Attribute.ID.NEXT_HOP,NoIP)
+		_nexthop = attributes.get(Attribute.CODE.NEXT_HOP,NoIP)
 		nexthop = _nexthop.packed
 
 		# XXX: NEXTHOP MUST NOT be the IP address of the receiving speaker.

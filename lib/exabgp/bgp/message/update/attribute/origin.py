@@ -12,7 +12,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 # =================================================================== Origin (1)
 
 class Origin (Attribute):
-	ID = Attribute.ID.ORIGIN
+	ID = Attribute.CODE.ORIGIN
 	FLAG = Attribute.Flag.TRANSITIVE
 	MULTIPLE = False
 	CACHING = True
@@ -60,9 +60,9 @@ class Origin (Attribute):
 		EGP = Origin(Origin.EGP)
 		INC = Origin(Origin.INCOMPLETE)
 
-		cls.cache[Attribute.ID.ORIGIN][IGP.pack()] = IGP
-		cls.cache[Attribute.ID.ORIGIN][EGP.pack()] = EGP
-		cls.cache[Attribute.ID.ORIGIN][INC.pack()] = INC
+		cls.cache[Attribute.CODE.ORIGIN][IGP.pack()] = IGP
+		cls.cache[Attribute.CODE.ORIGIN][EGP.pack()] = EGP
+		cls.cache[Attribute.CODE.ORIGIN][INC.pack()] = INC
 
 Origin.register_attribute()
 Origin.setCache()

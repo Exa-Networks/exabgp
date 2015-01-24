@@ -56,7 +56,7 @@ class TLVS (list):
 #
 
 class AIGP (Attribute):
-	ID = Attribute.ID.AIGP
+	ID = Attribute.CODE.AIGP
 	FLAG = Attribute.Flag.OPTIONAL
 	MULTIPLE = False
 	CACHING = True

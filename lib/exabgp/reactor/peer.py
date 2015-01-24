@@ -287,7 +287,7 @@ class Peer (object):
 
 		# send OPEN
 		for message in proto.new_open(self._restarted):
-			if ord(message.TYPE) == Message.ID.NOP:
+			if ord(message.TYPE) == Message.CODE.NOP:
 				yield ACTION.immediate
 
 		proto.negotiated.sent(message)
@@ -301,7 +301,7 @@ class Peer (object):
 		# which would be bad as we need to do the collission check without going to the other peer
 		for message in proto.read_open(self.neighbor.peer_address.ip):
 			opentimer.check_ka(message)
-			if ord(message.TYPE) == Message.ID.NOP:
+			if ord(message.TYPE) == Message.CODE.NOP:
 				yield ACTION.later
 
 		self._['in']['state'] = STATE.openconfirm
@@ -367,7 +367,7 @@ class Peer (object):
 		# Only yield if we have not the open, otherwise the reactor can run the other connection
 		# which would be bad as we need to set the state without going to the other peer
 		for message in proto.new_open(self._restarted):
-			if ord(message.TYPE) == Message.ID.NOP:
+			if ord(message.TYPE) == Message.CODE.NOP:
 				yield ACTION.immediate
 
 		proto.negotiated.sent(message)
@@ -382,7 +382,7 @@ class Peer (object):
 			# XXX: FIXME: change the whole code to use the ord and not the chr version
 			# Only yield if we have not the open, otherwise the reactor can run the other connection
 			# which would be bad as we need to do the collission check
-			if ord(message.TYPE) == Message.ID.NOP:
+			if ord(message.TYPE) == Message.CODE.NOP:
 				yield ACTION.later
 
 		self._['out']['state'] = STATE.openconfirm
@@ -573,7 +573,7 @@ class Peer (object):
 					break
 
 		# If graceful restart, silent shutdown
-		if self.neighbor.graceful_restart and proto.negotiated.sent_open.capabilities.announced(Capability.ID.GRACEFUL_RESTART):
+		if self.neighbor.graceful_restart and proto.negotiated.sent_open.capabilities.announced(Capability.CODE.GRACEFUL_RESTART):
 			self.logger.network('Closing the session without notification','error')
 			proto.close('graceful restarted negotiated, closing without sending any notification')
 			raise NetworkError('closing')
@@ -591,8 +591,8 @@ class Peer (object):
 				yield action
 
 		# CONNECTION FAILURE
-		except NetworkError,exc:
-			self._reset(direction,'closing connection',exc)
+		except NetworkError,network:
+			self._reset(direction,'closing connection',network)
 
 			# we tried to connect once, it failed, we stop
 			if self.once:
@@ -601,11 +601,11 @@ class Peer (object):
 			return
 
 		# NOTIFY THE PEER OF AN ERROR
-		except Notify, n:
+		except Notify,notify:
 			for direction in ['in','out']:
 				if self._[direction]['proto']:
 					try:
-						generator = self._[direction]['proto'].new_notification(n)
+						generator = self._[direction]['proto'].new_notification(notify)
 						try:
 							maximum = 20
 							while maximum:
@@ -617,14 +617,14 @@ class Peer (object):
 					except (NetworkError,ProcessError):
 						self.logger.network(self.me('NOTIFICATION NOT SENT'),'error')
 						pass
-					self._reset(direction,'notification sent (%d,%d)' % (n.code,n.subcode),n)
+					self._reset(direction,'notification sent (%d,%d)' % (notify.code,notify.subcode),notify)
 				else:
 					self._reset(direction)
 			return
 
 		# THE PEER NOTIFIED US OF AN ERROR
-		except Notification, n:
-			self._reset(direction,'notification received (%d,%d)' % (n.code,n.subcode),n)
+		except Notification,notification:
+			self._reset(direction,'notification received (%d,%d)' % (notification.code,notification.subcode),notification)
 
 			# we tried to connect once, it failed, we stop
 			if self.once:
@@ -633,18 +633,18 @@ class Peer (object):
 			return
 
 		# RECEIVED a Message TYPE we did not expect
-		except Message, m:
-			self._reset(direction,'unexpected message received',m)
+		except Message,message:
+			self._reset(direction,'unexpected message received',message)
 			return
 
 		# PROBLEM WRITING TO OUR FORKED PROCESSES
-		except ProcessError,exc:
-			self._reset(direction,'process problem',exc)
+		except ProcessError, process:
+			self._reset(direction,'process problem',process)
 			return
 
 		# ....
-		except Interrupted, i:
-			self._reset(i.direction)
+		except Interrupted,interrupt:
+			self._reset(interrupt.direction)
 			return
 
 		# UNHANDLED PROBLEMS

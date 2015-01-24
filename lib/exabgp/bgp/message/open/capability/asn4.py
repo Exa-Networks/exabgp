@@ -14,7 +14,7 @@ from exabgp.bgp.message.open.capability import Capability
 
 
 class ASN4 (Capability,ASN):
-	ID = Capability.ID.FOUR_BYTES_ASN
+	ID = Capability.CODE.FOUR_BYTES_ASN
 
 	# This makes python2.6 complain !
 	# def __init__ (self,value=0):

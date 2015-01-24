@@ -50,38 +50,38 @@ class Negotiated (object):
 		self.holdtime = HoldTime(min(self.sent_open.hold_time,self.received_open.hold_time))
 
 		self.addpath.setup(self.sent_open,self.received_open)
-		self.asn4 = sent_capa.announced(Capability.ID.FOUR_BYTES_ASN) and recv_capa.announced(Capability.ID.FOUR_BYTES_ASN)
-		self.operational = sent_capa.announced(Capability.ID.OPERATIONAL) and recv_capa.announced(Capability.ID.OPERATIONAL)
+		self.asn4 = sent_capa.announced(Capability.CODE.FOUR_BYTES_ASN) and recv_capa.announced(Capability.CODE.FOUR_BYTES_ASN)
+		self.operational = sent_capa.announced(Capability.CODE.OPERATIONAL) and recv_capa.announced(Capability.CODE.OPERATIONAL)
 
 		self.local_as = self.sent_open.asn
 		self.peer_as = self.received_open.asn
 		if self.received_open.asn == AS_TRANS:
-			self.peer_as = recv_capa[Capability.ID.FOUR_BYTES_ASN]
+			self.peer_as = recv_capa[Capability.CODE.FOUR_BYTES_ASN]
 
 		self.families = []
 		if \
-			recv_capa.announced(Capability.ID.MULTIPROTOCOL) and \
-			sent_capa.announced(Capability.ID.MULTIPROTOCOL):
-			for family in recv_capa[Capability.ID.MULTIPROTOCOL]:
-				if family in sent_capa[Capability.ID.MULTIPROTOCOL]:
+			recv_capa.announced(Capability.CODE.MULTIPROTOCOL) and \
+			sent_capa.announced(Capability.CODE.MULTIPROTOCOL):
+			for family in recv_capa[Capability.CODE.MULTIPROTOCOL]:
+				if family in sent_capa[Capability.CODE.MULTIPROTOCOL]:
 					self.families.append(family)
 
-		if recv_capa.announced(Capability.ID.ENHANCED_ROUTE_REFRESH) and sent_capa.announced(Capability.ID.ENHANCED_ROUTE_REFRESH):
+		if recv_capa.announced(Capability.CODE.ENHANCED_ROUTE_REFRESH) and sent_capa.announced(Capability.CODE.ENHANCED_ROUTE_REFRESH):
 			self.refresh = REFRESH.enhanced
-		elif recv_capa.announced(Capability.ID.ROUTE_REFRESH) and sent_capa.announced(Capability.ID.ROUTE_REFRESH):
+		elif recv_capa.announced(Capability.CODE.ROUTE_REFRESH) and sent_capa.announced(Capability.CODE.ROUTE_REFRESH):
 			self.refresh = REFRESH.normal
 
-		self.multisession  = sent_capa.announced(Capability.ID.MULTISESSION) and recv_capa.announced(Capability.ID.MULTISESSION)
-		self.multisession |= sent_capa.announced(Capability.ID.MULTISESSION_CISCO) and recv_capa.announced(Capability.ID.MULTISESSION_CISCO)
+		self.multisession  = sent_capa.announced(Capability.CODE.MULTISESSION) and recv_capa.announced(Capability.CODE.MULTISESSION)
+		self.multisession |= sent_capa.announced(Capability.CODE.MULTISESSION_CISCO) and recv_capa.announced(Capability.CODE.MULTISESSION_CISCO)
 
 		if self.multisession:
-			sent_ms_capa = set(sent_capa[Capability.ID.MULTISESSION])
-			recv_ms_capa = set(recv_capa[Capability.ID.MULTISESSION])
+			sent_ms_capa = set(sent_capa[Capability.CODE.MULTISESSION])
+			recv_ms_capa = set(recv_capa[Capability.CODE.MULTISESSION])
 
 			if sent_ms_capa == set([]):
-				sent_ms_capa = set([Capability.ID.MULTIPROTOCOL])
+				sent_ms_capa = set([Capability.CODE.MULTIPROTOCOL])
 			if recv_ms_capa == set([]):
-				recv_ms_capa = set([Capability.ID.MULTIPROTOCOL])
+				recv_ms_capa = set([Capability.CODE.MULTIPROTOCOL])
 
 			if sent_ms_capa != recv_ms_capa:
 				self.multisession = (2,8,'multisession, our peer did not reply with the same sessionid')
@@ -96,12 +96,12 @@ class Negotiated (object):
 					self.multisession = (2,8,'when checking session id, capability %s did not match' % str(capa))
 					break
 
-		elif sent_capa.announced(Capability.ID.MULTISESSION):
+		elif sent_capa.announced(Capability.CODE.MULTISESSION):
 			self.multisession = (2,9,'multisession is mandatory with this peer')
 
 		# XXX: Does not work as the capa is not yet defined
-		# if received_open.capabilities.announced(Capability.ID.EXTENDED_MESSAGE) \
-		# and sent_open.capabilities.announced(Capability.ID.EXTENDED_MESSAGE):
+		# if received_open.capabilities.announced(Capability.CODE.EXTENDED_MESSAGE) \
+		# and sent_open.capabilities.announced(Capability.CODE.EXTENDED_MESSAGE):
 		# 	if self.peer.bgp.received_open_size:
 		# 		self.received_open_size = self.peer.bgp.received_open_size - 19
 
@@ -155,8 +155,8 @@ class RequirePath (object):
 			def __getitem__(self,key):
 				return False
 
-		receive = received_open.capabilities.get(Capability.ID.ADD_PATH,FalseDict())
-		send = sent_open.capabilities.get(Capability.ID.ADD_PATH,FalseDict())
+		receive = received_open.capabilities.get(Capability.CODE.ADD_PATH,FalseDict())
+		send = sent_open.capabilities.get(Capability.CODE.ADD_PATH,FalseDict())
 
 		# python 2.4 compatibility mean no simple union but using sets.Set
 		union = []

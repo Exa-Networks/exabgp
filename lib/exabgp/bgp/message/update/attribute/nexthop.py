@@ -17,7 +17,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 # At least until we rename them to be more explicit
 
 class NextHop (Attribute,IP):
-	ID = Attribute.ID.NEXT_HOP
+	ID = Attribute.CODE.NEXT_HOP
 	FLAG = Attribute.Flag.TRANSITIVE
 	MULTIPLE = False
 	CACHING = True

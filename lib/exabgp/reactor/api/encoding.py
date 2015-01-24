@@ -32,22 +32,22 @@ class APIOptions (dict):
 		self['neighbor-changes'] = self.get('neighbor_changes',False) or value
 
 	def receive_notifications (self,value):
-		self[Message.ID.NOTIFICATION] = self.get(Message.ID.NOTIFICATION,False) or value
+		self[Message.CODE.NOTIFICATION] = self.get(Message.CODE.NOTIFICATION,False) or value
 
 	def receive_opens (self,value):
-		self[Message.ID.OPEN] = self.get(Message.ID.OPEN,False) or value
+		self[Message.CODE.OPEN] = self.get(Message.CODE.OPEN,False) or value
 
 	def receive_keepalives (self,value):
-		self[Message.ID.KEEPALIVE] = self.get(Message.ID.KEEPALIVE,False) or value
+		self[Message.CODE.KEEPALIVE] = self.get(Message.CODE.KEEPALIVE,False) or value
 
 	def receive_updates (self,value):
-		self[Message.ID.UPDATE] = self.get(Message.ID.UPDATE,False) or value
+		self[Message.CODE.UPDATE] = self.get(Message.CODE.UPDATE,False) or value
 
 	def receive_refresh (self,value):
-		self[Message.ID.ROUTE_REFRESH] = self.get(Message.ID.ROUTE_REFRESH,False) or value
+		self[Message.CODE.ROUTE_REFRESH] = self.get(Message.CODE.ROUTE_REFRESH,False) or value
 
 	def receive_operational (self,value):
-		self[Message.ID.OPERATIONAL] = self.get(Message.ID.OPERATIONAL,False) or value
+		self[Message.CODE.OPERATIONAL] = self.get(Message.CODE.OPERATIONAL,False) or value
 
 	def __missing__ (self,key):
 		return False

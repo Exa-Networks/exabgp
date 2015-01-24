@@ -16,7 +16,7 @@ from exabgp.bgp.message.open.capability import Capability
 
 
 class MultiProtocol (Capability,list):
-	ID = Capability.ID.MULTIPROTOCOL
+	ID = Capability.CODE.MULTIPROTOCOL
 
 	def __str__ (self):
 		return 'Multiprotocol(' + ','.join(["%s %s" % (str(afi),str(safi)) for (afi,safi) in self]) + ')'

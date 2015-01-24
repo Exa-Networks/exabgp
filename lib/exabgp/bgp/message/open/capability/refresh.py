@@ -14,15 +14,15 @@ from exabgp.bgp.message.open.capability import Capability
 
 class RouteRefresh (Capability):
 	def __init__ (self):
-		self.ID = Capability.ID.ROUTE_REFRESH
+		self.ID = Capability.CODE.ROUTE_REFRESH
 
 	def __str__ (self):
-		if self.ID == Capability.ID.ROUTE_REFRESH:
+		if self.ID == Capability.CODE.ROUTE_REFRESH:
 			return 'Route Refresh'
 		return 'Cisco Route Refresh'
 
 	def json (self):
-		return '{ "name": "route-refresh", "variant": "%s" }' % ('RFC' if self.ID == Capability.ID.ROUTE_REFRESH else 'Cisco')
+		return '{ "name": "route-refresh", "variant": "%s" }' % ('RFC' if self.ID == Capability.CODE.ROUTE_REFRESH else 'Cisco')
 
 	def extract (self):
 		return ['']
@@ -37,8 +37,8 @@ class RouteRefresh (Capability):
 			return False
 		return self.ID == other.ID
 
-RouteRefresh.register_capability(Capability.ID.ROUTE_REFRESH)
-RouteRefresh.register_capability(Capability.ID.ROUTE_REFRESH_CISCO)
+RouteRefresh.register_capability(Capability.CODE.ROUTE_REFRESH)
+RouteRefresh.register_capability(Capability.CODE.ROUTE_REFRESH_CISCO)
 
 
 # ========================================================= EnhancedRouteRefresh
@@ -46,7 +46,7 @@ RouteRefresh.register_capability(Capability.ID.ROUTE_REFRESH_CISCO)
 
 
 class EnhancedRouteRefresh (Capability):
-	ID = Capability.ID.ENHANCED_ROUTE_REFRESH
+	ID = Capability.CODE.ENHANCED_ROUTE_REFRESH
 
 	def __str__ (self):
 		return 'Enhanced Route Refresh'

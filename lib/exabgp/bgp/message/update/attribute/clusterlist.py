@@ -20,7 +20,7 @@ class ClusterID (IPv4):
 
 
 class ClusterList (Attribute):
-	ID = Attribute.ID.CLUSTER_LIST
+	ID = Attribute.CODE.CLUSTER_LIST
 	FLAG = Attribute.Flag.OPTIONAL
 	MULTIPLE = False
 	CACHING = True

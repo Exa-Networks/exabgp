@@ -18,14 +18,14 @@ class UnknownCapability (Capability):
 		self.raw = raw
 
 	def __str__ (self):
-		if self.value in Capability.ID.reserved: return 'Reserved %s' % str(self.value)
-		if self.value in Capability.ID.unassigned: return 'Unassigned %s' % str(self.value)
+		if self.value in Capability.CODE.reserved: return 'Reserved %s' % str(self.value)
+		if self.value in Capability.CODE.unassigned: return 'Unassigned %s' % str(self.value)
 		return 'Unknown %s' % str(self.value)
 
 	def json (self):
-		if self.value in Capability.ID.reserved:
+		if self.value in Capability.CODE.reserved:
 			iana = 'reserved'
-		elif self.value in Capability.ID.unassigned:
+		elif self.value in Capability.CODE.unassigned:
 			iana = 'unassigned'
 		else:
 			iana = 'unknown'

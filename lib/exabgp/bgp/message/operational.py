@@ -39,8 +39,8 @@ class Type (int):
 
 
 class Operational (Message):
-	ID = Message.ID.OPERATIONAL
-	TYPE = chr(Message.ID.OPERATIONAL)
+	ID = Message.CODE.OPERATIONAL
+	TYPE = chr(Message.CODE.OPERATIONAL)
 
 	registered_operational = dict()
 
@@ -48,7 +48,8 @@ class Operational (Message):
 	has_routerid = False
 	is_fault = False
 
-	class ID (object):
+	# really this should be called ID if not for the naming conflict
+	class CODE (object):
 		__slots__ = []
 
 		NOP  = 0x00  # Not defined by the RFC
@@ -75,7 +76,7 @@ class Operational (Message):
 	# XXX: FIXME: should be upper case
 	name = ''
 	category = ''
-	code = ID.NOP
+	code = CODE.NOP
 
 	def __init__ (self,what):
 		Message.__init__(self)
@@ -203,7 +204,7 @@ class NS:
 		def __init__ (self,afi,safi,sequence):
 			OperationalFamily.__init__(
 				self,
-				Operational.ID.NS,
+				Operational.CODE.NS,
 				afi,safi,
 				'%s%s' % (sequence,self.ERROR_SUBCODE)
 			)
@@ -249,28 +250,28 @@ class Advisory:
 
 	class ADM (_Advisory):
 		name = 'ADM'
-		code = Operational.ID.ADM
+		code = Operational.CODE.ADM
 
 		def __init__ (self,afi,safi,advisory,routerid=None):
 			utf8 = advisory.encode('utf-8')
 			if len(utf8) > MAX_ADVISORY:
 				utf8 = utf8[:MAX_ADVISORY-3] + '...'.encode('utf-8')
 			Advisory._Advisory.__init__(
-				self,Operational.ID.ADM,
+				self,Operational.CODE.ADM,
 				afi,safi,
 				utf8
 			)
 
 	class ASM (_Advisory):
 		name = 'ASM'
-		code = Operational.ID.ASM
+		code = Operational.CODE.ASM
 
 		def __init__ (self,afi,safi,advisory,routerid=None):
 			utf8 = advisory.encode('utf-8')
 			if len(utf8) > MAX_ADVISORY:
 				utf8 = utf8[:MAX_ADVISORY-3] + '...'.encode('utf-8')
 			Advisory._Advisory.__init__(
-				self,Operational.ID.ASM,
+				self,Operational.CODE.ASM,
 				afi,safi,
 				utf8
 			)
@@ -309,15 +310,15 @@ class Query:
 
 	class RPCQ (_Query):
 		name = 'RPCQ'
-		code = Operational.ID.RPCQ
+		code = Operational.CODE.RPCQ
 
 	class APCQ (_Query):
 		name = 'APCQ'
-		code = Operational.ID.APCQ
+		code = Operational.CODE.APCQ
 
 	class LPCQ (_Query):
 		name = 'LPCQ'
-		code = Operational.ID.LPCQ
+		code = Operational.CODE.LPCQ
 
 Query.RPCQ.register_operational()
 Query.APCQ.register_operational()
@@ -353,15 +354,15 @@ class Response:
 
 	class RPCP (_Counter):
 		name = 'RPCP'
-		code = Operational.ID.RPCP
+		code = Operational.CODE.RPCP
 
 	class APCP (_Counter):
 		name = 'APCP'
-		code = Operational.ID.APCP
+		code = Operational.CODE.APCP
 
 	class LPCP (_Counter):
 		name = 'LPCP'
-		code = Operational.ID.LPCP
+		code = Operational.CODE.LPCP
 
 
 Response.RPCP.register_operational()

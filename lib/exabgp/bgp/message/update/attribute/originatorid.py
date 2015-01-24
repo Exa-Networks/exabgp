@@ -14,7 +14,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 # ============================================================== OriginatorID (3)
 
 class OriginatorID (Attribute,IPv4):
-	ID = Attribute.ID.ORIGINATOR_ID
+	ID = Attribute.CODE.ORIGINATOR_ID
 	FLAG = Attribute.Flag.OPTIONAL
 	MULTIPLE = False
 	CACHING = True

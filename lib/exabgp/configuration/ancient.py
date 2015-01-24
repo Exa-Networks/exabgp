@@ -103,22 +103,22 @@ from exabgp.logger import Logger
 
 
 class Split (int):
-	ID = Attribute.ID.INTERNAL_SPLIT
+	ID = Attribute.CODE.INTERNAL_SPLIT
 	MULTIPLE = False
 
 
 class Watchdog (str):
-	ID = Attribute.ID.INTERNAL_WATCHDOG
+	ID = Attribute.CODE.INTERNAL_WATCHDOG
 	MULTIPLE = False
 
 
 class Withdrawn (object):
-	ID = Attribute.ID.INTERNAL_WITHDRAW
+	ID = Attribute.CODE.INTERNAL_WITHDRAW
 	MULTIPLE = False
 
 
 class Name (str):
-	ID = Attribute.ID.INTERNAL_NAME
+	ID = Attribute.CODE.INTERNAL_NAME
 	MULTIPLE = False
 
 
@@ -1645,12 +1645,12 @@ class Configuration (object):
 	def _split_last_route (self,scope):
 		# if the route does not need to be broken in smaller routes, return
 		change = scope[-1]['announce'][-1]
-		if Attribute.ID.INTERNAL_SPLIT not in change.attributes:
+		if Attribute.CODE.INTERNAL_SPLIT not in change.attributes:
 			return True
 
 		# ignore if the request is for an aggregate, or the same size
 		mask = change.nlri.mask
-		split = change.attributes[Attribute.ID.INTERNAL_SPLIT]
+		split = change.attributes[Attribute.CODE.INTERNAL_SPLIT]
 		if mask >= split:
 			return True
 
@@ -1876,7 +1876,7 @@ class Configuration (object):
 			return False
 
 	def _route_next_hop (self,scope,tokens):
-		if scope[-1]['announce'][-1].attributes.has(Attribute.ID.NEXT_HOP):
+		if scope[-1]['announce'][-1].attributes.has(Attribute.CODE.NEXT_HOP):
 			self._error = self._str_route_error
 			if self.debug: raise Exception()  # noqa
 			return False
@@ -2252,8 +2252,8 @@ class Configuration (object):
 
 	def _route_extended_community (self,scope,tokens):
 		attributes = scope[-1]['announce'][-1].attributes
-		if Attribute.ID.EXTENDED_COMMUNITY in attributes:
-			extended_communities = attributes[Attribute.ID.EXTENDED_COMMUNITY]
+		if Attribute.CODE.EXTENDED_COMMUNITY in attributes:
+			extended_communities = attributes[Attribute.CODE.EXTENDED_COMMUNITY]
 		else:
 			extended_communities = ExtendedCommunities()
 			attributes.add(extended_communities)
@@ -2449,7 +2449,7 @@ class Configuration (object):
 
 		try:
 			attributes = Attributes()
-			attributes[Attribute.ID.EXTENDED_COMMUNITY] = ExtendedCommunities()
+			attributes[Attribute.CODE.EXTENDED_COMMUNITY] = ExtendedCommunities()
 			flow = Change(Flow(),attributes)
 		except ValueError:
 			self._error = self._str_flow_error
@@ -2858,7 +2858,7 @@ class Configuration (object):
 	def _flow_route_discard (self,scope,tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
-			scope[-1]['announce'][-1].attributes[Attribute.ID.EXTENDED_COMMUNITY].add(TrafficRate(ASN(0),0))
+			scope[-1]['announce'][-1].attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficRate(ASN(0),0))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -2874,7 +2874,7 @@ class Configuration (object):
 			if speed > 1000000000000:
 				speed = 1000000000000
 				self.logger.configuration("rate-limiting changed for 1 000 000 000 000 bytes from %s" % tokens[0],'warning')
-			scope[-1]['announce'][-1].attributes[Attribute.ID.EXTENDED_COMMUNITY].add(TrafficRate(ASN(0),speed))
+			scope[-1]['announce'][-1].attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficRate(ASN(0),speed))
 			return True
 		except ValueError:
 			self._error = self._str_route_error
@@ -2894,7 +2894,7 @@ class Configuration (object):
 						raise ValueError('asn is a 32 bits number, it can only be 16 bit %s' % route_target)
 					if route_target >= pow(2,32):
 						raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
-					scope[-1]['announce'][-1].attributes[Attribute.ID.EXTENDED_COMMUNITY].add(TrafficRedirect(asn,route_target))
+					scope[-1]['announce'][-1].attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficRedirect(asn,route_target))
 					return True
 			else:
 				change = scope[-1]['announce'][-1]
@@ -2905,7 +2905,7 @@ class Configuration (object):
 
 				nh = IP.create(tokens.pop(0))
 				change.nlri.nexthop = nh
-				change.attributes[Attribute.ID.EXTENDED_COMMUNITY].add(TrafficNextHop(False))
+				change.attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficNextHop(False))
 				return True
 
 		except (IndexError,ValueError):
@@ -2922,7 +2922,7 @@ class Configuration (object):
 				if self.debug: raise Exception()  # noqa
 				return False
 
-			change.attributes[Attribute.ID.EXTENDED_COMMUNITY].add(TrafficNextHop(False))
+			change.attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficNextHop(False))
 			return True
 
 		except (IndexError,ValueError):
@@ -2933,14 +2933,14 @@ class Configuration (object):
 	def _flow_route_copy (self,scope,tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
-			if scope[-1]['announce'][-1].attributes.has(Attribute.ID.NEXT_HOP):
+			if scope[-1]['announce'][-1].attributes.has(Attribute.CODE.NEXT_HOP):
 				self._error = self._str_flow_error
 				if self.debug: raise Exception()  # noqa
 				return False
 
 			change = scope[-1]['announce'][-1]
 			change.nlri.nexthop = IP.create(tokens.pop(0))
-			change.attributes[Attribute.ID.EXTENDED_COMMUNITY].add(TrafficNextHop(True))
+			change.attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficNextHop(True))
 			return True
 
 		except (IndexError,ValueError):
@@ -2958,7 +2958,7 @@ class Configuration (object):
 				return False
 
 			change = scope[-1]['announce'][-1]
-			change.attributes[Attribute.ID.EXTENDED_COMMUNITY].add(TrafficMark(dscp))
+			change.attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficMark(dscp))
 			return True
 
 		except (IndexError,ValueError):
@@ -2978,7 +2978,7 @@ class Configuration (object):
 				return False
 
 			change = scope[-1]['announce'][-1]
-			change.attributes[Attribute.ID.EXTENDED_COMMUNITY].add(TrafficAction(sample,terminal))
+			change.attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficAction(sample,terminal))
 			return True
 		except (IndexError,ValueError):
 			self._error = self._str_flow_error
@@ -3107,8 +3107,8 @@ class Configuration (object):
 				path[f] = n.add_path
 
 		capa = Capabilities().new(n,False)
-		capa[Capability.ID.ADD_PATH] = path
-		capa[Capability.ID.MULTIPROTOCOL] = n.families()
+		capa[Capability.CODE.ADD_PATH] = path
+		capa[Capability.CODE.MULTIPROTOCOL] = n.families()
 
 		o1 = Open(4,n.local_as,str(n.local_address),capa,180)
 		o2 = Open(4,n.peer_as,str(n.peer_address),capa,180)

@@ -25,7 +25,7 @@ from exabgp.bgp.message.notification import Notify
 
 class MPRNLRI (Attribute,Address):
 	FLAG = Attribute.Flag.OPTIONAL
-	ID = Attribute.ID.MP_REACH_NLRI
+	ID = Attribute.CODE.MP_REACH_NLRI
 	MULTIPLE = True
 
 	__slots__ = ['nlris']

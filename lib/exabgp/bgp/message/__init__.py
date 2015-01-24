@@ -59,9 +59,11 @@ class Message (Exception):
 	MAX_LEN = 4096
 
 	registered_message = {}
-	klass_notify = None
+	# This is redefined by the Notify class, Exception is never used
+	klass_notify = Exception
+	klass_unknown = Exception
 
-	class ID (int):
+	class CODE (int):
 		__slots__ = []
 
 		NOP           = 0x00  # .   0 - internal
@@ -90,7 +92,7 @@ class Message (Exception):
 
 		@staticmethod
 		def name (message_id):
-			return Message.ID.names.get(message_id,'unknown message %s' % hex(message_id))
+			return Message.CODE.names.get(message_id,'unknown message %s' % hex(message_id))
 
 	class Name:
 		NOP           = 'NOP'
@@ -102,11 +104,11 @@ class Message (Exception):
 		OPERATIONAL   = 'OPERATIONAL'
 
 	Length = {
-		ID.OPEN:           lambda _:  _ >= 29,  # noqa
-		ID.UPDATE:         lambda _:  _ >= 23,  # noqa
-		ID.NOTIFICATION:   lambda _:  _ >= 21,  # noqa
-		ID.KEEPALIVE:      lambda _:  _ == 19,  # noqa
-		ID.ROUTE_REFRESH:  lambda _:  _ == 23,  # noqa
+		CODE.OPEN:           lambda _:  _ >= 29,  # noqa
+		CODE.UPDATE:         lambda _:  _ >= 23,  # noqa
+		CODE.NOTIFICATION:   lambda _:  _ >= 21,  # noqa
+		CODE.KEEPALIVE:      lambda _:  _ == 19,  # noqa
+		CODE.ROUTE_REFRESH:  lambda _:  _ == 23,  # noqa
 	}
 
 	def __init__ (self):
@@ -116,17 +118,17 @@ class Message (Exception):
 	def string (code):
 		if code is None:
 			return 'invalid'
-		if code == Message.ID.OPEN:
+		if code == Message.CODE.OPEN:
 			return 'open'
-		if code == Message.ID.UPDATE:
+		if code == Message.CODE.UPDATE:
 			return 'update'
-		if code == Message.ID.NOTIFICATION:
+		if code == Message.CODE.NOTIFICATION:
 			return 'notification'
-		if code == Message.ID.KEEPALIVE:
+		if code == Message.CODE.KEEPALIVE:
 			return 'keepalive'
-		if code == Message.ID.ROUTE_REFRESH:
+		if code == Message.CODE.ROUTE_REFRESH:
 			return 'route refresh'
-		if code == Message.ID.OPERATIONAL:
+		if code == Message.CODE.OPERATIONAL:
 			return 'operational'
 		return 'unknown'
 
@@ -151,7 +153,7 @@ class Message (Exception):
 		raise cls.klass_notify(2,4,'can not handle message %s' % what)
 
 	@classmethod
-	def unpack_message (cls,message,data,negotiated):
+	def unpack (cls,message,data,negotiated):
 		if message in cls.registered_message:
 			return cls.klass(message).unpack_message(data,negotiated)
-		return cls.klass(message).unpack_message(data,negotiated)
+		return cls.klass_unknown(message,data,negotiated)

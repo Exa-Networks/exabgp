@@ -16,7 +16,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 #
 
 class MED (Attribute):
-	ID = Attribute.ID.MED
+	ID = Attribute.CODE.MED
 	FLAG = Attribute.Flag.OPTIONAL
 	MULTIPLE = False
 	CACHING = True

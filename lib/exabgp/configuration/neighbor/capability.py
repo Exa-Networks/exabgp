@@ -42,11 +42,11 @@ class SectionCapability (Entry):
 		pass
 
 	def asn4 (self,tokeniser):
-		self.content[Capability.ID.FOUR_BYTES_ASN] = boolean(tokeniser,True)
+		self.content[Capability.CODE.FOUR_BYTES_ASN] = boolean(tokeniser,True)
 		self._drop_colon(tokeniser)
 
 	def aigp (self,tokeniser):
-		self.content[Capability.ID.AIGP] = boolean(tokeniser,False)
+		self.content[Capability.CODE.AIGP] = boolean(tokeniser,False)
 		self._drop_colon(tokeniser)
 
 	def addpath (self,tokeniser):
@@ -54,24 +54,24 @@ class SectionCapability (Entry):
 		if ap not in ('receive','send','send/receive','disable','disabled'):
 			raise Raised("")
 
-		self.content[Capability.ID.ADD_PATH] = 0
+		self.content[Capability.CODE.ADD_PATH] = 0
 		if ap.endswith('receive'):
-			self.content[Capability.ID.ADD_PATH] += 1
+			self.content[Capability.CODE.ADD_PATH] += 1
 		if ap.startswith('send'):
-			self.content[Capability.ID.ADD_PATH] += 2
+			self.content[Capability.CODE.ADD_PATH] += 2
 
 		self._drop_colon(tokeniser)
 
 	def operational (self,tokeniser):
-		self.content[Capability.ID.OPERATIONAL] = boolean(tokeniser,False)
+		self.content[Capability.CODE.OPERATIONAL] = boolean(tokeniser,False)
 		self._drop_colon(tokeniser)
 
 	def refresh (self,tokeniser):
-		self.content[Capability.ID.ROUTE_REFRESH] = boolean(tokeniser,False)
+		self.content[Capability.CODE.ROUTE_REFRESH] = boolean(tokeniser,False)
 		self._drop_colon(tokeniser)
 
 	def multisession (self,tokeniser):
-		self.content[Capability.ID.MULTISESSION] = boolean(tokeniser,False)
+		self.content[Capability.CODE.MULTISESSION] = boolean(tokeniser,False)
 		self._drop_colon(tokeniser)
 
 	def graceful (self,tokeniser):
@@ -85,7 +85,7 @@ class SectionCapability (Entry):
 		if duration > pow(2,16):
 			raise Raised("")
 
-		self.content[Capability.ID.GRACEFUL_RESTART] = duration
+		self.content[Capability.CODE.GRACEFUL_RESTART] = duration
 		self._drop_colon(tokeniser)
 
 	def _check_duplicate (self,key):

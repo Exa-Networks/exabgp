@@ -55,8 +55,8 @@ def check_neighbor (neighbors):
 				path[f] = neighbor.add_path
 
 		capa = Capabilities().new(neighbor,False)
-		capa[Capability.ID.ADD_PATH] = path
-		capa[Capability.ID.MULTIPROTOCOL] = neighbor.families()
+		capa[Capability.CODE.ADD_PATH] = path
+		capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
 
 		o1 = Open(4,neighbor.local_as,str(neighbor.local_address),capa,180)
 		o2 = Open(4,neighbor.peer_as,str(neighbor.peer_address),capa,180)
@@ -184,8 +184,8 @@ def check_update (neighbor,raw):
 			path[f] = n.add_path
 
 	capa = Capabilities().new(n,False)
-	capa[Capability.ID.ADD_PATH] = path
-	capa[Capability.ID.MULTIPROTOCOL] = n.families()
+	capa[Capability.CODE.ADD_PATH] = path
+	capa[Capability.CODE.MULTIPROTOCOL] = n.families()
 
 	routerid_1 = str(n.router_id)
 	routerid_2 = '.'.join(str((int(_)+1) % 250) for _ in str(n.router_id).split('.',-1))

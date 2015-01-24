@@ -16,7 +16,8 @@ class UnknownMessage (Message):
 	# Make sure we have a value, which is not defined in any RFC !
 
 	def __init__ (self,code,data=''):
-		self.TYPE = code
+		self.ID = code
+		self.TYPE = chr(code)
 		self.data = data
 
 	def message (self):
@@ -26,5 +27,7 @@ class UnknownMessage (Message):
 		return "UNKNOWN"
 
 	@classmethod
-	def unpack (cls,data):
-		return cls(0xFF,data)
+	def unpack_message (cls,data):
+		raise RuntimeError('should never be used')
+
+UnknownMessage.klass_unknown = UnknownMessage

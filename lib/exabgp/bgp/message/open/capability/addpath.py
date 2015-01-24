@@ -16,7 +16,7 @@ from exabgp.bgp.message.open.capability import Capability
 
 
 class AddPath (Capability,dict):
-	ID = Capability.ID.ADD_PATH
+	ID = Capability.CODE.ADD_PATH
 
 	string = {
 		0: 'disabled',

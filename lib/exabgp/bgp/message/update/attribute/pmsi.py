@@ -30,7 +30,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 # RFC 6514
 
 class PMSI (Attribute):
-	ID = Attribute.ID.PMSI_TUNNEL
+	ID = Attribute.CODE.PMSI_TUNNEL
 	FLAG = Attribute.Flag.OPTIONAL
 	MULTIPLE = False
 	CACHING = True

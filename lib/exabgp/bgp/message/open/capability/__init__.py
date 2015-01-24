@@ -12,7 +12,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 class Capability (object):
 
-	class ID (int):
+	class CODE (int):
 		__slots__ = []
 
 		RESERVED                 = 0x00  # [RFC5492]
@@ -69,9 +69,9 @@ class Capability (object):
 		def __str__ (self):
 			name = self.names.get(self,None)
 			if name is None:
-				if self in Capability.ID.unassigned:
+				if self in Capability.CODE.unassigned:
 					return 'unassigned-%s' % hex(self)
-				if self in Capability.ID.reserved:
+				if self in Capability.CODE.reserved:
 					return 'reserved-%s' % hex(self)
 				return 'capability-%s' % hex(self)
 			return name
@@ -83,9 +83,9 @@ class Capability (object):
 		def name (cls,self):
 			name = cls.names.get(self,None)
 			if name is None:
-				if self in Capability.ID.unassigned:
+				if self in Capability.CODE.unassigned:
 					return 'unassigned-%s' % hex(self)
-				if self in Capability.ID.reserved:
+				if self in Capability.CODE.reserved:
 					return 'reserved-%s' % hex(self)
 			return name
 
@@ -183,10 +183,10 @@ class Capabilities (dict):
 
 		mp = MultiProtocol()
 		mp.extend(families)
-		self[Capability.ID.MULTIPROTOCOL] = mp
+		self[Capability.CODE.MULTIPROTOCOL] = mp
 
 		if neighbor.asn4:
-			self[Capability.ID.FOUR_BYTES_ASN] = ASN4(neighbor.local_as)
+			self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(neighbor.local_as)
 
 		if neighbor.add_path:
 			ap_families = []
@@ -198,22 +198,22 @@ class Capabilities (dict):
 				ap_families.append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
 			if (AFI(AFI.ipv6),SAFI(SAFI.unicast)) in families:
 				ap_families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
-			self[Capability.ID.ADD_PATH] = AddPath(ap_families,neighbor.add_path)
+			self[Capability.CODE.ADD_PATH] = AddPath(ap_families,neighbor.add_path)
 
 		if graceful:
 			if restarted:
-				self[Capability.ID.GRACEFUL_RESTART] = Graceful().set(Graceful.RESTART_STATE,graceful,[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in families])
+				self[Capability.CODE.GRACEFUL_RESTART] = Graceful().set(Graceful.RESTART_STATE,graceful,[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in families])
 			else:
-				self[Capability.ID.GRACEFUL_RESTART] = Graceful().set(0x0,graceful,[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in families])
+				self[Capability.CODE.GRACEFUL_RESTART] = Graceful().set(0x0,graceful,[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in families])
 
 		if neighbor.route_refresh:
-			self[Capability.ID.ROUTE_REFRESH] = RouteRefresh()
-			self[Capability.ID.ENHANCED_ROUTE_REFRESH] = EnhancedRouteRefresh()
+			self[Capability.CODE.ROUTE_REFRESH] = RouteRefresh()
+			self[Capability.CODE.ENHANCED_ROUTE_REFRESH] = EnhancedRouteRefresh()
 
 		# MUST be the last key added
 		if neighbor.multisession:
 			# XXX: FIXME: should it not be the RFC version ?
-			self[Capability.ID.MULTISESSION] = MultiSession().set([Capability.ID.MULTIPROTOCOL])
+			self[Capability.CODE.MULTISESSION] = MultiSession().set([Capability.CODE.MULTIPROTOCOL])
 		return self
 
 	def pack (self):

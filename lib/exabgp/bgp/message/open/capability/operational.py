@@ -13,7 +13,7 @@ from exabgp.bgp.message.open.capability import Capability
 
 
 class Operational (Capability,list):
-	ID = Capability.ID.OPERATIONAL
+	ID = Capability.CODE.OPERATIONAL
 
 	def __str__ (self):
 		# XXX: FIXME: could be more verbose

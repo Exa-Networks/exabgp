@@ -40,6 +40,7 @@ class MAC (EVPN):
 	SHORT_NAME = "MACAdv"
 
 	def __init__(self,rd,esi,etag,mac,maclen,label,ip,packed=None):
+		EVPN.__init__(self,packed)
 		self.rd = rd
 		self.esi = esi
 		self.etag = etag
@@ -47,7 +48,7 @@ class MAC (EVPN):
 		self.mac = mac
 		self.ip = ip
 		self.label = label if label else Labels.NOLABEL
-		EVPN.__init__(self,packed if packed else self.pack())
+		self.pack()
 
 	def __str__ (self):
 		return "%s:%s:%s:%s:%s:%s%s:%s" % (

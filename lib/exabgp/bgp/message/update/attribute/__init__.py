@@ -89,25 +89,25 @@ class Attributes (dict):
 
 	representation = {
 		# key:  (how, default, name, text_presentation, json_presentation),
-		Attribute.ID.ORIGIN:             ('string',  '', 'origin',             '%s',     '%s'),
-		Attribute.ID.AS_PATH:            ('multiple','', ('as-path','as-set','confederation-path','confederation-set'), '%s',     '%s'),
-		Attribute.ID.NEXT_HOP:           ('string',  '', 'next-hop',           '%s',     '%s'),
-		Attribute.ID.MED:                ('integer', '', 'med',                '%s',     '%s'),
-		Attribute.ID.LOCAL_PREF:         ('integer', '', 'local-preference',   '%s',     '%s'),
-		Attribute.ID.ATOMIC_AGGREGATE:   ('boolean', '', 'atomic-aggregate',   '%s',     '%s'),
-		Attribute.ID.AGGREGATOR:         ('string',  '', 'aggregator',         '( %s )', '%s'),
-		Attribute.ID.AS4_AGGREGATOR:     ('string',  '', 'aggregator',         '( %s )', '%s'),
-		Attribute.ID.COMMUNITY:          ('list',    '', 'community',          '%s',     '%s'),
-		Attribute.ID.ORIGINATOR_ID:      ('inet',    '', 'originator-id',      '%s',     '%s'),
-		Attribute.ID.CLUSTER_LIST:       ('list',    '', 'cluster-list',       '%s',     '%s'),
-		Attribute.ID.EXTENDED_COMMUNITY: ('list',    '', 'extended-community', '%s',     '%s'),
-		Attribute.ID.PMSI_TUNNEL:        ('string',  '', 'pmsi',               '%s',     '%s'),
-		Attribute.ID.AIGP:               ('integer', '', 'aigp',               '%s',     '%s'),
-		Attribute.ID.INTERNAL_NAME:      ('string',  '', 'name',               '%s',     '%s'),
+		Attribute.CODE.ORIGIN:             ('string',  '', 'origin',             '%s',     '%s'),
+		Attribute.CODE.AS_PATH:            ('multiple','', ('as-path','as-set','confederation-path','confederation-set'), '%s',     '%s'),
+		Attribute.CODE.NEXT_HOP:           ('string',  '', 'next-hop',           '%s',     '%s'),
+		Attribute.CODE.MED:                ('integer', '', 'med',                '%s',     '%s'),
+		Attribute.CODE.LOCAL_PREF:         ('integer', '', 'local-preference',   '%s',     '%s'),
+		Attribute.CODE.ATOMIC_AGGREGATE:   ('boolean', '', 'atomic-aggregate',   '%s',     '%s'),
+		Attribute.CODE.AGGREGATOR:         ('string',  '', 'aggregator',         '( %s )', '%s'),
+		Attribute.CODE.AS4_AGGREGATOR:     ('string',  '', 'aggregator',         '( %s )', '%s'),
+		Attribute.CODE.COMMUNITY:          ('list',    '', 'community',          '%s',     '%s'),
+		Attribute.CODE.ORIGINATOR_ID:      ('inet',    '', 'originator-id',      '%s',     '%s'),
+		Attribute.CODE.CLUSTER_LIST:       ('list',    '', 'cluster-list',       '%s',     '%s'),
+		Attribute.CODE.EXTENDED_COMMUNITY: ('list',    '', 'extended-community', '%s',     '%s'),
+		Attribute.CODE.PMSI_TUNNEL:        ('string',  '', 'pmsi',               '%s',     '%s'),
+		Attribute.CODE.AIGP:               ('integer', '', 'aigp',               '%s',     '%s'),
+		Attribute.CODE.INTERNAL_NAME:      ('string',  '', 'name',               '%s',     '%s'),
 	}
 
 	def _generate_text (self,extra=None):
-		exclude = [Attribute.ID.INTERNAL_SPLIT, Attribute.ID.INTERNAL_WATCHDOG, Attribute.ID.INTERNAL_WITHDRAW, Attribute.ID.NEXT_HOP]
+		exclude = [Attribute.CODE.INTERNAL_SPLIT, Attribute.CODE.INTERNAL_WATCHDOG, Attribute.CODE.INTERNAL_WITHDRAW, Attribute.CODE.NEXT_HOP]
 		if extra:
 			exclude.append(extra)
 		for code in sorted(self.keys()):
@@ -128,9 +128,9 @@ class Attributes (dict):
 				yield ' attribute [ 0x%02X 0x%02X %s ]' % (code,self[code].FLAG,str(self[code]))
 
 	def _generate_json (self):
-		for code in sorted(self.keys() + [Attribute.ID.ATOMIC_AGGREGATE,]):
+		for code in sorted(self.keys() + [Attribute.CODE.ATOMIC_AGGREGATE,]):
 			# remove the next-hop from the attribute as it is define with the NLRI
-			if code in (Attribute.ID.NEXT_HOP, Attribute.ID.INTERNAL_SPLIT, Attribute.ID.INTERNAL_WATCHDOG, Attribute.ID.INTERNAL_WITHDRAW):
+			if code in (Attribute.CODE.NEXT_HOP, Attribute.CODE.INTERNAL_SPLIT, Attribute.CODE.INTERNAL_WATCHDOG, Attribute.CODE.INTERNAL_WITHDRAW):
 				continue
 			if code in self.representation:
 				how, default, name, _, presentation = self.representation[code]
@@ -182,7 +182,7 @@ class Attributes (dict):
 				self[attribute.ID] = MultiAttributes(attribute)
 		else:
 			if attribute.ID in self:
-				raise Notify(3,0,'multiple attribute for %s' % str(Attribute.ID(attribute.ID)))
+				raise Notify(3,0,'multiple attribute for %s' % str(Attribute.CODE(attribute.ID)))
 			else:
 				self[attribute.ID] = attribute
 
@@ -190,13 +190,13 @@ class Attributes (dict):
 		self.pop(attrid)
 
 	def watchdog (self):
-		if Attribute.ID.INTERNAL_WATCHDOG in self:
-			return self.pop(Attribute.ID.INTERNAL_WATCHDOG)
+		if Attribute.CODE.INTERNAL_WATCHDOG in self:
+			return self.pop(Attribute.CODE.INTERNAL_WATCHDOG)
 		return None
 
 	def withdraw (self):
-		if Attribute.ID.INTERNAL_WITHDRAW in self:
-			self.pop(Attribute.ID.INTERNAL_WITHDRAW)
+		if Attribute.CODE.INTERNAL_WITHDRAW in self:
+			self.pop(Attribute.CODE.INTERNAL_WITHDRAW)
 			return True
 		return False
 
@@ -207,14 +207,14 @@ class Attributes (dict):
 		message = ''
 
 		default = {
-			Attribute.ID.ORIGIN:     lambda l,r: Origin(Origin.IGP),                                     # noqa
-			Attribute.ID.AS_PATH:    lambda l,r: ASPath([],[]) if l == r else ASPath([local_asn,],[]),   # noqa
-			Attribute.ID.LOCAL_PREF: lambda l,r: LocalPreference(100) if l == r else NOTHING,            # noqa
+			Attribute.CODE.ORIGIN:     lambda l,r: Origin(Origin.IGP),                                     # noqa
+			Attribute.CODE.AS_PATH:    lambda l,r: ASPath([],[]) if l == r else ASPath([local_asn,],[]),   # noqa
+			Attribute.CODE.LOCAL_PREF: lambda l,r: LocalPreference(100) if l == r else NOTHING,            # noqa
 		}
 
 		check = {
-			Attribute.ID.NEXT_HOP:   lambda l,r,nh: nh.ipv4() == True,  # noqa
-			Attribute.ID.LOCAL_PREF: lambda l,r,nh: l == r,
+			Attribute.CODE.NEXT_HOP:   lambda l,r,nh: nh.ipv4() == True,  # noqa
+			Attribute.CODE.LOCAL_PREF: lambda l,r,nh: l == r,
 		}
 
 		if with_default:
@@ -223,7 +223,7 @@ class Attributes (dict):
 			keys = set(self.keys())
 
 		for code in sorted(keys):
-			if code in (Attribute.ID.INTERNAL_SPLIT, Attribute.ID.INTERNAL_WATCHDOG, Attribute.ID.INTERNAL_WITHDRAW, Attribute.ID.INTERNAL_NAME):
+			if code in (Attribute.CODE.INTERNAL_SPLIT, Attribute.CODE.INTERNAL_WATCHDOG, Attribute.CODE.INTERNAL_WITHDRAW, Attribute.CODE.INTERNAL_NAME):
 				continue
 			if code in self:
 				if code in check:
@@ -253,9 +253,9 @@ class Attributes (dict):
 	def index (self):
 		# XXX: FIXME: something a little bit smaller memory wise ?
 		if not self._idx:
-			# idx = ''.join(self._generate_text(Attribute.ID.MED))
+			# idx = ''.join(self._generate_text(Attribute.CODE.MED))
 			idx = ''.join(self._generate_text())
-			self._idx = '%s next-hop %s' % (idx, str(self[Attribute.ID.NEXT_HOP])) if Attribute.ID.NEXT_HOP in self else idx
+			self._idx = '%s next-hop %s' % (idx, str(self[Attribute.CODE.NEXT_HOP])) if Attribute.CODE.NEXT_HOP in self else idx
 		return self._idx
 
 	@classmethod
@@ -274,10 +274,10 @@ class Attributes (dict):
 			else:
 				attributes = cls().parse(data,negotiated)
 
-			if Attribute.ID.AS_PATH in attributes and Attribute.ID.AS4_PATH in attributes:
+			if Attribute.CODE.AS_PATH in attributes and Attribute.CODE.AS4_PATH in attributes:
 				attributes.merge_attributes()
 
-			if Attribute.ID.MP_REACH_NLRI not in attributes and Attribute.ID.MP_UNREACH_NLRI not in attributes:
+			if Attribute.CODE.MP_REACH_NLRI not in attributes and Attribute.CODE.MP_UNREACH_NLRI not in attributes:
 				cls.previous = data
 				cls.cached = attributes
 			else:
@@ -291,7 +291,7 @@ class Attributes (dict):
 	@staticmethod
 	def flag_attribute_content (data):
 		flag = Attribute.Flag(ord(data[0]))
-		attr = Attribute.ID(ord(data[1]))
+		attr = Attribute.CODE(ord(data[1]))
 
 		if flag & Attribute.Flag.EXTENDED_LENGTH:
 			length = unpack('!H',data[2:4])[0]
@@ -306,7 +306,7 @@ class Attributes (dict):
 
 		# We do not care if the attribute are transitive or not as we do not redistribute
 		flag = Attribute.Flag(ord(data[0]))
-		aid = Attribute.ID(ord(data[1]))
+		aid = Attribute.CODE(ord(data[1]))
 
 		if flag & Attribute.Flag.EXTENDED_LENGTH:
 			length = unpack('!H',data[2:4])[0]
@@ -335,7 +335,7 @@ class Attributes (dict):
 
 		# if we know the attribute but the flag is not what the RFC says. ignore it.
 		if aid in Attribute.attributes_known:
-			logger.parser('invalid flag for attribute %s (flag 0x%02X, aid 0x%02X)' % (Attribute.ID.names.get(aid,'unset'),flag,aid))
+			logger.parser('invalid flag for attribute %s (flag 0x%02X, aid 0x%02X)' % (Attribute.CODE.names.get(aid,'unset'),flag,aid))
 			return self.parse(next,negotiated)
 
 		# it is an unknown transitive attribute we need to pass on
@@ -349,17 +349,17 @@ class Attributes (dict):
 		return self.parse(next,negotiated)
 
 	def merge_attributes (self):
-		as2path = self[Attribute.ID.AS_PATH]
-		as4path = self[Attribute.ID.AS4_PATH]
-		self.remove(Attribute.ID.AS_PATH)
-		self.remove(Attribute.ID.AS4_PATH)
+		as2path = self[Attribute.CODE.AS_PATH]
+		as4path = self[Attribute.CODE.AS4_PATH]
+		self.remove(Attribute.CODE.AS_PATH)
+		self.remove(Attribute.CODE.AS4_PATH)
 
 		# this key is unique as index length is a two header, plus a number of ASN of size 2 or 4
 		# so adding the: make the length odd and unique
 		key = "%s:%s" % (as2path.index, as4path.index)
 
 		# found a cache copy
-		cached = Attribute.cache.get(Attribute.ID.AS_PATH,{}).get(key,None)
+		cached = Attribute.cache.get(Attribute.CODE.AS_PATH,{}).get(key,None)
 		if cached:
 			self.add(cached,key)
 			return
@@ -406,7 +406,7 @@ class Attributes (dict):
 
 		try:
 			for key in set(self.iterkeys()).union(set(other.iterkeys())):
-				if key == Attribute.ID.MP_REACH_NLRI:
+				if key == Attribute.CODE.MP_REACH_NLRI:
 					continue
 
 				sval = self[key]

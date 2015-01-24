@@ -13,7 +13,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
 class ExtendedCommunity (Attribute):
-	ID = Attribute.ID.EXTENDED_COMMUNITY
+	ID = Attribute.CODE.EXTENDED_COMMUNITY
 	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 	MULTIPLE = False
 

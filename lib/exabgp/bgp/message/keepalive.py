@@ -13,8 +13,8 @@ from exabgp.bgp.message import Message
 
 
 class KeepAlive (Message):
-	ID = Message.ID.KEEPALIVE
-	TYPE = chr(Message.ID.KEEPALIVE)
+	ID = Message.CODE.KEEPALIVE
+	TYPE = chr(Message.CODE.KEEPALIVE)
 
 	def message (self):
 		return self._message('')

@@ -46,8 +46,8 @@ from exabgp.bgp.message.notification import Notify
 
 
 class Open (Message):
-	ID = Message.ID.OPEN
-	TYPE = chr(Message.ID.OPEN)
+	ID = Message.CODE.OPEN
+	TYPE = chr(Message.CODE.OPEN)
 
 	def __init__ (self,version,asn,router_id,capabilities,hold_time):
 		self.version = Version(version)

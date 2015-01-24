@@ -134,7 +134,7 @@ class Protocol (object):
 			if notify:
 				if self.neighbor.api['receive-packets']:
 					self.peer.reactor.processes.receive(self.peer,msg_id,header,body)
-				if self.neighbor.api[Message.ID.NOTIFICATION]:
+				if self.neighbor.api[Message.CODE.NOTIFICATION]:
 					self.peer.reactor.processes.notification(self.peer,notify.code,notify.subcode,str(notify))
 				# XXX: is notify not already Notify class ?
 				raise Notify(notify.code,notify.subcode,str(notify))
@@ -144,19 +144,21 @@ class Protocol (object):
 		if self.neighbor.api['receive-packets'] and not self.neighbor.api['consolidate']:
 			self.peer.reactor.processes.receive(self.peer,msg_id,header,body)
 
-		if msg_id == Message.ID.UPDATE and not self.neighbor.api['receive-parsed'] and not self.log_routes:
+		if msg_id == Message.CODE.UPDATE and not self.neighbor.api['receive-parsed'] and not self.log_routes:
 			yield _UPDATE
 			return
 
-		self.logger.message(self.me('<< %s' % Message.ID.name(msg_id)))
+		self.logger.message(self.me('<< %s' % Message.CODE.name(msg_id)))
+		# message = Message.unpack(msg_id,body,self.negotiated)
 		try:
-			message = Message.unpack_message(msg_id,body,self.negotiated)
+			message = Message.unpack(msg_id,body,self.negotiated)
 		except (KeyboardInterrupt,SystemExit,Notify):
 			raise
 		except Exception,exc:
-			self.logger.message(self.me('Could not decode message %s' % Capability.hex(msg_id)))
+			self.logger.message(self.me('Could not decode message "%d"' % msg_id))
 			self.logger.message(self.me('%s' % str(exc)))
-			raise Notify(2,0,'can not decode update message %s' % Capability.hex(msg_id))
+			# XXX: TODO: add backtrace here
+			raise Notify(1,0,'can not decode update message of type "%d"' % msg_id)
 
 		if message.TYPE == Notification.TYPE:
 			raise message
@@ -173,7 +175,7 @@ class Protocol (object):
 		return
 		raise Notify(5,0,'unknown message received')
 
-		# elif msg == Message.ID.ROUTE_REFRESH:
+		# elif msg == Message.CODE.ROUTE_REFRESH:
 		# 	if self.negotiated.refresh != REFRESH.absent:
 		# 		self.logger.message(self.me('<< ROUTE-REFRESH'))
 		# 		refresh = RouteRefresh.unpack_message(body,self.negotiated)
@@ -238,13 +240,13 @@ class Protocol (object):
 			yield _NOP
 
 		self.logger.message(self.me('>> %s' % sent_open))
-		if self.neighbor.api[Message.ID.OPEN]:
+		if self.neighbor.api[Message.CODE.OPEN]:
 			if self.neighbor.api['consolidate']:
 				header = msg_send[0:38]
 				body = msg_send[38:]
-				self.peer.reactor.processes.message(Message.ID.OPEN,self.peer,sent_open,header,body,'sent')
+				self.peer.reactor.processes.message(Message.CODE.OPEN,self.peer,sent_open,header,body,'sent')
 			else:
-				self.peer.reactor.processes.message(Message.ID.OPEN,self.peer,sent_open,'','','sent')
+				self.peer.reactor.processes.message(Message.CODE.OPEN,self.peer,sent_open,'','','sent')
 		yield sent_open
 
 	def new_keepalive (self,comment=''):

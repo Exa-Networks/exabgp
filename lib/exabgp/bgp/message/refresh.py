@@ -31,8 +31,8 @@ class Reserved (int):
 
 
 class RouteRefresh (Message):
-	ID = Message.ID.ROUTE_REFRESH
-	TYPE = chr(Message.ID.ROUTE_REFRESH)
+	ID = Message.CODE.ROUTE_REFRESH
+	TYPE = chr(Message.CODE.ROUTE_REFRESH)
 
 	request = 0
 	start = 1

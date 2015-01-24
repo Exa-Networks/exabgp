@@ -99,7 +99,7 @@ from exabgp.bgp.message.update.attribute.community.extended.traffic import Traff
 
 
 class Communities (Attribute):
-	ID = Attribute.ID.COMMUNITY
+	ID = Attribute.CODE.COMMUNITY
 	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 	MULTIPLE = False
 
@@ -148,7 +148,7 @@ Communities.register_attribute()
 #
 
 class ExtendedCommunities (Communities):
-	ID = Attribute.ID.EXTENDED_COMMUNITY
+	ID = Attribute.CODE.EXTENDED_COMMUNITY
 
 	@staticmethod
 	def unpack (data,negotiated):

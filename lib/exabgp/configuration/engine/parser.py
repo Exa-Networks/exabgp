@@ -518,7 +518,7 @@ def extended_community (tokeniser):
 
 def watchdog (tokeniser):
 	class Watchdog (str):
-		ID = Attribute.ID.INTERNAL_WATCHDOG
+		ID = Attribute.CODE.INTERNAL_WATCHDOG
 		MULTIPLE = False
 
 	command = tokeniser()
@@ -532,7 +532,7 @@ def watchdog (tokeniser):
 
 def withdraw (tokeniser=None):
 	class Withdrawn (object):
-		ID = Attribute.ID.INTERNAL_WITHDRAW
+		ID = Attribute.CODE.INTERNAL_WITHDRAW
 		MULTIPLE = False
 	return Withdrawn()
 

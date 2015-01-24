@@ -53,32 +53,32 @@ class SectionCapability (Section):
 	def enter (self,tokeniser):
 		Section.enter(self,tokeniser)
 
-		self.content[Capability.ID(Capability.ID.FOUR_BYTES_ASN)] = True
-		self.content[Capability.ID(Capability.ID.AIGP)] = False
-		self.content[Capability.ID(Capability.ID.ADD_PATH)] = 0
-		self.content[Capability.ID(Capability.ID.OPERATIONAL)] = False
-		self.content[Capability.ID(Capability.ID.ROUTE_REFRESH)] = False
-		self.content[Capability.ID(Capability.ID.MULTISESSION)] = False
-		self.content[Capability.ID(Capability.ID.GRACEFUL_RESTART)] = 0
+		self.content[Capability.CODE(Capability.CODE.FOUR_BYTES_ASN)] = True
+		self.content[Capability.CODE(Capability.CODE.AIGP)] = False
+		self.content[Capability.CODE(Capability.CODE.ADD_PATH)] = 0
+		self.content[Capability.CODE(Capability.CODE.OPERATIONAL)] = False
+		self.content[Capability.CODE(Capability.CODE.ROUTE_REFRESH)] = False
+		self.content[Capability.CODE(Capability.CODE.MULTISESSION)] = False
+		self.content[Capability.CODE(Capability.CODE.GRACEFUL_RESTART)] = 0
 
 	def exit (self,tokeniser):
-		if Capability.ID(Capability.ID.MULTIPROTOCOL) not in self.content:
-			self.content[Capability.ID(Capability.ID.MULTIPROTOCOL)] = MultiProtocol(known_families())
+		if Capability.CODE(Capability.CODE.MULTIPROTOCOL) not in self.content:
+			self.content[Capability.CODE(Capability.CODE.MULTIPROTOCOL)] = MultiProtocol(known_families())
 
 	def family (self,tokeniser):
 		data = self.get_section(SectionFamily.name,tokeniser)
 		if data:
-			self.content[Capability.ID(Capability.ID.MULTIPROTOCOL)] = MultiProtocol((afi,safi) for afi in sorted(data) for safi in sorted(data[afi]))
+			self.content[Capability.CODE(Capability.CODE.MULTIPROTOCOL)] = MultiProtocol((afi,safi) for afi in sorted(data) for safi in sorted(data[afi]))
 		else:
 			return False
 
 	def asn4 (self,tokeniser):
 		self._check_duplicate(tokeniser,RaisedCapability)
-		self.content[Capability.ID(Capability.ID.FOUR_BYTES_ASN)] = boolean(tokeniser,True)
+		self.content[Capability.CODE(Capability.CODE.FOUR_BYTES_ASN)] = boolean(tokeniser,True)
 
 	def aigp (self,tokeniser):
 		self._check_duplicate(tokeniser,RaisedCapability)
-		self.content[Capability.ID(Capability.ID.AIGP)] = boolean(tokeniser,False)
+		self.content[Capability.CODE(Capability.CODE.AIGP)] = boolean(tokeniser,False)
 
 	def addpath (self,tokeniser):
 		self._check_duplicate(tokeniser,RaisedCapability)
@@ -87,23 +87,23 @@ class SectionCapability (Section):
 		if ap not in valid_options:
 			raise RaisedCapability(tokeniser,"%s is not a invalid add-path paramerter, options are %s" % (ap,', '.join(valid_options)))
 
-		self.content[Capability.ID(Capability.ID.ADD_PATH)] = 0
+		self.content[Capability.CODE(Capability.CODE.ADD_PATH)] = 0
 		if ap.endswith('receive'):
-			self.content[Capability.ID.ADD_PATH] += 1
+			self.content[Capability.CODE.ADD_PATH] += 1
 		if ap.startswith('send'):
-			self.content[Capability.ID.ADD_PATH] += 2
+			self.content[Capability.CODE.ADD_PATH] += 2
 
 	def operational (self,tokeniser):
 		self._check_duplicate(tokeniser,RaisedCapability)
-		self.content[Capability.ID(Capability.ID.OPERATIONAL)] = boolean(tokeniser,False)
+		self.content[Capability.CODE(Capability.CODE.OPERATIONAL)] = boolean(tokeniser,False)
 
 	def refresh (self,tokeniser):
 		self._check_duplicate(tokeniser,RaisedCapability)
-		self.content[Capability.ID(Capability.ID.ROUTE_REFRESH)] = boolean(tokeniser,False)
+		self.content[Capability.CODE(Capability.CODE.ROUTE_REFRESH)] = boolean(tokeniser,False)
 
 	def multisession (self,tokeniser):
 		self._check_duplicate(tokeniser,RaisedCapability)
-		self.content[Capability.ID(Capability.ID.MULTISESSION_CISCO)] = boolean(tokeniser,False)
+		self.content[Capability.CODE(Capability.CODE.MULTISESSION_CISCO)] = boolean(tokeniser,False)
 
 	def graceful (self,tokeniser):
 		self._check_duplicate(tokeniser,RaisedCapability)
@@ -117,7 +117,7 @@ class SectionCapability (Section):
 		if duration > pow(2,16):
 			raise RaisedCapability(tokeniser,"%s is not a valid option for graceful-restart, it must be a positive number smaller than 2^16" % token)
 
-		self.content[Capability.ID(Capability.ID.GRACEFUL_RESTART)] = duration
+		self.content[Capability.CODE(Capability.CODE.GRACEFUL_RESTART)] = duration
 
 	@classmethod
 	def register (cls,registry,location):

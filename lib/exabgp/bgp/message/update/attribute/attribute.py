@@ -42,7 +42,7 @@ class Attribute (object):
 
 	# XXX: FIXME: The API of ID is a bit different (it can be instanciated)
 	# XXX: FIXME: This is legacy. should we change to not be ?
-	class ID (int):
+	class CODE (int):
 		__slots__ = []
 
 		# This should move within the classes and not be here
@@ -176,7 +176,7 @@ class Attribute (object):
 		aid = cls.ID if attribute_id is None else attribute_id
 		flg = cls.FLAG | Attribute.Flag.EXTENDED_LENGTH if flag is None else flag | Attribute.Flag.EXTENDED_LENGTH
 		if (aid,flg) in cls.registered_attributes:
-			raise RuntimeError('only one class can be registered per capability')
+			raise RuntimeError('only one class can be registered per attribute')
 		cls.registered_attributes[(aid,flg)] = cls
 		cls.attributes_known.append(aid)
 		if cls.FLAG & Attribute.Flag.OPTIONAL:
@@ -196,7 +196,7 @@ class Attribute (object):
 			kls.ID = attribute_id
 			return kls
 		# XXX: we do see some AS4_PATH with the partial instead of transitive bit set !!
-		if attribute_id == Attribute.ID.AS4_PATH:
+		if attribute_id == Attribute.CODE.AS4_PATH:
 			kls = cls.attributes_known[attribute_id]
 			kls.ID = attribute_id
 			return kls
@@ -222,7 +222,7 @@ class Attribute (object):
 	@classmethod
 	def setCache (cls):
 		if not cls.cache:
-			for attribute in Attribute.ID.names:
+			for attribute in Attribute.CODE.names:
 				if attribute not in cls.cache:
 					cls.cache[attribute] = Cache()
 
