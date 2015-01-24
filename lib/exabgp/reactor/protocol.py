@@ -159,6 +159,7 @@ class Protocol (object):
 			self.logger.message(self.me('%s' % str(exc)))
 			# XXX: TODO: add backtrace here
 			raise Notify(1,0,'can not decode update message of type "%d"' % msg_id)
+			# raise Notify(5,0,'unknown message received')
 
 		if message.TYPE == Notification.TYPE:
 			raise message
@@ -171,9 +172,6 @@ class Protocol (object):
 					self.peer.reactor.processes.message(msg_id,self.peer,message,'','')
 
 		yield message
-
-		return
-		raise Notify(5,0,'unknown message received')
 
 		# elif msg == Message.CODE.ROUTE_REFRESH:
 		# 	if self.negotiated.refresh != REFRESH.absent:
