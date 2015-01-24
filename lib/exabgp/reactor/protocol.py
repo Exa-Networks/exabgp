@@ -171,8 +171,7 @@ class Protocol (object):
 		yield message
 
 		return
-		# XXX: FIXME: check it is well 2,4
-		raise Notify(2,4,'unknown message received')
+		raise Notify(5,0,'unknown message received')
 
 		# elif msg == Message.ID.ROUTE_REFRESH:
 		# 	if self.negotiated.refresh != REFRESH.absent:

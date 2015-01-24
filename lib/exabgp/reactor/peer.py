@@ -690,7 +690,7 @@ class Peer (object):
 					if r == ACTION.immediate:
 						back = ACTION.immediate
 					elif r == ACTION.later:
-						back == ACTION.later if back != ACTION.immediate else ACTION.immediate
+						back = ACTION.later if back != ACTION.immediate else ACTION.immediate
 				except StopIteration:
 					# Trying to run a closed loop, no point continuing
 					self._[direction]['generator'] = self._[direction]['enabled']
