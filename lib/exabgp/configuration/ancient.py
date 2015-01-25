@@ -20,6 +20,7 @@ from struct import unpack
 from exabgp.util.ip import isipv4
 
 from exabgp.configuration.environment import environment
+from exabgp.configuration.format import formated
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -125,15 +126,6 @@ class Name (str):
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
 def pack_int (afi,integer,mask):
 	return ''.join([chr((integer >> (offset * 8)) & 0xff) for offset in range(IP.length(afi)-1,-1,-1)])
-
-
-def formated (line):
-	changed_line = '#'
-	new_line = line.strip().replace('\t',' ').replace(']',' ]').replace('[','[ ').replace(')',' )').replace('(','( ').replace(',',' , ')
-	while new_line != changed_line:
-		changed_line = new_line
-		new_line = new_line.replace('  ',' ')
-	return new_line
 
 
 class Configuration (object):

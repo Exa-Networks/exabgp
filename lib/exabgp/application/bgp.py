@@ -13,7 +13,7 @@ import syslog
 
 from exabgp.version import version
 # import before the fork to improve copy on write memory savings
-from exabgp.reactor import Reactor
+from exabgp.reactor.loop import Reactor
 
 from exabgp.dep import docopt
 from exabgp.dep import lsprofcalltree

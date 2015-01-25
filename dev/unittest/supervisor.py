@@ -13,7 +13,7 @@ from exabgp.configuration.environment import environment
 env = environment.setup('')
 
 from exabgp.configuration.ancient import Configuration
-from exabgp.reactor import Reactor
+from exabgp.reactor.loop import Reactor
 
 class TestPeer (unittest.TestCase):
 	text_configuration = """\

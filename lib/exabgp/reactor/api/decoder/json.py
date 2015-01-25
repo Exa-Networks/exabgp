@@ -7,7 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 # from exabgp.configuration.ancient import Configuration
-# from exabgp.configuration.ancient import formated
+# from exabgp.configuration.format import formated
 #
 # from exabgp.protocol.family import AFI
 # from exabgp.protocol.family import SAFI
