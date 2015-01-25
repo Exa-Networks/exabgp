@@ -48,6 +48,7 @@ def check_neighbor (neighbors):
 
 	for name in neighbors.keys():
 		neighbor = neighbors[name]
+		neighbor.rib.clear()
 
 		path = {}
 		for f in known_families():

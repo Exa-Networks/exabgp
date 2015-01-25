@@ -15,7 +15,6 @@ import shlex
 
 from copy import deepcopy
 from struct import pack
-from struct import unpack
 
 from exabgp.util.ip import isipv4
 
@@ -946,10 +945,11 @@ class Configuration (object):
 					options.append('/etc/exabgp')
 					pwd = os.environ.get('PWD','').split('/')
 					if pwd:
+						# without abspath the path is not / prefixed !
 						if pwd[-1] in ('etc','sbin'):
-							options.append(os.path.join(pwd[:-1],parts))
+							options.append(os.path.abspath(os.path.join(os.path.join(*pwd[:-1]),os.path.join(*parts))))
 						if 'etc' not in pwd:
-							options.append(os.path.join(pwd,'etc',parts))
+							options.append(os.path.abspath(os.path.join(os.path.join(*pwd),os.path.join(*parts))))
 			else:
 				options = [
 					os.path.abspath(os.path.join(os.path.dirname(self._fname),prg)),
