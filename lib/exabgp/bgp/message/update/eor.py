@@ -12,7 +12,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.update.attribute import Attributes
-from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.bgp.message.update.nlri.nlri import NLRI as _NLRI
 
 # =================================================================== End-Of-RIB
 # not technically a different message type but easier to treat as one
@@ -21,14 +21,14 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 class EOR (Message):
 	TYPE = chr(Message.CODE.UPDATE)
 
-	class NLRI (NLRI):
+	class NLRI (_NLRI):
 		PREFIX = '\x00\x00\x00\x07\x90\x0F\x00\x03'
 		EOR = True
 
 		nexthop = None
 
 		def __init__ (self,afi,safi,action):
-			NLRI.__init__(self,afi,safi)
+			_NLRI.__init__(self,afi,safi)
 			self.action = action
 
 		def pack (self):
