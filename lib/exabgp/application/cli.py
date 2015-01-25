@@ -48,7 +48,7 @@ class Completed (cmd.Cmd):
 
 
 class SubMenu (Completed):
-	def do_exit (self,line):
+	def do_exit (self,_):
 		return True
 
 	do_x = do_exit
@@ -105,7 +105,7 @@ class Attribute (SubMenu):
 	# psmi
 	# aigp
 
-	def do_show (self,line):
+	def do_show (self,_):
 		print 'attribute %s ' % self.name + ' '.join('%s %s' % (key,value) for key,value in self.attribute.iteritems())
 
 
@@ -216,7 +216,7 @@ class ExaBGP (Completed):
 	def help_attribute (self):
 		print 'attribute <name>'
 
-	def do_quit (self,line):
+	def do_quit (self,_):
 		return True
 
 	do_q = do_quit

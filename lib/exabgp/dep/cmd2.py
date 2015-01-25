@@ -1425,7 +1425,7 @@ def cast(current, new):
             pass
         try:
             new = new.lower()
-        except:
+        except Exception:
             pass
         if (new=='on') or (new[0] in ('y','t')):
             return True
@@ -1434,7 +1434,7 @@ def cast(current, new):
     else:
         try:
             return typ(new)
-        except:
+        except Exception:
             pass
     print ("Problem setting parameter (now %s) to %s; incorrect type?" % (current, new))
     return current
@@ -1595,4 +1595,3 @@ into a file, ``transcript.test``, and invoke the test like::
 
 Wildcards can be used to test against multiple transcript files.
 '''
-

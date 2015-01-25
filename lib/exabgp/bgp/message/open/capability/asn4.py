@@ -24,7 +24,7 @@ class ASN4 (Capability,ASN):
 		return 'ASN4(%d)' % int(self)
 
 	@staticmethod
-	def unpack (what,instance,data):
+	def unpack_capability (instance,data,_=None):
 		# XXX: FIXME: if instance is not ASN(0) we have two ASN - raise
 		instance = ASN.unpack(data,ASN4)
 		return instance

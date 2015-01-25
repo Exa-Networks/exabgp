@@ -179,7 +179,7 @@ class ASPath (Attribute):
 				# Eat the data and ignore it if the ASPath attribute is know known
 				asns = as_choice.get(stype,[])
 
-				for i in range(slen):
+				for _ in range(slen):
 					asn = unpack(upr,sdata[:length])[0]
 					asns.append(ASN(asn))
 					sdata = sdata[length:]

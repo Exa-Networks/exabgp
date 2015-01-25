@@ -190,7 +190,7 @@ class SequencedOperationalFamily (OperationalFamily):
 #
 
 
-class NS:
+class NS (object):
 	MALFORMED   = 0x01  # Request TLV Malformed
 	UNSUPPORTED = 0x02  # TLV Unsupported for this neighbor
 	MAXIMUM     = 0x03  # Max query frequency exceeded
@@ -241,7 +241,7 @@ class NS:
 #
 
 
-class Advisory:
+class Advisory (object):
 	class _Advisory (OperationalFamily):
 		category = 'advisory'
 
@@ -288,7 +288,7 @@ Advisory.ASM.register_operational()
 #
 
 
-class Query:
+class Query (object):
 	class _Query (SequencedOperationalFamily):
 		category = 'query'
 
@@ -329,7 +329,7 @@ Query.LPCQ.register_operational()
 #
 
 
-class Response:
+class Response (object):
 	class _Counter (SequencedOperationalFamily):
 		category = 'counter'
 
@@ -378,5 +378,5 @@ Response.LPCP.register_operational()
 #
 
 
-class Dump:
+class Dump (object):
 	pass

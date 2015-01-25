@@ -112,7 +112,7 @@ class Text (object):
 		for nlri in update.nlris:
 			if nlri.EOR:
 				r += 'neighbor %s announced route %s\n' % (neighbor,nlri.extensive())
-			elif nlri.action == IN.announced:
+			elif nlri.action == IN.announced:  # pylint: disable=E1101
 				if nlri.nexthop:
 					r += 'neighbor %s announced route %s%s\n' % (neighbor,nlri.extensive(),attributes)
 				else:
@@ -300,9 +300,9 @@ class JSON (object):
 
 		for nlri in update.nlris:
 			nexthop = str(nlri.nexthop) if nlri.nexthop else 'null'
-			if nlri.action == IN.announced:
+			if nlri.action == IN.announced:  # pylint: disable=E1101
 				plus.setdefault(nlri.family(),{}).setdefault(nexthop,[]).append(nlri)
-			if nlri.action == IN.withdrawn:
+			if nlri.action == IN.withdrawn:  # pylint: disable=E1101
 				minus.setdefault(nlri.family(),[]).append(nlri)
 
 		add = []

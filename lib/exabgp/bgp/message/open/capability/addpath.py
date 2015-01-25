@@ -47,7 +47,7 @@ class AddPath (Capability,dict):
 		return rs
 
 	@staticmethod
-	def unpack (capability,instance,data):
+	def unpack_capability (instance,data,_=None):
 		# XXX: FIXME: should check that we have not yet seen the capability
 		while data:
 			afi = AFI.unpack(data[:2])

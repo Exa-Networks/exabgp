@@ -300,7 +300,7 @@ def check(cmd, timeout):
         logger.debug("Command was executed successfully {0} {1}".format(p.returncode, stdout))
         return True
     except Alarm:
-        logger.warn("Timeout ({0}) while running check command".format(timeout, cmd))
+        logger.warn("Timeout ({0}) while running check command {1}".format(timeout, cmd))
         os.killpg(p.pid, signal.SIGKILL)
         return False
 

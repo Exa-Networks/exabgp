@@ -31,8 +31,10 @@ class Decoder (object):
 		return function
 
 	def parse_command (self,reactor,service,command):
+		# it must be reversed so longer command are found before the shorter
+		# "show neighbor" should not match "show neighbors"
 		for registered in sorted(self.storage, reverse=True):
-			if command.startswith(registered):
+			if registered in command:
 				return self.storage[registered](self,reactor,service,command)
 		self.logger.reactor("Command from process not understood : %s" % command,'warning')
 		return False

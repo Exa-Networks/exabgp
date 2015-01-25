@@ -152,10 +152,10 @@ class MPRNLRI (Attribute,Address):
 		while data:
 			if nexthops:
 				for nexthop in nexthops:
-					length,nlri = NLRI.unpack(afi,safi,data,addpath,nexthop,IN.announced)
+					length,nlri = NLRI.unpack(afi,safi,data,addpath,nexthop,IN.announced)  # pylint: disable=E1101
 					nlris.append(nlri)
 			else:
-				length,nlri = NLRI.unpack(afi,safi,data,addpath,'',IN.announced)
+				length,nlri = NLRI.unpack(afi,safi,data,addpath,'',IN.announced)  # pylint: disable=E1101
 				nlris.append(nlri)
 
 			# logger.parser(LazyFormat("parsed announce mp nlri %s payload " % nlri,data[:length]))

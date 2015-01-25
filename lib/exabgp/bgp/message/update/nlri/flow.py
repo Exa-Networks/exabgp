@@ -472,7 +472,7 @@ class Flow (NLRI):
 	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ip,nexthop=None,rd=None):
 		NLRI.__init__(self,afi,safi)
 		self.rules = {}
-		self.action = OUT.announce
+		self.action = OUT.announce  # pylint: disable=E1101
 		self.nexthop = IP.unpack(nexthop) if nexthop else NoIP
 		self.rd = rd
 		self.unique = unique.next()

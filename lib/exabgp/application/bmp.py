@@ -129,7 +129,8 @@ class BMPServer(asyncore.dispatcher):
 	def handle_accept(self):
 		pair = self.accept()
 		if pair is not None:
-			sock, addr = pair
+			# The if prevent invalid unpacking
+			sock, addr = pair  # pylint: disable=W0633
 			print "new BGP connection from", addr
 			BMPHandler(sock).setup(self.env,*addr)
 
@@ -322,17 +323,23 @@ environment.configuration = {
 
 env = environment.setup('')
 
-try:
-	os.dup2(2,3)
-	env.fd = os.fdopen(3, "w+")
-except:
-	print "can not setup a descriptor of FD 3 for route display"
-	sys.exit(1)
 
-server = BMPServer(env)
-drop()
+def main ():
+	try:
+		os.dup2(2,3)
+		env.fd = os.fdopen(3, "w+")
+	except Exception:
+		print "can not setup a descriptor of FD 3 for route display"
+		sys.exit(1)
 
-try:
-	asyncore.loop()
-except:
-	pass
+	BMPServer(env)
+	drop()
+
+	try:
+		asyncore.loop()
+	except Exception:
+		pass
+
+
+if __name__ == '__main__':
+	main()

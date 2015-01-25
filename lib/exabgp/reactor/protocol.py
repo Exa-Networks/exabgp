@@ -149,7 +149,6 @@ class Protocol (object):
 			return
 
 		self.logger.message(self.me('<< %s' % Message.CODE.name(msg_id)))
-		# message = Message.unpack(msg_id,body,self.negotiated)
 		try:
 			message = Message.unpack(msg_id,body,self.negotiated)
 		except (KeyboardInterrupt,SystemExit,Notify):

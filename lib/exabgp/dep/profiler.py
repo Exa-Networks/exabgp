@@ -49,7 +49,7 @@ except ImportError:
             try:
                 vsz_index = out[0].split().index(b'RSS')
                 return float(out[1].split()[vsz_index]) / 1024
-            except:
+            except Exception:
                 return -1
     else:
         raise NotImplementedError('The psutil module is required for non-unix '

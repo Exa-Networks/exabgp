@@ -6,6 +6,7 @@ import errno
 import fcntl
 import select
 
+
 errno_block = set((
 	errno.EINPROGRESS, errno.EALREADY,
 	errno.EAGAIN, errno.EWOULDBLOCK,
@@ -26,12 +27,14 @@ errno_unavailable = set((
 	errno.ECONNREFUSED, errno.EHOSTUNREACH,
 ))
 
+
 def async (fd):
 	try:
 		fcntl.fcntl(fd, fcntl.F_SETFL, os.O_NONBLOCK)
 		return True
 	except IOError:
 		return False
+
 
 def sync (fd):
 	try:
@@ -40,10 +43,12 @@ def sync (fd):
 	except IOError:
 		return False
 
+
 if not async(sys.stdin):
 	print >> sys.stderr, "could not set stdin/stdout non blocking"
 	sys.stderr.flush()
 	sys.exit(1)
+
 
 def _reader ():
 	received = ''
@@ -58,7 +63,6 @@ def _reader ():
 			elif exc.args[0] in errno_fatal:
 				print >> sys.stderr, "fatal error while reading on stdin : %s" % str(exc)
 				sys.exit(1)
-
 
 		received += data
 		if '\n' in received:
@@ -88,9 +92,10 @@ def write (data='',left=''):
 
 	return not not left
 
+
 def read (timeout):
 	try:
-		r, w, x = select.select([sys.stdin], [], [sys.stdin,], timeout)
+		r, _, x = select.select([sys.stdin], [], [sys.stdin,], timeout)
 	except IOError,exc:
 		if exc.args[0] in errno_block:
 			return ''

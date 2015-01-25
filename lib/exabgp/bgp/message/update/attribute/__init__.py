@@ -39,7 +39,7 @@ from exabgp.logger import LazyFormat
 
 
 class _NOTHING (object):
-	def pack (self,negotiated=None):
+	def pack (self,_=None):
 		return ''
 
 NOTHING = _NOTHING()
@@ -62,7 +62,7 @@ class MultiAttributes (list):
 		self.MULTIPLE = True
 		self.append(attribute)
 
-	def pack (self,negotiated=None):
+	def pack (self,_=None):
 		r = []
 		for attribute in self:
 			r.append(attribute.pack())
@@ -115,7 +115,7 @@ class Attributes (dict):
 			if code in exclude:
 				continue
 			if code in self.representation:
-				how, default, name, presentation, _ = self.representation[code]
+				how, _, name, presentation, __ = self.representation[code]
 				if how == 'boolean':
 					yield ' %s' % name
 				elif how == 'list':
@@ -133,7 +133,7 @@ class Attributes (dict):
 			if code in (Attribute.CODE.NEXT_HOP, Attribute.CODE.INTERNAL_SPLIT, Attribute.CODE.INTERNAL_WATCHDOG, Attribute.CODE.INTERNAL_WITHDRAW):
 				continue
 			if code in self.representation:
-				how, default, name, _, presentation = self.representation[code]
+				how, _, name, __, presentation = self.representation[code]
 				if how == 'boolean':
 					yield '"%s": %s' % (name, 'true' if self.has(code) else 'false')
 				elif how == 'string':
@@ -167,7 +167,7 @@ class Attributes (dict):
 	def has (self,k):
 		return k in self
 
-	def add (self,attribute,data=None):
+	def add (self,attribute,_=None):
 		# we return None as attribute if the unpack code must not generate them
 		if attribute is None:
 			return
@@ -316,7 +316,7 @@ class Attributes (dict):
 			offset = 3
 
 		data = data[offset:]
-		next = data[length:]
+		left = data[length:]
 		attribute = data[:length]
 
 		logger = Logger()
@@ -330,23 +330,23 @@ class Attributes (dict):
 		# handle the attribute if we know it
 		if Attribute.registered(aid,flag):
 			self.add(Attribute.unpack(aid,flag,attribute,negotiated))
-			return self.parse(next,negotiated)
+			return self.parse(left,negotiated)
 		# XXX: FIXME: we could use a fallback function here like capability
 
 		# if we know the attribute but the flag is not what the RFC says. ignore it.
 		if aid in Attribute.attributes_known:
 			logger.parser('invalid flag for attribute %s (flag 0x%02X, aid 0x%02X)' % (Attribute.CODE.names.get(aid,'unset'),flag,aid))
-			return self.parse(next,negotiated)
+			return self.parse(left,negotiated)
 
 		# it is an unknown transitive attribute we need to pass on
 		if flag & Attribute.Flag.TRANSITIVE:
 			logger.parser('unknown transitive attribute (flag 0x%02X, aid 0x%02X)' % (flag,aid))
 			self.add(GenericAttribute(aid,flag | Attribute.Flag.PARTIAL,attribute),attribute)
-			return self.parse(next,negotiated)
+			return self.parse(left,negotiated)
 
 		# it is an unknown non-transitive attribute we can ignore.
 		logger.parser('ignoring unknown non-transitive attribute (flag 0x%02X, aid 0x%02X)' % (flag,aid))
-		return self.parse(next,negotiated)
+		return self.parse(left,negotiated)
 
 	def merge_attributes (self):
 		as2path = self[Attribute.CODE.AS_PATH]

@@ -30,7 +30,7 @@ class Negotiated (object):
 		self.multisession = False
 		self.msg_size = 4096
 		self.operational = False
-		self.refresh = REFRESH.absent
+		self.refresh = REFRESH.absent  # pylint: disable=E1101
 		self.aigp = None
 
 	def sent (self,sent_open):
@@ -67,9 +67,9 @@ class Negotiated (object):
 					self.families.append(family)
 
 		if recv_capa.announced(Capability.CODE.ENHANCED_ROUTE_REFRESH) and sent_capa.announced(Capability.CODE.ENHANCED_ROUTE_REFRESH):
-			self.refresh = REFRESH.enhanced
+			self.refresh = REFRESH.enhanced  # pylint: disable=E1101
 		elif recv_capa.announced(Capability.CODE.ROUTE_REFRESH) and sent_capa.announced(Capability.CODE.ROUTE_REFRESH):
-			self.refresh = REFRESH.normal
+			self.refresh = REFRESH.normal  # pylint: disable=E1101
 
 		self.multisession  = sent_capa.announced(Capability.CODE.MULTISESSION) and recv_capa.announced(Capability.CODE.MULTISESSION)
 		self.multisession |= sent_capa.announced(Capability.CODE.MULTISESSION_CISCO) and recv_capa.announced(Capability.CODE.MULTISESSION_CISCO)

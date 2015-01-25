@@ -2,6 +2,7 @@
 import gc
 import inspect
 
+
 def dump():
 	# force collection
 	print "\nCollecting GARBAGE:"
@@ -13,7 +14,8 @@ def dump():
 	print "\nGARBAGE OBJECTS:"
 	for x in gc.garbage:
 		s = str(x)
-		if len(s) > 80: s = "%s..." % s[:80]
+		if len(s) > 80:
+			s = "%s..." % s[:80]
 
 		print "::", s
 		print "		type:", type(x)
@@ -26,7 +28,7 @@ def dump():
 			print "	line num:", line_num
 			for l in lines:
 				print "		line:", l.rstrip("\n")
-		except:
+		except Exception:
 			pass
 
 		print

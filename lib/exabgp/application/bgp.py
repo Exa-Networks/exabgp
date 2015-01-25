@@ -114,13 +114,13 @@ def main ():
 			except KeyboardInterrupt:
 				pass
 			try:
-				pid,exit = os.wait()
-				sys.exit(exit)
+				pid,code = os.wait()
+				sys.exit(code)
 			except KeyboardInterrupt:
 				try:
-					pid,exit = os.wait()
-					sys.exit(exit)
-				except:
+					pid,code = os.wait()
+					sys.exit(code)
+				except Exception:
 					sys.exit(0)
 
 	if options["--help"]:
@@ -283,7 +283,7 @@ def run (env,comment,configurations,pid=0):
 		profiler.enable()
 		try:
 			Reactor(configurations).run()
-		except:
+		except Exception:
 			raise
 		finally:
 			profiler.disable()

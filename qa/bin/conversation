@@ -123,6 +123,7 @@ def dispatch (exabgp,daemon,groups,port):
 		display('failed, a test is taking more than the allocated time','\n\n')
 
 	if names.keys():
+		success = False
 		display('alarming','\n','---------','\n')
 
 		for name in names.keys():
@@ -147,8 +148,10 @@ def dispatch (exabgp,daemon,groups,port):
 					display(out)
 					display(err)
 					display('\n','\n')
-					try: process.terminate()
-					except OSError: pass
+					try:
+						process.terminate()
+					except OSError:
+						pass
 
 	return success
 

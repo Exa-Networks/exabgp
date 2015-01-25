@@ -350,7 +350,7 @@ def quote(s):
 def safe_repr(obj):
 	try:
 		return short_repr(obj)
-	except:
+	except Exception:
 		return '(unrepresentable)'
 
 

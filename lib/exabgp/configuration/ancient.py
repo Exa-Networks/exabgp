@@ -1679,7 +1679,7 @@ class Configuration (object):
 		# generate the new routes
 		for _ in range(number):
 			# update ip to the next route, this recalculate the "ip" field of the Inet class
-			nlri = klass(afi,safi,pack_int(afi,ip,split),split,nexthop,OUT.announce,path_info)
+			nlri = klass(afi,safi,pack_int(afi,ip,split),split,nexthop,OUT.announce,path_info)  # pylint: disable=E1101
 			if klass is MPLS:
 				nlri.labels = labels
 				nlri.rd = rd
@@ -1713,7 +1713,7 @@ class Configuration (object):
 				klass = Prefix
 
 			# nexthop must be false and its str return nothing .. an empty string does that
-			update = Change(klass(afi=IP.toafi(ip),safi=IP.tosafi(ip),packed=IP.pton(ip),mask=mask,nexthop=None,action=OUT.announce),Attributes())
+			update = Change(klass(afi=IP.toafi(ip),safi=IP.tosafi(ip),packed=IP.pton(ip),mask=mask,nexthop=None,action=OUT.announce),Attributes())  # pylint: disable=E1101
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise Exception()  # noqa
@@ -1902,7 +1902,7 @@ class Configuration (object):
 				# change.attributes.add(NextHop(nh.ip,nh.packed))
 
 			return True
-		except:
+		except Exception:
 			self._error = self._str_route_error
 			if self.debug: raise Exception()  # noqa
 			return False
@@ -2092,7 +2092,7 @@ class Configuration (object):
 		try:
 			scope[-1]['announce'][-1].attributes.add(OriginatorID(tokens.pop(0)))
 			return True
-		except:
+		except Exception:
 			self._error = self._str_route_error
 			if self.debug: raise Exception()  # noqa
 			return False

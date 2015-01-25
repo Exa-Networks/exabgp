@@ -35,7 +35,8 @@ class BGPServer(asyncore.dispatcher):
 	def handle_accept(self):
 		pair = self.accept()
 		if pair is not None:
-			sock, addr = pair
+			# The if prevent invalid unpacking
+			sock, addr = pair  # pylint: disable=W0633
 			print "new BGP connection from", addr
 			handler = BGPHandler(sock)
 

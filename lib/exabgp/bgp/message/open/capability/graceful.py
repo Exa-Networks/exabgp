@@ -58,7 +58,7 @@ class Graceful (Capability,dict):
 		return self.keys()
 
 	@staticmethod
-	def unpack (what,instance,data):
+	def unpack_capability (instance,data,_=None):
 		# XXX: FIXME: should raise if instance was already setup
 		restart = unpack('!H',data[:2])[0]
 		restart_flag = restart >> 12

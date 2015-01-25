@@ -23,7 +23,7 @@ class KeepAlive (Message):
 		return "KEEPALIVE"
 
 	@classmethod
-	def unpack_message (cls,data,negotiated):
+	def unpack_message (cls,_,__):
 		# XXX: FIXME: raise Notify if data has something
 		return cls()
 

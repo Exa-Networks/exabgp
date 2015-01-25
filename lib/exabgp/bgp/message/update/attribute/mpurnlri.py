@@ -68,7 +68,7 @@ class MPURNLRI (Attribute,Address):
 		addpath = negotiated.addpath.receive(afi,safi)
 
 		while data:
-			length,nlri = NLRI.unpack(afi,safi,data,addpath,None,IN.withdrawn)
+			length,nlri = NLRI.unpack(afi,safi,data,addpath,None,IN.withdrawn)  # pylint: disable=E1101
 			nlris.append(nlri)
 			data = data[length:]
 			# logger.parser(LazyFormat("parsed withdraw mp nlri %s payload " % nlri,data[:length]))

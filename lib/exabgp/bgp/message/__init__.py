@@ -94,14 +94,14 @@ class Message (Exception):
 		def name (message_id):
 			return Message.CODE.names.get(message_id,'unknown message %s' % hex(message_id))
 
-	class Name:
-		NOP           = 'NOP'
-		OPEN          = 'OPEN'
-		UPDATE        = 'UPDATE'
-		NOTIFICATION  = 'NOTIFICATION'
-		KEEPALIVE     = 'KEEPALIVE'
-		ROUTE_REFRESH = 'ROUTE_REFRESH'
-		OPERATIONAL   = 'OPERATIONAL'
+	# class Name (object):
+	# 	NOP           = 'NOP'
+	# 	OPEN          = 'OPEN'
+	# 	UPDATE        = 'UPDATE'
+	# 	NOTIFICATION  = 'NOTIFICATION'
+	# 	KEEPALIVE     = 'KEEPALIVE'
+	# 	ROUTE_REFRESH = 'ROUTE_REFRESH'
+	# 	OPERATIONAL   = 'OPERATIONAL'
 
 	Length = {
 		CODE.OPEN:           lambda _:  _ >= 29,  # noqa
@@ -141,7 +141,8 @@ class Message (Exception):
 
 	@classmethod
 	def register_message (cls,message=None):
-		what = cls.TYPE if message is None else message
+		# cls.TYPE is defined by all the subclasses which use this function
+		what = cls.TYPE if message is None else message  # pylint: disable=E1101
 		if what in cls.registered_message:
 			raise RuntimeError('only one class can be registered per message')
 		cls.registered_message[ord(what)] = cls

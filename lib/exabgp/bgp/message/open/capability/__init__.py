@@ -104,7 +104,8 @@ class Capability (object):
 
 	@classmethod
 	def register_capability (cls,capability=None):
-		what = cls.ID if capability is None else capability
+		# ID is defined by all the subclasses - otherwise they do not work :)
+		what = cls.ID if capability is None else capability  # pylint: disable=E1101
 		if what in cls.registered_capability:
 			raise RuntimeError('only one class can be registered per capability')
 		cls.registered_capability[what] = cls
@@ -121,9 +122,8 @@ class Capability (object):
 
 	@classmethod
 	def unpack (cls,capability,capabilities,data):
-		if capability in capabilities:
-			return cls.klass(capability).unpack(capability,capabilities[capability],data)
-		return cls.klass(capability).unpack(capability,Capability.klass(capability)(),data)
+		instance = capabilities.get(capability,Capability.klass(capability)())
+		return cls.klass(capability).unpack_capability(instance,data,capability)
 
 
 # =================================================================== Parameter

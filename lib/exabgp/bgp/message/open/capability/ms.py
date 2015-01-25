@@ -37,7 +37,7 @@ class MultiSession (Capability,list):
 		return rs
 
 	@staticmethod
-	def unpack (capability,instance,data):
+	def unpack_capability (instance,data,_=None):
 		# XXX: FIXME: we should set that that instance was seen and raise if seen twice
 		return instance
 
