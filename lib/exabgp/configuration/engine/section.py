@@ -16,20 +16,24 @@ class Section (object):
 	configuration = dict()
 	factory = dict()
 
+	# to be defined in subclasses
+	name = ''
+	syntax = ''
+
 	def __init__ (self):
 		# we get our name through our subclasses
-		self.factory[self.name] = self  # pylint: disable=E1101
+		self.factory[self.name] = self
 
 	def drop_parenthesis (self,tokeniser):
 		if tokeniser() != '{':
 			# syntax is set in our subclasses
-			raise Raised(tokeniser,'missing opening parenthesis "{"',self.syntax)  # pylint: disable=E1101
+			raise Raised(tokeniser,'missing opening parenthesis "{"',self.syntax)
 
 	def create_section (self,section,tokeniser):
 		name = tokeniser()
 		if name == '{':
 			# syntax is set in our subclasses
-			raise Raised(tokeniser,'was expecting section name',self.syntax)  # pylint: disable=E1101
+			raise Raised(tokeniser,'was expecting section name',self.syntax)
 		self.drop_parenthesis(tokeniser)
 		return self.create_content(section,name,tokeniser)
 
@@ -37,7 +41,7 @@ class Section (object):
 		storage = self.configuration[tokeniser.name][section][name]
 		if storage:
 			# syntax is set in our subclasses
-			raise Raised(tokeniser,'the section name %s/%s for %s is not unique' % (section,name,tokeniser.name),self.syntax)  # pylint: disable=E1101
+			raise Raised(tokeniser,'the section name %s/%s for %s is not unique' % (section,name,tokeniser.name),self.syntax)
 		return storage
 
 	def get_section (self,section,tokeniser):
@@ -51,7 +55,7 @@ class Section (object):
 		storage = self.configuration[tokeniser.name][section][name]
 		if storage is None:
 			# syntax is set in our subclasses
-			raise Raised(tokeniser,'the section name %s referenced does not exists' % name,self.syntax)  # pylint: disable=E1101
+			raise Raised(tokeniser,'the section name %s referenced does not exists' % name,self.syntax)
 		return storage
 
 	def extract_anonymous (self,section,tokeniser):
@@ -81,7 +85,7 @@ class Section (object):
 		token = tokeniser()
 		if token != '{':
 			# syntax is set in our subclasses
-			raise Raised(tokeniser,'was expecting {',self.syntax)  # pylint: disable=E1101
+			raise Raised(tokeniser,'was expecting {',self.syntax)
 
 	def exit_nameless (self,tokeniser):
 		# no verification to do
@@ -91,7 +95,7 @@ class Section (object):
 		token = tokeniser()
 		if token != '{':
 			# syntax is set in our subclasses
-			raise Raised(tokeniser,'was expecting {',self.syntax)  # pylint: disable=E1101
+			raise Raised(tokeniser,'was expecting {',self.syntax)
 		self.content = self.create_content(self.name,'anonymous',tokeniser)
 
 	def exit_anonymous (self,tokeniser):

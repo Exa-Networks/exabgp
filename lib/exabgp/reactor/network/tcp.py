@@ -41,7 +41,7 @@ def create (afi):
 		except (socket.error,AttributeError):
 			pass
 		try:
-			io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+			io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)  # pylint: disable=E1101
 		except (socket.error,AttributeError):
 			pass
 	except socket.error:

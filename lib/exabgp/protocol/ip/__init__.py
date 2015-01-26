@@ -16,6 +16,7 @@ from exabgp.protocol.family import SAFI
 
 
 class IP (object):
+	afi = None  # here for the API
 	_known = dict()
 
 	_UNICAST = SAFI(SAFI.unicast)

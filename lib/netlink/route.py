@@ -203,6 +203,9 @@ class Attributes (object):
 
 
 class _InfoMessage (object):
+	class Header (object):
+		LEN = 0  # to be defined by the subclasses
+
 	def __init__ (self,route):
 		self.route = route
 

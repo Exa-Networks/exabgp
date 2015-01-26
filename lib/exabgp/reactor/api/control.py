@@ -63,10 +63,10 @@ class Control (object):
 		sys.stdout.flush()
 
 	def write_socket (self,data):
-		self.sock.sendall(data)
+		self.sock.sendall(data)  # pylint: disable=E1101
 
 	def read_socket (self,number):
-		return self.sock.recv(number)
+		return self.sock.recv(number)  # pylint: disable=E1101
 
 	def read_stdin (self,_):
 		return sys.stdin.readline()

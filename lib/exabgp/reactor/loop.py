@@ -99,7 +99,7 @@ class Reactor (object):
 			read,_,_ = select.select(ios,[],[],sleeptime)
 			return read
 		except select.error,exc:
-			errno,message = exc.args
+			errno,message = exc.args  # pylint: disable=W0633
 			if errno not in error.block:
 				raise exc
 			return []

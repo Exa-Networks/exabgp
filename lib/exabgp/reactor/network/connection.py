@@ -228,14 +228,14 @@ class Connection (object):
 		length = unpack('!H',header[16:18])[0]
 
 		if length < Message.HEADER_LEN or length > Message.MAX_LEN:
-			report = '%s has an invalid message length of %d' % (Message.name(msg),length)
+			report = '%s has an invalid message length of %d' % (Message.CODE.name(msg),length)
 			yield length,0,header,'',NotifyError(1,2,report)
 			return
 
 		validator = Message.Length.get(msg,lambda _: _ >= 19)
 		if not validator(length):
 			# MUST send the faulty length back
-			report = '%s has an invalid message length of %d' % (Message.name(msg),length)
+			report = '%s has an invalid message length of %d' % (Message.CODE.name(msg),length)
 			yield length,0,header,'',NotifyError(1,2,report)
 			return
 
