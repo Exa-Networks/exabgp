@@ -13,7 +13,7 @@ from os import path
 class Alarm(Exception):
 	pass
 
-def alarm_handler(signum, frame):
+def alarm_handler(_, __):
 	raise Alarm()
 
 def main ():

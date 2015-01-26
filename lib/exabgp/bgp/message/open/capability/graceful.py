@@ -72,5 +72,3 @@ class Graceful (Capability,dict):
 			families.append((afi,safi,flag_family))
 			data = data[4:]
 		return instance.set(restart_flag,restart_time,families)
-
-Graceful.register_capability()

@@ -37,5 +37,3 @@ class MultiProtocol (Capability,list):
 		safi = SAFI.unpack(data[3])
 		instance.append((afi,safi))
 		return instance
-
-MultiProtocol.register_capability()

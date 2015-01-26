@@ -56,5 +56,3 @@ class AddPath (Capability,dict):
 			instance.add_path(afi,safi,sr)
 			data = data[4:]
 		return instance
-
-AddPath.register_capability()

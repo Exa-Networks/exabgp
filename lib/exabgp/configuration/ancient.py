@@ -3080,7 +3080,7 @@ class Configuration (object):
 		from exabgp.bgp.message.update import Update
 		from exabgp.bgp.message.open import Open
 		from exabgp.bgp.message.open.capability import Capability
-		from exabgp.bgp.message.open.capability import Capabilities
+		from exabgp.bgp.message.open.capability.capabilities import Capabilities
 		from exabgp.bgp.message.open.capability.negotiated import Negotiated
 		from exabgp.bgp.message.notification import Notify
 		from exabgp.reactor.peer import Peer

@@ -95,7 +95,7 @@ def write (data='',left=''):
 
 def read (timeout):
 	try:
-		r, _, x = select.select([sys.stdin], [], [sys.stdin,], timeout)
+		r, _, __ = select.select([sys.stdin], [], [sys.stdin,], timeout)
 	except IOError,exc:
 		if exc.args[0] in errno_block:
 			return ''

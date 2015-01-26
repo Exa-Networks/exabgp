@@ -40,6 +40,3 @@ class MultiSession (Capability,list):
 	def unpack_capability (instance,data,_=None):
 		# XXX: FIXME: we should set that that instance was seen and raise if seen twice
 		return instance
-
-MultiSession.register_capability(Capability.CODE.MULTISESSION_CISCO)
-MultiSession.register_capability(Capability.CODE.MULTISESSION)

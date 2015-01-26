@@ -37,9 +37,6 @@ class RouteRefresh (Capability):
 			return False
 		return self.ID == other.ID
 
-RouteRefresh.register_capability(Capability.CODE.ROUTE_REFRESH)
-RouteRefresh.register_capability(Capability.CODE.ROUTE_REFRESH_CISCO)
-
 
 # ========================================================= EnhancedRouteRefresh
 #
@@ -61,5 +58,3 @@ class EnhancedRouteRefresh (Capability):
 	def unpack_capability (instance,data,_=None):
 		# XXX: FIXME: we should set that that instance was seen and raise if seen twice
 		return instance
-
-EnhancedRouteRefresh.register_capability()

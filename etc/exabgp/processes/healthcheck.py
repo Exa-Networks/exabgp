@@ -276,7 +276,7 @@ def check(cmd, timeout):
     class Alarm(Exception):
         pass
 
-    def alarm_handler(signum, frame):
+    def alarm_handler(_, __):
         raise Alarm()
 
     logger.debug("Checking command {0}".format(repr(cmd)))

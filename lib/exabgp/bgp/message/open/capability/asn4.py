@@ -31,5 +31,3 @@ class ASN4 (Capability,ASN):
 
 	def json (self):
 		return '{ "name": "asn4", "asn4": %d }' % int(self)
-
-ASN4.register_capability()

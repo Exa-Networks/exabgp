@@ -39,5 +39,3 @@ class UnknownCapability (Capability):
 	@staticmethod
 	def unpack_capability (instance,data,capability):
 		return instance.set(capability,data)
-
-Capability.fallback_capability(UnknownCapability)
