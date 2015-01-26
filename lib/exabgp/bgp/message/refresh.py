@@ -43,7 +43,7 @@ class RouteRefresh (Message):
 		self.safi = SAFI(safi)
 		self.reserved = Reserved(reserved)
 
-	def messages (self,negotitated):
+	def messages (self,negotitated):  # pylint: disable=W0613
 		return [self._message('%s%s%s' % (self.afi.pack(),chr(self.reserved),self.safi.pack())),]
 
 	def __str__ (self):

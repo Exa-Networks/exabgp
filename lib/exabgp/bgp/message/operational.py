@@ -100,7 +100,7 @@ class Operational (Message):
 		cls.registered_operational[cls.code] = (cls.category,cls)
 
 	@classmethod
-	def unpack_message (cls,data,negotiated):
+	def unpack_message (cls,data,negotiated):  # pylint: disable=W0613
 		what = Type(unpack('!H',data[0:2])[0])
 		length = unpack('!H',data[2:4])[0]
 
@@ -256,7 +256,8 @@ class Advisory (object):
 			utf8 = advisory.encode('utf-8')
 			if len(utf8) > MAX_ADVISORY:
 				utf8 = utf8[:MAX_ADVISORY-3] + '...'.encode('utf-8')
-			Advisory._Advisory.__init__(
+			# using super as _Advisory is otherwise private :p
+			super(Advisory.ADM,self).__init__(
 				self,Operational.CODE.ADM,
 				afi,safi,
 				utf8
@@ -270,7 +271,8 @@ class Advisory (object):
 			utf8 = advisory.encode('utf-8')
 			if len(utf8) > MAX_ADVISORY:
 				utf8 = utf8[:MAX_ADVISORY-3] + '...'.encode('utf-8')
-			Advisory._Advisory.__init__(
+			# using super as _Advisory is otherwise private :p
+			super(Advisory.ASM,self).__init__(
 				self,Operational.CODE.ASM,
 				afi,safi,
 				utf8

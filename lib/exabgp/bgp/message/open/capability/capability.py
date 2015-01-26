@@ -105,12 +105,12 @@ class Capability (object):
 		cls._fallback_capability = imp
 
 	@staticmethod
-	def register_capability (cls,capability=None):
+	def register_capability (klass,capability=None):
 		# ID is defined by all the subclasses - otherwise they do not work :)
-		what = cls.ID if capability is None else capability  # pylint: disable=E1101
-		if what in cls.registered_capability:
+		what = klass.ID if capability is None else capability  # pylint: disable=E1101
+		if what in klass.registered_capability:
 			raise RuntimeError('only one class can be registered per capability')
-		cls.registered_capability[what] = cls
+		klass.registered_capability[what] = klass
 
 	@classmethod
 	def klass (cls,what):

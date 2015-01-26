@@ -14,5 +14,5 @@ from exabgp.protocol.ip import IPv4
 
 class RouterID (IPv4):
 	@classmethod
-	def unpack (cls,data):
+	def unpack (cls,data):  # pylint: disable=W0221
 		return cls('.'.join(str(ord(_)) for _ in data),data)

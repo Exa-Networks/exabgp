@@ -48,7 +48,13 @@ class Graceful (Capability,dict):
 		d = {
 			'name':'"graceful restart"',
 			'time':self.restart_time,
-			'address family flags':'{ %s} ' % ', '.join('"%s/%s": [ %s]' % (afi, safi, '"restart" ' if family & 0x80 else '') for afi, safi, family in [(str(afi), str(safi), self[(afi, safi)]) for (afi, safi) in self.keys()]),
+			'address family flags':'{ %s} ' % (
+				', '.join('"%s/%s": [ %s]' % (
+					afi, safi, '"restart" ' if family & 0x80 else '') for afi, safi, family in [
+						(str(a), str(s), self[(a,s)]) for (a,s) in self.keys()
+					]
+				)
+			),
 			'restart flags':'[ %s] ' % ('"forwarding" ' if self.restart_flag & 0x8 else '')
 		}
 
@@ -58,7 +64,7 @@ class Graceful (Capability,dict):
 		return self.keys()
 
 	@staticmethod
-	def unpack_capability (instance,data,_=None):
+	def unpack_capability (instance,data,capability=None):  # pylint: disable=W0613
 		# XXX: FIXME: should raise if instance was already setup
 		restart = unpack('!H',data[:2])[0]
 		restart_flag = restart >> 12

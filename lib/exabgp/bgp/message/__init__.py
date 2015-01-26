@@ -140,7 +140,7 @@ class Message (Exception):
 		message_len = pack('!H',19+len(message))
 		return "%s%s%s%s" % (self.MARKER,message_len,self.TYPE,message)
 
-	def message (self):
+	def message (self,negotiated):
 		raise RuntimeError('message not implemented in subclasses')
 
 	@classmethod

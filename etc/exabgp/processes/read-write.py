@@ -95,7 +95,7 @@ def write (data='',left=''):
 
 def read (timeout):
 	try:
-		r, _, __ = select.select([sys.stdin], [], [sys.stdin,], timeout)
+		r, w, x = select.select([sys.stdin], [], [sys.stdin,], timeout)  # pylint: disable=W0612
 	except IOError,exc:
 		if exc.args[0] in errno_block:
 			return ''

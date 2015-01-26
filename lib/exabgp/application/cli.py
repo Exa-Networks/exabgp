@@ -28,7 +28,7 @@ class Completed (cmd.Cmd):
 		self.prompt = '%s> ' % intro
 		cmd.Cmd.__init__(self)
 
-	def completedefault (self, text, line, begidx, endidx):
+	def completedefault (self, text, line, begidx, endidx):  # pylint: disable=W0613
 		commands = line.split()
 		local = self.completion
 
