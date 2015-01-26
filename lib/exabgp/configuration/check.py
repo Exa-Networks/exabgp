@@ -12,7 +12,7 @@ from exabgp.protocol.family import known_families
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open.capability.capabilities import Capabilities
-from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.notification import Notify
 

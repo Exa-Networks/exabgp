@@ -10,7 +10,7 @@ from struct import pack
 from struct import unpack
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open.capability.capability import Capability
 
 # =========================================================== Graceful (Restart)
 # RFC 4727

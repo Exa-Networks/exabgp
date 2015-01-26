@@ -13,7 +13,7 @@ from exabgp.bgp.timer import ReceiveTimer
 from exabgp.bgp.timer import SendTimer
 from exabgp.bgp.message import Message
 from exabgp.bgp.message import STATE
-from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability import REFRESH
 from exabgp.bgp.message.nop import NOP
 from exabgp.bgp.message.update import Update

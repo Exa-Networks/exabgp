@@ -7,7 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message.open.asn import ASN
-from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open.capability.capability import Capability
 
 # ========================================================================= ASN4
 #

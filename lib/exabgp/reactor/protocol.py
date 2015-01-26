@@ -17,7 +17,7 @@ from exabgp.bgp.message import Message
 from exabgp.bgp.message.nop import NOP
 from exabgp.bgp.message.nop import _NOP
 from exabgp.bgp.message.open import Open
-from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capabilities import Capabilities
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update import Update
