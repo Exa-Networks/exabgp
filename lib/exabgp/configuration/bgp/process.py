@@ -113,8 +113,9 @@ class SectionProcess (Section):
 		def printf (string):
 			return (string[::-1].replace(',', ' and'[::-1], 1))[::-1]
 
-		direction = self.location[-2]
-		message = self.location[-1]
+		# location is set by our caller
+		direction = self.location[-2]  # pylint: disable=E1101
+		message = self.location[-1]    # pylint: disable=E1101
 		actions = tokeniser()
 
 		for (idx_line,idx_column,line,action) in actions:

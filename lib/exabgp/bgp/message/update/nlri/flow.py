@@ -129,7 +129,8 @@ class IPrefix4 (IPrefix,IComponent,IPv4):
 
 	def pack (self):
 		raw = self.nlri.pack()
-		return "%s%s" % (chr(self.ID),raw)
+		# ID is defined in subclasses
+		return "%s%s" % (chr(self.ID),raw)  # pylint: disable=E1101
 
 	def __str__ (self):
 		return str(self.nlri)
@@ -149,7 +150,8 @@ class IPrefix6 (IPrefix,IComponent,IPv6):
 
 	def pack (self):
 		raw = self.nlri.packed_ip()
-		return "%s%s%s%s" % (chr(self.ID),chr(self.nlri.mask),chr(self.offset),raw)
+		# ID is defined in subclasses
+		return "%s%s%s%s" % (chr(self.ID),chr(self.nlri.mask),chr(self.offset),raw)  # pylint: disable=E1101
 
 	def __str__ (self):
 		return "%s/%s" % (self.nlri,self.offset)
@@ -169,10 +171,10 @@ class IOperation (IComponent):
 		return "%s%s" % (chr(op),v)
 
 	def encode (self,value):
-		raise NotImplemented('this method must be implemented by subclasses')
+		raise NotImplementedError('this method must be implemented by subclasses')
 
 	def decode (self,value):
-		raise NotImplemented('this method must be implemented by subclasses')
+		raise NotImplementedError('this method must be implemented by subclasses')
 
 
 # class IOperationIPv4 (IOperation):

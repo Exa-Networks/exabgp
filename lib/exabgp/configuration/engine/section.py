@@ -17,23 +17,27 @@ class Section (object):
 	factory = dict()
 
 	def __init__ (self):
-		self.factory[self.name] = self
+		# we get our name through our subclasses
+		self.factory[self.name] = self  # pylint: disable=E1101
 
 	def drop_parenthesis (self,tokeniser):
 		if tokeniser() != '{':
-			raise Raised(tokeniser,'missing opening parenthesis "{"',self.syntax)
+			# syntax is set in our subclasses
+			raise Raised(tokeniser,'missing opening parenthesis "{"',self.syntax)  # pylint: disable=E1101
 
 	def create_section (self,section,tokeniser):
 		name = tokeniser()
 		if name == '{':
-			raise Raised(tokeniser,'was expecting section name',self.syntax)
+			# syntax is set in our subclasses
+			raise Raised(tokeniser,'was expecting section name',self.syntax)  # pylint: disable=E1101
 		self.drop_parenthesis(tokeniser)
 		return self.create_content(section,name,tokeniser)
 
 	def create_content (self,section,name,tokeniser):
 		storage = self.configuration[tokeniser.name][section][name]
 		if storage:
-			raise Raised(tokeniser,'the section name %s/%s for %s is not unique' % (section,name,tokeniser.name),self.syntax)
+			# syntax is set in our subclasses
+			raise Raised(tokeniser,'the section name %s/%s for %s is not unique' % (section,name,tokeniser.name),self.syntax)  # pylint: disable=E1101
 		return storage
 
 	def get_section (self,section,tokeniser):
@@ -46,7 +50,8 @@ class Section (object):
 
 		storage = self.configuration[tokeniser.name][section][name]
 		if storage is None:
-			raise Raised(tokeniser,'the section name %s referenced does not exists' % name,self.syntax)
+			# syntax is set in our subclasses
+			raise Raised(tokeniser,'the section name %s referenced does not exists' % name,self.syntax)  # pylint: disable=E1101
 		return storage
 
 	def extract_anonymous (self,section,tokeniser):
@@ -58,7 +63,8 @@ class Section (object):
 			return None
 
 	def _check_duplicate (self,tokeniser,klass):
-		key = self.location[-3]
+		# location is set by our caller
+		key = self.location[-3]  # pylint: disable=E1101
 		if key in self.content:
 			raise klass(tokeniser,"duplicate entries for %s" % key)
 
@@ -74,7 +80,8 @@ class Section (object):
 	def enter_nameless (self,tokeniser):
 		token = tokeniser()
 		if token != '{':
-			raise Raised(tokeniser,'was expecting {',self.syntax)
+			# syntax is set in our subclasses
+			raise Raised(tokeniser,'was expecting {',self.syntax)  # pylint: disable=E1101
 
 	def exit_nameless (self,tokeniser):
 		# no verification to do
@@ -83,7 +90,8 @@ class Section (object):
 	def enter_anonymous (self,tokeniser):
 		token = tokeniser()
 		if token != '{':
-			raise Raised(tokeniser,'was expecting {',self.syntax)
+			# syntax is set in our subclasses
+			raise Raised(tokeniser,'was expecting {',self.syntax)  # pylint: disable=E1101
 		self.content = self.create_content(self.name,'anonymous',tokeniser)
 
 	def exit_anonymous (self,tokeniser):

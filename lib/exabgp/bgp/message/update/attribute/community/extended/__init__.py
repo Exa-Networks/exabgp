@@ -21,7 +21,8 @@ class ExtendedCommunity (Attribute):
 
 	@classmethod
 	def register_extended (cls):
-		cls.registered_extended[(cls.COMMUNITY_TYPE & 0x0F,cls.COMMUNITY_SUBTYPE)] = cls
+		# COMMUNITY_TYPE and COMMUNITY_SUBTYPE are defined in subclasses
+		cls.registered_extended[(cls.COMMUNITY_TYPE & 0x0F,cls.COMMUNITY_SUBTYPE)] = cls  # pylint: disable=E1101
 
 	# size of value for data (boolean: is extended)
 	length_value = {False:7, True:6}

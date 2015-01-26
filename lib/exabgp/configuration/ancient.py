@@ -3148,5 +3148,4 @@ class Configuration (object):
 				change = Change(update.nlris[number],update.attributes)
 				self.logger.parser('decoded %s %s %s' % (decoding,change.nlri.action,change.extensive()))
 			self.logger.parser('update json %s' % JSON('3.4.0').update(p,update,'',''))
-		import sys
 		sys.exit(0)

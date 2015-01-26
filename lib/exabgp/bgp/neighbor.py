@@ -159,19 +159,19 @@ class Neighbor (object):
 		if with_changes:
 			changes += '\nstatic { '
 			for changes in self.rib.incoming.queued_changes():
-				changes += '\n    %s' % changes.extensive()
+				changes += '\n\t\t%s' % changes.extensive()
 			changes += '\n}'
 
 		families = ''
 		for afi,safi in self.families():
-			families += '\n    %s %s;' % (afi.name(),safi.name())
+			families += '\n\t\t%s %s;' % (afi.name(),safi.name())
 
 		_extension_receive = {
-			'receive-parsed':         'parsed',
-			'receive-packets':        'packets',
-			'receive-parsed':         'parsed',
-			'consolidate':            'consolidate',
-			'neighbor-changes':       'neighbor-changes',
+			'receive-parsed':           'parsed',
+			'receive-packets':          'packets',
+			'receive-parsed':           'parsed',
+			'consolidate':              'consolidate',
+			'neighbor-changes':         'neighbor-changes',
 			Message.CODE.NOTIFICATION:  'notification',
 			Message.CODE.OPEN:          'open',
 			Message.CODE.KEEPALIVE:     'keepalive',
@@ -184,57 +184,58 @@ class Neighbor (object):
 			'send-packets': 'packets',
 		}
 
-		_receive  = []
+		_receive = []
 		for api,name in _extension_receive.items():
-			_receive.extend(['      %s;\n' % name,] if self.api[api] else [])
+			_receive.extend(['\t\t\t%s;\n' % name,] if self.api[api] else [])
 		receive = ''.join(_receive)
 
 		_send = []
 		for api,name in _extension_send.items():
-			_send.extend(['      %s;\n' % name,] if self.api[api] else [])
+			_send.extend(['\t\t\t%s;\n' % name,] if self.api[api] else [])
 		send = ''.join(_send)
 
-		return """\
-neighbor %s {
-  description "%s";
-  router-id %s;
-  local-address %s;
-  local-as %s;
-  peer-as %s;%s
-  hold-time %s;
-%s%s%s%s%s
-  capability {
-%s%s%s%s%s%s%s  }
-  family {%s
-  }
-  process {
-%s%s  }%s
-}""" % (
-	self.peer_address,
-	self.description,
-	self.router_id,
-	self.local_address,
-	self.local_as,
-	self.peer_as,
-	'\n  passive;\n' if self.passive else '',
-	self.hold_time,
-	'  group-updates: %s;\n' % (self.group_updates if self.group_updates else ''),
-	'  auto-flush: %s;\n' % ('true' if self.flush else 'false'),
-	'  adj-rib-out: %s;\n' % ('true' if self.adjribout else 'false'),
-	'  md5 "%s";\n' % self.md5 if self.md5 else '',
-	'  ttl-security: %s;\n' % (self.ttl if self.ttl else ''),
-	'    asn4 %s;\n' % ('enable' if self.asn4 else 'disable'),
-	'    route-refresh %s;\n' % ('enable' if self.route_refresh else 'disable'),
-	'    graceful-restart %s;\n' % (self.graceful_restart if self.graceful_restart else 'disable'),
-	'    add-path %s;\n' % (AddPath.string[self.add_path] if self.add_path else 'disable'),
-	'    multi-session %s;\n' % ('enable' if self.multisession else 'disable'),
-	'    operational %s;\n' % ('enable' if self.operational else 'disable'),
-	'    aigp %s;\n' % ('enable' if self.aigp else 'disable'),
-	families,
-	'    receive {\n%s    }\n' % receive if receive else '',
-	'    send {\n%s    }\n' % send if send else '',
-	changes
-)  # noqa
+		returned = \
+			'neighbor %s {\n' \
+			'\tdescription "%s";\n' \
+			'\trouter-id %s;\n' \
+			'\tlocal-address %s;\n' \
+			'\tlocal-as %s;\n' \
+			'\tpeer-as %s;%s\n' \
+			'\thold-time %s;\n' \
+			'%s%s%s%s%s\n' \
+			'\tcapability {\n' \
+			'%s%s%s%s%s%s%s\t}\n' \
+			'\tfamily {%s\n' \
+			'\t}\n' \
+			'\tprocess {\n' \
+			'%s%s\t}%s\n' \
+			'}' % (
+				self.peer_address,
+				self.description,
+				self.router_id,
+				self.local_address,
+				self.local_as,
+				self.peer_as,
+				'\n\tpassive;\n' if self.passive else '',
+				self.hold_time,
+				'\tgroup-updates: %s;\n' % (self.group_updates if self.group_updates else ''),
+				'\tauto-flush: %s;\n' % ('true' if self.flush else 'false'),
+				'\tadj-rib-out: %s;\n' % ('true' if self.adjribout else 'false'),
+				'\tmd5 "%s";\n' % self.md5 if self.md5 else '',
+				'\tttl-security: %s;\n' % (self.ttl if self.ttl else ''),
+				'\t\tasn4 %s;\n' % ('enable' if self.asn4 else 'disable'),
+				'\t\troute-refresh %s;\n' % ('enable' if self.route_refresh else 'disable'),
+				'\t\tgraceful-restart %s;\n' % (self.graceful_restart if self.graceful_restart else 'disable'),
+				'\t\tadd-path %s;\n' % (AddPath.string[self.add_path] if self.add_path else 'disable'),
+				'\t\tmulti-session %s;\n' % ('enable' if self.multisession else 'disable'),
+				'\t\toperational %s;\n' % ('enable' if self.operational else 'disable'),
+				'\t\taigp %s;\n' % ('enable' if self.aigp else 'disable'),
+				families,
+				'\t\treceive {\n%s\t\t}\n' % receive if receive else '',
+				'\t\tsend {\n%s\t\t}\n' % send if send else '',
+				changes
+			)
+		return returned.replace('\t','  ')
 
 	def __str__ (self):
 		return self.pprint(False)
