@@ -189,7 +189,7 @@ if __name__ == '__main__':
 		group = sys.argv[1]
 		success = check(exabgp,daemon,group,port)
 	else:
-		timeout = 80  # seconds
+		timeout = 160  # seconds
 		signal.signal(signal.SIGALRM, alarm_handler)
 		signal.alarm(timeout)
 
