@@ -204,6 +204,9 @@ class Attributes (object):
 
 class _InfoMessage (object):
 	# to be defined by the subclasses
+	format = namedtuple('Parent', 'to be subclassed')
+
+	# to be defined by the subclasses
 	class Header (object):
 		PACK = ''
 		LEN = 0
