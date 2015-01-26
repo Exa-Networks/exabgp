@@ -11,6 +11,8 @@ Version 3.4.8
     reported by: Tim Preston
  * Fix: handle numeric community parsing correctly
     reported by: Aaron Kalin
+ * Fix: bug in AS_PATH with AS_SET handling
+    patch by: Eiichiro Watanabe
 
 Version 3.4.7
  * Package: be more pythonic and use enty points with pip installation

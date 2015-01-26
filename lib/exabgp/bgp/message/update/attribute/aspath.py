@@ -121,7 +121,10 @@ class ASPath (Attribute):
 			else:
 				string = '[ %s ]' % ' '.join([str(_) for _ in aseq])
 		else:  # lseq == 0
-			string = '[ ]'
+			if lset:
+				string = '[ ( %s )]' % (' '.join([str(_) for _ in aset]))
+			else:
+				string = '[ ]'
 		return string
 
 	def json (self,name):
