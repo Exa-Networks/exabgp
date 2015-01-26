@@ -122,7 +122,7 @@ class ASPath (Attribute):
 				string = '[ %s ]' % ' '.join([str(_) for _ in aseq])
 		else:  # lseq == 0
 			if lset:
-				string = '[ %s]' % '( %s ) ' % (' '.join([str(_) for _ in aset]))
+				string = '[ ( %s )]' % (' '.join([str(_) for _ in aset]))
 			else:
 				string = '[ ]'
 		return string
