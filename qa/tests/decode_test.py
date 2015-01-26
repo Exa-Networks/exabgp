@@ -231,6 +231,7 @@ class Neighbor:
 	multisession = None
 	add_path = None
 	aigp = None
+	operational = None
 
 	@staticmethod
 	def families ():

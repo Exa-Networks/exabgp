@@ -66,13 +66,13 @@ try:
 except ImportError:
     # Other versions. This is not really an enum but this is OK for
     # what we want to do.
-    def Enum(*sequential):
+    def Enum (*sequential):
         return type(str("Enum"), (), dict(zip(sequential, sequential)))
 
 logger = logging.getLogger("healthcheck")
 
 
-def parse():
+def parse ():
     """Parse arguments"""
     parser = argparse.ArgumentParser(description=sys.modules[__name__].__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -186,7 +186,7 @@ def parse():
     return options
 
 
-def setup_logging(debug, silent, name, syslog_facility, syslog):
+def setup_logging (debug, silent, name, syslog_facility, syslog):
     """Setup logger"""
     logger.setLevel(debug and logging.DEBUG or logging.INFO)
     enable_syslog = syslog and not debug
@@ -213,7 +213,7 @@ def setup_logging(debug, silent, name, syslog_facility, syslog):
         logger.addHandler(ch)
 
 
-def loopback_ips(label):
+def loopback_ips (label):
     """Retrieve loopback IP addresses"""
     logger.debug("Retrieve loopback IP addresses")
     addresses = []
@@ -244,7 +244,7 @@ def loopback_ips(label):
     return addresses
 
 
-def setup_ips(ips, label):
+def setup_ips (ips, label):
     """Setup missing IP on loopback interface"""
     existing = set(loopback_ips(label))
     toadd = set(ips) - existing
@@ -258,11 +258,11 @@ def setup_ips(ips, label):
                 cmd, stdout=fnull, stderr=fnull)
 
 
-def setpgrp_preexec_fn():
+def setpgrp_preexec_fn ():
     os.setpgrp()
 
 
-def check(cmd, timeout):
+def check (cmd,timeout):
     """Check the return code of the given command.
 
     :param cmd: command to execute. If :keyword:`None`, no command is executed.
@@ -276,7 +276,7 @@ def check(cmd, timeout):
     class Alarm(Exception):
         pass
 
-    def alarm_handler(_, __):
+    def alarm_handler (number, frame):  # pylint: disable=W0613
         raise Alarm()
 
     logger.debug("Checking command {0}".format(repr(cmd)))
@@ -305,7 +305,7 @@ def check(cmd, timeout):
         return False
 
 
-def loop(options):
+def loop (options):
     """Main loop."""
     states = Enum(
         "INIT",                 # Initial state
@@ -317,7 +317,7 @@ def loop(options):
     )
     state = states.INIT
 
-    def exabgp(target):
+    def exabgp (target):
         """Communicate new state to ExaBGP"""
         if target not in (states.UP, states.DOWN, states.DISABLED):
             return
@@ -341,7 +341,7 @@ def loop(options):
             metric += options.increase
         sys.stdout.flush()
 
-    def trigger(target):
+    def trigger (target):
         """Trigger a state change and execute the appropriate commands"""
         # Shortcut for RISING->UP and FALLING->UP
         if target == states.RISING and options.rise <= 1:

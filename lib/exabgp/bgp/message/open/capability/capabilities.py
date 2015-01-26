@@ -59,46 +59,69 @@ class Capabilities (dict):
 			r.append(str(self[key]))
 		return ', '.join(r)
 
-	def new (self,neighbor,restarted):
-		graceful = neighbor.graceful_restart
+	def _protocol (self,neighbor):
 		families = neighbor.families()
-
 		mp = MultiProtocol()
 		mp.extend(families)
 		self[Capability.CODE.MULTIPROTOCOL] = mp
 
-		if neighbor.asn4:
-			self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(neighbor.local_as)
+	def _asn4 (self,neighbor):
+		if not neighbor.asn4:
+			return
 
-		if neighbor.add_path:
-			ap_families = []
-			if (AFI(AFI.ipv4),SAFI(SAFI.unicast)) in families:
-				ap_families.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
-			if (AFI(AFI.ipv6),SAFI(SAFI.unicast)) in families:
-				ap_families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
-			if (AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)) in families:
-				ap_families.append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
-			if (AFI(AFI.ipv6),SAFI(SAFI.unicast)) in families:
-				ap_families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
-			self[Capability.CODE.ADD_PATH] = AddPath(ap_families,neighbor.add_path)
+		self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(neighbor.local_as)
 
-		if graceful:
-			if restarted:
-				self[Capability.CODE.GRACEFUL_RESTART] = Graceful().set(Graceful.RESTART_STATE,graceful,[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in families])
-			else:
-				self[Capability.CODE.GRACEFUL_RESTART] = Graceful().set(0x0,graceful,[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in families])
+	def _addpath (self,neighbor):
+		if not neighbor.add_path:
+			return
 
-		if neighbor.route_refresh:
-			self[Capability.CODE.ROUTE_REFRESH] = RouteRefresh()
-			self[Capability.CODE.ENHANCED_ROUTE_REFRESH] = EnhancedRouteRefresh()
+		families = neighbor.families()
+		ap_families = []
+		if (AFI(AFI.ipv4),SAFI(SAFI.unicast)) in families:
+			ap_families.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
+		if (AFI(AFI.ipv6),SAFI(SAFI.unicast)) in families:
+			ap_families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+		if (AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)) in families:
+			ap_families.append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
+		if (AFI(AFI.ipv6),SAFI(SAFI.unicast)) in families:
+			ap_families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+		self[Capability.CODE.ADD_PATH] = AddPath(ap_families,neighbor.add_path)
 
-		if neighbor.operational:
-			self[Capability.CODE.OPERATIONAL] = Operational()
+	def _graceful (self,neighbor,restarted):
+		if not neighbor.graceful_restart:
+			return
 
-		# MUST be the last key added
-		if neighbor.multisession:
-			# XXX: FIXME: should it not be the RFC version ?
-			self[Capability.CODE.MULTISESSION] = MultiSession().set([Capability.CODE.MULTIPROTOCOL])
+		self[Capability.CODE.GRACEFUL_RESTART] = Graceful().set(
+			Graceful.RESTART_STATE if restarted else 0x0,
+			neighbor.graceful_restart,
+			[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in neighbor.families()]
+		)
+
+	def _refresh (self,neighbor):
+		if not neighbor.route_refresh:
+			return
+		self[Capability.CODE.ROUTE_REFRESH] = RouteRefresh()
+		self[Capability.CODE.ENHANCED_ROUTE_REFRESH] = EnhancedRouteRefresh()
+
+	def _operational (self,neighbor):
+		if not neighbor.operational:
+			return
+		self[Capability.CODE.OPERATIONAL] = Operational()
+
+	def _session (self,neighbor):
+		if not neighbor.multisession:
+			return
+		# XXX: FIXME: should it not be the RFC version ?
+		self[Capability.CODE.MULTISESSION] = MultiSession().set([Capability.CODE.MULTIPROTOCOL])
+
+	def new (self,neighbor,restarted):
+		self._protocol(neighbor)
+		self._asn4(neighbor)
+		self._addpath(neighbor)
+		self._graceful(neighbor,restarted)
+		self._refresh(neighbor)
+		self._operational(neighbor)
+		self._session(neighbor)  # MUST be the last key added, really !?! dict is not ordered !
 		return self
 
 	def pack (self):

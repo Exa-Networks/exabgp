@@ -19,7 +19,7 @@ class Alarm (Exception):
 	pass
 
 
-def alarm_handler (signum, frame):
+def alarm_handler (number,frame):  # pylint: disable=W0613
 	raise Alarm()
 
 

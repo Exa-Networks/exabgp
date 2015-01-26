@@ -13,7 +13,7 @@ from os import path
 class Alarm(Exception):
 	pass
 
-def alarm_handler(_, __):
+def alarm_handler (number,frame):  # pylint: disable=W0613
 	raise Alarm()
 
 def main ():
