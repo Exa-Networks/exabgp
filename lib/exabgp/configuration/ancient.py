@@ -1679,7 +1679,7 @@ class Configuration (object):
 		# generate the new routes
 		for _ in range(number):
 			# update ip to the next route, this recalculate the "ip" field of the Inet class
-			nlri = klass(afi,safi,pack_int(afi,ip,split),split,nexthop,OUT.announce,path_info)  # pylint: disable=E1101
+			nlri = klass(afi,safi,pack_int(afi,ip,split),split,nexthop,OUT.ANNOUNCE,path_info)
 			if klass is MPLS:
 				nlri.labels = labels
 				nlri.rd = rd
@@ -1713,7 +1713,7 @@ class Configuration (object):
 				klass = Prefix
 
 			# nexthop must be false and its str return nothing .. an empty string does that
-			update = Change(klass(afi=IP.toafi(ip),safi=IP.tosafi(ip),packed=IP.pton(ip),mask=mask,nexthop=None,action=OUT.announce),Attributes())  # pylint: disable=E1101
+			update = Change(klass(afi=IP.toafi(ip),safi=IP.tosafi(ip),packed=IP.pton(ip),mask=mask,nexthop=None,action=OUT.ANNOUNCE),Attributes())
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise Exception()  # noqa

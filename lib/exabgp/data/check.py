@@ -6,24 +6,22 @@ Created by Thomas Mangin on 2013-03-18.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.util.enumeration import Enumeration
 
-TYPE = Enumeration (
-	'null',       # -  1
-	'boolean',    # -  2
-	'integer',    # -  4
-	'string',     # -  8
-	'array',      # - 16
-	'hashtable',  # - 32
-)
+class TYPE (object):
+	NULL     = 0x01
+	BOOLEAN  = 0x02
+	INTEGER  = 0x04
+	STRING   = 0x08
+	ARRAY    = 0x10
+	HASH     = 0x20
 
-PRESENCE = Enumeration(
-	'optional',   # -  1
-	'mandatory',  # -  2
-)
+
+class PRESENCE (object):
+	OPTIONAL  = 0x01
+	MANDATORY = 0x02
+
 
 # TYPE CHECK
-
 
 def null (data):
 	return type(data) == type(None)  # noqa
@@ -52,12 +50,12 @@ def hashtable (data):
 # XXX: Not very good to redefine the keyword object, but this class uses no OO ...
 
 CHECK_TYPE = {
-	TYPE.null: null,
-	TYPE.boolean: boolean,
-	TYPE.integer: integer,
-	TYPE.string: string,
-	TYPE.array: array,
-	TYPE.hashtable: hashtable,
+	TYPE.NULL: null,
+	TYPE.BOOLEAN: boolean,
+	TYPE.INTEGER: integer,
+	TYPE.STRING: string,
+	TYPE.ARRAY: array,
+	TYPE.HASH: hashtable,
 }
 
 

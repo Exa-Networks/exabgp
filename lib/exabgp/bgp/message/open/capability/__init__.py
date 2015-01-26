@@ -258,5 +258,8 @@ class Capabilities (dict):
 					raise Notify(2,0,'Unknow OPEN parameter %s' % hex(key))
 		return capabilities
 
-from exabgp.util.enumeration import Enumeration
-REFRESH = Enumeration ('absent','normal','enhanced')
+
+class REFRESH (object):
+	ABSENT   = 0x01
+	NORMAL   = 0x02
+	ENHANCED = 0x04

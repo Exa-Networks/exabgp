@@ -12,6 +12,7 @@ import time
 from exabgp.bgp.timer import ReceiveTimer
 from exabgp.bgp.timer import SendTimer
 from exabgp.bgp.message import Message
+from exabgp.bgp.message import STATE
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import REFRESH
 from exabgp.bgp.message.nop import NOP
@@ -32,30 +33,21 @@ from exabgp.logger import LazyFormat
 
 from exabgp.util.trace import trace
 
-from exabgp.util.enumeration import Enumeration
 from exabgp.util.panic import no_panic
 from exabgp.util.panic import footer
 
-STATE = Enumeration (
-	'idle',
-	'active',
-	'connect',
-	'opensent',
-	'openconfirm',
-	'established',
-)
 
-ACTION = Enumeration (
-	'close',
-	'later',
-	'immediate',
-	)
+class ACTION (object):
+	CLOSE = 0x01
+	LATER = 0x02
+	NOW   = 0x03
 
-SEND = Enumeration (
-	'done',
-	'normal',
-	'refresh',
-)
+
+class SEND (object):
+	DONE    = 0x01
+	NORMAL  = 0x02
+	REFRESH = 0x04
+
 
 # As we can not know if this is our first start or not, this flag is used to
 # always make the program act like it was recovering from a failure
@@ -141,7 +133,7 @@ class Peer (object):
 		# We want to remove routes which are not in the configuration anymote afte a signal to reload
 		self._reconfigure = True
 		# We want to send all the known routes
-		self._resend_routes = SEND.done  # pylint: disable=E1101
+		self._resend_routes = SEND.DONE
 		# We have new routes for the peers
 		self._have_routes = True
 
@@ -150,8 +142,8 @@ class Peer (object):
 
 		self._ = {'in':{},'out':{}}
 
-		self._['in']['state'] = STATE.idle  # pylint: disable=E1101
-		self._['out']['state'] = STATE.idle  # pylint: disable=E1101
+		self._['in']['state'] = STATE.IDLE
+		self._['out']['state'] = STATE.IDLE
 
 		# value to reset 'generator' to
 		self._['in']['enabled'] = False
@@ -173,7 +165,7 @@ class Peer (object):
 		self._['out']['generator'] = self._['out']['enabled']
 
 	def _reset (self,direction,message='',error=''):
-		self._[direction]['state'] = STATE.idle  # pylint: disable=E1101
+		self._[direction]['state'] = STATE.IDLE
 
 		if self._restart:
 			if self._[direction]['proto']:
@@ -227,7 +219,7 @@ class Peer (object):
 		self._reset_skip()
 
 	def resend (self):
-		self._resend_routes = SEND.normal  # pylint: disable=E1101
+		self._resend_routes = SEND.NORMAL
 		self._reset_skip()
 
 	def send_new (self,changes=None,update=None):
@@ -240,7 +232,7 @@ class Peer (object):
 		self._teardown = 3
 		self._restart = True
 		self._restarted = True
-		self._resend_routes = SEND.normal  # pylint: disable=E1101
+		self._resend_routes = SEND.NORMAL
 		self._neighbor = restart_neighbor
 		self._reset_skip()
 
@@ -248,7 +240,7 @@ class Peer (object):
 		# we want to update the route which were in the configuration file
 		self._reconfigure = True
 		self._neighbor = restart_neighbor
-		self._resend_routes = SEND.normal  # pylint: disable=E1101
+		self._resend_routes = SEND.NORMAL
 		self._neighbor = restart_neighbor
 
 	def teardown (self,code,restart=True):
@@ -275,11 +267,11 @@ class Peer (object):
 		self._['in']['proto'] = Protocol(self).accept(connection)
 		# Let's make sure we do some work with this connection
 		self._['in']['generator'] = None
-		self._['in']['state'] = STATE.connect  # pylint: disable=E1101
+		self._['in']['state'] = STATE.CONNECT
 		return True
 
 	def established (self):
-		return self._['in']['state'] == STATE.established or self._['out']['state'] == STATE.established  # pylint: disable=E1101
+		return self._['in']['state'] == STATE.ESTABLISHED or self._['out']['state'] == STATE.ESTABLISHED
 
 	def _accept (self):
 		# we can do this as Protocol is a mutable object
@@ -289,11 +281,11 @@ class Peer (object):
 		message = Message.CODE.NOP
 		for message in proto.new_open(self._restarted):
 			if ord(message.TYPE) == Message.CODE.NOP:
-				yield ACTION.immediate  # pylint: disable=E1101
+				yield ACTION.NOW
 
 		proto.negotiated.sent(message)
 
-		self._['in']['state'] = STATE.opensent  # pylint: disable=E1101
+		self._['in']['state'] = STATE.OPENSENT
 
 		# Read OPEN
 		wait = environment.settings().bgp.openwait
@@ -303,13 +295,13 @@ class Peer (object):
 		for message in proto.read_open(self.neighbor.peer_address.ip):
 			opentimer.check_ka(message)
 			if ord(message.TYPE) == Message.CODE.NOP:
-				yield ACTION.later  # pylint: disable=E1101
+				yield ACTION.LATER
 
-		self._['in']['state'] = STATE.openconfirm  # pylint: disable=E1101
+		self._['in']['state'] = STATE.OPENCONFIRM
 		proto.negotiated.received(message)
 		proto.validate_open()
 
-		if self._['out']['state'] == STATE.openconfirm:  # pylint: disable=E1101
+		if self._['out']['state'] == STATE.OPENCONFIRM:
 			self.logger.network('incoming connection finds the outgoing connection is in openconfirm')
 			local_id = self.neighbor.router_id.packed
 			remote_id = proto.negotiated.received_open.router_id.packed
@@ -317,7 +309,7 @@ class Peer (object):
 			if local_id < remote_id:
 				self.logger.network('closing the outgoing connection')
 				self._stop('out','collision local id < remote id')
-				yield ACTION.later  # pylint: disable=E1101
+				yield ACTION.LATER
 			else:
 				self.logger.network('aborting the incoming connection')
 				stop = Interrupted()
@@ -326,18 +318,18 @@ class Peer (object):
 
 		# Send KEEPALIVE
 		for message in self._['in']['proto'].new_keepalive('OPENCONFIRM'):
-			yield ACTION.immediate  # pylint: disable=E1101
+			yield ACTION.NOW
 
 		# Start keeping keepalive timer
 		self.recv_timer = ReceiveTimer(self.me,proto.negotiated.holdtime,4,0)
 		# Read KEEPALIVE
 		for message in proto.read_keepalive():
 			self.recv_timer.check_ka(message)
-			yield ACTION.immediate  # pylint: disable=E1101
+			yield ACTION.NOW
 
-		self._['in']['state'] = STATE.established  # pylint: disable=E1101
+		self._['in']['state'] = STATE.ESTABLISHED
 		# let the caller know that we were sucesfull
-		yield ACTION.immediate  # pylint: disable=E1101
+		yield ACTION.NOW
 
 	def _connect (self):
 		# try to establish the outgoing connection
@@ -350,7 +342,7 @@ class Peer (object):
 			while not connected:
 				connected = generator.next()
 				# we want to come back as soon as possible
-				yield ACTION.later  # pylint: disable=E1101
+				yield ACTION.LATER
 		except StopIteration:
 			# Connection failed
 			if not connected:
@@ -361,7 +353,7 @@ class Peer (object):
 				stop.direction = 'out'
 				raise stop
 
-		self._['out']['state'] = STATE.connect  # pylint: disable=E1101
+		self._['out']['state'] = STATE.CONNECT
 		self._['out']['proto'] = proto
 
 		# send OPEN
@@ -370,11 +362,11 @@ class Peer (object):
 		message = Message.CODE.NOP
 		for message in proto.new_open(self._restarted):
 			if ord(message.TYPE) == Message.CODE.NOP:
-				yield ACTION.immediate  # pylint: disable=E1101
+				yield ACTION.NOW
 
 		proto.negotiated.sent(message)
 
-		self._['out']['state'] = STATE.opensent  # pylint: disable=E1101
+		self._['out']['state'] = STATE.OPENSENT
 
 		# Read OPEN
 		wait = environment.settings().bgp.openwait
@@ -385,13 +377,13 @@ class Peer (object):
 			# Only yield if we have not the open, otherwise the reactor can run the other connection
 			# which would be bad as we need to do the collission check
 			if ord(message.TYPE) == Message.CODE.NOP:
-				yield ACTION.later  # pylint: disable=E1101
+				yield ACTION.LATER
 
-		self._['out']['state'] = STATE.openconfirm  # pylint: disable=E1101
+		self._['out']['state'] = STATE.OPENCONFIRM
 		proto.negotiated.received(message)
 		proto.validate_open()
 
-		if self._['in']['state'] == STATE.openconfirm:  # pylint: disable=E1101
+		if self._['in']['state'] == STATE.OPENCONFIRM:
 			self.logger.network('outgoing connection finds the incoming connection is in openconfirm')
 			local_id = self.neighbor.router_id.packed
 			remote_id = proto.negotiated.received_open.router_id.packed
@@ -404,22 +396,22 @@ class Peer (object):
 			else:
 				self.logger.network('closing the incoming connection')
 				self._stop('in','collision local id < remote id')
-				yield ACTION.later  # pylint: disable=E1101
+				yield ACTION.LATER
 
 		# Send KEEPALIVE
 		for message in proto.new_keepalive('OPENCONFIRM'):
-			yield ACTION.immediate  # pylint: disable=E1101
+			yield ACTION.NOW
 
 		# Start keeping keepalive timer
 		self.recv_timer = ReceiveTimer(self.me,proto.negotiated.holdtime,4,0)
 		# Read KEEPALIVE
 		for message in self._['out']['proto'].read_keepalive():
 			self.recv_timer.check_ka(message)
-			yield ACTION.immediate  # pylint: disable=E1101
+			yield ACTION.NOW
 
-		self._['out']['state'] = STATE.established  # pylint: disable=E1101
+		self._['out']['state'] = STATE.ESTABLISHED
 		# let the caller know that we were sucesfull
-		yield ACTION.immediate  # pylint: disable=E1101
+		yield ACTION.NOW
 
 	def _main (self,direction):
 		"""yield True if we want to come back to it asap, None if nothing urgent, and False if stopped"""
@@ -441,7 +433,7 @@ class Peer (object):
 
 		send_eor = True
 		new_routes = None
-		self._resend_routes = SEND.normal  # pylint: disable=E1101
+		self._resend_routes = SEND.NORMAL
 		send_families = []
 
 		# Every last asm message should be re-announced on restart
@@ -463,7 +455,7 @@ class Peer (object):
 				if self.send_ka() is not False:
 					# we need and will send a keepalive
 					while self.send_ka() is None:
-						yield ACTION.immediate  # pylint: disable=E1101
+						yield ACTION.NOW
 
 				# Received update
 				if message.TYPE == Update.TYPE:
@@ -477,7 +469,7 @@ class Peer (object):
 
 				elif message.TYPE == RouteRefresh.TYPE:
 					if message.reserved == RouteRefresh.request:
-						self._resend_routes = SEND.refresh  # pylint: disable=E1101
+						self._resend_routes = SEND.REFRESH
 						send_families.append((message.afi,message.safi))
 
 				# SEND OPERATIONAL
@@ -498,7 +490,7 @@ class Peer (object):
 					if not refresh:
 						new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
 						if new_refresh:
-							enhanced_negotiated = True if proto.negotiated.refresh == REFRESH.enhanced else False
+							enhanced_negotiated = True if proto.negotiated.refresh == REFRESH.ENHANCED else False
 							refresh = proto.new_refresh(new_refresh,enhanced_negotiated)
 
 					if refresh:
@@ -521,9 +513,9 @@ class Peer (object):
 					self._have_routes = True
 
 				# Take the routes already sent to that peer and resend them
-				if self._resend_routes != SEND.done:  # pylint: disable=E1101
-					enhanced_refresh = True if self._resend_routes == SEND.refresh and proto.negotiated.refresh == REFRESH.enhanced else False
-					self._resend_routes = SEND.done  # pylint: disable=E1101
+				if self._resend_routes != SEND.DONE:
+					enhanced_refresh = True if self._resend_routes == SEND.REFRESH and proto.negotiated.refresh == REFRESH.ENHANCED else False
+					self._resend_routes = SEND.DONE
 					self.neighbor.rib.outgoing.resend(send_families,enhanced_refresh)
 					self._have_routes = True
 					send_families = []
@@ -547,7 +539,7 @@ class Peer (object):
 				elif send_eor:
 					send_eor = False
 					for _ in proto.new_eors():
-						yield ACTION.immediate  # pylint: disable=E1101
+						yield ACTION.NOW
 					self.logger.message(self.me('>> EOR(s)'))
 
 				# SEND MANUAL KEEPALIVE (only if we have no more routes to send)
@@ -562,13 +554,13 @@ class Peer (object):
 						command_eor = None
 
 				if new_routes or message.TYPE != NOP.TYPE:
-					yield ACTION.immediate  # pylint: disable=E1101
+					yield ACTION.NOW
 				elif self.neighbor.messages or operational:
-					yield ACTION.immediate  # pylint: disable=E1101
+					yield ACTION.NOW
 				elif self.neighbor.eor or command_eor:
-					yield ACTION.immediate  # pylint: disable=E1101
+					yield ACTION.NOW
 				else:
-					yield ACTION.later  # pylint: disable=E1101
+					yield ACTION.LATER
 
 				# read_message will loop until new message arrives with NOP
 				if self._teardown:
@@ -613,7 +605,7 @@ class Peer (object):
 							while maximum:
 								generator.next()
 								maximum -= 1
-								yield ACTION.immediate if maximum > 10 else ACTION.later  # pylint: disable=E1101
+								yield ACTION.NOW if maximum > 10 else ACTION.LATER
 						except StopIteration:
 							pass
 					except (NetworkError,ProcessError):
@@ -671,7 +663,7 @@ class Peer (object):
 			self.stop()
 			return True
 
-		back = ACTION.later if self._restart else ACTION.close  # pylint: disable=E1101
+		back = ACTION.LATER if self._restart else ACTION.CLOSE
 
 		for direction in ['in','out']:
 			opposite = 'out' if direction == 'in' else 'in'
@@ -682,32 +674,32 @@ class Peer (object):
 					# This generator only stops when it raises
 					r = generator.next()
 
-					# if r is ACTION.immediate: status = 'immediately'
-					# elif r is ACTION.later:   status = 'next second'
-					# elif r is ACTION.close:   status = 'stop'
+					# if r is ACTION.NOW: status = 'immediately'
+					# elif r is ACTION.LATER:   status = 'next second'
+					# elif r is ACTION.CLOSE:   status = 'stop'
 					# else: status = 'buggy'
 					# self.logger.network('%s loop %11s, state is %s' % (direction,status,self._[direction]['state']),'debug')
 
-					if r == ACTION.immediate:  # pylint: disable=E1101
-						back = ACTION.immediate  # pylint: disable=E1101
-					elif r == ACTION.later:  # pylint: disable=E1101
-						back = ACTION.later if back != ACTION.immediate else ACTION.immediate  # pylint: disable=E1101
+					if r == ACTION.NOW:
+						back = ACTION.NOW
+					elif r == ACTION.LATER:
+						back = ACTION.LATER if back != ACTION.NOW else ACTION.NOW
 				except StopIteration:
 					# Trying to run a closed loop, no point continuing
 					self._[direction]['generator'] = self._[direction]['enabled']
 
 			elif generator is None:
-				if self._[opposite]['state'] in [STATE.openconfirm,STATE.established]:  # pylint: disable=E1101
+				if self._[opposite]['state'] in [STATE.OPENCONFIRM,STATE.ESTABLISHED]:
 					self.logger.network('%s loop, stopping, other one is established' % direction,'debug')
 					self._[direction]['generator'] = False
 					continue
 				if direction == 'out' and self._skip_time > time.time():
 					self.logger.network('%s loop, skipping, not time yet' % direction,'debug')
-					back = ACTION.later  # pylint: disable=E1101
+					back = ACTION.LATER
 					continue
 				if self._restart:
 					self.logger.network('%s loop, intialising' % direction,'debug')
 					self._[direction]['generator'] = self._run(direction)
-					back = ACTION.later  # make sure we go through a clean loop
+					back = ACTION.LATER  # make sure we go through a clean loop
 
 		return back

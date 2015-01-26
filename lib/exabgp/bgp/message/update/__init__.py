@@ -111,12 +111,12 @@ class Update (Message):
 		for nlri in self.nlris:
 			if nlri.family() in negotiated.families:
 				if nlri.afi == AFI.ipv4 and nlri.safi in [SAFI.unicast, SAFI.multicast]:
-					if nlri.action == OUT.announce:  # pylint: disable=E1101
+					if nlri.action == OUT.ANNOUNCE:
 						add_nlri.append(nlri)
 					else:
 						del_nlri.append(nlri)
 				else:
-					if nlri.action == OUT.announce:  # pylint: disable=E1101
+					if nlri.action == OUT.ANNOUNCE:
 						add_mp.setdefault(nlri.family(),[]).append(nlri)
 					else:
 						del_mp.setdefault(nlri.family(),[]).append(nlri)
@@ -249,7 +249,7 @@ class Update (Message):
 
 		# This could be speed up massively by changing the order of the IF
 		if length == 23:
-			return EOR(AFI.ipv4,SAFI.unicast,IN.announced)  # pylint: disable=E1101
+			return EOR(AFI.ipv4,SAFI.unicast,IN.ANNOUNCED)  # pylint: disable=E1101
 		if length == 30 and data.startswith(EOR.NLRI.PREFIX):
 			return EOR.unpack_message(data,negotiated)
 
@@ -272,13 +272,13 @@ class Update (Message):
 
 		nlris = []
 		while withdrawn:
-			length,nlri = NLRI.unpack(AFI.ipv4,SAFI.unicast,withdrawn,addpath,nexthop,IN.withdrawn)  # pylint: disable=E1101
+			length,nlri = NLRI.unpack(AFI.ipv4,SAFI.unicast,withdrawn,addpath,nexthop,IN.WITHDRAWN)
 			logger.parser(LazyFormat("parsed withdraw nlri %s payload " % nlri,withdrawn[:len(nlri)]))
 			withdrawn = withdrawn[length:]
 			nlris.append(nlri)
 
 		while announced:
-			length,nlri = NLRI.unpack(AFI.ipv4,SAFI.unicast,announced,addpath,nexthop,IN.announced)  # pylint: disable=E1101
+			length,nlri = NLRI.unpack(AFI.ipv4,SAFI.unicast,announced,addpath,nexthop,IN.ANNOUNCED)
 			logger.parser(LazyFormat("parsed announce nlri %s payload " % nlri,announced[:len(nlri)]))
 			announced = announced[length:]
 			nlris.append(nlri)

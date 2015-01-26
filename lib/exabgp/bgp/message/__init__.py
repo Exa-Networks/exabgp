@@ -12,23 +12,27 @@ from struct import pack
 #
 
 
-class State (object):
+class STATE (object):
 	IDLE        = 0x01
-	CONNECT     = 0x02
-	ACTIVE      = 0x03
-	OPENSENT    = 0x04
-	OPENCONFIRM = 0x05
-	ESTABLISHED = 0x06
+	ACTIVE      = 0x02
+	CONNECT     = 0x04
+	OPENSENT    = 0x08
+	OPENCONFIRM = 0x10
+	ESTABLISHED = 0x20
 
 
 # ==================================================================== Direction
 #
 
 
-from exabgp.util.enumeration import Enumeration
+class OUT (object):
+	ANNOUNCE = 0x01
+	WITHDRAW = 0x02
 
-OUT = Enumeration ('announce','withdraw')
-IN  = Enumeration ('announced','withdrawn')
+
+class IN (object):
+	ANNOUNCED = 0x01
+	WITHDRAWN = 0x02
 
 
 # ================================================================== BGP Message

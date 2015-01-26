@@ -57,7 +57,7 @@ class Store (object):
 		# we use list() to make a snapshot of the data at the time we run the command
 		for family in requested_families:
 			for change in self._seen.get(family,{}).values():
-				if change.nlri.action == OUT.announce:  # pylint: disable=E1101
+				if change.nlri.action == OUT.ANNOUNCE:
 					yield change
 
 	def resend (self,families,enhanced_refresh):
@@ -66,7 +66,7 @@ class Store (object):
 
 		def _announced (family):
 			for change in self._seen.get(family,{}).values():
-				if change.nlri.action == OUT.announce:  # pylint: disable=E1101
+				if change.nlri.action == OUT.ANNOUNCE:
 					yield change
 			self._seen[family] = {}
 
@@ -87,7 +87,7 @@ class Store (object):
 	# 	changes = {}
 	# 	for family in self._seen.keys():
 	# 		for change in self._seen[family].values():
-	# 			if change.nlri.action == OUT.announce:  # pylint: disable=E1101
+	# 			if change.nlri.action == OUT.ANNOUNCE:
 	# 				changes[change.index()] = change
 	# 	return changes
 
@@ -97,7 +97,7 @@ class Store (object):
 
 	def replace (self,previous,changes):
 		for change in previous:
-			change.nlri.action = OUT.withdraw
+			change.nlri.action = OUT.WITHDRAW
 			self.insert_announced(change,True)
 
 		for change in changes:
@@ -117,7 +117,7 @@ class Store (object):
 	def announce_watchdog (self,watchdog):
 		if watchdog in self._watchdog:
 			for change in self._watchdog[watchdog].get('-',{}).values():
-				change.nlri.action = OUT.announce  # pylint: disable=E1101
+				change.nlri.action = OUT.ANNOUNCE  # pylint: disable=E1101
 				self.insert_announced(change)
 				self._watchdog[watchdog].setdefault('+',{})[change.index()] = change
 				self._watchdog[watchdog]['-'].pop(change.index())
@@ -125,7 +125,7 @@ class Store (object):
 	def withdraw_watchdog (self,watchdog):
 		if watchdog in self._watchdog:
 			for change in self._watchdog[watchdog].get('+',{}).values():
-				change.nlri.action = OUT.withdraw  # pylint: disable=E1101
+				change.nlri.action = OUT.WITHDRAW
 				self.insert_announced(change)
 				self._watchdog[watchdog].setdefault('-',{})[change.index()] = change
 				self._watchdog[watchdog]['+'].pop(change.index())
@@ -133,7 +133,7 @@ class Store (object):
 	def insert_received (self,change):
 		if not self.cache:
 			return
-		elif change.nlri.action == IN.announced:  # pylint: disable=E1101
+		elif change.nlri.action == IN.ANNOUNCED:
 			self._seen[change.index()] = change
 		else:
 			self._seen.pop(change.index(),None)
@@ -174,7 +174,7 @@ class Store (object):
 			if not dict_sorted[old_attr_index]:
 				del dict_sorted[old_attr_index]
 			# route removed before announcement, all goo
-			if old_change.nlri.action == OUT.announce and change.nlri.action == OUT.withdraw:  # pylint: disable=E1101
+			if old_change.nlri.action == OUT.ANNOUNCE and change.nlri.action == OUT.WITHDRAW:
 				# if we cache sent NLRI and this NLRI was never sent before, we do not need to send a withdrawal
 				if self.cache and change_nlri_index not in self._seen.get(change.nlri.family(),{}):
 					return
@@ -192,7 +192,7 @@ class Store (object):
 			for family in self._seen:
 				for change in self._seen[family].itervalues():
 					if change.index() not in self._modify_nlri:
-						change.nlri.action = OUT.withdraw  # pylint: disable=E1101
+						change.nlri.action = OUT.WITHDRAW
 						self.insert_announced(change,True)
 
 			for new in self._changes:
@@ -216,15 +216,15 @@ class Store (object):
 				for nlri_index,change in full_dict_change.iteritems():
 					family = change.nlri.family()
 					announced = self._seen.get(family,{})
-					if change.nlri.action == OUT.announce:  # pylint: disable=E1101
+					if change.nlri.action == OUT.ANNOUNCE:
 						if nlri_index in announced:
 							old_change = announced[nlri_index]
 							# it is a duplicate route
 							if old_change.attributes.index() == change.attributes.index():
 								continue
-					elif change.nlri.action == OUT.withdraw:  # pylint: disable=E1101
+					elif change.nlri.action == OUT.WITHDRAW:
 						if nlri_index not in announced:
-							if dict_nlri[nlri_index].nlri.action == OUT.announce:  # pylint: disable=E1101
+							if dict_nlri[nlri_index].nlri.action == OUT.ANNOUNCE:
 								continue
 					dict_change[nlri_index] = change
 			else:
@@ -262,7 +262,7 @@ class Store (object):
 			if self.cache:
 				announced = self._seen
 				for change in changed:
-					if change.nlri.action == OUT.announce:  # pylint: disable=E1101
+					if change.nlri.action == OUT.ANNOUNCE:
 						announced.setdefault(change.nlri.family(),{})[change.index()] = change
 					else:
 						family = change.nlri.family()

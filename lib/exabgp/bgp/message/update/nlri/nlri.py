@@ -73,7 +73,7 @@ class NLRI (Address):
 				# The last bit is set for the last label
 				labels.append(label >> 4)
 				# This is a route withdrawal
-				if label == 0x800000 and action == IN.withdrawn:  # pylint: disable=E1101
+				if label == 0x800000 and action == IN.WITHDRAWN:
 					break
 				# This is a next-hop
 				if label == 0x000000:

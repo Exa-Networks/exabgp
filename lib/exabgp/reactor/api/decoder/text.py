@@ -70,7 +70,7 @@ class Text (Configuration):
 
 		if action == 'withdraw':
 			for (peer,change) in changes:
-				change.nlri.action = OUT.withdraw  # pylint: disable=E1101
+				change.nlri.action = OUT.WITHDRAW
 		return changes
 
 	def parse_api_vpls (self,command,peers,action):
@@ -99,7 +99,7 @@ class Text (Configuration):
 					changes.append((peer,change))
 		if action == 'withdraw':
 			for (peer,change) in changes:
-				change.nlri.action = OUT.withdraw  # pylint: disable=E1101
+				change.nlri.action = OUT.WITHDRAW
 		return changes
 
 	def parse_api_attribute (self,command,peers,action):
@@ -127,9 +127,9 @@ class Text (Configuration):
 				attributes
 			)
 			if action == 'withdraw':
-				change.nlri.action = OUT.withdraw  # pylint: disable=E1101
+				change.nlri.action = OUT.WITHDRAW
 			else:
-				change.nlri.action = OUT.announce  # pylint: disable=E1101
+				change.nlri.action = OUT.ANNOUNCE
 			changes.append((peers.keys(),change))
 		return changes
 
@@ -143,7 +143,7 @@ class Text (Configuration):
 		changes = scope[0]['announce']
 		if action == 'withdraw':
 			for change in changes:
-				change.nlri.action = OUT.withdraw  # pylint: disable=E1101
+				change.nlri.action = OUT.WITHDRAW
 		return changes
 
 	def parse_api_refresh (self,command):

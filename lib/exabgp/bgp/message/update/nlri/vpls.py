@@ -33,7 +33,7 @@ class VPLS (NLRI):
 
 	def __init__ (self,rd,ve,base,offset,size):
 		NLRI.__init__(self,AFI.l2vpn,SAFI.vpls)
-		self.action = OUT.announce  # pylint: disable=E1101
+		self.action = OUT.ANNOUNCE
 		self.nexthop = None
 		self.rd = rd
 		self.base = base

@@ -173,7 +173,7 @@ class Protocol (object):
 		yield message
 
 		# elif msg == Message.CODE.ROUTE_REFRESH:
-		# 	if self.negotiated.refresh != REFRESH.absent:
+		# 	if self.negotiated.refresh != REFRESH.ABSENT:
 		# 		self.logger.message(self.me('<< ROUTE-REFRESH'))
 		# 		refresh = RouteRefresh.unpack_message(body,self.negotiated)
 		# 		if self.neighbor.api.receive_refresh:
