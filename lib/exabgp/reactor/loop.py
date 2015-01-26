@@ -180,11 +180,11 @@ class Reactor (object):
 							# * immediate if it wants to be called again
 							# * later if it should be called again but has no work atm
 							# * close if it is finished and is closing down, or restarting
-							if action == ACTION.close:
+							if action == ACTION.close:  # pylint: disable=E1101
 								self.unschedule(peer)
 								keys.discard(key)
 							# we are loosing this peer, not point to schedule more process work
-							elif action == ACTION.later:
+							elif action == ACTION.later:  # pylint: disable=E1101
 								for io in peer.sockets():
 									ios[io] = key
 								# no need to come back to it before a a full cycle
