@@ -298,14 +298,13 @@ class Protocol (object):
 			yield _UPDATE
 
 	def new_operational (self,operational,negotiated):
-		for _ in self.write(operational.message()):
+		for _ in self.write(operational.message(negotiated)):
 			yield _NOP
 		self.logger.message(self.me('>> OPERATIONAL %s' % str(operational)))
 		yield operational
 
-	def new_refresh (self,refresh,negotiated):
-		for refresh in refresh.messages(negotiated):
-			for _ in self.write(refresh):
-				yield _NOP
-			self.logger.message(self.me('>> REFRESH %s' % str(refresh)))
-			yield refresh
+	def new_refresh (self,refresh):
+		for _ in self.write(refresh.message()):
+			yield _NOP
+		self.logger.message(self.me('>> REFRESH %s' % str(refresh)))
+		yield refresh

@@ -150,7 +150,7 @@ class OperationalFamily (Operational):
 			data
 		))
 
-	def message (self):
+	def message (self,negotiated):
 		return self._message(self.data)
 
 

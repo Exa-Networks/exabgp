@@ -43,8 +43,8 @@ class RouteRefresh (Message):
 		self.safi = SAFI(safi)
 		self.reserved = Reserved(reserved)
 
-	def messages (self):
-		return [self._message('%s%s%s' % (self.afi.pack(),chr(self.reserved),self.safi.pack())),]
+	def message (self):
+		return self._message('%s%s%s' % (self.afi.pack(),chr(self.reserved),self.safi.pack()))
 
 	def __str__ (self):
 		return "REFRESH"

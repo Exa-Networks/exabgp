@@ -445,6 +445,7 @@ class Peer (object):
 		refresh = None
 		command_eor = None
 		number = 0
+		refresh_enhanced = True if proto.negotiated.refresh == REFRESH.ENHANCED else False
 
 		self.send_ka = KA(self.me,proto)
 
@@ -490,8 +491,7 @@ class Peer (object):
 					if not refresh:
 						new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
 						if new_refresh:
-							enhanced_negotiated = True if proto.negotiated.refresh == REFRESH.ENHANCED else False
-							refresh = proto.new_refresh(new_refresh,enhanced_negotiated)
+							refresh = proto.new_refresh(new_refresh)
 
 					if refresh:
 						try:
@@ -514,9 +514,9 @@ class Peer (object):
 
 				# Take the routes already sent to that peer and resend them
 				if self._resend_routes != SEND.DONE:
-					enhanced_refresh = True if self._resend_routes == SEND.REFRESH and proto.negotiated.refresh == REFRESH.ENHANCED else False
+					enhanced = True if refresh_enhanced and self._resend_routes == SEND.REFRESH else False
 					self._resend_routes = SEND.DONE
-					self.neighbor.rib.outgoing.resend(send_families,enhanced_refresh)
+					self.neighbor.rib.outgoing.resend(send_families,enhanced)
 					self._have_routes = True
 					send_families = []
 
