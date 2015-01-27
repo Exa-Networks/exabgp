@@ -104,8 +104,8 @@ class Message (Exception):
 		message_len = pack('!H',19+len(message))
 		return "%s%s%s%s" % (self.MARKER,message_len,self.TYPE,message)
 
-	def message (self,negotiated):
-		raise RuntimeError('message not implemented in subclasses')
+	def message (self):
+		raise NotImplementedError('message not implemented in subclasses')
 
 	@staticmethod
 	def register_message (klass,message=None):

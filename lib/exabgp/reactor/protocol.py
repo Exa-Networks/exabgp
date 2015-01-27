@@ -298,7 +298,7 @@ class Protocol (object):
 			yield _UPDATE
 
 	def new_operational (self,operational,negotiated):
-		for _ in self.write(operational.message(negotiated)):
+		for _ in self.write(operational.message()):
 			yield _NOP
 		self.logger.message(self.me('>> OPERATIONAL %s' % str(operational)))
 		yield operational

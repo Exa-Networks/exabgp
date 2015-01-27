@@ -150,7 +150,7 @@ class OperationalFamily (Operational):
 			data
 		))
 
-	def message (self,negotiated):
+	def message (self):
 		return self._message(self.data)
 
 
@@ -253,8 +253,7 @@ class Advisory (object):
 			utf8 = advisory.encode('utf-8')
 			if len(utf8) > MAX_ADVISORY:
 				utf8 = utf8[:MAX_ADVISORY-3] + '...'.encode('utf-8')
-			# using super as _Advisory is otherwise private :p
-			Advisory._Advisory.__init__(  # pylint: disable=W0272
+			Advisory._Advisory.__init__(
 				self,Operational.CODE.ADM,
 				afi,safi,
 				utf8
@@ -268,8 +267,7 @@ class Advisory (object):
 			utf8 = advisory.encode('utf-8')
 			if len(utf8) > MAX_ADVISORY:
 				utf8 = utf8[:MAX_ADVISORY-3] + '...'.encode('utf-8')
-			# using super as _Advisory is otherwise private :p
-			Advisory._Advisory.__init__(  # pylint: disable=W0272
+			Advisory._Advisory.__init__(
 				self,Operational.CODE.ASM,
 				afi,safi,
 				utf8

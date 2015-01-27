@@ -11,7 +11,7 @@ from struct import pack
 from struct import unpack
 
 from exabgp.bgp.message.open.asn import ASN
-from exabgp.bgp.message.update.attribute.community import RouteTarget
+from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTarget
 from exabgp.protocol.ip.address import Address
 
 
