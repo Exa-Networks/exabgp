@@ -56,7 +56,3 @@ class Prefix (CIDR,NLRI):
 		if path_identifier:
 			nlri.path_info = PathInfo(None,None,path_identifier)
 		return len(data) - len(left),nlri
-
-for _safi in (SAFI.unicast, SAFI.multicast):
-	for _afi in (AFI.ipv4, AFI.ipv6):
-		Prefix.register_nlri(_afi,_safi)

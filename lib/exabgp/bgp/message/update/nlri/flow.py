@@ -636,7 +636,3 @@ class Flow (NLRI):
 					# logger.parser(LazyFormat("added flow %s (%s) operator %d len %d payload " % (klass.NAME,adding,byte,length),value))
 
 		return total-len(bgp),nlri
-
-for safi in (SAFI.flow_ip,SAFI.flow_vpn):
-	for afi in (AFI.ipv4, AFI.ipv6):
-		Flow.register_nlri(afi,safi)

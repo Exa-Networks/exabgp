@@ -61,8 +61,6 @@ class OriginASNIP (Origin):
 		asn,ip = unpack('!H4s',data[2:8])
 		return OriginASNIP(ASN(asn),IPv4.ntop(ip),False,data[:8])
 
-OriginASNIP.register_extended()
-
 
 # ================================================================== OriginIPASN
 # RFC 4360 / RFC 7153
@@ -94,8 +92,6 @@ class OriginIPASN (Origin):
 		ip,asn = unpack('!4sH',data[2:8])
 		return OriginIPASN(IPv4.ntop(ip),ASN(asn),False,data[:8])
 
-OriginIPASN.register_extended()
-
 
 # ============================================================= OriginASN4Number
 # RFC 4360 / RFC 7153
@@ -124,5 +120,3 @@ class OriginASN4Number (Origin):
 	def unpack (data):
 		asn,number = unpack('!LH',data[2:8])
 		return OriginASN4Number(ASN(asn),number,False,data[:8])
-
-OriginASN4Number.register_extended()

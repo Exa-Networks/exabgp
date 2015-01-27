@@ -18,7 +18,6 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 class MED (Attribute):
 	ID = Attribute.CODE.MED
 	FLAG = Attribute.Flag.OPTIONAL
-	MULTIPLE = False
 	CACHING = True
 
 	__slots__ = ['med','packed']
@@ -49,5 +48,3 @@ class MED (Attribute):
 	@classmethod
 	def unpack (cls,data,negotiated):
 		return cls(unpack('!L',data)[0])
-
-MED.register_attribute()

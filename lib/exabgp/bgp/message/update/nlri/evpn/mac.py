@@ -122,5 +122,3 @@ class MAC (EVPN):
 		label = Labels.unpack(data[end+1+iplen:])
 
 		return cls(rd,esi,etag,mac,length,label,ip,data)
-
-MAC.register_evpn()

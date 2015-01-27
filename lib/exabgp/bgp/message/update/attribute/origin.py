@@ -14,7 +14,6 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 class Origin (Attribute):
 	ID = Attribute.CODE.ORIGIN
 	FLAG = Attribute.Flag.TRANSITIVE
-	MULTIPLE = False
 	CACHING = True
 
 	IGP        = 0x00
@@ -64,5 +63,4 @@ class Origin (Attribute):
 		cls.cache[Attribute.CODE.ORIGIN][EGP.pack()] = EGP
 		cls.cache[Attribute.CODE.ORIGIN][INC.pack()] = INC
 
-Origin.register_attribute()
 Origin.setCache()

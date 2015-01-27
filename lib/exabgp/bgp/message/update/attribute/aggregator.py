@@ -18,7 +18,6 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 class Aggregator (Attribute):
 	ID = Attribute.CODE.AGGREGATOR
 	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
-	MULTIPLE = False
 	CACHING = True
 
 	__slots__ = ['asn','speaker','_str']
@@ -51,8 +50,6 @@ class Aggregator (Attribute):
 			return cls(ASN.unpack(data[:4]),IPv4.unpack(data[-4:]))
 		return cls(ASN.unpack(data[:2]),IPv4.unpack(data[-4:]))
 
-Aggregator.register_attribute()
-
 
 # ============================================================== AGGREGATOR (18)
 #
@@ -63,5 +60,3 @@ class Aggregator4 (Aggregator):
 
 	def pack (self,negotiated):
 		return self._attribute(self.asn.pack(True)+self.speaker.pack())
-
-Aggregator4.register_attribute()

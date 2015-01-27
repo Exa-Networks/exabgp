@@ -115,12 +115,9 @@ class Notification (Message):
 		return cls(ord(data[0]),ord(data[1]),data[2:])
 
 
-# Message we receive and decode
-Notification.register_message()
 
 # =================================================================== Notify
 # A Notification we need to inform our peer of.
-
 
 class Notify (Notification):
 	def __init__ (self,code,subcode,data=None):
@@ -134,6 +131,3 @@ class Notify (Notification):
 			chr(self.subcode),
 			self.data
 		))
-
-# Message we send
-Notify.klass_notify = Notify

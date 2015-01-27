@@ -66,9 +66,9 @@ class EVPN (object):
 	def __hash__(self):
 		return hash("%s:%s:%s:%s" % (self.afi,self.safi,self.CODE,self.packed))
 
-	@classmethod
-	def register_evpn (cls):
-		cls.registered_evpn[cls.CODE] = cls
+	@staticmethod
+	def register_evpn (klass):
+		EVPN.registered_evpn[klass.CODE] = klass
 
 	@classmethod
 	def unpack(cls,data):

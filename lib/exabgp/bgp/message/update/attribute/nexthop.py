@@ -19,7 +19,6 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 class NextHop (Attribute,IP):
 	ID = Attribute.CODE.NEXT_HOP
 	FLAG = Attribute.Flag.TRANSITIVE
-	MULTIPLE = False
 	CACHING = True
 
 	def __init__ (self,ip,packed=None):
@@ -45,5 +44,3 @@ class NextHop (Attribute,IP):
 
 	def __str__ (self):
 		return IP.__str__(self)
-
-NextHop.register_attribute()

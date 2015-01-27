@@ -80,5 +80,3 @@ class Open (Message):
 		router_id = "%d.%d.%d.%d" % (numeric >> 24,(numeric >> 16) & 0xFF,(numeric >> 8) & 0xFF,numeric & 0xFF)
 		capabilities = Capabilities.unpack(data[9:])
 		return cls(version,asn,router_id,capabilities,hold_time)
-
-Open.register_message()

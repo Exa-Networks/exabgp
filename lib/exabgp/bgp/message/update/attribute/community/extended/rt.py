@@ -60,8 +60,6 @@ class RouteTargetASNIP (RouteTarget):
 		asn,ip = unpack('!H4s',data[2:8])
 		return RouteTargetASNIP(ASN(asn),IPv4.ntop(ip),False,data[:8])
 
-RouteTargetASNIP.register_extended()
-
 
 # ============================================================= RouteTargetIPASN
 # RFC 4360 / RFC 7153
@@ -92,15 +90,13 @@ class RouteTargetIPASN (RouteTarget):
 		ip,asn = unpack('!4sH',data[2:8])
 		return RouteTargetIPASN(IPv4.ntop(ip),ASN(asn),False,data[:8])
 
-RouteTargetIPASN.register_extended()
-
 
 # ======================================================== RouteTargetASN4Number
 # RFC 4360 / RFC 7153
 
 class RouteTargetASN4Number (RouteTarget):
 	COMMUNITY_TYPE = 0x02
-	LIMIT=6
+	LIMIT = 6
 
 	__slots__ = ['asn','ip']
 
@@ -123,5 +119,3 @@ class RouteTargetASN4Number (RouteTarget):
 	def unpack (data):
 		asn,number = unpack('!LH',data[2:8])
 		return RouteTargetASN4Number(ASN(asn),number,False,data[:8])
-
-RouteTargetASN4Number.register_extended()

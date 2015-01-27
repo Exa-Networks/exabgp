@@ -32,7 +32,6 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 class PMSI (Attribute):
 	ID = Attribute.CODE.PMSI_TUNNEL
 	FLAG = Attribute.Flag.OPTIONAL
-	MULTIPLE = False
 	CACHING = True
 	TUNNEL_TYPE = -1
 
@@ -103,9 +102,9 @@ class PMSI (Attribute):
 			self.prettytunnel()
 		)
 
-	@classmethod
-	def register_pmsi (cls):
-		cls._pmsi_known[cls.TUNNEL_TYPE] = cls
+	@staticmethod
+	def register_pmsi (klass):
+		PMSI._pmsi_known[klass.TUNNEL_TYPE] = klass
 
 	@staticmethod
 	def pmsi_unknown (subtype,tunnel,label,flags):
@@ -121,8 +120,6 @@ class PMSI (Attribute):
 		if subtype in cls._pmsi_known:
 			return cls._pmsi_known[subtype].unpack(data[5:],label,flags)
 		return cls.pmsi_unknown(subtype,data[5:],label,flags)
-
-PMSI.register_attribute()
 
 
 # ================================================================= PMSINoTunnel
@@ -140,8 +137,6 @@ class PMSINoTunnel (PMSI):
 	@classmethod
 	def unpack (cls,tunnel,label,flags):
 		return cls(label,flags)
-
-PMSINoTunnel.register_pmsi()
 
 
 # ======================================================= PMSIIngressReplication
@@ -162,4 +157,6 @@ class PMSIIngressReplication (PMSI):
 		ip = IPv4.ntop(tunnel)
 		return cls(ip,label,flags,tunnel)
 
-PMSIIngressReplication.register_pmsi()
+
+PMSI.register_pmsi(PMSINoTunnel)
+PMSI.register_pmsi(PMSIIngressReplication)

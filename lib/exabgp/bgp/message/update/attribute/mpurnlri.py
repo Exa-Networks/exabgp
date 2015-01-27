@@ -24,7 +24,6 @@ from exabgp.bgp.message.notification import Notify
 class MPURNLRI (Attribute,Address):
 	FLAG = Attribute.Flag.OPTIONAL
 	ID = Attribute.CODE.MP_UNREACH_NLRI
-	MULTIPLE = True
 
 	__slots__ = ['nlris']
 
@@ -74,7 +73,5 @@ class MPURNLRI (Attribute,Address):
 			# logger.parser(LazyFormat("parsed withdraw mp nlri %s payload " % nlri,data[:length]))
 
 		return cls(afi,safi,nlris)
-
-MPURNLRI.register_attribute()
 
 EMPTY_MPURNLRI = MPURNLRI(AFI(AFI.undefined),SAFI(SAFI.undefined),[])

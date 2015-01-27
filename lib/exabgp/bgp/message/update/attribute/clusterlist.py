@@ -22,7 +22,6 @@ class ClusterID (IPv4):
 class ClusterList (Attribute):
 	ID = Attribute.CODE.CLUSTER_LIST
 	FLAG = Attribute.Flag.OPTIONAL
-	MULTIPLE = False
 	CACHING = True
 
 	__slots__ = ['clusters','packed','_len']
@@ -53,5 +52,3 @@ class ClusterList (Attribute):
 			clusters.append(IPv4.unpack(data[:4]))
 			data = data[4:]
 		return cls(clusters)
-
-ClusterList.register_attribute()

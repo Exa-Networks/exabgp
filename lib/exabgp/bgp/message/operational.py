@@ -95,9 +95,9 @@ class Operational (Message):
 	def extensive (self):
 		return 'operational %s' % self.name
 
-	@classmethod
-	def register_operational (cls):
-		cls.registered_operational[cls.code] = (cls.category,cls)
+	@staticmethod
+	def register_operational (klass):
+		Operational.registered_operational[klass.code] = (klass.category,klass)
 
 	@classmethod
 	def unpack_message (cls,data,negotiated):  # pylint: disable=W0613
@@ -127,12 +127,9 @@ class Operational (Message):
 		else:
 			print 'ignoring ATM this kind of message'
 
-Operational.register_message()
-
 
 # ============================================================ OperationalFamily
 #
-
 
 class OperationalFamily (Operational):
 	has_family = True
@@ -257,7 +254,7 @@ class Advisory (object):
 			if len(utf8) > MAX_ADVISORY:
 				utf8 = utf8[:MAX_ADVISORY-3] + '...'.encode('utf-8')
 			# using super as _Advisory is otherwise private :p
-			super(Advisory.ADM,self).__init__(
+			Advisory._Advisory.__init__(  # pylint: disable=W0272
 				self,Operational.CODE.ADM,
 				afi,safi,
 				utf8
@@ -272,23 +269,15 @@ class Advisory (object):
 			if len(utf8) > MAX_ADVISORY:
 				utf8 = utf8[:MAX_ADVISORY-3] + '...'.encode('utf-8')
 			# using super as _Advisory is otherwise private :p
-			super(Advisory.ASM,self).__init__(
+			Advisory._Advisory.__init__(  # pylint: disable=W0272
 				self,Operational.CODE.ASM,
 				afi,safi,
 				utf8
 			)
 
-Advisory.ADM.register_operational()
-Advisory.ASM.register_operational()
-
-# a = Advisory.ADM(1,1,'string 1')
-# print a.extensive()
-# b = Advisory.ASM(1,1,'string 2')
-# print b.extensive()
 
 # ======================================================================== Query
 #
-
 
 class Query (object):
 	class _Query (SequencedOperationalFamily):
@@ -322,14 +311,9 @@ class Query (object):
 		name = 'LPCQ'
 		code = Operational.CODE.LPCQ
 
-Query.RPCQ.register_operational()
-Query.APCQ.register_operational()
-Query.LPCQ.register_operational()
-
 
 # ===================================================================== Response
 #
-
 
 class Response (object):
 	class _Counter (SequencedOperationalFamily):
@@ -367,18 +351,20 @@ class Response (object):
 		code = Operational.CODE.LPCP
 
 
-Response.RPCP.register_operational()
-Response.APCP.register_operational()
-Response.LPCP.register_operational()
-
-# c = State.RPCQ(1,1,'82.219.0.1',10)
-# print c.extensive()
-# d = State.RPCP(1,1,'82.219.0.1',10,10000)
-# print d.extensive()
-
 # ========================================================================= Dump
 #
 
-
 class Dump (object):
 	pass
+
+
+Operational.register_operational(Advisory.ADM)
+Operational.register_operational(Advisory.ASM)
+
+Operational.register_operational(Query.RPCQ)
+Operational.register_operational(Query.APCQ)
+Operational.register_operational(Query.LPCQ)
+
+Operational.register_operational(Response.RPCP)
+Operational.register_operational(Response.APCP)
+Operational.register_operational(Response.LPCP)

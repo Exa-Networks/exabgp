@@ -35,9 +35,9 @@ class NLRI (Address):
 	def pack (self,addpath=None):
 		raise Exception('unimplemented')
 
-	@classmethod
-	def register_nlri (cls,afi,safi):
-		cls.registered_nlri['%d/%d' % (afi,safi)] = cls
+	@staticmethod
+	def register_nlri (klass,afi,safi):
+		NLRI.registered_nlri['%d/%d' % (afi,safi)] = klass
 
 	@classmethod
 	def unpack (cls,afi,safi,data,addpath,nexthop,action):

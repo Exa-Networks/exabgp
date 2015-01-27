@@ -335,7 +335,7 @@ def cluster_list (tokeniser):
 # ==================================================================== Community
 #
 
-from exabgp.bgp.message.update.attribute.community import Community
+from exabgp.bgp.message.update.attribute.community.community import Community
 
 
 def _community (value):
@@ -385,7 +385,7 @@ def _community (value):
 			raise ValueError('invalid community name %s' % value)
 
 
-from exabgp.bgp.message.update.attribute.community import Communities
+from exabgp.bgp.message.update.attribute.community.communities import Communities
 
 
 def community (tokeniser):
@@ -407,7 +407,7 @@ def community (tokeniser):
 # ========================================================== ExtendedCommunities
 #
 
-from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunity
 
 
 def _extended_community (value):
@@ -494,7 +494,7 @@ def _extended_community (value):
 
 # This is the same code as community with a different parser, should be factored
 
-from exabgp.bgp.message.update.attribute.community import ExtendedCommunities
+from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
 
 
 def extended_community (tokeniser):
@@ -519,7 +519,6 @@ def extended_community (tokeniser):
 def watchdog (tokeniser):
 	class Watchdog (str):
 		ID = Attribute.CODE.INTERNAL_WATCHDOG
-		MULTIPLE = False
 
 	command = tokeniser()
 	if command.lower() in ['announce','withdraw']:
@@ -533,7 +532,6 @@ def watchdog (tokeniser):
 def withdraw (tokeniser=None):
 	class Withdrawn (object):
 		ID = Attribute.CODE.INTERNAL_WITHDRAW
-		MULTIPLE = False
 	return Withdrawn()
 
 

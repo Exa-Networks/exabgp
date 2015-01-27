@@ -71,10 +71,10 @@ from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 
-from exabgp.bgp.message.update.attribute.community import Community
-from exabgp.bgp.message.update.attribute.community import Communities
-from exabgp.bgp.message.update.attribute.community import ExtendedCommunities
-from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+from exabgp.bgp.message.update.attribute.community.community import Community
+from exabgp.bgp.message.update.attribute.community.communities import Communities
+from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunity
+from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficAction
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirect
@@ -90,7 +90,7 @@ from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 from exabgp.bgp.message.operational import MAX_ADVISORY
 from exabgp.bgp.message.operational import Advisory
 
-from exabgp.bgp.message.update.attribute import Attributes
+from exabgp.bgp.message.update.attribute.attributes import Attributes
 
 from exabgp.rib.change import Change
 from exabgp.reactor.api import control
@@ -104,22 +104,18 @@ from exabgp.logger import Logger
 
 class Split (int):
 	ID = Attribute.CODE.INTERNAL_SPLIT
-	MULTIPLE = False
 
 
 class Watchdog (str):
 	ID = Attribute.CODE.INTERNAL_WATCHDOG
-	MULTIPLE = False
 
 
 class Withdrawn (object):
 	ID = Attribute.CODE.INTERNAL_WITHDRAW
-	MULTIPLE = False
 
 
 class Name (str):
 	ID = Attribute.CODE.INTERNAL_NAME
-	MULTIPLE = False
 
 
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
@@ -1442,18 +1438,18 @@ class Configuration (object):
 			self.logger.configuration('-'*80,'warning')
 
 		def _init_neighbor (neighbor):
-				families = neighbor.families()
-				for change in neighbor.changes:
-					if change.nlri.family() in families:
-						# This add the family to neighbor.families()
-						neighbor.rib.outgoing.insert_announced_watchdog(change)
-				for message in messages:
-					if message.family() in families:
-						if message.name == 'ASM':
-							neighbor.asm[message.family()] = message
-						else:
-							neighbor.messages.append(message)
-				self._neighbor[neighbor.name()] = neighbor
+			families = neighbor.families()
+			for change in neighbor.changes:
+				if change.nlri.family() in families:
+					# This add the family to neighbor.families()
+					neighbor.rib.outgoing.insert_announced_watchdog(change)
+			for message in messages:
+				if message.family() in families:
+					if message.name == 'ASM':
+						neighbor.asm[message.family()] = message
+					else:
+						neighbor.messages.append(message)
+			self._neighbor[neighbor.name()] = neighbor
 
 		# create one neighbor object per family for multisession
 		if neighbor.multisession and len(neighbor.families()) > 1:

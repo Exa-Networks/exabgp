@@ -58,7 +58,6 @@ class TLVS (list):
 class AIGP (Attribute):
 	ID = Attribute.CODE.AIGP
 	FLAG = Attribute.Flag.OPTIONAL
-	MULTIPLE = False
 	CACHING = True
 	TYPES = [1,]
 
@@ -87,5 +86,3 @@ class AIGP (Attribute):
 			# AIGP must only be accepted on configured sessions
 			return None
 		return cls(unpack('!Q',data[:8] & 0x000000FFFFFFFFFF),data[:8])
-
-AIGP.register_attribute()

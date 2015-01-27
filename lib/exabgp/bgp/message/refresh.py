@@ -75,5 +75,3 @@ class RouteRefresh (Message):
 		if self.reserved != other.reserved:
 			return False
 		return True
-
-RouteRefresh.register_message()

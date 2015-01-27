@@ -18,7 +18,6 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 class LocalPreference (Attribute):
 	ID = Attribute.CODE.LOCAL_PREF
 	FLAG = Attribute.Flag.TRANSITIVE
-	MULTIPLE = False
 	CACHING = True
 
 	__slots__ = ['localpref','packed']
@@ -46,5 +45,3 @@ class LocalPreference (Attribute):
 	@classmethod
 	def unpack (cls,data,negotiated):
 		return cls(unpack('!L',data)[0],data)
-
-LocalPreference.register_attribute()

@@ -18,7 +18,7 @@ from exabgp.bgp.message import IN
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update.eor import EOR
 
-from exabgp.bgp.message.update.attribute import Attributes
+from exabgp.bgp.message.update.attribute.attributes import Attributes
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
 from exabgp.bgp.message.update.attribute.mprnlri import EMPTY_MPRNLRI
@@ -307,6 +307,3 @@ class Update (Message):
 			raise RuntimeError('This was not expected')
 
 		return Update(nlris,attributes)
-
-
-Update.register_message()

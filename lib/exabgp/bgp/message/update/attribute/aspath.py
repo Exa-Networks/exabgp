@@ -27,7 +27,6 @@ class ASPath (Attribute):
 
 	ID = Attribute.CODE.AS_PATH
 	FLAG = Attribute.Flag.TRANSITIVE
-	MULTIPLE = False
 
 	__slots__ = ['as_seq','as_set','as_cseq','as_cset','segments','packed','index','_str','_json']
 
@@ -204,7 +203,6 @@ class ASPath (Attribute):
 
 
 ASPath.Empty = ASPath([],[])
-ASPath.register_attribute()
 
 
 # ================================================================= AS4Path (17)
@@ -225,4 +223,3 @@ class AS4Path (ASPath):
 		return cls.__new_aspaths(data,True,AS4Path)
 
 AS4Path.Empty = AS4Path([],[])
-AS4Path.register_attribute()

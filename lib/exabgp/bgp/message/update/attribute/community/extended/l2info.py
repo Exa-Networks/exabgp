@@ -45,5 +45,3 @@ class L2Info (ExtendedCommunity):
 	def unpack (data):
 		encaps,control,mtu,reserved = unpack('!BBHH',data[2:8])
 		return L2Info(encaps,control,mtu,reserved,data[:8])
-
-L2Info.register_extended()

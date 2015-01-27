@@ -6,72 +6,35 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunity
 
-# ======================================================= ExtendedCommunity (16)
-# XXX: Should subclasses register with transitivity ?
+from exabgp.bgp.message.update.attribute.community.extended.encapsulation import Encapsulation
+from exabgp.bgp.message.update.attribute.community.extended.l2info import L2Info
+from exabgp.bgp.message.update.attribute.community.extended.origin import OriginASNIP
+from exabgp.bgp.message.update.attribute.community.extended.origin import OriginIPASN
+from exabgp.bgp.message.update.attribute.community.extended.origin import OriginASN4Number
+from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASNIP
+from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetIPASN
+from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN4Number
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficAction
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirect
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficMark
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficNextHop
 
+ExtendedCommunity.register_extended(Encapsulation)
+ExtendedCommunity.register_extended(L2Info)
 
-class ExtendedCommunity (Attribute):
-	ID = Attribute.CODE.EXTENDED_COMMUNITY
-	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
-	MULTIPLE = False
+ExtendedCommunity.register_extended(OriginASNIP)
+ExtendedCommunity.register_extended(OriginIPASN)
+ExtendedCommunity.register_extended(OriginASN4Number)
 
-	registered_extended = {}
+ExtendedCommunity.register_extended(RouteTargetASNIP)
+ExtendedCommunity.register_extended(RouteTargetIPASN)
+ExtendedCommunity.register_extended(RouteTargetASN4Number)
 
-	@classmethod
-	def register_extended (cls):
-		# COMMUNITY_TYPE and COMMUNITY_SUBTYPE are defined in subclasses
-		cls.registered_extended[(cls.COMMUNITY_TYPE & 0x0F,cls.COMMUNITY_SUBTYPE)] = cls  # pylint: disable=E1101
-
-	# size of value for data (boolean: is extended)
-	length_value = {False:7, True:6}
-	name = {False: 'regular', True: 'extended'}
-
-	__slots__ = ['community']
-
-	def __init__ (self,community):
-		# Two top bits are iana and transitive bits
-		self.community = community
-
-	def iana (self):
-		return not not (self.community[0] & 0x80)
-
-	def transitive (self):
-		return not not (self.community[0] & 0x40)
-
-	def pack (self,negotiated=None):
-		return self.community
-
-	def json (self):
-		h = 0x00
-		for byte in self.community:
-			h <<= 8
-			h += ord(byte)
-		return "%ld" % h
-
-	def __str__ (self):
-		h = 0x00
-		for byte in self.community:
-			h <<= 8
-			h += ord(byte)
-		return "0x%016X" % h
-
-	def __len__ (self):
-		return 8
-
-	def __hash__ (self):
-		return hash(self.community)
-
-	def __cmp__ (self,other):
-		if not isinstance(other, ExtendedCommunity):
-			return -1
-		return cmp(self.community,other.community)
-
-	@staticmethod
-	def unpack (data,negotiated=None):
-		# 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0FFF
-		community = (ord(data[0]) & 0x0F,ord(data[1]))
-		if community in ExtendedCommunity.registered_extended:
-			return ExtendedCommunity.registered_extended[community].unpack(data)
-		return ExtendedCommunity(data)
+ExtendedCommunity.register_extended(TrafficRate)
+ExtendedCommunity.register_extended(TrafficAction)
+ExtendedCommunity.register_extended(TrafficRedirect)
+ExtendedCommunity.register_extended(TrafficMark)
+ExtendedCommunity.register_extended(TrafficNextHop)

@@ -171,15 +171,15 @@ class Attribute (object):
 	def __ne__ (self,other):
 		return self.ID != other.ID
 
-	@classmethod
-	def register_attribute (cls,attribute_id=None,flag=None):
-		aid = cls.ID if attribute_id is None else attribute_id
-		flg = cls.FLAG | Attribute.Flag.EXTENDED_LENGTH if flag is None else flag | Attribute.Flag.EXTENDED_LENGTH
-		if (aid,flg) in cls.registered_attributes:
+	@staticmethod
+	def register_attribute (klass,attribute_id=None,flag=None):
+		aid = klass.ID if attribute_id is None else attribute_id
+		flg = klass.FLAG | Attribute.Flag.EXTENDED_LENGTH if flag is None else flag | Attribute.Flag.EXTENDED_LENGTH
+		if (aid,flg) in klass.registered_attributes:
 			raise RuntimeError('only one class can be registered per attribute')
-		cls.registered_attributes[(aid,flg)] = cls
-		cls.attributes_known.append(aid)
-		if cls.FLAG & Attribute.Flag.OPTIONAL:
+		klass.registered_attributes[(aid,flg)] = klass
+		klass.attributes_known.append(aid)
+		if klass.FLAG & Attribute.Flag.OPTIONAL:
 			Attribute.attributes_optional.append(aid)
 		else:
 			Attribute.attributes_well_know.append(aid)

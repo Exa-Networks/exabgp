@@ -99,7 +99,3 @@ class VPLS (NLRI):
 		nlri.action = action
 		nlri.nexthop = IP.unpack(nexthop)
 		return len(data), nlri
-
-for _safi in (SAFI.vpls,):
-	for _afi in (AFI.l2vpn,):
-		VPLS.register_nlri(_afi,_safi)

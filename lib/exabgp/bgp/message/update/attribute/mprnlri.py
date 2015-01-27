@@ -26,7 +26,6 @@ from exabgp.bgp.message.notification import Notify
 class MPRNLRI (Attribute,Address):
 	FLAG = Attribute.Flag.OPTIONAL
 	ID = Attribute.CODE.MP_REACH_NLRI
-	MULTIPLE = True
 
 	__slots__ = ['nlris']
 
@@ -161,8 +160,5 @@ class MPRNLRI (Attribute,Address):
 			# logger.parser(LazyFormat("parsed announce mp nlri %s payload " % nlri,data[:length]))
 			data = data[length:]
 		return cls(afi,safi,nlris)
-
-
-MPRNLRI.register_attribute()
 
 EMPTY_MPRNLRI  = MPRNLRI(AFI(AFI.undefined),SAFI(SAFI.undefined),[])

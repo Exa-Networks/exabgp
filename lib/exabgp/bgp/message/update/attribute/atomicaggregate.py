@@ -16,7 +16,6 @@ from exabgp.bgp.message.notification import Notify
 class AtomicAggregate (Attribute):
 	ID = Attribute.CODE.ATOMIC_AGGREGATE
 	FLAG = Attribute.Flag.TRANSITIVE
-	MULTIPLE = False
 	CACHING = True
 
 	__slots__ = []
@@ -49,5 +48,4 @@ class AtomicAggregate (Attribute):
 		# There can only be one, build it now :)
 		cls.cache[Attribute.CODE.ATOMIC_AGGREGATE][''] = cls()
 
-AtomicAggregate.register_attribute()
 AtomicAggregate.setCache()
