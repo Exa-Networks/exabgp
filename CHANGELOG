@@ -13,6 +13,8 @@ Version 3.4.8
     reported by: Aaron Kalin
  * Fix: bug in AS_PATH with AS_SET handling
     patch by: Eiichiro Watanabe
+ * Fix: off by one for the maximum message size generation
+    reported by: Eiichiro Watanabe
 
 Version 3.4.7
  * Package: be more pythonic and use enty points with pip installation
