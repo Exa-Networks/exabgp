@@ -43,7 +43,7 @@ def check (exabgp,daemon,group,port,delay):
 
 	os.environ['exabgp.tcp.once'] = 'true'
 	os.environ['exabgp.tcp.port'] = str(port)
-	os.environ['exabgp.debug.defensive'] = 'true'
+	#os.environ['exabgp.debug.defensive'] = 'true'
 	os.environ['exabgp.debug.rotate'] = 'true'
 
 	daemon_command = [daemon, sequence_file]
@@ -161,6 +161,7 @@ if __name__ == '__main__':
 		if not number.isdigit():
 			sys.exit('invalid port value %s' % number)
 		port = int(number)
+		print 'using port', port
 	else:
 		max_test = 100
 		port = 1024+ hash(sys.version) % (pow(2,16)-1024-max_test)
@@ -168,8 +169,6 @@ if __name__ == '__main__':
 
 	uid = os.getuid()
 	gid = os.getgid()
-
-	print 'using port base', port
 
 	if uid and gid and int(port) <= 1024:
 		sys.exit('you need to have root privileges to bind to port 79')
