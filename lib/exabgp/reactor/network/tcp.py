@@ -49,7 +49,7 @@ def create (afi):
 	return io
 
 
-def bind (io,ip,afi):
+def bind (io, ip, afi):
 	try:
 		if afi == AFI.ipv4:
 			io.bind((ip,0))
@@ -59,7 +59,7 @@ def bind (io,ip,afi):
 		raise BindingError('Could not bind to local ip %s - %s' % (ip,str(exc)))
 
 
-def connect (io,ip,port,afi,md5):
+def connect (io, ip, port, afi, md5):
 	try:
 		if afi == AFI.ipv4:
 			io.connect((ip,port))
@@ -100,7 +100,7 @@ def connect (io,ip,port,afi,md5):
 # 	/* _SS_MAXSIZE value minus size of ss_family */
 # } __attribute__ ((aligned(_K_SS_ALIGNSIZE)));   /* force desired alignment */
 
-def MD5 (io,ip,port,afi,md5):
+def MD5 (io, ip, port, afi, md5):
 	if md5:
 		os = platform.system()
 		if os == 'FreeBSD':
@@ -153,7 +153,7 @@ def MD5 (io,ip,port,afi,md5):
 			raise MD5Error('ExaBGP has no MD5 support for %s' % os)
 
 
-def nagle (io,ip):
+def nagle (io, ip):
 	try:
 		# diable Nagle's algorithm (no grouping of packets)
 		io.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
@@ -161,7 +161,7 @@ def nagle (io,ip):
 		raise NagleError("Could not disable nagle's algorithm for %s" % ip)
 
 
-def TTL (io,ip,ttl):
+def TTL (io, ip, ttl):
 	# None (ttl-security unset) or zero (maximum TTL) is the same thing
 	if ttl:
 		try:
@@ -170,7 +170,7 @@ def TTL (io,ip,ttl):
 			raise TTLError('This OS does not support IP_TTL (ttl-security) for %s (%s)' % (ip,errstr(exc)))
 
 
-def async (io,ip):
+def async (io, ip):
 	try:
 		io.setblocking(0)
 	except socket.error,exc:

@@ -12,7 +12,7 @@ from exabgp.bmp.message import Message
 
 
 class Header (object):
-	def __init__ (self,data):
+	def __init__ (self, data):
 		self.version = ord(data[0])
 		self.message = Message(ord(data[1]))
 		self.peer = Peer(data)

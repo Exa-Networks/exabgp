@@ -46,10 +46,10 @@ class SectionNeighbor (Section):
 	syntax = syntax_neighbor
 	name = 'neighbor'
 
-	def enter (self,tokeniser):
+	def enter (self, tokeniser):
 		Section.enter(self,tokeniser)
 
-	def exit (self,tokeniser):
+	def exit (self, tokeniser):
 		if 'tcp-bind' not in self.content:
 			raise RaisedNeighbor('neighbor needs a tcp bind ip')
 
@@ -62,45 +62,45 @@ class SectionNeighbor (Section):
 		if 'tcp-md5' not in self.content:
 			self.content['tcp-md5'] = None
 
-	def session (self,tokeniser):
+	def session (self, tokeniser):
 		section = self.get_section(SectionSession.name,tokeniser)
 		if section:
 			self.content['session'] = section
 		else:
 			return False
 
-	def announce (self,tokeniser):
+	def announce (self, tokeniser):
 		announced = tokeniser()
 		if not hasattr(announced,'pop'):
 			raise RaisedNeighbor('announce takes a list of named routes')
 		self.content['announce'] = [word for (line,column,line,word) in announced]
 
-	def tcp_bind (self,tokeniser):
+	def tcp_bind (self, tokeniser):
 		try:
 			self.content['tcp-bind'] = ip(tokeniser)
 		except ValueError,exc:
 			raise RaisedNeighbor(tokeniser,'could not parse tcp bind ip, %s' % str(exc))
 
-	def tcp_connect (self,tokeniser):
+	def tcp_connect (self, tokeniser):
 		try:
 			self.content['tcp-connect'] = ip(tokeniser)
 		except ValueError,exc:
 			raise RaisedNeighbor(tokeniser,'could not parse tcp connect ip, %s' % str(exc))
 
-	def tcp_ttl_security (self,tokeniser):
+	def tcp_ttl_security (self, tokeniser):
 		try:
 			self.content['tcp-ttl-security'] = ttl(tokeniser)
 		except ValueError,exc:
 			raise RaisedNeighbor(tokeniser,'could not parse tcp ttl, %s' % str(exc))
 
-	def tcp_md5 (self,tokeniser):
+	def tcp_md5 (self, tokeniser):
 		try:
 			self.content['tcp-md5'] = md5(tokeniser)
 		except ValueError,exc:
 			raise RaisedNeighbor(tokeniser,'could not parse tcp MD5, %s' % str(exc))
 
 	@classmethod
-	def register (cls,registry,location):
+	def register (cls, registry, location):
 		registry.register_class(cls)
 
 		registry.register_hook(cls,'enter',location,'enter')

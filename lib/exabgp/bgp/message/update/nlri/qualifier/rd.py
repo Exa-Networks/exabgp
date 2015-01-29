@@ -16,7 +16,7 @@ class RouteDistinguisher (object):
 
 	__slots__ = ['rd','_len']
 
-	def __init__ (self,rd):
+	def __init__ (self, rd):
 		self.rd = rd
 		self._len = len(self.rd)
 
@@ -49,7 +49,7 @@ class RouteDistinguisher (object):
 		return ' route-distinguisher %s' % self._str()
 
 	@classmethod
-	def unpack (cls,data):
+	def unpack (cls, data):
 		return cls(data[:8])
 
 RouteDistinguisher.NORD = RouteDistinguisher('')

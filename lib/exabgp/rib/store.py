@@ -15,7 +15,7 @@ from exabgp.bgp.message.refresh import RouteRefresh
 # XXX: FIXME: we would not have to use so many setdefault if we pre-filled the dicts with the families
 
 class Store (object):
-	def __init__ (self,families):
+	def __init__ (self, families):
 		# XXX: FIXME: we can decide to not cache the routes we seen and let the backend do it for us and save the memory
 		self._watchdog = {}
 		self.cache = False
@@ -50,7 +50,7 @@ class Store (object):
 		self._changes = None
 		self.reset()
 
-	def sent_changes (self,families=None):
+	def sent_changes (self, families=None):
 		# families can be None or []
 		requested_families = self.families if not families else set(families).intersection(self.families)
 
@@ -60,7 +60,7 @@ class Store (object):
 				if change.nlri.action == OUT.ANNOUNCE:
 					yield change
 
-	def resend (self,families,enhanced_refresh):
+	def resend (self, families, enhanced_refresh):
 		# families can be None or []
 		requested_families = self.families if not families else set(families).intersection(self.families)
 
@@ -95,7 +95,7 @@ class Store (object):
 		for change in self._modify_nlri.values():
 			yield change
 
-	def replace (self,previous,changes):
+	def replace (self, previous, changes):
 		for change in previous:
 			change.nlri.action = OUT.WITHDRAW
 			self.insert_announced(change,True)
@@ -103,7 +103,7 @@ class Store (object):
 		for change in changes:
 			self.insert_announced(change,True)
 
-	def insert_announced_watchdog (self,change):
+	def insert_announced_watchdog (self, change):
 		watchdog = change.attributes.watchdog()
 		withdraw = change.attributes.withdraw()
 		if watchdog:
@@ -114,7 +114,7 @@ class Store (object):
 		self.insert_announced(change)
 		return True
 
-	def announce_watchdog (self,watchdog):
+	def announce_watchdog (self, watchdog):
 		if watchdog in self._watchdog:
 			for change in self._watchdog[watchdog].get('-',{}).values():
 				change.nlri.action = OUT.ANNOUNCE  # pylint: disable=E1101
@@ -122,7 +122,7 @@ class Store (object):
 				self._watchdog[watchdog].setdefault('+',{})[change.index()] = change
 				self._watchdog[watchdog]['-'].pop(change.index())
 
-	def withdraw_watchdog (self,watchdog):
+	def withdraw_watchdog (self, watchdog):
 		if watchdog in self._watchdog:
 			for change in self._watchdog[watchdog].get('+',{}).values():
 				change.nlri.action = OUT.WITHDRAW
@@ -130,7 +130,7 @@ class Store (object):
 				self._watchdog[watchdog].setdefault('-',{})[change.index()] = change
 				self._watchdog[watchdog]['+'].pop(change.index())
 
-	def insert_received (self,change):
+	def insert_received (self, change):
 		if not self.cache:
 			return
 		elif change.nlri.action == IN.ANNOUNCED:
@@ -138,7 +138,7 @@ class Store (object):
 		else:
 			self._seen.pop(change.index(),None)
 
-	def insert_announced (self,change,force=False):
+	def insert_announced (self, change, force=False):
 		# WARNING: do not call change.nlri.index as it does not prepend the family
 		# WARNING : this function can run while we are in the updates() loop
 
@@ -185,7 +185,7 @@ class Store (object):
 		if change_attr_index not in dict_attr:
 			dict_attr[change_attr_index] = change
 
-	def updates (self,grouped):
+	def updates (self, grouped):
 		if self._changes:
 			dict_nlri = self._modify_nlri
 

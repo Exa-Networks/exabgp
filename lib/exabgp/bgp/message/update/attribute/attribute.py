@@ -110,7 +110,7 @@ class Attribute (object):
 			return str(self)
 
 		@classmethod
-		def name (cls,self):
+		def name (cls, self):
 			return cls.names.get(self,'unknown-attribute-%s' % hex(self))
 
 	# ---------------------------------------------------------------------------
@@ -147,12 +147,12 @@ class Attribute (object):
 				r.append("UNKNOWN %s" % hex(v))
 			return " ".join(r)
 
-		def matches (self,value):
+		def matches (self, value):
 			return self | 0x10 == value | 0x10
 
 	# ---------------------------------------------------------------------------
 
-	def _attribute (self,value):
+	def _attribute (self, value):
 		flag = self.FLAG
 		if flag & Attribute.Flag.OPTIONAL and not value:
 			return ''
@@ -165,14 +165,14 @@ class Attribute (object):
 			len_value = chr(length)
 		return "%s%s%s%s" % (chr(flag),chr(self.ID),len_value,value)
 
-	def __eq__ (self,other):
+	def __eq__ (self, other):
 		return self.ID == other.ID
 
-	def __ne__ (self,other):
+	def __ne__ (self, other):
 		return self.ID != other.ID
 
 	@staticmethod
-	def register_attribute (klass,attribute_id=None,flag=None):
+	def register_attribute (klass, attribute_id=None,flag=None):
 		aid = klass.ID if attribute_id is None else attribute_id
 		flg = klass.FLAG | Attribute.Flag.EXTENDED_LENGTH if flag is None else flag | Attribute.Flag.EXTENDED_LENGTH
 		if (aid,flg) in klass.registered_attributes:
@@ -185,11 +185,11 @@ class Attribute (object):
 			Attribute.attributes_well_know.append(aid)
 
 	@classmethod
-	def registered (cls,attribute_id,flag):
+	def registered (cls, attribute_id, flag):
 		return (attribute_id,flag | Attribute.Flag.EXTENDED_LENGTH) in cls.registered_attributes
 
 	@classmethod
-	def klass (cls,attribute_id,flag):
+	def klass (cls, attribute_id, flag):
 		key = (attribute_id,flag | Attribute.Flag.EXTENDED_LENGTH)
 		if key in cls.registered_attributes:
 			kls = cls.registered_attributes[key]
@@ -203,7 +203,7 @@ class Attribute (object):
 		raise Notify (2,4,'can not handle attribute id %s' % attribute_id)
 
 	@classmethod
-	def unpack (cls,attribute_id,flag,data,negotiated):
+	def unpack (cls, attribute_id, flag, data, negotiated):
 		cache = cls.caching and cls.CACHING
 
 		if cache and data in cls.cache.get(cls.ID,{}):

@@ -19,11 +19,11 @@ class Alarm (Exception):
 	pass
 
 
-def alarm_handler (number,frame):  # pylint: disable=W0613
+def alarm_handler (number, frame):  # pylint: disable=W0613
 	raise Alarm()
 
 
-def commands (exabgp,daemon,port):
+def commands (exabgp, daemon, port):
 	r = ""
 	r += "command lines are:\n"
 	r += 'export exabgp_debug_defensive=true\n'
@@ -33,7 +33,7 @@ def commands (exabgp,daemon,port):
 	return r
 
 
-def check (exabgp,daemon,group,port,delay):
+def check (exabgp, daemon, group, port, delay):
 	directory = os.path.dirname(group)
 	configurations = [os.path.join(directory,name) for name in open(group).read().strip().split()]
 	sequence_file = group.replace('.group','.sequence')
@@ -81,7 +81,7 @@ def check (exabgp,daemon,group,port,delay):
 		display(str(exc))
 
 
-def dispatch (exabgp,daemon,groups,port):
+def dispatch (exabgp, daemon, groups, port):
 	processes = {}
 	out,err = '',''
 

@@ -30,7 +30,7 @@ class Listener (object):
 		socket.AF_INET6: AFI.ipv6,
 	}
 
-	def __init__ (self,hosts,port,backlog=200):
+	def __init__ (self, hosts, port, backlog=200):
 		self._hosts = hosts
 		self._port = port
 		self._backlog = backlog
@@ -40,7 +40,7 @@ class Listener (object):
 		# self._connected = {}
 		self.logger = Logger()
 
-	def _bind (self,ip,port):
+	def _bind (self, ip, port):
 		try:
 			if isipv6(ip):
 				s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)

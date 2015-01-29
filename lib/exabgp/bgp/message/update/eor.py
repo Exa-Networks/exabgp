@@ -27,7 +27,7 @@ class EOR (Message):
 
 		nexthop = None
 
-		def __init__ (self,afi,safi,action):
+		def __init__ (self, afi, safi, action):
 			_NLRI.__init__(self,afi,safi)
 			self.action = action
 
@@ -45,7 +45,7 @@ class EOR (Message):
 		def json (self):
 			return '"eor": { "afi" : "%s", "safi" : "%s" }' % (self.afi,self.safi)
 
-	def __init__ (self,afi,safi,action=None):
+	def __init__ (self, afi, safi, action=None):
 		self.nlris = [EOR.NLRI(afi,safi,action),]
 		self.attributes = Attributes()
 
@@ -58,6 +58,6 @@ class EOR (Message):
 		return 'EOR'
 
 	@classmethod
-	def unpack_message (cls,data,negotiated):
+	def unpack_message (cls, data, negotiated):
 		header_length = len(EOR.NLRI.PREFIX)
 		return cls(AFI(data[header_length]),SAFI(data[header_length+1:header_length+3]))

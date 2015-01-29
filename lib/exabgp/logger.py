@@ -51,12 +51,12 @@ def _can_write (location):
 # hence why pylint too-few-public-method is disabled
 
 class LazyFormat (object):
-	def __init__ (self,prefix,message,formater=od):
+	def __init__ (self, prefix, message, formater=od):
 		self.prefix = prefix
 		self.message = message
 		self.formater = formater
 
-	def split (self,char):
+	def split (self, char):
 		return str(self).split(char)
 
 	def __str__ (self):
@@ -82,13 +82,13 @@ class Logger (object):
 
 	# we use os.pid everytime as we may fork and the class is instance before it
 
-	def pdb (self,level):
+	def pdb (self, level):
 		if self._option.pdb and level in ['CRITICAL','critical']:
 			# not sure why, pylint reports an import error here
 			import pdb
 			pdb.set_trace()
 
-	def config (self,config=None):
+	def config (self, config=None):
 		if config is not None:
 			self._config = config
 		return self._config
@@ -96,18 +96,18 @@ class Logger (object):
 	def history (self):
 		return "\n".join(self._format(*_) for _ in self._history)
 
-	def _record (self,timestamp,level,source,message):
+	def _record (self, timestamp, level, source, message):
 		if len(self._history) > self._max_history:
 			self._history.pop(0)
 		self._history.append((timestamp,level,source,message))
 
-	def _format (self,timestamp,level,source,message):
+	def _format (self, timestamp, level, source, message):
 		if self.short:
 			return message
 		now = time.strftime('%a, %d %b %Y %H:%M:%S',timestamp)
 		return "%s | %-8s | %-6d | %-13s | %s" % (now,level,self._pid,source,message)
 
-	def _prefixed (self,level,source,message):
+	def _prefixed (self, level, source, message):
 		timestamp = time.localtime()
 		self._record(timestamp,level,source,message)
 		return self._format(timestamp,level,source,message)
@@ -157,7 +157,7 @@ class Logger (object):
 		self._syslog.addHandler(handler)
 		return True
 
-	def _remote_syslog (self,destination):
+	def _remote_syslog (self, destination):
 		# If the address is invalid, each syslog call will print an error.
 		# See how it can be avoided, as the socket error is encapsulated and not returned
 		address = (destination, 514)
@@ -168,7 +168,7 @@ class Logger (object):
 		self._syslog.addHandler(handler)
 		return True
 
-	def _standard (self,facility):
+	def _standard (self, facility):
 		handler = logging.StreamHandler(getattr(sys,facility))
 
 		self._syslog = logging.getLogger()
@@ -176,7 +176,7 @@ class Logger (object):
 		self._syslog.addHandler(handler)
 		return True
 
-	def _file (self,destination):
+	def _file (self, destination):
 		# folder
 		logfile = os.path.realpath(os.path.normpath(os.path.join(self._cwd,destination)))
 		can = _can_write(logfile)
@@ -194,7 +194,7 @@ class Logger (object):
 		self._syslog.addHandler(handler)
 		return True
 
-	def restart (self,first=False):
+	def restart (self, first=False):
 		if first:
 			destination = 'stderr'
 		else:
@@ -219,7 +219,7 @@ class Logger (object):
 			self.critical('Can not set logging (are stdout/stderr closed?)','logger')
 			return False
 
-	def report (self,message,source='',level=''):
+	def report (self, message, source='',level=''):
 		for line in message.split('\n'):
 			if self._syslog:
 				self._syslog.debug(self._prefixed(level,source,line))
@@ -233,7 +233,7 @@ class Logger (object):
 	error = functools.partial(report,level='ERROR')
 	critical = functools.partial(report,level='CRITICAL')
 
-	def raw (self,message):
+	def raw (self, message):
 		for line in message.split('\n'):
 			if self._syslog:
 				self._syslog.critical(line)
@@ -242,7 +242,7 @@ class Logger (object):
 				sys.stdout.flush()
 
 	# show the message on the wire
-	def network (self,message,recorder='info'):
+	def network (self, message, recorder='info'):
 		level = short(recorder)
 		if self._option.network and getattr(syslog,'LOG_%s' % level) <= self.level:
 			getattr(self,recorder.lower())(self,message,'network')
@@ -251,7 +251,7 @@ class Logger (object):
 		self.pdb(recorder)
 
 	# show the message on the wire
-	def wire (self,message,recorder='debug'):
+	def wire (self, message, recorder='debug'):
 		level = short(recorder)
 		if self._option.wire and getattr(syslog,'LOG_%s' % level) <= self.level:
 			getattr(self,recorder.lower())(self,message,'wire')
@@ -260,7 +260,7 @@ class Logger (object):
 		self.pdb(recorder)
 
 	# show the exchange of message between peers
-	def message (self,message,recorder='info'):
+	def message (self, message, recorder='info'):
 		level = short(recorder)
 		if self._option.message and getattr(syslog,'LOG_%s' % level) <= self.level:
 			getattr(self,recorder.lower())(self,message,'message')
@@ -269,7 +269,7 @@ class Logger (object):
 		self.pdb(recorder)
 
 	# show the parsing of the configuration
-	def configuration (self,message,recorder='info'):
+	def configuration (self, message, recorder='info'):
 		level = short(recorder)
 		if self._option.configuration and getattr(syslog,'LOG_%s' % level) <= self.level:
 			getattr(self,recorder.lower())(self,message,'configuration')
@@ -278,7 +278,7 @@ class Logger (object):
 		self.pdb(recorder)
 
 	# show the exchange of message generated by the reactor (^C and signal received)
-	def reactor (self,message,recorder='info'):
+	def reactor (self, message, recorder='info'):
 		level = short(recorder)
 		if self._option.reactor and getattr(syslog,'LOG_%s' % level) <= self.level:
 			getattr(self,recorder.lower())(self,message,'reactor')
@@ -287,7 +287,7 @@ class Logger (object):
 		self.pdb(recorder)
 
 	# show the change of rib table
-	def rib (self,message,recorder='info'):
+	def rib (self, message, recorder='info'):
 		level = short(recorder)
 		if self._option.rib and getattr(syslog,'LOG_%s' % level) <= self.level:
 			getattr(self,recorder.lower())(self,message,'rib')
@@ -296,7 +296,7 @@ class Logger (object):
 		self.pdb(recorder)
 
 	# show the change of rib table
-	def timers (self,message,recorder='debug'):
+	def timers (self, message, recorder='debug'):
 		level = short(recorder)
 		if self._option.timer and getattr(syslog,'LOG_%s' % level) <= self.level:
 			getattr(self,recorder.lower())(self,message,'timers')
@@ -305,7 +305,7 @@ class Logger (object):
 		self.pdb(recorder)
 
 	# show the exchange of message generated by the daemon feature (change pid, fork, ...)
-	def daemon (self,message,recorder='info'):
+	def daemon (self, message, recorder='info'):
 		level = short(recorder)
 		if self._option.daemon and getattr(syslog,'LOG_%s' % level) <= self.level:
 			getattr(self,recorder.lower())(self,message,'daemon')
@@ -314,7 +314,7 @@ class Logger (object):
 		self.pdb(recorder)
 
 	# show the exchange of message generated by the forked processes
-	def processes (self,message,recorder='info'):
+	def processes (self, message, recorder='info'):
 		level = short(recorder)
 		if self._option.processes and getattr(syslog,'LOG_%s' % level) <= self.level:
 			getattr(self,recorder.lower())(self,message,'processes')
@@ -323,7 +323,7 @@ class Logger (object):
 		self.pdb(recorder)
 
 	# show the exchange of message generated by the routes received
-	def routes (self,message,recorder='info'):
+	def routes (self, message, recorder='info'):
 		level = short(recorder)
 		if self._option.routes and getattr(syslog,'LOG_%s' % level) <= self.level:
 			getattr(self,recorder.lower())(self,message,'routes')
@@ -332,7 +332,7 @@ class Logger (object):
 		self.pdb(recorder)
 
 	# show how the message received are parsed
-	def parser (self,message,recorder='info'):
+	def parser (self, message, recorder='info'):
 		level = short(recorder)
 		if self._option.parser and getattr(syslog,'LOG_%s' % level) <= self.level:
 			getattr(self,recorder.lower())(self,message,'parser')
@@ -340,8 +340,8 @@ class Logger (object):
 
 
 class FakeLogger (object):
-	def __getattr__ (self,name):
-		def printf (data,_=None):
+	def __getattr__ (self, name):
+		def printf (data, _=None):
 			sys.stdout.write('Fake logger [%s]\n' % str(data))
 		return printf
 

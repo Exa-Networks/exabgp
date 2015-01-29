@@ -98,7 +98,7 @@ class Notification (Message):
 		(7,2): "Malformed Message Subtype",
 	}
 
-	def __init__ (self,code,subcode,data=''):
+	def __init__ (self, code, subcode, data=''):
 		self.code = code
 		self.subcode = subcode
 		self.data = data if not len([_ for _ in data if _ not in string.printable]) else hexstring(data)
@@ -111,7 +111,7 @@ class Notification (Message):
 		)
 
 	@classmethod
-	def unpack_message (cls,data,negotiated):
+	def unpack_message (cls, data, negotiated):
 		return cls(ord(data[0]),ord(data[1]),data[2:])
 
 
@@ -120,7 +120,7 @@ class Notification (Message):
 # A Notification we need to inform our peer of.
 
 class Notify (Notification):
-	def __init__ (self,code,subcode,data=None):
+	def __init__ (self, code, subcode, data=None):
 		if data is None:
 			data = self._str_subcode.get((code,subcode),'unknown notification type')
 		Notification.__init__(self,code,subcode,data)

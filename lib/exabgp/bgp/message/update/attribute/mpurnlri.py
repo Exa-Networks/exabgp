@@ -27,11 +27,11 @@ class MPURNLRI (Attribute,Address):
 
 	__slots__ = ['nlris']
 
-	def __init__ (self,afi,safi,nlris):
+	def __init__ (self, afi, safi, nlris):
 		Address.__init__(self,afi,safi)
 		self.nlris = nlris
 
-	def packed_attributes (self,addpath):
+	def packed_attributes (self, addpath):
 		if not self.nlris:
 			return
 
@@ -42,7 +42,7 @@ class MPURNLRI (Attribute,Address):
 		for (pafi,psafi),nlris in mpurnlri.iteritems():
 			yield self._attribute(pafi + psafi + ''.join(nlris))
 
-	def pack (self,addpath):
+	def pack (self, addpath):
 		return ''.join(self.packed_attributes(addpath))
 
 	def __len__ (self):
@@ -52,7 +52,7 @@ class MPURNLRI (Attribute,Address):
 		return "MP_UNREACH_NLRI for %s %s with %d NLRI(s)" % (self.afi,self.safi,len(self.nlris))
 
 	@classmethod
-	def unpack (cls,data,negotiated):
+	def unpack (cls, data, negotiated):
 		nlris = []
 
 		# -- Reading AFI/SAFI

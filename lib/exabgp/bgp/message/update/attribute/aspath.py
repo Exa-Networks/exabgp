@@ -30,7 +30,7 @@ class ASPath (Attribute):
 
 	__slots__ = ['as_seq','as_set','as_cseq','as_cset','segments','packed','index','_str','_json']
 
-	def __init__ (self,as_sequence,as_set,as_conf_sequence=None,as_conf_set=None,index=None):
+	def __init__ (self, as_sequence, as_set, as_conf_sequence=None,as_conf_set=None,index=None):
 		self.as_seq = as_sequence
 		self.as_set = as_set
 		self.as_cseq = as_conf_sequence if as_conf_sequence is not None else []
@@ -41,7 +41,7 @@ class ASPath (Attribute):
 		self._str = ''
 		self._json = {}
 
-	def __cmp__ (self,other):
+	def __cmp__ (self, other):
 		if not isinstance(other, self.__class__):
 			return -1
 		if self.ASN4 != other.ASN4:
@@ -52,7 +52,7 @@ class ASPath (Attribute):
 			return -1
 		return 0
 
-	def _segment (self,seg_type,values,negotiated):
+	def _segment (self, seg_type, values, negotiated):
 		length = len(values)
 		if length:
 			if length > 255:
@@ -60,7 +60,7 @@ class ASPath (Attribute):
 			return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack(negotiated) for v in values]))
 		return ""
 
-	def _segments (self,negotiated):
+	def _segments (self, negotiated):
 		segments = ''
 		if self.as_cseq:
 			segments += self._segment(self.AS_CONFED_SEQUENCE,self.as_cseq,negotiated)
@@ -72,13 +72,13 @@ class ASPath (Attribute):
 			segments += self._segment(self.AS_SET,self.as_set,negotiated)
 		return segments
 
-	def asn_pack (self,negotiated,force_asn4=False):
+	def asn_pack (self, negotiated, force_asn4=False):
 		asn4 = True if force_asn4 else negotiated.asn4
 		if not self.packed[asn4]:
 			self.packed[asn4] = self._attribute(self._segments(negotiated))
 		return self.packed[asn4]
 
-	def pack (self,negotiated):
+	def pack (self, negotiated):
 		# if the peer does not understand ASN4, we need to build a transitive AS4_PATH
 		if negotiated.asn4:
 			return self.asn_pack(negotiated)
@@ -94,7 +94,7 @@ class ASPath (Attribute):
 	def __len__ (self):
 		raise RuntimeError('it makes no sense to ask for the size of this object')
 
-	def __str__ (self,confed=False):
+	def __str__ (self, confed=False):
 		if self._str:
 			return self._str
 
@@ -106,7 +106,7 @@ class ASPath (Attribute):
 		self._str = string
 		return string
 
-	def string (self,aseq,aset):
+	def string (self, aseq, aset):
 		lseq = len(aseq)
 		lset = len(aset)
 		if lseq == 1:
@@ -126,7 +126,7 @@ class ASPath (Attribute):
 				string = '[ ]'
 		return string
 
-	def json (self,name):
+	def json (self, name):
 		match = {
 			# data , default representation
 			'as-path':            (self.as_seq,  '[]'),
@@ -140,7 +140,7 @@ class ASPath (Attribute):
 		return self._json[name]
 
 	@classmethod
-	def __new_aspaths (cls,data,asn4,klass=None):
+	def __new_aspaths (cls, data, asn4, klass=None):
 		as_set = []
 		as_seq = []
 		as_cset = []
@@ -196,7 +196,7 @@ class ASPath (Attribute):
 		return cls(as_seq,as_set,as_cseq,as_cset,backup)
 
 	@classmethod
-	def unpack (cls,data,negotiated):
+	def unpack (cls, data, negotiated):
 		if not data:
 			return None  # ASPath.Empty
 		return cls.__new_aspaths(data,negotiated.asn4,ASPath)
@@ -213,11 +213,11 @@ class AS4Path (ASPath):
 	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 	ASN4 = True
 
-	def pack (self,negotiated=None):
+	def pack (self, negotiated=None):
 		ASPath.pack(self,True)
 
 	@classmethod
-	def unpack (cls,data,negotiated):
+	def unpack (cls, data, negotiated):
 		if not data:
 			return None  # AS4Path.Empty
 		return cls.__new_aspaths(data,True,AS4Path)

@@ -102,7 +102,7 @@ class Neighbor (object):
 		# this list() is important .. as we use the function to modify self._families
 		return list(self._families)
 
-	def add_family (self,family):
+	def add_family (self, family):
 		# the families MUST be sorted for neighbor indexing name to be predictable for API users
 		if family not in self.families():
 			afi,safi = family
@@ -112,7 +112,7 @@ class Neighbor (object):
 				d.setdefault(afi,[]).append(safi)
 			self._families = [(afi,safi) for afi in sorted(d) for safi in sorted(d[afi])]
 
-	def remove_family (self,family):
+	def remove_family (self, family):
 		if family in self.families():
 			self._families.remove(family)
 
@@ -130,7 +130,7 @@ class Neighbor (object):
 		return ''
 
 	# This function only compares the neighbor BUT NOT ITS ROUTES
-	def __eq__ (self,other):
+	def __eq__ (self, other):
 		return \
 			self.router_id == other.router_id and \
 			self.local_address == other.local_address and \
@@ -154,7 +154,7 @@ class Neighbor (object):
 	def __ne__ (self, other):
 		return not self.__eq__(other)
 
-	def pprint (self,with_changes=True):
+	def pprint (self, with_changes=True):
 		changes = ''
 		if with_changes:
 			changes += '\nstatic { '

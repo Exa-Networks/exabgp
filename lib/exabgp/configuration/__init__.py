@@ -32,10 +32,10 @@ class Configuration (object):
 
 	# self.location set by Registry
 
-	def register (self,cls,location):
+	def register (self, cls, location):
 		cls.register(self,location)
 
-	def register_class (self,cls):
+	def register_class (self, cls):
 		print
 		print "class %s" % cls.__name__
 		print "-"*40
@@ -43,18 +43,18 @@ class Configuration (object):
 			self._klass[cls] = cls()
 		print
 
-	def register_hook (self,cls,action,position,function):
+	def register_hook (self, cls, action, position, function):
 		key = '/'.join(position)
 		if action in self._handler:
 			raise Exception('conflicting handlers')
 		self._handler.setdefault(key,{})[action] = getattr(cls,function)
 		print "%-50s %-7s %s.%s" % (key if key else 'root',action,cls.__name__,function)
 
-	def iterate (self,tokeniser):
+	def iterate (self, tokeniser):
 		# each section can registered named configuration for reference here
 		Section.configuration[tokeniser.name] = defaultdict(Dictionary)
 
-		def run (search,section,location):
+		def run (search, section, location):
 			key = '/'.join(search)
 			function = self._handler.get(key,{}).get(section,None)
 
@@ -106,7 +106,7 @@ class Configuration (object):
 		del Section.configuration[tokeniser.name]
 		yield data
 
-	def parse_tokeniser (self,tokeniser):
+	def parse_tokeniser (self, tokeniser):
 		if self._parser is None:
 			self._parser = self.iterate(tokeniser)
 
@@ -116,7 +116,7 @@ class Configuration (object):
 		self._parser = None
 		return next
 
-	def parse_file (self,fname):
+	def parse_file (self, fname):
 		with Reader(fname) as r:
 			tokeniser = Tokeniser('configuration',r)
 			parsed = None
@@ -124,7 +124,7 @@ class Configuration (object):
 				parsed = self.parse_tokeniser(tokeniser)
 		return parsed
 
-	def parse_string (self,string):
+	def parse_string (self, string):
 		name = 'command-%d' % int(int(time.time()*1000) % (365*24*60*60*1000))
 		sio = StringIO(string)
 		tokeniser = Tokeniser(name,sio)

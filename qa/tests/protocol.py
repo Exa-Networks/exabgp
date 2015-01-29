@@ -104,7 +104,7 @@ class TestProtocol (unittest.TestCase):
 	def test_6_holdtime (self):
 		# class MyPeer(Network):
 		# 	_data = StringIO(Open(4,65000,'1.2.3.4',Capabilities().default(),90).message())
-		# 	def read (self,l):
+		# 	def read (self, l):
 		# 		return self._data.read(l)
 		#
 		# network = MyPeer('')

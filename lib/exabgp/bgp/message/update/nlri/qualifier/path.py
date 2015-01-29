@@ -14,7 +14,7 @@ class PathInfo (object):
 
 	__slots__ = ['path_info']
 
-	def __init__ (self,integer=None,ip=None,packed=None):
+	def __init__ (self, integer=None,ip=None,packed=None):
 		if packed:
 			self.path_info = packed
 		elif ip:

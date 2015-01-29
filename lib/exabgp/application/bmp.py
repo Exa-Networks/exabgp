@@ -30,10 +30,10 @@ class BMPHandler (asyncore.dispatcher_with_send):
 	wire = False
 	update = True
 
-	def announce (self,*args):
+	def announce (self, *args):
 		print >> self.fd, self.ip, self.port, ' '.join(str(_) for _ in args) if len(args) > 1 else args[0]
 
-	def setup (self,env,ip,port):
+	def setup (self, env, ip, port):
 		self.handle = {
 			Message.ROUTE_MONITORING:       self._route,
 			Message.STATISTICS_REPORT:      self._statistics,
@@ -47,7 +47,7 @@ class BMPHandler (asyncore.dispatcher_with_send):
 		self.json = JSON('3.4.8')
 		return self
 
-	def _read_data (self,number):
+	def _read_data (self, number):
 		header = ''
 		left = number
 		while left:
@@ -89,7 +89,7 @@ class BMPHandler (asyncore.dispatcher_with_send):
 
 		self.handle[header.message](header)
 
-	def _route (self,header):
+	def _route (self, header):
 		bgp_header = self._read_data(19)
 		if bgp_header is None:
 			self.close()
@@ -108,10 +108,10 @@ class BMPHandler (asyncore.dispatcher_with_send):
 			for route in update.routes:
 				print >> self.fd, route.extensive()
 
-	def _statistics (self,header):
+	def _statistics (self, header):
 		pass
 
-	def _peer (self,header):
+	def _peer (self, header):
 		pass
 
 

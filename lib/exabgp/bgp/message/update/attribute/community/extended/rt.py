@@ -40,7 +40,7 @@ class RouteTargetASNIP (RouteTarget):
 
 	__slots__ = ['asn','ip']
 
-	def __init__ (self,asn,ip,transitive,community=None):
+	def __init__ (self, asn, ip, transitive, community=None):
 		self.asn = asn
 		self.ip = ip
 		RouteTarget.__init__(
@@ -70,7 +70,7 @@ class RouteTargetIPASN (RouteTarget):
 
 	__slots__ = ['asn','ip']
 
-	def __init__ (self,asn,ip,transitive,community=None):
+	def __init__ (self, asn, ip, transitive, community=None):
 		self.ip = ip
 		self.asn = asn
 		RouteTarget.__init__(
@@ -100,7 +100,7 @@ class RouteTargetASN4Number (RouteTarget):
 
 	__slots__ = ['asn','ip']
 
-	def __init__ (self,asn,number,transitive,community=None):
+	def __init__ (self, asn, number, transitive, community=None):
 		self.asn = asn
 		self.number = number
 		RouteTarget.__init__(

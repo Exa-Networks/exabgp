@@ -31,25 +31,25 @@ class SectionCapability (Entry):
 	def __init__ (self):
 		self.content = dict()
 
-	def enter (self,tokeniser):
+	def enter (self, tokeniser):
 		token = tokeniser()
 		if token != '{':
 			raise Raised(self.syntax)
 		self.content = dict()
 
-	def exit (self,tokeniser):
+	def exit (self, tokeniser):
 		# no verification to do
 		pass
 
-	def asn4 (self,tokeniser):
+	def asn4 (self, tokeniser):
 		self.content[Capability.CODE.FOUR_BYTES_ASN] = boolean(tokeniser,True)
 		self._drop_colon(tokeniser)
 
-	def aigp (self,tokeniser):
+	def aigp (self, tokeniser):
 		self.content[Capability.CODE.AIGP] = boolean(tokeniser,False)
 		self._drop_colon(tokeniser)
 
-	def addpath (self,tokeniser):
+	def addpath (self, tokeniser):
 		ap = tokeniser()
 		if ap not in ('receive','send','send/receive','disable','disabled'):
 			raise Raised("")
@@ -62,19 +62,19 @@ class SectionCapability (Entry):
 
 		self._drop_colon(tokeniser)
 
-	def operational (self,tokeniser):
+	def operational (self, tokeniser):
 		self.content[Capability.CODE.OPERATIONAL] = boolean(tokeniser,False)
 		self._drop_colon(tokeniser)
 
-	def refresh (self,tokeniser):
+	def refresh (self, tokeniser):
 		self.content[Capability.CODE.ROUTE_REFRESH] = boolean(tokeniser,False)
 		self._drop_colon(tokeniser)
 
-	def multisession (self,tokeniser):
+	def multisession (self, tokeniser):
 		self.content[Capability.CODE.MULTISESSION] = boolean(tokeniser,False)
 		self._drop_colon(tokeniser)
 
-	def graceful (self,tokeniser):
+	def graceful (self, tokeniser):
 		token = tokeniser()
 		if not token.isdigit():
 			raise Raised("")
@@ -88,12 +88,12 @@ class SectionCapability (Entry):
 		self.content[Capability.CODE.GRACEFUL_RESTART] = duration
 		self._drop_colon(tokeniser)
 
-	def _check_duplicate (self,key):
+	def _check_duplicate (self, key):
 		if key in self.content:
 			raise Raised("")
 
 	@classmethod
-	def register (cls,registry,location):
+	def register (cls, registry, location):
 		registry.register_class(cls)
 
 		registry.register_hook(cls,'enter',location,'enter')

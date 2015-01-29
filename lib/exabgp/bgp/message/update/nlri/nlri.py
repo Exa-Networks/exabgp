@@ -32,15 +32,15 @@ class NLRI (Address):
 		return '%s%s%s' % (self.afi,self.safi,self.pack())
 
 	# remove this when code restructure is finished
-	def pack (self,addpath=None):
+	def pack (self, addpath=None):
 		raise Exception('unimplemented')
 
 	@staticmethod
-	def register_nlri (klass,afi,safi):
+	def register_nlri (klass, afi, safi):
 		NLRI.registered_nlri['%d/%d' % (afi,safi)] = klass
 
 	@classmethod
-	def unpack (cls,afi,safi,data,addpath,nexthop,action):
+	def unpack (cls, afi, safi, data, addpath, nexthop, action):
 		if not cls.logger:
 			cls.logger = Logger()
 		cls.logger.parser(LazyFormat("parsing %s/%s nlri payload " % (afi,safi),data))
@@ -51,7 +51,7 @@ class NLRI (Address):
 		raise Notify(3,0,'trying to decode unknown family %s/%s' % (AFI(afi),SAFI(safi)))
 
 	@staticmethod
-	def _nlri (afi,safi,bgp,action,addpath):
+	def _nlri (afi, safi, bgp, action, addpath):
 		labels = []
 		rd = ''
 

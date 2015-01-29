@@ -29,12 +29,12 @@ class MPRNLRI (Attribute,Address):
 
 	__slots__ = ['nlris']
 
-	def __init__ (self,afi,safi,nlris):
+	def __init__ (self, afi, safi, nlris):
 		Address.__init__(self,afi,safi)
 		# all the routes must have the same next-hop
 		self.nlris = nlris
 
-	def packed_attributes (self,addpath):
+	def packed_attributes (self, addpath):
 		if not self.nlris:
 			return
 
@@ -63,7 +63,7 @@ class MPRNLRI (Attribute,Address):
 					chr(0) + ''.join(nlris)
 				)
 
-	def pack (self,addpath):
+	def pack (self, addpath):
 		return ''.join(self.packed_attributes(addpath))
 
 	def __len__ (self):
@@ -74,7 +74,7 @@ class MPRNLRI (Attribute,Address):
 		return "MP_REACH_NLRI for %s %s with %d NLRI(s)" % (self.afi,self.safi,len(self.nlris))
 
 	@classmethod
-	def unpack (cls,data,negotiated):
+	def unpack (cls, data, negotiated):
 		nlris = []
 
 		# -- Reading AFI/SAFI

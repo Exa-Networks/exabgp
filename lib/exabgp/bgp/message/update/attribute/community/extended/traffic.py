@@ -22,7 +22,7 @@ class TrafficRate (ExtendedCommunity):
 
 	__slots__ = ['asn','rate']
 
-	def __init__ (self,asn,rate,community=None):
+	def __init__ (self, asn, rate, community=None):
 		self.asn = asn
 		self.rate = rate
 		ExtendedCommunity.__init__(
@@ -62,7 +62,7 @@ class TrafficAction (ExtendedCommunity):
 
 	__slots__ = ['sample','terminal']
 
-	def __init__ (self,sample,terminal,community=None):
+	def __init__ (self, sample, terminal, community=None):
 		self.sample = sample
 		self.terminal = terminal
 		bitmask = self._sample[sample] | self._terminal[terminal]
@@ -93,7 +93,7 @@ class TrafficRedirect (ExtendedCommunity):
 
 	__slots__ = ['asn','target']
 
-	def __init__ (self,asn,target,community=None):
+	def __init__ (self, asn, target, community=None):
 		self.asn = asn
 		self.target = target
 		ExtendedCommunity.__init__(
@@ -123,7 +123,7 @@ class TrafficMark (ExtendedCommunity):
 
 	__slots__ = ['dscp']
 
-	def __init__ (self,dscp,community=None):
+	def __init__ (self, dscp, community=None):
 		self.dscp = dscp
 		ExtendedCommunity.__init__(
 			self,
@@ -154,7 +154,7 @@ class TrafficNextHop (ExtendedCommunity):
 
 	__slots__ = ['copy']
 
-	def __init__ (self,copy,community=None):
+	def __init__ (self, copy, community=None):
 		self.copy = copy
 		ExtendedCommunity.__init__(
 			self,
@@ -187,7 +187,7 @@ class TrafficNextHop (ExtendedCommunity):
 # 	COMMUNITY_TYPE = 0x80
 # 	COMMUNITY_SUBTYPE = 0x08
 
-# 	def __init__ (self,ip,target,community=None):
+# 	def __init__ (self, ip, target, community=None):
 # 		self.ip = ip
 # 		self.target = target
 # 		ExtendedCommunity.__init__(self,community if community is not None else pack("!BB4sH",0x80,0x08,socket.inet_pton(socket.AF_INET,ip),target))

@@ -100,7 +100,7 @@ class Message (Exception):
 			return 'operational'
 		return 'unknown'
 
-	def _message (self,message):
+	def _message (self, message):
 		message_len = pack('!H',19+len(message))
 		return "%s%s%s%s" % (self.MARKER,message_len,self.TYPE,message)
 
@@ -108,20 +108,20 @@ class Message (Exception):
 		raise NotImplementedError('message not implemented in subclasses')
 
 	@staticmethod
-	def register_message (klass,message=None):
+	def register_message (klass, message=None):
 		what = klass.TYPE if message is None else message
 		if what in Message.registered_message:
 			raise RuntimeError('only one class can be registered per message')
 		Message.registered_message[ord(what)] = klass
 
 	@classmethod
-	def klass (cls,what):
+	def klass (cls, what):
 		if what in cls.registered_message:
 			return cls.registered_message[what]
 		raise cls.klass_notify(2,4,'can not handle message %s' % what)
 
 	@classmethod
-	def unpack (cls,message,data,negotiated):
+	def unpack (cls, message, data, negotiated):
 		if message in cls.registered_message:
 			return cls.klass(message).unpack_message(data,negotiated)
 		return cls.klass_unknown(message,data,negotiated)

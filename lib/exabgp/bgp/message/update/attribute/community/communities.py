@@ -21,17 +21,17 @@ class Communities (Attribute):
 
 	# __slots__ = ['communities']
 
-	def __init__ (self,communities=None):
+	def __init__ (self, communities=None):
 		# Must be None as = param is only evaluated once
 		if communities:
 			self.communities = communities
 		else:
 			self.communities = []
 
-	def add (self,data):
+	def add (self, data):
 		return self.communities.append(data)
 
-	def pack (self,negotiated=None):
+	def pack (self, negotiated=None):
 		if len(self.communities):
 			return self._attribute(''.join([c.pack() for c in self.communities]))
 		return ''
@@ -48,7 +48,7 @@ class Communities (Attribute):
 		return "[ %s ]" % ", ".join(community.json() for community in self.communities)
 
 	@staticmethod
-	def unpack (data,negotiated):
+	def unpack (data, negotiated):
 		communities = Communities()
 		while data:
 			if data and len(data) < 4:

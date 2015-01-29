@@ -59,7 +59,7 @@ CHECK_TYPE = {
 }
 
 
-def kind (kind,data):
+def kind (kind, data):
 	for t in CHECK_TYPE:
 		if kind & t:
 			if CHECK_TYPE[t](data):
@@ -89,7 +89,7 @@ def float (data):
 	return 0 <= data < 3.4 * pow(10,38)  # approximation of max from wikipedia
 
 
-def ip (data,):
+def ip (data):
 	return ipv4(data) or ipv6(data)
 
 
@@ -249,7 +249,7 @@ def flow_ipv4_range (data):
 	return False
 
 
-def _flow_numeric (data,check):
+def _flow_numeric (data, check):
 	if not array(data):
 		return False
 	for et in data:

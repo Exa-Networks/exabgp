@@ -26,11 +26,11 @@ class Decoder (object):
 	# callaback code
 
 	@classmethod
-	def register_command (cls,command,function):
+	def register_command (cls, command, function):
 		cls.storage[command] = function
 		return function
 
-	def parse_command (self,reactor,service,command):
+	def parse_command (self, reactor, service, command):
 		# it must be reversed so longer command are found before the shorter
 		# "show neighbor" should not match "show neighbors"
 		for registered in sorted(self.storage, reverse=True):

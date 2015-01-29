@@ -32,7 +32,7 @@ class Format (object):
 			return False
 
 		@staticmethod
-		def read (last,current):
+		def read (last, current):
 			return current
 
 
@@ -45,7 +45,7 @@ class Reader (object):
 	the start of the file with the "#syntax: <format>"
 	"""
 
-	def __init__ (self,fname):
+	def __init__ (self, fname):
 		self.file = open(fname,'rb')
 		self.last = ''      # the last line we read from the file
 		self.formated = ''  # the formated data we have already converted
@@ -76,7 +76,7 @@ class Reader (object):
 			self.file.close()
 			self.file = None
 
-	def read (self,number=0):
+	def read (self, number=0):
 		# we already done the work, just return the small chunks
 		if number and len(self.formated) >= number:
 			returned, self.formated = self.formated[:number], self.formated[number:]

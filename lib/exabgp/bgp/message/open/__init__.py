@@ -49,7 +49,7 @@ class Open (Message):
 	ID = Message.CODE.OPEN
 	TYPE = chr(Message.CODE.OPEN)
 
-	def __init__ (self,version,asn,router_id,capabilities,hold_time):
+	def __init__ (self, version, asn, router_id, capabilities, hold_time):
 		self.version = Version(version)
 		self.asn = ASN(asn)
 		self.hold_time = HoldTime(hold_time)
@@ -69,7 +69,7 @@ class Open (Message):
 		return "OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]" % (self.version, self.asn, self.hold_time, self.router_id,self.capabilities)
 
 	@classmethod
-	def unpack_message (cls,data,_):
+	def unpack_message (cls, data, _):
 		version = ord(data[0])
 		if version != 4:
 			# Only version 4 is supported nowdays..

@@ -15,7 +15,7 @@ from SocketServer import StreamRequestHandler
 class TimeoutException(Exception):
 	pass
 
-def read_command (rfile,wfile,prompt):
+def read_command (rfile, wfile, prompt):
 	def timeout_handler (signum, frame):
 		raise TimeoutException()
 

@@ -16,7 +16,7 @@ from exabgp.protocol.family import SAFI
 class Address (object):
 	__slots__ = ['afi','safi']
 
-	def __init__ (self,afi,safi):
+	def __init__ (self, afi, safi):
 		self.afi = AFI(afi)
 		self.safi = SAFI(safi)
 

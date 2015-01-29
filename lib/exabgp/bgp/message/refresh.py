@@ -38,7 +38,7 @@ class RouteRefresh (Message):
 	start = 1
 	end = 2
 
-	def __init__ (self,afi,safi,reserved=0):
+	def __init__ (self, afi, safi, reserved=0):
 		self.afi = AFI(afi)
 		self.safi = SAFI(safi)
 		self.reserved = Reserved(reserved)
@@ -56,7 +56,7 @@ class RouteRefresh (Message):
 		return self._families[:]
 
 	@classmethod
-	def unpack_message (cls,data,_):
+	def unpack_message (cls, data, _):
 		try:
 			afi,reserved,safi = unpack('!HBB',data)
 		except error:
@@ -65,7 +65,7 @@ class RouteRefresh (Message):
 			raise Notify(7,2,'invalid route-refresh message subtype')
 		return RouteRefresh(afi,safi,reserved)
 
-	def __eq__ (self,other):
+	def __eq__ (self, other):
 		if not isinstance(other, RouteRefresh):
 			return False
 		if self.afi != other.afi:

@@ -16,13 +16,13 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 class GenericAttribute (Attribute):
 	__slots__ = ['ID','FLAG','data','index']
 
-	def __init__ (self,code,flag,data):
+	def __init__ (self, code, flag, data):
 		self.ID = code
 		self.FLAG = flag
 		self.data = data
 		self.index = ''
 
-	def pack (self,negotiated=None):
+	def pack (self, negotiated=None):
 		flag = self.FLAG
 		length = len(self.data)
 		if length > 0xFF:
@@ -40,5 +40,5 @@ class GenericAttribute (Attribute):
 		return '0x' + ''.join('%02x' % ord(_) for _ in self.data)
 
 	@classmethod
-	def unpack (cls,code,flag,data):
+	def unpack (cls, code, flag, data):
 		return cls(code,flag,data)

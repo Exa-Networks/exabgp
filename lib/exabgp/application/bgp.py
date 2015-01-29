@@ -28,7 +28,7 @@ def is_hex (string):
 	return all(c in string.hexdigits or c == ':' for c in string)
 
 
-def __exit (memory,code):
+def __exit (memory, code):
 	if memory:
 		from exabgp.dep import objgraph
 		print "memory utilisation"
@@ -246,7 +246,7 @@ def main ():
 		logger.reactor('Can not fork, errno %d : %s' % (exc.errno,exc.strerror),'critical')
 
 
-def run (env,comment,configurations,pid=0):
+def run (env, comment, configurations, pid=0):
 	from exabgp.logger import Logger
 	logger = Logger()
 

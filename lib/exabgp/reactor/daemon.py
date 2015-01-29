@@ -21,7 +21,7 @@ MAXFD = 2048
 
 class Daemon (object):
 
-	def __init__ (self,reactor):
+	def __init__ (self, reactor):
 		self.pid = environment.settings().daemon.pid
 		self.user = environment.settings().daemon.user
 		self.daemonize = environment.settings().daemon.daemonize
@@ -124,7 +124,7 @@ class Daemon (object):
 
 		return True
 
-	def _is_socket (self,fd):
+	def _is_socket (self, fd):
 		try:
 			s = socket.fromfd(fd, socket.AF_INET, socket.SOCK_RAW)
 		except ValueError:

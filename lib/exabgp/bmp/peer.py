@@ -34,7 +34,7 @@ class PeerFlag (int):
 
 
 class Peer (object):
-	def __init__ (self,data):
+	def __init__ (self, data):
 		self.type = PeerType(ord(data[2]))
 		self.flag = PeerFlag(ord(data[3]))
 		self.distinguisher = unpack('!L',data[4:8])[0]

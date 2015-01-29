@@ -28,11 +28,11 @@ class RouteRefresh (Capability):
 		return ['']
 
 	@staticmethod
-	def unpack_capability (instance,data,capability=None):  # pylint: disable=W0613
+	def unpack_capability (instance, data, capability=None):  # pylint: disable=W0613
 		# XXX: FIXME: we should set that that instance was seen and raise if seen twice
 		return instance
 
-	def __eq__ (self,other):
+	def __eq__ (self, other):
 		if not isinstance(other,RouteRefresh):
 			return False
 		return self.ID == other.ID
@@ -55,6 +55,6 @@ class EnhancedRouteRefresh (Capability):
 		return ['']
 
 	@staticmethod
-	def unpack_capability (instance,data,capability=None):  # pylint: disable=W0613
+	def unpack_capability (instance, data, capability=None):  # pylint: disable=W0613
 		# XXX: FIXME: we should set that that instance was seen and raise if seen twice
 		return instance

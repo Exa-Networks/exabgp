@@ -34,18 +34,18 @@ class SectionShow (Section):
 	syntax = syntax_show
 	name = 'show'
 
-	def enter_show (self,tokeniser):
+	def enter_show (self, tokeniser):
 		Section.enter_anonymous(self,tokeniser)
 
-	def exit_show (self,tokeniser):
+	def exit_show (self, tokeniser):
 		pass
 
-	def version (self,tokeniser):
+	def version (self, tokeniser):
 		self.content['version'] = '%s %s' % (environment.application,version)
 		#self.content['version'] = '%s %s' % (environment.application,environment.version)
 
 	@classmethod
-	def register (cls,registry,location):
+	def register (cls, registry, location):
 		registry.register_class(cls)
 
 		registry.register_hook(cls,'enter',location,'enter_show')

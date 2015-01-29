@@ -16,7 +16,7 @@ class RIB (object):
 
 	_cache = {}
 
-	def __init__ (self,name,adjribout,families):
+	def __init__ (self, name, adjribout, families):
 		self.name = name
 
 		if name in self._cache:

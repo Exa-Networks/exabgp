@@ -40,7 +40,7 @@ class OriginASNIP (Origin):
 
 	__slots__ = ['asn','ip']
 
-	def __init__ (self,asn,ip,transitive,community=None):
+	def __init__ (self, asn, ip, transitive, community=None):
 		self.asn = asn
 		self.ip = ip
 		Origin.__init__(
@@ -71,7 +71,7 @@ class OriginIPASN (Origin):
 
 	__slots__ = ['asn','ip']
 
-	def __init__ (self,asn,ip,transitive,community=None):
+	def __init__ (self, asn, ip, transitive, community=None):
 		self.ip = ip
 		self.asn = asn
 		Origin.__init__(
@@ -100,7 +100,7 @@ class OriginASN4Number (Origin):
 	COMMUNITY_TYPE = 0x02
 	LIMIT = 6
 
-	def __init__ (self,asn,number,transitive,community=None):
+	def __init__ (self, asn, number, transitive, community=None):
 		self.asn = asn
 		self.number = number
 		Origin.__init__(

@@ -36,7 +36,7 @@ class Connection (object):
 	direction = 'undefined'
 	identifier = 0
 
-	def __init__ (self,afi,peer,local):
+	def __init__ (self, afi, peer, local):
 		# peer and local are strings of the IP
 
 		try:
@@ -101,7 +101,7 @@ class Connection (object):
 				return False
 			return w != []
 
-	def _reader (self,number):
+	def _reader (self, number):
 		# The function must not be called if it does not return with no data with a smaller size as parameter
 		if not self.io:
 			self.close()
@@ -161,7 +161,7 @@ class Connection (object):
 					self.logger.wire("%s %s undefined error reading on socket" % (self.name(),self.peer))
 					raise NetworkError('Problem while reading data from the network (%s)' % errstr(exc))
 
-	def writer (self,data):
+	def writer (self, data):
 		if not self.io:
 			# XXX: FIXME: Make sure it does not hold the cleanup during the closing of the peering session
 			yield True

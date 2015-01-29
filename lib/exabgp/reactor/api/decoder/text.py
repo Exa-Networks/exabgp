@@ -34,7 +34,7 @@ class Text (Configuration):
 		# part of parent API, done here to remove pylint warning attribute-defined-outside-init
 		self._nexthopself = None
 
-	def parse_api_route (self,command,peers,action):
+	def parse_api_route (self, command, peers, action):
 		tokens = formated(command).split(' ')[1:]
 		number = len(tokens)
 
@@ -73,7 +73,7 @@ class Text (Configuration):
 				change.nlri.action = OUT.WITHDRAW
 		return changes
 
-	def parse_api_vpls (self,command,peers,action):
+	def parse_api_vpls (self, command, peers, action):
 		tokens = formated(command).split(' ')[1:]
 		if len(tokens) < 4:
 			return False
@@ -102,7 +102,7 @@ class Text (Configuration):
 				change.nlri.action = OUT.WITHDRAW
 		return changes
 
-	def parse_api_attribute (self,command,peers,action):
+	def parse_api_attribute (self, command, peers, action):
 		# This is a quick solution which does not support next-hop self
 		attribute,nlris = command.split('nlri')
 		route = '%s route 0.0.0.0/0 %s' % (action, ' '.join(attribute.split()[2:]))
@@ -133,7 +133,7 @@ class Text (Configuration):
 			changes.append((peers.keys(),change))
 		return changes
 
-	def parse_api_flow (self,command,action):
+	def parse_api_flow (self, command, action):
 		self._tokens = self._tokenise(' '.join(formated(command).split(' ')[2:]).split('\\n'))
 		scope = [{}]
 		if not self._dispatch(scope,'flow',['route',],[],['root']):
@@ -146,7 +146,7 @@ class Text (Configuration):
 				change.nlri.action = OUT.WITHDRAW
 		return changes
 
-	def parse_api_refresh (self,command):
+	def parse_api_refresh (self, command):
 		tokens = formated(command).split(' ')[2:]
 		if len(tokens) != 2:
 			return False
@@ -156,7 +156,7 @@ class Text (Configuration):
 			return False
 		return RouteRefresh(afi,safi)
 
-	def parse_api_eor (self,command):
+	def parse_api_eor (self, command):
 		tokens = formated(command).split(' ')[2:]
 		number = len(tokens)
 
@@ -176,7 +176,7 @@ class Text (Configuration):
 
 		return Family(afi,safi)
 
-	def parse_api_operational (self,command):
+	def parse_api_operational (self, command):
 		tokens = formated(command).split(' ',2)
 		scope = [{}]
 

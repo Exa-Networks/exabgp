@@ -23,13 +23,13 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		chr(4) : 'KEEPALIVE',
 	}
 
-	def isupdate (self,header):
+	def isupdate (self, header):
 		return header[18] == chr(2)
 
-	def name (self,header):
+	def name (self, header):
 		return self._name.get(header[18],'SOME WEIRD RFC PACKET')
 
-	def routes (self,body):
+	def routes (self, body):
 		len_w = unpack('!H',body[0:2])[0]
 		prefixes = [ord(_) for _ in body[2:2+len_w:]]
 
@@ -58,10 +58,10 @@ class BGPHandler(asyncore.dispatcher_with_send):
 				r[index] = prefixes.pop(0)
 			yield 'announce ' + '.'.join(str(_) for _ in r) + '/' + str(l)
 
-	def announce (self,*args):
+	def announce (self, *args):
 		print self.ip, self.port, ' '.join(str(_) for _ in args) if len(args) > 1 else args[0]
 
-	def setup (self,record,ip,port):
+	def setup (self, record, ip, port):
 		self.ip = ip
 		self.port = port
 		now = time.strftime("%a-%d-%b-%Y-%H:%M:%S", time.gmtime())

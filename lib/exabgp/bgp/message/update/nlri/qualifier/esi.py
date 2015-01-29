@@ -18,7 +18,7 @@ class ESI (object):
 
 	__slots__ = ['esi']
 
-	def __init__ (self,esi=None):
+	def __init__ (self, esi=None):
 		self.esi = self.DEFAULT if esi is None else esi
 
 	def __str__ (self):
@@ -35,7 +35,7 @@ class ESI (object):
 	def __len__ (self):
 		return 10
 
-	def __cmp__ (self,other):
+	def __cmp__ (self, other):
 		if not isinstance(other,self.__class__):
 			return -1
 		if self.esi != other.esi:
@@ -46,5 +46,5 @@ class ESI (object):
 		return hash(self.esi)
 
 	@classmethod
-	def unpack (cls,data):
+	def unpack (cls, data):
 		return cls(data[:10])

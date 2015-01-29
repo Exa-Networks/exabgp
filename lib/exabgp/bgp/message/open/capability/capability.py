@@ -82,7 +82,7 @@ class Capability (object):
 			return str(self)
 
 		@classmethod
-		def name (cls,self):
+		def name (cls, self):
 			name = cls.names.get(self,None)
 			if name is None:
 				if self in Capability.CODE.unassigned:
@@ -105,7 +105,7 @@ class Capability (object):
 		cls._fallback_capability = imp
 
 	@staticmethod
-	def register_capability (klass,capability=None):
+	def register_capability (klass, capability=None):
 		# ID is defined by all the subclasses - otherwise they do not work :)
 		what = klass.ID if capability is None else capability  # pylint: disable=E1101
 		if what in klass.registered_capability:
@@ -113,7 +113,7 @@ class Capability (object):
 		klass.registered_capability[what] = klass
 
 	@classmethod
-	def klass (cls,what):
+	def klass (cls, what):
 		if what in cls.registered_capability:
 			kls = cls.registered_capability[what]
 			kls.ID = what
@@ -123,6 +123,6 @@ class Capability (object):
 		raise Notify (2,4,'can not handle capability %s' % what)
 
 	@classmethod
-	def unpack (cls,capability,capabilities,data):
+	def unpack (cls, capability, capabilities, data):
 		instance = capabilities.get(capability,Capability.klass(capability)())
 		return cls.klass(capability).unpack_capability(instance,data,capability)

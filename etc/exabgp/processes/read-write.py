@@ -74,7 +74,7 @@ def _reader ():
 reader = _reader().next
 
 
-def write (data='',left=''):
+def write (data='', left=''):
 	left += data
 	try:
 		if left:

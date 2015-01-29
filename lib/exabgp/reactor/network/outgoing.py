@@ -12,7 +12,7 @@ from .error import NetworkError
 class Outgoing (Connection):
 	direction = 'outgoing'
 
-	def __init__ (self,afi,peer,local,port=179,md5='',ttl=None):
+	def __init__ (self, afi, peer, local, port=179,md5='',ttl=None):
 		Connection.__init__(self,afi,peer,local)
 
 		self.logger.wire("Attempting connection to %s" % self.peer)

@@ -18,7 +18,7 @@ from exabgp.bgp.message.notification import Notify
 
 
 class ReceiveTimer (object):
-	def __init__ (self,me,holdtime,code,subcode,message=''):
+	def __init__ (self, me, holdtime, code, subcode, message=''):
 		self.logger = Logger()
 		self.me = me
 
@@ -29,7 +29,7 @@ class ReceiveTimer (object):
 		self.subcode = subcode
 		self.message = message
 
-	def check_ka (self,message=_NOP,ignore=_NOP.TYPE):
+	def check_ka (self, message=_NOP,ignore=_NOP.TYPE):
 		if message.TYPE != ignore:
 			self.last_read = time.time()
 		if self.holdtime:
@@ -42,7 +42,7 @@ class ReceiveTimer (object):
 
 
 class SendTimer (object):
-	def __init__ (self,me,holdtime):
+	def __init__ (self, me, holdtime):
 		self.logger = Logger()
 		self.me = me
 

@@ -15,7 +15,7 @@ from exabgp.bgp.message import Message
 class UnknownMessage (Message):
 	# Make sure we have a value, which is not defined in any RFC !
 
-	def __init__ (self,code,data=''):
+	def __init__ (self, code, data=''):
 		self.ID = code
 		self.TYPE = chr(code)
 		self.data = data
@@ -27,7 +27,7 @@ class UnknownMessage (Message):
 		return "UNKNOWN"
 
 	@classmethod
-	def unpack_message (cls,data):  # pylint: disable=W0613
+	def unpack_message (cls, data):  # pylint: disable=W0613
 		raise RuntimeError('should not have been used')
 
 UnknownMessage.klass_unknown = UnknownMessage

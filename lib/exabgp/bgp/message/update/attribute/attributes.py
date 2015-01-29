@@ -24,7 +24,7 @@ from exabgp.logger import LazyFormat
 
 
 class _NOTHING (object):
-	def pack (self,_=None):
+	def pack (self, _=None):
 		return ''
 
 NOTHING = _NOTHING()
@@ -67,7 +67,7 @@ class Attributes (dict):
 		Attribute.CODE.INTERNAL_NAME:      ('string',  '', 'name',               '%s',     '%s'),
 	}
 
-	def _generate_text (self,extra=None):
+	def _generate_text (self, extra=None):
 		exclude = [Attribute.CODE.INTERNAL_SPLIT, Attribute.CODE.INTERNAL_WATCHDOG, Attribute.CODE.INTERNAL_WITHDRAW, Attribute.CODE.NEXT_HOP]
 		if extra:
 			exclude.append(extra)
@@ -127,10 +127,10 @@ class Attributes (dict):
 		# XXX: FIXME: surely not the best place for this
 		Attribute.caching = environment.settings().cache.attributes
 
-	def has (self,k):
+	def has (self, k):
 		return k in self
 
-	def add (self,attribute,_=None):
+	def add (self, attribute, _=None):
 		# we return None as attribute if the unpack code must not generate them
 		if attribute is None:
 			return
@@ -147,7 +147,7 @@ class Attributes (dict):
 		else:
 			self[attribute.ID] = attribute
 
-	def remove (self,attrid):
+	def remove (self, attrid):
 		self.pop(attrid)
 
 	def watchdog (self):
@@ -156,7 +156,7 @@ class Attributes (dict):
 	def withdraw (self):
 		return self.pop(Attribute.CODE.INTERNAL_WITHDRAW,None) is not None
 
-	def pack (self,negotiated,with_default=True):
+	def pack (self, negotiated, with_default=True):
 		local_asn = negotiated.local_as
 		peer_asn = negotiated.peer_as
 
@@ -218,7 +218,7 @@ class Attributes (dict):
 		return self._idx
 
 	@classmethod
-	def unpack (cls,data,negotiated):
+	def unpack (cls, data, negotiated):
 		try:
 			if cls.cached:
 				if data == cls.previous:
@@ -259,7 +259,7 @@ class Attributes (dict):
 			length = ord(data[2])
 			return flag, attr, data[3:length+3]
 
-	def parse (self,data,negotiated):
+	def parse (self, data, negotiated):
 		if not data:
 			return self
 
@@ -357,10 +357,10 @@ class Attributes (dict):
 	# test that sets of attributes exactly match
 	# can't rely on __eq__ for this, because __eq__ relies on Attribute.__eq__ which does not look at attributes values
 
-	def sameValuesAs (self,other):
+	def sameValuesAs (self, other):
 		# we sort based on string representation since the items do not
 		# necessarily implement __cmp__
-		def sorter (x,y):
+		def sorter (x, y):
 			return cmp(repr(x), repr(y))
 
 		try:

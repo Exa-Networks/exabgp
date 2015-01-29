@@ -25,11 +25,11 @@ class AddPath (Capability,dict):
 		3: 'send/receive',
 	}
 
-	def __init__ (self,families=(),send_receive=0):
+	def __init__ (self, families=(),send_receive=0):
 		for afi,safi in families:
 			self.add_path(afi,safi,send_receive)
 
-	def add_path (self,afi,safi,send_receive):
+	def add_path (self, afi, safi, send_receive):
 		self[(afi,safi)] = send_receive
 
 	def __str__ (self):
@@ -47,7 +47,7 @@ class AddPath (Capability,dict):
 		return rs
 
 	@staticmethod
-	def unpack_capability (instance,data,capability=None):  # pylint: disable=W0613
+	def unpack_capability (instance, data, capability=None):  # pylint: disable=W0613
 		# XXX: FIXME: should check that we have not yet seen the capability
 		while data:
 			afi = AFI.unpack(data[:2])

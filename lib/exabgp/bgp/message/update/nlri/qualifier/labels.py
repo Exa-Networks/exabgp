@@ -18,7 +18,7 @@ class Labels (object):
 
 	__slots__ = ['labels','packed','_len']
 
-	def __init__ (self,labels,bos=True):
+	def __init__ (self, labels, bos=True):
 		self.labels = labels
 		packed = []
 		for label in labels:
@@ -52,7 +52,7 @@ class Labels (object):
 			return ''
 
 	@classmethod
-	def unpack (cls,data):
+	def unpack (cls, data):
 		labels = []
 		while True:
 			label = unpack('!L',data[4:])

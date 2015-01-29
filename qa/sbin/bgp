@@ -37,19 +37,19 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		chr(4) : 'KEEPALIVE',
 	}
 
-	def kind (self,header):
+	def kind (self, header):
 		return header[18]
 
-	def isupdate (self,header):
+	def isupdate (self, header):
 		return header[18] == chr(2)
 
-	def isnotification (self,header):
+	def isnotification (self, header):
 		return header[18] == chr(4)
 
-	def name (self,header):
+	def name (self, header):
 		return self._name.get(header[18],'SOME WEIRD RFC PACKET')
 
-	def routes (self,header,body):
+	def routes (self, header, body):
 		len_w = unpack('!H',body[0:2])[0]
 		withdrawn = [ord(_) for _ in body[2:2+len_w]]
 		len_a = unpack('!H',body[2+len_w:2+len_w+2])[0]
@@ -85,13 +85,13 @@ class BGPHandler(asyncore.dispatcher_with_send):
 				r[index] = announced.pop(0)
 			yield 'announce:%s' % '.'.join(str(_) for _ in r) + '/' + str(m)
 
-	def notification (self,header,body):
+	def notification (self, header, body):
 		yield 'notification:%d,%d' % (ord(body[0]),ord(body[1])), bytestream(body)
 
-	def announce (self,*args):
+	def announce (self, *args):
 		print '    ',self.ip,self.port,' '.join(str(_) for _ in args) if len(args) > 1 else args[0]
 
-	def setup (self,ip,port,messages,options):
+	def setup (self, ip, port, messages, options):
 		self.ip = ip
 		self.port = port
 		self.options = options
@@ -190,7 +190,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 			return
 
 		if self.raw:
-			def parser (self,header,body):
+			def parser (self, header, body):
 				if body:
 					yield bytestream(header+body)
 		else:
@@ -264,10 +264,10 @@ class BGPHandler(asyncore.dispatcher_with_send):
 	}
 
 class BGPServer (asyncore.dispatcher):
-	def announce (self,*args):
+	def announce (self, *args):
 		print '    ' + ' '.join(str(_) for _ in args) if len(args) > 1 else args[0]
 
-	def __init__ (self,host,port,messages):
+	def __init__ (self, host, port, messages):
 		asyncore.dispatcher.__init__(self)
 		self.create_socket(socket.AF_INET,socket.SOCK_STREAM)
 		self.set_reuse_addr()
@@ -295,7 +295,7 @@ class BGPServer (asyncore.dispatcher):
 				self.options['send-notification'] = True
 				continue
 			if message.strip().startswith('option:SIGUSR1:'):
-				def _signal (delay,myself):
+				def _signal (delay, myself):
 					time.sleep(delay)
 					name = sys.argv[1].split('/')[-1].split('.')[0]
 					command = "ps a 2>&1 | grep bgp.py | grep %s | grep '.conf' | grep -v grep" % name

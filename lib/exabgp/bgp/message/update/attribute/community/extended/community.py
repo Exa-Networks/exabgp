@@ -29,7 +29,7 @@ class ExtendedCommunity (Attribute):
 
 	__slots__ = ['community']
 
-	def __init__ (self,community):
+	def __init__ (self, community):
 		# Two top bits are iana and transitive bits
 		self.community = community
 
@@ -39,7 +39,7 @@ class ExtendedCommunity (Attribute):
 	def transitive (self):
 		return not not (self.community[0] & 0x40)
 
-	def pack (self,negotiated=None):
+	def pack (self, negotiated=None):
 		return self.community
 
 	def json (self):
@@ -62,13 +62,13 @@ class ExtendedCommunity (Attribute):
 	def __hash__ (self):
 		return hash(self.community)
 
-	def __cmp__ (self,other):
+	def __cmp__ (self, other):
 		if not isinstance(other, ExtendedCommunity):
 			return -1
 		return cmp(self.community,other.community)
 
 	@staticmethod
-	def unpack (data,negotiated=None):
+	def unpack (data, negotiated=None):
 		# 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0FFF
 		community = (ord(data[0]) & 0x0F,ord(data[1]))
 		if community in ExtendedCommunity.registered_extended:

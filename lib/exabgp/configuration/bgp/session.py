@@ -44,7 +44,7 @@ class SectionSession (Section):
 	syntax = syntax_session
 	name = 'session'
 
-	def exit (self,tokeniser):
+	def exit (self, tokeniser):
 		asn = self.extract_anonymous('asn',tokeniser)
 		if asn:
 			if 'asn' in self.content:
@@ -70,26 +70,26 @@ class SectionSession (Section):
 		if 'hold-time' not in self.content:
 			self.content['hold-time'] = holdtime(lambda:'180')
 
-	def router_id (self,tokeniser):
+	def router_id (self, tokeniser):
 		try:
 			self.content['router-id'] = ip(tokeniser)
 		except ValueError,exc:
 			raise RaisedSession(tokeniser,'could not parse router-id, %s' % str(exc))
 
-	def hold_time (self,tokeniser):
+	def hold_time (self, tokeniser):
 		try:
 			self.content['hold-time'] = holdtime(tokeniser)
 		except ValueError,exc:
 			raise RaisedSession(tokeniser,'could not parse hold-time, %s' % str(exc))
 
-	def asn (self,tokeniser):
+	def asn (self, tokeniser):
 		section = self.get_section(SectionASN.name,tokeniser)
 		if section:
 			self.content['asn'] = section
 		else:
 			return False
 
-	def capability (self,tokeniser):
+	def capability (self, tokeniser):
 		section = self.get_section(SectionCapability.name,tokeniser)
 		if section:
 			self.content['capability'] = section
@@ -97,7 +97,7 @@ class SectionSession (Section):
 			return False
 
 	@classmethod
-	def register (cls,registry,location):
+	def register (cls, registry, location):
 		registry.register_class(cls)
 
 		registry.register(SectionASN,location+['asn'])

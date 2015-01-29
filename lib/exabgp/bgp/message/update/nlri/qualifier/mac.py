@@ -15,7 +15,7 @@ class MAC(object):
 
 	__slots__ = ['mac','packed']
 
-	def __init__ (self,mac=None,packed=None):
+	def __init__ (self, mac=None,packed=None):
 		self.mac = mac
 		self.packed = packed if packed else ''.join(chr(int(_,16)) for _ in mac.split(":"))
 
@@ -32,7 +32,7 @@ class MAC(object):
 	def __len__ (self):
 		return 6
 
-	def __cmp__ (self,other):
+	def __cmp__ (self, other):
 		if not isinstance(other,self.__class__):
 			return -1
 		if self.packed != other.packed:
@@ -44,5 +44,5 @@ class MAC(object):
 		return hash(str(self))
 
 	@classmethod
-	def unpack (cls,data):
+	def unpack (cls, data):
 		return cls(':'.join('%02X' % ord(_) for _ in data[:6]),data[:6])

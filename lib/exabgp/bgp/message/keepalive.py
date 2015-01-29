@@ -23,6 +23,6 @@ class KeepAlive (Message):
 		return "KEEPALIVE"
 
 	@classmethod
-	def unpack_message (cls,data,negotiated):  # pylint: disable=W0613
+	def unpack_message (cls, data, negotiated):  # pylint: disable=W0613
 		# XXX: FIXME: raise Notify if data has something
 		return cls()

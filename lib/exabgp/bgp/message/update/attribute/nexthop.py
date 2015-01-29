@@ -21,15 +21,15 @@ class NextHop (Attribute,IP):
 	FLAG = Attribute.Flag.TRANSITIVE
 	CACHING = True
 
-	def __init__ (self,ip,packed=None):
+	def __init__ (self, ip, packed=None):
 		# Need to conform to from IP interface
 		self.ip = ip
 		self.packed = packed if packed else IP.create(ip).pack()
 
-	def pack (self,negotiated=None):
+	def pack (self, negotiated=None):
 		return self._attribute(self.packed)
 
-	def __cmp__ (self,other):
+	def __cmp__ (self, other):
 		if not isinstance(other,self.__class__):
 			return -1
 		if self.pack() != other.pack():
@@ -37,7 +37,7 @@ class NextHop (Attribute,IP):
 		return 0
 
 	@classmethod
-	def unpack (cls,data,negotiated=None):
+	def unpack (cls, data, negotiated=None):
 		if not data:
 			return NoIP
 		return IP.unpack(data,NextHop)

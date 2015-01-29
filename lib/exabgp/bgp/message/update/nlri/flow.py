@@ -124,7 +124,7 @@ class IPrefix4 (IPrefix,IComponent,IPv4):
 	# not used, just present for simplying the nlri generation
 	operations = 0x0
 
-	def __init__ (self,raw,netmask):
+	def __init__ (self, raw, netmask):
 		self.nlri = CIDR(raw,netmask)
 
 	def pack (self):
@@ -144,7 +144,7 @@ class IPrefix6 (IPrefix,IComponent,IPv6):
 	# not used, just present for simplying the nlri generation
 	operations = 0x0
 
-	def __init__ (self,raw,netmask,offset):
+	def __init__ (self, raw, netmask, offset):
 		self.nlri = CIDR(raw,netmask)
 		self.offset = offset
 
@@ -160,7 +160,7 @@ class IPrefix6 (IPrefix,IComponent,IPv6):
 class IOperation (IComponent):
 	# need to implement encode which encode the value of the operator
 
-	def __init__ (self,operations,value):
+	def __init__ (self, operations, value):
 		self.operations = operations
 		self.value = value
 		self.first = None  # handled by pack/str
@@ -170,32 +170,32 @@ class IOperation (IComponent):
 		op = self.operations | _len_to_bit(l)
 		return "%s%s" % (chr(op),v)
 
-	def encode (self,value):
+	def encode (self, value):
 		raise NotImplementedError('this method must be implemented by subclasses')
 
-	def decode (self,value):
+	def decode (self, value):
 		raise NotImplementedError('this method must be implemented by subclasses')
 
 
 # class IOperationIPv4 (IOperation):
-# 	def encode (self,value):
+# 	def encode (self, value):
 # 		return 4, socket.pton(socket.AF_INET,value)
 
 class IOperationByte (IOperation):
-	def encode (self,value):
+	def encode (self, value):
 		return 1,chr(value)
 
-	def decode (self,bgp):
+	def decode (self, bgp):
 		return ord(bgp[0]),bgp[1:]
 
 
 class IOperationByteShort (IOperation):
-	def encode (self,value):
+	def encode (self, value):
 		if value < (1 << 8):
 			return 1,chr(value)
 		return 2,pack('!H',value)
 
-	def decode (self,bgp):
+	def decode (self, bgp):
 		return unpack('!H',bgp[:2])[0],bgp[2:]
 
 
@@ -240,7 +240,7 @@ class BinaryString (object):
 
 # Components ..............................
 
-def converter (function,klass=int):
+def converter (function, klass=int):
 	def _integer (value):
 		try:
 			return klass(value)
@@ -249,7 +249,7 @@ def converter (function,klass=int):
 	return _integer
 
 
-def decoder (function,klass=int):
+def decoder (function, klass=int):
 	def _inner (value):
 		return klass(function(value))
 	return _inner
@@ -471,7 +471,7 @@ unique = _unique()
 
 
 class Flow (NLRI):
-	def __init__ (self,afi=AFI.ipv4,safi=SAFI.flow_ip,nexthop=None,rd=None):
+	def __init__ (self, afi=AFI.ipv4,safi=SAFI.flow_ip,nexthop=None,rd=None):
 		NLRI.__init__(self,afi,safi)
 		self.rules = {}
 		self.action = OUT.ANNOUNCE
@@ -482,7 +482,7 @@ class Flow (NLRI):
 	def __len__ (self):
 		return len(self.pack())
 
-	def add (self,rule):
+	def add (self, rule):
 		ID = rule.ID
 		if ID in (FlowDestination.ID,FlowSource.ID):
 			if ID in self.rules:
@@ -498,7 +498,7 @@ class Flow (NLRI):
 		return True
 
 	# The API requires addpath, but it is irrelevant here.
-	def pack (self,addpath=None):
+	def pack (self, addpath=None):
 		ordered_rules = []
 		# the order is a RFC requirement
 		for ID in sorted(self.rules.keys()):
@@ -572,7 +572,7 @@ class Flow (NLRI):
 		return self.pack()
 
 	@classmethod
-	def unpack (cls,afi,safi,bgp,has_multiple_path,nexthop,action):
+	def unpack (cls, afi, safi, bgp, has_multiple_path, nexthop, action):
 		total = len(bgp)
 		length,bgp = ord(bgp[0]),bgp[1:]
 

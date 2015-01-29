@@ -24,7 +24,7 @@ from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 class MPLS (NLRI,CIDR):
 	__slots__ = ['labels','rd','nexthop','action']
 
-	def __init__ (self,afi,safi,packed,mask,nexthop,action,path=None):
+	def __init__ (self, afi, safi, packed, mask, nexthop, action,path=None):
 		self.path_info = PathInfo.NOPATH if path is None else path
 		self.labels = Labels.NOLABEL
 		self.rd = RouteDistinguisher.NORD
@@ -50,13 +50,13 @@ class MPLS (NLRI,CIDR):
 		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
 		return "%s%s" % (self.extensive(),nexthop)
 
-	def __eq__ (self,other):
+	def __eq__ (self, other):
 		return str(self) == str(other)
 
-	def __ne__ (self,other):
+	def __ne__ (self, other):
 		return not self.__eq__(other)
 
-	def json (self,announced=True):
+	def json (self, announced=True):
 		label = self.labels.json()
 		rdist = self.rd.json()
 		pinfo = self.path_info.json()
@@ -71,7 +71,7 @@ class MPLS (NLRI,CIDR):
 				r.append(pinfo)
 		return '"%s": { %s }' % (self.prefix(),", ".join(r))
 
-	def pack (self,addpath=None):
+	def pack (self, addpath=None):
 		if not self.has_label():
 			return CIDR.pack(self)
 
@@ -82,7 +82,7 @@ class MPLS (NLRI,CIDR):
 		return self.pack()
 
 	@classmethod
-	def unpack (cls,afi,safi,bgp,addpath,nexthop,action):
+	def unpack (cls, afi, safi, bgp, addpath, nexthop, action):
 		labels,rd,path_identifier,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action,addpath)
 
 		nlri = cls(afi,safi,prefix,mask,nexthop,action)

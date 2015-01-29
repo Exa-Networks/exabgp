@@ -34,30 +34,30 @@ class SectionASN (Section):
 	syntax = syntax_asn
 	name = 'asn'
 
-	def enter_asn (self,tokeniser):
+	def enter_asn (self, tokeniser):
 		Section.enter(self,tokeniser)
 
-	def exit_asn (self,tokeniser):
+	def exit_asn (self, tokeniser):
 		if 'local' not in self.content:
 			raise RaisedASN(tokeniser,'section is missing a local asn')
 
 		if 'peer' not in self.content:
 			raise RaisedASN(tokeniser,'section is missing a peer asn')
 
-	def local_asn (self,tokeniser):
+	def local_asn (self, tokeniser):
 		try:
 			self.content['local'] = asn(tokeniser)
 		except ValueError,exc:
 			raise RaisedASN(tokeniser,'could not parse local asn, %s' % str(exc))
 
-	def peer_asn (self,tokeniser):
+	def peer_asn (self, tokeniser):
 		try:
 			self.content['peer'] = asn(tokeniser)
 		except ValueError,exc:
 			raise RaisedASN(tokeniser,'could not parse peer asn, %s' % str(exc))
 
 	@classmethod
-	def register (cls,registry,location):
+	def register (cls, registry, location):
 		registry.register_class(cls)
 
 		registry.register_hook(cls,'enter',location,'enter_asn')

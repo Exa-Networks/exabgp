@@ -24,7 +24,7 @@ class Completed (cmd.Cmd):
 	ruler = '-'
 	completion = {}
 
-	def __init__ (self,intro=''):
+	def __init__ (self, intro=''):
 		self.prompt = '%s> ' % intro
 		cmd.Cmd.__init__(self)
 
@@ -40,7 +40,7 @@ class Completed (cmd.Cmd):
 
 		return [_ for _ in local.keys() if _.startswith(text)]
 
-	def default (self,line):
+	def default (self, line):
 		print 'unrecognised syntax: ', line
 
 	def do_EOF (self):
@@ -48,7 +48,7 @@ class Completed (cmd.Cmd):
 
 
 class SubMenu (Completed):
-	def do_exit (self,_):
+	def do_exit (self, _):
 		return True
 
 	do_x = do_exit
@@ -70,22 +70,22 @@ class Attribute (SubMenu):
 		},
 	}
 
-	def __init__ (self,name):
+	def __init__ (self, name):
 		self.name = name
 		SubMenu.__init__(self,'attribute %s' % name)
 
-	def do_origin (self,line):
+	def do_origin (self, line):
 		if line in ('igp','egp','incomplete'):
 			self.attribute['origin'] = line
 		else:
 			print 'invalid origin'
 
-	def do_as_path (self,line):
+	def do_as_path (self, line):
 		pass
 
 	# next-hop
 
-	def do_med (self,line):
+	def do_med (self, line):
 		if not line.isdigit():
 			print 'invalid med, %s is not a number' % line
 			return
@@ -105,7 +105,7 @@ class Attribute (SubMenu):
 	# psmi
 	# aigp
 
-	def do_show (self,_):
+	def do_show (self, _):
 		print 'attribute %s ' % self.name + ' '.join('%s %s' % (key,value) for key,value in self.attribute.iteritems())
 
 
@@ -163,7 +163,7 @@ class ExaBGP (Completed):
 
 	_neighbors = set()
 
-	def do_neighbor (self,line):
+	def do_neighbor (self, line):
 		try:
 			action,ip = line.split()
 		except ValueError:
@@ -201,7 +201,7 @@ class ExaBGP (Completed):
 
 	_attribute = {}
 
-	def do_attribute (self,name):
+	def do_attribute (self, name):
 		if not name:
 			self.help_attribute()
 			return
@@ -216,7 +216,7 @@ class ExaBGP (Completed):
 	def help_attribute (self):
 		print 'attribute <name>'
 
-	def do_quit (self,_):
+	def do_quit (self, _):
 		return True
 
 	do_q = do_quit

@@ -50,7 +50,7 @@ class SectionCapability (Section):
 	syntax = syntax_capability
 	name = 'capability'
 
-	def enter (self,tokeniser):
+	def enter (self, tokeniser):
 		Section.enter(self,tokeniser)
 
 		self.content[Capability.CODE(Capability.CODE.FOUR_BYTES_ASN)] = True
@@ -61,26 +61,26 @@ class SectionCapability (Section):
 		self.content[Capability.CODE(Capability.CODE.MULTISESSION)] = False
 		self.content[Capability.CODE(Capability.CODE.GRACEFUL_RESTART)] = 0
 
-	def exit (self,tokeniser):
+	def exit (self, tokeniser):
 		if Capability.CODE(Capability.CODE.MULTIPROTOCOL) not in self.content:
 			self.content[Capability.CODE(Capability.CODE.MULTIPROTOCOL)] = MultiProtocol(known_families())
 
-	def family (self,tokeniser):
+	def family (self, tokeniser):
 		data = self.get_section(SectionFamily.name,tokeniser)
 		if data:
 			self.content[Capability.CODE(Capability.CODE.MULTIPROTOCOL)] = MultiProtocol((afi,safi) for afi in sorted(data) for safi in sorted(data[afi]))
 		else:
 			return False
 
-	def asn4 (self,tokeniser):
+	def asn4 (self, tokeniser):
 		self._check_duplicate(tokeniser,RaisedCapability)
 		self.content[Capability.CODE(Capability.CODE.FOUR_BYTES_ASN)] = boolean(tokeniser,True)
 
-	def aigp (self,tokeniser):
+	def aigp (self, tokeniser):
 		self._check_duplicate(tokeniser,RaisedCapability)
 		self.content[Capability.CODE(Capability.CODE.AIGP)] = boolean(tokeniser,False)
 
-	def addpath (self,tokeniser):
+	def addpath (self, tokeniser):
 		self._check_duplicate(tokeniser,RaisedCapability)
 		valid_options = ('receive','send','send/receive','disable','disabled')
 		ap = tokeniser()
@@ -93,19 +93,19 @@ class SectionCapability (Section):
 		if ap.startswith('send'):
 			self.content[Capability.CODE.ADD_PATH] += 2
 
-	def operational (self,tokeniser):
+	def operational (self, tokeniser):
 		self._check_duplicate(tokeniser,RaisedCapability)
 		self.content[Capability.CODE(Capability.CODE.OPERATIONAL)] = boolean(tokeniser,False)
 
-	def refresh (self,tokeniser):
+	def refresh (self, tokeniser):
 		self._check_duplicate(tokeniser,RaisedCapability)
 		self.content[Capability.CODE(Capability.CODE.ROUTE_REFRESH)] = boolean(tokeniser,False)
 
-	def multisession (self,tokeniser):
+	def multisession (self, tokeniser):
 		self._check_duplicate(tokeniser,RaisedCapability)
 		self.content[Capability.CODE(Capability.CODE.MULTISESSION_CISCO)] = boolean(tokeniser,False)
 
-	def graceful (self,tokeniser):
+	def graceful (self, tokeniser):
 		self._check_duplicate(tokeniser,RaisedCapability)
 		token = tokeniser()
 		if not token.isdigit():
@@ -120,7 +120,7 @@ class SectionCapability (Section):
 		self.content[Capability.CODE(Capability.CODE.GRACEFUL_RESTART)] = duration
 
 	@classmethod
-	def register (cls,registry,location):
+	def register (cls, registry, location):
 		registry.register_class(cls)
 
 		# FamilySection.register(location)

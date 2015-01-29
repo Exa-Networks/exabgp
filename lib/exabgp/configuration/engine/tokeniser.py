@@ -104,7 +104,7 @@ def tokens (stream):
 
 
 class Tokeniser (Location):
-	def __init__ (self,name,stream):
+	def __init__ (self, name, stream):
 		super(Tokeniser,self).__init__()
 		self.name = name                  # A unique name for this tokenier, so we can have multiple
 		self.tokeniser = tokens(stream)   # A corouting giving us the producer toker
@@ -117,10 +117,10 @@ class Tokeniser (Location):
 		return token
 
 	# XXX: FIXME: line and position only work if we only rewind one element
-	def rewind (self,token):
+	def rewind (self, token):
 		self._rewind.append(token)
 
-	def content (self,producer):
+	def content (self, producer):
 		try:
 			while True:
 				self.idx_line,self.idx_column,self.line,token = producer()
@@ -138,7 +138,7 @@ class Tokeniser (Location):
 		except StopIteration:
 			return None
 
-	def iterate_list (self,producer):
+	def iterate_list (self, producer):
 		token = self.content(producer)
 		while token and token != ']':
 			yield token

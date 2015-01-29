@@ -53,7 +53,7 @@ class SectionFamily (Section):
 	syntax = syntax_family
 	name = 'family'
 
-	def _add (self,tokeniser,afi_name,safi_names):
+	def _add (self, tokeniser, afi_name, safi_names):
 		self._check_duplicate(tokeniser,RaisedFamily)
 		known = self.content.setdefault(AFI(AFI.value(afi_name)),[])
 
@@ -66,22 +66,22 @@ class SectionFamily (Section):
 				raise RaisedFamily(Location(idx_line,idx_column,line),'afi/safi pair already defined in this family')
 			known.append(safi)
 
-	def ipv4 (self,tokeniser):
+	def ipv4 (self, tokeniser):
 		self._add(tokeniser,'ipv4',tokeniser())
 
-	def ipv6 (self,tokeniser):
+	def ipv6 (self, tokeniser):
 		self._add(tokeniser,'ipv6',tokeniser())
 
-	def l2vpn (self,tokeniser):
+	def l2vpn (self, tokeniser):
 		self._add(tokeniser,'l2vpn',tokeniser())
 
-	def all (self,tokeniser):
+	def all (self, tokeniser):
 		for afi_name in ('ipv4','ipv6','l2vpn'):
 			for safi_name in AFI.implemented_safi(afi_name):
 				self._add(tokeniser,afi_name,safi_name)
 
 	@classmethod
-	def register (cls,registry,location):
+	def register (cls, registry, location):
 		registry.register_class(cls)
 
 		registry.register_hook(cls,'enter',location,'enter')

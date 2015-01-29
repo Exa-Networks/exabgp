@@ -262,7 +262,7 @@ def setpgrp_preexec_fn ():
     os.setpgrp()
 
 
-def check (cmd,timeout):
+def check (cmd, timeout):
     """Check the return code of the given command.
 
     :param cmd: command to execute. If :keyword:`None`, no command is executed.

@@ -64,11 +64,11 @@ class Interrupted (Exception):
 #
 
 class KA (object):
-	def __init__ (self,log,proto):
+	def __init__ (self, log, proto):
 		self._generator = self._keepalive(proto)
 		self.send_timer = SendTimer(log,proto.negotiated.holdtime)
 
-	def _keepalive (self,proto):
+	def _keepalive (self, proto):
 		need_ka   = False
 		generator = None
 
@@ -109,7 +109,7 @@ class KA (object):
 # Present a File like interface to socket.socket
 
 class Peer (object):
-	def __init__ (self,neighbor,reactor):
+	def __init__ (self, neighbor, reactor):
 		try:
 			self.logger = Logger()
 			# We only to try to connect via TCP once
@@ -164,7 +164,7 @@ class Peer (object):
 		self._['in']['generator'] = self._['in']['enabled']
 		self._['out']['generator'] = self._['out']['enabled']
 
-	def _reset (self,direction,message='',error=''):
+	def _reset (self, direction, message='',error=''):
 		self._[direction]['state'] = STATE.IDLE
 
 		if self._restart:
@@ -184,7 +184,7 @@ class Peer (object):
 			self._[direction]['generator'] = False
 			self._[direction]['proto'] = None
 
-	def _stop (self,direction,message):
+	def _stop (self, direction, message):
 		self._[direction]['generator'] = False
 		self._[direction]['proto'].close('%s loop, stop, message [%s]' % (direction,message))
 		self._[direction]['proto'] = None
@@ -197,7 +197,7 @@ class Peer (object):
 		# when we can not connect to a peer how many time (in loop) should we back-off
 		self._next_skip = 0
 
-	def _more_skip (self,direction):
+	def _more_skip (self, direction):
 		if direction != 'out':
 			return
 		self._skip_time = time.time() + self._next_skip
@@ -207,7 +207,7 @@ class Peer (object):
 
 	# logging
 
-	def me (self,message):
+	def me (self, message):
 		return "peer %s ASN %-7s %s" % (self.neighbor.peer_address,self.neighbor.peer_as,message)
 
 	# control
@@ -222,12 +222,12 @@ class Peer (object):
 		self._resend_routes = SEND.NORMAL
 		self._reset_skip()
 
-	def send_new (self,changes=None,update=None):
+	def send_new (self, changes=None,update=None):
 		if changes:
 			self.neighbor.rib.outgoing.replace(changes)
 		self._have_routes = self.neighbor.flush if update is None else update
 
-	def reestablish (self,restart_neighbor=None):
+	def reestablish (self, restart_neighbor=None):
 		# we want to tear down the session and re-establish it
 		self._teardown = 3
 		self._restart = True
@@ -236,14 +236,14 @@ class Peer (object):
 		self._neighbor = restart_neighbor
 		self._reset_skip()
 
-	def reconfigure (self,restart_neighbor=None):
+	def reconfigure (self, restart_neighbor=None):
 		# we want to update the route which were in the configuration file
 		self._reconfigure = True
 		self._neighbor = restart_neighbor
 		self._resend_routes = SEND.NORMAL
 		self._neighbor = restart_neighbor
 
-	def teardown (self,code,restart=True):
+	def teardown (self, code, restart=True):
 		self._restart = restart
 		self._teardown = code
 		self._reset_skip()
@@ -258,7 +258,7 @@ class Peer (object):
 				ios.append(proto.connection.io)
 		return ios
 
-	def incoming (self,connection):
+	def incoming (self, connection):
 		# if the other side fails, we go back to idle
 		if self._['in']['proto'] not in (True,False,None):
 			self.logger.network('we already have a peer at this address')
@@ -413,7 +413,7 @@ class Peer (object):
 		# let the caller know that we were sucesfull
 		yield ACTION.NOW
 
-	def _main (self,direction):
+	def _main (self, direction):
 		"""yield True if we want to come back to it asap, None if nothing urgent, and False if stopped"""
 		if self._teardown:
 			raise Notify(6,3)
@@ -575,7 +575,7 @@ class Peer (object):
 		# notify our peer of the shutdown
 		raise Notify(6,self._teardown)
 
-	def _run (self,direction):
+	def _run (self, direction):
 		"""yield True if we want the reactor to give us back the hand with the same peer loop, None if we do not have any more work to do"""
 		try:
 			for action in self._[direction]['code']():

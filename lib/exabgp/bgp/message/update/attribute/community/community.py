@@ -24,7 +24,7 @@ class Community (object):
 
 	__slots__ = ['community','_str']
 
-	def __init__ (self,community):
+	def __init__ (self, community):
 		self.community = community
 		if community == self.NO_EXPORT:
 			self._str = 'no-export'
@@ -35,7 +35,7 @@ class Community (object):
 		else:
 			self._str = "%d:%d" % unpack('!HH',self.community)
 
-	def __cmp__ (self,other):
+	def __cmp__ (self, other):
 		if not isinstance(other,self.__class__):
 			return -1
 		if self.community != other.community:
@@ -45,7 +45,7 @@ class Community (object):
 	def json (self):
 		return "[ %d, %d ]" % unpack('!HH',self.community)
 
-	def pack (self,negotiated=None):
+	def pack (self, negotiated=None):
 		return self.community
 
 	def __str__ (self):
@@ -54,18 +54,18 @@ class Community (object):
 	def __len__ (self):
 		return 4
 
-	def __eq__ (self,other):
+	def __eq__ (self, other):
 		return self.community == other.community
 
-	def __ne__ (self,other):
+	def __ne__ (self, other):
 		return self.community != other.community
 
 	@classmethod
-	def unpack (cls,community,negotiated):
+	def unpack (cls, community, negotiated):
 		return cls(community)
 
 	@classmethod
-	def cached (cls,community):
+	def cached (cls, community):
 		if cls.caching and community in cls.cache:
 			return cls.cache[community]
 		instance = cls(community)

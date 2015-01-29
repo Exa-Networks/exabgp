@@ -78,7 +78,7 @@ class SizeError      (NetworkError):
 # not used atm - can not generate message due to size
 
 class NotifyError    (Exception):
-	def __init__ (self,code,subcode,msg):
+	def __init__ (self, code, subcode, msg):
 		self.code = code
 		self.subcode = subcode
 		Exception.__init__(self,msg)

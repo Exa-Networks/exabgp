@@ -51,7 +51,7 @@ class PMSI (Attribute):
 
 	__slots__ = ['label','flags','tunnel']
 
-	def __init__ (self,tunnel,label,flags):
+	def __init__ (self, tunnel, label, flags):
 		self.label = label    # integer
 		self.flags = flags    # integer
 		self.tunnel = tunnel  # tunnel id, packed data
@@ -74,7 +74,7 @@ class PMSI (Attribute):
 	def __len__ (self):
 		return len(self.tunnel) + 5  # label:1, tunnel type: 1, MPLS label:3
 
-	def __cmp__ (self,other):
+	def __cmp__ (self, other):
 		if not isinstance(other,self.__class__):
 			return -1
 		# if self.TUNNEL_TYPE != other.TUNNEL_TYPE:
@@ -107,13 +107,13 @@ class PMSI (Attribute):
 		PMSI._pmsi_known[klass.TUNNEL_TYPE] = klass
 
 	@staticmethod
-	def pmsi_unknown (subtype,tunnel,label,flags):
+	def pmsi_unknown (subtype, tunnel, label, flags):
 		pmsi = PMSI(tunnel,label,flags)
 		pmsi.TUNNEL_TYPE = subtype
 		return pmsi
 
 	@classmethod
-	def unpack (cls,data,negotiated):
+	def unpack (cls, data, negotiated):
 		flags,subtype = unpack('!BB',data[:2])
 		label = unpack('!L','\0'+data[2:5])[0] >> 4
 		# should we check for bottom of stack before the shift ?
@@ -128,14 +128,14 @@ class PMSI (Attribute):
 class PMSINoTunnel (PMSI):
 	TUNNEL_TYPE = 0
 
-	def __init__ (self,label=0,flags=0):
+	def __init__ (self, label=0,flags=0):
 		PMSI.__init__(self,'',label,flags)
 
 	def prettytunnel (self):
 		return ''
 
 	@classmethod
-	def unpack (cls,tunnel,label,flags):
+	def unpack (cls, tunnel, label, flags):
 		return cls(label,flags)
 
 
@@ -145,7 +145,7 @@ class PMSINoTunnel (PMSI):
 class PMSIIngressReplication (PMSI):
 	TUNNEL_TYPE = 6
 
-	def __init__ (self,ip,label=0,flags=0,tunnel=None):
+	def __init__ (self, ip, label=0,flags=0,tunnel=None):
 		self.ip = ip
 		PMSI.__init__(self,tunnel if tunnel else IPv4.pton(ip),label,flags)
 
@@ -153,7 +153,7 @@ class PMSIIngressReplication (PMSI):
 		return self.ip
 
 	@classmethod
-	def unpack (cls,tunnel,label,flags):
+	def unpack (cls, tunnel, label, flags):
 		ip = IPv4.ntop(tunnel)
 		return cls(ip,label,flags,tunnel)
 

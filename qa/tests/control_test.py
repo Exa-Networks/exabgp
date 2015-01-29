@@ -13,7 +13,7 @@ from exabgp.configuration.setup import environment
 env = environment.setup('')
 
 
-def speak (name,data):
+def speak (name, data):
 	time.sleep(0.005)
 	try:
 		sock = socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)
@@ -38,7 +38,7 @@ class TestControl (unittest.TestCase):
 		finally:
 			control.cleanup()
 
-	def validate (self,message,check):
+	def validate (self, message, check):
 		name = tempfile.mktemp()
 		control = Control(name,False)
 		try:

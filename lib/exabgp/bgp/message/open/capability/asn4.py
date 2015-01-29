@@ -17,14 +17,14 @@ class ASN4 (Capability,ASN):
 	ID = Capability.CODE.FOUR_BYTES_ASN
 
 	# This makes python2.6 complain !
-	# def __init__ (self,value=0):
+	# def __init__ (self, value=0):
 	# 	ASN.__init__(self,value)
 
 	def __str__ (self):
 		return 'ASN4(%d)' % int(self)
 
 	@staticmethod
-	def unpack_capability (instance,data,capability=None):  # pylint: disable=W0613
+	def unpack_capability (instance, data, capability=None):  # pylint: disable=W0613
 		# XXX: FIXME: if instance is not ASN(0) we have two ASN - raise
 		instance = ASN.unpack(data,ASN4)
 		return instance

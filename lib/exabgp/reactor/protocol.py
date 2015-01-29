@@ -42,7 +42,7 @@ _OPERATIONAL = Operational(0x00)
 class Protocol (object):
 	decode = True
 
-	def __init__ (self,peer):
+	def __init__ (self, peer):
 		try:
 			self.logger = Logger()
 		except RuntimeError:
@@ -66,10 +66,10 @@ class Protocol (object):
 	def __del__ (self):
 		self.close('automatic protocol cleanup')
 
-	def me (self,message):
+	def me (self, message):
 		return "Peer %15s ASN %-7s %s" % (self.peer.neighbor.peer_address,self.peer.neighbor.peer_as,message)
 
-	def accept (self,incoming):
+	def accept (self, incoming):
 		self.connection = incoming
 
 		if self.peer.neighbor.api['neighbor-changes']:
@@ -104,7 +104,7 @@ class Protocol (object):
 				yield False
 				return
 
-	def close (self,reason='protocol closed, reason unspecified'):
+	def close (self, reason='protocol closed, reason unspecified'):
 		if self.connection:
 			self.logger.network(self.me(reason))
 
@@ -118,7 +118,7 @@ class Protocol (object):
 			except ProcessError:
 				self.logger.message(self.me('could not send notification of neighbor close to API'))
 
-	def write (self,message):
+	def write (self, message):
 		if self.neighbor.api['send-packets'] and not self.neighbor.api['consolidate']:
 			self.peer.reactor.processes.send(self.peer,ord(message[18]),message[:19],message[19:])
 		for boolean in self.connection.writer(message):
@@ -193,7 +193,7 @@ class Protocol (object):
 		if error is not None:
 			raise Notify(*error)
 
-	def read_open (self,ip):
+	def read_open (self, ip):
 		for received_open in self.read_message():
 			if received_open.TYPE == NOP.TYPE:
 				yield received_open
@@ -222,7 +222,7 @@ class Protocol (object):
 	# Sending message to peer
 	#
 
-	def new_open (self,restarted):
+	def new_open (self, restarted):
 		sent_open = Open(
 			4,
 			self.neighbor.local_as,
@@ -246,7 +246,7 @@ class Protocol (object):
 				self.peer.reactor.processes.message(Message.CODE.OPEN,self.peer,sent_open,'','','sent')
 		yield sent_open
 
-	def new_keepalive (self,comment=''):
+	def new_keepalive (self, comment=''):
 		keepalive = KeepAlive()
 
 		for _ in self.write(keepalive.message()):
@@ -256,7 +256,7 @@ class Protocol (object):
 
 		yield keepalive
 
-	def new_notification (self,notification):
+	def new_notification (self, notification):
 		for _ in self.write(notification.message()):
 			yield _NOP
 		self.logger.message(self.me('>> NOTIFICATION (%d,%d,"%s")' % (notification.code,notification.subcode,notification.data)))
@@ -275,14 +275,14 @@ class Protocol (object):
 			self.logger.message(self.me('>> %d UPDATE(s)' % number))
 		yield _UPDATE
 
-	def new_eor (self,afi,safi):
+	def new_eor (self, afi, safi):
 		eor = EOR(afi,safi)
 		for _ in self.write(eor.message()):
 			yield _NOP
 		self.logger.message(self.me('>> EOR %s %s' % (afi,safi)))
 		yield eor
 
-	def new_eors (self,afi=AFI.undefined,safi=SAFI.undefined):
+	def new_eors (self, afi=AFI.undefined,safi=SAFI.undefined):
 		# Send EOR to let our peer know he can perform a RIB update
 		if self.negotiated.families:
 			families = self.negotiated.families if (afi,safi) == (AFI.undefined,SAFI.undefined) else [(afi,safi),]
@@ -297,13 +297,13 @@ class Protocol (object):
 				yield _NOP
 			yield _UPDATE
 
-	def new_operational (self,operational,negotiated):
+	def new_operational (self, operational, negotiated):
 		for _ in self.write(operational.message(negotiated)):
 			yield _NOP
 		self.logger.message(self.me('>> OPERATIONAL %s' % str(operational)))
 		yield operational
 
-	def new_refresh (self,refresh):
+	def new_refresh (self, refresh):
 		for _ in self.write(refresh.message()):
 			yield _NOP
 		self.logger.message(self.me('>> REFRESH %s' % str(refresh)))

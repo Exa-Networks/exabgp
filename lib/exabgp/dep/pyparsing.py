@@ -698,7 +698,7 @@ class ParseResults(object):
 
 collections.MutableMapping.register(ParseResults)
 
-def col (loc,strg):
+def col (loc, strg):
     """Returns current column within a string, counting newlines as line separators.
    The first column is number 1.
 

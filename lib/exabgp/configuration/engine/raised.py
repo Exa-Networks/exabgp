@@ -14,7 +14,7 @@ class Raised (Exception):
 	tabsize = 3
 	syntax = ''
 
-	def __init__ (self,location,message,syntax=''):
+	def __init__ (self, location, message, syntax=''):
 		self.line = location.line.replace('\t',' '*self.tabsize)
 		self.idx_line = location.idx_line
 		self.idx_column = location.idx_column + (self.tabsize-1) * location.line[:location.idx_column].count('\t')

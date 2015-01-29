@@ -36,7 +36,7 @@ class Reactor (object):
 	# [hex(ord(c)) for c in os.popen('clear').read()]
 	clear = ''.join([chr(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a']])
 
-	def __init__ (self,configurations):
+	def __init__ (self, configurations):
 		self.ip = environment.settings().tcp.bind
 		self.port = environment.settings().tcp.port
 		self.respawn = environment.settings().api.respawn
@@ -67,28 +67,28 @@ class Reactor (object):
 		signal.signal(signal.SIGUSR1, self.sigusr1)
 		signal.signal(signal.SIGUSR2, self.sigusr2)
 
-	def sigterm (self,signum, frame):
+	def sigterm (self, signum, frame):
 		self.logger.reactor("SIG TERM received - shutdown")
 		self._shutdown = True
 
-	def sighup (self,signum, frame):
+	def sighup (self, signum, frame):
 		self.logger.reactor("SIG HUP received - shutdown")
 		self._shutdown = True
 
-	def sigalrm (self,signum, frame):
+	def sigalrm (self, signum, frame):
 		self.logger.reactor("SIG ALRM received - restart")
 		self._restart = True
 
-	def sigusr1 (self,signum, frame):
+	def sigusr1 (self, signum, frame):
 		self.logger.reactor("SIG USR1 received - reload configuration")
 		self._reload = True
 
-	def sigusr2 (self,signum, frame):
+	def sigusr2 (self, signum, frame):
 		self.logger.reactor("SIG USR2 received - reload configuration and processes")
 		self._reload = True
 		self._reload_processes = True
 
-	def ready (self,ios,sleeptime=0):
+	def ready (self, ios, sleeptime=0):
 		# never sleep a negative number of second (if the rounding is negative somewhere)
 		# never sleep more than one second (should the clock time change during two time.time calls)
 		sleeptime = min(max(0.0,sleeptime),1.0)
@@ -289,7 +289,7 @@ class Reactor (object):
 		for key in self.peers.keys():
 			self.peers[key].stop()
 
-	def reload (self,restart=False):
+	def reload (self, restart=False):
 		"""reload the configuration and send to the peer the route which changed"""
 		self.logger.reactor("Performing reload of exabgp %s" % version)
 
@@ -384,12 +384,12 @@ class Reactor (object):
 		self.processes.terminate()
 		self.processes.start()
 
-	def unschedule (self,peer):
+	def unschedule (self, peer):
 		key = peer.neighbor.name()
 		if key in self.peers:
 			del self.peers[key]
 
-	def answer (self,service,string):
+	def answer (self, service, string):
 		self.processes.write(service,string)
 		self.logger.reactor('Responding to %s : %s' % (service,string))
 
@@ -409,13 +409,13 @@ class Reactor (object):
 		self._running = None
 
 	@staticmethod
-	def match_neighbor (description,name):
+	def match_neighbor (description, name):
 		for string in description:
 			if re.search('(^|[\s])%s($|[\s,])' % re.escape(string), name) is None:
 				return False
 		return True
 
-	def match_neighbors (self,descriptions):
+	def match_neighbors (self, descriptions):
 		"""returns the sublist of peers matching the description passed, or None if no description is given"""
 		if not descriptions:
 			return self.peers.keys()
@@ -428,8 +428,8 @@ class Reactor (object):
 						returned.append(key)
 		return returned
 
-	def nexthops (self,peers):
+	def nexthops (self, peers):
 		return dict((peer,self.peers[peer].neighbor.local_address) for peer in peers)
 
-	def plan (self,callback):
+	def plan (self, callback):
 		self._pending.append(callback)

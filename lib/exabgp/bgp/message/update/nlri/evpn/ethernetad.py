@@ -35,5 +35,5 @@ class EthernetAD (EVPN):
 	NAME = "Ethernet Auto-Discovery (A-D)"
 	SHORT_NAME = "EthernetAD"
 
-	def __init__ (self,**args):
+	def __init__ (self, **args):
 		raise Exception('unimplemented')

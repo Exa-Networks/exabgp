@@ -29,7 +29,7 @@ class IP (object):
 	def __init__ (self):
 		raise Exception("You should use IP.create() to use IP")
 
-	def init (self,ip,packed):
+	def init (self, ip, packed):
 		self.ip = ip
 		self.packed = packed
 		return self
@@ -91,7 +91,7 @@ class IP (object):
 	def __repr__ (self):
 		return str(self)
 
-	def __cmp__ (self,other):
+	def __cmp__ (self, other):
 		if not isinstance(other, self.__class__):
 			return -1
 		if self.packed == other.packed:
@@ -104,7 +104,7 @@ class IP (object):
 		return hash(str(self.__class__.__name__) + self.packed)
 
 	@classmethod
-	def klass (cls,ip):
+	def klass (cls, ip):
 		# the orders matters as ::FFFF:<ipv4> is an IPv6 address
 		if ':' in ip:
 			afi = IPv6.afi
@@ -116,7 +116,7 @@ class IP (object):
 			return cls._known[afi]
 
 	@classmethod
-	def create (cls,ip,data=None,klass=None):
+	def create (cls, ip, data=None,klass=None):
 		if klass:
 			return klass(ip,data)
 		return cls.klass(ip)(ip,data)
@@ -126,7 +126,7 @@ class IP (object):
 		cls._known[cls.afi] = cls
 
 	@classmethod
-	def unpack (cls,data,klass=None):
+	def unpack (cls, data, klass=None):
 		return cls.create(IP.ntop(data),data,klass)
 
 
@@ -136,7 +136,7 @@ class IP (object):
 class _NoIP (object):
 	packed = ''
 
-	def pack (self,data,negotiated=None):
+	def pack (self, data, negotiated=None):
 		return ''
 
 	def __str__ (self):
@@ -154,7 +154,7 @@ class IPv4 (IP):
 
 	__slots__ = []
 
-	def __init__ (self,ip,packed=None):
+	def __init__ (self, ip, packed=None):
 		self.init(ip,packed if packed else IP.pton(ip))
 
 	def __len__ (self):
@@ -182,7 +182,7 @@ class IPv4 (IP):
 
 	# klass is a trick for subclasses of IP/IPv4 such as NextHop / OriginatorID
 	@classmethod
-	def unpack (cls,data,klass=None):
+	def unpack (cls, data, klass=None):
 		ip = socket.inet_ntop(socket.AF_INET,data)
 		if klass:
 			return klass(ip,data)
@@ -200,7 +200,7 @@ class IPv6 (IP):
 
 	__slots__ = []
 
-	def __init__ (self,ip,packed=None):
+	def __init__ (self, ip, packed=None):
 		self.init(ip,packed if packed else socket.inet_pton(socket.AF_INET6,ip))
 
 	def __len__ (self):
@@ -227,7 +227,7 @@ class IPv6 (IP):
 		return socket.inet_ntop(socket.AF_INET6,data)
 
 	@classmethod
-	def unpack (cls,data,klass=None):
+	def unpack (cls, data, klass=None):
 		ip6 = socket.inet_ntop(socket.AF_INET6,data)
 		if klass:
 			return klass(ip6)

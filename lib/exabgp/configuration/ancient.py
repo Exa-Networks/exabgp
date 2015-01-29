@@ -119,7 +119,7 @@ class Name (str):
 
 
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
-def pack_int (afi,integer,mask):
+def pack_int (afi, integer, mask):
 	return ''.join([chr((integer >> (offset * 8)) & 0xff) for offset in range(IP.length(afi)-1,-1,-1)])
 
 
@@ -271,7 +271,7 @@ class Configuration (object):
 	_str_vpls_bad_label = "you tried to configure an invalid l2vpn vpls label"
 	_str_vpls_bad_enpoint = "you tried to configure an invalid l2vpn vpls endpoint"
 
-	def __init__ (self,configurations,text=False):
+	def __init__ (self, configurations, text=False):
 		self.debug = environment.settings().debug.configuration
 		self.api_encoder = environment.settings().api.encoder
 		self.cli_socket = environment.settings().api.socket
@@ -452,7 +452,7 @@ class Configuration (object):
 		return True
 
 	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
-	def change_to_peers (self,change,peers):
+	def change_to_peers (self, change, peers):
 		result = True
 		for neighbor in self.neighbor:
 			if neighbor in peers:
@@ -464,7 +464,7 @@ class Configuration (object):
 		return result
 
 	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
-	def eor_to_peers (self,family,peers):
+	def eor_to_peers (self, family, peers):
 		result = True
 		for neighbor in self.neighbor:
 			if neighbor in peers:
@@ -472,7 +472,7 @@ class Configuration (object):
 		return result
 
 	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
-	def operational_to_peers (self,operational,peers):
+	def operational_to_peers (self, operational, peers):
 		result = True
 		for neighbor in self.neighbor:
 			if neighbor in peers:
@@ -486,7 +486,7 @@ class Configuration (object):
 		return result
 
 	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
-	def refresh_to_peers (self,refresh,peers):
+	def refresh_to_peers (self, refresh, peers):
 		result = True
 		for neighbor in self.neighbor:
 			if neighbor in peers:
@@ -499,7 +499,7 @@ class Configuration (object):
 
 	# Tokenisation
 
-	def _tokenise (self,text):
+	def _tokenise (self, text):
 		r = []
 		config = ''
 		for line in text:
@@ -540,7 +540,7 @@ class Configuration (object):
 	# Flow control ......................
 
 	# name is not used yet but will come really handy if we have name collision :D
-	def _dispatch (self,scope,name,multi,single,location=None):
+	def _dispatch (self, scope, name, multi, single, location=None):
 		if location:
 			self._location = location
 			self._flow_state = 'out'
@@ -566,7 +566,7 @@ class Configuration (object):
 			return None
 		return False
 
-	def _multi_line (self,scope,name,tokens,valid):
+	def _multi_line (self, scope, name, tokens, valid):
 		command = tokens[0]
 
 		if valid and command not in valid:
@@ -661,7 +661,7 @@ class Configuration (object):
 				return False
 		return False
 
-	def _single_line (self,scope,name,tokens,valid):
+	def _single_line (self, scope, name, tokens, valid):
 		command = tokens[0]
 		if valid and command not in valid:
 			self._error = 'invalid keyword "%s"' % command
@@ -857,7 +857,7 @@ class Configuration (object):
 
 	# Programs used to control exabgp
 
-	def _multi_process (self,scope,tokens):
+	def _multi_process (self, scope, tokens):
 		while True:
 			r = self._dispatch(
 				scope,'process',
@@ -897,11 +897,11 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _set_process_command (self,scope,command,value):
+	def _set_process_command (self, scope, command, value):
 		scope[-1][command] = True
 		return True
 
-	def _set_process_encoder (self,scope,command,value):
+	def _set_process_encoder (self, scope, command, value):
 		if value and value[0] in ('text','json'):
 			scope[-1][command] = value[0]
 			return True
@@ -910,7 +910,7 @@ class Configuration (object):
 		if self.debug: raise Exception()  # noqa
 		return False
 
-	def _set_process_run (self,scope,command,value):
+	def _set_process_run (self, scope, command, value):
 		line = ' '.join(value).strip()
 		if len(line) > 2 and line[0] == line[-1] and line[0] in ['"',"'"]:
 			line = line[1:-1]
@@ -992,7 +992,7 @@ class Configuration (object):
 
 	# Limit the AFI/SAFI pair announced to peers
 
-	def _multi_family (self,scope,tokens):
+	def _multi_family (self, scope, tokens):
 		# we know all the families we should use
 		self._family = False
 		scope[-1]['families'] = []
@@ -1009,11 +1009,11 @@ class Configuration (object):
 		self._family = False
 		return True
 
-	def _set_family_inet4 (self,scope,tokens):
+	def _set_family_inet4 (self, scope, tokens):
 		self.logger.configuration("the word inet4 is deprecated, please use ipv4 instead",'error')
 		return self._set_family_ipv4 (scope,tokens)
 
-	def _set_family_ipv4 (self,scope,tokens):
+	def _set_family_ipv4 (self, scope, tokens):
 		if self._family:
 			self._error = 'ipv4 can not be used with all or minimal'
 			if self.debug: raise Exception()  # noqa
@@ -1042,11 +1042,11 @@ class Configuration (object):
 			return False
 		return True
 
-	def _set_family_inet6 (self,scope,tokens):
+	def _set_family_inet6 (self, scope, tokens):
 		self.logger.configuration("the word inet6 is deprecated, please use ipv6 instead",'error')
 		return self._set_family_ipv6 (scope,tokens)
 
-	def _set_family_ipv6 (self,scope,tokens):
+	def _set_family_ipv6 (self, scope, tokens):
 		try:
 			if self._family:
 				self._error = 'ipv6 can not be used with all or minimal'
@@ -1070,7 +1070,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _set_family_l2vpn (self,scope,tokens):
+	def _set_family_l2vpn (self, scope, tokens):
 		try:
 			if self._family:
 				self._error = 'l2vpn can not be used with all or minimal'
@@ -1088,7 +1088,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _set_family_minimal (self,scope,tokens):
+	def _set_family_minimal (self, scope, tokens):
 		if scope[-1]['families']:
 			self._error = 'minimal can not be used with any other options'
 			if self.debug: raise Exception()  # noqa
@@ -1097,7 +1097,7 @@ class Configuration (object):
 		self._family = True
 		return True
 
-	def _set_family_all (self,scope,tokens):
+	def _set_family_all (self, scope, tokens):
 		if scope[-1]['families']:
 			self._error = 'all can not be used with any other options'
 			if self.debug: raise Exception()  # noqa
@@ -1108,7 +1108,7 @@ class Configuration (object):
 
 	# capacity
 
-	def _multi_capability (self,scope,tokens):
+	def _multi_capability (self, scope, tokens):
 		# we know all the families we should use
 		self._capability = False
 		while True:
@@ -1127,7 +1127,7 @@ class Configuration (object):
 				break
 		return True
 
-	def _set_gracefulrestart (self,scope,command,value):
+	def _set_gracefulrestart (self, scope, command, value):
 		if not len(value):
 			scope[-1][command] = None
 			return True
@@ -1147,7 +1147,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _set_addpath (self,scope,command,value):
+	def _set_addpath (self, scope, command, value):
 		try:
 			ap = value[0].lower()
 			apv = 0
@@ -1164,7 +1164,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _set_boolean (self,scope,command,value,default='true'):
+	def _set_boolean (self, scope, command, value, default='true'):
 		try:
 			boolean = value[0].lower() if value else default
 			if boolean in ('true','enable','enabled'):
@@ -1181,7 +1181,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _set_asn4 (self,scope,command,value):
+	def _set_asn4 (self, scope, command, value):
 		try:
 			if not value:
 				scope[-1][command] = True
@@ -1202,7 +1202,7 @@ class Configuration (object):
 
 	# route grouping with watchdog
 
-	def _route_watchdog (self,scope,tokens):
+	def _route_watchdog (self, scope, tokens):
 		try:
 			w = tokens.pop(0)
 			if w.lower() in ['announce','withdraw']:
@@ -1220,7 +1220,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _route_withdraw (self,scope,tokens):
+	def _route_withdraw (self, scope, tokens):
 		try:
 			scope[-1]['announce'][-1].attributes.add(Withdrawn())
 			return True
@@ -1231,7 +1231,7 @@ class Configuration (object):
 
 	# Route name
 
-	def _route_name (self,scope,tokens):
+	def _route_name (self, scope, tokens):
 		try:
 			w = tokens.pop(0)
 		except IndexError:
@@ -1249,7 +1249,7 @@ class Configuration (object):
 
 	# Group Neighbor
 
-	def _multi_group (self,scope,address):
+	def _multi_group (self, scope, address):
 		scope.append({})
 		while True:
 			r = self._dispatch(
@@ -1272,7 +1272,7 @@ class Configuration (object):
 				scope.pop(-1)
 				return True
 
-	def _make_neighbor (self,scope):
+	def _make_neighbor (self, scope):
 		# we have local_scope[-2] as the group template and local_scope[-1] as the peer specific
 		if len(scope) > 1:
 			for key,content in scope[-2].iteritems():
@@ -1472,7 +1472,7 @@ class Configuration (object):
 		scope.pop(-1)
 		return True
 
-	def _multi_neighbor (self,scope,tokens):
+	def _multi_neighbor (self, scope, tokens):
 		if len(tokens) != 1:
 			self._error = 'syntax: neighbor <ip> { <options> }'
 			if self.debug: raise Exception()  # noqa
@@ -1507,7 +1507,7 @@ class Configuration (object):
 
 	# Command Neighbor
 
-	def _set_router_id (self,scope,command,value):
+	def _set_router_id (self, scope, command, value):
 		try:
 			ip = RouterID(value[0])
 		except (IndexError,ValueError):
@@ -1517,7 +1517,7 @@ class Configuration (object):
 		scope[-1][command] = ip
 		return True
 
-	def _set_ip (self,scope,command,value):
+	def _set_ip (self, scope, command, value):
 		try:
 			ip = IP.create(value[0])
 		except (IndexError,ValueError):
@@ -1527,7 +1527,7 @@ class Configuration (object):
 		scope[-1][command] = ip
 		return True
 
-	def _set_description (self,scope,tokens):
+	def _set_description (self, scope, tokens):
 		text = ' '.join(tokens)
 		if len(text) < 2 or text[0] != '"' or text[-1] != '"' or text[1:-1].count('"'):
 			self._error = 'syntax: description "<description>"'
@@ -1537,7 +1537,7 @@ class Configuration (object):
 		return True
 
 	# will raise ValueError if the ASN is not correct
-	def _newASN (self,value):
+	def _newASN (self, value):
 		if value.count('.'):
 			high,low = value.split('.',1)
 			as_number = (int(high) << 16) + int(low)
@@ -1545,7 +1545,7 @@ class Configuration (object):
 			as_number = int(value)
 		return ASN(as_number)
 
-	def _set_asn (self,scope,command,value):
+	def _set_asn (self, scope, command, value):
 		try:
 			scope[-1][command] = self._newASN(value[0])
 			return True
@@ -1554,7 +1554,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _set_passive (self,scope,command,value):
+	def _set_passive (self, scope, command, value):
 		if value:
 			self._error = '"%s" is an invalid for passive' % ' '.join(value)
 			if self.debug: raise Exception()  # noqa
@@ -1563,7 +1563,7 @@ class Configuration (object):
 		scope[-1][command] = True
 		return True
 
-	def _set_holdtime (self,scope,command,value):
+	def _set_holdtime (self, scope, command, value):
 		try:
 			holdtime = HoldTime(value[0])
 			if holdtime < 3 and holdtime != 0:
@@ -1577,7 +1577,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _set_md5 (self,scope,command,value):
+	def _set_md5 (self, scope, command, value):
 		md5 = value[0]
 		if len(md5) > 2 and md5[0] == md5[-1] and md5[0] in ['"',"'"]:
 			md5 = md5[1:-1]
@@ -1592,7 +1592,7 @@ class Configuration (object):
 		scope[-1][command] = md5
 		return True
 
-	def _set_ttl (self,scope,command,value):
+	def _set_ttl (self, scope, command, value):
 		if not len(value):
 			scope[-1][command] = self.TTL_SECURITY
 			return True
@@ -1612,7 +1612,7 @@ class Configuration (object):
 
 	#  Group Static ................
 
-	def _multi_static (self,scope,tokens):
+	def _multi_static (self, scope, tokens):
 		if len(tokens) != 0:
 			self._error = 'syntax: static { route; route; ... }'
 			if self.debug: raise Exception()  # noqa
@@ -1630,7 +1630,7 @@ class Configuration (object):
 
 	# Group Route  ........
 
-	def _split_last_route (self,scope):
+	def _split_last_route (self, scope):
 		# if the route does not need to be broken in smaller routes, return
 		change = scope[-1]['announce'][-1]
 		if Attribute.CODE.INTERNAL_SPLIT not in change.attributes:
@@ -1686,7 +1686,7 @@ class Configuration (object):
 
 		return True
 
-	def _insert_static_route (self,scope,tokens):
+	def _insert_static_route (self, scope, tokens):
 		try:
 			ip = tokens.pop(0)
 		except IndexError:
@@ -1721,7 +1721,7 @@ class Configuration (object):
 		scope[-1]['announce'].append(update)
 		return True
 
-	def _check_static_route (self,scope):
+	def _check_static_route (self, scope):
 		update = scope[-1]['announce'][-1]
 		if update.nlri.nexthop is NoIP:
 			self._error = 'syntax: route <ip>/<mask> { next-hop <ip>; }'
@@ -1729,7 +1729,7 @@ class Configuration (object):
 			return False
 		return True
 
-	def _multi_static_route (self,scope,tokens):
+	def _multi_static_route (self, scope, tokens):
 		if len(tokens) != 1:
 			self._error = self._str_route_error
 			if self.debug: raise Exception()  # noqa
@@ -1755,7 +1755,7 @@ class Configuration (object):
 			if r is None:
 				return self._split_last_route(scope)
 
-	def _single_static_route (self,scope,tokens):
+	def _single_static_route (self, scope, tokens):
 		if len(tokens) < 3:
 			return False
 
@@ -1789,7 +1789,7 @@ class Configuration (object):
 
 		return self._split_last_route(scope)
 
-	def _single_l2vpn_vpls (self,scope,tokens):
+	def _single_l2vpn_vpls (self, scope, tokens):
 		# TODO: actual length?(like rd+lb+bo+ve+bs+rd; 14 or so)
 		if len(tokens) < 10:
 			return False
@@ -1818,7 +1818,7 @@ class Configuration (object):
 
 	# Command Route
 
-	def _route_generic_attribute (self,scope,tokens):
+	def _route_generic_attribute (self, scope, tokens):
 		try:
 			start = tokens.pop(0)
 			code = tokens.pop(0).lower()
@@ -1863,7 +1863,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _route_next_hop (self,scope,tokens):
+	def _route_next_hop (self, scope, tokens):
 		if scope[-1]['announce'][-1].attributes.has(Attribute.CODE.NEXT_HOP):
 			self._error = self._str_route_error
 			if self.debug: raise Exception()  # noqa
@@ -1903,7 +1903,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _route_origin (self,scope,tokens):
+	def _route_origin (self, scope, tokens):
 		try:
 			data = tokens.pop(0).lower()
 			if data == 'igp':
@@ -1923,7 +1923,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _route_aspath (self,scope,tokens):
+	def _route_aspath (self, scope, tokens):
 		as_seq = []
 		as_set = []
 		asn = tokens.pop(0)
@@ -1969,7 +1969,7 @@ class Configuration (object):
 		scope[-1]['announce'][-1].attributes.add(ASPath(as_seq,as_set))
 		return True
 
-	def _route_med (self,scope,tokens):
+	def _route_med (self, scope, tokens):
 		try:
 			scope[-1]['announce'][-1].attributes.add(MED(int(tokens.pop(0))))
 			return True
@@ -1978,7 +1978,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _route_aigp (self,scope,tokens):
+	def _route_aigp (self, scope, tokens):
 		try:
 			number = tokens.pop(0)
 			base = 16 if number.lower().startswith('0x') else 10
@@ -1989,7 +1989,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _route_local_preference (self,scope,tokens):
+	def _route_local_preference (self, scope, tokens):
 		try:
 			scope[-1]['announce'][-1].attributes.add(LocalPreference(int(tokens.pop(0))))
 			return True
@@ -1998,7 +1998,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _route_atomic_aggregate (self,scope,tokens):
+	def _route_atomic_aggregate (self, scope, tokens):
 		try:
 			scope[-1]['announce'][-1].attributes.add(AtomicAggregate())
 			return True
@@ -2007,7 +2007,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _route_aggregator (self,scope,tokens):
+	def _route_aggregator (self, scope, tokens):
 		try:
 			if tokens:
 				if tokens.pop(0) != '(':
@@ -2036,7 +2036,7 @@ class Configuration (object):
 		scope[-1]['announce'][-1].attributes.add(Aggregator(local_as,local_address))
 		return True
 
-	def _route_path_information (self,scope,tokens):
+	def _route_path_information (self, scope, tokens):
 		try:
 			pi = tokens.pop(0)
 			if pi.isdigit():
@@ -2049,7 +2049,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _parse_community (self,scope,data):
+	def _parse_community (self, scope, data):
 		separator = data.find(':')
 		if separator > 0:
 			prefix = int(data[:separator])
@@ -2084,7 +2084,7 @@ class Configuration (object):
 			else:
 				raise ValueError('invalid community name %s' % data)
 
-	def _route_originator_id (self,scope,tokens):
+	def _route_originator_id (self, scope, tokens):
 		try:
 			scope[-1]['announce'][-1].attributes.add(OriginatorID(tokens.pop(0)))
 			return True
@@ -2093,7 +2093,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _route_cluster_list (self,scope,tokens):
+	def _route_cluster_list (self, scope, tokens):
 		_list = []
 		clusterid = tokens.pop(0)
 		try:
@@ -2120,7 +2120,7 @@ class Configuration (object):
 		scope[-1]['announce'][-1].attributes.add(clusterlist)
 		return True
 
-	def _route_community (self,scope,tokens):
+	def _route_community (self, scope, tokens):
 		communities = Communities()
 		community = tokens.pop(0)
 		try:
@@ -2144,7 +2144,7 @@ class Configuration (object):
 		scope[-1]['announce'][-1].attributes.add(communities)
 		return True
 
-	def _parse_extended_community (self,scope,data):
+	def _parse_extended_community (self, scope, data):
 		SIZE_H = 0xFFFF
 
 		if data[:2].lower() == '0x':
@@ -2238,7 +2238,7 @@ class Configuration (object):
 		else:
 			raise ValueError('invalid extended community %s - lc+gc' % data)
 
-	def _route_extended_community (self,scope,tokens):
+	def _route_extended_community (self, scope, tokens):
 		attributes = scope[-1]['announce'][-1].attributes
 		if Attribute.CODE.EXTENDED_COMMUNITY in attributes:
 			extended_communities = attributes[Attribute.CODE.EXTENDED_COMMUNITY]
@@ -2267,7 +2267,7 @@ class Configuration (object):
 			return False
 		return True
 
-	def _route_split (self,scope,tokens):
+	def _route_split (self, scope, tokens):
 		try:
 			size = tokens.pop(0)
 			if not size or size[0] != '/':
@@ -2279,7 +2279,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _route_label (self,scope,tokens):
+	def _route_label (self, scope, tokens):
 		labels = []
 		label = tokens.pop(0)
 		try:
@@ -2307,7 +2307,7 @@ class Configuration (object):
 		nlri.labels = Labels(labels)
 		return True
 
-	def _route_rd (self,scope,tokens,safi):
+	def _route_rd (self, scope, tokens, safi):
 		try:
 			try:
 				data = tokens.pop(0)
@@ -2347,7 +2347,7 @@ class Configuration (object):
 
 	# VPLS
 
-	def _multi_l2vpn (self,scope,tokens):
+	def _multi_l2vpn (self, scope, tokens):
 		if len(tokens) != 0:
 			self._error = self._str_vpls_error
 			if self.debug: raise Exception()  # noqa
@@ -2364,7 +2364,7 @@ class Configuration (object):
 				break
 		return True
 
-	def _insert_l2vpn_vpls (self,scope,tokens=None):
+	def _insert_l2vpn_vpls (self, scope, tokens=None):
 		try:
 			attributes = Attributes()
 			change = Change(VPLS(None,None,None,None,None),attributes)
@@ -2379,7 +2379,7 @@ class Configuration (object):
 		scope[-1]['announce'].append(change)
 		return True
 
-	def _multi_l2vpn_vpls (self,scope,tokens):
+	def _multi_l2vpn_vpls (self, scope, tokens):
 		if len(tokens) > 1:
 			self._error = self._str_vpls_error
 			if self.debug: raise Exception()  # noqa
@@ -2409,7 +2409,7 @@ class Configuration (object):
 
 	# Group Flow  ........
 
-	def _multi_flow (self,scope,tokens):
+	def _multi_flow (self, scope, tokens):
 		if len(tokens) != 0:
 			self._error = self._str_flow_error
 			if self.debug: raise Exception()  # noqa
@@ -2427,7 +2427,7 @@ class Configuration (object):
 				break
 		return True
 
-	def _insert_flow_route (self,scope,tokens=None):
+	def _insert_flow_route (self, scope, tokens=None):
 		if self._flow_state != 'out':
 			self._error = self._str_flow_error
 			if self.debug: raise Exception()  # noqa
@@ -2450,11 +2450,11 @@ class Configuration (object):
 		scope[-1]['announce'].append(flow)
 		return True
 
-	def _check_flow_route (self,scope):
+	def _check_flow_route (self, scope):
 		self.logger.configuration('warning: no check on flows are implemented')
 		return True
 
-	def _check_l2vpn_vpls (self,scope):
+	def _check_l2vpn_vpls (self, scope):
 		nlri = scope[-1]['announce'][-1].nlri
 
 		if nlri.ve is None:
@@ -2474,7 +2474,7 @@ class Configuration (object):
 
 		return True
 
-	def _multi_flow_route (self,scope,tokens):
+	def _multi_flow_route (self, scope, tokens):
 		if len(tokens) > 1:
 			self._error = self._str_flow_error
 			if self.debug: raise Exception()  # noqa
@@ -2539,7 +2539,7 @@ class Configuration (object):
 
 	# ..........................................
 
-	def _multi_match (self,scope,tokens):
+	def _multi_match (self, scope, tokens):
 		if len(tokens) != 0:
 			self._error = self._str_flow_error
 			if self.debug: raise Exception()  # noqa
@@ -2569,7 +2569,7 @@ class Configuration (object):
 				break
 		return True
 
-	def _multi_then (self,scope,tokens):
+	def _multi_then (self, scope, tokens):
 		if len(tokens) != 0:
 			self._error = self._str_flow_error
 			if self.debug: raise Exception()  # noqa
@@ -2601,7 +2601,7 @@ class Configuration (object):
 
 	# ..........................................
 
-	def _multi_receive (self,scope,tokens):
+	def _multi_receive (self, scope, tokens):
 		if len(tokens) != 0:
 			self._error = self._str_flow_error
 			if self.debug: raise Exception()  # noqa
@@ -2624,7 +2624,7 @@ class Configuration (object):
 				break
 		return True
 
-	def _multi_send (self,scope,tokens):
+	def _multi_send (self, scope, tokens):
 		if len(tokens) != 0:
 			self._error = self._str_flow_error
 			if self.debug: raise Exception()  # noqa
@@ -2644,7 +2644,7 @@ class Configuration (object):
 
 	# Command Flow
 
-	def _flow_source (self,scope,tokens):
+	def _flow_source (self, scope, tokens):
 		try:
 			data = tokens.pop(0)
 			if data.count('/') == 1:
@@ -2671,7 +2671,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _flow_destination (self,scope,tokens):
+	def _flow_destination (self, scope, tokens):
 		try:
 			data = tokens.pop(0)
 			if data.count('/') == 1:
@@ -2701,7 +2701,7 @@ class Configuration (object):
 
 	# to parse the port configuration of flow
 
-	def _operator (self,string):
+	def _operator (self, string):
 		try:
 			if string[0] == '=':
 				return NumericOperator.EQ,string[1:]
@@ -2719,7 +2719,7 @@ class Configuration (object):
 		except IndexError:
 			raise Exception('Invalid expression (too short) %s' % string)
 
-	def _value (self,string):
+	def _value (self, string):
 		l = 0
 		for c in string:
 			if c not in ['&',]:
@@ -2729,7 +2729,7 @@ class Configuration (object):
 		return string[:l],string[l:]
 
 	# parse =80 or >80 or <25 or &>10<20
-	def _flow_generic_expression (self,scope,tokens,klass):
+	def _flow_generic_expression (self, scope, tokens, klass):
 		try:
 			for test in tokens:
 				AND = BinaryOperator.NOP
@@ -2754,7 +2754,7 @@ class Configuration (object):
 			return False
 
 	# parse [ content1 content2 content3 ]
-	def _flow_generic_list (self,scope,tokens,klass):
+	def _flow_generic_list (self, scope, tokens, klass):
 		try:
 			name = tokens.pop(0)
 			AND = BinaryOperator.NOP
@@ -2779,51 +2779,51 @@ class Configuration (object):
 			return False
 		return True
 
-	def _flow_generic_condition (self,scope,tokens,klass):
+	def _flow_generic_condition (self, scope, tokens, klass):
 		if tokens[0][0] in ['=','>','<']:
 			return self._flow_generic_expression(scope,tokens,klass)
 		return self._flow_generic_list(scope,tokens,klass)
 
-	def _flow_route_anyport (self,scope,tokens):
+	def _flow_route_anyport (self, scope, tokens):
 		return self._flow_generic_condition(scope,tokens,FlowAnyPort)
 
-	def _flow_route_source_port (self,scope,tokens):
+	def _flow_route_source_port (self, scope, tokens):
 		return self._flow_generic_condition(scope,tokens,FlowSourcePort)
 
-	def _flow_route_destination_port (self,scope,tokens):
+	def _flow_route_destination_port (self, scope, tokens):
 		return self._flow_generic_condition(scope,tokens,FlowDestinationPort)
 
-	def _flow_route_packet_length (self,scope,tokens):
+	def _flow_route_packet_length (self, scope, tokens):
 		return self._flow_generic_condition(scope,tokens,FlowPacketLength)
 
-	def _flow_route_tcp_flags (self,scope,tokens):
+	def _flow_route_tcp_flags (self, scope, tokens):
 		return self._flow_generic_list(scope,tokens,FlowTCPFlag)
 
-	def _flow_route_protocol (self,scope,tokens):
+	def _flow_route_protocol (self, scope, tokens):
 		return self._flow_generic_list(scope,tokens,FlowIPProtocol)
 
-	def _flow_route_next_header (self,scope,tokens):
+	def _flow_route_next_header (self, scope, tokens):
 		return self._flow_generic_list(scope,tokens,FlowNextHeader)
 
-	def _flow_route_icmp_type (self,scope,tokens):
+	def _flow_route_icmp_type (self, scope, tokens):
 		return self._flow_generic_list(scope,tokens,FlowICMPType)
 
-	def _flow_route_icmp_code (self,scope,tokens):
+	def _flow_route_icmp_code (self, scope, tokens):
 		return self._flow_generic_list(scope,tokens,FlowICMPCode)
 
-	def _flow_route_fragment (self,scope,tokens):
+	def _flow_route_fragment (self, scope, tokens):
 		return self._flow_generic_list(scope,tokens,FlowFragment)
 
-	def _flow_route_dscp (self,scope,tokens):
+	def _flow_route_dscp (self, scope, tokens):
 		return self._flow_generic_condition(scope,tokens,FlowDSCP)
 
-	def _flow_route_traffic_class (self,scope,tokens):
+	def _flow_route_traffic_class (self, scope, tokens):
 		return self._flow_generic_condition(scope,tokens,FlowTrafficClass)
 
-	def _flow_route_flow_label (self,scope,tokens):
+	def _flow_route_flow_label (self, scope, tokens):
 		return self._flow_generic_condition(scope,tokens,FlowFlowLabel)
 
-	def _flow_route_next_hop (self,scope,tokens):
+	def _flow_route_next_hop (self, scope, tokens):
 		try:
 			change = scope[-1]['announce'][-1]
 
@@ -2840,10 +2840,10 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _flow_route_accept (self,scope,tokens):
+	def _flow_route_accept (self, scope, tokens):
 		return True
 
-	def _flow_route_discard (self,scope,tokens):
+	def _flow_route_discard (self, scope, tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
 			scope[-1]['announce'][-1].attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficRate(ASN(0),0))
@@ -2853,7 +2853,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _flow_route_rate_limit (self,scope,tokens):
+	def _flow_route_rate_limit (self, scope, tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
 			speed = int(tokens[0])
@@ -2869,7 +2869,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _flow_route_redirect (self,scope,tokens):
+	def _flow_route_redirect (self, scope, tokens):
 		try:
 			if tokens[0].count(':') == 1:
 				prefix,suffix = tokens[0].split(':',1)
@@ -2901,7 +2901,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _flow_route_redirect_next_hop (self,scope,tokens):
+	def _flow_route_redirect_next_hop (self, scope, tokens):
 		try:
 			change = scope[-1]['announce'][-1]
 
@@ -2918,7 +2918,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _flow_route_copy (self,scope,tokens):
+	def _flow_route_copy (self, scope, tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
 			if scope[-1]['announce'][-1].attributes.has(Attribute.CODE.NEXT_HOP):
@@ -2936,7 +2936,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _flow_route_mark (self,scope,tokens):
+	def _flow_route_mark (self, scope, tokens):
 		try:
 			dscp = int(tokens.pop(0))
 
@@ -2954,7 +2954,7 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-	def _flow_route_action (self,scope,tokens):
+	def _flow_route_action (self, scope, tokens):
 		try:
 			action = tokens.pop(0)
 			sample = 'sample' in action
@@ -2975,7 +2975,7 @@ class Configuration (object):
 
 	#  Group Operational ................
 
-	def _multi_operational (self,scope,tokens):
+	def _multi_operational (self, scope, tokens):
 		if len(tokens) != 0:
 			self._error = 'syntax: operational { command; command; ... }'
 			if self.debug: raise Exception()  # noqa
@@ -2991,10 +2991,10 @@ class Configuration (object):
 			if r is None:
 				return True
 
-	def _single_operational_asm (self,scope,value):
+	def _single_operational_asm (self, scope, value):
 		return self._single_operational(Advisory.ASM,scope,['afi','safi','advisory'],value)
 
-	def _single_operational (self,klass,scope,parameters,value):
+	def _single_operational (self, klass, scope, parameters, value):
 		def utf8 (string): return string.encode('utf-8')[1:-1]
 
 		convert = {
@@ -3071,7 +3071,7 @@ class Configuration (object):
 
 	# ..............................
 
-	def decode (self,update):
+	def decode (self, update):
 		# self check to see if we can decode what we encode
 		from exabgp.bgp.message.update import Update
 		from exabgp.bgp.message.open import Open

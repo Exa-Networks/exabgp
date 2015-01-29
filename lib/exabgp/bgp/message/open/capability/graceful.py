@@ -26,7 +26,7 @@ class Graceful (Capability,dict):
 	RESTART_STATE = 0x08
 	FORWARDING_STATE = 0x80
 
-	def set (self,restart_flag,restart_time,protos):
+	def set (self, restart_flag, restart_time, protos):
 		self.restart_flag = restart_flag
 		self.restart_time = restart_time & Graceful.TIME_MASK
 		for afi,safi,family_flag in protos:
@@ -64,7 +64,7 @@ class Graceful (Capability,dict):
 		return self.keys()
 
 	@staticmethod
-	def unpack_capability (instance,data,capability=None):  # pylint: disable=W0613
+	def unpack_capability (instance, data, capability=None):  # pylint: disable=W0613
 		# XXX: FIXME: should raise if instance was already setup
 		restart = unpack('!H',data[:2])[0]
 		restart_flag = restart >> 12

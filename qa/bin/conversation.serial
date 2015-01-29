@@ -13,7 +13,7 @@ from os import path
 class Alarm(Exception):
 	pass
 
-def alarm_handler (number,frame):  # pylint: disable=W0613
+def alarm_handler (number, frame):  # pylint: disable=W0613
 	raise Alarm()
 
 def main ():
@@ -67,7 +67,7 @@ def main ():
 
 	sys.exit(0 if success else 1)
 
-def check_sequence (group,exabgp,configurations,daemon,fname,show):
+def check_sequence (group, exabgp, configurations, daemon, fname, show):
 	os.environ['exabgp.tcp.once'] = 'true'
 	os.environ['exabgp.debug.defensive'] = 'true'
 	os.environ['exabgp.debug.rotate'] = 'true'
@@ -106,7 +106,7 @@ def check_sequence (group,exabgp,configurations,daemon,fname,show):
 		exabgp_output = ''
 		daemon_output = ''
 
-	def commands (command_exabgp,command_daemon):
+	def commands (command_exabgp, command_daemon):
 		r = ""
 		r += "command lines are:\n"
 		r += 'export exabgp_debug_defensive=true\n'

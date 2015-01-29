@@ -39,7 +39,7 @@ class MAC (EVPN):
 	NAME = "MAC/IP advertisement"
 	SHORT_NAME = "MACAdv"
 
-	def __init__ (self,rd,esi,etag,mac,maclen,label,ip,packed=None):
+	def __init__ (self, rd, esi, etag, mac, maclen, label,ip,packed=None):
 		EVPN.__init__(self,packed)
 		self.rd = rd
 		self.esi = esi
@@ -62,7 +62,7 @@ class MAC (EVPN):
 			self.label
 		)
 
-	def __cmp__ (self,other):
+	def __cmp__ (self, other):
 		if not isinstance(other,self.__class__):
 			return -1
 		if self.rd != other.rd:
@@ -101,7 +101,7 @@ class MAC (EVPN):
 		return self.packed
 
 	@classmethod
-	def unpack (cls,data):
+	def unpack (cls, data):
 		rd = RouteDistinguisher.unpack(data[:8])
 		esi = ESI.unpack(data[8:18])
 		etag = EthernetTag.unpack(data[18:22])

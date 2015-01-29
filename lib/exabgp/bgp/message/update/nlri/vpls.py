@@ -31,7 +31,7 @@ class VPLS (NLRI):
 
 	__slots__ = ['action','nexthop','rd','base','offset','size','ve','unique']
 
-	def __init__ (self,rd,ve,base,offset,size):
+	def __init__ (self, rd, ve, base, offset, size):
 		NLRI.__init__(self,AFI.l2vpn,SAFI.vpls)
 		self.action = OUT.ANNOUNCE
 		self.nexthop = None
@@ -45,7 +45,7 @@ class VPLS (NLRI):
 	def index (self):
 		return self.pack()
 
-	def pack (self,addpath=None):
+	def pack (self, addpath=None):
 		return '%s%s%s%s' % (
 			'\x00\x11',  # pack('!H',17)
 			self.rd.pack(),
@@ -87,7 +87,7 @@ class VPLS (NLRI):
 		return self.extensive()
 
 	@classmethod
-	def unpack (cls,afi,safi,data,addpath,nexthop,action):
+	def unpack (cls, afi, safi, data, addpath, nexthop, action):
 		# label is 20bits, stored using 3 bytes, 24 bits
 		length, = unpack('!H',data[0:2])
 		if len(data) != length+2:

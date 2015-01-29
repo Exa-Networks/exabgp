@@ -20,7 +20,7 @@ class ExtendedCommunities (Communities):
 	ID = Attribute.CODE.EXTENDED_COMMUNITY
 
 	@staticmethod
-	def unpack (data,negotiated):
+	def unpack (data, negotiated):
 		communities = ExtendedCommunities()
 		while data:
 			if data and len(data) < 8:

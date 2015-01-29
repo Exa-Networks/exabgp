@@ -31,7 +31,7 @@ class MultiProtocol (Capability,list):
 		return rs
 
 	@staticmethod
-	def unpack_capability (instance,data,capability=None):  # pylint: disable=W0613
+	def unpack_capability (instance, data, capability=None):  # pylint: disable=W0613
 		# XXX: FIXME: we should raise if we have twice the same AFI/SAFI
 		afi = AFI.unpack(data[:2])
 		safi = SAFI.unpack(data[3])

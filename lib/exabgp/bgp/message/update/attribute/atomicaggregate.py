@@ -20,7 +20,7 @@ class AtomicAggregate (Attribute):
 
 	__slots__ = []
 
-	def pack (self,negotiated=None):
+	def pack (self, negotiated=None):
 		return self._attribute('')
 
 	def __len__ (self):
@@ -29,7 +29,7 @@ class AtomicAggregate (Attribute):
 	def __str__ (self):
 		return ''
 
-	def __cmp__ (self,other):
+	def __cmp__ (self, other):
 		if not isinstance(other,self.__class__):
 			return -1
 		return 0
@@ -38,7 +38,7 @@ class AtomicAggregate (Attribute):
 		return 0
 
 	@classmethod
-	def unpack (cls,data,negotiated):
+	def unpack (cls, data, negotiated):
 		if data:
 			raise Notify(3,2,'invalid ATOMIC_AGGREGATE %s' % [hex(ord(_)) for _ in data])
 		return cls()

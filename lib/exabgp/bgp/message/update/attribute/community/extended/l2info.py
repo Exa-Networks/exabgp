@@ -22,7 +22,7 @@ class L2Info (ExtendedCommunity):
 
 	__slots__ = ['encaps','control','mtu','reserved']
 
-	def __init__ (self,encaps,control,mtu,reserved,community=None):
+	def __init__ (self, encaps, control, mtu, reserved, community=None):
 		self.encaps = encaps
 		self.control = control
 		self.mtu = mtu

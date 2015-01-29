@@ -20,7 +20,7 @@ class RouteTargetConstraint(Address):
 
 	__slots__ = ['origin','rt']
 
-	def __init__ (self,afi,safi,origin,rt):
+	def __init__ (self, afi, safi, origin, rt):
 		Address.__init__(self,afi,safi)
 		self.origin = origin
 		self.rt = rt
@@ -34,7 +34,7 @@ class RouteTargetConstraint(Address):
 	def __repr__ (self):
 		return str(self)
 
-	def __cmp__ (self,other):
+	def __cmp__ (self, other):
 		if not isinstance(other,self.__class__):
 			return -1
 		if self.origin != other.origin:
@@ -52,7 +52,7 @@ class RouteTargetConstraint(Address):
 		return pack("!B",0)
 
 	@staticmethod
-	def unpack (afi,safi,data):
+	def unpack (afi, safi, data):
 		length = ord(data[0])
 
 		if length == 0:

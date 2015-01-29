@@ -44,30 +44,30 @@ def _extract_neighbors (command):
 	return returned,command
 
 
-def shutdown (self,reactor,service,command):
+def shutdown (self, reactor, service, command):
 	reactor.api_shutdown()
 	reactor.answer(service,'shutdown in progress')
 	return True
 
 
-def reload (self,reactor,service,command):
+def reload (self, reactor, service, command):
 	reactor.api_reload()
 	reactor.answer(service,'reload in progress')
 	return True
 
 
-def restart (self,reactor,service,command):
+def restart (self, reactor, service, command):
 	reactor.api_restart()
 	reactor.answer(service,'restart in progress')
 	return True
 
 
-def version (self,reactor,service,command):
+def version (self, reactor, service, command):
 	reactor.answer(service,'exabgp %s' % _version)
 	return True
 
 
-def teardown (self,reactor,service,command):
+def teardown (self, reactor, service, command):
 	try:
 		descriptions,command = _extract_neighbors(command)
 		_,code = command.split(' ',1)
@@ -83,7 +83,7 @@ def teardown (self,reactor,service,command):
 		return False
 
 
-def show_neighbor (self,reactor,service,command):
+def show_neighbor (self, reactor, service, command):
 	def callback ():
 		for key in reactor.configuration.neighbor.keys():
 			neighbor = reactor.configuration.neighbor[key]
@@ -95,7 +95,7 @@ def show_neighbor (self,reactor,service,command):
 	return True
 
 
-def show_neighbors (self,reactor,service,command):
+def show_neighbors (self, reactor, service, command):
 	def callback ():
 		for key in reactor.configuration.neighbor.keys():
 			neighbor = reactor.configuration.neighbor[key]
@@ -107,7 +107,7 @@ def show_neighbors (self,reactor,service,command):
 	return True
 
 
-def show_routes (self,reactor,service,command):
+def show_routes (self, reactor, service, command):
 	def callback ():
 		for key in reactor.configuration.neighbor.keys():
 			neighbor = reactor.configuration.neighbor[key]
@@ -119,7 +119,7 @@ def show_routes (self,reactor,service,command):
 	return True
 
 
-def show_routes_extensive (self,reactor,service,command):
+def show_routes_extensive (self, reactor, service, command):
 	def callback ():
 		for key in reactor.configuration.neighbor.keys():
 			neighbor = reactor.configuration.neighbor[key]
@@ -132,7 +132,7 @@ def show_routes_extensive (self,reactor,service,command):
 
 
 
-def announce_watchdog (self,reactor,service,command):
+def announce_watchdog (self, reactor, service, command):
 	def callback (name):
 		for neighbor in reactor.configuration.neighbor:
 			reactor.configuration.neighbor[neighbor].rib.outgoing.announce_watchdog(name)
@@ -147,7 +147,7 @@ def announce_watchdog (self,reactor,service,command):
 	return True
 
 
-def withdraw_watchdog (self,reactor,service,command):
+def withdraw_watchdog (self, reactor, service, command):
 	def callback (name):
 		for neighbor in reactor.configuration.neighbor:
 			reactor.configuration.neighbor[neighbor].rib.outgoing.withdraw_watchdog(name)
@@ -161,8 +161,8 @@ def withdraw_watchdog (self,reactor,service,command):
 	return True
 
 
-def flush_route (self,reactor,service,command):
-	def callback (self,peers):
+def flush_route (self, reactor, service, command):
+	def callback (self, peers):
 		self.logger.reactor("Flushing routes for %s" % ', '.join(peers if peers else []) if peers is not None else 'all peers')
 		yield True
 		reactor.route_update = True
@@ -181,8 +181,8 @@ def flush_route (self,reactor,service,command):
 		return False
 
 
-def announce_route (self,reactor,service,command):
-	def callback (self,command,nexthops):
+def announce_route (self, reactor, service, command):
+	def callback (self, command, nexthops):
 		changes = self.format.parse_api_route(command,nexthops,'announce')
 		if not changes:
 			self.logger.reactor("Command could not parse route in : %s" % command,'warning')
@@ -210,8 +210,8 @@ def announce_route (self,reactor,service,command):
 		return False
 
 
-def withdraw_route (self,reactor,service,command):
-	def callback (self,command,nexthops):
+def withdraw_route (self, reactor, service, command):
+	def callback (self, command, nexthops):
 		changes = self.format.parse_api_route(command,nexthops,'withdraw')
 		if not changes:
 			self.logger.reactor("Command could not parse route in : %s" % command,'warning')
@@ -240,8 +240,8 @@ def withdraw_route (self,reactor,service,command):
 		return False
 
 
-def announce_vpls (self,reactor,service,command):
-	def callback (self,command,nexthops):
+def announce_vpls (self, reactor, service, command):
+	def callback (self, command, nexthops):
 		changes = self.format.parse_api_vpls(command,nexthops,'announce')
 		if not changes:
 			self.logger.reactor("Command could not parse vpls in : %s" % command,'warning')
@@ -269,8 +269,8 @@ def announce_vpls (self,reactor,service,command):
 		return False
 
 
-def withdraw_vpls (self,reactor,service,command):
-	def callback (self,command,nexthops):
+def withdraw_vpls (self, reactor, service, command):
+	def callback (self, command, nexthops):
 		changes = self.format.parse_api_vpls(command,nexthops,'withdraw')
 		if not changes:
 			self.logger.reactor("Command could not parse vpls in : %s" % command,'warning')
@@ -299,8 +299,8 @@ def withdraw_vpls (self,reactor,service,command):
 		return False
 
 
-def announce_attribute (self,reactor,service,command):
-	def callback (self,command,nexthops):
+def announce_attribute (self, reactor, service, command):
+	def callback (self, command, nexthops):
 		changes = self.format.parse_api_attribute(command,nexthops,'announce')
 		if not changes:
 			self.logger.reactor("Command could not parse attribute in : %s" % command,'warning')
@@ -326,8 +326,8 @@ def announce_attribute (self,reactor,service,command):
 		return False
 
 
-def withdraw_attribute (self,reactor,service,command):
-	def callback (self,command,nexthops):
+def withdraw_attribute (self, reactor, service, command):
+	def callback (self, command, nexthops):
 		changes = self.format.parse_api_attribute(command,nexthops,'withdraw')
 		if not changes:
 			self.logger.reactor("Command could not parse attribute in : %s" % command,'warning')
@@ -356,8 +356,8 @@ def withdraw_attribute (self,reactor,service,command):
 		return False
 
 
-def announce_flow (self,reactor,service,command):
-	def callback (self,command,peers):
+def announce_flow (self, reactor, service, command):
+	def callback (self, command, peers):
 		changes = self.format.parse_api_flow(command,'announce')
 		if not changes:
 			self.logger.reactor("Command could not parse flow in : %s" % command)
@@ -383,8 +383,8 @@ def announce_flow (self,reactor,service,command):
 		return False
 
 
-def withdraw_flow (self,reactor,service,command):
-	def callback (self,command,peers):
+def withdraw_flow (self, reactor, service, command):
+	def callback (self, command, peers):
 		changes = self.format.parse_api_flow(command,'withdraw')
 		if not changes:
 			self.logger.reactor("Command could not parse flow in : %s" % command)
@@ -413,8 +413,8 @@ def withdraw_flow (self,reactor,service,command):
 		return False
 
 
-def announce_eor (self,reactor,service,command):
-	def callback (self,command,peers):
+def announce_eor (self, reactor, service, command):
+	def callback (self, command, peers):
 		family = self.format.parse_api_eor(command)
 		if not family:
 			self.logger.reactor("Command could not parse eor : %s" % command)
@@ -439,8 +439,8 @@ def announce_eor (self,reactor,service,command):
 		return False
 
 
-def announce_refresh (self,reactor,service,command):
-	def callback (self,command,peers):
+def announce_refresh (self, reactor, service, command):
+	def callback (self, command, peers):
 		refresh = self.format.parse_api_refresh(command)
 		if not refresh:
 			self.logger.reactor("Command could not parse flow in : %s" % command)
@@ -465,8 +465,8 @@ def announce_refresh (self,reactor,service,command):
 		return False
 
 
-def announce_operational (self,reactor,service,command):
-	def callback (self,command,peers):
+def announce_operational (self, reactor, service, command):
+	def callback (self, command, peers):
 		operational = self.format.parse_api_operational(command)
 		if not operational:
 			self.logger.reactor("Command could not parse operational command : %s" % command)

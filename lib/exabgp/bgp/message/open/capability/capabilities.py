@@ -50,7 +50,7 @@ class Parameter (int):
 
 
 class Capabilities (dict):
-	def announced (self,capability):
+	def announced (self, capability):
 		return capability in self
 
 	def __str__ (self):
@@ -59,19 +59,19 @@ class Capabilities (dict):
 			r.append(str(self[key]))
 		return ', '.join(r)
 
-	def _protocol (self,neighbor):
+	def _protocol (self, neighbor):
 		families = neighbor.families()
 		mp = MultiProtocol()
 		mp.extend(families)
 		self[Capability.CODE.MULTIPROTOCOL] = mp
 
-	def _asn4 (self,neighbor):
+	def _asn4 (self, neighbor):
 		if not neighbor.asn4:
 			return
 
 		self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(neighbor.local_as)
 
-	def _addpath (self,neighbor):
+	def _addpath (self, neighbor):
 		if not neighbor.add_path:
 			return
 
@@ -87,7 +87,7 @@ class Capabilities (dict):
 			ap_families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
 		self[Capability.CODE.ADD_PATH] = AddPath(ap_families,neighbor.add_path)
 
-	def _graceful (self,neighbor,restarted):
+	def _graceful (self, neighbor, restarted):
 		if not neighbor.graceful_restart:
 			return
 
@@ -97,24 +97,24 @@ class Capabilities (dict):
 			[(afi,safi,Graceful.FORWARDING_STATE) for (afi,safi) in neighbor.families()]
 		)
 
-	def _refresh (self,neighbor):
+	def _refresh (self, neighbor):
 		if not neighbor.route_refresh:
 			return
 		self[Capability.CODE.ROUTE_REFRESH] = RouteRefresh()
 		self[Capability.CODE.ENHANCED_ROUTE_REFRESH] = EnhancedRouteRefresh()
 
-	def _operational (self,neighbor):
+	def _operational (self, neighbor):
 		if not neighbor.operational:
 			return
 		self[Capability.CODE.OPERATIONAL] = Operational()
 
-	def _session (self,neighbor):
+	def _session (self, neighbor):
 		if not neighbor.multisession:
 			return
 		# XXX: FIXME: should it not be the RFC version ?
 		self[Capability.CODE.MULTISESSION] = MultiSession().set([Capability.CODE.MULTIPROTOCOL])
 
-	def new (self,neighbor,restarted):
+	def new (self, neighbor, restarted):
 		self._protocol(neighbor)
 		self._asn4(neighbor)
 		self._addpath(neighbor)
@@ -134,7 +134,7 @@ class Capabilities (dict):
 
 	@staticmethod
 	def unpack (data):
-		def _key_values (name,data):
+		def _key_values (name, data):
 			if len(data) < 2:
 				raise Notify(2,0,"Bad length for OPEN %s (<2) %s" % (name,Capability.hex(data)))
 			l = ord(data[1])

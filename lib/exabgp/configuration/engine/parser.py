@@ -24,7 +24,7 @@ def string (tokeniser):
 	return tokeniser()
 
 
-def boolean (tokeniser,default):
+def boolean (tokeniser, default):
 	value = tokeniser()
 	status = value.lower()
 	if status in ('true','enable','enabled'):
@@ -66,7 +66,7 @@ def ttl (tokeniser):
 	return attl
 
 
-def asn (tokeniser,value=None):
+def asn (tokeniser, value=None):
 	value = tokeniser() if value is None else value
 	try:
 		if value.count('.'):

@@ -19,17 +19,17 @@ class Change (object):
 
 	__slots__ = ['nlri','attributes']
 
-	def __init__ (self,nlri,attributes):
+	def __init__ (self, nlri, attributes):
 		self.nlri = nlri
 		self.attributes = attributes
 
 	def index (self):
 		return '%02x%02x' % self.nlri.family() + self.nlri.index()
 
-	def __eq__ (self,other):
+	def __eq__ (self, other):
 		return self.nlri == other.nlri and self.attributes == other.attributes
 
-	def __ne__ (self,other):
+	def __ne__ (self, other):
 		return self.nlri != other.nlri or self.attributes != other.attributes
 
 	def extensive (self):

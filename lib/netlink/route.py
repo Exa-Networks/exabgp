@@ -96,7 +96,7 @@ class NetLinkRoute (object):
 		length = self.Header.LEN + len(attrs) + len(body)
 		return pack(self.Header.PACK, length, dtype, flags, seq, self.pid) + body + attrs
 
-	def decode (self,data):
+	def decode (self, data):
 		while data:
 			length, ntype, flags, seq, pid = unpack(self.Header.PACK,data[:self.Header.LEN])
 			if len(data) < length:
@@ -178,10 +178,10 @@ class Attributes (object):
 		IFA_CACHEINFO  = 0x06
 		IFA_MULTICAST  = 0x07
 
-	def pad (self,len,to=4):
+	def pad (self, len, to=4):
 		return (len+to-1) & ~(to-1)
 
-	def decode (self,data):
+	def decode (self, data):
 		while data:
 			length, atype, = unpack(self.Header.PACK,data[:self.Header.LEN])
 			if len(data) < length:
@@ -190,7 +190,7 @@ class Attributes (object):
 			yield atype, payload
 			data = data[int((length + 3) / 4) * 4:]
 
-	def _encode (self,atype,payload):
+	def _encode (self, atype, payload):
 		len = self.Header.LEN + len(payload)
 		raw = pack(self.Header.PACK,len,atype) + payload
 		pad = self.pad(len) - len(raw)
@@ -198,7 +198,7 @@ class Attributes (object):
 			raw += '\0'*pad
 		return raw
 
-	def encode (self,attributes):
+	def encode (self, attributes):
 		return ''.join([self._encode(k,v) for (k,v) in attributes.items()])
 
 
@@ -211,16 +211,16 @@ class _InfoMessage (object):
 		PACK = ''
 		LEN = 0
 
-	def __init__ (self,route):
+	def __init__ (self, route):
 		self.route = route
 
-	def decode (self,data):
+	def decode (self, data):
 		extracted = list(unpack(self.Header.PACK,data[:self.Header.LEN]))
 		attributes = Attributes().decode(data[self.Header.LEN:])
 		extracted.append(dict(attributes))
 		return self.format(*extracted)
 
-	def extract (self,atype):
+	def extract (self, atype):
 		for data in self.route.query(atype):
 			yield self.decode(data)
 

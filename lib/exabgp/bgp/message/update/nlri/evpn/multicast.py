@@ -30,7 +30,7 @@ class Multicast (EVPN):
 	NAME = "Inclusive Multicast Ethernet Tag"
 	SHORT_NAME = "Multicast"
 
-	def __init__ (self,rd,etag,ip):
+	def __init__ (self, rd, etag, ip):
 		self.rd = rd
 		self.etag = etag
 		self.ip = ip
@@ -44,7 +44,7 @@ class Multicast (EVPN):
 			self.ip,
 		)
 
-	def __cmp__ (self,other):
+	def __cmp__ (self, other):
 		if not isinstance(other,self.__class__):
 			return -1
 		if self.rd != other.rd:
@@ -69,7 +69,7 @@ class Multicast (EVPN):
 		)
 
 	@classmethod
-	def unpack (cls,data):
+	def unpack (cls, data):
 		rd = RouteDistinguisher.unpack(data[:8])
 		etag = EthernetTag.unpack(data[8:12])
 		iplen = ord(data[12])

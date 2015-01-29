@@ -15,7 +15,7 @@ from exabgp.bgp.message.open.routerid import RouterID
 
 
 class Negotiated (object):
-	def __init__ (self,neighbor):
+	def __init__ (self, neighbor):
 		self.neighbor = neighbor
 
 		self.sent_open = None
@@ -33,12 +33,12 @@ class Negotiated (object):
 		self.refresh = REFRESH.ABSENT  # pylint: disable=E1101
 		self.aigp = None
 
-	def sent (self,sent_open):
+	def sent (self, sent_open):
 		self.sent_open = sent_open
 		if self.received_open:
 			self._negotiate()
 
-	def received (self,received_open):
+	def received (self, received_open):
 		self.received_open = received_open
 		if self.sent_open:
 			self._negotiate()
@@ -105,7 +105,7 @@ class Negotiated (object):
 		# 	if self.peer.bgp.received_open_size:
 		# 		self.received_open_size = self.peer.bgp.received_open_size - 19
 
-	def validate (self,neighbor):
+	def validate (self, neighbor):
 		if not self.asn4:
 			if neighbor.local_as.asn4():
 				return (2,0,'peer does not speak ASN4, we are stuck')
@@ -149,10 +149,10 @@ class RequirePath (object):
 		self._send = {}
 		self._receive = {}
 
-	def setup (self,received_open,sent_open):
+	def setup (self, received_open, sent_open):
 		# A Dict always returning False
 		class FalseDict (dict):
-			def __getitem__ (self,key):
+			def __getitem__ (self, key):
 				return False
 
 		receive = received_open.capabilities.get(Capability.CODE.ADD_PATH,FalseDict())
@@ -167,8 +167,8 @@ class RequirePath (object):
 			self._send[k] = bool(receive.get(k,self.REFUSE) & self.ANNOUNCE and send.get(k,self.REFUSE) & self.ACCEPT)
 			self._receive[k] = bool(receive.get(k,self.REFUSE) & self.ACCEPT and send.get(k,self.REFUSE) & self.ANNOUNCE)
 
-	def send (self,afi,safi):
+	def send (self, afi, safi):
 		return self._send.get((afi,safi),False)
 
-	def receive (self,afi,safi):
+	def receive (self, afi, safi):
 		return self._receive.get((afi,safi),False)

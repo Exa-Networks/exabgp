@@ -78,11 +78,11 @@ class Operational (Message):
 	category = ''
 	code = CODE.NOP
 
-	def __init__ (self,what):
+	def __init__ (self, what):
 		Message.__init__(self)
 		self.what = Type(what)
 
-	def _message (self,data):
+	def _message (self, data):
 		return Message._message(self,"%s%s%s" % (
 			self.what.pack(),
 			pack('!H',len(data)),
@@ -100,7 +100,7 @@ class Operational (Message):
 		Operational.registered_operational[klass.code] = (klass.category,klass)
 
 	@classmethod
-	def unpack_message (cls,data,negotiated):  # pylint: disable=W0613
+	def unpack_message (cls, data, negotiated):  # pylint: disable=W0613
 		what = Type(unpack('!H',data[0:2])[0])
 		length = unpack('!H',data[2:4])[0]
 
@@ -134,7 +134,7 @@ class Operational (Message):
 class OperationalFamily (Operational):
 	has_family = True
 
-	def __init__ (self,what,afi,safi,data=''):
+	def __init__ (self, what, afi, safi, data=''):
 		Operational.__init__(self,what)
 		self.afi = AFI(afi)
 		self.safi = SAFI(safi)
@@ -143,14 +143,14 @@ class OperationalFamily (Operational):
 	def family (self):
 		return (self.afi,self.safi)
 
-	def _message (self,data):
+	def _message (self, data):
 		return Operational._message(self,"%s%s%s" % (
 			self.afi.pack(),
 			self.safi.pack(),
 			data
 		))
 
-	def message (self,negotiated):
+	def message (self, negotiated):
 		return self._message(self.data)
 
 
@@ -162,14 +162,14 @@ class SequencedOperationalFamily (OperationalFamily):
 	__sequence_number = {}
 	has_routerid = True
 
-	def __init__ (self,what,afi,safi,routerid,sequence,data=''):
+	def __init__ (self, what, afi, safi, routerid, sequence, data=''):
 		OperationalFamily.__init__(self,what,afi,safi,data)
 		self.routerid = routerid if routerid else None
 		self.sequence = sequence if sequence else None
 		self._sequence = self.sequence
 		self._routerid = self.routerid
 
-	def message (self,negotiated):
+	def message (self, negotiated):
 		self.sent_routerid = self.routerid if self.routerid else negotiated.sent_open.router_id
 		if self.sequence is None:
 			self.sent_sequence = (self.__sequence_number.setdefault(self.routerid,0) + 1) % 0xFFFFFFFF
@@ -198,7 +198,7 @@ class NS (object):
 	class _NS (OperationalFamily):
 		is_fault = True
 
-		def __init__ (self,afi,safi,sequence):
+		def __init__ (self, afi, safi, sequence):
 			OperationalFamily.__init__(
 				self,
 				Operational.CODE.NS,
@@ -249,7 +249,7 @@ class Advisory (object):
 		name = 'ADM'
 		code = Operational.CODE.ADM
 
-		def __init__ (self,afi,safi,advisory,routerid=None):
+		def __init__ (self, afi, safi, advisory, routerid=None):
 			utf8 = advisory.encode('utf-8')
 			if len(utf8) > MAX_ADVISORY:
 				utf8 = utf8[:MAX_ADVISORY-3] + '...'.encode('utf-8')
@@ -263,7 +263,7 @@ class Advisory (object):
 		name = 'ASM'
 		code = Operational.CODE.ASM
 
-		def __init__ (self,afi,safi,advisory,routerid=None):
+		def __init__ (self, afi, safi, advisory, routerid=None):
 			utf8 = advisory.encode('utf-8')
 			if len(utf8) > MAX_ADVISORY:
 				utf8 = utf8[:MAX_ADVISORY-3] + '...'.encode('utf-8')
@@ -281,7 +281,7 @@ class Query (object):
 	class _Query (SequencedOperationalFamily):
 		category = 'query'
 
-		def __init__ (self,afi,safi,routerid,sequence):
+		def __init__ (self, afi, safi, routerid, sequence):
 			SequencedOperationalFamily.__init__(
 				self,self.code,
 				afi,safi,
@@ -317,7 +317,7 @@ class Response (object):
 	class _Counter (SequencedOperationalFamily):
 		category = 'counter'
 
-		def __init__ (self,afi,safi,routerid,sequence,counter):
+		def __init__ (self, afi, safi, routerid, sequence, counter):
 			self.counter = counter
 			SequencedOperationalFamily.__init__(
 				self,self.code,

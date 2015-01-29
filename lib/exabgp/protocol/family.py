@@ -78,7 +78,7 @@ class AFI (int):
 		return []
 
 	@classmethod
-	def fromString (cls,string):
+	def fromString (cls, string):
 		return cls.names.get(string,cls.undefined)
 
 
@@ -187,7 +187,7 @@ class SAFI (int):
 		return None
 
 	@classmethod
-	def fromString (cls,string):
+	def fromString (cls, string):
 		return cls.names.get(string,cls.undefined)
 
 
@@ -210,7 +210,7 @@ def known_families ():
 
 
 class Family (object):
-	def __init__ (self,afi,safi):
+	def __init__ (self, afi, safi):
 		self.afi = AFI(afi)
 		self.safi = SAFI(safi)
 

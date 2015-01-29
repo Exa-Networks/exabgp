@@ -30,7 +30,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 class TLV (object):
 	__slots__ = ['type','value']
 
-	def __init__ (self,what,value):
+	def __init__ (self, what, value):
 		self.type = what
 		self.value = value
 
@@ -63,14 +63,14 @@ class AIGP (Attribute):
 
 	__slots__ = ['aigp','packed']
 
-	def __init__ (self,aigp,packed=None):
+	def __init__ (self, aigp, packed=None):
 		self.aigp = aigp
 		if packed:
 			self.packed = packed
 		else:
 			self.packed = self._attribute(aigp)
 
-	def pack (self,negotiated):
+	def pack (self, negotiated):
 		if negotiated.neighbor.aigp:
 			return self.packed
 		if negotiated.local_as == negotiated.peer_as:
@@ -81,7 +81,7 @@ class AIGP (Attribute):
 		return '0x' + ''.join('%02x' % ord(_) for _ in self.aigp[-8:])
 
 	@classmethod
-	def unpack (cls,data,negotiated):
+	def unpack (cls, data, negotiated):
 		if not negotiated.neighbor.aigp:
 			# AIGP must only be accepted on configured sessions
 			return None

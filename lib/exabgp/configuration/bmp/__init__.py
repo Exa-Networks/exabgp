@@ -34,7 +34,7 @@ class SectionBMP (Section):
 	content = None
 
 	@classmethod
-	def register (cls,registry,location):
+	def register (cls, registry, location):
 		registry.register_class(cls)
 
 		registry.register_hook(cls,'enter',location,'enter_nameless')

@@ -53,7 +53,7 @@ class Processes (object):
 	# 	Message.CODE.OPERATIONAL   : 'receive-operational',
 	# }
 
-	def __init__ (self,reactor):
+	def __init__ (self, reactor):
 		self.logger = Logger()
 		self.reactor = reactor
 		self.clean()
@@ -70,7 +70,7 @@ class Processes (object):
 		self._broken = []
 		self._respawning = {}
 
-	def _terminate (self,process):
+	def _terminate (self, process):
 		self.logger.processes("Terminating process %s" % process)
 		try:
 			self._process[process].terminate()
@@ -98,7 +98,7 @@ class Processes (object):
 
 		self.clean()
 
-	def _start (self,process):
+	def _start (self, process):
 		events = self.reactor.configuration.process[process]
 		for event,present in events.iteritems():
 			if event in ('run','encoder'):
@@ -160,7 +160,7 @@ class Processes (object):
 			self.logger.processes("Could not start process %s" % process)
 			self.logger.processes("reason: %s" % str(exc))
 
-	def start (self,restart=False):
+	def start (self, restart=False):
 		for process in self.reactor.configuration.process:
 			if restart:
 				self._terminate(process)
@@ -169,7 +169,7 @@ class Processes (object):
 			if process not in self.reactor.configuration.process:
 				self._terminate(process)
 
-	def broken (self,neighbor):
+	def broken (self, neighbor):
 		if self._broken:
 			if '*' in self._broken:
 				return True
@@ -221,7 +221,7 @@ class Processes (object):
 				self._terminate(process)
 				self._start(process)
 
-	def write (self,process,string,peer=None):
+	def write (self, process, string, peer=None):
 		if peer:
 			self.increase(peer)
 
@@ -249,7 +249,7 @@ class Processes (object):
 
 		return True
 
-	def _notify (self,peer,event):
+	def _notify (self, peer, event):
 		neighbor = peer.neighbor.peer_address
 		for process in self._neighbor_process.get(neighbor,[]):
 			if process in self._process:
@@ -264,21 +264,21 @@ class Processes (object):
 	# no-self-argument
 
 	def silenced (function):
-		def closure (self,*args):
+		def closure (self, *args):
 			if self.silence:
 				return
 			return function(self,*args)
 		return closure
 
 	@silenced
-	def reset (self,peer):
+	def reset (self, peer):
 		for process in self._notify(peer,'*'):
 			data = self._encoder[process].reset(peer)
 			if data:
 				self.write(process,data,peer)
 
 	@silenced
-	def increase (self,peer):
+	def increase (self, peer):
 		for process in self._notify(peer,'*'):
 			data = self._encoder[process].increase(peer)
 			if data:
@@ -286,43 +286,43 @@ class Processes (object):
 
 	# invalid-name
 	@silenced
-	def up (self,peer):
+	def up (self, peer):
 		for process in self._notify(peer,'neighbor-changes'):
 			self.write(process,self._encoder[process].up(peer),peer)
 
 	@silenced
-	def connected (self,peer):
+	def connected (self, peer):
 		for process in self._notify(peer,'neighbor-changes'):
 			self.write(process,self._encoder[process].connected(peer),peer)
 
 	@silenced
-	def down (self,peer,reason):
+	def down (self, peer, reason):
 		for process in self._notify(peer,'neighbor-changes'):
 			self.write(process,self._encoder[process].down(peer,reason),peer)
 
 	@silenced
-	def receive (self,peer,category,header,body):
+	def receive (self, peer, category, header, body):
 		for process in self._notify(peer,'receive-packets'):
 			self.write(process,self._encoder[process].receive(peer,category,header,body),peer)
 
 	@silenced
-	def send (self,peer,category,header,body):
+	def send (self, peer, category, header, body):
 		for process in self._notify(peer,'send-packets'):
 			self.write(process,self._encoder[process].send(peer,category,header,body),peer)
 
 	@silenced
-	def notification (self,peer,code,subcode,data):
+	def notification (self, peer, code, subcode, data):
 		for process in self._notify(peer,'neighbor-changes'):
 			self.write(process,self._encoder[process].notification(peer,code,subcode,data),peer)
 
 	@silenced
-	def message (self,message_id,peer,message,header,*body):
+	def message (self, message_id, peer, message, header,*body):
 		self._dispatch[message_id](self,peer,message,header,*body)
 
 	# registering message functions
 	# no-self-argument
 
-	def register_process (message_id,storage):
+	def register_process (message_id, storage):
 		def closure (function):
 			def wrap (*args):
 				function(*args)
@@ -331,27 +331,27 @@ class Processes (object):
 		return closure
 
 	@register_process(Message.CODE.OPEN,_dispatch)
-	def _open (self,peer,open_msg,header,body,direction='received'):
+	def _open (self, peer, open_msg, header, body, direction='received'):
 		for process in self._notify(peer,'receive-opens'):
 			self.write(process,self._encoder[process].open(peer,direction,open_msg,header,body),peer)
 
 	# unused-argument, must keep the API
 	@register_process(Message.CODE.KEEPALIVE,_dispatch)
-	def _keepalive (self,peer,keepalive,header,body):
+	def _keepalive (self, peer, keepalive, header, body):
 		for process in self._notify(peer,'receive-keepalives'):
 			self.write(process,self._encoder[process].keepalive(peer,header,body),peer)
 
 	@register_process(Message.CODE.UPDATE,_dispatch)
-	def _update (self,peer,update,header,body):
+	def _update (self, peer, update, header, body):
 		for process in self._notify(peer,'receive-updates'):
 			self.write(process,self._encoder[process].update(peer,update,header,body),peer)
 
 	@register_process(Message.CODE.ROUTE_REFRESH,_dispatch)
-	def _refresh (self,peer,refresh,header,body):
+	def _refresh (self, peer, refresh, header, body):
 		for process in self._notify(peer,'receive-refresh'):
 			self.write(process,self._encoder[process].refresh(peer,refresh,header,body),peer)
 
 	@register_process(Message.CODE.OPERATIONAL,_dispatch)
-	def _operational (self,peer,operational,header,body):
+	def _operational (self, peer, operational, header, body):
 		for process in self._notify(peer,'receive-operational'):
 			self.write(process,self._encoder[process].operational(peer,operational.category,operational,header,body),peer)

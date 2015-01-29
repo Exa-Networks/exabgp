@@ -59,7 +59,7 @@ class Update (Message):
 	TYPE = chr(Message.CODE.UPDATE)
 	EOR = False
 
-	def __init__ (self,nlris,attributes):
+	def __init__ (self, nlris, attributes):
 		self.nlris = nlris
 		self.attributes = attributes
 
@@ -100,7 +100,7 @@ class Update (Message):
 	# XXX: FIXME: calculate size progressively to not have to do it every time
 	# XXX: FIXME: we could as well track when packed_del, packed_mp_del, etc
 	# XXX: FIXME: are emptied and therefore when we can save calculations
-	def messages (self,negotiated):
+	def messages (self, negotiated):
 		# sort the nlris
 
 		add_nlri = []
@@ -242,7 +242,7 @@ class Update (Message):
 
 	# XXX: FIXME: this can raise ValueError. IndexError,TypeError, struct.error (unpack) = check it is well intercepted
 	@classmethod
-	def unpack_message (cls,data,negotiated):
+	def unpack_message (cls, data, negotiated):
 		logger = Logger()
 
 		length = len(data)

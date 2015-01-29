@@ -18,14 +18,14 @@ class CIDR (object):
 	_mask_to_bytes = {}
 
 	@classmethod
-	def size (cls,mask):
+	def size (cls, mask):
 		return cls._mask_to_bytes.get(mask,0)
 
 	# have a .raw for the ip
 	# have a .mask for the mask
 	# have a .bgp with the bgp wire format of the prefix
 
-	def __init__ (self,packed,mask):
+	def __init__ (self, packed, mask):
 		self.packed = packed
 		self.mask = mask
 		self._ip = None
@@ -56,7 +56,7 @@ class CIDR (object):
 	def __len__ (self):
 		return CIDR.size(self.mask) + 1
 
-	def __cmp__ (self,other):
+	def __cmp__ (self, other):
 		if not isinstance(other,self.__class__):
 			return -1
 		if self.packed != other.packed:

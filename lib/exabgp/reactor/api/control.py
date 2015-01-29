@@ -13,7 +13,7 @@ import traceback
 
 
 class Control (object):
-	def __init__ (self,location=None,production=True):
+	def __init__ (self, location=None,production=True):
 		from exabgp.configuration.environment import environment
 		self.location = location or environment.settings().api.socket
 
@@ -56,19 +56,19 @@ class Control (object):
 
 			return False
 
-	def write_standard (self,data):
+	def write_standard (self, data):
 		if not self._production:
 			data = ''
 		sys.stdout.write(data+'\n')
 		sys.stdout.flush()
 
-	def write_socket (self,data):
+	def write_socket (self, data):
 		self.sock.sendall(data)  # pylint: disable=E1101
 
-	def read_socket (self,number):
+	def read_socket (self, number):
 		return self.sock.recv(number)  # pylint: disable=E1101
 
-	def read_stdin (self,_):
+	def read_stdin (self, _):
 		return sys.stdin.readline()
 
 	def loop (self):

@@ -23,7 +23,7 @@ from exabgp.util.ip import isip
 #
 
 class NoneDict (dict):
-	def __getitem__ (self,name):
+	def __getitem__ (self, name):
 		return None
 nonedict = NoneDict()
 

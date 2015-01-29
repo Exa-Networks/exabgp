@@ -22,11 +22,11 @@ class MED (Attribute):
 
 	__slots__ = ['med','packed']
 
-	def __init__ (self,med,packed=None):
+	def __init__ (self, med, packed=None):
 		self.med = med
 		self.packed = self._attribute(packed if packed is not None else pack('!L',med))
 
-	def pack (self,negotiated=None):
+	def pack (self, negotiated=None):
 		return self.packed
 
 	def __len__ (self):
@@ -35,7 +35,7 @@ class MED (Attribute):
 	def __str__ (self):
 		return str(self.med)
 
-	def __cmp__ (self,other):
+	def __cmp__ (self, other):
 		if not isinstance(other,self.__class__):
 			return -1
 		if self.med != other.med:
@@ -46,5 +46,5 @@ class MED (Attribute):
 		return hash(self.med)
 
 	@classmethod
-	def unpack (cls,data,negotiated):
+	def unpack (cls, data, negotiated):
 		return cls(unpack('!L',data)[0])

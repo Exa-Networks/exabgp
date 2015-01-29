@@ -22,12 +22,12 @@ class Aggregator (Attribute):
 
 	__slots__ = ['asn','speaker','_str']
 
-	def __init__ (self,asn,speaker):
+	def __init__ (self, asn, speaker):
 		self.asn = asn
 		self.speaker = speaker
 		self._str = None
 
-	def pack (self,negotiated):
+	def pack (self, negotiated):
 		if negotiated.asn4:
 			return self._attribute(self.asn.pack(negotiated)+self.speaker.pack())
 		else:
@@ -45,7 +45,7 @@ class Aggregator (Attribute):
 		return '{ "asn" : %d, "speaker" : "%d" }' % (self.asn,self.speaker)
 
 	@classmethod
-	def unpack (cls,data,negotiated):
+	def unpack (cls, data, negotiated):
 		if negotiated.asn4:
 			return cls(ASN.unpack(data[:4]),IPv4.unpack(data[-4:]))
 		return cls(ASN.unpack(data[:2]),IPv4.unpack(data[-4:]))
@@ -58,5 +58,5 @@ class Aggregator4 (Aggregator):
 	ID = Attribute.CODE.AS4_AGGREGATOR
 	__slots__ = ['pack']
 
-	def pack (self,negotiated):
+	def pack (self, negotiated):
 		return self._attribute(self.asn.pack(True)+self.speaker.pack())

@@ -54,11 +54,11 @@ class SectionProcess (Section):
 	syntax = syntax_process
 	name = 'process'
 
-	def enter (self,tokeniser):
+	def enter (self, tokeniser):
 		Section.enter(self,tokeniser)
 		self.content['encoder'] = 'text'
 
-	def encoder (self,tokeniser):
+	def encoder (self, tokeniser):
 		token = tokeniser()
 		if token == '}':
 			return
@@ -66,10 +66,10 @@ class SectionProcess (Section):
 			raise RaisedProcess(tokeniser,'invalid encoder')
 		self.content['encoder'] = token
 
-	def respawn (self,tokeniser):
+	def respawn (self, tokeniser):
 		self.content['respawn'] = boolean(tokeniser,False)
 
-	def run (self,tokeniser):
+	def run (self, tokeniser):
 		command = tokeniser()
 
 		prg,args = command.split(None,1)
@@ -106,7 +106,7 @@ class SectionProcess (Section):
 
 	# all the action are the same
 
-	def message (self,tokeniser):
+	def message (self, tokeniser):
 		valid_messages = ['notification','open','keepalive','update','refresh','operational']
 		valid_options = ['parsed','packets','consolidated']
 
@@ -139,31 +139,31 @@ class SectionProcess (Section):
 
 				section.append(action)
 
-	def neighbor_changes (self,tokeniser):
+	def neighbor_changes (self, tokeniser):
 		self.content.setdefault('received',{})['neighbor-changes'] = True
 
 	# reveived global level
 
-	def received_packets (self,tokeniser):
+	def received_packets (self, tokeniser):
 		for message in ['notification','open','keepalive','update','refresh','operational']:
 			self.content.setdefault('received',{}).setdefault(message,[]).append('packets')
 
-	def received_parsed (self,tokeniser):
+	def received_parsed (self, tokeniser):
 		for message in ['notification','open','keepalive','update','refresh','operational']:
 			self.content.setdefault('received',{}).setdefault(message,[]).append('parsed')
 
-	def received_consolidated (self,tokeniser):
+	def received_consolidated (self, tokeniser):
 		for message in ['notification','open','keepalive','update','refresh','operational']:
 			self.content.setdefault('received',{}).setdefault(message,[]).append('consolidated')
 
 	# sent global level
 
-	def sent_packets (self,tokeniser):
+	def sent_packets (self, tokeniser):
 		for message in ['notification','open','keepalive','update','refresh','operational']:
 			self.content.setdefault('sent',{}).setdefault(message,[]).append('packets')
 
 	@classmethod
-	def register (cls,registry,location):
+	def register (cls, registry, location):
 		registry.register_class(cls)
 
 		registry.register_hook(cls,'enter',location,'enter')

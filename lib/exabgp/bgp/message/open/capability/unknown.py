@@ -13,7 +13,7 @@ from exabgp.bgp.message.open.capability.capability import Capability
 
 
 class UnknownCapability (Capability):
-	def set (self,capability,data=''):
+	def set (self, capability, data=''):
 		self.capability = capability
 		self.data = data
 
@@ -37,5 +37,5 @@ class UnknownCapability (Capability):
 		return []
 
 	@staticmethod
-	def unpack_capability (instance,data,capability):
+	def unpack_capability (instance, data, capability):
 		return instance.set(capability,data)

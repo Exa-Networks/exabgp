@@ -22,11 +22,11 @@ class Origin (Attribute):
 
 	__slots__ = ['origin','packed']
 
-	def __init__ (self,origin,packed=None):
+	def __init__ (self, origin, packed=None):
 		self.origin = origin
 		self.packed = self._attribute(packed if packed else chr(origin))
 
-	def pack (self,negotiated=None):
+	def pack (self, negotiated=None):
 		return self.packed
 
 	def __len__ (self):
@@ -41,7 +41,7 @@ class Origin (Attribute):
 			return 'incomplete'
 		return 'invalid'
 
-	def __cmp__ (self,other):
+	def __cmp__ (self, other):
 		if not isinstance(other,self.__class__):
 			return -1
 		if self.origin != other.origin:
@@ -49,7 +49,7 @@ class Origin (Attribute):
 		return 0
 
 	@classmethod
-	def unpack (cls,data,negotiated):
+	def unpack (cls, data, negotiated):
 		return cls(ord(data),data)
 
 	@classmethod
