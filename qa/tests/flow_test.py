@@ -23,7 +23,7 @@ from exabgp.bgp.message.update.nlri.flow import NumericOperator
 
 class TestFlow (unittest.TestCase):
 
-	def setUp(self):
+	def setUp (self):
 		pass
 
 	def test_rule (self):

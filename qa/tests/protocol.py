@@ -50,7 +50,7 @@ class Network (StringIO):
 
 class TestProtocol (unittest.TestCase):
 
-	def setUp(self):
+	def setUp (self):
 		self.neighbor = Neighbor()
 		self.neighbor.local_as = ASN(65000)
 		self.neighbor.peer_as = ASN(65000)

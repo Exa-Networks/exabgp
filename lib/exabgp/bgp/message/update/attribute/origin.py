@@ -41,7 +41,7 @@ class Origin (Attribute):
 			return 'incomplete'
 		return 'invalid'
 
-	def __cmp__(self,other):
+	def __cmp__ (self,other):
 		if not isinstance(other,self.__class__):
 			return -1
 		if self.origin != other.origin:

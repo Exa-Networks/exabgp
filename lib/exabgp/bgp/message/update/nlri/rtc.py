@@ -20,21 +20,21 @@ class RouteTargetConstraint(Address):
 
 	__slots__ = ['origin','rt']
 
-	def __init__(self,afi,safi,origin,rt):
+	def __init__ (self,afi,safi,origin,rt):
 		Address.__init__(self,afi,safi)
 		self.origin = origin
 		self.rt = rt
 
-	def __len__(self):
+	def __len__ (self):
 		return (4 + len(self.rt))*8 if self.rt else 1
 
 	def __str__ (self):
 		return "rtc %s:%s" % (self.origin,self.rt) if self.rt else "rtc wildcard"
 
-	def __repr__(self):
+	def __repr__ (self):
 		return str(self)
 
-	def __cmp__(self,other):
+	def __cmp__ (self,other):
 		if not isinstance(other,self.__class__):
 			return -1
 		if self.origin != other.origin:
@@ -43,16 +43,16 @@ class RouteTargetConstraint(Address):
 			return -1
 		return 0
 
-	def __hash__(self):
+	def __hash__ (self):
 		return hash(self.pack())
 
-	def pack(self):
+	def pack (self):
 		if self.rt:
 			return pack("!BL", len(self), self.origin) + self.rt.pack()
 		return pack("!B",0)
 
 	@staticmethod
-	def unpack(afi,safi,data):
+	def unpack (afi,safi,data):
 		length = ord(data[0])
 
 		if length == 0:

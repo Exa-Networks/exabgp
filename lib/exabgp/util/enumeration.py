@@ -14,7 +14,7 @@ class _integer (int):
 
 
 class Enumeration (object):
-	def __init__(self, *names):
+	def __init__ (self, *names):
 		for number, name in enumerate(names):
 			# doing the .parent thing here instead
 			number = _integer(pow(2,number))
@@ -23,5 +23,5 @@ class Enumeration (object):
 
 
 # Taken from Vincent Bernat
-def Enum(*sequential):
+def Enum (*sequential):
 	return type(str("Enum"), (), dict(zip(sequential, sequential)))

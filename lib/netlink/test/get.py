@@ -3,7 +3,7 @@
 from netlink.route import *
 
 
-def main():
+def main ():
 	netlink = NetLinkRoute()
 
 	links = {}

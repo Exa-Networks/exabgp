@@ -141,7 +141,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 			self.send(self.keepalive)
 
 class BGPServer(asyncore.dispatcher):
-	def __init__(self, host, port, record):
+	def __init__ (self, host, port, record):
 		self.record = record
 		asyncore.dispatcher.__init__(self)
 		self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -149,7 +149,7 @@ class BGPServer(asyncore.dispatcher):
 		self.bind((host, port))
 		self.listen(5)
 
-	def handle_accept(self):
+	def handle_accept (self):
 		pair = self.accept()
 		if pair is not None:
 			# The if prevent invalid unpacking

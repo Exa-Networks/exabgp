@@ -34,7 +34,7 @@ class EthernetTag (object):
 	def __len__ (self):
 		return 4
 
-	def __cmp__(self,other):
+	def __cmp__ (self,other):
 		if not isinstance(other,self.__class__):
 			return -1
 		if self.tag != other.tag:
@@ -45,5 +45,5 @@ class EthernetTag (object):
 		return hash(self.tag)
 
 	@classmethod
-	def unpack(cls,data):
+	def unpack (cls,data):
 		return cls(unpack("!L",data[:4])[0])

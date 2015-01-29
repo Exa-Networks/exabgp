@@ -35,7 +35,7 @@ class MED (Attribute):
 	def __str__ (self):
 		return str(self.med)
 
-	def __cmp__(self,other):
+	def __cmp__ (self,other):
 		if not isinstance(other,self.__class__):
 			return -1
 		if self.med != other.med:

@@ -9,9 +9,9 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from functools import wraps
 
 
-def each(function):
+def each (function):
 	@wraps(function)
-	def start(*args, **kwargs):
+	def start (*args, **kwargs):
 		generator = function(*args, **kwargs)
 		return lambda: generator.next()  # noqa
 	return start

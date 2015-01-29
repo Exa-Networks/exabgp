@@ -9,7 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import socket
 
 
-def isipv4(address):
+def isipv4 (address):
 	try:
 		socket.inet_pton(socket.AF_INET, address)
 		return True
@@ -17,7 +17,7 @@ def isipv4(address):
 		return False
 
 
-def isipv6(address):
+def isipv6 (address):
 	try:
 		socket.inet_pton(socket.AF_INET6, address)
 		return True
@@ -25,5 +25,5 @@ def isipv6(address):
 		return False
 
 
-def isip(address):
+def isip (address):
 	return isipv4(address) or isipv6(address)

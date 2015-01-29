@@ -210,7 +210,7 @@ def known_families ():
 
 
 class Family (object):
-	def __init__(self,afi,safi):
+	def __init__ (self,afi,safi):
 		self.afi = AFI(afi)
 		self.safi = SAFI(safi)
 

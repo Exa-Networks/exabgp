@@ -149,7 +149,7 @@ class environment (object):
 		return _
 
 	@staticmethod
-	def folder(path):
+	def folder (path):
 		paths = environment.root(path)
 		options = [p for p in paths if os.path.exists(path)]
 		if not options:
@@ -172,7 +172,7 @@ class environment (object):
 		return "'%s'" % path
 
 	@staticmethod
-	def conf(path):
+	def conf (path):
 		first = environment.folder(path)
 		if not os.path.isfile(first):
 			raise TypeError('%s is not a file' % path)

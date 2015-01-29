@@ -15,8 +15,8 @@ from SocketServer import StreamRequestHandler
 class TimeoutException(Exception):
 	pass
 
-def read_command(rfile,wfile,prompt):
-	def timeout_handler(signum, frame):
+def read_command (rfile,wfile,prompt):
+	def timeout_handler (signum, frame):
 		raise TimeoutException()
 
 	signal.signal(signal.SIGALRM, timeout_handler)
@@ -36,7 +36,7 @@ def read_command(rfile,wfile,prompt):
 class Control (StreamRequestHandler):
 	allow_reuse_address = True
 
-	def handle(self):
+	def handle (self):
 		command = 'go'
 		prompt = True
 		while command not in ['quit','exit']:
@@ -184,4 +184,3 @@ while not connected:
 		# we can not connect to the socket, retrying (happens if respawns too quickly)
 		time.sleep(1)
 server.serve_forever()
-

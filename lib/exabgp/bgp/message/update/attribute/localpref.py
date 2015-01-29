@@ -35,7 +35,7 @@ class LocalPreference (Attribute):
 	def __str__ (self):
 		return str(self.localpref)
 
-	def __cmp__(self,other):
+	def __cmp__ (self,other):
 		if not isinstance(other,self.__class__):
 			return -1
 		if self.localpref != other.localpref:

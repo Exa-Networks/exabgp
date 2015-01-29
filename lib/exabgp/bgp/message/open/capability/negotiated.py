@@ -152,7 +152,7 @@ class RequirePath (object):
 	def setup (self,received_open,sent_open):
 		# A Dict always returning False
 		class FalseDict (dict):
-			def __getitem__(self,key):
+			def __getitem__ (self,key):
 				return False
 
 		receive = received_open.capabilities.get(Capability.CODE.ADD_PATH,FalseDict())

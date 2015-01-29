@@ -151,7 +151,7 @@ class Neighbor (object):
 			self.adjribout == other.adjribout and \
 			self.families() == other.families()
 
-	def __ne__(self, other):
+	def __ne__ (self, other):
 		return not self.__eq__(other)
 
 	def pprint (self,with_changes=True):

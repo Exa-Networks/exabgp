@@ -25,7 +25,7 @@ class CIDR (object):
 	# have a .mask for the mask
 	# have a .bgp with the bgp wire format of the prefix
 
-	def __init__(self,packed,mask):
+	def __init__ (self,packed,mask):
 		self.packed = packed
 		self.mask = mask
 		self._ip = None
@@ -46,7 +46,7 @@ class CIDR (object):
 	def pack (self):
 		return chr(self.mask) + self.packed[:CIDR.size(self.mask)]
 
-	def packed_ip(self):
+	def packed_ip (self):
 		return self.packed[:CIDR.size(self.mask)]
 
 	# July 2014: should never be called as it is for the RIB code only
@@ -65,7 +65,7 @@ class CIDR (object):
 			return -1
 		return 0
 
-	def __hash__(self):
+	def __hash__ (self):
 		return hash(chr(self.mask)+self.packed)
 
 

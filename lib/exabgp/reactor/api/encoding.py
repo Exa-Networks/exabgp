@@ -64,7 +64,7 @@ class Text (object):
 	def __init__ (self,version):
 		self.version = version
 
-	def _header_body(self,header,body):
+	def _header_body (self,header,body):
 		header = ' header %s' % hexstring(header) if header else ''
 		body = ' body %s' % hexstring(body) if body else ''
 

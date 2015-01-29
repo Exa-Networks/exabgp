@@ -63,7 +63,7 @@ class Reader (object):
 		self.format = klass.read
 		self.skip = klass.skip
 
-	def __del__(self):
+	def __del__ (self):
 		if self.file:
 			self.file.close()
 			self.file = None
@@ -71,7 +71,7 @@ class Reader (object):
 	def __enter__ (self):
 		return self
 
-	def __exit__(self, dtype, value, tb):
+	def __exit__ (self, dtype, value, tb):
 		if self.file:
 			self.file.close()
 			self.file = None

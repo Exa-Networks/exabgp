@@ -5,7 +5,7 @@ import signal
 
 class TimeError (Exception): pass
 
-def handler(signum, frame):
+def handler (signum, frame):
 	raise TimeError()
 
 count = 0

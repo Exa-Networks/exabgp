@@ -348,7 +348,7 @@ class Attributes (dict):
 		aspath = ASPath(as_seq,as_set)
 		self.add(aspath,key)
 
-	def __hash__(self):
+	def __hash__ (self):
 		# XXX: FIXME: not excellent... :-(
 		return hash(repr(self))
 
@@ -357,7 +357,7 @@ class Attributes (dict):
 	# test that sets of attributes exactly match
 	# can't rely on __eq__ for this, because __eq__ relies on Attribute.__eq__ which does not look at attributes values
 
-	def sameValuesAs(self,other):
+	def sameValuesAs (self,other):
 		# we sort based on string representation since the items do not
 		# necessarily implement __cmp__
 		def sorter (x,y):

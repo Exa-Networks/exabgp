@@ -24,7 +24,7 @@ from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 class MPLS (NLRI,CIDR):
 	__slots__ = ['labels','rd','nexthop','action']
 
-	def __init__(self,afi,safi,packed,mask,nexthop,action,path=None):
+	def __init__ (self,afi,safi,packed,mask,nexthop,action,path=None):
 		self.path_info = PathInfo.NOPATH if path is None else path
 		self.labels = Labels.NOLABEL
 		self.rd = RouteDistinguisher.NORD

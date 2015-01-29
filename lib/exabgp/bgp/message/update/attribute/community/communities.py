@@ -28,7 +28,7 @@ class Communities (Attribute):
 		else:
 			self.communities = []
 
-	def add(self,data):
+	def add (self,data):
 		return self.communities.append(data)
 
 	def pack (self,negotiated=None):

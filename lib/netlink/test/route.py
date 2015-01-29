@@ -39,7 +39,7 @@ netmask = {
 }
 
 
-def main():
+def main ():
 	netlink = NetLinkRoute()
 
 	links = {}

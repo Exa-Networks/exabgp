@@ -29,7 +29,7 @@ class NextHop (Attribute,IP):
 	def pack (self,negotiated=None):
 		return self._attribute(self.packed)
 
-	def __cmp__(self,other):
+	def __cmp__ (self,other):
 		if not isinstance(other,self.__class__):
 			return -1
 		if self.pack() != other.pack():

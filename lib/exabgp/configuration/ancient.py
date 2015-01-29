@@ -2501,7 +2501,7 @@ class Configuration (object):
 
 		return True
 
-	def _l2vpn_vpls_endpoint(self, scope, token):
+	def _l2vpn_vpls_endpoint (self, scope, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			raise ValueError(self._str_vpls_bad_enpoint)
@@ -2510,7 +2510,7 @@ class Configuration (object):
 		vpls.ve = number
 		return True
 
-	def _l2vpn_vpls_size(self, scope, token):
+	def _l2vpn_vpls_size (self, scope, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			raise ValueError(self._str_vpls_bad_size)
@@ -2519,7 +2519,7 @@ class Configuration (object):
 		vpls.size = number
 		return True
 
-	def _l2vpn_vpls_offset(self, scope, token):
+	def _l2vpn_vpls_offset (self, scope, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			raise ValueError(self._str_vpls_bad_offset)
@@ -2528,7 +2528,7 @@ class Configuration (object):
 		vpls.offset = number
 		return True
 
-	def _l2vpn_vpls_base(self, scope, token):
+	def _l2vpn_vpls_base (self, scope, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			raise ValueError(self._str_vpls_bad_label)

@@ -56,7 +56,7 @@ class RouteTargetASNIP (RouteTarget):
 		return "target:%d:%s" % (self.asn,self.ip)
 
 	@staticmethod
-	def unpack(data):
+	def unpack (data):
 		asn,ip = unpack('!H4s',data[2:8])
 		return RouteTargetASNIP(ASN(asn),IPv4.ntop(ip),False,data[:8])
 

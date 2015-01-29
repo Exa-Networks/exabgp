@@ -28,7 +28,7 @@ def is_hex (string):
 	return all(c in string.hexdigits or c == ':' for c in string)
 
 
-def __exit(memory,code):
+def __exit (memory,code):
 	if memory:
 		from exabgp.dep import objgraph
 		print "memory utilisation"

@@ -41,7 +41,7 @@ class ASPath (Attribute):
 		self._str = ''
 		self._json = {}
 
-	def __cmp__(self,other):
+	def __cmp__ (self,other):
 		if not isinstance(other, self.__class__):
 			return -1
 		if self.ASN4 != other.ASN4:

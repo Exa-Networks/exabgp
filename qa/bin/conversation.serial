@@ -67,7 +67,7 @@ def main ():
 
 	sys.exit(0 if success else 1)
 
-def check_sequence(group,exabgp,configurations,daemon,fname,show):
+def check_sequence (group,exabgp,configurations,daemon,fname,show):
 	os.environ['exabgp.tcp.once'] = 'true'
 	os.environ['exabgp.debug.defensive'] = 'true'
 	os.environ['exabgp.debug.rotate'] = 'true'

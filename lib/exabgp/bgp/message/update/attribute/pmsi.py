@@ -60,7 +60,7 @@ class PMSI (Attribute):
 	def name (tunnel_type):
 		return PMSI._name.get(tunnel_type,'unknown')
 
-	def pack(self):
+	def pack (self):
 		return self._attribute(
 			pack(
 				'!BB3s',
@@ -74,7 +74,7 @@ class PMSI (Attribute):
 	def __len__ (self):
 		return len(self.tunnel) + 5  # label:1, tunnel type: 1, MPLS label:3
 
-	def __cmp__(self,other):
+	def __cmp__ (self,other):
 		if not isinstance(other,self.__class__):
 			return -1
 		# if self.TUNNEL_TYPE != other.TUNNEL_TYPE:

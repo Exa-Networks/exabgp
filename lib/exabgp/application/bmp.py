@@ -116,7 +116,7 @@ class BMPHandler (asyncore.dispatcher_with_send):
 
 
 class BMPServer(asyncore.dispatcher):
-	def __init__(self, env):
+	def __init__ (self, env):
 		self.env = env
 		host = env.bmp.host
 		port = env.bmp.port
@@ -126,7 +126,7 @@ class BMPServer(asyncore.dispatcher):
 		self.bind((host, port))
 		self.listen(5)
 
-	def handle_accept(self):
+	def handle_accept (self):
 		pair = self.accept()
 		if pair is not None:
 			# The if prevent invalid unpacking
