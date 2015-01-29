@@ -13,7 +13,8 @@ script:
   - sbin/exabgp --fi > etc/exabgp/exabgp.env
   - set pipefail
   - ./qa/bin/parsing
-  - ./qa/bin/conversation
+#  - ./qa/bin/conversation
+  - ./qa/bin/conversation.serial
   - env ETC=`pwd`/etc/exabgp exabgp_log_enable=false nosetests --with-coverage ./qa/tests/
 #  - coverage run -m unittest discover -s qa/tests -p *_test.py
 
