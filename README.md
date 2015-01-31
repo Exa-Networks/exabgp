@@ -1,33 +1,82 @@
+[![License](https://pypip.in/license/exabgp/badge.svg)](https://github.com/Exa-Networks/exabgp/blob/master/COPYRIGHT)
+
 ##Overview
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.png)](https://gitter.im/Exa-Networks/exabgp)
-[![PYPI Version](https://pypip.in/v/exabgp/badge.png)](https://pypi.python.org/pypi/exabgp)
-[![Testing Status](https://travis-ci.org/Exa-Networks/exabgp.png)](https://travis-ci.org/Exa-Networks/exabgp)
-[![Coverage Status](https://img.shields.io/coveralls/Exa-Networks/exabgp.png)](https://coveralls.io/r/Exa-Networks/exabgp)
-[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/Exa-Networks/exabgp/badges/quality-score.png)](https://scrutinizer-ci.com/g/Exa-Networks/exabgp/)
-[![Landscape Code Quality](https://landscape.io/github/Exa-Networks/exabgp/master/landscape.png)](https://landscape.io/github/Exa-Networks/exabgp/)
-[![Codacy Badge](https://www.codacy.com/project/badge/1f5fedb98bfd47bcb9ab868ea53ea210)](https://www.codacy.com/public/thomasmangin/exabgp_2)
-[![License](https://pypip.in/license/exabgp/badge.png)](https://github.com/Exa-Networks/exabgp/blob/master/COPYRIGHT)
-
 [ExaBGP](http://github.com/Exa-Networks/exabgp) allows engineers to control their network from commodity servers.
-Think of it as [Software Defined Networking](http://en.wikipedia.org/wiki/Software-defined_networking) using [BGP](http://en.wikipedia.org/wiki/BGP).
+Think of it as [Software Defined Networking](http://en.wikipedia.org/wiki/Software-defined_networking) using [BGP](http://en.wikipedia.org/wiki/BGP) by transforming [BGP messages](http://thomas.mangin.com/data/pdf/UKNOF%2015%20-%20Mangin%20-%20Naked%20BGP.pdf) into friendly plain [text or JSON](https://github.com/Exa-Networks/exabgp/wiki/Controlling-ExaBGP-:-API-for-received-messages).
 
-Use cases include:
- * sql backed [looking glasses](https://code.google.com/p/gixlg/wiki/sample_maps) with prefix routing visualisation
- * service [high availability](http://vincent.bernat.im/en/blog/2013-exabgp-highavailability.html) automatically isolating dead servers / broken services
- * [DDOS mitigation](http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf) solutions
- * [anycasted](http://blog.iweb-hosting.co.uk/blog/2012/01/27/using-bgp-to-serve-high-availability-dns/) services
+**Find what users have [done with it](https://github.com/Exa-Networks/exabgp/wiki/Related-articles)**.
 
-The program is [BSD licenced](https://github.com/Exa-Networks/exabgp/blob/master/COPYRIGHT) and packaged for **Debian**, **Ubuntu**, **ArchLinux**, **Gentoo**, **Mint**, **FreeBSD**, **OSX**, **OmniOS**, but some features may only be available on latest version.
+Current documented use cases include [DDOS mitigation](http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf), [network visualisation](https://code.google.com/p/gixlg/wiki/sample_maps), [service high availability](http://vincent.bernat.im/en/blog/2013-exabgp-highavailability.html),
+[anycast](http://blog.iweb-hosting.co.uk/blog/2012/01/27/using-bgp-to-serve-high-availability-dns/).
 
-[ExaBGP](http://github.com/Exa-Networks/exabgp) transforms [BGP messages](http://thomas.mangin.com/data/pdf/UKNOF%2015%20-%20Mangin%20-%20Naked%20BGP.pdf) into friendly plain [text or JSON](https://github.com/Exa-Networks/exabgp/wiki/Controlling-ExaBGP-:-API-for-received-messages) which can be easily manipulate by scripts, it does **not** perform any **FIB** manipulation. If this what you need, use another open source BGP daemon such as [BIRD](http://bird.network.cz/) or [Quagga](http://www.quagga.net/).
+
+ The program is packaged for Debian, Ubuntu, ArchLinux, Gentoo, Mint, FreeBSD, OSX and even OmniOS, but the rate of development mean that some features may only be available on latest version.
+
+ ```sh
+> pip install exabgp
+> exabgp --help
+ ```
 
 ```sh
-> wget https://github.com/Exa-Networks/exabgp/archive/3.4.5.tar.gz
-> tar zxvf 3.4.5.tar.gz
-> cd exabgp-3.4.5
-> ./sbin/exabgp --help
+> curl -L https://github.com/Exa-Networks/exabgp/archive/3.4.5.tar.gz | tar zx
+> ./exabgp-3.4.5/sbin/exabgp --help
 ```
+
+##Features
+
+### Extensive RFC support
+
+ASN4 [RFC 4893](http://www.ietf.org/rfc/rfc4893.txt) /
+IPv6 [RFC 4760](http://www.ietf.org/rfc/rfc4760.txt) /
+MPLS [RFC 4659](http://tools.ietf.org/html/rfc4659) (with vpnv6) /
+VPLS [RFC 4762](http://tools.ietf.org/html/rfc4762) /
+Flow [RFC 5575](http://tools.ietf.org/html/rfc5575) /
+Graceful Restart [RFC 4724](http://www.ietf.org/rfc/rfc4724.txt) /
+Enhanced Route Refresh [RFC 7313](http://tools.ietf.org/html/rfc7313) /
+AIGP[RFC 7311](http://tools.ietf.org/html/rfc7311) /
+and [more](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information).
+
+### Many drafts
+
+[raszuk-idr-flow-spec-v6-03](http://tools.ietf.org/html/draft-ietf-idr-flow-spec-v6-03) / [draft-ietf-idr-flowspec-redirect-ip-00](http://tools.ietf.org/html/draft-ietf-idr-flowspec-redirect-ip-00) / [draft-ietf-idr-add-paths-08](http://tools.ietf.org/html/draft-ietf-idr-add-paths-08) / [draft-ietf-idr-bgp-multisession-07](http://tools.ietf.org/html/draft-ietf-idr-bgp-multisession-07) / [draft-scudder-bmp-01](http://tools.ietf.org/html/draft-scudder-bmp-01)
+
+##More information
+
+Multiple versions can be used simulteanously without conflict when [ExaBGP](http://github.com/Exa-Networks/exabgp) is ran from extracted archives and / or a local git repositories.
+
+[ExaBGP](http://github.com/Exa-Networks/exabgp) does **not** perform any **FIB** manipulation. If this what you need, use another open source BGP daemon such as [BIRD](http://bird.network.cz/) or [Quagga](http://www.quagga.net/).
+
+##Curious
+
+Want to know how the code is changing ? Have a question ?
+
+The way way to keep informed is to follow us on [Google+](https://plus.google.com/u/0/communities/108249711110699351497), [twitter](https://twitter.com/#!/search/exabgp) and / or subscribe to our low volume [mailing list](http://groups.google.com/group/exabgp-users).
+
+For more information, please consult any of the [wiki pages](https://github.com/Exa-Networks/exabgp/wiki), in particular the [RFC compliance](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information), [FAQ](https://github.com/Exa-Networks/exabgp/wiki/FAQ)
+ and [changelog](https://raw.github.com/Exa-Networks/exabgp/master/CHANGELOG).
+
+##Problem ?
+
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/Exa-Networks/exabgp/badges/quality-score.png)](https://scrutinizer-ci.com/g/Exa-Networks/exabgp/)
+[![Landscape Code Quality](https://landscape.io/github/Exa-Networks/exabgp/master/landscape.svg)](https://landscape.io/github/Exa-Networks/exabgp/)
+[![Coverage Status](https://img.shields.io/coveralls/Exa-Networks/exabgp.svg)](https://coveralls.io/r/Exa-Networks/exabgp)
+[![Codacy Badge](https://www.codacy.com/project/badge/1f5fedb98bfd47bcb9ab868ea53ea210)](https://www.codacy.com/public/thomasmangin/exabgp_2)
+[![Testing Status](https://travis-ci.org/Exa-Networks/exabgp.svg)](https://travis-ci.org/Exa-Networks/exabgp)
+
+
+No software is perfect.
+
+ExaBGP is supported through Github [issue tracker](https://github.com/Exa-Networks/exabgp/issues) on a best effort basis. So should you encounter a bug please [report it](https://github.com/Exa-Networks/exabgp/issues?labels=bug&page=1&state=open) so we can help you resolve it.
+
+Should we be slow to pick your issue, you can also contact us ( GMT ) for a chat via [Gitter](https://gitter.im/Exa-Networks/exabgp) or [#exabgp](irc://irc.freenode.net:6667/exabgp).
+
+The configuration file format changes from version to version, but effort are made to make sure backward compatibility is kept, however users are encouraged to read the release note and check their setup after upgrade.
+
+##Support
+
+We try to be reactive to any problem raised, and hopefully are not too bad at it.
+Some organisation are however unable to deploy an applicatoin without commercial support, therefore it is available if your organisation requires it but is by no way required.
 
 ##Who is using it ?
 
@@ -50,56 +99,6 @@ These organisations have spoken of, or are using/have used [ExaBGP](http://githu
 ...
 
 Please let us know if you use it.
-
-##Features
-
-### Extensive RFC support
-
-**IPv6** [RFC 4760](http://www.ietf.org/rfc/rfc4760.txt),
-**ASN4** [RFC 4893](http://www.ietf.org/rfc/rfc4893.txt),
-**Flow** [RFC 5575](http://tools.ietf.org/html/rfc5575),
-**MPLS** [RFC 4659](http://tools.ietf.org/html/rfc4659) (with vpnv6),
-**VPLS** [RFC 4762](http://tools.ietf.org/html/rfc4762),
-**Graceful Restart** support [RFC 4724](http://www.ietf.org/rfc/rfc4724.txt),
-**Enhanced Route Refresh** [RFC 7313](http://tools.ietf.org/html/rfc7313),
-**AIGP** [RFC 7311](http://tools.ietf.org/html/rfc7311),
-**[more](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information)**
-
-### Many drafts
-
-[draft-raszuk-idr-flow-spec-v6-03](http://tools.ietf.org/html/draft-ietf-idr-flow-spec-v6-03), [draft-ietf-idr-flowspec-redirect-ip-00](http://tools.ietf.org/html/draft-ietf-idr-flowspec-redirect-ip-00), [draft-ietf-idr-add-paths-08](http://tools.ietf.org/html/draft-ietf-idr-add-paths-08), partial [draft-ietf-idr-bgp-multisession-07](http://tools.ietf.org/html/draft-ietf-idr-bgp-multisession-07), [draft-scudder-bmp-01](http://tools.ietf.org/html/draft-scudder-bmp-01)
-
-##More information
-
-[ExaBGP](http://github.com/Exa-Networks/exabgp) from source (or git) runs on any Unix server and has no dependencies.
-
-Multiple versions can be used simulteanously without conflict, if ran [ExaBGP](http://github.com/Exa-Networks/exabgp) from the extracted archive, or a local git repository.
-
-##Curious
-
-Want to know how the code is changing ? Have a question ?
-
-The way way to keep informed is to follow [ExaBGP's G+ Group](https://plus.google.com/u/0/communities/108249711110699351497). You can as well follow us on [twitter](https://twitter.com/#!/search/exabgp), or subscribe to our low volume [mailing list](http://groups.google.com/group/exabgp-users).
-
-For more information, please consult any of :
-
- * the [RFC compliance](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information) pages
- * the [wiki](https://github.com/Exa-Networks/exabgp/wiki) with some some talks and presentations, ...
- * and [the FAQ](https://github.com/Exa-Networks/exabgp/wiki/FAQ)
- * the [changelog](https://raw.github.com/Exa-Networks/exabgp/master/CHANGELOG)
-
-##Problem ?
-
-No software is perfect.
-
-ExaBGP is supported through Github [issue tracker](https://github.com/Exa-Networks/exabgp/issues) on a best effort basis. So should you encounter a bug please [report it](https://github.com/Exa-Networks/exabgp/issues?labels=bug&page=1&state=open) so we can help you resolve it.
-
-The configuration file format changes from version to version, but effort are made to make sure backward compatibility is kept, however users are encouraged to read the release note and check their setup after upgrade.
-
-##Support
-
-We try to be reactive to any problem raised, and hopefully are not too bad at it.
-Some organisation are however unable to deploy an applicatoin without commercial support, therefore it is available if your organisation requires it but is by no way required.
 
 ##Related Projects
 
