@@ -156,6 +156,9 @@ def parse ():
     g.add_argument("--community", metavar="COMMUNITY",
                    type=str, default=None,
                    help="announce IPs with the supplied community")
+    g.add_argument("--as-path", metavar="ASPATH",
+                   type=str, default=None,
+                   help="announce IPs with the supplied as-path")
     g.add_argument("--withdraw-on-down", action="store_true",
                    help="Instead of increasing the metric on health failure, withdraw the route")
 
@@ -336,6 +339,9 @@ def loop (options):
                 if options.community:
                     announce = "{0} community [ {1} ]".format(announce,
                                                               options.community)
+                if options.as_path:
+                    announce = "{0} as-path [ {1} ]".format(announce,
+                                                              options.as_path)
             logger.debug("exabgp: {0} {1}".format(command, announce))
             print("{0} {1}".format(command, announce))
             metric += options.increase
