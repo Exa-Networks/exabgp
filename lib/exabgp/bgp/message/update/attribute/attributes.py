@@ -40,6 +40,9 @@ NOTHING = _NOTHING()
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 class Attributes (dict):
+	MULTIPLE = (Attribute.CODE.MP_REACH_NLRI,Attribute.CODE.MP_UNREACH_NLRI)
+	NO_GENERATION = (Attribute.CODE.NEXT_HOP, Attribute.CODE.INTERNAL_SPLIT, Attribute.CODE.INTERNAL_WATCHDOG, Attribute.CODE.INTERNAL_WITHDRAW)
+
 	# A cache of parsed attributes
 	cache = {}
 
@@ -67,13 +70,10 @@ class Attributes (dict):
 		Attribute.CODE.INTERNAL_NAME:      ('string',  '', 'name',               '%s',     '%s'),
 	}
 
-	def _generate_text (self, extra=None):
-		exclude = [Attribute.CODE.INTERNAL_SPLIT, Attribute.CODE.INTERNAL_WATCHDOG, Attribute.CODE.INTERNAL_WITHDRAW, Attribute.CODE.NEXT_HOP]
-		if extra:
-			exclude.append(extra)
+	def _generate_text (self):
 		for code in sorted(self.keys()):
 			# XXX: FIXME: really we should have a INTERNAL attribute in the classes
-			if code in exclude:
+			if code in Attributes.NO_GENERATION:
 				continue
 			attribute = self[code]
 			if code in self.representation:
@@ -87,12 +87,16 @@ class Attributes (dict):
 				else:
 					yield ' %s %s' % (name, presentation % str(attribute))
 			else:
-				yield ' attribute [ 0x%02X 0x%02X %s ]' % (code,attribute.FLAG,str(attribute))
+				if code in self.MULTIPLE:
+					for attr in attribute:
+						yield ' attribute [ 0x%02X 0x%02X %s ]' % (code,attr.FLAG,str(attr))
+				else:
+					yield ' attribute [ 0x%02X 0x%02X %s ]' % (code,attribute.FLAG,str(attribute))
 
 	def _generate_json (self):
 		for code in sorted(self.keys() + [Attribute.CODE.ATOMIC_AGGREGATE,]):
 			# remove the next-hop from the attribute as it is define with the NLRI
-			if code in (Attribute.CODE.NEXT_HOP, Attribute.CODE.INTERNAL_SPLIT, Attribute.CODE.INTERNAL_WATCHDOG, Attribute.CODE.INTERNAL_WITHDRAW):
+			if code in Attributes.NO_GENERATION:
 				continue
 			attribute = self[code]
 			if code in self.representation:
@@ -114,7 +118,11 @@ class Attributes (dict):
 				else:
 					yield '"%s": %s' % (name, presentation % str(attribute))
 			else:
-				yield '"attribute-0x%02X-0x%02X": "%s"' % (code,attribute.FLAG,str(attribute))
+				if code in Attributes.MULTIPLE:
+					for attr in attribute:
+						yield '"attribute-0x%02X-0x%02X": "%s"' % (code,attr.FLAG,str(attr))
+				else:
+					yield '"attribute-0x%02X-0x%02X": "%s"' % (code,attribute.FLAG,str(attribute))
 
 	def __init__ (self):
 		# cached representation of the object
@@ -142,7 +150,7 @@ class Attributes (dict):
 			raise Notify(3,0,'multiple attribute for %s' % str(Attribute.CODE(attribute.ID)))
 
 		# XXX: FIXME: I am not sure anymore that more than one of each is possible
-		if attribute.ID in (Attribute.CODE.MP_REACH_NLRI,Attribute.CODE.MP_UNREACH_NLRI):
+		if attribute.ID in Attributes.MULTIPLE:
 			self.setdefault(attribute.ID,[]).append(attribute)
 		else:
 			self[attribute.ID] = attribute
@@ -194,7 +202,11 @@ class Attributes (dict):
 			if code in check and not check[code](local_asn,peer_asn,attribute):
 				continue
 
-			message += attribute.pack(negotiated)
+			if code in Attributes.MULTIPLE:
+				for attr in attribute:
+					message += attr.pack(negotiated)
+			else:
+				message += attribute.pack(negotiated)
 
 		return message
 
@@ -211,7 +223,6 @@ class Attributes (dict):
 	def index (self):
 		# XXX: something a little bit smaller memory wise ?
 		if not self._idx:
-			# idx = ''.join(self._generate_text(Attribute.CODE.MED))
 			idx = ''.join(self._generate_text())
 			nexthop = str(self.get(Attribute.CODE.NEXT_HOP,''))
 			self._idx = '%s next-hop %s' % (idx,nexthop) if nexthop else idx

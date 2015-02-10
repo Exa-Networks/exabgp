@@ -52,6 +52,10 @@ def check (exabgp, daemon, group, port, delay):
 	name = group.split('/')[-1].split('.')[0]
 
 	try:
+		if os.environ.get('dry',False) is not False:
+			display(commands(exabgp_command,daemon_command,port))
+			sys.exit(1)
+
 		daemon = subprocess.Popen(daemon_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		time.sleep(delay)
 		exabgp = subprocess.Popen(exabgp_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -190,6 +194,8 @@ if __name__ == '__main__':
 	timeout = int(os.environ.get('TIMEOUT',5*60))  # seconds
 	if len(sys.argv) >= 2:
 		group = sys.argv[1]
+		if not group.endswith('group'):
+			sys.exit('wrong name as parameter, it must be the group file ending in .group (%s)' % group)
 		success = check(exabgp,daemon,group,port,timeout/20)
 	else:
 		signal.signal(signal.SIGALRM, alarm_handler)
