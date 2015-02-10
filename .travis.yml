@@ -1,11 +1,17 @@
 language: python
+
 python:
   - "2.6"
   - "2.7"
   - "pypy"
 
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -y python-pip python-dev
+
 install:
-  - pip install coveralls
+  - pip install coveralls --use-mirrors
+  - pip install psutil --use-mirrors
 
 script:
   - export INTERPRETER=python
@@ -13,12 +19,20 @@ script:
   - sbin/exabgp --fi > etc/exabgp/exabgp.env
   - set pipefail
   - ./qa/bin/parsing
-#  - ./qa/bin/conversation
-  - ./qa/bin/conversation.serial
+  - ./qa/bin/conversation
   - env ETC=`pwd`/etc/exabgp exabgp_log_enable=false nosetests --with-coverage ./qa/tests/
 #  - coverage run -m unittest discover -s qa/tests -p *_test.py
 
 after_success:
   - coveralls
 
-sudo: false
+notifications:
+  irc:
+    channels: "irc.freenode.org#exabgp"
+    template:
+      - "%{repository}@%{branch}: %{message} (%{build_url})"
+    on_success: change
+    on_failure: change
+  email: true
+
+# sudo: false

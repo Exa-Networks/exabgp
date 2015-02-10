@@ -45,6 +45,7 @@ def check (exabgp, daemon, group, port, delay):
 	os.environ['exabgp.tcp.port'] = str(port)
 	#os.environ['exabgp.debug.defensive'] = 'true'
 	os.environ['exabgp.debug.rotate'] = 'true'
+	os.environ['exabgp.reactor.speed'] = '0.1'
 
 	daemon_command = [daemon, sequence_file]
 	exabgp_command = [exabgp, '-d'] + configurations
@@ -52,15 +53,13 @@ def check (exabgp, daemon, group, port, delay):
 	name = group.split('/')[-1].split('.')[0]
 
 	try:
-		if os.environ.get('dry',False) is not False:
+		if os.environ.get('DRY',os.environ.get('dry',False)) is not False:
 			display(commands(exabgp_command,daemon_command,port))
 			sys.exit(1)
 
 		daemon = subprocess.Popen(daemon_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		time.sleep(delay)
 		exabgp = subprocess.Popen(exabgp_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-		display(commands(exabgp_command,daemon_command,port))
 
 		exabgp_out,exabgp_err = exabgp.communicate()
 		daemon_out,daemon_err = daemon.communicate()
@@ -70,6 +69,8 @@ def check (exabgp, daemon, group, port, delay):
 		display(daemon_out)
 		display(daemon_err)
 	except Alarm:
+		display(commands(exabgp_command,daemon_command,port))
+
 		display('failed, killed', name, '\n')
 
 		try: daemon.terminate()
@@ -82,6 +83,8 @@ def check (exabgp, daemon, group, port, delay):
 		try: exabgp.kill()
 		except OSError: pass
 	except Exception,exc:
+		display(commands(exabgp_command,daemon_command,port))
+
 		display(str(exc))
 
 
@@ -191,12 +194,12 @@ if __name__ == '__main__':
 	if not path.isfile(daemon):
 		sys.exit('could not find the sequence daemon')
 
-	timeout = int(os.environ.get('TIMEOUT',5*60))  # seconds
+	timeout = int(os.environ.get('TIMEOUT',os.environ.get('timeout',5*60)))  # seconds
 	if len(sys.argv) >= 2:
 		group = sys.argv[1]
 		if not group.endswith('group'):
 			sys.exit('wrong name as parameter, it must be the group file ending in .group (%s)' % group)
-		success = check(exabgp,daemon,group,port,timeout/20)
+		success = check(exabgp,daemon,group,port,max(4,timeout/20))
 	else:
 		signal.signal(signal.SIGALRM, alarm_handler)
 		signal.alarm(timeout)

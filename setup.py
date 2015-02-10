@@ -81,6 +81,7 @@ Using pip
 ::
 
     pip install -U exabgp
+    exabgp --help
 
 
 Without installation
@@ -88,14 +89,14 @@ Without installation
 
 ::
 
-    wget https://github.com/Exa-Networks/exabgp/archive/%(version)s.tar.gz
-    tar zxvf %(version)s.tar.gz
-    cd exabgp-%(version)s
-    ./sbin/exabgp --help
+    curl -L https://github.com/Exa-Networks/exabgp/archive/%(version)s.tar.gz | tar zx
+    ./exabgp-%(version)s/sbin/exabgp --help
 
 Feedback and getting involved
 =============================
 
+- Gitter: https://gitter.im/Exa-Networks/exabgp
+- #exabgp: irc://irc.freenode.net:6667/exabgp
 - Google +: https://plus.google.com/u/0/communities/108249711110699351497
 - Twitter: https://twitter.com/#!/search/exabgp
 - Mailing list: http://groups.google.com/group/exabgp-users
