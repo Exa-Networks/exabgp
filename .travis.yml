@@ -36,7 +36,7 @@ notifications:
   email: true
   webhooks:
     urls:
-      - https://webhooks.gitter.im/e/728b8f13c68109547e98
+      - https://webhooks.gitter.im/e/48936e41bd3f866cce4e
     # options: [always|never|change] default: always
     on_success: always
     on_failure: always
