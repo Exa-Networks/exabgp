@@ -70,12 +70,14 @@ class BGPHandler(asyncore.dispatcher_with_send):
 				if conf_name not in cmdline[-1]:
 					continue
 
-				if not conf_name.endswith('.conf'):
+				if not cmdline[-1].endswith('.conf'):
 					continue
 
 				processes.append(pid)
 
 			except psutil.NoSuchProcess:
+				pass
+			except psutil.AccessDenied:
 				pass
 
 		if len(processes) == 0:
