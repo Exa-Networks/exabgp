@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+# encoding: utf-8
+"""
+l2vpn.py
+
+Created by Thomas Mangin on 2010-01-14.
+Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+"""
 
 import unittest
 
