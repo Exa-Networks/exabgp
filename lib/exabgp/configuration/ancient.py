@@ -1851,14 +1851,17 @@ class Configuration (object):
 			for i in range(2,len(data),2):
 				raw += chr(int(data[i:i+2],16))
 
-			for ((ID,_),klass) in Attribute.registered_attributes.iteritems():
-				if code == ID and flag == klass.FLAG:
-					scope[-1]['announce'][-1].attributes.add(klass.unpack(raw,None))
-					return True
+			try:
+				for ((ID,_),klass) in Attribute.registered_attributes.iteritems():
+					if code == ID and flag == klass.FLAG:
+						scope[-1]['announce'][-1].attributes.add(klass.unpack(raw,None))
+						return True
+			except Exception:
+				pass
 
 			scope[-1]['announce'][-1].attributes.add(GenericAttribute(code,flag,raw))
 			return True
-		except (IndexError,ValueError):
+		except (IndexError,ValueError), exc:
 			self._error = self._str_route_error
 			if self.debug: raise Exception()  # noqa
 			return False

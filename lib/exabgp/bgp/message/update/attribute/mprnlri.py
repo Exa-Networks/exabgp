@@ -82,7 +82,7 @@ class MPRNLRI (Attribute,Address):
 		offset = 3
 
 		# we do not want to accept unknown families
-		if (afi,safi) not in negotiated.families:
+		if negotiated and (afi,safi) not in negotiated.families:
 			raise Notify(3,0,'presented a non-negotiated family %d/%d' % (afi,safi))
 
 		# -- Reading length of next-hop
