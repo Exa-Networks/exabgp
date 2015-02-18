@@ -228,7 +228,7 @@ def loopback_ips (label):
         cmd = subprocess.Popen("/sbin/ip -o address show dev lo".split(), shell=False, stdout=subprocess.PIPE)
     else:
         # Try with ifconfig
-        ipre = re.compile(r"^inet6?\s+(alias )?(?P<ip>[\da-f.:]+)\s+(?:netmask 0x(?P<netmask>[0-9a-f]+)|prefixlen (?P<mask>\d+)).*")
+        ipre = re.compile(r"^inet6?\s+(alias\s+)?(?P<ip>[\da-f.:]+)\s+(?:netmask 0x(?P<netmask>[0-9a-f]+)|prefixlen (?P<mask>\d+)).*")
         cmd = subprocess.Popen("/sbin/ifconfig lo0".split(), shell=False, stdout=subprocess.PIPE)
         labelre = re.compile(r"")
     for line in cmd.stdout:
