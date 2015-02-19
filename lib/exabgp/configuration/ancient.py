@@ -880,7 +880,7 @@ class Configuration (object):
 		name = tokens[0] if len(tokens) >= 1 else 'conf-only-%s' % str(time.time())[-6:]
 		self.process.setdefault(name,{})['neighbor'] = scope[-1]['peer-address'] if 'peer-address' in scope[-1] else '*'
 
-		for key in ['neighbor-changes', 'receive-notifications', 'receive-opens', 'receive-keepalives', 'receive-refresh', 'receive-updates', 'receive-operational', 'receive-parsed', 'receive-packets', 'consolidate']:
+		for key in ['neighbor-changes', 'receive-notifications', 'receive-opens', 'receive-keepalives', 'receive-refresh', 'receive-updates', 'receive-operational', 'receive-parsed', 'receive-packets', 'consolidate', 'send-packets']:
 			self.process[name][key] = scope[-1].pop(key,False)
 
 		run = scope[-1].pop('process-run','')
