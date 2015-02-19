@@ -53,9 +53,9 @@ For more information, please consult any of the [wiki pages](https://github.com/
 
 ExaBGP is supported through Github [issue tracker](https://github.com/Exa-Networks/exabgp/issues) on a best effort basis. So should you encounter a bug please [report it](https://github.com/Exa-Networks/exabgp/issues?labels=bug&page=1&state=open) so we can help you resolve it.
 
-During "day time" ( GMT ) feel free to ask us question using instant messaging via [Gitter](https://gitter.im/Exa-Networks/exabgp) or [#exabgp](irc://irc.freenode.net:6667/exabgp) on Freenode.
+During "day time" ( GMT ) feel free to ask us questions using instant messaging via [Gitter](https://gitter.im/Exa-Networks/exabgp) or [#exabgp](irc://irc.freenode.net:6667/exabgp) on Freenode.
 
-Multiple versions can be used simulteanously without conflict when [ExaBGP](http://github.com/Exa-Networks/exabgp) is ran from extracted archives and / or a local git repositories.
+Multiple versions can be used simulteanously without conflict when [ExaBGP](http://github.com/Exa-Networks/exabgp) is ran from extracted archives and / or local git repositories.
 
 The configuration file format changes from version to version, but effort are made to make sure backward compatibility is kept, however users are encouraged to read the release note and check their setup after upgrade.
 

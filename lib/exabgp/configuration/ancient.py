@@ -1861,7 +1861,7 @@ class Configuration (object):
 
 			scope[-1]['announce'][-1].attributes.add(GenericAttribute(code,flag,raw))
 			return True
-		except (IndexError,ValueError), exc:
+		except (IndexError,ValueError):
 			self._error = self._str_route_error
 			if self.debug: raise Exception()  # noqa
 			return False
