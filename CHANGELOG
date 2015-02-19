@@ -17,6 +17,8 @@ Version 3.4.8
     reported by: Eiichiro Watanabe
  * Fix: issue with handling of some generic attributes
     reported by: Hiroshi Yokoi
+ * Fix: restore old api syntax broken by mistake
+    patch by: David Waring
 
 Version 3.4.7
  * Package: be more pythonic and use enty points with pip installation
