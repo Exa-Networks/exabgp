@@ -31,7 +31,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 class PMSI (Attribute):
 	ID = Attribute.CODE.PMSI_TUNNEL
-	FLAG = Attribute.Flag.OPTIONAL
+	FLAG = Attribute.Flag.OPTIONAL | Attribute.Flag.TRANSITIVE
 	CACHING = True
 	TUNNEL_TYPE = -1
 
