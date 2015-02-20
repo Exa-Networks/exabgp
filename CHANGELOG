@@ -19,6 +19,8 @@ Version 3.4.8
     reported by: Hiroshi Yokoi
  * Fix: restore old api syntax broken by mistake
     patch by: David Waring
+ * Fix: issue with E-VPN NLRI
+    patch by: Thomas Morin
 
 Version 3.4.7
  * Package: be more pythonic and use enty points with pip installation
