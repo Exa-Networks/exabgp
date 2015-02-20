@@ -64,7 +64,7 @@ class Multicast (EVPN):
 		return '%s%s%s%s' % (
 			self.rd.pack(),
 			self.etag.pack(),
-			chr(len(ip)),
+			chr(len(ip)*8),
 			ip
 		)
 
@@ -72,8 +72,8 @@ class Multicast (EVPN):
 	def unpack (cls, data):
 		rd = RouteDistinguisher.unpack(data[:8])
 		etag = EthernetTag.unpack(data[8:12])
-		iplen = ord(data[12])
+		iplen = ord(data[12])*8
 		ip = IP.unpack(data[12:12+iplen])
-		if iplen not in (4,16):
+		if iplen not in (4*8,16*8):
 			raise Exception("IP len is %d, but EVPN route currently support only IPv4" % iplen)
 		return cls(rd,etag,ip)
