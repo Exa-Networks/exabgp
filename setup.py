@@ -382,7 +382,7 @@ os_name = platform.system()
 
 if os_name == 'NetBSD':
 	files_definition= [
-		('bin/exabgp',configuration('etc/exabgp')),
+		('share/exabgp',configuration('etc/exabgp')),
 	]
 else:
 	files_definition = [
