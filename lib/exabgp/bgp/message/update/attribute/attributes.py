@@ -94,7 +94,7 @@ class Attributes (dict):
 					yield ' attribute [ 0x%02X 0x%02X %s ]' % (code,attribute.FLAG,str(attribute))
 
 	def _generate_json (self):
-		for code in sorted(self.keys() + [Attribute.CODE.ATOMIC_AGGREGATE,]):
+		for code in sorted(self.keys()):
 			# remove the next-hop from the attribute as it is define with the NLRI
 			if code in Attributes.NO_GENERATION:
 				continue
