@@ -23,6 +23,8 @@ Version 3.4.8
     patch by: Havard Eidnes
  * Fix: issue with E-VPN NLRI
     patch by: Thomas Morin
+ * Fix: bad iteration for JSON generation ( bug created during 3.4.8 dev )
+    patch by: Ian bobbitt
 
 Version 3.4.7
  * Package: be more pythonic and use enty points with pip installation
