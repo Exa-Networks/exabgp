@@ -19,12 +19,14 @@ Version 3.4.8
     reported by: Hiroshi Yokoi
  * Fix: restore old api syntax broken by mistake
     patch by: David Waring
- * Fix: make healthcheck.py work on NetBSD
-    patch by: Havard Eidnes
  * Fix: issue with E-VPN NLRI
     patch by: Thomas Morin
  * Fix: bad iteration for JSON generation ( bug created during 3.4.8 dev )
     patch by: Ian bobbitt
+ * Fix: healthcheck.py: optionally match "alias" in ifconfig output
+    patch by: Havard Eidnes
+ * Fix: healthcheck.py: make the ifconfig path work; regexp fix
+    patch by: Havard Eidnes
 
 Version 3.4.7
  * Package: be more pythonic and use enty points with pip installation

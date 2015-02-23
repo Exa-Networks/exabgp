@@ -22,8 +22,6 @@ Find what users have [done with it](https://github.com/Exa-Networks/exabgp/wiki/
 
 ##Features
 
-### Extensive RFC support
-
 **ASN4** [RFC 4893](http://www.ietf.org/rfc/rfc4893.txt) /
 **IPv6** [RFC 4760](http://www.ietf.org/rfc/rfc4760.txt) /
 **MPLS** [RFC 4659](http://tools.ietf.org/html/rfc4659) (with vpnv6) /
