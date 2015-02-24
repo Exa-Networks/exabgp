@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from netlink.route import *
+from exabgp.netlink.route import *
 
 
 def main ():
