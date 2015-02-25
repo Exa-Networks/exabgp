@@ -1,48 +1,11 @@
 #!/bin/sh
 
-dirname=`dirname $0`
-
-case $dirname in
-	/*)
-		cd $dirname/../.. > /dev/null
-		path=`pwd`
-		cd - > /dev/null
-	;;
-	*)
-		cd `pwd`/$dirname/../.. > /dev/null
-		path=`pwd`
-		cd - > /dev/null
-	;;
-esac
+path="$(readlink -f "$(dirname "$0")"/../..)"
 
 export PYTHONPATH=$path/lib:/usr/share/exabgp/lib/3.4.4
 
-PYPY=`which pypy 2>/dev/null`
-PYTHON27=`which python2.7 2>/dev/null`
-PYTHON26=`which python2.6 2>/dev/null`
-PYTHON2=`which python2 2>/dev/null`
-PYTHON=`which python 2>/dev/null`
+for INTERPRETER in "$INTERPRETER" pypy python2.7 python2.6 python2 python; do
+	INTERPRETER="$(command -v "$INTERPRETER")" && break
+done
 
-if [ "$INTERPRETER" != "" ]
-then
-	INTERPRETER=`which $INTERPRETER`
-elif [ -f "$PYPY" ]
-then
-	INTERPRETER=$PYPY
-elif [ -f "$PYTHON27" ]
-then
-	INTERPRETER=$PYTHON27
-elif [ -f "$PYTHON26" ]
-then
-	INTERPRETER=$PYTHON26
-elif [ -f "$PYTHON2" ]
-then
-	INTERPRETER=$PYTHON2
-elif [ -f "$PYTHON" ]
-then
-	INTERPRETER=$PYTHON
-else
-	INTERPRETER=python
-fi
-
-exec $INTERPRETER $path/qa/prg/ip.py "$@"
+exec "$INTERPRETER" "$path"/qa/prg/ip.py "$@"
