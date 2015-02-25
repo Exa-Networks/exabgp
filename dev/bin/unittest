@@ -1,6 +1,6 @@
 #!/bin/sh
 
-path="$(readlink -f "$(dirname "$0")"/../..)"
+path="$(cd "$(dirname "$0")"/../.. ; pwd)"
 
 export PYTHONPATH=$path/lib
 
