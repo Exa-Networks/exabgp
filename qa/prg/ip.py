@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
-from exabgp.netlink.route import *
+import socket
+from exabgp.netlink.route import Link, NetLinkRoute, Address, Neighbor, Attributes
 
 
 def main ():
