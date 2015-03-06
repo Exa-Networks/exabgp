@@ -120,7 +120,7 @@ exabgp (%s-1) unstable; urgency=low
 
   * latest ExaBGP release.
 
- -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  %s
+ -- Vincent Bernat <bernat@debian.org>  %s
 
 """
 
