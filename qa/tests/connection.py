@@ -21,17 +21,17 @@ def test ():
 	KEEP = ''.join([chr(int(_,16)) for _ in "FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF 00 00 04".split()])
 
 	from exabgp.reactor.network.outgoing import Outgoing
-	connection = Outgoing(1,'82.219.0.5','82.219.212.34')
-	writer = connection._writer(OPEN)
-	while writer() is False:
+	connection = Outgoing(1,'82.219.0.69','82.219.212.34')
+	writer = connection.writer(OPEN)
+	while writer.next() is False:
 		pass
-	writer = connection._writer(KEEP)
-	while writer() is False:
+	writer = connection.writer(KEEP)
+	while writer.next() is False:
 		pass
 
 	reader = connection.reader()
 
-	for size,kind,header,body in reader:
+	for size,msg,header,body,notification in reader:
 		if size:
 			print od(header+body)
 		else:
@@ -39,7 +39,7 @@ def test ():
 
 	reader = connection.reader()
 
-	for size,kind,header,body in reader:
+	for size,msg,header,body,notification in reader:
 		if size:
 			print od(header+body)
 		else:

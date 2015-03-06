@@ -21,7 +21,7 @@ script:
   - set pipefail
   - ./qa/bin/parsing
   - ./qa/bin/conversation
-  - env ETC=`pwd`/etc/exabgp exabgp_log_enable=false nosetests --with-coverage ./qa/tests/
+  - env ETC=`pwd`/etc/exabgp exabgp_log_enable=false nosetests --with-coverage ./qa/tests/*_test.py
 #  - coverage run -m unittest discover -s qa/tests -p *_test.py
 
 after_success:
