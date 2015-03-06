@@ -43,7 +43,10 @@ class Neighbor (object):
 
 		self.api = APIOptions()
 
+		# passive indicate that we do not establish outgoing connections
 		self.passive = False
+		# the port to listen on ( zero mean that we do not listen )
+		self.listen = 0
 
 		# capability
 		self.route_refresh = False
@@ -138,6 +141,7 @@ class Neighbor (object):
 			self.peer_address == other.peer_address and \
 			self.peer_as == other.peer_as and \
 			self.passive == other.passive and \
+			self.listen == other.listen and \
 			self.hold_time == other.hold_time and \
 			self.md5 == other.md5 and \
 			self.ttl == other.ttl and \
@@ -202,7 +206,7 @@ class Neighbor (object):
 			'\tlocal-as %s;\n' \
 			'\tpeer-as %s;%s\n' \
 			'\thold-time %s;\n' \
-			'%s%s%s%s%s\n' \
+			'%s%s%s%s%s%s\n' \
 			'\tcapability {\n' \
 			'%s%s%s%s%s%s%s\t}\n' \
 			'\tfamily {%s\n' \
@@ -216,8 +220,9 @@ class Neighbor (object):
 				self.local_address,
 				self.local_as,
 				self.peer_as,
-				'\n\tpassive;\n' if self.passive else '',
 				self.hold_time,
+				'\n\tpassive;\n' if self.passive else '',
+				'\n\tlisten %d;\n' % self.listen if self.listen else '',
 				'\tgroup-updates: %s;\n' % (self.group_updates if self.group_updates else ''),
 				'\tauto-flush: %s;\n' % ('true' if self.flush else 'false'),
 				'\tadj-rib-out: %s;\n' % ('true' if self.adjribout else 'false'),

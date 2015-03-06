@@ -5,7 +5,10 @@ Version explained:
 
 Version 3.4.9
  * Fix: very bad bug where NLRI where not associated to the right AFI/SAFI pair ( #235 )
-    reported by: esequei 
+    reported by: esequei
+ * Feature: per peer listening option ( listen keyword with port number )
+ * Feature: incoming connection MD5 support
+    requested by: Sandy Breeze
 
 Version 3.4.8
  * Fix: bug with multiple configuration files
