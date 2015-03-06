@@ -16,19 +16,19 @@ from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.bgp.message.update.nlri.flow import Flow
 
 
-NLRI.register_nlri(Prefix,SAFI.unicast,AFI.ipv4)
-NLRI.register_nlri(Prefix,SAFI.unicast,AFI.ipv6)
-NLRI.register_nlri(Prefix,SAFI.multicast,AFI.ipv4)
-NLRI.register_nlri(Prefix,SAFI.multicast,AFI.ipv6)
+NLRI.register_nlri(Prefix,AFI.ipv4,SAFI.unicast)
+NLRI.register_nlri(Prefix,AFI.ipv6,SAFI.unicast)
+NLRI.register_nlri(Prefix,AFI.ipv4,SAFI.multicast)
+NLRI.register_nlri(Prefix,AFI.ipv6,SAFI.multicast)
 
-NLRI.register_nlri(MPLS,SAFI.nlri_mpls,AFI.ipv4)
-NLRI.register_nlri(MPLS,SAFI.nlri_mpls,AFI.ipv6)
-NLRI.register_nlri(MPLS,SAFI.mpls_vpn,AFI.ipv4)
-NLRI.register_nlri(MPLS,SAFI.mpls_vpn,AFI.ipv6)
+NLRI.register_nlri(MPLS,AFI.ipv4,SAFI.nlri_mpls)
+NLRI.register_nlri(MPLS,AFI.ipv6,SAFI.nlri_mpls)
+NLRI.register_nlri(MPLS,AFI.ipv4,SAFI.mpls_vpn)
+NLRI.register_nlri(MPLS,AFI.ipv6,SAFI.mpls_vpn)
 
-NLRI.register_nlri(VPLS,SAFI.vpls,AFI.l2vpn)
+NLRI.register_nlri(VPLS,AFI.l2vpn,SAFI.vpls)
 
-NLRI.register_nlri(Flow,SAFI.flow_ip,AFI.ipv4)
-NLRI.register_nlri(Flow,SAFI.flow_ip,AFI.ipv6)
-NLRI.register_nlri(Flow,SAFI.flow_vpn,AFI.ipv4)
-NLRI.register_nlri(Flow,SAFI.flow_vpn,AFI.ipv6)
+NLRI.register_nlri(Flow,AFI.ipv4,SAFI.flow_ip)
+NLRI.register_nlri(Flow,AFI.ipv6,SAFI.flow_ip)
+NLRI.register_nlri(Flow,AFI.ipv4,SAFI.flow_vpn)
+NLRI.register_nlri(Flow,AFI.ipv6,SAFI.flow_vpn)
