@@ -116,9 +116,9 @@ if __name__ == '__main__':
 """
 
 debian_template = """\
-exabgp (%s-1) unstable; urgency=low
+exabgp (%s-0) unstable; urgency=low
 
-  * latest ExaBGP release.
+  * Latest ExaBGP release.
 
  -- Vincent Bernat <bernat@debian.org>  %s
 
@@ -196,28 +196,15 @@ if sys.argv[-1] == 'push':
 def debian ():
 	from email.utils import formatdate
 
-	if not os.path.exists('debian/changelog'):
-		return False
-
 	version = imp.load_source('version','lib/exabgp/version.py').version
 
-	with open('debian/changelog') as f:
-		content = f.read()
-
-	if '(%s-' % version in content:
-		return False
-
-	with open('debian/changelog','w') as w:
+	with open('debian/changelog', 'w') as w:
 		w.write(debian_template % (version,formatdate()))
-		w.write(content)
 
-	return True
+	print 'updated debian/changelog'
 
 if sys.argv[-1] == 'debian':
-	if not debian():
-		print 'the current version is already present in the debian/changelog file'
-		sys.exit(1)
-	print 'updated debian/changelog'
+	debian()
 	sys.exit(0)
 
 #
