@@ -5,13 +5,11 @@
 # Required-Stop:     $remote_fs
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: BGP route injector
-# Description:       This program is a BGP route injector.
-#  The route injector can connect using either IPv4 or IPv6 and announce both IPv4 and IPv6 routes.
-#  Potential use are :
-#  - Injection of service IPs like AS112 announcement
-#  - Temporary route redirection (adding more specific routes with different next-hop)
-#  - Injection of flow routes to handle DDOS
+# Short-Description: ExaBGP
+# Description:       BGP swiss army knife of networking
+#  ExaBGP allows engineers to control their network from commodity
+#  servers. Think of it as Software Defined Networking using BGP by
+#  transforming BGP messages into friendly plain text or JSON.
 ### END INIT INFO
 
 # Author: Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>
