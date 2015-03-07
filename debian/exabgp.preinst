@@ -7,8 +7,8 @@ if dpkg-maintscript-helper supports mv_conffile 2>/dev/null; then
         if ! egrep -q "$f" /etc/exabgp/exabgp.conf 2> /dev/null ; then
             dpkg-maintscript-helper rm_conffile "$f" -- "$@" ; fi
     done
-    dpkg-maintscript-helper rm_conffile /etc/default/exabgp -- "$@"
-    dpkg-maintscript-helper rm_conffile /etc/exabgp/exabgp.conf -- "$@"
+    dpkg-maintscript-helper rm_conffile /etc/default/exabgp 3.4.9-0~ -- "$@"
+    dpkg-maintscript-helper rm_conffile /etc/exabgp/exabgp.conf 3.4.9-0~ -- "$@"
 fi
 
 #DEBHELPER#
