@@ -21,8 +21,9 @@ PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="BGP route injector"
 USER=exabgp
 NAME=exabgp
+CONFIG="/etc/exabgp/exabgp.conf"
 DAEMON=/usr/sbin/exabgp
-DAEMON_ARGS=""
+DAEMON_OPTS="$CONFIG"
 PIDFILE=/var/run/$NAME/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
@@ -42,10 +43,7 @@ export ETC="/etc/exabgp/"
 # Depend on lsb-base (>= 3.0-6) to ensure that this file is present.
 . /lib/lsb/init-functions
 
-if [ "$EXABGPRUN" = "no" ]; then
-	log_daemon_msg "You need to set EXABGPRUN to yes in /etc/default/exabgp in order to use this daemon."
-	log_end_msg 0
-fi
+[ -f "$CONFIG" ] || exit 0
 
 # Check that the RUNDIR exists, create it otherwise
 RUNDIR=$(dirname ${PIDFILE})
@@ -56,21 +54,13 @@ RUNDIR=$(dirname ${PIDFILE})
 #
 do_start()
 {
-	if [ "$EXABGPRUN" = "yes" ] || [ "$EXABGPRUN" = "YES" ]; then
-		CFG_COUNT=`cat /etc/exabgp/exabgp.conf | grep -v ^# | grep -v ^$ | wc -l`
-		if [ $CFG_COUNT -lt 2 ] ; then
-			log_warning_msg "WARNING: Empty configuration file. ExaBGP won't start"
-			return 1
-		else
-			# Return
-			#   0 if daemon has been started
-			#   1 if daemon was already running
-			#   2 if daemon could not be started
-			# We create the PID file and we do background thanks to start-stop-daemon
-			start-stop-daemon --start --quiet --pidfile $PIDFILE -c $USER -b -m --exec $DAEMON -- $DAEMON_OPTS
-			return $?
-		fi
-        fi
+	# Return
+	#   0 if daemon has been started
+	#   1 if daemon was already running
+	#   2 if daemon could not be started
+	# We create the PID file and we do background thanks to start-stop-daemon
+	start-stop-daemon --start --quiet --pidfile $PIDFILE -c $USER -b -m --exec $DAEMON -- $DAEMON_OPTS
+	return $?
 }
 
 #
@@ -78,46 +68,40 @@ do_start()
 #
 do_stop()
 {
-	if [ "$EXABGPRUN" = "yes" ] || [ "$EXABGPRUN" = "YES" ]; then
-		# Return
-		#   0 if daemon has been stopped
-		#   1 if daemon was already stopped
-		#   2 if daemon could not be stopped
-		#   other if a failure occurred
-		start-stop-daemon --stop --quiet --signal TERM --pidfile $PIDFILE -c $USER
-		RETVAL="$?"
-		sleep 1
-		# clean stale PID file
-		rm $PIDFILE 2> /dev/null
-		[ "$RETVAL" = 2 ] && return 2
-		# Wait for children to finish too if this is a daemon that forks
-		# and if the daemon is only ever run from this initscript.
-		# If the above conditions are not satisfied then add some other code
-		# that waits for the process to drop all resources that could be
-		# needed by services started subsequently.  A last resort is to
-		# sleep for some time.
-		start-stop-daemon --stop --quiet --oknodo --retry=0/30/KILL/5 --exec $DAEMON
-		[ "$?" = 2 ] && return 2
-		sleep 1
-		return "$RETVAL"
-	fi
+	# Return
+	#   0 if daemon has been stopped
+	#   1 if daemon was already stopped
+	#   2 if daemon could not be stopped
+	#   other if a failure occurred
+	start-stop-daemon --stop --quiet --signal TERM --pidfile $PIDFILE -c $USER
+	RETVAL="$?"
+	sleep 1
+	# clean stale PID file
+	rm $PIDFILE 2> /dev/null
+	[ "$RETVAL" = 2 ] && return 2
+	# Wait for children to finish too if this is a daemon that forks
+	# and if the daemon is only ever run from this initscript.
+	# If the above conditions are not satisfied then add some other code
+	# that waits for the process to drop all resources that could be
+	# needed by services started subsequently.  A last resort is to
+	# sleep for some time.
+	start-stop-daemon --stop --quiet --oknodo --retry=0/30/KILL/5 --exec $DAEMON
+	[ "$?" = 2 ] && return 2
+	sleep 1
+	return "$RETVAL"
 }
 
 #
 # Function that sends a SIGUSR1 to the daemon/service
 #
 do_reload() {
-	if [ "$EXABGPRUN" = "yes" ] || [ "$EXABGPRUN" = "YES" ]; then
-		start-stop-daemon --stop --signal USR1 --quiet --pidfile $PIDFILE -c $USER
-		return 0
-	fi
+	start-stop-daemon --stop --signal USR1 --quiet --pidfile $PIDFILE -c $USER
+	return 0
 }
 
 do_force_reload() {
-	if [ "$EXABGPRUN" = "yes" ] || [ "$EXABGPRUN" = "YES" ]; then
-		start-stop-daemon --stop --signal USR2 --quiet --pidfile $PIDFILE -c $USER
-		return 0
-	fi
+	start-stop-daemon --stop --signal USR2 --quiet --pidfile $PIDFILE -c $USER
+	return 0
 }
 
 case "$1" in
