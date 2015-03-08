@@ -88,7 +88,6 @@ class Listener (object):
 						raise AcceptError('unexpected address family (%d)' % sock.family)
 					fam = self._family_AFI_map[sock.family]
 					yield Incoming(fam,remote_ip,local_ip,io)
-					break
 				except socket.error,exc:
 					if exc.errno in error.block:
 						continue
