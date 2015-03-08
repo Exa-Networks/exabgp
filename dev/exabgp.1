@@ -1,0 +1,390 @@
+.Dd February 26, 2015
+.Dt EXABGP 1
+.OS
+.Sh NAME
+.Nm exabgp
+.Nd Influence or control network using BGP
+.Sh SYNOPSIS
+.Nm
+.Op Fl -folder Ar folder | Fl f Ar folder
+.Op Fl -env Ar env-config | Fl e Ar env-config
+.Op Fl -full-ini | Fl -fi
+.Op Fl -diff-ini | Fl -di
+.Op Fl -full-env | Fl -fe
+.Op Fl -diff-env | Fl -de
+.Op Fl -debug | Fl d
+.Op Fl -signal Ar time
+.Op Fl -once | Fl 1
+.Op Fl -pdb | Fl p
+.Op Fl -memory | Fl s
+.Op Fl -profile Ar profile
+.Op Fl -test | Fl t
+.Op Fl -decode Ar hex-message | Fl x Ar hex-message
+.Op Fl -help | Fl h
+.Op Fl -version | Fl v
+.Op Ar configuration ...
+.Sh DESCRIPTION
+.Nm
+allows engineers to control their network from commodity servers.
+Possible uses include DDoS mitigation, network visualisation, service
+high availability and implementing anycast.
+.Nm
+does not perform any FIB manipulation on the system it runs on; if you
+need that this is not the program for you.
+.Nm
+can also print received BGP messages into readable plain text or JSON
+formatted text.
+.Pp
+The arguments are as follows:
+.Bl -tag -width indent
+.It Fl -folder Ar folder | Fl f Ar folder
+Specify the directory where the configuration file can be found.
+.It Fl -env Ar env-config | Fl e Ar env-config
+Specify where the environment configuration file can be found.
+.It Fl -full-ini | Fl -fi
+Display the full environment configuration using on stdout using the
+ini format.
+.It Fl -diff-ini | Fl -di
+Display the non-default environment configuration on stdout using the
+ini format.
+.It Fl -full-env | Fl -fe
+Display the full environment configuration on stdout using the env
+format.
+.It Fl -diff-env | Fl -de
+Display the non-default configuration on stdout using the env format.
+.It Fl -debug | Fl d
+Start the python debugger on serious logging on and on reception of
+the SIGTERM signal.  
+This is a shortcut for exabgp.log.all=true and
+exabgp.log.level=DEBUG.
+.It Fl -signal Ar time
+Issue a SIGUSR1 signal to reload the configuration after the specified
+number of seconds, only useful for code debugging.
+.It Fl -once | Fl 1
+Only perform one attempt to connect to peers, used mostly for
+debugging.
+.It Fl -pdb | Fl p
+Start the python debugger on critical logging, reception of SIGTERM,
+and on uncaught python exceptions.
+This is a shortcut for exabgp.pdb.enable=true.
+.It Fl -memory | Fl s
+Display memory usage information on program exit.
+.It Fl -profile Ar profile
+Enable collection of profiling information to the given file.
+This is a shortcut for exabgp.profile.enable=true and
+exabgp.profile.file=profile.
+.It Fl -test | Fl t
+Only do a configuration validity check.
+.It Fl -decode Ar hex-message | Fl x Ar hex-message
+Decode a raw route packet in hexadecimal string.
+.It Fl -help | Fl h
+Display summary of usage and configuration of exabgp.
+.It Fl -version | Fl v
+Display the
+.Nm
+version number and exit.
+.El
+.Sh ENVIRONMENT
+The configuration of exabgp is split in two:
+.Pp
+.Bl -bullet -compact
+.It
+The environment configuration which controls the basic execution of
+.Nm
+such as logging, daemonizing, pid-file, profiling etc.
+.It
+The BGP configuration of exabgp, which specifies which neighbors it
+should talk BGP with and all other aspects of the BGP configuration.
+.El
+.Pp
+The environment configuration can be specified a number of different
+ways, with different priority:
+.Pp
+.Bl -enum -compact
+.It
+Command line values using dot-separated notation.
+.It
+Environment variables using dot-separated notation.
+.It
+Command line values using underscore-separated notation.
+.It
+Environment variables using underscore-seprated notation.
+.It
+The values from the ini configuration file,
+.Pa /etc/exabgp/exabgp.env
+.It
+The built-in default values.
+.El
+.Pp
+The following environment variables can be used to configure the basic
+execution of
+.Nm :
+.Pp
+.Bl -hang -width 20m
+.It exabgp.api.encoder
+(experimental) default encoder to use with external API (text or
+json).
+Default: text.
+.It exabgp.api.highres
+Controls whether to use high-resolution timestamps in JSON.
+Default: false.
+.It exabgp.api.respawn
+Controls whether to respawn a helper process if it dies.
+Default: false.
+.It exabgp.bgp.openwait
+Controls how many seconds we should wait for a BGP open message once
+the TCP session is established.
+Default: 60 seconds.
+.It exabgp.cache.attributes
+Controls whether all attributes (configuration and wire) should be
+cached for faster parsing.
+Default: true.
+.It exabgp.cache.nexthops
+(deprecated) Controls whether route next-hops are cached.
+Default: true.
+.It exabgp.daemon.daemonize
+Controls whether
+.Nm
+should run in the background.
+Default: false.
+.It exabgp.daemon.pid
+Where to save the PID of
+.Nm
+if we manage it.  
+Default: '' (not set).
+.It exabgp.daemon.user
+The user to run
+.Nm
+as.
+Should be an unprivileged user.
+Default: nobody.
+.It exabgp.log.all
+Controls whether debug logging should be done for everything.
+Default: false.
+.It exabgp.log.configuration
+Controls whether logging should be done for the configuration and
+command parsing.
+Default: true.
+.It exabgp.log.daemon
+Controls whether logging should be done for PID change, forking, etc.
+Default: true.
+.It exabgp.log.destination
+Controls where logging should be sent.
+syslog (or no setting) sends the data to the local syslog server.
+host:<location> sends the data to a remote syslog server.
+stdout sends the data to stdout.
+stderr sends the data to stderr.
+<filename> sends the data to the named file.
+Default: stdout.
+.It exabgp.log.enable
+Controls whether logging should be done.
+Default: true.
+.It exabgp.log.level
+Sets the minimum severity level to log.
+Default: INFO.
+.It exabgp.log.message
+Controls logging of changes in route announcement in config reload.
+Default: false.
+.It exabgp.log.network
+Controls logging of networking information (TCP/IP state, network
+state etc.).
+Default: true.
+.It exabgp.log.packets
+Controls logging of BGP packets sent and received.
+Default: false.
+.It exabgp.log.parser
+Controls logging of BGP message parsing details.
+Default: false.
+.It exabgp.log.processes
+Controls logging of forked processes.
+Default: true.
+.It exabgp.log.reactor
+Controls logging of signals received and command reload.
+Default: true.
+.It exabgp.log.rib
+Controls logging of changes in locally configured routes.
+Default: false.
+.It exabgp.log.routes
+Controls logging of received routes.
+Default: false.
+.It exabgp.log.short
+Coontrols whether to use long or short log format (not prepended with
+time, level, pid and source).
+Default: false.
+.It exabgp.log.timers
+Controls logging of keepalive timers.
+Default: false.
+.It exabgp.pdb.enable
+Controls whether pdb, the python interactive debugger should be
+started on program faults.
+Default: false.
+.It exabgp.profile.enable
+Controls whether profiling of the code should be done.
+Default: false.
+.It exabgp.profile.file
+Controls where profiling results should be written.
+None/empty means stdout.
+Default: empty.
+.It exabgp.reactor.speed
+Controls the time of one reactor loop.
+Use only if you understand the code.
+Default: 1.0.
+.It exabgp.tcp.acl
+(experimental, unimplemented).
+Default: empty.
+.It exabgp.tcp.bind
+IP address to bind to when listening (no ip to disable).
+Default: empty.
+.It exabgp.tcp.delay
+Start to announce routes when the minutes in the hour is a modulo of
+this number.
+Default: 0.
+.It exabgp.tcp.once
+Only perform one TCP connection attempt per peer, for debugging
+scripts.
+Default: false.
+.It exabgp.tcp.port
+Port to bind to when listening.
+Default: 179.
+.El
+.Sh FILES
+.Pa /etc/exabgp/exabgp.env
+is the default file for setting the "environment" variables
+controlling the execution of
+.Nm .
+An alaternative "env" configuration file can be supplied via the
+.Fl -env Ar env-config
+argument.
+The format of this file is "Windows INI format".
+All the default settings can be shown with the
+.Nm Fl -test -full-init
+command, an example showing parts of this output is:
+.Bd -literal -offset 3m
+[exabgp.api]
+encoder = text
+highres = false
+respawn = false
+
+[exabgp.bgp]
+openwait = 60
+.Ed
+.Pp
+Additionally, the user will need to supply a configuration file
+controlling the BGP configuration of
+.Nm ,
+in the format described in
+.Xr exabgp.conf 5 .
+.Sh SIGNALS
+.Nm
+catches a few different signals to control specific actions.
+They are:
+.Pp
+.Bl -hang -width 5m -compact
+.It ALRM
+Restarts
+.Nm .
+.It USR1
+Causes
+.Nm
+to reload the configuration.
+.It USR2
+Causes
+.Nm
+to reload the configuration and restart any forked processes.
+.It TERM
+Terminates
+.Nm .
+.It HUP
+Also terminates
+.Nm
+(does 
+.Em not
+reload the configuration anymore).
+.El
+.Pp
+Reloading large configurations using signals is currently
+.Em not
+recommended, because the configuration parsing code is currently
+blocking.
+Therefore if you have a large configuration change, it could cause the
+peer to miss some keepalive and cause a session flap.
+.\" .Sh EXIT STATUS
+.Sh DIAGNOSTICS
+The
+.Fl -test
+argument is useful to validate the syntax of the configuration file.
+The
+.Fl -debug
+flag will provide copious debug output to whereever the various
+exabgp.log
+variable settings dictate.
+.Sh SEE ALSO
+.Xr exabgp.conf 5
+.Sh STANDARDS
+A list of the standards
+.Nm
+implements which is indicative of the features implemented is:
+.Pp
+.Bl -hang -width 10m -compact 
+.It RFC 4893
+BGP Support for Four-octet AS Number Space
+.It RFC 4760
+Multiprotocol Extension for BGP-4
+.It RFC 4659
+BGP-MPLS IP Virtual Private Network (VPN) Extension for IPv6 VPN
+.It RFC 4762
+Virtual Private LAN Service (VPLS) Using Label Distribution Protocol
+(LDP) Signalling
+.It RFC 5575
+Dissemination of Flow Specification Rules
+.It RFC 4724
+Graceful Restart Mechanism for BGP
+.It RFC 7313
+Enhanced Route Refresh Capability for BGP-4
+.It RFC 7311
+The Accumulated IGP Metric Attribute for BGP
+.It draft-raszuk-idr-flow-spec-v6-03
+(draft-ietf-idr-flow-spec-v6-06), Dissemination of Flow Specification
+Rules for IPv6
+.It draft-ietf-idr-flowspect-redirect-ip-00 (-02)
+BGP Flow-Spect Redirect to IP Action
+.It draft-ietf-idr-add-paths-08 (-10)
+Advertisement of Multiple Paths in BGP
+.It draft-ietf-idr-bgp-multisession-07 (??)
+.It draft-scudder-bmp-01 (??)
+.El
+.Pp
+A list of other more basic BGP-related standard entirely or partially
+implemented is:
+.Pp
+.Bl -hang -width 10m -compact
+.It RFC 1997
+BGP Communities Attribute
+.It RFC 2385
+Protection of BGP Sessions via the TCP MD5 Signature
+.It RFC 2545
+Use of BGP-4 Multirptocol Extensions for IPv6 Inter-Domain Routing 
+.It RFC 2918
+Route Refresh Capability for BGP-4
+.It RFC 3107
+Carrying Label Information in BGP-4
+.It RFC 3765
+NOPEER Community for Border Gateway Protocol (BGP) Route Scope Control
+.It RFC 4271
+A Border Gateway Protocol 4 (BGP-4)
+.It RFC 4360
+BGP Extended Communities Attribute
+.It RFC 4364
+Constrained Route Distribution for BGP/MPLS IP VPNs
+.It RFC 4456
+BGP Rotue Relection: An Alternative to Full Mesh Internal BGP (iBGP)
+.It RFC 5396
+Textual Representation of Autonomous System (AS) Numbers
+.It RFC 5492
+Capabilities Advertisement with BGP-4
+.It RFC 6286
+Autonomous-System-Wide Unique BGP Identifier for BGP-4
+.It RFC 6608
+Subcodes for BGP Finate State Machine Error
+.El
+.\" .Sh HISTORY
