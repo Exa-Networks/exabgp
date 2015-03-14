@@ -229,4 +229,7 @@ exabgp (1.2.0-1) unstable; urgency=low
   * Initial release (Closes: #623616) 
 
  -- Henry-Nicolas Tourneur <henry.nicolas@tourneur.be>  Thu, 21 Apr 2011 19:35:15 +0000
+=======
+ -- Vincent Bernat <bernat@debian.org>  Sat, 14 Mar 2015 15:32:13 -0000
+>>>>>>> 3.4.9
 
