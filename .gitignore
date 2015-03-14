@@ -10,8 +10,8 @@
 .coverage
 .idea
 
-.pyproj
-.suo
+*.pyproj
+*.suo
 
 .installed.cfg
 .mr.developer.cfg
