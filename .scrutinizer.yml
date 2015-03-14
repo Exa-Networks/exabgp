@@ -52,3 +52,5 @@ tools:
                 - 'build/*'
                 - 'dist/*'
             paths: {  }
+    external_code_coverage:
+        timeout: 600

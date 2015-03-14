@@ -1,5 +1,8 @@
-In all the examples stored under /usr/share/doc/exabgp/examples you will
-see how you can connect to different BGP speakers and use the features of ExaBGP.
+In all the examples stored under /usr/share/doc/exabgp/examples you
+will see how you can connect to different BGP speakers and use the
+features of ExaBGP. You need to put a configuration
+`/etc/exabgp/exabgp.conf'. ExaBGP won't start if this file doesn't
+exist.
 
 However, In case you would mind how to complete your setup on the network side,
 here is an IETF paper explaining RTBH and showing examples on different vendor platform.
@@ -10,3 +13,5 @@ For more information please look at ExaBGP's FAQ or the related talks/slide page
 
 https://github.com/Exa-Networks/exabgp/wiki
 https://github.com/Exa-Networks/exabgp/wiki/FAQ
+
+ -- Vincent Bernat <bernat@debian.org>, Sat,  7 Mar 2015 15:57:21 +0100

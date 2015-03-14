@@ -15,6 +15,8 @@ import select
 
 from collections import deque
 
+from exabgp.protocol.ip import IP
+
 from exabgp.reactor.daemon import Daemon
 from exabgp.reactor.listener import Listener
 from exabgp.reactor.listener import NetworkError
@@ -105,20 +107,45 @@ class Reactor (object):
 			return []
 
 	def run (self):
-		if self.ip:
-			try:
-				self.listener = Listener([self.ip,],self.port)
-				self.listener.start()
-			except NetworkError,exc:
-				self.listener = None
-				if os.geteuid() != 0 and self.port <= 1024:
-					self.logger.reactor("Can not bind to %s:%d, you may need to run ExaBGP as root" % (self.ip,self.port),'critical')
-				else:
-					self.logger.reactor("Can not bind to %s:%d (%s)" % (self.ip,self.port,str(exc)),'critical')
-				self.logger.reactor("unset exabgp.tcp.bind if you do not want listen for incoming connections",'critical')
-				self.logger.reactor("and check that no other daemon is already binding to port %d" % self.port,'critical')
-				sys.exit(1)
-			self.logger.reactor("Listening for BGP session(s) on %s:%d" % (self.ip,self.port))
+		self.daemon.daemonise()
+
+		# Make sure we create processes one we have closed file descriptor
+		# unfortunately, this must be done before reading the configuration file
+		# so we can nto do it with dropped privileges
+		self.processes = Processes(self)
+
+		# we have to read the configuration possibly with root privileges
+		# as we need the MD5 information when we bind, and root is needed
+		# to bind to a port < 1024
+
+		# this is undesirable as :
+		# - handling user generated data as root should be avoided
+		# - we may not be able to reload the configuration once the privileges are dropped
+
+		# but I can not see any way to avoid it
+
+		self.reload()
+
+		try:
+			self.listener = Listener()
+
+			if self.ip:
+				self.listener.listen(IP.create(self.ip),self.port,None)
+				self.logger.reactor("Listening for BGP session(s) on %s:%d" % (self.ip,self.port))
+
+			for neighbor in self.configuration.neighbor.values():
+				if neighbor.listen:
+					self.listener.listen(neighbor.local_address,neighbor.listen,neighbor.md5)
+					self.logger.reactor("Listening for BGP session(s) on %s:%d%s" % (neighbor.local_address,neighbor.listen,' with MD5' if neighbor.md5 else ''))
+		except NetworkError,exc:
+			self.listener = None
+			if os.geteuid() != 0 and self.port <= 1024:
+				self.logger.reactor("Can not bind to %s:%d, you may need to run ExaBGP as root" % (self.ip,self.port),'critical')
+			else:
+				self.logger.reactor("Can not bind to %s:%d (%s)" % (self.ip,self.port,str(exc)),'critical')
+			self.logger.reactor("unset exabgp.tcp.bind if you do not want listen for incoming connections",'critical')
+			self.logger.reactor("and check that no other daemon is already binding to port %d" % self.port,'critical')
+			sys.exit(1)
 
 		if not self.daemon.drop_privileges():
 			self.logger.reactor("Could not drop privileges to '%s' refusing to run as root" % self.daemon.user,'critical')
@@ -130,14 +157,8 @@ class Reactor (object):
 			self.logger.reactor("Could not setup the logger, aborting",'critical')
 			return
 
-		self.daemon.daemonise()
-
 		if not self.daemon.savepid():
 			self.logger.reactor('could not update PID, not starting','error')
-
-		# Make sure we create processes one we have dropped privileges and closed file descriptor
-		self.processes = Processes(self)
-		self.reload()
 
 		# did we complete the run of updates caused by the last SIGUSR1/SIGUSR2 ?
 		reload_completed = True
@@ -325,6 +346,7 @@ class Reactor (object):
 				self.logger.reactor("Peer definition identical, updating peer routes if required for %s" % str(key))
 				self.peers[key].reconfigure(neighbor)
 		self.logger.configuration("Loaded new configuration successfully",'warning')
+
 		# This only starts once ...
 		self.processes.start(restart)
 
@@ -416,7 +438,7 @@ class Reactor (object):
 		return True
 
 	def match_neighbors (self, descriptions):
-		"""returns the sublist of peers matching the description passed, or None if no description is given"""
+		"""return the sublist of peers matching the description passed, or None if no description is given"""
 		if not descriptions:
 			return self.peers.keys()
 

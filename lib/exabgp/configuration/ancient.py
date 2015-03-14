@@ -710,6 +710,8 @@ class Configuration (object):
 				return self._set_asn(scope,'peer-as',tokens[1:])
 			if command == 'passive':
 				return self._set_passive(scope,'passive',tokens[1:])
+			if command == 'listen':
+				return self._set_listen(scope,'listen',tokens[1:])
 			if command == 'hold-time':
 				return self._set_holdtime(scope,'hold-time',tokens[1:])
 			if command == 'md5':
@@ -1261,7 +1263,7 @@ class Configuration (object):
 				],
 				[
 					'description','router-id','local-address','local-as','peer-as',
-					'passive','hold-time','add-path','graceful-restart','md5',
+					'passive','listen','hold-time','add-path','graceful-restart','md5',
 					'ttl-security','multi-session','group-updates',
 					'route-refresh','asn4','aigp','auto-flush','adj-rib-out'
 				]
@@ -1313,6 +1315,9 @@ class Configuration (object):
 			value = local_scope.get('passive',False)
 			if value:
 				neighbor.passive = value
+			value = local_scope.get('listen',0)
+			if value:
+				neighbor.listen = value
 			value = local_scope.get('hold-time','')
 			if value:
 				neighbor.hold_time = value
@@ -1495,7 +1500,7 @@ class Configuration (object):
 				],
 				[
 					'description','router-id','local-address','local-as','peer-as',
-					'passive','hold-time','add-path','graceful-restart','md5',
+					'passive','listen','hold-time','add-path','graceful-restart','md5',
 					'ttl-security','multi-session','group-updates','asn4','aigp',
 					'auto-flush','adj-rib-out'
 				]
@@ -1562,6 +1567,20 @@ class Configuration (object):
 
 		scope[-1][command] = True
 		return True
+
+	def _set_listen (self, scope, command, value):
+		try:
+			listen = int(value[0])
+			if listen < 0:
+				raise ValueError('the listenening port must positive')
+			if listen >= pow(2,16):
+				raise ValueError('the listening port must be smaller than %d' % pow(2,16))
+			scope[-1][command] = listen
+			return True
+		except ValueError:
+			self._error = '"%s" is an invalid port to listen on' % ' '.join(value)
+			if self.debug: raise Exception()  # noqa
+			return False
 
 	def _set_holdtime (self, scope, command, value):
 		try:

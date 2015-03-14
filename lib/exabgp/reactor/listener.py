@@ -12,8 +12,7 @@ from exabgp.util.errstr import errstr
 
 from exabgp.protocol.family import AFI
 # from exabgp.util.coroutine import each
-from exabgp.util.ip import isipv4
-from exabgp.util.ip import isipv6
+from exabgp.reactor.network.tcp import MD5
 from exabgp.reactor.network.error import error
 from exabgp.reactor.network.error import errno
 from exabgp.reactor.network.error import NetworkError
@@ -30,57 +29,45 @@ class Listener (object):
 		socket.AF_INET6: AFI.ipv6,
 	}
 
-	def __init__ (self, hosts, port, backlog=200):
-		self._hosts = hosts
-		self._port = port
+	def __init__ (self, backlog=200):
 		self._backlog = backlog
-
 		self.serving = False
 		self._sockets = {}
-		# self._connected = {}
+
 		self.logger = Logger()
 
-	def _bind (self, ip, port):
+	def _new_socket (self, ip):
+		if ip.afi == AFI.ipv6:
+			return socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+		if ip.afi == AFI.ipv4:
+			return socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+		raise NetworkError('Can not create socket for listening, family of IP %s is unknown' % ip)
+
+	def listen (self, ip, port, md5):
+		self.serving = True
 		try:
-			if isipv6(ip):
-				s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
-				try:
-					s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-				except (socket.error,AttributeError):
-					pass
-				s.bind((ip,port,0,0))
-			elif isipv4(ip):
-				s = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
-				try:
-					s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-				except (socket.error,AttributeError):
-					pass
-				s.bind((ip,port))
-			else:
-				return None
-			s.setblocking(0)
+			sock = self._new_socket(ip)
+			if md5:
+				MD5(sock,ip.ip,port,md5)
+
+			sock.bind((ip.ip,port))
+			try:
+				sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+			except (socket.error,AttributeError):
+				pass
+			sock.setblocking(0)
 			# s.settimeout(0.0)
-			s.listen(self._backlog)
-			return s
+			sock.listen(self._backlog)
+			self._sockets[sock] = (ip.ip,port)
 		except socket.error,exc:
 			if exc.args[0] == errno.EADDRINUSE:
-				raise BindingError('could not listen on %s:%d, the port already in use by another application' % (ip,self._port))
+				raise BindingError('could not listen on %s:%d, the port already in use by another application' % (ip,port))
 			elif exc.args[0] == errno.EADDRNOTAVAIL:
-				raise BindingError('could not listen on %s:%d, this is an invalid address' % (ip,self._port))
-			else:
-				raise BindingError('could not listen on %s:%d (%s)' % (ip,self._port,errstr(exc)))
-
-	def start (self):
-		try:
-			for host in self._hosts:
-				if (host,self._port) not in self._sockets:
-					s = self._bind(host,self._port)
-					self._sockets[s] = (host,self._port)
-			self.serving = True
+				raise BindingError('could not listen on %s:%d, this is an invalid address' % (ip,port))
+			raise NetworkError(str(exc))
 		except NetworkError,exc:
-				self.logger.network(str(exc),'critical')
-				raise exc
-		self.serving = True
+			self.logger.network(str(exc),'critical')
+			raise exc
 
 	# @each
 	def connected (self):
@@ -88,20 +75,19 @@ class Listener (object):
 			return
 
 		try:
-			for sock,(host,_) in self._sockets.items():
+			for sock in self._sockets:
 				try:
 					io, _ = sock.accept()
 					if sock.family == socket.AF_INET:
-						local_ip,local_port = io.getpeername()
-						remote_ip,remote_port = io.getsockname()
+						local_ip  = io.getpeername()[0]  # local_ip,local_port
+						remote_ip = io.getsockname()[0]  # remote_ip,remote_port
 					elif sock.family == socket.AF_INET6:
-						local_ip,local_port,local_flow,local_scope = io.getpeername()
-						remote_ip,remote_port,remote_flow,remote_scope = io.getsockname()
+						local_ip  = io.getpeername()[0]  # local_ip,local_port,local_flow,local_scope
+						remote_ip = io.getsockname()[0]  # remote_ip,remote_port,remote_flow,remote_scope
 					else:
 						raise AcceptError('unexpected address family (%d)' % sock.family)
 					fam = self._family_AFI_map[sock.family]
 					yield Incoming(fam,remote_ip,local_ip,io)
-					break
 				except socket.error,exc:
 					if exc.errno in error.block:
 						continue

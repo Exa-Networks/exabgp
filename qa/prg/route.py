@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
-from netlink.route import *
+import socket
+from exabgp.netlink.route import Link, NetLinkRoute, Network
 
 netmask = {
 	32: '255.255.255.255',

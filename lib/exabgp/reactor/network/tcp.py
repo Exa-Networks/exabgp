@@ -20,12 +20,12 @@ from exabgp.protocol.ip import IP
 from exabgp.reactor.network.error import errno
 from exabgp.reactor.network.error import error
 
-from .error import NotConnected
-from .error import BindingError
-from .error import MD5Error
-from .error import NagleError
-from .error import TTLError
-from .error import AsyncError
+from exabgp.reactor.network.error import NotConnected
+from exabgp.reactor.network.error import BindingError
+from exabgp.reactor.network.error import MD5Error
+from exabgp.reactor.network.error import NagleError
+from exabgp.reactor.network.error import TTLError
+from exabgp.reactor.network.error import AsyncError
 
 from exabgp.logger import Logger
 
@@ -100,7 +100,7 @@ def connect (io, ip, port, afi, md5):
 # 	/* _SS_MAXSIZE value minus size of ss_family */
 # } __attribute__ ((aligned(_K_SS_ALIGNSIZE)));   /* force desired alignment */
 
-def MD5 (io, ip, port, afi, md5):
+def MD5 (io, ip, port, md5):
 	if md5:
 		os = platform.system()
 		if os == 'FreeBSD':
@@ -132,7 +132,7 @@ def MD5 (io, ip, port, afi, md5):
 				# Do not use '!' for the pack, the network (big) endian switch in
 				# struct.pack is fighting against inet_pton and htons (note the n)
 
-				if afi == AFI.ipv4:
+				if IP.toafi(ip) == AFI.ipv4:
 					# SS_MAXSIZE is 128 but addr_family, port and ipaddr (8 bytes total) are written independently of the padding
 					SS_MAXSIZE_PADDING = 128 - calcsize('HH4s')  # 8
 					sockaddr = pack('HH4s%dx' % SS_MAXSIZE_PADDING, socket.AF_INET, n_port, n_addr)

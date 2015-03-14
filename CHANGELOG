@@ -3,6 +3,13 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.4.9
+ * Fix: very bad bug where NLRI where not associated to the right AFI/SAFI pair ( #235 )
+    reported by: esequei
+ * Feature: per peer listening option ( listen keyword with port number )
+ * Feature: incoming connection MD5 support (incomplete: only work on localhost atm)
+    requested by: Sandy Breeze
+
 Version 3.4.8
  * Fix: bug with multiple configuration files
  * Fix: allow generic attribute not only in single line but also in multiple lines
@@ -27,6 +34,8 @@ Version 3.4.8
     patch by: Havard Eidnes
  * Fix: healthcheck.py: make the ifconfig path work; regexp fix
     patch by: Havard Eidnes
+ * Change: moved the netlink library within exabgp
+ * Feature: qa/bin/ip and qa/bin/route
 
 Version 3.4.7
  * Package: be more pythonic and use enty points with pip installation

@@ -1,3 +1,2 @@
 etc/exabgp/processes/healthcheck.py etc/exabgp/processes
 etc/systemd/exabgp.service lib/systemd/system
-debian/exabgp.conf etc/exabgp

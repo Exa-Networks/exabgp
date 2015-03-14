@@ -2,10 +2,10 @@
 
 path="$(cd "$(dirname "$0")"/../.. ; pwd)"
 
-export PYTHONPATH=$path/lib
+export PYTHONPATH=$path/lib:/usr/share/exabgp/lib/3.4.4
 
 for INTERPRETER in "$INTERPRETER" pypy python2.7 python2.6 python2 python; do
 	INTERPRETER="$(command -v "$INTERPRETER")" && break
 done
 
-exec "$INTERPRETER" -m exabgp.debug "$@"
+exec "$INTERPRETER" "$path"/qa/prg/route.py "$@"
