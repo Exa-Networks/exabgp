@@ -10,8 +10,8 @@ Build-Depends: debhelper (>= 9),
                python-nose
 Standards-Version: 3.9.6
 Homepage: https://github.com/Exa-Networks/exabgp
-Vcs-Browser: https://github.com/Exa-Networks/exabgp
-Vcs-Git: https://github.com/Exa-Networks/exabgp.git
+Vcs-Browser: https://github.com/Exa-Networks/exabgp/tree/debian/sid
+Vcs-Git: https://github.com/Exa-Networks/exabgp.git -b debian/sid
 
 Package: exabgp
 Architecture: all

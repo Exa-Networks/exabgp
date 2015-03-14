@@ -13,6 +13,7 @@ exabgp (3.4.9-1) UNRELEASED; urgency=medium
        no configuration file exists, don't start.
      + Don't provide an empty default configuration file and remove it if
        there is one (unchanged).
+  * Update debian/control's Vcs-* fields to use the appropriate branch.
 
  -- Vincent Bernat <bernat@debian.org>  Sat, 14 Mar 2015 20:47:48 +0100
 
