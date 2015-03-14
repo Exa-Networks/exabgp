@@ -249,10 +249,7 @@ if sys.argv[-1] == 'release':
 	with open('lib/exabgp/version.py','w') as version_file:
 		version_file.write(version_template % version)
 
-	# must be done after version.py's update
-	if not debian():
-		print 'could not update debian/changelog'
-		sys.exit(1)
+	debian()
 
 	print 'checking if we need to commit a version.py change'
 
