@@ -10,6 +10,8 @@ from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
 from exabgp.bgp.message.update.nlri.qualifier.esi import ESI
 from exabgp.bgp.message.update.nlri.qualifier.etag import EthernetTag
+from exabgp.bgp.message.update.nlri.qualifier.mac import MAC as MACQUAL
+
 
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
@@ -91,7 +93,7 @@ class MAC (EVPN):
 				self.rd.pack(),
 				self.esi.pack(),
 				self.etag.pack(),
-				chr(len(self.maclen)),  # will most likely always be 10
+				chr(self.maclen),  # only 48 supported by the draft
 				self.mac.pack(),
 				chr(len(ip.pack()) if ip else '\x00'),
 				ip,
@@ -111,7 +113,7 @@ class MAC (EVPN):
 			raise Exception('invalid MAC Address length in %s' % cls.NAME)
 		end = 23 + maclength/8
 
-		mac = MAC.unpack(data[23:end])
+		mac = MACQUAL.unpack(data[23:end])
 
 		length = ord(data[end])
 		if length % 8 != 0:
@@ -121,4 +123,4 @@ class MAC (EVPN):
 		ip = IP.unpack(data[end+1:end+1+iplen])
 		label = Labels.unpack(data[end+1+iplen:])
 
-		return cls(rd,esi,etag,mac,length,label,ip,data)
+		return cls(rd,esi,etag,mac,maclength,label,ip,data)
