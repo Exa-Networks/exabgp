@@ -39,7 +39,7 @@ from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 # total NLRI length is 34 bytes for IPv4 or 58 bytes for IPv6
 
 
-class Prefix(EVPNNLRI):
+class Prefix(EVPN):
 
 	CODE = 5
 	NAME = "IP Prefix advertisement"
