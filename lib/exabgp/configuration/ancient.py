@@ -1083,6 +1083,8 @@ class Configuration (object):
 			safi = tokens.pop(0)
 			if safi == 'vpls':
 				scope[-1]['families'].append((AFI(AFI.l2vpn),SAFI(SAFI.vpls)))
+			elif safi == 'evpn':
+				scope[-1]['families'].append((AFI(AFI.l2vpn),SAFI(SAFI.evpn)))
 			else:
 				return False
 			return True
