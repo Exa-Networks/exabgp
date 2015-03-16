@@ -41,6 +41,7 @@ from exabgp.bgp.message.update.nlri.mpls import MPLS
 from exabgp.bgp.message.update.nlri.mpls import Labels
 from exabgp.bgp.message.update.nlri.mpls import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.vpls import VPLS
+from exabgp.bgp.message.update.nlri.evpn import EVPN
 from exabgp.bgp.message.update.nlri.flow import BinaryOperator
 from exabgp.bgp.message.update.nlri.flow import NumericOperator
 from exabgp.bgp.message.update.nlri.flow import Flow
