@@ -35,6 +35,7 @@ family <name> {
 	]
 	l2vpn [
 		vpls
+		evpn
 	]
 }
 """
