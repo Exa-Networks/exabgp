@@ -294,8 +294,8 @@ class Attributes (dict):
 
 		# remove the PARTIAL bit before comparaison if the attribute is optional
 		if aid in Attribute.attributes_optional:
-			aid &= Attribute.Flag.MASK_PARTIAL & 0xFF
-			# aid &= ~Attribute.Flag.PARTIAL & 0xFF  # cleaner than above (python use signed integer for ~)
+			flag &= Attribute.Flag.MASK_PARTIAL & 0xFF
+			# flag &= ~Attribute.Flag.PARTIAL & 0xFF  # cleaner than above (python use signed integer for ~)
 
 		# handle the attribute if we know it
 		if Attribute.registered(aid,flag):
