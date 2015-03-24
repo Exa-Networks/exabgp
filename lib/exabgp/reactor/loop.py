@@ -124,7 +124,8 @@ class Reactor (object):
 
 		# but I can not see any way to avoid it
 
-		self.reload()
+		if not self.reload():
+			return False
 
 		try:
 			self.listener = Listener()
@@ -323,7 +324,7 @@ class Reactor (object):
 			# Careful the string above is used but the QA code to check for sucess of failure
 			#
 			self.logger.configuration(self.configuration.error,'error')
-			return
+			return False
 
 		for key, peer in self.peers.items():
 			if key not in self.configuration.neighbor:
@@ -349,6 +350,7 @@ class Reactor (object):
 
 		# This only starts once ...
 		self.processes.start(restart)
+		return True
 
 	def schedule (self):
 		try:

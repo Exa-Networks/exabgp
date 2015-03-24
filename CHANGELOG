@@ -6,6 +6,8 @@ Version explained:
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
     patch by: Daniel Neiter
+ * Fix: Fix -t exit with error code 1 when -t is used and the configuration is invalid
+    reported by: Kevin Landreth
 
 Version 3.4.9
  * Fix: very bad bug where NLRI where not associated to the right AFI/SAFI pair ( #235 )

@@ -380,6 +380,9 @@ class Configuration (object):
 		except KeyboardInterrupt:
 			self.error = 'configuration reload aborted by ^C or SIGINT'
 			return False
+		except Exception:
+			self.error = 'configuration parsing issue'
+			return False
 
 	def _reload (self):
 		# taking the first configuration available (FIFO buffer)
