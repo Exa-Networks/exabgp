@@ -56,8 +56,8 @@ class BGPHandler(asyncore.dispatcher_with_send):
 			try:
 				process = psutil.Process(pid)
 
-				name = process.name().lower()
-				if 'python' not in name and 'pypy' not in name:
+				process_name = process.name().lower()
+				if 'python' not in process_name and 'pypy' not in process_name:
 					continue
 
 				cmdline = process.cmdline()
