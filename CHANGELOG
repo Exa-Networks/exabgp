@@ -8,6 +8,8 @@ Version 3.4.10
     patch by: Daniel Neiter
  * Fix: Fix -t exit with error code 1 when -t is used and the configuration is invalid
     reported by: Kevin Landreth
+ * Fix: Using split option with large MP could lead to invalid update
+    reported by: m4ccbr on github
 
 Version 3.4.9
  * Fix: very bad bug where NLRI where not associated to the right AFI/SAFI pair ( #235 )
