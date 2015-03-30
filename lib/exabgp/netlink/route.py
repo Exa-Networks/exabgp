@@ -6,6 +6,7 @@
 # http://smacked.org/docs/netlink.pdf
 # RFC 3549
 
+import os
 import socket
 from struct import pack
 from struct import unpack
@@ -18,6 +19,44 @@ except AttributeError:
 	raise ImportError('This module only works on unix version with netlink support')
 
 
+class NetMask (object):
+	CIDR = {
+		32: '255.255.255.255',
+		31: '255.255.255.254',
+		30: '255.255.255.252',
+		29: '255.255.255.248',
+		28: '255.255.255.240',
+		27: '255.255.255.224',
+		26: '255.255.255.192',
+		25: '255.255.255.128',
+		24: '255.255.255.0',
+		23: '255.255.254.0',
+		22: '255.255.252.0',
+		21: '255.255.248.0',
+		20: '255.255.240.0',
+		19: '255.255.224.0',
+		18: '255.255.192.0',
+		17: '255.255.128.0',
+		16: '255.255.0.0',
+		15: '255.254.0.0',
+		14: '255.252.0.0',
+		13: '255.248.0.0',
+		12: '255.240.0.0',
+		11: '255.224.0.0',
+		10: '255.192.0.0',
+		9: '255.128.0.0',
+		8: '255.0.0.0',
+		7: '254.0.0.0',
+		6: '252.0.0.0',
+		5: '248.0.0.0',
+		4: '240.0.0.0',
+		3: '224.0.0.0',
+		2: '192.0.0.0',
+		1: '128.0.0.0',
+		0: '0.0.0.0',
+	}
+
+
 class GlobalError (Exception):
 	pass
 
@@ -26,23 +65,12 @@ class NetLinkError (GlobalError):
 	pass
 
 
-class _Sequence (object):
-	instance = None
+class Sequence (int):
+	_instance = dict()
 
-	def __init__ (self):
-		self._next = 0
-
-	def next (self):
-		# XXX: should protect this code with a Mutex
-		self._next += 1
-		return self._next
-
-
-def Sequence ():
-	# XXX: should protect this code with a Mutex
-	if not _Sequence.instance:
-		_Sequence.instance = _Sequence()
-	return _Sequence.instance
+	def __new__ (cls):
+		cls._instance['next'] = cls._instance.get('next', 0) + 1
+		return cls._instance['next']
 
 
 class NetLinkRoute (object):
@@ -51,7 +79,8 @@ class NetLinkRoute (object):
 	NETLINK_ROUTE = 0
 
 	format = namedtuple('Message','type flags seq pid data')
-	pid = 0  # os.getpid()
+	pid = os.getpid()
+	netlink = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, NETLINK_ROUTE)
 
 	class Header (object):
 		# linux/netlink.h
@@ -87,76 +116,52 @@ class NetLinkRoute (object):
 		Command.NLMSG_OVERRUN: 'netlink overrun',
 	}
 
-	def __init__ (self):
-		self.socket = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, self.NETLINK_ROUTE)
-		self.sequence = Sequence()
+	@classmethod
+	def encode (cls, dtype, seq, flags, body, attributes):
+		attrs = Attributes.encode(attributes)
+		length = cls.Header.LEN + len(attrs) + len(body)
+		return pack(cls.Header.PACK, length, dtype, flags, seq, cls.pid) + body + attrs
 
-	def encode (self, dtype, seq, flags, body, attributes):
-		attrs = Attributes().encode(attributes)
-		length = self.Header.LEN + len(attrs) + len(body)
-		return pack(self.Header.PACK, length, dtype, flags, seq, self.pid) + body + attrs
-
-	def decode (self, data):
+	@classmethod
+	def decode (cls, data):
 		while data:
-			length, ntype, flags, seq, pid = unpack(self.Header.PACK,data[:self.Header.LEN])
+			length, ntype, flags, seq, pid = unpack(cls.Header.PACK,data[:cls.Header.LEN])
 			if len(data) < length:
 				raise NetLinkError("Buffer underrun")
-			yield self.format(ntype, flags, seq, pid, data[self.Header.LEN:length])
+			yield cls.format(ntype, flags, seq, pid, data[cls.Header.LEN:length])
 			data = data[length:]
 
-	def query (self, dtype, family=socket.AF_UNSPEC):
-		sequence = self.sequence.next()
+	@classmethod
+	def send (cls, dtype, hflags, family=socket.AF_UNSPEC):
+		sequence = Sequence()
 
-		message = self.encode(
+		message = cls.encode(
 			dtype,
 			sequence,
-			self.Flags.NLM_F_REQUEST | self.Flags.NLM_F_DUMP,
+			hflags,
 			pack('Bxxx', family),
 			{}
 		)
 
-		self.socket.send(message)
+		cls.netlink.send(message)
 
 		while True:
-			data = self.socket.recv(640000)
-			for mtype, flags, seq, pid, data in self.decode(data):
+			data = cls.netlink.recv(640000)
+			for mtype, flags, seq, pid, data in cls.decode(data):
 				if seq != sequence:
-					if self._IGNORE_SEQ_FAULTS:
+					if cls._IGNORE_SEQ_FAULTS:
 						continue
 					raise NetLinkError("netlink seq mismatch")
-				if mtype == self.Command.NLMSG_DONE:
+				if mtype == NetLinkRoute.Command.NLMSG_DONE:
 					raise StopIteration()
-				elif dtype in self.errors:
-					raise NetLinkError(self.errors[mtype])
+				elif dtype in cls.errors:
+					raise NetLinkError(cls.errors[mtype])
 				else:
 					yield data
 
-	def change (self, dtype, family=socket.AF_UNSPEC):
-		sequence = self.sequence.next()
-
-		message = self.encode(
-			dtype,
-			sequence,
-			self.Flags.NLM_F_REQUEST | self.Flags.NLM_F_CREATE,
-			pack('Bxxx', family),
-			{}
-		)
-
-		self.socket.send(message)
-
-		while True:
-			data = self.socket.recv(640000)
-			for mtype, flags, seq, pid, data in self.decode(data):
-				if seq != sequence:
-					if self._IGNORE_SEQ_FAULTS:
-						continue
-					raise NetLinkError("netlink seq mismatch")
-				if mtype == self.Command.NLMSG_DONE:
-					raise StopIteration()
-				elif dtype in self.errors:
-					raise NetLinkError(self.errors[mtype])
-				else:
-					yield data
+	# def change (self, dtype, family=socket.AF_UNSPEC):
+	# 	for _ in self.send(dtype, self.Flags.NLM_F_REQUEST | self.Flags.NLM_F_CREATE,family):
+	# 		yield _
 
 
 class AttributesError (GlobalError):
@@ -178,28 +183,29 @@ class Attributes (object):
 		IFA_CACHEINFO  = 0x06
 		IFA_MULTICAST  = 0x07
 
-	def pad (self, len, to=4):
-		return (len+to-1) & ~(to-1)
-
-	def decode (self, data):
+	@classmethod
+	def decode (cls, data):
 		while data:
-			length, atype, = unpack(self.Header.PACK,data[:self.Header.LEN])
+			length, atype, = unpack(cls.Header.PACK,data[:cls.Header.LEN])
 			if len(data) < length:
 				raise AttributesError("Buffer underrun %d < %d" % (len(data),length))
-			payload = data[self.Header.LEN:length]
+			payload = data[cls.Header.LEN:length]
 			yield atype, payload
 			data = data[int((length + 3) / 4) * 4:]
 
-	def _encode (self, atype, payload):
-		len = self.Header.LEN + len(payload)
-		raw = pack(self.Header.PACK,len,atype) + payload
-		pad = self.pad(len) - len(raw)
-		if pad:
-			raw += '\0'*pad
-		return raw
+	@classmethod
+	def encode (cls, attributes):
+		def _encode (atype, payload):
+			def pad (length, to=4):
+				return (length+to-1) & ~(to-1)
+			length = cls.Header.LEN + len(payload)
+			raw = pack(cls.Header.PACK,length,atype) + payload
+			pad = pad(length) - len(raw)
+			if pad:
+				raw += '\0'*pad
+			return raw
 
-	def encode (self, attributes):
-		return ''.join([self._encode(k,v) for (k,v) in attributes.items()])
+		return ''.join([_encode(k,v) for (k,v) in attributes.items()])
 
 
 class _InfoMessage (object):
@@ -216,12 +222,12 @@ class _InfoMessage (object):
 
 	def decode (self, data):
 		extracted = list(unpack(self.Header.PACK,data[:self.Header.LEN]))
-		attributes = Attributes().decode(data[self.Header.LEN:])
+		attributes = Attributes.decode(data[self.Header.LEN:])
 		extracted.append(dict(attributes))
 		return self.format(*extracted)
 
-	def extract (self, atype):
-		for data in self.route.query(atype):
+	def extract (self, atype, flags=NetLinkRoute.Flags.NLM_F_REQUEST | NetLinkRoute.Flags.NLM_F_DUMP, family=socket.AF_UNSPEC):
+		for data in self.route.send(atype,flags,family):
 			yield self.decode(data)
 
 
@@ -291,7 +297,7 @@ class Link(_InfoMessage):
 			IFLA_STATS       = 0x07
 
 	def getLinks (self):
-		return self.extract(self.Command.RTM_GETLINK)
+		return self.extract(Link.Command.RTM_GETLINK)
 
 
 # 0                   1                   2                   3
@@ -361,7 +367,7 @@ class Address (_InfoMessage):
 			IFLA_PORT_SELF   = 0x19
 
 	def getAddresses (self):
-		return self.extract(self.Command.RTM_GETADDR)
+		return self.extract(Address.Command.RTM_GETADDR)
 
 
 # 0                   1                   2                   3
@@ -418,7 +424,7 @@ class Neighbor (_InfoMessage):
 			NDA_PROBES     = 0x04
 
 	def getNeighbors (self):
-		return self.extract(self.Command.RTM_GETNEIGH)
+		return self.extract(Neighbor.Command.RTM_GETNEIGH)
 
 
 # 0                   1                   2                   3
@@ -466,6 +472,8 @@ class Network (_InfoMessage):
 			RTPROT_XORP       = 0x0E  # XORP
 			RTPROT_NTK        = 0x0F  # Netsukuku
 			RTPROT_DHCP       = 0x10  # DHCP client
+			# Self allocating ourself a kernel table :p
+			# http://lxr.free-electrons.com/source/include/uapi/linux/rtnetlink.h#L237
 			# YES WE CAN !
 			RTPROT_EXABGP     = 0x11  # Exa Networks ExaBGP
 
@@ -515,8 +523,45 @@ class Network (_InfoMessage):
 			RTA_TABLE         = 0x0F
 
 	def getRoutes (self):
-		return self.extract(self.Command.RTM_GETROUTE)
+		return self.extract(Network.Command.RTM_GETROUTE)
 
+	def _create (self, family):
+		for _ in self.extract(Network.Command.RTM_NEWROUTE, flags,family):
+			yield _
+
+	def newRoute (self):
+		network_flags  = NetLinkRoute.Flags.NLM_F_REQUEST
+		network_flags |= NetLinkRoute.Flags.NLM_F_CREATE
+		network_flags |= NetLinkRoute.Flags.NLM_F_EXCL
+		# network_flags |= NetLinkRoute.Flags.NLM_F_ACK
+
+		family = socket.AF_INET
+
+		attributes = Attributes()
+		Network.Attribute.RTA_DST
+
+		neighbor = self.format(
+			family,
+			0,     # src_len
+			32,    # dst_len ( only /32 atm)
+			0,     # tos
+			Network.Type.Table.RT_TABLE_MAIN,
+			Network.Type.Protocol.RTPROT_EXABGP,
+			Network.Type.Scope.RT_SCOPE_UNIVERSE,
+			0,     # type
+			Network.Flag.RTM_F_PREFIX,  # this may be wrong
+			attributes
+		)
+
+
+		# prefix = '\20\x7f\0\0\2'
+
+
+		for _ in self.extract(Network.Command.RTM_NEWROUTE,network_flags,family):
+			yield _
+
+	def delRoute (self):
+		return self.extract(Network.Command.RTM_DELROUTE)
 
 # 0                   1                   2                   3
 # 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
