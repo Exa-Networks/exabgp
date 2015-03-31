@@ -28,7 +28,7 @@ class MPRNLRI (Attribute,Address):
 	FLAG = Attribute.Flag.OPTIONAL
 	ID = Attribute.CODE.MP_REACH_NLRI
 
-	__slots__ = ['nlris']
+	# __slots__ = ['nlris']
 
 	def __init__ (self, afi, safi, nlris):
 		Address.__init__(self,afi,safi)
@@ -71,15 +71,14 @@ class MPRNLRI (Attribute,Address):
 				# we should feedback the maximum on each iteration
 
 				for nlri in nlris:
-					data = self._attribute(
+					yield self._attribute(
 						pafi + psafi +
 						chr(len(nexthop)) + nexthop +
 						chr(0) + nlri
 					)
-					yield data
 
 	def pack (self, addpath):
-		return ''.join(self.packed_attributes(addpath,Negotiated.MAX_SIZE - 19 - 2 - 2))
+		return ''.join(self.packed_attributes(addpath,Negotiated.FREE_SIZE))
 
 	def __len__ (self):
 		raise RuntimeError('we can not give you the size of an MPRNLRI - was it with our witout addpath ?')
