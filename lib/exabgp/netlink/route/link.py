@@ -78,5 +78,6 @@ class Link (InfoMessage):
 			IFLA_QDISC       = 0x06
 			IFLA_STATS       = 0x07
 
-	def getLinks (self):
-		return self.extract(Link.Command.RTM_GETLINK)
+	@classmethod
+	def getLinks (cls):
+		return cls.extract(Link.Command.RTM_GETLINK)

@@ -79,5 +79,6 @@ class Address (InfoMessage):
 			IFLA_VF_PORTS    = 0x18
 			IFLA_PORT_SELF   = 0x19
 
-	def getAddresses (self):
-		return self.extract(Address.Command.RTM_GETADDR)
+	@classmethod
+	def getAddresses (cls):
+		return cls.extract(Address.Command.RTM_GETADDR)

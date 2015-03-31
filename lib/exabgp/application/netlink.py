@@ -4,7 +4,7 @@ import sys
 import socket
 
 from exabgp.netlink import NetMask
-from exabgp.netlink.route import NetLinkRoute
+from exabgp.netlink.message import NetLinkMessage
 from exabgp.netlink.attributes import Attributes
 
 from exabgp.netlink.route.link import Link
@@ -19,18 +19,16 @@ def usage ():
 	print '  route : show the ip routing'
 
 def addr ():
-	netlink = NetLinkRoute()
-
 	links = {}
-	for ifi in Link(netlink).getLinks():
+	for ifi in Link.getLinks():
 		links[ifi.index] = ifi
 
 	addresses = {}
-	for ifa in Address(netlink).getAddresses():
+	for ifa in Address.getAddresses():
 		addresses.setdefault(ifa.index,[]).append(ifa)
 
 	neighbors = {}
-	for neighbor in Neighbor(netlink).getNeighbors():
+	for neighbor in Neighbor.getNeighbors():
 		neighbors.setdefault(neighbor.index,[]).append(neighbor)
 
 	for index, ifi in links.items():
@@ -63,16 +61,14 @@ def addr ():
 				print 'mac',':'.join(_.encode('hex') for _ in neighbor.attributes[Neighbor.Type.State.NUD_REACHABLE])
 
 def route ():
-	netlink = NetLinkRoute()
-
 	links = {}
-	for ifi in Link(netlink).getLinks():
+	for ifi in Link.getLinks():
 		links[ifi.index] = ifi.attributes.get(Link.Type.Attribute.IFLA_IFNAME).strip('\0')
 
 	print 'Kernel IP routing table'
 	print '%-18s %-18s %-18s %-7s %s' % ('Destination','Genmask','Gateway','Metric','Iface')
 
-	for route in Network(netlink).getRoutes():
+	for route in Network.getRoutes():
 		if route.family != socket.AF_INET:
 			continue
 
@@ -98,7 +94,7 @@ def route ():
 
 
 def new ():
-	netlink = NetLinkRoute()
+	netlink = NetLinkMessage()
 
 	links = {}
 	for ifi in Link(netlink).getLinks():

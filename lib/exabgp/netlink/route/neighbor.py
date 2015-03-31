@@ -66,5 +66,6 @@ class Neighbor (InfoMessage):
 			NDA_CACHEINFO  = 0x03  # Cache statistics
 			NDA_PROBES     = 0x04
 
-	def getNeighbors (self):
-		return self.extract(Neighbor.Command.RTM_GETNEIGH)
+	@classmethod
+	def getNeighbors (cls):
+		return cls.extract(Neighbor.Command.RTM_GETNEIGH)

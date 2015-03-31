@@ -10,7 +10,7 @@ import socket
 from struct import calcsize
 from collections import namedtuple
 
-from exabgp.netlink.route import NetLinkRoute
+from exabgp.netlink.message import NetLinkMessage
 from exabgp.netlink.message import InfoMessage
 from exabgp.netlink.attributes import Attributes
 
@@ -110,15 +110,16 @@ class Network (InfoMessage):
 			# RTA_MP_ALGO     = 0x0E
 			RTA_TABLE         = 0x0F
 
-	def getRoutes (self):
-		return self.extract(Network.Command.RTM_GETROUTE)
+	@classmethod
+	def getRoutes (cls):
+		return cls.extract(Network.Command.RTM_GETROUTE)
 
 
 	def newRoute (self):
-		network_flags  = NetLinkRoute.Flags.NLM_F_REQUEST
-		network_flags |= NetLinkRoute.Flags.NLM_F_CREATE
-		network_flags |= NetLinkRoute.Flags.NLM_F_EXCL
-		# network_flags |= NetLinkRoute.Flags.NLM_F_ACK
+		network_flags  = NetLinkMessage.Flags.NLM_F_REQUEST
+		network_flags |= NetLinkMessage.Flags.NLM_F_CREATE
+		network_flags |= NetLinkMessage.Flags.NLM_F_EXCL
+		# network_flags |= NetLinkMessage.Flags.NLM_F_ACK
 
 		family = socket.AF_INET
 
