@@ -2,13 +2,15 @@
 
 import sys
 import socket
-from exabgp.netlink.route import Link
+
+from exabgp.netlink import NetMask
 from exabgp.netlink.route import NetLinkRoute
-from exabgp.netlink.route import Address
-from exabgp.netlink.route import Neighbor
-from exabgp.netlink.route import Attributes
-from exabgp.netlink.route import Network
-from exabgp.netlink.route import NetMask
+from exabgp.netlink.attributes import Attributes
+
+from exabgp.netlink.route.link import Link
+from exabgp.netlink.route.neighbor import Neighbor
+from exabgp.netlink.route.address import Address
+from exabgp.netlink.route.network import Network
 
 
 def usage ():
