@@ -10,6 +10,8 @@ Version 3.4.10
     reported by: Kevin Landreth
  * Fix: Using split option with large MP could lead to invalid update
     reported by: m4ccbr on github
+ * Fix: MD5 support for incoming connection
+    patch by: Sandy Breeze and David Overton
 
 Version 3.4.9
  * Fix: very bad bug where NLRI where not associated to the right AFI/SAFI pair ( #235 )
