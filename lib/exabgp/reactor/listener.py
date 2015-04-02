@@ -46,33 +46,30 @@ class Listener (object):
 	def listen (self, local_ip, peer_ip, local_port, md5):
 		self.serving = True
 
-		for local,port,peer,md in self._sockets.values():
+		for sock,(local,port,peer,md) in self._sockets.items():
 			if local_ip.ip != local:
 				continue
 			if local_port != port:
 				continue
-			if md and md5:
-				if peer_ip.ip != peer:
-					continue
-				if md != md5:
-					raise BindingError('can not listen on %s:%d remote host %s already has an MD5' % (local_ip,local_port,peer_ip))
+			if not md5 and not md:
+				continue
+			if md5 and md:
+				MD5(sock,peer_ip.ip,0,md5)
 				return
-			if not md and not md5:
-				raise BindingError('can not listen on %s:%d, the port already in use by another neighbor' % (local_ip,local_port))
+			raise BindingError('can not listen on %s:%d, the port can not mix MD5 and non MD5 (if you believe this to be wrong, please raise an issue)' % (local_ip,local_port))
 
 		try:
 			sock = self._new_socket(local_ip)
 			if md5:
 				# MD5 must match the peer side of the TCP, not the local one
 				MD5(sock,peer_ip.ip,0,md5)
-
-			sock.bind((local_ip.ip,local_port))
 			try:
 				sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 			except (socket.error,AttributeError):
 				pass
 			sock.setblocking(0)
 			# s.settimeout(0.0)
+			sock.bind((local_ip.ip,local_port))
 			sock.listen(self._backlog)
 			self._sockets[sock] = (local_ip.ip,local_port,peer_ip.ip,md5)
 		except socket.error,exc:

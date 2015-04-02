@@ -14,6 +14,8 @@ Version 3.4.10
     patch by: Sandy Breeze and David Overton
  * Fix: prevent multiple similar binding
     reported by: Sandy Breeze
+ * Fix: allow different MD5 for the same binding
+    reported by: Sandy Breeze
 
 Version 3.4.9
  * Fix: very bad bug where NLRI where not associated to the right AFI/SAFI pair ( #235 )
