@@ -12,6 +12,8 @@ Version 3.4.10
     reported by: m4ccbr on github
  * Fix: MD5 support for incoming connection
     patch by: Sandy Breeze and David Overton
+ * Fix: prevent multiple similar binding
+    reported by: Sandy Breeze
 
 Version 3.4.9
  * Fix: very bad bug where NLRI where not associated to the right AFI/SAFI pair ( #235 )

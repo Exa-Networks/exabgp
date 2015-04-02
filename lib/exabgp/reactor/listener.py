@@ -43,15 +43,30 @@ class Listener (object):
 			return socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
 		raise NetworkError('Can not create socket for listening, family of IP %s is unknown' % ip)
 
-	def listen (self, local_ip, peer_ip, port, md5):
+	def listen (self, local_ip, peer_ip, local_port, md5):
 		self.serving = True
+
+		for local,port,peer,md in self._sockets.values():
+			if local_ip.ip != local:
+				continue
+			if local_port != port:
+				continue
+			if md and md5:
+				if peer_ip.ip != peer:
+					continue
+				if md != md5:
+					raise BindingError('can not listen on %s:%d remote host %s already has an MD5' % (local_ip,local_port,peer_ip))
+				return
+			if not md and not md5:
+				raise BindingError('can not listen on %s:%d, the port already in use by another neighbor' % (local_ip,local_port))
+
 		try:
 			sock = self._new_socket(local_ip)
 			if md5:
 				# MD5 must match the peer side of the TCP, not the local one
 				MD5(sock,peer_ip.ip,0,md5)
 
-			sock.bind((local_ip.ip,port))
+			sock.bind((local_ip.ip,local_port))
 			try:
 				sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 			except (socket.error,AttributeError):
@@ -59,12 +74,12 @@ class Listener (object):
 			sock.setblocking(0)
 			# s.settimeout(0.0)
 			sock.listen(self._backlog)
-			self._sockets[sock] = (local_ip.ip,port)
+			self._sockets[sock] = (local_ip.ip,local_port,peer_ip.ip,md5)
 		except socket.error,exc:
 			if exc.args[0] == errno.EADDRINUSE:
-				raise BindingError('could not listen on %s:%d, the port already in use by another application' % (local_ip,port))
+				raise BindingError('could not listen on %s:%d, the port already in use by another application' % (local_ip,local_port))
 			elif exc.args[0] == errno.EADDRNOTAVAIL:
-				raise BindingError('could not listen on %s:%d, this is an invalid address' % (local_ip,port))
+				raise BindingError('could not listen on %s:%d, this is an invalid address' % (local_ip,local_port))
 			raise NetworkError(str(exc))
 		except NetworkError,exc:
 			self.logger.network(str(exc),'critical')
@@ -101,7 +116,7 @@ class Listener (object):
 		if not self.serving:
 			return
 
-		for sock,(ip,port) in self._sockets.items():
+		for sock,(ip,port,_,_) in self._sockets.items():
 			sock.close()
 			self.logger.network('stopped listening on %s:%d' % (ip,port),'info')
 
