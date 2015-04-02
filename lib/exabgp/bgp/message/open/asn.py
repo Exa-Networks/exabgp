@@ -17,7 +17,7 @@ class ASN (long):
 		return self > pow(2,16)
 
 	def pack (self, negotiated=None):
-		asn4 = negotiated.asn4 if negotiated else self.asn4()
+		asn4 = negotiated if negotiated else self.asn4()
 		if asn4:
 			return pack('!L',self)
 		return pack('!H',self)
