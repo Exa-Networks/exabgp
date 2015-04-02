@@ -51,12 +51,9 @@ class Listener (object):
 				continue
 			if local_port != port:
 				continue
-			if not md5 and not md:
-				continue
-			if md5 and md:
+			if md5:
 				MD5(sock,peer_ip.ip,0,md5)
-				return
-			raise BindingError('can not listen on %s:%d, the port can not mix MD5 and non MD5 (if you believe this to be wrong, please raise an issue)' % (local_ip,local_port))
+			return
 
 		try:
 			sock = self._new_socket(local_ip)
