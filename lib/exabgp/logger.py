@@ -60,7 +60,8 @@ class LazyFormat (object):
 		return str(self).split(char)
 
 	def __str__ (self):
-		return '%s (%d) %s' % (self.prefix,len(self.message),self.formater(self.message))
+		formated = self.formater(self.message)
+		return '%s (%d) %s' % (self.prefix,len(formated),formated)
 
 
 class Logger (object):
