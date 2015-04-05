@@ -97,10 +97,10 @@ def new ():
 	netlink = NetLinkMessage()
 
 	links = {}
-	for ifi in Link(netlink).getLinks():
+	for ifi in Link.getLinks():
 		links[ifi.index] = ifi.attributes.get(Link.Type.Attribute.IFLA_IFNAME).strip('\0')
 
-	for route in Network(netlink).newRoute():
+	for route in Network.newRoute():
 		print route
 
 		# if route.family != socket.AF_INET:
@@ -129,24 +129,24 @@ def main ():
 	if len(sys.argv) < 2:
 		usage()
 		sys.exit(1)
-	if sys.argv[1] in 'addr':
+	if 'addr'.startswith(sys.argv[1]):
 		if len(sys.argv) == 2:
 			addr()
 			sys.exit(0)
 		if sys.argv[2] in 'show':
 			addr()
 			sys.exit(0)
-	if sys.argv[1] in 'route':
+	if 'route'.startswith(sys.argv[1]):
 		if len(sys.argv) == 2:
 			route()
 			sys.exit(0)
-		if sys.argv[2] in 'show':
+		if 'show'.startswith(sys.argv[2]):
 			route()
 			sys.exit(0)
-		if sys.argv[2] in 'add':
+		if 'add'.startswith(sys.argv[2]):
 			new()
 			sys.exit(0)
-		if sys.argv[2] in 'del':
+		if 'delete'.startswith(sys.argv[2]):
 			print 'adding'
 
 	usage()

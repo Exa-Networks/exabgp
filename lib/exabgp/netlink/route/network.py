@@ -114,35 +114,42 @@ class Network (InfoMessage):
 	def getRoutes (cls):
 		return cls.extract(Network.Command.RTM_GETROUTE)
 
-
-	def newRoute (self):
+	@classmethod
+	def newRoute (cls):
 		network_flags  = NetLinkMessage.Flags.NLM_F_REQUEST
+		network_flags |= NetLinkMessage.Flags.NLM_F_ACK
 		network_flags |= NetLinkMessage.Flags.NLM_F_CREATE
-		network_flags |= NetLinkMessage.Flags.NLM_F_EXCL
-		# network_flags |= NetLinkMessage.Flags.NLM_F_ACK
+#		network_flags |= NetLinkMessage.Flags.NLM_F_EXCL
 
 		family = socket.AF_INET
 
-		attributes = Attributes()
-		# Network.Attribute.RTA_DST
+		prefix = '\x0a\1\0\0'
+		prefix_len = 24
+		gateway  = '\x0a\0\0\1'
 
-		neighbor = self.format(
+		attributes = {
+			Network.Type.Attribute.RTA_DST: prefix,
+			Network.Type.Attribute.RTA_GATEWAY: gateway,
+		}
+
+		# format = namedtuple('Address', 'family prefixlen flags scope index attributes')
+		# format = namedtuple('Neighbor', 'family src_len dst_len tos table proto scope type flags attributes')
+
+		neighbor = cls.format(
 			family,
 			0,     # src_len
-			32,    # dst_len ( only /32 atm)
+			prefix_len,    # dst_len ( only /32 atm)
 			0,     # tos
 			Network.Type.Table.RT_TABLE_MAIN,
 			Network.Type.Protocol.RTPROT_EXABGP,
 			Network.Type.Scope.RT_SCOPE_UNIVERSE,
-			0,     # type
-			Network.Flag.RTM_F_PREFIX,  # this may be wrong
+			Network.Type.Type.RTN_UNICAST,
+			Network.Type.Flag.RTM_F_PREFIX,  # this may be wrong
 			attributes
 		)
 
-		# prefix = '\20\x7f\0\0\2'
+		return cls.extract(Network.Command.RTM_NEWROUTE,network_flags,family,neighbor)
 
-		for _ in self.extract(Network.Command.RTM_NEWROUTE,network_flags,family):
-			yield _
-
-	def delRoute (self):
-		return self.extract(Network.Command.RTM_DELROUTE)
+	@classmethod
+	def delRoute (cls):
+		return cls.extract(Network.Command.RTM_DELROUTE)

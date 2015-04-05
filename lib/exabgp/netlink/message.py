@@ -29,8 +29,7 @@ class NetLinkMessage (object):
 
 	NETLINK_ROUTE = 0
 
-	format = namedtuple('Message','type flags seq pid data')
-	pid = os.getpid()
+	format = namedtuple('Message','format_type control_flags sequence pid data')
 	netlink = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, NETLINK_ROUTE)
 
 	class Header (object):
@@ -68,56 +67,66 @@ class NetLinkMessage (object):
 	}
 
 	@classmethod
-	def encode (cls, dtype, seq, flags, body, attributes):
+	def encode (cls, format_type, sequence, control_flags, pid, body, attributes):
 		attrs = Attributes.encode(attributes)
 		length = cls.Header.LEN + len(attrs) + len(body)
-		return pack(cls.Header.PACK, length, dtype, flags, seq, cls.pid) + body + attrs
+		return pack(cls.Header.PACK, length, format_type, control_flags, sequence, pid) + body + attrs
 
 	@classmethod
 	def decode (cls, data):
 		while data:
-			length, ntype, flags, seq, pid = unpack(cls.Header.PACK,data[:cls.Header.LEN])
+			length, format_type, control_flags, sequence, pid = unpack(cls.Header.PACK,data[:cls.Header.LEN])
 			if len(data) < length:
 				raise NetLinkError("Buffer underrun")
-			yield cls.format(ntype, flags, seq, pid, data[cls.Header.LEN:length])
+			yield cls.format(format_type, control_flags, sequence, pid, data[cls.Header.LEN:length])
 			data = data[length:]
 
+	# pack('Bxxx', family),
+	# family=socket.AF_UNSPEC,
+
 	@classmethod
-	def send (cls, dtype, hflags, family=socket.AF_UNSPEC):
+	def send (cls, format_type, control_flags, family=socket.AF_UNSPEC, attributes=None):
 		sequence = Sequence()
+		pid = os.getpid()
+
+		if attributes is None:
+			attributes = {}
 
 		message = cls.encode(
-			dtype,
+			format_type,
 			sequence,
-			hflags,
+			control_flags,
+			pid,
 			pack('Bxxx', family),
-			{}
+			attributes
 		)
 
 		cls.netlink.send(message)
 
 		while True:
-			data = cls.netlink.recv(640000)
-			for mtype, flags, seq, pid, data in cls.decode(data):
-				if seq != sequence:
+			response = cls.netlink.recv(640000)
+			for response_type, response_flags, response_sequence, response_pid, response_data in cls.decode(response):
+				if response_sequence != sequence:
 					if cls._IGNORE_SEQ_FAULTS:
 						continue
-					raise NetLinkError("netlink seq mismatch")
-				if mtype == NetLinkMessage.Command.NLMSG_DONE:
-					raise StopIteration()
-				elif dtype in cls.errors:
-					raise NetLinkError(cls.errors[mtype])
-				else:
-					yield data
+					raise NetLinkError("netlink sequence mismatch")
+				elif response_pid != pid:
+					raise NetLinkError("netlink pid mismatch")
+				# elif response_flags != control_flags:
+				# 	raise NetLinkError("netlink flags mismatch")
+				elif response_type in cls.errors:
+					raise NetLinkError(cls.errors[response_type],message,response)
 
-	# def change (self, dtype, family=socket.AF_UNSPEC):
-	# 	for _ in self.send(dtype, self.Flags.NLM_F_REQUEST | self.Flags.NLM_F_CREATE,family):
-	# 		yield _
+				if response_type == NetLinkMessage.Command.NLMSG_DONE:
+					raise StopIteration()
+				yield response_data
 
 
 class InfoMessage (object):
 	# to be defined by the subclasses
 	format = namedtuple('Parent', 'to be subclassed')
+
+	DEFAULT_FLAGS = NetLinkMessage.Flags.NLM_F_REQUEST | NetLinkMessage.Flags.NLM_F_DUMP
 
 	# to be defined by the subclasses
 	class Header (object):
@@ -132,6 +141,6 @@ class InfoMessage (object):
 		return cls.format(*extracted)
 
 	@classmethod
-	def extract (cls, atype, flags=NetLinkMessage.Flags.NLM_F_REQUEST | NetLinkMessage.Flags.NLM_F_DUMP, family=socket.AF_UNSPEC):
-		for data in NetLinkMessage.send(atype,flags,family):
+	def extract (cls, format_type, control_flags=DEFAULT_FLAGS, family=socket.AF_UNSPEC, attributes=None):
+		for data in NetLinkMessage.send(format_type,control_flags,family,attributes):
 			yield cls.decode(data)
