@@ -1,4 +1,4 @@
-version = "3.4.9"
+version = "3.4.10"
 
 # Do not change the first line as it is parsed by scripts
 
