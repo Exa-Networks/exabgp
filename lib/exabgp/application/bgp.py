@@ -10,6 +10,7 @@ import os
 import sys
 import platform
 import syslog
+import string
 
 from exabgp.version import version
 # import before the fork to improve copy on write memory savings
@@ -24,8 +25,8 @@ from exabgp.debug import setup_report
 setup_report()
 
 
-def is_hex (string):
-	return all(c in string.hexdigits or c == ':' for c in string)
+def is_hex (s):
+	return all(c in string.hexdigits or c == ':' for c in s)
 
 
 def __exit (memory, code):

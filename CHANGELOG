@@ -18,6 +18,7 @@ Version 3.4.10
     reported by: Sandy Breeze
  * Fix: issue with ASN4 code
     reported by: Florian Obser (with a patch, thank you)
+ * Fix: issue with --decode
 
 Version 3.4.9
  * Fix: very bad bug where NLRI where not associated to the right AFI/SAFI pair ( #235 )
