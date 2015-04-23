@@ -56,7 +56,7 @@ class Open (Message):
 		self.router_id = RouterID(router_id)
 		self.capabilities = capabilities
 
-	def message (self):
+	def message (self,negotiated=None):
 		return self._message("%s%s%s%s%s" % (
 			self.version.pack(),
 			self.asn.trans(),

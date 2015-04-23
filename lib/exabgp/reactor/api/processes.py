@@ -121,7 +121,7 @@ class Processes (object):
 			run = self.reactor.configuration.process[process].get('run','')
 			if run:
 				api = self.reactor.configuration.process[process]['encoder']
-				self._encoder[process] = JSON('3.4.8',self.highres) if api == 'json' else Text('3.3.2')
+				self._encoder[process] = Text('3.5.0') if api == 'text' else JSON('3.5.0',self.highres)
 
 				self._process[process] = subprocess.Popen(
 					run,
@@ -301,23 +301,18 @@ class Processes (object):
 			self.write(process,self._encoder[process].down(peer,reason),peer)
 
 	@silenced
-	def receive (self, peer, category, header, body):
-		for process in self._notify(peer,'receive-packets'):
-			self.write(process,self._encoder[process].receive(peer,category,header,body),peer)
+	def packets (self, peer, direction, category, header, body):
+		for process in self._notify(peer,'%s-packets' % direction):
+			self.write(process,self._encoder[process].packets(peer,direction,category,header,body),peer)
 
 	@silenced
-	def send (self, peer, category, header, body):
-		for process in self._notify(peer,'send-packets'):
-			self.write(process,self._encoder[process].send(peer,category,header,body),peer)
-
-	@silenced
-	def notification (self, peer, code, subcode, data):
+	def notification (self, peer, direction, code, subcode, data):
 		for process in self._notify(peer,'neighbor-changes'):
-			self.write(process,self._encoder[process].notification(peer,code,subcode,data),peer)
+			self.write(process,self._encoder[process].notification(peer,direction,code,subcode,data),peer)
 
 	@silenced
-	def message (self, message_id, peer, message, header,*body):
-		self._dispatch[message_id](self,peer,message,header,*body)
+	def message (self, message_id, peer, direction, message, header, *body):
+		self._dispatch[message_id](self,peer,direction,message,header,*body)
 
 	# registering message functions
 	# no-self-argument
@@ -331,27 +326,27 @@ class Processes (object):
 		return closure
 
 	@register_process(Message.CODE.OPEN,_dispatch)
-	def _open (self, peer, open_msg, header, body, direction='received'):
-		for process in self._notify(peer,'receive-opens'):
-			self.write(process,self._encoder[process].open(peer,direction,open_msg,header,body),peer)
+	def _open (self, peer, direction, message, header, body):
+		for process in self._notify(peer,'receive-%d' % Message.CODE.OPEN):
+			self.write(process,self._encoder[process].open(peer,direction,message,header,body),peer)
 
 	# unused-argument, must keep the API
 	@register_process(Message.CODE.KEEPALIVE,_dispatch)
-	def _keepalive (self, peer, keepalive, header, body):
-		for process in self._notify(peer,'receive-keepalives'):
-			self.write(process,self._encoder[process].keepalive(peer,header,body),peer)
+	def _keepalive (self, peer, direction, keepalive, header, body):
+		for process in self._notify(peer,'receive-%d' % Message.CODE.KEEPALIVE):
+			self.write(process,self._encoder[process].keepalive(peer,direction,header,body),peer)
 
 	@register_process(Message.CODE.UPDATE,_dispatch)
-	def _update (self, peer, update, header, body):
-		for process in self._notify(peer,'receive-updates'):
-			self.write(process,self._encoder[process].update(peer,update,header,body),peer)
+	def _update (self, peer, direction, update, header, body):
+		for process in self._notify(peer,'receive-%d' % Message.CODE.NOTIFICATION):
+			self.write(process,self._encoder[process].update(peer,direction,update,header,body),peer)
 
 	@register_process(Message.CODE.ROUTE_REFRESH,_dispatch)
-	def _refresh (self, peer, refresh, header, body):
-		for process in self._notify(peer,'receive-refresh'):
-			self.write(process,self._encoder[process].refresh(peer,refresh,header,body),peer)
+	def _refresh (self, peer, direction, refresh, header, body):
+		for process in self._notify(peer,'receive-%d' % Message.CODE.ROUTE_REFRESH):
+			self.write(process,self._encoder[process].refresh(peer,direction,refresh,header,body),peer)
 
 	@register_process(Message.CODE.OPERATIONAL,_dispatch)
-	def _operational (self, peer, operational, header, body):
-		for process in self._notify(peer,'receive-operational'):
-			self.write(process,self._encoder[process].operational(peer,operational.category,operational,header,body),peer)
+	def _operational (self, peer, direction, operational, header, body):
+		for process in self._notify(peer,'receive-%d' % Messa.CODE.OPERATIONAL):
+			self.write(process,self._encoder[process].operational(peer,direction,operational.category,operational,header,body),peer)

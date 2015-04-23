@@ -8,9 +8,54 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from struct import pack
 
+
+class _Code (int):
+	__slots__ = ['SHORT','NAME']
+
+	NOP           = 0x00  # .   0 - internal
+	OPEN          = 0x01  # .   1
+	UPDATE        = 0x02  # .   2
+	NOTIFICATION  = 0x03  # .   3
+	KEEPALIVE     = 0x04  # .   4
+	ROUTE_REFRESH = 0x05  # .   5
+	OPERATIONAL   = 0x06  # .   6  # Not IANA assigned yet
+
+	names = {
+		NOP:            'NOP',
+		OPEN:           'OPEN',
+		UPDATE:         'UPDATE',
+		NOTIFICATION:   'NOTIFICATION',
+		KEEPALIVE:      'KEEPALIVE',
+		ROUTE_REFRESH:  'ROUTE_REFRESH',
+		OPERATIONAL:    'OPERATIONAL',
+	}
+
+	short_names = {
+		NOP:            'nop',
+		OPEN:           'open',
+		UPDATE:         'update',
+		NOTIFICATION:   'notification',
+		KEEPALIVE:      'keepalive',
+		ROUTE_REFRESH:  'refresh',
+		OPERATIONAL:    'operational',
+	}
+
+	def __init__ (self,value):
+		self.SHORT = self.short()
+		self.NAME = str(self)
+
+	def __str__ (self):
+		return self.names.get(self,'unknown message %s' % hex(self))
+
+	def __repr__ (self):
+		return str(self)
+
+	def short (self):
+		return self.short_names.get(self,'unknown')
+
+
 # ================================================================== BGP Message
 #
-
 
 # 0                   1                   2                   3
 # 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -40,36 +85,31 @@ class Message (Exception):
 	klass_notify = Exception
 	klass_unknown = Exception
 
-	class CODE (int):
-		__slots__ = []
+	class CODE (object):
+		NOP           = _Code(0x00)  # .   0 - internal
+		OPEN          = _Code(0x01)  # .   1
+		UPDATE        = _Code(0x02)  # .   2
+		NOTIFICATION  = _Code(0x03)  # .   3
+		KEEPALIVE     = _Code(0x04)  # .   4
+		ROUTE_REFRESH = _Code(0x05)  # .   5
+		OPERATIONAL   = _Code(0x06)  # .   6  # Not IANA assigned yet
 
-		NOP           = 0x00  # .   0 - internal
-		OPEN          = 0x01  # .   1
-		UPDATE        = 0x02  # .   2
-		NOTIFICATION  = 0x03  # .   3
-		KEEPALIVE     = 0x04  # .   4
-		ROUTE_REFRESH = 0x05  # .   5
-		OPERATIONAL   = 0x06  # .   6  # Not IANA assigned yet
-
-		names = {
-			NOP:            'NOP',
-			OPEN:           'OPEN',
-			UPDATE:         'UPDATE',
-			NOTIFICATION:   'NOTIFICATION',
-			KEEPALIVE:      'KEEPALIVE',
-			ROUTE_REFRESH:  'ROUTE_REFRESH',
-			OPERATIONAL:    'OPERATIONAL',
-		}
-
-		def __str__ (self):
-			return self.names.get(self,'unknown message %s' % hex(self))
-
-		def __repr__ (self):
-			return str(self)
+ 		MESSAGES = [
+			NOP,
+			OPEN,
+			UPDATE,
+			NOTIFICATION,
+			KEEPALIVE,
+			ROUTE_REFRESH,
+			OPERATIONAL
+		]
 
 		@staticmethod
 		def name (message_id):
-			return Message.CODE.names.get(message_id,'unknown message %s' % hex(message_id))
+			return _Code.names.get(message_id,'unknown message %s' % hex(message_id))
+
+		def __init__ (self):
+			raise RuntimeError('This class can not be instantiated')
 
 	Length = {
 		CODE.OPEN:           lambda _:  _ >= 29,  # noqa
@@ -104,7 +144,7 @@ class Message (Exception):
 		message_len = pack('!H',19+len(message))
 		return "%s%s%s%s" % (self.MARKER,message_len,self.TYPE,message)
 
-	def message (self):
+	def message (self,negotiated=None):
 		raise NotImplementedError('message not implemented in subclasses')
 
 	@staticmethod

@@ -170,22 +170,30 @@ class Neighbor (object):
 		for afi,safi in self.families():
 			families += '\n\t\t%s %s;' % (afi.name(),safi.name())
 
+		codes = Message.CODE
+
 		_extension_receive = {
-			'receive-parsed':           'parsed',
-			'receive-packets':          'packets',
-			'receive-parsed':           'parsed',
-			'consolidate':              'consolidate',
-			'neighbor-changes':         'neighbor-changes',
-			Message.CODE.NOTIFICATION:  'notification',
-			Message.CODE.OPEN:          'open',
-			Message.CODE.KEEPALIVE:     'keepalive',
-			Message.CODE.UPDATE:        'update',
-			Message.CODE.ROUTE_REFRESH: 'refresh',
-			Message.CODE.OPERATIONAL:   'operational',
+			'receive-packets':                  'packets',
+			'receive-parsed':                   'parsed',
+			'receive-consolidate':              'consolidate',
+			'receive-%d' % codes.NOTIFICATION:  'notification',
+			'receive-%d' % codes.OPEN:          'open',
+			'receive-%d' % codes.KEEPALIVE:     'keepalive',
+			'receive-%d' % codes.UPDATE:        'update',
+			'receive-%d' % codes.ROUTE_REFRESH: 'refresh',
+			'receive-%d' % codes.OPERATIONAL:   'operational',
 		}
 
 		_extension_send = {
-			'send-packets': 'packets',
+			'send-packets':                  'packets',
+			'send-parsed':                   'parsed',
+			'send-consolidate':              'consolidate',
+			'send-%d' % codes.NOTIFICATION:  'notification',
+			'send-%d' % codes.OPEN:          'open',
+			'send-%d' % codes.KEEPALIVE:     'keepalive',
+			'send-%d' % codes.UPDATE:        'update',
+			'send-%d' % codes.ROUTE_REFRESH: 'refresh',
+			'send-%d' % codes.OPERATIONAL:   'operational',
 		}
 
 		_receive = []

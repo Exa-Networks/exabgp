@@ -44,7 +44,7 @@ class BMPHandler (asyncore.dispatcher_with_send):
 		self.fd = env.fd
 		self.ip = ip
 		self.port = port
-		self.json = JSON('3.4.8')
+		self.json = JSON('3.5.0')
 		return self
 
 	def _read_data (self, number):

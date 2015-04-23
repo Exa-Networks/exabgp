@@ -279,6 +279,7 @@ class Peer (object):
 
 		# send OPEN
 		message = Message.CODE.NOP
+
 		for message in proto.new_open(self._restarted):
 			if ord(message.TYPE) == Message.CODE.NOP:
 				yield ACTION.NOW

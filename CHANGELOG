@@ -3,6 +3,12 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.5.0
+ * Change: Change the API configuration syntax and format
+  - JSON is now the default API
+  - syntax changes to the Text API format
+  - syntax changes to the JSON API format
+
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
     patch by: Daniel Neiter
