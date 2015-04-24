@@ -1465,10 +1465,7 @@ class Configuration (object):
 				neighbor.add_family(family)
 
 		if neighbor.group_updates is None:
-			neighbor.group_updates = False
-			self.logger.configuration('-'*80,'warning')
-			self.logger.configuration('group-updates not enabled for peer %s, it surely should, the default will change to true soon' % neighbor.peer_address,'warning')
-			self.logger.configuration('-'*80,'warning')
+			neighbor.group_updates = True
 
 		def _init_neighbor (neighbor):
 			families = neighbor.families()

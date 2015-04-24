@@ -4,8 +4,10 @@ Version explained:
  bug   : increase on bug or incremental changes
 
 Version 3.5.0
+ * Change: Update are now grouped by default
  * Change: Change the API configuration syntax and format
-  - JSON is now the default API
+  - JSON is now the default API encoder
+  - JSON now use high resolution time by default
   - syntax changes to the Text API format
   - syntax changes to the JSON API format
 

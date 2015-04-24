@@ -221,13 +221,13 @@ environment.configuration = {
 		'encoder':  {
 			'read':  environment.api,
 			'write': environment.lower,
-			'value': 'text',
+			'value': 'json',
 			'help':  '(experimental) default encoder to use with with external API (text or json)',
 		},
 		'highres':  {
 			'read':  environment.boolean,
 			'write': environment.lower,
-			'value': 'false',
+			'value': 'true',
 			'help':  'should we use highres timer in JSON',
 		},
 		'respawn':  {
