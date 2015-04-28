@@ -325,6 +325,8 @@ class Processes (object):
 			return wrap
 		return closure
 
+	# notifications are handled in the loop as they use different arguments
+
 	@register_process(Message.CODE.OPEN,_dispatch)
 	def _open (self, peer, direction, message, header, body):
 		for process in self._notify(peer,'receive-%d' % Message.CODE.OPEN):
@@ -338,7 +340,7 @@ class Processes (object):
 
 	@register_process(Message.CODE.UPDATE,_dispatch)
 	def _update (self, peer, direction, update, header, body):
-		for process in self._notify(peer,'receive-%d' % Message.CODE.NOTIFICATION):
+		for process in self._notify(peer,'receive-%d' % Message.CODE.UPDATE):
 			self.write(process,self._encoder[process].update(peer,direction,update,header,body),peer)
 
 	@register_process(Message.CODE.ROUTE_REFRESH,_dispatch)
