@@ -10,6 +10,12 @@ Version 3.5.0
   - JSON now use high resolution time by default
   - syntax changes to the Text API format
   - syntax changes to the JSON API format
+    * add direction to object
+    * pid, ppid are now numbers and not string
+    * remove deprecated 'ip' from neighbor
+    * rename 'restart flags' to be 'restart-flags'
+    * rename 'address family flags' to be 'address-family-flags'
+    * format change for notification and shutdown message
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
