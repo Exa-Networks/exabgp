@@ -118,41 +118,35 @@ class Protocol (object):
 			except ProcessError:
 				self.logger.message(self.me('could not send notification of neighbor close to API'))
 
+	def _to_api (self,direction,message,raw):
+		packets = self.neighbor.api['%s-packets' % direction]
+		parsed = self.neighbor.api['%s-parsed' % direction]
+		consolidate = self.neighbor.api['%s-consolidate' % direction]
+
+		if consolidate:
+			if packets:
+				self.peer.reactor.processes.message(self.peer,direction,message,raw[:19],raw[19:])
+			else:
+				self.peer.reactor.processes.message(self.peer,direction,message,'','')
+		else:
+			if packets:
+				self.peer.reactor.processes.packets(self.peer,direction,int(message.ID),raw[:19],raw[19:])
+			if parsed:
+				self.peer.reactor.processes.message(message.ID,self.peer,direction,message,'','')
+
 	def write (self, message, negotiated=None):
-		matched = self.neighbor.api['send-%d' % message.ID]
 		raw = message.message(negotiated)
 
-		if matched:
-	 		packets = self.neighbor.api['send-packets']
-			consolidate = self.neighbor.api['send-consolidate']
-
-			if packets and not consolidate:
-				self.peer.reactor.processes.packets(self.peer,'sent',message.ID,raw[:19],raw[19:])
-
-			header = raw[0:19] if packets and not consolidate else ''
-			body = raw[19:] if packets and not consolidate else ''
-
-			self.peer.reactor.processes.message(message.ID,self.peer,'sent',message,header,body)
+		if self.neighbor.api.get('send-%d' % message.ID,False):
+			self._to_api('send',message,raw)
 
 		for boolean in self.connection.writer(raw):
 			yield boolean
 
 	def send (self,raw):
-		matched = self.neighbor.api['send-%d' % Update.ID]
-
-		if matched:
+		if self.neighbor.api.get('send-%d' % ord(raw[19]),False):
 			message = Update.unpack_message(raw[19:],self.negotiated)
-
-	 		packets = self.neighbor.api['send-packets']
-			consolidate = self.neighbor.api['send-consolidate']
-
-			if packets and not consolidate:
-				self.peer.reactor.processes.packets(self.peer,'sent',message.ID,raw[:19],raw[19:])
-
-			header = raw[0:19] if packets and not consolidate else ''
-			body = raw[19:] if packets and not consolidate else ''
-
-			self.peer.reactor.processes.message(message.ID,self.peer,'sent',message,header,body)
+			self._to_api('send',message,raw)
 
 		for boolean in self.connection.writer(raw):
 			yield boolean

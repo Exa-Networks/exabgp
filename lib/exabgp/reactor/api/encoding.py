@@ -315,7 +315,7 @@ class JSON (object):
 			})
 		})),'','',peer.neighbor.identificator(),self.count(peer),message_type='notification')
 
-	def packets (self, peer, direction, header, body):
+	def packets (self, peer, direction, category, header, body):
 		return self._header(self._neighbor(peer,direction,self._kv({
 			'message': '{ %s } ' % self._kv({
 				'category': category,
