@@ -79,7 +79,7 @@ class Text (object):
 		)
 
 	def notification (self, peer, direction, code, subcode, data):
-		return 'neighbor %s %s notification %s code %d subcode %d data %s\n' % (
+		return 'neighbor %s %s notification code %d subcode %d data %s\n' % (
 			peer.neighbor.peer_address,
 			direction,
 			code,
