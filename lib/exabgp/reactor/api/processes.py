@@ -21,6 +21,9 @@ from exabgp.reactor.api.encoding import JSON
 from exabgp.bgp.message import Message
 from exabgp.logger import Logger
 
+from exabgp.version import json as json_version
+from exabgp.version import text as text_version
+
 
 # pylint: disable=no-self-argument,not-callable,unused-argument,invalid-name
 
@@ -121,7 +124,7 @@ class Processes (object):
 			run = self.reactor.configuration.process[process].get('run','')
 			if run:
 				api = self.reactor.configuration.process[process]['encoder']
-				self._encoder[process] = Text('3.5.0') if api == 'text' else JSON('3.5.0',self.highres)
+				self._encoder[process] = Text(text_version) if api == 'text' else JSON(json_version,self.highres)
 
 				self._process[process] = subprocess.Popen(
 					run,
