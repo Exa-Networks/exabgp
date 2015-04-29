@@ -9,6 +9,9 @@ Version 3.5.0
   - JSON is now the default API encoder
   - JSON now use high resolution time by default
   - syntax changes to the Text API format
+    * added direction of message
+    * change received/sent to receive/send
+    * add extra informatiom (detail here)
   - syntax changes to the JSON API format
     * add direction to object
     * pid, ppid are now numbers and not string

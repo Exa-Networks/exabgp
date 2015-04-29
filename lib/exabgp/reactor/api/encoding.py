@@ -225,7 +225,7 @@ class JSON (object):
 	def _string (self, _):
 		return '%s' % _ if issubclass(_.__class__,int) or issubclass(_.__class__,long) or ('{' in str(_)) else '"%s"' % _
 
-	def _header (self, content, header, body, ident=None,count=None,message_type=None):
+	def _header (self, content, header, body, count=None,message_type=None):
 		peer     = '"host" : "%s", '   % socket.gethostname()
 		pid      = '"pid" : %s, '      % os.getpid()
 		ppid     = '"ppid" : %s, '     % os.getppid()
@@ -288,23 +288,23 @@ class JSON (object):
 	def up (self, peer):
 		return self._header(self._neighbor(peer,None,self._kv({
 			'state': 'up',
-		})),'','',peer.neighbor.identificator(),self.count(peer),message_type='state')
+		})),'','',self.count(peer),message_type='state')
 
 	def connected (self, peer):
 		return self._header(self._neighbor(peer,None,self._kv({
 			'state': 'connected',
-		})),'','',peer.neighbor.identificator(),self.count(peer),message_type='state')
+		})),'','',self.count(peer),message_type='state')
 
 	def down (self, peer, reason=''):
 		return self._header(self._neighbor(peer,None,self._kv({
 			'state':  'down',
 			'reason': reason,
-		})),'','',peer.neighbor.identificator(),self.count(peer),message_type='state')
+		})),'','',self.count(peer),message_type='state')
 
 	def shutdown (self):
 		return self._header(self._kv({
 			'notification': 'shutdown',
-		}),'','','',1,message_type='notification')
+		}),'','',1,message_type='notification')
 
 	def notification (self, peer, direction, code, subcode, data):
 		return self._header(self._neighbor(peer,direction,self._kv({
@@ -313,7 +313,7 @@ class JSON (object):
 				'subcode': subcode,
 				'data':    hexstring(data),
 			})
-		})),'','',peer.neighbor.identificator(),self.count(peer),message_type='notification')
+		})),'','',self.count(peer),message_type='notification')
 
 	def packets (self, peer, direction, category, header, body):
 		return self._header(self._neighbor(peer,direction,self._kv({
@@ -322,10 +322,10 @@ class JSON (object):
 				'header':   hexstring(header),
 				'body':     hexstring(body),
 			})
-		})),'','',peer.neighbor.identificator(),self.count(peer),message_type=Message.string(category))
+		})),'','',self.count(peer),message_type=Message.string(category))
 
 	def keepalive (self, peer, direction, header, body):
-		return self._header(self._neighbor(peer,direction,''),header,body,peer.neighbor.identificator(),self.count(peer),message_type='keepalive')
+		return self._header(self._neighbor(peer,direction,''),header,body,self.count(peer),message_type='keepalive')
 
 	def open (self, peer, direction, message, header, body):
 		return self._header(self._neighbor(peer,direction,self._kv({
@@ -336,7 +336,7 @@ class JSON (object):
 				'router_id':    message.router_id,
 				'capabilities': '{ %s }' % self._json_kv(message.capabilities),
 			})
-		})),header,body,peer.neighbor.identificator(),self.count(peer),message_type='open')
+		})),header,body,self.count(peer),message_type='open')
 
 	def _update (self, update):
 		plus = {}
@@ -390,7 +390,7 @@ class JSON (object):
 	def update (self, peer, direction, update, header, body):
 		return self._header(self._neighbor(peer,direction,self._kv({
 			'message': '{ %s }' % self._update(update)
-		})),header,body,peer.neighbor.identificator(),self.count(peer),message_type='update')
+		})),header,body,self.count(peer),message_type='update')
 
 	def refresh (self, peer, direction, refresh, header, body):
 		return self._header(self._neighbor(peer,direction,self._kv({
@@ -399,7 +399,7 @@ class JSON (object):
 				'safi': refresh.safi,
 				'subtype': refresh.reserved
 			})
-		})),header,body,peer.neighbor.identificator(),self.count(peer),message_type='refresh')
+		})),header,body,self.count(peer),message_type='refresh')
 
 	def bmp (self, bmp, update):
 		return self._header(self._bmp(bmp,self._update(update)),'','',message_type='bmp')
@@ -411,7 +411,7 @@ class JSON (object):
 				'afi': operational.afi,
 				'safi': operational.safi,
 			})
-		})),header,body,peer.neighbor.identificator(),self.count(peer),message_type='operational')
+		})),header,body,self.count(peer),message_type='operational')
 
 	def _operational_advisory (self, peer, direction, operational, header, body):
 		return self._header(self._neighbor(peer,direction,self._kv({
@@ -421,7 +421,7 @@ class JSON (object):
 				'safi': operational.safi,
 				'advisory': operational.data
 			})
-		})),header,body,peer.neighbor.identificator(),self.count(peer),message_type='operational')
+		})),header,body,self.count(peer),message_type='operational')
 
 	def _operational_counter (self, peer, direction, operational, header, body):
 		return self._header(self._neighbor(peer,direction,self._kv({
@@ -433,7 +433,7 @@ class JSON (object):
 				'sequence': operational.sequence,
 				'counter': operational.counter
 			})
-		})),header,body,peer.neighbor.identificator(),self.count(peer),message_type='operational')
+		})),header,body,self.count(peer),message_type='operational')
 
 	def operational (self, peer, direction, what, operational, header, body):
 		if what == 'advisory':
