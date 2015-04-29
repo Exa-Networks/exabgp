@@ -73,7 +73,7 @@ class Protocol (object):
 		self.connection = incoming
 
 		if self.peer.neighbor.api['neighbor-changes']:
-			self.peer.reactor.processes.connected(self.peer)
+			self.peer.reactor.processes.connected(self.peer.neighbor)
 
 		# very important - as we use this function on __init__
 		return self
@@ -95,7 +95,7 @@ class Protocol (object):
 						yield False
 						continue
 					if self.peer.neighbor.api['neighbor-changes']:
-						self.peer.reactor.processes.connected(self.peer)
+						self.peer.reactor.processes.connected(self.peer.neighbor)
 					yield True
 					return
 			except StopIteration:
@@ -114,7 +114,7 @@ class Protocol (object):
 
 			try:
 				if self.peer.neighbor.api['neighbor-changes']:
-					self.peer.reactor.processes.down(self.peer,reason)
+					self.peer.reactor.processes.down(self.peer.neighbor,reason)
 			except ProcessError:
 				self.logger.message(self.me('could not send notification of neighbor close to API'))
 
@@ -125,14 +125,14 @@ class Protocol (object):
 
 		if consolidate:
 			if packets:
-				self.peer.reactor.processes.message(self.peer,direction,message,raw[:19],raw[19:])
+				self.peer.reactor.processes.message(self.peer.neighbor,direction,message,raw[:19],raw[19:])
 			else:
-				self.peer.reactor.processes.message(self.peer,direction,message,'','')
+				self.peer.reactor.processes.message(self.peer.neighbor,direction,message,'','')
 		else:
 			if packets:
-				self.peer.reactor.processes.packets(self.peer,direction,int(message.ID),raw[:19],raw[19:])
+				self.peer.reactor.processes.packets(self.peer.neighbor,direction,int(message.ID),raw[:19],raw[19:])
 			if parsed:
-				self.peer.reactor.processes.message(message.ID,self.peer,direction,message,'','')
+				self.peer.reactor.processes.message(message.ID,self.peer.neighbor,direction,message,'','')
 
 	def write (self, message, negotiated=None):
 		raw = message.message(negotiated)
@@ -157,7 +157,7 @@ class Protocol (object):
 		# This will always be defined by the loop but scope leaking upset scrutinizer/pylint
 		msg_id = None
 
-	 	packets = self.neighbor.api['receive-packets']
+		packets = self.neighbor.api['receive-packets']
 		consolidate = self.neighbor.api['receive-consolidate']
 		parsed = self.neighbor.api['receive-parsed']
 
@@ -165,20 +165,20 @@ class Protocol (object):
 			if notify:
 				if self.neighbor.api['receive-%d' % Message.CODE.NOTIFICATION]:
 					if packets and not consolidate:
-						self.peer.reactor.processes.packets(self.peer,'receive',msg_id,header,body)
+						self.peer.reactor.processes.packets(self.peer.neighbor,'receive',msg_id,header,body)
 
 					if not packets or consolidate:
 						header = ''
 						body = ''
 
-					self.peer.reactor.processes.notification(self.peer,'receive',notify.code,notify.subcode,str(notify))
+					self.peer.reactor.processes.notification(self.peer.neighbor,'receive',notify.code,notify.subcode,str(notify))
 				# XXX: is notify not already Notify class ?
 				raise Notify(notify.code,notify.subcode,str(notify))
 			if not length:
 				yield _NOP
 
 		if packets and not consolidate:
-			self.peer.reactor.processes.packets(self.peer,'receive',msg_id,header,body)
+			self.peer.reactor.processes.packets(self.peer.neighbor,'receive',msg_id,header,body)
 
 		if msg_id == Message.CODE.UPDATE:
 			if not parsed and not self.log_routes:

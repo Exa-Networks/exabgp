@@ -425,7 +425,7 @@ class Peer (object):
 		self.logger.network('Connected to peer %s (%s)' % (self.neighbor.name(),direction))
 		if self.neighbor.api['neighbor-changes']:
 			try:
-				self.reactor.processes.up(self)
+				self.reactor.processes.up(self.neighbor)
 			except ProcessError:
 				# Can not find any better error code than 6,0 !
 				# XXX: We can not restart the program so this will come back again and again - FIX

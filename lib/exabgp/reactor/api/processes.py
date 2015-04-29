@@ -224,9 +224,9 @@ class Processes (object):
 				self._terminate(process)
 				self._start(process)
 
-	def write (self, process, string, peer=None):
-		if peer:
-			self.increase(peer)
+	def write (self, process, string, neighbor=None):
+		if neighbor:
+			self.increase(neighbor)
 
 		# XXX: FIXME: This is potentially blocking
 		while True:
@@ -252,9 +252,9 @@ class Processes (object):
 
 		return True
 
-	def _notify (self, peer, event):
-		neighbor = peer.neighbor.peer_address
-		for process in self._neighbor_process.get(neighbor,[]):
+	def _notify (self, neighbor, event):
+		address = neighbor.peer_address
+		for process in self._neighbor_process.get(address,[]):
 			if process in self._process:
 				if event in self._events[process]:
 					yield process
@@ -276,46 +276,46 @@ class Processes (object):
 	@silenced
 	def reset (self, peer):
 		for process in self._notify(peer,'*'):
-			data = self._encoder[process].reset(peer)
+			data = self._encoder[process].reset(peer.neighbor)
 			if data:
 				self.write(process,data,peer)
 
 	@silenced
 	def increase (self, peer):
 		for process in self._notify(peer,'*'):
-			data = self._encoder[process].increase(peer)
+			data = self._encoder[process].increase(peer.neighbor)
 			if data:
 				self.write(process,data,peer)
 
 	# invalid-name
 	@silenced
-	def up (self, peer):
-		for process in self._notify(peer,'neighbor-changes'):
-			self.write(process,self._encoder[process].up(peer),peer)
+	def up (self, neighbor):
+		for process in self._notify(neighbor,'neighbor-changes'):
+			self.write(process,self._encoder[process].up(neighbor),neighbor)
 
 	@silenced
-	def connected (self, peer):
-		for process in self._notify(peer,'neighbor-changes'):
-			self.write(process,self._encoder[process].connected(peer),peer)
+	def connected (self, neighbor):
+		for process in self._notify(neighbor,'neighbor-changes'):
+			self.write(process,self._encoder[process].connected(neighbor),neighbor)
 
 	@silenced
-	def down (self, peer, reason):
-		for process in self._notify(peer,'neighbor-changes'):
-			self.write(process,self._encoder[process].down(peer,reason),peer)
+	def down (self, neighbor, reason):
+		for process in self._notify(neighbor,'neighbor-changes'):
+			self.write(process,self._encoder[process].down(neighbor,reason),neighbor)
 
 	@silenced
-	def packets (self, peer, direction, category, header, body):
-		for process in self._notify(peer,'%s-packets' % direction):
-			self.write(process,self._encoder[process].packets(peer,direction,category,header,body),peer)
+	def packets (self, neighbor, direction, category, header, body):
+		for process in self._notify(neighbor,'%s-packets' % direction):
+			self.write(process,self._encoder[process].packets(neighbor,direction,category,header,body),neighbor)
 
 	@silenced
-	def notification (self, peer, direction, code, subcode, data):
-		for process in self._notify(peer,'neighbor-changes'):
-			self.write(process,self._encoder[process].notification(peer,direction,code,subcode,data),peer)
+	def notification (self, neighbor, direction, code, subcode, data):
+		for process in self._notify(neighbor,'neighbor-changes'):
+			self.write(process,self._encoder[process].notification(neighbor,direction,code,subcode,data),neighbor)
 
 	@silenced
-	def message (self, message_id, peer, direction, message, header, *body):
-		self._dispatch[message_id](self,peer,direction,message,header,*body)
+	def message (self, message_id, neighbor, direction, message, header, *body):
+		self._dispatch[message_id](self,neighbor,direction,message,header,*body)
 
 	# registering message functions
 	# no-self-argument
