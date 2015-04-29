@@ -40,6 +40,8 @@ class _Code (int):
 		OPERATIONAL:    'operational',
 	}
 
+	# to_short_names = dict((name,code) for (code,name) in short_names.items())
+
 	def __init__ (self,value):
 		self.SHORT = self.short()
 		self.NAME = str(self)
@@ -52,7 +54,6 @@ class _Code (int):
 
 	def short (self):
 		return self.short_names.get(self,'unknown')
-
 
 # ================================================================== BGP Message
 #
@@ -94,7 +95,7 @@ class Message (Exception):
 		ROUTE_REFRESH = _Code(0x05)  # .   5
 		OPERATIONAL   = _Code(0x06)  # .   6  # Not IANA assigned yet
 
- 		MESSAGES = [
+		MESSAGES = [
 			NOP,
 			OPEN,
 			UPDATE,
@@ -107,6 +108,11 @@ class Message (Exception):
 		@staticmethod
 		def name (message_id):
 			return _Code.names.get(message_id,'unknown message %s' % hex(message_id))
+
+		# # Can raise KeyError
+		# @staticmethod
+		# def code (short):
+		# 	return _Code.names.get[short]
 
 		def __init__ (self):
 			raise RuntimeError('This class can not be instantiated')
