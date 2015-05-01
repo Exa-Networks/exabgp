@@ -7,7 +7,16 @@ Created by Thomas Mangin on 2014-12-22.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+import os
+import sys
+import time
+import signal
+import thread
+import subprocess
+from collections import deque
+
 from exabgp.reactor.api.transcoder import Transcoder
+from exabgp.reactor.api.processes import preexec_helper
 
 from exabgp.configuration.setup import environment
 env = environment.setup('')
@@ -24,24 +33,90 @@ test = """\
 { "exabgp": "3.5.0", "time": 1430238928.76, "host" : "mangin.local", "pid" : 37912, "ppid" : 37903, "type": "update", "neighbor": { "address": { "local": "82.219.212.34", "peer": "127.0.0.1" }, "asn": { "local": "65534", "peer": "65533" }, "direction": "receive", "message": { "category": 2, "header": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001E02", "body": "00000007900F0003000285" } } }
 """.split('\n')
 
-def main ():
-	transcoder = Transcoder('json','json')
 
-	running = 50
-	while running:
+# XXX: We do not accept input from the forked application
 
-		if not test:
-			break
+class Application (object):
+	Q = deque()
+	running = True
 
-		# line = sys.stdin.readline().strip()
-		line = test.pop(0)
+	@staticmethod
+	def _signal (_,__):
+		Application.running = False
 
-		if not line:
-			running -= 1
-			continue
-		running = 50
+	def process (self):
+		run = sys.argv[1:]
+		if not run:
+			print sys.stderr, 'no consummer program provided'
+			sys.exit(1)
 
-		print transcoder.convert(line)
+		# Prevent some weird termcap data to be created at the start of the PIPE
+		# \x1b[?1034h (no-eol) (esc)
+		os.environ['TERM'] = 'dumb'
+
+		try:
+			sub = subprocess.Popen(
+				run,
+				stdin=subprocess.PIPE,
+				stdout=subprocess.PIPE,
+				preexec_fn=preexec_helper
+				# This flags exists for python 2.7.3 in the documentation but on on my MAC
+				# creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+			)
+		except (subprocess.CalledProcessError,OSError,ValueError):
+			print >> sys.stderr, 'could not start subprocess'
+			sys.exit(1)
+
+		return sub
+
+	def __init__ (self):
+		thread.start_new_thread(self.reader,(os.getpid(),))
+		signal.signal(signal.SIGTERM,Application._signal)
+		self.sub = self.process()
+		self.transcoder = Transcoder('json','json')
+		self.main()
+
+	# def test_reader (self,myself):
+	# 	while len(test):
+	# 		# line = sys.stdin.readline().strip()
+	# 		line = test.pop(0)
+	# 		if line:
+	# 			self.Q.append(line)
+	# 	time.sleep(2)
+	# 	os.kill(myself,signal.SIGTERM)
+
+	def reader (self,myself):
+		ok = True
+		line = ''
+		while True:
+			line = sys.stdin.readline().strip()
+			if ok:
+				if not line:
+					ok = False
+					continue
+			elif not line:
+				break
+			else:
+				ok = True
+			self.Q.append(line)
+		os.kill(myself,signal.SIGTERM)
+
+	def main (self):
+		while self.running or len(self.Q):
+			try:
+				line = self.Q.popleft()
+				self.sub.stdin.write(self.transcoder.convert(line))
+				self.sub.stdin.flush()
+			except IndexError:
+				# no data on the Q to read
+				time.sleep(0.1)
+			except IOError,exc:
+				# subprocess died
+				print >> sys.stderr, 'subprocess died'
+				sys.exit(1)
 
 if __name__ == '__main__':
-	main()
+	try:
+		Application()
+	except KeyboardInterrupt:
+		pass

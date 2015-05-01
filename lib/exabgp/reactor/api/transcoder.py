@@ -53,7 +53,11 @@ class Transcoder (object):
 			self.negotiated.received(self.seen_open['receive'])
 
 	def _from_json (self, string):
-		parsed = json.loads(string)
+		try:
+			parsed = json.loads(string)
+		except ValueError:
+			print >> sys.stderr, 'invalid JSON message'
+			sys.exit(1)
 
 		if parsed.get('exabgp','0.0.0') != json_version:
 			print >> sys.stderr, 'invalid json version', string
@@ -102,7 +106,7 @@ class Transcoder (object):
 		if content == 'update':
 			return self.encoder.update(neighbor, direction, message, header,body)
 
-		if content == 'eor':
+		if content == 'eor': # XXX: Should not be required
 			return self.encoder.update(neighbor, direction, message, header,body)
 
 		if content == 'refresh':
