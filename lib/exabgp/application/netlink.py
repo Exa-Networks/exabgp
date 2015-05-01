@@ -4,7 +4,7 @@ import sys
 import socket
 
 from exabgp.netlink import NetMask
-from exabgp.netlink.message import NetLinkMessage
+from exabgp.netlink.message import NetLink
 from exabgp.netlink.attributes import Attributes
 
 from exabgp.netlink.route.link import Link
@@ -94,7 +94,7 @@ def route ():
 
 
 def new ():
-	netlink = NetLinkMessage()
+	netlink = NetLink()
 
 	links = {}
 	for ifi in Link.getLinks():

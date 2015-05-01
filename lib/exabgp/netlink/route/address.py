@@ -10,7 +10,7 @@ import socket
 from struct import calcsize
 from collections import namedtuple
 
-from exabgp.netlink.message import InfoMessage
+from exabgp.netlink.message import Message
 
 
 # 0                   1                   2                   3
@@ -21,7 +21,7 @@ from exabgp.netlink.message import InfoMessage
 # |                     Interface Index                         |
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-class Address (InfoMessage):
+class Address (Message):
 	class Header (object):
 		PACK = '4Bi'
 		LEN = calcsize(PACK)

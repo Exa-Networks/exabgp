@@ -10,7 +10,7 @@ import socket
 from struct import calcsize
 from collections import namedtuple
 
-from exabgp.netlink.message import InfoMessage
+from exabgp.netlink.message import Message
 
 
 # 0                   1                   2                   3
@@ -25,7 +25,7 @@ from exabgp.netlink.message import InfoMessage
 # |                      Change Mask                              |
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-class Link (InfoMessage):
+class Link (Message):
 	class Header (object):
 		PACK = 'BxHiII'
 		LEN = calcsize(PACK)

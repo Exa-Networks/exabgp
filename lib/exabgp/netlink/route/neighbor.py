@@ -10,7 +10,7 @@ import socket
 from struct import calcsize
 from collections import namedtuple
 
-from exabgp.netlink.message import InfoMessage
+from exabgp.netlink.message import Message
 
 
 # 0                   1                   2                   3
@@ -23,7 +23,7 @@ from exabgp.netlink.message import InfoMessage
 # |           State             |     Flags     |     Type      |
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-class Neighbor (InfoMessage):
+class Neighbor (Message):
 	class Header (object):
 		# linux/if_addr.h
 		PACK = 'BxxxiHBB'

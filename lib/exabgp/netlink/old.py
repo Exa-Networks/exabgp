@@ -208,7 +208,7 @@ class Attributes (object):
 		return ''.join([_encode(k,v) for (k,v) in attributes.items()])
 
 
-class _InfoMessage (object):
+class _Message (object):
 	# to be defined by the subclasses
 	format = namedtuple('Parent', 'to be subclassed')
 
@@ -243,7 +243,7 @@ class _InfoMessage (object):
 # |                      Change Mask                              |
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-class Link(_InfoMessage):
+class Link(_Message):
 	class Header (object):
 		PACK = 'BxHiII'
 		LEN = calcsize(PACK)
@@ -308,7 +308,7 @@ class Link(_InfoMessage):
 # |                     Interface Index                         |
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-class Address (_InfoMessage):
+class Address (_Message):
 	class Header (object):
 		PACK = '4Bi'
 		LEN = calcsize(PACK)
@@ -380,7 +380,7 @@ class Address (_InfoMessage):
 # |           State             |     Flags     |     Type      |
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-class Neighbor (_InfoMessage):
+class Neighbor (_Message):
 	class Header (object):
 		# linux/if_addr.h
 		PACK = 'BxxxiHBB'
@@ -437,7 +437,7 @@ class Neighbor (_InfoMessage):
 # |                          Flags                              |
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-class Network (_InfoMessage):
+class Network (_Message):
 	class Header (object):
 		# linux/if_addr.h
 		PACK = '8BI'  # or is it 8Bi ?
@@ -578,7 +578,7 @@ class Network (_InfoMessage):
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
-class TC (_InfoMessage):
+class TC (_Message):
 	class Header (object):
 		PACK = "BxxxiIII"
 		LEN = calcsize(PACK)
@@ -638,7 +638,7 @@ class TC (_InfoMessage):
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
-class Firewall (_InfoMessage):
+class Firewall (_Message):
 	class Header (object):
 		PACK = "BxxxI"
 		LEN = calcsize(PACK)

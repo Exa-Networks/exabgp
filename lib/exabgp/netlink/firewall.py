@@ -10,7 +10,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import calcsize
 # from collections import namedtuple
 
-from exabgp.netlink.message import InfoMessage
+from exabgp.netlink.message import Message
 
 
 # 0                   1                   2                   3
@@ -51,7 +51,7 @@ from exabgp.netlink.message import InfoMessage
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
-class Firewall (InfoMessage):
+class Firewall (Message):
 	class Header (object):
 		PACK = "BxxxI"
 		LEN = calcsize(PACK)
