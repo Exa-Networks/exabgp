@@ -78,22 +78,22 @@ class Text (object):
 			os.getppid()
 		)
 
-	def notification (self, neighbor, direction, code, subcode, data):
-		return 'neighbor %s %s notification code %d subcode %d data %s\n' % (
+	def notification (self, neighbor, direction, code, subcode, data,header,body):
+		return 'neighbor %s %s notification code %d subcode %d data %s%s\n' % (
 			neighbor.peer_address,
 			direction,
 			code,
 			subcode,
-			hexstring(data)
+			hexstring(data),
+			self._header_body(header,body)
 		)
 
 	def packets (self, neighbor, direction, category, header, body):
-		return 'neighbor %s %s %d header %s body %s\n' % (
+		return 'neighbor %s %s %d%s\n' % (
 			neighbor.peer_address,
 			direction,
 			category,
-			hexstring(header),
-			hexstring(body)
+			self._header_body(header,body)
 		)
 
 	def keepalive (self, neighbor, direction, header, body):
@@ -149,10 +149,7 @@ class Text (object):
 			refresh.afi,
 			refresh.safi,
 			refresh.reserved,
-			self._header_body(
-				'header %s' % hexstring(header) if header else '',
-				'body %s' % hexstring(body) if body else ''
-			)
+			self._header_body(header,body)
 		)
 
 	def _operational_advisory (self, neighbor, direction, operational, header, body):
@@ -304,14 +301,14 @@ class JSON (object):
 			'notification': 'shutdown',
 		}),'','',1,message_type='notification')
 
-	def notification (self, neighbor, direction, code, subcode, data):
+	def notification (self, neighbor, direction, code, subcode, data, header, body):
 		return self._header(self._neighbor(neighbor,direction,self._kv({
 			'notification': '{ %s } ' % self._kv({
 				'code':    code,
 				'subcode': subcode,
 				'data':    hexstring(data),
 			})
-		})),'','',self.count(neighbor),message_type='notification')
+		})),header,body,self.count(neighbor),message_type='notification')
 
 	def packets (self, neighbor, direction, category, header, body):
 		return self._header(self._neighbor(neighbor,direction,self._kv({
