@@ -15,6 +15,7 @@ from exabgp.bgp.message.update.nlri.mpls import MPLS
 from exabgp.bgp.message.update.nlri.mpls import MPLSVPN
 from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.bgp.message.update.nlri.flow import Flow
+from exabgp.bgp.message.update.nlri.rtc import RouteTargetConstraint
 
 NLRI.register_nlri(Prefix,AFI.ipv4,SAFI.unicast)
 NLRI.register_nlri(Prefix,AFI.ipv6,SAFI.unicast)
@@ -32,3 +33,5 @@ NLRI.register_nlri(Flow,AFI.ipv4,SAFI.flow_ip)
 NLRI.register_nlri(Flow,AFI.ipv6,SAFI.flow_ip)
 NLRI.register_nlri(Flow,AFI.ipv4,SAFI.flow_vpn)
 NLRI.register_nlri(Flow,AFI.ipv6,SAFI.flow_vpn)
+
+NLRI.register_nlri(RouteTargetConstraint,AFI.ipv4,SAFI.rtc)
