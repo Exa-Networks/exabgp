@@ -20,6 +20,8 @@ Version 3.5.0
     * rename 'address family flags' to be 'address-family-flags'
     * format change for notification and shutdown message
  * Fix: Do shutdown when waiting for a new connection to a peer
+ * Fix: Bad ASN enconding when ASN4 is not negotiated
+    reported by: Orangefish on github
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
