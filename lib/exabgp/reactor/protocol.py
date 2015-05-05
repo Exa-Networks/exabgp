@@ -8,6 +8,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import os
 
+import traceback
+
 from exabgp.reactor.network.outgoing import Outgoing
 # from exabgp.reactor.network.error import NotifyError
 
@@ -193,7 +195,7 @@ class Protocol (object):
 		except Exception,exc:
 			self.logger.message(self.me('Could not decode message "%d"' % msg_id))
 			self.logger.message(self.me('%s' % str(exc)))
-			# XXX: TODO: add backtrace here
+			self.logger.message(traceback.format_exc())
 			raise Notify(1,0,'can not decode update message of type "%d"' % msg_id)
 			# raise Notify(5,0,'unknown message received')
 
