@@ -52,30 +52,30 @@ class ASPath (Attribute):
 			return -1
 		return 0
 
-	def _segment (self, seg_type, values, negotiated):
+	def _segment (self, seg_type, values, asn4):
 		length = len(values)
 		if length:
 			if length > 255:
-				return self._segment(seg_type,values[:255],negotiated) + self._segment(seg_type,values[255:],negotiated)
-			return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack(negotiated) for v in values]))
+				return self._segment(seg_type,values[:255],asn4) + self._segment(seg_type,values[255:],asn4)
+			return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack(asn4) for v in values]))
 		return ""
 
-	def _segments (self, negotiated):
+	def _segments (self, asn4):
 		segments = ''
 		if self.as_cseq:
-			segments += self._segment(self.AS_CONFED_SEQUENCE,self.as_cseq,negotiated)
+			segments += self._segment(self.AS_CONFED_SEQUENCE,self.as_cseq,asn4)
 		if self.as_cset:
-			segments += self._segment(self.AS_CONFED_SET,self.as_cset,negotiated)
+			segments += self._segment(self.AS_CONFED_SET,self.as_cset,asn4)
 		if self.as_seq:
-			segments += self._segment(self.AS_SEQUENCE,self.as_seq,negotiated)
+			segments += self._segment(self.AS_SEQUENCE,self.as_seq,asn4)
 		if self.as_set:
-			segments += self._segment(self.AS_SET,self.as_set,negotiated)
+			segments += self._segment(self.AS_SET,self.as_set,asn4)
 		return segments
 
 	def asn_pack (self, negotiated, force_asn4=False):
 		asn4 = True if force_asn4 else negotiated.asn4
 		if not self.packed[asn4]:
-			self.packed[asn4] = self._attribute(self._segments(negotiated))
+			self.packed[asn4] = self._attribute(self._segments(asn4))
 		return self.packed[asn4]
 
 	def pack (self, negotiated):
