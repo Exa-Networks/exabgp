@@ -389,7 +389,7 @@ class Attributes (dict):
 						return False
 
 					sval = sorted(sval,sorter)
-					oval = set(oval,sorter)
+					oval = sorted(oval,sorter)
 
 				if sval != oval:
 					return False
