@@ -1,0 +1,26 @@
+#route 77.93.35.15/32 next-hop 10.0.0.2;
+
+group test {
+	local-as 65533;
+	peer-as 65534;
+	hold-time 180;
+	graceful-restart 1200;
+
+	static {
+		route 11.0.0.0/8 next-hop 1.1.1.1 med 100 as-path [ 1 2 3 4 ];
+		route 22.0.0.0/8 next-hop 1.1.1.1 med 100 as-path [ 1 2 3 4 ];
+		route 33.0.0.0/8 next-hop 1.1.1.1 med 100 as-path [ 1 2 3 4 ];
+		route 44.0.0.0/8 next-hop 1.1.1.1 med 100 as-path [ 1 2 3 4 ];
+		route 55.0.0.0/8 next-hop 1.1.1.1 med 100 as-path [ 1 2 3 4 ];
+		route 66.0.0.0/8 next-hop 1.1.1.1 med 100 as-path [ 1 2 3 4 ];
+		route 77.0.0.0/8 next-hop 1.1.1.1 med 100 as-path [ 1 2 3 4 ];
+		route 88.0.0.0/8 next-hop 1.1.1.1 med 100 as-path [ 1 2 3 4 ];
+		route 99.0.0.0/8 next-hop 1.1.1.1 med 100 as-path [ 1 2 3 4 ];
+	}
+
+	neighbor IP {
+		description "router 2 with four routes";
+		router-id 127.0.0.0;
+		local-address 127.0.0.1;
+	}
+}
