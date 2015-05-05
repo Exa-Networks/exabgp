@@ -341,6 +341,8 @@ class Peer (object):
 		connected = False
 		try:
 			while not connected:
+				if self._teardown:
+					raise StopIteration()
 				connected = generator.next()
 				# we want to come back as soon as possible
 				yield ACTION.LATER
@@ -352,6 +354,7 @@ class Peer (object):
 			if not connected or self._['in']['proto']:
 				stop = Interrupted()
 				stop.direction = 'out'
+				yield ACTION.NOW
 				raise stop
 
 		self._['out']['state'] = STATE.CONNECT

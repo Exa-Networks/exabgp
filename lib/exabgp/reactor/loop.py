@@ -308,6 +308,7 @@ class Reactor (object):
 		self.logger.reactor("Performing shutdown")
 		if self.listener:
 			self.listener.stop()
+			self.listener = None
 		for key in self.peers.keys():
 			self.peers[key].stop()
 
