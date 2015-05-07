@@ -353,5 +353,5 @@ class Processes (object):
 
 	@register_process(Message.CODE.OPERATIONAL,_dispatch)
 	def _operational (self, peer, direction, operational, header, body):
-		for process in self._notify(peer,'receive-%d' % Messa.CODE.OPERATIONAL):
+		for process in self._notify(peer,'receive-%d' % Message.CODE.OPERATIONAL):
 			self.write(process,self._encoder[process].operational(peer,direction,operational.category,operational,header,body),peer)
