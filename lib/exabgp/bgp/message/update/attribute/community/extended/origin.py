@@ -53,7 +53,7 @@ class OriginASNIP (Origin):
 			)
 		)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "origin:%s:%s" % (self.asn,self.ip)
 
 	@staticmethod
@@ -84,7 +84,7 @@ class OriginIPASN (Origin):
 			)
 		)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "origin:%s:%s" % (self.ip, self.asn)
 
 	@staticmethod
@@ -113,7 +113,7 @@ class OriginASN4Number (Origin):
 			)
 		)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "origin:%sL:%s" % (self.asn, self.number)
 
 	@staticmethod
