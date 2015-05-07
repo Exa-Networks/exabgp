@@ -36,14 +36,14 @@ class Communities (Attribute):
 			return self._attribute(''.join([c.pack() for c in self.communities]))
 		return ''
 
-	def __str__ (self):
+	def __repr__ (self):
 		l = len(self.communities)
 		if l > 1:
-			return "[ %s ]" % " ".join(str(community) for community in self.communities)
+			return "[ %s ]" % " ".join(repr(community) for community in self.communities)
 		if l == 1:
-			return str(self.communities[0])
+			return repr(self.communities[0])
 		return ""
-
+	
 	def json (self):
 		return "[ %s ]" % ", ".join(community.json() for community in self.communities)
 
