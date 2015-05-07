@@ -94,7 +94,7 @@ class ASPath (Attribute):
 	def __len__ (self):
 		raise RuntimeError('it makes no sense to ask for the size of this object')
 
-	def __str__ (self, confed=False):
+	def __repr__ (self, confed=False):
 		if self._str:
 			return self._str
 

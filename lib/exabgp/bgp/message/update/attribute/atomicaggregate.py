@@ -26,7 +26,7 @@ class AtomicAggregate (Attribute):
 	def __len__ (self):
 		return 0
 
-	def __str__ (self):
+	def __repr__ (self):
 		return ''
 
 	def __cmp__ (self, other):

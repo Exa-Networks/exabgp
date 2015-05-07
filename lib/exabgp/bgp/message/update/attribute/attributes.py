@@ -215,7 +215,7 @@ class Attributes (dict):
 			self._json = ', '.join(self._generate_json())
 		return self._json
 
-	def __str__ (self):
+	def __repr__ (self):
 		if not self._str:
 			self._str = ''.join(self._generate_text())
 		return self._str

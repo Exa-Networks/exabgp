@@ -87,14 +87,10 @@ class PMSI (Attribute):
 			return -1
 		return 0
 
-	def __repr__ (self):
-		return str(self)
-
 	def prettytunnel (self):
 		return "0x" + ''.join('%02X' % ord(_) for _ in self.tunnel) if self.tunnel else ''
 
-	def __str__ (self):
-		# TODO: add hex dump of packedValue
+	def __repr__ (self):
 		return "pmsi:%s:%s:%s:%s" % (
 			self.name(self.TUNNEL_TYPE).replace(' ','').lower(),
 			str(self.flags) if self.flags else '-',  # why not use zero (0) ?

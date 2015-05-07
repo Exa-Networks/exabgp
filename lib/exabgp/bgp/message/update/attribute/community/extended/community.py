@@ -49,7 +49,7 @@ class ExtendedCommunity (Attribute):
 			h += ord(byte)
 		return "%ld" % h
 
-	def __str__ (self):
+	def __repr__ (self):
 		h = 0x00
 		for byte in self.community:
 			h <<= 8

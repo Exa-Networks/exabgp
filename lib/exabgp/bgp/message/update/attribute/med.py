@@ -32,7 +32,7 @@ class MED (Attribute):
 	def __len__ (self):
 		return 4
 
-	def __str__ (self):
+	def __repr__ (self):
 		return str(self.med)
 
 	def __cmp__ (self, other):

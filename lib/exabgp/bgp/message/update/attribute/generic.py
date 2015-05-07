@@ -36,7 +36,7 @@ class GenericAttribute (Attribute):
 	def __len__ (self):
 		return len(self.data)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return '0x' + ''.join('%02x' % ord(_) for _ in self.data)
 
 	@classmethod
