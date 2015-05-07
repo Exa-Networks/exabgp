@@ -46,7 +46,7 @@ class MPLS (NLRI,CIDR):
 	def __len__ (self):
 		return CIDR.__len__(self) + len(self.labels) + len(self.rd)
 
-	def __str__ (self):
+	def __repr__ (self):
 		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
 		return "%s%s" % (self.extensive(),nexthop)
 

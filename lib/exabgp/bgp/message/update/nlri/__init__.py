@@ -18,7 +18,6 @@ from exabgp.bgp.message.update.nlri.flow import Flow
 from exabgp.bgp.message.update.nlri.evpn import EVPN
 from exabgp.bgp.message.update.nlri.rtc import RouteTargetConstraint
 
-
 NLRI.register_nlri(Prefix,AFI.ipv4,SAFI.unicast)
 NLRI.register_nlri(Prefix,AFI.ipv6,SAFI.unicast)
 NLRI.register_nlri(Prefix,AFI.ipv4,SAFI.multicast)
