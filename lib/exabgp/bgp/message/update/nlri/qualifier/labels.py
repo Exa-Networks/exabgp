@@ -50,6 +50,14 @@ class Labels (object):
 			return ' label %s' % self.labels[0]
 		else:
 			return ''
+		
+	def __repr__(self):
+		if self._len > 1:
+			return '[%s]' % ','.join([str(_) for _ in self.labels])
+		elif self._len == 1:
+			return '%d' % self.labels[0]
+		else:
+			return '[]'
 
 	@classmethod
 	def unpack (cls, data):
