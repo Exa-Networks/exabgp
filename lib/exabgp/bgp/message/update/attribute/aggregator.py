@@ -36,7 +36,7 @@ class Aggregator (Attribute):
 	def __len__ (self):
 		raise RuntimeError('size can be 6 or 8 - we can not say - or can we ?')
 
-	def __str__ (self):
+	def __repr__ (self):
 		if not self._str:
 			self._str = '%s:%s' % (self.asn,self.speaker)
 		return self._str

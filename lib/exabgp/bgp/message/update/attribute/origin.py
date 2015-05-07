@@ -32,7 +32,7 @@ class Origin (Attribute):
 	def __len__ (self):
 		return len(self.packed)
 
-	def __str__ (self):
+	def __repr__ (self):
 		if self.origin == 0x00:
 			return 'igp'
 		if self.origin == 0x01:
