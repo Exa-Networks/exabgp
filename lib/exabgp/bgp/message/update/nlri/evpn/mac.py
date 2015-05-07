@@ -79,10 +79,9 @@ class MAC (EVPN):
 			return -1
 		return 0
 
-	# XXX: FIXME: improve for better performance?
 	def __hash__ (self):
 		# esi and label MUST *NOT* be part of the hash
-		return hash("%s:%s:%s:%s" % (self.rd,self.etag,self.mac,self.ip))
+		return hash((self.rd,self.etag,self.mac,self.ip))
 
 	def pack (self):
 		if not self.packed:
