@@ -151,6 +151,7 @@ class Attributes (dict):
 
 		# XXX: FIXME: I am not sure anymore that more than one of each is possible
 		if attribute.ID in Attributes.MULTIPLE:
+			# deadcode: setdefault does not seem to exist anywhere ? (TM)
 			self.setdefault(attribute.ID,[]).append(attribute)
 		else:
 			self[attribute.ID] = attribute
@@ -361,22 +362,24 @@ class Attributes (dict):
 
 	def __hash__ (self):
 		# XXX: FIXME: not excellent... :-(
+		# FIXME: two routes with distinct nh but other attributes equal
+		#        will hash to the same value until repr represents the nh (??)
 		return hash(repr(self))
 
-	# Orange BAGPIPE code ..
+	# BaGPipe code ..
 
 	# test that sets of attributes exactly match
 	# can't rely on __eq__ for this, because __eq__ relies on Attribute.__eq__ which does not look at attributes values
 
 	def sameValuesAs (self, other):
-		# we sort based on string representation since the items do not
+		# we sort based on packed values since the items do not
 		# necessarily implement __cmp__
 		def sorter (x, y):
-			return cmp(repr(x), repr(y))
+			return cmp(x.pack(), y.pack())
 
 		try:
 			for key in set(self.iterkeys()).union(set(other.iterkeys())):
-				if key == Attribute.CODE.MP_REACH_NLRI:
+				if (key == Attribute.CODE.MP_REACH_NLRI or key == Attribute.CODE.MP_UNREACH_NLRI):
 					continue
 
 				sval = self[key]
@@ -391,8 +394,8 @@ class Attributes (dict):
 					sval = sorted(sval,sorter)
 					oval = sorted(oval,sorter)
 
-				if sval != oval:
+				if cmp(sval,oval) != 0:
 					return False
 			return True
 		except KeyError:
-				return False
+			return False
