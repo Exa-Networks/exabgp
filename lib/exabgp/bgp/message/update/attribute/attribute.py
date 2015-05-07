@@ -103,11 +103,8 @@ class Attribute (object):
 			0xffff:             'internal-split',
 		}
 
-		def __str__ (self):
-			return self.names.get(self,'unknown-attribute-%s' % hex(self))
-
 		def __repr__ (self):
-			return str(self)
+			return self.names.get(self,'unknown-attribute-%s' % hex(self))
 
 		@classmethod
 		def name (cls, self):
