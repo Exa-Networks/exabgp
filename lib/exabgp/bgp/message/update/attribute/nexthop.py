@@ -43,4 +43,4 @@ class NextHop (Attribute,IP):
 		return IP.unpack(data,NextHop)
 
 	def __repr__ (self):
-		return IP.__str__(self)
+		return IP.__repr__(self)
