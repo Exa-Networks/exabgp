@@ -6,6 +6,9 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+import os
+import uuid
+
 from collections import deque
 
 # collections.counter is python2.7 only ..
@@ -71,13 +74,11 @@ class Neighbor (object):
 		self.refresh = deque()
 
 		self.counter = Counter()
-
-	def identificator (self):
 		# It is possible to :
 		# - have multiple exabgp toward one peer on the same host ( use of pid )
 		# - have more than once connection toward a peer
 		# - each connection has it own neihgbor (hence why identificator is not in Protocol)
-		return str(self.peer_address)
+		self.uid = '%d-%s' % (os.getpid(),uuid.uuid1())
 
 	def make_rib (self):
 		self.rib = RIB(self.name(),self.adjribout,self._families)

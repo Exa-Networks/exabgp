@@ -1416,6 +1416,9 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
+		# XXX: check that if we have any message, we have parsed/packets
+		# XXX: and vice-versa
+
 		missing = neighbor.missing()
 		if missing:
 			self._error = 'incomplete neighbor, missing %s' % missing
