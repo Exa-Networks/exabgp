@@ -205,7 +205,7 @@ class Protocol (object):
 				if not consolidate or not packets:
 					header = ''
 					body = ''
-				self.peer.reactor.processes.message(msg_id,self.peer,'receive',message,header,body)
+				self.peer.reactor.processes.message(msg_id,self.neighbor,'receive',message,header,body)
 
 		yield message
 
