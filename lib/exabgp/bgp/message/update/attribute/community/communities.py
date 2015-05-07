@@ -39,7 +39,7 @@ class Communities (Attribute):
 	def __repr__ (self):
 		l = len(self.communities)
 		if l > 1:
-			return "[ %s ]" % " ".join(repr(community) for community in self.communities)
+			return "[ %s ]" % " ".join(repr(community) for community in sorted(self.communities))
 		if l == 1:
 			return repr(self.communities[0])
 		return ""
