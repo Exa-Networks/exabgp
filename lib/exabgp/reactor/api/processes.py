@@ -225,9 +225,6 @@ class Processes (object):
 				self._start(process)
 
 	def write (self, process, string, neighbor=None):
-		if neighbor:
-			self.increase(neighbor)
-
 		# XXX: FIXME: This is potentially blocking
 		while True:
 			try:
@@ -272,20 +269,6 @@ class Processes (object):
 				return
 			return function(self,*args)
 		return closure
-
-	@silenced
-	def reset (self, peer):
-		for process in self._notify(peer,'*'):
-			data = self._encoder[process].reset(peer.neighbor)
-			if data:
-				self.write(process,data,peer)
-
-	@silenced
-	def increase (self, peer):
-		for process in self._notify(peer,'*'):
-			data = self._encoder[process].increase(peer.neighbor)
-			if data:
-				self.write(process,data,peer)
 
 	# invalid-name
 	@silenced
