@@ -16,7 +16,7 @@ class KeepAlive (Message):
 	ID = Message.CODE.KEEPALIVE
 	TYPE = chr(Message.CODE.KEEPALIVE)
 
-	def message (self):
+	def message (self,negotiated=None):
 		return self._message('')
 
 	def __str__ (self):

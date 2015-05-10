@@ -6,6 +6,9 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+import os
+import uuid
+
 from collections import deque
 
 # collections.counter is python2.7 only ..
@@ -71,13 +74,11 @@ class Neighbor (object):
 		self.refresh = deque()
 
 		self.counter = Counter()
-
-	def identificator (self):
 		# It is possible to :
 		# - have multiple exabgp toward one peer on the same host ( use of pid )
 		# - have more than once connection toward a peer
 		# - each connection has it own neihgbor (hence why identificator is not in Protocol)
-		return str(self.peer_address)
+		self.uid = '%d-%s' % (os.getpid(),uuid.uuid1())
 
 	def make_rib (self):
 		self.rib = RIB(self.name(),self.adjribout,self._families)
@@ -170,22 +171,30 @@ class Neighbor (object):
 		for afi,safi in self.families():
 			families += '\n\t\t%s %s;' % (afi.name(),safi.name())
 
+		codes = Message.CODE
+
 		_extension_receive = {
-			'receive-parsed':           'parsed',
-			'receive-packets':          'packets',
-			'receive-parsed':           'parsed',
-			'consolidate':              'consolidate',
-			'neighbor-changes':         'neighbor-changes',
-			Message.CODE.NOTIFICATION:  'notification',
-			Message.CODE.OPEN:          'open',
-			Message.CODE.KEEPALIVE:     'keepalive',
-			Message.CODE.UPDATE:        'update',
-			Message.CODE.ROUTE_REFRESH: 'refresh',
-			Message.CODE.OPERATIONAL:   'operational',
+			'receive-packets':                  'packets',
+			'receive-parsed':                   'parsed',
+			'receive-consolidate':              'consolidate',
+			'receive-%d' % codes.NOTIFICATION:  'notification',
+			'receive-%d' % codes.OPEN:          'open',
+			'receive-%d' % codes.KEEPALIVE:     'keepalive',
+			'receive-%d' % codes.UPDATE:        'update',
+			'receive-%d' % codes.ROUTE_REFRESH: 'refresh',
+			'receive-%d' % codes.OPERATIONAL:   'operational',
 		}
 
 		_extension_send = {
-			'send-packets': 'packets',
+			'send-packets':                  'packets',
+			'send-parsed':                   'parsed',
+			'send-consolidate':              'consolidate',
+			'send-%d' % codes.NOTIFICATION:  'notification',
+			'send-%d' % codes.OPEN:          'open',
+			'send-%d' % codes.KEEPALIVE:     'keepalive',
+			'send-%d' % codes.UPDATE:        'update',
+			'send-%d' % codes.ROUTE_REFRESH: 'refresh',
+			'send-%d' % codes.OPERATIONAL:   'operational',
 		}
 
 		_receive = []

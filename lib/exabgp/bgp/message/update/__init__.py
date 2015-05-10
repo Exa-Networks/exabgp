@@ -138,7 +138,8 @@ class Update (Message):
 		while del_nlri:
 			nlri = del_nlri.pop()
 			packed = nlri.pack(addpath)
-			if len(packed_del + packed) > msg_size:
+			seen_size = len(packed_del + packed)
+			if seen_size > msg_size:
 				if not packed_del:
 					raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
 				yield self._message(Update.prefix(packed_del) + Update.prefix(''))
@@ -156,11 +157,13 @@ class Update (Message):
 			afi,safi = family
 			mps = del_mp[family]
 			addpath = negotiated.addpath.send(*family)
-			mp_packed_generator = MPURNLRI(afi,safi,mps).packed_attributes(addpath)
+			seen_size = len(packed_del + packed_mp_del)
+			mp_packed_generator = MPURNLRI(afi,safi,mps).packed_attributes(addpath,msg_size-seen_size)
 			try:
 				while True:
 					packed = mp_packed_generator.next()
-					if len(packed_del + packed_mp_del + packed) > msg_size:
+					seen_size = len(packed_del + packed_mp_del + packed)
+					if seen_size > msg_size:
 						if not packed_mp_del and not packed_del:
 							raise Notify(6,0,'attributes size is so large we can not even pack one MPURNLRI')
 						yield self._message(Update.prefix(packed_del) + Update.prefix(packed_mp_del))
@@ -180,7 +183,8 @@ class Update (Message):
 
 		if add_mp:
 			msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
-		if len(packed_del + packed_mp_del) > msg_size:
+		seen_size = len(packed_del + packed_mp_del)
+		if seen_size > msg_size:
 			yield self._message(Update.prefix(packed_del) + Update.prefix(packed_mp_del))
 			packed_del = ''
 			packed_mp_del = ''
@@ -191,11 +195,13 @@ class Update (Message):
 			afi,safi = family
 			mps = add_mp[family]
 			addpath = negotiated.addpath.send(*family)
-			mp_packed_generator = MPRNLRI(afi,safi,mps).packed_attributes(addpath)
+			seen_size = len(packed_del + packed_mp_del + packed_mp_add)
+			mp_packed_generator = MPRNLRI(afi,safi,mps).packed_attributes(addpath,msg_size-seen_size)
 			try:
 				while True:
 					packed = mp_packed_generator.next()
-					if len(packed_del + packed_mp_del + packed_mp_add + packed) > msg_size:
+					seen_size = len(packed_del + packed_mp_del + packed_mp_add + packed)
+					if seen_size > msg_size:
 						if not packed_mp_add and not packed_mp_del and not packed_del:
 							raise Notify(6,0,'attributes size is so large we can not even pack on MPURNLRI')
 						yield self._message(Update.prefix(packed_del) + Update.prefix(attr + packed_mp_del + packed_mp_add))
@@ -213,7 +219,8 @@ class Update (Message):
 
 		if add_nlri:
 			msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
-		if len(packed_del + packed_mp_del + packed_mp_add) > msg_size:
+		seen_size = len(packed_del + packed_mp_del + packed_mp_add)
+		if seen_size > msg_size:
 			yield self._message(Update.prefix(packed_del) + Update.prefix(packed_mp_del))
 			packed_del = ''
 			packed_mp_del = ''
@@ -223,7 +230,8 @@ class Update (Message):
 		while add_nlri:
 			nlri = add_nlri.pop()
 			packed = nlri.pack(addpath)
-			if len(packed_del + packed_mp_del + packed_mp_add + packed_add + packed) > msg_size:
+			seen_size = len(packed_del + packed_mp_del + packed_mp_add + packed_add + packed)
+			if seen_size > msg_size:
 				if not packed_add and not packed_mp_add and not packed_mp_del and not packed_del:
 					raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
 				if packed_mp_add:

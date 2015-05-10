@@ -12,10 +12,11 @@ from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.update.nlri.prefix import Prefix
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.mpls import MPLS
+from exabgp.bgp.message.update.nlri.mpls import MPLSVPN
 from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.bgp.message.update.nlri.flow import Flow
 from exabgp.bgp.message.update.nlri.evpn import EVPN
-
+from exabgp.bgp.message.update.nlri.rtc import RouteTargetConstraint
 
 NLRI.register_nlri(Prefix,AFI.ipv4,SAFI.unicast)
 NLRI.register_nlri(Prefix,AFI.ipv6,SAFI.unicast)
@@ -24,8 +25,8 @@ NLRI.register_nlri(Prefix,AFI.ipv6,SAFI.multicast)
 
 NLRI.register_nlri(MPLS,AFI.ipv4,SAFI.nlri_mpls)
 NLRI.register_nlri(MPLS,AFI.ipv6,SAFI.nlri_mpls)
-NLRI.register_nlri(MPLS,AFI.ipv4,SAFI.mpls_vpn)
-NLRI.register_nlri(MPLS,AFI.ipv6,SAFI.mpls_vpn)
+NLRI.register_nlri(MPLSVPN,AFI.ipv4,SAFI.mpls_vpn)
+NLRI.register_nlri(MPLSVPN,AFI.ipv6,SAFI.mpls_vpn)
 
 NLRI.register_nlri(VPLS,AFI.l2vpn,SAFI.vpls)
 NLRI.register_nlri(EVPN,AFI.l2vpn,SAFI.evpn)
@@ -34,3 +35,5 @@ NLRI.register_nlri(Flow,AFI.ipv4,SAFI.flow_ip)
 NLRI.register_nlri(Flow,AFI.ipv6,SAFI.flow_ip)
 NLRI.register_nlri(Flow,AFI.ipv4,SAFI.flow_vpn)
 NLRI.register_nlri(Flow,AFI.ipv6,SAFI.flow_vpn)
+
+NLRI.register_nlri(RouteTargetConstraint,AFI.ipv4,SAFI.rtc)

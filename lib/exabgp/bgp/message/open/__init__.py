@@ -56,7 +56,7 @@ class Open (Message):
 		self.router_id = RouterID(router_id)
 		self.capabilities = capabilities
 
-	def message (self):
+	def message (self,negotiated=None):
 		return self._message("%s%s%s%s%s" % (
 			self.version.pack(),
 			self.asn.trans(),
@@ -69,7 +69,7 @@ class Open (Message):
 		return "OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]" % (self.version, self.asn, self.hold_time, self.router_id,self.capabilities)
 
 	@classmethod
-	def unpack_message (cls, data, _):
+	def unpack_message (cls, data, _=None):
 		version = ord(data[0])
 		if version != 4:
 			# Only version 4 is supported nowdays..

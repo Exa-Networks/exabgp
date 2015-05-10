@@ -10,6 +10,7 @@ import os
 import sys
 import platform
 import syslog
+import string
 
 from exabgp.version import version
 # import before the fork to improve copy on write memory savings
@@ -24,8 +25,8 @@ from exabgp.debug import setup_report
 setup_report()
 
 
-def is_hex (string):
-	return all(c in string.hexdigits or c == ':' for c in string)
+def is_hex (s):
+	return all(c in string.hexdigits or c == ':' for c in s)
 
 
 def __exit (memory, code):
@@ -254,8 +255,8 @@ def run (env, comment, configurations, pid=0):
 		logger.configuration(comment)
 
 	if not env.profile.enable:
-		Reactor(configurations).run()
-		__exit(env.debug.memory,0)
+		ok = Reactor(configurations).run()
+		__exit(env.debug.memory,0 if ok else 1)
 
 	try:
 		import cProfile as profile
@@ -263,8 +264,8 @@ def run (env, comment, configurations, pid=0):
 		import profile
 
 	if not env.profile.file or env.profile.file == 'stdout':
-		profile.run('Reactor(configurations).run()')
-		__exit(env.debug.memory,0)
+		ok = profile.run('Reactor(configurations).run()')
+		__exit(env.debug.memory,0 if ok else 1)
 
 	if pid:
 		profile_name = "%s-pid-%d" % (env.profile.file,pid)
@@ -282,7 +283,7 @@ def run (env, comment, configurations, pid=0):
 		profiler = profile.Profile()
 		profiler.enable()
 		try:
-			Reactor(configurations).run()
+			ok = Reactor(configurations).run()
 		except Exception:
 			raise
 		finally:
@@ -292,13 +293,13 @@ def run (env, comment, configurations, pid=0):
 			with open(profile_name, 'w+') as write:
 				kprofile.output(write)
 
-			__exit(env.debug.memory,0)
+			__exit(env.debug.memory,0 if ok else 1)
 	else:
 		logger.reactor("-"*len(notice))
 		logger.reactor(notice)
 		logger.reactor("-"*len(notice))
 		Reactor(configurations).run()
-		__exit(env.debug.memory,0)
+		__exit(env.debug.memory,1)
 
 
 if __name__ == '__main__':

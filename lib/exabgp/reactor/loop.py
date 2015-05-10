@@ -111,7 +111,7 @@ class Reactor (object):
 
 		# Make sure we create processes one we have closed file descriptor
 		# unfortunately, this must be done before reading the configuration file
-		# so we can nto do it with dropped privileges
+		# so we can not do it with dropped privileges
 		self.processes = Processes(self)
 
 		# we have to read the configuration possibly with root privileges
@@ -124,18 +124,19 @@ class Reactor (object):
 
 		# but I can not see any way to avoid it
 
-		self.reload()
+		if not self.reload():
+			return False
 
 		try:
 			self.listener = Listener()
 
 			if self.ip:
-				self.listener.listen(IP.create(self.ip),self.port,None)
+				self.listener.listen(IP.create(self.ip),IP.create('0.0.0.0'),self.port,None)
 				self.logger.reactor("Listening for BGP session(s) on %s:%d" % (self.ip,self.port))
 
 			for neighbor in self.configuration.neighbor.values():
 				if neighbor.listen:
-					self.listener.listen(neighbor.local_address,neighbor.listen,neighbor.md5)
+					self.listener.listen(neighbor.local_address,neighbor.peer_address,neighbor.listen,neighbor.md5)
 					self.logger.reactor("Listening for BGP session(s) on %s:%d%s" % (neighbor.local_address,neighbor.listen,' with MD5' if neighbor.md5 else ''))
 		except NetworkError,exc:
 			self.listener = None
@@ -307,6 +308,7 @@ class Reactor (object):
 		self.logger.reactor("Performing shutdown")
 		if self.listener:
 			self.listener.stop()
+			self.listener = None
 		for key in self.peers.keys():
 			self.peers[key].stop()
 
@@ -323,7 +325,7 @@ class Reactor (object):
 			# Careful the string above is used but the QA code to check for sucess of failure
 			#
 			self.logger.configuration(self.configuration.error,'error')
-			return
+			return False
 
 		for key, peer in self.peers.items():
 			if key not in self.configuration.neighbor:
@@ -349,6 +351,7 @@ class Reactor (object):
 
 		# This only starts once ...
 		self.processes.start(restart)
+		return True
 
 	def schedule (self):
 		try:

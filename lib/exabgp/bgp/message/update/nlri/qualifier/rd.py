@@ -43,6 +43,9 @@ class RouteDistinguisher (object):
 			return ''
 		return '"route-distinguisher": "%s"' % self._str()
 
+	def __hash__(self):
+		return hash(self.rd)
+
 	def __str__ (self):
 		if not self.rd:
 			return ''
@@ -51,5 +54,30 @@ class RouteDistinguisher (object):
 	@classmethod
 	def unpack (cls, data):
 		return cls(data[:8])
+	
+	@classmethod
+	def fromElements(cls,prefix,suffix):
+		try:
+			if '.' in prefix:
+				data = [chr(0),chr(1)]
+				data.extend([chr(int(_)) for _ in prefix.split('.')])
+				data.extend([chr(suffix >> 8),chr(suffix & 0xFF)])
+				distinguisher = ''.join(data)
+			else:
+				number = int(prefix)
+				if number < pow(2,16) and suffix < pow(2,32):
+					distinguisher = chr(0) + chr(0) + pack('!H',number) + pack('!L',suffix)
+				elif number < pow(2,32) and suffix < pow(2,16):
+					distinguisher = chr(0) + chr(2) + pack('!L',number) + pack('!H',suffix)
+				else:
+					raise ValueError('invalid route-distinguisher %s' % value)
+				
+			return cls(distinguisher)
+		except ValueError:
+			raise ValueError('invalid route-distinguisher %s' % value)
+		
+#FIXME: the above is stolen from exabgp.configuration.engine.parser.rd 
+#       which can now use RouteDistinguisher.fromElements instead of 
+#       the rd packing code it has
 
 RouteDistinguisher.NORD = RouteDistinguisher('')

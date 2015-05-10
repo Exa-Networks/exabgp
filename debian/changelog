@@ -1,6 +1,6 @@
-exabgp (3.4.8-0) unstable; urgency=low
+exabgp (3.4.10-0) unstable; urgency=low
 
   * Latest ExaBGP release.
 
- -- Vincent Bernat <bernat@debian.org>  Sat, 07 Mar 2015 14:05:22 -0000
+ -- Vincent Bernat <bernat@debian.org>  Thu, 23 Apr 2015 09:38:22 -0000
 

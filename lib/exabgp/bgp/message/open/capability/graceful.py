@@ -48,17 +48,17 @@ class Graceful (Capability,dict):
 		d = {
 			'name':'"graceful restart"',
 			'time':self.restart_time,
-			'address family flags':'{ %s} ' % (
-				', '.join('"%s/%s": [ %s]' % (
-					afi, safi, '"restart" ' if family & 0x80 else '') for afi, safi, family in [
+			'address-family-flags':'{%s } ' % (
+				', '.join('"%s/%s": [%s ]' % (
+					' %s' % afi, safi, ' "restart"' if family & 0x80 else '') for afi, safi, family in [
 						(str(a), str(s), self[(a,s)]) for (a,s) in self.keys()
 					]
 				)
 			),
-			'restart flags':'[ %s] ' % ('"forwarding" ' if self.restart_flag & 0x8 else '')
+			'restart-flags':'[%s] ' % (' "forwarding" ' if self.restart_flag & 0x8 else ' ')
 		}
 
-		return '{ %s} ' % ','.join('"%s": %s' % (k,v) for k,v in d.iteritems())
+		return '{ %s}' % ','.join('"%s": %s' % (k,v) for k,v in d.iteritems())
 
 	def families (self):
 		return self.keys()
