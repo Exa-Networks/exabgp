@@ -329,7 +329,6 @@ def loop(options):
         "UP",                   # Service is considered as up.
         "DOWN",                 # Service is considered as down.
     )
-    state = states.INIT
 
     def exabgp(target):
         """Communicate new state to ExaBGP"""
@@ -386,8 +385,8 @@ def loop(options):
 
         return target
 
-    checks = 0
-    while True:
+    def one(checks, state):
+        """Execute one loop iteration."""
         disabled = (options.disable is not None and
                     os.path.exists(options.disable))
         successful = disabled or check(options.command, options.timeout)
@@ -436,6 +435,12 @@ def loop(options):
         # Send announces. We announce them on a regular basis in case
         # we lose connection with a peer.
         exabgp(state)
+        return checks, state
+
+    checks = 0
+    state = states.INIT
+    while True:
+        checks, state = one(checks, state)
 
         # How much we should sleep?
         if state in (states.FALLING, states.RISING):
