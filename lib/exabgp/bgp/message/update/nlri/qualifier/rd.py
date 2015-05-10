@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2012-07-08.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from struct import pack
 from struct import unpack
 
 
@@ -54,9 +55,9 @@ class RouteDistinguisher (object):
 	@classmethod
 	def unpack (cls, data):
 		return cls(data[:8])
-	
+
 	@classmethod
-	def fromElements(cls,prefix,suffix):
+	def fromElements (cls, prefix, suffix):
 		try:
 			if '.' in prefix:
 				data = [chr(0),chr(1)]
@@ -70,14 +71,14 @@ class RouteDistinguisher (object):
 				elif number < pow(2,32) and suffix < pow(2,16):
 					distinguisher = chr(0) + chr(2) + pack('!L',number) + pack('!H',suffix)
 				else:
-					raise ValueError('invalid route-distinguisher %s' % value)
-				
+					raise ValueError('invalid route-distinguisher %s' % number)
+
 			return cls(distinguisher)
 		except ValueError:
-			raise ValueError('invalid route-distinguisher %s' % value)
-		
-#FIXME: the above is stolen from exabgp.configuration.engine.parser.rd 
-#       which can now use RouteDistinguisher.fromElements instead of 
+			raise ValueError('invalid route-distinguisher %s:%s' % (prefix,suffix))
+
+#FIXME: the above is stolen from exabgp.configuration.engine.parser.rd
+#       which can now use RouteDistinguisher.fromElements instead of
 #       the rd packing code it has
 
 RouteDistinguisher.NORD = RouteDistinguisher('')

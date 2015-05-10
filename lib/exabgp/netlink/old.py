@@ -526,7 +526,8 @@ class Network (_Message):
 		return self.extract(Network.Command.RTM_GETROUTE)
 
 	def _create (self, family):
-		for _ in self.extract(Network.Command.RTM_NEWROUTE, flags,family):
+		raise RuntimeError('need to fix this flag thing')
+		for _ in self.extract(Network.Command.RTM_NEWROUTE,flags,family):
 			yield _
 
 	def newRoute (self):
@@ -538,7 +539,7 @@ class Network (_Message):
 		family = socket.AF_INET
 
 		attributes = Attributes()
-		Network.Attribute.RTA_DST
+		# Network.Type.Attribute.RTA_DST
 
 		neighbor = self.format(
 			family,
@@ -549,13 +550,11 @@ class Network (_Message):
 			Network.Type.Protocol.RTPROT_EXABGP,
 			Network.Type.Scope.RT_SCOPE_UNIVERSE,
 			0,     # type
-			Network.Flag.RTM_F_PREFIX,  # this may be wrong
+			Network.Type.Flag.RTM_F_PREFIX,  # this may be wrong
 			attributes
 		)
 
-
 		# prefix = '\20\x7f\0\0\2'
-
 
 		for _ in self.extract(Network.Command.RTM_NEWROUTE,network_flags,family):
 			yield _
