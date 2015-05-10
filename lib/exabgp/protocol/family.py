@@ -74,7 +74,7 @@ class AFI (int):
 		if afi == 'ipv6':
 			return ['unicast','mpls-vpn','flow','flow-vpn']
 		if afi == 'l2vpn':
-			return ['vpls']
+			return ['vpls','evpn']
 		return []
 
 	@classmethod
@@ -147,6 +147,8 @@ class SAFI (int):
 			return "flow-vpn"
 		if self == 0x41:
 			return "vpls"
+		if self == 0x46:
+			return "evpn"
 		return "unknown safi %d" % self
 
 	def __str__ (self):
@@ -184,6 +186,8 @@ class SAFI (int):
 			return 0x86
 		if name == "vpls":
 			return 0x41
+		if name == "evpn":
+			return 0x46
 		return None
 
 	@classmethod
@@ -204,7 +208,8 @@ def known_families ():
 		(AFI(AFI.ipv6), SAFI(SAFI.mpls_vpn)),
 		(AFI(AFI.ipv6), SAFI(SAFI.flow_ip)),
 		(AFI(AFI.ipv6), SAFI(SAFI.flow_vpn)),
-		(AFI(AFI.l2vpn), SAFI(SAFI.vpls))
+		(AFI(AFI.l2vpn), SAFI(SAFI.vpls)),
+		(AFI(AFI.l2vpn), SAFI(SAFI.evpn))
 	]
 	return families
 
