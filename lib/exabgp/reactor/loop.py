@@ -111,7 +111,7 @@ class Reactor (object):
 
 		# Make sure we create processes one we have closed file descriptor
 		# unfortunately, this must be done before reading the configuration file
-		# so we can nto do it with dropped privileges
+		# so we can not do it with dropped privileges
 		self.processes = Processes(self)
 
 		# we have to read the configuration possibly with root privileges
