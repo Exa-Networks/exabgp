@@ -19,7 +19,7 @@ from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 
 
 # ====================================================== Both MPLS and Inet NLRI
-# RFC ....
+# RFC 3107 / RFC 4364
 
 class MPLS (NLRI,CIDR):
 	__slots__ = ['labels','rd','nexthop','action']
@@ -93,4 +93,41 @@ class MPLS (NLRI,CIDR):
 		if path_identifier:
 			nlri.path_info = PathInfo(None,None,path_identifier)
 
+		return len(bgp) - len(left),nlri
+
+
+# ====================================================== Both MPLS and Inet NLRI
+# RFC 3107 / RFC 4364
+
+class MPLSVPN (MPLS):
+
+	def __init__(self, afi, safi, packedPrefix, mask, labels, rd, nexthop, action, path=None):
+		MPLS.__init__(self, afi, safi, packedPrefix, mask, nexthop, action,path)
+		self.rd = rd
+		if labels is None:
+			labels = Labels.NOLABEL
+		self.labels = labels
+
+	def __cmp__(self,other):
+		# Note: BaGPipe needs an advertise and a withdraw for the same
+		# RD:prefix to result in objects that are equal for Python,
+		# this is why the test below does not look at self.labels
+		if (
+			isinstance(other,MPLSVPN) and
+			self.rd == other.rd and
+			self.prefix == other.prefix
+		):
+			return 0
+		else:
+			return -1
+
+	def __str__(self):
+		return "%s:%s/%d:[%s]" % (self.rd, self.ip, self.mask, self.labels)
+
+	@classmethod
+	def unpack (cls, afi, safi, bgp, addpath, nexthop, action):
+		labels,rd,path_identifier,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action,addpath)
+		nlri = cls(afi, safi, prefix, mask, labels, rd, nexthop, action, path=None)
+		if path_identifier:
+			nlri.path_info = PathInfo(None,None,path_identifier)
 		return len(bgp) - len(left),nlri

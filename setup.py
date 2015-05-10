@@ -17,6 +17,9 @@ from distutils.util import get_platform
 
 dryrun = False
 
+json_version = '3.5.0'
+text_version = '3.5.0'
+
 description_rst = """\
 ======
 ExaBGP
@@ -107,6 +110,8 @@ Feedback and getting involved
 
 version_template = """\
 version = "%s"
+json = "%s"
+text = "%s"
 
 # Do not change the first line as it is parsed by scripts
 
@@ -129,6 +134,7 @@ if sys.argv[-1] == 'help':
 python setup.py help     this help
 python setup.py cleanup  delete left-over file from release
 python setup.py readme   show the pypi RST readme
+python setup.py version  set the content of the version include file
 python setup.py push     update the version, push to github
 python setup.py release  tag a new version on github, and update pypi
 python setup.py pypi     create egg/wheel
@@ -150,6 +156,28 @@ remove_egg()
 if sys.argv[-1] == 'cleanup':
 	sys.exit(0)
 
+def set_version ():
+	git_version = os.popen('git describe --tags').read().strip()
+
+	with open('lib/exabgp/version.py','w') as version_file:
+		version_file.write(version_template % (git_version,json_version,text_version))
+
+	version = imp.load_source('version','lib/exabgp/version.py').version
+
+	if version != git_version:
+		print 'version setting failed'
+		sys.exit(1)
+
+	return git_version
+
+#
+# Set the content of the version file
+#
+
+if sys.argv[-1] == 'version':
+	set_version()
+	sys.exit(0)
+
 #
 # Show python readme.rst
 #
@@ -163,16 +191,7 @@ if sys.argv[-1].lower() == 'readme':
 #
 
 if sys.argv[-1] == 'push':
-	git_version = os.popen('git describe --tags').read().strip()
-
-	with open('lib/exabgp/version.py','w') as version_file:
-		version_file.write(version_template % git_version)
-
-	version = imp.load_source('version','lib/exabgp/version.py').version
-
-	if version != git_version:
-		print 'version setting failed'
-		sys.exit(1)
+	git_version = set_version()
 
 	commit = 'git ci -a -m "updating version to %s"' % git_version
 	push = 'git push'

@@ -279,6 +279,7 @@ class Peer (object):
 
 		# send OPEN
 		message = Message.CODE.NOP
+
 		for message in proto.new_open(self._restarted):
 			if ord(message.TYPE) == Message.CODE.NOP:
 				yield ACTION.NOW
@@ -340,6 +341,8 @@ class Peer (object):
 		connected = False
 		try:
 			while not connected:
+				if self._teardown:
+					raise StopIteration()
 				connected = generator.next()
 				# we want to come back as soon as possible
 				yield ACTION.LATER
@@ -351,6 +354,7 @@ class Peer (object):
 			if not connected or self._['in']['proto']:
 				stop = Interrupted()
 				stop.direction = 'out'
+				yield ACTION.NOW
 				raise stop
 
 		self._['out']['state'] = STATE.CONNECT
@@ -424,7 +428,7 @@ class Peer (object):
 		self.logger.network('Connected to peer %s (%s)' % (self.neighbor.name(),direction))
 		if self.neighbor.api['neighbor-changes']:
 			try:
-				self.reactor.processes.up(self)
+				self.reactor.processes.up(self.neighbor)
 			except ProcessError:
 				# Can not find any better error code than 6,0 !
 				# XXX: We can not restart the program so this will come back again and again - FIX

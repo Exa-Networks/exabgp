@@ -30,6 +30,11 @@ from exabgp.reactor.api.encoding import JSON
 
 from exabgp.bgp.message.notification import Notification
 
+# JSON version
+
+from exabgp.version import json as json_version
+
+
 # =============================================================== check_neighbor
 # ...
 
@@ -234,7 +239,7 @@ def check_update (neighbor, raw):
 		for number in range(len(update.nlris)):
 			change = Change(update.nlris[number],update.attributes)
 			logger.parser('decoded %s %s %s' % (decoding,change.nlri.action,change.extensive()))
-		logger.parser('update json %s' % JSON('3.4.0').update(p,update,'',''))
+		logger.parser('update json %s' % JSON(json_version).update(p,update,'',''))
 
 	return True
 

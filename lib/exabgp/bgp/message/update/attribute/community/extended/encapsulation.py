@@ -28,7 +28,7 @@ class Encapsulation (ExtendedCommunity):
 		IPIP      = 0x07
 		VXLAN     = 0x08
 		NVGRE     = 0x09
-		MPLS      = 0x10
+		MPLS      = 0x0A
 		VXLAN_GPE = 0x0C
 		MPLS_UDP  = 0x0D
 

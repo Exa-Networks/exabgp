@@ -15,6 +15,9 @@ from exabgp.bgp.message.open.routerid import RouterID
 
 
 class Negotiated (object):
+	MAX_SIZE = 4096
+	FREE_SIZE = MAX_SIZE - 19 - 2 - 2
+
 	def __init__ (self, neighbor):
 		self.neighbor = neighbor
 
@@ -28,7 +31,7 @@ class Negotiated (object):
 		self.asn4 = False
 		self.addpath = RequirePath()
 		self.multisession = False
-		self.msg_size = 4096
+		self.msg_size = self.MAX_SIZE
 		self.operational = False
 		self.refresh = REFRESH.ABSENT  # pylint: disable=E1101
 		self.aigp = None

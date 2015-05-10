@@ -19,6 +19,7 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI as _NLRI
 
 
 class EOR (Message):
+	ID = Message.CODE.UPDATE
 	TYPE = chr(Message.CODE.UPDATE)
 
 	class NLRI (_NLRI):
@@ -49,7 +50,7 @@ class EOR (Message):
 		self.nlris = [EOR.NLRI(afi,safi,action),]
 		self.attributes = Attributes()
 
-	def message (self):
+	def message (self,negotiated=None):
 		return self._message(
 			self.nlris[0].pack()
 		)

@@ -29,7 +29,9 @@ from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoIP
+
 from exabgp.bgp.message import OUT
+from exabgp.bgp.message import Message
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
@@ -238,6 +240,30 @@ class Configuration (object):
 		'syntax:\n' \
 		'process name-of-process {\n' \
 		'   run /path/to/command with its args;\n' \
+		'   encoder text|json;\n' \
+		'   neighbor-changes;\n' \
+		'   send {\n' \
+		'      parsed;\n' \
+		'      packets;\n' \
+		'      consolidate;\n' \
+		'      open;\n' \
+		'      update;\n' \
+		'      notification;\n' \
+		'      keepalive;\n' \
+		'      refresh;\n' \
+		'      operational;\n' \
+		'   }\n' \
+		'   receive {\n' \
+		'      parsed;\n' \
+		'      packets;\n' \
+		'      consolidate;\n' \
+		'      open;\n' \
+		'      update;\n' \
+		'      notification;\n' \
+		'      keepalive;\n' \
+		'      refresh;\n' \
+		'      operational;\n' \
+		'   }\n' \
 		'}\n\n' \
 
 	_str_family_error = \
@@ -246,7 +272,7 @@ class Configuration (object):
 		'   all;		  # default if not family block is present, announce all we know\n' \
 		'    minimal	  # use the AFI/SAFI required to announce the routes in the configuration\n' \
 		'    \n' \
-		'    ipv4 unicast;\n' \
+		'   ipv4 unicast;\n' \
 		'   ipv4 multicast;\n' \
 		'   ipv4 nlri-mpls;\n' \
 		'   ipv4 mpls-vpn;\n' \
@@ -380,6 +406,10 @@ class Configuration (object):
 			return self._reload()
 		except KeyboardInterrupt:
 			self.error = 'configuration reload aborted by ^C or SIGINT'
+			return False
+		except Exception:
+			raise
+			self.error = 'configuration parsing issue'
 			return False
 
 	def _reload (self):
@@ -652,14 +682,11 @@ class Configuration (object):
 				return False
 
 		if name == 'process':
-			if command == 'receive':
-				if self._multi_receive(scope,tokens[1:]):
+			if command in ['send','receive']:
+				if self._multi_api(scope,command,tokens[1:]):
 					return True
 				return False
-			if command == 'send':
-				if self._multi_send(scope,tokens[1:]):
-					return True
-				return False
+
 		return False
 
 	def _single_line (self, scope, name, tokens, valid):
@@ -814,34 +841,18 @@ class Configuration (object):
 				self._set_process_command(scope,'receive-operational',tokens[1:])
 				return True
 
-		elif name == 'send':  # process / send
-			if command == 'packets':
-				return self._set_process_command(scope,'send-packets',tokens[1:])
+		elif name in ['send','receive']:  # process / send
 
-		elif name == 'receive':  # process / receive
-			if command == 'packets':
-				return self._set_process_command(scope,'receive-packets',tokens[1:])
-			if command == 'parsed':
-				return self._set_process_command(scope,'receive-parsed',tokens[1:])
-			if command == 'consolidate':
-				return self._set_process_command(scope,'consolidate',tokens[1:])
+			if command in ['packets','parsed','consolidate']:
+				return self._set_process_command(scope,'%s-%s' % (name,command),tokens[1:])
 
+			for message in Message.CODE.MESSAGES:
+				if command == message.SHORT:
+					return self._set_process_command(scope,'%s-%d' % (name,message),tokens[1:])
+
+			# Legacy
 			if command == 'neighbor-changes':
 				return self._set_process_command(scope,'neighbor-changes',tokens[1:])
-			if command == 'notification':
-				return self._set_process_command(scope,'receive-notifications',tokens[1:])
-			if command == 'open':
-				return self._set_process_command(scope,'receive-opens',tokens[1:])
-			if command == 'keepalive':
-				return self._set_process_command(scope,'receive-keepalives',tokens[1:])
-			if command == 'refresh':
-				return self._set_process_command(scope,'receive-refresh',tokens[1:])
-			if command == 'update':
-				return self._set_process_command(scope,'receive-updates',tokens[1:])
-			if command == 'updates':
-				return self._set_process_command(scope,'receive-updates',tokens[1:])
-			if command == 'operational':
-				return self._set_process_command(scope,'receive-operational',tokens[1:])
 
 		elif name == 'static':
 			if command == 'route':
@@ -867,12 +878,7 @@ class Configuration (object):
 				['send','receive'],
 				[
 					'run','encoder',
-
-					'peer-updates','parse-routes','receive-routes',
-					'receive-parsed','receive-packets',
 					'neighbor-changes',
-					'receive-updates','receive-refresh','receive-operational',
-					'send-packets',
 				]
 			)
 			if r is False:
@@ -883,8 +889,17 @@ class Configuration (object):
 		name = tokens[0] if len(tokens) >= 1 else 'conf-only-%s' % str(time.time())[-6:]
 		self.process.setdefault(name,{})['neighbor'] = scope[-1]['peer-address'] if 'peer-address' in scope[-1] else '*'
 
-		for key in ['neighbor-changes', 'receive-notifications', 'receive-opens', 'receive-keepalives', 'receive-refresh', 'receive-updates', 'receive-operational', 'receive-parsed', 'receive-packets', 'consolidate', 'send-packets']:
+		for key in ['neighbor-changes',]:
 			self.process[name][key] = scope[-1].pop(key,False)
+
+		for direction in ['send','receive']:
+			for action in ['packets','parsed','consolidate']:
+				key = '%s-%s' % (direction,action)
+				self.process[name][key] = scope[-1].pop(key,False)
+
+			for message in Message.CODE.MESSAGES:
+				key = '%s-%d' % (direction,message)
+				self.process[name][key] = scope[-1].pop(key,False)
 
 		run = scope[-1].pop('process-run','')
 		if run:
@@ -1332,36 +1347,49 @@ class Configuration (object):
 		if self.cli_socket:
 			self.process['__cli__'] = {
 				'neighbor': '*',
-				'consolidate': False,
 				'encoder': 'json',
+				'run': [sys.executable, control.__file__, self.cli_socket],
+
 				'neighbor-changes': False,
-				'receive-keepalives': False,
-				'receive-notifications': False,
-				'receive-opens': False,
-				'receive-operational': False,
+
+				'receive-consolidate': False,
 				'receive-packets': False,
 				'receive-parsed': False,
-				'receive-refresh': False,
-				'receive-updates': False,
-				'run': [sys.executable, control.__file__, self.cli_socket]
+
+				'send-consolidate': False,
+				'send-packets': False,
+				'send-parsed': False,
 			}
+
+			for direction in ['send','receive']:
+				for message in [
+					Message.CODE.NOTIFICATION,
+					Message.CODE.OPEN,
+					Message.CODE.KEEPALIVE,
+					Message.CODE.UPDATE,
+					Message.CODE.ROUTE_REFRESH,
+					Message.CODE.OPERATIONAL
+				]:
+					self.process['__cli__']['%s-%s' % (direction,message.short())] = False
 
 		for name in self.process.keys():
 			process = self.process[name]
-			neighbor.api.receive_packets(process.get('receive-packets',False))
-			neighbor.api.send_packets(process.get('send-packets',False))
 
-			neighbor.api.neighbor_changes(process.get('neighbor-changes',False))
-			neighbor.api.consolidate(process.get('consolidate',False))
+			neighbor.api.set('neighbor-changes',process.get('neighbor-changes',False))
 
-			neighbor.api.receive_parsed(process.get('receive-parsed',False))
+			for direction in ['send','receive']:
+				for option in ['packets','consolidate','parsed']:
+					neighbor.api.set_value(direction,option,process.get('%s-%s' % (direction,option),False))
 
-			neighbor.api.receive_notifications(process.get('receive-notifications',False))
-			neighbor.api.receive_opens(process.get('receive-opens',False))
-			neighbor.api.receive_keepalives(process.get('receive-keepalives',False))
-			neighbor.api.receive_updates(process.get('receive-updates',False))
-			neighbor.api.receive_refresh(process.get('receive-refresh',False))
-			neighbor.api.receive_operational(process.get('receive-operational',False))
+				for message in [
+					Message.CODE.NOTIFICATION,
+					Message.CODE.OPEN,
+					Message.CODE.KEEPALIVE,
+					Message.CODE.UPDATE,
+					Message.CODE.ROUTE_REFRESH,
+					Message.CODE.OPERATIONAL
+				]:
+					neighbor.api.set_message(direction,message,process.get('%s-%d' % (direction,message),False))
 
 		if not neighbor.router_id:
 			neighbor.router_id = neighbor.local_address
@@ -1390,6 +1418,9 @@ class Configuration (object):
 			self._error = 'incomplete option route-refresh and no adj-rib-out'
 			if self.debug: raise Exception()  # noqa
 			return False
+
+		# XXX: check that if we have any message, we have parsed/packets
+		# XXX: and vice-versa
 
 		missing = neighbor.missing()
 		if missing:
@@ -1440,10 +1471,7 @@ class Configuration (object):
 				neighbor.add_family(family)
 
 		if neighbor.group_updates is None:
-			neighbor.group_updates = False
-			self.logger.configuration('-'*80,'warning')
-			self.logger.configuration('group-updates not enabled for peer %s, it surely should, the default will change to true soon' % neighbor.peer_address,'warning')
-			self.logger.configuration('-'*80,'warning')
+			neighbor.group_updates = True
 
 		def _init_neighbor (neighbor):
 			families = neighbor.families()
@@ -2626,7 +2654,7 @@ class Configuration (object):
 
 	# ..........................................
 
-	def _multi_receive (self, scope, tokens):
+	def _multi_api (self, scope, direction, tokens):
 		if len(tokens) != 0:
 			self._error = self._str_flow_error
 			if self.debug: raise Exception()  # noqa
@@ -2634,32 +2662,13 @@ class Configuration (object):
 
 		while True:
 			r = self._dispatch(
-				scope,'receive',
+				scope,direction,
 				[],
 				[
 					'packets','parsed','consolidate',
-					'neighbor-changes',
 					'notification','open','keepalive',
-					'update','updates','refresh','operational'
+					'update','refresh','operational'
 				]
-			)
-			if r is False:
-				return False
-			if r is None:
-				break
-		return True
-
-	def _multi_send (self, scope, tokens):
-		if len(tokens) != 0:
-			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-		while True:
-			r = self._dispatch(
-				scope,'send',
-				[],
-				['packets']
 			)
 			if r is False:
 				return False

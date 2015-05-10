@@ -17,6 +17,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 
 # ================================================================= MP NLRI (14)
@@ -25,13 +26,13 @@ class MPURNLRI (Attribute,Address):
 	FLAG = Attribute.Flag.OPTIONAL
 	ID = Attribute.CODE.MP_UNREACH_NLRI
 
-	__slots__ = ['nlris']
+	# __slots__ = ['nlris']
 
 	def __init__ (self, afi, safi, nlris):
 		Address.__init__(self,afi,safi)
 		self.nlris = nlris
 
-	def packed_attributes (self, addpath):
+	def packed_attributes (self, addpath, maximum):
 		if not self.nlris:
 			return
 
@@ -40,10 +41,21 @@ class MPURNLRI (Attribute,Address):
 			mpurnlri.setdefault((nlri.afi.pack(),nlri.safi.pack()),[]).append(nlri.pack(addpath))
 
 		for (pafi,psafi),nlris in mpurnlri.iteritems():
-			yield self._attribute(pafi + psafi + ''.join(nlris))
+			payload = pafi + psafi + ''.join(nlris)
+
+			if self._len(payload) <= maximum:
+				yield self._attribute(payload)
+				continue
+
+			# This will not generate an optimum update size..
+			# we should feedback the maximum on each iteration
+
+			for nlri in nlris:
+				yield self._attribute(pafi + psafi + nlri)
+
 
 	def pack (self, addpath):
-		return ''.join(self.packed_attributes(addpath))
+		return ''.join(self.packed_attributes(addpath,Negotiated.FREE_SIZE))
 
 	def __len__ (self):
 		raise RuntimeError('we can not give you the size of an MPURNLRI - was it with our witout addpath ?')

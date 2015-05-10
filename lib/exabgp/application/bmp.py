@@ -25,6 +25,7 @@ from exabgp.bmp.header import Header
 from exabgp.bmp.message import Message
 from exabgp.bmp.negotiated import FakeNegotiated
 
+from exabgp.version import json as json_version
 
 class BMPHandler (asyncore.dispatcher_with_send):
 	wire = False
@@ -44,7 +45,7 @@ class BMPHandler (asyncore.dispatcher_with_send):
 		self.fd = env.fd
 		self.ip = ip
 		self.port = port
-		self.json = JSON('3.4.8')
+		self.json = JSON(json_version)
 		return self
 
 	def _read_data (self, number):

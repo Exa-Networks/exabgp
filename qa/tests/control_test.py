@@ -38,7 +38,7 @@ class TestControl (unittest.TestCase):
 		control = Control()
 		try:
 			result = control.init()
-			assert result is False
+			self.assertFalse(result)
 		except IOError:
 			# could not write in the location
 			pass
@@ -50,13 +50,13 @@ class TestControl (unittest.TestCase):
 		control = Control(name,False)
 		try:
 			result = control.init()
-			assert result is True
+			self.assertTrue(result)
 
 			p = Process(target=speak, args=(name,message))
 			p.start()
 
 			string = control.loop()
-			assert string == check
+			self.assertEqual(string, check)
 			p.join()
 		finally:
 			control.cleanup()

@@ -3,6 +3,45 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.5.0
+ * Feature: add support for upstart
+   patch by: Pierre-Yves Kerembellec
+ * Change: Update are now grouped by default
+ * Change: Change the API configuration syntax and format
+  - JSON is now the default API encoder
+  - JSON now use high resolution time by default
+  - syntax changes to the Text API format
+    * added direction of message
+    * change received/sent to receive/send
+    * add extra informatiom (detail here)
+  - syntax changes to the JSON API format
+    * add direction to object
+    * pid, ppid are now numbers and not string
+    * remove deprecated 'ip' from neighbor
+    * rename 'restart flags' to be 'restart-flags'
+    * rename 'address family flags' to be 'address-family-flags'
+    * format change for notification and shutdown message
+ * Fix: Do shutdown when waiting for a new connection to a peer
+ * Fix: Bad ASN enconding when ASN4 is not negotiated
+    reported by: Orangefish on github
+
+Version 3.4.10
+ * Fix: Fix parsing attributes with PARTIAL flag set
+    patch by: Daniel Neiter
+ * Fix: Fix -t exit with error code 1 when -t is used and the configuration is invalid
+    reported by: Kevin Landreth
+ * Fix: Using split option with large MP could lead to invalid update
+    reported by: m4ccbr on github
+ * Fix: MD5 support for incoming connection
+    patch by: Sandy Breeze and David Overton
+ * Fix: prevent multiple similar binding
+    reported by: Sandy Breeze
+ * Fix: allow different MD5 for the same binding
+    reported by: Sandy Breeze
+ * Fix: issue with ASN4 code
+    reported by: Florian Obser (with a patch, thank you)
+ * Fix: issue with --decode
+
 Version 3.4.9
  * Fix: very bad bug where NLRI where not associated to the right AFI/SAFI pair ( #235 )
     reported by: esequei

@@ -16,7 +16,7 @@ class NOP (Message):
 	ID = Message.CODE.NOP
 	TYPE = chr(Message.CODE.NOP)
 
-	def message (self):
+	def message (self,negotiated=None):
 		return self._message(self.data)
 
 	def __str__ (self):

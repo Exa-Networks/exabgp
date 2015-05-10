@@ -125,7 +125,7 @@ class Notify (Notification):
 			data = self._str_subcode.get((code,subcode),'unknown notification type')
 		Notification.__init__(self,code,subcode,data)
 
-	def message (self):
+	def message (self,negotiated=None):
 		return self._message("%s%s%s" % (
 			chr(self.code),
 			chr(self.subcode),

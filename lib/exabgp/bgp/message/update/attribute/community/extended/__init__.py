@@ -13,8 +13,8 @@ from exabgp.bgp.message.update.attribute.community.extended.l2info import L2Info
 from exabgp.bgp.message.update.attribute.community.extended.origin import OriginASNIP
 from exabgp.bgp.message.update.attribute.community.extended.origin import OriginIPASN
 from exabgp.bgp.message.update.attribute.community.extended.origin import OriginASN4Number
-from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASNIP
-from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetIPASN
+from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN2Number
+from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetIPNumber
 from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN4Number
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficAction
@@ -29,8 +29,8 @@ ExtendedCommunity.register_extended(OriginASNIP)
 ExtendedCommunity.register_extended(OriginIPASN)
 ExtendedCommunity.register_extended(OriginASN4Number)
 
-ExtendedCommunity.register_extended(RouteTargetASNIP)
-ExtendedCommunity.register_extended(RouteTargetIPASN)
+ExtendedCommunity.register_extended(RouteTargetASN2Number)
+ExtendedCommunity.register_extended(RouteTargetIPNumber)
 ExtendedCommunity.register_extended(RouteTargetASN4Number)
 
 ExtendedCommunity.register_extended(TrafficRate)

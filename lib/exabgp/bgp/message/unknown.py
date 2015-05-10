@@ -20,7 +20,7 @@ class UnknownMessage (Message):
 		self.TYPE = chr(code)
 		self.data = data
 
-	def message (self):
+	def message (self,negotiated=None):
 		return self._message(self.data)
 
 	def __str__ (self):
