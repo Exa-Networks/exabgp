@@ -393,7 +393,7 @@ class JSON (object):
 		})),header,body,neighbor,message_type='refresh')
 
 	def bmp (self, bmp, update):
-		return self._header(self._bmp(bmp,self._update(update)),'','',message_type='bmp')
+		return self._header(self._bmp(bmp,self._update(update)),'','',None,message_type='bmp')
 
 	def _operational_query (self, neighbor, direction, operational, header, body):
 		return self._header(self._neighbor(neighbor,direction,self._kv({
