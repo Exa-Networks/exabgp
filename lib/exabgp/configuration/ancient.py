@@ -99,6 +99,8 @@ from exabgp.rib.change import Change
 from exabgp.reactor.api import control
 from exabgp.logger import Logger
 
+from exabgp.version import json as json_version
+
 # Duck class, faking part of the Attribute interface
 # We add this to routes when when need o split a route in smaller route
 # The value stored is the longer netmask we want to use
@@ -3176,5 +3178,5 @@ class Configuration (object):
 			for number in range(len(update.nlris)):
 				change = Change(update.nlris[number],update.attributes)
 				self.logger.parser('decoded %s %s %s' % (decoding,change.nlri.action,change.extensive()))
-			self.logger.parser('update json %s' % JSON('3.4.0').update(p,update,'',''))
+			self.logger.parser('update json %s' % JSON(json_version).update(p.neighbor,'in',update,'',''))
 		sys.exit(0)
