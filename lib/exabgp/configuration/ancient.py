@@ -408,7 +408,6 @@ class Configuration (object):
 			self.error = 'configuration reload aborted by ^C or SIGINT'
 			return False
 		except Exception:
-			raise
 			self.error = 'configuration parsing issue'
 			return False
 
