@@ -192,6 +192,7 @@ def check_update (neighbor, raw):
 	capa = Capabilities().new(n,False)
 	capa[Capability.CODE.ADD_PATH] = path
 	capa[Capability.CODE.MULTIPROTOCOL] = n.families()
+#	capa[Capability.CODE.FOUR_BYTES_ASN] = True
 
 	routerid_1 = str(n.router_id)
 	routerid_2 = '.'.join(str((int(_)+1) % 250) for _ in str(n.router_id).split('.',-1))
