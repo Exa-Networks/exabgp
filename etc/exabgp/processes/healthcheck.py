@@ -212,7 +212,10 @@ def setup_logging(debug, silent, name, syslog_facility, syslog):
                 os.getpid())))
         logger.addHandler(sh)
     # To console
-    if sys.stderr.isatty() and not silent:
+    toconsole = (hasattr(sys.stderr, "isatty") and
+                 sys.stderr.isatty() and
+                 not silent)
+    if toconsole:
         ch = logging.StreamHandler()
         ch.setFormatter(logging.Formatter(
             "%(levelname)s[%(name)s] %(message)s"))
