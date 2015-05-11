@@ -53,15 +53,27 @@ import argparse
 import signal
 import time
 import collections
+import socket
+
+logger = logging.getLogger("healthcheck")
+
 try:
     # Python 3.3+
     from ipaddress import ip_address  # pylint: disable=F0401
 except ImportError:
-    # Python 2.6, 2.7, 3.2
-    from ipaddr import IPAddress as ip_address
-
-logger = logging.getLogger("healthcheck")
-
+    try:
+        # Python 2.6, 2.7, 3.2
+        from ipaddr import IPAddress as ip_address
+    except ImportError:
+        sys.stderr.write(
+            '\n'
+            'This program requires the python module ip_address (for python 3.3+) or ipaddr (for python 2.6, 2.7, 3.2)\n'
+            'Please pip install one of them with one of the following command.\n'
+            '> pip install ip_address\n'
+            '> pip install ipaddr\n'
+            '\n'
+        )
+        sys.exit(1)
 
 def enum(*sequential):
     """Create a simple enumeration."""
@@ -213,7 +225,7 @@ def setup_logging(debug, silent, name, syslog_facility, syslog):
         logger.addHandler(sh)
     # To console
     toconsole = (hasattr(sys.stderr, "isatty") and
-                 sys.stderr.isatty() and
+                 sys.stderr.isatty() and  # pylint: disable=E1101
                  not silent)
     if toconsole:
         ch = logging.StreamHandler()
@@ -453,8 +465,12 @@ def loop(options):
 def main():
     """Entry point."""
     options = parse()
-    setup_logging(options.debug, options.silent, options.name,
-                  options.syslog_facility, not options.no_syslog)
+    try:
+        setup_logging(options.debug, options.silent, options.name,
+                      options.syslog_facility, not options.no_syslog)
+    except socket.error, e:  # OSX Error with default settings
+        sys.stderr.write("could not setup logger: %s\n" % e.strerror)
+        sys.exit(1)
     if options.pid:
         options.pid.write("{0}\n".format(os.getpid()))
         options.pid.close()
@@ -470,8 +486,12 @@ def main():
         options.ips = list(options.ips)
         # Main loop
         loop(options)
+    except RuntimeError as e:
+        logger.error("Runtime issue: %s", str(e))
+        sys.exit(1)
     except Exception as e:  # pylint: disable=W0703
-        logger.exception("Uncatched exception: %s", e)
+        logger.exception("Uncaught exception: %s", e)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
