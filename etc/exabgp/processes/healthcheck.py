@@ -60,14 +60,14 @@ try:
 except ImportError:
     # Python 2.6, 2.7, 3.2
     from ipaddr import IPAddress as ip_address
-# try:
-#     # Python 3.4+
-#     from enum import Enum
-# except ImportError:
-#     # Other versions. This is not really an enum but this is OK for
-#     # what we want to do.
-#     def Enum (*sequential):
-#         return type(str("Enum"), (), dict(zip(sequential, sequential)))
+try:
+    # Python 3.4+
+    from enum import Enum
+except ImportError:
+    # Other versions. This is not really an enum but this is OK for
+    # what we want to do.
+    def Enum (*sequential):
+        return type(str("Enum"), (), dict(zip(sequential, sequential)))
 
 logger = logging.getLogger("healthcheck")
 
@@ -307,33 +307,28 @@ def check (cmd, timeout):
         os.killpg(p.pid, signal.SIGKILL)
         return False
 
+
 def loop (options):
     """Main loop."""
-
-    class STATES:
-        class _S (int):
-            def name (self,string):
-                self.string = string
-            def __str__ (self):
-                return self.string
-        INIT     = _S(1,'INIT')      # Initial state
-        DISABLED = _S(2,'DISABLED')  # Disabled state
-        RISING   = _S(3,'RISING')    # Checks are currently succeeding.
-        FALLING  = _S(4,'FALLING')   # Checks are currently failing.
-        UP       = _S(5,'UP')        # Service is considered as up.
-        DOWN     = _S(6,'DOWN')      # Service is considered as down.
-
-    state = STATES.INIT
+    states = Enum(
+        "INIT",                 # Initial state
+        "DISABLED",             # Disabled state
+        "RISING",               # Checks are currently succeeding.
+        "FALLING",              # Checks are currently failing.
+        "UP",                   # Service is considered as up.
+        "DOWN",                 # Service is considered as down.
+    )
+    state = states.INIT
 
     def exabgp (target):
         """Communicate new state to ExaBGP"""
-        if target not in (STATES.UP, STATES.DOWN, STATES.DISABLED):
+        if target not in (states.UP, states.DOWN, states.DISABLED):
             return
         logger.info("send announces for {0} state to ExaBGP".format(target))
         metric = vars(options).get("{0}_metric".format(str(target).lower()))
         for ip in options.ips:
             if options.withdraw_on_down:
-                command = "announce" if target is STATES.UP else "withdraw"
+                command = "announce" if target is states.UP else "withdraw"
             else:
                 command = "announce"
             announce = "route {0}/{1} next-hop {2}".format(str(ip),
@@ -355,10 +350,10 @@ def loop (options):
     def trigger (target):
         """Trigger a state change and execute the appropriate commands"""
         # Shortcut for RISING->UP and FALLING->UP
-        if target == STATES.RISING and options.rise <= 1:
-            target = STATES.UP
-        elif target == STATES.FALLING and options.fall <= 1:
-            target = STATES.DOWN
+        if target == states.RISING and options.rise <= 1:
+            target = states.UP
+        elif target == states.FALLING and options.fall <= 1:
+            target = states.DOWN
 
         # Log and execute commands
         logger.debug("Transition to {0}".format(str(target)))
@@ -380,43 +375,43 @@ def loop (options):
         disabled = options.disable is not None and os.path.exists(options.disable)
         successful = disabled or check(options.command, options.timeout)
         # FSM
-        if state != STATES.DISABLED and disabled:
-            state = trigger(STATES.DISABLED)
-        elif state == STATES.INIT:
+        if state != states.DISABLED and disabled:
+            state = trigger(states.DISABLED)
+        elif state == states.INIT:
             if successful and options.rise <= 1:
-                state = trigger(STATES.UP)
+                state = trigger(states.UP)
             elif successful:
-                state = trigger(STATES.RISING)
+                state = trigger(states.RISING)
                 checks = 1
             else:
-                state = trigger(STATES.FALLING)
+                state = trigger(states.FALLING)
                 checks = 1
-        elif state == STATES.DISABLED:
+        elif state == states.DISABLED:
             if not disabled:
-                state = trigger(STATES.INIT)
-        elif state == STATES.RISING:
+                state = trigger(states.INIT)
+        elif state == states.RISING:
             if successful:
                 checks += 1
                 if checks >= options.rise:
-                    state = trigger(STATES.UP)
+                    state = trigger(states.UP)
             else:
-                state = trigger(STATES.FALLING)
+                state = trigger(states.FALLING)
                 checks = 1
-        elif state == STATES.FALLING:
+        elif state == states.FALLING:
             if not successful:
                 checks += 1
                 if checks >= options.fall:
-                    state = trigger(STATES.DOWN)
+                    state = trigger(states.DOWN)
             else:
-                state = trigger(STATES.RISING)
+                state = trigger(states.RISING)
                 checks = 1
-        elif state == STATES.UP:
+        elif state == states.UP:
             if not successful:
-                state = trigger(STATES.FALLING)
+                state = trigger(states.FALLING)
                 checks = 1
-        elif state == STATES.DOWN:
+        elif state == states.DOWN:
             if successful:
-                state = trigger(STATES.RISING)
+                state = trigger(states.RISING)
                 checks = 1
         else:
             raise ValueError("Unhandled state: {0}".format(str(state)))
@@ -426,7 +421,7 @@ def loop (options):
         exabgp(state)
 
         # How much we should sleep?
-        if state in (STATES.FALLING, STATES.RISING):
+        if state in (states.FALLING, states.RISING):
             time.sleep(options.fast)
         else:
             time.sleep(options.interval)
