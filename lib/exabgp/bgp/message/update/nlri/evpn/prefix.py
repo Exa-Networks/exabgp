@@ -63,9 +63,7 @@ class Prefix(EVPN):
 		self.iplen = iplen
 		self.gwip = gwip
 		self.label = label
-		if self.label is None:
-			raise RuntimeError('NO_LABEL is not defined - it MUST have a pack() function')
-			self.label = "NO_LABEL"
+		self.label = label if label else Labels.NOLABEL
 		self.pack()
 
 	def __str__ (self):
