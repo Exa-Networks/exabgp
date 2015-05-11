@@ -478,7 +478,8 @@ def main():
         # Setup IP to use
         options.ips = options.ips or loopback_ips(options.label)
         if not options.ips:
-            raise RuntimeError("No IP found")
+            logger.error("No IP found")
+            sys.exit(1)
         if options.ip_setup:
             setup_ips(options.ips, options.label)
         options.ips = collections.deque(options.ips)
@@ -486,9 +487,6 @@ def main():
         options.ips = list(options.ips)
         # Main loop
         loop(options)
-    except RuntimeError as e:
-        logger.error("Runtime issue: %s", str(e))
-        sys.exit(1)
     except Exception as e:  # pylint: disable=W0703
         logger.exception("Uncaught exception: %s", e)
         sys.exit(1)
