@@ -469,7 +469,7 @@ def main():
         setup_logging(options.debug, options.silent, options.name,
                       options.syslog_facility, not options.no_syslog)
     except socket.error, e:  # OSX Error with default settings
-        sys.stderr.write("could not setup logger: %s\n" % e.strerror)
+        sys.stderr.write("could not setup logger: {0}\n".format(e.strerror))
         sys.exit(1)
     if options.pid:
         options.pid.write("{0}\n".format(os.getpid()))
