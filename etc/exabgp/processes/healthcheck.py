@@ -251,7 +251,7 @@ def loopback_ips(label):
                 if not lmo or not lmo.group("label").startswith(label):
                     continue
             addresses.append(ip)
-    logger.debug("Loopback addresses: {0}".format(addresses))
+    logger.debug("Loopback addresses: %s", addresses)
     return addresses
 
 
@@ -260,7 +260,7 @@ def setup_ips(ips, label):
     existing = set(loopback_ips(label))
     toadd = set(ips) - existing
     for ip in toadd:
-        logger.debug("Setup loopback IP address {0}".format(ip))
+        logger.debug("Setup loopback IP address %s", ip)
         with open(os.devnull, "w") as fnull:
             cmd = ["ip", "address", "add", str(ip), "dev", "lo"]
             if label:
@@ -288,7 +288,7 @@ def check(cmd, timeout):
         """Handle SIGALRM signal."""
         raise Alarm()
 
-    logger.debug("Checking command {0}".format(repr(cmd)))
+    logger.debug("Checking command %s", repr(cmd))
     p = subprocess.Popen(cmd, shell=True,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT,
@@ -302,19 +302,17 @@ def check(cmd, timeout):
         if timeout:
             signal.alarm(0)
         if p.returncode != 0:
-            logger.warn("Check command was unsuccessful: {0}".format(
-                p.returncode))
+            logger.warn("Check command was unsuccessful: %s",
+                        p.returncode)
             if stdout.strip():
-                logger.info("Output of check command: {0}".format(stdout))
+                logger.info("Output of check command: %s", stdout)
             return False
         logger.debug(
-            "Command was executed successfully {0} {1}".format(
-                p.returncode, stdout))
+            "Command was executed successfully %s %s", p.returncode, stdout)
         return True
     except Alarm:
-        logger.warn(
-            "Timeout ({0}) while running check command {1}".format(
-                timeout, cmd))
+        logger.warn("Timeout (%s) while running check command %s",
+                    timeout, cmd)
         os.killpg(p.pid, signal.SIGKILL)
         return False
 
@@ -334,7 +332,7 @@ def loop(options):
         """Communicate new state to ExaBGP"""
         if target not in (states.UP, states.DOWN, states.DISABLED):
             return
-        logger.info("send announces for {0} state to ExaBGP".format(target))
+        logger.info("send announces for %s state to ExaBGP", target)
         metric = vars(options).get("{0}_metric".format(str(target).lower()))
         for ip in options.ips:
             if options.withdraw_on_down:
@@ -355,7 +353,7 @@ def loop(options):
                     announce = "{0} as-path [ {1} ]".format(
                         announce,
                         options.as_path)
-            logger.debug("exabgp: {0} {1}".format(command, announce))
+            logger.debug("exabgp: %s %s", command, announce)
             print("{0} {1}".format(command, announce))
             metric += options.increase
         sys.stdout.flush()
@@ -369,14 +367,14 @@ def loop(options):
             target = states.DOWN
 
         # Log and execute commands
-        logger.debug("Transition to {0}".format(str(target)))
+        logger.debug("Transition to %s", str(target))
         cmds = []
         cmds.extend(vars(options).get("{0}_execute".format(
             str(target).lower()), []) or [])
         cmds.extend(vars(options).get("execute", []) or [])
         for cmd in cmds:
-            logger.debug("Transition to {0}, execute `{1}`".format(
-                str(target), cmd))
+            logger.debug("Transition to %s, execute `%s`",
+                         str(target), cmd)
             env = os.environ.copy()
             env.update({"STATE": str(target)})
             with open(os.devnull, "w") as fnull:
