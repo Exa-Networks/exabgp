@@ -17,6 +17,9 @@ from exabgp.bgp.message.update.nlri.qualifier.etag import EthernetTag
 
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
+from exabgp.bgp.message.notification import Notify
+
+
 # ------------ EVPN Prefix Advertisement NLRI ------------
 # As described here:
 # http://tools.ietf.org/html/draft-ietf-bess-evpn-prefix-advertisement-01
@@ -63,9 +66,7 @@ class Prefix(EVPN):
 		self.iplen = iplen
 		self.gwip = gwip
 		self.label = label
-		if self.label is None:
-			raise RuntimeError('NO_LABEL is not defined - it MUST have a pack() function')
-			self.label = "NO_LABEL"
+		self.label = label if label else Labels.NOLABEL
 		self.pack()
 
 	def __str__ (self):
@@ -147,8 +148,7 @@ class Prefix(EVPN):
 			gwip = IP.unpack(data[:16])
 			data = data[16:]
 		else:
-			# XXX: not nice, we should raise a Notification
-			raise Exception("Data field length is given as %d, but EVPN route currently support only IPv4 or IPv6(34 or 58)" % iplen)
+			raise Notify(3,5,"Data field length is given as %d, but EVPN route currently support only IPv4 or IPv6(34 or 58)" % iplen)
 
 		label = Labels.unpack(data[:3])
 

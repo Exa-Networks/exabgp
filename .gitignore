@@ -5,6 +5,8 @@
 /sdist/
 /cover/
 
+*.sln
+
 .DS_Store
 .coveralls.yml*
 .coverage

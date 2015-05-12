@@ -12,8 +12,9 @@ from exabgp.bgp.message.update.nlri.qualifier.esi import ESI
 from exabgp.bgp.message.update.nlri.qualifier.etag import EthernetTag
 from exabgp.bgp.message.update.nlri.qualifier.mac import MAC as MACQUAL
 
-
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
+
+from exabgp.bgp.message.notification import Notify
 
 
 # ===================================================================== EVPNNLRI
@@ -41,8 +42,8 @@ class MAC (EVPN):
 	NAME = "MAC/IP advertisement"
 	SHORT_NAME = "MACAdv"
 
-	def __init__ (self, rd, esi, etag, mac, maclen, label,ip,packed=None):
-		EVPN.__init__(self,packed)
+	def __init__ (self, rd, esi, etag, mac, maclen, label, ip, packed=None):
+		EVPN.__init__(self, packed)
 		self.rd = rd
 		self.esi = esi
 		self.etag = etag
@@ -103,23 +104,37 @@ class MAC (EVPN):
 
 	@classmethod
 	def unpack (cls, data):
+		datalen = len(data)
 		rd = RouteDistinguisher.unpack(data[:8])
 		esi = ESI.unpack(data[8:18])
 		etag = EthernetTag.unpack(data[18:22])
 		maclength = ord(data[22])
 
-		if maclength % 8 != 0:
-			raise Exception('invalid MAC Address length in %s' % cls.NAME)
-		end = 23 + maclength/8
+		if (maclength > 48 or maclength < 0):
+			raise Notify(3,5,'invalid MAC Address length in %s' % cls.NAME)
+		end = 23 + 6 # MAC length MUST be 6
 
 		mac = MACQUAL.unpack(data[23:end])
 
 		length = ord(data[end])
-		if length % 8 != 0:
-			raise Exception('invalid IP Address length in %s' % cls.NAME)
 		iplen = length / 8
 
-		ip = IP.unpack(data[end+1:end+1+iplen])
-		label = Labels.unpack(data[end+1+iplen:])
+		if datalen in [36,39]:  # No IP information (1 or 2 labels)
+			iplenUnpack = 0
+			if iplen != 0:
+				raise Notify(3,5,"IP length is given as %d, but current MAC route has no IP information" % iplen)
+		elif datalen in [40, 43]:  # Using IPv4 addresses (1 or 2 labels)
+			iplenUnpack = 4
+			if (iplen > 32 or iplen < 0):
+				raise Notify(3,5,"IP field length is given as %d, but current MAC route is IPv4 and valus is out of range" % iplen)
+		elif datalen in [52, 55]:  # Using IPv6 addresses (1 or 2 labels)
+			iplenUnpack = 16
+			if (iplen > 128 or iplen < 0):
+				raise Notify(3,5,"IP field length is given as %d, but current MAC route is IPv6 and valus is out of range" % iplen)
+		else:
+			raise Notify(3,5,"Data field length is given as %d, but does not match one of the expected lengths" % datalen)
+
+		ip = IP.unpack(data[end+1:end+1+iplenUnpack])
+		label = Labels.unpack(data[end+1+iplenUnpack:])
 
 		return cls(rd,esi,etag,mac,maclength,label,ip,data)
