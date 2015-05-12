@@ -110,18 +110,23 @@ class MPLSVPN (MPLS):
 		assert(isinstance(labels,Labels))
 		self.labels = labels
 
-	def __cmp__(self,other):
+	def __eq__(self,other):
 		# Note: BaGPipe needs an advertise and a withdraw for the same
 		# RD:prefix to result in objects that are equal for Python,
 		# this is why the test below does not look at self.labels
-		if (
+		return (
 			isinstance(other,MPLSVPN) and
 			self.rd == other.rd and
 			self.prefix == other.prefix
-		):
-			return 0
-		else:
-			return -1
+		)
+	
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+	
+	def __hash__(self):
+		# Same as for __cmp__: two NLRI with same RD and prefix, but
+		# different labels need to hash equal
+		return hash((self.rd, self.ip, self.mask))
 		
 	def __str__(self):
 		return "%s,%s/%d:%s" % (self.rd._str(), self.ip, self.mask, repr(self.labels))
