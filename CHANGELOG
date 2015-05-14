@@ -6,6 +6,10 @@ Version explained:
 Version 3.5.0
  * Feature: add support for upstart
    patch by: Pierre-Yves Kerembellec
+ * Feature/Fix: Port of bagpipe EVPN code
+   patch by: Thomas Morrin
+ * Feature: EVPN RT5 support
+   patch by: Diego Garcia del Rio
  * Change: Update are now grouped by default
  * Change: Change the API configuration syntax and format
   - JSON is now the default API encoder
@@ -24,6 +28,14 @@ Version 3.5.0
  * Fix: Do shutdown when waiting for a new connection to a peer
  * Fix: Bad ASN enconding when ASN4 is not negotiated
     reported by: Orangefish on github
+ * Fix: Shutdown when waiting for a new outgoing connection to establish
+ * Fix: JSON counter
+    reported by:
+ * Fix: JSON flow printing for source and destination
+ * Fix: Do not always locate exabgp.env
+    reported by: Florian Obser
+ * Fix: Correctly drop root privileges
+    reported by: Florian Obser
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
