@@ -140,10 +140,24 @@ class _NoIP (object):
 		return ''
 
 	def __str__ (self):
-		return 'none'
+		return 'no-ip'
 
 NoIP = _NoIP()
 
+
+# ========================================================================= NoIP
+#
+
+class _NoNextHop (object):
+	packed = ''
+
+	def pack (self, data, negotiated=None):
+		return ''
+
+	def __str__ (self):
+		return 'no-nexthop'
+
+NoNextHop = _NoNextHop()
 
 # ========================================================================= IPv4
 #
