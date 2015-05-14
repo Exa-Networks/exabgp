@@ -109,7 +109,7 @@ class Reactor (object):
 	def run (self):
 		self.daemon.daemonise()
 
-		# Make sure we create processes one we have closed file descriptor
+		# Make sure we create processes once we have closed file descriptor
 		# unfortunately, this must be done before reading the configuration file
 		# so we can nto do it with dropped privileges
 		self.processes = Processes(self)
@@ -124,7 +124,7 @@ class Reactor (object):
 
 		# but I can not see any way to avoid it
 
-		if not self.reload():
+		if not self.load():
 			return False
 
 		try:
@@ -152,6 +152,8 @@ class Reactor (object):
 			self.logger.reactor("Could not drop privileges to '%s' refusing to run as root" % self.daemon.user,'critical')
 			self.logger.reactor("Set the environmemnt value exabgp.daemon.user to change the unprivileged user",'critical')
 			return
+
+		self.processes.start()
 
 		# This is required to make sure we can write in the log location as we now have dropped root privileges
 		if not self.logger.restart():
@@ -181,7 +183,8 @@ class Reactor (object):
 						self.shutdown()
 					elif self._reload and reload_completed:
 						self._reload = False
-						self.reload(self._reload_processes)
+						self.load()
+						self.processes.start(self._reload_processes)
 						self._reload_processes = False
 					elif self._restart:
 						self._restart = False
@@ -312,7 +315,7 @@ class Reactor (object):
 		for key in self.peers.keys():
 			self.peers[key].stop()
 
-	def reload (self, restart=False):
+	def load (self):
 		"""reload the configuration and send to the peer the route which changed"""
 		self.logger.reactor("Performing reload of exabgp %s" % version)
 
@@ -349,8 +352,6 @@ class Reactor (object):
 				self.peers[key].reconfigure(neighbor)
 		self.logger.configuration("Loaded new configuration successfully",'warning')
 
-		# This only starts once ...
-		self.processes.start(restart)
 		return True
 
 	def schedule (self):
