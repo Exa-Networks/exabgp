@@ -5,7 +5,10 @@ Version explained:
 
 Version 3.4.11
  * format change for notification and shutdown message
- * Fix: Do shutdown when waiting for a new connection to a peer
+ * Fix: Shutdown when waiting for a new outgoing connection to establish
+ * Fix: ASN4 encoding with non-ASN4 speakers
+ * Fix: JSON counter
+ * Fix: JSON flow printing for source and destination
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
