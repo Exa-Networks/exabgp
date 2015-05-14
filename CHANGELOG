@@ -4,11 +4,18 @@ Version explained:
  bug   : increase on bug or incremental changes
 
 Version 3.4.11
- * format change for notification and shutdown message
+ * Change: notification and shutdown message
+ * Fix: Do shutdown when waiting for a new connection to a peer
+ * Fix: Bad ASN enconding when ASN4 is not negotiated
+    reported by: Orangefish on github
  * Fix: Shutdown when waiting for a new outgoing connection to establish
- * Fix: ASN4 encoding with non-ASN4 speakers
  * Fix: JSON counter
+    reported by: 
  * Fix: JSON flow printing for source and destination
+ * Fix: Do not always locate exabgp.env
+    reported by: Florian Obser
+ * Fix: Correctly drop root privileges
+    reported by: Florian Obser
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
