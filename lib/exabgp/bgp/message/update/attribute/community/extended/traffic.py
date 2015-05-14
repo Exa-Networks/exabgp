@@ -34,7 +34,7 @@ class TrafficRate (ExtendedCommunity):
 			)
 		)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "rate-limit %d" % self.rate
 
 	@staticmethod
@@ -68,7 +68,7 @@ class TrafficAction (ExtendedCommunity):
 		bitmask = self._sample[sample] | self._terminal[terminal]
 		ExtendedCommunity.__init__(self,community if community is not None else pack('!BBLBB',0x80,0x07,0,0,bitmask))
 
-	def __str__ (self):
+	def __repr__ (self):
 		s = []
 		if self.sample:
 			s.append('sample')
@@ -105,7 +105,7 @@ class TrafficRedirect (ExtendedCommunity):
 			)
 		)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "redirect:%s:%s" % (self.asn,self.target)
 
 	@staticmethod
@@ -134,7 +134,7 @@ class TrafficMark (ExtendedCommunity):
 			)
 		)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "mark %d" % self.dscp
 
 	@staticmethod
@@ -165,7 +165,7 @@ class TrafficNextHop (ExtendedCommunity):
 			)
 		)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "copy-to-nexthop" if self.copy else "redirect-to-nexthop"
 
 	@staticmethod

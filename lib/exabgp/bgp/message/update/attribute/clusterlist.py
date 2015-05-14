@@ -37,7 +37,7 @@ class ClusterList (Attribute):
 	def __len__ (self):
 		return self._len
 
-	def __str__ (self):
+	def __repr__ (self):
 		if self._len != 1:
 			return '[ %s ]' % ' '.join([str(_) for _ in self.clusters])
 		return '%s' % self.clusters[0]

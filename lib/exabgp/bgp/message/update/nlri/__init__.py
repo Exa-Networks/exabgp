@@ -37,3 +37,4 @@ NLRI.register_nlri(Flow,AFI.ipv4,SAFI.flow_vpn)
 NLRI.register_nlri(Flow,AFI.ipv6,SAFI.flow_vpn)
 
 NLRI.register_nlri(RouteTargetConstraint,AFI.ipv4,SAFI.rtc)
+
