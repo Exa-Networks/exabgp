@@ -311,7 +311,9 @@ class Configuration (object):
 			'route-distinguisher': self._route_rd,
 			'next-hop': self._flow_route_next_hop,
 			'source': self._flow_source,
+			'source-ipv4': self._flow_source,
 			'destination': self._flow_destination,
+			'destination-ipv4': self._flow_destination,
 			'port': self._flow_route_anyport,
 			'source-port': self._flow_route_source_port,
 			'destination-port': self._flow_route_destination_port,
@@ -2583,6 +2585,7 @@ class Configuration (object):
 				[],
 				[
 					'source','destination',
+					'source-ipv4','destination-ipv4',
 					'port','source-port','destination-port',
 					'protocol','next-header','tcp-flags','icmp-type','icmp-code',
 					'fragment','dscp','traffic-class','packet-length','flow-label'
