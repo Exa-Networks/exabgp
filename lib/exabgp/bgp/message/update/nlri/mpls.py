@@ -10,7 +10,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.protocol.ip import IP
-from exabgp.protocol.ip import NoIP
+from exabgp.protocol.ip import NoNextHop
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
@@ -28,7 +28,7 @@ class MPLS (NLRI,CIDR):
 		self.path_info = PathInfo.NOPATH if path is None else path
 		self.labels = Labels.NOLABEL
 		self.rd = RouteDistinguisher.NORD
-		self.nexthop = IP.unpack(nexthop) if nexthop else NoIP
+		self.nexthop = IP.unpack(nexthop) if nexthop else NoNextHop
 		self.action = action
 		NLRI.__init__(self,afi,safi)
 		CIDR.__init__(self,packed,mask)

@@ -16,7 +16,7 @@ from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTarge
 from exabgp.protocol.ip.address import Address
 
 from exabgp.protocol.ip import IP
-from exabgp.protocol.ip import NoIP
+from exabgp.protocol.ip import NoNextHop
 
 
 class RouteTargetConstraint(Address):
@@ -27,7 +27,7 @@ class RouteTargetConstraint(Address):
 	def __init__ (self, afi, safi, action, nexthop, origin, rt):
 		Address.__init__(self,afi,safi)
 		self.action = action
-		self.nexthop = IP.unpack(nexthop) if nexthop else NoIP
+		self.nexthop = IP.unpack(nexthop) if nexthop else NoNextHop
 		self.origin = origin
 		self.rt = rt
 

@@ -9,7 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
-from exabgp.protocol.ip import NoIP
+from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
@@ -272,8 +272,8 @@ class Update (Message):
 		# Is the peer going to send us some Path Information with the route (AddPath)
 		addpath = negotiated.addpath.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
 
-		# empty string for NoIP, the packed IP otherwise (without the 3/4 bytes of attributes headers)
-		_nexthop = attributes.get(Attribute.CODE.NEXT_HOP,NoIP)
+		# empty string for NoNextHop, the packed IP otherwise (without the 3/4 bytes of attributes headers)
+		_nexthop = attributes.get(Attribute.CODE.NEXT_HOP,NoNextHop)
 		nexthop = _nexthop.packed
 
 		# XXX: NEXTHOP MUST NOT be the IP address of the receiving speaker.

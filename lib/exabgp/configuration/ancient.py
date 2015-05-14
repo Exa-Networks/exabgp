@@ -28,7 +28,7 @@ from exabgp.protocol.family import known_families
 from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.protocol.ip import IP
-from exabgp.protocol.ip import NoIP
+from exabgp.protocol.ip import NoNextHop
 
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message import Message
@@ -413,6 +413,7 @@ class Configuration (object):
 			return False
 		except Exception:
 			self.error = 'configuration parsing issue'
+			raise
 			return False
 
 	def _reload (self):
@@ -1776,7 +1777,7 @@ class Configuration (object):
 
 	def _check_static_route (self, scope):
 		update = scope[-1]['announce'][-1]
-		if update.nlri.nexthop is NoIP:
+		if update.nlri.nexthop is NoNextHop:
 			self._error = 'syntax: route <ip>/<mask> { next-hop <ip>; }'
 			if self.debug: raise Exception()  # noqa
 			return False
@@ -2865,7 +2866,7 @@ class Configuration (object):
 		try:
 			change = scope[-1]['announce'][-1]
 
-			if change.nlri.nexthop is not NoIP:
+			if change.nlri.nexthop is not NoNextHop:
 				self._error = self._str_flow_error
 				if self.debug: raise Exception()  # noqa
 				return False
@@ -2924,7 +2925,7 @@ class Configuration (object):
 					return True
 			else:
 				change = scope[-1]['announce'][-1]
-				if change.nlri.nexthop is not NoIP:
+				if change.nlri.nexthop is not NoNextHop:
 					self._error = self._str_flow_error
 					if self.debug: raise Exception()  # noqa
 					return False
@@ -2943,7 +2944,7 @@ class Configuration (object):
 		try:
 			change = scope[-1]['announce'][-1]
 
-			if change.nlri.nexthop is NoIP:
+			if change.nlri.nexthop is NoNextHop:
 				self._error = self._str_flow_error
 				if self.debug: raise Exception()  # noqa
 				return False
