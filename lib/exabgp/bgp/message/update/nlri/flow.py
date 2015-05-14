@@ -309,22 +309,22 @@ class FlowSource (object):
 
 # Prefix
 class Flow4Destination (IPrefix4,FlowDestination):
-	pass
+	NAME = 'destination-ipv4'
 
 
 # Prefix
 class Flow4Source (IPrefix4,FlowSource):
-	pass
+	NAME = 'source-ipv4'
 
 
 # Prefix
 class Flow6Destination (IPrefix6,FlowDestination):
-	pass
+	NAME = 'destination-ipv4'
 
 
 # Prefix
 class Flow6Source (IPrefix6,FlowSource):
-	pass
+	NAME = 'source-ipv6'
 
 
 class FlowIPProtocol (IOperationByte,NumericString,IPv4):
