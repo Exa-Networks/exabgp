@@ -318,6 +318,8 @@ class JSON (object):
 
 		nlri = ''
 		if not add and not remove:  # an EOR
+			if not update.nlris:
+				raise RuntimeError('no update.nlri: %s %s' % (type(update),dir(update)))
 			return update.nlris[0].json()
 		if add:
 			nlri += '"announce": { %s }' % ', '.join(add)
