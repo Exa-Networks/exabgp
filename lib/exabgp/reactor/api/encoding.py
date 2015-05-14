@@ -251,7 +251,7 @@ class JSON (object):
 				'"address": { "local": "%s", "peer": "%s" }, ' \
 				'"asn": { "local": "%s", "peer": "%s" }' \
 				'%s%s%s%s' \
-			'}' % (
+			' }' % (
 				neighbor.local_address,neighbor.peer_address,
 				neighbor.local_as,neighbor.peer_as,
 				', ' if direction else '',
