@@ -305,6 +305,7 @@ def check(cmd, timeout):
 
     logger.debug("Checking command %s", repr(cmd))
     p = subprocess.Popen(cmd, shell=True,
+                         env = {"NSS_SDB_USE_CACHE":"YES"},
                          stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT,
                          preexec_fn=os.setpgrp)
