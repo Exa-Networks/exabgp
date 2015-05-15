@@ -37,6 +37,7 @@ Version 3.5.0
     reported by: Florian Obser
  * Fix: Correctly drop root privileges
     reported by: Florian Obser
+ * Fix: validation of flow routes
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
