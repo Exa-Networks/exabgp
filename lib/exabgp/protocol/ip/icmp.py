@@ -132,7 +132,7 @@ class ICMPCode (int):
 	IP_HEADER_BAD                         = 0x2
 
 	def __str__ (self):
-			return '%d' % int(self)
+		return '%d' % int(self)
 
 
 def NamedICMPCode (name):
