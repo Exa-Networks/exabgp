@@ -18,6 +18,7 @@ Version 3.4.11
  * Fix: Correctly drop root privileges
     reported by: Florian Obser
  * Fix: validation of flow routes
+ * Fix: Python differences between Unix version breaking process forking
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
