@@ -25,23 +25,23 @@ class Protocol (int):
 	PIM   = 0x67
 	SCTP  = 0x84
 	#
-	_str = {
-		ICMP: 'ICMP',
-		IGMP: 'IGMP',
-		TCP:  'TCP',
-		EGP:  'EGP',
-		UDP:  'UDP',
-		RSVP: 'RSVP',
-		GRE:  'GRE',
-		ESP:  'ESP',
-		AH:   'AH',
-		OSPF: 'OSPF',
-		IPIP: 'IPIP',
-		PIM:  'PIP',
-		SCTP: 'SCTP',
+	_value = {
+		'ICMP': ICMP,
+		'IGMP': IGMP,
+		'TCP':  TCP,
+		'EGP':  EGP,
+		'UDP':  UDP,
+		'RSVP': RSVP,
+		'GRE':  GRE,
+		'ESP':  ESP,
+		'AH':   AH,
+		'OSPF': OSPF,
+		'IPIP': IPIP,
+		'PIM':  PIM,
+		'SCTP': SCTP,
 	}
 
-	_value = dict([(r,l) for (l,r) in _str.items()])
+	_str = dict([(r,l) for (l,r) in _value.items()])
 
 	def __str__ (self):
 		return self._str.get(self,'unknown protocol %d' % int(self))
