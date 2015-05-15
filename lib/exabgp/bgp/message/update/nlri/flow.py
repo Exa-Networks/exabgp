@@ -24,9 +24,7 @@ from exabgp.protocol import Protocol
 from exabgp.protocol.ip.icmp import ICMPType
 from exabgp.protocol.ip.icmp import ICMPCode
 from exabgp.protocol.ip.fragment import Fragment
-from exabgp.protocol.ip.fragment import NamedFragment
 from exabgp.protocol.ip.tcp.flag import TCPFlag
-from exabgp.protocol.ip.tcp.flag import NamedTCPFlag
 
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
@@ -378,7 +376,7 @@ class FlowICMPCode (IOperationByte,BinaryString,IPv4,IPv6):
 class FlowTCPFlag (IOperationByte,BinaryString,IPv4,IPv6):
 	ID = 0x09
 	NAME = 'tcp-flags'
-	converter = staticmethod(converter(NamedTCPFlag))
+	converter = staticmethod(converter(TCPFlag.named))
 	decoder = staticmethod(decoder(ord,TCPFlag))
 
 
@@ -409,7 +407,7 @@ class FlowTrafficClass (IOperationByte,NumericString,IPv6):
 class FlowFragment (IOperationByteShort,NumericString,IPv4):
 	ID = 0x0C
 	NAME = 'fragment'
-	converter = staticmethod(converter(NamedFragment))
+	converter = staticmethod(converter(Fragment.named))
 	decoder = staticmethod(decoder(ord,Fragment))
 
 

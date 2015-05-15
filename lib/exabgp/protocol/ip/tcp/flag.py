@@ -18,34 +18,23 @@ class TCPFlag (int):
 	ACK    = 0x10
 	URGENT = 0x20
 
+	_value = {
+		'FIN':    FIN,
+		'SYN':    SYN,
+		'RST':    RST,
+		'PUSH':   PUSH,
+		'ACK':    ACK,
+		'URGENT': URGENT,
+	}
+
+	_str = dict([(r,l) for (l,r) in _value.items()])
+
 	def __str__ (self):
-		if self == self.FIN:
-			return 'fin'
-		if self == self.SYN:
-			return 'syn'
-		if self == self.RST:
-			return 'rst'
-		if self == self.PUSH:
-			return 'push'
-		if self == self.ACK:
-			return 'ack'
-		if self == self.URGENT:
-			return 'urgent'
-		return 'unknown tcp flag %d' % int(self)
+		return self._str.get(self,'unknown tcp flag %d' % int(self))
 
-
-def NamedTCPFlag (name):
-	flag = name.lower()
-	if flag == 'fin':
-		return TCPFlag(TCPFlag.FIN)
-	if flag == 'syn':
-		return TCPFlag(TCPFlag.SYN)
-	if flag == 'rst':
-		return TCPFlag(TCPFlag.RST)
-	if flag == 'push':
-		return TCPFlag(TCPFlag.PUSH)
-	if flag == 'ack':
-		return TCPFlag(TCPFlag.ACK)
-	if flag == 'urgent':
-		return TCPFlag(TCPFlag.URGENT)
-	raise ValueError('unknown tcp flag %s' % flag)
+	@staticmethod
+	def named (flag):
+		name = flag.upper()
+		if name in TCPFlag._value:
+			return TCPFlag(TCPFlag._value[name])
+		raise ValueError('unknown tcp flag %s' % flag)
