@@ -3,10 +3,12 @@
 [ExaBGP](http://github.com/Exa-Networks/exabgp) allows engineers to control their network from commodity servers.
 Think of it as [Software Defined Networking](http://en.wikipedia.org/wiki/Software-defined_networking) using [BGP](http://en.wikipedia.org/wiki/BGP) by transforming [BGP messages](http://thomas.mangin.com/data/pdf/UKNOF%2015%20-%20Mangin%20-%20Naked%20BGP.pdf) into friendly plain [text or JSON](https://github.com/Exa-Networks/exabgp/wiki/Controlling-ExaBGP-:-API-for-received-messages).
 
-Current documented use cases include [DDOS mitigation](http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf), [network visualisation](https://code.google.com/p/gixlg/wiki/sample_maps), [service high availability](http://vincent.bernat.im/en/blog/2013-exabgp-highavailability.html),
-[anycast](http://blog.iweb-hosting.co.uk/blog/2012/01/27/using-bgp-to-serve-high-availability-dns/).
+Current documented use cases include [DDOS mitigation](http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf), [network visualisation](https://code.google.com/p/gixlg/wiki/sample_maps), [anycast](http://blog.iweb-hosting.co.uk/blog/2012/01/27/using-bgp-to-serve-high-availability-dns/), [service high availability](http://bits.shutterstock.com/2014/05/22/stop-buying-load-balancers-and-start-controlling-your-traffic-flow-with-software/).
 
-Find what users have [done with it](https://github.com/Exa-Networks/exabgp/wiki/Related-articles).
+It comes with an `healthcheck` application to help you monitor your daemons and withdraw dead ones from the network during failures/maintenances. A full lab explaining how to use it is available [here](http://vincent.bernat.im/en/blog/2013-exabgp-highavailability.html).
+
+
+Find what other users have [done with it](https://github.com/Exa-Networks/exabgp/wiki/Related-articles).
 
  The program is packaged for Debian, Ubuntu, ArchLinux, Gentoo, Mint, FreeBSD, OSX and even OmniOS, but the rate of development mean that some features may only be available on latest version.
 
