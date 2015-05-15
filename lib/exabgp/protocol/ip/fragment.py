@@ -29,30 +29,22 @@ class Fragment (int):
 	LAST     = 0x08
 	# reserved = 0xF0
 
+	_value = {
+		'not-a-fragment': NOT,
+		'dont-fragment':  DONT,
+		'is-fragment':    IS,
+		'first-fragment': FIRST,
+		'last-fragment':  LAST,
+	}
+
+	_str = dict([(r,l) for (l,r) in _value.items()])
+
 	def __str__ (self):
-		if self == self.NOT:
-			return 'not-a-fragment'
-		if self == self.DONT:
-			return 'dont-fragment'
-		if self == self.IS:
-			return 'is-fragment'
-		if self == self.FIRST:
-			return 'first-fragment'
-		if self == self.LAST:
-			return 'last-fragment'
-		return 'unknown fragment value %d' % int(self)
+		return self._str.get(self,'unknown fragment value %d' % int(self))
 
-
-def NamedFragment (name):
-	fragment = name.lower()
-	if fragment == 'not-a-fragment':
-		return Fragment(Fragment.NOT)
-	if fragment == 'dont-fragment':
-		return Fragment(Fragment.DONT)
-	if fragment == 'is-fragment':
-		return Fragment(Fragment.IS)
-	if fragment == 'first-fragment':
-		return Fragment(Fragment.FIRST)
-	if fragment == 'last-fragment':
-		return Fragment(Fragment.LAST)
-	raise ValueError('unknown fragment name %s' % fragment)
+	@staticmethod
+	def named (fragment):
+		name = fragment.lower().replace('_','-')
+		if name in Fragment._value:
+			return Fragment(Fragment._value[name])
+		raise ValueError('unknown fragment name %s' % fragment)
