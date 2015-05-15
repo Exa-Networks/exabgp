@@ -15,3 +15,7 @@ def run_exabgp ():
 def run_exabmp ():
 	from exabgp.application.bmp import main
 	main()
+
+def run_healthcheck ():
+	from exabgp.application.healthcheck import main
+	main()
