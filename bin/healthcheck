@@ -1,0 +1,20 @@
+#!/bin/sh
+
+path="$(cd "$(dirname "$0")"/.. ; pwd)"
+
+export PYTHONPATH="$path"/lib:/usr/share/exabgp/lib/3.4.4
+
+for INTERPRETER in "$INTERPRETER" pypy python2.7 python2.6 python2 python; do
+	INTERPRETER="$(command -v "$INTERPRETER")" && break
+done
+
+APPLICATION="$("$INTERPRETER" -c "
+import sys
+import os
+
+print [os.path.join(_, 'exabgp', 'application', 'healthcheck.py')
+       for _ in sys.path
+       if os.path.isfile('/'.join((_, 'exabgp', 'application', 'healthcheck.py')))][0]
+")"
+
+exec "$INTERPRETER" "$APPLICATION" --folder "$path"/etc/exabgp "$@"
