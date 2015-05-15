@@ -23,8 +23,6 @@ from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.protocol import Protocol
 from exabgp.protocol.ip.icmp import ICMPType
 from exabgp.protocol.ip.icmp import ICMPCode
-from exabgp.protocol.ip.icmp import NamedICMPType
-from exabgp.protocol.ip.icmp import NamedICMPCode
 from exabgp.protocol.ip.fragment import Fragment
 from exabgp.protocol.ip.fragment import NamedFragment
 from exabgp.protocol.ip.tcp.flag import TCPFlag
@@ -366,14 +364,14 @@ class FlowSourcePort (IOperationByteShort,NumericString,IPv4,IPv6):
 class FlowICMPType (IOperationByte,BinaryString,IPv4,IPv6):
 	ID = 0x07
 	NAME = 'icmp-type'
-	converter = staticmethod(converter(NamedICMPType))
+	converter = staticmethod(converter(ICMPType.named))
 	decoder = staticmethod(decoder(_number,ICMPType))
 
 
 class FlowICMPCode (IOperationByte,BinaryString,IPv4,IPv6):
 	ID = 0x08
 	NAME = 'icmp-code'
-	converter = staticmethod(converter(NamedICMPCode))
+	converter = staticmethod(converter(ICMPCode.named))
 	decoder = staticmethod(decoder(_number,ICMPCode))
 
 

@@ -28,73 +28,36 @@ class ICMPType (int):
 	MASK_REPLY               = 0x12
 	TRACEROUTE               = 0x1E
 
+	_value = dict ((k.lower().replace('_','-'),v) for (k,v) in {
+		'ECHO_REPLY':               ECHO_REPLY,
+		'DESTINATION_UNREACHEABLE': DESTINATION_UNREACHEABLE,
+		'SOURCE_QUENCH':            SOURCE_QUENCH,
+		'REDIRECT':                 REDIRECT,
+		'ECHO_REQUEST':             ECHO_REQUEST,
+		'ROUTER_ADVERTISEMENT':     ROUTER_ADVERTISEMENT,
+		'ROUTER_SOLICIT':           ROUTER_SOLICIT,
+		'TIME_EXCEEDED':            TIME_EXCEEDED,
+		'PARAMETER_PROBLEM':        PARAMETER_PROBLEM,
+		'TIMESTAMP':                TIMESTAMP,
+		'TIMESTAMP_REPLY':          TIMESTAMP_REPLY,
+		'INFO_REQUEST':             INFO_REQUEST,
+		'INFO_REPLY':               INFO_REPLY,
+		'MASK_REQUEST':             MASK_REQUEST,
+		'MASK_REPLY':               MASK_REPLY,
+		'TRACEROUTE':               TRACEROUTE,
+	}.items())
+
+	_str = dict([(r,l) for (l,r) in _value.items()])
+
 	def __str__ (self):
-		if self == ICMPType.ECHO_REPLY:
-			return 'echo-reply'
-		if self == ICMPType.ECHO_REQUEST:
-			return 'echo-request'
-		if self == ICMPType.INFO_REPLY:
-			return 'info-reply'
-		if self == ICMPType.INFO_REQUEST:
-			return 'info-request'
-		if self == ICMPType.MASK_REPLY:
-			return 'mask-reply'
-		if self == ICMPType.MASK_REQUEST:
-			return 'mask-request'
-		if self == ICMPType.PARAMETER_PROBLEM:
-			return 'parameter-problem'
-		if self == ICMPType.REDIRECT:
-			return 'redirect'
-		if self == ICMPType.ROUTER_ADVERTISEMENT:
-			return 'router-advertisement'
-		if self == ICMPType.ROUTER_SOLICIT:
-			return 'router-solicit'
-		if self == ICMPType.SOURCE_QUENCH:
-			return 'source-quench'
-		if self == ICMPType.TIME_EXCEEDED:
-			return 'time-exceeded'
-		if self == ICMPType.TIMESTAMP:
-			return 'timestamp'
-		if self == ICMPType.TIMESTAMP_REPLY:
-			return 'timestamp-reply'
-		if self == ICMPType.DESTINATION_UNREACHEABLE:
-			return 'unreachable'
-		return 'unknown icmp type %d' % int(self)
+		return self._str.get(self,'unknown icmp type %d' % int(self))
 
-
-def NamedICMPType (name):
-	icmp = name.lower()
-	if icmp == 'echo-reply':
-		return ICMPType(ICMPType.ECHO_REPLY)
-	if icmp == 'echo-request':
-		return ICMPType(ICMPType.ECHO_REQUEST)
-	if icmp == 'info-reply':
-		return ICMPType(ICMPType.INFO_REPLY)
-	if icmp == 'info-request':
-		return ICMPType(ICMPType.INFO_REQUEST)
-	if icmp == 'mask-reply':
-		return ICMPType(ICMPType.MASK_REPLY)
-	if icmp == 'mask-request':
-		return ICMPType(ICMPType.MASK_REQUEST)
-	if icmp == 'parameter-problem':
-		return ICMPType(ICMPType.PARAMETER_PROBLEM)
-	if icmp == 'redirect':
-		return ICMPType(ICMPType.REDIRECT)
-	if icmp == 'router-advertisement':
-		return ICMPType(ICMPType.ROUTER_ADVERTISEMENT)
-	if icmp == 'router-solicit':
-		return ICMPType(ICMPType.ROUTER_SOLICIT)
-	if icmp == 'source-quench':
-		return ICMPType(ICMPType.SOURCE_QUENCH)
-	if icmp == 'time-exceeded':
-		return ICMPType(ICMPType.TIME_EXCEEDED)
-	if icmp == 'timestamp':
-		return ICMPType(ICMPType.TIMESTAMP)
-	if icmp == 'timestamp-reply':
-		return ICMPType(ICMPType.TIMESTAMP_REPLY)
-	if icmp == 'unreachable':
-		return ICMPType(ICMPType.DESTINATION_UNREACHEABLE)
-	raise ValueError('unknown icmp type %s' % icmp)
+	@staticmethod
+	def named (icmp):
+		name = icmp.lower().replace('_','-')
+		if name in ICMPType._value:
+			return ICMPType(ICMPType._value[name])
+		raise ValueError('unknown icmp type %s' % name)
 
 
 # http://www.iana.org/assignments/icmp-parameters
@@ -131,58 +94,41 @@ class ICMPCode (int):
 	REQUIRED_OPTION_MISSING               = 0x1
 	IP_HEADER_BAD                         = 0x2
 
+	_value = dict ((k.lower().replace('_','-'),v) for (k,v) in {
+		'NETWORK_UNREACHABLE':                   NETWORK_UNREACHABLE,
+		'HOST_UNREACHABLE':                      HOST_UNREACHABLE,
+		'PROTOCOL_UNREACHABLE':                  PROTOCOL_UNREACHABLE,
+		'PORT_UNREACHABLE':                      PORT_UNREACHABLE,
+		'FRAGMENTATION_NEEDED':                  FRAGMENTATION_NEEDED,
+		'SOURCE_ROUTE_FAILED':                   SOURCE_ROUTE_FAILED,
+		'DESTINATION_NETWORK_UNKNOWN':           DESTINATION_NETWORK_UNKNOWN,
+		'DESTINATION_HOST_UNKNOWN':              DESTINATION_HOST_UNKNOWN,
+		'SOURCE_HOST_ISOLATED':                  SOURCE_HOST_ISOLATED,
+		'DESTINATION_NETWORK_PROHIBITED':        DESTINATION_NETWORK_PROHIBITED,
+		'DESTINATION_HOST_PROHIBITED':           DESTINATION_HOST_PROHIBITED,
+		'NETWORK_UNREACHABLE_FOR_TOS':           NETWORK_UNREACHABLE_FOR_TOS,
+		'HOST_UNREACHABLE_FOR_TOS':              HOST_UNREACHABLE_FOR_TOS,
+		'COMMUNICATION_PROHIBITED_BY_FILTERING': COMMUNICATION_PROHIBITED_BY_FILTERING,
+		'HOST_PRECEDENCE_VIOLATION':             HOST_PRECEDENCE_VIOLATION,
+		'PRECEDENCE_CUTOFF_IN_EFFECT':           PRECEDENCE_CUTOFF_IN_EFFECT,
+		'REDIRECT_FOR_NETWORK':                  REDIRECT_FOR_NETWORK,
+		'REDIRECT_FOR_HOST':                     REDIRECT_FOR_HOST,
+		'REDIRECT_FOR_TOS_AND_NET':              REDIRECT_FOR_TOS_AND_NET,
+		'REDIRECT_FOR_TOS_AND_HOST':             REDIRECT_FOR_TOS_AND_HOST,
+		'TTL_EQ_ZERO_DURING_TRANSIT':            TTL_EQ_ZERO_DURING_TRANSIT,
+		'TTL_EQ_ZERO_DURING_REASSEMBLY':         TTL_EQ_ZERO_DURING_REASSEMBLY,
+		'REQUIRED_OPTION_MISSING':               REQUIRED_OPTION_MISSING,
+		'IP_HEADER_BAD':                         IP_HEADER_BAD,
+	}.items())
+
+	# _str no unique
+
 	def __str__ (self):
 		return '%d' % int(self)
 
-
-def NamedICMPCode (name):
-	icmp = name.lower()
-	if icmp == 'communication-prohibited-by-filtering':
-		return ICMPCode(ICMPCode.COMMUNICATION_PROHIBITED_BY_FILTERING)
-	if icmp == 'destination-host-prohibited':
-		return ICMPCode(ICMPCode.DESTINATION_HOST_PROHIBITED)
-	if icmp == 'destination-host-unknown':
-		return ICMPCode(ICMPCode.DESTINATION_HOST_UNKNOWN)
-	if icmp == 'destination-network-prohibited':
-		return ICMPCode(ICMPCode.DESTINATION_NETWORK_PROHIBITED)
-	if icmp == 'destination-network-unknown':
-		return ICMPCode(ICMPCode.DESTINATION_NETWORK_UNKNOWN)
-	if icmp == 'fragmentation-needed':
-		return ICMPCode(ICMPCode.FRAGMENTATION_NEEDED)
-	if icmp == 'host-precedence-violation':
-		return ICMPCode(ICMPCode.HOST_PRECEDENCE_VIOLATION)
-	if icmp == 'host-unreachable':
-		return ICMPCode(ICMPCode.HOST_UNREACHABLE)
-	if icmp == 'host-unreachable-for-tos':
-		return ICMPCode(ICMPCode.HOST_UNREACHABLE_FOR_TOS)
-	if icmp == 'ip-header-bad':
-		return ICMPCode(ICMPCode.IP_HEADER_BAD)
-	if icmp == 'network-unreachable':
-		return ICMPCode(ICMPCode.NETWORK_UNREACHABLE)
-	if icmp == 'network-unreachable-for-tos':
-		return ICMPCode(ICMPCode.NETWORK_UNREACHABLE_FOR_TOS)
-	if icmp == 'port-unreachable':
-		return ICMPCode(ICMPCode.PORT_UNREACHABLE)
-	if icmp == 'precedence-cutoff-in-effect':
-		return ICMPCode(ICMPCode.PRECEDENCE_CUTOFF_IN_EFFECT)
-	if icmp == 'protocol-unreachable':
-		return ICMPCode(ICMPCode.PROTOCOL_UNREACHABLE)
-	if icmp == 'redirect-for-host':
-		return ICMPCode(ICMPCode.REDIRECT_FOR_HOST)
-	if icmp == 'redirect-for-network':
-		return ICMPCode(ICMPCode.REDIRECT_FOR_NETWORK)
-	if icmp == 'redirect-for-tos-and-host':
-		return ICMPCode(ICMPCode.REDIRECT_FOR_TOS_AND_HOST)
-	if icmp == 'redirect-for-tos-and-net':
-		return ICMPCode(ICMPCode.REDIRECT_FOR_TOS_AND_NET)
-	if icmp == 'required-option-missing':
-		return ICMPCode(ICMPCode.REQUIRED_OPTION_MISSING)
-	if icmp == 'source-host-isolated':
-		return ICMPCode(ICMPCode.SOURCE_HOST_ISOLATED)
-	if icmp == 'source-route-failed':
-		return ICMPCode(ICMPCode.SOURCE_ROUTE_FAILED)
-	if icmp == 'ttl-eq-zero-during-reassembly':
-		return ICMPCode(ICMPCode.TTL_EQ_ZERO_DURING_REASSEMBLY)
-	if icmp == 'ttl-eq-zero-during-transit':
-		return ICMPCode(ICMPCode.TTL_EQ_ZERO_DURING_TRANSIT)
-	raise ValueError('unknown icmp code %s' % icmp)
+	@staticmethod
+	def named (code):
+		name = code.lower().replace('_','-')
+		if name in ICMPCode._value:
+			return ICMPCode(ICMPCode._value[name])
+		raise ValueError('unknown icmp code %s' % code)

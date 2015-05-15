@@ -54,4 +54,4 @@ class Protocol (int):
 		name = protocol.upper()
 		if name in Protocol._value:
 			return Protocol(Protocol._value[name])
-		raise ValueError('unknown protocol %s' % name)
+		raise ValueError('unknown protocol %s' % protocol)
