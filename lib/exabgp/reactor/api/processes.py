@@ -195,7 +195,10 @@ class Processes (object):
 				if r:
 					try:
 						while True:
-							line = proc.stdout.next().rstrip()
+							# Calling next() on Linux and OSX works perfectly well
+							# but not on OpenBSD where it always raise StopIteration
+							# and only readline() works
+							line = proc.stdout.readline().rstrip()
 							consumed_data = True
 							self.logger.processes("Command from process %s : %s " % (process,line))
 							yield (process,formated(line))
