@@ -6,13 +6,18 @@ Created by Thomas Mangin on 2010-01-15.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.protocol.resource import Resource
+
 
 # ============================================================== ICMP Code Field
 # http://www.iana.org/assignments/icmp-parameters
 
-class ICMPType (int):
+class ICMPType (Resource):
+	_NAME = 'icmp type'
+
 	ECHO_REPLY               = 0x00
-	DESTINATION_UNREACHEABLE = 0x03
+	# DESTINATION_UNREACHEABLE = 0x03
+	UNREACHABLE              = 0x03
 	SOURCE_QUENCH            = 0x04
 	REDIRECT                 = 0x05
 	ECHO_REQUEST             = 0x08
@@ -28,9 +33,9 @@ class ICMPType (int):
 	MASK_REPLY               = 0x12
 	TRACEROUTE               = 0x1E
 
-	_value = dict ((k.lower().replace('_','-'),v) for (k,v) in {
+	_VALUE = dict ((k.lower().replace('_','-'),v) for (k,v) in {
 		'ECHO_REPLY':               ECHO_REPLY,
-		'DESTINATION_UNREACHEABLE': DESTINATION_UNREACHEABLE,
+		'UNREACHABLE':              UNREACHABLE,
 		'SOURCE_QUENCH':            SOURCE_QUENCH,
 		'REDIRECT':                 REDIRECT,
 		'ECHO_REQUEST':             ECHO_REQUEST,
@@ -47,21 +52,13 @@ class ICMPType (int):
 		'TRACEROUTE':               TRACEROUTE,
 	}.items())
 
-	_str = dict([(r,l) for (l,r) in _value.items()])
-
-	def __str__ (self):
-		return self._str.get(self,'unknown icmp type %d' % int(self))
-
-	@staticmethod
-	def named (icmp):
-		name = icmp.lower().replace('_','-')
-		if name in ICMPType._value:
-			return ICMPType(ICMPType._value[name])
-		raise ValueError('unknown icmp type %s' % name)
+	_STRING = dict([(r,l) for (l,r) in _VALUE.items()])
 
 
 # http://www.iana.org/assignments/icmp-parameters
-class ICMPCode (int):
+class ICMPCode (Resource):
+	_NAME = 'icmp code'
+
 	# Destination Unreacheable (type 3)
 	NETWORK_UNREACHABLE                   = 0x0
 	HOST_UNREACHABLE                      = 0x1
@@ -94,7 +91,7 @@ class ICMPCode (int):
 	REQUIRED_OPTION_MISSING               = 0x1
 	IP_HEADER_BAD                         = 0x2
 
-	_value = dict ((k.lower().replace('_','-'),v) for (k,v) in {
+	_VALUE = dict ((k.lower().replace('_','-'),v) for (k,v) in {
 		'NETWORK_UNREACHABLE':                   NETWORK_UNREACHABLE,
 		'HOST_UNREACHABLE':                      HOST_UNREACHABLE,
 		'PROTOCOL_UNREACHABLE':                  PROTOCOL_UNREACHABLE,
@@ -121,14 +118,7 @@ class ICMPCode (int):
 		'IP_HEADER_BAD':                         IP_HEADER_BAD,
 	}.items())
 
-	# _str no unique
+	# _STRING would have non-unique keys
 
 	def __str__ (self):
 		return '%d' % int(self)
-
-	@staticmethod
-	def named (code):
-		name = code.lower().replace('_','-')
-		if name in ICMPCode._value:
-			return ICMPCode(ICMPCode._value[name])
-		raise ValueError('unknown icmp code %s' % code)

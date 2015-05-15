@@ -6,11 +6,15 @@ Created by Thomas Mangin on 2010-01-15.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.protocol.resource import Resource
+
 
 # ===================================================================== Protocol
 # http://www.iana.org/assignments/protocol-numbers/
 
-class Protocol (int):
+class Protocol (Resource):
+	_NAME = 'protocol'
+
 	ICMP  = 0x01
 	IGMP  = 0x02
 	TCP   = 0x06
@@ -24,8 +28,8 @@ class Protocol (int):
 	IPIP  = 0x5E
 	PIM   = 0x67
 	SCTP  = 0x84
-	#
-	_value = {
+
+	_VALUE = dict ((k.lower().replace('_','-'),v) for (k,v) in {
 		'ICMP': ICMP,
 		'IGMP': IGMP,
 		'TCP':  TCP,
@@ -39,19 +43,9 @@ class Protocol (int):
 		'IPIP': IPIP,
 		'PIM':  PIM,
 		'SCTP': SCTP,
-	}
+	}.items())
 
-	_str = dict([(r,l) for (l,r) in _value.items()])
-
-	def __str__ (self):
-		return self._str.get(self,'unknown protocol %d' % int(self))
+	_STRING = dict([(r,l) for (l,r) in _VALUE.items()])
 
 	def pack (self):
 		return chr(self)
-
-	@staticmethod
-	def named (protocol):
-		name = protocol.upper()
-		if name in Protocol._value:
-			return Protocol(Protocol._value[name])
-		raise ValueError('unknown protocol %s' % protocol)
