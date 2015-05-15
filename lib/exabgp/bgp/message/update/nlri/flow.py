@@ -21,7 +21,6 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 
 from exabgp.protocol import Protocol
-from exabgp.protocol import NamedProtocol
 from exabgp.protocol.ip.icmp import ICMPType
 from exabgp.protocol.ip.icmp import ICMPCode
 from exabgp.protocol.ip.icmp import NamedICMPType
@@ -332,14 +331,14 @@ class Flow6Source (IPrefix6,FlowSource):
 class FlowIPProtocol (IOperationByte,NumericString,IPv4):
 	ID  = 0x03
 	NAME = 'protocol'
-	converter = staticmethod(converter(NamedProtocol,Protocol))
+	converter = staticmethod(converter(Protocol.named,Protocol))
 	decoder = staticmethod(decoder(ord,Protocol))
 
 
 class FlowNextHeader (IOperationByte,NumericString,IPv6):
 	ID  = 0x03
 	NAME = 'next-header'
-	converter = staticmethod(converter(NamedProtocol,Protocol))
+	converter = staticmethod(converter(Protocol.named,Protocol))
 	decoder = staticmethod(decoder(ord,Protocol))
 
 
