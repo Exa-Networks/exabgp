@@ -240,8 +240,10 @@ class BinaryString (object):
 
 # Components ..............................
 
-def converter (function, klass=int):
+def converter (function, klass=None):
 	def _integer (value):
+		if klass is None:
+			return function(value)
 		try:
 			return klass(value)
 		except ValueError:
