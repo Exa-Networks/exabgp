@@ -5,6 +5,7 @@ Version explained:
 
 Version 3.4.11
  * Change: notification and shutdown message
+ * Change: install healthcheck in bin
  * Fix: Do shutdown when waiting for a new connection to a peer
  * Fix: Bad ASN enconding when ASN4 is not negotiated
     reported by: Orangefish on github
