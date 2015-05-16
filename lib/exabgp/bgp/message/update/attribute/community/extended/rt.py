@@ -54,7 +54,7 @@ class RouteTargetASN2Number (RouteTarget):
 			)
 		)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "target:%d:%d" % (self.asn,self.number)
 
 	@staticmethod
@@ -85,7 +85,7 @@ class RouteTargetIPNumber (RouteTarget):
 			)
 		)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "target:%s:%d" % (self.ip, self.number)
 
 	@staticmethod
@@ -116,7 +116,7 @@ class RouteTargetASN4Number (RouteTarget):
 			)
 		)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "target:%dL:%d" % (self.asn, self.number)
 
 	@staticmethod
