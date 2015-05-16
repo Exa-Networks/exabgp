@@ -47,6 +47,9 @@ class RouteDistinguisher (object):
 	def __hash__(self):
 		return hash(self.rd)
 
+	def __cmp__(self,other):
+		return cmp(self.rd,other.rd)
+
 	def __str__ (self):
 		if not self.rd:
 			return ''
