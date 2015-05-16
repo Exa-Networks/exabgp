@@ -11,6 +11,8 @@ Version 3.5.0
    patch by: Thomas Morrin
  * Feature: EVPN RT5 support
    patch by: Diego Garcia del Rio
+ * Feature: Can use numerical values for Flow elements
+   requested by: jpan613 (on github)
  * Change: Update are now grouped by default
  * Change: Change the API configuration syntax and format
   - JSON is now the default API encoder
