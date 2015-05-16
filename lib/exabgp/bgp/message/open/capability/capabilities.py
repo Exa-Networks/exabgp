@@ -18,6 +18,7 @@ from exabgp.bgp.message.open.capability.ms import MultiSession
 from exabgp.bgp.message.open.capability.operational import Operational
 from exabgp.bgp.message.open.capability.refresh import RouteRefresh
 from exabgp.bgp.message.open.capability.refresh import EnhancedRouteRefresh
+from exabgp.bgp.message.open.capability.hostname import HostName
 # from exabgp.bgp.message.open.capability.unknown import UnknownCapability
 
 from exabgp.bgp.message.notification import Notify
@@ -103,6 +104,9 @@ class Capabilities (dict):
 		self[Capability.CODE.ROUTE_REFRESH] = RouteRefresh()
 		self[Capability.CODE.ENHANCED_ROUTE_REFRESH] = EnhancedRouteRefresh()
 
+	def _hostname (self, neighbor):
+		self[Capability.CODE.HOSTNAME] = HostName(neighbor.host_name,neighbor.domain_name)
+
 	def _operational (self, neighbor):
 		if not neighbor.operational:
 			return
@@ -121,6 +125,7 @@ class Capabilities (dict):
 		self._graceful(neighbor,restarted)
 		self._refresh(neighbor)
 		self._operational(neighbor)
+		self._hostname(neighbor)
 		self._session(neighbor)  # MUST be the last key added, really !?! dict is not ordered !
 		return self
 

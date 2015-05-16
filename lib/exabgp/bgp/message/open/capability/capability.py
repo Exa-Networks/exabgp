@@ -32,6 +32,7 @@ class Capability (object):
 		ADD_PATH                 = 0x45  # [draft-ietf-idr-add-paths]
 		ENHANCED_ROUTE_REFRESH   = 0x46  # [draft-ietf-idr-bgp-enhanced-route-refresh]
 		OPERATIONAL              = 0x47  # ExaBGP only ...
+		HOSTNAME                 = 0x48  # ExaBGP only ...
 		# 70-127    Unassigned
 		ROUTE_REFRESH_CISCO      = 0x80  # I Can only find reference to this in the router logs
 		# 128-255   Reserved for Private Use [RFC5492]

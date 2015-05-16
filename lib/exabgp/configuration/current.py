@@ -10,6 +10,7 @@ import os
 import sys
 import stat
 import time
+import string
 import socket
 import shlex
 
@@ -126,6 +127,18 @@ class Name (str):
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
 def pack_int (afi, integer, mask):
 	return ''.join([chr((integer >> (offset * 8)) & 0xff) for offset in range(IP.length(afi)-1,-1,-1)])
+
+def hostname ():
+	value = socket.gethostname()
+	if not value:
+		return 'localhost'
+	return value.split('.')[0]
+
+def domainname ():
+	value = socket.gethostname()
+	if not value:
+		return 'localdomain'
+	return ''.join(value.split('.')[1:])
 
 
 class Configuration (object):
@@ -734,6 +747,10 @@ class Configuration (object):
 				return self._set_description(scope,tokens[1:])
 			if command == 'router-id':
 				return self._set_router_id(scope,'router-id',tokens[1:])
+			if command == 'host-name':
+				return self._set_hostname(scope,'host-name',tokens[1:])
+			if command == 'domain-name':
+				return self._set_domainname(scope,'domain-name',tokens[1:])
 			if command == 'local-address':
 				return self._set_ip(scope,'local-address',tokens[1:])
 			if command == 'local-as':
@@ -1285,6 +1302,7 @@ class Configuration (object):
 				],
 				[
 					'description','router-id','local-address','local-as','peer-as',
+					'host-name', 'domain-name',
 					'passive','listen','hold-time','add-path','graceful-restart','md5',
 					'ttl-security','multi-session','group-updates',
 					'route-refresh','asn4','aigp','auto-flush','adj-rib-out'
@@ -1343,6 +1361,9 @@ class Configuration (object):
 			value = local_scope.get('hold-time','')
 			if value:
 				neighbor.hold_time = value
+
+			neighbor.host_name = local_scope.get('host-name',hostname())
+			neighbor.domain_name = local_scope.get('domain-name',domainname())
 
 			neighbor.changes = local_scope.get('announce',[])
 			messages = local_scope.get('operational',[])
@@ -1535,6 +1556,7 @@ class Configuration (object):
 				],
 				[
 					'description','router-id','local-address','local-as','peer-as',
+					'host-name','domain-name',
 					'passive','listen','hold-time','add-path','graceful-restart','md5',
 					'ttl-security','multi-session','group-updates','asn4','aigp',
 					'auto-flush','adj-rib-out'
@@ -1614,6 +1636,50 @@ class Configuration (object):
 			return True
 		except ValueError:
 			self._error = '"%s" is an invalid port to listen on' % ' '.join(value)
+			if self.debug: raise Exception()  # noqa
+			return False
+
+	def _set_hostname (self, scope, command, value):
+		try:
+			name = value[0]
+			if not name:
+				raise ValueError('bad host-name')
+			if not name[0].isalnum() or name[0].isdigit():
+				raise ValueError('bad host-name')
+			if not name[-1].isalnum() or name[-1].isdigit():
+				raise ValueError('bad host-name')
+			if '..' in name:
+				raise ValueError('bad host-name')
+			if not all(True if c in string.ascii_letters + '01234567890.' else False for c in name):
+				raise ValueError('bad host-name')
+			if len(name) > 255:
+				raise ValueError('bad host-name (length)')
+			scope[-1][command] = name
+			return True
+		except ValueError:
+			self._error = '"%s" is an invalid host-name' % ' '.join(value)
+			if self.debug: raise Exception()  # noqa
+			return False
+
+	def _set_domainname (self, scope, command, value):
+		try:
+			name = value[0]
+			if not name:
+				raise ValueError('bad domain-name')
+			if not name[0].isalnum() or name[0].isdigit():
+				raise ValueError('bad domain-name')
+			if not name[-1].isalnum() or name[-1].isdigit():
+				raise ValueError('bad domain-name')
+			if '..' in name:
+				raise ValueError('bad domain-name')
+			if not all(True if c in string.ascii_letters + '01234567890.' else False for c in name):
+				raise ValueError('bad domain-name')
+			if len(name) > 255:
+				raise ValueError('bad domain-name (length)')
+			scope[-1][command] = name
+			return True
+		except ValueError:
+			self._error = '"%s" is an invalid domain-name' % ' '.join(value)
 			if self.debug: raise Exception()  # noqa
 			return False
 

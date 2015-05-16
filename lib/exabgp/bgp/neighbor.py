@@ -31,6 +31,8 @@ class Neighbor (object):
 		# self.logger should not be used here as long as we do use deepcopy as it contains a Lock
 		self.description = ''
 		self.router_id = None
+		self.host_name = 'localhost'
+		self.domain_name = 'localdomain'
 		self.local_address = None
 		self.peer_address = None
 		self.peer_as = None
@@ -143,7 +145,8 @@ class Neighbor (object):
 			self.peer_as == other.peer_as and \
 			self.passive == other.passive and \
 			self.listen == other.listen and \
-			self.hold_time == other.hold_time and \
+			self.host_name == other.host_name and \
+			self.domain_name == other.domain_name and \
 			self.md5 == other.md5 and \
 			self.ttl == other.ttl and \
 			self.route_refresh == other.route_refresh and \
@@ -211,6 +214,8 @@ class Neighbor (object):
 			'neighbor %s {\n' \
 			'\tdescription "%s";\n' \
 			'\trouter-id %s;\n' \
+			'\thost-name %s;\n' \
+			'\tdomain-name %s;\n' \
 			'\tlocal-address %s;\n' \
 			'\tlocal-as %s;\n' \
 			'\tpeer-as %s;%s\n' \
@@ -226,6 +231,8 @@ class Neighbor (object):
 				self.peer_address,
 				self.description,
 				self.router_id,
+				self.host_name,
+				self.domain_name,
 				self.local_address,
 				self.local_as,
 				self.peer_as,
