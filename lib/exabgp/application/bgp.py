@@ -25,7 +25,7 @@ from exabgp.debug import setup_report
 setup_report()
 
 
-def is_hex (s):
+def is_bgp (s):
 	return all(c in string.hexdigits or c == ':' for c in s)
 
 
@@ -81,7 +81,7 @@ def main ():
 
 	if options["--decode"]:
 		decode = ''.join(options["--decode"]).replace(':','').replace(' ','')
-		if not is_hex(decode):
+		if not is_bgp(decode):
 			print usage
 			print 'Environment values are:\n' + '\n'.join(' - %s' % _ for _ in environment.default())
 			print ""
