@@ -101,7 +101,7 @@ class MPLS (NLRI,CIDR):
 
 class MPLSVPN (MPLS):
 
-	def __init__(self, afi, safi, packedPrefix, mask, labels, rd, nexthop, action, path=None):
+	def __init__(self, afi, safi, packedPrefix, mask, labels, rd, nexthop, action=None, path=None):
 		MPLS.__init__(self, afi, safi, packedPrefix, mask, nexthop, action,path)
 		assert(isinstance(rd,RouteDistinguisher))
 		self.rd = rd
