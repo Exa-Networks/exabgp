@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-asn4.py
+hostname.py
 
 Created by Thomas Mangin on 2015-05-16.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.

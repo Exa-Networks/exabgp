@@ -145,6 +145,7 @@ class Neighbor (object):
 			self.peer_as == other.peer_as and \
 			self.passive == other.passive and \
 			self.listen == other.listen and \
+			self.hold_time == other.hold_time and \
 			self.host_name == other.host_name and \
 			self.domain_name == other.domain_name and \
 			self.md5 == other.md5 and \
