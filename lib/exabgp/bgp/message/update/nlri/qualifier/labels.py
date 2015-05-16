@@ -62,11 +62,12 @@ class Labels (object):
 	@classmethod
 	def unpack (cls, data):
 		labels = []
-		while True:
-			label = unpack('!L',data[4:])
+		while len(data):
+			label = unpack('!L','\00'+data[:3])[0]
+			data=data[3:]
 			labels.append(label >> 4)
 			if label & 0x001:
 				break
-		return cls(labels,True)
+		return cls(labels)
 
 Labels.NOLABEL = Labels([])
