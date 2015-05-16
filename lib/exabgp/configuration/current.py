@@ -1654,7 +1654,7 @@ class Configuration (object):
 				raise ValueError('bad host-name')
 			if len(name) > 255:
 				raise ValueError('bad host-name (length)')
-			scope[-1][command] = name
+			scope[-1][command] = name.encode('utf-8')
 			return True
 		except ValueError:
 			self._error = '"%s" is an invalid host-name' % ' '.join(value)
@@ -1676,7 +1676,7 @@ class Configuration (object):
 				raise ValueError('bad domain-name')
 			if len(name) > 255:
 				raise ValueError('bad domain-name (length)')
-			scope[-1][command] = name
+			scope[-1][command] = name.encode('utf-8')
 			return True
 		except ValueError:
 			self._error = '"%s" is an invalid domain-name' % ' '.join(value)

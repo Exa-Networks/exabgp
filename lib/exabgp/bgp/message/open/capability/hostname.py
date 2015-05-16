@@ -33,7 +33,7 @@ class HostName (Capability):
 	@staticmethod
 	def unpack_capability (instance, data, capability=None):  # pylint: disable=W0613
 		l1 = ord(data[0])
-		instance.host_name = data[1:l1+1]
+		instance.host_name = data[1:l1+1].decode('utf-8')
 		l2 = ord(data[l1+1])
-		instance.domain_name = data[l1+2:l1+2+l2]
+		instance.domain_name = data[l1+2:l1+2+l2].decode('utf-8')
 		return instance

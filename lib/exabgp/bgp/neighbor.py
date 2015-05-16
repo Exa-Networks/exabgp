@@ -31,8 +31,8 @@ class Neighbor (object):
 		# self.logger should not be used here as long as we do use deepcopy as it contains a Lock
 		self.description = ''
 		self.router_id = None
-		self.host_name = 'localhost'
-		self.domain_name = 'localdomain'
+		self.host_name = 'localhost'.encode('utf-8')
+		self.domain_name = 'localdomain'.encode('utf-8')
 		self.local_address = None
 		self.peer_address = None
 		self.peer_as = None
