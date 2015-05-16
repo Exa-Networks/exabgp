@@ -60,7 +60,7 @@ class PMSI (Attribute):
 	def name (tunnel_type):
 		return PMSI._name.get(tunnel_type,'unknown')
 
-	def pack (self):
+	def pack (self, negotiated):
 		return self._attribute(
 			pack(
 				'!BB3s',
