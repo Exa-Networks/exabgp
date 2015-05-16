@@ -47,7 +47,7 @@ class Prefix(EVPN):
 	NAME = "IP Prefix advertisement"
 	SHORT_NAME = "PrfxAdv"
 
-	def __init__(self, rd, esi, etag, label, ip, iplen, gwip, packed=None):
+	def __init__(self, rd, esi, etag, label, ip, iplen, gwip, packed=None,nexthop=None,action=None,addpath=None):
 		'''
 		rd: a RouteDistinguisher
 		esi: an EthernetSegmentIdentifier
@@ -58,7 +58,7 @@ class Prefix(EVPN):
 		iplen: prefixlength for ip (defaults to 32)
 		gwip: an IP address (dotted quad string notation)
 		'''
-		EVPN.__init__(self,packed)
+		EVPN.__init__(self,packed,nexthop,action,addpath)
 		self.rd = rd
 		self.esi = esi
 		self.etag = etag
@@ -72,7 +72,7 @@ class Prefix(EVPN):
 	def __str__ (self):
 		return "%s:%s:%s:%s:%s%s:%s:%s" % (
 			self._prefix(),
-			self.rd,
+			self.rd._str(),
 			self.esi,
 			self.etag,
 			self.ip,

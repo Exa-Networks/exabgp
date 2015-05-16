@@ -7,6 +7,9 @@ Copyright (c) 2014-2015 Orange. All rights reserved.
 
 from struct import pack
 
+from exabgp.protocol.ip import IP, NoIP
+from exabgp.protocol.ip.address import Address
+
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
@@ -21,7 +24,7 @@ from exabgp.protocol.family import SAFI
 # | Route Type specific (variable)    |
 # +-----------------------------------+
 
-class EVPN (object):
+class EVPN (Address):
 	registered_evpn = dict()
 
 	# NEED to be defined in the subclasses
@@ -33,7 +36,10 @@ class EVPN (object):
 	afi = AFI(AFI.l2vpn)
 	safi = SAFI(SAFI.evpn)
 
-	def __init__ (self, packed):
+	def __init__ (self, packed, nexthop, action, path=None):
+		Address.__init__(self, EVPN.afi, EVPN.safi)
+		self.nexthop = IP.unpack(nexthop) if nexthop else NoIP
+		self.action = action
 		self.packed = packed
 
 	def _prefix (self):
@@ -45,7 +51,8 @@ class EVPN (object):
 	def __repr__ (self):
 		return str(self)
 
-	def pack (self):
+	def pack (self, addpath=None):
+		# XXXXXX: addpath not supported yet
 		return pack('!BB',self.CODE,len(self.packed)) + self.packed
 
 	def __len__ (self):
@@ -63,6 +70,12 @@ class EVPN (object):
 			return -1
 		return 0
 
+	def __eq__(self,other):
+		return cmp(self,other)==0
+
+	def __neq__(self,other):
+		return cmp(self,other)!=0
+
 	def __hash__ (self):
 		return hash("%s:%s:%s:%s" % (self.afi,self.safi,self.CODE,self.packed))
 
@@ -71,12 +84,17 @@ class EVPN (object):
 		EVPN.registered_evpn[klass.CODE] = klass
 
 	@classmethod
-	def unpack (cls, data):
+	def unpack (cls, afi, safi, data, addpath, nexthop, action):
 		code = ord(data[0])
 		length = ord(data[1])
 
 		if code in cls.registered_evpn:
-			return cls.registered_evpn[code].unpack(data[length+1:])
-		klass = cls(data[length+1:])
+			klass = cls.registered_evpn[code].unpack(data[2:length+2])
+		else:
+			klass = cls(data[2:length+2], nexthop, action, addpath)
 		klass.CODE = code
-		return klass
+		klass.action = action
+		klass.nexthop = IP.unpack(nexthop) if nexthop else NoIP
+		klass.addpath = addpath
+
+		return length+2,klass

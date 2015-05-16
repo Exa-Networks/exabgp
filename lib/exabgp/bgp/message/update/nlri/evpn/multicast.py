@@ -11,7 +11,6 @@ from exabgp.bgp.message.update.nlri.qualifier.etag import EthernetTag
 
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
-
 # ===================================================================== EVPNNLRI
 
 # +---------------------------------------+
@@ -30,16 +29,20 @@ class Multicast (EVPN):
 	NAME = "Inclusive Multicast Ethernet Tag"
 	SHORT_NAME = "Multicast"
 
-	def __init__ (self, rd, etag, ip):
+	def __init__ (self, rd, etag, ip, packed=None,nexthop=None,action=None,addpath=None):
+		EVPN.__init__(self,packed,nexthop,action,addpath)
+		assert(isinstance(rd, RouteDistinguisher))
+		assert(isinstance(etag, EthernetTag))
+		assert(isinstance(ip, IP))
 		self.rd = rd
 		self.etag = etag
 		self.ip = ip
-		EVPN.__init__(self,self.pack())
+		self._pack()
 
 	def __str__ (self):
 		return "%s:%s:%s:%s" % (
 			self._prefix(),
-			self.rd,
+			self.rd._str(),
 			self.etag,
 			self.ip,
 		)
@@ -58,21 +61,23 @@ class Multicast (EVPN):
 	def __hash__ (self):
 		return hash((self.afi,self.safi,self.CODE,self.rd,self.etag,self.ip))
 
-	def pack (self):
-		ip = self.ip.pack()
-		return '%s%s%s%s' % (
-			self.rd.pack(),
-			self.etag.pack(),
-			chr(len(ip)*8),
-			ip
-		)
+	def _pack (self):
+		if not self.packed:
+			ip = self.ip.pack()
+			self.packed = '%s%s%s%s' % (
+				self.rd.pack(),
+				self.etag.pack(),
+				chr(len(ip)*8),
+				ip
+			)
+		return self.packed
 
 	@classmethod
 	def unpack (cls, data):
 		rd = RouteDistinguisher.unpack(data[:8])
 		etag = EthernetTag.unpack(data[8:12])
-		iplen = ord(data[12])*8
-		ip = IP.unpack(data[12:12+iplen])
+		iplen = ord(data[12])
 		if iplen not in (4*8,16*8):
 			raise Exception("IP len is %d, but EVPN route currently support only IPv4" % iplen)
-		return cls(rd,etag,ip)
+		ip = IP.unpack(data[13:13+iplen/8])
+		return cls(rd,etag,ip,data)
