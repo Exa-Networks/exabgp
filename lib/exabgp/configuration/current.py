@@ -1650,7 +1650,7 @@ class Configuration (object):
 				raise ValueError('bad host-name')
 			if '..' in name:
 				raise ValueError('bad host-name')
-			if not all(True if c in string.ascii_letters + '01234567890.' else False for c in name):
+			if not all(True if c in string.ascii_letters + string.digits + '.-' else False for c in name):
 				raise ValueError('bad host-name')
 			if len(name) > 255:
 				raise ValueError('bad host-name (length)')
@@ -1672,7 +1672,7 @@ class Configuration (object):
 				raise ValueError('bad domain-name')
 			if '..' in name:
 				raise ValueError('bad domain-name')
-			if not all(True if c in string.ascii_letters + '01234567890.' else False for c in name):
+			if not all(True if c in string.ascii_letters + string.digits + '.-' else False for c in name):
 				raise ValueError('bad domain-name')
 			if len(name) > 255:
 				raise ValueError('bad domain-name (length)')
