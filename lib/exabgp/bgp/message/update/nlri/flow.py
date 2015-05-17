@@ -13,7 +13,7 @@ from struct import pack
 from struct import unpack
 
 from exabgp.protocol.ip import IP
-from exabgp.protocol.ip import NoIP
+from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message import OUT
@@ -477,7 +477,7 @@ class Flow (NLRI):
 		NLRI.__init__(self,afi,safi)
 		self.rules = {}
 		self.action = OUT.ANNOUNCE
-		self.nexthop = IP.unpack(nexthop) if nexthop else NoIP
+		self.nexthop = IP.unpack(nexthop) if nexthop else NoNextHop
 		self.rd = rd
 		self.unique = unique.next()
 
@@ -542,7 +542,7 @@ class Flow (NLRI):
 					s.append(' ')
 				s.append(rule)
 			string.append(' %s %s' % (rules[0].NAME,''.join(str(_) for _ in s)))
-		nexthop = ' next-hop %s' % self.nexthop if self.nexthop is not NoIP else ''
+		nexthop = ' next-hop %s' % self.nexthop if self.nexthop is not NoNextHop else ''
 		rd = str(self.rd) if self.rd else ''
 		return 'flow' + rd + ''.join(string) + nexthop
 
@@ -560,7 +560,7 @@ class Flow (NLRI):
 					s.append(', ')
 				s.append('"%s"' % rule)
 			string.append(' "%s": [ %s ]' % (rules[0].NAME,''.join(str(_) for _ in s)))
-		nexthop = ', "next-hop": "%s"' % self.nexthop if self.nexthop is not NoIP else ''
+		nexthop = ', "next-hop": "%s"' % self.nexthop if self.nexthop is not NoNextHop else ''
 		rd = ', %s' % self.rd.json() if self.rd else ''
 		compatibility = ', "string": "%s"' % self.extensive()
 		return '{' + rd + ','.join(string) + nexthop + compatibility + ' }'

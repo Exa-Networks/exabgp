@@ -130,10 +130,10 @@ class IP (object):
 		return cls.create(IP.ntop(data),data,klass)
 
 
-# ========================================================================= NoIP
+# ========================================================================= NoNextHop
 #
 
-class _NoIP (object):
+class _NoNextHop (object):
 	packed = ''
 
 	def pack (self, data, negotiated=None):
@@ -142,7 +142,7 @@ class _NoIP (object):
 	def __str__ (self):
 		return 'none'
 
-NoIP = _NoIP()
+NoNextHop = _NoNextHop()
 
 
 # ========================================================================= IPv4

@@ -7,7 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.protocol.ip import IP
-from exabgp.protocol.ip import NoIP
+from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.update.nlri.nlri import NLRI
@@ -20,7 +20,7 @@ class Prefix (CIDR,NLRI):
 
 	def __init__ (self, afi, safi, packed, mask, nexthop, action,path=None):
 		self.path_info = PathInfo.NOPATH if path is None else path
-		self.nexthop = IP.unpack(nexthop) if nexthop else NoIP
+		self.nexthop = IP.unpack(nexthop) if nexthop else NoNextHop
 		NLRI.__init__(self,afi,safi)
 		CIDR.__init__(self,packed,mask)
 		self.action = action
