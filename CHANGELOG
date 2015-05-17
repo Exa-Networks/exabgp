@@ -13,6 +13,8 @@ Version 3.5.0
    patch by: Diego Garcia del Rio
  * Feature: Can use numerical values for Flow elements
    requested by: jpan613 (on github)
+ * Feature: show route (extensive) can take a neighbor as parameter
+   requested by: jtkdpu
  * Change: Update are now grouped by default
  * Change: Change the API configuration syntax and format
   - JSON is now the default API encoder
