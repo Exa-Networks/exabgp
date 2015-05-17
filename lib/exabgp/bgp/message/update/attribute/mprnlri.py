@@ -8,7 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from struct import unpack
 
-from exabgp.protocol.ip import NoNextHop
+from exabgp.protocol.ip import NoIP
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.ip.address import Address
@@ -41,7 +41,7 @@ class MPRNLRI (Attribute,Address):
 
 		mpnlri = {}
 		for nlri in self.nlris:
-			if nlri.nexthop is NoNextHop:
+			if nlri.nexthop is NoIP:
 				# EOR and Flow may not have any next_hop
 				nexthop = ''
 			else:

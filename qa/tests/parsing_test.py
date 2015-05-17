@@ -12,7 +12,7 @@ import unittest
 import os
 import glob
 
-from exabgp.configuration.current import Configuration
+from exabgp.configuration.ancient import Configuration
 from exabgp.configuration.check import check_neighbor
 
 from exabgp.configuration.setup import environment

@@ -7,7 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.protocol.ip import IP
-from exabgp.protocol.ip import NoNextHop
+from exabgp.protocol.ip import NoIP
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
@@ -39,7 +39,7 @@ class NextHop (Attribute,IP):
 	@classmethod
 	def unpack (cls, data, negotiated=None):
 		if not data:
-			return NoNextHop
+			return NoIP
 		return IP.unpack(data,NextHop)
 
 	def __str__ (self):

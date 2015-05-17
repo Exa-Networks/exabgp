@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-current.py
+ancient.py
 
 Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
@@ -10,7 +10,6 @@ import os
 import sys
 import stat
 import time
-import string
 import socket
 import shlex
 
@@ -29,10 +28,8 @@ from exabgp.protocol.family import known_families
 from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.protocol.ip import IP
-from exabgp.protocol.ip import NoNextHop
-
+from exabgp.protocol.ip import NoIP
 from exabgp.bgp.message import OUT
-from exabgp.bgp.message import Message
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
@@ -44,7 +41,6 @@ from exabgp.bgp.message.update.nlri.mpls import MPLS
 from exabgp.bgp.message.update.nlri.mpls import Labels
 from exabgp.bgp.message.update.nlri.mpls import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.vpls import VPLS
-from exabgp.bgp.message.update.nlri.evpn import EVPN
 from exabgp.bgp.message.update.nlri.flow import BinaryOperator
 from exabgp.bgp.message.update.nlri.flow import NumericOperator
 from exabgp.bgp.message.update.nlri.flow import Flow
@@ -125,18 +121,6 @@ class Name (str):
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
 def pack_int (afi, integer, mask):
 	return ''.join([chr((integer >> (offset * 8)) & 0xff) for offset in range(IP.length(afi)-1,-1,-1)])
-
-def hostname ():
-	value = socket.gethostname()
-	if not value:
-		return 'localhost'
-	return value.split('.')[0]
-
-def domainname ():
-	value = socket.gethostname()
-	if not value:
-		return 'localdomain'
-	return ''.join(value.split('.')[1:])
 
 
 class Configuration (object):
@@ -253,30 +237,6 @@ class Configuration (object):
 		'syntax:\n' \
 		'process name-of-process {\n' \
 		'   run /path/to/command with its args;\n' \
-		'   encoder text|json;\n' \
-		'   neighbor-changes;\n' \
-		'   send {\n' \
-		'      parsed;\n' \
-		'      packets;\n' \
-		'      consolidate;\n' \
-		'      open;\n' \
-		'      update;\n' \
-		'      notification;\n' \
-		'      keepalive;\n' \
-		'      refresh;\n' \
-		'      operational;\n' \
-		'   }\n' \
-		'   receive {\n' \
-		'      parsed;\n' \
-		'      packets;\n' \
-		'      consolidate;\n' \
-		'      open;\n' \
-		'      update;\n' \
-		'      notification;\n' \
-		'      keepalive;\n' \
-		'      refresh;\n' \
-		'      operational;\n' \
-		'   }\n' \
 		'}\n\n' \
 
 	_str_family_error = \
@@ -285,7 +245,7 @@ class Configuration (object):
 		'   all;		  # default if not family block is present, announce all we know\n' \
 		'    minimal	  # use the AFI/SAFI required to announce the routes in the configuration\n' \
 		'    \n' \
-		'   ipv4 unicast;\n' \
+		'    ipv4 unicast;\n' \
 		'   ipv4 multicast;\n' \
 		'   ipv4 nlri-mpls;\n' \
 		'   ipv4 mpls-vpn;\n' \
@@ -424,7 +384,6 @@ class Configuration (object):
 			return False
 		except Exception:
 			self.error = 'configuration parsing issue'
-			raise
 			return False
 
 	def _reload (self):
@@ -697,11 +656,14 @@ class Configuration (object):
 				return False
 
 		if name == 'process':
-			if command in ['send','receive']:
-				if self._multi_api(scope,command,tokens[1:]):
+			if command == 'receive':
+				if self._multi_receive(scope,tokens[1:]):
 					return True
 				return False
-
+			if command == 'send':
+				if self._multi_send(scope,tokens[1:]):
+					return True
+				return False
 		return False
 
 	def _single_line (self, scope, name, tokens, valid):
@@ -745,10 +707,6 @@ class Configuration (object):
 				return self._set_description(scope,tokens[1:])
 			if command == 'router-id':
 				return self._set_router_id(scope,'router-id',tokens[1:])
-			if command == 'host-name':
-				return self._set_hostname(scope,'host-name',tokens[1:])
-			if command == 'domain-name':
-				return self._set_domainname(scope,'domain-name',tokens[1:])
 			if command == 'local-address':
 				return self._set_ip(scope,'local-address',tokens[1:])
 			if command == 'local-as':
@@ -860,18 +818,34 @@ class Configuration (object):
 				self._set_process_command(scope,'receive-operational',tokens[1:])
 				return True
 
-		elif name in ['send','receive']:  # process / send
+		elif name == 'send':  # process / send
+			if command == 'packets':
+				return self._set_process_command(scope,'send-packets',tokens[1:])
 
-			if command in ['packets','parsed','consolidate']:
-				return self._set_process_command(scope,'%s-%s' % (name,command),tokens[1:])
+		elif name == 'receive':  # process / receive
+			if command == 'packets':
+				return self._set_process_command(scope,'receive-packets',tokens[1:])
+			if command == 'parsed':
+				return self._set_process_command(scope,'receive-parsed',tokens[1:])
+			if command == 'consolidate':
+				return self._set_process_command(scope,'consolidate',tokens[1:])
 
-			for message in Message.CODE.MESSAGES:
-				if command == message.SHORT:
-					return self._set_process_command(scope,'%s-%d' % (name,message),tokens[1:])
-
-			# Legacy
 			if command == 'neighbor-changes':
 				return self._set_process_command(scope,'neighbor-changes',tokens[1:])
+			if command == 'notification':
+				return self._set_process_command(scope,'receive-notifications',tokens[1:])
+			if command == 'open':
+				return self._set_process_command(scope,'receive-opens',tokens[1:])
+			if command == 'keepalive':
+				return self._set_process_command(scope,'receive-keepalives',tokens[1:])
+			if command == 'refresh':
+				return self._set_process_command(scope,'receive-refresh',tokens[1:])
+			if command == 'update':
+				return self._set_process_command(scope,'receive-updates',tokens[1:])
+			if command == 'updates':
+				return self._set_process_command(scope,'receive-updates',tokens[1:])
+			if command == 'operational':
+				return self._set_process_command(scope,'receive-operational',tokens[1:])
 
 		elif name == 'static':
 			if command == 'route':
@@ -897,7 +871,12 @@ class Configuration (object):
 				['send','receive'],
 				[
 					'run','encoder',
+
+					'peer-updates','parse-routes','receive-routes',
+					'receive-parsed','receive-packets',
 					'neighbor-changes',
+					'receive-updates','receive-refresh','receive-operational',
+					'send-packets',
 				]
 			)
 			if r is False:
@@ -908,17 +887,8 @@ class Configuration (object):
 		name = tokens[0] if len(tokens) >= 1 else 'conf-only-%s' % str(time.time())[-6:]
 		self.process.setdefault(name,{})['neighbor'] = scope[-1]['peer-address'] if 'peer-address' in scope[-1] else '*'
 
-		for key in ['neighbor-changes',]:
+		for key in ['neighbor-changes', 'receive-notifications', 'receive-opens', 'receive-keepalives', 'receive-refresh', 'receive-updates', 'receive-operational', 'receive-parsed', 'receive-packets', 'consolidate', 'send-packets']:
 			self.process[name][key] = scope[-1].pop(key,False)
-
-		for direction in ['send','receive']:
-			for action in ['packets','parsed','consolidate']:
-				key = '%s-%s' % (direction,action)
-				self.process[name][key] = scope[-1].pop(key,False)
-
-			for message in Message.CODE.MESSAGES:
-				key = '%s-%d' % (direction,message)
-				self.process[name][key] = scope[-1].pop(key,False)
 
 		run = scope[-1].pop('process-run','')
 		if run:
@@ -1117,8 +1087,6 @@ class Configuration (object):
 			safi = tokens.pop(0)
 			if safi == 'vpls':
 				scope[-1]['families'].append((AFI(AFI.l2vpn),SAFI(SAFI.vpls)))
-			elif safi == 'evpn':
-				scope[-1]['families'].append((AFI(AFI.l2vpn),SAFI(SAFI.evpn)))
 			else:
 				return False
 			return True
@@ -1300,7 +1268,6 @@ class Configuration (object):
 				],
 				[
 					'description','router-id','local-address','local-as','peer-as',
-					'host-name', 'domain-name',
 					'passive','listen','hold-time','add-path','graceful-restart','md5',
 					'ttl-security','multi-session','group-updates',
 					'route-refresh','asn4','aigp','auto-flush','adj-rib-out'
@@ -1360,9 +1327,6 @@ class Configuration (object):
 			if value:
 				neighbor.hold_time = value
 
-			neighbor.host_name = local_scope.get('host-name',hostname())
-			neighbor.domain_name = local_scope.get('domain-name',domainname())
-
 			neighbor.changes = local_scope.get('announce',[])
 			messages = local_scope.get('operational',[])
 
@@ -1370,49 +1334,36 @@ class Configuration (object):
 		if self.cli_socket:
 			self.process['__cli__'] = {
 				'neighbor': '*',
+				'consolidate': False,
 				'encoder': 'json',
-				'run': [sys.executable, control.__file__, self.cli_socket],
-
 				'neighbor-changes': False,
-
-				'receive-consolidate': False,
+				'receive-keepalives': False,
+				'receive-notifications': False,
+				'receive-opens': False,
+				'receive-operational': False,
 				'receive-packets': False,
 				'receive-parsed': False,
-
-				'send-consolidate': False,
-				'send-packets': False,
-				'send-parsed': False,
+				'receive-refresh': False,
+				'receive-updates': False,
+				'run': [sys.executable, control.__file__, self.cli_socket]
 			}
-
-			for direction in ['send','receive']:
-				for message in [
-					Message.CODE.NOTIFICATION,
-					Message.CODE.OPEN,
-					Message.CODE.KEEPALIVE,
-					Message.CODE.UPDATE,
-					Message.CODE.ROUTE_REFRESH,
-					Message.CODE.OPERATIONAL
-				]:
-					self.process['__cli__']['%s-%s' % (direction,message.short())] = False
 
 		for name in self.process.keys():
 			process = self.process[name]
+			neighbor.api.receive_packets(process.get('receive-packets',False))
+			neighbor.api.send_packets(process.get('send-packets',False))
 
-			neighbor.api.set('neighbor-changes',process.get('neighbor-changes',False))
+			neighbor.api.neighbor_changes(process.get('neighbor-changes',False))
+			neighbor.api.consolidate(process.get('consolidate',False))
 
-			for direction in ['send','receive']:
-				for option in ['packets','consolidate','parsed']:
-					neighbor.api.set_value(direction,option,process.get('%s-%s' % (direction,option),False))
+			neighbor.api.receive_parsed(process.get('receive-parsed',False))
 
-				for message in [
-					Message.CODE.NOTIFICATION,
-					Message.CODE.OPEN,
-					Message.CODE.KEEPALIVE,
-					Message.CODE.UPDATE,
-					Message.CODE.ROUTE_REFRESH,
-					Message.CODE.OPERATIONAL
-				]:
-					neighbor.api.set_message(direction,message,process.get('%s-%d' % (direction,message),False))
+			neighbor.api.receive_notifications(process.get('receive-notifications',False))
+			neighbor.api.receive_opens(process.get('receive-opens',False))
+			neighbor.api.receive_keepalives(process.get('receive-keepalives',False))
+			neighbor.api.receive_updates(process.get('receive-updates',False))
+			neighbor.api.receive_refresh(process.get('receive-refresh',False))
+			neighbor.api.receive_operational(process.get('receive-operational',False))
 
 		if not neighbor.router_id:
 			neighbor.router_id = neighbor.local_address
@@ -1441,9 +1392,6 @@ class Configuration (object):
 			self._error = 'incomplete option route-refresh and no adj-rib-out'
 			if self.debug: raise Exception()  # noqa
 			return False
-
-		# XXX: check that if we have any message, we have parsed/packets
-		# XXX: and vice-versa
 
 		missing = neighbor.missing()
 		if missing:
@@ -1494,7 +1442,10 @@ class Configuration (object):
 				neighbor.add_family(family)
 
 		if neighbor.group_updates is None:
-			neighbor.group_updates = True
+			neighbor.group_updates = False
+			self.logger.configuration('-'*80,'warning')
+			self.logger.configuration('group-updates not enabled for peer %s, it surely should, the default will change to true soon' % neighbor.peer_address,'warning')
+			self.logger.configuration('-'*80,'warning')
 
 		def _init_neighbor (neighbor):
 			families = neighbor.families()
@@ -1554,7 +1505,6 @@ class Configuration (object):
 				],
 				[
 					'description','router-id','local-address','local-as','peer-as',
-					'host-name','domain-name',
 					'passive','listen','hold-time','add-path','graceful-restart','md5',
 					'ttl-security','multi-session','group-updates','asn4','aigp',
 					'auto-flush','adj-rib-out'
@@ -1634,50 +1584,6 @@ class Configuration (object):
 			return True
 		except ValueError:
 			self._error = '"%s" is an invalid port to listen on' % ' '.join(value)
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _set_hostname (self, scope, command, value):
-		try:
-			name = value[0]
-			if not name:
-				raise ValueError('bad host-name')
-			if not name[0].isalnum() or name[0].isdigit():
-				raise ValueError('bad host-name')
-			if not name[-1].isalnum() or name[-1].isdigit():
-				raise ValueError('bad host-name')
-			if '..' in name:
-				raise ValueError('bad host-name')
-			if not all(True if c in string.ascii_letters + string.digits + '.-' else False for c in name):
-				raise ValueError('bad host-name')
-			if len(name) > 255:
-				raise ValueError('bad host-name (length)')
-			scope[-1][command] = name.encode('utf-8')
-			return True
-		except ValueError:
-			self._error = '"%s" is an invalid host-name' % ' '.join(value)
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _set_domainname (self, scope, command, value):
-		try:
-			name = value[0]
-			if not name:
-				raise ValueError('bad domain-name')
-			if not name[0].isalnum() or name[0].isdigit():
-				raise ValueError('bad domain-name')
-			if not name[-1].isalnum() or name[-1].isdigit():
-				raise ValueError('bad domain-name')
-			if '..' in name:
-				raise ValueError('bad domain-name')
-			if not all(True if c in string.ascii_letters + string.digits + '.-' else False for c in name):
-				raise ValueError('bad domain-name')
-			if len(name) > 255:
-				raise ValueError('bad domain-name (length)')
-			scope[-1][command] = name.encode('utf-8')
-			return True
-		except ValueError:
-			self._error = '"%s" is an invalid domain-name' % ' '.join(value)
 			if self.debug: raise Exception()  # noqa
 			return False
 
@@ -1841,7 +1747,7 @@ class Configuration (object):
 
 	def _check_static_route (self, scope):
 		update = scope[-1]['announce'][-1]
-		if update.nlri.nexthop is NoNextHop:
+		if update.nlri.nexthop is NoIP:
 			self._error = 'syntax: route <ip>/<mask> { next-hop <ip>; }'
 			if self.debug: raise Exception()  # noqa
 			return False
@@ -2723,7 +2629,7 @@ class Configuration (object):
 
 	# ..........................................
 
-	def _multi_api (self, scope, direction, tokens):
+	def _multi_receive (self, scope, tokens):
 		if len(tokens) != 0:
 			self._error = self._str_flow_error
 			if self.debug: raise Exception()  # noqa
@@ -2731,13 +2637,32 @@ class Configuration (object):
 
 		while True:
 			r = self._dispatch(
-				scope,direction,
+				scope,'receive',
 				[],
 				[
 					'packets','parsed','consolidate',
+					'neighbor-changes',
 					'notification','open','keepalive',
-					'update','refresh','operational'
+					'update','updates','refresh','operational'
 				]
+			)
+			if r is False:
+				return False
+			if r is None:
+				break
+		return True
+
+	def _multi_send (self, scope, tokens):
+		if len(tokens) != 0:
+			self._error = self._str_flow_error
+			if self.debug: raise Exception()  # noqa
+			return False
+
+		while True:
+			r = self._dispatch(
+				scope,'send',
+				[],
+				['packets']
 			)
 			if r is False:
 				return False
@@ -2932,7 +2857,7 @@ class Configuration (object):
 		try:
 			change = scope[-1]['announce'][-1]
 
-			if change.nlri.nexthop is not NoNextHop:
+			if change.nlri.nexthop is not NoIP:
 				self._error = self._str_flow_error
 				if self.debug: raise Exception()  # noqa
 				return False
@@ -2991,7 +2916,7 @@ class Configuration (object):
 					return True
 			else:
 				change = scope[-1]['announce'][-1]
-				if change.nlri.nexthop is not NoNextHop:
+				if change.nlri.nexthop is not NoIP:
 					self._error = self._str_flow_error
 					if self.debug: raise Exception()  # noqa
 					return False
@@ -3010,7 +2935,7 @@ class Configuration (object):
 		try:
 			change = scope[-1]['announce'][-1]
 
-			if change.nlri.nexthop is NoNextHop:
+			if change.nlri.nexthop is NoIP:
 				self._error = self._str_flow_error
 				if self.debug: raise Exception()  # noqa
 				return False
@@ -3176,77 +3101,77 @@ class Configuration (object):
 
 	# ..............................
 
-	# def decode (self, update):
-	# 	# self check to see if we can decode what we encode
-	# 	from exabgp.bgp.message.update import Update
-	# 	from exabgp.bgp.message.open import Open
-	# 	from exabgp.bgp.message.open.capability.capability import Capability
-	# 	from exabgp.bgp.message.open.capability.capabilities import Capabilities
-	# 	from exabgp.bgp.message.open.capability.negotiated import Negotiated
-	# 	from exabgp.bgp.message.notification import Notify
-	# 	from exabgp.reactor.peer import Peer
-	# 	from exabgp.reactor.api.encoding import JSON
-	#
-	# 	self.logger._parser = True
-	#
-	# 	self.logger.parser('\ndecoding routes in configuration')
-	#
-	# 	n = self.neighbor[self.neighbor.keys()[0]]
-	# 	p = Peer(n,None)
-	#
-	# 	path = {}
-	# 	for f in known_families():
-	# 		if n.add_path:
-	# 			path[f] = n.add_path
-	#
-	# 	capa = Capabilities().new(n,False)
-	# 	capa[Capability.CODE.ADD_PATH] = path
-	# 	capa[Capability.CODE.MULTIPROTOCOL] = n.families()
-	#
-	# 	o1 = Open(4,n.local_as,str(n.local_address),capa,180)
-	# 	o2 = Open(4,n.peer_as,str(n.peer_address),capa,180)
-	# 	negotiated = Negotiated(n)
-	# 	negotiated.sent(o1)
-	# 	negotiated.received(o2)
-	# 	# grouped = False
-	#
-	# 	raw = ''.join(chr(int(_,16)) for _ in (update[i*2:(i*2)+2] for i in range(len(update)/2)))
-	#
-	# 	while raw:
-	# 		if raw.startswith('\xff'*16):
-	# 			kind = ord(raw[18])
-	# 			size = (ord(raw[16]) << 16) + (ord(raw[17]))
-	#
-	# 			injected,raw = raw[19:size],raw[size:]
-	#
-	# 			if kind == 2:
-	# 				self.logger.parser('the message is an update')
-	# 				decoding = 'update'
-	# 			else:
-	# 				self.logger.parser('the message is not an update (%d) - aborting' % kind)
-	# 				sys.exit(1)
-	# 		else:
-	# 			self.logger.parser('header missing, assuming this message is ONE update')
-	# 			decoding = 'update'
-	# 			injected,raw = raw,''
-	#
-	# 		try:
-	# 			# This does not take the BGP header - let's assume we will not break that :)
-	# 			update = Update.unpack_message(negotiated,injected)
-	# 		except KeyboardInterrupt:
-	# 			raise
-	# 		except Notify,exc:
-	# 			self.logger.parser('could not parse the message')
-	# 			self.logger.parser(str(exc))
-	# 			sys.exit(1)
-	# 		except Exception,exc:
-	# 			self.logger.parser('could not parse the message')
-	# 			self.logger.parser(str(exc))
-	# 			sys.exit(1)
-	#
-	# 		self.logger.parser('')  # new line
-	# 		for number in range(len(update.nlris)):
-	# 			change = Change(update.nlris[number],update.attributes)
-	# 			self.logger.parser('decoded %s %s %s' % (decoding,change.nlri.action,change.extensive()))
-	# 		self.logger.parser('update json %s' % JSON(json_version).update(p.neighbor,'in',update,'',''))
-	# 	sys.exit(0)
+	def decode (self, update):
+		# self check to see if we can decode what we encode
+		from exabgp.bgp.message.update import Update
+		from exabgp.bgp.message.open import Open
+		from exabgp.bgp.message.open.capability.capability import Capability
+		from exabgp.bgp.message.open.capability.capabilities import Capabilities
+		from exabgp.bgp.message.open.capability.negotiated import Negotiated
+		from exabgp.bgp.message.notification import Notify
+		from exabgp.reactor.peer import Peer
+		from exabgp.reactor.api.encoding import JSON
+
+		self.logger._parser = True
+
+		self.logger.parser('\ndecoding routes in configuration')
+
+		n = self.neighbor[self.neighbor.keys()[0]]
+		p = Peer(n,None)
+
+		path = {}
+		for f in known_families():
+			if n.add_path:
+				path[f] = n.add_path
+
+		capa = Capabilities().new(n,False)
+		capa[Capability.CODE.ADD_PATH] = path
+		capa[Capability.CODE.MULTIPROTOCOL] = n.families()
+
+		o1 = Open(4,n.local_as,str(n.local_address),capa,180)
+		o2 = Open(4,n.peer_as,str(n.peer_address),capa,180)
+		negotiated = Negotiated(n)
+		negotiated.sent(o1)
+		negotiated.received(o2)
+		# grouped = False
+
+		raw = ''.join(chr(int(_,16)) for _ in (update[i*2:(i*2)+2] for i in range(len(update)/2)))
+
+		while raw:
+			if raw.startswith('\xff'*16):
+				kind = ord(raw[18])
+				size = (ord(raw[16]) << 16) + (ord(raw[17]))
+
+				injected,raw = raw[19:size],raw[size:]
+
+				if kind == 2:
+					self.logger.parser('the message is an update')
+					decoding = 'update'
+				else:
+					self.logger.parser('the message is not an update (%d) - aborting' % kind)
+					sys.exit(1)
+			else:
+				self.logger.parser('header missing, assuming this message is ONE update')
+				decoding = 'update'
+				injected,raw = raw,''
+
+			try:
+				# This does not take the BGP header - let's assume we will not break that :)
+				update = Update.unpack_message(negotiated,injected)
+			except KeyboardInterrupt:
+				raise
+			except Notify,exc:
+				self.logger.parser('could not parse the message')
+				self.logger.parser(str(exc))
+				sys.exit(1)
+			except Exception,exc:
+				self.logger.parser('could not parse the message')
+				self.logger.parser(str(exc))
+				sys.exit(1)
+
+			self.logger.parser('')  # new line
+			for number in range(len(update.nlris)):
+				change = Change(update.nlris[number],update.attributes)
+				self.logger.parser('decoded %s %s %s' % (decoding,change.nlri.action,change.extensive()))
+			self.logger.parser('update json %s' % JSON('3.4.0').update(p,update,'',''))
+		sys.exit(0)
