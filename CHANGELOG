@@ -23,6 +23,8 @@ Version 3.4.11
  * Fix: selfcheck feature
  * Feature: Allow single line flow route
     requested by: Pavel Odintsov
+ * Feature: show route (extensive) can take a neighbor as parameter
+    requested by: jtkdpu
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
