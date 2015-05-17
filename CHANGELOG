@@ -45,6 +45,7 @@ Version 3.5.0
     reported by: Raphael Mazelier
  * Fix: Allow = with flowspec singleton
     reported by: Pavel Odintsov
+ * Fix: selfcheck feature
  * Feature: Allow single line flow route
     requested by: Pavel Odintsov
 
