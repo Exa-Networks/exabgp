@@ -20,6 +20,7 @@ Version 3.4.11
  * Fix: Python differences between Unix version breaking process forking
  * Fix: Allow = with flowspec singleton
     reported by: Pavel Odintsov
+ * Fix: selfcheck feature
  * Feature: Allow single line flow route
     requested by: Pavel Odintsov
 
