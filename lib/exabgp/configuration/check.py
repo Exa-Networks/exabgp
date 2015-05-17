@@ -48,15 +48,15 @@ def check_neighbor (neighbors):
 
 	for name in neighbors.keys():
 		neighbor = neighbors[name]
-		#neighbor.rib.clear()
 
 		path = {}
-		for f in known_families():
+		for f in NLRI.known_families():
 			if neighbor.add_path:
 				path[f] = neighbor.add_path
 
 		capa = Capabilities().new(neighbor,False)
-		capa[Capability.CODE.ADD_PATH] = path
+		if path:
+			capa[Capability.CODE.ADD_PATH] = path
 		capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
 
 		o1 = Open(4,neighbor.local_as,str(neighbor.local_address),capa,180)
@@ -137,6 +137,7 @@ def check_neighbor (neighbors):
 				logger.parser(str(exc))
 				logger.parser('----------------------------------------')
 				return False
+		neighbor.rib.clear()
 
 	return True
 
