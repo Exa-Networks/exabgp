@@ -19,6 +19,9 @@ Version 3.4.11
  * Fix: validation of flow routes
  * Fix: Python differences between Unix version breaking process forking
  * Fix: Allow = with flowspec singleton
+    reported by: Pavel Odintsov
+ * Feature: Allow single line flow route
+    requested by: Pavel Odintsov
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
