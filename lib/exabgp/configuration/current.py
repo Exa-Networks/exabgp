@@ -1895,7 +1895,7 @@ class Configuration (object):
 
 			if command in self._dispatch_route_cfg:
 				if command in ('rd','route-distinguisher'):
-					if self._dispatch_route_cfg[command](scope,tokens,SAFI.mpls_vpn):
+					if self._dispatch_route_cfg[command](scope,tokens,SAFI.nlri_mpls):
 						continue
 				else:
 					if self._dispatch_route_cfg[command](scope,tokens):
