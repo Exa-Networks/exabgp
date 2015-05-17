@@ -31,12 +31,12 @@ class Capability (object):
 		MULTISESSION             = 0x44  # [draft-ietf-idr-bgp-multisession]
 		ADD_PATH                 = 0x45  # [draft-ietf-idr-add-paths]
 		ENHANCED_ROUTE_REFRESH   = 0x46  # [draft-ietf-idr-bgp-enhanced-route-refresh]
-		OPERATIONAL              = 0x47  # ExaBGP only ...
-		HOSTNAME                 = 0x48  # ExaBGP only ...
 		# 70-127    Unassigned
 		ROUTE_REFRESH_CISCO      = 0x80  # I Can only find reference to this in the router logs
 		# 128-255   Reserved for Private Use [RFC5492]
 		MULTISESSION_CISCO       = 0x83  # What Cisco really use for Multisession (yes this is a reserved range in prod !)
+		HOSTNAME                 = 0xB8  # ExaBGP only ...
+		OPERATIONAL              = 0xB9  # ExaBGP only ...
 
 		EXTENDED_MESSAGE         = -1    # No yet defined by draft http://tools.ietf.org/html/draft-ietf-idr-extended-messages-02.txt
 
