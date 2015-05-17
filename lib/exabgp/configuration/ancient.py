@@ -2800,6 +2800,8 @@ class Configuration (object):
 						if self.debug: raise Exception()  # noqa
 						return False
 			else:
+				if name[0] == '=':
+					name = name[1:]
 				scope[-1]['announce'][-1].nlri.add(klass(NumericOperator.EQ | AND,klass.converter(name)))
 		except (IndexError,ValueError):
 			self._error = self._str_flow_error
