@@ -27,7 +27,7 @@ from exabgp.reactor.peer import ACTION
 from exabgp.reactor.network.error import error
 
 from exabgp.reactor.api.decoder import Decoder
-from exabgp.configuration.ancient import Configuration
+from exabgp.configuration.current import Configuration
 from exabgp.configuration.environment import environment
 
 from exabgp.version import version
