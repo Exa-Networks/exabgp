@@ -100,8 +100,6 @@ from exabgp.rib.change import Change
 from exabgp.reactor.api import control
 from exabgp.logger import Logger
 
-from exabgp.version import json as json_version
-
 # Duck class, faking part of the Attribute interface
 # We add this to routes when when need o split a route in smaller route
 # The value stored is the longer netmask we want to use
