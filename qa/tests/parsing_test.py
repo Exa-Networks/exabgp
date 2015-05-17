@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-parsin.py
+parsing.py
 
 Created by Thomas Mangin on 2009-09-06.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
@@ -35,7 +35,9 @@ class TestControl (unittest.TestCase):
         for filename in self.files:
             if filename.endswith(self.skip):
                 continue
+            print '-'*80
             print filename
+            print '='*80
             configuration = Configuration([filename,])
             configuration.reload()
             self.assertEqual(check_neighbor(configuration.neighbor),True)
