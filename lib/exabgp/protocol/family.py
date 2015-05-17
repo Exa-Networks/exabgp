@@ -196,25 +196,6 @@ class SAFI (int):
 		return cls.names.get(string,cls.undefined)
 
 
-def known_families ():
-	# it can not be a generator
-	families = [
-		(AFI(AFI.ipv4), SAFI(SAFI.unicast)),
-		(AFI(AFI.ipv4), SAFI(SAFI.multicast)),
-		(AFI(AFI.ipv4), SAFI(SAFI.nlri_mpls)),
-		(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn)),
-		(AFI(AFI.ipv4), SAFI(SAFI.flow_ip)),
-		(AFI(AFI.ipv4), SAFI(SAFI.flow_vpn)),
-		(AFI(AFI.ipv6), SAFI(SAFI.unicast)),
-		(AFI(AFI.ipv6), SAFI(SAFI.mpls_vpn)),
-		(AFI(AFI.ipv6), SAFI(SAFI.flow_ip)),
-		(AFI(AFI.ipv6), SAFI(SAFI.flow_vpn)),
-		(AFI(AFI.l2vpn), SAFI(SAFI.vpls)),
-		(AFI(AFI.l2vpn), SAFI(SAFI.evpn))
-	]
-	return families
-
-
 class Family (object):
 	def __init__ (self, afi, safi):
 		self.afi = AFI(afi)

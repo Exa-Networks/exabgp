@@ -26,6 +26,7 @@ class NLRI (Address):
 	EOR = False
 
 	registered_nlri = dict()
+	registered_families = [(AFI(AFI.ipv4), SAFI(SAFI.multicast))]
 	logger = None
 
 	def index (self):
@@ -38,6 +39,16 @@ class NLRI (Address):
 	@staticmethod
 	def register_nlri (klass, afi, safi):
 		NLRI.registered_nlri['%d/%d' % (afi,safi)] = klass
+		new = (AFI(afi),SAFI(safi))
+		if new in NLRI.registered_nlri:
+			raise RuntimeError('Tried to register %s/%s twice' % new)
+		NLRI.registered_families.append(new)
+
+	@staticmethod
+	def known_families ():
+		# we do not want to take the risk of the caller modifying the list by accident
+		# it can not be a generator
+		return list(NLRI.registered_families)
 
 	@classmethod
 	def unpack (cls, afi, safi, data, addpath, nexthop, action):

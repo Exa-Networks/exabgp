@@ -13,7 +13,7 @@ from exabgp.configuration.engine.parser import boolean
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.mp import MultiProtocol
 
-from exabgp.protocol.family import known_families
+from exabgp.bgp.message.update.nlri.nlri import NLRI
 
 from exabgp.configuration.bgp.family import SectionFamily
 from exabgp.configuration.bgp.family import syntax_family
@@ -63,7 +63,7 @@ class SectionCapability (Section):
 
 	def exit (self, tokeniser):
 		if Capability.CODE(Capability.CODE.MULTIPROTOCOL) not in self.content:
-			self.content[Capability.CODE(Capability.CODE.MULTIPROTOCOL)] = MultiProtocol(known_families())
+			self.content[Capability.CODE(Capability.CODE.MULTIPROTOCOL)] = MultiProtocol(NLRI.known_families())
 
 	def family (self, tokeniser):
 		data = self.get_section(SectionFamily.name,tokeniser)

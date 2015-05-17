@@ -24,7 +24,6 @@ from exabgp.configuration.format import formated
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.protocol.family import known_families
 
 from exabgp.bgp.neighbor import Neighbor
 
@@ -65,6 +64,7 @@ from exabgp.bgp.message.update.nlri.flow import FlowICMPCode
 from exabgp.bgp.message.update.nlri.flow import FlowDSCP
 from exabgp.bgp.message.update.nlri.flow import FlowTrafficClass
 from exabgp.bgp.message.update.nlri.flow import FlowFlowLabel
+from exabgp.bgp.message.update.nlri.nlri import NLRI
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.origin import Origin
@@ -1470,7 +1470,7 @@ class Configuration (object):
 				_families.add((change.nlri.afi,change.nlri.safi))
 			families = list(_families)
 		elif openfamilies in ('all','everything'):
-			families = known_families()
+			families = NLRI.known_families()
 		# only announce what you have as routes
 		elif openfamilies == 'minimal':
 			_families = set()
@@ -3197,7 +3197,7 @@ class Configuration (object):
 	# 	p = Peer(n,None)
 	#
 	# 	path = {}
-	# 	for f in known_families():
+	# 	for f in NLRI.known_families():
 	# 		if n.add_path:
 	# 			path[f] = n.add_path
 	#

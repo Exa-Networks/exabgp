@@ -205,13 +205,13 @@ from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
 
-from exabgp.protocol.family import known_families
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open.capability.capabilities import Capabilities
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 # from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.nlri.nlri import NLRI
 
 
 from exabgp.configuration.setup import environment
@@ -242,7 +242,7 @@ class Neighbor:
 
 	@staticmethod
 	def families ():
-		return known_families()
+		return NLRI.known_families()
 
 import unittest
 
@@ -272,7 +272,7 @@ class TestUpdateDecoding (unittest.TestCase):
 			capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
 
 			# path = {}
-			# for f in known_families():
+			# for f in NLRI.known_families():
 			# 	if neighbor.add_path:
 			# 		path[f] = neighbor.add_path
 			# capa[Capability.CODE.ADD_PATH] = path
