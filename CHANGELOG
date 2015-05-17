@@ -28,6 +28,7 @@ Version 3.5.0
     * rename 'restart flags' to be 'restart-flags'
     * rename 'address family flags' to be 'address-family-flags'
     * format change for notification and shutdown message
+    * extended community expressed as hexadecimal and not decimal
  * Fix: Do shutdown when waiting for a new connection to a peer
  * Fix: Bad ASN enconding when ASN4 is not negotiated
     reported by: Orangefish on github
