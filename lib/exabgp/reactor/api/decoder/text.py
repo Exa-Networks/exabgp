@@ -134,6 +134,7 @@ class Text (Configuration):
 		return changes
 
 	def parse_api_flow (self, command, action):
+		command = command.replace('{','{\\n').replace('}','}\\n').replace(';',';\\n').replace('\\n\\n','\\n')
 		self._tokens = self._tokenise(' '.join(formated(command).split(' ')[2:]).split('\\n'))
 		scope = [{}]
 		if not self._dispatch(scope,'flow',['route',],[],['root']):
