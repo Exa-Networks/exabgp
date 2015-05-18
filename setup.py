@@ -373,42 +373,52 @@ def packages (lib):
 			r.append(d.replace('/','.').replace('\\','.')[len(lib)+1:])
 	return r
 
-def configuration (etc):
-	etcs = []
-	for l,d,fs in os.walk(etc):
+
+def filesOf (direcotry):
+	files = []
+	for l,d,fs in os.walk(direcotry):
 		if not d:
 			for f in fs:
-				etcs.append(os.path.join(l,f))
-	return etcs
+				files.append(os.path.join(l,f))
+	return files
+
+
+def testFilesOf (direcotry):
+	files = []
+	for l,d,fs in os.walk(direcotry):
+		if not d:
+			for f in fs:
+				if f.endswith('.run') or f.endswith('.conf'):
+					files.append(os.path.join(l,f))
+	return files
+
 
 os_name = platform.system()
 
-if os_name == 'NetBSD':
-	files_definition= [
-		('share/exabgp',configuration('etc/exabgp')),
-	]
-else:
-	files_definition = [
-		('etc/exabgp',configuration('etc/exabgp')),
-	]
+files_definition = [
+	('share/exabgp/processes',filesOf('etc/exabgp')),
+	('share/exabgp/etc',testFilesOf('qa/conf')),
+]
+
+if os_name != 'NetBSD':
 	if sys.argv[-1] == 'systemd':
-		files_definition.append(('/usr/lib/systemd/system',configuration('etc/systemd')))
+		files_definition.append(('/usr/lib/systemd/system',filesOf('etc/systemd')))
 
 version = imp.load_source('version','lib/exabgp/version.py').version
 
-setup(name='exabgp',
+setup(
+	name='exabgp',
 	version=version,
 	description='BGP swiss army knife',
 	long_description=description_rst % {'version': version},
 	author='Thomas Mangin',
 	author_email='thomas.mangin@exa-networks.co.uk',
 	url='https://github.com/Exa-Networks/exabgp',
-	license="BSD",
-	keywords = 'bgp routing api sdn flowspec',
+	license='BSD',
+	keywords='BGP routing SDN FlowSpec HA',
 	platforms=[get_platform(),],
 	package_dir={'': 'lib'},
 	packages=packages('lib'),
-#	scripts=['sbin/exabgp',],
 	download_url='https://github.com/Exa-Networks/exabgp/archive/%s.tar.gz' % version,
 	data_files=files_definition,
 	classifiers=[
