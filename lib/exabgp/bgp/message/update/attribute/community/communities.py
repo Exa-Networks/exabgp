@@ -36,6 +36,9 @@ class Communities (Attribute):
 			return self._attribute(''.join([c.pack() for c in self.communities]))
 		return ''
 
+	def __iter__(self):
+		return iter(self.communities)
+
 	def __repr__ (self):
 		l = len(self.communities)
 		if l > 1:
