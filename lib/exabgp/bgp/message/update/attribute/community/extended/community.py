@@ -63,10 +63,10 @@ class ExtendedCommunity (Attribute):
 		return hash(self.community)
 
 	def __eq__(self,other):
-		return cmp(self,other) == 0
+		return self.__cmp__(other) == 0
 
 	def __ne__(self,other):
-		return cmp(self,other) != 0
+		return self.__cmp__(other) != 0
 
 	def __cmp__ (self, other):
 		if not isinstance(other, ExtendedCommunity):
