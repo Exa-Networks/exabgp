@@ -140,6 +140,7 @@ class Logger (object):
 		self._option.parser        = command.log.enable and (command.log.all or command.log.parser)
 
 		if not command.log.enable:
+			self.destination = ''
 			return
 
 		self.destination = command.log.destination
