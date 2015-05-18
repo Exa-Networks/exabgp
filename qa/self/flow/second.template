@@ -1,0 +1,28 @@
+#route 77.93.35.15/32 next-hop 10.0.0.2;
+
+group test {
+	local-as 65534;
+	peer-as 65533;
+	hold-time 9;
+	graceful-restart 1200;
+
+#	family {
+#		ipv4 unicast;
+#		ipv4 flow;
+#	}
+
+ 	process parsed-route-backend {
+		encoder json;
+		receive {
+			parsed;
+			update;
+		}
+ 		run ./log-syslog.py;
+ 	}
+
+	neighbor 127.0.0.1 {
+		description "router 2";
+		router-id 128.0.0.0;
+		local-address IP;
+	}
+}
