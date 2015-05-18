@@ -7,7 +7,7 @@ Copyright (c) 2014-2015 Orange. All rights reserved.
 
 from struct import pack
 
-from exabgp.protocol.ip import IP, NoIP
+from exabgp.protocol.ip import IP, NoNextHop
 from exabgp.protocol.ip.address import Address
 
 from exabgp.protocol.family import AFI
@@ -38,7 +38,7 @@ class EVPN (Address):
 
 	def __init__ (self, packed, nexthop, action, path=None):
 		Address.__init__(self, EVPN.afi, EVPN.safi)
-		self.nexthop = IP.unpack(nexthop) if nexthop else NoIP
+		self.nexthop = IP.unpack(nexthop) if nexthop else NoNextHop
 		self.action = action
 		self.packed = packed
 
@@ -94,7 +94,7 @@ class EVPN (Address):
 			klass = cls(data[2:length+2], nexthop, action, addpath)
 		klass.CODE = code
 		klass.action = action
-		klass.nexthop = IP.unpack(nexthop) if nexthop else NoIP
+		klass.nexthop = IP.unpack(nexthop) if nexthop else NoNextHop
 		klass.addpath = addpath
 
 		return length+2,klass
