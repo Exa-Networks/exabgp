@@ -21,6 +21,7 @@ Version 3.4.11
  * Fix: Allow = with flowspec singleton
     reported by: Pavel Odintsov
  * Fix: selfcheck feature
+ * Fix: do not refuse to parse multiple MP attributes in an update
  * Feature: Allow single line flow route
     requested by: Pavel Odintsov
  * Feature: show route (extensive) can take a neighbor as parameter
