@@ -130,7 +130,7 @@ class Control (object):
 			return self.loop()
 		except KeyboardInterrupt:
 			self.cleanup()
-		except Exception,exc:
+		except Exception, exc:
 			print >> sys.stderr, exc
 			print >> sys.stderr,''
 			traceback.print_exc(file=sys.stderr)
@@ -138,6 +138,11 @@ class Control (object):
 			self.cleanup()
 			sys.exit(1)
 
+
+def main():
+	location = dict(zip(range(len(sys.argv)),sys.argv)).get(1,'/var/run/exabgp.sock')
+	Control(location).run()
+
+
 if __name__ == '__main__':
-	LOCATION = dict(zip(range(len(sys.argv)),sys.argv)).get(1,'/var/run/exabgp.sock')
-	Control(LOCATION).run()
+	main()

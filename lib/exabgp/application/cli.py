@@ -222,9 +222,13 @@ class ExaBGP (Completed):
 	do_q = do_quit
 
 
-if __name__ == '__main__':
+def main():
 	if len(sys.argv) > 1:
 		ExaBGP().onecmd(' '.join(sys.argv[1:]))
 	else:
 		print "ExaBGP %s CLI" % version
 		ExaBGP('').cmdloop()
+
+
+if __name__ == '__main__':
+	main()
