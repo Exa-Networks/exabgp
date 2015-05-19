@@ -146,12 +146,11 @@ class Attributes (dict):
 		self._str = ''
 		self._json = ''
 
-		if attribute.ID in self:
-			raise Notify(3,0,'multiple attribute for %s' % str(Attribute.CODE(attribute.ID)))
-
 		# XXX: FIXME: I am not sure anymore that more than one of each is possible
 		if attribute.ID in Attributes.MULTIPLE:
 			self.setdefault(attribute.ID,[]).append(attribute)
+		elif attribute.ID in self:
+			raise Notify(3,0,'multiple attribute for %s' % str(Attribute.CODE(attribute.ID)))
 		else:
 			self[attribute.ID] = attribute
 
