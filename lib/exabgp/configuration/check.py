@@ -30,6 +30,8 @@ from exabgp.reactor.api.encoding import JSON
 
 from exabgp.bgp.message.notification import Notification
 
+from exabgp.protocol.family import known_families
+
 # =============================================================== check_neighbor
 # ...
 
@@ -50,7 +52,7 @@ def check_neighbor (neighbors):
 		neighbor = neighbors[name]
 
 		path = {}
-		for f in NLRI.known_families():
+		for f in known_families():
 			if neighbor.add_path:
 				path[f] = neighbor.add_path
 
