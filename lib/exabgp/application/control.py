@@ -13,41 +13,36 @@ import traceback
 
 
 class Control (object):
-	def __init__ (self, location=None,production=True):
-		from exabgp.configuration.environment import environment
-		self.location = location or environment.settings().api.socket
-
-		self.unix = None
-		self.sock = None
-		self._production = production
+	def __init__ (self, location=None):
+		self.location = location
+		self.fifo = None
 
 	def __del__ (self):
-		if self.sock:
-			self.sock.close()
-		if self.unix:
-			self.unix.close()
-
 		self.cleanup()
 
-	# Can raise IOError
 	def cleanup (self):
-		if os.path.exists(self.location):
-			os.remove(self.location)
+		if self.fifo:
+			try:
+				self.fifo.close()
+			except IOError:
+				pass
+		try:
+			if os.path.exists(self.location):
+				os.remove(self.location)
+		except IOError:
+			sys.stderr.write('could not remove current named pipe (%s)\n' % self.location)
+			sys.exit(1)
 
 	# Can raise IOError, socket.error
 	def init (self):
 		if not self.location:
 			return False
 
-		if not self.unix:
+		if not self.fifo:
 			try:
 				# Can raise IOError
 				self.cleanup()
-
-				self.unix = socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)
-				# Can raise socket.error
-				self.unix.bind(self.location)
-				self.unix.listen(1)
+				os.mkfifo(self.location)
 				return True
 			except IOError:
 				print >> sys.stderr, 'could not access/delete socket file', self.location
@@ -57,8 +52,6 @@ class Control (object):
 			return False
 
 	def write_standard (self, data):
-		if not self._production:
-			data = ''
 		sys.stdout.write(data+'\n')
 		sys.stdout.flush()
 
@@ -73,23 +66,22 @@ class Control (object):
 
 	def loop (self):
 		report = ''
+		self.fifo = open(self.location,'rw')
 
 		while True:
-			self.sock,_ = self.unix.accept()
-
 			read = {
 				sys.stdin: self.read_stdin,
-				self.sock: self.read_socket,
+				self.fifo: self.fifo.read,
 			}
 
 			write = {
-				sys.stdin: self.write_socket,
-				self.sock: self.write_standard,
+				sys.stdin: self.fifo.write,
+				self.fifo: self.write_standard,
 			}
 
 			store = {
 				sys.stdin: '',
-				self.sock: '',
+				self.fifo: '',
 			}
 
 			looping = True
@@ -117,11 +109,8 @@ class Control (object):
 							report,data = data.split('\n',1)
 							write[fd](report)
 
-				if not self._production:
-					return report
-
-		# This is only for the unittesting code
-		return report
+			# This is only for the unittesting code
+			return report
 
 	def run (self):
 		try:
@@ -139,8 +128,9 @@ class Control (object):
 			sys.exit(1)
 
 
-def main():
-	location = dict(zip(range(len(sys.argv)),sys.argv)).get(1,'/var/run/exabgp.sock')
+def main (location=None):
+	if not location:
+		location = dict(zip(range(len(sys.argv)),sys.argv)).get(1,'/var/run/exabgp.sock')
 	Control(location).run()
 
 

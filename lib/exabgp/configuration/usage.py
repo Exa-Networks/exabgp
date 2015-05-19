@@ -9,7 +9,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 usage = """\
 The BGP swiss army knife of networking
 
-usage: exabgp [--help] [--version] [--folder FOLDER] [--env ENV]
+usage: exabgp [--help] [--version]
+              [--folder FOLDER] [--env ENV]
               [[--full-ini | --diff-ini | --full-env | --diff-env] |
               [--fi | --di | --fe | --de]]
               [--debug] [--pdb] [--test]

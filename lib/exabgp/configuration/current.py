@@ -97,7 +97,7 @@ from exabgp.bgp.message.operational import Advisory
 from exabgp.bgp.message.update.attribute.attributes import Attributes
 
 from exabgp.rib.change import Change
-from exabgp.reactor.api import control
+
 from exabgp.logger import Logger
 
 from exabgp.version import json as json_version
@@ -1374,7 +1374,7 @@ class Configuration (object):
 			self.process['__cli__'] = {
 				'neighbor': '*',
 				'encoder': 'json',
-				'run': [sys.executable, control.__file__, self.cli_socket],
+				'run': [sys.executable, sys.argv[0]],
 
 				'neighbor-changes': False,
 
@@ -1396,7 +1396,7 @@ class Configuration (object):
 					Message.CODE.ROUTE_REFRESH,
 					Message.CODE.OPERATIONAL
 				]:
-					self.process['__cli__']['%s-%s' % (direction,message.short())] = False
+					self.process['__cli__']['%s-%d' % (direction,message)] = False
 
 		for name in self.process.keys():
 			process = self.process[name]

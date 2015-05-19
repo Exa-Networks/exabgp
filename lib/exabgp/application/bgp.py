@@ -79,6 +79,12 @@ def main ():
 
 	from exabgp.configuration.setup import environment
 
+	named_pipe = os.environ.get('NAMED_PIPE','')
+	if named_pipe:
+		from exabgp.application.control import main as control
+		control(named_pipe)
+		sys.exit(0)
+
 	if options["--decode"]:
 		decode = ''.join(options["--decode"]).replace(':','').replace(' ','')
 		if not is_bgp(decode):
@@ -104,6 +110,10 @@ def main ():
 		print usage
 		print '\nconfiguration issue,', str(exc)
 		sys.exit(1)
+
+	# Make sure our child has a named pipe name
+	if env.api.socket:
+		os.environ['NAMED_PIPE'] = env.api.socket
 
 	duration = options["--signal"]
 	if duration and duration.isdigit():
