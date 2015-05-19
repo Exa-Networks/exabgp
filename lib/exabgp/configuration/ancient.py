@@ -381,9 +381,11 @@ class Configuration (object):
 			return self._reload()
 		except KeyboardInterrupt:
 			self.error = 'configuration reload aborted by ^C or SIGINT'
+			if self.debug: raise  # noqa
 			return False
 		except Exception:
 			self.error = 'configuration parsing issue'
+			if self.debug: raise  # noqa
 			return False
 
 	def _reload (self):
