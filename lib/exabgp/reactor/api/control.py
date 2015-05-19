@@ -137,7 +137,3 @@ class Control (object):
 			sys.stderr.flush()
 			self.cleanup()
 			sys.exit(1)
-
-if __name__ == '__main__':
-	LOCATION = dict(zip(range(len(sys.argv)),sys.argv)).get(1,'/var/run/exabgp.sock')
-	Control(LOCATION).run()

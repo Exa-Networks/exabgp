@@ -426,7 +426,7 @@ def loop (options):
         else:
             time.sleep(options.interval)
 
-if __name__ == "__main__":
+def main ():
     options = parse()
     setup_logging(options.debug, options.silent, options.name,
                   options.syslog_facility, not options.no_syslog)
@@ -447,3 +447,6 @@ if __name__ == "__main__":
         loop(options)
     except Exception as e:
         logger.exception("Uncatched exception: %s", e)
+
+if __name__ == "__main__":
+    main()
