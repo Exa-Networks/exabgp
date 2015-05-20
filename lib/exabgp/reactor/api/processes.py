@@ -198,9 +198,12 @@ class Processes (object):
 							# Calling next() on Linux and OSX works perfectly well
 							# but not on OpenBSD where it always raise StopIteration
 							# and only readline() works
-							line = proc.stdout.readline().rstrip()
+							raw = proc.stdout.readline()
+							line = raw.rstrip()
 							consumed_data = True
 							self.logger.processes("Command from process %s : %s " % (process,line))
+							if raw == '':
+								raise IOError('Child process died')
 							yield (process,formated(line))
 					except IOError,exc:
 						if not exc.errno or exc.errno in error.fatal:
