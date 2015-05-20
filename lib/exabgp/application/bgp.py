@@ -112,8 +112,8 @@ def main ():
 		sys.exit(1)
 
 	# Make sure our child has a named pipe name
-	if env.api.socket:
-		os.environ['NAMED_PIPE'] = env.api.socket
+	if env.api.file:
+		os.environ['NAMED_PIPE'] = env.api.file
 
 	duration = options["--signal"]
 	if duration and duration.isdigit():

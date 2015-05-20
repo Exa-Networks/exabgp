@@ -316,7 +316,7 @@ class Configuration (object):
 	def __init__ (self, configurations, text=False):
 		self.debug = environment.settings().debug.configuration
 		self.api_encoder = environment.settings().api.encoder
-		self.cli_socket = environment.settings().api.socket
+		self.fifo = environment.settings().api.file
 
 		self.logger = Logger()
 		self._text = text
@@ -1370,7 +1370,7 @@ class Configuration (object):
 			messages = local_scope.get('operational',[])
 
 		# we want to have a socket for the cli
-		if self.cli_socket:
+		if self.fifo:
 			self.process['__cli__'] = {
 				'neighbor': '*',
 				'encoder': 'json',

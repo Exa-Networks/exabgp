@@ -236,7 +236,7 @@ environment.configuration = {
 			'value': 'false',
 			'help':  'should we respawn a helper process if it dies',
 		},
-		'socket':  {
+		'file':  {
 			'read':  environment.unquote,
 			'write': environment.quote,
 			'value': '',

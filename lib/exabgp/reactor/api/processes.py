@@ -204,6 +204,8 @@ class Processes (object):
 							line = proc.stdout.readline().rstrip()
 							consumed_data = True
 							self.logger.processes("Command from process %s : %s " % (process,line))
+							if line == '':
+								raise IOError('Child process died')
 							yield (process,formated(line))
 					except IOError,exc:
 						if not exc.errno or exc.errno in error.fatal:
