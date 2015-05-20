@@ -21,6 +21,7 @@ class _Code (int):
 	OPERATIONAL   = 0x06  # .   6  # Not IANA assigned yet
 
 	names = {
+		None:           'INVALID',
 		NOP:            'NOP',
 		OPEN:           'OPEN',
 		UPDATE:         'UPDATE',
@@ -31,12 +32,24 @@ class _Code (int):
 	}
 
 	short_names = {
+		None:           'invalid',
 		NOP:            'nop',
 		OPEN:           'open',
 		UPDATE:         'update',
 		NOTIFICATION:   'notification',
 		KEEPALIVE:      'keepalive',
 		ROUTE_REFRESH:  'refresh',
+		OPERATIONAL:    'operational',
+	}
+
+	long_names = {
+		None:           'invalid',
+		NOP:            'nop',
+		OPEN:           'open',
+		UPDATE:         'update',
+		NOTIFICATION:   'notification',
+		KEEPALIVE:      'keepalive',
+		ROUTE_REFRESH:  'route refresh',
 		OPERATIONAL:    'operational',
 	}
 
@@ -130,21 +143,7 @@ class Message (Exception):
 
 	@staticmethod
 	def string (code):
-		if code is None:
-			return 'invalid'
-		if code == Message.CODE.OPEN:
-			return 'open'
-		if code == Message.CODE.UPDATE:
-			return 'update'
-		if code == Message.CODE.NOTIFICATION:
-			return 'notification'
-		if code == Message.CODE.KEEPALIVE:
-			return 'keepalive'
-		if code == Message.CODE.ROUTE_REFRESH:
-			return 'route refresh'
-		if code == Message.CODE.OPERATIONAL:
-			return 'operational'
-		return 'unknown'
+		return _Code.long_names.get(code,'unknown')
 
 	def _message (self, message):
 		message_len = pack('!H',19+len(message))
