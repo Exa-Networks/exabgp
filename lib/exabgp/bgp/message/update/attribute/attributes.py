@@ -253,7 +253,7 @@ class Attributes (dict):
 				cls.cached = attributes
 			else:
 				cls.previous = ''
-				cls.cache = None
+				cls.cached = None
 
 			return attributes
 		except IndexError:
