@@ -232,12 +232,13 @@ class Attributes (dict):
 		try:
 			if cls.cached:
 				if data == cls.previous:
-					return Attributes.cached
-				elif cls.previous and data.startswith(cls.previous):
-					attributes = Attributes()
-					for key in Attributes.cached:
-						attributes[key] = Attributes.cached[key]
-					attributes.parse(data[len(cls.previous):],negotiated)
+					return cls.cached
+				# # This code may mess with the cached data
+				# elif cls.previous and data.startswith(cls.previous):
+				# 	attributes = Attributes()
+				# 	for key in cls.cached:
+				# 		attributes[key] = cls.cached[key]
+				# 	attributes.parse(data[len(cls.previous):],negotiated)
 				else:
 					attributes = cls().parse(data,negotiated)
 			else:
