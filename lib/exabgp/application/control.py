@@ -15,22 +15,26 @@ import traceback
 class Control (object):
 	def __init__ (self, location=None):
 		self.location = location
-		self.fifo = None
-
-	def __del__ (self):
-		self.cleanup()
+		self.fifo_read = None
+		self.fifo_write = None
 
 	def cleanup (self):
-		if self.fifo:
+		if self.fifo_read:
 			try:
-				self.fifo.close()
+				self.fifo_read.close()
+			except IOError:
+				pass
+		if self.fifo_write:
+			try:
+				self.fifo_write.close()
 			except IOError:
 				pass
 		try:
 			if os.path.exists(self.location):
 				os.remove(self.location)
 		except IOError:
-			sys.stderr.write('could not remove current named pipe (%s)\n' % self.location)
+			sys.stdout.write('error: could not remove current named pipe (%s)\n' % os.path.abspath(self.location))
+			sys.stdout.flush()
 			sys.exit(1)
 
 	# Can raise IOError, socket.error
@@ -38,92 +42,81 @@ class Control (object):
 		if not self.location:
 			return False
 
-		if not self.fifo:
-			try:
-				# Can raise IOError
-				self.cleanup()
-				os.mkfifo(self.location)
-				return True
-			except IOError:
-				print >> sys.stderr, 'could not access/delete socket file', self.location
-			except socket.error:
-				print >> sys.stderr, 'could not write socket file', self.location
-
+		if os.path.exists(self.location):
+			sys.stdout.write('error: named pipe already exists (%s)\n' % os.path.abspath(self.location))
+			sys.stdout.flush()
 			return False
 
-	def write_standard (self, data):
-		sys.stdout.write(data+'\n')
-		sys.stdout.flush()
-
-	def write_socket (self, data):
-		self.sock.sendall(data)  # pylint: disable=E1101
-
-	def read_socket (self, number):
-		return self.sock.recv(number)  # pylint: disable=E1101
-
-	def read_stdin (self, _):
-		return sys.stdin.readline()
+		try:
+			os.mkfifo(self.location)
+			return True
+		except OSError:
+			sys.stdout.write('error: could not create the named pipe %s\n' % os.path.abspath(self.location))
+			sys.stdout.flush()
+			raise
+		except IOError:
+			sys.stdout.write('error: could not access/delete the named pipe %s\n' % os.path.abspath(self.location))
+			sys.stdout.flush()
+		except socket.error:
+			sys.stdout.write('error: could not write on the named pipe %s\n' % os.path.abspath(self.location))
+			sys.stdout.flush()
 
 	def loop (self):
 		report = ''
-		self.fifo = open(self.location,'rw')
+
+		self.fifo_read = open(self.location,'r')
+		self.fifo_write = open(self.location,'w')
+
+		read = {
+			sys.stdin: sys.stdin.readline,
+			self.fifo_read: self.fifo_read.readline,
+		}
+
+		write = {
+			sys.stdin: self.fifo_write,
+			self.fifo_read: sys.stdout,
+		}
+
+		store = {
+			sys.stdin: '',
+			self.fifo_read: '',
+		}
 
 		while True:
-			read = {
-				sys.stdin: self.read_stdin,
-				self.fifo: self.fifo.read,
-			}
+			ready,_,_ = select.select(read.keys(),[],[],1)
+			if not ready:
+				continue
 
-			write = {
-				sys.stdin: self.fifo.write,
-				self.fifo: self.write_standard,
-			}
+			for source in ready:
+				new = read[source]()
+				data = store[source] + new
 
-			store = {
-				sys.stdin: '',
-				self.fifo: '',
-			}
-
-			looping = True
-			while looping:
-				ready,_,_ = select.select(read.keys(),[],[],1)
-				if not ready:
+				if '\n' not in data:
+					store[source] = data
+					data = ''
 					continue
 
-				for fd in ready:
-					r,_,_ = select.select([fd,],[],[],0)
+				store[source] = ''
+				write[source].write(data)
+				write[source].flush()
 
-					if r:
-						new = read[fd](10240)
-						if not new:
-							looping = False
-							break
-
-						data = store[fd] + new
-
-						while True:
-							if '\n' not in data:
-								store[fd] = data
-								data = ''
-								break
-							report,data = data.split('\n',1)
-							write[fd](report)
-
-			# This is only for the unittesting code
-			return report
+		# This is only for the unittesting code
+		return report
 
 	def run (self):
+		if not self.init():
+			return False
 		try:
-			if not self.init():
-				return False
-			return self.loop()
+			result = self.loop()
+			self.cleanup()
+			return result
 		except KeyboardInterrupt:
 			self.cleanup()
 		except Exception, exc:
-			print >> sys.stderr, exc
-			print >> sys.stderr,''
-			traceback.print_exc(file=sys.stderr)
-			sys.stderr.flush()
+			print exc
+			print ''
+			traceback.print_exc(file=sys.stdout)
+			sys.stdout.flush()
 			self.cleanup()
 			sys.exit(1)
 

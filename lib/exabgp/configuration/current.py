@@ -1371,7 +1371,8 @@ class Configuration (object):
 
 		# we want to have a socket for the cli
 		if self.fifo:
-			self.process['__cli__'] = {
+			_cli_name = 'CLI'
+			self.process[_cli_name] = {
 				'neighbor': '*',
 				'encoder': 'json',
 				'run': [sys.executable, sys.argv[0]],
@@ -1396,7 +1397,7 @@ class Configuration (object):
 					Message.CODE.ROUTE_REFRESH,
 					Message.CODE.OPERATIONAL
 				]:
-					self.process['__cli__']['%s-%d' % (direction,message)] = False
+					self.process[_cli_name]['%s-%d' % (direction,message)] = False
 
 		for name in self.process.keys():
 			process = self.process[name]

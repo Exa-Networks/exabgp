@@ -211,7 +211,7 @@ class Processes (object):
 					except IOError,exc:
 						if not exc.errno or exc.errno in error.fatal:
 							# if the program exists we can get an IOError with errno code zero !
-							self.logger.processes("Issue with the process' PIPE, terminating it and restarting it")
+							self.logger.processes("Issue with the process, terminating it and restarting it")
 							self._terminate(process)
 							self._start(process)
 						elif exc.errno in error.block:
