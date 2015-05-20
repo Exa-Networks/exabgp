@@ -7,6 +7,8 @@ Copyright (c) 2015-2015 Exa Networks. All rights reserved.
 
 import os
 import sys
+import stat
+import signal
 import select
 import socket
 import traceback
@@ -17,6 +19,14 @@ class Control (object):
 		self.location = location
 		self.fifo_read = None
 		self.fifo_write = None
+
+	def delete (self):
+		try:
+			if os.path.exists(self.location):
+				os.remove(self.location)
+		except IOError:
+			sys.stdout.write('error: could not remove current named pipe (%s)\n' % os.path.abspath(self.location))
+			sys.stdout.flush()
 
 	def cleanup (self):
 		if self.fifo_read:
@@ -29,31 +39,30 @@ class Control (object):
 				self.fifo_write.close()
 			except IOError:
 				pass
-		try:
-			if os.path.exists(self.location):
-				os.remove(self.location)
-		except IOError:
-			sys.stdout.write('error: could not remove current named pipe (%s)\n' % os.path.abspath(self.location))
-			sys.stdout.flush()
-			sys.exit(1)
+		self.delete()
 
 	# Can raise IOError, socket.error
 	def init (self):
 		if not self.location:
 			return False
 
-		if os.path.exists(self.location):
-			sys.stdout.write('error: named pipe already exists (%s)\n' % os.path.abspath(self.location))
-			sys.stdout.flush()
-			return False
-
 		try:
-			os.mkfifo(self.location)
+			if not os.path.exists(self.location):
+				os.mkfifo(self.location)
+			elif not stat.S_ISFIFO(os.stat(self.location).st_mode):
+				sys.stdout.write('error: a file exist which is not a named pipe (%s)\n' % os.path.abspath(self.location))
+				return False
+
+			if not os.access(self.location,os.R_OK | os.W_OK):
+				sys.stdout.write('error: a named pipe exists and we can not read/write to it (%s)\n' % os.path.abspath(self.location))
+				return False
+
+			signal.signal(signal.SIGINT, self.delete)
+			signal.signal(signal.SIGTERM, self.delete)
 			return True
 		except OSError:
 			sys.stdout.write('error: could not create the named pipe %s\n' % os.path.abspath(self.location))
-			sys.stdout.flush()
-			raise
+			return False
 		except IOError:
 			sys.stdout.write('error: could not access/delete the named pipe %s\n' % os.path.abspath(self.location))
 			sys.stdout.flush()
