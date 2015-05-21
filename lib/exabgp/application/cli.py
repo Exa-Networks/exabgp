@@ -109,7 +109,7 @@ class Attribute (SubMenu):
 		print 'attribute %s ' % self.name + ' '.join('%s %s' % (key,value) for key,value in self.attribute.iteritems())
 
 
-class ExaBGP (Completed):
+class Syntax (Completed):
 	completion = {
 		'announce':  {
 			'route':  {
@@ -220,6 +220,39 @@ class ExaBGP (Completed):
 		return True
 
 	do_q = do_quit
+
+
+class Command (object):
+	def do_show (self,line):
+		self.request('show routes')
+		self.report()
+
+
+import select
+
+
+class Connection (object):
+	def __init__ (self,name):
+		self.read = open(name,'r+')
+		self.write = open(name,'w+')
+
+	def request (self,command):
+		self.write.write(command + '\n')
+
+	def report (self):
+		while select.select([self.read],[],[],5):
+			print self.read.readline()
+
+	def close (self):
+		self.read.close()
+		self.write.close()
+
+
+class ExaBGP (Connection,Command,Syntax):
+	def __init__ (self,name='exabgp.cmd'):
+		Connection.__init__(self,name)
+		Syntax.__init__(self,'')
+
 
 
 def main():
