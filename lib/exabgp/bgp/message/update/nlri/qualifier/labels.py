@@ -57,7 +57,7 @@ class Labels (object):
 		elif self._len == 1:
 			return '%d' % self.labels[0]
 		else:
-			return '[]'
+			return '[ ]'
 
 	@classmethod
 	def unpack (cls, data):

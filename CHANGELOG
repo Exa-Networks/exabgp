@@ -48,6 +48,8 @@ Version 3.5.0
     reported by: Pavel Odintsov
  * Fix: selfcheck feature
  * Fix: do not refuse to parse multiple MP attributes in an update
+ * Fix: possible bug with attribute information due to caching
+    reported by: Colin Petrie
  * Feature: Allow single line flow route
     requested by: Pavel Odintsov
 
