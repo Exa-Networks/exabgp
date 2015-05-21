@@ -63,7 +63,7 @@ def restart (self, reactor, service, command):
 
 
 def version (self, reactor, service, command):
-	reactor.answer(service,'exabgp %s' % _version)
+	reactor.answer(service,'exabgp %s\n' % _version)
 	return True
 
 

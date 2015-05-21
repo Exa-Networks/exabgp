@@ -19,59 +19,55 @@ from exabgp.reactor.network.error import error
 class Control (object):
 	terminating = False
 
-	def __init__ (self, location=None):
-		self.location = location
+	def __init__ (self, location):
+		self.send = location + '.out'
+		self.recv = location + '.in'
 		self.r_pipe = None
-		self.w_pipe = None
 
 	def init (self):
-		if not self.location:
-			return False
+		def _make_fifo (name):
+			try:
+				if not os.path.exists(name):
+					os.mkfifo(name)
+				elif not stat.S_ISFIFO(os.stat(name).st_mode):
+					sys.stdout.write('error: a file exist which is not a named pipe (%s)\n' % os.path.abspath(name))
+					return False
 
-		try:
-			if not os.path.exists(self.location):
-				os.mkfifo(self.location)
-			elif not stat.S_ISFIFO(os.stat(self.location).st_mode):
-				sys.stdout.write('error: a file exist which is not a named pipe (%s)\n' % os.path.abspath(self.location))
+				if not os.access(name,os.R_OK):
+					sys.stdout.write('error: a named pipe exists and we can not read/write to it (%s)\n' % os.path.abspath(name))
+					return False
+				return True
+			except OSError:
+				sys.stdout.write('error: could not create the named pipe %s\n' % os.path.abspath(name))
 				return False
+			except IOError:
+				sys.stdout.write('error: could not access/delete the named pipe %s\n' % os.path.abspath(name))
+				sys.stdout.flush()
+			except socket.error:
+				sys.stdout.write('error: could not write on the named pipe %s\n' % os.path.abspath(name))
+				sys.stdout.flush()
 
-			if not os.access(self.location,os.R_OK | os.W_OK):
-				sys.stdout.write('error: a named pipe exists and we can not read/write to it (%s)\n' % os.path.abspath(self.location))
-				return False
+		if not _make_fifo(self.recv):
+			self.terminate()
+			sys.exit(1)
 
-			signal.signal(signal.SIGINT, self.terminate)
-			signal.signal(signal.SIGTERM, self.terminate)
-			return True
-		except OSError:
-			sys.stdout.write('error: could not create the named pipe %s\n' % os.path.abspath(self.location))
-			return False
-		except IOError:
-			sys.stdout.write('error: could not access/delete the named pipe %s\n' % os.path.abspath(self.location))
-			sys.stdout.flush()
-		except socket.error:
-			sys.stdout.write('error: could not write on the named pipe %s\n' % os.path.abspath(self.location))
-			sys.stdout.flush()
+		if not _make_fifo(self.send):
+			self.terminate()
+			sys.exit(1)
 
-	def remove_fifo (self):
-		# If we got two signal, time to stop trying nicely as we can not delete a file which is open
-		try:
-			if os.path.exists(self.location):
-				os.remove(self.location)
-		except IOError:
-			sys.stdout.write('error: could not remove current named pipe (%s)\n' % os.path.abspath(self.location))
-			sys.stdout.flush()
+		signal.signal(signal.SIGINT, self.terminate)
+		signal.signal(signal.SIGTERM, self.terminate)
+		return True
 
 	def cleanup (self):
-		if self.r_pipe:
-			try:
-				os.close(self.r_pipe)
-			except (OSError,IOError):
-				pass
-		if self.w_pipe:
-			try:
-				os.close(self.w_pipe)
-			except (OSError,IOError):
-				pass
+		def _close (pipe):
+			if self.r_pipe:
+				try:
+					os.close(pipe)
+				except (OSError,IOError,TypeError):
+					pass
+
+		_close(self.r_pipe)
 
 	def terminate (self,ignore=None,me=None):
 		# if the named pipe is open, and remove_fifo called
@@ -81,11 +77,24 @@ class Control (object):
 		self.terminating = True
 
 		self.cleanup()
-		# self.remove_fifo()
+
+		# def _remove_fifo (name):
+		# 	# If we got two signal, time to stop trying nicely as we can not delete a file which is open
+		# 	try:
+		# 		if os.path.exists(name):
+		# 			os.remove(name)
+		# 	except IOError:
+		# 		sys.stdout.write('error: could not remove current named pipe (%s)\n' % os.path.abspath(name))
+		# 		sys.stdout.flush()
+
+		# self._remove_fifo(self.recv)
+		# self._remove_fifo(self.send)
 
 	def loop (self):
-		self.r_pipe = os.open(self.location, os.O_RDONLY | os.O_NONBLOCK | os.O_EXCL)
-		self.w_pipe = os.open(self.location, os.O_WRONLY | os.O_NONBLOCK | os.O_EXCL)
+		try:
+			self.r_pipe = os.open(self.recv, os.O_RDONLY | os.O_NONBLOCK | os.O_EXCL)
+		except OSError:
+			self.terminate()
 
 		standard_in = sys.stdin.fileno()
 		standard_out = sys.stdout.fileno()
@@ -127,12 +136,22 @@ class Control (object):
 
 		@monitor
 		def fifo_writer (line):
+			pipe,nb = None,0
 			try:
-				return os.write(self.w_pipe,line)
-			except OSError as e:
-				if e.errno in error.block:
-					return 0
-				raise e
+				pipe = os.open(self.send, os.O_WRONLY | os.O_NONBLOCK | os.O_EXCL)
+			except OSError:
+				time.sleep(0.05)
+				return 0
+			if pipe is not None:
+				try:
+					nb = os.write(pipe,line)
+				except OSError:
+					pass
+				try:
+					os.close(pipe)
+				except OSError:
+					pass
+			return nb
 
 		read = {
 			standard_in: std_reader,
@@ -149,26 +168,10 @@ class Control (object):
 			self.r_pipe: '',
 		}
 
-		def have_data ():
-			return '\n' in ''.join(store.values())
-
-		def handle (source):
-			data = store[source]
-			while '\n' not in data:
-				data = read[source](1024)
-
-			while '\n' in data:
-				line,data = data.split('\n',1)
-				while line:
-					l = write[source](line + '\n')
-					if not l:
-						time.sleep(0.05)
-					line = line[l:]
-
-			store[source] = data
+		def consume (source):
+			store[source] += read[source](1024)
 
 		reading = [standard_in, self.r_pipe]
-		last = None
 
 		while True:
 			try:
@@ -176,25 +179,25 @@ class Control (object):
 			except select.error,e:
 				if e.args[0] == 4:  # Interrupted system call
 					raise KeyboardInterrupt()
-			if not ready and not have_data():
-				if last and time.time() - last > 10:
-					last = None
-					reading = [standard_in, self.r_pipe]
-					store = {
-						standard_in: '',
-						self.r_pipe: '',
-					}
+				sys.exit(1)  # Unknow error, ending
+
+			# we buffer first so the two ends are not blocking
+			if not ready:
+				for source in reading:
+					if '\n' in store[source]:
+						line,_ = store[source].split('\n',1)
+						line = line + '\n'
+						sent = write[source](line)
+						if sent:
+							store[source] = store[source][sent:]
+							continue
 				continue
 
 			# command from user
-			if self.r_pipe in ready or '\n' in store[self.r_pipe]:
-				last = time.time()
-				handle(self.r_pipe)
-				# wait for the reply from the server, do not consume the data we produce
-				reading = [standard_in]
-			if standard_in in ready or '\n' in store[standard_in]:
-				last = time.time()
-				handle(standard_in)
+			if self.r_pipe in ready:
+				consume(self.r_pipe)
+			if standard_in in ready:
+				consume(standard_in)
 
 	def run (self):
 		if not self.init():

@@ -421,7 +421,7 @@ class Reactor (object):
 
 	def answer (self, service, string):
 		self.processes.write(service,string)
-		self.logger.reactor('Responding to %s : %s' % (service,string))
+		self.logger.reactor('Responding to %s : %s' % (service,string.replace('\n','\\n')))
 
 	def api_shutdown (self):
 		self._shutdown = True
