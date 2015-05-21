@@ -85,11 +85,8 @@ class IP (object):
 	def pack (self):
 		return self.packed
 
-	def __str__ (self):
-		return self.ip
-
 	def __repr__ (self):
-		return str(self)
+		return self.ip
 
 	def __cmp__ (self, other):
 		if not isinstance(other, self.__class__):

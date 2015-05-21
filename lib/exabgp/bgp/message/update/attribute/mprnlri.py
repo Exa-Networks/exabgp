@@ -84,7 +84,7 @@ class MPRNLRI (Attribute,Address):
 		raise RuntimeError('we can not give you the size of an MPRNLRI - was it with our witout addpath ?')
 		# return len(self.pack(False))
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "MP_REACH_NLRI for %s %s with %d NLRI(s)" % (self.afi,self.safi,len(self.nlris))
 
 	@classmethod
@@ -134,6 +134,9 @@ class MPRNLRI (Attribute,Address):
 			elif safi in (SAFI.flow_vpn,):
 				if len_nh not in (0,16,32):
 					raise Notify(3,0,'invalid ipv6 flow_vpn next-hop length %d expected 0, 16 or 32' % len_nh)
+		elif afi == AFI.l2vpn:
+			if len_nh != 4:
+				Notify(3,0,'invalid l2vpn next-hop length %d expected 4' % len_nh)
 		size = len_nh - rd
 
 		# XXX: FIXME: GET IT FROM CACHE HERE ?
@@ -170,6 +173,10 @@ class MPRNLRI (Attribute,Address):
 			else:
 				length,nlri = NLRI.unpack(afi,safi,data,addpath,'',IN.ANNOUNCED)
 				nlris.append(nlri)
+
+			if length == 0:
+				length = len(data)
+				#XXXXX: we should log a warning
 
 			# logger.parser(LazyFormat("parsed announce mp nlri %s payload " % nlri,data[:length]))
 			data = data[length:]

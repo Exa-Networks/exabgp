@@ -49,7 +49,7 @@ class ExtendedCommunity (Attribute):
 			h += ord(byte)
 		return "%ld" % h
 
-	def __str__ (self):
+	def __repr__ (self):
 		h = 0x00
 		for byte in self.community:
 			h <<= 8
@@ -61,6 +61,12 @@ class ExtendedCommunity (Attribute):
 
 	def __hash__ (self):
 		return hash(self.community)
+
+	def __eq__(self,other):
+		return self.__cmp__(other) == 0
+
+	def __ne__(self,other):
+		return self.__cmp__(other) != 0
 
 	def __cmp__ (self, other):
 		if not isinstance(other, ExtendedCommunity):

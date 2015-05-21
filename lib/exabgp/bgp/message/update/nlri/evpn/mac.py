@@ -42,8 +42,12 @@ class MAC (EVPN):
 	NAME = "MAC/IP advertisement"
 	SHORT_NAME = "MACAdv"
 
-	def __init__ (self, rd, esi, etag, mac, maclen, label, ip, packed=None):
-		EVPN.__init__(self, packed)
+	def __init__ (self, rd, esi, etag, mac, maclen, label,ip,packed=None,nexthop=None,action=None,addpath=None):
+		EVPN.__init__(self,packed,nexthop,action,addpath)
+		assert(isinstance(rd, RouteDistinguisher))
+		assert(isinstance(etag, EthernetTag))
+		assert(isinstance(ip, IP))
+		assert(isinstance(mac, MACQUAL))
 		self.rd = rd
 		self.esi = esi
 		self.etag = etag
@@ -51,12 +55,12 @@ class MAC (EVPN):
 		self.mac = mac
 		self.ip = ip
 		self.label = label if label else Labels.NOLABEL
-		self.pack()
+		self._pack()
 
 	def __str__ (self):
-		return "%s:%s:%s:%s:%s:%s%s:%s" % (
+		return "%s:%s:%s:%s:%s%s:%s:%s" % (
 			self._prefix(),
-			self.rd,
+			self.rd._str(),
 			self.esi,
 			self.etag,
 			self.mac,
@@ -86,20 +90,19 @@ class MAC (EVPN):
 		# esi and label MUST *NOT* be part of the hash
 		return hash((self.rd,self.etag,self.mac,self.ip))
 
-	def pack (self):
+	def _pack (self):
 		if not self.packed:
 			ip = self.ip.pack() if self.ip else ''
-			value = "%s%s%s%s%s%s%s%s" % (
+			self.packed = "%s%s%s%s%s%s%s%s" % (
 				self.rd.pack(),
 				self.esi.pack(),
 				self.etag.pack(),
 				chr(self.maclen),  # only 48 supported by the draft
 				self.mac.pack(),
-				chr(len(ip.pack()) if ip else '\x00'),
+				chr(len(ip)*8 if ip else '\x00'),
 				ip,
 				self.label.pack()
 			)
-			self.packed = value
 		return self.packed
 
 	@classmethod
@@ -135,6 +138,6 @@ class MAC (EVPN):
 			raise Notify(3,5,"Data field length is given as %d, but does not match one of the expected lengths" % datalen)
 
 		ip = IP.unpack(data[end+1:end+1+iplenUnpack])
-		label = Labels.unpack(data[end+1+iplenUnpack:])
+		label = Labels.unpack(data[end+1+iplenUnpack:end+1+iplenUnpack+3])
 
 		return cls(rd,esi,etag,mac,maclength,label,ip,data)

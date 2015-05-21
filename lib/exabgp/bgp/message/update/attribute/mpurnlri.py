@@ -60,7 +60,7 @@ class MPURNLRI (Attribute,Address):
 	def __len__ (self):
 		raise RuntimeError('we can not give you the size of an MPURNLRI - was it with our witout addpath ?')
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "MP_UNREACH_NLRI for %s %s with %d NLRI(s)" % (self.afi,self.safi,len(self.nlris))
 
 	@classmethod

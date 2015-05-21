@@ -48,7 +48,7 @@ class Community (object):
 	def pack (self, negotiated=None):
 		return self.community
 
-	def __str__ (self):
+	def __repr__ (self):
 		return self._str
 
 	def __len__ (self):

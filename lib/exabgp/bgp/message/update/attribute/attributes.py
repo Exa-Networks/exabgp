@@ -16,6 +16,7 @@ from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import ASPath
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
+from exabgp.bgp.message.update.attribute.community.communities import Communities
 
 from exabgp.bgp.message.notification import Notify
 
@@ -215,7 +216,7 @@ class Attributes (dict):
 			self._json = ', '.join(self._generate_json())
 		return self._json
 
-	def __str__ (self):
+	def __repr__ (self):
 		if not self._str:
 			self._str = ''.join(self._generate_text())
 		return self._str
@@ -385,10 +386,10 @@ class Attributes (dict):
 				sval = self[key]
 				oval = other[key]
 
-				# In the case where the attribute is, for instance, a list
-				# we want to compare values independently of the order
-				if isinstance(sval, collections.Iterable):
-					if not isinstance(oval, collections.Iterable):
+				# In the case where the attribute is Communities or
+				# extended communities, we want to compare values independently of their order
+				if isinstance(sval, Communities):
+					if not isinstance(oval, Communities):
 						return False
 
 					sval = sorted(sval,sorter)

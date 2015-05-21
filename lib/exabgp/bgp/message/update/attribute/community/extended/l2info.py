@@ -38,7 +38,7 @@ class L2Info (ExtendedCommunity):
 			)
 		)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "l2info:%s:%s:%s:%s" % (self.encaps,self.control,self.mtu,self.reserved)
 
 	@staticmethod
