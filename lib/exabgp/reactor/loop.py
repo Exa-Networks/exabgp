@@ -364,17 +364,21 @@ class Reactor (object):
 			if not self._running:
 				if not self._pending:
 					return False
-				self._running = self._pending.popleft()
+				self._running,name = self._pending.popleft()
+				self.logger.reactor("callback | installing %s" % name)
 
-			# run it
-			try:
-				self._running.next()  # run
-				# should raise StopIteration in most case
-				# and prevent us to have to run twice to run one command
-				self._running.next()  # run
-			except StopIteration:
-				self._running = None
-			return True
+			if self._running:
+				# run it
+				try:
+					self.logger.reactor("callback | running")
+					self._running.next()  # run
+					# should raise StopIteration in most case
+					# and prevent us to have to run twice to run one command
+					self._running.next()  # run
+				except StopIteration:
+					self._running = None
+					self.logger.reactor("callback | removing")
+				return True
 
 		except StopIteration:
 			pass
@@ -457,5 +461,5 @@ class Reactor (object):
 	def nexthops (self, peers):
 		return dict((peer,self.peers[peer].neighbor.local_address) for peer in peers)
 
-	def plan (self, callback):
-		self._pending.append(callback)
+	def plan (self, callback,name):
+		self._pending.append((callback,name))

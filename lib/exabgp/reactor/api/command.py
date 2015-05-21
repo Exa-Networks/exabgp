@@ -91,7 +91,7 @@ def show_neighbor (self, reactor, service, command):
 				reactor.answer(service,line)
 				yield True
 
-	reactor.plan(callback())
+	reactor.plan(callback(),'show_neighbor')
 	return True
 
 
@@ -103,7 +103,7 @@ def show_neighbors (self, reactor, service, command):
 				reactor.answer(service,line)
 				yield True
 
-	reactor.plan(callback())
+	reactor.plan(callback(),'show_neighbors')
 	return True
 
 
@@ -120,7 +120,7 @@ def show_routes (self, reactor, service, command):
 				reactor.answer(service,'neighbor %s %s' % (neighbor.local_address,str(change.nlri)))
 				yield True
 
-	reactor.plan(callback())
+	reactor.plan(callback(),'show_routes')
 	return True
 
 
@@ -137,7 +137,7 @@ def show_routes_extensive (self, reactor, service, command):
 				reactor.answer(service,'neighbor %s %s' % (neighbor.name(),change.extensive()))
 				yield True
 
-	reactor.plan(callback())
+	reactor.plan(callback(),'show_routes_extensive')
 	return True
 
 
@@ -153,7 +153,7 @@ def announce_watchdog (self, reactor, service, command):
 		name = command.split(' ')[2]
 	except IndexError:
 		name = service
-	reactor.plan(callback(name))
+	reactor.plan(callback(name),'announce_watchdog')
 	return True
 
 
@@ -167,7 +167,7 @@ def withdraw_watchdog (self, reactor, service, command):
 		name = command.split(' ')[2]
 	except IndexError:
 		name = service
-	reactor.plan(callback(name))
+	reactor.plan(callback(name),'withdraw_watchdog')
 	return True
 
 
@@ -183,7 +183,7 @@ def flush_route (self, reactor, service, command):
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 			return False
-		reactor.plan(callback(self,peers))
+		reactor.plan(callback(self,peers),'flush_route')
 		return True
 	except ValueError:
 		return False
@@ -212,7 +212,7 @@ def announce_route (self, reactor, service, command):
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 			return False
-		reactor.plan(callback(self,command,reactor.nexthops(peers)))
+		reactor.plan(callback(self,command,reactor.nexthops(peers)),'announce_route')
 		return True
 	except ValueError:
 		return False
@@ -242,7 +242,7 @@ def withdraw_route (self, reactor, service, command):
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 			return False
-		reactor.plan(callback(self,command,reactor.nexthops(peers)))
+		reactor.plan(callback(self,command,reactor.nexthops(peers)),'withdraw_route')
 		return True
 	except ValueError:
 		return False
@@ -271,7 +271,7 @@ def announce_vpls (self, reactor, service, command):
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 			return False
-		reactor.plan(callback(self,command,reactor.nexthops(peers)))
+		reactor.plan(callback(self,command,reactor.nexthops(peers)),'announce_vpls')
 		return True
 	except ValueError:
 		return False
@@ -301,7 +301,7 @@ def withdraw_vpls (self, reactor, service, command):
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 			return False
-		reactor.plan(callback(self,command,reactor.nexthops(peers)))
+		reactor.plan(callback(self,command,reactor.nexthops(peers)),'withdraw_vpls')
 		return True
 	except ValueError:
 		return False
@@ -328,7 +328,7 @@ def announce_attribute (self, reactor, service, command):
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 			return False
-		reactor.plan(callback(self,command,reactor.nexthops(peers)))
+		reactor.plan(callback(self,command,reactor.nexthops(peers)),'announce_attribute')
 		return True
 	except ValueError:
 		return False
@@ -358,7 +358,7 @@ def withdraw_attribute (self, reactor, service, command):
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 			return False
-		reactor.plan(callback(self,command,reactor.nexthops(peers)))
+		reactor.plan(callback(self,command,reactor.nexthops(peers)),'withdraw_attribute')
 		return True
 	except ValueError:
 		return False
@@ -385,7 +385,7 @@ def announce_flow (self, reactor, service, command):
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 			return False
-		reactor.plan(callback(self,command,peers))
+		reactor.plan(callback(self,command,peers),'announce_flow')
 		return True
 	except ValueError:
 		return False
@@ -415,7 +415,7 @@ def withdraw_flow (self, reactor, service, command):
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 			return False
-		reactor.plan(callback(self,command,peers))
+		reactor.plan(callback(self,command,peers),'withdraw_flow')
 		return True
 	except ValueError:
 		return False
@@ -441,7 +441,7 @@ def announce_eor (self, reactor, service, command):
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 			return False
-		reactor.plan(callback(self,command,peers))
+		reactor.plan(callback(self,command,peers),'announce_eor')
 		return True
 	except ValueError:
 		return False
@@ -467,7 +467,7 @@ def announce_refresh (self, reactor, service, command):
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 			return False
-		reactor.plan(callback(self,command,peers))
+		reactor.plan(callback(self,command,peers),'announce_refresh')
 		return True
 	except ValueError:
 		return False
@@ -499,7 +499,7 @@ def announce_operational (self, reactor, service, command):
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
 			return False
-		reactor.plan(callback(self,command,peers))
+		reactor.plan(callback(self,command,peers),'announce_operational')
 		return True
 	except ValueError:
 		return False

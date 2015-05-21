@@ -35,7 +35,9 @@ class Decoder (object):
 		# "show neighbor" should not match "show neighbors"
 		for registered in sorted(self.storage, reverse=True):
 			if registered in command:
-				return self.storage[registered](self,reactor,service,command)
+				self.logger.reactor("callback | handling '%s' with %s" % (command,self.storage[registered].func_name),'warning')
+				self.storage[registered](self,reactor,service,command)
+				return True
 		self.logger.reactor("Command from process not understood : %s" % command,'warning')
 		return False
 
