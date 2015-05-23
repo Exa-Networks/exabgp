@@ -6,7 +6,6 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.reactor.api.decoder.text import Text
 from exabgp.reactor.api.command import Command
 from exabgp.logger import Logger
 
@@ -17,57 +16,53 @@ from exabgp.logger import Logger
 # XXX: FIXME: everything could be static method ?
 
 class Decoder (object):
-	storage = {}
+	callback = {
+		'text': {},
+		'json': {},
+	}
+
+	# need to sort and reverse, in order for the shorter command to not used by error
+	# "show neighbor" should not match "show neighbors"
+	functions = sorted([
+		'withdraw watchdog',
+		'withdraw vpls',
+		'withdraw route',
+		'withdraw flow',
+		'withdraw attribute',
+		'version',
+		'teardown',
+		'shutdown',
+		'show routes extensive',
+		'show routes',
+		'show neighbors',
+		'show neighbor',
+		'restart',
+		'reload',
+		'flush route',
+		'announce watchdog',
+		'announce vpls',
+		'announce route-refresh',
+		'announce route',
+		'announce operational',
+		'announce flow',
+		'announce eor',
+		'announce attribute'
+	],reverse=True)
 
 	def __init__ (self):
 		self.logger = Logger()
-		self.format = Text()
 
-	# callaback code
-
-	@classmethod
-	def register_command (cls, command, function):
-		cls.storage[command] = function
-		return function
+		try:
+			for name in self.functions:
+				self.callback['text'][name] = Command.Text.callback[name]
+		except KeyError:
+			raise RuntimeError('The code does not have an implementation for "%s", please code it !' % name)
 
 	def parse_command (self, reactor, service, command):
-		# it must be reversed so longer command are found before the shorter
-		# "show neighbor" should not match "show neighbors"
-		for registered in sorted(self.storage, reverse=True):
+		for registered in self.functions:
 			if registered in command:
-				self.logger.reactor("callback | handling '%s' with %s" % (command,self.storage[registered].func_name),'warning')
-				self.storage[registered](self,reactor,service,command)
+				self.logger.reactor("callback | handling '%s' with %s" % (command,self.callback['text'][registered].func_name),'warning')
+				self.callback['text'][registered](self,reactor,service,command)
 				return True
 		self.logger.reactor("Command from process not understood : %s" % command,'warning')
 		return False
-
-
-FUNCTION = {
-	'shutdown':               'shutdown',
-	'reload':                 'reload',
-	'restart':                'restart',
-	'version':                'version',
-	'teardown':               'teardown',
-	'show neighbor':          'show_neighbor',
-	'show neighbors':         'show_neighbors',
-	'show routes':            'show_routes',
-	'show routes extensive':  'show_routes_extensive',
-	'announce watchdog':      'announce_watchdog',
-	'withdraw watchdog':      'withdraw_watchdog',
-	'flush route':            'flush_route',
-	'announce route':         'announce_route',
-	'withdraw route':         'withdraw_route',
-	'announce vpls':          'announce_vpls',
-	'withdraw vpls':          'withdraw_vpls',
-	'announce attribute':     'announce_attribute',
-	'withdraw attribute':     'withdraw_attribute',
-	'announce flow':          'announce_flow',
-	'withdraw flow':          'withdraw_flow',
-	'announce eor':           'announce_eor',
-	'announce route-refresh': 'announce_refresh',
-	'announce operational':   'announce_operational',
-	'operational':            'announce_operational',
-}
-
-for name in sorted(FUNCTION.keys()):
-	Decoder.register_command(name,getattr(Command.Text,FUNCTION[name]))
