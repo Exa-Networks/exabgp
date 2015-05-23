@@ -3189,7 +3189,7 @@ class Configuration (object):
 	# 	from exabgp.bgp.message.open.capability.negotiated import Negotiated
 	# 	from exabgp.bgp.message.notification import Notify
 	# 	from exabgp.reactor.peer import Peer
-	# 	from exabgp.reactor.api.encoding import JSON
+	# 	from exabgp.reactor.api.response import Response
 	#
 	# 	self.logger._parser = True
 	#
@@ -3252,5 +3252,5 @@ class Configuration (object):
 	# 		for number in range(len(update.nlris)):
 	# 			change = Change(update.nlris[number],update.attributes)
 	# 			self.logger.parser('decoded %s %s %s' % (decoding,change.nlri.action,change.extensive()))
-	# 		self.logger.parser('update json %s' % JSON(json_version).update(p.neighbor,'in',update,'',''))
+	# 		self.logger.parser('update json %s' % Response.JSON(json_version).update(p.neighbor,'in',update,'',''))
 	# 	sys.exit(0)

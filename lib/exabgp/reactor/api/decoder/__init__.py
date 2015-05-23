@@ -7,7 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.reactor.api.decoder.text import Text
-from exabgp.reactor.api import command
+from exabgp.reactor.api.command import Command
 from exabgp.logger import Logger
 
 
@@ -70,4 +70,4 @@ FUNCTION = {
 }
 
 for name in sorted(FUNCTION.keys()):
-	Decoder.register_command(name,getattr(command,FUNCTION[name]))
+	Decoder.register_command(name,getattr(Command.Text,FUNCTION[name]))

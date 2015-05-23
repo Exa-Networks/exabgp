@@ -6,7 +6,7 @@ from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.version import json as json_version
-from exabgp.reactor.api.encoding import JSON
+from exabgp.reactor.api.response import Response
 
 from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.open.asn import ASN
@@ -27,7 +27,7 @@ class Transcoder (object):
 	}
 	negotiated = None
 
-	json = JSON(json_version)
+	json = Response.JSON(json_version)
 
 	def __init__ (self, src='json', dst='json'):
 		if src != 'json':

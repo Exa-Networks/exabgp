@@ -18,7 +18,7 @@ import asyncore
 from struct import unpack
 
 from exabgp.reactor.network.error import error
-from exabgp.reactor.api.encoding import JSON
+from exabgp.reactor.api.response import Response
 from exabgp.bgp.message.update import Update
 
 from exabgp.bmp.header import Header
@@ -45,7 +45,7 @@ class BMPHandler (asyncore.dispatcher_with_send):
 		self.fd = env.fd
 		self.ip = ip
 		self.port = port
-		self.json = JSON(json_version)
+		self.json = Response.JSON(json_version)
 		return self
 
 	def _read_data (self, number):

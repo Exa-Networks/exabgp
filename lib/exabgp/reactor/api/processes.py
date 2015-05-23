@@ -16,8 +16,7 @@ from exabgp.util.errstr import errstr
 from exabgp.reactor.network.error import error
 
 from exabgp.configuration.format import formated
-from exabgp.reactor.api.encoding import Text
-from exabgp.reactor.api.encoding import JSON
+from exabgp.reactor.api.response import Response
 from exabgp.bgp.message import Message
 from exabgp.logger import Logger
 
@@ -124,7 +123,7 @@ class Processes (object):
 			run = self.reactor.configuration.process[process].get('run','')
 			if run:
 				api = self.reactor.configuration.process[process]['encoder']
-				self._encoder[process] = Text(text_version) if api == 'text' else JSON(json_version,self.highres)
+				self._encoder[process] = Response.Text(text_version) if api == 'text' else Response.JSON(json_version,self.highres)
 
 				self._process[process] = subprocess.Popen(
 					run,

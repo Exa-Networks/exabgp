@@ -20,7 +20,7 @@ from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.capability import AddPath
 
-from exabgp.reactor.api.encoding import APIOptions
+from exabgp.reactor.api.options import APIOptions
 
 from exabgp.rib import RIB
 

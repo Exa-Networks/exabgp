@@ -24,7 +24,7 @@ from exabgp.rib.change import Change
 # check_update
 
 from exabgp.reactor.peer import Peer
-from exabgp.reactor.api.encoding import JSON
+from exabgp.reactor.api.response import Response
 
 # check_notification
 
@@ -245,7 +245,7 @@ def check_update (neighbor, raw):
 		for number in range(len(update.nlris)):
 			change = Change(update.nlris[number],update.attributes)
 			logger.parser('decoded %s %s %s' % (decoding,change.nlri.action,change.extensive()))
-		logger.parser('update json %s' % JSON(json_version).update(p.neighbor,'in',update,'',''))
+		logger.parser('update json %s' % Response.JSON(json_version).update(p.neighbor,'in',update,'',''))
 
 	return True
 
