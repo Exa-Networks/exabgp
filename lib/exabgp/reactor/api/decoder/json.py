@@ -6,6 +6,21 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+# ***********************************
+# *******************************
+# ***************************
+# NOT IN use
+# ***************************
+# *******************************
+# ***********************************
+
+import pprint as pp
+
+from exabgp.configuration import Configuration
+
+from exabgp.configuration.show import SectionShow
+
+
 # from exabgp.configuration.current import Configuration
 # from exabgp.configuration.format import formated
 #
@@ -25,12 +40,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 # from exabgp.rib.change import Change
 # from exabgp.version import version
 # from exabgp.logger import Logger
-
-import pprint as pp
-
-from exabgp.configuration import Configuration
-
-from exabgp.configuration.show import SectionShow
 
 
 def parse (command):

@@ -10,12 +10,10 @@ from exabgp.reactor.api.command import Command
 from exabgp.logger import Logger
 
 
-# ====================================================================== Decoder
+# ======================================================================= Parser
 #
 
-# XXX: FIXME: everything could be static method ?
-
-class Decoder (object):
+class Parser (object):
 	callback = {
 		'text': {},
 		'json': {},
@@ -58,7 +56,7 @@ class Decoder (object):
 		except KeyError:
 			raise RuntimeError('The code does not have an implementation for "%s", please code it !' % name)
 
-	def parse_command (self, reactor, service, command):
+	def text (self, reactor, service, command):
 		for registered in self.functions:
 			if registered in command:
 				self.logger.reactor("callback | handling '%s' with %s" % (command,self.callback['text'][registered].func_name),'warning')

@@ -6,6 +6,14 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+# ***********************************
+# *******************************
+# ***************************
+# NOT IN use
+# ***************************
+# *******************************
+# ***********************************
+
 from exabgp.configuration.current import Configuration
 from exabgp.configuration.format import formated
 
