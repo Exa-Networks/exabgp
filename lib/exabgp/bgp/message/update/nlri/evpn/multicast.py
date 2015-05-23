@@ -31,9 +31,9 @@ class Multicast (EVPN):
 
 	def __init__ (self, rd, etag, ip, packed=None,nexthop=None,action=None,addpath=None):
 		EVPN.__init__(self,packed,nexthop,action,addpath)
-		assert(isinstance(rd, RouteDistinguisher))
-		assert(isinstance(etag, EthernetTag))
-		assert(isinstance(ip, IP))
+		# assert(isinstance(rd, RouteDistinguisher))
+		# assert(isinstance(etag, EthernetTag))
+		# assert(isinstance(ip, IP))
 		self.rd = rd
 		self.etag = etag
 		self.ip = ip

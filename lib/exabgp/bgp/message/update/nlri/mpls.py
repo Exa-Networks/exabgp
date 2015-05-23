@@ -103,11 +103,11 @@ class MPLSVPN (MPLS):
 
 	def __init__(self, afi, safi, packedPrefix, mask, labels, rd, nexthop, action=None, path=None):
 		MPLS.__init__(self, afi, safi, packedPrefix, mask, nexthop, action,path)
-		assert(isinstance(rd,RouteDistinguisher))
+		# assert(isinstance(rd,RouteDistinguisher))
 		self.rd = rd
 		if labels is None:
 			labels = Labels.NOLABEL
-		assert(isinstance(labels,Labels))
+		# assert(isinstance(labels,Labels))
 		self.labels = labels
 
 	def __eq__(self,other):
@@ -119,18 +119,18 @@ class MPLSVPN (MPLS):
 			self.rd == other.rd and
 			self.prefix == other.prefix
 		)
-	
+
 	def __ne__ (self, other):
 		return not self.__eq__(other)
-	
+
 	def __hash__(self):
 		# Same as for __cmp__: two NLRI with same RD and prefix, but
 		# different labels need to hash equal
 		return hash((self.rd, self.ip, self.mask))
-		
+
 	def __str__(self):
 		return "%s,%s/%d:%s" % (self.rd._str(), self.ip, self.mask, repr(self.labels))
-		
+
 	@classmethod
 	def unpack (cls, afi, safi, bgp, addpath, nexthop, action):
 		labels,rd,path_identifier,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action,addpath)

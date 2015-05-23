@@ -50,7 +50,7 @@ class RouteTargetASN2Number (RouteTarget):
 	def __init__ (self, asn, number, transitive=True, community=None):
 		self.asn = asn
 		self.number = number
-		assert(number < pow(2,32))
+		# assert(number < pow(2,32))
 		RouteTarget.__init__(
 			self,
 			community if community else pack(
@@ -90,7 +90,7 @@ class RouteTargetIPNumber (RouteTarget):
 	def __init__ (self, ip, number, transitive=True, community=None):
 		self.ip = ip
 		self.number = number
-		assert(number < pow(2,16))
+		# assert(number < pow(2,16))
 		RouteTarget.__init__(
 			self,
 			community if community else pack(
@@ -129,7 +129,7 @@ class RouteTargetASN4Number (RouteTarget):
 	def __init__ (self, asn, number, transitive=True, community=None):
 		self.asn = asn
 		self.number = number
-		assert(number < pow(2,16))
+		# assert(number < pow(2,16))
 		RouteTarget.__init__(
 			self,
 			community if community else pack(

@@ -44,10 +44,10 @@ class MAC (EVPN):
 
 	def __init__ (self, rd, esi, etag, mac, maclen, label,ip,packed=None,nexthop=None,action=None,addpath=None):
 		EVPN.__init__(self,packed,nexthop,action,addpath)
-		assert(isinstance(rd, RouteDistinguisher))
-		assert(isinstance(etag, EthernetTag))
-		assert(isinstance(ip, IP))
-		assert(isinstance(mac, MACQUAL))
+		# assert(isinstance(rd, RouteDistinguisher))
+		# assert(isinstance(etag, EthernetTag))
+		# assert(isinstance(ip, IP))
+		# assert(isinstance(mac, MACQUAL))
 		self.rd = rd
 		self.esi = esi
 		self.etag = etag
