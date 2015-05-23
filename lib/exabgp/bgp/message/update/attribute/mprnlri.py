@@ -175,8 +175,7 @@ class MPRNLRI (Attribute,Address):
 				nlris.append(nlri)
 
 			if length == 0:
-				length = len(data)
-				#XXXXX: we should log a warning
+				raise RuntimeError("sub-calls should not return length zero")
 
 			# logger.parser(LazyFormat("parsed announce mp nlri %s payload " % nlri,data[:length]))
 			data = data[length:]
