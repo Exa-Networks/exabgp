@@ -17,7 +17,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 
 from exabgp.logger import Logger
-from exabgp.logger import LazyFormat
+from exabgp.logger import LazyNLRI
 
 
 class NLRI (Address):
@@ -54,7 +54,7 @@ class NLRI (Address):
 	def unpack (cls, afi, safi, data, addpath, nexthop, action):
 		if not cls.logger:
 			cls.logger = Logger()
-		cls.logger.parser(LazyFormat("parsing %s/%s nlri payload " % (afi,safi),data))
+		cls.logger.parser(LazyNLRI(afi,safi,data))
 
 		key = '%d/%d' % (afi,safi)
 		if key in cls.registered_nlri:

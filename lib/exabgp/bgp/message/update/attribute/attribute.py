@@ -106,6 +106,9 @@ class Attribute (object):
 		def __repr__ (self):
 			return self.names.get(self,'unknown-attribute-%s' % hex(self))
 
+		def __str__ (self):
+			return repr(self)
+
 		@classmethod
 		def name (cls, self):
 			return cls.names.get(self,'unknown-attribute-%s' % hex(self))

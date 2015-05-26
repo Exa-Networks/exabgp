@@ -21,7 +21,7 @@ from exabgp.bgp.message.update.attribute.community.communities import Communitie
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.logger import Logger
-from exabgp.logger import LazyFormat
+from exabgp.logger import LazyAttribute
 
 
 class _NOTHING (object):
@@ -292,7 +292,7 @@ class Attributes (dict):
 		attribute = data[:length]
 
 		logger = Logger()
-		logger.parser(LazyFormat("parsing flag %x type %02x (%s) len %02x %s" % (flag,int(aid),aid,length,'payload ' if length else ''),data[:length]))
+		logger.parser(LazyAttribute(flag,aid,length,data[:length]))
 
 		# remove the PARTIAL bit before comparaison if the attribute is optional
 		if aid in Attribute.attributes_optional:

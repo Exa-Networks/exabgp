@@ -17,6 +17,9 @@ import functools
 import logging
 import logging.handlers
 
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
+
 from exabgp.util.od import od
 from exabgp.util.hashtable import HashTable
 from exabgp.configuration.environment import environment
@@ -61,7 +64,42 @@ class LazyFormat (object):
 
 	def __str__ (self):
 		formated = self.formater(self.message)
-		return '%s (%d) %s' % (self.prefix,len(formated),formated)
+		return '%s (%4d) %s' % (self.prefix,len(formated),formated)
+
+
+class LazyAttribute (object):
+	def __init__ (self, flag, aid, length, data):
+		self.flag = flag
+		self.aid = aid
+		self.length = length
+		self.data = data
+
+	def split (self, char):
+		return str(self).split(char)
+
+	def __str__ (self):
+		return 'parsing attribute %-18s flag 0x%02x type 0x%02x len 0x%02x%s' % (
+			str(self.aid),
+			self.flag,
+			int(self.aid),
+			self.length,
+			' payload %s' % od(self.data) if self.data else ''
+		)
+
+
+class LazyNLRI (object):
+	def __init__ (self, afi, safi, data):
+		self.afi = afi
+		self.safi = safi
+		self.data = data
+
+	def split (self, char):
+		return str(self).split(char)
+
+	def __str__ (self):
+		family = '%s %s' % (AFI(self.afi),SAFI(self.safi))
+		payload = ' payload %s' % od(self.data) if self.data else ''
+		return 'parsing family    %-18s%s' % (family,payload)
 
 
 class Logger (object):
