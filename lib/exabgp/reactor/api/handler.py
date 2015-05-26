@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.reactor.api.parser import Parser
 from exabgp.reactor.api.command import Command
 from exabgp.logger import Logger
 
@@ -13,7 +14,7 @@ from exabgp.logger import Logger
 # ======================================================================= Parser
 #
 
-class Parser (object):
+class Handler (object):
 	callback = {
 		'text': {},
 		'json': {},
@@ -49,6 +50,7 @@ class Parser (object):
 
 	def __init__ (self):
 		self.logger = Logger()
+		self.parser = Parser.Text()
 
 		try:
 			for name in self.functions:

@@ -42,7 +42,42 @@ class Text (Configuration):
 		# part of parent API, done here to remove pylint warning attribute-defined-outside-init
 		self._nexthopself = None
 
-	def parse_api_route (self, command, peers, action):
+	@staticmethod
+	def extract_neighbors (command):
+		"""return a list of neighbor definition : the neighbor definition is a list of string which are in the neighbor indexing string"""
+		# This function returns a list and a string
+		# The first list contains parsed neighbor to match against our defined peers
+		# The string is the command to be run for those peers
+		# The parsed neighbor is a list of the element making the neighbor string so each part can be checked against the neighbor name
+
+		returned = []
+		neighbor,remaining = command.split(' ',1)
+		if neighbor != 'neighbor':
+			return [],command
+
+		ip,command = remaining.split(' ',1)
+		definition = ['neighbor %s' % (ip)]
+
+		while True:
+			try:
+				key,value,remaining = command.split(' ',2)
+			except ValueError:
+				key,value = command.split(' ',1)
+			if key == ',':
+				returned.append(definition)
+				_,command = command.split(' ',1)
+				definition = []
+				continue
+			if key not in ['neighbor','local-ip','local-as','peer-as','router-id','family-allowed']:
+				if definition:
+					returned.append(definition)
+				break
+			definition.append('%s %s' % (key,value))
+			command = remaining
+
+		return returned,command
+
+	def api_route (self, command, peers, action):
 		tokens = formated(command).split(' ')[1:]
 		number = len(tokens)
 
@@ -80,8 +115,7 @@ class Text (Configuration):
 			for (peer,change) in changes:
 				change.nlri.action = OUT.WITHDRAW
 		return changes
-
-	def parse_api_vpls (self, command, peers, action):
+	def api_vpls (self, command, peers, action):
 		tokens = formated(command).split(' ')[1:]
 		if len(tokens) < 4:
 			return False
@@ -110,11 +144,11 @@ class Text (Configuration):
 				change.nlri.action = OUT.WITHDRAW
 		return changes
 
-	def parse_api_attribute (self, command, peers, action):
+	def api_attribute (self, command, peers, action):
 		# This is a quick solution which does not support next-hop self
 		attribute,nlris = command.split('nlri')
 		route = '%s route 0.0.0.0/0 %s' % (action, ' '.join(attribute.split()[2:]))
-		parsed = self.parse_api_route(route,peers,action)
+		parsed = self.api_route(route,peers,action)
 		if parsed in (True,False,None):
 			return parsed
 		attributes = parsed[0][1].attributes
@@ -141,7 +175,7 @@ class Text (Configuration):
 			changes.append((peers.keys(),change))
 		return changes
 
-	def parse_api_flow (self, command, action):
+	def api_flow (self, command, action):
 		command = command.replace('{','{\\n').replace('}','}\\n').replace(';',';\\n').replace('\\n\\n','\\n')
 		self._tokens = self._tokenise(' '.join(formated(command).split(' ')[2:]).split('\\n'))
 		scope = [{}]
@@ -155,7 +189,7 @@ class Text (Configuration):
 				change.nlri.action = OUT.WITHDRAW
 		return changes
 
-	def parse_api_refresh (self, command):
+	def api_refresh (self, command):
 		tokens = formated(command).split(' ')[2:]
 		if len(tokens) != 2:
 			return False
@@ -165,7 +199,7 @@ class Text (Configuration):
 			return False
 		return RouteRefresh(afi,safi)
 
-	def parse_api_eor (self, command):
+	def api_eor (self, command):
 		tokens = formated(command).split(' ')[2:]
 		number = len(tokens)
 
@@ -185,7 +219,7 @@ class Text (Configuration):
 
 		return Family(afi,safi)
 
-	def parse_api_operational (self, command):
+	def api_operational (self, command):
 		tokens = formated(command).split(' ',2)
 		scope = [{}]
 

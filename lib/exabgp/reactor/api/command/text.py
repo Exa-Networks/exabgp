@@ -9,41 +9,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.version import version as _version
 
 
-def _extract_neighbors (command):
-	"""return a list of neighbor definition : the neighbor definition is a list of string which are in the neighbor indexing string"""
-	# This function returns a list and a string
-	# The first list contains parsed neighbor to match against our defined peers
-	# The string is the command to be run for those peers
-	# The parsed neighbor is a list of the element making the neighbor string so each part can be checked against the neighbor name
-
-	returned = []
-	neighbor,remaining = command.split(' ',1)
-	if neighbor != 'neighbor':
-		return [],command
-
-	ip,command = remaining.split(' ',1)
-	definition = ['neighbor %s' % (ip)]
-
-	while True:
-		try:
-			key,value,remaining = command.split(' ',2)
-		except ValueError:
-			key,value = command.split(' ',1)
-		if key == ',':
-			returned.append(definition)
-			_,command = command.split(' ',1)
-			definition = []
-			continue
-		if key not in ['neighbor','local-ip','local-as','peer-as','router-id','family-allowed']:
-			if definition:
-				returned.append(definition)
-			break
-		definition.append('%s %s' % (key,value))
-		command = remaining
-
-	return returned,command
-
-
 class Text (object):
 	callback = {}
 
@@ -84,7 +49,7 @@ def version (self, reactor, service, command):
 @Text('teardown')
 def teardown (self, reactor, service, command):
 	try:
-		descriptions,command = _extract_neighbors(command)
+		descriptions,command = self.parser.extract_neighbors(command)
 		_,code = command.split(' ',1)
 		for key in reactor.peers:
 			for description in descriptions:
@@ -200,7 +165,7 @@ def flush_route (self, reactor, service, command):
 		reactor.route_update = True
 
 	try:
-		descriptions,command = _extract_neighbors(command)
+		descriptions,command = self.parser.extract_neighbors(command)
 		peers = reactor.match_neighbors(descriptions)
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
@@ -216,7 +181,7 @@ def flush_route (self, reactor, service, command):
 @Text('announce route')
 def announce_route (self, reactor, service, command):
 	def callback (self, command, nexthops):
-		changes = self.format.parse_api_route(command,nexthops,'announce')
+		changes = self.parser.api_route(command,nexthops,'announce')
 		if not changes:
 			self.logger.reactor("Command could not parse route in : %s" % command,'warning')
 			yield True
@@ -230,7 +195,7 @@ def announce_route (self, reactor, service, command):
 			reactor.route_update = True
 
 	try:
-		descriptions,command = _extract_neighbors(command)
+		descriptions,command = self.parser.extract_neighbors(command)
 		peers = reactor.match_neighbors(descriptions)
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
@@ -246,7 +211,7 @@ def announce_route (self, reactor, service, command):
 @Text('withdraw route')
 def withdraw_route (self, reactor, service, command):
 	def callback (self, command, nexthops):
-		changes = self.format.parse_api_route(command,nexthops,'withdraw')
+		changes = self.parser.api_route(command,nexthops,'withdraw')
 		if not changes:
 			self.logger.reactor("Command could not parse route in : %s" % command,'warning')
 			yield True
@@ -261,7 +226,7 @@ def withdraw_route (self, reactor, service, command):
 			reactor.route_update = True
 
 	try:
-		descriptions,command = _extract_neighbors(command)
+		descriptions,command = self.parser.extract_neighbors(command)
 		peers = reactor.match_neighbors(descriptions)
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
@@ -277,7 +242,7 @@ def withdraw_route (self, reactor, service, command):
 @Text('announce vpls')
 def announce_vpls (self, reactor, service, command):
 	def callback (self, command, nexthops):
-		changes = self.format.parse_api_vpls(command,nexthops,'announce')
+		changes = self.parser.api_vpls(command,nexthops,'announce')
 		if not changes:
 			self.logger.reactor("Command could not parse vpls in : %s" % command,'warning')
 			yield True
@@ -291,7 +256,7 @@ def announce_vpls (self, reactor, service, command):
 			reactor.route_update = True
 
 	try:
-		descriptions,command = _extract_neighbors(command)
+		descriptions,command = self.parser.extract_neighbors(command)
 		peers = reactor.match_neighbors(descriptions)
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
@@ -307,7 +272,7 @@ def announce_vpls (self, reactor, service, command):
 @Text('withdraw vpls')
 def withdraw_vpls (self, reactor, service, command):
 	def callback (self, command, nexthops):
-		changes = self.format.parse_api_vpls(command,nexthops,'withdraw')
+		changes = self.parser.api_vpls(command,nexthops,'withdraw')
 		if not changes:
 			self.logger.reactor("Command could not parse vpls in : %s" % command,'warning')
 			yield True
@@ -322,7 +287,7 @@ def withdraw_vpls (self, reactor, service, command):
 			reactor.route_update = True
 
 	try:
-		descriptions,command = _extract_neighbors(command)
+		descriptions,command = self.parser.extract_neighbors(command)
 		peers = reactor.match_neighbors(descriptions)
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
@@ -338,7 +303,7 @@ def withdraw_vpls (self, reactor, service, command):
 @Text('announce attribute')
 def announce_attribute (self, reactor, service, command):
 	def callback (self, command, nexthops):
-		changes = self.format.parse_api_attribute(command,nexthops,'announce')
+		changes = self.parser.api_attribute(command,nexthops,'announce')
 		if not changes:
 			self.logger.reactor("Command could not parse attribute in : %s" % command,'warning')
 			yield True
@@ -350,7 +315,7 @@ def announce_attribute (self, reactor, service, command):
 			reactor.route_update = True
 
 	try:
-		descriptions,command = _extract_neighbors(command)
+		descriptions,command = self.parser.extract_neighbors(command)
 		peers = reactor.match_neighbors(descriptions)
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
@@ -366,7 +331,7 @@ def announce_attribute (self, reactor, service, command):
 @Text('withdraw attribute')
 def withdraw_attribute (self, reactor, service, command):
 	def callback (self, command, nexthops):
-		changes = self.format.parse_api_attribute(command,nexthops,'withdraw')
+		changes = self.parser.api_attribute(command,nexthops,'withdraw')
 		if not changes:
 			self.logger.reactor("Command could not parse attribute in : %s" % command,'warning')
 			yield True
@@ -381,7 +346,7 @@ def withdraw_attribute (self, reactor, service, command):
 			reactor.route_update = True
 
 	try:
-		descriptions,command = _extract_neighbors(command)
+		descriptions,command = self.parser.extract_neighbors(command)
 		peers = reactor.match_neighbors(descriptions)
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
@@ -397,7 +362,7 @@ def withdraw_attribute (self, reactor, service, command):
 @Text('announce flow')
 def announce_flow (self, reactor, service, command):
 	def callback (self, command, peers):
-		changes = self.format.parse_api_flow(command,'announce')
+		changes = self.parser.api_flow(command,'announce')
 		if not changes:
 			self.logger.reactor("Command could not parse flow in : %s" % command)
 			yield True
@@ -409,7 +374,7 @@ def announce_flow (self, reactor, service, command):
 			reactor.route_update = True
 
 	try:
-		descriptions,command = _extract_neighbors(command)
+		descriptions,command = self.parser.extract_neighbors(command)
 		peers = reactor.match_neighbors(descriptions)
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
@@ -425,7 +390,7 @@ def announce_flow (self, reactor, service, command):
 @Text('withdraw flow')
 def withdraw_flow (self, reactor, service, command):
 	def callback (self, command, peers):
-		changes = self.format.parse_api_flow(command,'withdraw')
+		changes = self.parser.api_flow(command,'withdraw')
 		if not changes:
 			self.logger.reactor("Command could not parse flow in : %s" % command)
 			yield True
@@ -440,7 +405,7 @@ def withdraw_flow (self, reactor, service, command):
 			reactor.route_update = True
 
 	try:
-		descriptions,command = _extract_neighbors(command)
+		descriptions,command = self.parser.extract_neighbors(command)
 		peers = reactor.match_neighbors(descriptions)
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
@@ -456,7 +421,7 @@ def withdraw_flow (self, reactor, service, command):
 @Text('announce eor')
 def announce_eor (self, reactor, service, command):
 	def callback (self, command, peers):
-		family = self.format.parse_api_eor(command)
+		family = self.parser.api_eor(command)
 		if not family:
 			self.logger.reactor("Command could not parse eor : %s" % command)
 			yield True
@@ -467,7 +432,7 @@ def announce_eor (self, reactor, service, command):
 			reactor.route_update = True
 
 	try:
-		descriptions,command = _extract_neighbors(command)
+		descriptions,command = self.parser.extract_neighbors(command)
 		peers = reactor.match_neighbors(descriptions)
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
@@ -483,7 +448,7 @@ def announce_eor (self, reactor, service, command):
 @Text('announce route-refresh')
 def announce_refresh (self, reactor, service, command):
 	def callback (self, command, peers):
-		refresh = self.format.parse_api_refresh(command)
+		refresh = self.parser.api_refresh(command)
 		if not refresh:
 			self.logger.reactor("Command could not parse flow in : %s" % command)
 			yield True
@@ -494,7 +459,7 @@ def announce_refresh (self, reactor, service, command):
 			reactor.route_update = True
 
 	try:
-		descriptions,command = _extract_neighbors(command)
+		descriptions,command = self.parser.extract_neighbors(command)
 		peers = reactor.match_neighbors(descriptions)
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
@@ -510,7 +475,7 @@ def announce_refresh (self, reactor, service, command):
 @Text('announce operational')
 def announce_operational (self, reactor, service, command):
 	def callback (self, command, peers):
-		operational = self.format.parse_api_operational(command)
+		operational = self.parser.api_operational(command)
 		if not operational:
 			self.logger.reactor("Command could not parse operational command : %s" % command)
 			yield True
@@ -527,7 +492,7 @@ def announce_operational (self, reactor, service, command):
 		return False
 
 	try:
-		descriptions,command = _extract_neighbors(command)
+		descriptions,command = self.parser.extract_neighbors(command)
 		peers = reactor.match_neighbors(descriptions)
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')

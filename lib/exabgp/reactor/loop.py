@@ -26,7 +26,7 @@ from exabgp.reactor.peer import Peer
 from exabgp.reactor.peer import ACTION
 from exabgp.reactor.network.error import error
 
-from exabgp.reactor.api.parser import Parser
+from exabgp.reactor.api.handler import Handler
 from exabgp.configuration.current import Configuration
 from exabgp.configuration.environment import environment
 
@@ -50,7 +50,7 @@ class Reactor (object):
 		self.processes = None
 		self.listener = None
 		self.configuration = Configuration(configurations)
-		self.parser = Parser()
+		self.api = Handler()
 
 		self.peers = {}
 		self.route_update = False
@@ -358,7 +358,7 @@ class Reactor (object):
 		try:
 			# read at least on message per process if there is some and parse it
 			for service,command in self.processes.received():
-				self.parser.text(self,service,command)
+				self.api.text(self,service,command)
 
 			# if we have nothing to do, return or save the work
 			if not self._running:
