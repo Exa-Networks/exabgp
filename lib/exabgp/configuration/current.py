@@ -37,8 +37,7 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 
-from exabgp.bgp.message.update.nlri.prefix import Prefix
-from exabgp.bgp.message.update.nlri.prefix import PathInfo
+from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.mpls import MPLS
 from exabgp.bgp.message.update.nlri.mpls import Labels
 from exabgp.bgp.message.update.nlri.mpls import RouteDistinguisher
@@ -65,6 +64,7 @@ from exabgp.bgp.message.update.nlri.flow import FlowDSCP
 from exabgp.bgp.message.update.nlri.flow import FlowTrafficClass
 from exabgp.bgp.message.update.nlri.flow import FlowFlowLabel
 from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.origin import Origin
@@ -1783,7 +1783,7 @@ class Configuration (object):
 
 		# Really ugly
 		klass = change.nlri.__class__
-		if klass is Prefix:
+		if klass is INET:
 			path_info = change.nlri.path_info
 		elif klass is MPLS:
 			path_info = None
@@ -1828,7 +1828,7 @@ class Configuration (object):
 			elif 'label' in tokens:
 				klass = MPLS
 			else:
-				klass = Prefix
+				klass = INET
 
 			# nexthop must be false and its str return nothing .. an empty string does that
 			update = Change(klass(afi=IP.toafi(ip),safi=IP.tosafi(ip),packed=IP.pton(ip),mask=mask,nexthop=None,action=OUT.ANNOUNCE),Attributes())

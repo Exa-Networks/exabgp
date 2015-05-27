@@ -197,8 +197,8 @@ body = [
 # asn4, data
 bodies.append((True,body))
 
-# Prefix include is required as it perform some AFI/SAFI registration
-from exabgp.bgp.message.update.nlri.prefix import Prefix  # noqa
+# INET include is required as it perform some AFI/SAFI registration
+from exabgp.bgp.message.update.nlri.prefix import INET  # noqa
 
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.protocol.ip import IPv4

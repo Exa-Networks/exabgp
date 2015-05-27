@@ -9,7 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 # from exabgp.protocol.family import AFI
 # from exabgp.protocol.family import SAFI
 #
-# from exabgp.bgp.message.update.nlri.prefix import Prefix
+# from exabgp.bgp.message.update.nlri.inet import INET
 # from exabgp.bgp.message.update.nlri.nlri import NLRI
 # from exabgp.bgp.message.update.nlri.mpls import MPLS
 # from exabgp.bgp.message.update.nlri.mpls import MPLSVPN

@@ -12,14 +12,13 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.cidr import CIDR
-from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 
 
 @NLRI.register(AFI.ipv4,SAFI.unicast)
 @NLRI.register(AFI.ipv6,SAFI.unicast)
 @NLRI.register(AFI.ipv4,SAFI.multicast)
 @NLRI.register(AFI.ipv6,SAFI.multicast)
-class Prefix (CIDR,NLRI):
+class INET (CIDR,NLRI):
 	__slots__ = ['path_info','nexthop','action']
 
 	def __init__ (self, afi, safi, packed, mask, nexthop, action,path=None):

@@ -23,7 +23,7 @@ from exabgp.protocol.family import Family
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message import OUT
 
-from exabgp.bgp.message.update.nlri.prefix import Prefix
+from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.mpls import MPLS
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.operational import Advisory
@@ -156,7 +156,7 @@ class Text (Configuration):
 		changes = []
 		for nlri in nlris.split():
 			ip,mask = nlri.split('/')
-			klass = Prefix if 'path-information' in command else MPLS
+			klass = MPLS if 'path-information' in command else INET
 			change = Change(
 				klass(
 					afi=IP.toafi(ip),
