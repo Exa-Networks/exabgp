@@ -125,7 +125,7 @@ class Capabilities (dict):
 		self._graceful(neighbor,restarted)
 		self._refresh(neighbor)
 		self._operational(neighbor)
-		self._hostname(neighbor)
+		# self._hostname(neighbor)  # Cumulus draft - disabling until -01 is out
 		self._session(neighbor)  # MUST be the last key added, really !?! dict is not ordered !
 		return self
 
