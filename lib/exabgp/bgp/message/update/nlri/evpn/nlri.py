@@ -8,7 +8,6 @@ Copyright (c) 2014-2015 Orange. All rights reserved.
 from struct import pack
 
 from exabgp.protocol.ip import IP, NoNextHop
-from exabgp.protocol.ip.address import Address
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -36,7 +35,7 @@ class EVPN (NLRI):
 	SHORT_NAME = 'unknown'
 
 	def __init__ (self, packed, nexthop, action, path=None):
-		NLRI.__init__(self, EVPN.afi, EVPN.safi)
+		NLRI.__init__(self, AFI.l2vpn, SAFI.evpn)
 		self.nexthop = IP.unpack(nexthop) if nexthop else NoNextHop
 		self.action = action
 		self.packed = packed

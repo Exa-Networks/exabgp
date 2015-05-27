@@ -9,7 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import unpack
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.protocol.ip.address import Address
+from exabgp.protocol.family import Family
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message import IN
 from exabgp.bgp.message.notification import Notify
@@ -20,7 +20,7 @@ from exabgp.logger import Logger
 from exabgp.logger import LazyNLRI
 
 
-class NLRI (Address):
+class NLRI (Family):
 	__slots__ = []
 
 	EOR = False

@@ -11,7 +11,7 @@ from struct import unpack
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.protocol.ip.address import Address
+from exabgp.protocol.family import Family
 
 from exabgp.bgp.message import IN
 from exabgp.bgp.message.update.attribute.attribute import Attribute
@@ -24,14 +24,14 @@ from exabgp.bgp.message.open.capability.negotiated import Negotiated
 # ==================================================== MP Unreacheable NLRI (15)
 #
 
-class MPRNLRI (Attribute,Address):
+class MPRNLRI (Attribute,Family):
 	FLAG = Attribute.Flag.OPTIONAL
 	ID = Attribute.CODE.MP_REACH_NLRI
 
 	# __slots__ = ['nlris']
 
 	def __init__ (self, afi, safi, nlris):
-		Address.__init__(self,afi,safi)
+		Family.__init__(self,afi,safi)
 		# all the routes must have the same next-hop
 		self.nlris = nlris
 

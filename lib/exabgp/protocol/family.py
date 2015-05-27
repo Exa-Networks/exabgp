@@ -197,12 +197,17 @@ class SAFI (int):
 
 
 class Family (object):
+	__slots__ = ['afi','safi']
+
 	def __init__ (self, afi, safi):
 		self.afi = AFI(afi)
 		self.safi = SAFI(safi)
+
+	def family (self):
+		return (self.afi,self.safi)
 
 	def extensive (self):
 		return 'afi %s safi %s' % (self.afi,self.safi)
 
 	def __str__ (self):
-		return 'family %s %s' % (self.afi,self.safi)
+		return "%s %s" % (str(self.afi),str(self.safi))
