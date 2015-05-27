@@ -259,74 +259,6 @@ class environment (object):
 					continue
 				yield "%s.%s.%s=%s" % (environment.application,section,k,environment.configuration[section][k]['write'](v))
 
-	# Compatibility with 2.0.x
-	@staticmethod
-	def _compatibility (env):
-		profile = os.environ.get('PROFILE','')
-		if profile:
-			env.profile.enable = True
-		if profile and profile.lower() not in ['1','true','yes','on','enable']:
-			env.profile.file = profile
-
-		# PDB : still compatible as a side effect of the code structure
-
-		syslog_env = os.environ.get('SYSLOG','')
-		if syslog_env != '':
-			env.log.destination = syslog_env
-
-		if os.environ.get('DEBUG_SUPERVISOR','').lower() in ['1','yes']:
-			env.log.reactor = True
-		if os.environ.get('DEBUG_DAEMON','').lower() in ['1','yes']:
-			env.log.daemon = True
-		if os.environ.get('DEBUG_PROCESSES','').lower() in ['1','yes']:
-			env.log.processes = True
-		if os.environ.get('DEBUG_CONFIGURATION','').lower() in ['1','yes']:
-			env.log.configuration = True
-		if os.environ.get('DEBUG_WIRE','').lower() in ['1','yes']:
-			env.log.network = True
-			env.log.packets = True
-		if os.environ.get('DEBUG_MESSAGE','').lower() in ['1','yes']:
-			env.log.message = True
-		if os.environ.get('DEBUG_RIB','').lower() in ['1','yes']:
-			env.log.rib = True
-		if os.environ.get('DEBUG_TIMER','').lower() in ['1','yes']:
-			env.log.timers = True
-		if os.environ.get('DEBUG_PARSER','').lower() in ['1','yes']:
-			env.log.parser = True
-		if os.environ.get('DEBUG_ROUTE','').lower() in ['1','yes']:
-			env.log.routes = True
-		if os.environ.get('DEBUG_ROUTES','').lower() in ['1','yes']:  # DEPRECATED even in 2.0.x
-			env.log.routes = True
-		if os.environ.get('DEBUG_ALL','').lower() in ['1','yes']:
-			env.log.all = True
-		if os.environ.get('DEBUG_CORE','').lower() in ['1','yes']:
-			env.log.reactor = True
-			env.log.daemon = True
-			env.log.processes = True
-			env.log.message = True
-			env.log.timer = True
-			env.log.routes = True
-			env.log.parser = False
-
-		pid = os.environ.get('PID','')
-		if pid:
-			env.daemon.pid = pid
-
-		try:
-			me = pwd.getpwuid(os.getuid()).pw_name
-			user = os.environ.get('USER','')
-			if user and user != 'root' and user != me and env.daemon.user == 'nobody':
-				env.daemon.user = user
-		except KeyError:
-			pass
-
-		daemon = os.environ.get('DAEMONIZE','').lower() in ['1','yes']
-		if daemon:
-			env.daemon.daemonize = True
-			env.log.enable = False
-
-		return env
-
 
 # ========================================================================= _env
 #
@@ -397,4 +329,4 @@ def _env (conf):
 			except TypeError:
 				raise environment.Error('invalid value for %s.%s : %s' % (section,option,conf))
 
-	return environment._compatibility(env)
+	return env

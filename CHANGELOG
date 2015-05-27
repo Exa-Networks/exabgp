@@ -5,6 +5,7 @@ Version explained:
 
 Version 3.5.0
  * Change: move and install healthcheck in bin
+ * Change: removed old environment support ( DEBUG_* )
  * Feature: add support for upstart
    patch by: Pierre-Yves Kerembellec
  * Feature/Fix: Port of bagpipe EVPN code
