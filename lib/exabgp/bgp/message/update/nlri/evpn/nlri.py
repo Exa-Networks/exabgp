@@ -13,6 +13,8 @@ from exabgp.protocol.ip.address import Address
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
+from exabgp.bgp.message.update.nlri.nlri import NLRI
+
 
 # ========================================================================= EVPN
 
@@ -24,7 +26,8 @@ from exabgp.protocol.family import SAFI
 # | Route Type specific (variable)    |
 # +-----------------------------------+
 
-class EVPN (Address):
+@NLRI.register(AFI.l2vpn,SAFI.evpn)
+class EVPN (NLRI):
 	registered_evpn = dict()
 
 	# NEED to be defined in the subclasses
@@ -32,12 +35,8 @@ class EVPN (Address):
 	NAME = 'unknown'
 	SHORT_NAME = 'unknown'
 
-	# lower case to match the class Address API
-	afi = AFI(AFI.l2vpn)
-	safi = SAFI(SAFI.evpn)
-
 	def __init__ (self, packed, nexthop, action, path=None):
-		Address.__init__(self, EVPN.afi, EVPN.safi)
+		NLRI.__init__(self, EVPN.afi, EVPN.safi)
 		self.nexthop = IP.unpack(nexthop) if nexthop else NoNextHop
 		self.action = action
 		self.packed = packed

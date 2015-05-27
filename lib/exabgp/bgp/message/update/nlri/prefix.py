@@ -15,6 +15,10 @@ from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 
 
+@NLRI.register(AFI.ipv4,SAFI.unicast)
+@NLRI.register(AFI.ipv6,SAFI.unicast)
+@NLRI.register(AFI.ipv4,SAFI.multicast)
+@NLRI.register(AFI.ipv6,SAFI.multicast)
 class Prefix (CIDR,NLRI):
 	__slots__ = ['path_info','nexthop','action']
 

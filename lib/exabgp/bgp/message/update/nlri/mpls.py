@@ -21,6 +21,8 @@ from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 # ====================================================== Both MPLS and Inet NLRI
 # RFC 3107 / RFC 4364
 
+@NLRI.register(AFI.ipv4,SAFI.nlri_mpls)
+@NLRI.register(AFI.ipv6,SAFI.nlri_mpls)
 class MPLS (NLRI,CIDR):
 	__slots__ = ['labels','rd','nexthop','action']
 
@@ -99,6 +101,8 @@ class MPLS (NLRI,CIDR):
 # ====================================================== Both MPLS and Inet NLRI
 # RFC 3107 / RFC 4364
 
+@NLRI.register(AFI.ipv4,SAFI.mpls_vpn)
+@NLRI.register(AFI.ipv6,SAFI.mpls_vpn)
 class MPLSVPN (MPLS):
 
 	def __init__(self, afi, safi, packedPrefix, mask, labels, rd, nexthop, action=None, path=None):

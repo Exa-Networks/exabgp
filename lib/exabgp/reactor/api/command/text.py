@@ -13,10 +13,10 @@ class Text (object):
 	callback = {}
 
 	def __new__ (cls,name):
-		def wrapper (function):
+		def register (function):
 			cls.callback[name] = function
 			return function
-		return wrapper
+		return register
 
 
 @Text('shutdown')

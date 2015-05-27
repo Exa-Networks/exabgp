@@ -37,12 +37,15 @@ class NLRI (Address):
 		raise Exception('unimplemented')
 
 	@staticmethod
-	def register_nlri (klass, afi, safi):
-		NLRI.registered_nlri['%d/%d' % (afi,safi)] = klass
-		new = (AFI(afi),SAFI(safi))
-		if new in NLRI.registered_nlri:
-			raise RuntimeError('Tried to register %s/%s twice' % new)
-		NLRI.registered_families.append(new)
+	def register (afi, safi):
+		def register_nlri (cls):
+			NLRI.registered_nlri['%d/%d' % (afi,safi)] = cls
+			new = (AFI(afi),SAFI(safi))
+			if new in NLRI.registered_nlri:
+				raise RuntimeError('Tried to register %s/%s twice' % new)
+			NLRI.registered_families.append(new)
+			return cls
+		return register_nlri
 
 	@staticmethod
 	def known_families ():

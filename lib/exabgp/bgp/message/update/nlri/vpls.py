@@ -27,6 +27,7 @@ def _unique ():
 unique = _unique()
 
 
+@NLRI.register(AFI.l2vpn,SAFI.vpls)
 class VPLS (NLRI):
 
 	__slots__ = ['action','nexthop','rd','base','offset','size','ve','unique']

@@ -467,6 +467,10 @@ def _unique ():
 unique = _unique()
 
 
+@NLRI.register(AFI.ipv4,SAFI.flow_ip)
+@NLRI.register(AFI.ipv6,SAFI.flow_ip)
+@NLRI.register(AFI.ipv4,SAFI.flow_vpn)
+@NLRI.register(AFI.ipv6,SAFI.flow_vpn)
 class Flow (NLRI):
 	def __init__ (self, afi=AFI.ipv4,safi=SAFI.flow_ip,nexthop=None,rd=None):
 		NLRI.__init__(self,afi,safi)
