@@ -12,6 +12,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.cidr import CIDR
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 
 
 @NLRI.register(AFI.ipv4,SAFI.unicast)

@@ -13,7 +13,7 @@ from exabgp.protocol.resource import Resource
 # http://www.iana.org/assignments/protocol-numbers/
 
 class Protocol (Resource):
-	_NAME = 'protocol'
+	NAME = 'protocol'
 
 	ICMP  = 0x01
 	IGMP  = 0x02
@@ -29,7 +29,7 @@ class Protocol (Resource):
 	PIM   = 0x67
 	SCTP  = 0x84
 
-	_VALUE = dict ((k.lower().replace('_','-'),v) for (k,v) in {
+	codes = dict ((k.lower().replace('_','-'),v) for (k,v) in {
 		'ICMP': ICMP,
 		'IGMP': IGMP,
 		'TCP':  TCP,
@@ -45,7 +45,7 @@ class Protocol (Resource):
 		'SCTP': SCTP,
 	}.items())
 
-	_STRING = dict([(r,l) for (l,r) in _VALUE.items()])
+	names = dict([(r,l) for (l,r) in codes.items()])
 
 	def pack (self):
 		return chr(self)

@@ -13,7 +13,7 @@ from exabgp.protocol.resource import Resource
 # http://www.iana.org/assignments/icmp-parameters
 
 class ICMPType (Resource):
-	_NAME = 'icmp type'
+	NAME = 'icmp type'
 
 	ECHO_REPLY               = 0x00
 	# DESTINATION_UNREACHEABLE = 0x03
@@ -33,7 +33,7 @@ class ICMPType (Resource):
 	MASK_REPLY               = 0x12
 	TRACEROUTE               = 0x1E
 
-	_VALUE = dict ((k.lower().replace('_','-'),v) for (k,v) in {
+	codes = dict ((k.lower().replace('_','-'),v) for (k,v) in {
 		'ECHO_REPLY':               ECHO_REPLY,
 		'UNREACHABLE':              UNREACHABLE,
 		'SOURCE_QUENCH':            SOURCE_QUENCH,
@@ -52,12 +52,12 @@ class ICMPType (Resource):
 		'TRACEROUTE':               TRACEROUTE,
 	}.items())
 
-	_STRING = dict([(r,l) for (l,r) in _VALUE.items()])
+	names = dict([(r,l) for (l,r) in codes.items()])
 
 
 # http://www.iana.org/assignments/icmp-parameters
 class ICMPCode (Resource):
-	_NAME = 'icmp code'
+	NAME = 'icmp code'
 
 	# Destination Unreacheable (type 3)
 	NETWORK_UNREACHABLE                   = 0x0
@@ -91,7 +91,7 @@ class ICMPCode (Resource):
 	REQUIRED_OPTION_MISSING               = 0x1
 	IP_HEADER_BAD                         = 0x2
 
-	_VALUE = dict ((k.lower().replace('_','-'),v) for (k,v) in {
+	codes = dict ((k.lower().replace('_','-'),v) for (k,v) in {
 		'NETWORK_UNREACHABLE':                   NETWORK_UNREACHABLE,
 		'HOST_UNREACHABLE':                      HOST_UNREACHABLE,
 		'PROTOCOL_UNREACHABLE':                  PROTOCOL_UNREACHABLE,
@@ -118,7 +118,7 @@ class ICMPCode (Resource):
 		'IP_HEADER_BAD':                         IP_HEADER_BAD,
 	}.items())
 
-	# _STRING would have non-unique keys
+	# names would have non-unique keys
 
 	def __str__ (self):
 		return '%d' % int(self)

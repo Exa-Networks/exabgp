@@ -24,7 +24,7 @@ from exabgp.protocol.resource import Resource
 # +  Bit 4 - Last fragment (LF)
 
 class Fragment (Resource):
-	_NAME = 'fragment'
+	NAME = 'fragment'
 
 	NOT      = 0x00
 	DONT     = 0x01
@@ -33,7 +33,7 @@ class Fragment (Resource):
 	LAST     = 0x08
 	# reserved = 0xF0
 
-	_VALUE = dict ((k.lower().replace('_','-'),v) for (k,v) in {
+	codes = dict ((k.lower().replace('_','-'),v) for (k,v) in {
 		'NOT-A-FRAGMENT': NOT,
 		'DONT-FRAGMENT':  DONT,
 		'IS-FRAGMENT':    IS,
@@ -41,4 +41,4 @@ class Fragment (Resource):
 		'LAST-FRAGMENT':  LAST,
 	}.items())
 
-	_STRING = dict([(r,l) for (l,r) in _VALUE.items()])
+	names = dict([(r,l) for (l,r) in codes.items()])

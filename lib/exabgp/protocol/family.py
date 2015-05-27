@@ -9,49 +9,41 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
-# XXX: Look like AFI and SAFI could be inheriting from Resource
+from exabgp.protocol.resource import Resource
 
-# =================================================================== AFI
-
+# ======================================================================== AFI
 # http://www.iana.org/assignments/address-family-numbers/
-class AFI (int):
+
+
+class AFI (Resource):
 	undefined = 0x00  # internal
 	ipv4      = 0x01
 	ipv6      = 0x02
 	l2vpn     = 0x19
 
-	Family = {
-		ipv4:  0x02,  # socket.AF_INET,
-		ipv6:  0x30,  # socket.AF_INET6,
-		l2vpn: 0x02,  # l2vpn info over ipv4 session
-	}
+	# Family = {
+	# 	ipv4:  0x02,  # socket.AF_INET,
+	# 	ipv6:  0x30,  # socket.AF_INET6,
+	# 	l2vpn: 0x02,  # l2vpn info over ipv4 session
+	# }
 
-	names = {
+	codes = dict ((k.lower().replace('_','-'),v) for (k,v) in {
 		'ipv4':  ipv4,
 		'ipv6':  ipv6,
 		'l2vpn': l2vpn,
-	}
+	}.items())
+
+	names = dict([(r,l) for (l,r) in codes.items()])
+	inet_names = dict([(r,l.replace('ipv','inet')) for (l,r) in codes.items()])
 
 	def __str__ (self):
-		if self == 0x01:
-			return "ipv4"
-		if self == 0x02:
-			return "ipv6"
-		if self == 0x19:
-			return "l2vpn"
-		return "unknown afi %d" % self
+		return self.names.get(self,"unknown afi %d" % int(self))
 
 	def __repr__ (self):
 		return str(self)
 
 	def name (self):
-		if self == 0x01:
-			return "inet4"
-		if self == 0x02:
-			return "inet6"
-		if self == 0x19:
-			return "l2vpn"
-		return "unknown afi"
+		return self.inet_names.get(self,"unknown afi")
 
 	def pack (self):
 		return pack('!H',self)
@@ -60,13 +52,9 @@ class AFI (int):
 	def unpack (data):
 		return AFI(unpack('!H',data)[0])
 
-	@staticmethod
-	def value (name):
-		if name == "ipv4":
-			return AFI.ipv4
-		if name == "ipv6":
-			return AFI.ipv6
-		return None
+	@classmethod
+	def value (cls,name):
+		return cls.codes.get(name,None)
 
 	@staticmethod
 	def implemented_safi (afi):
@@ -80,13 +68,13 @@ class AFI (int):
 
 	@classmethod
 	def fromString (cls, string):
-		return cls.names.get(string,cls.undefined)
+		return cls.codes.get(string,cls.undefined)
 
 
-# =================================================================== SAFI
+# ======================================================================= SAFI
 
 # http://www.iana.org/assignments/safi-namespace
-class SAFI (int):
+class SAFI (Resource):
 	undefined = 0               # internal
 	unicast = 1                 # [RFC4760]
 	multicast = 2               # [RFC4760]
@@ -117,7 +105,7 @@ class SAFI (int):
 	# unassigned = [_ for _ in range(8,64)] + [_ for _ in range(70,128)]
 	# reverved = [0,3] + [130,131] + [_ for _ in range(135,140)] + [_ for _ in range(141,241)] + [255,]    # [RFC4760]
 
-	names = {
+	codes = {
 		'unicast':   unicast,
 		'multicast': multicast,
 		'nlri-mpls': nlri_mpls,
@@ -129,28 +117,10 @@ class SAFI (int):
 		'flow-vpn':  flow_vpn,
 	}
 
+	names = dict([(r,l) for (l,r) in codes.items()])
+
 	def name (self):
-		if self == 0x01:
-			return "unicast"
-		if self == 0x02:
-			return "multicast"
-		if self == 0x04:
-			return "nlri-mpls"
-		if self == 0x46:
-			return "evpn"
-		if self == 0x80:
-			return "mpls-vpn"
-		if self == 0x84:
-			return "rtc"
-		if self == 0x85:
-			return "flow"
-		if self == 0x86:
-			return "flow-vpn"
-		if self == 0x41:
-			return "vpls"
-		if self == 0x46:
-			return "evpn"
-		return "unknown safi %d" % self
+		return self.names.get(self,'unknown safi %d' % int(self))
 
 	def __str__ (self):
 		return self.name()
@@ -171,29 +141,16 @@ class SAFI (int):
 	def has_rd (self):
 		return self in (self.mpls_vpn,)  # technically self.flow_vpn and self.vpls has an RD but it is not an NLRI
 
-	@staticmethod
-	def value (name):
-		if name == "unicast":
-			return 0x01
-		if name == "multicast":
-			return 0x02
-		if name == "nlri-mpls":
-			return 0x04
-		if name == "mpls-vpn":
-			return 0x80
-		if name == "flow":
-			return 0x85
-		if name == "flow-vpn":
-			return 0x86
-		if name == "vpls":
-			return 0x41
-		if name == "evpn":
-			return 0x46
-		return None
+	@classmethod
+	def value (cls,name):
+		return cls.codes.get(name,None)
 
 	@classmethod
 	def fromString (cls, string):
 		return cls.names.get(string,cls.undefined)
+
+
+# ===================================================================== FAMILY
 
 
 class Family (object):

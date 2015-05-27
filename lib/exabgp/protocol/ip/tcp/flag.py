@@ -13,7 +13,7 @@ from exabgp.protocol.resource import Resource
 # http://www.iana.org/assignments/tcp-header-flags
 
 class TCPFlag (Resource):
-	_NAME = 'tcp flag'
+	NAME = 'tcp flag'
 
 	FIN    = 0x01
 	SYN    = 0x02
@@ -22,7 +22,7 @@ class TCPFlag (Resource):
 	ACK    = 0x10
 	URGENT = 0x20
 
-	_VALUE = dict ((k.lower().replace('_','-'),v) for (k,v) in {
+	codes = dict ((k.lower().replace('_','-'),v) for (k,v) in {
 		'FIN':    FIN,
 		'SYN':    SYN,
 		'RST':    RST,
@@ -31,4 +31,4 @@ class TCPFlag (Resource):
 		'URGENT': URGENT,
 	}.items())
 
-	_STRING = dict([(r,l) for (l,r) in _VALUE.items()])
+	names = dict([(r,l) for (l,r) in codes.items()])
