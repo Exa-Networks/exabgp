@@ -6,6 +6,8 @@ Version explained:
 Version 3.4.12
  * Fix: issue with unknown capabilities
     reported by: Sandy Breeze
+ * Fix: notification messages were not passed to the API
+    reported by: Florian Obser
 
 Version 3.4.11
  * Change: install healthcheck in bin
