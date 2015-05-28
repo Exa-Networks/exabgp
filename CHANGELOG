@@ -56,6 +56,8 @@ Version 3.5.0
     reported by: Sandy Breeze
  * Feature: Allow single line flow route
     requested by: Pavel Odintsov
+ * Fix: notification messages were not passed to the API
+    reported by: Florian Obser
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
