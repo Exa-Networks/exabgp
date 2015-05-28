@@ -109,6 +109,8 @@ class Logger (object):
 	_history = []
 	_max_history = 20
 
+	_default = None
+
 	_config = ''
 	_pid = os.getpid()
 	_cwd = os.getcwd()
@@ -194,8 +196,6 @@ class Logger (object):
 			address = ('localhost', 514)
 		handler = logging.handlers.SysLogHandler(address)
 
-		self._syslog = logging.getLogger()
-		self._syslog.setLevel(logging.DEBUG)
 		self._syslog.addHandler(handler)
 		return True
 
@@ -205,16 +205,12 @@ class Logger (object):
 		address = (destination, 514)
 		handler = logging.handlers.SysLogHandler(address)
 
-		self._syslog = logging.getLogger()
-		self._syslog.setLevel(logging.DEBUG)
 		self._syslog.addHandler(handler)
 		return True
 
 	def _standard (self, facility):
 		handler = logging.StreamHandler(getattr(sys,facility))
 
-		self._syslog = logging.getLogger()
-		self._syslog.setLevel(logging.DEBUG)
 		self._syslog.addHandler(handler)
 		return True
 
@@ -231,32 +227,44 @@ class Logger (object):
 			self.critical('ExaBGP does not have the right to write in the requested log directory','logger')
 			return False
 
-		self._syslog = logging.getLogger()
-		self._syslog.setLevel(logging.DEBUG)
 		self._syslog.addHandler(handler)
 		return True
 
 	def restart (self, first=False):
-		if first:
-			destination = 'stderr'
-		else:
-			if self._syslog:
-				for handler in self._syslog.handlers:
-					self._syslog.removeHandler(handler)
-			destination = self.destination
+		try:
+			if first:
+				self._default = logging.StreamHandler(sys.stderr)
+				self._syslog = logging.getLogger()
+				self._syslog.setLevel(logging.DEBUG)
+				self._syslog.addHandler(self._default)
+				return True
+		except IOError:
+			# no way to report anything via stderr, silently failing
+			return False
+
+		if not self._syslog:
+			# no way to report anything via stderr, silently failing
+			return False
+
+		for handler in self._syslog.handlers:
+			self._syslog.removeHandler(handler)
+		self._syslog.addHandler(self._default)
 
 		try:
-			if destination in ('','syslog'):
-				return self._local_syslog()
+			if self.destination in ('stderr',):
+				return True
+			elif self.destination in ('stdout'):
+				result = self._standard(self.destination)
+			elif self.destination in ('','syslog'):
+				result = self._local_syslog()
+			elif self.destination.startswith('host:'):
+				result = self._remote_syslog(self.destination[5:].strip())
+			else:
+				result = self._file(self.destination)
 
-			if destination.startswith('host:'):
-				return self._remote_syslog(destination[5:].strip())
-
-			if destination in ('stdout','stderr'):
-				return self._standard(destination)
-
-			return self._file(destination)
-
+			if result:
+				self._syslog.removeHandler(self._default)
+			return result
 		except IOError:
 			self.critical('Can not set logging (are stdout/stderr closed?)','logger')
 			return False
@@ -269,11 +277,20 @@ class Logger (object):
 				print self._prefixed(level,source,line)
 				sys.stdout.flush()
 
-	debug = functools.partial(report,level='DEBUG')
-	info = functools.partial(report,level='INFO')
-	warning = functools.partial(report,level='WARNING')
-	error = functools.partial(report,level='ERROR')
-	critical = functools.partial(report,level='CRITICAL')
+	def debug (self, message, source='', level='debug'):
+		self.report(message,source,level)
+
+	def info (self, message, source='', level='info'):
+		self.report(message,source,level)
+
+	def warning (self, message, source='', level='warning'):
+		self.report(message,source,level)
+
+	def error (self, message, source='', level='error'):
+		self.report(message,source,level)
+
+	def critical (self, message, source='', level='critical'):
+		self.report(message,source,level)
 
 	def raw (self, message):
 		for line in message.split('\n'):
@@ -287,7 +304,7 @@ class Logger (object):
 	def network (self, message, recorder='info'):
 		level = short(recorder)
 		if self._option.network and getattr(syslog,'LOG_%s' % level) <= self.level:
-			getattr(self,recorder.lower())(self,message,'network')
+			getattr(self,recorder)(message,'network',level)
 		else:
 			self._record(time.localtime(),'network',recorder,message)
 		self.pdb(recorder)
@@ -296,7 +313,7 @@ class Logger (object):
 	def wire (self, message, recorder='debug'):
 		level = short(recorder)
 		if self._option.wire and getattr(syslog,'LOG_%s' % level) <= self.level:
-			getattr(self,recorder.lower())(self,message,'wire')
+			getattr(self,recorder)(message,'wire',level)
 		else:
 			self._record(time.localtime(),'wire',recorder,message)
 		self.pdb(recorder)
@@ -305,7 +322,7 @@ class Logger (object):
 	def message (self, message, recorder='info'):
 		level = short(recorder)
 		if self._option.message and getattr(syslog,'LOG_%s' % level) <= self.level:
-			getattr(self,recorder.lower())(self,message,'message')
+			getattr(self,recorder)(message,'message',level)
 		else:
 			self._record(time.localtime(),'message',recorder,message)
 		self.pdb(recorder)
@@ -314,7 +331,7 @@ class Logger (object):
 	def configuration (self, message, recorder='info'):
 		level = short(recorder)
 		if self._option.configuration and getattr(syslog,'LOG_%s' % level) <= self.level:
-			getattr(self,recorder.lower())(self,message,'configuration')
+			getattr(self,recorder)(message,'configuration',level)
 		else:
 			self._record(time.localtime(),'configuration',recorder,message)
 		self.pdb(recorder)
@@ -323,7 +340,7 @@ class Logger (object):
 	def reactor (self, message, recorder='info'):
 		level = short(recorder)
 		if self._option.reactor and getattr(syslog,'LOG_%s' % level) <= self.level:
-			getattr(self,recorder.lower())(self,message,'reactor')
+			getattr(self,recorder)(message,'reactor',level)
 		else:
 			self._record(time.localtime(),'reactor',recorder,message)
 		self.pdb(recorder)
@@ -332,7 +349,7 @@ class Logger (object):
 	def rib (self, message, recorder='info'):
 		level = short(recorder)
 		if self._option.rib and getattr(syslog,'LOG_%s' % level) <= self.level:
-			getattr(self,recorder.lower())(self,message,'rib')
+			getattr(self,recorder)(message,'rib',level)
 		else:
 			self._record(time.localtime(),'rib',recorder,message)
 		self.pdb(recorder)
@@ -341,7 +358,7 @@ class Logger (object):
 	def timers (self, message, recorder='debug'):
 		level = short(recorder)
 		if self._option.timer and getattr(syslog,'LOG_%s' % level) <= self.level:
-			getattr(self,recorder.lower())(self,message,'timers')
+			getattr(self,recorder)(message,'timers',level)
 		else:
 			self._record(time.localtime(),'timers',recorder,message)
 		self.pdb(recorder)
@@ -350,7 +367,7 @@ class Logger (object):
 	def daemon (self, message, recorder='info'):
 		level = short(recorder)
 		if self._option.daemon and getattr(syslog,'LOG_%s' % level) <= self.level:
-			getattr(self,recorder.lower())(self,message,'daemon')
+			getattr(self,recorder)(message,'daemon',level)
 		else:
 			self._record(time.localtime(),'daemon',recorder,message)
 		self.pdb(recorder)
@@ -359,7 +376,7 @@ class Logger (object):
 	def processes (self, message, recorder='info'):
 		level = short(recorder)
 		if self._option.processes and getattr(syslog,'LOG_%s' % level) <= self.level:
-			getattr(self,recorder.lower())(self,message,'processes')
+			getattr(self,recorder)(message,'processes',level)
 		else:
 			self._record(time.localtime(),'processes',recorder,message)
 		self.pdb(recorder)
@@ -368,7 +385,7 @@ class Logger (object):
 	def routes (self, message, recorder='info'):
 		level = short(recorder)
 		if self._option.routes and getattr(syslog,'LOG_%s' % level) <= self.level:
-			getattr(self,recorder.lower())(self,message,'routes')
+			getattr(self,recorder)(message,'routes',level)
 		else:
 			self._record(time.localtime(),'routes',recorder,message)
 		self.pdb(recorder)
@@ -377,7 +394,7 @@ class Logger (object):
 	def parser (self, message, recorder='info'):
 		level = short(recorder)
 		if self._option.parser and getattr(syslog,'LOG_%s' % level) <= self.level:
-			getattr(self,recorder.lower())(self,message,'parser')
+			getattr(self,recorder)(message,'parser',level)
 		self.pdb(recorder)
 
 

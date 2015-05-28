@@ -338,7 +338,7 @@ class Reactor (object):
 		for key, neighbor in self.configuration.neighbor.items():
 			# new peer
 			if key not in self.peers:
-				self.logger.reactor("New peer setup: %s" % neighbor.name())
+				self.logger.reactor("New peer: %s" % neighbor.name())
 				peer = Peer(neighbor,self)
 				self.peers[key] = peer
 			# modified peer

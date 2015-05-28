@@ -12,6 +12,8 @@ import platform
 import syslog
 import string
 
+from exabgp.logger import Logger
+
 from exabgp.version import version
 # import before the fork to improve copy on write memory savings
 from exabgp.reactor.loop import Reactor
@@ -79,6 +81,15 @@ def main ():
 
 	from exabgp.configuration.setup import environment
 
+	try:
+		env = environment.setup(envfile)
+	except environment.Error,exc:
+		print usage
+		print '\nconfiguration issue,', str(exc)
+		sys.exit(1)
+
+	logger = Logger()
+
 	named_pipe = os.environ.get('NAMED_PIPE','')
 	if named_pipe:
 		from exabgp.application.control import main as control
@@ -103,13 +114,6 @@ def main ():
 			sys.exit(1)
 	else:
 		decode = ''
-
-	try:
-		env = environment.setup(envfile)
-	except environment.Error,exc:
-		print usage
-		print '\nconfiguration issue,', str(exc)
-		sys.exit(1)
 
 	# Make sure our child has a named pipe name
 	if env.api.file:
@@ -213,8 +217,7 @@ def main ():
 				if os.path.isfile(normalised):
 					configurations.append(normalised)
 					continue
-			from exabgp.logger import Logger
-			logger = Logger()
+
 			logger.configuration('one of the arguments passed as configuration is not a file (%s)' % f,'error')
 			sys.exit(1)
 
@@ -231,8 +234,6 @@ def main ():
 		run(env,comment,configurations)
 
 	if not (env.log.destination in ('syslog','stdout','stderr') or env.log.destination.startswith('host:')):
-		from exabgp.logger import Logger
-		logger = Logger()
 		logger.configuration('can not log to files when running multiple configuration (as we fork)','error')
 		sys.exit(1)
 
@@ -254,13 +255,10 @@ def main ():
 		for pid in pids:
 			os.waitpid(pid,0)
 	except OSError,exc:
-		from exabgp.logger import Logger
-		logger = Logger()
 		logger.reactor('Can not fork, errno %d : %s' % (exc.errno,exc.strerror),'critical')
-
+		sys.exit(1)
 
 def run (env, comment, configurations, pid=0):
-	from exabgp.logger import Logger
 	logger = Logger()
 
 	if comment:
