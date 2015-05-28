@@ -199,15 +199,15 @@ class Protocol (object):
 			raise Notify(1,0,'can not decode update message of type "%d"' % msg_id)
 			# raise Notify(5,0,'unknown message received')
 
-		if message.TYPE == Notification.TYPE:
-			raise message
-
 		if self.neighbor.api.get('receive-%d' % msg_id,False):
 			if parsed:
 				if not consolidate or not packets:
 					header = ''
 					body = ''
 				self.peer.reactor.processes.message(msg_id,self.neighbor,'receive',message,header,body)
+
+		if message.TYPE == Notification.TYPE:
+			raise message
 
 		yield message
 
