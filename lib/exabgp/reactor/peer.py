@@ -57,7 +57,9 @@ FORCE_GRACEFUL = True
 
 
 class Interrupted (Exception):
-	pass
+	def __init__ (self,direction):
+		Exception.__init__(self)
+		self.direction = direction
 
 
 # =========================================================================== KA
@@ -139,6 +141,12 @@ class Peer (object):
 
 		# We have been asked to teardown the session with this code
 		self._teardown = None
+
+		# This skipping business should have its own class, like KA
+		self._skip_time = None
+		self._next_skip = None
+
+		self.recv_timer = None
 
 		self._ = {'in':{},'out':{}}
 
@@ -313,9 +321,7 @@ class Peer (object):
 				yield ACTION.LATER
 			else:
 				self.logger.network('aborting the incoming connection')
-				stop = Interrupted()
-				stop.direction = 'in'
-				raise stop
+				raise Interrupted('in')
 
 		# Send KEEPALIVE
 		for message in self._['in']['proto'].new_keepalive('OPENCONFIRM'):
@@ -352,10 +358,8 @@ class Peer (object):
 				proto.close('connection to peer failed')
 			# A connection arrived before we could establish !
 			if not connected or self._['in']['proto']:
-				stop = Interrupted()
-				stop.direction = 'out'
 				yield ACTION.NOW
-				raise stop
+				raise Interrupted('out')
 
 		self._['out']['state'] = STATE.CONNECT
 		self._['out']['proto'] = proto
@@ -394,9 +398,7 @@ class Peer (object):
 
 			if local_id < remote_id:
 				self.logger.network('aborting the outgoing connection')
-				stop = Interrupted()
-				stop.direction = 'out'
-				raise stop
+				raise Interrupted('out')
 			else:
 				self.logger.network('closing the incoming connection')
 				self._stop('in','collision local id < remote id')
@@ -451,15 +453,15 @@ class Peer (object):
 		number = 0
 		refresh_enhanced = True if proto.negotiated.refresh == REFRESH.ENHANCED else False
 
-		self.send_ka = KA(self.me,proto)
+		send_ka = KA(self.me,proto)
 
 		while not self._teardown:
 			for message in proto.read_message():
 				self.recv_timer.check_ka(message)
 
-				if self.send_ka() is not False:
+				if send_ka() is not False:
 					# we need and will send a keepalive
-					while self.send_ka() is None:
+					while send_ka() is None:
 						yield ACTION.NOW
 
 				# Received update
@@ -548,8 +550,8 @@ class Peer (object):
 
 				# SEND MANUAL KEEPALIVE (only if we have no more routes to send)
 				elif not command_eor and self.neighbor.eor:
-						new_eor = self.neighbor.eor.popleft()
-						command_eor = proto.new_eors(new_eor.afi,new_eor.safi)
+					new_eor = self.neighbor.eor.popleft()
+					command_eor = proto.new_eors(new_eor.afi,new_eor.safi)
 
 				if command_eor:
 					try:
@@ -640,8 +642,8 @@ class Peer (object):
 			return
 
 		# ....
-		except Interrupted,interrupt:
-			self._reset(interrupt.direction)
+		except Interrupted,interruption:
+			self._reset(interruption.direction)
 			return
 
 		# UNHANDLED PROBLEMS
