@@ -323,16 +323,22 @@ class Processes (object):
 		for process in self._notify(peer,'receive-%d' % Message.CODE.OPEN):
 			self.write(process,self._encoder[process].open(peer,direction,message,header,body),peer)
 
+	@register_process(Message.CODE.UPDATE,_dispatch)
+	def _update (self, peer, direction, update, header, body):
+		for process in self._notify(peer,'receive-%d' % Message.CODE.UPDATE):
+			self.write(process,self._encoder[process].update(peer,direction,update,header,body),peer)
+
+	@register_process(Message.CODE.NOTIFICATION,_dispatch)
+	def _notification (self, peer, direction, message, header, body):
+		for process in self._notify(peer,'receive-%d' % Message.CODE.NOTIFICATION):
+			import pdb; pdb.set_trace()
+			self.write(process,self._encoder[process].notification(peer,direction,message,header,body),peer)
+
 	# unused-argument, must keep the API
 	@register_process(Message.CODE.KEEPALIVE,_dispatch)
 	def _keepalive (self, peer, direction, keepalive, header, body):
 		for process in self._notify(peer,'receive-%d' % Message.CODE.KEEPALIVE):
 			self.write(process,self._encoder[process].keepalive(peer,direction,header,body),peer)
-
-	@register_process(Message.CODE.UPDATE,_dispatch)
-	def _update (self, peer, direction, update, header, body):
-		for process in self._notify(peer,'receive-%d' % Message.CODE.UPDATE):
-			self.write(process,self._encoder[process].update(peer,direction,update,header,body),peer)
 
 	@register_process(Message.CODE.ROUTE_REFRESH,_dispatch)
 	def _refresh (self, peer, direction, refresh, header, body):

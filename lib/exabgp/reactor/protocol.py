@@ -163,6 +163,8 @@ class Protocol (object):
 		consolidate = self.neighbor.api['receive-consolidate']
 		parsed = self.neighbor.api['receive-parsed']
 
+		body,header = '',''  # just because pylint/pylama are getting more clever
+
 		for length,msg_id,header,body,notify in self.connection.reader():
 			if notify:
 				if self.neighbor.api['receive-%d' % Message.CODE.NOTIFICATION]:

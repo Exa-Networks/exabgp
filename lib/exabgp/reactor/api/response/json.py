@@ -117,12 +117,12 @@ class JSON (object):
 			'notification': 'shutdown',
 		}),'','',None,message_type='notification')
 
-	def notification (self, neighbor, direction, code, subcode, data, header, body):
+	def notification (self, neighbor, direction, message, header, body):
 		return self._header(self._neighbor(neighbor,direction,self._kv({
 			'notification': '{ %s } ' % self._kv({
-				'code':    code,
-				'subcode': subcode,
-				'data':    hexstring(data),
+				'code':    message.code,
+				'subcode': message.subcode,
+				'data':    hexstring(message.data),
 			})
 		})),header,body,neighbor,message_type='notification')
 

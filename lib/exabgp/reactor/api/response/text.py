@@ -50,13 +50,13 @@ class Text (object):
 			os.getppid()
 		)
 
-	def notification (self, neighbor, direction, code, subcode, data,header,body):
+	def notification (self, neighbor, direction, message, header, body):
 		return 'neighbor %s %s notification code %d subcode %d data %s%s\n' % (
 			neighbor.peer_address,
 			direction,
-			code,
-			subcode,
-			hexstring(data),
+			message.code,
+			message.subcode,
+			hexstring(message.data),
 			self._header_body(header,body)
 		)
 
