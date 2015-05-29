@@ -331,7 +331,6 @@ class Processes (object):
 	@register_process(Message.CODE.NOTIFICATION,_dispatch)
 	def _notification (self, peer, direction, message, header, body):
 		for process in self._notify(peer,'receive-%d' % Message.CODE.NOTIFICATION):
-			import pdb; pdb.set_trace()
 			self.write(process,self._encoder[process].notification(peer,direction,message,header,body),peer)
 
 	# unused-argument, must keep the API
