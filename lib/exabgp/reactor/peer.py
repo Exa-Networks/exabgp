@@ -144,7 +144,7 @@ class Peer (object):
 
 		# This skipping business should have its own class, like KA
 		self._skip_time = None
-		self._next_skip = None
+		self._next_skip = 0
 
 		self.recv_timer = None
 
