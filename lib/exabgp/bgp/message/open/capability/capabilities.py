@@ -19,7 +19,8 @@ from exabgp.bgp.message.open.capability.operational import Operational
 from exabgp.bgp.message.open.capability.refresh import RouteRefresh
 from exabgp.bgp.message.open.capability.refresh import EnhancedRouteRefresh
 from exabgp.bgp.message.open.capability.hostname import HostName
-# from exabgp.bgp.message.open.capability.unknown import UnknownCapability
+# Do not remove this include or unknown capability will not be handled
+from exabgp.bgp.message.open.capability.unknown import UnknownCapability
 
 from exabgp.bgp.message.notification import Notify
 

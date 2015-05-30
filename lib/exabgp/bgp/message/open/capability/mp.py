@@ -15,6 +15,7 @@ from exabgp.bgp.message.open.capability.capability import Capability
 #
 
 
+@Capability.register()
 class MultiProtocol (Capability,list):
 	ID = Capability.CODE.MULTIPROTOCOL
 

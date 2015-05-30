@@ -15,6 +15,7 @@ from exabgp.bgp.message.open.capability.capability import Capability
 #
 
 
+@Capability.register()
 class AddPath (Capability,dict):
 	ID = Capability.CODE.ADD_PATH
 

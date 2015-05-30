@@ -93,25 +93,28 @@ class Capability (object):
 			return name
 
 	registered_capability = dict()
-	_fallback_capability = None
+	unknown_capability = None
 
 	@staticmethod
 	def hex (data):
 		return '0x' + ''.join('%02x' % ord(_) for _ in data)
 
 	@classmethod
-	def fallback_capability (cls, imp):
-		if cls._fallback_capability is not None:
+	def unknown (cls,klass):
+		if cls.unknown_capability is not None:
 			raise RuntimeError('only one fallback function can be registered')
-		cls._fallback_capability = imp
+		cls.unknown_capability = klass
 
-	@staticmethod
-	def register_capability (klass, capability=None):
-		# ID is defined by all the subclasses - otherwise they do not work :)
-		what = klass.ID if capability is None else capability  # pylint: disable=E1101
-		if what in klass.registered_capability:
-			raise RuntimeError('only one class can be registered per capability')
-		klass.registered_capability[what] = klass
+	@classmethod
+	def register (cls,capability=None):
+		def register_capability (klass):
+			# ID is defined by all the subclasses - otherwise they do not work :)
+			what = klass.ID if capability is None else capability  # pylint: disable=E1101
+			if what in cls.registered_capability:
+				raise RuntimeError('only one class can be registered per capability')
+			cls.registered_capability[what] = klass
+			return klass
+		return register_capability
 
 	@classmethod
 	def klass (cls, what):
@@ -119,8 +122,8 @@ class Capability (object):
 			kls = cls.registered_capability[what]
 			kls.ID = what
 			return kls
-		if cls._fallback_capability:
-			return cls._fallback_capability
+		if cls.unknown_capability:
+			return cls.unknown_capability
 		raise Notify (2,4,'can not handle capability %s' % what)
 
 	@classmethod

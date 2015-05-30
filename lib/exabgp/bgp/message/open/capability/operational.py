@@ -12,6 +12,7 @@ from exabgp.bgp.message.open.capability.capability import Capability
 #
 
 
+@Capability.register()
 class Operational (Capability,list):
 	ID = Capability.CODE.OPERATIONAL
 

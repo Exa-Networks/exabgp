@@ -12,9 +12,10 @@ from exabgp.bgp.message.open.capability.capability import Capability
 #
 
 
+@Capability.register()
+@Capability.register(Capability.CODE.ROUTE_REFRESH_CISCO)
 class RouteRefresh (Capability):
-	def __init__ (self):
-		self.ID = Capability.CODE.ROUTE_REFRESH
+	ID = Capability.CODE.ROUTE_REFRESH
 
 	def __str__ (self):
 		if self.ID == Capability.CODE.ROUTE_REFRESH:
@@ -56,6 +57,7 @@ class RouteRefresh (Capability):
 #
 
 
+@Capability.register()
 class EnhancedRouteRefresh (Capability):
 	ID = Capability.CODE.ENHANCED_ROUTE_REFRESH
 

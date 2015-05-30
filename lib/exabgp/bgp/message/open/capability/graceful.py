@@ -16,6 +16,7 @@ from exabgp.bgp.message.open.capability.capability import Capability
 # RFC 4727
 
 
+@Capability.register()
 class Graceful (Capability,dict):
 	ID = Capability.CODE.GRACEFUL_RESTART
 

@@ -12,10 +12,10 @@ from exabgp.bgp.message.open.capability.capability import Capability
 #
 
 
+@Capability.register()
+@Capability.register(Capability.CODE.MULTISESSION_CISCO)
 class MultiSession (Capability,list):
-	def __init__ (self):
-		self.ID = Capability.CODE.MULTISESSION
-		list.__init__(self)
+	ID = Capability.CODE.MULTISESSION
 
 	def set (self, data):
 		self.extend(data)

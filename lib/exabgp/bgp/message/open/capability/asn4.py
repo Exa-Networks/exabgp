@@ -13,6 +13,7 @@ from exabgp.bgp.message.open.capability.capability import Capability
 #
 
 
+@Capability.register()
 class ASN4 (Capability,ASN):
 	ID = Capability.CODE.FOUR_BYTES_ASN
 
