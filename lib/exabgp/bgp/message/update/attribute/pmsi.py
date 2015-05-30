@@ -96,9 +96,10 @@ class PMSI (Attribute):
 			self.prettytunnel()
 		)
 
-	@staticmethod
-	def register_pmsi (klass):
-		PMSI._pmsi_known[klass.TUNNEL_TYPE] = klass
+	@classmethod
+	def register (cls,klass):
+		cls._pmsi_known[klass.TUNNEL_TYPE] = klass
+		return klass
 
 	@staticmethod
 	def pmsi_unknown (subtype, tunnel, label, flags):
@@ -119,6 +120,7 @@ class PMSI (Attribute):
 # ================================================================= PMSINoTunnel
 # RFC 6514
 
+@PMSI.register
 class PMSINoTunnel (PMSI):
 	TUNNEL_TYPE = 0
 
@@ -136,6 +138,7 @@ class PMSINoTunnel (PMSI):
 # ======================================================= PMSIIngressReplication
 # RFC 6514
 
+@PMSI.register
 class PMSIIngressReplication (PMSI):
 	TUNNEL_TYPE = 6
 
@@ -150,7 +153,3 @@ class PMSIIngressReplication (PMSI):
 	def unpack (cls, tunnel, label, flags):
 		ip = IPv4.ntop(tunnel)
 		return cls(ip,label,flags,tunnel)
-
-
-PMSI.register_pmsi(PMSINoTunnel)
-PMSI.register_pmsi(PMSIIngressReplication)
