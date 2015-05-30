@@ -19,7 +19,7 @@ class ExtendedCommunity (Attribute):
 	registered_extended = {}
 
 	@classmethod
-	def register (cls,klass):
+	def register (cls, klass):
 		# COMMUNITY_TYPE and COMMUNITY_SUBTYPE are defined in subclasses
 		cls.registered_extended[(klass.COMMUNITY_TYPE & 0x0F,klass.COMMUNITY_SUBTYPE)] = klass
 		return klass

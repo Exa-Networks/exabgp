@@ -72,7 +72,7 @@ class EVPN (NLRI):
 		return hash("%s:%s:%s:%s" % (self.afi,self.safi,self.CODE,self.packed))
 
 	@classmethod
-	def register (cls,klass):
+	def register (cls, klass):
 		cls.registered_evpn[klass.CODE] = klass
 		return klass
 

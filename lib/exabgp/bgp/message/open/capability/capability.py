@@ -100,13 +100,13 @@ class Capability (object):
 		return '0x' + ''.join('%02x' % ord(_) for _ in data)
 
 	@classmethod
-	def unknown (cls,klass):
+	def unknown (cls, klass):
 		if cls.unknown_capability is not None:
 			raise RuntimeError('only one fallback function can be registered')
 		cls.unknown_capability = klass
 
 	@classmethod
-	def register (cls,capability=None):
+	def register (cls, capability=None):
 		def register_capability (klass):
 			# ID is defined by all the subclasses - otherwise they do not work :)
 			what = klass.ID if capability is None else capability  # pylint: disable=E1101

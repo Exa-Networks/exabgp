@@ -48,15 +48,15 @@ class NLRI (Family):
 	def __ge__ (self, other):
 		raise RuntimeError('comparing NLRI for ordering does not make sense')
 
-	@staticmethod
-	def register (afi, safi):
-		def register_nlri (cls):
-			NLRI.registered_nlri['%d/%d' % (afi,safi)] = cls
+	@classmethod
+	def register (cls, afi, safi):
+		def register_nlri (klass):
+			cls.registered_nlri['%d/%d' % (afi,safi)] = klass
 			new = (AFI(afi),SAFI(safi))
-			if new in NLRI.registered_nlri:
+			if new in cls.registered_nlri:
 				raise RuntimeError('Tried to register %s/%s twice' % new)
-			NLRI.registered_families.append(new)
-			return cls
+			cls.registered_families.append(new)
+			return klass
 		return register_nlri
 
 	@staticmethod
