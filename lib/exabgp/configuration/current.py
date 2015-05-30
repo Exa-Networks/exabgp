@@ -31,7 +31,7 @@ from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
 
 from exabgp.bgp.message import OUT
-from exabgp.bgp.message import Message
+from exabgp.bgp.message.message import Message
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime

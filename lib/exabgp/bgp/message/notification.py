@@ -8,7 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import string
 
-from exabgp.bgp.message import Message
+from exabgp.bgp.message.message import Message
 
 
 def hexstring (value):
@@ -28,6 +28,7 @@ def hexstring (value):
 # | Error code    | Error subcode |   Data (variable)             |
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
+@Message.register
 class Notification (Message):
 	ID = Message.CODE.NOTIFICATION
 	TYPE = chr(Message.CODE.NOTIFICATION)
@@ -118,6 +119,7 @@ class Notification (Message):
 # =================================================================== Notify
 # A Notification we need to inform our peer of.
 
+@Message.notify
 class Notify (Notification):
 	def __init__ (self, code, subcode, data=None):
 		if data is None:

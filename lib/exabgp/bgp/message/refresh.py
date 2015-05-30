@@ -11,7 +11,7 @@ from struct import error
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.bgp.message import Message
+from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
 
 # =================================================================== Notification
@@ -30,6 +30,7 @@ class Reserved (int):
 		return 'invalid'
 
 
+@Message.register
 class RouteRefresh (Message):
 	ID = Message.CODE.ROUTE_REFRESH
 	TYPE = chr(Message.CODE.ROUTE_REFRESH)

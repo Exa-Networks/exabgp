@@ -13,7 +13,7 @@ from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.bgp.message import Message
+from exabgp.bgp.message.message import Message
 from exabgp.bgp.message import IN
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update.eor import EOR
@@ -53,7 +53,7 @@ from exabgp.logger import LazyFormat
 # |   Prefix (variable)       |
 # +---------------------------+
 
-
+@Message.register
 class Update (Message):
 	ID = Message.CODE.UPDATE
 	TYPE = chr(Message.CODE.UPDATE)

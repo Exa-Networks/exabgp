@@ -12,7 +12,7 @@ from struct import unpack
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.open.routerid import RouterID
-from exabgp.bgp.message import Message
+from exabgp.bgp.message.message import Message
 
 # ========================================================================= Type
 #
@@ -37,7 +37,7 @@ class Type (int):
 # ================================================================== Operational
 #
 
-
+@Message.register
 class Operational (Message):
 	ID = Message.CODE.OPERATIONAL
 	TYPE = chr(Message.CODE.OPERATIONAL)

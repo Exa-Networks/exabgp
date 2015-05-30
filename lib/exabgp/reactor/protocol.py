@@ -10,12 +10,15 @@ import os
 
 import traceback
 
+# ================================================================ Registration
+#
+
 from exabgp.reactor.network.outgoing import Outgoing
 # from exabgp.reactor.network.error import NotifyError
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.bgp.message import Message
+from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.nop import NOP
 from exabgp.bgp.message.nop import _NOP
 from exabgp.bgp.message.open import Open

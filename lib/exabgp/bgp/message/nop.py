@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2009-11-06.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.bgp.message import Message
+from exabgp.bgp.message.message import Message
 
 # ========================================================================= NOP
 #

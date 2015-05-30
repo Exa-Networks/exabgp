@@ -8,7 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from struct import unpack
 
-from exabgp.bgp.message import Message
+from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.open.version import Version
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
@@ -45,6 +45,7 @@ from exabgp.bgp.message.notification import Notify
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-...
 
 
+@Message.register
 class Open (Message):
 	ID = Message.CODE.OPEN
 	TYPE = chr(Message.CODE.OPEN)

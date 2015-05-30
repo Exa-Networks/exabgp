@@ -153,11 +153,16 @@ class Message (Exception):
 		raise NotImplementedError('message not implemented in subclasses')
 
 	@staticmethod
-	def register_message (klass, message=None):
-		what = klass.TYPE if message is None else message
-		if what in Message.registered_message:
+	def register (klass):
+		if klass.TYPE in Message.registered_message:
 			raise RuntimeError('only one class can be registered per message')
-		Message.registered_message[ord(what)] = klass
+		Message.registered_message[ord(klass.TYPE)] = klass
+		return klass
+
+	@staticmethod
+	def notify (klass):
+		Message.klass_notify = klass
+		return klass
 
 	@classmethod
 	def klass (cls, what):
