@@ -16,6 +16,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 # RFC 5512
 
 
+@ExtendedCommunity.register
 class Encapsulation (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x03
 	COMMUNITY_SUBTYPE = 0x0C

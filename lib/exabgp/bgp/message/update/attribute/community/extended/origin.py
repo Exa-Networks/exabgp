@@ -38,6 +38,7 @@ class Origin (ExtendedCommunity):
 # ================================================================== OriginASNIP
 # RFC 4360 / RFC 7153
 
+@ExtendedCommunity.register
 class OriginASNIP (Origin):
 	COMMUNITY_TYPE = 0x00
 	LIMIT = 4
@@ -69,6 +70,7 @@ class OriginASNIP (Origin):
 # ================================================================== OriginIPASN
 # RFC 4360 / RFC 7153
 
+@ExtendedCommunity.register
 class OriginIPASN (Origin):
 	COMMUNITY_TYPE = 0x01
 	LIMIT = 6
@@ -100,6 +102,7 @@ class OriginIPASN (Origin):
 # ============================================================= OriginASN4Number
 # RFC 4360 / RFC 7153
 
+@ExtendedCommunity.register
 class OriginASN4Number (Origin):
 	COMMUNITY_TYPE = 0x02
 	LIMIT = 6

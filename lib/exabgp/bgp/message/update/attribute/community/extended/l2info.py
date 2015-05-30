@@ -16,6 +16,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 # RFC 4761
 
 
+@ExtendedCommunity.register
 class L2Info (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x80
 	COMMUNITY_SUBTYPE = 0x0A

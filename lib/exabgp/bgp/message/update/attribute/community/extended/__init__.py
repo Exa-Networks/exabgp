@@ -21,20 +21,3 @@ from exabgp.bgp.message.update.attribute.community.extended.traffic import Traff
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirect
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficMark
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficNextHop
-
-ExtendedCommunity.register_extended(Encapsulation)
-ExtendedCommunity.register_extended(L2Info)
-
-ExtendedCommunity.register_extended(OriginASNIP)
-ExtendedCommunity.register_extended(OriginIPASN)
-ExtendedCommunity.register_extended(OriginASN4Number)
-
-ExtendedCommunity.register_extended(RouteTargetASN2Number)
-ExtendedCommunity.register_extended(RouteTargetIPNumber)
-ExtendedCommunity.register_extended(RouteTargetASN4Number)
-
-ExtendedCommunity.register_extended(TrafficRate)
-ExtendedCommunity.register_extended(TrafficAction)
-ExtendedCommunity.register_extended(TrafficRedirect)
-ExtendedCommunity.register_extended(TrafficMark)
-ExtendedCommunity.register_extended(TrafficNextHop)

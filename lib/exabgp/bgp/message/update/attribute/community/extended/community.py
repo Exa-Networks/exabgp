@@ -18,10 +18,11 @@ class ExtendedCommunity (Attribute):
 
 	registered_extended = {}
 
-	@staticmethod
-	def register_extended (klass):
+	@classmethod
+	def register (cls,klass):
 		# COMMUNITY_TYPE and COMMUNITY_SUBTYPE are defined in subclasses
-		ExtendedCommunity.registered_extended[(klass.COMMUNITY_TYPE & 0x0F,klass.COMMUNITY_SUBTYPE)] = klass
+		cls.registered_extended[(klass.COMMUNITY_TYPE & 0x0F,klass.COMMUNITY_SUBTYPE)] = klass
+		return klass
 
 	# size of value for data (boolean: is extended)
 	length_value = {False:7, True:6}

@@ -16,6 +16,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 # ================================================================== TrafficRate
 # RFC 5575
 
+@ExtendedCommunity.register
 class TrafficRate (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x80
 	COMMUNITY_SUBTYPE = 0x06
@@ -46,6 +47,7 @@ class TrafficRate (ExtendedCommunity):
 # ================================================================ TrafficAction
 # RFC 5575
 
+@ExtendedCommunity.register
 class TrafficAction (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x80
 	COMMUNITY_SUBTYPE = 0x07
@@ -87,6 +89,7 @@ class TrafficAction (ExtendedCommunity):
 # ============================================================== TrafficRedirect
 # RFC 5575
 
+@ExtendedCommunity.register
 class TrafficRedirect (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x80
 	COMMUNITY_SUBTYPE = 0x08
@@ -117,6 +120,7 @@ class TrafficRedirect (ExtendedCommunity):
 # ================================================================== TrafficMark
 # RFC 5575
 
+@ExtendedCommunity.register
 class TrafficMark (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x80
 	COMMUNITY_SUBTYPE = 0x09
@@ -148,6 +152,7 @@ class TrafficMark (ExtendedCommunity):
 
 # XXX: FIXME: I guess this should be a subclass of NextHop or IP ..
 
+@ExtendedCommunity.register
 class TrafficNextHop (ExtendedCommunity):
 	COMMUNITY_TYPE = 0x80
 	COMMUNITY_SUBTYPE = 0x00

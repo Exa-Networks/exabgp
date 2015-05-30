@@ -40,6 +40,7 @@ class RouteTarget (ExtendedCommunity):
 # ============================================================= RouteTargetASN2Number
 # RFC 4360 / RFC 7153
 
+@ExtendedCommunity.register
 class RouteTargetASN2Number (RouteTarget):
 	COMMUNITY_TYPE = 0x00
 	LIMIT = 4
@@ -74,6 +75,7 @@ class RouteTargetASN2Number (RouteTarget):
 # ============================================================= RouteTargetIPNumber
 # RFC 4360 / RFC 7153
 
+@ExtendedCommunity.register
 class RouteTargetIPNumber (RouteTarget):
 	COMMUNITY_TYPE = 0x01
 	LIMIT = 6
@@ -109,6 +111,7 @@ class RouteTargetIPNumber (RouteTarget):
 # ======================================================== RouteTargetASN4Number
 # RFC 4360 / RFC 7153
 
+@ExtendedCommunity.register
 class RouteTargetASN4Number (RouteTarget):
 	COMMUNITY_TYPE = 0x02
 	LIMIT = 6
