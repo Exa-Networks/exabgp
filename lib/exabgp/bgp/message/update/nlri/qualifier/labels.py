@@ -31,6 +31,24 @@ class Labels (object):
 		self.packed = ''.join(packed)
 		self._len = len(self.packed)
 
+	def __eq__ (self, other):
+		return self.labels == other.labels
+
+	def __neq__ (self, other):
+		return self.labels != other.labels
+
+	def __lt__ (self, other):
+		raise RuntimeError('comparing EthernetTag for ordering does not make sense')
+
+	def __le__ (self, other):
+		raise RuntimeError('comparing EthernetTag for ordering does not make sense')
+
+	def __gt__ (self, other):
+		raise RuntimeError('comparing EthernetTag for ordering does not make sense')
+
+	def __ge__ (self, other):
+		raise RuntimeError('comparing EthernetTag for ordering does not make sense')
+
 	def pack (self):
 		return self.packed
 

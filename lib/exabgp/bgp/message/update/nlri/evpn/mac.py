@@ -16,9 +16,6 @@ from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
 from exabgp.bgp.message.notification import Notify
 
-
-# ===================================================================== EVPNNLRI
-
 # +---------------------------------------+
 # |      RD   (8 octets)                  |
 # +---------------------------------------+
@@ -36,6 +33,9 @@ from exabgp.bgp.message.notification import Notify
 # +---------------------------------------+
 # |  MPLS Label (3 octets)                |
 # +---------------------------------------+
+
+# ===================================================================== EVPNNLRI
+
 
 class MAC (EVPN):
 	CODE = 2
@@ -57,6 +57,18 @@ class MAC (EVPN):
 		self.label = label if label else Labels.NOLABEL
 		self._pack()
 
+	def __eq__ (self, other):
+		return \
+			EVPN.__eq__(self,other) and \
+			self.rd == other.rd and \
+			self.etag == other.etag and \
+			self.mac == other.mac and \
+			self.ip == other.ip
+		# esi and label must not be part of the comparaison
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
 	def __str__ (self):
 		return "%s:%s:%s:%s:%s%s:%s:%s" % (
 			self._prefix(),
@@ -68,23 +80,6 @@ class MAC (EVPN):
 			self.ip if self.ip else "",
 			self.label
 		)
-
-	def __cmp__ (self, other):
-		if not isinstance(other,self.__class__):
-			return -1
-		if self.rd != other.rd:
-			return -1
-		# if self.esi == other.esi:  # MUST NOT be part of the test
-		# 	return -1
-		# if self.label == other.label:  # MUST NOT be part of the test
-		# 	return -1
-		if self.etag != other.etag:
-			return -1
-		if self.mac != other.mac:
-			return -1
-		if self.ip != other.ip:
-			return -1
-		return 0
 
 	def __hash__ (self):
 		# esi and label MUST *NOT* be part of the hash

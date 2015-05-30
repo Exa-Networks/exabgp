@@ -26,6 +26,15 @@ class Origin (Attribute):
 		self.origin = origin
 		self.packed = self._attribute(packed if packed else chr(origin))
 
+	def __eq__ (self, other):
+		return \
+			self.ID == other.ID and \
+			self.FLAG == other.FLAG and \
+			self.origin == other.origin
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
 	def pack (self, negotiated=None):
 		return self.packed
 
@@ -40,13 +49,6 @@ class Origin (Attribute):
 		if self.origin == 0x02:
 			return 'incomplete'
 		return 'invalid'
-
-	def __cmp__ (self, other):
-		if not isinstance(other,self.__class__):
-			return -1
-		if self.origin != other.origin:
-			return -1
-		return 0
 
 	@classmethod
 	def unpack (cls, data, negotiated):

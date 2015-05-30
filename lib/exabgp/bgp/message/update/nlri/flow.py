@@ -480,6 +480,28 @@ class Flow (NLRI):
 		self.rd = rd
 		self.unique = unique.next()
 
+	def __eq__ (self, other):
+		return \
+			self.rules == other.rules and \
+			self.action == other.action and \
+			self.nexthop == other.nexthop and \
+			self.rd == other.rd
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
+	def __lt__ (self, other):
+		raise RuntimeError('comparing Flow for ordering does not make sense')
+
+	def __le__ (self, other):
+		raise RuntimeError('comparing Flow for ordering does not make sense')
+
+	def __gt__ (self, other):
+		raise RuntimeError('comparing Flow for ordering does not make sense')
+
+	def __ge__ (self, other):
+		raise RuntimeError('comparing Flow for ordering does not make sense')
+
 	def __len__ (self):
 		return len(self.pack())
 

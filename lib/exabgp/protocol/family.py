@@ -160,6 +160,28 @@ class Family (object):
 		self.afi = AFI(afi)
 		self.safi = SAFI(safi)
 
+	def __eq__ (self, other):
+		return \
+			self.afi == other.afi and \
+			self.safi == other.safi
+
+	def __neq__ (self, other):
+		return \
+			self.afi != other.afi or \
+			self.safi != other.safi
+
+	def __lt__ (self, other):
+		raise RuntimeError('comparing Family for ordering does not make sense')
+
+	def __le__ (self, other):
+		raise RuntimeError('comparing Family for ordering does not make sense')
+
+	def __gt__ (self, other):
+		raise RuntimeError('comparing Family for ordering does not make sense')
+
+	def __ge__ (self, other):
+		raise RuntimeError('comparing Family for ordering does not make sense')
+
 	def family (self):
 		return (self.afi,self.safi)
 

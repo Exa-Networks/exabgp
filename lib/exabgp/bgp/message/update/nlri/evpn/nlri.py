@@ -14,9 +14,6 @@ from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 
-
-# ========================================================================= EVPN
-
 # +-----------------------------------+
 # |    Route Type (1 octet)           |
 # +-----------------------------------+
@@ -24,6 +21,9 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 # +-----------------------------------+
 # | Route Type specific (variable)    |
 # +-----------------------------------+
+
+# ========================================================================= EVPN
+
 
 @NLRI.register(AFI.l2vpn,SAFI.evpn)
 class EVPN (NLRI):
@@ -40,6 +40,18 @@ class EVPN (NLRI):
 		self.action = action
 		self.packed = packed
 
+	# For subtype 2 (MAC/IP advertisement route),
+	# we will have to ignore a part of the route, so this method will be overridden
+
+	def __eq__ (self, other):
+		return \
+			NLRI.__eq__(self,other) and \
+			self.CODE == other.CODE and \
+			self.packed == other.packed
+
+	def __neq__(self, other):
+		return not self.__eq__(other)
+
 	def _prefix (self):
 		return "evpn:%s:" % (self.registered_evpn.get(self.CODE,self).SHORT_NAME.lower())
 
@@ -55,24 +67,6 @@ class EVPN (NLRI):
 
 	def __len__ (self):
 		return len(self.packed) + 2
-
-	# For subtype 2 (MAC/IP advertisement route),
-	# we will have to ignore a part of the route, so this method will be overridden
-
-	def __cmp__ (self, other):
-		if not isinstance(other,EVPN):
-			return -1
-		if self.CODE != other.CODE:
-			return -1
-		if self.packed != other.packed:
-			return -1
-		return 0
-
-	def __eq__(self,other):
-		return cmp(self,other)==0
-
-	def __neq__(self,other):
-		return cmp(self,other)!=0
 
 	def __hash__ (self):
 		return hash("%s:%s:%s:%s" % (self.afi,self.safi,self.CODE,self.packed))

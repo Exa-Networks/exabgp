@@ -56,6 +56,17 @@ class PMSI (Attribute):
 		self.flags = flags    # integer
 		self.tunnel = tunnel  # tunnel id, packed data
 
+	def __eq__ (self, other):
+		return \
+			self.ID == other.ID and \
+			self.FLAG == other.FLAG and \
+			self.label == other.label and \
+			self.flags == other.flags and \
+			self.tunnel == other.tunnel
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
 	@staticmethod
 	def name (tunnel_type):
 		return PMSI._name.get(tunnel_type,'unknown')
@@ -73,19 +84,6 @@ class PMSI (Attribute):
 	# XXX: FIXME: Orange code had 4 (and another reference to it in the code elsewhere)
 	def __len__ (self):
 		return len(self.tunnel) + 5  # label:1, tunnel type: 1, MPLS label:3
-
-	def __cmp__ (self, other):
-		if not isinstance(other,self.__class__):
-			return -1
-		# if self.TUNNEL_TYPE != other.TUNNEL_TYPE:
-		# 	return -1
-		if self.label != other.label:
-			return -1
-		if self.flags != other.flags:
-			return -1
-		if self.tunnel != other.tunnel:
-			return -1
-		return 0
 
 	def prettytunnel (self):
 		return "0x" + ''.join('%02X' % ord(_) for _ in self.tunnel) if self.tunnel else ''

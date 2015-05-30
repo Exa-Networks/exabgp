@@ -11,8 +11,6 @@ from exabgp.bgp.message.update.nlri.qualifier.etag import EthernetTag
 
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
-# ===================================================================== EVPNNLRI
-
 # +---------------------------------------+
 # |      RD   (8 octets)                  |
 # +---------------------------------------+
@@ -23,6 +21,9 @@ from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 # |   Originating Router's IP Addr        |
 # |          (4 or 16 octets)             |
 # +---------------------------------------+
+
+# ===================================================================== EVPNNLRI
+
 
 class Multicast (EVPN):
 	CODE = 3
@@ -39,6 +40,16 @@ class Multicast (EVPN):
 		self.ip = ip
 		self._pack()
 
+	def __eq__ (self, other):
+		return \
+			EVPN.__eq__(self,other) and \
+			self.rd == other.rd and \
+			self.etag == other.etag and \
+			self.ip == other.ip
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
 	def __str__ (self):
 		return "%s:%s:%s:%s" % (
 			self._prefix(),
@@ -46,17 +57,6 @@ class Multicast (EVPN):
 			self.etag,
 			self.ip,
 		)
-
-	def __cmp__ (self, other):
-		if not isinstance(other,self.__class__):
-			return -1
-		if self.rd != other.rd:
-			return -1
-		if self.etag != other.etag:
-			return -1
-		if self.ip != other.ip:
-			return -1
-		return 0
 
 	def __hash__ (self):
 		return hash((self.afi,self.safi,self.CODE,self.rd,self.etag,self.ip))

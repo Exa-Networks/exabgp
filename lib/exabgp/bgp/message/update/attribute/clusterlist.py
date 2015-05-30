@@ -31,6 +31,15 @@ class ClusterList (Attribute):
 		self.packed = self._attribute(packed if packed else ''.join([_.pack() for _ in clusters]))
 		self._len = len(clusters)*4
 
+	def __eq__ (self, other):
+		return \
+			self.ID == other.ID and \
+			self.FLAG == other.FLAG and \
+			self.clusters == other.clusters
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
 	def pack (self, negotiated=None):
 		return self.packed
 

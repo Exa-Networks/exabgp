@@ -21,6 +21,24 @@ class RouteDistinguisher (object):
 		self.rd = rd
 		self._len = len(self.rd)
 
+	def __eq__ (self, other):
+		return self.rd == other.rd
+
+	def __neq__ (self, other):
+		return self.rd != other.rd
+
+	def __lt__ (self, other):
+		raise RuntimeError('comparing RouteDistinguisher for ordering does not make sense')
+
+	def __le__ (self, other):
+		raise RuntimeError('comparing RouteDistinguisher for ordering does not make sense')
+
+	def __gt__ (self, other):
+		raise RuntimeError('comparing RouteDistinguisher for ordering does not make sense')
+
+	def __ge__ (self, other):
+		raise RuntimeError('comparing RouteDistinguisher for ordering does not make sense')
+
 	def pack (self):
 		return self.rd
 
@@ -46,9 +64,6 @@ class RouteDistinguisher (object):
 
 	def __hash__(self):
 		return hash(self.rd)
-
-	def __cmp__(self,other):
-		return cmp(self.rd,other.rd)
 
 	def __str__ (self):
 		if not self.rd:

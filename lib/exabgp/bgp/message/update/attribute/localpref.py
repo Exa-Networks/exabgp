@@ -26,6 +26,15 @@ class LocalPreference (Attribute):
 		self.localpref = localpref
 		self.packed = self._attribute(packed if packed is not None else pack('!L',localpref))
 
+	def __eq__ (self, other):
+		return \
+			self.ID == other.ID and \
+			self.FLAG == other.FLAG and \
+			self.localpref == other.localpref
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
 	def pack (self, negotiated=None):
 		return self.packed
 
@@ -34,13 +43,6 @@ class LocalPreference (Attribute):
 
 	def __repr__ (self):
 		return str(self.localpref)
-
-	def __cmp__ (self, other):
-		if not isinstance(other,self.__class__):
-			return -1
-		if self.localpref != other.localpref:
-			return -1
-		return 0
 
 	@classmethod
 	def unpack (cls, data, negotiated):

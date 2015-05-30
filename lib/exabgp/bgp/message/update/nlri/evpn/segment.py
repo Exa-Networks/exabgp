@@ -18,9 +18,6 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
-
-# ===================================================================== EVPNNLRI
-
 # +---------------------------------------+
 # |      RD   (8 octets)                  |
 # +---------------------------------------+
@@ -31,6 +28,9 @@ from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 # |   Originating Router's IP Addr        |
 # |          (4 or 16 octets)             |
 # +---------------------------------------+
+
+# ===================================================================== EVPNNLRI
+
 
 class EthernetSegment (EVPN):
 	CODE = 1

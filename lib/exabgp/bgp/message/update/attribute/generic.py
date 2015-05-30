@@ -22,6 +22,15 @@ class GenericAttribute (Attribute):
 		self.data = data
 		self.index = ''
 
+	def __eq__ (self, other):
+		return \
+			self.ID == other.ID and \
+			self.FLAG == other.FLAG and \
+			self.data == other.data
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
 	def pack (self, negotiated=None):
 		flag = self.FLAG
 		length = len(self.data)

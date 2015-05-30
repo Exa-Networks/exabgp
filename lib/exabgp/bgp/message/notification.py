@@ -115,7 +115,6 @@ class Notification (Message):
 		return cls(ord(data[0]),ord(data[1]),data[2:])
 
 
-
 # =================================================================== Notify
 # A Notification we need to inform our peer of.
 

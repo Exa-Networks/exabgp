@@ -33,6 +33,27 @@ class ExtendedCommunity (Attribute):
 		# Two top bits are iana and transitive bits
 		self.community = community
 
+	def __eq__(self, other):
+		return \
+			self.ID == other.ID and \
+			self.FLAG == other.FLAG and \
+			self.community == other.community
+
+	def __ne__(self, other):
+		return not self.__eq__(other)
+
+	def __lt__ (self, other):
+		return self.community < other.community
+
+	def __le__ (self, other):
+		return self.community <= other.community
+
+	def __gt__ (self, other):
+		return self.community > other.community
+
+	def __ge__ (self, other):
+		return self.community >= other.community
+
 	def iana (self):
 		return not not (self.community[0] & 0x80)
 
@@ -61,17 +82,6 @@ class ExtendedCommunity (Attribute):
 
 	def __hash__ (self):
 		return hash(self.community)
-
-	def __eq__(self,other):
-		return self.__cmp__(other) == 0
-
-	def __ne__(self,other):
-		return self.__cmp__(other) != 0
-
-	def __cmp__ (self, other):
-		if not isinstance(other, ExtendedCommunity):
-			return -1
-		return cmp(self.community,other.community)
 
 	@staticmethod
 	def unpack (data, negotiated=None):

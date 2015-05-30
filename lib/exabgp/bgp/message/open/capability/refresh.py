@@ -37,6 +37,20 @@ class RouteRefresh (Capability):
 			return False
 		return self.ID == other.ID
 
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
+	def __lt__ (self, other):
+		raise RuntimeError('comparing RouteRefresh for ordering does not make sense')
+
+	def __le__ (self, other):
+		raise RuntimeError('comparing RouteRefresh for ordering does not make sense')
+
+	def __gt__ (self, other):
+		raise RuntimeError('comparing RouteRefresh for ordering does not make sense')
+
+	def __ge__ (self, other):
+		raise RuntimeError('comparing RouteRefresh for ordering does not make sense')
 
 # ========================================================= EnhancedRouteRefresh
 #

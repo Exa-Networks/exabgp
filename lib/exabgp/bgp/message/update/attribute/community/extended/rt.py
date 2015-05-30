@@ -31,11 +31,10 @@ class RouteTarget (ExtendedCommunity):
 	def ga (self):
 		return self.community[self.LIMIT:8]
 
-	def __eq__(self,other):
-		return self.__cmp__(other) == 0
-
-	def __neq__(self,other):
-		return self.__cmp__(other) != 0
+	def __eq__ (self, other):
+		return \
+			self.COMMUNITY_SUBTYPE == other.COMMUNITY_SUBTYPE and \
+			ExtendedCommunity.__eq__(self,other)
 
 
 # ============================================================= RouteTargetASN2Number
@@ -62,12 +61,6 @@ class RouteTargetASN2Number (RouteTarget):
 
 	def __hash__(self):
 		return hash((self.asn,self.number))
-
-	def __cmp__(self,other):
-		if not isinstance(other,self.__class__):
-			return RouteTarget.__cmp__(self, other)
-		# compare need to not take into account the attribute flags
-		return cmp((self.asn,self.number),(other.asn,other.number))
 
 	def __repr__ (self):
 		return "target:%d:%d" % (self.asn,self.number)
@@ -100,13 +93,9 @@ class RouteTargetIPNumber (RouteTarget):
 			)
 		)
 
+	# why could we not simply use ExtendedCommunity.hash ?
 	def __hash__(self):
 		return hash((self.ip,self.number))
-
-	def __cmp__(self,other):
-		if not isinstance(other,self.__class__):
-			return RouteTarget.__cmp__(self, other)
-		return cmp((self.ip,self.number),(other.ip,other.number))
 
 	def __repr__ (self):
 		return "target:%s:%d" % (self.ip, self.number)
@@ -139,13 +128,9 @@ class RouteTargetASN4Number (RouteTarget):
 			)
 		)
 
+	# why could we not simply use ExtendedCommunity.hash ?
 	def __hash__(self):
 		return hash((self.asn,self.number))
-
-	def __cmp__(self,other):
-		if not isinstance(other,self.__class__):
-			return RouteTarget.__cmp__(self, other)
-		return cmp((self.asn,self.number),(other.asn,other.number))
 
 	def __repr__ (self):
 		return "target:%dL:%d" % (self.asn, self.number)

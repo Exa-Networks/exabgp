@@ -10,8 +10,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import unittest
 
 from exabgp.configuration.environment import environment
-env = environment.setup('')
-
 from exabgp.bgp.message.update.nlri.flow import Flow
 from exabgp.bgp.message.update.nlri.flow import Flow4Source
 from exabgp.bgp.message.update.nlri.flow import Flow4Destination
@@ -19,6 +17,8 @@ from exabgp.bgp.message.update.nlri.flow import FlowAnyPort
 
 from exabgp.bgp.message.update.nlri.flow import NumericOperator
 # from exabgp.bgp.message.update.attribute.community import *
+
+env = environment.setup('')
 
 
 class TestFlow (unittest.TestCase):
@@ -96,6 +96,29 @@ class TestFlow (unittest.TestCase):
 			self.fail('invalid size for message')
 		# if message[1:] != flow[1:]:
 		# 	self.fail('content mismatch\n%s\n%s' % (['0x%02X' % ord(_) for _ in flow],['0x%02X' % ord(_) for _ in message]))
+
+	def test_compare (self):
+		components = {
+			'destination': Flow4Destination("192.0.2.0",24),
+			'source':      Flow4Source("10.1.2.0",24),
+			'anyport_1':   FlowAnyPort(NumericOperator.EQ | NumericOperator.GT,25),
+			'anyport_2':   FlowAnyPort(NumericOperator.EQ | NumericOperator.LT,80),
+			'anyport_3':   FlowAnyPort(NumericOperator.EQ,80),
+		}
+
+		flow1 = Flow()
+		for key in ['destination','source','anyport_1','anyport_2']:
+			flow1.add(components[key])
+
+		flow2 = Flow()
+		for key in ['destination','source','anyport_3']:
+			flow2.add(components[key])
+
+		if flow1 != flow1:
+			self.fail('the flows are the same')
+
+		if flow1 == flow2:
+			self.fail('the flows are not the same')
 
 if __name__ == '__main__':
 	unittest.main()

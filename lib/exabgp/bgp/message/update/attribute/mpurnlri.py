@@ -32,6 +32,15 @@ class MPURNLRI (Attribute,Family):
 		Family.__init__(self,afi,safi)
 		self.nlris = nlris
 
+	def __eq__ (self, other):
+		return \
+			self.ID == other.ID and \
+			self.FLAG == other.FLAG and \
+			self.nlris == other.nlris
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
 	def packed_attributes (self, addpath, maximum):
 		if not self.nlris:
 			return

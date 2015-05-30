@@ -70,6 +70,15 @@ class AIGP (Attribute):
 		else:
 			self.packed = self._attribute(aigp)
 
+	def __eq__ (self, other):
+		return \
+			self.ID == other.ID and \
+			self.FLAG == other.FLAG and \
+			self.aigp == other.aigp
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
 	def pack (self, negotiated):
 		if negotiated.neighbor.aigp:
 			return self.packed

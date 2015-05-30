@@ -20,6 +20,14 @@ class OriginatorID (Attribute,IPv4):
 
 	__slots__ = []
 
+	def __eq__ (self, other):
+		return \
+			self.ID == other.ID and \
+			self.FLAG == other.FLAG
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
 	def pack (self, negotiated=None):
 		return self._attribute(self.packed)
 

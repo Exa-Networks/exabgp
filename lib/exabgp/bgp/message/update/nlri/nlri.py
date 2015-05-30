@@ -36,6 +36,18 @@ class NLRI (Family):
 	def pack (self, addpath=None):
 		raise Exception('unimplemented')
 
+	def __lt__ (self, other):
+		raise RuntimeError('comparing NLRI for ordering does not make sense')
+
+	def __le__ (self, other):
+		raise RuntimeError('comparing NRLI for ordering does not make sense')
+
+	def __gt__ (self, other):
+		raise RuntimeError('comparing NLRI for ordering does not make sense')
+
+	def __ge__ (self, other):
+		raise RuntimeError('comparing NLRI for ordering does not make sense')
+
 	@staticmethod
 	def register (afi, safi):
 		def register_nlri (cls):

@@ -32,6 +32,18 @@ class Change (object):
 	def __ne__ (self, other):
 		return self.nlri != other.nlri or self.attributes != other.attributes
 
+	def __lt__ (self, other):
+		raise RuntimeError('comparing Change for ordering does not make sense')
+
+	def __le__ (self, other):
+		raise RuntimeError('comparing Change for ordering does not make sense')
+
+	def __gt__ (self, other):
+		raise RuntimeError('comparing Change for ordering does not make sense')
+
+	def __ge__ (self, other):
+		raise RuntimeError('comparing Change for ordering does not make sense')
+
 	def extensive (self):
 		# If you change this you must change as well extensive in Update
 		return "%s%s" % (str(self.nlri),str(self.attributes))

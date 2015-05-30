@@ -170,10 +170,24 @@ class Attribute (object):
 		return length + 3 if length <= 0xFF else length + 4
 
 	def __eq__ (self, other):
-		return self.ID == other.ID
+		return \
+			self.ID == other.ID and \
+			self.FLAG == other.FLAG
 
 	def __ne__ (self, other):
-		return self.ID != other.ID
+		return not self.__eq__(other)
+
+	def __lt__ (self, other):
+		return self.ID < other.ID
+
+	def __le__ (self, other):
+		return self.ID <= other.ID
+
+	def __gt__ (self, other):
+		return self.ID > other.ID
+
+	def __ge__ (self, other):
+		return self.ID >= other.ID
 
 	@staticmethod
 	def register_attribute (klass, attribute_id=None,flag=None):

@@ -41,16 +41,16 @@ class ASPath (Attribute):
 		self._str = ''
 		self._json = {}
 
-	def __cmp__ (self, other):
-		if not isinstance(other, self.__class__):
-			return -1
-		if self.ASN4 != other.ASN4:
-			return -1
-		if self.as_seq != other.as_seq:
-			return -1
-		if self.as_set != other.as_set:
-			return -1
-		return 0
+	def __eq__ (self, other):
+		return \
+			self.ID == other.ID and \
+			self.FLAG == other.FLAG and \
+			self.ASN4 == other.ASN4 and \
+			self.as_seq == other.as_seq and \
+			self.as_set == other.as_set
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
 
 	def _segment (self, seg_type, values, asn4):
 		length = len(values)

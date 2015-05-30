@@ -20,6 +20,10 @@ class AtomicAggregate (Attribute):
 
 	__slots__ = []
 
+	# Inherited from Attribute
+	# def __eq__ (self, other):
+	# def __ne__ (self, other):
+
 	def pack (self, negotiated=None):
 		return self._attribute('')
 
@@ -28,11 +32,6 @@ class AtomicAggregate (Attribute):
 
 	def __repr__ (self):
 		return ''
-
-	def __cmp__ (self, other):
-		if not isinstance(other,self.__class__):
-			return -1
-		return 0
 
 	def __hash__ (self):
 		return 0

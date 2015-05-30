@@ -30,6 +30,28 @@ class CIDR (object):
 		self.mask = mask
 		self._ip = None
 
+	def __eq__ (self, other):
+		return \
+			self.mask == other.mask and \
+			self.packed == other.packed
+
+	def __ne__ (self, other):
+		return \
+			self.mask != other.mask or \
+			self.packed != other.packed
+
+	def __lt__ (self, other):
+		raise RuntimeError('comparing CIDR for ordering does not make sense')
+
+	def __le__ (self, other):
+		raise RuntimeError('comparing CIDR for ordering does not make sense')
+
+	def __gt__ (self, other):
+		raise RuntimeError('comparing CIDR for ordering does not make sense')
+
+	def __ge__ (self, other):
+		raise RuntimeError('comparing CIDR for ordering does not make sense')
+
 	def getip (self):
 		if not self._ip:
 			self._ip = IP.ntop(self.packed)
@@ -55,15 +77,6 @@ class CIDR (object):
 
 	def __len__ (self):
 		return CIDR.size(self.mask) + 1
-
-	def __cmp__ (self, other):
-		if not isinstance(other,self.__class__):
-			return -1
-		if self.packed != other.packed:
-			return -1
-		if self.mask != other.mask:
-			return -1
-		return 0
 
 	def __hash__ (self):
 		return hash(chr(self.mask)+self.packed)

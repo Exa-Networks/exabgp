@@ -88,14 +88,23 @@ class IP (object):
 	def __repr__ (self):
 		return self.ip
 
-	def __cmp__ (self, other):
-		if not isinstance(other, self.__class__):
-			return -1
-		if self.packed == other.packed:
-			return 0
-		if self.packed < other.packed:
-			return -1
-		return 1
+	def __eq__ (self, other):
+		return self.packed == other.packed
+
+	def __neq__ (self, other):
+		return self.packed != other.packed
+
+	def __lt__ (self, other):
+		return self.packed < other.packed
+
+	def __le__ (self, other):
+		return self.packed <= other.packed
+
+	def __gt__ (self, other):
+		return self.packed > other.packed
+
+	def __ge__ (self, other):
+		return self.packed >= other.packed
 
 	def __hash__ (self):
 		return hash(str(self.__class__.__name__) + self.packed)

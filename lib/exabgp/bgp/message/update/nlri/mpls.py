@@ -53,7 +53,14 @@ class MPLS (NLRI,CIDR):
 		return "%s%s" % (self.extensive(),nexthop)
 
 	def __eq__ (self, other):
-		return str(self) == str(other)
+		return \
+			NLRI.__eq__(self, other) and \
+			CIDR.__eq__(self, other) and \
+			self.path_info == other.path_info and \
+			self.labels == other.labels and \
+			self.rd == other.rd and \
+			self.nexthop == other.nexthop and \
+			self.action == other.action
 
 	def __ne__ (self, other):
 		return not self.__eq__(other)
@@ -114,21 +121,20 @@ class MPLSVPN (MPLS):
 		# assert(isinstance(labels,Labels))
 		self.labels = labels
 
-	def __eq__(self,other):
+	def __eq__(self, other):
 		# Note: BaGPipe needs an advertise and a withdraw for the same
 		# RD:prefix to result in objects that are equal for Python,
 		# this is why the test below does not look at self.labels
-		return (
-			isinstance(other,MPLSVPN) and
-			self.rd == other.rd and
+		return \
+			MPLS.__eq__(self,other) and \
+			self.rd == other.rd and \
 			self.prefix == other.prefix
-		)
 
 	def __ne__ (self, other):
 		return not self.__eq__(other)
 
 	def __hash__(self):
-		# Same as for __cmp__: two NLRI with same RD and prefix, but
+		# Like for the comparaison, two NLRI with same RD and prefix, but
 		# different labels need to hash equal
 		return hash((self.rd, self.ip, self.mask))
 

@@ -26,15 +26,17 @@ class NextHop (Attribute,IP):
 		self.ip = ip
 		self.packed = packed if packed else IP.create(ip).pack()
 
+	def __eq__ (self, other):
+		return \
+			self.ID == other.ID and \
+			self.FLAG == other.FLAG and \
+			self.packed == other.packed
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
 	def pack (self, negotiated=None):
 		return self._attribute(self.packed)
-
-	def __cmp__ (self, other):
-		if not isinstance(other,self.__class__):
-			return -1
-		if self.pack() != other.pack():
-			return -1
-		return 0
 
 	@classmethod
 	def unpack (cls, data, negotiated=None):

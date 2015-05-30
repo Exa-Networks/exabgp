@@ -36,6 +36,17 @@ class RouteTargetConstraint (NLRI):
 		self.origin = origin
 		self.rt = rt
 
+	def __eq__ (self, other):
+		return \
+			NLRI.__eq__(self,other) and \
+			self.action == other.action and \
+			self.nexthop == other.action and \
+			self.origin == other.origin and \
+			self.rt == other.rt
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
 	def __len__ (self):
 		return (4 + len(self.rt))*8 if self.rt else 1
 
@@ -44,15 +55,6 @@ class RouteTargetConstraint (NLRI):
 
 	def __repr__ (self):
 		return str(self)
-
-	def __cmp__ (self, other):
-		if not isinstance(other,self.__class__):
-			return -1
-		if self.origin != other.origin:
-			return -1
-		if self.rt != other.rt:
-			return -1
-		return 0
 
 	def __hash__ (self):
 		return hash(self.pack())

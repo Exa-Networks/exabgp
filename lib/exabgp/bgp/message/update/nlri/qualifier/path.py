@@ -25,6 +25,24 @@ class PathInfo (object):
 			self.path_info = ''
 		# sum(int(a)<<offset for (a,offset) in zip(ip.split('.'), range(24, -8, -8)))
 
+	def __eq__ (self, other):
+		return self.path_info == other.path_info
+
+	def __neq__ (self, other):
+		return self.path_info != other.path_info
+
+	def __lt__ (self, other):
+		raise RuntimeError('comparing PathInfo for ordering does not make sense')
+
+	def __le__ (self, other):
+		raise RuntimeError('comparing PathInfo for ordering does not make sense')
+
+	def __gt__ (self, other):
+		raise RuntimeError('comparing PathInfo for ordering does not make sense')
+
+	def __ge__ (self, other):
+		raise RuntimeError('comparing PathInfo for ordering does not make sense')
+
 	def __len__ (self):
 		return len(self.path_info)
 

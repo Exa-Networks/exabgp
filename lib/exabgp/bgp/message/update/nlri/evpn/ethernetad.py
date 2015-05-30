@@ -17,9 +17,6 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
-
-# ===================================================================== EVPNNLRI
-
 # +---------------------------------------+
 # |      RD   (8 octets)                  |
 # +---------------------------------------+
@@ -29,6 +26,9 @@ from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 # +---------------------------------------+
 # |  MPLS Label (3 octets)                |
 # +---------------------------------------+
+
+# ===================================================================== EVPNNLRI
+
 
 class EthernetAD (EVPN):
 	CODE = 1

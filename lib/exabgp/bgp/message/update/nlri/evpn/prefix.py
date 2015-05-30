@@ -41,8 +41,10 @@ from exabgp.bgp.message.notification import Notify
 # +---------------------------------------+
 # total NLRI length is 34 bytes for IPv4 or 58 bytes for IPv6
 
+# ======================================================================= Prefix
 
-class Prefix(EVPN):
+
+class Prefix (EVPN):
 	CODE = 5
 	NAME = "IP Prefix advertisement"
 	SHORT_NAME = "PrfxAdv"
@@ -69,6 +71,18 @@ class Prefix(EVPN):
 		self.label = label if label else Labels.NOLABEL
 		self.pack()
 
+	def __eq__ (self, other):
+		return \
+			EVPN.__eq__(self,other) and \
+			self.rd == other.rd and \
+			self.etag == other.etag and \
+			self.ip == other.ip and \
+			self.iplen == other.iplen
+		# esi, label and gwip must not be compared
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
 	def __str__ (self):
 		return "%s:%s:%s:%s:%s%s:%s:%s" % (
 			self._prefix(),
@@ -80,25 +94,6 @@ class Prefix(EVPN):
 			self.gwip,
 			self.label
 		)
-
-	def __cmp__ (self, other):
-		if not isinstance(other,self.__class__):
-			return -1
-		if self.rd != other.rd:
-			return -1
-		if self.etag != other.etag:
-			return -1
-		# if self.esi == other.esi:  # MUST NOT be part of the test
-		# 	return -1
-		# if self.label == other.label:  # MUST NOT be part of the test
-		# 	return -1
-		# if self.gwip == other.gwip:  # MUST NOT be part of the test
-		# 	return -1
-		if self.ip != other.ip:
-			return -1
-		if self.iplen != other.iplen:
-			return -1
-		return 0
 
 	def __hash__ (self):
 		# esi, and label, gwip must *not* be part of the hash

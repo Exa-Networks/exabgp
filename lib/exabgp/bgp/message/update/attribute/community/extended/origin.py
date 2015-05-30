@@ -30,6 +30,10 @@ class Origin (ExtendedCommunity):
 	def ga (self):
 		return self.community[self.LIMIT:8]
 
+	def __eq__ (self, other):
+		return \
+			self.COMMUNITY_SUBTYPE == other.COMMUNITY_SUBTYPE and \
+			ExtendedCommunity.__eq__(self,other)
 
 # ================================================================== OriginASNIP
 # RFC 4360 / RFC 7153

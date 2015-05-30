@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-labels.py
+esi.py
 
 Created by Thomas Mangin on 2012-07-08.
 Copyright (c) 2014-2015 Orange. All rights reserved.
@@ -21,6 +21,24 @@ class ESI (object):
 	def __init__ (self, esi=None):
 		self.esi = self.DEFAULT if esi is None else esi
 
+	def __eq__ (self, other):
+		return self.esi == other.esi
+
+	def __neq__ (self, other):
+		return self.esi != other.esi
+
+	def __lt__ (self, other):
+		raise RuntimeError('comparing ESI for ordering does not make sense')
+
+	def __le__ (self, other):
+		raise RuntimeError('comparing ESI for ordering does not make sense')
+
+	def __gt__ (self, other):
+		raise RuntimeError('comparing ESI for ordering does not make sense')
+
+	def __ge__ (self, other):
+		raise RuntimeError('comparing ESI for ordering does not make sense')
+
 	def __str__ (self):
 		if self.esi == self.DEFAULT:
 			return "-"
@@ -34,13 +52,6 @@ class ESI (object):
 
 	def __len__ (self):
 		return 10
-
-	def __cmp__ (self, other):
-		if not isinstance(other,self.__class__):
-			return -1
-		if self.esi != other.esi:
-			return -1
-		return 0
 
 	def __hash__ (self):
 		return hash(self.esi)

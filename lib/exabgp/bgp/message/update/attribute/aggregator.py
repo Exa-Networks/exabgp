@@ -27,6 +27,16 @@ class Aggregator (Attribute):
 		self.speaker = speaker
 		self._str = None
 
+	def __eq__ (self, other):
+		return \
+			self.ID == other.ID and \
+			self.FLAG == other.FLAG and \
+			self.asn == other.asn and \
+			self.speaker == other.speaker
+
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
 	def pack (self, negotiated):
 		if negotiated.asn4:
 			return self._attribute(self.asn.pack(True)+self.speaker.pack())
