@@ -25,6 +25,7 @@ from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 # ===================================================================== EVPNNLRI
 
 
+@EVPN.register
 class Multicast (EVPN):
 	CODE = 3
 	NAME = "Inclusive Multicast Ethernet Tag"

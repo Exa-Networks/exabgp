@@ -71,9 +71,10 @@ class EVPN (NLRI):
 	def __hash__ (self):
 		return hash("%s:%s:%s:%s" % (self.afi,self.safi,self.CODE,self.packed))
 
-	@staticmethod
-	def register_evpn (klass):
-		EVPN.registered_evpn[klass.CODE] = klass
+	@classmethod
+	def register (cls,klass):
+		cls.registered_evpn[klass.CODE] = klass
+		return klass
 
 	@classmethod
 	def unpack (cls, afi, safi, data, addpath, nexthop, action):

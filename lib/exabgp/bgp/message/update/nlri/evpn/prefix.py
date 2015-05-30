@@ -44,6 +44,7 @@ from exabgp.bgp.message.notification import Notify
 # ======================================================================= Prefix
 
 
+@EVPN.register
 class Prefix (EVPN):
 	CODE = 5
 	NAME = "IP Prefix advertisement"

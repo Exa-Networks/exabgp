@@ -37,6 +37,7 @@ from exabgp.bgp.message.notification import Notify
 # ===================================================================== EVPNNLRI
 
 
+@EVPN.register
 class MAC (EVPN):
 	CODE = 2
 	NAME = "MAC/IP advertisement"
