@@ -96,8 +96,9 @@ class Operational (Message):
 		return 'operational %s' % self.name
 
 	@staticmethod
-	def register_operational (klass):
+	def register (klass):
 		Operational.registered_operational[klass.code] = (klass.category,klass)
+		return klass
 
 	@classmethod
 	def unpack_message (cls, data, negotiated):  # pylint: disable=W0613
@@ -245,6 +246,7 @@ class Advisory (object):
 		def extensive (self):
 			return 'operational %s afi %s safi %s "%s"' % (self.name,self.afi,self.safi,self.data)
 
+	@Operational.register
 	class ADM (_Advisory):
 		name = 'ADM'
 		code = Operational.CODE.ADM
@@ -259,6 +261,7 @@ class Advisory (object):
 				utf8
 			)
 
+	@Operational.register
 	class ASM (_Advisory):
 		name = 'ASM'
 		code = Operational.CODE.ASM
@@ -297,14 +300,17 @@ class Query (object):
 				)
 			return 'operational %s afi %s safi %s' % (self.name,self.afi,self.safi)
 
+	@Operational.register
 	class RPCQ (_Query):
 		name = 'RPCQ'
 		code = Operational.CODE.RPCQ
 
+	@Operational.register
 	class APCQ (_Query):
 		name = 'APCQ'
 		code = Operational.CODE.APCQ
 
+	@Operational.register
 	class LPCQ (_Query):
 		name = 'LPCQ'
 		code = Operational.CODE.LPCQ
@@ -336,14 +342,17 @@ class Response (object):
 				)
 			return 'operational %s afi %s safi %s counter %d' % (self.name,self.afi,self.safi,self.counter)
 
+	@Operational.register
 	class RPCP (_Counter):
 		name = 'RPCP'
 		code = Operational.CODE.RPCP
 
+	@Operational.register
 	class APCP (_Counter):
 		name = 'APCP'
 		code = Operational.CODE.APCP
 
+	@Operational.register
 	class LPCP (_Counter):
 		name = 'LPCP'
 		code = Operational.CODE.LPCP
@@ -354,15 +363,3 @@ class Response (object):
 
 class Dump (object):
 	pass
-
-
-Operational.register_operational(Advisory.ADM)
-Operational.register_operational(Advisory.ASM)
-
-Operational.register_operational(Query.RPCQ)
-Operational.register_operational(Query.APCQ)
-Operational.register_operational(Query.LPCQ)
-
-Operational.register_operational(Response.RPCP)
-Operational.register_operational(Response.APCP)
-Operational.register_operational(Response.LPCP)
