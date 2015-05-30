@@ -32,7 +32,7 @@ class EOR (Message):
 			_NLRI.__init__(self,afi,safi)
 			self.action = action
 
-		def pack (self):
+		def pack (self, addpath=None):
 			if self.afi == AFI.ipv4 and self.safi == SAFI.unicast:
 				return '\x00\x00\x00\x00'
 			return self.PREFIX + self.afi.pack() + self.safi.pack()
@@ -47,6 +47,7 @@ class EOR (Message):
 			return '"eor": { "afi" : "%s", "safi" : "%s" }' % (self.afi,self.safi)
 
 	def __init__ (self, afi, safi, action=None):
+		Message.__init__(self)
 		self.nlris = [EOR.NLRI(afi,safi,action),]
 		self.attributes = Attributes()
 

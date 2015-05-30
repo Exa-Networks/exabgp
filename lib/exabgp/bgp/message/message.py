@@ -139,7 +139,7 @@ class Message (Exception):
 	}
 
 	def __init__ (self):
-		self._name = None
+		Exception.__init__(self)
 
 	@staticmethod
 	def string (code):
