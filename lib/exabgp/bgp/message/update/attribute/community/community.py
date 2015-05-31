@@ -38,20 +38,20 @@ class Community (object):
 	def __eq__ (self, other):
 		return self.community == other.community
 
-	def __neq__ (self, other):
+	def __ne__ (self, other):
 		return self.community != other.community
 
 	def __lt__ (self, other):
-		raise RuntimeError('comparing Community for ordering does not make sense')
+		return self.community < other.community
 
 	def __le__ (self, other):
-		raise RuntimeError('comparing Community for ordering does not make sense')
+		return self.community <= other.community
 
 	def __gt__ (self, other):
-		raise RuntimeError('comparing Community for ordering does not make sense')
+		return self.community > other.community
 
 	def __ge__ (self, other):
-		raise RuntimeError('comparing Community for ordering does not make sense')
+		return self.community >= other.community
 
 	def json (self):
 		return "[ %d, %d ]" % unpack('!HH',self.community)
@@ -64,24 +64,6 @@ class Community (object):
 
 	def __len__ (self):
 		return 4
-
-	def __eq__ (self, other):
-		return self.community == other.community
-
-	def __ne__ (self, other):
-		return self.community != other.community
-
-	def __lt__ (self, other):
-		raise RuntimeError('comparing Community for ordering does not make sense')
-
-	def __le__ (self, other):
-		raise RuntimeError('comparing Community for ordering does not make sense')
-
-	def __gt__ (self, other):
-		raise RuntimeError('comparing Community for ordering does not make sense')
-
-	def __ge__ (self, other):
-		raise RuntimeError('comparing Community for ordering does not make sense')
 
 	@classmethod
 	def unpack (cls, community, negotiated):
