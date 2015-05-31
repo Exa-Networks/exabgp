@@ -221,7 +221,7 @@ from exabgp.logger import Logger
 logger = Logger()
 
 
-class Neighbor:
+class FakeNeighbor (object):
 	description = 'a test neighbor'
 	router_id = RouterID('127.0.0.1')
 	local_address = IPv4('127.0.0.1')
@@ -267,7 +267,7 @@ class TestUpdateDecoding (unittest.TestCase):
 		self.negotiated = {}
 
 		for asn4 in (True,False):
-			neighbor = Neighbor()
+			neighbor = FakeNeighbor()
 			neighbor.asn4 = asn4
 
 			capa = Capabilities().new(neighbor,False)
