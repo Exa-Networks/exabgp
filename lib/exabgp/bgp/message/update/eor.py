@@ -12,7 +12,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.update.attribute import Attributes
-from exabgp.bgp.message.update.nlri.nlri import NLRI as _NLRI
+from exabgp.bgp.message.update.nlri import NLRI as _NLRI
 
 # =================================================================== End-Of-RIB
 # not technically a different message type but easier to treat as one

@@ -198,7 +198,7 @@ body = [
 bodies.append((True,body))
 
 # INET include is required as it perform some AFI/SAFI registration
-from exabgp.bgp.message.update.nlri.inet import INET  # noqa
+from exabgp.bgp.message.update.nlri import INET  # noqa
 
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.protocol.ip import IPv4
@@ -211,7 +211,7 @@ from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import Negotiated
 # from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.bgp.message.update.nlri import NLRI
 
 
 from exabgp.configuration.setup import environment

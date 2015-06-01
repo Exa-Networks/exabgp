@@ -13,9 +13,9 @@ from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.cidr import CIDR
-from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
-from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
-from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+from exabgp.bgp.message.update.nlri.qualifier import Labels
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 
 
 # ====================================================== Both MPLS and Inet NLRI

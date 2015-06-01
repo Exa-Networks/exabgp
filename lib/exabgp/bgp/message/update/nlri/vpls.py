@@ -15,7 +15,7 @@ from exabgp.protocol.family import SAFI
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
-from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
 
 def _unique ():

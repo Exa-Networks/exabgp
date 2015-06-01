@@ -14,9 +14,11 @@ from exabgp.bgp.message.update.attribute.community.extended.communities import E
 
 from exabgp.bgp.message.update.attribute.community.extended.encapsulation import Encapsulation
 from exabgp.bgp.message.update.attribute.community.extended.l2info import L2Info
+from exabgp.bgp.message.update.attribute.community.extended.origin import Origin
 from exabgp.bgp.message.update.attribute.community.extended.origin import OriginASNIP
 from exabgp.bgp.message.update.attribute.community.extended.origin import OriginIPASN
 from exabgp.bgp.message.update.attribute.community.extended.origin import OriginASN4Number
+from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTarget
 from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN2Number
 from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetIPNumber
 from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN4Number

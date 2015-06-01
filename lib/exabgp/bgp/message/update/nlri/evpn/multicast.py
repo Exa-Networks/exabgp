@@ -6,8 +6,8 @@ Copyright (c) 2014-2015 Orange. All rights reserved.
 """
 
 from exabgp.protocol.ip import IP
-from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
-from exabgp.bgp.message.update.nlri.qualifier.etag import EthernetTag
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier import EthernetTag
 
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 

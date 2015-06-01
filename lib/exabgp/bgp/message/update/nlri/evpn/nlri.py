@@ -12,7 +12,7 @@ from exabgp.protocol.ip import IP, NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.bgp.message.update.nlri import NLRI
 
 # +-----------------------------------+
 # |    Route Type (1 octet)           |

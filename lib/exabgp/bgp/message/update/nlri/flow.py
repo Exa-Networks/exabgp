@@ -27,7 +27,7 @@ from exabgp.protocol.ip.fragment import Fragment
 from exabgp.protocol.ip.tcp.flag import TCPFlag
 
 from exabgp.bgp.message.update.nlri.nlri import NLRI
-from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
 
 # =================================================================== Flow Components

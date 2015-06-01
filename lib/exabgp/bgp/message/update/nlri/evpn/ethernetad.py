@@ -10,10 +10,10 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 
 # from exabgp.protocol.family import AFI
 # from exabgp.protocol.family import SAFI
-# from exabgp.bgp.message.update.nlri.qualifier.esi import ESI
+# from exabgp.bgp.message.update.nlri.qualifier import ESI
 
-# from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
-# from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+# from exabgp.bgp.message.update.nlri.qualifier import Labels
+# from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 

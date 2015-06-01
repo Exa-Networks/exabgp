@@ -30,8 +30,8 @@ from exabgp.configuration.show import SectionShow
 # from exabgp.protocol.ip import IP
 # from exabgp.bgp.message import OUT
 #
-# from exabgp.bgp.message.update.nlri.inet import INET
-# from exabgp.bgp.message.update.nlri.mpls import MPLS
+# from exabgp.bgp.message.update.nlri import INET
+# from exabgp.bgp.message.update.nlri import MPLS
 # from exabgp.bgp.message.refresh import RouteRefresh
 # from exabgp.bgp.message.operational import Advisory
 # from exabgp.bgp.message.operational import Query

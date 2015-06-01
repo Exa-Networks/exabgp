@@ -37,12 +37,13 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 
-from exabgp.bgp.message.update.nlri.inet import INET
-from exabgp.bgp.message.update.nlri.mpls import MPLS
-from exabgp.bgp.message.update.nlri.mpls import Labels
-from exabgp.bgp.message.update.nlri.mpls import RouteDistinguisher
-from exabgp.bgp.message.update.nlri.vpls import VPLS
-from exabgp.bgp.message.update.nlri.evpn import EVPN
+from exabgp.bgp.message.update.nlri import INET
+from exabgp.bgp.message.update.nlri import MPLS
+from exabgp.bgp.message.update.nlri.qualifier import Labels
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier import PathInfo
+from exabgp.bgp.message.update.nlri import VPLS
+# from exabgp.bgp.message.update.nlri import EVPN
 from exabgp.bgp.message.update.nlri.flow import BinaryOperator
 from exabgp.bgp.message.update.nlri.flow import NumericOperator
 from exabgp.bgp.message.update.nlri.flow import Flow
@@ -63,8 +64,7 @@ from exabgp.bgp.message.update.nlri.flow import FlowICMPCode
 from exabgp.bgp.message.update.nlri.flow import FlowDSCP
 from exabgp.bgp.message.update.nlri.flow import FlowTrafficClass
 from exabgp.bgp.message.update.nlri.flow import FlowFlowLabel
-from exabgp.bgp.message.update.nlri.nlri import NLRI
-from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+from exabgp.bgp.message.update.nlri.flow import NLRI
 
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute import Origin

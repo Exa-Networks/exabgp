@@ -13,7 +13,7 @@ from exabgp.configuration.engine.parser import boolean
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import MultiProtocol
 
-from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.bgp.message.update.nlri import NLRI
 
 from exabgp.configuration.bgp.family import SectionFamily
 from exabgp.configuration.bgp.family import syntax_family

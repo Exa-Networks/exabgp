@@ -9,8 +9,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import unittest
 
-from exabgp.bgp.message.update.nlri.vpls import VPLS
-from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+from exabgp.bgp.message.update.nlri import VPLS
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
 
 class TestL2VPN (unittest.TestCase):

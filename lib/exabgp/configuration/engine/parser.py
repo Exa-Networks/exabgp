@@ -542,7 +542,7 @@ def withdraw (tokeniser=None):
 # =========================================================== RouteDistinguisher
 #
 
-from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
 
 def rd (tokeniser):
@@ -578,7 +578,7 @@ def rd (tokeniser):
 # ============================================================== PathInformation
 #
 
-from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 
 
 def path_information (tokeniser):
@@ -594,7 +594,7 @@ def path_information (tokeniser):
 # ============================================================== PathInformation
 #
 
-from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
+from exabgp.bgp.message.update.nlri.qualifier import Labels
 
 
 def label (tokeniser):
