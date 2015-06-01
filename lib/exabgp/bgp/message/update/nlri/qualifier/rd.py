@@ -65,7 +65,7 @@ class RouteDistinguisher (object):
 	def __hash__(self):
 		return hash(self.rd)
 
-	def __str__ (self):
+	def __repr__ (self):
 		if not self.rd:
 			return ''
 		return ' route-distinguisher %s' % self._str()
