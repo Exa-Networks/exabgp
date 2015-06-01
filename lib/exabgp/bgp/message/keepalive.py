@@ -7,6 +7,9 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message.message import Message
+from exabgp.bgp.message.notification import Notify
+
+from exabgp.reactor.api.options import hexstring
 
 # =================================================================== KeepAlive
 #
@@ -25,5 +28,8 @@ class KeepAlive (Message):
 
 	@classmethod
 	def unpack_message (cls, data, negotiated):  # pylint: disable=W0613
-		# XXX: FIXME: raise Notify if data has something
+		# This can not happen at decode time as we check the length of the KEEPALIVE message
+		# But could happen when calling the function programmatically
+		if data:
+			raise Notify('Keepalive can not have any payload but contains %s', hexstring(data))
 		return cls()
