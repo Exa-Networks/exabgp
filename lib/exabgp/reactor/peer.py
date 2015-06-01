@@ -11,15 +11,15 @@ import time
 
 from exabgp.bgp.timer import ReceiveTimer
 from exabgp.bgp.timer import SendTimer
-from exabgp.bgp.message.message import Message
+from exabgp.bgp.message import Message
 from exabgp.bgp.message import STATE
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import REFRESH
-from exabgp.bgp.message.nop import NOP
-from exabgp.bgp.message.update import Update
+from exabgp.bgp.message import NOP
+from exabgp.bgp.message import Update
 from exabgp.bgp.message.refresh import RouteRefresh
-from exabgp.bgp.message.notification import Notification
-from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message import Notification
+from exabgp.bgp.message import Notify
 from exabgp.reactor.protocol import Protocol
 from exabgp.reactor.network.error import NetworkError
 from exabgp.reactor.api.processes import ProcessError

@@ -16,7 +16,7 @@ from exabgp.dep.counter import Counter
 
 from exabgp.protocol.family import AFI
 
-from exabgp.bgp.message.message import Message
+from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.capability import AddPath
 

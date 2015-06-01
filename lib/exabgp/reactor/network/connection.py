@@ -19,7 +19,7 @@ from exabgp.logger import Logger
 from exabgp.logger import FakeLogger
 from exabgp.logger import LazyFormat
 
-from exabgp.bgp.message.message import Message
+from exabgp.bgp.message import Message
 
 from exabgp.reactor.network.error import error
 from exabgp.reactor.network.error import errno

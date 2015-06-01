@@ -8,12 +8,12 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 # common
 
-from exabgp.bgp.message.update import Update
-from exabgp.bgp.message.open import Open
+from exabgp.bgp.message import Update
+from exabgp.bgp.message import Open
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import Negotiated
-from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message import Notify
 from exabgp.bgp.message.update.nlri import NLRI
 
 # check_neighbor
@@ -28,7 +28,7 @@ from exabgp.reactor.api.response import Response
 
 # check_notification
 
-from exabgp.bgp.message.notification import Notification
+from exabgp.bgp.message import Notification
 
 # JSON version
 

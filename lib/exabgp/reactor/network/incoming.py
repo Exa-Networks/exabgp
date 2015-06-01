@@ -6,7 +6,7 @@ from .tcp import async
 from .error import NetworkError
 from .error import NotConnected
 
-from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message import Notify
 
 
 class Incoming (Connection):

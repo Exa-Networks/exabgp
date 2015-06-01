@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2012-07-17.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+# Do not create a dependency loop by using exabgp.bgp.message as import
 from exabgp.bgp.message.notification import Notify
 
 

@@ -13,7 +13,7 @@ import time
 
 from exabgp.reactor.api.options import hexstring
 
-from exabgp.bgp.message.message import Message
+from exabgp.bgp.message import Message
 from exabgp.bgp.message import IN
 
 def nop (_): return _

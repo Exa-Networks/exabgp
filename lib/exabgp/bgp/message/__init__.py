@@ -6,26 +6,20 @@ Created by Thomas Mangin on 2010-01-15.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-# ================================================================== BGP States
-#
+# Every Message should be imported from this file
+# as it makes sure that all the registering decorator are run
 
-class STATE (object):
-	IDLE        = 0x01
-	ACTIVE      = 0x02
-	CONNECT     = 0x04
-	OPENSENT    = 0x08
-	OPENCONFIRM = 0x10
-	ESTABLISHED = 0x20
+from exabgp.bgp.message.state import STATE
+from exabgp.bgp.message.state import OUT
+from exabgp.bgp.message.state import IN
 
-
-# =================================================================== Direction
-#
-
-class OUT (object):
-	ANNOUNCE = 0x01
-	WITHDRAW = 0x02
-
-
-class IN (object):
-	ANNOUNCED = 0x01
-	WITHDRAWN = 0x02
+from exabgp.bgp.message.message import Message
+from exabgp.bgp.message.nop import NOP
+from exabgp.bgp.message.nop import _NOP
+from exabgp.bgp.message.open import Open
+from exabgp.bgp.message.update import Update
+from exabgp.bgp.message.update import EOR
+from exabgp.bgp.message.keepalive import KeepAlive
+from exabgp.bgp.message.notification import Notification
+from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.operational import Operational

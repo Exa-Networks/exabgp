@@ -8,7 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message import IN
 from exabgp.bgp.message import OUT
-from exabgp.bgp.message.update import Update
+from exabgp.bgp.message import Update
 from exabgp.bgp.message.refresh import RouteRefresh
 
 

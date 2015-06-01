@@ -1,8 +1,8 @@
 import sys
 import json
 
-from exabgp.bgp.message.message import Message
-from exabgp.bgp.message.open import Open
+from exabgp.bgp.message import Message
+from exabgp.bgp.message import Open
 from exabgp.bgp.message.open.capability import Negotiated
 
 from exabgp.version import json as json_version

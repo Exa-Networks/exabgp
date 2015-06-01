@@ -11,7 +11,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
 from exabgp.protocol.ip import IP
-from exabgp.bgp.message import IN
+from exabgp.bgp.message.state import IN
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.nlri.cidr import CIDR

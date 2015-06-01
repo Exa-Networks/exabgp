@@ -17,7 +17,7 @@ from exabgp.reactor.network.error import error
 
 from exabgp.configuration.format import formated
 from exabgp.reactor.api.response import Response
-from exabgp.bgp.message.message import Message
+from exabgp.bgp.message import Message
 from exabgp.logger import Logger
 
 from exabgp.version import json as json_version

@@ -19,7 +19,7 @@ from struct import unpack
 
 from exabgp.reactor.network.error import error
 from exabgp.reactor.api.response import Response
-from exabgp.bgp.message.update import Update
+from exabgp.bgp.message import Update
 
 from exabgp.bmp.header import Header
 from exabgp.bmp.message import Message

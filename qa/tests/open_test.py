@@ -14,9 +14,9 @@ env = environment.setup('')
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.bgp.message.message import Message
-# from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.open import Open
+from exabgp.bgp.message import Message
+# from exabgp.bgp.message import Notify
+from exabgp.bgp.message import Open
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability import RouteRefresh
