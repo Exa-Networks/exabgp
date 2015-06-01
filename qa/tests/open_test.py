@@ -18,8 +18,8 @@ from exabgp.bgp.message.message import Message
 # from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open.routerid import RouterID
-from exabgp.bgp.message.open.capability.capabilities import Capabilities
-from exabgp.bgp.message.open.capability.refresh import RouteRefresh
+from exabgp.bgp.message.open.capability import Capabilities
+from exabgp.bgp.message.open.capability import RouteRefresh
 
 
 class TestData (unittest.TestCase):

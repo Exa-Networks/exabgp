@@ -10,7 +10,7 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.capability.capability import Capability
-from exabgp.bgp.message.open.capability import REFRESH
+from exabgp.bgp.message.open.capability.refresh import REFRESH
 from exabgp.bgp.message.open.routerid import RouterID
 
 

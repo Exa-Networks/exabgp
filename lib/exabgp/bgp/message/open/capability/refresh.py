@@ -12,6 +12,12 @@ from exabgp.bgp.message.open.capability.capability import Capability
 #
 
 
+class REFRESH (object):
+	ABSENT   = 0x01
+	NORMAL   = 0x02
+	ENHANCED = 0x04
+
+
 @Capability.register()
 @Capability.register(Capability.CODE.ROUTE_REFRESH_CISCO)
 class RouteRefresh (Capability):

@@ -10,8 +10,8 @@ from exabgp.configuration.engine.raised import Raised
 from exabgp.configuration.engine.section import Section
 from exabgp.configuration.engine.parser import boolean
 
-from exabgp.bgp.message.open.capability.capability import Capability
-from exabgp.bgp.message.open.capability.mp import MultiProtocol
+from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open.capability import MultiProtocol
 
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 
