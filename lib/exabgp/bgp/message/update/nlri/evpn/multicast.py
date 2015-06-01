@@ -41,13 +41,6 @@ class Multicast (EVPN):
 		self.ip = ip
 		self._pack()
 
-	def __eq__ (self, other):
-		return \
-			EVPN.__eq__(self,other) and \
-			self.rd == other.rd and \
-			self.etag == other.etag and \
-			self.ip == other.ip
-
 	def __ne__ (self, other):
 		return not self.__eq__(other)
 

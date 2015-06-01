@@ -124,11 +124,13 @@ class MPLSVPN (MPLS):
 	def __eq__(self, other):
 		# Note: BaGPipe needs an advertise and a withdraw for the same
 		# RD:prefix to result in objects that are equal for Python,
-		# this is why the test below does not look at self.labels
+		# this is why the test below does not look at self.labels nor
+		# self.nexthop or self.action
 		return \
-			MPLS.__eq__(self,other) and \
-			self.rd == other.rd and \
-			self.prefix == other.prefix
+			NLRI.__eq__(self, other) and \
+			CIDR.__eq__(self, other) and \
+			self.path_info == other.path_info and \
+			self.rd == other.rd
 
 	def __ne__ (self, other):
 		return not self.__eq__(other)
