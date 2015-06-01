@@ -29,6 +29,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 # ========================================================================= PMSI
 # RFC 6514
 
+@Attribute.register()
 class PMSI (Attribute):
 	ID = Attribute.CODE.PMSI_TUNNEL
 	FLAG = Attribute.Flag.OPTIONAL | Attribute.Flag.TRANSITIVE

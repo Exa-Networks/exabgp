@@ -12,7 +12,7 @@ from struct import unpack
 
 from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.open.asn import ASN
-from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
 
@@ -36,6 +36,8 @@ class RouteTarget (ExtendedCommunity):
 			self.COMMUNITY_SUBTYPE == other.COMMUNITY_SUBTYPE and \
 			ExtendedCommunity.__eq__(self,other)
 
+	def __ne__ (self, other):
+		return not self.__eq__(other)
 
 # ============================================================= RouteTargetASN2Number
 # RFC 4360 / RFC 7153

@@ -66,14 +66,14 @@ from exabgp.bgp.message.update.nlri.flow import FlowFlowLabel
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 
-from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.attribute.origin import Origin
-from exabgp.bgp.message.update.attribute.nexthop import NextHop
-from exabgp.bgp.message.update.attribute.aspath import ASPath
-from exabgp.bgp.message.update.attribute.med import MED
-from exabgp.bgp.message.update.attribute.localpref import LocalPreference
-from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
-from exabgp.bgp.message.update.attribute.aggregator import Aggregator
+from exabgp.bgp.message.update.attribute import Attribute
+from exabgp.bgp.message.update.attribute import Origin
+from exabgp.bgp.message.update.attribute import NextHop
+from exabgp.bgp.message.update.attribute import ASPath
+from exabgp.bgp.message.update.attribute import MED
+from exabgp.bgp.message.update.attribute import LocalPreference
+from exabgp.bgp.message.update.attribute import AtomicAggregate
+from exabgp.bgp.message.update.attribute import Aggregator
 
 from exabgp.bgp.message.update.attribute.community.community import Community
 from exabgp.bgp.message.update.attribute.community.communities import Communities
@@ -85,16 +85,16 @@ from exabgp.bgp.message.update.attribute.community.extended.traffic import Traff
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficMark
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficNextHop
 
-from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
-from exabgp.bgp.message.update.attribute.clusterlist import ClusterID
-from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
-from exabgp.bgp.message.update.attribute.aigp import AIGP
-from exabgp.bgp.message.update.attribute.generic import GenericAttribute
+from exabgp.bgp.message.update.attribute import OriginatorID
+from exabgp.bgp.message.update.attribute import ClusterID
+from exabgp.bgp.message.update.attribute import ClusterList
+from exabgp.bgp.message.update.attribute import AIGP
+from exabgp.bgp.message.update.attribute import GenericAttribute
 
 from exabgp.bgp.message.operational import MAX_ADVISORY
 from exabgp.bgp.message.operational import Advisory
 
-from exabgp.bgp.message.update.attribute.attributes import Attributes
+from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.rib.change import Change
 

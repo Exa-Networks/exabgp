@@ -15,6 +15,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 # ====================================================================== MED (4)
 #
 
+@Attribute.register()
 class MED (Attribute):
 	ID = Attribute.CODE.MED
 	FLAG = Attribute.Flag.OPTIONAL

@@ -13,6 +13,7 @@ from exabgp.bgp.message.notification import Notify
 # ========================================================== AtomicAggregate (6)
 #
 
+@Attribute.register()
 class AtomicAggregate (Attribute):
 	ID = Attribute.CODE.ATOMIC_AGGREGATE
 	FLAG = Attribute.Flag.TRANSITIVE

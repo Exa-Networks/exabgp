@@ -15,6 +15,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 # =============================================================== AGGREGATOR (7)
 #
 
+@Attribute.register()
 class Aggregator (Attribute):
 	ID = Attribute.CODE.AGGREGATOR
 	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
@@ -64,6 +65,7 @@ class Aggregator (Attribute):
 # ============================================================== AGGREGATOR (18)
 #
 
+@Attribute.register()
 class Aggregator4 (Aggregator):
 	ID = Attribute.CODE.AS4_AGGREGATOR
 	__slots__ = ['pack']

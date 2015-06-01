@@ -11,6 +11,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 # =================================================================== Origin (1)
 
+@Attribute.register()
 class Origin (Attribute):
 	ID = Attribute.CODE.ORIGIN
 	FLAG = Attribute.Flag.TRANSITIVE

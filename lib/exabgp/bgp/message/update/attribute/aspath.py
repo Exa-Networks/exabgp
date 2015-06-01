@@ -18,6 +18,7 @@ from exabgp.bgp.message.notification import Notify
 # =================================================================== ASPath (2)
 # only 2-4% of duplicated data therefore it is not worth to cache
 
+@Attribute.register()
 class ASPath (Attribute):
 	AS_SET             = 0x01
 	AS_SEQUENCE        = 0x02

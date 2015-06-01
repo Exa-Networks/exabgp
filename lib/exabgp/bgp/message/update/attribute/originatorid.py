@@ -13,6 +13,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 # ============================================================== OriginatorID (3)
 
+@Attribute.register()
 class OriginatorID (Attribute,IPv4):
 	ID = Attribute.CODE.ORIGINATOR_ID
 	FLAG = Attribute.Flag.OPTIONAL

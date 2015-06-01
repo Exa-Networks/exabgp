@@ -24,6 +24,7 @@ from exabgp.bgp.message.open.capability.negotiated import Negotiated
 # ==================================================== MP Unreacheable NLRI (15)
 #
 
+@Attribute.register()
 class MPRNLRI (Attribute,Family):
 	FLAG = Attribute.Flag.OPTIONAL
 	ID = Attribute.CODE.MP_REACH_NLRI

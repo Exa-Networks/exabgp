@@ -19,6 +19,7 @@ class ClusterID (IPv4):
 		IPv4.__init__(self,ip)
 
 
+@Attribute.register()
 class ClusterList (Attribute):
 	ID = Attribute.CODE.CLUSTER_LIST
 	FLAG = Attribute.Flag.OPTIONAL

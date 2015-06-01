@@ -55,6 +55,7 @@ class TLVS (list):
 # ==================================================================== AIGP (26)
 #
 
+@Attribute.register()
 class AIGP (Attribute):
 	ID = Attribute.CODE.AIGP
 	FLAG = Attribute.Flag.OPTIONAL

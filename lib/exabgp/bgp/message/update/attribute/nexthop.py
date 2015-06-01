@@ -16,6 +16,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 # The inheritance order is important and attribute MUST be first for the righ register to be called
 # At least until we rename them to be more explicit
 
+@Attribute.register()
 class NextHop (Attribute,IP):
 	ID = Attribute.CODE.NEXT_HOP
 	FLAG = Attribute.Flag.TRANSITIVE

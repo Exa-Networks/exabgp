@@ -9,12 +9,13 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 # ============================================================== Communities (8)
 # http://www.iana.org/assignments/bgp-extended-communities
 
-from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.community import Community
 
 from exabgp.bgp.message.notification import Notify
 
 
+@Attribute.register()
 class Communities (Attribute):
 	ID = Attribute.CODE.COMMUNITY
 	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
@@ -46,7 +47,7 @@ class Communities (Attribute):
 		if l == 1:
 			return repr(self.communities[0])
 		return ""
-	
+
 	def json (self):
 		return "[ %s ]" % ", ".join(community.json() for community in self.communities)
 

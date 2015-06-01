@@ -16,6 +16,7 @@ from exabgp.bgp.message.notification import Notify
 # ===================================================== ExtendedCommunities (16)
 # http://www.iana.org/assignments/bgp-extended-communities
 
+@Attribute.register()
 class ExtendedCommunities (Communities):
 	ID = Attribute.CODE.EXTENDED_COMMUNITY
 

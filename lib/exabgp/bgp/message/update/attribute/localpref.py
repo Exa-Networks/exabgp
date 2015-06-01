@@ -15,6 +15,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 # ========================================================= Local Preference (5)
 #
 
+@Attribute.register()
 class LocalPreference (Attribute):
 	ID = Attribute.CODE.LOCAL_PREF
 	FLAG = Attribute.Flag.TRANSITIVE

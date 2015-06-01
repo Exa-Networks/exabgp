@@ -227,7 +227,7 @@ def main ():
 		print '\nno configuration file provided'
 		sys.exit(1)
 
-	from exabgp.bgp.message.update.attribute.attribute import Attribute
+	from exabgp.bgp.message.update.attribute import Attribute
 	Attribute.caching = env.cache.attributes
 
 	if env.debug.rotate or len(configurations) == 1:

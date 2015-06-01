@@ -113,7 +113,7 @@ def holdtime (tokeniser):
 # ==================================================================== Attribute
 #
 
-from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute import Attribute
 
 
 def attribute (tokeniser):
@@ -149,7 +149,7 @@ def attribute (tokeniser):
 		raise ValueError('invalid attribute, does not ends with ]')
 
 	# XXX: FIXME: class Attribute should have an unpack function which does that
-	from exabgp.bgp.message.update.attribute.generic import GenericAttribute
+	from exabgp.bgp.message.update.attribute import GenericAttribute
 
 	for ((ID,flag),klass) in Attribute.registered_attributes.iteritems():
 		if code == ID and flag == klass.FLAG:
@@ -160,7 +160,7 @@ def attribute (tokeniser):
 # ====================================================================== NextHop
 #
 
-from exabgp.bgp.message.update.attribute.nexthop import NextHop
+from exabgp.bgp.message.update.attribute import NextHop
 
 
 def next_hop (tokeniser):
@@ -175,7 +175,7 @@ def next_hop (tokeniser):
 # ======================================================================= Origin
 #
 
-from exabgp.bgp.message.update.attribute.origin import Origin
+from exabgp.bgp.message.update.attribute import Origin
 
 
 def origin (tokeniser):
@@ -192,7 +192,7 @@ def origin (tokeniser):
 # ========================================================================== MED
 #
 
-from exabgp.bgp.message.update.attribute.med import MED
+from exabgp.bgp.message.update.attribute import MED
 
 
 def med (tokeniser):
@@ -205,7 +205,7 @@ def med (tokeniser):
 # ======================================================================= ASPath
 #
 
-from exabgp.bgp.message.update.attribute.aspath import ASPath
+from exabgp.bgp.message.update.attribute import ASPath
 
 
 def aspath (tokeniser):
@@ -245,7 +245,7 @@ def aspath (tokeniser):
 # ============================================================== LocalPreference
 #
 
-from exabgp.bgp.message.update.attribute.localpref import LocalPreference
+from exabgp.bgp.message.update.attribute import LocalPreference
 
 
 def local_preference (tokeniser):
@@ -258,7 +258,7 @@ def local_preference (tokeniser):
 # ==================================================================== Community
 #
 
-from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
+from exabgp.bgp.message.update.attribute import AtomicAggregate
 
 
 def atomic_aggregate (tokeniser):
@@ -268,7 +268,7 @@ def atomic_aggregate (tokeniser):
 # =================================================================== Aggregator
 #
 
-from exabgp.bgp.message.update.attribute.aggregator import Aggregator
+from exabgp.bgp.message.update.attribute import Aggregator
 
 
 def aggregator (tokeniser):
@@ -296,7 +296,7 @@ def aggregator (tokeniser):
 # ================================================================= OriginatorID
 #
 
-from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
+from exabgp.bgp.message.update.attribute import OriginatorID
 
 
 def originator_id (tokeniser):
@@ -309,8 +309,8 @@ def originator_id (tokeniser):
 # ================================================================== ClusterList
 #
 
-from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
-from exabgp.bgp.message.update.attribute.clusterlist import ClusterID
+from exabgp.bgp.message.update.attribute import ClusterList
+from exabgp.bgp.message.update.attribute import ClusterID
 
 
 def cluster_list (tokeniser):

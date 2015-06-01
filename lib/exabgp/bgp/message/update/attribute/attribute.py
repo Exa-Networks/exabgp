@@ -189,18 +189,21 @@ class Attribute (object):
 	def __ge__ (self, other):
 		return self.ID >= other.ID
 
-	@staticmethod
-	def register_attribute (klass, attribute_id=None,flag=None):
-		aid = klass.ID if attribute_id is None else attribute_id
-		flg = klass.FLAG | Attribute.Flag.EXTENDED_LENGTH if flag is None else flag | Attribute.Flag.EXTENDED_LENGTH
-		if (aid,flg) in klass.registered_attributes:
-			raise RuntimeError('only one class can be registered per attribute')
-		klass.registered_attributes[(aid,flg)] = klass
-		klass.attributes_known.append(aid)
-		if klass.FLAG & Attribute.Flag.OPTIONAL:
-			Attribute.attributes_optional.append(aid)
-		else:
-			Attribute.attributes_well_know.append(aid)
+	@classmethod
+	def register (cls,attribute_id=None,flag=None):
+		def register_attribute (klass):
+			aid = klass.ID if attribute_id is None else attribute_id
+			flg = klass.FLAG | Attribute.Flag.EXTENDED_LENGTH if flag is None else flag | Attribute.Flag.EXTENDED_LENGTH
+			if (aid,flg) in cls.registered_attributes:
+				raise RuntimeError('only one class can be registered per attribute')
+			cls.registered_attributes[(aid,flg)] = klass
+			cls.attributes_known.append(aid)
+			if klass.FLAG & Attribute.Flag.OPTIONAL:
+				cls.attributes_optional.append(aid)
+			else:
+				cls.attributes_well_know.append(aid)
+			return klass
+		return register_attribute
 
 	@classmethod
 	def registered (cls, attribute_id, flag):
