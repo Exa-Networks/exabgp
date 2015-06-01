@@ -6,7 +6,11 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+# Every Extended Community should be imported from this file
+# as it makes sure that all the registering decorator are run
+
 from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunity
+from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
 
 from exabgp.bgp.message.update.attribute.community.extended.encapsulation import Encapsulation
 from exabgp.bgp.message.update.attribute.community.extended.l2info import L2Info

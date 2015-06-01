@@ -6,6 +6,9 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+# Every Attribute should be imported from this file
+# as it makes sure that all the registering decorator are run
+
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.attributes import Attributes
 from exabgp.bgp.message.update.attribute.generic import GenericAttribute
@@ -19,7 +22,7 @@ from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator4
 from exabgp.bgp.message.update.attribute.community.communities import Communities
-from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
+from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunities
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterID

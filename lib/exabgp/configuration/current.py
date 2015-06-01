@@ -77,13 +77,13 @@ from exabgp.bgp.message.update.attribute import Aggregator
 
 from exabgp.bgp.message.update.attribute.community.community import Community
 from exabgp.bgp.message.update.attribute.community.communities import Communities
-from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunity
-from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficAction
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirect
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficMark
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficNextHop
+from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunities
+from exabgp.bgp.message.update.attribute.community.extended import TrafficRate
+from exabgp.bgp.message.update.attribute.community.extended import TrafficAction
+from exabgp.bgp.message.update.attribute.community.extended import TrafficRedirect
+from exabgp.bgp.message.update.attribute.community.extended import TrafficMark
+from exabgp.bgp.message.update.attribute.community.extended import TrafficNextHop
 
 from exabgp.bgp.message.update.attribute import OriginatorID
 from exabgp.bgp.message.update.attribute import ClusterID

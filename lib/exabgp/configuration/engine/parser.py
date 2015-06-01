@@ -407,7 +407,7 @@ def community (tokeniser):
 # ========================================================== ExtendedCommunities
 #
 
-from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunity
+from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
 
 def _extended_community (value):
@@ -494,7 +494,7 @@ def _extended_community (value):
 
 # This is the same code as community with a different parser, should be factored
 
-from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
+from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunities
 
 
 def extended_community (tokeniser):
