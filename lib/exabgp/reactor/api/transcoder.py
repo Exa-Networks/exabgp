@@ -3,6 +3,7 @@ import json
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message import Open
+from exabgp.bgp.message import Notification
 from exabgp.bgp.message.open.capability import Negotiated
 
 from exabgp.version import json as json_version
@@ -95,7 +96,8 @@ class Transcoder (object):
 			return self.encoder.keepalive(neighbor,direction,header,body)
 
 		if content == 'notification':
-			return self.encoder.notification(neighbor,direction,ord(message[0]),ord(message[1]),message[2:],header,body)
+			message = Notification.unpack_message(raw)
+			return self.encoder.notification(neighbor,direction,message,header,body)
 
 		if not self.negotiated:
 			print >> sys.stderr, 'invalid message sequence, open not exchange not complete', string
@@ -106,7 +108,7 @@ class Transcoder (object):
 		if content == 'update':
 			return self.encoder.update(neighbor, direction, message, header,body)
 
-		if content == 'eor': # XXX: Should not be required
+		if content == 'eor':  # XXX: Should not be required
 			return self.encoder.update(neighbor, direction, message, header,body)
 
 		if content == 'refresh':
