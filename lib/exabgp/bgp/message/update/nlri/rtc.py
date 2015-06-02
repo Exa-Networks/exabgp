@@ -24,7 +24,7 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 
 
 @NLRI.register(AFI.ipv4,SAFI.rtc)
-class RouteTargetConstraint (NLRI):
+class RTC (NLRI):
 	# XXX: FIXME: no support yet for RTC variable length with prefixing
 
 	__slots__ = ['origin','rt','action','nexthop']
@@ -69,7 +69,7 @@ class RouteTargetConstraint (NLRI):
 		# We reset ext com flag bits from the first byte in the packed RT
 		# because in an RTC route these flags never appear.
 		if self.rt:
-			return pack("!BLB", len(self), self.origin, ord(RouteTargetConstraint.resetFlags(packedRT[0]))) + packedRT[1:]
+			return pack("!BLB", len(self), self.origin, ord(RTC.resetFlags(packedRT[0]))) + packedRT[1:]
 		return pack("!B",0)
 
 	@classmethod
@@ -77,12 +77,12 @@ class RouteTargetConstraint (NLRI):
 		length = ord(data[0])
 
 		if length == 0:
-			return 1,RouteTargetConstraint(afi,safi,action,ASN(0),None)
+			return 1,RTC(afi,safi,action,ASN(0),None)
 
 		# safeguard: let's ignore any ext com flag that might be set here
-		packedRT = RouteTargetConstraint.resetFlags(data[5])+data[6:13]
+		packedRT = RTC.resetFlags(data[5])+data[6:13]
 
-		return 13,RouteTargetConstraint(
+		return 13,RTC(
 			afi, safi, action, nexthop,
 			ASN(unpack('!L', data[1:5])[0]),
 			RouteTarget.unpack(packedRT)
