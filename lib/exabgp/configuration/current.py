@@ -514,9 +514,10 @@ class Configuration (object):
 
 	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
 	def eor_to_peers (self, family, peers):
-		result = True
+		result = False
 		for neighbor in self.neighbor:
 			if neighbor in peers:
+				result = True
 				self.neighbor[neighbor].eor.append(family)
 		return result
 
