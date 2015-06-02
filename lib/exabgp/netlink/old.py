@@ -525,10 +525,10 @@ class Network (_Message):
 	def getRoutes (self):
 		return self.extract(Network.Command.RTM_GETROUTE)
 
-	def _create (self, family):
-		raise RuntimeError('need to fix this flag thing')
-		for _ in self.extract(Network.Command.RTM_NEWROUTE,flags,family):
-			yield _
+	# def _create (self, family):
+	# 	raise RuntimeError('need to fix this flag thing')
+	# 	for _ in self.extract(Network.Command.RTM_NEWROUTE,flags,family):
+	# 		yield _
 
 	def newRoute (self):
 		network_flags  = NetLinkRoute.Flags.NLM_F_REQUEST
