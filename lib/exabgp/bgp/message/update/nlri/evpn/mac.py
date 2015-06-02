@@ -12,6 +12,8 @@ from exabgp.bgp.message.update.nlri.qualifier import ESI
 from exabgp.bgp.message.update.nlri.qualifier import EthernetTag
 from exabgp.bgp.message.update.nlri.qualifier import MAC as MACQUAL
 
+from exabgp.bgp.message.update.nlri import NLRI
+
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
 from exabgp.bgp.message.notification import Notify
@@ -60,7 +62,8 @@ class MAC (EVPN):
 
 	def __eq__ (self, other):
 		return \
-			EVPN.__eq__(self,other) and \
+			NLRI.__eq__(self,other) and \
+			self.CODE == other.CODE and \
 			self.rd == other.rd and \
 			self.etag == other.etag and \
 			self.mac == other.mac and \

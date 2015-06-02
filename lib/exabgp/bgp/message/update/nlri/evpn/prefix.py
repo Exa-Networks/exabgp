@@ -74,7 +74,8 @@ class Prefix (EVPN):
 
 	def __eq__ (self, other):
 		return \
-			EVPN.__eq__(self,other) and \
+			NLRI.__eq__(self,other) and \
+			self.CODE == other.CODE and \
 			self.rd == other.rd and \
 			self.etag == other.etag and \
 			self.ip == other.ip and \
