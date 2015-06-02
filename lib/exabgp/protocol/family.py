@@ -147,7 +147,7 @@ class SAFI (Resource):
 
 	@classmethod
 	def fromString (cls, string):
-		return cls.names.get(string,cls.undefined)
+		return cls.codes.get(string,cls.undefined)
 
 
 # ===================================================================== FAMILY
@@ -188,5 +188,5 @@ class Family (object):
 	def extensive (self):
 		return 'afi %s safi %s' % (self.afi,self.safi)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return "%s %s" % (str(self.afi),str(self.safi))
