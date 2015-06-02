@@ -39,10 +39,10 @@ from exabgp.bgp.message.open.routerid import RouterID
 
 from exabgp.bgp.message.update.nlri import INET
 from exabgp.bgp.message.update.nlri import MPLS
+from exabgp.bgp.message.update.nlri import VPLS
 from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
-from exabgp.bgp.message.update.nlri import VPLS
 # from exabgp.bgp.message.update.nlri import EVPN
 from exabgp.bgp.message.update.nlri.flow import BinaryOperator
 from exabgp.bgp.message.update.nlri.flow import NumericOperator

@@ -107,6 +107,7 @@ def dispatch (exabgp, daemon, groups, port):
 		display('\n','collected','\n','---------','\n')
 
 		success = True
+		collected = []
 		while success and names.keys():
 			for name in list(names.keys()):
 				process = processes[name]
@@ -118,8 +119,9 @@ def dispatch (exabgp, daemon, groups, port):
 							success = False
 						else:
 							del names[name]
+							collected.append(name)
 							out,err = '',''
-							display(name,' ')
+							display("\r",' '.join(collected), '  |  ',' '.join(names.keys()))
 					except (IOError,OSError):
 						success = False
 

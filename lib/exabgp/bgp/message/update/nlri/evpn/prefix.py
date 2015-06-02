@@ -15,6 +15,7 @@ from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.qualifier import ESI
 from exabgp.bgp.message.update.nlri.qualifier import EthernetTag
 
+from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
 from exabgp.bgp.message.notification import Notify
