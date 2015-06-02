@@ -7,7 +7,7 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.configuration.engine.raised import Raised
-from exabgp.configuration.engine.registry import Entry
+from exabgp.configuration.engine.section import Section
 from exabgp.configuration.engine.parser import boolean
 
 from exabgp.bgp.message.open.capability import Capability
@@ -16,7 +16,7 @@ from exabgp.bgp.message.open.capability import Capability
 # =================================================================== Capability
 #
 
-class SectionCapability (Entry):
+class SectionCapability (Section):
 	syntax = \
 		'capability {\n' \
 		'   asn4 enable|disable;                         # default enabled\n' \
