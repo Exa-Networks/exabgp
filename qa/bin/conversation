@@ -96,18 +96,38 @@ def dispatch (exabgp, daemon, groups, port):
 	for group in sorted(groups):
 		names[group.split('/')[-1].split('.')[0]] = group
 
+	alphabet = [ chr(_) for _ in range(ord('0'),ord('9')) + range(ord('A'),ord('Z')) + range(ord('a'),ord('z'))]
+	# letter to name, name to letter
+	l2n = dict(zip(alphabet,names.keys()))
+	n2l = dict((r,l) for (l,r) in l2n.items())
+	letters = sorted(l2n)
+
+	class Color (object):
+		RED =   '\033[91m'
+		GREEN = '\033[92m'
+		BLUE =  '\033[94m'
+		END =   '\033[0m'
+
+	display('\n')
+	eol = False
+	for letter in letters:
+		display(letter,' ', l2n[letter], ' ' * (30 - len(l2n[letter])))
+		if eol:
+			display('\n')
+		eol = not eol
+	display('\n')
+
 	try:
 		display('\n','starting','\n','--------','\n')
 
 		for name in names.keys():
-			display(name,' ')
+			display(n2l[name],' ')
 			port += 1
 			processes[name] = subprocess.Popen([sys.argv[0],names[name],str(port)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		display('\n')
 		display('\n','collected','\n','---------','\n')
 
 		success = True
-		collected = []
 		while success and names.keys():
 			for name in list(names.keys()):
 				process = processes[name]
@@ -119,9 +139,10 @@ def dispatch (exabgp, daemon, groups, port):
 							success = False
 						else:
 							del names[name]
-							collected.append(name)
 							out,err = '',''
-							display("\r",' '.join(collected), '  |  ',' '.join(names.keys()))
+							display('\r')
+							display(*[ Color.RED + l + ' ' if l2n[l] in names else Color.GREEN + l + ' ' for l in letters])
+							display(Color.END)
 					except (IOError,OSError):
 						success = False
 
