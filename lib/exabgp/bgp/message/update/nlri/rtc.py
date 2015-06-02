@@ -77,13 +77,14 @@ class RTC (NLRI):
 		length = ord(data[0])
 
 		if length == 0:
-			return 1,RTC(afi,safi,action,ASN(0),None)
+			return 1,cls(afi,safi,action,NoNextHop,ASN(0),None)
 
-		# safeguard: let's ignore any ext com flag that might be set here
-		packedRT = RTC.resetFlags(data[5])+data[6:13]
+		# XXX: Why are we reseting the flags on the RouteTarget extended community ?
 
-		return 13,RTC(
+		return 13,cls(
 			afi, safi, action, nexthop,
 			ASN(unpack('!L', data[1:5])[0]),
-			RouteTarget.unpack(packedRT)
+			RouteTarget.unpack(
+				RTC.resetFlags(data[5])+data[6:13]
+			)
 		)
