@@ -40,7 +40,10 @@ class FSM (object):
 			int.__init__(code)
 
 		def __repr__ (self):
-			return self.names.get(self.code,'INVALID 0x%s' % hex(self.code))
+			return self.names.get(self,'INVALID 0x%s' % hex(self))
+
+		def __str__ (self):
+			return repr(self)
 
 	IDLE        = STATE(0x01)
 	ACTIVE      = STATE(0x02)
