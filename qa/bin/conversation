@@ -128,6 +128,7 @@ def dispatch (exabgp, daemon, groups, port):
 		display('\n','collected','\n','---------','\n')
 
 		success = True
+		color = dict(zip(l2n.keys(),[Color.BLUE]*100))
 		while success and names.keys():
 			for name in list(names.keys()):
 				process = processes[name]
@@ -136,12 +137,14 @@ def dispatch (exabgp, daemon, groups, port):
 					try:
 						out,err = process.communicate()
 						if 'failed' in out:
+							color[n2l[name]] = Color.RED
 							success = False
 						else:
+							color[n2l[name]] = Color.GREEN
 							del names[name]
 							out,err = '',''
 							display('\r')
-							display(*[ Color.RED + l + ' ' if l2n[l] in names else Color.GREEN + l + ' ' for l in letters])
+							display(*[ color[l] + l + ' ' for l in letters])
 							display(Color.END)
 					except (IOError,OSError):
 						success = False
