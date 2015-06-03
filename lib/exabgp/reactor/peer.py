@@ -12,7 +12,7 @@ import time
 from exabgp.bgp.timer import ReceiveTimer
 from exabgp.bgp.timer import SendTimer
 from exabgp.bgp.message import Message
-from exabgp.bgp.message import STATE
+from exabgp.bgp.fsm import FSM
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import REFRESH
 from exabgp.bgp.message import NOP
@@ -150,8 +150,8 @@ class Peer (object):
 
 		self._ = {'in':{},'out':{}}
 
-		self._['in']['state'] = STATE.IDLE
-		self._['out']['state'] = STATE.IDLE
+		self._['in']['fsm'] = FSM(FSM.IDLE)
+		self._['out']['fsm'] = FSM(FSM.IDLE)
 
 		# value to reset 'generator' to
 		self._['in']['enabled'] = False
@@ -173,7 +173,7 @@ class Peer (object):
 		self._['out']['generator'] = self._['out']['enabled']
 
 	def _reset (self, direction, message='',error=''):
-		self._[direction]['state'] = STATE.IDLE
+		self._[direction]['fsm'].change(FSM.IDLE)
 
 		if self._restart:
 			if self._[direction]['proto']:
@@ -275,11 +275,11 @@ class Peer (object):
 		self._['in']['proto'] = Protocol(self).accept(connection)
 		# Let's make sure we do some work with this connection
 		self._['in']['generator'] = None
-		self._['in']['state'] = STATE.CONNECT
+		self._['in']['fsm'].change(FSM.CONNECT)
 		return True
 
 	def established (self):
-		return self._['in']['state'] == STATE.ESTABLISHED or self._['out']['state'] == STATE.ESTABLISHED
+		return self._['in']['fsm'] == FSM.ESTABLISHED or self._['out']['fsm'] == FSM.ESTABLISHED
 
 	def _accept (self):
 		# we can do this as Protocol is a mutable object
@@ -294,7 +294,7 @@ class Peer (object):
 
 		proto.negotiated.sent(message)
 
-		self._['in']['state'] = STATE.OPENSENT
+		self._['in']['fsm'].change(FSM.OPENSENT)
 
 		# Read OPEN
 		wait = environment.settings().bgp.openwait
@@ -306,11 +306,11 @@ class Peer (object):
 			if ord(message.TYPE) == Message.CODE.NOP:
 				yield ACTION.LATER
 
-		self._['in']['state'] = STATE.OPENCONFIRM
+		self._['in']['fsm'].change(FSM.OPENCONFIRM)
 		proto.negotiated.received(message)
 		proto.validate_open()
 
-		if self._['out']['state'] == STATE.OPENCONFIRM:
+		if self._['out']['fsm'] == FSM.OPENCONFIRM:
 			self.logger.network('incoming connection finds the outgoing connection is in openconfirm')
 			local_id = self.neighbor.router_id.packed
 			remote_id = proto.negotiated.received_open.router_id.packed
@@ -334,7 +334,7 @@ class Peer (object):
 			self.recv_timer.check_ka(message)
 			yield ACTION.NOW
 
-		self._['in']['state'] = STATE.ESTABLISHED
+		self._['in']['fsm'].change(FSM.ESTABLISHED)
 		# let the caller know that we were sucesfull
 		yield ACTION.NOW
 
@@ -361,7 +361,7 @@ class Peer (object):
 				yield ACTION.NOW
 				raise Interrupted('out')
 
-		self._['out']['state'] = STATE.CONNECT
+		self._['out']['fsm'].change(FSM.CONNECT)
 		self._['out']['proto'] = proto
 
 		# send OPEN
@@ -374,7 +374,7 @@ class Peer (object):
 
 		proto.negotiated.sent(message)
 
-		self._['out']['state'] = STATE.OPENSENT
+		self._['out']['fsm'].change(FSM.OPENSENT)
 
 		# Read OPEN
 		wait = environment.settings().bgp.openwait
@@ -387,11 +387,11 @@ class Peer (object):
 			if ord(message.TYPE) == Message.CODE.NOP:
 				yield ACTION.LATER
 
-		self._['out']['state'] = STATE.OPENCONFIRM
+		self._['out']['fsm'].change(FSM.OPENCONFIRM)
 		proto.negotiated.received(message)
 		proto.validate_open()
 
-		if self._['in']['state'] == STATE.OPENCONFIRM:
+		if self._['in']['fsm'] == FSM.OPENCONFIRM:
 			self.logger.network('outgoing connection finds the incoming connection is in openconfirm')
 			local_id = self.neighbor.router_id.packed
 			remote_id = proto.negotiated.received_open.router_id.packed
@@ -415,7 +415,7 @@ class Peer (object):
 			self.recv_timer.check_ka(message)
 			yield ACTION.NOW
 
-		self._['out']['state'] = STATE.ESTABLISHED
+		self._['out']['fsm'].change(FSM.ESTABLISHED)
 		# let the caller know that we were sucesfull
 		yield ACTION.NOW
 
@@ -684,7 +684,7 @@ class Peer (object):
 					# elif r is ACTION.LATER:   status = 'next second'
 					# elif r is ACTION.CLOSE:   status = 'stop'
 					# else: status = 'buggy'
-					# self.logger.network('%s loop %11s, state is %s' % (direction,status,self._[direction]['state']),'debug')
+					# self.logger.network('%s loop %11s, state is %s' % (direction,status,self._[direction]['fsm']),'debug')
 
 					if r == ACTION.NOW:
 						back = ACTION.NOW
@@ -695,7 +695,7 @@ class Peer (object):
 					self._[direction]['generator'] = self._[direction]['enabled']
 
 			elif generator is None:
-				if self._[opposite]['state'] in [STATE.OPENCONFIRM,STATE.ESTABLISHED]:
+				if self._[opposite]['fsm'] in [FSM.OPENCONFIRM,FSM.ESTABLISHED]:
 					self.logger.network('%s loop, stopping, other one is established' % direction,'debug')
 					self._[direction]['generator'] = False
 					continue

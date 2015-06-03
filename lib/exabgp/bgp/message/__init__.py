@@ -9,9 +9,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 # Every Message should be imported from this file
 # as it makes sure that all the registering decorator are run
 
-from exabgp.bgp.message.state import STATE
-from exabgp.bgp.message.state import OUT
-from exabgp.bgp.message.state import IN
+from exabgp.bgp.message.direction import OUT
+from exabgp.bgp.message.direction import IN
 
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.nop import NOP

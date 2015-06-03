@@ -79,8 +79,7 @@ class RTC (NLRI):
 		if length == 0:
 			return 1,cls(afi,safi,action,NoNextHop,ASN(0),None)
 
-		# XXX: Why are we reseting the flags on the RouteTarget extended community ?
-
+		# XXX: Why are we reseting the flags on the RouteTarget extended communit
 		return 13,cls(
 			afi, safi, action, nexthop,
 			ASN(unpack('!L', data[1:5])[0]),
