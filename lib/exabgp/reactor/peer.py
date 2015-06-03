@@ -286,6 +286,7 @@ class Peer (object):
 			self.logger.network('we already have a peer at this address')
 			return False
 
+		self._incoming.fsm.change(FSM.ACTIVE)
 		self._incoming.proto = Protocol(self).accept(connection)
 		# Let's make sure we do some work with this connection
 		self._incoming.generator = None
@@ -354,6 +355,8 @@ class Peer (object):
 
 	def _connect (self):
 		# try to establish the outgoing connection
+
+		self._outgoing.fsm.change(FSM.ACTIVE)
 
 		proto = Protocol(self)
 		generator = proto.connect()
