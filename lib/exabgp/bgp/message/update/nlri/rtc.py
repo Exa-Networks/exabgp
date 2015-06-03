@@ -39,8 +39,6 @@ class RTC (NLRI):
 	def __eq__ (self, other):
 		return \
 			NLRI.__eq__(self,other) and \
-			self.action == other.action and \
-			self.nexthop == other.action and \
 			self.origin == other.origin and \
 			self.rt == other.rt
 
@@ -79,7 +77,9 @@ class RTC (NLRI):
 		if length == 0:
 			return 1,cls(afi,safi,action,NoNextHop,ASN(0),None)
 
-		# XXX: Why are we reseting the flags on the RouteTarget extended communit
+		# We are reseting the flags on the RouteTarget extended
+		# community, because they do not make sense for an RTC route
+
 		return 13,cls(
 			afi, safi, action, nexthop,
 			ASN(unpack('!L', data[1:5])[0]),
