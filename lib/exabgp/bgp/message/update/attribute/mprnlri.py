@@ -115,7 +115,7 @@ class MPRNLRI (Attribute,Family):
 
 		rd = 0
 
-		# check next-hope size
+		# check next-hop size
 		if afi == AFI.ipv4:
 			if safi in (SAFI.unicast,SAFI.multicast):
 				if len_nh != 4:
@@ -130,6 +130,9 @@ class MPRNLRI (Attribute,Family):
 			elif safi in (SAFI.flow_vpn,):
 				if len_nh not in (0,4):
 					raise Notify(3,0,'invalid ipv4 flow_vpn next-hop length %d expected 4' % len_nh)
+			elif safi in (SAFI.rtc,):
+				if len_nh not in (4,16):
+					raise Notify(3,0,'invalid ipv4 rtc next-hop length %d expected 4' % len_nh)
 		elif afi == AFI.ipv6:
 			if safi in (SAFI.unicast,):
 				if len_nh not in (16,32):
