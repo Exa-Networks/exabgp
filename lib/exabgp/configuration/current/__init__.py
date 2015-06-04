@@ -26,48 +26,22 @@ from exabgp.protocol.family import SAFI
 from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.protocol.ip import IP
-from exabgp.protocol.ip import NoNextHop
 
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message import Message
 
-from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.routerid import RouterID
 
 from exabgp.bgp.message.update.nlri import INET
 from exabgp.bgp.message.update.nlri import MPLS
 from exabgp.bgp.message.update.nlri import VPLS
 # from exabgp.bgp.message.update.nlri import EVPN
-from exabgp.bgp.message.update.nlri.flow import BinaryOperator
-from exabgp.bgp.message.update.nlri.flow import NumericOperator
-from exabgp.bgp.message.update.nlri.flow import Flow
-from exabgp.bgp.message.update.nlri.flow import Flow4Source
-from exabgp.bgp.message.update.nlri.flow import Flow4Destination
-from exabgp.bgp.message.update.nlri.flow import Flow6Source
-from exabgp.bgp.message.update.nlri.flow import Flow6Destination
-from exabgp.bgp.message.update.nlri.flow import FlowSourcePort
-from exabgp.bgp.message.update.nlri.flow import FlowDestinationPort
-from exabgp.bgp.message.update.nlri.flow import FlowAnyPort
-from exabgp.bgp.message.update.nlri.flow import FlowIPProtocol
-from exabgp.bgp.message.update.nlri.flow import FlowNextHeader
-from exabgp.bgp.message.update.nlri.flow import FlowTCPFlag
-from exabgp.bgp.message.update.nlri.flow import FlowFragment
-from exabgp.bgp.message.update.nlri.flow import FlowPacketLength
-from exabgp.bgp.message.update.nlri.flow import FlowICMPType
-from exabgp.bgp.message.update.nlri.flow import FlowICMPCode
-from exabgp.bgp.message.update.nlri.flow import FlowDSCP
-from exabgp.bgp.message.update.nlri.flow import FlowTrafficClass
-from exabgp.bgp.message.update.nlri.flow import FlowFlowLabel
 from exabgp.bgp.message.update.nlri.flow import NLRI
+from exabgp.bgp.message.update.nlri.flow import Flow
 
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunities
-from exabgp.bgp.message.update.attribute.community.extended import TrafficRate
-from exabgp.bgp.message.update.attribute.community.extended import TrafficAction
-from exabgp.bgp.message.update.attribute.community.extended import TrafficRedirect
-from exabgp.bgp.message.update.attribute.community.extended import TrafficMark
-from exabgp.bgp.message.update.attribute.community.extended import TrafficNextHop
 
 from exabgp.bgp.message.operational import MAX_ADVISORY
 from exabgp.bgp.message.operational import Advisory
@@ -80,6 +54,7 @@ from exabgp.configuration.current.error import Error
 from exabgp.configuration.current.neighbor import ParseNeighbor
 from exabgp.configuration.current.family import ParseFamily
 from exabgp.configuration.current.route import ParseRoute
+from exabgp.configuration.current.flow import ParseFlow
 
 # Duck class, faking part of the Attribute interface
 # We add this to routes when when need o split a route in smaller route
@@ -129,41 +104,6 @@ class Configuration (object):
 		'   name what-you-want-to-remember-about-the-route\n' \
 		'}\n'
 
-	_str_flow_error = \
-		'syntax:\n' \
-		'flow {\n' \
-		'   route give-me-a-name\n' \
-		'      route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535; (optional)\n' \
-		'      next-hop 1.2.3.4; (to use with redirect-to-nexthop)\n' \
-		'      match {\n' \
-		'        source 10.0.0.0/24;\n' \
-		'        source ::1/128/0;\n' \
-		'        destination 10.0.1.0/24;\n' \
-		'        port 25;\n' \
-		'        source-port >1024\n' \
-		'        destination-port =80 =3128 >8080&<8088;\n' \
-		'        protocol [ udp tcp ];  (ipv4 only)\n' \
-		'        next-header [ udp tcp ]; (ipv6 only)\n' \
-		'        fragment [ not-a-fragment dont-fragment is-fragment first-fragment last-fragment ]; (ipv4 only)\n' \
-		'        packet-length >200&<300 >400&<500;\n' \
-		'        flow-label >100&<2000; (ipv6 only)\n' \
-		'      }\n' \
-		'      then {\n' \
-		'        accept;\n' \
-		'        discard;\n' \
-		'        rate-limit 9600;\n' \
-		'        redirect 30740:12345;\n' \
-		'        redirect 1.2.3.4:5678;\n' \
-		'        redirect 1.2.3.4;\n' \
-		'        redirect-next-hop;\n' \
-		'        copy 1.2.3.4;\n' \
-		'        mark 123;\n' \
-		'        action sample|terminal|sample-terminal;\n' \
-		'      }\n' \
-		'   }\n' \
-		'}\n\n' \
-		'one or more match term, one action\n' \
-		'fragment code is totally untested\n' \
 
 	_str_process_error = \
 		'syntax:\n' \
@@ -212,6 +152,7 @@ class Configuration (object):
 		self.neighbor = ParseNeighbor(self.error)
 		self.family = ParseFamily(self.error)
 		self.route = ParseRoute(self.error)
+		self.flow = ParseFlow(self.error,self.logger)
 
 		self._dispatch_neighbor = {
 			'description':   self.neighbor.description,
@@ -280,37 +221,38 @@ class Configuration (object):
 		}
 
 		self._dispatch_flow = {
-			'rd': self.route.rd,
+			'rd':                  self.route.rd,
 			'route-distinguisher': self.route.rd,
-			'next-hop': self._flow_route_next_hop,
-			'source': self._flow_source,
-			'source-ipv4': self._flow_source,
-			'destination': self._flow_destination,
-			'destination-ipv4': self._flow_destination,
-			'port': self._flow_route_anyport,
-			'source-port': self._flow_route_source_port,
-			'destination-port': self._flow_route_destination_port,
-			'protocol': self._flow_route_protocol,
-			'next-header': self._flow_route_next_header,
-			'tcp-flags': self._flow_route_tcp_flags,
-			'icmp-type': self._flow_route_icmp_type,
-			'icmp-code': self._flow_route_icmp_code,
-			'fragment': self._flow_route_fragment,
-			'dscp': self._flow_route_dscp,
-			'traffic-class': self._flow_route_traffic_class,
-			'packet-length': self._flow_route_packet_length,
-			'flow-label': self._flow_route_flow_label,
-			'accept': self._flow_route_accept,
-			'discard': self._flow_route_discard,
-			'rate-limit': self._flow_route_rate_limit,
-			'redirect': self._flow_route_redirect,
-			'redirect-to-nexthop': self._flow_route_redirect_next_hop,
-			'copy': self._flow_route_copy,
-			'mark': self._flow_route_mark,
-			'action': self._flow_route_action,
-			'community': self.route.community,
-			'extended-community': self.route.extended_community,
+			'next-hop':            self.flow.next_hop,
+			'source':              self.flow.source,
+			'source-ipv4':         self.flow.source,
+			'destination':         self.flow.destination,
+			'destination-ipv4':    self.flow.destination,
+			'port':                self.flow.anyport,
+			'source-port':         self.flow.source_port,
+			'destination-port':    self.flow.destination_port,
+			'protocol':            self.flow.protocol,
+			'next-header':         self.flow.next_header,
+			'tcp-flags':           self.flow.tcp_flags,
+			'icmp-type':           self.flow.icmp_type,
+			'icmp-code':           self.flow.icmp_code,
+			'fragment':            self.flow.fragment,
+			'dscp':                self.flow.dscp,
+			'traffic-class':       self.flow.traffic_class,
+			'packet-length':       self.flow.packet_length,
+			'flow-label':          self.flow.flow_label,
+			'accept':              self.flow.accept,
+			'discard':             self.flow.discard,
+			'rate-limit':          self.flow.rate_limit,
+			'redirect':            self.flow.redirect,
+			'redirect-to-nexthop': self.flow.redirect_next_hop,
+			'copy':                self.flow.copy,
+			'mark':                self.flow.mark,
+			'action':              self.flow.action,
+			'community':           self.route.community,
+			'extended-community':  self.route.extended_community,
 		}
+
 		self._dispatch_vpls = {
 			'endpoint': self._l2vpn_vpls_endpoint,
 			'offset': self._l2vpn_vpls_offset,
@@ -349,12 +291,12 @@ class Configuration (object):
 		self._location = ['root']
 		self._line = []
 		self._number = 1
-		self._flow_state = 'out'
 
 		self.error.clear()
 		self.neighbor.clear()
 		self.family.clear()
 		self.route.clear()
+		self.flow.clear()
 
 	# Public Interface
 
@@ -533,7 +475,7 @@ class Configuration (object):
 	def _dispatch (self, scope, name, multi, single, location=None):
 		if location:
 			self._location = location
-			self._flow_state = 'out'
+			self.flow.clear()
 		try:
 			tokens = self.tokens()
 		except IndexError:
@@ -1433,7 +1375,7 @@ class Configuration (object):
 
 	def _multi_flow (self, scope, tokens):
 		if len(tokens) != 0:
-			self._error = self._str_flow_error
+			self._error = self.flow.syntax
 			if self.debug: raise Exception()  # noqa
 			return False
 
@@ -1450,19 +1392,19 @@ class Configuration (object):
 		return True
 
 	def _insert_flow_route (self, scope, tokens=None):
-		if self._flow_state != 'out':
-			self._error = self._str_flow_error
+		if self.flow.state != 'out':
+			self._error = self.flow.syntax
 			if self.debug: raise Exception()  # noqa
 			return False
 
-		self._flow_state = 'match'
+		self.flow.state = 'match'
 
 		try:
 			attributes = Attributes()
 			attributes[Attribute.CODE.EXTENDED_COMMUNITY] = ExtendedCommunities()
 			flow = Change(Flow(),attributes)
 		except ValueError:
-			self._error = self._str_flow_error
+			self._error = self.flow.syntax
 			if self.debug: raise Exception()  # noqa
 			return False
 
@@ -1498,7 +1440,7 @@ class Configuration (object):
 
 	def _multi_flow_route (self, scope, tokens):
 		if len(tokens) > 1:
-			self._error = self._str_flow_error
+			self._error = self.flow.syntax
 			if self.debug: raise Exception()  # noqa
 			return False
 
@@ -1516,8 +1458,8 @@ class Configuration (object):
 			if r is None:
 				break
 
-		if self._flow_state != 'out':
-			self._error = self._str_flow_error
+		if self.flow.state != 'out':
+			self._error = self.flow.syntax
 			if self.debug: raise Exception()  # noqa
 			return False
 
@@ -1563,16 +1505,16 @@ class Configuration (object):
 
 	def _multi_match (self, scope, tokens):
 		if len(tokens) != 0:
-			self._error = self._str_flow_error
+			self._error = self.flow.syntax
 			if self.debug: raise Exception()  # noqa
 			return False
 
-		if self._flow_state != 'match':
-			self._error = self._str_flow_error
+		if self.flow.state != 'match':
+			self._error = self.flow.syntax
 			if self.debug: raise Exception()  # noqa
 			return False
 
-		self._flow_state = 'then'
+		self.flow.state = 'then'
 
 		while True:
 			r = self._dispatch(
@@ -1594,16 +1536,16 @@ class Configuration (object):
 
 	def _multi_then (self, scope, tokens):
 		if len(tokens) != 0:
-			self._error = self._str_flow_error
+			self._error = self.flow.syntax
 			if self.debug: raise Exception()  # noqa
 			return False
 
-		if self._flow_state != 'then':
-			self._error = self._str_flow_error
+		if self.flow.state != 'then':
+			self._error = self.flow.syntax
 			if self.debug: raise Exception()  # noqa
 			return False
 
-		self._flow_state = 'out'
+		self.flow.state = 'out'
 
 		while True:
 			r = self._dispatch(
@@ -1626,7 +1568,7 @@ class Configuration (object):
 
 	def _multi_api (self, scope, direction, tokens):
 		if len(tokens) != 0:
-			self._error = self._str_flow_error
+			self._error = self.flow.syntax
 			if self.debug: raise Exception()  # noqa
 			return False
 
@@ -1645,339 +1587,6 @@ class Configuration (object):
 			if r is None:
 				break
 		return True
-
-	# Command Flow
-
-	def _flow_source (self, scope, tokens):
-		try:
-			data = tokens.pop(0)
-			if data.count('/') == 1:
-				ip,netmask = data.split('/')
-				raw = ''.join(chr(int(_)) for _ in ip.split('.'))
-
-				if not scope[-1]['announce'][-1].nlri.add(Flow4Source(raw,int(netmask))):
-					self._error = 'Flow can only have one destination'
-					if self.debug: raise ValueError(self._error)  # noqa
-					return False
-
-			else:
-				ip,netmask,offset = data.split('/')
-				change = scope[-1]['announce'][-1]
-				change.nlri.afi = AFI(AFI.ipv6)
-				if not change.nlri.add(Flow6Source(IP.pton(ip),int(netmask),int(offset))):
-					self._error = 'Flow can only have one destination'
-					if self.debug: raise ValueError(self._error)  # noqa
-					return False
-			return True
-
-		except (IndexError,ValueError):
-			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _flow_destination (self, scope, tokens):
-		try:
-			data = tokens.pop(0)
-			if data.count('/') == 1:
-				ip,netmask = data.split('/')
-				raw = ''.join(chr(int(_)) for _ in ip.split('.'))
-
-				if not scope[-1]['announce'][-1].nlri.add(Flow4Destination(raw,int(netmask))):
-					self._error = 'Flow can only have one destination'
-					if self.debug: raise ValueError(self._error)  # noqa
-					return False
-
-			else:
-				ip,netmask,offset = data.split('/')
-				change = scope[-1]['announce'][-1]
-				# XXX: This is ugly
-				change.nlri.afi = AFI(AFI.ipv6)
-				if not change.nlri.add(Flow6Destination(IP.pton(ip),int(netmask),int(offset))):
-					self._error = 'Flow can only have one destination'
-					if self.debug: raise ValueError(self._error)  # noqa
-					return False
-			return True
-
-		except (IndexError,ValueError):
-			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	# to parse the port configuration of flow
-
-	def _operator (self, string):
-		try:
-			if string[0] == '=':
-				return NumericOperator.EQ,string[1:]
-			elif string[0] == '>':
-				operator = NumericOperator.GT
-			elif string[0] == '<':
-				operator = NumericOperator.LT
-			else:
-				raise ValueError('Invalid operator in test %s' % string)
-			if string[1] == '=':
-				operator += NumericOperator.EQ
-				return operator,string[2:]
-			else:
-				return operator,string[1:]
-		except IndexError:
-			raise Exception('Invalid expression (too short) %s' % string)
-
-	def _value (self, string):
-		l = 0
-		for c in string:
-			if c not in ['&',]:
-				l += 1
-				continue
-			break
-		return string[:l],string[l:]
-
-	# parse =80 or >80 or <25 or &>10<20
-	def _flow_generic_expression (self, scope, tokens, klass):
-		try:
-			for test in tokens:
-				AND = BinaryOperator.NOP
-				while test:
-					operator,_ = self._operator(test)
-					value,test = self._value(_)
-					nlri = scope[-1]['announce'][-1].nlri
-					# XXX: should do a check that the rule is valid for the family
-					nlri.add(klass(AND | operator,klass.converter(value)))
-					if test:
-						if test[0] == '&':
-							AND = BinaryOperator.AND
-							test = test[1:]
-							if not test:
-								raise ValueError("Can not finish an expresion on an &")
-						else:
-							raise ValueError("Unknown binary operator %s" % test[0])
-			return True
-		except ValueError,exc:
-			self._error = self._str_flow_error + str(exc)
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	# parse [ content1 content2 content3 ]
-	def _flow_generic_list (self, scope, tokens, klass):
-		try:
-			name = tokens.pop(0)
-			AND = BinaryOperator.NOP
-			if name == '[':
-				while True:
-					name = tokens.pop(0)
-					if name == ']':
-						break
-					try:
-						nlri = scope[-1]['announce'][-1].nlri
-						# XXX: should do a check that the rule is valid for the family
-						nlri.add(klass(NumericOperator.EQ | AND,klass.converter(name)))
-					except IndexError:
-						self._error = self._str_flow_error
-						if self.debug: raise Exception()  # noqa
-						return False
-			else:
-				if name[0] == '=':
-					name = name[1:]
-				scope[-1]['announce'][-1].nlri.add(klass(NumericOperator.EQ | AND,klass.converter(name)))
-		except (IndexError,ValueError):
-			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa
-			return False
-		return True
-
-	def _flow_generic_condition (self, scope, tokens, klass):
-		if tokens[0][0] in ['=','>','<']:
-			return self._flow_generic_expression(scope,tokens,klass)
-		return self._flow_generic_list(scope,tokens,klass)
-
-	def _flow_route_anyport (self, scope, tokens):
-		return self._flow_generic_condition(scope,tokens,FlowAnyPort)
-
-	def _flow_route_source_port (self, scope, tokens):
-		return self._flow_generic_condition(scope,tokens,FlowSourcePort)
-
-	def _flow_route_destination_port (self, scope, tokens):
-		return self._flow_generic_condition(scope,tokens,FlowDestinationPort)
-
-	def _flow_route_packet_length (self, scope, tokens):
-		return self._flow_generic_condition(scope,tokens,FlowPacketLength)
-
-	def _flow_route_tcp_flags (self, scope, tokens):
-		return self._flow_generic_list(scope,tokens,FlowTCPFlag)
-
-	def _flow_route_protocol (self, scope, tokens):
-		return self._flow_generic_list(scope,tokens,FlowIPProtocol)
-
-	def _flow_route_next_header (self, scope, tokens):
-		return self._flow_generic_list(scope,tokens,FlowNextHeader)
-
-	def _flow_route_icmp_type (self, scope, tokens):
-		return self._flow_generic_list(scope,tokens,FlowICMPType)
-
-	def _flow_route_icmp_code (self, scope, tokens):
-		return self._flow_generic_list(scope,tokens,FlowICMPCode)
-
-	def _flow_route_fragment (self, scope, tokens):
-		return self._flow_generic_list(scope,tokens,FlowFragment)
-
-	def _flow_route_dscp (self, scope, tokens):
-		return self._flow_generic_condition(scope,tokens,FlowDSCP)
-
-	def _flow_route_traffic_class (self, scope, tokens):
-		return self._flow_generic_condition(scope,tokens,FlowTrafficClass)
-
-	def _flow_route_flow_label (self, scope, tokens):
-		return self._flow_generic_condition(scope,tokens,FlowFlowLabel)
-
-	def _flow_route_next_hop (self, scope, tokens):
-		try:
-			change = scope[-1]['announce'][-1]
-
-			if change.nlri.nexthop is not NoNextHop:
-				self._error = self._str_flow_error
-				if self.debug: raise Exception()  # noqa
-				return False
-
-			change.nlri.nexthop = IP.create(tokens.pop(0))
-			return True
-
-		except (IndexError,ValueError):
-			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _flow_route_accept (self, scope, tokens):
-		return True
-
-	def _flow_route_discard (self, scope, tokens):
-		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
-		try:
-			scope[-1]['announce'][-1].attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficRate(ASN(0),0))
-			return True
-		except ValueError:
-			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _flow_route_rate_limit (self, scope, tokens):
-		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
-		try:
-			speed = int(tokens[0])
-			if speed < 9600 and speed != 0:
-				self.logger.configuration("rate-limiting flow under 9600 bytes per seconds may not work",'warning')
-			if speed > 1000000000000:
-				speed = 1000000000000
-				self.logger.configuration("rate-limiting changed for 1 000 000 000 000 bytes from %s" % tokens[0],'warning')
-			scope[-1]['announce'][-1].attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficRate(ASN(0),speed))
-			return True
-		except ValueError:
-			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _flow_route_redirect (self, scope, tokens):
-		try:
-			if tokens[0].count(':') == 1:
-				prefix,suffix = tokens[0].split(':',1)
-				if prefix.count('.'):
-					raise ValueError('this format has been deprecaded as it does not make sense and it is not supported by other vendors')
-				else:
-					asn = int(prefix)
-					route_target = int(suffix)
-					if asn >= pow(2,16):
-						raise ValueError('asn is a 32 bits number, it can only be 16 bit %s' % route_target)
-					if route_target >= pow(2,32):
-						raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
-					scope[-1]['announce'][-1].attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficRedirect(asn,route_target))
-					return True
-			else:
-				change = scope[-1]['announce'][-1]
-				if change.nlri.nexthop is not NoNextHop:
-					self._error = self._str_flow_error
-					if self.debug: raise Exception()  # noqa
-					return False
-
-				nh = IP.create(tokens.pop(0))
-				change.nlri.nexthop = nh
-				change.attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficNextHop(False))
-				return True
-
-		except (IndexError,ValueError):
-			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _flow_route_redirect_next_hop (self, scope, tokens):
-		try:
-			change = scope[-1]['announce'][-1]
-
-			if change.nlri.nexthop is NoNextHop:
-				self._error = self._str_flow_error
-				if self.debug: raise Exception()  # noqa
-				return False
-
-			change.attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficNextHop(False))
-			return True
-
-		except (IndexError,ValueError):
-			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _flow_route_copy (self, scope, tokens):
-		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
-		try:
-			if scope[-1]['announce'][-1].attributes.has(Attribute.CODE.NEXT_HOP):
-				self._error = self._str_flow_error
-				if self.debug: raise Exception()  # noqa
-				return False
-
-			change = scope[-1]['announce'][-1]
-			change.nlri.nexthop = IP.create(tokens.pop(0))
-			change.attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficNextHop(True))
-			return True
-
-		except (IndexError,ValueError):
-			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _flow_route_mark (self, scope, tokens):
-		try:
-			dscp = int(tokens.pop(0))
-
-			if dscp < 0 or dscp > 0b111111:
-				self._error = self._str_flow_error
-				if self.debug: raise Exception()  # noqa
-				return False
-
-			change = scope[-1]['announce'][-1]
-			change.attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficMark(dscp))
-			return True
-
-		except (IndexError,ValueError):
-			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _flow_route_action (self, scope, tokens):
-		try:
-			action = tokens.pop(0)
-			sample = 'sample' in action
-			terminal = 'terminal' in action
-
-			if not sample and not terminal:
-				self._error = self._str_flow_error
-				if self.debug: raise Exception()  # noqa
-				return False
-
-			change = scope[-1]['announce'][-1]
-			change.attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficAction(sample,terminal))
-			return True
-		except (IndexError,ValueError):
-			self._error = self._str_flow_error
-			if self.debug: raise Exception()  # noqa
-			return False
 
 	#  Group Operational ................
 
