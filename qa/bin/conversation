@@ -109,10 +109,10 @@ def dispatch (exabgp, daemon, groups, port):
 	names, alphabet, l2n, n2l, letters = make_short(groups)
 
 	class Color (object):
-		RED =   '\033[91m'
-		GREEN = '\033[92m'
-		BLUE =  '\033[94m'
-		END =   '\033[0m'
+		RED =   '\033[0m' + '\033[91m'
+		GREEN = '\033[1m' + '\033[92m'
+		BLUE =  '\033[0m' + '\033[94m'
+		END =   '\033[0m' + '\033[0m'
 
 	display('\n')
 	eol = False
@@ -150,7 +150,7 @@ def dispatch (exabgp, daemon, groups, port):
 							del names[name]
 							out,err = '',''
 							display('\r')
-							display(*[ color[l] + l + ' ' for l in letters])
+							display(*[ color[l] + l + Color.END + ' ' for l in letters])
 							display(Color.END)
 					except (IOError,OSError):
 						success = False

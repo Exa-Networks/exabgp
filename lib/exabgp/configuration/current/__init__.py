@@ -78,6 +78,7 @@ from exabgp.logger import Logger
 
 from exabgp.configuration.current.error import Error
 from exabgp.configuration.current.neighbor import ParseNeighbor
+from exabgp.configuration.current.family import ParseFamily
 from exabgp.configuration.current.route import ParseRoute
 
 # Duck class, faking part of the Attribute interface
@@ -194,23 +195,6 @@ class Configuration (object):
 		'   }\n' \
 		'}\n\n' \
 
-	_str_family_error = \
-		'syntax:\n' \
-		'family {\n' \
-		'   all;		  # default if not family block is present, announce all we know\n' \
-		'    minimal	  # use the AFI/SAFI required to announce the routes in the configuration\n' \
-		'    \n' \
-		'   ipv4 unicast;\n' \
-		'   ipv4 multicast;\n' \
-		'   ipv4 nlri-mpls;\n' \
-		'   ipv4 mpls-vpn;\n' \
-		'   ipv4 flow;\n' \
-		'   ipv4 flow-vpn;\n' \
-		'   ipv6 unicast;\n' \
-		'   ipv6 flow;\n' \
-		'   ipv6 flow-vpn;\n' \
-		'}\n'
-
 	_str_vpls_bad_size = "you tried to configure an invalid l2vpn vpls block-size"
 	_str_vpls_bad_offset = "you tried to configure an invalid l2vpn vpls block-offset"
 	_str_vpls_bad_label = "you tried to configure an invalid l2vpn vpls label"
@@ -226,6 +210,7 @@ class Configuration (object):
 
 		self.error = Error()
 		self.neighbor = ParseNeighbor(self.error)
+		self.family = ParseFamily(self.error)
 		self.route = ParseRoute(self.error)
 
 		self._dispatch_neighbor = {
@@ -244,6 +229,14 @@ class Configuration (object):
 			'group-updates': self.neighbor.groupupdate,
 			'adj-rib-out':   self.neighbor.adjribout,
 			'auto-flush':    self.neighbor.autoflush,
+		}
+
+		self._dispatch_family = {
+			'ipv4':    self.family.ipv4,
+			'ipv6':    self.family.ipv6,
+			'l2vpn':   self.family.l2vpn,
+			'minimal': self.family.minimal,
+			'all':     self.family.all,
 		}
 
 		self._dispatch_capability = {
@@ -358,8 +351,10 @@ class Configuration (object):
 		self._number = 1
 		self._flow_state = 'out'
 
-		self.neighbor.clear()
 		self.error.clear()
+		self.neighbor.clear()
+		self.family.clear()
+		self.route.clear()
 
 	# Public Interface
 
@@ -694,22 +689,8 @@ class Configuration (object):
 				return self._dispatch_neighbor[command](scope,command,tokens[1:])
 
 		elif name == 'family':
-			if command == 'inet':
-				return self._set_family_inet4(scope,tokens[1:])
-			if command == 'inet4':
-				return self._set_family_inet4(scope,tokens[1:])
-			if command == 'inet6':
-				return self._set_family_inet6(scope,tokens[1:])
-			if command == 'ipv4':
-				return self._set_family_ipv4(scope,tokens[1:])
-			if command == 'ipv6':
-				return self._set_family_ipv6(scope,tokens[1:])
-			if command == 'l2vpn':
-				return self._set_family_l2vpn(scope,tokens[1:])
-			if command == 'minimal':
-				return self._set_family_minimal(scope,tokens[1:])
-			if command == 'all':
-				return self._set_family_all(scope,tokens[1:])
+			if command in self._dispatch_family:
+				return self._dispatch_family[command](scope,tokens[1:])
 
 		elif name == 'capability':
 			if command in self._dispatch_capability:
@@ -929,118 +910,18 @@ class Configuration (object):
 
 	def _multi_family (self, scope, tokens):
 		# we know all the families we should use
-		self._family = False
 		scope[-1]['families'] = []
 		while True:
 			r = self._dispatch(
 				scope,'family',
 				[],
-				['inet','inet4','inet6','ipv4','ipv6','l2vpn','minimal','all']
+				self._dispatch_family.keys()
 			)
 			if r is False:
 				return False
 			if r is None:
 				break
-		self._family = False
-		return True
-
-	def _set_family_inet4 (self, scope, tokens):
-		self.logger.configuration("the word inet4 is deprecated, please use ipv4 instead",'error')
-		return self._set_family_ipv4 (scope,tokens)
-
-	def _set_family_ipv4 (self, scope, tokens):
-		if self._family:
-			self._error = 'ipv4 can not be used with all or minimal'
-			if self.debug: raise Exception()  # noqa
-			return False
-
-		try:
-			safi = tokens.pop(0)
-		except IndexError:
-			self._error = 'missing family safi'
-			if self.debug: raise Exception()  # noqa
-			return False
-
-		if safi == 'unicast':
-			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
-		elif safi == 'multicast':
-			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.multicast)))
-		elif safi == 'nlri-mpls':
-			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
-		elif safi == 'mpls-vpn':
-			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.mpls_vpn)))
-		elif safi in ('flow'):
-			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.flow_ip)))
-		elif safi == 'flow-vpn':
-			scope[-1]['families'].append((AFI(AFI.ipv4),SAFI(SAFI.flow_vpn)))
-		else:
-			return False
-		return True
-
-	def _set_family_inet6 (self, scope, tokens):
-		self.logger.configuration("the word inet6 is deprecated, please use ipv6 instead",'error')
-		return self._set_family_ipv6 (scope,tokens)
-
-	def _set_family_ipv6 (self, scope, tokens):
-		try:
-			if self._family:
-				self._error = 'ipv6 can not be used with all or minimal'
-				if self.debug: raise Exception()  # noqa
-				return False
-
-			safi = tokens.pop(0)
-			if safi == 'unicast':
-				scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
-			elif safi == 'mpls-vpn':
-				scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)))
-			elif safi in ('flow'):
-				scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.flow_ip)))
-			elif safi == 'flow-vpn':
-				scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.flow_vpn)))
-			else:
-				return False
-			return True
-		except (IndexError,ValueError):
-			self._error = 'missing safi'
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _set_family_l2vpn (self, scope, tokens):
-		try:
-			if self._family:
-				self._error = 'l2vpn can not be used with all or minimal'
-				if self.debug: raise Exception()  # noqa
-				return False
-
-			safi = tokens.pop(0)
-			if safi == 'vpls':
-				scope[-1]['families'].append((AFI(AFI.l2vpn),SAFI(SAFI.vpls)))
-			elif safi == 'evpn':
-				scope[-1]['families'].append((AFI(AFI.l2vpn),SAFI(SAFI.evpn)))
-			else:
-				return False
-			return True
-		except (IndexError,ValueError):
-			self._error = 'missing safi'
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _set_family_minimal (self, scope, tokens):
-		if scope[-1]['families']:
-			self._error = 'minimal can not be used with any other options'
-			if self.debug: raise Exception()  # noqa
-			return False
-		scope[-1]['families'] = 'minimal'
-		self._family = True
-		return True
-
-	def _set_family_all (self, scope, tokens):
-		if scope[-1]['families']:
-			self._error = 'all can not be used with any other options'
-			if self.debug: raise Exception()  # noqa
-			return False
-		scope[-1]['families'] = 'all'
-		self._family = True
+		self.family.clear()
 		return True
 
 	# capacity
