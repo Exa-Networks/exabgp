@@ -41,7 +41,7 @@ class TestControl (unittest.TestCase):
 			sys.stdout.flush()
 			configuration = Configuration([filename,])
 			configuration.reload()
-			self.assertEqual(check_neighbor(configuration.neighbor),True)
+			self.assertEqual(check_neighbor(configuration.neighbors),True)
 			del configuration
 
 if __name__ == '__main__':

@@ -134,7 +134,7 @@ class Reactor (object):
 				self.listener.listen(IP.create(self.ip),IP.create('0.0.0.0'),self.port,None)
 				self.logger.reactor("Listening for BGP session(s) on %s:%d" % (self.ip,self.port))
 
-			for neighbor in self.configuration.neighbor.values():
+			for neighbor in self.configuration.neighbors.values():
 				if neighbor.listen:
 					self.listener.listen(neighbor.local_address,neighbor.peer_address,neighbor.listen,neighbor.md5)
 					self.logger.reactor("Listening for BGP session(s) on %s:%d%s" % (neighbor.local_address,neighbor.listen,' with MD5' if neighbor.md5 else ''))
@@ -331,11 +331,11 @@ class Reactor (object):
 			return False
 
 		for key, peer in self.peers.items():
-			if key not in self.configuration.neighbor:
+			if key not in self.configuration.neighbors:
 				self.logger.reactor("Removing peer: %s" % peer.neighbor.name())
 				peer.stop()
 
-		for key, neighbor in self.configuration.neighbor.items():
+		for key, neighbor in self.configuration.neighbors.items():
 			# new peer
 			if key not in self.peers:
 				self.logger.reactor("New peer: %s" % neighbor.name())
@@ -389,14 +389,14 @@ class Reactor (object):
 	def route_send (self):
 		"""the process ran and we need to figure what routes to changes"""
 		self.logger.reactor("Performing dynamic route update")
-		for key in self.configuration.neighbor.keys():
+		for key in self.configuration.neighbors.keys():
 			self.peers[key].send_new()
 		self.logger.reactor("Updated peers dynamic routes successfully")
 
 	def route_flush (self):
 		"""we just want to flush any unflushed routes"""
 		self.logger.reactor("Performing route flush")
-		for key in self.configuration.neighbor.keys():
+		for key in self.configuration.neighbors.keys():
 			self.peers[key].send_new(update=True)
 
 	def restart (self):
@@ -405,8 +405,8 @@ class Reactor (object):
 		self.configuration.reload()
 
 		for key in self.peers.keys():
-			if key not in self.configuration.neighbor.keys():
-				neighbor = self.configuration.neighbor[key]
+			if key not in self.configuration.neighbors.keys():
+				neighbor = self.configuration.neighbors[key]
 				self.logger.reactor("Removing Peer %s" % neighbor.name())
 				self.peers[key].stop()
 			else:

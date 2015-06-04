@@ -101,7 +101,7 @@ class Processes (object):
 		self.clean()
 
 	def _start (self, process):
-		events = self.reactor.configuration.process[process]
+		events = self.reactor.configuration.processes[process]
 		for event,present in events.iteritems():
 			if event in ('run','encoder'):
 				continue
@@ -112,7 +112,7 @@ class Processes (object):
 			if process in self._process:
 				self.logger.processes("process already running")
 				return
-			if process not in self.reactor.configuration.process:
+			if process not in self.reactor.configuration.processes:
 				self.logger.processes("Can not start process, no configuration for it (anymore ?)")
 				return
 
@@ -120,9 +120,9 @@ class Processes (object):
 			# \x1b[?1034h (no-eol) (esc)
 			os.environ['TERM'] = 'dumb'
 
-			run = self.reactor.configuration.process[process].get('run','')
+			run = self.reactor.configuration.processes[process].get('run','')
 			if run:
-				api = self.reactor.configuration.process[process]['encoder']
+				api = self.reactor.configuration.processes[process]['encoder']
 				self._encoder[process] = Response.Text(text_version) if api == 'text' else Response.JSON(json_version,self.highres)
 
 				self._process[process] = subprocess.Popen(
@@ -155,7 +155,7 @@ class Processes (object):
 					# record respawing
 					self._respawning[process] = {around_now: 1}
 
-			neighbor = self.reactor.configuration.process[process]['neighbor']
+			neighbor = self.reactor.configuration.processes[process]['neighbor']
 			self._neighbor_process.setdefault(neighbor,[]).append(process)
 		except (subprocess.CalledProcessError,OSError,ValueError),exc:
 			self._broken.append(process)
@@ -163,12 +163,12 @@ class Processes (object):
 			self.logger.processes("reason: %s" % str(exc))
 
 	def start (self, restart=False):
-		for process in self.reactor.configuration.process:
+		for process in self.reactor.configuration.processes:
 			if restart:
 				self._terminate(process)
 			self._start(process)
 		for process in list(self._process):
-			if process not in self.reactor.configuration.process:
+			if process not in self.reactor.configuration.processes:
 				self._terminate(process)
 
 	def broken (self, neighbor):

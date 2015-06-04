@@ -96,13 +96,13 @@ class Text (Configuration):
 		if 'self' in command:
 			for peer,nexthop in peers.iteritems():
 				scope = [{}]
-				self._nexthopself = nexthop
+				self.route.nexthop(nexthop)
 				if not self._single_static_route(scope,tokens[1:]):
-					self._nexthopself = None
+					self.route.clear()
 					return False
 				for change in scope[0]['announce']:
 					changes.append((peer,change))
-			self._nexthopself = None
+			self.route.clear()
 		else:
 			scope = [{}]
 			if not self._single_static_route(scope,tokens[1:]):
@@ -115,6 +115,7 @@ class Text (Configuration):
 			for (peer,change) in changes:
 				change.nlri.action = OUT.WITHDRAW
 		return changes
+
 	def api_vpls (self, command, peers, action):
 		tokens = formated(command).split(' ')[1:]
 		if len(tokens) < 4:

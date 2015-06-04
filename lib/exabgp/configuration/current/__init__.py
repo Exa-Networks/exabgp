@@ -10,12 +10,10 @@ import os
 import sys
 import stat
 import time
-import string
 import socket
 import shlex
 
 from copy import deepcopy
-from struct import pack
 
 from exabgp.util.ip import isipv4
 
@@ -34,15 +32,11 @@ from exabgp.bgp.message import OUT
 from exabgp.bgp.message import Message
 
 from exabgp.bgp.message.open.asn import ASN
-from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 
 from exabgp.bgp.message.update.nlri import INET
 from exabgp.bgp.message.update.nlri import MPLS
 from exabgp.bgp.message.update.nlri import VPLS
-from exabgp.bgp.message.update.nlri.qualifier import Labels
-from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 # from exabgp.bgp.message.update.nlri import EVPN
 from exabgp.bgp.message.update.nlri.flow import BinaryOperator
 from exabgp.bgp.message.update.nlri.flow import NumericOperator
@@ -67,17 +61,7 @@ from exabgp.bgp.message.update.nlri.flow import FlowFlowLabel
 from exabgp.bgp.message.update.nlri.flow import NLRI
 
 from exabgp.bgp.message.update.attribute import Attribute
-from exabgp.bgp.message.update.attribute import Origin
-from exabgp.bgp.message.update.attribute import NextHop
-from exabgp.bgp.message.update.attribute import ASPath
-from exabgp.bgp.message.update.attribute import MED
-from exabgp.bgp.message.update.attribute import LocalPreference
-from exabgp.bgp.message.update.attribute import AtomicAggregate
-from exabgp.bgp.message.update.attribute import Aggregator
-
-from exabgp.bgp.message.update.attribute.community.community import Community
-from exabgp.bgp.message.update.attribute.community.communities import Communities
-from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunities
 from exabgp.bgp.message.update.attribute.community.extended import TrafficRate
 from exabgp.bgp.message.update.attribute.community.extended import TrafficAction
@@ -85,22 +69,16 @@ from exabgp.bgp.message.update.attribute.community.extended import TrafficRedire
 from exabgp.bgp.message.update.attribute.community.extended import TrafficMark
 from exabgp.bgp.message.update.attribute.community.extended import TrafficNextHop
 
-from exabgp.bgp.message.update.attribute import OriginatorID
-from exabgp.bgp.message.update.attribute import ClusterID
-from exabgp.bgp.message.update.attribute import ClusterList
-from exabgp.bgp.message.update.attribute import AIGP
-from exabgp.bgp.message.update.attribute import GenericAttribute
-
 from exabgp.bgp.message.operational import MAX_ADVISORY
 from exabgp.bgp.message.operational import Advisory
-
-from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.rib.change import Change
 
 from exabgp.logger import Logger
 
-from exabgp.version import json as json_version
+from exabgp.configuration.current.error import Error
+from exabgp.configuration.current.neighbor import ParseNeighbor
+from exabgp.configuration.current.route import ParseRoute
 
 # Duck class, faking part of the Attribute interface
 # We add this to routes when when need o split a route in smaller route
@@ -108,31 +86,17 @@ from exabgp.version import json as json_version
 # As this is not a real BGP attribute this stays in the configuration file
 
 
-class Split (int):
-	ID = Attribute.CODE.INTERNAL_SPLIT
-
-
-class Watchdog (str):
-	ID = Attribute.CODE.INTERNAL_WATCHDOG
-
-
-class Withdrawn (object):
-	ID = Attribute.CODE.INTERNAL_WITHDRAW
-
-
-class Name (str):
-	ID = Attribute.CODE.INTERNAL_NAME
-
-
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
 def pack_int (afi, integer, mask):
 	return ''.join([chr((integer >> (offset * 8)) & 0xff) for offset in range(IP.length(afi)-1,-1,-1)])
+
 
 def hostname ():
 	value = socket.gethostname()
 	if not value:
 		return 'localhost'
 	return value.split('.')[0]
+
 
 def domainname ():
 	value = socket.gethostname()
@@ -142,58 +106,7 @@ def domainname ():
 
 
 class Configuration (object):
-	TTL_SECURITY = 255
-
 	_str_bad_flow = "you tried to filter a flow using an invalid port for a component .."
-	_str_route_error = \
-		'community, extended-communities and as-path can take a single community as parameter.\n' \
-		'only next-hop is mandatory\n' \
-		'\n' \
-		'syntax:\n' \
-		'route 10.0.0.1/22 {\n' \
-		'   path-information 0.0.0.1;\n' \
-		'   route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535' \
-		'   next-hop 192.0.1.254;\n' \
-		'   origin IGP|EGP|INCOMPLETE;\n' \
-		'   as-path [ AS-SEQUENCE-ASN1 AS-SEQUENCE-ASN2 ( AS-SET-ASN3 )] ;\n' \
-		'   med 100;\n' \
-		'   local-preference 100;\n' \
-		'   atomic-aggregate;\n' \
-		'   community [ 65000 65001 65002 ];\n' \
-		'   extended-community [ target:1234:5.6.7.8 target:1.2.3.4:5678 origin:1234:5.6.7.8 origin:1.2.3.4:5678 0x0002FDE800000001 ]\n' \
-		'   originator-id 10.0.0.10;\n' \
-		'   cluster-list [ 10.10.0.1 10.10.0.2 ];\n' \
-		'   label [ 100 200 ];\n' \
-		'   aggregator ( 65000:10.0.0.10 )\n' \
-		'   aigp 100;\n' \
-		'   split /24\n' \
-		'   watchdog watchdog-name\n' \
-		'   withdraw\n' \
-		'}\n' \
-		'\n' \
-		'syntax:\n' \
-		'route 10.0.0.1/22' \
-		' path-information 0.0.0.1' \
-		' route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535' \
-		' next-hop 192.0.2.1' \
-		' origin IGP|EGP|INCOMPLETE' \
-		' as-path AS-SEQUENCE-ASN' \
-		' med 100' \
-		' local-preference 100' \
-		' atomic-aggregate' \
-		' community 65000' \
-		' extended-community target:1234:5.6.7.8' \
-		' originator-id 10.0.0.10' \
-		' cluster-list 10.10.0.1' \
-		' label 150' \
-		' aggregator ( 65000:10.0.0.10 )' \
-		' aigp 100' \
-		' split /24' \
-		' watchdog watchdog-name' \
-		' withdraw' \
-		' name what-you-want-to-remember-about-the-route' \
-		';\n'
-
 	_str_vpls_error = \
 		'syntax:\n' \
 		'vpls site_name {\n' \
@@ -298,59 +211,84 @@ class Configuration (object):
 		'   ipv6 flow-vpn;\n' \
 		'}\n'
 
-	_str_capa_error = \
-		'syntax:\n' \
-		'capability {\n' \
-		'   graceful-restart <time in second>;\n' \
-		'   asn4 enable|disable;\n' \
-		'   add-path disable|send|receive|send/receive;\n' \
-		'   multi-session enable|disable;\n' \
-		'   operational enable|disable;\n' \
-		'}\n'
-
 	_str_vpls_bad_size = "you tried to configure an invalid l2vpn vpls block-size"
 	_str_vpls_bad_offset = "you tried to configure an invalid l2vpn vpls block-offset"
 	_str_vpls_bad_label = "you tried to configure an invalid l2vpn vpls label"
 	_str_vpls_bad_enpoint = "you tried to configure an invalid l2vpn vpls endpoint"
 
 	def __init__ (self, configurations, text=False):
-		self.debug = environment.settings().debug.configuration
 		self.api_encoder = environment.settings().api.encoder
 		self.fifo = environment.settings().api.file
 
 		self.logger = Logger()
 		self._text = text
 		self._configurations = configurations
-		self._dispatch_route_cfg = {
-			'origin': self._route_origin,
-			'as-path': self._route_aspath,
-			# For legacy with version 2.0.x
-			'as-sequence': self._route_aspath,
-			'med': self._route_med,
-			'aigp': self._route_aigp,
-			'next-hop': self._route_next_hop,
-			'local-preference': self._route_local_preference,
-			'atomic-aggregate': self._route_atomic_aggregate,
-			'aggregator': self._route_aggregator,
-			'path-information': self._route_path_information,
-			'originator-id': self._route_originator_id,
-			'cluster-list': self._route_cluster_list,
-			'split': self._route_split,
-			'label': self._route_label,
-			'rd': self._route_rd,
-			'route-distinguisher': self._route_rd,
-			'watchdog': self._route_watchdog,
-			# withdrawn is here to not break legacy code
-			'withdraw': self._route_withdraw,
-			'withdrawn': self._route_withdraw,
-			'name': self._route_name,
-			'community': self._route_community,
-			'extended-community': self._route_extended_community,
-			'attribute': self._route_generic_attribute,
+
+		self.error = Error()
+		self.neighbor = ParseNeighbor(self.error)
+		self.route = ParseRoute(self.error)
+
+		self._dispatch_neighbor = {
+			'description':   self.neighbor.description,
+			'router-id':     self.neighbor.router_id,
+			'host-name':     self.neighbor.hostname,
+			'domain-name':   self.neighbor.domainname,
+			'local-address': self.neighbor.ip,
+			'local-as':      self.neighbor.asn,
+			'peer-as':       self.neighbor.asn,
+			'passive':       self.neighbor.passive,
+			'listen':        self.neighbor.listen,
+			'hold-time':     self.neighbor.holdtime,
+			'md5':           self.neighbor.md5,
+			'ttl-security':  self.neighbor.ttl,
+			'group-updates': self.neighbor.groupupdate,
+			'adj-rib-out':   self.neighbor.adjribout,
+			'auto-flush':    self.neighbor.autoflush,
 		}
-		self._dispatch_flow_cfg = {
-			'rd': self._route_rd,
-			'route-distinguisher': self._route_rd,
+
+		self._dispatch_capability = {
+			# deprecated
+			'route-refresh':    self.neighbor.capability.refresh,
+			'graceful-restart': self.neighbor.capability.gracefulrestart,
+			'multi-session':    self.neighbor.capability.multisession,
+			'add-path':         self.neighbor.capability.addpath,
+			'aigp':             self.neighbor.capability.aigp,
+			'operational':      self.neighbor.capability.operational,
+			'add-path':         self.neighbor.capability.addpath,
+			'asn4':             self.neighbor.capability.asn4,
+		}
+
+		self._dispatch_route = {
+			'origin':              self.route.origin,
+			'as-path':             self.route.aspath,
+			# For legacy with version 2.0.x
+			'as-sequence':         self.route.aspath,
+			'med':                 self.route.med,
+			'aigp':                self.route.aigp,
+			'next-hop':            self.route.next_hop,
+			'local-preference':    self.route.local_preference,
+			'atomic-aggregate':    self.route.atomic_aggregate,
+			'aggregator':          self.route.aggregator,
+			'path-information':    self.route.path_information,
+			'originator-id':       self.route.originator_id,
+			'cluster-list':        self.route.cluster_list,
+			'split':               self.route.split,
+			'label':               self.route.label,
+			'rd':                  self.route.rd,
+			'route-distinguisher': self.route.rd,
+			'watchdog':            self.route.watchdog,
+			# withdrawn is here to not break legacy code
+			'withdraw':            self.route.withdraw,
+			'withdrawn':           self.route.withdraw,
+			'name':                self.route.name,
+			'community':           self.route.community,
+			'extended-community':  self.route.extended_community,
+			'attribute':           self.route.generic_attribute,
+		}
+
+		self._dispatch_flow = {
+			'rd': self.route.rd,
+			'route-distinguisher': self.route.rd,
 			'next-hop': self._flow_route_next_hop,
 			'source': self._flow_source,
 			'source-ipv4': self._flow_source,
@@ -377,44 +315,51 @@ class Configuration (object):
 			'copy': self._flow_route_copy,
 			'mark': self._flow_route_mark,
 			'action': self._flow_route_action,
-			'community': self._route_community,
-			'extended-community': self._route_extended_community,
+			'community': self.route.community,
+			'extended-community': self.route.extended_community,
 		}
-		self._dispatch_vpls_cfg = {
+		self._dispatch_vpls = {
 			'endpoint': self._l2vpn_vpls_endpoint,
 			'offset': self._l2vpn_vpls_offset,
 			'size': self._l2vpn_vpls_size,
 			'base': self._l2vpn_vpls_base,
-			'origin': self._route_origin,
-			'as-path': self._route_aspath,
-			'med': self._route_med,
-			'next-hop': self._route_next_hop,
-			'local-preference': self._route_local_preference,
-			'originator-id': self._route_originator_id,
-			'cluster-list': self._route_cluster_list,
-			'rd': self._route_rd,
-			'route-distinguisher': self._route_rd,
-			'withdraw': self._route_withdraw,
-			'withdrawn': self._route_withdraw,
-			'name': self._route_name,
-			'community': self._route_community,
-			'extended-community': self._route_extended_community,
+			'origin': self.route.origin,
+			'as-path': self.route.aspath,
+			'med': self.route.med,
+			'next-hop': self.route.next_hop,
+			'local-preference': self.route.local_preference,
+			'originator-id': self.route.originator_id,
+			'cluster-list': self.route.cluster_list,
+			'rd': self.route.rd,
+			'route-distinguisher': self.route.rd,
+			'withdraw': self.route.withdraw,
+			'withdrawn': self.route.withdraw,
+			'name': self.route.name,
+			'community': self.route.community,
+			'extended-community': self.route.extended_community,
 		}
+
 		self._clear()
 
-	def _clear (self):
-		self.process = {}
-		self.neighbor = {}
-		self.error = ''
-
-		self._neighbor = {}
+		self.debug = True  # delete me
 		self._error = ''
+
+	def _clear (self):
+		self.processes = {}
+		self.neighbors = {}
+		self._neighbors = {}
+
+		self.error.clear()
+		self._error = ''  # delete me
+
 		self._scope = []
 		self._location = ['root']
 		self._line = []
 		self._number = 1
 		self._flow_state = 'out'
-		self._nexthopself = None
+
+		self.neighbor.clear()
+		self.error.clear()
 
 	# Public Interface
 
@@ -454,8 +399,8 @@ class Configuration (object):
 
 		# storing the routes associated with each peer so we can find what changed
 		backup_changes = {}
-		for neighbor in self._neighbor:
-			backup_changes[neighbor] = self._neighbor[neighbor].changes
+		for neighbor in self._neighbors:
+			backup_changes[neighbor] = self._neighbors[neighbor].changes
 
 		# clearing the current configuration to be able to re-parse it
 		self._clear()
@@ -477,24 +422,24 @@ class Configuration (object):
 			return False
 
 		# parsing was sucessful, assigning the result
-		self.neighbor = self._neighbor
+		self.neighbors = self._neighbors
 
 		# installing in the neighbor what was its previous routes so we can
 		# add/withdraw what need to be
-		for neighbor in self.neighbor:
-			self.neighbor[neighbor].backup_changes = backup_changes.get(neighbor,[])
+		for neighbor in self.neighbors:
+			self.neighbors[neighbor].backup_changes = backup_changes.get(neighbor,[])
 
 		# we are not really running the program, just want to ....
 		if environment.settings().debug.route:
 			from exabgp.configuration.check import check_message
-			if check_message(self.neighbor,environment.settings().debug.route):
+			if check_message(self.neighbors,environment.settings().debug.route):
 				sys.exit(0)
 			sys.exit(1)
 
 		# we are not really running the program, just want check the configuration validity
 		if environment.settings().debug.selfcheck:
 			from exabgp.configuration.check import check_neighbor
-			if check_neighbor(self.neighbor):
+			if check_neighbor(self.neighbors):
 				sys.exit(0)
 			sys.exit(1)
 
@@ -503,10 +448,10 @@ class Configuration (object):
 	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
 	def change_to_peers (self, change, peers):
 		result = True
-		for neighbor in self.neighbor:
+		for neighbor in self.neighbors:
 			if neighbor in peers:
-				if change.nlri.family() in self.neighbor[neighbor].families():
-					self.neighbor[neighbor].rib.outgoing.insert_announced(change)
+				if change.nlri.family() in self.neighbors[neighbor].families():
+					self.neighbors[neighbor].rib.outgoing.insert_announced(change)
 				else:
 					self.logger.configuration('the route family is not configured on neighbor','error')
 					result = False
@@ -515,21 +460,21 @@ class Configuration (object):
 	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
 	def eor_to_peers (self, family, peers):
 		result = False
-		for neighbor in self.neighbor:
+		for neighbor in self.neighbors:
 			if neighbor in peers:
 				result = True
-				self.neighbor[neighbor].eor.append(family)
+				self.neighbors[neighbor].eor.append(family)
 		return result
 
 	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
 	def operational_to_peers (self, operational, peers):
 		result = True
-		for neighbor in self.neighbor:
+		for neighbor in self.neighbors:
 			if neighbor in peers:
-				if operational.family() in self.neighbor[neighbor].families():
+				if operational.family() in self.neighbors[neighbor].families():
 					if operational.name == 'ASM':
-						self.neighbor[neighbor].asm[operational.family()] = operational
-					self.neighbor[neighbor].messages.append(operational)
+						self.neighbors[neighbor].asm[operational.family()] = operational
+					self.neighbors[neighbor].messages.append(operational)
 				else:
 					self.logger.configuration('the route family is not configured on neighbor','error')
 					result = False
@@ -538,11 +483,11 @@ class Configuration (object):
 	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
 	def refresh_to_peers (self, refresh, peers):
 		result = True
-		for neighbor in self.neighbor:
+		for neighbor in self.neighbors:
 			if neighbor in peers:
 				family = (refresh.afi,refresh.safi)
-				if family in self.neighbor[neighbor].families():
-					self.neighbor[neighbor].refresh.append(refresh.__class__(refresh.afi,refresh.safi))
+				if family in self.neighbors[neighbor].families():
+					self.neighbors[neighbor].refresh.append(refresh.__class__(refresh.afi,refresh.safi))
 				else:
 					result = False
 		return result
@@ -675,7 +620,7 @@ class Configuration (object):
 		if name == 'static':
 			if command == 'route':
 				if self._multi_static_route(scope,tokens[1:]):
-					return self._check_static_route(scope)
+					return self.route.check_static_route(scope)
 				return False
 
 		if name == 'flow':
@@ -716,76 +661,37 @@ class Configuration (object):
 			return False
 
 		elif name == 'route':
-			if command in self._dispatch_route_cfg:
+			if command in self._dispatch_route:
 				if command in ('rd','route-distinguisher'):
-					return self._dispatch_route_cfg[command](scope,tokens[1:],SAFI.mpls_vpn)
+					return self._dispatch_route[command](scope,tokens[1:],SAFI.mpls_vpn)
 				else:
-					return self._dispatch_route_cfg[command](scope,tokens[1:])
+					return self._dispatch_route[command](scope,tokens[1:])
 
 		elif name == 'l2vpn':
-			if command in self._dispatch_vpls_cfg:
+			if command in self._dispatch_vpls:
 				if command in ('rd','route-distinguisher'):
-					return self._dispatch_vpls_cfg[command](scope,tokens[1:],SAFI.vpls)
+					return self._dispatch_vpls[command](scope,tokens[1:],SAFI.vpls)
 				else:
-					return self._dispatch_vpls_cfg[command](scope,tokens[1:])
+					return self._dispatch_vpls[command](scope,tokens[1:])
 
 		elif name == 'flow-route':
-			if command in self._dispatch_flow_cfg:
+			if command in self._dispatch_flow:
 				if command in ('rd','route-distinguisher'):
-					return self._dispatch_flow_cfg[command](scope,tokens[1:],SAFI.flow_vpn)
+					return self._dispatch_flow[command](scope,tokens[1:],SAFI.flow_vpn)
 				else:
-					return self._dispatch_flow_cfg[command](scope,tokens[1:])
+					return self._dispatch_flow[command](scope,tokens[1:])
 
 		elif name == 'flow-match':
-			if command in self._dispatch_flow_cfg:
-					return self._dispatch_flow_cfg[command](scope,tokens[1:])
+			if command in self._dispatch_flow:
+				return self._dispatch_flow[command](scope,tokens[1:])
 
 		elif name == 'flow-then':
-			if command in self._dispatch_flow_cfg:
-					return self._dispatch_flow_cfg[command](scope,tokens[1:])
+			if command in self._dispatch_flow:
+				return self._dispatch_flow[command](scope,tokens[1:])
 
 		if name in ('neighbor','group'):
-			if command == 'description':
-				return self._set_description(scope,tokens[1:])
-			if command == 'router-id':
-				return self._set_router_id(scope,'router-id',tokens[1:])
-			if command == 'host-name':
-				return self._set_hostname(scope,'host-name',tokens[1:])
-			if command == 'domain-name':
-				return self._set_domainname(scope,'domain-name',tokens[1:])
-			if command == 'local-address':
-				return self._set_ip(scope,'local-address',tokens[1:])
-			if command == 'local-as':
-				return self._set_asn(scope,'local-as',tokens[1:])
-			if command == 'peer-as':
-				return self._set_asn(scope,'peer-as',tokens[1:])
-			if command == 'passive':
-				return self._set_passive(scope,'passive',tokens[1:])
-			if command == 'listen':
-				return self._set_listen(scope,'listen',tokens[1:])
-			if command == 'hold-time':
-				return self._set_holdtime(scope,'hold-time',tokens[1:])
-			if command == 'md5':
-				return self._set_md5(scope,'md5',tokens[1:])
-			if command == 'ttl-security':
-				return self._set_ttl(scope,'ttl-security',tokens[1:])
-			if command == 'group-updates':
-				return self._set_boolean(scope,'group-updates',tokens[1:],'true')
-			if command == 'aigp':
-				return self._set_boolean(scope,'aigp',tokens[1:],'false')
-			# deprecated
-			if command == 'route-refresh':
-				return self._set_boolean(scope,'route-refresh',tokens[1:])
-			if command == 'graceful-restart':
-				return self._set_gracefulrestart(scope,'graceful-restart',tokens[1:])
-			if command == 'multi-session':
-				return self._set_boolean(scope,'multi-session',tokens[1:])
-			if command == 'add-path':
-				return self._set_addpath(scope,'add-path',tokens[1:])
-			if command == 'auto-flush':
-				return self._set_boolean(scope,'auto-flush',tokens[1:])
-			if command == 'adj-rib-out':
-				return self._set_boolean(scope,'adj-rib-out',tokens[1:])
+			if command in self._dispatch_neighbor:
+				return self._dispatch_neighbor[command](scope,command,tokens[1:])
 
 		elif name == 'family':
 			if command == 'inet':
@@ -806,20 +712,8 @@ class Configuration (object):
 				return self._set_family_all(scope,tokens[1:])
 
 		elif name == 'capability':
-			if command == 'route-refresh':
-				return self._set_boolean(scope,'route-refresh',tokens[1:])
-			if command == 'graceful-restart':
-				return self._set_gracefulrestart(scope,'graceful-restart',tokens[1:])
-			if command == 'multi-session':
-				return self._set_boolean(scope,'multi-session',tokens[1:])
-			if command == 'operational':
-				return self._set_boolean(scope,'capa-operational',tokens[1:])
-			if command == 'add-path':
-				return self._set_addpath(scope,'add-path',tokens[1:])
-			if command == 'asn4':
-				return self._set_asn4(scope,'asn4',tokens[1:])
-			if command == 'aigp':
-				return self._set_boolean(scope,'aigp',tokens[1:],'false')
+			if command in self._dispatch_capability:
+				return self._dispatch_capability[command](scope,command,tokens[1:])
 
 		elif name == 'process':
 			if command == 'run':
@@ -910,19 +804,19 @@ class Configuration (object):
 				break
 
 		name = tokens[0] if len(tokens) >= 1 else 'conf-only-%s' % str(time.time())[-6:]
-		self.process.setdefault(name,{})['neighbor'] = scope[-1]['peer-address'] if 'peer-address' in scope[-1] else '*'
+		self.processes.setdefault(name,{})['neighbor'] = scope[-1]['peer-address'] if 'peer-address' in scope[-1] else '*'
 
 		for key in ['neighbor-changes',]:
-			self.process[name][key] = scope[-1].pop(key,False)
+			self.processes[name][key] = scope[-1].pop(key,False)
 
 		for direction in ['send','receive']:
 			for action in ['packets','parsed','consolidate']:
 				key = '%s-%s' % (direction,action)
-				self.process[name][key] = scope[-1].pop(key,False)
+				self.processes[name][key] = scope[-1].pop(key,False)
 
 			for message in Message.CODE.MESSAGES:
 				key = '%s-%d' % (direction,message)
-				self.process[name][key] = scope[-1].pop(key,False)
+				self.processes[name][key] = scope[-1].pop(key,False)
 
 		run = scope[-1].pop('process-run','')
 		if run:
@@ -930,8 +824,8 @@ class Configuration (object):
 				self._error = self._str_process_error
 				if self.debug: raise Exception()  # noqa
 				return False
-			self.process[name]['encoder'] = scope[-1].get('encoder','') or self.api_encoder
-			self.process[name]['run'] = run
+			self.processes[name]['encoder'] = scope[-1].get('encoder','') or self.api_encoder
+			self.processes[name]['run'] = run
 			return True
 		elif len(tokens):
 			self._error = self._str_process_error
@@ -1153,16 +1047,11 @@ class Configuration (object):
 
 	def _multi_capability (self, scope, tokens):
 		# we know all the families we should use
-		self._capability = False
 		while True:
 			r = self._dispatch(
 				scope,'capability',
 				[],
-				[
-					'route-refresh','graceful-restart',
-					'multi-session','operational',
-					'add-path','asn4','aigp'
-				]
+				self._dispatch_capability.keys()
 			)
 			if r is False:
 				return False
@@ -1170,125 +1059,7 @@ class Configuration (object):
 				break
 		return True
 
-	def _set_gracefulrestart (self, scope, command, value):
-		if not len(value):
-			scope[-1][command] = None
-			return True
-		try:
-			if value and value[0] in ('disable','disabled'):
-				return True
-			# README: Should it be a subclass of int ?
-			grace = int(value[0])
-			if grace < 0:
-				raise ValueError('graceful-restart can not be negative')
-			if grace >= pow(2,16):
-				raise ValueError('graceful-restart must be smaller than %d' % pow(2,16))
-			scope[-1][command] = grace
-			return True
-		except ValueError:
-			self._error = '"%s" is an invalid graceful-restart time' % ' '.join(value)
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _set_addpath (self, scope, command, value):
-		try:
-			ap = value[0].lower()
-			apv = 0
-			if ap.endswith('receive'):
-				apv += 1
-			if ap.startswith('send'):
-				apv += 2
-			if not apv and ap not in ('disable','disabled'):
-				raise ValueError('invalid add-path')
-			scope[-1][command] = apv
-			return True
-		except (ValueError,IndexError):
-			self._error = '"%s" is an invalid add-path' % ' '.join(value) + '\n' + self._str_capa_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _set_boolean (self, scope, command, value, default='true'):
-		try:
-			boolean = value[0].lower() if value else default
-			if boolean in ('true','enable','enabled'):
-				scope[-1][command] = True
-			elif boolean in ('false','disable','disabled'):
-				scope[-1][command] = False
-			elif boolean in ('unset',):
-				scope[-1][command] = None
-			else:
-				raise ValueError()
-			return True
-		except (ValueError,IndexError):
-			self._error = 'invalid %s command (valid options are true or false)' % command
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _set_asn4 (self, scope, command, value):
-		try:
-			if not value:
-				scope[-1][command] = True
-				return True
-			asn4 = value[0].lower()
-			if asn4 in ('disable','disabled'):
-				scope[-1][command] = False
-				return True
-			if asn4 in ('enable','enabled'):
-				scope[-1][command] = True
-				return True
-			self._error = '"%s" is an invalid asn4 parameter options are enable (default) and disable)' % ' '.join(value)
-			return False
-		except ValueError:
-			self._error = '"%s" is an invalid asn4 parameter options are enable (default) and disable)' % ' '.join(value)
-			if self.debug: raise Exception()  # noqa
-			return False
-
 	# route grouping with watchdog
-
-	def _route_watchdog (self, scope, tokens):
-		try:
-			w = tokens.pop(0)
-			if w.lower() in ['announce','withdraw']:
-				raise ValueError('invalid watchdog name %s' % w)
-		except IndexError:
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-		try:
-			scope[-1]['announce'][-1].attributes.add(Watchdog(w))
-			return True
-		except ValueError:
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _route_withdraw (self, scope, tokens):
-		try:
-			scope[-1]['announce'][-1].attributes.add(Withdrawn())
-			return True
-		except ValueError:
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	# Route name
-
-	def _route_name (self, scope, tokens):
-		try:
-			w = tokens.pop(0)
-		except IndexError:
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-		try:
-			scope[-1]['announce'][-1].attributes.add(Name(w))
-			return True
-		except ValueError:
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
 
 	# Group Neighbor
 
@@ -1302,13 +1073,7 @@ class Configuration (object):
 					'neighbor','process','family',
 					'capability','operational'
 				],
-				[
-					'description','router-id','local-address','local-as','peer-as',
-					'host-name', 'domain-name',
-					'passive','listen','hold-time','add-path','graceful-restart','md5',
-					'ttl-security','multi-session','group-updates',
-					'route-refresh','asn4','aigp','auto-flush','adj-rib-out'
-				]
+				self._dispatch_neighbor.keys()
 			)
 			if r is False:
 				return False
@@ -1324,18 +1089,6 @@ class Configuration (object):
 					scope[-1][key] = deepcopy(content)
 				elif key == 'announce':
 					scope[-1][key].extend(scope[-2][key])
-
-		# self.logger.configuration("\nPeer configuration complete :")
-		# for _key in scope[-1].keys():
-		# 	stored = scope[-1][_key]
-		# 	if hasattr(stored,'__iter__'):
-		# 		for category in scope[-1][_key]:
-		# 			for _line in pformat(str(category),3,3,3).split('\n'):
-		# 				self.logger.configuration("   %s: %s" %(_key,_line))
-		# 	else:
-		# 		for _line in pformat(str(stored),3,3,3).split('\n'):
-		# 			self.logger.configuration("   %s: %s" %(_key,_line))
-		# self.logger.configuration("\n")
 
 		neighbor = Neighbor()
 		for local_scope in scope:
@@ -1368,12 +1121,12 @@ class Configuration (object):
 			neighbor.domain_name = local_scope.get('domain-name',domainname())
 
 			neighbor.changes = local_scope.get('announce',[])
-			messages = local_scope.get('operational',[])
+			messages = local_scope.get('operational-message',[])
 
 		# we want to have a socket for the cli
 		if self.fifo:
 			_cli_name = 'CLI'
-			self.process[_cli_name] = {
+			self.processes[_cli_name] = {
 				'neighbor': '*',
 				'encoder': 'json',
 				'run': [sys.executable, sys.argv[0]],
@@ -1398,10 +1151,10 @@ class Configuration (object):
 					Message.CODE.ROUTE_REFRESH,
 					Message.CODE.OPERATIONAL
 				]:
-					self.process[_cli_name]['%s-%d' % (direction,message)] = False
+					self.processes[_cli_name]['%s-%d' % (direction,message)] = False
 
-		for name in self.process.keys():
-			process = self.process[name]
+		for name in self.processes.keys():
+			process = self.processes[name]
 
 			neighbor.api.set('neighbor-changes',process.get('neighbor-changes',False))
 
@@ -1459,7 +1212,7 @@ class Configuration (object):
 			self._error = 'local-address and peer-address must be of the same family'
 			if self.debug: raise Exception()  # noqa(self._error)
 			return False
-		if neighbor.peer_address.ip in self._neighbor:
+		if neighbor.peer_address.ip in self._neighbors:
 			self._error = 'duplicate peer definition %s' % neighbor.peer_address.ip
 			if self.debug: raise Exception()  # noqa(self._error)
 			return False
@@ -1513,7 +1266,7 @@ class Configuration (object):
 						neighbor.asm[message.family()] = message
 					else:
 						neighbor.messages.append(message)
-			self._neighbor[neighbor.name()] = neighbor
+			self._neighbors[neighbor.name()] = neighbor
 
 		# create one neighbor object per family for multisession
 		if neighbor.multisession and len(neighbor.families()) > 1:
@@ -1569,169 +1322,6 @@ class Configuration (object):
 				return False
 			if r is None:
 				return True
-
-	# Command Neighbor
-
-	def _set_router_id (self, scope, command, value):
-		try:
-			ip = RouterID(value[0])
-		except (IndexError,ValueError):
-			self._error = '"%s" is an invalid IP address' % ' '.join(value)
-			if self.debug: raise Exception()  # noqa
-			return False
-		scope[-1][command] = ip
-		return True
-
-	def _set_ip (self, scope, command, value):
-		try:
-			ip = IP.create(value[0])
-		except (IndexError,ValueError):
-			self._error = '"%s" is an invalid IP address' % ' '.join(value)
-			if self.debug: raise Exception()  # noqa
-			return False
-		scope[-1][command] = ip
-		return True
-
-	def _set_description (self, scope, tokens):
-		text = ' '.join(tokens)
-		if len(text) < 2 or text[0] != '"' or text[-1] != '"' or text[1:-1].count('"'):
-			self._error = 'syntax: description "<description>"'
-			if self.debug: raise Exception()  # noqa
-			return False
-		scope[-1]['description'] = text[1:-1]
-		return True
-
-	# will raise ValueError if the ASN is not correct
-	def _newASN (self, value):
-		if value.count('.'):
-			high,low = value.split('.',1)
-			as_number = (int(high) << 16) + int(low)
-		else:
-			as_number = int(value)
-		return ASN(as_number)
-
-	def _set_asn (self, scope, command, value):
-		try:
-			scope[-1][command] = self._newASN(value[0])
-			return True
-		except ValueError:
-			self._error = '"%s" is an invalid ASN' % ' '.join(value)
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _set_passive (self, scope, command, value):
-		if value:
-			self._error = '"%s" is an invalid for passive' % ' '.join(value)
-			if self.debug: raise Exception()  # noqa
-			return False
-
-		scope[-1][command] = True
-		return True
-
-	def _set_listen (self, scope, command, value):
-		try:
-			listen = int(value[0])
-			if listen < 0:
-				raise ValueError('the listenening port must positive')
-			if listen >= pow(2,16):
-				raise ValueError('the listening port must be smaller than %d' % pow(2,16))
-			scope[-1][command] = listen
-			return True
-		except ValueError:
-			self._error = '"%s" is an invalid port to listen on' % ' '.join(value)
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _set_hostname (self, scope, command, value):
-		try:
-			name = value[0]
-			if not name:
-				raise ValueError('bad host-name')
-			if not name[0].isalnum() or name[0].isdigit():
-				raise ValueError('bad host-name')
-			if not name[-1].isalnum() or name[-1].isdigit():
-				raise ValueError('bad host-name')
-			if '..' in name:
-				raise ValueError('bad host-name')
-			if not all(True if c in string.ascii_letters + string.digits + '.-' else False for c in name):
-				raise ValueError('bad host-name')
-			if len(name) > 255:
-				raise ValueError('bad host-name (length)')
-			scope[-1][command] = name.encode('utf-8')
-			return True
-		except ValueError:
-			self._error = '"%s" is an invalid host-name' % ' '.join(value)
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _set_domainname (self, scope, command, value):
-		try:
-			name = value[0]
-			if not name:
-				raise ValueError('bad domain-name')
-			if not name[0].isalnum() or name[0].isdigit():
-				raise ValueError('bad domain-name')
-			if not name[-1].isalnum() or name[-1].isdigit():
-				raise ValueError('bad domain-name')
-			if '..' in name:
-				raise ValueError('bad domain-name')
-			if not all(True if c in string.ascii_letters + string.digits + '.-' else False for c in name):
-				raise ValueError('bad domain-name')
-			if len(name) > 255:
-				raise ValueError('bad domain-name (length)')
-			scope[-1][command] = name.encode('utf-8')
-			return True
-		except ValueError:
-			self._error = '"%s" is an invalid domain-name' % ' '.join(value)
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _set_holdtime (self, scope, command, value):
-		try:
-			holdtime = HoldTime(value[0])
-			if holdtime < 3 and holdtime != 0:
-				raise ValueError('holdtime must be zero or at least three seconds')
-			if holdtime >= pow(2,16):
-				raise ValueError('holdtime must be smaller than %d' % pow(2,16))
-			scope[-1][command] = holdtime
-			return True
-		except ValueError:
-			self._error = '"%s" is an invalid hold-time' % ' '.join(value)
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _set_md5 (self, scope, command, value):
-		md5 = value[0]
-		if len(md5) > 2 and md5[0] == md5[-1] and md5[0] in ['"',"'"]:
-			md5 = md5[1:-1]
-		if len(md5) > 80:
-			self._error = 'md5 password must be no larger than 80 characters'
-			if self.debug: raise Exception()  # noqa
-			return False
-		if not md5:
-			self._error = 'md5 requires the md5 password as an argument (quoted or unquoted).  FreeBSD users should use "kernel" as the argument.'
-			if self.debug: raise Exception()  # noqa
-			return False
-		scope[-1][command] = md5
-		return True
-
-	def _set_ttl (self, scope, command, value):
-		if not len(value):
-			scope[-1][command] = self.TTL_SECURITY
-			return True
-		try:
-			# README: Should it be a subclass of int ?
-			ttl = int(value[0])
-			if ttl <= 0:
-				raise ValueError('ttl-security must be a positive number (1-254)')
-			if ttl >= 255:
-				raise ValueError('ttl must be smaller than 255 (1-254)')
-			scope[-1][command] = ttl
-			return True
-		except ValueError:
-			self._error = '"%s" is an invalid ttl-security (1-254)' % ' '.join(value)
-			if self.debug: raise Exception()  # noqa
-			return False
 
 	#  Group Static ................
 
@@ -1809,56 +1399,13 @@ class Configuration (object):
 
 		return True
 
-	def _insert_static_route (self, scope, tokens):
-		try:
-			ip = tokens.pop(0)
-		except IndexError:
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-		try:
-			ip,mask = ip.split('/')
-			mask = int(mask)
-		except ValueError:
-			mask = 32
-		try:
-			if 'rd' in tokens:
-				klass = MPLS
-			elif 'route-distinguisher' in tokens:
-				klass = MPLS
-			elif 'label' in tokens:
-				klass = MPLS
-			else:
-				klass = INET
-
-			# nexthop must be false and its str return nothing .. an empty string does that
-			update = Change(klass(afi=IP.toafi(ip),safi=IP.tosafi(ip),packed=IP.pton(ip),mask=mask,nexthop=None,action=OUT.ANNOUNCE),Attributes())
-		except ValueError:
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-		if 'announce' not in scope[-1]:
-			scope[-1]['announce'] = []
-
-		scope[-1]['announce'].append(update)
-		return True
-
-	def _check_static_route (self, scope):
-		update = scope[-1]['announce'][-1]
-		if update.nlri.nexthop is NoNextHop:
-			self._error = 'syntax: route <ip>/<mask> { next-hop <ip>; }'
-			if self.debug: raise Exception()  # noqa
-			return False
-		return True
-
 	def _multi_static_route (self, scope, tokens):
 		if len(tokens) != 1:
-			self._error = self._str_route_error
+			self._error = self.route.syntax
 			if self.debug: raise Exception()  # noqa
 			return False
 
-		if not self._insert_static_route(scope,tokens):
+		if not self.route.insert_static_route(scope,tokens):
 			return False
 
 		while True:
@@ -1882,32 +1429,32 @@ class Configuration (object):
 		if len(tokens) < 3:
 			return False
 
-		if not self._insert_static_route(scope,tokens):
+		if not self.route.insert_static_route(scope,tokens):
 			return False
 
 		while len(tokens):
 			command = tokens.pop(0)
 
 			if command in ('withdraw','withdrawn'):
-				if self._route_withdraw(scope,tokens):
+				if self.route.withdraw(scope,tokens):
 					continue
 				return False
 
 			if len(tokens) < 1:
 				return False
 
-			if command in self._dispatch_route_cfg:
+			if command in self._dispatch_route:
 				if command in ('rd','route-distinguisher'):
-					if self._dispatch_route_cfg[command](scope,tokens,SAFI.nlri_mpls):
+					if self._dispatch_route[command](scope,tokens,SAFI.nlri_mpls):
 						continue
 				else:
-					if self._dispatch_route_cfg[command](scope,tokens):
+					if self._dispatch_route[command](scope,tokens):
 						continue
 			else:
 				return False
 			return False
 
-		if not self._check_static_route(scope):
+		if not self.route.check_static_route(scope):
 			return False
 
 		return self._split_last_route(scope)
@@ -1924,12 +1471,12 @@ class Configuration (object):
 			command = tokens.pop(0)
 			if len(tokens) < 1:
 				return False
-			if command in self._dispatch_vpls_cfg:
+			if command in self._dispatch_vpls:
 				if command in ('rd','route-distinguisher'):
-					if self._dispatch_vpls_cfg[command](scope,tokens,SAFI.vpls):
+					if self._dispatch_vpls[command](scope,tokens,SAFI.vpls):
 						continue
 				else:
-					if self._dispatch_vpls_cfg[command](scope,tokens):
+					if self._dispatch_vpls[command](scope,tokens):
 						continue
 			else:
 				return False
@@ -1938,538 +1485,6 @@ class Configuration (object):
 		if not self._check_l2vpn_vpls(scope):
 			return False
 		return True
-
-	# Command Route
-
-	def _route_generic_attribute (self, scope, tokens):
-		try:
-			start = tokens.pop(0)
-			code = tokens.pop(0).lower()
-			flag = tokens.pop(0).lower()
-			data = tokens.pop(0).lower()
-			end = tokens.pop(0)
-
-			if (start,end) != ('[',']'):
-				self._error = self._str_route_error
-				if self.debug: raise Exception()  # noqa
-				return False
-
-			if not code.startswith('0x'):
-				self._error = self._str_route_error
-				if self.debug: raise Exception()  # noqa
-				return False
-			code = int(code[2:],16)
-
-			if not flag.startswith('0x'):
-				self._error = self._str_route_error
-				if self.debug: raise Exception()  # noqa
-				return False
-			flag = int(flag[2:],16)
-
-			if not data.startswith('0x'):
-				self._error = self._str_route_error
-				if self.debug: raise Exception()  # noqa
-				return False
-			raw = ''
-			for i in range(2,len(data),2):
-				raw += chr(int(data[i:i+2],16))
-
-			try:
-				for ((ID,_),klass) in Attribute.registered_attributes.iteritems():
-					if code == ID and flag == klass.FLAG:
-						scope[-1]['announce'][-1].attributes.add(klass.unpack(raw,None))
-						return True
-			except Exception:
-				pass
-
-			scope[-1]['announce'][-1].attributes.add(GenericAttribute(code,flag,raw))
-			return True
-		except (IndexError,ValueError):
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _route_next_hop (self, scope, tokens):
-		if scope[-1]['announce'][-1].attributes.has(Attribute.CODE.NEXT_HOP):
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-		try:
-			# next-hop self is unsupported
-			ip = tokens.pop(0)
-			if ip.lower() == 'self':
-				if 'local-address' in scope[-1]:
-					la = scope[-1]['local-address']
-				elif self._nexthopself:
-					la = self._nexthopself
-				else:
-					self._error = 'next-hop self can only be specified with a neighbor'
-					if self.debug: raise ValueError(self._error)  # noqa
-					return False
-				nh = IP.unpack(la.pack())
-			else:
-				nh = IP.create(ip)
-
-			change = scope[-1]['announce'][-1]
-			nlri = change.nlri
-			afi = nlri.afi
-			safi = nlri.safi
-
-			nlri.nexthop = nh
-
-			if afi == AFI.ipv4 and safi in (SAFI.unicast,SAFI.multicast):
-				change.attributes.add(Attribute.unpack(NextHop.ID,NextHop.FLAG,nh.packed,None))
-				# NextHop(nh.ip,nh.packed) does not cache the result, using unpack does
-				# change.attributes.add(NextHop(nh.ip,nh.packed))
-
-			return True
-		except Exception:
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _route_origin (self, scope, tokens):
-		try:
-			data = tokens.pop(0).lower()
-			if data == 'igp':
-				scope[-1]['announce'][-1].attributes.add(Origin(Origin.IGP))
-				return True
-			if data == 'egp':
-				scope[-1]['announce'][-1].attributes.add(Origin(Origin.EGP))
-				return True
-			if data == 'incomplete':
-				scope[-1]['announce'][-1].attributes.add(Origin(Origin.INCOMPLETE))
-				return True
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-		except IndexError:
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _route_aspath (self, scope, tokens):
-		as_seq = []
-		as_set = []
-		asn = tokens.pop(0)
-		inset = False
-		try:
-			if asn == '[':
-				while True:
-					try:
-						asn = tokens.pop(0)
-					except IndexError:
-						self._error = self._str_route_error
-						if self.debug: raise Exception()  # noqa
-						return False
-					if asn == ',':
-						continue
-					if asn in ('(','['):
-						inset = True
-						while True:
-							try:
-								asn = tokens.pop(0)
-							except IndexError:
-								self._error = self._str_route_error
-								if self.debug: raise Exception()  # noqa
-								return False
-							if asn == ')':
-								break
-							as_set.append(self._newASN(asn))
-					if asn == ')':
-						inset = False
-						continue
-					if asn == ']':
-						if inset:
-							inset = False
-							continue
-						break
-					as_seq.append(self._newASN(asn))
-			else:
-				as_seq.append(self._newASN(asn))
-		except (IndexError,ValueError):
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-		scope[-1]['announce'][-1].attributes.add(ASPath(as_seq,as_set))
-		return True
-
-	def _route_med (self, scope, tokens):
-		try:
-			scope[-1]['announce'][-1].attributes.add(MED(int(tokens.pop(0))))
-			return True
-		except (IndexError,ValueError):
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _route_aigp (self, scope, tokens):
-		try:
-			number = tokens.pop(0)
-			base = 16 if number.lower().startswith('0x') else 10
-			scope[-1]['announce'][-1].attributes.add(AIGP('\x01\x00\x0b' + pack('!Q',int(number,base))))
-			return True
-		except (IndexError,ValueError):
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _route_local_preference (self, scope, tokens):
-		try:
-			scope[-1]['announce'][-1].attributes.add(LocalPreference(int(tokens.pop(0))))
-			return True
-		except (IndexError,ValueError):
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _route_atomic_aggregate (self, scope, tokens):
-		try:
-			scope[-1]['announce'][-1].attributes.add(AtomicAggregate())
-			return True
-		except ValueError:
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _route_aggregator (self, scope, tokens):
-		try:
-			if tokens:
-				if tokens.pop(0) != '(':
-					raise ValueError('invalid aggregator syntax')
-				asn,address = tokens.pop(0).split(':')
-				if tokens.pop(0) != ')':
-					raise ValueError('invalid aggregator syntax')
-				local_as = ASN(asn)
-				local_address = RouterID(address)
-			else:
-				local_as = scope[-1]['local-as']
-				local_address = scope[-1]['local-address']
-		except (ValueError,IndexError):
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-		except KeyError:
-			self._error = 'local-as and/or local-address missing from neighbor/group to make aggregator'
-			if self.debug: raise Exception()  # noqa
-			return False
-		except ValueError:
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-		scope[-1]['announce'][-1].attributes.add(Aggregator(local_as,local_address))
-		return True
-
-	def _route_path_information (self, scope, tokens):
-		try:
-			pi = tokens.pop(0)
-			if pi.isdigit():
-				scope[-1]['announce'][-1].nlri.path_info = PathInfo(integer=int(pi))
-			else:
-				scope[-1]['announce'][-1].nlri.path_info = PathInfo(ip=pi)
-			return True
-		except ValueError:
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _parse_community (self, scope, data):
-		separator = data.find(':')
-		if separator > 0:
-			prefix = int(data[:separator])
-			suffix = int(data[separator+1:])
-			if prefix >= pow(2,16):
-				raise ValueError('invalid community %s (prefix too large)' % data)
-			if suffix >= pow(2,16):
-				raise ValueError('invalid community %s (suffix too large)' % data)
-			return Community.cached(pack('!L',(prefix << 16) + suffix))
-		elif len(data) >= 2 and data[1] in 'xX':
-			value = long(data,16)
-			if value >= pow(2,32):
-				raise ValueError('invalid community %s (too large)' % data)
-			return Community.cached(pack('!L',value))
-		else:
-			low = data.lower()
-			if low == 'no-export':
-				return Community.cached(Community.NO_EXPORT)
-			elif low == 'no-advertise':
-				return Community.cached(Community.NO_ADVERTISE)
-			elif low == 'no-export-subconfed':
-				return Community.cached(Community.NO_EXPORT_SUBCONFED)
-			# no-peer is not a correct syntax but I am sure someone will make the mistake :)
-			elif low == 'nopeer' or low == 'no-peer':
-				return Community.cached(Community.NO_PEER)
-			elif data.isdigit():
-				value = long(data)
-				if value >= pow(2,32):
-					raise ValueError('invalid community %s (too large)' % data)
-					# return Community.cached(pack('!L',value))
-				return Community.cached(pack('!L',value))
-			else:
-				raise ValueError('invalid community name %s' % data)
-
-	def _route_originator_id (self, scope, tokens):
-		try:
-			scope[-1]['announce'][-1].attributes.add(OriginatorID(tokens.pop(0)))
-			return True
-		except Exception:
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _route_cluster_list (self, scope, tokens):
-		_list = []
-		clusterid = tokens.pop(0)
-		try:
-			if clusterid == '[':
-				while True:
-					try:
-						clusterid = tokens.pop(0)
-					except IndexError:
-						self._error = self._str_route_error
-						if self.debug: raise Exception()  # noqa
-						return False
-					if clusterid == ']':
-						break
-					_list.append(ClusterID(clusterid))
-			else:
-				_list.append(ClusterID(clusterid))
-			if not _list:
-				raise ValueError('no cluster-id in the cluster-list')
-			clusterlist = ClusterList(_list)
-		except ValueError:
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-		scope[-1]['announce'][-1].attributes.add(clusterlist)
-		return True
-
-	def _route_community (self, scope, tokens):
-		communities = Communities()
-		community = tokens.pop(0)
-		try:
-			if community == '[':
-				while True:
-					try:
-						community = tokens.pop(0)
-					except IndexError:
-						self._error = self._str_route_error
-						if self.debug: raise Exception()  # noqa
-						return False
-					if community == ']':
-						break
-					communities.add(self._parse_community(scope,community))
-			else:
-				communities.add(self._parse_community(scope,community))
-		except ValueError:
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-		scope[-1]['announce'][-1].attributes.add(communities)
-		return True
-
-	def _parse_extended_community (self, scope, data):
-		SIZE_H = 0xFFFF
-
-		if data[:2].lower() == '0x':
-			try:
-				raw = ''
-				for i in range(2,len(data),2):
-					raw += chr(int(data[i:i+2],16))
-			except ValueError:
-				raise ValueError('invalid extended community %s' % data)
-			if len(raw) != 8:
-				raise ValueError('invalid extended community %s' % data)
-			return ExtendedCommunity.unpack(raw,None)
-		elif data.count(':'):
-			_known_community = {
-				# header and subheader
-				'target':   chr(0x00)+chr(0x02),
-				'target4':  chr(0x02)+chr(0x02),
-				'origin':   chr(0x00)+chr(0x03),
-				'origin4':  chr(0x02)+chr(0x03),
-				'redirect': chr(0x80)+chr(0x08),
-				'l2info':   chr(0x80)+chr(0x0A),
-			}
-
-			_size_community = {
-				'target':   2,
-				'target4':  2,
-				'origin':   2,
-				'origin4':  2,
-				'redirect': 2,
-				'l2info':   4,
-			}
-
-			components = data.split(':')
-			command = 'target' if len(components) == 2 else components.pop(0)
-
-			if command not in _known_community:
-				raise ValueError('invalid extended community %s (only origin,target or l2info are supported) ' % command)
-
-			if len(components) != _size_community[command]:
-				raise ValueError('invalid extended community %s, expecting %d fields ' % (command,len(components)))
-
-			header = _known_community[command]
-
-			if command == 'l2info':
-				# encaps, control, mtu, site
-				return ExtendedCommunity.unpack(header+pack('!BBHH',*[int(_) for _ in components]),None)
-
-			if command in ('target','origin'):
-				# global admin, local admin
-				_ga,_la = components
-				ga,la = _ga.upper(),_la.upper()
-
-				if '.' in ga or '.' in la:
-					gc = ga.count('.')
-					lc = la.count('.')
-					if gc == 0 and lc == 3:
-						# ASN first, IP second
-						return ExtendedCommunity.unpack(header+pack('!HBBBB',int(ga),*[int(_) for _ in la.split('.')]),None)
-					if gc == 3 and lc == 0:
-						# IP first, ASN second
-						return ExtendedCommunity.unpack(header+pack('!BBBBH',*[int(_) for _ in ga.split('.')]+[int(la)]),None)
-				else:
-					iga = int(ga[:-1]) if 'L' in ga else int(ga)
-					ila = int(la[:-1]) if 'L' in la else int(la)
-					if command == 'target':
-						if ga.endswith('L') or iga > SIZE_H:
-							return ExtendedCommunity.unpack(_known_community['target4']+pack('!LH',iga,ila),None)
-						else:
-							return ExtendedCommunity.unpack(header+pack('!HI',iga,ila),None)
-					if command == 'origin':
-						if ga.endswith('L') or iga > SIZE_H:
-							return ExtendedCommunity.unpack(_known_community['origin4']+pack('!LH',iga,ila),None)
-						else:
-							return ExtendedCommunity.unpack(header+pack('!HI',iga,ila),None)
-
-			if command == 'target4':
-				iga = int(ga[:-1]) if 'L' in ga else int(ga)
-				ila = int(la[:-1]) if 'L' in la else int(la)
-				return ExtendedCommunity.unpack(_known_community['target4']+pack('!LH',iga,ila),None)
-
-			if command == 'orgin4':
-				iga = int(ga[:-1]) if 'L' in ga else int(ga)
-				ila = int(la[:-1]) if 'L' in la else int(la)
-				return ExtendedCommunity.unpack(_known_community['origin4']+pack('!LH',iga,ila),None)
-
-			if command in ('redirect',):
-				ga,la = components
-				return ExtendedCommunity.unpack(header+pack('!HL',int(ga),long(la)),None)
-
-			raise ValueError('invalid extended community %s' % command)
-		else:
-			raise ValueError('invalid extended community %s - lc+gc' % data)
-
-	def _route_extended_community (self, scope, tokens):
-		attributes = scope[-1]['announce'][-1].attributes
-		if Attribute.CODE.EXTENDED_COMMUNITY in attributes:
-			extended_communities = attributes[Attribute.CODE.EXTENDED_COMMUNITY]
-		else:
-			extended_communities = ExtendedCommunities()
-			attributes.add(extended_communities)
-
-		extended_community = tokens.pop(0)
-		try:
-			if extended_community == '[':
-				while True:
-					try:
-						extended_community = tokens.pop(0)
-					except IndexError:
-						self._error = self._str_route_error
-						if self.debug: raise Exception()  # noqa
-						return False
-					if extended_community == ']':
-						break
-					extended_communities.add(self._parse_extended_community(scope,extended_community))
-			else:
-				extended_communities.add(self._parse_extended_community(scope,extended_community))
-		except ValueError:
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-		return True
-
-	def _route_split (self, scope, tokens):
-		try:
-			size = tokens.pop(0)
-			if not size or size[0] != '/':
-				raise ValueError('route "as" require a CIDR')
-			scope[-1]['announce'][-1].attributes.add(Split(int(size[1:])))
-			return True
-		except ValueError:
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _route_label (self, scope, tokens):
-		labels = []
-		label = tokens.pop(0)
-		try:
-			if label == '[':
-				while True:
-					try:
-						label = tokens.pop(0)
-					except IndexError:
-						self._error = self._str_route_error
-						if self.debug: raise Exception()  # noqa
-						return False
-					if label == ']':
-						break
-					labels.append(int(label))
-			else:
-				labels.append(int(label))
-		except ValueError:
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-		nlri = scope[-1]['announce'][-1].nlri
-		if not nlri.safi.has_label():
-			nlri.safi = SAFI(SAFI.nlri_mpls)
-		nlri.labels = Labels(labels)
-		return True
-
-	def _route_rd (self, scope, tokens, safi):
-		try:
-			try:
-				data = tokens.pop(0)
-			except IndexError:
-				self._error = self._str_route_error
-				if self.debug: raise Exception()  # noqa
-				return False
-
-			separator = data.find(':')
-			if separator > 0:
-				prefix = data[:separator]
-				suffix = int(data[separator+1:])
-
-			if '.' in prefix:
-				data = [chr(0),chr(1)]
-				data.extend([chr(int(_)) for _ in prefix.split('.')])
-				data.extend([chr(suffix >> 8),chr(suffix & 0xFF)])
-				rd = ''.join(data)
-			else:
-				number = int(prefix)
-				if number < pow(2,16) and suffix < pow(2,32):
-					rd = chr(0) + chr(0) + pack('!H',number) + pack('!L',suffix)
-				elif number < pow(2,32) and suffix < pow(2,16):
-					rd = chr(0) + chr(2) + pack('!L',number) + pack('!H',suffix)
-				else:
-					raise ValueError('invalid route-distinguisher %s' % data)
-
-			nlri = scope[-1]['announce'][-1].nlri
-			# overwrite nlri-mpls
-			nlri.safi = SAFI(safi)
-			nlri.rd = RouteDistinguisher(rd)
-			return True
-		except ValueError:
-			self._error = self._str_route_error
-			if self.debug: raise Exception()  # noqa
-			return False
 
 	# VPLS
 
@@ -2857,7 +1872,7 @@ class Configuration (object):
 							raise ValueError("Unknown binary operator %s" % test[0])
 			return True
 		except ValueError,exc:
-			self._error = self._str_route_error + str(exc)
+			self._error = self._str_flow_error + str(exc)
 			if self.debug: raise Exception()  # noqa
 			return False
 
@@ -2946,7 +1961,7 @@ class Configuration (object):
 			return True
 
 		except (IndexError,ValueError):
-			self._error = self._str_route_error
+			self._error = self._str_flow_error
 			if self.debug: raise Exception()  # noqa
 			return False
 
@@ -2959,7 +1974,7 @@ class Configuration (object):
 			scope[-1]['announce'][-1].attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficRate(ASN(0),0))
 			return True
 		except ValueError:
-			self._error = self._str_route_error
+			self._error = self._str_flow_error
 			if self.debug: raise Exception()  # noqa
 			return False
 
@@ -2975,7 +1990,7 @@ class Configuration (object):
 			scope[-1]['announce'][-1].attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficRate(ASN(0),speed))
 			return True
 		except ValueError:
-			self._error = self._str_route_error
+			self._error = self._str_flow_error
 			if self.debug: raise Exception()  # noqa
 			return False
 
@@ -3007,7 +2022,7 @@ class Configuration (object):
 				return True
 
 		except (IndexError,ValueError):
-			self._error = self._str_route_error
+			self._error = self._str_flow_error
 			if self.debug: raise Exception()  # noqa
 			return False
 
@@ -3024,7 +2039,7 @@ class Configuration (object):
 			return True
 
 		except (IndexError,ValueError):
-			self._error = self._str_route_error
+			self._error = self._str_flow_error
 			if self.debug: raise Exception()  # noqa
 			return False
 
@@ -3172,9 +2187,9 @@ class Configuration (object):
 		if 'routerid' not in data:
 			data['routerid'] = None
 
-		if 'operational' not in scope[-1]:
-			scope[-1]['operational'] = []
+		if 'operational-message' not in scope[-1]:
+			scope[-1]['operational-message'] = []
 
 		# iterate on each family for the peer if multiprotocol is set.
-		scope[-1]['operational'].append(klass(**data))
+		scope[-1]['operationa-messagel'].append(klass(**data))
 		return True

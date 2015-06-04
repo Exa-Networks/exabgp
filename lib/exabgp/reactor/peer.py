@@ -154,7 +154,8 @@ class Peer (object):
 			self.bind = True if environment.settings().tcp.bind else False
 		except RuntimeError:
 			self.logger = FakeLogger()
-			self.once = True
+			self.once = False
+			self.bind = True
 
 		self.reactor = reactor
 		self.neighbor = neighbor
