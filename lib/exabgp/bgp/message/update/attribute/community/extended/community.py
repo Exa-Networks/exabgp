@@ -8,6 +8,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.update.attribute import Attribute
 
+from struct import pack
+
 # ======================================================= ExtendedCommunity (16)
 # XXX: Should subclasses register with transitivity ?
 
@@ -59,11 +61,26 @@ class ExtendedCommunity (Attribute):
 		return not not (self.community[0] & 0x80)
 
 	def transitive (self):
-		return not not (self.community[0] & 0x40)
+		# bit set means "not transitive"
+		#RFC4360:
+		#        T - Transitive bit
+		#
+		#            Value 0: The community is transitive across ASes
+		#
+		#            Value 1: The community is non-transitive across ASes
+		return not (self.community[0] & 0x40)
 
 	def pack (self, negotiated=None):
 		return self.community
-
+	
+	def _packedTypeSubtype(self, transitive=True):
+		# if not transitive -> set the 'transitive' bit, as per RFC4360
+		return pack(
+			'!BB',
+			self.COMMUNITY_TYPE if transitive else self.COMMUNITY_TYPE | 0x40,
+			self.COMMUNITY_SUBTYPE
+		)
+	
 	def json (self):
 		h = 0x00
 		for byte in self.community:
@@ -87,6 +104,7 @@ class ExtendedCommunity (Attribute):
 	@staticmethod
 	def unpack (data, negotiated=None):
 		# 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0FFF
+		# FIXME: is the fix below consistent with the fact that RFC4360 encodes 'transitive" as 0, and non-transitive as 1 ?
 		community = (ord(data[0]) & 0x0F,ord(data[1]))
 		if community in ExtendedCommunity.registered_extended:
 			return ExtendedCommunity.registered_extended[community].unpack(data)
