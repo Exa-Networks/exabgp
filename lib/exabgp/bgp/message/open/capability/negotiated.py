@@ -125,10 +125,16 @@ class Negotiated (object):
 		if self.received_open.router_id == RouterID('0.0.0.0'):
 			return (2,3,'0.0.0.0 is an invalid router_id')
 
-		if self.received_open.asn == neighbor.local_as:
-			# router-id must be unique within an ASN
-			if self.received_open.router_id == neighbor.router_id:
-				return (2,3,'BGP Indendifier collision, same router-id (%s) on both side of this IBGP session' % self.received_open.router_id)
+# 		if self.received_open.asn == neighbor.local_as:
+# 			# router-id must be unique within an ASN
+# 			if self.received_open.router_id == neighbor.router_id:
+# 				return (2,3,'BGP Identifier collision, same router-id (%s) on both side of this IBGP session' % self.received_open.router_id)
+		# We can't enforce this check: it will fail if we try to setup
+		# a connection between two ExaBGPs. The reason is that we generate our
+		# own Open messages with neighbor.router_id, which cannot be at the
+		# same time our id and our neighbor's. I think Neighbor needs an
+		# additional field to store our neighbor's router-id to enable this
+		#check.  Commenting out for now.
 
 		if self.received_open.hold_time and self.received_open.hold_time < 3:
 			return (2,6,'Hold Time is invalid (%d)' % self.received_open.hold_time)
