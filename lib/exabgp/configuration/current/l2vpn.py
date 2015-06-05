@@ -6,54 +6,7 @@ Created by Thomas Mangin on 2015-06-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-# from struct import pack
-#
-# from exabgp.protocol.family import AFI
-# from exabgp.protocol.family import SAFI
-#
-# from exabgp.protocol.ip import IP
-# from exabgp.protocol.ip import NoNextHop
-#
-# from exabgp.bgp.message.open.asn import ASN
-# from exabgp.bgp.message.open.routerid import RouterID
-#
-# from exabgp.bgp.message.update.nlri import INET
-# from exabgp.bgp.message.update.nlri import MPLS
-#
-# from exabgp.bgp.message.update.nlri.qualifier import Labels
-# from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-# from exabgp.bgp.message.update.nlri.qualifier import PathInfo
-#
-# from exabgp.bgp.message.update.attribute import Attribute
-# from exabgp.bgp.message.update.attribute import Attributes
-#
-# from exabgp.bgp.message.update.attribute import Origin
-# from exabgp.bgp.message.update.attribute import NextHop
-# from exabgp.bgp.message.update.attribute import ASPath
-# from exabgp.bgp.message.update.attribute import MED
-# from exabgp.bgp.message.update.attribute import LocalPreference
-# from exabgp.bgp.message.update.attribute import AtomicAggregate
-# from exabgp.bgp.message.update.attribute import Aggregator
-#
-# from exabgp.bgp.message.update.attribute.community.community import Community
-# from exabgp.bgp.message.update.attribute.community.communities import Communities
-# from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
-# from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunities
-#
-# from exabgp.bgp.message.update.attribute import OriginatorID
-# from exabgp.bgp.message.update.attribute import ClusterID
-# from exabgp.bgp.message.update.attribute import ClusterList
-# from exabgp.bgp.message.update.attribute import AIGP
-# from exabgp.bgp.message.update.attribute import GenericAttribute
-#
-# from exabgp.bgp.message import OUT
-# from exabgp.rib.change import Change
-#
 from exabgp.configuration.current.basic import Basic
-# from exabgp.configuration.current.basic import Split
-# from exabgp.configuration.current.basic import Withdrawn
-# from exabgp.configuration.current.basic import Watchdog
-# from exabgp.configuration.current.basic import Name
 
 
 class ParseL2VPN (Basic):

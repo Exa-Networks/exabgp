@@ -11,6 +11,11 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute import Attribute
 
 
+# Duck class, faking part of the Attribute interface
+# We add this to routes when when need o split a route in smaller route
+# The value stored is the longer netmask we want to use
+# As this is not a real BGP attribute this stays in the configuration file
+
 class Split (int):
 	ID = Attribute.CODE.INTERNAL_SPLIT
 

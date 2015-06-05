@@ -6,12 +6,9 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-import os
 import sys
-import stat
 import time
 import socket
-import shlex
 
 from copy import deepcopy
 
@@ -56,11 +53,7 @@ from exabgp.configuration.current.family import ParseFamily
 from exabgp.configuration.current.route import ParseRoute
 from exabgp.configuration.current.flow import ParseFlow
 from exabgp.configuration.current.l2vpn import ParseL2VPN
-
-# Duck class, faking part of the Attribute interface
-# We add this to routes when when need o split a route in smaller route
-# The value stored is the longer netmask we want to use
-# As this is not a real BGP attribute this stays in the configuration file
+from exabgp.configuration.current.process import ParseProcess
 
 
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
@@ -83,37 +76,6 @@ def domainname ():
 
 
 class Configuration (object):
-
-	_str_process_error = \
-		'syntax:\n' \
-		'process name-of-process {\n' \
-		'   run /path/to/command with its args;\n' \
-		'   encoder text|json;\n' \
-		'   neighbor-changes;\n' \
-		'   send {\n' \
-		'      parsed;\n' \
-		'      packets;\n' \
-		'      consolidate;\n' \
-		'      open;\n' \
-		'      update;\n' \
-		'      notification;\n' \
-		'      keepalive;\n' \
-		'      refresh;\n' \
-		'      operational;\n' \
-		'   }\n' \
-		'   receive {\n' \
-		'      parsed;\n' \
-		'      packets;\n' \
-		'      consolidate;\n' \
-		'      open;\n' \
-		'      update;\n' \
-		'      notification;\n' \
-		'      keepalive;\n' \
-		'      refresh;\n' \
-		'      operational;\n' \
-		'   }\n' \
-		'}\n\n' \
-
 	def __init__ (self, configurations, text=False):
 		self.api_encoder = environment.settings().api.encoder
 		self.fifo = environment.settings().api.file
@@ -128,6 +90,7 @@ class Configuration (object):
 		self.route = ParseRoute(self.error)
 		self.flow = ParseFlow(self.error,self.logger)
 		self.l2vpn = ParseL2VPN(self.error)
+		self.process = ParseProcess(self.error)
 
 		self._dispatch_neighbor = {
 			'description':   self.neighbor.description,
@@ -251,16 +214,12 @@ class Configuration (object):
 
 		self._clear()
 
-		self.debug = True  # delete me
-		self._error = ''
-
 	def _clear (self):
 		self.processes = {}
 		self.neighbors = {}
 		self._neighbors = {}
 
 		self.error.clear()
-		self._error = ''  # delete me
 
 		self._scope = []
 		self._location = ['root']
@@ -272,6 +231,8 @@ class Configuration (object):
 		self.family.clear()
 		self.route.clear()
 		self.flow.clear()
+		self.l2vpn.clear()
+		self.process.clear()
 
 	# Public Interface
 
@@ -279,35 +240,31 @@ class Configuration (object):
 		try:
 			return self._reload()
 		except KeyboardInterrupt:
-			self.error = 'configuration reload aborted by ^C or SIGINT'
-			if self.debug: raise  # noqa
-			return False
+			return self.error.set('configuration reload aborted by ^C or SIGINT')
 		except Exception:
-			self.error = 'configuration parsing issue'
-			if self.debug: raise  # noqa
-			return False
+			# unhandled configuration parsing issue
+			raise
 
 	def _reload (self):
 		# taking the first configuration available (FIFO buffer)
-		self._fname = self._configurations.pop(0)
-		self._configurations.append(self._fname)
+		fname = self._configurations.pop(0)
+		self.process.configuration(fname)
+		self._configurations.append(fname)
 
 		# creating the tokeniser for the configuration
 		if self._text:
-			self._tokens = self._tokenise(self._fname.split('\n'))
+			self._tokens = self._tokenise(fname.split('\n'))
 		else:
 			try:
-				f = open(self._fname,'r')
+				f = open(fname,'r')
 				self._tokens = self._tokenise(f)
 				f.close()
 			except IOError,exc:
 				error = str(exc)
 				if error.count(']'):
-					self.error = error.split(']')[1].strip()
+					return self.error.set(error.split(']')[1].strip())
 				else:
-					self.error = error
-				if self.debug: raise Exception()  # noqa
-				return False
+					return self.error.set(error)
 
 		# storing the routes associated with each peer so we can find what changed
 		backup_changes = {}
@@ -330,8 +287,7 @@ class Configuration (object):
 
 		# handling possible parsing errors
 		if r not in [True,None]:
-			self.error = "\nsyntax error in section %s\nline %d: %s\n\n%s" % (self._location[-1],self.number(),self.line(),self._error)
-			return False
+			return self.error.set("\nsyntax error in section %s\nline %d: %s\n\n%s" % (self._location[-1],self.number(),self.line(),self.error))
 
 		# parsing was sucessful, assigning the result
 		self.neighbors = self._neighbors
@@ -454,9 +410,7 @@ class Configuration (object):
 		try:
 			tokens = self.tokens()
 		except IndexError:
-			self._error = 'configuration file incomplete (most likely missing })'
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set('configuration file incomplete (most likely missing })')
 		self.logger.configuration("parsing | %-13s | '%s'" % (name,"' '".join(tokens)))
 		end = tokens[-1]
 		if multi and end == '{':
@@ -466,9 +420,7 @@ class Configuration (object):
 			return self._single_line(scope,name,tokens[:-1],single)
 		if end == '}':
 			if len(self._location) == 1:
-				self._error = 'closing too many parenthesis'
-				if self.debug: raise Exception()  # noqa
-				return False
+				return self.error.set('closing too many parenthesis')
 			self._location.pop(-1)
 			return None
 		return False
@@ -477,9 +429,7 @@ class Configuration (object):
 		command = tokens[0]
 
 		if valid and command not in valid:
-			self._error = 'option %s in not valid here' % command
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set('option %s in not valid here' % command)
 
 		if name == 'configuration':
 			if command == 'neighbor':
@@ -488,9 +438,7 @@ class Configuration (object):
 				return False
 			if command == 'group':
 				if len(tokens) != 2:
-					self._error = 'syntax: group <name> { <options> }'
-					if self.debug: raise Exception()  # noqa
-					return False
+					return self.error.set('syntax: group <name> { <options> }')
 				return self._multi_group(scope,tokens[1])
 
 		if name == 'group':
@@ -568,9 +516,7 @@ class Configuration (object):
 	def _single_line (self, scope, name, tokens, valid):
 		command = tokens[0]
 		if valid and command not in valid:
-			self._error = 'invalid keyword "%s"' % command
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set('invalid keyword "%s"' % command)
 
 		elif name == 'route':
 			if command in self._dispatch_route:
@@ -615,59 +561,21 @@ class Configuration (object):
 
 		elif name == 'process':
 			if command == 'run':
-				return self._set_process_run(scope,'process-run',tokens[1:])
+				return self.process.run(scope,'process-run',tokens[1:])
 			if command == 'encoder':
-				return self._set_process_encoder(scope,'encoder',tokens[1:])
-
-			# legacy ...
-
-			if command == 'parse-routes':
-				self._set_process_command(scope,'receive-parsed',tokens[1:])
-				self._set_process_command(scope,'neighbor-changes',tokens[1:])
-				self._set_process_command(scope,'receive-updates',tokens[1:])
-				return True
-
-			if command == 'peer-updates':
-				self._set_process_command(scope,'receive-parsed',tokens[1:])
-				self._set_process_command(scope,'neighbor-changes',tokens[1:])
-				self._set_process_command(scope,'receive-updates',tokens[1:])
-				return True
-
-			if command == 'send-packets':
-				return self._set_process_command(scope,'send-packets',tokens[1:])
+				return self.process.encoder(scope,'encoder',tokens[1:])
 
 			if command == 'neighbor-changes':
-				return self._set_process_command(scope,'neighbor-changes',tokens[1:])
-
-			if command == 'receive-packets':
-				return self._set_process_command(scope,'receive-packets',tokens[1:])
-
-			if command == 'receive-parsed':
-				return self._set_process_command(scope,'receive-parsed',tokens[1:])
-
-			if command == 'receive-routes':
-				self._set_process_command(scope,'receive-parsed',tokens[1:])
-				self._set_process_command(scope,'receive-updates',tokens[1:])
-				self._set_process_command(scope,'receive-refresh',tokens[1:])
-				return True
-
-			if command == 'receive-operational':
-				self._set_process_command(scope,'receive-parsed',tokens[1:])
-				self._set_process_command(scope,'receive-operational',tokens[1:])
-				return True
+				return self.process.command(scope,'neighbor-changes',tokens[1:])
 
 		elif name in ['send','receive']:  # process / send
 
 			if command in ['packets','parsed','consolidate']:
-				return self._set_process_command(scope,'%s-%s' % (name,command),tokens[1:])
+				return self.process.command(scope,'%s-%s' % (name,command),tokens[1:])
 
 			for message in Message.CODE.MESSAGES:
 				if command == message.SHORT:
-					return self._set_process_command(scope,'%s-%d' % (name,message),tokens[1:])
-
-			# Legacy
-			if command == 'neighbor-changes':
-				return self._set_process_command(scope,'neighbor-changes',tokens[1:])
+					return self.process.command(scope,'%s-%d' % (name,message),tokens[1:])
 
 		elif name == 'static':
 			if command == 'route':
@@ -719,109 +627,13 @@ class Configuration (object):
 		run = scope[-1].pop('process-run','')
 		if run:
 			if len(tokens) != 1:
-				self._error = self._str_process_error
-				if self.debug: raise Exception()  # noqa
-				return False
+				return self.error.set(self._str_process_error)
+
 			self.processes[name]['encoder'] = scope[-1].get('encoder','') or self.api_encoder
 			self.processes[name]['run'] = run
 			return True
 		elif len(tokens):
-			self._error = self._str_process_error
-			if self.debug: raise Exception()  # noqa
-			return False
-
-	def _set_process_command (self, scope, command, value):
-		scope[-1][command] = True
-		return True
-
-	def _set_process_encoder (self, scope, command, value):
-		if value and value[0] in ('text','json'):
-			scope[-1][command] = value[0]
-			return True
-
-		self._error = self._str_process_error
-		if self.debug: raise Exception()  # noqa
-		return False
-
-	def _set_process_run (self, scope, command, value):
-		line = ' '.join(value).strip()
-		if len(line) > 2 and line[0] == line[-1] and line[0] in ['"',"'"]:
-			line = line[1:-1]
-		if ' ' in line:
-			args = shlex.split(line,' ')
-			prg,args = args[0],args[1:]
-		else:
-			prg = line
-			args = ''
-
-		if not prg:
-			self._error = 'prg requires the program to prg as an argument (quoted or unquoted)'
-			if self.debug: raise Exception()  # noqa
-			return False
-
-		if prg[0] != '/':
-			if prg.startswith('etc/exabgp'):
-				parts = prg.split('/')
-
-				env = os.environ.get('ETC','')
-				if env:
-					options = [
-						os.path.join(env.rstrip('/'),*os.path.join(parts[2:])),
-						'/etc/exabgp'
-					]
-				else:
-					options = []
-					options.append('/etc/exabgp')
-					pwd = os.environ.get('PWD','').split('/')
-					if pwd:
-						# without abspath the path is not / prefixed !
-						if pwd[-1] in ('etc','sbin'):
-							options.append(os.path.abspath(os.path.join(os.path.join(*pwd[:-1]),os.path.join(*parts))))
-						if 'etc' not in pwd:
-							options.append(os.path.abspath(os.path.join(os.path.join(*pwd),os.path.join(*parts))))
-			else:
-				options = [
-					os.path.abspath(os.path.join(os.path.dirname(self._fname),prg)),
-					'/etc/exabgp'
-				]
-			for option in options:
-				if os.path.exists(option):
-					prg = option
-
-		if not os.path.exists(prg):
-			self._error = 'can not locate the the program "%s"' % prg
-			if self.debug: raise Exception()  # noqa
-			return False
-
-		# race conditions are possible, those are sanity checks not security ones ...
-		s = os.stat(prg)
-
-		if stat.S_ISDIR(s.st_mode):
-			self._error = 'can not execute directories "%s"' % prg
-			if self.debug: raise Exception()  # noqa
-			return False
-
-		if s.st_mode & stat.S_ISUID:
-			self._error = 'refusing to run setuid programs "%s"' % prg
-			if self.debug: raise Exception()  # noqa
-			return False
-
-		check = stat.S_IXOTH
-		if s.st_uid == os.getuid():
-			check |= stat.S_IXUSR
-		if s.st_gid == os.getgid():
-			check |= stat.S_IXGRP
-
-		if not check & s.st_mode:
-			self._error = 'exabgp will not be able to run this program "%s"' % prg
-			if self.debug: raise Exception()  # noqa
-			return False
-
-		if args:
-			scope[-1][command] = [prg] + args
-		else:
-			scope[-1][command] = [prg,]
-		return True
+			return self.error.set(self._str_process_error)
 
 	# Limit the AFI/SAFI pair announced to peers
 
@@ -994,26 +806,20 @@ class Configuration (object):
 		neighbor.aigp = local_scope.get('aigp',None)
 
 		if neighbor.route_refresh and not neighbor.adjribout:
-			self._error = 'incomplete option route-refresh and no adj-rib-out'
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set('incomplete option route-refresh and no adj-rib-out')
 
 		# XXX: check that if we have any message, we have parsed/packets
 		# XXX: and vice-versa
 
 		missing = neighbor.missing()
 		if missing:
-			self._error = 'incomplete neighbor, missing %s' % missing
-			if self.debug: raise Exception()  # noqa(self._error)
-			return False
+			return self.error.set('incomplete neighbor, missing %s' % missing)
+
 		if neighbor.local_address.afi != neighbor.peer_address.afi:
-			self._error = 'local-address and peer-address must be of the same family'
-			if self.debug: raise Exception()  # noqa(self._error)
-			return False
+			return self.error.set('local-address and peer-address must be of the same family')
+
 		if neighbor.peer_address.ip in self._neighbors:
-			self._error = 'duplicate peer definition %s' % neighbor.peer_address.ip
-			if self.debug: raise Exception()  # noqa(self._error)
-			return False
+			return self.error.set('duplicate peer definition %s' % neighbor.peer_address.ip)
 
 		openfamilies = local_scope.get('families','everything')
 		# announce every family we known
@@ -1038,9 +844,7 @@ class Configuration (object):
 		for family in neighbor.families():
 			if family not in families:
 				afi,safi = family
-				self._error = 'Trying to announce a route of type %s,%s when we are not announcing the family to our peer' % (afi,safi)
-				if self.debug: raise Exception()  # noqa
-				return False
+				return self.error.set('Trying to announce a route of type %s,%s when we are not announcing the family to our peer' % (afi,safi))
 
 		# add the families to the list of families known
 		initial_families = list(neighbor.families())
@@ -1089,18 +893,15 @@ class Configuration (object):
 
 	def _multi_neighbor (self, scope, tokens):
 		if len(tokens) != 1:
-			self._error = 'syntax: neighbor <ip> { <options> }'
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set('syntax: neighbor <ip> { <options> }')
 
 		address = tokens[0]
 		scope.append({})
 		try:
 			scope[-1]['peer-address'] = IP.create(address)
 		except (IndexError,ValueError,socket.error):
-			self._error = '"%s" is not a valid IP address' % address
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set('"%s" is not a valid IP address' % address)
+
 		while True:
 			r = self._dispatch(
 				scope,'neighbor',
@@ -1125,9 +926,8 @@ class Configuration (object):
 
 	def _multi_static (self, scope, tokens):
 		if len(tokens) != 0:
-			self._error = 'syntax: static { route; route; ... }'
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set('syntax: static { route; route; ... }')
+
 		while True:
 			r = self._dispatch(
 				scope,'static',
@@ -1199,9 +999,7 @@ class Configuration (object):
 
 	def _multi_static_route (self, scope, tokens):
 		if len(tokens) != 1:
-			self._error = self.route.syntax
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set(self.route.syntax)
 
 		if not self.route.insert_static_route(scope,tokens):
 			return False
@@ -1288,9 +1086,8 @@ class Configuration (object):
 
 	def _multi_l2vpn (self, scope, tokens):
 		if len(tokens) != 0:
-			self._error = self._str_vpls_error
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set(self.l2vpn.syntax)
+
 		while True:
 			r = self._dispatch(
 				scope,'l2vpn',
@@ -1308,9 +1105,7 @@ class Configuration (object):
 			attributes = Attributes()
 			change = Change(VPLS(None,None,None,None,None),attributes)
 		except ValueError:
-			self._error = self._str_vpls_error
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set(self.l2vpn.syntax)
 
 		if 'announce' not in scope[-1]:
 			scope[-1]['announce'] = []
@@ -1320,9 +1115,7 @@ class Configuration (object):
 
 	def _multi_l2vpn_vpls (self, scope, tokens):
 		if len(tokens) > 1:
-			self._error = self._str_vpls_error
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set(self.l2vpn.syntax)
 
 		if not self._insert_l2vpn_vpls(scope):
 			return False
@@ -1350,9 +1143,7 @@ class Configuration (object):
 
 	def _multi_flow (self, scope, tokens):
 		if len(tokens) != 0:
-			self._error = self.flow.syntax
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set(self.flow.syntax)
 
 		while True:
 			r = self._dispatch(
@@ -1368,9 +1159,7 @@ class Configuration (object):
 
 	def _insert_flow_route (self, scope, tokens=None):
 		if self.flow.state != 'out':
-			self._error = self.flow.syntax
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set(self.flow.syntax)
 
 		self.flow.state = 'match'
 
@@ -1379,9 +1168,7 @@ class Configuration (object):
 			attributes[Attribute.CODE.EXTENDED_COMMUNITY] = ExtendedCommunities()
 			flow = Change(Flow(),attributes)
 		except ValueError:
-			self._error = self.flow.syntax
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set(self.flow.syntax)
 
 		if 'announce' not in scope[-1]:
 			scope[-1]['announce'] = []
@@ -1415,9 +1202,7 @@ class Configuration (object):
 
 	def _multi_flow_route (self, scope, tokens):
 		if len(tokens) > 1:
-			self._error = self.flow.syntax
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set(self.flow.syntax)
 
 		if not self._insert_flow_route(scope):
 			return False
@@ -1434,9 +1219,7 @@ class Configuration (object):
 				break
 
 		if self.flow.state != 'out':
-			self._error = self.flow.syntax
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set(self.flow.syntax)
 
 		return True
 
@@ -1444,14 +1227,10 @@ class Configuration (object):
 
 	def _multi_match (self, scope, tokens):
 		if len(tokens) != 0:
-			self._error = self.flow.syntax
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set(self.flow.syntax)
 
 		if self.flow.state != 'match':
-			self._error = self.flow.syntax
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set(self.flow.syntax)
 
 		self.flow.state = 'then'
 
@@ -1475,14 +1254,10 @@ class Configuration (object):
 
 	def _multi_then (self, scope, tokens):
 		if len(tokens) != 0:
-			self._error = self.flow.syntax
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set(self.flow.syntax)
 
 		if self.flow.state != 'then':
-			self._error = self.flow.syntax
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set(self.flow.syntax)
 
 		self.flow.state = 'out'
 
@@ -1507,9 +1282,7 @@ class Configuration (object):
 
 	def _multi_api (self, scope, direction, tokens):
 		if len(tokens) != 0:
-			self._error = self.flow.syntax
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set(self.flow.syntax)
 
 		while True:
 			r = self._dispatch(
@@ -1531,9 +1304,8 @@ class Configuration (object):
 
 	def _multi_operational (self, scope, tokens):
 		if len(tokens) != 0:
-			self._error = 'syntax: operational { command; command; ... }'
-			if self.debug: raise Exception()  # noqa
-			return False
+			return self.error.set('syntax: operational { command; command; ... }')
+
 		while True:
 			r = self._dispatch(
 				scope,'operational',
@@ -1581,7 +1353,7 @@ class Configuration (object):
 		number = len(parameters)*2
 		tokens = formated(value).split(' ',number-1)
 		if len(tokens) != number:
-			self._error = 'invalid operational syntax, wrong number of arguments'
+			return self.error.set('invalid operational syntax, wrong number of arguments')
 			return False
 
 		data = {}
@@ -1594,23 +1366,23 @@ class Configuration (object):
 				if isipv4(value):
 					data['routerid'] = RouterID(value)
 				else:
-					self._error = 'invalid operational value for %s' % command
+					return self.error.set('invalid operational value for %s' % command)
 					return False
 				continue
 
 			expected = parameters.pop(0)
 
 			if command != expected:
-				self._error = 'invalid operational syntax, unknown argument %s' % command
+				return self.error.set('invalid operational syntax, unknown argument %s' % command)
 				return False
 			if not validate.get(command,valid)(value):
-				self._error = 'invalid operational value for %s' % command
+				return self.error.set('invalid operational value for %s' % command)
 				return False
 
 			data[command] = convert[command](value)
 
 		if tokens or parameters:
-			self._error = 'invalid advisory syntax, missing argument(s) %s' % ', '.join(parameters)
+			return self.error.set('invalid advisory syntax, missing argument(s) %s' % ', '.join(parameters))
 			return False
 
 		if 'routerid' not in data:

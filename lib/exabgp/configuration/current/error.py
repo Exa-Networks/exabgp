@@ -15,3 +15,6 @@ class Error (object):
 
 	def clear (self):
 		self._error = ''
+
+	def __repr__ (self):
+		return self._error
