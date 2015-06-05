@@ -22,7 +22,7 @@ class ParseNeighbor (Basic):
 
 	syntax = ''
 
-	def __init__ (self,error):
+	def __init__ (self, error):
 		self.error = error
 		self.capability = ParseCapability(error)
 
@@ -38,16 +38,16 @@ class ParseNeighbor (Basic):
 		scope[-1][command] = ip
 		return True
 
-	def ip (self, scope, command, value):
+	def ip (self, scope, command, tokens):
 		try:
-			ip = IP.create(value[0])
+			ip = IP.create(tokens[0])
 		except (IndexError,ValueError):
-			return self.error.set('"%s" is an invalid IP address' % ' '.join(value))
+			return self.error.set('"%s" is an invalid IP address' % ' '.join(tokens))
 
 		scope[-1][command] = ip
 		return True
 
-	def description (self, scope, tokens):
+	def description (self, scope, command, tokens):
 		text = ' '.join(tokens)
 		if len(text) < 2 or text[0] != '"' or text[-1] != '"' or text[1:-1].count('"'):
 			return self.error.set('syntax: description "<description>"')
@@ -55,9 +55,9 @@ class ParseNeighbor (Basic):
 		scope[-1]['description'] = text[1:-1]
 		return True
 
-	def asn (self, scope, command, value):
+	def asn (self, scope, command, tokens):
 		try:
-			value = Basic.newASN(value[0])
+			value = Basic.newASN(tokens[0])
 		except ValueError:
 			return self.error.set('"%s" is an invalid ASN' % ' '.join(value))
 		except IndexError:
@@ -66,20 +66,20 @@ class ParseNeighbor (Basic):
 		scope[-1][command] = value
 		return True
 
-	def passive (self, scope, command, value):
-		if value:
-			return self.error.set('"%s" is an invalid for passive' % ' '.join(value))
+	def passive (self, scope, command, tokens):
+		if tokens:
+			return self.error.set('"%s" is an invalid for passive' % ' '.join(tokens))
 
 		scope[-1][command] = True
 		return True
 
-	def listen (self, scope, command, value):
+	def listen (self, scope, command, tokens):
 		try:
-			listen = int(value[0])
+			listen = int(tokens[0])
 		except IndexError:
 			return self.error.set('please provide a port to listen on')
 		except ValueError:
-			return self.error.set('"%s" is an invalid port to listen on' % ' '.join(value))
+			return self.error.set('"%s" is an invalid port to listen on' % ' '.join(tokens))
 
 		if listen < 0:
 			return self.error.set('the listenening port must positive')
@@ -89,11 +89,11 @@ class ParseNeighbor (Basic):
 		scope[-1][command] = listen
 		return True
 
-	def hostname (self, scope, command, value):
-		if not len(value) == 1:
+	def hostname (self, scope, command, tokens):
+		if not len(tokens) == 1:
 			return self.error.set('single host-name required')
 
-		name = value[0]
+		name = tokens[0]
 
 		if not name:
 			return self.error.set('bad host-name')
@@ -111,11 +111,11 @@ class ParseNeighbor (Basic):
 		scope[-1][command] = name.encode('utf-8')
 		return True
 
-	def domainname (self, scope, command, value):
-		if not len(value) == 1:
+	def domainname (self, scope, command, tokens):
+		if not len(tokens) == 1:
 			return self.error.set('single domain-name required')
 
-		name = value[0]
+		name = tokens[0]
 
 		if not name:
 			return self.error.set('bad domain-name')
@@ -133,14 +133,14 @@ class ParseNeighbor (Basic):
 		scope[-1][command] = name.encode('utf-8')
 		return True
 
-	def holdtime (self, scope, command, value):
-		if not len(value) == 1:
+	def holdtime (self, scope, command, tokens):
+		if not len(tokens) == 1:
 			return self.error.set('hold-time required')
 
 		try:
-			holdtime = HoldTime(value[0])
+			holdtime = HoldTime(tokens[0])
 		except ValueError:
-			return self.error.set('"%s" is an invalid hold-time' % ' '.join(value))
+			return self.error.set('"%s" is an invalid hold-time' % ' '.join(tokens))
 
 		if holdtime < 3 and holdtime != 0:
 			return self.error.set('holdtime must be zero or at least three seconds')
@@ -150,11 +150,11 @@ class ParseNeighbor (Basic):
 		scope[-1][command] = holdtime
 		return True
 
-	def md5 (self, scope, command, value):
-		if not len(value) == 1:
+	def md5 (self, scope, command, tokens):
+		if not len(tokens) == 1:
 			return self.error.set('md5 required')
 
-		md5 = value[0]
+		md5 = tokens[0]
 		if len(md5) > 2 and md5[0] == md5[-1] and md5[0] in ['"',"'"]:
 			md5 = md5[1:-1]
 
@@ -166,16 +166,16 @@ class ParseNeighbor (Basic):
 		scope[-1][command] = md5
 		return True
 
-	def ttl (self, scope, command, value):
-		if not len(value):
+	def ttl (self, scope, command, tokens):
+		if not len(tokens):
 			scope[-1][command] = self.TTL_SECURITY
 			return True
 
 		try:
 			# README: Should it be a subclass of int ?
-			ttl = int(value[0])
+			ttl = int(tokens[0])
 		except ValueError:
-			return self.error.set('"%s" is an invalid ttl-security (1-254)' % ' '.join(value))
+			return self.error.set('"%s" is an invalid ttl-security (1-254)' % ' '.join(tokens))
 
 		if ttl <= 0:
 			return self.error.set('ttl-security must be a positive number (1-254)')

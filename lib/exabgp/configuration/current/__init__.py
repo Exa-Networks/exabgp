@@ -48,6 +48,7 @@ from exabgp.rib.change import Change
 from exabgp.logger import Logger
 
 from exabgp.configuration.current.error import Error
+from exabgp.configuration.current.tokeniser import Tokeniser
 from exabgp.configuration.current.neighbor import ParseNeighbor
 from exabgp.configuration.current.family import ParseFamily
 from exabgp.configuration.current.route import ParseRoute
@@ -81,10 +82,10 @@ class Configuration (object):
 		self.fifo = environment.settings().api.file
 
 		self.logger = Logger()
-		self._text = text
 		self._configurations = configurations
 
 		self.error = Error()
+		self.tokens = Tokeniser(self.error,self.logger)
 		self.neighbor = ParseNeighbor(self.error)
 		self.family = ParseFamily(self.error)
 		self.route = ParseRoute(self.error)
@@ -223,9 +224,8 @@ class Configuration (object):
 
 		self._scope = []
 		self._location = ['root']
-		self._line = []
-		self._number = 1
 
+		self.tokens.clear()
 		self.error.clear()
 		self.neighbor.clear()
 		self.family.clear()
@@ -251,21 +251,6 @@ class Configuration (object):
 		self.process.configuration(fname)
 		self._configurations.append(fname)
 
-		# creating the tokeniser for the configuration
-		if self._text:
-			self._tokens = self._tokenise(fname.split('\n'))
-		else:
-			try:
-				f = open(fname,'r')
-				self._tokens = self._tokenise(f)
-				f.close()
-			except IOError,exc:
-				error = str(exc)
-				if error.count(']'):
-					return self.error.set(error.split(']')[1].strip())
-				else:
-					return self.error.set(error)
-
 		# storing the routes associated with each peer so we can find what changed
 		backup_changes = {}
 		for neighbor in self._neighbors:
@@ -274,9 +259,12 @@ class Configuration (object):
 		# clearing the current configuration to be able to re-parse it
 		self._clear()
 
+		if not self.tokens.set_file(fname):
+			return False
+
 		# parsing the configurtion
 		r = False
-		while not self.finished():
+		while not self.tokens.finished:
 			r = self._dispatch(
 				self._scope,'configuration',
 				['group','neighbor'],
@@ -287,7 +275,7 @@ class Configuration (object):
 
 		# handling possible parsing errors
 		if r not in [True,None]:
-			return self.error.set("\nsyntax error in section %s\nline %d: %s\n\n%s" % (self._location[-1],self.number(),self.line(),self.error))
+			return self.error.set("\nsyntax error in section %s\nline %d: %s\n\n%s" % (self._location[-1],self.tokens.number,' '.join(self.tokens.line),self.error))
 
 		# parsing was sucessful, assigning the result
 		self.neighbors = self._neighbors
@@ -362,43 +350,8 @@ class Configuration (object):
 
 	# Tokenisation
 
-	def _tokenise (self, text):
-		r = []
-		config = ''
-		for line in text:
-			self.logger.configuration('loading | %s' % line.rstrip())
-			replaced = formated(line)
-			config += line
-			if not replaced:
-				continue
-			if replaced.startswith('#'):
-				continue
-			command = replaced[:3]
-			if command in ('md5','asm'):
-				string = line.strip()[3:].strip()
-				if string[-1] == ';':
-					string = string[:-1]
-				r.append([command,string,';'])
-			elif replaced[:3] == 'run':
-				r.append([t for t in replaced[:-1].split(' ',1) if t] + [replaced[-1]])
-			else:
-				r.append([t.lower() for t in replaced[:-1].split(' ') if t] + [replaced[-1]])
-		self.logger.config(config)
-		return r
-
-	def tokens (self):
-		self._number += 1
-		self._line = self._tokens.pop(0)
-		return self._line
-
 	def number (self):
 		return self._number
-
-	def line (self):
-		return ' '.join(self._line)
-
-	def finished (self):
-		return len(self._tokens) == 0
 
 	# Flow control ......................
 
@@ -408,7 +361,7 @@ class Configuration (object):
 			self._location = location
 			self.flow.clear()
 		try:
-			tokens = self.tokens()
+			tokens = self.tokens.next()
 		except IndexError:
 			return self.error.set('configuration file incomplete (most likely missing })')
 		self.logger.configuration("parsing | %-13s | '%s'" % (name,"' '".join(tokens)))
@@ -917,6 +870,7 @@ class Configuration (object):
 					'auto-flush','adj-rib-out'
 				]
 			)
+			# XXX: THIS SHOULD ALLOW CAPABILITY AND NOT THE INDIVIDUAL SUB KEYS
 			if r is False:
 				return False
 			if r is None:

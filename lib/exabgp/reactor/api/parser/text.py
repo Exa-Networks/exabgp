@@ -177,8 +177,8 @@ class Text (Configuration):
 		return changes
 
 	def api_flow (self, command, action):
-		command = command.replace('{','{\\n').replace('}','}\\n').replace(';',';\\n').replace('\\n\\n','\\n')
-		self._tokens = self._tokenise(' '.join(formated(command).split(' ')[2:]).split('\\n'))
+		tokens = formated(command).split(' ',2)[2].replace('\\n','\n').replace('{','{\n').replace('}','}\n').replace(';',';\n').replace('\n\n','\n')
+		self.tokens.set_text(tokens)
 		scope = [{}]
 		if not self._dispatch(scope,'flow',['route',],[],['root']):
 			return False
