@@ -1,20 +1,21 @@
+import pdb
 from exabgp.configuration.environment import environment
-
 
 class Error (object):
 
 	def __init__ (self):
-		self._error = ''
-		self._debug = environment.settings().debug.configuration
+		self._message = ''
+		self.debug = environment.settings().debug.configuration
 
 	def set (self, message):
-		self._error = message
-		if self._debug:
-			raise Exception()  # noqa
+		self._message = message
+		if self.debug:
+			pdb.set_trace()
+			raise Exception()
 		return False
 
 	def clear (self):
-		self._error = ''
+		self._message = ''
 
 	def __repr__ (self):
-		return self._error
+		return self._message

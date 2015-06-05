@@ -7,6 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 import sys
+import pdb
 import time
 import socket
 
@@ -74,6 +75,13 @@ def domainname ():
 	if not value:
 		return 'localdomain'
 	return ''.join(value.split('.')[1:])
+
+
+def false (*args):
+	return False
+
+def true (*args):
+	return True
 
 
 class Configuration (object):
@@ -213,6 +221,50 @@ class Configuration (object):
 			'extended-community':  self.route.extended_community,
 		}
 
+		self._parse_root = {
+			'configuration': {
+				'neighbor':    (self._multi_neighbor,self._make_neighbor),
+				'group':       (self._multi_group,true),
+			},
+			'group': {
+				'neighbor':    (self._multi_neighbor,self._make_neighbor),
+				'static':      (self._multi_static,true),
+				'flow':        (self._multi_flow,true),
+				'l2vpn':       (self._multi_l2vpn,true),
+				'process':     (self._multi_process,true),
+				'family':      (self._multi_family,true),
+				'capability':  (self._multi_capability,true),
+				'operational': (self._multi_operational,true),
+			},
+			'neighbor': {
+				'static':      (self._multi_static,true),
+				'flow':        (self._multi_flow,true),
+				'l2vpn':       (self._multi_l2vpn,true),
+				'process':     (self._multi_process,true),
+				'family':      (self._multi_family,true),
+				'capability':  (self._multi_capability,true),
+				'operational': (self._multi_operational,true),
+			},
+			'static': {
+				'route':       (self._multi_static_route,self.route.check_static_route),
+			},
+			'flow': {
+				'route':       (self._multi_flow_route,self._check_flow_route),
+			},
+			'l2vpn': {
+				'vpls':       (self._multi_l2vpn_vpls,self._check_l2vpn_vpls),
+			},
+			'flow-route': {
+				'match':       (self._multi_match,true),
+				'then':        (self._multi_then,true),
+			},
+			'process': {
+				'send':    (self._multi_api,true),
+				'receive': (self._multi_api,true),
+			}
+		}
+
+
 		self._clear()
 
 	def _clear (self):
@@ -275,7 +327,17 @@ class Configuration (object):
 
 		# handling possible parsing errors
 		if r not in [True,None]:
-			return self.error.set("\nsyntax error in section %s\nline %d: %s\n\n%s" % (self._location[-1],self.tokens.number,' '.join(self.tokens.line),self.error))
+			return self.error.set(
+				"\n"
+				"syntax error in section %s\n"
+				"line %d: %s\n"
+				"\n%s" % (
+					self._location[-1],
+					self.tokens.number,
+					' '.join(self.tokens.line),
+					str(self.error)
+				)
+			)
 
 		# parsing was sucessful, assigning the result
 		self.neighbors = self._neighbors
@@ -353,10 +415,8 @@ class Configuration (object):
 	def number (self):
 		return self._number
 
-	# Flow control ......................
-
 	# name is not used yet but will come really handy if we have name collision :D
-	def _dispatch (self, scope, name, multi, single, location=None):
+	def _dispatch (self, scope, command, multi, single, location=None):
 		if location:
 			self._location = location
 			self.flow.clear()
@@ -364,13 +424,19 @@ class Configuration (object):
 			tokens = self.tokens.next()
 		except IndexError:
 			return self.error.set('configuration file incomplete (most likely missing })')
-		self.logger.configuration("parsing | %-13s | '%s'" % (name,"' '".join(tokens)))
+		self.logger.configuration("parsing | %-13s | '%s'" % (command,"' '".join(tokens)))
 		end = tokens[-1]
 		if multi and end == '{':
 			self._location.append(tokens[0])
-			return self._multi_line(scope,name,tokens[:-1],multi)
+			result = self._multi_line(scope,command,tokens[:-1],multi)
+			if self.error.debug and result is False:
+				pdb.set_trace()
+			return result
 		if single and end == ';':
-			return self._single_line(scope,name,tokens[:-1],single)
+			result = self._single_line(scope,command,tokens[:-1],single)
+			if self.error.debug and result is False:
+				pdb.set_trace()
+			return result
 		if end == '}':
 			if len(self._location) == 1:
 				return self.error.set('closing too many parenthesis')
@@ -378,99 +444,41 @@ class Configuration (object):
 			return None
 		return False
 
-	def _multi_line (self, scope, name, tokens, valid):
+	def _multi (self, tree, scope, name, tokens, valid):
 		command = tokens[0]
 
 		if valid and command not in valid:
 			return self.error.set('option %s in not valid here' % command)
 
-		if name == 'configuration':
-			if command == 'neighbor':
-				if self._multi_neighbor(scope,tokens[1:]):
-					return self._make_neighbor(scope)
-				return False
-			if command == 'group':
-				if len(tokens) != 2:
-					return self.error.set('syntax: group <name> { <options> }')
-				return self._multi_group(scope,tokens[1])
+		if name not in tree:
+			return False
+		run, validate = tree[name].get(command,(false,false))
+		if not run(scope,command,tokens[1:]):
+			if self.error.debug:
+				pdb.set_trace()
+			return False
+		if not validate(scope):
+			if self.error.debug:
+				pdb.set_trace()
+			return False
+		return True
 
-		if name == 'group':
-			if command == 'neighbor':
-				if self._multi_neighbor(scope,tokens[1:]):
-					return self._make_neighbor(scope)
-				return False
-			if command == 'static':
-				return self._multi_static(scope,tokens[1:])
-			if command == 'flow':
-				return self._multi_flow(scope,tokens[1:])
-			if command == 'l2vpn':
-				return self._multi_l2vpn(scope,tokens[1:])
-			if command == 'process':
-				return self._multi_process(scope,tokens[1:])
-			if command == 'family':
-				return self._multi_family(scope,tokens[1:])
-			if command == 'capability':
-				return self._multi_capability(scope,tokens[1:])
-			if command == 'operational':
-				return self._multi_operational(scope,tokens[1:])
-
-		if name == 'neighbor':
-			if command == 'static':
-				return self._multi_static(scope,tokens[1:])
-			if command == 'flow':
-				return self._multi_flow(scope,tokens[1:])
-			if command == 'l2vpn':
-				return self._multi_l2vpn(scope,tokens[1:])
-			if command == 'process':
-				return self._multi_process(scope,tokens[1:])
-			if command == 'family':
-				return self._multi_family(scope,tokens[1:])
-			if command == 'capability':
-				return self._multi_capability(scope,tokens[1:])
-			if command == 'operational':
-				return self._multi_operational(scope,tokens[1:])
-
-		if name == 'static':
-			if command == 'route':
-				if self._multi_static_route(scope,tokens[1:]):
-					return self.route.check_static_route(scope)
-				return False
-
-		if name == 'flow':
-			if command == 'route':
-				if self._multi_flow_route(scope,tokens[1:]):
-					return self._check_flow_route(scope)
-				return False
-
-		if name == 'l2vpn':
-			if command == 'vpls':
-				if self._multi_l2vpn_vpls(scope,tokens[1:]):
-					return self._check_l2vpn_vpls(scope)
-				return False
-
-		if name == 'flow-route':
-			if command == 'match':
-				if self._multi_match(scope,tokens[1:]):
-					return True
-				return False
-			if command == 'then':
-				if self._multi_then(scope,tokens[1:]):
-					return True
-				return False
-
-		if name == 'process':
-			if command in ['send','receive']:
-				if self._multi_api(scope,command,tokens[1:]):
-					return True
-				return False
-
-		return False
+	def _multi_line (self, scope, name, tokens, valid):
+		return self._multi(self._parse_root,scope,name,tokens,valid)
 
 	def _single_line (self, scope, name, tokens, valid):
 		command = tokens[0]
 		if valid and command not in valid:
 			return self.error.set('invalid keyword "%s"' % command)
 
+		# dispatch = {
+		# 	'route': {
+		# 		'rd': SAFI.mpls_vpn,
+		# 		'route-distinguisher': SAFI.mpls_vpn,
+		# 	},
+		# 	'l2vpn'
+		# }
+		#
 		elif name == 'route':
 			if command in self._dispatch_route:
 				if command in ('rd','route-distinguisher'):
@@ -547,7 +555,7 @@ class Configuration (object):
 
 	# Programs used to control exabgp
 
-	def _multi_process (self, scope, tokens):
+	def _multi_process (self, scope, command, tokens):
 		while True:
 			r = self._dispatch(
 				scope,'process',
@@ -580,17 +588,17 @@ class Configuration (object):
 		run = scope[-1].pop('process-run','')
 		if run:
 			if len(tokens) != 1:
-				return self.error.set(self._str_process_error)
+				return self.error.set(self.process.syntax)
 
 			self.processes[name]['encoder'] = scope[-1].get('encoder','') or self.api_encoder
 			self.processes[name]['run'] = run
 			return True
 		elif len(tokens):
-			return self.error.set(self._str_process_error)
+			return self.error.set(self.process.syntax)
 
 	# Limit the AFI/SAFI pair announced to peers
 
-	def _multi_family (self, scope, tokens):
+	def _multi_family (self, scope, command, tokens):
 		# we know all the families we should use
 		scope[-1]['families'] = []
 		while True:
@@ -608,7 +616,7 @@ class Configuration (object):
 
 	# capacity
 
-	def _multi_capability (self, scope, tokens):
+	def _multi_capability (self, scope, command, tokens):
 		# we know all the families we should use
 		while True:
 			r = self._dispatch(
@@ -626,7 +634,10 @@ class Configuration (object):
 
 	# Group Neighbor
 
-	def _multi_group (self, scope, address):
+	def _multi_group (self, scope, command, address):
+		# if len(tokens) != 2:
+		# 	return self.error.set('syntax: group <name> { <options> }')
+
 		scope.append({})
 		while True:
 			r = self._dispatch(
@@ -844,7 +855,7 @@ class Configuration (object):
 		scope.pop(-1)
 		return True
 
-	def _multi_neighbor (self, scope, tokens):
+	def _multi_neighbor (self, scope, command, tokens):
 		if len(tokens) != 1:
 			return self.error.set('syntax: neighbor <ip> { <options> }')
 
@@ -878,7 +889,7 @@ class Configuration (object):
 
 	#  Group Static ................
 
-	def _multi_static (self, scope, tokens):
+	def _multi_static (self, scope, command, tokens):
 		if len(tokens) != 0:
 			return self.error.set('syntax: static { route; route; ... }')
 
@@ -951,7 +962,7 @@ class Configuration (object):
 
 		return True
 
-	def _multi_static_route (self, scope, tokens):
+	def _multi_static_route (self, scope, command, tokens):
 		if len(tokens) != 1:
 			return self.error.set(self.route.syntax)
 
@@ -1038,7 +1049,7 @@ class Configuration (object):
 
 	# VPLS
 
-	def _multi_l2vpn (self, scope, tokens):
+	def _multi_l2vpn (self, scope, command, tokens):
 		if len(tokens) != 0:
 			return self.error.set(self.l2vpn.syntax)
 
@@ -1067,7 +1078,7 @@ class Configuration (object):
 		scope[-1]['announce'].append(change)
 		return True
 
-	def _multi_l2vpn_vpls (self, scope, tokens):
+	def _multi_l2vpn_vpls (self, scope, command, tokens):
 		if len(tokens) > 1:
 			return self.error.set(self.l2vpn.syntax)
 
@@ -1095,7 +1106,7 @@ class Configuration (object):
 
 	# Group Flow  ........
 
-	def _multi_flow (self, scope, tokens):
+	def _multi_flow (self, scope, command, tokens):
 		if len(tokens) != 0:
 			return self.error.set(self.flow.syntax)
 
@@ -1154,7 +1165,7 @@ class Configuration (object):
 
 		return True
 
-	def _multi_flow_route (self, scope, tokens):
+	def _multi_flow_route (self, scope, command, tokens):
 		if len(tokens) > 1:
 			return self.error.set(self.flow.syntax)
 
@@ -1179,7 +1190,7 @@ class Configuration (object):
 
 	# ..........................................
 
-	def _multi_match (self, scope, tokens):
+	def _multi_match (self, scope, command, tokens):
 		if len(tokens) != 0:
 			return self.error.set(self.flow.syntax)
 
@@ -1206,7 +1217,7 @@ class Configuration (object):
 				break
 		return True
 
-	def _multi_then (self, scope, tokens):
+	def _multi_then (self, scope, command, tokens):
 		if len(tokens) != 0:
 			return self.error.set(self.flow.syntax)
 
@@ -1234,13 +1245,13 @@ class Configuration (object):
 
 	# ..........................................
 
-	def _multi_api (self, scope, direction, tokens):
+	def _multi_api (self, scope, command, tokens):
 		if len(tokens) != 0:
 			return self.error.set(self.flow.syntax)
 
 		while True:
 			r = self._dispatch(
-				scope,direction,
+				scope,command,
 				[],
 				[
 					'packets','parsed','consolidate',
@@ -1256,7 +1267,7 @@ class Configuration (object):
 
 	#  Group Operational ................
 
-	def _multi_operational (self, scope, tokens):
+	def _multi_operational (self, scope, command, tokens):
 		if len(tokens) != 0:
 			return self.error.set('syntax: operational { command; command; ... }')
 

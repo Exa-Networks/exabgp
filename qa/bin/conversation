@@ -231,7 +231,7 @@ if __name__ == '__main__':
 	client = os.environ.get('CLIENT',os.environ.get('client','')).upper()
 	if client:
 		names, alphabet, l2n, n2l, letters = make_short(groups)
-		command = "env exabgp.tcp.port=%d exabgp.tcp.once=true exabgp.debug.rotate=true exabgp.tcp.bind='' %s -d -p %s.conf" % (port,exabgp,names[l2n[client]][:-6])
+		command = "env exabgp.debug.configuration=true exabgp.tcp.port=%d exabgp.tcp.once=true exabgp.debug.rotate=true exabgp.tcp.bind='' %s -d -p %s.conf" % (port,exabgp,names[l2n[client]][:-6])
 		print '>', command
 		os.system(command)
 		sys.exit()
