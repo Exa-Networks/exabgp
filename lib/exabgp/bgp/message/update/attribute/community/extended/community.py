@@ -8,6 +8,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.update.attribute import Attribute
 
+from struct import pack
+
 # ======================================================= ExtendedCommunity (16)
 # XXX: Should subclasses register with transitivity ?
 
@@ -59,11 +61,26 @@ class ExtendedCommunity (Attribute):
 		return not not (self.community[0] & 0x80)
 
 	def transitive (self):
-		return not not (self.community[0] & 0x40)
+		# bit set means "not transitive"
+		#RFC4360:
+		#        T - Transitive bit
+		#
+		#            Value 0: The community is transitive across ASes
+		#
+		#            Value 1: The community is non-transitive across ASes
+		return not (self.community[0] & 0x40)
 
 	def pack (self, negotiated=None):
 		return self.community
-
+	
+	def _packedTypeSubtype(self, transitive=True):
+		# if not transitive -> set the 'transitive' bit, as per RFC4360
+		return pack(
+			'!BB',
+			self.COMMUNITY_TYPE if transitive else self.COMMUNITY_TYPE | 0x40,
+			self.COMMUNITY_SUBTYPE
+		)
+	
 	def json (self):
 		h = 0x00
 		for byte in self.community:
