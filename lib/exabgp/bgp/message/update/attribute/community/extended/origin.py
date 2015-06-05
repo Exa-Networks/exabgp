@@ -51,8 +51,8 @@ class OriginASNIP (Origin):
 		Origin.__init__(
 			self,
 			community if community else pack(
-				'!BBH4s',
-				self.COMMUNITY_TYPE | 0x40 if transitive else self.COMMUNITY_TYPE,0x02,
+				'!2sH4s',
+				self._packedTypeSubtype(),
 				asn,
 				IPv4.pton(ip)
 			)
@@ -83,8 +83,8 @@ class OriginIPASN (Origin):
 		Origin.__init__(
 			self,
 			community if community else pack(
-				'!BB4sH',
-				self.COMMUNITY_TYPE | 0x40 if transitive else self.COMMUNITY_TYPE,0x02,
+				'!2s4sH',
+				self._packedTypeSubtype(),
 				IPv4.pton(ip),
 				asn
 			)
@@ -113,8 +113,8 @@ class OriginASN4Number (Origin):
 		Origin.__init__(
 			self,
 			community if community else pack(
-				'!BBLH',
-				self.COMMUNITY_TYPE | 0x40 if transitive else self.COMMUNITY_TYPE,0x02,
+				'!2sLH',
+				self._packedTypeSubtype(),
 				asn,
 				number
 			)

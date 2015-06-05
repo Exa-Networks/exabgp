@@ -51,8 +51,8 @@ class Encapsulation (ExtendedCommunity):
 		self.tunnel_type = tunnel_type
 		ExtendedCommunity.__init__(
 			self,community if community is not None else pack(
-				"!BBLH",
-				0x03,0x0C,
+				"!2sLH",
+				self._packedTypeSubtype(),
 				0,self.tunnel_type
 			)
 		)

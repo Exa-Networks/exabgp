@@ -32,8 +32,8 @@ class L2Info (ExtendedCommunity):
 		ExtendedCommunity.__init__(
 			self,
 			community if community is not None else pack(
-				"!BBBBHH",
-				0x80,0x0A,
+				"!2sBBHH",
+				self._packedTypeSubtype(),
 				encaps,control,
 				mtu,reserved
 			)
