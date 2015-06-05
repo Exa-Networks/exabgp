@@ -55,6 +55,7 @@ from exabgp.configuration.current.neighbor import ParseNeighbor
 from exabgp.configuration.current.family import ParseFamily
 from exabgp.configuration.current.route import ParseRoute
 from exabgp.configuration.current.flow import ParseFlow
+from exabgp.configuration.current.l2vpn import ParseL2VPN
 
 # Duck class, faking part of the Attribute interface
 # We add this to routes when when need o split a route in smaller route
@@ -82,28 +83,6 @@ def domainname ():
 
 
 class Configuration (object):
-	_str_bad_flow = "you tried to filter a flow using an invalid port for a component .."
-	_str_vpls_error = \
-		'syntax:\n' \
-		'vpls site_name {\n' \
-		'   endpoint <vpls endpoint id; integer>\n' \
-		'   base <label base; integer>\n' \
-		'   offset <block offet; interger>\n' \
-		'   size <block size; integer>\n' \
-		'   route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535\n' \
-		'   next-hop 192.0.1.254;\n' \
-		'   origin IGP|EGP|INCOMPLETE;\n' \
-		'   as-path [ as as as as] ;\n' \
-		'   med 100;\n' \
-		'   local-preference 100;\n' \
-		'   community [ 65000 65001 65002 ];\n' \
-		'   extended-community [ target:1234:5.6.7.8 target:1.2.3.4:5678 origin:1234:5.6.7.8 origin:1.2.3.4:5678 0x0002FDE800000001 l2info:19:0:1500:111 ]\n' \
-		'   originator-id 10.0.0.10;\n' \
-		'   cluster-list [ 10.10.0.1 10.10.0.2 ];\n' \
-		'   withdraw\n' \
-		'   name what-you-want-to-remember-about-the-route\n' \
-		'}\n'
-
 
 	_str_process_error = \
 		'syntax:\n' \
@@ -135,11 +114,6 @@ class Configuration (object):
 		'   }\n' \
 		'}\n\n' \
 
-	_str_vpls_bad_size = "you tried to configure an invalid l2vpn vpls block-size"
-	_str_vpls_bad_offset = "you tried to configure an invalid l2vpn vpls block-offset"
-	_str_vpls_bad_label = "you tried to configure an invalid l2vpn vpls label"
-	_str_vpls_bad_enpoint = "you tried to configure an invalid l2vpn vpls endpoint"
-
 	def __init__ (self, configurations, text=False):
 		self.api_encoder = environment.settings().api.encoder
 		self.fifo = environment.settings().api.file
@@ -153,6 +127,7 @@ class Configuration (object):
 		self.family = ParseFamily(self.error)
 		self.route = ParseRoute(self.error)
 		self.flow = ParseFlow(self.error,self.logger)
+		self.l2vpn = ParseL2VPN(self.error)
 
 		self._dispatch_neighbor = {
 			'description':   self.neighbor.description,
@@ -254,24 +229,24 @@ class Configuration (object):
 		}
 
 		self._dispatch_vpls = {
-			'endpoint': self._l2vpn_vpls_endpoint,
-			'offset': self._l2vpn_vpls_offset,
-			'size': self._l2vpn_vpls_size,
-			'base': self._l2vpn_vpls_base,
-			'origin': self.route.origin,
-			'as-path': self.route.aspath,
-			'med': self.route.med,
-			'next-hop': self.route.next_hop,
-			'local-preference': self.route.local_preference,
-			'originator-id': self.route.originator_id,
-			'cluster-list': self.route.cluster_list,
-			'rd': self.route.rd,
+			'endpoint':            self.l2vpn.vpls_endpoint,
+			'offset':              self.l2vpn.vpls_offset,
+			'size':                self.l2vpn.vpls_size,
+			'base':                self.l2vpn.vpls_base,
+			'origin':              self.route.origin,
+			'as-path':             self.route.aspath,
+			'med':                 self.route.med,
+			'next-hop':            self.route.next_hop,
+			'local-preference':    self.route.local_preference,
+			'originator-id':       self.route.originator_id,
+			'cluster-list':        self.route.cluster_list,
+			'rd':                  self.route.rd,
 			'route-distinguisher': self.route.rd,
-			'withdraw': self.route.withdraw,
-			'withdrawn': self.route.withdraw,
-			'name': self.route.name,
-			'community': self.route.community,
-			'extended-community': self.route.extended_community,
+			'withdraw':            self.route.withdraw,
+			'withdrawn':           self.route.withdraw,
+			'name':                self.route.name,
+			'community':           self.route.community,
+			'extended-community':  self.route.extended_community,
 		}
 
 		self._clear()
@@ -1463,42 +1438,6 @@ class Configuration (object):
 			if self.debug: raise Exception()  # noqa
 			return False
 
-		return True
-
-	def _l2vpn_vpls_endpoint (self, scope, token):
-		number = int(token.pop(0))
-		if number < 0 or number > 0xFFFF:
-			raise ValueError(self._str_vpls_bad_enpoint)
-
-		vpls = scope[-1]['announce'][-1].nlri
-		vpls.ve = number
-		return True
-
-	def _l2vpn_vpls_size (self, scope, token):
-		number = int(token.pop(0))
-		if number < 0 or number > 0xFFFF:
-			raise ValueError(self._str_vpls_bad_size)
-
-		vpls = scope[-1]['announce'][-1].nlri
-		vpls.size = number
-		return True
-
-	def _l2vpn_vpls_offset (self, scope, token):
-		number = int(token.pop(0))
-		if number < 0 or number > 0xFFFF:
-			raise ValueError(self._str_vpls_bad_offset)
-
-		vpls = scope[-1]['announce'][-1].nlri
-		vpls.offset = number
-		return True
-
-	def _l2vpn_vpls_base (self, scope, token):
-		number = int(token.pop(0))
-		if number < 0 or number > 0xFFFF:
-			raise ValueError(self._str_vpls_bad_label)
-
-		vpls = scope[-1]['announce'][-1].nlri
-		vpls.base = number
 		return True
 
 	# ..........................................

@@ -81,6 +81,8 @@ class ParseFlow (Basic):
 		'one or more match term, one action\n' \
 		'fragment code is totally untested\n'
 
+	# _str_bad_flow = "you tried to filter a flow using an invalid port for a component .."
+
 	def __init__ (self, error, logger):
 		self.error = error
 		self.logger = logger

@@ -106,7 +106,7 @@ class ParseRoute (Basic):
 		' name what-you-want-to-remember-about-the-route' \
 		';\n'
 
-	def __init__ (self,error):
+	def __init__ (self, error):
 		self.error = error
 		self._nexthopself = None
 
