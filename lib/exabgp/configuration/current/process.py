@@ -54,19 +54,19 @@ class ParseProcess (Basic):
 	def configuration (self, name):
 		self._fname = name
 
-	def command (self, scope, command, value):
+	def command (self, scope, command, tokens):
 		scope[-1][command] = True
 		return True
 
-	def encoder (self, scope, command, value):
-		if value and value[0] in ('text','json'):
-			scope[-1][command] = value[0]
+	def encoder (self, scope, command, tokens):
+		if tokens and tokens[0] in ('text','json'):
+			scope[-1][command] = tokens[0]
 			return True
 
 		return self.error.set(self._str_process_error)
 
-	def run (self, scope, command, value):
-		line = ' '.join(value).strip()
+	def run (self, scope, command, tokens):
+		line = ' '.join(tokens).strip()
 		if len(line) > 2 and line[0] == line[-1] and line[0] in ['"',"'"]:
 			line = line[1:-1]
 		if ' ' in line:

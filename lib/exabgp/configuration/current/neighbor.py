@@ -29,11 +29,11 @@ class ParseNeighbor (Basic):
 	def clear (self):
 		pass
 
-	def router_id (self, scope, command, value):
+	def router_id (self, scope, command, tokens):
 		try:
-			ip = RouterID(value[0])
+			ip = RouterID(tokens[0])
 		except (IndexError,ValueError):
-			return self.error.set('"%s" is an invalid IP address' % ' '.join(value))
+			return self.error.set('"%s" is an invalid IP address' % ' '.join(tokens))
 
 		scope[-1][command] = ip
 		return True
@@ -59,7 +59,7 @@ class ParseNeighbor (Basic):
 		try:
 			value = Basic.newASN(tokens[0])
 		except ValueError:
-			return self.error.set('"%s" is an invalid ASN' % ' '.join(value))
+			return self.error.set('"%s" is an invalid ASN' % ' '.join(tokens))
 		except IndexError:
 			return self.error.set('please provide an ASN')
 

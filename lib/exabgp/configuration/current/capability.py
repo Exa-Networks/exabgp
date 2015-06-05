@@ -28,19 +28,19 @@ class ParseCapability (Basic):
 	def clear (self):
 		pass
 
-	def gracefulrestart (self, scope, command, value):
-		if not len(value):
+	def gracefulrestart (self, scope, command, tokens):
+		if not len(tokens):
 			scope[-1][command] = None
 			return True
 
-		if value and value[0] in ('disable','disabled'):
+		if tokens and tokens[0] in ('disable','disabled'):
 			return True
 
 		try:
 			# README: Should it be a subclass of int ?
-			grace = int(value[0])
+			grace = int(tokens[0])
 		except ValueError:
-			return self.error.set('"%s" is an invalid graceful-restart time' % ' '.join(value))
+			return self.error.set('"%s" is an invalid graceful-restart time' % ' '.join(tokens))
 
 		if grace < 0:
 			return self.error.set('graceful-restart can not be negative')
@@ -50,9 +50,9 @@ class ParseCapability (Basic):
 		scope[-1][command] = grace
 		return True
 
-	def addpath (self, scope, command, value):
+	def addpath (self, scope, command, tokens):
 		try:
-			ap = value[0].lower()
+			ap = tokens[0].lower()
 			apv = 0
 			if ap.endswith('receive'):
 				apv += 1
@@ -63,14 +63,14 @@ class ParseCapability (Basic):
 			scope[-1][command] = apv
 			return True
 		except (ValueError,IndexError):
-			return self.error.set('"%s" is an invalid add-path' % ' '.join(value) + '\n' + self.syntax)
+			return self.error.set('"%s" is an invalid add-path' % ' '.join(tokens) + '\n' + self.syntax)
 
-	def asn4 (self, scope, command, value):
-		if not value:
+	def asn4 (self, scope, command, tokens):
+		if not tokens:
 			scope[-1][command] = True
 			return True
 
-		asn4 = value[0].lower()
+		asn4 = tokens[0].lower()
 
 		if asn4 in ('disable','disabled'):
 			scope[-1][command] = False
@@ -79,7 +79,7 @@ class ParseCapability (Basic):
 			scope[-1][command] = True
 			return True
 
-		return self.error.set('"%s" is an invalid asn4 parameter options are enable (default) and disable)' % ' '.join(value))
+		return self.error.set('"%s" is an invalid asn4 parameter options are enable (default) and disable)' % ' '.join(tokens))
 
 	refresh = Basic.boolean
 	multisession = Basic.boolean
