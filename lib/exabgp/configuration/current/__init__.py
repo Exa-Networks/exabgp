@@ -387,7 +387,7 @@ class Configuration (object):
 
 		# we are not really running the program, just want to ....
 		if environment.settings().debug.route:
-			from exabgp.configuration.check import check_message
+			from exabgp.configuration.current.check import check_message
 			if check_message(self.neighbors,environment.settings().debug.route):
 				sys.exit(0)
 			sys.exit(1)
