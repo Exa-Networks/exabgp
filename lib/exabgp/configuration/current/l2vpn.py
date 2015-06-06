@@ -44,7 +44,7 @@ class ParseL2VPN (Basic):
 	def clear (self):
 		pass
 
-	def vpls_endpoint (self, scope, token):
+	def vpls_endpoint (self, scope, command, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			return self.error.set(self._str_vpls_bad_enpoint)
@@ -53,7 +53,7 @@ class ParseL2VPN (Basic):
 		vpls.ve = number
 		return True
 
-	def vpls_size (self, scope, token):
+	def vpls_size (self, scope, command, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			return self.error.set(self._str_vpls_bad_size)
@@ -62,7 +62,7 @@ class ParseL2VPN (Basic):
 		vpls.size = number
 		return True
 
-	def vpls_offset (self, scope, token):
+	def vpls_offset (self, scope, command, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			return self.error.set(self._str_vpls_bad_offset)
@@ -71,7 +71,7 @@ class ParseL2VPN (Basic):
 		vpls.offset = number
 		return True
 
-	def vpls_base (self, scope, token):
+	def vpls_base (self, scope, command, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			return self.error.set(self._str_vpls_bad_label)

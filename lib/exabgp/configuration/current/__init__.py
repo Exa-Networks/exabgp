@@ -83,6 +83,47 @@ def false (*args):
 def true (*args):
 	return True
 
+# self._tree = {
+# 	'neighbor': {
+# 		'section':    ['static','flow','l2vpn','process','family','capability','operational'],
+# 		'command':    'neighbor',
+# 		'parameter':  self._parameter_neighbor,
+# 		'validation': self._make_neighbor,
+# 	},
+# 	'group': {
+# 		'section':    ['neighbor','static','flow','l2vpn','process','family','capability','operational'],
+# 		'command':    '',
+# 		'parameter':  true,
+# 		'validation': true,
+# 	},
+# 	'static': {
+# 		'section':     ['static-route'],
+# 		'command':     'static',
+# 		'parameter':   true,
+# 		'validation':  true,
+# 	},
+# 	'static-route': {
+# 		'section':     [],
+# 		'command':     'static',
+# 		'parameter':   true,
+# 		'validation':  self.route.check_static_route,
+# 	},
+# 	'flow': {
+# 		'route':       (self._multi_flow_route,self._check_flow_route),
+# 	},
+# 	'l2vpn': {
+# 		'vpls':       (self._multi_l2vpn_vpls,self._check_l2vpn_vpls),
+# 	},
+# 	'flow-route': {
+# 		'match':       (self._multi_match,true),
+# 		'then':        (self._multi_then,true),
+# 	},
+# 	'process': {
+# 		'send':    (self._multi_api,true),
+# 		'receive': (self._multi_api,true),
+# 	}
+# }
+
 
 class Configuration (object):
 	def __init__ (self, configurations, text=False):
@@ -101,127 +142,7 @@ class Configuration (object):
 		self.l2vpn = ParseL2VPN(self.error)
 		self.process = ParseProcess(self.error)
 
-		self._dispatch_neighbor = {
-			'description':   self.neighbor.description,
-			'router-id':     self.neighbor.router_id,
-			'host-name':     self.neighbor.hostname,
-			'domain-name':   self.neighbor.domainname,
-			'local-address': self.neighbor.ip,
-			'local-as':      self.neighbor.asn,
-			'peer-as':       self.neighbor.asn,
-			'passive':       self.neighbor.passive,
-			'listen':        self.neighbor.listen,
-			'hold-time':     self.neighbor.holdtime,
-			'md5':           self.neighbor.md5,
-			'ttl-security':  self.neighbor.ttl,
-			'group-updates': self.neighbor.groupupdate,
-			'adj-rib-out':   self.neighbor.adjribout,
-			'auto-flush':    self.neighbor.autoflush,
-		}
-
-		self._dispatch_family = {
-			'ipv4':    self.family.ipv4,
-			'ipv6':    self.family.ipv6,
-			'l2vpn':   self.family.l2vpn,
-			'minimal': self.family.minimal,
-			'all':     self.family.all,
-		}
-
-		self._dispatch_capability = {
-			# deprecated
-			'route-refresh':    self.neighbor.capability.refresh,
-			'graceful-restart': self.neighbor.capability.gracefulrestart,
-			'multi-session':    self.neighbor.capability.multisession,
-			'add-path':         self.neighbor.capability.addpath,
-			'aigp':             self.neighbor.capability.aigp,
-			'operational':      self.neighbor.capability.operational,
-			'add-path':         self.neighbor.capability.addpath,
-			'asn4':             self.neighbor.capability.asn4,
-		}
-
-		self._dispatch_route = {
-			'origin':              self.route.origin,
-			'as-path':             self.route.aspath,
-			# For legacy with version 2.0.x
-			'as-sequence':         self.route.aspath,
-			'med':                 self.route.med,
-			'aigp':                self.route.aigp,
-			'next-hop':            self.route.next_hop,
-			'local-preference':    self.route.local_preference,
-			'atomic-aggregate':    self.route.atomic_aggregate,
-			'aggregator':          self.route.aggregator,
-			'path-information':    self.route.path_information,
-			'originator-id':       self.route.originator_id,
-			'cluster-list':        self.route.cluster_list,
-			'split':               self.route.split,
-			'label':               self.route.label,
-			'rd':                  self.route.rd,
-			'route-distinguisher': self.route.rd,
-			'watchdog':            self.route.watchdog,
-			# withdrawn is here to not break legacy code
-			'withdraw':            self.route.withdraw,
-			'withdrawn':           self.route.withdraw,
-			'name':                self.route.name,
-			'community':           self.route.community,
-			'extended-community':  self.route.extended_community,
-			'attribute':           self.route.generic_attribute,
-		}
-
-		self._dispatch_flow = {
-			'rd':                  self.route.rd,
-			'route-distinguisher': self.route.rd,
-			'next-hop':            self.flow.next_hop,
-			'source':              self.flow.source,
-			'source-ipv4':         self.flow.source,
-			'destination':         self.flow.destination,
-			'destination-ipv4':    self.flow.destination,
-			'port':                self.flow.anyport,
-			'source-port':         self.flow.source_port,
-			'destination-port':    self.flow.destination_port,
-			'protocol':            self.flow.protocol,
-			'next-header':         self.flow.next_header,
-			'tcp-flags':           self.flow.tcp_flags,
-			'icmp-type':           self.flow.icmp_type,
-			'icmp-code':           self.flow.icmp_code,
-			'fragment':            self.flow.fragment,
-			'dscp':                self.flow.dscp,
-			'traffic-class':       self.flow.traffic_class,
-			'packet-length':       self.flow.packet_length,
-			'flow-label':          self.flow.flow_label,
-			'accept':              self.flow.accept,
-			'discard':             self.flow.discard,
-			'rate-limit':          self.flow.rate_limit,
-			'redirect':            self.flow.redirect,
-			'redirect-to-nexthop': self.flow.redirect_next_hop,
-			'copy':                self.flow.copy,
-			'mark':                self.flow.mark,
-			'action':              self.flow.action,
-			'community':           self.route.community,
-			'extended-community':  self.route.extended_community,
-		}
-
-		self._dispatch_vpls = {
-			'endpoint':            self.l2vpn.vpls_endpoint,
-			'offset':              self.l2vpn.vpls_offset,
-			'size':                self.l2vpn.vpls_size,
-			'base':                self.l2vpn.vpls_base,
-			'origin':              self.route.origin,
-			'as-path':             self.route.aspath,
-			'med':                 self.route.med,
-			'next-hop':            self.route.next_hop,
-			'local-preference':    self.route.local_preference,
-			'originator-id':       self.route.originator_id,
-			'cluster-list':        self.route.cluster_list,
-			'rd':                  self.route.rd,
-			'route-distinguisher': self.route.rd,
-			'withdraw':            self.route.withdraw,
-			'withdrawn':           self.route.withdraw,
-			'name':                self.route.name,
-			'community':           self.route.community,
-			'extended-community':  self.route.extended_community,
-		}
-
-		self._parse_root = {
+		self._tree = {
 			'configuration': {
 				'neighbor':    (self._multi_neighbor,self._make_neighbor),
 				'group':       (self._multi_group,true),
@@ -264,6 +185,142 @@ class Configuration (object):
 			}
 		}
 
+		self._command = {
+			'group': {
+				'description':   self.neighbor.description,
+				'router-id':     self.neighbor.router_id,
+				'host-name':     self.neighbor.hostname,
+				'domain-name':   self.neighbor.domainname,
+				'local-address': self.neighbor.ip,
+				'local-as':      self.neighbor.asn,
+				'peer-as':       self.neighbor.asn,
+				'passive':       self.neighbor.passive,
+				'listen':        self.neighbor.listen,
+				'hold-time':     self.neighbor.holdtime,
+				'md5':           self.neighbor.md5,
+				'ttl-security':  self.neighbor.ttl,
+				'group-updates': self.neighbor.groupupdate,
+				'adj-rib-out':   self.neighbor.adjribout,
+				'auto-flush':    self.neighbor.autoflush,
+			},
+			'neighbor': {
+				'description':   self.neighbor.description,
+				'router-id':     self.neighbor.router_id,
+				'host-name':     self.neighbor.hostname,
+				'domain-name':   self.neighbor.domainname,
+				'local-address': self.neighbor.ip,
+				'local-as':      self.neighbor.asn,
+				'peer-as':       self.neighbor.asn,
+				'passive':       self.neighbor.passive,
+				'listen':        self.neighbor.listen,
+				'hold-time':     self.neighbor.holdtime,
+				'md5':           self.neighbor.md5,
+				'ttl-security':  self.neighbor.ttl,
+				'group-updates': self.neighbor.groupupdate,
+				'adj-rib-out':   self.neighbor.adjribout,
+				'auto-flush':    self.neighbor.autoflush,
+			},
+			'capability': {
+				'route-refresh':    self.neighbor.capability.refresh,
+				'graceful-restart': self.neighbor.capability.gracefulrestart,
+				'multi-session':    self.neighbor.capability.multisession,
+				'add-path':         self.neighbor.capability.addpath,
+				'aigp':             self.neighbor.capability.aigp,
+				'operational':      self.neighbor.capability.operational,
+				'add-path':         self.neighbor.capability.addpath,
+				'asn4':             self.neighbor.capability.asn4,
+			},
+			'family': {
+				'ipv4':    self.family.ipv4,
+				'ipv6':    self.family.ipv6,
+				'l2vpn':   self.family.l2vpn,
+				'minimal': self.family.minimal,
+				'all':     self.family.all,
+			},
+			'static-route': {
+				'origin':              self.route.origin,
+				'as-path':             self.route.aspath,
+				# For legacy with version 2.0.x
+				'as-sequence':         self.route.aspath,
+				'med':                 self.route.med,
+				'aigp':                self.route.aigp,
+				'next-hop':            self.route.next_hop,
+				'local-preference':    self.route.local_preference,
+				'atomic-aggregate':    self.route.atomic_aggregate,
+				'aggregator':          self.route.aggregator,
+				'path-information':    self.route.path_information,
+				'originator-id':       self.route.originator_id,
+				'cluster-list':        self.route.cluster_list,
+				'split':               self.route.split,
+				'label':               self.route.label,
+				'rd':                  self.route.rd,
+				'route-distinguisher': self.route.rd,
+				'watchdog':            self.route.watchdog,
+				# withdrawn is here to not break legacy code
+				'withdraw':            self.route.withdraw,
+				'withdrawn':           self.route.withdraw,
+				'name':                self.route.name,
+				'community':           self.route.community,
+				'extended-community':  self.route.extended_community,
+				'attribute':           self.route.generic_attribute,
+			},
+			'l2vpn-vpls': {
+				'endpoint':            self.l2vpn.vpls_endpoint,
+				'offset':              self.l2vpn.vpls_offset,
+				'size':                self.l2vpn.vpls_size,
+				'base':                self.l2vpn.vpls_base,
+				'origin':              self.route.origin,
+				'as-path':             self.route.aspath,
+				'med':                 self.route.med,
+				'next-hop':            self.route.next_hop,
+				'local-preference':    self.route.local_preference,
+				'originator-id':       self.route.originator_id,
+				'cluster-list':        self.route.cluster_list,
+				'rd':                  self.route.rd,
+				'route-distinguisher': self.route.rd,
+				'withdraw':            self.route.withdraw,
+				'withdrawn':           self.route.withdraw,
+				'name':                self.route.name,
+				'community':           self.route.community,
+				'extended-community':  self.route.extended_community,
+			},
+			'flow-route': {
+				'rd':                  self.route.rd,
+				'route-distinguisher': self.route.rd,
+				'next-hop':            self.flow.next_hop,
+			},
+			'flow-match': {
+				'source':              self.flow.source,
+				'source-ipv4':         self.flow.source,
+				'destination':         self.flow.destination,
+				'destination-ipv4':    self.flow.destination,
+				'port':                self.flow.anyport,
+				'source-port':         self.flow.source_port,
+				'destination-port':    self.flow.destination_port,
+				'protocol':            self.flow.protocol,
+				'next-header':         self.flow.next_header,
+				'tcp-flags':           self.flow.tcp_flags,
+				'icmp-type':           self.flow.icmp_type,
+				'icmp-code':           self.flow.icmp_code,
+				'fragment':            self.flow.fragment,
+				'dscp':                self.flow.dscp,
+				'traffic-class':       self.flow.traffic_class,
+				'packet-length':       self.flow.packet_length,
+				'flow-label':          self.flow.flow_label,
+			},
+			'flow-then': {
+				'accept':              self.flow.accept,
+				'discard':             self.flow.discard,
+				'rate-limit':          self.flow.rate_limit,
+				'redirect':            self.flow.redirect,
+				'redirect-to-nexthop': self.flow.redirect_next_hop,
+				'copy':                self.flow.copy,
+				'mark':                self.flow.mark,
+				'action':              self.flow.action,
+				'community':           self.route.community,
+				'extended-community':  self.route.extended_community,
+			},
+		}
 
 		self._clear()
 
@@ -464,61 +521,38 @@ class Configuration (object):
 		return True
 
 	def _multi_line (self, scope, name, tokens, valid):
-		return self._multi(self._parse_root,scope,name,tokens,valid)
+		return self._multi(self._tree,scope,name,tokens,valid)
 
 	def _single_line (self, scope, name, tokens, valid):
 		command = tokens[0]
 		if valid and command not in valid:
 			return self.error.set('invalid keyword "%s"' % command)
 
-		# dispatch = {
-		# 	'route': {
-		# 		'rd': SAFI.mpls_vpn,
-		# 		'route-distinguisher': SAFI.mpls_vpn,
-		# 	},
-		# 	'l2vpn'
-		# }
-		#
-		elif name == 'route':
-			if command in self._dispatch_route:
-				if command in ('rd','route-distinguisher'):
-					return self._dispatch_route[command](scope,tokens[1:],SAFI.mpls_vpn)
-				else:
-					return self._dispatch_route[command](scope,tokens[1:])
+		family = {
+			'static-route': {
+				'rd': SAFI.mpls_vpn,
+				'route-distinguisher': SAFI.mpls_vpn,
+			},
+			'l2vpn-vpls': {
+				'rd': SAFI.vpls,
+				'route-distinguisher': SAFI.vpls,
+			},
+			'flow-route': {
+				'rd': SAFI.flow_vpn,
+				'route-distinguisher': SAFI.flow_vpn,
+			}
+		}
 
-		elif name == 'l2vpn':
-			if command in self._dispatch_vpls:
-				if command in ('rd','route-distinguisher'):
-					return self._dispatch_vpls[command](scope,tokens[1:],SAFI.vpls)
-				else:
-					return self._dispatch_vpls[command](scope,tokens[1:])
+		if name in self._command:
+			if command in self._command[name]:
+				if command in family.get(name,{}):
+					return self._command[name][command](scope,command,tokens[1:],family[name][command])
+				return self._command[name][command](scope,command,tokens[1:])
 
-		elif name == 'flow-route':
-			if command in self._dispatch_flow:
-				if command in ('rd','route-distinguisher'):
-					return self._dispatch_flow[command](scope,tokens[1:],SAFI.flow_vpn)
-				else:
-					return self._dispatch_flow[command](scope,tokens[1:])
-
-		elif name == 'flow-match':
-			if command in self._dispatch_flow:
-				return self._dispatch_flow[command](scope,tokens[1:])
-
-		elif name == 'flow-then':
-			if command in self._dispatch_flow:
-				return self._dispatch_flow[command](scope,tokens[1:])
-
-		if name in ('neighbor','group'):
-			if command in self._dispatch_neighbor:
-				return self._dispatch_neighbor[command](scope,command,tokens[1:])
-
-		elif name == 'family':
-			if command in self._dispatch_family:
-				return self._dispatch_family[command](scope,tokens[1:])
-
-		elif name == 'capability':
-			if command in self._dispatch_capability:
-				return self._dispatch_capability[command](scope,command,tokens[1:])
+		elif name == 'operational':
+			if command == 'asm':
+				return self._single_operational_asm(scope,name,tokens[1])
+			# it does not make sense to have adm
 
 		elif name == 'process':
 			if command == 'run':
@@ -540,16 +574,11 @@ class Configuration (object):
 
 		elif name == 'static':
 			if command == 'route':
-				return self._single_static_route(scope,tokens[1:])
+				return self._single_static_route(scope,name,tokens[1:])
 
 		elif name == 'l2vpn':
 			if command == 'vpls':
-				return self._single_l2vpn_vpls(scope,tokens[1:])
-
-		elif name == 'operational':
-			if command == 'asm':
-				return self._single_operational_asm(scope,tokens[1])
-			# it does not make sense to have adm
+				return self._single_l2vpn_vpls(scope,name,tokens[1:])
 
 		return False
 
@@ -605,7 +634,7 @@ class Configuration (object):
 			r = self._dispatch(
 				scope,'family',
 				[],
-				self._dispatch_family.keys()
+				self._command['family'].keys()
 			)
 			if r is False:
 				return False
@@ -622,7 +651,7 @@ class Configuration (object):
 			r = self._dispatch(
 				scope,'capability',
 				[],
-				self._dispatch_capability.keys()
+				self._command['capability'].keys()
 			)
 			if r is False:
 				return False
@@ -647,7 +676,7 @@ class Configuration (object):
 					'neighbor','process','family',
 					'capability','operational'
 				],
-				self._dispatch_neighbor.keys()
+				self._command['neighbor'].keys()
 			)
 			if r is False:
 				return False
@@ -966,50 +995,44 @@ class Configuration (object):
 		if len(tokens) != 1:
 			return self.error.set(self.route.syntax)
 
-		if not self.route.insert_static_route(scope,tokens):
+		if not self.route.insert_static_route(scope,command,tokens):
 			return False
 
 		while True:
 			r = self._dispatch(
-				scope,'route',
-				[],
-				[
-					'next-hop','origin','as-path','as-sequence','med','aigp',
-					'local-preference','atomic-aggregate','aggregator',
-					'path-information','community','originator-id','cluster-list',
-					'extended-community','split','label','rd','route-distinguisher',
-					'watchdog','withdraw','attribute'
-				]
+				scope,'static-route',
+				self._command['static-route'].keys(),
+				self._command['static-route'].keys()
 			)
 			if r is False:
 				return False
 			if r is None:
 				return self._split_last_route(scope)
 
-	def _single_static_route (self, scope, tokens):
+	def _single_static_route (self, scope, command, tokens):
 		if len(tokens) < 3:
 			return False
 
-		if not self.route.insert_static_route(scope,tokens):
+		if not self.route.insert_static_route(scope,command,tokens):
 			return False
 
 		while len(tokens):
 			command = tokens.pop(0)
 
 			if command in ('withdraw','withdrawn'):
-				if self.route.withdraw(scope,tokens):
+				if self.route.withdraw(scope,command,tokens):
 					continue
 				return False
 
 			if len(tokens) < 1:
 				return False
 
-			if command in self._dispatch_route:
+			if command in self._command['static-route']:
 				if command in ('rd','route-distinguisher'):
-					if self._dispatch_route[command](scope,tokens,SAFI.nlri_mpls):
+					if self._command['static-route'][command](scope,command,tokens,SAFI.nlri_mpls):
 						continue
 				else:
-					if self._dispatch_route[command](scope,tokens):
+					if self._command['static-route'][command](scope,command,tokens):
 						continue
 			else:
 				return False
@@ -1020,24 +1043,24 @@ class Configuration (object):
 
 		return self._split_last_route(scope)
 
-	def _single_l2vpn_vpls (self, scope, tokens):
+	def _single_l2vpn_vpls (self, scope, command, tokens):
 		# TODO: actual length?(like rd+lb+bo+ve+bs+rd; 14 or so)
 		if len(tokens) < 10:
 			return False
 
-		if not self._insert_l2vpn_vpls(scope,tokens):
+		if not self._insert_l2vpn_vpls(scope,command,tokens):
 			return False
 
 		while len(tokens):
 			command = tokens.pop(0)
 			if len(tokens) < 1:
 				return False
-			if command in self._dispatch_vpls:
+			if command in self._command['l2vpn-vpls']:
 				if command in ('rd','route-distinguisher'):
-					if self._dispatch_vpls[command](scope,tokens,SAFI.vpls):
+					if self._command['l2vpn-vpls'][command](scope,command,tokens,SAFI.vpls):
 						continue
 				else:
-					if self._dispatch_vpls[command](scope,tokens):
+					if self._command['l2vpn-vpls'][command](scope,command,tokens):
 						continue
 			else:
 				return False
@@ -1065,7 +1088,27 @@ class Configuration (object):
 				break
 		return True
 
-	def _insert_l2vpn_vpls (self, scope, tokens=None):
+	def _multi_l2vpn_vpls (self, scope, command, tokens):
+		if len(tokens) > 1:
+			return self.error.set(self.l2vpn.syntax)
+
+		if not self._insert_l2vpn_vpls(scope,command,tokens):
+			return False
+
+		while True:
+			r = self._dispatch(
+				scope,'l2vpn-vpls',
+				self._command['l2vpn-vpls'].keys(),
+				self._command['l2vpn-vpls'].keys()
+			)
+			if r is False:
+				return False
+			if r is None:
+				break
+
+		return True
+
+	def _insert_l2vpn_vpls (self, scope, command, tokens=None):
 		try:
 			attributes = Attributes()
 			change = Change(VPLS(None,None,None,None,None),attributes)
@@ -1078,31 +1121,6 @@ class Configuration (object):
 		scope[-1]['announce'].append(change)
 		return True
 
-	def _multi_l2vpn_vpls (self, scope, command, tokens):
-		if len(tokens) > 1:
-			return self.error.set(self.l2vpn.syntax)
-
-		if not self._insert_l2vpn_vpls(scope):
-			return False
-
-		while True:
-			r = self._dispatch(
-				scope,'l2vpn',
-				[],
-				[
-					'next-hop','origin','as-path','med','local-preference',
-					'community','originator-id','cluster-list','extended-community',
-					'rd','route-distinguisher','withdraw',
-					'endpoint','offset',
-					'size','base'
-				]
-			)
-			if r is False:
-				return False
-			if r is None:
-				break
-
-		return True
 
 	# Group Flow  ........
 
@@ -1122,7 +1140,7 @@ class Configuration (object):
 				break
 		return True
 
-	def _insert_flow_route (self, scope, tokens=None):
+	def _insert_flow_route (self, scope, command, tokens=None):
 		if self.flow.state != 'out':
 			return self.error.set(self.flow.syntax)
 
@@ -1169,7 +1187,7 @@ class Configuration (object):
 		if len(tokens) > 1:
 			return self.error.set(self.flow.syntax)
 
-		if not self._insert_flow_route(scope):
+		if not self._insert_flow_route(scope,command):
 			return False
 
 		while True:
@@ -1282,7 +1300,7 @@ class Configuration (object):
 			if r is None:
 				return True
 
-	def _single_operational_asm (self, scope, value):
+	def _single_operational_asm (self, scope, command, value):
 		return self._single_operational(Advisory.ASM,scope,['afi','safi','advisory'],value)
 
 	def _single_operational (self, klass, scope, parameters, value):
