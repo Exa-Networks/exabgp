@@ -26,7 +26,7 @@ from exabgp.reactor.peer import Peer
 from exabgp.reactor.peer import ACTION
 from exabgp.reactor.network.error import error
 
-from exabgp.reactor.api.handler import Handler
+from exabgp.reactor.api.api import API
 from exabgp.configuration.current import Configuration
 from exabgp.configuration.environment import environment
 
@@ -50,7 +50,7 @@ class Reactor (object):
 		self.processes = None
 		self.listener = None
 		self.configuration = Configuration(configurations)
-		self.api = Handler()
+		self.api = API(self)
 
 		self.peers = {}
 		self.route_update = False

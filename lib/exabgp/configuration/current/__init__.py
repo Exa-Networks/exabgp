@@ -401,53 +401,6 @@ class Configuration (object):
 
 		return True
 
-	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
-	def change_to_peers (self, change, peers):
-		result = True
-		for neighbor in self.neighbors:
-			if neighbor in peers:
-				if change.nlri.family() in self.neighbors[neighbor].families():
-					self.neighbors[neighbor].rib.outgoing.insert_announced(change)
-				else:
-					self.logger.configuration('the route family is not configured on neighbor','error')
-					result = False
-		return result
-
-	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
-	def eor_to_peers (self, family, peers):
-		result = False
-		for neighbor in self.neighbors:
-			if neighbor in peers:
-				result = True
-				self.neighbors[neighbor].eor.append(family)
-		return result
-
-	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
-	def operational_to_peers (self, operational, peers):
-		result = True
-		for neighbor in self.neighbors:
-			if neighbor in peers:
-				if operational.family() in self.neighbors[neighbor].families():
-					if operational.name == 'ASM':
-						self.neighbors[neighbor].asm[operational.family()] = operational
-					self.neighbors[neighbor].messages.append(operational)
-				else:
-					self.logger.configuration('the route family is not configured on neighbor','error')
-					result = False
-		return result
-
-	# XXX: FIXME: move this from here to the reactor (or whatever will manage command from user later)
-	def refresh_to_peers (self, refresh, peers):
-		result = True
-		for neighbor in self.neighbors:
-			if neighbor in peers:
-				family = (refresh.afi,refresh.safi)
-				if family in self.neighbors[neighbor].families():
-					self.neighbors[neighbor].refresh.append(refresh.__class__(refresh.afi,refresh.safi))
-				else:
-					result = False
-		return result
-
 	# Tokenisation
 
 	def number (self):

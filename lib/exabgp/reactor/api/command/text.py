@@ -21,23 +21,20 @@ class Text (object):
 
 @Text('shutdown')
 def shutdown (self, reactor, service, command):
-	reactor.api_shutdown()
 	reactor.answer(service,'shutdown in progress')
-	return True
+	return reactor.api.shutdown()
 
 
 @Text('reload')
 def reload (self, reactor, service, command):
-	reactor.api_reload()
 	reactor.answer(service,'reload in progress')
-	return True
+	return reactor.api.reload()
 
 
 @Text('restart')
 def restart (self, reactor, service, command):
-	reactor.api_restart()
 	reactor.answer(service,'restart in progress')
-	return True
+	return reactor.api.restart()
 
 
 @Text('version')
@@ -129,6 +126,7 @@ def show_routes_extensive (self, reactor, service, command):
 @Text('announce watchdog')
 def announce_watchdog (self, reactor, service, command):
 	def callback (name):
+		# XXX: move into Action
 		for neighbor in reactor.configuration.neighbors:
 			reactor.configuration.neighbors[neighbor].rib.outgoing.announce_watchdog(name)
 			yield False
@@ -145,6 +143,7 @@ def announce_watchdog (self, reactor, service, command):
 @Text('withdraw watchdog')
 def withdraw_watchdog (self, reactor, service, command):
 	def callback (name):
+		# XXX: move into Action
 		for neighbor in reactor.configuration.neighbors:
 			reactor.configuration.neighbors[neighbor].rib.outgoing.withdraw_watchdog(name)
 			yield False
@@ -189,7 +188,7 @@ def announce_route (self, reactor, service, command):
 			peers = []
 			for (peer,change) in changes:
 				peers.append(peer)
-				reactor.configuration.change_to_peers(change,[peer,])
+				reactor.api.change_to_peers(change,[peer,])
 				self.logger.reactor("Route added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
 				yield False
 			reactor.route_update = True
@@ -217,7 +216,7 @@ def withdraw_route (self, reactor, service, command):
 			yield True
 		else:
 			for (peer,change) in changes:
-				if reactor.configuration.change_to_peers(change,[peer,]):
+				if reactor.api.change_to_peers(change,[peer,]):
 					self.logger.reactor("Route removed : %s" % change.extensive())
 					yield False
 				else:
@@ -250,7 +249,7 @@ def announce_vpls (self, reactor, service, command):
 			peers = []
 			for (peer,change) in changes:
 				peers.append(peer)
-				reactor.configuration.change_to_peers(change,[peer,])
+				reactor.api.change_to_peers(change,[peer,])
 				self.logger.reactor("vpls added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
 				yield False
 			reactor.route_update = True
@@ -278,7 +277,7 @@ def withdraw_vpls (self, reactor, service, command):
 			yield True
 		else:
 			for (peer,change) in changes:
-				if reactor.configuration.change_to_peers(change,[peer,]):
+				if reactor.api.change_to_peers(change,[peer,]):
 					self.logger.reactor("vpls removed : %s" % change.extensive())
 					yield False
 				else:
@@ -309,7 +308,7 @@ def announce_attribute (self, reactor, service, command):
 			yield True
 		else:
 			for (peers,change) in changes:
-				reactor.configuration.change_to_peers(change,peers)
+				reactor.api.change_to_peers(change,peers)
 				self.logger.reactor("Route added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
 			yield False
 			reactor.route_update = True
@@ -337,7 +336,7 @@ def withdraw_attribute (self, reactor, service, command):
 			yield True
 		else:
 			for (peers,change) in changes:
-				if reactor.configuration.change_to_peers(change,peers):
+				if reactor.api.change_to_peers(change,peers):
 					self.logger.reactor("Route removed : %s" % change.extensive())
 					yield False
 				else:
@@ -368,7 +367,7 @@ def announce_flow (self, reactor, service, command):
 			yield True
 		else:
 			for change in changes:
-				reactor.configuration.change_to_peers(change,peers)
+				reactor.api.change_to_peers(change,peers)
 				self.logger.reactor("Flow added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
 				yield False
 			reactor.route_update = True
@@ -396,7 +395,7 @@ def withdraw_flow (self, reactor, service, command):
 			yield True
 		else:
 			for change in changes:
-				if reactor.configuration.change_to_peers(change,peers):
+				if reactor.api.change_to_peers(change,peers):
 					self.logger.reactor("Flow found and removed : %s" % change.extensive())
 					yield False
 				else:
@@ -426,7 +425,7 @@ def announce_eor (self, reactor, service, command):
 			self.logger.reactor("Command could not parse eor : %s" % command)
 			yield True
 		else:
-			reactor.configuration.eor_to_peers(family,peers)
+			reactor.api.eor_to_peers(family,peers)
 			self.logger.reactor("Sent to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',family.extensive()))
 			yield False
 			reactor.route_update = True
@@ -453,7 +452,7 @@ def announce_refresh (self, reactor, service, command):
 			self.logger.reactor("Command could not parse flow in : %s" % command)
 			yield True
 		else:
-			reactor.configuration.refresh_to_peers(refresh,peers)
+			reactor.api.refresh_to_peers(refresh,peers)
 			self.logger.reactor("Sent to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',refresh.extensive()))
 			yield False
 			reactor.route_update = True
@@ -480,7 +479,7 @@ def announce_operational (self, reactor, service, command):
 			self.logger.reactor("Command could not parse operational command : %s" % command)
 			yield True
 		else:
-			reactor.configuration.operational_to_peers(operational,peers)
+			reactor.api.operational_to_peers(operational,peers)
 			self.logger.reactor("operational message sent to %s : %s" % (
 				', '.join(peers if peers else []) if peers is not None else 'all peers',operational.extensive()
 				)

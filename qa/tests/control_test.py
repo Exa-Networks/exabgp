@@ -13,8 +13,6 @@ import tempfile
 import unittest
 from multiprocessing import Process
 
-#from exabgp.reactor.api.control import Control
-
 
 from exabgp.configuration.setup import environment
 env = environment.setup('')

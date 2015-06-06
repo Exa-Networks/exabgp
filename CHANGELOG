@@ -19,6 +19,9 @@ Version 3.5.0
    requested by: jtkdpu
  * Feature: allow to run exabgp from python -m exabgp
  * Change: Update are now grouped by default
+ * Change: Configuration format
+  - all deprecated name remove
+  - no more process group within neighbor
  * Change: Change the API configuration syntax and format
   - JSON is now the default API encoder
   - JSON now use high resolution time by default
