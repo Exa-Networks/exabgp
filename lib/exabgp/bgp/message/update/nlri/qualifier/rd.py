@@ -95,7 +95,7 @@ class RouteDistinguisher (object):
 		except ValueError:
 			raise ValueError('invalid route-distinguisher %s:%s' % (prefix,suffix))
 
-#FIXME: the above is stolen from exabgp.configuration.engine.parser.rd
+#FIXME: the above is stolen from exabgp.configuration.experimental.engine.parser.rd
 #       which can now use RouteDistinguisher.fromElements instead of
 #       the rd packing code it has
 

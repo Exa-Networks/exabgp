@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2015-06-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.format import formated
+from exabgp.configuration.current.format import formated
 
 
 class Tokeniser (object):

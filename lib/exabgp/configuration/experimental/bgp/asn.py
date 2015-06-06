@@ -6,9 +6,9 @@ Created by Thomas Mangin on 2015-01-15.
 Copyright (c) 2015-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.engine.raised import Raised
-from exabgp.configuration.engine.section import Section
-from exabgp.configuration.engine.parser import asn
+from exabgp.configuration.experimental.engine.raised import Raised
+from exabgp.configuration.experimental.engine.section import Section
+from exabgp.configuration.experimental.engine.parser import asn
 
 
 # =================================================================== syntax_asn

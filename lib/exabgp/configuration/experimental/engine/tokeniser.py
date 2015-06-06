@@ -7,8 +7,8 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.util import coroutine
-from exabgp.configuration.engine.location import Location
-from exabgp.configuration.engine.raised import Raised
+from exabgp.configuration.experimental.engine.location import Location
+from exabgp.configuration.experimental.engine.raised import Raised
 
 # convert special caracters
 

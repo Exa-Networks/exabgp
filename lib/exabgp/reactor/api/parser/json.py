@@ -22,7 +22,7 @@ from exabgp.configuration.show import SectionShow
 
 
 # from exabgp.configuration.current import Configuration
-# from exabgp.configuration.format import formated
+# from exabgp.configuration.current.format import formated
 #
 # from exabgp.protocol.family import AFI
 # from exabgp.protocol.family import SAFI

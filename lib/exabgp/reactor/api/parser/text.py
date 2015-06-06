@@ -15,7 +15,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 # ***********************************
 
 from exabgp.configuration.current import Configuration
-from exabgp.configuration.format import formated
+from exabgp.configuration.current.format import formated
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -182,7 +182,7 @@ class Text (Configuration):
 		scope = [{}]
 		if not self._dispatch(scope,'flow',['route',],[],['root']):
 			return False
-		if not self._check_flow_route(scope):
+		if not self.flow.check_flow(scope,self):
 			return False
 		changes = scope[0]['announce']
 		if action == 'withdraw':

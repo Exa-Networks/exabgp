@@ -14,7 +14,7 @@ import socket
 from exabgp.util.ip import isipv4
 
 from exabgp.configuration.environment import environment
-from exabgp.configuration.format import formated
+from exabgp.configuration.current.format import formated
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -394,7 +394,7 @@ class Configuration (object):
 
 		# we are not really running the program, just want check the configuration validity
 		if environment.settings().debug.selfcheck:
-			from exabgp.configuration.check import check_neighbor
+			from exabgp.configuration.current.check import check_neighbor
 			if check_neighbor(self.neighbors):
 				sys.exit(0)
 			sys.exit(1)

@@ -6,16 +6,16 @@ Created by Thomas Mangin on 2014-06-22.
 Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.engine.raised import Raised
-from exabgp.configuration.engine.section import Section
-from exabgp.configuration.engine.parser import ip
-from exabgp.configuration.engine.parser import holdtime
+from exabgp.configuration.experimental.engine.raised import Raised
+from exabgp.configuration.experimental.engine.section import Section
+from exabgp.configuration.experimental.engine.parser import ip
+from exabgp.configuration.experimental.engine.parser import holdtime
 
-from exabgp.configuration.bgp.capability import syntax_capability
-from exabgp.configuration.bgp.capability import SectionCapability
+from exabgp.configuration.experimental.bgp.capability import syntax_capability
+from exabgp.configuration.experimental.bgp.capability import SectionCapability
 
-from exabgp.configuration.bgp.asn import SectionASN
-from exabgp.configuration.bgp.asn import syntax_asn
+from exabgp.configuration.experimental.bgp.asn import SectionASN
+from exabgp.configuration.experimental.bgp.asn import syntax_asn
 
 
 # ============================================================== syntax_session

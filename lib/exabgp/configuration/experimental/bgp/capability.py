@@ -6,17 +6,17 @@ Created by Thomas Mangin on 2014-06-22.
 Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.engine.raised import Raised
-from exabgp.configuration.engine.section import Section
-from exabgp.configuration.engine.parser import boolean
+from exabgp.configuration.experimental.engine.raised import Raised
+from exabgp.configuration.experimental.engine.section import Section
+from exabgp.configuration.experimental.engine.parser import boolean
 
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import MultiProtocol
 
 from exabgp.bgp.message.update.nlri import NLRI
 
-from exabgp.configuration.bgp.family import SectionFamily
-from exabgp.configuration.bgp.family import syntax_family
+from exabgp.configuration.experimental.bgp.family import SectionFamily
+from exabgp.configuration.experimental.bgp.family import syntax_family
 
 
 # ============================================================ syntax_capability

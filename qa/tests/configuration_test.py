@@ -9,15 +9,15 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import unittest
 
-from exabgp.configuration import Configuration
+from exabgp.configuration.experimental import Configuration
 
-from exabgp.configuration.bgp import SectionBGP
-from exabgp.configuration.bmp import SectionBMP
-from exabgp.configuration.bgp.family import SectionFamily
-from exabgp.configuration.bgp.capability import SectionCapability
-from exabgp.configuration.bgp.session import SectionSession
-from exabgp.configuration.bgp.process import SectionProcess
-from exabgp.configuration.bgp.neighbor import SectionNeighbor
+from exabgp.configuration.experimental.bgp import SectionBGP
+from exabgp.configuration.experimental.bmp import SectionBMP
+from exabgp.configuration.experimental.bgp.family import SectionFamily
+from exabgp.configuration.experimental.bgp.capability import SectionCapability
+from exabgp.configuration.experimental.bgp.session import SectionSession
+from exabgp.configuration.experimental.bgp.process import SectionProcess
+from exabgp.configuration.experimental.bgp.neighbor import SectionNeighbor
 
 import pprint
 pp = pprint.PrettyPrinter(indent=3)
