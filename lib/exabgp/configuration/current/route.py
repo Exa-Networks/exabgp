@@ -648,7 +648,7 @@ class ParseRoute (Basic):
 		scope[-1]['announce'].append(update)
 		return True
 
-	def check_static_route (self, scope):
+	def check_static_route (self, scope, configuration):
 		update = scope[-1]['announce'][-1]
 		if update.nlri.nexthop is NoNextHop:
 			return self.error.set('syntax: route <ip>/<mask> { next-hop <ip>; }')

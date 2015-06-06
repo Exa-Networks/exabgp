@@ -11,8 +11,6 @@ import pdb
 import time
 import socket
 
-from copy import deepcopy
-
 from exabgp.util.ip import isipv4
 
 from exabgp.configuration.environment import environment
@@ -20,8 +18,6 @@ from exabgp.configuration.format import formated
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-
-from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.protocol.ip import IP
 
@@ -34,7 +30,7 @@ from exabgp.bgp.message.update.nlri import INET
 from exabgp.bgp.message.update.nlri import MPLS
 from exabgp.bgp.message.update.nlri import VPLS
 # from exabgp.bgp.message.update.nlri import EVPN
-from exabgp.bgp.message.update.nlri.flow import NLRI
+# from exabgp.bgp.message.update.nlri.flow import NLRI
 from exabgp.bgp.message.update.nlri.flow import Flow
 
 from exabgp.bgp.message.update.attribute import Attribute
@@ -61,20 +57,6 @@ from exabgp.configuration.current.process import ParseProcess
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
 def pack_int (afi, integer, mask):
 	return ''.join([chr((integer >> (offset * 8)) & 0xff) for offset in range(IP.length(afi)-1,-1,-1)])
-
-
-def hostname ():
-	value = socket.gethostname()
-	if not value:
-		return 'localhost'
-	return value.split('.')[0]
-
-
-def domainname ():
-	value = socket.gethostname()
-	if not value:
-		return 'localdomain'
-	return ''.join(value.split('.')[1:])
 
 
 def false (*args):
@@ -128,14 +110,13 @@ def true (*args):
 class Configuration (object):
 	def __init__ (self, configurations, text=False):
 		self.api_encoder = environment.settings().api.encoder
-		self.fifo = environment.settings().api.file
 
 		self.logger = Logger()
 		self._configurations = configurations
 
 		self.error = Error()
 		self.tokens = Tokeniser(self.error,self.logger)
-		self.neighbor = ParseNeighbor(self.error)
+		self.neighbor = ParseNeighbor(self.error,self.logger)
 		self.family = ParseFamily(self.error)
 		self.route = ParseRoute(self.error)
 		self.flow = ParseFlow(self.error,self.logger)
@@ -144,11 +125,11 @@ class Configuration (object):
 
 		self._tree = {
 			'configuration': {
-				'neighbor':    (self._multi_neighbor,self._make_neighbor),
+				'neighbor':    (self._multi_neighbor,self.neighbor.make),
 				'group':       (self._multi_group,true),
 			},
 			'group': {
-				'neighbor':    (self._multi_neighbor,self._make_neighbor),
+				'neighbor':    (self._multi_neighbor,self.neighbor.make),
 				'static':      (self._multi_static,true),
 				'flow':        (self._multi_flow,true),
 				'l2vpn':       (self._multi_l2vpn,true),
@@ -170,10 +151,10 @@ class Configuration (object):
 				'route':       (self._multi_static_route,self.route.check_static_route),
 			},
 			'flow': {
-				'route':       (self._multi_flow_route,self._check_flow_route),
+				'route':       (self._multi_flow_route,self.flow.check_flow),
 			},
 			'l2vpn': {
-				'vpls':       (self._multi_l2vpn_vpls,self._check_l2vpn_vpls),
+				'vpls':       (self._multi_l2vpn_vpls,self.l2vpn.check_vpls),
 			},
 			'flow-route': {
 				'match':       (self._multi_match,true),
@@ -514,7 +495,7 @@ class Configuration (object):
 			if self.error.debug:
 				pdb.set_trace()
 			return False
-		if not validate(scope):
+		if not validate(scope,self):
 			if self.error.debug:
 				pdb.set_trace()
 			return False
@@ -684,206 +665,6 @@ class Configuration (object):
 				scope.pop(-1)
 				return True
 
-	def _make_neighbor (self, scope):
-		# we have local_scope[-2] as the group template and local_scope[-1] as the peer specific
-		if len(scope) > 1:
-			for key,content in scope[-2].iteritems():
-				if key not in scope[-1]:
-					scope[-1][key] = deepcopy(content)
-				elif key == 'announce':
-					scope[-1][key].extend(scope[-2][key])
-
-		neighbor = Neighbor()
-		for local_scope in scope:
-			value = local_scope.get('router-id','')
-			if value:
-				neighbor.router_id = value
-			value = local_scope.get('peer-address','')
-			if value:
-				neighbor.peer_address = value
-			value = local_scope.get('local-address','')
-			if value:
-				neighbor.local_address = value
-			value = local_scope.get('local-as','')
-			if value:
-				neighbor.local_as = value
-			value = local_scope.get('peer-as','')
-			if value:
-				neighbor.peer_as = value
-			value = local_scope.get('passive',False)
-			if value:
-				neighbor.passive = value
-			value = local_scope.get('listen',0)
-			if value:
-				neighbor.listen = value
-			value = local_scope.get('hold-time','')
-			if value:
-				neighbor.hold_time = value
-
-			neighbor.host_name = local_scope.get('host-name',hostname())
-			neighbor.domain_name = local_scope.get('domain-name',domainname())
-
-			neighbor.changes = local_scope.get('announce',[])
-			messages = local_scope.get('operational-message',[])
-
-		# we want to have a socket for the cli
-		if self.fifo:
-			_cli_name = 'CLI'
-			self.processes[_cli_name] = {
-				'neighbor': '*',
-				'encoder': 'json',
-				'run': [sys.executable, sys.argv[0]],
-
-				'neighbor-changes': False,
-
-				'receive-consolidate': False,
-				'receive-packets': False,
-				'receive-parsed': False,
-
-				'send-consolidate': False,
-				'send-packets': False,
-				'send-parsed': False,
-			}
-
-			for direction in ['send','receive']:
-				for message in [
-					Message.CODE.NOTIFICATION,
-					Message.CODE.OPEN,
-					Message.CODE.KEEPALIVE,
-					Message.CODE.UPDATE,
-					Message.CODE.ROUTE_REFRESH,
-					Message.CODE.OPERATIONAL
-				]:
-					self.processes[_cli_name]['%s-%d' % (direction,message)] = False
-
-		for name in self.processes.keys():
-			process = self.processes[name]
-
-			neighbor.api.set('neighbor-changes',process.get('neighbor-changes',False))
-
-			for direction in ['send','receive']:
-				for option in ['packets','consolidate','parsed']:
-					neighbor.api.set_value(direction,option,process.get('%s-%s' % (direction,option),False))
-
-				for message in [
-					Message.CODE.NOTIFICATION,
-					Message.CODE.OPEN,
-					Message.CODE.KEEPALIVE,
-					Message.CODE.UPDATE,
-					Message.CODE.ROUTE_REFRESH,
-					Message.CODE.OPERATIONAL
-				]:
-					neighbor.api.set_message(direction,message,process.get('%s-%d' % (direction,message),False))
-
-		if not neighbor.router_id:
-			neighbor.router_id = neighbor.local_address
-
-		local_scope = scope[-1]
-		neighbor.description = local_scope.get('description','')
-
-		neighbor.md5 = local_scope.get('md5',None)
-		neighbor.ttl = local_scope.get('ttl-security',None)
-		neighbor.group_updates = local_scope.get('group-updates',None)
-
-		neighbor.route_refresh = local_scope.get('route-refresh',0)
-		neighbor.graceful_restart = local_scope.get('graceful-restart',0)
-		if neighbor.graceful_restart is None:
-			# README: Should it be a subclass of int ?
-			neighbor.graceful_restart = int(neighbor.hold_time)
-		neighbor.multisession = local_scope.get('multi-session',False)
-		neighbor.operational = local_scope.get('capa-operational',False)
-		neighbor.add_path = local_scope.get('add-path',0)
-		neighbor.flush = local_scope.get('auto-flush',True)
-		neighbor.adjribout = local_scope.get('adj-rib-out',True)
-		neighbor.asn4 = local_scope.get('asn4',True)
-		neighbor.aigp = local_scope.get('aigp',None)
-
-		if neighbor.route_refresh and not neighbor.adjribout:
-			return self.error.set('incomplete option route-refresh and no adj-rib-out')
-
-		# XXX: check that if we have any message, we have parsed/packets
-		# XXX: and vice-versa
-
-		missing = neighbor.missing()
-		if missing:
-			return self.error.set('incomplete neighbor, missing %s' % missing)
-
-		if neighbor.local_address.afi != neighbor.peer_address.afi:
-			return self.error.set('local-address and peer-address must be of the same family')
-
-		if neighbor.peer_address.ip in self._neighbors:
-			return self.error.set('duplicate peer definition %s' % neighbor.peer_address.ip)
-
-		openfamilies = local_scope.get('families','everything')
-		# announce every family we known
-		if neighbor.multisession and openfamilies == 'everything':
-			# announce what is needed, and no more, no need to have lots of TCP session doing nothing
-			_families = set()
-			for change in neighbor.changes:
-				_families.add((change.nlri.afi,change.nlri.safi))
-			families = list(_families)
-		elif openfamilies in ('all','everything'):
-			families = NLRI.known_families()
-		# only announce what you have as routes
-		elif openfamilies == 'minimal':
-			_families = set()
-			for change in neighbor.changes:
-				_families.add((change.nlri.afi,change.nlri.safi))
-			families = list(_families)
-		else:
-			families = openfamilies
-
-		# check we are not trying to announce routes without the right MP announcement
-		for family in neighbor.families():
-			if family not in families:
-				afi,safi = family
-				return self.error.set('Trying to announce a route of type %s,%s when we are not announcing the family to our peer' % (afi,safi))
-
-		# add the families to the list of families known
-		initial_families = list(neighbor.families())
-		for family in families:
-			if family not in initial_families	:
-				# we are modifying the data used by .families() here
-				neighbor.add_family(family)
-
-		if neighbor.group_updates is None:
-			neighbor.group_updates = True
-
-		def _init_neighbor (neighbor):
-			families = neighbor.families()
-			for change in neighbor.changes:
-				if change.nlri.family() in families:
-					# This add the family to neighbor.families()
-					neighbor.rib.outgoing.insert_announced_watchdog(change)
-			for message in messages:
-				if message.family() in families:
-					if message.name == 'ASM':
-						neighbor.asm[message.family()] = message
-					else:
-						neighbor.messages.append(message)
-			self._neighbors[neighbor.name()] = neighbor
-
-		# create one neighbor object per family for multisession
-		if neighbor.multisession and len(neighbor.families()) > 1:
-			for family in neighbor.families():
-				# XXX: FIXME: Ok, it works but it takes LOTS of memory ..
-				m_neighbor = deepcopy(neighbor)
-				m_neighbor.make_rib()
-				m_neighbor.rib.outgoing.families = [family]
-				_init_neighbor(m_neighbor)
-		else:
-			neighbor.make_rib()
-			_init_neighbor(neighbor)
-
-		# display configuration
-		for line in str(neighbor).split('\n'):
-			self.logger.configuration(line)
-		self.logger.configuration("\n")
-
-		# ...
-		scope.pop(-1)
-		return True
-
 	def _multi_neighbor (self, scope, command, tokens):
 		if len(tokens) != 1:
 			return self.error.set('syntax: neighbor <ip> { <options> }')
@@ -1038,7 +819,7 @@ class Configuration (object):
 				return False
 			return False
 
-		if not self.route.check_static_route(scope):
+		if not self.route.check_static_route(scope,self):
 			return False
 
 		return self._split_last_route(scope)
@@ -1066,7 +847,7 @@ class Configuration (object):
 				return False
 			return False
 
-		if not self._check_l2vpn_vpls(scope):
+		if not self.l2vpn.check_vpls(scope,self):
 			return False
 		return True
 
@@ -1157,30 +938,6 @@ class Configuration (object):
 			scope[-1]['announce'] = []
 
 		scope[-1]['announce'].append(flow)
-		return True
-
-	def _check_flow_route (self, scope):
-		self.logger.configuration('warning: no check on flows are implemented')
-		return True
-
-	def _check_l2vpn_vpls (self, scope):
-		nlri = scope[-1]['announce'][-1].nlri
-
-		if nlri.ve is None:
-			raise ValueError(self._str_vpls_bad_enpoint)
-
-		if nlri.base is None:
-			raise ValueError(self._str_vpls_bad_label)
-
-		if nlri.offset is None:
-			raise ValueError(self._str_vpls_bad_offset)
-
-		if nlri.size is None:
-			raise ValueError(self._str_vpls_bad_size)
-
-		if nlri.base > (0xFFFFF - nlri.size):  # 20 bits, 3 bytes
-			raise ValueError(self._str_vpls_bad_label)
-
 		return True
 
 	def _multi_flow_route (self, scope, command, tokens):

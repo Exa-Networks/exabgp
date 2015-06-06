@@ -79,3 +79,23 @@ class ParseL2VPN (Basic):
 		vpls = scope[-1]['announce'][-1].nlri
 		vpls.base = number
 		return True
+
+	def check_vpls (self, scope, configuration):
+		nlri = scope[-1]['announce'][-1].nlri
+
+		if nlri.ve is None:
+			return self.error.set(self._str_vpls_bad_enpoint)
+
+		if nlri.base is None:
+			return self.error.set(self._str_vpls_bad_label)
+
+		if nlri.offset is None:
+			return self.error.set(self._str_vpls_bad_offset)
+
+		if nlri.size is None:
+			return self.error.set(self._str_vpls_bad_size)
+
+		if nlri.base > (0xFFFFF - nlri.size):  # 20 bits, 3 bytes
+			return self.error.set(self._str_vpls_bad_label)
+
+		return True

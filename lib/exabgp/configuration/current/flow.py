@@ -377,3 +377,7 @@ class ParseFlow (Basic):
 			return True
 		except (IndexError,ValueError):
 			return self.error.set(self.syntax)
+
+	def check_flow (self, scope, configuration):
+		self.logger.configuration('warning: no check on flows are implemented')
+		return True
