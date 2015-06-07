@@ -8,6 +8,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 import sys
+import select
+
 from exabgp.dep.cmd2 import cmd
 
 from exabgp.version import version
@@ -222,15 +224,6 @@ class Syntax (Completed):
 	do_q = do_quit
 
 
-class Command (object):
-	def do_show (self,line):
-		self.request('show routes')
-		self.report()
-
-
-import select
-
-
 class Connection (object):
 	def __init__ (self,name):
 		self.read = open(name,'r+')
@@ -248,11 +241,14 @@ class Connection (object):
 		self.write.close()
 
 
-class ExaBGP (Connection,Command,Syntax):
+class ExaBGP (Connection,Syntax):
 	def __init__ (self,name='exabgp.cmd'):
 		Connection.__init__(self,name)
 		Syntax.__init__(self,'')
 
+	def do_show (self, line):
+		self.request('show routes')
+		self.report()
 
 
 def main():

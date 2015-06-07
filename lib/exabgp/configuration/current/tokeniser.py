@@ -26,7 +26,7 @@ class Tokeniser (object):
 		self.number = 0
 		self.line = []
 		if self._data:
-			self.set(self._data)
+			self._set(self._data)
 
 	def _tokenise (self,iterator):
 		for line in iterator:

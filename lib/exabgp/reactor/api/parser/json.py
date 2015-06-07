@@ -16,7 +16,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import pprint as pp
 
-from exabgp.configuration import Configuration
+from exabgp.configuration.current import Configuration
 
 from exabgp.configuration.show import SectionShow
 

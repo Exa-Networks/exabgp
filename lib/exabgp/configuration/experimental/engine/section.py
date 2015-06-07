@@ -24,6 +24,11 @@ class Section (object):
 		# we get our name through our subclasses
 		self.factory[self.name] = self
 
+	def _drop_colon (self, tokeniser):
+		# This function is only here to hide a bug
+		# As this code will not make it to production as it
+		pass
+
 	def drop_parenthesis (self, tokeniser):
 		if tokeniser() != '{':
 			# syntax is set in our subclasses

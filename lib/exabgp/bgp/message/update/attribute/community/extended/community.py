@@ -18,11 +18,13 @@ class ExtendedCommunity (Attribute):
 	ID = Attribute.CODE.EXTENDED_COMMUNITY
 	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 
+	COMMUNITY_TYPE    = 0x00  # MUST be redefined by subclasses
+	COMMUNITY_SUBTYPE = 0x00  # MUST be redefined by subclasses
+
 	registered_extended = {}
 
 	@classmethod
 	def register (cls, klass):
-		# COMMUNITY_TYPE and COMMUNITY_SUBTYPE are defined in subclasses
 		cls.registered_extended[(klass.COMMUNITY_TYPE & 0x0F,klass.COMMUNITY_SUBTYPE)] = klass
 		return klass
 
@@ -62,17 +64,15 @@ class ExtendedCommunity (Attribute):
 
 	def transitive (self):
 		# bit set means "not transitive"
-		#RFC4360:
-		#        T - Transitive bit
-		#
-		#            Value 0: The community is transitive across ASes
-		#
-		#            Value 1: The community is non-transitive across ASes
+		# RFC4360:
+		#   T - Transitive bit
+		#     Value 0: The community is transitive across ASes
+		#     Value 1: The community is non-transitive across ASes
 		return not (self.community[0] & 0x40)
 
 	def pack (self, negotiated=None):
 		return self.community
-	
+
 	def _packedTypeSubtype(self, transitive=True):
 		# if not transitive -> set the 'transitive' bit, as per RFC4360
 		return pack(
@@ -80,7 +80,7 @@ class ExtendedCommunity (Attribute):
 			self.COMMUNITY_TYPE if transitive else self.COMMUNITY_TYPE | 0x40,
 			self.COMMUNITY_SUBTYPE
 		)
-	
+
 	def json (self):
 		h = 0x00
 		for byte in self.community:
