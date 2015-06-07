@@ -124,7 +124,7 @@ class Configuration (object):
 		self.process = ParseProcess(self.error)
 
 		self._tree = {
-			'configuration': {
+			'root': {
 				'neighbor':    (self._multi_neighbor,self.neighbor.make),
 				'group':       (self._multi_group,true),
 			},
@@ -221,8 +221,6 @@ class Configuration (object):
 			'static-route': {
 				'origin':              self.route.origin,
 				'as-path':             self.route.aspath,
-				# For legacy with version 2.0.x
-				'as-sequence':         self.route.aspath,
 				'med':                 self.route.med,
 				'aigp':                self.route.aigp,
 				'next-hop':            self.route.next_hop,
@@ -237,14 +235,55 @@ class Configuration (object):
 				'rd':                  self.route.rd,
 				'route-distinguisher': self.route.rd,
 				'watchdog':            self.route.watchdog,
-				# withdrawn is here to not break legacy code
 				'withdraw':            self.route.withdraw,
-				'withdrawn':           self.route.withdraw,
 				'name':                self.route.name,
 				'community':           self.route.community,
 				'extended-community':  self.route.extended_community,
 				'attribute':           self.route.generic_attribute,
 			},
+			# 'inet-route': {
+			# 	'origin':              self.route.origin,
+			# 	'as-path':             self.route.aspath,
+			# 	'med':                 self.route.med,
+			# 	'aigp':                self.route.aigp,
+			# 	'next-hop':            self.route.next_hop,
+			# 	'local-preference':    self.route.local_preference,
+			# 	'atomic-aggregate':    self.route.atomic_aggregate,
+			# 	'aggregator':          self.route.aggregator,
+			# 	'path-information':    self.route.path_information,
+			# 	'originator-id':       self.route.originator_id,
+			# 	'cluster-list':        self.route.cluster_list,
+			# 	'split':               self.route.split,
+			# 	'watchdog':            self.route.watchdog,
+			# 	'withdraw':            self.route.withdraw,
+			# 	'name':                self.route.name,
+			# 	'community':           self.route.community,
+			# 	'extended-community':  self.route.extended_community,
+			# 	'attribute':           self.route.generic_attribute,
+			# },
+			# 'mpls-route': {
+			# 	'label':               self.route.label,
+			# 	'rd':                  self.route.rd,
+			# 	'route-distinguisher': self.route.rd,
+			# 	'origin':              self.route.origin,
+			# 	'as-path':             self.route.aspath,
+			# 	'med':                 self.route.med,
+			# 	'aigp':                self.route.aigp,
+			# 	'next-hop':            self.route.next_hop,
+			# 	'local-preference':    self.route.local_preference,
+			# 	'atomic-aggregate':    self.route.atomic_aggregate,
+			# 	'aggregator':          self.route.aggregator,
+			# 	'path-information':    self.route.path_information,
+			# 	'originator-id':       self.route.originator_id,
+			# 	'cluster-list':        self.route.cluster_list,
+			# 	'split':               self.route.split,
+			# 	'watchdog':            self.route.watchdog,
+			# 	'withdraw':            self.route.withdraw,
+			# 	'name':                self.route.name,
+			# 	'community':           self.route.community,
+			# 	'extended-community':  self.route.extended_community,
+			# 	'attribute':           self.route.generic_attribute,
+			# },
 			'l2vpn-vpls': {
 				'endpoint':            self.l2vpn.vpls_endpoint,
 				'offset':              self.l2vpn.vpls_offset,
@@ -305,12 +344,13 @@ class Configuration (object):
 
 		self._clear()
 
+		self.processes = {}
+
+		self._scope = []
+		self._location = ['root']
+
 	def _clear (self):
 		self.processes = {}
-		self.neighbors = {}
-		self._neighbors = {}
-
-		self.error.clear()
 
 		self._scope = []
 		self._location = ['root']
@@ -341,10 +381,7 @@ class Configuration (object):
 		self.process.configuration(fname)
 		self._configurations.append(fname)
 
-		# storing the routes associated with each peer so we can find what changed
-		backup_changes = {}
-		for neighbor in self._neighbors:
-			backup_changes[neighbor] = self._neighbors[neighbor].changes
+		previous_neighbors = self.neighbor.neighbors
 
 		# clearing the current configuration to be able to re-parse it
 		self._clear()
@@ -356,8 +393,8 @@ class Configuration (object):
 		r = False
 		while not self.tokens.finished:
 			r = self._dispatch(
-				self._scope,'configuration',
-				['group','neighbor'],
+				self._scope,'root',
+				self._tree['root'].keys(),
 				[]
 			)
 			if r is False:
@@ -365,6 +402,8 @@ class Configuration (object):
 
 		# handling possible parsing errors
 		if r not in [True,None]:
+			# making sure nothing changed
+			self.neighbor.cancel()
 			return self.error.set(
 				"\n"
 				"syntax error in section %s\n"
@@ -377,34 +416,24 @@ class Configuration (object):
 				)
 			)
 
-		# parsing was sucessful, assigning the result
-		self.neighbors = self._neighbors
-
-		# installing in the neighbor what was its previous routes so we can
-		# add/withdraw what need to be
-		for neighbor in self.neighbors:
-			self.neighbors[neighbor].backup_changes = backup_changes.get(neighbor,[])
+		# installing in the neighbor the API routes
+		self.neighbor.complete()
 
 		# we are not really running the program, just want to ....
 		if environment.settings().debug.route:
 			from exabgp.configuration.current.check import check_message
-			if check_message(self.neighbors,environment.settings().debug.route):
+			if check_message(self.neighbor.neighbors,environment.settings().debug.route):
 				sys.exit(0)
 			sys.exit(1)
 
 		# we are not really running the program, just want check the configuration validity
 		if environment.settings().debug.selfcheck:
 			from exabgp.configuration.current.check import check_neighbor
-			if check_neighbor(self.neighbors):
+			if check_neighbor(self.neighbor.neighbors):
 				sys.exit(0)
 			sys.exit(1)
 
 		return True
-
-	# Tokenisation
-
-	def number (self):
-		return self._number
 
 	# name is not used yet but will come really handy if we have name collision :D
 	def _dispatch (self, scope, command, multi, single, location=None):
@@ -443,6 +472,12 @@ class Configuration (object):
 
 		if name not in tree:
 			return False
+
+		# print
+		# print "****", name
+		# print "****", scope
+		# print
+
 		run, validate = tree[name].get(command,(false,false))
 		if not run(scope,command,tokens[1:]):
 			if self.error.debug:

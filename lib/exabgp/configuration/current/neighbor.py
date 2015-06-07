@@ -52,8 +52,30 @@ class ParseNeighbor (Basic):
 		self.capability = ParseCapability(error)
 		self.fifo = environment.settings().api.file
 
+		self.neighbors = {}
+		self._neighbors = {}
+		self._previous = {}
+
 	def clear (self):
-		pass
+		self._previous = self.neighbors
+		self._neighbors = {}
+		self.neighbors = {}
+
+	def cancel (self):
+		self.neighbors = self._previous
+		self._neighbors = {}
+		self._previous = {}
+
+	def complete (self):
+		self.neighbors = self._neighbors
+		self._neighbors = {}
+
+		# installing in the neighbor the API routes
+		for neighbor in self.neighbors:
+			if neighbor in self._previous:
+				self.neighbors[neighbor].changes = self._previous[neighbor].changes
+
+		self._previous = {}
 
 	def router_id (self, scope, command, tokens):
 		try:
@@ -342,7 +364,7 @@ class ParseNeighbor (Basic):
 		if neighbor.local_address.afi != neighbor.peer_address.afi:
 			return self.error.set('local-address and peer-address must be of the same family')
 
-		if neighbor.peer_address.ip in configuration._neighbors:
+		if neighbor.peer_address.ip in self._neighbors:
 			return self.error.set('duplicate peer definition %s' % neighbor.peer_address.ip)
 
 		openfamilies = local_scope.get('families','everything')
@@ -392,7 +414,7 @@ class ParseNeighbor (Basic):
 						neighbor.asm[message.family()] = message
 					else:
 						neighbor.messages.append(message)
-			configuration._neighbors[neighbor.name()] = neighbor
+			self._neighbors[neighbor.name()] = neighbor
 
 		# create one neighbor object per family for multisession
 		if neighbor.multisession and len(neighbor.families()) > 1:
