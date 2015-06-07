@@ -509,6 +509,10 @@ class Peer (object):
 							operational.next()
 						except StopIteration:
 							operational = None
+				# make sure that if some operational message are received via the API
+				# that we do not eat memory for nothing
+				elif self.neighbor.messages:
+					self.neighbor.messages.popleft()
 
 				# SEND REFRESH
 				if self.neighbor.route_refresh:

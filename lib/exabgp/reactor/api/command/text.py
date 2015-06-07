@@ -487,7 +487,7 @@ def announce_operational (self, reactor, service, command):
 			yield False
 			reactor.route_update = True
 
-	if (command.split() + ['safe'])[1].lower() not in ('asm','adm','rpcq','rpcp','apcq','apcp','lpcq','lpcp'):
+	if (command.split() + ['be','safe'])[2].lower() not in ('asm','adm','rpcq','rpcp','apcq','apcp','lpcq','lpcp'):
 		return False
 
 	try:

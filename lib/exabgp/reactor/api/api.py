@@ -42,10 +42,10 @@ class API (object):
 		'announce vpls',
 		'announce route-refresh',
 		'announce route',
-		'announce operational',
 		'announce flow',
 		'announce eor',
-		'announce attribute'
+		'announce attribute',
+		'announce operational',
 	],reverse=True)
 
 	def __init__ (self,reactor):
@@ -63,6 +63,7 @@ class API (object):
 		for registered in self.functions:
 			if registered in command:
 				self.logger.reactor("callback | handling '%s' with %s" % (command,self.callback['text'][registered].func_name),'warning')
+				# XXX: should we not test the return value ?
 				self.callback['text'][registered](self,reactor,service,command)
 				return True
 		self.logger.reactor("Command from process not understood : %s" % command,'warning')

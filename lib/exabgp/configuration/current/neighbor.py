@@ -344,7 +344,7 @@ class ParseNeighbor (Basic):
 			# README: Should it be a subclass of int ?
 			neighbor.graceful_restart = int(neighbor.hold_time)
 		neighbor.multisession = local_scope.get('multi-session',False)
-		neighbor.operational = local_scope.get('capa-operational',False)
+		neighbor.operational = local_scope.get('operational',False)
 		neighbor.add_path = local_scope.get('add-path',0)
 		neighbor.flush = local_scope.get('auto-flush',True)
 		neighbor.adjribout = local_scope.get('adj-rib-out',True)

@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-reactor.py
+reactor/loop.py
 
 Created by Thomas Mangin on 2012-06-10.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.

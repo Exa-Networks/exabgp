@@ -6,14 +6,6 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-# ***********************************
-# *******************************
-# ***************************
-# NOT IN use
-# ***************************
-# *******************************
-# ***********************************
-
 from exabgp.configuration.current import Configuration
 from exabgp.configuration.current.format import formated
 
@@ -26,12 +18,11 @@ from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update.nlri import INET
 from exabgp.bgp.message.update.nlri import MPLS
 from exabgp.bgp.message.refresh import RouteRefresh
-from exabgp.bgp.message.operational import Advisory
-from exabgp.bgp.message.operational import Query
-from exabgp.bgp.message.operational import Response
 
 from exabgp.rib.change import Change
 
+
+# XXX: Need to remove the need to use scope to parse things
 
 # ========================================================================= Text
 #
@@ -221,44 +212,16 @@ class Text (Configuration):
 		return Family(afi,safi)
 
 	def api_operational (self, command):
-		tokens = formated(command).split(' ',2)
-		scope = [{}]
+		tokens = formated(command).split(' ',3)
 
-		if len(tokens) != 3:
+		if len(tokens) != 4:
 			return False
 
-		operational = tokens[0].lower()
-		what = tokens[1].lower()
+		operational = tokens[1].lower()
+		what = tokens[2].lower()
 
 		if operational != 'operational':
 			return False
 
-		if what == 'asm':
-			if not self._single_operational(Advisory.ASM,scope,['afi','safi','advisory'],tokens[2]):
-				return False
-		elif what == 'adm':
-			if not self._single_operational(Advisory.ADM,scope,['afi','safi','advisory'],tokens[2]):
-				return False
-		elif what == 'rpcq':
-			if not self._single_operational(Query.RPCQ,scope,['afi','safi','sequence'],tokens[2]):
-				return False
-		elif what == 'rpcp':
-			if not self._single_operational(Response.RPCP,scope,['afi','safi','sequence','counter'],tokens[2]):
-				return False
-		elif what == 'apcq':
-			if not self._single_operational(Query.APCQ,scope,['afi','safi','sequence'],tokens[2]):
-				return False
-		elif what == 'apcp':
-			if not self._single_operational(Response.APCP,scope,['afi','safi','sequence','counter'],tokens[2]):
-				return False
-		elif what == 'lpcq':
-			if not self._single_operational(Query.LPCQ,scope,['afi','safi','sequence'],tokens[2]):
-				return False
-		elif what == 'lpcp':
-			if not self._single_operational(Response.LPCP,scope,['afi','safi','sequence','counter'],tokens[2]):
-				return False
-		else:
-			return False
-
-		operational = scope[0]['operational'][0]
-		return operational
+		# None or a class
+		return self.operational.operational(what,tokens[3])

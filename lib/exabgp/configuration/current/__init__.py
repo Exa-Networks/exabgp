@@ -11,20 +11,14 @@ import pdb
 import time
 import socket
 
-from exabgp.util.ip import isipv4
-
 from exabgp.configuration.environment import environment
-from exabgp.configuration.current.format import formated
 
-from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.protocol.ip import IP
 
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message import Message
-
-from exabgp.bgp.message.open.routerid import RouterID
 
 from exabgp.bgp.message.update.nlri import INET
 from exabgp.bgp.message.update.nlri import MPLS
@@ -37,9 +31,6 @@ from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunities
 
-from exabgp.bgp.message.operational import MAX_ADVISORY
-from exabgp.bgp.message.operational import Advisory
-
 from exabgp.rib.change import Change
 
 from exabgp.logger import Logger
@@ -48,10 +39,11 @@ from exabgp.configuration.current.error import Error
 from exabgp.configuration.current.tokeniser import Tokeniser
 from exabgp.configuration.current.neighbor import ParseNeighbor
 from exabgp.configuration.current.family import ParseFamily
+from exabgp.configuration.current.process import ParseProcess
 from exabgp.configuration.current.route import ParseRoute
 from exabgp.configuration.current.flow import ParseFlow
 from exabgp.configuration.current.l2vpn import ParseL2VPN
-from exabgp.configuration.current.process import ParseProcess
+from exabgp.configuration.current.operational import ParseOperational
 
 
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
@@ -118,10 +110,11 @@ class Configuration (object):
 		self.tokens = Tokeniser(self.error,self.logger)
 		self.neighbor = ParseNeighbor(self.error,self.logger)
 		self.family = ParseFamily(self.error)
+		self.process = ParseProcess(self.error)
 		self.route = ParseRoute(self.error)
 		self.flow = ParseFlow(self.error,self.logger)
 		self.l2vpn = ParseL2VPN(self.error)
-		self.process = ParseProcess(self.error)
+		self.operational = ParseOperational(self.error)
 
 		self._tree = {
 			'root': {
@@ -340,6 +333,10 @@ class Configuration (object):
 				'community':           self.route.community,
 				'extended-community':  self.route.extended_community,
 			},
+			'operational': {
+				'asm':                 self.operational.asm,
+				# it makes no sense to have adm
+			}
 		}
 
 		self._clear()
@@ -359,11 +356,11 @@ class Configuration (object):
 		self.error.clear()
 		self.neighbor.clear()
 		self.family.clear()
+		self.process.clear()
 		self.route.clear()
 		self.flow.clear()
 		self.l2vpn.clear()
-		self.process.clear()
-
+		self.operational.clear()
 	# Public Interface
 
 	def reload (self):
@@ -380,8 +377,6 @@ class Configuration (object):
 		fname = self._configurations.pop(0)
 		self.process.configuration(fname)
 		self._configurations.append(fname)
-
-		previous_neighbors = self.neighbor.neighbors
 
 		# clearing the current configuration to be able to re-parse it
 		self._clear()
@@ -517,11 +512,6 @@ class Configuration (object):
 				if command in family.get(name,{}):
 					return self._command[name][command](scope,command,tokens[1:],family[name][command])
 				return self._command[name][command](scope,command,tokens[1:])
-
-		elif name == 'operational':
-			if command == 'asm':
-				return self._single_operational_asm(scope,name,tokens[1])
-			# it does not make sense to have adm
 
 		elif name == 'process':
 			if command == 'run':
@@ -1044,81 +1034,3 @@ class Configuration (object):
 				return False
 			if r is None:
 				return True
-
-	def _single_operational_asm (self, scope, command, value):
-		return self._single_operational(Advisory.ASM,scope,['afi','safi','advisory'],value)
-
-	def _single_operational (self, klass, scope, parameters, value):
-		def utf8 (string): return string.encode('utf-8')[1:-1]
-
-		convert = {
-			'afi': AFI.value,
-			'safi': SAFI.value,
-			'sequence': int,
-			'counter': long,
-			'advisory': utf8
-		}
-
-		def valid (_):
-			return True
-
-		def u32 (_):
-			return int(_) <= 0xFFFFFFFF
-
-		def u64 (_):
-			return long(_) <= 0xFFFFFFFFFFFFFFFF
-
-		def advisory (_):
-			return len(_.encode('utf-8')) <= MAX_ADVISORY + 2  # the two quotes
-
-		validate = {
-			'afi': AFI.value,
-			'safi': SAFI.value,
-			'sequence': u32,
-			'counter': u64,
-		}
-
-		number = len(parameters)*2
-		tokens = formated(value).split(' ',number-1)
-		if len(tokens) != number:
-			return self.error.set('invalid operational syntax, wrong number of arguments')
-			return False
-
-		data = {}
-
-		while tokens and parameters:
-			command = tokens.pop(0).lower()
-			value = tokens.pop(0)
-
-			if command == 'router-id':
-				if isipv4(value):
-					data['routerid'] = RouterID(value)
-				else:
-					return self.error.set('invalid operational value for %s' % command)
-					return False
-				continue
-
-			expected = parameters.pop(0)
-
-			if command != expected:
-				return self.error.set('invalid operational syntax, unknown argument %s' % command)
-				return False
-			if not validate.get(command,valid)(value):
-				return self.error.set('invalid operational value for %s' % command)
-				return False
-
-			data[command] = convert[command](value)
-
-		if tokens or parameters:
-			return self.error.set('invalid advisory syntax, missing argument(s) %s' % ', '.join(parameters))
-			return False
-
-		if 'routerid' not in data:
-			data['routerid'] = None
-
-		if 'operational-message' not in scope[-1]:
-			scope[-1]['operational-message'] = []
-
-		# iterate on each family for the peer if multiprotocol is set.
-		scope[-1]['operationa-messagel'].append(klass(**data))
-		return True
