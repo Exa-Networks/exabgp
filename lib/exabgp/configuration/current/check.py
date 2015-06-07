@@ -16,6 +16,8 @@ from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message import Notify
 from exabgp.bgp.message.update.nlri import NLRI
 
+from exabgp.logger import Logger
+
 # check_neighbor
 
 from exabgp.util.od import od
@@ -23,7 +25,6 @@ from exabgp.rib.change import Change
 
 # check_update
 
-from exabgp.reactor.peer import Peer
 from exabgp.reactor.api.response import Response
 
 # check_notification
@@ -40,10 +41,8 @@ from exabgp.version import json as json_version
 
 
 def check_neighbor (neighbors):
-	from exabgp.logger import Logger
-
-	logger = Logger()
 	logger._option.parser = True
+	logger = Logger()
 
 	if not neighbors:
 		logger.parser('\ncould not find neighbor(s) to check')
@@ -71,7 +70,7 @@ def check_neighbor (neighbors):
 		negotiated.received(o2)
 		# grouped = False
 
-		for message in neighbor.rib.outgoing.updates(False):
+		for _ in neighbor.rib.outgoing.updates(False):
 			pass
 
 		for change1 in neighbor.rib.outgoing.sent_changes():
@@ -180,31 +179,29 @@ def check_open (neighbor, raw):
 #
 
 def check_update (neighbor, raw):
-	from exabgp.logger import Logger
-
 	logger = Logger()
-	logger._parser = True
+	logger._option.parser = True
 	logger.parser('\ndecoding routes in configuration')
 
-	n = neighbor[neighbor.keys()[0]]
-	p = Peer(n,None)
+
+	neighbor = neighbor[neighbor.keys()[0]]
 
 	path = {}
 	for f in NLRI.known_families():
-		if n.add_path:
-			path[f] = n.add_path
+		if neighbor.add_path:
+			path[f] = neighbor.add_path
 
-	capa = Capabilities().new(n,False)
+	capa = Capabilities().new(neighbor,False)
 	capa[Capability.CODE.ADD_PATH] = path
-	capa[Capability.CODE.MULTIPROTOCOL] = n.families()
-#	capa[Capability.CODE.FOUR_BYTES_ASN] = True
+	capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
+	# capa[Capability.CODE.FOUR_BYTES_ASN] = True
 
-	routerid_1 = str(n.router_id)
-	routerid_2 = '.'.join(str((int(_)+1) % 250) for _ in str(n.router_id).split('.',-1))
+	routerid_1 = str(neighbor.router_id)
+	routerid_2 = '.'.join(str((int(_)+1) % 250) for _ in str(neighbor.router_id).split('.',-1))
 
-	o1 = Open(4,n.local_as,routerid_1,capa,180)
-	o2 = Open(4,n.peer_as,routerid_2,capa,180)
-	negotiated = Negotiated(n)
+	o1 = Open(4,neighbor.local_as,routerid_1,capa,180)
+	o2 = Open(4,neighbor.peer_as,routerid_2,capa,180)
+	negotiated = Negotiated(neighbor)
 	negotiated.sent(o1)
 	negotiated.received(o2)
 	# grouped = False
@@ -245,7 +242,7 @@ def check_update (neighbor, raw):
 		for number in range(len(update.nlris)):
 			change = Change(update.nlris[number],update.attributes)
 			logger.parser('decoded %s %s %s' % (decoding,change.nlri.action,change.extensive()))
-		logger.parser('update json %s' % Response.JSON(json_version).update(p.neighbor,'in',update,'',''))
+		logger.parser('update json %s' % Response.JSON(json_version).update(neighbor,'in',update,'',''))
 
 	return True
 

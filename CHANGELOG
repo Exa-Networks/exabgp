@@ -728,7 +728,7 @@ Version 3.0.2 - 16 of July 2012 (unreleased experimental version)
     reported by Rishabh Goel
  * Fix: bug with profiling
  * Fix: withdrawal was broken when path-info was added
- * API CHANGE: as-path configurtion syntax (as-sequence removed)
+ * API CHANGE: as-path configuration syntax (as-sequence removed)
  * CHANGE: restructuration of file hierarchy
 
 Version 3.0.1 - 14 of July 2012 (unreleased experimental version)

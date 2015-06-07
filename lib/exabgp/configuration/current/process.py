@@ -110,21 +110,15 @@ class ParseProcess (Basic):
 
 		if not os.path.exists(prg):
 			return self.error.set('can not locate the the program "%s"' % prg)
-			if self.debug: raise Exception()  # noqa
-			return False
 
 		# race conditions are possible, those are sanity checks not security ones ...
 		s = os.stat(prg)
 
 		if stat.S_ISDIR(s.st_mode):
 			return self.error.set('can not execute directories "%s"' % prg)
-			if self.debug: raise Exception()  # noqa
-			return False
 
 		if s.st_mode & stat.S_ISUID:
 			return self.error.set('refusing to run setuid programs "%s"' % prg)
-			if self.debug: raise Exception()  # noqa
-			return False
 
 		check = stat.S_IXOTH
 		if s.st_uid == os.getuid():
@@ -134,8 +128,6 @@ class ParseProcess (Basic):
 
 		if not check & s.st_mode:
 			return self.error.set('exabgp will not be able to run this program "%s"' % prg)
-			if self.debug: raise Exception()  # noqa
-			return False
 
 		if args:
 			scope[-1][command] = [prg] + args

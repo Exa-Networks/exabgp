@@ -66,7 +66,6 @@ class FSM (object):
 
 	def change (self, state):
 		if self.state not in self.transition.get(state,[]):
-			import pdb; pdb.set_trace()
 			raise RuntimeError ('invalid state machine transition (from %s to %s)' % (str(self.state),str(state)))
 		self.state = state
 		return self
