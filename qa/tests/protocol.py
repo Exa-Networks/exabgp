@@ -9,9 +9,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import unittest
 
-from exabgp.configuration.environment import environment
-env = environment.setup('')
-
 from exabgp.bgp.message.open.asn import ASN
 
 from exabgp.bgp.message import Open
@@ -25,6 +22,9 @@ from exabgp.reactor.protocol import Protocol
 from exabgp.bgp.neighbor import Neighbor
 
 from StringIO import StringIO
+
+from exabgp.configuration.environment import environment
+environment.setup('')
 
 
 class Network (StringIO):

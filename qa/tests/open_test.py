@@ -9,9 +9,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import unittest
 
-from exabgp.configuration.environment import environment
-env = environment.setup('')
-
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message import Message
@@ -21,6 +18,8 @@ from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability import RouteRefresh
 
+from exabgp.configuration.environment import environment
+environment.setup('')
 
 class TestData (unittest.TestCase):
 

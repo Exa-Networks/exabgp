@@ -10,7 +10,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import unittest
 
 from exabgp.configuration.environment import environment
-env = environment.setup('')
+environment.setup('')
 
 # from exabgp.protocol.family import AFI
 # from exabgp.protocol.family import SAFI
@@ -18,7 +18,7 @@ env = environment.setup('')
 class TestData (unittest.TestCase):
 	def setUp (self):
 		pass
-	
+
 	# def test_1_nlri_1 (self):
 	# 	self.assertEqual(''.join([chr(c) for c in [32,1,2,3,4]]),to_NLRI('1.2.3.4','32').pack())
 	# def test_1_nlri_2 (self):

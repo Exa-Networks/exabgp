@@ -9,13 +9,11 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import time
 import socket
-import tempfile
 import unittest
-from multiprocessing import Process
 
 
 from exabgp.configuration.setup import environment
-env = environment.setup('')
+environment.setup('')
 
 
 def speak (name, data):

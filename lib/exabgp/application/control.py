@@ -111,8 +111,8 @@ class Control (object):
 		def std_reader (number):
 			try:
 				return os.read(standard_in,number)
-			except OSError as e:
-				if e.errno in error.block:
+			except OSError as exc:
+				if exc.errno in error.block:
 					return ''
 				raise e
 
@@ -120,8 +120,8 @@ class Control (object):
 		def std_writer (line):
 			try:
 				return os.write(standard_out,line)
-			except OSError as e:
-				if e.errno in error.block:
+			except OSError as exc:
+				if exc.errno in error.block:
 					return 0
 				raise e
 
@@ -129,8 +129,8 @@ class Control (object):
 		def fifo_reader (number):
 			try:
 				return os.read(self.r_pipe,number)
-			except OSError as e:
-				if e.errno in error.block:
+			except OSError as exc:
+				if exc.errno in error.block:
 					return ''
 				raise e
 

@@ -17,11 +17,12 @@ from exabgp.configuration.current import Configuration
 from exabgp.configuration.current.check import check_neighbor
 
 from exabgp.configuration.setup import environment
-env = environment.setup('')
-env.log.enable = True
-env.log.all = False
-env.log.configuration = False
-env.log.parser = False
+environ = environment.setup('')
+environ.log.enable = True
+environ.log.all = False
+environ.log.configuration = False
+environ.log.parser = False
+
 
 class TestControl (unittest.TestCase):
 	def setUp (self):

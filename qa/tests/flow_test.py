@@ -9,7 +9,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import unittest
 
-from exabgp.configuration.environment import environment
 from exabgp.bgp.message.update.nlri import Flow
 from exabgp.bgp.message.update.nlri.flow import Flow4Source
 from exabgp.bgp.message.update.nlri.flow import Flow4Destination
@@ -18,7 +17,8 @@ from exabgp.bgp.message.update.nlri.flow import FlowAnyPort
 from exabgp.bgp.message.update.nlri.flow import NumericOperator
 # from exabgp.bgp.message.update.attribute.community import *
 
-env = environment.setup('')
+from exabgp.configuration.environment import environment
+environment.setup('')
 
 
 class TestFlow (unittest.TestCase):

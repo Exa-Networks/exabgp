@@ -10,6 +10,30 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 # pylint: ignore=E131
 # pylama:ignore=E131
 
+# INET include is required as it perform some AFI/SAFI registration
+from exabgp.bgp.message.update.nlri import INET  # noqa
+
+from exabgp.bgp.message.open.routerid import RouterID
+from exabgp.protocol.ip import IPv4
+from exabgp.bgp.message.open.asn import ASN
+from exabgp.bgp.message.open.holdtime import HoldTime
+
+from exabgp.bgp.message import Update
+from exabgp.bgp.message import Open
+from exabgp.bgp.message.open.capability import Capabilities
+from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open.capability import Negotiated
+# from exabgp.bgp.message import Notify
+from exabgp.bgp.message.update.nlri import NLRI
+
+
+from exabgp.configuration.setup import environment
+from exabgp.logger import Logger
+
+environment.setup('')
+logger = Logger()
+
+
 bodies = []
 
 body = [
@@ -197,29 +221,6 @@ body = [
 # asn4, data
 bodies.append((True,body))
 
-# INET include is required as it perform some AFI/SAFI registration
-from exabgp.bgp.message.update.nlri import INET  # noqa
-
-from exabgp.bgp.message.open.routerid import RouterID
-from exabgp.protocol.ip import IPv4
-from exabgp.bgp.message.open.asn import ASN
-from exabgp.bgp.message.open.holdtime import HoldTime
-
-from exabgp.bgp.message import Update
-from exabgp.bgp.message import Open
-from exabgp.bgp.message.open.capability import Capabilities
-from exabgp.bgp.message.open.capability import Capability
-from exabgp.bgp.message.open.capability import Negotiated
-# from exabgp.bgp.message import Notify
-from exabgp.bgp.message.update.nlri import NLRI
-
-
-from exabgp.configuration.setup import environment
-env = environment.setup('')
-
-from exabgp.logger import Logger
-logger = Logger()
-
 
 class FakeNeighbor (object):
 	description = 'a test neighbor'
@@ -263,7 +264,6 @@ import unittest
 
 class TestUpdateDecoding (unittest.TestCase):
 	def setUp (self):
-		# env.log.all = True
 		self.negotiated = {}
 
 		for asn4 in (True,False):

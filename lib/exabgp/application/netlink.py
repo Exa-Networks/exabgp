@@ -4,7 +4,6 @@ import sys
 import socket
 
 from exabgp.netlink import NetMask
-from exabgp.netlink.message import NetLink
 from exabgp.netlink.attributes import Attributes
 
 from exabgp.netlink.route.link import Link
@@ -18,14 +17,15 @@ def usage ():
 	print '  addr  : show the ip address on the interface'
 	print '  route : show the ip routing'
 
-def addr ():
+
+def addresses ():
 	links = {}
 	for ifi in Link.getLinks():
 		links[ifi.index] = ifi
 
-	addresses = {}
+	addrs = {}
 	for ifa in Address.getAddresses():
-		addresses.setdefault(ifa.index,[]).append(ifa)
+		addrs.setdefault(ifa.index,[]).append(ifa)
 
 	neighbors = {}
 	for neighbor in Neighbor.getNeighbors():
@@ -37,7 +37,7 @@ def addr ():
 			hwaddr = ':'.join(x.encode('hex') for x in ifi.attributes[Address.Type.Attribute.IFLA_ADDRESS])
 		print "%d: %s %s" % (ifi.index,ifi.attributes[Address.Type.Attribute.IFLA_IFNAME][:-1],hwaddr)
 
-		for ifa in addresses.get(ifi.index,{}):
+		for ifa in addrs.get(ifi.index,{}):
 			address = ifa.attributes.get(Attributes.Type.IFA_ADDRESS)
 			if not address:
 				continue
@@ -60,7 +60,8 @@ def addr ():
 					print '  %d %s' % (ifa.family, address.encode('hex'))
 				print 'mac',':'.join(_.encode('hex') for _ in neighbor.attributes[Neighbor.Type.State.NUD_REACHABLE])
 
-def route ():
+
+def routes ():
 	links = {}
 	for ifi in Link.getLinks():
 		links[ifi.index] = ifi.attributes.get(Link.Type.Attribute.IFLA_IFNAME).strip('\0')
@@ -94,8 +95,6 @@ def route ():
 
 
 def new ():
-	netlink = NetLink()
-
 	links = {}
 	for ifi in Link.getLinks():
 		links[ifi.index] = ifi.attributes.get(Link.Type.Attribute.IFLA_IFNAME).strip('\0')
@@ -131,17 +130,17 @@ def main ():
 		sys.exit(1)
 	if 'addr'.startswith(sys.argv[1]):
 		if len(sys.argv) == 2:
-			addr()
+			addresses()
 			sys.exit(0)
 		if sys.argv[2] in 'show':
 			addr()
 			sys.exit(0)
 	if 'route'.startswith(sys.argv[1]):
 		if len(sys.argv) == 2:
-			route()
+			routes()
 			sys.exit(0)
 		if 'show'.startswith(sys.argv[2]):
-			route()
+			routes()
 			sys.exit(0)
 		if 'add'.startswith(sys.argv[2]):
 			new()

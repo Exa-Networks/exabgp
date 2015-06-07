@@ -58,6 +58,7 @@ class _Code (int):
 	def __init__ (self,value):
 		self.SHORT = self.short()
 		self.NAME = str(self)
+		int.__init__(self,value)
 
 	def __str__ (self):
 		return self.names.get(self,'unknown message %s' % hex(self))
@@ -84,6 +85,7 @@ class _Code (int):
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 # |          Length               |      Type     |
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
 
 class Message (Exception):
 	# we need to define TYPE inside __init__ of the subclasses

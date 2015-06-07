@@ -25,6 +25,8 @@ from exabgp.bmp.header import Header
 from exabgp.bmp.message import Message
 from exabgp.bmp.negotiated import FakeNegotiated
 
+from exabgp.configuration.environment import environment
+
 from exabgp.version import json as json_version
 
 class BMPHandler (asyncore.dispatcher_with_send):
@@ -34,15 +36,15 @@ class BMPHandler (asyncore.dispatcher_with_send):
 	def announce (self, *args):
 		print >> self.fd, self.ip, self.port, ' '.join(str(_) for _ in args) if len(args) > 1 else args[0]
 
-	def setup (self, env, ip, port):
+	def setup (self, environ, ip, port):
 		self.handle = {
 			Message.ROUTE_MONITORING:       self._route,
 			Message.STATISTICS_REPORT:      self._statistics,
 			Message.PEER_DOWN_NOTIFICATION: self._peer,
 		}
-		self.asn4 = env.bmp.asn4
-		self.use_json = env.bmp.json
-		self.fd = env.fd
+		self.asn4 = environ.bmp.asn4
+		self.use_json = environ.bmp.json
+		self.fd = environ.fd
 		self.ip = ip
 		self.port = port
 		self.json = Response.JSON(json_version)
@@ -156,8 +158,6 @@ def drop ():
 	if not uid:
 		os.setuid(nuid)
 
-
-from exabgp.configuration.environment import environment
 
 _SPACE = {
 	'space': ' '*33
