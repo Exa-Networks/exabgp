@@ -41,8 +41,8 @@ from exabgp.version import json as json_version
 
 
 def check_neighbor (neighbors):
-	logger._option.parser = True
 	logger = Logger()
+	logger._option.parser = True
 
 	if not neighbors:
 		logger.parser('\ncould not find neighbor(s) to check')
