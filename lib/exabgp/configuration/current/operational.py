@@ -44,7 +44,7 @@ class ParseOperational (Basic):
 	def clear (self):
 		pass
 
-	def asm (self, scope, command,tokens):
+	def asm (self, scope, name, command, tokens):
 		operational = self._operational(Advisory.ASM,['afi','safi','advisory'],' '.join(tokens))
 
 		if not operational:
@@ -57,7 +57,7 @@ class ParseOperational (Basic):
 		scope[-1]['operational-message'].append(operational)
 		return True
 
-	def operational (self,what,tokens):
+	def operational (self, what, tokens):
 		return self._dispatch.get(what,lambda _: False)(tokens)
 
 	def _asm (self, tokens):

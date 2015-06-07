@@ -384,7 +384,7 @@ class Configuration (object):
 			self._location.append(tokens[0])
 			return self._multi_line(scope,command,tokens[1],tokens[:-1],multi)
 		if single and end == ';':
-			return self._single_line(scope,command,tokens[1],tokens[:-1],single)
+			return self.run(scope,command,tokens[1],tokens[:-1],single)
 		if end == '}':
 			if len(self._location) == 1:
 				return self.error.set('closing too many parenthesis')
@@ -730,17 +730,13 @@ class Configuration (object):
 
 	def _multi_api (self, scope, name, command, tokens):
 		if len(tokens) != 0:
-			return self.error.set(self.flow.syntax)
+			return self.error.set('api issue')
 
 		while True:
 			r = self._dispatch(
 				scope,name,command,
 				[],
-				[
-					'packets','parsed','consolidate',
-					'notification','open','keepalive',
-					'update','refresh','operational'
-				]
+				self._command[command].keys()
 			)
 			if r is False:
 				return False
@@ -756,16 +752,16 @@ class Configuration (object):
 
 		while True:
 			r = self._dispatch(
-				scope,name,'operational',
+				scope,name,command,
 				[],
-				['asm',]
+				self._command[command].keys()
 			)
 			if r is False:
 				return False
 			if r is None:
 				return True
 
-	def _single_line (self, scope, name, comamnd, tokens, valid):
+	def run (self, scope, name, comamnd, tokens, valid):
 		command = tokens[0]
 		if valid and command not in valid:
 			return self.error.set('invalid keyword "%s"' % command)
