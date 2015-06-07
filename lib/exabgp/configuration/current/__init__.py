@@ -254,6 +254,28 @@ class Configuration (object):
 				'community':           self.route.community,
 				'extended-community':  self.route.extended_community,
 			},
+			'send': {
+				'parsed':              self.process.command,
+				'packets':             self.process.command,
+				'consolidate':         self.process.command,
+				'open':                self.process.command,
+				'update':              self.process.command,
+				'notification':        self.process.command,
+				'keepalive':           self.process.command,
+				'refresh':             self.process.command,
+				'operational':         self.process.command,
+			},
+			'receive': {
+				'parsed':              self.process.command,
+				'packets':             self.process.command,
+				'consolidate':         self.process.command,
+				'open':                self.process.command,
+				'update':              self.process.command,
+				'notification':        self.process.command,
+				'keepalive':           self.process.command,
+				'refresh':             self.process.command,
+				'operational':         self.process.command,
+			},
 		}
 
 		self._clear()
@@ -768,8 +790,5 @@ class Configuration (object):
 				if command in family.get(name,{}):
 					return self._command[name][command](scope,name,command,tokens[1:],family[name][command])
 				return self._command[name][command](scope,name,command,tokens[1:])
-
-		elif name in ['send','receive']:  # process / send
-			return self.process.command(scope,name,command,tokens[1:])
 
 		return self.error.set('command not known %s' % command)
