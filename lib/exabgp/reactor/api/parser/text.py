@@ -88,7 +88,7 @@ class Text (Configuration):
 			for peer,nexthop in peers.iteritems():
 				scope = [{}]
 				self.route.nexthop(nexthop)
-				if not self._single_static_route(scope,'route',tokens[1:]):
+				if not self.route.route(scope,'route',tokens[1:]):
 					self.route.clear()
 					return False
 				for change in scope[0]['announce']:
@@ -96,7 +96,7 @@ class Text (Configuration):
 			self.route.clear()
 		else:
 			scope = [{}]
-			if not self._single_static_route(scope,'route',tokens[1:]):
+			if not self.route.route(scope,'route',tokens[1:]):
 				return False
 			for peer in peers:
 				for change in scope[0]['announce']:
@@ -118,7 +118,7 @@ class Text (Configuration):
 			for peer,nexthop in peers.iteritems():
 				scope = [{}]
 				self._nexthopself = nexthop
-				if not self._single_l2vpn_vpls(scope,'vpls',tokens[1:]):
+				if not self.l2vpn.vpls(scope,'vpls',tokens[1:]):
 					self._nexthopself = None
 					return False
 				for change in scope[0]['announce']:
@@ -126,7 +126,7 @@ class Text (Configuration):
 			self._nexthopself = None
 		else:
 			scope = [{}]
-			if not self._single_l2vpn_vpls(scope,'vpls',tokens[1:]):
+			if not self.l2vpn.vpls(scope,'vpls',tokens[1:]):
 				return False
 			for peer in peers:
 				for change in scope[0]['announce']:

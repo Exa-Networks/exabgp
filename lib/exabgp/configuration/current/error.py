@@ -11,7 +11,7 @@ class Error (object):
 		self._message = message
 		if self.debug:
 			pdb.set_trace()
-			raise Exception()
+			return True
 		return False
 
 	def clear (self):

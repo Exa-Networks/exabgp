@@ -6,10 +6,15 @@ Created by Thomas Mangin on 2015-06-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.current.basic import Basic
+from exabgp.protocol.family import SAFI
+from exabgp.bgp.message.update.attribute import Attributes
+from exabgp.rib.change import Change
+from exabgp.bgp.message.update.nlri import VPLS
+
+from exabgp.configuration.current.route import ParseRoute
 
 
-class ParseL2VPN (Basic):
+class ParseL2VPN (ParseRoute):
 	syntax = \
 		'syntax:\n' \
 		'  l2vpn {\n' \
@@ -40,6 +45,27 @@ class ParseL2VPN (Basic):
 
 	def __init__ (self, error):
 		self.error = error
+
+		self.command = {
+			'endpoint':            self.vpls_endpoint,
+			'offset':              self.vpls_offset,
+			'size':                self.vpls_size,
+			'base':                self.vpls_base,
+			'origin':              self.origin,
+			'as-path':             self.aspath,
+			'med':                 self.med,
+			'next-hop':            self.next_hop,
+			'local-preference':    self.local_preference,
+			'originator-id':       self.originator_id,
+			'cluster-list':        self.cluster_list,
+			'rd':                  self.rd,
+			'route-distinguisher': self.rd,
+			'withdraw':            self.withdraw,
+			'withdrawn':           self.withdraw,
+			'name':                self.name,
+			'community':           self.community,
+			'extended-community':  self.extended_community,
+		}
 
 	def clear (self):
 		pass
@@ -78,6 +104,46 @@ class ParseL2VPN (Basic):
 
 		vpls = scope[-1]['announce'][-1].nlri
 		vpls.base = number
+		return True
+
+	def vpls (self, scope, command, tokens):
+		# TODO: actual length?(like rd+lb+bo+ve+bs+rd; 14 or so)
+		if len(tokens) < 10:
+			return False
+
+		if not self.insert_vpls(scope,command,tokens):
+			return False
+
+		while len(tokens):
+			command = tokens.pop(0)
+			if len(tokens) < 1:
+				return False
+			if command in self.command:
+				if command in ('rd','route-distinguisher'):
+					if self.command[command](scope,command,tokens,SAFI.vpls):
+						continue
+				else:
+					if self.command[command](scope,command,tokens):
+						continue
+			else:
+				return False
+			return False
+
+		if not self.check_vpls(scope,self):
+			return False
+		return True
+
+	def insert_vpls (self, scope, command, tokens=None):
+		try:
+			attributes = Attributes()
+			change = Change(VPLS(None,None,None,None,None),attributes)
+		except ValueError:
+			return self.error.set(self.syntax)
+
+		if 'announce' not in scope[-1]:
+			scope[-1]['announce'] = []
+
+		scope[-1]['announce'].append(change)
 		return True
 
 	def check_vpls (self, scope, configuration):

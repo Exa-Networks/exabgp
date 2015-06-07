@@ -17,14 +17,8 @@ from exabgp.protocol.family import SAFI
 
 from exabgp.protocol.ip import IP
 
-from exabgp.bgp.message import OUT
 from exabgp.bgp.message import Message
 
-from exabgp.bgp.message.update.nlri import INET
-from exabgp.bgp.message.update.nlri import MPLS
-from exabgp.bgp.message.update.nlri import VPLS
-# from exabgp.bgp.message.update.nlri import EVPN
-# from exabgp.bgp.message.update.nlri.flow import NLRI
 from exabgp.bgp.message.update.nlri.flow import Flow
 
 from exabgp.bgp.message.update.attribute import Attribute
@@ -44,11 +38,6 @@ from exabgp.configuration.current.route import ParseRoute
 from exabgp.configuration.current.flow import ParseFlow
 from exabgp.configuration.current.l2vpn import ParseL2VPN
 from exabgp.configuration.current.operational import ParseOperational
-
-
-# Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
-def pack_int (afi, integer, mask):
-	return ''.join([chr((integer >> (offset * 8)) & 0xff) for offset in range(IP.length(afi)-1,-1,-1)])
 
 
 def false (*args):
@@ -204,6 +193,11 @@ class Configuration (object):
 				'add-path':         self.neighbor.capability.addpath,
 				'asn4':             self.neighbor.capability.asn4,
 			},
+			'process': {
+				'run':              self.process.run,
+				'encoder':          self.process.encoder,
+				'neighbor-changes': self.process.command,
+			},
 			'family': {
 				'ipv4':    self.family.ipv4,
 				'ipv6':    self.family.ipv6,
@@ -211,92 +205,20 @@ class Configuration (object):
 				'minimal': self.family.minimal,
 				'all':     self.family.all,
 			},
-			'static-route': {
-				'origin':              self.route.origin,
-				'as-path':             self.route.aspath,
-				'med':                 self.route.med,
-				'aigp':                self.route.aigp,
-				'next-hop':            self.route.next_hop,
-				'local-preference':    self.route.local_preference,
-				'atomic-aggregate':    self.route.atomic_aggregate,
-				'aggregator':          self.route.aggregator,
-				'path-information':    self.route.path_information,
-				'originator-id':       self.route.originator_id,
-				'cluster-list':        self.route.cluster_list,
-				'split':               self.route.split,
-				'label':               self.route.label,
-				'rd':                  self.route.rd,
-				'route-distinguisher': self.route.rd,
-				'watchdog':            self.route.watchdog,
-				'withdraw':            self.route.withdraw,
-				'name':                self.route.name,
-				'community':           self.route.community,
-				'extended-community':  self.route.extended_community,
-				'attribute':           self.route.generic_attribute,
+			'static': {
+				'route':   self.route.route,
 			},
+			'l2vpn': {
+				'vpls':    self.l2vpn.vpls,
+			},
+			'operational': {
+				'asm':                 self.operational.asm,
+				# it makes no sense to have adm or others
+			},
+			'static-route': self.route.command,
 			# 'inet-route': {
-			# 	'origin':              self.route.origin,
-			# 	'as-path':             self.route.aspath,
-			# 	'med':                 self.route.med,
-			# 	'aigp':                self.route.aigp,
-			# 	'next-hop':            self.route.next_hop,
-			# 	'local-preference':    self.route.local_preference,
-			# 	'atomic-aggregate':    self.route.atomic_aggregate,
-			# 	'aggregator':          self.route.aggregator,
-			# 	'path-information':    self.route.path_information,
-			# 	'originator-id':       self.route.originator_id,
-			# 	'cluster-list':        self.route.cluster_list,
-			# 	'split':               self.route.split,
-			# 	'watchdog':            self.route.watchdog,
-			# 	'withdraw':            self.route.withdraw,
-			# 	'name':                self.route.name,
-			# 	'community':           self.route.community,
-			# 	'extended-community':  self.route.extended_community,
-			# 	'attribute':           self.route.generic_attribute,
-			# },
 			# 'mpls-route': {
-			# 	'label':               self.route.label,
-			# 	'rd':                  self.route.rd,
-			# 	'route-distinguisher': self.route.rd,
-			# 	'origin':              self.route.origin,
-			# 	'as-path':             self.route.aspath,
-			# 	'med':                 self.route.med,
-			# 	'aigp':                self.route.aigp,
-			# 	'next-hop':            self.route.next_hop,
-			# 	'local-preference':    self.route.local_preference,
-			# 	'atomic-aggregate':    self.route.atomic_aggregate,
-			# 	'aggregator':          self.route.aggregator,
-			# 	'path-information':    self.route.path_information,
-			# 	'originator-id':       self.route.originator_id,
-			# 	'cluster-list':        self.route.cluster_list,
-			# 	'split':               self.route.split,
-			# 	'watchdog':            self.route.watchdog,
-			# 	'withdraw':            self.route.withdraw,
-			# 	'name':                self.route.name,
-			# 	'community':           self.route.community,
-			# 	'extended-community':  self.route.extended_community,
-			# 	'attribute':           self.route.generic_attribute,
-			# },
-			'l2vpn-vpls': {
-				'endpoint':            self.l2vpn.vpls_endpoint,
-				'offset':              self.l2vpn.vpls_offset,
-				'size':                self.l2vpn.vpls_size,
-				'base':                self.l2vpn.vpls_base,
-				'origin':              self.route.origin,
-				'as-path':             self.route.aspath,
-				'med':                 self.route.med,
-				'next-hop':            self.route.next_hop,
-				'local-preference':    self.route.local_preference,
-				'originator-id':       self.route.originator_id,
-				'cluster-list':        self.route.cluster_list,
-				'rd':                  self.route.rd,
-				'route-distinguisher': self.route.rd,
-				'withdraw':            self.route.withdraw,
-				'withdrawn':           self.route.withdraw,
-				'name':                self.route.name,
-				'community':           self.route.community,
-				'extended-community':  self.route.extended_community,
-			},
+			'l2vpn-vpls':   self.l2vpn.command,
 			'flow-route': {
 				'rd':                  self.route.rd,
 				'route-distinguisher': self.route.rd,
@@ -333,10 +255,6 @@ class Configuration (object):
 				'community':           self.route.community,
 				'extended-community':  self.route.extended_community,
 			},
-			'operational': {
-				'asm':                 self.operational.asm,
-				# it makes no sense to have adm
-			}
 		}
 
 		self._clear()
@@ -487,60 +405,6 @@ class Configuration (object):
 	def _multi_line (self, scope, name, tokens, valid):
 		return self._multi(self._tree,scope,name,tokens,valid)
 
-	def _single_line (self, scope, name, tokens, valid):
-		command = tokens[0]
-		if valid and command not in valid:
-			return self.error.set('invalid keyword "%s"' % command)
-
-		family = {
-			'static-route': {
-				'rd': SAFI.mpls_vpn,
-				'route-distinguisher': SAFI.mpls_vpn,
-			},
-			'l2vpn-vpls': {
-				'rd': SAFI.vpls,
-				'route-distinguisher': SAFI.vpls,
-			},
-			'flow-route': {
-				'rd': SAFI.flow_vpn,
-				'route-distinguisher': SAFI.flow_vpn,
-			}
-		}
-
-		if name in self._command:
-			if command in self._command[name]:
-				if command in family.get(name,{}):
-					return self._command[name][command](scope,command,tokens[1:],family[name][command])
-				return self._command[name][command](scope,command,tokens[1:])
-
-		elif name == 'process':
-			if command == 'run':
-				return self.process.run(scope,'process-run',tokens[1:])
-			if command == 'encoder':
-				return self.process.encoder(scope,'encoder',tokens[1:])
-
-			if command == 'neighbor-changes':
-				return self.process.command(scope,'neighbor-changes',tokens[1:])
-
-		elif name in ['send','receive']:  # process / send
-
-			if command in ['packets','parsed','consolidate']:
-				return self.process.command(scope,'%s-%s' % (name,command),tokens[1:])
-
-			for message in Message.CODE.MESSAGES:
-				if command == message.SHORT:
-					return self.process.command(scope,'%s-%d' % (name,message),tokens[1:])
-
-		elif name == 'static':
-			if command == 'route':
-				return self._single_static_route(scope,name,tokens[1:])
-
-		elif name == 'l2vpn':
-			if command == 'vpls':
-				return self._single_l2vpn_vpls(scope,name,tokens[1:])
-
-		return False
-
 	# Programs used to control exabgp
 
 	def _multi_process (self, scope, command, tokens):
@@ -573,7 +437,7 @@ class Configuration (object):
 				key = '%s-%d' % (direction,message)
 				self.processes[name][key] = scope[-1].pop(key,False)
 
-		run = scope[-1].pop('process-run','')
+		run = scope[-1].pop('run','')
 		if run:
 			if len(tokens) != 1:
 				return self.error.set(self.process.syntax)
@@ -694,62 +558,6 @@ class Configuration (object):
 
 	# Group Route  ........
 
-	def _split_last_route (self, scope):
-		# if the route does not need to be broken in smaller routes, return
-		change = scope[-1]['announce'][-1]
-		if Attribute.CODE.INTERNAL_SPLIT not in change.attributes:
-			return True
-
-		# ignore if the request is for an aggregate, or the same size
-		mask = change.nlri.mask
-		split = change.attributes[Attribute.CODE.INTERNAL_SPLIT]
-		if mask >= split:
-			return True
-
-		# get a local copy of the route
-		change = scope[-1]['announce'].pop(-1)
-
-		# calculate the number of IP in the /<size> of the new route
-		increment = pow(2,(len(change.nlri.packed)*8) - split)
-		# how many new routes are we going to create from the initial one
-		number = pow(2,split - change.nlri.mask)
-
-		# convert the IP into a integer/long
-		ip = 0
-		for c in change.nlri.packed:
-			ip <<= 8
-			ip += ord(c)
-
-		afi = change.nlri.afi
-		safi = change.nlri.safi
-
-		# Really ugly
-		klass = change.nlri.__class__
-		if klass is INET:
-			path_info = change.nlri.path_info
-		elif klass is MPLS:
-			path_info = None
-			labels = change.nlri.labels
-			rd = change.nlri.rd
-		# packed and not pack() but does not matter atm, it is an IP not a NextHop
-		nexthop = change.nlri.nexthop.packed
-
-		change.nlri.mask = split
-		change.nlri = None
-		# generate the new routes
-		for _ in range(number):
-			# update ip to the next route, this recalculate the "ip" field of the Inet class
-			nlri = klass(afi,safi,pack_int(afi,ip,split),split,nexthop,OUT.ANNOUNCE,path_info)
-			if klass is MPLS:
-				nlri.labels = labels
-				nlri.rd = rd
-			# next ip
-			ip += increment
-			# save route
-			scope[-1]['announce'].append(Change(nlri,change.attributes))
-
-		return True
-
 	def _multi_static_route (self, scope, command, tokens):
 		if len(tokens) != 1:
 			return self.error.set(self.route.syntax)
@@ -766,70 +574,7 @@ class Configuration (object):
 			if r is False:
 				return False
 			if r is None:
-				return self._split_last_route(scope)
-
-	def _single_static_route (self, scope, command, tokens):
-		if len(tokens) < 3:
-			return False
-
-		if not self.route.insert_static_route(scope,command,tokens):
-			return False
-
-		while len(tokens):
-			command = tokens.pop(0)
-
-			if command in ('withdraw','withdrawn'):
-				if self.route.withdraw(scope,command,tokens):
-					continue
-				return False
-
-			if len(tokens) < 1:
-				return False
-
-			if command in self._command['static-route']:
-				if command in ('rd','route-distinguisher'):
-					if self._command['static-route'][command](scope,command,tokens,SAFI.nlri_mpls):
-						continue
-				else:
-					if self._command['static-route'][command](scope,command,tokens):
-						continue
-			else:
-				return False
-			return False
-
-		if not self.route.check_static_route(scope,self):
-			return False
-
-		return self._split_last_route(scope)
-
-	def _single_l2vpn_vpls (self, scope, command, tokens):
-		# TODO: actual length?(like rd+lb+bo+ve+bs+rd; 14 or so)
-		if len(tokens) < 10:
-			return False
-
-		if not self._insert_l2vpn_vpls(scope,command,tokens):
-			return False
-
-		while len(tokens):
-			command = tokens.pop(0)
-			if len(tokens) < 1:
-				return False
-			if command in self._command['l2vpn-vpls']:
-				if command in ('rd','route-distinguisher'):
-					if self._command['l2vpn-vpls'][command](scope,command,tokens,SAFI.vpls):
-						continue
-				else:
-					if self._command['l2vpn-vpls'][command](scope,command,tokens):
-						continue
-			else:
-				return False
-			return False
-
-		if not self.l2vpn.check_vpls(scope,self):
-			return False
-		return True
-
-	# VPLS
+				return self.route.make_split(scope)
 
 	def _multi_l2vpn (self, scope, command, tokens):
 		if len(tokens) != 0:
@@ -851,7 +596,7 @@ class Configuration (object):
 		if len(tokens) > 1:
 			return self.error.set(self.l2vpn.syntax)
 
-		if not self._insert_l2vpn_vpls(scope,command,tokens):
+		if not self.l2vpn.insert_vpls(scope,command,tokens):
 			return False
 
 		while True:
@@ -865,19 +610,6 @@ class Configuration (object):
 			if r is None:
 				break
 
-		return True
-
-	def _insert_l2vpn_vpls (self, scope, command, tokens=None):
-		try:
-			attributes = Attributes()
-			change = Change(VPLS(None,None,None,None,None),attributes)
-		except ValueError:
-			return self.error.set(self.l2vpn.syntax)
-
-		if 'announce' not in scope[-1]:
-			scope[-1]['announce'] = []
-
-		scope[-1]['announce'].append(change)
 		return True
 
 
@@ -1034,3 +766,40 @@ class Configuration (object):
 				return False
 			if r is None:
 				return True
+
+	def _single_line (self, scope, name, tokens, valid):
+		command = tokens[0]
+		if valid and command not in valid:
+			return self.error.set('invalid keyword "%s"' % command)
+
+		family = {
+			'static-route': {
+				'rd': SAFI.mpls_vpn,
+				'route-distinguisher': SAFI.mpls_vpn,
+			},
+			'l2vpn-vpls': {
+				'rd': SAFI.vpls,
+				'route-distinguisher': SAFI.vpls,
+			},
+			'flow-route': {
+				'rd': SAFI.flow_vpn,
+				'route-distinguisher': SAFI.flow_vpn,
+			}
+		}
+
+		if name in self._command:
+			if command in self._command[name]:
+				if command in family.get(name,{}):
+					return self._command[name][command](scope,command,tokens[1:],family[name][command])
+				return self._command[name][command](scope,command,tokens[1:])
+
+		elif name in ['send','receive']:  # process / send
+
+			if command in ['packets','parsed','consolidate']:
+				return self.process.command(scope,'%s-%s' % (name,command),tokens[1:])
+
+			for message in Message.CODE.MESSAGES:
+				if command == message.SHORT:
+					return self.process.command(scope,'%s-%d' % (name,message),tokens[1:])
+
+		return False

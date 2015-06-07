@@ -14,6 +14,7 @@ from exabgp.protocol.family import SAFI
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
 
+from exabgp.bgp.message import OUT
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.routerid import RouterID
 
@@ -46,7 +47,6 @@ from exabgp.bgp.message.update.attribute import ClusterList
 from exabgp.bgp.message.update.attribute import AIGP
 from exabgp.bgp.message.update.attribute import GenericAttribute
 
-from exabgp.bgp.message import OUT
 from exabgp.rib.change import Change
 
 from exabgp.configuration.current.basic import Basic
@@ -54,6 +54,11 @@ from exabgp.configuration.current.basic import Split
 from exabgp.configuration.current.basic import Withdrawn
 from exabgp.configuration.current.basic import Watchdog
 from exabgp.configuration.current.basic import Name
+
+
+# Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
+def pack_int (afi, integer, mask):
+	return ''.join([chr((integer >> (offset * 8)) & 0xff) for offset in range(IP.length(afi)-1,-1,-1)])
 
 
 class ParseRoute (Basic):
@@ -109,6 +114,30 @@ class ParseRoute (Basic):
 	def __init__ (self, error):
 		self.error = error
 		self._nexthopself = None
+
+		self.command = {
+			'origin':              self.origin,
+			'as-path':             self.aspath,
+			'med':                 self.med,
+			'aigp':                self.aigp,
+			'next-hop':            self.next_hop,
+			'local-preference':    self.local_preference,
+			'atomic-aggregate':    self.atomic_aggregate,
+			'aggregator':          self.aggregator,
+			'path-information':    self.path_information,
+			'originator-id':       self.originator_id,
+			'cluster-list':        self.cluster_list,
+			'split':               self.split,
+			'label':               self.label,
+			'rd':                  self.rd,
+			'route-distinguisher': self.rd,
+			'watchdog':            self.watchdog,
+			'withdraw':            self.withdraw,
+			'name':                self.name,
+			'community':           self.community,
+			'extended-community':  self.extended_community,
+			'attribute':           self.generic_attribute,
+		}
 
 	def clear (self):
 		self._nexthopself = None
@@ -646,6 +675,96 @@ class ParseRoute (Basic):
 			scope[-1]['announce'] = []
 
 		scope[-1]['announce'].append(update)
+		return True
+
+	def route (self, scope, command, tokens):
+		if len(tokens) < 3:
+			return False
+
+		if not self.insert_static_route(scope,command,tokens):
+			return False
+
+		while len(tokens):
+			command = tokens.pop(0)
+
+			if command in ('withdraw','withdrawn'):
+				if self.withdraw(scope,command,tokens):
+					continue
+				return False
+
+			if len(tokens) < 1:
+				return False
+
+			if command in self.command:
+				if command in ('rd','route-distinguisher'):
+					if self.command[command](scope,command,tokens,SAFI.nlri_mpls):
+						continue
+				else:
+					if self.command[command](scope,command,tokens):
+						continue
+			else:
+				return False
+			return False
+
+		if not self.check_static_route(scope,self):
+			return False
+
+		return self.make_split(scope)
+
+	def make_split (self, scope, command=None, tokens=None):
+		# if the route does not need to be broken in smaller routes, return
+		change = scope[-1]['announce'][-1]
+		if Attribute.CODE.INTERNAL_SPLIT not in change.attributes:
+			return True
+
+		# ignore if the request is for an aggregate, or the same size
+		mask = change.nlri.mask
+		split = change.attributes[Attribute.CODE.INTERNAL_SPLIT]
+		if mask >= split:
+			return True
+
+		# get a local copy of the route
+		change = scope[-1]['announce'].pop(-1)
+
+		# calculate the number of IP in the /<size> of the new route
+		increment = pow(2,(len(change.nlri.packed)*8) - split)
+		# how many new routes are we going to create from the initial one
+		number = pow(2,split - change.nlri.mask)
+
+		# convert the IP into a integer/long
+		ip = 0
+		for c in change.nlri.packed:
+			ip <<= 8
+			ip += ord(c)
+
+		afi = change.nlri.afi
+		safi = change.nlri.safi
+
+		# Really ugly
+		klass = change.nlri.__class__
+		if klass is INET:
+			path_info = change.nlri.path_info
+		elif klass is MPLS:
+			path_info = None
+			labels = change.nlri.labels
+			rd = change.nlri.rd
+		# packed and not pack() but does not matter atm, it is an IP not a NextHop
+		nexthop = change.nlri.nexthop.packed
+
+		change.nlri.mask = split
+		change.nlri = None
+		# generate the new routes
+		for _ in range(number):
+			# update ip to the next route, this recalculate the "ip" field of the Inet class
+			nlri = klass(afi,safi,pack_int(afi,ip,split),split,nexthop,OUT.ANNOUNCE,path_info)
+			if klass is MPLS:
+				nlri.labels = labels
+				nlri.rd = rd
+			# next ip
+			ip += increment
+			# save route
+			scope[-1]['announce'].append(Change(nlri,change.attributes))
+
 		return True
 
 	def check_static_route (self, scope, configuration):
