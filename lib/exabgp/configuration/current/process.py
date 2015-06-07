@@ -57,7 +57,7 @@ class ParseProcess (Basic):
 		self._fname = name
 
 	def command (self, scope, name, command, tokens):
-		if command in ('packets','parsed','consolidate'):
+		if command in ('packets','parsed','consolidate','neighbor-changes'):
 			scope[-1]['%s-%s' % (name,command)] = True
 			return True
 
