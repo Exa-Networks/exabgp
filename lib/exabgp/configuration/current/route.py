@@ -145,7 +145,7 @@ class ParseRoute (Basic):
 	def nexthop (self, nexthopself):
 		self._nexthopself = nexthopself
 
-	def watchdog (self, scope, command, tokens):
+	def watchdog (self, scope, name, command, tokens):
 		try:
 			w = tokens.pop(0)
 			if w.lower() in ['announce','withdraw']:
@@ -159,7 +159,7 @@ class ParseRoute (Basic):
 		except ValueError:
 			return self.error.set(self.syntax)
 
-	def withdraw (self, scope, command, tokens):
+	def withdraw (self, scope, name, command, tokens):
 		try:
 			scope[-1]['announce'][-1].attributes.add(Withdrawn())
 			return True
@@ -168,7 +168,7 @@ class ParseRoute (Basic):
 
 	# Route name
 
-	def name (self, scope, command, tokens):
+	def name (self, scope, name, command, tokens):
 		try:
 			w = tokens.pop(0)
 		except IndexError:
@@ -182,7 +182,7 @@ class ParseRoute (Basic):
 
 	# Command Route
 
-	def generic_attribute (self, scope, command, tokens):
+	def generic_attribute (self, scope, name, command, tokens):
 		try:
 			start = tokens.pop(0)
 			code = tokens.pop(0).lower()
@@ -220,7 +220,7 @@ class ParseRoute (Basic):
 		except (IndexError,ValueError):
 			return self.error.set(self.syntax)
 
-	def next_hop (self, scope, command, tokens):
+	def next_hop (self, scope, name, command, tokens):
 		if scope[-1]['announce'][-1].attributes.has(Attribute.CODE.NEXT_HOP):
 			return self.error.set(self.syntax)
 
@@ -254,7 +254,7 @@ class ParseRoute (Basic):
 		except Exception:
 			return self.error.set(self.syntax)
 
-	def origin (self, scope, command, tokens):
+	def origin (self, scope, name, command, tokens):
 		try:
 			data = tokens.pop(0).lower()
 			if data == 'igp':
@@ -270,7 +270,7 @@ class ParseRoute (Basic):
 		except IndexError:
 			return self.error.set(self.syntax)
 
-	def aspath (self, scope, command, tokens):
+	def aspath (self, scope, name, command, tokens):
 		as_seq = []
 		as_set = []
 		asn = tokens.pop(0)
@@ -310,14 +310,14 @@ class ParseRoute (Basic):
 		scope[-1]['announce'][-1].attributes.add(ASPath(as_seq,as_set))
 		return True
 
-	def med (self, scope, command, tokens):
+	def med (self, scope, name, command, tokens):
 		try:
 			scope[-1]['announce'][-1].attributes.add(MED(int(tokens.pop(0))))
 			return True
 		except (IndexError,ValueError):
 			return self.error.set(self.syntax)
 
-	def aigp (self, scope, command, tokens):
+	def aigp (self, scope, name, command, tokens):
 		try:
 			number = tokens.pop(0)
 			base = 16 if number.lower().startswith('0x') else 10
@@ -326,21 +326,21 @@ class ParseRoute (Basic):
 		except (IndexError,ValueError):
 			return self.error.set(self.syntax)
 
-	def local_preference (self, scope, command, tokens):
+	def local_preference (self, scope, name, command, tokens):
 		try:
 			scope[-1]['announce'][-1].attributes.add(LocalPreference(int(tokens.pop(0))))
 			return True
 		except (IndexError,ValueError):
 			return self.error.set(self.syntax)
 
-	def atomic_aggregate (self, scope, command, tokens):
+	def atomic_aggregate (self, scope, name, command, tokens):
 		try:
 			scope[-1]['announce'][-1].attributes.add(AtomicAggregate())
 			return True
 		except ValueError:
 			return self.error.set(self.syntax)
 
-	def aggregator (self, scope, command, tokens):
+	def aggregator (self, scope, name, command, tokens):
 		try:
 			if tokens:
 				if tokens.pop(0) != '(':
@@ -363,7 +363,7 @@ class ParseRoute (Basic):
 		scope[-1]['announce'][-1].attributes.add(Aggregator(local_as,local_address))
 		return True
 
-	def path_information (self, scope, command, tokens):
+	def path_information (self, scope, name, command, tokens):
 		try:
 			pi = tokens.pop(0)
 			if pi.isdigit():
@@ -409,14 +409,14 @@ class ParseRoute (Basic):
 			else:
 				raise ValueError('invalid community name %s' % data)
 
-	def originator_id (self, scope, command, tokens):
+	def originator_id (self, scope, name, command, tokens):
 		try:
 			scope[-1]['announce'][-1].attributes.add(OriginatorID(tokens.pop(0)))
 			return True
 		except Exception:
 			return self.error.set(self.syntax)
 
-	def cluster_list (self, scope, command, tokens):
+	def cluster_list (self, scope, name, command, tokens):
 		_list = []
 		clusterid = tokens.pop(0)
 		try:
@@ -439,7 +439,7 @@ class ParseRoute (Basic):
 		scope[-1]['announce'][-1].attributes.add(clusterlist)
 		return True
 
-	def community (self, scope, command, tokens):
+	def community (self, scope, name, command, tokens):
 		communities = Communities()
 		community = tokens.pop(0)
 		try:
@@ -553,7 +553,7 @@ class ParseRoute (Basic):
 		else:
 			raise ValueError('invalid extended community %s - lc+gc' % data)
 
-	def extended_community (self, scope, command, tokens):
+	def extended_community (self, scope, name, command, tokens):
 		attributes = scope[-1]['announce'][-1].attributes
 		if Attribute.CODE.EXTENDED_COMMUNITY in attributes:
 			extended_communities = attributes[Attribute.CODE.EXTENDED_COMMUNITY]
@@ -578,7 +578,7 @@ class ParseRoute (Basic):
 			return self.error.set(self.syntax)
 		return True
 
-	def split (self, scope, command, tokens):
+	def split (self, scope, name, command, tokens):
 		try:
 			size = tokens.pop(0)
 			if not size or size[0] != '/':
@@ -588,7 +588,7 @@ class ParseRoute (Basic):
 		except ValueError:
 			return self.error.set(self.syntax)
 
-	def label (self, scope, command, tokens):
+	def label (self, scope, name, command, tokens):
 		labels = []
 		label = tokens.pop(0)
 		try:
@@ -612,7 +612,7 @@ class ParseRoute (Basic):
 		nlri.labels = Labels(labels)
 		return True
 
-	def rd (self, scope, command, tokens, safi):
+	def rd (self, scope, name, command, tokens, safi):
 		try:
 			try:
 				data = tokens.pop(0)
@@ -646,7 +646,7 @@ class ParseRoute (Basic):
 		except ValueError:
 			return self.error.set(self.syntax)
 
-	def insert_static_route (self, scope, command, tokens):
+	def insert_static_route (self, scope, name, command, tokens):
 		try:
 			ip = tokens.pop(0)
 		except IndexError:
@@ -677,34 +677,31 @@ class ParseRoute (Basic):
 		scope[-1]['announce'].append(update)
 		return True
 
-	def route (self, scope, command, tokens):
+	def static (self, scope, name, command, tokens):
 		if len(tokens) < 3:
-			return False
+			return self.error.set('not enought tokens to make a routes')
 
-		if not self.insert_static_route(scope,command,tokens):
+		if not self.insert_static_route(scope,name,command,tokens):
 			return False
 
 		while len(tokens):
 			command = tokens.pop(0)
 
 			if command in ('withdraw','withdrawn'):
-				if self.withdraw(scope,command,tokens):
-					continue
-				return False
+				if not self.withdraw(scope,name,command,tokens):
+					return False
+				continue
 
 			if len(tokens) < 1:
-				return False
+				return self.error.set('not enought tokens to make a routes')
 
-			if command in self.command:
-				if command in ('rd','route-distinguisher'):
-					if self.command[command](scope,command,tokens,SAFI.nlri_mpls):
-						continue
-				else:
-					if self.command[command](scope,command,tokens):
-						continue
-			else:
+			if command not in self.command:
+				return self.error.set('unknow route command %s' % command)
+			elif command in ('rd','route-distinguisher'):
+				if not self.command[command](scope,name,command,tokens,SAFI.nlri_mpls):
+					return False
+			elif not self.command[command](scope,name,command,tokens):
 				return False
-			return False
 
 		if not self.check_static_route(scope,self):
 			return False

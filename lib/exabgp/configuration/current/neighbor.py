@@ -77,7 +77,7 @@ class ParseNeighbor (Basic):
 
 		self._previous = {}
 
-	def router_id (self, scope, command, tokens):
+	def router_id (self, scope, name, command, tokens):
 		try:
 			ip = RouterID(tokens[0])
 		except (IndexError,ValueError):
@@ -86,7 +86,7 @@ class ParseNeighbor (Basic):
 		scope[-1][command] = ip
 		return True
 
-	def ip (self, scope, command, tokens):
+	def ip (self, scope, name, command, tokens):
 		try:
 			ip = IP.create(tokens[0])
 		except (IndexError,ValueError):
@@ -95,7 +95,7 @@ class ParseNeighbor (Basic):
 		scope[-1][command] = ip
 		return True
 
-	def description (self, scope, command, tokens):
+	def description (self, scope, name, command, tokens):
 		text = ' '.join(tokens)
 		if len(text) < 2 or text[0] != '"' or text[-1] != '"' or text[1:-1].count('"'):
 			return self.error.set('syntax: description "<description>"')
@@ -103,7 +103,7 @@ class ParseNeighbor (Basic):
 		scope[-1]['description'] = text[1:-1]
 		return True
 
-	def asn (self, scope, command, tokens):
+	def asn (self, scope, name, command, tokens):
 		try:
 			value = Basic.newASN(tokens[0])
 		except ValueError:
@@ -114,14 +114,14 @@ class ParseNeighbor (Basic):
 		scope[-1][command] = value
 		return True
 
-	def passive (self, scope, command, tokens):
+	def passive (self, scope, name, command, tokens):
 		if tokens:
 			return self.error.set('"%s" is an invalid for passive' % ' '.join(tokens))
 
 		scope[-1][command] = True
 		return True
 
-	def listen (self, scope, command, tokens):
+	def listen (self, scope, name, command, tokens):
 		try:
 			listen = int(tokens[0])
 		except IndexError:
@@ -137,7 +137,7 @@ class ParseNeighbor (Basic):
 		scope[-1][command] = listen
 		return True
 
-	def hostname (self, scope, command, tokens):
+	def hostname (self, scope, name, command, tokens):
 		if not len(tokens) == 1:
 			return self.error.set('single host-name required')
 
@@ -159,7 +159,7 @@ class ParseNeighbor (Basic):
 		scope[-1][command] = name.encode('utf-8')
 		return True
 
-	def domainname (self, scope, command, tokens):
+	def domainname (self, scope, name, command, tokens):
 		if not len(tokens) == 1:
 			return self.error.set('single domain-name required')
 
@@ -181,7 +181,7 @@ class ParseNeighbor (Basic):
 		scope[-1][command] = name.encode('utf-8')
 		return True
 
-	def holdtime (self, scope, command, tokens):
+	def holdtime (self, scope, name, command, tokens):
 		if not len(tokens) == 1:
 			return self.error.set('hold-time required')
 
@@ -198,7 +198,7 @@ class ParseNeighbor (Basic):
 		scope[-1][command] = holdtime
 		return True
 
-	def md5 (self, scope, command, tokens):
+	def md5 (self, scope, name, command, tokens):
 		if not len(tokens) == 1:
 			return self.error.set('md5 required')
 
@@ -214,7 +214,7 @@ class ParseNeighbor (Basic):
 		scope[-1][command] = md5
 		return True
 
-	def ttl (self, scope, command, tokens):
+	def ttl (self, scope, name, command, tokens):
 		if not len(tokens):
 			scope[-1][command] = self.TTL_SECURITY
 			return True

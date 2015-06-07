@@ -175,3 +175,10 @@ class Message (Exception):
 		if message in cls.registered_message:
 			return cls.klass(message).unpack_message(data,negotiated)
 		return cls.klass_unknown(message,data,negotiated)
+
+	@classmethod
+	def from_string (cls,name):
+		for message in cls.CODE.MESSAGES:
+			if name == str(message) or name == message.short():
+				return message
+		return cls.CODE.NOP

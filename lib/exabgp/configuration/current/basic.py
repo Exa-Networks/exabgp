@@ -49,7 +49,7 @@ class Basic (object):
 	def clear (self):
 		pass
 
-	def boolean (self, scope, command, tokens, default='true'):
+	def boolean (self, scope, name, command, tokens, default='true'):
 		boolean = tokens[0].lower() if tokens else default
 
 		if boolean in ('true','enable','enabled'):

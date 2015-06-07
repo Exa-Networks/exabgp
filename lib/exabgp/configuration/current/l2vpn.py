@@ -70,7 +70,7 @@ class ParseL2VPN (ParseRoute):
 	def clear (self):
 		pass
 
-	def vpls_endpoint (self, scope, command, token):
+	def vpls_endpoint (self, scope, name, command, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			return self.error.set(self._str_vpls_bad_enpoint)
@@ -79,7 +79,7 @@ class ParseL2VPN (ParseRoute):
 		vpls.ve = number
 		return True
 
-	def vpls_size (self, scope, command, token):
+	def vpls_size (self, scope, name, command, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			return self.error.set(self._str_vpls_bad_size)
@@ -88,7 +88,7 @@ class ParseL2VPN (ParseRoute):
 		vpls.size = number
 		return True
 
-	def vpls_offset (self, scope, command, token):
+	def vpls_offset (self, scope, name, command, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			return self.error.set(self._str_vpls_bad_offset)
@@ -97,7 +97,7 @@ class ParseL2VPN (ParseRoute):
 		vpls.offset = number
 		return True
 
-	def vpls_base (self, scope, command, token):
+	def vpls_base (self, scope, name, command, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			return self.error.set(self._str_vpls_bad_label)
@@ -106,34 +106,32 @@ class ParseL2VPN (ParseRoute):
 		vpls.base = number
 		return True
 
-	def vpls (self, scope, command, tokens):
+	def vpls (self, scope, name, command, tokens):
 		# TODO: actual length?(like rd+lb+bo+ve+bs+rd; 14 or so)
 		if len(tokens) < 10:
-			return False
+			return self.error.set('not enough parameter to make a vpls')
 
-		if not self.insert_vpls(scope,command,tokens):
+		if not self.insert_vpls(scope,name,command,tokens):
 			return False
 
 		while len(tokens):
 			command = tokens.pop(0)
 			if len(tokens) < 1:
+				return self.error.set('not enought tokens to make a vpls')
+
+			if command not in self.command:
+				return self.error.set('unknown vpls command %s' % command)
+			elif command in ('rd','route-distinguisher'):
+				if not self.command[command](scope,name,command,tokens,SAFI.vpls):
+					return False
+			elif not self.command[command](scope,name,command,tokens):
 				return False
-			if command in self.command:
-				if command in ('rd','route-distinguisher'):
-					if self.command[command](scope,command,tokens,SAFI.vpls):
-						continue
-				else:
-					if self.command[command](scope,command,tokens):
-						continue
-			else:
-				return False
-			return False
 
 		if not self.check_vpls(scope,self):
 			return False
 		return True
 
-	def insert_vpls (self, scope, command, tokens=None):
+	def insert_vpls (self, scope, name, command, tokens=None):
 		try:
 			attributes = Attributes()
 			change = Change(VPLS(None,None,None,None,None),attributes)

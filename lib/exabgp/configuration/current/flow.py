@@ -93,7 +93,7 @@ class ParseFlow (Basic):
 
 	# Command Flow
 
-	def source (self, scope, command, tokens):
+	def source (self, scope, name, command, tokens):
 		try:
 			data = tokens.pop(0)
 			if data.count('/') == 1:
@@ -114,7 +114,7 @@ class ParseFlow (Basic):
 		except (IndexError,ValueError):
 			return self.error.set(self.syntax)
 
-	def destination (self, scope, command, tokens):
+	def destination (self, scope, name, command, tokens):
 		try:
 			data = tokens.pop(0)
 			if data.count('/') == 1:
@@ -217,46 +217,46 @@ class ParseFlow (Basic):
 			return self._generic_expression(scope,tokens,klass)
 		return self._generic_list(scope,tokens,klass)
 
-	def anyport (self, scope, command, tokens):
+	def anyport (self, scope, name, command, tokens):
 		return self._generic_condition(scope,tokens,FlowAnyPort)
 
-	def source_port (self, scope, command, tokens):
+	def source_port (self, scope, name, command, tokens):
 		return self._generic_condition(scope,tokens,FlowSourcePort)
 
-	def destination_port (self, scope, command, tokens):
+	def destination_port (self, scope, name, command, tokens):
 		return self._generic_condition(scope,tokens,FlowDestinationPort)
 
-	def packet_length (self, scope, command, tokens):
+	def packet_length (self, scope, name, command, tokens):
 		return self._generic_condition(scope,tokens,FlowPacketLength)
 
-	def tcp_flags (self, scope, command, tokens):
+	def tcp_flags (self, scope, name, command, tokens):
 		return self._generic_list(scope,tokens,FlowTCPFlag)
 
-	def protocol (self, scope, command, tokens):
+	def protocol (self, scope, name, command, tokens):
 		return self._generic_list(scope,tokens,FlowIPProtocol)
 
-	def next_header (self, scope, command, tokens):
+	def next_header (self, scope, name, command, tokens):
 		return self._generic_list(scope,tokens,FlowNextHeader)
 
-	def icmp_type (self, scope, command, tokens):
+	def icmp_type (self, scope, name, command, tokens):
 		return self._generic_list(scope,tokens,FlowICMPType)
 
-	def icmp_code (self, scope, command, tokens):
+	def icmp_code (self, scope, name, command, tokens):
 		return self._generic_list(scope,tokens,FlowICMPCode)
 
-	def fragment (self, scope, command, tokens):
+	def fragment (self, scope, name, command, tokens):
 		return self._generic_list(scope,tokens,FlowFragment)
 
-	def dscp (self, scope, command, tokens):
+	def dscp (self, scope, name, command, tokens):
 		return self._generic_condition(scope,tokens,FlowDSCP)
 
-	def traffic_class (self, scope, command, tokens):
+	def traffic_class (self, scope, name, command, tokens):
 		return self._generic_condition(scope,tokens,FlowTrafficClass)
 
-	def flow_label (self, scope, command, tokens):
+	def flow_label (self, scope, name, command, tokens):
 		return self._generic_condition(scope,tokens,FlowFlowLabel)
 
-	def next_hop (self, scope, command, tokens):
+	def next_hop (self, scope, name, command, tokens):
 		try:
 			change = scope[-1]['announce'][-1]
 
@@ -269,10 +269,10 @@ class ParseFlow (Basic):
 		except (IndexError,ValueError):
 			return self.error.set(self.syntax)
 
-	def accept (self, scope, command, tokens):
+	def accept (self, scope, name, command, tokens):
 		return True
 
-	def discard (self, scope, command, tokens):
+	def discard (self, scope, name, command, tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
 			scope[-1]['announce'][-1].attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficRate(ASN(0),0))
@@ -280,7 +280,7 @@ class ParseFlow (Basic):
 		except ValueError:
 			return self.error.set(self.syntax)
 
-	def rate_limit (self, scope, command, tokens):
+	def rate_limit (self, scope, name, command, tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
 			speed = int(tokens[0])
@@ -294,7 +294,7 @@ class ParseFlow (Basic):
 		except ValueError:
 			return self.error.set(self.syntax)
 
-	def redirect (self, scope, command, tokens):
+	def redirect (self, scope, name, command, tokens):
 		try:
 			if tokens[0].count(':') == 1:
 				prefix,suffix = tokens[0].split(':',1)
@@ -322,7 +322,7 @@ class ParseFlow (Basic):
 		except (IndexError,ValueError):
 			return self.error.set(self.syntax)
 
-	def redirect_next_hop (self, scope, command, tokens):
+	def redirect_next_hop (self, scope, name, command, tokens):
 		try:
 			change = scope[-1]['announce'][-1]
 
@@ -335,7 +335,7 @@ class ParseFlow (Basic):
 		except (IndexError,ValueError):
 			return self.error.set(self.syntax)
 
-	def copy (self, scope, command, tokens):
+	def copy (self, scope, name, command, tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
 			if scope[-1]['announce'][-1].attributes.has(Attribute.CODE.NEXT_HOP):
@@ -349,7 +349,7 @@ class ParseFlow (Basic):
 		except (IndexError,ValueError):
 			return self.error.set(self.syntax)
 
-	def mark (self, scope, command, tokens):
+	def mark (self, scope, name, command, tokens):
 		try:
 			dscp = int(tokens.pop(0))
 
@@ -363,7 +363,7 @@ class ParseFlow (Basic):
 		except (IndexError,ValueError):
 			return self.error.set(self.syntax)
 
-	def action (self, scope, command, tokens):
+	def action (self, scope, name, command, tokens):
 		try:
 			action = tokens.pop(0)
 			sample = 'sample' in action

@@ -10,6 +10,8 @@ import os
 import stat
 import shlex
 
+from exabgp.bgp.message import Message
+
 from exabgp.configuration.current.basic import Basic
 
 
@@ -54,18 +56,27 @@ class ParseProcess (Basic):
 	def configuration (self, name):
 		self._fname = name
 
-	def command (self, scope, command, tokens):
-		scope[-1][command] = True
+	def command (self, scope, name, command, tokens):
+		if command in ('packets','parsed','consolidate'):
+			scope[-1]['%s-%s' % (name,command)] = True
+			return True
+
+		message = Message.from_string(command)
+		if message == Message.CODE.NOP:
+			return self.error.set('unknown process message')
+
+		scope[-1]['%s-%d' % (name,message)] = True
 		return True
 
-	def encoder (self, scope, command, tokens):
+
+	def encoder (self, scope, name, command, tokens):
 		if tokens and tokens[0] in ('text','json'):
 			scope[-1][command] = tokens[0]
 			return True
 
-		return self.error.set(self._str_process_error)
+		return self.error.set(self.syntax)
 
-	def run (self, scope, command, tokens):
+	def run (self, scope, name, command, tokens):
 		line = ' '.join(tokens).strip()
 		if len(line) > 2 and line[0] == line[-1] and line[0] in ['"',"'"]:
 			line = line[1:-1]

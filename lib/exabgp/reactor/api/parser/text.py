@@ -88,7 +88,7 @@ class Text (Configuration):
 			for peer,nexthop in peers.iteritems():
 				scope = [{}]
 				self.route.nexthop(nexthop)
-				if not self.route.route(scope,'route',tokens[1:]):
+				if not self.route.static(scope,'static','route',tokens[1:]):
 					self.route.clear()
 					return False
 				for change in scope[0]['announce']:
@@ -96,7 +96,7 @@ class Text (Configuration):
 			self.route.clear()
 		else:
 			scope = [{}]
-			if not self.route.route(scope,'route',tokens[1:]):
+			if not self.route.static(scope,'static','route',tokens[1:]):
 				return False
 			for peer in peers:
 				for change in scope[0]['announce']:
@@ -118,7 +118,7 @@ class Text (Configuration):
 			for peer,nexthop in peers.iteritems():
 				scope = [{}]
 				self._nexthopself = nexthop
-				if not self.l2vpn.vpls(scope,'vpls',tokens[1:]):
+				if not self.l2vpn.vpls(scope,'l2vpn','vpls',tokens[1:]):
 					self._nexthopself = None
 					return False
 				for change in scope[0]['announce']:
@@ -126,7 +126,7 @@ class Text (Configuration):
 			self._nexthopself = None
 		else:
 			scope = [{}]
-			if not self.l2vpn.vpls(scope,'vpls',tokens[1:]):
+			if not self.l2vpn.vpls(scope,'l2vpn','vpls',tokens[1:]):
 				return False
 			for peer in peers:
 				for change in scope[0]['announce']:
@@ -171,7 +171,7 @@ class Text (Configuration):
 		tokens = formated(command).split(' ',2)[2].replace('\\n','\n').replace('{','{\n').replace('}','}\n').replace(';',';\n').replace('\n\n','\n')
 		self.tokens.set_text(tokens)
 		scope = [{}]
-		if not self._dispatch(scope,'flow',['route',],[],['root']):
+		if not self._dispatch(scope,'root','flow',['route',],[],['root']):
 			return False
 		if not self.flow.check_flow(scope,self):
 			return False

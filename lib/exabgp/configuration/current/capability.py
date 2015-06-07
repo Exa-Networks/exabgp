@@ -28,7 +28,7 @@ class ParseCapability (Basic):
 	def clear (self):
 		pass
 
-	def gracefulrestart (self, scope, command, tokens):
+	def gracefulrestart (self, scope, name, command, tokens):
 		if not len(tokens):
 			scope[-1][command] = None
 			return True
@@ -50,7 +50,7 @@ class ParseCapability (Basic):
 		scope[-1][command] = grace
 		return True
 
-	def addpath (self, scope, command, tokens):
+	def addpath (self, scope, name, command, tokens):
 		try:
 			ap = tokens[0].lower()
 			apv = 0
@@ -65,7 +65,7 @@ class ParseCapability (Basic):
 		except (ValueError,IndexError):
 			return self.error.set('"%s" is an invalid add-path' % ' '.join(tokens) + '\n' + self.syntax)
 
-	def asn4 (self, scope, command, tokens):
+	def asn4 (self, scope, name, command, tokens):
 		if not tokens:
 			scope[-1][command] = True
 			return True

@@ -48,7 +48,7 @@ class ParseOperational (Basic):
 		operational = self._operational(Advisory.ASM,['afi','safi','advisory'],' '.join(tokens))
 
 		if not operational:
-			return False
+			return self.error.set('could not make operational message')
 
 		if 'operational-message' not in scope[-1]:
 			scope[-1]['operational-message'] = []

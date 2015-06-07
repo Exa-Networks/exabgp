@@ -76,16 +76,16 @@ class ParseFamily (Basic):
 
 		return self.error.set('unvalid safi %s for afi %s' % (safi,afi))
 
-	def ipv4 (self, scope, command, tokens):
+	def ipv4 (self, scope, name, command, tokens):
 		return self._set_family(scope, tokens, 'ipv4')
 
-	def ipv6 (self, scope, command, tokens):
+	def ipv6 (self, scope, name, command, tokens):
 		return self._set_family(scope, tokens, 'ipv6')
 
-	def l2vpn (self, scope, command, tokens):
+	def l2vpn (self, scope, name, command, tokens):
 		return self._set_family(scope, tokens, 'l2vpn')
 
-	def minimal (self, scope, command, tokens):
+	def minimal (self, scope, name, command, tokens):
 		if scope[-1]['families']:
 			return self.error.set('minimal can not be used with any other options')
 
@@ -93,7 +93,7 @@ class ParseFamily (Basic):
 		self._family = True
 		return True
 
-	def all (self, scope, command, tokens):
+	def all (self, scope, name, command, tokens):
 		if scope[-1]['families']:
 			return self.error.set('all can not be used with any other options')
 
