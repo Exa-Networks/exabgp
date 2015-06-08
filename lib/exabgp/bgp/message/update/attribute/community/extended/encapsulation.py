@@ -52,7 +52,7 @@ class Encapsulation (ExtendedCommunity):
 		ExtendedCommunity.__init__(
 			self,community if community is not None else pack(
 				"!2sLH",
-				self._packedTypeSubtype(),
+				self._subtype(),
 				0,self.tunnel_type
 			)
 		)

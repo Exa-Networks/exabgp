@@ -30,7 +30,7 @@ class TrafficRate (ExtendedCommunity):
 			self,
 			community if community is not None else pack(
 				"!2sHf",
-				self._packedTypeSubtype(),
+				self._subtype(),
 				asn,rate
 			)
 		)
@@ -72,7 +72,7 @@ class TrafficAction (ExtendedCommunity):
 			self,
 			community if community is not None else pack(
 				'!2sLBB',
-				self._packedTypeSubtype(),
+				self._subtype(),
 				0,0,bitmask
 			)
 		)
@@ -110,7 +110,7 @@ class TrafficRedirect (ExtendedCommunity):
 			self,
 			community if community is not None else pack(
 				"!2sHL",
-				self._packedTypeSubtype(),
+				self._subtype(),
 				asn,target
 			)
 		)
@@ -140,7 +140,7 @@ class TrafficMark (ExtendedCommunity):
 			self,
 			community if community is not None else pack(
 				"!2sLBB",
-				self._packedTypeSubtype(),
+				self._subtype(),
 				0,0,dscp
 			)
 		)
@@ -172,7 +172,7 @@ class TrafficNextHop (ExtendedCommunity):
 			self,
 			community if community is not None else pack(
 				"!2sLH",
-				self._packedTypeSubtype(),
+				self._subtype(),
 				0,1 if copy else 0
 			)
 		)

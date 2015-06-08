@@ -57,7 +57,7 @@ class RouteTargetASN2Number (RouteTarget):
 			self,
 			community if community else pack(
 				'!2sHL',
-				self._packedTypeSubtype(transitive),
+				self._subtype(transitive),
 				asn,number
 			)
 		)
@@ -92,7 +92,7 @@ class RouteTargetIPNumber (RouteTarget):
 			self,
 			community if community else pack(
 				'!2s4sH',
-				self._packedTypeSubtype(transitive),
+				self._subtype(transitive),
 				IPv4.pton(ip),number
 			)
 		)
@@ -128,7 +128,7 @@ class RouteTargetASN4Number (RouteTarget):
 			self,
 			community if community else pack(
 				'!2sLH',
-				self._packedTypeSubtype(transitive),
+				self._subtype(transitive),
 				asn,number
 			)
 		)
