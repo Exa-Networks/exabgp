@@ -18,28 +18,7 @@ import pprint as pp
 
 from exabgp.configuration.experimental import Configuration
 
-from exabgp.configuration.show import SectionShow
-
-
-# from exabgp.configuration.current import Configuration
-# from exabgp.configuration.current.format import formated
-#
-# from exabgp.protocol.family import AFI
-# from exabgp.protocol.family import SAFI
-# from exabgp.protocol.family import Family
-# from exabgp.protocol.ip import IP
-# from exabgp.bgp.message import OUT
-#
-# from exabgp.bgp.message.update.nlri import INET
-# from exabgp.bgp.message.update.nlri import MPLS
-# from exabgp.bgp.message.refresh import RouteRefresh
-# from exabgp.bgp.message.operational import Advisory
-# from exabgp.bgp.message.operational import Query
-# from exabgp.bgp.message.operational import Response
-#
-# from exabgp.rib.change import Change
-# from exabgp.version import version
-# from exabgp.logger import Logger
+from exabgp.configuration.experimental.show import SectionShow
 
 
 def parse (command):
