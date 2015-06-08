@@ -28,8 +28,8 @@ class TrafficRate (ExtendedCommunity):
 		ExtendedCommunity.__init__(
 			self,
 			community if community is not None else pack(
-				"!BBHf",
-				0x80,0x06,
+				"!2sHf",
+				self._packedTypeSubtype(),
 				asn,rate
 			)
 		)
@@ -66,7 +66,14 @@ class TrafficAction (ExtendedCommunity):
 		self.sample = sample
 		self.terminal = terminal
 		bitmask = self._sample[sample] | self._terminal[terminal]
-		ExtendedCommunity.__init__(self,community if community is not None else pack('!BBLBB',0x80,0x07,0,0,bitmask))
+		ExtendedCommunity.__init__(
+			self,
+			community if community is not None else pack(
+				'!2sLBB',
+				self._packedTypeSubtype(),
+				0,0,bitmask
+			)
+		)
 
 	def __str__ (self):
 		s = []
@@ -99,8 +106,8 @@ class TrafficRedirect (ExtendedCommunity):
 		ExtendedCommunity.__init__(
 			self,
 			community if community is not None else pack(
-				"!BBHL",
-				0x80,0x08,
+				"!2sHL",
+				self._packedTypeSubtype(),
 				asn,target
 			)
 		)
@@ -128,8 +135,8 @@ class TrafficMark (ExtendedCommunity):
 		ExtendedCommunity.__init__(
 			self,
 			community if community is not None else pack(
-				"!BBLBB",
-				0x80,0x09,
+				"!2sLBB",
+				self._packedTypeSubtype(),
 				0,0,dscp
 			)
 		)
@@ -159,8 +166,8 @@ class TrafficNextHop (ExtendedCommunity):
 		ExtendedCommunity.__init__(
 			self,
 			community if community is not None else pack(
-				"!BBLH",
-				0x80,0x00,
+				"!2sLH",
+				self._packedTypeSubtype(),
 				0,1 if copy else 0
 			)
 		)
