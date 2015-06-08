@@ -8,6 +8,8 @@ Version 3.4.12
     reported by: Sandy Breeze
  * Fix: notification messages were not passed to the API
     reported by: Florian Obser
+ * Fix: transitivity on extended community
+    patch by: Thomas Morin 
 
 Version 3.4.11
  * Change: install healthcheck in bin
