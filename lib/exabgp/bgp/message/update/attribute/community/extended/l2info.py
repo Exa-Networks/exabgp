@@ -33,7 +33,7 @@ class L2Info (ExtendedCommunity):
 			self,
 			community if community is not None else pack(
 				"!2sBBHH",
-				self._packedTypeSubtype(),
+				self._subtype(),
 				encaps,control,
 				mtu,reserved
 			)

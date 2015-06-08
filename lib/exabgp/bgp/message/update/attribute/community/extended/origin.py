@@ -52,7 +52,7 @@ class OriginASNIP (Origin):
 			self,
 			community if community else pack(
 				'!2sH4s',
-				self._packedTypeSubtype(),
+				self._subtype(),
 				asn,
 				IPv4.pton(ip)
 			)
@@ -84,7 +84,7 @@ class OriginIPASN (Origin):
 			self,
 			community if community else pack(
 				'!2s4sH',
-				self._packedTypeSubtype(),
+				self._subtype(),
 				IPv4.pton(ip),
 				asn
 			)
@@ -114,7 +114,7 @@ class OriginASN4Number (Origin):
 			self,
 			community if community else pack(
 				'!2sLH',
-				self._packedTypeSubtype(),
+				self._subtype(),
 				asn,
 				number
 			)

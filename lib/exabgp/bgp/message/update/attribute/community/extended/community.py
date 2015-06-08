@@ -20,6 +20,7 @@ class ExtendedCommunity (Attribute):
 
 	COMMUNITY_TYPE    = 0x00  # MUST be redefined by subclasses
 	COMMUNITY_SUBTYPE = 0x00  # MUST be redefined by subclasses
+	NON_TRANSITIVE    = 0x40
 
 	registered_extended = {}
 
@@ -73,11 +74,11 @@ class ExtendedCommunity (Attribute):
 	def pack (self, negotiated=None):
 		return self.community
 
-	def _packedTypeSubtype(self, transitive=True):
+	def _subtype (self, transitive=True):
 		# if not transitive -> set the 'transitive' bit, as per RFC4360
 		return pack(
 			'!BB',
-			self.COMMUNITY_TYPE if transitive else self.COMMUNITY_TYPE | 0x40,
+			self.COMMUNITY_TYPE if transitive else self.COMMUNITY_TYPE | self.NON_TRANSITIVE,
 			self.COMMUNITY_SUBTYPE
 		)
 
