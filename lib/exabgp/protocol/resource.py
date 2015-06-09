@@ -18,16 +18,23 @@ class Resource (int):
 		return self.names.get(self,'unknown %s type %d' % (self.NAME,int(self)))
 
 	@classmethod
-	def named (cls,string):
+	def _value (cls,string):
 		name = string.lower().replace('_','-')
 		if name in cls.codes:
-			return cls(cls.codes[name])
+			return cls.codes[name]
 		if string.isdigit():
 			value = int(string)
 			if value in cls.names:
-				return cls(value)
+				return value
 		if string_is_hex(string):
 			value = int(string[2:],16)
 			if value in cls.names:
-				return cls(value)
+				return value
 		raise ValueError('unknown %s %s' % (cls.NAME,name))
+
+	@classmethod
+	def named (cls,string):
+		value = 0
+		for name in string.split('+'):
+			value += cls._value(name)
+		return cls(value)
