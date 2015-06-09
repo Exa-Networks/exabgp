@@ -27,8 +27,10 @@ class ParseOperational (Basic):
 		'syntax:\n' \
 		''
 
-	def __init__ (self, error):
+	def __init__ (self, scope, error, logger):
+		self.scope = scope
 		self.error = error
+		self.logger = logger
 
 		self._dispatch = {
 			'asm':  self._asm,
@@ -44,17 +46,17 @@ class ParseOperational (Basic):
 	def clear (self):
 		pass
 
-	def asm (self, scope, name, command, tokens):
+	def asm (self, name, command, tokens):
 		operational = self._operational(Advisory.ASM,['afi','safi','advisory'],' '.join(tokens))
 
 		if not operational:
 			return self.error.set('could not make operational message')
 
-		if 'operational-message' not in scope[-1]:
-			scope[-1]['operational-message'] = []
+		if 'operational-message' not in self.scope.content[-1]:
+			self.scope.content[-1]['operational-message'] = []
 
 		# iterate on each family for the peer if multiprotocol is set.
-		scope[-1]['operational-message'].append(operational)
+		self.scope.content[-1]['operational-message'].append(operational)
 		return True
 
 	def operational (self, what, tokens):

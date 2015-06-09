@@ -49,17 +49,17 @@ class Basic (object):
 	def clear (self):
 		pass
 
-	def boolean (self, scope, name, command, tokens, default='true'):
+	def boolean (self, name, command, tokens, default='true'):
 		boolean = tokens[0].lower() if tokens else default
 
 		if boolean in ('true','enable','enabled'):
-			scope[-1][command] = True
+			self.scope.content[-1][command] = True
 			return True
 		if boolean in ('false','disable','disabled'):
-			scope[-1][command] = False
+			self.scope.content[-1][command] = False
 			return True
 		if boolean in ('unset',):
-			scope[-1][command] = None
+			self.scope.content[-1][command] = None
 			return True
 
 		return self.error.set('invalid %s command (valid options are true or false)' % command)

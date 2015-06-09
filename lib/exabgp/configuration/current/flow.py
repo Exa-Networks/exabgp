@@ -83,7 +83,8 @@ class ParseFlow (Basic):
 
 	# _str_bad_flow = "you tried to filter a flow using an invalid port for a component .."
 
-	def __init__ (self, error, logger):
+	def __init__ (self, scope, error, logger):
+		self.scope = scope
 		self.error = error
 		self.logger = logger
 		self.state = 'out'
@@ -93,19 +94,19 @@ class ParseFlow (Basic):
 
 	# Command Flow
 
-	def source (self, scope, name, command, tokens):
+	def source (self, name, command, tokens):
 		try:
 			data = tokens.pop(0)
 			if data.count('/') == 1:
 				ip,netmask = data.split('/')
 				raw = ''.join(chr(int(_)) for _ in ip.split('.'))
 
-				if not scope[-1]['announce'][-1].nlri.add(Flow4Source(raw,int(netmask))):
+				if not self.scope.content[-1]['announce'][-1].nlri.add(Flow4Source(raw,int(netmask))):
 					return self.error.set('Flow can only have one destination')
 
 			else:
 				ip,netmask,offset = data.split('/')
-				change = scope[-1]['announce'][-1]
+				change = self.scope.content[-1]['announce'][-1]
 				change.nlri.afi = AFI(AFI.ipv6)
 				if not change.nlri.add(Flow6Source(IP.pton(ip),int(netmask),int(offset))):
 					return self.error.set('Flow can only have one destination')
@@ -114,19 +115,19 @@ class ParseFlow (Basic):
 		except (IndexError,ValueError):
 			return self.error.set(self.syntax)
 
-	def destination (self, scope, name, command, tokens):
+	def destination (self, name, command, tokens):
 		try:
 			data = tokens.pop(0)
 			if data.count('/') == 1:
 				ip,netmask = data.split('/')
 				raw = ''.join(chr(int(_)) for _ in ip.split('.'))
 
-				if not scope[-1]['announce'][-1].nlri.add(Flow4Destination(raw,int(netmask))):
+				if not self.scope.content[-1]['announce'][-1].nlri.add(Flow4Destination(raw,int(netmask))):
 					return self.error.set('Flow can only have one destination')
 
 			else:
 				ip,netmask,offset = data.split('/')
-				change = scope[-1]['announce'][-1]
+				change = self.scope.content[-1]['announce'][-1]
 				# XXX: This is ugly
 				change.nlri.afi = AFI(AFI.ipv6)
 				if not change.nlri.add(Flow6Destination(IP.pton(ip),int(netmask),int(offset))):
@@ -166,14 +167,14 @@ class ParseFlow (Basic):
 		return string[:l],string[l:]
 
 	# parse =80 or >80 or <25 or &>10<20
-	def _generic_expression (self, scope, tokens, klass):
+	def _generic_expression (self,tokens, klass):
 		try:
 			for test in tokens:
 				AND = BinaryOperator.NOP
 				while test:
 					operator,_ = self._operator(test)
 					value,test = self._value(_)
-					nlri = scope[-1]['announce'][-1].nlri
+					nlri = self.scope.content[-1]['announce'][-1].nlri
 					# XXX: should do a check that the rule is valid for the family
 					nlri.add(klass(AND | operator,klass.converter(value)))
 					if test:
@@ -189,7 +190,7 @@ class ParseFlow (Basic):
 			return self.error.set(self.syntax + str(exc))
 
 	# parse [ content1 content2 content3 ]
-	def _generic_list (self, scope, tokens, klass):
+	def _generic_list (self,tokens, klass):
 		try:
 			name = tokens.pop(0)
 			AND = BinaryOperator.NOP
@@ -199,7 +200,7 @@ class ParseFlow (Basic):
 					if name == ']':
 						break
 					try:
-						nlri = scope[-1]['announce'][-1].nlri
+						nlri = self.scope.content[-1]['announce'][-1].nlri
 						# XXX: should do a check that the rule is valid for the family
 						nlri.add(klass(NumericOperator.EQ | AND,klass.converter(name)))
 					except IndexError:
@@ -207,58 +208,58 @@ class ParseFlow (Basic):
 			else:
 				if name[0] == '=':
 					name = name[1:]
-				scope[-1]['announce'][-1].nlri.add(klass(NumericOperator.EQ | AND,klass.converter(name)))
+				self.scope.content[-1]['announce'][-1].nlri.add(klass(NumericOperator.EQ | AND,klass.converter(name)))
 		except (IndexError,ValueError):
 			return self.error.set(self.syntax)
 		return True
 
-	def _generic_condition (self, scope, tokens, klass):
+	def _generic_condition (self,tokens, klass):
 		if tokens[0][0] in ['=','>','<']:
-			return self._generic_expression(scope,tokens,klass)
-		return self._generic_list(scope,tokens,klass)
+			return self._generic_expression(tokens,klass)
+		return self._generic_list(tokens,klass)
 
-	def anyport (self, scope, name, command, tokens):
-		return self._generic_condition(scope,tokens,FlowAnyPort)
+	def anyport (self, name, command, tokens):
+		return self._generic_condition(tokens,FlowAnyPort)
 
-	def source_port (self, scope, name, command, tokens):
-		return self._generic_condition(scope,tokens,FlowSourcePort)
+	def source_port (self, name, command, tokens):
+		return self._generic_condition(tokens,FlowSourcePort)
 
-	def destination_port (self, scope, name, command, tokens):
-		return self._generic_condition(scope,tokens,FlowDestinationPort)
+	def destination_port (self, name, command, tokens):
+		return self._generic_condition(tokens,FlowDestinationPort)
 
-	def packet_length (self, scope, name, command, tokens):
-		return self._generic_condition(scope,tokens,FlowPacketLength)
+	def packet_length (self, name, command, tokens):
+		return self._generic_condition(tokens,FlowPacketLength)
 
-	def tcp_flags (self, scope, name, command, tokens):
-		return self._generic_list(scope,tokens,FlowTCPFlag)
+	def tcp_flags (self, name, command, tokens):
+		return self._generic_list(tokens,FlowTCPFlag)
 
-	def protocol (self, scope, name, command, tokens):
-		return self._generic_list(scope,tokens,FlowIPProtocol)
+	def protocol (self, name, command, tokens):
+		return self._generic_list(tokens,FlowIPProtocol)
 
-	def next_header (self, scope, name, command, tokens):
-		return self._generic_list(scope,tokens,FlowNextHeader)
+	def next_header (self, name, command, tokens):
+		return self._generic_list(tokens,FlowNextHeader)
 
-	def icmp_type (self, scope, name, command, tokens):
-		return self._generic_list(scope,tokens,FlowICMPType)
+	def icmp_type (self, name, command, tokens):
+		return self._generic_list(tokens,FlowICMPType)
 
-	def icmp_code (self, scope, name, command, tokens):
-		return self._generic_list(scope,tokens,FlowICMPCode)
+	def icmp_code (self, name, command, tokens):
+		return self._generic_list(tokens,FlowICMPCode)
 
-	def fragment (self, scope, name, command, tokens):
-		return self._generic_list(scope,tokens,FlowFragment)
+	def fragment (self, name, command, tokens):
+		return self._generic_list(tokens,FlowFragment)
 
-	def dscp (self, scope, name, command, tokens):
-		return self._generic_condition(scope,tokens,FlowDSCP)
+	def dscp (self, name, command, tokens):
+		return self._generic_condition(tokens,FlowDSCP)
 
-	def traffic_class (self, scope, name, command, tokens):
-		return self._generic_condition(scope,tokens,FlowTrafficClass)
+	def traffic_class (self, name, command, tokens):
+		return self._generic_condition(tokens,FlowTrafficClass)
 
-	def flow_label (self, scope, name, command, tokens):
-		return self._generic_condition(scope,tokens,FlowFlowLabel)
+	def flow_label (self, name, command, tokens):
+		return self._generic_condition(tokens,FlowFlowLabel)
 
-	def next_hop (self, scope, name, command, tokens):
+	def next_hop (self, name, command, tokens):
 		try:
-			change = scope[-1]['announce'][-1]
+			change = self.scope.content[-1]['announce'][-1]
 
 			if change.nlri.nexthop is not NoNextHop:
 				return self.error.set(self.syntax)
@@ -269,18 +270,18 @@ class ParseFlow (Basic):
 		except (IndexError,ValueError):
 			return self.error.set(self.syntax)
 
-	def accept (self, scope, name, command, tokens):
+	def accept (self, name, command, tokens):
 		return True
 
-	def discard (self, scope, name, command, tokens):
+	def discard (self, name, command, tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
-			scope[-1]['announce'][-1].attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficRate(ASN(0),0))
+			self.scope.content[-1]['announce'][-1].attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficRate(ASN(0),0))
 			return True
 		except ValueError:
 			return self.error.set(self.syntax)
 
-	def rate_limit (self, scope, name, command, tokens):
+	def rate_limit (self, name, command, tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
 			speed = int(tokens[0])
@@ -289,12 +290,12 @@ class ParseFlow (Basic):
 			if speed > 1000000000000:
 				speed = 1000000000000
 				self.logger.configuration("rate-limiting changed for 1 000 000 000 000 bytes from %s" % tokens[0],'warning')
-			scope[-1]['announce'][-1].attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficRate(ASN(0),speed))
+			self.scope.content[-1]['announce'][-1].attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficRate(ASN(0),speed))
 			return True
 		except ValueError:
 			return self.error.set(self.syntax)
 
-	def redirect (self, scope, name, command, tokens):
+	def redirect (self, name, command, tokens):
 		try:
 			if tokens[0].count(':') == 1:
 				prefix,suffix = tokens[0].split(':',1)
@@ -307,10 +308,10 @@ class ParseFlow (Basic):
 						return self.error.set('asn is a 32 bits number, it can only be 16 bit %s' % route_target)
 					if route_target >= pow(2,32):
 						return self.error.set('route target is a 32 bits number, value too large %s' % route_target)
-					scope[-1]['announce'][-1].attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficRedirect(asn,route_target))
+					self.scope.content[-1]['announce'][-1].attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficRedirect(asn,route_target))
 					return True
 			else:
-				change = scope[-1]['announce'][-1]
+				change = self.scope.content[-1]['announce'][-1]
 				if change.nlri.nexthop is not NoNextHop:
 					return self.error.set(self.syntax)
 
@@ -322,9 +323,9 @@ class ParseFlow (Basic):
 		except (IndexError,ValueError):
 			return self.error.set(self.syntax)
 
-	def redirect_next_hop (self, scope, name, command, tokens):
+	def redirect_next_hop (self, name, command, tokens):
 		try:
-			change = scope[-1]['announce'][-1]
+			change = self.scope.content[-1]['announce'][-1]
 
 			if change.nlri.nexthop is NoNextHop:
 				return self.error.set(self.syntax)
@@ -335,13 +336,13 @@ class ParseFlow (Basic):
 		except (IndexError,ValueError):
 			return self.error.set(self.syntax)
 
-	def copy (self, scope, name, command, tokens):
+	def copy (self, name, command, tokens):
 		# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
 		try:
-			if scope[-1]['announce'][-1].attributes.has(Attribute.CODE.NEXT_HOP):
+			if self.scope.content[-1]['announce'][-1].attributes.has(Attribute.CODE.NEXT_HOP):
 				return self.error.set(self.syntax)
 
-			change = scope[-1]['announce'][-1]
+			change = self.scope.content[-1]['announce'][-1]
 			change.nlri.nexthop = IP.create(tokens.pop(0))
 			change.attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficNextHop(True))
 			return True
@@ -349,21 +350,21 @@ class ParseFlow (Basic):
 		except (IndexError,ValueError):
 			return self.error.set(self.syntax)
 
-	def mark (self, scope, name, command, tokens):
+	def mark (self, name, command, tokens):
 		try:
 			dscp = int(tokens.pop(0))
 
 			if dscp < 0 or dscp > 0b111111:
 				return self.error.set(self.syntax)
 
-			change = scope[-1]['announce'][-1]
+			change = self.scope.content[-1]['announce'][-1]
 			change.attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficMark(dscp))
 			return True
 
 		except (IndexError,ValueError):
 			return self.error.set(self.syntax)
 
-	def action (self, scope, name, command, tokens):
+	def action (self, name, command, tokens):
 		try:
 			action = tokens.pop(0)
 			sample = 'sample' in action
@@ -372,12 +373,12 @@ class ParseFlow (Basic):
 			if not sample and not terminal:
 				return self.error.set(self.syntax)
 
-			change = scope[-1]['announce'][-1]
+			change = self.scope.content[-1]['announce'][-1]
 			change.attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficAction(sample,terminal))
 			return True
 		except (IndexError,ValueError):
 			return self.error.set(self.syntax)
 
-	def check_flow (self, scope, configuration):
+	def check_flow (self,configuration):
 		self.logger.configuration('warning: no check on flows are implemented')
 		return True

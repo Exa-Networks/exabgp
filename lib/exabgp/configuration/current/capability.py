@@ -22,15 +22,17 @@ class ParseCapability (Basic):
 		'   operational enable|disable;\n' \
 		'}\n'
 
-	def __init__ (self, error):
+	def __init__ (self, scope, error, logger):
+		self.scope = scope
 		self.error = error
+		self.logger = logger
 
 	def clear (self):
 		pass
 
-	def gracefulrestart (self, scope, name, command, tokens):
+	def gracefulrestart (self, name, command, tokens):
 		if not len(tokens):
-			scope[-1][command] = None
+			self.scope.content[-1][command] = None
 			return True
 
 		if tokens and tokens[0] in ('disable','disabled'):
@@ -47,10 +49,10 @@ class ParseCapability (Basic):
 		if grace >= pow(2,16):
 			return self.error.set('graceful-restart must be smaller than %d' % pow(2,16))
 
-		scope[-1][command] = grace
+		self.scope.content[-1][command] = grace
 		return True
 
-	def addpath (self, scope, name, command, tokens):
+	def addpath (self, name, command, tokens):
 		try:
 			ap = tokens[0].lower()
 			apv = 0
@@ -60,23 +62,23 @@ class ParseCapability (Basic):
 				apv += 2
 			if not apv and ap not in ('disable','disabled'):
 				return self.error.set('invalid add-path')
-			scope[-1][command] = apv
+			self.scope.content[-1][command] = apv
 			return True
 		except (ValueError,IndexError):
 			return self.error.set('"%s" is an invalid add-path' % ' '.join(tokens) + '\n' + self.syntax)
 
-	def asn4 (self, scope, name, command, tokens):
+	def asn4 (self, name, command, tokens):
 		if not tokens:
-			scope[-1][command] = True
+			self.scope.content[-1][command] = True
 			return True
 
 		asn4 = tokens[0].lower()
 
 		if asn4 in ('disable','disabled'):
-			scope[-1][command] = False
+			self.scope.content[-1][command] = False
 			return True
 		if asn4 in ('enable','enabled'):
-			scope[-1][command] = True
+			self.scope.content[-1][command] = True
 			return True
 
 		return self.error.set('"%s" is an invalid asn4 parameter options are enable (default) and disable)' % ' '.join(tokens))

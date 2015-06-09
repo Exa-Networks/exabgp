@@ -43,8 +43,10 @@ class ParseL2VPN (ParseRoute):
 	_str_vpls_bad_label = "you tried to configure an invalid l2vpn vpls label"
 	_str_vpls_bad_enpoint = "you tried to configure an invalid l2vpn vpls endpoint"
 
-	def __init__ (self, error):
+	def __init__ (self, scope, error, logger):
+		self.scope = scope
 		self.error = error
+		self.logger = logger
 
 		self.command = {
 			'endpoint':            self.vpls_endpoint,
@@ -70,48 +72,48 @@ class ParseL2VPN (ParseRoute):
 	def clear (self):
 		pass
 
-	def vpls_endpoint (self, scope, name, command, token):
+	def vpls_endpoint (self, name, command, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			return self.error.set(self._str_vpls_bad_enpoint)
 
-		vpls = scope[-1]['announce'][-1].nlri
+		vpls = self.scope.content[-1]['announce'][-1].nlri
 		vpls.ve = number
 		return True
 
-	def vpls_size (self, scope, name, command, token):
+	def vpls_size (self, name, command, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			return self.error.set(self._str_vpls_bad_size)
 
-		vpls = scope[-1]['announce'][-1].nlri
+		vpls = self.scope.content[-1]['announce'][-1].nlri
 		vpls.size = number
 		return True
 
-	def vpls_offset (self, scope, name, command, token):
+	def vpls_offset (self, name, command, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			return self.error.set(self._str_vpls_bad_offset)
 
-		vpls = scope[-1]['announce'][-1].nlri
+		vpls = self.scope.content[-1]['announce'][-1].nlri
 		vpls.offset = number
 		return True
 
-	def vpls_base (self, scope, name, command, token):
+	def vpls_base (self, name, command, token):
 		number = int(token.pop(0))
 		if number < 0 or number > 0xFFFF:
 			return self.error.set(self._str_vpls_bad_label)
 
-		vpls = scope[-1]['announce'][-1].nlri
+		vpls = self.scope.content[-1]['announce'][-1].nlri
 		vpls.base = number
 		return True
 
-	def vpls (self, scope, name, command, tokens):
+	def vpls (self, name, command, tokens):
 		# TODO: actual length?(like rd+lb+bo+ve+bs+rd; 14 or so)
 		if len(tokens) < 10:
 			return self.error.set('not enough parameter to make a vpls')
 
-		if not self.insert_vpls(scope,name,command,tokens):
+		if not self.insert_vpls(name,command,tokens):
 			return False
 
 		while len(tokens):
@@ -122,30 +124,30 @@ class ParseL2VPN (ParseRoute):
 			if command not in self.command:
 				return self.error.set('unknown vpls command %s' % command)
 			elif command in ('rd','route-distinguisher'):
-				if not self.command[command](scope,name,command,tokens,SAFI.vpls):
+				if not self.command[command](name,command,tokens,SAFI.vpls):
 					return False
-			elif not self.command[command](scope,name,command,tokens):
+			elif not self.command[command](name,command,tokens):
 				return False
 
-		if not self.check_vpls(scope,self):
+		if not self.check_vpls(self):
 			return False
 		return True
 
-	def insert_vpls (self, scope, name, command, tokens=None):
+	def insert_vpls (self, name, command, tokens=None):
 		try:
 			attributes = Attributes()
 			change = Change(VPLS(None,None,None,None,None),attributes)
 		except ValueError:
 			return self.error.set(self.syntax)
 
-		if 'announce' not in scope[-1]:
-			scope[-1]['announce'] = []
+		if 'announce' not in self.scope.content[-1]:
+			self.scope.content[-1]['announce'] = []
 
-		scope[-1]['announce'].append(change)
+		self.scope.content[-1]['announce'].append(change)
 		return True
 
-	def check_vpls (self, scope, configuration):
-		nlri = scope[-1]['announce'][-1].nlri
+	def check_vpls (self,configuration):
+		nlri = self.scope.content[-1]['announce'][-1].nlri
 
 		if nlri.ve is None:
 			return self.error.set(self._str_vpls_bad_enpoint)

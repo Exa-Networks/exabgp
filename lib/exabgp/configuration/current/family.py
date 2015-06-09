@@ -53,14 +53,16 @@ class ParseFamily (Basic):
 		}
 	}
 
-	def __init__ (self, error):
+	def __init__ (self, scope, error, logger):
+		self.scope = scope
 		self.error = error
+		self.logger = logger
 		self._family = False
 
 	def clear (self):
 		self._family = False
 
-	def _set_family (self, scope, tokens, afi):
+	def _set_family (self,tokens, afi):
 		if self._family:
 			return self.error.set('ipv4 can not be used with all or minimal')
 
@@ -71,32 +73,32 @@ class ParseFamily (Basic):
 
 		pair = self.convert[afi].get(safi,None)
 		if pair:
-			scope[-1]['families'].append(pair)
+			self.scope.content[-1]['families'].append(pair)
 			return True
 
 		return self.error.set('unvalid safi %s for afi %s' % (safi,afi))
 
-	def ipv4 (self, scope, name, command, tokens):
-		return self._set_family(scope, tokens, 'ipv4')
+	def ipv4 (self, name, command, tokens):
+		return self._set_family(tokens, 'ipv4')
 
-	def ipv6 (self, scope, name, command, tokens):
-		return self._set_family(scope, tokens, 'ipv6')
+	def ipv6 (self, name, command, tokens):
+		return self._set_family(tokens, 'ipv6')
 
-	def l2vpn (self, scope, name, command, tokens):
-		return self._set_family(scope, tokens, 'l2vpn')
+	def l2vpn (self, name, command, tokens):
+		return self._set_family(tokens, 'l2vpn')
 
-	def minimal (self, scope, name, command, tokens):
-		if scope[-1]['families']:
+	def minimal (self, name, command, tokens):
+		if self.scope.content[-1]['families']:
 			return self.error.set('minimal can not be used with any other options')
 
-		scope[-1]['families'] = 'minimal'
+		self.scope.content[-1]['families'] = 'minimal'
 		self._family = True
 		return True
 
-	def all (self, scope, name, command, tokens):
-		if scope[-1]['families']:
+	def all (self, name, command, tokens):
+		if self.scope.content[-1]['families']:
 			return self.error.set('all can not be used with any other options')
 
-		scope[-1]['families'] = 'all'
+		self.scope.content[-1]['families'] = 'all'
 		self._family = True
 		return True

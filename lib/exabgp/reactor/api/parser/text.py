@@ -86,20 +86,20 @@ class Text (Configuration):
 		changes = []
 		if 'self' in command:
 			for peer,nexthop in peers.iteritems():
-				scope = [{}]
+				self.route.scope.clear()
 				self.route.nexthop(nexthop)
-				if not self.route.static(scope,'static','route',tokens[1:]):
+				if not self.route.static('static','route',tokens[1:]):
 					self.route.clear()
 					return False
-				for change in scope[0]['announce']:
+				for change in self.route.scope.content[0]['announce']:
 					changes.append((peer,change))
 			self.route.clear()
 		else:
-			scope = [{}]
-			if not self.route.static(scope,'static','route',tokens[1:]):
+			self.route.scope.clear()
+			if not self.route.static('static','route',tokens[1:]):
 				return False
 			for peer in peers:
-				for change in scope[0]['announce']:
+				for change in self.route.scope.content[0]['announce']:
 					changes.append((peer,change))
 
 		if action == 'withdraw':
@@ -116,20 +116,20 @@ class Text (Configuration):
 		changes = []
 		if 'self' in command:
 			for peer,nexthop in peers.iteritems():
-				scope = [{}]
+				self.l2vpn.scope.clear()
 				self._nexthopself = nexthop
-				if not self.l2vpn.vpls(scope,'l2vpn','vpls',tokens[1:]):
+				if not self.l2vpn.vpls('l2vpn','vpls',tokens[1:]):
 					self._nexthopself = None
 					return False
-				for change in scope[0]['announce']:
+				for change in self.l2vpn.scope.content[0]['announce']:
 					changes.append((peer,change))
 			self._nexthopself = None
 		else:
-			scope = [{}]
-			if not self.l2vpn.vpls(scope,'l2vpn','vpls',tokens[1:]):
+			self.l2vpn.scope.clear()
+			if not self.l2vpn.vpls('l2vpn','vpls',tokens[1:]):
 				return False
 			for peer in peers:
-				for change in scope[0]['announce']:
+				for change in self.l2vpn.scope.content[0]['announce']:
 					changes.append((peer,change))
 		if action == 'withdraw':
 			for (peer,change) in changes:
@@ -170,12 +170,12 @@ class Text (Configuration):
 	def api_flow (self, command, action):
 		tokens = formated(command).split(' ',2)[2].replace('\\n','\n').replace('{','{\n').replace('}','}\n').replace(';',';\n').replace('\n\n','\n')
 		self.tokens.set_text(tokens)
-		scope = [{}]
-		if not self._dispatch(scope,'root','flow',['route',],[],['root']):
+		self.scope.clear()
+		if not self._dispatch('root','flow',['route',],[],['root']):
 			return False
-		if not self.flow.check_flow(scope,self):
+		if not self.flow.check_flow(self):
 			return False
-		changes = scope[0]['announce']
+		changes = self.scope.content[0]['announce']
 		if action == 'withdraw':
 			for change in changes:
 				change.nlri.action = OUT.WITHDRAW

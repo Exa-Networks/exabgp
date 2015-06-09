@@ -47,8 +47,10 @@ class ParseProcess (Basic):
 		'}\n\n' \
 
 
-	def __init__ (self, error):
+	def __init__ (self, scope, error, logger):
+		self.scope = scope
 		self.error = error
+		self.logger = logger
 
 	def clear (self):
 		pass
@@ -56,27 +58,27 @@ class ParseProcess (Basic):
 	def configuration (self, name):
 		self._fname = name
 
-	def command (self, scope, name, command, tokens):
+	def command (self, name, command, tokens):
 		if command in ('packets','parsed','consolidate','neighbor-changes'):
-			scope[-1]['%s-%s' % (name,command)] = True
+			self.scope.content[-1]['%s-%s' % (name,command)] = True
 			return True
 
 		message = Message.from_string(command)
 		if message == Message.CODE.NOP:
 			return self.error.set('unknown process message')
 
-		scope[-1]['%s-%d' % (name,message)] = True
+		self.scope.content[-1]['%s-%d' % (name,message)] = True
 		return True
 
 
-	def encoder (self, scope, name, command, tokens):
+	def encoder (self, name, command, tokens):
 		if tokens and tokens[0] in ('text','json'):
-			scope[-1][command] = tokens[0]
+			self.scope.content[-1][command] = tokens[0]
 			return True
 
 		return self.error.set(self.syntax)
 
-	def run (self, scope, name, command, tokens):
+	def run (self, name, command, tokens):
 		line = ' '.join(tokens).strip()
 		if len(line) > 2 and line[0] == line[-1] and line[0] in ['"',"'"]:
 			line = line[1:-1]
@@ -141,7 +143,7 @@ class ParseProcess (Basic):
 			return self.error.set('exabgp will not be able to run this program "%s"' % prg)
 
 		if args:
-			scope[-1][command] = [prg] + args
+			self.scope.content[-1][command] = [prg] + args
 		else:
-			scope[-1][command] = [prg,]
+			self.scope.content[-1][command] = [prg,]
 		return True

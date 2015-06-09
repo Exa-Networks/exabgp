@@ -10,9 +10,11 @@ from exabgp.configuration.current.format import formated
 
 
 class Tokeniser (object):
-	def __init__ (self, error, logger):
+	def __init__ (self, scope, error, logger):
+		self.scope = scope
 		self.error = error
 		self.logger = logger
+
 		self.finished = False
 		self.number = 0
 		self.line = []

@@ -46,10 +46,12 @@ class ParseNeighbor (Basic):
 
 	syntax = ''
 
-	def __init__ (self, error, logger):
+	def __init__ (self, scope, error, logger):
+		self.scope = scope
 		self.error = error
 		self.logger = logger
-		self.capability = ParseCapability(error)
+
+		self.capability = ParseCapability(scope,error,logger)
 		self.fifo = environment.settings().api.file
 
 		self.neighbors = {}
@@ -77,33 +79,33 @@ class ParseNeighbor (Basic):
 
 		self._previous = {}
 
-	def router_id (self, scope, name, command, tokens):
+	def router_id (self, name, command, tokens):
 		try:
 			ip = RouterID(tokens[0])
 		except (IndexError,ValueError):
 			return self.error.set('"%s" is an invalid IP address' % ' '.join(tokens))
 
-		scope[-1][command] = ip
+		self.scope.content[-1][command] = ip
 		return True
 
-	def ip (self, scope, name, command, tokens):
+	def ip (self, name, command, tokens):
 		try:
 			ip = IP.create(tokens[0])
 		except (IndexError,ValueError):
 			return self.error.set('"%s" is an invalid IP address' % ' '.join(tokens))
 
-		scope[-1][command] = ip
+		self.scope.content[-1][command] = ip
 		return True
 
-	def description (self, scope, name, command, tokens):
+	def description (self, name, command, tokens):
 		text = ' '.join(tokens)
 		if len(text) < 2 or text[0] != '"' or text[-1] != '"' or text[1:-1].count('"'):
 			return self.error.set('syntax: description "<description>"')
 
-		scope[-1]['description'] = text[1:-1]
+		self.scope.content[-1]['description'] = text[1:-1]
 		return True
 
-	def asn (self, scope, name, command, tokens):
+	def asn (self, name, command, tokens):
 		try:
 			value = Basic.newASN(tokens[0])
 		except ValueError:
@@ -111,17 +113,17 @@ class ParseNeighbor (Basic):
 		except IndexError:
 			return self.error.set('please provide an ASN')
 
-		scope[-1][command] = value
+		self.scope.content[-1][command] = value
 		return True
 
-	def passive (self, scope, name, command, tokens):
+	def passive (self, name, command, tokens):
 		if tokens:
 			return self.error.set('"%s" is an invalid for passive' % ' '.join(tokens))
 
-		scope[-1][command] = True
+		self.scope.content[-1][command] = True
 		return True
 
-	def listen (self, scope, name, command, tokens):
+	def listen (self, name, command, tokens):
 		try:
 			listen = int(tokens[0])
 		except IndexError:
@@ -134,10 +136,10 @@ class ParseNeighbor (Basic):
 		if listen >= pow(2,16):
 			return self.error.set('the listening port must be smaller than %d' % pow(2,16))
 
-		scope[-1][command] = listen
+		self.scope.content[-1][command] = listen
 		return True
 
-	def hostname (self, scope, name, command, tokens):
+	def hostname (self, name, command, tokens):
 		if not len(tokens) == 1:
 			return self.error.set('single host-name required')
 
@@ -156,10 +158,10 @@ class ParseNeighbor (Basic):
 		if len(name) > 255:
 			return self.error.set('bad host-name (length)')
 
-		scope[-1][command] = name.encode('utf-8')
+		self.scope.content[-1][command] = name.encode('utf-8')
 		return True
 
-	def domainname (self, scope, name, command, tokens):
+	def domainname (self, name, command, tokens):
 		if not len(tokens) == 1:
 			return self.error.set('single domain-name required')
 
@@ -178,10 +180,10 @@ class ParseNeighbor (Basic):
 		if len(name) > 255:
 			return self.error.set('bad domain-name (length)')
 
-		scope[-1][command] = name.encode('utf-8')
+		self.scope.content[-1][command] = name.encode('utf-8')
 		return True
 
-	def holdtime (self, scope, name, command, tokens):
+	def holdtime (self, name, command, tokens):
 		if not len(tokens) == 1:
 			return self.error.set('hold-time required')
 
@@ -195,10 +197,10 @@ class ParseNeighbor (Basic):
 		if holdtime >= pow(2,16):
 			return self.error.set('holdtime must be smaller than %d' % pow(2,16))
 
-		scope[-1][command] = holdtime
+		self.scope.content[-1][command] = holdtime
 		return True
 
-	def md5 (self, scope, name, command, tokens):
+	def md5 (self, name, command, tokens):
 		if not len(tokens) == 1:
 			return self.error.set('md5 required')
 
@@ -211,12 +213,12 @@ class ParseNeighbor (Basic):
 		if not md5:
 			return self.error.set('md5 requires the md5 password as an argument (quoted or unquoted).  FreeBSD users should use "kernel" as the argument.')
 
-		scope[-1][command] = md5
+		self.scope.content[-1][command] = md5
 		return True
 
-	def ttl (self, scope, name, command, tokens):
+	def ttl (self, name, command, tokens):
 		if not len(tokens):
-			scope[-1][command] = self.TTL_SECURITY
+			self.scope.content[-1][command] = self.TTL_SECURITY
 			return True
 
 		try:
@@ -230,54 +232,54 @@ class ParseNeighbor (Basic):
 		if ttl >= 255:
 			return self.error.set('ttl must be smaller than 255 (1-254)')
 
-		scope[-1][command] = ttl
+		self.scope.content[-1][command] = ttl
 		return True
 
 	groupupdate = Basic.boolean
 	autoflush = Basic.boolean
 	adjribout = Basic.boolean
 
-	def make (self, scope, configuration):
-		# we have local_scope[-2] as the group template and local_scope[-1] as the peer specific
-		if len(scope) > 1:
-			for key,content in scope[-2].iteritems():
-				if key not in scope[-1]:
-					scope[-1][key] = deepcopy(content)
+	def make (self,configuration):
+		# we have local[-2] as the group template and local_self.scope.content[-1] as the peer specific
+		if len(self.scope.content) > 1:
+			for key,content in self.scope.content[-2].iteritems():
+				if key not in self.scope.content[-1]:
+					self.scope.content[-1][key] = deepcopy(content)
 				elif key == 'announce':
-					scope[-1][key].extend(scope[-2][key])
+					self.scope.content[-1][key].extend(self.scope.content[-2][key])
 
 		neighbor = Neighbor()
-		for local_scope in scope:
-			value = local_scope.get('router-id','')
+		for local in self.scope.content:
+			value = local.get('router-id','')
 			if value:
 				neighbor.router_id = value
-			value = local_scope.get('peer-address','')
+			value = local.get('peer-address','')
 			if value:
 				neighbor.peer_address = value
-			value = local_scope.get('local-address','')
+			value = local.get('local-address','')
 			if value:
 				neighbor.local_address = value
-			value = local_scope.get('local-as','')
+			value = local.get('local-as','')
 			if value:
 				neighbor.local_as = value
-			value = local_scope.get('peer-as','')
+			value = local.get('peer-as','')
 			if value:
 				neighbor.peer_as = value
-			value = local_scope.get('passive',False)
+			value = local.get('passive',False)
 			if value:
 				neighbor.passive = value
-			value = local_scope.get('listen',0)
+			value = local.get('listen',0)
 			if value:
 				neighbor.listen = value
-			value = local_scope.get('hold-time','')
+			value = local.get('hold-time','')
 			if value:
 				neighbor.hold_time = value
 
-			neighbor.host_name = local_scope.get('host-name',hostname())
-			neighbor.domain_name = local_scope.get('domain-name',domainname())
+			neighbor.host_name = local.get('host-name',hostname())
+			neighbor.domain_name = local.get('domain-name',domainname())
 
-			neighbor.changes = local_scope.get('announce',[])
-			messages = local_scope.get('operational-message',[])
+			neighbor.changes = local.get('announce',[])
+			messages = local.get('operational-message',[])
 
 		# we want to have a socket for the cli
 		if self.fifo:
@@ -331,25 +333,25 @@ class ParseNeighbor (Basic):
 		if not neighbor.router_id:
 			neighbor.router_id = neighbor.local_address
 
-		local_scope = scope[-1]
-		neighbor.description = local_scope.get('description','')
+		local = self.scope.content[-1]
+		neighbor.description = local.get('description','')
 
-		neighbor.md5 = local_scope.get('md5',None)
-		neighbor.ttl = local_scope.get('ttl-security',None)
-		neighbor.group_updates = local_scope.get('group-updates',None)
+		neighbor.md5 = local.get('md5',None)
+		neighbor.ttl = local.get('ttl-security',None)
+		neighbor.group_updates = local.get('group-updates',None)
 
-		neighbor.route_refresh = local_scope.get('route-refresh',0)
-		neighbor.graceful_restart = local_scope.get('graceful-restart',0)
+		neighbor.route_refresh = local.get('route-refresh',0)
+		neighbor.graceful_restart = local.get('graceful-restart',0)
 		if neighbor.graceful_restart is None:
 			# README: Should it be a subclass of int ?
 			neighbor.graceful_restart = int(neighbor.hold_time)
-		neighbor.multisession = local_scope.get('multi-session',False)
-		neighbor.operational = local_scope.get('operational',False)
-		neighbor.add_path = local_scope.get('add-path',0)
-		neighbor.flush = local_scope.get('auto-flush',True)
-		neighbor.adjribout = local_scope.get('adj-rib-out',True)
-		neighbor.asn4 = local_scope.get('asn4',True)
-		neighbor.aigp = local_scope.get('aigp',None)
+		neighbor.multisession = local.get('multi-session',False)
+		neighbor.operational = local.get('operational',False)
+		neighbor.add_path = local.get('add-path',0)
+		neighbor.flush = local.get('auto-flush',True)
+		neighbor.adjribout = local.get('adj-rib-out',True)
+		neighbor.asn4 = local.get('asn4',True)
+		neighbor.aigp = local.get('aigp',None)
 
 		if neighbor.route_refresh and not neighbor.adjribout:
 			return self.error.set('incomplete option route-refresh and no adj-rib-out')
@@ -367,7 +369,7 @@ class ParseNeighbor (Basic):
 		if neighbor.peer_address.ip in self._neighbors:
 			return self.error.set('duplicate peer definition %s' % neighbor.peer_address.ip)
 
-		openfamilies = local_scope.get('families','everything')
+		openfamilies = local.get('families','everything')
 		# announce every family we known
 		if neighbor.multisession and openfamilies == 'everything':
 			# announce what is needed, and no more, no need to have lots of TCP session doing nothing
@@ -434,5 +436,5 @@ class ParseNeighbor (Basic):
 		self.logger.configuration("\n")
 
 		# ...
-		scope.pop(-1)
+		self.scope.content.pop(-1)
 		return True

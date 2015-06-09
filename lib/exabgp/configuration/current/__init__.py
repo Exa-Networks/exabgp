@@ -29,6 +29,7 @@ from exabgp.rib.change import Change
 from exabgp.logger import Logger
 
 from exabgp.configuration.current.error import Error
+from exabgp.configuration.current.scope import Scope
 from exabgp.configuration.current.tokeniser import Tokeniser
 from exabgp.configuration.current.neighbor import ParseNeighbor
 from exabgp.configuration.current.family import ParseFamily
@@ -91,18 +92,20 @@ class Configuration (object):
 	def __init__ (self, configurations, text=False):
 		self.api_encoder = environment.settings().api.encoder
 
-		self.logger = Logger()
 		self._configurations = configurations
 
-		self.error = Error()
-		self.tokens = Tokeniser(self.error,self.logger)
-		self.neighbor = ParseNeighbor(self.error,self.logger)
-		self.family = ParseFamily(self.error)
-		self.process = ParseProcess(self.error)
-		self.route = ParseRoute(self.error)
-		self.flow = ParseFlow(self.error,self.logger)
-		self.l2vpn = ParseL2VPN(self.error)
-		self.operational = ParseOperational(self.error)
+		self.scope  = Scope  ()
+		self.logger = Logger ()
+		self.error  = Error  ()
+
+		self.tokens      = Tokeniser        (self.scope,self.error,self.logger)
+		self.neighbor    = ParseNeighbor    (self.scope,self.error,self.logger)
+		self.family      = ParseFamily      (self.scope,self.error,self.logger)
+		self.process     = ParseProcess     (self.scope,self.error,self.logger)
+		self.route       = ParseRoute       (self.scope,self.error,self.logger)
+		self.flow        = ParseFlow        (self.scope,self.error,self.logger)
+		self.l2vpn       = ParseL2VPN       (self.scope,self.error,self.logger)
+		self.operational = ParseOperational (self.scope,self.error,self.logger)
 
 		self._tree = {
 			'configuration': {
@@ -282,17 +285,14 @@ class Configuration (object):
 
 		self.processes = {}
 
-		self._scope = []
 		self._location = ['root']
 
 	def _clear (self):
 		self.processes = {}
 
-		self._scope = []
-		self._location = ['root']
-
-		self.tokens.clear()
 		self.error.clear()
+		self.tokens.clear()
+		self.scope.clear()
 		self.neighbor.clear()
 		self.family.clear()
 		self.process.clear()
@@ -327,7 +327,7 @@ class Configuration (object):
 		r = False
 		while not self.tokens.finished:
 			r = self._dispatch(
-				self._scope,'root','configuration',
+				'root','configuration',
 				self._tree['configuration'].keys(),
 				[]
 			)
@@ -370,7 +370,7 @@ class Configuration (object):
 		return True
 
 	# name is not used yet but will come really handy if we have name collision :D
-	def _dispatch (self, scope, name, command, multi, single, location=None):
+	def _dispatch (self, name, command, multi, single, location=None):
 		if location:
 			self._location = location
 			self.flow.clear()
@@ -382,9 +382,9 @@ class Configuration (object):
 		end = tokens[-1]
 		if multi and end == '{':
 			self._location.append(tokens[0])
-			return self._multi_line(scope,command,tokens[1],tokens[:-1],multi)
+			return self._multi_line(command,tokens[1],tokens[:-1],multi)
 		if single and end == ';':
-			return self.run(scope,command,tokens[1],tokens[:-1],single)
+			return self.run(command,tokens[1],tokens[:-1],single)
 		if end == '}':
 			if len(self._location) == 1:
 				return self.error.set('closing too many parenthesis')
@@ -392,7 +392,7 @@ class Configuration (object):
 			return None
 		return False
 
-	def _multi (self, tree, scope, name, command, tokens, valid):
+	def _multi (self, tree, name, command, tokens, valid):
 		command = tokens[0]
 
 		if valid and command not in valid:
@@ -402,21 +402,21 @@ class Configuration (object):
 			return self.error.set('option %s is not allowed here' % name)
 
 		run, validate = tree[name].get(command,(false,false))
-		if not run(scope,name,command,tokens[1:]):
+		if not run(name,command,tokens[1:]):
 			return False
-		if not validate(scope,self):
+		if not validate(self):
 			return False
 		return True
 
-	def _multi_line (self, scope, name, command, tokens, valid):
-		return self._multi(self._tree,scope,name,command,tokens,valid)
+	def _multi_line (self, name, command, tokens, valid):
+		return self._multi(self._tree,name,command,tokens,valid)
 
 	# Programs used to control exabgp
 
-	def _multi_process (self, scope, name, command, tokens):
+	def _multi_process (self, name, command, tokens):
 		while True:
 			r = self._dispatch(
-				scope,name,'process',
+				name,'process',
 				['send','receive'],
 				[
 					'run','encoder',
@@ -429,26 +429,26 @@ class Configuration (object):
 				break
 
 		name = tokens[0] if len(tokens) >= 1 else 'conf-only-%s' % str(time.time())[-6:]
-		self.processes.setdefault(name,{})['neighbor'] = scope[-1]['peer-address'] if 'peer-address' in scope[-1] else '*'
+		self.processes.setdefault(name,{})['neighbor'] = self.scope.content[-1]['peer-address'] if 'peer-address' in self.scope.content[-1] else '*'
 
 		for key in ['neighbor-changes',]:
-			self.processes[name][key] = scope[-1].pop(key,False)
+			self.processes[name][key] = self.scope.content[-1].pop(key,False)
 
 		for direction in ['send','receive']:
 			for action in ['packets','parsed','consolidate']:
 				key = '%s-%s' % (direction,action)
-				self.processes[name][key] = scope[-1].pop(key,False)
+				self.processes[name][key] = self.scope.content[-1].pop(key,False)
 
 			for message in Message.CODE.MESSAGES:
 				key = '%s-%d' % (direction,message)
-				self.processes[name][key] = scope[-1].pop(key,False)
+				self.processes[name][key] = self.scope.content[-1].pop(key,False)
 
-		run = scope[-1].pop('run','')
+		run = self.scope.content[-1].pop('run','')
 		if run:
 			if len(tokens) != 1:
 				return self.error.set(self.process.syntax)
 
-			self.processes[name]['encoder'] = scope[-1].get('encoder','') or self.api_encoder
+			self.processes[name]['encoder'] = self.scope.content[-1].get('encoder','') or self.api_encoder
 			self.processes[name]['run'] = run
 			return True
 		elif len(tokens):
@@ -456,12 +456,12 @@ class Configuration (object):
 
 	# Limit the AFI/SAFI pair announced to peers
 
-	def _multi_family (self, scope, name, command, tokens):
+	def _multi_family (self, name, command, tokens):
 		# we know all the families we should use
-		scope[-1]['families'] = []
+		self.scope.content[-1]['families'] = []
 		while True:
 			r = self._dispatch(
-				scope,name,'family',
+				name,'family',
 				[],
 				self._command['family'].keys()
 			)
@@ -474,11 +474,11 @@ class Configuration (object):
 
 	# capacity
 
-	def _multi_capability (self, scope, name, command, tokens):
+	def _multi_capability (self, name, command, tokens):
 		# we know all the families we should use
 		while True:
 			r = self._dispatch(
-				scope,name,'capability',
+				name,'capability',
 				[],
 				self._command['capability'].keys()
 			)
@@ -492,14 +492,14 @@ class Configuration (object):
 
 	# Group Neighbor
 
-	def _multi_group (self, scope, name, command, address):
+	def _multi_group (self, name, command, address):
 		# if len(tokens) != 2:
 		# 	return self.error.set('syntax: group <name> { <options> }')
 
-		scope.append({})
+		self.scope.content.append({})
 		while True:
 			r = self._dispatch(
-				scope,name,'group',
+				name,'group',
 				[
 					'static','flow','l2vpn',
 					'neighbor','process','family',
@@ -510,23 +510,23 @@ class Configuration (object):
 			if r is False:
 				return False
 			if r is None:
-				scope.pop(-1)
+				self.scope.content.pop(-1)
 				return True
 
-	def _multi_neighbor (self, scope, name, command, tokens):
+	def _multi_neighbor (self, name, command, tokens):
 		if len(tokens) != 1:
 			return self.error.set('syntax: neighbor <ip> { <options> }')
 
 		address = tokens[0]
-		scope.append({})
+		self.scope.content.append({})
 		try:
-			scope[-1]['peer-address'] = IP.create(address)
+			self.scope.content[-1]['peer-address'] = IP.create(address)
 		except (IndexError,ValueError,socket.error):
 			return self.error.set('"%s" is not a valid IP address' % address)
 
 		while True:
 			r = self._dispatch(
-				scope,name,'neighbor',
+				name,'neighbor',
 				[
 					'static','flow','l2vpn',
 					'process','family','capability','operational'
@@ -541,13 +541,13 @@ class Configuration (object):
 
 	#  Group Static ................
 
-	def _multi_static (self, scope, name, command, tokens):
+	def _multi_static (self, name, command, tokens):
 		if len(tokens) != 0:
 			return self.error.set('syntax: static { route; route; ... }')
 
 		while True:
 			r = self._dispatch(
-				scope,name,'static',
+				name,'static',
 				['route',],
 				['route',]
 			)
@@ -558,31 +558,31 @@ class Configuration (object):
 
 	# Group Route  ........
 
-	def _multi_static_route (self, scope, name, command, tokens):
+	def _multi_static_route (self, name, command, tokens):
 		if len(tokens) != 1:
 			return self.error.set(self.route.syntax)
 
-		if not self.route.insert_static_route(scope,name,command,tokens):
+		if not self.route.insert_static_route(name,command,tokens):
 			return False
 
 		while True:
 			r = self._dispatch(
-				scope,name,'static-route',
+				name,'static-route',
 				self._command['static-route'].keys(),
 				self._command['static-route'].keys()
 			)
 			if r is False:
 				return False
 			if r is None:
-				return self.route.make_split(scope)
+				return self.route.make_split()
 
-	def _multi_l2vpn (self, scope, name, command, tokens):
+	def _multi_l2vpn (self, name, command, tokens):
 		if len(tokens) != 0:
 			return self.error.set(self.l2vpn.syntax)
 
 		while True:
 			r = self._dispatch(
-				scope,name,'l2vpn',
+				name,'l2vpn',
 				['vpls',],
 				['vpls',]
 			)
@@ -592,16 +592,16 @@ class Configuration (object):
 				break
 		return True
 
-	def _multi_l2vpn_vpls (self, scope, name, command, tokens):
+	def _multi_l2vpn_vpls (self, name, command, tokens):
 		if len(tokens) > 1:
 			return self.error.set(self.l2vpn.syntax)
 
-		if not self.l2vpn.insert_vpls(scope,name,command,tokens):
+		if not self.l2vpn.insert_vpls(name,command,tokens):
 			return False
 
 		while True:
 			r = self._dispatch(
-				scope,name,'l2vpn-vpls',
+				name,'l2vpn-vpls',
 				self._command['l2vpn-vpls'].keys(),
 				self._command['l2vpn-vpls'].keys()
 			)
@@ -613,13 +613,13 @@ class Configuration (object):
 		return True
 
 
-	def _multi_flow (self, scope, name, command, tokens):
+	def _multi_flow (self, name, command, tokens):
 		if len(tokens) != 0:
 			return self.error.set(self.flow.syntax)
 
 		while True:
 			r = self._dispatch(
-				scope,name,'flow',
+				name,'flow',
 				['route',],
 				[]
 			)
@@ -629,7 +629,7 @@ class Configuration (object):
 				break
 		return True
 
-	def _insert_flow_route (self, scope, name, command, tokens=None):
+	def _insert_flow_route (self, name, command, tokens=None):
 		if self.flow.state != 'out':
 			return self.error.set(self.flow.syntax)
 
@@ -642,22 +642,22 @@ class Configuration (object):
 		except ValueError:
 			return self.error.set(self.flow.syntax)
 
-		if 'announce' not in scope[-1]:
-			scope[-1]['announce'] = []
+		if 'announce' not in self.scope.content[-1]:
+			self.scope.content[-1]['announce'] = []
 
-		scope[-1]['announce'].append(flow)
+		self.scope.content[-1]['announce'].append(flow)
 		return True
 
-	def _multi_flow_route (self, scope, name, command, tokens):
+	def _multi_flow_route (self, name, command, tokens):
 		if len(tokens) > 1:
 			return self.error.set(self.flow.syntax)
 
-		if not self._insert_flow_route(scope,name,command):
+		if not self._insert_flow_route(name,command):
 			return False
 
 		while True:
 			r = self._dispatch(
-				scope,name,'flow-route',
+				name,'flow-route',
 				['match','then'],
 				['rd','route-distinguisher','next-hop']
 			)
@@ -673,7 +673,7 @@ class Configuration (object):
 
 	# ..........................................
 
-	def _multi_match (self, scope, name, command, tokens):
+	def _multi_match (self, name, command, tokens):
 		if len(tokens) != 0:
 			return self.error.set(self.flow.syntax)
 
@@ -684,7 +684,7 @@ class Configuration (object):
 
 		while True:
 			r = self._dispatch(
-				scope,name,'flow-match',
+				name,'flow-match',
 				[],
 				[
 					'source','destination',
@@ -700,7 +700,7 @@ class Configuration (object):
 				break
 		return True
 
-	def _multi_then (self, scope, name, command, tokens):
+	def _multi_then (self, name, command, tokens):
 		if len(tokens) != 0:
 			return self.error.set(self.flow.syntax)
 
@@ -711,7 +711,7 @@ class Configuration (object):
 
 		while True:
 			r = self._dispatch(
-				scope,name,'flow-then',
+				name,'flow-then',
 				[],
 				[
 					'accept','discard','rate-limit',
@@ -728,13 +728,13 @@ class Configuration (object):
 
 	# ..........................................
 
-	def _multi_api (self, scope, name, command, tokens):
+	def _multi_api (self, name, command, tokens):
 		if len(tokens) != 0:
 			return self.error.set('api issue')
 
 		while True:
 			r = self._dispatch(
-				scope,name,command,
+				name,command,
 				[],
 				self._command[command].keys()
 			)
@@ -746,13 +746,13 @@ class Configuration (object):
 
 	#  Group Operational ................
 
-	def _multi_operational (self, scope, name, command, tokens):
+	def _multi_operational (self, name, command, tokens):
 		if len(tokens) != 0:
 			return self.error.set('syntax: operational { command; command; ... }')
 
 		while True:
 			r = self._dispatch(
-				scope,name,command,
+				name,command,
 				[],
 				self._command[command].keys()
 			)
@@ -761,7 +761,7 @@ class Configuration (object):
 			if r is None:
 				return True
 
-	def run (self, scope, name, comamnd, tokens, valid):
+	def run (self, name, comamnd, tokens, valid):
 		command = tokens[0]
 		if valid and command not in valid:
 			return self.error.set('invalid keyword "%s"' % command)
@@ -784,7 +784,7 @@ class Configuration (object):
 		if name in self._command:
 			if command in self._command[name]:
 				if command in family.get(name,{}):
-					return self._command[name][command](scope,name,command,tokens[1:],family[name][command])
-				return self._command[name][command](scope,name,command,tokens[1:])
+					return self._command[name][command](name,command,tokens[1:],family[name][command])
+				return self._command[name][command](name,command,tokens[1:])
 
 		return self.error.set('command not known %s' % command)
