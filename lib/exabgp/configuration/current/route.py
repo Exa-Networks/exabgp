@@ -344,10 +344,10 @@ class ParseRoute (Basic):
 		try:
 			if tokens:
 				if tokens.pop(0) != '(':
-					raise ValueError('invalid aggregator syntax')
+					return self.error.set('invalid aggregator syntax')
 				asn,address = tokens.pop(0).split(':')
 				if tokens.pop(0) != ')':
-					raise ValueError('invalid aggregator syntax')
+					return self.error.set('invalid aggregator syntax')
 				local_as = ASN(asn)
 				local_address = RouterID(address)
 			else:
@@ -432,7 +432,7 @@ class ParseRoute (Basic):
 			else:
 				_list.append(ClusterID(clusterid))
 			if not _list:
-				raise ValueError('no cluster-id in the cluster-list')
+				return self.error.set('no cluster-id in the cluster-list')
 			clusterlist = ClusterList(_list)
 		except ValueError:
 			return self.error.set(self.syntax)

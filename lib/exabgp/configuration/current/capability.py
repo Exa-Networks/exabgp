@@ -59,7 +59,7 @@ class ParseCapability (Basic):
 			if ap.startswith('send'):
 				apv += 2
 			if not apv and ap not in ('disable','disabled'):
-				raise ValueError('invalid add-path')
+				return self.error.set('invalid add-path')
 			scope[-1][command] = apv
 			return True
 		except (ValueError,IndexError):

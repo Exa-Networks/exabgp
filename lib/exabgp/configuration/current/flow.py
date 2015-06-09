@@ -154,7 +154,7 @@ class ParseFlow (Basic):
 			else:
 				return operator,string[1:]
 		except IndexError:
-			raise Exception('Invalid expression (too short) %s' % string)
+			raise ValueError('Invalid expression (too short) %s' % string)
 
 	def _value (self, string):
 		l = 0
@@ -181,9 +181,9 @@ class ParseFlow (Basic):
 							AND = BinaryOperator.AND
 							test = test[1:]
 							if not test:
-								raise ValueError("Can not finish an expresion on an &")
+								return self.error.set("Can not finish an expresion on an &")
 						else:
-							raise ValueError("Unknown binary operator %s" % test[0])
+							return self.error.set("Unknown binary operator %s" % test[0])
 			return True
 		except ValueError,exc:
 			return self.error.set(self.syntax + str(exc))
@@ -299,14 +299,14 @@ class ParseFlow (Basic):
 			if tokens[0].count(':') == 1:
 				prefix,suffix = tokens[0].split(':',1)
 				if prefix.count('.'):
-					raise ValueError('this format has been deprecaded as it does not make sense and it is not supported by other vendors')
+					return self.error.set('this format has been deprecaded as it does not make sense and it is not supported by other vendors')
 				else:
 					asn = int(prefix)
 					route_target = int(suffix)
 					if asn >= pow(2,16):
-						raise ValueError('asn is a 32 bits number, it can only be 16 bit %s' % route_target)
+						return self.error.set('asn is a 32 bits number, it can only be 16 bit %s' % route_target)
 					if route_target >= pow(2,32):
-						raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
+						return self.error.set('route target is a 32 bits number, value too large %s' % route_target)
 					scope[-1]['announce'][-1].attributes[Attribute.CODE.EXTENDED_COMMUNITY].add(TrafficRedirect(asn,route_target))
 					return True
 			else:
