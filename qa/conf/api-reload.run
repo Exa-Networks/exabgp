@@ -14,4 +14,19 @@ while messages:
 	sys.stdout.flush()
 
 while True:
-	time.sleep(1)
+	try:
+		while True:
+			line = sys.stdin.readline().strip()
+			if line:
+				break
+			counter += 1
+			if counter > 100:
+				sys.exit(1)
+		counter = 0
+		time.sleep(0.5)
+	except KeyboardInterrupt:
+		pass
+	except IOError:
+		# most likely a signal during readline
+		pass
+
