@@ -64,6 +64,8 @@ Version 3.5.0
     reported by: Florian Obser
  * Fix: ExaBGP was crashing if it could not write to a logfile
     reported by: Pavel Odintsov
+ * Feature: add support for rpm packaging
+   patch by: Arun Babu Neelicattu
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
