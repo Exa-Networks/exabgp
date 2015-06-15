@@ -11,6 +11,7 @@ import socket
 from copy import deepcopy
 
 from exabgp.bgp.neighbor import Neighbor
+from exabgp.bgp.message.open.holdtime import HoldTime
 
 # from exabgp.bgp.message import Message
 from exabgp.bgp.message.update.nlri.flow import NLRI
@@ -127,7 +128,7 @@ class ParseNeighbor (Generic):
 		neighbor.peer_as          = local.get('peer-as',None)
 		neighbor.passive          = local.get('passive',False)
 		neighbor.listen           = local.get('listen',0)
-		neighbor.hold_time        = local.get('hold-time','')
+		neighbor.hold_time        = local.get('hold-time',HoldTime(180))
 		neighbor.host_name        = local.get('host-name',hostname())
 		neighbor.domain_name      = local.get('domain-name',domainname())
 		neighbor.md5              = local.get('md5',None)
