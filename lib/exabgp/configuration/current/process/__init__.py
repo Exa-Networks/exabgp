@@ -12,10 +12,10 @@ import shlex
 
 from exabgp.bgp.message import Message
 
-from exabgp.configuration.current.basic import Basic
+from exabgp.configuration.current.generic import Generic
 
 
-class ParseProcess (Basic):
+class ParseProcess (Generic):
 	syntax = \
 		'syntax:\n' \
 		'process name-of-process {\n' \
@@ -147,3 +147,55 @@ class ParseProcess (Basic):
 		else:
 			self.scope.content[-1][command] = [prg,]
 		return True
+
+		# we want to have a socket for the cli
+		# if self.fifo:
+		# 	_cli_name = 'CLI'
+		# 	configuration.processes[_cli_name] = {
+		# 		'neighbor': '*',
+		# 		'encoder': 'json',
+		# 		'run': [sys.executable, sys.argv[0]],
+		#
+		# 		'neighbor-changes': False,
+		#
+		# 		'receive-consolidate': False,
+		# 		'receive-packets': False,
+		# 		'receive-parsed': False,
+		#
+		# 		'send-consolidate': False,
+		# 		'send-packets': False,
+		# 		'send-parsed': False,
+		# 	}
+		#
+		# 	for direction in ['send','receive']:
+		# 		for message in [
+		# 			Message.CODE.NOTIFICATION,
+		# 			Message.CODE.OPEN,
+		# 			Message.CODE.KEEPALIVE,
+		# 			Message.CODE.UPDATE,
+		# 			Message.CODE.ROUTE_REFRESH,
+		# 			Message.CODE.OPERATIONAL
+		# 		]:
+		# 			configuration.processes[_cli_name]['%s-%d' % (direction,message)] = False
+		#
+		# for name in configuration.processes.keys():
+		# 	process = configuration.processes[name]
+		#
+		# 	neighbor.api.set('neighbor-changes',process.get('neighbor-changes',False))
+		#
+		# 	for direction in ['send','receive']:
+		# 		for option in ['packets','consolidate','parsed']:
+		# 			neighbor.api.set_value(direction,option,process.get('%s-%s' % (direction,option),False))
+		#
+		# 		for message in [
+		# 			Message.CODE.NOTIFICATION,
+		# 			Message.CODE.OPEN,
+		# 			Message.CODE.KEEPALIVE,
+		# 			Message.CODE.UPDATE,
+		# 			Message.CODE.ROUTE_REFRESH,
+		# 			Message.CODE.OPERATIONAL
+		# 		]:
+		# 			neighbor.api.set_message(direction,message,process.get('%s-%d' % (direction,message),False))
+
+		# XXX: check that if we have any message, we have parsed/packets
+		# XXX: and vice-versa

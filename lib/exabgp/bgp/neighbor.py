@@ -17,7 +17,6 @@ from exabgp.dep.counter import Counter
 from exabgp.protocol.family import AFI
 
 from exabgp.bgp.message import Message
-from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.capability import AddPath
 
 from exabgp.reactor.api.options import APIOptions
@@ -29,17 +28,17 @@ from exabgp.rib import RIB
 class Neighbor (object):
 	def __init__ (self):
 		# self.logger should not be used here as long as we do use deepcopy as it contains a Lock
-		self.description = ''
+		self.description = None
 		self.router_id = None
-		self.host_name = 'localhost'.encode('utf-8')
-		self.domain_name = 'localdomain'.encode('utf-8')
+		self.host_name = None
+		self.domain_name = None
 		self.local_address = None
 		self.peer_address = None
 		self.peer_as = None
 		self.local_as = None
-		self.hold_time = HoldTime(180)
+		self.hold_time = None
 		self.asn4 = None
-		self.add_path = 0
+		self.add_path = None
 		self.md5 = None
 		self.ttl = None
 		self.group_updates = None

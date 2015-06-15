@@ -29,9 +29,9 @@ class IP (object):
 	def __init__ (self):
 		raise Exception("You should use IP.create() to use IP")
 
-	def init (self, ip, packed):
+	def init (self, ip, packed=None):
 		self.ip = ip
-		self.packed = packed
+		self.packed = packed if packed else IP.pton(ip)
 		return self
 
 	@staticmethod

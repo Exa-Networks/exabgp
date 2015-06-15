@@ -9,10 +9,10 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.configuration.current.basic import Basic
+from exabgp.configuration.current.generic import Generic
 
 
-class ParseFamily (Basic):
+class ParseFamily (Generic):
 	syntax = \
 		'syntax:\n' \
 		'family {\n' \
@@ -53,41 +53,59 @@ class ParseFamily (Basic):
 		}
 	}
 
-	def __init__ (self, scope, error, logger):
-		self.scope = scope
-		self.error = error
-		self.logger = logger
-		self._family = False
+	name = 'family'
+
+	def __init__ (self, tokeniser, scope, error, logger):
+		Generic.__init__(self,tokeniser,scope,error,logger)
+		self._full = ''
+		self.known = {
+			'ipv4':  self.ipv4,
+			'ipv6':  self.ipv6,
+			'l2vpn': self.l2vpn,
+		}
 
 	def clear (self):
-		self._family = False
+		self._full = False
 
-	def _set_family (self,tokens, afi):
-		if self._family:
-			return self.error.set('ipv4 can not be used with all or minimal')
+	def pre (self):
+		self.clear()
+		return True
 
-		try:
-			safi = tokens.pop(0).lower()
-		except IndexError:
-			return self.error.set('missing family safi')
+	def _family (self, tokeniser, afi):
+		safi = tokeniser().lower()
 
 		pair = self.convert[afi].get(safi,None)
-		if pair:
-			self.scope.content[-1]['families'].append(pair)
-			return True
+		if not pair:
+			raise ValueError('unvalid safi %s for afi %s' % (safi,afi))
+		return pair
 
-		return self.error.set('unvalid safi %s for afi %s' % (safi,afi))
+	# def family (self, tokens, afi):
+	# 	if self._family:
+	# 		return self.error.set('ipv4 can not be used with all or minimal')
+	#
+	# 	try:
+	# 		safi = tokens.pop(0).lower()
+	# 	except IndexError:
+	# 		return self.error.set('missing family safi')
+	#
+	# 	pair = self.convert[afi].get(safi,None)
+	# 	if pair:
+	# 		self.scope.content[-1]['families'].append(pair)
+	# 		return True
+	#
+	# 	return self.error.set('unvalid safi %s for afi %s' % (safi,afi))
 
-	def ipv4 (self, name, command, tokens):
-		return self._set_family(tokens, 'ipv4')
+	def ipv4 (self, tokeniser):
+		return self._family(tokeniser, 'ipv4')
 
-	def ipv6 (self, name, command, tokens):
-		return self._set_family(tokens, 'ipv6')
+	def ipv6 (self, tokeniser):
+		return self._family(tokeniser, 'ipv6')
 
-	def l2vpn (self, name, command, tokens):
-		return self._set_family(tokens, 'l2vpn')
+	def l2vpn (self, tokeniser):
+		return self._family(tokeniser, 'l2vpn')
 
-	def minimal (self, name, command, tokens):
+	def minimal (self, tokenisers):
+
 		if self.scope.content[-1]['families']:
 			return self.error.set('minimal can not be used with any other options')
 
@@ -95,7 +113,7 @@ class ParseFamily (Basic):
 		self._family = True
 		return True
 
-	def all (self, name, command, tokens):
+	def all (self, tokeniser):
 		if self.scope.content[-1]['families']:
 			return self.error.set('all can not be used with any other options')
 

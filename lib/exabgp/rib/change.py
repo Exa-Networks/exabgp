@@ -6,6 +6,11 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
+
+from exabgp.bgp.message.update.attribute import Attribute
+
 
 class Source (object):
 	UNSET         = 0
@@ -48,7 +53,16 @@ class Change (object):
 		# If you change this you must change as well extensive in Update
 		return "%s%s" % (str(self.nlri),str(self.attributes))
 
-	def __str__ (self):
+	def add (self,attribute):
+		if attribute.ID != Attribute.CODE.NEXT_HOP:
+			return self.attributes.add(attribute)
+
+		if self.nlri.afi == AFI.ipv4 and self.nlri.safi in (SAFI.unicast,SAFI.multicast):
+			return self.attributes.add(attribute)
+
+		return True
+
+	def __repr__ (self):
 		return self.extensive()
 
 

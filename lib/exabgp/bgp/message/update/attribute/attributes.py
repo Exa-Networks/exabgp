@@ -177,9 +177,9 @@ class Attributes (dict):
 			Attribute.CODE.LOCAL_PREF: lambda l,r: LocalPreference(100) if l == r else NOTHING,
 		}
 
-		check = {
-			Attribute.CODE.NEXT_HOP: lambda l,r,nh: nh.ipv4() is True,
-			Attribute.CODE.LOCAL_PREF: lambda l,r,nh: l == r,
+		skip = {
+			Attribute.CODE.NEXT_HOP: lambda l,r,nh: nh.ipv4() is not True,
+			Attribute.CODE.LOCAL_PREF: lambda l,r,nh: l != r,
 		}
 
 		keys = self.keys()
@@ -200,7 +200,7 @@ class Attributes (dict):
 
 			attribute = self[code]
 
-			if code in check and not check[code](local_asn,peer_asn,attribute):
+			if code in skip and skip[code](local_asn,peer_asn,attribute):
 				continue
 
 			if code in Attributes.MULTIPLE:

@@ -47,7 +47,7 @@ class INET (CIDR,NLRI):
 	def __len__ (self):
 		return CIDR.__len__(self) + len(self.path_info)
 
-	def __str__ (self):
+	def __repr__ (self):
 		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
 		return "%s%s" % (self.prefix(),nexthop)
 

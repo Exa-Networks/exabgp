@@ -59,7 +59,7 @@ class CIDR (object):
 
 	ip = property(getip)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return self.prefix()
 
 	def prefix (self):

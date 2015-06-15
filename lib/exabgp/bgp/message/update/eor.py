@@ -37,7 +37,7 @@ class EOR (Message):
 				return '\x00\x00\x00\x00'
 			return self.PREFIX + self.afi.pack() + self.safi.pack()
 
-		def __str__ (self):
+		def __repr__ (self):
 			return self.extensive()
 
 		def extensive (self):
@@ -56,7 +56,7 @@ class EOR (Message):
 			self.nlris[0].pack()
 		)
 
-	def __str__ (self):
+	def __repr__ (self):
 		return 'EOR'
 
 	@classmethod

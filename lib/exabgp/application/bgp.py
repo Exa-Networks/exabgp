@@ -88,6 +88,12 @@ def main ():
 		print '\nconfiguration issue,', str(exc)
 		sys.exit(1)
 
+	# Must be done before setting the logger as it modify its behaviour
+
+	if options["--debug"]:
+		env.log.all = True
+		env.log.level = syslog.LOG_DEBUG
+
 	logger = Logger()
 
 	named_pipe = os.environ.get('NAMED_PIPE','')
@@ -187,10 +193,6 @@ def main ():
 
 	if options["--once"]:
 		env.tcp.once = True
-
-	if options["--debug"]:
-		env.log.all = True
-		env.log.level = syslog.LOG_DEBUG
 
 	if options["--pdb"]:
 		# The following may fail on old version of python (but is required for debug.py)

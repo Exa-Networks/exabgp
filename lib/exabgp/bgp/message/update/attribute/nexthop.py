@@ -23,9 +23,7 @@ class NextHop (Attribute,IP):
 	CACHING = True
 
 	def __init__ (self, ip, packed=None):
-		# Need to conform to from IP interface
-		self.ip = ip
-		self.packed = packed if packed else IP.create(ip).pack()
+		self.init(ip)
 
 	def __eq__ (self, other):
 		return \

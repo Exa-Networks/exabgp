@@ -38,7 +38,7 @@ class Store (object):
 		# WARNING : this function can run while we are in the updates() loop too !
 		self._enhanced_refresh_start = []
 		self._enhanced_refresh_delay = []
-		for update in self.updates(False):
+		for update in self.updates(True):
 			pass
 
 	# back to square one, all the routes are removed

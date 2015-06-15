@@ -10,6 +10,7 @@ class Error (object):
 	def set (self, message):
 		self._message = message
 		if self.debug:
+			print "\n%s\n" % self._message
 			pdb.set_trace()
 			return True
 		return False

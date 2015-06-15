@@ -6,10 +6,10 @@ Created by Thomas Mangin on 2015-06-04.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.current.basic import Basic
+from exabgp.configuration.current.generic import Generic
 
 
-class ParseCapability (Basic):
+class ParseCapability (Generic):
 	TTL_SECURITY = 255
 
 	syntax = \
@@ -21,6 +21,19 @@ class ParseCapability (Basic):
 		'   multi-session enable|disable;\n' \
 		'   operational enable|disable;\n' \
 		'}\n'
+
+		known = {
+			'graceful-restart': gr,
+			'asn4':             boolean,
+			'add-path':         addpath,
+			'multi-session':    boolean,
+			'operational':      boolean,
+		}
+
+		default = {
+			'multi-session':    False,
+			'operational':      False,
+		}
 
 	def __init__ (self, scope, error, logger):
 		self.scope = scope
@@ -83,7 +96,7 @@ class ParseCapability (Basic):
 
 		return self.error.set('"%s" is an invalid asn4 parameter options are enable (default) and disable)' % ' '.join(tokens))
 
-	refresh = Basic.boolean
-	multisession = Basic.boolean
-	operational = Basic.boolean
-	aigp = Basic.boolean
+	refresh = Generic.boolean
+	multisession = Generic.boolean
+	operational = Generic.boolean
+	aigp = Generic.boolean
