@@ -6,14 +6,13 @@ Created by Thomas Mangin on 2014-07-01.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-import socket
-import string
+from string import ascii_letters
+from string import digits
 
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.holdtime import HoldTime
 
 from exabgp.configuration.current.generic.parser import string
-from exabgp.configuration.current.generic.parser import port
 
 
 def hostname (tokeniser):
@@ -24,7 +23,7 @@ def hostname (tokeniser):
 		raise ValueError('bad host-name (alphanumeric)')
 	if '..' in value:
 		raise ValueError('bad host-name (double colon)')
-	if not all(True if c in string.ascii_letters + string.digits + '.-' else False for c in value):
+	if not all(True if c in ascii_letters + digits + '.-' else False for c in value):
 		raise ValueError('bad host-name (charset)')
 	if len(value) > 255:
 		raise ValueError('bad host-name (length)')
@@ -42,9 +41,9 @@ def domainname (tokeniser):
 		raise ValueError('bad domain-name')
 	if '..' in value:
 		raise ValueError('bad domain-name')
-	if not all(True if c in string.ascii_letters + string.digits + '.-' else False for c in value):
+	if not all(True if c in ascii_letters + digits + '.-' else False for c in value):
 		raise ValueError('bad domain-name')
-	if len(name) > 255:
+	if len(value) > 255:
 		raise ValueError('bad domain-name (length)')
 	return value
 
@@ -91,12 +90,11 @@ def router_id (tokeniser):
 def hold_time (tokeniser):
 	value = tokeniser()
 	try:
-		hold_time = HoldTime(value)
+		holdtime = HoldTime(int(value))
 	except ValueError:
 		raise ValueError ('"%s" is an invalid hold-time' % value)
-	if hold_time < 3 and hold_time != 0:
+	if holdtime < 3 and hold_time != 0:
 		raise ValueError('holdtime must be zero or at least three seconds')
-	# XXX: FIXME: add HoldTime.MAX and reference it ( pow -1 )
-	if hold_time >= pow(2,16):
-		raise ValueError('holdtime must be smaller than %d' % pow(2,16))
-	return hold_time
+	if holdtime > HoldTime.MAX:
+		raise ValueError('holdtime must be smaller or equal to %d' % HoldTime.MAX)
+	return holdtime

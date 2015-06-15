@@ -14,6 +14,10 @@ from exabgp.protocol.family import SAFI
 from exabgp.bgp.message import Message
 # from exabgp.bgp.message import Notify
 from exabgp.bgp.message import Open
+from exabgp.bgp.message.open import Version
+from exabgp.bgp.message.open import ASN
+from exabgp.bgp.message.open import RouterID
+from exabgp.bgp.message.open import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability import RouteRefresh
@@ -46,7 +50,7 @@ class TestData (unittest.TestCase):
 
 	def test_2_open (self):
 		capabilities = Capabilities()
-		o = Open(4,65500,'127.0.0.1',capabilities,180)
+		o = Open(Version(4),ASN(65500),HoldTime(180),RouterID('127.0.0.1'),capabilities)
 		self.assertEqual(o.version,4)
 		self.assertEqual(o.asn,65500)
 		self.assertEqual(o.router_id,RouterID('127.0.0.1'))

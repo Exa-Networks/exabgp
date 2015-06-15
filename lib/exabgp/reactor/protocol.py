@@ -22,7 +22,10 @@ from exabgp.bgp.message import Message
 from exabgp.bgp.message import NOP
 from exabgp.bgp.message import _NOP
 from exabgp.bgp.message import Open
-# from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open import Version
+from exabgp.bgp.message.open import ASN
+from exabgp.bgp.message.open import RouterID
+from exabgp.bgp.message.open import HoldTime
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message import Update
@@ -268,11 +271,11 @@ class Protocol (object):
 
 	def new_open (self, restarted):
 		sent_open = Open(
-			4,
+			Version(4),
 			self.neighbor.local_as,
-			self.neighbor.router_id.ip,
-			Capabilities().new(self.neighbor,restarted),
-			self.neighbor.hold_time
+			self.neighbor.hold_time,
+			self.neighbor.router_id,
+			Capabilities().new(self.neighbor,restarted)
 		)
 
 		# we do not buffer open message in purpose

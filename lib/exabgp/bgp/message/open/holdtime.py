@@ -12,6 +12,8 @@ from struct import pack
 
 
 class HoldTime (int):
+	MAX = pow(2,16) - 1
+
 	def pack (self):
 		return pack('!H',self)
 

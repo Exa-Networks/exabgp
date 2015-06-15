@@ -10,6 +10,10 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message import Update
 from exabgp.bgp.message import Open
+from exabgp.bgp.message.open import Version
+from exabgp.bgp.message.open import ASN
+from exabgp.bgp.message.open import RouterID
+from exabgp.bgp.message.open import HoldTime
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import Negotiated
@@ -63,8 +67,8 @@ def check_neighbor (neighbors):
 			capa[Capability.CODE.ADD_PATH] = path
 		capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
 
-		o1 = Open(4,neighbor.local_as,str(neighbor.local_address),capa,180)
-		o2 = Open(4,neighbor.peer_as,str(neighbor.peer_address),capa,180)
+		o1 = Open(Version(4),ASN(neighbor.local_as),HoldTime(180),RouterID(neighbor.local_address),capa)
+		o2 = Open(Version(4),ASN(neighbor.peer_as),HoldTime(180),RouterID(neighbor.peer_address),capa)
 		negotiated = Negotiated(neighbor)
 		negotiated.sent(o1)
 		negotiated.received(o2)
@@ -199,8 +203,8 @@ def check_update (neighbor, raw):
 	routerid_1 = str(neighbor.router_id)
 	routerid_2 = '.'.join(str((int(_)+1) % 250) for _ in str(neighbor.router_id).split('.',-1))
 
-	o1 = Open(4,neighbor.local_as,routerid_1,capa,180)
-	o2 = Open(4,neighbor.peer_as,routerid_2,capa,180)
+	o1 = Open(Version(4),ASN(neighbor.local_as),HoldTime(180),RouterID(routerid_1),capa)
+	o2 = Open(Version(4),ASN(neighbor.peer_as),HoldTime(180),RouterID(routerid_2),capa)
 	negotiated = Negotiated(neighbor)
 	negotiated.sent(o1)
 	negotiated.received(o2)

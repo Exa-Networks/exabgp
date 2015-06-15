@@ -51,11 +51,11 @@ class Open (Message):
 	ID = Message.CODE.OPEN
 	TYPE = chr(Message.CODE.OPEN)
 
-	def __init__ (self, version, asn, router_id, capabilities, hold_time):
-		self.version = Version(version)
-		self.asn = ASN(asn)
-		self.hold_time = HoldTime(hold_time)
-		self.router_id = RouterID(router_id)
+	def __init__ (self, version, asn, hold_time, router_id, capabilities):
+		self.version = version
+		self.asn = asn
+		self.hold_time = hold_time
+		self.router_id = router_id
 		self.capabilities = capabilities
 
 	def message (self,negotiated=None):
@@ -80,5 +80,10 @@ class Open (Message):
 		hold_time = unpack('!H',data[3:5])[0]
 		numeric = unpack('!L',data[5:9])[0]
 		router_id = "%d.%d.%d.%d" % (numeric >> 24,(numeric >> 16) & 0xFF,(numeric >> 8) & 0xFF,numeric & 0xFF)
-		capabilities = Capabilities.unpack(data[9:])
-		return cls(version,asn,router_id,capabilities,hold_time)
+		return cls(
+			Version(version),
+			ASN(asn),
+			HoldTime(hold_time),
+			RouterID(router_id),
+			Capabilities.unpack(data[9:])
+		)
