@@ -156,9 +156,8 @@ class ParseRoute (Generic):
 		return True
 
 	def _split (self):
-		# if the route does not need to be broken in smaller routes, return
-		# XXX: ... use scope API
-		change = self.scope.content[-1][self.name][-1]
+		change = self.scope.last(self.name)
+
 		if Attribute.CODE.INTERNAL_SPLIT not in change.attributes:
 			return True
 
@@ -168,9 +167,7 @@ class ParseRoute (Generic):
 		if mask >= cut:
 			return True
 
-		# get a local copy of the route
-		# XXX: ... use scope API
-		change = self.scope.content[-1][self.name].pop(-1)
+		change = self.scope.pop(self.name)
 
 		# calculate the number of IP in the /<size> of the new route
 		increment = pow(2,(len(change.nlri.packed)*8) - cut)
@@ -194,11 +191,13 @@ class ParseRoute (Generic):
 			path_info = None
 			labels = change.nlri.labels
 			rd = change.nlri.rd
+
 		# packed and not pack() but does not matter atm, it is an IP not a NextHop
 		nexthop = change.nlri.nexthop.packed
 
 		change.nlri.mask = cut
 		change.nlri = None
+
 		# generate the new routes
 		for _ in range(number):
 			# update ip to the next route, this recalculate the "ip" field of the Inet class
@@ -208,8 +207,6 @@ class ParseRoute (Generic):
 				nlri.rd = rd
 			# next ip
 			ip += increment
-			# save route
-			# XXX: ... use scope API
-			self.scope.content[-1][self.name].append(Change(nlri,change.attributes))
+			self.scope.append(self.name,Change(nlri,change.attributes))
 
 		return True

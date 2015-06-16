@@ -161,7 +161,7 @@ class Configuration (object):
 				"syntax error in section %s\n"
 				"line %d: %s\n"
 				"\n%s" % (
-					self.scope.location[-1],
+					self.scope.location(),
 					self.tokeniser.number,
 					' '.join(self.tokeniser.line),
 					str(self.error)
@@ -194,7 +194,7 @@ class Configuration (object):
 				self.logger.configuration("> %-16s | '%s'" % (location,"' '".join(self.tokeniser.line)))
 
 				if location not in self._structure[name]['sections']:
-					return self.error.set('section %s is invalid in %s, %s' % (location,name,'/'.join(self.scope.location)))
+					return self.error.set('section %s is invalid in %s, %s' % (location,name,self.scope.location()))
 
 				self.scope.enter(location)
 				if not self.section(self._structure[name]['sections'][location]):

@@ -9,16 +9,34 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from copy import deepcopy
 
 
-class Scope (object):
+class Depth (object):
+	def __init__ (self):
+		self._location = []
+
+	def clear (self):
+		self._location = []
+
+	def enter (self,location):
+		self._location.append(location)
+
+	def leave (self):
+		if not len(self._location):
+			return ''
+		return self._location.pop()
+
+	def location (self):
+		return '/'.join(self._location)
+
+
+class Scope (Depth):
 	def __init__ (self,error):
 		self.error = error
 		self.content = []
-		self.location = []
 		self._added = set()
 
 	def clear (self):
+		Depth.clear(self)
 		self.content = [{}]
-		self.location = ['root']
 
 	# set a value
 	def set (self, name, value):
@@ -54,10 +72,5 @@ class Scope (object):
 	def last (self, name):
 		return self.content[-1][name][-1]
 
-	def enter (self,location):
-		self.location.append(location)
-
-	def leave (self):
-		if not len(self.location):
-			return ''
-		return self.location.pop()
+	def pop (self,name):
+		return self.content[-1][name].pop(-1)
