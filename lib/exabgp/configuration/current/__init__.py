@@ -73,40 +73,27 @@ class Configuration (object):
 			'root': {
 				'class':    generic,
 				'commands': [],
-				'sections': {
-					'neighbor':   'section-neighbor',
-				},
+				'sections': [ self.neighbor.name ],
 			},
-			'section-neighbor': {
+			self.neighbor.name: {
 				'class':    self.neighbor,
 				'commands': self.neighbor.known.keys(),
-				'sections': {
-					'family':      'section-neighbor-family',
-					'capability':  'section-neighbor-capability',
-					'static':      'section-static',
-					'flow':        'section-flow',
-					'l2vpn':       'section-l2vpn',
-					'operational': 'section-operational',
-				},
+				'sections': [ self.family.name, 'capability', self.static.name, 'flow', 'l2vpn', 'operational' ],
 			},
-			'section-static': {
-				'class':    self.static,
-				'commands': ['route'],
-				'sections': {
-					'route':       'section-route',  # must be ParseRoute self.name
-				},
-			},
-			'section-route': {
-				'class':    self.route,
-				'commands': self.static.known.keys(),
-				'sections': {
-				},
-			},
-			'section-neighbor-family': {
+			self.family.name: {
 				'class':    self.family,
 				'commands': self.family.known.keys(),
-				'sections': {
-				},
+				'sections': [],
+			},
+			self.static.name: {
+				'class':    self.static,
+				'commands': [ self.route.name ],
+				'sections': [ self.route.name ],
+			},
+			self.route.name: {
+				'class':    self.route,
+				'commands': self.static.known.keys(),
+				'sections': [],
 			},
 		}
 
@@ -197,7 +184,8 @@ class Configuration (object):
 					return self.error.set('section %s is invalid in %s, %s' % (location,name,self.scope.location()))
 
 				self.scope.enter(location)
-				if not self.section(self._structure[name]['sections'][location]):
+				# Simplifying with a flat user space ( will need to become nested when more complex )
+				if not self.section(location):
 					return False
 				continue
 
@@ -251,6 +239,9 @@ class Configuration (object):
 			sys.exit(1)
 
 
+
+
+
 	# Programs used to control exabgp
 
 	def _multi_process (self, name, command, tokens):
@@ -293,24 +284,6 @@ class Configuration (object):
 			return True
 		elif len(tokens):
 			return self.error.set(self.process.syntax)
-
-	# Limit the AFI/SAFI pair announced to peers
-
-	def _multi_family (self, name, command, tokens):
-		# we know all the families we should use
-		self.scope.content[-1]['families'] = []
-		while True:
-			r = self._dispatch(
-				name,'family',
-				[],
-				self._command['family'].keys()
-			)
-			if r is False:
-				return False
-			if r is None:
-				break
-		self.family.clear()
-		return True
 
 	# capacity
 

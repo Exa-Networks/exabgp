@@ -49,15 +49,16 @@ class ParseStatic (ParseRoute):
 
 	known = dict((k,v) for (k,v) in ParseRoute.known.items())
 
+	name = 'static'
+
 	def __init__ (self, tokeniser, scope, error, logger):
 		ParseRoute.__init__(self,tokeniser,scope,error,logger)
 
 	def pre (self):
-		self.scope.enter(self.name)
+		self.scope.to_context()
 		return True
 
 	def post (self):
-		self.scope.leave()
 		return True
 
 @ParseStatic.register('route')

@@ -9,68 +9,75 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from copy import deepcopy
 
 
-class Depth (object):
-	def __init__ (self):
+
+class Scope (object):
+	def __init__ (self,error):
+		self.error = error
 		self._location = []
+		self._added = set()
+		self._all = {}
+		self._current = self._all
 
 	def clear (self):
 		self._location = []
+		self._added = set()
+		self._all = {}
+		self._current = self._all
+
+	# context
 
 	def enter (self,location):
 		self._location.append(location)
 
 	def leave (self):
 		if not len(self._location):
-			return ''
+			return ''  # This is signaling an issue to the caller without raising
 		return self._location.pop()
 
 	def location (self):
 		return '/'.join(self._location)
 
+	# context
 
-class Scope (Depth):
-	def __init__ (self,error):
-		self.error = error
-		self.content = []
-		self._added = set()
+	def to_context (self):
+		self._current = self._all
+		for context in self._location:
+			if context not in self._current:
+				self._current[context] = {}
+			self._current = self._current[context]
 
-	def clear (self):
-		Depth.clear(self)
-		self.content = [{}]
+	def pop_context (self,name):
+		returned = self._all.pop(name)
 
-	# set a value
-	def set (self, name, value):
-		self.content[-1][name] = value
-
-	def new_context (self):
-		self.content.append({})
-
-	def pop_context (self):
-		returned = self.content.pop(-1)
-
-		if len(self.content):
-			for key,content in self.content[-1].iteritems():
-				if key not in returned:
-					# it was a deep copy
-					returned[key] = content
-				elif key in self._added:
-					returned.setdefault(key,[]).extend(self.content[-2][key])
+		# support old style group
+		group = self._all.get('group',{})
+		for key,content in group.iteritems():
+			if key not in returned:
+				# it was a deep copy
+				returned[key] = content
+			elif key in self._added:
+				returned.setdefault(key,[]).extend(group[key])
 
 		return returned
 
+	# key / value
+
+	def set (self, name, value):
+		self._current[name] = value
+
 	def add (self, name, data):
-		# XXX: Can raise Notify when adding attributes
-		self.content[-1][name][-1].add(data)
+		# XXX: Can raise Notify when adding attributes, as Change.add can raise
+		self._current[name].add(data)
 		if name not in self._added:
 			self._added.add(name)
 
 	# add a new prefix
 	def append (self, name, data):
-		self.content[-1].setdefault(name,[]).append(data)
+		self._current.setdefault(name,[]).append(data)
 
 	# add a new prefix
 	def last (self, name):
-		return self.content[-1][name][-1]
+		return self._current[name]
 
-	def pop (self,name):
-		return self.content[-1][name].pop(-1)
+	def pop_last (self,name):
+		return self._current.pop(name)

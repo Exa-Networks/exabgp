@@ -113,11 +113,11 @@ class ParseNeighbor (Generic):
 		self._previous = {}
 
 	def pre (self):
-		self.scope.new_context()
+		self.scope.to_context()
 		return self.parse(self.name,'peer-address')
 
 	def post (self):
-		local = self.scope.pop_context()
+		local = self.scope.pop_context(self.name)
 		neighbor = Neighbor()
 
 		# XXX: use the right class for the data type
@@ -145,7 +145,8 @@ class ParseNeighbor (Generic):
 		neighbor.route_refresh    = local.get('route-refresh',0)
 		neighbor.graceful_restart = local.get('graceful-restart',0)
 
-		neighbor.changes          = local.get('section-static',[]) + local.get('section-route',[])
+		static = local.get('static',{})
+		neighbor.changes          = static.get('static',[]) + static.get('section-route',[])
 
 		messages = local.get('operational-message',[])
 

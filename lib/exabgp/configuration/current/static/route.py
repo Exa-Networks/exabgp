@@ -123,7 +123,7 @@ class ParseRoute (Generic):
 		'route',
 	]
 
-	name = 'section-route'
+	name = 'route'
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		Generic.__init__(self,tokeniser,scope,error,logger)
@@ -139,13 +139,17 @@ class ParseRoute (Generic):
 		self.default['next-hop'] = nexthopself
 
 	def pre (self):
-		self.scope.append(self.name,change(self.tokeniser.iterate))
+		self.scope.set(self.name,change(self.tokeniser.iterate))
 		return True
 
 	def post (self):
 		if not self._check():
 			return False
-		return self._split()
+		if not self._split():
+			return False
+		change = self.scope.pop_last(self.name)
+		self.scope.append('routes',change)
+		return True
 
 	def _check (self):
 		update = self.scope.last(self.name)
@@ -167,7 +171,7 @@ class ParseRoute (Generic):
 		if mask >= cut:
 			return True
 
-		change = self.scope.pop(self.name)
+		change = self.scope.pop_last(self.name)
 
 		# calculate the number of IP in the /<size> of the new route
 		increment = pow(2,(len(change.nlri.packed)*8) - cut)

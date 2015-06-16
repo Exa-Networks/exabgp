@@ -53,6 +53,9 @@ class ParseFamily (Generic):
 		}
 	}
 
+
+	append = convert.keys()
+
 	name = 'family'
 
 	def __init__ (self, tokeniser, scope, error, logger):
@@ -69,6 +72,10 @@ class ParseFamily (Generic):
 
 	def pre (self):
 		self.clear()
+		self.scope.to_context()
+		return True
+
+	def post (self):
 		return True
 
 	def _family (self, tokeniser, afi):
