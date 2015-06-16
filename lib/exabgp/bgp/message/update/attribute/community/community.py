@@ -14,6 +14,8 @@ from struct import unpack
 #
 
 class Community (object):
+	MAX = pow(2,16) - 1
+
 	NO_EXPORT            = pack('!L',0xFFFFFF01)
 	NO_ADVERTISE         = pack('!L',0xFFFFFF02)
 	NO_EXPORT_SUBCONFED  = pack('!L',0xFFFFFF03)

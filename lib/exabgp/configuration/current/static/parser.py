@@ -89,6 +89,41 @@ def next_hop (tokeniser,nexthopself=None):
 		# return NextHop(ip,IP.pton(ip))
 
 
+# def next_hop (self, name, command, tokens):
+# 	if self.scope.content[-1]['announce'][-1].attributes.has(Attribute.CODE.NEXT_HOP):
+# 		return self.error.set(self.syntax)
+#
+# 	try:
+# 		# next-hop self is unsupported
+# 		ip = tokens.pop(0)
+# 		if ip.lower() == 'self':
+# 			if 'local-address' in self.scope.content[-1]:
+# 				la = self.scope.content[-1]['local-address']
+# 			elif self._nexthopself:
+# 				la = self._nexthopself
+# 			else:
+# 				return self.error.set('next-hop self can only be specified with a neighbor')
+# 			nh = IP.unpack(la.pack())
+# 		else:
+# 			nh = IP.create(ip)
+#
+# 		change = self.scope.content[-1]['announce'][-1]
+# 		nlri = change.nlri
+# 		afi = nlri.afi
+# 		safi = nlri.safi
+#
+# 		nlri.nexthop = nh
+#
+# 		if afi == AFI.ipv4 and safi in (SAFI.unicast,SAFI.multicast):
+# 			change.attributes.add(Attribute.unpack(NextHop.ID,NextHop.FLAG,nh.packed,None))
+# 			# NextHop(nh.ip,nh.packed) does not cache the result, using unpack does
+# 			# change.attributes.add(NextHop(nh.ip,nh.packed))
+#
+# 		return True
+# 	except Exception:
+# 		return self.error.set(self.syntax)
+
+
 def change (tokeniser):
 	ipmask = prefix(tokeniser)
 	return Change(
@@ -151,41 +186,6 @@ def attribute (tokeniser):
 		if code == ID and flag == klass.FLAG:
 			return klass(data)
 	return GenericAttribute(code,flag,data)
-
-
-# def next_hop (self, name, command, tokens):
-# 	if self.scope.content[-1]['announce'][-1].attributes.has(Attribute.CODE.NEXT_HOP):
-# 		return self.error.set(self.syntax)
-#
-# 	try:
-# 		# next-hop self is unsupported
-# 		ip = tokens.pop(0)
-# 		if ip.lower() == 'self':
-# 			if 'local-address' in self.scope.content[-1]:
-# 				la = self.scope.content[-1]['local-address']
-# 			elif self._nexthopself:
-# 				la = self._nexthopself
-# 			else:
-# 				return self.error.set('next-hop self can only be specified with a neighbor')
-# 			nh = IP.unpack(la.pack())
-# 		else:
-# 			nh = IP.create(ip)
-#
-# 		change = self.scope.content[-1]['announce'][-1]
-# 		nlri = change.nlri
-# 		afi = nlri.afi
-# 		safi = nlri.safi
-#
-# 		nlri.nexthop = nh
-#
-# 		if afi == AFI.ipv4 and safi in (SAFI.unicast,SAFI.multicast):
-# 			change.attributes.add(Attribute.unpack(NextHop.ID,NextHop.FLAG,nh.packed,None))
-# 			# NextHop(nh.ip,nh.packed) does not cache the result, using unpack does
-# 			# change.attributes.add(NextHop(nh.ip,nh.packed))
-#
-# 		return True
-# 	except Exception:
-# 		return self.error.set(self.syntax)
 
 
 def origin (tokeniser):
@@ -371,20 +371,17 @@ def _community (value):
 
 		prefix, suffix = int(prefix), int(suffix)
 
-		# XXX: FIXME: add a Community.MAX to pow(2,16) -1
-		if prefix >= pow(2,16):
+		if prefix > Community.MAX:
 			raise ValueError('invalid community %s (prefix too large)' % value)
 
-		# XXX: FIXME: add a Community.MAX to pow(2,16) -1
-		if suffix >= pow(2,16):
+		if suffix > Community.MAX:
 			raise ValueError('invalid community %s (suffix too large)' % value)
 
 		return Community(pack('!L',(prefix << 16) + suffix))
 
 	elif value[:2].lower() == '0x':
 		number = long(value,16)
-		# XXX: FIXME: add a Community.MAX to pow(2,16) -1
-		if number >= pow(2,32):
+		if number > Community.MAX:
 			raise ValueError('invalid community %s (too large)' % value)
 		return Community(pack('!L',number))
 	else:
@@ -400,7 +397,7 @@ def _community (value):
 			return Community(Community.NO_PEER)
 		elif value.isdigit():
 			number = int(value)
-			if number >= pow(2,32):
+			if number > Community.MAX:
 				raise ValueError('invalid community %s (too large)' % value)
 			return Community(pack('!L',number))
 		else:
