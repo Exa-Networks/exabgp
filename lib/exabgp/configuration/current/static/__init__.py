@@ -12,6 +12,7 @@ from exabgp.configuration.current.static.parser import next_hop
 from exabgp.configuration.current.generic.parser import string
 
 from exabgp.protocol.ip import IP
+from exabgp.protocol.ip import NoNextHop
 
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update.nlri import INET
@@ -45,9 +46,12 @@ class ParseStatic (ParseRoute):
 @ParseStatic.register('route')
 def route (tokeniser):
 	ipmask = prefix(tokeniser)
-	if string(tokeniser) != 'next-hop':
-		raise ValueError('the first command should be next-hop')
-	nexthop = next_hop(tokeniser)
+	# if 'next-hop' not in tokeniser.tokens:
+	# 	raise ValueError('next-hop is a mandatory attribute')
+	# index = tokeniser.tokens.index('next-hop') + 1
+	# if index + 1 > len(tokeniser.tokens):
+	# 	raise ValueError('next-hop value missing')
+	# nexthop = next_hop(lambda: tokeniser.tokens[index])
 
 	# May be wrong but taken from previous code
 	if 'rd' in tokeniser.tokens:
@@ -77,20 +81,17 @@ def route (tokeniser):
 
 	# return Change(INET(afi=IP.toafi(ip),safi=IP.tosafi(ip),packed=IP.pton(ip),mask=mask,nexthop=None,action=OUT.ANNOUNCE),Attributes())
 
-	attributes = Attributes()
-	attributes.add(nexthop)
-
 	change = Change(
 		klass(
 			IP.toafi(ipmask.ip),
 			IP.tosafi(ipmask.ip),
 			ipmask.packed,
 			ipmask.mask,
-			nexthop.packed,
+			'',
 			OUT.ANNOUNCE,
 			None
 		),
-		attributes
+		Attributes()
 	)
 
 	while True:

@@ -58,7 +58,8 @@ class Change (object):
 			return self.attributes.add(attribute)
 
 		if self.nlri.afi == AFI.ipv4 and self.nlri.safi in (SAFI.unicast,SAFI.multicast):
-			return self.attributes.add(attribute)
+			self.attributes.add(attribute)
+			self.nlri.nexthop = attribute
 
 		return True
 

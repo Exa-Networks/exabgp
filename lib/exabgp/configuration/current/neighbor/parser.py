@@ -15,6 +15,14 @@ from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.configuration.current.generic.parser import string
 
 
+def inherit (tokeniser):
+	if len(tokeniser.tokens) == 2:
+		return [tokeniser()]
+	if len(tokeniser.tokens) < 4 or tokeniser.tokens[1] != '[' or tokeniser.tokens[-1] != ']':
+		raise ValueError('invalid inherit list')
+	return tokeniser.tokens[2:-1]
+
+
 def hostname (tokeniser):
 	value = string(tokeniser)
 	if not value[0].isalnum() or value[0].isdigit():

@@ -17,7 +17,6 @@ class ParseFamily (Generic):
 		'syntax:\n' \
 		'family {\n' \
 		'   all;      # default if not family block is present, announce all we know\n' \
-		'   minimal   # use the AFI/SAFI required to announce the routes in the configuration\n' \
 		'   \n' \
 		'   ipv4 unicast;\n' \
 		'   ipv4 multicast;\n' \
@@ -53,22 +52,23 @@ class ParseFamily (Generic):
 		}
 	}
 
-
 	append = convert.keys()
 
 	name = 'family'
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		Generic.__init__(self,tokeniser,scope,error,logger)
-		self._full = ''
 		self.known = {
 			'ipv4':  self.ipv4,
 			'ipv6':  self.ipv6,
 			'l2vpn': self.l2vpn,
 		}
+		self._all = ''
+		self._seen = []
 
 	def clear (self):
-		self._full = False
+		self._all = False
+		self._seen = []
 
 	def pre (self):
 		self.clear()
@@ -78,28 +78,18 @@ class ParseFamily (Generic):
 		return True
 
 	def _family (self, tokeniser, afi):
+		if self._all:
+			raise ValueError('can not add any family once family all is set')
+
 		safi = tokeniser().lower()
 
 		pair = self.convert[afi].get(safi,None)
 		if not pair:
-			raise ValueError('unvalid safi %s for afi %s' % (safi,afi))
+			raise ValueError('invalid afi/safi pair %s/%s' % (afi,safi))
+		if pair in self._seen:
+			raise ValueError('duplicate afi/safi pair %s/%s' % (afi,safi))
+		self._seen.append(pair)
 		return pair
-
-	# def family (self, tokens, afi):
-	# 	if self._family:
-	# 		return self.error.set('ipv4 can not be used with all or minimal')
-	#
-	# 	try:
-	# 		safi = tokens.pop(0).lower()
-	# 	except IndexError:
-	# 		return self.error.set('missing family safi')
-	#
-	# 	pair = self.convert[afi].get(safi,None)
-	# 	if pair:
-	# 		self.scope.content[-1]['families'].append(pair)
-	# 		return True
-	#
-	# 	return self.error.set('unvalid safi %s for afi %s' % (safi,afi))
 
 	def ipv4 (self, tokeniser):
 		return self._family(tokeniser, 'ipv4')
@@ -110,19 +100,11 @@ class ParseFamily (Generic):
 	def l2vpn (self, tokeniser):
 		return self._family(tokeniser, 'l2vpn')
 
-	def minimal (self, tokenisers):
-
-		if self.scope.content[-1]['families']:
-			return self.error.set('minimal can not be used with any other options')
-
-		self.scope.content[-1]['families'] = 'minimal'
-		self._family = True
-		return True
+	def minimal (self, tokeniser):
+		raise ValueError('family minimal is deprecated')
 
 	def all (self, tokeniser):
-		if self.scope.content[-1]['families']:
+		if self._all or self._seen:
 			return self.error.set('all can not be used with any other options')
-
-		self.scope.content[-1]['families'] = 'all'
-		self._family = True
-		return True
+		self._all = True
+		raise RuntimeError('not implemented yet')

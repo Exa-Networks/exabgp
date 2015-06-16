@@ -27,6 +27,7 @@ from exabgp.configuration.current.error import Error
 from exabgp.configuration.current.scope import Scope
 from exabgp.configuration.current.tokeniser import Tokeniser
 from exabgp.configuration.current.generic import Generic
+from exabgp.configuration.current.template import ParseTemplate
 from exabgp.configuration.current.neighbor import ParseNeighbor
 from exabgp.configuration.current.family import ParseFamily
 from exabgp.configuration.current.capability import ParseCapability
@@ -59,6 +60,7 @@ class Configuration (object):
 		self.tokeniser = Tokeniser(self.scope,self.error,self.logger)
 
 		generic          = Generic          (self.tokeniser,self.scope,self.error,self.logger)
+		self.template    = ParseTemplate    (self.tokeniser,self.scope,self.error,self.logger)
 		self.neighbor    = ParseNeighbor    (self.tokeniser,self.scope,self.error,self.logger)
 		self.family      = ParseFamily      (self.tokeniser,self.scope,self.error,self.logger)
 		self.capability  = ParseCapability  (self.tokeniser,self.scope,self.error,self.logger)
@@ -76,7 +78,12 @@ class Configuration (object):
 			'root': {
 				'class':    generic,
 				'commands': [],
-				'sections': [ self.neighbor.name ],
+				'sections': [ self.neighbor.name, self.template.name ],
+			},
+			self.template.name: {
+				'class':    self.template,
+				'commands': self.template.known.keys(),
+				'sections': [ self.family.name, 'capability', self.static.name, 'flow', 'l2vpn', 'operational' ],
 			},
 			self.neighbor.name: {
 				'class':    self.neighbor,

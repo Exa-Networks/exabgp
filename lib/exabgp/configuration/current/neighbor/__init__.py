@@ -29,6 +29,7 @@ from exabgp.configuration.current.neighbor.parser import router_id
 from exabgp.configuration.current.neighbor.parser import hostname
 from exabgp.configuration.current.neighbor.parser import domainname
 from exabgp.configuration.current.neighbor.parser import description
+from exabgp.configuration.current.neighbor.parser import inherit
 
 
 def hostname ():
@@ -53,6 +54,7 @@ class ParseNeighbor (Generic):
 	syntax = ''
 
 	known = {
+		'inherit':       inherit,
 		'description':   description,
 		'hostname':      hostname,
 		'domainname':    domainname,
@@ -101,6 +103,7 @@ class ParseNeighbor (Generic):
 		self._neighbors = {}
 		self._previous = {}
 
+	# neighbor, _neighbor and _previous should not really be in the parser data
 	def complete (self):
 		self.neighbors = self._neighbors
 		self._neighbors = {}
@@ -146,7 +149,7 @@ class ParseNeighbor (Generic):
 		neighbor.graceful_restart = local.get('graceful-restart',0)
 
 		static = local.get('static',{})
-		neighbor.changes          = static.get('static',[]) + static.get('section-route',[])
+		neighbor.changes          = static.get('static',[]) + static.get('routes',[])
 
 		messages = local.get('operational-message',[])
 

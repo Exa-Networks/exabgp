@@ -6,8 +6,7 @@ Created by Thomas Mangin on 2015-06-04.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from copy import deepcopy
-
+# from copy import deepcopy
 
 
 class Scope (object):
@@ -15,13 +14,17 @@ class Scope (object):
 		self.error = error
 		self._location = []
 		self._added = set()
-		self._all = {}
+		self._all = {
+			'template': {}
+		}
 		self._current = self._all
 
 	def clear (self):
 		self._location = []
 		self._added = set()
-		self._all = {}
+		self._all = {
+			'template': {}
+		}
 		self._current = self._all
 
 	# context
@@ -49,14 +52,12 @@ class Scope (object):
 	def pop_context (self,name):
 		returned = self._all.pop(name)
 
-		# support old style group
-		group = self._all.get('group',{})
-		for key,content in group.iteritems():
-			if key not in returned:
-				# it was a deep copy
-				returned[key] = content
-			elif key in self._added:
-				returned.setdefault(key,[]).extend(group[key])
+		for inherit in returned.get('inherit',[]):
+			if inherit not in self._all['template']:
+				raise ValueError('invalid template name referenced')
+			for key,value in self._all['template'][inherit].iteritems():
+				if key not in returned:
+					returned[key] = value
 
 		return returned
 

@@ -160,8 +160,8 @@ class ParseRoute (Generic):
 	def _check (self):
 		update = self.scope.last(self.name)
 		if update.nlri.nexthop is NoNextHop \
-			and update.nlri.afi != AFI.ipv4 \
-			and update.nlri.safi not in (SAFI.unicast,SAFI.multicast):
+			and update.nlri.afi == AFI.ipv4 \
+			and update.nlri.safi in (SAFI.unicast,SAFI.multicast):
 			return self.error.set(self.syntax)
 		return True
 

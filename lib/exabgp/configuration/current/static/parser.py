@@ -80,13 +80,7 @@ def next_hop (tokeniser,nexthopself=None):
 	if ip.lower() == 'self' and nexthopself is None:
 		raise ValueError('unsupported yet on new format')
 	else:
-		return Attribute.unpack(
-			NextHop.ID,
-			NextHop.FLAG,
-			IP.create(ip).packed,
-			None
-		)
-		# return NextHop(ip,IP.pton(ip))
+		return NextHop(ip,IP.pton(ip))
 
 
 # def next_hop (self, name, command, tokens):
