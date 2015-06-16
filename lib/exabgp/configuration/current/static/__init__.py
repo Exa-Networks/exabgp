@@ -25,27 +25,8 @@ from exabgp.rib.change import Change
 class ParseStatic (ParseRoute):
 	syntax = \
 		'syntax:\n' \
-		'route 10.0.0.1/22' \
-		' path-information 0.0.0.1' \
-		' route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535' \
-		' next-hop 192.0.2.1' \
-		' origin IGP|EGP|INCOMPLETE' \
-		' as-path AS-SEQUENCE-ASN' \
-		' med 100' \
-		' local-preference 100' \
-		' atomic-aggregate' \
-		' community 65000' \
-		' extended-community target:1234:5.6.7.8' \
-		' originator-id 10.0.0.10' \
-		' cluster-list 10.10.0.1' \
-		' label 150' \
-		' aggregator ( 65000:10.0.0.10 )' \
-		' aigp 100' \
-		' split /24' \
-		' watchdog watchdog-name' \
-		' withdraw' \
-		' name what-you-want-to-remember-about-the-route' \
-		';\n'
+		'route <ip>/<netmask> ' \
+		' '.join(ParseRoute.definition) + ' ;\n'
 
 	known = dict((k,v) for (k,v) in ParseRoute.known.items())
 
@@ -69,11 +50,11 @@ def route (tokeniser):
 	nexthop = next_hop(tokeniser)
 
 	# May be wrong but taken from previous code
-	if 'rd' in tokeniser.line:
+	if 'rd' in tokeniser.tokens:
 		klass = MPLS
-	elif 'route-distinguisher' in tokeniser.line:
+	elif 'route-distinguisher' in tokeniser.tokens:
 		klass = MPLS
-	elif 'label' in tokeniser.line:
+	elif 'label' in tokeniser.tokens:
 		# XXX: Is it right ?
 		klass = MPLS
 	else:

@@ -72,7 +72,6 @@ class ParseFamily (Generic):
 
 	def pre (self):
 		self.clear()
-		self.scope.to_context()
 		return True
 
 	def post (self):

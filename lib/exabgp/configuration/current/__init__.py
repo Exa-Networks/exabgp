@@ -29,7 +29,7 @@ from exabgp.configuration.current.tokeniser import Tokeniser
 from exabgp.configuration.current.generic import Generic
 from exabgp.configuration.current.neighbor import ParseNeighbor
 from exabgp.configuration.current.family import ParseFamily
-# from exabgp.configuration.current.capability import ParseCapability
+from exabgp.configuration.current.capability import ParseCapability
 from exabgp.configuration.current.static import ParseStatic
 from exabgp.configuration.current.static import ParseRoute
 # from exabgp.configuration.current.process import ParseProcess
@@ -61,13 +61,16 @@ class Configuration (object):
 		generic          = Generic          (self.tokeniser,self.scope,self.error,self.logger)
 		self.neighbor    = ParseNeighbor    (self.tokeniser,self.scope,self.error,self.logger)
 		self.family      = ParseFamily      (self.tokeniser,self.scope,self.error,self.logger)
-		# self.capability  = ParseCapability  (self.tokeniser,self.scope,self.error,self.logger)
+		self.capability  = ParseCapability  (self.tokeniser,self.scope,self.error,self.logger)
 		# self.process     = ParseProcess     (self.tokeniser,self.scope,self.error,self.logger)
 		self.static      = ParseStatic      (self.tokeniser,self.scope,self.error,self.logger)
 		self.route       = ParseRoute       (self.tokeniser,self.scope,self.error,self.logger)
 		# self.flow        = ParseFlow        (self.tokeniser,self.scope,self.error,self.logger)
 		# self.l2vpn       = ParseL2VPN       (self.tokeniser,self.scope,self.error,self.logger)
 		# self.operational = ParseOperational (self.tokeniser,self.scope,self.error,self.logger)
+
+		# Later on we will use name such as 'neighbor/static' for keys which will give us depth of scope
+		# But for the momment a flat tree is easier
 
 		self._structure = {
 			'root': {
@@ -83,6 +86,11 @@ class Configuration (object):
 			self.family.name: {
 				'class':    self.family,
 				'commands': self.family.known.keys(),
+				'sections': [],
+			},
+			self.capability.name: {
+				'class':    self.capability,
+				'commands': self.capability.known.keys(),
 				'sections': [],
 			},
 			self.static.name: {

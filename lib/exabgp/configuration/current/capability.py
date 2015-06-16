@@ -6,7 +6,56 @@ Created by Thomas Mangin on 2015-06-04.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.bgp.message.open.capability.graceful import Graceful
+
 from exabgp.configuration.current.generic import Generic
+from exabgp.configuration.current.generic.parser import boolean
+from exabgp.configuration.current.generic.parser import string
+
+
+def addpath (tokeniser):
+	if not tokeniser.tokens:
+		raise ValueError('add-path must be one of send, receive, send/receive, disable')
+
+	ap = string(tokeniser).lower()
+
+	match = {
+		'disable':      0,
+		'disabled':     0,
+		'receive':      1,
+		'send':         2,
+		'send/receive': 3,
+	}
+
+	if ap in match:
+		return match[ap]
+
+	if ap == 'receive/send':  # was allowed with the previous parser
+		raise ValueError('the option is send/receive')
+
+	raise ValueError('"%s" is an invalid add-path' % value)
+
+
+def gracefulrestart (tokeniser, default):
+	if not tokeniser.tokens:
+		return default
+
+	state = string(tokeniser)
+
+	if state in ('disable','disabled'):
+		return False
+
+	try:
+		grace = int(state)
+	except ValueError:
+		raise ValueError('"%s" is an invalid graceful-restart time' % ' '.join(tokens))
+
+	if grace < 0:
+		raise ValueError('graceful-restart can not be negative')
+	if grace > Graceful.MAX:
+		raise ValueError('graceful-restart must be smaller or equal to %d' % Graceful.MAX)
+
+	return grace
 
 
 class ParseCapability (Generic):
@@ -15,88 +64,35 @@ class ParseCapability (Generic):
 	syntax = \
 		'syntax:\n' \
 		'capability {\n' \
-		'   graceful-restart <time in second>;\n' \
-		'   asn4 enable|disable;\n' \
 		'   add-path disable|send|receive|send/receive;\n' \
+		'   asn4 enable|disable;\n' \
+		'   graceful-restart <time in second>;\n' \
 		'   multi-session enable|disable;\n' \
 		'   operational enable|disable;\n' \
+		'   refresh enable|disable;\n' \
 		'}\n'
 
-		known = {
-			'graceful-restart': gr,
-			'asn4':             boolean,
-			'add-path':         addpath,
-			'multi-session':    boolean,
-			'operational':      boolean,
-		}
+	known = {
+		'add-path':         addpath,
+		'asn4':             boolean,
+		'graceful-restart': gracefulrestart,
+		'multi-session':    boolean,
+		'operational':      boolean,
+		'route-refresh':    boolean,
+	}
 
-		default = {
-			'multi-session':    False,
-			'operational':      False,
-		}
+	default = {
+		'asn4':             True,
+		'graceful-restart': False,
+		'multi-session':    False,
+		'operational':      False,
+		'route-refresh':    False,
+	}
 
-	def __init__ (self, scope, error, logger):
-		self.scope = scope
-		self.error = error
-		self.logger = logger
+	name = 'capability'
+
+	def __init__ (self, tokeniser, scope, error, logger):
+		Generic.__init__(self,tokeniser,scope,error,logger)
 
 	def clear (self):
 		pass
-
-	def gracefulrestart (self, name, command, tokens):
-		if not len(tokens):
-			self.scope.content[-1][command] = None
-			return True
-
-		if tokens and tokens[0] in ('disable','disabled'):
-			return True
-
-		try:
-			# README: Should it be a subclass of int ?
-			grace = int(tokens[0])
-		except ValueError:
-			return self.error.set('"%s" is an invalid graceful-restart time' % ' '.join(tokens))
-
-		if grace < 0:
-			return self.error.set('graceful-restart can not be negative')
-		if grace >= pow(2,16):
-			return self.error.set('graceful-restart must be smaller than %d' % pow(2,16))
-
-		self.scope.content[-1][command] = grace
-		return True
-
-	def addpath (self, name, command, tokens):
-		try:
-			ap = tokens[0].lower()
-			apv = 0
-			if ap.endswith('receive'):
-				apv += 1
-			if ap.startswith('send'):
-				apv += 2
-			if not apv and ap not in ('disable','disabled'):
-				return self.error.set('invalid add-path')
-			self.scope.content[-1][command] = apv
-			return True
-		except (ValueError,IndexError):
-			return self.error.set('"%s" is an invalid add-path' % ' '.join(tokens) + '\n' + self.syntax)
-
-	def asn4 (self, name, command, tokens):
-		if not tokens:
-			self.scope.content[-1][command] = True
-			return True
-
-		asn4 = tokens[0].lower()
-
-		if asn4 in ('disable','disabled'):
-			self.scope.content[-1][command] = False
-			return True
-		if asn4 in ('enable','enabled'):
-			self.scope.content[-1][command] = True
-			return True
-
-		return self.error.set('"%s" is an invalid asn4 parameter options are enable (default) and disable)' % ' '.join(tokens))
-
-	refresh = Generic.boolean
-	multisession = Generic.boolean
-	operational = Generic.boolean
-	aigp = Generic.boolean

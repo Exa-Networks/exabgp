@@ -41,8 +41,8 @@ from exabgp.bgp.message.update.attribute import Aggregator
 from exabgp.bgp.message.update.attribute import OriginatorID
 from exabgp.bgp.message.update.attribute import ClusterID
 from exabgp.bgp.message.update.attribute import ClusterList
-# from exabgp.bgp.message.update.attribute import AIGP
-# from exabgp.bgp.message.update.attribute import GenericAttribute
+from exabgp.bgp.message.update.attribute import AIGP
+from exabgp.bgp.message.update.attribute import GenericAttribute
 
 from exabgp.bgp.message.update.attribute.community.community import Community
 from exabgp.bgp.message.update.attribute.community.communities import Communities
@@ -179,13 +179,23 @@ def attribute (tokeniser):
 	if end != ']':
 		raise ValueError('invalid attribute, does not ends with ]')
 
-	# XXX: FIXME: class Attribute should have an unpack function which does that
-	from exabgp.bgp.message.update.attribute import GenericAttribute
-
 	for ((ID,flag),klass) in Attribute.registered_attributes.iteritems():
 		if code == ID and flag == klass.FLAG:
 			return klass(data)
 	return GenericAttribute(code,flag,data)
+
+
+def aigp (tokeniser):
+	if not tokeniser.tokens:
+		raise ValueError('aigp requires number (decimal or hexadecimal 0x prefixed)')
+	value = tokeniser()
+	base = 16 if number.lower().startswith('0x') else 10
+	try:
+		number = int(value,base)
+	except ValueError:
+		raise ValueError('aigp requires number (decimal or hexadecimal 0x prefixed)')
+
+	return AIGP('\x01\x00\x0b' + pack('!Q',number))
 
 
 def origin (tokeniser):
@@ -223,7 +233,7 @@ def as_path (tokeniser):
 						value = tokeniser()
 						if value == ')':
 							break
-						as_set.append(asn(tokeniser,value))
+						as_set.append(ASN.from_string(value))
 				if value == ')':
 					inset = False
 					continue
@@ -232,9 +242,9 @@ def as_path (tokeniser):
 						inset = False
 						continue
 					break
-				as_seq.append(ASN(tokeniser,value))
+				as_seq.append(ASN.from_string(value))
 		else:
-			as_seq.append(asn(tokeniser,value))
+			as_seq.append(ASN.from_string(value))
 	except ValueError:
 		raise ValueError('could not parse as-path')
 	return ASPath(as_seq,as_set)
@@ -252,6 +262,11 @@ def atomic_aggregate (tokeniser):
 
 
 def aggregator (tokeniser):
+	eat = True if tokeniser.tokens[0] == '(' else False
+
+	if eat:
+		tokeniser()
+
 	value = tokeniser()
 	if value != '(':
 		tokeniser.rewind(value)
@@ -259,15 +274,15 @@ def aggregator (tokeniser):
 
 	try:
 		as_number,address = tokeniser().split(':')
+		local_as = ASN.from_string(as_number)
+		local_address = RouterID(address)
 	except (ValueError,IndexError):
 		raise ValueError('invalid aggregator')
 
-	value = tokeniser()
-	if value != ')':
-		raise ValueError('invalid aggregator')
-
-	local_as = ASN(as_number)
-	local_address = RouterID(address)
+	if eat:
+		value = tokeniser()
+		if value != ')':
+			raise ValueError('invalid aggregator')
 
 	# XXX: This is buggy it can be an Aggregator4
 	return Aggregator(local_as,local_address)

@@ -17,8 +17,10 @@ def string (tokeniser):
 
 
 def boolean (tokeniser, default):
-	value = tokeniser()
-	status = value.lower()
+	if not tokeniser.tokens:
+		return default
+
+	status = tokeniser().lower()
 	if status in ('true','enable','enabled'):
 		value = True
 	elif status in ('false','disable','disabled'):
@@ -26,12 +28,14 @@ def boolean (tokeniser, default):
 	elif status in ('unset',):
 		value = None
 	else:
-		tokeniser.rewind(value)
-		return default
+		raise ValueError('invalid value for a boolean')
 	return value
 
 
 def port (tokeniser):
+	if not tokeniser.tokens:
+		raise ValueError('a port number is required')
+
 	value = tokeniser()
 	try:
 		return int(value)
@@ -45,7 +49,11 @@ def port (tokeniser):
 
 
 def asn (tokeniser, value=None):
-	value = tokeniser() if value is None else value
+	if value is None:
+		if not tokeniser.tokens:
+			raise ValueError('an asn is required')
+
+	value = tokeniser()
 	try:
 		if value.count('.'):
 			high,low = value.split('.',1)
@@ -58,6 +66,9 @@ def asn (tokeniser, value=None):
 
 
 def ip (tokeniser):
+	if not tokeniser.tokens:
+		raise ValueError('an ip address is required')
+
 	value = tokeniser()
 	try:
 		return IP.create(value)

@@ -39,6 +39,7 @@ from exabgp.configuration.current.static.parser import originator_id
 from exabgp.configuration.current.static.parser import cluster_list
 from exabgp.configuration.current.static.parser import community
 from exabgp.configuration.current.static.parser import extended_community
+from exabgp.configuration.current.static.parser import aigp
 from exabgp.configuration.current.static.parser import name as named
 from exabgp.configuration.current.static.parser import split
 from exabgp.configuration.current.static.parser import watchdog
@@ -50,33 +51,36 @@ def pack_int (afi, integer, mask):
 
 
 class ParseRoute (Generic):
+	# put next-hop first as it is a requirement atm
+	definition = [
+		'next-hop <ip>',
+		'path-information <ipv4 formated number>',
+		'route-distinguisher|rd <ipv4>:<port>|<16bits number>:<32bits number>|<32bits number>:<16bits number>',
+		'origin IGP|EGP|INCOMPLETE',
+		'as-path [ <asn>.. ]',
+		'med <16 bits number>',
+		'local-preference <16 bits number>',
+		'atomic-aggregate',
+		'community <16 bits number>',
+		'extended-community target:<16 bits number>:<ipv4 formated number>',
+		'originator-id <ipv4>',
+		'cluster-list <ipv4>',
+		'label <15 bits number>',
+		'aggregator ( <asn16>:<ipv4> )',
+		'aigp <40 bits number>',
+		'attribute [ generic attribute format ]'
+		'name <mnemonic>',
+		'split /<mask>',
+		'watchdog <watchdog-name>',
+		'withdraw',
+	]
+
 	syntax = \
 		'syntax:\n' \
-		'route 10.0.0.1/22 {\n' \
-		'   path-information 0.0.0.1 ;\n' \
-		'   route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535 ;\n' \
-		'   next-hop 192.0.1.254 ;\n' \
-		'   origin IGP|EGP|INCOMPLETE;\n' \
-		'   as-path [ AS-SEQUENCE-ASN1 AS-SEQUENCE-ASN2 ( AS-SET-ASN3 )] ;\n' \
-		'   med 100 ;\n' \
-		'   local-preference 100 ;\n' \
-		'   atomic-aggregate ;\n' \
-		'   community [ 65000 65001 65002 ] ;\n' \
-		'   extended-community [ target:1234:5.6.7.8 target:1.2.3.4:5678 origin:1234:5.6.7.8 origin:1.2.3.4:5678 0x0002FDE800000001 ] ;\n' \
-		'   originator-id 10.0.0.10 ;\n' \
-		'   cluster-list [ 10.10.0.1 10.10.0.2 ] ;\n' \
-		'   label [ 100 200 ] ;\n' \
-		'   aggregator ( 65000:10.0.0.10 ) ;\n' \
-		'   aigp 100 ;\n' \
-		'   split /24 ;\n' \
-		'   watchdog watchdog-name ;\n' \
-		'   withdraw ;\n' \
-		'}\n' \
-		'\n'
+		'route <ip>/<netmask> { ' \
+		'\n   ' + ' ;\n   '.join(definition) + '\n}\n\n'
 
-	# 'aigp':                self.aigp,
 	# 'path-information':    self.path_information,
-
 	# 'label':               self.label,
 	# 'rd':                  self.rd,
 	# 'route-distinguisher': self.rd,
@@ -94,6 +98,7 @@ class ParseRoute (Generic):
 		'cluster-list':       cluster_list,
 		'community':          community,
 		'extended-community': extended_community,
+		'aigp':               aigp,
 		'name':               named,
 		'split':              split,
 		'watchdog':           watchdog,
@@ -117,6 +122,7 @@ class ParseRoute (Generic):
 		'split',
 		'watchdog',
 		'withdraw',
+		'aigp',
 	]
 
 	append = [

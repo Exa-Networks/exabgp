@@ -41,4 +41,8 @@ class ASN (long):
 			return AS_TRANS.pack()
 		return self.pack()
 
+	@classmethod
+	def from_string (cls, value):
+		return cls(long(value))
+
 AS_TRANS = ASN(23456)

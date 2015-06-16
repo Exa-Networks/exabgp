@@ -7,10 +7,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.configuration.current.tokeniser.location import Location
-from exabgp.configuration.current.tokeniser.format import formated
 from exabgp.configuration.current.tokeniser.format import unescape
 from exabgp.configuration.current.tokeniser.format import tokens
-
 
 
 class Tokeniser (Location):
@@ -39,12 +37,12 @@ class Tokeniser (Location):
 			return self.message
 
 	class Iterator (object):
-		def __init__ (self,line):
+		def __init__ (self,tokens):
 			def _generator ():
-				for _ in line:
-					yield _
+				for token in tokens:
+					yield token
 
-			self.line = line  # to help debugging
+			self.tokens = tokens  # to help debugging
 			self.generator = _generator()
 
 		def __call__ (self):
