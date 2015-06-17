@@ -13,6 +13,7 @@ class Generic (object):
 	default = dict()   # command/section has a a defult value, use it if no data was provided
 	add = []           # we use the add method of the last object
 	append = []        # this key is storing a list
+	nlri = []          # nlri modificator
 
 	def __init__ (self, tokerniser, scope, error, logger):
 		self.tokeniser = tokerniser
@@ -40,23 +41,20 @@ class Generic (object):
 		if command not in self.known:
 			return self.error.set('unknown command')
 
-		if command in self.default:
-			insert = self.known[command](self.tokeniser.iterate,self.default[command])
-		else:
-			insert = self.known[command](self.tokeniser.iterate)
-
-		if command in self.add:
-			key = name
-			function = self.scope.add
-		elif command in self.append:
-			key = name
-			function = self.scope.append
-		else:
-			key = command
-			function = self.scope.set
-
 		try:
-			function(key,insert)
+			if command in self.default:
+				insert = self.known[command](self.tokeniser.iterate,self.default[command])
+			else:
+				insert = self.known[command](self.tokeniser.iterate)
+
+			if command in self.add:
+				self.scope.add(name,insert)
+			elif command in self.append:
+				self.scope.append(name,insert)
+			elif command in self.nlri:
+				self.scope.nlri(name,command,insert)
+			else:
+				self.scope.set(command,insert)
 			return True
 		except ValueError, exc:
 			return self.error.set(str(exc))

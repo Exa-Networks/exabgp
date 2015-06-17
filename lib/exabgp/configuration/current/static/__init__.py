@@ -8,11 +8,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from exabgp.configuration.current.static.route import ParseRoute
 from exabgp.configuration.current.static.parser import prefix
-from exabgp.configuration.current.static.parser import next_hop
-from exabgp.configuration.current.generic.parser import string
 
 from exabgp.protocol.ip import IP
-from exabgp.protocol.ip import NoNextHop
 
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update.nlri import INET
@@ -29,7 +26,7 @@ class ParseStatic (ParseRoute):
 		'route <ip>/<netmask> ' \
 		' '.join(ParseRoute.definition) + ' ;\n'
 
-	known = dict((k,v) for (k,v) in ParseRoute.known.items())
+	# known = dict((k,v) for (k,v) in ParseRoute.known.items())
 
 	name = 'static'
 
@@ -46,12 +43,6 @@ class ParseStatic (ParseRoute):
 @ParseStatic.register('route')
 def route (tokeniser):
 	ipmask = prefix(tokeniser)
-	# if 'next-hop' not in tokeniser.tokens:
-	# 	raise ValueError('next-hop is a mandatory attribute')
-	# index = tokeniser.tokens.index('next-hop') + 1
-	# if index + 1 > len(tokeniser.tokens):
-	# 	raise ValueError('next-hop value missing')
-	# nexthop = next_hop(lambda: tokeniser.tokens[index])
 
 	# May be wrong but taken from previous code
 	if 'rd' in tokeniser.tokens:

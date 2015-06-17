@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# decide between route-distinguisher and rd
+# decide between path-information and path-info
+
 import sys
 import md5
 import string

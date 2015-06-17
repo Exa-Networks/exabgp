@@ -49,13 +49,15 @@ from exabgp.bgp.message.update.attribute.community.communities import Communitie
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunities
 
-from exabgp.rib.change import Change
+from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 
-from exabgp.configuration.current.generic.parser import asn
+from exabgp.rib.change import Change
 
 
 # XXX: The IP and CIDR class API is totally broken, fix it.
 # XXX: Then add a similar class to the lot
+# XXX: I could also say this from many of the NLRI classes constructor which need correct @classmethods
+
 
 class Range (IP):
 	def __init__ (self, ip, packed, mask):
@@ -73,6 +75,14 @@ def prefix (tokeniser):
 		mask = 32
 
 	return Range(ip,IP.pton(ip),mask)
+
+
+def path_information (tokeniser):
+	pi = tokeniser()
+	if pi.isdigit():
+		return PathInfo(integer=int(pi))
+	else:
+		return PathInfo(ip=pi)
 
 
 def next_hop (tokeniser,nexthopself=None):
@@ -118,7 +128,7 @@ def next_hop (tokeniser,nexthopself=None):
 # 		return self.error.set(self.syntax)
 
 
-def change (tokeniser):
+def inet (tokeniser):
 	ipmask = prefix(tokeniser)
 	return Change(
 		INET(
@@ -131,6 +141,7 @@ def change (tokeniser):
 		),
 		Attributes()
 	)
+
 
 # def aigp (self, name, command, tokens):
 # 	try:
@@ -284,7 +295,9 @@ def aggregator (tokeniser):
 
 def originator_id (tokeniser):
 	value = tokeniser()
-	if not value.isdigit():
+	if value.count('.') != 3:
+		raise ValueError('invalid Originator ID %s' % value)
+	if not all(_.isdigit() for _ in value.split('.')):
 		raise ValueError('invalid Originator ID %s' % value)
 	return OriginatorID(value)
 

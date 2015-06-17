@@ -33,9 +33,10 @@ from exabgp.configuration.current.family import ParseFamily
 from exabgp.configuration.current.capability import ParseCapability
 from exabgp.configuration.current.static import ParseStatic
 from exabgp.configuration.current.static import ParseRoute
+from exabgp.configuration.current.l2vpn import ParseL2VPN
+from exabgp.configuration.current.l2vpn import ParseVPLS
 # from exabgp.configuration.current.process import ParseProcess
 # from exabgp.configuration.current.flow import ParseFlow
-# from exabgp.configuration.current.l2vpn import ParseL2VPN
 # from exabgp.configuration.current.operational import ParseOperational
 
 from exabgp.configuration.environment import environment
@@ -70,7 +71,8 @@ class Configuration (object):
 		self.static      = ParseStatic      (self.tokeniser,self.scope,self.error,self.logger)
 		self.route       = ParseRoute       (self.tokeniser,self.scope,self.error,self.logger)
 		# self.flow        = ParseFlow        (self.tokeniser,self.scope,self.error,self.logger)
-		# self.l2vpn       = ParseL2VPN       (self.tokeniser,self.scope,self.error,self.logger)
+		self.l2vpn       = ParseL2VPN       (self.tokeniser,self.scope,self.error,self.logger)
+		self.vpls        = ParseVPLS        (self.tokeniser,self.scope,self.error,self.logger)
 		# self.operational = ParseOperational (self.tokeniser,self.scope,self.error,self.logger)
 
 		# Later on we will use name such as 'neighbor/static' for keys which will give us depth of scope
@@ -80,17 +82,17 @@ class Configuration (object):
 			'root': {
 				'class':    generic,
 				'commands': [],
-				'sections': [ self.neighbor.name, self.template.name ],
+				'sections': [self.neighbor.name, self.template.name],
 			},
 			self.template.name: {
 				'class':    self.template,
 				'commands': self.template.known.keys(),
-				'sections': [ self.family.name, 'capability', self.static.name, 'flow', 'l2vpn', 'operational' ],
+				'sections': [self.family.name, 'capability', self.static.name, 'flow', self.l2vpn.name, 'operational'],
 			},
 			self.neighbor.name: {
 				'class':    self.neighbor,
 				'commands': self.neighbor.known.keys(),
-				'sections': [ self.family.name, 'capability', self.static.name, 'flow', 'l2vpn', 'operational' ],
+				'sections': [self.family.name, 'capability', self.static.name, 'flow', self.l2vpn.name, 'operational'],
 			},
 			self.family.name: {
 				'class':    self.family,
@@ -104,12 +106,22 @@ class Configuration (object):
 			},
 			self.static.name: {
 				'class':    self.static,
-				'commands': [ self.route.name ],
-				'sections': [ self.route.name ],
+				'commands': [self.route.name],
+				'sections': [self.route.name],
 			},
 			self.route.name: {
 				'class':    self.route,
-				'commands': self.static.known.keys(),
+				'commands': self.static.known.keys(),  # is it right ?
+				'sections': [],
+			},
+			self.l2vpn.name: {
+				'class':    self.l2vpn,
+				'commands': [self.vpls.name],
+				'sections': [self.vpls.name],
+			},
+			self.vpls.name: {
+				'class':    self.vpls,
+				'commands': self.l2vpn.known.keys(),  # is it right ?
 				'sections': [],
 			},
 		}
@@ -125,13 +137,13 @@ class Configuration (object):
 		self.tokeniser.clear()
 		self.scope.clear()
 		self.neighbor.clear()
-		# self.family.clear()
+		self.family.clear()
 		# self.process.clear()
-		# self.route.clear()
+		self.route.clear()
 		# self.flow.clear()
-		# self.l2vpn.clear()
+		self.l2vpn.clear()
+		self.vpls.clear()
 		# self.operational.clear()
-	# Public Interface
 
 	def reload (self):
 		try:

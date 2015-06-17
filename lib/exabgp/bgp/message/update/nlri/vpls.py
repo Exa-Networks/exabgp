@@ -30,9 +30,9 @@ unique = _unique()
 @NLRI.register(AFI.l2vpn,SAFI.vpls)
 class VPLS (NLRI):
 
-	__slots__ = ['action','nexthop','rd','base','offset','size','ve','unique']
+	__slots__ = ['action','nexthop','rd','base','offset','size','endpoint','unique']
 
-	def __init__ (self, rd, ve, base, offset, size):
+	def __init__ (self, rd, endpoint, base, offset, size):
 		NLRI.__init__(self,AFI.l2vpn,SAFI.vpls)
 		self.action = OUT.ANNOUNCE
 		self.nexthop = None
@@ -40,11 +40,15 @@ class VPLS (NLRI):
 		self.base = base
 		self.offset = offset
 		self.size = size
-		self.ve = ve
+		self.endpoint = endpoint
 		self.unique = unique.next()
 
 	def index (self):
 		return self.pack()
+
+	def set (self, name, value):
+		# we could do a dispatch by hand but this seems cleaner
+		setattr(self,name,value)
 
 	def pack (self, addpath=None):
 		return '%s%s%s%s' % (
@@ -52,7 +56,7 @@ class VPLS (NLRI):
 			self.rd.pack(),
 			pack(
 				'!HHH',
-				self.ve,
+				self.endpoint,
 				self.offset,
 				self.size
 			),
@@ -67,7 +71,7 @@ class VPLS (NLRI):
 	def json (self):
 		content = ','.join([
 			self.rd.json(),
-			'"endpoint": "%s"' % self.ve,
+			'"endpoint": "%s"' % self.endpoint,
 			'"base": "%s"' % self.offset,
 			'"offset": "%s"' % self.size,
 			'"size": "%s"' % self.base,
@@ -77,7 +81,7 @@ class VPLS (NLRI):
 	def extensive (self):
 		return "vpls%s endpoint %s base %s offset %s size %s %s" % (
 			self.rd,
-			self.ve,
+			self.endpoint,
 			self.base,
 			self.offset,
 			self.size,

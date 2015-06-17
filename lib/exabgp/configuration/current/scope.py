@@ -81,6 +81,9 @@ class Scope (object):
 		if name not in self._added:
 			self._added.add(name)
 
+	def nlri (self, name, command, data):
+		self._current[name].nlri.set(command,data)
+
 	# add a new prefix
 	def append (self, name, data):
 		self._current.setdefault(name,[]).append(data)

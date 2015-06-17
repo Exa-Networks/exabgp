@@ -18,7 +18,7 @@ from exabgp.bgp.message.open.capability.capability import Capability
 
 @Capability.register()
 class Graceful (Capability,dict):
-	MAX = pow(2,16) - 1
+	MAX = 0xFFFF
 	ID = Capability.CODE.GRACEFUL_RESTART
 
 	TIME_MASK     = 0x0FFF
