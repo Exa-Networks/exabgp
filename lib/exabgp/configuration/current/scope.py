@@ -52,12 +52,21 @@ class Scope (object):
 	def pop_context (self,name):
 		returned = self._all.pop(name)
 
+		def transfer (source,destination):
+			for key,value in source.iteritems():
+				if key not in destination:
+					destination[key] = value
+				elif isinstance(source[key], dict):
+					transfer(source[key],destination[key])
+				elif isinstance(source[key], list):
+					destination.setdefault(key,[]).extend(value)
+				else:
+					raise RuntimeError('can not recursively copy this type of data')
+
 		for inherit in returned.get('inherit',[]):
 			if inherit not in self._all['template']:
 				raise ValueError('invalid template name referenced')
-			for key,value in self._all['template'][inherit].iteritems():
-				if key not in returned:
-					returned[key] = value
+			transfer(self._all['template'][inherit],returned)
 
 		return returned
 

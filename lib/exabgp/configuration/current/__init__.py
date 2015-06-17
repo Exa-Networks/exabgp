@@ -38,6 +38,8 @@ from exabgp.configuration.current.static import ParseRoute
 # from exabgp.configuration.current.l2vpn import ParseL2VPN
 # from exabgp.configuration.current.operational import ParseOperational
 
+from exabgp.configuration.environment import environment
+
 
 def false (*args):
 	return False
@@ -136,11 +138,13 @@ class Configuration (object):
 			return self._reload()
 		except KeyboardInterrupt:
 			return self.error.set('configuration reload aborted by ^C or SIGINT')
-		# except Location, location:
-		# 	pass
-		except Exception:
-			# unhandled configuration parsing issue
-			raise
+		except Exception, exc:
+			if environment.settings().debug.configuration:
+				raise
+			return self.error.set(
+				'problem parsing configuration file line %d\n'
+					'error message: %s' % (self.tokeniser.x, exc)
+			)
 
 	def _reload (self):
 		# taking the first configuration available (FIFO buffer)

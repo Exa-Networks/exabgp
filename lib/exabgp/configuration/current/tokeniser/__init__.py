@@ -13,28 +13,28 @@ from exabgp.configuration.current.tokeniser.format import tokens
 
 class Tokeniser (Location):
 
-	class Error (Exception):
-		tabsize = 3
-		syntax = ''
-
-		def __init__ (self, location, message, syntax=''):
-			self.line = location.line.replace('\t',' '*self.tabsize)
-			self.index_line = location.index_line
-			self.index_column = location.index_column + (self.tabsize-1) * location.line[:location.index_column].count('\t')
-
-			self.message = '\n\n'.join((
-				'problem parsing configuration file line %d position %d' % (location.index_line,location.index_column+1),
-				'error message: %s' % message.replace('\t',' '*self.tabsize),
-				'%s%s' % (self.line,'-' * self.index_column + '^')
-			))
-			# allow to give the right syntax in using Raised
-			if syntax:
-				self.message += '\n\n' + syntax
-
-			Exception.__init__(self)
-
-		def __repr__ (self):
-			return self.message
+	# class Error (Exception):
+	# 	tabsize = 3
+	# 	syntax = ''
+	#
+	# 	def __init__ (self, location, message, syntax=''):
+	# 		self.line = location.line.replace('\t',' '*self.tabsize)
+	# 		self.index_line = location.index_line
+	# 		self.index_column = location.index_column + (self.tabsize-1) * location.line[:location.index_column].count('\t')
+	#
+	# 		self.message = '\n\n'.join((
+	# 			'problem parsing configuration file line %d position %d' % (location.index_line,location.index_column+1),
+	# 			'error message: %s' % message.replace('\t',' '*self.tabsize),
+	# 			'%s%s' % (self.line,'-' * self.index_column + '^')
+	# 		))
+	# 		# allow to give the right syntax in using Raised
+	# 		if syntax:
+	# 			self.message += '\n\n' + syntax
+	#
+	# 		Exception.__init__(self)
+	#
+	# 	def __repr__ (self):
+	# 		return self.message
 
 	class Iterator (object):
 		def __init__ (self,tokens):
@@ -61,6 +61,7 @@ class Tokeniser (Location):
 		self.line = []
 		self.iterate = Tokeniser._off
 		self.end = ''
+		self.x = 0
 
 		self._tokens = Tokeniser._off
 		self._next = None
@@ -72,11 +73,12 @@ class Tokeniser (Location):
 		self.line = []
 		self.iterate = None
 		self.end = ''
+		self.x = 0
 		if self._data:
 			self._set(self._data)
 
 	def _tokenise (self,iterator):
-		for x,line,parsed in tokens(iterator):
+		for self.x,line,parsed in tokens(iterator):
 			if not parsed:
 				continue
 			# ignore # lines
@@ -127,8 +129,6 @@ class Tokeniser (Location):
 			for _ in self._tokenise(data.split('\n')):
 				yield _
 		return self._set(_source(data))
-
-	# XXX: Horrible hack until I can move everything to a consumer API
 
 	def __call__ (self):
 		self.number += 1
