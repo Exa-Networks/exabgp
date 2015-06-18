@@ -10,6 +10,7 @@ Version 3.4.12
     reported by: Florian Obser
  * Fix: transitivity on extended community
     patch by: Thomas Morin 
+ * Fix: bad reporting of VPLS information in JSON
 
 Version 3.4.11
  * Change: install healthcheck in bin

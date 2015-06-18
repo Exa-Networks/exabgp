@@ -64,12 +64,12 @@ class VPLS (NLRI):
 	# XXX: FIXME: we need an unique key here.
 	# XXX: What can we use as unique key ?
 	def json (self):
-		content = ','.join([
+		content = ', '.join([
 			self.rd.json(),
-			'"endpoint": "%s"' % self.ve,
-			'"base": "%s"' % self.offset,
-			'"offset": "%s"' % self.size,
-			'"size": "%s"' % self.base,
+			'"endpoint": "%s"' % self.endpoint,
+			'"base": "%s"' % self.base,
+			'"offset": "%s"' % self.offset,
+			'"size": "%s"' % self.size,
 		])
 		return '"vpls-%s": { %s }' % (self.unique, content)
 
