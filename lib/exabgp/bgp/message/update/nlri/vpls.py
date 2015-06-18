@@ -66,7 +66,7 @@ class VPLS (NLRI):
 	def json (self):
 		content = ', '.join([
 			self.rd.json(),
-			'"endpoint": "%s"' % self.endpoint,
+			'"endpoint": "%s"' % self.ve,
 			'"base": "%s"' % self.base,
 			'"offset": "%s"' % self.offset,
 			'"size": "%s"' % self.size,
