@@ -155,7 +155,7 @@ class Configuration (object):
 				raise
 			return self.error.set(
 				'problem parsing configuration file line %d\n'
-					'error message: %s' % (self.tokeniser.x, exc)
+					'error message: %s' % (self.tokeniser.index_line, exc)
 			)
 
 	def _reload (self):
@@ -231,7 +231,7 @@ class Configuration (object):
 			if not self.tokeniser.end:  # finished
 				return True
 
-			return self.error.set('invalid syntax')
+			return self.error.set('invalid syntax line %d' % self.tokeniser.index_line)
 		return False
 
 	def section (self, name):

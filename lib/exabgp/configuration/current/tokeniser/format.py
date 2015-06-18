@@ -56,12 +56,10 @@ def tokens (stream):
 	strings = ['"', "'"]
 	syntax = [';',',','[',']','{','}']
 	comment = ['#',]
-	nb_lines = 0
 
 	for letters in stream:
 		line = unescape(letters)
 		parsed = []
-		nb_lines += 1
 		nb_chars = 0
 		quoted = ''
 		word = ''
@@ -107,4 +105,4 @@ def tokens (stream):
 			else:
 				word += char
 				nb_chars += 1
-		yield nb_lines,line.rstrip(), parsed
+		yield line.rstrip(), parsed

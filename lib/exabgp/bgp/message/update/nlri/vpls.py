@@ -43,11 +43,18 @@ class VPLS (NLRI):
 		self.endpoint = endpoint
 		self.unique = unique.next()
 
+	def __eq__ (self,other):
+		return self.nexthop == other.nexthop \
+			and self.rd == other.rd \
+			and self.base == other.base \
+			and self.offset == other.offset \
+			and self.size == other.size \
+			and self.endpoint == other.endpoint
+
 	def index (self):
 		return self.pack()
 
-	def set (self, name, value):
-		# we could do a dispatch by hand but this seems cleaner
+	def assign (self, name, value):
 		setattr(self,name,value)
 
 	def pack (self, addpath=None):
@@ -69,12 +76,12 @@ class VPLS (NLRI):
 	# XXX: FIXME: we need an unique key here.
 	# XXX: What can we use as unique key ?
 	def json (self):
-		content = ','.join([
+		content = ', '.join([
 			self.rd.json(),
-			'"endpoint": "%s"' % self.endpoint,
-			'"base": "%s"' % self.offset,
-			'"offset": "%s"' % self.size,
-			'"size": "%s"' % self.base,
+			'"endpoint": %s' % self.endpoint,
+			'"base": %s' % self.base,
+			'"offset": %s' % self.offset,
+			'"size": %s' % self.size,
 		])
 		return '"vpls-%s": { %s }' % (self.unique, content)
 
@@ -98,9 +105,9 @@ class VPLS (NLRI):
 		if len(data) != length+2:
 			raise Notify(3,10,'l2vpn vpls message length is not consistent with encoded data')
 		rd = RouteDistinguisher(data[2:10])
-		ve,offset,size = unpack('!HHH',data[10:16])
+		endpoint,offset,size = unpack('!HHH',data[10:16])
 		base = unpack('!L','\x00'+data[16:19])[0] >> 4
-		nlri = cls(rd,ve,base,offset,size)
+		nlri = cls(rd,endpoint,base,offset,size)
 		nlri.action = action
 		nlri.nexthop = IP.unpack(nexthop)
 		return len(data), nlri

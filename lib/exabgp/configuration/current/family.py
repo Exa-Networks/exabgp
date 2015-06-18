@@ -52,7 +52,11 @@ class ParseFamily (Generic):
 		}
 	}
 
-	append = convert.keys()
+	action = {
+		'ipv4':  ['append'],
+		'ipv6':  ['append'],
+		'l2vpn': ['append'],
+	}
 
 	name = 'family'
 

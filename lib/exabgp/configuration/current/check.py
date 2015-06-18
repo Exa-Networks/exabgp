@@ -8,6 +8,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 # common
 
+import traceback
+
 from exabgp.bgp.message import Update
 from exabgp.bgp.message import Open
 from exabgp.bgp.message.open import Version
@@ -233,13 +235,13 @@ def check_update (neighbor, raw):
 			update = Update.unpack_message(injected,negotiated)
 		except KeyboardInterrupt:
 			raise
-		except Notify,exc:
+		except Notify:
 			logger.parser('could not parse the message')
-			logger.parser(str(exc))
+			logger.parser(traceback.format_exc())
 			return False
-		except Exception,exc:
+		except Exception:
 			logger.parser('could not parse the message')
-			logger.parser(str(exc))
+			logger.parser(traceback.format_exc())
 			return False
 
 		logger.parser('')  # new line

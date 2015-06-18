@@ -110,36 +110,37 @@ class ParseVPLS (Generic):
 		'base':               vpls_base,
 	}
 
-	add = [
-		'attribute',
-		'next-hop',
-		'origin',
-		'med',
-		'as-path',
-		'local-preference',
-		'atomic-aggregate',
-		'aggregator',
-		'originator-id',
-		'cluster-list',
-		'community',
-		'extended-community',
-		'name',
-		'split',
-		'watchdog',
-		'withdraw',
-	]
+	action = {
+		'attribute':          ['add'],
+		'next-hop':           ['add'],
+		'origin':             ['add'],
+		'med':                ['add'],
+		'as-path':            ['add'],
+		'local-preference':   ['add'],
+		'atomic-aggregate':   ['add'],
+		'aggregator':         ['add'],
+		'originator-id':      ['add'],
+		'cluster-list':       ['add'],
+		'community':          ['add'],
+		'extended-community': ['add'],
+		'name':               ['add'],
+		'split':              ['add'],
+		'watchdog':           ['add'],
+		'withdraw':           ['add'],
+		'rd':                 ['assign'],
+		'endpoint':           ['assign'],
+		'offset':             ['assign'],
+		'size':               ['assign'],
+		'base':               ['assign'],
+	}
 
-	nlri = [
-		'rd',
-		'endpoint',
-		'offset',
-		'size',
-		'base',
-	]
-
-	append = [
-		'vpls',
-	]
+	assign = {
+		'rd':       'rd',
+		'endpoint': 'endpoint',
+		'offset':   'offset',
+		'size':     'size',
+		'base':     'base',
+	}
 
 	name = 'vpls'
 
@@ -156,6 +157,7 @@ class ParseVPLS (Generic):
 	def post (self):
 		if not self._check():
 			return False
+		# self.scope.to_context()
 		last = self.scope.pop_last(self.name)
 		self.scope.append('routes',last)
 		return True
@@ -163,6 +165,8 @@ class ParseVPLS (Generic):
 	def _check (self):
 		nlri = self.scope.last(self.name).nlri
 
+		if nlri.nexthop is None:
+			return self.error.set('vpls next-hop missing')
 		if nlri.endpoint is None:
 			return self.error.set('vpls enpoint missing')
 		if nlri.base is None:
@@ -174,41 +178,3 @@ class ParseVPLS (Generic):
 		if nlri.base > (0xFFFFF - nlri.size):  # 20 bits, 3 bytes
 			return self.error.set('vpls size inconsistancy')
 		return True
-
-	# def vpls (self, name, command, tokens):
-	# 	# TODO: actual length?(like rd+lb+bo+ve+bs+rd; 14 or so)
-	# 	if len(tokens) < 10:
-	# 		return self.error.set('not enough parameter to make a vpls')
-	#
-	# 	if not self.insert_vpls(name,command,tokens):
-	# 		return False
-	#
-	# 	while len(tokens):
-	# 		command = tokens.pop(0)
-	# 		if len(tokens) < 1:
-	# 			return self.error.set('not enought tokens to make a vpls')
-	#
-	# 		if command not in self.command:
-	# 			return self.error.set('unknown vpls command %s' % command)
-	# 		elif command in ('rd','route-distinguisher'):
-	# 			if not self.command[command](name,command,tokens,SAFI.vpls):
-	# 				return False
-	# 		elif not self.command[command](name,command,tokens):
-	# 			return False
-	#
-	# 	if not self.check_vpls(self):
-	# 		return False
-	# 	return True
-	#
-	# def insert_vpls (self, name, command, tokens=None):
-	# 	try:
-	# 		attributes = Attributes()
-	# 		change = Change(VPLS(None,None,None,None,None),attributes)
-	# 	except ValueError:
-	# 		return self.error.set(self.syntax)
-	#
-	# 	if 'announce' not in self.scope.content[-1]:
-	# 		self.scope.content[-1]['announce'] = []
-	#
-	# 	self.scope.content[-1]['announce'].append(change)
-	# 	return True

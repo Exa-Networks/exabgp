@@ -73,9 +73,26 @@ class ParseNeighbor (Generic):
 		'adj-rib-out':   boolean,
 	}
 
-	append = [
-		'route',
-	]
+	action = {
+		'inherit':       ['set'],
+		'description':   ['set'],
+		'hostname':      ['set'],
+		'domainname':    ['set'],
+		'router-id':     ['set'],
+		'hold-time':     ['set'],
+		'local-address': ['set'],
+		'peer-address':  ['set'],
+		'local-as':      ['set'],
+		'peer-as':       ['set'],
+		'passive':       ['set'],
+		'listen':        ['set'],
+		'ttl-security':  ['set'],
+		'md5':           ['set'],
+		'group-updates': ['set'],
+		'auto-flush':    ['set'],
+		'adj-rib-out':   ['set'],
+		'route':         ['append'],
+	}
 
 	default = {
 		'passive': False,
@@ -124,6 +141,7 @@ class ParseNeighbor (Generic):
 		neighbor = Neighbor()
 
 		# XXX: use the right class for the data type
+		# XXX: we can use the scope.nlri interface ( and rename it ) to set some values
 		neighbor.router_id        = local.get('router-id',None)
 		neighbor.peer_address     = local.get('peer-address',None)
 		neighbor.local_address    = local.get('local-address',None)
@@ -148,8 +166,9 @@ class ParseNeighbor (Generic):
 		neighbor.route_refresh    = local.get('route-refresh',0)
 		neighbor.graceful_restart = local.get('graceful-restart',0)
 
-		static = local.get('static',{})
-		neighbor.changes          = static.get('static',[]) + static.get('routes',[])
+		neighbor.changes = []
+		for section in ('static','l2vpn'):
+			neighbor.changes.extend(local.get(section,{}).get('routes',[]))
 
 		messages = local.get('operational-message',[])
 

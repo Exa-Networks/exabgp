@@ -16,6 +16,8 @@ from exabgp.bgp.message.update.nlri import VPLS
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.rib.change import Change
 
+from exabgp.configuration.current.l2vpn.parser import vpls
+
 
 class ParseL2VPN (ParseVPLS):
 	syntax = \
@@ -27,6 +29,9 @@ class ParseL2VPN (ParseVPLS):
 
 	name = 'l2vpn'
 
+	action = dict(ParseVPLS.action)
+	action['vpls'] = ['insert']
+
 	def __init__ (self, tokeniser, scope, error, logger):
 		ParseVPLS.__init__(self,tokeniser,scope,error,logger)
 
@@ -35,6 +40,8 @@ class ParseL2VPN (ParseVPLS):
 		return True
 
 	def post (self):
+		routes = self.scope.pop_last(self.name)
+		self.scope.append('routes',routes)
 		return True
 
 	def clear (self):
@@ -53,8 +60,14 @@ def vpls (tokeniser):
 			command = tokeniser()
 		except StopIteration:
 			break
-		if command in ParseVPLS.nlri:
-			change.nlri.set(command,ParseL2VPN.known[command](tokeniser))
-		else:
+
+		action = ParseVPLS.action[command]
+
+		if 'assign' in action:
+			change.nlri.assign(ParseVPLS.assign[command],ParseL2VPN.known[command](tokeniser))
+		elif 'add' in action:
 			change.add(ParseL2VPN.known[command](tokeniser))
+		else:
+			raise ValueError('bad dispatch for command %s' % command)
+
 	return change

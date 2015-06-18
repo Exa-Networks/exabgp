@@ -26,7 +26,8 @@ class ParseStatic (ParseRoute):
 		'route <ip>/<netmask> ' \
 		' '.join(ParseRoute.definition) + ' ;\n'
 
-	# known = dict((k,v) for (k,v) in ParseRoute.known.items())
+	action = dict(ParseRoute.action)
+	action['route'] = ['insert']
 
 	name = 'static'
 
@@ -38,6 +39,8 @@ class ParseStatic (ParseRoute):
 		return True
 
 	def post (self):
+		routes = self.scope.pop_last(self.name)
+		self.scope.append('routes',routes)
 		return True
 
 @ParseStatic.register('route')
@@ -90,6 +93,10 @@ def route (tokeniser):
 			command = tokeniser()
 		except StopIteration:
 			break
-		change.add(ParseStatic.known[command](tokeniser))
+
+		if 'add' in ParseStatic.action:
+			change.add(ParseStatic.known[command](tokeniser))
+		else:
+			raise ValueError('bad dispatch for command %s' % command)
 
 	return change

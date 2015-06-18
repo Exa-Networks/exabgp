@@ -21,8 +21,7 @@ class ParseTemplate (Generic):
 		'}\n'
 
 	known = ParseNeighbor.known
-	add = ParseNeighbor.add
-	append = ParseNeighbor.append
+	action = ParseNeighbor.action
 	default = ParseNeighbor.default
 
 	name = 'template'

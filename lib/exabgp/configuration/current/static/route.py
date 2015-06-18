@@ -82,7 +82,6 @@ class ParseRoute (Generic):
 		'route <ip>/<netmask> { ' \
 		'\n   ' + ' ;\n   '.join(definition) + '\n}\n\n'
 
-	# 'path-information':    self.path_information,
 	# 'label':               self.label,
 	# 'rd':                  self.rd,
 	# 'route-distinguisher': self.rd,
@@ -108,33 +107,26 @@ class ParseRoute (Generic):
 		'withdraw':           withdraw,
 	}
 
-	add = [
-		'attribute',
-		'next-hop',
-		'origin',
-		'med',
-		'as-path',
-		'local-preference',
-		'atomic-aggregate',
-		'aggregator',
-		'originator-id',
-		'cluster-list',
-		'community',
-		'extended-community',
-		'name',
-		'split',
-		'watchdog',
-		'withdraw',
-		'aigp',
-	]
-
-	nlri = [
-		'path-info',  # The INET class does not have the hook for this to work yet
-	]
-
-	append = [
-		'route',
-	]
+	action = {
+		'path-info':          ['assign'],
+		'attribute':          ['add'],
+		'next-hop':           ['add'],
+		'origin':             ['add'],
+		'med':                ['add'],
+		'as-path':            ['add'],
+		'local-preference':   ['add'],
+		'atomic-aggregate':   ['add'],
+		'aggregator':         ['add'],
+		'originator-id':      ['add'],
+		'cluster-list':       ['add'],
+		'community':          ['add'],
+		'extended-community': ['add'],
+		'name':               ['add'],
+		'split':              ['add'],
+		'watchdog':           ['add'],
+		'withdraw':           ['add'],
+		'aigp':               ['add'],
+	}
 
 	name = 'route'
 
@@ -160,6 +152,7 @@ class ParseRoute (Generic):
 			return False
 		if not self._split():
 			return False
+		# self.scope.to_context()
 		last = self.scope.pop_last(self.name)
 		self.scope.append('routes',last)
 		return True

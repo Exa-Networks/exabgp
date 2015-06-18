@@ -61,7 +61,8 @@ class Tokeniser (Location):
 		self.line = []
 		self.iterate = Tokeniser._off
 		self.end = ''
-		self.x = 0
+		self.index_column = 0
+		self.index_line = 0
 
 		self._tokens = Tokeniser._off
 		self._next = None
@@ -73,30 +74,31 @@ class Tokeniser (Location):
 		self.line = []
 		self.iterate = None
 		self.end = ''
-		self.x = 0
+		self.index_column = 0
+		self.index_line = 0
 		if self._data:
 			self._set(self._data)
 
 	def _tokenise (self,iterator):
-		for self.x,line,parsed in tokens(iterator):
+		for self.line,parsed in tokens(iterator):
 			if not parsed:
 				continue
 			# ignore # lines
 			# set Location information
-			yield [word for y,word in parsed]
+			yield [word for x,word in parsed]
 
-	def content (self, producer):
-		try:
-			while True:
-				self.index_line,self.index_column,self.line,token = producer()
-				if token[0] in ('"',"'"):
-					return unescape(token[1:-1])
-				else:
-					return token
-		except ValueError:
-			raise Tokeniser.Error(self,'Could not parse %s' % str(token))
-		except StopIteration:
-			return None
+	# def content (self, producer):
+	# 	try:
+	# 		while True:
+	# 			self.index_line,self.index_column,self.line,token = producer()
+	# 			if token[0] in ('"',"'"):
+	# 				return unescape(token[1:-1])
+	# 			else:
+	# 				return token
+	# 	except ValueError:
+	# 		raise Tokeniser.Error(self,'Could not parse %s' % str(token))
+	# 	except StopIteration:
+	# 		return None
 
 	def _set (self, function):
 		try:
@@ -124,9 +126,24 @@ class Tokeniser (Location):
 					yield _
 		return self._set(_source(data))
 
+	def set_file (self, data):
+		def _source (fname):
+			with open(fname,'r') as fileobject:
+				def formated ():
+					while True:
+						line = fileobject.next().rstrip()
+						self.index_line += 1
+						while line.endswith('\\'):
+							line = line[:-1] + fileobject.next().rstrip()
+							self.index_line += 1
+						yield line
+				for _ in self._tokenise(formated()):
+					yield _
+		return self._set(_source(data))
+
 	def set_text (self, data):
 		def _source (data):
-			for _ in self._tokenise(data.split('\n')):
+			for _ in self._tokenise(data.replace('\\\n',' ').split('\n')):
 				yield _
 		return self._set(_source(data))
 

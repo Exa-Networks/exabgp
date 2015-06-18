@@ -1,4 +1,4 @@
-version = "3.4.10"
+version = "3.9.0"
 json = "3.5.0"
 text = "3.5.0"
 
