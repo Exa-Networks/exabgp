@@ -158,13 +158,13 @@ class ParseVPLS (Section):
 		if not self._check():
 			return False
 		# self.scope.to_context()
-		route = self.scope.pop_last(self.name)
+		route = self.scope.pop(self.name)
 		if route:
 			self.scope.extend('routes',route)
 		return True
 
 	def _check (self):
-		nlri = self.scope.last(self.name).nlri
+		nlri = self.scope.get(self.name).nlri
 
 		if nlri.nexthop is None:
 			return self.error.set('vpls next-hop missing')

@@ -179,7 +179,7 @@ class Message (Exception):
 		return cls.klass_unknown(message,data,negotiated)
 
 	@classmethod
-	def from_string (cls,name):
+	def code (cls,name):
 		for message in cls.CODE.MESSAGES:
 			if name == str(message) or name == message.short():
 				return message

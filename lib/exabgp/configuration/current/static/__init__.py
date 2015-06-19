@@ -39,7 +39,7 @@ class ParseStatic (ParseRoute):
 		return True
 
 	def post (self):
-		routes = self.scope.pop_last(self.name)
+		routes = self.scope.pop(self.name)
 		if routes:
 			self.scope.extend('routes',routes)
 		return True
@@ -88,9 +88,9 @@ def route (tokeniser):
 	)
 
 	while True:
-		try:
-			command = tokeniser()
-		except StopIteration:
+		command = tokeniser()
+
+		if not command:
 			break
 
 		if 'add' in ParseStatic.action[command]:

@@ -153,13 +153,13 @@ class ParseRoute (Section):
 		if not self._split():
 			return False
 		# self.scope.to_context()
-		route = self.scope.pop_last(self.name)
+		route = self.scope.pop(self.name)
 		if route:
 			self.scope.append('routes',route)
 		return True
 
 	def _check (self):
-		last = self.scope.last(self.name)
+		last = self.scope.get(self.name)
 		if last.nlri.nexthop is NoNextHop \
 			and last.nlri.afi == AFI.ipv4 \
 			and last.nlri.safi in (SAFI.unicast,SAFI.multicast):
@@ -167,7 +167,7 @@ class ParseRoute (Section):
 		return True
 
 	def _split (self):
-		last = self.scope.last(self.name)
+		last = self.scope.get(self.name)
 
 		if Attribute.CODE.INTERNAL_SPLIT not in last.attributes:
 			return True
@@ -178,7 +178,7 @@ class ParseRoute (Section):
 		if mask >= cut:
 			return True
 
-		last = self.scope.pop_last(self.name)
+		last = self.scope.pop(self.name)
 
 		# calculate the number of IP in the /<size> of the new route
 		increment = pow(2,(len(last.nlri.packed)*8) - cut)

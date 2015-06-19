@@ -19,8 +19,6 @@ from exabgp.protocol.family import AFI
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability import AddPath
 
-from exabgp.reactor.api.options import APIOptions
-
 from exabgp.rib import RIB
 
 
@@ -45,7 +43,7 @@ class Neighbor (object):
 		self.flush = None
 		self.adjribout = None
 
-		self.api = APIOptions()
+		self.api = None
 
 		# passive indicate that we do not establish outgoing connections
 		self.passive = False

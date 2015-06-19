@@ -13,17 +13,6 @@ from exabgp.configuration.current.neighbor.parser import processes
 from exabgp.bgp.message import Message
 
 
-def _direction (tokeniser,way):
-	name = ''
-	if name not in ('open','update','notification','keepalive','refresh','operational'):
-		raise ValueError('"%s" is an invalid option' % name)
-
-	message = Message.from_string(name)
-	if message == Message.CODE.NOP:
-		raise ValueError('unknown process message')
-
-	return '%s-%d' % (way,message)
-
 class ParseAPI (Section):
 	syntax = \
 		'syntax:\n' \
@@ -70,6 +59,10 @@ class ParseAPI (Section):
 		'neighbor-changes': True,
 	}
 
+	DEFAULT_API = {
+		'neighbor-changes': False
+	}
+
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)
 
@@ -81,8 +74,26 @@ class ParseAPI (Section):
 		return True
 
 	def post (self):
+		self.scope.to_context(self.name)
+		local = {
+			'neighbor-changes':self.scope.get('neighbor-changes',False)
+		}
+		for way in ('send','receive'):
+			data = self.scope.pop(way,{})
+			for name in ('parsed','packets','consolidate'):
+				local["%s-%s" % (way,name)] = data.get(name,False)
+			for name in ('open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
+				local["%s-%d" % (way,Message.code(name))] = data.get(name,False)
+		for k,v in local.items():
+			self.scope.set(k,v)
 		return True
 
+
+for way in ('send','receive'):
+	for name in ('parsed','packets','consolidate'):
+		ParseAPI.DEFAULT_API["%s-%s" % (way,name)] = False
+	for name in ('open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
+		ParseAPI.DEFAULT_API["%s-%d" % (way,Message.code(name))] = False
 
 
 class _ParseDirection (Section):
@@ -132,7 +143,6 @@ class _ParseDirection (Section):
 		return True
 
 	def post (self):
-		import pdb; pdb.set_trace()
 		return True
 
 

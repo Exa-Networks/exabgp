@@ -92,11 +92,10 @@ class Scope (object):
 	def extend (self, name, data):
 		self._current.setdefault(name,[]).extend(data)
 
-	# add a new prefix
-	def last (self, name=''):
+	def get (self, name='', default=None):
 		if name:
-			return self._current[name]
+			return self._current.get(name,default)
 		return self._current
 
-	def pop_last (self,name):
-		return self._current.pop(name,None)
+	def pop (self, name, default=None):
+		return self._current.pop(name,default)

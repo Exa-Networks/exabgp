@@ -40,7 +40,7 @@ class ParseL2VPN (ParseVPLS):
 		return True
 
 	def post (self):
-		routes = self.scope.pop_last(self.name)
+		routes = self.scope.pop(self.name)
 		if routes:
 			self.scope.extend('routes',routes)
 		return True
@@ -57,9 +57,9 @@ def vpls (tokeniser):
 	)
 
 	while True:
-		try:
-			command = tokeniser()
-		except StopIteration:
+		command = tokeniser()
+
+		if not command:
 			break
 
 		action = ParseVPLS.action[command]

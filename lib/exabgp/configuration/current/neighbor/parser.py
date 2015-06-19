@@ -109,5 +109,19 @@ def hold_time (tokeniser):
 
 
 def processes (tokeniser):
-	# XXX: TODO
-	return [ 'nothing here' ]
+	result = []
+	token = tokeniser()
+	if token != '[':
+		raise ValueError('invalid processes, does not starts with [')
+
+	while True:
+		token = tokeniser()
+		if not token:
+			raise ValueError('invalid processes, does not ends with ]')
+		if token == ']':
+			break
+		if token == ',':
+			continue
+		result.append(token)
+
+	return result

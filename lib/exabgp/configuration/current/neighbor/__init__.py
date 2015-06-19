@@ -13,10 +13,10 @@ from copy import deepcopy
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.bgp.message.open.holdtime import HoldTime
 
-# from exabgp.bgp.message import Message
 from exabgp.bgp.message.update.nlri.flow import NLRI
 
 from exabgp.configuration.current.core import Section
+from exabgp.configuration.current.neighbor.api import ParseAPI
 
 from exabgp.configuration.current.parser import boolean
 from exabgp.configuration.current.parser import ip
@@ -145,7 +145,10 @@ class ParseNeighbor (Section):
 		neighbor.group_updates    = local.get('group-updates',True)
 		neighbor.route_refresh    = local.get('route-refresh',0)
 		neighbor.graceful_restart = local.get('graceful-restart',0)
+		neighbor.api              = local.get('api',ParseAPI.DEFAULT_API)
 
+		import pdb; pdb.set_trace()
+		
 		neighbor.changes = []
 		for section in ('static','l2vpn'):
 			neighbor.changes.extend(local.get(section,{}).get('routes',[]))

@@ -48,7 +48,7 @@ class ParseProcess (Section):
 		return True
 
 	def post (self):
-		difference = set(self.known.keys()).difference(self.scope.last().keys())
+		difference = set(self.known.keys()).difference(self.scope.get().keys())
 		if difference:
 			return self.error.set('unset process sections: %s' % ', '.join(difference))
 		return True
