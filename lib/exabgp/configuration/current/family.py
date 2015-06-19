@@ -9,10 +9,10 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.configuration.current.generic import Generic
+from exabgp.configuration.current.core import Section
 
 
-class ParseFamily (Generic):
+class ParseFamily (Section):
 	syntax = \
 		'syntax:\n' \
 		'family {\n' \
@@ -61,7 +61,7 @@ class ParseFamily (Generic):
 	name = 'family'
 
 	def __init__ (self, tokeniser, scope, error, logger):
-		Generic.__init__(self,tokeniser,scope,error,logger)
+		Section.__init__(self,tokeniser,scope,error,logger)
 		self.known = {
 			'ipv4':  self.ipv4,
 			'ipv6':  self.ipv6,

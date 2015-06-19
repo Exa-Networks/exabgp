@@ -41,10 +41,10 @@ from exabgp.bgp.message.update.attribute.community.extended import TrafficRedire
 from exabgp.bgp.message.update.attribute.community.extended import TrafficMark
 from exabgp.bgp.message.update.attribute.community.extended import TrafficNextHop
 
-from exabgp.configuration.current.generic import Generic
+from exabgp.configuration.current.core import Section
 
 
-class ParseFlow (Generic):
+class ParseFlow (Section):
 	syntax = \
 		'syntax:\n' \
 		'flow {\n' \

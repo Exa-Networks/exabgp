@@ -6,13 +6,13 @@ Created by Thomas Mangin on 2015-06-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.current.generic import Generic
+from exabgp.configuration.current.core import Section
 
 from exabgp.configuration.current.process.parser import encoder
 from exabgp.configuration.current.process.parser import run
 
 
-class ParseProcess (Generic):
+class ParseProcess (Section):
 	syntax = \
 		'syntax:\n' \
 		'process name-of-process {\n' \
@@ -34,7 +34,7 @@ class ParseProcess (Generic):
 	name = 'process'
 
 	def __init__ (self, tokeniser, scope, error, logger):
-		Generic.__init__(self,tokeniser,scope,error,logger)
+		Section.__init__(self,tokeniser,scope,error,logger)
 		self._processes = []
 
 	def clear (self):

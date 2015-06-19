@@ -7,7 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.configuration.current import Configuration
-from exabgp.configuration.current.tokeniser.format import formated
+from exabgp.configuration.current.core.format import formated
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI

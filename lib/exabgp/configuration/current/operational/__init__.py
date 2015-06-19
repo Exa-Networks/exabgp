@@ -17,12 +17,12 @@ from exabgp.bgp.message.operational import Advisory
 from exabgp.bgp.message.operational import Query
 from exabgp.bgp.message.operational import Response
 
-from exabgp.configuration.current.tokeniser.format import formated
+from exabgp.configuration.current.core.format import formated
 
-from exabgp.configuration.current.generic import Generic
+from exabgp.configuration.current.core import Section
 
 
-class ParseOperational (Generic):
+class ParseOperational (Section):
 	syntax = \
 		'syntax:\n' \
 		''

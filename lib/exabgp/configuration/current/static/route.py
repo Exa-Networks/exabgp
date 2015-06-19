@@ -24,7 +24,7 @@ from exabgp.bgp.message.update.attribute import Attribute
 
 from exabgp.rib.change import Change
 
-from exabgp.configuration.current.generic import Generic
+from exabgp.configuration.current.core import Section
 
 from exabgp.configuration.current.static.parser import inet
 from exabgp.configuration.current.static.parser import attribute
@@ -52,7 +52,7 @@ def pack_int (afi, integer):
 	return ''.join([chr((integer >> (offset * 8)) & 0xff) for offset in range(IP.length(afi)-1,-1,-1)])
 
 
-class ParseRoute (Generic):
+class ParseRoute (Section):
 	# put next-hop first as it is a requirement atm
 	definition = [
 		'next-hop <ip>',
@@ -131,7 +131,7 @@ class ParseRoute (Generic):
 	name = 'route'
 
 	def __init__ (self, tokeniser, scope, error, logger):
-		Generic.__init__(self,tokeniser,scope,error,logger)
+		Section.__init__(self,tokeniser,scope,error,logger)
 
 		self.default = {
 			'next-hop': None,

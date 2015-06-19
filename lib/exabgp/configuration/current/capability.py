@@ -8,9 +8,9 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.open.capability.graceful import Graceful
 
-from exabgp.configuration.current.generic import Generic
-from exabgp.configuration.current.generic.parser import boolean
-from exabgp.configuration.current.generic.parser import string
+from exabgp.configuration.current.core import Section
+from exabgp.configuration.current.parser import boolean
+from exabgp.configuration.current.parser import string
 
 
 def addpath (tokeniser):
@@ -58,7 +58,7 @@ def gracefulrestart (tokeniser, default):
 	return grace
 
 
-class ParseCapability (Generic):
+class ParseCapability (Section):
 	TTL_SECURITY = 255
 
 	syntax = \
@@ -101,7 +101,7 @@ class ParseCapability (Generic):
 	name = 'capability'
 
 	def __init__ (self, tokeniser, scope, error, logger):
-		Generic.__init__(self,tokeniser,scope,error,logger)
+		Section.__init__(self,tokeniser,scope,error,logger)
 
 	def clear (self):
 		pass

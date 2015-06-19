@@ -9,11 +9,11 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from string import ascii_letters
 from string import digits
 
-from exabgp.configuration.current.generic import Generic
+from exabgp.configuration.current.core import Section
 from exabgp.configuration.current.neighbor import ParseNeighbor
 
 
-class ParseTemplate (Generic):
+class ParseTemplate (Section):
 	syntax = \
 		'syntax:\n' \
 		'template <name> {\n' \
@@ -27,7 +27,7 @@ class ParseTemplate (Generic):
 	name = 'template'
 
 	def __init__ (self, tokeniser, scope, error, logger):
-		Generic.__init__(self,tokeniser,scope,error,logger)
+		Section.__init__(self,tokeniser,scope,error,logger)
 		self._templates = []
 
 	def clear (self):

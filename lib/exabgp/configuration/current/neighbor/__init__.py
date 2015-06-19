@@ -16,12 +16,12 @@ from exabgp.bgp.message.open.holdtime import HoldTime
 # from exabgp.bgp.message import Message
 from exabgp.bgp.message.update.nlri.flow import NLRI
 
-from exabgp.configuration.current.generic import Generic
+from exabgp.configuration.current.core import Section
 
-from exabgp.configuration.current.generic.parser import boolean
-from exabgp.configuration.current.generic.parser import ip
-from exabgp.configuration.current.generic.parser import asn
-from exabgp.configuration.current.generic.parser import port
+from exabgp.configuration.current.parser import boolean
+from exabgp.configuration.current.parser import ip
+from exabgp.configuration.current.parser import asn
+from exabgp.configuration.current.parser import port
 from exabgp.configuration.current.neighbor.parser import ttl
 from exabgp.configuration.current.neighbor.parser import md5
 from exabgp.configuration.current.neighbor.parser import hold_time
@@ -46,7 +46,7 @@ def domainname ():
 	return ''.join(value.split('.')[1:])
 
 
-class ParseNeighbor (Generic):
+class ParseNeighbor (Section):
 	TTL_SECURITY = 255
 
 	name = 'neighbor'
@@ -104,7 +104,7 @@ class ParseNeighbor (Generic):
 	name = 'neighbor'
 
 	def __init__ (self, tokeniser, scope, error, logger):
-		Generic.__init__(self,tokeniser,scope,error,logger)
+		Section.__init__(self,tokeniser,scope,error,logger)
 
 		self.neighbors = {}
 		self._neighbors = {}

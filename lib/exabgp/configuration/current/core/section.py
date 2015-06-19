@@ -7,7 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 
-class Generic (object):
+class Section (object):
 	name = 'undefined'
 	known = dict()     # command/section and code to handle it
 	default = dict()   # command/section has a a defult value, use it if no data was provided

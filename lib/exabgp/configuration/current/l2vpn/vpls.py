@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2015-06-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.current.generic import Generic
+from exabgp.configuration.current.core import Section
 
 from exabgp.configuration.current.static.parser import attribute
 from exabgp.configuration.current.static.parser import next_hop
@@ -55,7 +55,7 @@ from exabgp.configuration.current.l2vpn.parser import vpls_base
 # }
 
 
-class ParseVPLS (Generic):
+class ParseVPLS (Section):
 	definition = [
 		'endpoint <vpls endpoint id; integer>',
 		'base <label base; integer>',
@@ -145,7 +145,7 @@ class ParseVPLS (Generic):
 	name = 'vpls'
 
 	def __init__ (self, tokeniser, scope, error, logger):
-		Generic.__init__(self,tokeniser,scope,error,logger)
+		Section.__init__(self,tokeniser,scope,error,logger)
 
 	def clear (self):
 		pass

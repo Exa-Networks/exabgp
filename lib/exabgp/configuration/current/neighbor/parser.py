@@ -13,7 +13,7 @@ from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message import Message
 
-from exabgp.configuration.current.generic.parser import string
+from exabgp.configuration.current.parser import string
 
 
 def inherit (tokeniser):

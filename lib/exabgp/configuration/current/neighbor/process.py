@@ -6,11 +6,11 @@ Created by Thomas Mangin on 2015-06-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.current.generic import Generic
+from exabgp.configuration.current.core import Section
 
 
 
-class ParseNeighborProcess (Generic):
+class ParseNeighborProcess (Section):
 	syntax = \
 		'syntax:\n' \
 		'process name-of-process {\n' \
@@ -44,7 +44,7 @@ class ParseNeighborProcess (Generic):
 	name = 'process-xxxx'
 
 	def __init__ (self, tokeniser, scope, error, logger):
-		Generic.__init__(self,tokeniser,scope,error,logger)
+		Section.__init__(self,tokeniser,scope,error,logger)
 
 	def clear (self):
 		pass
