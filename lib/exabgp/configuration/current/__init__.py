@@ -32,6 +32,8 @@ from exabgp.configuration.current.process import ParseProcess
 from exabgp.configuration.current.template import ParseTemplate
 from exabgp.configuration.current.neighbor import ParseNeighbor
 from exabgp.configuration.current.neighbor.api import ParseAPI
+from exabgp.configuration.current.neighbor.api import ParseSend
+from exabgp.configuration.current.neighbor.api import ParseReceive
 from exabgp.configuration.current.family import ParseFamily
 from exabgp.configuration.current.capability import ParseCapability
 from exabgp.configuration.current.static import ParseStatic
@@ -44,16 +46,9 @@ from exabgp.configuration.current.l2vpn import ParseVPLS
 from exabgp.configuration.environment import environment
 
 
-def false (*args):
-	return False
-
-def true (*args):
-	return True
-
-
 class Configuration (object):
 
-	def __init__ (self, configurations, text=False):
+	def __init__ (self, configurations):
 		self.api_encoder = environment.settings().api.encoder
 
 		self._configurations = configurations
@@ -71,6 +66,8 @@ class Configuration (object):
 		self.family      = ParseFamily      (self.tokeniser,self.scope,self.error,self.logger)
 		self.capability  = ParseCapability  (self.tokeniser,self.scope,self.error,self.logger)
 		self.api         = ParseAPI         (self.tokeniser,self.scope,self.error,self.logger)
+		self.api_send    = ParseSend        (self.tokeniser,self.scope,self.error,self.logger)
+		self.api_receive = ParseReceive     (self.tokeniser,self.scope,self.error,self.logger)
 		self.static      = ParseStatic      (self.tokeniser,self.scope,self.error,self.logger)
 		self.route       = ParseRoute       (self.tokeniser,self.scope,self.error,self.logger)
 		self.l2vpn       = ParseL2VPN       (self.tokeniser,self.scope,self.error,self.logger)
@@ -90,17 +87,17 @@ class Configuration (object):
 			self.process.name: {
 				'class':    self.process,
 				'commands': self.process.known.keys(),
-				'sections': ['send','receive'],
+				'sections': [],
 			},
 			self.template.name: {
 				'class':    self.template,
 				'commands': self.template.known.keys(),
-				'sections': [self.family.name, 'capability', self.static.name, 'flow', self.l2vpn.name, 'operational'],
+				'sections': [self.family.name, 'capability', self.api.name, self.static.name, 'flow', self.l2vpn.name, 'operational'],
 			},
 			self.neighbor.name: {
 				'class':    self.neighbor,
 				'commands': self.neighbor.known.keys(),
-				'sections': [self.family.name, 'capability', self.static.name, 'flow', self.l2vpn.name, 'operational'],
+				'sections': [self.family.name, 'capability', self.api.name, self.static.name, 'flow', self.l2vpn.name, 'operational'],
 			},
 			self.family.name: {
 				'class':    self.family,
@@ -110,6 +107,21 @@ class Configuration (object):
 			self.capability.name: {
 				'class':    self.capability,
 				'commands': self.capability.known.keys(),
+				'sections': [],
+			},
+			self.api.name: {
+				'class':    self.api,
+				'commands': self.api.known.keys(),
+				'sections': [self.api_send.name, self.api_receive.name],
+			},
+			self.api_send.name: {
+				'class':    self.api_send,
+				'commands': self.api_send.known.keys(),
+				'sections': [],
+			},
+			self.api_receive.name: {
+				'class':    self.api_receive,
+				'commands': self.api_receive.known.keys(),
 				'sections': [],
 			},
 			self.static.name: {
@@ -354,147 +366,6 @@ class Configuration (object):
 		elif len(tokens):
 			return self.error.set(self.process.syntax)
 
-	# capacity
-
-	def _multi_capability (self, name, command, tokens):
-		# we know all the families we should use
-		while True:
-			r = self._dispatch(
-				name,'capability',
-				[],
-				self._command['capability'].keys()
-			)
-			if r is False:
-				return False
-			if r is None:
-				break
-		return True
-
-	# route grouping with watchdog
-
-	# Group Neighbor
-
-	def _multi_group (self, name, command, address):
-		# if len(tokens) != 2:
-		# 	return self.error.set('syntax: group <name> { <options> }')
-
-		self.scope.content.append({})
-		while True:
-			r = self._dispatch(
-				name,'group',
-				[
-					'static','flow','l2vpn',
-					'neighbor','process','family',
-					'capability','operational'
-				],
-				self._command['neighbor'].keys()
-			)
-			if r is False:
-				return False
-			if r is None:
-				self.scope.content.pop(-1)
-				return True
-
-	# def _multi_neighbor (self, name, command, tokens):
-	# 	if len(tokens) != 1:
-	# 		return self.error.set('syntax: neighbor <ip> { <options> }')
-	#
-	# 	address = tokens[0]
-	# 	self.scope.content.append({})
-	# 	try:
-	# 		self.scope.content[-1]['peer-address'] = IP.create(address)
-	# 	except (IndexError,ValueError,socket.error):
-	# 		return self.error.set('"%s" is not a valid IP address' % address)
-	#
-	# 	while True:
-	# 		r = self._dispatch(
-	# 			name,'neighbor',
-	# 			[
-	# 				'static','flow','l2vpn',
-	# 				'process','family','capability','operational'
-	# 			],
-	# 			self._command['neighbor']
-	# 		)
-	# 		# XXX: THIS SHOULD ALLOW CAPABILITY AND NOT THE INDIVIDUAL SUB KEYS
-	# 		if r is False:
-	# 			return False
-	# 		if r is None:
-	# 			return True
-
-	#  Group Static ................
-
-	def _multi_static (self, name, command, tokens):
-		if len(tokens) != 0:
-			return self.error.set('syntax: static { route; route; ... }')
-
-		while True:
-			r = self._dispatch(
-				name,'static',
-				['route',],
-				['route',]
-			)
-			if r is False:
-				return False
-			if r is None:
-				return True
-
-	# Group Route  ........
-
-	def _multi_static_route (self, name, command, tokens):
-		if len(tokens) != 1:
-			return self.error.set(self.route.syntax)
-
-		if not self.route.insert_static_route(name,command,tokens):
-			return False
-
-		while True:
-			r = self._dispatch(
-				name,'static-route',
-				self._command['static-route'].keys(),
-				self._command['static-route'].keys()
-			)
-			if r is False:
-				return False
-			if r is None:
-				return self.route.make_split()
-
-	def _multi_l2vpn (self, name, command, tokens):
-		if len(tokens) != 0:
-			return self.error.set(self.l2vpn.syntax)
-
-		while True:
-			r = self._dispatch(
-				name,'l2vpn',
-				['vpls',],
-				['vpls',]
-			)
-			if r is False:
-				return False
-			if r is None:
-				break
-		return True
-
-	def _multi_l2vpn_vpls (self, name, command, tokens):
-		if len(tokens) > 1:
-			return self.error.set(self.l2vpn.syntax)
-
-		if not self.l2vpn.insert_vpls(name,command,tokens):
-			return False
-
-		while True:
-			r = self._dispatch(
-				name,'l2vpn-vpls',
-				self._command['l2vpn-vpls'].keys(),
-				self._command['l2vpn-vpls'].keys()
-			)
-			if r is False:
-				return False
-			if r is None:
-				break
-
-		return True
-
-
 	def _multi_flow (self, name, command, tokens):
 		if len(tokens) != 0:
 			return self.error.set(self.flow.syntax)
@@ -644,113 +515,6 @@ class Configuration (object):
 				return True
 
 
-
-		# self._tree = {
-		# 	'configuration': {
-		# 		'neighbor':    self.neighbor
-		# 		'group':       (self._multi_group,true),
-		# 	},
-		# 	'group': {
-		# 		'neighbor':    (self._multi_neighbor,self.neighbor.make),
-		# 		'static':      (self._multi_static,true),
-		# 		'flow':        (self._multi_flow,true),
-		# 		'l2vpn':       (self._multi_l2vpn,true),
-		# 		'process':     (self._multi_process,true),
-		# 		'family':      (self._multi_family,true),
-		# 		'capability':  (self._multi_capability,true),
-		# 		'operational': (self._multi_operational,true),
-		# 	},
-		# 	'neighbor': {
-		# 		'static':      (self._multi_static,true),
-		# 		'flow':        (self._multi_flow,true),
-		# 		'l2vpn':       (self._multi_l2vpn,true),
-		# 		'process':     (self._multi_process,true),
-		# 		'family':      (self._multi_family,true),
-		# 		'capability':  (self._multi_capability,true),
-		# 		'operational': (self._multi_operational,true),
-		# 	},
-		# 	'static': {
-		# 		'route':       (self._multi_static_route,self.route.check_static_route),
-		# 	},
-		# 	'flow': {
-		# 		'route':       (self._multi_flow_route,self.flow.check_flow),
-		# 	},
-		# 	'l2vpn': {
-		# 		'vpls':       (self._multi_l2vpn_vpls,self.l2vpn.check_vpls),
-		# 	},
-		# 	'flow-route': {
-		# 		'match':       (self._multi_match,true),
-		# 		'then':        (self._multi_then,true),
-		# 	},
-		# 	'process': {
-		# 		'send':    (self._multi_api,true),
-		# 		'receive': (self._multi_api,true),
-		# 	}
-		# }
-		#
-		# self._command = {
-		# 	'group': {
-		# 		'description':   self.neighbor.description,
-		# 		'router-id':     self.neighbor.router_id,
-		# 		'host-name':     self.neighbor.hostname,
-		# 		'domain-name':   self.neighbor.domainname,
-		# 		'local-address': self.neighbor.ip,
-		# 		'local-as':      self.neighbor.asn,
-		# 		'peer-as':       self.neighbor.asn,
-		# 		'passive':       self.neighbor.passive,
-		# 		'listen':        self.neighbor.listen,
-		# 		'hold-time':     self.neighbor.holdtime,
-		# 		'md5':           self.neighbor.md5,
-		# 		'ttl-security':  self.neighbor.ttl,
-		# 		'group-updates': self.neighbor.groupupdate,
-		# 		'adj-rib-out':   self.neighbor.adjribout,
-		# 		'auto-flush':    self.neighbor.autoflush,
-		# 	},
-		# 	'neighbor': {
-		# 		'description':   self.neighbor.description,
-		# 		'router-id':     self.neighbor.router_id,
-		# 		'host-name':     self.neighbor.hostname,
-		# 		'domain-name':   self.neighbor.domainname,
-		# 		'local-address': self.neighbor.ip,
-		# 		'local-as':      self.neighbor.asn,
-		# 		'peer-as':       self.neighbor.asn,
-		# 		'passive':       self.neighbor.passive,
-		# 		'listen':        self.neighbor.listen,
-		# 		'hold-time':     self.neighbor.holdtime,
-		# 		'md5':           self.neighbor.md5,
-		# 		'ttl-security':  self.neighbor.ttl,
-		# 		'group-updates': self.neighbor.groupupdate,
-		# 		'adj-rib-out':   self.neighbor.adjribout,
-		# 		'auto-flush':    self.neighbor.autoflush,
-		# 	},
-		# 	'capability': {
-		# 		'route-refresh':    self.neighbor.capability.refresh,
-		# 		'graceful-restart': self.neighbor.capability.gracefulrestart,
-		# 		'multi-session':    self.neighbor.capability.multisession,
-		# 		'add-path':         self.neighbor.capability.addpath,
-		# 		'aigp':             self.neighbor.capability.aigp,
-		# 		'operational':      self.neighbor.capability.operational,
-		# 		'add-path':         self.neighbor.capability.addpath,
-		# 		'asn4':             self.neighbor.capability.asn4,
-		# 	},
-		# 	'process': {
-		# 		'run':              self.process.run,
-		# 		'encoder':          self.process.encoder,
-		# 		'neighbor-changes': self.process.command,
-		# 	},
-		# 	'family': {
-		# 		'ipv4':    self.family.ipv4,
-		# 		'ipv6':    self.family.ipv6,
-		# 		'l2vpn':   self.family.l2vpn,
-		# 		'minimal': self.family.minimal,
-		# 		'all':     self.family.all,
-		# 	},
-		# 	'static': {
-		# 		'route':   self.route.static,
-		# 	},
-		# 	'l2vpn': {
-		# 		'vpls':    self.l2vpn.vpls,
-		# 	},
 		# 	'operational': {
 		# 		'asm':     self.operational.asm,
 		# 		# it makes no sense to have adm or others

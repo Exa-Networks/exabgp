@@ -17,19 +17,16 @@ def string (tokeniser):
 
 
 def boolean (tokeniser, default):
-	if not tokeniser.tokens:
-		return default
-
 	status = tokeniser().lower()
+	if not status:
+		return default
 	if status in ('true','enable','enabled'):
-		value = True
-	elif status in ('false','disable','disabled'):
-		value = False
-	elif status in ('unset',):
-		value = None
-	else:
-		raise ValueError('invalid value for a boolean')
-	return value
+		return True
+	if status in ('false','disable','disabled'):
+		return False
+	if status in ('unset',):
+		return None
+	raise ValueError('invalid value for a boolean')
 
 
 def port (tokeniser):

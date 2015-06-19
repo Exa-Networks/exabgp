@@ -12,6 +12,7 @@ class Section (object):
 	known = dict()     # command/section and code to handle it
 	default = dict()   # command/section has a a defult value, use it if no data was provided
 	action = {}        # how to handle this command ( append, add, assign, route )
+	assign = {}        # configuration to class variable lookup for setattr
 
 	def __init__ (self, tokerniser, scope, error, logger):
 		self.tokeniser = tokerniser

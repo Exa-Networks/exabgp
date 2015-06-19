@@ -27,7 +27,7 @@ class IP (object):
 	__slots__ = ['ip','packed']
 
 	def __init__ (self):
-		raise Exception("You should use IP.create() to use IP")
+		raise RuntimeError("You should use IP.create() to use IP")
 
 	def init (self, ip, packed=None):
 		self.ip = ip
@@ -49,7 +49,7 @@ class IP (object):
 			return socket.AF_INET6
 		if '.' in ip:
 			return socket.AF_INET
-		raise Exception('unrecognised ip address %s' % ip)
+		raise ValueError('unrecognised ip address %s' % ip)
 
 	@staticmethod
 	def toafi (ip):
@@ -58,7 +58,7 @@ class IP (object):
 			return AFI.ipv6
 		if '.' in ip:
 			return AFI.ipv4
-		raise Exception('unrecognised ip address %s' % ip)
+		raise ValueError('unrecognised ip address %s' % ip)
 
 	@staticmethod
 	def tosafi (ip):
@@ -70,7 +70,7 @@ class IP (object):
 			if int(ip.split('.')[0]) in IP._multicast_range:
 				return SAFI.multicast
 			return SAFI.unicast
-		raise Exception('unrecognised ip address %s' % ip)
+		raise ValueError('unrecognised ip address %s' % ip)
 
 	def ipv4 (self):
 		return True if len(self.packed) == 4 else False
@@ -117,7 +117,7 @@ class IP (object):
 		elif '.' in ip:
 			afi = IPv4.afi
 		else:
-			raise Exception('can not decode this ip address : %s' % ip)
+			raise ValueError('can not decode this ip address : %s' % ip)
 		if afi in cls._known:
 			return cls._known[afi]
 

@@ -13,7 +13,7 @@ def encoder (tokeniser):
 	value = tokeniser()
 
 	if value not in ('text','json'):
-		raise ValueError('"%s" is an invalid option')
+		raise ValueError('"%s" is an invalid option' % value)
 	return value
 
 

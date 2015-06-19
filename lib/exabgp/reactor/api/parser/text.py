@@ -29,7 +29,7 @@ from exabgp.rib.change import Change
 
 class Text (Configuration):
 	def __init__ (self):
-		Configuration.__init__(self,'','')
+		Configuration.__init__(self,'')
 		# part of parent API, done here to remove pylint warning attribute-defined-outside-init
 		self._nexthopself = None
 

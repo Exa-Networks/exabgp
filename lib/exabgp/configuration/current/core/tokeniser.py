@@ -23,7 +23,10 @@ class Tokeniser (object):
 			self.generator = _generator()
 
 		def __call__ (self):
-			return self.generator.next()
+			try:
+				return self.generator.next()
+			except StopIteration:
+				return ''
 
 	@staticmethod
 	def _off ():
