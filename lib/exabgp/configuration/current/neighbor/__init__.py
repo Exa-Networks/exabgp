@@ -105,32 +105,12 @@ class ParseNeighbor (Section):
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)
-
+		self._neighbors = []
 		self.neighbors = {}
-		self._neighbors = {}
-		self._previous = {}
 
 	def clear (self):
-		self._previous = self.neighbors
-		self._neighbors = {}
+		self._neighbors = []
 		self.neighbors = {}
-
-	def cancel (self):
-		self.neighbors = self._previous
-		self._neighbors = {}
-		self._previous = {}
-
-	# neighbor, _neighbor and _previous should not really be in the parser data
-	def complete (self):
-		self.neighbors = self._neighbors
-		self._neighbors = {}
-
-		# installing in the neighbor the API routes
-		for neighbor in self.neighbors:
-			if neighbor in self._previous:
-				self.neighbors[neighbor].changes = self._previous[neighbor].changes
-
-		self._previous = {}
 
 	def pre (self):
 		self.scope.to_context()
@@ -217,6 +197,7 @@ class ParseNeighbor (Section):
 
 		if neighbor.peer_address.ip in self._neighbors:
 			return self.error.set('duplicate peer definition %s' % neighbor.peer_address.ip)
+		self._neighbors.append(neighbor.peer_address.ip)
 
 		# check we are not trying to announce routes without the right MP announcement
 		for family in neighbor.families():
@@ -236,7 +217,7 @@ class ParseNeighbor (Section):
 						neighbor.asm[message.family()] = message
 					else:
 						neighbor.messages.append(message)
-			self._neighbors[neighbor.name()] = neighbor
+			self.neighbors[neighbor.name()] = neighbor
 
 		# create one neighbor object per family for multisession
 		if neighbor.multisession and len(neighbor.families()) > 1:
@@ -250,9 +231,9 @@ class ParseNeighbor (Section):
 			neighbor.make_rib()
 			_init_neighbor(neighbor)
 
+		return True
+
 		# display configuration
 		# for line in str(neighbor).split('\n'):
 		# 	self.logger.configuration(line)
 		# self.logger.configuration("\n")
-
-		return True

@@ -27,15 +27,17 @@ from exabgp.configuration.current.core import Error
 from exabgp.configuration.current.core import Scope
 from exabgp.configuration.current.core import Tokeniser
 from exabgp.configuration.current.core import Section
+
+from exabgp.configuration.current.process import ParseProcess
 from exabgp.configuration.current.template import ParseTemplate
 from exabgp.configuration.current.neighbor import ParseNeighbor
+from exabgp.configuration.current.neighbor.api import ParseAPI
 from exabgp.configuration.current.family import ParseFamily
 from exabgp.configuration.current.capability import ParseCapability
 from exabgp.configuration.current.static import ParseStatic
 from exabgp.configuration.current.static import ParseRoute
 from exabgp.configuration.current.l2vpn import ParseL2VPN
 from exabgp.configuration.current.l2vpn import ParseVPLS
-from exabgp.configuration.current.process import ParseProcess
 # from exabgp.configuration.current.flow import ParseFlow
 # from exabgp.configuration.current.operational import ParseOperational
 
@@ -63,16 +65,17 @@ class Configuration (object):
 		self.tokeniser = Tokeniser(self.scope,self.error,self.logger)
 
 		generic          = Section          (self.tokeniser,self.scope,self.error,self.logger)
+		self.process     = ParseProcess     (self.tokeniser,self.scope,self.error,self.logger)
 		self.template    = ParseTemplate    (self.tokeniser,self.scope,self.error,self.logger)
 		self.neighbor    = ParseNeighbor    (self.tokeniser,self.scope,self.error,self.logger)
 		self.family      = ParseFamily      (self.tokeniser,self.scope,self.error,self.logger)
 		self.capability  = ParseCapability  (self.tokeniser,self.scope,self.error,self.logger)
-		self.process     = ParseProcess     (self.tokeniser,self.scope,self.error,self.logger)
+		self.api         = ParseAPI         (self.tokeniser,self.scope,self.error,self.logger)
 		self.static      = ParseStatic      (self.tokeniser,self.scope,self.error,self.logger)
 		self.route       = ParseRoute       (self.tokeniser,self.scope,self.error,self.logger)
-		# self.flow        = ParseFlow        (self.tokeniser,self.scope,self.error,self.logger)
 		self.l2vpn       = ParseL2VPN       (self.tokeniser,self.scope,self.error,self.logger)
 		self.vpls        = ParseVPLS        (self.tokeniser,self.scope,self.error,self.logger)
+		# self.flow        = ParseFlow        (self.tokeniser,self.scope,self.error,self.logger)
 		# self.operational = ParseOperational (self.tokeniser,self.scope,self.error,self.logger)
 
 		# Later on we will use name such as 'neighbor/static' for keys which will give us depth of scope
@@ -131,24 +134,55 @@ class Configuration (object):
 			},
 		}
 
+		self.processes = {}
+		self.neighbors = {}
+		self._neighbors = {}
+		self._previous_neighbors = {}
+
 		self._clear()
 
-		self.processes = {}
-
+	# remove the parse data
 	def _clear (self):
 		self.processes = {}
+		self.neighbors = {}
+		self.neighbors = {}
+		self._neighbors = {}
+		self._previous_neighbors = {}
 
+	# clear the parser data (ie: free memory)
+	def _cleanup (self):
 		self.error.clear()
 		self.tokeniser.clear()
 		self.scope.clear()
+		self.process.clear()
+		self.template.clear()
 		self.neighbor.clear()
 		self.family.clear()
-		# self.process.clear()
+		self.capability.clear()
+		self.api.clear()
+		self.static.clear()
 		self.route.clear()
-		# self.flow.clear()
 		self.l2vpn.clear()
 		self.vpls.clear()
+		# self.flow.clear()
 		# self.operational.clear()
+
+	def _rollback_reload (self):
+		self.neighbors = self._previous_neighbors
+		self._neighbors = {}
+		self._previous_neighbors = {}
+
+	def _commit_reload (self):
+		self.neighbors = self.neighbor.neighbors
+		self._neighbors = {}
+
+		# installing in the neighbor the API routes
+		for neighbor in self.neighbors:
+			if neighbor in self._previous_neighbors:
+				self.neighbors[neighbor].changes = self._previous_neighbors[neighbor].changes
+
+		self._previous_neighbors = {}
+		self._cleanup()
 
 	def reload (self):
 		try:
@@ -160,7 +194,7 @@ class Configuration (object):
 				raise
 			return self.error.set(
 				'problem parsing configuration file line %d\n'
-					'error message: %s' % (self.tokeniser.index_line, exc)
+				'error message: %s' % (self.tokeniser.index_line, exc)
 			)
 
 	def _reload (self):
@@ -176,7 +210,7 @@ class Configuration (object):
 
 		if self.section('root') is not True:
 			# XXX: Should it be in neighbor ?
-			self.neighbor.cancel()
+			self._rollback_reload()
 
 			return self.error.set(
 				"\n"
@@ -190,7 +224,7 @@ class Configuration (object):
 				)
 			)
 
-		self.neighbor.complete()
+		self._commit_reload()
 		self.debug_check_route()
 		self.debug_self_check()
 		return True

@@ -70,7 +70,7 @@ class API (object):
 		return False
 
 	def change_to_peers (self, change, peers):
-		neighbors = self.reactor.configuration.neighbor.neighbors
+		neighbors = self.reactor.configuration.neighbors
 		result = True
 		for neighbor in neighbors:
 			if neighbor in peers:
@@ -82,7 +82,7 @@ class API (object):
 		return result
 
 	def eor_to_peers (self, family, peers):
-		neighbors = self.reactor.configuration.neighbor.neighbors
+		neighbors = self.reactor.configuration.neighbors
 		result = False
 		for neighbor in neighbors:
 			if neighbor in peers:
@@ -91,7 +91,7 @@ class API (object):
 		return result
 
 	def operational_to_peers (self, operational, peers):
-		neighbors = self.reactor.configuration.neighbor.neighbors
+		neighbors = self.reactor.configuration.neighbors
 		result = True
 		for neighbor in neighbors:
 			if neighbor in peers:
@@ -105,7 +105,7 @@ class API (object):
 		return result
 
 	def refresh_to_peers (self, refresh, peers):
-		neighbors = self.reactor.configuration.neighbor.neighbors
+		neighbors = self.reactor.configuration.neighbors
 		result = True
 		for neighbor in neighbors:
 			if neighbor in peers:
