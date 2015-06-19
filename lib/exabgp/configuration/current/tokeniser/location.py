@@ -20,3 +20,27 @@ class Location (object):
 		self.index_line = 0
 		self.index_column = 0
 		self.line = ''
+
+
+class Error (Exception):
+	tabsize = 3
+	syntax = ''
+
+	def __init__ (self, location, message, syntax=''):
+		self.line = location.line.replace('\t',' '*self.tabsize)
+		self.index_line = location.index_line
+		self.index_column = location.index_column + (self.tabsize-1) * location.line[:location.index_column].count('\t')
+
+		self.message = '\n\n'.join((
+			'problem parsing configuration file line %d position %d' % (location.index_line,location.index_column+1),
+			'error message: %s' % message.replace('\t',' '*self.tabsize),
+			'%s%s' % (self.line,'-' * self.index_column + '^')
+		))
+		# allow to give the right syntax in using Raised
+		if syntax:
+			self.message += '\n\n' + syntax
+
+		Exception.__init__(self)
+
+	def __repr__ (self):
+		return self.message

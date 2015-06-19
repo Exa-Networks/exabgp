@@ -11,6 +11,7 @@ from string import digits
 
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.holdtime import HoldTime
+from exabgp.bgp.message import Message
 
 from exabgp.configuration.current.generic.parser import string
 
@@ -106,3 +107,26 @@ def hold_time (tokeniser):
 	if holdtime > HoldTime.MAX:
 		raise ValueError('holdtime must be smaller or equal to %d' % HoldTime.MAX)
 	return holdtime
+
+
+def _direction (tokeniser,way):
+	name = tokeniser()
+	if name not in ('packets','parsed','consolidate','neighbor-changes'):
+		return name
+
+	if name not in ('open','update','notification','keepalive','refresh','operational'):
+		raise ValueError('"%s" is an invalid option')
+
+	message = Message.from_string(name)
+	if message == Message.CODE.NOP:
+		raise ValueError('unknown process message')
+
+	return '%s-%d' % (way,message)
+
+
+def send (tokeniser):
+	return _direction(tokeniser,'send')
+
+
+def receive (tokeniser):
+	return _direction(tokeniser,'receive')

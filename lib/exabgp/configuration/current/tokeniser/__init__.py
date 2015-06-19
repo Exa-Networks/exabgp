@@ -6,37 +6,14 @@ Created by Thomas Mangin on 2015-06-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.current.tokeniser.location import Location
-from exabgp.configuration.current.tokeniser.format import unescape
 from exabgp.configuration.current.tokeniser.format import tokens
 
 
-class Tokeniser (Location):
-
-	# class Error (Exception):
-	# 	tabsize = 3
-	# 	syntax = ''
-	#
-	# 	def __init__ (self, location, message, syntax=''):
-	# 		self.line = location.line.replace('\t',' '*self.tabsize)
-	# 		self.index_line = location.index_line
-	# 		self.index_column = location.index_column + (self.tabsize-1) * location.line[:location.index_column].count('\t')
-	#
-	# 		self.message = '\n\n'.join((
-	# 			'problem parsing configuration file line %d position %d' % (location.index_line,location.index_column+1),
-	# 			'error message: %s' % message.replace('\t',' '*self.tabsize),
-	# 			'%s%s' % (self.line,'-' * self.index_column + '^')
-	# 		))
-	# 		# allow to give the right syntax in using Raised
-	# 		if syntax:
-	# 			self.message += '\n\n' + syntax
-	#
-	# 		Exception.__init__(self)
-	#
-	# 	def __repr__ (self):
-	# 		return self.message
+class Tokeniser (object):
 
 	class Iterator (object):
+		fname = ''  # This is ok to have a unique value as API parser do not use files
+
 		def __init__ (self,tokens):
 			def _generator ():
 				for token in tokens:
@@ -63,6 +40,7 @@ class Tokeniser (Location):
 		self.end = ''
 		self.index_column = 0
 		self.index_line = 0
+		self.fname = ''
 
 		self._tokens = Tokeniser._off
 		self._next = None
@@ -76,6 +54,7 @@ class Tokeniser (Location):
 		self.end = ''
 		self.index_column = 0
 		self.index_line = 0
+		self.fname = ''
 		if self._data:
 			self._set(self._data)
 
@@ -86,19 +65,6 @@ class Tokeniser (Location):
 			# ignore # lines
 			# set Location information
 			yield [word for x,word in parsed]
-
-	# def content (self, producer):
-	# 	try:
-	# 		while True:
-	# 			self.index_line,self.index_column,self.line,token = producer()
-	# 			if token[0] in ('"',"'"):
-	# 				return unescape(token[1:-1])
-	# 			else:
-	# 				return token
-	# 	except ValueError:
-	# 		raise Tokeniser.Error(self,'Could not parse %s' % str(token))
-	# 	except StopIteration:
-	# 		return None
 
 	def _set (self, function):
 		try:
@@ -122,13 +88,6 @@ class Tokeniser (Location):
 	def set_file (self, data):
 		def _source (fname):
 			with open(fname,'r') as fileobject:
-				for _ in self._tokenise(fileobject):
-					yield _
-		return self._set(_source(data))
-
-	def set_file (self, data):
-		def _source (fname):
-			with open(fname,'r') as fileobject:
 				def formated ():
 					while True:
 						line = fileobject.next().rstrip()
@@ -139,6 +98,7 @@ class Tokeniser (Location):
 						yield line
 				for _ in self._tokenise(formated()):
 					yield _
+		self.Iterator.fname = data
 		return self._set(_source(data))
 
 	def set_text (self, data):

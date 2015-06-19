@@ -158,8 +158,9 @@ class ParseVPLS (Generic):
 		if not self._check():
 			return False
 		# self.scope.to_context()
-		last = self.scope.pop_last(self.name)
-		self.scope.append('routes',last)
+		route = self.scope.pop_last(self.name)
+		if route:
+			self.scope.extend('routes',route)
 		return True
 
 	def _check (self):

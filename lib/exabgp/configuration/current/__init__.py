@@ -35,7 +35,7 @@ from exabgp.configuration.current.static import ParseStatic
 from exabgp.configuration.current.static import ParseRoute
 from exabgp.configuration.current.l2vpn import ParseL2VPN
 from exabgp.configuration.current.l2vpn import ParseVPLS
-# from exabgp.configuration.current.process import ParseProcess
+from exabgp.configuration.current.process import ParseProcess
 # from exabgp.configuration.current.flow import ParseFlow
 # from exabgp.configuration.current.operational import ParseOperational
 
@@ -67,7 +67,7 @@ class Configuration (object):
 		self.neighbor    = ParseNeighbor    (self.tokeniser,self.scope,self.error,self.logger)
 		self.family      = ParseFamily      (self.tokeniser,self.scope,self.error,self.logger)
 		self.capability  = ParseCapability  (self.tokeniser,self.scope,self.error,self.logger)
-		# self.process     = ParseProcess     (self.tokeniser,self.scope,self.error,self.logger)
+		self.process     = ParseProcess     (self.tokeniser,self.scope,self.error,self.logger)
 		self.static      = ParseStatic      (self.tokeniser,self.scope,self.error,self.logger)
 		self.route       = ParseRoute       (self.tokeniser,self.scope,self.error,self.logger)
 		# self.flow        = ParseFlow        (self.tokeniser,self.scope,self.error,self.logger)
@@ -82,7 +82,12 @@ class Configuration (object):
 			'root': {
 				'class':    generic,
 				'commands': [],
-				'sections': [self.neighbor.name, self.template.name],
+				'sections': [self.process.name, self.neighbor.name, self.template.name],
+			},
+			self.process.name: {
+				'class':    self.process,
+				'commands': self.process.known.keys(),
+				'sections': ['send','receive'],
 			},
 			self.template.name: {
 				'class':    self.template,
@@ -161,7 +166,6 @@ class Configuration (object):
 	def _reload (self):
 		# taking the first configuration available (FIFO buffer)
 		fname = self._configurations.pop(0)
-		# self.process.configuration(fname)
 		self._configurations.append(fname)
 
 		# clearing the current configuration to be able to re-parse it

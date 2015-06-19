@@ -55,8 +55,8 @@ class Generic (object):
 				self.scope.append(name,insert)
 			elif 'assign' in action:
 				self.scope.assign(name,self.assign[command],insert)
-			elif 'insert' in action:
-				self.scope.set(name,insert)
+			elif 'extend' in action:
+				self.scope.extend(name,insert)
 			else:
 				raise RuntimeError('name %s command %s has no action set' % (name,command))
 			return True

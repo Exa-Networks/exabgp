@@ -153,8 +153,9 @@ class ParseRoute (Generic):
 		if not self._split():
 			return False
 		# self.scope.to_context()
-		last = self.scope.pop_last(self.name)
-		self.scope.append('routes',last)
+		route = self.scope.pop_last(self.name)
+		if route:
+			self.scope.append('routes',route)
 		return True
 
 	def _check (self):

@@ -8,49 +8,52 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from exabgp.configuration.current.generic import Generic
 
-from exabgp.configuration.current.process.parser import encoder
-from exabgp.configuration.current.process.parser import run
 
 
-class ParseProcess (Generic):
+class ParseNeighborProcess (Generic):
 	syntax = \
 		'syntax:\n' \
 		'process name-of-process {\n' \
 		'   run /path/to/command with its args;\n' \
 		'   encoder text|json;\n' \
+		'   neighbor-changes;\n' \
+		'   send {\n' \
+		'      parsed;\n' \
+		'      packets;\n' \
+		'      consolidate;\n' \
+		'      open;\n' \
+		'      update;\n' \
+		'      notification;\n' \
+		'      keepalive;\n' \
+		'      refresh;\n' \
+		'      operational;\n' \
+		'   }\n' \
+		'   receive {\n' \
+		'      parsed;\n' \
+		'      packets;\n' \
+		'      consolidate;\n' \
+		'      open;\n' \
+		'      update;\n' \
+		'      notification;\n' \
+		'      keepalive;\n' \
+		'      refresh;\n' \
+		'      operational;\n' \
+		'   }\n' \
 		'}\n\n' \
 
-
-	known = {
-		'encoder': encoder,
-		'run':     run,
-	}
-
-	action = {
-		'encoder': ['set'],
-		'run':     ['set'],
-	}
-
-	name = 'process'
+	name = 'process-xxxx'
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		Generic.__init__(self,tokeniser,scope,error,logger)
-		self._processes = []
 
 	def clear (self):
-		self._processes = []
+		pass
 
 	def pre (self):
-		name = self.tokeniser.line[1]
-		if name in self._processes:
-			return self.error.set('a process section called "%s" already exists' % name)
-		self.scope.to_context(name)
+		self.scope.to_context()
 		return True
 
 	def post (self):
-		difference = set(self.known.keys()).difference(self.scope.last().keys())
-		if difference:
-			return self.error.set('unset process sections: %s' % ', '.join(difference))
 		return True
 
 	# we want to have a socket for the cli

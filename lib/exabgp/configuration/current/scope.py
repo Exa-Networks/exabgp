@@ -42,12 +42,14 @@ class Scope (object):
 
 	# context
 
-	def to_context (self):
+	def to_context (self,name=''):
 		self._current = self._all
 		for context in self._location:
 			if context not in self._current:
 				self._current[context] = {}
 			self._current = self._current[context]
+		if name:
+			self._current = self._current.setdefault(name,{})
 
 	def pop_context (self,name):
 		returned = self._all.pop(name)
@@ -87,9 +89,14 @@ class Scope (object):
 	def append (self, name, data):
 		self._current.setdefault(name,[]).append(data)
 
+	def extend (self, name, data):
+		self._current.setdefault(name,[]).extend(data)
+
 	# add a new prefix
-	def last (self, name):
-		return self._current[name]
+	def last (self, name=''):
+		if name:
+			return self._current[name]
+		return self._current
 
 	def pop_last (self,name):
-		return self._current.pop(name)
+		return self._current.pop(name,None)

@@ -30,7 +30,7 @@ class ParseL2VPN (ParseVPLS):
 	name = 'l2vpn'
 
 	action = dict(ParseVPLS.action)
-	action['vpls'] = ['insert']
+	action['vpls'] = ['append']
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		ParseVPLS.__init__(self,tokeniser,scope,error,logger)
@@ -41,7 +41,8 @@ class ParseL2VPN (ParseVPLS):
 
 	def post (self):
 		routes = self.scope.pop_last(self.name)
-		self.scope.append('routes',routes)
+		if routes:
+			self.scope.extend('routes',routes)
 		return True
 
 	def clear (self):
@@ -68,6 +69,6 @@ def vpls (tokeniser):
 		elif 'add' in action:
 			change.add(ParseL2VPN.known[command](tokeniser))
 		else:
-			raise ValueError('bad dispatch for command %s' % command)
+			raise ValueError('vpls: unknown command "%s"' % command)
 
 	return change

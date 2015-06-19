@@ -27,7 +27,7 @@ class ParseStatic (ParseRoute):
 		' '.join(ParseRoute.definition) + ' ;\n'
 
 	action = dict(ParseRoute.action)
-	action['route'] = ['insert']
+	action['route'] = ['append']
 
 	name = 'static'
 
@@ -40,7 +40,8 @@ class ParseStatic (ParseRoute):
 
 	def post (self):
 		routes = self.scope.pop_last(self.name)
-		self.scope.append('routes',routes)
+		if routes:
+			self.scope.extend('routes',routes)
 		return True
 
 @ParseStatic.register('route')
@@ -73,8 +74,6 @@ def route (tokeniser):
 	# 	}
 	# }
 
-	# return Change(INET(afi=IP.toafi(ip),safi=IP.tosafi(ip),packed=IP.pton(ip),mask=mask,nexthop=None,action=OUT.ANNOUNCE),Attributes())
-
 	change = Change(
 		klass(
 			IP.toafi(ipmask.ip),
@@ -94,9 +93,9 @@ def route (tokeniser):
 		except StopIteration:
 			break
 
-		if 'add' in ParseStatic.action:
+		if 'add' in ParseStatic.action[command]:
 			change.add(ParseStatic.known[command](tokeniser))
 		else:
-			raise ValueError('bad dispatch for command %s' % command)
+			raise ValueError('route: unknown command "%s"' % command)
 
 	return change

@@ -63,8 +63,8 @@ def main ():
 
 	if options["--folder"]:
 		folder = os.path.realpath(os.path.normpath(options["--folder"]))
-	elif os.environ.get('ETC',None):
-		folder = os.path.join(os.path.realpath(os.path.normpath(os.environ.get('ETC','etc'))),'exabgp')
+	# elif os.environ.get('ETC',None):
+	# 	folder = os.path.join(os.path.realpath(os.path.normpath(os.environ.get('ETC','etc'))),'exabgp')
 	elif sys.argv[0].endswith('/bin/exabgp'):
 		folder = sys.argv[0][:-len('/bin/exabgp')] + '/etc/exabgp'
 	elif sys.argv[0].endswith('/sbin/exabgp'):
@@ -72,8 +72,9 @@ def main ():
 	else:
 		folder = '/etc/exabgp'
 
-	if not os.environ.get('ETC',''):
-		os.environ['ETC'] = folder
+	# if not os.environ.get('ETC',''):
+	# 	os.environ['ETC'] = folder
+	os.environ['EXABGP_ETC'] = folder  # This is not most pretty
 
 	envfile = 'exabgp.env' if not options["--env"] else options["--env"]
 	if not envfile.startswith('/'):
