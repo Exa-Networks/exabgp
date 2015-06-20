@@ -26,6 +26,8 @@ class Section (object):
 	@classmethod
 	def register (cls, name):
 		def inner (function):
+			if name in cls.known:
+				raise RuntimeError('more than one registration per command attempted')
 			cls.known[name] = function
 			return function
 		return inner

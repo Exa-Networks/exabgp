@@ -73,6 +73,8 @@ class EVPN (NLRI):
 
 	@classmethod
 	def register (cls, klass):
+		if klass.CODE in cls.registered_evpn:
+			raise RuntimeError('only one EVPN registration allowed')
 		cls.registered_evpn[klass.CODE] = klass
 		return klass
 
