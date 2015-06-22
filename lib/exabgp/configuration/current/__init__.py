@@ -82,67 +82,100 @@ class Configuration (object):
 			'root': {
 				'class':    generic,
 				'commands': [],
-				'sections': [self.process.name, self.neighbor.name, self.template.name],
+				'sections': {
+					'process': self.process.name,
+					'neighbor': self.neighbor.name,
+					'template': self.template.name,
+				},
 			},
 			self.process.name: {
 				'class':    self.process,
 				'commands': self.process.known.keys(),
-				'sections': [],
+				'sections': {},
 			},
 			self.template.name: {
 				'class':    self.template,
 				'commands': self.template.known.keys(),
-				'sections': [self.family.name, 'capability', self.api.name, self.static.name, 'flow', self.l2vpn.name, 'operational'],
+				'sections': {
+					'family':      self.family.name,
+					'capability':  self.capability.name,
+					'api':         self.api.name,
+					'static':      self.static.name,
+					'flow':        'flow',
+					'l2vpn':       self.l2vpn.name,
+					'operational': 'operational',
+				},
 			},
-			self.neighbor.name: {
+			'neighbor': {
 				'class':    self.neighbor,
 				'commands': self.neighbor.known.keys(),
-				'sections': [self.family.name, 'capability', self.api.name, self.static.name, 'flow', self.l2vpn.name, 'operational'],
+				'sections': {
+					'family':      self.family.name,
+					'capability':  self.capability.name,
+					'api':         self.api.name,
+					'static':      self.static.name,
+					'flow':        'flow',
+					'l2vpn':       self.l2vpn.name,
+					'operational': 'operational',
+				},
 			},
-			self.family.name: {
+			'family': {
 				'class':    self.family,
 				'commands': self.family.known.keys(),
-				'sections': [],
+				'sections': {
+				},
 			},
-			self.capability.name: {
+			'capability': {
 				'class':    self.capability,
 				'commands': self.capability.known.keys(),
-				'sections': [],
+				'sections': {
+				},
 			},
-			self.api.name: {
+			'api': {
 				'class':    self.api,
 				'commands': self.api.known.keys(),
-				'sections': [self.api_send.name, self.api_receive.name],
+				'sections': {
+					'send':    self.api_send.name,
+					'receive': self.api_receive.name,
+				},
 			},
-			self.api_send.name: {
+			'api/send': {
 				'class':    self.api_send,
 				'commands': self.api_send.known.keys(),
-				'sections': [],
+				'sections': {
+				},
 			},
-			self.api_receive.name: {
+			'api/receive': {
 				'class':    self.api_receive,
 				'commands': self.api_receive.known.keys(),
-				'sections': [],
+				'sections': {
+				},
 			},
-			self.static.name: {
+			'static': {
 				'class':    self.static,
-				'commands': [self.route.name],
-				'sections': [self.route.name],
+				'commands': 'route',
+				'sections': {
+					'route': self.route.name,
+				},
 			},
 			self.route.name: {
 				'class':    self.route,
 				'commands': self.static.known.keys(),  # is it right ?
-				'sections': [],
+				'sections': {
+				},
 			},
-			self.l2vpn.name: {
+			'l2vpn': {
 				'class':    self.l2vpn,
 				'commands': [self.vpls.name],
-				'sections': [self.vpls.name],
+				'sections': {
+					'vpls': self.vpls.name,
+				},
 			},
-			self.vpls.name: {
+			'l2vpn/vpls': {
 				'class':    self.vpls,
 				'commands': self.l2vpn.known.keys(),  # is it right ?
-				'sections': [],
+				'sections': {
+				},
 			},
 		}
 
@@ -265,8 +298,7 @@ class Configuration (object):
 					return self.error.set('section %s is invalid in %s, %s' % (location,name,self.scope.location()))
 
 				self.scope.enter(location)
-				# Simplifying with a flat user space ( will need to become nested when more complex )
-				if not self.section(location):
+				if not self.section(self._structure[name]['sections'][location]):
 					return False
 				continue
 
@@ -319,52 +351,6 @@ class Configuration (object):
 				sys.exit(0)
 			sys.exit(1)
 
-
-
-
-
-	# Programs used to control exabgp
-
-	def _multi_process (self, name, command, tokens):
-		while True:
-			r = self._dispatch(
-				name,'process',
-				['send','receive'],
-				[
-					'run','encoder',
-					'neighbor-changes',
-				]
-			)
-			if r is False:
-				return False
-			if r is None:
-				break
-
-		name = tokens[0] if len(tokens) >= 1 else 'conf-only-%s' % str(time.time())[-6:]
-		self.processes.setdefault(name,{})['neighbor'] = self.scope.content[-1]['peer-address'] if 'peer-address' in self.scope.content[-1] else '*'
-
-		for key in ['neighbor-changes',]:
-			self.processes[name][key] = self.scope.content[-1].pop(key,False)
-
-		for direction in ['send','receive']:
-			for action in ['packets','parsed','consolidate']:
-				key = '%s-%s' % (direction,action)
-				self.processes[name][key] = self.scope.content[-1].pop(key,False)
-
-			for message in Message.CODE.MESSAGES:
-				key = '%s-%d' % (direction,message)
-				self.processes[name][key] = self.scope.content[-1].pop(key,False)
-
-		run = self.scope.content[-1].pop('run','')
-		if run:
-			if len(tokens) != 1:
-				return self.error.set(self.process.syntax)
-
-			self.processes[name]['encoder'] = self.scope.content[-1].get('encoder','') or self.api_encoder
-			self.processes[name]['run'] = run
-			return True
-		elif len(tokens):
-			return self.error.set(self.process.syntax)
 
 	def _multi_flow (self, name, command, tokens):
 		if len(tokens) != 0:
