@@ -30,7 +30,7 @@ class ParseL2VPN (ParseVPLS):
 	name = 'l2vpn'
 
 	action = dict(ParseVPLS.action)
-	action['vpls'] = ['append']
+	action['vpls'] = 'append'
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		ParseVPLS.__init__(self,tokeniser,scope,error,logger)

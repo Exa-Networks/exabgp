@@ -27,8 +27,8 @@ class ParseProcess (Section):
 	}
 
 	action = {
-		'encoder': ['set'],
-		'run':     ['set'],
+		'encoder': 'set',
+		'run':     'set',
 	}
 
 	name = 'process'

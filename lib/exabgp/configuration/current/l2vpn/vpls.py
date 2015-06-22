@@ -111,27 +111,27 @@ class ParseVPLS (Section):
 	}
 
 	action = {
-		'attribute':          ['add'],
-		'next-hop':           ['add'],
-		'origin':             ['add'],
-		'med':                ['add'],
-		'as-path':            ['add'],
-		'local-preference':   ['add'],
-		'atomic-aggregate':   ['add'],
-		'aggregator':         ['add'],
-		'originator-id':      ['add'],
-		'cluster-list':       ['add'],
-		'community':          ['add'],
-		'extended-community': ['add'],
-		'name':               ['add'],
-		'split':              ['add'],
-		'watchdog':           ['add'],
-		'withdraw':           ['add'],
-		'rd':                 ['assign'],
-		'endpoint':           ['assign'],
-		'offset':             ['assign'],
-		'size':               ['assign'],
-		'base':               ['assign'],
+		'attribute':          'attribute-add',
+		'next-hop':           'attribute-add',
+		'origin':             'attribute-add',
+		'med':                'attribute-add',
+		'as-path':            'attribute-add',
+		'local-preference':   'attribute-add',
+		'atomic-aggregate':   'attribute-add',
+		'aggregator':         'attribute-add',
+		'originator-id':      'attribute-add',
+		'cluster-list':       'attribute-add',
+		'community':          'attribute-add',
+		'extended-community': 'attribute-add',
+		'name':               'attribute-add',
+		'split':              'attribute-add',
+		'watchdog':           'attribute-add',
+		'withdraw':           'attribute-add',
+		'rd':                 'nlri-set',
+		'endpoint':           'nlri-set',
+		'offset':             'nlri-set',
+		'size':               'nlri-set',
+		'base':               'nlri-set',
 	}
 
 	assign = {
@@ -142,7 +142,7 @@ class ParseVPLS (Section):
 		'base':     'base',
 	}
 
-	name = 'vpls'
+	name = 'l2vpn/vpls'
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)

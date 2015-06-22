@@ -50,16 +50,18 @@ class Section (object):
 
 			action = self.action[command]
 
-			if 'set' in action:
+			if action == 'set':
 				self.scope.set(command,insert)
-			elif 'add' in action:
-				self.scope.add(name,insert)
-			elif 'append' in action:
-				self.scope.append(name,insert)
-			elif 'assign' in action:
-				self.scope.assign(name,self.assign[command],insert)
-			elif 'extend' in action:
+			elif action == 'extend':
 				self.scope.extend(name,insert)
+			elif action == 'append':
+				self.scope.append(name,insert)
+			elif action == 'attribute-add':
+				self.scope.attribute_add(name,insert)
+			elif action == 'nlri-set':
+				self.scope.nlri_assign(name,self.assign[command],insert)
+			elif action == 'nlri-add':
+				self.scope.nlri_add(name,insert)
 			else:
 				raise RuntimeError('name %s command %s has no action set' % (name,command))
 			return True

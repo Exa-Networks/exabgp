@@ -108,27 +108,27 @@ class ParseRoute (Section):
 	}
 
 	action = {
-		'path-info':          ['assign'],
-		'attribute':          ['add'],
-		'next-hop':           ['add'],
-		'origin':             ['add'],
-		'med':                ['add'],
-		'as-path':            ['add'],
-		'local-preference':   ['add'],
-		'atomic-aggregate':   ['add'],
-		'aggregator':         ['add'],
-		'originator-id':      ['add'],
-		'cluster-list':       ['add'],
-		'community':          ['add'],
-		'extended-community': ['add'],
-		'name':               ['add'],
-		'split':              ['add'],
-		'watchdog':           ['add'],
-		'withdraw':           ['add'],
-		'aigp':               ['add'],
+		'path-info':          'nlri-set',
+		'attribute':          'attribute-add',
+		'next-hop':           'attribute-add',
+		'origin':             'attribute-add',
+		'med':                'attribute-add',
+		'as-path':            'attribute-add',
+		'local-preference':   'attribute-add',
+		'atomic-aggregate':   'attribute-add',
+		'aggregator':         'attribute-add',
+		'originator-id':      'attribute-add',
+		'cluster-list':       'attribute-add',
+		'community':          'attribute-add',
+		'extended-community': 'attribute-add',
+		'name':               'attribute-add',
+		'split':              'attribute-add',
+		'watchdog':           'attribute-add',
+		'withdraw':           'attribute-add',
+		'aigp':               'attribute-add',
 	}
 
-	name = 'route'
+	name = 'static/route'
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)

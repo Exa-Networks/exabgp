@@ -82,12 +82,12 @@ class ParseCapability (Section):
 	}
 
 	action = {
-		'add-path':         ['set'],
-		'asn4':             ['set'],
-		'graceful-restart': ['set'],
-		'multi-session':    ['set'],
-		'operational':      ['set'],
-		'route-refresh':    ['set'],
+		'add-path':         'set',
+		'asn4':             'set',
+		'graceful-restart': 'set',
+		'multi-session':    'set',
+		'operational':      'set',
+		'route-refresh':    'set',
 	}
 
 	default = {

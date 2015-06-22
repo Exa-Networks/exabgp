@@ -77,14 +77,17 @@ class Scope (object):
 	def set (self, name, value):
 		self._current[name] = value
 
-	def add (self, name, data):
+	def attribute_add (self, name, data):
 		# XXX: Can raise Notify when adding attributes, as Change.add can raise
 		self._current[name].add(data)
 		if name not in self._added:
 			self._added.add(name)
 
-	def assign (self, name, command, data):
+	def nlri_assign (self, name, command, data):
 		self._current[name].nlri.assign(command,data)
+
+	def nlri_add (self, name, command, data):
+		self._current[name].nlri.add(command,data)
 
 	def append (self, name, data):
 		self._current.setdefault(name,[]).append(data)

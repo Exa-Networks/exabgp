@@ -53,9 +53,9 @@ class ParseFamily (Section):
 	}
 
 	action = {
-		'ipv4':  ['append'],
-		'ipv6':  ['append'],
-		'l2vpn': ['append'],
+		'ipv4':  'append',
+		'ipv6':  'append',
+		'l2vpn': 'append',
 	}
 
 	name = 'family'

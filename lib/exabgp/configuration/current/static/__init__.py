@@ -27,7 +27,7 @@ class ParseStatic (ParseRoute):
 		' '.join(ParseRoute.definition) + ' ;\n'
 
 	action = dict(ParseRoute.action)
-	action['route'] = ['append']
+	action['route'] = 'append'
 
 	name = 'static'
 

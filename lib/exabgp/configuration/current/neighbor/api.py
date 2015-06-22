@@ -51,8 +51,8 @@ class ParseAPI (Section):
 	}
 
 	action = {
-		'processes':        ['set'],
-		'neighbor-changes': ['set'],
+		'processes':        'set',
+		'neighbor-changes': 'set',
 	}
 
 	default = {
@@ -100,15 +100,15 @@ class _ParseDirection (Section):
 	syntax = ParseAPI.syntax
 
 	action = {
-		'parsed':       ['set'],
-		'packets':      ['set'],
-		'consolidate':  ['set'],
-		'open':         ['set'],
-		'update':       ['set'],
-		'notification': ['set'],
-		'keepalive':    ['set'],
-		'refresh':      ['set'],
-		'operational':  ['set'],
+		'parsed':       'set',
+		'packets':      'set',
+		'consolidate':  'set',
+		'open':         'set',
+		'update':       'set',
+		'notification': 'set',
+		'keepalive':    'set',
+		'refresh':      'set',
+		'operational':  'set',
 	}
 
 	known = {
@@ -147,11 +147,11 @@ class _ParseDirection (Section):
 
 
 class ParseSend (_ParseDirection):
-	name = 'send'
+	name = 'api/send'
 
 
 class ParseReceive (_ParseDirection):
-	name = 'receive'
+	name = 'api/receive'
 
 
 	# we want to have a socket for the cli
