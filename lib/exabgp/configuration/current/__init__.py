@@ -38,6 +38,9 @@ from exabgp.configuration.current.family import ParseFamily
 from exabgp.configuration.current.capability import ParseCapability
 from exabgp.configuration.current.static import ParseStatic
 from exabgp.configuration.current.static import ParseRoute
+from exabgp.configuration.current.flow import ParseFlow
+from exabgp.configuration.current.flow import ParseFlowThen
+from exabgp.configuration.current.flow import ParseFlowMatch
 from exabgp.configuration.current.l2vpn import ParseL2VPN
 from exabgp.configuration.current.l2vpn import ParseVPLS
 # from exabgp.configuration.current.flow import ParseFlow
@@ -70,6 +73,9 @@ class Configuration (object):
 		self.api_receive = ParseReceive     (self.tokeniser,self.scope,self.error,self.logger)
 		self.static      = ParseStatic      (self.tokeniser,self.scope,self.error,self.logger)
 		self.route       = ParseRoute       (self.tokeniser,self.scope,self.error,self.logger)
+		self.flow        = ParseFlow        (self.tokeniser,self.scope,self.error,self.logger)
+		self.flow_match  = ParseFlowMatch   (self.tokeniser,self.scope,self.error,self.logger)
+		self.flow_then   = ParseFlowThen    (self.tokeniser,self.scope,self.error,self.logger)
 		self.l2vpn       = ParseL2VPN       (self.tokeniser,self.scope,self.error,self.logger)
 		self.vpls        = ParseVPLS        (self.tokeniser,self.scope,self.error,self.logger)
 		# self.flow        = ParseFlow        (self.tokeniser,self.scope,self.error,self.logger)
@@ -106,7 +112,7 @@ class Configuration (object):
 					'operational': 'operational',
 				},
 			},
-			'neighbor': {
+			self.neighbor.name: {
 				'class':    self.neighbor,
 				'commands': self.neighbor.known.keys(),
 				'sections': {
@@ -114,24 +120,24 @@ class Configuration (object):
 					'capability':  self.capability.name,
 					'api':         self.api.name,
 					'static':      self.static.name,
-					'flow':        'flow',
+					'flow':        self.flow.name,
 					'l2vpn':       self.l2vpn.name,
 					'operational': 'operational',
 				},
 			},
-			'family': {
+			self.family.name: {
 				'class':    self.family,
 				'commands': self.family.known.keys(),
 				'sections': {
 				},
 			},
-			'capability': {
+			self.capability.name: {
 				'class':    self.capability,
 				'commands': self.capability.known.keys(),
 				'sections': {
 				},
 			},
-			'api': {
+			self.api.name: {
 				'class':    self.api,
 				'commands': self.api.known.keys(),
 				'sections': {
@@ -139,19 +145,19 @@ class Configuration (object):
 					'receive': self.api_receive.name,
 				},
 			},
-			'api/send': {
+			self.api_send.name: {
 				'class':    self.api_send,
 				'commands': self.api_send.known.keys(),
 				'sections': {
 				},
 			},
-			'api/receive': {
+			self.api_receive.name: {
 				'class':    self.api_receive,
 				'commands': self.api_receive.known.keys(),
 				'sections': {
 				},
 			},
-			'static': {
+			self.static.name: {
 				'class':    self.static,
 				'commands': 'route',
 				'sections': {
@@ -164,14 +170,34 @@ class Configuration (object):
 				'sections': {
 				},
 			},
-			'l2vpn': {
+			self.flow.name: {
+				'class':    self.l2vpn,
+				'commands': [],
+				'sections': {
+					'match': self.flow_match.name,
+					'then':  self.flow_then.name,
+				},
+			},
+			self.flow_match.name: {
+				'class':    self.flow_match,
+				'commands': self.flow_match.known.keys(),
+				'sections': {
+				},
+			},
+			self.flow_then.name: {
+				'class':    self.flow_then,
+				'commands': self.flow_then.known.keys(),
+				'sections': {
+				},
+			},
+			self.l2vpn.name: {
 				'class':    self.l2vpn,
 				'commands': [self.vpls.name],
 				'sections': {
 					'vpls': self.vpls.name,
 				},
 			},
-			'l2vpn/vpls': {
+			self.vpls.name: {
 				'class':    self.vpls,
 				'commands': self.l2vpn.known.keys(),  # is it right ?
 				'sections': {

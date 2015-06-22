@@ -61,7 +61,16 @@ class Section (object):
 			elif action == 'nlri-set':
 				self.scope.nlri_assign(name,self.assign[command],insert)
 			elif action == 'nlri-add':
-				self.scope.nlri_add(name,insert)
+				for adding in insert:
+					self.scope.nlri_add(name,adding)
+			elif action == 'nlri-nexthop':
+				self.scope.nlri_nexthop(name,insert)
+			elif action == 'nexthop-and-attribute':
+				ip, attribute = insert
+				self.scope.nlri_nexthop(name,ip)
+				self.scope.attribute_add(name,attribute)
+			elif action == 'nop':
+				pass
 			else:
 				raise RuntimeError('name %s command %s has no action set' % (name,command))
 			return True

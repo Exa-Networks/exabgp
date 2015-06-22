@@ -517,6 +517,8 @@ class Flow (NLRI):
 			if pair:
 				if rule.afi != pair[0].afi:
 					return False
+			if rule.NAME.endswith('ipv6'):  # better way to check this ?
+				self.afi = AFI(AFI.ipv6)
 		self.rules.setdefault(ID,[]).append(rule)
 		return True
 

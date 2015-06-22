@@ -1,12 +1,15 @@
 # encoding: utf-8
 """
-parse_route.py
+parse_flow.py
 
 Created by Thomas Mangin on 2015-06-04.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.configuration.current.core import Section
+
+from exabgp.configuration.current.flow.match import ParseFlowMatch
+from exabgp.configuration.current.flow.then import ParseFlowThen
 
 
 class ParseFlow (Section):
@@ -46,7 +49,7 @@ class ParseFlow (Section):
 		'one or more match term, one action\n' \
 		'fragment code is totally untested\n'
 
-	# _str_bad_flow = "you tried to filter a flow using an invalid port for a component .."
+	name = 'flow'
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)
@@ -59,11 +62,7 @@ class ParseFlow (Section):
 		return True
 
 	def post (self):
-		routes = self.scope.pop(self.name)
-		if routes:
-			self.scope.extend('routes',routes)
 		return True
 
-	def _check (self,configuration):
-		self.logger.configuration('warning: no check on flows are implemented')
+	def _check (self):
 		return True

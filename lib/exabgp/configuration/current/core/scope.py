@@ -89,6 +89,9 @@ class Scope (object):
 	def nlri_add (self, name, command, data):
 		self._current[name].nlri.add(command,data)
 
+	def nlri_nexthop (self, name, command, data):
+		self._current[name].nlri.nexthop = data
+
 	def append (self, name, data):
 		self._current.setdefault(name,[]).append(data)
 
