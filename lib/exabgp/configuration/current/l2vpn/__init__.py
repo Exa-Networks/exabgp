@@ -21,9 +21,7 @@ from exabgp.configuration.current.l2vpn.parser import vpls
 
 class ParseL2VPN (ParseVPLS):
 	syntax = \
-		'syntax:\n' \
-		'vpls ' \
-		' '.join(ParseVPLS.definition) + ' ;\n'
+		'vpls %s;\n' % ' '.join(ParseVPLS.definition)
 
 	# known = dict((k,v) for (k,v) in ParseVPLS.known.items())
 
@@ -64,9 +62,9 @@ def vpls (tokeniser):
 
 		action = ParseVPLS.action[command]
 
-		if 'assign' in action:
+		if 'nlri-set' in action:
 			change.nlri.assign(ParseVPLS.assign[command],ParseL2VPN.known[command](tokeniser))
-		elif 'add' in action:
+		elif 'attriute-add' in action:
 			change.add(ParseL2VPN.known[command](tokeniser))
 		else:
 			raise ValueError('vpls: unknown command "%s"' % command)

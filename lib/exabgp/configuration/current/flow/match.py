@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-parse_flow.py
+parse_match.py
 
 Created by Thomas Mangin on 2015-06-22.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
@@ -26,22 +26,24 @@ from exabgp.configuration.current.flow.parser import flow_label
 
 
 class ParseFlowMatch (Section):
-	syntax = \
-		'syntax:\n' \
-		'  match {\n' \
-		'    source 10.0.0.0/24;\n' \
-		'    source ::1/128/0;\n' \
-		'    destination 10.0.1.0/24;\n' \
-		'    port 25;\n' \
-		'    source-port >1024\n' \
-		'    destination-port =80 =3128 >8080&<8088;\n' \
-		'    protocol [ udp tcp ];  (ipv4 only)\n' \
-		'    next-header [ udp tcp ]; (ipv6 only)\n' \
-		'    fragment [ not-a-fragment dont-fragment is-fragment first-fragment last-fragment ]; (ipv4 only)\n' \
-		'    packet-length >200&<300 >400&<500;\n' \
-		'    flow-label >100&<2000; (ipv6 only)\n' \
-		'}\n'
+	definition = [
+		'source 10.0.0.0/24',
+		'source ::1/128/0',
+		'destination 10.0.1.0/24',
+		'port 25',
+		'source-port >1024',
+		'destination-port =80 =3128 >8080&<8088',
+		'packet-length >200&<300 >400&<500',
+		'(ipv4 only) protocol [ udp tcp ]',
+		'(ipv4 only) fragment [ not-a-fragment dont-fragment is-fragment first-fragment last-fragment ]',
+		'(ipv6 only) next-header [ udp tcp ]',
+		'(ipv6 only) flow-label >100&<2000',
+	]
 
+	syntax = \
+		'match {\n' \
+		'  %s;\n' \
+		'}' % ';\n  '.join(definition)
 
 	known = {
 		'source':           source,
@@ -61,6 +63,8 @@ class ParseFlowMatch (Section):
 		'traffic-class':    traffic_class,
 		'flow-label':       flow_label,
 	}
+
+	# 'source-ipv4','destination-ipv4',
 
 	action = {
 		'source':           'nlri-add',

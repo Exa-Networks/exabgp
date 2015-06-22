@@ -52,7 +52,7 @@ def pack_int (afi, integer):
 	return ''.join([chr((integer >> (offset * 8)) & 0xff) for offset in range(IP.length(afi)-1,-1,-1)])
 
 
-class ParseRoute (Section):
+class ParseStaticRoute (Section):
 	# put next-hop first as it is a requirement atm
 	definition = [
 		'next-hop <ip>',
@@ -78,9 +78,8 @@ class ParseRoute (Section):
 	]
 
 	syntax = \
-		'syntax:\n' \
 		'route <ip>/<netmask> { ' \
-		'\n   ' + ' ;\n   '.join(definition) + '\n}\n\n'
+		'\n   ' + ' ;\n   '.join(definition) + '\n}'
 
 	# 'label':               self.label,
 	# 'rd':                  self.rd,

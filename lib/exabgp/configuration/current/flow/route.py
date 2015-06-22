@@ -8,45 +8,52 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from exabgp.configuration.current.core import Section
 
-# from exabgp.configuration.current.flow.parser import source
+from exabgp.configuration.current.flow.match import ParseFlowMatch
+from exabgp.configuration.current.flow.then import ParseFlowThen
 
+from exabgp.configuration.current.static.mpls import route_distinguisher
+from exabgp.configuration.current.static.parser import next_hop
 
-def nop ():  # XXX: DELETEME
-	pass
+from exabgp.configuration.current.flow.parser import flow
 
 
 class ParseFlowRoute (Section):
 	syntax = \
-		'syntax:\n' \
-		'  route give-me-a-name\n' \
-		'     route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535; (optional)\n' \
-		'     next-hop 1.2.3.4; (to use with redirect-to-nexthop)\n' \
-		'     match {\n' \
-		'     ...\n' \
-		'     }\n' \
-		'     then {\n' \
-		'     ...\n' \
-		'     }\n' \
-		'  }\n'
+		'route give-me-a-name {\n' \
+		'  (optional) route-distinguisher|rd 255.255.255.255:65535|65535:65536|65536:65535;\n' \
+		'  next-hop 1.2.3.4; (to use with redirect-to-nexthop)\n' \
+		'  %s\n' \
+		'  %s\n' \
+		'}\n' % (
+			'\n  '.join(ParseFlowMatch.syntax.split('\n')),
+			'\n  '.join(ParseFlowThen.syntax.split('\n'))
+		)
 
 	known = {
-		'route-distinguisher':  nop,
-		'next-hop':             nop,
+		'rd':                   route_distinguisher,
+		'route-distinguisher':  route_distinguisher,
+		'next-hop':             next_hop,
 	}
 
 	action = {
-		'route-distinguisher': 'nlri-assign',
-		'next-hop':            'nlri-nexthop',   # is this correct ?
+		'rd':                  'nlri-set',
+		'route-distinguisher': 'nlri-set',
+		'next-hop':            'nlri-nexthop',
 	}
 
 	assign = {
-		'route-distinguisher': 'not-sure-the-name',  # XXX: FIXME
+		'rd':                  'rd',
+		'route-distinguisher': 'rd',
 	}
 
 	name = 'flow/route'
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)
+
+	def pre (self):
+		self.scope.set(self.name,flow(self.tokeniser.iterate))
+		return True
 
 	def post (self):
 		if not self._check():

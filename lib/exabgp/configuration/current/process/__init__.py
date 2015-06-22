@@ -14,12 +14,10 @@ from exabgp.configuration.current.process.parser import run
 
 class ParseProcess (Section):
 	syntax = \
-		'syntax:\n' \
 		'process name-of-process {\n' \
 		'   run /path/to/command with its args;\n' \
 		'   encoder text|json;\n' \
-		'}\n\n' \
-
+		'}' \
 
 	known = {
 		'encoder': encoder,

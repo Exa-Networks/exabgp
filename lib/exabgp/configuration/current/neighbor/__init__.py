@@ -49,8 +49,6 @@ def domainname ():
 class ParseNeighbor (Section):
 	TTL_SECURITY = 255
 
-	name = 'neighbor'
-
 	syntax = ''
 
 	known = {
@@ -148,7 +146,7 @@ class ParseNeighbor (Section):
 		neighbor.api              = local.get('api',ParseAPI.DEFAULT_API)
 
 		import pdb; pdb.set_trace()
-		
+
 		neighbor.changes = []
 		for section in ('static','l2vpn'):
 			neighbor.changes.extend(local.get(section,{}).get('routes',[]))

@@ -7,19 +7,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 import sys
-import time
-
-from exabgp.configuration.environment import environment
-
-from exabgp.bgp.message import Message
-
-from exabgp.bgp.message.update.nlri.flow import Flow
-
-from exabgp.bgp.message.update.attribute import Attribute
-from exabgp.bgp.message.update.attribute import Attributes
-from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunities
-
-from exabgp.rib.change import Change
 
 from exabgp.logger import Logger
 
@@ -37,13 +24,13 @@ from exabgp.configuration.current.neighbor.api import ParseReceive
 from exabgp.configuration.current.family import ParseFamily
 from exabgp.configuration.current.capability import ParseCapability
 from exabgp.configuration.current.static import ParseStatic
-from exabgp.configuration.current.static import ParseRoute
+from exabgp.configuration.current.static import ParseStaticRoute
 from exabgp.configuration.current.flow import ParseFlow
+from exabgp.configuration.current.flow import ParseFlowRoute
 from exabgp.configuration.current.flow import ParseFlowThen
 from exabgp.configuration.current.flow import ParseFlowMatch
 from exabgp.configuration.current.l2vpn import ParseL2VPN
 from exabgp.configuration.current.l2vpn import ParseVPLS
-# from exabgp.configuration.current.flow import ParseFlow
 # from exabgp.configuration.current.operational import ParseOperational
 
 from exabgp.configuration.environment import environment
@@ -62,22 +49,23 @@ class Configuration (object):
 
 		self.tokeniser = Tokeniser(self.scope,self.error,self.logger)
 
-		generic          = Section          (self.tokeniser,self.scope,self.error,self.logger)
-		self.process     = ParseProcess     (self.tokeniser,self.scope,self.error,self.logger)
-		self.template    = ParseTemplate    (self.tokeniser,self.scope,self.error,self.logger)
-		self.neighbor    = ParseNeighbor    (self.tokeniser,self.scope,self.error,self.logger)
-		self.family      = ParseFamily      (self.tokeniser,self.scope,self.error,self.logger)
-		self.capability  = ParseCapability  (self.tokeniser,self.scope,self.error,self.logger)
-		self.api         = ParseAPI         (self.tokeniser,self.scope,self.error,self.logger)
-		self.api_send    = ParseSend        (self.tokeniser,self.scope,self.error,self.logger)
-		self.api_receive = ParseReceive     (self.tokeniser,self.scope,self.error,self.logger)
-		self.static      = ParseStatic      (self.tokeniser,self.scope,self.error,self.logger)
-		self.route       = ParseRoute       (self.tokeniser,self.scope,self.error,self.logger)
-		self.flow        = ParseFlow        (self.tokeniser,self.scope,self.error,self.logger)
-		self.flow_match  = ParseFlowMatch   (self.tokeniser,self.scope,self.error,self.logger)
-		self.flow_then   = ParseFlowThen    (self.tokeniser,self.scope,self.error,self.logger)
-		self.l2vpn       = ParseL2VPN       (self.tokeniser,self.scope,self.error,self.logger)
-		self.vpls        = ParseVPLS        (self.tokeniser,self.scope,self.error,self.logger)
+		generic           = Section          (self.tokeniser,self.scope,self.error,self.logger)
+		self.process      = ParseProcess     (self.tokeniser,self.scope,self.error,self.logger)
+		self.template     = ParseTemplate    (self.tokeniser,self.scope,self.error,self.logger)
+		self.neighbor     = ParseNeighbor    (self.tokeniser,self.scope,self.error,self.logger)
+		self.family       = ParseFamily      (self.tokeniser,self.scope,self.error,self.logger)
+		self.capability   = ParseCapability  (self.tokeniser,self.scope,self.error,self.logger)
+		self.api          = ParseAPI         (self.tokeniser,self.scope,self.error,self.logger)
+		self.api_send     = ParseSend        (self.tokeniser,self.scope,self.error,self.logger)
+		self.api_receive  = ParseReceive     (self.tokeniser,self.scope,self.error,self.logger)
+		self.static       = ParseStatic      (self.tokeniser,self.scope,self.error,self.logger)
+		self.static_route = ParseStaticRoute (self.tokeniser,self.scope,self.error,self.logger)
+		self.flow         = ParseFlow        (self.tokeniser,self.scope,self.error,self.logger)
+		self.flow_route   = ParseFlowRoute   (self.tokeniser,self.scope,self.error,self.logger)
+		self.flow_match   = ParseFlowMatch   (self.tokeniser,self.scope,self.error,self.logger)
+		self.flow_then    = ParseFlowThen    (self.tokeniser,self.scope,self.error,self.logger)
+		self.l2vpn        = ParseL2VPN       (self.tokeniser,self.scope,self.error,self.logger)
+		self.vpls         = ParseVPLS        (self.tokeniser,self.scope,self.error,self.logger)
 		# self.flow        = ParseFlow        (self.tokeniser,self.scope,self.error,self.logger)
 		# self.operational = ParseOperational (self.tokeniser,self.scope,self.error,self.logger)
 
@@ -107,7 +95,7 @@ class Configuration (object):
 					'capability':  self.capability.name,
 					'api':         self.api.name,
 					'static':      self.static.name,
-					'flow':        'flow',
+					'flow':        self.flow.name,
 					'l2vpn':       self.l2vpn.name,
 					'operational': 'operational',
 				},
@@ -161,18 +149,25 @@ class Configuration (object):
 				'class':    self.static,
 				'commands': 'route',
 				'sections': {
-					'route': self.route.name,
+					'route': self.static_route.name,
 				},
 			},
-			self.route.name: {
-				'class':    self.route,
-				'commands': self.static.known.keys(),  # is it right ?
+			self.static_route.name: {
+				'class':    self.static_route,
+				'commands': self.static_route.known.keys(),
 				'sections': {
 				},
 			},
 			self.flow.name: {
-				'class':    self.l2vpn,
+				'class':    self.flow,
 				'commands': [],
+				'sections': {
+					'route': self.flow_route.name,
+				},
+			},
+			self.flow_route.name: {
+				'class':    self.l2vpn,
+				'commands': self.flow_route.known.keys(),
 				'sections': {
 					'match': self.flow_match.name,
 					'then':  self.flow_then.name,
@@ -376,221 +371,3 @@ class Configuration (object):
 			if check_neighbor(self.neighbor.neighbors):
 				sys.exit(0)
 			sys.exit(1)
-
-
-	def _multi_flow (self, name, command, tokens):
-		if len(tokens) != 0:
-			return self.error.set(self.flow.syntax)
-
-		while True:
-			r = self._dispatch(
-				name,'flow',
-				['route',],
-				[]
-			)
-			if r is False:
-				return False
-			if r is None:
-				break
-		return True
-
-	def _insert_flow_route (self, name, command, tokens=None):
-		if self.flow.state != 'out':
-			return self.error.set(self.flow.syntax)
-
-		self.flow.state = 'match'
-
-		try:
-			attributes = Attributes()
-			attributes[Attribute.CODE.EXTENDED_COMMUNITY] = ExtendedCommunities()
-			flow = Change(Flow(),attributes)
-		except ValueError:
-			return self.error.set(self.flow.syntax)
-
-		if 'announce' not in self.scope.content[-1]:
-			self.scope.content[-1]['announce'] = []
-
-		self.scope.content[-1]['announce'].append(flow)
-		return True
-
-	def _multi_flow_route (self, name, command, tokens):
-		if len(tokens) > 1:
-			return self.error.set(self.flow.syntax)
-
-		if not self._insert_flow_route(name,command):
-			return False
-
-		while True:
-			r = self._dispatch(
-				name,'flow-route',
-				['match','then'],
-				['rd','route-distinguisher','next-hop']
-			)
-			if r is False:
-				return False
-			if r is None:
-				break
-
-		if self.flow.state != 'out':
-			return self.error.set(self.flow.syntax)
-
-		return True
-
-	# ..........................................
-
-	def _multi_match (self, name, command, tokens):
-		if len(tokens) != 0:
-			return self.error.set(self.flow.syntax)
-
-		if self.flow.state != 'match':
-			return self.error.set(self.flow.syntax)
-
-		self.flow.state = 'then'
-
-		while True:
-			r = self._dispatch(
-				name,'flow-match',
-				[],
-				[
-					'source','destination',
-					'source-ipv4','destination-ipv4',
-					'port','source-port','destination-port',
-					'protocol','next-header','tcp-flags','icmp-type','icmp-code',
-					'fragment','dscp','traffic-class','packet-length','flow-label'
-				]
-			)
-			if r is False:
-				return False
-			if r is None:
-				break
-		return True
-
-	def _multi_then (self, name, command, tokens):
-		if len(tokens) != 0:
-			return self.error.set(self.flow.syntax)
-
-		if self.flow.state != 'then':
-			return self.error.set(self.flow.syntax)
-
-		self.flow.state = 'out'
-
-		while True:
-			r = self._dispatch(
-				name,'flow-then',
-				[],
-				[
-					'accept','discard','rate-limit',
-					'redirect','copy','redirect-to-nexthop',
-					'mark','action',
-					'community','extended-community'
-				]
-			)
-			if r is False:
-				return False
-			if r is None:
-				break
-		return True
-
-	# ..........................................
-
-	def _multi_api (self, name, command, tokens):
-		if len(tokens) != 0:
-			return self.error.set('api issue')
-
-		while True:
-			r = self._dispatch(
-				name,command,
-				[],
-				self._command[command].keys()
-			)
-			if r is False:
-				return False
-			if r is None:
-				break
-		return True
-
-	#  Group Operational ................
-
-	def _multi_operational (self, name, command, tokens):
-		if len(tokens) != 0:
-			return self.error.set('syntax: operational { command; command; ... }')
-
-		while True:
-			r = self._dispatch(
-				name,command,
-				[],
-				self._command[command].keys()
-			)
-			if r is False:
-				return False
-			if r is None:
-				return True
-
-
-		# 	'operational': {
-		# 		'asm':     self.operational.asm,
-		# 		# it makes no sense to have adm or others
-		# 	},
-		# 	'static-route': self.route.command,
-		# 	# 'inet-route': {
-		# 	# 'mpls-route': {
-		# 	'l2vpn-vpls':   self.l2vpn.command,
-		# 	'flow-route': {
-		# 		'rd':                  self.route.rd,
-		# 		'route-distinguisher': self.route.rd,
-		# 		'next-hop':            self.flow.next_hop,
-		# 	},
-		# 	'flow-match': {
-		# 		'source':              self.flow.source,
-		# 		'source-ipv4':         self.flow.source,
-		# 		'destination':         self.flow.destination,
-		# 		'destination-ipv4':    self.flow.destination,
-		# 		'port':                self.flow.anyport,
-		# 		'source-port':         self.flow.source_port,
-		# 		'destination-port':    self.flow.destination_port,
-		# 		'protocol':            self.flow.protocol,
-		# 		'next-header':         self.flow.next_header,
-		# 		'tcp-flags':           self.flow.tcp_flags,
-		# 		'icmp-type':           self.flow.icmp_type,
-		# 		'icmp-code':           self.flow.icmp_code,
-		# 		'fragment':            self.flow.fragment,
-		# 		'dscp':                self.flow.dscp,
-		# 		'traffic-class':       self.flow.traffic_class,
-		# 		'packet-length':       self.flow.packet_length,
-		# 		'flow-label':          self.flow.flow_label,
-		# 	},
-		# 	'flow-then': {
-		# 		'accept':              self.flow.accept,
-		# 		'discard':             self.flow.discard,
-		# 		'rate-limit':          self.flow.rate_limit,
-		# 		'redirect':            self.flow.redirect,
-		# 		'redirect-to-nexthop': self.flow.redirect_next_hop,
-		# 		'copy':                self.flow.copy,
-		# 		'mark':                self.flow.mark,
-		# 		'action':              self.flow.action,
-		# 		'community':           self.route.community,
-		# 		'extended-community':  self.route.extended_community,
-		# 	},
-		# 	'send': {
-		# 		'parsed':              self.process.command,
-		# 		'packets':             self.process.command,
-		# 		'consolidate':         self.process.command,
-		# 		'open':                self.process.command,
-		# 		'update':              self.process.command,
-		# 		'notification':        self.process.command,
-		# 		'keepalive':           self.process.command,
-		# 		'refresh':             self.process.command,
-		# 		'operational':         self.process.command,
-		# 	},
-		# 	'receive': {
-		# 		'parsed':              self.process.command,
-		# 		'packets':             self.process.command,
-		# 		'consolidate':         self.process.command,
-		# 		'open':                self.process.command,
-		# 		'update':              self.process.command,
-		# 		'notification':        self.process.command,
-		# 		'keepalive':           self.process.command,
-		# 		'refresh':             self.process.command,
-		# 		'operational':         self.process.command,
-		# 	},
-		# }

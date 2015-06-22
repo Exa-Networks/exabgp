@@ -14,7 +14,6 @@ from exabgp.configuration.current.core import Section
 
 class ParseFamily (Section):
 	syntax = \
-		'syntax:\n' \
 		'family {\n' \
 		'   all;      # default if not family block is present, announce all we know\n' \
 		'   \n' \
@@ -29,7 +28,7 @@ class ParseFamily (Section):
 		'   ipv6 flow-vpn;\n' \
 		'   l2vpn vpls;\n' \
 		'   l2vpn evpn;\n' \
-		'}\n'
+		'}'
 
 	convert = {
 		'ipv4': {

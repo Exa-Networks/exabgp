@@ -25,15 +25,25 @@ from exabgp.bgp.message.update.nlri.flow import FlowICMPCode
 from exabgp.bgp.message.update.nlri.flow import FlowDSCP
 from exabgp.bgp.message.update.nlri.flow import FlowTrafficClass
 from exabgp.bgp.message.update.nlri.flow import FlowFlowLabel
+from exabgp.bgp.message.update.nlri import Flow
 
-from exabgp.bgp.message.update.attribute import Attribute
+from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.attribute.community.extended import TrafficRate
 from exabgp.bgp.message.update.attribute.community.extended import TrafficAction
 from exabgp.bgp.message.update.attribute.community.extended import TrafficRedirect
 from exabgp.bgp.message.update.attribute.community.extended import TrafficMark
 from exabgp.bgp.message.update.attribute.community.extended import TrafficNextHop
 
+from exabgp.rib.change import Change
+
 from exabgp.logger import Logger
+
+
+def flow (tokeniser):
+	return Change(
+		Flow(),
+		Attributes()
+	)
 
 def source (tokeniser):
 	data = tokeniser()

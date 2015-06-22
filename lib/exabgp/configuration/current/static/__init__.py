@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2015-06-04.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.current.static.route import ParseRoute
+from exabgp.configuration.current.static.route import ParseStaticRoute
 from exabgp.configuration.current.static.parser import prefix
 
 from exabgp.protocol.ip import IP
@@ -20,19 +20,17 @@ from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.rib.change import Change
 
 
-class ParseStatic (ParseRoute):
+class ParseStatic (ParseStaticRoute):
 	syntax = \
-		'syntax:\n' \
-		'route <ip>/<netmask> ' \
-		' '.join(ParseRoute.definition) + ' ;\n'
+		'route <ip>/<netmask> %s;' % ' '.join(ParseStaticRoute.definition)
 
-	action = dict(ParseRoute.action)
+	action = dict(ParseStaticRoute.action)
 	action['route'] = 'append'
 
 	name = 'static'
 
 	def __init__ (self, tokeniser, scope, error, logger):
-		ParseRoute.__init__(self,tokeniser,scope,error,logger)
+		ParseStaticRoute.__init__(self,tokeniser,scope,error,logger)
 
 	def pre (self):
 		self.scope.to_context()
@@ -58,6 +56,8 @@ def route (tokeniser):
 		klass = MPLS
 	else:
 		klass = INET
+
+	# XXX: TODO ?
 
 	# family = {
 	# 	'static-route': {
@@ -93,7 +93,7 @@ def route (tokeniser):
 		if not command:
 			break
 
-		if 'add' in ParseStatic.action[command]:
+		if 'attribute-add' in ParseStatic.action[command]:
 			change.add(ParseStatic.known[command](tokeniser))
 		else:
 			raise ValueError('route: unknown command "%s"' % command)

@@ -13,92 +13,7 @@ from exabgp.configuration.current.neighbor.parser import processes
 from exabgp.bgp.message import Message
 
 
-class ParseAPI (Section):
-	syntax = \
-		'syntax:\n' \
-		'process {\n' \
-		'   processes [ name-of-processes ];\n' \
-		'   neighbor-changes;\n' \
-		'   send {\n' \
-		'      parsed;\n' \
-		'      packets;\n' \
-		'      consolidate;\n' \
-		'      open;\n' \
-		'      update;\n' \
-		'      notification;\n' \
-		'      keepalive;\n' \
-		'      refresh;\n' \
-		'      operational;\n' \
-		'   }\n' \
-		'   receive {\n' \
-		'      parsed;\n' \
-		'      packets;\n' \
-		'      consolidate;\n' \
-		'      open;\n' \
-		'      update;\n' \
-		'      notification;\n' \
-		'      keepalive;\n' \
-		'      refresh;\n' \
-		'      operational;\n' \
-		'   }\n' \
-		'}\n\n' \
-
-	name = 'api'
-
-	known = {
-		'processes':        processes,
-		'neighbor-changes': boolean,
-	}
-
-	action = {
-		'processes':        'set',
-		'neighbor-changes': 'set',
-	}
-
-	default = {
-		'neighbor-changes': True,
-	}
-
-	DEFAULT_API = {
-		'neighbor-changes': False
-	}
-
-	def __init__ (self, tokeniser, scope, error, logger):
-		Section.__init__(self,tokeniser,scope,error,logger)
-
-	def clear (self):
-		pass
-
-	def pre (self):
-		self.scope.to_context()
-		return True
-
-	def post (self):
-		self.scope.to_context(self.name)
-		local = {
-			'neighbor-changes':self.scope.get('neighbor-changes',False)
-		}
-		for way in ('send','receive'):
-			data = self.scope.pop(way,{})
-			for name in ('parsed','packets','consolidate'):
-				local["%s-%s" % (way,name)] = data.get(name,False)
-			for name in ('open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
-				local["%s-%d" % (way,Message.code(name))] = data.get(name,False)
-		for k,v in local.items():
-			self.scope.set(k,v)
-		return True
-
-
-for way in ('send','receive'):
-	for name in ('parsed','packets','consolidate'):
-		ParseAPI.DEFAULT_API["%s-%s" % (way,name)] = False
-	for name in ('open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
-		ParseAPI.DEFAULT_API["%s-%d" % (way,Message.code(name))] = False
-
-
 class _ParseDirection (Section):
-	syntax = ParseAPI.syntax
-
 	action = {
 		'parsed':       'set',
 		'packets':      'set',
@@ -135,6 +50,8 @@ class _ParseDirection (Section):
 		'operational':  True,
 	}
 
+	syntax = '{\n  %s;\n}' % ';\n  '.join(default.keys())
+
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)
 
@@ -147,11 +64,83 @@ class _ParseDirection (Section):
 
 
 class ParseSend (_ParseDirection):
+	syntax = \
+		'send %s' % _ParseDirection.syntax
+
 	name = 'api/send'
 
 
 class ParseReceive (_ParseDirection):
+	syntax = \
+		'receive %s' % _ParseDirection.syntax
+
 	name = 'api/receive'
+
+
+class ParseAPI (Section):
+	syntax = \
+		'process {\n' \
+		'  processes [ name-of-processes ];\n' \
+		'  neighbor-changes;\n' \
+		'  %s\n' \
+		'  %s\n' \
+		'}' % (
+			'\n  '.join(ParseSend.syntax.split('\n')),
+			'\n  '.join(ParseReceive.syntax.split('\n'))
+		)
+
+	known = {
+		'processes':        processes,
+		'neighbor-changes': boolean,
+	}
+
+	action = {
+		'processes':        'set',
+		'neighbor-changes': 'set',
+	}
+
+	default = {
+		'neighbor-changes': True,
+	}
+
+	DEFAULT_API = {
+		'neighbor-changes': False
+	}
+
+	name = 'api'
+
+	def __init__ (self, tokeniser, scope, error, logger):
+		Section.__init__(self,tokeniser,scope,error,logger)
+
+	def clear (self):
+		pass
+
+	def pre (self):
+		self.scope.to_context()
+		return True
+
+	def post (self):
+		self.scope.to_context(self.name)
+		local = {
+			'neighbor-changes':self.scope.get('neighbor-changes',False)
+		}
+		for way in ('send','receive'):
+			data = self.scope.pop(way,{})
+			for name in ('parsed','packets','consolidate'):
+				local["%s-%s" % (way,name)] = data.get(name,False)
+			for name in ('open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
+				local["%s-%d" % (way,Message.code(name))] = data.get(name,False)
+		for k,v in local.items():
+			self.scope.set(k,v)
+		return True
+
+
+for way in ('send','receive'):
+	for name in ('parsed','packets','consolidate'):
+		ParseAPI.DEFAULT_API["%s-%s" % (way,name)] = False
+	for name in ('open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
+		ParseAPI.DEFAULT_API["%s-%d" % (way,Message.code(name))] = False
+
 
 
 	# we want to have a socket for the cli

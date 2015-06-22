@@ -17,46 +17,58 @@ from exabgp.configuration.current.flow.parser import copy
 from exabgp.configuration.current.flow.parser import mark
 from exabgp.configuration.current.flow.parser import action
 
+from exabgp.configuration.current.static.parser import community
+from exabgp.configuration.current.static.parser import extended_community
+
 
 class ParseFlowThen (Section):
+	definition = [
+		'accept',
+		'discard',
+		'rate-limit 9600',
+		'redirect 30740:12345',
+		'redirect 1.2.3.4:5678',
+		'redirect 1.2.3.4',
+		'redirect-next-hop',
+		'copy 1.2.3.4',
+		'mark 123',
+		'action sample|terminal|sample-terminal',
+	]
+
 	syntax = \
-		'syntax:\n' \
-		'  then {\n' \
-		'    accept;\n' \
-		'    discard;\n' \
-		'    rate-limit 9600;\n' \
-		'    redirect 30740:12345;\n' \
-		'    redirect 1.2.3.4:5678;\n' \
-		'    redirect 1.2.3.4;\n' \
-		'    redirect-next-hop;\n' \
-		'    copy 1.2.3.4;\n' \
-		'    mark 123;\n' \
-		'    action sample|terminal|sample-terminal;\n' \
-		'  }\n'
+		'then {\n' \
+		'  %s;\n' \
+		'}' % ';\n  '.join(definition)
 
 	known = {
-		'accept':            accept,
-		'discard':           discard,
-		'rate-limit':        rate_limit,
-		'redirect':          redirect,
-		'redirect-next-hop': redirect_next_hop,
-		'copy':              copy,
-		'mark':              mark,
-		'action':            action,
+		'accept':             accept,
+		'discard':            discard,
+		'rate-limit':         rate_limit,
+		'redirect':           redirect,
+		'redirect-next-hop':  redirect_next_hop,
+		'copy':               copy,
+		'mark':               mark,
+		'action':             action,
+		'community':          community,
+		'extended-community': extended_community,
 	}
+
+	# 'community','extended-community'
 
 	action = {
-		'accept':            'nop',
-		'discard':           'attribute-add',
-		'rate-limit':        'attribute-add',
-		'redirect':          'nexthop-and-attribute',
-		'redirect-next-hop': 'attribute-add',
-		'copy':              'nexthop-and-attribute',
-		'mark':              'attribute-add',
-		'action':            'attribute-add',
+		'accept':             'nop',
+		'discard':            'attribute-add',
+		'rate-limit':         'attribute-add',
+		'redirect':           'nexthop-and-attribute',
+		'redirect-next-hop':  'attribute-add',
+		'copy':               'nexthop-and-attribute',
+		'mark':               'attribute-add',
+		'action':             'attribute-add',
+		'community':          'attribute-add',
+		'extended-community': 'attribute-add',
 	}
 
-	name = 'flow/match'
+	name = 'flow/then'
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)

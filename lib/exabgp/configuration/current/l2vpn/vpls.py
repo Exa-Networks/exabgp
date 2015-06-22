@@ -82,9 +82,7 @@ class ParseVPLS (Section):
 	]
 
 	syntax = \
-		'syntax:\n' \
-		'vpls { ' \
-		'\n   ' + ' ;\n   '.join(definition) + '\n}\n\n'
+		'vpls {\n  %s\n}' % ' ;\n  '.join(definition)
 
 	known = {
 		'rd':                 route_distinguisher,

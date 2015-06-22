@@ -15,10 +15,9 @@ from exabgp.configuration.current.neighbor import ParseNeighbor
 
 class ParseTemplate (Section):
 	syntax = \
-		'syntax:\n' \
 		'template <name> {\n' \
 		'   <neighbor commands>\n' \
-		'}\n'
+		'}'
 
 	known = ParseNeighbor.known
 	action = ParseNeighbor.action

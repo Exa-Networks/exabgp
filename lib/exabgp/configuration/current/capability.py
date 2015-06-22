@@ -62,7 +62,6 @@ class ParseCapability (Section):
 	TTL_SECURITY = 255
 
 	syntax = \
-		'syntax:\n' \
 		'capability {\n' \
 		'   add-path disable|send|receive|send/receive;\n' \
 		'   asn4 enable|disable;\n' \
