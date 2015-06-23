@@ -31,7 +31,7 @@ from exabgp.configuration.current.flow import ParseFlowThen
 from exabgp.configuration.current.flow import ParseFlowMatch
 from exabgp.configuration.current.l2vpn import ParseL2VPN
 from exabgp.configuration.current.l2vpn import ParseVPLS
-# from exabgp.configuration.current.operational import ParseOperational
+from exabgp.configuration.current.operational import ParseOperational
 
 from exabgp.configuration.environment import environment
 
@@ -66,11 +66,9 @@ class Configuration (object):
 		self.flow_then    = ParseFlowThen    (self.tokeniser,self.scope,self.error,self.logger)
 		self.l2vpn        = ParseL2VPN       (self.tokeniser,self.scope,self.error,self.logger)
 		self.vpls         = ParseVPLS        (self.tokeniser,self.scope,self.error,self.logger)
-		# self.flow        = ParseFlow        (self.tokeniser,self.scope,self.error,self.logger)
-		# self.operational = ParseOperational (self.tokeniser,self.scope,self.error,self.logger)
+		self.operational  = ParseOperational (self.tokeniser,self.scope,self.error,self.logger)
 
-		# Later on we will use name such as 'neighbor/static' for keys which will give us depth of scope
-		# But for the momment a flat tree is easier
+		# We should check if name are unique when running Section.__init__
 
 		self._structure = {
 			'root': {
@@ -97,7 +95,7 @@ class Configuration (object):
 					'static':      self.static.name,
 					'flow':        self.flow.name,
 					'l2vpn':       self.l2vpn.name,
-					'operational': 'operational',
+					'operational': self.operational.name,
 				},
 			},
 			self.neighbor.name: {
@@ -110,7 +108,7 @@ class Configuration (object):
 					'static':      self.static.name,
 					'flow':        self.flow.name,
 					'l2vpn':       self.l2vpn.name,
-					'operational': 'operational',
+					'operational': self.operational.name,
 				},
 			},
 			self.family.name: {
@@ -194,9 +192,15 @@ class Configuration (object):
 			},
 			self.vpls.name: {
 				'class':    self.vpls,
-				'commands': self.l2vpn.known.keys(),  # is it right ?
+				'commands': self.l2vpn.known.keys(),
 				'sections': {
 				},
+			},
+			self.operational.name: {
+				'class':    self.operational,
+				'commands': self.operational.known.keys(),
+				'sections': {
+				}
 			},
 		}
 
@@ -237,7 +241,7 @@ class Configuration (object):
 		self.flow_then.clear()
 		self.l2vpn.clear()
 		self.vpls.clear()
-		# self.operational.clear()
+		self.operational.clear()
 
 	def _rollback_reload (self):
 		self.neighbors = self._previous_neighbors
@@ -311,7 +315,7 @@ class Configuration (object):
 
 			if self.tokeniser.end == ';':
 				command = self.tokeniser.iterate()
-				self.logger.configuration(". %-16s | '%s'" % (command,"' '".join(self.tokeniser.line)))
+				self.logger.configuration(". %-16s | %s" % (command,self.tokeniser.params()))
 
 				if not self.run(name,command):
 					return False
@@ -319,7 +323,7 @@ class Configuration (object):
 
 			if self.tokeniser.end == '{':
 				location = self.tokeniser.iterate()
-				self.logger.configuration("> %-16s | '%s'" % (location,"' '".join(self.tokeniser.line)))
+				self.logger.configuration("> %-16s | %s" % (location,self.tokeniser.params()))
 
 				if location not in self._structure[name]['sections']:
 					return self.error.set('section %s is invalid in %s, %s' % (location,name,self.scope.location()))
@@ -331,7 +335,7 @@ class Configuration (object):
 
 			if self.tokeniser.end == '}':
 				left = self.scope.leave()
-				self.logger.configuration("< %-16s | '%s'" % (left,"' '".join(self.tokeniser.line)))
+				self.logger.configuration("< %-16s | %s" % (left,self.tokeniser.params()))
 
 				if not left:
 					return self.error.set('closing too many parenthesis')

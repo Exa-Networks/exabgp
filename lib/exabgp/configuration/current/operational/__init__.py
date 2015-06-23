@@ -34,15 +34,17 @@ class ParseOperational (Section):
 	}
 
 	action = {
-		'asm':  'set',
-		'adm':  'set',
-		'rpcq': 'set',
-		'rpcp': 'set',
-		'apcq': 'set',
-		'apcp': 'set',
-		'lpcq': 'set',
-		'lpcp': 'set',
+		'asm':  'append',
+		'adm':  'append',
+		'rpcq': 'append',
+		'rpcp': 'append',
+		'apcq': 'append',
+		'apcp': 'append',
+		'lpcq': 'append',
+		'lpcp': 'append',
 	}
+
+	name = 'operational'
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)
@@ -51,7 +53,11 @@ class ParseOperational (Section):
 		pass
 
 	def pre (self):
-		pass
+		self.scope.to_context()
+		return True
 
 	def post (self):
-		pass
+		routes = self.scope.pop(self.name)
+		if routes:
+			self.scope.set('routes',routes)
+		return True

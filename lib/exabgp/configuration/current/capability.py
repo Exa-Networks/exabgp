@@ -102,6 +102,10 @@ class ParseCapability (Section):
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)
 
+	def pre (self):
+		self.scope.to_context()
+		return True
+
 	def post (self):
 		return True
 

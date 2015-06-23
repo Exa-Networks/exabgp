@@ -74,6 +74,13 @@ class Tokeniser (object):
 		if self._data:
 			self._set(self._data)
 
+	def params (self):
+		if len(self.line) <= 2:
+			return ''
+		if self.end in ('{','}',';'):
+			return "'%s'" % "' '".join(self.line[1:-1])
+		return "'%s'" % "' '".join(self.line[1:])
+
 	def _tokenise (self,iterator):
 		for self.line,parsed in tokens(iterator):
 			if not parsed:

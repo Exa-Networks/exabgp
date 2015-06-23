@@ -150,7 +150,7 @@ class ParseNeighbor (Section):
 		for section in ('static','l2vpn','flow'):
 			neighbor.changes.extend(local.get(section,{}).get('routes',[]))
 
-		messages = local.get('operational-message',[])
+		messages = local.get('operational',{}).get('routes',[])
 
 		openfamilies = local.get('families','everything')
 		# announce every family we known

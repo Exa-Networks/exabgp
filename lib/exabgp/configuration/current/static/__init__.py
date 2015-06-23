@@ -38,7 +38,7 @@ class ParseStatic (ParseStaticRoute):
 		return True
 
 	def post (self):
-		routes = self.scope.pop(self.name)
+		routes = self.scope.pop(self.name,[])
 		if routes:
 			self.scope.extend('routes',routes)
 		return True

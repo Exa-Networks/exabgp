@@ -20,7 +20,7 @@ from exabgp.bgp.message.operational import Response
 
 def _operational (klass, parameters, tokeniser):
 	def utf8 (string):
-		return string.encode('utf-8')[1:-1]
+		return string.encode('utf-8')
 
 	def valid (_):
 		return True
