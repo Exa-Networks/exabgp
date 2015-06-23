@@ -10,6 +10,7 @@ from exabgp.configuration.current.static.route import ParseStaticRoute
 from exabgp.configuration.current.static.parser import prefix
 
 from exabgp.protocol.ip import IP
+from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update.nlri import INET
@@ -46,38 +47,21 @@ class ParseStatic (ParseStaticRoute):
 def route (tokeniser):
 	ipmask = prefix(tokeniser)
 
-	# May be wrong but taken from previous code
-	if 'rd' in tokeniser.tokens:
+	if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
 		klass = MPLS
-	elif 'route-distinguisher' in tokeniser.tokens:
-		klass = MPLS
+		safi = SAFI(SAFI.mpls_vpn)
 	elif 'label' in tokeniser.tokens:
-		# XXX: Is it right ?
+		# XXX: should we create a LABEL class ?
 		klass = MPLS
+		safi = SAFI(SAFI.nlri_mpls)
 	else:
 		klass = INET
-
-	# XXX: TODO ?
-
-	# family = {
-	# 	'static-route': {
-	# 		'rd': SAFI.mpls_vpn,
-	# 		'route-distinguisher': SAFI.mpls_vpn,
-	# 	},
-	# 	'l2vpn-vpls': {
-	# 		'rd': SAFI.vpls,
-	# 		'route-distinguisher': SAFI.vpls,
-	# 	},
-	# 	'flow-route': {
-	# 		'rd': SAFI.flow_vpn,
-	# 		'route-distinguisher': SAFI.flow_vpn,
-	# 	}
-	# }
+		safi = IP.tosafi(ipmask.ip)
 
 	change = Change(
 		klass(
 			IP.toafi(ipmask.ip),
-			IP.tosafi(ipmask.ip),
+			safi,
 			ipmask.packed,
 			ipmask.mask,
 			'',
@@ -93,9 +77,20 @@ def route (tokeniser):
 		if not command:
 			break
 
-		if 'attribute-add' in ParseStatic.action[command]:
-			change.add(ParseStatic.known[command](tokeniser))
+		action = ParseStatic.action[command]
+
+		if action == 'attribute-add':
+			change.attributes.add(ParseStatic.known[command](tokeniser))
+		elif action == 'nlri-set':
+			change.nlri.assign(ParseStatic.assign[command],ParseStatic.known[command](tokeniser))
+		elif action == 'nexthop-and-attribute':
+			nexthop,attribute = ParseStatic.known[command](tokeniser)
+			change.nlri.nexthop = nexthop
+			change.attributes.add(attribute)
 		else:
 			raise ValueError('route: unknown command "%s"' % command)
+
+	# if change.nlri.labels and not change.nlri.safi.has_label():
+	# 	change.nlri.safi = SAFI(SAFI.nlri_mpls)
 
 	return change

@@ -189,7 +189,6 @@ def check_update (neighbor, raw):
 	logger._option.parser = True
 	logger.parser('\ndecoding routes in configuration')
 
-
 	neighbor = neighbor[neighbor.keys()[0]]
 
 	path = {}

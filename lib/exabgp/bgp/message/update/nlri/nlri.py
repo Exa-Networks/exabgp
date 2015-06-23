@@ -29,6 +29,9 @@ class NLRI (Family):
 	registered_families = [(AFI(AFI.ipv4), SAFI(SAFI.multicast))]
 	logger = None
 
+	def assign (self, name, value):
+		setattr(self,name,value)
+
 	def index (self):
 		return '%s%s%s' % (self.afi,self.safi,self.pack())
 

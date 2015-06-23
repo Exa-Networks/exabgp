@@ -55,6 +55,9 @@ class _ParseDirection (Section):
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)
 
+	def clear (self):
+		pass
+
 	def pre (self):
 		self.scope.to_context()
 		return True

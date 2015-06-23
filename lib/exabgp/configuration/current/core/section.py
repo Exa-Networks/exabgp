@@ -21,7 +21,7 @@ class Section (object):
 		self.logger = logger
 
 	def clear (self):
-		raise RuntimeError('not implemented in subclass as should be')
+		raise RuntimeError('%s did not implemented clear as should be' % self.__class__.__name__)
 
 	@classmethod
 	def register (cls, name):
@@ -40,7 +40,7 @@ class Section (object):
 
 	def parse (self, name, command):
 		if command not in self.known:
-			return self.error.set('unknown command')
+			return self.error.set('unknown command %s options are %s' % (command,', '.join(self.known)))
 
 		try:
 			if command in self.default:
@@ -62,13 +62,15 @@ class Section (object):
 				self.scope.nlri_assign(name,self.assign[command],insert)
 			elif action == 'nlri-add':
 				for adding in insert:
-					self.scope.nlri_add(name,adding)
+					self.scope.nlri_add(name,command,adding)
 			elif action == 'nlri-nexthop':
 				self.scope.nlri_nexthop(name,insert)
 			elif action == 'nexthop-and-attribute':
 				ip, attribute = insert
-				self.scope.nlri_nexthop(name,ip)
-				self.scope.attribute_add(name,attribute)
+				if ip:
+					self.scope.nlri_nexthop(name,ip)
+				if attribute:
+					self.scope.attribute_add(name,attribute)
 			elif action == 'nop':
 				pass
 			else:
@@ -76,3 +78,5 @@ class Section (object):
 			return True
 		except ValueError, exc:
 			return self.error.set(str(exc))
+
+		return True

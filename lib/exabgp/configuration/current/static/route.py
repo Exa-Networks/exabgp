@@ -45,6 +45,8 @@ from exabgp.configuration.current.static.parser import name as named
 from exabgp.configuration.current.static.parser import split
 from exabgp.configuration.current.static.parser import watchdog
 from exabgp.configuration.current.static.parser import withdraw
+from exabgp.configuration.current.static.mpls import route_distinguisher
+from exabgp.configuration.current.static.mpls import label
 
 
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
@@ -81,12 +83,14 @@ class ParseStaticRoute (Section):
 		'route <ip>/<netmask> { ' \
 		'\n   ' + ' ;\n   '.join(definition) + '\n}'
 
+	# XXX: TODO
 	# 'label':               self.label,
-	# 'rd':                  self.rd,
-	# 'route-distinguisher': self.rd,
 
 	known = {
-		'path-information':   path_information,
+		'path-information':    path_information,
+		'rd':                  route_distinguisher,
+		'route-distinguisher': route_distinguisher,
+		'label':               label,
 		'attribute':          attribute,
 		'next-hop':           next_hop,
 		'origin':             origin,
@@ -107,9 +111,12 @@ class ParseStaticRoute (Section):
 	}
 
 	action = {
-		'path-info':          'nlri-set',
+		'path-info':           'nlri-set',
+		'rd':                  'nlri-set',
+		'route-distinguisher': 'nlri-set',
+		'label':               'nlri-set',
 		'attribute':          'attribute-add',
-		'next-hop':           'attribute-add',
+		'next-hop':           'nexthop-and-attribute',
 		'origin':             'attribute-add',
 		'med':                'attribute-add',
 		'as-path':            'attribute-add',
@@ -125,6 +132,12 @@ class ParseStaticRoute (Section):
 		'watchdog':           'attribute-add',
 		'withdraw':           'attribute-add',
 		'aigp':               'attribute-add',
+	}
+
+	assign = {
+		'rd':                  'rd',
+		'route-distinguisher': 'rd',
+		'label':               'labels',
 	}
 
 	name = 'static/route'
@@ -147,6 +160,7 @@ class ParseStaticRoute (Section):
 		return True
 
 	def post (self):
+		self._family()
 		if not self._check():
 			return False
 		if not self._split():
@@ -156,6 +170,11 @@ class ParseStaticRoute (Section):
 		if route:
 			self.scope.append('routes',route)
 		return True
+
+	def _family (self):
+		last = self.scope.get(self.name)
+		if last.labels and not last.safi.has_label():
+			last.safi = SAFI(SAFI.nlri_mpls)
 
 	def _check (self):
 		last = self.scope.get(self.name)

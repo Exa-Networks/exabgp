@@ -505,7 +505,7 @@ class Flow (NLRI):
 	def __len__ (self):
 		return len(self.pack())
 
-	def add (self, rule):
+	def add (self, name, rule):
 		ID = rule.ID
 		if ID in (FlowDestination.ID,FlowSource.ID):
 			if ID in self.rules:

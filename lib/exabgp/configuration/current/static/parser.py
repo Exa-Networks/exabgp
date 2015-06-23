@@ -23,6 +23,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 
 from exabgp.protocol.ip import IP
+from exabgp.protocol.family import AFI
+# from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update.nlri import INET
@@ -86,46 +88,15 @@ def path_information (tokeniser):
 
 
 def next_hop (tokeniser,nexthopself=None):
-	ip = tokeniser()
-	if ip.lower() == 'self' and nexthopself is None:
+	value = tokeniser()
+
+	if value.lower() == 'self' and nexthopself is None:
 		raise ValueError('unsupported yet on new format')
 	else:
-		return NextHop(ip,IP.pton(ip))
-
-
-# def next_hop (self, name, command, tokens):
-# 	if self.scope.content[-1]['announce'][-1].attributes.has(Attribute.CODE.NEXT_HOP):
-# 		return self.error.set(self.syntax)
-#
-# 	try:
-# 		# next-hop self is unsupported
-# 		ip = tokens.pop(0)
-# 		if ip.lower() == 'self':
-# 			if 'local-address' in self.scope.content[-1]:
-# 				la = self.scope.content[-1]['local-address']
-# 			elif self._nexthopself:
-# 				la = self._nexthopself
-# 			else:
-# 				return self.error.set('next-hop self can only be specified with a neighbor')
-# 			nh = IP.unpack(la.pack())
-# 		else:
-# 			nh = IP.create(ip)
-#
-# 		change = self.scope.content[-1]['announce'][-1]
-# 		nlri = change.nlri
-# 		afi = nlri.afi
-# 		safi = nlri.safi
-#
-# 		nlri.nexthop = nh
-#
-# 		if afi == AFI.ipv4 and safi in (SAFI.unicast,SAFI.multicast):
-# 			change.attributes.add(Attribute.unpack(NextHop.ID,NextHop.FLAG,nh.packed,None))
-# 			# NextHop(nh.ip,nh.packed) does not cache the result, using unpack does
-# 			# change.attributes.add(NextHop(nh.ip,nh.packed))
-#
-# 		return True
-# 	except Exception:
-# 		return self.error.set(self.syntax)
+		ip = IP.create(value)
+		if ip.afi == AFI.ipv4:
+			return ip,NextHop(value,ip.packed)
+		return IP.create(ip),None
 
 
 def inet (tokeniser):
@@ -176,7 +147,7 @@ def attribute (tokeniser):
 	data = tokeniser().lower()
 	if not data.startswith('0x'):
 		raise ValueError('invalid attribute, data is not 0x hexadecimal')
-	if not len(data) % 2:
+	if len(data) % 2:
 		raise ValueError('invalid attribute, data is not 0x hexadecimal')
 	data = ''.join(chr(int(data[_:_+2],16)) for _ in range(2,len(data),2))
 
@@ -194,7 +165,7 @@ def aigp (tokeniser):
 	if not tokeniser.tokens:
 		raise ValueError('aigp requires number (decimal or hexadecimal 0x prefixed)')
 	value = tokeniser()
-	base = 16 if number.lower().startswith('0x') else 10
+	base = 16 if value.lower().startswith('0x') else 10
 	try:
 		number = int(value,base)
 	except ValueError:
@@ -560,16 +531,9 @@ def community (tokeniser):
 
 def _extended_community (value):
 	if value[:2].lower() == '0x':
-		if not len(value) % 2:
+		if len(value) % 2:
 			raise ValueError('invalid extended community %s' % value)
-		try:
-			raw = ''
-			for i in range(2,len(value),2):
-				raw += chr(int(value[i:i+2],16))
-		except ValueError:
-			raise ValueError('invalid extended community %s' % value)
-		if len(raw) != 8:
-			raise ValueError('invalid extended community %s' % value)
+		raw = ''.join([chr(int(value[_:_+2],16)) for _ in range(2,len(value),2)])
 		return ExtendedCommunity.unpack(raw)
 	elif value.count(':'):
 		_known_community = {

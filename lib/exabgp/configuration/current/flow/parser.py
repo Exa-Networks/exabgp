@@ -1,7 +1,4 @@
-from exabgp.protocol.family import AFI
-
 from exabgp.protocol.ip import IP
-from exabgp.protocol.ip import NoNextHop
 
 from exabgp.bgp.message.open.asn import ASN
 
@@ -45,14 +42,16 @@ def flow (tokeniser):
 		Attributes()
 	)
 
+
 def source (tokeniser):
 	data = tokeniser()
 	if data.count('/') == 1:
 		ip,netmask = data.split('/')
 		raw = ''.join(chr(int(_)) for _ in ip.split('.'))
 		yield Flow4Source(raw,int(netmask))
-		return
-	yield Flow6Source(IP.pton(ip),int(netmask),int(offset))
+	else:
+		ip,netmask,offset = data.split('/')
+		yield Flow6Source(IP.pton(ip),int(netmask),int(offset))
 
 
 def destination (tokeniser):
@@ -62,9 +61,9 @@ def destination (tokeniser):
 		raw = ''.join(chr(int(_)) for _ in ip.split('.'))
 		yield Flow4Destination(raw,int(netmask))
 		return
-
-	ip,netmask,offset = data.split('/')
-	yield Flow6Destination(IP.pton(ip),int(netmask),int(offset))
+	else:
+		ip,netmask,offset = data.split('/')
+		yield Flow6Destination(IP.pton(ip),int(netmask),int(offset))
 
 
 # Expressions
@@ -89,7 +88,7 @@ def _operator (string):
 		raise ValueError('Invalid expression (too short) %s' % string)
 
 
-def _value (self, string):
+def _value (string):
 	l = 0
 	for c in string:
 		if c not in ['&',]:
@@ -101,116 +100,120 @@ def _value (self, string):
 
 # parse =80 or >80 or <25 or &>10<20
 def _generic_expression (tokeniser, klass):
-	data = tokensiser()
-	for test in data:
-		AND = BinaryOperator.NOP
-		while test:
-			operator,_ = self._operator(test)
-			value,test = self._value(_)
-			# XXX: should do a check that the rule is valid for the family
-			yield klass(AND | operator,klass.converter(value))
-			if test:
-				if test[0] == '&':
-					AND = BinaryOperator.AND
-					test = test[1:]
-					if not test:
-						raise ValueError("Can not finish an expresion on an &")
-				else:
-					raise ValueError("Unknown binary operator %s" % test[0])
+	data = tokeniser()
+	AND = BinaryOperator.NOP
+	while data:
+		operator,_ = _operator(data)
+		value,data = _value(_)
+		# XXX: should do a check that the rule is valid for the family
+		yield klass(AND | operator,klass.converter(value))
+		if data:
+			if data[0] == '&':
+				AND = BinaryOperator.AND
+				data = data[1:]
+				if not data:
+					raise ValueError("Can not finish an expresion on an &")
+			else:
+				raise ValueError("Unknown binary operator %s" % data[0])
 
 
 # parse [ content1 content2 content3 ]
 def _generic_list (tokeniser, klass):
-	name = tokeniser()
+	data = tokeniser()
 	AND = BinaryOperator.NOP
-	if name == '[':
+	if data == '[':
 		while True:
-			name = tokeniser()
-			if name == ']':
+			data = tokeniser()
+			if data == ']':
 				break
-			yield klass(NumericOperator.EQ | AND,klass.converter(name))
-			return
-
-	if name[0] == '=':
-		name = name[1:]
-	yield klass(NumericOperator.EQ | AND,klass.converter(name))
-
+			yield klass(NumericOperator.EQ | AND,klass.converter(data))
+	elif data[0] == '=':
+		yield klass(NumericOperator.EQ | AND,klass.converter(data[1:]))
+	else:
+		yield klass(NumericOperator.EQ | AND,klass.converter(data))
 
 def _generic_condition (tokeniser, klass):
-	if tokens[0][0] in ['=','>','<']:
-		for _ in self._generic_expression(tokeniser,klass):
-			yield
-	for _ in self._generic_list(tokeniser,klass):
-		yield _
+	data = tokeniser.peak()
+	if data[0] in ['=','>','<']:
+		for _ in _generic_expression(tokeniser,klass):
+			yield _
+	else:
+		for _ in _generic_list(tokeniser,klass):
+			yield _
 
 
 def any_port (tokeniser):
-	for _ in self._generic_condition(tokeniser,FlowAnyPort):
+	for _ in _generic_condition(tokeniser,FlowAnyPort):
 		yield _
 
 
 def source_port (tokeniser):
-	for _ in self._generic_condition(tokeniser,FlowSourcePort):
+	for _ in _generic_condition(tokeniser,FlowSourcePort):
 		yield _
 
 
 def destination_port (tokeniser):
-	for _ in self._generic_condition(tokeniser,FlowDestinationPort):
+	for _ in _generic_condition(tokeniser,FlowDestinationPort):
 		yield _
 
 
 def packet_length (tokeniser):
-	for _ in self._generic_condition(tokeniser,FlowPacketLength):
+	for _ in _generic_condition(tokeniser,FlowPacketLength):
 		yield _
 
 
 def tcp_flags (tokeniser):
-	for _ in self._generic_list(tokeniser,FlowTCPFlag):
+	for _ in _generic_list(tokeniser,FlowTCPFlag):
 		yield _
 
 
 def protocol (tokeniser):
-	for _ in self._generic_list(tokeniser,FlowIPProtocol):
+	for _ in _generic_list(tokeniser,FlowIPProtocol):
 		yield _
 
 
 def next_header (tokeniser):
-	for _ in self._generic_list(tokeniser,FlowNextHeader):
+	for _ in _generic_list(tokeniser,FlowNextHeader):
 		yield _
 
 
 def icmp_type (tokeniser):
-	for _ in self._generic_list(tokeniser,FlowICMPType):
+	for _ in _generic_list(tokeniser,FlowICMPType):
 		yield _
 
 
 def icmp_code (tokeniser):
-	for _ in self._generic_list(tokeniser,FlowICMPCode):
+	for _ in _generic_list(tokeniser,FlowICMPCode):
 		yield _
 
 
 def fragment (tokeniser):
-	for _ in self._generic_list(tokeniser,FlowFragment):
+	for _ in _generic_list(tokeniser,FlowFragment):
 		yield _
 
 
 def dscp (tokeniser):
-	for _ in self._generic_condition(tokeniser,FlowDSCP):
+	for _ in _generic_condition(tokeniser,FlowDSCP):
 		yield _
 
 
 def traffic_class (tokeniser):
-	for _ in self._generic_condition(tokeniser,FlowTrafficClass):
+	for _ in _generic_condition(tokeniser,FlowTrafficClass):
 		yield _
 
 
 def flow_label (tokeniser):
-	for _ in self._generic_condition(tokeniser,FlowFlowLabel):
+	for _ in _generic_condition(tokeniser,FlowFlowLabel):
 		yield _
 
 
 def next_hop (tokeniser):
-	return IP.create(tokens.pop(0))
+	value = tokeniser()
+
+	if value.lower() == 'self':
+		raise ValueError('unsupported yet on new format')
+	else:
+		return IP.create(value)
 
 
 def accept (tokeniser):
@@ -229,14 +232,14 @@ def rate_limit (tokeniser):
 		Logger().configuration("rate-limiting flow under 9600 bytes per seconds may not work",'warning')
 	if speed > 1000000000000:
 		speed = 1000000000000
-		Logger().configuration("rate-limiting changed for 1 000 000 000 000 bytes from %s" % tokens[0],'warning')
+		Logger().configuration("rate-limiting changed for 1 000 000 000 000 bytes from %s" % speed,'warning')
 	return TrafficRate(ASN(0),speed)
 
 
 def redirect (tokeniser):
-	tokens = tokeniser()
-	if data[0].count(':') == 1:
-		prefix,suffix = data[0].split(':',1)
+	data = tokeniser()
+	if data.count(':') == 1:
+		prefix,suffix = data.split(':',1)
 		if prefix.count('.'):
 			raise ValueError('this format has been deprecaded as it does not make sense and it is not supported by other vendors')
 
@@ -246,9 +249,9 @@ def redirect (tokeniser):
 			raise ValueError('asn is a 32 bits number, it can only be 16 bit %s' % route_target)
 		if route_target >= pow(2,32):
 			raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
-		return TrafficRedirect(asn,route_target)
-
-	return IP.create(data.tokeniser()),TrafficNextHop(False)
+		return None,TrafficRedirect(asn,route_target)
+	else:
+		return IP.create(data),TrafficNextHop(False)
 
 
 def redirect_next_hop (tokeniser):
@@ -260,22 +263,24 @@ def copy (tokeniser):
 
 
 def mark (tokeniser):
-	dscp = tokeniser()
+	value = tokeniser()
 
-	if not dscp.isdigit():
+	if not value.isdigit():
 		raise ValueError('dscp is not a number')
 
-	if dscp < 0 or dscp > 0b111111:
+	dscp_value = int(value)
+
+	if dscp_value < 0 or dscp_value > 0b111111:
 		raise ValueError('dscp is not a valid number')
 
-	return TrafficMark(dscp)
+	return TrafficMark(dscp_value)
 
 
 def action (tokeniser):
-	action = tokeniser()
+	value = tokeniser()
 
-	sample = 'sample' in action
-	terminal = 'terminal' in action
+	sample = 'sample' in value
+	terminal = 'terminal' in value
 
 	if not sample and not terminal:
 		raise ValueError('invalid flow action')

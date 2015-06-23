@@ -24,12 +24,6 @@ class Change (object):
 
 	__slots__ = ['nlri','attributes']
 
-	_add_family = (
-		(AFI.ipv4,SAFI.unicast),
-		(AFI.ipv4,SAFI.multicast),
-		(AFI.l2vpn,SAFI.vpls)
-	)
-
 	def __init__ (self, nlri, attributes):
 		self.nlri = nlri
 		self.attributes = attributes
@@ -58,17 +52,6 @@ class Change (object):
 	def extensive (self):
 		# If you change this you must change as well extensive in Update
 		return "%s%s" % (str(self.nlri),str(self.attributes))
-
-	def add (self,attribute):
-
-		if attribute.ID != Attribute.CODE.NEXT_HOP:
-			return self.attributes.add(attribute)
-
-		if (self.nlri.afi,self.nlri.safi) in self._add_family:
-			self.attributes.add(attribute)
-			self.nlri.nexthop = attribute
-
-		return True
 
 	def __repr__ (self):
 		return self.extensive()

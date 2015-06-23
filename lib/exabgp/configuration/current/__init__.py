@@ -166,7 +166,7 @@ class Configuration (object):
 				},
 			},
 			self.flow_route.name: {
-				'class':    self.l2vpn,
+				'class':    self.flow_route,
 				'commands': self.flow_route.known.keys(),
 				'sections': {
 					'match': self.flow_match.name,
@@ -220,17 +220,23 @@ class Configuration (object):
 		self.error.clear()
 		self.tokeniser.clear()
 		self.scope.clear()
+
 		self.process.clear()
 		self.template.clear()
 		self.neighbor.clear()
 		self.family.clear()
 		self.capability.clear()
 		self.api.clear()
+		self.api_send.clear()
+		self.api_receive.clear()
 		self.static.clear()
-		self.route.clear()
+		self.static_route.clear()
+		self.flow.clear()
+		self.flow_route.clear()
+		self.flow_match.clear()
+		self.flow_then.clear()
 		self.l2vpn.clear()
 		self.vpls.clear()
-		# self.flow.clear()
 		# self.operational.clear()
 
 	def _rollback_reload (self):
@@ -360,7 +366,7 @@ class Configuration (object):
 		# we are not really running the program, just want to ....
 		if environment.settings().debug.route:
 			from exabgp.configuration.current.check import check_message
-			if check_message(self.neighbor.neighbors,environment.settings().debug.route):
+			if check_message(self.neighbors,environment.settings().debug.route):
 				sys.exit(0)
 			sys.exit(1)
 

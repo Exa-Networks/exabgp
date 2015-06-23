@@ -29,9 +29,6 @@ class INET (CIDR,NLRI):
 		CIDR.__init__(self,packed,mask)
 		self.action = action
 
-	def assign (self, name, value):
-		setattr(self,name,value)
-
 	def prefix (self):
 		return "%s/%s%s" % (CIDR.getip(self),self.mask,str(self.path_info) if self.path_info is not PathInfo.NOPATH else '')
 

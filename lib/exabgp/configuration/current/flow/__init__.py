@@ -24,13 +24,15 @@ class ParseFlow (Section):
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)
 
-	# def clear (self):
-	# 	self.state = 'out'
+	def clear (self):
+		pass
 
 	def pre (self):
 		return True
 
 	def post (self):
+		self.scope.to_context(self.name)
+		self.scope.set('routes',self.scope.pop('route').get('routes',[]))
 		return True
 
 	def _check (self):

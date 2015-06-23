@@ -21,12 +21,25 @@ class Tokeniser (object):
 
 			self.tokens = tokens  # to help debugging
 			self.generator = _generator()
+			self.next = ''
 
 		def __call__ (self):
+			if self.next:
+				returned,self.next = self.next,''
+				return returned
+
 			try:
 				return self.generator.next()
 			except StopIteration:
 				return ''
+
+		def peak (self):
+			try:
+				self.next = self.generator.next()
+				return self.next
+			except StopIteration:
+				return ''
+
 
 	@staticmethod
 	def _off ():

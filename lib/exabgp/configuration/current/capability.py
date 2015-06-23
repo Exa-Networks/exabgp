@@ -37,7 +37,7 @@ def addpath (tokeniser):
 
 
 def gracefulrestart (tokeniser, default):
-	if not tokeniser.tokens:
+	if len(tokeniser.tokens) == 1:
 		return default
 
 	state = string(tokeniser)
@@ -91,7 +91,7 @@ class ParseCapability (Section):
 
 	default = {
 		'asn4':             True,
-		'graceful-restart': False,
+		'graceful-restart': 0,
 		'multi-session':    False,
 		'operational':      False,
 		'route-refresh':    False,
@@ -101,6 +101,9 @@ class ParseCapability (Section):
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)
+
+	def post (self):
+		return True
 
 	def clear (self):
 		pass

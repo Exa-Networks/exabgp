@@ -13,7 +13,6 @@ import sys
 import stat
 import time
 import syslog
-import functools
 import logging
 import logging.handlers
 

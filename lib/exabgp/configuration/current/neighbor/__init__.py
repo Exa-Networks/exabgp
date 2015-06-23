@@ -142,13 +142,13 @@ class ParseNeighbor (Section):
 		neighbor.ttl              = local.get('ttl-security',None)
 		neighbor.group_updates    = local.get('group-updates',True)
 		neighbor.route_refresh    = local.get('route-refresh',0)
-		neighbor.graceful_restart = local.get('graceful-restart',0)
+		neighbor.graceful_restart = local.get('graceful-restart',0) or int(neighbor.hold_time)
 		neighbor.api              = local.get('api',ParseAPI.DEFAULT_API)
 
-		import pdb; pdb.set_trace()
-
 		neighbor.changes = []
-		for section in ('static','l2vpn'):
+
+		import pdb; pdb.set_trace()
+		for section in ('static','l2vpn','flow'):
 			neighbor.changes.extend(local.get(section,{}).get('routes',[]))
 
 		messages = local.get('operational-message',[])

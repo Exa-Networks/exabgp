@@ -41,31 +41,31 @@ class ParseFlowThen (Section):
 		'}' % ';\n  '.join(definition)
 
 	known = {
-		'accept':             accept,
-		'discard':            discard,
-		'rate-limit':         rate_limit,
-		'redirect':           redirect,
-		'redirect-next-hop':  redirect_next_hop,
-		'copy':               copy,
-		'mark':               mark,
-		'action':             action,
-		'community':          community,
-		'extended-community': extended_community,
+		'accept':              accept,
+		'discard':             discard,
+		'rate-limit':          rate_limit,
+		'redirect':            redirect,
+		'redirect-to-nexthop': redirect_next_hop,
+		'copy':                copy,
+		'mark':                mark,
+		'action':              action,
+		'community':           community,
+		'extended-community':  extended_community,
 	}
 
 	# 'community','extended-community'
 
 	action = {
-		'accept':             'nop',
-		'discard':            'attribute-add',
-		'rate-limit':         'attribute-add',
-		'redirect':           'nexthop-and-attribute',
-		'redirect-next-hop':  'attribute-add',
-		'copy':               'nexthop-and-attribute',
-		'mark':               'attribute-add',
-		'action':             'attribute-add',
-		'community':          'attribute-add',
-		'extended-community': 'attribute-add',
+		'accept':              'nop',
+		'discard':             'attribute-add',
+		'rate-limit':          'attribute-add',
+		'redirect':            'nexthop-and-attribute',
+		'redirect-to-nexthop': 'attribute-add',
+		'copy':                'nexthop-and-attribute',
+		'mark':                'attribute-add',
+		'action':              'attribute-add',
+		'community':           'attribute-add',
+		'extended-community':  'attribute-add',
 	}
 
 	name = 'flow/then'
@@ -73,8 +73,13 @@ class ParseFlowThen (Section):
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)
 
+	def clear (self):
+		pass
+
 	def pre (self):
+		self.scope.set(self.name,self.scope.get('flow/route'))
 		return True
 
 	def post (self):
+		self.scope.pop(self.name)
 		return True

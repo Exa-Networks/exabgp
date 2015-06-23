@@ -6,38 +6,26 @@ Created by Thomas Mangin on 2015-06-04.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-
 from struct import pack
 
-from exabgp.protocol.family import SAFI
-
-#from exabgp.bgp.message.update.nlri.qualifier import Labels
+from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
 
-# def label (self, name, command, tokens):
-# 	labels = []
-# 	label = tokens.pop(0)
-# 	try:
-# 		if label == '[':
-# 			while True:
-# 				try:
-# 					label = tokens.pop(0)
-# 				except IndexError:
-# 					return self.error.set(self.syntax)
-# 				if label == ']':
-# 					break
-# 				labels.append(int(label))
-# 		else:
-# 			labels.append(int(label))
-# 	except ValueError:
-# 		return self.error.set(self.syntax)
-#
-# 	nlri = self.scope.content[-1]['announce'][-1].nlri
-# 	if not nlri.safi.has_label():
-# 		nlri.safi = SAFI(SAFI.nlri_mpls)
-# 	nlri.labels = Labels(labels)
-# 	return True
+def label (tokeniser):
+	labels = []
+	value = tokeniser()
+
+	if value == '[':
+		while True:
+			value = tokeniser()
+			if label == ']':
+				break
+			labels.append(int(value))
+	else:
+		labels.append(int(value))
+
+	return Labels(labels)
 
 
 def route_distinguisher (tokeniser):

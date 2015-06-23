@@ -12,9 +12,9 @@ from exabgp.configuration.current.flow.match import ParseFlowMatch
 from exabgp.configuration.current.flow.then import ParseFlowThen
 
 from exabgp.configuration.current.static.mpls import route_distinguisher
-from exabgp.configuration.current.static.parser import next_hop
 
 from exabgp.configuration.current.flow.parser import flow
+from exabgp.configuration.current.flow.parser import next_hop
 
 
 class ParseFlowRoute (Section):
@@ -51,14 +51,17 @@ class ParseFlowRoute (Section):
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)
 
+	def clear (self):
+		pass
+
 	def pre (self):
+		self.scope.to_context()
 		self.scope.set(self.name,flow(self.tokeniser.iterate))
 		return True
 
 	def post (self):
 		if not self._check():
 			return False
-		# self.scope.to_context()
 		route = self.scope.pop(self.name)
 		if route:
 			self.scope.append('routes',route)
