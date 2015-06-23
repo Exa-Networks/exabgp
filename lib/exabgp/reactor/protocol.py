@@ -93,7 +93,7 @@ class Protocol (object):
 			local = self.neighbor.local_address
 			md5 = self.neighbor.md5
 			ttl = self.neighbor.ttl
-			self.connection = Outgoing(peer.afi,peer.ip,local.ip,self.port,md5,ttl)
+			self.connection = Outgoing(peer.afi,peer.string,local.string,self.port,md5,ttl)
 
 			try:
 				generator = self.connection.establish()
