@@ -91,23 +91,23 @@ class ParseStaticRoute (Section):
 		'rd':                  route_distinguisher,
 		'route-distinguisher': route_distinguisher,
 		'label':               label,
-		'attribute':          attribute,
-		'next-hop':           next_hop,
-		'origin':             origin,
-		'med':                med,
-		'as-path':            as_path,
-		'local-preference':   local_preference,
-		'atomic-aggregate':   atomic_aggregate,
-		'aggregator':         aggregator,
-		'originator-id':      originator_id,
-		'cluster-list':       cluster_list,
-		'community':          community,
-		'extended-community': extended_community,
-		'aigp':               aigp,
-		'name':               named,
-		'split':              split,
-		'watchdog':           watchdog,
-		'withdraw':           withdraw,
+		'attribute':           attribute,
+		'next-hop':            next_hop,
+		'origin':              origin,
+		'med':                 med,
+		'as-path':             as_path,
+		'local-preference':    local_preference,
+		'atomic-aggregate':    atomic_aggregate,
+		'aggregator':          aggregator,
+		'originator-id':       originator_id,
+		'cluster-list':        cluster_list,
+		'community':           community,
+		'extended-community':  extended_community,
+		'aigp':                aigp,
+		'name':                named,
+		'split':               split,
+		'watchdog':            watchdog,
+		'withdraw':            withdraw,
 	}
 
 	action = {
@@ -115,23 +115,23 @@ class ParseStaticRoute (Section):
 		'rd':                  'nlri-set',
 		'route-distinguisher': 'nlri-set',
 		'label':               'nlri-set',
-		'attribute':          'attribute-add',
-		'next-hop':           'nexthop-and-attribute',
-		'origin':             'attribute-add',
-		'med':                'attribute-add',
-		'as-path':            'attribute-add',
-		'local-preference':   'attribute-add',
-		'atomic-aggregate':   'attribute-add',
-		'aggregator':         'attribute-add',
-		'originator-id':      'attribute-add',
-		'cluster-list':       'attribute-add',
-		'community':          'attribute-add',
-		'extended-community': 'attribute-add',
-		'name':               'attribute-add',
-		'split':              'attribute-add',
-		'watchdog':           'attribute-add',
-		'withdraw':           'attribute-add',
-		'aigp':               'attribute-add',
+		'attribute':           'attribute-add',
+		'next-hop':            'nexthop-and-attribute',
+		'origin':              'attribute-add',
+		'med':                 'attribute-add',
+		'as-path':             'attribute-add',
+		'local-preference':    'attribute-add',
+		'atomic-aggregate':    'attribute-add',
+		'aggregator':          'attribute-add',
+		'originator-id':       'attribute-add',
+		'cluster-list':        'attribute-add',
+		'community':           'attribute-add',
+		'extended-community':  'attribute-add',
+		'name':                'attribute-add',
+		'split':               'attribute-add',
+		'watchdog':            'attribute-add',
+		'withdraw':            'attribute-add',
+		'aigp':                'attribute-add',
 	}
 
 	assign = {
@@ -160,7 +160,7 @@ class ParseStaticRoute (Section):
 		return True
 
 	def post (self):
-		self._family()
+		# self._family()
 		if not self._check():
 			return False
 		if not self._split():
@@ -171,10 +171,10 @@ class ParseStaticRoute (Section):
 			self.scope.append('routes',route)
 		return True
 
-	def _family (self):
-		last = self.scope.get(self.name)
-		if last.labels and not last.safi.has_label():
-			last.safi = SAFI(SAFI.nlri_mpls)
+	# def _family (self):
+	# 	last = self.scope.get(self.name)
+	# 	if last.nlri.labels and not last.nlri.safi.has_label():
+	# 		last.nlri.safi = SAFI(SAFI.nlri_mpls)
 
 	def _check (self):
 		last = self.scope.get(self.name)

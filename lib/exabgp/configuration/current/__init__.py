@@ -374,6 +374,6 @@ class Configuration (object):
 		# we are not really running the program, just want check the configuration validity
 		if environment.settings().debug.selfcheck:
 			from exabgp.configuration.current.check import check_neighbor
-			if check_neighbor(self.neighbor.neighbors):
+			if check_neighbor(self.neighbors):
 				sys.exit(0)
 			sys.exit(1)

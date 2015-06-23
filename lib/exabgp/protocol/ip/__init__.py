@@ -24,15 +24,20 @@ class IP (object):
 
 	_multicast_range = set(range(224,240))  # 239
 
-	__slots__ = ['ip','packed']
+	__slots__ = ['string','packed']
 
 	def __init__ (self):
 		raise RuntimeError("You should use IP.create() to use IP")
 
-	def init (self, ip, packed=None):
-		self.ip = ip
-		self.packed = packed if packed else IP.pton(ip)
+	def init (self, string, packed=None):
+		# XXX: the str should not be needed
+		self.string = string
+		self.packed = packed if packed else IP.pton(string)
 		return self
+
+	def __iter__ (self):
+		for letter in self.string:
+			yield letter
 
 	@staticmethod
 	def pton (ip):
@@ -86,7 +91,7 @@ class IP (object):
 		return self.packed
 
 	def __repr__ (self):
-		return self.ip
+		return self.string
 
 	def __eq__ (self, other):
 		return self.packed == other.packed
@@ -122,10 +127,10 @@ class IP (object):
 			return cls._known[afi]
 
 	@classmethod
-	def create (cls, ip, data=None,klass=None):
+	def create (cls, string, packed=None, klass=None):
 		if klass:
-			return klass(ip,data)
-		return cls.klass(ip)(ip,data)
+			return klass(string,packed)
+		return cls.klass(string)(string,packed)
 
 	@classmethod
 	def register (cls):
@@ -159,8 +164,8 @@ class IPv4 (IP):
 
 	__slots__ = []
 
-	def __init__ (self, ip, packed=None):
-		self.init(ip,packed if packed else IP.pton(ip))
+	def __init__ (self, string, packed=None):
+		self.init(string,packed if packed else IP.pton(string))
 
 	def __len__ (self):
 		return 4
@@ -205,8 +210,8 @@ class IPv6 (IP):
 
 	__slots__ = []
 
-	def __init__ (self, ip, packed=None):
-		self.init(ip,packed if packed else socket.inet_pton(socket.AF_INET6,ip))
+	def __init__ (self, string, packed=None):
+		self.init(string,packed if packed else socket.inet_pton(socket.AF_INET6,string))
 
 	def __len__ (self):
 		return 16

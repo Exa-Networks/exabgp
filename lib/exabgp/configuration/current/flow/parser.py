@@ -24,12 +24,15 @@ from exabgp.bgp.message.update.nlri.flow import FlowTrafficClass
 from exabgp.bgp.message.update.nlri.flow import FlowFlowLabel
 from exabgp.bgp.message.update.nlri import Flow
 
+from exabgp.bgp.message.update.attribute import NextHop
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.attribute.community.extended import TrafficRate
 from exabgp.bgp.message.update.attribute.community.extended import TrafficAction
 from exabgp.bgp.message.update.attribute.community.extended import TrafficRedirect
 from exabgp.bgp.message.update.attribute.community.extended import TrafficMark
 from exabgp.bgp.message.update.attribute.community.extended import TrafficNextHop
+
+from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunities
 
 from exabgp.rib.change import Change
 
@@ -132,6 +135,7 @@ def _generic_list (tokeniser, klass):
 	else:
 		yield klass(NumericOperator.EQ | AND,klass.converter(data))
 
+
 def _generic_condition (tokeniser, klass):
 	data = tokeniser.peak()
 	if data[0] in ['=','>','<']:
@@ -213,7 +217,8 @@ def next_hop (tokeniser):
 	if value.lower() == 'self':
 		raise ValueError('unsupported yet on new format')
 	else:
-		return IP.create(value)
+		ip = IP.create(value)
+		return NextHop(ip.string,ip.packed)
 
 
 def accept (tokeniser):
@@ -222,7 +227,7 @@ def accept (tokeniser):
 
 def discard (tokeniser):
 	# README: We are setting the ASN as zero as that what Juniper (and Arbor) did when we created a local flow route
-	return TrafficRate(ASN(0),0)
+	return ExtendedCommunities().add(TrafficRate(ASN(0),0))
 
 
 def rate_limit (tokeniser):
@@ -233,7 +238,7 @@ def rate_limit (tokeniser):
 	if speed > 1000000000000:
 		speed = 1000000000000
 		Logger().configuration("rate-limiting changed for 1 000 000 000 000 bytes from %s" % speed,'warning')
-	return TrafficRate(ASN(0),speed)
+	return ExtendedCommunities().add(TrafficRate(ASN(0),speed))
 
 
 def redirect (tokeniser):
@@ -249,17 +254,17 @@ def redirect (tokeniser):
 			raise ValueError('asn is a 32 bits number, it can only be 16 bit %s' % route_target)
 		if route_target >= pow(2,32):
 			raise ValueError('route target is a 32 bits number, value too large %s' % route_target)
-		return None,TrafficRedirect(asn,route_target)
+		return None,ExtendedCommunities().add(TrafficRedirect(asn,route_target))
 	else:
-		return IP.create(data),TrafficNextHop(False)
+		return IP.create(data),ExtendedCommunities().add(TrafficNextHop(False))
 
 
 def redirect_next_hop (tokeniser):
-	return TrafficNextHop(False)
+	return ExtendedCommunities().add(TrafficNextHop(False))
 
 
 def copy (tokeniser):
-	return IP.create(tokeniser()),TrafficNextHop(True)
+	return IP.create(tokeniser()),ExtendedCommunities().add(TrafficNextHop(True))
 
 
 def mark (tokeniser):
@@ -273,7 +278,7 @@ def mark (tokeniser):
 	if dscp_value < 0 or dscp_value > 0b111111:
 		raise ValueError('dscp is not a valid number')
 
-	return TrafficMark(dscp_value)
+	return ExtendedCommunities().add(TrafficMark(dscp_value))
 
 
 def action (tokeniser):
@@ -285,4 +290,4 @@ def action (tokeniser):
 	if not sample and not terminal:
 		raise ValueError('invalid flow action')
 
-	return TrafficAction(sample,terminal)
+	return ExtendedCommunities().add(TrafficAction(sample,terminal))

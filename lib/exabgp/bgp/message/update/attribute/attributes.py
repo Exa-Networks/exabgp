@@ -17,6 +17,7 @@ from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import ASPath
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.community.communities import Communities
+from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunities
 
 from exabgp.bgp.message.notification import Notify
 
@@ -151,6 +152,10 @@ class Attributes (dict):
 		if attribute.ID in Attributes.MULTIPLE:
 			# deadcode: setdefault does not seem to exist anywhere ? (TM)
 			self.setdefault(attribute.ID,[]).append(attribute)
+		# elif attribute.ID in (Attribute.CODE.COMMUNITY, Attribute.CODE.EXTENDED_COMMUNITY):
+		# 	if attribute.ID not in self:
+		# 		self[attribute.ID] = Attribute.klass(attribute.ID,attribute.FLAG)()
+		# 	self[attribute.ID].add(attribute)
 		elif attribute.ID in self:
 			raise Notify(3,0,'multiple attribute for %s' % str(Attribute.CODE(attribute.ID)))
 		else:

@@ -30,7 +30,8 @@ class Communities (Attribute):
 			self.communities = []
 
 	def add (self, data):
-		return self.communities.append(data)
+		self.communities.append(data)
+		return self
 
 	def pack (self, negotiated=None):
 		if len(self.communities):

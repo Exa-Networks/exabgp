@@ -69,8 +69,8 @@ def check_neighbor (neighbors):
 			capa[Capability.CODE.ADD_PATH] = path
 		capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
 
-		o1 = Open(Version(4),ASN(neighbor.local_as),HoldTime(180),RouterID(neighbor.local_address),capa)
-		o2 = Open(Version(4),ASN(neighbor.peer_as),HoldTime(180),RouterID(neighbor.peer_address),capa)
+		o1 = Open(Version(4),ASN(neighbor.local_as),HoldTime(180),RouterID(neighbor.local_address.string),capa)
+		o2 = Open(Version(4),ASN(neighbor.peer_as),HoldTime(180),RouterID(neighbor.peer_address.string),capa)
 		negotiated = Negotiated(neighbor)
 		negotiated.sent(o1)
 		negotiated.received(o2)
@@ -84,7 +84,6 @@ def check_neighbor (neighbors):
 			packed = list(Update([change1.nlri],change1.attributes).messages(negotiated))
 			pack1 = packed[0]
 
-			logger.parser('parsed route requires %d updates' % len(packed))
 			logger.parser('parsed route requires %d updates' % len(packed))
 			logger.parser('update size is %d' % len(pack1))
 

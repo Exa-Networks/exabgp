@@ -22,8 +22,8 @@ class NextHop (Attribute,IP):
 	FLAG = Attribute.Flag.TRANSITIVE
 	CACHING = True
 
-	def __init__ (self, ip, packed=None):
-		self.init(ip)
+	def __init__ (self, string, packed=None):
+		self.init(string,packed)
 
 	def __eq__ (self, other):
 		return \

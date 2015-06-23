@@ -147,7 +147,6 @@ class ParseNeighbor (Section):
 
 		neighbor.changes = []
 
-		import pdb; pdb.set_trace()
 		for section in ('static','l2vpn','flow'):
 			neighbor.changes.extend(local.get(section,{}).get('routes',[]))
 
@@ -196,9 +195,9 @@ class ParseNeighbor (Section):
 		if neighbor.local_address.afi != neighbor.peer_address.afi:
 			return self.error.set('local-address and peer-address must be of the same family')
 
-		if neighbor.peer_address.ip in self._neighbors:
-			return self.error.set('duplicate peer definition %s' % neighbor.peer_address.ip)
-		self._neighbors.append(neighbor.peer_address.ip)
+		if neighbor.peer_address.string in self._neighbors:
+			return self.error.set('duplicate peer definition %s' % neighbor.peer_address.string)
+		self._neighbors.append(neighbor.peer_address.string)
 
 		# check we are not trying to announce routes without the right MP announcement
 		for family in neighbor.families():

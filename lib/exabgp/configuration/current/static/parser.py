@@ -6,20 +6,6 @@ Created by Thomas Mangin on 2015-06-04.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-# def watchdog (self, name, command, tokens):
-# 	try:
-# 		w = tokens.pop(0)
-# 		if w.lower() in ['announce','withdraw']:
-# 			raise ValueError('invalid watchdog name %s' % w)
-# 	except IndexError:
-# 		return self.error.set(self.syntax)
-#
-# 	try:
-# 		self.scope.content[-1]['announce'][-1].attributes.add(Watchdog(w))
-# 		return True
-# 	except ValueError:
-# 		return self.error.set(self.syntax)
-
 from struct import pack
 
 from exabgp.protocol.ip import IP
@@ -95,17 +81,17 @@ def next_hop (tokeniser,nexthopself=None):
 	else:
 		ip = IP.create(value)
 		if ip.afi == AFI.ipv4:
-			return ip,NextHop(value,ip.packed)
-		return IP.create(ip),None
+			return ip,NextHop(ip.string)
+		return ip,None
 
 
 def inet (tokeniser):
 	ipmask = prefix(tokeniser)
 	return Change(
 		INET(
-			afi=IP.toafi(ipmask.ip),
-			safi=IP.tosafi(ipmask.ip),
-			packed=IP.pton(ipmask.ip),
+			afi=IP.toafi(ipmask.string),
+			safi=IP.tosafi(ipmask.string),
+			packed=IP.pton(ipmask.string),
 			mask=ipmask.mask,
 			nexthop=None,
 			action=OUT.ANNOUNCE
@@ -418,6 +404,7 @@ def _community (value):
 # 	self.scope.content[-1]['announce'][-1].attributes.add(communities)
 # 	return True
 
+
 def community (tokeniser):
 	communities = Communities()
 
@@ -686,6 +673,20 @@ def watchdog (tokeniser):
 	if command.lower() in ['announce','withdraw']:
 		raise ValueError('invalid watchdog name %s' % command)
 	return Watchdog(command)
+
+# def watchdog (self, name, command, tokens):
+# 	try:
+# 		w = tokens.pop(0)
+# 		if w.lower() in ['announce','withdraw']:
+# 			raise ValueError('invalid watchdog name %s' % w)
+# 	except IndexError:
+# 		return self.error.set(self.syntax)
+#
+# 	try:
+# 		self.scope.content[-1]['announce'][-1].attributes.add(Watchdog(w))
+# 		return True
+# 	except ValueError:
+# 		return self.error.set(self.syntax)
 
 
 def withdraw (tokeniser=None):

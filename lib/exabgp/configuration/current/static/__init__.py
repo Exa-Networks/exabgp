@@ -56,11 +56,11 @@ def route (tokeniser):
 		safi = SAFI(SAFI.nlri_mpls)
 	else:
 		klass = INET
-		safi = IP.tosafi(ipmask.ip)
+		safi = IP.tosafi(ipmask.string)
 
 	change = Change(
 		klass(
-			IP.toafi(ipmask.ip),
+			IP.toafi(ipmask.string),
 			safi,
 			ipmask.packed,
 			ipmask.mask,
