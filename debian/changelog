@@ -19,6 +19,7 @@ exabgp (3.4.11-1) UNRELEASED; urgency=medium
   * Switch to 3.0 (quilt) format.
   * Add upstart script, thanks to Pierre-Yves Kerembellec.
   * Add back debian/watch.
+  * Skip some unreliable tests.
 
  -- Vincent Bernat <bernat@debian.org>  Wed, 24 Jun 2015 14:13:12 +0200
 
