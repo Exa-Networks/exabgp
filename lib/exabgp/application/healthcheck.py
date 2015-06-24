@@ -206,13 +206,25 @@ def parse():
 
 def setup_logging(debug, silent, name, syslog_facility, syslog):
     """Setup logger"""
+
+    def syslog_address():
+        """Return a sensitive syslog address"""
+        if sys.platform == "darwin":
+            return "/var/run/syslog"
+        if sys.platform.startswith("freebsd"):
+            return "/var/run/log"
+        if sys.platform.startswith("linux"):
+            return "/dev/log"
+        raise EnvironmentError("Unable to guess syslog address for your "
+                               "platform, try to disable syslog")
+
     logger.setLevel(debug and logging.DEBUG or logging.INFO)
     enable_syslog = syslog and not debug
     # To syslog
     if enable_syslog:
         facility = getattr(logging.handlers.SysLogHandler,
                            "LOG_{0}".format(syslog_facility.upper()))
-        sh = logging.handlers.SysLogHandler(address=str("/dev/log"),
+        sh = logging.handlers.SysLogHandler(address=str(syslog_address()),
                                             facility=facility)
         if name:
             healthcheck_name = "healthcheck-{0}".format(name)
@@ -465,12 +477,8 @@ def loop(options):
 def main():
     """Entry point."""
     options = parse()
-    try:
-        setup_logging(options.debug, options.silent, options.name,
-                      options.syslog_facility, not options.no_syslog)
-    except socket.error, e:  # OSX Error with default settings
-        sys.stderr.write("could not setup logger: {0}\n".format(e.strerror))
-        sys.exit(1)
+    setup_logging(options.debug, options.silent, options.name,
+                  options.syslog_facility, not options.no_syslog)
     if options.pid:
         options.pid.write("{0}\n".format(os.getpid()))
         options.pid.close()
