@@ -15,7 +15,8 @@ Vcs-Git: https://github.com/Exa-Networks/exabgp.git -b debian/sid
 
 Package: exabgp
 Architecture: all
-Pre-Depends: debconf (>= 1.5.34)
+Pre-Depends: debconf (>= 1.5.34),
+             dpkg (>= 1.15.7.2)
 Depends: ${misc:Depends},
          ${python:Depends},
          adduser,

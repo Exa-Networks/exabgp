@@ -1,0 +1,9 @@
+exabgp (3.4.11-1) unstable; urgency=medium
+
+  /etc/exabgp/processes/healthcheck.py is not shipped any more from this
+  version and will be removed unless modified. The best way to
+  invoke this script is to use:
+
+    python -m exabgp.application.healthcheck
+
+ -- Vincent Bernat <bernat@debian.org>  Wed, 24 Jun 2015 16:14:39 +0200
