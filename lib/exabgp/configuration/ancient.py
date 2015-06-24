@@ -1727,15 +1727,19 @@ class Configuration (object):
 		try:
 			if 'rd' in tokens:
 				klass = MPLS
+				safi = SAFI(SAFI.mpls_vpn)
 			elif 'route-distinguisher' in tokens:
 				klass = MPLS
+				safi = SAFI(SAFI.mpls_vpn)
 			elif 'label' in tokens:
 				klass = MPLS
+				safi = SAFI(SAFI.nlri_mpls)
 			else:
 				klass = Prefix
+				safi = IP.tosafi(ip)
 
 			# nexthop must be false and its str return nothing .. an empty string does that
-			update = Change(klass(afi=IP.toafi(ip),safi=IP.tosafi(ip),packed=IP.pton(ip),mask=mask,nexthop=None,action=OUT.ANNOUNCE),Attributes())
+			update = Change(klass(afi=IP.toafi(ip),safi=safi,packed=IP.pton(ip),mask=mask,nexthop=None,action=OUT.ANNOUNCE),Attributes())
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise Exception()  # noqa
@@ -1801,7 +1805,7 @@ class Configuration (object):
 
 			if command in self._dispatch_route_cfg:
 				if command in ('rd','route-distinguisher'):
-					if self._dispatch_route_cfg[command](scope,tokens,SAFI.nlri_mpls):
+					if self._dispatch_route_cfg[command](scope,tokens,SAFI.mpls_vpn):
 						continue
 				else:
 					if self._dispatch_route_cfg[command](scope,tokens):
