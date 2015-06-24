@@ -72,12 +72,6 @@ class Text (object):
 
 		return total_string
 
-	def reset (self, peer):
-		return None
-
-	def increase (self, peer):
-		return None
-
 	def up (self, peer):
 		return 'neighbor %s up\n' % peer.neighbor.peer_address
 
@@ -170,15 +164,11 @@ class JSON (object):
 		self.version = version
 		self.time = nop if highres else int
 
-	def reset (self, peer):
-		self._counter[peer.neighbor.peer_address] = 0
-
-	def increase (self, peer):
-		address = peer.neighbor.peer_address
-		self._counter[address] = self._counter.get(address,0) + 1
-
 	def count (self, peer):
-		return self._counter.get(peer.neighbor.peer_address,0)
+		address = peer.neighbor.peer_address
+		number = self._counter.get(address,0) + 1
+		self._counter[address] = number
+		return number
 
 	def _string (self, _):
 		return '%s' % _ if issubclass(_.__class__,int) or issubclass(_.__class__,long) or ('{' in str(_)) else '"%s"' % _
@@ -328,6 +318,8 @@ class JSON (object):
 
 		nlri = ''
 		if not add and not remove:  # an EOR
+			if not update.nlris:
+				raise RuntimeError('no update.nlri: %s %s' % (type(update),dir(update)))
 			return update.nlris[0].json()
 		if add:
 			nlri += '"announce": { %s }' % ', '.join(add)

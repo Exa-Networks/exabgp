@@ -165,6 +165,10 @@ class Attribute (object):
 			len_value = chr(length)
 		return "%s%s%s%s" % (chr(flag),chr(self.ID),len_value,value)
 
+	def _len (self,value):
+		length = len(value)
+		return length + 3 if length <= 0xFF else length + 4
+
 	def __eq__ (self, other):
 		return self.ID == other.ID
 

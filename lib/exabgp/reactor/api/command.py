@@ -109,7 +109,12 @@ def show_neighbors (self, reactor, service, command):
 
 def show_routes (self, reactor, service, command):
 	def callback ():
-		for key in reactor.configuration.neighbor.keys():
+		last = command.split()[-1]
+		if last == 'routes':
+			neighbors = reactor.configuration.neighbor.keys()
+		else:
+			neighbors = [n for n in reactor.configuration.neighbor.keys() if 'neighbor %s' % last in n]
+		for key in neighbors:
 			neighbor = reactor.configuration.neighbor[key]
 			for change in list(neighbor.rib.outgoing.sent_changes()):
 				reactor.answer(service,'neighbor %s %s' % (neighbor.local_address,str(change.nlri)))
@@ -121,7 +126,12 @@ def show_routes (self, reactor, service, command):
 
 def show_routes_extensive (self, reactor, service, command):
 	def callback ():
-		for key in reactor.configuration.neighbor.keys():
+		last = command.split()[-1]
+		if last == 'extensive':
+			neighbors = reactor.configuration.neighbor.keys()
+		else:
+			neighbors = [n for n in reactor.configuration.neighbor.keys() if 'neighbor %s' % last in n]
+		for key in neighbors:
 			neighbor = reactor.configuration.neighbor[key]
 			for change in list(neighbor.rib.outgoing.sent_changes()):
 				reactor.answer(service,'neighbor %s %s' % (neighbor.name(),change.extensive()))

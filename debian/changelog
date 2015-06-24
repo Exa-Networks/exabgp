@@ -1,4 +1,4 @@
-exabgp (3.4.9-1) UNRELEASED; urgency=medium
+exabgp (3.4.11-1) UNRELEASED; urgency=medium
 
   * New upstream release.
   * New maintainer. Thanks to Henry-Nicolas for maintaining ExaBGP
@@ -17,7 +17,7 @@ exabgp (3.4.9-1) UNRELEASED; urgency=medium
   * Update debian/control's Vcs-* fields to use the appropriate branch.
   * Switch to 3.0 (quilt) format.
 
- -- Vincent Bernat <bernat@debian.org>  Sat, 14 Mar 2015 20:47:48 +0100
+ -- Vincent Bernat <bernat@debian.org>  Wed, 24 Jun 2015 14:13:12 +0200
 
 exabgp (3.3.1-1) unstable; urgency=low
 
@@ -232,4 +232,7 @@ exabgp (1.2.0-1) unstable; urgency=low
 =======
  -- Vincent Bernat <bernat@debian.org>  Sat, 14 Mar 2015 15:32:13 -0000
 >>>>>>> 3.4.9
+=======
+ -- Vincent Bernat <bernat@debian.org>  Tue, 26 May 2015 19:23:30 -0000
+>>>>>>> 3.4.11
 

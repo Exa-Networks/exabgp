@@ -109,7 +109,7 @@ class Reactor (object):
 	def run (self):
 		self.daemon.daemonise()
 
-		# Make sure we create processes one we have closed file descriptor
+		# Make sure we create processes once we have closed file descriptor
 		# unfortunately, this must be done before reading the configuration file
 		# so we can nto do it with dropped privileges
 		self.processes = Processes(self)
@@ -124,18 +124,19 @@ class Reactor (object):
 
 		# but I can not see any way to avoid it
 
-		self.reload()
+		if not self.load():
+			return False
 
 		try:
 			self.listener = Listener()
 
 			if self.ip:
-				self.listener.listen(IP.create(self.ip),self.port,None)
+				self.listener.listen(IP.create(self.ip),IP.create('0.0.0.0'),self.port,None)
 				self.logger.reactor("Listening for BGP session(s) on %s:%d" % (self.ip,self.port))
 
 			for neighbor in self.configuration.neighbor.values():
 				if neighbor.listen:
-					self.listener.listen(neighbor.local_address,neighbor.listen,neighbor.md5)
+					self.listener.listen(neighbor.local_address,neighbor.peer_address,neighbor.listen,neighbor.md5)
 					self.logger.reactor("Listening for BGP session(s) on %s:%d%s" % (neighbor.local_address,neighbor.listen,' with MD5' if neighbor.md5 else ''))
 		except NetworkError,exc:
 			self.listener = None
@@ -151,6 +152,8 @@ class Reactor (object):
 			self.logger.reactor("Could not drop privileges to '%s' refusing to run as root" % self.daemon.user,'critical')
 			self.logger.reactor("Set the environmemnt value exabgp.daemon.user to change the unprivileged user",'critical')
 			return
+
+		self.processes.start()
 
 		# This is required to make sure we can write in the log location as we now have dropped root privileges
 		if not self.logger.restart():
@@ -180,7 +183,8 @@ class Reactor (object):
 						self.shutdown()
 					elif self._reload and reload_completed:
 						self._reload = False
-						self.reload(self._reload_processes)
+						self.load()
+						self.processes.start(self._reload_processes)
 						self._reload_processes = False
 					elif self._restart:
 						self._restart = False
@@ -307,10 +311,11 @@ class Reactor (object):
 		self.logger.reactor("Performing shutdown")
 		if self.listener:
 			self.listener.stop()
+			self.listener = None
 		for key in self.peers.keys():
 			self.peers[key].stop()
 
-	def reload (self, restart=False):
+	def load (self):
 		"""reload the configuration and send to the peer the route which changed"""
 		self.logger.reactor("Performing reload of exabgp %s" % version)
 
@@ -323,7 +328,7 @@ class Reactor (object):
 			# Careful the string above is used but the QA code to check for sucess of failure
 			#
 			self.logger.configuration(self.configuration.error,'error')
-			return
+			return False
 
 		for key, peer in self.peers.items():
 			if key not in self.configuration.neighbor:
@@ -347,8 +352,7 @@ class Reactor (object):
 				self.peers[key].reconfigure(neighbor)
 		self.logger.configuration("Loaded new configuration successfully",'warning')
 
-		# This only starts once ...
-		self.processes.start(restart)
+		return True
 
 	def schedule (self):
 		try:
@@ -433,7 +437,7 @@ class Reactor (object):
 	@staticmethod
 	def match_neighbor (description, name):
 		for string in description:
-			if re.search('(^|[\s])%s($|[\s,])' % re.escape(string), name) is None:
+			if re.search(r'(^|[\s])%s($|[\s,])' % re.escape(string), name) is None:
 				return False
 		return True
 

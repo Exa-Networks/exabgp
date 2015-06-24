@@ -204,9 +204,9 @@ class Neighbor (object):
 			'\trouter-id %s;\n' \
 			'\tlocal-address %s;\n' \
 			'\tlocal-as %s;\n' \
-			'\tpeer-as %s;%s\n' \
+			'\tpeer-as %s;\n' \
 			'\thold-time %s;\n' \
-			'%s%s%s%s%s%s\n' \
+			'%s%s%s%s%s%s%s\n' \
 			'\tcapability {\n' \
 			'%s%s%s%s%s%s%s\t}\n' \
 			'\tfamily {%s\n' \

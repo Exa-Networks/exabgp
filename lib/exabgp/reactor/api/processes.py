@@ -195,9 +195,15 @@ class Processes (object):
 				if r:
 					try:
 						while True:
-							line = proc.stdout.next().rstrip()
+							# Calling next() on Linux and OSX works perfectly well
+							# but not on OpenBSD where it always raise StopIteration
+							# and only readline() works
+							raw = proc.stdout.readline()
+							line = raw.rstrip()
 							consumed_data = True
 							self.logger.processes("Command from process %s : %s " % (process,line))
+							if raw == '':
+								raise IOError('Child process died')
 							yield (process,formated(line))
 					except IOError,exc:
 						if not exc.errno or exc.errno in error.fatal:
@@ -222,9 +228,6 @@ class Processes (object):
 				self._start(process)
 
 	def write (self, process, string, peer=None):
-		if peer:
-			self.increase(peer)
-
 		# XXX: FIXME: This is potentially blocking
 		while True:
 			try:
@@ -269,20 +272,6 @@ class Processes (object):
 				return
 			return function(self,*args)
 		return closure
-
-	@silenced
-	def reset (self, peer):
-		for process in self._notify(peer,'*'):
-			data = self._encoder[process].reset(peer)
-			if data:
-				self.write(process,data,peer)
-
-	@silenced
-	def increase (self, peer):
-		for process in self._notify(peer,'*'):
-			data = self._encoder[process].increase(peer)
-			if data:
-				self.write(process,data,peer)
 
 	# invalid-name
 	@silenced

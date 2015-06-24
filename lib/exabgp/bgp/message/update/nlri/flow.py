@@ -240,8 +240,10 @@ class BinaryString (object):
 
 # Components ..............................
 
-def converter (function, klass=int):
+def converter (function, klass=None):
 	def _integer (value):
+		if klass is None:
+			return function(value)
 		try:
 			return klass(value)
 		except ValueError:
@@ -309,22 +311,22 @@ class FlowSource (object):
 
 # Prefix
 class Flow4Destination (IPrefix4,FlowDestination):
-	pass
+	NAME = 'destination'
 
 
 # Prefix
 class Flow4Source (IPrefix4,FlowSource):
-	pass
+	NAME = 'source'
 
 
 # Prefix
 class Flow6Destination (IPrefix6,FlowDestination):
-	pass
+	NAME = 'destination'
 
 
 # Prefix
 class Flow6Source (IPrefix6,FlowSource):
-	pass
+	NAME = 'source'
 
 
 class FlowIPProtocol (IOperationByte,NumericString,IPv4):

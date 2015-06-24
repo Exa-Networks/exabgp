@@ -16,8 +16,8 @@ Find what users have [done with it](https://github.com/Exa-Networks/exabgp/wiki/
  ```
 
 ```sh
-> curl -L https://github.com/Exa-Networks/exabgp/archive/3.4.5.tar.gz | tar zx
-> ./exabgp-3.4.5/sbin/exabgp --help
+> curl -L https://github.com/Exa-Networks/exabgp/archive/3.4.9.tar.gz | tar zx
+> ./exabgp-3.4.9/sbin/exabgp --help
 ```
 
 ##Features

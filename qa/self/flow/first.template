@@ -1,0 +1,40 @@
+group test {
+	local-as 65533;
+	peer-as 65534;
+	hold-time 9;
+	graceful-restart 1200;
+
+	family {
+		ipv4 unicast;
+		ipv4 flow;
+	}
+
+	process stdout {
+		receive {
+			parsed;
+			operational;
+		}
+		encoder json;
+		run "./flow-change.py";
+	}
+
+	flow {
+		route block_traffic_to_proxy {
+			match {
+				source 10.0.0.1/32;
+				destination 10.0.0.2/32;
+				destination-port =3128;
+				protocol tcp;
+			}   
+			then {
+				discard;
+			}   
+		}   
+	}
+
+	neighbor IP {
+		description "router";
+		router-id 127.0.0.0;
+		local-address 127.0.0.1;
+	}
+}

@@ -226,6 +226,8 @@ class Neighbor:
 	router_id = RouterID('127.0.0.1')
 	local_address = IPv4('127.0.0.1')
 	peer_address = IPv4('127.0.0.1')
+	host_name = 'localhost'
+	domain_name = 'localdomain'
 	peer_as = ASN('65500')
 	local_as = ASN('65500')
 	hold_time = HoldTime(180)

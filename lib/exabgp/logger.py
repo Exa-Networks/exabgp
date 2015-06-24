@@ -60,7 +60,8 @@ class LazyFormat (object):
 		return str(self).split(char)
 
 	def __str__ (self):
-		return self.prefix + self.formater(self.message)
+		formated = self.formater(self.message)
+		return '%s (%d) %s' % (self.prefix,len(formated),formated)
 
 
 class Logger (object):
@@ -105,7 +106,9 @@ class Logger (object):
 		if self.short:
 			return message
 		now = time.strftime('%a, %d %b %Y %H:%M:%S',timestamp)
-		return "%s | %-8s | %-6d | %-13s | %s" % (now,level,self._pid,source,message)
+		if self.destination in ['stderr','stdout']:
+			return "%s | %-8s | %-6d | %-13s | %s" % (now,level,self._pid,source,message)
+		return "%s %-6d %-13s %s" % (environment.application,self._pid,source,message)
 
 	def _prefixed (self, level, source, message):
 		timestamp = time.localtime()
@@ -137,6 +140,7 @@ class Logger (object):
 		self._option.parser        = command.log.enable and (command.log.all or command.log.parser)
 
 		if not command.log.enable:
+			self.destination = ''
 			return
 
 		self.destination = command.log.destination

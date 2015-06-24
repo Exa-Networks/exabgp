@@ -3,6 +3,48 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.4.11
+ * Change: install healthcheck in bin
+ * Fix: Do shutdown when waiting for a new connection to a peer
+ * Fix: Bad ASN enconding when ASN4 is not negotiated
+    reported by: Orangefish on github
+ * Fix: Shutdown when waiting for a new outgoing connection to establish
+ * Fix: JSON counter
+    reported by: 
+ * Fix: JSON flow printing for source and destination
+ * Fix: Do not always locate exabgp.env
+    reported by: Florian Obser
+ * Fix: Correctly drop root privileges
+    reported by: Florian Obser
+ * Fix: validation of flow routes
+ * Fix: Python differences between Unix version breaking process forking
+ * Fix: Allow = with flowspec singleton
+    reported by: Pavel Odintsov
+ * Fix: selfcheck feature
+ * Fix: do not refuse to parse multiple MP attributes in an update
+ * Fix: possible bug with attribute information due to caching
+ * Feature: Allow single line flow route
+    requested by: Pavel Odintsov
+ * Feature: show route (extensive) can take a neighbor as parameter
+    requested by: jtkdpu
+
+Version 3.4.10
+ * Fix: Fix parsing attributes with PARTIAL flag set
+    patch by: Daniel Neiter
+ * Fix: Fix -t exit with error code 1 when -t is used and the configuration is invalid
+    reported by: Kevin Landreth
+ * Fix: Using split option with large MP could lead to invalid update
+    reported by: m4ccbr on github
+ * Fix: MD5 support for incoming connection
+    patch by: Sandy Breeze and David Overton
+ * Fix: prevent multiple similar binding
+    reported by: Sandy Breeze
+ * Fix: allow different MD5 for the same binding
+    reported by: Sandy Breeze
+ * Fix: issue with ASN4 code
+    reported by: Florian Obser (with a patch, thank you)
+ * Fix: issue with --decode
+
 Version 3.4.9
  * Fix: very bad bug where NLRI where not associated to the right AFI/SAFI pair ( #235 )
     reported by: esequei

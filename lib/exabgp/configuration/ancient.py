@@ -311,7 +311,9 @@ class Configuration (object):
 			'route-distinguisher': self._route_rd,
 			'next-hop': self._flow_route_next_hop,
 			'source': self._flow_source,
+			'source-ipv4': self._flow_source,
 			'destination': self._flow_destination,
+			'destination-ipv4': self._flow_destination,
 			'port': self._flow_route_anyport,
 			'source-port': self._flow_route_source_port,
 			'destination-port': self._flow_route_destination_port,
@@ -379,6 +381,11 @@ class Configuration (object):
 			return self._reload()
 		except KeyboardInterrupt:
 			self.error = 'configuration reload aborted by ^C or SIGINT'
+			if self.debug: raise  # noqa
+			return False
+		except Exception:
+			self.error = 'configuration parsing issue'
+			if self.debug: raise  # noqa
 			return False
 
 	def _reload (self):
@@ -1794,7 +1801,7 @@ class Configuration (object):
 
 			if command in self._dispatch_route_cfg:
 				if command in ('rd','route-distinguisher'):
-					if self._dispatch_route_cfg[command](scope,tokens,SAFI.mpls_vpn):
+					if self._dispatch_route_cfg[command](scope,tokens,SAFI.nlri_mpls):
 						continue
 				else:
 					if self._dispatch_route_cfg[command](scope,tokens):
@@ -2580,6 +2587,7 @@ class Configuration (object):
 				[],
 				[
 					'source','destination',
+					'source-ipv4','destination-ipv4',
 					'port','source-port','destination-port',
 					'protocol','next-header','tcp-flags','icmp-type','icmp-code',
 					'fragment','dscp','traffic-class','packet-length','flow-label'
@@ -2794,6 +2802,8 @@ class Configuration (object):
 						if self.debug: raise Exception()  # noqa
 						return False
 			else:
+				if name[0] == '=':
+					name = name[1:]
 				scope[-1]['announce'][-1].nlri.add(klass(NumericOperator.EQ | AND,klass.converter(name)))
 		except (IndexError,ValueError):
 			self._error = self._str_flow_error

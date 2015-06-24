@@ -30,6 +30,8 @@ from exabgp.reactor.api.encoding import JSON
 
 from exabgp.bgp.message.notification import Notification
 
+from exabgp.protocol.family import known_families
+
 # =============================================================== check_neighbor
 # ...
 
@@ -38,7 +40,7 @@ def check_neighbor (neighbors):
 	from exabgp.logger import Logger
 
 	logger = Logger()
-	logger._parser = True
+	logger._option.parser = True
 
 	if not neighbors:
 		logger.parser('\ncould not find neighbor(s) to check')
@@ -48,7 +50,6 @@ def check_neighbor (neighbors):
 
 	for name in neighbors.keys():
 		neighbor = neighbors[name]
-		neighbor.rib.clear()
 
 		path = {}
 		for f in known_families():
@@ -56,7 +57,8 @@ def check_neighbor (neighbors):
 				path[f] = neighbor.add_path
 
 		capa = Capabilities().new(neighbor,False)
-		capa[Capability.CODE.ADD_PATH] = path
+		if path:
+			capa[Capability.CODE.ADD_PATH] = path
 		capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
 
 		o1 = Open(4,neighbor.local_as,str(neighbor.local_address),capa,180)
@@ -74,6 +76,7 @@ def check_neighbor (neighbors):
 			packed = list(Update([change1.nlri],change1.attributes).messages(negotiated))
 			pack1 = packed[0]
 
+			logger.parser('parsed route requires %d updates' % len(packed))
 			logger.parser('parsed route requires %d updates' % len(packed))
 			logger.parser('update size is %d' % len(pack1))
 
@@ -115,7 +118,7 @@ def check_neighbor (neighbors):
 						logger.parser('[%s]' % (str2r))
 						return False
 				else:
-						logger.parser('strings are fine')
+					logger.parser('strings are fine')
 
 				if skip:
 					logger.parser('skipping encoding for update with non-transitive attribute(s)')
@@ -128,11 +131,15 @@ def check_neighbor (neighbors):
 					logger.parser('encoding is fine')
 					logger.parser('----------------------------------------')
 
+				logger.parser('JSON nlri %s' % change1.nlri.json())
+				logger.parser('JSON attr %s' % change1.attributes.json())
+
 			except Notify,exc:
 				logger.parser('----------------------------------------')
 				logger.parser(str(exc))
 				logger.parser('----------------------------------------')
 				return False
+		neighbor.rib.clear()
 
 	return True
 

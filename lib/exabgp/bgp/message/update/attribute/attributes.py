@@ -146,12 +146,11 @@ class Attributes (dict):
 		self._str = ''
 		self._json = ''
 
-		if attribute.ID in self:
-			raise Notify(3,0,'multiple attribute for %s' % str(Attribute.CODE(attribute.ID)))
-
 		# XXX: FIXME: I am not sure anymore that more than one of each is possible
 		if attribute.ID in Attributes.MULTIPLE:
 			self.setdefault(attribute.ID,[]).append(attribute)
+		elif attribute.ID in self:
+			raise Notify(3,0,'multiple attribute for %s' % str(Attribute.CODE(attribute.ID)))
 		else:
 			self[attribute.ID] = attribute
 
@@ -233,12 +232,13 @@ class Attributes (dict):
 		try:
 			if cls.cached:
 				if data == cls.previous:
-					return Attributes.cached
-				elif cls.previous and data.startswith(cls.previous):
-					attributes = Attributes()
-					for key in Attributes.cached:
-						attributes[key] = Attributes.cached[key]
-					attributes.parse(data[len(cls.previous):],negotiated)
+					return cls.cached
+				# # This code may mess with the cached data
+				# elif cls.previous and data.startswith(cls.previous):
+				# 	attributes = Attributes()
+				# 	for key in cls.cached:
+				# 		attributes[key] = cls.cached[key]
+				# 	attributes.parse(data[len(cls.previous):],negotiated)
 				else:
 					attributes = cls().parse(data,negotiated)
 			else:
@@ -252,7 +252,7 @@ class Attributes (dict):
 				cls.cached = attributes
 			else:
 				cls.previous = ''
-				cls.cache = None
+				cls.cached = None
 
 			return attributes
 		except IndexError:
@@ -294,8 +294,8 @@ class Attributes (dict):
 
 		# remove the PARTIAL bit before comparaison if the attribute is optional
 		if aid in Attribute.attributes_optional:
-			aid &= Attribute.Flag.MASK_PARTIAL & 0xFF
-			# aid &= ~Attribute.Flag.PARTIAL & 0xFF  # cleaner than above (python use signed integer for ~)
+			flag &= Attribute.Flag.MASK_PARTIAL & 0xFF
+			# flag &= ~Attribute.Flag.PARTIAL & 0xFF  # cleaner than above (python use signed integer for ~)
 
 		# handle the attribute if we know it
 		if Attribute.registered(aid,flag):
