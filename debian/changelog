@@ -16,6 +16,7 @@ exabgp (3.4.11-1) UNRELEASED; urgency=medium
      + Remove unused lintian override.
   * Update debian/control's Vcs-* fields to use the appropriate branch.
   * Switch to 3.0 (quilt) format.
+  * Add upstart script, thanks to Pierre-Yves Kerembellec.
 
  -- Vincent Bernat <bernat@debian.org>  Wed, 24 Jun 2015 14:13:12 +0200
 
