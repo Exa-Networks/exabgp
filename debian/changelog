@@ -1,6 +1,7 @@
 exabgp (3.4.11-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+     + RFC documents not shipped anymore. Closes: #753829.
   * New maintainer. Thanks to Henry-Nicolas for maintaining ExaBGP
     packaging up to this release.
   * Many packaging changes. First, we just fork off the packaging as
