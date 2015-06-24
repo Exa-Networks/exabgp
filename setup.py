@@ -407,7 +407,6 @@ setup(name='exabgp',
 	entry_points={
 		'console_scripts': [
 			'exabgp = exabgp.application:run_exabgp',
-			'healthcheck = exabgp.application:run_healthcheck',
 		],
 	},
 )

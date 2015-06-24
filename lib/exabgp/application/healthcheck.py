@@ -15,10 +15,10 @@ To use, declare this program as a process in your
        peer-as 64497;
     }
     process watch-haproxy {
-       run /etc/exabgp/processes/healthcheck.py --cmd "curl -sf http://127.0.0.1/healthcheck" --label haproxy;
+       run python -m exabgp healthcheck --cmd "curl -sf http://127.0.0.1/healthcheck" --label haproxy;
     }
     process watch-mysql {
-       run /etc/exabgp/processes/healthcheck.py --cmd "mysql -u check -e 'SELECT 1'" --label mysql;
+       run python -m exabgp healthcheck --cmd "mysql -u check -e 'SELECT 1'" --label mysql;
     }
 
 Use :option:`--help` to get options accepted by this program. A
