@@ -20,6 +20,9 @@ exabgp (3.4.11-1) UNRELEASED; urgency=medium
   * Add upstart script, thanks to Pierre-Yves Kerembellec.
   * Add back debian/watch.
   * Skip some unreliable tests.
+  * Don't ship /usr/sbin/healthcheck. The name is too generic, this is not
+    a script to run as a standalone script. A user should use "python -m
+    exabgp.application.healthcheck" instead.
 
  -- Vincent Bernat <bernat@debian.org>  Wed, 24 Jun 2015 14:13:12 +0200
 

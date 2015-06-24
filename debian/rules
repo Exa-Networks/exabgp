@@ -6,6 +6,9 @@
 override_dh_auto_install:
 	dh_auto_install -- --install-scripts=/usr/sbin
 	rm -rf $(CURDIR)/debian/exabgp/usr/etc
+	# /usr/sbin is not a good place for healthcheck script.
+	# People should use "python -m exabgp.application.healthcheck" instead.
+	rm  $(CURDIR)/debian/exabgp/usr/sbin/healthcheck
 
 override_dh_auto_test:
 	env INTERPRETER=python sbin/exabgp --fi > etc/exabgp/exabgp.env
