@@ -1,4 +1,4 @@
-exabgp (3.4.11-1) UNRELEASED; urgency=medium
+exabgp (3.4.11-1) unstable; urgency=medium
 
   * New upstream release.
      + RFC documents not shipped anymore. Closes: #753829.
