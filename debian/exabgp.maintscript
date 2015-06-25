@@ -1,1 +1,0 @@
-rm_conffile /etc/exabgp/processes/healthcheck.py
