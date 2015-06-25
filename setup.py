@@ -392,6 +392,7 @@ setup(name='exabgp',
 #	scripts=['sbin/exabgp',],
 	download_url='https://github.com/Exa-Networks/exabgp/archive/%s.tar.gz' % version,
 	data_files=files_definition,
+	install_requires=['setuptools'],
 	classifiers=[
 		'Development Status :: 5 - Production/Stable',
 		'Environment :: Console',
