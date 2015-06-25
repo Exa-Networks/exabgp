@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2010-01-15.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+# https://en.wikipedia.org/wiki/Border_Gateway_Protocol#Finite-state_machines
 
 # ======================================================== Finite State Machine
 #
@@ -52,21 +53,22 @@ class FSM (object):
 	OPENCONFIRM = STATE(0x10)
 	ESTABLISHED = STATE(0x20)
 
+	# to: from
 	transition = {
 		IDLE:        [IDLE, ACTIVE, CONNECT, OPENSENT, OPENCONFIRM, ESTABLISHED],
-		ACTIVE:      [IDLE],
-		CONNECT:     [ACTIVE],
+		ACTIVE:      [IDLE, ACTIVE, OPENSENT],
+		CONNECT:     [IDLE, CONNECT, ACTIVE],
 		OPENSENT:    [CONNECT],
-		OPENCONFIRM: [OPENSENT],
-		ESTABLISHED: [OPENCONFIRM],
+		OPENCONFIRM: [OPENSENT, OPENCONFIRM],
+		ESTABLISHED: [OPENCONFIRM, ESTABLISHED],
 	}
 
 	def __init__ (self, state):
 		self.state = state
 
 	def change (self, state):
-		if self.state not in self.transition.get(state,[]):
-			raise RuntimeError ('invalid state machine transition (from %s to %s)' % (str(self.state),str(state)))
+		# if self.state not in self.transition.get(state,[]):
+		# 	raise RuntimeError ('invalid state machine transition (from %s to %s)' % (str(self.state),str(state)))
 		self.state = state
 		return self
 

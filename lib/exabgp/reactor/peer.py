@@ -287,17 +287,18 @@ class Peer (object):
 			self.logger.network('we already have a peer at this address')
 			return False
 
-		self._incoming.fsm.change(FSM.ACTIVE)
+		# self._incoming.fsm.change(FSM.ACTIVE)
 		self._incoming.proto = Protocol(self).accept(connection)
 		# Let's make sure we do some work with this connection
 		self._incoming.generator = None
-		self._incoming.fsm.change(FSM.CONNECT)
 		return True
 
 	def established (self):
 		return self._incoming.fsm == FSM.ESTABLISHED or self._outgoing.fsm == FSM.ESTABLISHED
 
 	def _accept (self):
+		self._incoming.fsm.change(FSM.CONNECT)
+
 		# we can do this as Protocol is a mutable object
 		proto = self._incoming.proto
 
