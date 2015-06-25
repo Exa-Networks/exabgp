@@ -1,3 +1,13 @@
+exabgp (3.4.11-2) unstable; urgency=medium
+
+  * Move processes/healthcheck.py in the same way we moved other files in
+    /etc/exabgp/processes: check if it is present in the configuration
+    file first.
+  * Depends on python-pkg-resources which is needed and not discovered
+    automatically for entry points. Closes: #789915.
+
+ -- Vincent Bernat <bernat@debian.org>  Thu, 25 Jun 2015 11:02:11 +0200
+
 exabgp (3.4.11-1) unstable; urgency=medium
 
   * New upstream release.
