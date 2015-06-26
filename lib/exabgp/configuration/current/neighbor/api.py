@@ -175,25 +175,6 @@ for way in ('send','receive'):
 	# 			Message.CODE.OPERATIONAL
 	# 		]:
 	# 			configuration.processes[_cli_name]['%s-%d' % (receive,message)] = False
-	#
-	# for name in configuration.processes.keys():
-	# 	process = configuration.processes[name]
-	#
-	# 	neighbor.api.set('neighbor-changes',process.get('neighbor-changes',False))
-	#
-	# 	for receive in ['send','receive']:
-	# 		for option in ['packets','consolidate','parsed']:
-	# 			neighbor.api.set_value(receive,option,process.get('%s-%s' % (receive,option),False))
-	#
-	# 		for message in [
-	# 			Message.CODE.NOTIFICATION,
-	# 			Message.CODE.OPEN,
-	# 			Message.CODE.KEEPALIVE,
-	# 			Message.CODE.UPDATE,
-	# 			Message.CODE.ROUTE_REFRESH,
-	# 			Message.CODE.OPERATIONAL
-	# 		]:
-	# 			neighbor.api.set_message(receive,message,process.get('%s-%d' % (receive,message),False))
 
 	# XXX: check that if we have any message, we have parsed/packets
 	# XXX: and vice-versa

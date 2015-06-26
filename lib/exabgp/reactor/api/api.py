@@ -51,7 +51,7 @@ class API (object):
 	def __init__ (self,reactor):
 		self.reactor = reactor
 		self.logger = Logger()
-		self.parser = Parser.Text()
+		self.parser = Parser.Text(reactor)
 
 		try:
 			for name in self.functions:

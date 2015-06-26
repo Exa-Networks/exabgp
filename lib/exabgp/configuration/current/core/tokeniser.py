@@ -7,6 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.configuration.current.core.format import tokens
+from collections import deque
 
 
 class Tokeniser (object):
@@ -14,19 +15,23 @@ class Tokeniser (object):
 	class Iterator (object):
 		fname = ''  # This is ok to have a unique value as API parser do not use files
 
-		def __init__ (self,tokens):
-			def _generator ():
-				for token in tokens:
-					yield token
+		def __init__ (self):
+			self.next = deque()
+			self.tokens = []
+			self.generator = iter([])
 
-			self.tokens = tokens  # to help debugging
-			self.generator = _generator()
-			self.next = ''
+		def replenish (self, content):
+			self.next.clear()
+			self.tokens = content
+			self.generator = iter(content)
+			return self
+
+		def clear (self):
+			self.replenish([])
 
 		def __call__ (self):
 			if self.next:
-				returned,self.next = self.next,''
-				return returned
+				return self.next.popleft()
 
 			try:
 				return self.generator.next()
@@ -35,8 +40,9 @@ class Tokeniser (object):
 
 		def peak (self):
 			try:
-				self.next = self.generator.next()
-				return self.next
+				peaked = self.generator.next()
+				self.next.append(peaked)
+				return peaked
 			except StopIteration:
 				return ''
 
@@ -52,7 +58,7 @@ class Tokeniser (object):
 		self.finished = False
 		self.number = 0
 		self.line = []
-		self.iterate = Tokeniser._off
+		self.iterate = Tokeniser.Iterator()
 		self.end = ''
 		self.index_column = 0
 		self.index_line = 0
@@ -66,7 +72,7 @@ class Tokeniser (object):
 		self.finished = False
 		self.number = 0
 		self.line = []
-		self.iterate = None
+		self.iterate.clear()
 		self.end = ''
 		self.index_column = 0
 		self.index_line = 0
@@ -126,9 +132,12 @@ class Tokeniser (object):
 
 	def set_text (self, data):
 		def _source (data):
-			for _ in self._tokenise(data.replace('\\\n',' ').split('\n')):
+			for _ in self._tokenise(data.split('\n')):
 				yield _
 		return self._set(_source(data))
+
+	def set_api (self, line):
+		return self._set(self._tokenise(iter([line])))
 
 	def __call__ (self):
 		self.number += 1
@@ -143,8 +152,8 @@ class Tokeniser (object):
 			else:
 				self.line = []
 				self.end = ''
-		# This should raise a Location if called with no more data
 
-		self.iterate = Tokeniser.Iterator(self.line[:-1])
+		# should we raise a Location if called with no more data ?
+		self.iterate.replenish(self.line[:-1])
 
 		return self.line

@@ -33,6 +33,7 @@ from exabgp.configuration.current.l2vpn import ParseL2VPN
 from exabgp.configuration.current.l2vpn import ParseVPLS
 from exabgp.configuration.current.operational import ParseOperational
 
+from exabgp.bgp.message import Message
 from exabgp.configuration.environment import environment
 
 
@@ -250,6 +251,7 @@ class Configuration (object):
 
 	def _commit_reload (self):
 		self.neighbors = self.neighbor.neighbors
+		self.processes = self.process.processes
 		self._neighbors = {}
 
 		# installing in the neighbor the API routes
@@ -301,8 +303,45 @@ class Configuration (object):
 			)
 
 		self._commit_reload()
+		self._link()
 		self.debug_check_route()
 		self.debug_self_check()
+		return True
+
+	def _link (self):
+		for neighbor in self.neighbors.itervalues():
+			api = neighbor.api
+			for process in api['processes']:
+				self.processes.setdefault(process,{})['neighbor-changes'] = api['neighbor-changes']
+				for way in ('send','receive'):
+					for name in ('parsed','packets','consolidate'):
+						key = "%s-%s" % (way,name)
+						if api[key]:
+							self.processes[process].setdefault(key,[]).append(neighbor.router_id)
+					for name in ('open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
+						key = "%s-%d" % (way,Message.code(name))
+						if api[key]:
+							self.processes[process].setdefault(key,[]).append(neighbor.router_id)
+
+	def partial (self, section, text):
+		self._cleanup()  # this perform a big cleanup (may be able to be smarter)
+		self._clear()
+		self.tokeniser.set_api(text if text.endswith(';') else text + ' ;')
+
+		if self.section(section) is not True:
+			self._rollback_reload()
+			self.logger.configuration(
+				"\n"
+				"syntax error in api command %s\n"
+				"line %d: %s\n"
+				"\n%s" % (
+					self.scope.location(),
+					self.tokeniser.number,
+					' '.join(self.tokeniser.line),
+					str(self.error)
+				)
+			)
+			return False
 		return True
 
 	def dispatch (self,name):

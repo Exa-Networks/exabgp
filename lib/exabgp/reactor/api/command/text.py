@@ -178,64 +178,65 @@ def flush_route (self, reactor, service, command):
 
 
 @Text('announce route')
-def announce_route (self, reactor, service, command):
-	def callback (self, command, nexthops):
-		changes = self.parser.api_route(command,nexthops,'announce')
-		if not changes:
-			self.logger.reactor("Command could not parse route in : %s" % command,'warning')
-			yield True
-		else:
-			peers = []
-			for (peer,change) in changes:
-				peers.append(peer)
-				reactor.api.change_to_peers(change,[peer,])
-				self.logger.reactor("Route added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
+def announce_route (self, reactor, service, line):
+	def callback ():
+		try:
+			descriptions,command = self.parser.extract_neighbors(line)
+			peers = reactor.match_neighbors(descriptions)
+			if not peers:
+				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+				return
+
+			changes = self.parser.api_route(command,peers)
+			if not changes:
+				self.logger.reactor('command could not parse route in : %s' % command,'warning')
+				return
+
+			for (selected_peers,change) in changes:
+				reactor.api.change_to_peers(change,selected_peers)
+				self.logger.reactor('route added to %s : %s' % (', '.join(selected_peers) if selected_peers else 'all peers',change.extensive()))
 				yield False
 			reactor.route_update = True
+		except ValueError:
+			yield True
+		except IndexError:
+			yield True
 
-	try:
-		descriptions,command = self.parser.extract_neighbors(command)
-		peers = reactor.match_neighbors(descriptions)
-		if not peers:
-			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
-			return False
-		reactor.plan(callback(self,command,reactor.nexthops(peers)),'announce_route')
-		return True
-	except ValueError:
-		return False
-	except IndexError:
-		return False
+	reactor.plan(callback(),'announce_route')
+	return True
 
 
 @Text('withdraw route')
-def withdraw_route (self, reactor, service, command):
-	def callback (self, command, nexthops):
-		changes = self.parser.api_route(command,nexthops,'withdraw')
-		if not changes:
-			self.logger.reactor("Command could not parse route in : %s" % command,'warning')
-			yield True
-		else:
-			for (peer,change) in changes:
-				if reactor.api.change_to_peers(change,[peer,]):
-					self.logger.reactor("Route removed : %s" % change.extensive())
+def withdraw_route (self, reactor, service, line):
+	def callback ():
+		try:
+			descriptions,command = self.parser.extract_neighbors(line)
+			peers = reactor.match_neighbors(descriptions)
+			if not peers:
+				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+				return
+
+			changes = self.parser.api_route(command,peers)
+
+			if not changes:
+				self.logger.reactor('command could not parse route in : %s' % command,'warning')
+				return
+
+			for (selected_peers,change) in changes:
+				if reactor.api.change_to_peers(change,selected_peers):
+					self.logger.reactor('route removed from %s : %s' % (', '.join(selected_peers) if selected_peers else 'all peers',change.extensive()))
 					yield False
 				else:
-					self.logger.reactor("Could not find therefore remove route : %s" % change.extensive(),'warning')
+					self.logger.reactor('route not found on %s : %s' % (', '.join(selected_peers) if selected_peers else 'all peers',change.extensive()))
 					yield False
 			reactor.route_update = True
+		except ValueError:
+			yield True
+		except IndexError:
+			yield True
 
-	try:
-		descriptions,command = self.parser.extract_neighbors(command)
-		peers = reactor.match_neighbors(descriptions)
-		if not peers:
-			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
-			return False
-		reactor.plan(callback(self,command,reactor.nexthops(peers)),'withdraw_route')
-		return True
-	except ValueError:
-		return False
-	except IndexError:
-		return False
+	reactor.plan(callback(),'withdraw_route')
+	return True
 
 
 @Text('announce vpls')

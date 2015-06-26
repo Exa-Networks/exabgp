@@ -27,11 +27,11 @@ from exabgp.rib.change import Change
 # ========================================================================= Text
 #
 
-class Text (Configuration):
-	def __init__ (self):
-		Configuration.__init__(self,'')
-		# part of parent API, done here to remove pylint warning attribute-defined-outside-init
-		self._nexthopself = None
+class Text (object):
+	def __init__ (self,reactor):
+		self.configuration = Configuration('')
+		self.reactor = reactor
+
 
 	@staticmethod
 	def extract_neighbors (command):
@@ -68,43 +68,34 @@ class Text (Configuration):
 
 		return returned,command
 
-	def api_route (self, command, peers, action):
-		tokens = formated(command).split(' ')[1:]
-		number = len(tokens)
+	def api_route (self, command, peers):
+		action, line = command.split(' ',1)
 
-		if number < 1:
-			return False
+		if 'self' in command:
+			nexthops = self.reactor.nexthops(peers)
+			nexthops = nexthops
+			# for peer,nexthop in peers.iteritems():
+			# 	self.route.scope.clear()
+			# 	self.route.nexthop(nexthop)
+			# 	if not self.route.static('static','route',tokens[1:]):
+			# 		self.route.clear()
+			# 		return False
+			# 	for change in self.route.scope.content[0]['announce']:
+			# 		changes.append((peer,change))
+			# self.route.clear()
 
-		message = tokens[0]
-
-		if message not in ('route',):
-			return False
-
-		if number == 2 and action == 'withdraw' and 'next-hop' not in tokens:
-			tokens.extend(['next-hop','0.0.0.0'])
+		self.configuration.static.clear()
+		if not self.configuration.partial('static',line):
+			return []
 
 		changes = []
-		if 'self' in command:
-			for peer,nexthop in peers.iteritems():
-				self.route.scope.clear()
-				self.route.nexthop(nexthop)
-				if not self.route.static('static','route',tokens[1:]):
-					self.route.clear()
-					return False
-				for change in self.route.scope.content[0]['announce']:
-					changes.append((peer,change))
-			self.route.clear()
-		else:
-			self.route.scope.clear()
-			if not self.route.static('static','route',tokens[1:]):
-				return False
-			for peer in peers:
-				for change in self.route.scope.content[0]['announce']:
-					changes.append((peer,change))
+		if action == 'announce':
+			changes = self.configuration.scope.pop('routes',[])
+			return zip([peers]*len(changes),changes)
 
-		if action == 'withdraw':
-			for (peer,change) in changes:
-				change.nlri.action = OUT.WITHDRAW
+		for change in self.configuration.scope.pop('routes',[]):
+			change.nlri.action = OUT.WITHDRAW
+			changes.append((peers,change))
 		return changes
 
 	def api_vpls (self, command, peers, action):

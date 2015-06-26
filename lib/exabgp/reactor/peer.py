@@ -374,7 +374,7 @@ class Peer (object):
 		except StopIteration:
 			# Connection failed
 			if not connected:
-				proto.close('connection to peer failed')
+				proto.close('connection to %s:%d failed' % (self.neighbor.peer_address,proto.port))
 			# A connection arrived before we could establish !
 			if not connected or self._incoming.proto:
 				yield ACTION.NOW

@@ -15,7 +15,7 @@ class Outgoing (Connection):
 	def __init__ (self, afi, peer, local, port=179,md5='',ttl=None):
 		Connection.__init__(self,afi,peer,local)
 
-		self.logger.wire("Attempting connection to %s" % self.peer)
+		self.logger.wire("attempting connection to %s:%d" % (self.peer,port))
 
 		self.peer = peer
 		self.ttl = ttl
@@ -33,7 +33,7 @@ class Outgoing (Connection):
 		except NetworkError,exc:
 			self.init = False
 			self.close()
-			self.logger.wire("Connection failed, %s" % str(exc))
+			self.logger.wire("connection to %s:%d failed, %s" % (self.peer,port,str(exc)))
 
 	def establish (self):
 		if not self.init:

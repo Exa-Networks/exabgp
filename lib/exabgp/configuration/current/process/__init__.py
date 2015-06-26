@@ -33,15 +33,18 @@ class ParseProcess (Section):
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)
+		self.processes = {}
 		self._processes = []
 
 	def clear (self):
+		self.processes = {}
 		self._processes = []
 
 	def pre (self):
 		name = self.tokeniser.line[1]
 		if name in self._processes:
 			return self.error.set('a process section called "%s" already exists' % name)
+		self._processes.append(name)
 		self.scope.to_context(name)
 		return True
 
@@ -49,6 +52,8 @@ class ParseProcess (Section):
 		difference = set(self.known.keys()).difference(self.scope.get().keys())
 		if difference:
 			return self.error.set('unset process sections: %s' % ', '.join(difference))
+		self.scope.to_context()
+		self.processes.update(self.scope.pop(self.name))
 		return True
 
 	# we want to have a socket for the cli

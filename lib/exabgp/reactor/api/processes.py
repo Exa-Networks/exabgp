@@ -41,7 +41,7 @@ def preexec_helper ():
 class Processes (object):
 	# how many time can a process can respawn in the time interval
 	respawn_number = 5
-	respawn_timemask = 0xFFFFFF - pow(2,6) + 1
+	respawn_timemask = 0xFFFFFF - 0b111111
 	# '0b111111111111111111000000' (around a minute, 63 seconds)
 
 	_dispatch = {}
@@ -67,8 +67,8 @@ class Processes (object):
 	def clean (self):
 		self._process = {}
 		self._encoder = {}
-		self._events = {}
-		self._neighbor_process = {}
+		# self._events = {}
+		# self._neighbor_process = {}
 		self._broken = []
 		self._respawning = {}
 
@@ -101,13 +101,13 @@ class Processes (object):
 		self.clean()
 
 	def _start (self, process):
-		events = self.reactor.configuration.processes[process]
-		for event,present in events.iteritems():
-			if event in ('run','encoder'):
-				continue
-			if present:
-				self._events.setdefault(process,[]).append(event)
-
+		# events = self.reactor.configuration.processes[process]
+		# for event,present in events.iteritems():
+		# 	if event in ('run','encoder'):
+		# 		continue
+		# 	if present:
+		# 		self._events.setdefault(process,[]).append(event)
+		#
 		try:
 			if process in self._process:
 				self.logger.processes("process already running")
@@ -155,8 +155,8 @@ class Processes (object):
 					# record respawing
 					self._respawning[process] = {around_now: 1}
 
-			neighbor = self.reactor.configuration.processes[process]['neighbor']
-			self._neighbor_process.setdefault(neighbor,[]).append(process)
+			# neighbor = self.reactor.configuration.processes[process]['neighbor']
+			# self._neighbor_process.setdefault(neighbor,[]).append(process)
 		except (subprocess.CalledProcessError,OSError,ValueError),exc:
 			self._broken.append(process)
 			self.logger.processes("Could not start process %s" % process)
@@ -255,6 +255,7 @@ class Processes (object):
 		return True
 
 	def _notify (self, neighbor, event):
+		import pdb; pdb.set_trace()
 		address = neighbor.peer_address
 		for process in self._neighbor_process.get(address,[]):
 			if process in self._process:

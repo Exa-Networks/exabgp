@@ -23,9 +23,6 @@ from exabgp.bgp.message import NOP
 from exabgp.bgp.message import _NOP
 from exabgp.bgp.message import Open
 from exabgp.bgp.message.open import Version
-from exabgp.bgp.message.open import ASN
-from exabgp.bgp.message.open import RouterID
-from exabgp.bgp.message.open import HoldTime
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message import Update
