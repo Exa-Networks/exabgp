@@ -33,6 +33,9 @@ class MPLS (NLRI,CIDR):
 		NLRI.__init__(self,afi,safi)
 		CIDR.__init__(self,packed,mask)
 
+	def index (self):
+		return self.pack() + self.nexthop.pack()
+
 	def has_label (self):
 		if self.afi == AFI.ipv4 and self.safi in (SAFI.nlri_mpls,SAFI.mpls_vpn):
 			return True
@@ -50,8 +53,8 @@ class MPLS (NLRI,CIDR):
 		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
 		return "%s%s" % (self.extensive(),nexthop)
 
-	def __eq__ (self, other):
-		return str(self) == str(other)
+	def __eq__ (self,other):
+		return self.index() == other.index()
 
 	def __ne__ (self, other):
 		return not self.__eq__(other)
