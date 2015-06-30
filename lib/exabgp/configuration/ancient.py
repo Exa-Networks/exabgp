@@ -1699,7 +1699,7 @@ class Configuration (object):
 		# generate the new routes
 		for _ in range(number):
 			# update ip to the next route, this recalculate the "ip" field of the Inet class
-			nlri = klass(afi,safi,pack_int(afi,ip,split),split,nexthop,OUT.ANNOUNCE,path_info)
+			nlri = klass(afi,safi,pack_int(afi,ip,split),split,nexthop,OUT.ANNOUNCE)
 			if klass is MPLS:
 				nlri.path_info = path_info
 				nlri.labels = labels
