@@ -8,6 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.bgp.message.update.nlri.flow import NLRI
 
 from exabgp.configuration.current.core import Section
 
@@ -52,9 +53,9 @@ class ParseFamily (Section):
 	}
 
 	action = {
-		'ipv4':  'append',
-		'ipv6':  'append',
-		'l2vpn': 'append',
+		'ipv4':  'append-command',
+		'ipv6':  'append-command',
+		'l2vpn': 'append-command',
 	}
 
 	name = 'family'
@@ -74,6 +75,7 @@ class ParseFamily (Section):
 		self._seen = []
 
 	def pre (self):
+		self.scope.to_context()
 		self.clear()
 		return True
 
@@ -110,4 +112,5 @@ class ParseFamily (Section):
 		if self._all or self._seen:
 			return self.error.set('all can not be used with any other options')
 		self._all = True
-		raise RuntimeError('not implemented yet')
+		for pair in NLRI.known_families():
+			self._seen.append(pair)

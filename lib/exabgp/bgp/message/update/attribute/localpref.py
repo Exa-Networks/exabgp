@@ -21,11 +21,11 @@ class LocalPreference (Attribute):
 	FLAG = Attribute.Flag.TRANSITIVE
 	CACHING = True
 
-	__slots__ = ['localpref','packed']
+	__slots__ = ['localpref','_packed']
 
 	def __init__ (self, localpref, packed=None):
 		self.localpref = localpref
-		self.packed = self._attribute(packed if packed is not None else pack('!L',localpref))
+		self._packed = self._attribute(packed if packed is not None else pack('!L',localpref))
 
 	def __eq__ (self, other):
 		return \
@@ -37,7 +37,7 @@ class LocalPreference (Attribute):
 		return not self.__eq__(other)
 
 	def pack (self, negotiated=None):
-		return self.packed
+		return self._packed
 
 	def __len__ (self):
 		return 4

@@ -33,7 +33,7 @@ def addpath (tokeniser):
 	if ap == 'receive/send':  # was allowed with the previous parser
 		raise ValueError('the option is send/receive')
 
-	raise ValueError('"%s" is an invalid add-path' % ap)
+	raise ValueError('"%s" is an invalid add-path, options are send, receive, send/receive' % ap)
 
 
 def gracefulrestart (tokeniser, default):
@@ -81,12 +81,12 @@ class ParseCapability (Section):
 	}
 
 	action = {
-		'add-path':         'set',
-		'asn4':             'set',
-		'graceful-restart': 'set',
-		'multi-session':    'set',
-		'operational':      'set',
-		'route-refresh':    'set',
+		'add-path':         'set-command',
+		'asn4':             'set-command',
+		'graceful-restart': 'set-command',
+		'multi-session':    'set-command',
+		'operational':      'set-command',
+		'route-refresh':    'set-command',
 	}
 
 	default = {

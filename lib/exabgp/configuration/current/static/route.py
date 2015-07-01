@@ -111,7 +111,7 @@ class ParseStaticRoute (Section):
 	}
 
 	action = {
-		'path-info':           'nlri-set',
+		'path-information':    'nlri-set',
 		'rd':                  'nlri-set',
 		'route-distinguisher': 'nlri-set',
 		'label':               'nlri-set',
@@ -135,6 +135,7 @@ class ParseStaticRoute (Section):
 	}
 
 	assign = {
+		'path-information':    'path_info',
 		'rd':                  'rd',
 		'route-distinguisher': 'rd',
 		'label':               'labels',
@@ -145,30 +146,22 @@ class ParseStaticRoute (Section):
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)
 
-		self.default = {
-			'next-hop': None,
-		}
-
 	def clear (self):
-		self.default['next-hop'] = None
-
-	def nexthop (self, nexthopself):
-		self.default['next-hop'] = nexthopself
+		return True
 
 	def pre (self):
 		self.scope.set(self.name,inet(self.tokeniser.iterate))
 		return True
 
 	def post (self):
-		# self._family()
 		if not self._check():
 			return False
-		if not self._split():
-			return False
+		# self._family()
+		self._split()
 		# self.scope.to_context()
 		route = self.scope.pop(self.name)
 		if route:
-			self.scope.append('routes',route)
+			self.scope.extend('routes',route)
 		return True
 
 	# def _family (self):
@@ -176,36 +169,40 @@ class ParseStaticRoute (Section):
 	# 	if last.nlri.labels and not last.nlri.safi.has_label():
 	# 		last.nlri.safi = SAFI(SAFI.nlri_mpls)
 
-	def _check (self):
-		last = self.scope.get(self.name)
+	@staticmethod
+	def check (last):
 		if last.nlri.nexthop is NoNextHop \
 			and last.nlri.afi == AFI.ipv4 \
 			and last.nlri.safi in (SAFI.unicast,SAFI.multicast):
+			return False
+		return True
+
+	def _check (self):
+		if not self.check(self.scope.get(self.name)):
 			return self.error.set(self.syntax)
 		return True
 
-	def _split (self):
-		last = self.scope.get(self.name)
-
+	@staticmethod
+	def split (last):
 		if Attribute.CODE.INTERNAL_SPLIT not in last.attributes:
-			return True
+			yield last
+			return
 
 		# ignore if the request is for an aggregate, or the same size
 		mask = last.nlri.mask
 		cut = last.attributes[Attribute.CODE.INTERNAL_SPLIT]
 		if mask >= cut:
-			return True
-
-		last = self.scope.pop(self.name)
+			yield last
+			return
 
 		# calculate the number of IP in the /<size> of the new route
-		increment = pow(2,(len(last.nlri.packed)*8) - cut)
+		increment = pow(2,(len(last.nlri.ton())*8) - cut)
 		# how many new routes are we going to create from the initial one
 		number = pow(2,cut - last.nlri.mask)
 
 		# convert the IP into a integer/long
 		ip = 0
-		for c in last.nlri.packed:
+		for c in last.nlri.ton():
 			ip <<= 8
 			ip += ord(c)
 
@@ -214,15 +211,11 @@ class ParseStaticRoute (Section):
 
 		# Really ugly
 		klass = last.nlri.__class__
-		if klass is INET:
-			path_info = last.nlri.path_info
-		elif klass is MPLS:
-			path_info = None
+		if klass is MPLS:
 			labels = last.nlri.labels
 			rd = last.nlri.rd
-
-		# packed and not pack() but does not matter atm, it is an IP not a NextHop
-		nexthop = last.nlri.nexthop.packed
+		path_info = last.nlri.path_info
+		nexthop = last.nlri.nexthop
 
 		last.nlri.mask = cut
 		last.nlri = None
@@ -230,12 +223,17 @@ class ParseStaticRoute (Section):
 		# generate the new routes
 		for _ in range(number):
 			# update ip to the next route, this recalculate the "ip" field of the Inet class
-			nlri = klass(afi,safi,pack_int(afi,ip),cut,nexthop,OUT.ANNOUNCE,path_info)
+			nlri = klass(afi,safi,pack_int(afi,ip),cut,'',OUT.ANNOUNCE)
+			nlri.nexthop = nexthop  # nexthop can be NextHopSelf
+			nlri.path_info = path_info
+			# Really ugly
 			if klass is MPLS:
 				nlri.labels = labels
 				nlri.rd = rd
 			# next ip
 			ip += increment
-			self.scope.append(self.name,Change(nlri,last.attributes))
+			yield Change(nlri,last.attributes)
 
-		return True
+	def _split (self):
+		for splat in self.split(self.scope.pop(self.name)):
+			self.scope.append(self.name,splat)

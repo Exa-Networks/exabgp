@@ -251,6 +251,8 @@ class Configuration (object):
 
 	def _commit_reload (self):
 		self.neighbors = self.neighbor.neighbors
+		# XXX: Yes, we do not detect changes in processes and restart anything ..
+		# XXX: This is a bug ..
 		self.processes = self.process.processes
 		self._neighbors = {}
 
@@ -311,7 +313,7 @@ class Configuration (object):
 	def _link (self):
 		for neighbor in self.neighbors.itervalues():
 			api = neighbor.api
-			for process in api['processes']:
+			for process in api.get('processes',[]):
 				self.processes.setdefault(process,{})['neighbor-changes'] = api['neighbor-changes']
 				for way in ('send','receive'):
 					for name in ('parsed','packets','consolidate'):

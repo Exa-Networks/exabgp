@@ -133,11 +133,10 @@ class Update (Message):
 
 		packed_del = ''
 		msg_size = negotiated.msg_size - 19 - 2 - 2  # 2 bytes for each of the two prefix() header
-		addpath = negotiated.addpath.send(AFI.ipv4,SAFI.unicast)
 
 		while del_nlri:
 			nlri = del_nlri.pop()
-			packed = nlri.pack(addpath)
+			packed = nlri.pack(negotiated)
 			seen_size = len(packed_del + packed)
 			if seen_size > msg_size:
 				if not packed_del:
@@ -156,9 +155,8 @@ class Update (Message):
 			family = families.pop()
 			afi,safi = family
 			mps = del_mp[family]
-			addpath = negotiated.addpath.send(*family)
 			seen_size = len(packed_del + packed_mp_del)
-			mp_packed_generator = MPURNLRI(afi,safi,mps).packed_attributes(addpath,msg_size-seen_size)
+			mp_packed_generator = MPURNLRI(afi,safi,mps).packed_attributes(negotiated)
 			try:
 				while True:
 					packed = mp_packed_generator.next()
@@ -194,9 +192,8 @@ class Update (Message):
 			family = families.pop()
 			afi,safi = family
 			mps = add_mp[family]
-			addpath = negotiated.addpath.send(*family)
 			seen_size = len(packed_del + packed_mp_del + packed_mp_add)
-			mp_packed_generator = MPRNLRI(afi,safi,mps).packed_attributes(addpath,msg_size-seen_size)
+			mp_packed_generator = MPRNLRI(afi,safi,mps).packed_attributes(negotiated)
 			try:
 				while True:
 					packed = mp_packed_generator.next()
@@ -229,7 +226,7 @@ class Update (Message):
 
 		while add_nlri:
 			nlri = add_nlri.pop()
-			packed = nlri.pack(addpath)
+			packed = nlri.pack(negotiated)
 			seen_size = len(packed_del + packed_mp_del + packed_mp_add + packed_add + packed)
 			if seen_size > msg_size:
 				if not packed_add and not packed_mp_add and not packed_mp_del and not packed_del:
@@ -256,9 +253,9 @@ class Update (Message):
 		length = len(data)
 
 		# This could be speed up massively by changing the order of the IF
-		if length == 23:
+		if length == 4 and data == '\x00\x00\x00\x00':
 			return EOR(AFI.ipv4,SAFI.unicast,IN.ANNOUNCED)  # pylint: disable=E1101
-		if length == 30 and data.startswith(EOR.NLRI.PREFIX):
+		if length == 11 and data.startswith(EOR.NLRI.PREFIX):
 			return EOR.unpack_message(data,negotiated)
 
 		withdrawn, _attributes, announced = cls.split(data)
@@ -274,7 +271,7 @@ class Update (Message):
 
 		# empty string for NoNextHop, the packed IP otherwise (without the 3/4 bytes of attributes headers)
 		_nexthop = attributes.get(Attribute.CODE.NEXT_HOP,NoNextHop)
-		nexthop = _nexthop.packed
+		nexthop = _nexthop.ton(negotiated)
 
 		# XXX: NEXTHOP MUST NOT be the IP address of the receiving speaker.
 

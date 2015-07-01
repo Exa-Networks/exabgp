@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2012-07-19.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.protocol.family import AFI
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.open.holdtime import HoldTime
@@ -139,6 +140,11 @@ class Negotiated (object):
 			return self.multisession
 
 		return None
+
+	def nexthopself (self,afi):
+		if afi == AFI.ipv4:
+			return self.sent_open.router_id
+		raise RuntimeError('nexthop self only implemented for IPv4 atm')
 
 # =================================================================== RequirePath
 

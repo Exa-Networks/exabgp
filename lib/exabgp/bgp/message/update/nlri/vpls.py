@@ -57,7 +57,7 @@ class VPLS (NLRI):
 	def assign (self, name, value):
 		setattr(self,name,value)
 
-	def pack (self, addpath=None):
+	def pack (self, negotiated=None):
 		return '%s%s%s%s' % (
 			'\x00\x11',  # pack('!H',17)
 			self.rd.pack(),

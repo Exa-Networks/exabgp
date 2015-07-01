@@ -110,7 +110,7 @@ class ParseVPLS (Section):
 
 	action = {
 		'attribute':          'attribute-add',
-		'next-hop':           'attribute-add',
+		'next-hop':           'nexthop-and-attribute',
 		'origin':             'attribute-add',
 		'med':                'attribute-add',
 		'as-path':            'attribute-add',

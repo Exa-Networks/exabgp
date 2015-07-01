@@ -38,7 +38,7 @@ class EVPN (NLRI):
 		NLRI.__init__(self, AFI.l2vpn, SAFI.evpn)
 		self.nexthop = IP.unpack(nexthop) if nexthop else NoNextHop
 		self.action = action
-		self.packed = packed
+		self._packed = packed
 
 	# For subtype 2 (MAC/IP advertisement route),
 	# we will have to ignore a part of the route, so this method will be overridden
@@ -47,7 +47,7 @@ class EVPN (NLRI):
 		return \
 			NLRI.__eq__(self,other) and \
 			self.CODE == other.CODE and \
-			self.packed == other.packed
+			self.pack() == other.pack()
 
 	def __neq__(self, other):
 		return not self.__eq__(other)
@@ -56,20 +56,20 @@ class EVPN (NLRI):
 		return "evpn:%s:" % (self.registered_evpn.get(self.CODE,self).SHORT_NAME.lower())
 
 	def __str__ (self):
-		return "evpn:%s:%s" % (self.registered_evpn.get(self.CODE,self).SHORT_NAME.lower(),'0x' + ''.join('%02x' % ord(_) for _ in self.packed))
+		return "evpn:%s:%s" % (self.registered_evpn.get(self.CODE,self).SHORT_NAME.lower(),'0x' + ''.join('%02x' % ord(_) for _ in self._packed))
 
 	def __repr__ (self):
 		return str(self)
 
-	def pack (self, addpath=None):
+	def pack (self, negotiated=None):
 		# XXXXXX: addpath not supported yet
-		return pack('!BB',self.CODE,len(self.packed)) + self.packed
+		return pack('!BB',self.CODE,len(self._packed)) + self._packed
 
 	def __len__ (self):
-		return len(self.packed) + 2
+		return len(self._packed) + 2
 
 	def __hash__ (self):
-		return hash("%s:%s:%s:%s" % (self.afi,self.safi,self.CODE,self.packed))
+		return hash("%s:%s:%s:%s" % (self.afi,self.safi,self.CODE,self._packed))
 
 	@classmethod
 	def register (cls, klass):

@@ -21,11 +21,11 @@ class Origin (Attribute):
 	EGP        = 0x01
 	INCOMPLETE = 0x02
 
-	__slots__ = ['origin','packed']
+	__slots__ = ['origin','_packed']
 
 	def __init__ (self, origin, packed=None):
 		self.origin = origin
-		self.packed = self._attribute(packed if packed else chr(origin))
+		self._packed = self._attribute(packed if packed else chr(origin))
 
 	def __eq__ (self, other):
 		return \
@@ -37,10 +37,10 @@ class Origin (Attribute):
 		return not self.__eq__(other)
 
 	def pack (self, negotiated=None):
-		return self.packed
+		return self._packed
 
 	def __len__ (self):
-		return len(self.packed)
+		return len(self._packed)
 
 	def __repr__ (self):
 		if self.origin == 0x00:

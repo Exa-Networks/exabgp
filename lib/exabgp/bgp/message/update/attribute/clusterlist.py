@@ -29,7 +29,7 @@ class ClusterList (Attribute):
 
 	def __init__ (self, clusters, packed=None):
 		self.clusters = clusters
-		self.packed = self._attribute(packed if packed else ''.join([_.pack() for _ in clusters]))
+		self._packed = self._attribute(packed if packed else ''.join([_.pack() for _ in clusters]))
 		self._len = len(clusters)*4
 
 	def __eq__ (self, other):
@@ -42,7 +42,7 @@ class ClusterList (Attribute):
 		return not self.__eq__(other)
 
 	def pack (self, negotiated=None):
-		return self.packed
+		return self._packed
 
 	def __len__ (self):
 		return self._len

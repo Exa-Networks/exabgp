@@ -47,28 +47,28 @@ class Listener (object):
 		self.serving = True
 
 		for sock,(local,port,peer,md) in self._sockets.items():
-			if local_ip.ip != local:
+			if local_ip.top() != local:
 				continue
 			if local_port != port:
 				continue
 			if md5:
-				MD5(sock,peer_ip.ip,0,md5)
+				MD5(sock,peer_ip.top(),0,md5)
 			return
 
 		try:
 			sock = self._new_socket(local_ip)
 			if md5:
 				# MD5 must match the peer side of the TCP, not the local one
-				MD5(sock,peer_ip.ip,0,md5)
+				MD5(sock,peer_ip.top(),0,md5)
 			try:
 				sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 			except (socket.error,AttributeError):
 				pass
 			sock.setblocking(0)
 			# s.settimeout(0.0)
-			sock.bind((local_ip.ip,local_port))
+			sock.bind((local_ip.top(),local_port))
 			sock.listen(self._backlog)
-			self._sockets[sock] = (local_ip.ip,local_port,peer_ip.ip,md5)
+			self._sockets[sock] = (local_ip.top(),local_port,peer_ip.top(),md5)
 		except socket.error,exc:
 			if exc.args[0] == errno.EADDRINUSE:
 				raise BindingError('could not listen on %s:%d, the port already in use by another application' % (local_ip,local_port))

@@ -103,7 +103,7 @@ class Prefix (EVPN):
 		return hash("%s:%s:%s:%s" % (self.rd,self.etag,self.ip,self.iplen))
 
 	def _pack (self):
-		if not self.packed:
+		if not self._packed:
 			value = "%s%s%s%s%s%s%s" % (
 				self.rd.pack(),
 				self.esi.pack(),
@@ -113,8 +113,8 @@ class Prefix (EVPN):
 				self.gwip.pack(),
 				self.label.pack(),
 			)
-			self.packed = value
-		return self.packed
+			self._packed = value
+		return self._packed
 
 	@classmethod
 	def unpack (cls, exdata):

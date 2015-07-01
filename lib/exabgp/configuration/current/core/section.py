@@ -50,12 +50,14 @@ class Section (object):
 
 			action = self.action[command]
 
-			if action == 'set':
+			if action == 'set-command':
 				self.scope.set(command,insert)
-			elif action == 'extend':
+			elif action == 'extend-name':
 				self.scope.extend(name,insert)
-			elif action == 'append':
+			elif action == 'append-name':
 				self.scope.append(name,insert)
+			elif action == 'append-command':
+				self.scope.append(command,insert)
 			elif action == 'attribute-add':
 				self.scope.attribute_add(name,insert)
 			elif action == 'nlri-set':

@@ -318,7 +318,7 @@ class Peer (object):
 		opentimer = ReceiveTimer(self.me,wait,1,1,'waited for open too long, we do not like stuck in active')
 		# Only yield if we have not the open, otherwise the reactor can run the other connection
 		# which would be bad as we need to do the collission check without going to the other peer
-		for message in proto.read_open(self.neighbor.peer_address.ip):
+		for message in proto.read_open(self.neighbor.peer_address.top()):
 			opentimer.check_ka(message)
 			if ord(message.TYPE) == Message.CODE.NOP:
 				yield ACTION.LATER
@@ -329,8 +329,8 @@ class Peer (object):
 
 		if self._outgoing.fsm == FSM.OPENCONFIRM:
 			self.logger.network('incoming connection finds the outgoing connection is in openconfirm')
-			local_id = self.neighbor.router_id.packed
-			remote_id = proto.negotiated.received_open.router_id.packed
+			local_id = self.neighbor.router_id.pack()
+			remote_id = proto.negotiated.received_open.router_id.pack()
 
 			if local_id < remote_id:
 				self.logger.network('closing the outgoing connection')
@@ -412,8 +412,8 @@ class Peer (object):
 
 		if self._incoming.fsm == FSM.OPENCONFIRM:
 			self.logger.network('outgoing connection finds the incoming connection is in openconfirm')
-			local_id = self.neighbor.router_id.packed
-			remote_id = proto.negotiated.received_open.router_id.packed
+			local_id = self.neighbor.router_id.pack()
+			remote_id = proto.negotiated.received_open.router_id.pack()
 
 			if local_id < remote_id:
 				self.logger.network('aborting the outgoing connection')

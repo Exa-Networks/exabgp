@@ -21,11 +21,11 @@ class MED (Attribute):
 	FLAG = Attribute.Flag.OPTIONAL
 	CACHING = True
 
-	__slots__ = ['med','packed']
+	__slots__ = ['med','_packed']
 
 	def __init__ (self, med, packed=None):
 		self.med = med
-		self.packed = self._attribute(packed if packed is not None else pack('!L',med))
+		self._packed = self._attribute(packed if packed is not None else pack('!L',med))
 
 	def __eq__ (self, other):
 		return \
@@ -37,7 +37,7 @@ class MED (Attribute):
 		return not self.__eq__(other)
 
 	def pack (self, negotiated=None):
-		return self.packed
+		return self._packed
 
 	def __len__ (self):
 		return 4

@@ -11,8 +11,19 @@ import socket
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
+
 # =========================================================================== IP
 #
+
+class IPSelf (object):
+	def __init__ (self, afi):
+		self.afi = afi
+
+	def __repr__ (self):
+		return 'self'
+
+	def pack (self, negotiated):
+		return negotiated.nexthopself(self.afi).ton(negotiated)
 
 
 class IP (object):
@@ -24,7 +35,7 @@ class IP (object):
 
 	_multicast_range = set(range(224,240))  # 239
 
-	__slots__ = ['string','packed']
+	__slots__ = ['string','_packed']
 
 	def __init__ (self):
 		raise RuntimeError("You should use IP.create() to use IP")
@@ -32,7 +43,7 @@ class IP (object):
 	def init (self, string, packed=None):
 		# XXX: the str should not be needed
 		self.string = string
-		self.packed = packed if packed else IP.pton(string)
+		self._packed = IP.pton(string) if packed is None else packed
 		return self
 
 	def __iter__ (self):
@@ -78,41 +89,47 @@ class IP (object):
 		raise ValueError('unrecognised ip address %s' % ip)
 
 	def ipv4 (self):
-		return True if len(self.packed) == 4 else False
+		return True if len(self._packed) == 4 else False
 
 	def ipv6 (self):
-		return False if len(self.packed) == 4 else True
+		return False if len(self._packed) == 4 else True
 
 	@staticmethod
 	def length (afi):
 		return 4 if afi == AFI.ipv4 else 16
 
+	def index (self):
+		return self._packed
+
 	def pack (self):
-		return self.packed
+		return self._packed
+
+	def ton (self, negotiated):
+		return self._packed
 
 	def __repr__ (self):
 		return self.string
 
 	def __eq__ (self, other):
-		return self.packed == other.packed
+		return self._packed == other._packed
 
 	def __neq__ (self, other):
-		return self.packed != other.packed
+		return self._packed != other._packed
 
 	def __lt__ (self, other):
-		return self.packed < other.packed
+		return self._packed < other._packed
 
 	def __le__ (self, other):
-		return self.packed <= other.packed
+		return self._packed <= other._packed
 
 	def __gt__ (self, other):
-		return self.packed > other.packed
+		return self._packed > other._packed
 
 	def __ge__ (self, other):
-		return self.packed >= other.packed
+		return self._packed >= other._packed
 
 	def __hash__ (self):
-		return hash(str(self.__class__.__name__) + self.packed)
+		return hash(str(self.__class__.__name__) + self._packed)
 
 	@classmethod
 	def klass (cls, ip):
@@ -150,6 +167,9 @@ class _NoNextHop (object):
 	def pack (self, data, negotiated=None):
 		return ''
 
+	def ton (self, negotiated):
+		return ''
+
 	def __str__ (self):
 		return 'no-nexthop'
 
@@ -174,7 +194,7 @@ class IPv4 (IP):
 		return not self.multicast()
 
 	def multicast (self):
-		return ord(self.packed[0]) in set(range(224,240))  # 239 is last
+		return ord(self._packed[0]) in set(range(224,240))  # 239 is last
 
 	def ipv4 (self):
 		return True

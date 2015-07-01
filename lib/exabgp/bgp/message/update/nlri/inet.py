@@ -22,27 +22,33 @@ from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 class INET (CIDR,NLRI):
 	__slots__ = ['path_info','nexthop','action']
 
-	def __init__ (self, afi, safi, packed, mask, nexthop, action,path=None):
-		self.path_info = PathInfo.NOPATH if path is None else path
+	def __init__ (self, afi, safi, packed, mask, nexthop, action):
+		self.path_info = PathInfo.NOPATH
 		self.nexthop = IP.unpack(nexthop) if nexthop else NoNextHop
 		NLRI.__init__(self,afi,safi)
 		CIDR.__init__(self,packed,mask)
 		self.action = action
 
 	def prefix (self):
-		return "%s/%s%s" % (CIDR.getip(self),self.mask,str(self.path_info) if self.path_info is not PathInfo.NOPATH else '')
+		return "%s/%s%s" % (CIDR.top(self),self.mask,str(self.path_info) if self.path_info is not PathInfo.NOPATH else '')
 
 	def extensive (self):
-		return "%s/%s%s next-hop %s" % (self.ip,self.mask,str(self.path_info) if self.path_info is not PathInfo.NOPATH else '',self.nexthop)
+		return "%s/%s%s next-hop %s" % (self.top(),self.mask,str(self.path_info) if self.path_info is not PathInfo.NOPATH else '',self.nexthop)
 
-	def pack (self, addpath):
-		return self.path_info.pack() + CIDR.pack(self) if addpath else CIDR.pack(self)
+	def pack (self, negotiated):
+		# from exabgp.bgp.message.open.capability import Negotiated
+		# assert type(negotiated) is Negotiated
+		if negotiated.addpath.send(self.afi,self.safi):
+			return self.path_info.pack() + self.cidr()
+		return self.cidr()
 
 	def json (self):
-		return '"%s/%s": { %s }' % (CIDR.getip(self),self.mask,self.path_info.json())
+		return '"%s/%s": { %s }' % (CIDR.top(self),self.mask,self.path_info.json())
 
 	def index (self):
-		return self.pack(True)
+		if self.path_info is PathInfo.NOPATH:
+			return 'path-nopath' + self.path_info.pack() + self.cidr()
+		return 'path-packed' + self.path_info.pack() + self.cidr()
 
 	def __len__ (self):
 		return CIDR.__len__(self) + len(self.path_info)

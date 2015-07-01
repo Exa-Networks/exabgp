@@ -26,8 +26,8 @@ from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 class MPLS (NLRI,CIDR):
 	__slots__ = ['labels','rd','nexthop','action']
 
-	def __init__ (self, afi, safi, packed, mask, nexthop, action,path=None):
-		self.path_info = PathInfo.NOPATH if path is None else path
+	def __init__ (self, afi, safi, packed, mask, nexthop, action	):
+		self.path_info = PathInfo.NOPATH
 		self.labels = Labels.NOLABEL
 		self.rd = RouteDistinguisher.NORD
 		self.nexthop = IP.unpack(nexthop) if nexthop else NoNextHop
@@ -80,12 +80,14 @@ class MPLS (NLRI,CIDR):
 				r.append(pinfo)
 		return '"%s": { %s }' % (self.prefix(),", ".join(r))
 
-	def pack (self, addpath=None):
-		if not self.has_label():
-			return CIDR.pack(self)
+	def pack (self, negotiated=None):
+		addpath = self.path_info.pack() if negotiated.addpath.send(self.afi,self.safi) else ''
 
-		length = len(self.labels)*8 + len(self.rd)*8 + self.mask
-		return chr(length) + self.labels.pack() + self.rd.pack() + CIDR.packed_ip(self)
+		if self.has_label():
+			length = len(self.labels)*8 + len(self.rd)*8 + self.mask
+			return addpath + chr(length) + self.labels.pack() + self.rd.pack() + self.classless()
+
+		return addpath + self.cidr()
 
 	def index (self):
 		return self.pack()

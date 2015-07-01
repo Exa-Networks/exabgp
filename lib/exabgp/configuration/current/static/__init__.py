@@ -26,12 +26,15 @@ class ParseStatic (ParseStaticRoute):
 		'route <ip>/<netmask> %s;' % ' '.join(ParseStaticRoute.definition)
 
 	action = dict(ParseStaticRoute.action)
-	action['route'] = 'append'
+	action['route'] = 'extend-name'
 
 	name = 'static'
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		ParseStaticRoute.__init__(self,tokeniser,scope,error,logger)
+
+	def clear (self):
+		return True
 
 	def pre (self):
 		self.scope.to_context()
@@ -62,11 +65,10 @@ def route (tokeniser):
 		klass(
 			IP.toafi(ipmask.string),
 			safi,
-			ipmask.packed,
+			ipmask.pack(),
 			ipmask.mask,
 			'',
-			OUT.ANNOUNCE,
-			None
+			OUT.ANNOUNCE
 		),
 		Attributes()
 	)
@@ -90,7 +92,10 @@ def route (tokeniser):
 		else:
 			raise ValueError('route: unknown command "%s"' % command)
 
-	# if change.nlri.labels and not change.nlri.safi.has_label():
-	# 	change.nlri.safi = SAFI(SAFI.nlri_mpls)
+	changes = list(ParseStatic.split(change))
 
-	return change
+	for change in changes:
+		if not ParseStatic.check(change):
+			raise ValueError('could not validate route')
+
+	return changes

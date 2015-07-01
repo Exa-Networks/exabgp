@@ -1,4 +1,5 @@
 from exabgp.protocol.ip import IP
+from exabgp.protocol.family import AFI
 
 from exabgp.bgp.message.open.asn import ASN
 
@@ -25,6 +26,7 @@ from exabgp.bgp.message.update.nlri.flow import FlowFlowLabel
 from exabgp.bgp.message.update.nlri import Flow
 
 from exabgp.bgp.message.update.attribute import NextHop
+from exabgp.bgp.message.update.attribute import NextHopSelf
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.attribute.community.extended import TrafficRate
 from exabgp.bgp.message.update.attribute.community.extended import TrafficAction
@@ -215,10 +217,10 @@ def next_hop (tokeniser):
 	value = tokeniser()
 
 	if value.lower() == 'self':
-		raise ValueError('unsupported yet on new format')
+		return NextHopSelf(AFI.ipv4)
 	else:
 		ip = IP.create(value)
-		return NextHop(ip.string,ip.packed)
+		return NextHop(ip.string,ip.pack())
 
 
 def accept (tokeniser):

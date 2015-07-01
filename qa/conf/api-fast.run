@@ -30,6 +30,5 @@ while messages2:
 	sys.stdout.write( message + '\n')
 	sys.stdout.flush()
 
-while True:
-	sys.stdin.readline()
+sys.stdin.readline()
 

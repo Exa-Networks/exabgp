@@ -56,15 +56,15 @@ class Multicast (EVPN):
 		return hash((self.afi,self.safi,self.CODE,self.rd,self.etag,self.ip))
 
 	def _pack (self):
-		if not self.packed:
+		if not self._packed:
 			ip = self.ip.pack()
-			self.packed = '%s%s%s%s' % (
+			self._packed = '%s%s%s%s' % (
 				self.rd.pack(),
 				self.etag.pack(),
 				chr(len(ip)*8),
 				ip
 			)
-		return self.packed
+		return self._packed
 
 	@classmethod
 	def unpack (cls, data):

@@ -26,19 +26,19 @@ class CIDR (object):
 	# have a .bgp with the bgp wire format of the prefix
 
 	def __init__ (self, packed, mask):
-		self.packed = packed
+		self._packed = packed
 		self.mask = mask
 		self._ip = None
 
 	def __eq__ (self, other):
 		return \
 			self.mask == other.mask and \
-			self.packed == other.packed
+			self._packed == other.packed
 
 	def __ne__ (self, other):
 		return \
 			self.mask != other.mask or \
-			self.packed != other.packed
+			self._packed != other.packed
 
 	def __lt__ (self, other):
 		raise RuntimeError('comparing CIDR for ordering does not make sense')
@@ -52,24 +52,25 @@ class CIDR (object):
 	def __ge__ (self, other):
 		raise RuntimeError('comparing CIDR for ordering does not make sense')
 
-	def getip (self):
+	def top (self):
 		if not self._ip:
-			self._ip = IP.ntop(self.packed)
+			self._ip = IP.ntop(self._packed)
 		return self._ip
 
-	ip = property(getip)
+	def ton (self):
+		return self._packed
 
 	def __repr__ (self):
 		return self.prefix()
 
 	def prefix (self):
-		return "%s/%s" % (self.ip,self.mask)
+		return "%s/%s" % (self.top(),self.mask)
 
-	def pack (self):
-		return chr(self.mask) + self.packed[:CIDR.size(self.mask)]
+	def cidr (self):
+		return chr(self.mask) + self._packed[:CIDR.size(self.mask)]
 
-	def packed_ip (self):
-		return self.packed[:CIDR.size(self.mask)]
+	def classless (self):
+		return self._packed[:CIDR.size(self.mask)]
 
 	# July 2014: should never be called as it is for the RIB code only
 	# def index (self):
@@ -79,7 +80,7 @@ class CIDR (object):
 		return CIDR.size(self.mask) + 1
 
 	def __hash__ (self):
-		return hash(chr(self.mask)+self.packed)
+		return hash(chr(self.mask)+self._packed)
 
 
 for netmask in range(0,129):

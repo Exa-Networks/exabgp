@@ -36,8 +36,14 @@ class NLRI (Family):
 		return '%s%s%s' % (self.afi,self.safi,self.pack())
 
 	# remove this when code restructure is finished
-	def pack (self, addpath=None):
-		raise Exception('unimplemented')
+	def pack (self, negotiated=None):
+		raise Exception('unimplemented in NLRI children class')
+
+	def __eq__ (self,other):
+		return self.index() == other.index()
+
+	def __ne__ (self,other):
+		return not self.__eq__(other)
 
 	def __lt__ (self, other):
 		raise RuntimeError('comparing NLRI for ordering does not make sense')

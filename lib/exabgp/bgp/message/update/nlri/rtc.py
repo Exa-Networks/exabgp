@@ -61,7 +61,7 @@ class RTC (NLRI):
 	def resetFlags(char):
 		return chr(ord(char) & ~(Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL))
 
-	def pack (self, addpath=None):
+	def pack (self, negotiated=None):
 		# XXX: no support for addpath yet
 		packedRT = self.rt.pack()
 		# We reset ext com flag bits from the first byte in the packed RT

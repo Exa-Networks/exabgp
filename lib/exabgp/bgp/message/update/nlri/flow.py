@@ -123,7 +123,7 @@ class IPrefix4 (IPrefix,IComponent,IPv4):
 		self.nlri = CIDR(raw,netmask)
 
 	def pack (self):
-		raw = self.nlri.pack()
+		raw = self.nlri.cidr()
 		# ID is defined in subclasses
 		return "%s%s" % (chr(self.ID),raw)  # pylint: disable=E1101
 
@@ -144,9 +144,8 @@ class IPrefix6 (IPrefix,IComponent,IPv6):
 		self.offset = offset
 
 	def pack (self):
-		raw = self.nlri.packed_ip()
 		# ID is defined in subclasses
-		return "%s%s%s%s" % (chr(self.ID),chr(self.nlri.mask),chr(self.offset),raw)  # pylint: disable=E1101
+		return "%s%s%s%s" % (chr(self.ID),chr(self.nlri.mask),chr(self.offset),self.nlri.classless())  # pylint: disable=E1101
 
 	def __str__ (self):
 		return "%s/%s" % (self.nlri,self.offset)
@@ -523,7 +522,7 @@ class Flow (NLRI):
 		return True
 
 	# The API requires addpath, but it is irrelevant here.
-	def pack (self, addpath=None):
+	def pack (self, negotiated=None):
 		ordered_rules = []
 		# the order is a RFC requirement
 		for ID in sorted(self.rules.keys()):

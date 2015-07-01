@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
 from exabgp.bgp.message.update.attribute.attribute import Attribute
@@ -21,6 +22,7 @@ class NextHop (Attribute,IP):
 	ID = Attribute.CODE.NEXT_HOP
 	FLAG = Attribute.Flag.TRANSITIVE
 	CACHING = True
+	SELF = False
 
 	def __init__ (self, string, packed=None):
 		self.init(string,packed)
@@ -29,13 +31,16 @@ class NextHop (Attribute,IP):
 		return \
 			self.ID == other.ID and \
 			self.FLAG == other.FLAG and \
-			self.packed == other.packed
+			self._packed == other.ton()
 
 	def __ne__ (self, other):
 		return not self.__eq__(other)
 
+	def ton (self,negotiated):
+		return self._packed
+
 	def pack (self, negotiated=None):
-		return self._attribute(self.packed)
+		return self._attribute(self.ton(negotiated))
 
 	@classmethod
 	def unpack (cls, data, negotiated=None):
@@ -45,3 +50,19 @@ class NextHop (Attribute,IP):
 
 	def __repr__ (self):
 		return IP.__repr__(self)
+
+
+class NextHopSelf (NextHop):
+	SELF = True
+
+	def __init__ (self, afi):
+		self.afi = afi
+
+	def __repr__ (self):
+		return 'self'
+
+	def ipv4 (self):
+		return self.afi == AFI.ipv4
+
+	def pack (self,negotiated):
+		return self._attribute(negotiated.nexthopself(self.afi).ton(negotiated))

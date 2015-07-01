@@ -29,7 +29,7 @@ class ASPath (Attribute):
 	ID = Attribute.CODE.AS_PATH
 	FLAG = Attribute.Flag.TRANSITIVE
 
-	__slots__ = ['as_seq','as_set','as_cseq','as_cset','segments','packed','index','_str','_json']
+	__slots__ = ['as_seq','as_set','as_cseq','as_cset','segments','_packed','index','_str','_json']
 
 	def __init__ (self, as_sequence, as_set, as_conf_sequence=None,as_conf_set=None,index=None):
 		self.as_seq = as_sequence
@@ -37,7 +37,7 @@ class ASPath (Attribute):
 		self.as_cseq = as_conf_sequence if as_conf_sequence is not None else []
 		self.as_cset = as_conf_set if as_conf_set is not None else []
 		self.segments = ''
-		self.packed = {True:'',False:''}
+		self._packed = {True:'',False:''}
 		self.index = index  # the original packed data, use for indexing
 		self._str = ''
 		self._json = {}
@@ -75,9 +75,9 @@ class ASPath (Attribute):
 
 	def asn_pack (self, negotiated, force_asn4=False):
 		asn4 = True if force_asn4 else negotiated.asn4
-		if not self.packed[asn4]:
-			self.packed[asn4] = self._attribute(self._segments(asn4))
-		return self.packed[asn4]
+		if not self._packed[asn4]:
+			self._packed[asn4] = self._attribute(self._segments(asn4))
+		return self._packed[asn4]
 
 	def pack (self, negotiated):
 		# if the peer does not understand ASN4, we need to build a transitive AS4_PATH

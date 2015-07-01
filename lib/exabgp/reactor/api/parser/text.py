@@ -32,6 +32,8 @@ class Text (object):
 		self.configuration = Configuration('')
 		self.reactor = reactor
 
+		# we should store the nexthops of peer in a easy to grab way
+		# self.nhs = reactor.configuration.nexthops()  # nhs : next-hop-self
 
 	@staticmethod
 	def extract_neighbors (command):
@@ -71,19 +73,6 @@ class Text (object):
 	def api_route (self, command, peers):
 		action, line = command.split(' ',1)
 
-		if 'self' in command:
-			nexthops = self.reactor.nexthops(peers)
-			nexthops = nexthops
-			# for peer,nexthop in peers.iteritems():
-			# 	self.route.scope.clear()
-			# 	self.route.nexthop(nexthop)
-			# 	if not self.route.static('static','route',tokens[1:]):
-			# 		self.route.clear()
-			# 		return False
-			# 	for change in self.route.scope.content[0]['announce']:
-			# 		changes.append((peer,change))
-			# self.route.clear()
-
 		self.configuration.static.clear()
 		if not self.configuration.partial('static',line):
 			return []
@@ -93,6 +82,7 @@ class Text (object):
 			changes = self.configuration.scope.pop('routes',[])
 			return zip([peers]*len(changes),changes)
 
+		# withdraw ...
 		for change in self.configuration.scope.pop('routes',[]):
 			change.nlri.action = OUT.WITHDRAW
 			changes.append((peers,change))
@@ -146,11 +136,12 @@ class Text (object):
 					safi=IP.tosafi(ip),
 					packed=IP.pton(ip),
 					mask=int(mask),
-					nexthop=nexthop.packed,
+					nexthop='',  # could be NextHopSelf
 					action=action
 				),
 				attributes
 			)
+			change.nlri.nexthop = nexthop
 			if action == 'withdraw':
 				change.nlri.action = OUT.WITHDRAW
 			else:

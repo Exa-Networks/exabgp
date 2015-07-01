@@ -62,14 +62,17 @@ class AIGP (Attribute):
 	CACHING = True
 	TYPES = [1,]
 
-	__slots__ = ['aigp','packed']
+	__slots__ = ['aigp','_packed']
 
 	def __init__ (self, aigp, packed=None):
 		self.aigp = aigp
 		if packed:
-			self.packed = packed
+			self._packed = packed
 		else:
-			self.packed = self._attribute(aigp)
+			self._packed = self._attribute(aigp)
+
+	def pack (self):
+		return self._packed
 
 	def __eq__ (self, other):
 		return \
@@ -82,9 +85,9 @@ class AIGP (Attribute):
 
 	def pack (self, negotiated):
 		if negotiated.neighbor.aigp:
-			return self.packed
+			return self._packed
 		if negotiated.local_as == negotiated.peer_as:
-			return self.packed
+			return self._packed
 		return ''
 
 	def __repr__ (self):

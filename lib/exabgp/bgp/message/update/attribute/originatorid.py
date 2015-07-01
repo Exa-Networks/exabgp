@@ -30,7 +30,7 @@ class OriginatorID (Attribute,IPv4):
 		return not self.__eq__(other)
 
 	def pack (self, negotiated=None):
-		return self._attribute(self.packed)
+		return self._attribute(self.ton(negotiated))
 
 	@classmethod
 	def unpack (cls, data, negotiated):

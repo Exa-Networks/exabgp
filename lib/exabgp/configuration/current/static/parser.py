@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 
 from exabgp.protocol.ip import IP
+from exabgp.protocol.ip import IPSelf
 from exabgp.protocol.family import AFI
 # from exabgp.protocol.family import SAFI
 
@@ -20,6 +21,7 @@ from exabgp.bgp.message.open import RouterID
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.attribute import NextHop
+from exabgp.bgp.message.update.attribute import NextHopSelf
 from exabgp.bgp.message.update.attribute import Origin
 from exabgp.bgp.message.update.attribute import MED
 from exabgp.bgp.message.update.attribute import ASPath
@@ -73,11 +75,11 @@ def path_information (tokeniser):
 		return PathInfo(ip=pi)
 
 
-def next_hop (tokeniser,nexthopself=None):
+def next_hop (tokeniser):
 	value = tokeniser()
 
-	if value.lower() == 'self' and nexthopself is None:
-		raise ValueError('unsupported yet on new format')
+	if value.lower() == 'self':
+		return IPSelf(AFI.ipv4),NextHopSelf(AFI.ipv4)
 	else:
 		ip = IP.create(value)
 		if ip.afi == AFI.ipv4:

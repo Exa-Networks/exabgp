@@ -15,15 +15,15 @@ from exabgp.bgp.message import Message
 
 class _ParseDirection (Section):
 	action = {
-		'parsed':       'set',
-		'packets':      'set',
-		'consolidate':  'set',
-		'open':         'set',
-		'update':       'set',
-		'notification': 'set',
-		'keepalive':    'set',
-		'refresh':      'set',
-		'operational':  'set',
+		'parsed':       'set-command',
+		'packets':      'set-command',
+		'consolidate':  'set-command',
+		'open':         'set-command',
+		'update':       'set-command',
+		'notification': 'set-command',
+		'keepalive':    'set-command',
+		'refresh':      'set-command',
+		'operational':  'set-command',
 	}
 
 	known = {
@@ -98,8 +98,8 @@ class ParseAPI (Section):
 	}
 
 	action = {
-		'processes':        'set',
-		'neighbor-changes': 'set',
+		'processes':        'set-command',
+		'neighbor-changes': 'set-command',
 	}
 
 	default = {

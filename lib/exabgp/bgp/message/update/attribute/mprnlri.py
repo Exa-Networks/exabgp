@@ -45,9 +45,13 @@ class MPRNLRI (Attribute,Family):
 	def __ne__ (self, other):
 		return not self.__eq__(other)
 
-	def packed_attributes (self, addpath, maximum):
+	def packed_attributes (self, negotiated):
 		if not self.nlris:
 			return
+
+		# addpath = negotiated.addpath.send(self.afi,self.safi)
+		# nexthopself = negotiated.nexthopself(self.afi)
+		maximum = negotiated.FREE_SIZE
 
 		mpnlri = {}
 		for nlri in self.nlris:
@@ -58,13 +62,13 @@ class MPRNLRI (Attribute,Family):
 				# we do not want a next_hop attribute packed (with the _attribute()) but just the next_hop itself
 				if nlri.safi.has_rd():
 					# .packed and not .pack()
-					nexthop = chr(0)*8 + nlri.nexthop.packed
+					nexthop = chr(0)*8 + nlri.nexthop.ton(negotiated)
 				else:
 					# .packed and not .pack()
-					nexthop = nlri.nexthop.packed
+					nexthop = nlri.nexthop.ton(negotiated)
 
 			# mpunli[afi,safi][nexthop] = nlri
-			mpnlri.setdefault((nlri.afi.pack(),nlri.safi.pack()),{}).setdefault(nexthop,[]).append(nlri.pack(addpath))
+			mpnlri.setdefault((nlri.afi.pack(),nlri.safi.pack()),{}).setdefault(nexthop,[]).append(nlri.pack(negotiated))
 
 		for (pafi,psafi),data in mpnlri.iteritems():
 			for nexthop,nlris in data.iteritems():
@@ -87,8 +91,8 @@ class MPRNLRI (Attribute,Family):
 						chr(0) + nlri
 					)
 
-	def pack (self, addpath):
-		return ''.join(self.packed_attributes(addpath,Negotiated.FREE_SIZE))
+	def pack (self, negotiated):
+		return ''.join(self.packed_attributes(negotiated))
 
 	def __len__ (self):
 		raise RuntimeError('we can not give you the size of an MPRNLRI - was it with our witout addpath ?')

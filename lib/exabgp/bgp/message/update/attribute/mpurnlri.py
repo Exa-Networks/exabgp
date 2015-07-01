@@ -17,7 +17,6 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.nlri import NLRI
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.open.capability import Negotiated
 
 
 # ================================================================= MP NLRI (14)
@@ -42,13 +41,16 @@ class MPURNLRI (Attribute,Family):
 	def __ne__ (self, other):
 		return not self.__eq__(other)
 
-	def packed_attributes (self, addpath, maximum):
+	def packed_attributes (self, negotiated):
 		if not self.nlris:
 			return
 
+		# we changed the API to nrli.pack from addpath to negotiated but not pack itself
+		maximum = negotiated.FREE_SIZE
+
 		mpurnlri = {}
 		for nlri in self.nlris:
-			mpurnlri.setdefault((nlri.afi.pack(),nlri.safi.pack()),[]).append(nlri.pack(addpath))
+			mpurnlri.setdefault((nlri.afi.pack(),nlri.safi.pack()),[]).append(nlri.pack(negotiated))
 
 		for (pafi,psafi),nlris in mpurnlri.iteritems():
 			payload = pafi + psafi + ''.join(nlris)
@@ -63,9 +65,8 @@ class MPURNLRI (Attribute,Family):
 			for nlri in nlris:
 				yield self._attribute(pafi + psafi + nlri)
 
-
-	def pack (self, addpath):
-		return ''.join(self.packed_attributes(addpath,Negotiated.FREE_SIZE))
+	def pack (self, negotiated):
+		return ''.join(self.packed_attributes(negotiated))
 
 	def __len__ (self):
 		raise RuntimeError('we can not give you the size of an MPURNLRI - was it with our witout addpath ?')

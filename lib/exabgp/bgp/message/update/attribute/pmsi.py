@@ -146,7 +146,7 @@ class PMSIIngressReplication (PMSI):
 	TUNNEL_TYPE = 6
 
 	def __init__ (self, ip, label=0,flags=0,tunnel=None):
-		self.ip = ip
+		self.ip = ip  # looks like a bad name
 		PMSI.__init__(self,tunnel if tunnel else IPv4.pton(ip),label,flags)
 
 	def prettytunnel (self):

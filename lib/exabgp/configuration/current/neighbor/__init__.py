@@ -17,6 +17,7 @@ from exabgp.bgp.message.update.nlri.flow import NLRI
 
 from exabgp.configuration.current.core import Section
 from exabgp.configuration.current.neighbor.api import ParseAPI
+from exabgp.configuration.current.family import ParseFamily
 
 from exabgp.configuration.current.parser import boolean
 from exabgp.configuration.current.parser import ip
@@ -72,24 +73,24 @@ class ParseNeighbor (Section):
 	}
 
 	action = {
-		'inherit':       'set',
-		'description':   'set',
-		'hostname':      'set',
-		'domainname':    'set',
-		'router-id':     'set',
-		'hold-time':     'set',
-		'local-address': 'set',
-		'peer-address':  'set',
-		'local-as':      'set',
-		'peer-as':       'set',
-		'passive':       'set',
-		'listen':        'set',
-		'ttl-security':  'set',
-		'md5':           'set',
-		'group-updates': 'set',
-		'auto-flush':    'set',
-		'adj-rib-out':   'set',
-		'route':         'append',
+		'inherit':       'set-command',
+		'description':   'set-command',
+		'hostname':      'set-command',
+		'domainname':    'set-command',
+		'router-id':     'set-command',
+		'hold-time':     'set-command',
+		'local-address': 'set-command',
+		'peer-address':  'set-command',
+		'local-as':      'set-command',
+		'peer-as':       'set-command',
+		'passive':       'set-command',
+		'listen':        'set-command',
+		'ttl-security':  'set-command',
+		'md5':           'set-command',
+		'group-updates': 'set-command',
+		'auto-flush':    'set-command',
+		'adj-rib-out':   'set-command',
+		'route':         'append-name',
 	}
 
 	default = {
@@ -132,18 +133,33 @@ class ParseNeighbor (Section):
 		neighbor.domain_name      = local.get('domain-name',domainname())
 		neighbor.md5              = local.get('md5',None)
 		neighbor.description      = local.get('description','')
-		neighbor.multisession     = local.get('multi-session',False)
-		neighbor.operational      = local.get('operational',False)
-		neighbor.add_path         = local.get('add-path',0)
 		neighbor.flush            = local.get('auto-flush',True)
 		neighbor.adjribout        = local.get('adj-rib-out',True)
-		neighbor.asn4             = local.get('asn4',True)
 		neighbor.aigp             = local.get('aigp',None)
 		neighbor.ttl              = local.get('ttl-security',None)
 		neighbor.group_updates    = local.get('group-updates',True)
-		neighbor.route_refresh    = local.get('route-refresh',0)
-		neighbor.graceful_restart = local.get('graceful-restart',0) or int(neighbor.hold_time)
+
 		neighbor.api              = local.get('api',ParseAPI.DEFAULT_API)
+
+		# capabilities
+		capability = local.get('capability',{})
+		neighbor.graceful_restart = capability.get('graceful-restart',0) or int(neighbor.hold_time)
+		neighbor.add_path         = capability.get('add-path',0)
+		neighbor.asn4             = capability.get('asn4',True)
+		neighbor.multisession     = capability.get('multi-session',False)
+		neighbor.operational      = capability.get('operational',False)
+		neighbor.route_refresh    = capability.get('route-refresh',0)
+
+		families = []
+		for family in ParseFamily.convert.keys():
+			for pair in local.get('family',{}).get(family,[]):
+				print pair
+				families.append(pair)
+
+		families = families or NLRI.known_families()
+
+		for family in families:
+			neighbor.add_family(family)
 
 		neighbor.changes = []
 
@@ -151,32 +167,6 @@ class ParseNeighbor (Section):
 			neighbor.changes.extend(local.get(section,{}).get('routes',[]))
 
 		messages = local.get('operational',{}).get('routes',[])
-
-		openfamilies = local.get('families','everything')
-		# announce every family we known
-		if neighbor.multisession and openfamilies == 'everything':
-			# announce what is needed, and no more, no need to have lots of TCP session doing nothing
-			_families = set()
-			for change in neighbor.changes:
-				_families.add((change.nlri.afi,change.nlri.safi))
-			families = list(_families)
-		elif openfamilies in ('all','everything'):
-			families = NLRI.known_families()
-		# only announce what you have
-		elif openfamilies == 'minimal':
-			_families = set()
-			for change in neighbor.changes:
-				_families.add((change.nlri.afi,change.nlri.safi))
-			families = list(_families)
-		else:
-			families = openfamilies
-
-		# add the families to the list of families known
-		initial_families = list(neighbor.families())
-		for family in families:
-			if family not in initial_families:
-				# we are modifying the data used by .families() here
-				neighbor.add_family(family)
 
 		if not neighbor.router_id:
 			neighbor.router_id = neighbor.local_address
@@ -200,10 +190,9 @@ class ParseNeighbor (Section):
 		self._neighbors.append(neighbor.peer_address.string)
 
 		# check we are not trying to announce routes without the right MP announcement
-		for family in neighbor.families():
-			if family not in families:
-				afi,safi = family
-				return self.error.set('Trying to announce a route of type %s,%s when we are not announcing the family to our peer' % (afi,safi))
+		for change in neighbor.changes:
+			if change.nlri.family() not in families:
+				return self.error.set('Trying to announce a route of type %s,%s when we are not announcing the family to our peer' % change.nlri.family())
 
 		def _init_neighbor (neighbor):
 			families = neighbor.families()

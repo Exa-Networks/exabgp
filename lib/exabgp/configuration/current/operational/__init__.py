@@ -34,14 +34,14 @@ class ParseOperational (Section):
 	}
 
 	action = {
-		'asm':  'append',
-		'adm':  'append',
-		'rpcq': 'append',
-		'rpcp': 'append',
-		'apcq': 'append',
-		'apcp': 'append',
-		'lpcq': 'append',
-		'lpcp': 'append',
+		'asm':  'append-name',
+		'adm':  'append-name',
+		'rpcq': 'append-name',
+		'rpcp': 'append-name',
+		'apcq': 'append-name',
+		'apcp': 'append-name',
+		'lpcq': 'append-name',
+		'lpcp': 'append-name',
 	}
 
 	name = 'operational'
