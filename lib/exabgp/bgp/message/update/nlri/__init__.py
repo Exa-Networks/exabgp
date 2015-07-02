@@ -16,10 +16,10 @@ from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.bgp.message.update.nlri.flow import Flow
 
 
-NLRI.register_nlri(Prefix,AFI.ipv4,SAFI.unicast)
-NLRI.register_nlri(Prefix,AFI.ipv6,SAFI.unicast)
-NLRI.register_nlri(Prefix,AFI.ipv4,SAFI.multicast)
-NLRI.register_nlri(Prefix,AFI.ipv6,SAFI.multicast)
+NLRI.register_nlri(MPLS,AFI.ipv4,SAFI.unicast)
+NLRI.register_nlri(MPLS,AFI.ipv6,SAFI.unicast)
+NLRI.register_nlri(MPLS,AFI.ipv4,SAFI.multicast)
+NLRI.register_nlri(MPLS,AFI.ipv6,SAFI.multicast)
 
 NLRI.register_nlri(MPLS,AFI.ipv4,SAFI.nlri_mpls)
 NLRI.register_nlri(MPLS,AFI.ipv6,SAFI.nlri_mpls)
