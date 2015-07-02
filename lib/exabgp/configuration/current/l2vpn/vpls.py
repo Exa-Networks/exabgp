@@ -33,27 +33,6 @@ from exabgp.configuration.current.l2vpn.parser import vpls_size
 from exabgp.configuration.current.l2vpn.parser import vpls_offset
 from exabgp.configuration.current.l2vpn.parser import vpls_base
 
-# self.command = {
-# 	'endpoint':            self.vpls_endpoint,
-# 	'offset':              self.vpls_offset,
-# 	'size':                self.vpls_size,
-# 	'base':                self.vpls_base,
-# 	'origin':              self.origin,
-# 	'as-path':             self.aspath,
-# 	'med':                 self.med,
-# 	'next-hop':            self.next_hop,
-# 	'local-preference':    self.local_preference,
-# 	'originator-id':       self.originator_id,
-# 	'cluster-list':        self.cluster_list,
-# 	'rd':                  self.rd,
-# 	'route-distinguisher': self.rd,
-# 	'withdraw':            self.withdraw,
-# 	'withdrawn':           self.withdraw,
-# 	'name':                self.name,
-# 	'community':           self.community,
-# 	'extended-community':  self.extended_community,
-# }
-
 
 class ParseVPLS (Section):
 	definition = [
@@ -109,35 +88,37 @@ class ParseVPLS (Section):
 	}
 
 	action = {
-		'attribute':          'attribute-add',
-		'next-hop':           'nexthop-and-attribute',
-		'origin':             'attribute-add',
-		'med':                'attribute-add',
-		'as-path':            'attribute-add',
-		'local-preference':   'attribute-add',
-		'atomic-aggregate':   'attribute-add',
-		'aggregator':         'attribute-add',
-		'originator-id':      'attribute-add',
-		'cluster-list':       'attribute-add',
-		'community':          'attribute-add',
-		'extended-community': 'attribute-add',
-		'name':               'attribute-add',
-		'split':              'attribute-add',
-		'watchdog':           'attribute-add',
-		'withdraw':           'attribute-add',
-		'rd':                 'nlri-set',
-		'endpoint':           'nlri-set',
-		'offset':             'nlri-set',
-		'size':               'nlri-set',
-		'base':               'nlri-set',
+		'attribute':           'attribute-add',
+		'next-hop':            'nexthop-and-attribute',
+		'origin':              'attribute-add',
+		'med':                 'attribute-add',
+		'as-path':             'attribute-add',
+		'local-preference':    'attribute-add',
+		'atomic-aggregate':    'attribute-add',
+		'aggregator':          'attribute-add',
+		'originator-id':       'attribute-add',
+		'cluster-list':        'attribute-add',
+		'community':           'attribute-add',
+		'extended-community':  'attribute-add',
+		'name':                'attribute-add',
+		'split':               'attribute-add',
+		'watchdog':            'attribute-add',
+		'withdraw':            'attribute-add',
+		'route-distinguisher': 'nlri-set',
+		'rd':                  'nlri-set',
+		'endpoint':            'nlri-set',
+		'offset':              'nlri-set',
+		'size':                'nlri-set',
+		'base':                'nlri-set',
 	}
 
 	assign = {
-		'rd':       'rd',
-		'endpoint': 'endpoint',
-		'offset':   'offset',
-		'size':     'size',
-		'base':     'base',
+		'rd':                  'rd',
+		'route-distinguisher': 'rd',
+		'endpoint':            'endpoint',
+		'offset':              'offset',
+		'size':                'size',
+		'base':                'base',
 	}
 
 	name = 'l2vpn/vpls'
@@ -158,7 +139,7 @@ class ParseVPLS (Section):
 		# self.scope.to_context()
 		route = self.scope.pop(self.name)
 		if route:
-			self.scope.extend('routes',route)
+			self.scope.append('routes',route)
 		return True
 
 	def _check (self):

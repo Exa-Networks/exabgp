@@ -81,7 +81,7 @@ class MPLS (NLRI,CIDR):
 		return '"%s": { %s }' % (self.prefix(),", ".join(r))
 
 	def pack (self, negotiated=None):
-		addpath = self.path_info.pack() if negotiated.addpath.send(self.afi,self.safi) else ''
+		addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi,self.safi) else ''
 
 		if self.has_label():
 			length = len(self.labels)*8 + len(self.rd)*8 + self.mask

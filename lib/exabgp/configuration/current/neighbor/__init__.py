@@ -10,6 +10,9 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import socket
 from copy import deepcopy
 
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
+
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.bgp.message.open.holdtime import HoldTime
 
@@ -153,7 +156,6 @@ class ParseNeighbor (Section):
 		families = []
 		for family in ParseFamily.convert.keys():
 			for pair in local.get('family',{}).get(family,[]):
-				print pair
 				families.append(pair)
 
 		families = families or NLRI.known_families()
@@ -191,7 +193,8 @@ class ParseNeighbor (Section):
 
 		# check we are not trying to announce routes without the right MP announcement
 		for change in neighbor.changes:
-			if change.nlri.family() not in families:
+			family = change.nlri.family()
+			if family not in families and family != (AFI.ipv4,SAFI.unicast):
 				return self.error.set('Trying to announce a route of type %s,%s when we are not announcing the family to our peer' % change.nlri.family())
 
 		def _init_neighbor (neighbor):

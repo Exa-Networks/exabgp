@@ -46,6 +46,7 @@ class ParseStatic (ParseStaticRoute):
 			self.scope.extend('routes',routes)
 		return True
 
+
 @ParseStatic.register('route')
 def route (tokeniser):
 	ipmask = prefix(tokeniser)

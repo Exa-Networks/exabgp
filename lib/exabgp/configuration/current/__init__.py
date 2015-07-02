@@ -186,7 +186,7 @@ class Configuration (object):
 			},
 			self.l2vpn.name: {
 				'class':    self.l2vpn,
-				'commands': [self.vpls.name],
+				'commands': self.l2vpn.known.keys(),
 				'sections': {
 					'vpls': self.vpls.name,
 				},
