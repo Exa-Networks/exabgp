@@ -105,21 +105,26 @@ def _value (string):
 
 # parse =80 or >80 or <25 or &>10<20
 def _generic_expression (tokeniser, klass):
-	data = tokeniser()
-	AND = BinaryOperator.NOP
-	while data:
-		operator,_ = _operator(data)
-		value,data = _value(_)
-		# XXX: should do a check that the rule is valid for the family
-		yield klass(AND | operator,klass.converter(value))
-		if data:
-			if data[0] == '&':
-				AND = BinaryOperator.AND
-				data = data[1:]
-				if not data:
-					raise ValueError("Can not finish an expresion on an &")
-			else:
-				raise ValueError("Unknown binary operator %s" % data[0])
+	tokens = tokeniser()
+
+	if tokeniser():
+		raise ValueError("Syntax change, please join each test with a | ie: '>79&<81 =3128' is now '>79&<81|=3128''")
+
+	for data in tokens.split('|'):
+		AND = BinaryOperator.NOP
+		while data:
+			operator,_ = _operator(data)
+			value,data = _value(_)
+			# XXX: should do a check that the rule is valid for the family
+			yield klass(AND | operator,klass.converter(value))
+			if data:
+				if data[0] == '&':
+					AND = BinaryOperator.AND
+					data = data[1:]
+					if not data:
+						raise ValueError("Can not finish an expresion on an &")
+				else:
+					raise ValueError("Unknown binary operator %s" % data[0])
 
 
 # parse [ content1 content2 content3 ]
