@@ -1,2 +1,2 @@
 version=3
-https://github.com/Exa-Networks/exabgp/releases .*/v?(\d\S*)\.tar\.gz
+https://github.com/Exa-Networks/exabgp/releases .*/v?(\d[^-]*)\.tar\.gz

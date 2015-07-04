@@ -1,3 +1,9 @@
+exabgp (3.4.11-3) UNRELEASED; urgency=medium
+
+  * Exclude Debian versions from debian/watch.
+
+ -- Vincent Bernat <bernat@debian.org>  Sat, 04 Jul 2015 07:22:59 +0200
+
 exabgp (3.4.11-2) unstable; urgency=medium
 
   * Move processes/healthcheck.py in the same way we moved other files in
