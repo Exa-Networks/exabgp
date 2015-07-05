@@ -6,6 +6,9 @@ Created by Thomas Mangin on 2015-06-22.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.protocol.family import SAFI
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+
 from exabgp.configuration.current.core import Section
 
 from exabgp.configuration.current.flow.match import ParseFlowMatch
@@ -63,6 +66,10 @@ class ParseFlowRoute (Section):
 		if not self._check():
 			return False
 		route = self.scope.pop(self.name)
+
+		if route.nlri.rd is not RouteDistinguisher.NORD:
+			route.nlri.safi = SAFI(SAFI.flow_vpn)
+
 		if route:
 			self.scope.append('routes',route)
 		return True

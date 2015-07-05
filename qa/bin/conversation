@@ -123,6 +123,9 @@ def dispatch (exabgp, daemon, groups, port):
 		eol = not eol
 	display('\n')
 
+	if os.environ.get('LISTING',False):
+		sys.exit(0)
+
 	try:
 		display('\n','starting','\n','--------','\n')
 

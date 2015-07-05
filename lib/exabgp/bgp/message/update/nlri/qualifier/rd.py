@@ -74,6 +74,7 @@ class RouteDistinguisher (object):
 	def unpack (cls, data):
 		return cls(data[:8])
 
+	# DO NOT USE, the right function is route_distinguisher() in exabgp.configuation.static.mpls
 	@classmethod
 	def fromElements (cls, prefix, suffix):
 		try:
@@ -94,9 +95,5 @@ class RouteDistinguisher (object):
 			return cls(distinguisher)
 		except ValueError:
 			raise ValueError('invalid route-distinguisher %s:%s' % (prefix,suffix))
-
-#FIXME: the above is stolen from exabgp.configuration.experimental.engine.parser.rd
-#       which can now use RouteDistinguisher.fromElements instead of
-#       the rd packing code it has
 
 RouteDistinguisher.NORD = RouteDistinguisher('')

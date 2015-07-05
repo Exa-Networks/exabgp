@@ -476,7 +476,7 @@ class Flow (NLRI):
 		self.rules = {}
 		self.action = OUT.ANNOUNCE
 		self.nexthop = IP.unpack(nexthop) if nexthop else NoNextHop
-		self.rd = rd
+		self.rd = rd if rd else RouteDistinguisher.NORD
 		self.unique = unique.next()
 
 	def __eq__ (self, other):
@@ -537,21 +537,14 @@ class Flow (NLRI):
 				ordered_rules.append(chr(ID))
 			ordered_rules.append(''.join(rule.pack() for rule in rules))
 
-		components = ''.join(ordered_rules)
-
-		if self.safi == SAFI.flow_vpn:
-			components = self.rd.pack() + components
+		components = self.rd.pack() + ''.join(ordered_rules)
 
 		l = len(components)
 		if l < 0xF0:
-			data = "%s%s" % (chr(l),components)
-		elif l < 0x0FFF:
-			data = "%s%s" % (pack('!H',l | 0xF000),components)
-		else:
-			raise Notify(3,0,"rule too big for NLRI - how to handle this - does this work ?")
-			# data = "%s" % chr(0)
-
-		return data
+			return "%s%s" % (chr(l),components)
+		if l < 0x0FFF:
+			return "%s%s" % (pack('!H',l | 0xF000),components)
+		raise Notify(3,0,"my administrator attempted to announce a Flow Spec rule larger than encoding allows, protecting the innocent the only way I can")
 
 	def extensive (self):
 		string = []
@@ -565,7 +558,7 @@ class Flow (NLRI):
 				s.append(rule)
 			string.append(' %s %s' % (rules[0].NAME,''.join(str(_) for _ in s)))
 		nexthop = ' next-hop %s' % self.nexthop if self.nexthop is not NoNextHop else ''
-		rd = str(self.rd) if self.rd else ''
+		rd = '' if self.rd is RouteDistinguisher.NORD else str(self.rd)
 		return 'flow' + rd + ''.join(string) + nexthop
 
 	def __str__ (self):
@@ -583,7 +576,7 @@ class Flow (NLRI):
 				s.append('"%s"' % rule)
 			string.append(' "%s": [ %s ]' % (rules[0].NAME,''.join(str(_) for _ in s)))
 		nexthop = ', "next-hop": "%s"' % self.nexthop if self.nexthop is not NoNextHop else ''
-		rd = ', %s' % self.rd.json() if self.rd else ''
+		rd = '' if self.rd is RouteDistinguisher.NORD else ', %s' % self.rd.json()
 		compatibility = ', "string": "%s"' % self.extensive()
 		return '{' + rd + ','.join(string) + nexthop + compatibility + ' }'
 
