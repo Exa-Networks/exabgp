@@ -14,6 +14,7 @@ from exabgp.configuration.current.core import Error
 from exabgp.configuration.current.core import Scope
 from exabgp.configuration.current.core import Tokeniser
 from exabgp.configuration.current.core import Section
+from exabgp.configuration.current.core import SectionError
 
 from exabgp.configuration.current.process import ParseProcess
 from exabgp.configuration.current.template import ParseTemplate
@@ -269,6 +270,11 @@ class Configuration (object):
 			return self._reload()
 		except KeyboardInterrupt:
 			return self.error.set('configuration reload aborted by ^C or SIGINT')
+		except SectionError, exc:
+			return self.error.set(
+				'problem parsing configuration file line %d\n'
+				'error message: %s' % (self.tokeniser.index_line, exc)
+			)
 		except Exception, exc:
 			if environment.settings().debug.configuration:
 				raise

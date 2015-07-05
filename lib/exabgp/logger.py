@@ -125,8 +125,8 @@ class Logger (object):
 	def pdb (self, level):
 		if self._option.pdb and level in ['CRITICAL','critical']:
 			# not sure why, pylint reports an import error here
-			import pdb
-			pdb.set_trace()
+			from pdb import set_trace
+			set_trace()
 
 	def config (self, config=None):
 		if config is not None:

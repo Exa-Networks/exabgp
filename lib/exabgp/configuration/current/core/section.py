@@ -6,6 +6,15 @@ Created by Thomas Mangin on 2015-06-04.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from string import ascii_letters
+from string import digits
+
+from exabgp.configuration.environment import environment
+
+
+class SectionError (Exception):
+	pass
+
 
 class Section (object):
 	name = 'undefined'
@@ -19,6 +28,8 @@ class Section (object):
 		self.scope = scope
 		self.error = error
 		self.logger = logger
+		self._names = []
+		self.debug = environment.settings().debug.configuration
 
 	def clear (self):
 		raise RuntimeError('%s did not implemented clear as should be' % self.__class__.__name__)
@@ -31,6 +42,26 @@ class Section (object):
 			cls.known[name] = function
 			return function
 		return inner
+
+	def check_name (self, name):
+		if any(False if c in ascii_letters + digits + '.-_' else True for c in name):
+			message = 'invalid character in name for %s ' % self.name
+			if self.debug:
+				print '\n%s\n' % message
+				from pdb import set_trace
+				set_trace()
+			else:
+				raise SectionError(message)
+
+		if name in self._names:
+			message = 'the name "%s" already exists in %s' % (name,self.name)
+			if self.debug:
+				print '\n%s\n' % message
+				from pdb import set_trace
+				set_trace()
+			else:
+				raise SectionError()
+		self._names.append(name)
 
 	def pre (self):
 		return True

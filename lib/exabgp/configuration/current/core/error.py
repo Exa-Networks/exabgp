@@ -1,4 +1,3 @@
-import pdb
 from exabgp.configuration.environment import environment
 
 class Error (object):
@@ -10,8 +9,9 @@ class Error (object):
 	def set (self, message):
 		self._message = message
 		if self.debug:
-			print "\n%s\n" % self._message
-			pdb.set_trace()
+			print '\n%s\n' % self._message
+			from pdb import set_trace
+			set_trace()
 			return True
 		return False
 
