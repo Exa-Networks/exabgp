@@ -167,6 +167,9 @@ class _NoNextHop (object):
 	def pack (self, data, negotiated=None):
 		return ''
 
+	def index (self):
+		return ''
+
 	def ton (self, negotiated):
 		return ''
 

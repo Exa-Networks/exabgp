@@ -33,7 +33,6 @@ from exabgp.configuration.current.l2vpn import ParseL2VPN
 from exabgp.configuration.current.l2vpn import ParseVPLS
 from exabgp.configuration.current.operational import ParseOperational
 
-from exabgp.bgp.message import Message
 from exabgp.configuration.environment import environment
 
 
@@ -159,7 +158,7 @@ class Configuration (object):
 			},
 			self.flow.name: {
 				'class':    self.flow,
-				'commands': [],
+				'commands': self.flow.known.keys(),
 				'sections': {
 					'route': self.flow_route.name,
 				},

@@ -81,8 +81,7 @@ class Text (object):
 		return zip([peers]*len(changes),changes)
 
 	def api_flow (self, command, peers):
-		action, line = command.split(' ',1)
-		line = line.replace('\\n','\n').replace('{','{\n').replace('}','}\n').replace(';',';\n').replace('\n\n','\n')
+		action, flow, line = command.split(' ',2)
 
 		self.configuration.static.clear()
 		if not self.configuration.partial('flow',line):

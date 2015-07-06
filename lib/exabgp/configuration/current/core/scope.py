@@ -19,6 +19,9 @@ class Scope (Error):
 		}
 		self._current = self._all
 
+	def __repr__ (self):
+		return str(self.__class__)
+
 	def clear (self):
 		self._location = []
 		self._added = set()

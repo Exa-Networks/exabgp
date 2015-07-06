@@ -474,7 +474,7 @@ class Flow (NLRI):
 	def __init__ (self, afi=AFI.ipv4,safi=SAFI.flow_ip,nexthop=None,rd=None):
 		NLRI.__init__(self,afi,safi)
 		self.rules = {}
-		self.action = OUT.ANNOUNCE
+		self.action = OUT.UNSET
 		self.nexthop = IP.unpack(nexthop) if nexthop else NoNextHop
 		self.rd = rd if rd else RouteDistinguisher.NORD
 		self.unique = unique.next()

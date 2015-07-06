@@ -31,11 +31,12 @@ class Section (Error):
 		raise RuntimeError('%s did not implemented clear as should be' % self.__class__.__name__)
 
 	@classmethod
-	def register (cls, name):
+	def register (cls, name, action):
 		def inner (function):
 			if name in cls.known:
 				raise RuntimeError('more than one registration per command attempted')
 			cls.known[name] = function
+			cls.action[name] = action
 			return function
 		return inner
 

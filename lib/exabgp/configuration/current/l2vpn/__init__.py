@@ -18,7 +18,6 @@ class ParseL2VPN (ParseVPLS):
 		'vpls %s;\n' % ' '.join(ParseVPLS.definition)
 
 	action = dict(ParseVPLS.action)
-	action['vpls'] = 'append-name'
 
 	name = 'l2vpn'
 
@@ -39,7 +38,7 @@ class ParseL2VPN (ParseVPLS):
 		return True
 
 
-@ParseL2VPN.register('vpls')
+@ParseL2VPN.register('vpls','append-name')
 def vpls (tokeniser):
 	change = Change(
 		VPLS(None,None,None,None,None),

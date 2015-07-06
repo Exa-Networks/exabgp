@@ -26,7 +26,6 @@ class ParseStatic (ParseStaticRoute):
 		'route <ip>/<netmask> %s;' % ' '.join(ParseStaticRoute.definition)
 
 	action = dict(ParseStaticRoute.action)
-	action['route'] = 'extend-name'
 
 	name = 'static'
 
@@ -47,7 +46,7 @@ class ParseStatic (ParseStaticRoute):
 		return True
 
 
-@ParseStatic.register('route')
+@ParseStatic.register('route','extend-name')
 def route (tokeniser):
 	ipmask = prefix(tokeniser)
 
