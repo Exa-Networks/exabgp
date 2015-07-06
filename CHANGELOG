@@ -13,6 +13,7 @@ Version 3.4.12
  * Fix: bad reporting of VPLS information in JSON
  * Fix: wrong SAFI on MPLS routes
     reported by: Hideaki HAYASHI
+ * Fix/Improve: JSON for flow spec
 
 Version 3.4.11
  * Change: install healthcheck in bin

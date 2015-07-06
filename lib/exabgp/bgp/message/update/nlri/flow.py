@@ -541,7 +541,10 @@ class Flow (NLRI):
 				if idx and not rule.operations & NumericOperator.AND:
 					s.append(' ')
 				s.append(rule)
-			string.append(' %s %s' % (rules[0].NAME,''.join(str(_) for _ in s)))
+			line = ''.join(str(_) for _ in s)
+			if len(s) > 1:
+				line = '[ %s ]' % line
+			string.append(' %s %s' % (rules[0].NAME,line))
 		nexthop = ' next-hop %s' % self.nexthop if self.nexthop is not NoIP else ''
 		rd = str(self.rd) if self.rd else ''
 		return 'flow' + rd + ''.join(string) + nexthop
@@ -559,7 +562,7 @@ class Flow (NLRI):
 				if idx and not rule.operations & NumericOperator.AND:
 					s.append(', ')
 				s.append('"%s"' % rule)
-			string.append(' "%s": [ %s ]' % (rules[0].NAME,''.join(str(_) for _ in s)))
+			string.append(' "%s": [ %s ]' % (rules[0].NAME,''.join(str(_) for _ in s).replace('""','')))
 		nexthop = ', "next-hop": "%s"' % self.nexthop if self.nexthop is not NoIP else ''
 		rd = ', %s' % self.rd.json() if self.rd else ''
 		compatibility = ', "string": "%s"' % self.extensive()
