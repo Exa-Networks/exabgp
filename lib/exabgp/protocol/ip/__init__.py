@@ -82,6 +82,9 @@ class IP (object):
 	def length (afi):
 		return 4 if afi == AFI.ipv4 else 16
 
+	def index (self):
+		return self.packed
+
 	def pack (self):
 		return self.packed
 
@@ -139,11 +142,13 @@ class _NoIP (object):
 	def pack (self, data, negotiated=None):
 		return ''
 
+	def index (self):
+		return ''
+
 	def __str__ (self):
 		return 'none'
 
 NoIP = _NoIP()
-
 
 # ========================================================================= IPv4
 #

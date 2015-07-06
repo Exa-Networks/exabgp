@@ -28,6 +28,12 @@ class NLRI (Address):
 	registered_nlri = dict()
 	logger = None
 
+	def __eq__ (self,other):
+		return self.index() == other.index()
+
+	def __ne__ (self,other):
+		return not self.__eq__(other)
+
 	def index (self):
 		return '%s%s%s' % (self.afi,self.safi,self.pack())
 
