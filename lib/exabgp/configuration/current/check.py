@@ -237,7 +237,7 @@ def check_update (neighbor, raw):
 			logger.parser('could not parse the message')
 			logger.parser(traceback.format_exc())
 			return False
-		except Exception:
+		except StandardError:
 			logger.parser('could not parse the message')
 			logger.parser(traceback.format_exc())
 			return False

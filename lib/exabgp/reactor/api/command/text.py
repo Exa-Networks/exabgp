@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2015-12-15.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.bgp.message import OUT
+
 from exabgp.version import version as _version
 
 
@@ -122,7 +124,6 @@ def show_routes_extensive (self, reactor, service, command):
 	return True
 
 
-
 @Text('announce watchdog')
 def announce_watchdog (self, reactor, service, command):
 	def callback (name):
@@ -172,8 +173,10 @@ def flush_route (self, reactor, service, command):
 		reactor.plan(callback(self,peers),'flush_route')
 		return True
 	except ValueError:
+		self.logger.reactor('issue parsing the command')
 		return False
 	except IndexError:
+		self.logger.reactor('issue parsing the command')
 		return False
 
 
@@ -193,13 +196,16 @@ def announce_route (self, reactor, service, line):
 				return
 
 			for (selected_peers,change) in changes:
+				change.nlri.action = OUT.ANNOUNCE
 				reactor.api.change_to_peers(change,selected_peers)
 				self.logger.reactor('route added to %s : %s' % (', '.join(selected_peers) if selected_peers else 'all peers',change.extensive()))
 				yield False
 			reactor.route_update = True
 		except ValueError:
+			self.logger.reactor('issue parsing the route')
 			yield True
 		except IndexError:
+			self.logger.reactor('issue parsing the route')
 			yield True
 
 	reactor.plan(callback(),'announce_route')
@@ -223,6 +229,7 @@ def withdraw_route (self, reactor, service, line):
 				return
 
 			for (selected_peers,change) in changes:
+				change.nlri.action = OUT.WITHDRAW
 				if reactor.api.change_to_peers(change,selected_peers):
 					self.logger.reactor('route removed from %s : %s' % (', '.join(selected_peers) if selected_peers else 'all peers',change.extensive()))
 					yield False
@@ -231,8 +238,10 @@ def withdraw_route (self, reactor, service, line):
 					yield False
 			reactor.route_update = True
 		except ValueError:
+			self.logger.reactor('issue parsing the route')
 			yield True
 		except IndexError:
+			self.logger.reactor('issue parsing the route')
 			yield True
 
 	reactor.plan(callback(),'withdraw_route')
@@ -264,8 +273,10 @@ def announce_vpls (self, reactor, service, command):
 		reactor.plan(callback(self,command,reactor.nexthops(peers)),'announce_vpls')
 		return True
 	except ValueError:
+		self.logger.reactor('issue parsing the command')
 		return False
 	except IndexError:
+		self.logger.reactor('issue parsing the command')
 		return False
 
 
@@ -295,8 +306,10 @@ def withdraw_vpls (self, reactor, service, command):
 		reactor.plan(callback(self,command,reactor.nexthops(peers)),'withdraw_vpls')
 		return True
 	except ValueError:
+		self.logger.reactor('issue parsing the command')
 		return False
 	except IndexError:
+		self.logger.reactor('issue parsing the command')
 		return False
 
 
@@ -323,8 +336,10 @@ def announce_attribute (self, reactor, service, command):
 		reactor.plan(callback(self,command,reactor.nexthops(peers)),'announce_attribute')
 		return True
 	except ValueError:
+		self.logger.reactor('issue parsing the command')
 		return False
 	except IndexError:
+		self.logger.reactor('issue parsing the command')
 		return False
 
 
@@ -354,37 +369,43 @@ def withdraw_attribute (self, reactor, service, command):
 		reactor.plan(callback(self,command,reactor.nexthops(peers)),'withdraw_attribute')
 		return True
 	except ValueError:
+		self.logger.reactor('issue parsing the command')
 		return False
 	except IndexError:
+		self.logger.reactor('issue parsing the command')
 		return False
 
 
 @Text('announce flow')
-def announce_flow (self, reactor, service, command):
-	def callback (self, command, peers):
-		changes = self.parser.api_flow(command,'announce')
-		if not changes:
-			self.logger.reactor("Command could not parse flow in : %s" % command)
-			yield True
-		else:
-			for change in changes:
-				reactor.api.change_to_peers(change,peers)
-				self.logger.reactor("Flow added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
+def announce_flow (self, reactor, service, line):
+	def callback ():
+		try:
+			descriptions,command = self.parser.extract_neighbors(line)
+			peers = reactor.match_neighbors(descriptions)
+			if not peers:
+				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+				return
+
+			changes = self.parser.api_flow(command,peers)
+			if not changes:
+				self.logger.reactor('command could not parse flow in : %s' % command,'warning')
+				return
+
+			for (selected_peers,change) in changes:
+				change.nlri.action = OUT.ANNOUNCE
+				reactor.api.change_to_peers(change,selected_peers)
+				self.logger.reactor('flow added to %s : %s' % (', '.join(selected_peers) if selected_peers else 'all peers',change.extensive()))
 				yield False
 			reactor.route_update = True
+		except ValueError:
+			self.logger.reactor('issue parsing the flow')
+			yield True
+		except IndexError:
+			self.logger.reactor('issue parsing the flow')
+			yield True
 
-	try:
-		descriptions,command = self.parser.extract_neighbors(command)
-		peers = reactor.match_neighbors(descriptions)
-		if not peers:
-			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
-			return False
-		reactor.plan(callback(self,command,peers),'announce_flow')
-		return True
-	except ValueError:
-		return False
-	except IndexError:
-		return False
+	reactor.plan(callback(),'announce_route')
+	return True
 
 
 @Text('withdraw flow')
@@ -413,8 +434,10 @@ def withdraw_flow (self, reactor, service, command):
 		reactor.plan(callback(self,command,peers),'withdraw_flow')
 		return True
 	except ValueError:
+		self.logger.reactor('issue parsing the command')
 		return False
 	except IndexError:
+		self.logger.reactor('issue parsing the command')
 		return False
 
 
@@ -440,8 +463,10 @@ def announce_eor (self, reactor, service, command):
 		reactor.plan(callback(self,command,peers),'announce_eor')
 		return True
 	except ValueError:
+		self.logger.reactor('issue parsing the command')
 		return False
 	except IndexError:
+		self.logger.reactor('issue parsing the command')
 		return False
 
 
@@ -467,8 +492,10 @@ def announce_refresh (self, reactor, service, command):
 		reactor.plan(callback(self,command,peers),'announce_refresh')
 		return True
 	except ValueError:
+		self.logger.reactor('issue parsing the command')
 		return False
 	except IndexError:
+		self.logger.reactor('issue parsing the command')
 		return False
 
 
@@ -500,6 +527,8 @@ def announce_operational (self, reactor, service, command):
 		reactor.plan(callback(self,command,peers),'announce_operational')
 		return True
 	except ValueError:
+		self.logger.reactor('issue parsing the command')
 		return False
 	except IndexError:
+		self.logger.reactor('issue parsing the command')
 		return False

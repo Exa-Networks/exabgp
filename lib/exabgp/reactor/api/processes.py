@@ -46,15 +46,6 @@ class Processes (object):
 
 	_dispatch = {}
 
-	# names = {
-	# 	Message.CODE.NOTIFICATION  : 'neighbor-changes',
-	# 	Message.CODE.OPEN          : 'receive-opens',
-	# 	Message.CODE.KEEPALIVE     : 'receive-keepalives',
-	# 	Message.CODE.UPDATE        : 'receive-updates',
-	# 	Message.CODE.ROUTE_REFRESH : 'receive-refresh',
-	# 	Message.CODE.OPERATIONAL   : 'receive-operational',
-	# }
-
 	def __init__ (self, reactor):
 		self.logger = Logger()
 		self.reactor = reactor
@@ -67,8 +58,6 @@ class Processes (object):
 	def clean (self):
 		self._process = {}
 		self._encoder = {}
-		# self._events = {}
-		# self._neighbor_process = {}
 		self._broken = []
 		self._respawning = {}
 
@@ -101,13 +90,6 @@ class Processes (object):
 		self.clean()
 
 	def _start (self, process):
-		# events = self.reactor.configuration.processes[process]
-		# for event,present in events.iteritems():
-		# 	if event in ('run','encoder'):
-		# 		continue
-		# 	if present:
-		# 		self._events.setdefault(process,[]).append(event)
-		#
 		try:
 			if process in self._process:
 				self.logger.processes("process already running")
@@ -155,8 +137,6 @@ class Processes (object):
 					# record respawing
 					self._respawning[process] = {around_now: 1}
 
-			# neighbor = self.reactor.configuration.processes[process]['neighbor']
-			# self._neighbor_process.setdefault(neighbor,[]).append(process)
 		except (subprocess.CalledProcessError,OSError,ValueError),exc:
 			self._broken.append(process)
 			self.logger.processes("Could not start process %s" % process)
@@ -173,9 +153,7 @@ class Processes (object):
 
 	def broken (self, neighbor):
 		if self._broken:
-			if '*' in self._broken:
-				return True
-			for process in self._neighbor_process.get(neighbor,[]):
+			for process in self.neighbor.api['processes']:
 				if process in self._broken:
 					return True
 		return False
@@ -255,16 +233,8 @@ class Processes (object):
 		return True
 
 	def _notify (self, neighbor, event):
-		import pdb; pdb.set_trace()
-		address = neighbor.peer_address
-		for process in self._neighbor_process.get(address,[]):
-			if process in self._process:
-				if event in self._events[process]:
-					yield process
-		for process in self._neighbor_process.get('*',[]):
-			if process in self._process:
-				if event in self._events[process]:
-					yield process
+		for process in neighbor.api[event]:
+			yield process
 
 	# do not do anything if silenced
 	# no-self-argument
@@ -321,31 +291,31 @@ class Processes (object):
 
 	@register_process(Message.CODE.OPEN)
 	def _open (self, peer, direction, message, header, body):
-		for process in self._notify(peer,'receive-%d' % Message.CODE.OPEN):
+		for process in self._notify(peer,'receive-%s' % Message.CODE.OPEN.SHORT):
 			self.write(process,self._encoder[process].open(peer,direction,message,header,body),peer)
 
 	@register_process(Message.CODE.UPDATE)
 	def _update (self, peer, direction, update, header, body):
-		for process in self._notify(peer,'receive-%d' % Message.CODE.UPDATE):
+		for process in self._notify(peer,'receive-%s' % Message.CODE.UPDATE.SHORT):
 			self.write(process,self._encoder[process].update(peer,direction,update,header,body),peer)
 
 	@register_process(Message.CODE.NOTIFICATION)
 	def _notification (self, peer, direction, message, header, body):
-		for process in self._notify(peer,'receive-%d' % Message.CODE.NOTIFICATION):
+		for process in self._notify(peer,'receive-%s' % Message.CODE.NOTIFICATION.SHORT):
 			self.write(process,self._encoder[process].notification(peer,direction,message,header,body),peer)
 
 	# unused-argument, must keep the API
 	@register_process(Message.CODE.KEEPALIVE)
 	def _keepalive (self, peer, direction, keepalive, header, body):
-		for process in self._notify(peer,'receive-%d' % Message.CODE.KEEPALIVE):
+		for process in self._notify(peer,'receive-%s' % Message.CODE.KEEPALIVE.SHORT):
 			self.write(process,self._encoder[process].keepalive(peer,direction,header,body),peer)
 
 	@register_process(Message.CODE.ROUTE_REFRESH)
 	def _refresh (self, peer, direction, refresh, header, body):
-		for process in self._notify(peer,'receive-%d' % Message.CODE.ROUTE_REFRESH):
+		for process in self._notify(peer,'receive-%s' % Message.CODE.ROUTE_REFRESH.SHORT):
 			self.write(process,self._encoder[process].refresh(peer,direction,refresh,header,body),peer)
 
 	@register_process(Message.CODE.OPERATIONAL)
 	def _operational (self, peer, direction, operational, header, body):
-		for process in self._notify(peer,'receive-%d' % Message.CODE.OPERATIONAL):
+		for process in self._notify(peer,'receive-%s' % Message.CODE.OPERATIONAL.SHORT):
 			self.write(process,self._encoder[process].operational(peer,direction,operational.category,operational,header,body),peer)

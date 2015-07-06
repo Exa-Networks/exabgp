@@ -154,8 +154,6 @@ class ParseStaticRoute (Section):
 		return True
 
 	def post (self):
-		if not self._check():
-			return False
 		# self._family()
 		self._split()
 		# self.scope.to_context()
@@ -169,17 +167,18 @@ class ParseStaticRoute (Section):
 	# 	if last.nlri.labels and not last.nlri.safi.has_label():
 	# 		last.nlri.safi = SAFI(SAFI.nlri_mpls)
 
-	@staticmethod
-	def check (last):
-		if last.nlri.nexthop is NoNextHop \
-			and last.nlri.afi == AFI.ipv4 \
-			and last.nlri.safi in (SAFI.unicast,SAFI.multicast):
-			return False
-		return True
-
 	def _check (self):
 		if not self.check(self.scope.get(self.name)):
 			return self.error.set(self.syntax)
+		return True
+
+	@staticmethod
+	def check (change):
+		if change.nlri.nexthop is NoNextHop \
+			and change.nlri.action == OUT.ANNOUNCE \
+			and change.nlri.afi == AFI.ipv4 \
+			and change.nlri.safi in (SAFI.unicast,SAFI.multicast):
+			return False
 		return True
 
 	@staticmethod

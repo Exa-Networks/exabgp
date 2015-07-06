@@ -77,16 +77,19 @@ class Text (object):
 		if not self.configuration.partial('static',line):
 			return []
 
-		changes = []
-		if action == 'announce':
-			changes = self.configuration.scope.pop('routes',[])
-			return zip([peers]*len(changes),changes)
+		changes = self.configuration.scope.pop('routes',[])
+		return zip([peers]*len(changes),changes)
 
-		# withdraw ...
-		for change in self.configuration.scope.pop('routes',[]):
-			change.nlri.action = OUT.WITHDRAW
-			changes.append((peers,change))
-		return changes
+	def api_flow (self, command, peers):
+		action, line = command.split(' ',1)
+		line = line.replace('\\n','\n').replace('{','{\n').replace('}','}\n').replace(';',';\n').replace('\n\n','\n')
+
+		self.configuration.static.clear()
+		if not self.configuration.partial('flow',line):
+			return []
+
+		changes = self.configuration.scope.pop('routes',[])
+		return zip([peers]*len(changes),changes)
 
 	def api_vpls (self, command, peers, action):
 		tokens = formated(command).split(' ')[1:]
@@ -147,20 +150,6 @@ class Text (object):
 			else:
 				change.nlri.action = OUT.ANNOUNCE
 			changes.append((peers.keys(),change))
-		return changes
-
-	def api_flow (self, command, action):
-		tokens = formated(command).split(' ',2)[2].replace('\\n','\n').replace('{','{\n').replace('}','}\n').replace(';',';\n').replace('\n\n','\n')
-		self.tokens.set_text(tokens)
-		self.scope.clear()
-		if not self._dispatch('root','flow',['route',],[],['root']):
-			return False
-		if not self.flow.check_flow(self):
-			return False
-		changes = self.scope.content[0]['announce']
-		if action == 'withdraw':
-			for change in changes:
-				change.nlri.action = OUT.WITHDRAW
 		return changes
 
 	def api_refresh (self, command):

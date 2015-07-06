@@ -14,6 +14,8 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.neighbor import Neighbor
+
+from exabgp.bgp.message import OUT
 from exabgp.bgp.message.open.holdtime import HoldTime
 
 from exabgp.bgp.message.update.nlri.flow import NLRI
@@ -142,7 +144,7 @@ class ParseNeighbor (Section):
 		neighbor.ttl              = local.get('ttl-security',None)
 		neighbor.group_updates    = local.get('group-updates',True)
 
-		neighbor.api              = local.get('api',ParseAPI.DEFAULT_API)
+		neighbor.api              = ParseAPI.extract()
 
 		# capabilities
 		capability = local.get('capability',{})
@@ -166,7 +168,10 @@ class ParseNeighbor (Section):
 		neighbor.changes = []
 
 		for section in ('static','l2vpn','flow'):
-			neighbor.changes.extend(local.get(section,{}).get('routes',[]))
+			routes = local.get(section,{}).get('routes',[])
+			for route in routes:
+				route.nlri.action = OUT.ANNOUNCE
+			neighbor.changes.extend(routes)
 
 		messages = local.get('operational',{}).get('routes',[])
 

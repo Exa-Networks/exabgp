@@ -63,8 +63,6 @@ class ParseFlowRoute (Section):
 		return True
 
 	def post (self):
-		if not self._check():
-			return False
 		route = self.scope.pop(self.name)
 
 		if route.nlri.rd is not RouteDistinguisher.NORD:
@@ -74,6 +72,7 @@ class ParseFlowRoute (Section):
 			self.scope.append('routes',route)
 		return True
 
-	def _check (self):
+	@staticmethod
+	def check (change):
 		self.logger.configuration('warning: no check on flows are implemented')
 		return True

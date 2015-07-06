@@ -14,7 +14,6 @@ from exabgp.configuration.current.core import Error
 from exabgp.configuration.current.core import Scope
 from exabgp.configuration.current.core import Tokeniser
 from exabgp.configuration.current.core import Section
-from exabgp.configuration.current.core import SectionError
 
 from exabgp.configuration.current.process import ParseProcess
 from exabgp.configuration.current.template import ParseTemplate
@@ -47,7 +46,7 @@ class Configuration (object):
 
 		self.error  = Error  ()
 		self.logger = Logger ()
-		self.scope  = Scope  (self.error)
+		self.scope  = Scope  ()
 
 		self.tokeniser = Tokeniser(self.scope,self.error,self.logger)
 
@@ -270,12 +269,12 @@ class Configuration (object):
 			return self._reload()
 		except KeyboardInterrupt:
 			return self.error.set('configuration reload aborted by ^C or SIGINT')
-		except SectionError, exc:
+		except Error, exc:
 			return self.error.set(
 				'problem parsing configuration file line %d\n'
 				'error message: %s' % (self.tokeniser.index_line, exc)
 			)
-		except Exception, exc:
+		except StandardError, exc:
 			if environment.settings().debug.configuration:
 				raise
 			return self.error.set(
@@ -327,7 +326,7 @@ class Configuration (object):
 						if api[key]:
 							self.processes[process].setdefault(key,[]).append(neighbor.router_id)
 					for name in ('open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
-						key = "%s-%d" % (way,Message.code(name))
+						key = "%s-%s" % (way,name)
 						if api[key]:
 							self.processes[process].setdefault(key,[]).append(neighbor.router_id)
 

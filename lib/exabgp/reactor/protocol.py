@@ -142,14 +142,14 @@ class Protocol (object):
 	def write (self, message, negotiated=None):
 		raw = message.message(negotiated)
 
-		if self.neighbor.api.get('send-%d' % message.ID,False):
+		if self.neighbor.api.get('send-%s' % message.CODE.short(message.ID),False):
 			self._to_api('send',message,raw)
 
 		for boolean in self.connection.writer(raw):
 			yield boolean
 
 	def send (self,raw):
-		if self.neighbor.api.get('send-%d' % ord(raw[19]),False):
+		if self.neighbor.api.get('send-%s' % Message.CODE.short(ord(raw[19])),False):
 			message = Update.unpack_message(raw[19:],self.negotiated)
 			self._to_api('send',message,raw)
 
@@ -170,7 +170,7 @@ class Protocol (object):
 
 		for length,msg_id,header,body,notify in self.connection.reader():
 			if notify:
-				if self.neighbor.api['receive-%d' % Message.CODE.NOTIFICATION]:
+				if self.neighbor.api['receive-%s' % Message.CODE.NOTIFICATION.SHORT]:
 					if packets and not consolidate:
 						self.peer.reactor.processes.packets(self.peer.neighbor,'receive',msg_id,header,body)
 
@@ -204,7 +204,7 @@ class Protocol (object):
 			raise Notify(1,0,'can not decode update message of type "%d"' % msg_id)
 			# raise Notify(5,0,'unknown message received')
 
-		if self.neighbor.api.get('receive-%d' % msg_id,False):
+		if self.neighbor.api.get('receive-%s' % Message.CODE.short(msg_id),False):
 			if parsed:
 				if not consolidate or not packets:
 					header = ''

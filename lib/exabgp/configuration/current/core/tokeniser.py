@@ -46,7 +46,6 @@ class Tokeniser (object):
 			except StopIteration:
 				return ''
 
-
 	@staticmethod
 	def _off ():
 		raise StopIteration()
@@ -63,6 +62,7 @@ class Tokeniser (object):
 		self.index_column = 0
 		self.index_line = 0
 		self.fname = ''
+		self.type = 'unset'
 
 		self._tokens = Tokeniser._off
 		self._next = None
@@ -77,6 +77,7 @@ class Tokeniser (object):
 		self.index_column = 0
 		self.index_line = 0
 		self.fname = ''
+		self.type = 'unset'
 		if self._data:
 			self._set(self._data)
 
@@ -127,6 +128,7 @@ class Tokeniser (object):
 						yield line
 				for _ in self._tokenise(formated()):
 					yield _
+		self.type = 'file'
 		self.Iterator.fname = data
 		return self._set(_source(data))
 
@@ -134,6 +136,7 @@ class Tokeniser (object):
 		def _source (data):
 			for _ in self._tokenise(data.split('\n')):
 				yield _
+		self.type = 'text'
 		return self._set(_source(data))
 
 	def set_api (self, line):

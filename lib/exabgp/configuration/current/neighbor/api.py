@@ -6,6 +6,9 @@ Created by Thomas Mangin on 2015-06-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+import time
+from collections import defaultdict
+
 from exabgp.configuration.current.core import Section
 from exabgp.configuration.current.parser import boolean
 from exabgp.configuration.current.neighbor.parser import processes
@@ -107,44 +110,57 @@ class ParseAPI (Section):
 	}
 
 	DEFAULT_API = {
-		'neighbor-changes': False
+		'neighbor-changes': []
 	}
 
 	name = 'api'
 
+	_built = defaultdict(list)
+
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)
+		self.named = ''
+
+	@classmethod
+	def extract (cls):
+		if cls._built:
+			parsed = cls._built
+			cls._built = defaultdict(list)
+			return parsed
+		return cls.DEFAULT_API
 
 	def clear (self):
-		pass
+		self._built = defaultdict(list)
 
 	def pre (self):
+		self.scope.to_context()
+		named = self.tokeniser.iterate()
+		self.named = named if named else 'auto-named-%d' % int(time.time()*1000000)
+		self.check_name(self.named)
 		self.scope.to_context()
 		return True
 
 	def post (self):
 		self.scope.to_context(self.name)
-		local = {
-			'neighbor-changes':self.scope.get('neighbor-changes',False)
-		}
-		for way in ('send','receive'):
-			data = self.scope.pop(way,{})
-			for name in ('parsed','packets','consolidate'):
-				local["%s-%s" % (way,name)] = data.get(name,False)
-			for name in ('open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
-				local["%s-%d" % (way,Message.code(name))] = data.get(name,False)
-		for k,v in local.items():
-			self.scope.set(k,v)
+		api = self.scope.pop()
+		procs = api.get('processes',[])
+
+		self._built['processes'].extend(procs)
+
+		for command in ('neighbor-changes',):
+			self._built[command].extend(procs if api.get(command,False) else [])
+
+		for direction in ('send','receive'):
+			data = api.get(direction,{})
+			for action in ('parsed','packets','consolidate','open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
+				self._built["%s-%s" % (direction,action)].extend(procs if data.get(action,False) else [])
+
 		return True
 
 
 for way in ('send','receive'):
-	for name in ('parsed','packets','consolidate'):
-		ParseAPI.DEFAULT_API["%s-%s" % (way,name)] = False
-	for name in ('open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
-		ParseAPI.DEFAULT_API["%s-%d" % (way,Message.code(name))] = False
-
-
+	for name in ('parsed','packets','consolidate','open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
+		ParseAPI.DEFAULT_API["%s-%s" % (way,name)] = []
 
 	# we want to have a socket for the cli
 	# if self.fifo:
@@ -167,14 +183,14 @@ for way in ('send','receive'):
 	#
 	# 	for receive in ['send','receive']:
 	# 		for message in [
-	# 			Message.CODE.NOTIFICATION,
-	# 			Message.CODE.OPEN,
-	# 			Message.CODE.KEEPALIVE,
-	# 			Message.CODE.UPDATE,
-	# 			Message.CODE.ROUTE_REFRESH,
-	# 			Message.CODE.OPERATIONAL
+	# 			Message.CODE.NOTIFICATION.SHORT,
+	# 			Message.CODE.OPEN.SHORT,
+	# 			Message.CODE.KEEPALIVE.SHORT,
+	# 			Message.CODE.UPDATE.SHORT,
+	# 			Message.CODE.ROUTE_REFRESH.SHORT,
+	# 			Message.CODE.OPERATIONAL.SHORT,
 	# 		]:
-	# 			configuration.processes[_cli_name]['%s-%d' % (receive,message)] = False
+	# 			configuration.processes[_cli_name]['%s-%s' % (receive,message)] = False
 
 	# XXX: check that if we have any message, we have parsed/packets
 	# XXX: and vice-versa

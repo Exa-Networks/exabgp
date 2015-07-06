@@ -158,3 +158,6 @@ class ParseVPLS (Section):
 		if nlri.base > (0xFFFFF - nlri.size):  # 20 bits, 3 bytes
 			return self.error.set('vpls size inconsistancy')
 		return True
+
+	def check (change):
+		return True

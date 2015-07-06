@@ -175,27 +175,27 @@ class Neighbor (object):
 		codes = Message.CODE
 
 		_extension_receive = {
-			'receive-packets':                  'packets',
-			'receive-parsed':                   'parsed',
-			'receive-consolidate':              'consolidate',
-			'receive-%d' % codes.NOTIFICATION:  'notification',
-			'receive-%d' % codes.OPEN:          'open',
-			'receive-%d' % codes.KEEPALIVE:     'keepalive',
-			'receive-%d' % codes.UPDATE:        'update',
-			'receive-%d' % codes.ROUTE_REFRESH: 'refresh',
-			'receive-%d' % codes.OPERATIONAL:   'operational',
+			'receive-packets':                        'packets',
+			'receive-parsed':                         'parsed',
+			'receive-consolidate':                    'consolidate',
+			'receive-%s' % codes.NOTIFICATION.SHORT:  'notification',
+			'receive-%s' % codes.OPEN.SHORT:          'open',
+			'receive-%s' % codes.KEEPALIVE.SHORT:     'keepalive',
+			'receive-%s' % codes.UPDATE.SHORT:        'update',
+			'receive-%s' % codes.ROUTE_REFRESH.SHORT: 'refresh',
+			'receive-%s' % codes.OPERATIONAL.SHORT:   'operational',
 		}
 
 		_extension_send = {
-			'send-packets':                  'packets',
-			'send-parsed':                   'parsed',
-			'send-consolidate':              'consolidate',
-			'send-%d' % codes.NOTIFICATION:  'notification',
-			'send-%d' % codes.OPEN:          'open',
-			'send-%d' % codes.KEEPALIVE:     'keepalive',
-			'send-%d' % codes.UPDATE:        'update',
-			'send-%d' % codes.ROUTE_REFRESH: 'refresh',
-			'send-%d' % codes.OPERATIONAL:   'operational',
+			'send-packets':                        'packets',
+			'send-parsed':                         'parsed',
+			'send-consolidate':                    'consolidate',
+			'send-%s' % codes.NOTIFICATION.SHORT:  'notification',
+			'send-%s' % codes.OPEN.SHORT:          'open',
+			'send-%s' % codes.KEEPALIVE.SHORT:     'keepalive',
+			'send-%s' % codes.UPDATE.SHORT:        'update',
+			'send-%s' % codes.ROUTE_REFRESH.SHORT: 'refresh',
+			'send-%s' % codes.OPERATIONAL.SHORT:   'operational',
 		}
 
 		_receive = []

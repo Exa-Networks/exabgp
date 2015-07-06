@@ -7,11 +7,11 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 # from copy import deepcopy
+from exabgp.configuration.current.core.error import Error
 
 
-class Scope (object):
-	def __init__ (self,error):
-		self.error = error
+class Scope (Error):
+	def __init__ (self):
 		self._location = []
 		self._added = set()
 		self._all = {
@@ -63,11 +63,11 @@ class Scope (object):
 				elif isinstance(source[key], list):
 					destination.setdefault(key,[]).extend(value)
 				else:
-					raise RuntimeError('can not recursively copy this type of data')
+					self.throw('can not recursively copy this type of data')
 
 		for inherit in returned.get('inherit',[]):
 			if inherit not in self._all['template']:
-				raise ValueError('invalid template name referenced')
+				self.throw('invalid template name referenced')
 			transfer(self._all['template'][inherit],returned)
 
 		return returned
@@ -102,5 +102,7 @@ class Scope (object):
 			return self._current.get(name,default)
 		return self._current
 
-	def pop (self, name, default=None):
+	def pop (self, name='', default=None):
+		if name == '':
+			return dict((k,self._current.pop(k)) for k in self._current.keys())
 		return self._current.pop(name,default)

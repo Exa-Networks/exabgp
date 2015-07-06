@@ -96,7 +96,7 @@ def inet (tokeniser):
 			packed=IP.pton(ipmask.string),
 			mask=ipmask.mask,
 			nexthop=None,
-			action=OUT.ANNOUNCE
+			action=OUT.UNSET
 		),
 		Attributes()
 	)

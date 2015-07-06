@@ -9,14 +9,10 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from string import ascii_letters
 from string import digits
 
-from exabgp.configuration.environment import environment
+from exabgp.configuration.current.core.error import Error
 
 
-class SectionError (Exception):
-	pass
-
-
-class Section (object):
+class Section (Error):
 	name = 'undefined'
 	known = dict()     # command/section and code to handle it
 	default = dict()   # command/section has a a defult value, use it if no data was provided
@@ -24,12 +20,12 @@ class Section (object):
 	assign = {}        # configuration to class variable lookup for setattr
 
 	def __init__ (self, tokerniser, scope, error, logger):
+		Error.__init__(self)
 		self.tokeniser = tokerniser
 		self.scope = scope
 		self.error = error
 		self.logger = logger
 		self._names = []
-		self.debug = environment.settings().debug.configuration
 
 	def clear (self):
 		raise RuntimeError('%s did not implemented clear as should be' % self.__class__.__name__)
@@ -45,22 +41,9 @@ class Section (object):
 
 	def check_name (self, name):
 		if any(False if c in ascii_letters + digits + '.-_' else True for c in name):
-			message = 'invalid character in name for %s ' % self.name
-			if self.debug:
-				print '\n%s\n' % message
-				from pdb import set_trace
-				set_trace()
-			else:
-				raise SectionError(message)
-
+			self.throw('invalid character in name for %s ' % self.name)
 		if name in self._names:
-			message = 'the name "%s" already exists in %s' % (name,self.name)
-			if self.debug:
-				print '\n%s\n' % message
-				from pdb import set_trace
-				set_trace()
-			else:
-				raise SectionError()
+			self.throw('the name "%s" already exists in %s' % (name,self.name))
 		self._names.append(name)
 
 	def pre (self):

@@ -124,6 +124,10 @@ class Message (Exception):
 		def name (message_id):
 			return _Code.names.get(message_id,'unknown message %s' % hex(message_id))
 
+		@staticmethod
+		def short (message_id):
+			return _Code.short_names.get(message_id,'unknown message %s' % hex(message_id))
+
 		# # Can raise KeyError
 		# @staticmethod
 		# def code (short):

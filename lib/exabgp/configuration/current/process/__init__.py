@@ -77,14 +77,14 @@ class ParseProcess (Section):
 	#
 	# 	for direction in ['send','receive']:
 	# 		for message in [
-	# 			Message.CODE.NOTIFICATION,
-	# 			Message.CODE.OPEN,
-	# 			Message.CODE.KEEPALIVE,
-	# 			Message.CODE.UPDATE,
-	# 			Message.CODE.ROUTE_REFRESH,
-	# 			Message.CODE.OPERATIONAL
+	# 			Message.CODE.NOTIFICATION.SHORT,
+	# 			Message.CODE.OPEN.SHORT,
+	# 			Message.CODE.KEEPALIVE.SHORT,
+	# 			Message.CODE.UPDATE.SHORT,
+	# 			Message.CODE.ROUTE_REFRESH.SHORT,
+	# 			Message.CODE.OPERATIONAL.SHORT,
 	# 		]:
-	# 			configuration.processes[_cli_name]['%s-%d' % (direction,message)] = False
+	# 			configuration.processes[_cli_name]['%s-%s' % (direction,message)] = False
 	#
 	# for name in configuration.processes.keys():
 	# 	process = configuration.processes[name]
@@ -96,14 +96,14 @@ class ParseProcess (Section):
 	# 			neighbor.api.set_value(direction,option,process.get('%s-%s' % (direction,option),False))
 	#
 	# 		for message in [
-	# 			Message.CODE.NOTIFICATION,
-	# 			Message.CODE.OPEN,
-	# 			Message.CODE.KEEPALIVE,
-	# 			Message.CODE.UPDATE,
-	# 			Message.CODE.ROUTE_REFRESH,
-	# 			Message.CODE.OPERATIONAL
+	# 			Message.CODE.NOTIFICATION.SHORT,
+	# 			Message.CODE.OPEN.SHORT,
+	# 			Message.CODE.KEEPALIVE.SHORT,
+	# 			Message.CODE.UPDATE.SHORT,
+	# 			Message.CODE.ROUTE_REFRESH.SHORT,
+	# 			Message.CODE.OPERATIONAL.SHORT,
 	# 		]:
-	# 			neighbor.api.set_message(direction,message,process.get('%s-%d' % (direction,message),False))
+	# 			neighbor.api.set_message(direction,message,process.get('%s-%s' % (direction,message),False))
 
 	# XXX: check that if we have any message, we have parsed/packets
 	# XXX: and vice-versa

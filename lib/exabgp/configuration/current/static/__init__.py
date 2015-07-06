@@ -69,7 +69,7 @@ def route (tokeniser):
 			ipmask.pack(),
 			ipmask.mask,
 			'',
-			OUT.ANNOUNCE
+			OUT.UNSET
 		),
 		Attributes()
 	)
@@ -93,10 +93,4 @@ def route (tokeniser):
 		else:
 			raise ValueError('route: unknown command "%s"' % command)
 
-	changes = list(ParseStatic.split(change))
-
-	for change in changes:
-		if not ParseStatic.check(change):
-			raise ValueError('could not validate route')
-
-	return changes
+	return list(ParseStatic.split(change))

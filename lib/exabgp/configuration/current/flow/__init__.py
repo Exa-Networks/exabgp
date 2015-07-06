@@ -35,5 +35,6 @@ class ParseFlow (Section):
 		self.scope.set('routes',self.scope.pop('route').get('routes',[]))
 		return True
 
-	def _check (self):
+
+	def check (self):
 		return True

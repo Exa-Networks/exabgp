@@ -1,22 +1,31 @@
 from exabgp.configuration.environment import environment
 
-class Error (object):
 
+class Error (StandardError):
 	def __init__ (self):
-		self._message = ''
+		self.message = ''
 		self.debug = environment.settings().debug.configuration
 
 	def set (self, message):
-		self._message = message
+		self.message = message
 		if self.debug:
-			print '\n%s\n' % self._message
+			print '\n%s\n' % self.message
 			from pdb import set_trace
 			set_trace()
 			return True
 		return False
 
+	def throw (self,message):
+		self.message = message
+		if self.debug:
+			print '\n%s\n' % message
+			from pdb import set_trace
+			set_trace()
+		else:
+			raise self
+
 	def clear (self):
-		self._message = ''
+		self.message = ''
 
 	def __repr__ (self):
-		return self._message
+		return self.message
