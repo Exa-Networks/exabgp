@@ -83,7 +83,7 @@ def _operator (string):
 		elif string[0] == '<':
 			operator = NumericOperator.LT
 		else:
-			raise ValueError('Invalid operator in test %s' % string)
+			return NumericOperator.EQ,string
 		if string[1] == '=':
 			operator += NumericOperator.EQ
 			return operator,string[2:]
@@ -103,54 +103,36 @@ def _value (string):
 	return string[:l],string[l:]
 
 
+# parse [ content1 content2 content3 ]
 # parse =80 or >80 or <25 or &>10<20
-def _generic_expression (tokeniser, klass):
-	tokens = tokeniser()
-
-	if tokeniser():
-		raise ValueError("Syntax change, please join each test with a | ie: '>79&<81 =3128' is now '>79&<81|=3128''")
-
-	for data in tokens.split('|'):
-		AND = BinaryOperator.NOP
-		while data:
+def _generic_condition (tokeniser, klass):
+	data = tokeniser()
+	AND = BinaryOperator.NOP
+	if data == '[':
+		data = tokeniser()
+		while True:
+			if data == ']':
+				break
 			operator,_ = _operator(data)
 			value,data = _value(_)
 			# XXX: should do a check that the rule is valid for the family
 			yield klass(AND | operator,klass.converter(value))
 			if data:
-				if data[0] == '&':
-					AND = BinaryOperator.AND
-					data = data[1:]
-					if not data:
-						raise ValueError("Can not finish an expresion on an &")
-				else:
+				if data[0] != '&':
 					raise ValueError("Unknown binary operator %s" % data[0])
-
-
-# parse [ content1 content2 content3 ]
-def _generic_list (tokeniser, klass):
-	data = tokeniser()
-	AND = BinaryOperator.NOP
-	if data == '[':
-		while True:
-			data = tokeniser()
-			if data == ']':
-				break
-			yield klass(NumericOperator.EQ | AND,klass.converter(data))
-	elif data[0] == '=':
-		yield klass(NumericOperator.EQ | AND,klass.converter(data[1:]))
+				AND = BinaryOperator.AND
+				data = data[1:]
+				if not data:
+					raise ValueError("Can not finish an expresion on an &")
+			else:
+				AND = BinaryOperator.NOP
+				data = tokeniser()
 	else:
-		yield klass(NumericOperator.EQ | AND,klass.converter(data))
-
-
-def _generic_condition (tokeniser, klass):
-	data = tokeniser.peak()
-	if data[0] in ['=','>','<']:
-		for _ in _generic_expression(tokeniser,klass):
-			yield _
-	else:
-		for _ in _generic_list(tokeniser,klass):
-			yield _
+		operator,_ = _operator(data)
+		value,data = _value(_)
+		if data:
+			raise ValueError("Invalid flow route data" % data)
+		yield klass(operator | AND,klass.converter(value))
 
 
 def any_port (tokeniser):
@@ -174,32 +156,32 @@ def packet_length (tokeniser):
 
 
 def tcp_flags (tokeniser):
-	for _ in _generic_list(tokeniser,FlowTCPFlag):
+	for _ in _generic_condition(tokeniser,FlowTCPFlag):
 		yield _
 
 
 def protocol (tokeniser):
-	for _ in _generic_list(tokeniser,FlowIPProtocol):
+	for _ in _generic_condition(tokeniser,FlowIPProtocol):
 		yield _
 
 
 def next_header (tokeniser):
-	for _ in _generic_list(tokeniser,FlowNextHeader):
+	for _ in _generic_condition(tokeniser,FlowNextHeader):
 		yield _
 
 
 def icmp_type (tokeniser):
-	for _ in _generic_list(tokeniser,FlowICMPType):
+	for _ in _generic_condition(tokeniser,FlowICMPType):
 		yield _
 
 
 def icmp_code (tokeniser):
-	for _ in _generic_list(tokeniser,FlowICMPCode):
+	for _ in _generic_condition(tokeniser,FlowICMPCode):
 		yield _
 
 
 def fragment (tokeniser):
-	for _ in _generic_list(tokeniser,FlowFragment):
+	for _ in _generic_condition(tokeniser,FlowFragment):
 		yield _
 
 
