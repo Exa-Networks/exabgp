@@ -334,144 +334,56 @@ def community (tokeniser):
 	return communities
 
 
-# def _parse_extended_community (self,data):
-# 	SIZE_H = 0xFFFF
-#
-# 	if data[:2].lower() == '0x':
-# 		try:
-# 			raw = ''
-# 			for i in range(2,len(data),2):
-# 				raw += chr(int(data[i:i+2],16))
-# 		except ValueError:
-# 			raise ValueError('invalid extended community %s' % data)
-# 		if len(raw) != 8:
-# 			raise ValueError('invalid extended community %s' % data)
-# 		return ExtendedCommunity.unpack(raw,None)
-# 	elif data.count(':'):
-# 		_known_community = {
-# 			# header and subheader
-# 			'target':   chr(0x00)+chr(0x02),
-# 			'target4':  chr(0x02)+chr(0x02),
-# 			'origin':   chr(0x00)+chr(0x03),
-# 			'origin4':  chr(0x02)+chr(0x03),
-# 			'redirect': chr(0x80)+chr(0x08),
-# 			'l2info':   chr(0x80)+chr(0x0A),
-# 		}
-#
-# 		_size_community = {
-# 			'target':   2,
-# 			'target4':  2,
-# 			'origin':   2,
-# 			'origin4':  2,
-# 			'redirect': 2,
-# 			'l2info':   4,
-# 		}
-#
-# 		components = data.split(':')
-# 		command = 'target' if len(components) == 2 else components.pop(0)
-#
-# 		if command not in _known_community:
-# 			raise ValueError('invalid extended community %s (only origin,target or l2info are supported) ' % command)
-#
-# 		if len(components) != _size_community[command]:
-# 			raise ValueError('invalid extended community %s, expecting %d fields ' % (command,len(components)))
-#
-# 		header = _known_community[command]
-#
-# 		if command == 'l2info':
-# 			# encaps, control, mtu, site
-# 			return ExtendedCommunity.unpack(header+pack('!BBHH',*[int(_) for _ in components]),None)
-#
-# 		if command in ('target','origin'):
-# 			# global admin, local admin
-# 			_ga,_la = components
-# 			ga,la = _ga.upper(),_la.upper()
-#
-# 			if '.' in ga or '.' in la:
-# 				gc = ga.count('.')
-# 				lc = la.count('.')
-# 				if gc == 0 and lc == 3:
-# 					# ASN first, IP second
-# 					return ExtendedCommunity.unpack(header+pack('!HBBBB',int(ga),*[int(_) for _ in la.split('.')]),None)
-# 				if gc == 3 and lc == 0:
-# 					# IP first, ASN second
-# 					return ExtendedCommunity.unpack(header+pack('!BBBBH',*[int(_) for _ in ga.split('.')]+[int(la)]),None)
-# 			else:
-# 				iga = int(ga[:-1]) if 'L' in ga else int(ga)
-# 				ila = int(la[:-1]) if 'L' in la else int(la)
-# 				if command == 'target':
-# 					if ga.endswith('L') or iga > SIZE_H:
-# 						return ExtendedCommunity.unpack(_known_community['target4']+pack('!LH',iga,ila),None)
-# 					else:
-# 						return ExtendedCommunity.unpack(header+pack('!HI',iga,ila),None)
-# 				if command == 'origin':
-# 					if ga.endswith('L') or iga > SIZE_H:
-# 						return ExtendedCommunity.unpack(_known_community['origin4']+pack('!LH',iga,ila),None)
-# 					else:
-# 						return ExtendedCommunity.unpack(header+pack('!HI',iga,ila),None)
-#
-# 		if command == 'target4':
-# 			iga = int(ga[:-1]) if 'L' in ga else int(ga)
-# 			ila = int(la[:-1]) if 'L' in la else int(la)
-# 			return ExtendedCommunity.unpack(_known_community['target4']+pack('!LH',iga,ila),None)
-#
-# 		if command == 'orgin4':
-# 			iga = int(ga[:-1]) if 'L' in ga else int(ga)
-# 			ila = int(la[:-1]) if 'L' in la else int(la)
-# 			return ExtendedCommunity.unpack(_known_community['origin4']+pack('!LH',iga,ila),None)
-#
-# 		if command in ('redirect',):
-# 			ga,la = components
-# 			return ExtendedCommunity.unpack(header+pack('!HL',int(ga),long(la)),None)
-#
-# 		raise ValueError('invalid extended community %s' % command)
-# 	else:
-# 		raise ValueError('invalid extended community %s - lc+gc' % data)
+_HEADER = {
+	# header and subheader
+	'target':   chr(0x00)+chr(0x02),
+	'target4':  chr(0x02)+chr(0x02),
+	'origin':   chr(0x00)+chr(0x03),
+	'origin4':  chr(0x02)+chr(0x03),
+	'redirect': chr(0x80)+chr(0x08),
+	'l2info':   chr(0x80)+chr(0x0A),
+}
+
+_SIZE = {
+	'target':   2,
+	'target4':  2,
+	'origin':   2,
+	'origin4':  2,
+	'redirect': 2,
+	'l2info':   4,
+}
+
+_SIZE_H = 0xFFFF
 
 
 def _extended_community (value):
 	if value[:2].lower() == '0x':
+		# we could raise if the length is not 8 bytes (16 chars)
 		if len(value) % 2:
 			raise ValueError('invalid extended community %s' % value)
 		raw = ''.join([chr(int(value[_:_+2],16)) for _ in range(2,len(value),2)])
 		return ExtendedCommunity.unpack(raw)
 	elif value.count(':'):
-		_known_community = {
-			# header and subheader
-			'target':  chr(0x00)+chr(0x02),
-			'target4': chr(0x02)+chr(0x02),
-			'origin':  chr(0x00)+chr(0x03),
-			'origin4': chr(0x02)+chr(0x03),
-			'l2info':  chr(0x80)+chr(0x0A),
-		}
-
-		_size_community = {
-			'target':  2,
-			'target4': 2,
-			'origin':  2,
-			'origin4': 2,
-			'l2info':  4,
-		}
-
 		components = value.split(':')
 		command = 'target' if len(components) == 2 else components.pop(0)
 
-		if command not in _known_community:
+		if command not in _HEADER:
 			raise ValueError('invalid extended community %s (only origin,target or l2info are supported) ' % command)
 
-		if len(components) != _size_community[command]:
+		if len(components) != _SIZE[command]:
 			raise ValueError('invalid extended community %s, expecting %d fields ' % (command,len(components)))
 
-		header = _known_community[command]
+		header = _HEADER[command]
 
 		if command == 'l2info':
 			# encaps, control, mtu, site
 			return ExtendedCommunity.unpack(header+pack('!BBHH',*[int(_) for _ in components]))
 
+		_ga,_la = components
+		ga,la = _ga.upper(),_la.upper()
+
 		if command in ('target','origin'):
 			# global admin, local admin
-			ga,la = components
-
 			if '.' in ga or '.' in la:
 				gc = ga.count('.')
 				lc = la.count('.')
@@ -481,23 +393,29 @@ def _extended_community (value):
 				if gc == 3 and lc == 0:
 					# IP first, ASN second
 					return ExtendedCommunity.unpack(header+pack('!BBBBH',*[int(_) for _ in ga.split('.')]+[int(la)]))
+
+		iga = int(ga[:-1]) if 'L' in ga else int(ga)
+		ila = int(la[:-1]) if 'L' in la else int(la)
+
+		if command == 'target':
+			if ga.endswith('L') or iga > _SIZE_H:
+				return ExtendedCommunity.unpack(_HEADER['target4']+pack('!LH',iga,ila),None)
 			else:
-				if command == 'target':
-					if ga.upper().endswith('L'):
-						return ExtendedCommunity.unpack(_known_community['target4']+pack('!LH',int(ga[:-1]),int(la)))
-					else:
-						return ExtendedCommunity.unpack(header+pack('!HI',int(ga),int(la)))
-				if command == 'origin':
-					if ga.upper().endswith('L'):
-						return ExtendedCommunity.unpack(_known_community['origin4']+pack('!LH',int(ga),int(la)))
-					else:
-						return ExtendedCommunity.unpack(header+pack('!HI',int(ga),int(la)))
+				return ExtendedCommunity.unpack(header+pack('!HI',iga,ila),None)
+		if command == 'origin':
+			if ga.endswith('L') or iga > _SIZE_H:
+				return ExtendedCommunity.unpack(_HEADER['origin4']+pack('!LH',iga,ila),None)
+			else:
+				return ExtendedCommunity.unpack(header+pack('!HI',iga,ila),None)
 
-			if command == 'target4':
-				return ExtendedCommunity.unpack(_known_community['target4']+pack('!LH',int(ga[:-1]),int(la)),None)
+		if command == 'target4':
+			return ExtendedCommunity.unpack(_HEADER['target4']+pack('!LH',iga,ila),None)
 
-			if command == 'orgin4':
-				return ExtendedCommunity.unpack(_known_community['origin4']+pack('!LH',int(ga[:-1]),int(la)),None)
+		if command == 'orgin4':
+			return ExtendedCommunity.unpack(_HEADER['origin4']+pack('!LH',iga,ila),None)
+
+		if command in ('redirect',):
+			return ExtendedCommunity.unpack(header+pack('!HL',iga,ila),None)
 
 		raise ValueError('invalid extended community %s' % command)
 	else:
