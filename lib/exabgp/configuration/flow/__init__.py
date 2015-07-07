@@ -67,7 +67,7 @@ def route (tokeniser):
 
 		if action == 'nlri-add':
 			for adding in ParseFlow.known[command](tokeniser):
-				change.nlri.add(command,adding)
+				change.nlri.add(adding)
 		elif action == 'attribute-add':
 			change.attributes.add(ParseFlow.known[command](tokeniser))
 		elif action == 'nexthop-and-attribute':

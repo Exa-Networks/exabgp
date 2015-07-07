@@ -89,7 +89,7 @@ class Scope (Error):
 		self._current[name].nlri.assign(command,data)
 
 	def nlri_add (self, name, command, data):
-		self._current[name].nlri.add(command,data)
+		self._current[name].nlri.add(data)
 
 	def nlri_nexthop (self, name, data):
 		self._current[name].nlri.nexthop = data
