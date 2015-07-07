@@ -40,6 +40,7 @@ class _Configuration (object):
 	def __init__ (self):
 		self.processes = {}
 		self.neighbors = {}
+		self.logger = Logger ()
 
 	def inject_change (self, peers, change):
 		result = True
@@ -94,7 +95,6 @@ class Configuration (_Configuration):
 		self._configurations = configurations
 
 		self.error  = Error  ()
-		self.logger = Logger ()
 		self.scope  = Scope  ()
 
 		self.tokeniser = Tokeniser(self.scope,self.error,self.logger)

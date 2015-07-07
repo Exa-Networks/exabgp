@@ -104,7 +104,7 @@ class Text (object):
 		# This is a quick solution which does not support next-hop self
 		attribute,nlris = command.split('nlri')
 		route = '%s route 0.0.0.0/0 %s' % (action, ' '.join(attribute.split()[2:]))
-		parsed = self.api_route(route,peers,action)
+		parsed = self.api_route(peers,route)
 		if parsed in (True,False,None):
 			return parsed
 		attributes = parsed[0][1].attributes

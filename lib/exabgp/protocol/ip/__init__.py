@@ -35,6 +35,7 @@ class IP (object):
 
 	_multicast_range = set(range(224,240))  # 239
 
+	# deprecate the string API in favor of top()
 	__slots__ = ['string','_packed']
 
 	def __init__ (self):
@@ -57,6 +58,9 @@ class IP (object):
 	@staticmethod
 	def ntop (data):
 		return socket.inet_ntop(socket.AF_INET if len(data) == 4 else socket.AF_INET6,data)
+
+	def top (self):
+		return self.string
 
 	@staticmethod
 	def toaf (ip):

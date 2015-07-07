@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2014-06-17.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.protocol.family import AFI
+
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import IPSelf
 

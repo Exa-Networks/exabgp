@@ -13,7 +13,7 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 
 class MAC (object):
 
-	__slots__ = ['mac','packed']
+	__slots__ = ['mac','_packed']
 
 	def __init__ (self, mac=None,packed=None):
 		self.mac = mac
