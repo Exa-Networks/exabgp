@@ -23,6 +23,8 @@ class Attribute (object):
 
 	# Should this Attribute be cached
 	CACHING = False
+	# Generic Class or implementation
+	GENERIC = False
 
 	# Registered subclasses we know how to decode
 	registered_attributes = dict()

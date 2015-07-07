@@ -111,7 +111,7 @@ def attribute (tokeniser):
 	if not code.startswith('0x'):
 		raise ValueError('invalid attribute, code is not 0x hexadecimal')
 	try:
-		code = int(code[2:],16)
+		code = int(code,16)
 	except ValueError:
 		raise ValueError('invalid attribute, code is not 0x hexadecimal')
 
@@ -119,7 +119,7 @@ def attribute (tokeniser):
 	if not flag.startswith('0x'):
 		raise ValueError('invalid attribute, flag is not 0x hexadecimal')
 	try:
-		flag = int(flag[2:],16)
+		flag = int(flag,16)
 	except ValueError:
 		raise ValueError('invalid attribute, flag is not 0x hexadecimal')
 
@@ -134,10 +134,16 @@ def attribute (tokeniser):
 	if end != ']':
 		raise ValueError('invalid attribute, does not ends with ]')
 
-	for ((ID,flag),klass) in Attribute.registered_attributes.iteritems():
-		if code == ID and flag == klass.FLAG:
-			return klass(data)
 	return GenericAttribute(code,flag,data)
+
+	# for ((ID,flag),klass) in Attribute.registered_attributes.iteritems():
+	# 	length = len(data)
+	# 	if code == ID and flag | Attribute.Flag.EXTENDED_LENGTH == klass.FLAG | Attribute.Flag.EXTENDED_LENGTH:
+	# 		# if length > 0xFF or flag & Attribute.Flag.EXTENDED_LENGTH:
+	# 		# 	raw = pack('!BBH',flag,code,length & (0xFF-Attribute.Flag.EXTENDED_LENGTH)) + data
+	# 		# else:
+	# 		# 	raw = pack('!BBB',flag,code,length) + data
+	# 		return klass.unpack(data,None)
 
 
 def aigp (tokeniser):

@@ -78,7 +78,13 @@ class Attributes (dict):
 			if code in Attributes.NO_GENERATION:
 				continue
 			attribute = self[code]
-			if code in self.representation:
+			if code not in self.representation or attribute.GENERIC:
+				if code in self.MULTIPLE:
+					for attr in attribute:
+						yield ' attribute [ 0x%02X 0x%02X %s ]' % (code,attr.FLAG,str(attr))
+				else:
+					yield ' attribute [ 0x%02X 0x%02X %s ]' % (code,attribute.FLAG,str(attribute))
+			else:
 				how, _, name, presentation, __ = self.representation[code]
 				if how == 'boolean':
 					yield ' %s' % name
@@ -88,12 +94,6 @@ class Attributes (dict):
 					yield ' %s %s' % (name[0], presentation % str(attribute))
 				else:
 					yield ' %s %s' % (name, presentation % str(attribute))
-			else:
-				if code in self.MULTIPLE:
-					for attr in attribute:
-						yield ' attribute [ 0x%02X 0x%02X %s ]' % (code,attr.FLAG,str(attr))
-				else:
-					yield ' attribute [ 0x%02X 0x%02X %s ]' % (code,attribute.FLAG,str(attribute))
 
 	def _generate_json (self):
 		for code in sorted(self.keys()):

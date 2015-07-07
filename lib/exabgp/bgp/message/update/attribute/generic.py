@@ -16,6 +16,8 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 class GenericAttribute (Attribute):
 	__slots__ = ['ID','FLAG','data','index']
 
+	GENERIC = True
+
 	def __init__ (self, code, flag, data):
 		self.ID = code
 		self.FLAG = flag

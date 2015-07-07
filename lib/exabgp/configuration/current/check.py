@@ -104,6 +104,7 @@ def check_neighbor (neighbors):
 				logger.parser('recoded route %s' % str2)
 				logger.parser('recoded hex   %s' % od(pack2))
 
+				str1 = str1.replace('attribute [ 0x04 0x80 0x00000064 ]','med 100')
 				str1r = str1.replace(' med 100','').replace(' local-preference 100','').replace(' origin igp','')
 				str2r = str2.replace(' med 100','').replace(' local-preference 100','').replace(' origin igp','')
 
