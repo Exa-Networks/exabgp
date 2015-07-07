@@ -40,7 +40,7 @@ do
 	else
 		printf "failed\n"
 		printf "\n"
-		printf "env exabgp.tcp.bind='' exabgp.debug.selfcheck=true $path/../sbin/exabgp $path/conf/$conf 2>&1"
+		printf "env exabgp.debug.configuration=true exabgp.tcp.bind='' exabgp.debug.selfcheck=true $path/../sbin/exabgp -d -p $path/conf/$conf 2>&1"
 		printf "\n\n"
 		printf "$result"
 		printf "\n\n"

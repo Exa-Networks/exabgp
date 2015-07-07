@@ -42,8 +42,17 @@ NOTHING = _NOTHING()
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 class Attributes (dict):
-	MULTIPLE = (Attribute.CODE.MP_REACH_NLRI,Attribute.CODE.MP_UNREACH_NLRI)
-	NO_GENERATION = (Attribute.CODE.NEXT_HOP, Attribute.CODE.INTERNAL_SPLIT, Attribute.CODE.INTERNAL_WATCHDOG, Attribute.CODE.INTERNAL_WITHDRAW)
+	MULTIPLE = (
+		Attribute.CODE.MP_REACH_NLRI,
+		Attribute.CODE.MP_UNREACH_NLRI,
+	)
+	NO_GENERATION = (
+		Attribute.CODE.NEXT_HOP,
+		Attribute.CODE.INTERNAL_SPLIT,
+		Attribute.CODE.INTERNAL_WATCHDOG,
+		Attribute.CODE.INTERNAL_WITHDRAW,
+		Attribute.CODE.INTERNAL_NAME,
+	)
 
 	# A cache of parsed attributes
 	cache = {}
