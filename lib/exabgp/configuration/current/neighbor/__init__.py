@@ -38,14 +38,14 @@ from exabgp.configuration.current.neighbor.parser import description
 from exabgp.configuration.current.neighbor.parser import inherit
 
 
-def hostname ():
+def _hostname ():
 	value = socket.gethostname()
 	if not value:
 		return 'localhost'
 	return value.split('.')[0]
 
 
-def domainname ():
+def _domainname ():
 	value = socket.gethostname()
 	if not value:
 		return 'localdomain'
@@ -134,8 +134,8 @@ class ParseNeighbor (Section):
 		neighbor.passive          = local.get('passive',False)
 		neighbor.listen           = local.get('listen',0)
 		neighbor.hold_time        = local.get('hold-time',HoldTime(180))
-		neighbor.host_name        = local.get('host-name',hostname())
-		neighbor.domain_name      = local.get('domain-name',domainname())
+		neighbor.host_name        = local.get('host-name',_hostname())
+		neighbor.domain_name      = local.get('domain-name',_domainname())
 		neighbor.md5              = local.get('md5',None)
 		neighbor.description      = local.get('description','')
 		neighbor.flush            = local.get('auto-flush',True)
