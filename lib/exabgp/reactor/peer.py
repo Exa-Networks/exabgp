@@ -615,12 +615,12 @@ class Peer (object):
 
 		# CONNECTION FAILURE
 		except NetworkError,network:
-			self._reset(direction,'closing connection',network)
-
-			# we tried to connect once, it failed, we stop
-			if self.once:
+			# we tried to connect once, it failed and it was not a manual request, we stop
+			if self.once and not self._teardown:
 				self.logger.network('only one attempt to connect is allowed, stopping the peer')
 				self.stop()
+
+			self._reset(direction,'closing connection',network)
 			return
 
 		# NOTIFY THE PEER OF AN ERROR
@@ -645,12 +645,12 @@ class Peer (object):
 
 		# THE PEER NOTIFIED US OF AN ERROR
 		except Notification,notification:
-			self._reset(direction,'notification received (%d,%d)' % (notification.code,notification.subcode),notification)
-
-			# we tried to connect once, it failed, we stop
-			if self.once:
+			# we tried to connect once, it failed and it was not a manual request, we stop
+			if self.once and not self._teardown:
 				self.logger.network('only one attempt to connect is allowed, stopping the peer')
 				self.stop()
+
+			self._reset(direction,'notification received (%d,%d)' % (notification.code,notification.subcode),notification)
 			return
 
 		# RECEIVED a Message TYPE we did not expect
