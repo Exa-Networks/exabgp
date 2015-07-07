@@ -9,7 +9,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.configuration.current.core import Section
 
 from exabgp.configuration.current.static.parser import attribute
-from exabgp.configuration.current.static.parser import next_hop
 from exabgp.configuration.current.static.parser import origin
 from exabgp.configuration.current.static.parser import med
 from exabgp.configuration.current.static.parser import as_path
@@ -32,6 +31,7 @@ from exabgp.configuration.current.l2vpn.parser import vpls_endpoint
 from exabgp.configuration.current.l2vpn.parser import vpls_size
 from exabgp.configuration.current.l2vpn.parser import vpls_offset
 from exabgp.configuration.current.l2vpn.parser import vpls_base
+from exabgp.configuration.current.l2vpn.parser import next_hop
 
 
 class ParseVPLS (Section):
@@ -89,7 +89,6 @@ class ParseVPLS (Section):
 
 	action = {
 		'attribute':           'attribute-add',
-		'next-hop':            'nexthop-and-attribute',
 		'origin':              'attribute-add',
 		'med':                 'attribute-add',
 		'as-path':             'attribute-add',
@@ -104,6 +103,7 @@ class ParseVPLS (Section):
 		'split':               'attribute-add',
 		'watchdog':            'attribute-add',
 		'withdraw':            'attribute-add',
+		'next-hop':            'nlri-set',
 		'route-distinguisher': 'nlri-set',
 		'rd':                  'nlri-set',
 		'endpoint':            'nlri-set',
@@ -113,6 +113,7 @@ class ParseVPLS (Section):
 	}
 
 	assign = {
+		'next-hop':            'nexthop',
 		'rd':                  'rd',
 		'route-distinguisher': 'rd',
 		'endpoint':            'endpoint',

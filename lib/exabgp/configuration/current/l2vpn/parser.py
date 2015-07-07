@@ -6,6 +6,9 @@ Created by Thomas Mangin on 2014-06-17.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.protocol.ip import IP
+from exabgp.protocol.ip import IPSelf
+
 from exabgp.bgp.message.update.nlri import VPLS
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.rib.change import Change
@@ -48,3 +51,10 @@ def vpls_base (tokeniser):
 		raise ValueError('invalid l2vpn vpls label')
 	return number
 	# vpls.base = number
+
+def next_hop (tokeniser):
+	value = tokeniser()
+
+	if value.lower() == 'self':
+		return IPSelf(AFI.ipv4)
+	return IP.create(value)

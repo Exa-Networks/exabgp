@@ -249,68 +249,71 @@ def withdraw_route (self, reactor, service, line):
 
 
 @Text('announce vpls')
-def announce_vpls (self, reactor, service, command):
-	def callback (self, command, nexthops):
-		changes = self.parser.api_vpls(command,nexthops,'announce')
-		if not changes:
-			self.logger.reactor("Command could not parse vpls in : %s" % command,'warning')
-			yield True
-		else:
-			peers = []
-			for (peer,change) in changes:
-				peers.append(peer)
-				reactor.api.change_to_peers(change,[peer,])
-				self.logger.reactor("vpls added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
+def announce_vpls (self, reactor, service, line):
+	def callback ():
+		try:
+			descriptions,command = self.parser.extract_neighbors(line)
+			peers = reactor.match_neighbors(descriptions)
+			if not peers:
+				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+				return
+
+			changes = self.parser.api_vpls(command,peers)
+			if not changes:
+				self.logger.reactor('command could not parse vpls in : %s' % command,'warning')
+				return
+
+			for (selected_peers,change) in changes:
+				change.nlri.action = OUT.ANNOUNCE
+				reactor.api.change_to_peers(change,selected_peers)
+				self.logger.reactor('vpls added to %s : %s' % (', '.join(selected_peers) if selected_peers else 'all peers',change.extensive()))
 				yield False
 			reactor.route_update = True
+		except ValueError:
+			self.logger.reactor('issue parsing the vpls')
+			yield True
+		except IndexError:
+			self.logger.reactor('issue parsing the vpls')
+			yield True
 
-	try:
-		descriptions,command = self.parser.extract_neighbors(command)
-		peers = reactor.match_neighbors(descriptions)
-		if not peers:
-			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
-			return False
-		reactor.plan(callback(self,command,reactor.nexthops(peers)),'announce_vpls')
-		return True
-	except ValueError:
-		self.logger.reactor('issue parsing the command')
-		return False
-	except IndexError:
-		self.logger.reactor('issue parsing the command')
-		return False
+	reactor.plan(callback(),'announce_vpls')
+	return True
 
 
 @Text('withdraw vpls')
-def withdraw_vpls (self, reactor, service, command):
-	def callback (self, command, nexthops):
-		changes = self.parser.api_vpls(command,nexthops,'withdraw')
-		if not changes:
-			self.logger.reactor("Command could not parse vpls in : %s" % command,'warning')
-			yield True
-		else:
-			for (peer,change) in changes:
-				if reactor.api.change_to_peers(change,[peer,]):
-					self.logger.reactor("vpls removed : %s" % change.extensive())
+def withdraw_vpls (self, reactor, service, line):
+	def callback ():
+		try:
+			descriptions,command = self.parser.extract_neighbors(line)
+			peers = reactor.match_neighbors(descriptions)
+			if not peers:
+				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+				return
+
+			changes = self.parser.api_vpls(command,peers)
+
+			if not changes:
+				self.logger.reactor('command could not parse vpls in : %s' % command,'warning')
+				return
+
+			for (selected_peers,change) in changes:
+				change.nlri.action = OUT.WITHDRAW
+				if reactor.api.change_to_peers(change,selected_peers):
+					self.logger.reactor('vpls removed from %s : %s' % (', '.join(selected_peers) if selected_peers else 'all peers',change.extensive()))
 					yield False
 				else:
-					self.logger.reactor("Could not find therefore remove vpls : %s" % change.extensive(),'warning')
+					self.logger.reactor('vpls not found on %s : %s' % (', '.join(selected_peers) if selected_peers else 'all peers',change.extensive()))
 					yield False
 			reactor.route_update = True
+		except ValueError:
+			self.logger.reactor('issue parsing the vpls')
+			yield True
+		except IndexError:
+			self.logger.reactor('issue parsing the vpls')
+			yield True
 
-	try:
-		descriptions,command = self.parser.extract_neighbors(command)
-		peers = reactor.match_neighbors(descriptions)
-		if not peers:
-			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
-			return False
-		reactor.plan(callback(self,command,reactor.nexthops(peers)),'withdraw_vpls')
-		return True
-	except ValueError:
-		self.logger.reactor('issue parsing the command')
-		return False
-	except IndexError:
-		self.logger.reactor('issue parsing the command')
-		return False
+	reactor.plan(callback(),'withdraw_vpls')
+	return True
 
 
 @Text('announce attribute')

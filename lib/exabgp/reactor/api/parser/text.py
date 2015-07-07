@@ -90,34 +90,15 @@ class Text (object):
 		changes = self.configuration.scope.pop('routes',[])
 		return zip([peers]*len(changes),changes)
 
-	def api_vpls (self, command, peers, action):
-		tokens = formated(command).split(' ')[1:]
-		if len(tokens) < 4:
-			return False
-		if tokens[0] != 'vpls':
-			return False
-		changes = []
-		if 'self' in command:
-			for peer,nexthop in peers.iteritems():
-				self.l2vpn.scope.clear()
-				self._nexthopself = nexthop
-				if not self.l2vpn.vpls('l2vpn','vpls',tokens[1:]):
-					self._nexthopself = None
-					return False
-				for change in self.l2vpn.scope.content[0]['announce']:
-					changes.append((peer,change))
-			self._nexthopself = None
-		else:
-			self.l2vpn.scope.clear()
-			if not self.l2vpn.vpls('l2vpn','vpls',tokens[1:]):
-				return False
-			for peer in peers:
-				for change in self.l2vpn.scope.content[0]['announce']:
-					changes.append((peer,change))
-		if action == 'withdraw':
-			for (peer,change) in changes:
-				change.nlri.action = OUT.WITHDRAW
-		return changes
+	def api_vpls (self, command, peers):
+		action, line = command.split(' ',1)
+
+		self.configuration.static.clear()
+		if not self.configuration.partial('l2vpn',line):
+			return []
+
+		changes = self.configuration.scope.pop('routes',[])
+		return zip([peers]*len(changes),changes)
 
 	def api_attribute (self, command, peers, action):
 		# This is a quick solution which does not support next-hop self
