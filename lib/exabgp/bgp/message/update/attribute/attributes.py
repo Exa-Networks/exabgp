@@ -157,7 +157,12 @@ class Attributes (dict):
 		# 		self[attribute.ID] = Attribute.klass(attribute.ID,attribute.FLAG)()
 		# 	self[attribute.ID].add(attribute)
 		elif attribute.ID in self:
-			raise Notify(3,0,'multiple attribute for %s' % str(Attribute.CODE(attribute.ID)))
+			# For flows we can add extended-communities using special keywords and extended-community
+			# This allows this trick
+			if attribute.ID != Attribute.CODE.EXTENDED_COMMUNITY:
+				raise Notify(3,0,'multiple attribute for %s' % str(Attribute.CODE(attribute.ID)))
+			for community in attribute.communities:
+				self[attribute.ID].add(community)
 		else:
 			self[attribute.ID] = attribute
 
