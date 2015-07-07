@@ -78,6 +78,7 @@ class ParseCapability (Section):
 		'multi-session':    boolean,
 		'operational':      boolean,
 		'route-refresh':    boolean,
+		'aigp':             boolean,
 	}
 
 	action = {
@@ -87,6 +88,7 @@ class ParseCapability (Section):
 		'multi-session':    'set-command',
 		'operational':      'set-command',
 		'route-refresh':    'set-command',
+		'aigp':             'set-command',
 	}
 
 	default = {
@@ -95,6 +97,7 @@ class ParseCapability (Section):
 		'multi-session':    False,
 		'operational':      False,
 		'route-refresh':    False,
+		'aigp':             False,
 	}
 
 	name = 'capability'
