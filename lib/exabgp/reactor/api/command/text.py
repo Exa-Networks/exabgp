@@ -195,10 +195,10 @@ def announce_route (self, reactor, service, line):
 				self.logger.reactor('command could not parse route in : %s' % command,'warning')
 				return
 
-			for (selected_peers,change) in changes:
+			for (peers,change) in changes:
 				change.nlri.action = OUT.ANNOUNCE
-				reactor.api.change_to_peers(change,selected_peers)
-				self.logger.reactor('route added to %s : %s' % (', '.join(selected_peers) if selected_peers else 'all peers',change.extensive()))
+				reactor.configuration.inject_change(peers,change)
+				self.logger.reactor('route added to %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 				yield False
 			reactor.route_update = True
 		except ValueError:
@@ -228,13 +228,13 @@ def withdraw_route (self, reactor, service, line):
 				self.logger.reactor('command could not parse route in : %s' % command,'warning')
 				return
 
-			for (selected_peers,change) in changes:
+			for (peers,change) in changes:
 				change.nlri.action = OUT.WITHDRAW
-				if reactor.api.change_to_peers(change,selected_peers):
-					self.logger.reactor('route removed from %s : %s' % (', '.join(selected_peers) if selected_peers else 'all peers',change.extensive()))
+				if reactor.configuration.inject_change(peers,change):
+					self.logger.reactor('route removed from %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 					yield False
 				else:
-					self.logger.reactor('route not found on %s : %s' % (', '.join(selected_peers) if selected_peers else 'all peers',change.extensive()))
+					self.logger.reactor('route not found on %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 					yield False
 			reactor.route_update = True
 		except ValueError:
@@ -263,10 +263,10 @@ def announce_vpls (self, reactor, service, line):
 				self.logger.reactor('command could not parse vpls in : %s' % command,'warning')
 				return
 
-			for (selected_peers,change) in changes:
+			for (peers,change) in changes:
 				change.nlri.action = OUT.ANNOUNCE
-				reactor.api.change_to_peers(change,selected_peers)
-				self.logger.reactor('vpls added to %s : %s' % (', '.join(selected_peers) if selected_peers else 'all peers',change.extensive()))
+				reactor.configuration.inject_change(peers,change)
+				self.logger.reactor('vpls added to %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 				yield False
 			reactor.route_update = True
 		except ValueError:
@@ -296,13 +296,13 @@ def withdraw_vpls (self, reactor, service, line):
 				self.logger.reactor('command could not parse vpls in : %s' % command,'warning')
 				return
 
-			for (selected_peers,change) in changes:
+			for (peers,change) in changes:
 				change.nlri.action = OUT.WITHDRAW
-				if reactor.api.change_to_peers(change,selected_peers):
-					self.logger.reactor('vpls removed from %s : %s' % (', '.join(selected_peers) if selected_peers else 'all peers',change.extensive()))
+				if reactor.configuration.inject_change(peers,change):
+					self.logger.reactor('vpls removed from %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 					yield False
 				else:
-					self.logger.reactor('vpls not found on %s : %s' % (', '.join(selected_peers) if selected_peers else 'all peers',change.extensive()))
+					self.logger.reactor('vpls not found on %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 					yield False
 			reactor.route_update = True
 		except ValueError:
@@ -394,10 +394,10 @@ def announce_flow (self, reactor, service, line):
 				self.logger.reactor('command could not parse flow in : %s' % command,'warning')
 				return
 
-			for (selected_peers,change) in changes:
+			for (peers,change) in changes:
 				change.nlri.action = OUT.ANNOUNCE
-				reactor.api.change_to_peers(change,selected_peers)
-				self.logger.reactor('flow added to %s : %s' % (', '.join(selected_peers) if selected_peers else 'all peers',change.extensive()))
+				reactor.configuration.inject_change(peers,change)
+				self.logger.reactor('flow added to %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 				yield False
 			reactor.route_update = True
 		except ValueError:
@@ -427,13 +427,13 @@ def withdraw_flow (self, reactor, service, line):
 				self.logger.reactor('command could not parse flow in : %s' % command,'warning')
 				return
 
-			for (selected_peers,change) in changes:
+			for (peers,change) in changes:
 				change.nlri.action = OUT.WITHDRAW
-				if reactor.api.change_to_peers(change,selected_peers):
-					self.logger.reactor('flow removed from %s : %s' % (', '.join(selected_peers) if selected_peers else 'all peers',change.extensive()))
+				if reactor.configuration.inject_change(peers,change):
+					self.logger.reactor('flow removed from %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 					yield False
 				else:
-					self.logger.reactor('flow not found on %s : %s' % (', '.join(selected_peers) if selected_peers else 'all peers',change.extensive()))
+					self.logger.reactor('flow not found on %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 					yield False
 			reactor.route_update = True
 		except ValueError:
@@ -455,7 +455,7 @@ def announce_eor (self, reactor, service, command):
 			self.logger.reactor("Command could not parse eor : %s" % command)
 			yield True
 		else:
-			reactor.api.eor_to_peers(family,peers)
+			reactor.configuration.inject_eor(peers,family)
 			self.logger.reactor("Sent to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',family.extensive()))
 			yield False
 			reactor.route_update = True
@@ -484,7 +484,7 @@ def announce_refresh (self, reactor, service, command):
 			self.logger.reactor("Command could not parse flow in : %s" % command)
 			yield True
 		else:
-			reactor.api.refresh_to_peers(refresh,peers)
+			reactor.configuration.inject_refresh(peers,refresh)
 			self.logger.reactor("Sent to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',refresh.extensive()))
 			yield False
 			reactor.route_update = True
@@ -513,7 +513,7 @@ def announce_operational (self, reactor, service, command):
 			self.logger.reactor("Command could not parse operational command : %s" % command)
 			yield True
 		else:
-			reactor.api.operational_to_peers(operational,peers)
+			reactor.configuration.inject_operational(peers,operational)
 			self.logger.reactor("operational message sent to %s : %s" % (
 				', '.join(peers if peers else []) if peers is not None else 'all peers',operational.extensive()
 				)

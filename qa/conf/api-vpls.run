@@ -14,6 +14,7 @@ while messages:
 	sys.stdout.write(message + '\n')
 	sys.stdout.flush()
 
+counter = 0
 while True:
 	try:
 		while True:

@@ -36,9 +36,59 @@ from exabgp.configuration.current.operational import ParseOperational
 from exabgp.configuration.environment import environment
 
 
-class Configuration (object):
+class _Configuration (object):
+	def __init__ (self):
+		self.processes = {}
+		self.neighbors = {}
+
+	def inject_change (self, peers, change):
+		result = True
+		for neighbor in self.neighbors:
+			if neighbor in peers:
+				if change.nlri.family() in self.neighbors[neighbor].families():
+					self.neighbors[neighbor].rib.outgoing.insert_announced(change)
+				else:
+					self.logger.configuration('the route family is not configured on neighbor','error')
+					result = False
+		return result
+
+	def inject_eor (self, peers, family):
+		result = False
+		for neighbor in self.neighbors:
+			if neighbor in peers:
+				result = True
+				self.neighbors[neighbor].eor.append(family)
+		return result
+
+	def inject_operational (self, peers, operational):
+		result = True
+		for neighbor in self.neighbors:
+			if neighbor in peers:
+				if operational.family() in self.neighbors[neighbor].families():
+					if operational.name == 'ASM':
+						self.neighbors[neighbor].asm[operational.family()] = operational
+					self.neighbors[neighbor].messages.append(operational)
+				else:
+					self.logger.configuration('the route family is not configured on neighbor','error')
+					result = False
+		return result
+
+	def inject_refresh (self, peers, refresh):
+		result = True
+		for neighbor in self.neighbors:
+			if neighbor in peers:
+				family = (refresh.afi,refresh.safi)
+				if family in self.neighbors[neighbor].families():
+					self.neighbors[neighbor].refresh.append(refresh.__class__(refresh.afi,refresh.safi))
+				else:
+					result = False
+		return result
+
+
+class Configuration (_Configuration):
 
 	def __init__ (self, configurations):
+		_Configuration.__init__(self)
 		self.api_encoder = environment.settings().api.encoder
 
 		self._configurations = configurations
@@ -204,17 +254,11 @@ class Configuration (object):
 			},
 		}
 
-		self.processes = {}
-		self.neighbors = {}
 		self._neighbors = {}
 		self._previous_neighbors = {}
 
-		self._clear()
-
-	# remove the parse data
 	def _clear (self):
 		self.processes = {}
-		self.neighbors = {}
 		self.neighbors = {}
 		self._neighbors = {}
 		self._previous_neighbors = {}
@@ -350,41 +394,50 @@ class Configuration (object):
 			return False
 		return True
 
-	def dispatch (self,name):
-		if False:
-			# self.flow.clear()
-			pass
+	def _enter (self,name):
+		location = self.tokeniser.iterate()
+		self.logger.configuration("> %-16s | %s" % (location,self.tokeniser.params()))
 
+		if location not in self._structure[name]['sections']:
+			return self.error.set('section %s is invalid in %s, %s' % (location,name,self.scope.location()))
+
+		self.scope.enter(location)
+		if not self.section(self._structure[name]['sections'][location]):
+			return False
+		return True
+
+	def _leave (self):
+		left = self.scope.leave()
+		self.logger.configuration("< %-16s | %s" % (left,self.tokeniser.params()))
+
+		if not left:
+			return self.error.set('closing too many parenthesis')
+		return True
+
+	def _run (self,name):
+		command = self.tokeniser.iterate()
+		self.logger.configuration(". %-16s | %s" % (command,self.tokeniser.params()))
+
+		if not self.run(name,command):
+			return False
+		return True
+
+	def dispatch (self,name):
 		while True:
 			self.tokeniser()
 
 			if self.tokeniser.end == ';':
-				command = self.tokeniser.iterate()
-				self.logger.configuration(". %-16s | %s" % (command,self.tokeniser.params()))
-
-				if not self.run(name,command):
-					return False
-				continue
+				if self._run(name):
+					continue
+				return False
 
 			if self.tokeniser.end == '{':
-				location = self.tokeniser.iterate()
-				self.logger.configuration("> %-16s | %s" % (location,self.tokeniser.params()))
-
-				if location not in self._structure[name]['sections']:
-					return self.error.set('section %s is invalid in %s, %s' % (location,name,self.scope.location()))
-
-				self.scope.enter(location)
-				if not self.section(self._structure[name]['sections'][location]):
-					return False
-				continue
+				if self._enter(name):
+					continue
+				return False
 
 			if self.tokeniser.end == '}':
-				left = self.scope.leave()
-				self.logger.configuration("< %-16s | %s" % (left,self.tokeniser.params()))
-
-				if not left:
-					return self.error.set('closing too many parenthesis')
-				return True
+				return self._leave()
 
 			if not self.tokeniser.end:  # finished
 				return True

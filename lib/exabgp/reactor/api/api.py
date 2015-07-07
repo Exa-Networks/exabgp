@@ -65,56 +65,10 @@ class API (object):
 				self.logger.reactor("callback | handling '%s' with %s" % (command,self.callback['text'][registered].func_name),'warning')
 				# XXX: should we not test the return value ?
 				self.callback['text'][registered](self,reactor,service,command)
+				# reactor.plan(self.callback['text'][registered](self,reactor,service,command),registered)
 				return True
 		self.logger.reactor("Command from process not understood : %s" % command,'warning')
 		return False
-
-	def change_to_peers (self, change, peers):
-		neighbors = self.reactor.configuration.neighbors
-		result = True
-		for neighbor in neighbors:
-			if neighbor in peers:
-				if change.nlri.family() in neighbors[neighbor].families():
-					neighbors[neighbor].rib.outgoing.insert_announced(change)
-				else:
-					self.logger.configuration('the route family is not configured on neighbor','error')
-					result = False
-		return result
-
-	def eor_to_peers (self, family, peers):
-		neighbors = self.reactor.configuration.neighbors
-		result = False
-		for neighbor in neighbors:
-			if neighbor in peers:
-				result = True
-				neighbors[neighbor].eor.append(family)
-		return result
-
-	def operational_to_peers (self, operational, peers):
-		neighbors = self.reactor.configuration.neighbors
-		result = True
-		for neighbor in neighbors:
-			if neighbor in peers:
-				if operational.family() in neighbors[neighbor].families():
-					if operational.name == 'ASM':
-						neighbors[neighbor].asm[operational.family()] = operational
-					neighbors[neighbor].messages.append(operational)
-				else:
-					self.logger.configuration('the route family is not configured on neighbor','error')
-					result = False
-		return result
-
-	def refresh_to_peers (self, refresh, peers):
-		neighbors = self.reactor.configuration.neighbors
-		result = True
-		for neighbor in neighbors:
-			if neighbor in peers:
-				family = (refresh.afi,refresh.safi)
-				if family in neighbors[neighbor].families():
-					neighbors[neighbor].refresh.append(refresh.__class__(refresh.afi,refresh.safi))
-				else:
-					result = False
-		return result
 
 	def shutdown (self):
 		self.reactor.api_shutdown()
