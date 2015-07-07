@@ -107,6 +107,9 @@ def check_neighbor (neighbors):
 				str1r = str1.replace(' med 100','').replace(' local-preference 100','').replace(' origin igp','')
 				str2r = str2.replace(' med 100','').replace(' local-preference 100','').replace(' origin igp','')
 
+				if 'next-hop self' in str1r:
+					str1r = str1r.replace('next-hop self','next-hop 127.0.0.1')
+
 				if ' name ' in str1r:
 					parts = str1r.split(' ')
 					pos = parts.index('name')
