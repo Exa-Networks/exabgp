@@ -6,8 +6,8 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.configuration.current import Configuration
-from exabgp.configuration.current.core.format import formated
+from exabgp.configuration.configuration import Configuration
+from exabgp.configuration.core.format import formated
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI

@@ -27,7 +27,7 @@ from exabgp.reactor.peer import ACTION
 from exabgp.reactor.network.error import error
 
 from exabgp.reactor.api.api import API
-from exabgp.configuration.current import Configuration
+from exabgp.configuration.configuration import Configuration
 from exabgp.configuration.environment import environment
 
 from exabgp.version import version

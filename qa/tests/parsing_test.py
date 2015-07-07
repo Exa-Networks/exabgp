@@ -13,8 +13,8 @@ import os
 import sys
 import glob
 
-from exabgp.configuration.current import Configuration
-from exabgp.configuration.current.check import check_neighbor
+from exabgp.configuration.configuration import Configuration
+from exabgp.configuration.check import check_neighbor
 
 from exabgp.configuration.setup import environment
 environ = environment.setup('')
