@@ -1,8 +1,11 @@
-exabgp (3.4.11-3) UNRELEASED; urgency=medium
+exabgp (3.4.11-3) unstable; urgency=medium
 
   * Exclude Debian versions from debian/watch.
+  * Add two patches fixing decoding of incoming BGP messages:
+     - 0001-fix-update-decoding.patch
+     - 0001-fix-EOR-parsing.patch
 
- -- Vincent Bernat <bernat@debian.org>  Sat, 04 Jul 2015 07:22:59 +0200
+ -- Vincent Bernat <bernat@debian.org>  Tue, 07 Jul 2015 10:35:24 +0200
 
 exabgp (3.4.11-2) unstable; urgency=medium
 

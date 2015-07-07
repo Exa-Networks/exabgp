@@ -1,0 +1,29 @@
+From 9d03b4f9cfb022aa6cadbf8ab969fede5ecc2f1a Mon Sep 17 00:00:00 2001
+From: Thomas Mangin <thomas.mangin@exa-networks.co.uk>
+Date: Wed, 1 Jul 2015 19:09:06 +0100
+Subject: [PATCH] fix update decoding
+
+---
+ CHANGELOG                                 | 1 +
+ lib/exabgp/bgp/message/update/__init__.py | 4 ++--
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/lib/exabgp/bgp/message/update/__init__.py b/lib/exabgp/bgp/message/update/__init__.py
+index 0c6502f40d2a..80bfcf04f14c 100644
+--- a/lib/exabgp/bgp/message/update/__init__.py
++++ b/lib/exabgp/bgp/message/update/__init__.py
+@@ -256,9 +256,9 @@ class Update (Message):
+ 		length = len(data)
+ 
+ 		# This could be speed up massively by changing the order of the IF
+-		if length == 23:
++		if length == 4 and data == '\x00\x00\x00\x00':
+ 			return EOR(AFI.ipv4,SAFI.unicast,IN.ANNOUNCED)  # pylint: disable=E1101
+-		if length == 30 and data.startswith(EOR.NLRI.PREFIX):
++		if length == 11 and data.startswith(EOR.NLRI.PREFIX):
+ 			return EOR.unpack_message(data,negotiated)
+ 
+ 		withdrawn, _attributes, announced = cls.split(data)
+-- 
+2.1.4
+
