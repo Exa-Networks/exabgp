@@ -16,6 +16,7 @@ install:
 
 script:
   - export INTERPRETER=python
+  - export SKIPCLEANUP=exabgp
   - sbin/exabgp --version
   - sbin/exabgp --fi > etc/exabgp/exabgp.env
   - set pipefail

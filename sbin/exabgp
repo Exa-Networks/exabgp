@@ -22,7 +22,8 @@ def remove (file):
     try: os.remove(file)
     except: pass
 
-[remove(os.path.join(r,f)) for r,d,fs in os.walk(path) for f in fs if f.endswith('.pyc')]
+if 'exabgp' not in os.environ.get('SKIPCLEANUP',''):
+	[remove(os.path.join(r,f)) for r,d,fs in os.walk(path) for f in fs if f.endswith('.pyc')]
 
 ")"
 
