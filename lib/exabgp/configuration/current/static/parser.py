@@ -102,15 +102,6 @@ def inet (tokeniser):
 	)
 
 
-# def aigp (self, name, command, tokens):
-# 	try:
-# 		number = tokens.pop(0)
-# 		base = 16 if number.lower().startswith('0x') else 10
-# 		self.scope.content[-1]['announce'][-1].attributes.add(AIGP('\x01\x00\x0b' + pack('!Q',int(number,base))))
-# 		return True
-# 	except (IndexError,ValueError):
-# 		return self.error.set(self.syntax)
-
 def attribute (tokeniser):
 	start = tokeniser()
 	if start != '[':
@@ -261,31 +252,6 @@ def originator_id (tokeniser):
 	return OriginatorID(value)
 
 
-
-# def cluster_list (self, name, command, tokens):
-# 	_list = []
-# 	clusterid = tokens.pop(0)
-# 	try:
-# 		if clusterid == '[':
-# 			while True:
-# 				try:
-# 					clusterid = tokens.pop(0)
-# 				except IndexError:
-# 					return self.error.set(self.syntax)
-# 				if clusterid == ']':
-# 					break
-# 				_list.append(ClusterID(clusterid))
-# 		else:
-# 			_list.append(ClusterID(clusterid))
-# 		if not _list:
-# 			return self.error.set('no cluster-id in the cluster-list')
-# 		clusterlist = ClusterList(_list)
-# 	except ValueError:
-# 		return self.error.set(self.syntax)
-# 	self.scope.content[-1]['announce'][-1].attributes.add(clusterlist)
-# 	return True
-
-
 def cluster_list (tokeniser):
 	clusterids = []
 	value = tokeniser()
@@ -304,41 +270,7 @@ def cluster_list (tokeniser):
 	except ValueError:
 		raise ValueError('invalud cluster list')
 
-
-# def _parse_community (self,data):
-# 	separator = data.find(':')
-# 	if separator > 0:
-# 		prefix = int(data[:separator])
-# 		suffix = int(data[separator+1:])
-# 		if prefix >= pow(2,16):
-# 			raise ValueError('invalid community %s (prefix too large)' % data)
-# 		if suffix >= pow(2,16):
-# 			raise ValueError('invalid community %s (suffix too large)' % data)
-# 		return Community.cached(pack('!L',(prefix << 16) + suffix))
-# 	elif len(data) >= 2 and data[1] in 'xX':
-# 		value = long(data,16)
-# 		if value >= pow(2,32):
-# 			raise ValueError('invalid community %s (too large)' % data)
-# 		return Community.cached(pack('!L',value))
-# 	else:
-# 		low = data.lower()
-# 		if low == 'no-export':
-# 			return Community.cached(Community.NO_EXPORT)
-# 		elif low == 'no-advertise':
-# 			return Community.cached(Community.NO_ADVERTISE)
-# 		elif low == 'no-export-subconfed':
-# 			return Community.cached(Community.NO_EXPORT_SUBCONFED)
-# 		# no-peer is not a correct syntax but I am sure someone will make the mistake :)
-# 		elif low == 'nopeer' or low == 'no-peer':
-# 			return Community.cached(Community.NO_PEER)
-# 		elif data.isdigit():
-# 			value = long(data)
-# 			if value >= pow(2,32):
-# 				raise ValueError('invalid community %s (too large)' % data)
-# 				# return Community.cached(pack('!L',value))
-# 			return Community.cached(pack('!L',value))
-# 		else:
-# 			raise ValueError('invalid community name %s' % data)
+# XXX: Community does does not cache anymore .. we SHOULD really do it !
 
 
 def _community (value):
@@ -365,6 +297,7 @@ def _community (value):
 		if number > Community.MAX:
 			raise ValueError('invalid community %s (too large)' % value)
 		return Community(pack('!L',number))
+
 	else:
 		low = value.lower()
 		if low == 'no-export':
@@ -383,28 +316,6 @@ def _community (value):
 			return Community(pack('!L',number))
 		else:
 			raise ValueError('invalid community name %s' % value)
-
-
-
-# def community (self, name, command, tokens):
-# 	communities = Communities()
-# 	community = tokens.pop(0)
-# 	try:
-# 		if community == '[':
-# 			while True:
-# 				try:
-# 					community = tokens.pop(0)
-# 				except IndexError:
-# 					return self.error.set(self.syntax)
-# 				if community == ']':
-# 					break
-# 				communities.add(self._parse_community(community))
-# 		else:
-# 			communities.add(self._parse_community(community))
-# 	except ValueError:
-# 		return self.error.set(self.syntax)
-# 	self.scope.content[-1]['announce'][-1].attributes.add(communities)
-# 	return True
 
 
 def community (tokeniser):
@@ -593,33 +504,8 @@ def _extended_community (value):
 		raise ValueError('invalid extended community %s - lc+gc' % value)
 
 
-# This is the same code as community with a different parser, should be factored
-
-# def extended_community (self, name, command, tokens):
-# 	attributes = self.scope.content[-1]['announce'][-1].attributes
-# 	if Attribute.CODE.EXTENDED_COMMUNITY in attributes:
-# 		extended_communities = attributes[Attribute.CODE.EXTENDED_COMMUNITY]
-# 	else:
-# 		extended_communities = ExtendedCommunities()
-# 		attributes.add(extended_communities)
-#
-# 	extended_community = tokens.pop(0)
-# 	try:
-# 		if extended_community == '[':
-# 			while True:
-# 				try:
-# 					extended_community = tokens.pop(0)
-# 				except IndexError:
-# 					return self.error.set(self.syntax)
-# 				if extended_community == ']':
-# 					break
-# 				extended_communities.add(self._parse_extended_community(extended_community))
-# 		else:
-# 			extended_communities.add(self._parse_extended_community(extended_community))
-# 	except ValueError:
-# 		return self.error.set(self.syntax)
-# 	return True
-#
+# The previous code was extracting the extended-community class from the attributes
+# And adding to it.
 
 def extended_community (tokeniser):
 	communities = ExtendedCommunities()
@@ -675,20 +561,6 @@ def watchdog (tokeniser):
 	if command.lower() in ['announce','withdraw']:
 		raise ValueError('invalid watchdog name %s' % command)
 	return Watchdog(command)
-
-# def watchdog (self, name, command, tokens):
-# 	try:
-# 		w = tokens.pop(0)
-# 		if w.lower() in ['announce','withdraw']:
-# 			raise ValueError('invalid watchdog name %s' % w)
-# 	except IndexError:
-# 		return self.error.set(self.syntax)
-#
-# 	try:
-# 		self.scope.content[-1]['announce'][-1].attributes.add(Watchdog(w))
-# 		return True
-# 	except ValueError:
-# 		return self.error.set(self.syntax)
 
 
 def withdraw (tokeniser=None):
