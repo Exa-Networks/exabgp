@@ -81,6 +81,7 @@ These organisations have spoken of, or are using/have used [ExaBGP](http://githu
 [POWERDNS](https://www.powerdns.com/),
 [RIPE NCC](https://labs.ripe.net/Members/wouter_miltenburg/Researchpaper.pdf),
 [VIDEOPLAZA](http://www.videoplaza.com),
+[CISCO SYSTEMS](http://www.ciscoknowledgenetwork.com/files/452_06-11-14-20140610_v3_BGP_Optimizing_the_SDN-v1-0.pdf?),
 and many more ...
 
 Please let us know if you use it.
