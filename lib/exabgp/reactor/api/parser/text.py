@@ -8,6 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from exabgp.configuration.configuration import Configuration
 from exabgp.configuration.core.format import formated
+from exabgp.configuration.operational.parser import operational
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -163,16 +164,14 @@ class Text (object):
 		return Family(afi,safi)
 
 	def api_operational (self, command):
-		tokens = formated(command).split(' ',3)
+		tokens = formated(command).split(' ')
 
-		if len(tokens) != 4:
-			return False
-
-		operational = tokens[1].lower()
+		op = tokens[1].lower()
 		what = tokens[2].lower()
 
-		if operational != 'operational':
+		if op != 'operational':
 			return False
 
+		self.configuration.tokeniser.iterate.replenish(tokens[3:])
 		# None or a class
-		return self.operational.operational(what,tokens[3])
+		return operational(what,self.configuration.tokeniser.iterate)

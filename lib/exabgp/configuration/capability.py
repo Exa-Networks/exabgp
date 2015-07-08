@@ -94,10 +94,10 @@ class ParseCapability (Section):
 	default = {
 		'asn4':             True,
 		'graceful-restart': 0,
-		'multi-session':    False,
-		'operational':      False,
-		'route-refresh':    False,
-		'aigp':             False,
+		'multi-session':    True,
+		'operational':      True,
+		'route-refresh':    True,
+		'aigp':             True,
 	}
 
 	name = 'capability'

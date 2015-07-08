@@ -142,7 +142,7 @@ class Protocol (object):
 	def write (self, message, negotiated=None):
 		raw = message.message(negotiated)
 
-		if self.neighbor.api.get('send-%s' % message.CODE.short(message.ID),False):
+		if self.neighbor.api.get('send-%s' % Message.CODE.short(message.ID),False):
 			self._to_api('send',message,raw)
 
 		for boolean in self.connection.writer(raw):

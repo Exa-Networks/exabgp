@@ -84,40 +84,56 @@ def _operational (klass, parameters, tokeniser):
 
 	return klass(**data)
 
-# def operational (self, what, tokens):
-# 	return _dispatch.get(what,lambda _: False)(tokens)
 
-# scope.content[-1]['operational-message'].append(operational)
-# if 'operational-message' not in scope.content[-1]:
-# 	scope.content[-1]['operational-message'] = []
+_dispatch = {}
 
+
+def register (name):
+	def inner (function):
+		_dispatch[name] = function
+		return function
+	return inner
+
+
+@register('asm')
 def asm (tokeniser):
 	return _operational(Advisory.ASM,['afi','safi','advisory'],tokeniser)
 
 
+@register('adm')
 def adm (tokeniser):
 	return _operational(Advisory.ADM,['afi','safi','advisory'],tokeniser)
 
 
+@register('rpcq')
 def rpcq (tokeniser):
 	return _operational(Query.RPCQ,['afi','safi','sequence'],tokeniser)
 
 
+@register('rpcp')
 def rpcp (tokeniser):
 	return _operational(Response.RPCP,['afi','safi','sequence','counter'],tokeniser)
 
 
+@register('apcq')
 def apcq (tokeniser):
 	return _operational(Query.APCQ,['afi','safi','sequence'],tokeniser)
 
 
+@register('apcp')
 def apcp (tokeniser):
 	return _operational(Response.APCP,['afi','safi','sequence','counter'],tokeniser)
 
 
+@register('lpcq')
 def lpcq (tokeniser):
 	return _operational(Query.LPCQ,['afi','safi','sequence'],tokeniser)
 
 
+@register('lpcp')
 def lpcp (tokeniser):
 	return _operational(Response.LPCP,['afi','safi','sequence','counter'],tokeniser)
+
+
+def operational (what, tokeniser):
+	return _dispatch.get(what,lambda _: None)(tokeniser)
