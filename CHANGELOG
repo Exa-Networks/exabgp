@@ -69,6 +69,8 @@ Version 4.0.0
     reported by: Pavel Odintsov
  * Feature: add support for rpm packaging
    patch by: Arun Babu Neelicattu
+ * Fix: only grouping IPv4 routes
+   reported by: Sergey Viuchny (stroboscope)
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
