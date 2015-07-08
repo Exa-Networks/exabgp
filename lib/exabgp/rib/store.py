@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.protocol.family import AFI
 from exabgp.bgp.message import IN
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message import Update
@@ -239,14 +240,25 @@ class Store (object):
 			changed = list(dict_change.itervalues())
 
 			if grouped:
-				update = Update([dict_nlri[nlri_index].nlri for nlri_index in dict_change],attributes)
+				updates = []
+				nlris = []
+				for change in dict_change.values():
+					if change.nlri.afi == AFI.ipv4:
+						nlris.append(change.nlri)
+						continue
+					updates.append(Update([change.nlri],attributes))
+				if nlris:
+					updates.append(Update(nlris,attributes))
+					nlris = []
+
 				for change in changed:
 					nlri_index = change.index()
 					del dict_sorted[attr_index][nlri_index]
 					del dict_nlri[nlri_index]
 				# only yield once we have a consistent state, otherwise it will go wrong
 				# as we will try to modify things we are using
-				yield update
+				for update in updates:
+					yield update
 			else:
 				updates = []
 				for change in changed:
