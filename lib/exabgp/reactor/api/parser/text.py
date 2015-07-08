@@ -101,37 +101,15 @@ class Text (object):
 		changes = self.configuration.scope.pop('routes',[])
 		return zip([peers]*len(changes),changes)
 
-	def api_attribute (self, command, peers, action):
-		# This is a quick solution which does not support next-hop self
-		attribute,nlris = command.split('nlri')
-		route = '%s route 0.0.0.0/0 %s' % (action, ' '.join(attribute.split()[2:]))
-		parsed = self.api_route(peers,route)
-		if parsed in (True,False,None):
-			return parsed
-		attributes = parsed[0][1].attributes
-		nexthop = parsed[0][1].nlri.nexthop
-		changes = []
-		for nlri in nlris.split():
-			ip,mask = nlri.split('/')
-			klass = MPLS if 'path-information' in command else INET
-			change = Change(
-				klass(
-					afi=IP.toafi(ip),
-					safi=IP.tosafi(ip),
-					packed=IP.pton(ip),
-					mask=int(mask),
-					nexthop='',  # could be NextHopSelf
-					action=action
-				),
-				attributes
-			)
-			change.nlri.nexthop = nexthop
-			if action == 'withdraw':
-				change.nlri.action = OUT.WITHDRAW
-			else:
-				change.nlri.action = OUT.ANNOUNCE
-			changes.append((peers.keys(),change))
-		return changes
+	def api_attributes (self, command, peers):
+		action, line = command.split(' ',1)
+
+		self.configuration.static.clear()
+		if not self.configuration.partial('static',line):
+			return []
+
+		changes = self.configuration.scope.pop('routes',[])
+		return zip([peers]*len(changes),changes)
 
 	def api_refresh (self, command):
 		tokens = formated(command).split(' ')[2:]

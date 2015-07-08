@@ -316,67 +316,72 @@ def withdraw_vpls (self, reactor, service, line):
 	return True
 
 
-@Text('announce attribute')
-def announce_attribute (self, reactor, service, command):
-	def callback (self, command, nexthops):
-		changes = self.parser.api_attribute(command,nexthops,'announce')
-		if not changes:
-			self.logger.reactor("Command could not parse attribute in : %s" % command,'warning')
-			yield True
-		else:
+@Text('announce attributes')
+def announce_attribute (self, reactor, service, line):
+	def callback ():
+		try:
+			descriptions,command = self.parser.extract_neighbors(line)
+			peers = reactor.match_neighbors(descriptions)
+			if not peers:
+				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+				return
+
+			changes = self.parser.api_attributes(command,peers)
+			if not changes:
+				self.logger.reactor('command could not parse route in : %s' % command,'warning')
+				return
+
 			for (peers,change) in changes:
-				reactor.api.change_to_peers(change,peers)
-				self.logger.reactor("Route added to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',change.extensive()))
-			yield False
+				change.nlri.action = OUT.ANNOUNCE
+				reactor.configuration.inject_change(peers,change)
+				self.logger.reactor('route added to %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
+				yield False
 			reactor.route_update = True
-
-	try:
-		descriptions,command = self.parser.extract_neighbors(command)
-		peers = reactor.match_neighbors(descriptions)
-		if not peers:
-			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
-			return False
-		reactor.plan(callback(self,command,reactor.nexthops(peers)),'announce_attribute')
-		return True
-	except ValueError:
-		self.logger.reactor('issue parsing the command')
-		return False
-	except IndexError:
-		self.logger.reactor('issue parsing the command')
-		return False
-
-
-@Text('withdraw attribute')
-def withdraw_attribute (self, reactor, service, command):
-	def callback (self, command, nexthops):
-		changes = self.parser.api_attribute(command,nexthops,'withdraw')
-		if not changes:
-			self.logger.reactor("Command could not parse attribute in : %s" % command,'warning')
+		except ValueError:
+			self.logger.reactor('issue parsing the route')
 			yield True
-		else:
+		except IndexError:
+			self.logger.reactor('issue parsing the route')
+			yield True
+
+	reactor.plan(callback(),'announce_attribute')
+	return True
+
+
+@Text('withdraw attributes')
+def withdraw_attribute (self, reactor, service, line):
+	def callback ():
+		try:
+			descriptions,command = self.parser.extract_neighbors(line)
+			peers = reactor.match_neighbors(descriptions)
+			if not peers:
+				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+				return
+
+			changes = self.parser.api_attributes(command,peers)
+
+			if not changes:
+				self.logger.reactor('command could not parse route in : %s' % command,'warning')
+				return
+
 			for (peers,change) in changes:
-				if reactor.api.change_to_peers(change,peers):
-					self.logger.reactor("Route removed : %s" % change.extensive())
+				change.nlri.action = OUT.WITHDRAW
+				if reactor.configuration.inject_change(peers,change):
+					self.logger.reactor('route removed from %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 					yield False
 				else:
-					self.logger.reactor("Could not find therefore remove route : %s" % change.extensive(),'warning')
+					self.logger.reactor('route not found on %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 					yield False
 			reactor.route_update = True
+		except ValueError:
+			self.logger.reactor('issue parsing the route')
+			yield True
+		except IndexError:
+			self.logger.reactor('issue parsing the route')
+			yield True
 
-	try:
-		descriptions,command = self.parser.extract_neighbors(command)
-		peers = reactor.match_neighbors(descriptions)
-		if not peers:
-			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
-			return False
-		reactor.plan(callback(self,command,reactor.nexthops(peers)),'withdraw_attribute')
-		return True
-	except ValueError:
-		self.logger.reactor('issue parsing the command')
-		return False
-	except IndexError:
-		self.logger.reactor('issue parsing the command')
-		return False
+	reactor.plan(callback(),'withdraw_route')
+	return True
 
 
 @Text('announce flow')

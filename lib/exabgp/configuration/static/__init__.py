@@ -93,3 +93,79 @@ def route (tokeniser):
 			raise ValueError('route: unknown command "%s"' % command)
 
 	return list(ParseStatic.split(change))
+
+
+@ParseStatic.register('attributes','extend-name')
+def attribute (tokeniser):
+	ipmask = prefix(lambda: tokeniser.tokens[-1])
+
+	if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
+		klass = MPLS
+		safi = SAFI(SAFI.mpls_vpn)
+	elif 'label' in tokeniser.tokens:
+		# XXX: should we create a LABEL class ?
+		klass = MPLS
+		safi = SAFI(SAFI.nlri_mpls)
+	else:
+		klass = INET
+		safi = IP.tosafi(ipmask.string)
+
+	change = Change(
+		klass(
+			IP.toafi(ipmask.string),
+			safi,
+			ipmask.pack(),
+			ipmask.mask,
+			'',
+			OUT.UNSET
+		),
+		Attributes()
+	)
+
+	while True:
+		command = tokeniser()
+
+		if not command:
+			return []
+
+		if command == 'nlri':
+			break
+
+		action = ParseStatic.action[command]
+
+		if action == 'attribute-add':
+			change.attributes.add(ParseStatic.known[command](tokeniser))
+		elif action == 'nlri-set':
+			change.nlri.assign(ParseStatic.assign[command],ParseStatic.known[command](tokeniser))
+		elif action == 'nexthop-and-attribute':
+			nexthop,attribute = ParseStatic.known[command](tokeniser)
+			change.nlri.nexthop = nexthop
+			change.attributes.add(attribute)
+		else:
+			raise ValueError('route: unknown command "%s"' % command)
+
+	attributes = change.attributes
+	nexthop = change.nlri.nexthop
+
+	changes = []
+	while True:
+		command = tokeniser.peak()
+		if not command:
+			break
+
+		ipmask = prefix(tokeniser)
+		change = Change(
+			klass(
+				IP.toafi(ipmask.string),
+				safi,
+				ipmask.pack(),
+				ipmask.mask,
+				'',
+				OUT.UNSET
+			),
+			attributes
+		)
+		change.nlri.nexthop = nexthop
+		changes.append(change)
+
+	return changes

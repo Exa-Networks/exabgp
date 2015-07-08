@@ -195,7 +195,7 @@ class Configuration (_Configuration):
 			},
 			self.static.name: {
 				'class':    self.static,
-				'commands': 'route',
+				'commands': ['route','attributes'],
 				'sections': {
 					'route': self.static_route.name,
 				},
