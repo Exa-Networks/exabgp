@@ -90,7 +90,7 @@ class MAC (EVPN):
 		return hash((self.rd,self.etag,self.mac,self.ip))
 
 	def _pack (self):
-		if not self.packed:
+		if not self._packed:
 			ip = self.ip.pack() if self.ip else ''
 			self.packed = "%s%s%s%s%s%s%s%s" % (
 				self.rd.pack(),
@@ -102,7 +102,7 @@ class MAC (EVPN):
 				ip,
 				self.label.pack()
 			)
-		return self.packed
+		return self._packed
 
 	@classmethod
 	def unpack (cls, data):
