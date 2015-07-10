@@ -33,12 +33,12 @@ class CIDR (object):
 	def __eq__ (self, other):
 		return \
 			self.mask == other.mask and \
-			self._packed == other.packed
+			self._packed == other._packed
 
 	def __ne__ (self, other):
 		return \
 			self.mask != other.mask or \
-			self._packed != other.packed
+			self._packed != other._packed
 
 	def __lt__ (self, other):
 		raise RuntimeError('comparing CIDR for ordering does not make sense')
