@@ -2188,21 +2188,23 @@ class Configuration (object):
 		elif data.count(':'):
 			_known_community = {
 				# header and subheader
-				'target':   chr(0x00)+chr(0x02),
-				'target4':  chr(0x02)+chr(0x02),
-				'origin':   chr(0x00)+chr(0x03),
-				'origin4':  chr(0x02)+chr(0x03),
-				'redirect': chr(0x80)+chr(0x08),
-				'l2info':   chr(0x80)+chr(0x0A),
+				'redirect-to-nexthop': chr(0x80)+chr(0x00),
+				'target':              chr(0x00)+chr(0x02),
+				'target4':             chr(0x02)+chr(0x02),
+				'origin':              chr(0x00)+chr(0x03),
+				'origin4':             chr(0x02)+chr(0x03),
+				'redirect':            chr(0x80)+chr(0x08),
+				'l2info':              chr(0x80)+chr(0x0A),
 			}
 
 			_size_community = {
-				'target':   2,
-				'target4':  2,
-				'origin':   2,
-				'origin4':  2,
-				'redirect': 2,
-				'l2info':   4,
+				'redirect-to-nexthop': 2,
+				'target':              2,
+				'target4':             2,
+				'origin':              2,
+				'origin4':             2,
+				'redirect':            2,
+				'l2info':              4,
 			}
 
 			components = data.split(':')
@@ -2214,7 +2216,7 @@ class Configuration (object):
 			if len(components) != _size_community[command]:
 				raise ValueError('invalid extended community %s, expecting %d fields ' % (command,len(components)))
 
-			header = _known_community[command]
+			header = _known_community.get(command,None)
 
 			if command == 'l2info':
 				# encaps, control, mtu, site
@@ -2261,6 +2263,9 @@ class Configuration (object):
 			if command in ('redirect',):
 				ga,la = components
 				return ExtendedCommunity.unpack(header+pack('!HL',int(ga),long(la)),None)
+
+			if command in ('redirect-nexthop',):
+				return ExtendedCommunity.unpack(header+pack('!HL',0,0),None)
 
 			raise ValueError('invalid extended community %s' % command)
 		else:
