@@ -17,6 +17,8 @@ Version 3.4.12
     reported by: Alvaro Pereira
  * Fix: decoding of Update
  * Fix/Improve: JSON for flow spec
+ * Fix/Improve: redirect-to-nexthop
+    reported by: Mickael Marchand
 
 Version 3.4.11
  * Change: install healthcheck in bin
