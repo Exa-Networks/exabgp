@@ -67,21 +67,22 @@ That said, some organisation are  unable to deploy an application without commer
 
 These organisations have spoken of, or are using/have used [ExaBGP](http://github.com/Exa-Networks/exabgp):
 
-[ALCATEL LUCENT](http://www.nanog.org/sites/default/files/wed.general.trafficdiversion.serodio.10.pdf),
-[AMSIX](https://ripe64.ripe.net/presentations/49-Follow_Up_AMS-IX_route-server_test_Euro-IX_20th_RIPE64.pdf),
+[AMS-IX](https://ripe64.ripe.net/presentations/49-Follow_Up_AMS-IX_route-server_test_Euro-IX_20th_RIPE64.pdf),
+[Alcatel Lucent](http://www.nanog.org/sites/default/files/wed.general.trafficdiversion.serodio.10.pdf),
 [BBC](http://www.bbc.co.uk/),
-[CLOUDFLARE](http://www.slideshare.net/TomPaseka/flowspec-apf-2013),
-[DAILYMOTION](https://twitter.com/fgabut),
-[FACEBOOK](http://velocityconf.com/velocity2013/public/schedule/detail/28410),
-[INTERNAP](http://www.internap.com/),
-[OPENDNS](http://www.opendns.com/),
-[MAXCDN](http://blog.maxcdn.com/anycast-ip-routing-used-maxcdn/),
-[MICROSOFT](http://www.nanog.org/sites/default/files/wed.general.brainslug.lapukhov.20.pdf),
-[NEO TELECOM](http://media.frnog.org/FRnOG_18/FRnOG_18-6.pdf),
-[POWERDNS](https://www.powerdns.com/),
+[Cisco Systems](http://www.ciscoknowledgenetwork.com/files/452_06-11-14-20140610_v3_BGP_Optimizing_the_SDN-v1-0.pdf?),
+[CloudFlare](http://www.slideshare.net/TomPaseka/flowspec-apf-2013),
+[Dailymotion](https://twitter.com/fgabut),
+[Deutsche Telekom/TeraStream](https://www.telekom.com),
+[Facebook](http://velocityconf.com/velocity2013/public/schedule/detail/28410),
+[Internap](http://www.internap.com/),
+[MaxCDN](http://blog.maxcdn.com/anycast-ip-routing-used-maxcdn/),
+[Microsoft](http://www.nanog.org/sites/default/files/wed.general.brainslug.lapukhov.20.pdf),
+[Neo Telecom](http://media.frnog.org/FRnOG_18/FRnOG_18-6.pdf),
+[OpenDNS](http://www.opendns.com/),
+[PowerDNS](https://www.powerdns.com/),
 [RIPE NCC](https://labs.ripe.net/Members/wouter_miltenburg/Researchpaper.pdf),
-[VIDEOPLAZA](http://www.videoplaza.com),
-[CISCO SYSTEMS](http://www.ciscoknowledgenetwork.com/files/452_06-11-14-20140610_v3_BGP_Optimizing_the_SDN-v1-0.pdf?),
+[Videoplaza](http://www.videoplaza.com),
 and many more ...
 
 Please let us know if you use it.
