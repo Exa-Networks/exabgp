@@ -92,7 +92,7 @@ class MAC (EVPN):
 	def _pack (self):
 		if not self._packed:
 			ip = self.ip.pack() if self.ip else ''
-			self.packed = "%s%s%s%s%s%s%s%s" % (
+			self._packed = "%s%s%s%s%s%s%s%s" % (
 				self.rd.pack(),
 				self.esi.pack(),
 				self.etag.pack(),
