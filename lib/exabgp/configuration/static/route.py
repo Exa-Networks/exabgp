@@ -17,16 +17,17 @@ from exabgp.bgp.message import OUT
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.bgp.message.update.nlri import INET
-from exabgp.bgp.message.update.nlri import MPLS
-
+from exabgp.bgp.message.update.nlri.cidr import CIDR
+from exabgp.bgp.message.update.nlri.qualifier import Labels
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.attribute import Attribute
 
 from exabgp.rib.change import Change
 
 from exabgp.configuration.core import Section
 
-from exabgp.configuration.static.parser import inet
+# from exabgp.configuration.static.parser import inet
+from exabgp.configuration.static.parser import mpls
 from exabgp.configuration.static.parser import attribute
 from exabgp.configuration.static.parser import next_hop
 from exabgp.configuration.static.parser import origin
@@ -150,16 +151,23 @@ class ParseStaticRoute (Section):
 		return True
 
 	def pre (self):
-		self.scope.set(self.name,inet(self.tokeniser.iterate))
+		self.scope.set(self.name,mpls(self.tokeniser.iterate))
+		# self.scope.set(self.name,inet(self.tokeniser.iterate))
 		return True
 
 	def post (self):
 		# self._family()
 		self._split()
 		# self.scope.to_context()
-		route = self.scope.pop(self.name)
-		if route:
-			self.scope.extend('routes',route)
+		routes = self.scope.pop(self.name)
+		if routes:
+			for route in routes:
+				if route.nlri.rd is not RouteDistinguisher.NORD:
+					route.nlri.safi = SAFI(SAFI.mpls_vpn)
+				elif route.nlri.labels is not Labels.NOLABEL:
+					route.nlri.safi = SAFI(SAFI.nlri_mpls)
+
+			self.scope.extend('routes',routes)
 		return True
 
 	# def _family (self):
@@ -188,20 +196,20 @@ class ParseStaticRoute (Section):
 			return
 
 		# ignore if the request is for an aggregate, or the same size
-		mask = last.nlri.mask
+		mask = last.nlri.cidr.mask
 		cut = last.attributes[Attribute.CODE.INTERNAL_SPLIT]
 		if mask >= cut:
 			yield last
 			return
 
 		# calculate the number of IP in the /<size> of the new route
-		increment = pow(2,(len(last.nlri.ton())*8) - cut)
+		increment = pow(2,last.nlri.afi.mask() - cut)
 		# how many new routes are we going to create from the initial one
-		number = pow(2,cut - last.nlri.mask)
+		number = pow(2,cut - last.nlri.cidr.mask)
 
 		# convert the IP into a integer/long
 		ip = 0
-		for c in last.nlri.ton():
+		for c in last.nlri.cidr.ton():
 			ip <<= 8
 			ip += ord(c)
 
@@ -210,24 +218,28 @@ class ParseStaticRoute (Section):
 
 		# Really ugly
 		klass = last.nlri.__class__
-		if klass is MPLS:
-			labels = last.nlri.labels
-			rd = last.nlri.rd
 		path_info = last.nlri.path_info
 		nexthop = last.nlri.nexthop
+		if klass.has_label():
+			labels = last.nlri.labels
+		if klass.has_rd():
+			rd = last.nlri.rd
 
-		last.nlri.mask = cut
+		# XXX: Looks weird to set and then set to None, check
+		last.nlri.cidr.mask = cut
 		last.nlri = None
 
 		# generate the new routes
 		for _ in range(number):
 			# update ip to the next route, this recalculate the "ip" field of the Inet class
-			nlri = klass(afi,safi,pack_int(afi,ip),cut,'',OUT.ANNOUNCE)
+			nlri = klass(afi,safi,OUT.ANNOUNCE)
+			nlri.cidr = CIDR(pack_int(afi,ip),cut)
 			nlri.nexthop = nexthop  # nexthop can be NextHopSelf
 			nlri.path_info = path_info
 			# Really ugly
-			if klass is MPLS:
+			if klass.has_label():
 				nlri.labels = labels
+			if klass.has_rd():
 				nlri.rd = rd
 			# next ip
 			ip += increment

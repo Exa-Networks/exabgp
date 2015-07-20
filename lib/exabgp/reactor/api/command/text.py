@@ -317,7 +317,7 @@ def withdraw_vpls (self, reactor, service, line):
 
 
 @Text('announce attributes')
-def announce_attribute (self, reactor, service, line):
+def announce_attributes (self, reactor, service, line):
 	def callback ():
 		try:
 			descriptions,command = self.parser.extract_neighbors(line)
@@ -344,7 +344,7 @@ def announce_attribute (self, reactor, service, line):
 			self.logger.reactor('issue parsing the route')
 			yield True
 
-	reactor.plan(callback(),'announce_attribute')
+	reactor.plan(callback(),'announce_attributes')
 	return True
 
 

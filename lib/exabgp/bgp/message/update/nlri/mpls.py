@@ -9,44 +9,31 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.protocol.ip import IP
-from exabgp.protocol.ip import NoNextHop
 from exabgp.bgp.message.update.nlri.nlri import NLRI
-from exabgp.bgp.message.update.nlri.cidr import CIDR
-from exabgp.bgp.message.update.nlri.qualifier import Labels
+from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 
 
-# ====================================================== Both MPLS and Inet NLRI
+# ====================================================== MPLS
 # RFC 3107 / RFC 4364
 
 @NLRI.register(AFI.ipv4,SAFI.nlri_mpls)
 @NLRI.register(AFI.ipv6,SAFI.nlri_mpls)
-class MPLS (NLRI,CIDR):
-	__slots__ = ['labels','rd','nexthop','action']
+@NLRI.register(AFI.ipv4,SAFI.mpls_vpn)
+@NLRI.register(AFI.ipv6,SAFI.mpls_vpn)
+class MPLS (Label):
+	__slots__ = ['rd']
 
-	def __init__ (self, afi, safi, packed, mask, nexthop, action	):
-		self.path_info = PathInfo.NOPATH
-		self.labels = Labels.NOLABEL
+	def __init__ (self, afi, safi, action):
+		Label.__init__(self, afi, safi, action)
 		self.rd = RouteDistinguisher.NORD
-		self.nexthop = IP.unpack(nexthop) if nexthop else NoNextHop
-		self.action = action
-		NLRI.__init__(self,afi,safi)
-		CIDR.__init__(self,packed,mask)
-
-	def has_label (self):
-		if self.afi == AFI.ipv4 and self.safi in (SAFI.nlri_mpls,SAFI.mpls_vpn):
-			return True
-		if self.afi == AFI.ipv6 and self.safi == SAFI.mpls_vpn:
-			return True
-		return False
 
 	def extensive (self):
-		return "%s%s%s%s" % (self.prefix(),str(self.labels),str(self.path_info),str(self.rd))
+		return "%s%s%s%s%s" % (self.prefix(),str(self.labels),str(self.rd),str(self.path_info),str(self.rd))
 
 	def __len__ (self):
-		return CIDR.__len__(self) + len(self.labels) + len(self.rd)
+		return Label.__len__(self) + len(self.rd)
 
 	def __repr__ (self):
 		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
@@ -54,102 +41,54 @@ class MPLS (NLRI,CIDR):
 
 	def __eq__ (self, other):
 		return \
-			NLRI.__eq__(self, other) and \
-			CIDR.__eq__(self, other) and \
-			self.path_info == other.path_info and \
-			self.labels == other.labels and \
-			self.rd == other.rd and \
-			self.nexthop == other.nexthop and \
-			self.action == other.action
+			Label.__eq__(self, other) and \
+			self.rd == other.rd
 
-	def __ne__ (self, other):
-		return not self.__eq__(other)
-
-	def json (self, announced=True):
-		label = self.labels.json()
-		rdist = self.rd.json()
-		pinfo = self.path_info.json()
-
-		r = []
-		if announced:
-			if label:
-				r.append(label)
-			if rdist:
-				r.append(rdist)
-			if pinfo:
-				r.append(pinfo)
-		return '"%s": { %s }' % (self.prefix(),", ".join(r))
+	@classmethod
+	def has_rd (cls):
+		return True
 
 	def pack (self, negotiated=None):
 		addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi,self.safi) else ''
+		mask = chr(len(self.labels)*8 + len(self.rd)*8 + self.cidr.mask)
+		return addpath + mask + self.labels.pack() + self.rd.pack() + self.cidr.pack_ip()
 
-		if self.has_label():
-			length = len(self.labels)*8 + len(self.rd)*8 + self.mask
-			return addpath + chr(length) + self.labels.pack() + self.rd.pack() + self.classless()
+	def index (self, negotiated=None):
+		addpath = 'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
+		mask = chr(len(self.labels)*8 + len(self.rd)*8 + self.cidr.mask)
+		return addpath + mask + self.labels.pack() + self.rd.pack() + self.cidr.pack_ip()
 
-		return addpath + self.cidr()
+	def _internal (self, announced=True):
+		r = Label._internal(self,announced)
+		if announced and self.rd:
+			r.append(self.rd.json())
+		return r
 
-	def index (self):
-		return self.pack()
-
-	@classmethod
-	def unpack (cls, afi, safi, bgp, addpath, nexthop, action):
-		labels,rd,path_identifier,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action,addpath)
-
-		nlri = cls(afi,safi,prefix,mask,nexthop,action)
-		if labels:
-			nlri.labels = Labels(labels)
-		if rd:
-			nlri.rd = RouteDistinguisher(rd)
-		if path_identifier:
-			nlri.path_info = PathInfo(None,None,path_identifier)
-
-		return len(bgp) - len(left),nlri
-
-
-# ====================================================== Both MPLS and Inet NLRI
-# RFC 3107 / RFC 4364
-
-@NLRI.register(AFI.ipv4,SAFI.mpls_vpn)
-@NLRI.register(AFI.ipv6,SAFI.mpls_vpn)
-class MPLSVPN (MPLS):
-
-	def __init__(self, afi, safi, packedPrefix, mask, labels, rd, nexthop, action=None):
-		MPLS.__init__(self, afi, safi, packedPrefix, mask, nexthop, action)
-		# assert(isinstance(rd,RouteDistinguisher))
-		self.rd = rd
-		if labels is None:
-			labels = Labels.NOLABEL
-		# assert(isinstance(labels,Labels))
-		self.labels = labels
-
-	def __eq__(self, other):
-		# Note: BaGPipe needs an advertise and a withdraw for the same
-		# RD:prefix to result in objects that are equal for Python,
-		# this is why the test below does not look at self.labels nor
-		# self.nexthop or self.action
-		return \
-			NLRI.__eq__(self, other) and \
-			CIDR.__eq__(self, other) and \
-			self.path_info == other.path_info and \
-			self.rd == other.rd
-
-	def __ne__ (self, other):
-		return not self.__eq__(other)
-
-	def __hash__(self):
-		# Like for the comparaison, two NLRI with same RD and prefix, but
-		# different labels need to hash equal
-		# XXX: Don't we need to have the label here ?
-		return hash((self.rd, self.top(), self.mask))
-
-	def __str__(self):
-		return "%s/%d%s%s next-hop %s" % (self.top(), self.mask, self.labels, self.rd, self.nexthop)
-
-	@classmethod
-	def unpack (cls, afi, safi, bgp, addpath, nexthop, action):
-		labels,rd,path_identifier,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action,addpath)
-		nlri = cls(afi, safi, prefix, mask, Labels(labels), RouteDistinguisher(rd), nexthop, action)
-		if path_identifier:
-			nlri.path_info = PathInfo(None,None,path_identifier)
-		return len(bgp) - len(left),nlri
+	# @classmethod
+	# def _rd (cls, data, mask):
+	# 	mask -= 8*8  # the 8 bytes of the route distinguisher
+	# 	rd = data[:8]
+	# 	data = data[8:]
+	#
+	# 	if mask < 0:
+	# 		raise Notify(3,10,'invalid length in NLRI prefix')
+	#
+	# 	if not data and mask:
+	# 		raise Notify(3,10,'not enough data for the mask provided to decode the NLRI')
+	#
+	# 	return RouteDistinguisher(rd), mask, data
+	#
+	# @classmethod
+	# def unpack_mpls (cls, afi, safi, data, action, addpath):
+	# 	pathinfo, data = cls._pathinfo(data,addpath)
+	# 	mask, labels, data = cls._labels(data,action)
+	# 	rd, mask, data = cls._rd(data,mask)
+	# 	nlri, data = cls.unpack_cidr(afi,safi,mask,data,action)
+	# 	nlri.path_info = pathinfo
+	# 	nlri.labels = labels
+	# 	nlri.rd = rd
+	# 	return nlri,data
+	#
+	# @classmethod
+	# def unpack_nlri (cls, afi, safi, data, addpath):
+	# 	return cls.unpack_mpls(afi,safi,data,addpath)

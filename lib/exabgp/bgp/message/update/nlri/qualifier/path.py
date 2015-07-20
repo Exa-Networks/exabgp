@@ -14,7 +14,7 @@ class PathInfo (object):
 
 	__slots__ = ['path_info']
 
-	def __init__ (self, integer=None,ip=None,packed=None):
+	def __init__ (self, packed=None, integer=None, ip=None):
 		if packed:
 			self.path_info = packed
 		elif ip:
@@ -51,7 +51,7 @@ class PathInfo (object):
 			return '"path-information": "%s"' % '.'.join([str(ord(_)) for _ in self.path_info])
 		return ''
 
-	def __str__ (self):
+	def __repr__ (self):
 		if self.path_info:
 			return ' path-information %s' % '.'.join([str(ord(_)) for _ in self.path_info])
 		return ''

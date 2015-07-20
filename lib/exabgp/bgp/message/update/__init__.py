@@ -70,6 +70,7 @@ class Update (Message):
 
 	@staticmethod
 	def prefix (data):
+		# This function needs renaming
 		return '%s%s' % (pack('!H',len(data)),data)
 
 	@staticmethod
@@ -270,22 +271,23 @@ class Update (Message):
 		addpath = negotiated.addpath.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
 
 		# empty string for NoNextHop, the packed IP otherwise (without the 3/4 bytes of attributes headers)
-		_nexthop = attributes.get(Attribute.CODE.NEXT_HOP,NoNextHop)
-		nexthop = _nexthop.ton(negotiated)
+		nexthop = attributes.get(Attribute.CODE.NEXT_HOP,NoNextHop)
+		# nexthop = NextHop.unpack(_nexthop.ton())
 
 		# XXX: NEXTHOP MUST NOT be the IP address of the receiving speaker.
 
 		nlris = []
 		while withdrawn:
-			length,nlri = NLRI.unpack(AFI.ipv4,SAFI.unicast,withdrawn,addpath,nexthop,IN.WITHDRAWN)
+			nlri,left = NLRI.unpack_nlri(AFI.ipv4,SAFI.unicast,withdrawn,IN.WITHDRAWN,addpath)
 			logger.parser(LazyFormat("parsed withdraw nlri %s payload " % nlri,withdrawn[:len(nlri)]))
-			withdrawn = withdrawn[length:]
+			withdrawn = left
 			nlris.append(nlri)
 
 		while announced:
-			length,nlri = NLRI.unpack(AFI.ipv4,SAFI.unicast,announced,addpath,nexthop,IN.ANNOUNCED)
+			nlri,left = NLRI.unpack_nlri(AFI.ipv4,SAFI.unicast,announced,IN.ANNOUNCED,addpath)
+			nlri.nexthop = nexthop
 			logger.parser(LazyFormat("parsed announce nlri %s payload " % nlri,announced[:len(nlri)]))
-			announced = announced[length:]
+			announced = left
 			nlris.append(nlri)
 
 		# required for 'is' comparaison

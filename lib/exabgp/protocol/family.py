@@ -36,11 +36,19 @@ class AFI (Resource):
 	names = dict([(r,l) for (l,r) in codes.items()])
 	inet_names = dict([(r,l.replace('ipv','inet')) for (l,r) in codes.items()])
 
+	masks = {
+		ipv4:  32,
+		ipv6:  128,
+	}
+
 	def __str__ (self):
 		return self.names.get(self,"unknown afi %d" % int(self))
 
 	def __repr__ (self):
 		return str(self)
+
+	def mask (self):
+		return self.masks.get(self,'invalid request for this family')
 
 	def name (self):
 		return self.inet_names.get(self,"unknown afi")
@@ -159,6 +167,16 @@ class Family (object):
 	def __init__ (self, afi, safi):
 		self.afi = AFI(afi)
 		self.safi = SAFI(safi)
+
+	def has_label (self):
+		if self.safi in (SAFI.nlri_mpls,SAFI.mpls_vpn):
+			return True
+		return False
+
+	def has_rd (self):
+		if self.safi in (SAFI.nlri_mpls,SAFI.mpls_vpn,SAFI.flow_vpn):
+			return True
+		return False
 
 	def __eq__ (self, other):
 		return \

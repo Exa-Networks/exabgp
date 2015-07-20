@@ -12,8 +12,9 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 
 from exabgp.bgp.message.update.nlri.inet import INET
+from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.mpls import MPLS
-from exabgp.bgp.message.update.nlri.mpls import MPLSVPN
+from exabgp.bgp.message.update.nlri.mplsvpn import MPLSVPN
 from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.bgp.message.update.nlri.flow import Flow
 from exabgp.bgp.message.update.nlri.evpn import EVPN

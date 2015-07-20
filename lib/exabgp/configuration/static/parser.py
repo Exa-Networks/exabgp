@@ -14,7 +14,9 @@ from exabgp.protocol.family import AFI
 # from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message import OUT
+from exabgp.bgp.message.update.nlri import CIDR
 from exabgp.bgp.message.update.nlri import INET
+from exabgp.bgp.message.update.nlri import MPLS
 
 from exabgp.bgp.message.open import ASN
 from exabgp.bgp.message.open import RouterID
@@ -49,10 +51,13 @@ from exabgp.rib.change import Change
 # XXX: I could also say this from many of the NLRI classes constructor which need correct @classmethods
 
 
-class Range (IP):
+class Range (IP):  # XXX:  we do not need this class anymore and should just use CIDR
 	def __init__ (self, ip, packed, mask):
 		IP.init(self,ip,packed)
 		self.mask = mask
+
+	def __repr__ (self):
+		return '%s/%d' % (self.top(),self.mask)
 
 
 def prefix (tokeniser):
@@ -83,21 +88,36 @@ def next_hop (tokeniser):
 	else:
 		ip = IP.create(value)
 		if ip.afi == AFI.ipv4:
-			return ip,NextHop(ip.string)
+			return ip,NextHop(ip.top())
 		return ip,None
 
 
 def inet (tokeniser):
 	ipmask = prefix(tokeniser)
+	inet = INET(
+		afi=IP.toafi(ipmask.top()),
+		safi=IP.tosafi(ipmask.top()),
+		action=OUT.UNSET
+	)
+	inet.cidr = CIDR(ipmask.ton(),ipmask.mask)
+
 	return Change(
-		INET(
-			afi=IP.toafi(ipmask.string),
-			safi=IP.tosafi(ipmask.string),
-			packed=IP.pton(ipmask.string),
-			mask=ipmask.mask,
-			nexthop=None,
-			action=OUT.UNSET
-		),
+		inet,
+		Attributes()
+	)
+
+
+def mpls (tokeniser):
+	ipmask = prefix(tokeniser)
+	mpls = MPLS(
+		afi=IP.toafi(ipmask.top()),
+		safi=IP.tosafi(ipmask.top()),
+		action=OUT.UNSET
+	)
+	mpls.cidr = CIDR(ipmask.ton(),ipmask.mask)
+
+	return Change(
+		mpls,
 		Attributes()
 	)
 

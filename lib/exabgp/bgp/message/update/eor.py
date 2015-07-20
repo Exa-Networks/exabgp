@@ -29,7 +29,7 @@ class EOR (Message):
 		nexthop = None
 
 		def __init__ (self, afi, safi, action):
-			_NLRI.__init__(self,afi,safi)
+			_NLRI.__init__(self,afi,safi,action)
 			self.action = action
 
 		def pack (self, negotiated=None):

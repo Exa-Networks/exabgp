@@ -99,15 +99,15 @@ class VPLS (NLRI):
 		return self.extensive()
 
 	@classmethod
-	def unpack (cls, afi, safi, data, addpath, nexthop, action):
+	def unpack_nlri (cls, afi, safi, bgp, action, addpath):
 		# label is 20bits, stored using 3 bytes, 24 bits
-		length, = unpack('!H',data[0:2])
-		if len(data) != length+2:
-			raise Notify(3,10,'l2vpn vpls message length is not consistent with encoded data')
-		rd = RouteDistinguisher(data[2:10])
-		endpoint,offset,size = unpack('!HHH',data[10:16])
-		base = unpack('!L','\x00'+data[16:19])[0] >> 4
+		length, = unpack('!H',bgp[0:2])
+		if len(bgp) != length+2:
+			raise Notify(3,10,'l2vpn vpls message length is not consistent with encoded bgp')
+		rd = RouteDistinguisher(bgp[2:10])
+		endpoint,offset,size = unpack('!HHH',bgp[10:16])
+		base = unpack('!L','\x00'+bgp[16:19])[0] >> 4
 		nlri = cls(rd,endpoint,base,offset,size)
 		nlri.action = action
-		nlri.nexthop = IP.unpack(nexthop)
-		return len(data), nlri
+		# nlri.nexthop = IP.unpack(nexthop)
+		return nlri, bgp[19:]

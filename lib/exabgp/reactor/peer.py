@@ -398,7 +398,7 @@ class Peer (object):
 		# Read OPEN
 		wait = environment.settings().bgp.openwait
 		opentimer = ReceiveTimer(self.me,wait,1,1,'waited for open too long, we do not like stuck in active')
-		for message in self._outgoing.proto.read_open(self.neighbor.peer_address.string):
+		for message in self._outgoing.proto.read_open(self.neighbor.peer_address.top()):
 			opentimer.check_ka(message)
 			# XXX: FIXME: change the whole code to use the ord and not the chr version
 			# Only yield if we have not the open, otherwise the reactor can run the other connection

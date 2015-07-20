@@ -12,7 +12,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
-from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -120,15 +119,20 @@ class IPrefix4 (IPrefix,IComponent,IPv4):
 	operations = 0x0
 
 	def __init__ (self, raw, netmask):
-		self.nlri = CIDR(raw,netmask)
+		self.cidr = CIDR(raw,netmask)
 
 	def pack (self):
-		raw = self.nlri.cidr()
+		raw = self.cidr.pack_nlri()
 		# ID is defined in subclasses
 		return "%s%s" % (chr(self.ID),raw)  # pylint: disable=E1101
 
 	def __str__ (self):
-		return str(self.nlri)
+		return str(self.cidr)
+
+	@classmethod
+	def make (cls, bgp):
+		prefix,mask = CIDR.decode(AFI.ipv4,bgp)
+		return cls(prefix,mask), bgp[CIDR.size(mask)+1:]
 
 
 class IPrefix6 (IPrefix,IComponent,IPv6):
@@ -140,15 +144,21 @@ class IPrefix6 (IPrefix,IComponent,IPv6):
 	operations = 0x0
 
 	def __init__ (self, raw, netmask, offset):
-		self.nlri = CIDR(raw,netmask)
+		self.cidr = CIDR(raw,netmask)
 		self.offset = offset
 
 	def pack (self):
 		# ID is defined in subclasses
-		return "%s%s%s%s" % (chr(self.ID),chr(self.nlri.mask),chr(self.offset),self.nlri.classless())  # pylint: disable=E1101
+		return "%s%s%s%s" % (chr(self.ID),chr(self.cidr.mask),chr(self.offset),self.cidr.pack_ip())  # pylint: disable=E1101
 
 	def __str__ (self):
-		return "%s/%s" % (self.nlri,self.offset)
+		return "%s/%s" % (self.cidr,self.offset)
+
+	@classmethod
+	def make (cls, bgp):
+		offset = ord(bgp[1])
+		prefix,mask = CIDR.decode(AFI.ipv6,bgp[0]+bgp[2:])
+		return cls(prefix,mask,offset), bgp[CIDR.size(mask)+2:]
 
 
 class IOperation (IComponent):
@@ -471,12 +481,11 @@ unique = _unique()
 @NLRI.register(AFI.ipv4,SAFI.flow_vpn)
 @NLRI.register(AFI.ipv6,SAFI.flow_vpn)
 class Flow (NLRI):
-	def __init__ (self, afi=AFI.ipv4,safi=SAFI.flow_ip,nexthop=None,rd=None):
-		NLRI.__init__(self,afi,safi)
+	def __init__ (self, afi=AFI.ipv4, safi=SAFI.flow_ip, action=OUT.UNSET):
+		NLRI.__init__(self,afi,safi,action)
 		self.rules = {}
-		self.action = OUT.UNSET
-		self.nexthop = IP.unpack(nexthop) if nexthop else NoNextHop
-		self.rd = rd if rd else RouteDistinguisher.NORD
+		self.nexthop = NoNextHop
+		self.rd = RouteDistinguisher.NORD
 		self.unique = unique.next()
 
 	def __eq__ (self, other):
@@ -592,8 +601,7 @@ class Flow (NLRI):
 		return self.pack()
 
 	@classmethod
-	def unpack (cls, afi, safi, bgp, has_multiple_path, nexthop, action):
-		total = len(bgp)
+	def unpack_nlri (cls, afi, safi, bgp, action, addpath):
 		length,bgp = ord(bgp[0]),bgp[1:]
 
 		if length & 0xF0 == 0xF0:  # bigger than 240
@@ -604,8 +612,8 @@ class Flow (NLRI):
 			raise Notify(3,10,'invalid length at the start of the the flow')
 
 		bgp = bgp[:length]
-		nlri = Flow(afi,safi,nexthop)
-		nlri.action = action
+
+		nlri = Flow(afi,safi,action)
 
 		if safi == SAFI.flow_vpn:
 			nlri.rd = RouteDistinguisher(bgp[:8])
@@ -627,22 +635,10 @@ class Flow (NLRI):
 			klass = factory[afi][what]
 
 			if decoded == 'prefix':
-				if afi == AFI.ipv4:
-					_,rd,_,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action,False)
-					adding = klass(prefix,mask)
-					if not nlri.add(adding):
-						raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
-					# logger.parser(LazyFormat("added flow %s (%s) payload " % (klass.NAME,adding),bgp[:-len(left)]))
-					bgp = left
-				else:
-					byte,bgp = bgp[1],bgp[0]+bgp[2:]
-					offset = ord(byte)
-					_,rd,_,mask,size,prefix,left = NLRI._nlri(afi,safi,bgp,action,False)
-					adding = klass(prefix,mask,offset)
-					if not nlri.add(adding):
-						raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
-					# logger.parser(LazyFormat("added flow %s (%s) payload " % (klass.NAME,adding),bgp[:-len(left)]))
-					bgp = left
+				adding,bgp = klass.make(bgp)
+				if not nlri.add(adding):
+					raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
+				# logger.parser(LazyFormat("added flow %s (%s) payload " % (klass.NAME,adding),bgp[:-len(left)]))
 			else:
 				end = False
 				while not end:
@@ -655,4 +651,4 @@ class Flow (NLRI):
 					nlri.add(klass(operator,adding))
 					# logger.parser(LazyFormat("added flow %s (%s) operator %d len %d payload " % (klass.NAME,adding,byte,length),value))
 
-		return total-len(bgp),nlri
+		return nlri, bgp

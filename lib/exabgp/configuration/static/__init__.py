@@ -13,7 +13,9 @@ from exabgp.protocol.ip import IP
 from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message import OUT
+from exabgp.bgp.message.update.nlri import CIDR
 from exabgp.bgp.message.update.nlri import INET
+from exabgp.bgp.message.update.nlri import Label
 from exabgp.bgp.message.update.nlri import MPLS
 
 from exabgp.bgp.message.update.attribute import Attributes
@@ -51,25 +53,16 @@ def route (tokeniser):
 	ipmask = prefix(tokeniser)
 
 	if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
-		klass = MPLS
-		safi = SAFI(SAFI.mpls_vpn)
+		nlri = MPLS(IP.toafi(ipmask.top()),SAFI.mpls_vpn,OUT.ANNOUNCE)
 	elif 'label' in tokeniser.tokens:
-		# XXX: should we create a LABEL class ?
-		klass = MPLS
-		safi = SAFI(SAFI.nlri_mpls)
+		nlri = Label(IP.toafi(ipmask.top()),SAFI.nlri_mpls,OUT.ANNOUNCE)
 	else:
-		klass = INET
-		safi = IP.tosafi(ipmask.string)
+		nlri = INET(IP.toafi(ipmask.top()),IP.tosafi(ipmask.top()),OUT.ANNOUNCE)
+
+	nlri.cidr = CIDR(ipmask.pack(),ipmask.mask)
 
 	change = Change(
-		klass(
-			IP.toafi(ipmask.string),
-			safi,
-			ipmask.pack(),
-			ipmask.mask,
-			'',
-			OUT.UNSET
-		),
+		nlri,
 		Attributes()
 	)
 
@@ -96,29 +89,20 @@ def route (tokeniser):
 
 
 @ParseStatic.register('attributes','extend-name')
-def attribute (tokeniser):
+def attributes (tokeniser):
 	ipmask = prefix(lambda: tokeniser.tokens[-1])
 
 	if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
-		klass = MPLS
-		safi = SAFI(SAFI.mpls_vpn)
+		nlri = MPLS(IP.toafi(ipmask.top()),SAFI.mpls_vpn,OUT.ANNOUNCE)
 	elif 'label' in tokeniser.tokens:
-		# XXX: should we create a LABEL class ?
-		klass = MPLS
-		safi = SAFI(SAFI.nlri_mpls)
+		nlri = Label(IP.toafi(ipmask.top()),SAFI.nlri_mpls,OUT.ANNOUNCE)
 	else:
-		klass = INET
-		safi = IP.tosafi(ipmask.string)
+		nlri = INET(IP.toafi(ipmask.top()),IP.tosafi(ipmask.top()),OUT.ANNOUNCE)
+
+	nlri.cidr = CIDR(ipmask.pack(),ipmask.mask)
 
 	change = Change(
-		klass(
-			IP.toafi(ipmask.string),
-			safi,
-			ipmask.pack(),
-			ipmask.mask,
-			'',
-			OUT.UNSET
-		),
+		nlri,
 		Attributes()
 	)
 
@@ -149,23 +133,21 @@ def attribute (tokeniser):
 
 	changes = []
 	while True:
-		command = tokeniser.peak()
-		if not command:
+		nlri = tokeniser.peek()
+		if not nlri:
 			break
 
 		ipmask = prefix(tokeniser)
-		change = Change(
-			klass(
-				IP.toafi(ipmask.string),
-				safi,
-				ipmask.pack(),
-				ipmask.mask,
-				'',
+		new = Change(
+			change.nlri.__class__(
+				change.nlri.afi,
+				change.nlri.safi,
 				OUT.UNSET
 			),
 			attributes
 		)
-		change.nlri.nexthop = nexthop
-		changes.append(change)
+		new.nlri.cidr = CIDR(ipmask.pack(),ipmask.mask)
+		new.nlri.nexthop = nexthop
+		changes.append(new)
 
 	return changes

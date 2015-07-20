@@ -207,7 +207,7 @@ def next_hop (tokeniser):
 		return NextHopSelf(AFI.ipv4)
 	else:
 		ip = IP.create(value)
-		return NextHop(ip.string,ip.pack())
+		return NextHop(ip.top(),ip.pack())
 
 
 def accept (tokeniser):

@@ -38,7 +38,7 @@ class Tokeniser (object):
 			except StopIteration:
 				return ''
 
-		def peak (self):
+		def peek (self):
 			try:
 				peaked = self.generator.next()
 				self.next.append(peaked)

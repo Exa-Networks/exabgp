@@ -27,7 +27,6 @@ from exabgp.bgp.message.open import HoldTime
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import Negotiated
-# from exabgp.bgp.message import Notify
 from exabgp.bgp.message.update.nlri import NLRI
 
 
@@ -283,8 +282,8 @@ class TestUpdateDecoding (unittest.TestCase):
 			# 		path[f] = neighbor.add_path
 			# capa[Capability.CODE.ADD_PATH] = path
 
-			o1 = Open(Version(4),ASN(neighbor.local_as),HoldTime(180),RouterID(neighbor.local_address.string),capa)
-			o2 = Open(Version(4),ASN(neighbor.peer_as),HoldTime(180),RouterID(neighbor.peer_address.string),capa)
+			o1 = Open(Version(4),ASN(neighbor.local_as),HoldTime(180),RouterID(neighbor.local_address.top()),capa)
+			o2 = Open(Version(4),ASN(neighbor.peer_as),HoldTime(180),RouterID(neighbor.peer_address.top()),capa)
 
 			negotiated = Negotiated(neighbor)
 			negotiated.sent(o1)

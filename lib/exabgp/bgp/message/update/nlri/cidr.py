@@ -7,15 +7,21 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 import math
+
 from exabgp.protocol.ip import IP
+from exabgp.bgp.message.notification import Notify
 
 
 class CIDR (object):
 	EOR = False
-	# we can not define slots here as otherwise it conflict in Prefix
 	# __slots__ = ['packed','mask','_ip']
 
 	_mask_to_bytes = {}
+
+	def __init__ (self, packed, mask):
+		self._packed = packed
+		self.mask = mask
+		self._ip = None
 
 	@classmethod
 	def size (cls, mask):
@@ -24,11 +30,6 @@ class CIDR (object):
 	# have a .raw for the ip
 	# have a .mask for the mask
 	# have a .bgp with the bgp wire format of the prefix
-
-	def __init__ (self, packed, mask):
-		self._packed = packed
-		self.mask = mask
-		self._ip = None
 
 	def __eq__ (self, other):
 		return \
@@ -41,16 +42,16 @@ class CIDR (object):
 			self._packed != other._packed
 
 	def __lt__ (self, other):
-		raise RuntimeError('comparing CIDR for ordering does not make sense')
+		return self._packed < other._packed
 
 	def __le__ (self, other):
-		raise RuntimeError('comparing CIDR for ordering does not make sense')
+		return self._packed <= other._packed
 
 	def __gt__ (self, other):
-		raise RuntimeError('comparing CIDR for ordering does not make sense')
+		return self._packed > other._packed
 
 	def __ge__ (self, other):
-		raise RuntimeError('comparing CIDR for ordering does not make sense')
+		return self._packed >= other._packed
 
 	def top (self):
 		if not self._ip:
@@ -66,15 +67,33 @@ class CIDR (object):
 	def prefix (self):
 		return "%s/%s" % (self.top(),self.mask)
 
-	def cidr (self):
+	def index (self):
 		return chr(self.mask) + self._packed[:CIDR.size(self.mask)]
 
-	def classless (self):
+	def pack_ip (self):
 		return self._packed[:CIDR.size(self.mask)]
 
-	# July 2014: should never be called as it is for the RIB code only
-	# def index (self):
-	# 	return self.pack()
+	def pack_nlri (self):
+		return chr(self.mask) + self._packed[:CIDR.size(self.mask)]
+
+	@staticmethod
+	def decode (afi,bgp):
+		mask = ord(bgp[0])
+		size = CIDR.size(mask)
+
+		if len(bgp) < size+1:
+			raise Notify(3,10,'could not decode CIDR')
+
+		padding = '\0'*(IP.length(afi)-size)
+		return bgp[1:size+1] + padding, mask
+
+		# data = bgp[1:size+1] + '\x0\x0\x0\x0'
+		# return data[:4], mask
+
+	@classmethod
+	def unpack (cls, data):
+		prefix,mask = cls.decode(data)
+		return cls(prefix,mask)
 
 	def __len__ (self):
 		return CIDR.size(self.mask) + 1
@@ -82,6 +101,7 @@ class CIDR (object):
 	def __hash__ (self):
 		return hash(chr(self.mask)+self._packed)
 
-
 for netmask in range(0,129):
 	CIDR._mask_to_bytes[netmask] = int(math.ceil(float(netmask)/8))
+
+CIDR.NOCIDR = CIDR('',0)

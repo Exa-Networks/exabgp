@@ -36,11 +36,11 @@ class NextHop (Attribute,IP):
 	def __ne__ (self, other):
 		return not self.__eq__(other)
 
-	def ton (self,negotiated):
+	def ton (self):
 		return self._packed
 
 	def pack (self, negotiated=None):
-		return self._attribute(self.ton(negotiated))
+		return self._attribute(self.ton())
 
 	@classmethod
 	def unpack (cls, data, negotiated=None):
@@ -65,4 +65,4 @@ class NextHopSelf (NextHop):
 		return self.afi == AFI.ipv4
 
 	def pack (self,negotiated):
-		return self._attribute(negotiated.nexthopself(self.afi).ton(negotiated))
+		return self._attribute(negotiated.nexthopself(self.afi).ton())

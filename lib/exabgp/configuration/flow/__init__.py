@@ -50,6 +50,7 @@ class ParseFlow (Section):
 	def check (self):
 		return True
 
+
 @ParseFlow.register('route','extend-name')
 def route (tokeniser):
 	change = Change(

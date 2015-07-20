@@ -23,7 +23,7 @@ class IPSelf (object):
 		return 'self'
 
 	def pack (self, negotiated):
-		return negotiated.nexthopself(self.afi).ton(negotiated)
+		return negotiated.nexthopself(self.afi).ton()
 
 
 class IP (object):
@@ -36,19 +36,19 @@ class IP (object):
 	_multicast_range = set(range(224,240))  # 239
 
 	# deprecate the string API in favor of top()
-	__slots__ = ['string','_packed']
+	__slots__ = ['_string','_packed']
 
 	def __init__ (self):
 		raise RuntimeError("You should use IP.create() to use IP")
 
 	def init (self, string, packed=None):
 		# XXX: the str should not be needed
-		self.string = string
+		self._string = string
 		self._packed = IP.pton(string) if packed is None else packed
 		return self
 
 	def __iter__ (self):
-		for letter in self.string:
+		for letter in self._string:
 			yield letter
 
 	@staticmethod
@@ -60,7 +60,7 @@ class IP (object):
 		return socket.inet_ntop(socket.AF_INET if len(data) == 4 else socket.AF_INET6,data)
 
 	def top (self):
-		return self.string
+		return self._string
 
 	@staticmethod
 	def toaf (ip):
@@ -108,11 +108,11 @@ class IP (object):
 	def pack (self):
 		return self._packed
 
-	def ton (self, negotiated):
+	def ton (self):
 		return self._packed
 
 	def __repr__ (self):
-		return self.string
+		return self._string
 
 	def __eq__ (self, other):
 		return self._packed == other._packed
@@ -174,7 +174,7 @@ class _NoNextHop (object):
 	def index (self):
 		return ''
 
-	def ton (self, negotiated):
+	def ton (self):
 		return ''
 
 	def __str__ (self):

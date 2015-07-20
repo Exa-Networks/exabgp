@@ -14,11 +14,13 @@ from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
 
 from exabgp.bgp.message.direction import IN
-from exabgp.bgp.message.update.attribute.attribute import Attribute
+# from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute import Attribute
+from exabgp.bgp.message.update.attribute import NextHop
 from exabgp.bgp.message.update.nlri import NLRI
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.open.capability import Negotiated
+# from exabgp.bgp.message.open.capability import Negotiated
 
 
 # ==================================================== MP Unreacheable NLRI (15)
@@ -62,10 +64,10 @@ class MPRNLRI (Attribute,Family):
 				# we do not want a next_hop attribute packed (with the _attribute()) but just the next_hop itself
 				if nlri.safi.has_rd():
 					# .packed and not .pack()
-					nexthop = chr(0)*8 + nlri.nexthop.ton(negotiated)
+					nexthop = chr(0)*8 + nlri.nexthop.ton()
 				else:
 					# .packed and not .pack()
-					nexthop = nlri.nexthop.ton(negotiated)
+					nexthop = nlri.nexthop.ton()
 
 			# mpunli[afi,safi][nexthop] = nlri
 			mpnlri.setdefault((nlri.afi.pack(),nlri.safi.pack()),{}).setdefault(nexthop,[]).append(nlri.pack(negotiated))
@@ -185,17 +187,18 @@ class MPRNLRI (Attribute,Family):
 		while data:
 			if nexthops:
 				for nexthop in nexthops:
-					length,nlri = NLRI.unpack(afi,safi,data,addpath,nexthop,IN.ANNOUNCED)
+					nlri,left = NLRI.unpack_nlri(afi,safi,data,IN.ANNOUNCED,addpath)
+					nlri.nexthop = NextHop.unpack(nexthop)
 					nlris.append(nlri)
 			else:
-				length,nlri = NLRI.unpack(afi,safi,data,addpath,'',IN.ANNOUNCED)
+				nlri,left = NLRI.unpack_nlri(afi,safi,data,IN.ANNOUNCED,addpath)
 				nlris.append(nlri)
 
-			if length == 0:
-				raise RuntimeError("sub-calls should not return length zero")
+			if left == data:
+				raise RuntimeError("sub-calls should consume data")
 
 			# logger.parser(LazyFormat("parsed announce mp nlri %s payload " % nlri,data[:length]))
-			data = data[length:]
+			data = left
 		return cls(afi,safi,nlris)
 
 EMPTY_MPRNLRI  = MPRNLRI(AFI(AFI.undefined),SAFI(SAFI.undefined),[])
