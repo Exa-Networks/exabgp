@@ -6,11 +6,6 @@ Created by Thomas Mangin on 2012-07-08.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
-
-from exabgp.bgp.message.update.nlri.cidr import CIDR
-from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.mpls import MPLS
 
 
