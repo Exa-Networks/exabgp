@@ -72,7 +72,6 @@ class ParseFlowRoute (Section):
 			self.scope.append('routes',route)
 		return True
 
-	@staticmethod
-	def check (change):
+	def _check (self,change):
 		self.logger.configuration('warning: no check on flows are implemented')
 		return True
