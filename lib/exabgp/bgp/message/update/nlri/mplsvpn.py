@@ -39,7 +39,7 @@ class MPLSVPN (MPLS):
 		# Like for the comparaison, two NLRI with same RD and prefix, but
 		# different labels need to hash equal
 		# XXX: Don't we need to have the label here ?
-		return hash((self.rd, self.top(), self.cidr.mask))
+		return hash((self.rd, self.cidr.top(), self.cidr.mask))
 
 	def __str__(self):
-		return "%s/%d%s%s next-hop %s" % (self.top(), self.mask, self.labels, self.rd, self.nexthop)
+		return "%s/%d%s%s next-hop %s" % (self.cidr.top(), self.cidr.mask, self.labels, self.rd, self.nexthop)
