@@ -33,8 +33,7 @@ class MPLSVPN (MPLS):
 			isinstance(other, MPLSVPN) and \
 			self.path_info == other.path_info and \
 			self.rd == other.rd and \
-			self.mask == other.mask and \
-			self._packed == other._packed
+			self.cidr == other.cidr
 
 	def __hash__(self):
 		# Like for the comparaison, two NLRI with same RD and prefix, but
