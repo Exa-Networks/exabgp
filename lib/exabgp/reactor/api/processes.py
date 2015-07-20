@@ -153,7 +153,7 @@ class Processes (object):
 
 	def broken (self, neighbor):
 		if self._broken:
-			for process in self.neighbor.api['processes']:
+			for process in self.reactor.configuration.processes:
 				if process in self._broken:
 					return True
 		return False
