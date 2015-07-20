@@ -30,10 +30,11 @@ class MPLSVPN (MPLS):
 		# this is why the test below does not look at self.labels nor
 		# self.nexthop or self.action
 		return \
-			NLRI.__eq__(self, other) and \
-			CIDR.__eq__(self, other) and \
+			isinstance(other, MPLSVPN) and \
 			self.path_info == other.path_info and \
-			self.rd == other.rd
+			self.rd == other.rd and \
+			self.mask == other.mask and \
+			self._packed == other._packed
 
 	def __hash__(self):
 		# Like for the comparaison, two NLRI with same RD and prefix, but

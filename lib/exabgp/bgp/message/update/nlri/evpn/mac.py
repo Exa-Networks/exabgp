@@ -62,7 +62,7 @@ class MAC (EVPN):
 
 	def __eq__ (self, other):
 		return \
-			NLRI.__eq__(self,other) and \
+			isinstance(other, MAC) and \
 			self.CODE == other.CODE and \
 			self.rd == other.rd and \
 			self.etag == other.etag and \
