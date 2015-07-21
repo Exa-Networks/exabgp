@@ -32,12 +32,15 @@ class ParseFlowMatch (Section):
 		'destination 10.0.1.0/24',
 		'port 25',
 		'source-port >1024',
-		'destination-port =80|=3128|>8080&<8088',
-		'packet-length >200&<300|>400&<500',
+		'destination-port [ =80 =3128 >8080&<8088 ]',
+		'packet-length [ >200&<300 >400&<500 ]',
+		'tcp-flags [ 0x20+0x8+0x1 #name-here ]  # to check',
 		'(ipv4 only) protocol [ udp tcp ]',
 		'(ipv4 only) fragment [ not-a-fragment dont-fragment is-fragment first-fragment last-fragment ]',
 		'(ipv6 only) next-header [ udp tcp ]',
 		'(ipv6 only) flow-label >100&<2000',
+		'(ipv6 only) icmp-type 35  # to check',
+		'(ipv6 only) icmp-code 55  # to check',
 	]
 
 	syntax = \
@@ -48,6 +51,10 @@ class ParseFlowMatch (Section):
 	known = {
 		'source':           source,
 		'destination':      destination,
+		'source-ipv4':      source,
+		'destination-ipv4': destination,
+		'source-ipv6':      source,
+		'destination-ipv6': destination,
 		'port':             any_port,
 		'source-port':      source_port,
 		'destination-port': destination_port,
