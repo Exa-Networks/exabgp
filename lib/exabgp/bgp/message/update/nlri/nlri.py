@@ -69,13 +69,17 @@ class NLRI (Family):
 		return False
 
 	@classmethod
-	def register (cls, afi, safi):
+	def register (cls, afi, safi, force=False):
 		def register_nlri (klass):
-			cls.registered_nlri['%d/%d' % (afi,safi)] = klass
 			new = (AFI(afi),SAFI(safi))
 			if new in cls.registered_nlri:
-				raise RuntimeError('Tried to register %s/%s twice' % new)
-			cls.registered_families.append(new)
+				if force:
+					cls.registered_nlri['%d/%d' % new] = klass
+				else:
+					raise RuntimeError('Tried to register %s/%s twice' % new)
+			else:
+				cls.registered_nlri['%d/%d' % new] = klass
+				cls.registered_families.append(new)
 			return klass
 		return register_nlri
 
