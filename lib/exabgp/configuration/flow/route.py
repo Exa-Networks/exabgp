@@ -65,6 +65,7 @@ class ParseFlowRoute (Section):
 	def post (self):
 		route = self.scope.pop(self.name)
 
+		# if route.nlri.has_rd(): # ???
 		if route.nlri.rd is not RouteDistinguisher.NORD:
 			route.nlri.safi = SAFI(SAFI.flow_vpn)
 

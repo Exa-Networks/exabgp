@@ -6,7 +6,14 @@ Created by Thomas Mangin on 2012-07-08.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+# from exabgp.protocol.family import AFI
+# from exabgp.protocol.family import SAFI
+
+from exabgp.bgp.message import OUT
+
+# from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.mpls import MPLS
+# from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
 
 # ====================================================== Both MPLS and Inet NLRI
@@ -15,15 +22,26 @@ from exabgp.bgp.message.update.nlri.mpls import MPLS
 # @NLRI.register(AFI.ipv4,SAFI.mpls_vpn)
 # @NLRI.register(AFI.ipv6,SAFI.mpls_vpn)
 class MPLSVPN (MPLS):
+	def __init__ (self, afi, safi, action=OUT.UNSET):
+		MPLS.__init__(self, afi, safi, action)
 
-	def __init__ (self, afi, safi, packed, mask, nexthop):
-		MPLS.__init__(self, afi, safi, packed, mask, nexthop)
+	@classmethod
+	def new (cls, afi, safi, packed, mask, nexthop):
+		instance = cls(afi,safi,OUT.announce)
+		instance.cidr = CIDR(packed, mask)
+		instance.nexthop = nexthop
+		return instance
 
 	def __eq__(self, other):
 		# Note: BaGPipe needs an advertise and a withdraw for the same
 		# RD:prefix to result in objects that are equal for Python,
 		# this is why the test below does not look at self.labels nor
 		# self.nexthop or self.action
+
+		# Note to Note: This breaks all ExaBGP API consistency
+		# Are we not better having a new comparator function, or have bagpipe-bgp
+		# Inherit and replace the __eq__ function with its own version
+		# using @NLRI.register(AFI.ipv4,SAFI.mpls_vpn,force=True)
 		return \
 			isinstance(other, MPLSVPN) and \
 			self.path_info == other.path_info and \
@@ -35,6 +53,3 @@ class MPLSVPN (MPLS):
 		# different labels need to hash equal
 		# XXX: Don't we need to have the label here ?
 		return hash((self.rd, self.cidr.top(), self.cidr.mask))
-
-	def __str__(self):
-		return "%s/%d%s%s next-hop %s" % (self.cidr.top(), self.cidr.mask, self.labels, self.rd, self.nexthop)

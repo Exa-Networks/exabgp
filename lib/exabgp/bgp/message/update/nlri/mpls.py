@@ -9,11 +9,12 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
+from exabgp.bgp.message import OUT
+
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
-
 
 # ====================================================== MPLS
 # RFC 3107 / RFC 4364
@@ -25,7 +26,7 @@ from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 class MPLS (Label):
 	__slots__ = ['rd']
 
-	def __init__ (self, afi, safi, action):
+	def __init__ (self, afi, safi, action=OUT.UNSET):
 		Label.__init__(self, afi, safi, action)
 		self.rd = RouteDistinguisher.NORD
 

@@ -162,8 +162,10 @@ class ParseStaticRoute (Section):
 		routes = self.scope.pop(self.name)
 		if routes:
 			for route in routes:
+				# if route.nlri.has_rd():
 				if route.nlri.rd is not RouteDistinguisher.NORD:
 					route.nlri.safi = SAFI(SAFI.mpls_vpn)
+				# elif route.nlri.has_label():
 				elif route.nlri.labels is not Labels.NOLABEL:
 					route.nlri.safi = SAFI(SAFI.nlri_mpls)
 
