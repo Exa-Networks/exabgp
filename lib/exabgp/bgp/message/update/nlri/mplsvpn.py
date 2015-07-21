@@ -12,6 +12,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.bgp.message import OUT
 
 # from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.mpls import MPLS
 # from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
@@ -27,7 +28,7 @@ class MPLSVPN (MPLS):
 
 	@classmethod
 	def new (cls, afi, safi, packed, mask, nexthop):
-		instance = cls(afi,safi,OUT.announce)
+		instance = cls(afi,safi,OUT.ANNOUNCE)
 		instance.cidr = CIDR(packed, mask)
 		instance.nexthop = nexthop
 		return instance
