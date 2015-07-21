@@ -325,7 +325,7 @@ class Flow4Source (IPrefix4,FlowSource):
 
 # Prefix
 class Flow6Destination (IPrefix6,FlowDestination):
-	NAME = 'destination-ipv4'
+	NAME = 'destination-ipv6'
 
 
 # Prefix
