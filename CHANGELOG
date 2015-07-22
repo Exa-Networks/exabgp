@@ -16,6 +16,8 @@ Version 3.4.12
  * Fix: bad route comparaison
     reported by: Alvaro Pereira
  * Fix: decoding of Update
+ * Fix: Flow redirect to nexhop encoding
+    reported by: Mickael Marchand (Thank you to Peng Xiao and Nicolas Fevrier for their help) 
  * Fix/Improve: JSON for flow spec
  * Fix/Improve: redirect-to-nexthop
     reported by: Mickael Marchand
