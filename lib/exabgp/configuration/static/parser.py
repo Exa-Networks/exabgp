@@ -362,21 +362,23 @@ def community (tokeniser):
 
 _HEADER = {
 	# header and subheader
-	'target':   chr(0x00)+chr(0x02),
-	'target4':  chr(0x02)+chr(0x02),
-	'origin':   chr(0x00)+chr(0x03),
-	'origin4':  chr(0x02)+chr(0x03),
-	'redirect': chr(0x80)+chr(0x08),
-	'l2info':   chr(0x80)+chr(0x0A),
+	'target':              chr(0x00)+chr(0x02),
+	'target4':             chr(0x02)+chr(0x02),
+	'origin':              chr(0x00)+chr(0x03),
+	'origin4':             chr(0x02)+chr(0x03),
+	'redirect':            chr(0x80)+chr(0x08),
+	'l2info':              chr(0x80)+chr(0x0A),
+	'redirect-to-nexthop': chr(0x08)+chr(0x00),
 }
 
 _SIZE = {
-	'target':   2,
-	'target4':  2,
-	'origin':   2,
-	'origin4':  2,
-	'redirect': 2,
-	'l2info':   4,
+	'target':              2,
+	'target4':             2,
+	'origin':              2,
+	'origin4':             2,
+	'redirect':            2,
+	'l2info':              4,
+	'redirect-to-nexthop': 0,
 }
 
 _SIZE_H = 0xFFFF
@@ -399,7 +401,10 @@ def _extended_community (value):
 		if len(components) != _SIZE[command]:
 			raise ValueError('invalid extended community %s, expecting %d fields ' % (command,len(components)))
 
-		header = _HEADER[command]
+		header = _HEADER.get(command,None)
+
+		if header is None:
+			raise ValueError('unknown extended community %s' % command)
 
 		if command == 'l2info':
 			# encaps, control, mtu, site
@@ -444,6 +449,9 @@ def _extended_community (value):
 			return ExtendedCommunity.unpack(header+pack('!HL',iga,ila),None)
 
 		raise ValueError('invalid extended community %s' % command)
+	elif value == 'redirect-to-nexthop':
+		header = _HEADER[value]
+		return ExtendedCommunity.unpack(header+pack('!HL',0,0),None)
 	else:
 		raise ValueError('invalid extended community %s - lc+gc' % value)
 
