@@ -161,7 +161,7 @@ class TrafficMark (ExtendedCommunity):
 
 @ExtendedCommunity.register
 class TrafficNextHop (ExtendedCommunity):
-	COMMUNITY_TYPE = 0x80
+	COMMUNITY_TYPE = 0x08
 	COMMUNITY_SUBTYPE = 0x00
 
 	__slots__ = ['copy']
