@@ -1,3 +1,10 @@
+exabgp (3.4.12-1) UNRELEASED; urgency=medium
+
+  * New upstream version.
+  * Drop the two previously introduced patches.
+
+ -- Vincent Bernat <bernat@debian.org>  Thu, 23 Jul 2015 15:13:04 +0200
+
 exabgp (3.4.11-3) unstable; urgency=medium
 
   * Exclude Debian versions from debian/watch.
