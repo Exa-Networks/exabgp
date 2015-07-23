@@ -1687,10 +1687,8 @@ class Configuration (object):
 
 		# Really ugly
 		klass = change.nlri.__class__
-		if klass is Prefix:
+		if klass is MPLS:
 			path_info = change.nlri.path_info
-		elif klass is MPLS:
-			path_info = None
 			labels = change.nlri.labels
 			rd = change.nlri.rd
 		# packed and not pack() but does not matter atm, it is an IP not a NextHop
@@ -1701,8 +1699,9 @@ class Configuration (object):
 		# generate the new routes
 		for _ in range(number):
 			# update ip to the next route, this recalculate the "ip" field of the Inet class
-			nlri = klass(afi,safi,pack_int(afi,ip,split),split,nexthop,OUT.ANNOUNCE,path_info)
+			nlri = klass(afi,safi,pack_int(afi,ip,split),split,nexthop,OUT.ANNOUNCE)
 			if klass is MPLS:
+				nlri.path_info = path_info
 				nlri.labels = labels
 				nlri.rd = rd
 			# next ip
@@ -1726,16 +1725,16 @@ class Configuration (object):
 			mask = 32
 		try:
 			if 'rd' in tokens:
-				klass = MPLS
+				safi = SAFI(SAFI.mpls_vpn)
 			elif 'route-distinguisher' in tokens:
-				klass = MPLS
+				safi = SAFI(SAFI.mpls_vpn)
 			elif 'label' in tokens:
-				klass = MPLS
+				safi = SAFI(SAFI.nlri_mpls)
 			else:
-				klass = Prefix
+				safi = IP.tosafi(ip)
 
 			# nexthop must be false and its str return nothing .. an empty string does that
-			update = Change(klass(afi=IP.toafi(ip),safi=IP.tosafi(ip),packed=IP.pton(ip),mask=mask,nexthop=None,action=OUT.ANNOUNCE),Attributes())
+			update = Change(MPLS(afi=IP.toafi(ip),safi=safi,packed=IP.pton(ip),mask=mask,nexthop=None,action=OUT.ANNOUNCE),Attributes())
 		except ValueError:
 			self._error = self._str_route_error
 			if self.debug: raise Exception()  # noqa
@@ -1801,7 +1800,7 @@ class Configuration (object):
 
 			if command in self._dispatch_route_cfg:
 				if command in ('rd','route-distinguisher'):
-					if self._dispatch_route_cfg[command](scope,tokens,SAFI.nlri_mpls):
+					if self._dispatch_route_cfg[command](scope,tokens,SAFI.mpls_vpn):
 						continue
 				else:
 					if self._dispatch_route_cfg[command](scope,tokens):
@@ -2189,21 +2188,23 @@ class Configuration (object):
 		elif data.count(':'):
 			_known_community = {
 				# header and subheader
-				'target':   chr(0x00)+chr(0x02),
-				'target4':  chr(0x02)+chr(0x02),
-				'origin':   chr(0x00)+chr(0x03),
-				'origin4':  chr(0x02)+chr(0x03),
-				'redirect': chr(0x80)+chr(0x08),
-				'l2info':   chr(0x80)+chr(0x0A),
+				'redirect-to-nexthop': chr(0x80)+chr(0x00),
+				'target':              chr(0x00)+chr(0x02),
+				'target4':             chr(0x02)+chr(0x02),
+				'origin':              chr(0x00)+chr(0x03),
+				'origin4':             chr(0x02)+chr(0x03),
+				'redirect':            chr(0x80)+chr(0x08),
+				'l2info':              chr(0x80)+chr(0x0A),
 			}
 
 			_size_community = {
-				'target':   2,
-				'target4':  2,
-				'origin':   2,
-				'origin4':  2,
-				'redirect': 2,
-				'l2info':   4,
+				'redirect-to-nexthop': 2,
+				'target':              2,
+				'target4':             2,
+				'origin':              2,
+				'origin4':             2,
+				'redirect':            2,
+				'l2info':              4,
 			}
 
 			components = data.split(':')
@@ -2215,7 +2216,7 @@ class Configuration (object):
 			if len(components) != _size_community[command]:
 				raise ValueError('invalid extended community %s, expecting %d fields ' % (command,len(components)))
 
-			header = _known_community[command]
+			header = _known_community.get(command,None)
 
 			if command == 'l2info':
 				# encaps, control, mtu, site
@@ -2262,6 +2263,9 @@ class Configuration (object):
 			if command in ('redirect',):
 				ga,la = components
 				return ExtendedCommunity.unpack(header+pack('!HL',int(ga),long(la)),None)
+
+			if command in ('redirect-nexthop',):
+				return ExtendedCommunity.unpack(header+pack('!HL',0,0),None)
 
 			raise ValueError('invalid extended community %s' % command)
 		else:

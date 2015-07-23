@@ -3,6 +3,25 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.4.12
+ * Fix: issue with unknown capabilities
+    reported by: Sandy Breeze
+ * Fix: notification messages were not passed to the API
+    reported by: Florian Obser
+ * Fix: transitivity on extended community
+    patch by: Thomas Morin 
+ * Fix: bad reporting of VPLS information in JSON
+ * Fix: wrong SAFI on MPLS routes
+    reported by: Hideaki HAYASHI
+ * Fix: bad route comparaison
+    reported by: Alvaro Pereira
+ * Fix: decoding of Update
+ * Fix: Flow redirect to nexhop encoding
+    reported by: Mickael Marchand (Thank you to Peng Xiao and Nicolas Fevrier for their help) 
+ * Fix/Improve: JSON for flow spec
+ * Fix/Improve: redirect-to-nexthop
+    reported by: Mickael Marchand
+
 Version 3.4.11
  * Change: install healthcheck in bin
  * Fix: Do shutdown when waiting for a new connection to a peer
@@ -44,6 +63,8 @@ Version 3.4.10
  * Fix: issue with ASN4 code
     reported by: Florian Obser (with a patch, thank you)
  * Fix: issue with --decode
+ * Change: remove /usr/bin/healthcheck. People should use
+    "python -m exabgp healthcheck" instead
 
 Version 3.4.9
  * Fix: very bad bug where NLRI where not associated to the right AFI/SAFI pair ( #235 )

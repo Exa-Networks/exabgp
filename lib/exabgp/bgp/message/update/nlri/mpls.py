@@ -24,14 +24,17 @@ from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 class MPLS (NLRI,CIDR):
 	__slots__ = ['labels','rd','nexthop','action']
 
-	def __init__ (self, afi, safi, packed, mask, nexthop, action,path=None):
-		self.path_info = PathInfo.NOPATH if path is None else path
+	def __init__ (self, afi, safi, packed, mask, nexthop, action):
+		self.path_info = PathInfo.NOPATH
 		self.labels = Labels.NOLABEL
 		self.rd = RouteDistinguisher.NORD
 		self.nexthop = IP.unpack(nexthop) if nexthop else NoIP
 		self.action = action
 		NLRI.__init__(self,afi,safi)
 		CIDR.__init__(self,packed,mask)
+
+	def index (self):
+		return self.pack() + self.nexthop.pack()
 
 	def has_label (self):
 		if self.afi == AFI.ipv4 and self.safi in (SAFI.nlri_mpls,SAFI.mpls_vpn):
@@ -50,8 +53,8 @@ class MPLS (NLRI,CIDR):
 		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
 		return "%s%s" % (self.extensive(),nexthop)
 
-	def __eq__ (self, other):
-		return str(self) == str(other)
+	def __eq__ (self,other):
+		return self.index() == other.index()
 
 	def __ne__ (self, other):
 		return not self.__eq__(other)
@@ -73,9 +76,13 @@ class MPLS (NLRI,CIDR):
 
 	def pack (self, addpath=None):
 		if not self.has_label():
+			if addpath:
+				return self.path_info.pack() + CIDR.pack(self)
 			return CIDR.pack(self)
 
 		length = len(self.labels)*8 + len(self.rd)*8 + self.mask
+		if addpath:
+			return self.path_info.pack() + chr(length) + self.labels.pack() + self.rd.pack() + CIDR.packed_ip(self)
 		return chr(length) + self.labels.pack() + self.rd.pack() + CIDR.packed_ip(self)
 
 	def index (self):

@@ -16,6 +16,7 @@ class UnknownCapability (Capability):
 	def set (self, capability, data=''):
 		self.capability = capability
 		self.data = data
+		return self
 
 	def __str__ (self):
 		if self.capability in Capability.CODE.reserved:

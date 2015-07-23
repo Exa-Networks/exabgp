@@ -46,8 +46,8 @@ class RouteTargetASNIP (RouteTarget):
 		RouteTarget.__init__(
 			self,
 			community if community else pack(
-				'!BBH4s',
-				self.COMMUNITY_TYPE | 0x40 if transitive else self.COMMUNITY_TYPE,0x02,
+				'!2sHL',
+				self._packedTypeSubtype(transitive),
 				asn,IPv4.pton(ip)
 			)
 		)
@@ -76,8 +76,8 @@ class RouteTargetIPASN (RouteTarget):
 		RouteTarget.__init__(
 			self,
 			community if community else pack(
-				'!BB4sH',
-				self.COMMUNITY_TYPE | 0x40 if transitive else self.COMMUNITY_TYPE,0x02,
+				'!2s4sH',
+				self._packedTypeSubtype(transitive),
 				IPv4.pton(ip),asn
 			)
 		)
@@ -106,8 +106,8 @@ class RouteTargetASN4Number (RouteTarget):
 		RouteTarget.__init__(
 			self,
 			community if community else pack(
-				'!BBLH',
-				self.COMMUNITY_TYPE | 0x40 if transitive else self.COMMUNITY_TYPE,0x02,
+				'!2sLH',
+				self._packedTypeSubtype(transitive),
 				asn,number
 			)
 		)
