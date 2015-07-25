@@ -14,10 +14,6 @@ ExaBGP
    :target: https://pypi.python.org/pypi/exabgp/
    :alt: Downloads
 
-.. image:: https://img.shields.io/pypi/v/exabgp.svg
-   :target: https://pypi.python.org/pypi/exabgp/
-   :alt: Latest Version
-
 .. image:: https://img.shields.io/scrutinizer/coverage/g/exa-networks/exabgp.svg
    :target: https://coveralls.io/r/Exa-Networks/exabgp
    :alt: Coverage
