@@ -1,3 +1,10 @@
+exabgp (3.4.12-2) unstable; urgency=medium
+
+  * Disable more control tests. They seem to be unreliable when run in
+    unusual conditions. Closes: #793509.
+
+ -- Vincent Bernat <bernat@debian.org>  Sat, 25 Jul 2015 14:32:59 +0200
+
 exabgp (3.4.12-1) unstable; urgency=medium
 
   * New upstream version.
