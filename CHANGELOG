@@ -73,6 +73,8 @@ Version 4.0.0
    reported by: Sergey Viuchny (stroboscope)
  * Fix: Flow redirect to nexhop encoding
    reported by: Mickael Marchand (Thank you to Peng Xiao and Nicolas Fevrier for their help)
+ * Fix: remove useless PYTHONPATH in sbin/exabgp
+   reported by: he32
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
