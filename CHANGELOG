@@ -74,7 +74,7 @@ Version 4.0.0
  * Fix: Flow redirect to nexhop encoding
    reported by: Mickael Marchand (Thank you to Peng Xiao and Nicolas Fevrier for their help)
  * Fix: remove useless PYTHONPATH in sbin/exabgp
-   reported by: he32
+   reported by: Håvard Eidnes
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
@@ -123,9 +123,9 @@ Version 3.4.8
  * Fix: bad iteration for JSON generation ( bug created during 3.4.8 dev )
     patch by: Ian bobbitt
  * Fix: healthcheck.py: optionally match "alias" in ifconfig output
-    patch by: Havard Eidnes
+    patch by: Håvard Eidnes
  * Fix: healthcheck.py: make the ifconfig path work; regexp fix
-    patch by: Havard Eidnes
+    patch by: Håvard Eidnes
  * Change: moved the netlink library within exabgp
  * Feature: qa/bin/ip and qa/bin/route
 
