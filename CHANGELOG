@@ -75,6 +75,7 @@ Version 4.0.0
    reported by: Mickael Marchand (Thank you to Peng Xiao and Nicolas Fevrier for their help)
  * Fix: remove useless PYTHONPATH in sbin/exabgp
    reported by: Håvard Eidnes
+ * Fix: add semi-colon in syslog ouput
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
