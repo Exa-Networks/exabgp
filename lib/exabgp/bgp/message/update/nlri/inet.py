@@ -44,7 +44,7 @@ class INET (NLRI):
 	def __eq__ (self, other):
 		return \
 			NLRI.__eq__(self, other) and \
-			CIDR.__eq__(self, other) and \
+			self.cidr == other.cidr and \
 			self.path_info == other.path_info and \
 			self.nexthop == other.nexthop
 

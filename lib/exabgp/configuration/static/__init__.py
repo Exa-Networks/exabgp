@@ -15,8 +15,8 @@ from exabgp.protocol.family import SAFI
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update.nlri import CIDR
 from exabgp.bgp.message.update.nlri import INET
-from exabgp.bgp.message.update.nlri import Label
-from exabgp.bgp.message.update.nlri import MPLS
+from exabgp.bgp.message.update.nlri import Labelled
+from exabgp.bgp.message.update.nlri import IPVPN
 
 from exabgp.bgp.message.update.attribute import Attributes
 
@@ -53,9 +53,9 @@ def route (tokeniser):
 	ipmask = prefix(tokeniser)
 
 	if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
-		nlri = MPLS(IP.toafi(ipmask.top()),SAFI.mpls_vpn,OUT.ANNOUNCE)
+		nlri = IPVPN(IP.toafi(ipmask.top()),SAFI.mpls_vpn,OUT.ANNOUNCE)
 	elif 'label' in tokeniser.tokens:
-		nlri = Label(IP.toafi(ipmask.top()),SAFI.nlri_mpls,OUT.ANNOUNCE)
+		nlri = Labelled(IP.toafi(ipmask.top()),SAFI.nlri_mpls,OUT.ANNOUNCE)
 	else:
 		nlri = INET(IP.toafi(ipmask.top()),IP.tosafi(ipmask.top()),OUT.ANNOUNCE)
 
@@ -93,9 +93,9 @@ def attributes (tokeniser):
 	ipmask = prefix(lambda: tokeniser.tokens[-1])
 
 	if 'rd' in tokeniser.tokens or 'route-distinguisher' in tokeniser.tokens:
-		nlri = MPLS(IP.toafi(ipmask.top()),SAFI.mpls_vpn,OUT.ANNOUNCE)
+		nlri = IPVPN(IP.toafi(ipmask.top()),SAFI.mpls_vpn,OUT.ANNOUNCE)
 	elif 'label' in tokeniser.tokens:
-		nlri = Label(IP.toafi(ipmask.top()),SAFI.nlri_mpls,OUT.ANNOUNCE)
+		nlri = Labelled(IP.toafi(ipmask.top()),SAFI.nlri_mpls,OUT.ANNOUNCE)
 	else:
 		nlri = INET(IP.toafi(ipmask.top()),IP.tosafi(ipmask.top()),OUT.ANNOUNCE)
 

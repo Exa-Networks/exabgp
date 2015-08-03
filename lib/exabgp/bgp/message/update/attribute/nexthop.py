@@ -24,6 +24,7 @@ class NextHop (Attribute,IP):
 	CACHING = True
 	SELF = False
 
+	# XXX: This is a bad API, as it works on non-raw data
 	def __init__ (self, string, packed=None):
 		self.init(string,packed)
 

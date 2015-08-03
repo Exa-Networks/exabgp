@@ -13,14 +13,14 @@ from exabgp.configuration.operational.parser import operational
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
-from exabgp.protocol.ip import IP
-from exabgp.bgp.message import OUT
+# from exabgp.protocol.ip import IP
+# from exabgp.bgp.message import OUT
 
-from exabgp.bgp.message.update.nlri import INET
-from exabgp.bgp.message.update.nlri import MPLS
+# from exabgp.bgp.message.update.nlri import INET
+# from exabgp.bgp.message.update.nlri import IPVPN
 from exabgp.bgp.message.refresh import RouteRefresh
 
-from exabgp.rib.change import Change
+# from exabgp.rib.change import Change
 
 
 # XXX: Need to remove the need to use scope to parse things

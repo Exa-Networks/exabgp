@@ -16,7 +16,7 @@ from exabgp.protocol.family import AFI
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update.nlri import CIDR
 from exabgp.bgp.message.update.nlri import INET
-from exabgp.bgp.message.update.nlri import MPLS
+from exabgp.bgp.message.update.nlri import IPVPN
 
 from exabgp.bgp.message.open import ASN
 from exabgp.bgp.message.open import RouterID
@@ -109,7 +109,7 @@ def inet (tokeniser):
 
 def mpls (tokeniser):
 	ipmask = prefix(tokeniser)
-	mpls = MPLS(
+	mpls = IPVPN(
 		afi=IP.toafi(ipmask.top()),
 		safi=IP.tosafi(ipmask.top()),
 		action=OUT.UNSET
