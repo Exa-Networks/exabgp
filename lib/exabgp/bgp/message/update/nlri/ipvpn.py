@@ -60,6 +60,12 @@ class IPVPN (Labelled):
 			Labelled.__eq__(self, other) and \
 			self.rd == other.rd
 
+	# bagpipe specific code
+	def eq (self, other):
+		return \
+			Labelled.eq(self, other) and \
+			self.rd == other.rd
+
 	def __hash__ (self):
 		# bagpipe: two NLRI with same RD and prefix, but different labels need to have the same hash
 		return hash((self.rd, self.cidr.top(), self.cidr.mask))

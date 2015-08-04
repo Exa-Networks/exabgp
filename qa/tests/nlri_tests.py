@@ -116,6 +116,7 @@ class TestNLRIs(unittest.TestCase):
                           OUT.ANNOUNCE)
 
         self.assertEqual(hash(nlri1), hash(nlri2))
+        self.assertTrue(nlri1.eq(nlri2))
         self.assertNotEqual(nlri1, nlri2)
 
     def test3_IPVPNHashEqual(self):
@@ -141,6 +142,7 @@ class TestNLRIs(unittest.TestCase):
                           OUT.WITHDRAW)
 
         self.assertEqual(hash(nlri1), hash(nlri2))
+        self.assertTrue(nlri1.eq(nlri2))
         self.assertEqual(nlri1, nlri2)
 
     # Tests on EVPN NLRIs
