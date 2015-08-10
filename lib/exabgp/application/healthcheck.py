@@ -57,8 +57,15 @@ import collections
 logger = logging.getLogger("healthcheck")
 
 try:
-    # Python 3.3+
-    from ipaddress import ip_address  # pylint: disable=F0401
+    # Python 3.3+ or backport
+    from ipaddress import ip_address as _ip_address  # pylint: disable=F0401
+
+    def ip_address(x):
+        try:
+            x = x.decode('ascii')
+        except AttributeError:
+            pass
+        return _ip_address(x)
 except ImportError:
     try:
         # Python 2.6, 2.7, 3.2
