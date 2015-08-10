@@ -53,7 +53,6 @@ import argparse
 import signal
 import time
 import collections
-import socket
 
 logger = logging.getLogger("healthcheck")
 
