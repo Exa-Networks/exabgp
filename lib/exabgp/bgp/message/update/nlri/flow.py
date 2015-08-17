@@ -71,9 +71,10 @@ class NumericOperator (CommonOperator):
 
 
 class BinaryOperator (CommonOperator):
-	# reserved= 0x0C  # 0b00001100
+	INCLUDE   = 0x00  # 0b00000000
 	NOT       = 0x02  # 0b00000010
 	MATCH     = 0x01  # 0b00000001
+	# reserved= 0x0C  # 0b00001100
 
 
 def _len_to_bit (value):
@@ -206,6 +207,7 @@ class IOperationByteShort (IOperation):
 # String representation for Numeric and Binary Tests
 
 class NumericString (object):
+	OPERATION = 'numeric'
 	operations = None
 	value = None
 
@@ -228,12 +230,14 @@ class NumericString (object):
 
 
 class BinaryString (object):
+	OPERATION = 'binary'
 	operations = None
 	value = None
 
 	_string = {
-		BinaryOperator.NOT:   '!',
-		BinaryOperator.MATCH: '=',
+		BinaryOperator.INCLUDE: '',
+		BinaryOperator.NOT:     '!',
+		BinaryOperator.MATCH:   '=',
 		BinaryOperator.AND | BinaryOperator.NOT:   '&!',
 		BinaryOperator.AND | BinaryOperator.MATCH: '&=',
 	}

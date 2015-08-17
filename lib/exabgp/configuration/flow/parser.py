@@ -74,7 +74,7 @@ def destination (tokeniser):
 # Expressions
 
 
-def _operator (string):
+def _operator_numeric (string):
 	try:
 		if string[0] == '=':
 			return NumericOperator.EQ,string[1:]
@@ -92,6 +92,17 @@ def _operator (string):
 	except IndexError:
 		raise ValueError('Invalid expression (too short) %s' % string)
 
+def _operator_binary (string):
+	try:
+		if string[0] == '=':
+			return BinaryOperator.MATCH,string[1:]
+		elif string[0] == '!':
+			return BinaryOperator.NOT,string[1:]
+		else:
+			return BinaryOperator.INCLUDE,string[1:]
+	except IndexError:
+		raise ValueError('Invalid expression (too short) %s' % string)
+
 
 def _value (string):
 	l = 0
@@ -106,6 +117,7 @@ def _value (string):
 # parse [ content1 content2 content3 ]
 # parse =80 or >80 or <25 or &>10<20
 def _generic_condition (tokeniser, klass):
+	_operator = _operator_binary if klass.OPERATION == 'binary' else _operator_numeric
 	data = tokeniser()
 	AND = BinaryOperator.NOP
 	if data == '[':
