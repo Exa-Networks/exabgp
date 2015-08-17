@@ -58,7 +58,7 @@ class CIDR (object):
 			self._ip = IP.ntop(self._packed)
 		return self._ip
 
-	def ton (self):
+	def ton (self, negotiated=None):
 		return self._packed
 
 	def __repr__ (self):

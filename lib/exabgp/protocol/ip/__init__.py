@@ -108,7 +108,7 @@ class IP (object):
 	def pack (self):
 		return self._packed
 
-	def ton (self):
+	def ton (self, negotiated=None):
 		return self._packed
 
 	def __repr__ (self):
@@ -174,7 +174,7 @@ class _NoNextHop (object):
 	def index (self):
 		return ''
 
-	def ton (self):
+	def ton (self, negotiated=None):
 		return ''
 
 	def __str__ (self):

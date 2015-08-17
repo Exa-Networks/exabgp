@@ -64,10 +64,10 @@ class MPRNLRI (Attribute,Family):
 				# we do not want a next_hop attribute packed (with the _attribute()) but just the next_hop itself
 				if nlri.safi.has_rd():
 					# .packed and not .pack()
-					nexthop = chr(0)*8 + nlri.nexthop.ton()
+					nexthop = chr(0)*8 + nlri.nexthop.ton(negotiated)
 				else:
 					# .packed and not .pack()
-					nexthop = nlri.nexthop.ton()
+					nexthop = nlri.nexthop.ton(negotiated)
 
 			# mpunli[afi,safi][nexthop] = nlri
 			mpnlri.setdefault((nlri.afi.pack(),nlri.safi.pack()),{}).setdefault(nexthop,[]).append(nlri.pack(negotiated))
