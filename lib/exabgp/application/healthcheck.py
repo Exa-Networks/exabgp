@@ -53,13 +53,19 @@ import argparse
 import signal
 import time
 import collections
-import socket
 
 logger = logging.getLogger("healthcheck")
 
 try:
-    # Python 3.3+
-    from ipaddress import ip_address  # pylint: disable=F0401
+    # Python 3.3+ or backport
+    from ipaddress import ip_address as _ip_address  # pylint: disable=F0401
+
+    def ip_address(x):
+        try:
+            x = x.decode('ascii')
+        except AttributeError:
+            pass
+        return _ip_address(x)
 except ImportError:
     try:
         # Python 2.6, 2.7, 3.2
@@ -108,6 +114,10 @@ def parse():
     parser.add_argument("--pid", "-p", metavar="FILE",
                         type=argparse.FileType('w'),
                         help="write PID to the provided file")
+    parser.add_argument("--user", metavar="USER",
+                        help="set user after setting loopback addresses")
+    parser.add_argument("--group", metavar="GROUP",
+                        help="set group after setting loopback addresses")
 
     g = parser.add_argument_group("checking healthiness")
     g.add_argument("--interval", "-i", metavar='N',
@@ -294,6 +304,26 @@ def setup_ips(ips, label):
                 cmd += ["label", "lo:{0}".format(label)]
             subprocess.check_call(
                 cmd, stdout=fnull, stderr=fnull)
+
+
+def drop_privileges(user, group):
+    """Drop privileges to specified user and group"""
+    if group is not None:
+        import grp
+        gid = grp.getgrnam(group).gr_gid
+        logger.debug("Dropping privileges to group {0}/{1}".format(group, gid))
+        try:
+            os.setresgid(gid, gid, gid)
+        except AttributeError:
+            os.setregid(gid, gid)
+    if user is not None:
+        import pwd
+        uid = pwd.getpwnam(user).pw_uid
+        logger.debug("Dropping privileges to user {0}/{1}".format(user, uid))
+        try:
+            os.setresuid(uid, uid, uid)
+        except AttributeError:
+            os.setreuid(uid, uid)
 
 
 def check(cmd, timeout):
@@ -490,6 +520,7 @@ def main():
             sys.exit(1)
         if options.ip_setup:
             setup_ips(options.ips, options.label)
+        drop_privileges(options.user, options.group)
         options.ips = collections.deque(options.ips)
         options.ips.rotate(-options.start_ip)
         options.ips = list(options.ips)
