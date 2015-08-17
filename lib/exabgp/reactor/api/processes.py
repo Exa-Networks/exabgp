@@ -182,7 +182,7 @@ class Processes (object):
 							raw = buffered.get(process,'') + proc.stdout.readline()
 
 							if not raw.endswith('\n'):
-								buffered[process] = buffered.get(process,'') + raw
+								buffered[process] = raw
 								continue
 
 							buffered[process] = ''
