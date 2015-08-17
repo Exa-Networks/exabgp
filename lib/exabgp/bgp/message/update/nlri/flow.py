@@ -71,10 +71,10 @@ class NumericOperator (CommonOperator):
 
 
 class BinaryOperator (CommonOperator):
-	INCLUDE   = 0x00  # 0b00000000
+	# reserved= 0x0C  # 0b00001100
 	NOT       = 0x02  # 0b00000010
 	MATCH     = 0x01  # 0b00000001
-	# reserved= 0x0C  # 0b00001100
+	INCLUDE   = 0x00  # 0b00000000
 
 
 def _len_to_bit (value):

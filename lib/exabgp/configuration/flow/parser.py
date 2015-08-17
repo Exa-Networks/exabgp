@@ -92,6 +92,7 @@ def _operator_numeric (string):
 	except IndexError:
 		raise ValueError('Invalid expression (too short) %s' % string)
 
+
 def _operator_binary (string):
 	try:
 		if string[0] == '=':
