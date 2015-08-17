@@ -99,7 +99,7 @@ def _operator_binary (string):
 		elif string[0] == '!':
 			return BinaryOperator.NOT,string[1:]
 		else:
-			return BinaryOperator.INCLUDE,string[1:]
+			return BinaryOperator.INCLUDE,string
 	except IndexError:
 		raise ValueError('Invalid expression (too short) %s' % string)
 
