@@ -8,9 +8,6 @@ Copyright (c) 2009-2015 Orange. All rights reserved.
 """
 import unittest
 
-from exabgp.configuration.setup import environment
-environment.setup('')
-
 from exabgp.reactor.protocol import AFI, SAFI
 
 from exabgp.bgp.message.update import Attributes
@@ -23,7 +20,7 @@ from exabgp.bgp.message.update.attribute.community.extended \
 from exabgp.bgp.message.update.attribute.community.extended.encapsulation \
     import Encapsulation
 
-from exabgp.bgp.message.update.nlri.mpls import MPLSVPN
+from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
 from exabgp.bgp.message.update.nlri.evpn.mac import MAC as EVPNMAC
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
@@ -35,6 +32,8 @@ from exabgp.protocol.ip import IP
 
 from exabgp.bgp.message import OUT
 
+from exabgp.configuration.setup import environment
+environment.setup('')
 
 
 def prefixToPackedIPMask(prefix):
@@ -46,7 +45,7 @@ class TestNLRIs(unittest.TestCase):
 
     # tests on MPLS VPN NLRIs
 
-    def test0_MPLSVPNHashEqual(self):
+    def test0_IPVPNHashEqual(self):
         '''
         Two indistinct VPN NLRIs should
         hash to the same value, and be equal
@@ -55,22 +54,22 @@ class TestNLRIs(unittest.TestCase):
 
         packedPrefix, mask = prefixToPackedIPMask("1.1.1.1/32")
 
-        nlri1 = MPLSVPN(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
-                        packedPrefix, mask,
-                        Labels([42], True), rd,
-                        IP.pton("45.45.45.45"),
-                        OUT.ANNOUNCE)
+        nlri1 = IPVPN.new(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
+                          packedPrefix, mask,
+                          Labels([42], True), rd,
+                          IP.pton("45.45.45.45"),
+                          OUT.ANNOUNCE)
 
-        nlri2 = MPLSVPN(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
-                        packedPrefix, mask,
-                        Labels([42], True), rd,
-                        IP.pton("45.45.45.45"),
-                        OUT.ANNOUNCE)
+        nlri2 = IPVPN.new(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
+                          packedPrefix, mask,
+                          Labels([42], True), rd,
+                          IP.pton("45.45.45.45"),
+                          OUT.ANNOUNCE)
 
         self.assertEqual(hash(nlri1), hash(nlri2))
         self.assertEqual(nlri1, nlri2)
 
-    def test1_MPLSVPNHashEqual(self):
+    def test1_IPVPNHashEqual(self):
         '''
         Two VPN NLRI distinct only by their *label* should
         hash to the same value, and be equal
@@ -78,48 +77,49 @@ class TestNLRIs(unittest.TestCase):
 
         packedPrefix, mask = prefixToPackedIPMask("1.1.1.1/32")
 
-        nlri1 = MPLSVPN(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
-                        packedPrefix, mask,
-                        Labels([42], True),
-                        RouteDistinguisher.fromElements("42.42.42.42", 5),
-                        IP.pton("45.45.45.45"),
-                        OUT.ANNOUNCE)
+        nlri1 = IPVPN.new(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
+                          packedPrefix, mask,
+                          Labels([42], True),
+                          RouteDistinguisher.fromElements("42.42.42.42", 5),
+                          IP.pton("45.45.45.45"),
+                          OUT.ANNOUNCE)
 
-        nlri2 = MPLSVPN(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
-                        packedPrefix, mask,
-                        Labels([0], True),
-                        RouteDistinguisher.fromElements("42.42.42.42", 5),
-                        IP.pton("45.45.45.45"),
-                        OUT.ANNOUNCE)
+        nlri2 = IPVPN.new(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
+                          packedPrefix, mask,
+                          Labels([0], True),
+                          RouteDistinguisher.fromElements("42.42.42.42", 5),
+                          IP.pton("45.45.45.45"),
+                          OUT.ANNOUNCE)
 
         self.assertEqual(hash(nlri1), hash(nlri2))
-        self.assertEqual(nlri1, nlri2)
+        self.assertNotEqual(nlri1, nlri2)
 
-    def test2_MPLSVPNHashEqual(self):
+    def test2_IPVPNHashEqual(self):
         '''
         Two VPN NLRI distinct only by their *nexthop* should
         hash to the same value, and be equal
         '''
         packedPrefix, mask = prefixToPackedIPMask("1.1.1.1/32")
 
-        nlri1 = MPLSVPN(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
-                        packedPrefix, mask,
-                        Labels([42], True),
-                        RouteDistinguisher.fromElements("42.42.42.42", 5),
-                        IP.pton("45.45.45.45"),
-                        OUT.ANNOUNCE)
+        nlri1 = IPVPN.new(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
+                          packedPrefix, mask,
+                          Labels([42], True),
+                          RouteDistinguisher.fromElements("42.42.42.42", 5),
+                          IP.pton("45.45.45.45"),
+                          OUT.ANNOUNCE)
 
-        nlri2 = MPLSVPN(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
-                        packedPrefix, mask,
-                        Labels([42], True),
-                        RouteDistinguisher.fromElements("42.42.42.42", 5),
-                        IP.pton("77.77.77.77"),
-                        OUT.ANNOUNCE)
+        nlri2 = IPVPN.new(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
+                          packedPrefix, mask,
+                          Labels([42], True),
+                          RouteDistinguisher.fromElements("42.42.42.42", 5),
+                          IP.pton("77.77.77.77"),
+                          OUT.ANNOUNCE)
 
         self.assertEqual(hash(nlri1), hash(nlri2))
-        self.assertEqual(nlri1, nlri2)
+        self.assertTrue(nlri1.eq(nlri2))
+        self.assertNotEqual(nlri1, nlri2)
 
-    def test3_MPLSVPNHashEqual(self):
+    def test3_IPVPNHashEqual(self):
         '''
         Two VPN NLRI distinct only by their *action* should
         hash to the same value, and be equal
@@ -127,21 +127,22 @@ class TestNLRIs(unittest.TestCase):
 
         packedPrefix, mask = prefixToPackedIPMask("1.1.1.1/32")
 
-        nlri1 = MPLSVPN(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
-                        packedPrefix, mask,
-                        Labels([42], True),
-                        RouteDistinguisher.fromElements("42.42.42.42", 5),
-                        IP.pton("45.45.45.45"),
-                        OUT.ANNOUNCE)
+        nlri1 = IPVPN.new(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
+                          packedPrefix, mask,
+                          Labels([42], True),
+                          RouteDistinguisher.fromElements("42.42.42.42", 5),
+                          IP.pton("45.45.45.45"),
+                          OUT.ANNOUNCE)
 
-        nlri2 = MPLSVPN(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
-                        packedPrefix, mask,
-                        Labels([42], True),
-                        RouteDistinguisher.fromElements("42.42.42.42", 5),
-                        IP.pton("45.45.45.45"),
-                        OUT.WITHDRAW)
+        nlri2 = IPVPN.new(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
+                          packedPrefix, mask,
+                          Labels([42], True),
+                          RouteDistinguisher.fromElements("42.42.42.42", 5),
+                          IP.pton("45.45.45.45"),
+                          OUT.WITHDRAW)
 
         self.assertEqual(hash(nlri1), hash(nlri2))
+        self.assertTrue(nlri1.eq(nlri2))
         self.assertEqual(nlri1, nlri2)
 
     # Tests on EVPN NLRIs
@@ -278,7 +279,6 @@ class TestNLRIs(unittest.TestCase):
 
         self.assertEqual(hash(atts1), hash(atts2))
         self.assertEqual(atts1, atts2)
-
 
     def test10_Ecoms(self):
         eComs1 = ExtendedCommunities()

@@ -9,12 +9,17 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
+from exabgp.protocol.ip import IP
+
 from exabgp.bgp.message import OUT
 
 from exabgp.bgp.message.update.nlri.nlri import NLRI
-from exabgp.bgp.message.update.nlri.label import Label
+from exabgp.bgp.message.update.nlri.cidr import CIDR
+from exabgp.bgp.message.update.nlri.labelled import Labelled
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
+from exabgp.bgp.message.update.attribute import NextHop
+
 
 # ====================================================== MPLS
 # RFC 3107 / RFC 4364
@@ -23,18 +28,28 @@ from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 @NLRI.register(AFI.ipv6,SAFI.nlri_mpls)
 @NLRI.register(AFI.ipv4,SAFI.mpls_vpn)
 @NLRI.register(AFI.ipv6,SAFI.mpls_vpn)
-class MPLS (Label):
+class IPVPN (Labelled):
 	__slots__ = ['rd']
 
 	def __init__ (self, afi, safi, action=OUT.UNSET):
-		Label.__init__(self, afi, safi, action)
+		Labelled.__init__(self, afi, safi, action)
 		self.rd = RouteDistinguisher.NORD
+
+	@classmethod
+	def new (cls, afi, safi, packed, mask, labels, rd, nexthop, action):
+		instance = cls(afi,safi,OUT.ANNOUNCE)
+		instance.cidr = CIDR(packed, mask)
+		instance.labels = labels
+		instance.rd = rd
+		instance.nexthop = NextHop(IP.ntop(nexthop),nexthop)
+		instance.action = action
+		return instance
 
 	def extensive (self):
 		return "%s%s%s%s%s" % (self.prefix(),str(self.labels),str(self.rd),str(self.path_info),str(self.rd))
 
 	def __len__ (self):
-		return Label.__len__(self) + len(self.rd)
+		return Labelled.__len__(self) + len(self.rd)
 
 	def __repr__ (self):
 		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
@@ -42,8 +57,18 @@ class MPLS (Label):
 
 	def __eq__ (self, other):
 		return \
-			Label.__eq__(self, other) and \
+			Labelled.__eq__(self, other) and \
 			self.rd == other.rd
+
+	# bagpipe specific code
+	def eq (self, other):
+		return \
+			Labelled.eq(self, other) and \
+			self.rd == other.rd
+
+	def __hash__ (self):
+		# bagpipe: two NLRI with same RD and prefix, but different labels need to have the same hash
+		return hash((self.rd, self.cidr.top(), self.cidr.mask))
 
 	@classmethod
 	def has_rd (cls):
@@ -60,7 +85,7 @@ class MPLS (Label):
 		return addpath + mask + self.labels.pack() + self.rd.pack() + self.cidr.pack_ip()
 
 	def _internal (self, announced=True):
-		r = Label._internal(self,announced)
+		r = Labelled._internal(self,announced)
 		if announced and self.rd:
 			r.append(self.rd.json())
 		return r
