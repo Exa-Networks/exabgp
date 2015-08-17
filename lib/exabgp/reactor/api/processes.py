@@ -163,6 +163,7 @@ class Processes (object):
 
 	def received (self):
 		consumed_data = False
+		buffered = {}
 
 		for process in list(self._process):
 			try:
@@ -178,7 +179,13 @@ class Processes (object):
 							# Calling next() on Linux and OSX works perfectly well
 							# but not on OpenBSD where it always raise StopIteration
 							# and only readline() works
-							raw = proc.stdout.readline()
+							raw = buffered.get(process,'') + proc.stdout.readline()
+
+							if not raw.endswith('\n'):
+								buffered[process] = buffered.get(process,'') + raw
+								continue
+
+							buffered[process] = ''
 							line = raw.rstrip()
 							consumed_data = True
 							self.logger.processes("Command from process %s : %s " % (process,line))
