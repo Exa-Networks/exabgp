@@ -417,7 +417,7 @@ class FlowTrafficClass (IOperationByte,NumericString,IPv6):
 
 
 # BinaryOperator
-class FlowFragment (IOperationByteShort,NumericString,IPv4):
+class FlowFragment (IOperationByteShort,BinaryString,IPv4):
 	ID = 0x0C
 	NAME = 'fragment'
 	converter = staticmethod(converter(Fragment.named))
