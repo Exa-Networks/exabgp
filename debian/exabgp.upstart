@@ -32,5 +32,5 @@ script
   export exabgp_daemon_user
   exabgp_daemon_pid=$PIDFILE
   export exabgp_daemon_pid
-  $DAEMON $DAEMON_OPTS
+  $DAEMON --folder /etc/exabgp $DAEMON_OPTS
 end script
