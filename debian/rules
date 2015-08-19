@@ -11,4 +11,4 @@ override_dh_auto_test:
 	env INTERPRETER=python sbin/exabgp --fi > etc/exabgp/exabgp.env
 	env INTERPRETER=python ./qa/bin/parsing
 	env INTERPRETER=python ./qa/bin/conversation
-	env INTERPRETER=python ETC=$(CURDIR)/etc/exabgp exabgp_log_enable=false nosetests ./qa/tests/*_test.py
+	env INTERPRETER=python exabgp_log_enable=false nosetests ./qa/tests/*_test.py

@@ -17,4 +17,4 @@ print [os.path.join(_, 'exabgp', 'application', 'tojson.py')
        if os.path.isfile('/'.join((_, 'exabgp', 'application', 'tojson.py')))][0]
 ")"
 
-exec env ETC="$path"/etc/exabgp "$INTERPRETER" "$APPLICATION" "$@"
+exec env "$INTERPRETER" "$APPLICATION" "$@"

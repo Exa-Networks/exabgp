@@ -29,7 +29,7 @@ SCRIPTNAME=/etc/init.d/$NAME
 [ -x $DAEMON ] || exit 0
 
 # Some env var the daemon will need
-export ETC="/etc/exabgp/"
+export ETC="/etc/exabgp"
 
 # Read configuration variable file if it is present
 [ -r /etc/default/$NAME ] && . /etc/default/$NAME
@@ -57,7 +57,7 @@ do_start()
 	#   1 if daemon was already running
 	#   2 if daemon could not be started
 	# We create the PID file and we do background thanks to start-stop-daemon
-	start-stop-daemon --start --quiet --pidfile $PIDFILE -c $USER -b -m --exec $DAEMON -- $DAEMON_OPTS
+	start-stop-daemon --start --quiet --pidfile $PIDFILE -c $USER -b -m --exec $DAEMON --folder $ETC -- $DAEMON_OPTS
 	return $?
 }
 
