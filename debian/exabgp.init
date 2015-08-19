@@ -21,15 +21,12 @@ USER=exabgp
 NAME=exabgp
 CONFIG="/etc/exabgp/exabgp.conf"
 DAEMON=/usr/sbin/exabgp
-DAEMON_OPTS="$CONFIG"
+DAEMON_OPTS="--folder /etc/exabgp $CONFIG"
 PIDFILE=/var/run/$NAME/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
 # Exit if the package is not installed
 [ -x $DAEMON ] || exit 0
-
-# Some env var the daemon will need
-export ETC="/etc/exabgp/"
 
 # Read configuration variable file if it is present
 [ -r /etc/default/$NAME ] && . /etc/default/$NAME

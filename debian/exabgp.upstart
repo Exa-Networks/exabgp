@@ -15,7 +15,6 @@ env DAEMON=/usr/sbin/exabgp
 env DAEMON_OPTS=/etc/exabgp/exabgp.conf
 env CONFIG=/etc/exabgp/exabgp.conf
 env PIDFILE=/var/run/exabgp/exabgp.pid
-env ETC=/etc
 
 pre-start script
   [ -f /etc/default/$NAME ] && . /etc/default/$NAME start
@@ -33,5 +32,5 @@ script
   export exabgp_daemon_user
   exabgp_daemon_pid=$PIDFILE
   export exabgp_daemon_pid
-  $DAEMON $DAEMON_OPTS
+  $DAEMON --folder /etc/exabgp $DAEMON_OPTS
 end script
