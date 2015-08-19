@@ -76,6 +76,13 @@ Version 4.0.0
  * Fix: remove useless PYTHONPATH in sbin/exabgp
    reported by: Håvard Eidnes
  * Fix: add semi-colon in syslog ouput
+ * Fix: parsing multiple NLRI in flow routes
+   reported by: Dmitry Onuchin
+ * Fix: bad parsing of flow routes / missing support for exact bit matches
+   reported by: hengchai
+   reported by: Dmitry Onuchin
+ * Fix: reading large buffered data from helper process caused truncation
+   reported by: qqTYXn7
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
