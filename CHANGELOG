@@ -83,6 +83,8 @@ Version 4.0.0
    reported by: Dmitry Onuchin
  * Fix: reading large buffered data from helper process caused truncation
    reported by: qqTYXn7
+ * Change: ExaBGP is now run as user/group exabgp/exabgp with the systemd
+   service file.
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
