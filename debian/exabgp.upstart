@@ -12,7 +12,7 @@ env PATH=/sbin:/usr/sbin:/bin:/usr/bin
 env USER=exabgp
 env NAME=exabgp
 env DAEMON=/usr/sbin/exabgp
-env DAEMON_OPTS=--folder /etc/exabgp /etc/exabgp/exabgp.conf
+env DAEMON_OPTS=/etc/exabgp/exabgp.conf
 env CONFIG=/etc/exabgp/exabgp.conf
 env PIDFILE=/var/run/exabgp/exabgp.pid
 
@@ -32,5 +32,5 @@ script
   export exabgp_daemon_user
   exabgp_daemon_pid=$PIDFILE
   export exabgp_daemon_pid
-  $DAEMON $DAEMON_OPTS
+  $DAEMON --folder /etc/exabgp $DAEMON_OPTS
 end script
