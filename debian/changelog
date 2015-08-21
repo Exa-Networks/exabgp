@@ -1,3 +1,10 @@
+exabgp (3.4.12-3) unstable; urgency=medium
+
+  * init: use --folder to tell ExaBGP the location of /etc/exabgp
+  * init: let ExaBGP drops privileges itself.
+
+ -- Vincent Bernat <bernat@debian.org>  Fri, 21 Aug 2015 18:38:37 +0200
+
 exabgp (3.4.12-2) unstable; urgency=medium
 
   * Disable more control tests. They seem to be unreliable when run in
