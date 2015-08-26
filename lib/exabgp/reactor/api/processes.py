@@ -79,6 +79,10 @@ class Processes (object):
 		self._process[process].wait()
 		del self._process[process]
 
+		for processes in self._neighbor_process.itervalues():
+			if process in processes:
+				processes.remove(process)
+
 	def terminate (self):
 		for process in list(self._process):
 			if not self.silence:
