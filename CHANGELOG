@@ -5,6 +5,10 @@ Version explained:
 
 Version 3.4.13
  * Fix: add semicolon in syslog entry so it can be parsed by tools
+ * Fix: duplication of message following helper process death
+    reported by: spakka
+ * Fix: death of helper program would lead to BGP session drop
+    reported by: spakka
 
 Version 3.4.12
  * Fix: issue with unknown capabilities
