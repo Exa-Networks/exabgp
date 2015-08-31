@@ -58,7 +58,7 @@ def main ():
 	if options["--version"]:
 		print 'ExaBGP : %s' % version
 		print 'Python : %s' % sys.version.replace('\n',' ')
-		print 'Uname  : %s' % platform.version()
+                print 'Uname  : %s' % ' '.join(platform.uname()[:5])
 		sys.exit(0)
 
 	if options["--folder"]:
