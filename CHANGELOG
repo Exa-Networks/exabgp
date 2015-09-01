@@ -18,6 +18,8 @@ Version 4.0.0
  * Feature: show route (extensive) can take a neighbor as parameter
    requested by: jtkdpu
  * Feature: allow to run exabgp from python -m exabgp
+ * Change: ExaBGP is now run as user/group exabgp/exabgp with the systemd service file.
+    patch by: Vincent Bernat
  * Change: Update are now grouped by default
  * Change: Configuration format
   - all deprecated name remove
@@ -83,8 +85,8 @@ Version 4.0.0
    reported by: Dmitry Onuchin
  * Fix: reading large buffered data from helper process caused truncation
    reported by: qqTYXn7
- * Change: ExaBGP is now run as user/group exabgp/exabgp with the systemd
-   service file.
+ * Fix: better --version output
+   patch by: Ebben Aries
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
