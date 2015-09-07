@@ -10,6 +10,72 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.bgp.message.notification import Notify
 
 
+class _CapabilityCode (int):
+	__slots__ = ['NAME',]
+
+	RESERVED                 = 0x00  # [RFC5492]
+	MULTIPROTOCOL            = 0x01  # [RFC2858]
+	ROUTE_REFRESH            = 0x02  # [RFC2918]
+	OUTBOUND_ROUTE_FILTERING = 0x03  # [RFC5291]
+	MULTIPLE_ROUTES          = 0x04  # [RFC3107]
+	EXTENDED_NEXT_HOP        = 0x05  # [RFC5549]
+	# 6-63      Unassigned
+	GRACEFUL_RESTART         = 0x40  # [RFC4724]
+	FOUR_BYTES_ASN           = 0x41  # [RFC4893]
+	# 66        Deprecated
+	DYNAMIC_CAPABILITY       = 0x43  # [Chen]
+	MULTISESSION             = 0x44  # [draft-ietf-idr-bgp-multisession]
+	ADD_PATH                 = 0x45  # [draft-ietf-idr-add-paths]
+	ENHANCED_ROUTE_REFRESH   = 0x46  # [draft-ietf-idr-bgp-enhanced-route-refresh]
+	# 70-127    Unassigned
+	ROUTE_REFRESH_CISCO      = 0x80  # I Can only find reference to this in the router logs
+	# 128-255   Reserved for Private Use [RFC5492]
+	MULTISESSION_CISCO       = 0x83  # What Cisco really use for Multisession (yes this is a reserved range in prod !)
+	HOSTNAME                 = 0xB8  # ExaBGP only ...
+	OPERATIONAL              = 0xB9  # ExaBGP only ...
+
+	EXTENDED_MESSAGE         = -1    # No yet defined by draft http://tools.ietf.org/html/draft-ietf-idr-extended-messages-02.txt
+
+	# Internal
+	AIGP = 0xFF00
+
+	names = {
+		RESERVED:                  'reserved',
+		MULTIPROTOCOL:             'multiprotocol',
+		ROUTE_REFRESH:             'route-refresh',
+		OUTBOUND_ROUTE_FILTERING:  'outbound-route-filtering',
+		MULTIPLE_ROUTES:           'multiple-routes',
+		EXTENDED_NEXT_HOP:         'extended-next-hop',
+
+		GRACEFUL_RESTART:          'graceful-restart',
+		FOUR_BYTES_ASN:            'asn4',
+
+		DYNAMIC_CAPABILITY:        'dynamic-capability',
+		MULTISESSION:              'multi-session',
+		ADD_PATH:                  'add-path',
+		ENHANCED_ROUTE_REFRESH:    'enhanced-route-refresh',
+		OPERATIONAL:               'operational',
+
+		ROUTE_REFRESH_CISCO:       'cisco-route-refresh',
+		MULTISESSION_CISCO:        'cisco-multi-sesion',
+
+		AIGP:                      'aigp',
+	}
+
+	def __init__ (self, value):
+		int.__init__(self,value)
+		self.NAME = str(self)
+
+	def __str__ (self):
+		return self.names.get(self,'unknown capability %s' % hex(self))
+
+	def __repr__ (self):
+		return str(self)
+
+	def name (self):
+		return self.names.get(self,'unknown capability %s' % hex(self))
+
+
 # =================================================================== Capability
 #
 
@@ -18,60 +84,30 @@ class Capability (object):
 	class CODE (int):
 		__slots__ = []
 
-		RESERVED                 = 0x00  # [RFC5492]
-		MULTIPROTOCOL            = 0x01  # [RFC2858]
-		ROUTE_REFRESH            = 0x02  # [RFC2918]
-		OUTBOUND_ROUTE_FILTERING = 0x03  # [RFC5291]
-		MULTIPLE_ROUTES          = 0x04  # [RFC3107]
-		EXTENDED_NEXT_HOP        = 0x05  # [RFC5549]
-		# 6-63      Unassigned
-		GRACEFUL_RESTART         = 0x40  # [RFC4724]
-		FOUR_BYTES_ASN           = 0x41  # [RFC4893]
-		# 66        Deprecated
-		DYNAMIC_CAPABILITY       = 0x43  # [Chen]
-		MULTISESSION             = 0x44  # [draft-ietf-idr-bgp-multisession]
-		ADD_PATH                 = 0x45  # [draft-ietf-idr-add-paths]
-		ENHANCED_ROUTE_REFRESH   = 0x46  # [draft-ietf-idr-bgp-enhanced-route-refresh]
-		# 70-127    Unassigned
-		ROUTE_REFRESH_CISCO      = 0x80  # I Can only find reference to this in the router logs
-		# 128-255   Reserved for Private Use [RFC5492]
-		MULTISESSION_CISCO       = 0x83  # What Cisco really use for Multisession (yes this is a reserved range in prod !)
-		HOSTNAME                 = 0xB8  # ExaBGP only ...
-		OPERATIONAL              = 0xB9  # ExaBGP only ...
-
-		EXTENDED_MESSAGE         = -1    # No yet defined by draft http://tools.ietf.org/html/draft-ietf-idr-extended-messages-02.txt
+		RESERVED                 = _CapabilityCode(_CapabilityCode.RESERVED)
+		MULTIPROTOCOL            = _CapabilityCode(_CapabilityCode.MULTIPROTOCOL)
+		ROUTE_REFRESH            = _CapabilityCode(_CapabilityCode.ROUTE_REFRESH)
+		OUTBOUND_ROUTE_FILTERING = _CapabilityCode(_CapabilityCode.OUTBOUND_ROUTE_FILTERING)
+		MULTIPLE_ROUTES          = _CapabilityCode(_CapabilityCode.MULTIPLE_ROUTES)
+		EXTENDED_NEXT_HOP        = _CapabilityCode(_CapabilityCode.EXTENDED_NEXT_HOP)
+		GRACEFUL_RESTART         = _CapabilityCode(_CapabilityCode.GRACEFUL_RESTART)
+		FOUR_BYTES_ASN           = _CapabilityCode(_CapabilityCode.FOUR_BYTES_ASN)
+		DYNAMIC_CAPABILITY       = _CapabilityCode(_CapabilityCode.DYNAMIC_CAPABILITY)
+		MULTISESSION             = _CapabilityCode(_CapabilityCode.MULTISESSION)
+		ADD_PATH                 = _CapabilityCode(_CapabilityCode.ADD_PATH)
+		ENHANCED_ROUTE_REFRESH   = _CapabilityCode(_CapabilityCode.ENHANCED_ROUTE_REFRESH)
+		ROUTE_REFRESH_CISCO      = _CapabilityCode(_CapabilityCode.ROUTE_REFRESH_CISCO)
+		MULTISESSION_CISCO       = _CapabilityCode(_CapabilityCode.MULTISESSION_CISCO)
+		HOSTNAME                 = _CapabilityCode(_CapabilityCode.HOSTNAME)
+		OPERATIONAL              = _CapabilityCode(_CapabilityCode.OPERATIONAL)
+		EXTENDED_MESSAGE         = _CapabilityCode(_CapabilityCode.EXTENDED_MESSAGE)
+		AIGP                     = _CapabilityCode(_CapabilityCode.AIGP)
 
 		unassigned = range(70,128)
 		reserved = range(128,256)
 
-		# Internal
-		AIGP = 0xFF00
-
-		names = {
-			RESERVED:                  'reserved',
-			MULTIPROTOCOL:             'multiprotocol',
-			ROUTE_REFRESH:             'route-refresh',
-			OUTBOUND_ROUTE_FILTERING:  'outbound-route-filtering',
-			MULTIPLE_ROUTES:           'multiple-routes',
-			EXTENDED_NEXT_HOP:         'extended-next-hop',
-
-			GRACEFUL_RESTART:          'graceful-restart',
-			FOUR_BYTES_ASN:            'asn4',
-
-			DYNAMIC_CAPABILITY:        'dynamic-capability',
-			MULTISESSION:              'multi-session',
-			ADD_PATH:                  'add-path',
-			ENHANCED_ROUTE_REFRESH:    'enhanced-route-refresh',
-			OPERATIONAL:               'operational',
-
-			ROUTE_REFRESH_CISCO:       'cisco-route-refresh',
-			MULTISESSION_CISCO:        'cisco-multi-sesion',
-
-			AIGP:                      'aigp',
-		}
-
 		def __str__ (self):
-			name = self.names.get(self,None)
+			name = _CapabilityCode.names.get(self,None)
 			if name is None:
 				if self in Capability.CODE.unassigned:
 					return 'unassigned-%s' % hex(self)
@@ -83,9 +119,10 @@ class Capability (object):
 		def __repr__ (self):
 			return str(self)
 
+		# XXX: Could use cls instead of _CapabilityCode and other tidy up
 		@classmethod
 		def name (cls, self):
-			name = cls.names.get(self,None)
+			name = _CapabilityCode.names.get(self,None)
 			if name is None:
 				if self in Capability.CODE.unassigned:
 					return 'unassigned-%s' % hex(self)
