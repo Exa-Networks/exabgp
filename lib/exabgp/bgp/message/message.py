@@ -9,7 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 
 
-class _Code (int):
+class _MessageCode (int):
 	__slots__ = ['SHORT','NAME']
 
 	NOP           = 0x00  # .   0 - internal
@@ -55,7 +55,7 @@ class _Code (int):
 
 	# to_short_names = dict((name,code) for (code,name) in short_names.items())
 
-	def __init__ (self,value):
+	def __init__ (self, value):
 		self.SHORT = self.short()
 		self.NAME = str(self)
 
@@ -101,13 +101,13 @@ class Message (Exception):
 	klass_unknown = Exception
 
 	class CODE (object):
-		NOP           = _Code(0x00)  # .   0 - internal
-		OPEN          = _Code(0x01)  # .   1
-		UPDATE        = _Code(0x02)  # .   2
-		NOTIFICATION  = _Code(0x03)  # .   3
-		KEEPALIVE     = _Code(0x04)  # .   4
-		ROUTE_REFRESH = _Code(0x05)  # .   5
-		OPERATIONAL   = _Code(0x06)  # .   6  # Not IANA assigned yet
+		NOP           = _MessageCode(_MessageCode.NOP)
+		OPEN          = _MessageCode(_MessageCode.OPEN)
+		UPDATE        = _MessageCode(_MessageCode.UPDATE)
+		NOTIFICATION  = _MessageCode(_MessageCode.NOTIFICATION)
+		KEEPALIVE     = _MessageCode(_MessageCode.KEEPALIVE)
+		ROUTE_REFRESH = _MessageCode(_MessageCode.ROUTE_REFRESH)
+		OPERATIONAL   = _MessageCode(_MessageCode.OPERATIONAL)
 
 		MESSAGES = [
 			NOP,
@@ -121,11 +121,11 @@ class Message (Exception):
 
 		@staticmethod
 		def name (message_id):
-			return _Code.names.get(message_id,'unknown message %s' % hex(message_id))
+			return _MessageCode.names.get(message_id,'unknown message %s' % hex(message_id))
 
 		@staticmethod
 		def short (message_id):
-			return _Code.short_names.get(message_id,'unknown message %s' % hex(message_id))
+			return _MessageCode.short_names.get(message_id,'unknown message %s' % hex(message_id))
 
 		# # Can raise KeyError
 		# @staticmethod
