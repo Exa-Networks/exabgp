@@ -456,7 +456,7 @@ class Peer (object):
 				# XXX: In the main loop we do exit on this kind of error
 				raise Notify(6,0,'ExaBGP Internal error, sorry.')
 
-		send_eor = True
+		send_eor = not self.neighbor.skip_initial_eor
 		new_routes = None
 		self._resend_routes = SEND.NORMAL
 		send_families = []

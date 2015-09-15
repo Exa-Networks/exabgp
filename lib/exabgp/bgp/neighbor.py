@@ -43,6 +43,8 @@ class Neighbor (object):
 		self.flush = None
 		self.adjribout = None
 
+		self.skip_initial_eor = False
+
 		self.api = None
 
 		# passive indicate that we do not establish outgoing connections

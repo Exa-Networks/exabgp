@@ -58,44 +58,46 @@ class ParseNeighbor (Section):
 	syntax = ''
 
 	known = {
-		'inherit':       inherit,
-		'description':   description,
-		'hostname':      hostname,
-		'domainname':    domainname,
-		'router-id':     router_id,
-		'hold-time':     hold_time,
-		'local-address': ip,
-		'peer-address':  ip,
-		'local-as':      asn,
-		'peer-as':       asn,
-		'passive':       boolean,
-		'listen':        port,
-		'ttl-security':  ttl,
-		'md5':           md5,
-		'group-updates': boolean,
-		'auto-flush':    boolean,
-		'adj-rib-out':   boolean,
+		'inherit':          inherit,
+		'description':      description,
+		'hostname':         hostname,
+		'domainname':       domainname,
+		'router-id':        router_id,
+		'hold-time':        hold_time,
+		'local-address':    ip,
+		'peer-address':     ip,
+		'local-as':         asn,
+		'peer-as':          asn,
+		'passive':          boolean,
+		'listen':           port,
+		'ttl-security':     ttl,
+		'md5':              md5,
+		'group-updates':    boolean,
+		'auto-flush':       boolean,
+		'adj-rib-out':      boolean,
+		'skip-initial-eor': boolean,
 	}
 
 	action = {
-		'inherit':       'set-command',
-		'description':   'set-command',
-		'hostname':      'set-command',
-		'domainname':    'set-command',
-		'router-id':     'set-command',
-		'hold-time':     'set-command',
-		'local-address': 'set-command',
-		'peer-address':  'set-command',
-		'local-as':      'set-command',
-		'peer-as':       'set-command',
-		'passive':       'set-command',
-		'listen':        'set-command',
-		'ttl-security':  'set-command',
-		'md5':           'set-command',
-		'group-updates': 'set-command',
-		'auto-flush':    'set-command',
-		'adj-rib-out':   'set-command',
-		'route':         'append-name',
+		'inherit':           'set-command',
+		'description':       'set-command',
+		'hostname':          'set-command',
+		'domainname':        'set-command',
+		'router-id':         'set-command',
+		'hold-time':         'set-command',
+		'local-address':     'set-command',
+		'peer-address':      'set-command',
+		'local-as':          'set-command',
+		'peer-as':           'set-command',
+		'passive':           'set-command',
+		'listen':            'set-command',
+		'ttl-security':      'set-command',
+		'md5':               'set-command',
+		'group-updates':     'set-command',
+		'auto-flush':        'set-command',
+		'adj-rib-out':       'set-command',
+		'skip-initial-eor':  'set-command',
+		'route':             'append-name',
 	}
 
 	default = {
@@ -103,6 +105,7 @@ class ParseNeighbor (Section):
 		'group-updates': True,
 		'auto-flush': True,
 		'adj-rib-out': False,
+		'skip-initial-eor': False,
 	}
 
 	name = 'neighbor'
@@ -143,6 +146,7 @@ class ParseNeighbor (Section):
 		neighbor.aigp             = local.get('aigp',None)
 		neighbor.ttl              = local.get('ttl-security',None)
 		neighbor.group_updates    = local.get('group-updates',True)
+		neighbor.skip_initial_eor = local.get('skip-initial-eor', False)
 
 		neighbor.api              = ParseAPI.extract()
 
