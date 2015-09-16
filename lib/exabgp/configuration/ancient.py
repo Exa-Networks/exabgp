@@ -742,6 +742,8 @@ class Configuration (object):
 				return self._set_boolean(scope,'auto-flush',tokens[1:])
 			if command == 'adj-rib-out':
 				return self._set_boolean(scope,'adj-rib-out',tokens[1:])
+			if command == 'manual-eor':
+				return self._set_boolean(scope,'manual-eor',tokens[1:])
 
 		elif name == 'family':
 			if command == 'inet':
@@ -1387,6 +1389,7 @@ class Configuration (object):
 		neighbor.add_path = local_scope.get('add-path',0)
 		neighbor.flush = local_scope.get('auto-flush',True)
 		neighbor.adjribout = local_scope.get('adj-rib-out',True)
+		neighbor.manual_eor = local_scope.get('manual-eor',False)
 		neighbor.asn4 = local_scope.get('asn4',True)
 		neighbor.aigp = local_scope.get('aigp',None)
 
@@ -1509,7 +1512,7 @@ class Configuration (object):
 					'description','router-id','local-address','local-as','peer-as',
 					'passive','listen','hold-time','add-path','graceful-restart','md5',
 					'ttl-security','multi-session','group-updates','asn4','aigp',
-					'auto-flush','adj-rib-out'
+					'auto-flush','adj-rib-out','manual-eor',
 				]
 			)
 			if r is False:
