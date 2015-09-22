@@ -75,6 +75,7 @@ class ParseNeighbor (Section):
 		'group-updates': boolean,
 		'auto-flush':    boolean,
 		'adj-rib-out':   boolean,
+		'manual-eor':    boolean,
 	}
 
 	action = {
@@ -95,6 +96,7 @@ class ParseNeighbor (Section):
 		'group-updates': 'set-command',
 		'auto-flush':    'set-command',
 		'adj-rib-out':   'set-command',
+		'manual-eor':    'set-command',
 		'route':         'append-name',
 	}
 
@@ -103,6 +105,7 @@ class ParseNeighbor (Section):
 		'group-updates': True,
 		'auto-flush': True,
 		'adj-rib-out': False,
+		'manual-eor': False,
 	}
 
 	name = 'neighbor'
@@ -143,6 +146,7 @@ class ParseNeighbor (Section):
 		neighbor.aigp             = local.get('aigp',None)
 		neighbor.ttl              = local.get('ttl-security',None)
 		neighbor.group_updates    = local.get('group-updates',True)
+		neighbor.manual_eor       = local.get('manual-eor', False)
 
 		neighbor.api              = ParseAPI.extract()
 

@@ -43,6 +43,8 @@ class Neighbor (object):
 		self.flush = None
 		self.adjribout = None
 
+		self.manual_eor = False
+
 		self.api = None
 
 		# passive indicate that we do not establish outgoing connections
@@ -218,6 +220,7 @@ class Neighbor (object):
 			'\tlocal-as %s;\n' \
 			'\tpeer-as %s;\n' \
 			'\thold-time %s;\n' \
+			'\tmanual-eor %s;\n' \
 			'%s%s%s%s%s%s%s\n' \
 			'\tcapability {\n' \
 			'%s%s%s%s%s%s%s\t}\n' \
@@ -235,6 +238,7 @@ class Neighbor (object):
 				self.local_as,
 				self.peer_as,
 				self.hold_time,
+				'true' if self.manual_eor else 'false',
 				'\n\tpassive;\n' if self.passive else '',
 				'\n\tlisten %d;\n' % self.listen if self.listen else '',
 				'\tgroup-updates: %s;\n' % (self.group_updates if self.group_updates else ''),
