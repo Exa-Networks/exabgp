@@ -9,6 +9,8 @@ Version 3.4.13
     reported by: spakka
  * Fix: death of helper program would lead to BGP session drop
     reported by: spakka
+ * Feature: manual eor
+    patch by: Charles Ng
 
 Version 3.4.12
  * Fix: issue with unknown capabilities
