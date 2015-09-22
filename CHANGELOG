@@ -9,6 +9,8 @@ Version 3.4.13
     reported by: spakka
  * Fix: death of helper program would lead to BGP session drop
     reported by: spakka
+ * Fix: mistakenly made a function private breaking some ASN4 code path
+    reported by: Victor Sudakov
  * Feature: manual eor
     patch by: Charles Ng
 
