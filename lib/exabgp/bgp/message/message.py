@@ -130,7 +130,7 @@ class Message (Exception):
 		# # Can raise KeyError
 		# @staticmethod
 		# def code (short):
-		# 	return _Code.names.get[short]
+		# 	return _MessageCode.names.get[short]
 
 		def __init__ (self):
 			raise RuntimeError('This class can not be instantiated')
@@ -148,7 +148,7 @@ class Message (Exception):
 
 	@staticmethod
 	def string (code):
-		return _Code.long_names.get(code,'unknown')
+		return _MessageCode.long_names.get(code,'unknown')
 
 	def _message (self, message):
 		message_len = pack('!H',19+len(message))
