@@ -2,7 +2,7 @@
 #branch = True
 
 [report]
-exclude_line =
+exclude_lines =
 	pragma: no cover
 	pass
 	def __repr__
