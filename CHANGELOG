@@ -63,14 +63,10 @@ Version 4.0.0
     reported by: Colin Petrie
  * Fix: issue with unknown capabilities
     reported by: Sandy Breeze
- * Feature: Allow single line flow route
-    requested by: Pavel Odintsov
  * Fix: notification messages were not passed to the API
     reported by: Florian Obser
  * Fix: ExaBGP was crashing if it could not write to a logfile
     reported by: Pavel Odintsov
- * Feature: add support for rpm packaging
-   patch by: Arun Babu Neelicattu
  * Fix: only grouping IPv4 routes
    reported by: Sergey Viuchny (stroboscope)
  * Fix: Flow redirect to nexhop encoding
@@ -87,6 +83,12 @@ Version 4.0.0
    reported by: qqTYXn7
  * Fix: better --version output
    patch by: Ebben Aries
+ * Feature: Allow single line flow route
+    requested by: Pavel Odintsov
+ * Feature: add support for rpm packaging
+   patch by: Arun Babu Neelicattu
+ * Feature: manually sending EOR
+   pach by: Charles Ng
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
