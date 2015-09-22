@@ -71,9 +71,6 @@ class AIGP (Attribute):
 		else:
 			self._packed = self._attribute(aigp)
 
-	def pack (self):
-		return self._packed
-
 	def __eq__ (self, other):
 		return \
 			self.ID == other.ID and \

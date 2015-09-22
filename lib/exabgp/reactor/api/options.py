@@ -17,8 +17,8 @@ class APIOptions (dict):
 
 	def set_message (self, direction, name, value):
 		raise RuntimeError('deprecated')
-		key = '%s-%d' % (direction,name)
-		self[key] = self.get(key,False) or value
+		# key = '%s-%d' % (direction,name)
+		# self[key] = self.get(key,False) or value
 
 	def __missing__ (self, key):
 		return False
