@@ -83,6 +83,8 @@ Version 4.0.0
    reported by: qqTYXn7
  * Fix: better --version output
    patch by: Ebben Aries
+ * Fix: mistakenly made a function private breaking some ASN4 code path
+    reported by: Victor Sudakov
  * Feature: Allow single line flow route
     requested by: Pavel Odintsov
  * Feature: add support for rpm packaging
