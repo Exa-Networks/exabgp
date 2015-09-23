@@ -6,6 +6,7 @@ open.py
 Created by Thomas Morin, Orange on 2015-07-10.
 Copyright (c) 2009-2015 Orange. All rights reserved.
 """
+
 import unittest
 
 from exabgp.reactor.protocol import AFI, SAFI
@@ -21,7 +22,14 @@ from exabgp.bgp.message.update.attribute.community.extended.encapsulation \
     import Encapsulation
 
 from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
+
+from exabgp.bgp.message.update.nlri.rtc import RTC
+
 from exabgp.bgp.message.update.nlri.evpn.mac import MAC as EVPNMAC
+from exabgp.bgp.message.update.nlri.evpn.multicast import Multicast as EVPNMulticast
+from exabgp.bgp.message.update.nlri.evpn.prefix import Prefix as EVPNPrefix
+from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
+
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
 from exabgp.bgp.message.update.nlri.qualifier.esi import ESI
@@ -36,116 +44,120 @@ from exabgp.configuration.setup import environment
 environment.setup('')
 
 
-def prefixToPackedIPMask(prefix):
-    ipString, mask = prefix.split("/")
-    return (IP.pton(ipString), int(mask))
-
-
 class TestNLRIs(unittest.TestCase):
 
-    # tests on MPLS VPN NLRIs
+    # Tests on IPVPN NLRIs
 
-    def test0_IPVPNHashEqual(self):
-        '''
-        Two indistinct VPN NLRIs should
-        hash to the same value, and be equal
-        '''
-        rd = RouteDistinguisher.fromElements("42.42.42.42", 5)
+    def test200_IPVPNCreatePackUnpack(self):
+        '''Test pack/unpack for IPVPN routes'''
+        nlri = IPVPN.new(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
+                         IP.pton("1.2.3.0"), 24,
+                         Labels([42], True), 
+                         RouteDistinguisher.fromElements("42.42.42.42", 5))
 
-        packedPrefix, mask = prefixToPackedIPMask("1.1.1.1/32")
+        packed = nlri.pack()
+        unpacked,leftover = IPVPN.unpack_nlri(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
+                                              packed, OUT.UNSET, None)
 
-        nlri1 = IPVPN.new(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
-                          packedPrefix, mask,
-                          Labels([42], True), rd,
-                          IP.pton("45.45.45.45"),
-                          OUT.ANNOUNCE)
+        self.assertEqual(0, len(leftover))
 
-        nlri2 = IPVPN.new(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
-                          packedPrefix, mask,
-                          Labels([42], True), rd,
-                          IP.pton("45.45.45.45"),
-                          OUT.ANNOUNCE)
+        # TODO: compare packed with a reference encoding verified 
+        # as conformant with RFC4364
 
-        self.assertEqual(hash(nlri1), hash(nlri2))
-        self.assertEqual(nlri1, nlri2)
+        self.assertTrue(isinstance(unpacked, IPVPN))
 
-    def test1_IPVPNHashEqual(self):
-        '''
-        Two VPN NLRI distinct only by their *label* should
-        hash to the same value, and be equal
-        '''
-
-        packedPrefix, mask = prefixToPackedIPMask("1.1.1.1/32")
-
-        nlri1 = IPVPN.new(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
-                          packedPrefix, mask,
-                          Labels([42], True),
-                          RouteDistinguisher.fromElements("42.42.42.42", 5),
-                          IP.pton("45.45.45.45"),
-                          OUT.ANNOUNCE)
-
-        nlri2 = IPVPN.new(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
-                          packedPrefix, mask,
-                          Labels([0], True),
-                          RouteDistinguisher.fromElements("42.42.42.42", 5),
-                          IP.pton("45.45.45.45"),
-                          OUT.ANNOUNCE)
-
-        self.assertEqual(hash(nlri1), hash(nlri2))
-        self.assertNotEqual(nlri1, nlri2)
-
-    def test2_IPVPNHashEqual(self):
-        '''
-        Two VPN NLRI distinct only by their *nexthop* should
-        hash to the same value, and be equal
-        '''
-        packedPrefix, mask = prefixToPackedIPMask("1.1.1.1/32")
-
-        nlri1 = IPVPN.new(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
-                          packedPrefix, mask,
-                          Labels([42], True),
-                          RouteDistinguisher.fromElements("42.42.42.42", 5),
-                          IP.pton("45.45.45.45"),
-                          OUT.ANNOUNCE)
-
-        nlri2 = IPVPN.new(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
-                          packedPrefix, mask,
-                          Labels([42], True),
-                          RouteDistinguisher.fromElements("42.42.42.42", 5),
-                          IP.pton("77.77.77.77"),
-                          OUT.ANNOUNCE)
-
-        self.assertEqual(hash(nlri1), hash(nlri2))
-        self.assertTrue(nlri1.eq(nlri2))
-        self.assertNotEqual(nlri1, nlri2)
-
-    def test3_IPVPNHashEqual(self):
-        '''
-        Two VPN NLRI distinct only by their *action* should
-        hash to the same value, and be equal
-        '''
-
-        packedPrefix, mask = prefixToPackedIPMask("1.1.1.1/32")
-
-        nlri1 = IPVPN.new(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
-                          packedPrefix, mask,
-                          Labels([42], True),
-                          RouteDistinguisher.fromElements("42.42.42.42", 5),
-                          IP.pton("45.45.45.45"),
-                          OUT.ANNOUNCE)
-
-        nlri2 = IPVPN.new(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
-                          packedPrefix, mask,
-                          Labels([42], True),
-                          RouteDistinguisher.fromElements("42.42.42.42", 5),
-                          IP.pton("45.45.45.45"),
-                          OUT.WITHDRAW)
-
-        self.assertEqual(hash(nlri1), hash(nlri2))
-        self.assertTrue(nlri1.eq(nlri2))
-        self.assertEqual(nlri1, nlri2)
+        self.assertEqual("1.2.3.0/24", unpacked.cidr.prefix())
+        self.assertEqual(1, len(unpacked.labels.labels))
+        self.assertEqual(42, unpacked.labels.labels[0])
+        self.assertEqual("42.42.42.42:5", unpacked.rd._str())
 
     # Tests on EVPN NLRIs
+
+    def test99_EVPNMACCreatePackUnpack(self):
+        '''Test pack/unpack for E-VPN MAC routes'''
+        nlri = EVPNMAC(RouteDistinguisher.fromElements("42.42.42.42", 5),
+                       ESI(),
+                       EthernetTag(111),
+                       MAC("01:02:03:04:05:06"), 6*8,
+                       Labels([42], True),
+                       IP.create("1.1.1.1"))
+
+        packed = nlri.pack()
+
+        unpacked,leftover = EVPN.unpack_nlri(AFI(AFI.l2vpn), SAFI(SAFI.evpn),
+                                             packed, OUT.UNSET, None)
+
+        self.assertEqual(0, len(leftover))
+
+        # TODO: compare packed with a reference encoding verified 
+        # as conformant with RFC7432
+
+        self.assertTrue(isinstance(unpacked, EVPNMAC))
+
+        self.assertEqual("42.42.42.42:5", unpacked.rd._str())
+        self.assertEqual(ESI.DEFAULT, unpacked.esi.esi)
+        self.assertEqual(EthernetTag(111), unpacked.etag)
+        self.assertEqual(MAC("01:02:03:04:05:06"), unpacked.mac)
+
+        self.assertEqual(IP.create("1.1.1.1"), unpacked.ip)
+
+        self.assertEqual(1, len(unpacked.label.labels))
+        self.assertEqual(42, unpacked.label.labels[0])
+
+    def test99_EVPNMulticastCreatePackUnpack(self):
+        '''Test pack/unpack for E-VPN Multicast routes'''
+
+        nlri = EVPNMulticast(RouteDistinguisher.fromElements("42.42.42.42", 5),
+                             EthernetTag(111),
+                             IP.create("1.1.1.1"))
+
+        packed = nlri.pack()
+
+        unpacked,leftover = EVPN.unpack_nlri(AFI(AFI.l2vpn), SAFI(SAFI.evpn),
+                                             packed, OUT.UNSET, None)
+
+        self.assertEqual(0, len(leftover))
+
+        # TODO: compare packed with a reference encoding verified 
+        # as conformant with RFC7432
+
+        self.assertTrue(isinstance(unpacked, EVPNMulticast))
+
+        self.assertEqual("42.42.42.42:5", unpacked.rd._str())
+        self.assertEqual(EthernetTag(111), unpacked.etag)
+        self.assertEqual(IP.create("1.1.1.1"), unpacked.ip)
+
+    def test99_EVPNPrefixCreatePackUnpack(self):
+        '''Test pack/unpack for E-VPN Prefix routes'''
+
+        nlri = EVPNPrefix(RouteDistinguisher.fromElements("42.42.42.42", 5),
+                          ESI(),
+                          EthernetTag(111),
+                          Labels([42], True),
+                          IP.create("1.1.1.0"),24,
+                          IP.create("2.2.2.2"),
+                          )
+
+        packed = nlri.pack()
+
+        unpacked,leftover = EVPN.unpack_nlri(AFI(AFI.l2vpn), SAFI(SAFI.evpn),
+                                             packed, OUT.UNSET, None)
+
+        self.assertEqual(0, len(leftover))
+
+        # TODO: compare packed with a reference encoding verified 
+        # as conformant with RFC7432
+
+        self.assertTrue(isinstance(unpacked, EVPNPrefix))
+
+        self.assertEqual("42.42.42.42:5", unpacked.rd._str())
+        self.assertEqual(ESI.DEFAULT, unpacked.esi.esi)
+        self.assertEqual(EthernetTag(111), unpacked.etag)
+        self.assertEqual(IP.create("1.1.1.0"), unpacked.ip)
+        self.assertEqual(24, unpacked.iplen)
+        self.assertEqual(IP.create("2.2.2.2"), unpacked.gwip)
+        self.assertEqual(1, len(unpacked.label.labels))
+        self.assertEqual(42, unpacked.label.labels[0])
 
     def test100_EVPNMACHashEqual(self):
         '''
@@ -154,14 +166,14 @@ class TestNLRIs(unittest.TestCase):
         '''
 
         nlri1 = EVPNMAC(RouteDistinguisher.fromElements("42.42.42.42", 5),
-                        ESI(0),
+                        ESI(),
                         EthernetTag(111),
                         MAC("01:02:03:04:05:06"), 6*8,
                         Labels([42], True),
                         IP.create("1.1.1.1"))
 
         nlri2 = EVPNMAC(RouteDistinguisher.fromElements("42.42.42.42", 5),
-                        ESI(0),
+                        ESI(),
                         EthernetTag(111),
                         MAC("01:02:03:04:05:06"), 6*8,
                         Labels([42], True),
@@ -178,7 +190,7 @@ class TestNLRIs(unittest.TestCase):
         '''
 
         nlri0 = EVPNMAC(RouteDistinguisher.fromElements("42.42.42.42", 5),
-                        ESI(0),
+                        ESI(),
                         EthernetTag(111),
                         MAC("01:02:03:04:05:06"), 6*8,
                         Labels([42], True),
@@ -186,7 +198,7 @@ class TestNLRIs(unittest.TestCase):
 
         # Esi
         nlri1 = EVPNMAC(RouteDistinguisher.fromElements("42.42.42.42", 5),
-                        ESI(1),
+                        ESI(['1' for _ in range(0,10)]),
                         EthernetTag(111),
                         MAC("01:02:03:04:05:06"), 6*8,
                         Labels([42], True),
@@ -194,7 +206,7 @@ class TestNLRIs(unittest.TestCase):
 
         # label
         nlri2 = EVPNMAC(RouteDistinguisher.fromElements("42.42.42.42", 5),
-                        ESI(0),
+                        ESI(),
                         EthernetTag(111),
                         MAC("01:02:03:04:05:06"), 6*8,
                         Labels([4444], True),
@@ -202,7 +214,7 @@ class TestNLRIs(unittest.TestCase):
 
         # IP: different IPs, but same MACs: different route
         nlri3 = EVPNMAC(RouteDistinguisher.fromElements("42.42.42.42", 5),
-                        ESI(0),
+                        ESI(),
                         EthernetTag(111),
                         MAC("01:02:03:04:05:06"), 6*8,
                         Labels([42], True),
@@ -210,14 +222,14 @@ class TestNLRIs(unittest.TestCase):
 
         # with a next hop...
         nlri4 = EVPNMAC(RouteDistinguisher.fromElements("42.42.42.42", 5),
-                        ESI(0),
+                        ESI(),
                         EthernetTag(111),
                         MAC("01:02:03:04:05:06"), 6*8,
                         Labels([42], True),
                         IP.create("1.1.1.1"),
                         IP.pton("10.10.10.10"))
         nlri5 = EVPNMAC(RouteDistinguisher.fromElements("42.42.42.42", 5),
-                        ESI(0),
+                        ESI(),
                         EthernetTag(111),
                         MAC("01:02:03:04:05:06"), 6*8,
                         Labels([42], True),
@@ -240,6 +252,32 @@ class TestNLRIs(unittest.TestCase):
         self.assertNotEqual(nlri1, nlri3)
         self.assertNotEqual(nlri2, nlri3)
         self.assertNotEqual(nlri3, nlri4)
+
+    # tests on RTC NLRI
+
+    def test99_RTCCreatePackUnpack(self):
+        '''Test pack/unpack for RTC routes'''
+
+        nlri = RTC.new(AFI(AFI.ipv4), SAFI(SAFI.rtc),
+                       64512,
+                       RouteTarget(64577,123))
+
+        packed = nlri.pack()
+        unpacked,leftover = RTC.unpack_nlri(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
+                                            packed, OUT.UNSET, None)
+
+        self.assertEqual(0, len(leftover))
+
+        # TODO: compare packed with a reference encoding verified 
+        # as conformant with RFC4684
+
+        self.assertTrue(isinstance(unpacked, RTC))
+
+        self.assertEqual(64512, unpacked.origin)
+
+        self.assertTrue(isinstance(unpacked.rt, RouteTarget))
+        self.assertEqual(64577, unpacked.rt.asn)
+        self.assertEqual(123, unpacked.rt.number)
 
     # tests on attributes
 
