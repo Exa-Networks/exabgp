@@ -20,6 +20,8 @@ from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
+from exabgp.bgp.message import OUT
+
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 
 
@@ -29,12 +31,21 @@ class RTC (NLRI):
 
 	__slots__ = ['origin','rt','action','nexthop']
 
-	def __init__ (self, afi, safi, action, nexthop, origin, rt):
+	def __init__ (self, afi, safi, action, origin, rt):
 		NLRI.__init__(self,afi,safi)
 		self.action = action
-		self.nexthop = IP.unpack(nexthop) if nexthop else NoNextHop
 		self.origin = origin
 		self.rt = rt
+		self.nexthop = NoNextHop
+
+	@classmethod
+	def new (cls, afi, safi, origin, rt, nexthop=NoNextHop, action=OUT.UNSET):
+		instance = cls(afi,safi,action,origin,rt)
+		instance.origin = origin
+		instance.rt = rt
+		instance.nexthop = nexthop
+		instance.action = action
+		return instance
 
 	def __eq__ (self, other):
 		return \
@@ -71,19 +82,20 @@ class RTC (NLRI):
 		return pack("!B",0)
 
 	@classmethod
-	def unpack (cls, afi, safi, data, addpath, nexthop, action):
-		length = ord(data[0])
+	def unpack_nlri (cls, afi, safi, bgp, action, addpath):
+
+		length = ord(bgp[0])
 
 		if length == 0:
-			return 1,cls(afi,safi,action,NoNextHop,ASN(0),None)
+			return 1,cls(afi,safi,action,ASN(0),None)
 
 		# We are reseting the flags on the RouteTarget extended
 		# community, because they do not make sense for an RTC route
 
-		return 13,cls(
-			afi, safi, action, nexthop,
-			ASN(unpack('!L', data[1:5])[0]),
+		return cls(
+			afi, safi, action,
+			ASN(unpack('!L', bgp[1:5])[0]),
 			RouteTarget.unpack(
-				RTC.resetFlags(data[5])+data[6:13]
+				RTC.resetFlags(bgp[5])+bgp[6:13]
 			)
-		)
+		),bgp[13:]
