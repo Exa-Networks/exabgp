@@ -79,17 +79,16 @@ class EVPN (NLRI):
 		return klass
 
 	@classmethod
-	def unpack (cls, afi, safi, data, addpath, nexthop, action):
-		code = ord(data[0])
-		length = ord(data[1])
+	def unpack_nlri (cls, afi, safi, bgp, action, addpath):
+		code = ord(bgp[0])
+		length = ord(bgp[1])
 
 		if code in cls.registered_evpn:
-			klass = cls.registered_evpn[code].unpack(data[2:length+2])
+			klass = cls.registered_evpn[code].unpack(bgp[2:length+2])
 		else:
-			klass = cls(data[2:length+2], nexthop, action, addpath)
+			klass = cls(bgp[2:length+2], nexthop, action, addpath)
 		klass.CODE = code
 		klass.action = action
-		klass.nexthop = IP.unpack(nexthop) if nexthop else NoNextHop
 		klass.addpath = addpath
 
-		return length+2,klass
+		return klass,bgp[length+2:]
