@@ -1,4 +1,4 @@
-[![License](https://pypip.in/license/exabgp/badge.svg)](https://github.com/Exa-Networks/exabgp/blob/master/COPYRIGHT)
+[![License](https://img.shields.io/pypi/l/exabgp.svg)](https://github.com/Exa-Networks/exabgp/blob/master/COPYRIGHT)
 
 [ExaBGP](http://github.com/Exa-Networks/exabgp) allows engineers to control their network from commodity servers.
 Think of it as [Software Defined Networking](http://en.wikipedia.org/wiki/Software-defined_networking) using [BGP](http://en.wikipedia.org/wiki/BGP) by transforming [BGP messages](http://thomas.mangin.com/data/pdf/UKNOF%2015%20-%20Mangin%20-%20Naked%20BGP.pdf) into friendly plain [text or JSON](https://github.com/Exa-Networks/exabgp/wiki/Controlling-ExaBGP-:-API-for-received-messages).
@@ -41,9 +41,11 @@ draft-ietf-idr-**[add-paths-08](http://tools.ietf.org/html/draft-ietf-idr-add-pa
 
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/Exa-Networks/exabgp/badges/quality-score.png)](https://scrutinizer-ci.com/g/Exa-Networks/exabgp/)
 [![Landscape Code Quality](https://landscape.io/github/Exa-Networks/exabgp/master/landscape.svg)](https://landscape.io/github/Exa-Networks/exabgp/)
-[![Coverage Status](https://img.shields.io/coveralls/Exa-Networks/exabgp.svg)](https://coveralls.io/r/Exa-Networks/exabgp)
+[![Coverage Status](https://img.shields.io/scrutinizer/coverage/g/exa-networks/exabgp.svg)](https://coveralls.io/r/Exa-Networks/exabgp)
 [![Codacy Badge](https://www.codacy.com/project/badge/1f5fedb98bfd47bcb9ab868ea53ea210)](https://www.codacy.com/public/thomasmangin/exabgp_2)
 [![Testing Status](https://travis-ci.org/Exa-Networks/exabgp.svg)](https://travis-ci.org/Exa-Networks/exabgp)
+
+<!-- [![Coverage Status](https://img.shields.io/coveralls/Exa-Networks/exabgp.svg)](https://coveralls.io/r/Exa-Networks/exabgp) -->
 
 The way way to keep informed is to follow us on [Google+](https://plus.google.com/u/0/communities/108249711110699351497), [twitter](https://twitter.com/#!/search/exabgp) and / or subscribe to our low volume [mailing list](http://groups.google.com/group/exabgp-users).
 For more information, please consult any of the [wiki pages](https://github.com/Exa-Networks/exabgp/wiki), in particular the [RFC compliance](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information), [FAQ](https://github.com/Exa-Networks/exabgp/wiki/FAQ)

@@ -434,7 +434,7 @@ class Peer (object):
 				# XXX: In the main loop we do exit on this kind of error
 				raise Notify(6,0,'ExaBGP Internal error, sorry.')
 
-		send_eor = True
+		send_eor = not self.neighbor.manual_eor
 		new_routes = None
 		self._resend_routes = SEND.NORMAL
 		send_families = []
@@ -660,12 +660,6 @@ class Peer (object):
 	# loop
 
 	def run (self):
-		if self.reactor.processes.broken(self.neighbor.peer_address):
-			# XXX: we should perhaps try to restart the process ??
-			self.logger.processes('ExaBGP lost the helper process for this peer - stopping','error')
-			self.stop()
-			return True
-
 		back = ACTION.LATER if self._restart else ACTION.CLOSE
 
 		for direction in ['in','out']:

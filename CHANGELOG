@@ -3,6 +3,17 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.4.13
+ * Fix: add semicolon in syslog entry so it can be parsed by tools
+ * Fix: duplication of message following helper process death
+    reported by: spakka
+ * Fix: death of helper program would lead to BGP session drop
+    reported by: spakka
+ * Fix: mistakenly made a function private breaking some ASN4 code path
+    reported by: Victor Sudakov
+ * Feature: manual eor
+    patch by: Charles Ng
+
 Version 3.4.12
  * Fix: issue with unknown capabilities
     reported by: Sandy Breeze

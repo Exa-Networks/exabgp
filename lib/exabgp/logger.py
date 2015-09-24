@@ -108,7 +108,7 @@ class Logger (object):
 		now = time.strftime('%a, %d %b %Y %H:%M:%S',timestamp)
 		if self.destination in ['stderr','stdout']:
 			return "%s | %-8s | %-6d | %-13s | %s" % (now,level,self._pid,source,message)
-		return "%s %-6d %-13s %s" % (environment.application,self._pid,source,message)
+		return "%s: %-6d %-13s %s" % (environment.application,self._pid,source,message)
 
 	def _prefixed (self, level, source, message):
 		timestamp = time.localtime()

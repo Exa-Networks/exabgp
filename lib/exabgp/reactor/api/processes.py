@@ -67,7 +67,6 @@ class Processes (object):
 		self._encoder = {}
 		self._events = {}
 		self._neighbor_process = {}
-		self._broken = []
 		self._respawning = {}
 
 	def _terminate (self, process):
@@ -79,6 +78,10 @@ class Processes (object):
 			pass
 		self._process[process].wait()
 		del self._process[process]
+
+		for processes in self._neighbor_process.itervalues():
+			if process in processes:
+				processes.remove(process)
 
 	def terminate (self):
 		for process in list(self._process):
@@ -156,9 +159,9 @@ class Processes (object):
 			neighbor = self.reactor.configuration.process[process]['neighbor']
 			self._neighbor_process.setdefault(neighbor,[]).append(process)
 		except (subprocess.CalledProcessError,OSError,ValueError),exc:
-			self._broken.append(process)
 			self.logger.processes("Could not start process %s" % process)
 			self.logger.processes("reason: %s" % str(exc))
+			raise ProcessError()
 
 	def start (self, restart=False):
 		for process in self.reactor.configuration.process:
@@ -168,15 +171,6 @@ class Processes (object):
 		for process in list(self._process):
 			if process not in self.reactor.configuration.process:
 				self._terminate(process)
-
-	def broken (self, neighbor):
-		if self._broken:
-			if '*' in self._broken:
-				return True
-			for process in self._neighbor_process.get(neighbor,[]):
-				if process in self._broken:
-					return True
-		return False
 
 	def fds (self):
 		return [self._process[process].stdout for process in self._process]
@@ -228,28 +222,31 @@ class Processes (object):
 				self._start(process)
 
 	def write (self, process, string, peer=None):
-		# XXX: FIXME: This is potentially blocking
+		failure = 0
 		while True:
 			try:
 				self._process[process].stdin.write('%s\n' % string)
+				self._process[process].stdin.flush()
 			except IOError,exc:
-				self._broken.append(process)
-				if exc.errno == errno.EPIPE:
-					self._broken.append(process)
-					self.logger.processes("Issue while sending data to our helper program")
+				failure += 1
+				if failure >= 5:
+					self.logger.processes("Too many attempt to send data to helper program, aborting")
 					raise ProcessError()
-				else:
+
+				if exc.errno in error.block:
 					# Could it have been caused by a signal ? What to do.
-					self.logger.processes("Error received while SENDING data to helper program, retrying (%s)" % errstr(exc))
+					self.logger.processes("Error received while sending data to helper program, retrying (%s)" % errstr(exc))
 					continue
+
+				if exc.errno == errno.EPIPE:
+					self.logger.processes("Issue while sending data to our helper program, it left us restarting it")
+					self._terminate(process)
+					self._start(process)
+					continue
+
+				self.logger.processes("Fatal error on writing to PIPE, ignoring as it can not recovered")
+				raise ProcessError()
 			break
-
-		try:
-			self._process[process].stdin.flush()
-		except IOError,exc:
-			# AFAIK, the buffer should be flushed at the next attempt.
-			self.logger.processes("Error received while FLUSHING data to helper program, retrying (%s)" % errstr(exc))
-
 		return True
 
 	def _notify (self, peer, event):
