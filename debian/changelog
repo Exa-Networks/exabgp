@@ -1,3 +1,9 @@
+exabgp (3.4.13-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+
+ -- Vincent Bernat <bernat@debian.org>  Thu, 24 Sep 2015 16:36:02 +0200
+
 exabgp (3.4.12-3) unstable; urgency=medium
 
   * init: use --folder to tell ExaBGP the location of /etc/exabgp
