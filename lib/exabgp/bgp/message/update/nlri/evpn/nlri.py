@@ -12,6 +12,8 @@ from exabgp.protocol.ip import IP, NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
+from exabgp.bgp.message import OUT
+
 from exabgp.bgp.message.update.nlri import NLRI
 
 # +-----------------------------------+
@@ -34,10 +36,9 @@ class EVPN (NLRI):
 	NAME = 'unknown'
 	SHORT_NAME = 'unknown'
 
-	def __init__ (self, packed, nexthop, action, path=None):
-		NLRI.__init__(self, AFI.l2vpn, SAFI.evpn)
-		self.nexthop = IP.unpack(nexthop) if nexthop else NoNextHop
-		self.action = action
+	def __init__ (self, packed, nexthop=NoNextHop, action=OUT.UNSET, addpath=None):
+		NLRI.__init__(self, AFI.l2vpn, SAFI.evpn, action)
+		self.nexthop = nexthop
 		self._packed = packed
 
 	# For subtype 2 (MAC/IP advertisement route),
@@ -86,7 +87,7 @@ class EVPN (NLRI):
 		if code in cls.registered_evpn:
 			klass = cls.registered_evpn[code].unpack(bgp[2:length+2])
 		else:
-			klass = cls(bgp[2:length+2], nexthop, action, addpath)
+			klass = cls(bgp[2:length+2], NoNextHop, action, addpath)
 		klass.CODE = code
 		klass.action = action
 		klass.addpath = addpath
