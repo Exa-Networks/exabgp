@@ -14,7 +14,6 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.extended import RouteTarget
 
-from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
 
 from exabgp.protocol.family import AFI

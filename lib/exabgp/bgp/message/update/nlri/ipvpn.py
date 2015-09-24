@@ -9,8 +9,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.protocol.ip import IP
-
 from exabgp.bgp.message import OUT
 
 from exabgp.bgp.message.update.nlri.nlri import NLRI
@@ -18,7 +16,6 @@ from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.labelled import Labelled
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
-from exabgp.bgp.message.update.attribute import NextHop
 
 from exabgp.protocol.ip import NoNextHop
 
