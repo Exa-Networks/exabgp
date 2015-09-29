@@ -71,7 +71,7 @@ class Prefix (EVPN):
 		self.gwip = gwip
 		self.label = label
 		self.label = label if label else Labels.NOLABEL
-		self.pack()
+		self._pack()
 
 	def __eq__ (self, other):
 		return \

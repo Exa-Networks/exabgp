@@ -15,6 +15,7 @@ from exabgp.bgp.message.update.nlri.qualifier import Labels
 
 
 @NLRI.register(AFI.ipv4,SAFI.nlri_mpls)
+@NLRI.register(AFI.ipv6,SAFI.nlri_mpls)
 class Labelled (INET):
 	__slots__ = ['labels']
 

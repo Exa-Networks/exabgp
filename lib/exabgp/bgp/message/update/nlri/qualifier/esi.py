@@ -20,6 +20,8 @@ class ESI (object):
 
 	def __init__ (self, esi=None):
 		self.esi = self.DEFAULT if esi is None else esi
+		if len(self.esi)!=10:
+			raise Exception("incorrect ESI, len %d instead of 10" % len(esi))
 
 	def __eq__ (self, other):
 		return self.esi == other.esi
