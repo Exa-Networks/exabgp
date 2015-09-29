@@ -9,8 +9,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.protocol.ip import IP
-
 from exabgp.bgp.message import OUT
 
 from exabgp.bgp.message.update.nlri.nlri import NLRI
@@ -18,14 +16,12 @@ from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.labelled import Labelled
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
-from exabgp.bgp.message.update.attribute import NextHop
 
+from exabgp.protocol.ip import NoNextHop
 
 # ====================================================== MPLS
 # RFC 3107 / RFC 4364
 
-@NLRI.register(AFI.ipv4,SAFI.nlri_mpls)
-@NLRI.register(AFI.ipv6,SAFI.nlri_mpls)
 @NLRI.register(AFI.ipv4,SAFI.mpls_vpn)
 @NLRI.register(AFI.ipv6,SAFI.mpls_vpn)
 class IPVPN (Labelled):
@@ -36,12 +32,12 @@ class IPVPN (Labelled):
 		self.rd = RouteDistinguisher.NORD
 
 	@classmethod
-	def new (cls, afi, safi, packed, mask, labels, rd, nexthop, action):
-		instance = cls(afi,safi,OUT.ANNOUNCE)
+	def new (cls, afi, safi, packed, mask, labels, rd, nexthop=NoNextHop, action=OUT.UNSET):
+		instance = cls(afi,safi,action)
 		instance.cidr = CIDR(packed, mask)
 		instance.labels = labels
 		instance.rd = rd
-		instance.nexthop = NextHop(IP.ntop(nexthop),nexthop)
+		instance.nexthop = nexthop
 		instance.action = action
 		return instance
 
@@ -51,24 +47,10 @@ class IPVPN (Labelled):
 	def __len__ (self):
 		return Labelled.__len__(self) + len(self.rd)
 
-	def __repr__ (self):
-		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
-		return "%s%s" % (self.extensive(),nexthop)
-
 	def __eq__ (self, other):
 		return \
 			Labelled.__eq__(self, other) and \
 			self.rd == other.rd
-
-	# bagpipe specific code
-	def eq (self, other):
-		return \
-			Labelled.eq(self, other) and \
-			self.rd == other.rd
-
-	def __hash__ (self):
-		# bagpipe: two NLRI with same RD and prefix, but different labels need to have the same hash
-		return hash((self.rd, self.cidr.top(), self.cidr.mask))
 
 	@classmethod
 	def has_rd (cls):
