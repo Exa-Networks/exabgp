@@ -26,6 +26,7 @@ class Outgoing (Connection):
 		try:
 			self.io = create(afi)
 			MD5(self.io,peer,port,md5)
+			TTL(self.io, peer, self.ttl)
 			bind(self.io,local,afi)
 			async(self.io,peer)
 			connect(self.io,peer,port,afi,md5)
@@ -55,5 +56,5 @@ class Outgoing (Connection):
 			return
 
 		nagle(self.io,self.peer)
-		TTL(self.io,self.peer,self.ttl)
+		# Not working after connect() at least on FreeBSD TTL(self.io,self.peer,self.ttl)
 		yield True
