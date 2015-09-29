@@ -19,6 +19,7 @@ from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 
 from exabgp.protocol.ip import NoNextHop
 
+
 # ====================================================== MPLS
 # RFC 3107 / RFC 4364
 
@@ -47,10 +48,24 @@ class IPVPN (Labelled):
 	def __len__ (self):
 		return Labelled.__len__(self) + len(self.rd)
 
+	def __repr__ (self):
+		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
+		return "%s%s" % (self.extensive(),nexthop)
+
 	def __eq__ (self, other):
 		return \
 			Labelled.__eq__(self, other) and \
 			self.rd == other.rd
+
+	# bagpipe specific code
+	def eq (self, other):
+		return \
+			Labelled.eq(self, other) and \
+			self.rd == other.rd
+
+	def __hash__ (self):
+		# bagpipe: two NLRI with same RD and prefix, but different labels need to have the same hash
+		return hash((self.rd, self.cidr.top(), self.cidr.mask))
 
 	@classmethod
 	def has_rd (cls):
