@@ -85,6 +85,8 @@ Version 4.0.0
    patch by: Ebben Aries
  * Fix: mistakenly made a function private breaking some ASN4 code path
     reported by: Victor Sudakov
+ * Fix: the ttl-security parameter didn´t really work. Fixed for outgoing connections now.
+   patch by: Borja Marcos
  * Feature: Allow single line flow route
     requested by: Pavel Odintsov
  * Feature: add support for rpm packaging
