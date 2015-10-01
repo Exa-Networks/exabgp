@@ -17,11 +17,12 @@ from exabgp.bgp.message.update.nlri.labelled import Labelled
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 
+from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
 
 
-# ====================================================== MPLS
-# RFC 3107 / RFC 4364
+# ====================================================== IPVPN
+# RFC 4364
 
 @NLRI.register(AFI.ipv4,SAFI.mpls_vpn)
 @NLRI.register(AFI.ipv6,SAFI.mpls_vpn)
@@ -33,12 +34,12 @@ class IPVPN (Labelled):
 		self.rd = RouteDistinguisher.NORD
 
 	@classmethod
-	def new (cls, afi, safi, packed, mask, labels, rd, nexthop=NoNextHop, action=OUT.UNSET):
+	def new (cls, afi, safi, packed, mask, labels, rd, nexthop=None, action=OUT.UNSET):
 		instance = cls(afi,safi,action)
 		instance.cidr = CIDR(packed, mask)
 		instance.labels = labels
 		instance.rd = rd
-		instance.nexthop = nexthop
+		instance.nexthop = IP.create(nexthop) if nexthop else NoNextHop
 		instance.action = action
 		return instance
 
@@ -56,16 +57,6 @@ class IPVPN (Labelled):
 		return \
 			Labelled.__eq__(self, other) and \
 			self.rd == other.rd
-
-	# bagpipe specific code
-	def eq (self, other):
-		return \
-			Labelled.eq(self, other) and \
-			self.rd == other.rd
-
-	def __hash__ (self):
-		# bagpipe: two NLRI with same RD and prefix, but different labels need to have the same hash
-		return hash((self.rd, self.cidr.top(), self.cidr.mask))
 
 	@classmethod
 	def has_rd (cls):
