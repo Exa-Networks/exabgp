@@ -48,13 +48,6 @@ class INET (NLRI):
 			self.path_info == other.path_info and \
 			self.nexthop == other.nexthop
 
-	# bagpipe specific code
-	def eq (self, other):
-		return \
-			NLRI.eq(self, other) and \
-			self.cidr == other.cidr and \
-			self.path_info == other.path_info
-
 	def __ne__ (self, other):
 		return not self.__eq__(other)
 

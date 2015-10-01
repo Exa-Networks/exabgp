@@ -13,6 +13,8 @@ from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 from exabgp.bgp.message.update.nlri.qualifier import Labels
 
+# ====================================================== MPLS
+# RFC 3107
 
 @NLRI.register(AFI.ipv4,SAFI.nlri_mpls)
 @NLRI.register(AFI.ipv6,SAFI.nlri_mpls)
