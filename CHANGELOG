@@ -3,6 +3,9 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.4.14
+ * Fix: the ttl-security parameter didn´t really work. Fixed for outgoing connections now.
+   patch by: Borja Marcos
 Version 3.4.13
  * Fix: add semicolon in syslog entry so it can be parsed by tools
  * Fix: duplication of message following helper process death
