@@ -28,6 +28,7 @@ class Outgoing (Connection):
 			MD5(self.io,peer,port,md5)
 			bind(self.io,local,afi)
 			async(self.io,peer)
+			TTL(self.io,peer,ttl)
 			connect(self.io,peer,port,afi,md5)
 			self.init = True
 		except NetworkError,exc:
