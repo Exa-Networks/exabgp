@@ -5,7 +5,10 @@ Version explained:
 
 Version 3.4.14
  * Fix: the ttl-security parameter didn´t really work. Fixed for outgoing connections now.
-   patch by: Borja Marcos
+    patch by: Borja Marcos
+ * Fix: configuration leak between processes for neighbor-changes and send-packets
+    reported by: spakka
+
 Version 3.4.13
  * Fix: add semicolon in syslog entry so it can be parsed by tools
  * Fix: duplication of message following helper process death
