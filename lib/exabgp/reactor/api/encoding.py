@@ -26,10 +26,10 @@ class APIOptions (dict):
 		self['consolidate'] = self.get('consolidate',False) or value
 
 	def send_packets (self, value):
-		self['send-packets'] = self.get('send_packets',False) or value
+		self['send-packets'] = self.get('send-packets',False) or value
 
 	def neighbor_changes (self, value):
-		self['neighbor-changes'] = self.get('neighbor_changes',False) or value
+		self['neighbor-changes'] = self.get('neighbor-changes',False) or value
 
 	def receive_notifications (self, value):
 		self[Message.CODE.NOTIFICATION] = self.get(Message.CODE.NOTIFICATION,False) or value
