@@ -4,7 +4,6 @@ After=network.target
 
 [Service]
 Environment=exabgp_daemon_daemonize=false
-Environment=exabgp_log_destination=stdout
 ConditionPathExists=/etc/exabgp/exabgp.conf
 ExecStart=/usr/sbin/exabgp --folder /etc/exabgp /etc/exabgp/exabgp.conf
 ExecReload=/bin/kill -USR1 $MAINPID
