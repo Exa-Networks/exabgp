@@ -47,6 +47,12 @@ draft-ietf-idr-**[add-paths-08](http://tools.ietf.org/html/draft-ietf-idr-add-pa
 
 <!-- [![Coverage Status](https://img.shields.io/coveralls/Exa-Networks/exabgp.svg)](https://coveralls.io/r/Exa-Networks/exabgp) -->
 
+If using `git`, for production deployment please use the `3.4` branch.
+```sh
+> git clone https://github.com/Exa-Networks/exabgp.git
+> git checkout 3.4
+```
+
 The way way to keep informed is to follow us on [Google+](https://plus.google.com/u/0/communities/108249711110699351497), [twitter](https://twitter.com/#!/search/exabgp) and / or subscribe to our low volume [mailing list](http://groups.google.com/group/exabgp-users).
 For more information, please consult any of the [wiki pages](https://github.com/Exa-Networks/exabgp/wiki), in particular the [RFC compliance](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information), [FAQ](https://github.com/Exa-Networks/exabgp/wiki/FAQ)
  and [changelog](https://raw.github.com/Exa-Networks/exabgp/master/CHANGELOG).
