@@ -102,6 +102,7 @@ def show_routes (self, reactor, service, command):
 				reactor.answer(service,'neighbor %s %s' % (neighbor.local_address,str(change.nlri)))
 				yield True
 			reactor.answer(service,'neighbor %s %s' % (neighbor.local_address,'end'))
+		reactor.answer(service,'end')
 	reactor.plan(callback(),'show_routes')
 	return True
 
