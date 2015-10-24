@@ -20,4 +20,5 @@ while messages:
 	sys.stdout.flush()
 	time.sleep(0.1)
 
-sys.stdin.readline()
+while True:
+	sys.stdin.readline()
