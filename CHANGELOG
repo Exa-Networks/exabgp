@@ -7,6 +7,7 @@ Version 4.0.0
  * Change: move and install healthcheck in bin
  * Change: removed old environment support ( DEBUG_* )
  * Change: configuration logging is now disabled by default
+ * Change: 'show routes' now returns an 'end' message after the last route
  * Feature: add support for upstart
    patch by: Pierre-Yves Kerembellec
  * Feature/Fix: Port of bagpipe EVPN code

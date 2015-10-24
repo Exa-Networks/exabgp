@@ -47,7 +47,7 @@ draft-ietf-idr-**[add-paths-08](http://tools.ietf.org/html/draft-ietf-idr-add-pa
 
 <!-- [![Coverage Status](https://img.shields.io/coveralls/Exa-Networks/exabgp.svg)](https://coveralls.io/r/Exa-Networks/exabgp) -->
 
-If using `git`, for production deployment please use the `3.4` branch.
+If using `git`, for production deployment please use the "3.4` branch.
 ```sh
 > git clone https://github.com/Exa-Networks/exabgp.git
 > git checkout 3.4
