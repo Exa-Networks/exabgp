@@ -9,16 +9,19 @@ Version 4.0.0
  * Change: configuration logging is now disabled by default
  * Change: 'show routes' now returns an 'end' message for each peer
  * Change: 'show routes' now returns an 'end' message after the last route
+    patch from: Jérôme Marteaux
+ * Change: when API commands are failing, returns a 'error' message
+    patch from: Jérôme Marteaux
  * Feature: add support for upstart
-   patch by: Pierre-Yves Kerembellec
+    patch by: Pierre-Yves Kerembellec
  * Feature/Fix: Port of bagpipe EVPN code
-   patch by: Thomas Morrin
+    patch by: Thomas Morrin
  * Feature: EVPN RT5 support
-   patch by: Diego Garcia del Rio
+    patch by: Diego Garcia del Rio
  * Feature: Can use numerical values for Flow elements
-   requested by: jpan613 (on github)
+    requested by: jpan613 (on github)
  * Feature: show route (extensive) can take a neighbor as parameter
-   requested by: jtkdpu
+    requested by: jtkdpu
  * Feature: allow to run exabgp from python -m exabgp
  * Change: ExaBGP is now run as user/group exabgp/exabgp with the systemd service file.
     patch by: Vincent Bernat

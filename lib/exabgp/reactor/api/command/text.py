@@ -170,6 +170,7 @@ def flush_route (self, reactor, service, command):
 		peers = reactor.match_neighbors(descriptions)
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+			reactor.answer(service,'error')
 			return False
 		reactor.plan(callback(self,peers),'flush_route')
 		return True
@@ -189,11 +190,13 @@ def announce_route (self, reactor, service, line):
 			peers = reactor.match_neighbors(descriptions)
 			if not peers:
 				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+				reactor.answer(service,'error')
 				return
 
 			changes = self.parser.api_route(command,peers)
 			if not changes:
 				self.logger.reactor('command could not parse route in : %s' % command,'warning')
+				reactor.answer(service,'error')
 				return
 
 			for (peers,change) in changes:
@@ -221,6 +224,7 @@ def withdraw_route (self, reactor, service, line):
 			peers = reactor.match_neighbors(descriptions)
 			if not peers:
 				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+				reactor.answer(service,'error')
 				return
 
 			changes = self.parser.api_route(command,peers)
@@ -257,6 +261,7 @@ def announce_vpls (self, reactor, service, line):
 			peers = reactor.match_neighbors(descriptions)
 			if not peers:
 				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+				reactor.answer(service,'error')
 				return
 
 			changes = self.parser.api_vpls(command,peers)
@@ -289,6 +294,7 @@ def withdraw_vpls (self, reactor, service, line):
 			peers = reactor.match_neighbors(descriptions)
 			if not peers:
 				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+				reactor.answer(service,'error')
 				return
 
 			changes = self.parser.api_vpls(command,peers)
@@ -325,6 +331,7 @@ def announce_attributes (self, reactor, service, line):
 			peers = reactor.match_neighbors(descriptions)
 			if not peers:
 				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+				reactor.answer(service,'error')
 				return
 
 			changes = self.parser.api_attributes(command,peers)
@@ -357,6 +364,7 @@ def withdraw_attribute (self, reactor, service, line):
 			peers = reactor.match_neighbors(descriptions)
 			if not peers:
 				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+				reactor.answer(service,'error')
 				return
 
 			changes = self.parser.api_attributes(command,peers)
@@ -393,6 +401,7 @@ def announce_flow (self, reactor, service, line):
 			peers = reactor.match_neighbors(descriptions)
 			if not peers:
 				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+				reactor.answer(service,'error')
 				return
 
 			changes = self.parser.api_flow(command,peers)
@@ -425,6 +434,7 @@ def withdraw_flow (self, reactor, service, line):
 			peers = reactor.match_neighbors(descriptions)
 			if not peers:
 				self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+				reactor.answer(service,'error')
 				return
 
 			changes = self.parser.api_flow(command,peers)
@@ -471,6 +481,7 @@ def announce_eor (self, reactor, service, command):
 		peers = reactor.match_neighbors(descriptions)
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+			reactor.answer(service,'error')
 			return False
 		reactor.plan(callback(self,command,peers),'announce_eor')
 		return True
@@ -500,6 +511,7 @@ def announce_refresh (self, reactor, service, command):
 		peers = reactor.match_neighbors(descriptions)
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+			reactor.answer(service,'error')
 			return False
 		reactor.plan(callback(self,command,peers),'announce_refresh')
 		return True
@@ -535,6 +547,7 @@ def announce_operational (self, reactor, service, command):
 		peers = reactor.match_neighbors(descriptions)
 		if not peers:
 			self.logger.reactor('no neighbor matching the command : %s' % command,'warning')
+			reactor.answer(service,'error')
 			return False
 		reactor.plan(callback(self,command,peers),'announce_operational')
 		return True
