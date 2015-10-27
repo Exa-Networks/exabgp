@@ -74,11 +74,13 @@ class NLRI (Family):
 			new = (AFI(afi),SAFI(safi))
 			if new in cls.registered_nlri:
 				if force:
-					cls.registered_nlri['%d/%d' % new] = klass
+					# python has a bug and does not allow %ld/%ld (pypy does)
+					cls.registered_nlri['%s/%s' % new] = klass
 				else:
 					raise RuntimeError('Tried to register %s/%s twice' % new)
 			else:
-				cls.registered_nlri['%d/%d' % new] = klass
+				# python has a bug and does not allow %ld/%ld (pypy does)
+				cls.registered_nlri['%s/%s' % new] = klass
 				cls.registered_families.append(new)
 			return klass
 		return register_nlri
@@ -95,7 +97,7 @@ class NLRI (Family):
 			cls.logger = Logger()
 		cls.logger.parser(LazyNLRI(afi,safi,data))
 
-		key = '%d/%d' % (afi,safi)
+		key = '%s/%s' % (AFI(afi),SAFI(safi))
 		if key in cls.registered_nlri:
 			return cls.registered_nlri[key].unpack_nlri(afi,safi,data,action,addpath)
 		raise Notify(3,0,'trying to decode unknown family %s/%s' % (AFI(afi),SAFI(safi)))
