@@ -13,25 +13,30 @@ from struct import unpack
 
 
 class ASN (long):
+	cache = {}
+
+	@classmethod
+	def _cache (cls,value,klass):
+		if value in cls.cache:
+			return cls.cache[value]
+		instance = klass(value)
+		cls.cache[value] = instance
+		return instance
+
 	def asn4 (self):
 		return self > pow(2,16)
 
 	def pack (self, negotiated=None):
 		asn4 = negotiated if negotiated is not None else self.asn4()
-		if asn4:
-			return pack('!L',self)
-		return pack('!H',self)
+		return pack('!L' if asn4 else '!H',self)
 
 	@classmethod
 	def unpack (cls, data, klass=None):
-		klass = cls if klass is None else klass
-		asn4 = True if len(data) == 4 else False
-		return klass(unpack('!L' if asn4 else '!H',data)[0])
+		value = unpack('!L' if len(data) == 4 else '!H',data)[0]
+		return cls._cache(value,cls if klass is None else klass)
 
 	def __len__ (self):
-		if self.asn4():
-			return 4
-		return 2
+		return 4 if self.asn4() else 2
 
 	def extract (self):
 		return [pack('!L',self)]
@@ -43,6 +48,6 @@ class ASN (long):
 
 	@classmethod
 	def from_string (cls, value):
-		return cls(long(value))
+		return cls._cache(long(value),cls)
 
 AS_TRANS = ASN(23456)
