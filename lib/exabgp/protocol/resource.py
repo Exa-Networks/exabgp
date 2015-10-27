@@ -9,13 +9,23 @@ Copyright (c) 2015-2015 Exa Networks. All rights reserved.
 from exabgp.util import string_is_hex
 
 
-class Resource (int):
+class Resource (long):
 	NAME = ''
 	codes = {}
 	names = {}
 
+	cache = {}
+
+	def __new__ (cls, *args):
+		key = '//'.join((str(_) for _ in args))
+		if key in Resource.cache.setdefault(cls,{}):
+			return Resource.cache[cls][key]
+		instance = long.__new__(cls,*args)
+		Resource.cache[cls][key] = instance
+		return instance
+
 	def __str__ (self):
-		return self.names.get(self,'unknown %s type %d' % (self.NAME,int(self)))
+		return self.names.get(self,'unknown %s type %ld' % (self.NAME,self))
 
 	@classmethod
 	def _value (cls,string):

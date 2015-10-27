@@ -9,20 +9,12 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
+from exabgp.protocol.resource import Resource
+
 # =================================================================== ASN
 
 
-class ASN (long):
-	cache = {}
-
-	@classmethod
-	def _cache (cls,value,klass):
-		if value in cls.cache:
-			return cls.cache[value]
-		instance = klass(value)
-		cls.cache[value] = instance
-		return instance
-
+class ASN (Resource):
 	def asn4 (self):
 		return self > pow(2,16)
 
@@ -32,8 +24,9 @@ class ASN (long):
 
 	@classmethod
 	def unpack (cls, data, klass=None):
+		kls = cls if klass is None else klass
 		value = unpack('!L' if len(data) == 4 else '!H',data)[0]
-		return cls._cache(value,cls if klass is None else klass)
+		return kls(value)
 
 	def __len__ (self):
 		return 4 if self.asn4() else 2
@@ -46,8 +39,14 @@ class ASN (long):
 			return AS_TRANS.pack()
 		return self.pack()
 
+	def __repr__ (self):
+		return '%ld' % self
+
+	def __str__ (self):
+		return '%ld' % self
+
 	@classmethod
 	def from_string (cls, value):
-		return cls._cache(long(value),cls)
+		return cls(long(value))
 
 AS_TRANS = ASN(23456)
