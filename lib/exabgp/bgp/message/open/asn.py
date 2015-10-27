@@ -40,10 +40,10 @@ class ASN (Resource):
 		return self.pack()
 
 	def __repr__ (self):
-		return '%ld' % self
+		return '%ld' % long(self)
 
 	def __str__ (self):
-		return '%ld' % self
+		return '%ld' % long(self)
 
 	@classmethod
 	def from_string (cls, value):
