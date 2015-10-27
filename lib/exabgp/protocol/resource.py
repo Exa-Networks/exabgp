@@ -25,7 +25,7 @@ class Resource (long):
 		return instance
 
 	def __str__ (self):
-		return self.names.get(self,'unknown %s type %ld' % (self.NAME,self))
+		return self.names.get(self,'unknown %s type %ld' % (self.NAME,long(self)))
 
 	@classmethod
 	def _value (cls,string):
