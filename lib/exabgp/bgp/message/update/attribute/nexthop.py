@@ -67,3 +67,6 @@ class NextHopSelf (NextHop):
 
 	def pack (self,negotiated):
 		return self._attribute(negotiated.nexthopself(self.afi).ton())
+
+	def ton (self, negotiated=None):
+		return negotiated.nexthopself(self.afi).ton()

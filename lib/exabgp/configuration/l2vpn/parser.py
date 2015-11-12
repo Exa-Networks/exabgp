@@ -9,7 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.protocol.family import AFI
 
 from exabgp.protocol.ip import IP
-from exabgp.protocol.ip import IPSelf
+from exabgp.bgp.message.update.attribute import NextHopSelf
 
 from exabgp.bgp.message.update.nlri import VPLS
 from exabgp.bgp.message.update.attribute import Attributes
@@ -58,5 +58,5 @@ def next_hop (tokeniser):
 	value = tokeniser()
 
 	if value.lower() == 'self':
-		return IPSelf(AFI.ipv4)
+		return NextHopSelf(AFI.ipv4)
 	return IP.create(value)
