@@ -141,9 +141,11 @@ class Negotiated (object):
 
 		return None
 
-	def nexthopself (self,afi):
+	def nexthopself (self, afi):
 		if afi == AFI.ipv4:
 			return self.sent_open.router_id
+		if afi == AFI.ipv6:
+			return self.neighbor.local_address
 		raise RuntimeError('nexthop self only implemented for IPv4 atm')
 
 # =================================================================== RequirePath

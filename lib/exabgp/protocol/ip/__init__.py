@@ -22,6 +22,12 @@ class IPSelf (object):
 	def __repr__ (self):
 		return 'self'
 
+	def top (self, negotiated, afi=AFI.undefined):
+		return negotiated.nexthopself(afi).top()
+
+	def ton (self,negotiated, afi=AFI.undefined):
+		return negotiated.nexthopself(afi).ton()
+
 	def pack (self, negotiated):
 		return negotiated.nexthopself(self.afi).ton()
 
@@ -59,7 +65,7 @@ class IP (object):
 	def ntop (data):
 		return socket.inet_ntop(socket.AF_INET if len(data) == 4 else socket.AF_INET6,data)
 
-	def top (self):
+	def top (self, negotiated=None, afi=AFI.undefined):
 		return self._string
 
 	@staticmethod
@@ -108,7 +114,7 @@ class IP (object):
 	def pack (self):
 		return self._packed
 
-	def ton (self, negotiated=None):
+	def ton (self, negotiated=None, afi=AFI.undefined):
 		return self._packed
 
 	def __repr__ (self):
@@ -174,7 +180,7 @@ class _NoNextHop (object):
 	def index (self):
 		return ''
 
-	def ton (self, negotiated=None):
+	def ton (self, negotiated=None, afi=AFI.undefined):
 		return ''
 
 	def __str__ (self):

@@ -37,7 +37,7 @@ class NextHop (Attribute,IP):
 	def __ne__ (self, other):
 		return not self.__eq__(other)
 
-	def ton (self, negotiated=None):
+	def ton (self, negotiated=None, afi=AFI.undefined):
 		return self._packed
 
 	def pack (self, negotiated=None):
@@ -68,5 +68,5 @@ class NextHopSelf (NextHop):
 	def pack (self,negotiated):
 		return self._attribute(negotiated.nexthopself(self.afi).ton())
 
-	def ton (self, negotiated=None):
-		return negotiated.nexthopself(self.afi).ton()
+	def ton (self, negotiated=None, afi=AFI.undefined):
+		return negotiated.nexthopself(afi).ton()

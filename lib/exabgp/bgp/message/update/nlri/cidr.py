@@ -8,6 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import math
 
+from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.notification import Notify
 
@@ -53,12 +54,12 @@ class CIDR (object):
 	def __ge__ (self, other):
 		return self._packed >= other._packed
 
-	def top (self):
+	def top (self, negotiated=None, afi=AFI.undefined):
 		if not self._ip:
 			self._ip = IP.ntop(self._packed)
 		return self._ip
 
-	def ton (self, negotiated=None):
+	def ton (self, negotiated=None, afi=AFI.undefined):
 		return self._packed
 
 	def __repr__ (self):

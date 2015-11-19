@@ -84,7 +84,7 @@ def next_hop (tokeniser):
 	value = tokeniser()
 
 	if value.lower() == 'self':
-		return IPSelf(AFI.ipv4),NextHopSelf(AFI.ipv4)
+		return IPSelf(AFI.undefined),NextHopSelf(AFI.undefined)
 	else:
 		ip = IP.create(value)
 		if ip.afi == AFI.ipv4:

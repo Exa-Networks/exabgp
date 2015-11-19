@@ -16,6 +16,7 @@ import psutil
 
 SIGNAL = dict([(name,getattr(signal,name)) for name in dir(signal) if name.startswith('SIG')])
 
+
 def bytestream (value):
 	return ''.join(['%02X' % ord(_) for _ in value])
 
@@ -337,7 +338,11 @@ class BGPServer (asyncore.dispatcher):
 
 	def __init__ (self, host, port, messages):
 		asyncore.dispatcher.__init__(self)
-		self.create_socket(socket.AF_INET,socket.SOCK_STREAM)
+
+		if ':' in host:
+			self.create_socket(socket.AF_INET6, socket.SOCK_STREAM)
+		else:
+			self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.set_reuse_addr()
 		self.bind((host,port))
 		self.listen(5)
@@ -404,7 +409,7 @@ class BGPServer (asyncore.dispatcher):
 		if pair is not None:
 			sock,addr = pair
 			handler = BGPHandler(sock).setup(
-				*addr,
+				*addr[:2],
 				messages=messages,
 				options=self.options
 			)
@@ -444,7 +449,8 @@ def main ():
 		sys.exit(1)
 
 	try:
-		BGPServer('localhost',int(os.environ.get('exabgp.tcp.port','179')),messages)
+		BGPServer('127.0.0.1',int(os.environ.get('exabgp.tcp.port','179')),messages)
+		BGPServer('::1',int(os.environ.get('exabgp.tcp.port','179')),messages)
 		drop()
 		asyncore.loop()
 	except socket.error,exc:
