@@ -152,12 +152,15 @@ class ParseNeighbor (Section):
 
 		# capabilities
 		capability = local.get('capability',{})
-		neighbor.graceful_restart = capability.get('graceful-restart',0) or int(neighbor.hold_time)
+
 		neighbor.add_path         = capability.get('add-path',0)
 		neighbor.asn4             = capability.get('asn4',True)
 		neighbor.multisession     = capability.get('multi-session',False)
 		neighbor.operational      = capability.get('operational',False)
 		neighbor.route_refresh    = capability.get('route-refresh',0)
+
+		if capability.get('graceful-restart',0) is not False:
+			neighbor.graceful_restart = capability.get('graceful-restart',0) or int(neighbor.hold_time)
 
 		families = []
 		for family in ParseFamily.convert.keys():
@@ -184,9 +187,6 @@ class ParseNeighbor (Section):
 
 		if not neighbor.router_id:
 			neighbor.router_id = neighbor.local_address
-
-		if neighbor.graceful_restart is None:
-			neighbor.graceful_restart = int(neighbor.hold_time)
 
 		if neighbor.route_refresh:
 			if neighbor.adjribout:
