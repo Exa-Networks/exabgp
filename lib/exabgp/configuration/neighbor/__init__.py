@@ -159,7 +159,7 @@ class ParseNeighbor (Section):
 		neighbor.operational      = capability.get('operational',False)
 		neighbor.route_refresh    = capability.get('route-refresh',0)
 
-		if capability.get('graceful-restart',0) is not False:
+		if capability.get('graceful-restart',False) is not False:
 			neighbor.graceful_restart = capability.get('graceful-restart',0) or int(neighbor.hold_time)
 
 		families = []
