@@ -44,7 +44,6 @@ Version 4.0.0
     * format change for notification and shutdown message
     * VPLS endpoint, base, offset, and size are now numbers and not strings
  * Change: remove all ExaBGP 2.0 compatibily environment variables
- * Fix: AS4Path Message Registration
  * Fix: JSON reporting of VPLS ( endpoint, base, offset, and size were mixed up during printing )
  * Fix: Do shutdown when waiting for a new connection to a peer
  * Fix: Bad ASN enconding when ASN4 is not negotiated
@@ -92,6 +91,8 @@ Version 4.0.0
     reported by: Victor Sudakov
  * Fix: the ttl-security parameter didn´t really work. Fixed for outgoing connections now.
    patch by: Borja Marcos
+ * Fix: AS4Path Message Registration
+   patch by: Adam Twardowski
  * Feature: Allow single line flow route
     requested by: Pavel Odintsov
  * Feature: add support for rpm packaging
