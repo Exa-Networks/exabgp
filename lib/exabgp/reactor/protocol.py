@@ -51,8 +51,15 @@ class Protocol (object):
 		self.neighbor = peer.neighbor
 		self.negotiated = Negotiated(self.neighbor)
 		self.connection = None
-		port = os.environ.get('exabgp.tcp.port','') or os.environ.get('exabgp_tcp_port','')
-		self.port = int(port) if port.isdigit() else 179
+
+		if self.neighbor.connect:
+			self.port = self.neighbor.connect
+		elif os.environ.get('exabgp.tcp.port','').isdigit():
+			self.port = int(os.environ.get('exabgp.tcp.port'))
+		elif os.environ.get('exabgp_tcp_port','').isdigit():
+			self.port = int(os.environ.get('exabgp_tcp_port'))
+		else:
+			self.port = 179
 
 		# XXX: FIXME: check the the -19 is correct (but it is harmless)
 		# The message size is the whole BGP message _without_ headers

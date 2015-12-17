@@ -8,6 +8,8 @@ Version 3.4.14
     patch by: Borja Marcos
  * Fix: configuration leak between processes for neighbor-changes and send-packets
     reported by: spakka
+ * Feature: add per neighbor connection port
+    requested by: dbarrosop
 
 Version 3.4.13
  * Fix: add semicolon in syslog entry so it can be parsed by tools
