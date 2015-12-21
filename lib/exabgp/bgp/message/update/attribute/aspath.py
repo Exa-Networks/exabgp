@@ -209,6 +209,7 @@ ASPath.Empty = ASPath([],[])
 # ================================================================= AS4Path (17)
 #
 
+@Attribute.register()
 class AS4Path (ASPath):
 	ID = Attribute.CODE.AS4_PATH
 	FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL

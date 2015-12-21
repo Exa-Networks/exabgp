@@ -91,6 +91,8 @@ Version 4.0.0
     reported by: Victor Sudakov
  * Fix: the ttl-security parameter didn´t really work. Fixed for outgoing connections now.
    patch by: Borja Marcos
+ * Fix: AS4Path Message Registration
+   patch by: Adam Twardowski
  * Feature: Allow single line flow route
     requested by: Pavel Odintsov
  * Feature: add support for rpm packaging
