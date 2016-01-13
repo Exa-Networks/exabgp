@@ -104,6 +104,8 @@ Please let us know if you use it.
  * [exabgp-voipbl](https://github.com/GeertHauwaerts/exabgp-voipbl) advertises local or/and voipbl.org blacklist using unicast or flow route.
  * [ExaBGPmon](https://github.com/thepacketgeek/ExaBGPmon) web interface to ExaBGP
  * [ERCO](https://erco.xyz/) web interface to ExaBGP
+ * [ExaZK](https://github.com/shtouff/exazk) a plugin to interface ExaBGP & ZooKeeper
+ * [exazk](https://github.com/ton31337/exazk) a ruby solution to interface ExaBGP & ZooKeeper to achieve service HA
 
 ## Self Promotion
 
