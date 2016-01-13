@@ -30,6 +30,7 @@ from exabgp.bgp.message.update.attribute import ASPath
 from exabgp.bgp.message.update.attribute import LocalPreference
 from exabgp.bgp.message.update.attribute import AtomicAggregate
 from exabgp.bgp.message.update.attribute import Aggregator
+from exabgp.bgp.message.update.attribute import Aggregator4
 from exabgp.bgp.message.update.attribute import OriginatorID
 from exabgp.bgp.message.update.attribute import ClusterID
 from exabgp.bgp.message.update.attribute import ClusterList
@@ -243,15 +244,10 @@ def atomic_aggregate (tokeniser):
 
 
 def aggregator (tokeniser):
-	eat = True if tokeniser.tokens[0] == '(' else False
+	eat = tokeniser.tokens and tokeniser.tokens[0] == '('
 
 	if eat:
 		tokeniser()
-
-	value = tokeniser()
-	if value != '(':
-		tokeniser.rewind(value)
-		return None
 
 	try:
 		as_number,address = tokeniser().split(':')
@@ -261,11 +257,12 @@ def aggregator (tokeniser):
 		raise ValueError('invalid aggregator')
 
 	if eat:
-		value = tokeniser()
-		if value != ')':
+		if tokeniser() != ')':
 			raise ValueError('invalid aggregator')
 
-	# XXX: This is buggy it can be an Aggregator4
+	# XXX: This could be buggy - check it
+	if local_as.asn4():
+		return Aggregator4(local_as,local_address)
 	return Aggregator(local_as,local_address)
 
 
