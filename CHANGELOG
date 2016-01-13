@@ -93,6 +93,7 @@ Version 4.0.0
    patch by: Borja Marcos
  * Fix: AS4Path Message Registration
    patch by: Adam Twardowski
+ * Fix: ASN4 boundary off by one
  * Feature: Allow single line flow route
     requested by: Pavel Odintsov
  * Feature: add support for rpm packaging

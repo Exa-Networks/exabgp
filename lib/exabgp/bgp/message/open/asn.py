@@ -15,8 +15,10 @@ from exabgp.protocol.resource import Resource
 
 
 class ASN (Resource):
+	MAX = pow(2,16)-1
+
 	def asn4 (self):
-		return self > pow(2,16)
+		return self > self.MAX
 
 	def pack (self, negotiated=None):
 		asn4 = negotiated if negotiated is not None else self.asn4()
