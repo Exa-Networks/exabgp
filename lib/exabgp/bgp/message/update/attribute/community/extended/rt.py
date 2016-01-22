@@ -23,6 +23,8 @@ class RouteTarget (ExtendedCommunity):
 	COMMUNITY_SUBTYPE = 0x02
 	LIMIT = 0
 
+	DESC = 'target'
+
 	@property
 	def la (self):
 		return self.community[2:self.LIMIT]
@@ -66,12 +68,12 @@ class RouteTargetASN2Number (RouteTarget):
 		return hash((self.asn,self.number))
 
 	def __repr__ (self):
-		return "target:%d:%d" % (self.asn,self.number)
+		return "%s:%d:%d" % (self.DESC,self.asn,self.number)
 
-	@staticmethod
-	def unpack (data):
+	@classmethod
+	def unpack (cls, data):
 		asn,number = unpack('!HL',data[2:8])
-		return RouteTargetASN2Number(ASN(asn),number,False,data[:8])
+		return cls(ASN(asn),number,False,data[:8])
 
 
 # ============================================================= RouteTargetIPNumber
@@ -102,12 +104,12 @@ class RouteTargetIPNumber (RouteTarget):
 		return hash((self.ip,self.number))
 
 	def __repr__ (self):
-		return "target:%s:%d" % (self.ip, self.number)
+		return "%s:%d:%d" % (self.DESC,self.ip,self.number)
 
-	@staticmethod
-	def unpack (data):
+	@classmethod
+	def unpack (cls, data):
 		ip,number = unpack('!4sH',data[2:8])
-		return RouteTargetIPNumber(IPv4.ntop(ip),number,False,data[:8])
+		return cls(IPv4.ntop(ip),number,False,data[:8])
 
 
 # ======================================================== RouteTargetASN4Number
@@ -138,9 +140,9 @@ class RouteTargetASN4Number (RouteTarget):
 		return hash((self.asn,self.number))
 
 	def __repr__ (self):
-		return "target:%dL:%d" % (self.asn, self.number)
+		return "%s:%dL:%d" % (self.DESC,self.asn, self.number)
 
-	@staticmethod
-	def unpack (data):
+	@classmethod
+	def unpack (cls, data):
 		asn,number = unpack('!LH',data[2:8])
-		return RouteTargetASN4Number(ASN(asn),number,False,data[:8])
+		return cls(ASN(asn),number,False,data[:8])
