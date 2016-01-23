@@ -1,3 +1,9 @@
+exabgp (3.4.13-1~bpo7+1) jessie-backports; urgency=medium
+
+  * Backport to Jessie.
+
+ -- Vincent Bernat <bernat@debian.org>  Sat, 23 Jan 2016 11:25:17 +0100
+
 exabgp (3.4.13-1) unstable; urgency=medium
 
   * New upstream release.
