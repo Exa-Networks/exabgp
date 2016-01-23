@@ -106,6 +106,8 @@ Please let us know if you use it.
  * [ERCO](https://erco.xyz/) web interface to ExaBGP
  * [ExaZK](https://github.com/shtouff/exazk) a plugin to interface ExaBGP & ZooKeeper
  * [exazk](https://github.com/ton31337/exazk) a ruby solution to interface ExaBGP & ZooKeeper to achieve service HA
+ * [exabgp edgerouter](https://github.com/infowolfe/exabgp-edgerouter) automated blocklist for Spamhaus DROP/EDROP and Emerging Threats blocklists for Ubiquiti EdgeRouters
+
 
 ## Self Promotion
 
