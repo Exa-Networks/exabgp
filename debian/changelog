@@ -1,4 +1,4 @@
-exabgp (3.4.13-1~bpo7+1) jessie-backports; urgency=medium
+exabgp (3.4.13-1~bpo8+1) jessie-backports; urgency=medium
 
   * Backport to Jessie.
 
