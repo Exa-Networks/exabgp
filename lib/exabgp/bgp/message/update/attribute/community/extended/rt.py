@@ -22,8 +22,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 class RouteTarget (ExtendedCommunity):
 	COMMUNITY_SUBTYPE = 0x02
 	LIMIT = 0
-
-	DESC = 'target'
+	DESCRIPTION = 'target'
 
 	@property
 	def la (self):
@@ -68,7 +67,7 @@ class RouteTargetASN2Number (RouteTarget):
 		return hash((self.asn,self.number))
 
 	def __repr__ (self):
-		return "%s:%d:%d" % (self.DESC,self.asn,self.number)
+		return "%s:%d:%d" % (self.DESCRIPTION,self.asn,self.number)
 
 	@classmethod
 	def unpack (cls, data):
@@ -104,7 +103,7 @@ class RouteTargetIPNumber (RouteTarget):
 		return hash((self.ip,self.number))
 
 	def __repr__ (self):
-		return "%s:%d:%d" % (self.DESC,self.ip,self.number)
+		return "%s:%d:%d" % (self.DESCRIPTION,self.ip,self.number)
 
 	@classmethod
 	def unpack (cls, data):
@@ -140,7 +139,7 @@ class RouteTargetASN4Number (RouteTarget):
 		return hash((self.asn,self.number))
 
 	def __repr__ (self):
-		return "%s:%dL:%d" % (self.DESC,self.asn, self.number)
+		return "%s:%dL:%d" % (self.DESCRIPTION,self.asn, self.number)
 
 	@classmethod
 	def unpack (cls, data):
