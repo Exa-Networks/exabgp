@@ -11,6 +11,8 @@ Version 3.4.14
  * Feature: add per neighbor connection port
     requested by: dbarrosop
  * Fix: ASN4 boundary off by one
+ * Fix: Bad peer IP when using show routes
+    patch by (backported): Wayne Tucker
 
 Version 3.4.13
  * Fix: add semicolon in syslog entry so it can be parsed by tools
