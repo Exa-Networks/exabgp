@@ -94,6 +94,8 @@ Version 4.0.0
  * Fix: AS4Path Message Registration
    patch by: Adam Twardowski
  * Fix: ASN4 boundary off by one
+ * Fix: Bad peer IP when using show routes
+    patch by: Wayne Tucker
  * Feature: Allow single line flow route
     requested by: Pavel Odintsov
  * Feature: add support for rpm packaging
