@@ -73,12 +73,12 @@ class RTC (NLRI):
 
 	def pack (self, negotiated=None):
 		# XXX: no support for addpath yet
-		packedRT = self.rt.pack()
 		# We reset ext com flag bits from the first byte in the packed RT
 		# because in an RTC route these flags never appear.
 		if self.rt:
+			packedRT = self.rt.pack()
 			return pack("!BLB", len(self), self.origin, ord(RTC.resetFlags(packedRT[0]))) + packedRT[1:]
-		return pack("!B",0)
+		return pack("!B",1)
 
 	@classmethod
 	def unpack_nlri (cls, afi, safi, bgp, action, addpath):
@@ -86,7 +86,7 @@ class RTC (NLRI):
 		length = ord(bgp[0])
 
 		if length == 0:
-			return 1,cls(afi,safi,action,ASN(0),None)
+			return cls(afi,safi,action,ASN(0),None),bgp[1:]
 
 		# We are reseting the flags on the RouteTarget extended
 		# community, because they do not make sense for an RTC route
