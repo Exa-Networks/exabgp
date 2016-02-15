@@ -40,7 +40,7 @@ optional arguments:
                         format
   --de                  (shorthand for above)
   --run HELPER          Do not run ExaBGP but one of its helper program
-                        (options are: healthcheck)
+                        (options are: healthcheck and cli)
 
 debugging:
   --debug, -d           start the python debugger on serious logging and on
