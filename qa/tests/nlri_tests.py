@@ -279,6 +279,28 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual(64577, unpacked.rt.asn)
         self.assertEqual(123, unpacked.rt.number)
 
+    def test98_RTCWildcardPackUnpack(self):
+        '''Test pack/unpack for RTC routes'''
+
+        nlri = RTC.new(AFI(AFI.ipv4), SAFI(SAFI.rtc),
+                       0, None)
+
+        packed = nlri.pack()
+        unpacked,leftover = RTC.unpack_nlri(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
+                                            packed, OUT.UNSET, None)
+
+        self.assertEqual(0, len(leftover))
+
+        # TODO: compare packed with a reference encoding verified 
+        # as conformant with RFC4684
+
+        self.assertTrue(isinstance(unpacked, RTC))
+
+        self.assertEqual(0, unpacked.origin)
+
+        self.assertIsNone(unpacked.rt)
+
+
     # tests on attributes
 
     def test4_DistinctAttributes(self):
