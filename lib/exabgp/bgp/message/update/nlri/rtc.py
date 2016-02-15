@@ -78,7 +78,7 @@ class RTC (NLRI):
 		if self.rt:
 			packedRT = self.rt.pack()
 			return pack("!BLB", len(self), self.origin, ord(RTC.resetFlags(packedRT[0]))) + packedRT[1:]
-		return pack("!B",1)
+		return pack("!B",0)
 
 	@classmethod
 	def unpack_nlri (cls, afi, safi, bgp, action, addpath):
@@ -87,6 +87,9 @@ class RTC (NLRI):
 
 		if length == 0:
 			return cls(afi,safi,action,ASN(0),None),bgp[1:]
+
+		if length < 8*4:
+			raise Exception("incorrect RT lenght: %d (should be >=32,<=96)" % length)
 
 		# We are reseting the flags on the RouteTarget extended
 		# community, because they do not make sense for an RTC route
