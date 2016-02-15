@@ -328,6 +328,7 @@ setup(
 	platforms=[get_platform(),],
 	package_dir={'': 'lib'},
 	packages=packages('lib'),
+	package_data={'': ['PYPI.rst']},
 	download_url='https://github.com/Exa-Networks/exabgp/archive/%s.tar.gz' % version,
 	data_files=files_definition,
 	install_requires=['setuptools'],
