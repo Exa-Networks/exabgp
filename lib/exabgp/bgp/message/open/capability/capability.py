@@ -11,7 +11,8 @@ from exabgp.bgp.message.notification import Notify
 
 
 class _CapabilityCode (int):
-	__slots__ = ['NAME',]
+	_cache = dict()
+	__slots__ = ['NAME','_cache']
 
 	RESERVED                 = 0x00  # [RFC5492]
 	MULTIPROTOCOL            = 0x01  # [RFC2858]
@@ -31,10 +32,10 @@ class _CapabilityCode (int):
 	ROUTE_REFRESH_CISCO      = 0x80  # I Can only find reference to this in the router logs
 	# 128-255   Reserved for Private Use [RFC5492]
 	MULTISESSION_CISCO       = 0x83  # What Cisco really use for Multisession (yes this is a reserved range in prod !)
+
 	HOSTNAME                 = 0xB8  # ExaBGP only ...
 	OPERATIONAL              = 0xB9  # ExaBGP only ...
-
-	EXTENDED_MESSAGE         = -1    # No yet defined by draft http://tools.ietf.org/html/draft-ietf-idr-extended-messages-02.txt
+	EXTENDED_MESSAGE         = 0xBA  # ExaBGP only ... No yet defined by draft http://tools.ietf.org/html/draft-ietf-idr-extended-messages-11.txt
 
 	# Internal
 	AIGP = 0xFF00
@@ -60,11 +61,19 @@ class _CapabilityCode (int):
 		MULTISESSION_CISCO:        'cisco-multi-sesion',
 
 		AIGP:                      'aigp',
+
+		HOSTNAME:                  'exabgp-experimental-hostname',
+		OPERATIONAL:               'exabgp-experimental-operational',
+		EXTENDED_MESSAGE:          'exabgp-experimental-extended-message',
 	}
 
-	def __init__ (self, value):
-		int.__init__(self,value)
-		self.NAME = str(self)
+	def __new__ (cls, value):
+		if value in cls._cache:
+			return cls._cache[value]
+		obj = super(_CapabilityCode, cls).__new__(cls,value)
+		obj.NAME = cls.names.get(value,'unknown capability %s' % hex(value))
+		cls._cache[value] = obj
+		return obj
 
 	def __str__ (self):
 		return self.names.get(self,'unknown capability %s' % hex(self))
