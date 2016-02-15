@@ -72,6 +72,12 @@ def main ():
 
 	os.environ['EXABGP_ETC'] = folder  # This is not most pretty
 
+	if options["--run"]:
+		from exabgp.application import run_healthcheck
+		sys.argv = sys.argv[sys.argv.index('--run')+1:]
+		run_healthcheck()
+		return
+
 	envfile = 'exabgp.env' if not options["--env"] else options["--env"]
 	if not envfile.startswith('/'):
 		envfile = '%s/%s' % (folder, envfile)

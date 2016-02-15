@@ -16,6 +16,7 @@ usage: exabgp [--help] [--version]
               [--debug] [--pdb] [--test]
               [--once] [--signal TIME]
               [--memory] [--profile PROFILE]
+              [--run HELPER]
               [--decode HEX_MESSAGE]...
               [<configuration>...]
 
@@ -38,6 +39,8 @@ optional arguments:
   --diff-env            display non-default configurations values using the env
                         format
   --de                  (shorthand for above)
+  --run HELPER          Do not run ExaBGP but one of its helper program
+                        (options are: healthcheck)
 
 debugging:
   --debug, -d           start the python debugger on serious logging and on
