@@ -245,7 +245,8 @@ def atomic_aggregate (tokeniser):
 
 
 def aggregator (tokeniser):
-	eat = tokeniser.tokens and tokeniser.tokens[0] == '('
+	first = tokeniser.peek()
+	eat = True if first == '(' else False
 
 	if eat:
 		tokeniser()
