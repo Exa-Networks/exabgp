@@ -7,6 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.configuration.core.format import tokens
+from exabgp.protocol.family import AFI
 from collections import deque
 
 
@@ -63,6 +64,7 @@ class Tokeniser (object):
 		self.index_line = 0
 		self.fname = ''
 		self.type = 'unset'
+		self.afi = AFI.undefined
 
 		self._tokens = Tokeniser._off
 		self._next = None

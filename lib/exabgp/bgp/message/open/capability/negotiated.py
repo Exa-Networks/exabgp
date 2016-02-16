@@ -146,7 +146,7 @@ class Negotiated (object):
 			return self.sent_open.router_id
 		if afi == AFI.ipv6:
 			return self.neighbor.local_address
-		raise RuntimeError('nexthop self only implemented for IPv4 atm')
+		raise RuntimeError('nexthop self is not implemented for this family %s' % afi)
 
 # =================================================================== RequirePath
 

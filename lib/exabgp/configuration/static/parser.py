@@ -70,6 +70,7 @@ def prefix (tokeniser):
 	except ValueError:
 		mask = 32
 
+	tokeniser.afi = IP.toafi(ip)
 	return Range(ip,IP.pton(ip),mask)
 
 
@@ -85,7 +86,7 @@ def next_hop (tokeniser):
 	value = tokeniser()
 
 	if value.lower() == 'self':
-		return IPSelf(AFI.undefined),NextHopSelf(AFI.undefined)
+		return IPSelf(tokeniser.afi),NextHopSelf(tokeniser.afi)
 	else:
 		ip = IP.create(value)
 		if ip.afi == AFI.ipv4:
