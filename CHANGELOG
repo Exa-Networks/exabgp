@@ -13,6 +13,8 @@ Version 3.4.14
  * Fix: ASN4 boundary off by one
  * Fix: Bad peer IP when using show routes
     patch by (backported): Wayne Tucker
+ * Fix: Missing next-hop in the text api
+    reported by: Lisa Roach
 
 Version 3.4.13
  * Fix: add semicolon in syslog entry so it can be parsed by tools
