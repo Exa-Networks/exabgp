@@ -1,0 +1,26 @@
+#!/usr/bin/env python
+
+import sys
+import time
+
+lines = [
+	'neighbor 127.0.0.1 receive update start',
+	'neighbor 127.0.0.1 receive update announced 0.0.0.0/32 next-hop 127.0.0.1 origin igp local-preference 100',
+	'neighbor 127.0.0.1 receive update end',
+]
+
+while lines:
+	line = sys.stdin.readline().strip()
+	if line in lines:
+		lines.remove(line)
+	sys.stderr.flush()
+	print >> sys.stderr , '\n%s\n' % line
+	print >> sys.stderr, 'left', lines
+	sys.stderr.flush()
+
+time.sleep(2)
+sys.stdout.write('neighbor 127.0.0.1 announce route 1.2.3.4 next-hop 5.6.7.8\n')
+sys.stdout.flush()
+
+while True:
+	sys.stdin.readline()
