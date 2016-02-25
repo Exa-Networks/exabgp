@@ -11,6 +11,7 @@ from exabgp.bgp.message import IN
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message import Update
 from exabgp.bgp.message.refresh import RouteRefresh
+from exabgp.bgp.message.update.attribute import Attributes
 
 
 # XXX: FIXME: we would not have to use so many setdefault if we pre-filled the dicts with the families
@@ -205,7 +206,7 @@ class Store (object):
 
 		for afi,safi in self._enhanced_refresh_start:
 			rr_announced.append((afi,safi))
-			yield RouteRefresh(afi,safi,RouteRefresh.start)
+			yield Update(RouteRefresh(afi,safi,RouteRefresh.start),Attributes())
 
 		dict_sorted = self._modify_sorted
 		dict_nlri = self._modify_nlri
@@ -284,7 +285,7 @@ class Store (object):
 		if rr_announced:
 			for afi,safi in rr_announced:
 				self._enhanced_refresh_start.remove((afi,safi))
-				yield RouteRefresh(afi,safi,RouteRefresh.end)
+				yield Update(RouteRefresh(afi,safi,RouteRefresh.end),Attributes())
 
 			for change in self._enhanced_refresh_delay:
 				self.insert_announced(change,True)

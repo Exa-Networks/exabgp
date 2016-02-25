@@ -96,6 +96,8 @@ Version 4.0.0
  * Fix: ASN4 boundary off by one
  * Fix: Bad peer IP when using show routes
     patch by: Wayne Tucker
+ * Fix: broken route-refresh command
+    reported by: Bryan Schwerer
  * Feature: Allow single line flow route
     requested by: Pavel Odintsov
  * Feature: add support for rpm packaging
