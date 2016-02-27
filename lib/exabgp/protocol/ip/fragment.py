@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2010-02-04.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.protocol.resource import Resource
+from exabgp.protocol.resource import BitResource
 
 
 # =================================================================== Fragment
@@ -23,7 +23,7 @@ from exabgp.protocol.resource import Resource
 # +  Bit 5 - First fragment (FF)
 # +  Bit 4 - Last fragment (LF)
 
-class Fragment (Resource):
+class Fragment (BitResource):
 	NAME = 'fragment'
 
 	NOT      = 0x00

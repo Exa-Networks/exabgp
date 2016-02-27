@@ -34,7 +34,7 @@ from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 class IComponent (object):
 	# all have ID
 	# should have an interface for serialisation and put it here
-	pass
+	FLAG = False
 
 
 class CommonOperator (object):
@@ -389,6 +389,7 @@ class FlowICMPCode (IOperationByte,BinaryString,IPv4,IPv6):
 class FlowTCPFlag (IOperationByte,BinaryString,IPv4,IPv6):
 	ID = 0x09
 	NAME = 'tcp-flags'
+	FLAG = True
 	converter = staticmethod(converter(TCPFlag.named))
 	decoder = staticmethod(decoder(ord,TCPFlag))
 
@@ -420,6 +421,7 @@ class FlowTrafficClass (IOperationByte,NumericString,IPv6):
 class FlowFragment (IOperationByteShort,BinaryString,IPv4):
 	ID = 0x0C
 	NAME = 'fragment'
+	FLAG = True
 	converter = staticmethod(converter(Fragment.named))
 	decoder = staticmethod(decoder(ord,Fragment))
 
@@ -589,7 +591,10 @@ class Flow (NLRI):
 				# only add ' ' after the first element
 				if idx and not rule.operations & NumericOperator.AND:
 					s.append(', ')
-				s.append('"%s"' % rule)
+				if rule.FLAG:
+					s.append(', '.join('"%s"' % flag for flag in rule.value.named_bits()))
+				else:
+					s.append('"%s"' % rule)
 			string.append(' "%s": [ %s ]' % (rules[0].NAME,''.join(str(_) for _ in s).replace('""','')))
 		nexthop = ', "next-hop": "%s"' % self.nexthop if self.nexthop is not NoNextHop else ''
 		rd = '' if self.rd is RouteDistinguisher.NORD else ', %s' % self.rd.json()

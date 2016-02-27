@@ -6,13 +6,13 @@ Created by Thomas Mangin on 2010-02-04.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.protocol.resource import Resource
+from exabgp.protocol.resource import BitResource
 
 
 # ====================================================================== TCPFlag
 # http://www.iana.org/assignments/tcp-header-flags
 
-class TCPFlag (Resource):
+class TCPFlag (BitResource):
 	NAME = 'tcp flag'
 
 	FIN    = 0x01

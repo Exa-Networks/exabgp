@@ -48,3 +48,21 @@ class Resource (long):
 		for name in string.split('+'):
 			value += cls._value(name)
 		return cls(value)
+
+
+class BitResource (Resource):
+	def bits (self):
+		value = int(self)
+		for bit in self.names.keys():
+			if value & bit:
+				yield self.names[bit]
+				value -= bit
+		if value:
+			yield self.names.get(self,'unknown %s type %ld' % (self.NAME,long(self)))
+
+	def named_bits (self):
+		for value in self.bits():
+			yield value
+
+	def __str__ (self):
+		return '+'.join(self.bits())

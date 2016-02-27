@@ -98,6 +98,8 @@ Version 4.0.0
     patch by: Wayne Tucker
  * Fix: broken route-refresh command
     reported by: Bryan Schwerer
+ * Fix: handle mulitple bits of flags in flow routes (Fragments and TCPFlags)
+    reported by: Pavel Odintsov
  * Feature: Allow single line flow route
     requested by: Pavel Odintsov
  * Feature: add support for rpm packaging
