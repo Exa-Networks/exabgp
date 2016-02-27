@@ -28,6 +28,10 @@ _SHORT = {
 	'ERROR': 'ERR'
 }
 
+_LONG = {
+	'CRIT': 'CRITICAL',
+	'ERR': 'ERROR'
+}
 
 def short (name):
 	return _SHORT.get(name.upper(),name.upper())
@@ -151,6 +155,7 @@ class Logger (object):
 
 	def _prefixed (self, level, source, message):
 		timestamp = time.localtime()
+		level = _LONG.get(level,level)
 		self._record(timestamp,level,source,message)
 		return self._format(timestamp,level,source,message)
 
