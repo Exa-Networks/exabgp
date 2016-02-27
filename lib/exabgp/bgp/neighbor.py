@@ -230,7 +230,7 @@ class Neighbor (object):
 				'true' if self.manual_eor else 'false',
 				'\n\tpassive;\n' if self.passive else '',
 				'\n\tlisten %d;\n' % self.listen if self.listen else '',
-				'\n\connect %d;\n' % self.connect if self.connect else '',
+				'\n\tconnect %d;\n' % self.connect if self.connect else '',
 				'\tgroup-updates: %s;\n' % (self.group_updates if self.group_updates else ''),
 				'\tauto-flush: %s;\n' % ('true' if self.flush else 'false'),
 				'\tadj-rib-out: %s;\n' % ('true' if self.adjribout else 'false'),
