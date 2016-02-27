@@ -108,6 +108,7 @@ class LazyNLRI (object):
 class Logger (object):
 	_instance = dict()
 	_syslog = None
+	_where = ''
 
 	_history = []
 	_max_history = 20
@@ -151,7 +152,13 @@ class Logger (object):
 		now = time.strftime('%a, %d %b %Y %H:%M:%S',timestamp)
 		if self.destination in ['stderr','stdout']:
 			return "%s | %-8s | %-6d | %-13s | %s" % (now,level,self._pid,source,message)
-		return "%s: %-6d %-13s %s" % (environment.application,self._pid,source,message)
+		elif self.destination in ['syslog',]:
+			return "%s: %-6d %-13s %s" % (environment.application,self._pid,source,message)
+		elif self.destination in ['file',]:
+			return "%d %-6d %-13s %s" % (now,self._pid,source,message)
+		else:
+			# failsafe
+			return "%s | %-8s | %-6d | %-13s | %s" % (now,level,self._pid,source,message)
 
 	def _prefixed (self, level, source, message):
 		timestamp = time.localtime()
@@ -237,6 +244,7 @@ class Logger (object):
 	def restart (self, first=False):
 		try:
 			if first:
+				self._where = 'stderr'
 				self._default = logging.StreamHandler(sys.stderr)
 				self._syslog = logging.getLogger()
 				self._syslog.setLevel(logging.DEBUG)
@@ -256,14 +264,19 @@ class Logger (object):
 
 		try:
 			if self.destination in ('stderr',):
+				self._where = 'stderr'
 				return True
 			elif self.destination in ('stdout'):
+				self._where = 'out'
 				result = self._standard(self.destination)
 			elif self.destination in ('','syslog'):
+				self._where = 'syslog'
 				result = self._local_syslog()
 			elif self.destination.startswith('host:'):
+				self._where = 'syslog'
 				result = self._remote_syslog(self.destination[5:].strip())
 			else:
+				self._where = 'file'
 				result = self._file(self.destination)
 
 			if result:

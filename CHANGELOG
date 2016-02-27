@@ -44,6 +44,7 @@ Version 4.0.0
     * format change for notification and shutdown message
     * VPLS endpoint, base, offset, and size are now numbers and not strings
  * Change: remove all ExaBGP 2.0 compatibily environment variables
+ * Change: include time when we log to file (and not application)
  * Fix: JSON reporting of VPLS ( endpoint, base, offset, and size were mixed up during printing )
  * Fix: Do shutdown when waiting for a new connection to a peer
  * Fix: Bad ASN enconding when ASN4 is not negotiated
