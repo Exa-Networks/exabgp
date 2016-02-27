@@ -70,6 +70,7 @@ class ParseNeighbor (Section):
 		'peer-as':       asn,
 		'passive':       boolean,
 		'listen':        port,
+		'connect':       port,
 		'ttl-security':  ttl,
 		'md5':           md5,
 		'group-updates': boolean,
@@ -91,6 +92,7 @@ class ParseNeighbor (Section):
 		'peer-as':       'set-command',
 		'passive':       'set-command',
 		'listen':        'set-command',
+		'connect':       'set-command',
 		'ttl-security':  'set-command',
 		'md5':           'set-command',
 		'group-updates': 'set-command',
@@ -136,6 +138,7 @@ class ParseNeighbor (Section):
 		neighbor.peer_as          = local.get('peer-as',None)
 		neighbor.passive          = local.get('passive',False)
 		neighbor.listen           = local.get('listen',0)
+		neighbor.connect          = local.get('connect',0)
 		neighbor.hold_time        = local.get('hold-time',HoldTime(180))
 		neighbor.host_name        = local.get('host-name',_hostname())
 		neighbor.domain_name      = local.get('domain-name',_domainname())
