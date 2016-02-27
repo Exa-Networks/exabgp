@@ -45,6 +45,7 @@ Version 4.0.0
     * VPLS endpoint, base, offset, and size are now numbers and not strings
  * Change: remove all ExaBGP 2.0 compatibily environment variables
  * Change: include time when we log to file (and not application)
+ * Change: ttl-security is now called outgoing-ttl
  * Fix: JSON reporting of VPLS ( endpoint, base, offset, and size were mixed up during printing )
  * Fix: Do shutdown when waiting for a new connection to a peer
  * Fix: Bad ASN enconding when ASN4 is not negotiated
@@ -111,6 +112,8 @@ Version 4.0.0
    pach by: Charles Ng
  * Feature: add per neighbor connection port
    requested by: dbarrosop
+ * Feature: support MIN_TTL for incoming connection (for OS with support - FreeBSD)
+   requested by: Borja Marcos
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set

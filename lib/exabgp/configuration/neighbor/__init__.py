@@ -71,7 +71,8 @@ class ParseNeighbor (Section):
 		'passive':       boolean,
 		'listen':        port,
 		'connect':       port,
-		'ttl-security':  ttl,
+		'outgoing-ttl':  ttl,
+		'incoming-ttl':  ttl,
 		'md5':           md5,
 		'group-updates': boolean,
 		'auto-flush':    boolean,
@@ -93,7 +94,8 @@ class ParseNeighbor (Section):
 		'passive':       'set-command',
 		'listen':        'set-command',
 		'connect':       'set-command',
-		'ttl-security':  'set-command',
+		'outgoing-ttl':  'set-command',
+		'incoming-ttl':  'set-command',
 		'md5':           'set-command',
 		'group-updates': 'set-command',
 		'auto-flush':    'set-command',
@@ -147,7 +149,8 @@ class ParseNeighbor (Section):
 		neighbor.flush            = local.get('auto-flush',True)
 		neighbor.adjribout        = local.get('adj-rib-out',True)
 		neighbor.aigp             = local.get('aigp',None)
-		neighbor.ttl              = local.get('ttl-security',None)
+		neighbor.ttl_out          = local.get('outgoing-ttl',None)
+		neighbor.ttl_in           = local.get('incoming-ttl',None)
 		neighbor.group_updates    = local.get('group-updates',True)
 		neighbor.manual_eor       = local.get('manual-eor', False)
 

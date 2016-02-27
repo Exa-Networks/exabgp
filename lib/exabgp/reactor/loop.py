@@ -131,12 +131,12 @@ class Reactor (object):
 			self.listener = Listener()
 
 			if self.ip:
-				self.listener.listen(IP.create(self.ip),IP.create('0.0.0.0'),self.port,None)
+				self.listener.listen(IP.create(self.ip),IP.create('0.0.0.0'),self.port,None,None)
 				self.logger.reactor('Listening for BGP session(s) on %s:%d' % (self.ip,self.port))
 
 			for neighbor in self.configuration.neighbors.values():
 				if neighbor.listen:
-					self.listener.listen(neighbor.local_address,neighbor.peer_address,neighbor.listen,neighbor.md5)
+					self.listener.listen(neighbor.local_address,neighbor.peer_address,neighbor.listen,neighbor.md5,neighbor.ttl_in)
 					self.logger.reactor('Listening for BGP session(s) on %s:%d%s' % (neighbor.local_address,neighbor.listen,' with MD5' if neighbor.md5 else ''))
 		except NetworkError,exc:
 			self.listener = None

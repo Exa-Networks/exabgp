@@ -13,6 +13,7 @@ from exabgp.util.errstr import errstr
 from exabgp.protocol.family import AFI
 # from exabgp.util.coroutine import each
 from exabgp.reactor.network.tcp import MD5
+from exabgp.reactor.network.tcp import MIN_TTL
 from exabgp.reactor.network.error import error
 from exabgp.reactor.network.error import errno
 from exabgp.reactor.network.error import NetworkError
@@ -43,7 +44,7 @@ class Listener (object):
 			return socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
 		raise NetworkError('Can not create socket for listening, family of IP %s is unknown' % ip)
 
-	def listen (self, local_ip, peer_ip, local_port, md5):
+	def listen (self, local_ip, peer_ip, local_port, md5, ttl_in):
 		self.serving = True
 
 		for sock,(local,port,peer,md) in self._sockets.items():
@@ -53,6 +54,8 @@ class Listener (object):
 				continue
 			if md5:
 				MD5(sock,peer_ip.top(),0,md5)
+			if ttl_in:
+				MIN_TTL(sock,ttl_in)
 			return
 
 		try:

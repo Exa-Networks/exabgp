@@ -38,7 +38,6 @@ class Connection (object):
 
 	def __init__ (self, afi, peer, local):
 		# peer and local are strings of the IP
-
 		try:
 			self.defensive = environment.settings().debug.defensive
 			self.logger = Logger()

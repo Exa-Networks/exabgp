@@ -38,7 +38,8 @@ class Neighbor (object):
 		self.asn4 = None
 		self.add_path = None
 		self.md5 = None
-		self.ttl = None
+		self.ttl_in = None
+		self.ttl_out = None
 		self.group_updates = None
 		self.flush = None
 		self.adjribout = None
@@ -151,7 +152,8 @@ class Neighbor (object):
 			self.host_name == other.host_name and \
 			self.domain_name == other.domain_name and \
 			self.md5 == other.md5 and \
-			self.ttl == other.ttl and \
+			self.ttl_in == other.ttl_in and \
+			self.ttl_out == other.ttl_out and \
 			self.route_refresh == other.route_refresh and \
 			self.graceful_restart == other.graceful_restart and \
 			self.multisession == other.multisession and \
@@ -226,7 +228,7 @@ class Neighbor (object):
 			'\tmanual-eor %s;\n' \
 			'%s%s%s%s%s%s%s%s\n' \
 			'\tcapability {\n' \
-			'%s%s%s%s%s%s%s\t}\n' \
+			'%s%s%s%s%s%s%s%s\t}\n' \
 			'\tfamily {%s\n' \
 			'\t}\n' \
 			'\tprocess {\n' \
@@ -249,7 +251,8 @@ class Neighbor (object):
 				'\tauto-flush: %s;\n' % ('true' if self.flush else 'false'),
 				'\tadj-rib-out: %s;\n' % ('true' if self.adjribout else 'false'),
 				'\tmd5 "%s";\n' % self.md5 if self.md5 else '',
-				'\tttl-security: %s;\n' % (self.ttl if self.ttl else ''),
+				'\toutgoing-ttl: %s;\n' % (self.ttl_out if self.ttl_out else ''),
+				'\tincoming-ttl: %s;\n' % (self.ttl_in if self.ttl_in else ''),
 				'\t\tasn4 %s;\n' % ('enable' if self.asn4 else 'disable'),
 				'\t\troute-refresh %s;\n' % ('enable' if self.route_refresh else 'disable'),
 				'\t\tgraceful-restart %s;\n' % (self.graceful_restart if self.graceful_restart else 'disable'),
