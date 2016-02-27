@@ -100,6 +100,8 @@ Version 4.0.0
     reported by: Bryan Schwerer
  * Fix: handle mulitple bits of flags in flow routes (Fragments and TCPFlags)
     reported by: Pavel Odintsov
+ * Fix: does not use label information when handling the RIB
+    reported by: choisuibun
  * Feature: Allow single line flow route
     requested by: Pavel Odintsov
  * Feature: add support for rpm packaging
