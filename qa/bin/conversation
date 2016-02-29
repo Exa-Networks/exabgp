@@ -228,7 +228,7 @@ if __name__ == '__main__':
 	if not path.isfile(daemon):
 		sys.exit('could not find the sequence daemon')
 
-	timeout = int(os.environ.get('TIMEOUT',os.environ.get('timeout',5*60)))  # seconds
+	timeout = int(os.environ.get('TIMEOUT',os.environ.get('timeout',10*60)))  # seconds
 	groups = sorted(glob.glob(os.path.join(location,'qa','conf','*.group')))[::-1]
 
 	client = os.environ.get('CLIENT',os.environ.get('client','')).upper()
