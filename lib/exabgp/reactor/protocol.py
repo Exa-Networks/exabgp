@@ -93,9 +93,9 @@ class Protocol (object):
 	def connect (self):
 		# allows to test the protocol code using modified StringIO with a extra 'pending' function
 		if not self.connection:
+			local = self.neighbor.md5_ip
 			peer = self.neighbor.peer_address
-			local = self.neighbor.local_address
-			md5 = self.neighbor.md5
+			md5 = self.neighbor.md5_password
 			ttl_out = self.neighbor.ttl_out
 			self.connection = Outgoing(peer.afi,peer.top(),local.top(),self.port,md5,ttl_out)
 

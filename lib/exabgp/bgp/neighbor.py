@@ -37,7 +37,8 @@ class Neighbor (object):
 		self.hold_time = None
 		self.asn4 = None
 		self.add_path = None
-		self.md5 = None
+		self.md5_password = None
+		self.md5_ip = None
 		self.ttl_in = None
 		self.ttl_out = None
 		self.group_updates = None
@@ -151,7 +152,8 @@ class Neighbor (object):
 			self.hold_time == other.hold_time and \
 			self.host_name == other.host_name and \
 			self.domain_name == other.domain_name and \
-			self.md5 == other.md5 and \
+			self.md5_password == other.md5_password and \
+			self.md5_ip == other.md5_ip and \
 			self.ttl_in == other.ttl_in and \
 			self.ttl_out == other.ttl_out and \
 			self.route_refresh == other.route_refresh and \
@@ -226,7 +228,7 @@ class Neighbor (object):
 			'\tpeer-as %s;\n' \
 			'\thold-time %s;\n' \
 			'\tmanual-eor %s;\n' \
-			'%s%s%s%s%s%s%s%s\n' \
+			'%s%s%s%s%s%s%s%s%s\n' \
 			'\tcapability {\n' \
 			'%s%s%s%s%s%s%s%s\t}\n' \
 			'\tfamily {%s\n' \
@@ -250,7 +252,8 @@ class Neighbor (object):
 				'\tgroup-updates: %s;\n' % (self.group_updates if self.group_updates else ''),
 				'\tauto-flush: %s;\n' % ('true' if self.flush else 'false'),
 				'\tadj-rib-out: %s;\n' % ('true' if self.adjribout else 'false'),
-				'\tmd5 "%s";\n' % self.md5 if self.md5 else '',
+				'\tmd5-password "%s";\n' % self.md5_password if self.md5_password else '',
+				'\tmd5-ip "%s";\n' % self.md5_ip if self.md5_ip else '',
 				'\toutgoing-ttl: %s;\n' % (self.ttl_out if self.ttl_out else ''),
 				'\tincoming-ttl: %s;\n' % (self.ttl_in if self.ttl_in else ''),
 				'\t\tasn4 %s;\n' % ('enable' if self.asn4 else 'disable'),

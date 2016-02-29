@@ -11,6 +11,7 @@ Version 4.0.0
     patch from: Jérôme Marteaux
  * Change: when API commands are failing, returns a 'error' message
     patch from: Jérôme Marteaux
+ * Change: md5 is now called md5-password
  * Feature: add support for upstart
     patch by: Pierre-Yves Kerembellec
  * Feature/Fix: Port of bagpipe EVPN code
@@ -114,6 +115,8 @@ Version 4.0.0
    requested by: dbarrosop
  * Feature: support MIN_TTL for incoming connection (for OS with support - FreeBSD)
    requested by: Borja Marcos
+ * Feature: md5-ip allows to override local-address for the MD5 calculations
+   requested by: Bryan Benson
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set

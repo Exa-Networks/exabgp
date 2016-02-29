@@ -73,7 +73,8 @@ class ParseNeighbor (Section):
 		'connect':       port,
 		'outgoing-ttl':  ttl,
 		'incoming-ttl':  ttl,
-		'md5':           md5,
+		'md5-password':  md5,
+		'md5-ip':        router_id,
 		'group-updates': boolean,
 		'auto-flush':    boolean,
 		'adj-rib-out':   boolean,
@@ -96,7 +97,8 @@ class ParseNeighbor (Section):
 		'connect':       'set-command',
 		'outgoing-ttl':  'set-command',
 		'incoming-ttl':  'set-command',
-		'md5':           'set-command',
+		'md5-password':  'set-command',
+		'md5-ip':        'set-command',
 		'group-updates': 'set-command',
 		'auto-flush':    'set-command',
 		'adj-rib-out':   'set-command',
@@ -144,7 +146,8 @@ class ParseNeighbor (Section):
 		neighbor.hold_time        = local.get('hold-time',HoldTime(180))
 		neighbor.host_name        = local.get('host-name',_hostname())
 		neighbor.domain_name      = local.get('domain-name',_domainname())
-		neighbor.md5              = local.get('md5',None)
+		neighbor.md5_password     = local.get('md5-password',None)
+		neighbor.md5_ip           = local.get('md5-ip',neighbor.local_address)
 		neighbor.description      = local.get('description','')
 		neighbor.flush            = local.get('auto-flush',True)
 		neighbor.adjribout        = local.get('adj-rib-out',True)
