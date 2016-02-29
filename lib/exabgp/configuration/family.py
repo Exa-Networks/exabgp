@@ -42,6 +42,7 @@ class ParseFamily (Section):
 		},
 		'ipv6': {
 			'unicast':   (AFI(AFI.ipv6),SAFI(SAFI.unicast)),
+			'nlri-mpls': (AFI(AFI.ipv6),SAFI(SAFI.nlri_mpls)),
 			'mpls-vpn':  (AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)),
 			'flow':      (AFI(AFI.ipv6),SAFI(SAFI.flow_ip)),
 			'flow-vpn':  (AFI(AFI.ipv6),SAFI(SAFI.flow_vpn)),
