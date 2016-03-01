@@ -21,9 +21,12 @@ json_version = '3.5.0'
 text_version = '3.5.0'
 
 version_template = """\
-version = "%s"
+import os
+
+release = "%s"
 json = "%s"
 text = "%s"
+version = os.environ.get('EXABGP_VERSION',release)
 
 # Do not change the first line as it is parsed by scripts
 
