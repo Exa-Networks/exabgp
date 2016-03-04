@@ -17,6 +17,8 @@ Version 3.4.14
     reported by: Lisa Roach
  * Fix: broken route-refresh command
     reported by: Bryan Schwerer
+ * Fix: wrongly announcing connection issue with peer on the API
+    reported by: Bryan Schwerer
 
 Version 3.4.13
  * Fix: add semicolon in syslog entry so it can be parsed by tools
