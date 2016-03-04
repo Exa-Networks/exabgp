@@ -111,7 +111,7 @@ class Protocol (object):
 				yield False
 				return
 
-	def close (self, reason='protocol closed, reason unspecified'):
+	def close (self, reason='protocol closed, reason unspecified',notification=True):
 		if self.connection:
 			self.logger.network(self.me(reason))
 
@@ -119,11 +119,11 @@ class Protocol (object):
 			self.connection.close()
 			self.connection = None
 
-			try:
-				if self.peer.neighbor.api['neighbor-changes']:
+			if self.peer.neighbor.api['neighbor-changes'] and notification:
+				try:
 					self.peer.reactor.processes.down(self.peer,reason)
-			except ProcessError:
-				self.logger.message(self.me('could not send notification of neighbor close to API'))
+				except ProcessError:
+					self.logger.message(self.me('could not send notification of neighbor close to API'))
 
 	def write (self, message):
 		if self.neighbor.api['send-packets'] and not self.neighbor.api['consolidate']:
