@@ -3,7 +3,7 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
-Version 3.4.14
+Version 3.4.15
  * Fix: the ttl-security parameter didn´t really work. Fixed for outgoing connections now.
     patch by: Borja Marcos
  * Fix: configuration leak between processes for neighbor-changes and send-packets
