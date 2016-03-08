@@ -316,7 +316,11 @@ if os_name != 'NetBSD':
 		files_definition.append(('/usr/lib/systemd/system',filesOf('etc/systemd')))
 
 version = imp.load_source('version','lib/exabgp/version.py').version
-description_rst = open('PYPI.rst').read() % {'version': version}
+
+try:
+	description_rst = open('PYPI.rst').read() % {'version': version}
+except IOError:
+	description_rst = 'ExaBGP'
 
 setup(
 	name='exabgp',
