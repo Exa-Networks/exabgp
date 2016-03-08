@@ -719,6 +719,8 @@ class Configuration (object):
 				return self._set_passive(scope,'passive',tokens[1:])
 			if command == 'listen':
 				return self._set_listen(scope,'listen',tokens[1:])
+			if command == 'connect':
+				return self._set_connect(scope,'connect',tokens[1:])
 			if command == 'hold-time':
 				return self._set_holdtime(scope,'hold-time',tokens[1:])
 			if command == 'md5':
@@ -1272,7 +1274,7 @@ class Configuration (object):
 				],
 				[
 					'description','router-id','local-address','local-as','peer-as',
-					'passive','listen','hold-time','add-path','graceful-restart','md5',
+					'passive','listen','connect','hold-time','add-path','graceful-restart','md5',
 					'ttl-security','multi-session','group-updates',
 					'route-refresh','asn4','aigp','auto-flush','adj-rib-out'
 				]
@@ -1327,6 +1329,9 @@ class Configuration (object):
 			value = local_scope.get('listen',0)
 			if value:
 				neighbor.listen = value
+			value = local_scope.get('connect',0)
+			if value:
+				neighbor.connect = value
 			value = local_scope.get('hold-time','')
 			if value:
 				neighbor.hold_time = value
@@ -1589,6 +1594,20 @@ class Configuration (object):
 			return True
 		except ValueError:
 			self._error = '"%s" is an invalid port to listen on' % ' '.join(value)
+			if self.debug: raise Exception()  # noqa
+			return False
+
+	def _set_connect (self, scope, command, value):
+		try:
+			connect = int(value[0])
+			if connect < 0:
+				raise ValueError('the connecting port must positive')
+			if connect >= pow(2,16):
+				raise ValueError('the connecting port must be smaller than %d' % pow(2,16))
+			scope[-1][command] = connect
+			return True
+		except ValueError:
+			self._error = '"%s" is an invalid port to connect on' % ' '.join(value)
 			if self.debug: raise Exception()  # noqa
 			return False
 

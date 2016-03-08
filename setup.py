@@ -284,7 +284,10 @@ else:
 		files_definition.append(('/usr/lib/systemd/system',configuration('etc/systemd')))
 
 version = imp.load_source('version','lib/exabgp/version.py').version
-description_rst = open('PYPI.rst').read() % {'version': version}
+try:
+	description_rst = open('PYPI.rst').read() % {'version': version}
+except IOError:
+	description_rst = 'ExaBGP'
 
 setup(name='exabgp',
 	version=version,
@@ -298,6 +301,7 @@ setup(name='exabgp',
 	platforms=[get_platform(),],
 	package_dir={'': 'lib'},
 	packages=packages('lib'),
+	package_data={'': ['PYPI.rst']},
 #	scripts=['sbin/exabgp',],
 	download_url='https://github.com/Exa-Networks/exabgp/archive/%s.tar.gz' % version,
 	data_files=files_definition,

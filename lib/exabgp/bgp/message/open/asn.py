@@ -14,7 +14,7 @@ from struct import unpack
 
 class ASN (long):
 	def asn4 (self):
-		return self > pow(2,16)
+		return self >= pow(2,16)
 
 	def pack (self, negotiated=None):
 		asn4 = negotiated if negotiated is not None else self.asn4()

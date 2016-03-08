@@ -3,6 +3,23 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.4.15
+ * Fix: the ttl-security parameter didn´t really work. Fixed for outgoing connections now.
+    patch by: Borja Marcos
+ * Fix: configuration leak between processes for neighbor-changes and send-packets
+    reported by: spakka
+ * Feature: add per neighbor connection port
+    requested by: dbarrosop
+ * Fix: ASN4 boundary off by one
+ * Fix: Bad peer IP when using show routes
+    patch by (backported): Wayne Tucker
+ * Fix: Missing next-hop in the text api
+    reported by: Lisa Roach
+ * Fix: broken route-refresh command
+    reported by: Bryan Schwerer
+ * Fix: wrongly announcing connection issue with peer on the API
+    reported by: Bryan Schwerer
+
 Version 3.4.13
  * Fix: add semicolon in syslog entry so it can be parsed by tools
  * Fix: duplication of message following helper process death

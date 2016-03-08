@@ -67,16 +67,13 @@ try:
 except ImportError:
     # Python 2.6, 2.7, 3.2
     from ipaddr import IPAddress as ip_address
-try:
-    # Python 3.4+
-    from enum import Enum
-except ImportError:
-    # Other versions. This is not really an enum but this is OK for
-    # what we want to do.
-    def Enum (*sequential):
-        return type(str("Enum"), (), dict(zip(sequential, sequential)))
 
 logger = logging.getLogger("healthcheck")
+
+
+def enum (*sequential):
+    """Create a simple enumeration."""
+    return type(str("Enum"), (), dict(zip(sequential, sequential)))
 
 
 def parse ():
@@ -329,7 +326,7 @@ def check (cmd, timeout):
 
 def loop (options):
     """Main loop."""
-    states = Enum(
+    states = enum(
         "INIT",                 # Initial state
         "DISABLED",             # Disabled state
         "RISING",               # Checks are currently succeeding.

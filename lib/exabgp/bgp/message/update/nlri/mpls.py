@@ -44,14 +44,14 @@ class MPLS (NLRI,CIDR):
 		return False
 
 	def extensive (self):
-		return "%s%s%s%s" % (self.prefix(),str(self.labels),str(self.path_info),str(self.rd))
+		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
+		return "%s%s%s%s%s" % (self.prefix(),nexthop,str(self.labels),str(self.path_info),str(self.rd))
 
 	def __len__ (self):
 		return CIDR.__len__(self) + len(self.labels) + len(self.rd)
 
 	def __str__ (self):
-		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
-		return "%s%s" % (self.extensive(),nexthop)
+		return self.extensive()
 
 	def __eq__ (self,other):
 		return self.index() == other.index()

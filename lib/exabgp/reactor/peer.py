@@ -348,7 +348,7 @@ class Peer (object):
 		except StopIteration:
 			# Connection failed
 			if not connected:
-				proto.close('connection to peer failed')
+				proto.close('connection to peer failed',self._['in']['state'] != STATE.ESTABLISHED)
 			# A connection arrived before we could establish !
 			if not connected or self._['in']['proto']:
 				stop = Interrupted()

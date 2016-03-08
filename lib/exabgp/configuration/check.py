@@ -229,12 +229,12 @@ def check_update (neighbor, raw):
 		except KeyboardInterrupt:
 			raise
 		except Notify,exc:
-			logger.parser('could not parse the message')
-			logger.parser(str(exc))
+			logger.parser('could not parse the message','error')
+			logger.parser(str(exc),'error')
 			return False
 		except Exception,exc:
-			logger.parser('could not parse the message')
-			logger.parser(str(exc))
+			logger.parser('could not parse the message','error')
+			logger.parser(str(exc),'error')
 			return False
 
 		logger.parser('')  # new line
