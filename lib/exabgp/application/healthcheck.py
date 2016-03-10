@@ -265,7 +265,7 @@ def loopback_ips(label):
         # Use "ip" (ifconfig is not able to see all addresses)
         ipre = re.compile(r"^(?P<index>\d+):\s+(?P<name>\S+)\s+inet6?\s+"
                           r"(?P<ip>[\da-f.:]+)/(?P<netmask>\d+)\s+.*")
-        labelre = re.compile(r".*\s+lo:(?P<label>\S+)\s+.*")
+        labelre = re.compile(r".*\s+lo:(?P<label>\S+).*")
         cmd = subprocess.Popen("/sbin/ip -o address show dev lo".split(),
                                shell=False, stdout=subprocess.PIPE)
     else:
