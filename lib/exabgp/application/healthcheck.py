@@ -305,6 +305,32 @@ def setup_ips(ips, label):
             subprocess.check_call(
                 cmd, stdout=fnull, stderr=fnull)
 
+    # If we setup IPs we should also remove them on SIGTERM
+    def sigterm_handler(signum, frame):
+        remove_ips(ips, label)
+
+    signal.signal(signal.SIGTERM, sigterm_handler)
+
+
+def remove_ips(ips, label):
+    """Remove added IP on loopback interface"""
+    existing = set(loopback_ips(label))
+
+    # Get intersection of IPs (ips setup, and IPs configured by ExaBGP)
+    toremove = set(ips) | existing
+    for ip in toremove:
+        logger.debug("Remove loopback IP address %s", ip)
+        with open(os.devnull, "w") as fnull:
+            cmd = ["ip", "address", "delete", str(ip) + "/32", "dev", "lo"]
+            if label:
+                cmd += ["label", "lo:{0}".format(label)]
+            try:
+                subprocess.check_call(
+                    cmd, stdout=fnull, stderr=fnull)
+            except subprocess.CalledProcessError:
+                logger.warn("Unable to remove loopback IP address %s - is healthcheck running as root?" % (str(ip)))
+    sys.exit(0)
+
 
 def drop_privileges(user, group):
     """Drop privileges to specified user and group"""
