@@ -13,6 +13,6 @@ neighbor 10.0.0.3 {
         # healthcheck process manually to check if it works as
         # expected (-h flag will give you available options)
         process service-nginx {
-                run etc/exabgp/processes/healthcheck.py -s --name nginx --cmd "curl --fail --verbose --max-time 2 http://localhost" --start-ip 0;
+                run python -m exabgp healthcheck -s --name nginx --cmd "curl --fail --verbose --max-time 2 http://localhost" --start-ip 0;
         }
 }

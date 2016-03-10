@@ -134,6 +134,8 @@ Version 3.4.10
  * Fix: issue with ASN4 code
     reported by: Florian Obser (with a patch, thank you)
  * Fix: issue with --decode
+ * Change: remove /usr/bin/healthcheck. People should use
+    "python -m exabgp healthcheck" instead
 
 Version 3.4.9
  * Fix: very bad bug where NLRI where not associated to the right AFI/SAFI pair ( #235 )
