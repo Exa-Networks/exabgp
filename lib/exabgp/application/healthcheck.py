@@ -321,6 +321,7 @@ def remove_ips(ips, label):
     for ip in toremove:
         logger.debug("Remove loopback IP address %s", ip)
         with open(os.devnull, "w") as fnull:
+            # We specify the prefix length due to ip addr warnings about wildcard deletion
             cmd = ["ip", "address", "delete", str(ip) + "/32", "dev", "lo"]
             if label:
                 cmd += ["label", "lo:{0}".format(label)]
@@ -328,7 +329,8 @@ def remove_ips(ips, label):
                 subprocess.check_call(
                     cmd, stdout=fnull, stderr=fnull)
             except subprocess.CalledProcessError:
-                logger.warn("Unable to remove loopback IP address %s - is healthcheck running as root?" % (str(ip)))
+                logger.warn("Unable to remove loopback IP address %s - is \
+                    healthcheck running as root?" % (str(ip)))
     sys.exit(0)
 
 
