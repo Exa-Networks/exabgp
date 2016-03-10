@@ -265,7 +265,7 @@ def loopback_ips(label):
         # Use "ip" (ifconfig is not able to see all addresses)
         ipre = re.compile(r"^(?P<index>\d+):\s+(?P<name>\S+)\s+inet6?\s+"
                           r"(?P<ip>[\da-f.:]+)/(?P<netmask>\d+)\s+.*")
-        labelre = re.compile(r".*\s+lo:(?P<label>\S+)\s+.*")
+        labelre = re.compile(r".*\s+lo:(?P<label>\S+).*")
         cmd = subprocess.Popen("/sbin/ip -o address show dev lo".split(),
                                shell=False, stdout=subprocess.PIPE)
     else:
@@ -304,6 +304,34 @@ def setup_ips(ips, label):
                 cmd += ["label", "lo:{0}".format(label)]
             subprocess.check_call(
                 cmd, stdout=fnull, stderr=fnull)
+
+    # If we setup IPs we should also remove them on SIGTERM
+    def sigterm_handler(signum, frame): # pylint: disable=W0612,W0613
+        remove_ips(ips, label)
+
+    signal.signal(signal.SIGTERM, sigterm_handler)
+
+
+def remove_ips(ips, label):
+    """Remove added IP on loopback interface"""
+    existing = set(loopback_ips(label))
+
+    # Get intersection of IPs (ips setup, and IPs configured by ExaBGP)
+    toremove = set(ips) | existing
+    for ip in toremove:
+        logger.debug("Remove loopback IP address %s", ip)
+        with open(os.devnull, "w") as fnull:
+            # We specify the prefix length due to ip addr warnings about wildcard deletion
+            cmd = ["ip", "address", "delete", str(ip) + "/32", "dev", "lo"]
+            if label:
+                cmd += ["label", "lo:{0}".format(label)]
+            try:
+                subprocess.check_call(
+                    cmd, stdout=fnull, stderr=fnull)
+            except subprocess.CalledProcessError:
+                logger.warn("Unable to remove loopback IP address %s - is \
+                    healthcheck running as root?", str(ip))
+    sys.exit(0)
 
 
 def drop_privileges(user, group):
