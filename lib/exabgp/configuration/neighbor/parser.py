@@ -82,7 +82,7 @@ def ttl (tokeniser):
 		raise ValueError('invalid ttl-security "%s"' % value)
 	if attl < 0:
 		raise ValueError('ttl-security can not be negative')
-	if attl >= 255:
+	if attl > 255:
 		raise ValueError('ttl must be smaller than 256')
 	return attl
 
