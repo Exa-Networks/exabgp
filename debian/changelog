@@ -2,6 +2,7 @@ exabgp (3.4.15-1) unstable; urgency=medium
 
   * New upstream release.
   * d/rules: don't run conversation tests (unreliable).
+  * d/control: bump Standards-Version.
 
  -- Vincent Bernat <bernat@debian.org>  Tue, 08 Mar 2016 15:22:19 +0100
 

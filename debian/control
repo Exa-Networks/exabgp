@@ -8,7 +8,7 @@ Build-Depends: debhelper (>= 9),
                python-ipaddr,
                python-psutil,
                python-nose
-Standards-Version: 3.9.6
+Standards-Version: 3.9.7
 Homepage: https://github.com/Exa-Networks/exabgp
 Vcs-Browser: https://github.com/Exa-Networks/exabgp/tree/debian/sid
 Vcs-Git: https://github.com/Exa-Networks/exabgp.git -b debian/sid
