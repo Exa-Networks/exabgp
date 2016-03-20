@@ -157,7 +157,7 @@ class Reactor (object):
 			self.logger.reactor("Set the environmemnt value exabgp.daemon.user to change the unprivileged user",'critical')
 			return
 
-		if not self.early_drop:
+		if self.early_drop:
 			self.processes.start()
 
 		# This is required to make sure we can write in the log location as we now have dropped root privileges
