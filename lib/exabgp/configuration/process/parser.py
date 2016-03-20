@@ -46,8 +46,8 @@ def run (tokeniser):
 			options = _make_path(prg)
 		else:
 			options = [
+				os.path.abspath(os.path.join('/etc/exabgp',prg)),
 				os.path.abspath(os.path.join(os.path.dirname(tokeniser.fname),prg)),
-				'/etc/exabgp'
 			]
 		for option in options:
 			if os.path.exists(option):
