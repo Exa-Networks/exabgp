@@ -448,16 +448,23 @@ def main ():
 		print 'could not open file', sys.argv[1]
 		sys.exit(1)
 
+	if os.environ.get('exabgp.tcp.port','').isdigit():
+		port = int(os.environ.get('exabgp.tcp.port'))
+	elif os.environ.get('exabgp_tcp_port','').isdigit():
+		port = int(os.environ.get('exabgp_tcp_port'))
+	else:
+		port = 179
+
 	try:
-		BGPServer('127.0.0.1',int(os.environ.get('exabgp.tcp.port','179')),messages)
-		BGPServer('::1',int(os.environ.get('exabgp.tcp.port','179')),messages)
+		BGPServer('127.0.0.1',port,messages)
+		BGPServer('::1',port,messages)
 		drop()
 		asyncore.loop()
 	except socket.error,exc:
 		if exc.errno == errno.EACCES:
-			print "failure: could not bind to port %s - most likely not run as root" % os.environ.get('exabgp.tcp.port','179')
+			print "failure: could not bind to port %d - most likely not run as root" % port
 		elif exc.errno == errno.EADDRINUSE:
-			print "failure: could not bind to port %s - port already in use" % os.environ.get('exabgp.tcp.port','179')
+			print "failure: could not bind to port %d - port already in use" % port
 		else:
 			print "failure", str(exc)
 
