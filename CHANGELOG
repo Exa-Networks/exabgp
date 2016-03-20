@@ -6,6 +6,8 @@ Version explained:
 Version 3.4.16
  * Feature: allow users to decide if processes must be run before or after we drop privileges
     requested by: Ben Agricola
+ * Fix: correctly look in /etc/exabgp for programs to run when the path is relative
+    reported by: Vincent Bernat
 
 Version 3.4.15
  * Fix: the ttl-security parameter didn´t really work. Fixed for outgoing connections now.

@@ -961,12 +961,13 @@ class Configuration (object):
 							options.append(os.path.abspath(os.path.join(os.path.join(*pwd),os.path.join(*parts))))
 			else:
 				options = [
+					os.path.abspath(os.path.join('/etc/exabgp',prg)),
 					os.path.abspath(os.path.join(os.path.dirname(self._fname),prg)),
-					'/etc/exabgp'
 				]
 			for option in options:
 				if os.path.exists(option):
 					prg = option
+					break
 
 		if not os.path.exists(prg):
 			self._error = 'can not locate the the program "%s"' % prg
