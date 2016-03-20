@@ -14,6 +14,7 @@ from struct import unpack
 
 import psutil
 
+PORT = os.environ.get('exabgp.tcp.port',os.environ.get('exabgp_tcp_port','179'))
 SIGNAL = dict([(name,getattr(signal,name)) for name in dir(signal) if name.startswith('SIG')])
 
 def bytestream (value):
@@ -444,14 +445,14 @@ def main ():
 		sys.exit(1)
 
 	try:
-		BGPServer('localhost',int(os.environ.get('exabgp.tcp.port','179')),messages)
+		BGPServer('localhost',int(PORT),messages)
 		drop()
 		asyncore.loop()
 	except socket.error,exc:
 		if exc.errno == errno.EACCES:
-			print "failure: could not bind to port %s - most likely not run as root" % os.environ.get('exabgp.tcp.port','179')
+			print "failure: could not bind to port %s - most likely not run as root" % PORT
 		elif exc.errno == errno.EADDRINUSE:
-			print "failure: could not bind to port %s - port already in use" % os.environ.get('exabgp.tcp.port','179')
+			print "failure: could not bind to port %s - port already in use" % PORT
 		else:
 			print "failure", str(exc)
 
