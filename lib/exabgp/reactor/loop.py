@@ -44,6 +44,7 @@ class Reactor (object):
 		self.respawn = environment.settings().api.respawn
 
 		self.max_loop_time = environment.settings().reactor.speed
+		self.early_drop = environment.settings().daemon.drop
 
 		self.logger = Logger()
 		self.daemon = Daemon(self)
@@ -148,12 +149,16 @@ class Reactor (object):
 			self.logger.reactor("and check that no other daemon is already binding to port %d" % self.port,'critical')
 			sys.exit(1)
 
+		if not self.early_drop:
+			self.processes.start()
+
 		if not self.daemon.drop_privileges():
 			self.logger.reactor("Could not drop privileges to '%s' refusing to run as root" % self.daemon.user,'critical')
 			self.logger.reactor("Set the environmemnt value exabgp.daemon.user to change the unprivileged user",'critical')
 			return
 
-		self.processes.start()
+		if not self.early_drop:
+			self.processes.start()
 
 		# This is required to make sure we can write in the log location as we now have dropped root privileges
 		if not self.logger.restart():
