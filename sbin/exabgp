@@ -5,7 +5,7 @@ git status 2> /dev/null > /dev/null
 # returns 128 if not in a git repo
 # returns 127 if git is not installed
 
-if [ $? == 0 ]; then
+if [ $? -eq  0 ]; then
    GIT_BRANCH=`git branch | grep "*" | awk '{ print $2}'`
    GIT_COMMIT=`git log -1 | head -1 | awk '{ print $2 }'`
    export EXABGP_VERSION="${GIT_BRANCH}-${GIT_COMMIT}"
