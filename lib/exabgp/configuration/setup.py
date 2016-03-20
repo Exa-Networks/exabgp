@@ -64,6 +64,12 @@ environment.configuration = {
 			'value': 'false',
 			'help':  'should we run in the background',
 		},
+		'drop':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'true',
+			'help':  'drop privileges before forking processes',
+		},
 	},
 	'log':  {
 		'enable':  {
