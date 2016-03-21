@@ -341,3 +341,8 @@ class Processes (object):
 	def _operational (self, peer, operational, header, body):
 		for process in self._notify(peer,'receive-operational'):
 			self.write(process,self._encoder[process].operational(peer,operational.category,operational,header,body),peer)
+
+	@register_process(Message.CODE.NOTIFICATION,_dispatch)
+	def _notification (self, peer, message, header, body):
+		for process in self._notify(peer,'receive-notifications'):
+			self.write(process,self._encoder[process].notification(peer,message,header,body),peer)

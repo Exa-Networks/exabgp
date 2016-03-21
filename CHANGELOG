@@ -8,6 +8,8 @@ Version 3.4.16
     requested by: Ben Agricola
  * Fix: correctly look in /etc/exabgp for programs to run when the path is relative
     reported by: Vincent Bernat
+ * Fix: missing handler for NOTIFICATION
+    patch by: minglvyy
 
 Version 3.4.15
  * Fix: the ttl-security parameter didn´t really work. Fixed for outgoing connections now.
