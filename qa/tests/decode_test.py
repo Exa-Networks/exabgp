@@ -282,8 +282,11 @@ class TestUpdateDecoding (unittest.TestCase):
 			# 		path[f] = neighbor.add_path
 			# capa[Capability.CODE.ADD_PATH] = path
 
-			o1 = Open(Version(4),ASN(neighbor.local_as),HoldTime(180),RouterID(neighbor.local_address.top()),capa)
-			o2 = Open(Version(4),ASN(neighbor.peer_as),HoldTime(180),RouterID(neighbor.peer_address.top()),capa)
+			routerid_1 = str(neighbor.router_id)
+			routerid_2 = '.'.join(str((int(_)+1) % 250) for _ in str(neighbor.router_id).split('.',-1))
+
+			o1 = Open(Version(4),ASN(neighbor.local_as),HoldTime(180),RouterID(routerid_1),capa)
+			o2 = Open(Version(4),ASN(neighbor.peer_as),HoldTime(180),RouterID(routerid_2),capa)
 
 			negotiated = Negotiated(neighbor)
 			negotiated.sent(o1)

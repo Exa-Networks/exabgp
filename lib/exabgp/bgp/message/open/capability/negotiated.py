@@ -142,9 +142,8 @@ class Negotiated (object):
 		return None
 
 	def nexthopself (self, afi):
-		if afi == AFI.ipv4:
-			return self.sent_open.router_id
-		if afi == AFI.ipv6:
+		if afi in (AFI.ipv4,AFI.ipv6):
+			# return self.sent_open.router_id
 			return self.neighbor.local_address
 		raise RuntimeError('nexthop self is not implemented for this family %s' % afi)
 
