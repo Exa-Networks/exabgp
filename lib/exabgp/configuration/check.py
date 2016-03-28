@@ -61,8 +61,8 @@ def check_neighbor (neighbors):
 			capa[Capability.CODE.ADD_PATH] = path
 		capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
 
-		o1 = Open(4,neighbor.local_as,str(neighbor.local_address),capa,180)
-		o2 = Open(4,neighbor.peer_as,str(neighbor.peer_address),capa,180)
+		o1 = Open(4,neighbor.local_as,'127.0.0.2',capa,180)
+		o2 = Open(4,neighbor.peer_as,'127.0.0.3',capa,180)
 		negotiated = Negotiated(neighbor)
 		negotiated.sent(o1)
 		negotiated.received(o2)
