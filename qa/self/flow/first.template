@@ -1,42 +1,54 @@
-group test {
+process stdout {
+	encoder json;
+	run "./flow-change.py";
+}
+
+neighbor IP {
+	description "router";
+	router-id 127.0.0.0;
+	local-address 127.0.0.1;
 	local-as 65533;
 	peer-as 65534;
 	hold-time 9;
-	graceful-restart 1200;
-	host-name my.localhost;
-	domain-name mangin.com;
+#	graceful-restart 1200;
+#	host-name my.localhost;
+#	domain-name mangin.com;
 
 	family {
 		ipv4 unicast;
 		ipv4 flow;
+		ipv4 flow-vpn;
 	}
 
-	process stdout {
+	api {
+		processes [stdout ];
 		receive {
 			parsed;
 			operational;
 		}
-		encoder json;
-		run "./flow-change.py";
 	}
 
 	flow {
+#		route first-vpn-route {
+#			rd 65535:65536;
+#			match {
+#				 source 10.0.0.1/32;
+#			}
+#			then {
+#				 discard;
+#			}
+#		}
+
 		route block_traffic_to_proxy {
 			match {
 				source 10.0.0.1/32;
 				destination 10.0.0.2/32;
 				destination-port =3128;
 				protocol tcp;
-			}   
+			}
 			then {
 				discard;
-			}   
-		}   
-	}
-
-	neighbor IP {
-		description "router";
-		router-id 127.0.0.0;
-		local-address 127.0.0.1;
+			}
+		}
 	}
 }

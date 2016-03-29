@@ -1,28 +1,25 @@
-#route 77.93.35.15/32 next-hop 10.0.0.2;
+process parsed-route-backend {
+	encoder json;
+	run ./log-syslog.py;
+}
 
-group test {
+neighbor 127.0.0.1 {
+	description "router 2";
+	router-id 128.0.0.0;
+	local-address IP;
 	local-as 65534;
 	peer-as 65533;
 	hold-time 9;
-	graceful-restart 1200;
 
-#	family {
-#		ipv4 unicast;
-#		ipv4 flow;
-#	}
+	capability {
+		graceful-restart;
+	}
 
- 	process parsed-route-backend {
-		encoder json;
+	api {
+		processes [ parsed-route-backend ];
 		receive {
 			parsed;
 			update;
 		}
- 		run ./log-syslog.py;
- 	}
-
-	neighbor 127.0.0.1 {
-		description "router 2";
-		router-id 128.0.0.0;
-		local-address IP;
 	}
 }
