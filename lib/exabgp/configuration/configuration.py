@@ -313,6 +313,8 @@ class Configuration (_Configuration):
 		except KeyboardInterrupt:
 			return self.error.set('configuration reload aborted by ^C or SIGINT')
 		except Error, exc:
+			if environment.settings().debug.configuration:
+				raise
 			return self.error.set(
 				'problem parsing configuration file line %d\n'
 				'error message: %s' % (self.tokeniser.index_line, exc)

@@ -9,10 +9,11 @@ class Error (StandardError):
 	def set (self, message):
 		self.message = message
 		if self.debug:
+			error = False
 			print '\n%s\n' % self.message
 			from pdb import set_trace
 			set_trace()
-			return True
+			return error
 		return False
 
 	def throw (self,message):
@@ -28,4 +29,7 @@ class Error (StandardError):
 		self.message = ''
 
 	def __repr__ (self):
+		return self.message
+
+	def __str__ (self):
 		return self.message
