@@ -54,7 +54,8 @@ def unescape (string):
 def tokens (stream):
 	spaces = [' ','\t','\r','\n']
 	strings = ['"', "'"]
-	syntax = [';',',','[',']','{','}']
+	syntax = [',','[',']']
+	eol = [';','{','}']
 	comment = ['#',]
 
 	for letters in stream:
@@ -73,6 +74,19 @@ def tokens (stream):
 						parsed.append((nb_chars,char))
 						word = ''
 					break
+
+			elif char in eol:
+				if quoted:
+					word += char
+					nb_chars += 1
+				else:
+					if word:
+						parsed.append((nb_chars-len(word),word))
+						word = ''
+					parsed.append((nb_chars,char))
+					nb_chars += 1
+					yield ''.join(__ for _,__ in parsed), parsed
+					parsed = []
 
 			elif char in syntax:
 				if quoted:
@@ -105,4 +119,6 @@ def tokens (stream):
 			else:
 				word += char
 				nb_chars += 1
-		yield line.rstrip(), parsed
+
+		if parsed:
+			yield ''.join(__ for _,__ in parsed), parsed
