@@ -84,17 +84,18 @@ class Text (object):
 	def api_flow (self, command, peers):
 		action, flow, line = command.split(' ',2)
 
-		self.configuration.static.clear()
+		self.configuration.flow.clear()
 		if not self.configuration.partial('flow',line):
 			return []
 
+		self.configuration.scope.to_context('route')
 		changes = self.configuration.scope.pop('routes',[])
 		return zip([peers]*len(changes),changes)
 
 	def api_vpls (self, command, peers):
 		action, line = command.split(' ',1)
 
-		self.configuration.static.clear()
+		self.configuration.vpls.clear()
 		if not self.configuration.partial('l2vpn',line):
 			return []
 
