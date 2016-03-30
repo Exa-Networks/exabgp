@@ -58,10 +58,13 @@ def tokens (stream):
 	eol = [';','{','}']
 	comment = ['#',]
 
+	nb_lines = 0
+
 	for letters in stream:
 		line = unescape(letters)
 		parsed = []
 		nb_chars = 0
+		nb_lines += 1
 		quoted = ''
 		word = ''
 		for char in line:
@@ -71,7 +74,7 @@ def tokens (stream):
 					nb_chars += 1
 				else:
 					if word:
-						parsed.append((nb_chars,char))
+						parsed.append((nb_lines,nb_chars,char))
 						word = ''
 					break
 
@@ -81,11 +84,11 @@ def tokens (stream):
 					nb_chars += 1
 				else:
 					if word:
-						parsed.append((nb_chars-len(word),word))
+						parsed.append((nb_lines,nb_chars-len(word),word))
 						word = ''
-					parsed.append((nb_chars,char))
+					parsed.append((nb_lines,nb_chars,char))
 					nb_chars += 1
-					yield ''.join(__ for _,__ in parsed), parsed
+					yield parsed
 					parsed = []
 
 			elif char in syntax:
@@ -93,16 +96,16 @@ def tokens (stream):
 					word += char
 				else:
 					if word:
-						parsed.append((nb_chars-len(word),word))
+						parsed.append((nb_lines,nb_chars-len(word),word))
 						word = ''
-					parsed.append((nb_chars,char))
+					parsed.append((nb_lines,nb_chars,char))
 				nb_chars += 1
 
 			elif char in spaces:
 				if quoted:
 					word += char
 				elif word:
-					parsed.append((nb_chars-len(word),word))
+					parsed.append((nb_lines,nb_chars-len(word),word))
 					word = ''
 				nb_chars += 1
 
@@ -110,7 +113,7 @@ def tokens (stream):
 				# word += char
 				if quoted == char:
 					quoted = ''
-					parsed.append((nb_chars-len(word),word))
+					parsed.append((nb_lines,nb_chars-len(word),word))
 					word = ''
 				else:
 					quoted = char
@@ -121,4 +124,4 @@ def tokens (stream):
 				nb_chars += 1
 
 		if parsed:
-			yield ''.join(__ for _,__ in parsed), parsed
+			raise ValueError('invalid syntax')

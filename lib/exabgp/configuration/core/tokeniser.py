@@ -91,12 +91,12 @@ class Tokeniser (object):
 		return "'%s'" % "' '".join(self.line[1:])
 
 	def _tokenise (self,iterator):
-		for self.line,parsed in tokens(iterator):
-			if not parsed:
-				continue
+		for parsed in tokens(iterator):
+			words = [word for y,x,word in parsed]
+			self.line = ''.join(words)
 			# ignore # lines
 			# set Location information
-			yield [word for x,word in parsed]
+			yield words
 
 	def _set (self, function):
 		try:
