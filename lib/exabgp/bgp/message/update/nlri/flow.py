@@ -577,7 +577,7 @@ class Flow (NLRI):
 			string.append(' %s %s' % (rules[0].NAME,line))
 		nexthop = ' next-hop %s' % self.nexthop if self.nexthop is not NoNextHop else ''
 		rd = '' if self.rd is RouteDistinguisher.NORD else str(self.rd)
-		return 'flow' + rd + ''.join(string) + nexthop
+		return 'flow' + ''.join(string) + rd + nexthop
 
 	def __str__ (self):
 		return self.extensive()
