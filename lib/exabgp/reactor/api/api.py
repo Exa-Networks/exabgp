@@ -59,6 +59,14 @@ class API (object):
 		except KeyError:
 			raise RuntimeError('The code does not have an implementation for "%s", please code it !' % name)
 
+	def log_message (self, message, level='info'):
+		self.logger.reactor(message,level)
+
+	def log_failure (self, message, level='error'):
+		error = str(self.parser.configuration.tokeniser.error)
+		report = '%s\nreason: %s' % (message, error) if error else message
+		self.logger.reactor(report,level)
+
 	def text (self, reactor, service, command):
 		for registered in self.functions:
 			if registered in command:
