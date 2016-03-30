@@ -547,7 +547,7 @@ class Flow (NLRI):
 			string.append(' %s %s' % (rules[0].NAME,line))
 		nexthop = ' next-hop %s' % self.nexthop if self.nexthop is not NoIP else ''
 		rd = str(self.rd) if self.rd else ''
-		return 'flow' + rd + ''.join(string) + nexthop
+		return 'flow' + ''.join(string) + rd + nexthop
 
 	def __str__ (self):
 		return self.extensive()
@@ -566,7 +566,7 @@ class Flow (NLRI):
 		nexthop = ', "next-hop": "%s"' % self.nexthop if self.nexthop is not NoIP else ''
 		rd = ', %s' % self.rd.json() if self.rd else ''
 		compatibility = ', "string": "%s"' % self.extensive()
-		return '{' + rd + ','.join(string) + nexthop + compatibility + ' }'
+		return '{' + ','.join(string) + rd + nexthop + compatibility + ' }'
 
 	def json (self):
 		# this is a stop gap so flow route parsing does not crash exabgp

@@ -6,6 +6,8 @@ Version explained:
 Version 3.4.17
  * Fix: does not accept IPv6 as router-id
     reported by: yuriya
+ * Fix: JSON output for flow routes with rd
+    reported by droon5
 
 Version 3.4.16
  * Feature: allow users to decide if processes must be run before or after we drop privileges
