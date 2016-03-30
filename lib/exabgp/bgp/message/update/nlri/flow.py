@@ -599,7 +599,7 @@ class Flow (NLRI):
 		nexthop = ', "next-hop": "%s"' % self.nexthop if self.nexthop is not NoNextHop else ''
 		rd = '' if self.rd is RouteDistinguisher.NORD else ', %s' % self.rd.json()
 		compatibility = ', "string": "%s"' % self.extensive()
-		return '{' + rd + ','.join(string) + nexthop + compatibility + ' }'
+		return '{' + ','.join(string) + rd + nexthop + compatibility + ' }'
 
 	def json (self):
 		# this is a stop gap so flow route parsing does not crash exabgp
