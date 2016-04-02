@@ -1,6 +1,7 @@
 exabgp (3.4.16-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+  * d/rules: enable back conversation tests.
 
  -- Vincent Bernat <bernat@debian.org>  Sat, 02 Apr 2016 14:59:01 +0200
 
