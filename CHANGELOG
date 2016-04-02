@@ -3,6 +3,14 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.4.16
+ * Feature: allow users to decide if processes must be run before or after we drop privileges
+    requested by: Ben Agricola
+ * Fix: correctly look in /etc/exabgp for programs to run when the path is relative
+    reported by: Vincent Bernat
+ * Fix: missing handler for NOTIFICATION
+    patch by: minglvyy
+
 Version 3.4.15
  * Fix: the ttl-security parameter didn´t really work. Fixed for outgoing connections now.
     patch by: Borja Marcos
@@ -19,6 +27,11 @@ Version 3.4.15
     reported by: Bryan Schwerer
  * Fix: wrongly announcing connection issue with peer on the API
     reported by: Bryan Schwerer
+
+Version 3.4.14
+  * Change: This version does not exists
+  * Change: we modified some pypi related code and failed at first
+  * Change: pypi does not let you modify releases
 
 Version 3.4.13
  * Fix: add semicolon in syslog entry so it can be parsed by tools
