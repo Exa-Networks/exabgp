@@ -10,9 +10,9 @@ before_install:
   - sudo apt-get install -y python-pip python-dev
 
 install:
-  - pip install coveralls
-  - pip install psutil
-  - pip install scrutinizer-ocular
+  - sudo pip install coveralls
+  - sudo pip install psutil
+  - sudo pip install scrutinizer-ocular
 
 script:
   - export INTERPRETER=python
