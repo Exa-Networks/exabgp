@@ -150,11 +150,11 @@ class Logger (object):
 		if self.short:
 			return message
 		now = time.strftime('%a, %d %b %Y %H:%M:%S',timestamp)
-		if self.destination in ['stderr','stdout']:
+		if self._where in ['stderr','stdout']:
 			return "%s | %-8s | %-6d | %-13s | %s" % (now,level,self._pid,source,message)
-		elif self.destination in ['syslog',]:
+		elif self._where in ['syslog',]:
 			return "%s: %-6d %-13s %s" % (environment.application,self._pid,source,message)
-		elif self.destination in ['file',]:
+		elif self._where in ['file',]:
 			return "%d %-6d %-13s %s" % (now,self._pid,source,message)
 		else:
 			# failsafe
