@@ -222,7 +222,7 @@ class Store (object):
 						if nlri_index in announced:
 							old_change = announced[nlri_index]
 							# it is a duplicate route
-							if old_change.attributes.index() == change.attributes.index() and old_change.nlri.nexthop.index() == change.nlri.nexthop.index():
+							if old_change.attributes.index() == change.attributes.index() and old_change.nlri.nexthop == change.nlri.nexthop:
 								continue
 					elif change.nlri.action == OUT.WITHDRAW:
 						if nlri_index not in announced:
