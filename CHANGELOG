@@ -120,6 +120,8 @@ Version 4.0.0
    requested by: Borja Marcos
  * Feature: md5-ip allows to override local-address for the MD5 calculations
    requested by: Bryan Benson
+ * Feature: allow setting process umask via exabgp.daemon.umask
+   patch by: Bryan Le Gear
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set

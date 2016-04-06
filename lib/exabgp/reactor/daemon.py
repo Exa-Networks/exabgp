@@ -25,14 +25,14 @@ class Daemon (object):
 		self.pid = environment.settings().daemon.pid
 		self.user = environment.settings().daemon.user
 		self.daemonize = environment.settings().daemon.daemonize
+                self.umask = environment.settings().daemon.umask
 
 		self.logger = Logger()
 
 		self.reactor = reactor
 
 		os.chdir('/')
-		# os.umask(0)
-		os.umask(0137)
+                os.umask(self.umask)
 
 	def savepid (self):
 		self._saved_pid = False
