@@ -222,8 +222,12 @@ class environment (object):
 		raise TypeError('invalid log level %s' % log)
 
         @staticmethod
-        def umask (_):
+        def umask_read (_):
                 return int(_, 8)
+
+        @staticmethod
+        def umask_write (_):
+                return "'%s'" % (oct(_))
 
 	@staticmethod
 	def default ():
