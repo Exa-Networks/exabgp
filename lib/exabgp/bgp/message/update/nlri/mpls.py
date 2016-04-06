@@ -86,7 +86,7 @@ class MPLS (NLRI,CIDR):
 		return chr(length) + self.labels.pack() + self.rd.pack() + CIDR.packed_ip(self)
 
 	def index (self):
-		return self.pack()
+		return self.pack(self.path_info != PathInfo.NOPATH)
 
 	@classmethod
 	def unpack (cls, afi, safi, bgp, addpath, nexthop, action):
