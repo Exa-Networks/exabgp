@@ -7,16 +7,26 @@ import time
 counter = 0
 
 line = sys.stdin.readline().strip()
-print >> sys.stderr, 'ok, received', line
-sys.stdout.flush()
 
 if 'keepalive' in line:
-	time.sleep(2)  # make sure the other process is faster if it gets any data
-	print "announce route 0.0.0.0/0 next-hop 1.1.1.1"
+	print >> sys.stderr, 'ok, received', line
 	sys.stdout.flush()
 else:
-	print "announce route 6.6.6.6/6 next-hop 9.9.9.9"
+	print "announce route 6.6.6.0/24 next-hop 9.9.9.9"
 	sys.stdout.flush()
+
+line = sys.stdin.readline().strip()
+
+if '0.0.0.0/32' in line:
+	print >> sys.stderr, 'ok, received', line
+	sys.stdout.flush()
+	time.sleep(2)  # make sure the other process is faster if it gets any data
+	print "announce route 6.6.6.0/24 next-hop 1.1.1.1"
+	sys.stdout.flush()
+else:
+	print "announce route 6.6.6.0/24 next-hop 9.9.9.9"
+	sys.stdout.flush()
+
 
 while True:
 	try:

@@ -16,13 +16,13 @@ while True:
 			if counter > 100:
 				sys.exit(1)
 		counter = 0
-		time.sleep(0.5)	
+		time.sleep(0.5)
 
-		if not 'shutdown' in line:
+		if 'shutdown' not in line:
 			print >> sys.stderr, 'failure, we received data on this worker: ', line
 			sys.stderr.flush()
 
-			print "announce route 6.6.6.6/6 next-hop 9.9.9.9"
+			print "announce route 6.6.6.0/24 next-hop 9.9.9.9"
 			sys.stdout.flush()
 
 		if line == "":
