@@ -151,7 +151,7 @@ def dispatch (exabgp, daemon, groups, port):
 				if returncode is not None:
 					try:
 						out,err = process.communicate()
-						if 'failed' in out:
+						if 'failed' in out or 'expected' in out:
 							color[n2l[name]] = Color.RED
 							success = False
 						else:
@@ -161,7 +161,7 @@ def dispatch (exabgp, daemon, groups, port):
 							display('\r')
 							display(*['%s%s%s' % (color[l],l if color[l] != Color.GREEN else '-', Color.END) + ' ' for l in letters])
 							display(Color.END)
-					except (IOError,OSError):
+					except (IOError,OSError,ValueError):
 						success = False
 
 			time.sleep(1)
@@ -192,7 +192,10 @@ def dispatch (exabgp, daemon, groups, port):
 			for name in names.keys():
 				process = processes.get(name,None)
 				if process:
-					out,err = process.communicate()
+					try:
+						out,err = process.communicate()
+					except ValueError:
+						pass
 					display(out)
 					display(err)
 					display('\n','\n')
@@ -243,16 +246,18 @@ if __name__ == '__main__':
 		names, alphabet, l2n, n2l, letters = make_short(groups)
 		command = "env exabgp_debug_configuration=true exabgp_tcp_port=%d exabgp_tcp_once=true exabgp_debug_rotate=true exabgp_tcp_bind='' %s -d -p %s.conf" % (port,exabgp,names[l2n[client]][:-6])
 		print '>', command
-		os.system(command)
-		sys.exit()
+		if os.system(command):
+			sys.exit(1)
+		sys.exit(0)
 
 	server = os.environ.get('SERVER',os.environ.get('server','')).upper()
 	if server:
 		names, alphabet, l2n, n2l, letters = make_short(groups)
 		command = "env exabgp_tcp_port=%d %s %s.sequence" % (port,daemon,names[l2n[server]][:-6])
 		print '>', command
-		os.system(command)
-		sys.exit()
+		if os.system(command):
+			sys.exit(1)
+		sys.exit(0)
 
 	if len(sys.argv) >= 2:
 		group = sys.argv[1]
