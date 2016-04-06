@@ -70,6 +70,12 @@ environment.configuration = {
 			'value': 'true',
 			'help':  'drop privileges before forking processes',
 		},
+                'umask':  {
+                        'read':  environment.umask,
+                        'write': environment.nop,
+                        'value': '0137',
+                        'help':  'run daemon with this umask, governs perms of logfiles etc.',
+                },
 	},
 	'log':  {
 		'enable':  {

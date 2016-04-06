@@ -221,6 +221,10 @@ class environment (object):
 				return name
 		raise TypeError('invalid log level %s' % log)
 
+        @staticmethod
+        def umask (_):
+                return int(_, 8)
+
 	@staticmethod
 	def default ():
 		for section in sorted(environment.configuration):
