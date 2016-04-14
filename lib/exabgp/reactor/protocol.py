@@ -177,7 +177,7 @@ class Protocol (object):
 
 		for length,msg_id,header,body,notify in self.connection.reader():
 			if notify:
-				if self.neighbor.api['receive-%s' % Message.CODE.NOTIFICATION.SHORT]:
+				if self.neighbor.api.get('receive-%s' % Message.CODE.NOTIFICATION.SHORT,False):
 					if packets and not consolidate:
 						self.peer.reactor.processes.packets(self.peer.neighbor,'receive',msg_id,header,body)
 
@@ -192,7 +192,8 @@ class Protocol (object):
 				yield _NOP
 
 		if packets and not consolidate:
-			self.peer.reactor.processes.packets(self.peer.neighbor,'receive',msg_id,header,body)
+			if self.neighbor.api.get('receive-%s' % Message.CODE.short(msg_id),False):
+				self.peer.reactor.processes.packets(self.peer.neighbor,'receive',msg_id,header,body)
 
 		if msg_id == Message.CODE.UPDATE:
 			if not parsed and not self.log_routes:
