@@ -88,6 +88,9 @@ class Text (object):
 		if not self.configuration.partial('flow',line):
 			return []
 
+		if self.configuration.scope.location():
+			return []
+
 		self.configuration.scope.to_context('route')
 		changes = self.configuration.scope.pop('routes',[])
 		return zip([peers]*len(changes),changes)

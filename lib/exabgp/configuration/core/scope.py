@@ -20,7 +20,7 @@ class Scope (Error):
 		self._current = self._all
 
 	def __repr__ (self):
-		return str(self.__class__)
+		return str(self.__dict__)
 
 	def clear (self):
 		self._location = []
