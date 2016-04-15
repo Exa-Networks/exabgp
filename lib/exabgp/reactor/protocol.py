@@ -176,53 +176,59 @@ class Protocol (object):
 		body,header = '',''  # just because pylint/pylama are getting more clever
 
 		for length,msg_id,header,body,notify in self.connection.reader():
+			# internal issue
 			if notify:
-				if self.neighbor.api.get('receive-%s' % Message.CODE.NOTIFICATION.SHORT,False):
-					if packets and not consolidate:
-						self.peer.reactor.processes.packets(self.peer.neighbor,'receive',msg_id,header,body)
-
-					if not packets or consolidate:
-						header = ''
-						body = ''
-
-					self.peer.reactor.processes.notification(self.peer.neighbor,'receive',notify.code,notify.subcode,str(notify),header,body)
+				if self.neighbor.api.get('send-%s' % Message.CODE.NOTIFICATION.SHORT,False):
+					if consolidate:
+						self.peer.reactor.processes.notification(self.peer.neighbor,'send',notify.code,notify.subcode,str(notify),header,body)
+					elif parsed:
+						self.peer.reactor.processes.notification(self.peer.neighbor,'send',notify.code,notify.subcode,str(notify),'','')
+					elif packets:
+						self.peer.reactor.processes.packets(self.peer.neighbor,'send',msg_id,header,body)
 				# XXX: is notify not already Notify class ?
 				raise Notify(notify.code,notify.subcode,str(notify))
+
 			if not length:
 				yield _NOP
+				continue
 
-		if packets and not consolidate:
-			if self.neighbor.api.get('receive-%s' % Message.CODE.short(msg_id),False):
+			self.logger.message(self.me('<< %s' % Message.CODE.name(msg_id)))
+
+			for_api = self.neighbor.api.get('receive-%s' % Message.CODE.short(msg_id),False)
+
+			if for_api and packets and not consolidate:
 				self.peer.reactor.processes.packets(self.peer.neighbor,'receive',msg_id,header,body)
 
-		if msg_id == Message.CODE.UPDATE:
-			if not parsed and not self.log_routes:
-				yield _UPDATE
-				return
+			if msg_id == Message.CODE.UPDATE:
+				if not (for_api or self.log_routes) and not (parsed or consolidate):
+					yield _UPDATE
+					return
 
-		self.logger.message(self.me('<< %s' % Message.CODE.name(msg_id)))
-		try:
-			message = Message.unpack(msg_id,body,self.negotiated)
-		except (KeyboardInterrupt,SystemExit,Notify):
-			raise
-		except Exception,exc:
-			self.logger.message(self.me('Could not decode message "%d"' % msg_id))
-			self.logger.message(self.me('%s' % str(exc)))
-			self.logger.message(traceback.format_exc())
-			raise Notify(1,0,'can not decode update message of type "%d"' % msg_id)
-			# raise Notify(5,0,'unknown message received')
+			try:
+				message = Message.unpack(msg_id,body,self.negotiated)
+			except (KeyboardInterrupt,SystemExit,Notify):
+				raise
+			except Exception,exc:
+				self.logger.message(self.me('Could not decode message "%d"' % msg_id))
+				self.logger.message(self.me('%s' % str(exc)))
+				self.logger.message(traceback.format_exc())
+				raise Notify(1,0,'can not decode update message of type "%d"' % msg_id)
+				# raise Notify(5,0,'unknown message received')
 
-		if self.neighbor.api.get('receive-%s' % Message.CODE.short(msg_id),False):
-			if parsed:
-				if not consolidate or not packets:
-					header = ''
-					body = ''
-				self.peer.reactor.processes.message(msg_id,self.neighbor,'receive',message,header,body)
+			if for_api:
+				if consolidate:
+					self.peer.reactor.processes.message(msg_id,self.neighbor,'receive',message,header,body)
+				elif parsed:
+					self.peer.reactor.processes.message(msg_id,self.neighbor,'receive',message,'','')
 
-		if message.TYPE == Notification.TYPE:
-			raise message
+			try:
+				if message.TYPE == Notification.TYPE:
+					raise message
+			except:
+				import pdb; pdb.set_trace()
+				pass
 
-		yield message
+			yield message
 
 		# elif msg == Message.CODE.ROUTE_REFRESH:
 		# 	if self.negotiated.refresh != REFRESH.ABSENT:

@@ -78,6 +78,9 @@ class Text (object):
 		if not self.configuration.partial('static',line):
 			return []
 
+		if self.configuration.scope.location():
+			return []
+
 		changes = self.configuration.scope.pop('routes',[])
 		return zip([peers]*len(changes),changes)
 
