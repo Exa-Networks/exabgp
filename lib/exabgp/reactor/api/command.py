@@ -66,6 +66,9 @@ def version (self, reactor, service, command):
 	reactor.answer(service,'exabgp %s' % _version)
 	return True
 
+def log (self, reactor, service, command):
+	self.logger.processes(command.lstrip().lstrip('#').strip())
+	return True
 
 def teardown (self, reactor, service, command):
 	try:

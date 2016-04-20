@@ -65,6 +65,7 @@ FUNCTION = {
 	'announce route-refresh': 'announce_refresh',
 	'announce operational':   'announce_operational',
 	'operational':            'announce_operational',
+	'#':                      'log',
 }
 
 for name in sorted(FUNCTION.keys()):
