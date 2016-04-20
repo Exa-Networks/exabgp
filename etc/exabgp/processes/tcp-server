@@ -118,7 +118,7 @@ class Control (StreamRequestHandler):
 				self.wfile.flush()
 				prompt = True
 
-			elif command in ['shutdown','reload','restart','version']:
+			elif command in ['shutdown','reload','restart','version','#']:
 				sys.stdout.write('%s\n' % command)
 				sys.stdout.flush()
 				prompt = True

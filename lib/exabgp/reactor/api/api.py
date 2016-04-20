@@ -46,6 +46,7 @@ class API (object):
 		'restart',
 		'reload',
 		'shutdown',
+		'#',
 	],reverse=True)
 
 	def __init__ (self,reactor):

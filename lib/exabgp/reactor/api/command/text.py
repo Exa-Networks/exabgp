@@ -45,6 +45,12 @@ def version (self, reactor, service, command):
 	return True
 
 
+@Text('#')
+def version (self, reactor, service, command):
+	self.logger.processes(command.lstrip().lstrip('#').strip())
+	return True
+
+
 @Text('teardown')
 def teardown (self, reactor, service, command):
 	try:
