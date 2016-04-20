@@ -82,11 +82,13 @@ The following projects are related to ExaBGP
 
 **Visualisation**
   - [GIXLG](https://code.google.com/p/gixlg/) a looking glass with visualisation
+  - [lookify](https://github.com/Shopify/lookify) another looking glass
 
 **Route Announcement**
   - [ERCO](https://erco.xyz/) web interface
   - [ExaBGPmon](https://github.com/thepacketgeek/ExaBGPmon) web interface
   - [BGPAPI](https://github.com/abh/bgpapi) an HTTP API
+  - [BGP commander](https://github.com/crazed/bgpcommander) Integration with etcd 
 
 **Installation**
   - [Chef](https://github.com/hw-cookbooks/exabgp) Cookbook
