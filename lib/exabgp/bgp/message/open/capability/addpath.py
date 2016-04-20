@@ -41,11 +41,11 @@ class AddPath (Capability,dict):
 		return '{ "name": "addpath"%s%s }' % (', ' if families else '', families)
 
 	def extract (self):
-		rs = []
+		rs = ''
 		for v in self:
 			if self[v]:
-				rs.append(v[0].pack() + v[1].pack() + pack('!B',self[v]))
-		return rs
+				rs += v[0].pack() + v[1].pack() + pack('!B',self[v])
+		return [rs,]
 
 	@staticmethod
 	def unpack_capability (instance, data, capability=None):  # pylint: disable=W0613

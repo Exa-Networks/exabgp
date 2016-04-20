@@ -108,6 +108,8 @@ Version 4.0.0
     reported by: choisuibun
  * Fix: healthcheck removes added IPs on exit
     patch by: Ben Agricola
+ * Fix: Bad encoding of capability when multiple families are used for add-path
+    reported by Alexander Bespalov
  * Feature: Allow single line flow route
     requested by: Pavel Odintsov
  * Feature: add support for rpm packaging
