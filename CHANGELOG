@@ -10,7 +10,9 @@ Version 3.4.17
     reported by droon5
  * Fix: Fix Path-Information
  * Fix: Bad encoding of capability when multiple families are used for add-path
-    reported by Alexander Bespalov
+    reported: by Alexander Bespalov
+ * Fix: support non ASN4 use of AS_TRANS (AS23456)
+    reported by: Todd Crane
 
 Version 3.4.16
  * Feature: allow users to decide if processes must be run before or after we drop privileges
