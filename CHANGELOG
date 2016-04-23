@@ -109,7 +109,9 @@ Version 4.0.0
  * Fix: healthcheck removes added IPs on exit
     patch by: Ben Agricola
  * Fix: Bad encoding of capability when multiple families are used for add-path
-    reported by Alexander Bespalov
+    reported by: Alexander Bespalov
+ * Fix: support non ASN4 use of AS_TRANS (AS23456)
+    reported by: Todd Crane
  * Feature: Allow single line flow route
     requested by: Pavel Odintsov
  * Feature: add support for rpm packaging

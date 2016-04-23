@@ -59,8 +59,8 @@ class Negotiated (object):
 
 		self.local_as = self.sent_open.asn
 		self.peer_as = self.received_open.asn
-		if self.received_open.asn == AS_TRANS:
-			self.peer_as = recv_capa[Capability.CODE.FOUR_BYTES_ASN]
+		if self.received_open.asn == AS_TRANS and self.asn4:
+			self.peer_as = recv_capa.get(Capability.CODE.FOUR_BYTES_ASN,self.peer_as)
 
 		self.families = []
 		if \
