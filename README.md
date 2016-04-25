@@ -106,14 +106,14 @@ The following projects are related to ExaBGP
   - [super smash brogp](https://github.com/spotify/super-smash-brogp) Stress test BGP
   - [kyro](https://github.com/kvogt/kyro) realtime network performance measurement and optimal routes injection - not really ExaBGP related, they have their own stack, but worth mentioning
 
-**Commercial**
-  - [WanGuard](https://www.andrisoft.com/software/wanguard) DDOS protection from Andrisoft with ExaBGP integration
-
 **Other BGP implementation**
   - [Full list](https://github.com/Exa-Networks/exabgp/wiki/Other-OSS-BGP-implementations) of known open source BGP implementation
   - [Bird](http://bird.network.cz/) very good C based BGP implementation with powerful route filtering language for network administrators
   - [GoBGP](https://github.com/osrg/gobgp) an implementation with various binding for programmers
   - [RYU](https://github.com/osrg/ryu) for SDN fans
+
+**Commercial**
+  - [WanGuard](https://www.andrisoft.com/software/wanguard) DDOS protection from Andrisoft with ExaBGP integration
 
 ## Features
 
