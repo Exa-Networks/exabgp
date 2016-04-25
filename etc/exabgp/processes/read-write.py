@@ -55,7 +55,7 @@ def _reader ():
 
 	while True:
 		try:
-			data = sys.stdin.read(4096)
+			data = os.read(sys.stdin.fileno(),4096)
 		except IOError,exc:
 			if exc.args[0] in errno_block:
 				yield ''
@@ -78,7 +78,7 @@ def write (data='', left=''):
 	left += data
 	try:
 		if left:
-			number = sys.stdout.write(left)
+			number = os.write(sys.stdout.fileno(),left)
 			left = left[number:]
 			sys.stdout.flush()
 	except IOError,exc:
