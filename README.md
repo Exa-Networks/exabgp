@@ -96,6 +96,7 @@ The following projects are related to ExaBGP
 
 **Interoperability**
   - [IOS2ExaBGP](https://github.com/lochiiconnectivity/ios2exa) converts Cisco IOS IPv4 BGP LOC Rib dumps to ExaBGP's format
+  - [MRTparse](https://github.com/YoshiyukiYamauchi/mrtparse) convert MRT format to ExaBGP
 
 **High availability**
   - [ExaZK](https://github.com/shtouff/exazk) a plugin to interface ExaBGP & ZooKeeper
