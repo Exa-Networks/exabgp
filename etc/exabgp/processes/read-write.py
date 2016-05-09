@@ -63,6 +63,14 @@ def _reader ():
 			elif exc.args[0] in errno_fatal:
 				print >> sys.stderr, "fatal error while reading on stdin : %s" % str(exc)
 				sys.exit(1)
+			else:
+				print >> sys.stderr, "unknown error while reading on stdin : %s" % str(exc)
+				sys.exit(1)
+
+		if not data:
+			# we lost the pipe
+			print >> sys.stderr, "the read pipe was closed by the other side : %s" % str(exc)
+			sys.exit(1)
 
 		received += data
 		if '\n' in received:
@@ -87,6 +95,10 @@ def write (data='', left=''):
 		elif exc.args[0] in errno_fatal:
 			# this may not send anything ...
 			print >> sys.stderr, "fatal error while reading on stdin : %s" % str(exc)
+			sys.stderr.flush()
+			sys.exit(1)
+		else:
+			print >> sys.stderr, "unknown error while reading on stdin : %s" % str(exc)
 			sys.stderr.flush()
 			sys.exit(1)
 
