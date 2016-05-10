@@ -83,7 +83,7 @@ class VPLS (NLRI):
 			'"offset": %s' % self.offset,
 			'"size": %s' % self.size,
 		])
-		return '"vpls-%s": { %s }' % (self.unique, content)
+		return '{ %s }' % (content)
 
 	def extensive (self):
 		return "vpls%s endpoint %s base %s offset %s size %s %s" % (

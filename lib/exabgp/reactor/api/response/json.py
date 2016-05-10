@@ -168,9 +168,9 @@ class JSON (object):
 			m = ''
 			for nexthop in plus[family]:
 				nlris = plus[family][nexthop]
-				m += '"%s": { ' % nexthop
+				m += '"%s": [ ' % nexthop
 				m += ', '.join('%s' % nlri.json() for nlri in nlris)
-				m += ' }, '
+				m += ' ], '
 			s += m[:-2]
 			s += ' }'
 			add.append(s)

@@ -31,8 +31,9 @@ Version 4.0.0
   - all deprecated name remove
   - no more process group within neighbor
  * Change: Change the API configuration syntax and format
-  - JSON is now the default API encoder
-  - JSON now use high resolution time by default
+  - default changed
+    * JSON is now the default API encoder
+    * JSON now use high resolution time by default
   - syntax changes to the Text API format
     * added direction of message
     * change received/sent to receive/send
@@ -45,6 +46,9 @@ Version 4.0.0
     * rename 'address family flags' to be 'address-family-flags'
     * format change for notification and shutdown message
     * VPLS endpoint, base, offset, and size are now numbers and not strings
+    * nlris are now a list and not nrli indexed object
+    * ipv4/ipv6 nlri without label or rd are now a list of nlri (as string) and not key to empty objects
+    * nlris with label or rd are returned as a list of objects
  * Change: remove all ExaBGP 2.0 compatibily environment variables
  * Change: include time when we log to file (and not application)
  * Change: ttl-security is now called outgoing-ttl
@@ -112,6 +116,8 @@ Version 4.0.0
     reported by: Alexander Bespalov
  * Fix: support non ASN4 use of AS_TRANS (AS23456)
     reported by: Todd Crane
+ * Fix: the json format would not allow normal parsers to extract all the NLRIs
+    reported by: Marco Marzetti
  * Feature: Allow single line flow route
     requested by: Pavel Odintsov
  * Feature: add support for rpm packaging

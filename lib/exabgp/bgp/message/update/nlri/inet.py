@@ -69,7 +69,10 @@ class INET (NLRI):
 		return [self.path_info.json()]
 
 	def json (self, announced=True):
-		return '"%s": { %s }' % (self.cidr.prefix(),", ".join(self._internal(announced)))
+		internal = ", ".join(self._internal(announced))
+		if internal:
+			return '{ "nlri": "%s", %s }' % (self.cidr.prefix(),internal)
+		return '"%s"' % self.cidr.prefix()
 
 	@classmethod
 	def _pathinfo (cls, data, addpath):
