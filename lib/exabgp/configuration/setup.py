@@ -236,11 +236,11 @@ environment.configuration = {
 			'value': 'json',
 			'help':  '(experimental) default encoder to use with with external API (text or json)',
 		},
-		'highres':  {
+		'compact':  {
 			'read':  environment.boolean,
 			'write': environment.lower,
-			'value': 'true',
-			'help':  'should we use highres timer in JSON',
+			'value': 'false',
+			'help':  'shorter JSON encoding for IPv4/IPv6 Unicast NLRI',
 		},
 		'respawn':  {
 			'read':  environment.boolean,

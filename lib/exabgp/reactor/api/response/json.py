@@ -16,15 +16,19 @@ from exabgp.reactor.api.options import hexstring
 from exabgp.bgp.message import Message
 from exabgp.bgp.message import IN
 
+from exabgp.configuration.environment import environment
+
+
 def nop (_): return _
 
 
 class JSON (object):
 	_count = {}
 
-	def __init__ (self, version, highres=False):
+	def __init__ (self, version):
 		self.version = version
-		self.time = nop if highres else int
+		self.time = nop
+		self.compact = environment.settings().api.compact
 
 	# def _reset (self, neighbor):
 	# 	self._count[neighbor.uid] = 0
@@ -169,7 +173,7 @@ class JSON (object):
 			for nexthop in plus[family]:
 				nlris = plus[family][nexthop]
 				m += '"%s": [ ' % nexthop
-				m += ', '.join('%s' % nlri.json() for nlri in nlris)
+				m += ', '.join('%s' % nlri.json(compact=self.compact) for nlri in nlris)
 				m += ' ], '
 			s += m[:-2]
 			s += ' }'
@@ -179,7 +183,7 @@ class JSON (object):
 		for family in minus:
 			nlris = minus[family]
 			s  = '"%s %s": [ ' % family
-			s += ', '.join('%s' % nlri.json() for nlri in nlris)
+			s += ', '.join('%s' % nlri.json(compact=self.compact) for nlri in nlris)
 			s += ' ]'
 			remove.append(s)
 

@@ -33,7 +33,7 @@ Version 4.0.0
  * Change: Change the API configuration syntax and format
   - default changed
     * JSON is now the default API encoder
-    * JSON now use high resolution time by default
+    * JSON now use high resolution time
   - syntax changes to the Text API format
     * added direction of message
     * change received/sent to receive/send

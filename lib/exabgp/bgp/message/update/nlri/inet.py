@@ -65,12 +65,14 @@ class INET (NLRI):
 	def extensive (self):
 		return "%s%s" % (self.prefix(),'' if self.nexthop is NoNextHop else ' next-hop %s' % self.nexthop)
 
-	def _internal (self,announced=True):
+	def _internal (self, announced=True):
 		return [self.path_info.json()]
 
-	def json (self, announced=True):
+	# The announced feature is not used by ExaBGP, is it by BAGPIPE ?
+
+	def json (self, announced=True, compact=False):
 		internal = ", ".join(self._internal(announced))
-		if internal:
+		if internal or not compact:
 			return '{ "nlri": "%s", %s }' % (self.cidr.prefix(),internal)
 		return '"%s"' % self.cidr.prefix()
 

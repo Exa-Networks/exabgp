@@ -52,9 +52,6 @@ class Processes (object):
 		self.clean()
 		self.silence = False
 
-		from exabgp.configuration.environment import environment
-		self.highres = environment.settings().api.highres
-
 	def clean (self):
 		self._process = {}
 		self._encoder = {}
@@ -105,7 +102,7 @@ class Processes (object):
 			run = self.reactor.configuration.processes[process].get('run','')
 			if run:
 				api = self.reactor.configuration.processes[process]['encoder']
-				self._encoder[process] = Response.Text(text_version) if api == 'text' else Response.JSON(json_version,self.highres)
+				self._encoder[process] = Response.Text(text_version) if api == 'text' else Response.JSON(json_version)
 
 				self._process[process] = subprocess.Popen(
 					run,
