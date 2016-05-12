@@ -312,11 +312,11 @@ class Protocol (object):
 		self.logger.message(self.me('>> NOTIFICATION (%d,%d,"%s")' % (notification.code,notification.subcode,notification.data)))
 		yield notification
 
-	def new_update (self):
+	def new_update (self, include_withdraw):
 		updates = self.neighbor.rib.outgoing.updates(self.neighbor.group_updates)
 		number = 0
 		for update in updates:
-			for message in update.messages(self.negotiated):
+			for message in update.messages(self.negotiated,include_withdraw):
 				number += 1
 				for boolean in self.send(message):
 					# boolean is a transient network error we already announced

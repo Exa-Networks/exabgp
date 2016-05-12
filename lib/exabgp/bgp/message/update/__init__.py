@@ -101,7 +101,7 @@ class Update (Message):
 	# XXX: FIXME: calculate size progressively to not have to do it every time
 	# XXX: FIXME: we could as well track when packed_del, packed_mp_del, etc
 	# XXX: FIXME: are emptied and therefore when we can save calculations
-	def messages (self, negotiated):
+	def messages (self, negotiated, include_withdraw=True):
 		# sort the nlris
 
 		add_nlri = []
@@ -114,12 +114,12 @@ class Update (Message):
 				if nlri.afi == AFI.ipv4 and nlri.safi in [SAFI.unicast, SAFI.multicast]:
 					if nlri.action == OUT.ANNOUNCE:
 						add_nlri.append(nlri)
-					else:
+					elif include_withdraw:
 						del_nlri.append(nlri)
 				else:
 					if nlri.action == OUT.ANNOUNCE:
 						add_mp.setdefault(nlri.family(),[]).append(nlri)
-					else:
+					elif include_withdraw:
 						del_mp.setdefault(nlri.family(),[]).append(nlri)
 
 		if not add_nlri and not del_nlri and not add_mp and not del_mp:

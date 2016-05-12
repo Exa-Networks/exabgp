@@ -444,6 +444,7 @@ class Peer (object):
 			raise Notify(6,3)
 
 		proto = direction.proto
+		include_withdraw = False
 
 		# Announce to the process BGP is up
 		self.logger.network('Connected to peer %s (%s)' % (self.neighbor.name(),direction.name))
@@ -553,7 +554,7 @@ class Peer (object):
 				if self._have_routes and not new_routes:
 					self._have_routes = False
 					# XXX: in proto really. hum to think about ?
-					new_routes = proto.new_update()
+					new_routes = proto.new_update(include_withdraw)
 
 				if new_routes:
 					try:
@@ -564,6 +565,7 @@ class Peer (object):
 							count -= 1
 					except StopIteration:
 						new_routes = None
+						include_withdraw = True
 
 				elif send_eor:
 					send_eor = False
