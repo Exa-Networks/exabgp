@@ -101,6 +101,7 @@ The following projects are related to ExaBGP
 **High availability**
   - [ExaZK](https://github.com/shtouff/exazk) a plugin to interface ExaBGP & ZooKeeper
   - [exazk](https://github.com/ton31337/exazk) a ruby solution to interface ExaBGP & ZooKeeper to achieve service HA
+  - [exabgp-healthcheck](https://github.com/shthead/exabgp-healthcheck) A third party healthcheck program in Perl
 
 **Performance**
   - [bgperf](https://github.com/osrg/bgperf) Stress test solution for Bird and Quagga (can be used with other implementations)
