@@ -41,7 +41,7 @@ class EOR (Message):
 			return self.extensive()
 
 		def extensive (self):
-			return 'eor %ld/%ld (%s %s)' % (self.afi,self.safi,self.afi,self.safi)
+			return 'eor %ld/%ld (%s %s)' % (long(self.afi),long(self.safi),self.afi,self.safi)
 
 		def json (self):
 			return '"eor": { "afi" : "%s", "safi" : "%s" }' % (self.afi,self.safi)
