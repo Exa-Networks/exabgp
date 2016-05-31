@@ -72,7 +72,7 @@ def route (tokeniser):
 		if not command:
 			break
 
-		action = ParseStatic.action[command]
+		action = ParseStatic.action.get(command,'')
 
 		if action == 'attribute-add':
 			change.attributes.add(ParseStatic.known[command](tokeniser))
