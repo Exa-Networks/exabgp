@@ -7,6 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message import OUT
+from exabgp.configuration.static import ParseStaticRoute
 
 from exabgp.version import version as _version
 
@@ -223,6 +224,9 @@ def announce_route (self, reactor, service, line):
 				return
 
 			for (peers,change) in changes:
+				if not ParseStaticRoute.check(change):
+					self.log_message('invalid route for %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
+					continue
 				change.nlri.action = OUT.ANNOUNCE
 				reactor.configuration.inject_change(peers,change)
 				self.log_message('route added to %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
@@ -264,6 +268,9 @@ def withdraw_route (self, reactor, service, line):
 				return
 
 			for (peers,change) in changes:
+				if not ParseStaticRoute.check(change):
+					self.log_message('invalid route for %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
+					continue
 				change.nlri.action = OUT.WITHDRAW
 				if reactor.configuration.inject_change(peers,change):
 					self.log_message('route removed from %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
