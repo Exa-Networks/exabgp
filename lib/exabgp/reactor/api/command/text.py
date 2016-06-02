@@ -216,14 +216,14 @@ def announce_route (self, reactor, service, line):
 				yield True
 				return
 
-			changes = self.parser.api_route(command,peers)
+			changes = self.parser.api_route(command)
 			if not changes:
 				self.log_failure('command could not parse route in : %s' % command,'warning')
 				reactor.answer(service,'error')
 				yield True
 				return
 
-			for (peers,change) in changes:
+			for change in changes:
 				if not ParseStaticRoute.check(change):
 					self.log_message('invalid route for %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 					continue
@@ -259,15 +259,14 @@ def withdraw_route (self, reactor, service, line):
 				yield True
 				return
 
-			changes = self.parser.api_route(command,peers)
-
+			changes = self.parser.api_route(command)
 			if not changes:
 				self.log_failure('command could not parse route in : %s' % command,'warning')
 				reactor.answer(service,'error')
 				yield True
 				return
 
-			for (peers,change) in changes:
+			for change in changes:
 				if not ParseStaticRoute.check(change):
 					self.log_message('invalid route for %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 					continue
@@ -304,14 +303,14 @@ def announce_vpls (self, reactor, service, line):
 				yield True
 				return
 
-			changes = self.parser.api_vpls(command,peers)
+			changes = self.parser.api_vpls(command)
 			if not changes:
 				self.log_failure('command could not parse vpls in : %s' % command,'warning')
 				reactor.answer(service,'error')
 				yield True
 				return
 
-			for (peers,change) in changes:
+			for change in changes:
 				change.nlri.action = OUT.ANNOUNCE
 				reactor.configuration.inject_change(peers,change)
 				self.log_message('vpls added to %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
@@ -344,7 +343,7 @@ def withdraw_vpls (self, reactor, service, line):
 				yield True
 				return
 
-			changes = self.parser.api_vpls(command,peers)
+			changes = self.parser.api_vpls(command)
 
 			if not changes:
 				self.log_failure('command could not parse vpls in : %s' % command,'warning')
@@ -352,7 +351,7 @@ def withdraw_vpls (self, reactor, service, line):
 				yield True
 				return
 
-			for (peers,change) in changes:
+			for change in changes:
 				change.nlri.action = OUT.WITHDRAW
 				if reactor.configuration.inject_change(peers,change):
 					self.log_message('vpls removed from %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
@@ -388,14 +387,14 @@ def announce_attributes (self, reactor, service, line):
 				yield True
 				return
 
-			changes = self.parser.api_attributes(command,peers)
+			changes = self.parser.api_attributes(command)
 			if not changes:
 				self.log_failure('command could not parse route in : %s' % command,'warning')
 				reactor.answer(service,'error')
 				yield True
 				return
 
-			for (peers,change) in changes:
+			for change in changes:
 				change.nlri.action = OUT.ANNOUNCE
 				reactor.configuration.inject_change(peers,change)
 				self.log_message('route added to %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
@@ -428,15 +427,14 @@ def withdraw_attribute (self, reactor, service, line):
 				yield True
 				return
 
-			changes = self.parser.api_attributes(command,peers)
-
+			changes = self.parser.api_attributes(command)
 			if not changes:
 				self.log_failure('command could not parse route in : %s' % command,'warning')
 				reactor.answer(service,'error')
 				yield True
 				return
 
-			for (peers,change) in changes:
+			for change in changes:
 				change.nlri.action = OUT.WITHDRAW
 				if reactor.configuration.inject_change(peers,change):
 					self.log_message('route removed from %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
@@ -472,14 +470,14 @@ def announce_flow (self, reactor, service, line):
 				yield True
 				return
 
-			changes = self.parser.api_flow(command,peers)
+			changes = self.parser.api_flow(command)
 			if not changes:
 				self.log_failure('command could not parse flow in : %s' % command,'warning')
 				reactor.answer(service,'error')
 				yield True
 				return
 
-			for (peers,change) in changes:
+			for change in changes:
 				change.nlri.action = OUT.ANNOUNCE
 				reactor.configuration.inject_change(peers,change)
 				self.log_message('flow added to %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
@@ -512,7 +510,7 @@ def withdraw_flow (self, reactor, service, line):
 				yield True
 				return
 
-			changes = self.parser.api_flow(command,peers)
+			changes = self.parser.api_flow(command)
 
 			if not changes:
 				self.log_failure('command could not parse flow in : %s' % command,'warning')
@@ -520,7 +518,7 @@ def withdraw_flow (self, reactor, service, line):
 				yield True
 				return
 
-			for (peers,change) in changes:
+			for change in changes:
 				change.nlri.action = OUT.WITHDRAW
 				if reactor.configuration.inject_change(peers,change):
 					self.log_message('flow removed from %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))

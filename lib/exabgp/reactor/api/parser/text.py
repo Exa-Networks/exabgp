@@ -71,7 +71,7 @@ class Text (object):
 
 		return returned,command
 
-	def api_route (self, command, peers):
+	def api_route (self, command):
 		action, line = command.split(' ',1)
 
 		self.configuration.static.clear()
@@ -82,9 +82,9 @@ class Text (object):
 			return []
 
 		changes = self.configuration.scope.pop('routes',[])
-		return zip([peers]*len(changes),changes)
+		return changes
 
-	def api_flow (self, command, peers):
+	def api_flow (self, command):
 		action, flow, line = command.split(' ',2)
 
 		self.configuration.flow.clear()
@@ -96,9 +96,9 @@ class Text (object):
 
 		self.configuration.scope.to_context('route')
 		changes = self.configuration.scope.pop('routes',[])
-		return zip([peers]*len(changes),changes)
+		return changes
 
-	def api_vpls (self, command, peers):
+	def api_vpls (self, command):
 		action, line = command.split(' ',1)
 
 		self.configuration.vpls.clear()
@@ -106,7 +106,7 @@ class Text (object):
 			return []
 
 		changes = self.configuration.scope.pop('routes',[])
-		return zip([peers]*len(changes),changes)
+		return changes
 
 	def api_attributes (self, command, peers):
 		action, line = command.split(' ',1)
@@ -116,7 +116,7 @@ class Text (object):
 			return []
 
 		changes = self.configuration.scope.pop('routes',[])
-		return zip([peers]*len(changes),changes)
+		return changes
 
 	def api_refresh (self, command):
 		tokens = formated(command).split(' ')[2:]
