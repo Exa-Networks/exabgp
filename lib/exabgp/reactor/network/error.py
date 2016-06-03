@@ -15,7 +15,7 @@ class error:
 		errno.EAGAIN, errno.EWOULDBLOCK,
 		errno.EINTR, errno.EDEADLK,
 		errno.EBUSY, errno.ENOBUFS,
-		errno.ENOMEM,
+		errno.ENOMEM, errno.ENOTCONN,
 	))
 
 	fatal = set((

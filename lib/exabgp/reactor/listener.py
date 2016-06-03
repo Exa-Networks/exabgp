@@ -91,6 +91,19 @@ class Listener (object):
 			for sock in self._sockets:
 				try:
 					io, _ = sock.accept()
+				except socket.error,exc:
+					if exc.errno in error.block:
+						continue
+					try:
+						# we do not run sock.shutdown()
+						sock.close()
+					except KeyboardInterrupt, exc:
+						raise exc
+					except Exception, exc:
+						pass
+					raise AcceptError('could not accept a new connection (%s)' % errstr(exc))
+
+				try:
 					if sock.family == socket.AF_INET:
 						local_ip  = io.getpeername()[0]  # local_ip,local_port
 						remote_ip = io.getsockname()[0]  # remote_ip,remote_port
@@ -102,9 +115,7 @@ class Listener (object):
 					fam = self._family_AFI_map[sock.family]
 					yield Incoming(fam,remote_ip,local_ip,io)
 				except socket.error,exc:
-					if exc.errno in error.block:
-						continue
-					raise AcceptError('could not accept a new connection (%s)' % errstr(exc))
+					raise AcceptError('could not setup a new connection (%s)' % errstr(exc))
 		except NetworkError,exc:
 			self.logger.network(str(exc),'critical')
 
