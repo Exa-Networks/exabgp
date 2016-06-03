@@ -107,7 +107,6 @@ class Listener (object):
 					raise AcceptError('could not accept a new connection (%s)' % errstr(exc))
 		except NetworkError,exc:
 			self.logger.network(str(exc),'critical')
-			raise exc
 
 	def stop (self):
 		if not self.serving:
