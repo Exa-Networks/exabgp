@@ -13,6 +13,8 @@ Version 3.4.17
     reported: by Alexander Bespalov
  * Fix: support non ASN4 use of AS_TRANS (AS23456)
     reported by: Todd Crane
+ * Fix: do not exit when we can not accept incoming connection
+    reported by: Pavel Batkov
 
 Version 3.4.16
  * Feature: allow users to decide if processes must be run before or after we drop privileges
