@@ -94,13 +94,6 @@ class Listener (object):
 				except socket.error,exc:
 					if exc.errno in error.block:
 						continue
-					try:
-						# we do not run sock.shutdown()
-						sock.close()
-					except KeyboardInterrupt, exc:
-						raise exc
-					except Exception, exc:
-						pass
 					raise AcceptError('could not accept a new connection (%s)' % errstr(exc))
 
 				try:
