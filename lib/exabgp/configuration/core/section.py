@@ -63,7 +63,7 @@ class Section (Error):
 			else:
 				insert = self.known[command](self.tokeniser.iterate)
 
-			action = self.action[command]
+			action = self.action.get(command,'')
 
 			if action == 'set-command':
 				self.scope.set(command,insert)
