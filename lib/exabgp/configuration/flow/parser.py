@@ -65,11 +65,15 @@ def source (tokeniser):
 
 def destination (tokeniser):
 	data = tokeniser()
-	if data.count('/') == 1:
+	if data.count('.') == 4:
 		ip,netmask = data.split('/')
 		raw = ''.join(chr(int(_)) for _ in ip.split('.'))
 		yield Flow4Destination(raw,int(netmask))
 		return
+	elif data.count('/') == 1:
+		ip,netmask = data.split('/')
+		offset = 0
+		yield Flow6Destination(IP.pton(ip),int(netmask),int(offset))
 	else:
 		ip,netmask,offset = data.split('/')
 		yield Flow6Destination(IP.pton(ip),int(netmask),int(offset))
