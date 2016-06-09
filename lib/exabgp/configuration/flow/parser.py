@@ -50,7 +50,7 @@ def flow (tokeniser):
 
 def source (tokeniser):
 	data = tokeniser()
-	if data.count('.') == 4:
+	if data.count('.') == 3:
 		ip,netmask = data.split('/')
 		raw = ''.join(chr(int(_)) for _ in ip.split('.'))
 		yield Flow4Source(raw,int(netmask))
@@ -65,7 +65,7 @@ def source (tokeniser):
 
 def destination (tokeniser):
 	data = tokeniser()
-	if data.count('.') == 4:
+	if data.count('.') == 3:
 		ip,netmask = data.split('/')
 		raw = ''.join(chr(int(_)) for _ in ip.split('.'))
 		yield Flow4Destination(raw,int(netmask))
