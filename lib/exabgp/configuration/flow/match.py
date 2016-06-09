@@ -50,10 +50,10 @@ class ParseFlowMatch (Section):
 
 	known = {
 		'source':           source,
-		'destination':      destination,
 		'source-ipv4':      source,
-		'destination-ipv4': destination,
 		'source-ipv6':      source,
+		'destination':      destination,
+		'destination-ipv4': destination,
 		'destination-ipv6': destination,
 		'port':             any_port,
 		'source-port':      source_port,
@@ -75,7 +75,11 @@ class ParseFlowMatch (Section):
 
 	action = {
 		'source':           'nlri-add',
+		'source-ipv4':      'nlri-add',
+		'source-ipv6':      'nlri-add',
 		'destination':      'nlri-add',
+		'destination-ipv4': 'nlri-add',
+		'destination-ipv6': 'nlri-add',
 		'port':             'nlri-add',
 		'source-port':      'nlri-add',
 		'destination-port': 'nlri-add',
