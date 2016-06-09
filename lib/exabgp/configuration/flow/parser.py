@@ -50,10 +50,14 @@ def flow (tokeniser):
 
 def source (tokeniser):
 	data = tokeniser()
-	if data.count('/') == 1:
+	if data.count('.') == 3 and data.count(':') == 0:
 		ip,netmask = data.split('/')
 		raw = ''.join(chr(int(_)) for _ in ip.split('.'))
 		yield Flow4Source(raw,int(netmask))
+	elif data.count('/') == 1:
+		ip,netmask = data.split('/')
+		offset = 0
+		yield Flow6Source(IP.pton(ip),int(netmask),int(offset))
 	else:
 		ip,netmask,offset = data.split('/')
 		yield Flow6Source(IP.pton(ip),int(netmask),int(offset))
@@ -61,11 +65,14 @@ def source (tokeniser):
 
 def destination (tokeniser):
 	data = tokeniser()
-	if data.count('/') == 1:
+	if data.count('.') == 3 and data.count(':') == 0:
 		ip,netmask = data.split('/')
 		raw = ''.join(chr(int(_)) for _ in ip.split('.'))
 		yield Flow4Destination(raw,int(netmask))
-		return
+	elif data.count('/') == 1:
+		ip,netmask = data.split('/')
+		offset = 0
+		yield Flow6Destination(IP.pton(ip),int(netmask),int(offset))
 	else:
 		ip,netmask,offset = data.split('/')
 		yield Flow6Destination(IP.pton(ip),int(netmask),int(offset))
