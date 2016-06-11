@@ -169,7 +169,7 @@ class Neighbor (object):
 	def __ne__ (self, other):
 		return not self.__eq__(other)
 
-	def pprint (self, with_changes=True):
+	def string (self, with_changes=True):
 		changes = ''
 		if with_changes:
 			changes += '\nstatic { '
@@ -271,4 +271,4 @@ class Neighbor (object):
 		return returned.replace('\t','  ')
 
 	def __str__ (self):
-		return self.pprint(False)
+		return self.string(False)

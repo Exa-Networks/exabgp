@@ -75,8 +75,10 @@ def teardown (self, reactor, service, command):
 @Text('show neighbor')
 def show_neighbor (self, reactor, service, command):
 	def callback ():
-		for key in reactor.configuration.neighbors.keys():
-			neighbor = reactor.configuration.neighbors[key]
+		for neighbor_name in reactor.configuration.neighbors.keys():
+			neighbor = reactor.configuration.neighbors.get(neighbor_name,None)
+			if not neighbor:
+				continue
 			for line in str(neighbor).split('\n'):
 				reactor.answer(service,line)
 				yield True
@@ -89,8 +91,10 @@ def show_neighbor (self, reactor, service, command):
 @Text('show neighbors')
 def show_neighbors (self, reactor, service, command):
 	def callback ():
-		for key in reactor.configuration.neighbors.keys():
-			neighbor = reactor.configuration.neighbors[key]
+		for neighbor_name in reactor.configuration.neighbors.keys():
+			neighbor = reactor.configuration.neighbors.get(neighbor_name,None)
+			if not neighbor:
+				continue
 			for line in str(neighbor).split('\n'):
 				reactor.answer(service,line)
 				yield True
