@@ -87,6 +87,7 @@ The following projects are related to ExaBGP
 **Route Announcement**
   - [ERCO](https://erco.xyz/) web interface
   - [ExaBGPmon](https://github.com/thepacketgeek/ExaBGPmon) web interface
+  - [ExaBGPmon Vagrant](https://github.com/DDecoene/ExaBGPmon) Fork of ExaBGPmon with a vagrantfile and install script.
   - [BGPAPI](https://github.com/abh/bgpapi) an HTTP API
   - [BGP commander](https://github.com/crazed/bgpcommander) Integration with etcd
 
