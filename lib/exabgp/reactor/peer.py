@@ -358,7 +358,7 @@ class Peer (object):
 	def _connect (self):
 		# try to establish the outgoing connection
 
-		self._outgoing.fsm.change(FSM.ACTIVE)
+		self._outgoing.fsm.change(FSM.CONNECT)
 
 		proto = Protocol(self)
 		generator = proto.connect()
@@ -380,7 +380,6 @@ class Peer (object):
 				yield ACTION.NOW
 				raise Interrupted(self._outgoing)
 
-		self._outgoing.fsm.change(FSM.CONNECT)
 		self._outgoing.proto = proto
 
 		# send OPEN
