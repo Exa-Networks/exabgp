@@ -111,9 +111,11 @@ class JSON (object):
 		})),'','',neighbor,message_type='state')
 
 	def down (self, neighbor, reason=''):
+		def escape_quote (reason):
+			return reason.replace('""','\\"')
 		return self._header(self._neighbor(neighbor,None,self._kv({
 			'state':  'down',
-			'reason': reason,
+			'reason': escape_quote(reason),
 		})),'','',neighbor,message_type='state')
 
 	def shutdown (self):
