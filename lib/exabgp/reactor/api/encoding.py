@@ -231,7 +231,7 @@ class JSON (object):
 
 	def down (self, peer, reason=''):
 		def escape_quote (reason):
-			return reason.replace('""','\\"')
+			return reason.replace('"','\\"')
 		return self._header(self._neighbor(peer,self._kv({
 			'state':  'down',
 			'reason': escape_quote(reason),
