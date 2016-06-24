@@ -112,7 +112,7 @@ class JSON (object):
 
 	def down (self, neighbor, reason=''):
 		def escape_quote (reason):
-			return reason.replace('""','\\"')
+			return reason.replace('"','\\"')
 		return self._header(self._neighbor(neighbor,None,self._kv({
 			'state':  'down',
 			'reason': escape_quote(reason),
