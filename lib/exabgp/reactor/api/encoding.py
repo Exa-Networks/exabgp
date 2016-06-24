@@ -230,9 +230,11 @@ class JSON (object):
 		})),'','',peer.neighbor.identificator(),self.count(peer),message_type='state')
 
 	def down (self, peer, reason=''):
+		def escape_quote (reason):
+			return reason.replace('""','\\"')
 		return self._header(self._neighbor(peer,self._kv({
 			'state':  'down',
-			'reason': reason,
+			'reason': escape_quote(reason),
 		})),'','',peer.neighbor.identificator(),self.count(peer),message_type='state')
 
 	def shutdown (self):
