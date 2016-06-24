@@ -19,7 +19,7 @@ def label (tokeniser):
 	if value == '[':
 		while True:
 			value = tokeniser()
-			if label == ']':
+			if value == ']':
 				break
 			labels.append(int(value))
 	else:

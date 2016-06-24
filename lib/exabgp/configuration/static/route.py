@@ -84,9 +84,6 @@ class ParseStaticRoute (Section):
 		'route <ip>/<netmask> { ' \
 		'\n   ' + ' ;\n   '.join(definition) + '\n}'
 
-	# XXX: TODO
-	# 'label':               self.label,
-
 	known = {
 		'path-information':    path_information,
 		'rd':                  route_distinguisher,
