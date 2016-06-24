@@ -435,29 +435,32 @@ for content in dir():
 		continue
 	if not issubclass(kls,IComponent):
 		continue
-	if issubclass(kls,IPv4):
-		_afi = AFI.ipv4
-	elif issubclass(kls,IPv6):
-		_afi = AFI.ipv6
-	else:
-		continue
+
 	_ID = getattr(kls,'ID',None)
 	if not _ID:
 		continue
-	factory[_afi][_ID] = kls
-	name = getattr(kls,'NAME')
 
-	if issubclass(kls, IOperation):
-		if issubclass(kls, BinaryString):
-			decode[_afi][_ID] = 'binary'
-		elif issubclass(kls, NumericString):
-			decode[_afi][_ID] = 'numeric'
+	_afis = []
+	if issubclass(kls,IPv4):
+		_afis.append(AFI.ipv4)
+	if issubclass(kls,IPv6):
+		_afis.append(AFI.ipv6)
+
+	for _afi in _afis:
+		factory[_afi][_ID] = kls
+		name = getattr(kls,'NAME')
+
+		if issubclass(kls, IOperation):
+			if issubclass(kls, BinaryString):
+				decode[_afi][_ID] = 'binary'
+			elif issubclass(kls, NumericString):
+				decode[_afi][_ID] = 'numeric'
+			else:
+				raise RuntimeError('invalid class defined (string)')
+		elif issubclass(kls, IPrefix):
+			decode[_afi][_ID] = 'prefix'
 		else:
-			raise RuntimeError('invalid class defined (string)')
-	elif issubclass(kls, IPrefix):
-		decode[_afi][_ID] = 'prefix'
-	else:
-		raise RuntimeError('unvalid class defined (type)')
+			raise RuntimeError('unvalid class defined (type)')
 
 
 # ..........................................................
