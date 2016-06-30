@@ -76,7 +76,7 @@ class Graceful (Capability,dict):
 		while data:
 			afi = AFI.unpack(data[:2])
 			safi = SAFI.unpack(data[2])
-			flag_family = ord(data[0])
+			flag_family = ord(data[3])
 			families.append((afi,safi,flag_family))
 			data = data[4:]
 		return instance.set(restart_flag,restart_time,families)
