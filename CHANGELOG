@@ -19,6 +19,8 @@ Version 3.4.17
     reported by: Rob Barnes
  * Fix: decoding of IPv6 flow routes
     reported by: stoffi92
+ * Fix: decoding of Graceful Restart Capability
+    patch by: florinz
 
 Version 3.4.16
  * Feature: allow users to decide if processes must be run before or after we drop privileges
