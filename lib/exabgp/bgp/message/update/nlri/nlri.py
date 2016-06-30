@@ -32,8 +32,11 @@ class NLRI (Family):
 	def assign (self, name, value):
 		setattr(self,name,value)
 
+	def _index (self):
+		return '%s%s' % (self.afi,self.safi)
+
 	def index (self):
-		return '%s%s%s' % (self.afi,self.safi,self.pack())
+		raise NotImplementedError('NLRI index not implemented')
 
 	# remove this when code restructure is finished
 	def pack (self, negotiated=None):

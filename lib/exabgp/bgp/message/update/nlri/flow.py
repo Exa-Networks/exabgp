@@ -610,7 +610,7 @@ class Flow (NLRI):
 		return '"flow-%d": %s' % (self.unique,self._json())
 
 	def index (self):
-		return self.pack()
+		return NLRI._index(self) + self.pack()
 
 	@classmethod
 	def unpack_nlri (cls, afi, safi, bgp, action, addpath):

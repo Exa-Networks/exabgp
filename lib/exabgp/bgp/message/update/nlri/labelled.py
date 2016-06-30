@@ -48,7 +48,7 @@ class Labelled (INET):
 	def index (self, negotiated=None):
 		addpath = 'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
 		mask = chr(self.cidr.mask)
-		return addpath + mask + self.cidr.pack_ip()
+		return NLRI._index(self) + addpath + mask + self.cidr.pack_ip()
 
 	def _internal (self, announced=True):
 		r = INET._internal(self,announced)
