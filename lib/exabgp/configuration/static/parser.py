@@ -262,9 +262,6 @@ def aggregator (tokeniser):
 		if tokeniser() != ')':
 			raise ValueError('invalid aggregator')
 
-	# XXX: This could be buggy - check it
-	if local_as.asn4():
-		return Aggregator4(local_as,local_address)
 	return Aggregator(local_as,local_address)
 
 
