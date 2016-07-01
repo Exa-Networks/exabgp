@@ -12,6 +12,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
 
+from exabgp.bgp.message.update.attribute.community.extended.consistent_hash_sort_order import ConsistentHashSortOrder
 from exabgp.bgp.message.update.attribute.community.extended.encapsulation import Encapsulation
 from exabgp.bgp.message.update.attribute.community.extended.l2info import L2Info
 from exabgp.bgp.message.update.attribute.community.extended.origin import Origin
