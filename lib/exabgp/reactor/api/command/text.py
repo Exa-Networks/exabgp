@@ -271,10 +271,11 @@ def withdraw_route (self, reactor, service, line):
 				return
 
 			for change in changes:
+				# Change the action to withdraw before checking the route
+				change.nlri.action = OUT.WITHDRAW
 				if not ParseStaticRoute.check(change):
 					self.log_message('invalid route for %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 					continue
-				change.nlri.action = OUT.WITHDRAW
 				if reactor.configuration.inject_change(peers,change):
 					self.log_message('route removed from %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 					yield False
