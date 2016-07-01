@@ -52,9 +52,10 @@ The configuration file and API format change from time to time, but every effort
 
 [![Testing Status](https://img.shields.io/codeship/d6c1ddd0-16a3-0132-5f85-2e35c05e22b1.svg)]()
 [![Codacy Rating](https://www.codacy.com/project/badge/1f5fedb98bfd47bcb9ab868ea53ea210)](https://www.codacy.com/public/thomasmangin/exabgp_2)
-[![Landscape Code Quality](https://landscape.io/github/Exa-Networks/exabgp/master/landscape.svg)](https://landscape.io/github/Exa-Networks/exabgp/)
+[![Landscape Code Quality](https://landscape.io/github/Exa-Networks/exabgp/master/landscape.svg)]](https://landscape.io/github/Exa-Networks/exabgp/)
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/Exa-Networks/exabgp/badges/quality-score.png)](https://scrutinizer-ci.com/g/Exa-Networks/exabgp/)
 [![Coverage Status](https://img.shields.io/coveralls/Exa-Networks/exabgp.svg)](https://coveralls.io/r/Exa-Networks/exabgp)
+[![Throughput Graph](https://graphs.waffle.io/Exa-Networks/exabgp/throughput.svg)](https://waffle.io/Exa-Networks/exabgp/metrics/throughput) 
 
 <!--
 [![Testing Status](https://travis-ci.org/Exa-Networks/exabgp.svg)](https://travis-ci.org/Exa-Networks/exabgp)
