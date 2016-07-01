@@ -587,7 +587,7 @@ def announce_refresh (self, reactor, service, command):
 	def callback (self, command, peers):
 		refresh = self.parser.api_refresh(command)
 		if not refresh:
-			self.log_failure("Command could not parse flow in : %s" % command)
+			self.log_failure("Command could not parse route-refresh command : %s" % command)
 			reactor.answer(service,'error')
 			yield True
 			return
