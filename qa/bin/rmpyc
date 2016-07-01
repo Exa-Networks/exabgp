@@ -1,0 +1,27 @@
+#!/bin/sh
+
+path="$(cd "$(dirname "$0")"/../.. ; pwd)"
+
+export PYTHONPATH="$path"/lib
+
+for INTERPRETER in "$INTERPRETER" pypy python2.7 python2.6 python2 python; do
+    INTERPRETER="$(command -v "$INTERPRETER")" && break
+done
+
+APPLICATION="$("$INTERPRETER" -c "
+import sys
+import os
+
+path = [os.path.join(_,'exabgp')
+        for _ in sys.path
+        if os.path.isfile('/'.join((_, 'exabgp', 'application', 'bgp.py')))][0]
+
+def remove (file):
+    try: os.remove(file)
+    except: pass
+
+[remove(os.path.join(r,f)) for r,d,fs in os.walk(path) for f in fs if f.endswith('.pyc')]
+
+")"
+
+echo done
