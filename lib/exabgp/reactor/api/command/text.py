@@ -6,6 +6,9 @@ Created by Thomas Mangin on 2015-12-15.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.protocol.family import AFI
+from exabgp.protocol.ip import NoNextHop
+from exabgp.bgp.message.update.attribute import NextHop
 from exabgp.bgp.message import OUT
 from exabgp.configuration.static import ParseStaticRoute
 
@@ -273,6 +276,10 @@ def withdraw_route (self, reactor, service, line):
 			for change in changes:
 				# Change the action to withdraw before checking the route
 				change.nlri.action = OUT.WITHDRAW
+				# NextHop is a mandatory field (but we do not require in)
+				if change.nlri.nexthop is NoNextHop or change.nlri.afi != AFI.ipv4:
+					change.nlri.nexthop = NextHop('0.0.0.0')
+
 				if not ParseStaticRoute.check(change):
 					self.log_message('invalid route for %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 					continue
