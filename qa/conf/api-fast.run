@@ -4,32 +4,34 @@ import sys
 import time
 
 messages1 = [
-'announce route 1.1.0.0/24 next-hop 101.1.101.1 med 200', 
-'announce route 1.1.0.0/25 next-hop 101.1.101.1',
-'withdraw route 1.1.0.0/24 next-hop 101.1.101.1',
-'show routes'
+	'announce route 1.1.0.0/24 next-hop 101.1.101.1 med 200',
+	'announce route 1.1.0.0/25 next-hop 101.1.101.1',
+	'withdraw route 1.1.0.0/24 next-hop 101.1.101.1',
+	'show routes'
 ]
 
 messages2 = [
-'announce route 2.2.0.0/25 next-hop 101.1.101.1',
-'announce route 2.2.0.0/24 next-hop 101.1.101.1',
-'withdraw route 2.2.0.0/25 next-hop 101.1.101.1',
+	'announce route 2.2.0.0/25 next-hop 101.1.101.1',
+	'announce route 2.2.0.0/24 next-hop 101.1.101.1',
+	'withdraw route 2.2.0.0/25 next-hop 101.1.101.1',
 ]
 
 time.sleep(3)
 
 while messages1:
 	message = messages1.pop(0)
-	sys.stdout.write( message + '\n')
+	sys.stdout.write(message + '\n')
 	sys.stdout.flush()
 
 time.sleep(2)
 
 while messages2:
 	message = messages2.pop(0)
-	sys.stdout.write( message + '\n')
+	sys.stdout.write(message + '\n')
 	sys.stdout.flush()
 
-while True:
-	sys.stdin.readline()
-
+now = time.time()
+while True and time.time() < now + 20:
+	if 'shutdown' in sys.stdin.readline():
+		break
+	time.sleep(1)

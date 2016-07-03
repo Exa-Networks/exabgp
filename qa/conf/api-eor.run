@@ -4,9 +4,9 @@ import sys
 import time
 
 messages = [
-'announce eor',
-'announce eor ipv6 unicast',
-'announce eor ipv4 unicast',
+	'announce eor',
+	'announce eor ipv6 unicast',
+	'announce eor ipv4 unicast',
 ]
 
 time.sleep(6)
@@ -16,5 +16,8 @@ while messages:
 	sys.stdout.write(message + '\n')
 	sys.stdout.flush()
 
-while True:
-	sys.stdin.readline()
+now = time.time()
+while True and time.time() < now + 20:
+	if 'shutdown' in sys.stdin.readline():
+		break
+	time.sleep(1)

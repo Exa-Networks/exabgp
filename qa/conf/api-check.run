@@ -14,7 +14,7 @@ while lines:
 	if line in lines:
 		lines.remove(line)
 	sys.stderr.flush()
-	print >> sys.stderr , '\n%s\n' % line
+	print >> sys.stderr, '\n%s\n' % line
 	print >> sys.stderr, 'left', lines
 	sys.stderr.flush()
 
@@ -22,5 +22,8 @@ time.sleep(2)
 sys.stdout.write('neighbor 127.0.0.1 announce route 1.2.3.4 next-hop 5.6.7.8\n')
 sys.stdout.flush()
 
-while True:
-	sys.stdin.readline()
+now = time.time()
+while True and time.time() < now + 20:
+	if 'shutdown' in sys.stdin.readline():
+		break
+	time.sleep(1)

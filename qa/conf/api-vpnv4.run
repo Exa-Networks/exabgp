@@ -6,8 +6,8 @@ import time
 messages = [
 	'neighbor 127.0.0.1 announce route 1.4.0.0/16 rd 65000:1 next-hop 101.1.101.1 community 100:1 extended-community 0x0002FDE900000001 label 1000',
 	'neighbor 127.0.0.1 withdraw route 1.4.0.0/16 rd 65000:1 next-hop 101.1.101.1 community 100:1 extended-community 0x0002FDE900000001 label 1000',
-	#'announce route 1.4.0.0/16 rd 65000:1 next-hop 101.1.101.1 community 100:1 extended-community 0x0002FDE900000001 label 1000',
-	#'withdraw route 1.4.0.0/16 rd 65000:1 next-hop 101.1.101.1 community 100:1 extended-community 0x0002FDE900000001 label 1000',
+	# 'announce route 1.4.0.0/16 rd 65000:1 next-hop 101.1.101.1 community 100:1 extended-community 0x0002FDE900000001 label 1000',
+	# 'withdraw route 1.4.0.0/16 rd 65000:1 next-hop 101.1.101.1 community 100:1 extended-community 0x0002FDE900000001 label 1000',
 ]
 
 while messages:
@@ -16,5 +16,8 @@ while messages:
 	sys.stdout.write(message + '\n')
 	sys.stdout.flush()
 
-while True:
+now = time.time()
+while True and time.time() < now + 20:
+	if 'shutdown' in sys.stdin.readline():
+		break
 	time.sleep(1)

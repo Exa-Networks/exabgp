@@ -4,16 +4,18 @@ import sys
 import time
 
 messages = [
-'neighbor 127.0.0.1 announce route 1.1.0.0/16 next-hop self',
-'announce route 2.2.0.0/16 next-hop self',
+	'neighbor 127.0.0.1 announce route 1.1.0.0/16 next-hop self',
+	'announce route 2.2.0.0/16 next-hop self',
 ]
 
 while messages:
 	message = messages.pop(0)
-	sys.stdout.write( message + '\n')
+	sys.stdout.write(message + '\n')
 	sys.stdout.flush()
 	time.sleep(0.1)
 
-while True:
+now = time.time()
+while True and time.time() < now + 20:
+	if 'shutdown' in sys.stdin.readline():
+		break
 	time.sleep(1)
-

@@ -14,20 +14,8 @@ while messages:
 	sys.stdout.write(message + '\n')
 	sys.stdout.flush()
 
-counter = 0
-while True:
-	try:
-		while True:
-			line = sys.stdin.readline().strip()
-			if line:
-				break
-			counter += 1
-			if counter > 100:
-				sys.exit(1)
-		counter = 0
-		time.sleep(0.5)
-	except KeyboardInterrupt:
-		pass
-	except IOError:
-		# most likely a signal during readline
-		pass
+now = time.time()
+while True and time.time() < now + 20:
+	if 'shutdown' in sys.stdin.readline():
+		break
+	time.sleep(1)

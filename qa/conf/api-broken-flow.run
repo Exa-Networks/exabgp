@@ -20,7 +20,7 @@ messages = [
 	'sleep',
 	withdraw_flow_1,
 	'sleep',
-	announce_flow_1, # to catch if a withdraw 2 is sent
+	announce_flow_1,  # to catch if a withdraw 2 is sent
 ]
 
 while messages:
@@ -28,8 +28,11 @@ while messages:
 	if message == 'sleep':
 		time.sleep(1)
 	else:
-		sys.stdout.write( message + '\n')
+		sys.stdout.write(message + '\n')
 		sys.stdout.flush()
 
-while True:
-	sys.stdin.readline()
+now = time.time()
+while True and time.time() < now + 20:
+	if 'shutdown' in sys.stdin.readline():
+		break
+	time.sleep(1)

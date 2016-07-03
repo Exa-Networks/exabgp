@@ -14,9 +14,12 @@ time.sleep(2)
 
 while messages:
 	message = messages.pop(0)
-	sys.stdout.write( message + '\n')
+	sys.stdout.write(message + '\n')
 	sys.stdout.flush()
 	time.sleep(1)
 
-while True:
-	sys.stdin.readline()
+now = time.time()
+while True and time.time() < now + 20:
+	if 'shutdown' in sys.stdin.readline():
+		break
+	time.sleep(1)

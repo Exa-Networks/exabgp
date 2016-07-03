@@ -4,8 +4,8 @@ import sys
 import time
 
 messages = [
-# This will never be announced
-'announce route 1.0.0.0/24 next-hop 101.1.101.1',
+	# This will never be announced
+	'announce route 1.0.0.0/24 next-hop 101.1.101.1',
 ]
 
 while messages:
@@ -14,5 +14,8 @@ while messages:
 	sys.stdout.write(message + '\n')
 	sys.stdout.flush()
 
-while True:
+now = time.time()
+while True and time.time() < now + 20:
+	if 'shutdown' in sys.stdin.readline():
+		break
 	time.sleep(1)
