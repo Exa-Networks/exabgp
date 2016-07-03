@@ -221,12 +221,8 @@ class Protocol (object):
 				elif parsed:
 					self.peer.reactor.processes.message(msg_id,self.neighbor,'receive',message,'','')
 
-			try:
-				if message.TYPE == Notification.TYPE:
-					raise message
-			except:
-				import pdb; pdb.set_trace()
-				pass
+			if message.TYPE == Notification.TYPE:
+				raise message
 
 			yield message
 
