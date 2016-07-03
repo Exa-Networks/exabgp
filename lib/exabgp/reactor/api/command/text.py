@@ -399,7 +399,7 @@ def announce_attributes (self, reactor, service, line):
 				yield True
 				return
 
-			changes = self.parser.api_attributes(command)
+			changes = self.parser.api_attributes(command,peers)
 			if not changes:
 				self.log_failure('command could not parse route in : %s' % command,'warning')
 				reactor.answer(service,'error')
@@ -439,7 +439,7 @@ def withdraw_attribute (self, reactor, service, line):
 				yield True
 				return
 
-			changes = self.parser.api_attributes(command)
+			changes = self.parser.api_attributes(command,peers)
 			if not changes:
 				self.log_failure('command could not parse route in : %s' % command,'warning')
 				reactor.answer(service,'error')
