@@ -154,6 +154,9 @@ def dispatch (exabgp, daemon, groups, port):
 						if 'failed' in out or 'expected' in out:
 							color[n2l[name]] = Color.RED
 							success = False
+							display('\r')
+							display(*['%s%s%s' % (color[l],l if color[l] != Color.GREEN else '-', Color.END) + ' ' for l in letters])
+							display(Color.END)
 						else:
 							color[n2l[name]] = Color.GREEN
 							del names[name]
@@ -184,9 +187,10 @@ def dispatch (exabgp, daemon, groups, port):
 					pass
 		display('\n')
 
-		display('\n','error','\n','----------','\n')
 		if out or err:
+			display('\n','stdout','\n','------','\n')
 			display(out)
+			display('\n','stderr','\n','------','\n')
 			display(err)
 		else:
 			for name in names.keys():
