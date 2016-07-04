@@ -66,7 +66,7 @@ class STATUS (object):
 	port = dict()
 	success = True
 	base_port = 1790
-	timeout = get_env('timeout',2*60)  # seconds
+	timeout = int(get_env('timeout',2*60))  # seconds
 
 	@classmethod
 	def register (cls,filename):
