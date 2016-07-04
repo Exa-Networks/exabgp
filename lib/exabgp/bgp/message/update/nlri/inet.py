@@ -72,9 +72,11 @@ class INET (NLRI):
 
 	def json (self, announced=True, compact=False):
 		internal = ", ".join(self._internal(announced))
-		if internal or not compact:
+		if internal:
 			return '{ "nlri": "%s", %s }' % (self.cidr.prefix(),internal)
-		return '"%s"' % self.cidr.prefix()
+		if compact:
+			return '"%s"' % self.cidr.prefix()
+		return '{ "nlri": "%s" }' % (self.cidr.prefix())
 
 	@classmethod
 	def _pathinfo (cls, data, addpath):
