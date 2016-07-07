@@ -80,6 +80,9 @@ class RTC (NLRI):
 			return pack("!BLB", len(self), self.origin, ord(RTC.resetFlags(packedRT[0]))) + packedRT[1:]
 		return pack("!B",0)
 
+	def index (self):
+		return NLRI._index(self) + self.pack()
+
 	@classmethod
 	def unpack_nlri (cls, afi, safi, bgp, action, addpath):
 
