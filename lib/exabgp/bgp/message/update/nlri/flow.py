@@ -626,7 +626,7 @@ class Flow (NLRI):
 		over = bgp[length:]
 		bgp = bgp[:length]
 
-		nlri = Flow(afi,safi,action)
+		nlri = cls(afi,safi,action)
 
 		if safi == SAFI.flow_vpn:
 			nlri.rd = RouteDistinguisher(bgp[:8])
