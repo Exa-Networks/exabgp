@@ -91,6 +91,7 @@ The following projects are related to ExaBGP
   - [ExaBGPmon Vagrant](https://github.com/DDecoene/ExaBGPmon) Fork of ExaBGPmon with a vagrantfile and install script.
   - [BGPAPI](https://github.com/abh/bgpapi) an HTTP API
   - [BGP commander](https://github.com/crazed/bgpcommander) Integration with etcd
+  - [exabgp-healthcheck](https://github.com/sysadminblog/exabgp-healthcheck) a perl based healthcheck program
 
 **Installation**
   - [Chef](https://github.com/hw-cookbooks/exabgp) Cookbook
