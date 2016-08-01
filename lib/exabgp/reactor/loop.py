@@ -182,7 +182,7 @@ class Reactor (object):
 				if self._shutdown:
 					self._shutdown = False
 					self.shutdown()
-					break;
+					break
 				elif self._reload and reload_completed:
 					self._reload = False
 					self.load()
