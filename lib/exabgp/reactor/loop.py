@@ -357,7 +357,7 @@ class Reactor (object):
 				# finding what route changed and sending the delta is not obvious
 				self.logger.reactor("Peer definition identical, updating peer routes if required for %s" % str(key))
 				self.peers[key].reconfigure(neighbor)
-		self.logger.configuration("Loaded new configuration successfully",'warning')
+		self.logger.configuration("Loaded new configuration successfully",'info')
 
 		return True
 
