@@ -179,22 +179,25 @@ class Reactor (object):
 
 		while True:
 			try:
-				while self.peers:
+				if self._shutdown:
+					self._shutdown = False
+					self.shutdown()
+					break;
+				elif self._reload and reload_completed:
+					self._reload = False
+					self.load()
+					self.processes.start(self._reload_processes)
+					self._reload_processes = False
+				elif self._restart:
+					self._restart = False
+					self.restart()
+				self.schedule()
+
+				if self.peers:
 					start = time.time()
 					end = start+self.max_loop_time
 
-					if self._shutdown:
-						self._shutdown = False
-						self.shutdown()
-					elif self._reload and reload_completed:
-						self._reload = False
-						self.load()
-						self.processes.start(self._reload_processes)
-						self._reload_processes = False
-					elif self._restart:
-						self._restart = False
-						self.restart()
-					elif self.route_update:
+					if self.route_update:
 						self.route_update = False
 						self.route_send()
 
@@ -220,8 +223,8 @@ class Reactor (object):
 								# no need to come back to it before a a full cycle
 								keys.discard(key)
 
-						if not self.schedule() and not keys:
-							ready = self.ready(ios.keys() + self.processes.fds(),end-time.time())
+						if not keys:
+							ready = self.ready(ios.keys(),end-time.time())
 							for io in ready:
 								if io in ios:
 									keys.add(ios[io])
@@ -262,9 +265,6 @@ class Reactor (object):
 								connection.notification(6,5,'could not accept the connection')
 								connection.close()
 
-				self.processes.terminate()
-				self.daemon.removepid()
-				break
 			except KeyboardInterrupt:
 				while True:
 					try:
@@ -319,6 +319,8 @@ class Reactor (object):
 			self.listener = None
 		for key in self.peers.keys():
 			self.peers[key].stop()
+		self.processes.terminate()
+		self.daemon.removepid()
 
 	def load (self):
 		"""reload the configuration and send to the peer the route which changed"""
@@ -355,7 +357,7 @@ class Reactor (object):
 				# finding what route changed and sending the delta is not obvious
 				self.logger.reactor("Peer definition identical, updating peer routes if required for %s" % str(key))
 				self.peers[key].reconfigure(neighbor)
-		self.logger.configuration("Loaded new configuration successfully",'info')
+		self.logger.configuration("Loaded new configuration successfully",'warning')
 
 		return True
 
