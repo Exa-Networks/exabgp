@@ -56,6 +56,7 @@ class Reactor (object):
 		self.peers = {}
 		self.route_update = False
 
+		self._stopping = environment.settings().tcp.once
 		self._shutdown = False
 		self._reload = False
 		self._reload_processes = False
@@ -177,16 +178,22 @@ class Reactor (object):
 			self.logger.reactor("waiting for %d seconds before connecting" % sleeptime)
 			time.sleep(float(sleeptime))
 
+		ios = {}
+		keys = set()
+		scheduled = False
+
 		while True:
 			try:
+				finished = False
 				start = time.time()
-				end = start+self.max_loop_time
+				end = start + self.max_loop_time
 
 				if self._shutdown:
 					self._shutdown = False
 					self.shutdown()
 					break
-				elif self._reload and reload_completed:
+
+				if self._reload and reload_completed:
 					self._reload = False
 					self.load()
 					self.processes.start(self._reload_processes)
@@ -195,17 +202,16 @@ class Reactor (object):
 					self._restart = False
 					self.restart()
 
-				ios = {}
-				keys = set()
+				# We got some API routes to announce
+				if self.route_update:
+					self.route_update = False
+					self.route_send()
 
-				if self.peers:
-					if self.route_update:
-						self.route_update = False
-						self.route_send()
+				for k in self.peers.keys():
+					keys.add(k)
 
-					keys = set(self.peers.keys())
-
-					while start < time.time() < end:
+				while start < time.time() < end and not finished:
+					if self.peers:
 						for key in list(keys):
 							peer = self.peers[key]
 							action = peer.run()
@@ -223,45 +229,53 @@ class Reactor (object):
 									ios[io] = key
 								# no need to come back to it before a a full cycle
 								keys.discard(key)
-					if not keys: reload_completed = True
 
-				if not self.schedule() and not keys:
+					if not keys:
+						reload_completed = True
+
+					if self.listener:
+						for connection in self.listener.connected():
+							# found
+							# * False, not peer found for this TCP connection
+							# * True, peer found
+							# * None, conflict found for this TCP connections
+							found = False
+							for key in self.peers:
+								peer = self.peers[key]
+								neighbor = peer.neighbor
+								# XXX: FIXME: Inet can only be compared to Inet
+								if connection.local == str(neighbor.peer_address) and connection.peer == str(neighbor.local_address):
+									if peer.incoming(connection):
+										found = True
+										break
+									found = None
+									break
+
+							if found:
+								self.logger.reactor("accepted connection from  %s - %s" % (connection.local,connection.peer))
+							elif found is False:
+								self.logger.reactor("no session configured for  %s - %s" % (connection.local,connection.peer))
+								connection.notification(6,3,'no session configured for the peer')
+								connection.close()
+							elif found is None:
+								self.logger.reactor("connection refused (already connected to the peer) %s - %s" % (connection.local,connection.peer))
+								connection.notification(6,5,'could not accept the connection')
+								connection.close()
+
+					scheduled = self.schedule()
+					finished = not keys and not scheduled
+
+				# RFC state that we MUST not send more than one KEEPALIVE / sec
+				# And doing less could cause the session to drop
+
+				if finished:
 					for io in self.ready(ios.keys()+self.processes.fds(),end-time.time()):
 						if io in ios:
 							keys.add(ios[io])
 							del ios[io]
 
-				# RFC state that we MUST not send more than one KEEPALIVE / sec
-				# And doing less could cause the session to drop
-
-				if self.listener:
-					for connection in self.listener.connected():
-						# found
-						# * False, not peer found for this TCP connection
-						# * True, peer found
-						# * None, conflict found for this TCP connections
-						found = False
-						for key in self.peers:
-							peer = self.peers[key]
-							neighbor = peer.neighbor
-							# XXX: FIXME: Inet can only be compared to Inet
-							if connection.local == str(neighbor.peer_address) and connection.peer == str(neighbor.local_address):
-								if peer.incoming(connection):
-									found = True
-									break
-								found = None
-								break
-
-						if found:
-							self.logger.reactor("accepted connection from  %s - %s" % (connection.local,connection.peer))
-						elif found is False:
-							self.logger.reactor("no session configured for  %s - %s" % (connection.local,connection.peer))
-							connection.notification(6,3,'no session configured for the peer')
-							connection.close()
-						elif found is None:
-							self.logger.reactor("connection refused (already connected to the peer) %s - %s" % (connection.local,connection.peer))
-							connection.notification(6,5,'could not accept the connection')
-							connection.close()
+				if self._stopping and not self.peers.keys():
+					break
 
 			except KeyboardInterrupt:
 				while True:
@@ -319,6 +333,7 @@ class Reactor (object):
 			self.peers[key].stop()
 		self.processes.terminate()
 		self.daemon.removepid()
+		self._stopping = True
 
 	def load (self):
 		"""reload the configuration and send to the peer the route which changed"""
