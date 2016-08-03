@@ -23,6 +23,8 @@ Version 3.4.17
     patch by: florinz
  * Fix: ASN4 encoding
     patch by: Shu Sugimoto and Eiichiro Watanabe
+ * Change: Run without even peers configured
+    patch by: Jordan Gedney
 
 Version 3.4.16
  * Feature: allow users to decide if processes must be run before or after we drop privileges
