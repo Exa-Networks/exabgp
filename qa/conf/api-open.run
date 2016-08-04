@@ -14,6 +14,8 @@ while True:
 
 		while True:
 			line = sys.stdin.readline().strip()
+			if line == 'done':
+				continue
 			if line:
 				break
 			counter += 1
