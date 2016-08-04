@@ -12,6 +12,7 @@ import sys
 import time
 import signal
 import select
+import socket
 
 from collections import deque
 
@@ -92,7 +93,7 @@ class Reactor (object):
 		self._reload = True
 		self._reload_processes = True
 
-	def ready (self, ios, sleeptime=0):
+	def ready (self, sockets, ios, sleeptime=0):
 		# never sleep a negative number of second (if the rounding is negative somewhere)
 		# never sleep more than one second (should the clock time change during two time.time calls)
 		sleeptime = min(max(0.0,sleeptime),1.0)
@@ -100,11 +101,15 @@ class Reactor (object):
 			time.sleep(sleeptime)
 			return []
 		try:
-			read,_,_ = select.select(ios,[],[],sleeptime)
+			read,_,_ = select.select(sockets+ios,[],[],sleeptime)
 			return read
 		except select.error,exc:
 			errno,message = exc.args  # pylint: disable=W0633
 			if errno not in error.block:
+				raise exc
+			return []
+		except socket.error,exc:
+			if exc.errno in error.fatal:
 				raise exc
 			return []
 
@@ -178,8 +183,8 @@ class Reactor (object):
 			self.logger.reactor("waiting for %d seconds before connecting" % sleeptime)
 			time.sleep(float(sleeptime))
 
-		ios = {}
-		keys = set()
+		workers = {}
+		peers = set()
 		scheduled = False
 
 		while True:
@@ -207,12 +212,12 @@ class Reactor (object):
 					self.route_update = False
 					self.route_send()
 
-				for k in self.peers.keys():
-					keys.add(k)
+				for peer in self.peers.keys():
+					peers.add(peer)
 
 				while start < time.time() < end and not finished:
 					if self.peers:
-						for key in list(keys):
+						for key in list(peers):
 							peer = self.peers[key]
 							action = peer.run()
 
@@ -222,15 +227,15 @@ class Reactor (object):
 							# * close if it is finished and is closing down, or restarting
 							if action == ACTION.CLOSE:
 								self.unschedule(peer)
-								keys.discard(key)
+								peers.discard(key)
 							# we are loosing this peer, not point to schedule more process work
 							elif action == ACTION.LATER:
 								for io in peer.sockets():
-									ios[io] = key
+									workers[io] = key
 								# no need to come back to it before a a full cycle
-								keys.discard(key)
+								peers.discard(key)
 
-					if not keys:
+					if not peers:
 						reload_completed = True
 
 					if self.listener:
@@ -252,27 +257,27 @@ class Reactor (object):
 									break
 
 							if found:
-								self.logger.reactor("accepted connection from  %s - %s" % (connection.local,connection.peer))
+								self.logger.reactor('accepted connection from  %s - %s' % (connection.local,connection.peer))
 							elif found is False:
-								self.logger.reactor("no session configured for  %s - %s" % (connection.local,connection.peer))
+								self.logger.reactor('no session configured for  %s - %s' % (connection.local,connection.peer))
 								connection.notification(6,3,'no session configured for the peer')
 								connection.close()
 							elif found is None:
-								self.logger.reactor("connection refused (already connected to the peer) %s - %s" % (connection.local,connection.peer))
+								self.logger.reactor('connection refused (already connected to the peer) %s - %s' % (connection.local,connection.peer))
 								connection.notification(6,5,'could not accept the connection')
 								connection.close()
 
 					scheduled = self.schedule()
-					finished = not keys and not scheduled
+					finished = not peers and not scheduled
 
 				# RFC state that we MUST not send more than one KEEPALIVE / sec
 				# And doing less could cause the session to drop
 
 				if finished:
-					for io in self.ready(ios.keys()+self.processes.fds(),end-time.time()):
-						if io in ios:
-							keys.add(ios[io])
-							del ios[io]
+					for io in self.ready(list(peers),self.processes.fds(),end-time.time()):
+						if io in workers:
+							peers.add(workers[io])
+							del workers[io]
 
 				if self._stopping and not self.peers.keys():
 					break
@@ -293,6 +298,14 @@ class Reactor (object):
 						break
 					except KeyboardInterrupt:
 						pass
+			# socket.error is a subclass of IOError (so catch it first)
+			except socket.error:
+				try:
+					self._shutdown = True
+					self.logger.reactor('socket error received','warning')
+					break
+				except KeyboardInterrupt:
+					pass
 			except IOError:
 				while True:
 					try:
