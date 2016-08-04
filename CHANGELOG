@@ -52,6 +52,8 @@ Version 4.0.0
  * Change: remove all ExaBGP 2.0 compatibily environment variables
  * Change: include time when we log to file (and not application)
  * Change: ttl-security is now called outgoing-ttl
+ * Change: the reactor does not exit if there is no peer configured
+    patch by: Jordan Gedney
  * Fix: JSON reporting of VPLS ( endpoint, base, offset, and size were mixed up during printing )
  * Fix: Do shutdown when waiting for a new connection to a peer
  * Fix: Bad ASN enconding when ASN4 is not negotiated
