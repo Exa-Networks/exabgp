@@ -564,7 +564,7 @@ class Flow (NLRI):
 			return "%s%s" % (pack('!H',l | 0xF000),components)
 		raise Notify(3,0,"my administrator attempted to announce a Flow Spec rule larger than encoding allows, protecting the innocent the only way I can")
 
-	def extensive (self):
+	def ordered_rules_str (self):
 		string = []
 		for index in sorted(self.rules):
 			rules = self.rules[index]
@@ -578,9 +578,12 @@ class Flow (NLRI):
 			if len(s) > 1:
 				line = '[ %s ]' % line
 			string.append(' %s %s' % (rules[0].NAME,line))
+		return ''.join(string)
+
+	def extensive (self):
 		nexthop = ' next-hop %s' % self.nexthop if self.nexthop is not NoNextHop else ''
 		rd = '' if self.rd is RouteDistinguisher.NORD else str(self.rd)
-		return 'flow' + ''.join(string) + rd + nexthop
+		return 'flow' + self.ordered_rules_str() + rd + nexthop
 
 	def __str__ (self):
 		return self.extensive()
