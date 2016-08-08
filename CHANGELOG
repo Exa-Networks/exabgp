@@ -120,6 +120,8 @@ Version 4.0.0
     reported by: Todd Crane
  * Fix: the json format would not allow normal parsers to extract all the NLRIs
     reported by: Marco Marzetti
+ * Fix: JSON encoding of updates without NLRIs
+    patch by: Dhammika Pathirana
  * Feature: Allow single line flow route
     requested by: Pavel Odintsov
  * Feature: add support for rpm packaging
