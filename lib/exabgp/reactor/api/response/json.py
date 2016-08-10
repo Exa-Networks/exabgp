@@ -190,10 +190,9 @@ class JSON (object):
 			remove.append(s)
 
 		nlri = ''
-		if not add and not remove:  # an EOR
-			if not update.nlris:
-				raise ValueError('no NLRIS in the update')
-			return update.nlris[0].json()
+		if not add and not remove:
+			if update.nlris:  # an EOR
+				return update.nlris[0].json()
 		if add:
 			nlri += '"announce": { %s }' % ', '.join(add)
 		if add and remove:

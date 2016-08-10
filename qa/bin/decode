@@ -1,0 +1,2 @@
+# a weird packet from Cisco 7600 with attribute not no NLRI (so not an EOR, just a junk, unless packet)
+./sbin/exabgp qa/conf/simple-v4.conf  --decode ffffffffffffffffffffffffffffffff004f02000000384001010040020e02030000aaaa0000aaaa0000aaaac0070800aa00aa0a0a0a0a4006004003040a0a0a0a8004040000000040050400000064
