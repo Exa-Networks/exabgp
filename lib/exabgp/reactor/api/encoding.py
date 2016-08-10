@@ -321,7 +321,7 @@ class JSON (object):
 		nlri = ''
 
 		if not add and not remove:
-			if update.nlris:
+			if update.nlris:  # An EOR
 				return update.nlris[0].json()
 		if add:
 			nlri += '"announce": { %s }' % ', '.join(add)
