@@ -27,6 +27,8 @@ Version 3.4.17
     patch by: Jordan Gedney
  * Fix: JSON encoding of updates without NLRIs
     patch by: Dhammika Pathirana
+ * Fix: Possible race conditions in api handling
+    patch by: Brian Johnson
 
 Version 3.4.16
  * Feature: allow users to decide if processes must be run before or after we drop privileges
