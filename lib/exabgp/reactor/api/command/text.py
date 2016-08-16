@@ -116,7 +116,9 @@ def show_routes (self, reactor, service, command):
 		else:
 			neighbors = [n for n in reactor.configuration.neighbors.keys() if 'neighbor %s' % last in n]
 		for key in neighbors:
-			neighbor = reactor.configuration.neighbors[key]
+			neighbor = reactor.configuration.neighbors.get(key, None)
+			if not neighbor:
+				continue
 			for change in list(neighbor.rib.outgoing.sent_changes()):
 				reactor.answer(service,'neighbor %s %s' % (neighbor.peer_address,str(change.nlri)))
 				yield True
@@ -135,7 +137,9 @@ def show_routes_extensive (self, reactor, service, command):
 		else:
 			neighbors = [n for n in reactor.configuration.neighbors.keys() if 'neighbor %s' % last in n]
 		for key in neighbors:
-			neighbor = reactor.configuration.neighbors[key]
+			neighbor = reactor.configuration.neighbors.get(key, None)
+			if not neighbor:
+				continue
 			for change in list(neighbor.rib.outgoing.sent_changes()):
 				reactor.answer(service,'neighbor %s %s' % (neighbor.name(),change.extensive()))
 				yield True
@@ -149,8 +153,11 @@ def show_routes_extensive (self, reactor, service, command):
 def announce_watchdog (self, reactor, service, command):
 	def callback (name):
 		# XXX: move into Action
-		for neighbor in reactor.configuration.neighbors:
-			reactor.configuration.neighbors[neighbor].rib.outgoing.announce_watchdog(name)
+		for neighbor_name in reactor.configuration.neighbors.keys():
+			neighbor = reactor.configuration.neighbors.get(neighbor_name, None)
+			if not neighbor:
+				continue
+			neighbor.rib.outgoing.announce_watchdog(name)
 			yield False
 
 		reactor.route_update = True
@@ -168,8 +175,11 @@ def announce_watchdog (self, reactor, service, command):
 def withdraw_watchdog (self, reactor, service, command):
 	def callback (name):
 		# XXX: move into Action
-		for neighbor in reactor.configuration.neighbors:
-			reactor.configuration.neighbors[neighbor].rib.outgoing.withdraw_watchdog(name)
+		for neighbor_name in reactor.configuration.neighbors.keys():
+			neighbor = reactor.configuration.neighbors.get(neighbor_name, None)
+			if not neighbor:
+				continue
+			neighbor.rib.outgoing.withdraw_watchdog(name)
 			yield False
 
 		reactor.route_update = True
