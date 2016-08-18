@@ -89,7 +89,9 @@ def teardown (self, reactor, service, command):
 def show_neighbor (self, reactor, service, command):
 	def callback ():
 		for key in reactor.configuration.neighbor.keys():
-			neighbor = reactor.configuration.neighbor[key]
+			neighbor = reactor.configuration.neighbor.get(key, None)
+			if not neighbor:
+				continue
 			for line in str(neighbor).split('\n'):
 				reactor.answer(service,line)
 				yield True
@@ -101,7 +103,9 @@ def show_neighbor (self, reactor, service, command):
 def show_neighbors (self, reactor, service, command):
 	def callback ():
 		for key in reactor.configuration.neighbor.keys():
-			neighbor = reactor.configuration.neighbor[key]
+			neighbor = reactor.configuration.neighbor.get(key, None)
+			if not neighbor:
+				continue
 			for line in str(neighbor).split('\n'):
 				reactor.answer(service,line)
 				yield True
@@ -118,7 +122,9 @@ def show_routes (self, reactor, service, command):
 		else:
 			neighbors = [n for n in reactor.configuration.neighbor.keys() if 'neighbor %s' % last in n]
 		for key in neighbors:
-			neighbor = reactor.configuration.neighbor[key]
+			neighbor = reactor.configuration.neighbor.get(key, None)
+			if not neighbor:
+				continue
 			for change in list(neighbor.rib.outgoing.sent_changes()):
 				reactor.answer(service,'neighbor %s %s' % (neighbor.peer_address,str(change.nlri)))
 				yield True
@@ -135,7 +141,9 @@ def show_routes_extensive (self, reactor, service, command):
 		else:
 			neighbors = [n for n in reactor.configuration.neighbor.keys() if 'neighbor %s' % last in n]
 		for key in neighbors:
-			neighbor = reactor.configuration.neighbor[key]
+			neighbor = reactor.configuration.neighbor.get(key, None)
+			if not neighbor:
+				continue
 			for change in list(neighbor.rib.outgoing.sent_changes()):
 				reactor.answer(service,'neighbor %s %s' % (neighbor.name(),change.extensive()))
 				yield True
@@ -147,8 +155,11 @@ def show_routes_extensive (self, reactor, service, command):
 
 def announce_watchdog (self, reactor, service, command):
 	def callback (name):
-		for neighbor in reactor.configuration.neighbor:
-			reactor.configuration.neighbor[neighbor].rib.outgoing.announce_watchdog(name)
+		for key in reactor.configuration.neighbor.keys():
+			neighbor = reactor.configuration.neighbor.get(key, None)
+			if not neighbor:
+				continue
+			neighbor.rib.outgoing.announce_watchdog(name)
 			yield False
 		reactor.route_update = True
 
@@ -162,8 +173,11 @@ def announce_watchdog (self, reactor, service, command):
 
 def withdraw_watchdog (self, reactor, service, command):
 	def callback (name):
-		for neighbor in reactor.configuration.neighbor:
-			reactor.configuration.neighbor[neighbor].rib.outgoing.withdraw_watchdog(name)
+		for key in reactor.configuration.neighbor.keys():
+			neighbor = reactor.configuration.neighbor.get(key, None)
+			if not neighbor:
+				continue
+			neighbor.rib.outgoing.withdraw_watchdog(name)
 			yield False
 		reactor.route_update = True
 	try:
