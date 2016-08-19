@@ -80,6 +80,7 @@ class Attribute (object):
 		INTERNAL_WATCHDOG  = 0xFFFE
 		INTERNAL_SPLIT     = 0xFFFF
 
+		# Currently formating is done with %-18s
 		names = {
 			ORIGIN:             'origin',
 			AS_PATH:            'as-path',

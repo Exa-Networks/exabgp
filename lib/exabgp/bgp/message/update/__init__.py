@@ -251,6 +251,8 @@ class Update (Message):
 	def unpack_message (cls, data, negotiated):
 		logger = Logger()
 
+		logger.parser(LazyFormat("parsing UPDATE",data))
+
 		length = len(data)
 
 		# This could be speed up massively by changing the order of the IF
@@ -260,12 +262,14 @@ class Update (Message):
 			return EOR.unpack_message(data,negotiated)
 
 		withdrawn, _attributes, announced = cls.split(data)
-		attributes = Attributes.unpack(_attributes,negotiated)
 
 		if not withdrawn:
-			logger.parser("no withdrawn NLRI")
+			logger.parser("withdrawn NLRI none")
+
+		attributes = Attributes.unpack(_attributes,negotiated)
+
 		if not announced:
-			logger.parser("no announced NLRI")
+			logger.parser("announced NLRI none")
 
 		# Is the peer going to send us some Path Information with the route (AddPath)
 		addpath = negotiated.addpath.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
@@ -279,14 +283,14 @@ class Update (Message):
 		nlris = []
 		while withdrawn:
 			nlri,left = NLRI.unpack_nlri(AFI.ipv4,SAFI.unicast,withdrawn,IN.WITHDRAWN,addpath)
-			logger.parser(LazyFormat("parsed withdraw nlri %s payload " % nlri,withdrawn[:len(nlri)]))
+			logger.parser("withdrawn NLRI %s" % nlri)
 			withdrawn = left
 			nlris.append(nlri)
 
 		while announced:
 			nlri,left = NLRI.unpack_nlri(AFI.ipv4,SAFI.unicast,announced,IN.ANNOUNCED,addpath)
 			nlri.nexthop = nexthop
-			logger.parser(LazyFormat("parsed announce nlri %s payload " % nlri,announced[:len(nlri)]))
+			logger.parser("announced NLRI %s" % nlri)
 			announced = left
 			nlris.append(nlri)
 

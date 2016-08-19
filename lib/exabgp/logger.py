@@ -33,6 +33,7 @@ _LONG = {
 	'ERR': 'ERROR'
 }
 
+
 def short (name):
 	return _SHORT.get(name.upper(),name.upper())
 
@@ -67,7 +68,7 @@ class LazyFormat (object):
 
 	def __str__ (self):
 		formated = self.formater(self.message)
-		return '%s (%4d) %s' % (self.prefix,len(formated),formated)
+		return '%s (%4d) %s' % (self.prefix,len(self.message),formated)
 
 
 class LazyAttribute (object):
@@ -81,7 +82,7 @@ class LazyAttribute (object):
 		return str(self).split(char)
 
 	def __str__ (self):
-		return 'parsing attribute %-18s flag 0x%02x type 0x%02x len 0x%02x%s' % (
+		return 'attribute %-18s flag 0x%02x type 0x%02x len 0x%02x%s' % (
 			str(self.aid),
 			self.flag,
 			int(self.aid),
@@ -91,9 +92,10 @@ class LazyAttribute (object):
 
 
 class LazyNLRI (object):
-	def __init__ (self, afi, safi, data):
+	def __init__ (self, afi, safi, addpath, data):
 		self.afi = afi
 		self.safi = safi
+		self.addpath = addpath
 		self.data = data
 
 	def split (self, char):
@@ -101,8 +103,9 @@ class LazyNLRI (object):
 
 	def __str__ (self):
 		family = '%s %s' % (AFI(self.afi),SAFI(self.safi))
-		payload = ' payload %s' % od(self.data) if self.data else ''
-		return 'parsing family    %-18s%s' % (family,payload)
+		path = 'with path-information' if self.addpath else 'without path-information'
+		payload = od(self.data) if self.data else 'none'
+		return 'NLRI      %-18s %-28s payload %s' % (family,path,payload)
 
 
 class Logger (object):
