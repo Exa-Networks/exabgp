@@ -56,7 +56,7 @@ class Labels (object):
 		return self._len
 
 	def json (self):
-		if self._len > 1:
+		if self._len >= 1:
 			return '"label": [ %s ]' % ', '.join([str(_) for _ in self.labels])
 		else:
 			return ''

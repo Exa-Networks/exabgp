@@ -71,7 +71,7 @@ class INET (NLRI):
 	# The announced feature is not used by ExaBGP, is it by BAGPIPE ?
 
 	def json (self, announced=True, compact=False):
-		internal = ", ".join(self._internal(announced))
+		internal = ", ".join([_ for _ in self._internal(announced) if _])
 		if internal:
 			return '{ "nlri": "%s", %s }' % (self.cidr.prefix(),internal)
 		if compact:
