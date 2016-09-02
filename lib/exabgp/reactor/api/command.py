@@ -114,6 +114,24 @@ def show_neighbors (self, reactor, service, command):
 	return True
 
 
+def show_neighbor_status (self, reactor, service, command):
+	def callback ():
+		for peer_name in reactor.peers.keys():
+			peer = reactor.peers.get(peer_name, None)
+			if not peer:
+				continue
+			detailed_status = peer.detailed_link_status()
+			families = peer.negotiated_families()
+			if families:
+				families = "negotiated %s" % families
+			reactor.answer(service, "%s %s state %s" % (peer_name, families, detailed_status))
+			yield True
+		reactor.answer(service,"done")
+
+	reactor.plan(callback())
+	return True
+
+
 def show_routes (self, reactor, service, command):
 	def callback ():
 		last = command.split()[-1]
