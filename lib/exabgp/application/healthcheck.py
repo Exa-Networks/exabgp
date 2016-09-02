@@ -180,6 +180,9 @@ def parse():
     g.add_argument("--community", metavar="COMMUNITY",
                    type=str, default=None,
                    help="announce IPs with the supplied community")
+    g.add_argument("--large-community", metavar="LARGECOMMUNITY",
+                   type=str, default=None,
+                   help="announce IPs with the supplied large community")
     g.add_argument("--as-path", metavar="ASPATH",
                    type=str, default=None,
                    help="announce IPs with the supplied as-path")
@@ -434,6 +437,10 @@ def loop(options):
                     announce = "{0} community [ {1} ]".format(
                         announce,
                         options.community)
+                if options.large_community:
+                    announce = "{0} large-community [ {1} ]".format(
+                        announce,
+                        options.large_community)
                 if options.as_path:
                     announce = "{0} as-path [ {1} ]".format(
                         announce,

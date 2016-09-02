@@ -60,6 +60,7 @@ group <groupname> {
       aggregator <asn>:<ip-address>;
       path-information <ip-address>;
       community ( <community> | [ <community> <community> ... ] );
+      large-community ( <large-community> | [ <large-community> <large-community> ... ] );
       originator-id <ip-address>;
       cluster-list ( <ip-address> | [ <ip-address> <ip-address> ... ] );
       extended-community ( <extended-community> |
@@ -128,6 +129,7 @@ group <groupname> {
         mark <mark>;
         action ( sample | terminal | sample-terminal );
         community
+        large-community
         extended-community
       }
     }
@@ -140,6 +142,7 @@ group <groupname> {
       med <med>;
       local-preference <preference>;
       community ( <community> | [ <community> <community> ... ] );
+      large-community ( <large-community> | [ <large-community> <large-community> ... ] );
       originator-id <ip-address>;
       cluster-list [ <ip-address> <ip-address> ... ];
       extended-community ( <extended-community> |

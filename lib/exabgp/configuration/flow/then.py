@@ -18,6 +18,7 @@ from exabgp.configuration.flow.parser import mark
 from exabgp.configuration.flow.parser import action
 
 from exabgp.configuration.static.parser import community
+from exabgp.configuration.static.parser import large_community
 from exabgp.configuration.static.parser import extended_community
 
 
@@ -50,6 +51,7 @@ class ParseFlowThen (Section):
 		'mark':                mark,
 		'action':              action,
 		'community':           community,
+		'large-community':     large_community,
 		'extended-community':  extended_community,
 	}
 
@@ -65,6 +67,7 @@ class ParseFlowThen (Section):
 		'mark':                'attribute-add',
 		'action':              'attribute-add',
 		'community':           'attribute-add',
+		'large-community':     'attribute-add',
 		'extended-community':  'attribute-add',
 	}
 

@@ -101,6 +101,7 @@ class Attribute (SubMenu):
 	# atomic-aggregate
 	# aggregator
 	# community
+	# large-community
 	# originator-id
 	# cluster-list
 	# extended-community
