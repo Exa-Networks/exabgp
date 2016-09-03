@@ -13,6 +13,8 @@ Version 4.0.0
     patch from: Jérôme Marteaux
  * Change: md5 is now called md5-password
  * Change: always use neighbor local address for next-hop self (and not router-id for on IPv4 connections)
+ * Feature: support for large communities
+    patch by: Job Snijders
  * Feature: add support for upstart
     patch by: Pierre-Yves Kerembellec
  * Feature/Fix: Port of bagpipe EVPN code

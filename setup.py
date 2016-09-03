@@ -17,8 +17,8 @@ from distutils.util import get_platform
 
 dryrun = False
 
-json_version = '3.5.0'
-text_version = '3.5.0'
+json_version = '3.9.0'
+text_version = '3.9.0'
 
 version_template = """\
 import os
