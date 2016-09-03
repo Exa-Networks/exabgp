@@ -31,6 +31,8 @@ Version 3.4.17
     patch by: Brian Johnson
  * Feature: Add 'show neighbor status' api
     patch by: Brian Johnson
+ * Fix: flush route api
+    patch by: Brian Johnson
 
 Version 3.4.16
  * Feature: allow users to decide if processes must be run before or after we drop privileges

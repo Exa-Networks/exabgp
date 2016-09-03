@@ -209,8 +209,12 @@ def withdraw_watchdog (self, reactor, service, command):
 def flush_route (self, reactor, service, command):
 	def callback (self, peers):
 		self.logger.reactor("Flushing routes for %s" % ', '.join(peers if peers else []) if peers is not None else 'all peers')
-		yield True
-		reactor.route_update = True
+		for peer_name in peers:
+			peer = reactor.peers.get(peer_name, None)
+			if not peer:
+				continue
+			peer.send_new(update=True)
+			yield False
 
 	try:
 		descriptions,command = _extract_neighbors(command)
