@@ -31,6 +31,8 @@ Version 3.4.17
     patch by: Brian Johnson
  * Feature: Add 'show neighbor status' api
     patch by: Brian Johnson
+ * Fix: flush route api
+    patch by: Brian Johnson
  * Change: configuration output does not includes ':' anymore
     patch by: doddt
 
