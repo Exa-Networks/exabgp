@@ -1,5 +1,8 @@
 # encoding: utf-8
 """
+
+Support for draft-heitz-idr-large-community-03
+
 Copyright (c) 2016 Job Snijders <job@ntt.net>
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
