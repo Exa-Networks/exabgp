@@ -17,6 +17,7 @@ from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import ASPath
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.community.communities import Communities
+from exabgp.bgp.message.update.attribute.community.large import LargeCommunities
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunities
 
 from exabgp.bgp.message.notification import Notify
@@ -73,6 +74,7 @@ class Attributes (dict):
 		Attribute.CODE.AGGREGATOR:         ('string',  '', 'aggregator',         '( %s )', '%s'),
 		Attribute.CODE.AS4_AGGREGATOR:     ('string',  '', 'aggregator',         '( %s )', '%s'),
 		Attribute.CODE.COMMUNITY:          ('list',    '', 'community',          '%s',     '%s'),
+		Attribute.CODE.LARGE_COMMUNITY:    ('list',    '', 'large-community',    '%s',     '%s'),
 		Attribute.CODE.ORIGINATOR_ID:      ('inet',    '', 'originator-id',      '%s',     '%s'),
 		Attribute.CODE.CLUSTER_LIST:       ('list',    '', 'cluster-list',       '%s',     '%s'),
 		Attribute.CODE.EXTENDED_COMMUNITY: ('list',    '', 'extended-community', '%s',     '%s'),

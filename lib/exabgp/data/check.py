@@ -84,6 +84,8 @@ def uint16 (data):
 def uint32 (data):
 	return 0 <= data < pow(2,32)
 
+def uint96 (data):
+	return 0 <= data < pow(2,96)
 
 def float (data):
 	return 0 <= data < 3.4 * pow(10,38)  # approximation of max from wikipedia
@@ -198,6 +200,14 @@ def community (data):
 	return array(data) and len(data) == 2 and \
 		integer(data[0]) and integer(data[1]) and \
 		asn16(data[0]) and uint16(data[1])
+
+
+def largecommunity (data):
+	if integer(data):
+		return uint96(data)
+	return array(data) and len(data) == 3 and \
+		integer(data[0]) and integer(data[1]) and integer(data[2]) and \
+		asn32(data[0]) and uint32(data[1]) and uint32(data[2])
 
 
 def extendedcommunity (data):  # TODO: improve, incomplete see http://tools.ietf.org/rfc/rfc4360.txt

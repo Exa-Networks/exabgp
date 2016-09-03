@@ -39,6 +39,8 @@ from exabgp.bgp.message.update.attribute import GenericAttribute
 
 from exabgp.bgp.message.update.attribute.community.community import Community
 from exabgp.bgp.message.update.attribute.community.communities import Communities
+from exabgp.bgp.message.update.attribute.community.large import LargeCommunity
+from exabgp.bgp.message.update.attribute.community.large import LargeCommunities
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunities
 
@@ -354,6 +356,55 @@ def community (tokeniser):
 		communities.add(_community(value))
 
 	return communities
+
+def _large_community (value):
+
+	separator = value.find(':')
+	if separator > 0:
+		prefix, affix, suffix = value.split(':')
+
+		if not any(map(lambda c:c.isdigit(), [prefix, affix, suffix])):
+			raise ValueError('invalid community %s' % value)
+
+		prefix, affix, suffix = map(int, [prefix, affix, suffix])
+
+		for i in [prefix, affix, suffix]:
+			if i > LargeCommunity.MAX:
+				raise ValueError('invalid community %i in %s too large' % (i, value))
+
+		return LargeCommunity(pack('!LLL', prefix, affix, suffix))
+
+	elif value[:2].lower() == '0x':
+		number = int(value)
+		if number > LargeCommunity.MAX:
+			raise ValueError('invalid large community %s (too large)' % value)
+		return LargeCommunity(pack('!LLL', number >> 64, (number >> 32) & 0xFFFFFFFF, number & 0xFFFFFFFF))
+
+	else:
+		low = value.lower()
+		if value.isdigit():
+			number = int(value)
+			if number > LargeCommunity.MAX:
+				raise ValueError('invalid large community %s (too large)' % value)
+			return LargeCommunity(pack('!LLL', number >> 64, (number >> 32) & 0xFFFFFFFF, number & 0xFFFFFFFF))
+		else:
+			raise ValueError('invalid large community name %s' % value)
+
+
+def large_community (tokeniser):
+	large_communities = LargeCommunities()
+
+	value = tokeniser()
+	if value == '[':
+		while True:
+			value = tokeniser()
+			if value == ']':
+				break
+			large_communities.add(_large_community(value))
+	else:
+		large_communities.add(_large_community(value))
+
+	return large_communities
 
 
 _HEADER = {

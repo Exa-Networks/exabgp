@@ -39,6 +39,7 @@ from exabgp.configuration.static.parser import aggregator
 from exabgp.configuration.static.parser import originator_id
 from exabgp.configuration.static.parser import cluster_list
 from exabgp.configuration.static.parser import community
+from exabgp.configuration.static.parser import large_community
 from exabgp.configuration.static.parser import extended_community
 from exabgp.configuration.static.parser import aigp
 from exabgp.configuration.static.parser import path_information
@@ -67,6 +68,7 @@ class ParseStaticRoute (Section):
 		'local-preference <16 bits number>',
 		'atomic-aggregate',
 		'community <16 bits number>',
+		'large-community <96 bits number>',
 		'extended-community target:<16 bits number>:<ipv4 formated number>',
 		'originator-id <ipv4>',
 		'cluster-list <ipv4>',
@@ -100,6 +102,7 @@ class ParseStaticRoute (Section):
 		'originator-id':       originator_id,
 		'cluster-list':        cluster_list,
 		'community':           community,
+		'large-community':     large_community,
 		'extended-community':  extended_community,
 		'aigp':                aigp,
 		'name':                named,
@@ -124,6 +127,7 @@ class ParseStaticRoute (Section):
 		'originator-id':       'attribute-add',
 		'cluster-list':        'attribute-add',
 		'community':           'attribute-add',
+		'large-community':     'attribute-add',
 		'extended-community':  'attribute-add',
 		'name':                'attribute-add',
 		'split':               'attribute-add',
