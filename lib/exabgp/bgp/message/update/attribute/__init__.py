@@ -22,9 +22,9 @@ from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator4
-from exabgp.bgp.message.update.attribute.community.communities import Communities
-from exabgp.bgp.message.update.attribute.community.large import LargeCommunities
-from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunities
+from exabgp.bgp.message.update.attribute.community import Communities
+from exabgp.bgp.message.update.attribute.community import LargeCommunities
+from exabgp.bgp.message.update.attribute.community import ExtendedCommunities
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterID

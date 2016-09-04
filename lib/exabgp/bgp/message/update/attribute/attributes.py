@@ -16,9 +16,9 @@ from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import ASPath
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
-from exabgp.bgp.message.update.attribute.community.communities import Communities
-from exabgp.bgp.message.update.attribute.community.large import LargeCommunities
-from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunities
+from exabgp.bgp.message.update.attribute.community import Communities
+from exabgp.bgp.message.update.attribute.community import LargeCommunities
+from exabgp.bgp.message.update.attribute.community import ExtendedCommunities
 
 from exabgp.bgp.message.notification import Notify
 

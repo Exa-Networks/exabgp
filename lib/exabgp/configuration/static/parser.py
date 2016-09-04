@@ -37,12 +37,12 @@ from exabgp.bgp.message.update.attribute import ClusterList
 from exabgp.bgp.message.update.attribute import AIGP
 from exabgp.bgp.message.update.attribute import GenericAttribute
 
-from exabgp.bgp.message.update.attribute.community.community import Community
-from exabgp.bgp.message.update.attribute.community.communities import Communities
-from exabgp.bgp.message.update.attribute.community.large import LargeCommunity
-from exabgp.bgp.message.update.attribute.community.large import LargeCommunities
-from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
-from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunities
+from exabgp.bgp.message.update.attribute.community import Community
+from exabgp.bgp.message.update.attribute.community import Communities
+from exabgp.bgp.message.update.attribute.community import LargeCommunity
+from exabgp.bgp.message.update.attribute.community import LargeCommunities
+from exabgp.bgp.message.update.attribute.community import ExtendedCommunity
+from exabgp.bgp.message.update.attribute.community import ExtendedCommunities
 
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 
