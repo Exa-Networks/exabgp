@@ -195,7 +195,7 @@ def assequence (data):
 def community (data):
 	if integer(data):
 		return uint32(data)
-	if string(data) and data.lower() in ('no-export', 'no-advertise', 'no-export-subconfed', 'nopeer', 'no-peer'):
+	if string(data) and data.lower() in ('no-export', 'no-advertise', 'no-export-subconfed', 'nopeer', 'no-peer', 'blackhole'):
 		return True
 	return array(data) and len(data) == 2 and \
 		integer(data[0]) and integer(data[1]) and \
