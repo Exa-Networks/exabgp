@@ -44,6 +44,9 @@ class EVPN (NLRI):
 	# For subtype 2 (MAC/IP advertisement route),
 	# we will have to ignore a part of the route, so this method will be overridden
 
+	def index(self):
+		return NLRI._index(self) + self.pack()
+
 	def __eq__ (self, other):
 		return \
 			NLRI.__eq__(self,other) and \
