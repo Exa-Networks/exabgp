@@ -25,6 +25,7 @@ class API (object):
 	functions = sorted([
 		'show neighbor',
 		'show neighbors',
+		'show neighbor status',
 		'show routes',
 		'show routes extensive',
 		'announce operational',
