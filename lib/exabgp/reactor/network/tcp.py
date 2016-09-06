@@ -210,7 +210,7 @@ def ready (io):
 			err = io.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
 			if not err:
 				if warned:
-					logger.network('incoming socket ready','warning')
+					logger.network('connection established','warning')
 				yield True
 				return
 			elif err in error.block:
