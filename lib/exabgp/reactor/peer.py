@@ -296,6 +296,29 @@ class Peer (object):
 	def established (self):
 		return self._incoming.fsm == FSM.ESTABLISHED or self._outgoing.fsm == FSM.ESTABLISHED
 
+	def detailed_link_status (self):
+		state_tbl = {
+			FSM.IDLE : "Idle",
+			FSN.ACTIVE : "Active",
+			FSM.CONNECT : "Connect",
+			FSM.OPENSENT : "OpenSent",
+			FSM.OPENCONFIRM : "OpenConfirm",
+			FSM.ESTABLISHED : "Established" }
+		return state_tbl[max(self._incoming.fsm.state, self._outgoing.fsm.state)]
+
+	def negotiated_families(self):
+		if self._outgoing.proto:
+			families = ["%s/%s" % (x[0], x[1]) for x in self._outgoing.proto.negotiated.families]
+		else:
+			families = ["%s/%s" % (x[0], x[1]) for x in self.neighbor.families()]
+
+		if len(families) > 1:
+			return "[ %s ]" % " ".join(families)
+		elif len(families) == 1:
+			return families[0]
+
+		return ''
+
 	def _accept (self):
 		self._incoming.fsm.change(FSM.CONNECT)
 

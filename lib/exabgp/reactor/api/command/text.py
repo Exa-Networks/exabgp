@@ -106,6 +106,24 @@ def show_neighbors (self, reactor, service, command):
 	reactor.plan(callback(),'show_neighbors')
 	return True
 
+@Text('show neighbor status')
+def show_neighbor_status (self, reactor, service, command):
+	def callback ():
+		for peer_name in reactor.peers.keys():
+			peer = reactor.peers.get(peer_name, None)
+			if not peer:
+				continue
+			detailed_status = peer.detailed_link_status()
+			families = peer.negotiated_families()
+			if families:
+				families = "negotiated %s" % families
+			reactor.answer(service, "%s %s state %s" % (peer_name, families, detailed_status))
+			yield True
+		reactor.answer(service,"done")
+
+	reactor.plan(callback())
+	return True
+
 
 @Text('show routes')
 def show_routes (self, reactor, service, command):
@@ -197,9 +215,13 @@ def withdraw_watchdog (self, reactor, service, command):
 def flush_route (self, reactor, service, command):
 	def callback (self, peers):
 		self.log_message("Flushing routes for %s" % ', '.join(peers if peers else []) if peers is not None else 'all peers')
-		yield True
+		for peer_name in peers:
+			peer = reactor.peers.get(peer_name, None)
+			if not peer:
+				continue
+			peer.send_new(update=True)
+			yield False
 
-		reactor.route_update = True
 		reactor.answer(service,'done')
 
 	try:

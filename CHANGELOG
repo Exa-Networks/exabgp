@@ -136,6 +136,12 @@ Version 4.0.0
    requested by: Bryan Benson
  * Feature: allow setting process umask via exabgp.daemon.umask
    patch by: Bryan Le Gear
+ * Change: Update syslog message format
+   patch by: Brian Johnson
+ * Fix: flush route api
+   patch by: Brian Johnson
+ * Feature: Add 'show neighbor status' api
+   patch by: Brian Johnson
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set

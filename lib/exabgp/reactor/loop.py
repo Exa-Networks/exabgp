@@ -421,12 +421,6 @@ class Reactor (object):
 			self.peers[key].send_new()
 		self.logger.reactor('updated peers dynamic routes successfully')
 
-	def route_flush (self):
-		"""we just want to flush any unflushed routes"""
-		self.logger.reactor('performing route flush')
-		for key in self.configuration.neighbors.keys():
-			self.peers[key].send_new(update=True)
-
 	def restart (self):
 		"""kill the BGP session and restart it"""
 		self.logger.reactor('performing restart of exabgp %s' % version)

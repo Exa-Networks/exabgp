@@ -156,7 +156,7 @@ class Logger (object):
 		if self._where in ['stderr','stdout']:
 			return "%s | %-8s | %-6d | %-13s | %s" % (now,level,self._pid,source,message)
 		elif self._where in ['syslog',]:
-			return "%s: %-6d %-13s %s" % (environment.application,self._pid,source,message)
+			return "%s[%d]: %-13s %s" % (environment.application,self._pid,source,message)
 		elif self._where in ['file',]:
 			return "%s %-6d %-13s %s" % (now,self._pid,source,message)
 		else:
