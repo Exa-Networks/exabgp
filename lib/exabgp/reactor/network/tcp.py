@@ -203,7 +203,7 @@ def ready (io):
 			_,w,_ = select.select([],[io,],[],0)
 			if not w:
 				if not warned and time.time()-start > 1.0:
-					logger.network('attempting to accept connections, socket not ready','warning')
+					logger.network('attempting to establish connection','warning')
 					warned = True
 				yield False
 				continue
