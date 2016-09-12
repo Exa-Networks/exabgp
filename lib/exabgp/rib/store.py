@@ -7,6 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
 from exabgp.bgp.message import IN
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message import Update
@@ -217,6 +218,8 @@ class Store (object):
 				dict_change = {}
 				for nlri_index,change in full_dict_change.iteritems():
 					family = change.nlri.family()
+					if family != (AFI.ipv4,SAFI.unicast):
+						grouped = False
 					announced = self._seen.get(family,{})
 					if change.nlri.action == OUT.ANNOUNCE:
 						if nlri_index in announced:
