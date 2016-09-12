@@ -142,6 +142,8 @@ Version 4.0.0
    patch by: Brian Johnson
  * Feature: Add 'show neighbor status' api
    patch by: Brian Johnson
+ * Fix: Allow asn4 peer to speak with asn2 only peer
+   patch by: Brian Johnson
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
