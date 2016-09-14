@@ -33,11 +33,13 @@ Version 3.4.17
     patch by: Brian Johnson
  * Fix: flush route api
     patch by: Brian Johnson
+ * Fix: Allow asn4 peer to speak with asn2 only peer
+    patch by: Brian Johnson
+ * Fix: only one MP NLRI is allow per UPDATE
+    reported by: subsecond
  * Change: configuration output does not includes ':' anymore
     patch by: doddt
  * Change: syslog format changed to be in line with other application
-    patch by: Brian Johnson
- * Fix: Allow asn4 peer to speak with asn2 only peer
     patch by: Brian Johnson
 
 Version 3.4.16

@@ -193,8 +193,6 @@ class Store (object):
 			dict_nlri = self._modify_nlri
 
 			for family in self._seen:
-				if family != (AFI.ipv4,SAFI.unicast):
-					grouped = False
 				for change in self._seen[family].itervalues():
 					if change.index() not in self._modify_nlri:
 						change.nlri.action = OUT.WITHDRAW
@@ -242,6 +240,10 @@ class Store (object):
 
 			# we NEED the copy provided by list() here as insert_announced can be called while we iterate
 			changed = list(dict_change.itervalues())
+
+			for family in self._seen:
+				if family != (AFI.ipv4,SAFI.unicast):
+					grouped = False
 
 			if grouped:
 				update = Update([dict_nlri[nlri_index].nlri for nlri_index in dict_change],attributes)
