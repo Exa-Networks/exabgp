@@ -50,10 +50,6 @@ def check_neighbor (neighbors):
 	logger = Logger()
 	logger._option.parser = True
 
-	if not neighbors:
-		logger.parser('\ncould not find neighbor(s) to check')
-		return False
-
 	logger.parser('\ndecoding routes in configuration')
 
 	for name in neighbors.keys():
