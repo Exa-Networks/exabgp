@@ -2,6 +2,7 @@ exabgp (3.4.17-1) UNRELEASED; urgency=medium
 
   * New upstream version.
   * d/control: bump Standards-Version.
+  * d/patches: don't disable unittests.
 
  -- Vincent Bernat <bernat@debian.org>  Sun, 18 Sep 2016 11:11:47 +0200
 
