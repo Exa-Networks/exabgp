@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
 from exabgp.bgp.message import IN
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update import Update
@@ -238,6 +240,10 @@ class Store (object):
 
 			# we NEED the copy provided by list() here as insert_announced can be called while we iterate
 			changed = list(dict_change.itervalues())
+
+			for family in self._seen:
+				if family != (AFI.ipv4,SAFI.unicast):
+					grouped = False
 
 			if grouped:
 				update = Update([dict_nlri[nlri_index].nlri for nlri_index in dict_change],attributes)

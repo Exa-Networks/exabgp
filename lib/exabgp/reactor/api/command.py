@@ -66,6 +66,9 @@ def version (self, reactor, service, command):
 	reactor.answer(service,'exabgp %s' % _version)
 	return True
 
+def log (self, reactor, service, command):
+	self.logger.processes(command.lstrip().lstrip('#').strip())
+	return True
 
 def teardown (self, reactor, service, command):
 	try:
@@ -86,7 +89,9 @@ def teardown (self, reactor, service, command):
 def show_neighbor (self, reactor, service, command):
 	def callback ():
 		for key in reactor.configuration.neighbor.keys():
-			neighbor = reactor.configuration.neighbor[key]
+			neighbor = reactor.configuration.neighbor.get(key, None)
+			if not neighbor:
+				continue
 			for line in str(neighbor).split('\n'):
 				reactor.answer(service,line)
 				yield True
@@ -98,10 +103,30 @@ def show_neighbor (self, reactor, service, command):
 def show_neighbors (self, reactor, service, command):
 	def callback ():
 		for key in reactor.configuration.neighbor.keys():
-			neighbor = reactor.configuration.neighbor[key]
+			neighbor = reactor.configuration.neighbor.get(key, None)
+			if not neighbor:
+				continue
 			for line in str(neighbor).split('\n'):
 				reactor.answer(service,line)
 				yield True
+
+	reactor.plan(callback())
+	return True
+
+
+def show_neighbor_status (self, reactor, service, command):
+	def callback ():
+		for peer_name in reactor.peers.keys():
+			peer = reactor.peers.get(peer_name, None)
+			if not peer:
+				continue
+			detailed_status = peer.detailed_link_status()
+			families = peer.negotiated_families()
+			if families:
+				families = "negotiated %s" % families
+			reactor.answer(service, "%s %s state %s" % (peer_name, families, detailed_status))
+			yield True
+		reactor.answer(service,"done")
 
 	reactor.plan(callback())
 	return True
@@ -115,7 +140,9 @@ def show_routes (self, reactor, service, command):
 		else:
 			neighbors = [n for n in reactor.configuration.neighbor.keys() if 'neighbor %s' % last in n]
 		for key in neighbors:
-			neighbor = reactor.configuration.neighbor[key]
+			neighbor = reactor.configuration.neighbor.get(key, None)
+			if not neighbor:
+				continue
 			for change in list(neighbor.rib.outgoing.sent_changes()):
 				reactor.answer(service,'neighbor %s %s' % (neighbor.peer_address,str(change.nlri)))
 				yield True
@@ -132,7 +159,9 @@ def show_routes_extensive (self, reactor, service, command):
 		else:
 			neighbors = [n for n in reactor.configuration.neighbor.keys() if 'neighbor %s' % last in n]
 		for key in neighbors:
-			neighbor = reactor.configuration.neighbor[key]
+			neighbor = reactor.configuration.neighbor.get(key, None)
+			if not neighbor:
+				continue
 			for change in list(neighbor.rib.outgoing.sent_changes()):
 				reactor.answer(service,'neighbor %s %s' % (neighbor.name(),change.extensive()))
 				yield True
@@ -144,8 +173,11 @@ def show_routes_extensive (self, reactor, service, command):
 
 def announce_watchdog (self, reactor, service, command):
 	def callback (name):
-		for neighbor in reactor.configuration.neighbor:
-			reactor.configuration.neighbor[neighbor].rib.outgoing.announce_watchdog(name)
+		for key in reactor.configuration.neighbor.keys():
+			neighbor = reactor.configuration.neighbor.get(key, None)
+			if not neighbor:
+				continue
+			neighbor.rib.outgoing.announce_watchdog(name)
 			yield False
 		reactor.route_update = True
 
@@ -159,8 +191,11 @@ def announce_watchdog (self, reactor, service, command):
 
 def withdraw_watchdog (self, reactor, service, command):
 	def callback (name):
-		for neighbor in reactor.configuration.neighbor:
-			reactor.configuration.neighbor[neighbor].rib.outgoing.withdraw_watchdog(name)
+		for key in reactor.configuration.neighbor.keys():
+			neighbor = reactor.configuration.neighbor.get(key, None)
+			if not neighbor:
+				continue
+			neighbor.rib.outgoing.withdraw_watchdog(name)
 			yield False
 		reactor.route_update = True
 	try:
@@ -174,8 +209,12 @@ def withdraw_watchdog (self, reactor, service, command):
 def flush_route (self, reactor, service, command):
 	def callback (self, peers):
 		self.logger.reactor("Flushing routes for %s" % ', '.join(peers if peers else []) if peers is not None else 'all peers')
-		yield True
-		reactor.route_update = True
+		for peer_name in peers:
+			peer = reactor.peers.get(peer_name, None)
+			if not peer:
+				continue
+			peer.send_new(update=True)
+			yield False
 
 	try:
 		descriptions,command = _extract_neighbors(command)

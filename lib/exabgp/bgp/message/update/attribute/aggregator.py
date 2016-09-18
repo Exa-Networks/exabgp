@@ -30,8 +30,10 @@ class Aggregator (Attribute):
 	def pack (self, negotiated):
 		if negotiated.asn4:
 			return self._attribute(self.asn.pack(True)+self.speaker.pack())
+		elif self.asn.asn4():
+			return self._attribute(self.asn.trans()+self.speaker.pack()) + Aggregator4(self.asn,self.speaker).pack(negotiated)
 		else:
-			return self._attribute(self.asn.trans()+self.speaker.pack()) + self._attribute(self.asn.pack(True)+self.speaker.pack())
+			return self._attribute(self.asn.pack()+self.speaker.pack())
 
 	def __len__ (self):
 		raise RuntimeError('size can be 6 or 8 - we can not say - or can we ?')

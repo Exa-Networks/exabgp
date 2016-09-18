@@ -345,4 +345,4 @@ class Processes (object):
 	@register_process(Message.CODE.NOTIFICATION,_dispatch)
 	def _notification (self, peer, message, header, body):
 		for process in self._notify(peer,'receive-notifications'):
-			self.write(process,self._encoder[process].notification(peer,message,header,body),peer)
+			self.write(process,self._encoder[process].notification(peer,message.code,message.subcode,body),peer)

@@ -3,6 +3,45 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 3.4.17
+ * Fix: does not accept IPv6 as router-id
+    reported by: yuriya
+ * Fix: JSON output for flow routes with rd
+    reported by droon5
+ * Fix: Fix Path-Information
+ * Fix: Bad encoding of capability when multiple families are used for add-path
+    reported: by Alexander Bespalov
+ * Fix: support non ASN4 use of AS_TRANS (AS23456)
+    reported by: Todd Crane
+ * Fix: do not exit when we can not accept incoming connection
+    reported by: Pavel Batkov
+ * Fix: quote where not escaped in JSON reason field
+    reported by: Rob Barnes
+ * Fix: decoding of IPv6 flow routes
+    reported by: stoffi92
+ * Fix: decoding of Graceful Restart Capability
+    patch by: florinz
+ * Fix: ASN4 encoding
+    patch by: Shu Sugimoto and Eiichiro Watanabe
+ * Change: Run without even peers configured
+    patch by: Jordan Gedney
+ * Fix: JSON encoding of updates without NLRIs
+    patch by: Dhammika Pathirana
+ * Fix: Possible race conditions in api handling
+    patch by: Brian Johnson
+ * Feature: Add 'show neighbor status' api
+    patch by: Brian Johnson
+ * Fix: flush route api
+    patch by: Brian Johnson
+ * Fix: Allow asn4 peer to speak with asn2 only peer
+    patch by: Brian Johnson
+ * Fix: only one MP NLRI is allow per UPDATE
+    reported by: subsecond
+ * Change: configuration output does not includes ':' anymore
+    patch by: doddt
+ * Change: syslog format changed to be in line with other application
+    patch by: Brian Johnson
+
 Version 3.4.16
  * Feature: allow users to decide if processes must be run before or after we drop privileges
     requested by: Ben Agricola

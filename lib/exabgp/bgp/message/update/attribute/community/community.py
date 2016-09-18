@@ -32,6 +32,8 @@ class Community (object):
 			self._str = 'no-advertise'
 		elif community == self.NO_EXPORT_SUBCONFED:
 			self._str = 'no-export-subconfed'
+		elif community == self.NO_PEER:
+			self._str = 'no-peer'
 		else:
 			self._str = "%d:%d" % unpack('!HH',self.community)
 
