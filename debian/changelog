@@ -1,3 +1,10 @@
+exabgp (3.4.17-1) UNRELEASED; urgency=medium
+
+  * New upstream version.
+  * d/control: bump Standards-Version.
+
+ -- Vincent Bernat <bernat@debian.org>  Sun, 18 Sep 2016 11:11:47 +0200
+
 exabgp (3.4.16-1) unstable; urgency=medium
 
   * New upstream release.
