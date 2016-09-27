@@ -610,7 +610,7 @@ class Flow (NLRI):
 	def json (self, compact=None):
 		# this is a stop gap so flow route parsing does not crash exabgp
 		# delete unique when this is fixed
-		return '"flow-%d": %s' % (self.unique,self._json())
+		return '{ "flow-%d": %s }' % (self.unique,self._json())
 
 	def index (self):
 		return NLRI._index(self) + self.pack()
