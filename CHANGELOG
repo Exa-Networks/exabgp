@@ -146,6 +146,13 @@ Version 4.0.0
    reported by: Pier Carlo Chiodi
  * Fix: Allow asn4 peer to speak with asn2 only peer
    patch by: Brian Johnson
+ * Fix: ExaBGP was crashing when serializing BGP flowspec updates
+   patch by: Stacey Sheldon (Corsa)
+ * Change: API format for BGP flowspec updates
+   patch by: Stacey Sheldon (Corsa)
+   - encoding is now valid JSON
+   - dropped auto-generated name for flowspec updates
+   - format for flowspec updates is now a list of dicts where each dict contains a single flowspec rule
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set

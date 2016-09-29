@@ -475,16 +475,6 @@ for content in dir():
 
 # ..........................................................
 
-def _unique ():
-	value = 0
-	while True:
-		yield value
-		value += 1
-
-
-unique = _unique()
-
-
 @NLRI.register(AFI.ipv4,SAFI.flow_ip)
 @NLRI.register(AFI.ipv6,SAFI.flow_ip)
 @NLRI.register(AFI.ipv4,SAFI.flow_vpn)
@@ -495,7 +485,6 @@ class Flow (NLRI):
 		self.rules = {}
 		self.nexthop = NoNextHop
 		self.rd = RouteDistinguisher.NORD
-		self.unique = unique.next()
 
 	def __eq__ (self, other):
 		return \
@@ -588,7 +577,7 @@ class Flow (NLRI):
 	def __str__ (self):
 		return self.extensive()
 
-	def _json (self):
+	def json (self, compact=None):
 		string = []
 		for index in sorted(self.rules):
 			rules = self.rules[index]
@@ -606,11 +595,6 @@ class Flow (NLRI):
 		rd = '' if self.rd is RouteDistinguisher.NORD else ', %s' % self.rd.json()
 		compatibility = ', "string": "%s"' % self.extensive()
 		return '{' + ','.join(string) + rd + nexthop + compatibility + ' }'
-
-	def json (self):
-		# this is a stop gap so flow route parsing does not crash exabgp
-		# delete unique when this is fixed
-		return '"flow-%d": %s' % (self.unique,self._json())
 
 	def index (self):
 		return NLRI._index(self) + self.pack()
