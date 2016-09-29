@@ -75,8 +75,8 @@ class Attribute (object):
 		TUNNEL_ENCAP       = 0x17  # 23
 		AIGP               = 0x1A  # 26
 
-		# draft-heitz-idr-large-community-03
-		LARGE_COMMUNITY    = 0x29  # 41
+		# draft-ietf-idr-large-community
+		LARGE_COMMUNITY    = 0x1E  # 30
 
 		INTERNAL_NAME      = 0xFFFC
 		INTERNAL_WITHDRAW  = 0xFFFD
