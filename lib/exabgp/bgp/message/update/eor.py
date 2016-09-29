@@ -24,6 +24,7 @@ class EOR (Message):
 
 	class NLRI (_NLRI):
 		PREFIX = '\x00\x00\x00\x07\x90\x0F\x00\x03'
+		MP_LENGTH = len(PREFIX) + 1 + 2  # len(AFI) and len(SAFI)
 		EOR = True
 
 		nexthop = None
@@ -31,6 +32,8 @@ class EOR (Message):
 		def __init__ (self, afi, safi, action):
 			_NLRI.__init__(self,afi,safi,action)
 			self.action = action
+			self.afi = afi
+			self.safi = safi
 
 		def pack (self, negotiated=None):
 			if self.afi == AFI.ipv4 and self.safi == SAFI.unicast:
@@ -45,6 +48,13 @@ class EOR (Message):
 
 		def json (self, announced=True, compact=None):
 			return '"eor": { "afi" : "%s", "safi" : "%s" }' % (self.afi,self.safi)
+
+		def __len__ (self):
+			if self.afi == AFI.ipv4 and self.safi == SAFI.unicast:
+				# May not have been the size read on the wire if MP was used for IPv4 unicast
+				return 4
+			else:
+				return self.MP_LENGTH
 
 	def __init__ (self, afi, safi, action=None):
 		Message.__init__(self)

@@ -142,6 +142,8 @@ Version 4.0.0
    patch by: Brian Johnson
  * Feature: Add 'show neighbor status' api
    patch by: Brian Johnson
+ * Fix: Broken EOR printing
+   reported by: Pier Carlo Chiodi
  * Fix: Allow asn4 peer to speak with asn2 only peer
    patch by: Brian Johnson
 
