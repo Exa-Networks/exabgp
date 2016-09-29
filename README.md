@@ -111,6 +111,9 @@ The following projects are related to ExaBGP
   - [super smash brogp](https://github.com/spotify/super-smash-brogp) Stress test BGP
   - [kyro](https://github.com/kvogt/kyro) realtime network performance measurement and optimal routes injection - not really ExaBGP related, they have their own stack, but worth mentioning
 
+**FIB**
+  - [IOS-XR Solenoid](https://github.com/ios-xr/Solenoid) a FIB for ExaBGP
+
 **Other BGP implementation**
   - [Full list](https://github.com/Exa-Networks/exabgp/wiki/Other-OSS-BGP-implementations) of known open source BGP implementation
   - [Bird](http://bird.network.cz/) very good C based BGP implementation with powerful route filtering language for network administrators
