@@ -153,6 +153,8 @@ Version 4.0.0
    - encoding is now valid JSON
    - dropped auto-generated name for flowspec updates
    - format for flowspec updates is now a list of dicts where each dict contains a single flowspec rule
+ * Fix: API encoding of IPv4 Unicast EOR messages were being encoded as NLRI updates
+   patch by: Stacey Sheldon (Corsa)
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
