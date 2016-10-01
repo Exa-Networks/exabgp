@@ -1,11 +1,11 @@
-exabgp (3.4.17-1) UNRELEASED; urgency=medium
+exabgp (3.4.17-1) unstable; urgency=medium
 
   * New upstream version.
   * d/control: bump Standards-Version.
   * d/patches: don't disable unittests.
   * d/rules: disable conversation tests. Closes: #839393.
 
- -- Vincent Bernat <bernat@debian.org>  Sun, 18 Sep 2016 11:11:47 +0200
+ -- Vincent Bernat <bernat@debian.org>  Sat, 01 Oct 2016 15:57:59 +0200
 
 exabgp (3.4.16-1) unstable; urgency=medium
 
