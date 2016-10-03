@@ -1516,7 +1516,7 @@ class Configuration (object):
 				],
 				[
 					'description','router-id','local-address','local-as','peer-as',
-					'passive','listen','hold-time','add-path','graceful-restart','md5',
+					'passive','listen','connect','hold-time','add-path','graceful-restart','md5',
 					'ttl-security','multi-session','group-updates','asn4','aigp',
 					'auto-flush','adj-rib-out','manual-eor',
 				]

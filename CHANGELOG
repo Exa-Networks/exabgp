@@ -6,7 +6,9 @@ Version explained:
 Version 3.4.18
  * Fix: Configuration parser does not accept configs without neighbors.
     patch by doddt
-    
+ * Fix: 'connect' keyword is now also allowed in neighbor scope
+    patch by: Stacey Sheldon (Corsa)
+
 Version 3.4.17
  * Fix: does not accept IPv6 as router-id
     reported by: yuriya
