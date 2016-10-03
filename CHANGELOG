@@ -148,11 +148,8 @@ Version 4.0.0
    patch by: Brian Johnson
  * Fix: ExaBGP was crashing when serializing BGP flowspec updates
    patch by: Stacey Sheldon (Corsa)
- * Change: API format for BGP flowspec updates
+ * Change: API format for BGP flowspec updates, flowspec updates is now a list of dicts where each dict contains a single flowspec rule
    patch by: Stacey Sheldon (Corsa)
-   - encoding is now valid JSON
-   - dropped auto-generated name for flowspec updates
-   - format for flowspec updates is now a list of dicts where each dict contains a single flowspec rule
  * Fix: API encoding of IPv4 Unicast EOR messages were being encoded as NLRI updates
    patch by: Stacey Sheldon (Corsa)
 
