@@ -257,7 +257,7 @@ class Update (Message):
 
 		# This could be speed up massively by changing the order of the IF
 		if length == 4 and data == '\x00\x00\x00\x00':
-			return EOR(AFI.ipv4,SAFI.unicast,IN.ANNOUNCED)  # pylint: disable=E1101
+			return EOR(AFI(AFI.ipv4),SAFI(SAFI.unicast))  # pylint: disable=E1101
 		if length == 11 and data.startswith(EOR.NLRI.PREFIX):
 			return EOR.unpack_message(data,negotiated)
 
