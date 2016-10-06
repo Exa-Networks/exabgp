@@ -8,6 +8,8 @@ Version 3.4.18
     patch by doddt
  * Fix: 'connect' keyword is now also allowed in neighbor scope
     patch by: Stacey Sheldon (Corsa)
+ * Fix: removing protocol auto-cleanup (it should never be called and seems to cause a CG issue)
+    reported by: Colin Petrie
 
 Version 3.4.17
  * Fix: does not accept IPv6 as router-id
