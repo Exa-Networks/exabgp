@@ -75,9 +75,6 @@ class Protocol (object):
 
 	# XXX: we use self.peer.neighbor.peer_address when we could use self.neighbor.peer_address
 
-	def __del__ (self):
-		self.close('automatic protocol cleanup')
-
 	def me (self, message):
 		return "Peer %15s ASN %-7s %s" % (self.peer.neighbor.peer_address,self.peer.neighbor.peer_as,message)
 
