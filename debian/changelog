@@ -1,3 +1,9 @@
+exabgp (3.4.17-2) unstable; urgency=medium
+
+  * d/patches: disable again some unreliable tests. Closes: #840310.
+
+ -- Vincent Bernat <bernat@debian.org>  Mon, 10 Oct 2016 18:36:46 +0200
+
 exabgp (3.4.17-1) unstable; urgency=medium
 
   * New upstream version.
