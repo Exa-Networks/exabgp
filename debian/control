@@ -21,7 +21,8 @@ Depends: ${misc:Depends},
          ${python:Depends},
          python-pkg-resources,
          adduser,
-         ucf
+         ucf,
+         lsb-base (>= 3.2-14)
 Description: BGP swiss army knife of networking
  ExaBGP allows engineers to control their network from commodity
  servers. Think of it as Software Defined Networking using BGP by
