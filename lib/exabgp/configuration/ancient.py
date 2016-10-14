@@ -2704,21 +2704,24 @@ class Configuration (object):
 	def _flow_source (self, scope, tokens):
 		try:
 			data = tokens.pop(0)
-			if data.count('/') == 1:
+			if ':' in data:
+				if data.count('/') == 1:
+					ip,netmask = data.split('/')
+					offset = 0
+				else:
+					ip,netmask,offset = data.split('/')
+				change = scope[-1]['announce'][-1]
+				change.nlri.afi = AFI(AFI.ipv6)
+				if not change.nlri.add(Flow6Source(IP.pton(ip),int(netmask),int(offset))):
+					self._error = 'Flow can only have one source'
+					if self.debug: raise ValueError(self._error)  # noqa
+					return False
+			else:
 				ip,netmask = data.split('/')
 				raw = ''.join(chr(int(_)) for _ in ip.split('.'))
 
 				if not scope[-1]['announce'][-1].nlri.add(Flow4Source(raw,int(netmask))):
-					self._error = 'Flow can only have one destination'
-					if self.debug: raise ValueError(self._error)  # noqa
-					return False
-
-			else:
-				ip,netmask,offset = data.split('/')
-				change = scope[-1]['announce'][-1]
-				change.nlri.afi = AFI(AFI.ipv6)
-				if not change.nlri.add(Flow6Source(IP.pton(ip),int(netmask),int(offset))):
-					self._error = 'Flow can only have one destination'
+					self._error = 'Flow can only have one source'
 					if self.debug: raise ValueError(self._error)  # noqa
 					return False
 			return True
@@ -2731,21 +2734,25 @@ class Configuration (object):
 	def _flow_destination (self, scope, tokens):
 		try:
 			data = tokens.pop(0)
-			if data.count('/') == 1:
-				ip,netmask = data.split('/')
-				raw = ''.join(chr(int(_)) for _ in ip.split('.'))
-
-				if not scope[-1]['announce'][-1].nlri.add(Flow4Destination(raw,int(netmask))):
+			if ':' in data:
+				if data.count('/') == 1:
+					ip,netmask = data.split('/')
+					offset = 0
+				else:
+					ip,netmask,offset = data.split('/')
+				change = scope[-1]['announce'][-1]
+				# XXX: This is ugly
+				change.nlri.afi = AFI(AFI.ipv6)
+				if not change.nlri.add(Flow6Destination(IP.pton(ip),int(netmask),int(offset))):
 					self._error = 'Flow can only have one destination'
 					if self.debug: raise ValueError(self._error)  # noqa
 					return False
 
 			else:
-				ip,netmask,offset = data.split('/')
-				change = scope[-1]['announce'][-1]
-				# XXX: This is ugly
-				change.nlri.afi = AFI(AFI.ipv6)
-				if not change.nlri.add(Flow6Destination(IP.pton(ip),int(netmask),int(offset))):
+				ip,netmask = data.split('/')
+				raw = ''.join(chr(int(_)) for _ in ip.split('.'))
+
+				if not scope[-1]['announce'][-1].nlri.add(Flow4Destination(raw,int(netmask))):
 					self._error = 'Flow can only have one destination'
 					if self.debug: raise ValueError(self._error)  # noqa
 					return False
