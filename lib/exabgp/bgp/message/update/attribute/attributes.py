@@ -253,19 +253,10 @@ class Attributes (dict):
 	@classmethod
 	def unpack (cls, data, negotiated):
 		try:
-			if cls.cached:
-				if data == cls.previous:
-					return cls.cached
-				# # This code may mess with the cached data
-				# elif cls.previous and data.startswith(cls.previous):
-				# 	attributes = Attributes()
-				# 	for key in cls.cached:
-				# 		attributes[key] = cls.cached[key]
-				# 	attributes.parse(data[len(cls.previous):],negotiated)
-				else:
-					attributes = cls().parse(data,negotiated)
-			else:
-				attributes = cls().parse(data,negotiated)
+			if cls.cached and data == cls.previous:
+				return cls.cached
+
+			attributes = cls().parse(data,negotiated)
 
 			if Attribute.CODE.AS_PATH in attributes and Attribute.CODE.AS4_PATH in attributes:
 				attributes.merge_attributes()
