@@ -76,6 +76,11 @@ class Attributes (dict):
 		Attribute.CODE.MP_UNREACH_NLRI,
 	)
 
+	VALID_ZERO = (
+		Attribute.CODE.ATOMIC_AGGREGATE,
+		Attribute.CODE.AS_PATH,
+	)
+
 	# A cache of parsed attributes
 	cache = {}
 
@@ -330,6 +335,10 @@ class Attributes (dict):
 
 		# handle the attribute if we know it
 		if Attribute.registered(aid,flag):
+			if length == 0 and aid not in self.VALID_ZERO:
+				self.add(TreatAsWithdraw())
+				return self.parse(left,negotiated)
+
 			try:
 				decoded = Attribute.unpack(aid,flag,attribute,negotiated)
 			except IndexError:
