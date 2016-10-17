@@ -117,7 +117,11 @@ class Attributes (dict):
 
 			attribute = self[code]
 
-			if code not in self.representation or attribute.GENERIC:
+			if code not in self.representation:
+				yield ' attribute [ 0x%02X 0x%02X %s ]' % (code,attribute.FLAG,str(attribute))
+				continue
+
+			if code != Attribute.CODE.EXTENDED_COMMUNITY and attribute.GENERIC:
 				yield ' attribute [ 0x%02X 0x%02X %s ]' % (code,attribute.FLAG,str(attribute))
 				continue
 
@@ -190,7 +194,7 @@ class Attributes (dict):
 		# This allows this trick
 		if attribute.ID == Attribute.CODE.EXTENDED_COMMUNITY:
 			for community in attribute.communities:
-				self[attribute.ID].add(community)
+				self.setdefault(attribute.ID,[]).append(community)
 				return
 
 		self[attribute.ID] = attribute
