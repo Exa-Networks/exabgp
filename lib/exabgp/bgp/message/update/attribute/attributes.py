@@ -294,16 +294,20 @@ class Attributes (dict):
 		if not data:
 			return self
 
-		# We do not care if the attribute are transitive or not as we do not redistribute
-		flag = Attribute.Flag(ord(data[0]))
-		aid = Attribute.CODE(ord(data[1]))
+		try:
+			# We do not care if the attribute are transitive or not as we do not redistribute
+			flag = Attribute.Flag(ord(data[0]))
+			aid = Attribute.CODE(ord(data[1]))
 
-		if flag & Attribute.Flag.EXTENDED_LENGTH:
-			length = unpack('!H',data[2:4])[0]
-			offset = 4
-		else:
-			length = ord(data[2])
 			offset = 3
+			length = ord(data[2])
+
+			if flag & Attribute.Flag.EXTENDED_LENGTH:
+				offset = 4
+				length = (length << 8) + data[3]
+		except IndexError:
+			self.add(TreatAsWithdraw())
+			return self
 
 		data = data[offset:]
 		left = data[length:]
