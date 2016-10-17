@@ -131,10 +131,12 @@ class Attributes (dict):
 			# remove the next-hop from the attribute as it is define with the NLRI
 			if code in Attributes.NO_GENERATION:
 				continue
-			if code not in self.representation:
-				continue
 
 			attribute = self[code]
+
+			if code not in self.representation:
+				yield '"attribute-0x%02X-0x%02X": "%s"' % (code,attribute.FLAG,str(attribute))
+				continue
 
 			how, _, name, _, presentation = self.representation[code]
 			if how == 'boolean':
