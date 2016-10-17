@@ -261,25 +261,22 @@ class Attributes (dict):
 
 	@classmethod
 	def unpack (cls, data, negotiated):
-		try:
-			if cls.cached and data == cls.previous:
-				return cls.cached
+		if cls.cached and data == cls.previous:
+			return cls.cached
 
-			attributes = cls().parse(data,negotiated)
+		attributes = cls().parse(data,negotiated)
 
-			if Attribute.CODE.AS_PATH in attributes and Attribute.CODE.AS4_PATH in attributes:
-				attributes.merge_attributes()
+		if Attribute.CODE.AS_PATH in attributes and Attribute.CODE.AS4_PATH in attributes:
+			attributes.merge_attributes()
 
-			if Attribute.CODE.MP_REACH_NLRI not in attributes and Attribute.CODE.MP_UNREACH_NLRI not in attributes:
-				cls.previous = data
-				cls.cached = attributes
-			else:
-				cls.previous = ''
-				cls.cached = None
+		if Attribute.CODE.MP_REACH_NLRI not in attributes and Attribute.CODE.MP_UNREACH_NLRI not in attributes:
+			cls.previous = data
+			cls.cached = attributes
+		else:
+			cls.previous = ''
+			cls.cached = None
 
-			return attributes
-		except IndexError:
-			raise Notify(3,2,data)
+		return attributes
 
 	@staticmethod
 	def flag_attribute_content (data):
@@ -329,8 +326,13 @@ class Attributes (dict):
 
 		# handle the attribute if we know it
 		if Attribute.registered(aid,flag):
-			self.add(Attribute.unpack(aid,flag,attribute,negotiated))
+			try:
+				decoded = Attribute.unpack(aid,flag,attribute,negotiated)
+			except IndexError:
+				decoded = TreatAsWithdraw()
+			self.add(decoded)
 			return self.parse(left,negotiated)
+
 		# XXX: FIXME: we could use a fallback function here like capability
 
 		# if we know the attribute but the flag is not what the RFC says.
@@ -348,7 +350,11 @@ class Attributes (dict):
 		# it is an unknown transitive attribute we need to pass on
 		if flag & Attribute.Flag.TRANSITIVE:
 			logger.parser('unknown transitive attribute (flag 0x%02X, aid 0x%02X)' % (flag,aid))
-			self.add(GenericAttribute(aid,flag | Attribute.Flag.PARTIAL,attribute),attribute)
+			try:
+				decoded = GenericAttribute(aid,flag | Attribute.Flag.PARTIAL,attribute)
+			except IndexError:
+				decoded = TreatAsWithdraw()
+			self.add(decoded,attribute)
 			return self.parse(left,negotiated)
 
 		# it is an unknown non-transitive attribute we can ignore.
