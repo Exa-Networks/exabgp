@@ -121,7 +121,7 @@ class Attributes (dict):
 				yield ' attribute [ 0x%02X 0x%02X %s ]' % (code,attribute.FLAG,str(attribute))
 				continue
 
-			if code != Attribute.CODE.EXTENDED_COMMUNITY and attribute.GENERIC:
+			if attribute.GENERIC:
 				yield ' attribute [ 0x%02X 0x%02X %s ]' % (code,attribute.FLAG,str(attribute))
 				continue
 
@@ -189,13 +189,6 @@ class Attributes (dict):
 
 		self._str = ''
 		self._json = ''
-
-		# For flows we can add extended-communities using special keywords and extended-community
-		# This allows this trick
-		if attribute.ID == Attribute.CODE.EXTENDED_COMMUNITY:
-			for community in attribute.communities:
-				self.setdefault(attribute.ID,[]).append(community)
-				return
 
 		self[attribute.ID] = attribute
 
