@@ -13,6 +13,13 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.util.cache import Cache
 
 
+# ============================================================== TreatAsWithdraw
+#
+
+class TreatAsWithdraw (object):
+	ID = 0xffff
+
+
 # ==================================================================== Attribute
 #
 
@@ -78,10 +85,11 @@ class Attribute (object):
 		# draft-ietf-idr-large-community
 		LARGE_COMMUNITY    = 0x1E  # 30
 
-		INTERNAL_NAME      = 0xFFFC
-		INTERNAL_WITHDRAW  = 0xFFFD
-		INTERNAL_WATCHDOG  = 0xFFFE
-		INTERNAL_SPLIT     = 0xFFFF
+		INTERNAL_NAME      = 0xFFFB
+		INTERNAL_WITHDRAW  = 0xFFFC
+		INTERNAL_WATCHDOG  = 0xFFFD
+		INTERNAL_SPLIT     = 0xFFFE
+		TREAT_AS_WITHDRAW  = 0xFFFF
 
 		# Currently formating is done with %-18s
 		names = {
@@ -104,10 +112,11 @@ class Attribute (object):
 			PMSI_TUNNEL:        'pmsi-tunnel',
 			TUNNEL_ENCAP:       'tunnel-encaps',
 			AIGP:               'aigp',
-			0xfffc:             'internal-name',
-			0xfffd:             'internal-withdraw',
-			0xfffe:             'internal-watchdog',
-			0xffff:             'internal-split',
+			0xfffb:             'internal-name',
+			0xfffc:             'internal-withdraw',
+			0xfffd:             'internal-watchdog',
+			0xfffe:             'internal-split',
+			0xffff:             'internal-treath-as-withdraw',
 		}
 
 		def __repr__ (self):
@@ -223,11 +232,7 @@ class Attribute (object):
 			kls = cls.registered_attributes[key]
 			kls.ID = attribute_id
 			return kls
-		# XXX: we do see some AS4_PATH with the partial instead of transitive bit set !!
-		if attribute_id == Attribute.CODE.AS4_PATH:
-			kls = cls.attributes_known[attribute_id]
-			kls.ID = attribute_id
-			return kls
+
 		raise Notify (2,4,'can not handle attribute id %s' % attribute_id)
 
 	@classmethod

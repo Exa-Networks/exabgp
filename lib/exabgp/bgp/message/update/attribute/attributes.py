@@ -6,19 +6,19 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-import collections
 from struct import unpack
 
 from exabgp.configuration.environment import environment
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
 from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import ASPath
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
+
+# For bagpipe
 from exabgp.bgp.message.update.attribute.community import Communities
-from exabgp.bgp.message.update.attribute.community import LargeCommunities
-from exabgp.bgp.message.update.attribute.community import ExtendedCommunities
 
 from exabgp.bgp.message.notification import Notify
 
@@ -43,16 +43,37 @@ NOTHING = _NOTHING()
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 class Attributes (dict):
-	MULTIPLE = (
-		Attribute.CODE.MP_REACH_NLRI,
-		Attribute.CODE.MP_UNREACH_NLRI,
-	)
 	NO_GENERATION = (
 		Attribute.CODE.NEXT_HOP,
 		Attribute.CODE.INTERNAL_SPLIT,
 		Attribute.CODE.INTERNAL_WATCHDOG,
 		Attribute.CODE.INTERNAL_WITHDRAW,
 		Attribute.CODE.INTERNAL_NAME,
+		Attribute.CODE.TREAT_AS_WITHDRAW,
+	)
+
+	TREAT_AS_WITHDRAW = (
+		Attribute.CODE.ORIGIN,
+		Attribute.CODE.AS_PATH,
+		Attribute.CODE.NEXT_HOP,
+		Attribute.CODE.MED,
+		Attribute.CODE.LOCAL_PREF
+	)
+
+	DISCARD = (
+		Attribute.CODE.ATOMIC_AGGREGATE,
+		Attribute.CODE.AGGREGATOR,
+	)
+
+	MANDATORY = (
+		Attribute.CODE.ORIGIN,
+		Attribute.CODE.AS_PATH,
+		Attribute.CODE.LOCAL_PREF
+	)
+
+	NO_DUPLICATE = (
+		Attribute.CODE.MP_REACH_NLRI,
+		Attribute.CODE.MP_UNREACH_NLRI,
 	)
 
 	# A cache of parsed attributes
@@ -88,56 +109,53 @@ class Attributes (dict):
 			# XXX: FIXME: really we should have a INTERNAL attribute in the classes
 			if code in Attributes.NO_GENERATION:
 				continue
+
 			attribute = self[code]
+
 			if code not in self.representation or attribute.GENERIC:
-				if code in self.MULTIPLE:
-					for attr in attribute:
-						yield ' attribute [ 0x%02X 0x%02X %s ]' % (code,attr.FLAG,str(attr))
-				else:
-					yield ' attribute [ 0x%02X 0x%02X %s ]' % (code,attribute.FLAG,str(attribute))
+				yield ' attribute [ 0x%02X 0x%02X %s ]' % (code,attribute.FLAG,str(attribute))
+				continue
+
+			how, _, name, presentation, _ = self.representation[code]
+			if how == 'boolean':
+				yield ' %s' % name
+			elif how == 'list':
+				yield ' %s %s' % (name, presentation % str(attribute))
+			elif how == 'multiple':
+				yield ' %s %s' % (name[0], presentation % str(attribute))
 			else:
-				how, _, name, presentation, __ = self.representation[code]
-				if how == 'boolean':
-					yield ' %s' % name
-				elif how == 'list':
-					yield ' %s %s' % (name, presentation % str(attribute))
-				elif how == 'multiple':
-					yield ' %s %s' % (name[0], presentation % str(attribute))
-				else:
-					yield ' %s %s' % (name, presentation % str(attribute))
+				yield ' %s %s' % (name, presentation % str(attribute))
 
 	def _generate_json (self):
 		for code in sorted(self.keys()):
 			# remove the next-hop from the attribute as it is define with the NLRI
 			if code in Attributes.NO_GENERATION:
 				continue
+			if code not in self.representation:
+				continue
+
 			attribute = self[code]
-			if code in self.representation:
-				how, _, name, __, presentation = self.representation[code]
-				if how == 'boolean':
-					yield '"%s": %s' % (name, 'true' if self.has(code) else 'false')
-				elif how == 'string':
-					yield '"%s": "%s"' % (name, presentation % str(attribute))
-				elif how == 'list':
-					yield '"%s": %s' % (name, presentation % attribute.json())
-				elif how == 'multiple':
-					for n in name:
-						value = attribute.json(n)
-						if value:
-							yield '"%s": %s' % (n, presentation % value)
-				elif how == 'inet':
-					yield '"%s": "%s"' % (name, presentation % str(attribute))
-				# Should never be ran
-				else:
-					yield '"%s": %s' % (name, presentation % str(attribute))
+
+			how, _, name, _, presentation = self.representation[code]
+			if how == 'boolean':
+				yield '"%s": %s' % (name, 'true' if self.has(code) else 'false')
+			elif how == 'string':
+				yield '"%s": "%s"' % (name, presentation % str(attribute))
+			elif how == 'list':
+				yield '"%s": %s' % (name, presentation % attribute.json())
+			elif how == 'multiple':
+				for n in name:
+					value = attribute.json(n)
+					if value:
+						yield '"%s": %s' % (n, presentation % value)
+			elif how == 'inet':
+				yield '"%s": "%s"' % (name, presentation % str(attribute))
+			# Should never be ran
 			else:
-				if code in Attributes.MULTIPLE:
-					for attr in attribute:
-						yield '"attribute-0x%02X-0x%02X": "%s"' % (code,attr.FLAG,str(attr))
-				else:
-					yield '"attribute-0x%02X-0x%02X": "%s"' % (code,attribute.FLAG,str(attribute))
+				yield '"%s": %s' % (name, presentation % str(attribute))
 
 	def __init__ (self):
+		dict.__init__(self)
 		# cached representation of the object
 		self._str = ''
 		self._idx = ''
@@ -155,27 +173,20 @@ class Attributes (dict):
 		# we return None as attribute if the unpack code must not generate them
 		if attribute is None:
 			return
+		if attribute.ID in self:
+			return
 
 		self._str = ''
 		self._json = ''
 
-		# XXX: FIXME: I am not sure anymore that more than one of each is possible
-		if attribute.ID in Attributes.MULTIPLE:
-			# deadcode: setdefault does not seem to exist anywhere ? (TM)
-			self.setdefault(attribute.ID,[]).append(attribute)
-		# elif attribute.ID in (Attribute.CODE.COMMUNITY, Attribute.CODE.EXTENDED_COMMUNITY):
-		# 	if attribute.ID not in self:
-		# 		self[attribute.ID] = Attribute.klass(attribute.ID,attribute.FLAG)()
-		# 	self[attribute.ID].add(attribute)
-		elif attribute.ID in self:
-			# For flows we can add extended-communities using special keywords and extended-community
-			# This allows this trick
-			if attribute.ID != Attribute.CODE.EXTENDED_COMMUNITY:
-				raise Notify(3,0,'multiple attribute for %s' % str(Attribute.CODE(attribute.ID)))
+		# For flows we can add extended-communities using special keywords and extended-community
+		# This allows this trick
+		if attribute.ID == Attribute.CODE.EXTENDED_COMMUNITY:
 			for community in attribute.communities:
 				self[attribute.ID].add(community)
-		else:
-			self[attribute.ID] = attribute
+				return
+
+		self[attribute.ID] = attribute
 
 	def remove (self, attrid):
 		self.pop(attrid)
@@ -224,11 +235,7 @@ class Attributes (dict):
 			if code in skip and skip[code](local_asn,peer_asn,attribute):
 				continue
 
-			if code in Attributes.MULTIPLE:
-				for attr in attribute:
-					message += attr.pack(negotiated)
-			else:
-				message += attribute.pack(negotiated)
+			message += attribute.pack(negotiated)
 
 		return message
 
@@ -311,15 +318,29 @@ class Attributes (dict):
 			flag &= Attribute.Flag.MASK_PARTIAL & 0xFF
 			# flag &= ~Attribute.Flag.PARTIAL & 0xFF  # cleaner than above (python use signed integer for ~)
 
+		if aid in self:
+			if aid in self.NO_DUPLICATE:
+				raise Notify(3,1,'multiple attribute for %s' % str(Attribute.CODE(attribute.ID)))
+
+			logger.parser('duplicate attribute %s (flag 0x%02X, aid 0x%02X) skipping' % (Attribute.CODE.names.get(aid,'unset'),flag,aid))
+			return self.parse(left,negotiated)
+
 		# handle the attribute if we know it
 		if Attribute.registered(aid,flag):
 			self.add(Attribute.unpack(aid,flag,attribute,negotiated))
 			return self.parse(left,negotiated)
 		# XXX: FIXME: we could use a fallback function here like capability
 
-		# if we know the attribute but the flag is not what the RFC says. ignore it.
+		# if we know the attribute but the flag is not what the RFC says.
 		if aid in Attribute.attributes_known:
-			logger.parser('invalid flag for attribute %s (flag 0x%02X, aid 0x%02X)' % (Attribute.CODE.names.get(aid,'unset'),flag,aid))
+			if aid in self.TREAT_AS_WITHDRAW:
+				logger.parser('invalid flag for attribute %s (flag 0x%02X, aid 0x%02X) treat as withdraw' % (Attribute.CODE.names.get(aid,'unset'),flag,aid))
+				self.add(TreatAsWithdraw())
+			if aid in self.DISCARD:
+				logger.parser('invalid flag for attribute %s (flag 0x%02X, aid 0x%02X) discard' % (Attribute.CODE.names.get(aid,'unset'),flag,aid))
+				return self.parse(left,negotiated)
+			# XXX: Check if we are missing any
+			logger.parser('invalid flag for attribute %s (flag 0x%02X, aid 0x%02X) unspecified (should not happen)' % (Attribute.CODE.names.get(aid,'unset'),flag,aid))
 			return self.parse(left,negotiated)
 
 		# it is an unknown transitive attribute we need to pass on
