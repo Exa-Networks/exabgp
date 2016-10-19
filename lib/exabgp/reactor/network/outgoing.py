@@ -32,7 +32,7 @@ class Outgoing (Connection):
 			async(self.io,peer)
 			if afi == AFI.ipv4:
 				TTL(self.io,peer,ttl)
-			else if afi == AFI.ipv6:
+			elif afi == AFI.ipv6:
 				TTLv6(self.io,peer,ttl)
 			connect(self.io,peer,port,afi,md5)
 			self.init = True
