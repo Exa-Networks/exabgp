@@ -169,6 +169,12 @@ def TTL (io, ip, ttl):
 		except socket.error,exc:
 			raise TTLError('This OS does not support IP_TTL (ttl-security) for %s (%s)' % (ip,errstr(exc)))
 
+def TTLv6 (io, ip, ttl):
+	if ttl:
+		try:
+			io.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_UNICAST_HOPS, ttl)
+		except socket.error,exc:
+			raise TTLError('This OS does not support unicast_hops (ttl-security) for %s (%s)' % (pi,errstr(exc)))
 
 def async (io, ip):
 	try:

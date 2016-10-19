@@ -1,9 +1,11 @@
+from exabgp.protocol.family import AFI
 from .connection import Connection
 from .tcp import create,bind
 from .tcp import connect
 from .tcp import MD5
 from .tcp import nagle
 from .tcp import TTL
+from .tcp import TTLv6
 from .tcp import async
 from .tcp import ready
 from .error import NetworkError
@@ -28,7 +30,10 @@ class Outgoing (Connection):
 			MD5(self.io,peer,port,md5)
 			bind(self.io,local,afi)
 			async(self.io,peer)
-			TTL(self.io,peer,ttl)
+			if afi == AFI.ipv4:
+				TTL(self.io,peer,ttl)
+			elif afi == AFI.ipv6:
+				TTLv6(self.io,peer,ttl)
 			connect(self.io,peer,port,afi,md5)
 			self.init = True
 		except NetworkError,exc:
