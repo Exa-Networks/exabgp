@@ -4,6 +4,8 @@ Version explained:
  bug   : increase on bug or incremental changes
 
 Version 3.4.18
+ * Backport: backhole community (RFC 7999)
+    original patch by: Job Snijders
  * Fix: Configuration parser does not accept configs without neighbors.
     patch by doddt
  * Fix: 'connect' keyword is now also allowed in neighbor scope

@@ -2126,6 +2126,8 @@ class Configuration (object):
 			# no-peer is not a correct syntax but I am sure someone will make the mistake :)
 			elif low == 'nopeer' or low == 'no-peer':
 				return Community.cached(Community.NO_PEER)
+			elif low == 'blackhole':
+				return Community.cached(Community.BLACKHOLE)
 			elif data.isdigit():
 				value = long(data)
 				if value >= pow(2,32):

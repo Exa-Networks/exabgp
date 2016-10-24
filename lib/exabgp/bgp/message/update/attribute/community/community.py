@@ -18,6 +18,7 @@ class Community (object):
 	NO_ADVERTISE         = pack('!L',0xFFFFFF02)
 	NO_EXPORT_SUBCONFED  = pack('!L',0xFFFFFF03)
 	NO_PEER              = pack('!L',0xFFFFFF04)
+	BLACKHOLE            = pack('!L',0xFFFF029A)
 
 	cache = {}
 	caching = True
@@ -34,6 +35,8 @@ class Community (object):
 			self._str = 'no-export-subconfed'
 		elif community == self.NO_PEER:
 			self._str = 'no-peer'
+		elif community == self.BLACKHOLE:
+			self._str = 'blackhole'
 		else:
 			self._str = "%d:%d" % unpack('!HH',self.community)
 
@@ -81,3 +84,4 @@ if not Community.cache:
 	Community.cache[Community.NO_ADVERTISE] = Community(Community.NO_ADVERTISE)
 	Community.cache[Community.NO_EXPORT_SUBCONFED] = Community(Community.NO_EXPORT_SUBCONFED)
 	Community.cache[Community.NO_PEER] = Community(Community.NO_PEER)
+	Community.cache[Community.BLACKHOLE] = Community(Community.BLACKHOLE)

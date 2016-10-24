@@ -376,6 +376,8 @@ def _community (value):
 		# no-peer is not a correct syntax but I am sure someone will make the mistake :)
 		elif low == 'nopeer' or low == 'no-peer':
 			return Community(Community.NO_PEER)
+		elif low == 'blackhole':
+			return Community(Community.BLACKHOLE)
 		elif value.isdigit():
 			value = unpack('!L',value)[0]
 			if value >= pow(2,32):
