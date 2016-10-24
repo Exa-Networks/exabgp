@@ -61,3 +61,6 @@ class ESI (object):
 	@classmethod
 	def unpack (cls, data):
 		return cls(data[:10])
+
+	def json (self, compact=None):
+		return '"esi": "%s"' % str(self)

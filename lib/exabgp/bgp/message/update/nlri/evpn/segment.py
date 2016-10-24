@@ -32,6 +32,7 @@ from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 # ===================================================================== EVPNNLRI
 
 
+# @EVPN.register
 class EthernetSegment (EVPN):
 	CODE = 1
 	NAME = "Ethernet Segment"
