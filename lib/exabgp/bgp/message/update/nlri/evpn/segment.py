@@ -31,7 +31,7 @@ from exabgp.bgp.message.notification import Notify
 
 @EVPN.register
 class EthernetSegment (EVPN):
-	CODE = 1
+	CODE = 4
 	NAME = "Ethernet Segment"
 	SHORT_NAME = "Segment"
 
