@@ -16,6 +16,8 @@ from exabgp.bgp.message import OUT
 
 from exabgp.bgp.message.update.nlri import NLRI
 
+# https://tools.ietf.org/html/rfc7432
+
 # +-----------------------------------+
 # |    Route Type (1 octet)           |
 # +-----------------------------------+
@@ -33,7 +35,7 @@ class EVPN (NLRI):
 
 	# NEED to be defined in the subclasses
 	CODE = -1
-	NAME = 'unknown'
+	NAME = 'Unknown'
 	SHORT_NAME = 'unknown'
 
 	def __init__ (self, action=OUT.UNSET, addpath=None):

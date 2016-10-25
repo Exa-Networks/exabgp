@@ -35,7 +35,7 @@ from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 @EVPN.register
 class EthernetAD (EVPN):
 	CODE = 1
-	NAME = "Ethernet Auto-Discovery (A-D)"
+	NAME = "Ethernet Auto-Discovery"
 	SHORT_NAME = "EthernetAD"
 
 	def __init__ (self, rd, esi, etag, label, packed=None,nexthop=None,action=None,addpath=None):
@@ -100,6 +100,7 @@ class EthernetAD (EVPN):
 		content = ' "code": %d, ' % self.CODE
 		content += '"parsed": true, '
 		content += '"raw": "%s", ' % self._raw()
+		content += '"name": "%s", ' % self.NAME
 		content += '%s, ' % self.rd.json()
 		content += '%s, ' % self.esi.json()
 		content += '%s, ' % self.etag.json()

@@ -156,6 +156,7 @@ class MAC (EVPN):
 		content = ' "code": %d, ' % self.CODE
 		content += '"parsed": true, '
 		content += '"raw": "%s", ' % self._raw()
+		content += '"name": "%s", ' % self.NAME
 		content += '%s, ' % self.rd.json()
 		content += '%s, ' % self.esi.json()
 		content += '%s, ' % self.etag.json()

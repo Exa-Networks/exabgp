@@ -83,6 +83,7 @@ class Multicast (EVPN):
 		content = ' "code": %d, ' % self.CODE
 		content += '"parsed": true, '
 		content += '"raw": "%s", ' % self._raw()
+		content += '"name": "%s", ' % self.NAME
 		content += '%s, ' % self.rd.json()
 		content += self.etag.json()
 		if self.ip:
