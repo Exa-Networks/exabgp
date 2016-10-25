@@ -7,7 +7,7 @@ Copyright (c) 2014-2015 Orange. All rights reserved.
 
 from struct import pack
 
-from exabgp.protocol.ip import IP, NoNextHop
+from exabgp.protocol.ip import NoNextHop
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -15,6 +15,8 @@ from exabgp.protocol.family import SAFI
 from exabgp.bgp.message import OUT
 
 from exabgp.bgp.message.update.nlri import NLRI
+
+# https://tools.ietf.org/html/rfc7432
 
 # +-----------------------------------+
 # |    Route Type (1 octet)           |
@@ -33,16 +35,12 @@ class EVPN (NLRI):
 
 	# NEED to be defined in the subclasses
 	CODE = -1
-	NAME = 'unknown'
+	NAME = 'Unknown'
 	SHORT_NAME = 'unknown'
 
-	def __init__ (self, packed, nexthop=NoNextHop, action=OUT.UNSET, addpath=None):
+	def __init__ (self, action=OUT.UNSET, addpath=None):
 		NLRI.__init__(self, AFI.l2vpn, SAFI.evpn, action)
-		self.nexthop = nexthop
-		self._packed = packed
-
-	# For subtype 2 (MAC/IP advertisement route),
-	# we will have to ignore a part of the route, so this method will be overridden
+		self._packed = ''
 
 	def index(self):
 		return NLRI._index(self) + self.pack()
@@ -90,9 +88,30 @@ class EVPN (NLRI):
 		if code in cls.registered_evpn:
 			klass = cls.registered_evpn[code].unpack(bgp[2:length+2])
 		else:
-			klass = cls(bgp[2:length+2], NoNextHop, action, addpath)
+			klass = GenericEVPN(code,bgp[2:length+2])
 		klass.CODE = code
 		klass.action = action
 		klass.addpath = addpath
 
 		return klass,bgp[length+2:]
+
+	def _raw (self):
+		return ''.join('%02X' % ord(_) for _ in self.pack())
+
+
+class GenericEVPN (EVPN):
+	def __init__ (self,code,packed):
+		EVPN.__init__(self)
+		self.CODE = code
+		self._pack(packed)
+
+	def _pack (self,packed=None):
+		if self._packed:
+			return self._packed
+
+		if packed:
+			self._packed = packed
+			return packed
+
+	def json (self, compact=None):
+		return '{ "code": %d, "parsed": false, "raw": "%s" }' % (self.CODE,self._raw())

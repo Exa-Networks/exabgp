@@ -295,31 +295,31 @@ class Processes (object):
 
 	@register_process(Message.CODE.OPEN)
 	def _open (self, peer, direction, message, header, body):
-		for process in self._notify(peer,'receive-%s' % Message.CODE.OPEN.SHORT):
+		for process in self._notify(peer,'%s-%s' % (direction,Message.CODE.OPEN.SHORT)):
 			self.write(process,self._encoder[process].open(peer,direction,message,header,body),peer)
 
 	@register_process(Message.CODE.UPDATE)
 	def _update (self, peer, direction, update, header, body):
-		for process in self._notify(peer,'receive-%s' % Message.CODE.UPDATE.SHORT):
+		for process in self._notify(peer,'%s-%s' % (direction,Message.CODE.UPDATE.SHORT)):
 			self.write(process,self._encoder[process].update(peer,direction,update,header,body),peer)
 
 	@register_process(Message.CODE.NOTIFICATION)
 	def _notification (self, peer, direction, message, header, body):
-		for process in self._notify(peer,'receive-%s' % Message.CODE.NOTIFICATION.SHORT):
+		for process in self._notify(peer,'%s-%s' % (direction,Message.CODE.NOTIFICATION.SHORT)):
 			self.write(process,self._encoder[process].notification(peer,direction,message,header,body),peer)
 
 	# unused-argument, must keep the API
 	@register_process(Message.CODE.KEEPALIVE)
 	def _keepalive (self, peer, direction, keepalive, header, body):
-		for process in self._notify(peer,'receive-%s' % Message.CODE.KEEPALIVE.SHORT):
+		for process in self._notify(peer,'%s-%s' % (direction,Message.CODE.KEEPALIVE.SHORT)):
 			self.write(process,self._encoder[process].keepalive(peer,direction,header,body),peer)
 
 	@register_process(Message.CODE.ROUTE_REFRESH)
 	def _refresh (self, peer, direction, refresh, header, body):
-		for process in self._notify(peer,'receive-%s' % Message.CODE.ROUTE_REFRESH.SHORT):
+		for process in self._notify(peer,'%s-%s' % (direction,Message.CODE.ROUTE_REFRESH.SHORT)):
 			self.write(process,self._encoder[process].refresh(peer,direction,refresh,header,body),peer)
 
 	@register_process(Message.CODE.OPERATIONAL)
 	def _operational (self, peer, direction, operational, header, body):
-		for process in self._notify(peer,'receive-%s' % Message.CODE.OPERATIONAL.SHORT):
+		for process in self._notify(peer,'%s-%s' % (direction,Message.CODE.OPERATIONAL.SHORT)):
 			self.write(process,self._encoder[process].operational(peer,direction,operational.category,operational,header,body),peer)

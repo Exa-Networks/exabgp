@@ -58,3 +58,6 @@ class EthernetTag (object):
 	@classmethod
 	def unpack (cls, data):
 		return cls(unpack("!L",data[:4])[0])
+
+	def json (self, compact=None):
+		return '"ethernet-tag": %s' % self.tag

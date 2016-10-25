@@ -1,7 +1,6 @@
 [![License](https://img.shields.io/pypi/l/exabgp.svg)](https://github.com/Exa-Networks/exabgp/blob/master/COPYRIGHT)
 [![PyPI](https://img.shields.io/pypi/v/exabgp.svg)](https://pypi.python.org/pypi/exabgp)
 [![PyPI Downloads](https://img.shields.io/pypi/dm/exabgp.svg)](https://pypi.python.org/pypi/exabgp)
-[![PyPI Python](https://img.shields.io/pypi/pyversions/exabgp.svg)](https://pypi.python.org/pypi/exabgp)
 [![PyPI Status](https://img.shields.io/pypi/status/exabgp.svg)](https://pypi.python.org/pypi/exabgp)
 [![PyPI Wheel](https://img.shields.io/pypi/wheel/exabgp.svg)](https://pypi.python.org/pypi/exabgp)
 [![Gitter](https://badges.gitter.im/Exa-Networks/exabgp.svg)](https://gitter.im/Exa-Networks/exabgp?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)

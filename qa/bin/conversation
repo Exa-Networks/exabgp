@@ -254,7 +254,7 @@ def check (group, delay=1):
 		display(str(exc))
 
 
-def dispatch ():
+def dispatch (running):
 	outs = {}
 	errs = {}
 
@@ -264,12 +264,12 @@ def dispatch ():
 		display('\n','checking','\n','--------','\n')
 
 		processes = {}
-		for name in STATUS.names:
+		for name in running:
 			processes[name] = subprocess.Popen([sys.argv[0],STATUS.group[name],str(STATUS.port[name])], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			STATUS.start(name)
 			STATUS.display()
 
-		names = list(STATUS.names)
+		names = list(running)
 		while names:
 			STATUS.display()
 			for name in list(names):
@@ -356,7 +356,11 @@ if __name__ == '__main__':
 	signal.signal(signal.SIGALRM, alarm_handler)
 	signal.alarm(STATUS.timeout)
 
-	success = dispatch()
+	to_run = STATUS.names
+	chunk = 10
+	while to_run:
+		running, to_run = to_run[:chunk], to_run[chunk:]
+		success = dispatch(running)
 	STATUS.display()
 
 	sys.exit(0 if success else 1)
