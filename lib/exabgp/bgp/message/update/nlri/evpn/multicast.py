@@ -87,5 +87,5 @@ class Multicast (EVPN):
 		content += '%s, ' % self.rd.json()
 		content += self.etag.json()
 		if self.ip:
-			content += ', "ip": "%s" ' % str(self.ip)
-		return '{%s}' % content
+			content += ', "ip": "%s"' % str(self.ip)
+		return '{%s }' % content
