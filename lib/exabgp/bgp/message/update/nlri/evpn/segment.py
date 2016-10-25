@@ -29,7 +29,7 @@ from exabgp.bgp.message.notification import Notify
 # ===================================================================== EVPNNLRI
 
 
-# @EVPN.register
+@EVPN.register
 class EthernetSegment (EVPN):
 	CODE = 1
 	NAME = "Ethernet Segment"
