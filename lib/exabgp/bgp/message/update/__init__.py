@@ -223,7 +223,7 @@ class Update (Message):
 			packed_del = ''
 			packed_mp_del = ''
 
-		addpath = negotiated.addpath.send(AFI.ipv4,SAFI.unicast)
+		# addpath = negotiated.addpath.send(AFI.ipv4,SAFI.unicast)
 
 		while add_nlri:
 			nlri = add_nlri.pop()
@@ -268,6 +268,8 @@ class Update (Message):
 
 		attributes = Attributes.unpack(_attributes,negotiated)
 
+		treat_as_withdraw = Attribute.CODE.TREAT_AS_WITHDRAW in attributes
+
 		if not announced:
 			logger.parser("announced NLRI none")
 
@@ -287,33 +289,39 @@ class Update (Message):
 			withdrawn = left
 			nlris.append(nlri)
 
-		while announced:
-			nlri,left = NLRI.unpack_nlri(AFI.ipv4,SAFI.unicast,announced,IN.ANNOUNCED,addpath)
-			nlri.nexthop = nexthop
-			logger.parser("announced NLRI %s" % nlri)
-			announced = left
-			nlris.append(nlri)
+		if treat_as_withdraw:
+			while announced:
+				nlri,left = NLRI.unpack_nlri(AFI.ipv4,SAFI.unicast,announced,IN.WITHDRAWN,addpath)
+				logger.parser("treat as withdraw NLRI %s" % nlri)
+				announced = left
+				nlris.append(nlri)
+		else:
+			while announced:
+				nlri,left = NLRI.unpack_nlri(AFI.ipv4,SAFI.unicast,announced,IN.ANNOUNCED,addpath)
+				nlri.nexthop = nexthop
+				logger.parser("announced NLRI %s" % nlri)
+				announced = left
+				nlris.append(nlri)
 
-		# required for 'is' comparaison
-		UNREACH = [EMPTY_MPURNLRI,]
-		REACH = [EMPTY_MPRNLRI,]
+		unreach = attributes.pop(MPURNLRI.ID,None)
+		reach = attributes.pop(MPRNLRI.ID,None)
 
-		unreach = attributes.pop(MPURNLRI.ID,UNREACH)
-		reach = attributes.pop(MPRNLRI.ID,REACH)
+		if unreach is not None:
+			nlris.extend(unreach.nlris)
 
-		for mpr in unreach:
-			nlris.extend(mpr.nlris)
-
-		for mpr in reach:
-			nlris.extend(mpr.nlris)
+		if reach is not None:
+			if treat_as_withdraw or True:
+				for nlri in reach.nlris:
+					nlri.action = IN.WITHDRAWN
+			nlris.extend(reach.nlris)
 
 		if not attributes and not nlris:
 			# Careful do not use == or != as the comparaison does not work
-			if unreach is UNREACH and reach is REACH:
+			if unreach is None and reach is None:
 				return EOR(AFI(AFI.ipv4),SAFI(SAFI.unicast))
-			if unreach is not UNREACH:
+			if unreach is not None:
 				return EOR(unreach[0].afi,unreach[0].safi)
-			if reach is not REACH:
+			if reach is not None:
 				return EOR(reach[0].afi,reach[0].safi)
 			raise RuntimeError('This was not expected')
 

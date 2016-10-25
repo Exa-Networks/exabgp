@@ -268,6 +268,9 @@ class Attributes (dict):
 
 		attributes = cls().parse(data,negotiated)
 
+		if Attribute.CODE.TREAT_AS_WITHDRAW in attributes:
+			return attributes
+
 		if Attribute.CODE.AS_PATH in attributes and Attribute.CODE.AS4_PATH in attributes:
 			attributes.merge_attributes()
 
@@ -338,8 +341,16 @@ class Attributes (dict):
 
 			try:
 				decoded = Attribute.unpack(aid,flag,attribute,negotiated)
-			except IndexError:
-				decoded = TreatAsWithdraw()
+			except IndexError, exc:
+				if aid in self.TREAT_AS_WITHDRAW:
+					decoded = TreatAsWithdraw()
+				else:
+					raise exc
+			except Notify, exc:
+				if aid in self.TREAT_AS_WITHDRAW:
+					decoded = TreatAsWithdraw()
+				else:
+					raise exc
 			self.add(decoded)
 			return self.parse(left,negotiated)
 
