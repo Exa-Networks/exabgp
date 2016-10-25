@@ -160,7 +160,7 @@ class MAC (EVPN):
 		content += '%s, ' % self.esi.json()
 		content += '%s, ' % self.etag.json()
 		content += '%s, ' % self.mac.json()
-		content += self.label.json()
+		content += '%s ' % self.label.json()
 		if self.ip:
 			content += ', "ip": "%s" ' % str(self.ip)
 		return '{%s}' % content
