@@ -146,7 +146,6 @@ class MAC (EVPN):
 		if payload:
 			ip = IP.unpack(data[end+1:end+1+iplenUnpack])
 		else:
-			# import pdb; pdb.set_trace()
 			ip = None
 		label = Labels.unpack(data[end+1+iplenUnpack:end+1+iplenUnpack+3])
 

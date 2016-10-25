@@ -268,8 +268,6 @@ class Update (Message):
 
 		attributes = Attributes.unpack(_attributes,negotiated)
 
-		treat_as_withdraw = Attribute.CODE.TREAT_AS_WITHDRAW in attributes
-
 		if not announced:
 			logger.parser("announced NLRI none")
 
@@ -289,19 +287,12 @@ class Update (Message):
 			withdrawn = left
 			nlris.append(nlri)
 
-		if treat_as_withdraw:
-			while announced:
-				nlri,left = NLRI.unpack_nlri(AFI.ipv4,SAFI.unicast,announced,IN.WITHDRAWN,addpath)
-				logger.parser("treat as withdraw NLRI %s" % nlri)
-				announced = left
-				nlris.append(nlri)
-		else:
-			while announced:
-				nlri,left = NLRI.unpack_nlri(AFI.ipv4,SAFI.unicast,announced,IN.ANNOUNCED,addpath)
-				nlri.nexthop = nexthop
-				logger.parser("announced NLRI %s" % nlri)
-				announced = left
-				nlris.append(nlri)
+		while announced:
+			nlri,left = NLRI.unpack_nlri(AFI.ipv4,SAFI.unicast,announced,IN.ANNOUNCED,addpath)
+			nlri.nexthop = nexthop
+			logger.parser("announced NLRI %s" % nlri)
+			announced = left
+			nlris.append(nlri)
 
 		unreach = attributes.pop(MPURNLRI.ID,None)
 		reach = attributes.pop(MPRNLRI.ID,None)
@@ -310,9 +301,6 @@ class Update (Message):
 			nlris.extend(unreach.nlris)
 
 		if reach is not None:
-			if treat_as_withdraw or True:
-				for nlri in reach.nlris:
-					nlri.action = IN.WITHDRAWN
 			nlris.extend(reach.nlris)
 
 		if not attributes and not nlris:

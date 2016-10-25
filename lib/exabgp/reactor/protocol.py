@@ -32,6 +32,9 @@ from exabgp.bgp.message import Notification
 from exabgp.bgp.message import Notify
 from exabgp.bgp.message import Operational
 
+from exabgp.bgp.message.direction import IN
+from exabgp.bgp.message.update.attribute import Attribute
+
 from exabgp.reactor.api.processes import ProcessError
 
 from exabgp.logger import Logger
@@ -212,6 +215,11 @@ class Protocol (object):
 				raise Notify(1,0,'can not decode update message of type "%d"' % msg_id)
 				# raise Notify(5,0,'unknown message received')
 
+			if message.TYPE == Update.TYPE:
+				if Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in message.attributes:
+					for nlri in message.nlris:
+						nlri.action = IN.WITHDRAWN
+
 			if for_api:
 				if consolidate:
 					self.peer.reactor.processes.message(msg_id,self.neighbor,'receive',message,header,body)
@@ -221,23 +229,10 @@ class Protocol (object):
 			if message.TYPE == Notification.TYPE:
 				raise message
 
-			yield message
-
-		# elif msg == Message.CODE.ROUTE_REFRESH:
-		# 	if self.negotiated.refresh != REFRESH.ABSENT:
-		# 		self.logger.message(self.me('<< ROUTE-REFRESH'))
-		# 		refresh = RouteRefresh.unpack_message(body,self.negotiated)
-		# 		if self.neighbor.api.receive_refresh:
-		# 			if refresh.reserved in (RouteRefresh.start,RouteRefresh.end):
-		# 				if self.neighbor.api.consolidate:
-		# 					self.peer.reactor.process.refresh(self.peer,refresh,header,body)
-		# 				else:
-		# 					self.peer.reactor.processes.refresh(self.peer,refresh,'','')
-		# 	else:
-		# 		# XXX: FIXME: really should raise, we are too nice
-		# 		self.logger.message(self.me('<< NOP (un-negotiated type %d)' % msg))
-		# 		refresh = UnknownMessage.unpack_message(body,self.negotiated)
-		# 	yield refresh
+			if message.TYPE == Update.TYPE and Attribute.CODE.INTERNAL_DISCARD in message.attributes:
+				yield _NOP
+			else:
+				yield message
 
 	def validate_open (self):
 		error = self.negotiated.validate(self.neighbor)

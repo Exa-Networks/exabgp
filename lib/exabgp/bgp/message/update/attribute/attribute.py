@@ -18,7 +18,28 @@ from exabgp.util.cache import Cache
 
 class TreatAsWithdraw (object):
 	ID = 0xffff
+	GENERIC = False
 
+	def __init__ (self,aid=None):
+		self.aid = aid
+
+	def __str__ (self):
+		if self.aid is None:
+			return 'treat-as-withdraw'
+		return 'treat-as-withdraw due to %s' % Attribute.CODE(self.aid)
+
+
+class Discard (object):
+	ID = 0xfffe
+	GENERIC = False
+
+	def __init__ (self,aid=None):
+		self.aid = aid
+
+	def __str__ (self):
+		if self.aid is None:
+			return 'discard'
+		return 'discard due to %s' % Attribute.CODE(self.aid)
 
 # ==================================================================== Attribute
 #
@@ -85,11 +106,12 @@ class Attribute (object):
 		# draft-ietf-idr-large-community
 		LARGE_COMMUNITY    = 0x1E  # 30
 
-		INTERNAL_NAME      = 0xFFFB
-		INTERNAL_WITHDRAW  = 0xFFFC
-		INTERNAL_WATCHDOG  = 0xFFFD
-		INTERNAL_SPLIT     = 0xFFFE
-		TREAT_AS_WITHDRAW  = 0xFFFF
+		INTERNAL_NAME              = 0xFFFA
+		INTERNAL_WITHDRAW          = 0xFFFB
+		INTERNAL_WATCHDOG          = 0xFFFC
+		INTERNAL_SPLIT             = 0xFFFD
+		INTERNAL_DISCARD           = 0xFFFE
+		INTERNAL_TREAT_AS_WITHDRAW = 0xFFFF  # Treat as Withdraw
 
 		# Currently formating is done with %-18s
 		names = {
@@ -112,10 +134,11 @@ class Attribute (object):
 			PMSI_TUNNEL:        'pmsi-tunnel',
 			TUNNEL_ENCAP:       'tunnel-encaps',
 			AIGP:               'aigp',
-			0xfffb:             'internal-name',
-			0xfffc:             'internal-withdraw',
-			0xfffd:             'internal-watchdog',
-			0xfffe:             'internal-split',
+			0xfffa:             'internal-name',
+			0xfffb:             'internal-withdraw',
+			0xfffc:             'internal-watchdog',
+			0xfffd:             'internal-split',
+			0xfffe:             'internal-discard',
 			0xffff:             'internal-treath-as-withdraw',
 		}
 

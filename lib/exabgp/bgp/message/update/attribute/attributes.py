@@ -12,6 +12,7 @@ from exabgp.configuration.environment import environment
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
+from exabgp.bgp.message.update.attribute.attribute import Discard
 from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.bgp.message.update.attribute.aspath import ASPath
@@ -47,9 +48,10 @@ class Attributes (dict):
 		Attribute.CODE.NEXT_HOP,
 		Attribute.CODE.INTERNAL_SPLIT,
 		Attribute.CODE.INTERNAL_WATCHDOG,
-		Attribute.CODE.INTERNAL_WITHDRAW,
 		Attribute.CODE.INTERNAL_NAME,
-		Attribute.CODE.TREAT_AS_WITHDRAW,
+		Attribute.CODE.INTERNAL_WITHDRAW,
+		# Attribute.CODE.INTERNAL_DISCARD,
+		# Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW,
 	)
 
 	TREAT_AS_WITHDRAW = (
@@ -107,6 +109,8 @@ class Attributes (dict):
 		Attribute.CODE.PMSI_TUNNEL:        ('string',  '', 'pmsi',               '%s',     '%s'),
 		Attribute.CODE.AIGP:               ('integer', '', 'aigp',               '%s',     '%s'),
 		Attribute.CODE.INTERNAL_NAME:      ('string',  '', 'name',               '%s',     '%s'),
+		Attribute.CODE.INTERNAL_DISCARD:   ('string',  '', 'error',              '%s',     '%s'),
+		Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW: ('string','','error',         '%s',     '%s'),
 	}
 
 	def _generate_text (self):
@@ -268,7 +272,7 @@ class Attributes (dict):
 
 		attributes = cls().parse(data,negotiated)
 
-		if Attribute.CODE.TREAT_AS_WITHDRAW in attributes:
+		if Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in attributes:
 			return attributes
 
 		if Attribute.CODE.AS_PATH in attributes and Attribute.CODE.AS4_PATH in attributes:
@@ -303,7 +307,11 @@ class Attributes (dict):
 			# We do not care if the attribute are transitive or not as we do not redistribute
 			flag = Attribute.Flag(ord(data[0]))
 			aid = Attribute.CODE(ord(data[1]))
+		except IndexError:
+			self.add(TreatAsWithdraw())
+			return self
 
+		try:
 			offset = 3
 			length = ord(data[2])
 
@@ -311,7 +319,7 @@ class Attributes (dict):
 				offset = 4
 				length = (length << 8) + data[3]
 		except IndexError:
-			self.add(TreatAsWithdraw())
+			self.add(TreatAsWithdraw(aid))
 			return self
 
 		data = data[offset:]
@@ -336,19 +344,21 @@ class Attributes (dict):
 		# handle the attribute if we know it
 		if Attribute.registered(aid,flag):
 			if length == 0 and aid not in self.VALID_ZERO:
-				self.add(TreatAsWithdraw())
+				self.add(TreatAsWithdraw(aid))
 				return self.parse(left,negotiated)
 
 			try:
 				decoded = Attribute.unpack(aid,flag,attribute,negotiated)
 			except IndexError, exc:
 				if aid in self.TREAT_AS_WITHDRAW:
-					decoded = TreatAsWithdraw()
+					decoded = TreatAsWithdraw(aid)
 				else:
 					raise exc
 			except Notify, exc:
 				if aid in self.TREAT_AS_WITHDRAW:
 					decoded = TreatAsWithdraw()
+				elif aid in self.DISCARD:
+					decoded = Discard()
 				else:
 					raise exc
 			self.add(decoded)
@@ -374,7 +384,7 @@ class Attributes (dict):
 			try:
 				decoded = GenericAttribute(aid,flag | Attribute.Flag.PARTIAL,attribute)
 			except IndexError:
-				decoded = TreatAsWithdraw()
+				decoded = TreatAsWithdraw(aid)
 			self.add(decoded,attribute)
 			return self.parse(left,negotiated)
 
