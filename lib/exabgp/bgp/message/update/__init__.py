@@ -202,7 +202,7 @@ class Update (Message):
 					if seen_size > msg_size:
 						if not packed_mp_add and not packed_mp_del and not packed_del:
 							raise Notify(6,0,'attributes size is so large we can not even pack on MPURNLRI')
-						yield self._message(Update.prefix(packed_del) + Update.prefix(attr + packed_mp_del + packed_mp_add))
+						yield self._message(Update.prefix(packed_del) + Update.prefix(packed_mp_del + packed_mp_add + attr))
 						packed_del = ''
 						packed_mp_del = ''
 						packed_mp_add = packed
@@ -233,10 +233,10 @@ class Update (Message):
 				if not packed_add and not packed_mp_add and not packed_mp_del and not packed_del:
 					raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
 				if packed_mp_add:
-					yield self._message(Update.prefix(packed_del) + Update.prefix(attr + packed_mp_del + packed_mp_add) + packed_add)
+					yield self._message(Update.prefix(packed_del) + Update.prefix(packed_mp_del + packed_mp_add + attr) + packed_add)
 					msg_size = negotiated.msg_size - 19 - 2 - 2  # 2 bytes for each of the two prefix() header
 				else:
-					yield self._message(Update.prefix(packed_del) + Update.prefix(attr + packed_mp_del) + packed_add)
+					yield self._message(Update.prefix(packed_del) + Update.prefix(packed_mp_del + attr) + packed_add)
 				packed_del = ''
 				packed_mp_del = ''
 				packed_mp_add = ''
@@ -244,7 +244,7 @@ class Update (Message):
 			else:
 				packed_add += packed
 
-		yield self._message(Update.prefix(packed_del) + Update.prefix(attr + packed_mp_del + packed_mp_add) + packed_add)
+		yield self._message(Update.prefix(packed_del) + Update.prefix(packed_mp_del + packed_mp_add + attr) + packed_add)
 
 	# XXX: FIXME: this can raise ValueError. IndexError,TypeError, struct.error (unpack) = check it is well intercepted
 	@classmethod
