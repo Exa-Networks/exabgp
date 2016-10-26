@@ -104,7 +104,7 @@ class Attribute (object):
 		AIGP               = 0x1A  # 26
 
 		# draft-ietf-idr-large-community
-		LARGE_COMMUNITY    = 0x1E  # 30
+		LARGE_COMMUNITY    = 0x20  # 32
 
 		INTERNAL_NAME              = 0xFFFA
 		INTERNAL_WITHDRAW          = 0xFFFB
