@@ -59,7 +59,8 @@ class Attributes (dict):
 		Attribute.CODE.AS_PATH,
 		Attribute.CODE.NEXT_HOP,
 		Attribute.CODE.MED,
-		Attribute.CODE.LOCAL_PREF
+		Attribute.CODE.LOCAL_PREF,
+		Attribute.CODE.LARGE_COMMUNITY
 	)
 
 	DISCARD = (
