@@ -15,6 +15,23 @@ Also, [alone](http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf) or i
 
 But it is not its only strength, thanks to modern routers' flow balancing, ExaBGP can also be used to save you money on [load balancers](http://bits.shutterstock.com/2014/05/22/stop-buying-load-balancers-and-start-controlling-your-traffic-flow-with-software/). Other uses include keeping an eye on network changes done by [RIPE](https://labs.ripe.net/Members/wouter_miltenburg/researching-next-generation-ris-route-collectors) or by other networks with [GIXLG](https://github.com/dpiekacz/gixlg/wiki/GIXLG-wiki).
 
+## Who is using ExaBGP ?
+
+These organisations have spoken of, or are using/have used ExaBGP: 
+[AMS-IX](https://ripe64.ripe.net/presentations/49-Follow_Up_AMS-IX_route-server_test_Euro-IX_20th_RIPE64.pdf),
+[Alcatel Lucent](http://www.nanog.org/sites/default/files/wed.general.trafficdiversion.serodio.10.pdf),
+[BBC](http://www.bbc.co.uk/blogs/internet/entries/8c6c2414-df7a-4ad7-bd2e-dbe481da3633),
+[Blablacar](http://blablatech.com/blog/bgp-routing-to-containers),
+[Cisco Systems](http://www.ciscoknowledgenetwork.com/files/452_06-11-14-20140610_v3_BGP_Optimizing_the_SDN-v1-0.pdf?),
+[CloudFlare](http://www.slideshare.net/TomPaseka/flowspec-apf-2013),
+[Dailymotion](https://github.com/pyke369/exabgp-helpers),
+[Facebook](https://code.facebook.com/posts/1734309626831603/dhcplb-an-open-source-load-balancer/),
+[MaxCDN](http://blog.maxcdn.com/anycast-ip-routing-used-maxcdn/),
+[Microsoft](http://www.nanog.org/sites/default/files/wed.general.brainslug.lapukhov.20.pdf),
+[OpenDNS](https://blog.opendns.com/2013/01/10/high-availability-with-anycast-routing/),
+[PowerDNS](https://blog.powerdns.com/2016/02/23/an-important-update-on-new-powerdns-products/),
+[RIPE NCC](https://labs.ripe.net/Members/wouter_miltenburg/Researchpaper.pdf), ...
+
 ## Installation
 
 The program is packaged for Debian, Ubuntu, ArchLinux, Gentoo, Mint, FreeBSD, OSX and even OmniOS.
@@ -54,7 +71,7 @@ The configuration file and API format change from time to time, but every effort
 [![Landscape Code Quality](https://landscape.io/github/Exa-Networks/exabgp/master/landscape.svg)](https://landscape.io/github/Exa-Networks/exabgp/)
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/Exa-Networks/exabgp/badges/quality-score.png)](https://scrutinizer-ci.com/g/Exa-Networks/exabgp/)
 [![Coverage Status](https://img.shields.io/coveralls/Exa-Networks/exabgp.svg)](https://coveralls.io/r/Exa-Networks/exabgp)
-[![Throughput Graph](https://graphs.waffle.io/Exa-Networks/exabgp/throughput.svg)](https://waffle.io/Exa-Networks/exabgp/metrics/throughput) 
+[![Throughput Graph](https://graphs.waffle.io/Exa-Networks/exabgp/throughput.svg)](https://waffle.io/Exa-Networks/exabgp/metrics/throughput)
 
 <!--
 [![Testing Status](https://travis-ci.org/Exa-Networks/exabgp.svg)](https://travis-ci.org/Exa-Networks/exabgp)
@@ -128,26 +145,6 @@ RFC support includes ASN4, IPv6, MPLS, VPLS, Flow, Graceful Restart, Enhanced Ro
 More information can be found [here](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information)
 
 ExaBGP does **not** perform any FIB manipulation. If this is what you need, you may consider another open source BGP daemon such as [BIRD](http://bird.network.cz/) or [Quagga](http://www.quagga.net/).
-
-## Who is using ExaBGP ?
-
-These organisations have spoken of, or are using/have used ExaBGP:
-
-[AMS-IX](https://ripe64.ripe.net/presentations/49-Follow_Up_AMS-IX_route-server_test_Euro-IX_20th_RIPE64.pdf),
-[Alcatel Lucent](http://www.nanog.org/sites/default/files/wed.general.trafficdiversion.serodio.10.pdf),
-[BBC](http://www.bbc.co.uk/),
-[Cisco Systems](http://www.ciscoknowledgenetwork.com/files/452_06-11-14-20140610_v3_BGP_Optimizing_the_SDN-v1-0.pdf?),
-[CloudFlare](http://www.slideshare.net/TomPaseka/flowspec-apf-2013),
-[Dailymotion](https://twitter.com/fgabut),
-[Deutsche Telekom/TeraStream](https://www.telekom.com),
-[Facebook](http://velocityconf.com/velocity2013/public/schedule/detail/28410),
-[Internap](http://www.internap.com/),
-[MaxCDN](http://blog.maxcdn.com/anycast-ip-routing-used-maxcdn/),
-[Microsoft](http://www.nanog.org/sites/default/files/wed.general.brainslug.lapukhov.20.pdf),
-[Neo Telecom](http://media.frnog.org/FRnOG_18/FRnOG_18-6.pdf),
-[OpenDNS](http://www.opendns.com/),
-[PowerDNS](https://www.powerdns.com/),
-[RIPE NCC](https://labs.ripe.net/Members/wouter_miltenburg/Researchpaper.pdf),
 
 ## Self Promotion
 
