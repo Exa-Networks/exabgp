@@ -318,7 +318,7 @@ class Attributes (dict):
 
 			if flag & Attribute.Flag.EXTENDED_LENGTH:
 				offset = 4
-				length = (length << 8) + data[3]
+				length = (length << 8) + ord(data[3])
 		except IndexError:
 			self.add(TreatAsWithdraw(aid))
 			return self
