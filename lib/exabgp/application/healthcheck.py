@@ -271,7 +271,7 @@ def loopback_ips(label):
     if sys.platform.startswith("linux"):
         # Use "ip" (ifconfig is not able to see all addresses)
         ipre = re.compile(r"^(?P<index>\d+):\s+(?P<name>\S+)\s+inet6?\s+"
-                          r"(?P<ip>[\da-f.:]+)/(?P<netmask>\d+)\s+.*")
+                          r"(?P<ip>[\da-f.:]+)/(?P<mask>\d+)\s+.*")
         labelre = re.compile(r".*\s+lo:(?P<label>\S+).*")
         cmd = subprocess.Popen("/sbin/ip -o address show dev lo".split(),
                                shell=False, stdout=subprocess.PIPE)
@@ -288,7 +288,8 @@ def loopback_ips(label):
         mo = ipre.match(line)
         if not mo:
             continue
-        ip = ip_address(mo.group("ip"))
+        ip = ip_address("{0}/{1}".format(mo.group("ip"),
+                         mo.group("mask")))
         if not ip.is_loopback:
             if label:
                 lmo = labelre.match(line)
