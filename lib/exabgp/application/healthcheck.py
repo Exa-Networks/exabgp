@@ -288,8 +288,12 @@ def loopback_ips(label):
         mo = ipre.match(line)
         if not mo:
             continue
-        ip = ip_address("{0}/{1}".format(mo.group("ip"),
-                         mo.group("mask")))
+        mask = int(mo.group("mask")) or bin(int(mo.group("netmask"), 16)).count("1")
+        try:
+            ip = ip_address("{0}/{1}".format(mo.group("ip"),
+                                             mask))
+        except ValueError:
+            continue
         if not ip.is_loopback:
             if label:
                 lmo = labelre.match(line)
