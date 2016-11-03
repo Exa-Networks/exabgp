@@ -307,7 +307,7 @@ def loopback_ips(label):
 def setup_ips(ips, label):
     """Setup missing IP on loopback interface"""
     existing = set(loopback_ips(label))
-    toadd = set(ips) - existing
+    toadd = set([ip_address(ip) for net in ips for ip in net]) - existing
     for ip in toadd:
         logger.debug("Setup loopback IP address %s", ip)
         with open(os.devnull, "w") as fnull:
@@ -329,7 +329,7 @@ def remove_ips(ips, label):
     existing = set(loopback_ips(label))
 
     # Get intersection of IPs (ips setup, and IPs configured by ExaBGP)
-    toremove = set(ips) | existing
+    toremove = set([ip_address(ip) for net in ips for ip in net]) | existing
     for ip in toremove:
         logger.debug("Remove loopback IP address %s", ip)
         with open(os.devnull, "w") as fnull:
