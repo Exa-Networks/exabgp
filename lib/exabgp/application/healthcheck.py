@@ -333,8 +333,7 @@ def remove_ips(ips, label):
     for ip in toremove:
         logger.debug("Remove loopback IP address %s", ip)
         with open(os.devnull, "w") as fnull:
-            # We specify the prefix length due to ip addr warnings about wildcard deletion
-            cmd = ["ip", "address", "delete", str(ip) + "/32", "dev", "lo"]
+            cmd = ["ip", "address", "delete", str(ip), "dev", "lo"]
             if label:
                 cmd += ["label", "lo:{0}".format(label)]
             try:
