@@ -58,7 +58,7 @@ logger = logging.getLogger("healthcheck")
 
 try:
     # Python 3.3+ or backport
-    from ipaddress import ip_address as _ip_address  # pylint: disable=F0401
+    from ipaddress import ip_network as _ip_address  # pylint: disable=F0401
 
     def ip_address(x):
         try:
@@ -66,10 +66,11 @@ try:
         except AttributeError:
             pass
         return _ip_address(x)
+
 except ImportError:
     try:
         # Python 2.6, 2.7, 3.2
-        from ipaddr import IPAddress as ip_address
+        from ipaddr import IPNetwork as ip_address
     except ImportError:
         sys.stderr.write(
             '\n'
@@ -154,7 +155,10 @@ def parse():
                    help="self IP address to use as next hop")
     g.add_argument("--ip", metavar='IP',
                    type=ip_address, dest="ips", action="append",
-                   help="advertise this IP address")
+                   help="advertise this IP address or network (CIDR notation)")
+    g.add_argument("--deaggregate-networks",
+                   dest="deaggregate_networks", action="store_true",
+                   help="Deaggregate Networks specified in --ip")
     g.add_argument("--no-ip-setup",
                    action="store_false", dest="ip_setup",
                    help="don't setup missing IP addresses")
@@ -427,10 +431,10 @@ def loop(options):
                 command = "announce" if target is states.UP else "withdraw"
             else:
                 command = "announce"
-            announce = "route {0}/{1} next-hop {2}".format(
+            announce = "route {0} next-hop {1}".format(
                 str(ip),
-                ip.max_prefixlen,
                 options.next_hop or "self")
+
             if command == "announce":
                 announce = "{0} med {1}".format(announce, metric)
                 if options.community:
@@ -556,6 +560,11 @@ def main():
         if options.ip_setup:
             setup_ips(options.ips, options.label)
         drop_privileges(options.user, options.group)
+
+        # Parse defined networks into a list of IPs for advertisement
+        if options.deaggregate_networks:
+            options.ips = [ip_address(ip) for net in options.ips for ip in net]
+
         options.ips = collections.deque(options.ips)
         options.ips.rotate(-options.start_ip)
         options.ips = list(options.ips)
