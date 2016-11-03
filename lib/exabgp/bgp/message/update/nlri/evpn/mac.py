@@ -46,11 +46,8 @@ class MAC (EVPN):
 	SHORT_NAME = "MACAdv"
 
 	def __init__ (self, rd, esi, etag, mac, maclen, label,ip,packed=None,nexthop=None,action=None,addpath=None):
-		EVPN.__init__(self,packed,nexthop,action,addpath)
-		# assert(isinstance(rd, RouteDistinguisher))
-		# assert(isinstance(etag, EthernetTag))
-		# assert(isinstance(ip, IP))
-		# assert(isinstance(mac, MACQUAL))
+		EVPN.__init__(self,action,addpath)
+		self.nexthop = nexthop
 		self.rd = rd
 		self.esi = esi
 		self.etag = etag
@@ -58,7 +55,11 @@ class MAC (EVPN):
 		self.mac = mac
 		self.ip = ip
 		self.label = label if label else Labels.NOLABEL
-		self._pack()
+		self._pack(packed)
+
+	# XXX: we have to ignore a part of the route
+	def index (self):
+		return EVPN.index(self)
 
 	def __eq__ (self, other):
 		return \
@@ -89,19 +90,24 @@ class MAC (EVPN):
 		# esi and label MUST *NOT* be part of the hash
 		return hash((self.rd,self.etag,self.mac,self.ip))
 
-	def _pack (self):
-		if not self._packed:
-			ip = self.ip.pack() if self.ip else ''
-			self._packed = "%s%s%s%s%s%s%s%s" % (
-				self.rd.pack(),
-				self.esi.pack(),
-				self.etag.pack(),
-				chr(self.maclen),  # only 48 supported by the draft
-				self.mac.pack(),
-				chr(len(ip)*8 if ip else '\x00'),
-				ip,
-				self.label.pack()
-			)
+	def _pack (self, packed=None):
+		if self._packed:
+			return self._packed
+
+		if packed:
+			self._packed = packed
+			return packed
+
+		self._packed = "%s%s%s%s%s%s%s%s" % (
+			self.rd.pack(),
+			self.esi.pack(),
+			self.etag.pack(),
+			chr(self.maclen),  # only 48 supported by the draft
+			self.mac.pack(),
+			chr(len(self.ip)*8 if self.ip else '\x00'),
+			self.ip.pack() if self.ip else '',
+			self.label.pack()
+		)
 		return self._packed
 
 	@classmethod
@@ -136,7 +142,25 @@ class MAC (EVPN):
 		else:
 			raise Notify(3,5,"Data field length is given as %d, but does not match one of the expected lengths" % datalen)
 
-		ip = IP.unpack(data[end+1:end+1+iplenUnpack])
+		payload = data[end+1:end+1+iplenUnpack]
+		if payload:
+			ip = IP.unpack(data[end+1:end+1+iplenUnpack])
+		else:
+			ip = None
 		label = Labels.unpack(data[end+1+iplenUnpack:end+1+iplenUnpack+3])
 
 		return cls(rd,esi,etag,mac,maclength,label,ip,data)
+
+	def json (self, compact=None):
+		content = ' "code": %d, ' % self.CODE
+		content += '"parsed": true, '
+		content += '"raw": "%s", ' % self._raw()
+		content += '"name": "%s", ' % self.NAME
+		content += '%s, ' % self.rd.json()
+		content += '%s, ' % self.esi.json()
+		content += '%s, ' % self.etag.json()
+		content += '%s, ' % self.mac.json()
+		content += self.label.json()
+		if self.ip:
+			content += ', "ip": "%s"' % str(self.ip)
+		return '{%s }' % content

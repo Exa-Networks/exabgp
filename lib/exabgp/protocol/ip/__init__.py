@@ -31,6 +31,9 @@ class IPSelf (object):
 	def pack (self, negotiated):
 		return negotiated.nexthopself(self.afi).ton()
 
+	def index (self):
+		return 'self-' + AFI.names[self.afi]
+
 
 class IP (object):
 	afi = None  # here for the API

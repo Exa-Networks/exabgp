@@ -57,3 +57,6 @@ class MAC (object):
 	@classmethod
 	def unpack (cls, data):
 		return cls(':'.join('%02X' % ord(_) for _ in data[:6]),data[:6])
+
+	def json (self, compact=None):
+		return '"mac": "%s"' % str(self)

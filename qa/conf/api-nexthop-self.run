@@ -6,6 +6,10 @@ import time
 messages = [
 	'neighbor 127.0.0.1 announce route 1.1.0.0/16 next-hop self',
 	'announce route 2.2.0.0/16 next-hop self',
+	'announce route 2.2.0.1/32 next-hop self',
+	'announce route 2.2.0.1/32 next-hop self',
+	'announce route 2.2.0.1/32 next-hop self',
+	'announce route 3.3.0.3/32 next-hop self', # Non duplicate route, signals server that test is over
 ]
 
 while messages:

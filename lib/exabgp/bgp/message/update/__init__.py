@@ -202,7 +202,7 @@ class Update (Message):
 					if seen_size > msg_size:
 						if not packed_mp_add and not packed_mp_del and not packed_del:
 							raise Notify(6,0,'attributes size is so large we can not even pack on MPURNLRI')
-						yield self._message(Update.prefix(packed_del) + Update.prefix(attr + packed_mp_del + packed_mp_add))
+						yield self._message(Update.prefix(packed_del) + Update.prefix(packed_mp_del + packed_mp_add + attr))
 						packed_del = ''
 						packed_mp_del = ''
 						packed_mp_add = packed
@@ -223,7 +223,7 @@ class Update (Message):
 			packed_del = ''
 			packed_mp_del = ''
 
-		addpath = negotiated.addpath.send(AFI.ipv4,SAFI.unicast)
+		# addpath = negotiated.addpath.send(AFI.ipv4,SAFI.unicast)
 
 		while add_nlri:
 			nlri = add_nlri.pop()
@@ -233,10 +233,10 @@ class Update (Message):
 				if not packed_add and not packed_mp_add and not packed_mp_del and not packed_del:
 					raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
 				if packed_mp_add:
-					yield self._message(Update.prefix(packed_del) + Update.prefix(attr + packed_mp_del + packed_mp_add) + packed_add)
+					yield self._message(Update.prefix(packed_del) + Update.prefix(packed_mp_del + packed_mp_add + attr) + packed_add)
 					msg_size = negotiated.msg_size - 19 - 2 - 2  # 2 bytes for each of the two prefix() header
 				else:
-					yield self._message(Update.prefix(packed_del) + Update.prefix(attr + packed_mp_del) + packed_add)
+					yield self._message(Update.prefix(packed_del) + Update.prefix(packed_mp_del + attr) + packed_add)
 				packed_del = ''
 				packed_mp_del = ''
 				packed_mp_add = ''
@@ -244,7 +244,7 @@ class Update (Message):
 			else:
 				packed_add += packed
 
-		yield self._message(Update.prefix(packed_del) + Update.prefix(attr + packed_mp_del + packed_mp_add) + packed_add)
+		yield self._message(Update.prefix(packed_del) + Update.prefix(packed_mp_del + packed_mp_add + attr) + packed_add)
 
 	# XXX: FIXME: this can raise ValueError. IndexError,TypeError, struct.error (unpack) = check it is well intercepted
 	@classmethod
@@ -257,7 +257,7 @@ class Update (Message):
 
 		# This could be speed up massively by changing the order of the IF
 		if length == 4 and data == '\x00\x00\x00\x00':
-			return EOR(AFI.ipv4,SAFI.unicast,IN.ANNOUNCED)  # pylint: disable=E1101
+			return EOR(AFI(AFI.ipv4),SAFI(SAFI.unicast))  # pylint: disable=E1101
 		if length == 11 and data.startswith(EOR.NLRI.PREFIX):
 			return EOR.unpack_message(data,negotiated)
 
@@ -294,27 +294,23 @@ class Update (Message):
 			announced = left
 			nlris.append(nlri)
 
-		# required for 'is' comparaison
-		UNREACH = [EMPTY_MPURNLRI,]
-		REACH = [EMPTY_MPRNLRI,]
+		unreach = attributes.pop(MPURNLRI.ID,None)
+		reach = attributes.pop(MPRNLRI.ID,None)
 
-		unreach = attributes.pop(MPURNLRI.ID,UNREACH)
-		reach = attributes.pop(MPRNLRI.ID,REACH)
+		if unreach is not None:
+			nlris.extend(unreach.nlris)
 
-		for mpr in unreach:
-			nlris.extend(mpr.nlris)
-
-		for mpr in reach:
-			nlris.extend(mpr.nlris)
+		if reach is not None:
+			nlris.extend(reach.nlris)
 
 		if not attributes and not nlris:
 			# Careful do not use == or != as the comparaison does not work
-			if unreach is UNREACH and reach is REACH:
+			if unreach is None and reach is None:
 				return EOR(AFI(AFI.ipv4),SAFI(SAFI.unicast))
-			if unreach is not UNREACH:
-				return EOR(unreach[0].afi,unreach[0].safi)
-			if reach is not REACH:
-				return EOR(reach[0].afi,reach[0].safi)
+			if unreach is not None:
+				return EOR(unreach.afi,unreach.safi)
+			if reach is not None:
+				return EOR(reach.afi,reach.safi)
 			raise RuntimeError('This was not expected')
 
 		return Update(nlris,attributes)

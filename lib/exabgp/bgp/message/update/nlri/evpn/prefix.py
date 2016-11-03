@@ -44,11 +44,12 @@ from exabgp.bgp.message.notification import Notify
 
 # ======================================================================= Prefix
 
+# https://tools.ietf.org/html/draft-rabadan-l2vpn-evpn-prefix-advertisement-03
 
 @EVPN.register
 class Prefix (EVPN):
 	CODE = 5
-	NAME = "IP Prefix advertisement"
+	NAME = "IP Prefix Advertisement"
 	SHORT_NAME = "PrfxAdv"
 
 	def __init__(self, rd, esi, etag, label, ip, iplen, gwip, packed=None,nexthop=None,action=None,addpath=None):
@@ -62,7 +63,8 @@ class Prefix (EVPN):
 		iplen: prefixlength for ip (defaults to 32)
 		gwip: an IP address (dotted quad string notation)
 		'''
-		EVPN.__init__(self,packed,nexthop,action,addpath)
+		EVPN.__init__(self,action,addpath)
+		self.nexthop = nexthop
 		self.rd = rd
 		self.esi = esi
 		self.etag = etag
@@ -71,7 +73,7 @@ class Prefix (EVPN):
 		self.gwip = gwip
 		self.label = label
 		self.label = label if label else Labels.NOLABEL
-		self._pack()
+		self._pack(packed)
 
 	def __eq__ (self, other):
 		return \
@@ -102,18 +104,23 @@ class Prefix (EVPN):
 		# esi, and label, gwip must *not* be part of the hash
 		return hash("%s:%s:%s:%s" % (self.rd,self.etag,self.ip,self.iplen))
 
-	def _pack (self):
-		if not self._packed:
-			value = "%s%s%s%s%s%s%s" % (
-				self.rd.pack(),
-				self.esi.pack(),
-				self.etag.pack(),
-				chr(self.iplen),
-				self.ip.pack(),
-				self.gwip.pack(),
-				self.label.pack(),
-			)
-			self._packed = value
+	def _pack (self, packed=None):
+		if self._packed:
+			return self._packed
+
+		if packed:
+			self._packed = packed
+			return packed
+
+		self._packed = "%s%s%s%s%s%s%s" % (
+			self.rd.pack(),
+			self.esi.pack(),
+			self.etag.pack(),
+			chr(self.iplen),
+			self.ip.pack(),
+			self.gwip.pack(),
+			self.label.pack(),
+		)
 		return self._packed
 
 	@classmethod
@@ -151,3 +158,16 @@ class Prefix (EVPN):
 		label = Labels.unpack(data[:3])
 
 		return cls(rd,esi,etag,label,ip,iplen,gwip,exdata)
+
+	def json (self, compact=None):
+		content = ' "code": %d, ' % self.CODE
+		content += '"parsed": true, '
+		content += '"raw": "%s", ' % self._raw()
+		content += '"name": "%s", ' % self.NAME
+		content += '%s, ' % self.rd.json()
+		content += '%s, ' % self.esi.json()
+		content += '%s, ' % self.etag.json()
+		content += '%s, ' % self.label.json()
+		content += '"ip": "%s", ' % str(self.ip)
+		content += '"gateway": "%s" ' % str(self.gwip)
+		return '{%s}' % content

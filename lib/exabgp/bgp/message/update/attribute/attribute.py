@@ -13,6 +13,34 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.util.cache import Cache
 
 
+# ============================================================== TreatAsWithdraw
+#
+
+class TreatAsWithdraw (object):
+	ID = 0xffff
+	GENERIC = False
+
+	def __init__ (self,aid=None):
+		self.aid = aid
+
+	def __str__ (self):
+		if self.aid is None:
+			return 'treat-as-withdraw'
+		return 'treat-as-withdraw due to %s' % Attribute.CODE(self.aid)
+
+
+class Discard (object):
+	ID = 0xfffe
+	GENERIC = False
+
+	def __init__ (self,aid=None):
+		self.aid = aid
+
+	def __str__ (self):
+		if self.aid is None:
+			return 'discard'
+		return 'discard due to %s' % Attribute.CODE(self.aid)
+
 # ==================================================================== Attribute
 #
 
@@ -75,13 +103,15 @@ class Attribute (object):
 		TUNNEL_ENCAP       = 0x17  # 23
 		AIGP               = 0x1A  # 26
 
-		# draft-heitz-idr-large-community-03
-		LARGE_COMMUNITY    = 0x29  # 41
+		# draft-ietf-idr-large-community
+		LARGE_COMMUNITY    = 0x20  # 32
 
-		INTERNAL_NAME      = 0xFFFC
-		INTERNAL_WITHDRAW  = 0xFFFD
-		INTERNAL_WATCHDOG  = 0xFFFE
-		INTERNAL_SPLIT     = 0xFFFF
+		INTERNAL_NAME              = 0xFFFA
+		INTERNAL_WITHDRAW          = 0xFFFB
+		INTERNAL_WATCHDOG          = 0xFFFC
+		INTERNAL_SPLIT             = 0xFFFD
+		INTERNAL_DISCARD           = 0xFFFE
+		INTERNAL_TREAT_AS_WITHDRAW = 0xFFFF  # Treat as Withdraw
 
 		# Currently formating is done with %-18s
 		names = {
@@ -104,10 +134,12 @@ class Attribute (object):
 			PMSI_TUNNEL:        'pmsi-tunnel',
 			TUNNEL_ENCAP:       'tunnel-encaps',
 			AIGP:               'aigp',
-			0xfffc:             'internal-name',
-			0xfffd:             'internal-withdraw',
-			0xfffe:             'internal-watchdog',
-			0xffff:             'internal-split',
+			0xfffa:             'internal-name',
+			0xfffb:             'internal-withdraw',
+			0xfffc:             'internal-watchdog',
+			0xfffd:             'internal-split',
+			0xfffe:             'internal-discard',
+			0xffff:             'internal-treath-as-withdraw',
 		}
 
 		def __repr__ (self):
@@ -223,11 +255,7 @@ class Attribute (object):
 			kls = cls.registered_attributes[key]
 			kls.ID = attribute_id
 			return kls
-		# XXX: we do see some AS4_PATH with the partial instead of transitive bit set !!
-		if attribute_id == Attribute.CODE.AS4_PATH:
-			kls = cls.attributes_known[attribute_id]
-			kls.ID = attribute_id
-			return kls
+
 		raise Notify (2,4,'can not handle attribute id %s' % attribute_id)
 
 	@classmethod

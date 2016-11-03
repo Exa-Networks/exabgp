@@ -26,7 +26,7 @@ class ParseTemplate (Section):
 		Section.__init__(self,tokeniser,scope,error,logger)
 
 	def clear (self):
-		pass
+		self._names = []
 
 	def pre (self):
 		named = self.tokeniser.line[1]

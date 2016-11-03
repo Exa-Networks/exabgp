@@ -30,6 +30,17 @@ def dump (value):
 			even = not even
 	return ''.join(spaced(value))
 
+def cdr_to_length (cidr):
+	if cidr > 24:
+		return 4
+	if cidr > 16:
+		return 3
+	if cidr > 8:
+		return 2
+	if cidr > 0:
+		return 1
+	return 0
+
 
 class BGPHandler(asyncore.dispatcher_with_send):
 
@@ -120,28 +131,23 @@ class BGPHandler(asyncore.dispatcher_with_send):
 				yield 'eor:%d:%d' % (ord(body[-2]),ord(body[-1]))
 			else:  # undecoded MP route
 				yield 'mp:'
+			return
 
 		while withdrawn:
-			if len(withdrawn) > 5:
-				yield ''
-				break
-			m = withdrawn.pop(0)
+			cdr = withdrawn.pop(0)
+			size = cdr_to_length(cdr)
 			r = [0,0,0,0]
-			for index in range(4):
-				if index*8 >= m: break
+			for index in range(size):
 				r[index] = withdrawn.pop(0)
-			yield 'withdraw:%s' % '.'.join(str(_) for _ in r) + '/' + str(m)
+			yield 'withdraw:%s' % '.'.join(str(_) for _ in r) + '/' + str(cdr)
 
 		while announced:
-			if len(announced) > 5:
-				yield ''
-				break
-			m = announced.pop(0)
+			cdr = announced.pop(0)
+			size = cdr_to_length(cdr)
 			r = [0,0,0,0]
-			for index in range(4):
-				if index*8 >= m: break
+			for index in range(size):
 				r[index] = announced.pop(0)
-			yield 'announce:%s' % '.'.join(str(_) for _ in r) + '/' + str(m)
+			yield 'announce:%s' % '.'.join(str(_) for _ in r) + '/' + str(cdr)
 
 	def notification (self, header, body):
 		yield 'notification:%d,%d' % (ord(body[0]),ord(body[1])), bytestream(body)
@@ -276,7 +282,10 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 				if announcement in self.messages:
 					self.messages.remove(announcement)
-					self.announce('received (%1s%s):' % (self.options['letter'],self.step),'%s:%s:%s:%s' % (announcement[:32],announcement[32:36],announcement[36:38],announcement[38:]))
+					if self.raw:
+						self.announce('received (%1s%s):' % (self.options['letter'],self.step),'%s:%s:%s:%s' % (announcement[:32],announcement[32:36],announcement[36:38],announcement[38:]))
+					else:
+						self.announce('received (%1s%s):' % (self.options['letter'],self.step), announcement)
 					self.check_signal()
 				else:
 					if self.raw:

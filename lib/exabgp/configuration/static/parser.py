@@ -402,7 +402,10 @@ def large_community (tokeniser):
 			value = tokeniser()
 			if value == ']':
 				break
-			large_communities.add(_large_community(value))
+			lc = _large_community(value)
+			if lc in large_communities.communities:
+				continue
+			large_communities.add(lc)
 	else:
 		large_communities.add(_large_community(value))
 

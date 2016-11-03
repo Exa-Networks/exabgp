@@ -32,14 +32,12 @@ class Multicast (EVPN):
 	SHORT_NAME = "Multicast"
 
 	def __init__ (self, rd, etag, ip, packed=None,nexthop=None,action=None,addpath=None):
-		EVPN.__init__(self,packed,nexthop,action,addpath)
-		# assert(isinstance(rd, RouteDistinguisher))
-		# assert(isinstance(etag, EthernetTag))
-		# assert(isinstance(ip, IP))
+		EVPN.__init__(self,action,addpath)
+		self.nexthop = nexthop
 		self.rd = rd
 		self.etag = etag
 		self.ip = ip
-		self._pack()
+		self._pack(packed)
 
 	def __ne__ (self, other):
 		return not self.__eq__(other)
@@ -55,15 +53,20 @@ class Multicast (EVPN):
 	def __hash__ (self):
 		return hash((self.afi,self.safi,self.CODE,self.rd,self.etag,self.ip))
 
-	def _pack (self):
-		if not self._packed:
-			ip = self.ip.pack()
-			self._packed = '%s%s%s%s' % (
-				self.rd.pack(),
-				self.etag.pack(),
-				chr(len(ip)*8),
-				ip
-			)
+	def _pack (self, packed=None):
+		if self._packed:
+			return self._packed
+
+		if packed:
+			self._packed = packed
+			return packed
+
+		self._packed = '%s%s%s%s' % (
+			self.rd.pack(),
+			self.etag.pack(),
+			chr(len(self.ip)*8),
+			self.ip.pack()
+		)
 		return self._packed
 
 	@classmethod
@@ -75,3 +78,14 @@ class Multicast (EVPN):
 			raise Exception("IP len is %d, but EVPN route currently support only IPv4" % iplen)
 		ip = IP.unpack(data[13:13+iplen/8])
 		return cls(rd,etag,ip,data)
+
+	def json (self, compact=None):
+		content = ' "code": %d, ' % self.CODE
+		content += '"parsed": true, '
+		content += '"raw": "%s", ' % self._raw()
+		content += '"name": "%s", ' % self.NAME
+		content += '%s, ' % self.rd.json()
+		content += self.etag.json()
+		if self.ip:
+			content += ', "ip": "%s"' % str(self.ip)
+		return '{%s }' % content
