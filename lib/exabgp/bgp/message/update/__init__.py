@@ -308,9 +308,9 @@ class Update (Message):
 			if unreach is None and reach is None:
 				return EOR(AFI(AFI.ipv4),SAFI(SAFI.unicast))
 			if unreach is not None:
-				return EOR(unreach[0].afi,unreach[0].safi)
+				return EOR(unreach.afi,unreach.safi)
 			if reach is not None:
-				return EOR(reach[0].afi,reach[0].safi)
+				return EOR(reach.afi,reach.safi)
 			raise RuntimeError('This was not expected')
 
 		return Update(nlris,attributes)
