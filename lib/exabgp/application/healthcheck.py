@@ -288,8 +288,12 @@ def loopback_ips(label):
         mo = ipre.match(line)
         if not mo:
             continue
-        ip = ip_address("{0}/{1}".format(mo.group("ip"),
-                         mo.group("mask")))
+        mask = int(mo.group("mask")) or bin(int(mo.group("netmask"), 16)).count("1")
+        try:
+            ip = ip_address("{0}/{1}".format(mo.group("ip"),
+                                             mask))
+        except ValueError:
+            continue
         if not ip.is_loopback:
             if label:
                 lmo = labelre.match(line)
@@ -303,7 +307,7 @@ def loopback_ips(label):
 def setup_ips(ips, label):
     """Setup missing IP on loopback interface"""
     existing = set(loopback_ips(label))
-    toadd = set(ips) - existing
+    toadd = set([ip_address(ip) for net in ips for ip in net]) - existing
     for ip in toadd:
         logger.debug("Setup loopback IP address %s", ip)
         with open(os.devnull, "w") as fnull:
@@ -325,12 +329,11 @@ def remove_ips(ips, label):
     existing = set(loopback_ips(label))
 
     # Get intersection of IPs (ips setup, and IPs configured by ExaBGP)
-    toremove = set(ips) | existing
+    toremove = set([ip_address(ip) for net in ips for ip in net]) | existing
     for ip in toremove:
         logger.debug("Remove loopback IP address %s", ip)
         with open(os.devnull, "w") as fnull:
-            # We specify the prefix length due to ip addr warnings about wildcard deletion
-            cmd = ["ip", "address", "delete", str(ip) + "/32", "dev", "lo"]
+            cmd = ["ip", "address", "delete", str(ip), "dev", "lo"]
             if label:
                 cmd += ["label", "lo:{0}".format(label)]
             try:
