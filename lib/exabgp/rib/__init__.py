@@ -22,6 +22,12 @@ class RIB (object):
 		if name in self._cache:
 			self.incoming = self._cache[name].incoming
 			self.outgoing = self._cache[name].outgoing
+			self.incoming.families = families
+			self.outgoing.families = families
+			for family in self.outgoing._seen.keys():
+				if family not in families:
+					del self.outgoing._seen[family]
+
 			if adjribout:
 				self.outgoing.resend(None,False)
 			else:
