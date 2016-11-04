@@ -14,6 +14,8 @@ Version 3.4.18
     reported by: Colin Petrie
  * Change: default to a 0 offset for ipv6 flowspec source/destination match
     patch by: Brian Johnson
+ * Fix: Update RIB cache families on configuration reload
+    patch by: Brian Johnson
 
 Version 3.4.17
  * Fix: does not accept IPv6 as router-id
