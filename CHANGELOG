@@ -152,6 +152,8 @@ Version 4.0.0
    patch by: Stacey Sheldon (Corsa)
  * Fix: API encoding of IPv4 Unicast EOR messages were being encoded as NLRI updates
    patch by: Stacey Sheldon (Corsa)
+ * Fix: Update RIB cache families on configuration reload
+    patch by: Brian Johnson
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
