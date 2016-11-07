@@ -65,10 +65,13 @@ class Daemon (object):
 			fd = os.open(self.pid,flags,mode)
 		except OSError:
 			try:
-				pid = open(self.pid,'r').read().readline()
+				pid = open(self.pid,'r').readline()
 				if self.check_pid(int(pid)):
 					self.logger.daemon("PIDfile already exists and program still running %s" % self.pid)
 					return False
+				else:
+					# If pid is not running, reopen file without O_EXCL				
+					fd = os.open(self.pid,flags ^ os.O_EXCL,mode)				
 			except (OSError,IOError,ValueError):
 				pass
 
