@@ -172,7 +172,7 @@ class Reactor (object):
 			return
 
 		if not self.daemon.savepid():
-			self.logger.reactor('could not update PID, not starting','error')
+			return
 
 		# did we complete the run of updates caused by the last SIGUSR1/SIGUSR2 ?
 		reload_completed = True
