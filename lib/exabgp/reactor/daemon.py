@@ -34,6 +34,22 @@ class Daemon (object):
 		# os.umask(0)
 		os.umask(0137)
 
+	def check_pid (self,pid):
+		if pid < 0:  # user input error
+			return False
+		if pid == 0:  # all processes
+			return False
+		try:
+			os.kill(pid, 0)
+			return True
+		except OSError as err:
+			if err.errno == errno.EPERM:  # a process we were denied access to
+				return True
+			if err.errno == errno.ESRCH:  # No such process
+				return False
+			# should never happen
+			return False
+
 	def savepid (self):
 		self._saved_pid = False
 
@@ -48,8 +64,13 @@ class Daemon (object):
 		try:
 			fd = os.open(self.pid,flags,mode)
 		except OSError:
-			self.logger.daemon("PIDfile already exists, not updated %s" % self.pid)
-			return False
+			try:
+				pid = os.fdopen(self.pid,'r').read().readline()
+				if self.check_pid(int(pid)):
+					self.logger.daemon("PIDfile already exists and program still running %s" % self.pid)
+					return False
+			except (OSError,IOError,ValueError):
+				pass
 
 		try:
 			f = os.fdopen(fd,'w')
