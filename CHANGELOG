@@ -18,6 +18,8 @@ Version 3.4.18
     reported by: Ben Agricola
  * Fix: Update RIB cache families on configuration reload
     patch by: Brian Johnson
+ * Fix: When group-updates is enabled, send one UPDATE per address family
+    patch by: Brian Johnson
 
 Version 3.4.17
  * Fix: does not accept IPv6 as router-id
