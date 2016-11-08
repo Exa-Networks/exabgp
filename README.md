@@ -32,7 +32,7 @@ These organisations have spoken of, or are using/have used ExaBGP:
 [PowerDNS](https://blog.powerdns.com/2016/02/23/an-important-update-on-new-powerdns-products/),
 [RIPE NCC](https://labs.ripe.net/Members/wouter_miltenburg/Researchpaper.pdf), ...
 
-Therefore so should [YOU! :grin:](https://en.wikipedia.org/wiki/Bandwagon_effect)
+Therefore so should [`YOU`](https://en.wikipedia.org/wiki/Bandwagon_effect)! :grin:
 
 ## Installation
 
@@ -91,10 +91,12 @@ The best way to be kept informed about our progress/releases is to follow us on 
 
 The documentation is known to be imperfect. One could even say wanting, limited, insufficient and lacking, therefore any contribution (however small) toward its improvement is truly welcomed.
 
-The best way to understand how ExaBGP should be configured is to look into the folder
-`qa/conf` of the repository where a great many examples are available. `exabgp --help`  is also a treasure trove of information. The `wiki pages` are also a [good start](https://github.com/Exa-Networks/exabgp/wiki).
+Other users did however do a fair bit of [`documentation`](https://github.com/Exa-Networks/exabgp/wiki/Related-articles), just not on the [`wiki`](https://github.com/Exa-Networks/exabgp/wiki). :cry:
 
-If anything else, you may also want to take the time to explore the [Related Articles](https://github.com/Exa-Networks/exabgp/wiki/Related-articles).
+To understand how ExaBGP should be configured, please have a look into the [`qa/conf`](https://github.com/Exa-Networks/exabgp/tree/master/qa/conf) folder of the repository where a great many examples are available.
+
+`exabgp --help`  is also a treasure trove of information.
+
 
 ## Related Projects
 
@@ -155,4 +157,3 @@ More information can be found [here](https://github.com/Exa-Networks/exabgp/wiki
 ExaBGP does **not** perform any FIB manipulation. If this is what you need, you may consider another open source BGP daemon such as [BIRD](http://bird.network.cz/) or [Quagga](http://www.quagga.net/).
 
 [RFC compliance](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information) details the latest developments.
-
