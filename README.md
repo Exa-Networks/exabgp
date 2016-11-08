@@ -156,6 +156,3 @@ ExaBGP does **not** perform any FIB manipulation. If this is what you need, you 
 
 [RFC compliance](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information) details the latest developments.
 
-## Self Promotion
-
-Exa Networks has also developed a high-performance and very flexible filtering [HTTP proxy](https://github.com/Exa-Networks/exaproxy) (allowing cookie manipulation and other goodies). Spread the word :wink:
