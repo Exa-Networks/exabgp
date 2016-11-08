@@ -235,42 +235,26 @@ class Store (object):
 			if not dict_change:
 				continue
 
+			updates = {}
+			changed = dict_change.values()
 			attributes = dict_attr[attr_index].attributes
 
-			# we NEED the copy provided by list() here as insert_announced can be called while we iterate
-			changed = list(dict_change.itervalues())
+			for change in dict_change.itervalues():
+				updates.setdefault(change.nlri.family(),[]).append(change.nlri)
+				nlri_index = change.index()
+				del dict_sorted[attr_index][nlri_index]
+				del dict_nlri[nlri_index]
+
+			# only yield once we have a consistent state, otherwise it will go wrong
+			# as we will try to modify things we are iterating over and using
 
 			if grouped:
-				updates = []
-				nlris = []
-				for change in dict_change.values():
-					if change.nlri.afi == AFI.ipv4:
-						nlris.append(change.nlri)
-						continue
-					updates.append(Update([change.nlri],attributes))
-				if nlris:
-					updates.append(Update(nlris,attributes))
-					nlris = []
-
-				for change in changed:
-					nlri_index = change.index()
-					del dict_sorted[attr_index][nlri_index]
-					del dict_nlri[nlri_index]
-				# only yield once we have a consistent state, otherwise it will go wrong
-				# as we will try to modify things we are using
-				for update in updates:
-					yield update
+				for nlris in updates.itervalues():
+					yield Update(nlris, attributes)
 			else:
-				updates = []
-				for change in changed:
-					updates.append(Update([change.nlri,],attributes))
-					nlri_index = change.index()
-					del dict_sorted[attr_index][nlri_index]
-					del dict_nlri[nlri_index]
-				# only yield once we have a consistent state, otherwise it will go wrong
-				# as we will try to modify things we are using
-				for update in updates:
-					yield update
+				for nlris in updates.itervalues():
+					for nlri in nlris:
+						yield Update([nlri,], attributes)
 
 			if self.cache:
 				announced = self._seen
