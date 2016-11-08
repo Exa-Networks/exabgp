@@ -17,7 +17,7 @@ But it is not its only strength, thanks to modern routers' flow balancing, ExaBG
 
 ## Who is using ExaBGP ?
 
-These organisations have spoken of, or are using/have used ExaBGP: 
+These organisations have spoken of, or are using/have used ExaBGP:
 [AMS-IX](https://ripe64.ripe.net/presentations/49-Follow_Up_AMS-IX_route-server_test_Euro-IX_20th_RIPE64.pdf),
 [Alcatel Lucent](http://www.nanog.org/sites/default/files/wed.general.trafficdiversion.serodio.10.pdf),
 [BBC](http://www.bbc.co.uk/blogs/internet/entries/8c6c2414-df7a-4ad7-bd2e-dbe481da3633),
@@ -32,9 +32,11 @@ These organisations have spoken of, or are using/have used ExaBGP:
 [PowerDNS](https://blog.powerdns.com/2016/02/23/an-important-update-on-new-powerdns-products/),
 [RIPE NCC](https://labs.ripe.net/Members/wouter_miltenburg/Researchpaper.pdf), ...
 
+Therefore so should [YOU! :grin:](https://en.wikipedia.org/wiki/Bandwagon_effect)
+
 ## Installation
 
-The program is packaged for Debian, Ubuntu, ArchLinux, Gentoo, Mint, FreeBSD, OSX and even OmniOS.
+The program is packaged for Debian, Ubuntu, ArchLinux, Gentoo, Mint, FreeBSD, OSX and OmniOS (and probably more).
 
 The latest version is available on [`pypi`](https://pypi.python.org/pypi), the Python Package Index
 
@@ -47,8 +49,8 @@ The latest version is available on [`pypi`](https://pypi.python.org/pypi), the P
 It is also possible to download the latest archive from github
 
 ```sh
-> curl -L https://github.com/Exa-Networks/exabgp/archive/3.4.16.tar.gz | tar zx
-> ./exabgp-3.4.16/sbin/exabgp --help
+> curl -L https://github.com/Exa-Networks/exabgp/archive/3.4.17.tar.gz | tar zx
+> ./exabgp-3.4.17/sbin/exabgp --help
 > ./bin/healthcheck --help
 ```
 
@@ -60,9 +62,9 @@ If using `git`, for production deployment, please use the "3.4` branch.
 > ./bin/healthcheck --help
 ```
 
-Multiple versions can be used simulteanously without conflict when ExaBGP is ran from extracted archives and/or local git repositories.
+Multiple versions can be used simultaneously without conflict when ExaBGP is ran from extracted archives and/or local git repositories.
 
-The configuration file and API format change from time to time, but every effort is made to make sure backward compatibility is kept. However users are encouraged to read the release note/CHANGELOG and check their setup after upgrade.
+The configuration file and API format change from time to time, but every effort is made to make sure backward compatibility is kept. However users are encouraged to read the [release note/CHANGELOG](https://raw.github.com/Exa-Networks/exabgp/master/CHANGELOG) and check their setup after upgrade.
 
 ## Support
 
@@ -85,8 +87,14 @@ During "day time" (GMT/BST) feel free to contact us on [`Gitter`](https://gitter
 
 The best way to be kept informed about our progress/releases is to follow us on [Google+](https://plus.google.com/u/0/communities/108249711110699351497) and/or [Twitter](https://twitter.com/#!/search/exabgp). You can also use and subscribe to our low volume [mailing list](http://groups.google.com/group/exabgp-users).
 
-For more information, please consult any of the [wiki pages](https://github.com/Exa-Networks/exabgp/wiki), in particular the [Related Articles](https://github.com/Exa-Networks/exabgp/wiki/Related-articles), [RFC compliance](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information), [FAQ](https://github.com/Exa-Networks/exabgp/wiki/FAQ)
- and [changelog](https://raw.github.com/Exa-Networks/exabgp/master/CHANGELOG).
+## Documentation
+
+The documentation is known to be imperfect. One could even say wanting, limited, insufficient and lacking, therefore any contribution (however small) toward its improvement is truly welcomed.
+
+The best way to understand how ExaBGP should be configured is to look into the folder
+`qa/conf` of the repository where a great many examples are available. `exabgp --help`  is also a treasure trove of information. The `wiki pages` are also a [good start](https://github.com/Exa-Networks/exabgp/wiki).
+
+If anything else, you may also want to take the time to explore the [Related Articles](https://github.com/Exa-Networks/exabgp/wiki/Related-articles).
 
 ## Related Projects
 
@@ -145,6 +153,8 @@ RFC support includes ASN4, IPv6, MPLS, VPLS, Flow, Graceful Restart, Enhanced Ro
 More information can be found [here](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information)
 
 ExaBGP does **not** perform any FIB manipulation. If this is what you need, you may consider another open source BGP daemon such as [BIRD](http://bird.network.cz/) or [Quagga](http://www.quagga.net/).
+
+[RFC compliance](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information) details the latest developments.
 
 ## Self Promotion
 
