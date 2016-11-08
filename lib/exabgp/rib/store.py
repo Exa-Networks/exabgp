@@ -241,19 +241,17 @@ class Store (object):
 			# we NEED the copy provided by list() here as insert_announced can be called while we iterate
 			changed = list(dict_change.itervalues())
 
-			for family in self._seen:
-				if family != (AFI.ipv4,SAFI.unicast):
-					grouped = False
-
 			if grouped:
-				update = Update([dict_nlri[nlri_index].nlri for nlri_index in dict_change],attributes)
+				updates = {}
 				for change in changed:
+					updates.setdefault(change.nlri.family(), []).append(change.nlri)
 					nlri_index = change.index()
 					del dict_sorted[attr_index][nlri_index]
 					del dict_nlri[nlri_index]
 				# only yield once we have a consistent state, otherwise it will go wrong
 				# as we will try to modify things we are using
-				yield update
+				for nlris in updates.itervalues():
+					yield Update(nlris, attributes)
 			else:
 				updates = []
 				for change in changed:
