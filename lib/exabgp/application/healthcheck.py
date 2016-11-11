@@ -455,8 +455,10 @@ def loop(options):
                         options.as_path)
             logger.debug("exabgp: %s %s", command, announce)
             print("{0} {1}".format(command, announce))
+            # Flush command and wait for confirmation from ExaBGP
+            sys.stdout.flush()
+            sys.stdin.readline()
             metric += options.increase
-        sys.stdout.flush()
 
     def trigger(target):
         """Trigger a state change and execute the appropriate commands"""
