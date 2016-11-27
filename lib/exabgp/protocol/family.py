@@ -20,6 +20,7 @@ class AFI (Resource):
 	ipv4      = 0x01
 	ipv6      = 0x02
 	l2vpn     = 0x19
+	bgpls     = 0x4004
 
 	# Family = {
 	# 	ipv4:  0x02,  # socket.AF_INET,
@@ -31,6 +32,7 @@ class AFI (Resource):
 		'ipv4':  ipv4,
 		'ipv6':  ipv6,
 		'l2vpn': l2vpn,
+		'bgpls': bgpls,
 	}.items())
 
 	names = dict([(r,l) for (l,r) in codes.items()])
@@ -72,6 +74,8 @@ class AFI (Resource):
 			return ['unicast','mpls-vpn','flow','flow-vpn']
 		if afi == 'l2vpn':
 			return ['vpls','evpn']
+		if afi == 'bgpls':
+			return ['bgp-ls','bgp-ls-vpn']
 		return []
 
 	@classmethod
@@ -100,6 +104,8 @@ class SAFI (Resource):
 	# vpn_adi = 69              # [RFC-ietf-l1vpn-bgp-auto-discovery-05.txt]
 
 	evpn = 70                   # [draft-ietf-l2vpn-evpn]
+	bgp_ls = 71                 # [RFC7752]
+	bgp_ls_vpn = 72             # [RFC7752]
 	mpls_vpn = 128              # [RFC4364]
 	# mcast_bgp_mpls_vpn = 129  # [RFC2547]
 	# rt = 132                  # [RFC4684]
@@ -119,6 +125,8 @@ class SAFI (Resource):
 		'nlri-mpls': nlri_mpls,
 		'vpls':      vpls,
 		'evpn':      evpn,
+		'bgp-ls':    bgp_ls,
+		'bgp-ls-vpn':bgp_ls_vpn,
 		'mpls-vpn':  mpls_vpn,
 		'rtc':       rtc,
 		'flow':      flow_ip,
