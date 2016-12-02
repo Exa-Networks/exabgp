@@ -1,3 +1,9 @@
+exabgp (3.4.17-3) unstable; urgency=medium
+
+  * d/exabgp.postinst: provide complete paths to dpkg-maintscript-helper.
+
+ -- Vincent Bernat <bernat@debian.org>  Fri, 02 Dec 2016 20:47:18 +0100
+
 exabgp (3.4.17-2) unstable; urgency=medium
 
   * d/patches: disable again some unreliable tests. Closes: #840310.
