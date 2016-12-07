@@ -239,7 +239,7 @@ class Store (object):
 			changed = dict_change.values()
 			attributes = dict_attr[attr_index].attributes
 
-			for change in dict_change.itervalues():
+			for change in dict_change.values():
 				updates.setdefault(change.nlri.family(),[]).append(change.nlri)
 				nlri_index = change.index()
 				del dict_sorted[attr_index][nlri_index]
