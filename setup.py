@@ -338,7 +338,7 @@ setup(
 	package_data={'': ['PYPI.rst']},
 	download_url='https://github.com/Exa-Networks/exabgp/archive/%s.tar.gz' % version,
 	data_files=files_definition,
-	install_requires=['setuptools'],
+	setup_requires=['setuptools'],
 	classifiers=[
 		'Development Status :: 5 - Production/Stable',
 		'Environment :: Console',
