@@ -130,7 +130,7 @@ class ParseAPI (Section):
 		return cls.DEFAULT_API
 
 	def clear (self):
-		self._built = defaultdict(list)
+		type(self)._built = defaultdict(list)
 
 	def pre (self):
 		self.scope.to_context()
@@ -145,15 +145,15 @@ class ParseAPI (Section):
 		api = self.scope.pop()
 		procs = api.get('processes',[])
 
-		self._built['processes'].extend(procs)
+		type(self)._built['processes'].extend(procs)
 
 		for command in ('neighbor-changes',):
-			self._built[command].extend(procs if api.get(command,False) else [])
+			type(self)._built[command].extend(procs if api.get(command,False) else [])
 
 		for direction in ('send','receive'):
 			data = api.get(direction,{})
 			for action in ('parsed','packets','consolidate','open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
-				self._built["%s-%s" % (direction,action)].extend(procs if data.get(action,False) else [])
+				type(self)._built["%s-%s" % (direction,action)].extend(procs if data.get(action,False) else [])
 
 		return True
 
