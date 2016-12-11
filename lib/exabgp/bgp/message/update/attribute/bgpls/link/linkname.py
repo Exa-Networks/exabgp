@@ -42,4 +42,5 @@ class LinkName(object):
 			return cls(linkname=linkname)
 
 	def json (self,compact=None):
-		return '"link-name" : %s' % (str(self.linkname))
+		return '"link-name": "%s"' % self.linkname
+

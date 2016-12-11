@@ -57,11 +57,9 @@ class LINKSTATE(Attribute):
 
 		return cls(ls_attrs=ls_attrs)
 
-	def json(self, compact=None):
-		json_data = []
-		for attr in self.ls_attrs:
-			json_data.append(attr.json())
-		return json_data
+	def json (self,compact=None):
+		content = ', '.join(d.json() for d in self.ls_attrs)
+		return '{ %s }' % (content)
 
 	def __str__(self):
 		return ', '.join(str(d) for d in self.ls_attrs)

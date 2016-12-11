@@ -6,12 +6,9 @@ Created by Evelio Vila on 2016-11-26. eveliovila@gmail.com
 Copyright (c) 2009-2016 Exa Networks. All rights reserved.
 """
 
-from struct import pack
 from struct import unpack
 
 from exabgp.protocol.ip import IP
-from exabgp.bgp.message.notification import Notify
-
 
 #   The IP Reachability Information TLV is a mandatory TLV that contains
 #   one IP address prefix (IPv4 or IPv6) originally advertised in the IGP
@@ -46,7 +43,7 @@ class IpReach(object):
 		return cls(prefix=prefix)
 
 	def json (self, compact=None):
-		return '"ip-reachability-tlv": %s' % self.prefix
+		return '"ip-reachability-tlv": "%s"' % self.prefix
 
 	def __eq__ (self, other):
     		return self.prefix == other.prefix

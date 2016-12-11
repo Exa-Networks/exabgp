@@ -41,7 +41,7 @@ class NeighAddr (object):
 
 	def json (self):
     		content = ' '.join([
-				'"neighbor-address": %s' % self.addr,
+				'"neighbor-address": "%s"' % self.addr,
 		])
 		return content
 
