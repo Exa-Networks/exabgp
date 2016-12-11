@@ -39,4 +39,4 @@ class UnRsvpBw(object):
 			return cls(unrsvpbw=unrsvpbw)
 
 	def json (self,compact=None):
-		return '{ "unreserved-bandwidth" : %s }' % (str(self.unrsvpbw))
+		return { "unreserved-bandwidth" : str(self.unrsvpbw) }

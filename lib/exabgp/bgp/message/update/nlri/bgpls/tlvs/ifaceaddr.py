@@ -6,13 +6,9 @@ Created by Evelio Vila on 2016-11-26. eveliovila@gmail.com
 Copyright (c) 2009-2016 Exa Networks. All rights reserved.
 """
 
-from struct import pack
 from struct import unpack
 
 from exabgp.protocol.ip import IP
-from exabgp.bgp.message.notification import Notify
-
-
 
 #		https://tools.ietf.org/html/rfc5305#section-3.2
 # 	This sub-TLV contains a 4-octet IPv4 address for the interface
@@ -43,7 +39,7 @@ class IfaceAddr (object):
 		return cls(iface_addr=addr)
 
 	def json (self, compact=None):
-		return '"interface-address": %s' % self.iface_address
+		return '"interface-address": "%s"' % self.iface_address
 
 	def __eq__ (self, other):
     		return self.iface_address == other.iface_address

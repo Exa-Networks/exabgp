@@ -39,4 +39,4 @@ class RsvpBw(object):
 			return cls(rsvpbw=rsvpbw)
 
 	def json (self,compact=None):
-		return '{ "maximum-reservable-link-bandwidth" : %s }' % (str(self.rsvpbw))
+		return { "maximum-reservable-link-bandwidth" : str(self.rsvpbw) }

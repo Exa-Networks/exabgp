@@ -39,4 +39,4 @@ class IsisArea(object):
 		return cls(areaid=b.hex)
 
 	def json (self,compact=None):
-		return '{ "area-id" : %s }' % (str(self.areaid))
+		return { "area-id" : str(self.areaid) }

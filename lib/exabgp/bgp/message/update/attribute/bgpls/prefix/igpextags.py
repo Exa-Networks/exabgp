@@ -44,4 +44,4 @@ class IgpExTags(object):
 		return cls(igpextags=tags)
 
 	def json (self,compact=None):
-		return '{ "igp-extended-route-tags" : %s }' % (str(self.igpextags))
+		return { "igp-extended-route-tags" : str(self.igpextags) }

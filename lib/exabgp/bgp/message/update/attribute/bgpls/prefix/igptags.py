@@ -47,4 +47,4 @@ class IgpTags(object):
 		return cls(igptags=tags)
 
 	def json (self,compact=None):
-		return '{ "igp-route-tags" : %s }' % (str(self.igptags))
+		return { "igp-route-tags" : str(self.igptags) }

@@ -57,4 +57,4 @@ class IgpMetric(object):
 			raise Notify(3,5, "Incorrect IGP Metric Size")
 
 	def json (self,compact=None):
-		return '"igp-metric" : %d' % (self.igpmetric[0])
+		return { "igp-metric" : self.igpmetric[0] }

@@ -48,4 +48,4 @@ class Srlg(object):
 		return cls(srlg=srlg)
 
 	def json (self,compact=None):
-		return '{ "shared-risk-link-groups" : %s }' % (str(self.srlg))
+		return { "shared-risk-link-groups" : str(self.srlg) }

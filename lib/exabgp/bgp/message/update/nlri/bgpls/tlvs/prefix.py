@@ -43,7 +43,7 @@ class Prefix (object):
 		return cls(iface_addr=addr)
 
 	def json (self):
-    		content = '"interface-address": %s' % self.iface_address
+    		content = '"interface-address": "%s"' % self.iface_address
 		return content
 
 	def __eq__ (self, other):

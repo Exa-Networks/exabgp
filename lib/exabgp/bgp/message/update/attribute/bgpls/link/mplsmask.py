@@ -64,4 +64,4 @@ class MplsMask(object):
 				raise Notify(3,5, "Invalid MPLS flags mask")
 
 	def json (self,compact=None):
-		return '{ "mpls-mask" : %s }' % (str(self.mplsflags))
+		return { "mpls-mask" : str(self.mplsflags) }

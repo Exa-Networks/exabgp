@@ -38,4 +38,4 @@ class MaxBw(object):
 			return cls(maxbw=maxbw)
 
 	def json (self,compact=None):
-		return '"maximum-link-bandwidth" : %d' % (self.maxbw)
+		return { "maximum-link-bandwidth" : str(self.maxbw) }

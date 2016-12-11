@@ -58,4 +58,4 @@ class LinkProtectionType(object):
 		return cls(protectionflags=flags)
 
 	def json (self,compact=None):
-		return '{ "link-protection-flags" : %s }' % (str(self.protectionflags))
+		return { "link-protection-flags" : str(self.protectionflags) }

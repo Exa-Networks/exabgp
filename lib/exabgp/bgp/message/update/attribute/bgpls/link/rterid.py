@@ -38,4 +38,4 @@ class RemoteTeRid(object):
 		return cls(terid=terid)
 
 	def json (self,compact=None):
-		return '{ "remote-te-router-id" : "%s" }' % (str(self.terid))
+		return { "remote-te-router-id" : str(self.terid) }

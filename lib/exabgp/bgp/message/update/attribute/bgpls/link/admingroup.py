@@ -33,4 +33,4 @@ class AdminGroup(object):
 			return cls(colormask=colormask)
 
 	def json (self,compact=None):
-		return '"admin-group-mask" : %s' % (str(self.colormask))
+		return { "admin-group-mask" : self.colormask }

@@ -45,4 +45,4 @@ class OspfForwardingAddress(object):
 		return cls(addr=addr)
 
 	def json (self,compact=None):
-		return '{ "ospf-forwarding-address" : "%s" }' % (str(self.addr))
+		return { "ospf-forwarding-address" : str(self.addr) }

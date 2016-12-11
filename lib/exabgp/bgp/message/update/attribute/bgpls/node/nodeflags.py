@@ -64,4 +64,4 @@ class NodeFlags(object):
 		return cls(nodeflags=flags)
 
 	def json (self,compact=None):
-		return '{ "node-flags" : %s }' % (str(self.nodeflags))
+		return { "node-flags" : str(self.nodeflags) }

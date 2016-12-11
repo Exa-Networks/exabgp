@@ -42,4 +42,4 @@ class NodeName(object):
 			return cls(nodename=nodename)
 
 	def json (self,compact=None):
-		return '{ "node-name" : "%s" }' % (str(self.nodename))
+		return { "node-name" : str(self.nodename) }

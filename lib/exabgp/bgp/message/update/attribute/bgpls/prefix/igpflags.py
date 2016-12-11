@@ -63,4 +63,4 @@ class IgpFlags(object):
     				raise Notify(3,5, "Invalid IGP flags mask")
 
 	def json (self,compact=None):
-		return '{ "igp-flags" : %s }' % (str(self.igpflags))
+		return { "igp-flags" : str(self.igpflags) }

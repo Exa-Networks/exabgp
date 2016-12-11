@@ -40,4 +40,4 @@ class TeMetric(object):
 			return cls(temetric=temetric)
 
 	def json (self,compact=None):
-		return '{ "te-metric" : %s }' % (str(self.temetric))
+		return { "te-metric" : str(self.temetric) }

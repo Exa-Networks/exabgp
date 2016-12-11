@@ -40,4 +40,4 @@ class LocalTeRid(object):
 		return cls(terid=terid)
 
 	def json (self,compact=None):
-		return '{ "local-te-router-id" : "%s" }' % (str(self.terid))
+		return { "local-te-router-id" : str(self.terid) }
