@@ -299,7 +299,7 @@ class Peer (object):
 	def detailed_link_status (self):
 		state_tbl = {
 			FSM.IDLE : "Idle",
-			FSN.ACTIVE : "Active",
+			FSM.ACTIVE : "Active",
 			FSM.CONNECT : "Connect",
 			FSM.OPENSENT : "OpenSent",
 			FSM.OPENCONFIRM : "OpenConfirm",
