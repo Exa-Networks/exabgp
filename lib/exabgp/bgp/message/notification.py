@@ -7,6 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 import string
+import struct
 
 from exabgp.bgp.message.message import Message
 
@@ -87,13 +88,14 @@ class Notification (Message):
 		(6,0): "Unspecific",
 		# RFC 4486
 		(6,1): "Maximum Number of Prefixes Reached",
-		(6,2): "Administrative Shutdown",
+		(6,2): "Administrative Shutdown", # draft-snijders-idr-shutdown-message
 		(6,3): "Peer De-configured",
 		(6,4): "Administrative Reset",
 		(6,5): "Connection Rejected",
 		(6,6): "Other Configuration Change",
 		(6,7): "Connection Collision Resolution",
 		(6,8): "Out of Resources",
+
 		# draft-keyur-bgp-enhanced-route-refresh-00
 		(7,1): "Invalid Message Length",
 		(7,2): "Malformed Message Subtype",
@@ -103,6 +105,25 @@ class Notification (Message):
 		self.code = code
 		self.subcode = subcode
 		self.data = data if not len([_ for _ in data if _ not in string.printable]) else hexstring(data)
+
+		# draft-ietf-idr-shutdown
+		if (code, subcode) == (6, 2):
+			if len(data):
+				length = struct.unpack('B', data[0])[0]
+				if 0 < length <= 128:
+					try:
+						sc = "Shutdown Communication: \"" \
+							+ data[1:length].decode('utf-8').replace('\r',' ').replace('\n',' ') \
+							+ "\""
+					except KeyboardInterrupt:
+						raise
+					except Exception:
+						sc = "The peer sent a invalid message notification (invalid UTF-8)"
+				elif length > 128:
+					self.data = hexstring(data)
+				else:
+					sc = "The peer sent an empty Shutdown Communication"
+				self.data = sc
 
 	def __str__ (self):
 		return "%s / %s%s" % (
