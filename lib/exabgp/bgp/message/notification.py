@@ -121,7 +121,8 @@ class Notification (Message):
 						raise
 					except Exception:
 						sc = "The peer sent a invalid message notification (invalid UTF-8)"
-					    self.data = sc
+				self.data = sc
+
 				if length > 128:
 					self.data = sc + ", trailing data: " + hexstring(data[128:])
 
