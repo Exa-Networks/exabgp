@@ -110,7 +110,9 @@ class Notification (Message):
 		if (code, subcode) == (6, 2):
 			if len(data):
 				length = struct.unpack('B', data[0])[0]
-				if 0 < length <= 128:
+				if length == 0:
+					self.data = "The peer sent an empty Shutdown Communication"
+				else:
 					try:
 						sc = "Shutdown Communication: \"" \
 							+ data[1:length].decode('utf-8').replace('\r',' ').replace('\n',' ') \
@@ -119,11 +121,9 @@ class Notification (Message):
 						raise
 					except Exception:
 						sc = "The peer sent a invalid message notification (invalid UTF-8)"
-				elif length > 128:
-					self.data = hexstring(data)
-				else:
-					sc = "The peer sent an empty Shutdown Communication"
-				self.data = sc
+					    self.data = sc
+				if length > 128:
+					self.data = sc + ", trailing data: " + hexstring(data[128:])
 
 	def __str__ (self):
 		return "%s / %s%s" % (
