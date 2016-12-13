@@ -1,3 +1,4 @@
+import struct
 import sys
 import json
 
@@ -97,6 +98,21 @@ class Transcoder (object):
 
 		if content == 'notification':
 			message = Notification.unpack_message(raw)
+
+			# draft-ietf-idr-shutdown
+			if (message.code, message.subcode) == (6, 2):
+				if len(message.data):
+					length = struct.unpack('B', message.data[0])[0]
+					if 0 < length <= 128:
+						try:
+							message.data = message.data[1:length].decode('utf-8').replace('\r',' ').replace('\n',' ')
+						except KeyboardInterrupt:
+							raise
+						except Exception:
+							message.data = "The peer sent a invalid message notification (invalid UTF-8)"
+					else:
+						messsage.data = "The peer sent an empty Shutdown Communication"
+
 			return self.encoder.notification(neighbor,direction,message,header,body)
 
 		if not self.negotiated:
