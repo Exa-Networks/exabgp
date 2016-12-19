@@ -115,7 +115,7 @@ class Notification (Message):
 				else:
 					try:
 						sc = "Shutdown Communication: \"" \
-							+ data[1:length].decode('utf-8').replace('\r',' ').replace('\n',' ') \
+							+ data[1:length+1].decode('utf-8').replace('\r',' ').replace('\n',' ') \
 							+ "\""
 					except KeyboardInterrupt:
 						raise
