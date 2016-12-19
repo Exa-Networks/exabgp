@@ -107,7 +107,7 @@ class Transcoder (object):
 						messsage.data = "The peer sent an empty Shutdown Communication"
 					else:
 						try:
-							message.data = message.data[1:length].decode('utf-8').replace('\r',' ').replace('\n',' ')
+							message.data = message.data[1:length+1].decode('utf-8').replace('\r',' ').replace('\n',' ')
 						except KeyboardInterrupt:
 							raise
 						except Exception:
