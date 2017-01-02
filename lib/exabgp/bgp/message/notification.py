@@ -105,38 +105,44 @@ class Notification (Message):
 		self.code = code
 		self.subcode = subcode
 
-		# draft-ietf-idr-shutdown
-		if (code, subcode) == (6, 2):
-			if len(data):
-				shutdown_length = struct.unpack('B', data[0])[0]
-				remainder_offset = 0
-				if shutdown_length == 0:
-					self.data = "The peer sent an empty Shutdown Communication."
-					# move offset past length field
-					remainder_offset += 1
-				if shutdown_length > 128:
-					self.data = "The peer sent too long Shutdown Communication: %i octets: %s" \
-						% (shutdown_length, hexstring(data))
-				else:
-					try:
-						self.data = "Shutdown Communication: \"" \
-							+ data[1:shutdown_length+1].decode('utf-8').replace('\r',' ').replace('\n',' ') \
-							+ "\""
-						# move offset past the shutdown communication
-						remainder_offset += shutdown_length + 1
-					except Exception:
-						self.data = "The peer sent a invalid Shutdown Communication (invalid UTF-8)"
-						# rewind the offset to before the invalid utf8, so we'll hexdump it later
-						remainder_offset -= shutdown_length - 1
-
-				# dump any trailing data (if any)
-				if len(data) > remainder_offset:
-					self.data += ", trailing data: " + hexstring(data[remainder_offset:])
-			else:
-				# shutdown without shutdown communication (the old fashioned way)
-				self.data = None
-		else:
+		if (code, subcode) != (6, 2):
 			self.data = data if not len([_ for _ in data if _ not in string.printable]) else hexstring(data)
+			return
+
+		if len(data) == 0:
+			# shutdown without shutdown communication (the old fashioned way)
+			self.data = ''
+			return
+
+		# draft-ietf-idr-shutdown or the peer was using 6,2 with data
+
+		shutdown_length  = ord(data[0])
+		data = data[1:]
+
+		if shutdown_length == 0:
+			self.data = "empty Shutdown Communication."
+			# move offset past length field
+			return
+
+		if len(data) < shutdown_length:
+			self.data = "invalid Shutdown Communication (buffer underrun) length : %i [%s]" % (shutdown_length, hexstring(data))
+			return
+
+		if shutdown_length > 128:
+			self.data = "invalid Shutdown Communication (too large) length : %i [%s]" % (shutdown_length, hexstring(data))
+			return
+
+		try:
+			string = data[:shutdown_length].decode('utf-8').replace('\r',' ').replace('\n',' ')
+		except UnicodeDecodeError:
+			self.data = "invalid Shutdown Communication (invalid UTF-8) length : %i [%s]" % (shutdown_length, hexstring(data))
+			return
+
+		self.data = 'Shutdown Communication: "' + string + '"'
+
+		string = string[shutdown_length:]
+		if string:
+			self.data += ", trailing data: " + hexstring(string)
 
 	def __str__ (self):
 		return "%s / %s%s" % (
