@@ -154,6 +154,8 @@ Version 4.0.0
    patch by: Stacey Sheldon (Corsa)
  * Fix: Update RIB cache families on configuration reload
     patch by: Brian Johnson
+ * Fix: Do not add IPv4/unicast family unless specifically configured
+    patch by: Brian Johnson
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set

@@ -178,9 +178,6 @@ class ParseNeighbor (Section):
 
 		families = families or NLRI.known_families()
 
-		if (AFI.ipv4,SAFI.unicast) not in families:
-			families.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
-
 		for family in families:
 			neighbor.add_family(family)
 
