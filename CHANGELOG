@@ -154,6 +154,8 @@ Version 4.0.0
    patch by: Stacey Sheldon (Corsa)
  * Fix: Update RIB cache families on configuration reload
     patch by: Brian Johnson
+ * Feature: Allow configuration parsing of a string or a file
+    patch by: Brian Johnson
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
