@@ -210,7 +210,7 @@ class Peer (object):
 			return
 
 		if direction.proto:
-			direction.proto.close('%s loop, peer reset, message [%s] error[%s]' % (direction.name,message,str(error)))
+			direction.proto.close(u"{0} loop, peer reset, message [{1}] error[{2}]".format(direction.name, message, error))
 		direction.proto = None
 		direction.generator = direction.enabled
 
@@ -674,7 +674,8 @@ class Peer (object):
 				self.logger.network('only one attempt to connect is allowed, stopping the peer')
 				self.stop()
 
-			self._reset(direction,'notification received (%d,%d)' % (notification.code,notification.subcode),notification)
+			self._reset(direction,'notification received (%d,%d)' \
+				% (notification.code, notification.subcode), notification)
 			return
 
 		# RECEIVED a Message TYPE we did not expect
