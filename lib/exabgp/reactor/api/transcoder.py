@@ -102,16 +102,30 @@ class Transcoder (object):
 			# draft-ietf-idr-shutdown
 			if (message.code, message.subcode) == (6, 2):
 				if len(message.data):
-					length = struct.unpack('B', message.data[0])[0]
-					if length == 0:
-						messsage.data = "The peer sent an empty Shutdown Communication"
+					shutdown_length = struct.unpack('B', message.data[0])[0]
+					remainder_offset = 0
+					if shutdown_length == 0:
+						message.data = "The peer sent an empty Shutdown Communication."
+						# move offset past length field
+						remainder_offset += 1
+					if shutdown_length > 128:
+						message.data = "The peer sent too long Shutdown Communication: %i octets: %s" \
+							% (shutdown_length, hexstring(data))
 					else:
 						try:
-							message.data = message.data[1:length+1].decode('utf-8').replace('\r',' ').replace('\n',' ')
-						except KeyboardInterrupt:
-							raise
+							message.data = "Shutdown Communication: \"" \
+								+ message.data[1:shutdown_length+1].decode('utf-8').replace('\r',' ').replace('\n',' ') \
+								+ "\""
+							# move offset past the shutdown communication
+							remainder_offset += shutdown_length + 1
 						except Exception:
-							message.data = "The peer sent a invalid message notification (invalid UTF-8)"
+							message.data = "The peer sent a invalid Shutdown Communication (invalid UTF-8)"
+							# rewind the offset to before the invalid utf8, so we'll hexdump it later
+							remainder_offset -= shutdown_length - 1
+
+					# dump any trailing data (if any)
+					if len(message.data) > remainder_offset:
+						message.data += ", trailing data: " + hexstring(message.data[remainder_offset:])
 
 			return self.encoder.notification(neighbor,direction,message,header,body)
 

@@ -88,7 +88,7 @@ class Notification (Message):
 		(6,0): "Unspecific",
 		# RFC 4486
 		(6,1): "Maximum Number of Prefixes Reached",
-		(6,2): "Administrative Shutdown", # draft-snijders-idr-shutdown-message
+		(6,2): "Administrative Shutdown", # augmented with draft-ietf-idr-shutdown
 		(6,3): "Peer De-configured",
 		(6,4): "Administrative Reset",
 		(6,5): "Connection Rejected",
@@ -104,27 +104,37 @@ class Notification (Message):
 	def __init__ (self, code, subcode, data=''):
 		self.code = code
 		self.subcode = subcode
-		self.data = data if not len([_ for _ in data if _ not in string.printable]) else hexstring(data)
+		self.data = hexstring(data)
 
 		# draft-ietf-idr-shutdown
 		if (code, subcode) == (6, 2):
 			if len(data):
-				length = struct.unpack('B', data[0])[0]
-				if length == 0:
-					self.data = "The peer sent an empty Shutdown Communication"
+				shutdown_length = struct.unpack('B', data[0])[0]
+				remainder_offset = 0
+				if shutdown_length == 0:
+					self.data = "The peer sent an empty Shutdown Communication."
+					# move offset past length field
+					remainder_offset += 1
+				if shutdown_length > 128:
+					self.data = "The peer sent too long Shutdown Communication: %i octets: %s" \
+						% (shutdown_length, hexstring(data))
 				else:
 					try:
-						sc = "Shutdown Communication: \"" \
-							+ data[1:length+1].decode('utf-8').replace('\r',' ').replace('\n',' ') \
+						self.data = "Shutdown Communication: \"" \
+							+ data[1:shutdown_length+1].decode('utf-8').replace('\r',' ').replace('\n',' ') \
 							+ "\""
-					except KeyboardInterrupt:
-						raise
+						# move offset past the shutdown communication
+						remainder_offset += shutdown_length + 1
 					except Exception:
-						sc = "The peer sent a invalid message notification (invalid UTF-8)"
-				self.data = sc
+						self.data = "The peer sent a invalid Shutdown Communication (invalid UTF-8)"
+						# rewind the offset to before the invalid utf8, so we'll hexdump it later
+						remainder_offset -= shutdown_length - 1
 
-				if length > 128:
-					self.data = sc + ", trailing data: " + hexstring(data[128:])
+				# dump any trailing data (if any)
+				if len(data) > remainder_offset:
+					self.data += ", trailing data: " + hexstring(data[remainder_offset:])
+		else:
+			self.data = data if not len([_ for _ in data if _ not in string.printable]) else hexstring(data)
 
 	def __str__ (self):
 		return "%s / %s%s" % (
