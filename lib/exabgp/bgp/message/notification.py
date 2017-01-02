@@ -104,7 +104,6 @@ class Notification (Message):
 	def __init__ (self, code, subcode, data=''):
 		self.code = code
 		self.subcode = subcode
-		self.data = hexstring(data)
 
 		# draft-ietf-idr-shutdown
 		if (code, subcode) == (6, 2):
