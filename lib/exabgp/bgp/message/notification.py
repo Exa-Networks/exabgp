@@ -132,6 +132,9 @@ class Notification (Message):
 				# dump any trailing data (if any)
 				if len(data) > remainder_offset:
 					self.data += ", trailing data: " + hexstring(data[remainder_offset:])
+			else:
+				# shutdown without shutdown communication (the old fashioned way)
+				self.data = None
 		else:
 			self.data = data if not len([_ for _ in data if _ not in string.printable]) else hexstring(data)
 
