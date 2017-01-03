@@ -184,6 +184,9 @@ def parse():
     g.add_argument("--community", metavar="COMMUNITY",
                    type=str, default=None,
                    help="announce IPs with the supplied community")
+    g.add_argument("--extended-community", metavar="EXTENDEDCOMMUNITY",
+                   type=str, default=None,
+                   help="announce IPs with the supplied extended community")
     g.add_argument("--large-community", metavar="LARGECOMMUNITY",
                    type=str, default=None,
                    help="announce IPs with the supplied large community")
@@ -445,6 +448,10 @@ def loop(options):
                     announce = "{0} community [ {1} ]".format(
                         announce,
                         options.community)
+                if options.extended_community:
+                    announce = "{0} extended-community [ {1} ]".format(
+                        announce,
+                        options.extended_community)
                 if options.large_community:
                     announce = "{0} large-community [ {1} ]".format(
                         announce,
