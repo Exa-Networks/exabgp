@@ -228,12 +228,12 @@ class Neighbor (object):
 			'\tpeer-as %s;\n' \
 			'\thold-time %s;\n' \
 			'\tmanual-eor %s;\n' \
-			'%s%s%s%s%s%s%s%s%s\n' \
+			'%s%s%s%s%s%s%s%s%s%s\n' \
 			'\tcapability {\n' \
-			'%s%s%s%s%s%s%s%s\t}\n' \
+			'%s%s%s%s%s%s%s\t}\n' \
 			'\tfamily {%s\n' \
 			'\t}\n' \
-			'\tprocess {\n' \
+			'\tapi {\n' \
 			'%s%s\t}%s\n' \
 			'}' % (
 				self.peer_address,
@@ -246,16 +246,16 @@ class Neighbor (object):
 				self.peer_as,
 				self.hold_time,
 				'true' if self.manual_eor else 'false',
-				'\n\tpassive;\n' if self.passive else '',
+				'\n\tpassive %s;\n' % ('true' if self.passive else 'false'),
 				'\n\tlisten %d;\n' % self.listen if self.listen else '',
 				'\n\tconnect %d;\n' % self.connect if self.connect else '',
-				'\tgroup-updates %s;\n' % (self.group_updates if self.group_updates else ''),
+				'\tgroup-updates %s;\n' % ('true' if self.group_updates else 'false'),
 				'\tauto-flush %s;\n' % ('true' if self.flush else 'false'),
 				'\tadj-rib-out %s;\n' % ('true' if self.adjribout else 'false'),
 				'\tmd5-password "%s";\n' % self.md5_password if self.md5_password else '',
 				'\tmd5-ip "%s";\n' % self.md5_ip if self.md5_ip else '',
-				'\toutgoing-ttl %s;\n' % (self.ttl_out if self.ttl_out else ''),
-				'\tincoming-ttl %s;\n' % (self.ttl_in if self.ttl_in else ''),
+				'\toutgoing-ttl %s;\n' % self.ttl_out if self.ttl_out else '',
+				'\tincoming-ttl %s;\n' % self.ttl_in if self.ttl_in else '',
 				'\t\tasn4 %s;\n' % ('enable' if self.asn4 else 'disable'),
 				'\t\troute-refresh %s;\n' % ('enable' if self.route_refresh else 'disable'),
 				'\t\tgraceful-restart %s;\n' % (self.graceful_restart if self.graceful_restart else 'disable'),

@@ -154,6 +154,8 @@ Version 4.0.0
    patch by: Stacey Sheldon (Corsa)
  * Fix: Update RIB cache families on configuration reload
     patch by: Brian Johnson
+ * Change: Update show neighbors output to be parseable by configuration parser
+    patch by: Brian Johnson
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
