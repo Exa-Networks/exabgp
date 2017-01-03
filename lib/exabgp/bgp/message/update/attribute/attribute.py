@@ -102,6 +102,8 @@ class Attribute (object):
 		# RFC5512
 		TUNNEL_ENCAP       = 0x17  # 23
 		AIGP               = 0x1A  # 26
+		# RFC7752
+		BGP_LS             = 0x1D  # 29
 
 		# draft-ietf-idr-large-community
 		LARGE_COMMUNITY    = 0x20  # 32
@@ -134,6 +136,7 @@ class Attribute (object):
 			PMSI_TUNNEL:        'pmsi-tunnel',
 			TUNNEL_ENCAP:       'tunnel-encaps',
 			AIGP:               'aigp',
+			BGP_LS:				'bgp-ls',
 			0xfffa:             'internal-name',
 			0xfffb:             'internal-withdraw',
 			0xfffc:             'internal-watchdog',

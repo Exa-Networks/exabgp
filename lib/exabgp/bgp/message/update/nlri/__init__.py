@@ -18,3 +18,4 @@ from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.bgp.message.update.nlri.flow import Flow
 from exabgp.bgp.message.update.nlri.evpn import EVPN
 from exabgp.bgp.message.update.nlri.rtc import RTC
+from exabgp.bgp.message.update.nlri.bgpls import BGPLS
