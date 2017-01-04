@@ -160,6 +160,10 @@ Version 4.0.0
     patch by: Brian Johnson
  * Fix: Do not add IPv4/unicast family unless specifically configured
     patch by: Brian Johnson
+ * Fix: ParseAPI should always use the class version of the _built dict
+    patch by: Brian Johnson
+ * Fix: Off by one error when getting message type for send-* api
+    patch by: Brian Johnson
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set
