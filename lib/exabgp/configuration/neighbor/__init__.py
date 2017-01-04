@@ -76,7 +76,7 @@ class ParseNeighbor (Section):
 		'outgoing-ttl':  ttl,
 		'incoming-ttl':  ttl,
 		'md5-password':  md5,
-		'md5-ip':        router_id,
+		'md5-ip':        ip,
 		'group-updates': boolean,
 		'auto-flush':    boolean,
 		'adj-rib-out':   boolean,
