@@ -25,7 +25,7 @@ class RemoteTeRid(object):
 		self.terid = terid
 
 	def __repr__ (self):
-		return "Remote TE Router ID: %s" % (self.terid.string)
+		return "Remote TE Router ID: %s" % (self.terid)
 
 	@classmethod
 	def unpack (cls,data,length):

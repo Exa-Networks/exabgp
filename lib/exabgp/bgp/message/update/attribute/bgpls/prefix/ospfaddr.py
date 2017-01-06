@@ -30,7 +30,7 @@ class OspfForwardingAddress(object):
 		self.addr = addr
 
 	def __repr__ (self):
-		return "Ospf forwarding address: '%s'" % (self.addr.string)
+		return "Ospf forwarding address: '%s'" % (self.addr)
 
 	@classmethod
 	def unpack (cls,data,length):
