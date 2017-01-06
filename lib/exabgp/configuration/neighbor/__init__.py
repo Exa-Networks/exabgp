@@ -46,10 +46,12 @@ def _hostname ():
 
 
 def _domainname ():
-	value = socket.gethostname()
-	if not value:
+	value = socket.getfqdn()
+	domainname = '.'.join(value.split('.')[1:])
+	if not domainname:
 		return 'localdomain'
-	return ''.join(value.split('.')[1:])
+	return domainname
+
 
 
 class ParseNeighbor (Section):
@@ -60,8 +62,8 @@ class ParseNeighbor (Section):
 	known = {
 		'inherit':       inherit,
 		'description':   description,
-		'hostname':      hostname,
-		'domainname':    domainname,
+		'host-name':     hostname,
+		'domain-name':   domainname,
 		'router-id':     router_id,
 		'hold-time':     hold_time,
 		'local-address': ip,
@@ -74,7 +76,7 @@ class ParseNeighbor (Section):
 		'outgoing-ttl':  ttl,
 		'incoming-ttl':  ttl,
 		'md5-password':  md5,
-		'md5-ip':        router_id,
+		'md5-ip':        ip,
 		'group-updates': boolean,
 		'auto-flush':    boolean,
 		'adj-rib-out':   boolean,
@@ -84,8 +86,8 @@ class ParseNeighbor (Section):
 	action = {
 		'inherit':       'set-command',
 		'description':   'set-command',
-		'hostname':      'set-command',
-		'domainname':    'set-command',
+		'host-name':     'set-command',
+		'domain-name':   'set-command',
 		'router-id':     'set-command',
 		'hold-time':     'set-command',
 		'local-address': 'set-command',
@@ -177,9 +179,6 @@ class ParseNeighbor (Section):
 				families.append(pair)
 
 		families = families or NLRI.known_families()
-
-		if (AFI.ipv4,SAFI.unicast) not in families:
-			families.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
 
 		for family in families:
 			neighbor.add_family(family)

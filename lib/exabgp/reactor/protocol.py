@@ -156,7 +156,7 @@ class Protocol (object):
 			yield boolean
 
 	def send (self,raw):
-		if self.neighbor.api.get('send-%s' % Message.CODE.short(ord(raw[19])),False):
+		if self.neighbor.api.get('send-%s' % Message.CODE.short(ord(raw[18])),False):
 			message = Update.unpack_message(raw[19:],self.negotiated)
 			self._to_api('send',message,raw)
 

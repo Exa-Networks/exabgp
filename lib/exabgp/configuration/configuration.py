@@ -88,11 +88,12 @@ class _Configuration (object):
 
 class Configuration (_Configuration):
 
-	def __init__ (self, configurations):
+	def __init__ (self, configurations, text=False):
 		_Configuration.__init__(self)
 		self.api_encoder = environment.settings().api.encoder
 
 		self._configurations = configurations
+		self._text = text
 
 		self.error  = Error  ()
 		self.scope  = Scope  ()
@@ -335,8 +336,12 @@ class Configuration (_Configuration):
 		# clearing the current configuration to be able to re-parse it
 		self._clear()
 
-		if not self.tokeniser.set_file(fname):
-			return False
+		if self._text:
+			if not self.tokeniser.set_text(fname):
+				return False
+		else:
+			if not self.tokeniser.set_file(fname):
+				return False
 
 		if self.section('root') is not True:
 			# XXX: Should it be in neighbor ?

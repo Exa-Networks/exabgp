@@ -154,6 +154,20 @@ Version 4.0.0
    patch by: Stacey Sheldon (Corsa)
  * Fix: Update RIB cache families on configuration reload
     patch by: Brian Johnson
+ * Change: Update show neighbors output to be parseable by configuration parser
+    patch by: Brian Johnson
+ * Feature: Allow configuration parsing of a string or a file
+    patch by: Brian Johnson
+ * Fix: Do not add IPv4/unicast family unless specifically configured
+    patch by: Brian Johnson
+ * Fix: ParseAPI should always use the class version of the _built dict
+    patch by: Brian Johnson
+ * Fix: Off by one error when getting message type for send-* api
+    patch by: Brian Johnson
+ * Fix: md5-ip config option is an ip address not a router_id
+    patch by: Brian Johnson
+ * Feature: Show routes by type (static/flow/l2vpn)
+    patch by: Brian Johnson
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set

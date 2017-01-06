@@ -33,30 +33,35 @@ class ParseFamily (Section):
 
 	convert = {
 		'ipv4': {
-			'unicast':   (AFI(AFI.ipv4),SAFI(SAFI.unicast)),
-			'multicast': (AFI(AFI.ipv4),SAFI(SAFI.multicast)),
-			'nlri-mpls': (AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)),
-			'mpls-vpn':  (AFI(AFI.ipv4),SAFI(SAFI.mpls_vpn)),
-			'flow':      (AFI(AFI.ipv4),SAFI(SAFI.flow_ip)),
-			'flow-vpn':  (AFI(AFI.ipv4),SAFI(SAFI.flow_vpn)),
+			'unicast':   	(AFI(AFI.ipv4),SAFI(SAFI.unicast)),
+			'multicast': 	(AFI(AFI.ipv4),SAFI(SAFI.multicast)),
+			'nlri-mpls': 	(AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)),
+			'mpls-vpn':  	(AFI(AFI.ipv4),SAFI(SAFI.mpls_vpn)),
+			'flow':      	(AFI(AFI.ipv4),SAFI(SAFI.flow_ip)),
+			'flow-vpn':  	(AFI(AFI.ipv4),SAFI(SAFI.flow_vpn)),
 		},
 		'ipv6': {
-			'unicast':   (AFI(AFI.ipv6),SAFI(SAFI.unicast)),
-			'nlri-mpls': (AFI(AFI.ipv6),SAFI(SAFI.nlri_mpls)),
-			'mpls-vpn':  (AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)),
-			'flow':      (AFI(AFI.ipv6),SAFI(SAFI.flow_ip)),
-			'flow-vpn':  (AFI(AFI.ipv6),SAFI(SAFI.flow_vpn)),
+			'unicast':   	(AFI(AFI.ipv6),SAFI(SAFI.unicast)),
+			'nlri-mpls': 	(AFI(AFI.ipv6),SAFI(SAFI.nlri_mpls)),
+			'mpls-vpn':  	(AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)),
+			'flow':      	(AFI(AFI.ipv6),SAFI(SAFI.flow_ip)),
+			'flow-vpn':  	(AFI(AFI.ipv6),SAFI(SAFI.flow_vpn)),
 		},
 		'l2vpn': {
-			'vpls':      (AFI(AFI.l2vpn),SAFI(SAFI.vpls)),
-			'evpn':      (AFI(AFI.l2vpn),SAFI(SAFI.evpn)),
-		}
+			'vpls':      	(AFI(AFI.l2vpn),SAFI(SAFI.vpls)),
+			'evpn':      	(AFI(AFI.l2vpn),SAFI(SAFI.evpn)),
+		},
+		'bgpls': {
+			'bgp-ls':		(AFI(AFI.bgpls),SAFI(SAFI.bgp_ls)),
+			'bgp-ls-vpn':	(AFI(AFI.bgpls),SAFI(SAFI.bgp_ls_vpn)),
+		},
 	}
 
 	action = {
 		'ipv4':  'append-command',
 		'ipv6':  'append-command',
 		'l2vpn': 'append-command',
+		'bgpls': 'append-command',
 	}
 
 	name = 'family'
@@ -67,6 +72,7 @@ class ParseFamily (Section):
 			'ipv4':  self.ipv4,
 			'ipv6':  self.ipv6,
 			'l2vpn': self.l2vpn,
+			'bgpls': self.bgpls,
 		}
 		self._all = ''
 		self._seen = []
@@ -105,6 +111,9 @@ class ParseFamily (Section):
 
 	def l2vpn (self, tokeniser):
 		return self._family(tokeniser, 'l2vpn')
+
+	def bgpls (self, tokeniser):
+    		return self._family(tokeniser, 'bgpls')
 
 	def minimal (self, tokeniser):
 		raise ValueError('family minimal is deprecated')
