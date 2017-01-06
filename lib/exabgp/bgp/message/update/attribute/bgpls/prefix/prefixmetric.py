@@ -31,7 +31,7 @@ class PrefixMetric(object):
 		self.prefixmetric = prefixmetric
 
 	def __repr__ (self):
-		return "Prefix meteric: %s" % (self.prefixmetric)
+		return "Prefix metric: %s" % (self.prefixmetric)
 
 	@classmethod
 	def unpack (cls,data,length):
@@ -42,4 +42,4 @@ class PrefixMetric(object):
 			return cls(prefixmetric=metric)
 
 	def json (self,compact=None):
-		return '"prefix-metric": "%s"' % str(self.prefixmetric[0])
+		return '"prefix-metric": "%s"' % str(self.prefixmetric)
