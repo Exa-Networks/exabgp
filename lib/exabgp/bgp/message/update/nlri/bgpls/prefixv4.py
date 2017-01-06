@@ -111,6 +111,7 @@ class PREFIXv4(BGPLS):
 		return hash((self))
 
 	def json (self, compact=None):
+
 		nodes = ', '.join(d.json() for d in self.local_node)
 		content = ', '.join([
 			'"ls-nlri-type": 3',
@@ -118,11 +119,14 @@ class PREFIXv4(BGPLS):
 			'"protocol-id": %s' % self.proto_id,
 			'"node-descriptors": { %s }' % nodes,
 			self.prefix.json(),
-			self.ospf_type.json(),
 			'"nexthop": "%s"' % self.nexthop,
 		])
+		if self.ospf_type:
+  			content += ', %s' % self.ospf_type.json()
+
 		if self.route_d:
-			content += ', %s' % self.route_d.json()
+  			content += ', %s' % self.route_d.json()
+
 		return '{ %s }' % (content)
 
 	def pack (self,negotiated=None):

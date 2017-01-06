@@ -5,8 +5,9 @@ node.py
 Created by Evelio Vila on 2016-11-26. eveliovila@gmail.com
 Copyright (c) 2009-2016 Exa Networks. All rights reserved.
 """
-
+from __future__ import division
 from struct import unpack
+import math
 
 from exabgp.protocol.ip import IP
 
@@ -36,10 +37,27 @@ class IpReach(object):
 
 	@classmethod
 	def unpack (cls, data):
-		plenght = unpack('!B',data[0])[0]
-		psize = plenght / 8
-		prefix = IP.unpack(data[1:psize])
-		# prefix = unpack("!%dB" % psize ,data[1:psize])[0]
+		# FIXME
+		# There seems to be a bug in the Cisco Xr implementation
+		# that causes the Prefix IP field to be one octet less than
+		# indicated by the Prefix Length field. Once the bug is fixed we'll change
+		# the calculation to be rfc compliant. See below for correct way:
+		#
+		# The IP Prefix field contains the most significant
+		# octets of the prefix, i.e., 1 octet for prefix length 1 up to 8, 2
+		# octets for prefix length 9 to 16, 3 octets for prefix length 17 up to
+		# 24, 4 octets for prefix length 25 up to 32, etc.
+
+		# plenght = unpack('!B',data[0])[0]
+		# octet = int(math.ceil(plenght / 8))
+		octet = len(data[1:])
+		prefix_list = unpack("!%dB" % octet ,data[1:octet + 1])
+		prefix_list = [str(x) for x in prefix_list]
+		# fill the rest of the octets with 0 to construct
+		# a 4 octet IP prefix
+		prefix_list = prefix_list + ["0"]*(4 - len(prefix_list))
+		prefix = ".".join(prefix_list)
+
 		return cls(prefix=prefix)
 
 	def json (self, compact=None):
