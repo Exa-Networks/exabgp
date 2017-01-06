@@ -1,3 +1,4 @@
+import struct
 import sys
 import json
 
@@ -97,6 +98,46 @@ class Transcoder (object):
 
 		if content == 'notification':
 			message = Notification.unpack_message(raw)
+
+			if (message.code, message.subcode) != (6, 2):
+				message.data = data if not len([_ for _ in data if _ not in string.printable]) else hexstring(data)
+				return self.encoder.notification(neighbor,direction,message,header,body)
+
+			if len(data) == 0:
+				# shutdown without shutdown communication (the old fashioned way)
+				message.data = ''
+				return self.encoder.notification(neighbor,direction,message,header,body)
+
+			# draft-ietf-idr-shutdown or the peer was using 6,2 with data
+
+			shutdown_length  = ord(data[0])
+			data = data[1:]
+
+			if shutdown_length == 0:
+				message.data = "empty Shutdown Communication."
+				# move offset past length field
+				return self.encoder.notification(neighbor,direction,message,header,body)
+
+			if len(data) < shutdown_length:
+				message.data = "invalid Shutdown Communication (buffer underrun) length : %i [%s]" % (shutdown_length, hexstring(data))
+				return self.encoder.notification(neighbor,direction,message,header,body)
+
+			if shutdown_length > 128:
+				message.data = "invalid Shutdown Communication (too large) length : %i [%s]" % (shutdown_length, hexstring(data))
+				return self.encoder.notification(neighbor,direction,message,header,body)
+
+			try:
+				string = data[:shutdown_length].decode('utf-8').replace('\r',' ').replace('\n',' ')
+			except UnicodeDecodeError:
+				message.data = "invalid Shutdown Communication (invalid UTF-8) length : %i [%s]" % (shutdown_length, hexstring(data))
+				return self.encoder.notification(neighbor,direction,message,header,body)
+
+			message.data = 'Shutdown Communication: "' + string + '"'
+
+			string = string[shutdown_length:]
+			if string:
+				message.data += ", trailing data: " + hexstring(string)
+
 			return self.encoder.notification(neighbor,direction,message,header,body)
 
 		if not self.negotiated:

@@ -7,6 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 import string
+import struct
 
 from exabgp.bgp.message.message import Message
 
@@ -87,13 +88,14 @@ class Notification (Message):
 		(6,0): "Unspecific",
 		# RFC 4486
 		(6,1): "Maximum Number of Prefixes Reached",
-		(6,2): "Administrative Shutdown",
+		(6,2): "Administrative Shutdown", # augmented with draft-ietf-idr-shutdown
 		(6,3): "Peer De-configured",
 		(6,4): "Administrative Reset",
 		(6,5): "Connection Rejected",
 		(6,6): "Other Configuration Change",
 		(6,7): "Connection Collision Resolution",
 		(6,8): "Out of Resources",
+
 		# draft-keyur-bgp-enhanced-route-refresh-00
 		(7,1): "Invalid Message Length",
 		(7,2): "Malformed Message Subtype",
@@ -102,7 +104,45 @@ class Notification (Message):
 	def __init__ (self, code, subcode, data=''):
 		self.code = code
 		self.subcode = subcode
-		self.data = data if not len([_ for _ in data if _ not in string.printable]) else hexstring(data)
+
+		if (code, subcode) != (6, 2):
+			self.data = data if not len([_ for _ in data if _ not in string.printable]) else hexstring(data)
+			return
+
+		if len(data) == 0:
+			# shutdown without shutdown communication (the old fashioned way)
+			self.data = ''
+			return
+
+		# draft-ietf-idr-shutdown or the peer was using 6,2 with data
+
+		shutdown_length  = ord(data[0])
+		data = data[1:]
+
+		if shutdown_length == 0:
+			self.data = "empty Shutdown Communication."
+			# move offset past length field
+			return
+
+		if len(data) < shutdown_length:
+			self.data = "invalid Shutdown Communication (buffer underrun) length : %i [%s]" % (shutdown_length, hexstring(data))
+			return
+
+		if shutdown_length > 128:
+			self.data = "invalid Shutdown Communication (too large) length : %i [%s]" % (shutdown_length, hexstring(data))
+			return
+
+		try:
+			string = data[:shutdown_length].decode('utf-8').replace('\r',' ').replace('\n',' ')
+		except UnicodeDecodeError:
+			self.data = "invalid Shutdown Communication (invalid UTF-8) length : %i [%s]" % (shutdown_length, hexstring(data))
+			return
+
+		self.data = 'Shutdown Communication: "' + string + '"'
+
+		string = string[shutdown_length:]
+		if string:
+			self.data += ", trailing data: " + hexstring(string)
 
 	def __str__ (self):
 		return "%s / %s%s" % (
