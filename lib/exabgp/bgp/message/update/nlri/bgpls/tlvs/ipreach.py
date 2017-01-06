@@ -43,10 +43,10 @@ class IpReach(object):
 		# indicated by the Prefix Length field. Once the bug is fixed we'll change
 		# the calculation to be rfc compliant. See below for correct way:
 		#
-  	# The IP Prefix field contains the most significant
-    # octets of the prefix, i.e., 1 octet for prefix length 1 up to 8, 2
-    # octets for prefix length 9 to 16, 3 octets for prefix length 17 up to
-    # 24, 4 octets for prefix length 25 up to 32, etc.
+		# The IP Prefix field contains the most significant
+		# octets of the prefix, i.e., 1 octet for prefix length 1 up to 8, 2
+		# octets for prefix length 9 to 16, 3 octets for prefix length 17 up to
+		# 24, 4 octets for prefix length 25 up to 32, etc.
 
 		# plenght = unpack('!B',data[0])[0]
 		# octet = int(math.ceil(plenght / 8))
