@@ -166,6 +166,8 @@ Version 4.0.0
     patch by: Brian Johnson
  * Fix: md5-ip config option is an ip address not a router_id
     patch by: Brian Johnson
+ * Fix: Rewrite Update.messages so it will only include one MP_REACH or MP_UNREACH per UPDATE
+    patch by: Brian Johnson
 
 Version 3.4.10
  * Fix: Fix parsing attributes with PARTIAL flag set

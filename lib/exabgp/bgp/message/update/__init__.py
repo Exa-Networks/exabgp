@@ -104,147 +104,72 @@ class Update (Message):
 	def messages (self, negotiated, include_withdraw=True):
 		# sort the nlris
 
-		add_nlri = []
-		del_nlri = []
-		add_mp = {}
-		del_mp = {}
+		nlris = []
+		mp_nlris = {}
 
 		for nlri in self.nlris:
 			if nlri.family() in negotiated.families:
 				if nlri.afi == AFI.ipv4 and nlri.safi in [SAFI.unicast, SAFI.multicast]:
-					if nlri.action == OUT.ANNOUNCE:
-						add_nlri.append(nlri)
-					elif include_withdraw:
-						del_nlri.append(nlri)
+					nlris.append(nlri)
 				else:
-					if nlri.action == OUT.ANNOUNCE:
-						add_mp.setdefault(nlri.family(),[]).append(nlri)
-					elif include_withdraw:
-						del_mp.setdefault(nlri.family(),[]).append(nlri)
+					mp_nlris.setdefault(nlri.family(), {}).setdefault(nlri.action, []).append(nlri)
 
-		if not add_nlri and not del_nlri and not add_mp and not del_mp:
+		if not nlris and not mp_nlris:
 			return
 
-		if add_nlri or add_mp:
-			attr = self.attributes.pack(negotiated,True)
+		attr = self.attributes.pack(negotiated, True)
+
+		# Withdraws/NLRIS (IPv4 unicast and multicast)
+		msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr) # 2 bytes for each of the two prefix() header
+		withdraws = ''
+		announced = ''
+		for nlri in nlris:
+			packed = nlri.pack(negotiated)
+			if len(announced + withdraws + packed) > msg_size:
+				if not withdraws and not announced:
+					raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
+				yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
+				if nlri.action == OUT.ANNOUNCE:
+					announced = packed
+					withdraws = ''
+				elif include_withdraw:
+					withdraws = packed
+					announced = ''
+			else:
+				if nlri.action == OUT.ANNOUNCE:
+					announced += packed
+				elif include_withdraw:
+					withdraws += packed
+
+		if mp_nlris:
+			for family in mp_nlris.keys():
+				afi, safi = family
+				mp_reach = ''
+				mp_unreach = ''
+				mp_announce = MPRNLRI(afi, safi, mp_nlris[family].get(OUT.ANNOUNCE, []))
+				mp_withdraw = MPURNLRI(afi, safi, mp_nlris[family].get(OUT.WITHDRAW, []))
+
+				for mprnlri in mp_announce.packed_attributes(negotiated, msg_size - len(withdraws + announced)):
+					if mp_reach:
+						yield self._message(Update.prefix(withdraws) + Update.prefix(attr + mp_reach) + announced)
+						announced = ''
+						withdraws = ''
+					mp_reach = mprnlri
+
+				if include_withdraw:
+					for mpurnlri in mp_withdraw.packed_attributes(negotiated, msg_size - len(withdraws + announced + mp_reach)):
+						if mp_unreach:
+							yield self._message(Update.prefix(withdraws) + Update.prefix(attr + mp_unreach + mp_reach) + announced)
+							mp_reach = ''
+							announced = ''
+							withdraws = ''
+						mp_unreach = mpurnlri
+
+				yield self._message(Update.prefix(withdraws) + Update.prefix(attr + mp_unreach + mp_reach) + announced) # yield mpr/mpur per family
+				withdraws = ''
+				announced = ''
 		else:
-			attr = ''
-
-		# withdrawn IPv4
-
-		packed_del = ''
-		msg_size = negotiated.msg_size - 19 - 2 - 2  # 2 bytes for each of the two prefix() header
-
-		while del_nlri:
-			nlri = del_nlri.pop()
-			packed = nlri.pack(negotiated)
-			seen_size = len(packed_del + packed)
-			if seen_size > msg_size:
-				if not packed_del:
-					raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
-				yield self._message(Update.prefix(packed_del) + Update.prefix(''))
-				packed_del = packed
-			else:
-				packed_del += packed
-
-		# withdrawn MP
-
-		packed_mp_del = ''
-
-		families = del_mp.keys()
-		while families:
-			family = families.pop()
-			afi,safi = family
-			mps = del_mp[family]
-			seen_size = len(packed_del + packed_mp_del)
-			mp_packed_generator = MPURNLRI(afi,safi,mps).packed_attributes(negotiated)
-			try:
-				while True:
-					packed = mp_packed_generator.next()
-					seen_size = len(packed_del + packed_mp_del + packed)
-					if seen_size > msg_size:
-						if not packed_mp_del and not packed_del:
-							raise Notify(6,0,'attributes size is so large we can not even pack one MPURNLRI')
-						yield self._message(Update.prefix(packed_del) + Update.prefix(packed_mp_del))
-						packed_del = ''
-						packed_mp_del = packed
-					else:
-						packed_mp_del += packed
-			except StopIteration:
-				pass
-
-		# add MP
-
-		# we have some MPRNLRI so we need to add the attributes, recalculate
-		# and make sure we do not overflow
-
-		packed_mp_add = ''
-
-		if add_mp:
-			msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
-		seen_size = len(packed_del + packed_mp_del)
-		if seen_size > msg_size:
-			yield self._message(Update.prefix(packed_del) + Update.prefix(packed_mp_del))
-			packed_del = ''
-			packed_mp_del = ''
-
-		families = add_mp.keys()
-		while families:
-			family = families.pop()
-			afi,safi = family
-			mps = add_mp[family]
-			seen_size = len(packed_del + packed_mp_del + packed_mp_add)
-			mp_packed_generator = MPRNLRI(afi,safi,mps).packed_attributes(negotiated)
-			try:
-				while True:
-					packed = mp_packed_generator.next()
-					seen_size = len(packed_del + packed_mp_del + packed_mp_add + packed)
-					if seen_size > msg_size:
-						if not packed_mp_add and not packed_mp_del and not packed_del:
-							raise Notify(6,0,'attributes size is so large we can not even pack on MPURNLRI')
-						yield self._message(Update.prefix(packed_del) + Update.prefix(packed_mp_del + packed_mp_add + attr))
-						packed_del = ''
-						packed_mp_del = ''
-						packed_mp_add = packed
-					else:
-						packed_mp_add += packed
-			except StopIteration:
-				pass
-
-		# ADD Ipv4
-
-		packed_add = ''
-
-		if add_nlri:
-			msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
-		seen_size = len(packed_del + packed_mp_del + packed_mp_add)
-		if seen_size > msg_size:
-			yield self._message(Update.prefix(packed_del) + Update.prefix(packed_mp_del))
-			packed_del = ''
-			packed_mp_del = ''
-
-		# addpath = negotiated.addpath.send(AFI.ipv4,SAFI.unicast)
-
-		while add_nlri:
-			nlri = add_nlri.pop()
-			packed = nlri.pack(negotiated)
-			seen_size = len(packed_del + packed_mp_del + packed_mp_add + packed_add + packed)
-			if seen_size > msg_size:
-				if not packed_add and not packed_mp_add and not packed_mp_del and not packed_del:
-					raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
-				if packed_mp_add:
-					yield self._message(Update.prefix(packed_del) + Update.prefix(packed_mp_del + packed_mp_add + attr) + packed_add)
-					msg_size = negotiated.msg_size - 19 - 2 - 2  # 2 bytes for each of the two prefix() header
-				else:
-					yield self._message(Update.prefix(packed_del) + Update.prefix(packed_mp_del + attr) + packed_add)
-				packed_del = ''
-				packed_mp_del = ''
-				packed_mp_add = ''
-				packed_add = packed
-			else:
-				packed_add += packed
-
-		yield self._message(Update.prefix(packed_del) + Update.prefix(packed_mp_del + packed_mp_add + attr) + packed_add)
+			yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
 
 	# XXX: FIXME: this can raise ValueError. IndexError,TypeError, struct.error (unpack) = check it is well intercepted
 	@classmethod
