@@ -9,6 +9,11 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import NoNextHop
 from exabgp.bgp.message.update.attribute import NextHop
+from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.bgp.message.update.nlri.inet import INET
+from exabgp.bgp.message.update.nlri.flow import Flow
+from exabgp.bgp.message.update.nlri.vpls import VPLS
+from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 from exabgp.bgp.message import OUT
 from exabgp.configuration.static import ParseStaticRoute
 
@@ -24,6 +29,28 @@ class Text (object):
 			return function
 		return register
 
+def _show_routes_callback(reactor, service, last, route_type, advertised, extensive):
+	def callback ():
+		families = None
+		if last in ('routes', 'extensive', 'static', 'flow', 'l2vpn'):
+			peers = reactor.peers.keys()
+		else:
+			peers = [n for n in reactor.peers.keys() if 'neighbor %s' % last in n]
+		for key in peers:
+			peer = reactor.peers.get(key, None)
+			if not peer:
+				continue
+			if advertised:
+				families = peer._outgoing.proto.negotiated.families if peer._outgoing.proto else []
+			for change in list(peer.neighbor.rib.outgoing.sent_changes(families)):
+				if isinstance(change.nlri, route_type):
+					if extensive:
+						reactor.answer(service,'neighbor %s %s' % (peer.neighbor.name(),change.extensive()))
+					else:
+						reactor.answer(service,'neighbor %s %s' % (peer.neighbor.peer_address,str(change.nlri)))
+					yield True
+		reactor.answer(service,'done')
+	return callback
 
 @Text('shutdown')
 def shutdown (self, reactor, service, command):
@@ -121,49 +148,47 @@ def show_neighbor_status (self, reactor, service, command):
 			yield True
 		reactor.answer(service,"done")
 
-	reactor.plan(callback())
+	reactor.plan(callback(), 'show_neighbor_status')
 	return True
 
 
 @Text('show routes')
 def show_routes (self, reactor, service, command):
-	def callback ():
-		last = command.split()[-1]
-		if last == 'routes':
-			neighbors = reactor.configuration.neighbors.keys()
-		else:
-			neighbors = [n for n in reactor.configuration.neighbors.keys() if 'neighbor %s' % last in n]
-		for key in neighbors:
-			neighbor = reactor.configuration.neighbors.get(key, None)
-			if not neighbor:
-				continue
-			for change in list(neighbor.rib.outgoing.sent_changes()):
-				reactor.answer(service,'neighbor %s %s' % (neighbor.peer_address,str(change.nlri)))
-				yield True
-		reactor.answer(service,'done')
-
+	last = command.split()[-1]
+	callback = _show_routes_callback(reactor, service, last, NLRI, False, False)
 	reactor.plan(callback(),'show_routes')
 	return True
 
 
 @Text('show routes extensive')
 def show_routes_extensive (self, reactor, service, command):
-	def callback ():
-		last = command.split()[-1]
-		if last == 'extensive':
-			neighbors = reactor.configuration.neighbors.keys()
-		else:
-			neighbors = [n for n in reactor.configuration.neighbors.keys() if 'neighbor %s' % last in n]
-		for key in neighbors:
-			neighbor = reactor.configuration.neighbors.get(key, None)
-			if not neighbor:
-				continue
-			for change in list(neighbor.rib.outgoing.sent_changes()):
-				reactor.answer(service,'neighbor %s %s' % (neighbor.name(),change.extensive()))
-				yield True
-		reactor.answer(service,'done')
-
+	last = command.split()[-1]
+	callback = _show_routes_callback(reactor, service, last, NLRI, False, True)
 	reactor.plan(callback(),'show_routes_extensive')
+	return True
+
+
+@Text('show routes static')
+def show_routes_static (self, reactor, service, command):
+	last = command.split()[-1]
+	callback = _show_routes_callback(reactor, service, last, INET, True, True)
+	reactor.plan(callback(), 'show_routes_static')
+	return True
+
+
+@Text('show routes flow')
+def show_routes_flow (self, reactor, service, command):
+	last = command.split()[-1]
+	callback = _show_routes_callback(reactor, service, last, Flow, True, True)
+	reactor.plan(callback(), 'show_routes_flow')
+	return True
+
+
+@Text('show routes l2vpn')
+def show_routes_flow (self, reactor, service, command):
+	last = command.split()[-1]
+	callback = _show_routes_callback(reactor, service, last, (VPLS, EVPN), True, True)
+	reactor.plan(callback(), 'show_routes_l2vpn')
 	return True
 
 
