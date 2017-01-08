@@ -54,21 +54,21 @@ class Transcoder (object):
 			self.negotiated.sent(self.seen_open['send'])
 			self.negotiated.received(self.seen_open['receive'])
 
-	def _from_json (self, string):
+	def _from_json (self, json_string):
 		try:
-			parsed = json.loads(string)
+			parsed = json.loads(json_string)
 		except ValueError:
 			print >> sys.stderr, 'invalid JSON message'
 			sys.exit(1)
 
 		if parsed.get('exabgp','0.0.0') != json_version:
-			print >> sys.stderr, 'invalid json version', string
+			print >> sys.stderr, 'invalid json version', json_string
 			sys.exit(1)
 
 		content = parsed.get('type','')
 
 		if not content:
-			print >> sys.stderr, 'invalid json content', string
+			print >> sys.stderr, 'invalid json content', json_string
 			sys.exit(1)
 
 		neighbor = _FakeNeighbor(
@@ -80,7 +80,7 @@ class Transcoder (object):
 
 		if content == 'state':
 			self._state()
-			return string
+			return json_string
 
 		direction = parsed['neighbor']['direction']
 		category = parsed['neighbor']['message']['category']
@@ -127,21 +127,21 @@ class Transcoder (object):
 				return self.encoder.notification(neighbor,direction,message,header,body)
 
 			try:
-				string = data[:shutdown_length].decode('utf-8').replace('\r',' ').replace('\n',' ')
+				message.data = 'Shutdown Communication: "%s"' % \
+					data[:shutdown_length].decode('utf-8').replace('\r',' ').replace('\n',' ')
 			except UnicodeDecodeError:
 				message.data = "invalid Shutdown Communication (invalid UTF-8) length : %i [%s]" % (shutdown_length, hexstring(data))
 				return self.encoder.notification(neighbor,direction,message,header,body)
 
-			message.data = 'Shutdown Communication: "' + string + '"'
 
-			string = data[shutdown_length:]
-			if string:
-				message.data += ", trailing data: " + hexstring(string)
+			trailer = data[shutdown_length:]
+			if trailer:
+				message.data += ", trailing data: " + hexstring(trailer)
 
 			return self.encoder.notification(neighbor,direction,message,header,body)
 
 		if not self.negotiated:
-			print >> sys.stderr, 'invalid message sequence, open not exchange not complete', string
+			print >> sys.stderr, 'invalid message sequence, open not exchange not complete', json_string
 			sys.exit(1)
 
 		message = Message.unpack(category,raw,self.negotiated)

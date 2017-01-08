@@ -133,16 +133,15 @@ class Notification (Message):
 			return
 
 		try:
-			string = data[:shutdown_length].decode('utf-8').replace('\r',' ').replace('\n',' ')
+			self.data = 'Shutdown Communication: "%s"' % \
+				data[:shutdown_length].decode('utf-8').replace('\r',' ').replace('\n',' ')
 		except UnicodeDecodeError:
 			self.data = "invalid Shutdown Communication (invalid UTF-8) length : %i [%s]" % (shutdown_length, hexstring(data))
 			return
 
-		self.data = 'Shutdown Communication: "' + string + '"'
-
-		string = data[shutdown_length:]
-		if string:
-			self.data += ", trailing data: " + hexstring(string)
+		trailer = data[shutdown_length:]
+		if trailer:
+			self.data += ", trailing data: " + hexstring(trailer)
 
 	def __str__ (self):
 		return "%s / %s%s" % (
