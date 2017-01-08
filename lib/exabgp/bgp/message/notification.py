@@ -140,7 +140,7 @@ class Notification (Message):
 
 		self.data = 'Shutdown Communication: "' + string + '"'
 
-		string = string[shutdown_length:]
+		string = data[shutdown_length:]
 		if string:
 			self.data += ", trailing data: " + hexstring(string)
 

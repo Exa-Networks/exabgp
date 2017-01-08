@@ -134,7 +134,7 @@ class Transcoder (object):
 
 			message.data = 'Shutdown Communication: "' + string + '"'
 
-			string = string[shutdown_length:]
+			string = data[shutdown_length:]
 			if string:
 				message.data += ", trailing data: " + hexstring(string)
 
