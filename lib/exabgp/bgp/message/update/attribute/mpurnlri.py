@@ -17,7 +17,7 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.nlri import NLRI
 
 from exabgp.bgp.message.notification import Notify
-
+from exabgp.bgp.message.open.capability import Negotiated
 
 # ================================================================= MP NLRI (14)
 
@@ -41,29 +41,31 @@ class MPURNLRI (Attribute,Family):
 	def __ne__ (self, other):
 		return not self.__eq__(other)
 
-	def packed_attributes (self, negotiated):
+	def packed_attributes (self, negotiated, maximum=Negotiated.FREE_SIZE):
 		if not self.nlris:
 			return
 
 		# we changed the API to nrli.pack from addpath to negotiated but not pack itself
-		maximum = negotiated.FREE_SIZE
 
-		mpurnlri = {}
+		mpurnlri = []
 		for nlri in self.nlris:
-			mpurnlri.setdefault((nlri.afi.pack(),nlri.safi.pack()),[]).append(nlri.pack(negotiated))
-
-		for (pafi,psafi),nlris in mpurnlri.iteritems():
-			payload = pafi + psafi + ''.join(nlris)
-
-			if self._len(payload) <= maximum:
-				yield self._attribute(payload)
+			if nlri.family() != self.family(): # nlri is not part of specified family
 				continue
+			mpurnlri.append(nlri.pack(negotiated))
 
-			# This will not generate an optimum update size..
-			# we should feedback the maximum on each iteration
-
-			for nlri in nlris:
-				yield self._attribute(pafi + psafi + nlri)
+		payload = ''.join([self.afi.pack(), self.safi.pack()])
+		header_length = len(payload)
+		for nlri in mpurnlri:
+			if self._len(payload + nlri) > maximum:
+				if len(payload) == header_length or len(payload) > maximum:
+					raise Notify(6, 0, 'attributes size is so large we can not even pack on MPURNLRI')
+				yield self._attribute(payload)
+				payload = ''.join([self.afi.pack(), self.safi.pack(), nlri])
+				continue
+			payload = ''.join([payload, nlri])
+		if len(payload) == header_length or len(payload) > maximum:
+			raise Notify(6, 0, 'attributes size is so large we can not even pack on MPURNLRI')
+		yield self._attribute(payload)
 
 	def pack (self, negotiated):
 		return ''.join(self.packed_attributes(negotiated))

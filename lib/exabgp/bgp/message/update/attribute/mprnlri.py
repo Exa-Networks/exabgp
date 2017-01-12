@@ -20,7 +20,7 @@ from exabgp.bgp.message.update.attribute import NextHop
 from exabgp.bgp.message.update.nlri import NLRI
 
 from exabgp.bgp.message.notification import Notify
-# from exabgp.bgp.message.open.capability import Negotiated
+from exabgp.bgp.message.open.capability import Negotiated
 
 
 # ==================================================== MP Unreacheable NLRI (15)
@@ -47,16 +47,16 @@ class MPRNLRI (Attribute,Family):
 	def __ne__ (self, other):
 		return not self.__eq__(other)
 
-	def packed_attributes (self, negotiated):
+	def packed_attributes (self, negotiated, maximum=Negotiated.FREE_SIZE):
 		if not self.nlris:
 			return
 
 		# addpath = negotiated.addpath.send(self.afi,self.safi)
 		# nexthopself = negotiated.nexthopself(self.afi)
-		maximum = negotiated.FREE_SIZE
-
 		mpnlri = {}
 		for nlri in self.nlris:
+			if nlri.family() != self.family(): # nlri is not part of specified family
+				continue
 			if nlri.nexthop is NoNextHop:
 				# EOR and Flow may not have any next_hop
 				nexthop = ''
@@ -69,29 +69,23 @@ class MPRNLRI (Attribute,Family):
 					# .packed and not .pack()
 					nexthop = nlri.nexthop.ton(negotiated,nlri.afi)
 
-			# mpunli[afi,safi][nexthop] = nlri
-			mpnlri.setdefault((nlri.afi.pack(),nlri.safi.pack()),{}).setdefault(nexthop,[]).append(nlri.pack(negotiated))
+			# mpunli[nexthop] = nlri
+			mpnlri.setdefault(nexthop,[]).append(nlri.pack(negotiated))
 
-		for (pafi,psafi),data in mpnlri.iteritems():
-			for nexthop,nlris in data.iteritems():
-				payload = \
-					pafi + psafi + \
-					chr(len(nexthop)) + nexthop + \
-					chr(0) + ''.join(nlris)
-
-				if self._len(payload) <= maximum:
+		for nexthop,nlris in mpnlri.iteritems():
+			payload = ''.join([self.afi.pack(), self.safi.pack(), chr(len(nexthop)), nexthop, chr(0)])
+			header_length = len(payload)
+			for nlri in nlris:
+				if self._len(payload + nlri) > maximum:
+					if len(payload) == header_length or len(payload) > maximum:
+						raise Notify(6, 0, 'attributes size is so large we can not even pack on MPRNLRI')
 					yield self._attribute(payload)
+					payload = ''.join([self.afi.pack(), self.safi.pack(), chr(len(nexthop)), nexthop, chr(0), nlri])
 					continue
-
-				# This will not generate an optimum update size..
-				# we should feedback the maximum on each iteration
-
-				for nlri in nlris:
-					yield self._attribute(
-						pafi + psafi +
-						chr(len(nexthop)) + nexthop +
-						chr(0) + nlri
-					)
+				payload  = ''.join([payload, nlri])
+			if len(payload) == header_length or len(payload) > maximum:
+				raise Notify(6, 0, 'attributes size is so large we can not even pack on MPRNLRI')
+			yield self._attribute(payload)
 
 	def pack (self, negotiated):
 		return ''.join(self.packed_attributes(negotiated))
