@@ -141,7 +141,7 @@ class Processes (object):
 
 	def start (self, restart=False):
 		for process in self.reactor.configuration.processes:
-			if restart:
+			if restart and process in list(self._process):
 				self._terminate(process)
 			self._start(process)
 		for process in list(self._process):
