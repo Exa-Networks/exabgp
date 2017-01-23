@@ -18,6 +18,8 @@ Version 3.4.18
     reported by: Ben Agricola
  * Fix: Update RIB cache families on configuration reload
     patch by: Brian Johnson
+ * Fix: Backport fix on SIGUSR2 (restarting process not needing to be)
+    patch by: Shawn Zhou
  * Change: group-updates now generates one UPDATE per address family (and not one per NLRI for non IPv4)
     patch by: Brian Johnson
 
