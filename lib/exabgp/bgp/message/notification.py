@@ -105,7 +105,7 @@ class Notification (Message):
 		self.code = code
 		self.subcode = subcode
 
-		if (code, subcode) != (6, 2):
+		if not (code, subcode) in [(6, 2), (6, 4)]:
 			self.data = data if not len([_ for _ in data if _ not in string.printable]) else hexstring(data)
 			return
 
