@@ -106,6 +106,8 @@ def parse():
                    default="daemon",
                    help=("log to syslog using FACILITY, "
                          "default FACILITY is daemon"))
+    g.add_argument("--sudo", action="store_true", default=False,
+                   help="use sudo to setup ip addresses")
     g.add_argument("--no-syslog", action="store_true",
                    help="disable syslog logging")
     parser.add_argument("--name", "-n", metavar="NAME",
@@ -162,6 +164,10 @@ def parse():
     g.add_argument("--no-ip-setup",
                    action="store_false", dest="ip_setup",
                    help="don't setup missing IP addresses")
+    g.add_argument("--dynamic-ip-setup", default=False,
+                   action="store_true", dest="ip_dynamic",
+                   help="delete existing loopback ips on state down and "\
+                        "disabled, then restore loopback when up")
     g.add_argument("--label", default=None,
                    help="use the provided label to match loopback addresses")
     g.add_argument("--start-ip", metavar='N',
@@ -307,7 +313,7 @@ def loopback_ips(label):
     return addresses
 
 
-def setup_ips(ips, label):
+def setup_ips(ips, label, sudo=False):
     """Setup missing IP on loopback interface"""
     existing = set(loopback_ips(label))
     toadd = set([ip_address(ip) for net in ips for ip in net]) - existing
@@ -315,6 +321,8 @@ def setup_ips(ips, label):
         logger.debug("Setup loopback IP address %s", ip)
         with open(os.devnull, "w") as fnull:
             cmd = ["ip", "address", "add", str(ip), "dev", "lo"]
+            if sudo:
+                cmd.insert(0, "sudo")
             if label:
                 cmd += ["label", "lo:{0}".format(label)]
             subprocess.check_call(
@@ -322,12 +330,13 @@ def setup_ips(ips, label):
 
     # If we setup IPs we should also remove them on SIGTERM
     def sigterm_handler(signum, frame): # pylint: disable=W0612,W0613
-        remove_ips(ips, label)
+        remove_ips(ips, label, sudo)
+        sys.exit(0)
 
     signal.signal(signal.SIGTERM, sigterm_handler)
 
 
-def remove_ips(ips, label):
+def remove_ips(ips, label, sudo=False):
     """Remove added IP on loopback interface"""
     existing = set(loopback_ips(label))
 
@@ -337,6 +346,8 @@ def remove_ips(ips, label):
         logger.debug("Remove loopback IP address %s", ip)
         with open(os.devnull, "w") as fnull:
             cmd = ["ip", "address", "delete", str(ip), "dev", "lo"]
+            if sudo:
+                cmd.insert(0, "sudo")
             if label:
                 cmd += ["label", "lo:{0}".format(label)]
             try:
@@ -345,7 +356,6 @@ def remove_ips(ips, label):
             except subprocess.CalledProcessError:
                 logger.warn("Unable to remove loopback IP address %s - is \
                     healthcheck running as root?", str(ip))
-    sys.exit(0)
 
 
 def drop_privileges(user, group):
@@ -431,6 +441,15 @@ def loop(options):
         """Communicate new state to ExaBGP"""
         if target not in (states.UP, states.DOWN, states.DISABLED):
             return
+        # dynamic ip management. When the service fail, remove the loopback
+        if target in (states.DOWN, states.DISABLED) and options.ip_dynamic:
+            logger.info("service down, deleting loopback ips")
+            remove_ips(options.ips, options.label, options.sudo)
+        # if ips was deleted with dyn ip, re-setup them
+        if target == states.UP and options.ips_deleted and options.ip_setup:
+            logger.info("service up, restoring loopback ips")
+            setup_ips(options.ips, options.label, options.sudo)
+
         logger.info("send announces for %s state to ExaBGP", target)
         metric = vars(options).get("{0}_metric".format(str(target).lower()))
         for ip in options.ips:
@@ -571,7 +590,7 @@ def main():
             logger.error("No IP found")
             sys.exit(1)
         if options.ip_setup:
-            setup_ips(options.ips, options.label)
+            setup_ips(options.ips, options.label, options.sudo)
         drop_privileges(options.user, options.group)
 
         # Parse defined networks into a list of IPs for advertisement
