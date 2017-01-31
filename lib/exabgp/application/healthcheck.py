@@ -101,6 +101,8 @@ def parse ():
                         help="read configuration from a file")
     parser.add_argument("--pid", "-p", metavar="FILE", type=argparse.FileType('w'),
                         help="write PID to the provided file")
+    parser.add_argument("--sudo", action="store_true", default=False,
+                        help="use sudo to setup ip addresses")
 
     g = parser.add_argument_group("checking healthiness")
     g.add_argument("--interval", "-i", metavar='N',
@@ -140,6 +142,10 @@ def parse ():
     g.add_argument("--no-ip-setup",
                    action="store_false", dest="ip_setup",
                    help="don't setup missing IP addresses")
+    g.add_argument("--dynamic-ip-setup", default=False,
+                   action="store_true", dest="ip_dynamic",
+                   help="delete existing loopback ips on state down and "\
+                        "disabled, then restore loopback when up")
     g.add_argument("--label", default=None,
                    help="use the provided label to match loopback addresses")
     g.add_argument("--start-ip", metavar='N',
@@ -263,7 +269,7 @@ def loopback_ips (label):
     return addresses
 
 
-def setup_ips (ips, label):
+def setup_ips (ips, label, sudo=False):
     """Setup missing IP on loopback interface"""
     existing = set(loopback_ips(label))
     toadd = set(ips) - existing
@@ -271,6 +277,25 @@ def setup_ips (ips, label):
         logger.debug("Setup loopback IP address {0}".format(ip))
         with open(os.devnull, "w") as fnull:
             cmd = ["ip", "address", "add", str(ip), "dev", "lo"]
+            if sudo:
+                cmd.insert(0, "sudo")
+            if label:
+                cmd += ["label", "lo:{0}".format(label)]
+            subprocess.check_call(
+                cmd, stdout=fnull, stderr=fnull)
+
+def remove_ips (ips, label, sudo=False):
+    """Remove existing IP on loopback interface"""
+    existing = set(loopback_ips(label))
+
+    # Get intersection of IPs (ips setup, and IPs configured by ExaBGP)
+    toremove = existing.intersection(ips)
+    for ip in toremove:
+        logger.debug("Remove loopback IP address {0}".format(ip))
+        with open(os.devnull, "w") as fnull:
+            cmd = ["ip", "address", "delete", str(ip), "dev", "lo"]
+            if sudo:
+                cmd.insert(0, "sudo")
             if label:
                 cmd += ["label", "lo:{0}".format(label)]
             subprocess.check_call(
@@ -340,6 +365,13 @@ def loop (options):
         """Communicate new state to ExaBGP"""
         if target not in (states.UP, states.DOWN, states.DISABLED):
             return
+        if target in (states.DOWN, states.DISABLED) and options.ip_dynamic:
+            logger.info("service down, deleting loopback ips")
+            remove_ips(options.ips, options.label, options.sudo)
+        if target == states.UP and options.ip_dynamic:
+            logger.info("service up, restoring loopback ips")
+            setup_ips(options.ips, options.label, options.sudo)
+
         logger.info("send announces for {0} state to ExaBGP".format(target))
         metric = vars(options).get("{0}_metric".format(str(target).lower()))
         for ip in options.ips:
@@ -455,7 +487,7 @@ def main ():
         if not options.ips:
             raise RuntimeError("No IP found")
         if options.ip_setup:
-            setup_ips(options.ips, options.label)
+            setup_ips(options.ips, options.label, options.sudo)
         options.ips = collections.deque(options.ips)
         options.ips.rotate(-options.start_ip)
         options.ips = list(options.ips)
