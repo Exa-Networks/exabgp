@@ -435,29 +435,32 @@ for content in dir():
 		continue
 	if not issubclass(kls,IComponent):
 		continue
-	if issubclass(kls,IPv4):
-		_afi = AFI.ipv4
-	elif issubclass(kls,IPv6):
-		_afi = AFI.ipv6
-	else:
-		continue
+
 	_ID = getattr(kls,'ID',None)
 	if not _ID:
 		continue
-	factory[_afi][_ID] = kls
-	name = getattr(kls,'NAME')
 
-	if issubclass(kls, IOperation):
-		if issubclass(kls, BinaryString):
-			decode[_afi][_ID] = 'binary'
-		elif issubclass(kls, NumericString):
-			decode[_afi][_ID] = 'numeric'
+	_afis = []
+	if issubclass(kls,IPv4):
+		_afis.append(AFI.ipv4)
+	if issubclass(kls,IPv6):
+		_afis.append(AFI.ipv6)
+
+	for _afi in _afis:
+		factory[_afi][_ID] = kls
+		name = getattr(kls,'NAME')
+
+		if issubclass(kls, IOperation):
+			if issubclass(kls, BinaryString):
+				decode[_afi][_ID] = 'binary'
+			elif issubclass(kls, NumericString):
+				decode[_afi][_ID] = 'numeric'
+			else:
+				raise RuntimeError('invalid class defined (string)')
+		elif issubclass(kls, IPrefix):
+			decode[_afi][_ID] = 'prefix'
 		else:
-			raise RuntimeError('invalid class defined (string)')
-	elif issubclass(kls, IPrefix):
-		decode[_afi][_ID] = 'prefix'
-	else:
-		raise RuntimeError('unvalid class defined (type)')
+			raise RuntimeError('unvalid class defined (type)')
 
 
 # ..........................................................
@@ -547,7 +550,7 @@ class Flow (NLRI):
 			string.append(' %s %s' % (rules[0].NAME,line))
 		nexthop = ' next-hop %s' % self.nexthop if self.nexthop is not NoIP else ''
 		rd = str(self.rd) if self.rd else ''
-		return 'flow' + rd + ''.join(string) + nexthop
+		return 'flow' + ''.join(string) + rd + nexthop
 
 	def __str__ (self):
 		return self.extensive()
@@ -566,7 +569,7 @@ class Flow (NLRI):
 		nexthop = ', "next-hop": "%s"' % self.nexthop if self.nexthop is not NoIP else ''
 		rd = ', %s' % self.rd.json() if self.rd else ''
 		compatibility = ', "string": "%s"' % self.extensive()
-		return '{' + rd + ','.join(string) + nexthop + compatibility + ' }'
+		return '{' + ','.join(string) + rd + nexthop + compatibility + ' }'
 
 	def json (self):
 		# this is a stop gap so flow route parsing does not crash exabgp

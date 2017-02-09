@@ -279,8 +279,8 @@ class TestUpdateDecoding (unittest.TestCase):
 			# 		path[f] = neighbor.add_path
 			# capa[Capability.CODE.ADD_PATH] = path
 
-			o1 = Open(4,neighbor.local_as,str(neighbor.local_address),capa,180)
-			o2 = Open(4,neighbor.peer_as,str(neighbor.peer_address),capa,180)
+			o1 = Open(4,neighbor.local_as,'127.0.0.1',capa,180)
+			o2 = Open(4,neighbor.peer_as,'127.0.0.1',capa,180)
 
 			negotiated = Negotiated(neighbor)
 			negotiated.sent(o1)

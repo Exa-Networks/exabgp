@@ -14,6 +14,7 @@ from struct import unpack
 
 import psutil
 
+PORT = os.environ.get('exabgp.tcp.port',os.environ.get('exabgp_tcp_port','179'))
 SIGNAL = dict([(name,getattr(signal,name)) for name in dir(signal) if name.startswith('SIG')])
 
 def bytestream (value):
@@ -275,11 +276,11 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 				if announcement in self.messages:
 					self.messages.remove(announcement)
-					self.announce('received (%1s%s):' % (self.options['letter'],self.step),announcement)
+					self.announce('received (%1s%s):' % (self.options['letter'],self.step),'%s:%s:%s:%s' % (announcement[:32],announcement[32:36],announcement[36:38],announcement[38:]))
 					self.check_signal()
 				else:
 					if self.raw:
-						self.announce('received (%1s%s):' % (self.options['letter'],self.step),'%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:]),bytestream(body)))
+						self.announce('received (%1s%s):' % (self.options['letter'],self.step),'%s:%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:18]),bytestream(header[18:]),bytestream(body)))
 					else:
 						self.announce('received     :',announcement)
 
@@ -287,7 +288,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 						self.announce('expected one of the following :')
 						for message in self.messages:
 							if message.startswith('F'*32):
-								self.announce('               %s:%s:%s' % (message[:32],message[32:38],message[38:]))
+								self.announce('               %s:%s:%s:%s' % (message[:32],message[32:36],message[36:38],message[38:]))
 							else:
 								self.announce('               %s' % message)
 					elif self.messages:
@@ -444,14 +445,14 @@ def main ():
 		sys.exit(1)
 
 	try:
-		BGPServer('localhost',int(os.environ.get('exabgp.tcp.port','179')),messages)
+		BGPServer('localhost',int(PORT),messages)
 		drop()
 		asyncore.loop()
 	except socket.error,exc:
 		if exc.errno == errno.EACCES:
-			print "failure: could not bind to port %s - most likely not run as root" % os.environ.get('exabgp.tcp.port','179')
+			print "failure: could not bind to port %s - most likely not run as root" % PORT
 		elif exc.errno == errno.EADDRINUSE:
-			print "failure: could not bind to port %s - port already in use" % os.environ.get('exabgp.tcp.port','179')
+			print "failure: could not bind to port %s - port already in use" % PORT
 		else:
 			print "failure", str(exc)
 

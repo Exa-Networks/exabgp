@@ -48,6 +48,7 @@ FUNCTION = {
 	'teardown':               'teardown',
 	'show neighbor':          'show_neighbor',
 	'show neighbors':         'show_neighbors',
+	'show neighbor status':   'show_neighbor_status',
 	'show routes':            'show_routes',
 	'show routes extensive':  'show_routes_extensive',
 	'announce watchdog':      'announce_watchdog',
@@ -65,6 +66,7 @@ FUNCTION = {
 	'announce route-refresh': 'announce_refresh',
 	'announce operational':   'announce_operational',
 	'operational':            'announce_operational',
+	'#':                      'log',
 }
 
 for name in sorted(FUNCTION.keys()):

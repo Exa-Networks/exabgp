@@ -58,8 +58,8 @@ class Negotiated (object):
 
 		self.local_as = self.sent_open.asn
 		self.peer_as = self.received_open.asn
-		if self.received_open.asn == AS_TRANS:
-			self.peer_as = recv_capa[Capability.CODE.FOUR_BYTES_ASN]
+		if self.received_open.asn == AS_TRANS and self.asn4:
+			self.peer_as = recv_capa.get(Capability.CODE.FOUR_BYTES_ASN,self.peer_as)
 
 		self.families = []
 		if \
@@ -109,14 +109,6 @@ class Negotiated (object):
 		# 		self.received_open_size = self.peer.bgp.received_open_size - 19
 
 	def validate (self, neighbor):
-		if not self.asn4:
-			if neighbor.local_as.asn4():
-				return (2,0,'peer does not speak ASN4, we are stuck')
-			else:
-				# we will use RFC 4893 to convey new ASN to the peer
-				# XXX: FIXME
-				pass
-
 		if self.peer_as != neighbor.peer_as:
 			return (2,2,'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.received_open.asn,neighbor.peer_as))
 

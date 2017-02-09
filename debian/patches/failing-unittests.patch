@@ -8,7 +8,7 @@ Index: exabgp/qa/tests/control_test.py
 ===================================================================
 --- exabgp.orig/qa/tests/control_test.py
 +++ exabgp/qa/tests/control_test.py
-@@ -62,15 +62,19 @@ class TestControl (unittest.TestCase):
+@@ -62,16 +62,19 @@ class TestControl (unittest.TestCase):
  			control.cleanup()
  			del control
  
@@ -20,9 +20,9 @@ Index: exabgp/qa/tests/control_test.py
  	def test_one_newline (self):
  		self.validate('x\n','x')
  
-+	@unittest.skip
- 	def test_two_newline (self):
- 		self.validate('-\nx\n','x')
+ # This fails on some linux / python version - removing the test until we can investigate
+ #	def test_two_newline (self):
+ #		self.validate('-\nx\n','x')
  
 +	@unittest.skip
  	def test_leftover (self):

@@ -26,10 +26,10 @@ class APIOptions (dict):
 		self['consolidate'] = self.get('consolidate',False) or value
 
 	def send_packets (self, value):
-		self['send-packets'] = self.get('send_packets',False) or value
+		self['send-packets'] = self.get('send-packets',False) or value
 
 	def neighbor_changes (self, value):
-		self['neighbor-changes'] = self.get('neighbor_changes',False) or value
+		self['neighbor-changes'] = self.get('neighbor-changes',False) or value
 
 	def receive_notifications (self, value):
 		self[Message.CODE.NOTIFICATION] = self.get(Message.CODE.NOTIFICATION,False) or value
@@ -230,9 +230,11 @@ class JSON (object):
 		})),'','',peer.neighbor.identificator(),self.count(peer),message_type='state')
 
 	def down (self, peer, reason=''):
+		def escape_quote (reason):
+			return reason.replace('"','\\"')
 		return self._header(self._neighbor(peer,self._kv({
 			'state':  'down',
-			'reason': reason,
+			'reason': escape_quote(reason),
 		})),'','',peer.neighbor.identificator(),self.count(peer),message_type='state')
 
 	def shutdown (self):
@@ -317,10 +319,10 @@ class JSON (object):
 			remove.append(s)
 
 		nlri = ''
-		if not add and not remove:  # an EOR
-			if not update.nlris:
-				raise RuntimeError('no update.nlri: %s %s' % (type(update),dir(update)))
-			return update.nlris[0].json()
+
+		if not add and not remove:
+			if update.nlris:  # An EOR
+				return update.nlris[0].json()
 		if add:
 			nlri += '"announce": { %s }' % ', '.join(add)
 		if add and remove:

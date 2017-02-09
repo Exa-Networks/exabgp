@@ -1,12 +1,11 @@
 [Unit]
 Description=ExaBGP
 After=network.target
+ConditionPathExists=/etc/exabgp/exabgp.conf
 
 [Service]
 Environment=exabgp_daemon_daemonize=false
-Environment=exabgp_log_destination=stdout
 Environment=ETC=/etc
-ConditionPathExists=/etc/exabgp/exabgp.conf
 ExecStart=/usr/sbin/exabgp /etc/exabgp/exabgp.conf
 ExecReload=/bin/kill -USR1 $MAINPID
 

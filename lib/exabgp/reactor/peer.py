@@ -273,6 +273,29 @@ class Peer (object):
 	def established (self):
 		return self._['in']['state'] == STATE.ESTABLISHED or self._['out']['state'] == STATE.ESTABLISHED
 
+	def detailed_link_status (self):
+		state_tbl = {
+			STATE.IDLE : "Idle",
+			STATE.ACTIVE : "Active",
+			STATE.CONNECT : "Connect",
+			STATE.OPENSENT : "OpenSent",
+			STATE.OPENCONFIRM : "OpenConfirm",
+			STATE.ESTABLISHED : "Established" }
+		return state_tbl[max(self._["in"]["state"], self._["out"]["state"])]
+
+	def negotiated_families(self):
+		if self._['out']['proto']:
+			families = ["%s/%s" % (x[0], x[1]) for x in self._['out']['proto'].negotiated.families]
+		else:
+			families = ["%s/%s" % (x[0], x[1]) for x in self.neighbor.families()]
+
+		if len(families) > 1:
+			return "[ %s ]" % " ".join(families)
+		elif len(families) == 1:
+			return families[0]
+
+		return ''
+
 	def _accept (self):
 		# we can do this as Protocol is a mutable object
 		proto = self._['in']['proto']
@@ -348,7 +371,7 @@ class Peer (object):
 		except StopIteration:
 			# Connection failed
 			if not connected:
-				proto.close('connection to peer failed')
+				proto.close('connection to peer failed',self._['in']['state'] != STATE.ESTABLISHED)
 			# A connection arrived before we could establish !
 			if not connected or self._['in']['proto']:
 				stop = Interrupted()

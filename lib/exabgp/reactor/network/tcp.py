@@ -165,7 +165,7 @@ def TTL (io, ip, ttl):
 	# None (ttl-security unset) or zero (maximum TTL) is the same thing
 	if ttl:
 		try:
-			io.setsockopt(socket.IPPROTO_IP,socket.IP_TTL, 20)
+			io.setsockopt(socket.IPPROTO_IP,socket.IP_TTL, ttl)
 		except socket.error,exc:
 			raise TTLError('This OS does not support IP_TTL (ttl-security) for %s (%s)' % (ip,errstr(exc)))
 
@@ -187,14 +187,14 @@ def ready (io):
 			_,w,_ = select.select([],[io,],[],0)
 			if not w:
 				if not warned and time.time()-start > 1.0:
-					logger.network('attempting to accept connections, socket not ready','warning')
+					logger.network('attempting to establish connection','warning')
 					warned = True
 				yield False
 				continue
 			err = io.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
 			if not err:
 				if warned:
-					logger.network('incoming socket ready','warning')
+					logger.network('connection established','warning')
 				yield True
 				return
 			elif err in error.block:

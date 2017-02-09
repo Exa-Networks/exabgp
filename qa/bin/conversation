@@ -7,8 +7,6 @@ import time
 import signal
 import subprocess
 
-from os import path
-
 
 def display (*args):
 	sys.stdout.write(''.join(str(_) for _ in args))
@@ -19,7 +17,7 @@ class Alarm (Exception):
 	pass
 
 
-def alarm_handler (nb, frame):  # pylint: disable=W0613
+def alarm_handler (number, frame):  # pylint: disable=W0613
 	raise Alarm()
 
 
@@ -27,8 +25,8 @@ def commands (exabgp, daemon, port):
 	r = ""
 	r += "command lines are:\n"
 	r += 'export exabgp_debug_defensive=true\n'
-	r += "> env exabgp.tcp.port=%d exabgp.tcp.once=true exabgp.debug.rotate=true exabgp.tcp.bind='' " % port + ' '.join(exabgp) + '\n'
-	r += '> env exabgp.tcp.port=%d ' % port + ' '.join(daemon)
+	r += "> env exabgp_tcp_port=%d exabgp_tcp_once=true exabgp_debug.rotate=true exabgp_tcp_bind='' " % port + ' '.join(exabgp) + '\n'
+	r += '> env exabgp_tcp_port=%d ' % port + ' '.join(daemon)
 	r += '\n'
 	return r
 
@@ -36,12 +34,12 @@ def commands (exabgp, daemon, port):
 def make_short (groups):
 	names = {}
 
-	for group in sorted(groups):
+	for group in groups:
 		names[group.split('/')[-1].split('.')[0]] = group
 
-	alphabet = [ chr(_) for _ in range(ord('0'),ord('9')) + range(ord('A'),ord('Z')) + range(ord('a'),ord('z'))]
+	alphabet = [chr(_) for _ in range(ord('0'),ord('9')) + range(ord('A'),ord('Z')) + range(ord('a'),ord('z'))]
 	# letter to name, name to letter
-	l2n = dict(zip(alphabet,names.keys()))
+	l2n = dict(zip(alphabet,sorted(names.keys())))
 	n2l = dict((r,l) for (l,r) in l2n.items())
 	letters = sorted(l2n)
 
@@ -53,14 +51,14 @@ def check (exabgp, daemon, group, port, delay):
 	configurations = [os.path.join(directory,name) for name in open(group).read().strip().split()]
 	sequence_file = group.replace('.group','.sequence')
 
-	if not path.isfile(sequence_file):
+	if not os.path.isfile(sequence_file):
 		return False
 
-	os.environ['exabgp.tcp.once'] = 'true'
-	os.environ['exabgp.tcp.port'] = str(port)
-	#os.environ['exabgp.debug.defensive'] = 'true'
-	os.environ['exabgp.debug.rotate'] = 'true'
-	os.environ['exabgp.reactor.speed'] = '0.1'
+	os.environ['exabgp_tcp_once'] = 'true'
+	os.environ['exabgp_tcp_port'] = str(port)
+	# os.environ['exabgp_debug_defensive'] = 'true'
+	os.environ['exabgp_debug_rotate'] = 'true'
+	os.environ['exabgp_reactor_speed'] = '0.1'
 
 	daemon_command = [daemon, sequence_file]
 	exabgp_command = [exabgp, '-d'] + configurations
@@ -88,19 +86,27 @@ def check (exabgp, daemon, group, port, delay):
 
 		display('failed, killed', name, '\n')
 
-		try: daemon.terminate()
-		except OSError: pass
-		try: exabgp.terminate()
-		except OSError: pass
+		try:
+			daemon.terminate()
+		except OSError:
+			pass
+		try:
+			exabgp.terminate()
+		except OSError:
+			pass
 		time.sleep(1)
-		try: daemon.kill()
-		except OSError: pass
-		try: exabgp.kill()
-		except OSError: pass
+		try:
+			daemon.kill()
+		except OSError:
+			pass
+		try:
+			exabgp.kill()
+		except OSError:
+			pass
 	except Exception,exc:
 		display(commands(exabgp_command,daemon_command,port))
-
 		display(str(exc))
+
 
 def dispatch (exabgp, daemon, groups, port):
 	processes = {}
@@ -109,10 +115,10 @@ def dispatch (exabgp, daemon, groups, port):
 	names, alphabet, l2n, n2l, letters = make_short(groups)
 
 	class Color (object):
-		RED =   '\033[0m' + '\033[91m'
+		RED   = '\033[0m' + '\033[91m'
 		GREEN = '\033[1m' + '\033[92m'
-		BLUE =  '\033[0m' + '\033[94m'
-		END =   '\033[0m' + '\033[0m'
+		BLUE  = '\033[0m' + '\033[94m'
+		END   = '\033[0m' + '\033[0m'
 
 	display('\n')
 	eol = False
@@ -123,10 +129,13 @@ def dispatch (exabgp, daemon, groups, port):
 		eol = not eol
 	display('\n')
 
+	if os.environ.get('LISTING',False):
+		sys.exit(0)
+
 	try:
 		display('\n','starting','\n','--------','\n')
 
-		for name in names.keys():
+		for name in sorted(names.keys()):
 			display(n2l[name],' ')
 			port += 1
 			processes[name] = subprocess.Popen([sys.argv[0],names[name],str(port)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -136,13 +145,13 @@ def dispatch (exabgp, daemon, groups, port):
 		success = True
 		color = dict(zip(l2n.keys(),[Color.BLUE]*100))
 		while success and names.keys():
-			for name in list(names.keys()):
+			for name in sorted(names.keys()):
 				process = processes[name]
 				returncode = process.poll()
 				if returncode is not None:
 					try:
 						out,err = process.communicate()
-						if 'failed' in out:
+						if 'failed' in out or 'expected' in out:
 							color[n2l[name]] = Color.RED
 							success = False
 						else:
@@ -150,9 +159,9 @@ def dispatch (exabgp, daemon, groups, port):
 							del names[name]
 							out,err = '',''
 							display('\r')
-							display(*[ color[l] + l + Color.END + ' ' for l in letters])
+							display(*['%s%s%s' % (color[l],l if color[l] != Color.GREEN else '-', Color.END) + ' ' for l in letters])
 							display(Color.END)
-					except (IOError,OSError):
+					except (IOError,OSError,ValueError):
 						success = False
 
 			time.sleep(1)
@@ -183,7 +192,10 @@ def dispatch (exabgp, daemon, groups, port):
 			for name in names.keys():
 				process = processes.get(name,None)
 				if process:
-					out,err = process.communicate()
+					try:
+						out,err = process.communicate()
+					except ValueError:
+						pass
 					display(out)
 					display(err)
 					display('\n','\n')
@@ -194,6 +206,7 @@ def dispatch (exabgp, daemon, groups, port):
 
 	return success
 
+
 if __name__ == '__main__':
 	if len(sys.argv) > 2:
 		number = sys.argv.pop(2)
@@ -203,7 +216,7 @@ if __name__ == '__main__':
 		print 'using port', port
 	else:
 		max_test = 100
-		port = 1024+ hash(sys.version) % (pow(2,16)-1024-max_test)
+		port = 1024 + hash(sys.version) % (pow(2,16)-1024-max_test)
 
 	uid = os.getuid()
 	gid = os.getgid()
@@ -211,38 +224,40 @@ if __name__ == '__main__':
 	if uid and gid and int(port) <= 1024:
 		sys.exit('you need to have root privileges to bind to port 79')
 
-	location = path.abspath(path.join(path.realpath(__file__),'..','..','..'))
+	location = os.path.abspath(os.path.join(os.path.realpath(__file__),'..','..','..'))
 
-	exabgp = path.join(location,'sbin','exabgp')
-	if not path.isfile(exabgp):
+	exabgp = os.path.join(location,'sbin','exabgp')
+	if not os.path.isfile(exabgp):
 		sys.exit("could not find exabgp")
 
-	conf = path.join(location,'qa','conf')
-	if not path.isdir(conf):
+	conf = os.path.join(location,'qa','conf')
+	if not os.path.isdir(conf):
 		sys.exit('could not find conf folder')
 
-	daemon = path.join(location,'qa','sbin','bgp')
-	if not path.isfile(daemon):
+	daemon = os.path.join(location,'qa','sbin','bgp')
+	if not os.path.isfile(daemon):
 		sys.exit('could not find the sequence daemon')
 
-	timeout = int(os.environ.get('TIMEOUT',os.environ.get('timeout',5*60)))  # seconds
+	timeout = int(os.environ.get('TIMEOUT',os.environ.get('timeout',10*60)))  # seconds
 	groups = sorted(glob.glob(os.path.join(location,'qa','conf','*.group')))[::-1]
 
 	client = os.environ.get('CLIENT',os.environ.get('client','')).upper()
 	if client:
 		names, alphabet, l2n, n2l, letters = make_short(groups)
-		command = "env exabgp.debug.configuration=true exabgp.tcp.port=%d exabgp.tcp.once=true exabgp.debug.rotate=true exabgp.tcp.bind='' %s -d -p %s.conf" % (port,exabgp,names[l2n[client]][:-6])
+		command = "env exabgp_debug_configuration=true exabgp_tcp_port=%d exabgp_tcp_once=true exabgp_debug_rotate=true exabgp_tcp_bind='' %s -d -p %s.conf" % (port,exabgp,names[l2n[client]][:-6])
 		print '>', command
-		os.system(command)
-		sys.exit()
+		if os.system(command):
+			sys.exit(1)
+		sys.exit(0)
 
 	server = os.environ.get('SERVER',os.environ.get('server','')).upper()
 	if server:
 		names, alphabet, l2n, n2l, letters = make_short(groups)
-		command = "env exabgp.tcp.port=%d %s %s.sequence" % (port,daemon,names[l2n[server]][:-6])
+		command = "env exabgp_tcp_port=%d %s %s.sequence" % (port,daemon,names[l2n[server]][:-6])
 		print '>', command
-		os.system(command)
-		sys.exit()
+		if os.system(command):
+			sys.exit(1)
+		sys.exit(0)
 
 	if len(sys.argv) >= 2:
 		group = sys.argv[1]

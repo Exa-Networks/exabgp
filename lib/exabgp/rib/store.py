@@ -6,10 +6,13 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
 from exabgp.bgp.message import IN
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.refresh import RouteRefresh
+from exabgp.bgp.message.update.attribute.attributes import Attributes
 
 
 # XXX: FIXME: we would not have to use so many setdefault if we pre-filled the dicts with the families
@@ -204,7 +207,7 @@ class Store (object):
 
 		for afi,safi in self._enhanced_refresh_start:
 			rr_announced.append((afi,safi))
-			yield RouteRefresh(afi,safi,RouteRefresh.start)
+			yield Update(RouteRefresh(afi,safi,RouteRefresh.start),Attributes())
 
 		dict_sorted = self._modify_sorted
 		dict_nlri = self._modify_nlri
@@ -237,6 +240,10 @@ class Store (object):
 
 			# we NEED the copy provided by list() here as insert_announced can be called while we iterate
 			changed = list(dict_change.itervalues())
+
+			for family in self._seen:
+				if family != (AFI.ipv4,SAFI.unicast):
+					grouped = False
 
 			if grouped:
 				update = Update([dict_nlri[nlri_index].nlri for nlri_index in dict_change],attributes)
@@ -272,7 +279,7 @@ class Store (object):
 		if rr_announced:
 			for afi,safi in rr_announced:
 				self._enhanced_refresh_start.remove((afi,safi))
-				yield RouteRefresh(afi,safi,RouteRefresh.end)
+				yield Update(RouteRefresh(afi,safi,RouteRefresh.end),Attributes())
 
 			for change in self._enhanced_refresh_delay:
 				self.insert_announced(change,True)
