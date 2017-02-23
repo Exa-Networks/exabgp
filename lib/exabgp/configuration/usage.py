@@ -88,7 +88,7 @@ For example :
       exabgp.log.destination=host:127.0.0.1 \\
       exabgp.daemon.user=wheel \\
       exabgp.daemon.daemonize=true \\
-      exabgp.daemon.pid=/var/run/exabpg.pid \\
+      exabgp.daemon.pid=/var/run/exabgp.pid \\
  > ./bin/exabgp ./etc/bgp/configuration.txt
 
 The program configuration can be controlled using signals:
