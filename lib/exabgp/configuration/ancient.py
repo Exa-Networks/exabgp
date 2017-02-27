@@ -1070,6 +1070,8 @@ class Configuration (object):
 			safi = tokens.pop(0)
 			if safi == 'unicast':
 				scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+			elif safi == 'nlri-mpls':
+				scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.nlri_mpls)))
 			elif safi == 'mpls-vpn':
 				scope[-1]['families'].append((AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)))
 			elif safi in ('flow'):
