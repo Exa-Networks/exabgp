@@ -153,7 +153,7 @@ class Prefix (EVPN):
 			gwip = IP.unpack(data[:16])
 			data = data[16:]
 		else:
-			raise Notify(3,5,"Data field length is given as %d, but EVPN route currently support only IPv4 or IPv6(34 or 58)" % iplen)
+			raise Notify(3,5,"Data field length is given as %d, but EVPN route currently support only IPv4 or IPv6(34 or 58)" % datalen)
 
 		label = Labels.unpack(data[:3])
 
