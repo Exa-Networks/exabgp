@@ -169,5 +169,6 @@ class Prefix (EVPN):
 		content += '%s, ' % self.etag.json()
 		content += '%s, ' % self.label.json()
 		content += '"ip": "%s", ' % str(self.ip)
+		content += '"iplen": %d, ' % self.iplen
 		content += '"gateway": "%s" ' % str(self.gwip)
 		return '{%s}' % content
