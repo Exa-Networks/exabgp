@@ -8,7 +8,7 @@ Summary:        The BGP swiss army knife of networking (Library)
 
 Group:          Development/Libraries
 License:        BSD
-URL:            http://pypi.python.org/pypi/exabgp/
+URL:            https://pypi.python.org/pypi/exabgp/
 Source0:        https://github.com/Exa-Networks/exabgp/archive/%{version}/exabgp-%{version}.tar.gz
 BuildArch:      noarch
 Provides:       exabgp-libs

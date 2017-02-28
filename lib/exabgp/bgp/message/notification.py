@@ -56,7 +56,7 @@ class Notification (Message):
 		(2,4): "Unsupported Optional Parameter",
 		(2,5): "Authentication Notification (Deprecated)",
 		(2,6): "Unacceptable Hold Time",
-		# RFC 5492
+		# RFC 5492 - https://tools.ietf.org/html/rfc5492
 		(2,7): "Unsupported Capability",
 
 		# draft-ietf-idr-bgp-multisession-06
@@ -80,13 +80,13 @@ class Notification (Message):
 		(4,0): "Unspecific",
 
 		(5,0): "Unspecific",
-		# RFC 6608
+		# RFC 6608 - https://tools.ietf.org/html/rfc6608
 		(5,1): "Receive Unexpected Message in OpenSent State",
 		(5,2): "Receive Unexpected Message in OpenConfirm State",
 		(5,3): "Receive Unexpected Message in Established State",
 
 		(6,0): "Unspecific",
-		# RFC 4486
+		# RFC 4486 - https://tools.ietf.org/html/rfc4486
 		(6,1): "Maximum Number of Prefixes Reached",
 		(6,2): "Administrative Shutdown", # augmented with draft-ietf-idr-shutdown
 		(6,3): "Peer De-configured",

@@ -13,7 +13,7 @@ from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.open.capability.capability import Capability
 
 # =========================================================== Graceful (Restart)
-# RFC 4727
+# RFC 4727 - https://tools.ietf.org/html/rfc4727
 
 
 @Capability.register()

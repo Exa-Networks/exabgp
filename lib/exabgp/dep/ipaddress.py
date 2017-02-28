@@ -392,7 +392,7 @@ class _TotalOrderingMixin:
     # Helper that derives the other comparison operations from
     # __lt__ and __eq__
     # We avoid functools.total_ordering because it doesn't handle
-    # NotImplemented correctly yet (http://bugs.python.org/issue10042)
+    # NotImplemented correctly yet (https://bugs.python.org/issue10042)
     def __eq__(self, other):
         raise NotImplementedError
     def __ne__(self, other):

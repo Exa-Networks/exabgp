@@ -7,27 +7,27 @@
 
 ## Introduction
 
-[ExaBGP](http://github.com/Exa-Networks/exabgp) provides a convenient way to implement [Software Defined Networking](http://en.wikipedia.org/wiki/Software-defined_networking) by transforming [BGP messages](http://thomas.mangin.com/data/pdf/UKNOF%2015%20-%20Mangin%20-%20Naked%20BGP.pdf) into friendly plain [text or JSON](https://github.com/Exa-Networks/exabgp/wiki/Controlling-ExaBGP-:-API-for-received-messages), which can then be easily handled by simple scripts or your BSS/OSS.
+[ExaBGP](https://github.com/Exa-Networks/exabgp) provides a convenient way to implement [Software Defined Networking](https://en.wikipedia.org/wiki/Software-defined_networking) by transforming [BGP messages](http://thomas.mangin.com/data/pdf/UKNOF%2015%20-%20Mangin%20-%20Naked%20BGP.pdf) into friendly plain [text or JSON](https://github.com/Exa-Networks/exabgp/wiki/Controlling-ExaBGP-:-API-for-received-messages), which can then be easily handled by simple scripts or your BSS/OSS.
 
-It is routinely used to improve service resilience and provide protection against network or service failures. For example, thanks to the `healthcheck` backend included, anycasted DNS service failures can be detected and handled [gracefully](http://blog.iweb-hosting.co.uk/blog/2012/01/27/using-bgp-to-serve-high-availability-dns/). To help you get started, [Vincent Bernat](https://github.com/vincentbernat) put forward a full lab [explaining](http://vincent.bernat.im/en/blog/2013-exabgp-highavailability.html)  how to best use this feature.
+It is routinely used to improve service resilience and provide protection against network or service failures. For example, thanks to the `healthcheck` backend included, anycasted DNS service failures can be detected and handled [gracefully](http://blog.iweb-hosting.co.uk/blog/2012/01/27/using-bgp-to-serve-high-availability-dns/). To help you get started, [Vincent Bernat](https://github.com/vincentbernat) put forward a full lab [explaining](https://vincent.bernat.im/en/blog/2013-exabgp-highavailability.html)  how to best use this feature.
 
 Also, [alone](http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf) or in conjunction with [fastnetmon](https://github.com/pavel-odintsov/fastnetmon), it provides network operators a cost effective DDOS protection solution.
 
-But it is not its only strength, thanks to modern routers' flow balancing, ExaBGP can also be used to save you money on [load balancers](http://bits.shutterstock.com/2014/05/22/stop-buying-load-balancers-and-start-controlling-your-traffic-flow-with-software/). Other uses include keeping an eye on network changes done by [RIPE](https://labs.ripe.net/Members/wouter_miltenburg/researching-next-generation-ris-route-collectors) or by other networks with [GIXLG](https://github.com/dpiekacz/gixlg/wiki/GIXLG-wiki).
+But it is not its only strength, thanks to modern routers' flow balancing, ExaBGP can also be used to save you money on [load balancers](https://bits.shutterstock.com/2014/05/22/stop-buying-load-balancers-and-start-controlling-your-traffic-flow-with-software/). Other uses include keeping an eye on network changes done by [RIPE](https://labs.ripe.net/Members/wouter_miltenburg/researching-next-generation-ris-route-collectors) or by other networks with [GIXLG](https://github.com/dpiekacz/gixlg/wiki/GIXLG-wiki).
 
 ## Who is using ExaBGP ?
 
 These organisations have spoken of, or are using/have used ExaBGP:
 [AMS-IX](https://ripe64.ripe.net/presentations/49-Follow_Up_AMS-IX_route-server_test_Euro-IX_20th_RIPE64.pdf),
-[Alcatel Lucent](http://www.nanog.org/sites/default/files/wed.general.trafficdiversion.serodio.10.pdf),
+[Alcatel Lucent](https://www.nanog.org/sites/default/files/wed.general.trafficdiversion.serodio.10.pdf),
 [BBC](http://www.bbc.co.uk/blogs/internet/entries/8c6c2414-df7a-4ad7-bd2e-dbe481da3633),
 [Blablacar](http://blablatech.com/blog/bgp-routing-to-containers),
 [Cisco Systems](http://www.ciscoknowledgenetwork.com/files/452_06-11-14-20140610_v3_BGP_Optimizing_the_SDN-v1-0.pdf?),
-[CloudFlare](http://www.slideshare.net/TomPaseka/flowspec-apf-2013),
+[CloudFlare](https://www.slideshare.net/TomPaseka/flowspec-apf-2013),
 [Dailymotion](https://github.com/pyke369/exabgp-helpers),
 [Facebook](https://code.facebook.com/posts/1734309626831603/dhcplb-an-open-source-load-balancer/),
-[MaxCDN](http://blog.maxcdn.com/anycast-ip-routing-used-maxcdn/),
-[Microsoft](http://www.nanog.org/sites/default/files/wed.general.brainslug.lapukhov.20.pdf),
+[MaxCDN](https://blog.maxcdn.com/anycast-ip-routing-used-maxcdn/),
+[Microsoft](https://www.nanog.org/sites/default/files/wed.general.brainslug.lapukhov.20.pdf),
 [OpenDNS](https://blog.opendns.com/2013/01/10/high-availability-with-anycast-routing/),
 [PowerDNS](https://blog.powerdns.com/2016/02/23/an-important-update-on-new-powerdns-products/),
 [RIPE NCC](https://labs.ripe.net/Members/wouter_miltenburg/Researchpaper.pdf), ...
@@ -85,7 +85,7 @@ ExaBGP is supported through Github's [issue tracker](https://github.com/Exa-Netw
 
 During "day time" (GMT/BST) feel free to contact us on [`Gitter`](https://gitter.im/Exa-Networks/exabgp); we will try to respond if available. ExaBGP also has a channel on `Freenode` [`#exabgp`](irc://irc.freenode.net:6667/exabgp) but it is not monitored.
 
-The best way to be kept informed about our progress/releases is to follow us on [Google+](https://plus.google.com/u/0/communities/108249711110699351497) and/or [Twitter](https://twitter.com/#!/search/exabgp). You can also use and subscribe to our low volume [mailing list](http://groups.google.com/group/exabgp-users).
+The best way to be kept informed about our progress/releases is to follow us on [Google+](https://plus.google.com/u/0/communities/108249711110699351497) and/or [Twitter](https://twitter.com/#!/search/exabgp). You can also use and subscribe to our low volume [mailing list](https://groups.google.com/group/exabgp-users).
 
 ## Documentation
 

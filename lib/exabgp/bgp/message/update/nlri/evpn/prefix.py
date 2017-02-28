@@ -23,7 +23,7 @@ from exabgp.bgp.message.notification import Notify
 
 # ------------ EVPN Prefix Advertisement NLRI ------------
 # As described here:
-# http://tools.ietf.org/html/draft-ietf-bess-evpn-prefix-advertisement-01
+# https://tools.ietf.org/html/draft-ietf-bess-evpn-prefix-advertisement-01
 
 # +---------------------------------------+
 # |      RD   (8 octets)                  |

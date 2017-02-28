@@ -7,7 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 # ============================================================== Communities (8)
-# http://www.iana.org/assignments/bgp-extended-communities
+# https://www.iana.org/assignments/bgp-extended-communities
 
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.initial.community import Community

@@ -35,7 +35,7 @@ class _CapabilityCode (int):
 
 	HOSTNAME                 = 0xB8  # ExaBGP only ...
 	OPERATIONAL              = 0xB9  # ExaBGP only ...
-	EXTENDED_MESSAGE         = 0xBA  # ExaBGP only ... No yet defined by draft http://tools.ietf.org/html/draft-ietf-idr-extended-messages-11.txt
+	EXTENDED_MESSAGE         = 0xBA  # ExaBGP only ... No yet defined by draft https://tools.ietf.org/html/draft-ietf-idr-bgp-extended-messages-20
 
 	# Internal
 	AIGP = 0xFF00

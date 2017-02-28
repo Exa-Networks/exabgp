@@ -12,7 +12,7 @@ from struct import unpack
 from exabgp.protocol.resource import Resource
 
 # ======================================================================== AFI
-# http://www.iana.org/assignments/address-family-numbers/
+# https://www.iana.org/assignments/address-family-numbers/
 
 
 class AFI (Resource):
@@ -85,7 +85,7 @@ class AFI (Resource):
 
 # ======================================================================= SAFI
 
-# http://www.iana.org/assignments/safi-namespace
+# https://www.iana.org/assignments/safi-namespace
 class SAFI (Resource):
 	undefined = 0               # internal
 	unicast = 1                 # [RFC4760]

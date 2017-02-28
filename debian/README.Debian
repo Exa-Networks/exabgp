@@ -7,7 +7,7 @@ exist.
 However, In case you would mind how to complete your setup on the network side,
 here is an IETF paper explaining RTBH and showing examples on different vendor platform.
 
-http://tools.ietf.org/html/draft-ietf-opsec-blackhole-urpf-00
+https://tools.ietf.org/html/draft-ietf-opsec-blackhole-urpf-00
 
 For more information please look at ExaBGP's FAQ or the related talks/slide page of its wiki.
 

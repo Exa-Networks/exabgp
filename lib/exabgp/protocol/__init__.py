@@ -10,7 +10,7 @@ from exabgp.protocol.resource import Resource
 
 
 # ===================================================================== Protocol
-# http://www.iana.org/assignments/protocol-numbers/
+# https://www.iana.org/assignments/protocol-numbers/
 
 class Protocol (Resource):
 	NAME = 'protocol'

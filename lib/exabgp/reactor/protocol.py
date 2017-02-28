@@ -247,7 +247,7 @@ class Protocol (object):
 				break
 
 		if received_open.TYPE != Open.TYPE:
-			raise Notify(5,1,'The first packet recevied is not an open message (%s)' % received_open)
+			raise Notify(5,1,'The first packet received is not an open message (%s)' % received_open)
 
 		self.logger.message(self.me('<< %s' % received_open))
 		yield received_open

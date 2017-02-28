@@ -13,7 +13,7 @@ from struct import unpack
 from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
-# http://tools.ietf.org/html/rfc6514#section-5
+# https://tools.ietf.org/html/rfc6514#section-5
 #
 #  +---------------------------------+
 #  |  Flags (1 octet)                |
