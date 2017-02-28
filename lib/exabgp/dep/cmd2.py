@@ -21,7 +21,7 @@ written to use `self.stdout.write()`,
 
 - Catherine Devlin, Jan 03 2008 - catherinedevlin.blogspot.com
 
-mercurial repository at http://www.assembla.com/wiki/show/python-cmd2
+mercurial repository at https://www.assembla.com/wiki/show/python-cmd2
 """
 import cmd
 import re
@@ -169,7 +169,7 @@ class PasteBufferError(EnvironmentError):
     if sys.platform[:3] == 'win':
         errmsg = """Redirecting to or from paste buffer requires pywin32
 to be installed on operating system.
-Download from http://sourceforge.net/projects/pywin32/"""
+Download from https://sourceforge.net/projects/pywin32/"""
     elif sys.platform[:3] == 'dar':
         # Use built in pbcopy on Mac OSX
         pass
@@ -202,7 +202,7 @@ if subprocess.mswindows:
             win32clipboard.CloseClipboard()
     except ImportError:
         def get_paste_buffer(*args):
-            raise OSError(pastebufferr % ('pywin32', 'Download from http://sourceforge.net/projects/pywin32/'))
+            raise OSError(pastebufferr % ('pywin32', 'Download from https://sourceforge.net/projects/pywin32/'))
         write_to_paste_buffer = get_paste_buffer
 elif sys.platform == 'darwin':
     can_clip = False

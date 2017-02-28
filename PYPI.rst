@@ -41,7 +41,7 @@ Use cases include
 -----------------
 
 - sql backed `looking glass <https://code.google.com/p/gixlg/wiki/sample_maps>`_ with prefix routing visualisation
-- service `high availability <http://vincent.bernat.im/en/blog/2013-exabgp-highavailability.html>`_ automatically isolating dead servers / broken services
+- service `high availability <https://vincent.bernat.im/en/blog/2013-exabgp-highavailability.html>`_ automatically isolating dead servers / broken services
 - `DDOS mitigation <http://perso.nautile.fr/prez/fgabut-flowspec-frnog-final.pdf>`_ solutions
 - `anycasted <http://blog.iweb-hosting.co.uk/blog/2012/01/27/using-bgp-to-serve-high-availability-dns/>`_ services
 

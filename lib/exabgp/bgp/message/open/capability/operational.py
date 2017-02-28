@@ -8,6 +8,7 @@ Copyright (c) 2013-2015 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.open.capability.capability import Capability
 
+# https://tools.ietf.org/html/draft-ietf-idr-operational-message-00
 # ================================================================== Operational
 #
 

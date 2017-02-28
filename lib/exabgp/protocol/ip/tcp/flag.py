@@ -10,7 +10,7 @@ from exabgp.protocol.resource import BitResource
 
 
 # ====================================================================== TCPFlag
-# http://www.iana.org/assignments/tcp-header-flags
+# https://www.iana.org/assignments/tcp-header-flags
 
 class TCPFlag (BitResource):
 	NAME = 'tcp flag'

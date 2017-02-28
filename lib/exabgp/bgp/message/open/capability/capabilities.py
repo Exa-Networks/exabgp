@@ -38,7 +38,7 @@ class Parameter (int):
 		return 'UNKNOWN'
 
 # =================================================================== Capabilities
-# http://www.iana.org/assignments/capability-codes/
+# https://www.iana.org/assignments/capability-codes/
 
 # +------------------------------+
 # | Capability Code (1 octet)    |

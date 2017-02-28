@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2015-05-16.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+# https://tools.ietf.org/html/draft-walton-bgp-hostname-capability-02
+
 from exabgp.bgp.message.open.capability.capability import Capability
 
 

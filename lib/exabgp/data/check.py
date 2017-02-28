@@ -210,7 +210,7 @@ def largecommunity (data):
 		asn32(data[0]) and uint32(data[1]) and uint32(data[2])
 
 
-def extendedcommunity (data):  # TODO: improve, incomplete see http://tools.ietf.org/rfc/rfc4360.txt
+def extendedcommunity (data):  # TODO: improve, incomplete see https://tools.ietf.org/rfc/rfc4360.txt
 	if integer(data):
 		return True
 	if string(data) and data.count(':') == 2:
