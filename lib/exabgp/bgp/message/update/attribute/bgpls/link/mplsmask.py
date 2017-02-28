@@ -9,7 +9,7 @@ Copyright (c) 2014-2016 Exa Networks. All rights reserved.
 import binascii
 import itertools
 
-from exabgp.dep.bitstring import BitArray
+from exabgp.vendoring.bitstring import BitArray
 
 from exabgp.bgp.message.notification import Notify
 

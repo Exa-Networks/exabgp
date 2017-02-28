@@ -18,8 +18,8 @@ from exabgp.version import version
 # import before the fork to improve copy on write memory savings
 from exabgp.reactor.loop import Reactor
 
-from exabgp.dep import docopt
-from exabgp.dep import lsprofcalltree
+from exabgp.vendoring import docopt
+from exabgp.vendoring import lsprofcalltree
 
 from exabgp.configuration.usage import usage
 
@@ -33,7 +33,7 @@ def is_bgp (s):
 
 def __exit (memory, code):
 	if memory:
-		from exabgp.dep import objgraph
+		from exabgp.vendoring import objgraph
 		print "memory utilisation"
 		print
 		print objgraph.show_most_common_types(limit=20)

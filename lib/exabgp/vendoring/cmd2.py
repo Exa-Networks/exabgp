@@ -40,7 +40,7 @@ import platform
 import copy
 from code import InteractiveConsole, InteractiveInterpreter
 from optparse import make_option
-from exabgp.dep import pyparsing
+from exabgp.vendoring import pyparsing
 
 __version__ = '0.6.8'
 

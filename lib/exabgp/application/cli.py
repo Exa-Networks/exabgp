@@ -10,7 +10,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import sys
 import select
 
-from exabgp.dep.cmd2 import cmd
+from exabgp.vendoring.cmd2 import cmd
 
 from exabgp.version import version
 

@@ -12,7 +12,7 @@ import uuid
 from collections import deque
 
 # collections.counter is python2.7 only ..
-from exabgp.dep.counter import Counter
+from exabgp.vendoring.counter import Counter
 
 from exabgp.protocol.family import AFI
 
