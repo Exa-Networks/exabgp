@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import struct
 import sys
 import json
@@ -58,17 +60,17 @@ class Transcoder (object):
 		try:
 			parsed = json.loads(json_string)
 		except ValueError:
-			print >> sys.stderr, 'invalid JSON message'
+			print('invalid JSON message', file=sys.stderr)
 			sys.exit(1)
 
 		if parsed.get('exabgp','0.0.0') != json_version:
-			print >> sys.stderr, 'invalid json version', json_string
+			print('invalid json version', json_string, file=sys.stderr)
 			sys.exit(1)
 
 		content = parsed.get('type','')
 
 		if not content:
-			print >> sys.stderr, 'invalid json content', json_string
+			print('invalid json content', json_string, file=sys.stderr)
 			sys.exit(1)
 
 		neighbor = _FakeNeighbor(
@@ -141,7 +143,7 @@ class Transcoder (object):
 			return self.encoder.notification(neighbor,direction,message,header,body)
 
 		if not self.negotiated:
-			print >> sys.stderr, 'invalid message sequence, open not exchange not complete', json_string
+			print('invalid message sequence, open not exchange not complete', json_string, file=sys.stderr)
 			sys.exit(1)
 
 		message = Message.unpack(category,raw,self.negotiated)

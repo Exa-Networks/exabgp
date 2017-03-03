@@ -7,6 +7,8 @@ Created by Thomas Mangin on 2013-02-20.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from __future__ import print_function
+
 import os
 import sys
 
@@ -34,7 +36,7 @@ class BMPHandler (asyncore.dispatcher_with_send):
 	update = True
 
 	def announce (self, *args):
-		print >> self.fd, self.ip, self.port, ' '.join(str(_) for _ in args) if len(args) > 1 else args[0]
+		print(self.ip, self.port, ' '.join(str(_) for _ in args) if len(args) > 1 else args[0], file=self.fd)
 
 	def setup (self, environ, ip, port):
 		self.handle = {
@@ -67,7 +69,7 @@ class BMPHandler (asyncore.dispatcher_with_send):
 			except socket.error,exc:
 				if exc.args[0] in error.block:
 					continue
-				print "problem reading on socket", str(exc)
+				print("problem reading on socket", str(exc))
 				return None
 
 			left -= len(data)
@@ -75,7 +77,7 @@ class BMPHandler (asyncore.dispatcher_with_send):
 
 			if left and not data:
 				# the TCP session is gone.
-				print "TCP connection closed"
+				print("TCP connection closed")
 				self.close()
 				return None
 		return header
@@ -87,7 +89,7 @@ class BMPHandler (asyncore.dispatcher_with_send):
 			return
 		header = Header(data)
 		if not header.validate():
-			print "closeing tcp connection following an invalid header"
+			print("closeing tcp connection following an invalid header")
 			self.close()
 
 		self.handle[header.message](header)
@@ -106,10 +108,10 @@ class BMPHandler (asyncore.dispatcher_with_send):
 		negotiated = FakeNegotiated(header,self.asn4)
 		update = Update.unpack_message(bgp_body,negotiated)
 		if self.use_json:
-			print >> self.fd, self.json.bmp(self.ip,update)
+			print(self.json.bmp(self.ip,update), file=self.fd)
 		else:
 			for route in update.routes:
-				print >> self.fd, route.extensive()
+				print(route.extensive(), file=self.fd)
 
 	def _statistics (self, header):
 		pass
@@ -134,7 +136,7 @@ class BMPServer(asyncore.dispatcher):
 		if pair is not None:
 			# The if prevent invalid unpacking
 			sock, addr = pair  # pylint: disable=W0633
-			print "new BGP connection from", addr
+			print("new BGP connection from", addr)
 			BMPHandler(sock).setup(self.env,*addr)
 
 
@@ -330,7 +332,7 @@ def main ():
 		os.dup2(2,3)
 		env.fd = os.fdopen(3, "w+")
 	except Exception:
-		print "can not setup a descriptor of FD 3 for route display"
+		print("can not setup a descriptor of FD 3 for route display")
 		sys.exit(1)
 
 	BMPServer(env)

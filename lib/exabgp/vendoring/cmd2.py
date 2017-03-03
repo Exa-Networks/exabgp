@@ -69,7 +69,7 @@ class OptionParser(optparse.OptionParser):
 
     def print_help(self, *args, **kwargs):
         try:
-            print (self._func.__doc__)
+            print(self._func.__doc__)
         except AttributeError:
             pass
         optparse.OptionParser.print_help(self, *args, **kwargs)
@@ -410,7 +410,7 @@ class Cmd(cmd.Cmd):
     def perror(self, errmsg, statement=None):
         if self.debug:
             traceback.print_exc()
-        print (str(errmsg))
+        print(str(errmsg))
     def pfeedback(self, msg):
         """For printing nonessential feedback.  Can be silenced with `quiet`.
            Inclusion in redirected output is controlled by `feedback_to_output`."""
@@ -1436,7 +1436,7 @@ def cast(current, new):
             return typ(new)
         except Exception:
             pass
-    print ("Problem setting parameter (now %s) to %s; incorrect type?" % (current, new))
+    print("Problem setting parameter (now %s) to %s; incorrect type?" % (current, new))
     return current
 
 class Statekeeper(object):

@@ -263,5 +263,5 @@ def check_update (neighbor, raw):
 def check_notification (raw):
 	notification = Notification.unpack_message(raw[18:],None)
 	# XXX: FIXME: should be using logger here
-	print notification
+	print(notification)
 	return True

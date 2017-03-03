@@ -8,6 +8,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 # pylint: disable=too-few-public-methods,star-args,import-error
 
+from __future__ import print_function
+
 import os
 import sys
 import stat
@@ -294,7 +296,7 @@ class Logger (object):
 			if self._syslog:
 				self._syslog.debug(self._prefixed(level,source,line))
 			else:
-				print self._prefixed(level,source,line)
+				print(self._prefixed(level,source,line))
 				sys.stdout.flush()
 
 	def debug (self, message, source='', level='debug'):
@@ -317,7 +319,7 @@ class Logger (object):
 			if self._syslog:
 				self._syslog.critical(line)
 			else:
-				print line
+				print(line)
 				sys.stdout.flush()
 
 	# show the message on the wire

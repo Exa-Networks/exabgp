@@ -126,7 +126,7 @@ class Operational (Message):
 			counter = unpack('!L',data[15:19])[0]
 			return klass(afi,safi,routerid,sequence,counter)
 		else:
-			print 'ignoring ATM this kind of message'
+			print('ignoring ATM this kind of message')
 
 
 # ============================================================ OperationalFamily

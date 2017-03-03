@@ -209,8 +209,8 @@ class Control (object):
 		except KeyboardInterrupt:
 			self.cleanup()
 		except Exception, exc:
-			print exc
-			print ''
+			print(exc)
+			print('')
 			traceback.print_exc(file=sys.stdout)
 			sys.stdout.flush()
 			self.cleanup()

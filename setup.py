@@ -45,7 +45,7 @@ exabgp (%s-0) unstable; urgency=low
 """
 
 if sys.argv[-1] == 'help':
-	print """\
+	print("""\
 python setup.py help     this help
 python setup.py cleanup  delete left-over file from release
 python setup.py version  set the content of the version include file
@@ -53,16 +53,16 @@ python setup.py push     update the version, push to github
 python setup.py release  tag a new version on github, and update pypi
 python setup.py pypi     create egg/wheel
 python setup.py debian   prepend the current version to debian/changelog
-"""
+""")
 	sys.exit(0)
 
 
 def remove_egg ():
 	if os.path.exists('lib/exabgp.egg-info'):
-		print 'removing left-over egg'
+		print('removing left-over egg')
 		rmtree('lib/exabgp.egg-info')
 	if os.path.exists('build/lib/exabgp'):
-		print 'removing left-over egg'
+		print('removing left-over egg')
 		rmtree('build')
 
 remove_egg()
@@ -79,7 +79,7 @@ def set_version ():
 	version = imp.load_source('version','lib/exabgp/version.py').version
 
 	if version != git_version:
-		print 'version setting failed'
+		print('version setting failed')
 		sys.exit(1)
 
 	return git_version
@@ -108,12 +108,12 @@ if sys.argv[-1] == 'push':
 
 	ret = dryrun or os.system(commit)
 	if ret:
-		print 'failed to commit'
+		print('failed to commit')
 		sys.exit(ret)
 
 	ret = dryrun or os.system(push)
 	if ret:
-		print 'failed to push'
+		print('failed to push')
 		sys.exit(ret)
 
 	sys.exit(0)
@@ -130,7 +130,7 @@ def debian ():
 	with open('debian/changelog', 'w') as w:
 		w.write(debian_template % (version,formatdate()))
 
-	print 'updated debian/changelog'
+	print('updated debian/changelog')
 
 if sys.argv[-1] == 'debian':
 	debian()
@@ -141,7 +141,7 @@ if sys.argv[-1] == 'debian':
 #
 
 if sys.argv[-1] == 'release':
-	print 'figuring valid next release version'
+	print('figuring valid next release version')
 
 	tags = os.popen('git tag').read().split('-')[0].strip()
 	versions = [[int(_) for _ in tag.split('.')]  for tag in tags.split('\n')
@@ -153,8 +153,8 @@ if sys.argv[-1] == 'release':
 		'.'.join([str(_) for _ in (latest[0]+1, 0, 0)]),
 	]
 
-	print 'valid versions are:', ', '.join(next)
-	print 'checking the CHANGELOG uses one of them'
+	print('valid versions are:', ', '.join(next))
+	print('checking the CHANGELOG uses one of them')
 
 	with open('CHANGELOG') as changelog:
 		changelog.next()  # skip the word version on the first line
@@ -163,25 +163,25 @@ if sys.argv[-1] == 'release':
 				version = line.split()[1]
 				if version in next:
 					break
-				print 'invalid new version in CHANGELOG'
+				print('invalid new version in CHANGELOG')
 				sys.exit(1)
 
-	print 'ok, next release is %s' % version
-	print 'checking that this release is not already tagged'
+	print('ok, next release is %s' % version)
+	print('checking that this release is not already tagged')
 
 	if version in tags.split('\n'):
-		print 'this tag was already released'
+		print('this tag was already released')
 		sys.exit(1)
 
-	print 'ok, this is a new release'
-	print 'rewriting lib/exabgp/version.py'
+	print('ok, this is a new release')
+	print('rewriting lib/exabgp/version.py')
 
 	with open('lib/exabgp/version.py','w') as version_file:
 		version_file.write(version_template % version)
 
 	debian()
 
-	print 'checking if we need to commit a version.py change'
+	print('checking if we need to commit a version.py change')
 
 	commit = None
 	status = os.popen('git status')
@@ -197,76 +197,76 @@ if sys.argv[-1] == 'release':
 
 	if commit is True:
 		command = "git commit -a -m 'updating version to %s'" % version
-		print '\n>', command
+		print('\n>', command)
 
 		ret = dryrun or os.system(command)
 		if ret:
-			print 'return code is', ret
-			print 'could not commit version change (%s)' % version
+			print('return code is', ret)
+			print('could not commit version change (%s)' % version)
 			sys.exit(1)
-		print 'version.py was updated'
+		print('version.py was updated')
 	elif commit is False:
-		print 'more than one file is modified and need updating, aborting'
+		print('more than one file is modified and need updating, aborting')
 		sys.exit(1)
 	else:  # None
-		print 'version.py was already set'
+		print('version.py was already set')
 
-	print 'tagging the new version'
+	print('tagging the new version')
 	command = "git tag -a %s -m 'release %s'" % (version,version)
-	print '\n>', command
+	print('\n>', command)
 
 	ret = dryrun or os.system(command)
 	if ret:
-		print 'return code is', ret
-		print 'could not tag version (%s)' % version
+		print('return code is', ret)
+		print('could not tag version (%s)' % version)
 		sys.exit(1)
 
-	print 'pushing the new tag to local repo'
+	print('pushing the new tag to local repo')
 	command = "git push --tags"
-	print '\n>', command
+	print('\n>', command)
 
 	ret = dryrun or os.system(command)
 	if ret:
-		print 'return code is', ret
-		print 'could not push release version'
+		print('return code is', ret)
+		print('could not push release version')
 		sys.exit(1)
 
-	print 'pushing the new tag to upstream'
+	print('pushing the new tag to upstream')
 	command = "git push --tags upstream"
-	print '\n>', command
+	print('\n>', command)
 
 	ret = dryrun or os.system(command)
 	if ret:
-		print 'return code is', ret
-		print 'could not push release version'
+		print('return code is', ret)
+		print('could not push release version')
 		sys.exit(1)
 	sys.exit(0)
 
 if sys.argv[-1] in ('pypi'):
-	print
-	print 'updating PyPI'
+	print()
+	print('updating PyPI')
 
 	command = "python setup.py sdist upload"
-	print '\n>', command
+	print('\n>', command)
 
 	ret = dryrun or os.system(command)
 	if ret:
-		print 'return code is', ret
-		print 'could not generate egg on pypi'
+		print('return code is', ret)
+		print('could not generate egg on pypi')
 		sys.exit(1)
 
 	remove_egg()
 
 	command = "python setup.py bdist_wheel upload"
-	print '\n>', command
+	print('\n>', command)
 
 	ret = dryrun or os.system(command)
 	if ret:
-		print 'return code is', ret
-		print 'could not generate wheel on pypi'
+		print('return code is', ret)
+		print('could not generate wheel on pypi')
 		sys.exit(1)
 
-	print 'all done.'
+	print('all done.')
 	sys.exit(0)
 
 
