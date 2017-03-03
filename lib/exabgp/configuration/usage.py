@@ -46,7 +46,7 @@ debugging:
   --debug, -d           start the python debugger on serious logging and on
                         SIGTERM (shortcut for exabgp.log.all=true
                         exabgp.log.level=DEBUG)
-  --signal TIME         issue a SIGUSR1 to reload the configuraiton after
+  --signal TIME         issue a SIGUSR1 to reload the configuration after
                         <time> seconds, only useful for code debugging
   --once, -1            only perform one attempt to connect to peers (used for
                         debugging)
