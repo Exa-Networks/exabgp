@@ -334,7 +334,7 @@ def withdraw_route (self, reactor, service, line):
 				# Change the action to withdraw before checking the route
 				change.nlri.action = OUT.WITHDRAW
 				# NextHop is a mandatory field (but we do not require in)
-				if change.nlri.nexthop is NoNextHop or change.nlri.afi != AFI.ipv4:
+				if change.nlri.nexthop is NoNextHop:
 					change.nlri.nexthop = NextHop('0.0.0.0')
 
 				if not ParseStaticRoute.check(change):
