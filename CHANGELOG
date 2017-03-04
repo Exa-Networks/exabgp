@@ -6,6 +6,8 @@ Version explained:
 Version 3.4.19
  * Added IPv6 nlri-mpls to list of enabled protocol (was missing)
     requested by: adrian62
+ * Fix encoding of Flow Label requiring more than 2 bytes
+    reported by: BLAKEMMM
 
 Version 3.4.18
  * Backport: backhole community (RFC 7999)
