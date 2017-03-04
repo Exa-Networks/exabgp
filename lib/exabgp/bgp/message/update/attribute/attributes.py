@@ -44,8 +44,7 @@ NOTHING = _NOTHING()
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 class Attributes (dict):
-	NO_GENERATION = (
-		Attribute.CODE.NEXT_HOP,
+	INTERNAL = (
 		Attribute.CODE.INTERNAL_SPLIT,
 		Attribute.CODE.INTERNAL_WATCHDOG,
 		Attribute.CODE.INTERNAL_NAME,
@@ -53,6 +52,10 @@ class Attributes (dict):
 		# Attribute.CODE.INTERNAL_DISCARD,
 		# Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW,
 	)
+
+	NO_GENERATION = (
+		Attribute.CODE.NEXT_HOP,
+	) + INTERNAL
 
 	TREAT_AS_WITHDRAW = (
 		Attribute.CODE.ORIGIN,
@@ -228,12 +231,7 @@ class Attributes (dict):
 		alls = set(keys + default.keys() if with_default else [])
 
 		for code in sorted(alls):
-			if code in (
-				Attribute.CODE.INTERNAL_SPLIT,
-				Attribute.CODE.INTERNAL_WATCHDOG,
-				Attribute.CODE.INTERNAL_WITHDRAW,
-				Attribute.CODE.INTERNAL_NAME
-			):
+			if code in Attributes.INTERNAL:
 				continue
 
 			if code not in keys and code in default:
