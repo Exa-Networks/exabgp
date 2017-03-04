@@ -201,6 +201,17 @@ class Attributes (dict):
 
 		self[attribute.ID] = attribute
 
+	# This is as when we generate flow spec we can have multiple keywords
+	# which are all adding information in the extended-community
+	def add_and_merge (self, attribute):
+		if attribute.ID not in self:
+			self.add(attribute)
+			return
+
+		if attribute.ID == Attribute.CODE.EXTENDED_COMMUNITY:
+			for community in attribute.communities:
+				self[attribute.ID].add(community)
+
 	def remove (self, attrid):
 		self.pop(attrid)
 

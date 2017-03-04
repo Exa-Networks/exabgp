@@ -81,7 +81,9 @@ class Scope (Error):
 		self._current[name] = value
 
 	def attribute_add (self, name, data):
-		self._current[name].attributes.add(data)
+		# .add_and_merge() and not .add() is required
+		# flow spec to have multiple keywords adding to the extended-community
+		self._current[name].attributes.add_and_merge(data)
 		if name not in self._added:
 			self._added.add(name)
 
