@@ -59,14 +59,14 @@ class Open (Message):
 	def message (self):
 		return self._message("%s%s%s%s%s" % (
 			self.version.pack(),
-			self.asn.trans(),
+			self.asn.trans().pack(),
 			self.hold_time.pack(),
 			self.router_id.pack(),
 			self.capabilities.pack()
 		))
 
 	def __str__ (self):
-		return "OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]" % (self.version, self.asn, self.hold_time, self.router_id,self.capabilities)
+		return "OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]" % (self.version, self.asn.trans(), self.hold_time, self.router_id,self.capabilities)
 
 	@classmethod
 	def unpack_message (cls, data, _):

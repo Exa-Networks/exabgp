@@ -38,7 +38,7 @@ class ASN (long):
 
 	def trans (self):
 		if self.asn4():
-			return AS_TRANS.pack()
-		return self.pack()
+			return AS_TRANS
+		return self
 
 AS_TRANS = ASN(23456)
