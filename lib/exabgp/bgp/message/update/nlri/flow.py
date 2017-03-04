@@ -204,6 +204,18 @@ class IOperationByteShort (IOperation):
 		return unpack('!H',bgp[:2])[0],bgp[2:]
 
 
+class IOperationByteShortLong (IOperation):
+	def encode (self, value):
+		if value < (1 << 8):
+			return 1,chr(value)
+		if value < (1 << 16):
+			return 2,pack('!H',value)
+		return 4,pack('!L',value)
+
+	def decode (self, bgp):
+		return unpack('!H',bgp[:2])[0],bgp[2:]
+
+
 # String representation for Numeric and Binary Tests
 
 class NumericString (object):
@@ -427,7 +439,7 @@ class FlowFragment (IOperationByteShort,BinaryString,IPv4):
 
 
 # draft-raszuk-idr-flow-spec-v6-01
-class FlowFlowLabel (IOperationByteShort,NumericString,IPv6):
+class FlowFlowLabel (IOperationByteShortLong,NumericString,IPv6):
 	ID = 0x0D
 	NAME = 'flow-label'
 	converter = staticmethod(converter(LabelValue))
