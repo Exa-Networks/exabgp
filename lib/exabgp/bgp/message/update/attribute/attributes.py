@@ -441,6 +441,9 @@ class Attributes (dict):
 		#        will hash to the same value until repr represents the nh (??)
 		return hash(repr(self))
 
+	def __eq__ (self, other):
+		return self.sameValuesAs(other)
+
 	# BaGPipe code ..
 
 	# test that sets of attributes exactly match
