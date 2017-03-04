@@ -38,8 +38,8 @@ class ASN (Resource):
 
 	def trans (self):
 		if self.asn4():
-			return AS_TRANS.pack()
-		return self.pack()
+			return AS_TRANS
+		return self
 
 	def __repr__ (self):
 		return '%ld' % long(self)
