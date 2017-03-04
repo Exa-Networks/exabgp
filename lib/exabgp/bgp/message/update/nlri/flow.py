@@ -200,6 +200,7 @@ class IOperationByteShort (IOperation):
 			return 1,chr(value)
 		return 2,pack('!H',value)
 
+	# XXX: buggy ?? as it assumes 2 bytes but may be less
 	def decode (self, bgp):
 		return unpack('!H',bgp[:2])[0],bgp[2:]
 
@@ -212,8 +213,9 @@ class IOperationByteShortLong (IOperation):
 			return 2,pack('!H',value)
 		return 4,pack('!L',value)
 
+	# XXX: buggy ?? as it assumes 4 bytes but may be less
 	def decode (self, bgp):
-		return unpack('!H',bgp[:2])[0],bgp[2:]
+		return unpack('!L',bgp[:4])[0],bgp[4:]
 
 
 # String representation for Numeric and Binary Tests
