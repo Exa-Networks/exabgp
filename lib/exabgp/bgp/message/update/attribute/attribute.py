@@ -7,6 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from struct import pack
+import sys
 
 from exabgp.bgp.message.notification import Notify
 
@@ -73,7 +74,8 @@ class Attribute (object):
 	# XXX: FIXME: The API of ID is a bit different (it can be instanciated)
 	# XXX: FIXME: This is legacy. should we change to not be ?
 	class CODE (int):
-		__slots__ = []
+		if sys.version_info[0]<3:
+			__slots__ = []
 
 		# This should move within the classes and not be here
 		# RFC 4271
@@ -168,7 +170,8 @@ class Attribute (object):
 		MASK_TRANSITIVE = 0xBF  # . 191 - 1011 1111
 		MASK_OPTIONAL   = 0x7F  # . 127 - 0111 1111
 
-		__slots__ = []
+		if sys.version_info[0]<3:
+			__slots__ = []
 
 		def __str__ (self):
 			r = []

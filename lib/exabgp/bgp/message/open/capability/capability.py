@@ -6,13 +6,17 @@ Created by Thomas Mangin on 2012-07-17.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+import sys
+
 # Do not create a dependency loop by using exabgp.bgp.message as import
 from exabgp.bgp.message.notification import Notify
 
 
 class _CapabilityCode (int):
 	_cache = dict()
-	__slots__ = ['NAME','_cache']
+
+	if sys.version_info[0]<3:
+		__slots__ = ['NAME','_cache']
 
 	RESERVED                 = 0x00  # [RFC5492]
 	MULTIPROTOCOL            = 0x01  # [RFC2858]
@@ -91,7 +95,8 @@ class _CapabilityCode (int):
 class Capability (object):
 
 	class CODE (int):
-		__slots__ = []
+		if sys.version_info[0]<3:
+			__slots__ = []
 
 		RESERVED                 = _CapabilityCode(_CapabilityCode.RESERVED)
 		MULTIPROTOCOL            = _CapabilityCode(_CapabilityCode.MULTIPROTOCOL)

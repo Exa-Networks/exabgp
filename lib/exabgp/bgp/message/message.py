@@ -6,11 +6,13 @@ Created by Thomas Mangin on 2010-01-15.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+import sys
 from struct import pack
 
 
 class _MessageCode (int):
-	__slots__ = ['SHORT','NAME']
+	if sys.version_info[0]<3:
+		__slots__ = ['SHORT','NAME']
 
 	NOP           = 0x00  # .   0 - internal
 	OPEN          = 0x01  # .   1
