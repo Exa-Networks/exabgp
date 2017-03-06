@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2012-07-14.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+import sys
+
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.protocol.ip import IPv4
 
@@ -70,7 +72,9 @@ class Aggregator (Attribute):
 @Attribute.register()
 class Aggregator4 (Aggregator):
 	ID = Attribute.CODE.AS4_AGGREGATOR
-	__slots__ = ['pack']
+
+	if sys.version_info[0]<3:
+		__slots__ = ['pack']
 
 	def pack (self, negotiated):
 		return self._attribute(self.asn.pack(True)+self.speaker.pack())
