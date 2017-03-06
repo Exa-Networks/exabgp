@@ -1,4 +1,10 @@
+import sys
+
 from exabgp.configuration.environment import environment
+
+
+if sys.version_info[0]>=3:
+	StandardError = Exception
 
 
 class Error (StandardError):

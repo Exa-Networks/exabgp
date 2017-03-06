@@ -8,6 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 # common
 
+import sys
 import traceback
 
 from exabgp.bgp.message import Update
@@ -41,6 +42,9 @@ from exabgp.bgp.message import Notification
 
 from exabgp.version import json as json_version
 
+
+if sys.version_info[0]>=3:
+	StandardError = Exception
 
 # =============================================================== check_neighbor
 # ...

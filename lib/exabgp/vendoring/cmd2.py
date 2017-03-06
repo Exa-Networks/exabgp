@@ -48,6 +48,10 @@ __version__ = '0.6.8'
 if sys.version_info[0] == 2:
     pyparsing.ParserElement.enablePackrat()
 
+if sys.version_info[0]>=3:
+    StandardError = Exception
+
+
 """
 Packrat is causing Python3 errors that I don't understand.
 

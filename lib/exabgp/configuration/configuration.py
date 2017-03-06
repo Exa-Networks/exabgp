@@ -36,6 +36,10 @@ from exabgp.configuration.operational import ParseOperational
 from exabgp.configuration.environment import environment
 
 
+if sys.version_info[0]>=3:
+	StandardError = Exception
+
+
 class _Configuration (object):
 	def __init__ (self):
 		self.processes = {}
