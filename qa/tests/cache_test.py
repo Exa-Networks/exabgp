@@ -105,8 +105,8 @@ class TestCache (unittest.TestCase):
 			end = time.time()
 			time1 = end-start
 
-			print COUNT,'iterations of',klass.__name__,'with',UNIQUE,'uniques classes'
-			print "time instance %d" % time1
+			print(COUNT,'iterations of',klass.__name__,'with',UNIQUE,'uniques classes')
+			print("time instance %d" % time1)
 
 			cache = Cache()
 			start = time.time()
@@ -121,6 +121,6 @@ class TestCache (unittest.TestCase):
 			end = time.time()
 			time2 = end-start
 
-			print "time cached  %d" % time2
-			print "speedup %.3f" % (time1/time2)
-			print
+			print("time cached  %d" % time2)
+			print("speedup %.3f" % (time1/time2))
+			print()
