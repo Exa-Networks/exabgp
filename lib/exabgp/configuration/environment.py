@@ -280,7 +280,7 @@ from exabgp.util.hashtable import HashTable
 
 
 def _env (conf):
-	here = os.path.join(os.sep,*os.path.join(environment.location.split(os.sep)))
+	here = os.path.join(os.sep,os.path.join(*environment.location.split(os.sep)))
 
 	location, directory = os.path.split(here)
 	while directory:
