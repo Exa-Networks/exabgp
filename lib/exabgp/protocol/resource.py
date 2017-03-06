@@ -6,7 +6,13 @@ Created by Thomas Mangin on 2015-05-15.
 Copyright (c) 2015-2015 Exa Networks. All rights reserved.
 """
 
+import sys
+
 from exabgp.util import string_is_hex
+
+
+if sys.version_info > (3,):
+	long = int
 
 
 class Resource (long):

@@ -8,8 +8,12 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from struct import pack
 from struct import unpack
+import sys
 
 from exabgp.protocol.resource import Resource
+
+if sys.version_info > (3,):
+	long = int
 
 # =================================================================== ASN
 
