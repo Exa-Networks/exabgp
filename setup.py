@@ -14,6 +14,7 @@ import platform
 from shutil import rmtree
 from setuptools import setup
 from distutils.util import get_platform
+import six
 
 dryrun = False
 
@@ -157,7 +158,7 @@ if sys.argv[-1] == 'release':
 	print('checking the CHANGELOG uses one of them')
 
 	with open('CHANGELOG') as changelog:
-		changelog.next()  # skip the word version on the first line
+		six.next(changelog)  # skip the word version on the first line
 		for line in changelog:
 			if 'version' in line.lower():
 				version = line.split()[1]
@@ -276,7 +277,7 @@ def packages (lib):
 			yield location
 
 	def modules (lib):
-		return os.walk(lib).next()[1]
+		return six.next(os.walk(lib))[1]
 
 	r = []
 	for module in modules(lib):

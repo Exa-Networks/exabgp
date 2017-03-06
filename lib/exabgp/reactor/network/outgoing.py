@@ -1,3 +1,5 @@
+from exabgp.vendoring import six
+
 from exabgp.protocol.family import AFI
 from .connection import Connection
 from .tcp import create,bind
@@ -49,7 +51,7 @@ class Outgoing (Connection):
 		try:
 			generator = ready(self.io)
 			while True:
-				connected = generator.next()
+				connected = six.next(generator)
 				if not connected:
 					yield False
 					continue

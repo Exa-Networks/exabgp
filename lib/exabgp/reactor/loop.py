@@ -15,6 +15,7 @@ import select
 import socket
 
 from collections import deque
+from exabgp.vendoring import six
 
 from exabgp.protocol.ip import IP
 
@@ -399,10 +400,10 @@ class Reactor (object):
 				# run it
 				try:
 					self.logger.reactor('callback | running')
-					self._running.next()  # run
+					six.next(self._running)  # run
 					# should raise StopIteration in most case
 					# and prevent us to have to run twice to run one command
-					self._running.next()  # run
+					six.next(self._running)  # run
 				except StopIteration:
 					self._running = None
 					self.logger.reactor('callback | removing')

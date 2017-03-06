@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.configuration.core.format import tokens
 from exabgp.protocol.family import AFI
 from collections import deque
+from exabgp.vendoring import six
 
 
 class Tokeniser (object):
@@ -35,13 +36,13 @@ class Tokeniser (object):
 				return self.next.popleft()
 
 			try:
-				return self.generator.next()
+				return six.next(self.generator)
 			except StopIteration:
 				return ''
 
 		def peek (self):
 			try:
-				peaked = self.generator.next()
+				peaked = six.next(self.generator)
 				self.next.append(peaked)
 				return peaked
 			except StopIteration:
@@ -101,7 +102,7 @@ class Tokeniser (object):
 	def _set (self, function):
 		try:
 			self._tokens = function
-			self._next = self._tokens.next()
+			self._next = six.next(self._tokens)
 		except IOError,exc:
 			error = str(exc)
 			if error.count(']'):
@@ -122,10 +123,10 @@ class Tokeniser (object):
 			with open(fname,'r') as fileobject:
 				def formated ():
 					while True:
-						line = fileobject.next().rstrip()
+						line = six.next(fileobject).rstrip()
 						self.index_line += 1
 						while line.endswith('\\'):
-							line = line[:-1] + fileobject.next().rstrip()
+							line = line[:-1] + six.next(fileobject).rstrip()
 							self.index_line += 1
 						yield line
 				for _ in self._tokenise(formated()):
@@ -147,7 +148,7 @@ class Tokeniser (object):
 	def __call__ (self):
 		self.number += 1
 		try:
-			self.line, self._next = self._next, self._tokens.next()
+			self.line, self._next = self._next, six.next(self._tokens)
 			self.end = self.line[-1]
 		except StopIteration:
 			if not self.finished:

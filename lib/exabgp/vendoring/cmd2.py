@@ -38,6 +38,7 @@ import glob
 import traceback
 import platform
 import copy
+from exabgp.vendoring import six
 from code import InteractiveConsole, InteractiveInterpreter
 from optparse import make_option
 from exabgp.vendoring import pyparsing
@@ -1512,25 +1513,25 @@ class Cmd2TestCase(unittest.TestCase):
     def _test_transcript(self, fname, transcript):
         lineNum = 0
         finished = False
-        line = transcript.next()
+        line = six.next(transcript)
         lineNum += 1
         tests_run = 0
         while not finished:
             # Scroll forward to where actual commands begin
             while not line.startswith(self.cmdapp.prompt):
                 try:
-                    line = transcript.next()
+                    line = six.next(transcript)
                 except StopIteration:
                     finished = True
                     break
                 lineNum += 1
             command = [line[len(self.cmdapp.prompt):]]
-            line = transcript.next()
+            line = six.next(transcript)
             # Read the entirety of a multi-line command
             while line.startswith(self.cmdapp.continuation_prompt):
                 command.append(line[len(self.cmdapp.continuation_prompt):])
                 try:
-                    line = transcript.next()
+                    line = six.next(transcript)
                 except StopIteration:
                     raise (StopIteration,
                            'Transcript broke off while reading command beginning at line %d with\n%s'
@@ -1551,7 +1552,7 @@ class Cmd2TestCase(unittest.TestCase):
             while not line.startswith(self.cmdapp.prompt):
                 expected.append(line)
                 try:
-                    line = transcript.next()
+                    line = six.next(transcript)
                 except StopIteration:
                     finished = True
                     break

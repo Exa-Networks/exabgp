@@ -7,13 +7,13 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from functools import wraps
-
+from exabgp.vendoring import six
 
 def each (function):
 	@wraps(function)
 	def start (*args, **kwargs):
 		generator = function(*args, **kwargs)
-		return lambda: generator.next()  # noqa
+		return lambda: six.next(generator)  # noqa
 	return start
 
 

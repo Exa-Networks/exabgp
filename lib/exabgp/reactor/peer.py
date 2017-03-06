@@ -7,6 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 import time
+from exabgp.vendoring import six
 # import traceback
 
 from exabgp.bgp.timer import ReceiveTimer
@@ -109,8 +110,8 @@ class KA (object):
 
 			try:
 				# try to close the generator and raise a StopIteration in one call
-				generator.next()
-				generator.next()
+				six.next(generator)
+				six.next(generator)
 				# still running
 				yield True
 			except NetworkError:
@@ -123,7 +124,7 @@ class KA (object):
 		#  True  if we need or are trying
 		#  False if we do not need to send one
 		try:
-			return self._generator.next()
+			return six.next(self._generator)
 		except StopIteration:
 			raise Notify(4,0,'could not send keepalive')
 
@@ -391,7 +392,7 @@ class Peer (object):
 			while not connected:
 				if self._teardown:
 					raise StopIteration()
-				connected = generator.next()
+				connected = six.next(generator)
 				# we want to come back as soon as possible
 				yield ACTION.LATER
 		except StopIteration:
@@ -530,7 +531,7 @@ class Peer (object):
 
 					if operational:
 						try:
-							operational.next()
+							six.next(operational)
 						except StopIteration:
 							operational = None
 				# make sure that if some operational message are received via the API
@@ -547,7 +548,7 @@ class Peer (object):
 
 					if refresh:
 						try:
-							refresh.next()
+							six.next(refresh)
 						except StopIteration:
 							refresh = None
 
@@ -583,7 +584,7 @@ class Peer (object):
 						count = 20
 						while count:
 							# This can raise a NetworkError
-							new_routes.next()
+							six.next(new_routes)
 							count -= 1
 					except StopIteration:
 						new_routes = None
@@ -602,7 +603,7 @@ class Peer (object):
 
 				if command_eor:
 					try:
-						command_eor.next()
+						six.next(command_eor)
 					except StopIteration:
 						command_eor = None
 
@@ -655,7 +656,7 @@ class Peer (object):
 					try:
 						maximum = 20
 						while maximum:
-							generator.next()
+							six.next(generator)
 							maximum -= 1
 							yield ACTION.NOW if maximum > 10 else ACTION.LATER
 					except StopIteration:
@@ -722,7 +723,7 @@ class Peer (object):
 			if direction.generator:
 				try:
 					# This generator only stops when it raises
-					r = direction.generator.next()
+					r = six.next(direction.generator)
 
 					# if r is ACTION.NOW: status = 'immediately'
 					# elif r is ACTION.LATER:   status = 'next second'

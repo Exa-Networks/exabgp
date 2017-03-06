@@ -14,7 +14,7 @@ import cProfile
 import unittest
 
 from exabgp.util.od import od
-
+from exabgp.vendoring import six
 
 def test ():
 	OPEN = ''.join([chr(int(_,16)) for _ in "FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF 00 1D 01 04 78 14 00 5A 52 DB 00 45 00".split()])
@@ -23,10 +23,10 @@ def test ():
 	from exabgp.reactor.network.outgoing import Outgoing
 	connection = Outgoing(1,'82.219.0.69','82.219.212.34')
 	writer = connection.writer(OPEN)
-	while writer.next() is False:
+	while six.next(writer) is False:
 		pass
 	writer = connection.writer(KEEP)
-	while writer.next() is False:
+	while six.next(writer) is False:
 		pass
 
 	reader = connection.reader()
