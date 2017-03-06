@@ -271,7 +271,11 @@ class environment (object):
 # ========================================================================= _env
 #
 
-import ConfigParser
+if sys.version_info[0]<3:
+	import ConfigParser
+else:
+	import configparser as ConfigParser
+
 from exabgp.util.hashtable import HashTable
 
 
