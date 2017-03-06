@@ -35,7 +35,7 @@ class Prefix (object):
 	@classmethod
 	def unpack (cls, data):
 		if len(data) == 4:
-    		# IPv4 address
+			# IPv4 address
 			addr = IP.unpack(data[:4])
 		elif len(data) == 16:
     		# IPv6
@@ -43,7 +43,7 @@ class Prefix (object):
 		return cls(iface_addr=addr)
 
 	def json (self):
-    		content = '"interface-address": "%s"' % self.iface_address
+		content = '"interface-address": "%s"' % self.iface_address
 		return content
 
 	def __eq__ (self, other):

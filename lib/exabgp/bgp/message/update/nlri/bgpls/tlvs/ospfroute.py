@@ -57,7 +57,7 @@ class OspfRoute(object):
 		return cls(ospf_type=ospf_type)
 
 	def json (self):
-  		content = '"ospf-route-type": %s' % self.ospf_type
+		content = '"ospf-route-type": %s' % self.ospf_type
 		return content
 
 	def __eq__ (self, other):
