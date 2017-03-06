@@ -11,6 +11,11 @@ from exabgp.version import version
 import sys
 import platform
 
+if sys.version_info[0]<3:
+    _max = sys.maxint
+else:
+    _max = sys.maxsize
+
 panic = """
 ********************************************************************************
 EXABGP CRASHED / HELP US FIX IT
@@ -47,7 +52,7 @@ Python version : %s
 System Uname   : %s
 System MaxInt  : %s
 
-""" % (version,sys.version.replace('\n',' '),platform.version(),str(sys.maxint))
+""" % (version,sys.version.replace('\n',' '),platform.version(),str(_max))
 
 
 no_panic="""
@@ -86,7 +91,7 @@ Python version : %s
 System Uname   : %s
 System MaxInt  : %s
 
-""" % (version,sys.version.replace('\n',' '),platform.version(),str(sys.maxint))
+""" % (version,sys.version.replace('\n',' '),platform.version(),str(_max))
 
 footer = """\
 ********************************************************************************
