@@ -5,8 +5,11 @@ trace.py
 Created by Thomas Mangin on 2009-09-06.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
+import sys
 
-import StringIO
+from exabgp.vendoring import six
+from six.moves import StringIO
+
 import traceback
 
 
