@@ -639,7 +639,7 @@ class Peer (object):
 				yield action
 
 		# CONNECTION FAILURE
-		except NetworkError,network:
+		except NetworkError as network:
 			# we tried to connect once, it failed and it was not a manual request, we stop
 			if self.once and not self._teardown:
 				self.logger.network('only one attempt to connect is allowed, stopping the peer')
@@ -649,7 +649,7 @@ class Peer (object):
 			return
 
 		# NOTIFY THE PEER OF AN ERROR
-		except Notify,notify:
+		except Notify as notify:
 			if direction.proto:
 				try:
 					generator = direction.proto.new_notification(notify)
@@ -669,7 +669,7 @@ class Peer (object):
 			return
 
 		# THE PEER NOTIFIED US OF AN ERROR
-		except Notification,notification:
+		except Notification as notification:
 			# we tried to connect once, it failed and it was not a manual request, we stop
 			if self.once and not self._teardown:
 				self.logger.network('only one attempt to connect is allowed, stopping the peer')
@@ -680,22 +680,22 @@ class Peer (object):
 			return
 
 		# RECEIVED a Message TYPE we did not expect
-		except Message,message:
+		except Message as message:
 			self._reset(direction,'unexpected message received',message)
 			return
 
 		# PROBLEM WRITING TO OUR FORKED PROCESSES
-		except ProcessError, process:
+		except ProcessError as process:
 			self._reset(direction,'process problem',process)
 			return
 
 		# ....
-		except Interrupted,interruption:
+		except Interrupted as interruption:
 			self._reset(interruption.direction)
 			return
 
 		# UNHANDLED PROBLEMS
-		except Exception,exc:
+		except Exception as exc:
 			# Those messages can not be filtered in purpose
 			self.logger.raw('\n'.join([
 				no_panic,

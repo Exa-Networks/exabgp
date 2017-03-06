@@ -209,7 +209,7 @@ class Protocol (object):
 				message = Message.unpack(msg_id,body,self.negotiated)
 			except (KeyboardInterrupt,SystemExit,Notify):
 				raise
-			except Exception,exc:
+			except Exception as exc:
 				self.logger.message(self.me('Could not decode message "%d"' % msg_id))
 				self.logger.message(self.me('%s' % str(exc)))
 				self.logger.message(traceback.format_exc())

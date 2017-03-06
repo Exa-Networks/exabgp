@@ -92,7 +92,7 @@ class Daemon (object):
 			return
 		try:
 			os.remove(self.pid)
-		except OSError,exc:
+		except OSError as exc:
 			if exc.errno == errno.ENOENT:
 				pass
 			else:
@@ -156,7 +156,7 @@ class Daemon (object):
 			return False
 		try:
 			s.getsockopt(socket.SOL_SOCKET, socket.SO_TYPE)
-		except socket.error,exc:
+		except socket.error as exc:
 			# It is look like one but it is not a socket ...
 			if exc.args[0] == errno.ENOTSOCK:
 				return False
@@ -176,7 +176,7 @@ class Daemon (object):
 				pid = os.fork()
 				if pid > 0:
 					os._exit(0)
-			except OSError,exc:
+			except OSError as exc:
 				self.logger.reactor('Can not fork, errno %d : %s' % (exc.errno,exc.strerror),'critical')
 
 		# do not detach if we are already supervised or run by init like process

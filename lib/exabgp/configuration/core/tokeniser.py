@@ -103,7 +103,7 @@ class Tokeniser (object):
 		try:
 			self._tokens = function
 			self._next = six.next(self._tokens)
-		except IOError,exc:
+		except IOError as exc:
 			error = str(exc)
 			if error.count(']'):
 				self.error.set(error.split(']')[1].strip())

@@ -176,7 +176,7 @@ class Control (object):
 		while True:
 			try:
 				ready,_,_ = select.select(reading,[],[],0.05)
-			except select.error,e:
+			except select.error as e:
 				if e.args[0] == 4:  # Interrupted system call
 					raise KeyboardInterrupt()
 				sys.exit(1)  # Unknow error, ending
@@ -208,7 +208,7 @@ class Control (object):
 			return result
 		except KeyboardInterrupt:
 			self.cleanup()
-		except Exception, exc:
+		except Exception as exc:
 			print(exc)
 			print('')
 			traceback.print_exc(file=sys.stdout)

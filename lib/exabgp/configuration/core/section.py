@@ -93,7 +93,7 @@ class Section (Error):
 			else:
 				raise RuntimeError('name %s command %s has no action set' % (name,command))
 			return True
-		except ValueError, exc:
+		except ValueError as exc:
 			return self.error.set(str(exc))
 
 		return True

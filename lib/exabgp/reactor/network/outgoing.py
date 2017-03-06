@@ -38,7 +38,7 @@ class Outgoing (Connection):
 			async(self.io,peer)
 			connect(self.io,peer,port,afi,md5)
 			self.init = True
-		except NetworkError,exc:
+		except NetworkError as exc:
 			self.init = False
 			self.close()
 			self.logger.wire("connection to %s:%d failed, %s" % (self.peer,port,str(exc)))

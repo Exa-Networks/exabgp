@@ -147,7 +147,7 @@ def check_neighbor (neighbors):
 				logger.parser('JSON nlri %s' % change1.nlri.json())
 				logger.parser('JSON attr %s' % change1.attributes.json())
 
-			except Notify,exc:
+			except Notify as exc:
 				logger.parser('----------------------------------------')
 				logger.parser(str(exc))
 				logger.parser('----------------------------------------')

@@ -360,12 +360,12 @@ class Attributes (dict):
 
 			try:
 				decoded = Attribute.unpack(aid,flag,attribute,negotiated)
-			except IndexError, exc:
+			except IndexError as exc:
 				if aid in self.TREAT_AS_WITHDRAW:
 					decoded = TreatAsWithdraw(aid)
 				else:
 					raise exc
-			except Notify, exc:
+			except Notify as exc:
 				if aid in self.TREAT_AS_WITHDRAW:
 					decoded = TreatAsWithdraw()
 				elif aid in self.DISCARD:

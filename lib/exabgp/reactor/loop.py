@@ -104,12 +104,12 @@ class Reactor (object):
 		try:
 			read,_,_ = select.select(sockets+ios,[],[],sleeptime)
 			return read
-		except select.error,exc:
+		except select.error as exc:
 			errno,message = exc.args  # pylint: disable=W0633
 			if errno not in error.block:
 				raise exc
 			return []
-		except socket.error,exc:
+		except socket.error as exc:
 			if exc.errno in error.fatal:
 				raise exc
 			return []
@@ -146,7 +146,7 @@ class Reactor (object):
 				if neighbor.listen:
 					self.listener.listen(neighbor.md5_ip,neighbor.peer_address,neighbor.listen,neighbor.md5_password,neighbor.ttl_in)
 					self.logger.reactor('Listening for BGP session(s) on %s:%d%s' % (neighbor.md5_ip,neighbor.listen,' with MD5' if neighbor.md5_password else ''))
-		except NetworkError,exc:
+		except NetworkError as exc:
 			self.listener = None
 			if os.geteuid() != 0 and self.port <= 1024:
 				self.logger.reactor('Can not bind to %s:%d, you may need to run ExaBGP as root' % (self.ip,self.port),'critical')

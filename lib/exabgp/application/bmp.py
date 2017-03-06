@@ -66,7 +66,7 @@ class BMPHandler (asyncore.dispatcher_with_send):
 
 			try:
 				data = self.recv(left)
-			except socket.error,exc:
+			except socket.error as exc:
 				if exc.args[0] in error.block:
 					continue
 				print("problem reading on socket", str(exc))

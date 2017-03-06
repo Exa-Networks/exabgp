@@ -93,7 +93,7 @@ def main ():
 
 	try:
 		env = environment.setup(envfile)
-	except environment.Error,exc:
+	except environment.Error as exc:
 		print(usage)
 		print('\nconfiguration issue,', str(exc))
 		sys.exit(1)
@@ -266,7 +266,7 @@ def main ():
 		# wait for the forked processes
 		for pid in pids:
 			os.waitpid(pid,0)
-	except OSError,exc:
+	except OSError as exc:
 		logger.reactor('Can not fork, errno %d : %s' % (exc.errno,exc.strerror),'critical')
 		sys.exit(1)
 

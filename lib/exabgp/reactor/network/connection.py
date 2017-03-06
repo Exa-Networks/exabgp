@@ -71,7 +71,7 @@ class Connection (object):
 			if self.io:
 				self.io.close()
 				self.io = None
-		except KeyboardInterrupt,exc:
+		except KeyboardInterrupt as exc:
 			raise exc
 		except:
 			pass
@@ -80,7 +80,7 @@ class Connection (object):
 		while True:
 			try:
 				r,_,_ = select.select([self.io,],[],[],0)
-			except select.error,exc:
+			except select.error as exc:
 				if exc.args[0] not in error.block:
 					self.close()
 					self.logger.wire("%s %s errno %s on socket" % (self.name(),self.peer,errno.errorcode[exc.args[0]]))
@@ -92,7 +92,7 @@ class Connection (object):
 		while True:
 			try:
 				_,w,_ = select.select([],[self.io,],[],0)
-			except select.error,exc:
+			except select.error as exc:
 				if exc.args[0] not in error.block:
 					self.close()
 					self.logger.wire("%s %s errno %s on socket" % (self.name(),self.peer,errno.errorcode[exc.args[0]]))
@@ -104,7 +104,7 @@ class Connection (object):
 		# The function must not be called if it does not return with no data with a smaller size as parameter
 		if not self.io:
 			self.close()
-			raise NotConnected('Trying to read on a closed TCP conncetion')
+			raise NotConnected('Trying to read on a closed TCP connection')
 		if number == 0:
 			yield ''
 			return
@@ -141,11 +141,11 @@ class Connection (object):
 						return
 
 					yield ''
-			except socket.timeout,exc:
+			except socket.timeout as exc:
 				self.close()
 				self.logger.wire("%s %s peer is too slow" % (self.name(),self.peer))
 				raise TooSlowError('Timeout while reading data from the network (%s)' % errstr(exc))
-			except socket.error,exc:
+			except socket.error as exc:
 				if exc.args[0] in error.block:
 					message = "%s %s blocking io problem mid-way through reading a message %s, trying to complete" % (self.name(),self.peer,errstr(exc))
 					if message != reported:
@@ -188,7 +188,7 @@ class Connection (object):
 						yield True
 						return
 					yield False
-			except socket.error,exc:
+			except socket.error as exc:
 				if exc.args[0] in error.block:
 					self.logger.wire(
 						"%s %s blocking io problem mid-way through writing a message %s, trying to complete" % (
