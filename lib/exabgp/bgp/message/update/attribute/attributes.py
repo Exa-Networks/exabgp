@@ -466,8 +466,8 @@ class Attributes (dict):
 	def sameValuesAs (self, other):
 		# we sort based on packed values since the items do not
 		# necessarily implement __cmp__
-		def sorter (x, y):
-			return cmp(x.pack(), y.pack())
+		def pack_(x):
+			return x.pack()
 
 		try:
 			for key in set(six.iterkeys(self)).union(set(six.iterkeys(other))):
@@ -483,10 +483,10 @@ class Attributes (dict):
 					if not isinstance(oval, Communities):
 						return False
 
-					sval = sorted(sval,sorter)
-					oval = sorted(oval,sorter)
+					sval = sorted(sval,key=pack_)
+					oval = sorted(oval,key=pack_)
 
-				if cmp(sval,oval) != 0:
+				if sval != oval:
 					return False
 			return True
 		except KeyError:
