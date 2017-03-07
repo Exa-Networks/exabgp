@@ -17,6 +17,8 @@ from exabgp.bgp.message.update.nlri.flow import FlowAnyPort
 from exabgp.bgp.message.update.nlri.flow import NumericOperator
 # from exabgp.bgp.message.update.attribute.community import *
 
+from exabgp.util.test import data_from_body
+
 from exabgp.configuration.environment import environment
 environment.setup('')
 
@@ -40,7 +42,7 @@ class TestFlow (unittest.TestCase):
 
 		for key in ['destination','source','anyport_1']:
 			component = components[key].pack()
-			message   = ''.join((chr(_) for _ in messages[key]))
+			message   = data_from_body(messages[key])
 			# if component != message:
 			# 	self.fail('content mismatch\n%s\n%s' % (['0x%02X' % ord(_) for _ in component],['0x%02X' % ord(_) for _ in message]))
 
@@ -62,8 +64,8 @@ class TestFlow (unittest.TestCase):
 		message = ""
 		for key in ['destination','source','anyport_1','anyport_2']:
 			flow.add(components[key])
-			message += ''.join([chr(_) for _ in messages[key]])
 		message = chr(len(message)) + message
+			message += data_from_body(messages[key])
 		# flow.add(to_FlowAction(65000,False,False))
 		flow.pack()
 		# print [hex(ord(_)) for _ in flow]
@@ -86,8 +88,8 @@ class TestFlow (unittest.TestCase):
 		message = ""
 		for key in ['destination','source','anyport_1','anyport_2']:
 			flow.add(components[key])
-			message += ''.join([chr(_) for _ in messages[key]])
 		message = chr(len(message)) + message
+			message += data_from_body(messages[key])
 		# policy.add(to_FlowAction(65000,False,False))
 		flow = flow.pack()
 		if message[0] != flow[0]:
