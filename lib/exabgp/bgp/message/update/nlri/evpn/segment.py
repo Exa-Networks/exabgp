@@ -79,7 +79,7 @@ class EthernetSegment (EVPN):
 		self._packed = "%s%s%s%s" % (
 			self.rd.pack(),
 			self.esi.pack(),
-			chr_(len(self.ip)*8 if self.ip else '\x00'),
+			chr_(len(self.ip)*8 if self.ip else 0),
 			self.ip.pack() if self.ip else b''
 		)
 		return self._packed

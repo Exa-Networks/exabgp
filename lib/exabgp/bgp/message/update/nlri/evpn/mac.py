@@ -106,7 +106,7 @@ class MAC (EVPN):
 			self.etag.pack(),
 			chr_(self.maclen),  # only 48 supported by the draft
 			self.mac.pack(),
-			chr_(len(self.ip)*8 if self.ip else '\x00'),
+			chr_(len(self.ip)*8 if self.ip else 0),
 			self.ip.pack() if self.ip else b'',
 			self.label.pack()
 		)
