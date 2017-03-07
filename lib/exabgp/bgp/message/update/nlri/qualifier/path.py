@@ -19,9 +19,9 @@ class PathInfo (object):
 		if packed:
 			self.path_info = packed
 		elif ip:
-			self.path_info = ''.join([chr_(int(_)) for _ in ip.split('.')])
+			self.path_info = b''.join([chr_(int(_)) for _ in ip.split('.')])
 		elif integer:
-			self.path_info = ''.join([chr_((integer >> offset) & 0xff) for offset in [24,16,8,0]])
+			self.path_info = b''.join([chr_((integer >> offset) & 0xff) for offset in [24,16,8,0]])
 		else:
 			self.path_info = ''
 		# sum(int(a)<<offset for (a,offset) in zip(ip.split('.'), range(24, -8, -8)))

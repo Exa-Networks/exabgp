@@ -39,7 +39,7 @@ class Graceful (Capability,dict):
 	def extract (self):
 		restart  = pack('!H',((self.restart_flag << 12) | (self.restart_time & Graceful.TIME_MASK)))
 		families = [(afi.pack(),safi.pack(),chr(self[(afi,safi)])) for (afi,safi) in self.keys()]
-		sfamilies = ''.join(["%s%s%s" % (pafi,psafi,family) for (pafi,psafi,family) in families])
+		sfamilies = b''.join(["%s%s%s" % (pafi,psafi,family) for (pafi,psafi,family) in families])
 		return ["%s%s" % (restart,sfamilies)]
 
 	def __str__ (self):

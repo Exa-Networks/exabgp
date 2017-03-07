@@ -16,8 +16,8 @@ from exabgp.util import ord_
 
 # Ethernet Segment Identifier
 class ESI (object):
-	DEFAULT = ''.join(chr_(0) for _ in range(0,10))
-	MAX = ''.join(chr_(0xFF) for _ in range(0,10))
+	DEFAULT = b''.join(chr_(0) for _ in range(0,10))
+	MAX = b''.join(chr_(0xFF) for _ in range(0,10))
 
 	__slots__ = ['esi']
 

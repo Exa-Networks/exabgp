@@ -150,7 +150,7 @@ class Capability (object):
 
 	@staticmethod
 	def hex (data):
-		return '0x' + ''.join('%02x' % ord_(_) for _ in data)
+		return '0x' + b''.join('%02x' % ord_(_) for _ in data)
 
 	@classmethod
 	def unknown (cls, klass):

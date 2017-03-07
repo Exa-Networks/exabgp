@@ -28,7 +28,7 @@ class Labels (object):
 		if packed and bos:
 			packed.pop()
 			packed.append(pack('!L',(label << 4) | 1)[1:])
-		self.packed = ''.join(packed)
+		self.packed = b''.join(packed)
 		self._len = len(self.packed)
 
 	def __eq__ (self, other):

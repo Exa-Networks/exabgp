@@ -84,7 +84,7 @@ class RouteDistinguisher (object):
 				data = [chr_(0),chr_(1)]
 				data.extend([chr_(int(_)) for _ in prefix.split('.')])
 				data.extend([chr_(suffix >> 8),chr_(suffix & 0xFF)])
-				distinguisher = ''.join(data)
+				distinguisher = b''.join(data)
 			else:
 				number = int(prefix)
 				if number < pow(2,16) and suffix < pow(2,32):

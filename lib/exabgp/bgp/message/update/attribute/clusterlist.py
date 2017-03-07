@@ -29,7 +29,7 @@ class ClusterList (Attribute):
 
 	def __init__ (self, clusters, packed=None):
 		self.clusters = clusters
-		self._packed = self._attribute(packed if packed else ''.join([_.pack() for _ in clusters]))
+		self._packed = self._attribute(packed if packed else b''.join([_.pack() for _ in clusters]))
 		self._len = len(clusters)*4
 
 	def __eq__ (self, other):

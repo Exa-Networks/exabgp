@@ -59,7 +59,7 @@ class ASPath (Attribute):
 		if length:
 			if length > 255:
 				return self._segment(seg_type,values[:255],asn4) + self._segment(seg_type,values[255:],asn4)
-			return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack(asn4) for v in values]))
+			return "%s%s%s" % (chr(seg_type),chr(len(values)),b''.join([v.pack(asn4) for v in values]))
 		return ""
 
 	def _segments (self, asn4):

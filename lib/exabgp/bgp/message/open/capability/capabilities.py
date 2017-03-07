@@ -135,7 +135,7 @@ class Capabilities (dict):
 		for k,capabilities in self.iteritems():
 			for capability in capabilities.extract():
 				rs.append("%s%s%s" % (chr_(k),chr_(len(capability)),capability))
-		parameters = "".join(["%s%s%s" % (chr_(2),chr_(len(r)),r) for r in rs])
+		parameters = b''.join(["%s%s%s" % (chr_(2),chr_(len(r)),r) for r in rs])
 		return "%s%s" % (chr_(len(parameters)),parameters)
 
 	@staticmethod

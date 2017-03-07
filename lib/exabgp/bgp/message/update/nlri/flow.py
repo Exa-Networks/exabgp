@@ -558,9 +558,9 @@ class Flow (NLRI):
 			# and add it to the last rule
 			if ID not in (FlowDestination.ID,FlowSource.ID):
 				ordered_rules.append(chr_(ID))
-			ordered_rules.append(''.join(rule.pack() for rule in rules))
+			ordered_rules.append(b''.join(rule.pack() for rule in rules))
 
-		components = self.rd.pack() + ''.join(ordered_rules)
+		components = self.rd.pack() + b''.join(ordered_rules)
 
 		l = len(components)
 		if l < 0xF0:
@@ -606,7 +606,7 @@ class Flow (NLRI):
 					s.append(', '.join('"%s"' % flag for flag in rule.value.named_bits()))
 				else:
 					s.append('"%s"' % rule)
-			string.append(' "%s": [ %s ]' % (rules[0].NAME,''.join(str(_) for _ in s).replace('""','')))
+			string.append(' "%s": [ %s ]' % (rules[0].NAME,b''.join(str(_) for _ in s).replace('""','')))
 		nexthop = ', "next-hop": "%s"' % self.nexthop if self.nexthop is not NoNextHop else ''
 		rd = '' if self.rd is RouteDistinguisher.NORD else ', %s' % self.rd.json()
 		compatibility = ', "string": "%s"' % self.extensive()
