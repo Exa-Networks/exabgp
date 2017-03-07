@@ -4,16 +4,18 @@ import struct
 import sys
 import json
 
+from exabgp.util import chr_
+
 from exabgp.bgp.message import Message
 from exabgp.bgp.message import Open
 from exabgp.bgp.message import Notification
+from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability import Negotiated
 
 from exabgp.version import json as json_version
 from exabgp.reactor.api.response import Response
 
 from exabgp.protocol.ip import IPv4
-from exabgp.bgp.message.open.asn import ASN
 
 
 class _FakeNeighbor (object):
@@ -88,7 +90,7 @@ class Transcoder (object):
 		category = parsed['neighbor']['message']['category']
 		header = parsed['neighbor']['message']['header']
 		body = parsed['neighbor']['message']['body']
-		raw = ''.join(chr(int(body[_:_+2],16)) for _ in range(0,len(body),2))
+		raw = ''.join(chr_(int(body[_:_+2],16)) for _ in range(0,len(body),2))
 
 		if content == 'open':
 			message = Open.unpack_message(raw)

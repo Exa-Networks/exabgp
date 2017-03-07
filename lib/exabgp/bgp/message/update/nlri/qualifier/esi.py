@@ -7,14 +7,17 @@ Copyright (c) 2014-2015 Orange. All rights reserved.
 Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.util import chr_
+from exabgp.util import ord_
+
 # TODO: take into account E-VPN specs that specify the role of the first bit of ESI
 # (since draft-ietf-l2vpn-evpn-05)
 
 
 # Ethernet Segment Identifier
 class ESI (object):
-	DEFAULT = ''.join(chr(0) for _ in range(0,10))
-	MAX = ''.join(chr(0xFF) for _ in range(0,10))
+	DEFAULT = ''.join(chr_(0) for _ in range(0,10))
+	MAX = ''.join(chr_(0xFF) for _ in range(0,10))
 
 	__slots__ = ['esi']
 
@@ -44,7 +47,7 @@ class ESI (object):
 	def __str__ (self):
 		if self.esi == self.DEFAULT:
 			return "-"
-		return ":".join('%02x' % ord(_) for _ in self.esi)
+		return ":".join('%02x' % ord_(_) for _ in self.esi)
 
 	def __repr__ (self):
 		return self.__str__()

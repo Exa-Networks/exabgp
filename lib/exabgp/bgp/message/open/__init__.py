@@ -8,6 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from struct import unpack
 
+from exabgp.util import ord_
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
 
@@ -72,7 +73,7 @@ class Open (Message):
 
 	@classmethod
 	def unpack_message (cls, data, _=None):
-		version = ord(data[0])
+		version = ord_(data[0])
 		if version != 4:
 			# Only version 4 is supported nowdays..
 			raise Notify(2,1,data[0])

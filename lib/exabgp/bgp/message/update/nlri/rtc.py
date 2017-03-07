@@ -10,6 +10,8 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
+from exabgp.util import chr_
+from exabgp.util import ord_
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.extended import RouteTarget
@@ -69,7 +71,7 @@ class RTC (NLRI):
 
 	@staticmethod
 	def resetFlags(char):
-		return chr(ord(char) & ~(Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL))
+		return chr_(ord_(char) & ~(Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL))
 
 	def pack (self, negotiated=None):
 		# XXX: no support for addpath yet
@@ -77,7 +79,7 @@ class RTC (NLRI):
 		# because in an RTC route these flags never appear.
 		if self.rt:
 			packedRT = self.rt.pack()
-			return pack("!BLB", len(self), self.origin, ord(RTC.resetFlags(packedRT[0]))) + packedRT[1:]
+			return pack("!BLB", len(self), self.origin, ord_(RTC.resetFlags(packedRT[0]))) + packedRT[1:]
 		return pack("!B",0)
 
 	def index (self):
@@ -86,7 +88,7 @@ class RTC (NLRI):
 	@classmethod
 	def unpack_nlri (cls, afi, safi, bgp, action, addpath):
 
-		length = ord(bgp[0])
+		length = ord_(bgp[0])
 
 		if length == 0:
 			return cls(afi,safi,action,ASN(0),None),bgp[1:]

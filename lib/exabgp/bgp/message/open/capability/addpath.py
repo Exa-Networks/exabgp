@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.util import ord_
 from exabgp.bgp.message.open.capability.capability import Capability
 
 # ====================================================================== AddPath
@@ -53,7 +54,7 @@ class AddPath (Capability,dict):
 		while data:
 			afi = AFI.unpack(data[:2])
 			safi = SAFI.unpack(data[2])
-			sr = ord(data[3])
+			sr = ord_(data[3])
 			instance.add_path(afi,safi,sr)
 			data = data[4:]
 		return instance

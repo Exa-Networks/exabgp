@@ -10,6 +10,7 @@ from struct import unpack
 
 from exabgp.configuration.environment import environment
 
+from exabgp.util import ord_
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
 from exabgp.bgp.message.update.attribute.attribute import Discard
@@ -22,6 +23,8 @@ from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.community import Communities
 
 from exabgp.bgp.message.notification import Notify
+
+from exabgp.util import ord_
 
 from exabgp.logger import Logger
 from exabgp.logger import LazyAttribute
@@ -300,14 +303,14 @@ class Attributes (dict):
 
 	@staticmethod
 	def flag_attribute_content (data):
-		flag = Attribute.Flag(ord(data[0]))
-		attr = Attribute.CODE(ord(data[1]))
+		flag = Attribute.Flag(ord_(data[0]))
+		attr = Attribute.CODE(ord_(data[1]))
 
 		if flag & Attribute.Flag.EXTENDED_LENGTH:
 			length = unpack('!H',data[2:4])[0]
 			return flag, attr, data[4:length+4]
 		else:
-			length = ord(data[2])
+			length = ord_(data[2])
 			return flag, attr, data[3:length+3]
 
 	def parse (self, data, negotiated):
@@ -316,19 +319,20 @@ class Attributes (dict):
 
 		try:
 			# We do not care if the attribute are transitive or not as we do not redistribute
-			flag = Attribute.Flag(ord(data[0]))
-			aid = Attribute.CODE(ord(data[1]))
+			#import pdb; pdb.set_trace()
+			flag = Attribute.Flag(ord_(data[0]))
+			aid = Attribute.CODE(ord_(data[1]))
 		except IndexError:
 			self.add(TreatAsWithdraw())
 			return self
 
 		try:
 			offset = 3
-			length = ord(data[2])
+			length = ord_(data[2])
 
 			if flag & Attribute.Flag.EXTENDED_LENGTH:
 				offset = 4
-				length = (length << 8) + ord(data[3])
+				length = (length << 8) + ord_(data[3])
 		except IndexError:
 			self.add(TreatAsWithdraw(aid))
 			return self

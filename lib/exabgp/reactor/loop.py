@@ -17,6 +17,8 @@ import socket
 from collections import deque
 from exabgp.vendoring import six
 
+from exabgp.util import chr_
+
 from exabgp.protocol.ip import IP
 
 from exabgp.reactor.daemon import Daemon
@@ -38,7 +40,7 @@ from exabgp.logger import Logger
 
 class Reactor (object):
 	# [hex(ord(c)) for c in os.popen('clear').read()]
-	clear = ''.join([chr(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a']])
+	clear = ''.join([chr_(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a']])
 
 	def __init__ (self, configurations):
 		self.ip = environment.settings().tcp.bind

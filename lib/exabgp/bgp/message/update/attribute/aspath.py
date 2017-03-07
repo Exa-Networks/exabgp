@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import unpack
 from struct import error
 
+from exabgp.util import ord_
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.update.attribute.attribute import Attribute
@@ -170,8 +171,8 @@ class ASPath (Attribute):
 		try:
 
 			while data:
-				stype = ord(data[0])
-				slen  = ord(data[1])
+				stype = ord_(data[0])
+				slen  = ord_(data[1])
 
 				if stype not in (ASPath.AS_SET, ASPath.AS_SEQUENCE, ASPath.AS_CONFED_SEQUENCE, ASPath.AS_CONFED_SET):
 					raise Notify(3,11,'invalid AS Path type sent %d' % stype)

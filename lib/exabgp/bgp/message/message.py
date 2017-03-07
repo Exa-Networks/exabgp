@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import sys
 from struct import pack
 
+from exabgp.util import chr_
 
 class _MessageCode (int):
 	if sys.version_info[0]<3:
@@ -93,7 +94,7 @@ class Message (Exception):
 	# otherwise we can not dynamically create different UnknownMessage
 	# TYPE = None
 
-	MARKER = chr(0xff)*16
+	MARKER = chr_(0xff)*16
 	HEADER_LEN = 19
 	MAX_LEN = 4096
 

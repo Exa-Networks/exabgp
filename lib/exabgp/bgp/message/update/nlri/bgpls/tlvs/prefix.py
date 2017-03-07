@@ -10,6 +10,7 @@ from struct import pack
 from struct import unpack
 
 from exabgp.protocol.ip import IP
+from exabgp.util import ord_
 from exabgp.bgp.message.notification import Notify
 
 
@@ -65,7 +66,7 @@ class Prefix (object):
 		raise RuntimeError('Not implemented')
 
 	def __str__ (self):
-		return ':'.join('%02X' % ord(_) for _ in self._packed)
+		return ':'.join('%02X' % ord_(_) for _ in self._packed)
 
 	def __repr__ (self):
 		return self.__str__()

@@ -9,6 +9,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
+from exabgp.util import chr_
+from exabgp.util import ord_
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.addpath import AddPath
 from exabgp.bgp.message.open.capability.asn4 import ASN4
@@ -132,27 +134,27 @@ class Capabilities (dict):
 		rs = []
 		for k,capabilities in self.iteritems():
 			for capability in capabilities.extract():
-				rs.append("%s%s%s" % (chr(k),chr(len(capability)),capability))
-		parameters = "".join(["%s%s%s" % (chr(2),chr(len(r)),r) for r in rs])
-		return "%s%s" % (chr(len(parameters)),parameters)
+				rs.append("%s%s%s" % (chr_(k),chr_(len(capability)),capability))
+		parameters = "".join(["%s%s%s" % (chr_(2),chr_(len(r)),r) for r in rs])
+		return "%s%s" % (chr_(len(parameters)),parameters)
 
 	@staticmethod
 	def unpack (data):
 		def _key_values (name, data):
 			if len(data) < 2:
 				raise Notify(2,0,"Bad length for OPEN %s (<2) %s" % (name,Capability.hex(data)))
-			l = ord(data[1])
+			l = ord_(data[1])
 			boundary = l+2
 			if len(data) < boundary:
 				raise Notify(2,0,"Bad length for OPEN %s (buffer underrun) %s" % (name,Capability.hex(data)))
-			key = ord(data[0])
+			key = ord_(data[0])
 			value = data[2:boundary]
 			rest = data[boundary:]
 			return key,value,rest
 
 		capabilities = Capabilities()
 
-		option_len = ord(data[0])
+		option_len = ord_(data[0])
 		# XXX: FIXME: check the length of data
 		if option_len:
 			data = data[1:]

@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
+from exabgp.util import ord_
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
@@ -42,14 +43,14 @@ class TLVS (list):
 	def unpack (data):
 		def loop (data):
 			while data:
-				t = ord(data[0])
+				t = ord_(data[0])
 				l = unpack('!H',data[1:3])[0]
 				v,data = data[3:l],data[l:]
 				yield TLV(t,v)
 		return TLVS(list(loop(data)))
 
 	def pack (self):
-		return ''.join('%s%s%s' % (chr(tlv.type),pack('!H',len(tlv.value)+3),tlv.value) for tlv in self)
+		return b''.join('%s%s%s' % (chr_(tlv.type),pack('!H',len(tlv.value)+3),tlv.value) for tlv in self)
 
 
 # ==================================================================== AIGP (26)

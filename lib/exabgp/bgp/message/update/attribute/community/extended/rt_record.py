@@ -1,3 +1,4 @@
+from exabgp.util import chr_
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community.extended import rt
 
@@ -11,7 +12,7 @@ class RTRecord(rt.RouteTarget):
 	@classmethod
 	def from_rt(cls, route_target):
 		packed = route_target.pack()
-		return cls.unpack(chr(packed[0]) + chr(cls.COMMUNITY_SUBTYPE) + str(packed[2:]))
+		return cls.unpack(chr_(packed[0]) + chr_(cls.COMMUNITY_SUBTYPE) + packed[2:])
 
 @ExtendedCommunity.register
 class RTRecordASN2Number(RTRecord, rt.RouteTargetASN2Number):

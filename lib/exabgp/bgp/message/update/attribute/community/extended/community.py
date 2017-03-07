@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.util import ord_
 from exabgp.bgp.message.update.attribute import Attribute
 
 from struct import pack
@@ -86,14 +87,14 @@ class ExtendedCommunity (Attribute):
 		h = 0x00
 		for byte in self.community:
 			h <<= 8
-			h += ord(byte)
+			h += ord_(byte)
 		return "%ld" % h
 
 	def __repr__ (self):
 		h = 0x00
 		for byte in self.community:
 			h <<= 8
-			h += ord(byte)
+			h += ord_(byte)
 		return "0x%016X" % h
 
 	def __len__ (self):
@@ -105,7 +106,7 @@ class ExtendedCommunity (Attribute):
 	@staticmethod
 	def unpack (data, negotiated=None):
 		# 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0FFF
-		community = (ord(data[0]) & 0x0F,ord(data[1]))
+		community = (ord_(data[0]) & 0x0F,ord_(data[1]))
 		if community in ExtendedCommunity.registered_extended:
 			return ExtendedCommunity.registered_extended[community].unpack(data)
 		return ExtendedCommunity(data)

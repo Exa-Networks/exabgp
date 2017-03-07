@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 import sys
 
+from exabgp.util import chr_
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.util.cache import Cache
@@ -207,7 +208,7 @@ class Attribute (object):
 		if flag & Attribute.Flag.EXTENDED_LENGTH:
 			len_value = pack('!H',length)
 		else:
-			len_value = chr(length)
+			len_value = chr_(length)
 		return "%s%s%s%s" % (chr(flag),chr(self.ID),len_value,value)
 
 	def _len (self,value):

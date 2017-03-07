@@ -10,6 +10,7 @@ from struct import pack
 from struct import unpack
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.util import ord_
 from exabgp.bgp.message.open.capability.capability import Capability
 
 # =========================================================== Graceful (Restart)
@@ -76,7 +77,7 @@ class Graceful (Capability,dict):
 		while data:
 			afi = AFI.unpack(data[:2])
 			safi = SAFI.unpack(data[2])
-			flag_family = ord(data[3])
+			flag_family = ord_(data[3])
 			families.append((afi,safi,flag_family))
 			data = data[4:]
 		return instance.set(restart_flag,restart_time,families)

@@ -9,6 +9,9 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import string
 import struct
 
+from exabgp.util import chr_
+from exabgp.util import ord_
+
 from exabgp.bgp.message.message import Message
 
 
@@ -116,7 +119,7 @@ class Notification (Message):
 
 		# draft-ietf-idr-shutdown or the peer was using 6,2 with data
 
-		shutdown_length  = ord(data[0])
+		shutdown_length  = ord_(data[0])
 		data = data[1:]
 
 		if shutdown_length == 0:
@@ -152,7 +155,7 @@ class Notification (Message):
 
 	@classmethod
 	def unpack_message (cls, data, negotiated=None):
-		return cls(ord(data[0]),ord(data[1]),data[2:])
+		return cls(ord_(data[0]),ord_(data[1]),data[2:])
 
 
 # =================================================================== Notify
@@ -167,7 +170,7 @@ class Notify (Notification):
 
 	def message (self,negotiated=None):
 		return self._message("%s%s%s" % (
-			chr(self.code),
-			chr(self.subcode),
+			chr_(self.code),
+			chr_(self.subcode),
 			self.data
 		))

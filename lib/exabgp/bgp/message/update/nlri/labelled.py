@@ -8,6 +8,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.util import chr_
+from exabgp.util import ord_
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
@@ -42,12 +44,12 @@ class Labelled (INET):
 
 	def pack (self, negotiated=None):
 		addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi,self.safi) else ''
-		mask = chr(len(self.labels)*8 + self.cidr.mask)
+		mask = chr_(len(self.labels)*8 + self.cidr.mask)
 		return addpath + mask + self.labels.pack() + self.cidr.pack_ip()
 
 	def index (self, negotiated=None):
 		addpath = 'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
-		mask = chr(self.cidr.mask)
+		mask = chr_(self.cidr.mask)
 		return NLRI._index(self) + addpath + mask + self.cidr.pack_ip()
 
 	def _internal (self, announced=True):
@@ -58,11 +60,11 @@ class Labelled (INET):
 
 	# @classmethod
 	# def _labels (cls, data, action):
-	# 	mask = ord(data[0])
+	# 	mask = ord_(data[0])
 	# 	data = data[1:]
 	# 	labels = []
 	# 	while data and mask >= 8:
-	# 		label = int(unpack('!L',chr(0) + data[:3])[0])
+	# 		label = int(unpack('!L',chr_(0) + data[:3])[0])
 	# 		data = data[3:]
 	# 		mask -= 24  	# 3 bytes
 	# 		# The last 4 bits are the bottom of Stack

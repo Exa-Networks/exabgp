@@ -6,6 +6,8 @@ Copyright (c) 2014-2015 Orange. All rights reserved.
 """
 
 from exabgp.protocol.ip import IP
+from exabgp.util import chr_
+from exabgp.util import ord_
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.qualifier import ESI
@@ -102,9 +104,9 @@ class MAC (EVPN):
 			self.rd.pack(),
 			self.esi.pack(),
 			self.etag.pack(),
-			chr(self.maclen),  # only 48 supported by the draft
+			chr_(self.maclen),  # only 48 supported by the draft
 			self.mac.pack(),
-			chr(len(self.ip)*8 if self.ip else '\x00'),
+			chr_(len(self.ip)*8 if self.ip else '\x00'),
 			self.ip.pack() if self.ip else '',
 			self.label.pack()
 		)
@@ -116,7 +118,7 @@ class MAC (EVPN):
 		rd = RouteDistinguisher.unpack(data[:8])
 		esi = ESI.unpack(data[8:18])
 		etag = EthernetTag.unpack(data[18:22])
-		maclength = ord(data[22])
+		maclength = ord_(data[22])
 
 		if (maclength > 48 or maclength < 0):
 			raise Notify(3,5,'invalid MAC Address length in %s' % cls.NAME)
@@ -124,7 +126,7 @@ class MAC (EVPN):
 
 		mac = MACQUAL.unpack(data[23:end])
 
-		length = ord(data[end])
+		length = ord_(data[end])
 		iplen = length / 8
 
 		if datalen in [33,36]:  # No IP information (1 or 2 labels)
