@@ -61,7 +61,7 @@ class MPRNLRI (Attribute,Family):
 				continue
 			if nlri.nexthop is NoNextHop:
 				# EOR and Flow may not have any next_hop
-				nexthop = ''
+				nexthop = b''
 			else:
 				# we do not want a next_hop attribute packed (with the _attribute()) but just the next_hop itself
 				if nlri.safi.has_rd():

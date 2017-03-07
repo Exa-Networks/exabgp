@@ -61,7 +61,7 @@ class TestFlow (unittest.TestCase):
 		}
 
 		flow = Flow()
-		message = ""
+		message = b""
 		for key in ['destination','source','anyport_1','anyport_2']:
 			flow.add(components[key])
 		message = chr(len(message)) + message
@@ -85,7 +85,7 @@ class TestFlow (unittest.TestCase):
 		}
 
 		flow = Flow()
-		message = ""
+		message = b""
 		for key in ['destination','source','anyport_1','anyport_2']:
 			flow.add(components[key])
 		message = chr(len(message)) + message

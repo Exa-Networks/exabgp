@@ -37,7 +37,7 @@ class Communities (Attribute):
 	def pack (self, negotiated=None):
 		if len(self.communities):
 			return self._attribute(b''.join([c.pack() for c in self.communities]))
-		return ''
+		return b''
 
 	def __iter__(self):
 		return iter(self.communities)

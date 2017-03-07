@@ -86,7 +86,7 @@ class AIGP (Attribute):
 			return self._packed
 		if negotiated.local_as == negotiated.peer_as:
 			return self._packed
-		return ''
+		return b''
 
 	def __repr__ (self):
 		return '0x' + ''.join('%02x' % ord(_) for _ in self.aigp[-8:])

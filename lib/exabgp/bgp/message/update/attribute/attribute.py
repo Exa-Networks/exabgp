@@ -201,7 +201,7 @@ class Attribute (object):
 	def _attribute (self, value):
 		flag = self.FLAG
 		if flag & Attribute.Flag.OPTIONAL and not value:
-			return ''
+			return b''
 		length = len(value)
 		if length > 0xFF:
 			flag |= Attribute.Flag.EXTENDED_LENGTH

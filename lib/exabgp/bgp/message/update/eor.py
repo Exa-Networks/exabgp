@@ -27,7 +27,7 @@ class EOR (Message):
 	TYPE = chr(Message.CODE.UPDATE)
 
 	class NLRI (_NLRI):
-		PREFIX = '\x00\x00\x00\x07\x90\x0F\x00\x03'
+		PREFIX = b'\x00\x00\x00\x07\x90\x0F\x00\x03'
 		MP_LENGTH = len(PREFIX) + 1 + 2  # len(AFI) and len(SAFI)
 		EOR = True
 
@@ -41,7 +41,7 @@ class EOR (Message):
 
 		def pack (self, negotiated=None):
 			if self.afi == AFI.ipv4 and self.safi == SAFI.unicast:
-				return '\x00\x00\x00\x00'
+				return b'\x00\x00\x00\x00'
 			return self.PREFIX + self.afi.pack() + self.safi.pack()
 
 		def __repr__ (self):

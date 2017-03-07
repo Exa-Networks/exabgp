@@ -58,7 +58,7 @@ class INET (NLRI):
 		return "%s%s" % (self.cidr.prefix(),str(self.path_info))
 
 	def pack (self, negotiated=None):
-		addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi,self.safi) else ''
+		addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi,self.safi) else b''
 		return addpath + self.cidr.pack_nlri()
 
 	def index (self):

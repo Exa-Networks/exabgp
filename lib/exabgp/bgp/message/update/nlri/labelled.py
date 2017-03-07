@@ -43,7 +43,7 @@ class Labelled (INET):
 		return "%s%s" % (INET.prefix(self),str(self.labels))
 
 	def pack (self, negotiated=None):
-		addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi,self.safi) else ''
+		addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi,self.safi) else b''
 		mask = chr_(len(self.labels)*8 + self.cidr.mask)
 		return addpath + mask + self.labels.pack() + self.cidr.pack_ip()
 

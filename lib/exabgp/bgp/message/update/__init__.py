@@ -121,8 +121,8 @@ class Update (Message):
 
 		# Withdraws/NLRIS (IPv4 unicast and multicast)
 		msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr) # 2 bytes for each of the two prefix() header
-		withdraws = ''
-		announced = ''
+		withdraws = b''
+		announced = b''
 		for nlri in nlris:
 			packed = nlri.pack(negotiated)
 			if len(announced + withdraws + packed) > msg_size:
@@ -131,10 +131,10 @@ class Update (Message):
 				yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
 				if nlri.action == OUT.ANNOUNCE:
 					announced = packed
-					withdraws = ''
+					withdraws = b''
 				elif include_withdraw:
 					withdraws = packed
-					announced = ''
+					announced = b''
 			else:
 				if nlri.action == OUT.ANNOUNCE:
 					announced += packed
@@ -144,30 +144,30 @@ class Update (Message):
 		if mp_nlris:
 			for family in mp_nlris.keys():
 				afi, safi = family
-				mp_reach = ''
-				mp_unreach = ''
+				mp_reach = b''
+				mp_unreach = b''
 				mp_announce = MPRNLRI(afi, safi, mp_nlris[family].get(OUT.ANNOUNCE, []))
 				mp_withdraw = MPURNLRI(afi, safi, mp_nlris[family].get(OUT.WITHDRAW, []))
 
 				for mprnlri in mp_announce.packed_attributes(negotiated, msg_size - len(withdraws + announced)):
 					if mp_reach:
 						yield self._message(Update.prefix(withdraws) + Update.prefix(attr + mp_reach) + announced)
-						announced = ''
-						withdraws = ''
+						announced = b''
+						withdraws = b''
 					mp_reach = mprnlri
 
 				if include_withdraw:
 					for mpurnlri in mp_withdraw.packed_attributes(negotiated, msg_size - len(withdraws + announced + mp_reach)):
 						if mp_unreach:
 							yield self._message(Update.prefix(withdraws) + Update.prefix(attr + mp_unreach + mp_reach) + announced)
-							mp_reach = ''
-							announced = ''
-							withdraws = ''
+							mp_reach = b''
+							announced = b''
+							withdraws = b''
 						mp_unreach = mpurnlri
 
 				yield self._message(Update.prefix(withdraws) + Update.prefix(attr + mp_unreach + mp_reach) + announced) # yield mpr/mpur per family
-				withdraws = ''
-				announced = ''
+				withdraws = b''
+				announced = b''
 		else:
 			yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
 
@@ -181,7 +181,7 @@ class Update (Message):
 		length = len(data)
 
 		# This could be speed up massively by changing the order of the IF
-		if length == 4 and data == '\x00\x00\x00\x00':
+		if length == 4 and data == b'\x00\x00\x00\x00':
 			return EOR(AFI(AFI.ipv4),SAFI(SAFI.unicast))  # pylint: disable=E1101
 		if length == 11 and data.startswith(EOR.NLRI.PREFIX):
 			return EOR.unpack_message(data,negotiated)

@@ -65,7 +65,7 @@ class IPVPN (Labelled):
 		return True
 
 	def pack (self, negotiated=None):
-		addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi,self.safi) else ''
+		addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi,self.safi) else b''
 		mask = chr_(len(self.labels)*8 + len(self.rd)*8 + self.cidr.mask)
 		return addpath + mask + self.labels.pack() + self.rd.pack() + self.cidr.pack_ip()
 

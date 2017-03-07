@@ -15,7 +15,7 @@ from exabgp.bgp.message.message import Message
 class UnknownMessage (Message):
 	# Make sure we have a value, which is not defined in any RFC !
 
-	def __init__ (self, code, data=''):
+	def __init__ (self, code, data=b''):
 		self.ID = code
 		self.TYPE = chr(code)
 		self.data = data

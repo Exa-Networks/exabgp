@@ -136,7 +136,7 @@ class Operational (Message):
 class OperationalFamily (Operational):
 	has_family = True
 
-	def __init__ (self, what, afi, safi, data=''):
+	def __init__ (self, what, afi, safi, data=b''):
 		Operational.__init__(self,what)
 		self.afi = AFI(afi)
 		self.safi = SAFI(safi)
@@ -164,7 +164,7 @@ class SequencedOperationalFamily (OperationalFamily):
 	__sequence_number = {}
 	has_routerid = True
 
-	def __init__ (self, what, afi, safi, routerid, sequence, data=''):
+	def __init__ (self, what, afi, safi, routerid, sequence, data=b''):
 		OperationalFamily.__init__(self,what,afi,safi,data)
 		self.routerid = routerid if routerid else None
 		self.sequence = sequence if sequence else None
@@ -213,27 +213,27 @@ class NS (object):
 
 	class Malformed (_NS):
 		name = 'NS malformed'
-		ERROR_SUBCODE = '\x00\x01'  # pack('!H',MALFORMED)
+		ERROR_SUBCODE = b'\x00\x01'  # pack('!H',MALFORMED)
 
 	class Unsupported (_NS):
 		name = 'NS unsupported'
-		ERROR_SUBCODE = '\x00\x02'  # pack('!H',UNSUPPORTED)
+		ERROR_SUBCODE = b'\x00\x02'  # pack('!H',UNSUPPORTED)
 
 	class Maximum (_NS):
 		name = 'NS maximum'
-		ERROR_SUBCODE = '\x00\x03'  # pack('!H',MAXIMUM)
+		ERROR_SUBCODE = b'\x00\x03'  # pack('!H',MAXIMUM)
 
 	class Prohibited (_NS):
 		name = 'NS prohibited'
-		ERROR_SUBCODE = '\x00\x04'  # pack('!H',PROHIBITED)
+		ERROR_SUBCODE = b'\x00\x04'  # pack('!H',PROHIBITED)
 
 	class Busy (_NS):
 		name = 'NS busy'
-		ERROR_SUBCODE = '\x00\x05'  # pack('!H',BUSY)
+		ERROR_SUBCODE = b'\x00\x05'  # pack('!H',BUSY)
 
 	class NotFound (_NS):
 		name = 'NS notfound'
-		ERROR_SUBCODE = '\x00\x06'  # pack('!H',NOTFOUND)
+		ERROR_SUBCODE = b'\x00\x06'  # pack('!H',NOTFOUND)
 
 
 # ===================================================================== Advisory

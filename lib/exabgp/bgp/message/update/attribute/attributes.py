@@ -32,7 +32,7 @@ from exabgp.logger import LazyAttribute
 
 class _NOTHING (object):
 	def pack (self, _=None):
-		return ''
+		return b''
 
 NOTHING = _NOTHING()
 
@@ -228,7 +228,7 @@ class Attributes (dict):
 		local_asn = negotiated.local_as
 		peer_asn = negotiated.peer_as
 
-		message = ''
+		message = b''
 
 		default = {
 			Attribute.CODE.ORIGIN: lambda l,r: Origin(Origin.IGP),
@@ -275,7 +275,7 @@ class Attributes (dict):
 		# XXX: something a little bit smaller memory wise ?
 		if not self._idx:
 			idx = ''.join(self._generate_text())
-			nexthop = str(self.get(Attribute.CODE.NEXT_HOP,''))
+			nexthop = str(self.get(Attribute.CODE.NEXT_HOP,b''))
 			self._idx = '%s next-hop %s' % (idx,nexthop) if nexthop else idx
 		return self._idx
 

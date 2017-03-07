@@ -23,7 +23,7 @@ class PathInfo (object):
 		elif integer:
 			self.path_info = b''.join([chr_((integer >> offset) & 0xff) for offset in [24,16,8,0]])
 		else:
-			self.path_info = ''
+			self.path_info = b''
 		# sum(int(a)<<offset for (a,offset) in zip(ip.split('.'), range(24, -8, -8)))
 
 	def __eq__ (self, other):
@@ -60,6 +60,6 @@ class PathInfo (object):
 	def pack (self):
 		if self.path_info:
 			return self.path_info
-		return '\x00\x00\x00\x00'
+		return b'\x00\x00\x00\x00'
 
 PathInfo.NOPATH = PathInfo()

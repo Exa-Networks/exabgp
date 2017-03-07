@@ -129,7 +129,7 @@ class PMSINoTunnel (PMSI):
 	TUNNEL_TYPE = 0
 
 	def __init__ (self, label=0,flags=0):
-		PMSI.__init__(self,'',label,flags)
+		PMSI.__init__(self,b'',label,flags)
 
 	def prettytunnel (self):
 		return ''

@@ -104,7 +104,7 @@ class Notification (Message):
 		(7,2): "Malformed Message Subtype",
 	}
 
-	def __init__ (self, code, subcode, data=''):
+	def __init__ (self, code, subcode, data=b''):
 		self.code = code
 		self.subcode = subcode
 
@@ -114,7 +114,7 @@ class Notification (Message):
 
 		if len(data) == 0:
 			# shutdown without shutdown communication (the old fashioned way)
-			self.data = ''
+			self.data = b''
 			return
 
 		# draft-ietf-idr-shutdown or the peer was using 6,2 with data

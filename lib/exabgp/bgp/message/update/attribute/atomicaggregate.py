@@ -27,7 +27,7 @@ class AtomicAggregate (Attribute):
 	# def __ne__ (self, other):
 
 	def pack (self, negotiated=None):
-		return self._attribute('')
+		return self._attribute(b'')
 
 	def __len__ (self):
 		return 0

@@ -98,4 +98,4 @@ class RouteDistinguisher (object):
 		except ValueError:
 			raise ValueError('invalid route-distinguisher %s:%s' % (prefix,suffix))
 
-RouteDistinguisher.NORD = RouteDistinguisher('')
+RouteDistinguisher.NORD = RouteDistinguisher(b'')

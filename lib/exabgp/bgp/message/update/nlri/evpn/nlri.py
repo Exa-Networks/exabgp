@@ -41,7 +41,7 @@ class EVPN (NLRI):
 
 	def __init__ (self, action=OUT.UNSET, addpath=None):
 		NLRI.__init__(self, AFI.l2vpn, SAFI.evpn, action)
-		self._packed = ''
+		self._packed = b''
 
 	def index(self):
 		return NLRI._index(self) + self.pack()
