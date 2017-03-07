@@ -320,7 +320,6 @@ class Attributes (dict):
 
 		try:
 			# We do not care if the attribute are transitive or not as we do not redistribute
-			#import pdb; pdb.set_trace()
 			flag = Attribute.Flag(ord_(data[0]))
 			aid = Attribute.CODE(ord_(data[1]))
 		except IndexError:

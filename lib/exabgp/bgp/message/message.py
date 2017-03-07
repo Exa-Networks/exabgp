@@ -10,6 +10,7 @@ import sys
 from struct import pack
 
 from exabgp.util import chr_
+from exabgp.util import concat_strs
 
 class _MessageCode (int):
 	if sys.version_info[0]<3:
@@ -155,7 +156,7 @@ class Message (Exception):
 
 	def _message (self, message):
 		message_len = pack('!H',19+len(message))
-		return "%s%s%s%s" % (self.MARKER,message_len,self.TYPE,message)
+		return concat_strs(self.MARKER,message_len,self.TYPE,message)
 
 	def message (self,negotiated=None):
 		raise NotImplementedError('message not implemented in subclasses')

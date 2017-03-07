@@ -10,6 +10,8 @@ from exabgp.protocol.ip import IP
 
 from exabgp.util import chr_
 from exabgp.util import ord_
+from exabgp.util import concat_strs
+
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import ESI
 
@@ -76,7 +78,7 @@ class EthernetSegment (EVPN):
 			self._packed = packed
 			return packed
 
-		self._packed = "%s%s%s%s" % (
+		self._packed = concat_strs(
 			self.rd.pack(),
 			self.esi.pack(),
 			chr_(len(self.ip)*8 if self.ip else 0),

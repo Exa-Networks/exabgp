@@ -11,6 +11,7 @@ import struct
 
 from exabgp.util import chr_
 from exabgp.util import ord_
+from exabgp.util import concat_strs
 
 from exabgp.bgp.message.message import Message
 
@@ -169,7 +170,7 @@ class Notify (Notification):
 		Notification.__init__(self,code,subcode,data)
 
 	def message (self,negotiated=None):
-		return self._message("%s%s%s" % (
+		return self._message(concat_strs(
 			chr_(self.code),
 			chr_(self.subcode),
 			self.data

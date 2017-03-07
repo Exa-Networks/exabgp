@@ -9,6 +9,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
+from exabgp.util import concat_strs
+
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -71,7 +73,7 @@ class Update (Message):
 	@staticmethod
 	def prefix (data):
 		# This function needs renaming
-		return '%s%s' % (pack('!H',len(data)),data)
+		return concat_strs(pack('!H',len(data)),data)
 
 	@staticmethod
 	def split (data):

@@ -8,6 +8,7 @@ Copyright (c) 2014-2015 Orange. All rights reserved.
 from exabgp.protocol.ip import IP
 from exabgp.util import chr_
 from exabgp.util import ord_
+from exabgp.util import concat_strs
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import EthernetTag
 
@@ -63,7 +64,7 @@ class Multicast (EVPN):
 			self._packed = packed
 			return packed
 
-		self._packed = '%s%s%s%s' % (
+		self._packed = concat_strs(
 			self.rd.pack(),
 			self.etag.pack(),
 			chr_(len(self.ip)*8),

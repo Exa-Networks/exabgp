@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from exabgp.util import chr_
 from exabgp.util import ord_
+from exabgp.util import concat_strs
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
@@ -44,7 +45,7 @@ class GenericAttribute (Attribute):
 			len_value = pack('!H',length)
 		else:
 			len_value = chr_(length)
-		return "%s%s%s%s" % (chr(flag),chr(self.ID),len_value,self.data)
+		return concat_strs(chr_(flag),chr_(self.ID),len_value,self.data)
 
 	def __len__ (self):
 		return len(self.data)

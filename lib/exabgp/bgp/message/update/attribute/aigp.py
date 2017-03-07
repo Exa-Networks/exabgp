@@ -10,6 +10,7 @@ from struct import pack
 from struct import unpack
 
 from exabgp.util import ord_
+from exabgp.util import concat_strs
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
@@ -50,7 +51,7 @@ class TLVS (list):
 		return TLVS(list(loop(data)))
 
 	def pack (self):
-		return b''.join('%s%s%s' % (chr_(tlv.type),pack('!H',len(tlv.value)+3),tlv.value) for tlv in self)
+		return b''.join(concat_strs(chr_(tlv.type),pack('!H',len(tlv.value)+3),tlv.value) for tlv in self)
 
 
 # ==================================================================== AIGP (26)

@@ -17,6 +17,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.util import chr_
 from exabgp.util import ord_
+from exabgp.util import concat_strs
 from exabgp.bgp.message.direction import OUT
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.cidr import CIDR
@@ -127,7 +128,7 @@ class IPrefix4 (IPrefix,IComponent,IPv4):
 	def pack (self):
 		raw = self.cidr.pack_nlri()
 		# ID is defined in subclasses
-		return "%s%s" % (chr_(self.ID),raw)  # pylint: disable=E1101
+		return concat_strs(chr_(self.ID),raw)  # pylint: disable=E1101
 
 	def __str__ (self):
 		return str(self.cidr)
@@ -152,7 +153,7 @@ class IPrefix6 (IPrefix,IComponent,IPv6):
 
 	def pack (self):
 		# ID is defined in subclasses
-		return "%s%s%s%s" % (chr_(self.ID),chr_(self.cidr.mask),chr_(self.offset),self.cidr.pack_ip())  # pylint: disable=E1101
+		return concat_strs(chr_(self.ID),chr_(self.cidr.mask),chr_(self.offset),self.cidr.pack_ip())  # pylint: disable=E1101
 
 	def __str__ (self):
 		return "%s/%s" % (self.cidr,self.offset)
@@ -175,7 +176,7 @@ class IOperation (IComponent):
 	def pack (self):
 		l,v = self.encode(self.value)
 		op = self.operations | _len_to_bit(l)
-		return "%s%s" % (chr_(op),v)
+		return concat_strs(chr_(op),v)
 
 	def encode (self, value):
 		raise NotImplementedError('this method must be implemented by subclasses')
@@ -564,9 +565,9 @@ class Flow (NLRI):
 
 		l = len(components)
 		if l < 0xF0:
-			return "%s%s" % (chr_(l),components)
+			return concat_strs(chr_(l),components)
 		if l < 0x0FFF:
-			return "%s%s" % (pack('!H',l | 0xF000),components)
+			return concat_strs(pack('!H',l | 0xF000),components)
 		raise Notify(3,0,"my administrator attempted to announce a Flow Spec rule larger than encoding allows, protecting the innocent the only way I can")
 
 	def _rules (self):

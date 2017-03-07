@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 # https://tools.ietf.org/html/draft-walton-bgp-hostname-capability-02
 
 from exabgp.util import ord_
+from exabgp.util import concat_strs
 from exabgp.bgp.message.open.capability.capability import Capability
 
 
@@ -26,7 +27,7 @@ class HostName (Capability):
 		return '{ "host-name": "%s", "domain-name": "%s" }' % (self.host_name,self.domain_name)
 
 	def extract (self):
-		return ['%s%s%s%s' % (
+		return [concat_strs(
 			chr(len(self.host_name)),
 			self.host_name,
 			chr(len(self.domain_name)),

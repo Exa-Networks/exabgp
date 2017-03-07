@@ -20,6 +20,8 @@ from exabgp.bgp.message.update.attribute.community.extended \
     import RouteTargetASN2Number as RouteTarget
 from exabgp.bgp.message.update.attribute.community.extended.encapsulation \
     import Encapsulation
+from exabgp.bgp.message.update.attribute.community.extended \
+    import RTRecord
 
 from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
 
@@ -372,6 +374,9 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual(set([rt1a]), set([rt1b]))
         self.assertEqual(1, len(set([rt1a]).intersection(set([rt1b]))))
 
+    def test12_RTRecord(self):
+        rt = RouteTarget(64512, 22)
+        rt_record = RTRecord.from_rt(rt)
 
 if __name__ == '__main__':
     unittest.main()

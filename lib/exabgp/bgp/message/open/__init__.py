@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import unpack
 
 from exabgp.util import ord_
+from exabgp.util import concat_strs
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
 
@@ -60,7 +61,7 @@ class Open (Message):
 		self.capabilities = capabilities
 
 	def message (self,negotiated=None):
-		return self._message("%s%s%s%s%s" % (
+		return self._message(concat_strs(
 			self.version.pack(),
 			self.asn.trans().pack(),
 			self.hold_time.pack(),

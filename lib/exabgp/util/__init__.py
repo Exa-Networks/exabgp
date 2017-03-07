@@ -40,3 +40,7 @@ else:
 	def padding(n):
 		return bytes(n)
 
+
+def concat_strs(*items): #each item is an 'str' in py2 or a 'bytes' in py3
+	return b''.join(items)
+
