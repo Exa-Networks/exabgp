@@ -13,6 +13,7 @@ from exabgp.bgp.message import Update
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.attribute import Attributes
 
+from exabgp.vendoring import six
 
 # XXX: FIXME: we would not have to use so many setdefault if we pre-filled the dicts with the families
 
@@ -192,7 +193,7 @@ class Store (object):
 			dict_nlri = self._modify_nlri
 
 			for family in self._seen:
-				for change in self._seen[family].itervalues():
+				for change in six.itervalues(self._seen[family]):
 					if change.index() not in self._modify_nlri:
 						change.nlri.action = OUT.WITHDRAW
 						self.insert_announced(change,True)
@@ -249,10 +250,10 @@ class Store (object):
 			# as we will try to modify things we are iterating over and using
 
 			if grouped:
-				for nlris in updates.itervalues():
+				for nlris in six.itervalues(updates):
 					yield Update(nlris, attributes)
 			else:
-				for nlris in updates.itervalues():
+				for nlris in six.itervalues(updates):
 					for nlri in nlris:
 						yield Update([nlri,], attributes)
 

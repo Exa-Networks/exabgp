@@ -29,6 +29,7 @@ from exabgp.util import ord_
 from exabgp.logger import Logger
 from exabgp.logger import LazyAttribute
 
+from exabgp.vendoring import six
 
 class _NOTHING (object):
 	def pack (self, _=None):
@@ -469,7 +470,7 @@ class Attributes (dict):
 			return cmp(x.pack(), y.pack())
 
 		try:
-			for key in set(self.iterkeys()).union(set(other.iterkeys())):
+			for key in set(six.iterkeys(self)).union(set(six.iterkeys(other))):
 				if (key == Attribute.CODE.MP_REACH_NLRI or key == Attribute.CODE.MP_UNREACH_NLRI):
 					continue
 
