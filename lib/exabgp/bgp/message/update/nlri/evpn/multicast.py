@@ -79,7 +79,7 @@ class Multicast (EVPN):
 		iplen = ord_(data[12])
 		if iplen not in (4*8,16*8):
 			raise Exception("IP len is %d, but EVPN route currently support only IPv4" % iplen)
-		ip = IP.unpack(data[13:13+iplen/8])
+		ip = IP.unpack(data[13:13+iplen//8])
 		return cls(rd,etag,ip,data)
 
 	def json (self, compact=None):

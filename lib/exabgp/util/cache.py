@@ -25,7 +25,7 @@ class Cache (dict):
 			self.truncate(self.min_items)
 
 		elif len(self) >= self.max_items:
-			self.truncate(self.max_items/2)
+			self.truncate(self.max_items//2)
 
 		if key not in self:
 			self.ordered.append(key)
