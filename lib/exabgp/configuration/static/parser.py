@@ -7,6 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from struct import pack
+import sys
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import IPSelf
@@ -47,6 +48,10 @@ from exabgp.bgp.message.update.attribute.community import ExtendedCommunities
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 
 from exabgp.rib.change import Change
+
+
+if sys.version_info > (3,):
+	long = int
 
 
 # XXX: The IP and CIDR class API is totally broken, fix it.

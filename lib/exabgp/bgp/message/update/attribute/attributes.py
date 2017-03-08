@@ -10,6 +10,7 @@ from struct import unpack
 
 from exabgp.configuration.environment import environment
 
+from exabgp.util import ord_
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
 from exabgp.bgp.message.update.attribute.attribute import Discard
@@ -23,13 +24,16 @@ from exabgp.bgp.message.update.attribute.community import Communities
 
 from exabgp.bgp.message.notification import Notify
 
+from exabgp.util import ord_
+
 from exabgp.logger import Logger
 from exabgp.logger import LazyAttribute
 
+from exabgp.vendoring import six
 
 class _NOTHING (object):
 	def pack (self, _=None):
-		return ''
+		return b''
 
 NOTHING = _NOTHING()
 
@@ -225,7 +229,7 @@ class Attributes (dict):
 		local_asn = negotiated.local_as
 		peer_asn = negotiated.peer_as
 
-		message = ''
+		message = b''
 
 		default = {
 			Attribute.CODE.ORIGIN: lambda l,r: Origin(Origin.IGP),
@@ -272,7 +276,7 @@ class Attributes (dict):
 		# XXX: something a little bit smaller memory wise ?
 		if not self._idx:
 			idx = ''.join(self._generate_text())
-			nexthop = str(self.get(Attribute.CODE.NEXT_HOP,''))
+			nexthop = str(self.get(Attribute.CODE.NEXT_HOP,b''))
 			self._idx = '%s next-hop %s' % (idx,nexthop) if nexthop else idx
 		return self._idx
 
@@ -300,14 +304,14 @@ class Attributes (dict):
 
 	@staticmethod
 	def flag_attribute_content (data):
-		flag = Attribute.Flag(ord(data[0]))
-		attr = Attribute.CODE(ord(data[1]))
+		flag = Attribute.Flag(ord_(data[0]))
+		attr = Attribute.CODE(ord_(data[1]))
 
 		if flag & Attribute.Flag.EXTENDED_LENGTH:
 			length = unpack('!H',data[2:4])[0]
 			return flag, attr, data[4:length+4]
 		else:
-			length = ord(data[2])
+			length = ord_(data[2])
 			return flag, attr, data[3:length+3]
 
 	def parse (self, data, negotiated):
@@ -316,19 +320,19 @@ class Attributes (dict):
 
 		try:
 			# We do not care if the attribute are transitive or not as we do not redistribute
-			flag = Attribute.Flag(ord(data[0]))
-			aid = Attribute.CODE(ord(data[1]))
+			flag = Attribute.Flag(ord_(data[0]))
+			aid = Attribute.CODE(ord_(data[1]))
 		except IndexError:
 			self.add(TreatAsWithdraw())
 			return self
 
 		try:
 			offset = 3
-			length = ord(data[2])
+			length = ord_(data[2])
 
 			if flag & Attribute.Flag.EXTENDED_LENGTH:
 				offset = 4
-				length = (length << 8) + ord(data[3])
+				length = (length << 8) + ord_(data[3])
 		except IndexError:
 			self.add(TreatAsWithdraw(aid))
 			return self
@@ -360,12 +364,12 @@ class Attributes (dict):
 
 			try:
 				decoded = Attribute.unpack(aid,flag,attribute,negotiated)
-			except IndexError, exc:
+			except IndexError as exc:
 				if aid in self.TREAT_AS_WITHDRAW:
 					decoded = TreatAsWithdraw(aid)
 				else:
 					raise exc
-			except Notify, exc:
+			except Notify as exc:
 				if aid in self.TREAT_AS_WITHDRAW:
 					decoded = TreatAsWithdraw()
 				elif aid in self.DISCARD:
@@ -461,11 +465,11 @@ class Attributes (dict):
 	def sameValuesAs (self, other):
 		# we sort based on packed values since the items do not
 		# necessarily implement __cmp__
-		def sorter (x, y):
-			return cmp(x.pack(), y.pack())
+		def pack_(x):
+			return x.pack()
 
 		try:
-			for key in set(self.iterkeys()).union(set(other.iterkeys())):
+			for key in set(six.iterkeys(self)).union(set(six.iterkeys(other))):
 				if (key == Attribute.CODE.MP_REACH_NLRI or key == Attribute.CODE.MP_UNREACH_NLRI):
 					continue
 
@@ -478,10 +482,10 @@ class Attributes (dict):
 					if not isinstance(oval, Communities):
 						return False
 
-					sval = sorted(sval,sorter)
-					oval = sorted(oval,sorter)
+					sval = sorted(sval,key=pack_)
+					oval = sorted(oval,key=pack_)
 
-				if cmp(sval,oval) != 0:
+				if sval != oval:
 					return False
 			return True
 		except KeyError:

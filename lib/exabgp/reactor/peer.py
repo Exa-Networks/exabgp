@@ -7,6 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 import time
+from exabgp.vendoring import six
 # import traceback
 
 from exabgp.bgp.timer import ReceiveTimer
@@ -109,8 +110,8 @@ class KA (object):
 
 			try:
 				# try to close the generator and raise a StopIteration in one call
-				generator.next()
-				generator.next()
+				six.next(generator)
+				six.next(generator)
 				# still running
 				yield True
 			except NetworkError:
@@ -123,7 +124,7 @@ class KA (object):
 		#  True  if we need or are trying
 		#  False if we do not need to send one
 		try:
-			return self._generator.next()
+			return six.next(self._generator)
 		except StopIteration:
 			raise Notify(4,0,'could not send keepalive')
 
@@ -391,7 +392,7 @@ class Peer (object):
 			while not connected:
 				if self._teardown:
 					raise StopIteration()
-				connected = generator.next()
+				connected = six.next(generator)
 				# we want to come back as soon as possible
 				yield ACTION.LATER
 		except StopIteration:
@@ -530,7 +531,7 @@ class Peer (object):
 
 					if operational:
 						try:
-							operational.next()
+							six.next(operational)
 						except StopIteration:
 							operational = None
 				# make sure that if some operational message are received via the API
@@ -547,7 +548,7 @@ class Peer (object):
 
 					if refresh:
 						try:
-							refresh.next()
+							six.next(refresh)
 						except StopIteration:
 							refresh = None
 
@@ -583,7 +584,7 @@ class Peer (object):
 						count = 20
 						while count:
 							# This can raise a NetworkError
-							new_routes.next()
+							six.next(new_routes)
 							count -= 1
 					except StopIteration:
 						new_routes = None
@@ -602,7 +603,7 @@ class Peer (object):
 
 				if command_eor:
 					try:
-						command_eor.next()
+						six.next(command_eor)
 					except StopIteration:
 						command_eor = None
 
@@ -638,7 +639,7 @@ class Peer (object):
 				yield action
 
 		# CONNECTION FAILURE
-		except NetworkError,network:
+		except NetworkError as network:
 			# we tried to connect once, it failed and it was not a manual request, we stop
 			if self.once and not self._teardown:
 				self.logger.network('only one attempt to connect is allowed, stopping the peer')
@@ -648,14 +649,14 @@ class Peer (object):
 			return
 
 		# NOTIFY THE PEER OF AN ERROR
-		except Notify,notify:
+		except Notify as notify:
 			if direction.proto:
 				try:
 					generator = direction.proto.new_notification(notify)
 					try:
 						maximum = 20
 						while maximum:
-							generator.next()
+							six.next(generator)
 							maximum -= 1
 							yield ACTION.NOW if maximum > 10 else ACTION.LATER
 					except StopIteration:
@@ -668,7 +669,7 @@ class Peer (object):
 			return
 
 		# THE PEER NOTIFIED US OF AN ERROR
-		except Notification,notification:
+		except Notification as notification:
 			# we tried to connect once, it failed and it was not a manual request, we stop
 			if self.once and not self._teardown:
 				self.logger.network('only one attempt to connect is allowed, stopping the peer')
@@ -679,22 +680,22 @@ class Peer (object):
 			return
 
 		# RECEIVED a Message TYPE we did not expect
-		except Message,message:
+		except Message as message:
 			self._reset(direction,'unexpected message received',message)
 			return
 
 		# PROBLEM WRITING TO OUR FORKED PROCESSES
-		except ProcessError, process:
+		except ProcessError as process:
 			self._reset(direction,'process problem',process)
 			return
 
 		# ....
-		except Interrupted,interruption:
+		except Interrupted as interruption:
 			self._reset(interruption.direction)
 			return
 
 		# UNHANDLED PROBLEMS
-		except Exception,exc:
+		except Exception as exc:
 			# Those messages can not be filtered in purpose
 			self.logger.raw('\n'.join([
 				no_panic,
@@ -722,7 +723,7 @@ class Peer (object):
 			if direction.generator:
 				try:
 					# This generator only stops when it raises
-					r = direction.generator.next()
+					r = six.next(direction.generator)
 
 					# if r is ACTION.NOW: status = 'immediately'
 					# elif r is ACTION.LATER:   status = 'next second'

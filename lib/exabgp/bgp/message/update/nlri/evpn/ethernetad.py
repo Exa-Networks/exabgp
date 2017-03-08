@@ -8,6 +8,8 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 # from struct import pack
 # from struct import unpack
 
+from exabgp.util import concat_strs
+
 # from exabgp.protocol.family import AFI
 # from exabgp.protocol.family import SAFI
 # from exabgp.bgp.message.update.nlri.qualifier import ESI
@@ -79,7 +81,7 @@ class EthernetAD (EVPN):
 			self._packed = packed
 			return packed
 
-		self._packed = "%s%s%s%s" % (
+		self._packed = concat_strs(
 			self.rd.pack(),
 			self.esi.pack(),
 			self.etag.pack(),

@@ -8,6 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import os
 
+from exabgp.vendoring import six
 import traceback
 
 # ================================================================ Registration
@@ -102,7 +103,7 @@ class Protocol (object):
 			try:
 				generator = self.connection.establish()
 				while True:
-					connected = generator.next()
+					connected = six.next(generator)
 					if not connected:
 						yield False
 						continue
@@ -208,7 +209,7 @@ class Protocol (object):
 				message = Message.unpack(msg_id,body,self.negotiated)
 			except (KeyboardInterrupt,SystemExit,Notify):
 				raise
-			except Exception,exc:
+			except Exception as exc:
 				self.logger.message(self.me('Could not decode message "%d"' % msg_id))
 				self.logger.message(self.me('%s' % str(exc)))
 				self.logger.message(traceback.format_exc())

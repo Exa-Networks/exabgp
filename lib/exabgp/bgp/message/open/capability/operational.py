@@ -25,7 +25,7 @@ class Operational (Capability,list):
 		return '{ "name": "operational" }'
 
 	def extract (self):
-		return ['']
+		return [b'']
 
 	@staticmethod
 	def unpack_capability (instance, data, capability=None):  # pylint: disable=W0613

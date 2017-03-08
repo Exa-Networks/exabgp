@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+from __future__ import print_function
+
 import sys
 import socket
 
@@ -13,9 +15,9 @@ from exabgp.netlink.route.network import Network
 
 
 def usage ():
-	print '%s' % sys.argv[0]
-	print '  addr  : show the ip address on the interface'
-	print '  route : show the ip routing'
+	print('%s' % sys.argv[0])
+	print('  addr  : show the ip address on the interface')
+	print('  route : show the ip routing')
 
 
 def addresses ():
@@ -35,7 +37,7 @@ def addresses ():
 		hwaddr = '<no addr>'
 		if Address.Type.Attribute.IFLA_ADDRESS in ifi.attributes:
 			hwaddr = ':'.join(x.encode('hex') for x in ifi.attributes[Address.Type.Attribute.IFLA_ADDRESS])
-		print "%d: %s %s" % (ifi.index,ifi.attributes[Address.Type.Attribute.IFLA_IFNAME][:-1],hwaddr)
+		print("%d: %s %s" % (ifi.index,ifi.attributes[Address.Type.Attribute.IFLA_IFNAME][:-1],hwaddr))
 
 		for ifa in addrs.get(ifi.index,{}):
 			address = ifa.attributes.get(Attributes.Type.IFA_ADDRESS)
@@ -43,22 +45,22 @@ def addresses ():
 				continue
 
 			if ifa.family == socket.AF_INET:
-				print '  %s %s' % ('inet ', socket.inet_ntop(ifa.family, address))
+				print('  %s %s' % ('inet ', socket.inet_ntop(ifa.family, address)))
 			elif ifa.family == socket.AF_INET6:
-				print '  %s %s' % ('inet6', socket.inet_ntop(ifa.family, address))
+				print('  %s %s' % ('inet6', socket.inet_ntop(ifa.family, address)))
 			else:
-				print '  %d %s' % (ifa.family, address.encode('hex'))
+				print('  %d %s' % (ifa.family, address.encode('hex')))
 
 		for neighbor in neighbors.get(ifi.index,{}):
 			if neighbor.state == Neighbor.Type.State.NUD_REACHABLE:
 				address = neighbor.attributes.get(Neighbor.Type.Flag.NTF_USE,'\0\0\0\0')
 				if ifa.family == socket.AF_INET:
-					print '  %s %s' % ('inet ', socket.inet_ntop(neighbor.family, address)),
+					print('  %s %s' % ('inet ', socket.inet_ntop(neighbor.family, address)), end=' ')
 				elif ifa.family == socket.AF_INET6:
-					print '  %s %s' % ('inet ', socket.inet_ntop(neighbor.family, address)),
+					print('  %s %s' % ('inet ', socket.inet_ntop(neighbor.family, address)), end=' ')
 				else:
-					print '  %d %s' % (ifa.family, address.encode('hex'))
-				print 'mac',':'.join(_.encode('hex') for _ in neighbor.attributes[Neighbor.Type.State.NUD_REACHABLE])
+					print('  %d %s' % (ifa.family, address.encode('hex')))
+				print('mac',':'.join(_.encode('hex') for _ in neighbor.attributes[Neighbor.Type.State.NUD_REACHABLE]))
 
 
 def routes ():
@@ -66,8 +68,8 @@ def routes ():
 	for ifi in Link.getLinks():
 		links[ifi.index] = ifi.attributes.get(Link.Type.Attribute.IFLA_IFNAME).strip('\0')
 
-	print 'Kernel IP routing table'
-	print '%-18s %-18s %-18s %-7s %s' % ('Destination','Genmask','Gateway','Metric','Iface')
+	print('Kernel IP routing table')
+	print('%-18s %-18s %-18s %-7s %s' % ('Destination','Genmask','Gateway','Metric','Iface'))
 
 	for route in Network.getRoutes():
 		if route.family != socket.AF_INET:
@@ -90,7 +92,7 @@ def routes ():
 		mask = NetMask.CIDR[route.src_len]
 		iface = links[oif]
 
-		print '%-18s %-18s %-18s %-7d %-s' % (dst or '0.0.0.0',mask,gw,metric,iface)
+		print('%-18s %-18s %-18s %-7d %-s' % (dst or '0.0.0.0',mask,gw,metric,iface))
 		# if gateway: print route
 
 
@@ -100,7 +102,7 @@ def new ():
 		links[ifi.index] = ifi.attributes.get(Link.Type.Attribute.IFLA_IFNAME).strip('\0')
 
 	for route in Network.newRoute():
-		print route
+		print(route)
 
 		# if route.family != socket.AF_INET:
 		# 	continue
@@ -146,7 +148,7 @@ def main ():
 			new()
 			sys.exit(0)
 		if 'delete'.startswith(sys.argv[2]):
-			print 'adding'
+			print('adding')
 
 	usage()
 	sys.exit(0)

@@ -8,6 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 # common
 
+import sys
 import traceback
 
 from exabgp.bgp.message import Update
@@ -41,6 +42,9 @@ from exabgp.bgp.message import Notification
 
 from exabgp.version import json as json_version
 
+
+if sys.version_info[0]>=3:
+	StandardError = Exception
 
 # =============================================================== check_neighbor
 # ...
@@ -147,7 +151,7 @@ def check_neighbor (neighbors):
 				logger.parser('JSON nlri %s' % change1.nlri.json())
 				logger.parser('JSON attr %s' % change1.attributes.json())
 
-			except Notify,exc:
+			except Notify as exc:
 				logger.parser('----------------------------------------')
 				logger.parser(str(exc))
 				logger.parser('----------------------------------------')
@@ -162,7 +166,7 @@ def check_neighbor (neighbors):
 
 def check_message (neighbor, message):
 	message = message.replace(':','')
-	raw = ''.join(chr(int(_,16)) for _ in (message[i*2:(i*2)+2] for i in range(len(message)/2)))
+	raw = b''.join(chr(int(_,16)) for _ in (message[i*2:(i*2)+2] for i in range(len(message)/2)))
 
 	if raw.startswith('\xff'*16):
 		kind = ord(raw[18])
@@ -263,5 +267,5 @@ def check_update (neighbor, raw):
 def check_notification (raw):
 	notification = Notification.unpack_message(raw[18:],None)
 	# XXX: FIXME: should be using logger here
-	print notification
+	print(notification)
 	return True

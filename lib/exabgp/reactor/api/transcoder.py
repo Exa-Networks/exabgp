@@ -1,17 +1,21 @@
+from __future__ import print_function
+
 import struct
 import sys
 import json
 
+from exabgp.util import chr_
+
 from exabgp.bgp.message import Message
 from exabgp.bgp.message import Open
 from exabgp.bgp.message import Notification
+from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability import Negotiated
 
 from exabgp.version import json as json_version
 from exabgp.reactor.api.response import Response
 
 from exabgp.protocol.ip import IPv4
-from exabgp.bgp.message.open.asn import ASN
 
 
 class _FakeNeighbor (object):
@@ -58,17 +62,17 @@ class Transcoder (object):
 		try:
 			parsed = json.loads(json_string)
 		except ValueError:
-			print >> sys.stderr, 'invalid JSON message'
+			print('invalid JSON message', file=sys.stderr)
 			sys.exit(1)
 
 		if parsed.get('exabgp','0.0.0') != json_version:
-			print >> sys.stderr, 'invalid json version', json_string
+			print('invalid json version', json_string, file=sys.stderr)
 			sys.exit(1)
 
 		content = parsed.get('type','')
 
 		if not content:
-			print >> sys.stderr, 'invalid json content', json_string
+			print('invalid json content', json_string, file=sys.stderr)
 			sys.exit(1)
 
 		neighbor = _FakeNeighbor(
@@ -86,7 +90,7 @@ class Transcoder (object):
 		category = parsed['neighbor']['message']['category']
 		header = parsed['neighbor']['message']['header']
 		body = parsed['neighbor']['message']['body']
-		raw = ''.join(chr(int(body[_:_+2],16)) for _ in range(0,len(body),2))
+		raw = b''.join(chr_(int(body[_:_+2],16)) for _ in range(0,len(body),2))
 
 		if content == 'open':
 			message = Open.unpack_message(raw)
@@ -141,7 +145,7 @@ class Transcoder (object):
 			return self.encoder.notification(neighbor,direction,message,header,body)
 
 		if not self.negotiated:
-			print >> sys.stderr, 'invalid message sequence, open not exchange not complete', json_string
+			print('invalid message sequence, open not exchange not complete', json_string, file=sys.stderr)
 			sys.exit(1)
 
 		message = Message.unpack(category,raw,self.negotiated)

@@ -14,7 +14,7 @@ from exabgp.bgp.message.open.capability.capability import Capability
 
 @Capability.unknown
 class UnknownCapability (Capability):
-	def set (self, capability, data=''):
+	def set (self, capability, data=b''):
 		self.capability = capability
 		self.data = data
 		return self

@@ -56,7 +56,7 @@ def _reader ():
 	while True:
 		try:
 			data = os.read(sys.stdin.fileno(),4096)
-		except IOError,exc:
+		except IOError as exc:
 			if exc.args[0] in errno_block:
 				yield ''
 				continue
@@ -89,7 +89,7 @@ def write (data='', left=''):
 			number = os.write(sys.stdout.fileno(),left)
 			left = left[number:]
 			sys.stdout.flush()
-	except IOError,exc:
+	except IOError as exc:
 		if exc.args[0] in errno_block:
 			return not not left
 		elif exc.args[0] in errno_fatal:
@@ -108,7 +108,7 @@ def write (data='', left=''):
 def read (timeout):
 	try:
 		r, w, x = select.select([sys.stdin], [], [sys.stdin,], timeout)  # pylint: disable=W0612
-	except IOError,exc:
+	except IOError as exc:
 		if exc.args[0] in errno_block:
 			return ''
 		elif exc.args[0] in errno_fatal:

@@ -52,8 +52,8 @@ class LinkProtectionType(object):
 			hex_rep = hex(int(flag_array, 16))
 			bit_array = BitArray(hex_rep)
 			valid_flags = [''.join(item)+'00' for item in itertools.product('01', repeat=6)]
- 			valid_flags.append('0000')
- 			if bit_array.bin in valid_flags:
+			valid_flags.append('0000')
+			if bit_array.bin in valid_flags:
 				flags = dict(zip(protection_mask, bit_array.bin))
 		return cls(protectionflags=flags)
 

@@ -13,23 +13,23 @@ from exabgp.util.panic import footer
 
 
 def bug_report (dtype, value, trace):
-	print panic
+	print(panic)
 
 	import traceback
 
-	print "-- Traceback\n\n"
+	print("-- Traceback\n\n")
 	traceback.print_exception(dtype,value,trace)
 
 	from exabgp.logger import Logger
 	logger = Logger()
 
-	print "\n\n-- Configuration\n\n"
-	print logger.config()
-	print "\n\n-- Logging History\n\n"
-	print logger.history()
-	print "\n\n\n"
+	print("\n\n-- Configuration\n\n")
+	print(logger.config())
+	print("\n\n-- Logging History\n\n")
+	print(logger.history())
+	print("\n\n\n")
 
-	print footer
+	print(footer)
 
 
 def intercept (dtype, value, trace):

@@ -38,4 +38,4 @@ class OrderedDict (dict):
 if __name__ == '__main__':
 	d = OrderedDict(((10,'ten'),(8,'eight'),(6,'six'),(4,'four'),(2,'two'),(0,'boom')))
 	for k in d:
-		print k
+		print(k)

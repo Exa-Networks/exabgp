@@ -10,6 +10,9 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.protocol.ip import IP
+from exabgp.util import chr_
+from exabgp.util import ord_
+from exabgp.util import concat_strs
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.qualifier import ESI
@@ -112,11 +115,11 @@ class Prefix (EVPN):
 			self._packed = packed
 			return packed
 
-		self._packed = "%s%s%s%s%s%s%s" % (
+		self._packed = concat_strs(
 			self.rd.pack(),
 			self.esi.pack(),
 			self.etag.pack(),
-			chr(self.iplen),
+			chr_(self.iplen),
 			self.ip.pack(),
 			self.gwip.pack(),
 			self.label.pack(),
@@ -139,7 +142,7 @@ class Prefix (EVPN):
 		etag = EthernetTag.unpack(data[:4])
 		data = data[4:]
 
-		iplen = ord(data[0])
+		iplen = ord_(data[0])
 		data = data[1:]
 
 		if datalen == (26 + 8):  # Using IPv4 addresses

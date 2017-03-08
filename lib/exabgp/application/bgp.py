@@ -34,13 +34,13 @@ def is_bgp (s):
 def __exit (memory, code):
 	if memory:
 		from exabgp.vendoring import objgraph
-		print "memory utilisation"
-		print
-		print objgraph.show_most_common_types(limit=20)
-		print
-		print
-		print "generating memory utilisation graph"
-		print
+		print("memory utilisation")
+		print()
+		print(objgraph.show_most_common_types(limit=20))
+		print()
+		print()
+		print("generating memory utilisation graph")
+		print()
 		obj = objgraph.by_type('Reactor')
 		objgraph.show_backrefs([obj], max_depth=10)
 	sys.exit(code)
@@ -56,9 +56,9 @@ def main ():
 		sys.exit('This program can not work (is not tested) with your python version (< 2.5 or >= 3.0)')
 
 	if options["--version"]:
-		print 'ExaBGP : %s' % version
-		print 'Python : %s' % sys.version.replace('\n',' ')
-		print 'Uname  : %s' % ' '.join(platform.uname()[:5])
+		print('ExaBGP : %s' % version)
+		print('Python : %s' % sys.version.replace('\n',' '))
+		print('Uname  : %s' % ' '.join(platform.uname()[:5]))
 		sys.exit(0)
 
 	if options["--folder"]:
@@ -93,9 +93,9 @@ def main ():
 
 	try:
 		env = environment.setup(envfile)
-	except environment.Error,exc:
-		print usage
-		print '\nconfiguration issue,', str(exc)
+	except environment.Error as exc:
+		print(usage)
+		print('\nconfiguration issue,', str(exc))
 		sys.exit(1)
 
 	# Must be done before setting the logger as it modify its behaviour
@@ -115,18 +115,18 @@ def main ():
 	if options["--decode"]:
 		decode = ''.join(options["--decode"]).replace(':','').replace(' ','')
 		if not is_bgp(decode):
-			print usage
-			print 'Environment values are:\n' + '\n'.join(' - %s' % _ for _ in environment.default())
-			print ""
-			print "The BGP message must be an hexadecimal string."
-			print ""
-			print "All colons or spaces are ignored, for example:"
-			print ""
-			print "  --decode 001E0200000007900F0003000101"
-			print "  --decode 001E:02:0000:0007:900F:0003:0001:01"
-			print "  --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001E0200000007900F0003000101"
-			print "  --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:0000:0007:900F:0003:0001:01"
-			print "  --decode 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF 001E02 00000007900F0003000101'"
+			print(usage)
+			print('Environment values are:\n' + '\n'.join(' - %s' % _ for _ in environment.default()))
+			print("")
+			print("The BGP message must be an hexadecimal string.")
+			print("")
+			print("All colons or spaces are ignored, for example:")
+			print("")
+			print("  --decode 001E0200000007900F0003000101")
+			print("  --decode 001E:02:0000:0007:900F:0003:0001:01")
+			print("  --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001E0200000007900F0003000101")
+			print("  --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:0000:0007:900F:0003:0001:01")
+			print("  --decode 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF 001E02 00000007900F0003000101'")
 			sys.exit(1)
 	else:
 		decode = ''
@@ -158,7 +158,7 @@ def main ():
 
 	if options["--help"]:
 		print(usage)
-		print 'Environment values are:\n' + '\n'.join(' - %s' % _ for _ in environment.default())
+		print('Environment values are:\n' + '\n'.join(' - %s' % _ for _ in environment.default()))
 		sys.exit(0)
 
 	if options["--decode"]:
@@ -182,23 +182,23 @@ def main ():
 
 	if options["--full-ini"] or options["--fi"]:
 		for line in environment.iter_ini():
-			print line
+			print(line)
 		sys.exit(0)
 
 	if options["--full-env"] or options["--fe"]:
-		print
+		print()
 		for line in environment.iter_env():
-			print line
+			print(line)
 		sys.exit(0)
 
 	if options["--diff-ini"] or options["--di"]:
 		for line in environment.iter_ini(True):
-			print line
+			print(line)
 		sys.exit(0)
 
 	if options["--diff-env"] or options["--de"]:
 		for line in environment.iter_env(True):
-			print line
+			print(line)
 		sys.exit(0)
 
 	if options["--once"]:
@@ -235,8 +235,8 @@ def main ():
 
 	else:
 		print(usage)
-		print 'Environment values are:\n' + '\n'.join(' - %s' % _ for _ in environment.default())
-		print '\nno configuration file provided'
+		print('Environment values are:\n' + '\n'.join(' - %s' % _ for _ in environment.default()))
+		print('\nno configuration file provided')
 		sys.exit(1)
 
 	from exabgp.bgp.message.update.attribute import Attribute
@@ -266,7 +266,7 @@ def main ():
 		# wait for the forked processes
 		for pid in pids:
 			os.waitpid(pid,0)
-	except OSError,exc:
+	except OSError as exc:
 		logger.reactor('Can not fork, errno %d : %s' % (exc.errno,exc.strerror),'critical')
 		sys.exit(1)
 

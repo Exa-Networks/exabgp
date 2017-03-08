@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import os
 import socket
+import sys
 import time
 
 from exabgp.reactor.api.options import hexstring
@@ -18,6 +19,9 @@ from exabgp.bgp.message import IN
 
 from exabgp.configuration.environment import environment
 
+
+if sys.version_info > (3,):
+	long = int
 
 def nop (_): return _
 

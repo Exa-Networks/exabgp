@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
+from exabgp.util import chr_
 
 # ======================================================================= Labels
 # RFC 3107
@@ -28,7 +29,7 @@ class Labels (object):
 		if packed and bos:
 			packed.pop()
 			packed.append(pack('!L',(label << 4) | 1)[1:])
-		self.packed = ''.join(packed)
+		self.packed = b''.join(packed)
 		self._len = len(self.packed)
 
 	def __eq__ (self, other):
@@ -81,7 +82,7 @@ class Labels (object):
 	def unpack (cls, data):
 		labels = []
 		while len(data):
-			label = unpack('!L','\00'+data[:3])[0]
+			label = unpack('!L',chr_(0)+data[:3])[0]
 			data=data[3:]
 			labels.append(label >> 4)
 			if label & 0x001:

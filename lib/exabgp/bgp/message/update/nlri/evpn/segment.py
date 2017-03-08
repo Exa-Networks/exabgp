@@ -8,6 +8,10 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 
 from exabgp.protocol.ip import IP
 
+from exabgp.util import chr_
+from exabgp.util import ord_
+from exabgp.util import concat_strs
+
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import ESI
 
@@ -74,11 +78,11 @@ class EthernetSegment (EVPN):
 			self._packed = packed
 			return packed
 
-		self._packed = "%s%s%s%s" % (
+		self._packed = concat_strs(
 			self.rd.pack(),
 			self.esi.pack(),
-			chr(len(self.ip)*8 if self.ip else '\x00'),
-			self.ip.pack() if self.ip else ''
+			chr_(len(self.ip)*8 if self.ip else 0),
+			self.ip.pack() if self.ip else b''
 		)
 		return self._packed
 
@@ -86,7 +90,7 @@ class EthernetSegment (EVPN):
 	def unpack (cls, data):
 		rd = RouteDistinguisher.unpack(data[:8])
 		esi = ESI.unpack(data[8:18])
-		iplen = ord(data[18])
+		iplen = ord_(data[18])
 
 		if iplen not in (32,128):
 			raise Notify(3,5,"IP field length is given as %d in current Segment, expecting 32 (IPv4) or 128 (IPv6) bits" % iplen)

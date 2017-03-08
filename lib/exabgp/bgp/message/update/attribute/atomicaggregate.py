@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2012-07-14.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.util import ord_
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.notification import Notify
 
@@ -26,7 +27,7 @@ class AtomicAggregate (Attribute):
 	# def __ne__ (self, other):
 
 	def pack (self, negotiated=None):
-		return self._attribute('')
+		return self._attribute(b'')
 
 	def __len__ (self):
 		return 0
@@ -40,7 +41,7 @@ class AtomicAggregate (Attribute):
 	@classmethod
 	def unpack (cls, data, negotiated):
 		if data:
-			raise Notify(3,2,'invalid ATOMIC_AGGREGATE %s' % [hex(ord(_)) for _ in data])
+			raise Notify(3,2,'invalid ATOMIC_AGGREGATE %s' % [hex(ord_(_)) for _ in data])
 		return cls()
 
 	@classmethod

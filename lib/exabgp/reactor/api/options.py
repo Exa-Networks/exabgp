@@ -28,4 +28,4 @@ def hexstring (value):
 	def spaced (value):
 		for v in value:
 			yield '%02X' % ord(v)
-	return ''.join(spaced(value))
+	return b''.join(spaced(value))

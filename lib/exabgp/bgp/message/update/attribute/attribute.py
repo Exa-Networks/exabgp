@@ -7,7 +7,10 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from struct import pack
+import sys
 
+from exabgp.util import chr_
+from exabgp.util import concat_strs
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.util.cache import Cache
@@ -73,7 +76,8 @@ class Attribute (object):
 	# XXX: FIXME: The API of ID is a bit different (it can be instanciated)
 	# XXX: FIXME: This is legacy. should we change to not be ?
 	class CODE (int):
-		__slots__ = []
+		if sys.version_info[0]<3:
+			__slots__ = []
 
 		# This should move within the classes and not be here
 		# RFC 4271
@@ -168,7 +172,8 @@ class Attribute (object):
 		MASK_TRANSITIVE = 0xBF  # . 191 - 1011 1111
 		MASK_OPTIONAL   = 0x7F  # . 127 - 0111 1111
 
-		__slots__ = []
+		if sys.version_info[0]<3:
+			__slots__ = []
 
 		def __str__ (self):
 			r = []
@@ -197,15 +202,15 @@ class Attribute (object):
 	def _attribute (self, value):
 		flag = self.FLAG
 		if flag & Attribute.Flag.OPTIONAL and not value:
-			return ''
+			return b''
 		length = len(value)
 		if length > 0xFF:
 			flag |= Attribute.Flag.EXTENDED_LENGTH
 		if flag & Attribute.Flag.EXTENDED_LENGTH:
 			len_value = pack('!H',length)
 		else:
-			len_value = chr(length)
-		return "%s%s%s%s" % (chr(flag),chr(self.ID),len_value,value)
+			len_value = chr_(length)
+		return concat_strs(chr_(flag),chr_(self.ID),len_value,value)
 
 	def _len (self,value):
 		length = len(value)

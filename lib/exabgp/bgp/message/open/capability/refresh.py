@@ -32,7 +32,7 @@ class RouteRefresh (Capability):
 		return '{ "name": "route-refresh", "variant": "%s" }' % ('RFC' if self.ID == Capability.CODE.ROUTE_REFRESH else 'Cisco')
 
 	def extract (self):
-		return ['']
+		return [b'']
 
 	@staticmethod
 	def unpack_capability (instance, data, capability=None):  # pylint: disable=W0613
@@ -74,7 +74,7 @@ class EnhancedRouteRefresh (Capability):
 		return '{ "name": "enhanced-route-refresh" }'
 
 	def extract (self):
-		return ['']
+		return [b'']
 
 	@staticmethod
 	def unpack_capability (instance, data, capability=None):  # pylint: disable=W0613

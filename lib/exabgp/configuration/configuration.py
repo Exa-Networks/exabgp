@@ -36,6 +36,10 @@ from exabgp.configuration.operational import ParseOperational
 from exabgp.configuration.environment import environment
 
 
+if sys.version_info[0]>=3:
+	StandardError = Exception
+
+
 class _Configuration (object):
 	def __init__ (self):
 		self.processes = {}
@@ -313,14 +317,14 @@ class Configuration (_Configuration):
 			return self._reload()
 		except KeyboardInterrupt:
 			return self.error.set('configuration reload aborted by ^C or SIGINT')
-		except Error, exc:
+		except Error as exc:
 			if environment.settings().debug.configuration:
 				raise
 			return self.error.set(
 				'problem parsing configuration file line %d\n'
 				'error message: %s' % (self.tokeniser.index_line, exc)
 			)
-		except StandardError, exc:
+		except StandardError as exc:
 			if environment.settings().debug.configuration:
 				raise
 			return self.error.set(

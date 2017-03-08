@@ -6,6 +6,9 @@ Copyright (c) 2014-2015 Orange. All rights reserved.
 """
 
 from exabgp.protocol.ip import IP
+from exabgp.util import chr_
+from exabgp.util import ord_
+from exabgp.util import concat_strs
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import EthernetTag
 
@@ -61,10 +64,10 @@ class Multicast (EVPN):
 			self._packed = packed
 			return packed
 
-		self._packed = '%s%s%s%s' % (
+		self._packed = concat_strs(
 			self.rd.pack(),
 			self.etag.pack(),
-			chr(len(self.ip)*8),
+			chr_(len(self.ip)*8),
 			self.ip.pack()
 		)
 		return self._packed
@@ -73,10 +76,10 @@ class Multicast (EVPN):
 	def unpack (cls, data):
 		rd = RouteDistinguisher.unpack(data[:8])
 		etag = EthernetTag.unpack(data[8:12])
-		iplen = ord(data[12])
+		iplen = ord_(data[12])
 		if iplen not in (4*8,16*8):
 			raise Exception("IP len is %d, but EVPN route currently support only IPv4" % iplen)
-		ip = IP.unpack(data[13:13+iplen/8])
+		ip = IP.unpack(data[13:13+iplen//8])
 		return cls(rd,etag,ip,data)
 
 	def json (self, compact=None):

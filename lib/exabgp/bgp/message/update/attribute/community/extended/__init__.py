@@ -28,3 +28,4 @@ from exabgp.bgp.message.update.attribute.community.extended.traffic import Traff
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficNextHop
 from exabgp.bgp.message.update.attribute.community.extended.encapsulation import Encapsulation
 from exabgp.bgp.message.update.attribute.community.extended.chso import ConsistentHashSortOrder
+from exabgp.bgp.message.update.attribute.community.extended.rt_record import RTRecord
