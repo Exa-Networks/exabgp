@@ -7,6 +7,7 @@ Created by Thomas Mangin on 2010-01-14.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+import socket
 import unittest
 
 from exabgp.util import chr_
@@ -21,6 +22,8 @@ from exabgp.bgp.message.update.nlri.flow import FlowAnyPort
 from exabgp.bgp.message.update.nlri.flow import NumericOperator
 # from exabgp.bgp.message.update.attribute.community import *
 
+from exabgp.protocol.ip import IPv4
+
 from exabgp.util.test import data_from_body
 
 from exabgp.configuration.environment import environment
@@ -34,8 +37,8 @@ class TestFlow (unittest.TestCase):
 
 	def test_rule (self):
 		components = {
-			'destination': Flow4Destination("192.0.2.0",24),
-			'source':      Flow4Source("10.1.2.0",24),
+			'destination': Flow4Destination(IPv4.pton("192.0.2.0"),24),
+			'source':      Flow4Source(IPv4.pton("10.1.2.0"),24),
 			'anyport_1':   FlowAnyPort(NumericOperator.EQ,25),
 		}
 		messages = {
@@ -52,8 +55,8 @@ class TestFlow (unittest.TestCase):
 
 	def test_rule_and (self):
 		components = {
-			'destination': Flow4Destination("192.0.2.0",24),
-			'source':      Flow4Source("10.1.2.0",24),
+			'destination': Flow4Destination(IPv4.pton("192.0.2.0"),24),
+			'source':      Flow4Source(IPv4.pton("10.1.2.0"),24),
 			'anyport_1':   FlowAnyPort(NumericOperator.EQ | NumericOperator.GT,25),
 			'anyport_2':   FlowAnyPort(NumericOperator.EQ | NumericOperator.LT,80),
 		}
@@ -76,8 +79,8 @@ class TestFlow (unittest.TestCase):
 
 	def test_nlri (self):
 		components = {
-			'destination': Flow4Destination("192.0.2.0",24),
-			'source':      Flow4Source("10.1.2.0",24),
+			'destination': Flow4Destination(IPv4.pton("192.0.2.0"),24),
+			'source':      Flow4Source(IPv4.pton("10.1.2.0"),24),
 			'anyport_1':   FlowAnyPort(NumericOperator.EQ | NumericOperator.GT,25),
 			'anyport_2':   FlowAnyPort(NumericOperator.EQ | NumericOperator.LT,80),
 		}
@@ -105,8 +108,8 @@ class TestFlow (unittest.TestCase):
 
 	def test_compare (self):
 		components = {
-			'destination': Flow4Destination("192.0.2.0",24),
-			'source':      Flow4Source("10.1.2.0",24),
+			'destination': Flow4Destination(IPv4.pton("192.0.2.0"),24),
+			'source':      Flow4Source(IPv4.pton("10.1.2.0"),24),
 			'anyport_1':   FlowAnyPort(NumericOperator.EQ | NumericOperator.GT,25),
 			'anyport_2':   FlowAnyPort(NumericOperator.EQ | NumericOperator.LT,80),
 			'anyport_3':   FlowAnyPort(NumericOperator.EQ,80),
