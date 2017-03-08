@@ -9,6 +9,8 @@ Copyright (c) 2009-2015 Orange. All rights reserved.
 
 import unittest
 
+from exabgp.util import chr_
+
 from exabgp.reactor.protocol import AFI, SAFI
 
 from exabgp.bgp.message.update import Attributes
@@ -198,9 +200,9 @@ class TestNLRIs(unittest.TestCase):
                         Labels([42], True),
                         IP.create("1.1.1.1"))
 
-        # Esi
+        # ESI
         nlri1 = EVPNMAC(RouteDistinguisher.fromElements("42.42.42.42", 5),
-                        ESI(['1' for _ in range(0,10)]),
+                        ESI(b''.join(chr_(1) for _ in range(0,10))),
                         EthernetTag(111),
                         MAC("01:02:03:04:05:06"), 6*8,
                         Labels([42], True),
