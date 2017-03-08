@@ -9,6 +9,10 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import unittest
 
+from exabgp.util import chr_
+from exabgp.util import ord_
+from exabgp.util import concat_strs
+
 from exabgp.bgp.message.update.nlri import Flow
 from exabgp.bgp.message.update.nlri.flow import Flow4Source
 from exabgp.bgp.message.update.nlri.flow import Flow4Destination
@@ -64,8 +68,8 @@ class TestFlow (unittest.TestCase):
 		message = b""
 		for key in ['destination','source','anyport_1','anyport_2']:
 			flow.add(components[key])
-		message = chr(len(message)) + message
 			message += data_from_body(messages[key])
+		message = chr_(len(message)) + message
 		# flow.add(to_FlowAction(65000,False,False))
 		flow.pack()
 		# print [hex(ord(_)) for _ in flow]
@@ -88,13 +92,13 @@ class TestFlow (unittest.TestCase):
 		message = b""
 		for key in ['destination','source','anyport_1','anyport_2']:
 			flow.add(components[key])
-		message = chr(len(message)) + message
 			message += data_from_body(messages[key])
+		message = chr_(len(message)) + message
 		# policy.add(to_FlowAction(65000,False,False))
 		flow = flow.pack()
 		if message[0] != flow[0]:
-			self.fail('size mismatch %s %s\n' % (ord(flow[0]),ord(message[0])))
-		if len(flow) != ord(flow[0]) + 1:
+			self.fail('size mismatch %s %s\n' % (ord_(flow[0]),ord_(message[0])))
+		if len(flow) != ord_(flow[0]) + 1:
 			self.fail('invalid size for message')
 		# if message[1:] != flow[1:]:
 		# 	self.fail('content mismatch\n%s\n%s' % (['0x%02X' % ord(_) for _ in flow],['0x%02X' % ord(_) for _ in message]))
