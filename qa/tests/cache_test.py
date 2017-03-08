@@ -11,6 +11,9 @@ import unittest
 
 import time
 from exabgp.util.cache import Cache
+from exabgp.vendoring import six
+
+from six.moves import xrange
 
 
 class TestCache (unittest.TestCase):
