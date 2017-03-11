@@ -149,19 +149,20 @@ class Capabilities (dict):
 		capabilities = Capabilities()
 
 		option_len = ord(data[0])
-		# XXX: FIXME: check the length of data
-		if option_len:
-			data = data[1:]
-			while data:
-				key,value,data = _key_values('parameter',data)
-				# Paramaters must only be sent once.
-				if key == Parameter.AUTHENTIFICATION_INFORMATION:
-					raise Notify(2,5)
+		if not option_len:
+			return capabilities
 
-				if key == Parameter.CAPABILITIES:
-					while value:
-						capability,capv,value = _key_values('capability',value)
-						capabilities[capability] = Capability.unpack(capability,capabilities,capv)
-				else:
-					raise Notify(2,0,'Unknow OPEN parameter %s' % hex(key))
+		data = data[1:option_len+1]
+		while data:
+			key,value,data = _key_values('parameter',data)
+			# Paramaters must only be sent once.
+			if key == Parameter.AUTHENTIFICATION_INFORMATION:
+				raise Notify(2,5)
+
+			if key == Parameter.CAPABILITIES:
+				while value:
+					capability,capv,value = _key_values('capability',value)
+					capabilities[capability] = Capability.unpack(capability,capabilities,capv)
+			else:
+				raise Notify(2,0,'Unknow OPEN parameter %s' % hex(key))
 		return capabilities

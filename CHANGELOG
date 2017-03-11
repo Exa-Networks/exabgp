@@ -8,6 +8,7 @@ Version 3.4.19
     requested by: adrian62
  * Fix encoding of Flow Label requiring more than 2 bytes
     reported by: BLAKEMMM
+ * Fix decoding of capability (was potentially over reading)
 
 Version 3.4.18
  * Backport: backhole community (RFC 7999)
