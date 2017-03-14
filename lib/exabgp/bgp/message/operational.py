@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-operational/__init__.py
+operational.py
 
 Created by Thomas Mangin on 2013-09-01.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.

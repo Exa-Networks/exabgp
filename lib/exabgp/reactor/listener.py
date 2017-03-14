@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-listen.py
+listener.py
 
 Created by Thomas Mangin on 2013-07-11.
 Copyright (c) 2013-2015 Exa Networks. All rights reserved.
@@ -74,7 +74,7 @@ class Listener (object):
 			self._sockets[sock] = (local_ip.top(),local_port,peer_ip.top(),md5)
 		except socket.error as exc:
 			if exc.args[0] == errno.EADDRINUSE:
-				raise BindingError('could not listen on %s:%d, the port already in use by another application' % (local_ip,local_port))
+				raise BindingError('could not listen on %s:%d, the port may already be in use by another application' % (local_ip,local_port))
 			elif exc.args[0] == errno.EADDRNOTAVAIL:
 				raise BindingError('could not listen on %s:%d, this is an invalid address' % (local_ip,local_port))
 			raise NetworkError(str(exc))

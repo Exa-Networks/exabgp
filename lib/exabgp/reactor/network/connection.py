@@ -117,7 +117,7 @@ class Connection (object):
 			try:
 				while True:
 					if self.defensive and random.randint(0,2):
-						raise socket.error(errno.EAGAIN,'raising network error in purpose')
+						raise socket.error(errno.EAGAIN,'raising network error on purpose')
 
 					read = self.io.recv(number)
 					if not read:
@@ -173,7 +173,7 @@ class Connection (object):
 			try:
 				while True:
 					if self.defensive and random.randint(0,2):
-						raise socket.error(errno.EAGAIN,'raising network error in purpose')
+						raise socket.error(errno.EAGAIN,'raising network error on purpose')
 
 					# we can not use sendall as in case of network buffer filling
 					# it does raise and does not let you know how much was sent

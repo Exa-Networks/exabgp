@@ -56,7 +56,7 @@ class NODE(BGPLS):
 		nodes = ', '.join(d.json() for d in self.node_ids)
 		content = ', '.join([
 			'"ls-nlri-type": 1',
-			'"l3-routing-toplogy": %s' % self.domain,
+			'"l3-routing-topology": %s' % self.domain,
 			'"protocol-id": %s' % self.proto_id,
 			'"node-descriptors": { %s }' % nodes,
 			'"nexthop": "%s"' % self.nexthop,

@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-path.py
+inet.py
 
 Created by Thomas Mangin on 2014-06-27.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
@@ -139,7 +139,7 @@ class INET (NLRI):
 		size = CIDR.size(mask)
 
 		if len(bgp) < size:
-			raise Notify(3,10,'could not decode route with AFI %d sand SAFI %d' % (afi,safi))
+			raise Notify(3,10,'could not decode route with AFI %d and SAFI %d' % (afi,safi))
 
 		network,bgp = bgp[:size],bgp[size:]
 

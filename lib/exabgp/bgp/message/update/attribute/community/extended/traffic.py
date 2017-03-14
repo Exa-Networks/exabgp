@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-encapsulation.py
+traffic.py
 
 Created by Thomas Mangin on 2014-06-21.
 Copyright (c) 2014-2015 Exa Networks. All rights reserved.

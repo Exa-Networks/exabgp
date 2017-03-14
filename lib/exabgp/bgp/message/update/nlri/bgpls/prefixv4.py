@@ -1,5 +1,5 @@
 """
-node.py
+prefixv4.py
 
 Created by Evelio Vila on 2016-11-26. eveliovila@gmail.com
 Copyright (c) 2009-2016 Exa Networks. All rights reserved.
@@ -115,7 +115,7 @@ class PREFIXv4(BGPLS):
 		nodes = ', '.join(d.json() for d in self.local_node)
 		content = ', '.join([
 			'"ls-nlri-type": 3',
-			'"l3-routing-toplogy": %s' % self.domain,
+			'"l3-routing-topology": %s' % self.domain,
 			'"protocol-id": %s' % self.proto_id,
 			'"node-descriptors": { %s }' % nodes,
 			self.prefix.json(),

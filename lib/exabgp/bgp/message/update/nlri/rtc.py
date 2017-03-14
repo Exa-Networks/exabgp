@@ -94,7 +94,7 @@ class RTC (NLRI):
 			return cls(afi,safi,action,ASN(0),None),bgp[1:]
 
 		if length < 8*4:
-			raise Exception("incorrect RT lenght: %d (should be >=32,<=96)" % length)
+			raise Exception("incorrect RT length: %d (should be >=32,<=96)" % length)
 
 		# We are reseting the flags on the RouteTarget extended
 		# community, because they do not make sense for an RTC route

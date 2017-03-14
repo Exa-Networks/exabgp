@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-peer.py
+bmp.py
 
 Created by Thomas Mangin on 2013-02-20.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.

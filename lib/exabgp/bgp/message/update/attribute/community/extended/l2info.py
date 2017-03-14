@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-encapsulation.py
+l2info.py
 
 Created by Thomas Mangin on 2014-06-20.
 Copyright (c) 2014-2015 Orange. All rights reserved.

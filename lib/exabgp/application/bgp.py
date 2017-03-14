@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-exabgp.py
+bgp.py
 
 Created by Thomas Mangin on 2009-08-30.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
@@ -296,9 +296,9 @@ def run (env, comment, configurations, pid=0):
 
 	notice = ''
 	if os.path.isdir(profile_name):
-		notice = 'profile can not use this filename as outpout, it is not a directory (%s)' % profile_name
+		notice = 'profile can not use this filename as output, it is not a directory (%s)' % profile_name
 	if os.path.exists(profile_name):
-		notice = 'profile can not use this filename as outpout, it already exists (%s)' % profile_name
+		notice = 'profile can not use this filename as output, it already exists (%s)' % profile_name
 
 	if not notice:
 		logger.reactor('profiling ....')

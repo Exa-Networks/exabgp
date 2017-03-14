@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-pmsi_tunnel.py
+pmsi.py
 
 Created by Thomas Morin on 2014-06-10.
 Copyright (c) 2014-2015 Orange. All rights reserved.

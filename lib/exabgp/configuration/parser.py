@@ -26,7 +26,7 @@ def boolean (tokeniser, default):
 		return False
 	if status in ('unset',):
 		return None
-	raise ValueError('invalid value for a boolean')
+	raise ValueError('invalid value (%s) for a boolean' % status)
 
 
 def port (tokeniser):
@@ -39,7 +39,7 @@ def port (tokeniser):
 	except ValueError:
 		raise ValueError('"%s" is an invalid port' % value)
 	if value < 0:
-		raise ValueError('the port must positive')
+		raise ValueError('the port must be positive')
 	if value >= pow(2,16):
 		raise ValueError('the port must be smaller than %d' % pow(2,16))
 	return value

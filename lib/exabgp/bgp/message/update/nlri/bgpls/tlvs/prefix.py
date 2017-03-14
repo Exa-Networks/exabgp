@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-node.py
+prefix.py
 
 Created by Evelio Vila on 2016-11-26. eveliovila@gmail.com
 Copyright (c) 2009-2016 Exa Networks. All rights reserved.
@@ -79,5 +79,3 @@ class Prefix (object):
 
 	def pack (self):
 		return self._packed
-
-
