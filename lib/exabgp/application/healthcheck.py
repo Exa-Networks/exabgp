@@ -446,7 +446,7 @@ def loop(options):
             logger.info("service down, deleting loopback ips")
             remove_ips(options.ips, options.label, options.sudo)
         # if ips was deleted with dyn ip, re-setup them
-        if target == states.UP and options.ips_deleted and options.ip_setup:
+        if target == states.UP and options.ip_dynamic and options.ip_setup:
             logger.info("service up, restoring loopback ips")
             setup_ips(options.ips, options.label, options.sudo)
 
