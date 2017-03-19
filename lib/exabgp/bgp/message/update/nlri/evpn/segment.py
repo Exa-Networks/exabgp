@@ -93,7 +93,7 @@ class EthernetSegment (EVPN):
 		iplen = ord_(data[18])
 
 		if iplen not in (32,128):
-			raise Notify(3,5,"IP field length is given as %d in current Segment, expecting 32 (IPv4) or 128 (IPv6) bits" % iplen)
+			raise Notify(3,5,"IP length field is given as %d in current Segment, expecting 32 (IPv4) or 128 (IPv6) bits" % iplen)
 
 		ip = IP.unpack(data[19:19+(iplen/8)])
 

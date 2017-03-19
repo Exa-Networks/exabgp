@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-Enumeration.py
+enumeration.py
 
 Created by Thomas Mangin on 2013-03-18.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.

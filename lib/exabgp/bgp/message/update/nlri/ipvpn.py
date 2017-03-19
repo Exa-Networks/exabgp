@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-bgp.py
+ipvpn.py
 
 Created by Thomas Mangin on 2012-07-08.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.

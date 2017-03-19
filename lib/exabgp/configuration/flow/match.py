@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-parse_match.py
+match.py
 
 Created by Thomas Mangin on 2015-06-22.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.

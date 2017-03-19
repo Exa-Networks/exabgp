@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-parser.py
+tojson.py
 
 Created by Thomas Mangin on 2014-12-22.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.

@@ -1,5 +1,5 @@
 """
-node.py
+link.py
 
 Created by Evelio Vila on 2016-11-26. eveliovila@gmail.com
 Copyright (c) 2009-2016 Exa Networks. All rights reserved.
@@ -167,7 +167,7 @@ class LINK(BGPLS):
 		interface_addrs = ', '.join(d.json() for d in self.iface_addrs)
 		neighbor_addrs = ', '.join(d.json() for d in self.neigh_addrs)
 		content = '"ls-nlri-type": 2, '
-		content += '"l3-routing-toplogy": "%s", ' % self.domain
+		content += '"l3-routing-topology": "%s", ' % self.domain
 		content += '"protocol-id": %d, ' % self.proto_id
 		content += '"local-node-descriptors": { %s }, ' % local
 		content += '"remote-node-descriptors": { %s }, ' % remote

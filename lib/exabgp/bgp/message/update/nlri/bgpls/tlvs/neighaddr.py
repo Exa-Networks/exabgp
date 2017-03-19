@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-node.py
+neighaddr.py
 
 Created by Evelio Vila on 2016-11-26. eveliovila@gmail.com
 Copyright (c) 2009-2016 Exa Networks. All rights reserved.
@@ -21,7 +21,7 @@ from exabgp.util import ord_
 #   into their routing or forwarding table because this can lead to
 #   forwarding loops when interacting with systems that do not support
 #   this sub-TLV.
-# ================================================================== NeighborAddress 
+# ================================================================== NeighborAddress
 
 class NeighAddr (object):
 
@@ -77,5 +77,3 @@ class NeighAddr (object):
 
 	def pack (self):
 		return self._packed
-
-

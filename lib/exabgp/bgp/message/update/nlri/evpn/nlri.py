@@ -1,5 +1,5 @@
 """
-evpn.py
+nlri.py
 
 Created by Thomas Morin on 2014-06-23.
 Copyright (c) 2014-2015 Orange. All rights reserved.
