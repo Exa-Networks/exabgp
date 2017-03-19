@@ -11,14 +11,7 @@ from exabgp.configuration.neighbor import ParseNeighbor
 
 
 class ParseTemplate (Section):
-	syntax = \
-		'template <name> {\n' \
-		'   <neighbor commands>\n' \
-		'}'
-
-	known = ParseNeighbor.known
-	action = ParseNeighbor.action
-	default = ParseNeighbor.default
+	syntax = ''
 
 	name = 'template'
 
@@ -29,12 +22,7 @@ class ParseTemplate (Section):
 		self._names = []
 
 	def pre (self):
-		named = self.tokeniser.line[1]
-		self.check_name(named)
-		self.scope.enter(named)
-		self.scope.to_context()
 		return True
 
 	def post (self):
-		self.scope.leave()
 		return True

@@ -69,9 +69,9 @@ class Scope (Error):
 					self.throw('can not recursively copy this type of data')
 
 		for inherit in returned.get('inherit',[]):
-			if inherit not in self._all['template']:
+			if inherit not in self._all['template'].get('neighbor',{}):
 				self.throw('invalid template name referenced')
-			transfer(self._all['template'][inherit],returned)
+			transfer(self._all['template']['neighbor'][inherit],returned)
 
 		return returned
 
