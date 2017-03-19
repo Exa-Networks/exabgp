@@ -5,6 +5,7 @@ Version explained:
 
 Version 4.0.0
  * Change: the configuration format is not compatible with ExaBGP 3.x
+ * Change: BMP support is deprecated for BGP-LS
  * Change: move and install healthcheck in bin
  * Change: removed old environment support ( DEBUG_* )
  * Change: configuration logging is now disabled by default
