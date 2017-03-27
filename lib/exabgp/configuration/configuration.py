@@ -29,6 +29,7 @@ from exabgp.configuration.flow import ParseFlow
 from exabgp.configuration.flow import ParseFlowRoute
 from exabgp.configuration.flow import ParseFlowThen
 from exabgp.configuration.flow import ParseFlowMatch
+from exabgp.configuration.flow import ParseFlowScope
 from exabgp.configuration.l2vpn import ParseL2VPN
 from exabgp.configuration.l2vpn import ParseVPLS
 from exabgp.configuration.operational import ParseOperational
@@ -115,7 +116,8 @@ class Configuration (_Configuration):
 		self.flow_route   = ParseFlowRoute   (self.tokeniser,self.scope,self.error,self.logger)
 		self.flow_match   = ParseFlowMatch   (self.tokeniser,self.scope,self.error,self.logger)
 		self.flow_then    = ParseFlowThen    (self.tokeniser,self.scope,self.error,self.logger)
-		self.l2vpn        = ParseL2VPN       (self.tokeniser,self.scope,self.error,self.logger)
+		self.flow_scope   = ParseFlowScope   (self.tokeniser,self.scope,self.error,self.logger)
+                self.l2vpn        = ParseL2VPN       (self.tokeniser,self.scope,self.error,self.logger)
 		self.vpls         = ParseVPLS        (self.tokeniser,self.scope,self.error,self.logger)
 		self.operational  = ParseOperational (self.tokeniser,self.scope,self.error,self.logger)
 
@@ -220,6 +222,7 @@ class Configuration (_Configuration):
 				'sections': {
 					'match': self.flow_match.name,
 					'then':  self.flow_then.name,
+                                        'scope': self.flow_scope.name,
 				},
 			},
 			self.flow_match.name: {
@@ -234,6 +237,12 @@ class Configuration (_Configuration):
 				'sections': {
 				},
 			},
+                        self.flow_scope.name: {
+                                'class':    self.flow_scope,
+                                'commands': self.flow_scope.known.keys(),
+                                'sections': {
+                                },
+                        },
 			self.l2vpn.name: {
 				'class':    self.l2vpn,
 				'commands': self.l2vpn.known.keys(),
@@ -284,7 +293,8 @@ class Configuration (_Configuration):
 		self.flow_route.clear()
 		self.flow_match.clear()
 		self.flow_then.clear()
-		self.l2vpn.clear()
+	        self.flow_scope.clear()	
+                self.l2vpn.clear()
 		self.vpls.clear()
 		self.operational.clear()
 
