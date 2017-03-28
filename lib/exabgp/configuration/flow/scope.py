@@ -7,12 +7,12 @@ Created by Stephane Litkowski on 2017-02-24.
 
 from exabgp.configuration.core import Section
 
-from exabgp.configuration.flow.parser import interface_set 
+from exabgp.configuration.flow.parser import interface_set
 
 
 class ParseFlowScope (Section):
 	definition = [
-		'interface-set transitive:input:1234:1234'	
+		'interface-set transitive:input:1234:1234'
 	]
 
 	syntax = \
@@ -21,7 +21,7 @@ class ParseFlowScope (Section):
 		'}' % ';\n  '.join(definition)
 
 	known = {
-		'interface-set':              interface_set,
+		'interface-set':	interface_set,
 	}
 
 	# 'community','extended-community'

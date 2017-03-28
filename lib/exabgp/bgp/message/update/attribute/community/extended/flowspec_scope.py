@@ -23,15 +23,18 @@ class InterfaceSet(ExtendedCommunity):
 
 	__slots__ = ['trans', 'asn','target','direction']
 
+	names = {
+		1:	'input',
+		2:	'output',
+		3:	'input-output',
+	}
+
 	def __init__ (self, trans, asn, target, direction, community=None):
 		self.asn = asn
 		self.target = target
-		self.direction = direction	
-		if (trans == 'transitive'):
-			self.transitive = True
-		else:
-			self.transitive = False
-		new_target =  (direction << 14) + target	
+		self.direction = direction
+		self.transitive = trans	
+		new_target =  (direction << 14) + target
 		ExtendedCommunity.__init__(
 			self,
 			community if community is not None else pack(
@@ -42,14 +45,7 @@ class InterfaceSet(ExtendedCommunity):
 		)
 
 	def __repr__ (self):
-		if (self.direction == 1 ):
-			str_direction = 'input'
-		elif (self.direction == 2 ):
-			str_direction = 'output'	
-		elif (self.direction == 3):
-			str_direction = 'input-output'
-		else:
-			str_direction = str(self.direction)	
+		str_direction = self.names[self.direction] 
 		return "interface-set:%s:%s:%s" % (\
 			str_direction,str(self.asn),str(self.target))
 
@@ -57,5 +53,5 @@ class InterfaceSet(ExtendedCommunity):
 	def unpack (data):
 		asn,target = unpack('!LH',data[2:8])
 		direction = target >> 14
-		target = target & 0x1FFF	
-		return InterfaceSet(0,ASN(asn),target,direction,data[:8])
+		target = target & 0x1FFF
+		return InterfaceSet(False,ASN(asn),target,direction,data[:8])

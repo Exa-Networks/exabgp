@@ -28,11 +28,11 @@ class ParseFlow (Section):
 
 	known = dict(ParseFlowMatch.known)
 	known.update(ParseFlowThen.known)
-        known.update(ParseFlowScope.known)
+	known.update(ParseFlowScope.known)
 
 	action = dict(ParseFlowMatch.action)
 	action.update(ParseFlowThen.action)
-        action.update(ParseFlowScope.action)
+	action.update(ParseFlowScope.action)
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)

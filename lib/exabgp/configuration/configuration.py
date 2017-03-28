@@ -123,7 +123,7 @@ class Configuration (_Configuration):
 		self.flow_route          = ParseFlowRoute        (*params)
 		self.flow_match          = ParseFlowMatch        (*params)
 		self.flow_then           = ParseFlowThen         (*params)
-		self.flow_scope          = ParseFlowScope	 (*params) 		
+		self.flow_scope          = ParseFlowScope	 (*params)
 		self.l2vpn               = ParseL2VPN            (*params)
 		self.vpls                = ParseVPLS             (*params)
 		self.operational         = ParseOperational      (*params)
@@ -236,7 +236,7 @@ class Configuration (_Configuration):
 				'sections': {
 					'match': self.flow_match.name,
 					'then':  self.flow_then.name,
-                                        'scope': self.flow_scope.name,
+					'scope': self.flow_scope.name,
 				},
 			},
 			self.flow_match.name: {
@@ -251,11 +251,11 @@ class Configuration (_Configuration):
 				'sections': {
 				},
 			},
-                        self.flow_scope.name: {
-                                'class':    self.flow_scope,
-                                'commands': self.flow_scope.known.keys(),
-                                'sections': {
-                                },
+			self.flow_scope.name: {
+				'class':    self.flow_scope,
+				'commands': self.flow_scope.known.keys(),
+				'sections': {
+				},
                         },
 			self.l2vpn.name: {
 				'class':    self.l2vpn,
@@ -307,7 +307,7 @@ class Configuration (_Configuration):
 		self.flow_route.clear()
 		self.flow_match.clear()
 		self.flow_then.clear()
-	        self.flow_scope.clear()	
+		self.flow_scope.clear()	
                 self.l2vpn.clear()
 		self.vpls.clear()
 		self.operational.clear()
