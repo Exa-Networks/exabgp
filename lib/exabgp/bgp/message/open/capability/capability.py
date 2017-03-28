@@ -6,13 +6,18 @@ Created by Thomas Mangin on 2012-07-17.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+import sys
+
 # Do not create a dependency loop by using exabgp.bgp.message as import
+from exabgp.util import ord_
 from exabgp.bgp.message.notification import Notify
 
 
 class _CapabilityCode (int):
 	_cache = dict()
-	__slots__ = ['NAME','_cache']
+
+	if sys.version_info[0]<3:
+		__slots__ = ['NAME','_cache']
 
 	RESERVED                 = 0x00  # [RFC5492]
 	MULTIPROTOCOL            = 0x01  # [RFC2858]
@@ -35,7 +40,7 @@ class _CapabilityCode (int):
 
 	HOSTNAME                 = 0xB8  # ExaBGP only ...
 	OPERATIONAL              = 0xB9  # ExaBGP only ...
-	EXTENDED_MESSAGE         = 0xBA  # ExaBGP only ... No yet defined by draft http://tools.ietf.org/html/draft-ietf-idr-extended-messages-11.txt
+	EXTENDED_MESSAGE         = 0xBA  # ExaBGP only ... No yet defined by draft https://tools.ietf.org/html/draft-ietf-idr-bgp-extended-messages-20
 
 	# Internal
 	AIGP = 0xFF00
@@ -91,7 +96,8 @@ class _CapabilityCode (int):
 class Capability (object):
 
 	class CODE (int):
-		__slots__ = []
+		if sys.version_info[0]<3:
+			__slots__ = []
 
 		RESERVED                 = _CapabilityCode(_CapabilityCode.RESERVED)
 		MULTIPROTOCOL            = _CapabilityCode(_CapabilityCode.MULTIPROTOCOL)
@@ -144,7 +150,7 @@ class Capability (object):
 
 	@staticmethod
 	def hex (data):
-		return '0x' + ''.join('%02x' % ord(_) for _ in data)
+		return '0x' + b''.join('%02x' % ord_(_) for _ in data)
 
 	@classmethod
 	def unknown (cls, klass):

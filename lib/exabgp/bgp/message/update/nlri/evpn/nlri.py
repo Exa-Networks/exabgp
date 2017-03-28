@@ -1,5 +1,5 @@
 """
-evpn.py
+nlri.py
 
 Created by Thomas Morin on 2014-06-23.
 Copyright (c) 2014-2015 Orange. All rights reserved.
@@ -12,6 +12,7 @@ from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
+from exabgp.util import ord_
 from exabgp.bgp.message import OUT
 
 from exabgp.bgp.message.update.nlri import NLRI
@@ -40,7 +41,7 @@ class EVPN (NLRI):
 
 	def __init__ (self, action=OUT.UNSET, addpath=None):
 		NLRI.__init__(self, AFI.l2vpn, SAFI.evpn, action)
-		self._packed = ''
+		self._packed = b''
 
 	def index(self):
 		return NLRI._index(self) + self.pack()
@@ -58,7 +59,7 @@ class EVPN (NLRI):
 		return "evpn:%s:" % (self.registered_evpn.get(self.CODE,self).SHORT_NAME.lower())
 
 	def __str__ (self):
-		return "evpn:%s:%s" % (self.registered_evpn.get(self.CODE,self).SHORT_NAME.lower(),'0x' + ''.join('%02x' % ord(_) for _ in self._packed))
+		return "evpn:%s:%s" % (self.registered_evpn.get(self.CODE,self).SHORT_NAME.lower(),'0x' + ''.join('%02x' % ord_(_) for _ in self._packed))
 
 	def __repr__ (self):
 		return str(self)
@@ -82,8 +83,8 @@ class EVPN (NLRI):
 
 	@classmethod
 	def unpack_nlri (cls, afi, safi, bgp, action, addpath):
-		code = ord(bgp[0])
-		length = ord(bgp[1])
+		code = ord_(bgp[0])
+		length = ord_(bgp[1])
 
 		if code in cls.registered_evpn:
 			klass = cls.registered_evpn[code].unpack(bgp[2:length+2])
@@ -96,7 +97,7 @@ class EVPN (NLRI):
 		return klass,bgp[length+2:]
 
 	def _raw (self):
-		return ''.join('%02X' % ord(_) for _ in self.pack())
+		return ''.join('%02X' % ord_(_) for _ in self.pack())
 
 
 class GenericEVPN (EVPN):

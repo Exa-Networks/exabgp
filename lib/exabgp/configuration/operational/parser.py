@@ -1,10 +1,12 @@
 # encoding: utf-8
 """
-parse_operational.py
+operational/__init__.py
 
 Created by Thomas Mangin on 2015-06-23.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
+
+import sys
 
 from exabgp.util.ip import isipv4
 
@@ -16,6 +18,10 @@ from exabgp.bgp.message.operational import MAX_ADVISORY
 from exabgp.bgp.message.operational import Advisory
 from exabgp.bgp.message.operational import Query
 from exabgp.bgp.message.operational import Response
+
+
+if sys.version_info > (3,):
+	long = int
 
 
 def _operational (klass, parameters, tokeniser):

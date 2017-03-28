@@ -134,7 +134,7 @@ class Processes (object):
 					# record respawing
 					self._respawning[process] = {around_now: 1}
 
-		except (subprocess.CalledProcessError,OSError,ValueError),exc:
+		except (subprocess.CalledProcessError,OSError,ValueError) as exc:
 			self._broken.append(process)
 			self.logger.processes("Could not start process %s" % process)
 			self.logger.processes("reason: %s" % str(exc))
@@ -189,7 +189,7 @@ class Processes (object):
 							if raw == '':
 								raise IOError('Child process died')
 							yield (process,formated(line))
-					except IOError,exc:
+					except IOError as exc:
 						if not exc.errno or exc.errno in error.fatal:
 							# if the program exists we can get an IOError with errno code zero !
 							self.logger.processes("Issue with the process, terminating it and restarting it")
@@ -216,7 +216,7 @@ class Processes (object):
 		while True:
 			try:
 				self._process[process].stdin.write('%s\n' % string)
-			except IOError,exc:
+			except IOError as exc:
 				self._broken.append(process)
 				if exc.errno == errno.EPIPE:
 					self._broken.append(process)
@@ -230,7 +230,7 @@ class Processes (object):
 
 		try:
 			self._process[process].stdin.flush()
-		except IOError,exc:
+		except IOError as exc:
 			# AFAIK, the buffer should be flushed at the next attempt.
 			self.logger.processes("Error received while FLUSHING data to helper program, retrying (%s)" % errstr(exc))
 

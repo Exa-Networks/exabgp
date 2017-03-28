@@ -21,7 +21,7 @@ written to use `self.stdout.write()`,
 
 - Catherine Devlin, Jan 03 2008 - catherinedevlin.blogspot.com
 
-mercurial repository at http://www.assembla.com/wiki/show/python-cmd2
+mercurial repository at https://www.assembla.com/wiki/show/python-cmd2
 """
 import cmd
 import re
@@ -38,14 +38,19 @@ import glob
 import traceback
 import platform
 import copy
+from exabgp.vendoring import six
 from code import InteractiveConsole, InteractiveInterpreter
 from optparse import make_option
-from exabgp.dep import pyparsing
+from exabgp.vendoring import pyparsing
 
 __version__ = '0.6.8'
 
 if sys.version_info[0] == 2:
     pyparsing.ParserElement.enablePackrat()
+
+if sys.version_info[0]>=3:
+    StandardError = Exception
+
 
 """
 Packrat is causing Python3 errors that I don't understand.
@@ -69,7 +74,7 @@ class OptionParser(optparse.OptionParser):
 
     def print_help(self, *args, **kwargs):
         try:
-            print (self._func.__doc__)
+            print(self._func.__doc__)
         except AttributeError:
             pass
         optparse.OptionParser.print_help(self, *args, **kwargs)
@@ -169,7 +174,7 @@ class PasteBufferError(EnvironmentError):
     if sys.platform[:3] == 'win':
         errmsg = """Redirecting to or from paste buffer requires pywin32
 to be installed on operating system.
-Download from http://sourceforge.net/projects/pywin32/"""
+Download from https://sourceforge.net/projects/pywin32/"""
     elif sys.platform[:3] == 'dar':
         # Use built in pbcopy on Mac OSX
         pass
@@ -202,7 +207,7 @@ if subprocess.mswindows:
             win32clipboard.CloseClipboard()
     except ImportError:
         def get_paste_buffer(*args):
-            raise OSError(pastebufferr % ('pywin32', 'Download from http://sourceforge.net/projects/pywin32/'))
+            raise OSError(pastebufferr % ('pywin32', 'Download from https://sourceforge.net/projects/pywin32/'))
         write_to_paste_buffer = get_paste_buffer
 elif sys.platform == 'darwin':
     can_clip = False
@@ -410,7 +415,7 @@ class Cmd(cmd.Cmd):
     def perror(self, errmsg, statement=None):
         if self.debug:
             traceback.print_exc()
-        print (str(errmsg))
+        print(str(errmsg))
     def pfeedback(self, msg):
         """For printing nonessential feedback.  Can be silenced with `quiet`.
            Inclusion in redirected output is controlled by `feedback_to_output`."""
@@ -1436,7 +1441,7 @@ def cast(current, new):
             return typ(new)
         except Exception:
             pass
-    print ("Problem setting parameter (now %s) to %s; incorrect type?" % (current, new))
+    print("Problem setting parameter (now %s) to %s; incorrect type?" % (current, new))
     return current
 
 class Statekeeper(object):
@@ -1512,25 +1517,25 @@ class Cmd2TestCase(unittest.TestCase):
     def _test_transcript(self, fname, transcript):
         lineNum = 0
         finished = False
-        line = transcript.next()
+        line = six.next(transcript)
         lineNum += 1
         tests_run = 0
         while not finished:
             # Scroll forward to where actual commands begin
             while not line.startswith(self.cmdapp.prompt):
                 try:
-                    line = transcript.next()
+                    line = six.next(transcript)
                 except StopIteration:
                     finished = True
                     break
                 lineNum += 1
             command = [line[len(self.cmdapp.prompt):]]
-            line = transcript.next()
+            line = six.next(transcript)
             # Read the entirety of a multi-line command
             while line.startswith(self.cmdapp.continuation_prompt):
                 command.append(line[len(self.cmdapp.continuation_prompt):])
                 try:
-                    line = transcript.next()
+                    line = six.next(transcript)
                 except StopIteration:
                     raise (StopIteration,
                            'Transcript broke off while reading command beginning at line %d with\n%s'
@@ -1551,7 +1556,7 @@ class Cmd2TestCase(unittest.TestCase):
             while not line.startswith(self.cmdapp.prompt):
                 expected.append(line)
                 try:
-                    line = transcript.next()
+                    line = six.next(transcript)
                 except StopIteration:
                     finished = True
                     break

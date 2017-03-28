@@ -15,6 +15,9 @@ import select
 import socket
 
 from collections import deque
+from exabgp.vendoring import six
+
+from exabgp.util import chr_
 
 from exabgp.protocol.ip import IP
 
@@ -37,7 +40,7 @@ from exabgp.logger import Logger
 
 class Reactor (object):
 	# [hex(ord(c)) for c in os.popen('clear').read()]
-	clear = ''.join([chr(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a']])
+	clear = b''.join([chr_(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a']])
 
 	def __init__ (self, configurations):
 		self.ip = environment.settings().tcp.bind
@@ -103,12 +106,12 @@ class Reactor (object):
 		try:
 			read,_,_ = select.select(sockets+ios,[],[],sleeptime)
 			return read
-		except select.error,exc:
+		except select.error as exc:
 			errno,message = exc.args  # pylint: disable=W0633
 			if errno not in error.block:
 				raise exc
 			return []
-		except socket.error,exc:
+		except socket.error as exc:
 			if exc.errno in error.fatal:
 				raise exc
 			return []
@@ -145,7 +148,7 @@ class Reactor (object):
 				if neighbor.listen:
 					self.listener.listen(neighbor.md5_ip,neighbor.peer_address,neighbor.listen,neighbor.md5_password,neighbor.ttl_in)
 					self.logger.reactor('Listening for BGP session(s) on %s:%d%s' % (neighbor.md5_ip,neighbor.listen,' with MD5' if neighbor.md5_password else ''))
-		except NetworkError,exc:
+		except NetworkError as exc:
 			self.listener = None
 			if os.geteuid() != 0 and self.port <= 1024:
 				self.logger.reactor('Can not bind to %s:%d, you may need to run ExaBGP as root' % (self.ip,self.port),'critical')
@@ -399,10 +402,10 @@ class Reactor (object):
 				# run it
 				try:
 					self.logger.reactor('callback | running')
-					self._running.next()  # run
+					six.next(self._running)  # run
 					# should raise StopIteration in most case
 					# and prevent us to have to run twice to run one command
-					self._running.next()  # run
+					six.next(self._running)  # run
 				except StopIteration:
 					self._running = None
 					self.logger.reactor('callback | removing')

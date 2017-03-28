@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-community.py
+__init__.py
 
 Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
@@ -28,4 +28,5 @@ from exabgp.bgp.message.update.attribute.community.extended.traffic import Traff
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficNextHop
 from exabgp.bgp.message.update.attribute.community.extended.encapsulation import Encapsulation
 from exabgp.bgp.message.update.attribute.community.extended.chso import ConsistentHashSortOrder
+from exabgp.bgp.message.update.attribute.community.extended.rt_record import RTRecord
 from exabgp.bgp.message.update.attribute.community.extended.flowspec_scope import InterfaceSet

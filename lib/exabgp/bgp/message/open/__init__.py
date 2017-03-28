@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-open.py
+__init__.py
 
 Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
@@ -8,6 +8,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from struct import unpack
 
+from exabgp.util import ord_
+from exabgp.util import concat_strs
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
 
@@ -59,20 +61,20 @@ class Open (Message):
 		self.capabilities = capabilities
 
 	def message (self,negotiated=None):
-		return self._message("%s%s%s%s%s" % (
+		return self._message(concat_strs(
 			self.version.pack(),
-			self.asn.trans(),
+			self.asn.trans().pack(),
 			self.hold_time.pack(),
 			self.router_id.pack(),
 			self.capabilities.pack()
 		))
 
 	def __str__ (self):
-		return "OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]" % (self.version, self.asn, self.hold_time, self.router_id,self.capabilities)
+		return "OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]" % (self.version, self.asn.trans(), self.hold_time, self.router_id,self.capabilities)
 
 	@classmethod
 	def unpack_message (cls, data, _=None):
-		version = ord(data[0])
+		version = ord_(data[0])
 		if version != 4:
 			# Only version 4 is supported nowdays..
 			raise Notify(2,1,data[0])

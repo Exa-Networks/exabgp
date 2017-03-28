@@ -2,9 +2,9 @@
 
 # based on netlink.py at ....
 # https://gforge.inria.fr/scm/viewvc.php/canso/trunk/tools/netlink.py?view=markup&revision=1360&root=mehani&pathrev=1360
-# http://www.linuxjournal.com/article/7356?page=0,1
+# https://www.linuxjournal.com/article/7356?page=0,1
 # http://smacked.org/docs/netlink.pdf
-# RFC 3549
+# RFC 3549 - https://tools.ietf.org/html/rfc3549
 
 import os
 import socket
@@ -205,7 +205,7 @@ class Attributes (object):
 				raw += '\0'*pad
 			return raw
 
-		return ''.join([_encode(k,v) for (k,v) in attributes.items()])
+		return b''.join([_encode(k,v) for (k,v) in attributes.items()])
 
 
 class _Message (object):

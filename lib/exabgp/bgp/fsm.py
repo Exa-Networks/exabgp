@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2010-01-15.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+import sys
+
 # https://en.wikipedia.org/wiki/Border_Gateway_Protocol#Finite-state_machines
 
 # ======================================================== Finite State Machine
@@ -13,7 +15,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 class FSM (object):
 	class STATE (int):
-		__slots__ = ['code']
+		if sys.version_info[0]<3:
+			__slots__ = ['code']
 
 		IDLE        = 0x01
 		ACTIVE      = 0x02

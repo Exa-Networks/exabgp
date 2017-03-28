@@ -30,7 +30,7 @@ def hostname (tokeniser):
 	if not value[-1].isalnum() or value[-1].isdigit():
 		raise ValueError('bad host-name (alphanumeric)')
 	if '..' in value:
-		raise ValueError('bad host-name (double colon)')
+		raise ValueError('bad host-name (double period)')
 	if not all(True if c in ascii_letters + digits + '.-' else False for c in value):
 		raise ValueError('bad host-name (charset)')
 	if len(value) > 255:
@@ -112,12 +112,12 @@ def processes (tokeniser):
 	result = []
 	token = tokeniser()
 	if token != '[':
-		raise ValueError('invalid processes, does not starts with [')
+		raise ValueError('invalid processes, does not start with [')
 
 	while True:
 		token = tokeniser()
 		if not token:
-			raise ValueError('invalid processes, does not ends with ]')
+			raise ValueError('invalid processes, does not end with ]')
 		if token == ']':
 			break
 		if token == ',':

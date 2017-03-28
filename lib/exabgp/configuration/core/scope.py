@@ -69,9 +69,9 @@ class Scope (Error):
 					self.throw('can not recursively copy this type of data')
 
 		for inherit in returned.get('inherit',[]):
-			if inherit not in self._all['template']:
+			if inherit not in self._all['template'].get('neighbor',{}):
 				self.throw('invalid template name referenced')
-			transfer(self._all['template'][inherit],returned)
+			transfer(self._all['template']['neighbor'][inherit],returned)
 
 		return returned
 
@@ -81,7 +81,9 @@ class Scope (Error):
 		self._current[name] = value
 
 	def attribute_add (self, name, data):
-		self._current[name].attributes.add(data)
+		# .add_and_merge() and not .add() is required
+		# flow spec to have multiple keywords adding to the extended-community
+		self._current[name].attributes.add_and_merge(data)
 		if name not in self._added:
 			self._added.add(name)
 

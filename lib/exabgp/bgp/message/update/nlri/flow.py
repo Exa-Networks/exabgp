@@ -15,6 +15,9 @@ from struct import unpack
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.util import chr_
+from exabgp.util import ord_
+from exabgp.util import concat_strs
 from exabgp.bgp.message.direction import OUT
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.cidr import CIDR
@@ -125,7 +128,7 @@ class IPrefix4 (IPrefix,IComponent,IPv4):
 	def pack (self):
 		raw = self.cidr.pack_nlri()
 		# ID is defined in subclasses
-		return "%s%s" % (chr(self.ID),raw)  # pylint: disable=E1101
+		return concat_strs(chr_(self.ID),raw)  # pylint: disable=E1101
 
 	def __str__ (self):
 		return str(self.cidr)
@@ -150,14 +153,14 @@ class IPrefix6 (IPrefix,IComponent,IPv6):
 
 	def pack (self):
 		# ID is defined in subclasses
-		return "%s%s%s%s" % (chr(self.ID),chr(self.cidr.mask),chr(self.offset),self.cidr.pack_ip())  # pylint: disable=E1101
+		return concat_strs(chr_(self.ID),chr_(self.cidr.mask),chr_(self.offset),self.cidr.pack_ip())  # pylint: disable=E1101
 
 	def __str__ (self):
 		return "%s/%s" % (self.cidr,self.offset)
 
 	@classmethod
 	def make (cls, bgp):
-		offset = ord(bgp[1])
+		offset = ord_(bgp[1])
 		prefix,mask = CIDR.decode(AFI.ipv6,bgp[0]+bgp[2:])
 		return cls(prefix,mask,offset), bgp[CIDR.size(mask)+2:]
 
@@ -173,7 +176,7 @@ class IOperation (IComponent):
 	def pack (self):
 		l,v = self.encode(self.value)
 		op = self.operations | _len_to_bit(l)
-		return "%s%s" % (chr(op),v)
+		return concat_strs(chr_(op),v)
 
 	def encode (self, value):
 		raise NotImplementedError('this method must be implemented by subclasses')
@@ -188,20 +191,34 @@ class IOperation (IComponent):
 
 class IOperationByte (IOperation):
 	def encode (self, value):
-		return 1,chr(value)
+		return 1,chr_(value)
 
 	def decode (self, bgp):
-		return ord(bgp[0]),bgp[1:]
+		return ord_(bgp[0]),bgp[1:]
 
 
 class IOperationByteShort (IOperation):
 	def encode (self, value):
 		if value < (1 << 8):
-			return 1,chr(value)
+			return 1,chr_(value)
 		return 2,pack('!H',value)
 
+	# XXX: buggy ?? as it assumes 2 bytes but may be less
 	def decode (self, bgp):
 		return unpack('!H',bgp[:2])[0],bgp[2:]
+
+
+class IOperationByteShortLong (IOperation):
+	def encode (self, value):
+		if value < (1 << 8):
+			return 1,chr(value)
+		if value < (1 << 16):
+			return 2,pack('!H',value)
+		return 4,pack('!L',value)
+
+	# XXX: buggy ?? as it assumes 4 bytes but may be less
+	def decode (self, bgp):
+		return unpack('!L',bgp[:4])[0],bgp[4:]
 
 
 # String representation for Numeric and Binary Tests
@@ -427,7 +444,7 @@ class FlowFragment (IOperationByteShort,BinaryString,IPv4):
 
 
 # draft-raszuk-idr-flow-spec-v6-01
-class FlowFlowLabel (IOperationByteShort,NumericString,IPv6):
+class FlowFlowLabel (IOperationByteShortLong,NumericString,IPv6):
 	ID = 0x0D
 	NAME = 'flow-label'
 	converter = staticmethod(converter(LabelValue))
@@ -541,16 +558,16 @@ class Flow (NLRI):
 			rules[-1].operations |= CommonOperator.EOL
 			# and add it to the last rule
 			if ID not in (FlowDestination.ID,FlowSource.ID):
-				ordered_rules.append(chr(ID))
-			ordered_rules.append(''.join(rule.pack() for rule in rules))
+				ordered_rules.append(chr_(ID))
+			ordered_rules.append(b''.join(rule.pack() for rule in rules))
 
-		components = self.rd.pack() + ''.join(ordered_rules)
+		components = self.rd.pack() + b''.join(ordered_rules)
 
 		l = len(components)
 		if l < 0xF0:
-			return "%s%s" % (chr(l),components)
+			return concat_strs(chr_(l),components)
 		if l < 0x0FFF:
-			return "%s%s" % (pack('!H',l | 0xF000),components)
+			return concat_strs(pack('!H',l | 0xF000),components)
 		raise Notify(3,0,"my administrator attempted to announce a Flow Spec rule larger than encoding allows, protecting the innocent the only way I can")
 
 	def _rules (self):
@@ -590,7 +607,7 @@ class Flow (NLRI):
 					s.append(', '.join('"%s"' % flag for flag in rule.value.named_bits()))
 				else:
 					s.append('"%s"' % rule)
-			string.append(' "%s": [ %s ]' % (rules[0].NAME,''.join(str(_) for _ in s).replace('""','')))
+			string.append(' "%s": [ %s ]' % (rules[0].NAME,b''.join(str(_) for _ in s).replace('""','')))
 		nexthop = ', "next-hop": "%s"' % self.nexthop if self.nexthop is not NoNextHop else ''
 		rd = '' if self.rd is RouteDistinguisher.NORD else ', %s' % self.rd.json()
 		compatibility = ', "string": "%s"' % self.extensive()
@@ -601,10 +618,10 @@ class Flow (NLRI):
 
 	@classmethod
 	def unpack_nlri (cls, afi, safi, bgp, action, addpath):
-		length,bgp = ord(bgp[0]),bgp[1:]
+		length,bgp = ord_(bgp[0]),bgp[1:]
 
 		if length & 0xF0 == 0xF0:  # bigger than 240
-			extra,bgp = ord(bgp[0]),bgp[1:]
+			extra,bgp = ord_(bgp[0]),bgp[1:]
 			length = ((length & 0x0F) << 16) + extra
 
 		if length > len(bgp):
@@ -622,7 +639,7 @@ class Flow (NLRI):
 		seen = []
 
 		while bgp:
-			what,bgp = ord(bgp[0]),bgp[1:]
+			what,bgp = ord_(bgp[0]),bgp[1:]
 
 			if what not in decode.get(afi,{}):
 				raise Notify(3,10,'unknown flowspec component received for address family %d' % what)
@@ -642,7 +659,7 @@ class Flow (NLRI):
 			else:
 				end = False
 				while not end:
-					byte,bgp = ord(bgp[0]),bgp[1:]
+					byte,bgp = ord_(bgp[0]),bgp[1:]
 					end = CommonOperator.eol(byte)
 					operator = CommonOperator.operator(byte)
 					length = CommonOperator.length(byte)

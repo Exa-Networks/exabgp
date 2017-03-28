@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-node.py
+neighaddr.py
 
 Created by Evelio Vila on 2016-11-26. eveliovila@gmail.com
 Copyright (c) 2009-2016 Exa Networks. All rights reserved.
@@ -11,7 +11,7 @@ from struct import unpack
 
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.notification import Notify
-
+from exabgp.util import ord_
 
 #  https://tools.ietf.org/html/rfc5305#section-3.3
 #   This sub-TLV contains a single IPv4 address for a neighboring router
@@ -21,7 +21,7 @@ from exabgp.bgp.message.notification import Notify
 #   into their routing or forwarding table because this can lead to
 #   forwarding loops when interacting with systems that do not support
 #   this sub-TLV.
-# ================================================================== NeighborAddress 
+# ================================================================== NeighborAddress
 
 class NeighAddr (object):
 
@@ -32,7 +32,7 @@ class NeighAddr (object):
 	@classmethod
 	def unpack (cls, data):
 		if len(data) == 4:
-    		# IPv4 address
+			# IPv4 address
 			addr = IP.unpack(data[:4])
 		elif len(data) == 16:
     		# IPv6
@@ -40,7 +40,7 @@ class NeighAddr (object):
 		return cls(addr=addr)
 
 	def json (self):
-    		content = ' '.join([
+		content = ' '.join([
 				'"neighbor-address": "%s"' % self.addr,
 		])
 		return content
@@ -64,7 +64,7 @@ class NeighAddr (object):
 		raise RuntimeError('Not implemented')
 
 	def __str__ (self):
-		return ':'.join('%02X' % ord(_) for _ in self._packed)
+		return ':'.join('%02X' % ord_(_) for _ in self._packed)
 
 	def __repr__ (self):
 		return self.__str__()
@@ -77,5 +77,3 @@ class NeighAddr (object):
 
 	def pack (self):
 		return self._packed
-
-

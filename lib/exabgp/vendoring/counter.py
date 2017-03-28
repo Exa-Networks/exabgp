@@ -52,10 +52,10 @@ class Counter(dict):
 
     '''
     # References:
-    #   http://en.wikipedia.org/wiki/Multiset
-    #   http://www.gnu.org/software/smalltalk/manual-base/html_node/Bag.html
-    #   http://www.demo2s.com/Tutorial/Cpp/0380__set-multiset/Catalog0380__set-multiset.htm
-    #   http://code.activestate.com/recipes/259174/
+    #   https://en.wikipedia.org/wiki/Multiset
+    #   https://www.gnu.org/software/smalltalk/manual-base/html_node/Bag.html
+    #   http://www.demo2s.com/Tutorial/Cpp/0380__set-multiset/Catalog0380__set-multiset.htm (historic)
+    #   https://code.activestate.com/recipes/259174/
     #   Knuth, TAOCP Vol. II section 4.6.3
 
     def __init__(self, iterable=None, **kwds):
@@ -203,7 +203,7 @@ class Counter(dict):
 
     # Multiset-style mathematical operations discussed in:
     #       Knuth TAOCP Volume II section 4.6.3 exercise 19
-    #       and at http://en.wikipedia.org/wiki/Multiset
+    #       and at https://en.wikipedia.org/wiki/Multiset
     #
     # Outputs guaranteed to only include positive counts.
     #

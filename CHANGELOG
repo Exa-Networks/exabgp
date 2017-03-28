@@ -4,6 +4,7 @@ Version explained:
  bug   : increase on bug or incremental changes
 
 Version 4.0.0
+ * Change: the configuration format is not compatible with ExaBGP 3.x
  * Change: move and install healthcheck in bin
  * Change: removed old environment support ( DEBUG_* )
  * Change: configuration logging is now disabled by default
@@ -26,6 +27,7 @@ Version 4.0.0
  * Feature: show route (extensive) can take a neighbor as parameter
     requested by: jtkdpu
  * Feature: allow to run exabgp from python -m exabgp
+ * Feature: support for BGP-LS decoding
  * Change: ExaBGP is now run as user/group exabgp/exabgp with the systemd service file.
     patch by: Vincent Bernat
  * Change: Update are now grouped by default
@@ -56,6 +58,8 @@ Version 4.0.0
  * Change: ttl-security is now called outgoing-ttl
  * Change: the reactor does not exit if there is no peer configured
     patch by: Jordan Gedney
+ * Change: API format for BGP flowspec updates, flowspec updates is now a list of dicts where each dict contains a single flowspec rule
+    patch by: Stacey Sheldon (Corsa)
  * Fix: JSON reporting of VPLS ( endpoint, base, offset, and size were mixed up during printing )
  * Fix: Do shutdown when waiting for a new connection to a peer
  * Fix: Bad ASN enconding when ASN4 is not negotiated
@@ -88,23 +92,23 @@ Version 4.0.0
  * Fix: Flow redirect to nexhop encoding
    reported by: Mickael Marchand (Thank you to Peng Xiao and Nicolas Fevrier for their help)
  * Fix: remove useless PYTHONPATH in sbin/exabgp
-   reported by: Håvard Eidnes
+    reported by: Håvard Eidnes
  * Fix: add semi-colon in syslog ouput
  * Fix: parsing multiple NLRI in flow routes
-   reported by: Dmitry Onuchin
+    reported by: Dmitry Onuchin
  * Fix: bad parsing of flow routes / missing support for exact bit matches
-   reported by: hengchai
-   reported by: Dmitry Onuchin
+    reported by: hengchai
+    reported by: Dmitry Onuchin
  * Fix: reading large buffered data from helper process caused truncation
-   reported by: qqTYXn7
+    reported by: qqTYXn7
  * Fix: better --version output
-   patch by: Ebben Aries
+    patch by: Ebben Aries
  * Fix: mistakenly made a function private breaking some ASN4 code path
     reported by: Victor Sudakov
  * Fix: the ttl-security parameter didn´t really work. Fixed for outgoing connections now.
-   patch by: Borja Marcos
+    patch by: Borja Marcos
  * Fix: AS4Path Message Registration
-   patch by: Adam Twardowski
+    patch by: Adam Twardowski
  * Fix: ASN4 boundary off by one
  * Fix: Bad peer IP when using show routes
     patch by: Wayne Tucker
@@ -125,33 +129,31 @@ Version 4.0.0
  * Feature: Allow single line flow route
     requested by: Pavel Odintsov
  * Feature: add support for rpm packaging
-   patch by: Arun Babu Neelicattu
+    patch by: Arun Babu Neelicattu
  * Feature: manually sending EOR
-   pach by: Charles Ng
+    pach by: Charles Ng
  * Feature: add per neighbor connection port
-   requested by: dbarrosop
+    requested by: dbarrosop
  * Feature: support MIN_TTL for incoming connection (for OS with support - FreeBSD)
-   requested by: Borja Marcos
+    requested by: Borja Marcos
  * Feature: md5-ip allows to override local-address for the MD5 calculations
-   requested by: Bryan Benson
+    requested by: Bryan Benson
  * Feature: allow setting process umask via exabgp.daemon.umask
-   patch by: Bryan Le Gear
+    patch by: Bryan Le Gear
  * Change: Update syslog message format
-   patch by: Brian Johnson
+    patch by: Brian Johnson
  * Fix: flush route api
-   patch by: Brian Johnson
+    patch by: Brian Johnson
  * Feature: Add 'show neighbor status' api
-   patch by: Brian Johnson
+    patch by: Brian Johnson
  * Fix: Broken EOR printing
-   reported by: Pier Carlo Chiodi
+    reported by: Pier Carlo Chiodi
  * Fix: Allow asn4 peer to speak with asn2 only peer
-   patch by: Brian Johnson
+    patch by: Brian Johnson
  * Fix: ExaBGP was crashing when serializing BGP flowspec updates
-   patch by: Stacey Sheldon (Corsa)
- * Change: API format for BGP flowspec updates, flowspec updates is now a list of dicts where each dict contains a single flowspec rule
-   patch by: Stacey Sheldon (Corsa)
+    patch by: Stacey Sheldon (Corsa)
  * Fix: API encoding of IPv4 Unicast EOR messages were being encoded as NLRI updates
-   patch by: Stacey Sheldon (Corsa)
+    patch by: Stacey Sheldon (Corsa)
  * Fix: Update RIB cache families on configuration reload
     patch by: Brian Johnson
  * Change: Update show neighbors output to be parseable by configuration parser

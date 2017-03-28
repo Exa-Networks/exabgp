@@ -8,7 +8,7 @@ Copyright (c) 2014-2016 Exa Networks. All rights reserved.
 
 import binascii
 import itertools
-from exabgp.dep.bitstring import BitArray
+from exabgp.vendoring.bitstring import BitArray
 
 from exabgp.bgp.message.notification import Notify
 
@@ -58,8 +58,8 @@ class NodeFlags(object):
 			hex_rep = hex(int(flag_array, 16))
 			bit_array = BitArray(hex_rep)
 			valid_flags = [''.join(item)+'00' for item in itertools.product('01', repeat=6)]
- 			valid_flags.append('0000')
- 			if bit_array.bin in valid_flags:
+			valid_flags.append('0000')
+			if bit_array.bin in valid_flags:
 				flags = dict(zip(node_flags, bit_array.bin))
 		return cls(nodeflags=flags)
 

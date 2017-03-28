@@ -36,9 +36,9 @@ class TestControl (unittest.TestCase):
 		for filename in self.files:
 			if filename.endswith(self.skip):
 				continue
-			print '-'*80
-			print filename
-			print '='*80
+			print('-'*80)
+			print(filename)
+			print('='*80)
 			sys.stdout.flush()
 			configuration = Configuration([filename,])
 			configuration.reload()

@@ -6,8 +6,10 @@ Created by Thomas Mangin on 2009-09-06.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-import StringIO
+import sys
 import traceback
+
+from exabgp.vendoring.six import StringIO
 
 
 def trace ():

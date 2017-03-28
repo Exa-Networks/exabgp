@@ -53,7 +53,7 @@ from exabgp.configuration.static.mpls import label
 
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
 def pack_int (afi, integer):
-	return ''.join([chr((integer >> (offset * 8)) & 0xff) for offset in range(IP.length(afi)-1,-1,-1)])
+	return b''.join([chr((integer >> (offset * 8)) & 0xff) for offset in range(IP.length(afi)-1,-1,-1)])
 
 
 class ParseStaticRoute (Section):

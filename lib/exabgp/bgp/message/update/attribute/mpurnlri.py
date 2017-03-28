@@ -53,22 +53,22 @@ class MPURNLRI (Attribute,Family):
 				continue
 			mpurnlri.append(nlri.pack(negotiated))
 
-		payload = ''.join([self.afi.pack(), self.safi.pack()])
+		payload = b''.join([self.afi.pack(), self.safi.pack()])
 		header_length = len(payload)
 		for nlri in mpurnlri:
 			if self._len(payload + nlri) > maximum:
 				if len(payload) == header_length or len(payload) > maximum:
 					raise Notify(6, 0, 'attributes size is so large we can not even pack on MPURNLRI')
 				yield self._attribute(payload)
-				payload = ''.join([self.afi.pack(), self.safi.pack(), nlri])
+				payload = b''.join([self.afi.pack(), self.safi.pack(), nlri])
 				continue
-			payload = ''.join([payload, nlri])
+			payload = b''.join([payload, nlri])
 		if len(payload) == header_length or len(payload) > maximum:
 			raise Notify(6, 0, 'attributes size is so large we can not even pack on MPURNLRI')
 		yield self._attribute(payload)
 
 	def pack (self, negotiated):
-		return ''.join(self.packed_attributes(negotiated))
+		return b''.join(self.packed_attributes(negotiated))
 
 	def __len__ (self):
 		raise RuntimeError('we can not give you the size of an MPURNLRI - was it with our witout addpath ?')

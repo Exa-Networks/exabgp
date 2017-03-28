@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-node.py
+ipreach.py
 
 Created by Evelio Vila on 2016-11-26. eveliovila@gmail.com
 Copyright (c) 2009-2016 Exa Networks. All rights reserved.
@@ -10,6 +10,7 @@ from struct import unpack
 import math
 
 from exabgp.protocol.ip import IP
+from exabgp.util import ord_
 
 #   The IP Reachability Information TLV is a mandatory TLV that contains
 #   one IP address prefix (IPv4 or IPv6) originally advertised in the IGP
@@ -56,7 +57,7 @@ class IpReach(object):
 		# fill the rest of the octets with 0 to construct
 		# a 4 octet IP prefix
 		prefix_list = prefix_list + ["0"]*(4 - len(prefix_list))
-		prefix = ".".join(prefix_list)
+		prefix = b".".join(prefix_list)
 
 		return cls(prefix=prefix)
 
@@ -82,7 +83,7 @@ class IpReach(object):
 		raise RuntimeError('Not implemented')
 
 	def __str__ (self):
-		return ':'.join('%02X' % ord(_) for _ in self._packed)
+		return ':'.join('%02X' % ord_(_) for _ in self._packed)
 
 	def __repr__ (self):
 		return self.__str__()
@@ -95,5 +96,3 @@ class IpReach(object):
 
 	def pack (self):
 		return self._packed
-
-

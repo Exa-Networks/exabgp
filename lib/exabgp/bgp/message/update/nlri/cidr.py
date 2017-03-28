@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-prefix.py
+cidr.py
 
 Created by Thomas Mangin on 2013-08-07.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
@@ -10,6 +10,9 @@ import math
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
+from exabgp.util import chr_
+from exabgp.util import ord_
+from exabgp.util import padding
 from exabgp.bgp.message.notification import Notify
 
 
@@ -75,18 +78,17 @@ class CIDR (object):
 		return self._packed[:CIDR.size(self.mask)]
 
 	def pack_nlri (self):
-		return chr(self.mask) + self._packed[:CIDR.size(self.mask)]
+		return chr_(self.mask) + self._packed[:CIDR.size(self.mask)]
 
 	@staticmethod
 	def decode (afi,bgp):
-		mask = ord(bgp[0])
+		mask = ord_(bgp[0])
 		size = CIDR.size(mask)
 
 		if len(bgp) < size+1:
 			raise Notify(3,10,'could not decode CIDR')
 
-		padding = '\0'*(IP.length(afi)-size)
-		return bgp[1:size+1] + padding, mask
+		return bgp[1:size+1] + padding(IP.length(afi)-size), mask
 
 		# data = bgp[1:size+1] + '\x0\x0\x0\x0'
 		# return data[:4], mask
@@ -100,7 +102,7 @@ class CIDR (object):
 		return CIDR.size(self.mask) + 1
 
 	def __hash__ (self):
-		return hash(chr(self.mask)+self._packed)
+		return hash(chr_(self.mask)+self._packed)
 
 for netmask in range(0,129):
 	CIDR._mask_to_bytes[netmask] = int(math.ceil(float(netmask)/8))

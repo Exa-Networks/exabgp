@@ -10,6 +10,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 # pylint: ignore=E131
 # pylama:ignore=E131
 
+import sys
+
 # INET include is required as it perform some AFI/SAFI registration
 from exabgp.bgp.message.update.nlri import INET  # noqa
 
@@ -32,6 +34,8 @@ from exabgp.bgp.message.update.nlri import NLRI
 
 from exabgp.configuration.setup import environment
 from exabgp.logger import Logger
+
+from exabgp.util.test import data_from_body
 
 environment.setup('')
 logger = Logger()
@@ -302,13 +306,13 @@ class TestUpdateDecoding (unittest.TestCase):
 		for asn4,body in bodies:
 			if asn4:
 				continue
-			Update.unpack_message(''.join(chr(_) for _ in body),self.negotiated[asn4])
+			Update.unpack_message(data_from_body(body),self.negotiated[asn4])
 
 	def test_decoding_udpate_asn4 (self):
 		for asn4,body in bodies:
 			if not asn4:
 				continue
-			Update.unpack_message(''.join(chr(_) for _ in body),self.negotiated[asn4])
+			Update.unpack_message(data_from_body(body),self.negotiated[asn4])
 
 if __name__ == '__main__':
 	unittest.main()

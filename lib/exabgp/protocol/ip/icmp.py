@@ -10,7 +10,7 @@ from exabgp.protocol.resource import Resource
 
 
 # ============================================================== ICMP Code Field
-# http://www.iana.org/assignments/icmp-parameters
+# https://www.iana.org/assignments/icmp-parameters
 
 class ICMPType (Resource):
 	NAME = 'icmp type'
@@ -55,7 +55,7 @@ class ICMPType (Resource):
 	names = dict([(r,l) for (l,r) in codes.items()])
 
 
-# http://www.iana.org/assignments/icmp-parameters
+# https://www.iana.org/assignments/icmp-parameters
 class ICMPCode (Resource):
 	NAME = 'icmp code'
 

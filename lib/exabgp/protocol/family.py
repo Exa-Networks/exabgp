@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-address.py
+family.py
 
 Created by Thomas Mangin on 2010-01-19.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
@@ -9,10 +9,12 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
+from exabgp.util import chr_
+from exabgp.util import ord_
 from exabgp.protocol.resource import Resource
 
 # ======================================================================== AFI
-# http://www.iana.org/assignments/address-family-numbers/
+# https://www.iana.org/assignments/address-family-numbers/
 
 
 class AFI (Resource):
@@ -85,7 +87,7 @@ class AFI (Resource):
 
 # ======================================================================= SAFI
 
-# http://www.iana.org/assignments/safi-namespace
+# https://www.iana.org/assignments/safi-namespace
 class SAFI (Resource):
 	undefined = 0               # internal
 	unicast = 1                 # [RFC4760]
@@ -145,11 +147,11 @@ class SAFI (Resource):
 		return str(self)
 
 	def pack (self):
-		return chr(self)
+		return chr_(self)
 
 	@staticmethod
 	def unpack (data):
-		return SAFI(ord(data))
+		return SAFI(ord_(data))
 
 	def has_label (self):
 		return self in (self.nlri_mpls,self.mpls_vpn)

@@ -53,4 +53,4 @@ class Attributes (object):
 				raw += '\0'*pad
 			return raw
 
-		return ''.join([_encode(k,v) for (k,v) in attributes.items()])
+		return b''.join([_encode(k,v) for (k,v) in attributes.items()])

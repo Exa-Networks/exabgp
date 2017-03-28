@@ -8,6 +8,7 @@ Copyright (c) 2013-2015 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.open.capability.capability import Capability
 
+# https://tools.ietf.org/html/draft-ietf-idr-operational-message-00
 # ================================================================== Operational
 #
 
@@ -24,7 +25,7 @@ class Operational (Capability,list):
 		return '{ "name": "operational" }'
 
 	def extract (self):
-		return ['']
+		return [b'']
 
 	@staticmethod
 	def unpack_capability (instance, data, capability=None):  # pylint: disable=W0613

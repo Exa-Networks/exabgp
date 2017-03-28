@@ -53,10 +53,10 @@ class NODE(BGPLS):
 		self.route_d = route_d
 
 	def json (self,compact=None):
-    		nodes = ', '.join(d.json() for d in self.node_ids)
-    		content = ', '.join([
+		nodes = ', '.join(d.json() for d in self.node_ids)
+		content = ', '.join([
 			'"ls-nlri-type": 1',
-			'"l3-routing-toplogy": %s' % self.domain,
+			'"l3-routing-topology": %s' % self.domain,
 			'"protocol-id": %s' % self.proto_id,
 			'"node-descriptors": { %s }' % nodes,
 			'"nexthop": "%s"' % self.nexthop,
@@ -81,7 +81,7 @@ class NODE(BGPLS):
 
 		node_ids = []
 		while values:
-    		# Unpack Node Descriptor Sub-TLVs
+			# Unpack Node Descriptor Sub-TLVs
 			node_id, left = NodeDescriptor.unpack(values, proto_id)
 			node_ids.append(node_id)
 			if left == data:

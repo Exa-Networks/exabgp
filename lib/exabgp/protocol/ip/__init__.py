@@ -142,7 +142,7 @@ class IP (object):
 		return self._packed >= other._packed
 
 	def __hash__ (self):
-		return hash(str(self.__class__.__name__) + self._packed)
+		return hash((self.__class__.__name__, self._packed))
 
 	@classmethod
 	def klass (cls, ip):

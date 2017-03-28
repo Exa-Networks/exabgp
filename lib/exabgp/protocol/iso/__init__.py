@@ -10,7 +10,7 @@ Copyright (c) 2009-2016 Exa Networks. All rights reserved.
 # =========================================================================== ISO
 #
 
-from exabgp.dep.bitstring import BitArray
+from exabgp.vendoring.bitstring import BitArray
 
 class ISO (object):
 

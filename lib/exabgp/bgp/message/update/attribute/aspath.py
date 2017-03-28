@@ -9,6 +9,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import unpack
 from struct import error
 
+from exabgp.util import ord_
+from exabgp.util import concat_strs
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.update.attribute.attribute import Attribute
@@ -36,8 +38,8 @@ class ASPath (Attribute):
 		self.as_set = as_set
 		self.as_cseq = as_conf_sequence if as_conf_sequence is not None else []
 		self.as_cset = as_conf_set if as_conf_set is not None else []
-		self.segments = ''
-		self._packed = {True:'',False:''}
+		self.segments = b''
+		self._packed = {True:b'',False:b''}
 		self.index = index  # the original packed data, use for indexing
 		self._str = ''
 		self._json = {}
@@ -58,11 +60,11 @@ class ASPath (Attribute):
 		if length:
 			if length > 255:
 				return self._segment(seg_type,values[:255],asn4) + self._segment(seg_type,values[255:],asn4)
-			return "%s%s%s" % (chr(seg_type),chr(len(values)),''.join([v.pack(asn4) for v in values]))
-		return ""
+			return concat_strs(chr(seg_type),chr(len(values)),b''.join([v.pack(asn4) for v in values]))
+		return b""
 
 	def _segments (self, asn4):
-		segments = ''
+		segments = b''
 		if self.as_cseq:
 			segments += self._segment(self.AS_CONFED_SEQUENCE,self.as_cseq,asn4)
 		if self.as_cset:
@@ -170,8 +172,8 @@ class ASPath (Attribute):
 		try:
 
 			while data:
-				stype = ord(data[0])
-				slen  = ord(data[1])
+				stype = ord_(data[0])
+				slen  = ord_(data[1])
 
 				if stype not in (ASPath.AS_SET, ASPath.AS_SEQUENCE, ASPath.AS_CONFED_SEQUENCE, ASPath.AS_CONFED_SET):
 					raise Notify(3,11,'invalid AS Path type sent %d' % stype)

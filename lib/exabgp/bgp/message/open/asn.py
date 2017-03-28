@@ -8,8 +8,12 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from struct import pack
 from struct import unpack
+import sys
 
 from exabgp.protocol.resource import Resource
+
+if sys.version_info > (3,):
+	long = int
 
 # =================================================================== ASN
 
@@ -38,8 +42,8 @@ class ASN (Resource):
 
 	def trans (self):
 		if self.asn4():
-			return AS_TRANS.pack()
-		return self.pack()
+			return AS_TRANS
+		return self
 
 	def __repr__ (self):
 		return '%ld' % long(self)

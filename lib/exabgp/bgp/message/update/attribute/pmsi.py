@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-pmsi_tunnel.py
+pmsi.py
 
 Created by Thomas Morin on 2014-06-10.
 Copyright (c) 2014-2015 Orange. All rights reserved.
@@ -11,9 +11,10 @@ from struct import pack
 from struct import unpack
 
 from exabgp.protocol.ip import IPv4
+from exabgp.util import ord_
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
-# http://tools.ietf.org/html/rfc6514#section-5
+# https://tools.ietf.org/html/rfc6514#section-5
 #
 #  +---------------------------------+
 #  |  Flags (1 octet)                |
@@ -87,7 +88,7 @@ class PMSI (Attribute):
 		return len(self.tunnel) + 5  # label:1, tunnel type: 1, MPLS label:3
 
 	def prettytunnel (self):
-		return "0x" + ''.join('%02X' % ord(_) for _ in self.tunnel) if self.tunnel else ''
+		return "0x" + ''.join('%02X' % ord_(_) for _ in self.tunnel) if self.tunnel else ''
 
 	def __repr__ (self):
 		return "pmsi:%s:%s:%s:%s" % (
@@ -128,7 +129,7 @@ class PMSINoTunnel (PMSI):
 	TUNNEL_TYPE = 0
 
 	def __init__ (self, label=0,flags=0):
-		PMSI.__init__(self,'',label,flags)
+		PMSI.__init__(self,b'',label,flags)
 
 	def prettytunnel (self):
 		return ''

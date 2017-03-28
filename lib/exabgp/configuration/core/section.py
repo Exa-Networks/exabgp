@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-generic/__init__.py
+section.py
 
 Created by Thomas Mangin on 2015-06-04.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
@@ -93,7 +93,7 @@ class Section (Error):
 			else:
 				raise RuntimeError('name %s command %s has no action set' % (name,command))
 			return True
-		except ValueError, exc:
+		except ValueError as exc:
 			return self.error.set(str(exc))
 
 		return True

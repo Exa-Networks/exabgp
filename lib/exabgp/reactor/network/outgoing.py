@@ -1,3 +1,5 @@
+from exabgp.vendoring import six
+
 from exabgp.protocol.family import AFI
 from .connection import Connection
 from .tcp import create,bind
@@ -36,7 +38,7 @@ class Outgoing (Connection):
 			async(self.io,peer)
 			connect(self.io,peer,port,afi,md5)
 			self.init = True
-		except NetworkError,exc:
+		except NetworkError as exc:
 			self.init = False
 			self.close()
 			self.logger.wire("connection to %s:%d failed, %s" % (self.peer,port,str(exc)))
@@ -49,7 +51,7 @@ class Outgoing (Connection):
 		try:
 			generator = ready(self.io)
 			while True:
-				connected = generator.next()
+				connected = six.next(generator)
 				if not connected:
 					yield False
 					continue

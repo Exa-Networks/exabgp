@@ -9,6 +9,10 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import string
 import struct
 
+from exabgp.util import chr_
+from exabgp.util import ord_
+from exabgp.util import concat_strs
+
 from exabgp.bgp.message.message import Message
 
 
@@ -56,7 +60,7 @@ class Notification (Message):
 		(2,4): "Unsupported Optional Parameter",
 		(2,5): "Authentication Notification (Deprecated)",
 		(2,6): "Unacceptable Hold Time",
-		# RFC 5492
+		# RFC 5492 - https://tools.ietf.org/html/rfc5492
 		(2,7): "Unsupported Capability",
 
 		# draft-ietf-idr-bgp-multisession-06
@@ -80,13 +84,13 @@ class Notification (Message):
 		(4,0): "Unspecific",
 
 		(5,0): "Unspecific",
-		# RFC 6608
+		# RFC 6608 - https://tools.ietf.org/html/rfc6608
 		(5,1): "Receive Unexpected Message in OpenSent State",
 		(5,2): "Receive Unexpected Message in OpenConfirm State",
 		(5,3): "Receive Unexpected Message in Established State",
 
 		(6,0): "Unspecific",
-		# RFC 4486
+		# RFC 4486 - https://tools.ietf.org/html/rfc4486
 		(6,1): "Maximum Number of Prefixes Reached",
 		(6,2): "Administrative Shutdown", # augmented with draft-ietf-idr-shutdown
 		(6,3): "Peer De-configured",
@@ -101,7 +105,7 @@ class Notification (Message):
 		(7,2): "Malformed Message Subtype",
 	}
 
-	def __init__ (self, code, subcode, data=''):
+	def __init__ (self, code, subcode, data=b''):
 		self.code = code
 		self.subcode = subcode
 
@@ -111,12 +115,12 @@ class Notification (Message):
 
 		if len(data) == 0:
 			# shutdown without shutdown communication (the old fashioned way)
-			self.data = ''
+			self.data = b''
 			return
 
 		# draft-ietf-idr-shutdown or the peer was using 6,2 with data
 
-		shutdown_length  = ord(data[0])
+		shutdown_length  = ord_(data[0])
 		data = data[1:]
 
 		if shutdown_length == 0:
@@ -152,7 +156,7 @@ class Notification (Message):
 
 	@classmethod
 	def unpack_message (cls, data, negotiated=None):
-		return cls(ord(data[0]),ord(data[1]),data[2:])
+		return cls(ord_(data[0]),ord_(data[1]),data[2:])
 
 
 # =================================================================== Notify
@@ -166,8 +170,8 @@ class Notify (Notification):
 		Notification.__init__(self,code,subcode,data)
 
 	def message (self,negotiated=None):
-		return self._message("%s%s%s" % (
-			chr(self.code),
-			chr(self.subcode),
+		return self._message(concat_strs(
+			chr_(self.code),
+			chr_(self.subcode),
 			self.data
 		))

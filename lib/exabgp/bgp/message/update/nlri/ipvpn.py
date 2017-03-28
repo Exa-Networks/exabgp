@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-bgp.py
+ipvpn.py
 
 Created by Thomas Mangin on 2012-07-08.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
@@ -8,6 +8,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+
+from exabgp.util import chr_
 
 from exabgp.bgp.message import OUT
 
@@ -63,8 +65,8 @@ class IPVPN (Labelled):
 		return True
 
 	def pack (self, negotiated=None):
-		addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi,self.safi) else ''
-		mask = chr(len(self.labels)*8 + len(self.rd)*8 + self.cidr.mask)
+		addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi,self.safi) else b''
+		mask = chr_(len(self.labels)*8 + len(self.rd)*8 + self.cidr.mask)
 		return addpath + mask + self.labels.pack() + self.rd.pack() + self.cidr.pack_ip()
 
 	def index (self, negotiated=None):

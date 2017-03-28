@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-listen.py
+listener.py
 
 Created by Thomas Mangin on 2013-07-11.
 Copyright (c) 2013-2015 Exa Networks. All rights reserved.
@@ -72,13 +72,13 @@ class Listener (object):
 			sock.bind((local_ip.top(),local_port))
 			sock.listen(self._backlog)
 			self._sockets[sock] = (local_ip.top(),local_port,peer_ip.top(),md5)
-		except socket.error,exc:
+		except socket.error as exc:
 			if exc.args[0] == errno.EADDRINUSE:
-				raise BindingError('could not listen on %s:%d, the port already in use by another application' % (local_ip,local_port))
+				raise BindingError('could not listen on %s:%d, the port may already be in use by another application' % (local_ip,local_port))
 			elif exc.args[0] == errno.EADDRNOTAVAIL:
 				raise BindingError('could not listen on %s:%d, this is an invalid address' % (local_ip,local_port))
 			raise NetworkError(str(exc))
-		except NetworkError,exc:
+		except NetworkError as exc:
 			self.logger.network(str(exc),'critical')
 			raise exc
 
@@ -91,7 +91,7 @@ class Listener (object):
 			for sock in self._sockets:
 				try:
 					io, _ = sock.accept()
-				except socket.error,exc:
+				except socket.error as exc:
 					if exc.errno in error.block:
 						continue
 					raise AcceptError('could not accept a new connection (%s)' % errstr(exc))
@@ -107,9 +107,9 @@ class Listener (object):
 						raise AcceptError('unexpected address family (%d)' % sock.family)
 					fam = self._family_AFI_map[sock.family]
 					yield Incoming(fam,remote_ip,local_ip,io)
-				except socket.error,exc:
+				except socket.error as exc:
 					raise AcceptError('could not setup a new connection (%s)' % errstr(exc))
-		except NetworkError,exc:
+		except NetworkError as exc:
 			self.logger.network(str(exc),'critical')
 
 	def stop (self):

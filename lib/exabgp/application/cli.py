@@ -10,7 +10,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import sys
 import select
 
-from exabgp.dep.cmd2 import cmd
+from exabgp.vendoring.cmd2 import cmd
 
 from exabgp.version import version
 
@@ -43,7 +43,7 @@ class Completed (cmd.Cmd):
 		return [_ for _ in local.keys() if _.startswith(text)]
 
 	def default (self, line):
-		print 'unrecognised syntax: ', line
+		print('unrecognised syntax: ', line)
 
 	def do_EOF (self):
 		return True
@@ -80,7 +80,7 @@ class Attribute (SubMenu):
 		if line in ('igp','egp','incomplete'):
 			self.attribute['origin'] = line
 		else:
-			print 'invalid origin'
+			print('invalid origin')
 
 	def do_as_path (self, line):
 		pass
@@ -89,12 +89,12 @@ class Attribute (SubMenu):
 
 	def do_med (self, line):
 		if not line.isdigit():
-			print 'invalid med, %s is not a number' % line
+			print('invalid med, %s is not a number' % line)
 			return
 
 		med = int(line)
 		if 0 > med < 65536:
-			print 'invalid med, %s is not a valid number' % line
+			print('invalid med, %s is not a valid number' % line)
 		self.attribute['origin'] = line
 
 	# local-preference
@@ -109,7 +109,7 @@ class Attribute (SubMenu):
 	# aigp
 
 	def do_show (self, _):
-		print 'attribute %s ' % self.name + ' '.join('%s %s' % (key,value) for key,value in self.attribute.iteritems())
+		print('attribute %s ' % self.name + ' '.join('%s %s' % (key,value) for key,value in self.attribute.iteritems()))
 
 
 class Syntax (Completed):
@@ -171,11 +171,11 @@ class Syntax (Completed):
 			action,ip = line.split()
 		except ValueError:
 			if line == 'reset':
-				print 'removed neighbors', ', '.join(self._neighbors)
+				print('removed neighbors', ', '.join(self._neighbors))
 				self._neighbors = set()
 				self._update_prompt()
 			else:
-				print 'invalid syntax'
+				print('invalid syntax')
 				self.help_neighbor()
 			return
 
@@ -187,20 +187,20 @@ class Syntax (Completed):
 		elif action == 'exclude':
 			if ip in self._neighbors:
 				self._neighbors.remove(ip)
-				print 'neighbor excluded'
+				print('neighbor excluded')
 				self._update_prompt()
 			else:
-				print 'invalid neighbor'
+				print('invalid neighbor')
 		elif action == 'list':
-			print 'removed neighbors', ', '.join(self._neighbors)
+			print('removed neighbors', ', '.join(self._neighbors))
 		else:
-			print 'invalid syntax'
+			print('invalid syntax')
 			self.help_neighbor()
 
 	def help_neighbor (self):
-		print "neighbor include <ip>:  limit the action to the defined neighbors"
-		print "neighbor exclude <ip>:  remove a particular neighbor"
-		print "neighbor reset       :  clear the neighbor previous set "
+		print("neighbor include <ip>:  limit the action to the defined neighbors")
+		print("neighbor exclude <ip>:  remove a particular neighbor")
+		print("neighbor reset       :  clear the neighbor previous set ")
 
 	_attribute = {}
 
@@ -210,14 +210,14 @@ class Syntax (Completed):
 			return
 		invalid = ''.join([_ for _ in name if _ not in Attribute.chars])
 		if invalid:
-			print 'invalid character(s) in attribute name: %s' % invalid
+			print('invalid character(s) in attribute name: %s' % invalid)
 			return
 		cli = Attribute(name)
 		cli.attribute = self._attribute.get(name,{})
 		cli.cmdloop()
 
 	def help_attribute (self):
-		print 'attribute <name>'
+		print('attribute <name>')
 
 	def do_quit (self, _):
 		return True
@@ -235,7 +235,7 @@ class Connection (object):
 
 	def report (self):
 		while select.select([self.read],[],[],5):
-			print self.read.readline()
+			print(self.read.readline())
 
 	def close (self):
 		self.read.close()
@@ -256,7 +256,7 @@ def main():
 	if len(sys.argv) > 1:
 		ExaBGP().onecmd(' '.join(sys.argv[1:]))
 	else:
-		print "ExaBGP %s CLI" % version
+		print("ExaBGP %s CLI" % version)
 		ExaBGP('').cmdloop()
 
 

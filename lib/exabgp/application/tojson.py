@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-parser.py
+tojson.py
 
 Created by Thomas Mangin on 2014-12-22.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
+
+from __future__ import print_function
 
 import os
 import sys
@@ -47,7 +49,7 @@ class Application (object):
 	def process (self):
 		run = sys.argv[1:]
 		if not run:
-			print sys.stderr, 'no consummer program provided'
+			print(sys.stderr, 'no consummer program provided')
 			sys.exit(1)
 
 		# Prevent some weird termcap data to be created at the start of the PIPE
@@ -64,7 +66,7 @@ class Application (object):
 				# creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
 			)
 		except (subprocess.CalledProcessError,OSError,ValueError):
-			print >> sys.stderr, 'could not start subprocess'
+			print('could not start subprocess', file=sys.stderr)
 			sys.exit(1)
 
 		return sub
@@ -112,7 +114,7 @@ class Application (object):
 				time.sleep(0.1)
 			except IOError:
 				# subprocess died
-				print >> sys.stderr, 'subprocess died'
+				print('subprocess died', file=sys.stderr)
 				sys.exit(1)
 
 if __name__ == '__main__':

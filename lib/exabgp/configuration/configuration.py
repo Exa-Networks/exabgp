@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-current.py
+configuration.py
 
 Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
@@ -17,6 +17,7 @@ from exabgp.configuration.core import Section
 
 from exabgp.configuration.process import ParseProcess
 from exabgp.configuration.template import ParseTemplate
+from exabgp.configuration.template.neighbor import ParseTemplateNeighbor
 from exabgp.configuration.neighbor import ParseNeighbor
 from exabgp.configuration.neighbor.api import ParseAPI
 from exabgp.configuration.neighbor.api import ParseSend
@@ -35,6 +36,10 @@ from exabgp.configuration.l2vpn import ParseVPLS
 from exabgp.configuration.operational import ParseOperational
 
 from exabgp.configuration.environment import environment
+
+
+if sys.version_info[0]>=3:
+	StandardError = Exception
 
 
 class _Configuration (object):
@@ -101,25 +106,27 @@ class Configuration (_Configuration):
 
 		self.tokeniser = Tokeniser(self.scope,self.error,self.logger)
 
-		generic           = Section          (self.tokeniser,self.scope,self.error,self.logger)
-		self.process      = ParseProcess     (self.tokeniser,self.scope,self.error,self.logger)
-		self.template     = ParseTemplate    (self.tokeniser,self.scope,self.error,self.logger)
-		self.neighbor     = ParseNeighbor    (self.tokeniser,self.scope,self.error,self.logger)
-		self.family       = ParseFamily      (self.tokeniser,self.scope,self.error,self.logger)
-		self.capability   = ParseCapability  (self.tokeniser,self.scope,self.error,self.logger)
-		self.api          = ParseAPI         (self.tokeniser,self.scope,self.error,self.logger)
-		self.api_send     = ParseSend        (self.tokeniser,self.scope,self.error,self.logger)
-		self.api_receive  = ParseReceive     (self.tokeniser,self.scope,self.error,self.logger)
-		self.static       = ParseStatic      (self.tokeniser,self.scope,self.error,self.logger)
-		self.static_route = ParseStaticRoute (self.tokeniser,self.scope,self.error,self.logger)
-		self.flow         = ParseFlow        (self.tokeniser,self.scope,self.error,self.logger)
-		self.flow_route   = ParseFlowRoute   (self.tokeniser,self.scope,self.error,self.logger)
-		self.flow_match   = ParseFlowMatch   (self.tokeniser,self.scope,self.error,self.logger)
-		self.flow_then    = ParseFlowThen    (self.tokeniser,self.scope,self.error,self.logger)
-		self.flow_scope   = ParseFlowScope   (self.tokeniser,self.scope,self.error,self.logger)
-                self.l2vpn        = ParseL2VPN       (self.tokeniser,self.scope,self.error,self.logger)
-		self.vpls         = ParseVPLS        (self.tokeniser,self.scope,self.error,self.logger)
-		self.operational  = ParseOperational (self.tokeniser,self.scope,self.error,self.logger)
+		params = (self.tokeniser,self.scope,self.error,self.logger)
+		generic                  = Section               (*params)
+		self.process             = ParseProcess          (*params)
+		self.template            = ParseTemplate         (*params)
+		self.template_neighbor   = ParseTemplateNeighbor (*params)
+		self.neighbor            = ParseNeighbor         (*params)
+		self.family              = ParseFamily           (*params)
+		self.capability          = ParseCapability       (*params)
+		self.api                 = ParseAPI              (*params)
+		self.api_send            = ParseSend             (*params)
+		self.api_receive         = ParseReceive          (*params)
+		self.static              = ParseStatic           (*params)
+		self.static_route        = ParseStaticRoute      (*params)
+		self.flow                = ParseFlow             (*params)
+		self.flow_route          = ParseFlowRoute        (*params)
+		self.flow_match          = ParseFlowMatch        (*params)
+		self.flow_then           = ParseFlowThen         (*params)
+		self.flow_scope          = ParseFlowScope	 (*params) 		
+		self.l2vpn               = ParseL2VPN            (*params)
+		self.vpls                = ParseVPLS             (*params)
+		self.operational         = ParseOperational      (*params)
 
 		# We should check if name are unique when running Section.__init__
 
@@ -141,6 +148,13 @@ class Configuration (_Configuration):
 			self.template.name: {
 				'class':    self.template,
 				'commands': self.template.known.keys(),
+				'sections': {
+					'neighbor':    self.template_neighbor.name,
+				},
+			},
+			self.template_neighbor.name: {
+				'class':    self.template_neighbor,
+				'commands': self.template_neighbor.known.keys(),
 				'sections': {
 					'family':      self.family.name,
 					'capability':  self.capability.name,
@@ -323,14 +337,14 @@ class Configuration (_Configuration):
 			return self._reload()
 		except KeyboardInterrupt:
 			return self.error.set('configuration reload aborted by ^C or SIGINT')
-		except Error, exc:
+		except Error as exc:
 			if environment.settings().debug.configuration:
 				raise
 			return self.error.set(
 				'problem parsing configuration file line %d\n'
 				'error message: %s' % (self.tokeniser.index_line, exc)
 			)
-		except StandardError, exc:
+		except StandardError as exc:
 			if environment.settings().debug.configuration:
 				raise
 			return self.error.set(

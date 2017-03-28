@@ -113,7 +113,7 @@ class Negotiated (object):
 		if self.peer_as != neighbor.peer_as:
 			return (2,2,'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.received_open.asn,neighbor.peer_as))
 
-		# RFC 6286 : http://tools.ietf.org/html/rfc6286
+		# RFC 6286 : https://tools.ietf.org/html/rfc6286
 		# XXX: FIXME: check that router id is not self
 		if self.received_open.router_id == RouterID('0.0.0.0'):
 			return (2,3,'0.0.0.0 is an invalid router_id')
@@ -121,7 +121,7 @@ class Negotiated (object):
 		if self.received_open.asn == neighbor.local_as:
 			# router-id must be unique within an ASN
 			if self.received_open.router_id == neighbor.router_id:
-				return (2,3,'BGP Indendifier collision, same router-id (%s) on both side of this IBGP session' % self.received_open.router_id)
+				return (2,3,'BGP Identifier collision, same router-id (%s) on both sides of this IBGP session' % self.received_open.router_id)
 
 		if self.received_open.hold_time and self.received_open.hold_time < 3:
 			return (2,6,'Hold Time is invalid (%d)' % self.received_open.hold_time)

@@ -8,7 +8,7 @@ Copyright (c) 2014-2016 Exa Networks. All rights reserved.
 
 from struct import unpack
 
-from exabgp.dep.bitstring import BitArray
+from exabgp.vendoring.bitstring import BitArray
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE

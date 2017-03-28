@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-parse_capability.py
+capability.py
 
 Created by Thomas Mangin on 2015-06-04.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
@@ -33,7 +33,7 @@ def addpath (tokeniser):
 	if ap == 'receive/send':  # was allowed with the previous parser
 		raise ValueError('the option is send/receive')
 
-	raise ValueError('"%s" is an invalid add-path, options are send, receive, send/receive' % ap)
+	raise ValueError('"%s" is an invalid add-path, options are: send, receive, send/receive' % ap)
 
 
 def gracefulrestart (tokeniser, default):

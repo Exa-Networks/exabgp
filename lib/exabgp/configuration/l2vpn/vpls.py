@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-parse_l2vpn.py
+vpls.py
 
 Created by Thomas Mangin on 2015-06-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
@@ -149,7 +149,7 @@ class ParseVPLS (Section):
 		if nlri.nexthop is None:
 			return self.error.set('vpls next-hop missing')
 		if nlri.endpoint is None:
-			return self.error.set('vpls enpoint missing')
+			return self.error.set('vpls endpoint missing')
 		if nlri.base is None:
 			return self.error.set('vpls base missing')
 		if nlri.offset is None:
@@ -157,7 +157,7 @@ class ParseVPLS (Section):
 		if nlri.size is None:
 			return self.error.set('vpls size missing')
 		if nlri.base > (0xFFFFF - nlri.size):  # 20 bits, 3 bytes
-			return self.error.set('vpls size inconsistancy')
+			return self.error.set('vpls size inconsistency')
 		return True
 
 	def check (change):

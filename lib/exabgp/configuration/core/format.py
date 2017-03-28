@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-formating.py
+format.py
 
 Created by Thomas Mangin on 2014-06-22.
 Copyright (c) 2014-2015 Exa Networks. All rights reserved.

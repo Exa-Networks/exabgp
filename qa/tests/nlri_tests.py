@@ -9,6 +9,8 @@ Copyright (c) 2009-2015 Orange. All rights reserved.
 
 import unittest
 
+from exabgp.util import chr_
+
 from exabgp.reactor.protocol import AFI, SAFI
 
 from exabgp.bgp.message.update import Attributes
@@ -20,6 +22,8 @@ from exabgp.bgp.message.update.attribute.community.extended \
     import RouteTargetASN2Number as RouteTarget
 from exabgp.bgp.message.update.attribute.community.extended.encapsulation \
     import Encapsulation
+from exabgp.bgp.message.update.attribute.community.extended \
+    import RTRecord
 
 from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
 
@@ -196,9 +200,9 @@ class TestNLRIs(unittest.TestCase):
                         Labels([42], True),
                         IP.create("1.1.1.1"))
 
-        # Esi
+        # ESI
         nlri1 = EVPNMAC(RouteDistinguisher.fromElements("42.42.42.42", 5),
-                        ESI(['1' for _ in range(0,10)]),
+                        ESI(b''.join(chr_(1) for _ in range(0,10))),
                         EthernetTag(111),
                         MAC("01:02:03:04:05:06"), 6*8,
                         Labels([42], True),
@@ -372,6 +376,9 @@ class TestNLRIs(unittest.TestCase):
         self.assertEqual(set([rt1a]), set([rt1b]))
         self.assertEqual(1, len(set([rt1a]).intersection(set([rt1b]))))
 
+    def test12_RTRecord(self):
+        rt = RouteTarget(64512, 22)
+        rt_record = RTRecord.from_rt(rt)
 
 if __name__ == '__main__':
     unittest.main()
