@@ -11,6 +11,7 @@ from exabgp.configuration.core import Section
 from exabgp.configuration.flow.route import ParseFlowRoute
 from exabgp.configuration.flow.route import ParseFlowMatch
 from exabgp.configuration.flow.route import ParseFlowThen
+from exabgp.configuration.flow.route import ParseFlowScope
 
 from exabgp.rib.change import Change
 from exabgp.bgp.message.update.nlri import Flow
@@ -27,9 +28,11 @@ class ParseFlow (Section):
 
 	known = dict(ParseFlowMatch.known)
 	known.update(ParseFlowThen.known)
+	known.update(ParseFlowScope.known)
 
 	action = dict(ParseFlowMatch.action)
 	action.update(ParseFlowThen.action)
+	action.update(ParseFlowScope.action)
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)

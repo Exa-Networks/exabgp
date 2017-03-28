@@ -4,6 +4,7 @@ Version explained:
  bug   : increase on bug or incremental changes
 
 Version 4.0.0
+ * Feature: add support for interface-set for BGP flowspec routes
  * Change: the configuration format is not compatible with ExaBGP 3.x
  * Change: BMP support is deprecated for BGP-LS
  * Change: move and install healthcheck in bin
