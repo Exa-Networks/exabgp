@@ -73,7 +73,8 @@ class Daemon (object):
 					# If pid is not running, reopen file without O_EXCL
 					fd = os.open(self.pid,flags ^ os.O_EXCL,mode)
 			except (OSError,IOError,ValueError):
-				pass
+				self.logger.daemon("issue accessing PID file %s (most likely permission or ownership)" % self.pid)
+				return False
 
 		try:
 			f = os.fdopen(fd,'w')
