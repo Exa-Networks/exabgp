@@ -30,6 +30,7 @@ from exabgp.configuration.flow import ParseFlow
 from exabgp.configuration.flow import ParseFlowRoute
 from exabgp.configuration.flow import ParseFlowThen
 from exabgp.configuration.flow import ParseFlowMatch
+from exabgp.configuration.flow import ParseFlowScope
 from exabgp.configuration.l2vpn import ParseL2VPN
 from exabgp.configuration.l2vpn import ParseVPLS
 from exabgp.configuration.operational import ParseOperational
@@ -122,6 +123,7 @@ class Configuration (_Configuration):
 		self.flow_route          = ParseFlowRoute        (*params)
 		self.flow_match          = ParseFlowMatch        (*params)
 		self.flow_then           = ParseFlowThen         (*params)
+		self.flow_scope		 = ParseFlowScope	 (*params)	
 		self.l2vpn               = ParseL2VPN            (*params)
 		self.vpls                = ParseVPLS             (*params)
 		self.operational         = ParseOperational      (*params)
@@ -234,6 +236,7 @@ class Configuration (_Configuration):
 				'sections': {
 					'match': self.flow_match.name,
 					'then':  self.flow_then.name,
+					'scope': self.flow_scope.name,
 				},
 			},
 			self.flow_match.name: {
@@ -247,6 +250,12 @@ class Configuration (_Configuration):
 				'commands': self.flow_then.known.keys(),
 				'sections': {
 				},
+			},
+			self.flow_scope.name: {
+				'class':    self.flow_scope,
+				'commands': self.flow_scope.known.keys(),
+				'sections': {
+				}
 			},
 			self.l2vpn.name: {
 				'class':    self.l2vpn,
@@ -298,6 +307,7 @@ class Configuration (_Configuration):
 		self.flow_route.clear()
 		self.flow_match.clear()
 		self.flow_then.clear()
+		self.flow_scope.clear()	
 		self.l2vpn.clear()
 		self.vpls.clear()
 		self.operational.clear()

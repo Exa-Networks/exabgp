@@ -13,6 +13,7 @@ from exabgp.configuration.core import Section
 
 from exabgp.configuration.flow.match import ParseFlowMatch
 from exabgp.configuration.flow.then import ParseFlowThen
+from exabgp.configuration.flow.scope import ParseFlowScope
 
 from exabgp.configuration.static.mpls import route_distinguisher
 
@@ -27,8 +28,10 @@ class ParseFlowRoute (Section):
 		'  next-hop 1.2.3.4; (to use with redirect-to-nexthop)\n' \
 		'  %s\n' \
 		'  %s\n' \
+		'  %s\n' \
 		'}\n' % (
 			'\n  '.join(ParseFlowMatch.syntax.split('\n')),
+			'\n  '.join(ParseFlowScope.syntax.split('\n')),			
 			'\n  '.join(ParseFlowThen.syntax.split('\n'))
 		)
 

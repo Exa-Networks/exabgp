@@ -34,6 +34,8 @@ from exabgp.bgp.message.update.attribute.community.extended import TrafficRedire
 from exabgp.bgp.message.update.attribute.community.extended import TrafficMark
 from exabgp.bgp.message.update.attribute.community.extended import TrafficNextHop
 
+from exabgp.bgp.message.update.attribute.community.extended import InterfaceSet
+
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunities
 
 from exabgp.rib.change import Change
@@ -300,3 +302,49 @@ def action (tokeniser):
 		raise ValueError('invalid flow action')
 
 	return ExtendedCommunities().add(TrafficAction(sample,terminal))
+
+def _interface_set (data):
+	if data.count(':') != 3:
+		raise ValueError('not a valid format %s' % data)
+
+	trans,direction,prefix,suffix = data.split(':',3)
+
+	if trans == 'transitive':
+		trans = True
+	elif trans == 'non-transitive':
+		trans = False
+	else:
+		raise ValueError('Bad transitivity type %s, should be transitive or non-transitive' % trans)
+	if prefix.count('.'):
+		raise ValueError('a 32 bits number must be used, invalid value %s' % prefix)
+	if (direction == 'input'):
+		int_direction = 1
+	elif (direction == 'output'):
+		int_direction = 2
+	elif (direction == 'input-output'):
+		int_direction = 3
+	else:
+		raise ValueError('Bad direction %s, should be input, output or input-output' % direction)
+	asn = int(prefix)
+	route_target = int(suffix)
+	if asn >= pow(2,32):
+		raise ValueError('asn can only be 32 bits, value too large %s' % asn)
+	if route_target >= pow(2,14):
+		raise ValueError('group-id is a 14 bits number, value too large %s' % route_target)
+	return InterfaceSet(trans,asn,route_target,int_direction)
+
+def interface_set (tokeniser):
+	communities = ExtendedCommunities()
+
+	value = tokeniser()
+	if value == '[':
+		while True:
+			value = tokeniser()
+			if value == ']':
+				break
+			communities.add(_interface_set(value))
+	else:
+		communities.add(_interface_set(value))
+
+	return communities
+
