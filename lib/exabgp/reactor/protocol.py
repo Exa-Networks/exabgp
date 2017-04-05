@@ -94,11 +94,15 @@ class Protocol (object):
 	def connect (self):
 		# allows to test the protocol code using modified StringIO with a extra 'pending' function
 		if not self.connection:
-			local = self.neighbor.md5_ip
-			peer = self.neighbor.peer_address
+			local = self.neighbor.md5_ip.top() if self.neighbor.md5_ip else None
+			peer = self.neighbor.peer_address.top()
+			afi = self.neighbor.peer_address.afi
 			md5 = self.neighbor.md5_password
 			ttl_out = self.neighbor.ttl_out
-			self.connection = Outgoing(peer.afi,peer.top(),local.top(),self.port,md5,ttl_out)
+			self.neighbor._client_ip = local
+			self.connection = Outgoing(afi,peer,local,self.port,md5,ttl_out)
+			if not local and self.connection.init:
+				self.neighbor._client_ip = self.connection.io.getsockname()[0]
 
 			try:
 				generator = self.connection.establish()

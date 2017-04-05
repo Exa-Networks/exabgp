@@ -229,7 +229,7 @@ class Reactor (object):
 							# * later if it should be called again but has no work atm
 							# * close if it is finished and is closing down, or restarting
 							if action == ACTION.CLOSE:
-								self.unschedule(peer)
+								self.unschedule(key)
 								peers.discard(key)
 							# we are loosing this peer, not point to schedule more process work
 							elif action == ACTION.LATER:
@@ -252,7 +252,7 @@ class Reactor (object):
 								peer = self.peers[key]
 								neighbor = peer.neighbor
 								# XXX: FIXME: Inet can only be compared to Inet
-								if connection.local == str(neighbor.peer_address) and connection.peer == str(neighbor.local_address):
+								if connection.local == str(neighbor.peer_address) and (not neighbor.local_address or connection.peer == str(neighbor.local_address)):
 									if peer.incoming(connection):
 										found = True
 										break
@@ -440,9 +440,8 @@ class Reactor (object):
 		self.processes.start()
 
 	def unschedule (self, peer):
-		key = peer.neighbor.name()
-		if key in self.peers:
-			del self.peers[key]
+		if peer in self.peers:
+			del self.peers[peer]
 
 	def answer (self, service, string):
 		self.processes.write(service,string)

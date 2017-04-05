@@ -204,7 +204,7 @@ class ParseNeighbor (Section):
 		if missing:
 			return self.error.set('incomplete neighbor, missing %s' % missing)
 
-		if neighbor.local_address.afi != neighbor.peer_address.afi:
+		if neighbor.local_address and neighbor.local_address.afi != neighbor.peer_address.afi:
 			return self.error.set('local-address and peer-address must be of the same family')
 
 		if neighbor.peer_address.top() in self._neighbors:

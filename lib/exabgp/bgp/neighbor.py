@@ -51,7 +51,7 @@ class Neighbor (object):
 		self.manual_eor = False
 
 		self.api = None
-
+		self._client_ip = None
 		# passive indicate that we do not establish outgoing connections
 		self.passive = False
 		# the port to listen on ( zero mean that we do not listen )
@@ -108,7 +108,8 @@ class Neighbor (object):
 			session = '/'.join("%s-%s" % (afi.name(),safi.name()) for (afi,safi) in self.families())
 		else:
 			session = 'in-open'
-		return "neighbor %s local-ip %s local-as %s peer-as %s router-id %s family-allowed %s" % (self.peer_address,self.local_address,self.local_as,self.peer_as,self.router_id,session)
+		local_address = self.local_address if self.local_address else self._client_ip
+		return "neighbor %s local-ip %s local-as %s peer-as %s router-id %s family-allowed %s" % (self.peer_address,local_address,self.local_as,self.peer_as,self.router_id,session)
 
 	def families (self):
 		# this list() is important .. as we use the function to modify self._families
@@ -129,7 +130,7 @@ class Neighbor (object):
 			self._families.remove(family)
 
 	def missing (self):
-		if self.local_address is None:
+		if self.listen > 0 and not self.local_address:
 			return 'local-address'
 		if self.peer_address is None:
 			return 'peer-address'
@@ -137,7 +138,7 @@ class Neighbor (object):
 			return 'local-as'
 		if self.peer_as is None:
 			return 'peer-as'
-		if self.peer_address.afi == AFI.ipv6 and not self.router_id:
+		if (not self.local_address or self.peer_address.afi == AFI.ipv6) and not self.router_id:
 			return 'router-id'
 		return ''
 
@@ -226,7 +227,7 @@ class Neighbor (object):
 			'\trouter-id %s;\n' \
 			'\thost-name %s;\n' \
 			'\tdomain-name %s;\n' \
-			'\tlocal-address %s;\n' \
+			'%s' \
 			'\tlocal-as %s;\n' \
 			'\tpeer-as %s;\n' \
 			'\thold-time %s;\n' \
@@ -244,7 +245,7 @@ class Neighbor (object):
 				self.router_id,
 				self.host_name,
 				self.domain_name,
-				self.local_address,
+				'\tlocal-address "%s";\n' % self.local_address if self.local_address else '',
 				self.local_as,
 				self.peer_as,
 				self.hold_time,
