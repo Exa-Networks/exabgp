@@ -217,6 +217,7 @@ class Peer (object):
 		self._restart = False
 		self._restarted = False
 		self._reset_skip()
+		self.neighbor.rib.uncache()
 
 	def resend (self):
 		self._resend_routes = SEND.NORMAL

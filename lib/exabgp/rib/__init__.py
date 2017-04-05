@@ -43,6 +43,9 @@ class RIB (object):
 		self.incoming.reset()
 		self.outgoing.reset()
 
+	def uncache(self):
+		del self._cache[self.name]
+
 	# This code was never tested ...
 	def clear (self):
 		self._cache[self.name].incoming = Store(self._cache[self.name].incoming.families)

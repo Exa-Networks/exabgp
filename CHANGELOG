@@ -11,6 +11,8 @@ Version 3.4.19
  * Fix decoding of capability (was potentially over reading)
  * Fix trace when trying to access PID file and this is not allowed
     reported by: George Shuklin
+ * Fix: Remove a peer's RIB cache when it is deleted from the config file
+    patch by: Brian Johnson
 
 Version 3.4.18
  * Backport: backhole community (RFC 7999)
