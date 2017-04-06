@@ -124,10 +124,12 @@ class IP (object):
 		return self._string
 
 	def __eq__ (self, other):
+		if not isinstance(other, IP):
+			return False
 		return self._packed == other._packed
 
-	def __neq__ (self, other):
-		return self._packed != other._packed
+	def __ne__ (self, other):
+		return not self.__eq__(other)
 
 	def __lt__ (self, other):
 		return self._packed < other._packed

@@ -32,6 +32,7 @@ from exabgp.configuration.neighbor.parser import ttl
 from exabgp.configuration.neighbor.parser import md5
 from exabgp.configuration.neighbor.parser import hold_time
 from exabgp.configuration.neighbor.parser import router_id
+from exabgp.configuration.neighbor.parser import local_address
 from exabgp.configuration.neighbor.parser import hostname
 from exabgp.configuration.neighbor.parser import domainname
 from exabgp.configuration.neighbor.parser import description
@@ -66,7 +67,7 @@ class ParseNeighbor (Section):
 		'domain-name':   domainname,
 		'router-id':     router_id,
 		'hold-time':     hold_time,
-		'local-address': ip,
+		'local-address': local_address,
 		'peer-address':  ip,
 		'local-as':      asn,
 		'peer-as':       asn,
@@ -193,18 +194,21 @@ class ParseNeighbor (Section):
 
 		messages = local.get('operational',{}).get('routes',[])
 
-		if not neighbor.router_id:
+		neighbor.auto_discovery = True if neighbor.local_address == 'auto' else False
+
+		if not neighbor.router_id and not neighbor.auto_discovery:
 			neighbor.router_id = neighbor.local_address
 
 		if neighbor.route_refresh:
 			if neighbor.adjribout:
 				self.logger.configuration('route-refresh requested, enabling adj-rib-out')
 
+
 		missing = neighbor.missing()
 		if missing:
 			return self.error.set('incomplete neighbor, missing %s' % missing)
 
-		if neighbor.local_address and neighbor.local_address.afi != neighbor.peer_address.afi:
+		if not neighbor.auto_discovery and neighbor.local_address.afi != neighbor.peer_address.afi:
 			return self.error.set('local-address and peer-address must be of the same family')
 
 		if neighbor.peer_address.top() in self._neighbors:

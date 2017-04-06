@@ -6,13 +6,14 @@ Created by Thomas Mangin on 2014-07-01.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+import socket
 from string import ascii_letters
 from string import digits
 
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.holdtime import HoldTime
-
 from exabgp.configuration.parser import string
+from exabgp.protocol.ip import IP
 
 
 def inherit (tokeniser):
@@ -85,6 +86,19 @@ def ttl (tokeniser):
 	if attl > 255:
 		raise ValueError('ttl must be smaller than 256')
 	return attl
+
+
+def local_address(tokeniser):
+	if not tokeniser.tokens:
+		raise ValueError("an ip address  or 'auto' is required")
+
+	value = tokeniser()
+	if value == 'auto':
+		return value
+	try:
+		return IP.create(value)
+	except (IndexError,ValueError,socket.error):
+		raise ValueError('"%s" is an invalid IP address' % value)
 
 
 def router_id (tokeniser):

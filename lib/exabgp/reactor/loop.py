@@ -252,7 +252,7 @@ class Reactor (object):
 								peer = self.peers[key]
 								neighbor = peer.neighbor
 								# XXX: FIXME: Inet can only be compared to Inet
-								if connection.local == str(neighbor.peer_address) and (not neighbor.local_address or connection.peer == str(neighbor.local_address)):
+								if connection.local == str(neighbor.peer_address) and (neighbor.auto_discovery or connection.peer == str(neighbor.local_address)):
 									if peer.incoming(connection):
 										found = True
 										break
