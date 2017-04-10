@@ -130,7 +130,9 @@ class Neighbor (object):
 			self._families.remove(family)
 
 	def missing (self):
-		if self.local_address is None or (self.listen > 0 and self.auto_discovery):
+		if self.local_address is None and not self.auto_discovery:
+			return 'local-address'
+		if self.listen > 0 and self.auto_discovery:
 			return 'local-address'
 		if self.peer_address is None:
 			return 'peer-address'
