@@ -199,7 +199,7 @@ class ParseNeighbor (Section):
 			neighbor.local_address = None
 			neighbor.md5_ip = None
 
-		if not neighbor.router_id and not neighbor.auto_discovery:
+		if not neighbor.router_id and neighbor.peer_address.afi == AFI.ipv4 and not neighbor.auto_discovery:
 			neighbor.router_id = neighbor.local_address
 
 		if neighbor.route_refresh:

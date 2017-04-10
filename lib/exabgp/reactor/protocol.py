@@ -36,6 +36,7 @@ from exabgp.bgp.message import Operational
 from exabgp.bgp.message.direction import IN
 from exabgp.bgp.message.update.attribute import Attribute
 
+from exabgp.protocol.ip import IP
 from exabgp.reactor.api.processes import ProcessError
 
 from exabgp.logger import Logger
@@ -94,14 +95,16 @@ class Protocol (object):
 	def connect (self):
 		# allows to test the protocol code using modified StringIO with a extra 'pending' function
 		if not self.connection:
-			local = self.neighbor.md5_ip.top() if not self.auto_discovery else None
+			local = self.neighbor.md5_ip.top() if not self.neighbor.auto_discovery else None
 			peer = self.neighbor.peer_address.top()
 			afi = self.neighbor.peer_address.afi
 			md5 = self.neighbor.md5_password
 			ttl_out = self.neighbor.ttl_out
 			self.connection = Outgoing(afi,peer,local,self.port,md5,ttl_out)
 			if not local and self.connection.init:
-				self.neighbor.local_address = self.connection.local
+				self.neighbor.local_address = IP.create(self.connection.local)
+				if self.neighbor.router_id is None and self.neighbor.local_address.afi == AFI.ipv4:
+					self.neighbor.router_id = self.neighbor.local_address
 
 			try:
 				generator = self.connection.establish()
