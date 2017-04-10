@@ -21,7 +21,6 @@ class Outgoing (Connection):
 
 		self.logger.wire("attempting connection to %s:%d" % (self.peer,port))
 
-		self.peer = peer
 		self.ttl = ttl
 		self.afi = afi
 		self.md5 = md5
@@ -29,14 +28,17 @@ class Outgoing (Connection):
 
 		try:
 			self.io = create(afi)
-			MD5(self.io,peer,port,md5)
+			MD5(self.io,self.peer,port,md5)
 			if afi == AFI.ipv4:
-				TTL(self.io, peer, self.ttl)
+				TTL(self.io, self.peer, self.ttl)
 			elif afi == AFI.ipv6:
-				TTLv6(self.io, peer, self.ttl)
-			bind(self.io,local,afi)
-			async(self.io,peer)
-			connect(self.io,peer,port,afi,md5)
+				TTLv6(self.io, self.peer, self.ttl)
+			if local:
+				bind(self.io,self.local,afi)
+			async(self.io,self.peer)
+			connect(self.io,self.peer,port,afi,md5)
+			if not self.local:
+				self.local = self.io.getsockname()[0]
 			self.init = True
 		except NetworkError as exc:
 			self.init = False

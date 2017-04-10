@@ -140,6 +140,7 @@ def show_neighbor_status (self, reactor, service, command):
 			peer = reactor.peers.get(peer_name, None)
 			if not peer:
 				continue
+			peer_name = peer.neighbor.name()
 			detailed_status = peer.detailed_link_status()
 			families = peer.negotiated_families()
 			if families:

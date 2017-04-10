@@ -19,8 +19,8 @@ class Incoming (Connection):
 
 		try:
 			self.io = io
-			async(self.io,peer)
-			nagle(self.io,peer)
+			async(self.io,self.peer)
+			nagle(self.io,self.peer)
 		except NetworkError as exc:
 			self.close()
 			raise NotConnected(errstr(exc))

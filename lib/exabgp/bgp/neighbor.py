@@ -34,6 +34,8 @@ class Neighbor (object):
 		self.host_name = None
 		self.domain_name = None
 		self.local_address = None
+		# local_address uses auto discovery
+		self.auto_discovery = False
 		self.peer_address = None
 		self.peer_as = None
 		self.local_as = None
@@ -51,7 +53,6 @@ class Neighbor (object):
 		self.manual_eor = False
 
 		self.api = None
-
 		# passive indicate that we do not establish outgoing connections
 		self.passive = False
 		# the port to listen on ( zero mean that we do not listen )
@@ -129,7 +130,9 @@ class Neighbor (object):
 			self._families.remove(family)
 
 	def missing (self):
-		if self.local_address is None:
+		if self.local_address is None and not self.auto_discovery:
+			return 'local-address'
+		if self.listen > 0 and self.auto_discovery:
 			return 'local-address'
 		if self.peer_address is None:
 			return 'peer-address'
@@ -137,7 +140,7 @@ class Neighbor (object):
 			return 'local-as'
 		if self.peer_as is None:
 			return 'peer-as'
-		if self.peer_address.afi == AFI.ipv6 and not self.router_id:
+		if (self.auto_discovery or self.peer_address.afi == AFI.ipv6) and not self.router_id:
 			return 'router-id'
 		return ''
 
@@ -244,7 +247,7 @@ class Neighbor (object):
 				self.router_id,
 				self.host_name,
 				self.domain_name,
-				self.local_address,
+				self.local_address if not self.auto_discovery else 'auto',
 				self.local_as,
 				self.peer_as,
 				self.hold_time,
@@ -256,7 +259,7 @@ class Neighbor (object):
 				'\tauto-flush %s;\n' % ('true' if self.flush else 'false'),
 				'\tadj-rib-out %s;\n' % ('true' if self.adjribout else 'false'),
 				'\tmd5-password "%s";\n' % self.md5_password if self.md5_password else '',
-				'\tmd5-ip "%s";\n' % self.md5_ip if self.md5_ip else '',
+				'\tmd5-ip "%s";\n' % self.md5_ip if not self.auto_discovery else '',
 				'\toutgoing-ttl %s;\n' % self.ttl_out if self.ttl_out else '',
 				'\tincoming-ttl %s;\n' % self.ttl_in if self.ttl_in else '',
 				'\t\tasn4 %s;\n' % ('enable' if self.asn4 else 'disable'),
