@@ -18,7 +18,7 @@ from exabgp.bgp.message import OUT
 from exabgp.configuration.static import ParseStaticRoute
 
 from exabgp.version import version as _version
-
+from exabgp.configuration.environment import environment
 
 class Text (object):
 	callback = {}
@@ -32,6 +32,7 @@ class Text (object):
 def _show_routes_callback(reactor, service, last, route_type, advertised, extensive):
 	def callback ():
 		families = None
+		lines_per_yield = environment.settings().api.chunk
 		if last in ('routes', 'extensive', 'static', 'flow', 'l2vpn'):
 			peers = reactor.peers.keys()
 		else:
@@ -42,13 +43,16 @@ def _show_routes_callback(reactor, service, last, route_type, advertised, extens
 				continue
 			if advertised:
 				families = peer._outgoing.proto.negotiated.families if peer._outgoing.proto else []
-			for change in list(peer.neighbor.rib.outgoing.sent_changes(families)):
-				if isinstance(change.nlri, route_type):
-					if extensive:
-						reactor.answer(service,'neighbor %s %s' % (peer.neighbor.name(),change.extensive()))
-					else:
-						reactor.answer(service,'neighbor %s %s' % (peer.neighbor.peer_address,str(change.nlri)))
-					yield True
+			routes = list(peer.neighbor.rib.outgoing.sent_changes(families))
+			while routes:
+				changes, routes = routes[:lines_per_yield], routes[lines_per_yield:]
+				for change in changes:
+					if isinstance(change.nlri, route_type):
+						if extensive:
+							reactor.answer(service,'neighbor %s %s' % (peer.neighbor.name(),change.extensive()))
+						else:
+							reactor.answer(service,'neighbor %s %s' % (peer.neighbor.peer_address,str(change.nlri)))
+				yield True
 		reactor.answer(service,'done')
 	return callback
 
