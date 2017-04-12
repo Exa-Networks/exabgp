@@ -230,6 +230,12 @@ environment.configuration = {
 		},
 	},
 	'api':  {
+		'chunk': {
+			'read': environment.integer,
+			'write': environment.nop,
+			'value': '1',
+			'help': 'maximum lines to print before yielding in show routes api',
+		},
 		'encoder':  {
 			'read':  environment.api,
 			'write': environment.lower,
