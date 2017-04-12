@@ -59,30 +59,35 @@ def _show_routes_callback(reactor, service, last, route_type, advertised, extens
 @Text('shutdown')
 def shutdown (self, reactor, service, command):
 	reactor.answer(service,'shutdown in progress')
+	reactor.answer(service,'done')
 	return reactor.api.shutdown()
 
 
 @Text('reload')
 def reload (self, reactor, service, command):
 	reactor.answer(service,'reload in progress')
+	reactor.answer(service,'done')
 	return reactor.api.reload()
 
 
 @Text('restart')
 def restart (self, reactor, service, command):
 	reactor.answer(service,'restart in progress')
+	reactor.answer(service,'done')
 	return reactor.api.restart()
 
 
 @Text('version')
 def version (self, reactor, service, command):
 	reactor.answer(service,'exabgp %s\n' % _version)
+	reactor.answer(service,'done')
 	return True
 
 
 @Text('#')
 def comment (self, reactor, service, command):
 	self.logger.processes(command.lstrip().lstrip('#').strip())
+	reactor.answer(service,'done')
 	return True
 
 
@@ -356,9 +361,11 @@ def withdraw_route (self, reactor, service, line):
 			reactor.answer(service,'done')
 		except ValueError:
 			self.log_failure('issue parsing the route')
+			reactor.answer(service,'error')
 			yield True
 		except IndexError:
 			self.log_failure('issue parsing the route')
+			reactor.answer(service,'error')
 			yield True
 
 	reactor.plan(callback(),'withdraw_route')
@@ -707,6 +714,7 @@ def announce_operational (self, reactor, service, command):
 		reactor.answer(service,'done')
 
 	if (command.split() + ['be','safe'])[2].lower() not in ('asm','adm','rpcq','rpcp','apcq','apcp','lpcq','lpcp'):
+		reactor.answer(service,'done')
 		return False
 
 	try:
