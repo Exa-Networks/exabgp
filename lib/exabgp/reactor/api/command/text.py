@@ -81,7 +81,7 @@ def version (self, reactor, service, command):
 
 
 @Text('#')
-def version (self, reactor, service, command):
+def comment (self, reactor, service, command):
 	self.logger.processes(command.lstrip().lstrip('#').strip())
 	return True
 
