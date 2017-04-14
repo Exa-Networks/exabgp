@@ -182,6 +182,14 @@ class Store (object):
 				if self.cache and change_nlri_index not in self._seen.get(change.nlri.family(),{}):
 					return
 
+		if not force and self.cache:
+			announced = self._seen.get(change.nlri.family(),{})
+			if change_nlri_index in announced and change.nlri.action == OUT.ANNOUNCE:
+				old_change = announced[change_nlri_index]
+				# it is a duplicate route
+				if old_change.attributes.index() == change.attributes.index() and old_change.nlri.nexthop.index() == change.nlri.nexthop.index():
+					return
+
 		# add the route to the list to be announced
 		dict_sorted.setdefault(change_attr_index,{})[change_nlri_index] = change
 		dict_nlri[change_nlri_index] = change
@@ -213,26 +221,7 @@ class Store (object):
 		dict_nlri = self._modify_nlri
 		dict_attr = self._cache_attribute
 
-		for attr_index,full_dict_change in dict_sorted.items():
-			if self.cache:
-				dict_change = {}
-				for nlri_index,change in full_dict_change.iteritems():
-					family = change.nlri.family()
-					announced = self._seen.get(family,{})
-					if change.nlri.action == OUT.ANNOUNCE:
-						if nlri_index in announced:
-							old_change = announced[nlri_index]
-							# it is a duplicate route
-							if old_change.attributes.index() == change.attributes.index() and old_change.nlri.nexthop.index() == change.nlri.nexthop.index():
-								continue
-					elif change.nlri.action == OUT.WITHDRAW:
-						if nlri_index not in announced:
-							if dict_nlri[nlri_index].nlri.action == OUT.ANNOUNCE:
-								continue
-					dict_change[nlri_index] = change
-			else:
-				dict_change = full_dict_change
-
+		for attr_index,dict_change in dict_sorted.items():
 			if not dict_change:
 				continue
 
@@ -243,8 +232,6 @@ class Store (object):
 			for change in dict_change.values():
 				updates.setdefault(change.nlri.family(),[]).append(change.nlri)
 				nlri_index = change.index()
-				del dict_sorted[attr_index][nlri_index]
-				del dict_nlri[nlri_index]
 
 			# only yield once we have a consistent state, otherwise it will go wrong
 			# as we will try to modify things we are iterating over and using
@@ -266,6 +253,9 @@ class Store (object):
 						family = change.nlri.family()
 						if family in announced:
 							announced[family].pop(change.index(),None)
+
+		self._modify_sorted = {}
+		self._modify_nlri = {}
 
 		if rr_announced:
 			for afi,safi in rr_announced:
