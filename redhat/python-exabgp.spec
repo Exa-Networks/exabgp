@@ -3,13 +3,14 @@
 
 Name:           python-exabgp
 Version:        3.4.11
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        The BGP swiss army knife of networking (Library)
 
 Group:          Development/Libraries
 License:        BSD
 URL:            https://pypi.python.org/pypi/exabgp/
 Source0:        https://github.com/Exa-Networks/exabgp/archive/%{version}/exabgp-%{version}.tar.gz
+Patch0:		healthcheck.patch
 BuildArch:      noarch
 Provides:       exabgp-libs
 
@@ -35,6 +36,8 @@ Find what other users have done with it. Current documented use cases include DD
 %prep
 %setup -q -n exabgp-%{version}
 
+%patch0 -p0
+
 %build
 %{__python2} setup.py build
 
@@ -44,8 +47,8 @@ Find what other users have done with it. Current documented use cases include DD
 # fix file locations
 mv ${RPM_BUILD_ROOT}%{_bindir} ${RPM_BUILD_ROOT}%{_sbindir}
 mv ${RPM_BUILD_ROOT}%{_sbindir}/healthcheck ${RPM_BUILD_ROOT}/%{_sbindir}/exabgp-healthcheck
-install -d -m 744 ${RPM_BUILD_ROOT}/%{_sysconfdir}/
-mv ${RPM_BUILD_ROOT}/usr/etc/exabgp ${RPM_BUILD_ROOT}/%{_sysconfdir}/
+install -d -m 744 ${RPM_BUILD_ROOT}/%{_sysconfdir}
+cp -r etc/exabgp ${RPM_BUILD_ROOT}/%{_sysconfdir}/
 
 install -d %{buildroot}/%{_unitdir}
 install etc/systemd/exabgp.service %{buildroot}/%{_unitdir}/
@@ -76,6 +79,7 @@ install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 %attr(755, root, root) %{_sbindir}/exabgp
 %attr(755, root, root) %{_sbindir}/exabgp-healthcheck
 %dir %{_sysconfdir}/exabgp
+%{_datarootdir}/exabgp
 %attr(744, root, root) %{_sysconfdir}/exabgp/*
 %{_unitdir}/exabgp.service
 %doc COPYRIGHT CHANGELOG README.md
@@ -83,6 +87,10 @@ install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 %{_mandir}/man5/*
 
 %changelog
+* Mon Feb 8 2016 Dylan Redding <dzredding@gmail.com> - 3.4.11-2
+- Fixed copying of /etc/exabgp into buildroot
+- Fixed packaging of /usr/share/exabgp
+
 * Tue Jun 09 2015 Arun Babu Neelicattu <arun.neelicattu@gmail.com> - 3.4.11-1
 - Initial release
 
