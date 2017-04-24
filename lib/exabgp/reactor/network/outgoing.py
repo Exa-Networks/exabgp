@@ -16,7 +16,7 @@ from .error import NetworkError
 class Outgoing (Connection):
 	direction = 'outgoing'
 
-	def __init__ (self, afi, peer, local, port=179,md5='',ttl=None):
+	def __init__ (self, afi, peer, local, port=179,md5='',md5_base64=False, ttl=None):
 		Connection.__init__(self,afi,peer,local)
 
 		self.logger.wire("attempting connection to %s:%d" % (self.peer,port))
@@ -28,7 +28,7 @@ class Outgoing (Connection):
 
 		try:
 			self.io = create(afi)
-			MD5(self.io,self.peer,port,md5)
+			MD5(self.io,self.peer,port,md5,md5_base64)
 			if afi == AFI.ipv4:
 				TTL(self.io, self.peer, self.ttl)
 			elif afi == AFI.ipv6:

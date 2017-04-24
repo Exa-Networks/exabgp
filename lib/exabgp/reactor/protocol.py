@@ -99,8 +99,9 @@ class Protocol (object):
 			peer = self.neighbor.peer_address.top()
 			afi = self.neighbor.peer_address.afi
 			md5 = self.neighbor.md5_password
+			md5_base64 = self.neighbor.md5_base64
 			ttl_out = self.neighbor.ttl_out
-			self.connection = Outgoing(afi,peer,local,self.port,md5,ttl_out)
+			self.connection = Outgoing(afi,peer,local,self.port,md5,md5_base64,ttl_out)
 			if not local and self.connection.init:
 				self.neighbor.local_address = IP.create(self.connection.local)
 				if self.neighbor.router_id is None and self.neighbor.local_address.afi == AFI.ipv4:

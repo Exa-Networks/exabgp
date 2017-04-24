@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2013-07-13.
 Copyright (c) 2013-2015 Exa Networks. All rights reserved.
 """
 
+import base64
 import time
 import socket
 import select
@@ -100,7 +101,7 @@ def connect (io, ip, port, afi, md5):
 # 	/* _SS_MAXSIZE value minus size of ss_family */
 # } __attribute__ ((aligned(_K_SS_ALIGNSIZE)));   /* force desired alignment */
 
-def MD5 (io, ip, port, md5):
+def MD5 (io, ip, port, md5, md5_base64):
 	if md5:
 		os = platform.system()
 		if os == 'FreeBSD':
@@ -123,6 +124,12 @@ def MD5 (io, ip, port, md5):
 				)
 		elif os == 'Linux':
 			try:
+				if md5_base64:
+					try:
+						md5 = base64.b64decode(md5)
+					except TypeError:
+						raise MD5Error("Failed to decode base 64 encoded PSK")
+
 				# __kernel_sockaddr_storage
 				n_af   = IP.toaf(ip)
 				n_addr = IP.pton(ip)

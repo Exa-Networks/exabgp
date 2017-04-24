@@ -44,7 +44,7 @@ class Listener (object):
 			return socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
 		raise NetworkError('Can not create socket for listening, family of IP %s is unknown' % ip)
 
-	def listen (self, local_ip, peer_ip, local_port, md5, ttl_in):
+	def listen (self, local_ip, peer_ip, local_port, md5, md5_base64, ttl_in):
 		self.serving = True
 
 		for sock,(local,port,peer,md) in self._sockets.items():
@@ -53,7 +53,7 @@ class Listener (object):
 			if local_port != port:
 				continue
 			if md5:
-				MD5(sock,peer_ip.top(),0,md5)
+				MD5(sock,peer_ip.top(),0,md5,md5_base64)
 			if ttl_in:
 				MIN_TTL(sock,ttl_in)
 			return
@@ -62,7 +62,7 @@ class Listener (object):
 			sock = self._new_socket(local_ip)
 			if md5:
 				# MD5 must match the peer side of the TCP, not the local one
-				MD5(sock,peer_ip.top(),0,md5)
+				MD5(sock,peer_ip.top(),0,md5,md5_base64)
 			try:
 				sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 			except (socket.error,AttributeError):
