@@ -4,15 +4,17 @@ Version explained:
  bug   : increase on bug or incremental changes
 
 Version 3.4.19
- * Added IPv6 nlri-mpls to list of enabled protocol (was missing)
+ * Add: IPv6 nlri-mpls to list of enabled protocol (was missing)
     requested by: adrian62
- * Fix encoding of Flow Label requiring more than 2 bytes
+ * Fix: encoding of Flow Label requiring more than 2 bytes
     reported by: BLAKEMMM
- * Fix decoding of capability (was potentially over reading)
- * Fix trace when trying to access PID file and this is not allowed
+ * Fix: decoding of capability (was potentially over reading)
+ * Fix: trace when trying to access PID file and this is not allowed
     reported by: George Shuklin
  * Fix: Remove a peer's RIB cache when it is deleted from the config file
     patch by: Brian Johnson
+ * Fix: do not crash the reactor when an invalid IP is passed via the API
+    reported by: Yevgeniy Ovsyannikov
 
 Version 3.4.18
  * Backport: backhole community (RFC 7999)

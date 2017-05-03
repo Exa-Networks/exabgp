@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2015-12-15.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+import socket
+
 from exabgp.version import version as _version
 
 
@@ -257,6 +259,8 @@ def announce_route (self, reactor, service, command):
 		return False
 	except IndexError:
 		return False
+	except socket.error:
+		return False
 
 
 def withdraw_route (self, reactor, service, command):
@@ -287,6 +291,8 @@ def withdraw_route (self, reactor, service, command):
 		return False
 	except IndexError:
 		return False
+	except socket.error:
+		return False
 
 
 def announce_vpls (self, reactor, service, command):
@@ -315,6 +321,8 @@ def announce_vpls (self, reactor, service, command):
 	except ValueError:
 		return False
 	except IndexError:
+		return False
+	except socket.error:
 		return False
 
 
@@ -346,6 +354,8 @@ def withdraw_vpls (self, reactor, service, command):
 		return False
 	except IndexError:
 		return False
+	except socket.error:
+		return False
 
 
 def announce_attribute (self, reactor, service, command):
@@ -372,6 +382,8 @@ def announce_attribute (self, reactor, service, command):
 	except ValueError:
 		return False
 	except IndexError:
+		return False
+	except socket.error:
 		return False
 
 
@@ -403,6 +415,8 @@ def withdraw_attribute (self, reactor, service, command):
 		return False
 	except IndexError:
 		return False
+	except socket.error:
+		return False
 
 
 def announce_flow (self, reactor, service, command):
@@ -429,6 +443,8 @@ def announce_flow (self, reactor, service, command):
 	except ValueError:
 		return False
 	except IndexError:
+		return False
+	except socket.error:
 		return False
 
 
@@ -459,6 +475,8 @@ def withdraw_flow (self, reactor, service, command):
 	except ValueError:
 		return False
 	except IndexError:
+		return False
+	except socket.error:
 		return False
 
 
