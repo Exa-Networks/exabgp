@@ -36,7 +36,7 @@ class IgpMetric(object):
 		self.igpmetric = igpmetric
 
 	def __repr__ (self):
-		return "TE Default Metric: %s" % (self.igpmetric)
+		return "IGP Metric: %s" % (self.igpmetric)
 
 	@classmethod
 	def unpack (cls,data,length):
