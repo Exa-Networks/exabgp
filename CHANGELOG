@@ -15,6 +15,8 @@ Version 3.4.19
     patch by: Brian Johnson
  * Fix: do not crash the reactor when an invalid IP is passed via the API
     reported by: Yevgeniy Ovsyannikov
+ * Fix: bad defintion of Flow for ICMPType, ICMPCode and Fragment
+    reported by: Christoph Loibl
 
 Version 3.4.18
  * Backport: backhole community (RFC 7999)

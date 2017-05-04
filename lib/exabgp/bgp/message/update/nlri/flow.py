@@ -377,14 +377,14 @@ class FlowSourcePort (IOperationByteShort,NumericString,IPv4,IPv6):
 	decoder = staticmethod(_number)
 
 
-class FlowICMPType (IOperationByte,BinaryString,IPv4,IPv6):
+class FlowICMPType (IOperationByte,NumericString,IPv4,IPv6):
 	ID = 0x07
 	NAME = 'icmp-type'
 	converter = staticmethod(converter(NamedICMPType))
 	decoder = staticmethod(decoder(_number,ICMPType))
 
 
-class FlowICMPCode (IOperationByte,BinaryString,IPv4,IPv6):
+class FlowICMPCode (IOperationByte,NumericString,IPv4,IPv6):
 	ID = 0x08
 	NAME = 'icmp-code'
 	converter = staticmethod(converter(NamedICMPCode))
@@ -422,7 +422,7 @@ class FlowTrafficClass (IOperationByte,NumericString,IPv6):
 
 
 # BinaryOperator
-class FlowFragment (IOperationByteShort,NumericString,IPv4):
+class FlowFragment (IOperationByteShort,BinaryString,IPv4):
 	ID = 0x0C
 	NAME = 'fragment'
 	converter = staticmethod(converter(NamedFragment))
