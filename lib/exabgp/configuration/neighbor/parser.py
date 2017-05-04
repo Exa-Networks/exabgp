@@ -66,8 +66,6 @@ def description (tokeniser):
 
 def md5 (tokeniser):
 	value = tokeniser()
-	if len(value) > 80:
-		raise ValueError('MD5 password must be no larger than 80 characters')
 	if not value:
 		raise ValueError('value requires the value password as an argument (quoted or unquoted).  FreeBSD users should use "kernel" as the argument.')
 	return value

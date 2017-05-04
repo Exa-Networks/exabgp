@@ -7,6 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 # import sys
+import base64
 import socket
 from copy import deepcopy
 
@@ -77,6 +78,7 @@ class ParseNeighbor (Section):
 		'outgoing-ttl':  ttl,
 		'incoming-ttl':  ttl,
 		'md5-password':  md5,
+		'md5-base64':    boolean,
 		'md5-ip':        ip,
 		'group-updates': boolean,
 		'auto-flush':    boolean,
@@ -101,6 +103,7 @@ class ParseNeighbor (Section):
 		'outgoing-ttl':  'set-command',
 		'incoming-ttl':  'set-command',
 		'md5-password':  'set-command',
+		'md5-base64':    'set-command',
 		'md5-ip':        'set-command',
 		'group-updates': 'set-command',
 		'auto-flush':    'set-command',
@@ -110,6 +113,7 @@ class ParseNeighbor (Section):
 	}
 
 	default = {
+		'md5-base64': False,
 		'passive': False,
 		'group-updates': True,
 		'auto-flush': True,
@@ -150,6 +154,7 @@ class ParseNeighbor (Section):
 		neighbor.host_name        = local.get('host-name',_hostname())
 		neighbor.domain_name      = local.get('domain-name',_domainname())
 		neighbor.md5_password     = local.get('md5-password',None)
+		neighbor.md5_base64       = local.get('md5-base64', False)
 		neighbor.md5_ip           = local.get('md5-ip',neighbor.local_address)
 		neighbor.description      = local.get('description','')
 		neighbor.flush            = local.get('auto-flush',True)
@@ -217,6 +222,15 @@ class ParseNeighbor (Section):
 		if neighbor.peer_address.top() in self._neighbors:
 			return self.error.set('duplicate peer definition %s' % neighbor.peer_address.top())
 		self._neighbors.append(neighbor.peer_address.top())
+
+		if neighbor.md5_password:
+			try:
+				md5 = base64.b64decode(neighbor.md5_password) if neighbor.md5_base64 else neighbor.md5_password
+			except TypeError as e:
+				return self.error.set("Invalid base64 encoding of MD5 password.")
+			else:
+			    if len(md5) > 80:
+				    return self.error.set('MD5 password must be no larger than 80 characters')
 
 		# check we are not trying to announce routes without the right MP announcement
 		for change in neighbor.changes:
