@@ -389,14 +389,14 @@ class FlowSourcePort (IOperationByteShort,NumericString,IPv4,IPv6):
 	decoder = staticmethod(_number)
 
 
-class FlowICMPType (IOperationByte,BinaryString,IPv4,IPv6):
+class FlowICMPType (IOperationByte,NumericString,IPv4,IPv6):
 	ID = 0x07
 	NAME = 'icmp-type'
 	converter = staticmethod(converter(ICMPType.named))
 	decoder = staticmethod(decoder(_number,ICMPType))
 
 
-class FlowICMPCode (IOperationByte,BinaryString,IPv4,IPv6):
+class FlowICMPCode (IOperationByte,NumericString,IPv4,IPv6):
 	ID = 0x08
 	NAME = 'icmp-code'
 	converter = staticmethod(converter(ICMPCode.named))
