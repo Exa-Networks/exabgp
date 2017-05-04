@@ -68,6 +68,7 @@ class CommonOperator (object):
 
 class NumericOperator (CommonOperator):
 	# reserved= 0x08  # 0b00001000
+	NONE      = 0x00  # 0000000000
 	LT        = 0x04  # 0b00000100
 	GT        = 0x02  # 0b00000010
 	EQ        = 0x01  # 0b00000001
@@ -75,6 +76,7 @@ class NumericOperator (CommonOperator):
 
 class BinaryOperator (CommonOperator):
 	# reserved= 0x0C  # 0b00001100
+	NONE      = 0x00  # 0000000000
 	NOT       = 0x02  # 0b00000010
 	MATCH     = 0x01  # 0b00000001
 	INCLUDE   = 0x00  # 0b00000000
@@ -229,17 +231,21 @@ class NumericString (object):
 	value = None
 
 	_string = {
+		NumericOperator.NONE: 'true',
 		NumericOperator.LT: '<',
 		NumericOperator.GT: '>',
 		NumericOperator.EQ: '=',
 		NumericOperator.LT | NumericOperator.EQ: '<=',
 		NumericOperator.GT | NumericOperator.EQ: '>=',
+		NumericOperator.LT | NumericOperator.GT | NumericOperator.EQ: 'false',
 
+		NumericOperator.AND: '&true',
 		NumericOperator.AND | NumericOperator.LT: '&<',
 		NumericOperator.AND | NumericOperator.GT: '&>',
 		NumericOperator.AND | NumericOperator.EQ: '&=',
 		NumericOperator.AND | NumericOperator.LT | NumericOperator.EQ: '&<=',
 		NumericOperator.AND | NumericOperator.GT | NumericOperator.EQ: '&>=',
+		NumericOperator.AND | NumericOperator.LT | NumericOperator.GT | NumericOperator.EQ: '&false',
 	}
 
 	def __str__ (self):
