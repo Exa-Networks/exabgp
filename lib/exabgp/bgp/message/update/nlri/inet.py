@@ -62,8 +62,8 @@ class INET (NLRI):
 		return addpath + self.cidr.pack_nlri()
 
 	def index (self):
-		addpath = 'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
-		return NLRI._index(self) + addpath + self.cidr.pack_nlri()
+		addpath = 'no-pi' if self.path_info is PathInfo.NOPATH else str(self.path_info.pack())
+		return NLRI._index(self) + addpath + str(self.cidr.pack_nlri())
 
 	def extensive (self):
 		return "%s%s" % (self.prefix(),'' if self.nexthop is NoNextHop else ' next-hop %s' % self.nexthop)

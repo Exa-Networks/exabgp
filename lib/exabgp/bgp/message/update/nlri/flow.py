@@ -620,9 +620,6 @@ class Flow (NLRI):
 		compatibility = ', "string": "%s"' % self.extensive()
 		return '{' + ','.join(string) + rd + nexthop + compatibility + ' }'
 
-	def index (self):
-		return NLRI._index(self) + self.pack()
-
 	@classmethod
 	def unpack_nlri (cls, afi, safi, bgp, action, addpath):
 		length,bgp = ord_(bgp[0]),bgp[1:]

@@ -70,9 +70,9 @@ class IPVPN (Labelled):
 		return addpath + mask + self.labels.pack() + self.rd.pack() + self.cidr.pack_ip()
 
 	def index (self, negotiated=None):
-		addpath = 'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
+		addpath = 'no-pi' if self.path_info is PathInfo.NOPATH else str(self.path_info.pack())
 		mask = chr(len(self.rd)*8 + self.cidr.mask)
-		return NLRI._index(self) + addpath + mask + self.rd.pack() + self.cidr.pack_ip()
+		return NLRI._index(self) + addpath + mask + str(self.rd.pack()) + str(self.cidr.pack_ip())
 
 	def _internal (self, announced=True):
 		r = Labelled._internal(self,announced)

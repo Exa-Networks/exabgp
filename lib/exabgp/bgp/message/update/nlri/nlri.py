@@ -36,7 +36,7 @@ class NLRI (Family):
 		return '%s%s' % (self.afi,self.safi)
 
 	def index (self):
-		raise NotImplementedError('NLRI index not implemented')
+		return self._index() + str(self.pack())
 
 	# remove this when code restructure is finished
 	def pack (self, negotiated=None):

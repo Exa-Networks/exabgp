@@ -86,9 +86,6 @@ class BGPLS(NLRI):
 		NLRI.__init__(self, AFI.bgpls, SAFI.bgp_ls, action)
 		self._packed = b''
 
-	def index(self):
-		return NLRI._index(self) + self.pack()
-
 	def pack(self, negotiated=None):
 		return pack('!BB',self.CODE,len(self._packed)) + self._packed
 
@@ -100,7 +97,6 @@ class BGPLS(NLRI):
 
 	def __str__(self):
 		return "bgpls:%s:%s" % (self.registered_bgpls.get(self.CODE,self).SHORT_NAME.lower(),'0x' + ''.join('%02x' % ord_(_) for _ in self._packed))
-
 
 	@classmethod
 	def register(cls, klass):
