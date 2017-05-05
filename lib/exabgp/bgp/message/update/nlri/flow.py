@@ -68,11 +68,11 @@ class CommonOperator (object):
 
 class NumericOperator (CommonOperator):
 	# reserved= 0x08  # 0b00001000
-	NONE      = 0x00  # 0000000000
+	TRUE      = 0x00  # 0000000000
 	LT        = 0x04  # 0b00000100
 	GT        = 0x02  # 0b00000010
 	EQ        = 0x01  # 0b00000001
-
+	FALSE     = 0x01 | 0x02 | 0x04
 
 class BinaryOperator (CommonOperator):
 	# reserved= 0x0C  # 0b00001100
@@ -231,21 +231,21 @@ class NumericString (object):
 	value = None
 
 	_string = {
-		NumericOperator.NONE: 'true',
+		NumericOperator.TRUE: 't',
 		NumericOperator.LT: '<',
 		NumericOperator.GT: '>',
 		NumericOperator.EQ: '=',
 		NumericOperator.LT | NumericOperator.EQ: '<=',
 		NumericOperator.GT | NumericOperator.EQ: '>=',
-		NumericOperator.LT | NumericOperator.GT | NumericOperator.EQ: 'false',
+		NumericOperator.FALSE: 'f',
 
-		NumericOperator.AND: '&true',
+		NumericOperator.AND: '&t',
 		NumericOperator.AND | NumericOperator.LT: '&<',
 		NumericOperator.AND | NumericOperator.GT: '&>',
 		NumericOperator.AND | NumericOperator.EQ: '&=',
 		NumericOperator.AND | NumericOperator.LT | NumericOperator.EQ: '&<=',
 		NumericOperator.AND | NumericOperator.GT | NumericOperator.EQ: '&>=',
-		NumericOperator.AND | NumericOperator.LT | NumericOperator.GT | NumericOperator.EQ: '&false',
+		NumericOperator.AND | NumericOperator.FALSE: '&f',
 	}
 
 	def __str__ (self):

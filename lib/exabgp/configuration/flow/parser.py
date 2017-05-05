@@ -91,8 +91,12 @@ def _operator_numeric (string):
 			operator = NumericOperator.GT
 		elif string[0] == '<':
 			operator = NumericOperator.LT
+		elif operator == 't':
+			return NumericOperator.TRUE,string[1:]
+		elif operator == 'f':
+			return NumericOperator.FALSE,string[1:]
 		else:
-			return NumericOperator.EQ,string
+			raise ValueError('Invalid operator %s' % string[0])
 		if string[1] == '=':
 			operator += NumericOperator.EQ
 			return operator,string[2:]
@@ -347,4 +351,3 @@ def interface_set (tokeniser):
 		communities.add(_interface_set(value))
 
 	return communities
-
