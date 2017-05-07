@@ -34,7 +34,7 @@ def _show_routes_callback(reactor, service, last, route_type, advertised, extens
 		families = None
 		lines_per_yield = environment.settings().api.chunk
 		if last in ('routes', 'extensive', 'static', 'flow', 'l2vpn'):
-			peers = reactor.peers.keys()
+			peers = list(reactor.peers)  # peers.keys()
 		else:
 			peers = [n for n in reactor.peers.keys() if 'neighbor %s' % last in n]
 		for key in peers:

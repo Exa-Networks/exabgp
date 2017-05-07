@@ -36,7 +36,7 @@ class FSM (object):
 
 		codes = dict((name,code) for (code,name) in names.items())
 
-		valid = names.keys()
+		valid = list(names)  # names.keys()
 
 		def __init__ (self, code):
 			if code not in self.valid:

@@ -242,8 +242,8 @@ class Attributes (dict):
 			Attribute.CODE.LOCAL_PREF: lambda l,r,nh: l != r,
 		}
 
-		keys = self.keys()
-		alls = set(keys + default.keys() if with_default else [])
+		keys = list(self)
+		alls = set(keys + list(default) if with_default else [])
 
 		for code in sorted(alls):
 			if code in Attributes.INTERNAL:

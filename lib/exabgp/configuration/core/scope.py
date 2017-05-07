@@ -110,5 +110,5 @@ class Scope (Error):
 
 	def pop (self, name='', default=None):
 		if name == '':
-			return dict((k,self._current.pop(k)) for k in self._current.keys())
+			return dict((k,self._current.pop(k)) for k in list(self._current))
 		return self._current.pop(name,default)
