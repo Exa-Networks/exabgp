@@ -11,6 +11,7 @@ import sys
 import select
 
 from exabgp.vendoring.cmd2 import cmd
+from exabgp.vendoring import six
 
 from exabgp.version import version
 
@@ -109,7 +110,7 @@ class Attribute (SubMenu):
 	# aigp
 
 	def do_show (self, _):
-		print('attribute %s ' % self.name + ' '.join('%s %s' % (key,value) for key,value in self.attribute.iteritems()))
+		print('attribute %s ' % self.name + ' '.join('%s %s' % (key,value) for key,value in six.iteritems(self.attribute)))
 
 
 class Syntax (Completed):

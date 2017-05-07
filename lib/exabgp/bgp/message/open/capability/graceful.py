@@ -15,6 +15,8 @@ from exabgp.util import ord_
 from exabgp.util import concat_strs
 from exabgp.bgp.message.open.capability.capability import Capability
 
+from exabgp.vendoring import six
+
 # =========================================================== Graceful (Restart)
 # RFC 4727 - https://tools.ietf.org/html/rfc4727
 
@@ -63,7 +65,7 @@ class Graceful (Capability,dict):
 			'restart-flags':'[%s] ' % (' "forwarding" ' if self.restart_flag & 0x8 else ' ')
 		}
 
-		return '{ %s}' % ','.join('"%s": %s' % (k,v) for k,v in d.iteritems())
+		return '{ %s}' % ','.join('"%s": %s' % (k,v) for k,v in six.iteritems(d))
 
 	def families (self):
 		return self.keys()

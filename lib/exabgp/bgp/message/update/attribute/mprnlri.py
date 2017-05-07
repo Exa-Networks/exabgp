@@ -24,6 +24,7 @@ from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability import Negotiated
 
+from exabgp.vendoring import six
 
 # ==================================================== MP Unreacheable NLRI (15)
 #
@@ -74,7 +75,7 @@ class MPRNLRI (Attribute,Family):
 			# mpunli[nexthop] = nlri
 			mpnlri.setdefault(nexthop,[]).append(nlri.pack(negotiated))
 
-		for nexthop,nlris in mpnlri.iteritems():
+		for nexthop,nlris in six.iteritems(mpnlri):
 			payload = b''.join([self.afi.pack(), self.safi.pack(), chr_(len(nexthop)), nexthop, chr_(0)])
 			header_length = len(payload)
 			for nlri in nlris:
