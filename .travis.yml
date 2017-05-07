@@ -25,6 +25,15 @@ script:
   - ./sbin/exabgp qa/conf/api-open.conf --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
   - env exabgp_log_enable=false nosetests --with-coverage ./qa/tests/*_test.py
 #  - coverage run -m unittest discover -s qa/tests -p *_test.py
+  # now run the testsuite again with python3
+  - export INTERPRETER=python3
+  - sbin/exabgp --version
+  - sbin/exabgp --fi > etc/exabgp/exabgp.env
+  - set pipefail
+  - ./qa/bin/parsing
+  - ./qa/bin/conversation
+  - ./sbin/exabgp qa/conf/api-open.conf --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
+  - env exabgp_log_enable=false nosetests --with-coverage ./qa/tests/*_test.py
 
 after_success:
   - coveralls
