@@ -214,7 +214,7 @@ class IOperationByteShort (IOperation):
 class IOperationByteShortLong (IOperation):
 	def encode (self, value):
 		if value < (1 << 8):
-			return 1,chr(value)
+			return 1,chr_(value)
 		if value < (1 << 16):
 			return 2,pack('!H',value)
 		return 4,pack('!L',value)

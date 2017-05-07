@@ -16,6 +16,9 @@ from exabgp.util import concat_strs
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.message import Message
 
+from exabgp.util import chr_
+
+
 # ========================================================================= Type
 #
 
@@ -42,7 +45,7 @@ class Type (int):
 @Message.register
 class Operational (Message):
 	ID = Message.CODE.OPERATIONAL
-	TYPE = chr(Message.CODE.OPERATIONAL)
+	TYPE = chr_(Message.CODE.OPERATIONAL)
 
 	registered_operational = dict()
 

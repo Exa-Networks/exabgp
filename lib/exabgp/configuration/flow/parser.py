@@ -42,6 +42,8 @@ from exabgp.rib.change import Change
 
 from exabgp.logger import Logger
 
+from exabgp.util import chr_
+from exabgp.util import concat_strs
 
 def flow (tokeniser):
 	return Change(
@@ -54,7 +56,7 @@ def source (tokeniser):
 	data = tokeniser()
 	if data.count('.') == 3 and data.count(':') == 0:
 		ip,netmask = data.split('/')
-		raw = ''.join(chr(int(_)) for _ in ip.split('.'))
+		raw = b''.join(chr_(int(_)) for _ in ip.split('.'))
 		yield Flow4Source(raw,int(netmask))
 	elif data.count('/') == 1:
 		ip,netmask = data.split('/')
@@ -69,7 +71,7 @@ def destination (tokeniser):
 	data = tokeniser()
 	if data.count('.') == 3 and data.count(':') == 0:
 		ip,netmask = data.split('/')
-		raw = ''.join(chr(int(_)) for _ in ip.split('.'))
+		raw = b''.join(chr_(int(_)) for _ in ip.split('.'))
 		yield Flow4Destination(raw,int(netmask))
 	elif data.count('/') == 1:
 		ip,netmask = data.split('/')

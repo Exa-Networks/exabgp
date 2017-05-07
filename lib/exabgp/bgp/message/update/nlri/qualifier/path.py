@@ -7,6 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.util import chr_
+from exabgp.util import ord_
 
 # ===================================================================== PathInfo
 # RFC draft-ietf-idr-add-paths-09
@@ -49,12 +50,12 @@ class PathInfo (object):
 
 	def json (self):
 		if self.path_info:
-			return '"path-information": "%s"' % '.'.join([str(ord(_)) for _ in self.path_info])
+			return '"path-information": "%s"' % '.'.join([str(ord_(_)) for _ in self.path_info])
 		return ''
 
 	def __repr__ (self):
 		if self.path_info:
-			return ' path-information %s' % '.'.join([str(ord(_)) for _ in self.path_info])
+			return ' path-information %s' % '.'.join([str(ord_(_)) for _ in self.path_info])
 		return ''
 
 	def pack (self):

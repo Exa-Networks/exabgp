@@ -75,7 +75,7 @@ class MPRNLRI (Attribute,Family):
 			mpnlri.setdefault(nexthop,[]).append(nlri.pack(negotiated))
 
 		for nexthop,nlris in mpnlri.iteritems():
-			payload = b''.join([self.afi.pack(), self.safi.pack(), chr(len(nexthop)), nexthop, chr(0)])
+			payload = b''.join([self.afi.pack(), self.safi.pack(), chr_(len(nexthop)), nexthop, chr_(0)])
 			header_length = len(payload)
 			for nlri in nlris:
 				if self._len(payload + nlri) > maximum:

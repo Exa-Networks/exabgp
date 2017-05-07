@@ -17,7 +17,7 @@ class UnknownMessage (Message):
 
 	def __init__ (self, code, data=b''):
 		self.ID = code
-		self.TYPE = chr(code)
+		self.TYPE = chr_(code)
 		self.data = data
 
 	def message (self,negotiated=None):

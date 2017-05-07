@@ -33,6 +33,8 @@ from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.logger import Logger
 from exabgp.logger import LazyFormat
 
+from exabgp.util import chr_
+
 # ======================================================================= Update
 
 # +-----------------------------------------------------+
@@ -58,7 +60,7 @@ from exabgp.logger import LazyFormat
 @Message.register
 class Update (Message):
 	ID = Message.CODE.UPDATE
-	TYPE = chr(Message.CODE.UPDATE)
+	TYPE = chr_(Message.CODE.UPDATE)
 	EOR = False
 
 	def __init__ (self, nlris, attributes):

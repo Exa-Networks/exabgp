@@ -47,6 +47,9 @@ from exabgp.bgp.message.update.attribute.community import ExtendedCommunities
 
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 
+from exabgp.util import chr_
+from exabgp.util import concat_strs
+
 from exabgp.rib.change import Change
 
 
@@ -157,7 +160,7 @@ def attribute (tokeniser):
 		raise ValueError('invalid attribute, data is not 0x hexadecimal')
 	if len(data) % 2:
 		raise ValueError('invalid attribute, data is not 0x hexadecimal')
-	data = ''.join(chr(int(data[_:_+2],16)) for _ in range(2,len(data),2))
+	data = b''.join(chr_(int(data[_:_+2],16)) for _ in range(2,len(data),2))
 
 	end = tokeniser()
 	if end != ']':
@@ -419,13 +422,13 @@ def large_community (tokeniser):
 
 _HEADER = {
 	# header and subheader
-	'target':              chr(0x00)+chr(0x02),
-	'target4':             chr(0x02)+chr(0x02),
-	'origin':              chr(0x00)+chr(0x03),
-	'origin4':             chr(0x02)+chr(0x03),
-	'redirect':            chr(0x80)+chr(0x08),
-	'l2info':              chr(0x80)+chr(0x0A),
-	'redirect-to-nexthop': chr(0x08)+chr(0x00),
+	'target':              chr_(0x00)+chr_(0x02),
+	'target4':             chr_(0x02)+chr_(0x02),
+	'origin':              chr_(0x00)+chr_(0x03),
+	'origin4':             chr_(0x02)+chr_(0x03),
+	'redirect':            chr_(0x80)+chr_(0x08),
+	'l2info':              chr_(0x80)+chr_(0x0A),
+	'redirect-to-nexthop': chr_(0x08)+chr_(0x00),
 }
 
 _SIZE = {
@@ -446,7 +449,7 @@ def _extended_community (value):
 		# we could raise if the length is not 8 bytes (16 chars)
 		if len(value) % 2:
 			raise ValueError('invalid extended community %s' % value)
-		raw = ''.join([chr(int(value[_:_+2],16)) for _ in range(2,len(value),2)])
+		raw = concat_strs(*[chr_(int(value[_:_+2],16)) for _ in range(2,len(value),2)])
 		return ExtendedCommunity.unpack(raw)
 	elif value.count(':'):
 		components = value.split(':')

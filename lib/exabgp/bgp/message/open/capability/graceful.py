@@ -10,6 +10,7 @@ from struct import pack
 from struct import unpack
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.util import chr_
 from exabgp.util import ord_
 from exabgp.util import concat_strs
 from exabgp.bgp.message.open.capability.capability import Capability
@@ -39,7 +40,7 @@ class Graceful (Capability,dict):
 
 	def extract (self):
 		restart  = pack('!H',((self.restart_flag << 12) | (self.restart_time & Graceful.TIME_MASK)))
-		families = [(afi.pack(),safi.pack(),chr(self[(afi,safi)])) for (afi,safi) in self.keys()]
+		families = [(afi.pack(),safi.pack(),chr_(self[(afi,safi)])) for (afi,safi) in self.keys()]
 		sfamilies = b''.join([concat_strs(pafi,psafi,family) for (pafi,psafi,family) in families])
 		return [concat_strs(restart,sfamilies)]
 

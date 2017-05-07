@@ -15,6 +15,8 @@ from exabgp.util import concat_strs
 
 from exabgp.bgp.message.message import Message
 
+from exabgp.util import chr_
+
 
 def hexstring (value):
 	def spaced (value):
@@ -36,7 +38,7 @@ def hexstring (value):
 @Message.register
 class Notification (Message):
 	ID = Message.CODE.NOTIFICATION
-	TYPE = chr(Message.CODE.NOTIFICATION)
+	TYPE = chr_(Message.CODE.NOTIFICATION)
 
 	_str_code = {
 		1: "Message header error",

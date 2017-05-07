@@ -8,11 +8,12 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from struct import pack
 
-from exabgp.util import chr_
+from exabgp.util import concat_strs
 
 from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
+from exabgp.util import chr_
 
 def label (tokeniser):
 	labels = []
@@ -42,7 +43,7 @@ def route_distinguisher (tokeniser):
 		data = [chr_(0),chr_(1)]
 		data.extend([chr_(int(_)) for _ in prefix.split('.')])
 		data.extend([chr_(suffix >> 8),chr_(suffix & 0xFF)])
-		rtd = b''.join(data)
+		rtd = concat_strs(*data)
 	else:
 		number = int(prefix)
 		if number < pow(2,16) and suffix < pow(2,32):

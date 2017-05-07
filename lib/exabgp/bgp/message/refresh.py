@@ -15,6 +15,8 @@ from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
 
+from exabgp.util import chr_
+
 # =================================================================== Notification
 # A Notification received from our peer.
 # RFC 4271 Section 4.5
@@ -34,7 +36,7 @@ class Reserved (int):
 @Message.register
 class RouteRefresh (Message):
 	ID = Message.CODE.ROUTE_REFRESH
-	TYPE = chr(Message.CODE.ROUTE_REFRESH)
+	TYPE = chr_(Message.CODE.ROUTE_REFRESH)
 
 	request = 0
 	start = 1
@@ -46,7 +48,7 @@ class RouteRefresh (Message):
 		self.reserved = Reserved(reserved)
 
 	def message (self,negotiated=None):
-		return self._message(concat_strs(self.afi.pack(),chr(self.reserved),self.safi.pack()))
+		return self._message(concat_strs(self.afi.pack(),chr_(self.reserved),self.safi.pack()))
 
 	def __str__ (self):
 		return "REFRESH"

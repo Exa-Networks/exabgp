@@ -19,6 +19,8 @@ from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.capability import Capabilities
 
+from exabgp.util import chr_
+
 # =================================================================== Open
 
 # 0                   1                   2                   3
@@ -51,7 +53,7 @@ from exabgp.bgp.message.open.capability import Capabilities
 @Message.register
 class Open (Message):
 	ID = Message.CODE.OPEN
-	TYPE = chr(Message.CODE.OPEN)
+	TYPE = chr_(Message.CODE.OPEN)
 
 	def __init__ (self, version, asn, hold_time, router_id, capabilities):
 		self.version = version

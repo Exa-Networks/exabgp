@@ -11,6 +11,8 @@ from exabgp.bgp.message.notification import Notify
 
 from exabgp.reactor.api.options import hexstring
 
+from exabgp.util import chr_
+
 # =================================================================== KeepAlive
 #
 
@@ -18,7 +20,7 @@ from exabgp.reactor.api.options import hexstring
 @Message.register
 class KeepAlive (Message):
 	ID = Message.CODE.KEEPALIVE
-	TYPE = chr(Message.CODE.KEEPALIVE)
+	TYPE = chr_(Message.CODE.KEEPALIVE)
 
 	def message (self,negotiated=None):
 		return self._message(b'')
