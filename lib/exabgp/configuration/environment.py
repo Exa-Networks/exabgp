@@ -271,10 +271,7 @@ class environment (object):
 # ========================================================================= _env
 #
 
-if sys.version_info[0]<3:
-	import ConfigParser
-else:
-	import configparser as ConfigParser
+from exabgp.vendoring.six.moves import configparser as ConfigParser
 
 from exabgp.util.hashtable import HashTable
 
