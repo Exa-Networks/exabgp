@@ -44,3 +44,13 @@ else:
 def concat_strs(*items): #each item is an 'str' in py2 or a 'bytes' in py3
 	return b''.join(items)
 
+# helpers for converting between string and bytestring
+
+if sys.version_info[0]<3:
+	str_ascii = lambda x: x
+	bytes_ascii = lambda x: x
+else:
+	def str_ascii(bytestring):
+		return str(bytestring, 'ascii')
+	def bytes_ascii(bytestring):
+		return bytes(bytestring, 'ascii')
