@@ -77,6 +77,6 @@ class SrAdjacencyLan(object):
 		return cls(flags=flags.flags, sids=sids, weight=weight)
 
 	def json (self,compact=None):
-		return '"sr-adj-lan flags": "%s", "sids": "%s", "sr-adj-weight": "%s"' % (self.flags,
+		return '"sr-adj-lan-flags": "%s", "sids": "%s", "sr-adj-weight": "%s"' % (self.flags,
 				self.sids, self.weight)
 

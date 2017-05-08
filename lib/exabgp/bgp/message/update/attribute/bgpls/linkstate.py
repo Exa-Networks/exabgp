@@ -66,6 +66,7 @@ class LINKSTATE(Attribute):
 	def __str__(self):
 		return ', '.join(str(d) for d in self.ls_attrs)
 
+
 class GenericLSID(object):
 	TLV = 99999
 
@@ -74,7 +75,7 @@ class GenericLSID(object):
 		self.code = code
 
 	def __repr__ (self):
-		return "Unknown attribute: %s" % (self.rep)
+		return "Attribute with code [ %s ] not implemented" % (self.code)
 
 	@classmethod
 	def unpack (cls,scode,data):
@@ -83,7 +84,7 @@ class GenericLSID(object):
 		return cls(code=scode,rep=info)
 
 	def json (self,compact=None):
-		return '"Unknown attribute: %s"' % (self.rep)
+		return '"attribute-not-implemented": "%s"' % (self.code)
 
 
 class LsGenericFlags(object):

@@ -37,3 +37,4 @@ from exabgp.bgp.message.update.attribute.bgpls.link.sradj import SrAdjacency
 from exabgp.bgp.message.update.attribute.bgpls.link.sradjlan import SrAdjacencyLan
 from exabgp.bgp.message.update.attribute.bgpls.prefix.srprefix import SrPrefix
 from exabgp.bgp.message.update.attribute.bgpls.prefix.srigpprefixattr import SrIgpPrefixAttr
+from exabgp.bgp.message.update.attribute.bgpls.prefix.srrid import SrSourceRouterID

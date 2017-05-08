@@ -35,21 +35,11 @@ from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixmetric import Prefix
 #   | TLV Code Point | Description         |   Length | Section       |
 #   +----------------+---------------------+----------+---------------+
 #   |    1158    | Prefix SID              | variable | Section 2.3.1 |
-#   |    1159    | Range                   | variable | Section 2.3.5 |
-#   |    1160    | Binding SID             | variable | Section 2.3.6 |
 #   |    1170    | IGP Prefix Attributes   | variable | Section 2.3.3 |
 #   |    1171    | Source Router-ID        | variable | Section 2.3.4 |
 #   |    1161    | SID/Label TLV           | variable | Section 2.3.7.2 |
-#   |    1162    | ERO Metric TLV          | 4 octets | Section 2.3.7.3 |
-#   |    1163    | IPv4 ERO TLV            | 8 octets | Section 2.3.7.4 |
-#   |    1165    | Unnumbered Interface ID | 12       | Section 2.3.7.6 |
-#   |            | ERO TLV                 |          |                 |
-#   |    1166    | IPv4 Backup ERO TLV     | 8 octets | Section 2.3.7.7 |
-#   |            |                         | octets   |                 |
-#   |    1168    | Unnumbered Interface ID | 12       | Section 2.3.7.9 |
-#   |            | Backup ERO TLV          |          |                 |
-#   +------------+-------------------------+----------+-----------------+
 # Note: Only IS-IS IGP extensions as defined in draft-ietf-isis-segment-routing-extensions
-# are currently parsed by ExaBGP.
+# are currently parsed by ExaBGP. Binding segments are not supported (3.5.  Binding Segment)
 from exabgp.bgp.message.update.attribute.bgpls.prefix.srprefix import SrPrefix
 from exabgp.bgp.message.update.attribute.bgpls.prefix.srigpprefixattr import SrIgpPrefixAttr
+from exabgp.bgp.message.update.attribute.bgpls.prefix.srrid import SrSourceRouterID
