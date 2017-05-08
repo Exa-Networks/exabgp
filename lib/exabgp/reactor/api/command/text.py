@@ -26,6 +26,7 @@ class Text (object):
 	def __new__ (cls,name):
 		def register (function):
 			cls.callback[name] = function
+			function.func_name = name.replace(' ','_')
 			return function
 		return register
 
