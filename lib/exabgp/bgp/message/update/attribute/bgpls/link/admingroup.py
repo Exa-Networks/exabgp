@@ -6,12 +6,8 @@ Created by Evelio Vila on 2016-12-01.
 Copyright (c) 2014-2016 Exa Networks. All rights reserved.
 """
 
-import binascii
-
 from exabgp.vendoring.bitstring import BitArray
-
 from exabgp.bgp.message.notification import Notify
-
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 
 @LINKSTATE.register()

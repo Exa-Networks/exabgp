@@ -5,15 +5,8 @@ nodename.py
 Created by Evelio Vila on 2016-12-01.
 Copyright (c) 2014-2016 Exa Networks. All rights reserved.
 """
-
-import binascii
-import itertools
-from exabgp.vendoring.bitstring import BitArray
-
 from exabgp.bgp.message.notification import Notify
-
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
-
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGenericFlags
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -37,8 +30,6 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #        +-----------------+-------------------------+------------+
 # 		https://tools.ietf.org/html/rfc7752 sec 3.3.1.1 Node Flag Bits Definitions
 
-
-
 @LINKSTATE.register()
 class NodeFlags(object):
 	TLV = 1024
@@ -50,18 +41,12 @@ class NodeFlags(object):
 
 	@classmethod
 	def unpack (cls,data,length):
-		node_flags = ['O', 'T', 'E', 'B', 'R', 'V', 'RSV', 'RSV']
+
 		if length > 1:
 			raise Notify(3,5, "Node Flags TLV length too large")
 		else:
-			flag_array = binascii.b2a_hex(data[0])
-			hex_rep = hex(int(flag_array, 16))
-			bit_array = BitArray(hex_rep)
-			valid_flags = [''.join(item)+'00' for item in itertools.product('01', repeat=6)]
-			valid_flags.append('0000')
-			if bit_array.bin in valid_flags:
-				flags = dict(zip(node_flags, bit_array.bin))
-		return cls(nodeflags=flags)
+			flags = LsGenericFlags.unpack(data[0],LsGenericFlags.LS_NODE_FLAGS)
+		return cls(nodeflags=flags.flags)
 
 	def json (self,compact=None):
 		return '"node-flags": "%s"' % str(self.nodeflags)

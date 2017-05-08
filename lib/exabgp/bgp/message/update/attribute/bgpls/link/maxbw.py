@@ -9,9 +9,7 @@ Copyright (c) 2014-2016 Exa Networks. All rights reserved.
 from struct import unpack
 
 from exabgp.bgp.message.notification import Notify
-
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
-
 
 #  This sub-TLV contains the maximum bandwidth that can be used on this
 #   link in this direction (from the system originating the LSP to its

@@ -7,20 +7,6 @@ Copyright (c) 2014-2016 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 
-from exabgp.bgp.message.update.attribute.bgpls.link.igpmetric import IgpMetric
-from exabgp.bgp.message.update.attribute.bgpls.link.srlg import Srlg
-from exabgp.bgp.message.update.attribute.bgpls.link.mplsmask import MplsMask
-from exabgp.bgp.message.update.attribute.bgpls.link.temetric import TeMetric
-from exabgp.bgp.message.update.attribute.bgpls.node.lterid import LocalTeRid
-from exabgp.bgp.message.update.attribute.bgpls.link.rterid import RemoteTeRid
-from exabgp.bgp.message.update.attribute.bgpls.link.admingroup import AdminGroup
-from exabgp.bgp.message.update.attribute.bgpls.link.maxbw import MaxBw
-from exabgp.bgp.message.update.attribute.bgpls.link.rsvpbw import RsvpBw
-from exabgp.bgp.message.update.attribute.bgpls.link.unrsvpbw import UnRsvpBw
-from exabgp.bgp.message.update.attribute.bgpls.link.protection import LinkProtectionType
-from exabgp.bgp.message.update.attribute.bgpls.link.opaque import LinkOpaque
-from exabgp.bgp.message.update.attribute.bgpls.link.linkname import LinkName
-
  #  +-----------+---------------------+--------------+------------------+
  #  |  TLV Code | Description         |  IS-IS TLV   | Reference        |
  #  |   Point   |                     |   /Sub-TLV   | (RFC/Section)    |
@@ -53,3 +39,29 @@ from exabgp.bgp.message.update.attribute.bgpls.link.linkname import LinkName
  #  |    1098   | Link Name           |     ---      | Section 3.3.2.7  |
 #   +-----------+---------------------+--------------+------------------+
 #   https://tools.ietf.org/html/rfc7752#section-3.3.2 Link Attributes TLVs
+from exabgp.bgp.message.update.attribute.bgpls.link.igpmetric import IgpMetric
+from exabgp.bgp.message.update.attribute.bgpls.link.srlg import Srlg
+from exabgp.bgp.message.update.attribute.bgpls.link.mplsmask import MplsMask
+from exabgp.bgp.message.update.attribute.bgpls.link.temetric import TeMetric
+from exabgp.bgp.message.update.attribute.bgpls.node.lterid import LocalTeRid
+from exabgp.bgp.message.update.attribute.bgpls.link.rterid import RemoteTeRid
+from exabgp.bgp.message.update.attribute.bgpls.link.admingroup import AdminGroup
+from exabgp.bgp.message.update.attribute.bgpls.link.maxbw import MaxBw
+from exabgp.bgp.message.update.attribute.bgpls.link.rsvpbw import RsvpBw
+from exabgp.bgp.message.update.attribute.bgpls.link.unrsvpbw import UnRsvpBw
+from exabgp.bgp.message.update.attribute.bgpls.link.protection import LinkProtectionType
+from exabgp.bgp.message.update.attribute.bgpls.link.opaque import LinkOpaque
+from exabgp.bgp.message.update.attribute.bgpls.link.linkname import LinkName
+
+#   +-----------+----------------------------+----------+---------------+
+#   |  TLV Code | Description                |   Length |       Section |
+#   |   Point   |                            |          |               |
+#   +-----------+----------------------------+----------+---------------+
+#   |    1099   | Adjacency Segment          | variable | Section 2.2.1 |
+#   |           | Identifier (Adj-SID) TLV   |          |               |
+#   |    1100   | LAN Adjacency Segment      | variable | Section 2.2.2 |
+#   |           | Identifier (Adj-SID) TLV   |          |               |
+#   +-----------+----------------------------+----------+---------------+
+#   draft-gredler-idr-bgp-ls-segment-routing-ext-03
+from exabgp.bgp.message.update.attribute.bgpls.link.sradj import SrAdjacency
+from exabgp.bgp.message.update.attribute.bgpls.link.sradjlan import SrAdjacencyLan
