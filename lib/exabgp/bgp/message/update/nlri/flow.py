@@ -183,8 +183,8 @@ class IOperation (IComponent):
 	def encode (self, value):
 		raise NotImplementedError('this method must be implemented by subclasses')
 
-	def decode (self, value):
-		raise NotImplementedError('this method must be implemented by subclasses')
+	# def decode (self, value):
+	# 	raise NotImplementedError('this method must be implemented by subclasses')
 
 
 # class IOperationIPv4 (IOperation):
@@ -195,8 +195,8 @@ class IOperationByte (IOperation):
 	def encode (self, value):
 		return 1,chr_(value)
 
-	def decode (self, bgp):
-		return ord_(bgp[0]),bgp[1:]
+	# def decode (self, bgp):
+	# 	return ord_(bgp[0]),bgp[1:]
 
 
 class IOperationByteShort (IOperation):
@@ -205,9 +205,10 @@ class IOperationByteShort (IOperation):
 			return 1,chr_(value)
 		return 2,pack('!H',value)
 
-	# XXX: buggy ?? as it assumes 2 bytes but may be less
-	def decode (self, bgp):
-		return unpack('!H',bgp[:2])[0],bgp[2:]
+	# XXX: buggy as it assumes 2 bytes but may be less
+	# def decode (self, bgp):
+	# 	import pdb; pdb.set_trace()
+	# 	return unpack('!H',bgp[:2])[0],bgp[2:]
 
 
 class IOperationByteShortLong (IOperation):
@@ -218,9 +219,9 @@ class IOperationByteShortLong (IOperation):
 			return 2,pack('!H',value)
 		return 4,pack('!L',value)
 
-	# XXX: buggy ?? as it assumes 4 bytes but may be less
-	def decode (self, bgp):
-		return unpack('!L',bgp[:4])[0],bgp[4:]
+	# XXX: buggy as it assumes 4 bytes but may be less
+	# def decode (self, bgp):
+	# 	return unpack('!L',bgp[:4])[0],bgp[4:]
 
 
 # String representation for Numeric and Binary Tests
