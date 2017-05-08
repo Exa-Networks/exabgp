@@ -308,7 +308,7 @@ def PortValue (data):
 def DSCPValue (data):
 	_str_bad_dscp = "you tried to filter a flow using an invalid dscp for a component .."
 	number = int(data)
-	if number < 0 or number > 0xFFFF:
+	if number < 0 or number > 0x3F:  # 0b00111111
 		raise ValueError(_str_bad_dscp)
 	return number
 
@@ -426,7 +426,7 @@ class FlowPacketLength (IOperationByteShort,NumericString,IPv4,IPv6):
 
 
 # RFC2474
-class FlowDSCP (IOperationByteShort,NumericString,IPv4):
+class FlowDSCP (IOperationByte,NumericString,IPv4):
 	ID = 0x0B
 	NAME = 'dscp'
 	converter = staticmethod(converter(DSCPValue))
