@@ -231,21 +231,21 @@ class NumericString (object):
 	value = None
 
 	_string = {
-		NumericOperator.TRUE: 't',
+		NumericOperator.TRUE: 'true',
 		NumericOperator.LT: '<',
 		NumericOperator.GT: '>',
 		NumericOperator.EQ: '=',
 		NumericOperator.LT | NumericOperator.EQ: '<=',
 		NumericOperator.GT | NumericOperator.EQ: '>=',
-		NumericOperator.FALSE: 'f',
+		NumericOperator.FALSE: 'false',
 
-		NumericOperator.AND: '&t',
+		NumericOperator.AND: '&true',
 		NumericOperator.AND | NumericOperator.LT: '&<',
 		NumericOperator.AND | NumericOperator.GT: '&>',
 		NumericOperator.AND | NumericOperator.EQ: '&=',
 		NumericOperator.AND | NumericOperator.LT | NumericOperator.EQ: '&<=',
 		NumericOperator.AND | NumericOperator.GT | NumericOperator.EQ: '&>=',
-		NumericOperator.AND | NumericOperator.FALSE: '&f',
+		NumericOperator.AND | NumericOperator.FALSE: '&false',
 	}
 
 	def __str__ (self):

@@ -85,19 +85,19 @@ def destination (tokeniser):
 
 def _operator_numeric (string):
 	try:
-		char = string[0]
+		char = string[0].lower()
 		if char == '=':
 			return NumericOperator.EQ,string[1:]
 		elif char == '>':
 			operator = NumericOperator.GT
 		elif char == '<':
 			operator = NumericOperator.LT
-		elif char == 't':
-			return NumericOperator.TRUE,string[1:]
-		elif char == 'f':
-			return NumericOperator.FALSE,string[1:]
+		elif char == 't' and string.lower().startswith('true'):
+			return NumericOperator.TRUE,string[4:]
+		elif char == 'f' and string.lower().startswith('false'):
+			return NumericOperator.FALSE,string[5:]
 		else:
-			raise ValueError('Invalid operator %s' % string[0])
+			return NumericOperator.EQ,string
 		if string[1] == '=':
 			operator += NumericOperator.EQ
 			return operator,string[2:]
