@@ -66,7 +66,7 @@ class NODE(BGPLS):
 
 	@classmethod
 	def unpack (cls, data, rd):
-		proto_id = unpack('!B',data[0])[0]
+		proto_id = unpack('!B',data[0:1])[0]
 		if proto_id not in PROTO_CODES.keys():
 			raise Exception('Protocol-ID {} is not valid'.format(proto_id))
 		domain = unpack('!Q',data[1:9])[0]

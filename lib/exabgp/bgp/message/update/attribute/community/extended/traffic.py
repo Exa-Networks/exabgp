@@ -87,7 +87,7 @@ class TrafficAction (ExtendedCommunity):
 
 	@staticmethod
 	def unpack (data):
-		bit, = unpack('!B',data[7])
+		bit, = unpack('!B',data[7:8])
 		sample = bool(bit & 0x02)
 		terminal = bool(bit & 0x01)
 		return TrafficAction(sample,terminal,data[:8])
@@ -150,7 +150,7 @@ class TrafficMark (ExtendedCommunity):
 
 	@staticmethod
 	def unpack (data):
-		dscp, = unpack('!B',data[7])
+		dscp, = unpack('!B',data[7:8])
 		return TrafficMark(dscp,data[:8])
 
 
@@ -182,7 +182,7 @@ class TrafficNextHop (ExtendedCommunity):
 
 	@staticmethod
 	def unpack (data):
-		bit, = unpack('!B',data[7])
+		bit, = unpack('!B',data[7:8])
 		return TrafficNextHop(bool(bit & 0x01),data[:8])
 
 

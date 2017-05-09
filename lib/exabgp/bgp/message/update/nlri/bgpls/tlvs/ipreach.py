@@ -49,7 +49,7 @@ class IpReach(object):
 		# octets for prefix length 9 to 16, 3 octets for prefix length 17 up to
 		# 24, 4 octets for prefix length 25 up to 32, etc.
 
-		# plenght = unpack('!B',data[0])[0]
+		# plenght = unpack('!B',data[0:1])[0]
 		# octet = int(math.ceil(plenght / 8))
 		octet = len(data[1:])
 		prefix_list = unpack("!%dB" % octet,data[1:octet + 1])
