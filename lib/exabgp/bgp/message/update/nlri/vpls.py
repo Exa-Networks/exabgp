@@ -54,9 +54,6 @@ class VPLS (NLRI):
 			and self.size == other.size \
 			and self.endpoint == other.endpoint
 
-	def index (self):
-		return NLRI._index(self) + self.pack()
-
 	def assign (self, name, value):
 		setattr(self,name,value)
 

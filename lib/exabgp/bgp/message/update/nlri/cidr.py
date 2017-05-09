@@ -72,7 +72,7 @@ class CIDR (object):
 		return "%s/%s" % (self.top(),self.mask)
 
 	def index (self):
-		return character(self.mask) + self._packed[:CIDR.size(self.mask)]
+		return character(self.mask) + str(self._packed[:CIDR.size(self.mask)])
 
 	def pack_ip (self):
 		return self._packed[:CIDR.size(self.mask)]
