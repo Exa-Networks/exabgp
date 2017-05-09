@@ -10,7 +10,7 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
-from exabgp.util import ordinal
+from exabgp.util import ord_
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 
 # ================================================================ Encapsulation
@@ -66,8 +66,8 @@ class Encapsulation (ExtendedCommunity):
 		tunnel, = unpack('!H',data[6:8])
 		return Encapsulation(tunnel,data[:8])
 
-		# type_  = ordinal(data[0]) & 0x0F
-		# stype = ordinal(data[1])
+		# type_  = ord_(data[0]) & 0x0F
+		# stype = ord_(data[1])
 
 		# assert(type_==Encapsulation.COMMUNITY_TYPE)
 		# assert(stype==Encapsulation.COMMUNITY_SUBTYPE)

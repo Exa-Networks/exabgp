@@ -9,8 +9,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 import sys
 
-from exabgp.util import character
-
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import IPSelf
 from exabgp.protocol.family import AFI
@@ -159,7 +157,7 @@ def attribute (tokeniser):
 		raise ValueError('invalid attribute, data is not 0x hexadecimal')
 	if len(data) % 2:
 		raise ValueError('invalid attribute, data is not 0x hexadecimal')
-	data = ''.join(character(int(data[_:_+2],16)) for _ in range(2,len(data),2))
+	data = ''.join(chr(int(data[_:_+2],16)) for _ in range(2,len(data),2))
 
 	end = tokeniser()
 	if end != ']':
@@ -421,13 +419,13 @@ def large_community (tokeniser):
 
 _HEADER = {
 	# header and subheader
-	'target':              character(0x00)+character(0x02),
-	'target4':             character(0x02)+character(0x02),
-	'origin':              character(0x00)+character(0x03),
-	'origin4':             character(0x02)+character(0x03),
-	'redirect':            character(0x80)+character(0x08),
-	'l2info':              character(0x80)+character(0x0A),
-	'redirect-to-nexthop': character(0x08)+character(0x00),
+	'target':              chr(0x00)+chr(0x02),
+	'target4':             chr(0x02)+chr(0x02),
+	'origin':              chr(0x00)+chr(0x03),
+	'origin4':             chr(0x02)+chr(0x03),
+	'redirect':            chr(0x80)+chr(0x08),
+	'l2info':              chr(0x80)+chr(0x0A),
+	'redirect-to-nexthop': chr(0x08)+chr(0x00),
 }
 
 _SIZE = {
@@ -448,7 +446,7 @@ def _extended_community (value):
 		# we could raise if the length is not 8 bytes (16 chars)
 		if len(value) % 2:
 			raise ValueError('invalid extended community %s' % value)
-		raw = ''.join([character(int(value[_:_+2],16)) for _ in range(2,len(value),2)])
+		raw = ''.join([chr(int(value[_:_+2],16)) for _ in range(2,len(value),2)])
 		return ExtendedCommunity.unpack(raw)
 	elif value.count(':'):
 		components = value.split(':')

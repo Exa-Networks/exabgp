@@ -9,9 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 # ============================================================== Communities (8)
 # https://www.iana.org/assignments/bgp-extended-communities
 
-from exabgp.util import ordinal
-from exabgp.util import concat_bytes
-
+from exabgp.util import ord_
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.initial.community import Community
 
@@ -38,7 +36,7 @@ class Communities (Attribute):
 
 	def pack (self, negotiated=None):
 		if len(self.communities):
-			return self._attribute(concat_bytes([c.pack() for c in self.communities]))
+			return self._attribute(b''.join([c.pack() for c in self.communities]))
 		return b''
 
 	def __iter__(self):
@@ -60,7 +58,7 @@ class Communities (Attribute):
 		communities = Communities()
 		while data:
 			if data and len(data) < 4:
-				raise Notify(3,1,'could not decode community %s' % str([hex(ordinal(_)) for _ in data]))
+				raise Notify(3,1,'could not decode community %s' % str([hex(ord_(_)) for _ in data]))
 			communities.add(Community.unpack(data[:4],negotiated))
 			data = data[4:]
 		return communities

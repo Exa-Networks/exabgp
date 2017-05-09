@@ -11,9 +11,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import sys
 import traceback
 
-from exabgp.util import character
-from exabgp.util import concat_bytes
-
 from exabgp.bgp.message import Update
 from exabgp.bgp.message import Open
 from exabgp.bgp.message.open import Version
@@ -169,7 +166,7 @@ def check_neighbor (neighbors):
 
 def check_message (neighbor, message):
 	message = message.replace(':','')
-	raw = concat_bytes(character(int(_,16)) for _ in (message[i*2:(i*2)+2] for i in range(len(message)/2)))
+	raw = b''.join(chr(int(_,16)) for _ in (message[i*2:(i*2)+2] for i in range(len(message)/2)))
 
 	if raw.startswith('\xff'*16):
 		kind = ord(raw[18])

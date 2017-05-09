@@ -8,11 +8,10 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from struct import pack
 from struct import unpack
-from exabgp.util import character
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.util import ordinal
-from exabgp.util import concat_bytes
+from exabgp.util import ord_
+from exabgp.util import concat_strs
 from exabgp.bgp.message.open.capability.capability import Capability
 
 # =========================================================== Graceful (Restart)
@@ -40,9 +39,9 @@ class Graceful (Capability,dict):
 
 	def extract (self):
 		restart  = pack('!H',((self.restart_flag << 12) | (self.restart_time & Graceful.TIME_MASK)))
-		families = [(afi.pack(),safi.pack(),character(self[(afi,safi)])) for (afi,safi) in self.keys()]
-		sfamilies = concat_bytes([concat_bytes(pafi,psafi,family) for (pafi,psafi,family) in families])
-		return [concat_bytes(restart,sfamilies)]
+		families = [(afi.pack(),safi.pack(),chr(self[(afi,safi)])) for (afi,safi) in self.keys()]
+		sfamilies = b''.join([concat_strs(pafi,psafi,family) for (pafi,psafi,family) in families])
+		return [concat_strs(restart,sfamilies)]
 
 	def __str__ (self):
 		families = [(str(afi),str(safi),hex(self[(afi,safi)])) for (afi,safi) in self.keys()]
@@ -79,7 +78,7 @@ class Graceful (Capability,dict):
 		while data:
 			afi = AFI.unpack(data[:2])
 			safi = SAFI.unpack(data[2])
-			flag_family = ordinal(data[3])
+			flag_family = ord_(data[3])
 			families.append((afi,safi,flag_family))
 			data = data[4:]
 		return instance.set(restart_flag,restart_time,families)

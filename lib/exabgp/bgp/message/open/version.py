@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2012-07-17.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.util import character
+from exabgp.util import chr_
 
 # =================================================================== Version
 #
@@ -14,4 +14,4 @@ from exabgp.util import character
 
 class Version (int):
 	def pack (self):
-		return character(self)
+		return chr_(self)

@@ -1,5 +1,3 @@
-from exabgp.util import character
-
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI
 
@@ -56,7 +54,7 @@ def source (tokeniser):
 	data = tokeniser()
 	if data.count('.') == 3 and data.count(':') == 0:
 		ip,netmask = data.split('/')
-		raw = ''.join(character(int(_)) for _ in ip.split('.'))
+		raw = ''.join(chr(int(_)) for _ in ip.split('.'))
 		yield Flow4Source(raw,int(netmask))
 	elif data.count('/') == 1:
 		ip,netmask = data.split('/')
@@ -71,7 +69,7 @@ def destination (tokeniser):
 	data = tokeniser()
 	if data.count('.') == 3 and data.count(':') == 0:
 		ip,netmask = data.split('/')
-		raw = ''.join(character(int(_)) for _ in ip.split('.'))
+		raw = ''.join(chr(int(_)) for _ in ip.split('.'))
 		yield Flow4Destination(raw,int(netmask))
 	elif data.count('/') == 1:
 		ip,netmask = data.split('/')

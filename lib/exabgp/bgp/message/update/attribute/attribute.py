@@ -9,8 +9,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 import sys
 
-from exabgp.util import character
-from exabgp.util import concat_bytes
+from exabgp.util import chr_
+from exabgp.util import concat_strs
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.util.cache import Cache
@@ -209,8 +209,8 @@ class Attribute (object):
 		if flag & Attribute.Flag.EXTENDED_LENGTH:
 			len_value = pack('!H',length)
 		else:
-			len_value = character(length)
-		return concat_bytes(character(flag),character(self.ID),len_value,value)
+			len_value = chr_(length)
+		return concat_strs(chr_(flag),chr_(self.ID),len_value,value)
 
 	def _len (self,value):
 		length = len(value)

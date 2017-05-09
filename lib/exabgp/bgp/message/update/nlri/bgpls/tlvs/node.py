@@ -12,7 +12,7 @@ from struct import unpack
 from exabgp.protocol.ip import IP
 from exabgp.protocol.iso import ISO
 from exabgp.bgp.message.notification import Notify
-from exabgp.util import ordinal
+from exabgp.util import ord_
 
 #           +--------------------+-------------------+----------+
 #           | Sub-TLV Code Point | Description       |   Length |

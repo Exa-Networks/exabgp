@@ -6,8 +6,6 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.util import character
-
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
 
@@ -20,7 +18,7 @@ from exabgp.reactor.api.options import hexstring
 @Message.register
 class KeepAlive (Message):
 	ID = Message.CODE.KEEPALIVE
-	TYPE = character(Message.CODE.KEEPALIVE)
+	TYPE = chr(Message.CODE.KEEPALIVE)
 
 	def message (self,negotiated=None):
 		return self._message(b'')

@@ -7,10 +7,11 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 import string
+import struct
 
-from exabgp.util import character
-from exabgp.util import ordinal
-from exabgp.util import concat_bytes
+from exabgp.util import chr_
+from exabgp.util import ord_
+from exabgp.util import concat_strs
 
 from exabgp.bgp.message.message import Message
 
@@ -35,7 +36,7 @@ def hexstring (value):
 @Message.register
 class Notification (Message):
 	ID = Message.CODE.NOTIFICATION
-	TYPE = character(Message.CODE.NOTIFICATION)
+	TYPE = chr(Message.CODE.NOTIFICATION)
 
 	_str_code = {
 		1: "Message header error",
@@ -119,7 +120,7 @@ class Notification (Message):
 
 		# draft-ietf-idr-shutdown or the peer was using 6,2 with data
 
-		shutdown_length  = ordinal(data[0])
+		shutdown_length  = ord_(data[0])
 		data = data[1:]
 
 		if shutdown_length == 0:
@@ -155,7 +156,7 @@ class Notification (Message):
 
 	@classmethod
 	def unpack_message (cls, data, negotiated=None):
-		return cls(ordinal(data[0]),ordinal(data[1]),data[2:])
+		return cls(ord_(data[0]),ord_(data[1]),data[2:])
 
 
 # =================================================================== Notify
@@ -169,8 +170,8 @@ class Notify (Notification):
 		Notification.__init__(self,code,subcode,data)
 
 	def message (self,negotiated=None):
-		return self._message(concat_bytes(
-			character(self.code),
-			character(self.subcode),
+		return self._message(concat_strs(
+			chr_(self.code),
+			chr_(self.subcode),
 			self.data
 		))

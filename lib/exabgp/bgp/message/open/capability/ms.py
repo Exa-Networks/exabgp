@@ -6,8 +6,6 @@ Created by Thomas Mangin on 2012-07-17.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.util import character
-
 from exabgp.bgp.message.open.capability.capability import Capability
 
 # ================================================================= MultiSession
@@ -33,9 +31,9 @@ class MultiSession (Capability,list):
 		return '{ "name": "multisession", "variant": "%s" ,"capabilities": [%s ] }' % (variant, ','.join(' %s' % str(capa) for capa in self))
 
 	def extract (self):
-		rs = [character(0),]
+		rs = [chr(0),]
 		for v in self:
-			rs.append(character(v))
+			rs.append(chr(v))
 		return rs
 
 	@staticmethod

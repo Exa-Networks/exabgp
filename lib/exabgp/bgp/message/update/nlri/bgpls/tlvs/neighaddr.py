@@ -11,7 +11,7 @@ from struct import unpack
 
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.notification import Notify
-from exabgp.util import ordinal
+from exabgp.util import ord_
 
 #  https://tools.ietf.org/html/rfc5305#section-3.3
 #   This sub-TLV contains a single IPv4 address for a neighboring router
@@ -64,7 +64,7 @@ class NeighAddr (object):
 		raise RuntimeError('Not implemented')
 
 	def __str__ (self):
-		return ':'.join('%02X' % ordinal(_) for _ in self._packed)
+		return ':'.join('%02X' % ord_(_) for _ in self._packed)
 
 	def __repr__ (self):
 		return self.__str__()

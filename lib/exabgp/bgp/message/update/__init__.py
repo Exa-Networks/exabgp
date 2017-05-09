@@ -9,8 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
-from exabgp.util import character
-from exabgp.util import concat_bytes
+from exabgp.util import concat_strs
 
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
@@ -59,7 +58,7 @@ from exabgp.logger import LazyFormat
 @Message.register
 class Update (Message):
 	ID = Message.CODE.UPDATE
-	TYPE = character(Message.CODE.UPDATE)
+	TYPE = chr(Message.CODE.UPDATE)
 	EOR = False
 
 	def __init__ (self, nlris, attributes):
@@ -74,7 +73,7 @@ class Update (Message):
 	@staticmethod
 	def prefix (data):
 		# This function needs renaming
-		return concat_bytes(pack('!H',len(data)),data)
+		return concat_strs(pack('!H',len(data)),data)
 
 	@staticmethod
 	def split (data):

@@ -6,7 +6,7 @@ Created by Thomas Mangin on 2010-01-15.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.util import character
+from exabgp.util import chr_
 
 from exabgp.protocol.resource import Resource
 
@@ -50,4 +50,4 @@ class Protocol (Resource):
 	names = dict([(r,l) for (l,r) in codes.items()])
 
 	def pack (self):
-		return character(self)
+		return chr_(self)

@@ -9,8 +9,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import sys
 from struct import pack
 
-from exabgp.util import character
-from exabgp.util import concat_bytes
+from exabgp.util import chr_
+from exabgp.util import concat_strs
 
 class _MessageCode (int):
 	if sys.version_info[0]<3:
@@ -95,7 +95,7 @@ class Message (Exception):
 	# otherwise we can not dynamically create different UnknownMessage
 	# TYPE = None
 
-	MARKER = character(0xff)*16
+	MARKER = chr_(0xff)*16
 	HEADER_LEN = 19
 	MAX_LEN = 4096
 
@@ -156,7 +156,7 @@ class Message (Exception):
 
 	def _message (self, message):
 		message_len = pack('!H',19+len(message))
-		return concat_bytes(self.MARKER,message_len,self.TYPE,message)
+		return concat_strs(self.MARKER,message_len,self.TYPE,message)
 
 	def message (self,negotiated=None):
 		raise NotImplementedError('message not implemented in subclasses')

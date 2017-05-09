@@ -13,8 +13,6 @@ from struct import unpack
 from struct import calcsize
 from collections import namedtuple
 
-from exabgp.util import concat_bytes
-
 try:
 	getattr(socket,'AF_NETLINK')
 except AttributeError:
@@ -207,7 +205,7 @@ class Attributes (object):
 				raw += '\0'*pad
 			return raw
 
-		return concat_bytes([_encode(k,v) for (k,v) in attributes.items()])
+		return b''.join([_encode(k,v) for (k,v) in attributes.items()])
 
 
 class _Message (object):

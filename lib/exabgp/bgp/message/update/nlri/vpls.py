@@ -10,7 +10,7 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 from struct import unpack
 from struct import pack
 from exabgp.vendoring import six
-from exabgp.util import concat_bytes
+from exabgp.util import concat_strs
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -60,7 +60,7 @@ class VPLS (NLRI):
 		setattr(self,name,value)
 
 	def pack (self, negotiated=None):
-		return concat_bytes(
+		return concat_strs(
 			'\x00\x11',  # pack('!H',17)
 			self.rd.pack(),
 			pack(

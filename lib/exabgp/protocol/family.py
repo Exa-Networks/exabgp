@@ -9,8 +9,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
-from exabgp.util import character
-from exabgp.util import ordinal
+from exabgp.util import chr_
+from exabgp.util import ord_
 from exabgp.protocol.resource import Resource
 
 # ======================================================================== AFI
@@ -147,11 +147,11 @@ class SAFI (Resource):
 		return str(self)
 
 	def pack (self):
-		return character(self)
+		return chr_(self)
 
 	@staticmethod
 	def unpack (data):
-		return SAFI(ordinal(data))
+		return SAFI(ord_(data))
 
 	def has_label (self):
 		return self in (self.nlri_mpls,self.mpls_vpn)
