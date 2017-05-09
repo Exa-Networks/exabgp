@@ -38,6 +38,10 @@ def preexec_helper ():
 	# signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
+class EmptyLine(Exception):
+	pass
+
+
 class Processes (object):
 	# how many time can a process can respawn in the time interval
 	respawn_number = 5
@@ -178,7 +182,7 @@ class Processes (object):
 							# and only readline() works
 							buf = proc.stdout.readline()
 							if buf == '':
-								raise IOError('Child process died')
+								raise EmptyLine('readline returned an empty string')
 							raw = buffered.get(process,'') + buf
 
 							if not raw.endswith('\n'):
@@ -192,7 +196,7 @@ class Processes (object):
 							yield (process,formated(line))
 					except IOError as exc:
 						if not exc.errno or exc.errno in error.fatal:
-							# if the program exists we can get an IOError with errno code zero !
+							# if the program exits we can get an IOError with errno code zero !
 							self.logger.processes("Issue with the process, terminating it and restarting it")
 							self._terminate(process)
 							self._start(process)
@@ -204,6 +208,16 @@ class Processes (object):
 							self.logger.processes("unexpected errno received from forked process (%s)" % errstr(exc))
 					except StopIteration:
 						if not consumed_data:
+							self.logger.processes("The process died, trying to respawn it")
+							self._terminate(process)
+							self._start(process)
+					except EmptyLine:
+						if proc.poll() is None:
+							# process is fine, we received an empty line because
+							# we're doing .readline() on a non-blocking pipe and
+							# the process maybe has nothing to send yet
+							pass
+						else:
 							self.logger.processes("The process died, trying to respawn it")
 							self._terminate(process)
 							self._start(process)
