@@ -52,7 +52,7 @@ def main ():
 	major = int(sys.version[0])
 	minor = int(sys.version[2])
 
-	if major != 2 or minor < 5:
+	if major <= 2 and minor < 5:
 		sys.exit('This program can not work (is not tested) with your python version (< 2.5 or >= 3.0)')
 
 	if options["--version"]:
