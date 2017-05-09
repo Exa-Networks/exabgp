@@ -38,10 +38,6 @@ def preexec_helper ():
 	# signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
-class EmptyLine(Exception):
-	pass
-
-
 class Processes (object):
 	# how many time can a process can respawn in the time interval
 	respawn_number = 5
@@ -61,6 +57,21 @@ class Processes (object):
 		self._encoder = {}
 		self._broken = []
 		self._respawning = {}
+
+	def handle_respawn (self):
+		self.logger.processes("Issue with the process, restarting it")
+		self._terminate(process)
+		self._start(process)
+
+	def handle_terminate (self):
+		self.logger.processes("Issue with the process, terminating it")
+		self._terminate(process)
+
+	def handle_problem (self):
+		if self.reactor.respawn:
+			self.handle_respawn()
+		else:
+			self.handle_terminate()
 
 	def _terminate (self, process):
 		self.logger.processes("Terminating process %s" % process)
@@ -169,10 +180,12 @@ class Processes (object):
 		for process in list(self._process):
 			try:
 				proc = self._process[process]
+				poll = proc.poll()
 				# proc.poll returns None if the process is still fine
 				# -[signal], like -15, if the process was terminated
-				if proc.poll() is not None and self.reactor.respawn:
-					raise ValueError('child died')
+				if poll is not None:
+					self.handle_problem()
+					return
 				r,_,_ = select.select([proc.stdout,],[],[],0)
 				if r:
 					try:
@@ -181,8 +194,13 @@ class Processes (object):
 							# but not on OpenBSD where it always raise StopIteration
 							# and only readline() works
 							buf = proc.stdout.readline()
-							if buf == '':
-								raise EmptyLine('readline returned an empty string')
+							if buf == '' and poll is not None:
+								# if proc.poll() is None then
+								# process is fine, we received an empty line because
+								# we're doing .readline() on a non-blocking pipe and
+								# the process maybe has nothing to send yet
+								self.handle_problem()
+								return
 							raw = buffered.get(process,'') + buf
 
 							if not raw.endswith('\n'):
@@ -194,12 +212,11 @@ class Processes (object):
 							consumed_data = True
 							self.logger.processes("Command from process %s : %s " % (process,line))
 							yield (process,formated(line))
+							poll = proc.poll()
 					except IOError as exc:
 						if not exc.errno or exc.errno in error.fatal:
 							# if the program exits we can get an IOError with errno code zero !
-							self.logger.processes("Issue with the process, terminating it and restarting it")
-							self._terminate(process)
-							self._start(process)
+							self.handle_problem()
 						elif exc.errno in error.block:
 							# we often see errno.EINTR: call interrupted and
 							# we most likely have data, we will try to read them a the next loop iteration
@@ -208,23 +225,9 @@ class Processes (object):
 							self.logger.processes("unexpected errno received from forked process (%s)" % errstr(exc))
 					except StopIteration:
 						if not consumed_data:
-							self.logger.processes("The process died, trying to respawn it")
-							self._terminate(process)
-							self._start(process)
-					except EmptyLine:
-						if proc.poll() is None:
-							# process is fine, we received an empty line because
-							# we're doing .readline() on a non-blocking pipe and
-							# the process maybe has nothing to send yet
-							pass
-						else:
-							self.logger.processes("The process died, trying to respawn it")
-							self._terminate(process)
-							self._start(process)
+							self.handle_problem()
 			except (subprocess.CalledProcessError,OSError,ValueError):
-				self.logger.processes("Issue with the process, terminating it and restarting it")
-				self._terminate(process)
-				self._start(process)
+				self.handle_problem()
 
 	def write (self, process, string, neighbor=None):
 		# XXX: FIXME: This is potentially blocking
