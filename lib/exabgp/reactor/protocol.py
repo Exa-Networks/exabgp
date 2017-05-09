@@ -42,7 +42,7 @@ from exabgp.reactor.api.processes import ProcessError
 from exabgp.logger import Logger
 from exabgp.logger import FakeLogger
 
-from exabgp.util import ord_
+from exabgp.util import ordinal
 
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000
@@ -166,7 +166,7 @@ class Protocol (object):
 			yield boolean
 
 	def send (self,raw):
-		if self.neighbor.api.get('send-%s' % Message.CODE.short(ord_(raw[18])),False):
+		if self.neighbor.api.get('send-%s' % Message.CODE.short(ordinal(raw[18])),False):
 			message = Update.unpack_message(raw[19:],self.negotiated)
 			self._to_api('send',message,raw)
 

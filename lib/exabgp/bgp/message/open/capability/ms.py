@@ -8,7 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.open.capability.capability import Capability
 
-from exabgp.util import chr_
+from exabgp.util import character
 
 # ================================================================= MultiSession
 #
@@ -33,9 +33,9 @@ class MultiSession (Capability,list):
 		return '{ "name": "multisession", "variant": "%s" ,"capabilities": [%s ] }' % (variant, ','.join(' %s' % str(capa) for capa in self))
 
 	def extract (self):
-		rs = [chr_(0),]
+		rs = [character(0),]
 		for v in self:
-			rs.append(chr_(v))
+			rs.append(character(v))
 		return rs
 
 	@staticmethod

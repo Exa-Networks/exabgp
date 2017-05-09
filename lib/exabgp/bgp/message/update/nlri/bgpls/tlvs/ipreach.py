@@ -10,7 +10,7 @@ from struct import unpack
 import math
 
 from exabgp.protocol.ip import IP
-from exabgp.util import ord_
+from exabgp.util import ordinal
 
 #   The IP Reachability Information TLV is a mandatory TLV that contains
 #   one IP address prefix (IPv4 or IPv6) originally advertised in the IGP
@@ -83,7 +83,7 @@ class IpReach(object):
 		raise RuntimeError('Not implemented')
 
 	def __str__ (self):
-		return ':'.join('%02X' % ord_(_) for _ in self._packed)
+		return ':'.join('%02X' % ordinal(_) for _ in self._packed)
 
 	def __repr__ (self):
 		return self.__str__()

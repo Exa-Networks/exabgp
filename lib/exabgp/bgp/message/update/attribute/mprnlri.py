@@ -13,8 +13,10 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
 
-from exabgp.util import chr_
-from exabgp.util import ord_
+from exabgp.util import character
+from exabgp.util import ordinal
+from exabgp.util import concat_bytes
+
 from exabgp.bgp.message.direction import IN
 # from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute import Attribute
@@ -67,7 +69,7 @@ class MPRNLRI (Attribute,Family):
 				# we do not want a next_hop attribute packed (with the _attribute()) but just the next_hop itself
 				if nlri.safi.has_rd():
 					# .packed and not .pack()
-					nexthop = chr_(0)*8 + nlri.nexthop.ton(negotiated,nlri.afi)
+					nexthop = character(0)*8 + nlri.nexthop.ton(negotiated,nlri.afi)
 				else:
 					# .packed and not .pack()
 					nexthop = nlri.nexthop.ton(negotiated,nlri.afi)
@@ -76,22 +78,22 @@ class MPRNLRI (Attribute,Family):
 			mpnlri.setdefault(nexthop,[]).append(nlri.pack(negotiated))
 
 		for nexthop,nlris in six.iteritems(mpnlri):
-			payload = b''.join([self.afi.pack(), self.safi.pack(), chr_(len(nexthop)), nexthop, chr_(0)])
+			payload = concat_bytes(self.afi.pack(), self.safi.pack(), character(len(nexthop)), nexthop, character(0))
 			header_length = len(payload)
 			for nlri in nlris:
 				if self._len(payload + nlri) > maximum:
 					if len(payload) == header_length or len(payload) > maximum:
 						raise Notify(6, 0, 'attributes size is so large we can not even pack on MPRNLRI')
 					yield self._attribute(payload)
-					payload = b''.join([self.afi.pack(), self.safi.pack(), chr_(len(nexthop)), nexthop, chr_(0), nlri])
+					payload = concat_bytes(self.afi.pack(), self.safi.pack(), character(len(nexthop)), nexthop, character(0), nlri)
 					continue
-				payload  = b''.join([payload, nlri])
+				payload  = concat_bytes(payload, nlri)
 			if len(payload) == header_length or len(payload) > maximum:
 				raise Notify(6, 0, 'attributes size is so large we can not even pack on MPRNLRI')
 			yield self._attribute(payload)
 
 	def pack (self, negotiated):
-		return b''.join(self.packed_attributes(negotiated))
+		return concat_bytes(*self.packed_attributes(negotiated))
 
 	def __len__ (self):
 		raise RuntimeError('we can not give you the size of an MPRNLRI - was it with our witout addpath ?')
@@ -113,7 +115,7 @@ class MPRNLRI (Attribute,Family):
 			raise Notify(3,0,'presented a non-negotiated family %d/%d' % (afi,safi))
 
 		# -- Reading length of next-hop
-		len_nh = ord_(data[offset])
+		len_nh = ordinal(data[offset])
 		offset += 1
 
 		rd = 0
@@ -163,13 +165,13 @@ class MPRNLRI (Attribute,Family):
 		nexthops = [nhs[pos:pos+16] for pos in range(0,len(nhs),16)]
 
 		# chech the RD is well zero
-		if rd and sum([int(ord_(_)) for _ in data[offset:8]]) != 0:
+		if rd and sum([int(ordinal(_)) for _ in data[offset:8]]) != 0:
 			raise Notify(3,0,"MP_REACH_NLRI next-hop's route-distinguisher must be zero")
 
 		offset += len_nh
 
 		# Skip a reserved bit as somone had to bug us !
-		reserved = ord_(data[offset])
+		reserved = ordinal(data[offset])
 		offset += 1
 
 		if reserved != 0:

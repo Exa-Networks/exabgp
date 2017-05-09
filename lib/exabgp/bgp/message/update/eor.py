@@ -15,7 +15,7 @@ from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.nlri import NLRI as _NLRI
 
-from exabgp.util import chr_
+from exabgp.util import character
 
 
 if sys.version_info > (3,):
@@ -27,7 +27,7 @@ if sys.version_info > (3,):
 
 class EOR (Message):
 	ID = Message.CODE.UPDATE
-	TYPE = chr_(Message.CODE.UPDATE)
+	TYPE = character(Message.CODE.UPDATE)
 
 	class NLRI (_NLRI):
 		PREFIX = b'\x00\x00\x00\x07\x90\x0F\x00\x03'

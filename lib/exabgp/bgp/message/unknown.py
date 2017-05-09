@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2013-07-20.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.util import character
+
 from exabgp.bgp.message.message import Message
 
 # ================================================================= UnknownMessage
@@ -17,7 +19,7 @@ class UnknownMessage (Message):
 
 	def __init__ (self, code, data=b''):
 		self.ID = code
-		self.TYPE = chr_(code)
+		self.TYPE = character(code)
 		self.data = data
 
 	def message (self,negotiated=None):

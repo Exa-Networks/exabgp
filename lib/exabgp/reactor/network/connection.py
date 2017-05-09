@@ -13,7 +13,7 @@ from struct import unpack
 
 from exabgp.configuration.environment import environment
 
-from exabgp.util import ord_
+from exabgp.util import ordinal
 from exabgp.util.errstr import errstr
 
 from exabgp.logger import Logger
@@ -224,7 +224,7 @@ class Connection (object):
 			yield 0,0,header,b'',NotifyError(1,1,report)
 			return
 
-		msg = ord_(header[18])
+		msg = ordinal(header[18])
 		length = unpack('!H',header[16:18])[0]
 
 		if length < Message.HEADER_LEN or length > Message.MAX_LEN:

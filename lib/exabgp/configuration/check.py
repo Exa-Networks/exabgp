@@ -25,9 +25,9 @@ from exabgp.bgp.message.update.nlri import NLRI
 
 from exabgp.logger import Logger
 
-from exabgp.util import chr_
-from exabgp.util import concat_strs
-from exabgp.util import ord_
+from exabgp.util import character
+from exabgp.util import concat_bytes
+from exabgp.util import ordinal
 
 # check_neighbor
 
@@ -170,10 +170,10 @@ def check_neighbor (neighbors):
 
 def check_message (neighbor, message):
 	message = message.replace(':','')
-	raw = concat_strs(*[chr_(int(_,16)) for _ in (message[i*2:(i*2)+2] for i in range(len(message)/2))])
+	raw = concat_bytes(*[character(int(_,16)) for _ in (message[i*2:(i*2)+2] for i in range(len(message)/2))])
 
 	if raw.startswith('\xff'*16):
-		kind = ord_(raw[18])
+		kind = ordinal(raw[18])
 		# XXX: FIXME: check size
 		# size = (ord(raw[16]) << 16) + (ord(raw[17]))
 
@@ -226,8 +226,8 @@ def check_update (neighbor, raw):
 
 	while raw:
 		if raw.startswith('\xff'*16):
-			kind = ord_(raw[18])
-			size = (ord_(raw[16]) << 16) + (ord_(raw[17]))
+			kind = ordinal(raw[18])
+			size = (ordinal(raw[16]) << 16) + (ordinal(raw[17]))
 
 			injected,raw = raw[19:size],raw[size:]
 

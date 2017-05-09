@@ -10,8 +10,8 @@ import math
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
-from exabgp.util import chr_
-from exabgp.util import ord_
+from exabgp.util import character
+from exabgp.util import ordinal
 from exabgp.util import padding
 from exabgp.bgp.message.notification import Notify
 
@@ -78,11 +78,11 @@ class CIDR (object):
 		return self._packed[:CIDR.size(self.mask)]
 
 	def pack_nlri (self):
-		return chr_(self.mask) + self._packed[:CIDR.size(self.mask)]
+		return character(self.mask) + self._packed[:CIDR.size(self.mask)]
 
 	@staticmethod
 	def decode (afi,bgp):
-		mask = ord_(bgp[0])
+		mask = ordinal(bgp[0])
 		size = CIDR.size(mask)
 
 		if len(bgp) < size+1:
@@ -102,7 +102,7 @@ class CIDR (object):
 		return CIDR.size(self.mask) + 1
 
 	def __hash__ (self):
-		return hash(chr_(self.mask)+self._packed)
+		return hash(character(self.mask)+self._packed)
 
 for netmask in range(0,129):
 	CIDR._mask_to_bytes[netmask] = int(math.ceil(float(netmask)/8))

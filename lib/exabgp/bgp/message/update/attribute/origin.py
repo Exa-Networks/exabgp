@@ -6,8 +6,8 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.util import chr_
-from exabgp.util import ord_
+from exabgp.util import character
+from exabgp.util import ordinal
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
@@ -27,7 +27,7 @@ class Origin (Attribute):
 
 	def __init__ (self, origin, packed=None):
 		self.origin = origin
-		self._packed = self._attribute(packed if packed else chr_(origin))
+		self._packed = self._attribute(packed if packed else character(origin))
 
 	def __eq__ (self, other):
 		return \
@@ -55,7 +55,7 @@ class Origin (Attribute):
 
 	@classmethod
 	def unpack (cls, data, negotiated):
-		return cls(ord_(data),data)
+		return cls(ordinal(data),data)
 
 	@classmethod
 	def setCache (cls):
