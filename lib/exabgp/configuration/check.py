@@ -201,7 +201,7 @@ def check_update (neighbor, raw):
 	logger._option.parser = True
 	logger.parser('\ndecoding routes in configuration')
 
-	neighbor = neighbor[neighbor.keys()[0]]
+	neighbor = neighbor[list(neighbor)[0]]
 
 	path = {}
 	for f in NLRI.known_families():
