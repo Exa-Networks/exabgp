@@ -7,6 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 # from copy import deepcopy
+from exabgp.vendoring import six
 from exabgp.configuration.core.error import Error
 
 
@@ -58,7 +59,7 @@ class Scope (Error):
 		returned = self._all.pop(name)
 
 		def transfer (source,destination):
-			for key,value in source.iteritems():
+			for key,value in six.iteritems(source):
 				if key not in destination:
 					destination[key] = value
 				elif isinstance(source[key], dict):

@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2012-07-17.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.vendoring import six
+
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
@@ -133,7 +135,7 @@ class Capabilities (dict):
 
 	def pack (self):
 		rs = []
-		for k,capabilities in self.iteritems():
+		for k,capabilities in six.iteritems(self):
 			for capability in capabilities.extract():
 				rs.append(concat_bytes(character(k),character(len(capability)),capability))
 		parameters = concat_bytes([concat_bytes(character(2),character(len(r)),r) for r in rs])

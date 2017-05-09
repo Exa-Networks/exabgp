@@ -8,6 +8,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import sys
 
+from exabgp.vendoring import six
+
 from exabgp.logger import Logger
 
 from exabgp.configuration.core import Error
@@ -390,7 +392,7 @@ class Configuration (_Configuration):
 		return True
 
 	def _link (self):
-		for neighbor in self.neighbors.itervalues():
+		for neighbor in six.itervalues(self.neighbors):
 			api = neighbor.api
 			for process in api.get('processes',[]):
 				self.processes.setdefault(process,{})['neighbor-changes'] = api['neighbor-changes']

@@ -8,6 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from struct import unpack
 
+from exabgp.vendoring import six
 from exabgp.util import concat_bytes
 
 from exabgp.protocol.ip import NoNextHop
@@ -76,7 +77,7 @@ class MPRNLRI (Attribute,Family):
 			# mpunli[nexthop] = nlri
 			mpnlri.setdefault(nexthop,[]).append(nlri.pack(negotiated))
 
-		for nexthop,nlris in mpnlri.iteritems():
+		for nexthop,nlris in six.iteritems(mpnlri):
 			payload = concat_bytes([self.afi.pack(), self.safi.pack(), chr(len(nexthop)), nexthop, chr(0)])
 			header_length = len(payload)
 			for nlri in nlris:

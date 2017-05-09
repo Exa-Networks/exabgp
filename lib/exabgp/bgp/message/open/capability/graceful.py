@@ -8,6 +8,9 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from struct import pack
 from struct import unpack
+
+from exabgp.vendoring import six
+
 from exabgp.util import character
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -63,7 +66,7 @@ class Graceful (Capability,dict):
 			'restart-flags':'[%s] ' % (' "forwarding" ' if self.restart_flag & 0x8 else ' ')
 		}
 
-		return '{ %s}' % ','.join('"%s": %s' % (k,v) for k,v in d.iteritems())
+		return '{ %s}' % ','.join('"%s": %s' % (k,v) for k,v in six.iteritems(d))
 
 	def families (self):
 		return self.keys()
