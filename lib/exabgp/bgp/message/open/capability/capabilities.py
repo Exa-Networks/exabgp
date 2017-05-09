@@ -11,7 +11,7 @@ from exabgp.protocol.family import SAFI
 
 from exabgp.util import character
 from exabgp.util import ordinal
-from exabgp.util import concat_strs
+from exabgp.util import concat_bytes
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.addpath import AddPath
 from exabgp.bgp.message.open.capability.asn4 import ASN4
@@ -135,9 +135,9 @@ class Capabilities (dict):
 		rs = []
 		for k,capabilities in self.iteritems():
 			for capability in capabilities.extract():
-				rs.append(concat_strs(character(k),character(len(capability)),capability))
-		parameters = b''.join([concat_strs(character(2),character(len(r)),r) for r in rs])
-		return concat_strs(character(len(parameters)),parameters)
+				rs.append(concat_bytes(character(k),character(len(capability)),capability))
+		parameters = concat_bytes([concat_bytes(character(2),character(len(r)),r) for r in rs])
+		return concat_bytes(character(len(parameters)),parameters)
 
 	@staticmethod
 	def unpack (data):

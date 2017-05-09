@@ -8,7 +8,7 @@ Copyright (c) 2014-2015 Orange. All rights reserved.
 from exabgp.protocol.ip import IP
 from exabgp.util import character
 from exabgp.util import ordinal
-from exabgp.util import concat_strs
+from exabgp.util import concat_bytes
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.qualifier import ESI
@@ -101,7 +101,7 @@ class MAC (EVPN):
 			self._packed = packed
 			return packed
 
-		self._packed = concat_strs(
+		self._packed = concat_bytes(
 			self.rd.pack(),
 			self.esi.pack(),
 			self.etag.pack(),

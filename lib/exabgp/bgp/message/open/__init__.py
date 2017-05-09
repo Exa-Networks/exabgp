@@ -10,7 +10,7 @@ from struct import unpack
 
 from exabgp.util import character
 from exabgp.util import ordinal
-from exabgp.util import concat_strs
+from exabgp.util import concat_bytes
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
 
@@ -62,7 +62,7 @@ class Open (Message):
 		self.capabilities = capabilities
 
 	def message (self,negotiated=None):
-		return self._message(concat_strs(
+		return self._message(concat_bytes(
 			self.version.pack(),
 			self.asn.trans().pack(),
 			self.hold_time.pack(),

@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 # This is a legacy file to handle 3.4.x like format
 
 from exabgp.util import character
+from exabgp.util import concat_bytes
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
@@ -54,7 +55,7 @@ from exabgp.configuration.static.mpls import label
 
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
 def pack_int (afi, integer):
-	return b''.join([chr((integer >> (offset * 8)) & 0xff) for offset in range(IP.length(afi)-1,-1,-1)])
+	return concat_bytes([character((integer >> (offset * 8)) & 0xff) for offset in range(IP.length(afi)-1,-1,-1)])
 
 
 class ParseStaticRoute (Section):

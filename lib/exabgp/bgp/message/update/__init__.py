@@ -10,7 +10,7 @@ from struct import pack
 from struct import unpack
 
 from exabgp.util import character
-from exabgp.util import concat_strs
+from exabgp.util import concat_bytes
 
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
@@ -74,7 +74,7 @@ class Update (Message):
 	@staticmethod
 	def prefix (data):
 		# This function needs renaming
-		return concat_strs(pack('!H',len(data)),data)
+		return concat_bytes(pack('!H',len(data)),data)
 
 	@staticmethod
 	def split (data):

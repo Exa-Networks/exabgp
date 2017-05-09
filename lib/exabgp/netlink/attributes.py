@@ -9,6 +9,9 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 from struct import calcsize
+
+from exabgp.util import concat_bytes
+
 from exabgp.netlink import NetLinkError
 
 
@@ -53,4 +56,4 @@ class Attributes (object):
 				raw += '\0'*pad
 			return raw
 
-		return b''.join([_encode(k,v) for (k,v) in attributes.items()])
+		return concat_bytes([_encode(k,v) for (k,v) in attributes.items()])

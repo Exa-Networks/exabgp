@@ -7,11 +7,10 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 import string
-import struct
 
 from exabgp.util import character
 from exabgp.util import ordinal
-from exabgp.util import concat_strs
+from exabgp.util import concat_bytes
 
 from exabgp.bgp.message.message import Message
 
@@ -170,7 +169,7 @@ class Notify (Notification):
 		Notification.__init__(self,code,subcode,data)
 
 	def message (self,negotiated=None):
-		return self._message(concat_strs(
+		return self._message(concat_bytes(
 			character(self.code),
 			character(self.subcode),
 			self.data

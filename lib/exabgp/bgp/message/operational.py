@@ -13,7 +13,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.util import character
 from exabgp.util import ordinal
-from exabgp.util import concat_strs
+from exabgp.util import concat_bytes
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.message import Message
 
@@ -86,7 +86,7 @@ class Operational (Message):
 		self.what = Type(what)
 
 	def _message (self, data):
-		return Message._message(self,concat_strs(
+		return Message._message(self,concat_bytes(
 			self.what.pack(),
 			pack('!H',len(data)),
 			data
@@ -148,7 +148,7 @@ class OperationalFamily (Operational):
 		return (self.afi,self.safi)
 
 	def _message (self, data):
-		return Operational._message(self,concat_strs(
+		return Operational._message(self,concat_bytes(
 			self.afi.pack(),
 			self.safi.pack(),
 			data
@@ -181,7 +181,7 @@ class SequencedOperationalFamily (OperationalFamily):
 		else:
 			self.sent_sequence = self.sequence
 
-		return self._message(concat_strs(
+		return self._message(concat_bytes(
 			self.sent_routerid.pack(),pack('!L',self.sent_sequence),
 			self.data
 		))
@@ -207,7 +207,7 @@ class NS (object):
 				self,
 				Operational.CODE.NS,
 				afi,safi,
-				concat_strs(sequence,self.ERROR_SUBCODE)
+				concat_bytes(sequence,self.ERROR_SUBCODE)
 			)
 
 		def extensive (self):

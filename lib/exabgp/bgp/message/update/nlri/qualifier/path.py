@@ -7,6 +7,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.util import character
+from exabgp.util import concat_bytes
+
 
 # ===================================================================== PathInfo
 # RFC draft-ietf-idr-add-paths-09
@@ -19,9 +21,9 @@ class PathInfo (object):
 		if packed:
 			self.path_info = packed
 		elif ip:
-			self.path_info = b''.join([character(int(_)) for _ in ip.split('.')])
+			self.path_info = concat_bytes([character(int(_)) for _ in ip.split('.')])
 		elif integer:
-			self.path_info = b''.join([character((integer >> offset) & 0xff) for offset in [24,16,8,0]])
+			self.path_info = concat_bytes([character((integer >> offset) & 0xff) for offset in [24,16,8,0]])
 		else:
 			self.path_info = b''
 		# sum(int(a)<<offset for (a,offset) in zip(ip.split('.'), range(24, -8, -8)))

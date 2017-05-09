@@ -10,7 +10,7 @@ from struct import pack
 import sys
 
 from exabgp.util import character
-from exabgp.util import concat_strs
+from exabgp.util import concat_bytes
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.util.cache import Cache
@@ -210,7 +210,7 @@ class Attribute (object):
 			len_value = pack('!H',length)
 		else:
 			len_value = character(length)
-		return concat_strs(character(flag),character(self.ID),len_value,value)
+		return concat_bytes(character(flag),character(self.ID),len_value,value)
 
 	def _len (self,value):
 		length = len(value)

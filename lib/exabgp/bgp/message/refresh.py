@@ -10,7 +10,7 @@ from struct import unpack
 from struct import error
 
 from exabgp.util import character
-from exabgp.util import concat_strs
+from exabgp.util import concat_bytes
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.message import Message
@@ -47,7 +47,7 @@ class RouteRefresh (Message):
 		self.reserved = Reserved(reserved)
 
 	def message (self,negotiated=None):
-		return self._message(concat_strs(self.afi.pack(),character(self.reserved),self.safi.pack()))
+		return self._message(concat_bytes(self.afi.pack(),character(self.reserved),self.safi.pack()))
 
 	def __str__ (self):
 		return "REFRESH"

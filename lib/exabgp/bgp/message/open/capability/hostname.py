@@ -11,7 +11,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from exabgp.util import character
 from exabgp.util import ordinal
-from exabgp.util import concat_strs
+from exabgp.util import concat_bytes
 from exabgp.bgp.message.open.capability.capability import Capability
 
 
@@ -29,7 +29,7 @@ class HostName (Capability):
 		return '{ "host-name": "%s", "domain-name": "%s" }' % (self.host_name,self.domain_name)
 
 	def extract (self):
-		return [concat_strs(
+		return [concat_bytes(
 			character(len(self.host_name)),
 			self.host_name,
 			character(len(self.domain_name)),
