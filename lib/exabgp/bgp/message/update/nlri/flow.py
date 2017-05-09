@@ -163,7 +163,7 @@ class IPrefix6 (IPrefix,IComponent,IPv6):
 	@classmethod
 	def make (cls, bgp):
 		offset = ordinal(bgp[1])
-		prefix,mask = CIDR.decode(AFI.ipv6,bgp[0]+bgp[2:])
+		prefix,mask = CIDR.decode(AFI.ipv6,bgp[0:1]+bgp[2:])
 		return cls(prefix,mask,offset), bgp[CIDR.size(mask)+2:]
 
 

@@ -53,7 +53,7 @@ class OspfRoute(object):
 	@classmethod
 	def unpack (cls, data):
 		if len(data) == 1:
-			ospf_type = unpack('!B',data[0])[0]
+			ospf_type = unpack('!B',data[0:1])[0]
 		return cls(ospf_type=ospf_type)
 
 	def json (self):

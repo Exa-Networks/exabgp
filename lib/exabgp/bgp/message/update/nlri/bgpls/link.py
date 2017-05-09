@@ -78,7 +78,7 @@ class LINK(BGPLS):
 
 	@classmethod
 	def unpack (cls, data, rd):
-		proto_id = unpack('!B',data[0])[0]
+		proto_id = unpack('!B',data[0:1])[0]
 		iface_addrs = []
 		neigh_addrs = []
 		link_identifiers = []
