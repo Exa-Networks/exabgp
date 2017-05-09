@@ -12,12 +12,14 @@ import socket
 import sys
 import time
 
-from exabgp.reactor.api.options import hexstring
+from exabgp.util import hexstring
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message import IN
 
 from exabgp.configuration.environment import environment
+
+from exabgp.vendoring import six
 
 
 if sys.version_info > (3,):
@@ -96,13 +98,13 @@ class JSON (object):
 			' }' % (neighbor,content)
 
 	def _kv (self, extra):
-		return ", ".join('"%s": %s' % (k,self._string(v)) for (k,v) in extra.iteritems())
+		return ", ".join('"%s": %s' % (k,self._string(v)) for (k,v) in six.iteritems(extra))
 
 	def _json_kv (self, extra):
-		return ", ".join('"%s": %s' % (k,v.json()) for (k,v) in extra.iteritems())
+		return ", ".join('"%s": %s' % (k,v.json()) for (k,v) in six.iteritems(extra))
 
 	def _minimalkv (self, extra):
-		return ", ".join('"%s": %s' % (k,self._string(v)) for (k,v) in extra.iteritems() if v)
+		return ", ".join('"%s": %s' % (k,self._string(v)) for (k,v) in six.iteritems(extra) if v)
 
 	def up (self, neighbor):
 		return self._header(self._neighbor(neighbor,None,self._kv({

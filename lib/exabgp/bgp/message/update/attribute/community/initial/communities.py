@@ -38,7 +38,7 @@ class Communities (Attribute):
 
 	def pack (self, negotiated=None):
 		if len(self.communities):
-			return self._attribute(concat_bytes([c.pack() for c in self.communities]))
+			return self._attribute(concat_bytes(*[c.pack() for c in self.communities]))
 		return b''
 
 	def __iter__(self):

@@ -53,15 +53,12 @@ class VPLS (NLRI):
 			and self.size == other.size \
 			and self.endpoint == other.endpoint
 
-	def index (self):
-		return NLRI._index(self) + self.pack()
-
 	def assign (self, name, value):
 		setattr(self,name,value)
 
 	def pack (self, negotiated=None):
 		return concat_bytes(
-			'\x00\x11',  # pack('!H',17)
+			b'\x00\x11',  # pack('!H',17)
 			self.rd.pack(),
 			pack(
 				'!HHH',
@@ -108,7 +105,7 @@ class VPLS (NLRI):
 			raise Notify(3,10,'l2vpn vpls message length is not consistent with encoded bgp')
 		rd = RouteDistinguisher(bgp[2:10])
 		endpoint,offset,size = unpack('!HHH',bgp[10:16])
-		base = unpack('!L','\x00'+bgp[16:19])[0] >> 4
+		base = unpack('!L',b'\x00'+bgp[16:19])[0] >> 4
 		nlri = cls(rd,endpoint,base,offset,size)
 		nlri.action = action
 		# nlri.nexthop = IP.unpack(nexthop)

@@ -12,9 +12,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
-from exabgp.util import character
-from exabgp.util import concat_bytes
-
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -96,7 +93,7 @@ def _bit_to_len (value):
 def _number (string):
 	value = 0
 	for c in string:
-		value = (value << 8) + ord(c)
+		value = (value << 8) + ordinal(c)
 	return value
 
 # def short (value):
@@ -166,7 +163,7 @@ class IPrefix6 (IPrefix,IComponent,IPv6):
 	@classmethod
 	def make (cls, bgp):
 		offset = ordinal(bgp[1])
-		prefix,mask = CIDR.decode(AFI.ipv6,bgp[0]+bgp[2:])
+		prefix,mask = CIDR.decode(AFI.ipv6,bgp[0:1]+bgp[2:])
 		return cls(prefix,mask,offset), bgp[CIDR.size(mask)+2:]
 
 
@@ -569,9 +566,9 @@ class Flow (NLRI):
 			# and add it to the last rule
 			if ID not in (FlowDestination.ID,FlowSource.ID):
 				ordered_rules.append(character(ID))
-			ordered_rules.append(concat_bytes(rule.pack() for rule in rules))
+			ordered_rules.append(concat_bytes(*[rule.pack() for rule in rules]))
 
-		components = self.rd.pack() + concat_bytes(ordered_rules)
+		components = self.rd.pack() + concat_bytes(*ordered_rules)
 
 		l = len(components)
 		if l < 0xF0:
@@ -617,14 +614,11 @@ class Flow (NLRI):
 					s.append(', '.join('"%s"' % flag for flag in rule.value.named_bits()))
 				else:
 					s.append('"%s"' % rule)
-			string.append(' "%s": [ %s ]' % (rules[0].NAME,concat_bytes(str(_) for _ in s).replace('""','')))
+			string.append(' "%s": [ %s ]' % (rules[0].NAME,''.join(str(_) for _ in s).replace('""','')))
 		nexthop = ', "next-hop": "%s"' % self.nexthop if self.nexthop is not NoNextHop else ''
 		rd = '' if self.rd is RouteDistinguisher.NORD else ', %s' % self.rd.json()
 		compatibility = ', "string": "%s"' % self.extensive()
 		return '{' + ','.join(string) + rd + nexthop + compatibility + ' }'
-
-	def index (self):
-		return NLRI._index(self) + self.pack()
 
 	@classmethod
 	def unpack_nlri (cls, afi, safi, bgp, action, addpath):

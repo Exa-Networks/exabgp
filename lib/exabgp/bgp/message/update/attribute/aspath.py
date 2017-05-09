@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import unpack
 from struct import error
 
+from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 from exabgp.bgp.message.open.asn import ASN
@@ -60,7 +61,7 @@ class ASPath (Attribute):
 		if length:
 			if length > 255:
 				return self._segment(seg_type,values[:255],asn4) + self._segment(seg_type,values[255:],asn4)
-			return concat_bytes(chr(seg_type),chr(len(values)),concat_bytes([v.pack(asn4) for v in values]))
+			return concat_bytes(character(seg_type),character(len(values)),*[v.pack(asn4) for v in values])
 		return b""
 
 	def _segments (self, asn4):

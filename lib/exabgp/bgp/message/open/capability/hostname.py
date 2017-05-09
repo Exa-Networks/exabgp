@@ -8,12 +8,10 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 # https://tools.ietf.org/html/draft-walton-bgp-hostname-capability-02
 
-
 from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 from exabgp.bgp.message.open.capability.capability import Capability
-
 
 class HostName (Capability):
 	ID = Capability.CODE.HOSTNAME

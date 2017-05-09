@@ -42,10 +42,12 @@ from exabgp.reactor.api.processes import ProcessError
 from exabgp.logger import Logger
 from exabgp.logger import FakeLogger
 
+from exabgp.util import ordinal
+
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000
 
-_UPDATE = Update([],'')
+_UPDATE = Update([],b'')
 _OPERATIONAL = Operational(0x00)
 
 
@@ -147,12 +149,12 @@ class Protocol (object):
 			if packets:
 				self.peer.reactor.processes.message(self.peer.neighbor,direction,message,raw[:19],raw[19:])
 			else:
-				self.peer.reactor.processes.message(self.peer.neighbor,direction,message,'','')
+				self.peer.reactor.processes.message(self.peer.neighbor,direction,message,b'',b'')
 		else:
 			if packets:
 				self.peer.reactor.processes.packets(self.peer.neighbor,direction,int(message.ID),raw[:19],raw[19:])
 			if parsed:
-				self.peer.reactor.processes.message(message.ID,self.peer.neighbor,direction,message,'','')
+				self.peer.reactor.processes.message(message.ID,self.peer.neighbor,direction,message,b'',b'')
 
 	def write (self, message, negotiated=None):
 		raw = message.message(negotiated)
@@ -164,7 +166,7 @@ class Protocol (object):
 			yield boolean
 
 	def send (self,raw):
-		if self.neighbor.api.get('send-%s' % Message.CODE.short(ord(raw[18])),False):
+		if self.neighbor.api.get('send-%s' % Message.CODE.short(ordinal(raw[18])),False):
 			message = Update.unpack_message(raw[19:],self.negotiated)
 			self._to_api('send',message,raw)
 
@@ -181,7 +183,7 @@ class Protocol (object):
 		consolidate = self.neighbor.api['receive-consolidate']
 		parsed = self.neighbor.api['receive-parsed']
 
-		body,header = '',''  # just because pylint/pylama are getting more clever
+		body,header = b'',b''  # just because pylint/pylama are getting more clever
 
 		for length,msg_id,header,body,notify in self.connection.reader():
 			# internal issue
@@ -190,7 +192,7 @@ class Protocol (object):
 					if consolidate:
 						self.peer.reactor.processes.notification(self.peer.neighbor,'send',notify.code,notify.subcode,str(notify),header,body)
 					elif parsed:
-						self.peer.reactor.processes.notification(self.peer.neighbor,'send',notify.code,notify.subcode,str(notify),'','')
+						self.peer.reactor.processes.notification(self.peer.neighbor,'send',notify.code,notify.subcode,str(notify),b'',b'')
 					elif packets:
 						self.peer.reactor.processes.packets(self.peer.neighbor,'send',msg_id,header,body)
 				# XXX: is notify not already Notify class ?
@@ -232,7 +234,7 @@ class Protocol (object):
 				if consolidate:
 					self.peer.reactor.processes.message(msg_id,self.neighbor,'receive',message,header,body)
 				elif parsed:
-					self.peer.reactor.processes.message(msg_id,self.neighbor,'receive',message,'','')
+					self.peer.reactor.processes.message(msg_id,self.neighbor,'receive',message,b'',b'')
 
 			if message.TYPE == Notification.TYPE:
 				raise message

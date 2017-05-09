@@ -6,9 +6,9 @@ Created by Thomas Mangin on 2009-11-06.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.util import character
-
 from exabgp.bgp.message.message import Message
+
+from exabgp.util import character
 
 # ========================================================================= NOP
 #

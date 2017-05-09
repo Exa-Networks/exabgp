@@ -28,7 +28,7 @@ path = [os.path.join(_,'exabgp')
         for _ in sys.path
         if os.path.isfile('/'.join((_, 'exabgp', 'application', 'bgp.py')))][0]
 
-print os.path.join(path,'application','bgp.py')
+print(os.path.join(path,'application','bgp.py'))
 
 def remove (file):
     try: os.remove(file)
