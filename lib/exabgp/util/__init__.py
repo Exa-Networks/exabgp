@@ -16,6 +16,12 @@ def string_is_hex (s):
 		return False
 	return all(c in string.hexdigits for c in s[2:])
 
+def hexstring (value):
+	def spaced (value):
+		for v in value:
+			yield '%02X' % ord(v)
+	return '0x' + ''.join(spaced(value))
+
 # for Python3+, let's redefine ord into something
 # that plays along nicely with ord(data[42]) with
 # data being of type 'bytes'
