@@ -7,7 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.util import chr_
-from exabgp.util import ord_
+from exabgp.util import ordinal
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
@@ -55,7 +55,7 @@ class Origin (Attribute):
 
 	@classmethod
 	def unpack (cls, data, negotiated):
-		return cls(ord_(data),data)
+		return cls(ordinal(data),data)
 
 	@classmethod
 	def setCache (cls):

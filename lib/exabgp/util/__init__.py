@@ -20,9 +20,9 @@ def string_is_hex (s):
 # that plays along nicely with ord(data[42]) with
 # data being of type 'bytes'
 if sys.version_info[0]<3:
-	ord_ = ord
+	ordinal = ord
 else:
-	def ord_(x):
+	def ordinal(x):
 		return x if type(x)==int else ord(x)
 
 
@@ -43,4 +43,3 @@ else:
 
 def concat_strs(*items): #each item is an 'str' in py2 or a 'bytes' in py3
 	return b''.join(items)
-

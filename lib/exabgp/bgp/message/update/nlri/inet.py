@@ -13,7 +13,7 @@ from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.util import chr_
-from exabgp.util import ord_
+from exabgp.util import ordinal
 from exabgp.util import padding
 from exabgp.bgp.message import IN
 from exabgp.bgp.message import OUT
@@ -102,7 +102,7 @@ class INET (NLRI):
 			nlri.path_info = PathInfo(bgp[:4])
 			bgp = bgp[4:]
 
-		mask = ord_(bgp[0])
+		mask = ordinal(bgp[0])
 		bgp = bgp[1:]
 
 		if cls.has_label():

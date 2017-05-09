@@ -14,7 +14,7 @@ from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
 
 from exabgp.util import chr_
-from exabgp.util import ord_
+from exabgp.util import ordinal
 from exabgp.bgp.message.direction import IN
 # from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute import Attribute
@@ -112,7 +112,7 @@ class MPRNLRI (Attribute,Family):
 			raise Notify(3,0,'presented a non-negotiated family %d/%d' % (afi,safi))
 
 		# -- Reading length of next-hop
-		len_nh = ord_(data[offset])
+		len_nh = ordinal(data[offset])
 		offset += 1
 
 		rd = 0
@@ -162,13 +162,13 @@ class MPRNLRI (Attribute,Family):
 		nexthops = [nhs[pos:pos+16] for pos in range(0,len(nhs),16)]
 
 		# chech the RD is well zero
-		if rd and sum([int(ord_(_)) for _ in data[offset:8]]) != 0:
+		if rd and sum([int(ordinal(_)) for _ in data[offset:8]]) != 0:
 			raise Notify(3,0,"MP_REACH_NLRI next-hop's route-distinguisher must be zero")
 
 		offset += len_nh
 
 		# Skip a reserved bit as somone had to bug us !
-		reserved = ord_(data[offset])
+		reserved = ordinal(data[offset])
 		offset += 1
 
 		if reserved != 0:

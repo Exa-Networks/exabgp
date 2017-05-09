@@ -10,7 +10,7 @@ import string
 import struct
 
 from exabgp.util import chr_
-from exabgp.util import ord_
+from exabgp.util import ordinal
 from exabgp.util import concat_strs
 
 from exabgp.bgp.message.message import Message
@@ -120,7 +120,7 @@ class Notification (Message):
 
 		# draft-ietf-idr-shutdown or the peer was using 6,2 with data
 
-		shutdown_length  = ord_(data[0])
+		shutdown_length  = ordinal(data[0])
 		data = data[1:]
 
 		if shutdown_length == 0:
@@ -156,7 +156,7 @@ class Notification (Message):
 
 	@classmethod
 	def unpack_message (cls, data, negotiated=None):
-		return cls(ord_(data[0]),ord_(data[1]),data[2:])
+		return cls(ordinal(data[0]),ordinal(data[1]),data[2:])
 
 
 # =================================================================== Notify

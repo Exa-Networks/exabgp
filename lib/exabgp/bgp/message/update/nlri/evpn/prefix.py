@@ -11,7 +11,7 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 
 from exabgp.protocol.ip import IP
 from exabgp.util import chr_
-from exabgp.util import ord_
+from exabgp.util import ordinal
 from exabgp.util import concat_strs
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import Labels
@@ -142,7 +142,7 @@ class Prefix (EVPN):
 		etag = EthernetTag.unpack(data[:4])
 		data = data[4:]
 
-		iplen = ord_(data[0])
+		iplen = ordinal(data[0])
 		data = data[1:]
 
 		if datalen == (26 + 8):  # Using IPv4 addresses

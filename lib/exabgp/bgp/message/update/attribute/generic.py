@@ -8,7 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from struct import pack
 from exabgp.util import chr_
-from exabgp.util import ord_
+from exabgp.util import ordinal
 from exabgp.util import concat_strs
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
@@ -51,7 +51,7 @@ class GenericAttribute (Attribute):
 		return len(self.data)
 
 	def __repr__ (self):
-		return '0x' + ''.join('%02x' % ord_(_) for _ in self.data)
+		return '0x' + ''.join('%02x' % ordinal(_) for _ in self.data)
 
 	@classmethod
 	def unpack (cls, code, flag, data):

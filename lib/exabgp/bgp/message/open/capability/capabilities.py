@@ -10,7 +10,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
 from exabgp.util import chr_
-from exabgp.util import ord_
+from exabgp.util import ordinal
 from exabgp.util import concat_strs
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.addpath import AddPath
@@ -144,18 +144,18 @@ class Capabilities (dict):
 		def _key_values (name, data):
 			if len(data) < 2:
 				raise Notify(2,0,"Bad length for OPEN %s (<2) %s" % (name,Capability.hex(data)))
-			l = ord_(data[1])
+			l = ordinal(data[1])
 			boundary = l+2
 			if len(data) < boundary:
 				raise Notify(2,0,"Bad length for OPEN %s (buffer underrun) %s" % (name,Capability.hex(data)))
-			key = ord_(data[0])
+			key = ordinal(data[0])
 			value = data[2:boundary]
 			rest = data[boundary:]
 			return key,value,rest
 
 		capabilities = Capabilities()
 
-		option_len = ord_(data[0])
+		option_len = ordinal(data[0])
 		if not option_len:
 			return capabilities
 

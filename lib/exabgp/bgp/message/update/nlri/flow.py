@@ -16,7 +16,7 @@ from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.util import chr_
-from exabgp.util import ord_
+from exabgp.util import ordinal
 from exabgp.util import concat_strs
 from exabgp.bgp.message.direction import OUT
 from exabgp.bgp.message.notification import Notify
@@ -162,7 +162,7 @@ class IPrefix6 (IPrefix,IComponent,IPv6):
 
 	@classmethod
 	def make (cls, bgp):
-		offset = ord_(bgp[1])
+		offset = ordinal(bgp[1])
 		prefix,mask = CIDR.decode(AFI.ipv6,bgp[0]+bgp[2:])
 		return cls(prefix,mask,offset), bgp[CIDR.size(mask)+2:]
 
@@ -196,7 +196,7 @@ class IOperationByte (IOperation):
 		return 1,chr_(value)
 
 	# def decode (self, bgp):
-	# 	return ord_(bgp[0]),bgp[1:]
+	# 	return ordinal(bgp[0]),bgp[1:]
 
 
 class IOperationByteShort (IOperation):
@@ -625,10 +625,10 @@ class Flow (NLRI):
 
 	@classmethod
 	def unpack_nlri (cls, afi, safi, bgp, action, addpath):
-		length,bgp = ord_(bgp[0]),bgp[1:]
+		length,bgp = ordinal(bgp[0]),bgp[1:]
 
 		if length & 0xF0 == 0xF0:  # bigger than 240
-			extra,bgp = ord_(bgp[0]),bgp[1:]
+			extra,bgp = ordinal(bgp[0]),bgp[1:]
 			length = ((length & 0x0F) << 16) + extra
 
 		if length > len(bgp):
@@ -646,7 +646,7 @@ class Flow (NLRI):
 		seen = []
 
 		while bgp:
-			what,bgp = ord_(bgp[0]),bgp[1:]
+			what,bgp = ordinal(bgp[0]),bgp[1:]
 
 			if what not in decode.get(afi,{}):
 				raise Notify(3,10,'unknown flowspec component received for address family %d' % what)
@@ -666,7 +666,7 @@ class Flow (NLRI):
 			else:
 				end = False
 				while not end:
-					byte,bgp = ord_(bgp[0]),bgp[1:]
+					byte,bgp = ordinal(bgp[0]),bgp[1:]
 					end = CommonOperator.eol(byte)
 					operator = CommonOperator.operator(byte)
 					length = CommonOperator.length(byte)

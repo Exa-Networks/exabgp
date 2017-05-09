@@ -10,7 +10,7 @@ from struct import pack
 from struct import unpack
 
 from exabgp.util import chr_
-from exabgp.util import ord_
+from exabgp.util import ordinal
 from exabgp.protocol.resource import Resource
 
 # ======================================================================== AFI
@@ -151,7 +151,7 @@ class SAFI (Resource):
 
 	@staticmethod
 	def unpack (data):
-		return SAFI(ord_(data))
+		return SAFI(ordinal(data))
 
 	def has_label (self):
 		return self in (self.nlri_mpls,self.mpls_vpn)

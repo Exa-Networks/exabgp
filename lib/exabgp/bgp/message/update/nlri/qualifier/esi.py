@@ -8,7 +8,7 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.util import chr_
-from exabgp.util import ord_
+from exabgp.util import ordinal
 
 # TODO: take into account E-VPN specs that specify the role of the first bit of ESI
 # (since draft-ietf-l2vpn-evpn-05)
@@ -47,7 +47,7 @@ class ESI (object):
 	def __str__ (self):
 		if self.esi == self.DEFAULT:
 			return "-"
-		return ":".join('%02x' % ord_(_) for _ in self.esi)
+		return ":".join('%02x' % ordinal(_) for _ in self.esi)
 
 	def __repr__ (self):
 		return self.__str__()

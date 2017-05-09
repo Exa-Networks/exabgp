@@ -11,7 +11,7 @@ import math
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
 from exabgp.util import chr_
-from exabgp.util import ord_
+from exabgp.util import ordinal
 from exabgp.util import padding
 from exabgp.bgp.message.notification import Notify
 
@@ -82,7 +82,7 @@ class CIDR (object):
 
 	@staticmethod
 	def decode (afi,bgp):
-		mask = ord_(bgp[0])
+		mask = ordinal(bgp[0])
 		size = CIDR.size(mask)
 
 		if len(bgp) < size+1:

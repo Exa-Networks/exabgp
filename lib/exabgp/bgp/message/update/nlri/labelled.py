@@ -9,7 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.util import chr_
-from exabgp.util import ord_
+from exabgp.util import ordinal
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
@@ -60,7 +60,7 @@ class Labelled (INET):
 
 	# @classmethod
 	# def _labels (cls, data, action):
-	# 	mask = ord_(data[0])
+	# 	mask = ordinal(data[0])
 	# 	data = data[1:]
 	# 	labels = []
 	# 	while data and mask >= 8:
