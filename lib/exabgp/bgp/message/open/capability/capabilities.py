@@ -25,6 +25,7 @@ from exabgp.bgp.message.open.capability.hostname import HostName
 
 from exabgp.bgp.message.notification import Notify
 
+from exabgp.vendoring import six
 
 # =================================================================== Parameter
 #
@@ -133,10 +134,10 @@ class Capabilities (dict):
 
 	def pack (self):
 		rs = []
-		for k,capabilities in self.iteritems():
+		for k,capabilities in six.iteritems(self):
 			for capability in capabilities.extract():
 				rs.append(concat_bytes(character(k),character(len(capability)),capability))
-		parameters = concat_bytes([concat_bytes(character(2),character(len(r)),r) for r in rs])
+		parameters = concat_bytes(*[concat_bytes(character(2),character(len(r)),r) for r in rs])
 		return concat_bytes(character(len(parameters)),parameters)
 
 	@staticmethod

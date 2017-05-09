@@ -10,6 +10,7 @@ Copyright (c) 2009-2015 Orange. All rights reserved.
 import unittest
 
 from exabgp.util import character
+from exabgp.util import concat_bytes
 
 from exabgp.reactor.protocol import AFI, SAFI
 
@@ -202,7 +203,7 @@ class TestNLRIs(unittest.TestCase):
 
         # ESI
         nlri1 = EVPNMAC(RouteDistinguisher.fromElements("42.42.42.42", 5),
-                        ESI(b''.join(character(1) for _ in range(0,10))),
+                        ESI(concat_bytes(*[character(1) for _ in range(0,10)])),
                         EthernetTag(111),
                         MAC("01:02:03:04:05:06"), 6*8,
                         Labels([42], True),

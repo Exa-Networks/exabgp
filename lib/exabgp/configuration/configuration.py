@@ -37,6 +37,7 @@ from exabgp.configuration.operational import ParseOperational
 
 from exabgp.configuration.environment import environment
 
+from exabgp.vendoring import six
 
 if sys.version_info[0]>=3:
 	StandardError = Exception
@@ -390,7 +391,7 @@ class Configuration (_Configuration):
 		return True
 
 	def _link (self):
-		for neighbor in self.neighbors.itervalues():
+		for neighbor in six.itervalues(self.neighbors):
 			api = neighbor.api
 			for process in api.get('processes',[]):
 				self.processes.setdefault(process,{})['neighbor-changes'] = api['neighbor-changes']

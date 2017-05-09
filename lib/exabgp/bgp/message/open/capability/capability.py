@@ -10,15 +10,13 @@ import sys
 
 # Do not create a dependency loop by using exabgp.bgp.message as import
 from exabgp.util import ordinal
-from exabgp.util import concat_bytes
-
 from exabgp.bgp.message.notification import Notify
 
 
 class _CapabilityCode (int):
 	_cache = dict()
 
-	if sys.version_info[0] < 3:
+	if sys.version_info[0]<3:
 		__slots__ = ['NAME','_cache']
 
 	RESERVED                 = 0x00  # [RFC5492]
@@ -152,7 +150,7 @@ class Capability (object):
 
 	@staticmethod
 	def hex (data):
-		return '0x' + concat_bytes('%02x' % ordinal(_) for _ in data)
+		return '0x' + ''.join('%02x' % ordinal(_) for _ in data)
 
 	@classmethod
 	def unknown (cls, klass):

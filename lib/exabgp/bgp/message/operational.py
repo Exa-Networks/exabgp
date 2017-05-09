@@ -11,11 +11,13 @@ from struct import unpack
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.message import Message
+
+from exabgp.util import character
+
 
 # ========================================================================= Type
 #

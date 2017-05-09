@@ -9,13 +9,14 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 # from struct import unpack
 import sys
 
-from exabgp.util import character
-
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.bgp.message.update.nlri import NLRI as _NLRI
+
+from exabgp.util import character
+
 
 if sys.version_info > (3,):
 	long = int

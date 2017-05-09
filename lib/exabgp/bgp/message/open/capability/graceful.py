@@ -8,12 +8,14 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from struct import pack
 from struct import unpack
-from exabgp.util import character
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 from exabgp.bgp.message.open.capability.capability import Capability
+
+from exabgp.vendoring import six
 
 # =========================================================== Graceful (Restart)
 # RFC 4727 - https://tools.ietf.org/html/rfc4727
@@ -41,7 +43,7 @@ class Graceful (Capability,dict):
 	def extract (self):
 		restart  = pack('!H',((self.restart_flag << 12) | (self.restart_time & Graceful.TIME_MASK)))
 		families = [(afi.pack(),safi.pack(),character(self[(afi,safi)])) for (afi,safi) in self.keys()]
-		sfamilies = concat_bytes([concat_bytes(pafi,psafi,family) for (pafi,psafi,family) in families])
+		sfamilies = concat_bytes(*[concat_bytes(pafi,psafi,family) for (pafi,psafi,family) in families])
 		return [concat_bytes(restart,sfamilies)]
 
 	def __str__ (self):
@@ -63,7 +65,7 @@ class Graceful (Capability,dict):
 			'restart-flags':'[%s] ' % (' "forwarding" ' if self.restart_flag & 0x8 else ' ')
 		}
 
-		return '{ %s}' % ','.join('"%s": %s' % (k,v) for k,v in d.iteritems())
+		return '{ %s}' % ','.join('"%s": %s' % (k,v) for k,v in six.iteritems(d))
 
 	def families (self):
 		return self.keys()

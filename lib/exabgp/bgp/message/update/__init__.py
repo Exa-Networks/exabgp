@@ -9,7 +9,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
-from exabgp.util import character
 from exabgp.util import concat_bytes
 
 from exabgp.protocol.ip import NoNextHop
@@ -33,6 +32,8 @@ from exabgp.bgp.message.update.nlri import NLRI
 
 from exabgp.logger import Logger
 from exabgp.logger import LazyFormat
+
+from exabgp.util import character
 
 # ======================================================================= Update
 

@@ -8,8 +8,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from struct import unpack
 
-from exabgp.util import concat_bytes
-
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -17,6 +15,8 @@ from exabgp.protocol.family import Family
 
 from exabgp.util import character
 from exabgp.util import ordinal
+from exabgp.util import concat_bytes
+
 from exabgp.bgp.message.direction import IN
 # from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute import Attribute
@@ -26,6 +26,7 @@ from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability import Negotiated
 
+from exabgp.vendoring import six
 
 # ==================================================== MP Unreacheable NLRI (15)
 #
@@ -76,23 +77,23 @@ class MPRNLRI (Attribute,Family):
 			# mpunli[nexthop] = nlri
 			mpnlri.setdefault(nexthop,[]).append(nlri.pack(negotiated))
 
-		for nexthop,nlris in mpnlri.iteritems():
-			payload = concat_bytes([self.afi.pack(), self.safi.pack(), chr(len(nexthop)), nexthop, chr(0)])
+		for nexthop,nlris in six.iteritems(mpnlri):
+			payload = concat_bytes(self.afi.pack(), self.safi.pack(), character(len(nexthop)), nexthop, character(0))
 			header_length = len(payload)
 			for nlri in nlris:
 				if self._len(payload + nlri) > maximum:
 					if len(payload) == header_length or len(payload) > maximum:
 						raise Notify(6, 0, 'attributes size is so large we can not even pack on MPRNLRI')
 					yield self._attribute(payload)
-					payload = concat_bytes([self.afi.pack(), self.safi.pack(), character(len(nexthop)), nexthop, character(0), nlri])
+					payload = concat_bytes(self.afi.pack(), self.safi.pack(), character(len(nexthop)), nexthop, character(0), nlri)
 					continue
-				payload  = concat_bytes([payload, nlri])
+				payload  = concat_bytes(payload, nlri)
 			if len(payload) == header_length or len(payload) > maximum:
 				raise Notify(6, 0, 'attributes size is so large we can not even pack on MPRNLRI')
 			yield self._attribute(payload)
 
 	def pack (self, negotiated):
-		return concat_bytes(self.packed_attributes(negotiated))
+		return concat_bytes(*self.packed_attributes(negotiated))
 
 	def __len__ (self):
 		raise RuntimeError('we can not give you the size of an MPRNLRI - was it with our witout addpath ?')

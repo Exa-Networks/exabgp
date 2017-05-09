@@ -8,8 +8,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import math
 
-from exabgp.util import character
-
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
 from exabgp.util import character
@@ -74,7 +72,7 @@ class CIDR (object):
 		return "%s/%s" % (self.top(),self.mask)
 
 	def index (self):
-		return character(self.mask) + self._packed[:CIDR.size(self.mask)]
+		return chr(self.mask) + str(self._packed[:CIDR.size(self.mask)])
 
 	def pack_ip (self):
 		return self._packed[:CIDR.size(self.mask)]

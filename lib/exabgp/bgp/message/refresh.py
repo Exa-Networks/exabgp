@@ -9,12 +9,13 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import unpack
 from struct import error
 
-from exabgp.util import character
 from exabgp.util import concat_bytes
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
+
+from exabgp.util import character
 
 # =================================================================== Notification
 # A Notification received from our peer.

@@ -6,9 +6,9 @@ Created by Thomas Mangin on 2012-07-17.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.util import character
-
 from exabgp.bgp.message.open.capability.capability import Capability
+
+from exabgp.util import character
 
 # ================================================================= MultiSession
 #
