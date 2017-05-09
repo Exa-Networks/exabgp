@@ -93,7 +93,7 @@ def _bit_to_len (value):
 def _number (string):
 	value = 0
 	for c in string:
-		value = (value << 8) + ord(c)
+		value = (value << 8) + ordinal(c)
 	return value
 
 # def short (value):
