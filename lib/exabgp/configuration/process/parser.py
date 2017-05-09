@@ -24,7 +24,7 @@ def _make_path (prg):
 	env = os.environ.get('EXABGP_ETC','')
 	if env:
 		options = [
-			os.path.join(env.rstrip('/'),*os.path.join(parts[2:])),
+			os.path.join(env.rstrip('/'),os.path.join(*parts[2:])),
 			'/etc/exabgp'
 		]
 	else:
