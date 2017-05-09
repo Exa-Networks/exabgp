@@ -7,11 +7,10 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.util import character
+from exabgp.util import hexstring
 
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
-
-from exabgp.reactor.api.options import hexstring
 
 # =================================================================== KeepAlive
 #

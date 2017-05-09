@@ -6,8 +6,7 @@ import string
 
 from exabgp.util import character
 from exabgp.util import concat_bytes
-
-from exabgp.reactor.api.options import hexstring
+from exabgp.util import hexstring
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message import Open

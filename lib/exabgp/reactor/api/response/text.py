@@ -9,7 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import os
 
-from exabgp.reactor.api.options import hexstring
+from exabgp.util import hexstring
 from exabgp.bgp.message import IN
 
 

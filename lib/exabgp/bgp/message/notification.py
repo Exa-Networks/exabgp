@@ -11,15 +11,9 @@ import string
 from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
+from exabgp.util import hexstring
 
 from exabgp.bgp.message.message import Message
-
-
-def hexstring (value):
-	def spaced (value):
-		for v in value:
-			yield '%02X' % ord(v)
-	return '0x' + ''.join(spaced(value))
 
 
 # ================================================================== Notification

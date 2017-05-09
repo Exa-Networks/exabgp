@@ -24,10 +24,3 @@ class APIOptions (dict):
 
 	def __missing__ (self, key):
 		return False
-
-
-def hexstring (value):
-	def spaced (value):
-		for v in value:
-			yield '%02X' % ord(v)
-	return concat_bytes(spaced(value))

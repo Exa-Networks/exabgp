@@ -12,6 +12,13 @@ import sys
 PY2 = sys.version_info[0] < 3
 
 
+def hexstring (value):
+	def spaced (value):
+		for v in value:
+			yield '%02X' % ord(v)
+	return '0x' + concat_bytes(spaced(value))
+
+
 def string_is_hex (s):
 	if s[:2].lower() != '0x':
 		return False
