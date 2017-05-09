@@ -12,10 +12,12 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
+from exabgp.util import character
+
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.util import chr_
+from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_strs
 from exabgp.bgp.message.direction import OUT
@@ -130,7 +132,7 @@ class IPrefix4 (IPrefix,IComponent,IPv4):
 	def pack (self):
 		raw = self.cidr.pack_nlri()
 		# ID is defined in subclasses
-		return concat_strs(chr_(self.ID),raw)  # pylint: disable=E1101
+		return concat_strs(character(self.ID),raw)  # pylint: disable=E1101
 
 	def __str__ (self):
 		return str(self.cidr)
@@ -155,7 +157,7 @@ class IPrefix6 (IPrefix,IComponent,IPv6):
 
 	def pack (self):
 		# ID is defined in subclasses
-		return concat_strs(chr_(self.ID),chr_(self.cidr.mask),chr_(self.offset),self.cidr.pack_ip())  # pylint: disable=E1101
+		return concat_strs(character(self.ID),character(self.cidr.mask),character(self.offset),self.cidr.pack_ip())  # pylint: disable=E1101
 
 	def __str__ (self):
 		return "%s/%s" % (self.cidr,self.offset)
@@ -178,7 +180,7 @@ class IOperation (IComponent):
 	def pack (self):
 		l,v = self.encode(self.value)
 		op = self.operations | _len_to_bit(l)
-		return concat_strs(chr_(op),v)
+		return concat_strs(character(op),v)
 
 	def encode (self, value):
 		raise NotImplementedError('this method must be implemented by subclasses')
@@ -193,7 +195,7 @@ class IOperation (IComponent):
 
 class IOperationByte (IOperation):
 	def encode (self, value):
-		return 1,chr_(value)
+		return 1,character(value)
 
 	# def decode (self, bgp):
 	# 	return ordinal(bgp[0]),bgp[1:]
@@ -202,7 +204,7 @@ class IOperationByte (IOperation):
 class IOperationByteShort (IOperation):
 	def encode (self, value):
 		if value < (1 << 8):
-			return 1,chr_(value)
+			return 1,character(value)
 		return 2,pack('!H',value)
 
 	# XXX: buggy as it assumes 2 bytes but may be less
@@ -214,7 +216,7 @@ class IOperationByteShort (IOperation):
 class IOperationByteShortLong (IOperation):
 	def encode (self, value):
 		if value < (1 << 8):
-			return 1,chr(value)
+			return 1,character(value)
 		if value < (1 << 16):
 			return 2,pack('!H',value)
 		return 4,pack('!L',value)
@@ -565,14 +567,14 @@ class Flow (NLRI):
 			rules[-1].operations |= CommonOperator.EOL
 			# and add it to the last rule
 			if ID not in (FlowDestination.ID,FlowSource.ID):
-				ordered_rules.append(chr_(ID))
+				ordered_rules.append(character(ID))
 			ordered_rules.append(b''.join(rule.pack() for rule in rules))
 
 		components = self.rd.pack() + b''.join(ordered_rules)
 
 		l = len(components)
 		if l < 0xF0:
-			return concat_strs(chr_(l),components)
+			return concat_strs(character(l),components)
 		if l < 0x0FFF:
 			return concat_strs(pack('!H',l | 0xF000),components)
 		raise Notify(3,0,"my administrator attempted to announce a Flow Spec rule larger than encoding allows, protecting the innocent the only way I can")

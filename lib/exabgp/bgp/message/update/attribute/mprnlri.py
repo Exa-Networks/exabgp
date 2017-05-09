@@ -13,7 +13,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
 
-from exabgp.util import chr_
+from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.bgp.message.direction import IN
 # from exabgp.bgp.message.update.attribute.attribute import Attribute
@@ -66,7 +66,7 @@ class MPRNLRI (Attribute,Family):
 				# we do not want a next_hop attribute packed (with the _attribute()) but just the next_hop itself
 				if nlri.safi.has_rd():
 					# .packed and not .pack()
-					nexthop = chr_(0)*8 + nlri.nexthop.ton(negotiated,nlri.afi)
+					nexthop = character(0)*8 + nlri.nexthop.ton(negotiated,nlri.afi)
 				else:
 					# .packed and not .pack()
 					nexthop = nlri.nexthop.ton(negotiated,nlri.afi)
@@ -82,7 +82,7 @@ class MPRNLRI (Attribute,Family):
 					if len(payload) == header_length or len(payload) > maximum:
 						raise Notify(6, 0, 'attributes size is so large we can not even pack on MPRNLRI')
 					yield self._attribute(payload)
-					payload = b''.join([self.afi.pack(), self.safi.pack(), chr_(len(nexthop)), nexthop, chr_(0), nlri])
+					payload = b''.join([self.afi.pack(), self.safi.pack(), character(len(nexthop)), nexthop, character(0), nlri])
 					continue
 				payload  = b''.join([payload, nlri])
 			if len(payload) == header_length or len(payload) > maximum:

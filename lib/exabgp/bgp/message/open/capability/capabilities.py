@@ -9,7 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.util import chr_
+from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_strs
 from exabgp.bgp.message.open.capability.capability import Capability
@@ -135,9 +135,9 @@ class Capabilities (dict):
 		rs = []
 		for k,capabilities in self.iteritems():
 			for capability in capabilities.extract():
-				rs.append(concat_strs(chr_(k),chr_(len(capability)),capability))
-		parameters = b''.join([concat_strs(chr_(2),chr_(len(r)),r) for r in rs])
-		return concat_strs(chr_(len(parameters)),parameters)
+				rs.append(concat_strs(character(k),character(len(capability)),capability))
+		parameters = b''.join([concat_strs(character(2),character(len(r)),r) for r in rs])
+		return concat_strs(character(len(parameters)),parameters)
 
 	@staticmethod
 	def unpack (data):

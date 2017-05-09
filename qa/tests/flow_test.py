@@ -10,7 +10,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import socket
 import unittest
 
-from exabgp.util import chr_
+from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_strs
 
@@ -72,7 +72,7 @@ class TestFlow (unittest.TestCase):
 		for key in ['destination','source','anyport_1','anyport_2']:
 			flow.add(components[key])
 			message += data_from_body(messages[key])
-		message = chr_(len(message)) + message
+		message = character(len(message)) + message
 		# flow.add(to_FlowAction(65000,False,False))
 		flow.pack()
 		# print [hex(ord(_)) for _ in flow]
@@ -96,7 +96,7 @@ class TestFlow (unittest.TestCase):
 		for key in ['destination','source','anyport_1','anyport_2']:
 			flow.add(components[key])
 			message += data_from_body(messages[key])
-		message = chr_(len(message)) + message
+		message = character(len(message)) + message
 		# policy.add(to_FlowAction(65000,False,False))
 		flow = flow.pack()
 		if message[0] != flow[0]:

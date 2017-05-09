@@ -12,7 +12,7 @@ from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.util import chr_
+from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import padding
 from exabgp.bgp.message import IN
@@ -108,7 +108,7 @@ class INET (NLRI):
 		if cls.has_label():
 			labels = []
 			while bgp and mask >= 8:
-				label = int(unpack('!L',chr_(0) + bgp[:3])[0])
+				label = int(unpack('!L',character(0) + bgp[:3])[0])
 				bgp = bgp[3:]
 				mask -= 24  	# 3 bytes
 				# The last 4 bits are the bottom of Stack

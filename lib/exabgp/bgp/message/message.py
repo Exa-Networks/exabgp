@@ -9,7 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import sys
 from struct import pack
 
-from exabgp.util import chr_
+from exabgp.util import character
 from exabgp.util import concat_strs
 
 class _MessageCode (int):
@@ -95,7 +95,7 @@ class Message (Exception):
 	# otherwise we can not dynamically create different UnknownMessage
 	# TYPE = None
 
-	MARKER = chr_(0xff)*16
+	MARKER = character(0xff)*16
 	HEADER_LEN = 19
 	MAX_LEN = 4096
 

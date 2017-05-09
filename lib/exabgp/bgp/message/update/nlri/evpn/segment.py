@@ -8,7 +8,7 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 
 from exabgp.protocol.ip import IP
 
-from exabgp.util import chr_
+from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_strs
 
@@ -81,7 +81,7 @@ class EthernetSegment (EVPN):
 		self._packed = concat_strs(
 			self.rd.pack(),
 			self.esi.pack(),
-			chr_(len(self.ip)*8 if self.ip else 0),
+			character(len(self.ip)*8 if self.ip else 0),
 			self.ip.pack() if self.ip else b''
 		)
 		return self._packed

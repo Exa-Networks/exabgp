@@ -10,7 +10,7 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
-from exabgp.util import chr_
+from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute import Attribute
@@ -71,7 +71,7 @@ class RTC (NLRI):
 
 	@staticmethod
 	def resetFlags(char):
-		return chr_(ordinal(char) & ~(Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL))
+		return character(ordinal(char) & ~(Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL))
 
 	def pack (self, negotiated=None):
 		# XXX: no support for addpath yet

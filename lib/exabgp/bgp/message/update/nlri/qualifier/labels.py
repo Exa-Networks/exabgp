@@ -9,7 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
-from exabgp.util import chr_
+from exabgp.util import character
 
 # ======================================================================= Labels
 # RFC 3107
@@ -82,7 +82,7 @@ class Labels (object):
 	def unpack (cls, data):
 		labels = []
 		while len(data):
-			label = unpack('!L',chr_(0)+data[:3])[0]
+			label = unpack('!L',character(0)+data[:3])[0]
 			data=data[3:]
 			labels.append(label >> 4)
 			if label & 0x001:

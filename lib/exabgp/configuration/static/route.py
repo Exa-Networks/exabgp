@@ -8,6 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 # This is a legacy file to handle 3.4.x like format
 
+from exabgp.util import character
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop

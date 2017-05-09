@@ -51,7 +51,7 @@ class TLVS (list):
 		return TLVS(list(loop(data)))
 
 	def pack (self):
-		return b''.join(concat_strs(chr_(tlv.type),pack('!H',len(tlv.value)+3),tlv.value) for tlv in self)
+		return b''.join(concat_strs(character(tlv.type),pack('!H',len(tlv.value)+3),tlv.value) for tlv in self)
 
 
 # ==================================================================== AIGP (26)

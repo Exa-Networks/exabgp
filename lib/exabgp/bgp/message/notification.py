@@ -9,7 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import string
 import struct
 
-from exabgp.util import chr_
+from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_strs
 
@@ -36,7 +36,7 @@ def hexstring (value):
 @Message.register
 class Notification (Message):
 	ID = Message.CODE.NOTIFICATION
-	TYPE = chr(Message.CODE.NOTIFICATION)
+	TYPE = character(Message.CODE.NOTIFICATION)
 
 	_str_code = {
 		1: "Message header error",
@@ -171,7 +171,7 @@ class Notify (Notification):
 
 	def message (self,negotiated=None):
 		return self._message(concat_strs(
-			chr_(self.code),
-			chr_(self.subcode),
+			character(self.code),
+			character(self.subcode),
 			self.data
 		))

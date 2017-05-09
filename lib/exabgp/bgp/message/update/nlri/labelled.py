@@ -8,7 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.util import chr_
+from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.inet import INET
@@ -44,12 +44,12 @@ class Labelled (INET):
 
 	def pack (self, negotiated=None):
 		addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi,self.safi) else b''
-		mask = chr_(len(self.labels)*8 + self.cidr.mask)
+		mask = character(len(self.labels)*8 + self.cidr.mask)
 		return addpath + mask + self.labels.pack() + self.cidr.pack_ip()
 
 	def index (self, negotiated=None):
 		addpath = 'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
-		mask = chr_(self.cidr.mask)
+		mask = character(self.cidr.mask)
 		return NLRI._index(self) + addpath + mask + self.cidr.pack_ip()
 
 	def _internal (self, announced=True):
@@ -64,7 +64,7 @@ class Labelled (INET):
 	# 	data = data[1:]
 	# 	labels = []
 	# 	while data and mask >= 8:
-	# 		label = int(unpack('!L',chr_(0) + data[:3])[0])
+	# 		label = int(unpack('!L',character(0) + data[:3])[0])
 	# 		data = data[3:]
 	# 		mask -= 24  	# 3 bytes
 	# 		# The last 4 bits are the bottom of Stack

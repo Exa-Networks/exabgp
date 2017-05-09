@@ -9,7 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
-from exabgp.util import chr_
+from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.protocol.resource import Resource
 
@@ -147,7 +147,7 @@ class SAFI (Resource):
 		return str(self)
 
 	def pack (self):
-		return chr_(self)
+		return character(self)
 
 	@staticmethod
 	def unpack (data):

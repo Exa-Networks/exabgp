@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
+from exabgp.util import character
 from exabgp.util import concat_strs
 
 from exabgp.protocol.ip import NoNextHop
@@ -58,7 +59,7 @@ from exabgp.logger import LazyFormat
 @Message.register
 class Update (Message):
 	ID = Message.CODE.UPDATE
-	TYPE = chr(Message.CODE.UPDATE)
+	TYPE = character(Message.CODE.UPDATE)
 	EOR = False
 
 	def __init__ (self, nlris, attributes):

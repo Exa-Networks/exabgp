@@ -10,7 +10,7 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.protocol.ip import IP
-from exabgp.util import chr_
+from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_strs
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
@@ -119,7 +119,7 @@ class Prefix (EVPN):
 			self.rd.pack(),
 			self.esi.pack(),
 			self.etag.pack(),
-			chr_(self.iplen),
+			character(self.iplen),
 			self.ip.pack(),
 			self.gwip.pack(),
 			self.label.pack(),

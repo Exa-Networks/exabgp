@@ -8,6 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from struct import unpack
 
+from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_strs
 from exabgp.bgp.message.message import Message
@@ -51,7 +52,7 @@ from exabgp.bgp.message.open.capability import Capabilities
 @Message.register
 class Open (Message):
 	ID = Message.CODE.OPEN
-	TYPE = chr(Message.CODE.OPEN)
+	TYPE = character(Message.CODE.OPEN)
 
 	def __init__ (self, version, asn, hold_time, router_id, capabilities):
 		self.version = version

@@ -27,9 +27,9 @@ else:
 
 
 if sys.version_info[0]<3:
-	chr_ = chr
+	character = chr
 else:
-	def chr_(x):
+	def character(x):
 		return bytes([x])
 
 

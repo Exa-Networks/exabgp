@@ -6,7 +6,7 @@ Copyright (c) 2014-2015 Orange. All rights reserved.
 """
 
 from exabgp.protocol.ip import IP
-from exabgp.util import chr_
+from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_strs
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
@@ -105,9 +105,9 @@ class MAC (EVPN):
 			self.rd.pack(),
 			self.esi.pack(),
 			self.etag.pack(),
-			chr_(self.maclen),  # only 48 supported by the draft
+			character(self.maclen),  # only 48 supported by the draft
 			self.mac.pack(),
-			chr_(len(self.ip)*8 if self.ip else 0),
+			character(len(self.ip)*8 if self.ip else 0),
 			self.ip.pack() if self.ip else b'',
 			self.label.pack()
 		)

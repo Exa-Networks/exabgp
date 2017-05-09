@@ -8,7 +8,7 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 """
 
 
-from exabgp.util import chr_
+from exabgp.util import character
 from exabgp.util import ordinal
 
 # ========================================================================== MAC
@@ -20,7 +20,7 @@ class MAC (object):
 
 	def __init__ (self, mac=None,packed=None):
 		self.mac = mac
-		self._packed = packed if packed else b''.join(chr_(int(_,16)) for _ in mac.split(":"))
+		self._packed = packed if packed else b''.join(character(int(_,16)) for _ in mac.split(":"))
 
 	def __eq__ (self, other):
 		return self.mac == other.mac

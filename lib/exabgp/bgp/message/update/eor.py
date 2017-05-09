@@ -9,6 +9,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 # from struct import unpack
 import sys
 
+from exabgp.util import character
+
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.message import Message
@@ -24,7 +26,7 @@ if sys.version_info > (3,):
 
 class EOR (Message):
 	ID = Message.CODE.UPDATE
-	TYPE = chr(Message.CODE.UPDATE)
+	TYPE = character(Message.CODE.UPDATE)
 
 	class NLRI (_NLRI):
 		PREFIX = b'\x00\x00\x00\x07\x90\x0F\x00\x03'
