@@ -49,7 +49,6 @@ class Connection (object):
 		self.peer = peer
 		self.local = local
 
-		self._buffer = ''
 		self.io = None
 		self.established = False
 
