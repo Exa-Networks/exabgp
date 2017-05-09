@@ -91,7 +91,7 @@ class AIGP (Attribute):
 		return b''
 
 	def __repr__ (self):
-		return '0x' + ''.join('%02x' % ord(_) for _ in self.aigp[-8:])
+		return '0x' + ''.join('%02x' % ordinal(_) for _ in self.aigp[-8:])
 
 	@classmethod
 	def unpack (cls, data, negotiated):

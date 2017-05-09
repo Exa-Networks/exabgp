@@ -7,9 +7,9 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 import time
-from exabgp.vendoring import six
 # import traceback
-
+from exabgp.vendoring import six
+from exabgp.util import ordinal
 from exabgp.bgp.timer import ReceiveTimer
 from exabgp.bgp.timer import SendTimer
 from exabgp.bgp.message import Message
@@ -333,7 +333,7 @@ class Peer (object):
 		message = Message.CODE.NOP
 
 		for message in proto.new_open(self._restarted):
-			if ord(message.TYPE) == Message.CODE.NOP:
+			if ordinal(message.TYPE) == Message.CODE.NOP:
 				yield ACTION.NOW
 
 		proto.negotiated.sent(message)
@@ -347,7 +347,7 @@ class Peer (object):
 		# which would be bad as we need to do the collission check without going to the other peer
 		for message in proto.read_open(self.neighbor.peer_address.top()):
 			opentimer.check_ka(message)
-			if ord(message.TYPE) == Message.CODE.NOP:
+			if ordinal(message.TYPE) == Message.CODE.NOP:
 				yield ACTION.LATER
 
 		self._incoming.fsm.change(FSM.OPENCONFIRM)
@@ -414,7 +414,7 @@ class Peer (object):
 		# which would be bad as we need to set the state without going to the other peer
 		message = Message.CODE.NOP
 		for message in proto.new_open(self._restarted):
-			if ord(message.TYPE) == Message.CODE.NOP:
+			if ordinal(message.TYPE) == Message.CODE.NOP:
 				yield ACTION.NOW
 
 		proto.negotiated.sent(message)
@@ -429,7 +429,7 @@ class Peer (object):
 			# XXX: FIXME: change the whole code to use the ord and not the chr version
 			# Only yield if we have not the open, otherwise the reactor can run the other connection
 			# which would be bad as we need to do the collission check
-			if ord(message.TYPE) == Message.CODE.NOP:
+			if ordinal(message.TYPE) == Message.CODE.NOP:
 				yield ACTION.LATER
 
 		self._outgoing.fsm.change(FSM.OPENCONFIRM)

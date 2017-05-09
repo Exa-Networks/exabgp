@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 # This is a legacy file to handle 3.4.x like format
 
 from exabgp.util import character
+from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 
 from exabgp.protocol.ip import IP
@@ -216,7 +217,7 @@ class ParseStaticRoute (Section):
 		ip = 0
 		for c in last.nlri.cidr.ton():
 			ip <<= 8
-			ip += ord(c)
+			ip += ordinal(c)
 
 		afi = last.nlri.afi
 		safi = last.nlri.safi

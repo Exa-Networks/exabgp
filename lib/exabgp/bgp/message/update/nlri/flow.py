@@ -13,6 +13,7 @@ from struct import pack
 from struct import unpack
 
 from exabgp.util import character
+from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 
 from exabgp.protocol.ip import NoNextHop
@@ -97,11 +98,11 @@ def _bit_to_len (value):
 def _number (string):
 	value = 0
 	for c in string:
-		value = (value << 8) + ord(c)
+		value = (value << 8) + ordinal(c)
 	return value
 
 # def short (value):
-# 	return (ord(value[0]) << 8) + ord(value[1])
+# 	return (ordinal(value[0]) << 8) + ordinal(value[1])
 
 # Interface ..................
 

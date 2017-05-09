@@ -7,6 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.util import character
+from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 
 
@@ -51,12 +52,12 @@ class PathInfo (object):
 
 	def json (self):
 		if self.path_info:
-			return '"path-information": "%s"' % '.'.join([str(ord(_)) for _ in self.path_info])
+			return '"path-information": "%s"' % '.'.join([str(ordinal(_)) for _ in self.path_info])
 		return ''
 
 	def __repr__ (self):
 		if self.path_info:
-			return ' path-information %s' % '.'.join([str(ord(_)) for _ in self.path_info])
+			return ' path-information %s' % '.'.join([str(ordinal(_)) for _ in self.path_info])
 		return ''
 
 	def pack (self):
