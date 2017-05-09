@@ -17,7 +17,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #   |     1029    | IPv6 Router-ID of    |       16 | [RFC6119]/4.1     |
 #   |             | Local Node           |          |                   |
 #   +-------------+----------------------+----------+-------------------+
-#	https://tools.ietf.org/html/rfc7752 sec 3.3.1.4  - Traffic Engineering RouterID
+#   https://tools.ietf.org/html/rfc7752 sec 3.3.1.4  - Traffic Engineering RouterID
 
 @LINKSTATE.register(lsid=1028)
 @LINKSTATE.register(lsid=1029)
@@ -32,10 +32,10 @@ class LocalTeRid(object):
 	@classmethod
 	def unpack (cls,data,length):
 		if len(data) == 4:
-    		# IPv4 address
+			# IPv4 address
 			terid = IP.unpack(data[:4])
 		elif len(data) == 16:
-    		# IPv6
+			# IPv6
 			terid = IP.unpack(data[:16])
 		return cls(terid=terid)
 

@@ -52,7 +52,7 @@ class IpReach(object):
 		# plenght = unpack('!B',data[0])[0]
 		# octet = int(math.ceil(plenght / 8))
 		octet = len(data[1:])
-		prefix_list = unpack("!%dB" % octet ,data[1:octet + 1])
+		prefix_list = unpack("!%dB" % octet,data[1:octet + 1])
 		prefix_list = [str(x) for x in prefix_list]
 		# fill the rest of the octets with 0 to construct
 		# a 4 octet IP prefix
@@ -65,7 +65,7 @@ class IpReach(object):
 		return '"ip-reachability-tlv": "%s"' % self.prefix
 
 	def __eq__ (self, other):
-    		return self.prefix == other.prefix
+		return self.prefix == other.prefix
 
 	def __neq__ (self, other):
 		return self.prefix != other.prefix

@@ -55,6 +55,7 @@ class RouteRefresh (Message):
 	def extensive (self):
 		return 'route refresh %s/%d/%s' % (self.afi,self.reserved,self.safi)
 
+	# XXX: Check how we get this data into the RR
 	def families (self):
 		return self._families[:]
 

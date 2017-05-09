@@ -35,6 +35,7 @@ class Origin (ExtendedCommunity):
 			self.COMMUNITY_SUBTYPE == other.COMMUNITY_SUBTYPE and \
 			ExtendedCommunity.__eq__(self,other)
 
+
 # ================================================================== OriginASNIP
 # RFC 4360 / RFC 7153
 

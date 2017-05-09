@@ -12,6 +12,7 @@ from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 
+
 # ========================================================================== MAC
 #
 

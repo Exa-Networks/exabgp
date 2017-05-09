@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 # =================================================================== Direction
 #
 
+
 class OUT (object):
 	UNSET    = 0x00
 	ANNOUNCE = 0x01

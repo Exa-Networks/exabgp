@@ -73,7 +73,7 @@ class Connection (object):
 				self.io = None
 		except KeyboardInterrupt as exc:
 			raise exc
-		except:
+		except Exception:
 			pass
 
 	def reading (self):

@@ -1,9 +1,9 @@
 import sys
+import pdb
 
 from exabgp.configuration.environment import environment
 
-
-if sys.version_info[0]>=3:
+if sys.version_info[0] >= 3:
 	StandardError = Exception
 
 
@@ -17,8 +17,7 @@ class Error (StandardError):
 		if self.debug:
 			error = False
 			print('\n%s\n' % self.message)
-			from pdb import set_trace
-			set_trace()
+			pdb.set_trace()
 			return error
 		return False
 
@@ -26,8 +25,7 @@ class Error (StandardError):
 		self.message = message
 		if self.debug:
 			print('\n%s\n' % message)
-			from pdb import set_trace
-			set_trace()
+			pdb.set_trace()
 		else:
 			raise self
 

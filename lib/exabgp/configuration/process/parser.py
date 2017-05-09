@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import os
 import stat
 
+
 def encoder (tokeniser):
 	value = tokeniser()
 
@@ -37,6 +38,7 @@ def _make_path (prg):
 			if 'etc' not in pwd:
 				options.append(os.path.abspath(os.path.join(os.path.join(*pwd),os.path.join(*parts))))
 	return options
+
 
 def run (tokeniser):
 	prg = tokeniser()

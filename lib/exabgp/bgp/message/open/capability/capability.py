@@ -98,7 +98,7 @@ class _CapabilityCode (int):
 class Capability (object):
 
 	class CODE (int):
-		if sys.version_info[0]<3:
+		if sys.version_info[0] < 3:
 			__slots__ = []
 
 		RESERVED                 = _CapabilityCode(_CapabilityCode.RESERVED)

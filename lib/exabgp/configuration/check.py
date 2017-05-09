@@ -46,7 +46,7 @@ from exabgp.bgp.message import Notification
 from exabgp.version import json as json_version
 
 
-if sys.version_info[0]>=3:
+if sys.version_info[0] >= 3:
 	StandardError = Exception
 
 # =============================================================== check_neighbor

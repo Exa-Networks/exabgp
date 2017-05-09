@@ -21,6 +21,7 @@ from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability import Negotiated
 
+
 # ================================================================= MP NLRI (14)
 
 @Attribute.register()
@@ -51,7 +52,7 @@ class MPURNLRI (Attribute,Family):
 
 		mpurnlri = []
 		for nlri in self.nlris:
-			if nlri.family() != self.family(): # nlri is not part of specified family
+			if nlri.family() != self.family():  # nlri is not part of specified family
 				continue
 			mpurnlri.append(nlri.pack(negotiated))
 
@@ -98,5 +99,6 @@ class MPURNLRI (Attribute,Family):
 			nlris.append(nlri)
 
 		return cls(afi,safi,nlris)
+
 
 EMPTY_MPURNLRI = MPURNLRI(AFI(AFI.undefined),SAFI(SAFI.undefined),[])

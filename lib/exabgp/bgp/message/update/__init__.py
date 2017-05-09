@@ -56,6 +56,7 @@ from exabgp.logger import LazyFormat
 # |   Prefix (variable)       |
 # +---------------------------+
 
+
 @Message.register
 class Update (Message):
 	ID = Message.CODE.UPDATE
@@ -123,7 +124,7 @@ class Update (Message):
 		attr = self.attributes.pack(negotiated, True)
 
 		# Withdraws/NLRIS (IPv4 unicast and multicast)
-		msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr) # 2 bytes for each of the two prefix() header
+		msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
 		withdraws = b''
 		announced = b''
 		for nlri in nlris:
@@ -168,7 +169,7 @@ class Update (Message):
 							withdraws = b''
 						mp_unreach = mpurnlri
 
-				yield self._message(Update.prefix(withdraws) + Update.prefix(attr + mp_unreach + mp_reach) + announced) # yield mpr/mpur per family
+				yield self._message(Update.prefix(withdraws) + Update.prefix(attr + mp_unreach + mp_reach) + announced)  # yield mpr/mpur per family
 				withdraws = b''
 				announced = b''
 		else:

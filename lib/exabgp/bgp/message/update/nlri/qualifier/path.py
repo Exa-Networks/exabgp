@@ -64,4 +64,5 @@ class PathInfo (object):
 			return self.path_info
 		return b'\x00\x00\x00\x00'
 
+
 PathInfo.NOPATH = PathInfo()

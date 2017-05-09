@@ -19,7 +19,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #     //                 Area Identifier (variable)                  //
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#		https://tools.ietf.org/html/rfc7752#section-3.3.1.2
+#     https://tools.ietf.org/html/rfc7752#section-3.3.1.2
 
 
 @LINKSTATE.register()

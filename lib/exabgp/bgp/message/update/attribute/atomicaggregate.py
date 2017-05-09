@@ -49,4 +49,5 @@ class AtomicAggregate (Attribute):
 		# There can only be one, build it now :)
 		cls.cache[Attribute.CODE.ATOMIC_AGGREGATE][''] = cls()
 
+
 AtomicAggregate.setCache()

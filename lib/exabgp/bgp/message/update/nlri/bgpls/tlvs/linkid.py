@@ -19,13 +19,12 @@ from exabgp.util import ordinal
 #      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #      |                  Link Remote Identifier                       |
 #      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#		https://tools.ietf.org/html/rfc5307 sec 1.1
+#      https://tools.ietf.org/html/rfc5307 sec 1.1
 # ================================================================== Link Local/Remote Identifiers
 
-class LinkIdentifier (object):
 
-	def __init__ (self, local_id, remote_id,
-		 packed=None):
+class LinkIdentifier (object):
+	def __init__ (self, local_id, remote_id, packed=None):
 		self.local_id = local_id
 		self.remote_id = remote_id
 		self._packed = packed
@@ -41,11 +40,8 @@ class LinkIdentifier (object):
 			'"link-remote-id": %s' % self.remote_id
 		return content
 
-
-
 	def __eq__ (self, other):
-    		return ( self.local_id == other.local_id ) and \
-				   ( self.remote_id == other.remote_id )
+		return (self.local_id == other.local_id) and (self.remote_id == other.remote_id)
 
 	def __neq__ (self, other):
 		return self.local_id != other.local_id

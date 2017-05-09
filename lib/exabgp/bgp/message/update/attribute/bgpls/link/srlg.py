@@ -24,7 +24,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #     |                  Shared Risk Link Group Value                 |
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#		https://tools.ietf.org/html/rfc7752#section-3.3.2.5 Shared Risk Link Group TLV
+#     https://tools.ietf.org/html/rfc7752#section-3.3.2.5 Shared Risk Link Group TLV
 
 @LINKSTATE.register()
 class Srlg(object):

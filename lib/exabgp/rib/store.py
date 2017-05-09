@@ -6,7 +6,6 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.protocol.family import AFI
 from exabgp.bgp.message import IN
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message import Update
@@ -16,6 +15,7 @@ from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.vendoring import six
 
 # XXX: FIXME: we would not have to use so many setdefault if we pre-filled the dicts with the families
+
 
 class Store (object):
 	def __init__ (self, families):
@@ -41,7 +41,7 @@ class Store (object):
 		# WARNING : this function can run while we are in the updates() loop too !
 		self._enhanced_refresh_start = []
 		self._enhanced_refresh_delay = []
-		for update in self.updates(True):
+		for _ in self.updates(True):
 			pass
 
 	# back to square one, all the routes are removed

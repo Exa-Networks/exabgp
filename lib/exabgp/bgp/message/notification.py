@@ -91,7 +91,7 @@ class Notification (Message):
 		(6,0): "Unspecific",
 		# RFC 4486 - https://tools.ietf.org/html/rfc4486
 		(6,1): "Maximum Number of Prefixes Reached",
-		(6,2): "Administrative Shutdown", # augmented with draft-ietf-idr-shutdown
+		(6,2): "Administrative Shutdown",  # augmented with draft-ietf-idr-shutdown
 		(6,3): "Peer De-configured",
 		(6,4): "Administrative Reset",
 		(6,5): "Connection Rejected",

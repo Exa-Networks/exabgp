@@ -73,6 +73,7 @@ PROTO_CODES = {
 	6:	'ospfv3',
 }
 
+
 @NLRI.register(AFI.bgpls,SAFI.bgp_ls)
 @NLRI.register(AFI.bgpls,SAFI.bgp_ls_vpn)
 class BGPLS(NLRI):
@@ -101,7 +102,6 @@ class BGPLS(NLRI):
 	def __str__(self):
 		return "bgpls:%s:%s" % (self.registered_bgpls.get(self.CODE,self).SHORT_NAME.lower(),'0x' + ''.join('%02x' % ordinal(_) for _ in self._packed))
 
-
 	@classmethod
 	def register(cls, klass):
 		if klass.CODE in cls.registered_bgpls:
@@ -114,7 +114,7 @@ class BGPLS(NLRI):
 		code, length = unpack('!HH',bgp[:4])
 		if code in cls.registered_bgpls:
 			if safi == SAFI.bgp_ls_vpn:
-    			# Extract Route Distinguisher
+				# Extract Route Distinguisher
 				rd = RouteDistinguisher.unpack(bgp[4:12])
 				klass = cls.registered_bgpls[code].unpack(bgp[12:length+4],rd)
 			else:
@@ -148,5 +148,3 @@ class GenericBGPLS(BGPLS):
 
 	def json(self, compact=None):
 		return '{ "code": %d, "parsed": false, "raw": "%s" }' % (self.CODE,self._raw())
-
-

@@ -26,6 +26,7 @@ def _unique ():
 		yield value
 		value += 1
 
+
 unique = _unique()
 
 

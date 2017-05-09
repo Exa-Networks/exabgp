@@ -122,13 +122,13 @@ def _operator_binary (string):
 
 
 def _value (string):
-	l = 0
+	ls = 0
 	for c in string:
 		if c not in ['&',]:
-			l += 1
+			ls += 1
 			continue
 		break
-	return string[:l],string[l:]
+	return string[:ls],string[ls:]
 
 
 # parse [ content1 content2 content3 ]
@@ -310,6 +310,7 @@ def action (tokeniser):
 
 	return ExtendedCommunities().add(TrafficAction(sample,terminal))
 
+
 def _interface_set (data):
 	if data.count(':') != 3:
 		raise ValueError('not a valid format %s' % data)
@@ -339,6 +340,7 @@ def _interface_set (data):
 	if route_target >= pow(2,14):
 		raise ValueError('group-id is a 14 bits number, value too large %s' % route_target)
 	return InterfaceSet(trans,asn,route_target,int_direction)
+
 
 def interface_set (tokeniser):
 	communities = ExtendedCommunities()

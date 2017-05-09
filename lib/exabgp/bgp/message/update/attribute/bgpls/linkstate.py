@@ -64,6 +64,7 @@ class LINKSTATE(Attribute):
 	def __str__(self):
 		return ', '.join(str(d) for d in self.ls_attrs)
 
+
 class GenericLSID(object):
 	TLV = 99999
 
@@ -79,4 +80,3 @@ class GenericLSID(object):
 		length = len(data)
 		info = binascii.b2a_uu(data[:length])
 		return cls(code=scode,rep=info)
-

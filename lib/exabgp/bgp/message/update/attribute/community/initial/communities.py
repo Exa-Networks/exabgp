@@ -45,10 +45,10 @@ class Communities (Attribute):
 		return iter(self.communities)
 
 	def __repr__ (self):
-		l = len(self.communities)
-		if l > 1:
+		lc = len(self.communities)
+		if lc > 1:
 			return "[ %s ]" % " ".join(repr(community) for community in sorted(self.communities))
-		if l == 1:
+		if lc == 1:
 			return repr(self.communities[0])
 		return ""
 

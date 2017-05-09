@@ -38,10 +38,10 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 # 		https://tools.ietf.org/html/rfc7752 sec 3.3.1.1 Node Flag Bits Definitions
 
 
-
 @LINKSTATE.register()
 class NodeFlags(object):
 	TLV = 1024
+
 	def __init__ (self, nodeflags):
 		self.nodeflags = nodeflags
 

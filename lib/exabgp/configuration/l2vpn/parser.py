@@ -54,6 +54,7 @@ def vpls_base (tokeniser):
 	return number
 	# vpls.base = number
 
+
 def next_hop (tokeniser):
 	value = tokeniser()
 

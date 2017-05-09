@@ -12,8 +12,9 @@ from struct import pack
 from exabgp.util import character
 from exabgp.util import concat_bytes
 
+
 class _MessageCode (int):
-	if sys.version_info[0]<3:
+	if sys.version_info[0] < 3:
 		__slots__ = ['SHORT','NAME']
 
 	NOP           = 0x00  # .   0 - internal

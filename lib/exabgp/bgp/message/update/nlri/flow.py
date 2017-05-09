@@ -77,6 +77,7 @@ class NumericOperator (CommonOperator):
 	EQ        = 0x01  # 0b00000001
 	FALSE     = 0x01 | 0x02 | 0x04
 
+
 class BinaryOperator (CommonOperator):
 	# reserved= 0x0C  # 0b00001100
 	NONE      = 0x00  # 0000000000
@@ -573,11 +574,11 @@ class Flow (NLRI):
 
 		components = self.rd.pack() + concat_bytes(ordered_rules)
 
-		l = len(components)
-		if l < 0xF0:
-			return concat_bytes(character(l),components)
-		if l < 0x0FFF:
-			return concat_bytes(pack('!H',l | 0xF000),components)
+		lc = len(components)
+		if lc < 0xF0:
+			return concat_bytes(character(lc),components)
+		if lc < 0x0FFF:
+			return concat_bytes(pack('!H',lc | 0xF000),components)
 		raise Notify(3,0,"my administrator attempted to announce a Flow Spec rule larger than encoding allows, protecting the innocent the only way I can")
 
 	def _rules (self):

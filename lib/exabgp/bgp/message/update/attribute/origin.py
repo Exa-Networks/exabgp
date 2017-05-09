@@ -68,4 +68,5 @@ class Origin (Attribute):
 		cls.cache[Attribute.CODE.ORIGIN][EGP.pack()] = EGP
 		cls.cache[Attribute.CODE.ORIGIN][INC.pack()] = INC
 
+
 Origin.setCache()

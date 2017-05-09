@@ -58,11 +58,11 @@ class LINK(BGPLS):
 	NAME = "Link NLRI"
 	SHORT_NAME = "Link"
 
-
-	def __init__ (self,domain,proto_id,local_node,
-				remote_node,neigh_addrs=None,iface_addrs=None,
-				packed=None,link_ids=None,nexthop=None,
-				action=None, route_d=None, addpath=None):
+	def __init__ (
+			self,domain,proto_id,local_node,
+			remote_node,neigh_addrs=None,iface_addrs=None,
+			packed=None,link_ids=None,nexthop=None,
+			action=None, route_d=None, addpath=None):
 		BGPLS.__init__(self,action,addpath)
 		self.domain = domain
 		self.proto_id = proto_id
@@ -74,7 +74,6 @@ class LINK(BGPLS):
 		self.nexthop = nexthop
 		self.route_d = route_d
 		self._pack = packed
-
 
 	@classmethod
 	def unpack (cls, data, rd):
@@ -95,7 +94,7 @@ class LINK(BGPLS):
 				values = tlvs[4: 4 + tlv_length]
 				local_node = []
 				while values:
-	    			# Unpack Local Node Descriptor Sub-TLVs
+					# Unpack Local Node Descriptor Sub-TLVs
 					# We pass proto_id as TLV interpretation
 					# follows IGP type
 					node, left = NodeDescriptor.unpack(values, proto_id)
@@ -106,7 +105,7 @@ class LINK(BGPLS):
 				tlvs = tlvs[4 + tlv_length:]
 				continue
 			elif tlv_type == 257:
-    			# Remote Node Descriptor
+				# Remote Node Descriptor
 				values = tlvs[4: 4 + tlv_length]
 				remote_node = []
 				while values:
@@ -118,28 +117,30 @@ class LINK(BGPLS):
 				tlvs = tlvs[4 + tlv_length:]
 				continue
 			elif tlv_type == 258:
-    			# Link Local/Remote identifiers
+				# Link Local/Remote identifiers
 				value = tlvs[4: 4 + 8]
-				link_identifiers =  LinkIdentifier.unpack(value)
+				link_identifiers = LinkIdentifier.unpack(value)
 				tlvs = tlvs[4 + 8:]
 				continue
 			elif tlv_type in [259,261]:
-    			# IPv{4,6} Interface Address
+				# IPv{4,6} Interface Address
 				value = tlvs[4: 4 + tlv_length]
 				iface_addrs.append(IfaceAddr.unpack(value))
 				tlvs = tlvs[4 + tlv_length:]
 				continue
 			elif tlv_type in [260,262]:
-    			# IPv{4,6} Neighbor Address
+				# IPv{4,6} Neighbor Address
 				value = tlvs[4: 4 + tlv_length]
 				neigh_addrs.append(NeighAddr.unpack(value))
 				tlvs = tlvs[4 + tlv_length:]
 				continue
 
-		return cls(domain=domain,proto_id=proto_id,
-				local_node=local_node,remote_node=remote_node,
-				neigh_addrs=neigh_addrs,iface_addrs=iface_addrs,
-				link_ids=link_identifiers,route_d=rd,packed=data)
+		return cls(
+			domain=domain,proto_id=proto_id,
+			local_node=local_node,remote_node=remote_node,
+			neigh_addrs=neigh_addrs,iface_addrs=iface_addrs,
+			link_ids=link_identifiers,route_d=rd,packed=data
+		)
 
 	def __eq__ (self, other):
 		return \

@@ -270,6 +270,7 @@ def main ():
 		logger.reactor('Can not fork, errno %d : %s' % (exc.errno,exc.strerror),'critical')
 		sys.exit(1)
 
+
 def run (env, comment, configurations, pid=0):
 	logger = Logger()
 

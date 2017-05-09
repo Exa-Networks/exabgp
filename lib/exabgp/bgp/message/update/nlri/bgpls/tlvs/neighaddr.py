@@ -23,8 +23,8 @@ from exabgp.util import ordinal
 #   this sub-TLV.
 # ================================================================== NeighborAddress
 
-class NeighAddr (object):
 
+class NeighAddr (object):
 	def __init__ (self, addr, packed=None):
 		self.addr = addr
 		self._packed = packed
@@ -35,7 +35,7 @@ class NeighAddr (object):
 			# IPv4 address
 			addr = IP.unpack(data[:4])
 		elif len(data) == 16:
-    		# IPv6
+			# IPv6
 			addr = IP.unpack(data[:16])
 		return cls(addr=addr)
 
@@ -46,7 +46,7 @@ class NeighAddr (object):
 		return content
 
 	def __eq__ (self, other):
-    		return self.addr == other.addr
+		return self.addr == other.addr
 
 	def __neq__ (self, other):
 		return self.addr != other.addr

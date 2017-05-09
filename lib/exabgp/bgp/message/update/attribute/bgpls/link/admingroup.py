@@ -11,12 +11,13 @@ import binascii
 from exabgp.vendoring.bitstring import BitArray
 
 from exabgp.bgp.message.notification import Notify
-
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+
 
 @LINKSTATE.register()
 class AdminGroup(object):
 	TLV = 1088
+
 	def __init__ (self, colormask):
 		self.colormask = colormask
 

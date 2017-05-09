@@ -366,8 +366,8 @@ def community (tokeniser):
 
 	return communities
 
-def _large_community (value):
 
+def _large_community (value):
 	separator = value.find(':')
 	if separator > 0:
 		prefix, affix, suffix = value.split(':')

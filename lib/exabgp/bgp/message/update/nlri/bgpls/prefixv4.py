@@ -15,15 +15,13 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ospfroute import OspfRoute
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
 
-
-
 #   The IPv4 and IPv6 Prefix NLRIs (NLRI Type = 3 and Type = 4) use the
 #   same format, as shown in the following figure.
 #
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 #     +-+-+-+-+-+-+-+-+
-#	|  Protocol-ID  |
+#     |  Protocol-ID  |
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #     |                           Identifier                          |
 #     |                            (64 bits)                          |
@@ -40,10 +38,10 @@ class PREFIXv4(BGPLS):
 	NAME = " IPv4 Topology Prefix"
 	SHORT_NAME = "PREFIX_V4"
 
-
-	def __init__ (self,domain,proto_id,local_node,
-				packed=None,ospf_type=None,prefix=None,
-				nexthop=None,route_d=None,action=None, addpath=None):
+	def __init__ (
+			self,domain,proto_id,local_node,
+			packed=None,ospf_type=None,prefix=None,
+			nexthop=None,route_d=None,action=None, addpath=None):
 		BGPLS.__init__(self,action,addpath)
 		self.domain = domain
 		self.ospf_type = ospf_type
@@ -53,7 +51,6 @@ class PREFIXv4(BGPLS):
 		self.nexthop = nexthop
 		self._pack = packed
 		self.route_d = route_d
-
 
 	@classmethod
 	def unpack (cls, data, rd):
@@ -70,7 +67,7 @@ class PREFIXv4(BGPLS):
 				values = tlvs[4: 4 + tlv_length]
 				local_node = []
 				while values:
-	    			# Unpack Local Node Descriptor Sub-TLVs
+					# Unpack Local Node Descriptor Sub-TLVs
 					# We pass proto_id as TLV interpretation
 					# follows IGP type
 					node, left = NodeDescriptor.unpack(values, proto_id)
@@ -89,9 +86,11 @@ class PREFIXv4(BGPLS):
 				prefix = IpReach.unpack(values)
 				tlvs = tlvs[4 + tlv_length:]
 
-		return cls(domain=domain,proto_id=proto_id,packed=data,
-				local_node=local_node,ospf_type=ospf_type,
-				prefix=prefix,route_d=rd)
+		return cls(
+			domain=domain,proto_id=proto_id,packed=data,
+			local_node=local_node,ospf_type=ospf_type,
+			prefix=prefix,route_d=rd
+		)
 
 	def __eq__ (self, other):
 		return \
@@ -122,10 +121,10 @@ class PREFIXv4(BGPLS):
 			'"nexthop": "%s"' % self.nexthop,
 		])
 		if self.ospf_type:
-  			content += ', %s' % self.ospf_type.json()
+			content += ', %s' % self.ospf_type.json()
 
 		if self.route_d:
-  			content += ', %s' % self.route_d.json()
+			content += ', %s' % self.route_d.json()
 
 		return '{ %s }' % (content)
 

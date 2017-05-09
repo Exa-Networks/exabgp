@@ -59,7 +59,7 @@ class MPRNLRI (Attribute,Family):
 		# nexthopself = negotiated.nexthopself(self.afi)
 		mpnlri = {}
 		for nlri in self.nlris:
-			if nlri.family() != self.family(): # nlri is not part of specified family
+			if nlri.family() != self.family():  # nlri is not part of specified family
 				continue
 			if nlri.nexthop is NoNextHop:
 				# EOR and Flow may not have any next_hop
@@ -201,5 +201,6 @@ class MPRNLRI (Attribute,Family):
 			# logger.parser(LazyFormat("parsed announce mp nlri %s payload " % nlri,data[:length]))
 			data = left
 		return cls(afi,safi,nlris)
+
 
 EMPTY_MPRNLRI  = MPRNLRI(AFI(AFI.undefined),SAFI(SAFI.undefined),[])

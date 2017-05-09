@@ -34,8 +34,8 @@ from exabgp.logger import LazyFormat
 
 from exabgp.util.trace import trace
 
-from exabgp.util.panic import no_panic
-from exabgp.util.panic import footer
+from exabgp.util.panic import NO_PANIC
+from exabgp.util.panic import FOOTER
 
 
 class ACTION (object):
@@ -299,13 +299,15 @@ class Peer (object):
 		return self._incoming.fsm == FSM.ESTABLISHED or self._outgoing.fsm == FSM.ESTABLISHED
 
 	def detailed_link_status (self):
+		# XXX: Should be defined outside this function but in the FSM
 		state_tbl = {
-			FSM.IDLE : "Idle",
-			FSM.ACTIVE : "Active",
-			FSM.CONNECT : "Connect",
-			FSM.OPENSENT : "OpenSent",
-			FSM.OPENCONFIRM : "OpenConfirm",
-			FSM.ESTABLISHED : "Established" }
+			FSM.IDLE:        "Idle",
+			FSM.ACTIVE:      "Active",
+			FSM.CONNECT:     "Connect",
+			FSM.OPENSENT:    "OpenSent",
+			FSM.OPENCONFIRM: "OpenConfirm",
+			FSM.ESTABLISHED: "Established",
+		}
 		return state_tbl[max(self._incoming.fsm.state, self._outgoing.fsm.state)]
 
 	def negotiated_families(self):
@@ -676,8 +678,12 @@ class Peer (object):
 				self.logger.network('only one attempt to connect is allowed, stopping the peer')
 				self.stop()
 
-			self._reset(direction,'notification received (%d,%d)' \
-				% (notification.code, notification.subcode), notification)
+			self._reset(
+				direction,'notification received (%d,%d)' % (
+					notification.code,
+					notification.subcode),
+				notification
+			)
 			return
 
 		# RECEIVED a Message TYPE we did not expect
@@ -699,13 +705,13 @@ class Peer (object):
 		except Exception as exc:
 			# Those messages can not be filtered in purpose
 			self.logger.raw('\n'.join([
-				no_panic,
+				NO_PANIC,
 				self.me(''),
 				'',
 				str(type(exc)),
 				str(exc),
 				trace(),
-				footer
+				FOOTER
 			]))
 			self._reset(direction)
 			return

@@ -13,7 +13,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 
 # ============================================================== InterfaceSet
-# draft-ietf-idr-flowspsec-interfaceset 
+# draft-ietf-idr-flowspsec-interfaceset
 
 
 @ExtendedCommunity.register
@@ -33,8 +33,8 @@ class InterfaceSet(ExtendedCommunity):
 		self.asn = asn
 		self.target = target
 		self.direction = direction
-		self.transitive = trans	
-		new_target =  (direction << 14) + target
+		self.transitive = trans
+		new_target = (direction << 14) + target
 		ExtendedCommunity.__init__(
 			self,
 			community if community is not None else pack(
@@ -45,9 +45,12 @@ class InterfaceSet(ExtendedCommunity):
 		)
 
 	def __repr__ (self):
-		str_direction = self.names.get(self.direction, str(self.direction)) 
-		return "interface-set:%s:%s:%s" % (\
-			str_direction,str(self.asn),str(self.target))
+		str_direction = self.names.get(self.direction, str(self.direction))
+		return "interface-set:%s:%s:%s" % (
+			str_direction,
+			str(self.asn),
+			str(self.target)
+		)
 
 	@staticmethod
 	def unpack (data):

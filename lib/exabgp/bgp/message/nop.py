@@ -19,7 +19,7 @@ class NOP (Message):
 	TYPE = character(Message.CODE.NOP)
 
 	def message (self,negotiated=None):
-		return self._message(self.data)
+		raise RuntimeError('NOP messages can not be sent on the wire')
 
 	def __str__ (self):
 		return "NOP"

@@ -17,6 +17,7 @@ from exabgp.configuration.operational.parser import apcp
 from exabgp.configuration.operational.parser import lpcq
 from exabgp.configuration.operational.parser import lpcp
 
+
 class ParseOperational (Section):
 	syntax = \
 		'syntax:\n' \

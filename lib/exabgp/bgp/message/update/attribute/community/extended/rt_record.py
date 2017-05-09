@@ -15,6 +15,7 @@ class RTRecord(rt.RouteTarget):
 		packed = route_target.pack()
 		return cls.unpack(concat_bytes(packed[0:1], character(cls.COMMUNITY_SUBTYPE), packed[2:]))
 
+
 @ExtendedCommunity.register
 class RTRecordASN2Number(RTRecord, rt.RouteTargetASN2Number):
 	pass

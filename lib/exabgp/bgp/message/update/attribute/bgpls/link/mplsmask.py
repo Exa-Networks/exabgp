@@ -12,7 +12,6 @@ import itertools
 from exabgp.vendoring.bitstring import BitArray
 
 from exabgp.bgp.message.notification import Notify
-
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 
 
@@ -33,7 +32,6 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #   |            | (RSVP-TE)                                |           |
 #   | 'Reserved' | Reserved for future use                  |           |
 #   +------------+------------------------------------------+-----------+
-
 
 
 @LINKSTATE.register()

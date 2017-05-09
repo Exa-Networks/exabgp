@@ -17,8 +17,10 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #   direction on this link.  Note that for oversubscription purposes,
 #   this can be greater than the bandwidth of the link.
 #    [ One value per priority]
-#    https://tools.ietf.org/html/rfc5305#section-3.6
-##################   Units are in Bytes not Bits. ####################
+#   https://tools.ietf.org/html/rfc5305#section-3.6
+#
+#  Units are in Bytes not Bits.
+#  ----------------------------
 
 @LINKSTATE.register()
 class UnRsvpBw(object):

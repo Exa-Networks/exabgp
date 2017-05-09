@@ -144,8 +144,8 @@ class Capabilities (dict):
 		def _key_values (name, data):
 			if len(data) < 2:
 				raise Notify(2,0,"Bad length for OPEN %s (<2) %s" % (name,Capability.hex(data)))
-			l = ordinal(data[1])
-			boundary = l+2
+			ld = ordinal(data[1])
+			boundary = ld+2
 			if len(data) < boundary:
 				raise Notify(2,0,"Bad length for OPEN %s (buffer underrun) %s" % (name,Capability.hex(data)))
 			key = ordinal(data[0])

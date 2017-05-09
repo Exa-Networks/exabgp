@@ -20,8 +20,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #     //                     Node Name (variable)                    //
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#			https://tools.ietf.org/html/rfc7752 Sec 3.3.1.3.  Node Name TLV
-
+#     https://tools.ietf.org/html/rfc7752 Sec 3.3.1.3.  Node Name TLV
 
 @LINKSTATE.register()
 class NodeName(object):

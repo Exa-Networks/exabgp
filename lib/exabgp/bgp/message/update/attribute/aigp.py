@@ -46,8 +46,8 @@ class TLVS (list):
 		def loop (data):
 			while data:
 				t = ordinal(data[0])
-				l = unpack('!H',data[1:3])[0]
-				v,data = data[3:l],data[l:]
+				length = unpack('!H',data[1:3])[0]
+				v,data = data[3:length],data[length:]
 				yield TLV(t,v)
 		return TLVS(list(loop(data)))
 

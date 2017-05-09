@@ -31,9 +31,11 @@ from exabgp.logger import LazyAttribute
 
 from exabgp.vendoring import six
 
+
 class _NOTHING (object):
 	def pack (self, _=None):
 		return b''
+
 
 NOTHING = _NOTHING()
 

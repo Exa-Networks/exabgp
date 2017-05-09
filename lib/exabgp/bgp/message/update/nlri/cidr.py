@@ -8,8 +8,6 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import math
 
-from exabgp.util import character
-
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
 from exabgp.util import character
@@ -97,7 +95,8 @@ class CIDR (object):
 
 	@classmethod
 	def unpack (cls, data):
-		prefix,mask = cls.decode(data)
+		afi = AFI.ipv6 if len(data) > 4 or ordinal(data[0]) > 24 else AFI.ipv4
+		prefix,mask = cls.decode(afi,data)
 		return cls(prefix,mask)
 
 	def __len__ (self):
@@ -105,6 +104,7 @@ class CIDR (object):
 
 	def __hash__ (self):
 		return hash(character(self.mask)+self._packed)
+
 
 for netmask in range(0,129):
 	CIDR._mask_to_bytes[netmask] = int(math.ceil(float(netmask)/8))

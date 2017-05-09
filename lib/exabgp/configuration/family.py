@@ -113,7 +113,7 @@ class ParseFamily (Section):
 		return self._family(tokeniser, 'l2vpn')
 
 	def bgpls (self, tokeniser):
-    		return self._family(tokeniser, 'bgpls')
+		return self._family(tokeniser, 'bgpls')
 
 	def minimal (self, tokeniser):
 		raise ValueError('family minimal is deprecated')

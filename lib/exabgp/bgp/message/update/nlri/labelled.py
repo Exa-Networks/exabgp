@@ -15,6 +15,7 @@ from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 from exabgp.bgp.message.update.nlri.qualifier import Labels
 
+
 # ====================================================== MPLS
 # RFC 3107
 

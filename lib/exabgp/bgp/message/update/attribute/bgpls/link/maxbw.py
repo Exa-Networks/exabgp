@@ -17,7 +17,9 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #   link in this direction (from the system originating the LSP to its
 #   neighbors).
 #    https://tools.ietf.org/html/rfc5305#section-3.4
-##################   Units are in Bytes not Bits. ####################
+#
+#  Units are in Bytes not Bits.
+#  ----------------------------
 
 @LINKSTATE.register()
 class MaxBw(object):

@@ -60,7 +60,7 @@ def domainname (tokeniser):
 def description (tokeniser):
 	try:
 		return string(tokeniser)
-	except:
+	except Exception:
 		raise ValueError('bad neighbor description')
 
 

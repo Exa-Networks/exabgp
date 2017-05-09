@@ -53,7 +53,7 @@ class Neighbor (object):
 
 		self.manual_eor = False
 
-		self.api = None
+		self.api = None  # XXX: not scriptable - is replaced outside the class
 		# passive indicate that we do not establish outgoing connections
 		self.passive = False
 		# the port to listen on ( zero mean that we do not listen )

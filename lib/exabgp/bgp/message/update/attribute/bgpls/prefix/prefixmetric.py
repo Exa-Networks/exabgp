@@ -23,6 +23,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #     https://tools.ietf.org/html/rfc7752#section-3.3.3.4
 
+
 @LINKSTATE.register()
 class PrefixMetric(object):
 	TLV = 1155
@@ -38,7 +39,7 @@ class PrefixMetric(object):
 		if length != 4:
 			raise Notify(3,5, "Incorrect Prefix Metric size")
 		else:
-			metric =  unpack("!L", data)[0]
+			metric = unpack("!L", data)[0]
 			return cls(prefixmetric=metric)
 
 	def json (self,compact=None):

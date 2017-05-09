@@ -25,6 +25,8 @@ from exabgp.util.ip import isip
 class NoneDict (dict):
 	def __getitem__ (self, name):
 		return None
+
+
 nonedict = NoneDict()
 
 
@@ -271,7 +273,7 @@ class environment (object):
 # ========================================================================= _env
 #
 
-if sys.version_info[0]<3:
+if sys.version_info[0] < 3:
 	import ConfigParser
 else:
 	import configparser as ConfigParser
@@ -330,7 +332,7 @@ def _env (conf):
 				elif rep_name in os.environ:
 					conf = os.environ.get(rep_name)
 				else:
-					if sys.version_info[0]<3:
+					if sys.version_info[0] < 3:
 						conf = environment.unquote(ini.get(proxy_section,option,nonedict))
 					else:
 						conf = environment.unquote(ini.get(proxy_section,option,vars=nonedict))

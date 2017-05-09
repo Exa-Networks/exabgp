@@ -33,8 +33,6 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #           +----------+---------------------------+-----------+
 
 
-
-
 @LINKSTATE.register()
 class IgpFlags(object):
 	TLV = 1152
@@ -60,8 +58,7 @@ class IgpFlags(object):
 				flags = dict(zip(igpflags, bit_array.bin))
 				return cls(igpflags=flags)
 			else:
-    				raise Notify(3,5, "Invalid IGP flags mask")
+				raise Notify(3,5, "Invalid IGP flags mask")
 
 	def json (self,compact=None):
 		return '"igp-flags": "%s"' % str(self.igpflags)
-

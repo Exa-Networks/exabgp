@@ -11,12 +11,12 @@ from exabgp.version import version
 import sys
 import platform
 
-if sys.version_info[0]<3:
-    _max = sys.maxint
+if sys.version_info[0] < 3:
+	_max = sys.maxint
 else:
-    _max = sys.maxsize
+	_max = sys.maxsize
 
-panic = """
+PANIC = """
 ********************************************************************************
 EXABGP CRASHED / HELP US FIX IT
 ********************************************************************************
@@ -55,7 +55,7 @@ System MaxInt  : %s
 """ % (version,sys.version.replace('\n',' '),platform.version(),str(_max))
 
 
-no_panic="""
+NO_PANIC = """
 ********************************************************************************
 EXABGP MISBEHAVED / HELP US FIX IT
 ********************************************************************************
@@ -93,7 +93,7 @@ System MaxInt  : %s
 
 """ % (version,sys.version.replace('\n',' '),platform.version(),str(_max))
 
-footer = """\
+FOOTER = """\
 ********************************************************************************
 -- Please provide _ALL_ the information above on :
 -- https://github.com/Exa-Networks/exabgp/issues

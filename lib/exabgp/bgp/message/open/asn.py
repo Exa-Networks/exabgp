@@ -55,4 +55,5 @@ class ASN (Resource):
 	def from_string (cls, value):
 		return cls(long(value))
 
+
 AS_TRANS = ASN(23456)

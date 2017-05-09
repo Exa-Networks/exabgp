@@ -123,7 +123,7 @@ class MAC (EVPN):
 
 		if (maclength > 48 or maclength < 0):
 			raise Notify(3,5,'invalid MAC Address length in %s' % cls.NAME)
-		end = 23 + 6 # MAC length MUST be 6
+		end = 23 + 6  # MAC length MUST be 6
 
 		mac = MACQUAL.unpack(data[23:end])
 
