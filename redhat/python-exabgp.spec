@@ -2,7 +2,7 @@
 %{!?python2_sitelib:  %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           python-exabgp
-Version:        3.4.11
+Version:        3.4.18
 Release:        1%{?dist}
 Summary:        The BGP swiss army knife of networking (Library)
 
@@ -14,7 +14,8 @@ BuildArch:      noarch
 Provides:       exabgp-libs
 
 BuildRequires:  python-setuptools
-Requires:       python2 >= 2.6, python-ipaddr
+Requires:       python2 >= 2.6
+Requires:       python-ipaddr
 
 %description
 ExaBGP python module
@@ -83,6 +84,8 @@ install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 %{_mandir}/man5/*
 
 %changelog
+* Tue May 09 2017 Luke Hinds <lhinds@protonmail.com> - 3.4.18
+- Bumped to version 3.4.18 and fixed Requires multiline entries
 * Tue Jun 09 2015 Arun Babu Neelicattu <arun.neelicattu@gmail.com> - 3.4.11-1
 - Initial release
 
