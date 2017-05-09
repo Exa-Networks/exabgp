@@ -9,6 +9,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import string
 import sys
 
+PY2 = sys.version_info[0] < 3
+
 
 def string_is_hex (s):
 	if s[:2].lower() != '0x':
@@ -22,21 +24,21 @@ def string_is_hex (s):
 # data being of type 'bytes'
 
 
-if sys.version_info[0] < 3:
+if PY2:
 	ordinal = ord
 else:
 	def ordinal(x):
 		return x if type(x) == int else ord(x)
 
 
-if sys.version_info[0] < 3:
+if PY2:
 	character = chr
 else:
 	def character(x):
 		return bytes([x])
 
 
-if sys.version_info[0] < 3:
+if PY2:
 	def padding(n):
 		return '\0'*n
 else:
@@ -52,3 +54,20 @@ def concat_strs(*items):
 
 def concat_bytes(*items):
 	return b''.join(items)
+
+
+# helpers for converting between string and bytestring
+
+if PY2:
+	def str_ascii (string):
+		return string
+else:
+	def str_ascii(bytestring):
+		return str(bytestring, 'ascii')
+
+if PY2:
+	def bytes_ascii (string):
+		return string
+else:
+	def bytes_ascii(bytestring):
+		return bytes(bytestring, 'ascii')
