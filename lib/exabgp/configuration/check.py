@@ -101,7 +101,7 @@ def check_neighbor (neighbors):
 			try:
 				logger.parser('')  # new line
 
-				pack1s = pack1[19:] if pack1.startswith('\xFF'*16) else pack1
+				pack1s = pack1[19:] if pack1.startswith(b'\xFF'*16) else pack1
 				update = Update.unpack_message(pack1s,negotiated)
 
 				change2 = Change(update.nlris[0],update.attributes)

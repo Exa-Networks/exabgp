@@ -42,7 +42,7 @@ class AddPath (Capability,dict):
 		return '{ "name": "addpath"%s%s }' % (', ' if families else '', families)
 
 	def extract (self):
-		rs = ''
+		rs = b''
 		for v in self:
 			if self[v]:
 				rs += v[0].pack() + v[1].pack() + pack('!B',self[v])

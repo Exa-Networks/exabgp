@@ -166,7 +166,7 @@ class Capabilities (dict):
 		data = data[1:option_len+1]
 		while data:
 			key,value,data = _key_values('parameter',data)
-			# Paramaters must only be sent once.
+			# Parameters must only be sent once.
 			if key == Parameter.AUTHENTIFICATION_INFORMATION:
 				raise Notify(2,5)
 

@@ -107,12 +107,12 @@ class Connection (object):
 			self.close()
 			raise NotConnected('Trying to read on a closed TCP connection')
 		if number == 0:
-			yield ''
+			yield b''
 			return
 
 		while not self.reading():
-			yield ''
-		data = ''
+			yield b''
+		data = b''
 		reported = ''
 		while True:
 			try:
@@ -141,7 +141,7 @@ class Connection (object):
 						yield data
 						return
 
-					yield ''
+					yield b''
 			except socket.timeout as exc:
 				self.close()
 				self.logger.wire("%s %s peer is too slow" % (self.name(),self.peer))
@@ -152,7 +152,7 @@ class Connection (object):
 					if message != reported:
 						reported = message
 						self.logger.wire(message,'debug')
-					yield ''
+					yield b''
 				elif exc.args[0] in error.fatal:
 					self.close()
 					raise LostConnection('issue reading on the socket: %s' % errstr(exc))
@@ -217,11 +217,11 @@ class Connection (object):
 		# _reader returns the whole number requested or nothing and then stops
 		for header in self._reader(Message.HEADER_LEN):
 			if not header:
-				yield 0,0,'','',None
+				yield 0,0,b'',b'',None
 
 		if not header.startswith(Message.MARKER):
 			report = 'The packet received does not contain a BGP marker'
-			yield 0,0,header,'',NotifyError(1,1,report)
+			yield 0,0,header,b'',NotifyError(1,1,report)
 			return
 
 		msg = ordinal(header[18])
@@ -229,24 +229,24 @@ class Connection (object):
 
 		if length < Message.HEADER_LEN or length > Message.MAX_LEN:
 			report = '%s has an invalid message length of %d' % (Message.CODE.name(msg),length)
-			yield length,0,header,'',NotifyError(1,2,report)
+			yield length,0,header,b'',NotifyError(1,2,report)
 			return
 
 		validator = Message.Length.get(msg,lambda _: _ >= 19)
 		if not validator(length):
 			# MUST send the faulty length back
 			report = '%s has an invalid message length of %d' % (Message.CODE.name(msg),length)
-			yield length,0,header,'',NotifyError(1,2,report)
+			yield length,0,header,b'',NotifyError(1,2,report)
 			return
 
 		number = length - Message.HEADER_LEN
 
 		if not number:
-			yield length,msg,header,'',None
+			yield length,msg,header,b'',None
 			return
 
 		for body in self._reader(number):
 			if not body:
-				yield 0,0,'','',None
+				yield 0,0,b'',b'',None
 
 		yield length,msg,header,body,None

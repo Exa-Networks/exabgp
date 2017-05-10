@@ -53,7 +53,7 @@ class Attributes (object):
 			raw = pack(cls.Header.PACK,length,atype) + payload
 			pad = pad(length) - len(raw)
 			if pad:
-				raw += '\0'*pad
+				raw += b'\0'*pad
 			return raw
 
 		return concat_bytes_i(_encode(k,v) for (k,v) in attributes.items())
