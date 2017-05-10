@@ -196,7 +196,6 @@ class Processes (object):
 							# but not on OpenBSD where it always raise StopIteration
 							# and only readline() works
 							buf = str_ascii(proc.stdout.readline())
-							buf = proc.stdout.readline()
 							if buf == '' and poll is not None:
 								# if proc.poll() is None then
 								# process is fine, we received an empty line because
