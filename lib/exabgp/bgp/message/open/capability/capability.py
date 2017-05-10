@@ -10,7 +10,7 @@ import sys
 
 # Do not create a dependency loop by using exabgp.bgp.message as import
 from exabgp.util import ordinal
-from exabgp.util import concat_bytes
+from exabgp.util import concat_bytes_i
 
 from exabgp.bgp.message.notification import Notify
 
@@ -152,7 +152,7 @@ class Capability (object):
 
 	@staticmethod
 	def hex (data):
-		return '0x' + concat_bytes('%02x' % ordinal(_) for _ in data)
+		return '0x' + concat_bytes_i('%02x' % ordinal(_) for _ in data)
 
 	@classmethod
 	def unknown (cls, klass):

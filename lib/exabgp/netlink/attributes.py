@@ -10,7 +10,7 @@ from struct import pack
 from struct import unpack
 from struct import calcsize
 
-from exabgp.util import concat_bytes
+from exabgp.util import concat_bytes_i
 
 from exabgp.netlink import NetLinkError
 
@@ -56,4 +56,4 @@ class Attributes (object):
 				raw += '\0'*pad
 			return raw
 
-		return concat_bytes([_encode(k,v) for (k,v) in attributes.items()])
+		return concat_bytes_i(_encode(k,v) for (k,v) in attributes.items())

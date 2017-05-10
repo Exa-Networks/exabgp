@@ -10,6 +10,7 @@ from struct import unpack
 
 from exabgp.vendoring import six
 from exabgp.util import concat_bytes
+from exabgp.util import concat_bytes_i
 
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
@@ -78,22 +79,22 @@ class MPRNLRI (Attribute,Family):
 			mpnlri.setdefault(nexthop,[]).append(nlri.pack(negotiated))
 
 		for nexthop,nlris in six.iteritems(mpnlri):
-			payload = concat_bytes([self.afi.pack(), self.safi.pack(), chr(len(nexthop)), nexthop, chr(0)])
+			payload = concat_bytes(self.afi.pack(), self.safi.pack(), character(len(nexthop)), nexthop, character(0))
 			header_length = len(payload)
 			for nlri in nlris:
 				if self._len(payload + nlri) > maximum:
 					if len(payload) == header_length or len(payload) > maximum:
 						raise Notify(6, 0, 'attributes size is so large we can not even pack on MPRNLRI')
 					yield self._attribute(payload)
-					payload = concat_bytes([self.afi.pack(), self.safi.pack(), character(len(nexthop)), nexthop, character(0), nlri])
+					payload = concat_bytes(self.afi.pack(), self.safi.pack(), character(len(nexthop)), nexthop, character(0), nlri)
 					continue
-				payload  = concat_bytes([payload, nlri])
+				payload  = concat_bytes(payload, nlri)
 			if len(payload) == header_length or len(payload) > maximum:
 				raise Notify(6, 0, 'attributes size is so large we can not even pack on MPRNLRI')
 			yield self._attribute(payload)
 
 	def pack (self, negotiated):
-		return concat_bytes(self.packed_attributes(negotiated))
+		return concat_bytes_i(self.packed_attributes(negotiated))
 
 	def __len__ (self):
 		raise RuntimeError('we can not give you the size of an MPRNLRI - was it with our witout addpath ?')

@@ -52,7 +52,7 @@ class TLVS (list):
 		return TLVS(list(loop(data)))
 
 	def pack (self):
-		return concat_bytes(concat_bytes(character(tlv.type),pack('!H',len(tlv.value)+3),tlv.value) for tlv in self)
+		return concat_bytes_i(concat_bytes(character(tlv.type),pack('!H',len(tlv.value)+3),tlv.value) for tlv in self)
 
 
 # ==================================================================== AIGP (26)

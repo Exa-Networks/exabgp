@@ -12,10 +12,12 @@ from struct import unpack
 from exabgp.vendoring import six
 
 from exabgp.util import character
+from exabgp.util import ordinal
+from exabgp.util import concat_bytes_i
+from exabgp.util import concat_bytes
+
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.util import ordinal
-from exabgp.util import concat_bytes
 from exabgp.bgp.message.open.capability.capability import Capability
 
 # =========================================================== Graceful (Restart)
@@ -44,7 +46,7 @@ class Graceful (Capability,dict):
 	def extract (self):
 		restart  = pack('!H',((self.restart_flag << 12) | (self.restart_time & Graceful.TIME_MASK)))
 		families = [(afi.pack(),safi.pack(),character(self[(afi,safi)])) for (afi,safi) in self.keys()]
-		sfamilies = concat_bytes([concat_bytes(pafi,psafi,family) for (pafi,psafi,family) in families])
+		sfamilies = concat_bytes_i(concat_bytes(pafi,psafi,family) for (pafi,psafi,family) in families)
 		return [concat_bytes(restart,sfamilies)]
 
 	def __str__ (self):

@@ -7,7 +7,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from exabgp.util import ordinal
-from exabgp.util import concat_strs
+from exabgp.util import concat_strs_i
 
 
 def od (value):
@@ -18,4 +18,4 @@ def od (value):
 				yield ' '
 			yield '%02X' % ordinal(v)
 			even = not even
-	return concat_strs(spaced(value))
+	return concat_strs_i(spaced(value))

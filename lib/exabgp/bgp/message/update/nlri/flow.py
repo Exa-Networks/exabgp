@@ -15,13 +15,12 @@ from struct import unpack
 from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
+from exabgp.util import concat_bytes_i
+from exabgp.util import concat_strs_i
 
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
-from exabgp.util import character
-from exabgp.util import ordinal
-from exabgp.util import concat_bytes
 from exabgp.bgp.message.direction import OUT
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.cidr import CIDR
@@ -571,9 +570,9 @@ class Flow (NLRI):
 			# and add it to the last rule
 			if ID not in (FlowDestination.ID,FlowSource.ID):
 				ordered_rules.append(character(ID))
-			ordered_rules.append(concat_bytes(rule.pack() for rule in rules))
+			ordered_rules.append(concat_bytes_i(rule.pack() for rule in rules))
 
-		components = self.rd.pack() + concat_bytes(ordered_rules)
+		components = self.rd.pack() + concat_bytes_i(ordered_rules)
 
 		lc = len(components)
 		if lc < 0xF0:
@@ -619,7 +618,7 @@ class Flow (NLRI):
 					s.append(', '.join('"%s"' % flag for flag in rule.value.named_bits()))
 				else:
 					s.append('"%s"' % rule)
-			string.append(' "%s": [ %s ]' % (rules[0].NAME,concat_bytes(str(_) for _ in s).replace('""','')))
+			string.append(' "%s": [ %s ]' % (rules[0].NAME,concat_strs_i(str(_) for _ in s).replace('""','')))
 		nexthop = ', "next-hop": "%s"' % self.nexthop if self.nexthop is not NoNextHop else ''
 		rd = '' if self.rd is RouteDistinguisher.NORD else ', %s' % self.rd.json()
 		compatibility = ', "string": "%s"' % self.extensive()
