@@ -10,6 +10,7 @@ from struct import pack
 import sys
 
 from exabgp.util import character
+from exabgp.util import concat_bytes_i
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import IPSelf
@@ -159,7 +160,7 @@ def attribute (tokeniser):
 		raise ValueError('invalid attribute, data is not 0x hexadecimal')
 	if len(data) % 2:
 		raise ValueError('invalid attribute, data is not 0x hexadecimal')
-	data = ''.join(character(int(data[_:_+2],16)) for _ in range(2,len(data),2))
+	data = concat_bytes_i(character(int(data[_:_+2],16)) for _ in range(2,len(data),2))
 
 	end = tokeniser()
 	if end != ']':
@@ -448,7 +449,7 @@ def _extended_community (value):
 		# we could raise if the length is not 8 bytes (16 chars)
 		if len(value) % 2:
 			raise ValueError('invalid extended community %s' % value)
-		raw = ''.join([character(int(value[_:_+2],16)) for _ in range(2,len(value),2)])
+		raw = concat_bytes_i(character(int(value[_:_+2],16)) for _ in range(2,len(value),2))
 		return ExtendedCommunity.unpack(raw)
 	elif value.count(':'):
 		components = value.split(':')

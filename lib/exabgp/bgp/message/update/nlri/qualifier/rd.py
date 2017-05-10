@@ -10,7 +10,7 @@ from struct import pack
 from struct import unpack
 
 from exabgp.util import character
-from exabgp.util import concat_bytes
+from exabgp.util import concat_bytes_i
 
 
 # =========================================================== RouteDistinguisher
@@ -85,7 +85,7 @@ class RouteDistinguisher (object):
 				data = [character(0),character(1)]
 				data.extend([character(int(_)) for _ in prefix.split('.')])
 				data.extend([character(suffix >> 8),character(suffix & 0xFF)])
-				distinguisher = concat_bytes(data)
+				distinguisher = concat_bytes_i(data)
 			else:
 				number = int(prefix)
 				if number < pow(2,16) and suffix < pow(2,32):

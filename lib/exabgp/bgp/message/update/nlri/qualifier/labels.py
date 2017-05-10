@@ -10,7 +10,7 @@ from struct import pack
 from struct import unpack
 
 from exabgp.util import character
-from exabgp.util import concat_bytes
+from exabgp.util import concat_bytes_i
 
 
 # ======================================================================= Labels
@@ -31,7 +31,7 @@ class Labels (object):
 		if packed and bos:
 			packed.pop()
 			packed.append(pack('!L',(label << 4) | 1)[1:])
-		self.packed = concat_bytes(packed)
+		self.packed = concat_bytes_i(packed)
 		self._len = len(self.packed)
 
 	def __eq__ (self, other):

@@ -8,7 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from exabgp.util import character
 from exabgp.util import ordinal
-from exabgp.util import concat_bytes
+from exabgp.util import concat_bytes_i
 
 
 # ===================================================================== PathInfo
@@ -22,9 +22,9 @@ class PathInfo (object):
 		if packed:
 			self.path_info = packed
 		elif ip:
-			self.path_info = concat_bytes([character(int(_)) for _ in ip.split('.')])
+			self.path_info = concat_bytes_i(character(int(_)) for _ in ip.split('.'))
 		elif integer:
-			self.path_info = concat_bytes([character((integer >> offset) & 0xff) for offset in [24,16,8,0]])
+			self.path_info = concat_bytes_i(character((integer >> offset) & 0xff) for offset in [24,16,8,0])
 		else:
 			self.path_info = b''
 		# sum(int(a)<<offset for (a,offset) in zip(ip.split('.'), range(24, -8, -8)))

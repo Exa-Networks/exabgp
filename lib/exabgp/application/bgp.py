@@ -53,7 +53,7 @@ def main ():
 	minor = int(sys.version[2])
 
 	if major <= 2 and minor < 5:
-		sys.exit('This program can not work (is not tested) with your python version (< 2.5 or >= 3.0)')
+		sys.exit('This program can not work (is not tested) with your python version (< 2.5)')
 
 	if options["--version"]:
 		print('ExaBGP : %s' % version)

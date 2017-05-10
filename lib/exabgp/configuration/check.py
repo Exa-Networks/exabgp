@@ -13,7 +13,7 @@ import traceback
 
 from exabgp.util import character
 from exabgp.util import ordinal
-from exabgp.util import concat_bytes
+from exabgp.util import concat_bytes_i
 
 from exabgp.bgp.message import Update
 from exabgp.bgp.message import Open
@@ -101,7 +101,7 @@ def check_neighbor (neighbors):
 			try:
 				logger.parser('')  # new line
 
-				pack1s = pack1[19:] if pack1.startswith('\xFF'*16) else pack1
+				pack1s = pack1[19:] if pack1.startswith(b'\xFF'*16) else pack1
 				update = Update.unpack_message(pack1s,negotiated)
 
 				change2 = Change(update.nlris[0],update.attributes)
@@ -170,7 +170,7 @@ def check_neighbor (neighbors):
 
 def check_message (neighbor, message):
 	message = message.replace(':','')
-	raw = concat_bytes(character(int(_,16)) for _ in (message[i*2:(i*2)+2] for i in range(len(message)/2)))
+	raw = concat_bytes_i(character(int(_,16)) for _ in (message[i*2:(i*2)+2] for i in range(len(message)/2)))
 
 	if raw.startswith('\xff'*16):
 		kind = ordinal(raw[18])

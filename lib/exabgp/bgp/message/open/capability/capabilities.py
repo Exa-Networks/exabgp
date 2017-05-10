@@ -14,6 +14,8 @@ from exabgp.protocol.family import SAFI
 from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
+from exabgp.util import concat_bytes_i
+
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.addpath import AddPath
 from exabgp.bgp.message.open.capability.asn4 import ASN4
@@ -138,7 +140,7 @@ class Capabilities (dict):
 		for k,capabilities in six.iteritems(self):
 			for capability in capabilities.extract():
 				rs.append(concat_bytes(character(k),character(len(capability)),capability))
-		parameters = concat_bytes([concat_bytes(character(2),character(len(r)),r) for r in rs])
+		parameters = concat_bytes_i(concat_bytes(character(2),character(len(r)),r) for r in rs)
 		return concat_bytes(character(len(parameters)),parameters)
 
 	@staticmethod
@@ -164,7 +166,7 @@ class Capabilities (dict):
 		data = data[1:option_len+1]
 		while data:
 			key,value,data = _key_values('parameter',data)
-			# Paramaters must only be sent once.
+			# Parameters must only be sent once.
 			if key == Parameter.AUTHENTIFICATION_INFORMATION:
 				raise Notify(2,5)
 
