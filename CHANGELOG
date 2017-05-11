@@ -17,6 +17,8 @@ Version 3.4.19
     reported by: Yevgeniy Ovsyannikov
  * Fix: bad defintion of Flow for ICMPType, ICMPCode and Fragment
     reported by: Christoph Loibl
+ * Feature: added SRPMS for exabgp
+    patch by: Leonardo Amaral
 
 Version 3.4.18
  * Backport: backhole community (RFC 7999)
