@@ -16,6 +16,10 @@ from setuptools import setup
 from distutils.util import get_platform
 import six
 
+CHANGELOG = os.path.join(os.getcwd(),os.path.dirname(sys.argv[0]),'CHANGELOG')
+VERSION_PY = os.path.join(os.getcwd(),os.path.dirname(sys.argv[0]),'lib/exabgp/version.py')
+DEBIAN = os.path.join(os.getcwd(),os.path.dirname(sys.argv[0]),'debian/changelog')
+
 dryrun = False
 
 json_version = '3.9.0'
@@ -62,7 +66,7 @@ python setup.py debian   prepend the current version to debian/changelog
 
 def versions ():
 	versions = []
-	with open('CHANGELOG') as changelog:
+	with open(CHANGELOG) as changelog:
 		six.next(changelog)  # skip the word version on the first line
 		for line in changelog:
 			if line.lower().startswith('version '):
@@ -95,10 +99,10 @@ if sys.argv[-1] == 'next':
 def set_version ():
 	git_version = os.popen('git describe --tags').read().strip()
 
-	with open('lib/exabgp/version.py','w') as version_file:
+	with open(VERSION_PY,'w') as version_file:
 		version_file.write(version_template % (git_version,json_version,text_version))
 
-	version = imp.load_source('version','lib/exabgp/version.py').version
+	version = imp.load_source('version',VERSION_PY).version
 
 	if version != git_version:
 		print('version setting failed')
@@ -147,9 +151,9 @@ if sys.argv[-1] == 'push':
 def debian ():
 	from email.utils import formatdate
 
-	version = imp.load_source('version','lib/exabgp/version.py').version
+	version = imp.load_source('version',VERSION_PY).version
 
-	with open('debian/changelog', 'w') as w:
+	with open(DEBIAN, 'w') as w:
 		w.write(debian_template % (version,formatdate()))
 
 	print('updated debian/changelog')
@@ -178,15 +182,11 @@ if sys.argv[-1] == 'release':
 	print('valid versions are:', ', '.join(next))
 	print('checking the CHANGELOG uses one of them')
 
-	with open('CHANGELOG') as changelog:
-		six.next(changelog)  # skip the word version on the first line
-		for line in changelog:
-			if 'version' in line.lower():
-				version = line.split()[1]
-				if version in next:
-					break
-				print('invalid new version in CHANGELOG')
-				sys.exit(1)
+	version = versions()[0]
+
+	if version.count('.') != 2:
+		print('invalid new version in CHANGELOG')
+		sys.exit(1)
 
 	print('ok, next release is %s' % version)
 	print('checking that this release is not already tagged')
