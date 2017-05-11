@@ -49,6 +49,8 @@ if sys.argv[-1] == 'help':
 	print("""\
 python setup.py help     this help
 python setup.py cleanup  delete left-over file from release
+python setup.py current  show the current version
+python setup.py next     show the next version
 python setup.py version  set the content of the version include file
 python setup.py push     update the version, push to github
 python setup.py release  tag a new version on github, and update pypi
@@ -56,6 +58,17 @@ python setup.py pypi     create egg/wheel
 python setup.py debian   prepend the current version to debian/changelog
 """)
 	sys.exit(0)
+
+
+def versions ():
+	versions = []
+	with open('CHANGELOG') as changelog:
+		six.next(changelog)  # skip the word version on the first line
+		for line in changelog:
+			if line.lower().startswith('version '):
+				version = line.split()[1]
+				versions.append(version)
+	return versions
 
 
 def remove_egg ():
@@ -66,9 +79,17 @@ def remove_egg ():
 		print('removing left-over egg')
 		rmtree('build')
 
-remove_egg()
 
 if sys.argv[-1] == 'cleanup':
+	remove_egg()
+	sys.exit(0)
+
+if sys.argv[-1] == 'current':
+	print(versions()[1])
+	sys.exit(0)
+
+if sys.argv[-1] == 'next':
+	print(versions()[0])
 	sys.exit(0)
 
 def set_version ():
