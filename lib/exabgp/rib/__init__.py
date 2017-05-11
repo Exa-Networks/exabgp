@@ -44,7 +44,8 @@ class RIB (object):
 		self.outgoing.reset()
 
 	def uncache(self):
-		del self._cache[self.name]
+		if self.name in self._cache:
+			del self._cache[self.name]
 
 	# This code was never tested ...
 	def clear (self):
