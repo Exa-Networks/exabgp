@@ -56,7 +56,7 @@ mv ${RPM_BUILD_ROOT}%{_bindir} ${RPM_BUILD_ROOT}%{_sbindir}
 mv ${RPM_BUILD_ROOT}%{_sbindir}/healthcheck ${RPM_BUILD_ROOT}/%{_sbindir}/exabgp-healthcheck
 install -d -m 744 ${RPM_BUILD_ROOT}/%{_sysconfdir}/
 install -d -m 755 ${RPM_BUILD_ROOT}/%{_sysconfdir}/exabgp/examples
-mv ${RPM_BUILD_ROOT}/usr/share/exabgp/etc ${RPM_BUILD_ROOT}/%{_sysconfdir}/exabgp/examples
+mv ${RPM_BUILD_ROOT}/usr/share/exabgp/etc/* ${RPM_BUILD_ROOT}/%{_sysconfdir}/exabgp/examples
 
 install -d %{buildroot}/%{_unitdir}
 install etc/systemd/exabgp.service %{buildroot}/%{_unitdir}/
