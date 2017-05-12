@@ -68,7 +68,7 @@ install -d %{buildroot}/%{_mandir}/man5
 install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 
 # Sample .conf
-ln -s %{_sysconfdir}/examples/api-api.conf %{buildroot}/%{_sysconfdir}/exabgp/exabgp.conf
+ln -s %{_sysconfdir}/exabgp/examples/api-api.conf %{buildroot}/%{_sysconfdir}/exabgp/exabgp.conf
 
 %post -n exabgp
 %systemd_post exabgp.service
