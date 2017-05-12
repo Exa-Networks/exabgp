@@ -1,6 +1,6 @@
 %{!?__python2:        %global __python2 /usr/bin/python2}
 %{!?python2_sitelib:  %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
-%define version %(echo "$(git describe HEAD | sed 's,-,_,g')")
+%define version %(echo "$(python setup.py current).git$(git rev-parse --short HEAD)")
 
 # Warning: This .spec is meant to be used with https://github.com/iovation/git-build-rpm
 #
@@ -55,7 +55,8 @@ install bin/healthcheck ${RPM_BUILD_ROOT}%{_bindir}
 mv ${RPM_BUILD_ROOT}%{_bindir} ${RPM_BUILD_ROOT}%{_sbindir}
 mv ${RPM_BUILD_ROOT}%{_sbindir}/healthcheck ${RPM_BUILD_ROOT}/%{_sbindir}/exabgp-healthcheck
 install -d -m 744 ${RPM_BUILD_ROOT}/%{_sysconfdir}/
-mv ${RPM_BUILD_ROOT}/usr/share/exabgp/etc ${RPM_BUILD_ROOT}/%{_sysconfdir}/exabgp
+install -d -m 755 ${RPM_BUILD_ROOT}/%{_sysconfdir}/exabgp/examples
+mv ${RPM_BUILD_ROOT}/usr/share/exabgp/etc ${RPM_BUILD_ROOT}/%{_sysconfdir}/exabgp/examples
 
 install -d %{buildroot}/%{_unitdir}
 install etc/systemd/exabgp.service %{buildroot}/%{_unitdir}/
@@ -66,6 +67,8 @@ install doc/man/exabgp.1 %{buildroot}/%{_mandir}/man1
 install -d %{buildroot}/%{_mandir}/man5
 install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 
+# Sample .conf
+ln -s ./examples/api-api.conf %{buildroot}/%{_sysconfdir}/exabgp/exabgp.conf
 
 %post -n exabgp
 %systemd_post exabgp.service
@@ -86,8 +89,10 @@ install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 %attr(755, root, root) %{_sbindir}/exabgp
 %attr(755, root, root) %{_sbindir}/exabgp-healthcheck
 %dir %{_sysconfdir}/exabgp
+%{_sysconfdir}/exabgp/exabgp.conf
+%dir %{_sysconfdir}/exabgp/examples
 %attr(744, root, root) %{_prefix}/share/exabgp/*
-%attr(744, root, root) %{_sysconfdir}/exabgp/*
+%attr(744, root, root) %{_sysconfdir}/exabgp/examples/*
 %{_unitdir}/exabgp.service
 %doc COPYRIGHT CHANGELOG README.md
 %{_mandir}/man1/*
