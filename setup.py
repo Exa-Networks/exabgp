@@ -19,6 +19,10 @@ import six
 CHANGELOG = os.path.join(os.getcwd(),os.path.dirname(sys.argv[0]),'CHANGELOG')
 VERSION_PY = os.path.join(os.getcwd(),os.path.dirname(sys.argv[0]),'lib/exabgp/version.py')
 DEBIAN = os.path.join(os.getcwd(),os.path.dirname(sys.argv[0]),'debian/changelog')
+EGG = os.path.join(os.getcwd(),os.path.dirname(sys.argv[0]),'lib/exabgp.egg-info')
+BUILD_EXABGP = os.path.join(os.getcwd(),os.path.dirname(sys.argv[0]),'build/lib/exabgp')
+BUILD_ROOT = os.path.join(os.getcwd(),os.path.dirname(sys.argv[0]),'build')
+
 
 dryrun = False
 
@@ -76,16 +80,17 @@ def versions ():
 
 
 def remove_egg ():
-	if os.path.exists('lib/exabgp.egg-info'):
+	if os.path.exists(EGG):
 		print('removing left-over egg')
-		rmtree('lib/exabgp.egg-info')
-	if os.path.exists('build/lib/exabgp'):
+		rmtree(EGG)
+	if os.path.exists(BUILD_EXABGP):
 		print('removing left-over egg')
-		rmtree('build')
+		rmtree(BUILD_ROOT)
 
+
+remove_egg()
 
 if sys.argv[-1] == 'cleanup':
-	remove_egg()
 	sys.exit(0)
 
 if sys.argv[-1] == 'current':
