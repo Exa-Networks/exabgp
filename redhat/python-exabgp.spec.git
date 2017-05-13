@@ -1,20 +1,29 @@
 %{!?__python2:        %global __python2 /usr/bin/python2}
 %{!?python2_sitelib:  %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
+%define version %(echo "$(python setup.py current).git$(git rev-parse --short HEAD)")
+
+# Warning: This .spec is meant to be used with https://github.com/iovation/git-build-rpm
+#
+# Invocation example: From top exabgp git dir: git build-rpm --spec-file redhat/python-exabgp.spec.git
 
 Name:           python-exabgp
-Version:        3.4.11
+Version:        %{version}
 Release:        1%{?dist}
 Summary:        The BGP swiss army knife of networking (Library)
 
 Group:          Development/Libraries
 License:        BSD
 URL:            https://pypi.python.org/pypi/exabgp/
-Source0:        https://github.com/Exa-Networks/exabgp/archive/%{version}/exabgp-%{version}.tar.gz
+Source0:	exabgp-%{version}.tar.gz
 BuildArch:      noarch
 Provides:       exabgp-libs
 
 BuildRequires:  python-setuptools
-Requires:       python2 >= 2.6, python-ipaddr
+BuildRequires:  sed
+BuildRequires:  git
+BuildRequires:  git-extras
+Requires:       python2 >= 2.6
+Requires:	python-ipaddr
 
 %description
 ExaBGP python module
@@ -46,7 +55,8 @@ install bin/healthcheck ${RPM_BUILD_ROOT}%{_bindir}
 mv ${RPM_BUILD_ROOT}%{_bindir} ${RPM_BUILD_ROOT}%{_sbindir}
 mv ${RPM_BUILD_ROOT}%{_sbindir}/healthcheck ${RPM_BUILD_ROOT}/%{_sbindir}/exabgp-healthcheck
 install -d -m 744 ${RPM_BUILD_ROOT}/%{_sysconfdir}/
-mv ${RPM_BUILD_ROOT}/usr/share/exabgp/etc ${RPM_BUILD_ROOT}/%{_sysconfdir}/exabgp
+install -d -m 755 ${RPM_BUILD_ROOT}/%{_sysconfdir}/exabgp/examples
+mv ${RPM_BUILD_ROOT}/usr/share/exabgp/etc/* ${RPM_BUILD_ROOT}/%{_sysconfdir}/exabgp/examples
 
 install -d %{buildroot}/%{_unitdir}
 install etc/systemd/exabgp.service %{buildroot}/%{_unitdir}/
@@ -57,6 +67,8 @@ install doc/man/exabgp.1 %{buildroot}/%{_mandir}/man1
 install -d %{buildroot}/%{_mandir}/man5
 install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 
+# Sample .conf
+ln -s %{_sysconfdir}/exabgp/examples/api-api.conf %{buildroot}/%{_sysconfdir}/exabgp/exabgp.conf
 
 %post -n exabgp
 %systemd_post exabgp.service
@@ -77,14 +89,15 @@ install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 %attr(755, root, root) %{_sbindir}/exabgp
 %attr(755, root, root) %{_sbindir}/exabgp-healthcheck
 %dir %{_sysconfdir}/exabgp
+%{_sysconfdir}/exabgp/exabgp.conf
+%dir %{_sysconfdir}/exabgp/examples
 %attr(744, root, root) %{_prefix}/share/exabgp/*
-%attr(744, root, root) %{_sysconfdir}/exabgp/*
+%attr(744, root, root) %{_sysconfdir}/exabgp/examples/*
 %{_unitdir}/exabgp.service
 %doc COPYRIGHT CHANGELOG README.md
 %{_mandir}/man1/*
 %{_mandir}/man5/*
 
 %changelog
-* Tue Jun 09 2015 Arun Babu Neelicattu <arun.neelicattu@gmail.com> - 3.4.11-1
-- Initial release
-
+%(LANG=C date +"* %a %b %d %Y $(git config user.name) <$(git config user.email)> - $(git describe HEAD | sed 's,-,_,g')")
+%(git-changelog -l -x)
