@@ -10,7 +10,7 @@ from struct import pack
 from struct import unpack
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.util import ord_
+from exabgp.util import ordinal
 
 #       0                   1                   2                   3
 #       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -19,13 +19,12 @@ from exabgp.util import ord_
 #      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #      |                  Link Remote Identifier                       |
 #      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#		https://tools.ietf.org/html/rfc5307 sec 1.1
+#      https://tools.ietf.org/html/rfc5307 sec 1.1
 # ================================================================== Link Local/Remote Identifiers
 
-class LinkIdentifier (object):
 
-	def __init__ (self, local_id, remote_id,
-		 packed=None):
+class LinkIdentifier (object):
+	def __init__ (self, local_id, remote_id, packed=None):
 		self.local_id = local_id
 		self.remote_id = remote_id
 		self._packed = packed
@@ -41,11 +40,8 @@ class LinkIdentifier (object):
 			'"link-remote-id": %s' % self.remote_id
 		return content
 
-
-
 	def __eq__ (self, other):
-    		return ( self.local_id == other.local_id ) and \
-				   ( self.remote_id == other.remote_id )
+		return (self.local_id == other.local_id) and (self.remote_id == other.remote_id)
 
 	def __neq__ (self, other):
 		return self.local_id != other.local_id
@@ -63,7 +59,7 @@ class LinkIdentifier (object):
 		raise RuntimeError('Not implemented')
 
 	def __str__ (self):
-		return ':'.join('%02X' % ord_(_) for _ in self._packed)
+		return ':'.join('%02X' % ordinal(_) for _ in self._packed)
 
 	def __repr__ (self):
 		return self.__str__()

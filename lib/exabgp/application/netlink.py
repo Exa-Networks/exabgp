@@ -126,6 +126,7 @@ def new ():
 		#
 		# print '%-18s %-18s %-18s %-7d %-s' % (dst or '0.0.0.0',mask,gw,metric,iface)
 
+
 def main ():
 	if len(sys.argv) < 2:
 		usage()
@@ -135,7 +136,7 @@ def main ():
 			addresses()
 			sys.exit(0)
 		if sys.argv[2] in 'show':
-			addr()
+			addresses()
 			sys.exit(0)
 	if 'route'.startswith(sys.argv[1]):
 		if len(sys.argv) == 2:
@@ -152,6 +153,7 @@ def main ():
 
 	usage()
 	sys.exit(0)
+
 
 if __name__ == '__main__':
 	main()

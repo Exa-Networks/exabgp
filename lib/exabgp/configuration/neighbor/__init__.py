@@ -55,7 +55,6 @@ def _domainname ():
 	return domainname
 
 
-
 class ParseNeighbor (Section):
 	TTL_SECURITY = 255
 
@@ -211,7 +210,6 @@ class ParseNeighbor (Section):
 			if neighbor.adjribout:
 				self.logger.configuration('route-refresh requested, enabling adj-rib-out')
 
-
 		missing = neighbor.missing()
 		if missing:
 			return self.error.set('incomplete neighbor, missing %s' % missing)
@@ -229,8 +227,8 @@ class ParseNeighbor (Section):
 			except TypeError as e:
 				return self.error.set("Invalid base64 encoding of MD5 password.")
 			else:
-			    if len(md5) > 80:
-				    return self.error.set('MD5 password must be no larger than 80 characters')
+				if len(md5) > 80:
+					return self.error.set('MD5 password must be no larger than 80 characters')
 
 		# check we are not trying to announce routes without the right MP announcement
 		for change in neighbor.changes:

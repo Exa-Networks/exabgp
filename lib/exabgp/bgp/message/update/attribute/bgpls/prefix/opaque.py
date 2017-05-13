@@ -20,8 +20,9 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #     //              Opaque Prefix Attributes  (variable)           //
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#     https://tools.ietf.org/html/rfc7752#section-3.3.3.6 
+#     https://tools.ietf.org/html/rfc7752#section-3.3.3.6
 #
+
 
 @LINKSTATE.register()
 class PrefixOpaque(object):

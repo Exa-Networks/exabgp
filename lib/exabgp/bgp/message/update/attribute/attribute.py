@@ -9,8 +9,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 import sys
 
-from exabgp.util import chr_
-from exabgp.util import concat_strs
+from exabgp.util import character
+from exabgp.util import concat_bytes
 from exabgp.bgp.message.notification import Notify
 
 from exabgp.util.cache import Cache
@@ -44,6 +44,7 @@ class Discard (object):
 			return 'discard'
 		return 'discard due to %s' % Attribute.CODE(self.aid)
 
+
 # ==================================================================== Attribute
 #
 
@@ -76,7 +77,7 @@ class Attribute (object):
 	# XXX: FIXME: The API of ID is a bit different (it can be instanciated)
 	# XXX: FIXME: This is legacy. should we change to not be ?
 	class CODE (int):
-		if sys.version_info[0]<3:
+		if sys.version_info[0] < 3:
 			__slots__ = []
 
 		# This should move within the classes and not be here
@@ -172,7 +173,7 @@ class Attribute (object):
 		MASK_TRANSITIVE = 0xBF  # . 191 - 1011 1111
 		MASK_OPTIONAL   = 0x7F  # . 127 - 0111 1111
 
-		if sys.version_info[0]<3:
+		if sys.version_info[0] < 3:
 			__slots__ = []
 
 		def __str__ (self):
@@ -209,8 +210,8 @@ class Attribute (object):
 		if flag & Attribute.Flag.EXTENDED_LENGTH:
 			len_value = pack('!H',length)
 		else:
-			len_value = chr_(length)
-		return concat_strs(chr_(flag),chr_(self.ID),len_value,value)
+			len_value = character(length)
+		return concat_bytes(character(flag),character(self.ID),len_value,value)
 
 	def _len (self,value):
 		length = len(value)
@@ -289,5 +290,6 @@ class Attribute (object):
 			for attribute in Attribute.CODE.names:
 				if attribute not in cls.cache:
 					cls.cache[attribute] = Cache()
+
 
 Attribute.setCache()

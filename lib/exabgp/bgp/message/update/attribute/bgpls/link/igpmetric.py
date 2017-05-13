@@ -41,15 +41,15 @@ class IgpMetric(object):
 	@classmethod
 	def unpack (cls,data,length):
 		if len(data) == 2:
-    		# OSPF
+			# OSPF
 			igpmetric = unpack('!H',data)[0]
 			return cls(igpmetric=igpmetric)
 		elif len(data) == 1:
-    		# ISIS small metrics
+			# ISIS small metrics
 			igpmetric = unpack('!B',data)[0]
 			return cls(igpmetric=igpmetric)
 		elif len(data) == 3:
-    		# ISIS wide metrics
+			# ISIS wide metrics
 			b = BitArray(bytes=data)
 			igpmetric = b.unpack('uintbe:24')
 			return cls(igpmetric=igpmetric)

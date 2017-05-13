@@ -7,9 +7,9 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 import time
-from exabgp.vendoring import six
 # import traceback
-
+from exabgp.vendoring import six
+from exabgp.util import ordinal
 from exabgp.bgp.timer import ReceiveTimer
 from exabgp.bgp.timer import SendTimer
 from exabgp.bgp.message import Message
@@ -34,8 +34,8 @@ from exabgp.logger import LazyFormat
 
 from exabgp.util.trace import trace
 
-from exabgp.util.panic import no_panic
-from exabgp.util.panic import footer
+from exabgp.util.panic import NO_PANIC
+from exabgp.util.panic import FOOTER
 
 
 class ACTION (object):
@@ -299,13 +299,15 @@ class Peer (object):
 		return self._incoming.fsm == FSM.ESTABLISHED or self._outgoing.fsm == FSM.ESTABLISHED
 
 	def detailed_link_status (self):
+		# XXX: Should be defined outside this function but in the FSM
 		state_tbl = {
-			FSM.IDLE : "Idle",
-			FSM.ACTIVE : "Active",
-			FSM.CONNECT : "Connect",
-			FSM.OPENSENT : "OpenSent",
-			FSM.OPENCONFIRM : "OpenConfirm",
-			FSM.ESTABLISHED : "Established" }
+			FSM.IDLE:        "Idle",
+			FSM.ACTIVE:      "Active",
+			FSM.CONNECT:     "Connect",
+			FSM.OPENSENT:    "OpenSent",
+			FSM.OPENCONFIRM: "OpenConfirm",
+			FSM.ESTABLISHED: "Established",
+		}
 		return state_tbl[max(self._incoming.fsm.state, self._outgoing.fsm.state)]
 
 	def negotiated_families(self):
@@ -331,7 +333,7 @@ class Peer (object):
 		message = Message.CODE.NOP
 
 		for message in proto.new_open(self._restarted):
-			if ord(message.TYPE) == Message.CODE.NOP:
+			if ordinal(message.TYPE) == Message.CODE.NOP:
 				yield ACTION.NOW
 
 		proto.negotiated.sent(message)
@@ -345,7 +347,7 @@ class Peer (object):
 		# which would be bad as we need to do the collission check without going to the other peer
 		for message in proto.read_open(self.neighbor.peer_address.top()):
 			opentimer.check_ka(message)
-			if ord(message.TYPE) == Message.CODE.NOP:
+			if ordinal(message.TYPE) == Message.CODE.NOP:
 				yield ACTION.LATER
 
 		self._incoming.fsm.change(FSM.OPENCONFIRM)
@@ -412,7 +414,7 @@ class Peer (object):
 		# which would be bad as we need to set the state without going to the other peer
 		message = Message.CODE.NOP
 		for message in proto.new_open(self._restarted):
-			if ord(message.TYPE) == Message.CODE.NOP:
+			if ordinal(message.TYPE) == Message.CODE.NOP:
 				yield ACTION.NOW
 
 		proto.negotiated.sent(message)
@@ -427,7 +429,7 @@ class Peer (object):
 			# XXX: FIXME: change the whole code to use the ord and not the chr version
 			# Only yield if we have not the open, otherwise the reactor can run the other connection
 			# which would be bad as we need to do the collission check
-			if ord(message.TYPE) == Message.CODE.NOP:
+			if ordinal(message.TYPE) == Message.CODE.NOP:
 				yield ACTION.LATER
 
 		self._outgoing.fsm.change(FSM.OPENCONFIRM)
@@ -676,8 +678,12 @@ class Peer (object):
 				self.logger.network('only one attempt to connect is allowed, stopping the peer')
 				self.stop()
 
-			self._reset(direction,'notification received (%d,%d)' \
-				% (notification.code, notification.subcode), notification)
+			self._reset(
+				direction,'notification received (%d,%d)' % (
+					notification.code,
+					notification.subcode),
+				notification
+			)
 			return
 
 		# RECEIVED a Message TYPE we did not expect
@@ -699,13 +705,13 @@ class Peer (object):
 		except Exception as exc:
 			# Those messages can not be filtered in purpose
 			self.logger.raw('\n'.join([
-				no_panic,
+				NO_PANIC,
 				self.me(''),
 				'',
 				str(type(exc)),
 				str(exc),
 				trace(),
-				footer
+				FOOTER
 			]))
 			self._reset(direction)
 			return

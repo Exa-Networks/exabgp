@@ -9,7 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.util import chr_
+from exabgp.util import character
 
 from exabgp.bgp.message import OUT
 
@@ -66,13 +66,13 @@ class IPVPN (Labelled):
 
 	def pack (self, negotiated=None):
 		addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi,self.safi) else b''
-		mask = chr_(len(self.labels)*8 + len(self.rd)*8 + self.cidr.mask)
+		mask = character(len(self.labels)*8 + len(self.rd)*8 + self.cidr.mask)
 		return addpath + mask + self.labels.pack() + self.rd.pack() + self.cidr.pack_ip()
 
 	def index (self, negotiated=None):
-		addpath = 'no-pi' if self.path_info is PathInfo.NOPATH else self.path_info.pack()
+		addpath = 'no-pi' if self.path_info is PathInfo.NOPATH else str(self.path_info.pack())
 		mask = chr(len(self.rd)*8 + self.cidr.mask)
-		return NLRI._index(self) + addpath + mask + self.rd.pack() + self.cidr.pack_ip()
+		return NLRI._index(self) + addpath + mask + str(self.rd.pack()) + str(self.cidr.pack_ip())
 
 	def _internal (self, announced=True):
 		r = Labelled._internal(self,announced)

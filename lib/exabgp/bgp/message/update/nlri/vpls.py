@@ -10,7 +10,7 @@ Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 from struct import unpack
 from struct import pack
 from exabgp.vendoring import six
-from exabgp.util import concat_strs
+from exabgp.util import concat_bytes
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -25,6 +25,7 @@ def _unique ():
 	while True:
 		yield value
 		value += 1
+
 
 unique = _unique()
 
@@ -53,15 +54,12 @@ class VPLS (NLRI):
 			and self.size == other.size \
 			and self.endpoint == other.endpoint
 
-	def index (self):
-		return NLRI._index(self) + self.pack()
-
 	def assign (self, name, value):
 		setattr(self,name,value)
 
 	def pack (self, negotiated=None):
-		return concat_strs(
-			'\x00\x11',  # pack('!H',17)
+		return concat_bytes(
+			b'\x00\x11',  # pack('!H',17)
 			self.rd.pack(),
 			pack(
 				'!HHH',
@@ -108,7 +106,7 @@ class VPLS (NLRI):
 			raise Notify(3,10,'l2vpn vpls message length is not consistent with encoded bgp')
 		rd = RouteDistinguisher(bgp[2:10])
 		endpoint,offset,size = unpack('!HHH',bgp[10:16])
-		base = unpack('!L','\x00'+bgp[16:19])[0] >> 4
+		base = unpack('!L',b'\x00'+bgp[16:19])[0] >> 4
 		nlri = cls(rd,endpoint,base,offset,size)
 		nlri.action = action
 		# nlri.nexthop = IP.unpack(nexthop)

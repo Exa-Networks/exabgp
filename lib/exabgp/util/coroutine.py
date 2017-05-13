@@ -9,6 +9,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from functools import wraps
 from exabgp.vendoring import six
 
+
 def each (function):
 	@wraps(function)
 	def start (*args, **kwargs):

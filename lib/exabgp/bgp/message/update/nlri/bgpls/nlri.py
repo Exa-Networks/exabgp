@@ -11,7 +11,7 @@ from struct import unpack
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.util import ord_
+from exabgp.util import ordinal
 from exabgp.bgp.message import OUT
 
 from exabgp.bgp.message.update.nlri import NLRI
@@ -73,6 +73,7 @@ PROTO_CODES = {
 	6:	'ospfv3',
 }
 
+
 @NLRI.register(AFI.bgpls,SAFI.bgp_ls)
 @NLRI.register(AFI.bgpls,SAFI.bgp_ls_vpn)
 class BGPLS(NLRI):
@@ -86,9 +87,6 @@ class BGPLS(NLRI):
 		NLRI.__init__(self, AFI.bgpls, SAFI.bgp_ls, action)
 		self._packed = b''
 
-	def index(self):
-		return NLRI._index(self) + self.pack()
-
 	def pack(self, negotiated=None):
 		return pack('!BB',self.CODE,len(self._packed)) + self._packed
 
@@ -99,8 +97,7 @@ class BGPLS(NLRI):
 		return hash("%s:%s:%s:%s" % (self.afi,self.safi,self.CODE,self._packed))
 
 	def __str__(self):
-		return "bgpls:%s:%s" % (self.registered_bgpls.get(self.CODE,self).SHORT_NAME.lower(),'0x' + ''.join('%02x' % ord_(_) for _ in self._packed))
-
+		return "bgpls:%s:%s" % (self.registered_bgpls.get(self.CODE,self).SHORT_NAME.lower(),'0x' + ''.join('%02x' % ordinal(_) for _ in self._packed))
 
 	@classmethod
 	def register(cls, klass):
@@ -114,7 +111,7 @@ class BGPLS(NLRI):
 		code, length = unpack('!HH',bgp[:4])
 		if code in cls.registered_bgpls:
 			if safi == SAFI.bgp_ls_vpn:
-    			# Extract Route Distinguisher
+				# Extract Route Distinguisher
 				rd = RouteDistinguisher.unpack(bgp[4:12])
 				klass = cls.registered_bgpls[code].unpack(bgp[12:length+4],rd)
 			else:
@@ -129,7 +126,7 @@ class BGPLS(NLRI):
 		return klass,bgp[length+4:]
 
 	def _raw(self):
-		return ''.join('%02X' % ord_(_) for _ in self.pack())
+		return ''.join('%02X' % ordinal(_) for _ in self.pack())
 
 
 class GenericBGPLS(BGPLS):
@@ -148,5 +145,3 @@ class GenericBGPLS(BGPLS):
 
 	def json(self, compact=None):
 		return '{ "code": %d, "parsed": false, "raw": "%s" }' % (self.CODE,self._raw())
-
-

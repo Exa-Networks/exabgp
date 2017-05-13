@@ -55,7 +55,7 @@ class Listener (object):
 			if md5:
 				MD5(sock,peer_ip.top(),0,md5,md5_base64)
 			if ttl_in:
-				MIN_TTL(sock,ttl_in)
+				MIN_TTL(sock,peer_ip,ttl_in)
 			return
 
 		try:

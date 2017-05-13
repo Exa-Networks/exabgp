@@ -9,7 +9,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
-from exabgp.util import chr_
+from exabgp.util import character
+from exabgp.util import concat_bytes_i
 
 
 # =========================================================== RouteDistinguisher
@@ -81,21 +82,22 @@ class RouteDistinguisher (object):
 	def fromElements (cls, prefix, suffix):
 		try:
 			if '.' in prefix:
-				data = [chr_(0),chr_(1)]
-				data.extend([chr_(int(_)) for _ in prefix.split('.')])
-				data.extend([chr_(suffix >> 8),chr_(suffix & 0xFF)])
-				distinguisher = b''.join(data)
+				data = [character(0),character(1)]
+				data.extend([character(int(_)) for _ in prefix.split('.')])
+				data.extend([character(suffix >> 8),character(suffix & 0xFF)])
+				distinguisher = concat_bytes_i(data)
 			else:
 				number = int(prefix)
 				if number < pow(2,16) and suffix < pow(2,32):
-					distinguisher = chr_(0) + chr_(0) + pack('!H',number) + pack('!L',suffix)
+					distinguisher = character(0) + character(0) + pack('!H',number) + pack('!L',suffix)
 				elif number < pow(2,32) and suffix < pow(2,16):
-					distinguisher = chr_(0) + chr_(2) + pack('!L',number) + pack('!H',suffix)
+					distinguisher = character(0) + character(2) + pack('!L',number) + pack('!H',suffix)
 				else:
 					raise ValueError('invalid route-distinguisher %s' % number)
 
 			return cls(distinguisher)
 		except ValueError:
 			raise ValueError('invalid route-distinguisher %s:%s' % (prefix,suffix))
+
 
 RouteDistinguisher.NORD = RouteDistinguisher(b'')

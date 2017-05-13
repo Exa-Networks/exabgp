@@ -11,7 +11,7 @@ from struct import unpack
 
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.notification import Notify
-from exabgp.util import ord_
+from exabgp.util import ordinal
 
 #  https://tools.ietf.org/html/rfc5305#section-3.3
 #   This sub-TLV contains a single IPv4 address for a neighboring router
@@ -23,8 +23,8 @@ from exabgp.util import ord_
 #   this sub-TLV.
 # ================================================================== NeighborAddress
 
-class NeighAddr (object):
 
+class NeighAddr (object):
 	def __init__ (self, addr, packed=None):
 		self.addr = addr
 		self._packed = packed
@@ -35,7 +35,7 @@ class NeighAddr (object):
 			# IPv4 address
 			addr = IP.unpack(data[:4])
 		elif len(data) == 16:
-    		# IPv6
+			# IPv6
 			addr = IP.unpack(data[:16])
 		return cls(addr=addr)
 
@@ -46,7 +46,7 @@ class NeighAddr (object):
 		return content
 
 	def __eq__ (self, other):
-    		return self.addr == other.addr
+		return self.addr == other.addr
 
 	def __neq__ (self, other):
 		return self.addr != other.addr
@@ -64,7 +64,7 @@ class NeighAddr (object):
 		raise RuntimeError('Not implemented')
 
 	def __str__ (self):
-		return ':'.join('%02X' % ord_(_) for _ in self._packed)
+		return ':'.join('%02X' % ordinal(_) for _ in self._packed)
 
 	def __repr__ (self):
 		return self.__str__()

@@ -10,7 +10,7 @@ from struct import unpack
 
 from exabgp.configuration.environment import environment
 
-from exabgp.util import ord_
+from exabgp.util import ordinal
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
 from exabgp.bgp.message.update.attribute.attribute import Discard
@@ -24,16 +24,18 @@ from exabgp.bgp.message.update.attribute.community import Communities
 
 from exabgp.bgp.message.notification import Notify
 
-from exabgp.util import ord_
+from exabgp.util import ordinal
 
 from exabgp.logger import Logger
 from exabgp.logger import LazyAttribute
 
 from exabgp.vendoring import six
 
+
 class _NOTHING (object):
 	def pack (self, _=None):
 		return b''
+
 
 NOTHING = _NOTHING()
 
@@ -242,8 +244,8 @@ class Attributes (dict):
 			Attribute.CODE.LOCAL_PREF: lambda l,r,nh: l != r,
 		}
 
-		keys = self.keys()
-		alls = set(keys + default.keys() if with_default else [])
+		keys = list(self)
+		alls = set(keys + list(default) if with_default else [])
 
 		for code in sorted(alls):
 			if code in Attributes.INTERNAL:
@@ -304,14 +306,14 @@ class Attributes (dict):
 
 	@staticmethod
 	def flag_attribute_content (data):
-		flag = Attribute.Flag(ord_(data[0]))
-		attr = Attribute.CODE(ord_(data[1]))
+		flag = Attribute.Flag(ordinal(data[0]))
+		attr = Attribute.CODE(ordinal(data[1]))
 
 		if flag & Attribute.Flag.EXTENDED_LENGTH:
 			length = unpack('!H',data[2:4])[0]
 			return flag, attr, data[4:length+4]
 		else:
-			length = ord_(data[2])
+			length = ordinal(data[2])
 			return flag, attr, data[3:length+3]
 
 	def parse (self, data, negotiated):
@@ -320,19 +322,19 @@ class Attributes (dict):
 
 		try:
 			# We do not care if the attribute are transitive or not as we do not redistribute
-			flag = Attribute.Flag(ord_(data[0]))
-			aid = Attribute.CODE(ord_(data[1]))
+			flag = Attribute.Flag(ordinal(data[0]))
+			aid = Attribute.CODE(ordinal(data[1]))
 		except IndexError:
 			self.add(TreatAsWithdraw())
 			return self
 
 		try:
 			offset = 3
-			length = ord_(data[2])
+			length = ordinal(data[2])
 
 			if flag & Attribute.Flag.EXTENDED_LENGTH:
 				offset = 4
-				length = (length << 8) + ord_(data[3])
+				length = (length << 8) + ordinal(data[3])
 		except IndexError:
 			self.add(TreatAsWithdraw(aid))
 			return self

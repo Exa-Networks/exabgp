@@ -8,6 +8,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import sys
 
+from exabgp.vendoring import six
+
 from exabgp.logger import Logger
 
 from exabgp.configuration.core import Error
@@ -38,7 +40,7 @@ from exabgp.configuration.operational import ParseOperational
 from exabgp.configuration.environment import environment
 
 
-if sys.version_info[0]>=3:
+if sys.version_info[0] >= 3:
 	StandardError = Exception
 
 
@@ -123,7 +125,7 @@ class Configuration (_Configuration):
 		self.flow_route          = ParseFlowRoute        (*params)
 		self.flow_match          = ParseFlowMatch        (*params)
 		self.flow_then           = ParseFlowThen         (*params)
-		self.flow_scope		 = ParseFlowScope	 (*params)	
+		self.flow_scope		 = ParseFlowScope	 (*params)
 		self.l2vpn               = ParseL2VPN            (*params)
 		self.vpls                = ParseVPLS             (*params)
 		self.operational         = ParseOperational      (*params)
@@ -307,7 +309,7 @@ class Configuration (_Configuration):
 		self.flow_route.clear()
 		self.flow_match.clear()
 		self.flow_then.clear()
-		self.flow_scope.clear()	
+		self.flow_scope.clear()
 		self.l2vpn.clear()
 		self.vpls.clear()
 		self.operational.clear()
@@ -390,7 +392,7 @@ class Configuration (_Configuration):
 		return True
 
 	def _link (self):
-		for neighbor in self.neighbors.itervalues():
+		for neighbor in six.itervalues(self.neighbors):
 			api = neighbor.api
 			for process in api.get('processes',[]):
 				self.processes.setdefault(process,{})['neighbor-changes'] = api['neighbor-changes']

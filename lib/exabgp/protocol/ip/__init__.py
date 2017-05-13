@@ -8,6 +8,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import socket
 
+from exabgp.util import ordinal
+
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
@@ -212,7 +214,7 @@ class IPv4 (IP):
 		return not self.multicast()
 
 	def multicast (self):
-		return ord(self._packed[0]) in set(range(224,240))  # 239 is last
+		return ordinal(self._packed[0]) in set(range(224,240))  # 239 is last
 
 	def ipv4 (self):
 		return True

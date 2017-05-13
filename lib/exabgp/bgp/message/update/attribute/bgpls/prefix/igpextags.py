@@ -21,7 +21,6 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #     https://tools.ietf.org/html/rfc7752#section-3.3.3.3
 
 
-
 @LINKSTATE.register()
 class IgpExTags(object):
 	TLV = 1154
@@ -45,4 +44,3 @@ class IgpExTags(object):
 
 	def json (self,compact=None):
 		return '"igp-extended-route-tags": "%s"' % str(self.igpextags)
-

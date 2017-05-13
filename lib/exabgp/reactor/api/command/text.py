@@ -20,21 +20,24 @@ from exabgp.configuration.static import ParseStaticRoute
 from exabgp.version import version as _version
 from exabgp.configuration.environment import environment
 
+
 class Text (object):
 	callback = {}
 
 	def __new__ (cls,name):
 		def register (function):
 			cls.callback[name] = function
+			function.func_name = name.replace(' ','_')
 			return function
 		return register
+
 
 def _show_routes_callback(reactor, service, last, route_type, advertised, extensive):
 	def callback ():
 		families = None
 		lines_per_yield = environment.settings().api.chunk
 		if last in ('routes', 'extensive', 'static', 'flow', 'l2vpn'):
-			peers = reactor.peers.keys()
+			peers = list(reactor.peers)
 		else:
 			peers = [n for n in reactor.peers.keys() if 'neighbor %s' % last in n]
 		for key in peers:
@@ -55,6 +58,7 @@ def _show_routes_callback(reactor, service, last, route_type, advertised, extens
 				yield True
 		reactor.answer(service,'done')
 	return callback
+
 
 @Text('shutdown')
 def shutdown (self, reactor, service, command):
@@ -142,6 +146,7 @@ def show_neighbors (self, reactor, service, command):
 	reactor.plan(callback(),'show_neighbors')
 	return True
 
+
 @Text('show neighbor status')
 def show_neighbor_status (self, reactor, service, command):
 	def callback ():
@@ -195,7 +200,7 @@ def show_routes_flow (self, reactor, service, command):
 
 
 @Text('show routes l2vpn')
-def show_routes_flow (self, reactor, service, command):
+def show_routes_l2vpn (self, reactor, service, command):
 	last = command.split()[-1]
 	callback = _show_routes_callback(reactor, service, last, (VPLS, EVPN), True, True)
 	reactor.plan(callback(), 'show_routes_l2vpn')

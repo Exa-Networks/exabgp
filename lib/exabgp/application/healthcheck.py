@@ -82,6 +82,7 @@ except ImportError:
         )
         sys.exit(1)
 
+
 def enum(*sequential):
     """Create a simple enumeration."""
     return type(str("Enum"), (), dict(zip(sequential, sequential)))
@@ -166,7 +167,7 @@ def parse():
                    help="don't setup missing IP addresses")
     g.add_argument("--dynamic-ip-setup", default=False,
                    action="store_true", dest="ip_dynamic",
-                   help="delete existing loopback ips on state down and "\
+                   help="delete existing loopback ips on state down and "
                         "disabled, then restore loopback when up")
     g.add_argument("--label", default=None,
                    help="use the provided label to match loopback addresses")
@@ -329,7 +330,7 @@ def setup_ips(ips, label, sudo=False):
                 cmd, stdout=fnull, stderr=fnull)
 
     # If we setup IPs we should also remove them on SIGTERM
-    def sigterm_handler(signum, frame): # pylint: disable=W0612,W0613
+    def sigterm_handler(signum, frame):  # pylint: disable=W0612,W0613
         remove_ips(ips, label, sudo)
         sys.exit(0)
 
@@ -605,6 +606,7 @@ def main():
     except Exception as e:  # pylint: disable=W0703
         logger.exception("Uncaught exception: %s", e)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

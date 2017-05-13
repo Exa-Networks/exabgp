@@ -23,7 +23,8 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #     https://tools.ietf.org/html/rfc7752#section-3.3.2.6 Opaque Link Attribute TLV
 #
-#	This TLV is added here for completeness but we don't look into the TLV.
+# This TLV is added here for completeness but we don't look into the TLV.
+
 
 @LINKSTATE.register()
 class LinkOpaque(object):

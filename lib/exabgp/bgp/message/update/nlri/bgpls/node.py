@@ -13,7 +13,6 @@ from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 
-
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 #     +-+-+-+-+-+-+-+-+
@@ -40,10 +39,10 @@ class NODE(BGPLS):
 	NAME = "Node NLRI"
 	SHORT_NAME = "Node"
 
-
-	def __init__ (self, domain, proto_id, node_ids,
-				packed=None,nexthop=None,action=None,
-				route_d=None,addpath=None):
+	def __init__ (
+			self, domain, proto_id, node_ids,
+			packed=None,nexthop=None,action=None,
+			route_d=None,addpath=None):
 		BGPLS.__init__(self,action,addpath)
 		self.domain = domain
 		self.proto_id = proto_id
@@ -67,7 +66,7 @@ class NODE(BGPLS):
 
 	@classmethod
 	def unpack (cls, data, rd):
-		proto_id = unpack('!B',data[0])[0]
+		proto_id = unpack('!B',data[0:1])[0]
 		if proto_id not in PROTO_CODES.keys():
 			raise Exception('Protocol-ID {} is not valid'.format(proto_id))
 		domain = unpack('!Q',data[1:9])[0]
@@ -75,8 +74,10 @@ class NODE(BGPLS):
 		# unpack list of node descriptors
 		node_type, node_length = unpack('!HH',data[9:13])
 		if node_type != 256:
-			raise Exception('Unknown type: {}. Only Local Node descriptors are allowed in'
-				'Node type msg'.format(node_type))
+			raise Exception(
+				'Unknown type: {}. Only Local Node descriptors are allowed in'
+				'Node type msg'.format(node_type)
+			)
 		values = data[13: 13 + node_length]
 
 		node_ids = []
@@ -88,8 +89,10 @@ class NODE(BGPLS):
 				raise RuntimeError("sub-calls should consume data")
 			values = left
 
-		return cls(domain=domain,proto_id=proto_id,
-				node_ids=node_ids,route_d=rd,packed=data)
+		return cls(
+			domain=domain,proto_id=proto_id,
+			node_ids=node_ids,route_d=rd,packed=data
+		)
 
 	def __eq__ (self, other):
 		return \

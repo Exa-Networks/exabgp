@@ -1,3 +1,6 @@
+from exabgp.util import character
+from exabgp.util import concat_bytes_i
+
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI
 
@@ -54,7 +57,7 @@ def source (tokeniser):
 	data = tokeniser()
 	if data.count('.') == 3 and data.count(':') == 0:
 		ip,netmask = data.split('/')
-		raw = ''.join(chr(int(_)) for _ in ip.split('.'))
+		raw = concat_bytes_i(character(int(_)) for _ in ip.split('.'))
 		yield Flow4Source(raw,int(netmask))
 	elif data.count('/') == 1:
 		ip,netmask = data.split('/')
@@ -69,7 +72,7 @@ def destination (tokeniser):
 	data = tokeniser()
 	if data.count('.') == 3 and data.count(':') == 0:
 		ip,netmask = data.split('/')
-		raw = ''.join(chr(int(_)) for _ in ip.split('.'))
+		raw = concat_bytes_i(character(int(_)) for _ in ip.split('.'))
 		yield Flow4Destination(raw,int(netmask))
 	elif data.count('/') == 1:
 		ip,netmask = data.split('/')
@@ -120,13 +123,13 @@ def _operator_binary (string):
 
 
 def _value (string):
-	l = 0
+	ls = 0
 	for c in string:
 		if c not in ['&',]:
-			l += 1
+			ls += 1
 			continue
 		break
-	return string[:l],string[l:]
+	return string[:ls],string[ls:]
 
 
 # parse [ content1 content2 content3 ]
@@ -308,6 +311,7 @@ def action (tokeniser):
 
 	return ExtendedCommunities().add(TrafficAction(sample,terminal))
 
+
 def _interface_set (data):
 	if data.count(':') != 3:
 		raise ValueError('not a valid format %s' % data)
@@ -337,6 +341,7 @@ def _interface_set (data):
 	if route_target >= pow(2,14):
 		raise ValueError('group-id is a 14 bits number, value too large %s' % route_target)
 	return InterfaceSet(trans,asn,route_target,int_direction)
+
 
 def interface_set (tokeniser):
 	communities = ExtendedCommunities()

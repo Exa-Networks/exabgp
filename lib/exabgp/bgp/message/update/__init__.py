@@ -9,7 +9,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from struct import pack
 from struct import unpack
 
-from exabgp.util import concat_strs
+from exabgp.util import character
+from exabgp.util import concat_bytes
 
 from exabgp.protocol.ip import NoNextHop
 from exabgp.protocol.family import AFI
@@ -55,10 +56,11 @@ from exabgp.logger import LazyFormat
 # |   Prefix (variable)       |
 # +---------------------------+
 
+
 @Message.register
 class Update (Message):
 	ID = Message.CODE.UPDATE
-	TYPE = chr(Message.CODE.UPDATE)
+	TYPE = character(Message.CODE.UPDATE)
 	EOR = False
 
 	def __init__ (self, nlris, attributes):
@@ -73,7 +75,7 @@ class Update (Message):
 	@staticmethod
 	def prefix (data):
 		# This function needs renaming
-		return concat_strs(pack('!H',len(data)),data)
+		return concat_bytes(pack('!H',len(data)),data)
 
 	@staticmethod
 	def split (data):
@@ -122,7 +124,7 @@ class Update (Message):
 		attr = self.attributes.pack(negotiated, True)
 
 		# Withdraws/NLRIS (IPv4 unicast and multicast)
-		msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr) # 2 bytes for each of the two prefix() header
+		msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
 		withdraws = b''
 		announced = b''
 		for nlri in nlris:
@@ -167,7 +169,7 @@ class Update (Message):
 							withdraws = b''
 						mp_unreach = mpurnlri
 
-				yield self._message(Update.prefix(withdraws) + Update.prefix(attr + mp_unreach + mp_reach) + announced) # yield mpr/mpur per family
+				yield self._message(Update.prefix(withdraws) + Update.prefix(attr + mp_unreach + mp_reach) + announced)  # yield mpr/mpur per family
 				withdraws = b''
 				announced = b''
 		else:

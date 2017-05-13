@@ -8,12 +8,12 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import os
 import sys
-from exabgp.util.panic import panic
-from exabgp.util.panic import footer
+from exabgp.util.panic import PANIC
+from exabgp.util.panic import FOOTER
 
 
 def bug_report (dtype, value, trace):
-	print(panic)
+	print(PANIC)
 
 	import traceback
 
@@ -29,7 +29,7 @@ def bug_report (dtype, value, trace):
 	print(logger.history())
 	print("\n\n\n")
 
-	print(footer)
+	print(FOOTER)
 
 
 def intercept (dtype, value, trace):

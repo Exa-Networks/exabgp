@@ -1,10 +1,13 @@
 from __future__ import print_function
 
-import struct
 import sys
 import json
+import string
 
-from exabgp.util import chr_
+from exabgp.util import character
+from exabgp.util import ordinal
+from exabgp.util import concat_bytes_i
+from exabgp.util import hexstring
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message import Open
@@ -90,18 +93,19 @@ class Transcoder (object):
 		category = parsed['neighbor']['message']['category']
 		header = parsed['neighbor']['message']['header']
 		body = parsed['neighbor']['message']['body']
-		raw = b''.join(chr_(int(body[_:_+2],16)) for _ in range(0,len(body),2))
+		data = concat_bytes_i(character(int(body[_:_+2],16)) for _ in range(0,len(body),2))
 
 		if content == 'open':
-			message = Open.unpack_message(raw)
+			message = Open.unpack_message(data)
 			self._open(direction,message)
 			return self.encoder.open(neighbor,direction,message,header,body)
 
-		if content == 'keapalive':
+		if content == 'keepalive':
 			return self.encoder.keepalive(neighbor,direction,header,body)
 
 		if content == 'notification':
-			message = Notification.unpack_message(raw)
+			# XXX: Use the code of the Notifcation class here ..
+			message = Notification.unpack_message(data)
 
 			if (message.code, message.subcode) != (6, 2):
 				message.data = data if not len([_ for _ in data if _ not in string.printable]) else hexstring(data)
@@ -114,7 +118,7 @@ class Transcoder (object):
 
 			# draft-ietf-idr-shutdown or the peer was using 6,2 with data
 
-			shutdown_length  = ord(data[0])
+			shutdown_length  = ordinal(data[0])
 			data = data[1:]
 
 			if shutdown_length == 0:
@@ -137,7 +141,6 @@ class Transcoder (object):
 				message.data = "invalid Shutdown Communication (invalid UTF-8) length : %i [%s]" % (shutdown_length, hexstring(data))
 				return self.encoder.notification(neighbor,direction,message,header,body)
 
-
 			trailer = data[shutdown_length:]
 			if trailer:
 				message.data += ", trailing data: " + hexstring(trailer)
@@ -148,7 +151,7 @@ class Transcoder (object):
 			print('invalid message sequence, open not exchange not complete', json_string, file=sys.stderr)
 			sys.exit(1)
 
-		message = Message.unpack(category,raw,self.negotiated)
+		message = Message.unpack(category,data,self.negotiated)
 
 		if content == 'update':
 			return self.encoder.update(neighbor, direction, message, header,body)

@@ -11,9 +11,9 @@ from struct import unpack
 
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.notification import Notify
-from exabgp.util import ord_
+from exabgp.util import ordinal
 
-#		https://tools.ietf.org/html/rfc7752#section-3.2.3
+#     https://tools.ietf.org/html/rfc7752#section-3.2.3
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -23,14 +23,13 @@ from exabgp.util import ord_
 #     |  Route Type   |
 #     +-+-+-+-+-+-+-+-+
 
-# 	Route Type can be:
+#  Route Type can be:
 #    Intra-Area (0x1)
-#	 Inter-Area (0x2)
-#	 External 1 (0x3)
-#	 External 2 (0x4)
-#	 NSSA 1 (0x5)
-#	 NSSA 2 (0x6)
-
+#    Inter-Area (0x2)
+#    External 1 (0x3)
+#    External 2 (0x4)
+#    NSSA 1 (0x5)
+#    NSSA 2 (0x6)
 
 # ================================================================== OSPF_ROUTE_TYPE
 
@@ -44,8 +43,8 @@ OSPF_ROUTE = {
 	6:	'nssa-2'
 }
 
-class OspfRoute(object):
 
+class OspfRoute(object):
 	def __init__ (self, ospf_type, packed=None):
 		self.ospf_type = ospf_type
 		self._packed = packed
@@ -53,7 +52,7 @@ class OspfRoute(object):
 	@classmethod
 	def unpack (cls, data):
 		if len(data) == 1:
-			ospf_type = unpack('!B',data[0])[0]
+			ospf_type = unpack('!B',data[0:1])[0]
 		return cls(ospf_type=ospf_type)
 
 	def json (self):
@@ -61,7 +60,7 @@ class OspfRoute(object):
 		return content
 
 	def __eq__ (self, other):
-    		return self.ospf_type == other.ospf_type
+		return self.ospf_type == other.ospf_type
 
 	def __neq__ (self, other):
 		return self.ospf_type != other.ospf_type
@@ -79,7 +78,7 @@ class OspfRoute(object):
 		raise RuntimeError('Not implemented')
 
 	def __str__ (self):
-		return ':'.join('%02X' % ord_(_) for _ in self._packed)
+		return ':'.join('%02X' % ordinal(_) for _ in self._packed)
 
 	def __repr__ (self):
 		return self.__str__()

@@ -11,8 +11,6 @@ from exabgp.protocol.ip import IP
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 
-
-
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -21,6 +19,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #     //                Forwarding Address (variable)                //
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #     https://tools.ietf.org/html/rfc7752#section-3.3.3.5
+
 
 @LINKSTATE.register()
 class OspfForwardingAddress(object):
@@ -35,10 +34,10 @@ class OspfForwardingAddress(object):
 	@classmethod
 	def unpack (cls,data,length):
 		if len(data) == 4:
-    		# IPv4 address
+			# IPv4 address
 			addr = IP.unpack(data[:4])
 		elif len(data) == 16:
-    		# IPv6
+			# IPv6
 			addr = IP.unpack(data[:16])
 		else:
 			raise Notify(3,5, "Error parsing OSPF Forwarding Address. Wrong size")

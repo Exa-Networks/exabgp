@@ -12,7 +12,7 @@ from struct import unpack
 from exabgp.protocol.ip import IP
 from exabgp.protocol.iso import ISO
 from exabgp.bgp.message.notification import Notify
-from exabgp.util import ord_
+from exabgp.util import ordinal
 
 #           +--------------------+-------------------+----------+
 #           | Sub-TLV Code Point | Description       |   Length |
@@ -32,12 +32,12 @@ NODE_TLVS = {
 	515:	'igp-rid',
 }
 
+
 # TODO
 # 3.2.1.5.  Multi-Topology ID
-class NodeDescriptor (object):
 
-	def __init__ (self, node_id, dtype,
-		psn=None, dr_id=None, packed=None):
+class NodeDescriptor (object):
+	def __init__ (self, node_id, dtype, psn=None, dr_id=None, packed=None):
 		self.node_id = node_id
 		self.dtype = dtype
 		self.psn = psn
@@ -51,42 +51,66 @@ class NodeDescriptor (object):
 			raise Exception("Unknown Node Descriptor Sub-TLV")
 		# OSPF Area-ID
 		if dtype == 514:
-			return cls(node_id=IP.unpack(data[4: 4 + dlength]),
-					dtype=dtype,packed=data[:4+dlength]), data[4 + dlength:]
+			return cls(
+				node_id=IP.unpack(data[4: 4 + dlength]),
+				dtype=dtype,
+				packed=data[:4+dlength]
+			), data[4 + dlength:]
 		# IGP Router-ID: The TLV size in combination with the protocol
 		# identifier enables the decoder to determine the type
 		# of the node: sec 3.2.1.4.
 		elif dtype == 515:
-    		# OSPFv{2,3} non-pseudonode
+			# OSPFv{2,3} non-pseudonode
 			if (igp == 3 or igp == 6) and dlength == 4:
 				r_id = IP.unpack(data[4: 4 + 4])
-				return cls(node_id=r_id, dtype=dtype,
-						packed=data[:4+dlength]), data[4 + 4:]
+				return cls(
+					node_id=r_id,
+					dtype=dtype,
+					packed=data[:4+dlength]
+				), data[4 + 4:]
 			# OSPFv{2,3} LAN pseudonode
 			if (igp == 3 or igp == 6) and dlength == 8:
 				r_id = IP.unpack(data[4: 4 + 4])
 				dr_id = IP.unpack(data[8: 4 + 8])
-				return cls(node_id=r_id,dtype=dtype,psn=None,
-						dr_id=dr_id,packed=data[:4+dlength]), data[4 + 8:]
+				return cls(
+					node_id=r_id,
+					dtype=dtype,
+					psn=None,
+					dr_id=dr_id,
+					packed=data[:4+dlength]
+				), data[4 + 8:]
 			# IS-IS non-pseudonode
 			if (igp == 1 or igp == 2) and dlength == 6:
-				return cls(node_id=ISO.unpack_sysid(data[4: 4 + 6]),
-					dtype=dtype,packed=data[:4+dlength]), data[4 + 6:]
+				return cls(
+					node_id=ISO.unpack_sysid(data[4: 4 + 6]),
+					dtype=dtype,
+					packed=data[:4+dlength]
+				), data[4 + 6:]
 			# IS-IS LAN pseudonode = ISO Node-ID + PSN
 			# Unpack ISO address
 			if (igp == 1 or igp == 2) and dlength == 7:
 				iso_node = ISO.unpack_sysid(data[4: 4 + 6])
 				psn = unpack('!B', data[4 + 6: 4 + 7])[0]
-				return cls(node_id=iso_node,dtype=dtype,
-						psn=psn,packed=data[:4+dlength]), data[4 + 7:]
+				return cls(
+					node_id=iso_node,
+					dtype=dtype,
+					psn=psn,
+					packed=data[:4+dlength]
+				), data[4 + 7:]
 		elif dtype == 512 and dlength == 4:
-    		# ASN
-			return cls(node_id=unpack('!L', data[4: 4 + dlength])[0],
-					dtype=dtype,packed=data[:4+dlength]), data[4 + 4:]
+			# ASN
+			return cls(
+				node_id=unpack('!L', data[4: 4 + dlength])[0],
+				dtype=dtype,
+				packed=data[:4+dlength]
+			), data[4 + 4:]
 		elif dtype == 513 and dlength == 4:
-    		# BGP-LS
-			return cls(node_id=unpack('!L',data[4: 4 + dlength])[0],
-					dtype=dtype,packed=data[:4+dlength]), data[4 + 4:]
+			# BGP-LS
+			return cls(
+				node_id=unpack('!L',data[4: 4 + dlength])[0],
+				dtype=dtype,
+				packed=data[:4+dlength]
+			), data[4 + 4:]
 		else:
 			raise Notify(3,5,'could not decode Local Node descriptor')
 
@@ -113,8 +137,7 @@ class NodeDescriptor (object):
 		return content
 
 	def __eq__ (self, other):
-    		return isinstance(other, NodeDescriptor) and \
-					self.node_id == other.node_id
+		return isinstance(other, NodeDescriptor) and self.node_id == other.node_id
 
 	def __neq__ (self, other):
 		return self.node_id != other.node_id
@@ -145,5 +168,3 @@ class NodeDescriptor (object):
 
 	def pack (self):
 		return self._packed
-
-

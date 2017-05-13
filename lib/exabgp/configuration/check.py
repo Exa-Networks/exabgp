@@ -11,6 +11,10 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 import sys
 import traceback
 
+from exabgp.util import character
+from exabgp.util import ordinal
+from exabgp.util import concat_bytes_i
+
 from exabgp.bgp.message import Update
 from exabgp.bgp.message import Open
 from exabgp.bgp.message.open import Version
@@ -43,7 +47,7 @@ from exabgp.bgp.message import Notification
 from exabgp.version import json as json_version
 
 
-if sys.version_info[0]>=3:
+if sys.version_info[0] >= 3:
 	StandardError = Exception
 
 # =============================================================== check_neighbor
@@ -97,7 +101,7 @@ def check_neighbor (neighbors):
 			try:
 				logger.parser('')  # new line
 
-				pack1s = pack1[19:] if pack1.startswith('\xFF'*16) else pack1
+				pack1s = pack1[19:] if pack1.startswith(b'\xFF'*16) else pack1
 				update = Update.unpack_message(pack1s,negotiated)
 
 				change2 = Change(update.nlris[0],update.attributes)
@@ -166,12 +170,12 @@ def check_neighbor (neighbors):
 
 def check_message (neighbor, message):
 	message = message.replace(':','')
-	raw = b''.join(chr(int(_,16)) for _ in (message[i*2:(i*2)+2] for i in range(len(message)/2)))
+	raw = concat_bytes_i(character(int(_,16)) for _ in (message[i*2:(i*2)+2] for i in range(len(message)/2)))
 
 	if raw.startswith('\xff'*16):
-		kind = ord(raw[18])
+		kind = ordinal(raw[18])
 		# XXX: FIXME: check size
-		# size = (ord(raw[16]) << 16) + (ord(raw[17]))
+		# size = (ordinal(raw[16]) << 16) + (ordinal(raw[17]))
 
 		if kind == 1:
 			return check_open(neighbor,raw[18:])
@@ -198,7 +202,7 @@ def check_update (neighbor, raw):
 	logger._option.parser = True
 	logger.parser('\ndecoding routes in configuration')
 
-	neighbor = neighbor[neighbor.keys()[0]]
+	neighbor = neighbor[list(neighbor)[0]]
 
 	path = {}
 	for f in NLRI.known_families():
@@ -222,8 +226,8 @@ def check_update (neighbor, raw):
 
 	while raw:
 		if raw.startswith('\xff'*16):
-			kind = ord(raw[18])
-			size = (ord(raw[16]) << 16) + (ord(raw[17]))
+			kind = ordinal(raw[18])
+			size = (ordinal(raw[16]) << 16) + (ordinal(raw[17]))
 
 			injected,raw = raw[19:size],raw[size:]
 

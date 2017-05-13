@@ -16,7 +16,6 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 #     |O|T|E|B|R|V| Rsvd|
 #     +-+-+-+-+-+-+-+-+-+
 #     https://tools.ietf.org/html/rfc7752 Sec 3.3.1.1.  Node Flag Bits TLV
-
 #        +-----------------+-------------------------+------------+
 #        |       Bit       | Description             | Reference  |
 #        +-----------------+-------------------------+------------+
@@ -33,6 +32,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 @LINKSTATE.register()
 class NodeFlags(object):
 	TLV = 1024
+
 	def __init__ (self, nodeflags):
 		self.nodeflags = nodeflags
 

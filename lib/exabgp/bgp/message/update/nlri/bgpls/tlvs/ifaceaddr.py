@@ -9,10 +9,10 @@ Copyright (c) 2009-2016 Exa Networks. All rights reserved.
 from struct import unpack
 
 from exabgp.protocol.ip import IP
-from exabgp.util import ord_
+from exabgp.util import ordinal
 
-#		https://tools.ietf.org/html/rfc5305#section-3.2
-# 	This sub-TLV contains a 4-octet IPv4 address for the interface
+#   https://tools.ietf.org/html/rfc5305#section-3.2
+#   This sub-TLV contains a 4-octet IPv4 address for the interface
 #   described by the (main) TLV.  This sub-TLV can occur multiple times.
 #
 #
@@ -23,6 +23,7 @@ from exabgp.util import ord_
 #   This sub-TLV can occur multiple times.
 # ================================================================== InterfaceAddress
 
+
 class IfaceAddr (object):
 
 	def __init__ (self, iface_addr, packed=None):
@@ -32,10 +33,10 @@ class IfaceAddr (object):
 	@classmethod
 	def unpack (cls, data):
 		if len(data) == 4:
-    		# IPv4 address
+			# IPv4 address
 			addr = IP.unpack(data[:4])
 		elif len(data) == 16:
-    		# IPv6
+			# IPv6
 			addr = IP.unpack(data[:16])
 		return cls(iface_addr=addr)
 
@@ -43,7 +44,7 @@ class IfaceAddr (object):
 		return '"interface-address": "%s"' % self.iface_address
 
 	def __eq__ (self, other):
-    		return self.iface_address == other.iface_address
+		return self.iface_address == other.iface_address
 
 	def __neq__ (self, other):
 		return self.iface_address != other.iface_address
@@ -61,7 +62,7 @@ class IfaceAddr (object):
 		raise RuntimeError('Not implemented')
 
 	def __str__ (self):
-		return ':'.join('%02X' % ord_(_) for _ in self._packed)
+		return ':'.join('%02X' % ordinal(_) for _ in self._packed)
 
 	def __repr__ (self):
 		return self.__str__()

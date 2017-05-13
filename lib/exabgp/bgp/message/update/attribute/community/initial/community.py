@@ -85,6 +85,7 @@ class Community (object):
 			cls.cache[community] = instance
 		return instance
 
+
 # Always cache well-known communities, they will be used a lot
 if not Community.cache:
 	Community.cache[Community.NO_EXPORT] = Community(Community.NO_EXPORT)

@@ -160,5 +160,5 @@ class ParseVPLS (Section):
 			return self.error.set('vpls size inconsistency')
 		return True
 
-	def check (change):
+	def check (self,change):
 		return True

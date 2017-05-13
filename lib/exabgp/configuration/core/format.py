@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2014-06-22.
 Copyright (c) 2014-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.util import character
 from exabgp.util import coroutine
 
 
@@ -42,7 +43,7 @@ def unescape (string):
 		elif esc == 't':
 			yield '\t'
 		elif esc == 'u':
-			yield chr(int(string[pos + 1:pos + 5], 16))
+			yield character(int(string[pos + 1:pos + 5], 16))
 			pos += 4
 		else:
 			yield esc

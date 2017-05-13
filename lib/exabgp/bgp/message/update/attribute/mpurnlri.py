@@ -8,6 +8,9 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from struct import unpack
 
+from exabgp.util import concat_bytes
+from exabgp.util import concat_bytes_i
+
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.protocol.family import Family
@@ -18,6 +21,7 @@ from exabgp.bgp.message.update.nlri import NLRI
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability import Negotiated
+
 
 # ================================================================= MP NLRI (14)
 
@@ -49,26 +53,26 @@ class MPURNLRI (Attribute,Family):
 
 		mpurnlri = []
 		for nlri in self.nlris:
-			if nlri.family() != self.family(): # nlri is not part of specified family
+			if nlri.family() != self.family():  # nlri is not part of specified family
 				continue
 			mpurnlri.append(nlri.pack(negotiated))
 
-		payload = b''.join([self.afi.pack(), self.safi.pack()])
+		payload = concat_bytes(self.afi.pack(), self.safi.pack())
 		header_length = len(payload)
 		for nlri in mpurnlri:
 			if self._len(payload + nlri) > maximum:
 				if len(payload) == header_length or len(payload) > maximum:
 					raise Notify(6, 0, 'attributes size is so large we can not even pack on MPURNLRI')
 				yield self._attribute(payload)
-				payload = b''.join([self.afi.pack(), self.safi.pack(), nlri])
+				payload = concat_bytes(self.afi.pack(), self.safi.pack(), nlri)
 				continue
-			payload = b''.join([payload, nlri])
+			payload = concat_bytes(payload, nlri)
 		if len(payload) == header_length or len(payload) > maximum:
 			raise Notify(6, 0, 'attributes size is so large we can not even pack on MPURNLRI')
 		yield self._attribute(payload)
 
 	def pack (self, negotiated):
-		return b''.join(self.packed_attributes(negotiated))
+		return concat_bytes_i(self.packed_attributes(negotiated))
 
 	def __len__ (self):
 		raise RuntimeError('we can not give you the size of an MPURNLRI - was it with our witout addpath ?')
@@ -96,5 +100,6 @@ class MPURNLRI (Attribute,Family):
 			nlris.append(nlri)
 
 		return cls(afi,safi,nlris)
+
 
 EMPTY_MPURNLRI = MPURNLRI(AFI(AFI.undefined),SAFI(SAFI.undefined),[])

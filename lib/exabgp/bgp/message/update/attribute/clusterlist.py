@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2012-07-07.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.util import concat_bytes_i
+
 from exabgp.protocol.ip import IPv4
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
@@ -29,7 +31,7 @@ class ClusterList (Attribute):
 
 	def __init__ (self, clusters, packed=None):
 		self.clusters = clusters
-		self._packed = self._attribute(packed if packed else b''.join([_.pack() for _ in clusters]))
+		self._packed = self._attribute(packed if packed else concat_bytes_i(_.pack() for _ in clusters))
 		self._len = len(clusters)*4
 
 	def __eq__ (self, other):

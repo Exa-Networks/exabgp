@@ -7,7 +7,6 @@ Copyright (c) 2014-2016 Exa Networks. All rights reserved.
 """
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGenericFlags
-
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -16,7 +15,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 #     |L|R|  Reserved |
 #     +-+-+-+-+-+-+-+-+
 #     https://tools.ietf.org/html/rfc7752#section-3.3.2.2  MPLS Protocol Mask
-
+#
 #   +------------+------------------------------------------+-----------+
 #   |    Bit     | Description                              | Reference |
 #   +------------+------------------------------------------+-----------+

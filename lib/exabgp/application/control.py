@@ -16,6 +16,7 @@ import traceback
 
 from exabgp.reactor.network.error import error
 
+
 class Control (object):
 	terminating = False
 

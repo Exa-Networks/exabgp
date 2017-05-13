@@ -73,7 +73,7 @@ class Aggregator (Attribute):
 class Aggregator4 (Aggregator):
 	ID = Attribute.CODE.AS4_AGGREGATOR
 
-	if sys.version_info[0]<3:
+	if sys.version_info[0] < 3:
 		__slots__ = ['pack']
 
 	def pack (self, negotiated):

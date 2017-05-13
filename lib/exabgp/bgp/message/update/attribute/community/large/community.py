@@ -12,6 +12,7 @@ from exabgp.bgp.message.update.attribute import Attribute
 from struct import pack
 from struct import unpack
 
+
 class LargeCommunity (Attribute):
 	MAX = 0xFFFFFFFFFFFFFFFFFFFFFFFF
 

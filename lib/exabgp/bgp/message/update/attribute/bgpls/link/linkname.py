@@ -20,7 +20,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #     //                     Link Name (variable)                    //
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#	https://tools.ietf.org/html/rfc7752#section-3.3.2.7  Link Name TLV
+#     https://tools.ietf.org/html/rfc7752#section-3.3.2.7  Link Name TLV
 
 
 @LINKSTATE.register()
@@ -43,4 +43,3 @@ class LinkName(object):
 
 	def json (self,compact=None):
 		return '"link-name": "%s"' % self.linkname
-

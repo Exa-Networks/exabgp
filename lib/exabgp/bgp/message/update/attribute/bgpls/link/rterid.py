@@ -30,10 +30,10 @@ class RemoteTeRid(object):
 	@classmethod
 	def unpack (cls,data,length):
 		if len(data) == 4:
-    		# IPv4 address
+			# IPv4 address
 			terid = IP.unpack(data[:4])
 		elif len(data) == 16:
-    		# IPv6
+			# IPv6
 			terid = IP.unpack(data[:16])
 		return cls(terid=terid)
 

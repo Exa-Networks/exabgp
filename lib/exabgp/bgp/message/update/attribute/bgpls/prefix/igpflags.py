@@ -48,4 +48,3 @@ class IgpFlags(object):
 
 	def json (self,compact=None):
 		return '"igp-flags": "%s"' % str(self.igpflags)
-

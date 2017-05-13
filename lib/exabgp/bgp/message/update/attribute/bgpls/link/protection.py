@@ -14,7 +14,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 #      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #      |Protection Cap |    Reserved   |
 #      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#		https://tools.ietf.org/html/rfc5307 Sec 1.2
+#      https://tools.ietf.org/html/rfc5307 Sec 1.2
 #      0x01  Extra Traffic
 #      0x02  Unprotected
 #      0x04  Shared
@@ -27,6 +27,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGen
 @LINKSTATE.register()
 class LinkProtectionType(object):
 	TLV = 1093
+
 	def __init__ (self, protectionflags):
 		self.protectionflags = protectionflags
 
@@ -35,7 +36,6 @@ class LinkProtectionType(object):
 
 	@classmethod
 	def unpack (cls,data,length):
-
 		if length != 2:
 			raise Notify(3,5, "Wrong size for protection type TLV")
 		else:

@@ -8,8 +8,9 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 from struct import unpack
 
-from exabgp.util import ord_
-from exabgp.util import concat_strs
+from exabgp.util import character
+from exabgp.util import ordinal
+from exabgp.util import concat_bytes
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
 
@@ -51,7 +52,7 @@ from exabgp.bgp.message.open.capability import Capabilities
 @Message.register
 class Open (Message):
 	ID = Message.CODE.OPEN
-	TYPE = chr(Message.CODE.OPEN)
+	TYPE = character(Message.CODE.OPEN)
 
 	def __init__ (self, version, asn, hold_time, router_id, capabilities):
 		self.version = version
@@ -61,7 +62,7 @@ class Open (Message):
 		self.capabilities = capabilities
 
 	def message (self,negotiated=None):
-		return self._message(concat_strs(
+		return self._message(concat_bytes(
 			self.version.pack(),
 			self.asn.trans().pack(),
 			self.hold_time.pack(),
@@ -74,7 +75,7 @@ class Open (Message):
 
 	@classmethod
 	def unpack_message (cls, data, _=None):
-		version = ord_(data[0])
+		version = ordinal(data[0])
 		if version != 4:
 			# Only version 4 is supported nowdays..
 			raise Notify(2,1,data[0])
