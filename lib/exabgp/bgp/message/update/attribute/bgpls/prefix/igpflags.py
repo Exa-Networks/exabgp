@@ -5,13 +5,8 @@ igpflags.py
 Created by Evelio Vila on 2016-12-01.
 Copyright (c) 2014-2016 Exa Networks. All rights reserved.
 """
-import binascii
-import itertools
-
-from exabgp.vendoring.bitstring import BitArray
-
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGenericFlags
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -32,7 +27,6 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 #           | Reserved | Reserved for future use.  |           |
 #           +----------+---------------------------+-----------+
 
-
 @LINKSTATE.register()
 class IgpFlags(object):
 	TLV = 1152
@@ -45,20 +39,12 @@ class IgpFlags(object):
 
 	@classmethod
 	def unpack (cls,data,length):
-		igpflags = ['D', 'N', 'L', 'P']
+
 		if length > 1:
 			raise Notify(3,5, "IGP Flags TLV length too large")
 		else:
-			flag_array = binascii.b2a_hex(data[0])
-			hex_rep = hex(int(flag_array, 16))
-			bit_array = BitArray(hex_rep)
-			valid_flags = [''.join(item)+'0000' for item in itertools.product('01', repeat=4)]
-			valid_flags.append('0000')
-			if bit_array.bin in valid_flags:
-				flags = dict(zip(igpflags, bit_array.bin))
-				return cls(igpflags=flags)
-			else:
-				raise Notify(3,5, "Invalid IGP flags mask")
+			flags = LsGenericFlags.unpack(data[0],LsGenericFlags.LS_IGP_FLAGS)
+			return cls(igpflags=flags.flags)
 
 	def json (self,compact=None):
 		return '"igp-flags": "%s"' % str(self.igpflags)

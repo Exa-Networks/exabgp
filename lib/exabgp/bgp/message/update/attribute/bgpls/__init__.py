@@ -31,3 +31,10 @@ from exabgp.bgp.message.update.attribute.bgpls.prefix.igptags import IgpTags
 from exabgp.bgp.message.update.attribute.bgpls.prefix.opaque import PrefixOpaque
 from exabgp.bgp.message.update.attribute.bgpls.prefix.ospfaddr import OspfForwardingAddress
 from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixmetric import PrefixMetric
+from exabgp.bgp.message.update.attribute.bgpls.node.srcap import SrCapabilities
+from exabgp.bgp.message.update.attribute.bgpls.node.sralgo import SrAlgorithm
+from exabgp.bgp.message.update.attribute.bgpls.link.sradj import SrAdjacency
+from exabgp.bgp.message.update.attribute.bgpls.link.sradjlan import SrAdjacencyLan
+from exabgp.bgp.message.update.attribute.bgpls.prefix.srprefix import SrPrefix
+from exabgp.bgp.message.update.attribute.bgpls.prefix.srigpprefixattr import SrIgpPrefixAttr
+from exabgp.bgp.message.update.attribute.bgpls.prefix.srrid import SrSourceRouterID

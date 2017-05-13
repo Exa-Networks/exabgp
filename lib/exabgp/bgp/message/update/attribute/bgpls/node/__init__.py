@@ -7,13 +7,6 @@ Copyright (c) 2014-2016 Exa Networks. All rights reserved.
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 
-from exabgp.bgp.message.update.attribute.bgpls.node.nodename import NodeName
-from exabgp.bgp.message.update.attribute.bgpls.node.isisarea import IsisArea
-from exabgp.bgp.message.update.attribute.bgpls.node.nodeflags import NodeFlags
-from exabgp.bgp.message.update.attribute.bgpls.node.opaque import NodeOpaque
-from exabgp.bgp.message.update.attribute.bgpls.node.lterid import LocalTeRid
-
-
 #   +-------------+----------------------+----------+-------------------+
 #   |   TLV Code  | Description          |   Length | Reference         |
 #   |    Point    |                      |          | (RFC/Section)     |
@@ -32,3 +25,20 @@ from exabgp.bgp.message.update.attribute.bgpls.node.lterid import LocalTeRid
 #   |             | Local Node           |          |                   |
 #   +-------------+----------------------+----------+-------------------+
 #   https://tools.ietf.org/html/rfc7752#section-3.3.1 - Node Attribute TLVs
+#
+#
+from exabgp.bgp.message.update.attribute.bgpls.node.nodename import NodeName
+from exabgp.bgp.message.update.attribute.bgpls.node.isisarea import IsisArea
+from exabgp.bgp.message.update.attribute.bgpls.node.nodeflags import NodeFlags
+from exabgp.bgp.message.update.attribute.bgpls.node.opaque import NodeOpaque
+from exabgp.bgp.message.update.attribute.bgpls.node.lterid import LocalTeRid
+
+# draft-gredler-idr-bgp-ls-segment-routing-ext-03 extensions
+#      +----------------+-----------------+----------+---------------+
+#      | TLV Code Point | Description     | Length   |       Section |
+#      +----------------+-----------------+----------+---------------+
+#      |      1034      | SR Capabilities | variable | Section 2.1.1 |
+#      |      1035      | SR Algorithm    | variable | Section 2.1.2 |
+#      +----------------+-----------------+----------+---------------+
+from exabgp.bgp.message.update.attribute.bgpls.node.srcap import SrCapabilities
+from exabgp.bgp.message.update.attribute.bgpls.node.sralgo import SrAlgorithm
