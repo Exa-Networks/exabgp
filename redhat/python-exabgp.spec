@@ -15,7 +15,7 @@ Provides:       exabgp-libs
 
 BuildRequires:  python-setuptools
 Requires:       python2 >= 2.6
-Requires:	python-ipaddr
+Requires:       python-ipaddr
 
 %description
 ExaBGP python module
@@ -86,4 +86,3 @@ install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 %changelog
 * Tue Jun 09 2015 Arun Babu Neelicattu <arun.neelicattu@gmail.com> - 3.4.18-1
 - Initial release
-
