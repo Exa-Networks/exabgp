@@ -179,6 +179,26 @@ Version 4.0.0
  * Feature: Allow md5 password to be base64 encoded
     patch by: Brian Johnson
 
+Version 3.4.19
+ * Add: IPv6 nlri-mpls to list of enabled protocol (was missing)
+    requested by: adrian62
+ * Fix: encoding of Flow Label requiring more than 2 bytes
+    reported by: BLAKEMMM
+ * Fix: decoding of capability (was potentially over reading)
+ * Fix: trace when trying to access PID file and this is not allowed
+    reported by: George Shuklin
+ * Fix: Remove a peer's RIB cache when it is deleted from the config file
+    patch by: Brian Johnson
+ * Fix: do not crash the reactor when an invalid IP is passed via the API
+    reported by: Yevgeniy Ovsyannikov
+ * Fix: bad defintion of Flow for ICMPType, ICMPCode and Fragment
+    reported by: Christoph Loibl
+ * Feature: allow add-path for mpls-vpn
+    reported by: adrian62
+ * Change: Backported setup.py from master
+ * Feature: added SRPMS for exabgp
+    patch by: Leonardo Amaral
+
 Version 3.4.18
  * Backport: backhole community (RFC 7999)
     original patch by: Job Snijders
