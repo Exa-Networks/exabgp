@@ -29,12 +29,7 @@ json_version = '3.4.8'
 text_version = '3.3.2'
 
 version_template = """\
-import os
-
-release = "%s"
-json = "%s"
-text = "%s"
-version = os.environ.get('EXABGP_VERSION',release)
+version = "%s"
 
 # Do not change the first line as it is parsed by scripts
 
@@ -174,9 +169,11 @@ if sys.argv[-1] == 'release':
 	print('figuring valid next release version')
 
 	tags = os.popen('git tag').read().split('-')[0].strip()
-	versions = [[int(_) for _ in tag.split('.')]  for tag in tags.split('\n')
-                    if tag.count('.') == 2 and tag[0].isdigit()]
-	latest = sorted(versions)[-1]
+	tagged_versions = [
+		[int(_) for _ in tag.split('.')]  for tag in tags.split('\n')
+		if tag.count('.') == 2 and tag[0].isdigit()
+	]
+	latest = sorted(tagged_versions)[-1]
 	next = [
 		'.'.join([str(_) for _ in (latest[0], latest[1], latest[2]+1)]),
 		'.'.join([str(_) for _ in (latest[0], latest[1]+1, 0)]),
