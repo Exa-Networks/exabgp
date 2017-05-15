@@ -102,14 +102,21 @@ if sys.argv[-1] == 'next':
 	sys.exit(0)
 
 def set_version ():
-	git_version = os.popen('git describe --tags').read().strip()
+	next_version = versions()[0]
+	git_version = os.popen('git rev-parse --short HEAD').read().strip()
+	full_version = "%s-%s" % (next_version,git_version)
 
 	with open(VERSION_PY,'w') as version_file:
-		version_file.write(version_template % (git_version,json_version,text_version))
+		version_file.write(version_template % (
+			full_version,
+			json_version,
+			text_version
+		))
 
 	version = imp.load_source('version',VERSION_PY).version
 
-	if version != git_version:
+	if version != full_version:
+		import pdb; pdb.set_trace()
 		print('version setting failed')
 		sys.exit(1)
 
