@@ -305,7 +305,7 @@ Version 3.4.12
  * Fix: notification messages were not passed to the API
     reported by: Florian Obser
  * Fix: transitivity on extended community
-    patch by: Thomas Morin 
+    patch by: Thomas Morin
  * Fix: bad reporting of VPLS information in JSON
  * Fix: wrong SAFI on MPLS routes
     reported by: Hideaki HAYASHI
@@ -313,7 +313,7 @@ Version 3.4.12
     reported by: Alvaro Pereira
  * Fix: decoding of Update
  * Fix: Flow redirect to nexhop encoding
-    reported by: Mickael Marchand (Thank you to Peng Xiao and Nicolas Fevrier for their help) 
+    reported by: Mickael Marchand (Thank you to Peng Xiao and Nicolas Fevrier for their help)
  * Fix/Improve: JSON for flow spec
  * Fix/Improve: redirect-to-nexthop
     reported by: Mickael Marchand
@@ -325,7 +325,7 @@ Version 3.4.11
     reported by: Orangefish on github
  * Fix: Shutdown when waiting for a new outgoing connection to establish
  * Fix: JSON counter
-    reported by: 
+    reported by:
  * Fix: JSON flow printing for source and destination
  * Fix: Do not always locate exabgp.env
     reported by: Florian Obser
