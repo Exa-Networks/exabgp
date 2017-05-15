@@ -288,7 +288,7 @@ if sys.argv[-1] in ('pypi'):
 	print()
 	print('updating PyPI')
 
-	command = "python setup.py sdist upload"
+	command = "python3 setup.py sdist upload"
 	print('\n>', command)
 
 	ret = dryrun or os.system(command)
@@ -299,7 +299,7 @@ if sys.argv[-1] in ('pypi'):
 
 	remove_egg()
 
-	command = "python setup.py bdist_wheel upload"
+	command = "python3 setup.py bdist_wheel upload"
 	print('\n>', command)
 
 	ret = dryrun or os.system(command)
