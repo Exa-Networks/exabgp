@@ -51,7 +51,7 @@ Installation
 Prerequisites
 -------------
 
-ExaBGP requires python 2.6 or 2.7. It has no external dependencies.
+ExaBGP requires python 2.7 or 3.x. It has no external dependencies.
 
 Using pip
 ---------
