@@ -70,6 +70,8 @@ group <groupname> {
       label ( <label> | [ <label> <label> ... ] );
       ( rd | route-distinguisher ) <route-distinguisher>;
       watchdog <watchdog-name>;
+      bgp-prefix-sid ( [<label-index-value>] |
+         [ <label-index-value>, [ ( <srgb-base_1>,<srgb-range_1> ), ... ] ]);
       withdraw;
     }
     // or alternatively

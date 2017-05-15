@@ -52,6 +52,7 @@ from exabgp.configuration.static.parser import watchdog
 from exabgp.configuration.static.parser import withdraw
 from exabgp.configuration.static.mpls import route_distinguisher
 from exabgp.configuration.static.mpls import label
+from exabgp.configuration.static.mpls import prefix_sid
 
 
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
@@ -76,6 +77,7 @@ class ParseStaticRoute (Section):
 		'originator-id <ipv4>',
 		'cluster-list <ipv4>',
 		'label <15 bits number>',
+		'bgp-prefix-sid [ 32 bits number> ] | [ <32 bits number>, [ ( <24 bits number>,<24 bits number> ) ]]',
 		'aggregator ( <asn16>:<ipv4> )',
 		'aigp <40 bits number>',
 		'attribute [ generic attribute format ]'
@@ -94,6 +96,7 @@ class ParseStaticRoute (Section):
 		'rd':                  route_distinguisher,
 		'route-distinguisher': route_distinguisher,
 		'label':               label,
+		'bgp-prefix-sid':      prefix_sid,
 		'attribute':           attribute,
 		'next-hop':            next_hop,
 		'origin':              origin,
@@ -119,6 +122,7 @@ class ParseStaticRoute (Section):
 		'rd':                  'nlri-set',
 		'route-distinguisher': 'nlri-set',
 		'label':               'nlri-set',
+		'bgp-prefix-sid':      'attribute-add',
 		'attribute':           'attribute-add',
 		'next-hop':            'nexthop-and-attribute',
 		'origin':              'attribute-add',

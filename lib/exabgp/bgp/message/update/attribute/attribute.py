@@ -109,9 +109,10 @@ class Attribute (object):
 		AIGP               = 0x1A  # 26
 		# RFC7752
 		BGP_LS             = 0x1D  # 29
-
 		# draft-ietf-idr-large-community
 		LARGE_COMMUNITY    = 0x20  # 32
+		# draft-ietf-idr-bgp-prefix-sid
+		BGP_PREFIX_SID	   = 0x28  # 40
 
 		INTERNAL_NAME              = 0xFFFA
 		INTERNAL_WITHDRAW          = 0xFFFB
@@ -141,7 +142,8 @@ class Attribute (object):
 			PMSI_TUNNEL:        'pmsi-tunnel',
 			TUNNEL_ENCAP:       'tunnel-encaps',
 			AIGP:               'aigp',
-			BGP_LS:				'bgp-ls',
+			BGP_LS:             'bgp-ls',
+			BGP_PREFIX_SID:     'bgp-prefix-sid',
 			0xfffa:             'internal-name',
 			0xfffb:             'internal-withdraw',
 			0xfffc:             'internal-watchdog',
