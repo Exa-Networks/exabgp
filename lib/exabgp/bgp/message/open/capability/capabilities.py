@@ -57,6 +57,14 @@ class Parameter (int):
 
 
 class Capabilities (dict):
+	_ADD_PATH = [
+		(AFI(AFI.ipv4),SAFI(SAFI.unicast)),
+		(AFI(AFI.ipv6),SAFI(SAFI.unicast)),
+		(AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)),
+		(AFI(AFI.ipv4),SAFI(SAFI.mpls_vpn)),
+		(AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)),
+	]
+
 	def announced (self, capability):
 		return capability in self
 
@@ -84,14 +92,9 @@ class Capabilities (dict):
 
 		families = neighbor.families()
 		ap_families = []
-		if (AFI(AFI.ipv4),SAFI(SAFI.unicast)) in families:
-			ap_families.append((AFI(AFI.ipv4),SAFI(SAFI.unicast)))
-		if (AFI(AFI.ipv6),SAFI(SAFI.unicast)) in families:
-			ap_families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
-		if (AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)) in families:
-			ap_families.append((AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)))
-		if (AFI(AFI.ipv6),SAFI(SAFI.unicast)) in families:
-			ap_families.append((AFI(AFI.ipv6),SAFI(SAFI.unicast)))
+		for allowed in self._ADD_PATH:
+			if allowed in families:
+				ap_families.append(allowed)
 		self[Capability.CODE.ADD_PATH] = AddPath(ap_families,neighbor.add_path)
 
 	def _graceful (self, neighbor, restarted):
