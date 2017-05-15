@@ -357,7 +357,7 @@ if os_name != 'NetBSD':
 	if sys.argv[-1] == 'systemd':
 		files_definition.append(('/usr/lib/systemd/system',filesOf('etc/systemd')))
 
-version = imp.load_source('version','lib/exabgp/version.py').version
+version = imp.load_source('version','lib/exabgp/version.py').version.split('-')[0]
 
 try:
 	description_rst = open('PYPI.rst').read() % {'version': version}
