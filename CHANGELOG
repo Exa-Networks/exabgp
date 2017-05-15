@@ -17,6 +17,8 @@ Version 3.4.19
     reported by: Yevgeniy Ovsyannikov
  * Fix: bad defintion of Flow for ICMPType, ICMPCode and Fragment
     reported by: Christoph Loibl
+ * Feature: allow add-path for mpls-vpn
+    reported by: adrian62
  * Change: Backported setup.py from master
  * Feature: added SRPMS for exabgp
     patch by: Leonardo Amaral
