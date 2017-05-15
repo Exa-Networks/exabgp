@@ -254,7 +254,7 @@ if sys.argv[-1] == 'release':
 		print('version.py was already set')
 
 	print('tagging the new version')
-	command = "git tag -a %s -m 'release %s'" % (next_version,version)
+	command = "git tag -a %s -m 'release %s'" % (next_version,next_version)
 	print('\n>', command)
 
 	ret = dryrun or os.system(command)
