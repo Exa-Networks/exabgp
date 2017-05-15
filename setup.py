@@ -182,9 +182,11 @@ if sys.argv[-1] == 'release':
 	print('figuring valid next release version')
 
 	tags = os.popen('git tag').read().split('-')[0].strip()
-	versions = [[int(_) for _ in tag.split('.')]  for tag in tags.split('\n')
-                    if tag.count('.') == 2 and tag[0].isdigit()]
-	latest = sorted(versions)[-1]
+	tag_versions = [
+		[int(_) for _ in tag.split('.')]  for tag in tags.split('\n')
+		if tag.count('.') == 2 and tag[0].isdigit()
+	]
+	latest = sorted(tag_versions)[-1]
 	next = [
 		'.'.join([str(_) for _ in (latest[0], latest[1], latest[2]+1)]),
 		'.'.join([str(_) for _ in (latest[0], latest[1]+1, 0)]),
@@ -194,24 +196,30 @@ if sys.argv[-1] == 'release':
 	print('valid versions are:', ', '.join(next))
 	print('checking the CHANGELOG uses one of them')
 
-	version = versions()[0]
-
-	if version.count('.') != 2:
+	next_version = versions()[0]
+	if next_version.count('.') != 2:
 		print('invalid new version in CHANGELOG')
 		sys.exit(1)
 
-	print('ok, next release is %s' % version)
+	print('ok, next release is %s' % next_version)
 	print('checking that this release is not already tagged')
 
-	if version in tags.split('\n'):
+	if next_version in tags.split('\n'):
 		print('this tag was already released')
 		sys.exit(1)
 
 	print('ok, this is a new release')
 	print('rewriting lib/exabgp/version.py')
 
-	with open('lib/exabgp/version.py','w') as version_file:
-		version_file.write(version_template % version)
+	git_version = os.popen('git rev-parse --short HEAD').read().strip()
+	full_version = "%s-%s" % (next_version,git_version)
+
+	with open(VERSION_PY,'w') as version_file:
+		version_file.write(version_template % (
+			full_version,
+			json_version,
+			text_version
+		))
 
 	debian()
 
@@ -230,13 +238,13 @@ if sys.argv[-1] == 'release':
 			commit = False
 
 	if commit is True:
-		command = "git commit -a -m 'updating version to %s'" % version
+		command = "git commit -a -m 'updating version to %s'" % next_version
 		print('\n>', command)
 
 		ret = dryrun or os.system(command)
 		if ret:
 			print('return code is', ret)
-			print('could not commit version change (%s)' % version)
+			print('could not commit version change (%s)' % next_version)
 			sys.exit(1)
 		print('version.py was updated')
 	elif commit is False:
@@ -246,13 +254,13 @@ if sys.argv[-1] == 'release':
 		print('version.py was already set')
 
 	print('tagging the new version')
-	command = "git tag -a %s -m 'release %s'" % (version,version)
+	command = "git tag -a %s -m 'release %s'" % (next_version,version)
 	print('\n>', command)
 
 	ret = dryrun or os.system(command)
 	if ret:
 		print('return code is', ret)
-		print('could not tag version (%s)' % version)
+		print('could not tag version (%s)' % next_version)
 		sys.exit(1)
 
 	print('pushing the new tag to local repo')
