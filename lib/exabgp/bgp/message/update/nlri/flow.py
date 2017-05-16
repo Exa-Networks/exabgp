@@ -19,6 +19,7 @@ from exabgp.util import concat_bytes_i
 from exabgp.util import concat_strs_i
 
 from exabgp.protocol.ip import NoNextHop
+from exabgp.protocol.ip.port import Port
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.direction import OUT
@@ -303,7 +304,7 @@ def PacketLength (data):
 
 def PortValue (data):
 	_str_bad_port = "you tried to set an invalid port number .."
-	number = int(data)
+	number = Port.named(data)
 	if number < 0 or number > 0xFFFF:
 		raise ValueError(_str_bad_port)
 	return number
@@ -403,14 +404,14 @@ class FlowSourcePort (IOperationByteShort,NumericString,IPv4,IPv6):
 class FlowICMPType (IOperationByte,NumericString,IPv4,IPv6):
 	ID = 0x07
 	NAME = 'icmp-type'
-	converter = staticmethod(converter(ICMPType.named))
+	converter = staticmethod(converter(ICMPType.named,ICMPType))
 	decoder = staticmethod(decoder(_number,ICMPType))
 
 
 class FlowICMPCode (IOperationByte,NumericString,IPv4,IPv6):
 	ID = 0x08
 	NAME = 'icmp-code'
-	converter = staticmethod(converter(ICMPCode.named))
+	converter = staticmethod(converter(ICMPCode.named,ICMPCode))
 	decoder = staticmethod(decoder(_number,ICMPCode))
 
 
