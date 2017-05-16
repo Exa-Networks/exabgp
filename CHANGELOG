@@ -3,6 +3,11 @@ Version explained:
  minor : increase on risk of code breakage during a major release
  bug   : increase on bug or incremental changes
 
+Version 4.0.1
+ * Change: makes python3 the default interpreter
+ * Fix: correcly parse single element flow rule
+    reported by: Christoph Loibl
+
 Version 4.0.0
  * Feature: add support for interface-set for BGP flowspec routes
  * Change: the configuration format is not compatible with ExaBGP 3.x

@@ -158,11 +158,15 @@ def _generic_condition (tokeniser, klass):
 				AND = BinaryOperator.NOP
 				data = tokeniser()
 	else:
-		operator,_ = _operator(data)
-		value,data = _value(_)
-		if data:
-			raise ValueError("Invalid flow route data" % data)
-		yield klass(operator | AND,klass.converter(value))
+		while data:
+			operator,_ = _operator(data)
+			value,data = _value(_)
+			if data:
+				if data[0] != '&':
+					raise ValueError("Unknown binary operator %s" % data[0])
+				AND = BinaryOperator.AND
+				data = data[1:]
+			yield klass(operator | AND,klass.converter(value))
 
 
 def any_port (tokeniser):
