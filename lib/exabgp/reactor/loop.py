@@ -47,6 +47,7 @@ class Reactor (object):
 		self.ip = environment.settings().tcp.bind
 		self.port = environment.settings().tcp.port
 		self.respawn = environment.settings().api.respawn
+		self.ack = environment.settings().api.ack
 
 		self.max_loop_time = environment.settings().reactor.speed
 		self.early_drop = environment.settings().daemon.drop
@@ -445,6 +446,10 @@ class Reactor (object):
 			del self.peers[peer]
 
 	def answer (self, service, string):
+		if self.ack:
+			self.always_answer(service,string)
+
+	def always_answer (self, service, string):
 		self.processes.write(service,string)
 		self.logger.reactor('responding to %s : %s' % (service,string.replace('\n','\\n')))
 

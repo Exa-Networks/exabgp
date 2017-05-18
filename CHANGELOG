@@ -7,6 +7,8 @@ Version 4.0.1
  * Change: makes python3 the default interpreter
  * Fix: correcly parse single element flow rule
     reported by: Christoph Loibl
+ * Feature: allow to disable command acknowledgement via environment
+    reported by: nidotech 
 
 Version 4.0.0
  * Feature: add support for interface-set for BGP flowspec routes

@@ -52,9 +52,9 @@ def _show_routes_callback(reactor, service, last, route_type, advertised, extens
 				for change in changes:
 					if isinstance(change.nlri, route_type):
 						if extensive:
-							reactor.answer(service,'neighbor %s %s' % (peer.neighbor.name(),change.extensive()))
+							reactor.always_answer(service,'neighbor %s %s' % (peer.neighbor.name(),change.extensive()))
 						else:
-							reactor.answer(service,'neighbor %s %s' % (peer.neighbor.peer_address,str(change.nlri)))
+							reactor.always_answer(service,'neighbor %s %s' % (peer.neighbor.peer_address,str(change.nlri)))
 				yield True
 		reactor.answer(service,'done')
 	return callback

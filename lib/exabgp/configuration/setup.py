@@ -230,6 +230,12 @@ environment.configuration = {
 		},
 	},
 	'api':  {
+		'ack':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'true',
+			'help':  'acknowledge api command(s) and report issues',
+		},
 		'chunk': {
 			'read': environment.integer,
 			'write': environment.nop,
