@@ -83,7 +83,7 @@ def restart (self, reactor, service, command):
 
 @Text('version')
 def version (self, reactor, service, command):
-	reactor.answer(service,'exabgp %s\n' % _version)
+	reactor.always_answer(service,'exabgp %s\n' % _version)
 	reactor.answer(service,'done')
 	return True
 
@@ -159,7 +159,7 @@ def show_neighbor_status (self, reactor, service, command):
 			families = peer.negotiated_families()
 			if families:
 				families = "negotiated %s" % families
-			reactor.answer(service, "%s %s state %s" % (peer_name, families, detailed_status))
+			reactor.always_answer(service, "%s %s state %s" % (peer_name, families, detailed_status))
 			yield True
 		reactor.answer(service,"done")
 
