@@ -67,6 +67,8 @@ class Listener (object):
 				MIN_TTL(sock,peer_ip,ttl_in)
 			try:
 				sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+				if local_ip.ipv6():
+					sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
 			except (socket.error,AttributeError):
 				pass
 			sock.setblocking(0)
