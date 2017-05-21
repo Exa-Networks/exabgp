@@ -11,7 +11,7 @@ from struct import unpack
 
 from exabgp.util import ordinal
 from exabgp.util import character
-from exabgp.util import concat_bytes
+from exabgp.util import concat_bytes_i, concat_bytes
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
