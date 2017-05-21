@@ -7,6 +7,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
 from struct import unpack
+from exabgp.vendoring import six
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
 
@@ -36,7 +37,7 @@ class SrAlgorithm(object):
 	def unpack (cls,data,length):
 		sr_algos = []
 		while data:
-			sr_algos.append(unpack('!B',data[0])[0])
+			sr_algos.append(six.indexbytes(data,0))
 			data = data[1:]
 		# Looks like IOS XR advertises len 0 on this sub TLV
 		# when using default SPF.
@@ -46,4 +47,3 @@ class SrAlgorithm(object):
 
 	def json (self,compact=None):
 		return '"sr-algorithms": "%s"' % (self.sr_algos)
-

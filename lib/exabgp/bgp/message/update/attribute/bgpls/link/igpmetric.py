@@ -7,6 +7,7 @@ Copyright (c) 2014-2016 Exa Networks. All rights reserved.
 """
 
 from struct import unpack
+from exabgp.vendoring import six
 
 from exabgp.vendoring.bitstring import BitArray
 from exabgp.bgp.message.notification import Notify
@@ -46,7 +47,7 @@ class IgpMetric(object):
 			return cls(igpmetric=igpmetric)
 		elif len(data) == 1:
 			# ISIS small metrics
-			igpmetric = unpack('!B',data)[0]
+			igpmetric = six.indexbytes(data,0)
 			return cls(igpmetric=igpmetric)
 		elif len(data) == 3:
 			# ISIS wide metrics

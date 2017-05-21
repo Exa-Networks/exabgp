@@ -7,6 +7,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
 from struct import unpack
+from exabgp.vendoring import six
 
 from exabgp.vendoring.bitstring import BitArray
 from exabgp.protocol.iso import ISO
@@ -49,7 +50,7 @@ class SrAdjacencyLan(object):
 		# We only support IS-IS flags for now.
 		flags = LsGenericFlags.unpack(data[0],LsGenericFlags.ISIS_ADJ_SR_FLAGS)
 		# Parse adj weight
-		weight = unpack('!B',data[1])[0]
+		weight = six.indexbytes(data,1)
 		# Move pointer 4 bytes: Flags(1) + Weight(1) + Reserved(2)
 		data = data[4:]
 		isis_system_id = ISO.unpack_sysid(data[:6])
@@ -79,4 +80,3 @@ class SrAdjacencyLan(object):
 	def json (self,compact=None):
 		return '"sr-adj-lan-flags": "%s", "sids": "%s", "sr-adj-weight": "%s"' % (self.flags,
 				self.sids, self.weight)
-

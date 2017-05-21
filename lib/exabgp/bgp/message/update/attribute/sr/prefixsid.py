@@ -8,6 +8,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 
 import binascii
 from struct import unpack
+from exabgp.vendoring import six
 
 from exabgp.util import concat_bytes_i
 from exabgp.bgp.message.update.attribute.attribute import Attribute
@@ -48,7 +49,7 @@ class PrefixSid (Attribute):
 		sr_attrs = []
 		while data:
 			# Type = 1 octet
-			scode = unpack('!B',data[0])[0]
+			scode = six.indexbytes(data,0)
 			# L = 2 octet  :|
 			length = unpack('!H',data[1:3])[0]
 			if scode in cls.registered_srids:
@@ -68,7 +69,7 @@ class PrefixSid (Attribute):
 		return ', '.join(str(d) for d in self.sr_attrs)
 
 	def pack (self, negotiated=None):
-    		return self._packed
+		return self._packed
 
 
 class GenericSRId(object):

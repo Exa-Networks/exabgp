@@ -170,9 +170,9 @@ def check_neighbor (neighbors):
 
 def check_message (neighbor, message):
 	message = message.replace(':','')
-	raw = concat_bytes_i(character(int(_,16)) for _ in (message[i*2:(i*2)+2] for i in range(len(message)/2)))
+	raw = concat_bytes_i(character(int(_,16)) for _ in (message[i*2:(i*2)+2] for i in range(len(message)//2)))
 
-	if raw.startswith('\xff'*16):
+	if raw.startswith(b'\xff'*16):
 		kind = ordinal(raw[18])
 		# XXX: FIXME: check size
 		# size = (ordinal(raw[16]) << 16) + (ordinal(raw[17]))
@@ -225,7 +225,7 @@ def check_update (neighbor, raw):
 	# grouped = False
 
 	while raw:
-		if raw.startswith('\xff'*16):
+		if raw.startswith(b'\xff'*16):
 			kind = ordinal(raw[18])
 			size = (ordinal(raw[16]) << 16) + (ordinal(raw[17]))
 
