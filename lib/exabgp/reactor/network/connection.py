@@ -64,7 +64,7 @@ class Connection (object):
 			self.close()
 
 	def name (self):
-		return "session %d %s" % (self.id,self.direction)
+		return "session-%d %s-%s" % (self.id,self.local,self.peer)
 
 	def close (self):
 		try:

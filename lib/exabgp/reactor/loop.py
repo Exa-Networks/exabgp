@@ -224,6 +224,9 @@ class Reactor (object):
 					if self.peers:
 						for key in list(peers):
 							peer = self.peers[key]
+							if peer.neighbor.passive:
+								continue
+
 							action = peer.run()
 
 							# .run() returns an ACTION enum:
@@ -262,13 +265,13 @@ class Reactor (object):
 									break
 
 							if found:
-								self.logger.reactor('accepted connection from  %s - %s' % (connection.local,connection.peer))
+								self.logger.reactor('accepted connection from %s' % connection.name())
 							elif found is False:
-								self.logger.reactor('no session configured for  %s - %s' % (connection.local,connection.peer))
+								self.logger.reactor('no session configured for %s' % connection.name())
 								connection.notification(6,3,'no session configured for the peer')
 								connection.close()
 							elif found is None:
-								self.logger.reactor('connection refused (already connected to the peer) %s - %s' % (connection.local,connection.peer))
+								self.logger.reactor('already connected to the peer %s' % connection.name())
 								connection.notification(6,5,'could not accept the connection')
 								connection.close()
 
