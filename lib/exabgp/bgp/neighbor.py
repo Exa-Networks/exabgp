@@ -141,7 +141,9 @@ class Neighbor (object):
 			return 'local-as'
 		if self.peer_as is None:
 			return 'peer-as'
-		if (self.auto_discovery or self.peer_address.afi == AFI.ipv6) and not self.router_id:
+		if self.auto_discovery and not self.router_id:
+			return 'router-id'
+		if self.peer_address.afi == AFI.ipv6 and not self.router_id:
 			return 'router-id'
 		return ''
 
@@ -150,6 +152,7 @@ class Neighbor (object):
 		return \
 			self.router_id == other.router_id and \
 			self.local_address == other.local_address and \
+			self.auto_discovery == other.auto_discovery and \
 			self.local_as == other.local_as and \
 			self.peer_address == other.peer_address and \
 			self.peer_as == other.peer_as and \
@@ -230,7 +233,7 @@ class Neighbor (object):
 			'\trouter-id %s;\n' \
 			'\thost-name %s;\n' \
 			'\tdomain-name %s;\n' \
-			'\tlocal-address %s;\n' \
+			'\tlocal-as %s;\n' \
 			'\tlocal-as %s;\n' \
 			'\tpeer-as %s;\n' \
 			'\thold-time %s;\n' \

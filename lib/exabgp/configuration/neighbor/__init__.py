@@ -17,6 +17,7 @@ from exabgp.protocol.family import SAFI
 from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.bgp.message import OUT
+from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
 
 from exabgp.bgp.message.update.nlri.flow import NLRI
@@ -28,6 +29,7 @@ from exabgp.configuration.family import ParseFamily
 from exabgp.configuration.parser import boolean
 from exabgp.configuration.parser import ip
 from exabgp.configuration.parser import asn
+from exabgp.configuration.parser import local_asn
 from exabgp.configuration.parser import port
 from exabgp.configuration.neighbor.parser import ttl
 from exabgp.configuration.neighbor.parser import md5
@@ -69,7 +71,7 @@ class ParseNeighbor (Section):
 		'hold-time':     hold_time,
 		'local-address': local_address,
 		'peer-address':  ip,
-		'local-as':      asn,
+		'local-as':      local_asn,
 		'peer-as':       asn,
 		'passive':       boolean,
 		'listen':        port,
@@ -198,9 +200,9 @@ class ParseNeighbor (Section):
 
 		messages = local.get('operational',{}).get('routes',[])
 
-		if neighbor.local_address == 'auto':
+		if neighbor.local_address is None:
 			neighbor.auto_discovery = True
-			neighbor.local_address = None
+			neighbor.local_as = ASN(0)
 			neighbor.md5_ip = None
 
 		if not neighbor.router_id and neighbor.peer_address.afi == AFI.ipv4 and not neighbor.auto_discovery:

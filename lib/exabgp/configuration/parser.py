@@ -45,6 +45,18 @@ def port (tokeniser):
 	return value
 
 
+def local_asn (tokeniser, value=None):
+	if value is None:
+		if not tokeniser.tokens:
+			raise ValueError("an asn or 'mirror' is required")
+
+	if tokeniser.peek() == 'auto':
+		tokeniser()
+		return None
+
+	return asn(tokeniser)
+
+
 def asn (tokeniser, value=None):
 	if value is None:
 		if not tokeniser.tokens:
