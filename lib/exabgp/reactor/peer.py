@@ -330,17 +330,19 @@ class Peer (object):
 		proto = self._incoming.proto
 
 		# send OPEN
+		attempts = 5
 		message = Message.CODE.NOP
-
 		for message in proto.new_open(self._restarted):
 			if ordinal(message.TYPE) == Message.CODE.NOP:
-				yield ACTION.NOW
+				yield ACTION.NOW if attempts > 0 else ACTION.LATER
+				attempts -= 1
 
 		proto.negotiated.sent(message)
 
 		self._incoming.fsm.change(FSM.OPENSENT)
 
 		# Read OPEN
+		attempts = 10
 		wait = environment.settings().bgp.openwait
 		opentimer = ReceiveTimer(self.me,wait,1,1,'waited for open too long, we do not like stuck in active')
 		# Only yield if we have not the open, otherwise the reactor can run the other connection
@@ -348,7 +350,8 @@ class Peer (object):
 		for message in proto.read_open(self.neighbor.peer_address.top()):
 			opentimer.check_ka(message)
 			if ordinal(message.TYPE) == Message.CODE.NOP:
-				yield ACTION.LATER
+				yield ACTION.NOW if attempts > 0 else ACTION.LATER
+				attempts -= 1
 
 		self._incoming.fsm.change(FSM.OPENCONFIRM)
 		proto.negotiated.received(message)
@@ -368,15 +371,19 @@ class Peer (object):
 				raise Interrupted(self._incoming)
 
 		# Send KEEPALIVE
+		attempts = 5
 		for message in self._incoming.proto.new_keepalive('OPENCONFIRM'):
-			yield ACTION.NOW
+			yield ACTION.NOW if attempts > 0 else ACTION.LATER
+			attempts -= 1
 
 		# Start keeping keepalive timer
+		attempts = 10
 		self.recv_timer = ReceiveTimer(self.me,proto.negotiated.holdtime,4,0)
 		# Read KEEPALIVE
 		for message in proto.read_keepalive():
 			self.recv_timer.check_ka(message)
-			yield ACTION.NOW
+			yield ACTION.NOW if attempts > 0 else ACTION.LATER
+			attempts -= 1
 
 		self._incoming.fsm.change(FSM.ESTABLISHED)
 		# let the caller know that we were sucesfull
@@ -412,16 +419,19 @@ class Peer (object):
 		# send OPEN
 		# Only yield if we have not the open, otherwise the reactor can run the other connection
 		# which would be bad as we need to set the state without going to the other peer
+		attempts = 5
 		message = Message.CODE.NOP
 		for message in proto.new_open(self._restarted):
 			if ordinal(message.TYPE) == Message.CODE.NOP:
-				yield ACTION.NOW
+				yield ACTION.NOW if attempts > 0 else ACTION.LATER
+				attempts -= 1
 
 		proto.negotiated.sent(message)
 
 		self._outgoing.fsm.change(FSM.OPENSENT)
 
 		# Read OPEN
+		attempts = 10
 		wait = environment.settings().bgp.openwait
 		opentimer = ReceiveTimer(self.me,wait,1,1,'waited for open too long, we do not like stuck in active')
 		for message in self._outgoing.proto.read_open(self.neighbor.peer_address.top()):
@@ -430,7 +440,8 @@ class Peer (object):
 			# Only yield if we have not the open, otherwise the reactor can run the other connection
 			# which would be bad as we need to do the collission check
 			if ordinal(message.TYPE) == Message.CODE.NOP:
-				yield ACTION.LATER
+				yield ACTION.NOW if attempts > 0 else ACTION.LATER
+				attempts -= 1
 
 		self._outgoing.fsm.change(FSM.OPENCONFIRM)
 		proto.negotiated.received(message)
@@ -450,15 +461,20 @@ class Peer (object):
 				yield ACTION.LATER
 
 		# Send KEEPALIVE
+		attempts = 5
 		for message in proto.new_keepalive('OPENCONFIRM'):
-			yield ACTION.NOW
+			yield ACTION.NOW if attempts > 0 else ACTION.LATER
+			attempts -= 1
 
 		# Start keeping keepalive timer
 		self.recv_timer = ReceiveTimer(self.me,proto.negotiated.holdtime,4,0)
+
 		# Read KEEPALIVE
+		attempts = 10
 		for message in self._outgoing.proto.read_keepalive():
 			self.recv_timer.check_ka(message)
-			yield ACTION.NOW
+			yield ACTION.NOW if attempts > 0 else ACTION.LATER
+			attempts -= 1
 
 		self._outgoing.fsm.change(FSM.ESTABLISHED)
 		# let the caller know that we were sucesfull
