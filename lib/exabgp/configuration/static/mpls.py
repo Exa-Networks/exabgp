@@ -7,12 +7,17 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
 from struct import pack
+import ast
+import re
 
 from exabgp.util import character
 from exabgp.util import concat_bytes_i
 
 from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
+from exabgp.bgp.message.update.attribute.sr.labelindex import SrLabelIndex
+from exabgp.bgp.message.update.attribute.sr.srgb import SrGb
 
 
 def label (tokeniser):
@@ -54,3 +59,60 @@ def route_distinguisher (tokeniser):
 			raise ValueError('invalid route-distinguisher %s' % data)
 
 	return RouteDistinguisher(rtd)
+
+# [ 300, [ ( 800000,100 ), ( 1000000,5000 ) ] ]
+def prefix_sid (tokeniser):
+	sr_attrs = []
+	srgbs = []
+	srgb_data = []
+	value = tokeniser()
+	get_range = False
+	consume_extra = False
+	try:
+		if value == '[':
+			label_sid = tokeniser()
+			while True:
+				value = tokeniser()
+				if value == '[':
+					consume_extra = True
+					continue
+				if value == ',':
+					continue
+				if value == '(':
+					while True:
+						value = tokeniser()
+						if value == ')':
+							break
+						if value == ',':
+							get_range = True
+							continue
+						if get_range:
+							srange = value
+							get_range = False
+						else:
+							base = value
+				if value == ')':
+					srgb_data.append((base,srange))
+					continue
+				if value == ']':
+					break
+		if consume_extra:
+			tokeniser()
+	except Exception as e:
+		raise ValueError('could not parse BGP PrefixSid attribute: {}'
+				.format(e))
+
+	if int(label_sid) < pow(2,32):
+		sr_attrs.append(SrLabelIndex(int(label_sid)))
+
+	for srgb in srgb_data:
+		if ( len(srgb) == 2 and int(srgb[0]) < pow(2,24) and
+			int(srgb[1]) < pow(2,24) ):
+			srgbs.append((int(srgb[0]),int(srgb[1])))
+		else:
+			raise ValueError('could not parse SRGB tupple')
+
+	if srgbs:
+    		sr_attrs.append(SrGb(srgbs))
+
+	return PrefixSid(sr_attrs)

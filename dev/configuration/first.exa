@@ -88,6 +88,7 @@
             large-community: [[2914,0,666], [3320,1299,4]]
 			cluster-list: []
 			extended-community: []
+			bgp-prefix-sid: [ 300, [ ( 800000,100 ), ( 1000000,5000 ) ] ]
 		}
 	}
 
