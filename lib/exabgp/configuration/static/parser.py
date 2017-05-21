@@ -188,7 +188,7 @@ def aigp (tokeniser):
 	except ValueError:
 		raise ValueError('aigp requires number (decimal or hexadecimal 0x prefixed)')
 
-	return AIGP('\x01\x00\x0b' + pack('!Q',number))
+	return AIGP(b'\x01\x00\x0b' + pack('!Q',number))
 
 
 def origin (tokeniser):
