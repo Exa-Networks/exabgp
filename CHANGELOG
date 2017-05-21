@@ -8,7 +8,9 @@ Version 4.0.1
  * Fix: correcly parse single element flow rule
     reported by: Christoph Loibl
  * Feature: allow to disable command acknowledgement via environment
-    reported by: nidotech 
+    reported by: nidotech
+ * Feature: https://tools.ietf.org/html/draft-ietf-idr-bgp-prefix-sid-05
+    patch by: Evelio Vila
 
 Version 4.0.0
  * Feature: add support for interface-set for BGP flowspec routes
