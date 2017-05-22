@@ -233,7 +233,7 @@ class Neighbor (object):
 			'\trouter-id %s;\n' \
 			'\thost-name %s;\n' \
 			'\tdomain-name %s;\n' \
-			'\tlocal-as %s;\n' \
+			'\tlocal-address %s;\n' \
 			'\tlocal-as %s;\n' \
 			'\tpeer-as %s;\n' \
 			'\thold-time %s;\n' \

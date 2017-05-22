@@ -200,9 +200,9 @@ class ParseNeighbor (Section):
 
 		messages = local.get('operational',{}).get('routes',[])
 
-		if neighbor.local_address is None:
+		if neighbor.local_address == None:
 			neighbor.auto_discovery = True
-			neighbor.local_as = ASN(0)
+			neighbor.local_address = None
 			neighbor.md5_ip = None
 
 		if not neighbor.router_id and neighbor.peer_address.afi == AFI.ipv4 and not neighbor.auto_discovery:

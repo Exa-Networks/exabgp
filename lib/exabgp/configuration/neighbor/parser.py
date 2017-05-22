@@ -92,7 +92,7 @@ def local_address(tokeniser):
 
 	value = tokeniser()
 	if value == 'auto':
-		return value
+		return None
 	try:
 		return IP.create(value)
 	except (IndexError,ValueError,socket.error):
