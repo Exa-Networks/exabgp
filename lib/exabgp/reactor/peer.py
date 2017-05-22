@@ -375,7 +375,6 @@ class Peer (object):
 		for received_open in self._read_open():
 			if received_open in ACTION.ALL:
 				yield received_open
-		self.fsm.change(FSM.OPENCONFIRM)
 
 		self.proto.negotiated.sent(sent_open)
 		self.proto.negotiated.received(received_open)
@@ -394,6 +393,7 @@ class Peer (object):
 				self._stop('collision local id < remote id')
 				yield ACTION.LATER
 
+		self.fsm.change(FSM.OPENCONFIRM)
 		self.recv_timer = ReceiveTimer(self.me,self.proto.negotiated.holdtime,4,0)
 		self._send_ka()
 		self._read_ka()
