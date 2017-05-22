@@ -255,14 +255,25 @@ class Peer (object):
 
 	def incoming (self, connection):
 		# if the other side fails, we go back to idle
-		if self.proto not in (True,False,None):
+		if self.fsm == FSM.ESTABLISHED:
 			self.logger.network('we already have a peer at this address')
 			return False
 
-		self.proto = Protocol(self).accept(connection)
-		self.generator = None
-		# Let's make sure we do some work with this connection
-		return True
+		if self.fsm == FSM.OPENCONFIRM:
+			local_id = self.neighbor.router_id.pack()
+			remote_id = self.proto.negotiated.received_open.router_id.pack()
+
+			if local_id < remote_id:
+				# XXX: we are not really reading the OPEN, we use the data we have instead
+				self.proto.close('closing connection as we have another incoming on with higher router-id')
+				self.proto = Protocol(self).accept(connection)
+				self.generator = None
+				# Let's make sure we do some work with this connection
+				return True
+			else:
+				self.logger.network('closing the incoming connection')
+				connection.close()
+				return False
 
 	def established (self):
 		return self.fsm == FSM.ESTABLISHED
@@ -380,23 +391,13 @@ class Peer (object):
 		self.proto.negotiated.received(received_open)
 		self.proto.validate_open()
 
-		if self.fsm == FSM.OPENCONFIRM:
-			self.logger.network('outgoing connection finds the incoming connection is in openconfirm')
-			local_id = self.neighbor.router_id.pack()
-			remote_id = self.proto.negotiated.received_open.router_id.pack()
-
-			if local_id < remote_id:
-				self.logger.network('aborting the outgoing connection')
-				raise Interrupted()
-			else:
-				self.logger.network('closing the incoming connection')
-				self._stop('collision local id < remote id')
-				yield ACTION.LATER
-
 		self.fsm.change(FSM.OPENCONFIRM)
+
 		self.recv_timer = ReceiveTimer(self.me,self.proto.negotiated.holdtime,4,0)
-		self._send_ka()
-		self._read_ka()
+		for action in self._send_ka():
+			yield action
+		for action in self._read_ka():
+			yield action
 		self.fsm.change(FSM.ESTABLISHED)
 
 		# let the caller know that we were sucesfull
