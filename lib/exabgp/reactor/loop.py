@@ -188,6 +188,9 @@ class Reactor (object):
 			self.logger.reactor('waiting for %d seconds before connecting' % sleeptime)
 			time.sleep(float(sleeptime))
 
+		refused = []   # generators for connections needing a notification
+		flipflop = []  # to not have to allocate a refused at every loop
+
 		workers = {}
 		peers = set()
 		scheduled = False
@@ -257,26 +260,36 @@ class Reactor (object):
 								if connection.peer != str(neighbor.local_address):
 									if not neighbor.auto_discovery:
 										continue
-								if peer.incoming(connection):
+								denied = peer.incoming(connection)
+								if denied:
+									refused.append(denied)
+								else:
 									self.logger.reactor('accepted connection from %s' % connection.name())
 									break
 								self.logger.reactor('could not accept connection from %s' % connection.name())
-								for _ in connection.notification(6,5,b'could not accept the connection'):
-									pass
-								connection.close()
+								refused.append(connection.notification(6,5,b'could not accept the connection'))
 								break
 							else:
 								# we did not break (nothign was found/done)
 								self.logger.reactor('no session configured for %s' % connection.name())
-								for _ in connection.notification(6,3,b'no session configured for the peer'):
-									pass
-								connection.close()
+								refused.append(connection.notification(6,3,b'no session configured for the peer'))
 
 					scheduled = self.schedule()
 					finished = not peers and not scheduled
 
 				# RFC state that we MUST not send more than one KEEPALIVE / sec
 				# And doing less could cause the session to drop
+
+				attempts = 5
+				while refused and attempts:
+					for gen in refused:
+						try:
+							six.next(gen)
+							flipflop.append(gen)
+						except StopIteration:
+							pass
+					refused, flipflop = flipflop, refused
+					attempts -= 1
 
 				if finished:
 					for io in self.ready(list(peers),self.processes.fds(),end-time.time()):

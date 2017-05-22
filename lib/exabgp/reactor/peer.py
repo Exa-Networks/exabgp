@@ -258,9 +258,7 @@ class Peer (object):
 		# if the other side fails, we go back to idle
 		if self.fsm == FSM.ESTABLISHED:
 			self.logger.network('we already have a peer in state established for %s' % connection.name())
-			for _ in connection.notification(6,7,b'could not accept the connection, already established'):
-				pass
-			return False
+			return connection.notification(6,7,b'could not accept the connection, already established')
 
 		# 6.8 The convention is to compare the BGP Identifiers of the peers
 		# involved in the collision and to retain only the connection initiated
@@ -274,10 +272,7 @@ class Peer (object):
 
 			if remote_id < local_id:
 				self.logger.network('closing incoming connection as we have an outgoing connection with higher router-id for %s' % connection.name())
-				for _ in connection.notification(6,7,b'could not accept the connection, as another connection is already in open-confirm and will go through'):
-					pass
-				connection.close()
-				return False
+				return connection.notification(6,7,b'could not accept the connection, as another connection is already in open-confirm and will go through')
 
 		# accept the connection
 		if self.proto:
@@ -285,7 +280,7 @@ class Peer (object):
 		self.proto = Protocol(self).accept(connection)
 		self.generator = None
 		# Let's make sure we do some work with this connection
-		return True
+		return None
 
 	def established (self):
 		return self.fsm == FSM.ESTABLISHED
