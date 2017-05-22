@@ -19,6 +19,10 @@ def hexstring (value):
 	return '0x' + concat_strs_i(spaced(value))
 
 
+def hexbytes (value):
+	return bytes_ascii(hexstring(str_ascii(value)))
+
+
 def string_is_hex (s):
 	if s[:2].lower() != '0x':
 		return False

@@ -248,31 +248,28 @@ class Reactor (object):
 
 					if self.listener:
 						for connection in self.listener.connected():
-							# found
-							# * False, not peer found for this TCP connection
-							# * True, peer found
-							# * None, conflict found for this TCP connections
-							found = False
 							for key in self.peers:
 								peer = self.peers[key]
 								neighbor = peer.neighbor
 								# XXX: FIXME: Inet can only be compared to Inet
-								if connection.local == str(neighbor.peer_address) and (neighbor.auto_discovery or connection.peer == str(neighbor.local_address)):
-									if peer.incoming(connection):
-										found = True
-										break
-									found = None
+								if connection.local != str(neighbor.peer_address):
+									continue
+								if connection.peer != str(neighbor.local_address):
+									if not neighbor.auto_discovery:
+										continue
+								if peer.incoming(connection):
+									self.logger.reactor('accepted connection from %s' % connection.name())
 									break
-
-							if found:
-								self.logger.reactor('accepted connection from %s' % connection.name())
-							elif found is False:
-								self.logger.reactor('no session configured for %s' % connection.name())
-								connection.notification(6,3,'no session configured for the peer')
+								self.logger.reactor('could not accept connection from %s' % connection.name())
+								for _ in connection.notification(6,5,b'could not accept the connection'):
+									pass
 								connection.close()
-							elif found is None:
-								self.logger.reactor('already connected to the peer %s' % connection.name())
-								connection.notification(6,5,'could not accept the connection')
+								break
+							else:
+								# we did not break (nothign was found/done)
+								self.logger.reactor('no session configured for %s' % connection.name())
+								for _ in connection.notification(6,3,b'no session configured for the peer'):
+									pass
 								connection.close()
 
 					scheduled = self.schedule()

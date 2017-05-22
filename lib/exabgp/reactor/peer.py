@@ -213,6 +213,7 @@ class Peer (object):
 		self._restart = False
 		self._restarted = False
 		self._delay.reset()
+		self.fsm = FSM.IDLE
 		self.neighbor.rib.uncache()
 
 	def resend (self):
@@ -256,24 +257,35 @@ class Peer (object):
 	def incoming (self, connection):
 		# if the other side fails, we go back to idle
 		if self.fsm == FSM.ESTABLISHED:
-			self.logger.network('we already have a peer at this address')
+			self.logger.network('we already have a peer in state established for %s' % connection.name())
+			for _ in connection.notification(6,7,b'could not accept the connection, already established'):
+				pass
 			return False
 
+		# 6.8 The convention is to compare the BGP Identifiers of the peers
+		# involved in the collision and to retain only the connection initiated
+		# by the BGP speaker with the higher-valued BGP Identifier.
+		# FSM.IDLE , FSM.ACTIVE , FSM.CONNECT , FSM.OPENSENT , FSM.OPENCONFIRM , FSM.ESTABLISHED
+
 		if self.fsm == FSM.OPENCONFIRM:
+			# XXX: we are not really reading the OPEN, we use the data we have instead
 			local_id = self.neighbor.router_id.pack()
 			remote_id = self.proto.negotiated.received_open.router_id.pack()
 
-			if local_id < remote_id:
-				# XXX: we are not really reading the OPEN, we use the data we have instead
-				self.proto.close('closing connection as we have another incoming on with higher router-id')
-				self.proto = Protocol(self).accept(connection)
-				self.generator = None
-				# Let's make sure we do some work with this connection
-				return True
-			else:
-				self.logger.network('closing the incoming connection')
+			if remote_id < local_id:
+				self.logger.network('closing incoming connection as we have an outgoing connection with higher router-id for %s' % connection.name())
+				for _ in connection.notification(6,7,b'could not accept the connection, as another connection is already in open-confirm and will go through'):
+					pass
 				connection.close()
 				return False
+
+		# accept the connection
+		if self.proto:
+			self.proto.close('closing outgoing connection as we have another incoming on with higher router-id')
+		self.proto = Protocol(self).accept(connection)
+		self.generator = None
+		# Let's make sure we do some work with this connection
+		return True
 
 	def established (self):
 		return self.fsm == FSM.ESTABLISHED
@@ -636,7 +648,7 @@ class Peer (object):
 
 		# ....
 		except Interrupted as interruption:
-			self._reset()
+			self._reset('connection received before we could fully establish one')
 			return
 
 		# UNHANDLED PROBLEMS

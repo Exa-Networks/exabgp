@@ -11,7 +11,8 @@ import string
 from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
-from exabgp.util import hexstring
+from exabgp.util import str_ascii
+from exabgp.util import hexbytes
 
 from exabgp.bgp.message.message import Message
 
@@ -103,7 +104,7 @@ class Notification (Message):
 		self.subcode = subcode
 
 		if not (code, subcode) in [(6, 2), (6, 4)]:
-			self.data = data if not len([_ for _ in data if _ not in string.printable]) else hexstring(data)
+			self.data = data if not len([_ for _ in str(data) if _ not in string.printable]) else hexbytes(data)
 			return
 
 		if len(data) == 0:
@@ -144,7 +145,7 @@ class Notification (Message):
 		return "%s / %s%s" % (
 			self._str_code.get(self.code,'unknown error'),
 			self._str_subcode.get((self.code,self.subcode),'unknow reason'),
-			'%s' % (' / %s' % self.data if self.data else '')
+			'%s' % (' / %s' % str_ascii(self.data) if self.data else '')
 		)
 
 	@classmethod

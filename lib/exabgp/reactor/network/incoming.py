@@ -25,7 +25,6 @@ class Incoming (Connection):
 			self.close()
 			raise NotConnected(errstr(exc))
 
-	# XXX: FIXME: is that code ever called ?
 	def notification (self, code, subcode, message):
 		try:
 			notification = Notify(code,subcode,message).message()
