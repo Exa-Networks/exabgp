@@ -149,9 +149,10 @@ class Neighbor (object):
 
 	# This function only compares the neighbor BUT NOT ITS ROUTES
 	def __eq__ (self, other):
+		auto_discovery = self.auto_discovery or other.auto_discovery
 		return \
 			self.router_id == other.router_id and \
-			self.local_address == other.local_address and \
+			(auto_discovery or self.local_address == other.local_address) and \
 			self.auto_discovery == other.auto_discovery and \
 			self.local_as == other.local_as and \
 			self.peer_address == other.peer_address and \

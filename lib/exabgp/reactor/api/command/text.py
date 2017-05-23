@@ -45,7 +45,7 @@ def _show_routes_callback(reactor, service, last, route_type, advertised, extens
 			if not peer:
 				continue
 			if advertised:
-				families = peer._outgoing.proto.negotiated.families if peer._outgoing.proto else []
+				families = peer.proto.negotiated.families if peer.proto else []
 			routes = list(peer.neighbor.rib.outgoing.sent_changes(families))
 			while routes:
 				changes, routes = routes[:lines_per_yield], routes[lines_per_yield:]
