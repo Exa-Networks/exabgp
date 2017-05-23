@@ -149,6 +149,10 @@ class Neighbor (object):
 
 	# This function only compares the neighbor BUT NOT ITS ROUTES
 	def __eq__ (self, other):
+		# Comparing local_address is skipped in the case where either
+		# peer is configured to auto discover its local address. In
+		# this case it can happen that one local_address is None and
+		# the other one will be set to the auto disocvered IP address.
 		auto_discovery = self.auto_discovery or other.auto_discovery
 		return \
 			self.router_id == other.router_id and \
