@@ -53,6 +53,7 @@ class Processes (object):
 		self.reactor = reactor
 		self.clean()
 		self.silence = False
+		self._buffer = {}
 
 	def clean (self):
 		self._process = {}
@@ -177,7 +178,6 @@ class Processes (object):
 
 	def received (self):
 		consumed_data = False
-		buffered = {}
 
 		for process in list(self._process):
 			try:
@@ -203,13 +203,13 @@ class Processes (object):
 								# the process maybe has nothing to send yet
 								self.handle_problem(process)
 								return
-							raw = buffered.get(process,'') + buf
+							raw = self._buffer.get(process,'') + buf
 
 							if not raw.endswith('\n'):
-								buffered[process] = raw
-								continue
+								self._buffer[process] = raw
+								break
 
-							buffered[process] = ''
+							self._buffer[process] = ''
 							line = raw.rstrip()
 							consumed_data = True
 							self.logger.processes("Command from process %s : %s " % (process,line))
