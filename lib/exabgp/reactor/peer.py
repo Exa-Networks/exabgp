@@ -172,22 +172,20 @@ class Peer (object):
 		self.recv_timer = None
 
 	def _reset (self, message='',error=''):
-		generator = None
-
 		self.fsm.change(FSM.IDLE)
 
 		if self.proto:
-			if self.proto.connection.direction == 'outgoing':
-				self._delay.increase()
-			generator = None
 			self.proto.close(u"peer reset, message [{0}] error[{1}]".format(message, error))
+		else:
+			self._delay.increase()
+
 		self.proto = None
 
 		if not self._restart:
 			self.generator = False
 			return
 
-		self.generator = generator
+		self.generator = None
 		self._teardown = None
 		self.neighbor.rib.reset()
 
