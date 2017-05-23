@@ -197,7 +197,8 @@ class Peer (object):
 		# FSM.IDLE , FSM.ACTIVE , FSM.CONNECT , FSM.OPENSENT , FSM.OPENCONFIRM , FSM.ESTABLISHED
 
 		if self.fsm == FSM.OPENCONFIRM:
-			# XXX: we are not really reading the OPEN, we use the data we have instead
+			# We cheat: we are not really reading the OPEN, we use the data we have instead
+			# it does not matter as the open message will be the same anyway
 			local_id = self.neighbor.router_id.pack()
 			remote_id = self.proto.negotiated.received_open.router_id.pack()
 
