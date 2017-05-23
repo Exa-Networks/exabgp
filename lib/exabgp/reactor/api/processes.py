@@ -60,20 +60,20 @@ class Processes (object):
 		self._broken = []
 		self._respawning = {}
 
-	def handle_respawn (self):
+	def handle_respawn (self, process):
 		self.logger.processes("Issue with the process, restarting it")
 		self._terminate(process)
 		self._start(process)
 
-	def handle_terminate (self):
+	def handle_terminate (self, process):
 		self.logger.processes("Issue with the process, terminating it")
 		self._terminate(process)
 
-	def handle_problem (self):
+	def handle_problem (self, process):
 		if self.reactor.respawn:
-			self.handle_respawn()
+			self.handle_respawn(process)
 		else:
-			self.handle_terminate()
+			self.handle_terminate(process)
 
 	def _terminate (self, process):
 		self.logger.processes("Terminating process %s" % process)
@@ -186,7 +186,7 @@ class Processes (object):
 				# proc.poll returns None if the process is still fine
 				# -[signal], like -15, if the process was terminated
 				if poll is not None:
-					self.handle_problem()
+					self.handle_problem(process)
 					return
 				r,_,_ = select.select([proc.stdout,],[],[],0)
 				if r:
@@ -201,7 +201,7 @@ class Processes (object):
 								# process is fine, we received an empty line because
 								# we're doing .readline() on a non-blocking pipe and
 								# the process maybe has nothing to send yet
-								self.handle_problem()
+								self.handle_problem(process)
 								return
 							raw = buffered.get(process,'') + buf
 
@@ -218,7 +218,7 @@ class Processes (object):
 					except IOError as exc:
 						if not exc.errno or exc.errno in error.fatal:
 							# if the program exits we can get an IOError with errno code zero !
-							self.handle_problem()
+							self.handle_problem(process)
 						elif exc.errno in error.block:
 							# we often see errno.EINTR: call interrupted and
 							# we most likely have data, we will try to read them a the next loop iteration
@@ -227,9 +227,9 @@ class Processes (object):
 							self.logger.processes("unexpected errno received from forked process (%s)" % errstr(exc))
 					except StopIteration:
 						if not consumed_data:
-							self.handle_problem()
+							self.handle_problem(process)
 			except (subprocess.CalledProcessError,OSError,ValueError):
-				self.handle_problem()
+				self.handle_problem(process)
 
 	def write (self, process, string, neighbor=None):
 		# XXX: FIXME: This is potentially blocking
