@@ -127,6 +127,9 @@ class Reactor (object):
 			if exc.errno in error.fatal:
 				raise exc
 			return []
+		except KeyboardInterrupt:
+			self._termination('^C received')
+			return []
 
 	def _setup_listener (self):
 		try:
@@ -234,7 +237,7 @@ class Reactor (object):
 
 		workers = {}
 		peers = set()
-		scheduled = False
+		busy = False
 
 		while True:
 			try:
@@ -268,7 +271,7 @@ class Reactor (object):
 				self._handle_listener()
 
 				# give a turn to all the peers
-				while peers and start < time.time() < end:
+				while start < time.time() < end:
 					for key in list(peers):
 						peer = self.peers[key]
 						action = peer.run()
@@ -288,15 +291,15 @@ class Reactor (object):
 							peers.discard(key)
 
 					# handle API calls
-					scheduled  = self._scheduled_api()
+					busy  = self._scheduled_api()
 					# handle new connections
-					scheduled &= self._scheduled_listener()
+					busy |= self._scheduled_listener()
 
-					if not peers:
-						reload_completed = True
-
-					if not peers and not scheduled:
+					if not peers and not busy:
 						break
+
+				if not peers:
+					reload_completed = True
 
 				for io in self._api_ready(list(workers)):
 					peers.add(workers[io])
@@ -382,7 +385,7 @@ class Reactor (object):
 			self._async, flipflop = flipflop, self._async
 			return len(self._async) > 0
 		except KeyboardInterrupt:
-			self._termination('^C received','error')
+			self._termination('^C received')
 			return False
 
 	def _scheduled_api (self):
