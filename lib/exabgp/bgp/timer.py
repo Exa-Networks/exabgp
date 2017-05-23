@@ -24,6 +24,7 @@ class ReceiveTimer (object):
 
 		self.holdtime = holdtime
 		self.last_read = time.time()
+		self.last_print = 0
 
 		self.code = code
 		self.subcode = subcode
@@ -34,7 +35,9 @@ class ReceiveTimer (object):
 			self.last_read = time.time()
 		if self.holdtime:
 			left = int(self.last_read  + self.holdtime - time.time())
-			self.logger.timers(self.me('Receive Timer %d second(s) left' % left))
+			if self.last_print != left:
+				self.logger.timers(self.me('Receive Timer %d second(s) left' % left))
+				self.last_print = left
 			if left <= 0:
 				raise Notify(self.code,self.subcode,self.message)
 		elif message.TYPE == KeepAlive.TYPE:
@@ -48,6 +51,7 @@ class SendTimer (object):
 
 		self.keepalive = holdtime.keepalive()
 		self.last_sent = int(time.time())
+		self.last_print = 0
 
 	def need_ka (self):
 		if not self.keepalive:
@@ -56,8 +60,9 @@ class SendTimer (object):
 		now  = int(time.time())
 		left = self.last_sent + self.keepalive - now
 
-		if now != self.last_sent:
+		if now != self.last_print:
 			self.logger.timers(self.me('Send Timer %d second(s) left' % left))
+			self.last_print = now
 
 		if left <= 0:
 			self.last_sent = now
