@@ -21,6 +21,7 @@ from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message import Notification
 from exabgp.bgp.message import Notify
 from exabgp.reactor.protocol import Protocol
+from exabgp.reactor.delay import Delay
 from exabgp.reactor.keepalive import KA
 from exabgp.reactor.network.error import NetworkError
 from exabgp.reactor.api.processes import ProcessError
@@ -61,26 +62,6 @@ FORCE_GRACEFUL = True
 
 class Interrupted (Exception):
 	pass
-
-
-# ======================================================================== Delay
-# Exponential backup for outgoing connection
-
-class Delay (object):
-	def __init__ (self):
-		self._time = time.time()
-		self._next = 0
-
-	def reset (self):
-		self._time = time.time()
-		self._next = 0
-
-	def increase (self):
-		self._time = time.time() + self._next
-		self._next = min(int(1 + self._next * 1.2),60)
-
-	def backoff (self):
-		return self._time > time.time()
 
 
 # ======================================================================== Peer
