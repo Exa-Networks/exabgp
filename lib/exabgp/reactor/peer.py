@@ -213,7 +213,7 @@ class Peer (object):
 		self._restart = False
 		self._restarted = False
 		self._delay.reset()
-		self.fsm = FSM.IDLE
+		self.fsm.change(FSM.IDLE)
 		self.neighbor.rib.uncache()
 
 	def resend (self):
@@ -334,17 +334,13 @@ class Peer (object):
 				raise Interrupted()
 
 	def _send_open (self):
-		attempts = 5
 		message = Message.CODE.NOP
 		for message in self.proto.new_open(self._restarted):
 			if ordinal(message.TYPE) == Message.CODE.NOP:
-				yield ACTION.NOW if attempts > 0 else ACTION.LATER
-				attempts -= 1
+				yield ACTION.NOW
 		yield message
 
 	def _read_open (self):
-		# Read OPEN
-		attempts = 10
 		wait = environment.settings().bgp.openwait
 		opentimer = ReceiveTimer(self.me,wait,1,1,'waited for open too long, we do not like stuck in active')
 		# Only yield if we have not the open, otherwise the reactor can run the other connection
@@ -355,25 +351,18 @@ class Peer (object):
 			# Only yield if we have not the open, otherwise the reactor can run the other connection
 			# which would be bad as we need to do the collission check
 			if ordinal(message.TYPE) == Message.CODE.NOP:
-				yield ACTION.NOW if attempts > 0 else ACTION.LATER
-				attempts -= 1
+				yield ACTION.NOW
 		yield message
 
 	def _send_ka (self):
-		# Send KEEPALIVE
-		attempts = 5
 		for message in self.proto.new_keepalive('OPENCONFIRM'):
-			yield ACTION.NOW if attempts > 0 else ACTION.LATER
-			attempts -= 1
+			yield ACTION.NOW
 
 	def _read_ka (self):
 		# Start keeping keepalive timer
-		attempts = 10
-		# Read KEEPALIVE
 		for message in self.proto.read_keepalive():
 			self.recv_timer.check_ka(message)
-			yield ACTION.NOW if attempts > 0 else ACTION.LATER
-			attempts -= 1
+			yield ACTION.NOW
 
 	def _establish (self):
 		# try to establish the outgoing connection

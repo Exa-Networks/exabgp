@@ -68,14 +68,24 @@ class Reactor (object):
 		self._reload_processes = False
 		self._restart = False
 		self._saved_pid = False
-		self._pending = deque()
 		self._running = None
+		self._pending = deque()
+		self._async = deque()
 
 		signal.signal(signal.SIGTERM, self.sigterm)
 		signal.signal(signal.SIGHUP, self.sighup)
 		signal.signal(signal.SIGALRM, self.sigalrm)
 		signal.signal(signal.SIGUSR1, self.sigusr1)
 		signal.signal(signal.SIGUSR2, self.sigusr2)
+
+	def _termatination (self,reason):
+		while True:
+			try:
+				self._shutdown = True
+				self.logger.reactor(reason,'warning')
+				break
+			except KeyboardInterrupt:
+				pass
 
 	def sigterm (self, signum, frame):
 		self.logger.reactor('SIG TERM received - shutdown')
@@ -118,6 +128,58 @@ class Reactor (object):
 				raise exc
 			return []
 
+	def _setup_listener (self):
+		try:
+			if self.ip:
+				self.listener = Listener()
+				self.listener.listen(IP.create(self.ip),IP.create('0.0.0.0'),self.port,None,False,None)
+				self.logger.reactor('Listening for BGP session(s) on %s:%d' % (self.ip,self.port))
+
+			for neighbor in self.configuration.neighbors.values():
+				if neighbor.listen:
+					if not self.listener:
+						self.listener = Listener()
+					self.listener.listen(neighbor.md5_ip,neighbor.peer_address,neighbor.listen,neighbor.md5_password,neighbor.md5_base64,neighbor.ttl_in)
+					self.logger.reactor('Listening for BGP session(s) on %s:%d%s' % (neighbor.md5_ip,neighbor.listen,' with MD5' if neighbor.md5_password else ''))
+			return True
+		except NetworkError as exc:
+			self.listener = None
+			if os.geteuid() != 0 and self.port <= 1024:
+				self.logger.reactor('Can not bind to %s:%d, you may need to run ExaBGP as root' % (self.ip,self.port),'critical')
+			else:
+				self.logger.reactor('Can not bind to %s:%d (%s)' % (self.ip,self.port,str(exc)),'critical')
+			self.logger.reactor('unset exabgp.tcp.bind if you do not want listen for incoming connections','critical')
+			self.logger.reactor('and check that no other daemon is already binding to port %d' % self.port,'critical')
+			return False
+
+	def _handle_listener (self):
+		if not self.listener:
+			return
+
+		for connection in self.listener.connected():
+			for key in self.peers:
+				peer = self.peers[key]
+				neighbor = peer.neighbor
+				# XXX: FIXME: Inet can only be compared to Inet
+				if connection.local != str(neighbor.peer_address):
+					continue
+				if connection.peer != str(neighbor.local_address):
+					if not neighbor.auto_discovery:
+						continue
+				denied = peer.incoming(connection)
+				if denied:
+					self._async.append(denied)
+				else:
+					self.logger.reactor('accepted connection from %s' % connection.name())
+					break
+				self.logger.reactor('could not accept connection from %s' % connection.name())
+				self._async.append(connection.notification(6,5,b'could not accept the connection'))
+				break
+			else:
+				# we did not break (nothign was found/done)
+				self.logger.reactor('no session configured for %s' % connection.name())
+				self._async.append(connection.notification(6,3,b'no session configured for the peer'))
+
 	def run (self):
 		self.daemon.daemonise()
 
@@ -139,26 +201,8 @@ class Reactor (object):
 		if not self.load():
 			return False
 
-		try:
-			self.listener = Listener()
-
-			if self.ip:
-				self.listener.listen(IP.create(self.ip),IP.create('0.0.0.0'),self.port,None,False,None)
-				self.logger.reactor('Listening for BGP session(s) on %s:%d' % (self.ip,self.port))
-
-			for neighbor in self.configuration.neighbors.values():
-				if neighbor.listen:
-					self.listener.listen(neighbor.md5_ip,neighbor.peer_address,neighbor.listen,neighbor.md5_password,neighbor.md5_base64,neighbor.ttl_in)
-					self.logger.reactor('Listening for BGP session(s) on %s:%d%s' % (neighbor.md5_ip,neighbor.listen,' with MD5' if neighbor.md5_password else ''))
-		except NetworkError as exc:
-			self.listener = None
-			if os.geteuid() != 0 and self.port <= 1024:
-				self.logger.reactor('Can not bind to %s:%d, you may need to run ExaBGP as root' % (self.ip,self.port),'critical')
-			else:
-				self.logger.reactor('Can not bind to %s:%d (%s)' % (self.ip,self.port,str(exc)),'critical')
-			self.logger.reactor('unset exabgp.tcp.bind if you do not want listen for incoming connections','critical')
-			self.logger.reactor('and check that no other daemon is already binding to port %d' % self.port,'critical')
-			sys.exit(1)
+		if not self._setup_listener():
+			return False
 
 		if not self.early_drop:
 			self.processes.start()
@@ -188,16 +232,12 @@ class Reactor (object):
 			self.logger.reactor('waiting for %d seconds before connecting' % sleeptime)
 			time.sleep(float(sleeptime))
 
-		refused = []   # generators for connections needing a notification
-		flipflop = []  # to not have to allocate a refused at every loop
-
 		workers = {}
 		peers = set()
 		scheduled = False
 
 		while True:
 			try:
-				finished = False
 				start = time.time()
 				end = start + self.max_loop_time
 
@@ -220,134 +260,64 @@ class Reactor (object):
 					self.route_update = False
 					self.route_send()
 
-				for peer in self.peers.keys():
-					peers.add(peer)
+				for key,peer in self.peers.items():
+					if not peer.neighbor.passive:
+						peers.add(key)
 
-				while start < time.time() < end and not finished:
-					if self.peers:
-						for key in list(peers):
-							peer = self.peers[key]
-							if peer.neighbor.passive:
-								continue
+				while peers and start < time.time() < end:
+					for key in list(peers):
+						peer = self.peers[key]
+						action = peer.run()
 
-							action = peer.run()
+						# .run() returns an ACTION enum:
+						# * immediate if it wants to be called again
+						# * later if it should be called again but has no work atm
+						# * close if it is finished and is closing down, or restarting
+						if action == ACTION.CLOSE:
+							self._unschedule(key)
+							peers.discard(key)
+						# we are loosing this peer, not point to schedule more process work
+						elif action == ACTION.LATER:
+							for io in peer.sockets():
+								workers[io] = key
+							# no need to come back to it before a a full cycle
+							peers.discard(key)
 
-							# .run() returns an ACTION enum:
-							# * immediate if it wants to be called again
-							# * later if it should be called again but has no work atm
-							# * close if it is finished and is closing down, or restarting
-							if action == ACTION.CLOSE:
-								self.unschedule(key)
-								peers.discard(key)
-							# we are loosing this peer, not point to schedule more process work
-							elif action == ACTION.LATER:
-								for io in peer.sockets():
-									workers[io] = key
-								# no need to come back to it before a a full cycle
-								peers.discard(key)
+					self._handle_listener()
+
+					scheduled  = self._scheduled_api()
+					scheduled &= self._scheduled_listener()
 
 					if not peers:
 						reload_completed = True
 
-					if self.listener:
-						for connection in self.listener.connected():
-							for key in self.peers:
-								peer = self.peers[key]
-								neighbor = peer.neighbor
-								# XXX: FIXME: Inet can only be compared to Inet
-								if connection.local != str(neighbor.peer_address):
-									continue
-								if connection.peer != str(neighbor.local_address):
-									if not neighbor.auto_discovery:
-										continue
-								denied = peer.incoming(connection)
-								if denied:
-									refused.append(denied)
-								else:
-									self.logger.reactor('accepted connection from %s' % connection.name())
-									break
-								self.logger.reactor('could not accept connection from %s' % connection.name())
-								refused.append(connection.notification(6,5,b'could not accept the connection'))
-								break
-							else:
-								# we did not break (nothign was found/done)
-								self.logger.reactor('no session configured for %s' % connection.name())
-								refused.append(connection.notification(6,3,b'no session configured for the peer'))
-
-					scheduled = self.schedule()
-					finished = not peers and not scheduled
+					if not peers and not scheduled:
+						break
 
 				# RFC state that we MUST not send more than one KEEPALIVE / sec
 				# And doing less could cause the session to drop
 
-				attempts = 5
-				while refused and attempts:
-					for gen in refused:
-						try:
-							six.next(gen)
-							flipflop.append(gen)
-						except StopIteration:
-							pass
-					refused, flipflop = flipflop, refused
-					attempts -= 1
-
-				if finished:
-					for io in self.ready(list(peers),self.processes.fds(),end-time.time()):
-						if io in workers:
-							peers.add(workers[io])
-							del workers[io]
+				for io in self.ready(list(peers),self.processes.fds(),max(0,end-time.time())):
+					if io in workers:
+						peers.add(workers[io])
+						del workers[io]
 
 				if self._stopping and not self.peers.keys():
 					break
 
 			except KeyboardInterrupt:
-				while True:
-					try:
-						self._shutdown = True
-						self.logger.reactor('^C received')
-						break
-					except KeyboardInterrupt:
-						pass
+				self._termatination('^C received')
 			# socket.error is a subclass of IOError (so catch it first)
 			except socket.error:
-				try:
-					self._shutdown = True
-					self.logger.reactor('socket error received','warning')
-					break
-				except KeyboardInterrupt:
-					pass
+				self._termatination('socket error received')
 			except IOError:
-				while True:
-					try:
-						self._shutdown = True
-						self.logger.reactor('I/O Error received, most likely ^C during IO','warning')
-						break
-					except KeyboardInterrupt:
-						pass
+				self._termatination('I/O Error received, most likely ^C during IO')
 			except SystemExit:
-				try:
-					self._shutdown = True
-					self.logger.reactor('exiting')
-					break
-				except KeyboardInterrupt:
-					pass
+				self._termatination('exiting')
 			except ProcessError:
-				try:
-					self._shutdown = True
-					self.logger.reactor('Problem when sending message(s) to helper program, stopping','error')
-				except KeyboardInterrupt:
-					pass
+				self._termatination('Problem when sending message(s) to helper program, stopping')
 			except select.error:
-				try:
-					self._shutdown = True
-					self.logger.reactor('problem using select, stopping','error')
-				except KeyboardInterrupt:
-					pass
-				# from exabgp.leak import objgraph
-				# print objgraph.show_most_common_types(limit=20)
-				# import random
-				# obj = objgraph.by_type('Route')[random.randint(0,2000)]
-				# objgraph.show_backrefs([obj], max_depth=10)
+				self._termatination('problem using select, stopping')
 
 	def shutdown (self):
 		"""terminate all the current BGP connections"""
@@ -400,7 +370,23 @@ class Reactor (object):
 
 		return True
 
-	def schedule (self):
+	def _scheduled_listener (self, flipflop=[]):
+		try:
+			for generator in self._async:
+				try:
+					six.next(generator)
+					six.next(generator)
+					flipflop.append(generator)
+				except StopIteration:
+					pass
+			self._async, flipflop = flipflop, self._async
+			return len(self._async) > 0
+		except KeyboardInterrupt:
+			self._shutdown = True
+			self.logger.reactor('^C received','error')
+			return False
+
+	def _scheduled_api (self):
 		try:
 			# read at least on message per process if there is some and parse it
 			for service,command in self.processes.received():
@@ -426,11 +412,10 @@ class Reactor (object):
 					self.logger.reactor('callback | removing')
 				return True
 
-		except StopIteration:
-			pass
 		except KeyboardInterrupt:
 			self._shutdown = True
 			self.logger.reactor('^C received','error')
+			return False
 
 	def route_send (self):
 		"""the process ran and we need to figure what routes to changes"""
@@ -454,7 +439,7 @@ class Reactor (object):
 		self.processes.terminate()
 		self.processes.start()
 
-	def unschedule (self, peer):
+	def _unschedule (self, peer):
 		if peer in self.peers:
 			del self.peers[peer]
 

@@ -32,6 +32,5 @@ class Incoming (Connection):
 				yield False
 			# self.logger.message(self.me('>> NOTIFICATION (%d,%d,"%s")' % (notification.code,notification.subcode,notification.data)),'error')
 			self.close()
-			yield True
 		except NetworkError:
 			pass  # This is only be used when closing session due to unconfigured peers - so issues do not matter
