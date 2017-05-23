@@ -653,37 +653,41 @@ class Peer (object):
 			self.stop()
 			return True
 
-		back = ACTION.LATER if self._restart else ACTION.CLOSE
-
 		if self.generator:
 			try:
 				# This generator only stops when it raises
 				r = six.next(self.generator)
-
-				# if r is ACTION.NOW: status = 'immediately'
-				# elif r is ACTION.LATER:   status = 'next second'
-				# elif r is ACTION.CLOSE:   status = 'stop'
-				# else: status = 'buggy'
-				# self.logger.network('%s loop %11s, state is %s' % (direction.name,status,direction.fsm),'debug')
-
-				if r == ACTION.NOW:
-					back = ACTION.NOW
-				elif r == ACTION.LATER:
-					back = ACTION.LATER if back != ACTION.NOW else ACTION.NOW
 			except StopIteration:
 				# Trying to run a closed loop, no point continuing
 				self.generator = None
+				if self._restart:
+					return ACTION.LATER
+				return ACTION.CLOSE
+
+			# if r is ACTION.NOW: status = 'immediately'
+			# elif r is ACTION.LATER:   status = 'next second'
+			# elif r is ACTION.CLOSE:   status = 'stop'
+			# else: status = 'buggy'
+			# self.logger.network('%s loop %11s, state is %s' % (direction.name,status,direction.fsm),'debug')
+
+			if r == ACTION.NOW:
+				return ACTION.NOW
+			if r == ACTION.LATER:
+				return ACTION.LATER
+			if r == ACTION.CLOSE:
+				return ACTION.CLOSE
+			self.logger.network('UNEXPECTED ACTION %d' % r,'error')
+			return ACTION.CLOSE
 
 		elif self.generator is None:
 			if self.fsm in [FSM.OPENCONFIRM,FSM.ESTABLISHED]:
 				self.logger.network('stopping, other connection is established','debug')
 				self.generator = False
-			if self.proto and self.proto.connection.direction == 'outgoing' and self._delay.backoff():
-				self.logger.network('skipping, not time yet','debug')
-				back = ACTION.LATER
+				return ACTION.LATER
+			if self._delay.backoff():
+				return ACTION.LATER
 			if self._restart:
 				self.logger.network('intialising connection to %s' % self.neighbor.name(),'debug')
 				self.generator = self._run()
-				back = ACTION.LATER  # make sure we go through a clean loop
-
-		return back
+				return ACTION.LATER  # make sure we go through a clean loop
+			return ACTION.CLOSE
