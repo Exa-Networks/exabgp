@@ -78,7 +78,7 @@ class Reactor (object):
 		signal.signal(signal.SIGUSR1, self.sigusr1)
 		signal.signal(signal.SIGUSR2, self.sigusr2)
 
-	def _termatination (self,reason):
+	def _termination (self,reason):
 		while True:
 			try:
 				self._shutdown = True
@@ -306,18 +306,18 @@ class Reactor (object):
 					break
 
 			except KeyboardInterrupt:
-				self._termatination('^C received')
+				self._termination('^C received')
 			# socket.error is a subclass of IOError (so catch it first)
 			except socket.error:
-				self._termatination('socket error received')
+				self._termination('socket error received')
 			except IOError:
-				self._termatination('I/O Error received, most likely ^C during IO')
+				self._termination('I/O Error received, most likely ^C during IO')
 			except SystemExit:
-				self._termatination('exiting')
+				self._termination('exiting')
 			except ProcessError:
-				self._termatination('Problem when sending message(s) to helper program, stopping')
+				self._termination('Problem when sending message(s) to helper program, stopping')
 			except select.error:
-				self._termatination('problem using select, stopping')
+				self._termination('problem using select, stopping')
 
 	def shutdown (self):
 		"""terminate all the current BGP connections"""
@@ -382,8 +382,7 @@ class Reactor (object):
 			self._async, flipflop = flipflop, self._async
 			return len(self._async) > 0
 		except KeyboardInterrupt:
-			self._shutdown = True
-			self.logger.reactor('^C received','error')
+			self._termination('^C received','error')
 			return False
 
 	def _scheduled_api (self):
@@ -413,8 +412,7 @@ class Reactor (object):
 				return True
 
 		except KeyboardInterrupt:
-			self._shutdown = True
-			self.logger.reactor('^C received','error')
+			self._termination('^C received')
 			return False
 
 	def route_send (self):
