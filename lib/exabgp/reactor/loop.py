@@ -108,15 +108,15 @@ class Reactor (object):
 		self._reload = True
 		self._reload_processes = True
 
-	def ready (self, sockets, ios, sleeptime=0):
-		# never sleep a negative number of second (if the rounding is negative somewhere)
-		# never sleep more than one second (should the clock time change during two time.time calls)
-		sleeptime = min(max(0.0,sleeptime),1.0)
-		if not ios:
-			time.sleep(sleeptime)
-			return []
+	def _api_ready (self,sockets):
+		sleeptime = self.max_loop_time / 20
+		fds = self.processes.fds()
+		ios = fds + sockets
 		try:
-			read,_,_ = select.select(sockets+ios,[],[],sleeptime)
+			read,_,_ = select.select(ios,[],[],sleeptime)
+			for fd in fds:
+				if fd in read:
+					read.remove(fd)
 			return read
 		except select.error as exc:
 			errno,message = exc.args  # pylint: disable=W0633
@@ -264,6 +264,10 @@ class Reactor (object):
 					if not peer.neighbor.passive:
 						peers.add(key)
 
+				# check all incoming connection
+				self._handle_listener()
+
+				# give a turn to all the peers
 				while peers and start < time.time() < end:
 					for key in list(peers):
 						peer = self.peers[key]
@@ -283,9 +287,9 @@ class Reactor (object):
 							# no need to come back to it before a a full cycle
 							peers.discard(key)
 
-					self._handle_listener()
-
+					# handle API calls
 					scheduled  = self._scheduled_api()
+					# handle new connections
 					scheduled &= self._scheduled_listener()
 
 					if not peers:
@@ -294,13 +298,9 @@ class Reactor (object):
 					if not peers and not scheduled:
 						break
 
-				# RFC state that we MUST not send more than one KEEPALIVE / sec
-				# And doing less could cause the session to drop
-
-				for io in self.ready(list(peers),self.processes.fds(),max(0.0001,end-time.time())):
-					if io in workers:
-						peers.add(workers[io])
-						del workers[io]
+				for io in self._api_ready(list(workers)):
+					peers.add(workers[io])
+					del workers[io]
 
 				if self._stopping and not self.peers.keys():
 					break
@@ -410,6 +410,7 @@ class Reactor (object):
 					self._running = None
 					self.logger.reactor('callback | removing')
 				return True
+			return False
 
 		except KeyboardInterrupt:
 			self._termination('^C received')

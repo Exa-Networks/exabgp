@@ -176,8 +176,7 @@ class Peer (object):
 
 		if self.proto:
 			self.proto.close(u"peer reset, message [{0}] error[{1}]".format(message, error))
-		else:
-			self._delay.increase()
+		self._delay.increase()
 
 		self.proto = None
 
