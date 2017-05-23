@@ -297,6 +297,7 @@ class Configuration (_Configuration):
 
 		self.process.clear()
 		self.template.clear()
+		self.template_neighbor.clear()
 		self.neighbor.clear()
 		self.family.clear()
 		self.capability.clear()
