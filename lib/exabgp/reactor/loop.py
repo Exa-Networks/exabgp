@@ -297,7 +297,7 @@ class Reactor (object):
 				# RFC state that we MUST not send more than one KEEPALIVE / sec
 				# And doing less could cause the session to drop
 
-				for io in self.ready(list(peers),self.processes.fds(),max(0,end-time.time())):
+				for io in self.ready(list(peers),self.processes.fds(),max(0.0001,end-time.time())):
 					if io in workers:
 						peers.add(workers[io])
 						del workers[io]
