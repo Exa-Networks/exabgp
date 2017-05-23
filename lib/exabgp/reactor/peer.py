@@ -6,7 +6,6 @@ Created by Thomas Mangin on 2009-08-25.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-import time
 # import traceback
 from exabgp.vendoring import six
 from exabgp.util import ordinal
@@ -40,9 +39,9 @@ from exabgp.util.panic import FOOTER
 
 
 class ACTION (object):
-	CLOSE = 0x01
-	LATER = 0x02
-	NOW   = 0x03
+	CLOSE = 0x01  # finished, no need to restart the peer
+	LATER = 0x02  # re-run at the next reactor round
+	NOW   = 0x03  # re-run immediatlely
 	ALL   = [CLOSE, LATER, NOW]
 
 
@@ -591,28 +590,14 @@ class Peer (object):
 		if self.generator:
 			try:
 				# This generator only stops when it raises
-				r = six.next(self.generator)
+				# otherwise return one of the ACTION
+				return six.next(self.generator)
 			except StopIteration:
 				# Trying to run a closed loop, no point continuing
 				self.generator = None
 				if self._restart:
 					return ACTION.LATER
 				return ACTION.CLOSE
-
-			# if r is ACTION.NOW: status = 'immediately'
-			# elif r is ACTION.LATER:   status = 'next second'
-			# elif r is ACTION.CLOSE:   status = 'stop'
-			# else: status = 'buggy'
-			# self.logger.network('%s loop %11s, state is %s' % (direction.name,status,direction.fsm),'debug')
-
-			if r == ACTION.NOW:
-				return ACTION.NOW
-			if r == ACTION.LATER:
-				return ACTION.LATER
-			if r == ACTION.CLOSE:
-				return ACTION.CLOSE
-			self.logger.network('UNEXPECTED ACTION %d' % r,'error')
-			return ACTION.CLOSE
 
 		elif self.generator is None:
 			if self.fsm in [FSM.OPENCONFIRM,FSM.ESTABLISHED]:
