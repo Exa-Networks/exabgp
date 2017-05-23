@@ -591,11 +591,9 @@ class Peer (object):
 				try:
 					generator = self.proto.new_notification(notify)
 					try:
-						maximum = 20
-						while maximum:
+						while True:
 							six.next(generator)
-							maximum -= 1
-							yield ACTION.NOW if maximum > 10 else ACTION.LATER
+							yield ACTION.NOW
 					except StopIteration:
 						pass
 				except (NetworkError,ProcessError):
