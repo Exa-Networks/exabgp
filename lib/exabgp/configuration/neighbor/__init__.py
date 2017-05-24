@@ -8,8 +8,9 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 # import sys
 import base64
-import socket
 from copy import deepcopy
+
+from exabgp.util.dns import host,domain
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -40,21 +41,6 @@ from exabgp.configuration.neighbor.parser import hostname
 from exabgp.configuration.neighbor.parser import domainname
 from exabgp.configuration.neighbor.parser import description
 from exabgp.configuration.neighbor.parser import inherit
-
-
-def _hostname ():
-	value = socket.gethostname()
-	if not value:
-		return 'localhost'
-	return value.split('.')[0]
-
-
-def _domainname ():
-	value = socket.getfqdn()
-	domainname = '.'.join(value.split('.')[1:])
-	if not domainname:
-		return 'localdomain'
-	return domainname
 
 
 class ParseNeighbor (Section):
@@ -152,8 +138,8 @@ class ParseNeighbor (Section):
 		neighbor.listen           = local.get('listen',0)
 		neighbor.connect          = local.get('connect',0)
 		neighbor.hold_time        = local.get('hold-time',HoldTime(180))
-		neighbor.host_name        = local.get('host-name',_hostname())
-		neighbor.domain_name      = local.get('domain-name',_domainname())
+		neighbor.host_name        = local.get('host-name',host())
+		neighbor.domain_name      = local.get('domain-name',domain())
 		neighbor.md5_password     = local.get('md5-password',None)
 		neighbor.md5_base64       = local.get('md5-base64', False)
 		neighbor.md5_ip           = local.get('md5-ip',neighbor.local_address)

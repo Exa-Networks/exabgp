@@ -12,6 +12,7 @@ import platform
 import syslog
 import string
 
+from exabgp.util.dns import warn
 from exabgp.logger import Logger
 
 from exabgp.version import version
@@ -276,6 +277,10 @@ def run (env, comment, configurations, pid=0):
 
 	if comment:
 		logger.configuration(comment)
+
+	warning = warn()
+	if warning:
+		logger.configuration(warning)
 
 	if not env.profile.enable:
 		ok = Reactor(configurations).run()
