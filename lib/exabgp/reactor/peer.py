@@ -212,6 +212,7 @@ class Peer (object):
 		self.proto = Protocol(self).accept(connection)
 		self.generator = None
 		# Let's make sure we do some work with this connection
+		self._delay.reset()
 		return None
 
 	def established (self):
