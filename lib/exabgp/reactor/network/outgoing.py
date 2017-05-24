@@ -39,6 +39,7 @@ class Outgoing (Connection):
 			connect(self.io,self.peer,port,afi,md5)
 			if not self.local:
 				self.local = self.io.getsockname()[0]
+			self.success()
 			self.init = True
 		except NetworkError as exc:
 			self.init = False

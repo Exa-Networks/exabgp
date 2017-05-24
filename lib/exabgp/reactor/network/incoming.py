@@ -21,6 +21,7 @@ class Incoming (Connection):
 			self.io = io
 			async(self.io,self.peer)
 			nagle(self.io,self.peer)
+			self.success()
 		except NetworkError as exc:
 			self.close()
 			raise NotConnected(errstr(exc))
@@ -30,7 +31,7 @@ class Incoming (Connection):
 			notification = Notify(code,subcode,message).message()
 			for boolean in self.writer(notification):
 				yield False
-			# self.logger.message(self.me('>> NOTIFICATION (%d,%d,"%s")' % (notification.code,notification.subcode,notification.data)),'error')
+			# self.logger.message('>> NOTIFICATION (%d,%d,"%s")' % (notification.code,notification.subcode,notification.data),'error')
 			self.close()
 		except NetworkError:
 			pass  # This is only be used when closing session due to unconfigured peers - so issues do not matter

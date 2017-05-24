@@ -18,9 +18,9 @@ from exabgp.bgp.message import Notify
 
 
 class ReceiveTimer (object):
-	def __init__ (self, me, holdtime, code, subcode, message=b''):
+	def __init__ (self, session, holdtime, code, subcode, message=b''):
 		self.logger = Logger()
-		self.me = me
+		self.session = session
 
 		self.holdtime = holdtime
 		self.last_read = time.time()
@@ -36,7 +36,7 @@ class ReceiveTimer (object):
 		if self.holdtime:
 			left = int(self.last_read  + self.holdtime - time.time())
 			if self.last_print != left:
-				self.logger.timers(self.me('Receive Timer %d second(s) left' % left))
+				self.logger.timers('Receive Timer %d second(s) left' % left,source=self.session())
 				self.last_print = left
 			if left <= 0:
 				raise Notify(self.code,self.subcode,self.message)
@@ -45,9 +45,9 @@ class ReceiveTimer (object):
 
 
 class SendTimer (object):
-	def __init__ (self, me, holdtime):
+	def __init__ (self, session, holdtime):
 		self.logger = Logger()
-		self.me = me
+		self.session = session
 
 		self.keepalive = holdtime.keepalive()
 		self.last_sent = int(time.time())
@@ -61,7 +61,7 @@ class SendTimer (object):
 		left = self.last_sent + self.keepalive - now
 
 		if now != self.last_print:
-			self.logger.timers(self.me('Send Timer %d second(s) left' % left))
+			self.logger.timers('Send Timer %d second(s) left' % left,source=self.session())
 			self.last_print = now
 
 		if left <= 0:

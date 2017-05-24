@@ -262,7 +262,7 @@ class Peer (object):
 
 	def _read_open (self):
 		wait = environment.settings().bgp.openwait
-		opentimer = ReceiveTimer(self.me,wait,1,1,'waited for open too long, we do not like stuck in active')
+		opentimer = ReceiveTimer(self.proto.connection.session,wait,1,1,'waited for open too long, we do not like stuck in active')
 		# Only yield if we have not the open, otherwise the reactor can run the other connection
 		# which would be bad as we need to do the collission check without going to the other peer
 		for message in self.proto.read_open(self.neighbor.peer_address.top()):
@@ -309,7 +309,7 @@ class Peer (object):
 
 		self.fsm.change(FSM.OPENCONFIRM)
 
-		self.recv_timer = ReceiveTimer(self.me,self.proto.negotiated.holdtime,4,0)
+		self.recv_timer = ReceiveTimer(self.proto.connection.session,self.proto.negotiated.holdtime,4,0)
 		for action in self._send_ka():
 			yield action
 		for action in self._read_ka():
@@ -353,7 +353,7 @@ class Peer (object):
 		number = 0
 		refresh_enhanced = True if self.proto.negotiated.refresh == REFRESH.ENHANCED else False
 
-		send_ka = KA(self.me,self.proto)
+		send_ka = KA(self.proto.connection.session,self.proto)
 
 		while not self._teardown:
 			for message in self.proto.read_message():
@@ -368,11 +368,11 @@ class Peer (object):
 				if message.TYPE == Update.TYPE:
 					number += 1
 
-					self.logger.routes(LazyFormat(self.me('<< UPDATE (%d)' % number),message.attributes,lambda _: "%s%s" % (' attributes' if _ else '',_)))
+					self.logger.routes(LazyFormat('<< UPDATE (%d)' % number,message.attributes,lambda _: "%s%s" % (' attributes' if _ else '',_)),source=self.proto.connection.session())
 
 					for nlri in message.nlris:
 						self.neighbor.rib.incoming.insert_received(Change(nlri,message.attributes))
-						self.logger.routes(LazyFormat(self.me('<< UPDATE (%d) nlri ' % number),nlri,str))
+						self.logger.routes(LazyFormat('<< UPDATE (%d) nlri ' % number,nlri,str),source=self.proto.connection.session())
 
 				elif message.TYPE == RouteRefresh.TYPE:
 					if message.reserved == RouteRefresh.request:
@@ -451,7 +451,7 @@ class Peer (object):
 					send_eor = False
 					for _ in self.proto.new_eors():
 						yield ACTION.NOW
-					self.logger.message(self.me('>> EOR(s)'))
+					self.logger.message('>> EOR(s)')
 
 				# SEND MANUAL KEEPALIVE (only if we have no more routes to send)
 				elif not command_eor and self.neighbor.eor:
@@ -517,7 +517,7 @@ class Peer (object):
 					except StopIteration:
 						pass
 				except (NetworkError,ProcessError):
-					self.logger.network(self.me('NOTIFICATION NOT SENT'),'error')
+					self.logger.network('NOTIFICATION NOT SENT','error')
 				self._reset('notification sent (%d,%d)' % (notify.code,notify.subcode),notify)
 			else:
 				self._reset()
@@ -558,7 +558,7 @@ class Peer (object):
 			# Those messages can not be filtered in purpose
 			self.logger.raw('\n'.join([
 				NO_PANIC,
-				self.me(''),
+				'',
 				'',
 				str(type(exc)),
 				str(exc),

@@ -83,7 +83,7 @@ class Protocol (object):
 	# XXX: we use self.peer.neighbor.peer_address when we could use self.neighbor.peer_address
 
 	def me (self, message):
-		return "Peer %15s ASN %-7s %s" % (self.peer.neighbor.peer_address,self.peer.neighbor.peer_as,message)
+		return "%s/%s %s" % (self.peer.neighbor.peer_address,self.peer.neighbor.peer_as,message)
 
 	def accept (self, incoming):
 		self.connection = incoming
@@ -128,7 +128,7 @@ class Protocol (object):
 
 	def close (self, reason='protocol closed, reason unspecified'):
 		if self.connection:
-			self.logger.network(self.me(reason))
+			self.logger.network(reason,source=self.connection.session())
 
 			# must be first otherwise we could have a loop caused by the raise in the below
 			self.connection.close()
@@ -138,7 +138,7 @@ class Protocol (object):
 				if self.peer.neighbor.api['neighbor-changes']:
 					self.peer.reactor.processes.down(self.peer.neighbor,reason)
 			except ProcessError:
-				self.logger.message(self.me('could not send notification of neighbor close to API'))
+				self.logger.message('could not send notification of neighbor close to API',source=self.connection.session())
 
 	def _to_api (self,direction,message,raw):
 		packets = self.neighbor.api['%s-packets' % direction]
@@ -202,7 +202,7 @@ class Protocol (object):
 				yield _NOP
 				continue
 
-			self.logger.message(self.me('<< %s' % Message.CODE.name(msg_id)))
+			self.logger.message('<< %s' % Message.CODE.name(msg_id),source=self.connection.session())
 
 			for_api = self.neighbor.api.get('receive-%s' % Message.CODE.short(msg_id),False)
 
@@ -219,8 +219,8 @@ class Protocol (object):
 			except (KeyboardInterrupt,SystemExit,Notify):
 				raise
 			except Exception as exc:
-				self.logger.message(self.me('Could not decode message "%d"' % msg_id))
-				self.logger.message(self.me('%s' % str(exc)))
+				self.logger.message('Could not decode message "%d"' % msg_id,source=self.connection.session())
+				self.logger.message('%s' % str(exc),source=self.connection.session())
 				self.logger.message(traceback.format_exc())
 				raise Notify(1,0,'can not decode update message of type "%d"' % msg_id)
 				# raise Notify(5,0,'unknown message received')
@@ -248,6 +248,13 @@ class Protocol (object):
 		error = self.negotiated.validate(self.neighbor)
 		if error is not None:
 			raise Notify(*error)
+		if self.negotiated.mismatch:
+			self.logger.warning('--------------------------------------------------------------------',self.connection.session())
+			self.logger.warning('the connection can not carry the following family/families',self.connection.session())
+			for reason,(afi,safi) in self.negotiated.mismatch:
+				self.logger.warning(' - %s is not configured for %s/%s' % (reason,afi,safi),self.connection.session())
+			self.logger.warning('therefore no routes of this kind can be announced on the connection',self.connection.session())
+			self.logger.warning('--------------------------------------------------------------------',self.connection.session())
 
 	def read_open (self, ip):
 		for received_open in self.read_message():
@@ -259,7 +266,7 @@ class Protocol (object):
 		if received_open.TYPE != Open.TYPE:
 			raise Notify(5,1,'The first packet received is not an open message (%s)' % received_open)
 
-		self.logger.message(self.me('<< %s' % received_open))
+		self.logger.message('<< %s' % received_open,source=self.connection.session())
 		yield received_open
 
 	def read_keepalive (self):
@@ -291,7 +298,7 @@ class Protocol (object):
 		for _ in self.write(sent_open):
 			yield _NOP
 
-		self.logger.message(self.me('>> %s' % sent_open))
+		self.logger.message('>> %s' % sent_open,source=self.connection.session())
 		yield sent_open
 
 	def new_keepalive (self, comment=''):
@@ -300,14 +307,14 @@ class Protocol (object):
 		for _ in self.write(keepalive):
 			yield _NOP
 
-		self.logger.message(self.me('>> KEEPALIVE%s' % (' (%s)' % comment if comment else '')))
+		self.logger.message('>> KEEPALIVE%s' % (' (%s)' % comment if comment else ''),source=self.connection.session())
 
 		yield keepalive
 
 	def new_notification (self, notification):
 		for _ in self.write(notification):
 			yield _NOP
-		self.logger.message(self.me('>> NOTIFICATION (%d,%d,"%s")' % (notification.code,notification.subcode,notification.data)))
+		self.logger.message('>> NOTIFICATION (%d,%d,"%s")' % (notification.code,notification.subcode,notification.data),source=self.connection.session())
 		yield notification
 
 	def new_update (self, include_withdraw):
@@ -320,14 +327,14 @@ class Protocol (object):
 					# boolean is a transient network error we already announced
 					yield _NOP
 		if number:
-			self.logger.message(self.me('>> %d UPDATE(s)' % number))
+			self.logger.message('>> %d UPDATE(s)' % number,source=self.connection.session())
 		yield _UPDATE
 
 	def new_eor (self, afi, safi):
 		eor = EOR(afi,safi)
 		for _ in self.write(eor):
 			yield _NOP
-		self.logger.message(self.me('>> EOR %s %s' % (afi,safi)))
+		self.logger.message('>> EOR %s %s' % (afi,safi),source=self.connection.session())
 		yield eor
 
 	def new_eors (self, afi=AFI.undefined,safi=SAFI.undefined):
@@ -348,11 +355,11 @@ class Protocol (object):
 	def new_operational (self, operational, negotiated):
 		for _ in self.write(operational,negotiated):
 			yield _NOP
-		self.logger.message(self.me('>> OPERATIONAL %s' % str(operational)))
+		self.logger.message('>> OPERATIONAL %s' % str(operational),source=self.connection.session())
 		yield operational
 
 	def new_refresh (self, refresh):
 		for _ in self.write(refresh,None):
 			yield _NOP
-		self.logger.message(self.me('>> REFRESH %s' % str(refresh)))
+		self.logger.message('>> REFRESH %s' % str(refresh),source=self.connection.session())
 		yield refresh

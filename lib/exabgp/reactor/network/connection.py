@@ -36,7 +36,7 @@ from .error import *
 
 class Connection (object):
 	direction = 'undefined'
-	identifier = 0
+	identifier = {}
 
 	def __init__ (self, afi, peer, local):
 		# peer and local are strings of the IP
@@ -54,21 +54,28 @@ class Connection (object):
 		self.io = None
 		self.established = False
 
-		self.identifier += 1
-		self.id = self.identifier
+		self.id = self.identifier.get(self.direction,1)
+
+	def success (self):
+		identifier = self.identifier.get(self.direction,1) + 1
+		self.identifier[self.direction] = identifier
+		return identifier
 
 	# Just in case ..
 	def __del__ (self):
 		if self.io:
-			self.logger.network("%s connection to %s closed" % (self.name(),self.peer),'info')
+			self.logger.network("%s connection to %s closed" % (self.name(),self.peer),'info',self.session())
 			self.close()
 
 	def name (self):
-		return "session-%d %s-%s" % (self.id,self.local,self.peer)
+		return "%s-%d %s-%s" % (self.direction,self.id,self.local,self.peer)
+
+	def session (self):
+		return "%s-%d" % (self.direction,self.id)
 
 	def close (self):
 		try:
-			self.logger.wire("%s, closing connection from %s to %s" % (self.name(),self.local,self.peer))
+			self.logger.wire("%s, closing connection from %s to %s" % (self.name(),self.local,self.peer),source=self.session())
 			if self.io:
 				self.io.close()
 				self.io = None
@@ -84,7 +91,7 @@ class Connection (object):
 			except select.error as exc:
 				if exc.args[0] not in error.block:
 					self.close()
-					self.logger.wire("%s %s errno %s on socket" % (self.name(),self.peer,errno.errorcode[exc.args[0]]))
+					self.logger.wire("%s %s errno %s on socket" % (self.name(),self.peer,errno.errorcode[exc.args[0]]),source=self.session())
 					raise NetworkError('errno %s on socket' % errno.errorcode[exc.args[0]])
 				return False
 			return r != []
@@ -96,7 +103,7 @@ class Connection (object):
 			except select.error as exc:
 				if exc.args[0] not in error.block:
 					self.close()
-					self.logger.wire("%s %s errno %s on socket" % (self.name(),self.peer,errno.errorcode[exc.args[0]]))
+					self.logger.wire("%s %s errno %s on socket" % (self.name(),self.peer,errno.errorcode[exc.args[0]]),source=self.session())
 					raise NetworkError('errno %s on socket' % errno.errorcode[exc.args[0]])
 				return False
 			return w != []
@@ -123,7 +130,7 @@ class Connection (object):
 					read = self.io.recv(number)
 					if not read:
 						self.close()
-						self.logger.wire("%s %s lost TCP session with peer" % (self.name(),self.peer))
+						self.logger.wire("%s %s lost TCP session with peer" % (self.name(),self.peer),source=self.session())
 						raise LostConnection('the TCP connection was closed by the remote end')
 					data += read
 
@@ -136,7 +143,8 @@ class Connection (object):
 									'%s / %s' % (self.local,self.peer)
 								),
 								read
-							)
+							),
+							source=self.session()
 						)
 						yield data
 						return
@@ -144,21 +152,21 @@ class Connection (object):
 					yield b''
 			except socket.timeout as exc:
 				self.close()
-				self.logger.wire("%s %s peer is too slow" % (self.name(),self.peer))
+				self.logger.wire("%s %s peer is too slow" % (self.name(),self.peer),source=self.session())
 				raise TooSlowError('Timeout while reading data from the network (%s)' % errstr(exc))
 			except socket.error as exc:
 				if exc.args[0] in error.block:
 					message = "%s %s blocking io problem mid-way through reading a message %s, trying to complete" % (self.name(),self.peer,errstr(exc))
 					if message != reported:
 						reported = message
-						self.logger.wire(message,'debug')
+						self.logger.wire(message,'debug',self.session())
 					yield b''
 				elif exc.args[0] in error.fatal:
 					self.close()
 					raise LostConnection('issue reading on the socket: %s' % errstr(exc))
 				# what error could it be !
 				else:
-					self.logger.wire("%s %s undefined error reading on socket" % (self.name(),self.peer))
+					self.logger.wire("%s %s undefined error reading on socket" % (self.name(),self.peer),source=self.session())
 					raise NetworkError('Problem while reading data from the network (%s)' % errstr(exc))
 
 	def writer (self, data):
@@ -168,7 +176,7 @@ class Connection (object):
 			return
 		while not self.writing():
 			yield False
-		self.logger.wire(LazyFormat("%s %-32s SENDING " % (self.name(),'%s / %s' % (self.local,self.peer)),data))
+		self.logger.wire(LazyFormat("%s %-32s SENDING " % (self.name(),'%s / %s' % (self.local,self.peer)),data),source=self.session())
 		# The first while is here to setup the try/catch block once as it is very expensive
 		while True:
 			try:
@@ -181,7 +189,7 @@ class Connection (object):
 					number = self.io.send(data)
 					if not number:
 						self.close()
-						self.logger.wire("%s %s lost TCP connection with peer" % (self.name(),self.peer))
+						self.logger.wire("%s %s lost TCP connection with peer" % (self.name(),self.peer),source=self.session())
 						raise LostConnection('lost the TCP connection')
 
 					data = data[number:]
@@ -197,7 +205,8 @@ class Connection (object):
 							self.peer,
 							errstr(exc)
 						),
-						'debug'
+						'debug',
+						self.session()
 					)
 					yield False
 				elif exc.errno == errno.EPIPE:
@@ -206,11 +215,11 @@ class Connection (object):
 					raise NetworkError('Broken TCP connection')
 				elif exc.args[0] in error.fatal:
 					self.close()
-					self.logger.wire("%s %s problem sending message (%s)" % (self.name(),self.peer,errstr(exc)))
+					self.logger.wire("%s %s problem sending message (%s)" % (self.name(),self.peer,errstr(exc)),source=self.session())
 					raise NetworkError('Problem while writing data to the network (%s)' % errstr(exc))
 				# what error could it be !
 				else:
-					self.logger.wire("%s %s undefined error writing on socket" % (self.name(),self.peer))
+					self.logger.wire("%s %s undefined error writing on socket" % (self.name(),self.peer),source=self.session())
 					yield False
 
 	def reader (self):
