@@ -5,8 +5,10 @@ Version explained:
 
 Version 4.0.1
  * Change: makes python3 the default interpreter
+ * Change: major change to log output format
  * Fix: correcly parse single element flow rule
     reported by: Christoph Loibl
+ * Fix: much faster session establishment
  * Feature: allow to disable command acknowledgement via environment
     reported by: nidotech
  * Feature: https://tools.ietf.org/html/draft-ietf-idr-bgp-prefix-sid-05
