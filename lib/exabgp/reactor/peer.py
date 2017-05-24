@@ -217,18 +217,6 @@ class Peer (object):
 	def established (self):
 		return self.fsm == FSM.ESTABLISHED
 
-	def detailed_link_status (self):
-		# XXX: Should be defined outside this function but in the FSM
-		state_tbl = {
-			FSM.IDLE:        "Idle",
-			FSM.ACTIVE:      "Active",
-			FSM.CONNECT:     "Connect",
-			FSM.OPENSENT:    "OpenSent",
-			FSM.OPENCONFIRM: "OpenConfirm",
-			FSM.ESTABLISHED: "Established",
-		}
-		return state_tbl[self.fsm.state]
-
 	def negotiated_families(self):
 		if self.proto:
 			families = ["%s/%s" % (x[0], x[1]) for x in self.proto.negotiated.families]

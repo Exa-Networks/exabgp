@@ -84,3 +84,6 @@ class FSM (object):
 
 	def __repr__ (self):
 		return 'FSM state %s' % self.state
+
+	def name (self):
+		return self.STATE.names.get(self.state,'INVALID')

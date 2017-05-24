@@ -155,7 +155,7 @@ def show_neighbor_status (self, reactor, service, command):
 			if not peer:
 				continue
 			peer_name = peer.neighbor.name()
-			detailed_status = peer.detailed_link_status()
+			detailed_status = peer.fsm.name()()
 			families = peer.negotiated_families()
 			if families:
 				families = "negotiated %s" % families
