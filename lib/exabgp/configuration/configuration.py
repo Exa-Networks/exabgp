@@ -397,6 +397,7 @@ class Configuration (_Configuration):
 			api = neighbor.api
 			for process in api.get('processes',[]):
 				self.processes.setdefault(process,{})['neighbor-changes'] = api['neighbor-changes']
+				self.processes.setdefault(process,{})['negotiated'] = api['negotiated']
 				for way in ('send','receive'):
 					for name in ('parsed','packets','consolidate'):
 						key = "%s-%s" % (way,name)

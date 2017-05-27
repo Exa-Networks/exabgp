@@ -17,6 +17,16 @@ class REFRESH (object):
 	NORMAL   = 0x02
 	ENHANCED = 0x04
 
+	@staticmethod
+	def json (refresh):
+		if refresh == REFRESH.ABSENT:
+			return 'absent'
+		if refresh == REFRESH.NORMAL:
+			return 'normal'
+		if refresh == REFRESH.ENHANCED:
+			return 'enhanced'
+		return 'unknown'
+
 
 @Capability.register()
 @Capability.register(Capability.CODE.ROUTE_REFRESH_CISCO)

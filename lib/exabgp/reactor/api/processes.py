@@ -232,6 +232,9 @@ class Processes (object):
 				self.handle_problem(process)
 
 	def write (self, process, string, neighbor=None):
+		if string is None:
+			return True
+
 		# XXX: FIXME: This is potentially blocking
 		while True:
 			try:
@@ -285,6 +288,11 @@ class Processes (object):
 	def down (self, neighbor, reason):
 		for process in self._notify(neighbor,'neighbor-changes'):
 			self.write(process,self._encoder[process].down(neighbor,reason),neighbor)
+
+	@silenced
+	def negotiated (self, neighbor, negotiated):
+		for process in self._notify(neighbor,'negotiated'):
+			self.write(process,self._encoder[process].negotiated(neighbor,negotiated),neighbor)
 
 	@silenced
 	def packets (self, neighbor, direction, category, header, body):

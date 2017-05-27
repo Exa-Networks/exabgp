@@ -248,6 +248,10 @@ class Protocol (object):
 		error = self.negotiated.validate(self.neighbor)
 		if error is not None:
 			raise Notify(*error)
+
+		if self.neighbor.api['negotiated']:
+			self.peer.reactor.processes.negotiated(self.peer.neighbor,self.negotiated)
+
 		if self.negotiated.mismatch:
 			self.logger.warning('--------------------------------------------------------------------',self.connection.session())
 			self.logger.warning('the connection can not carry the following family/families',self.connection.session())
