@@ -13,6 +13,11 @@ from exabgp.util import ordinal
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
+from exabgp.protocol.ip.netmask import NetMask
+
+# XXX: The IP,Range and CIDR class API are totally broken, fix it.
+# XXX: many of the NLRI classes constructor also need correct @classmethods
+
 
 # =========================================================================== IP
 #
@@ -38,7 +43,7 @@ class IPSelf (object):
 
 
 class IP (object):
-	afi = None  # here for the API
+	afi = None  # here for the API, changed in init which does not change this
 	_known = dict()
 
 	_UNICAST = SAFI(SAFI.unicast)
@@ -47,7 +52,6 @@ class IP (object):
 	_multicast_range = set(range(224,240))  # 239
 
 	# deprecate the string API in favor of top()
-	__slots__ = ['_string','_packed']
 
 	def __init__ (self):
 		raise RuntimeError("You should use IP.create() to use IP")
@@ -56,6 +60,7 @@ class IP (object):
 		# XXX: the str should not be needed
 		self._string = string
 		self._packed = IP.pton(string) if packed is None else packed
+		self.afi = IP.toafi(string)
 		return self
 
 	def __iter__ (self):
@@ -108,6 +113,13 @@ class IP (object):
 
 	def ipv6 (self):
 		return False if len(self._packed) == 4 else True
+
+	def address (self):
+		value = 0
+		for char in self._packed:
+			value <<= 8
+			value += ordinal(char)
+		return value
 
 	@staticmethod
 	def length (afi):
@@ -175,6 +187,22 @@ class IP (object):
 		return cls.create(IP.ntop(data),data,klass)
 
 
+# ======================================================================== Range
+#
+
+class IPRange (IP):
+	def __init__ (self, ip, mask):
+		IP.init(self,ip)
+		self.mask = NetMask.create(mask,IP.toafi(ip))
+
+	@classmethod
+	def create (klass, ip, mask):
+		return klass(ip,mask)
+
+	def __repr__ (self):
+		return '%s/%d' % (self.top(),self.mask)
+
+
 # ==================================================================== NoNextHop
 #
 
@@ -193,14 +221,16 @@ class _NoNextHop (object):
 	def __str__ (self):
 		return 'no-nexthop'
 
+
 NoNextHop = _NoNextHop()
+
 
 # ========================================================================= IPv4
 #
 
 class IPv4 (IP):
 	# lower case to match the class Address API
-	afi = AFI.ipv4
+	afi = AFI(AFI.ipv4)
 
 	__slots__ = []
 
@@ -238,6 +268,7 @@ class IPv4 (IP):
 			return klass(ip,data)
 		return cls(ip,data)
 
+
 IPv4.register()
 
 
@@ -246,7 +277,7 @@ IPv4.register()
 
 class IPv6 (IP):
 	# lower case to match the class Address API
-	afi = AFI.ipv6
+	afi = AFI(AFI.ipv6)
 
 	__slots__ = []
 
@@ -282,5 +313,6 @@ class IPv6 (IP):
 		if klass:
 			return klass(ip6)
 		return cls(ip6)
+
 
 IPv6.register()

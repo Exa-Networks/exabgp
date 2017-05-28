@@ -8,7 +8,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 
 import os
 import re
-import sys
+import copy
 import time
 import signal
 import select
@@ -159,29 +159,68 @@ class Reactor (object):
 		if not self.listener:
 			return
 
+		ranged_neighbor = []
+
 		for connection in self.listener.connected():
 			for key in self.peers:
 				peer = self.peers[key]
 				neighbor = peer.neighbor
-				# XXX: FIXME: Inet can only be compared to Inet
-				if connection.local != str(neighbor.peer_address):
+
+				connection_local = IP.create(connection.local).address()
+				neighbor_peer_start = neighbor.peer_address.address()
+				neighbor_peer_next = neighbor_peer_start + neighbor.range_size
+
+				if not neighbor_peer_start <= connection_local < neighbor_peer_next:
 					continue
-				if connection.peer != str(neighbor.local_address):
+
+				connection_peer = IP.create(connection.peer).address()
+				neighbor_local = neighbor.local_address.address()
+
+				if connection_peer != neighbor_local:
 					if not neighbor.auto_discovery:
 						continue
-				denied = peer.handle_fsm(connection)
+
+				# we found a range matching for this connection
+				# but the peer may already have connected, so
+				# we need to iterate all individual peers before
+				# handling "range" peers
+				if neighbor.range_size > 1:
+					ranged_neighbor.append(peer.neighbor)
+					continue
+
+				denied = peer.handle_connection(connection)
 				if denied:
+					self.logger.reactor('refused connection from %s due to the state machine' % connection.name())
 					self._async.append(denied)
-				else:
-					self.logger.reactor('accepted connection from %s' % connection.name())
 					break
-				self.logger.reactor('could not accept connection from %s' % connection.name())
-				self._async.append(connection.notification(6,5,b'could not accept the connection'))
+				self.logger.reactor('accepted connection from %s' % connection.name())
 				break
 			else:
-				# we did not break (nothign was found/done)
-				self.logger.reactor('no session configured for %s' % connection.name())
-				self._async.append(connection.notification(6,3,b'no session configured for the peer'))
+				# we did not break (and nothign was found/done or we have group match)
+				matched = len(ranged_neighbor)
+				if matched > 1:
+					self.logger.reactor('could not accept connection from %s (more than one neighbor match)' % connection.name())
+					self._async.append(connection.notification(6,5,b'could not accept the connection (more than one neighbor match)'))
+					return
+				if not matched:
+					self.logger.reactor('no session configured for %s' % connection.name())
+					self._async.append(connection.notification(6,3,b'no session configured for the peer'))
+					return
+
+				new_neighbor = copy.copy(ranged_neighbor[0])
+				new_neighbor.range_size = 1
+				new_neighbor.local_address = IP.create(connection.peer)
+				new_neighbor.peer_address = IP.create(connection.local)
+
+				new_peer = Peer(new_neighbor,self)
+				denied = new_peer.handle_connection(connection)
+				if denied:
+					self.logger.reactor('refused connection from %s due to the state machine' % connection.name())
+					self._async.append(denied)
+					return
+
+				self.peers[new_neighbor.name()] = new_peer
+				return
 
 	def run (self):
 		self.daemon.daemonise()
@@ -264,7 +303,7 @@ class Reactor (object):
 					self.route_send()
 
 				for key,peer in self.peers.items():
-					if not peer.neighbor.passive:
+					if not peer.neighbor.passive or peer.proto:
 						peers.add(key)
 
 				# check all incoming connection

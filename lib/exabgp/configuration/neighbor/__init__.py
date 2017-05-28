@@ -29,6 +29,7 @@ from exabgp.configuration.family import ParseFamily
 
 from exabgp.configuration.parser import boolean
 from exabgp.configuration.parser import ip
+from exabgp.configuration.parser import peer_ip
 from exabgp.configuration.parser import asn
 from exabgp.configuration.parser import local_asn
 from exabgp.configuration.parser import port
@@ -56,7 +57,7 @@ class ParseNeighbor (Section):
 		'router-id':     router_id,
 		'hold-time':     hold_time,
 		'local-address': local_address,
-		'peer-address':  ip,
+		'peer-address':  peer_ip,
 		'local-as':      local_asn,
 		'peer-as':       asn,
 		'passive':       boolean,
@@ -186,7 +187,7 @@ class ParseNeighbor (Section):
 
 		messages = local.get('operational',{}).get('routes',[])
 
-		if neighbor.local_address == None:
+		if neighbor.local_address is None:
 			neighbor.auto_discovery = True
 			neighbor.local_address = None
 			neighbor.md5_ip = None
@@ -204,6 +205,10 @@ class ParseNeighbor (Section):
 
 		if not neighbor.auto_discovery and neighbor.local_address.afi != neighbor.peer_address.afi:
 			return self.error.set('local-address and peer-address must be of the same family')
+		neighbor.range_size = neighbor.peer_address.mask.size()
+
+		if neighbor.range_size > 1 and not neighbor.passive:
+			return self.error.set('can only use ip ranges for the peer address with passive neighbors')
 
 		if neighbor.peer_address.top() in self._neighbors:
 			return self.error.set('duplicate peer definition %s' % neighbor.peer_address.top())

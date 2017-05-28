@@ -34,6 +34,7 @@ class Neighbor (object):
 		self.host_name = None
 		self.domain_name = None
 		self.local_address = None
+		self.range_size = 1
 		# local_address uses auto discovery
 		self.auto_discovery = False
 		self.peer_address = None

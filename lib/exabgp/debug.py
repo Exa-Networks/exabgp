@@ -13,7 +13,12 @@ from exabgp.util.panic import FOOTER
 
 
 def bug_report (dtype, value, trace):
+	sys.stdout.flush()
+	sys.stderr.flush()
+
 	print(PANIC)
+	sys.stdout.flush()
+	sys.stderr.flush()
 
 	import traceback
 
@@ -30,6 +35,8 @@ def bug_report (dtype, value, trace):
 	print("\n\n\n")
 
 	print(FOOTER)
+	sys.stdout.flush()
+	sys.stderr.flush()
 
 
 def intercept (dtype, value, trace):

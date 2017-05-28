@@ -14,6 +14,7 @@ from exabgp.util import concat_bytes_i
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import IPSelf
+from exabgp.protocol.ip import IPRange
 from exabgp.protocol.family import AFI
 # from exabgp.protocol.family import SAFI
 
@@ -57,31 +58,16 @@ if sys.version_info > (3,):
 	long = int
 
 
-# XXX: The IP and CIDR class API is totally broken, fix it.
-# XXX: Then add a similar class to the lot
-# XXX: I could also say this from many of the NLRI classes constructor which need correct @classmethods
-
-
-class Range (IP):  # XXX:  we do not need this class anymore and should just use CIDR
-	def __init__ (self, ip, packed, mask):
-		IP.init(self,ip,packed)
-		self.mask = mask
-
-	def __repr__ (self):
-		return '%s/%d' % (self.top(),self.mask)
-
-
 def prefix (tokeniser):
 	# XXX: could raise
 	ip = tokeniser()
 	try:
 		ip,mask = ip.split('/')
-		mask = int(mask)
 	except ValueError:
-		mask = 32
+		mask = '32'
 
 	tokeniser.afi = IP.toafi(ip)
-	return Range(ip,IP.pton(ip),mask)
+	return IPRange.create(ip,mask)
 
 
 def path_information (tokeniser):
