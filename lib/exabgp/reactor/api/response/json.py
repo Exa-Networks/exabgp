@@ -162,6 +162,11 @@ class JSON (object):
 			})
 		})),'','',neighbor,message_type='negotiated')
 
+	def fsm (self, neighbor, fsm):
+		return self._header(self._neighbor(neighbor,None,self._kv({
+			'state': fsm.name()
+		})),'','',neighbor,message_type='fsm')
+
 	def notification (self, neighbor, direction, message, header, body):
 		return self._header(self._neighbor(neighbor,direction,self._kv({
 			'notification': '{ %s } ' % self._kv({

@@ -84,7 +84,7 @@ class Peer (object):
 		self._neighbor = None
 
 		self.proto = None
-		self.fsm = FSM(FSM.IDLE)
+		self.fsm = FSM(self,FSM.IDLE)
 		self.generator = None
 
 		# The peer should restart after a stop

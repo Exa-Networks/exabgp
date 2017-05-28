@@ -290,6 +290,11 @@ class Processes (object):
 			self.write(process,self._encoder[process].down(neighbor,reason),neighbor)
 
 	@silenced
+	def fsm (self, neighbor, fsm):
+		for process in self._notify(neighbor,'fsm'):
+			self.write(process,self._encoder[process].fsm(neighbor,fsm),neighbor)
+
+	@silenced
 	def negotiated (self, neighbor, negotiated):
 		for process in self._notify(neighbor,'negotiated'):
 			self.write(process,self._encoder[process].negotiated(neighbor,negotiated),neighbor)

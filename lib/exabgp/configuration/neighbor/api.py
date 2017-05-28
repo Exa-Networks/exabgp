@@ -99,22 +99,26 @@ class ParseAPI (Section):
 		'processes':        processes,
 		'neighbor-changes': boolean,
 		'negotiated':       boolean,
+		'fsm':              boolean,
 	}
 
 	action = {
 		'processes':        'set-command',
 		'neighbor-changes': 'set-command',
 		'negotiated':       'set-command',
+		'fsm':              'set-command',
 	}
 
 	default = {
 		'neighbor-changes': True,
 		'negotiated':       True,
+		'fsm':              True,
 	}
 
 	DEFAULT_API = {
 		'neighbor-changes': [],
 		'negotiated':       [],
+		'fsm':              [],
 	}
 
 	name = 'api'
@@ -151,7 +155,7 @@ class ParseAPI (Section):
 
 		type(self)._built['processes'].extend(procs)
 
-		for command in ('neighbor-changes','negotiated'):
+		for command in ('neighbor-changes','negotiated','fsm'):
 			type(self)._built[command].extend(procs if api.get(command,False) else [])
 
 		for direction in ('send','receive'):
@@ -176,6 +180,7 @@ for way in ('send','receive'):
 	#
 	# 		'neighbor-changes': False,
 	# 		'negotiated': False,
+	# 		'fsm: False,
 	#
 	# 		'receive-consolidate': False,
 	# 		'receive-packets': False,
