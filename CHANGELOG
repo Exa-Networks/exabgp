@@ -15,6 +15,7 @@ Version 4.0.1
  * Feature: https://tools.ietf.org/html/draft-ietf-idr-bgp-prefix-sid-05
     patch by: Evelio Vila
  * Feature: added a new API message "negotiated" which gives the negotiated feature of the session
+ * Feature: added a new API message "fsm" which gives the BGP state machine information
  * Feature: it is now possible to use ip/netmask as notation for neighbor
 
 Version 4.0.0
