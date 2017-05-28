@@ -114,7 +114,7 @@ class Peer (object):
 
 		self.proto = None
 
-		if not self._restart:
+		if not self._restart or self.neighbor.generated:
 			self.generator = False
 			return
 

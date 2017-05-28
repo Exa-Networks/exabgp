@@ -62,6 +62,9 @@ class Neighbor (object):
 		# the port to connect to
 		self.connect = 0
 
+		# was this Neighbor generated from a range
+		self.generated = False
+
 		# capability
 		self.route_refresh = False
 		self.graceful_restart = False

@@ -209,6 +209,7 @@ class Reactor (object):
 
 				new_neighbor = copy.copy(ranged_neighbor[0])
 				new_neighbor.range_size = 1
+				new_neighbor.generated = True
 				new_neighbor.local_address = IP.create(connection.peer)
 				new_neighbor.peer_address = IP.create(connection.local)
 
