@@ -289,13 +289,20 @@ class Protocol (object):
 	# Sending message to peer
 	#
 
-	def new_open (self, restarted):
+	def new_open (self):
+		if self.neighbor.local_as:
+			local_as = self.neighbor.local_as
+		elif self.negotiated.received_open:
+			local_as = self.negotiated.received_open.asn
+		else:
+			raise RuntimeError('no ASN available for the OPEN message')
+
 		sent_open = Open(
 			Version(4),
-			self.neighbor.local_as,
+			local_as,
 			self.neighbor.hold_time,
 			self.neighbor.router_id,
-			Capabilities().new(self.neighbor,restarted)
+			Capabilities().new(self.neighbor,self.peer._restarted)
 		)
 
 		# we do not buffer open message in purpose

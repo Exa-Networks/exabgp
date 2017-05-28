@@ -46,7 +46,7 @@ def port (tokeniser):
 	return value
 
 
-def local_asn (tokeniser, value=None):
+def auto_asn (tokeniser, value=None):
 	if value is None:
 		if not tokeniser.tokens:
 			raise ValueError("an asn or 'auto' is required")

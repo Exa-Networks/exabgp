@@ -256,7 +256,7 @@ class Peer (object):
 
 	def _send_open (self):
 		message = Message.CODE.NOP
-		for message in self.proto.new_open(self._restarted):
+		for message in self.proto.new_open():
 			if ordinal(message.TYPE) == Message.CODE.NOP:
 				yield ACTION.NOW
 		yield message
@@ -295,19 +295,29 @@ class Peer (object):
 					yield action
 		self.fsm.change(FSM.CONNECT)
 
-		for sent_open in self._send_open():
-			if sent_open in ACTION.ALL:
-				yield sent_open
-		self.fsm.change(FSM.OPENSENT)
+		# normal sending of OPEN first ...
+		if self.neighbor.local_as:
+			for sent_open in self._send_open():
+				if sent_open in ACTION.ALL:
+					yield sent_open
+			self.proto.negotiated.sent(sent_open)
+			self.fsm.change(FSM.OPENSENT)
 
+		# read the peer's open
 		for received_open in self._read_open():
 			if received_open in ACTION.ALL:
 				yield received_open
-
-		self.proto.negotiated.sent(sent_open)
 		self.proto.negotiated.received(received_open)
-		self.proto.validate_open()
 
+		# if we mirror the ASN, we need to read first and send second
+		if not self.neighbor.local_as:
+			for sent_open in self._send_open():
+				if sent_open in ACTION.ALL:
+					yield sent_open
+			self.proto.negotiated.sent(sent_open)
+			self.fsm.change(FSM.OPENSENT)
+
+		self.proto.validate_open()
 		self.fsm.change(FSM.OPENCONFIRM)
 
 		self.recv_timer = ReceiveTimer(self.proto.connection.session,self.proto.negotiated.holdtime,4,0)

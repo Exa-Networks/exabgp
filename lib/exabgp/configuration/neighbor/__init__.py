@@ -30,8 +30,8 @@ from exabgp.configuration.family import ParseFamily
 from exabgp.configuration.parser import boolean
 from exabgp.configuration.parser import ip
 from exabgp.configuration.parser import peer_ip
-from exabgp.configuration.parser import asn
-from exabgp.configuration.parser import local_asn
+# from exabgp.configuration.parser import asn
+from exabgp.configuration.parser import auto_asn
 from exabgp.configuration.parser import port
 from exabgp.configuration.neighbor.parser import ttl
 from exabgp.configuration.neighbor.parser import md5
@@ -58,8 +58,8 @@ class ParseNeighbor (Section):
 		'hold-time':     hold_time,
 		'local-address': local_address,
 		'peer-address':  peer_ip,
-		'local-as':      local_asn,
-		'peer-as':       asn,
+		'local-as':      auto_asn,
+		'peer-as':       auto_asn,
 		'passive':       boolean,
 		'listen':        port,
 		'connect':       port,

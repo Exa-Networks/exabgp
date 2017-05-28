@@ -114,7 +114,14 @@ class Neighbor (object):
 			session = '/'.join("%s-%s" % (afi.name(),safi.name()) for (afi,safi) in self.families())
 		else:
 			session = 'in-open'
-		return "neighbor %s local-ip %s local-as %s peer-as %s router-id %s family-allowed %s" % (self.peer_address,self.local_address,self.local_as,self.peer_as,self.router_id,session)
+		return "neighbor %s local-ip %s local-as %s peer-as %s router-id %s family-allowed %s" % (
+			self.peer_address,
+			self.local_address if self.peer_address is not None else 'auto',
+			self.local_as if self.local_as is not None else 'auto',
+			self.peer_as if self.peer_as is not None else 'auto',
+			self.router_id,
+			session
+		)
 
 	def families (self):
 		# this list() is important .. as we use the function to modify self._families
@@ -141,10 +148,6 @@ class Neighbor (object):
 			return 'local-address'
 		if self.peer_address is None:
 			return 'peer-address'
-		if self.local_as is None:
-			return 'local-as'
-		if self.peer_as is None:
-			return 'peer-as'
 		if self.auto_discovery and not self.router_id:
 			return 'router-id'
 		if self.peer_address.afi == AFI.ipv6 and not self.router_id:

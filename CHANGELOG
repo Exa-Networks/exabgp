@@ -17,6 +17,7 @@ Version 4.0.1
  * Feature: added a new API message "negotiated" which gives the negotiated feature of the session
  * Feature: added a new API message "fsm" which gives the BGP state machine information
  * Feature: it is now possible to use ip/netmask as notation for neighbor
+ * Feature: local-as can be set to "auto", to auto-setup an iBGP session using the OPEN's ASN
 
 Version 4.0.0
  * Feature: add support for interface-set for BGP flowspec routes
