@@ -6,6 +6,7 @@ Version explained:
 Version 4.0.1
  * Change: makes python3 the default interpreter
  * Change: major change to log output format
+ * Change: refactor the core for much faster session establishment
  * Fix: correcly parse single element flow rule
     reported by: Christoph Loibl
  * Fix: much faster session establishment
@@ -13,6 +14,8 @@ Version 4.0.1
     reported by: nidotech
  * Feature: https://tools.ietf.org/html/draft-ietf-idr-bgp-prefix-sid-05
     patch by: Evelio Vila
+ * Feature: added a new API message "negotiated" which gives the negotiated feature of the session
+ * Feature: it is now possible to use ip/netmask as notation for neighbor
 
 Version 4.0.0
  * Feature: add support for interface-set for BGP flowspec routes
