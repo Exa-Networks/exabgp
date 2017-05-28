@@ -169,7 +169,7 @@ class Reactor (object):
 				if connection.peer != str(neighbor.local_address):
 					if not neighbor.auto_discovery:
 						continue
-				denied = peer.incoming(connection)
+				denied = peer.handle_fsm(connection)
 				if denied:
 					self._async.append(denied)
 				else:

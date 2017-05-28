@@ -185,7 +185,7 @@ class Peer (object):
 			ios.append(self.proto.connection.io)
 		return ios
 
-	def incoming (self, connection):
+	def handle_fsm (self, connection):
 		# if the other side fails, we go back to idle
 		if self.fsm == FSM.ESTABLISHED:
 			self.logger.network('we already have a peer in state established for %s' % connection.name())
