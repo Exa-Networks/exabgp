@@ -4,7 +4,7 @@
 setup.py
 
 Created by Thomas Mangin on 2011-01-24.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 """
 
 import os
@@ -391,7 +391,7 @@ setup(
 		'Operating System :: MacOS :: MacOS X',
 		'Operating System :: Microsoft :: Windows',
 		'Programming Language :: Python',
-		'Programming Language :: Python :: 2.7',
+		'Programming Language :: Python :: 3.6',
 		'Topic :: Internet',
 	],
 	entry_points={
