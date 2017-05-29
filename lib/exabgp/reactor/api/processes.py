@@ -290,14 +290,19 @@ class Processes (object):
 			self.write(process,self._encoder[process].down(neighbor,reason),neighbor)
 
 	@silenced
+	def negotiated (self, neighbor, negotiated):
+		for process in self._notify(neighbor,'negotiated'):
+			self.write(process,self._encoder[process].negotiated(neighbor,negotiated),neighbor)
+
+	@silenced
 	def fsm (self, neighbor, fsm):
 		for process in self._notify(neighbor,'fsm'):
 			self.write(process,self._encoder[process].fsm(neighbor,fsm),neighbor)
 
 	@silenced
-	def negotiated (self, neighbor, negotiated):
-		for process in self._notify(neighbor,'negotiated'):
-			self.write(process,self._encoder[process].negotiated(neighbor,negotiated),neighbor)
+	def signal (self, neighbor, signal):
+		for process in self._notify(neighbor,'signal'):
+			self.write(process,self._encoder[process].signal(neighbor,signal),neighbor)
 
 	@silenced
 	def packets (self, neighbor, direction, category, header, body):

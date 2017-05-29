@@ -11,6 +11,7 @@ import os
 import socket
 import sys
 import time
+import signal
 
 from exabgp.vendoring import six
 
@@ -25,6 +26,8 @@ from exabgp.bgp.message.open.capability.refresh import REFRESH
 
 if sys.version_info > (3,):
 	long = int
+
+SIGNAL_NAME = dict((k, v) for v, k in reversed(sorted(signal.__dict__.items())) if v.startswith('SIG') and not v.startswith('SIG_'))
 
 
 def nop (_): return _
@@ -166,6 +169,12 @@ class JSON (object):
 		return self._header(self._neighbor(neighbor,None,self._kv({
 			'state': fsm.name()
 		})),'','',neighbor,message_type='fsm')
+
+	def signal (self, neighbor, signal):
+		return self._header(self._neighbor(neighbor,None,self._kv({
+			'code': '%d' % signal,
+			'name': SIGNAL_NAME.get(signal,'UNKNOWN'),
+		})),'','',neighbor,message_type='signal')
 
 	def notification (self, neighbor, direction, message, header, body):
 		return self._header(self._neighbor(neighbor,direction,self._kv({

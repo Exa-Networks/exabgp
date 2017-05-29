@@ -16,6 +16,7 @@ Version 4.0.1
     patch by: Evelio Vila
  * Feature: added a new API message "negotiated" which gives the negotiated feature of the session
  * Feature: added a new API message "fsm" which gives the BGP state machine information
+ * Feature: added a new API message "signal" which inform of the signals received by ExaBGP
  * Feature: it is now possible to use ip/netmask as notation for neighbor
  * Feature: local-as can be set to "auto", to auto-setup an iBGP session using the OPEN's ASN
 

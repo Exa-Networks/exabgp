@@ -56,6 +56,9 @@ class Text (object):
 	def fsm (self, neighbor, fsm):
 		return None
 
+	def signal (self, neighbor, signal):
+		return None
+
 	def notification (self, neighbor, direction, message, header, body):
 		return 'neighbor %s %s notification code %d subcode %d data %s%s\n' % (
 			neighbor.peer_address,

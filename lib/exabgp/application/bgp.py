@@ -275,6 +275,12 @@ def main ():
 def run (env, comment, configurations, pid=0):
 	logger = Logger()
 
+	logger.error('',source='ExaBGP')
+	logger.error('%s' % version,source='version')
+	logger.error('%s' % sys.version.replace('\n',' '),source='interpreter')
+	logger.error('%s' % ' '.join(platform.uname()[:5]),source='os')
+	logger.error('',source='ExaBGP')
+
 	if comment:
 		logger.configuration(comment)
 

@@ -72,6 +72,8 @@ class Reactor (object):
 		self._pending = deque()
 		self._async = deque()
 
+		self._signal = {}
+
 		signal.signal(signal.SIGTERM, self.sigterm)
 		signal.signal(signal.SIGHUP, self.sighup)
 		signal.signal(signal.SIGALRM, self.sigalrm)
@@ -90,23 +92,38 @@ class Reactor (object):
 	def sigterm (self, signum, frame):
 		self.logger.reactor('SIG TERM received - shutdown')
 		self._shutdown = True
+		for key in self.peers:
+			if self.peers[key].neighbor.api['signal']:
+				self._signal[key] = signum
 
 	def sighup (self, signum, frame):
 		self.logger.reactor('SIG HUP received - shutdown')
 		self._shutdown = True
+		for key in self.peers:
+			if self.peers[key].neighbor.api['signal']:
+				self._signal[key] = signum
 
 	def sigalrm (self, signum, frame):
 		self.logger.reactor('SIG ALRM received - restart')
 		self._restart = True
+		for key in self.peers:
+			if self.peers[key].neighbor.api['signal']:
+				self._signal[key] = signum
 
 	def sigusr1 (self, signum, frame):
 		self.logger.reactor('SIG USR1 received - reload configuration')
 		self._reload = True
+		for key in self.peers:
+			if self.peers[key].neighbor.api['signal']:
+				self._signal[key] = signum
 
 	def sigusr2 (self, signum, frame):
 		self.logger.reactor('SIG USR2 received - reload configuration and processes')
 		self._reload = True
 		self._reload_processes = True
+		for key in self.peers:
+			if self.peers[key].neighbor.api['signal']:
+				self._signal[key] = signum
 
 	def _api_ready (self,sockets):
 		sleeptime = self.max_loop_time / 20
@@ -306,6 +323,9 @@ class Reactor (object):
 				for key,peer in self.peers.items():
 					if not peer.neighbor.passive or peer.proto:
 						peers.add(key)
+					if key in self._signal:
+						self.peers[key].reactor.processes.signal(self.peers[key].neighbor,self._signal[key])
+				self._signal = {}
 
 				# check all incoming connection
 				self._handle_listener()
