@@ -25,6 +25,8 @@ from exabgp.logger import Logger
 from exabgp.version import json as json_version
 from exabgp.version import text as text_version
 
+from exabgp.configuration.environment import environment
+
 
 # pylint: disable=no-self-argument,not-callable,unused-argument,invalid-name
 
@@ -42,7 +44,6 @@ def preexec_helper ():
 
 class Processes (object):
 	# how many time can a process can respawn in the time interval
-	respawn_number = 5
 	respawn_timemask = 0xFFFFFF - 0b111111
 	# '0b111111111111111111000000' (around a minute, 63 seconds)
 
@@ -54,6 +55,9 @@ class Processes (object):
 		self.clean()
 		self.silence = False
 		self._buffer = {}
+
+		self.respawn_number = 5 if environment.settings().api.respawn else 0
+		self.terminate = environment.settings().api.terminate
 
 	def clean (self):
 		self._process = {}
@@ -141,7 +145,7 @@ class Processes (object):
 						# we are respawning too fast
 						if self._respawning[process][around_now] > self.respawn_number:
 							self.logger.processes(
-								"Too many respawn for %s (%d) terminating program" % (process,self.respawn_number),
+								"Too many death for %s (%d) terminating program" % (process,self.respawn_number),
 								'critical'
 							)
 							raise ProcessError()

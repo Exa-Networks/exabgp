@@ -257,8 +257,14 @@ environment.configuration = {
 		'respawn':  {
 			'read':  environment.boolean,
 			'write': environment.lower,
+			'value': 'true',
+			'help':  'should we try to respawn helper processes if they dies',
+		},
+		'terminate':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
 			'value': 'false',
-			'help':  'should we respawn a helper process if it dies',
+			'help':  'should we terminate ExaBGP if any helper process dies',
 		},
 		'file':  {
 			'read':  environment.unquote,

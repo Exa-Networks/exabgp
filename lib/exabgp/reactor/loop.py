@@ -46,7 +46,6 @@ class Reactor (object):
 	def __init__ (self, configurations):
 		self.ip = environment.settings().tcp.bind
 		self.port = environment.settings().tcp.port
-		self.respawn = environment.settings().api.respawn
 		self.ack = environment.settings().api.ack
 
 		self.max_loop_time = environment.settings().reactor.speed
