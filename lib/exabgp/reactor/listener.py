@@ -52,17 +52,15 @@ class Listener (object):
 				continue
 			if local_port != port:
 				continue
-			if md5:
-				MD5(sock,peer_ip.top(),0,md5,md5_base64)
+			MD5(sock,peer_ip.top(),0,md5,md5_base64)
 			if ttl_in:
 				MIN_TTL(sock,peer_ip,ttl_in)
 			return
 
 		try:
 			sock = self._new_socket(local_ip)
-			if md5:
-				# MD5 must match the peer side of the TCP, not the local one
-				MD5(sock,peer_ip.top(),0,md5,md5_base64)
+			# MD5 must match the peer side of the TCP, not the local one
+			MD5(sock,peer_ip.top(),0,md5,md5_base64)
 			if ttl_in:
 				MIN_TTL(sock,peer_ip,ttl_in)
 			try:

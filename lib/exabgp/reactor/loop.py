@@ -147,26 +147,22 @@ class Reactor (object):
 			self._termination('^C received')
 			return []
 
-	def _setup_listener (self):
+	def _setup_listener (self, local_addr, remote_addr, port, md5_password, md5_base64, ttl_in):
 		try:
-			self.listener = Listener()
-			for ip in self.ips:
-				self.listener.listen(ip,IP.create('0.0.0.0'),self.port,None,False,None)
-				self.logger.reactor('Listening for BGP session(s) on %s:%d' % (ip,self.port))
-
-			for neighbor in self.configuration.neighbors.values():
-				if neighbor.listen:
-					self.listener.listen(neighbor.md5_ip,neighbor.peer_address,neighbor.listen,neighbor.md5_password,neighbor.md5_base64,neighbor.ttl_in)
-					self.logger.reactor('Listening for BGP session(s) on %s:%d%s' % (neighbor.md5_ip,neighbor.listen,' with MD5' if neighbor.md5_password else ''))
+			if not self.listener:
+				self.listener = Listener()
+			if not remote_addr:
+				remote_addr = IP.create('0.0.0.0') if local_addr.ipv4() else IP.create('::')
+			self.listener.listen(local_addr, remote_addr, port, md5_password, md5_base64, ttl_in)
+			self.logger.reactor('Listening for BGP session(s) on %s:%d%s' % (local_addr, port,' with MD5' if md5_password else ''))
 			return True
 		except NetworkError as exc:
-			self.listener = None
-			if os.geteuid() != 0 and self.port <= 1024:
-				self.logger.reactor('Can not bind to %s:%d, you may need to run ExaBGP as root' % (self.ip,self.port),'critical')
+			if os.geteuid() != 0 and port <= 1024:
+				self.logger.reactor('Can not bind to %s:%d, you may need to run ExaBGP as root' % (local_addr, port),'critical')
 			else:
-				self.logger.reactor('Can not bind to %s:%d (%s)' % (self.ip,self.port,str(exc)),'critical')
+				self.logger.reactor('Can not bind to %s:%d (%s)' % (local_addr, port,str(exc)),'critical')
 			self.logger.reactor('unset exabgp.tcp.bind if you do not want listen for incoming connections','critical')
-			self.logger.reactor('and check that no other daemon is already binding to port %d' % self.port,'critical')
+			self.logger.reactor('and check that no other daemon is already binding to port %d' % port,'critical')
 			return False
 
 	def _handle_listener (self):
@@ -254,12 +250,17 @@ class Reactor (object):
 		# - we may not be able to reload the configuration once the privileges are dropped
 
 		# but I can not see any way to avoid it
+		for ip in self.ips:
+			if not self._setup_listener(ip, None, self.port, None, False, None):
+				return False
 
 		if not self.load():
 			return False
 
-		if not self._setup_listener():
-			return False
+		for neighbor in self.configuration.neighbors.values():
+			if neighbor.listen:
+				if not self._setup_listener(neighbor.md5_ip, neighbor.peer_address, neighbor.listen, neighbor.md5_password, neighbor.md5_base64, neighbor.ttl_in):
+					return False
 
 		if not self.early_drop:
 			self.processes.start()
@@ -426,6 +427,9 @@ class Reactor (object):
 				# finding what route changed and sending the delta is not obvious
 				self.logger.reactor('peer definition identical, updating peer routes if required for %s' % str(key))
 				self.peers[key].reconfigure(neighbor)
+			for ip in self.ips:
+				if ip.afi == neighbor.peer_address.afi:
+					self._setup_listener(ip, neighbor.peer_address, self.port, neighbor.md5_password, neighbor.md5_base64, None)
 		self.logger.configuration('loaded new configuration successfully','info')
 
 		return True
