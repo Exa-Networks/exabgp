@@ -16,6 +16,7 @@ import sys
 import pwd
 import syslog
 
+from exabgp.protocol.ip import IP
 from exabgp.util.ip import isip
 
 
@@ -135,10 +136,16 @@ class environment (object):
 		raise TypeError('ip %s is invalid' % _)
 
 	@staticmethod
-	def optional_ip (_):
-		if not _ or isip(_):
-			return _
-		raise TypeError('ip %s is invalid' % _)
+	def ip_list (_):
+		ips = []
+		for ip in _.split(' '):
+			if not ip:
+				continue
+			elif isip(ip):
+				ips.append(IP.create(ip))
+			else:
+				raise TypeError('ip %s is invalid' % ip)
+		return ips
 
 	@staticmethod
 	def user (_):

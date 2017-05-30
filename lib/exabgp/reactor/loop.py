@@ -44,7 +44,7 @@ class Reactor (object):
 	clear = concat_bytes_i(character(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a'])
 
 	def __init__ (self, configurations):
-		self.ip = environment.settings().tcp.bind
+		self.ips = environment.settings().tcp.bind
 		self.port = environment.settings().tcp.port
 		self.ack = environment.settings().api.ack
 
@@ -149,15 +149,13 @@ class Reactor (object):
 
 	def _setup_listener (self):
 		try:
-			if self.ip:
-				self.listener = Listener()
-				self.listener.listen(IP.create(self.ip),IP.create('0.0.0.0'),self.port,None,False,None)
-				self.logger.reactor('Listening for BGP session(s) on %s:%d' % (self.ip,self.port))
+			self.listener = Listener()
+			for ip in self.ips:
+				self.listener.listen(ip,IP.create('0.0.0.0'),self.port,None,False,None)
+				self.logger.reactor('Listening for BGP session(s) on %s:%d' % (ip,self.port))
 
 			for neighbor in self.configuration.neighbors.values():
 				if neighbor.listen:
-					if not self.listener:
-						self.listener = Listener()
 					self.listener.listen(neighbor.md5_ip,neighbor.peer_address,neighbor.listen,neighbor.md5_password,neighbor.md5_base64,neighbor.ttl_in)
 					self.logger.reactor('Listening for BGP session(s) on %s:%d%s' % (neighbor.md5_ip,neighbor.listen,' with MD5' if neighbor.md5_password else ''))
 			return True
