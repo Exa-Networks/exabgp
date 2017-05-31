@@ -275,7 +275,7 @@ class Neighbor (object):
 				'\tauto-flush %s;\n' % ('true' if self.flush else 'false'),
 				'\tadj-rib-out %s;\n' % ('true' if self.adjribout else 'false'),
 				'\tmd5-password "%s";\n' % self.md5_password if self.md5_password else '',
-				'\tmd5-base64 %s;\n' % ('true' if self.md5_base64 else 'false'),
+				'\tmd5-base64 %s;\n' % ('true' if self.md5_base64 is True else 'false' if self.md5_base64 is False else 'auto'),
 				'\tmd5-ip "%s";\n' % self.md5_ip if not self.auto_discovery else '',
 				'\toutgoing-ttl %s;\n' % self.ttl_out if self.ttl_out else '',
 				'\tincoming-ttl %s;\n' % self.ttl_in if self.ttl_in else '',
