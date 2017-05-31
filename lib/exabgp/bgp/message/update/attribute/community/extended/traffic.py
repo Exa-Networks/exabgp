@@ -36,7 +36,7 @@ class TrafficRate (ExtendedCommunity):
 		)
 
 	def __repr__ (self):
-		return "rate-limit %d" % self.rate
+		return "rate-limit:%d" % self.rate
 
 	@staticmethod
 	def unpack (data):

@@ -59,7 +59,7 @@ class Encapsulation (ExtendedCommunity):
 		)
 
 	def __repr__ (self):
-		return "Encap:%s" % Encapsulation._string.get(self.tunnel_type,"Encap:(unknown:%d)" % self.tunnel_type)
+		return "encap:%s" % Encapsulation._string.get(self.tunnel_type,"encap:UNKNOWN-%d" % self.tunnel_type)
 
 	@staticmethod
 	def unpack (data):

@@ -93,6 +93,8 @@ class ExtendedCommunity (Attribute):
 		return '{ "value": %ld, "string": "%s" }' % (h,s)
 
 	def __repr__ (self):
+		if self.klass:
+			return self.klass.__repr__(self)
 		h = 0x00
 		for byte in self.community:
 			h <<= 8
