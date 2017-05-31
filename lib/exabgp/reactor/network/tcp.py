@@ -102,9 +102,9 @@ def connect (io, ip, port, afi, md5):
 # } __attribute__ ((aligned(_K_SS_ALIGNSIZE)));   /* force desired alignment */
 
 def MD5 (io, ip, port, md5, md5_base64):
-	if md5:
-		os = platform.system()
-		if os == 'FreeBSD':
+	os = platform.system()
+	if os == 'FreeBSD':
+		if md5:
 			if md5 != 'kernel':
 				raise MD5Error(
 					'FreeBSD requires that you set your MD5 key via ipsec.conf.\n'
@@ -122,42 +122,46 @@ def MD5 (io, ip, port, md5, md5_base64):
 					'options         TCP_SIGNATURE\n'
 					'device          crypto\n'
 				)
-		elif os == 'Linux':
-			try:
-				if md5_base64:
-					try:
-						md5 = base64.b64decode(md5)
-					except TypeError:
-						raise MD5Error("Failed to decode base 64 encoded PSK")
+	elif os == 'Linux':
+		try:
+			if md5 and md5_base64:
+				try:
+					md5 = base64.b64decode(md5)
+				except TypeError:
+					raise MD5Error("Failed to decode base 64 encoded PSK")
 
-				# __kernel_sockaddr_storage
-				n_af   = IP.toaf(ip)
-				n_addr = IP.pton(ip)
-				n_port = socket.htons(port)
+			# __kernel_sockaddr_storage
+			n_af   = IP.toaf(ip)
+			n_addr = IP.pton(ip)
+			n_port = socket.htons(port)
 
-				# pack 'x' is padding, so we want the struct
-				# Do not use '!' for the pack, the network (big) endian switch in
-				# struct.pack is fighting against inet_pton and htons (note the n)
+			# pack 'x' is padding, so we want the struct
+			# Do not use '!' for the pack, the network (big) endian switch in
+			# struct.pack is fighting against inet_pton and htons (note the n)
 
-				if IP.toafi(ip) == AFI.ipv4:
-					# SS_MAXSIZE is 128 but addr_family, port and ipaddr (8 bytes total) are written independently of the padding
-					SS_MAXSIZE_PADDING = 128 - calcsize('HH4s')  # 8
-					sockaddr = pack('HH4s%dx' % SS_MAXSIZE_PADDING, socket.AF_INET, n_port, n_addr)
-				else:
-					SS_MAXSIZE_PADDING = 128 - calcsize('HI16sI')  # 28
-					SIN6_FLOWINFO = 0
-					SIN6_SCOPE_ID = 0
-					sockaddr = pack('HHI16sI%dx' % SS_MAXSIZE_PADDING, n_af, n_port, SIN6_FLOWINFO, n_addr, SIN6_SCOPE_ID)
+			if IP.toafi(ip) == AFI.ipv4:
+				# SS_MAXSIZE is 128 but addr_family, port and ipaddr (8 bytes total) are written independently of the padding
+				SS_MAXSIZE_PADDING = 128 - calcsize('HH4s')  # 8
+				sockaddr = pack('HH4s%dx' % SS_MAXSIZE_PADDING, socket.AF_INET, n_port, n_addr)
+			else:
+				SS_MAXSIZE_PADDING = 128 - calcsize('HI16sI')  # 28
+				SIN6_FLOWINFO = 0
+				SIN6_SCOPE_ID = 0
+				sockaddr = pack('HHI16sI%dx' % SS_MAXSIZE_PADDING, n_af, n_port, SIN6_FLOWINFO, n_addr, SIN6_SCOPE_ID)
 
-				TCP_MD5SIG_MAXKEYLEN = 80
+			TCP_MD5SIG_MAXKEYLEN = 80
+			if md5:
 				key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, len(md5), md5)
+			else:
+				key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, 0, '')
 
-				TCP_MD5SIG = 14
-				io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
-			except socket.error as exc:
+			TCP_MD5SIG = 14
+			io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
+		except socket.error as exc:
+			if exc.errno != errno.ENOENT:
 				raise MD5Error('This linux machine does not support TCP_MD5SIG, you can not use MD5 (%s)' % errstr(exc))
-		else:
-			raise MD5Error('ExaBGP has no MD5 support for %s' % os)
+	else:
+		raise MD5Error('ExaBGP has no MD5 support for %s' % os)
 
 
 def nagle (io, ip):

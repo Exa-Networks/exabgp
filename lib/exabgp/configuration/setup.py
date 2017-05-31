@@ -189,10 +189,10 @@ environment.configuration = {
 			'help':  'start to announce route when the minutes in the hours is a modulo of this number',
 		},
 		'bind': {
-			'read':  environment.optional_ip,
+			'read':  environment.ip_list,
 			'write': environment.quote,
 			'value': '',
-			'help':  'IP to bind on when listening (no ip to disable)',
+			'help':  'Space separated list of IPs to bind on when listening (no ip to disable)',
 		},
 		'port': {
 			'read':  environment.integer,

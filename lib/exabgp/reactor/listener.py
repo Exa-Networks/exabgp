@@ -52,19 +52,21 @@ class Listener (object):
 				continue
 			if local_port != port:
 				continue
-			if md5:
-				MD5(sock,peer_ip.top(),0,md5,md5_base64)
+			MD5(sock,peer_ip.top(),0,md5,md5_base64)
 			if ttl_in:
 				MIN_TTL(sock,peer_ip,ttl_in)
 			return
 
 		try:
 			sock = self._new_socket(local_ip)
-			if md5:
-				# MD5 must match the peer side of the TCP, not the local one
-				MD5(sock,peer_ip.top(),0,md5,md5_base64)
+			# MD5 must match the peer side of the TCP, not the local one
+			MD5(sock,peer_ip.top(),0,md5,md5_base64)
+			if ttl_in:
+				MIN_TTL(sock,peer_ip,ttl_in)
 			try:
 				sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+				if local_ip.ipv6():
+					sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
 			except (socket.error,AttributeError):
 				pass
 			sock.setblocking(0)
