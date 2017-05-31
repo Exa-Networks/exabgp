@@ -170,7 +170,7 @@ def MD5 (io, ip, port, md5, md5_base64):
 			if exc.errno != errno.ENOENT:
 				raise MD5Error('This linux machine does not support TCP_MD5SIG, you can not use MD5 (%s)' % errstr(exc))
 	else:
-		raise MD5Error('ExaBGP has no MD5 support for %s' % os)
+		raise MD5Error('ExaBGP has no MD5 support for %s' % platform_os)
 
 
 def nagle (io, ip):
