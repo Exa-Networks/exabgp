@@ -57,7 +57,7 @@ class Processes (object):
 		self._buffer = {}
 
 		self.respawn_number = 5 if environment.settings().api.respawn else 0
-		self.terminate = environment.settings().api.terminate
+		self.terminate_on_error = environment.settings().api.terminate
 
 	def clean (self):
 		self._process = {}
