@@ -26,8 +26,8 @@ BUILD_ROOT = os.path.join(os.getcwd(),os.path.dirname(sys.argv[0]),'build')
 
 dryrun = False
 
-json_version = '4.0.0'
-text_version = '4.0.0'
+json_version = '4.0.1'
+text_version = '4.0.1'
 
 version_template = """\
 import os

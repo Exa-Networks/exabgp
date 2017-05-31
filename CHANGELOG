@@ -7,6 +7,7 @@ Version 4.0.1
  * Change: makes python3 the default interpreter
  * Change: major change to log output format
  * Change: refactor the core for much faster session establishment
+ * Change: JSON format for extended-community now reports both the value and decoded string
  * Fix: correcly parse single element flow rule
     reported by: Christoph Loibl
  * Fix: much faster session establishment
