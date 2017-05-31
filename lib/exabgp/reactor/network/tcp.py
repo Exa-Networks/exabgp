@@ -102,8 +102,8 @@ def connect (io, ip, port, afi, md5):
 # } __attribute__ ((aligned(_K_SS_ALIGNSIZE)));   /* force desired alignment */
 
 def MD5 (io, ip, port, md5, md5_base64):
-	os = platform.system()
-	if os == 'FreeBSD':
+	platform_os = platform.system()
+	if platform_os == 'FreeBSD':
 		if md5:
 			if md5 != 'kernel':
 				raise MD5Error(
@@ -122,7 +122,7 @@ def MD5 (io, ip, port, md5, md5_base64):
 					'options         TCP_SIGNATURE\n'
 					'device          crypto\n'
 				)
-	elif os == 'Linux':
+	elif platform_os == 'Linux':
 		try:
 			if md5:
 				if md5_base64 is True:
