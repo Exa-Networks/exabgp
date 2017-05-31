@@ -233,7 +233,7 @@ class Reactor (object):
 				self.peers[new_neighbor.name()] = new_peer
 				return
 
-	def run (self):
+	def run (self, validate):
 		self.daemon.daemonise()
 
 		# Make sure we create processes once we have closed file descriptor
@@ -256,6 +256,16 @@ class Reactor (object):
 
 		if not self.load():
 			return False
+
+		if validate:  # only validate configuration
+			self.logger.configuration('')
+			self.logger.configuration('Parsed Neighbors, un-templated')
+			self.logger.configuration('------------------------------')
+			self.logger.configuration('')
+			for key in self.peers:
+				self.logger.configuration(str(self.peers[key].neighbor))
+				self.logger.configuration('')
+			return True
 
 		for neighbor in self.configuration.neighbors.values():
 			if neighbor.listen:

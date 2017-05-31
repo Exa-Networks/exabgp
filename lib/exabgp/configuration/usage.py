@@ -16,6 +16,7 @@ usage: exabgp [--help] [--version]
               [--debug] [--pdb] [--test]
               [--once] [--signal TIME]
               [--memory] [--profile PROFILE]
+              [--validate]
               [--run HELPER]
               [--decode HEX_MESSAGE]...
               [<configuration>...]
@@ -46,6 +47,7 @@ debugging:
   --debug, -d           start the python debugger on serious logging and on
                         SIGTERM (shortcut for exabgp.log.all=true
                         exabgp.log.level=DEBUG)
+  --validate            validate the configuration file format only
   --signal TIME         issue a SIGUSR1 to reload the configuration after
                         <time> seconds, only useful for code debugging
   --once, -1            only perform one attempt to connect to peers (used for

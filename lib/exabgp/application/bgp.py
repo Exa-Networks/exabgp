@@ -244,7 +244,7 @@ def main ():
 	Attribute.caching = env.cache.attributes
 
 	if env.debug.rotate or len(configurations) == 1:
-		run(env,comment,configurations)
+		run(env,comment,configurations,options["--validate"])
 
 	if not (env.log.destination in ('syslog','stdout','stderr') or env.log.destination.startswith('host:')):
 		logger.configuration('can not log to files when running multiple configuration (as we fork)','error')
@@ -256,7 +256,7 @@ def main ():
 		for configuration in configurations:
 			pid = os.fork()
 			if pid == 0:
-				run(env,comment,[configuration],os.getpid())
+				run(env,comment,[configuration],options["--validate"],os.getpid())
 			else:
 				pids.append(pid)
 
@@ -272,7 +272,7 @@ def main ():
 		sys.exit(1)
 
 
-def run (env, comment, configurations, pid=0):
+def run (env, comment, configurations, validate, pid=0):
 	logger = Logger()
 
 	logger.error('',source='ExaBGP')
@@ -289,7 +289,7 @@ def run (env, comment, configurations, pid=0):
 		logger.configuration(warning)
 
 	if not env.profile.enable:
-		ok = Reactor(configurations).run()
+		ok = Reactor(configurations).run(validate)
 		__exit(env.debug.memory,0 if ok else 1)
 
 	try:
@@ -298,7 +298,7 @@ def run (env, comment, configurations, pid=0):
 		import profile
 
 	if not env.profile.file or env.profile.file == 'stdout':
-		ok = profile.run('Reactor(configurations).run()')
+		ok = profile.run('Reactor(configurations).run(validate)')
 		__exit(env.debug.memory,0 if ok else 1)
 
 	if pid:

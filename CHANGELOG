@@ -21,6 +21,7 @@ Version 4.0.1
  * Feature: it is now possible to use ip/netmask as notation for neighbor
  * Feature: local-as can be set to "auto", to auto-setup an iBGP session using the OPEN's ASN
  * Feature: Allow binding to multiple global IP addresses
+ * Feature: Add --validate option to check configuration
  * Fix: Handle MD5 authentication on global IP addresses
 
 Version 4.0.0
