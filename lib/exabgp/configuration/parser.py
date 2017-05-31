@@ -25,7 +25,18 @@ def boolean (tokeniser, default):
 		return True
 	if status in ('false','disable','disabled'):
 		return False
-	if status in ('unset',):
+	raise ValueError('invalid value (%s) for a boolean' % status)
+
+
+def auto_boolean (tokeniser, default):
+	status = tokeniser().lower()
+	if not status:
+		return default
+	if status in ('true','enable','enabled'):
+		return True
+	if status in ('false','disable','disabled'):
+		return False
+	if status in ('auto',):
 		return None
 	raise ValueError('invalid value (%s) for a boolean' % status)
 
