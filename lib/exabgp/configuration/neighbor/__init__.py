@@ -129,6 +129,10 @@ class ParseNeighbor (Section):
 		local = self.scope.pop_context(self.name)
 		neighbor = Neighbor()
 
+		for inherit in local.get('inherit',[]):
+			data = self.scope.template('neighbor',inherit)
+			self.scope.inherit(data)
+
 		# XXX: use the right class for the data type
 		# XXX: we can use the scope.nlri interface ( and rename it ) to set some values
 		neighbor.router_id        = local.get('router-id',None)
@@ -154,7 +158,8 @@ class ParseNeighbor (Section):
 		neighbor.group_updates    = local.get('group-updates',True)
 		neighbor.manual_eor       = local.get('manual-eor', False)
 
-		neighbor.api              = ParseAPI.extract()
+		self.scope.merge('api',ParseAPI.extract())
+		neighbor.api              = self.scope.get('api',{})
 
 		# capabilities
 		capability = local.get('capability',{})

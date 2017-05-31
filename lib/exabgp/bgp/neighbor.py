@@ -256,7 +256,9 @@ class Neighbor (object):
 			'\tfamily {%s\n' \
 			'\t}\n' \
 			'\tapi {\n' \
-			'%s%s\t}%s\n' \
+			'\t%s\n' \
+			'\t%s\n' \
+			'\t}%s\n' \
 			'}' % (
 				self.peer_address,
 				self.description,
@@ -287,10 +289,12 @@ class Neighbor (object):
 				'\t\toperational %s;\n' % ('enable' if self.operational else 'disable'),
 				'\t\taigp %s;\n' % ('enable' if self.aigp else 'disable'),
 				families,
-				'\t\treceive {\n%s\t\t}\n' % receive if receive else '',
-				'\t\tsend {\n%s\t\t}\n' % send if send else '',
+				'\t\tprocesses [ %s ]' % (' '.join(self.api['processes'])),
+				'\t\tTODO - globals & for each process what is sent / received',
 				changes
 			)
+		# '\t\treceive {\n%s\t\t}\n' % receive if receive else '',
+		# '\t\tsend {\n%s\t\t}\n' % send if send else '',
 		return returned.replace('\t','  ')
 
 	def __str__ (self):

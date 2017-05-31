@@ -58,21 +58,10 @@ class Scope (Error):
 	def pop_context (self,name):
 		returned = self._all.pop(name)
 
-		def transfer (source,destination):
-			for key,value in six.iteritems(source):
-				if key not in destination:
-					destination[key] = value
-				elif isinstance(source[key], dict):
-					transfer(source[key],destination[key])
-				elif isinstance(source[key], list):
-					destination.setdefault(key,[]).extend(value)
-				else:
-					self.throw('can not recursively copy this type of data')
-
 		for inherit in returned.get('inherit',[]):
 			if inherit not in self._all['template'].get('neighbor',{}):
 				self.throw('invalid template name referenced')
-			transfer(self._all['template']['neighbor'][inherit],returned)
+			self.transfer(self._all['template']['neighbor'][inherit],returned)
 
 		return returned
 
@@ -103,6 +92,29 @@ class Scope (Error):
 	def extend (self, name, data):
 		self._current.setdefault(name,[]).extend(data)
 
+	def merge (self, name, data):
+		for key in data:
+			self.set(key,data[key])
+
+	def inherit (self, data):
+		return self.transfer(data,self._current)
+
+	def transfer (self, source, destination):
+		for key,value in six.iteritems(source):
+			if key not in destination:
+				destination[key] = value
+			elif isinstance(source[key], dict):
+				if key not in destination:
+					destination[key] = source[key]
+				else:
+					for element in source[key]:
+						if element not in destination[key]:
+							destination[key].append(element)
+			elif isinstance(source[key], list):
+				destination.setdefault(key,[]).extend(value)
+			else:
+				self.throw('can not recursively copy this type of data')
+
 	def get (self, name='', default=None):
 		if name:
 			return self._current.get(name,default)
@@ -112,3 +124,6 @@ class Scope (Error):
 		if name == '':
 			return dict((k,self._current.pop(k)) for k in list(self._current))
 		return self._current.pop(name,default)
+
+	def template (self, template, name):
+		return self._all['template'].get(template,{}).get(name,{})

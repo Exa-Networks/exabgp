@@ -9,6 +9,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 from exabgp.configuration.core import Section
 from exabgp.configuration.neighbor import ParseNeighbor
 
+from exabgp.configuration.neighbor.api import ParseAPI
+
 
 class ParseTemplate (Section):
 	syntax = ''
@@ -25,4 +27,5 @@ class ParseTemplate (Section):
 		return True
 
 	def post (self):
+		self.scope.merge('api',ParseAPI.extract())
 		return True
