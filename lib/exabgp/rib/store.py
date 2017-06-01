@@ -169,9 +169,9 @@ class Store (object):
 
 		# removing a route before we had time to announce it ?
 		if change_nlri_index in dict_nlri:
-			old_attr_index = dict_nlri[change_nlri_index].attributes.index()
 			# pop removes the entry
 			old_change = dict_nlri.pop(change_nlri_index)
+			old_attr_index = old_change.attributes.index()
 			# do not delete dict_attr, other routes may use it
 			del dict_sorted[old_attr_index][change_nlri_index]
 			if not dict_sorted[old_attr_index]:
