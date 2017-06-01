@@ -205,6 +205,13 @@ class Neighbor (object):
 
 		codes = Message.CODE
 
+		_extension_global = {
+			'neighbor-changes': 'neighbor-changes',
+			'negotiated':       'negotiated',
+			'fsm':              'fsm',
+			'signal':           'signal',
+		}
+
 		_extension_receive = {
 			'receive-packets':                        'packets',
 			'receive-parsed':                         'parsed',
@@ -229,15 +236,36 @@ class Neighbor (object):
 			'send-%s' % codes.OPERATIONAL.SHORT:   'operational',
 		}
 
-		_receive = []
-		for api,name in _extension_receive.items():
-			_receive.extend(['\t\t\t%s;\n' % name,] if self.api[api] else [])
-		receive = ''.join(_receive)
+		apis = ''
 
-		_send = []
-		for api,name in _extension_send.items():
-			_send.extend(['\t\t\t%s;\n' % name,] if self.api[api] else [])
-		send = ''.join(_send)
+		for process in self.api['processes']:
+			_global = []
+			_receive = []
+			_send = []
+
+			for api,name in _extension_global.items():
+				_global.extend(['\t\t%s;\n' % name,] if process in self.api[api] else [])
+
+			for api,name in _extension_receive.items():
+				_receive.extend(['\t\t\t%s;\n' % name,] if process in self.api[api] else [])
+
+			for api,name in _extension_send.items():
+				_send.extend(['\t\t\t%s;\n' % name,] if process in self.api[api] else [])
+
+			_api  = '\tapi {\n'
+			_api += '\t\tprocesses [ %s ];\n' % process
+			_api += ''.join(_global)
+			if _receive:
+				_api += '\t\treceive {\n'
+				_api += ''.join(_receive)
+				_api += '\t\t}\n'
+			if _send:
+				_api += '\t\tsend {\n'
+				_api += ''.join(_send)
+				_api += '\t\t}\n'
+			_api += '\t}\n'
+
+			apis += _api
 
 		returned = \
 			'neighbor %s {\n' \
@@ -255,10 +283,8 @@ class Neighbor (object):
 			'%s%s%s%s%s%s%s\t}\n' \
 			'\tfamily {%s\n' \
 			'\t}\n' \
-			'\tapi {\n' \
-			'\t%s\n' \
-			'\t%s\n' \
-			'\t}%s\n' \
+			'%s' \
+			'%s' \
 			'}' % (
 				self.peer_address,
 				self.description,
@@ -289,8 +315,7 @@ class Neighbor (object):
 				'\t\toperational %s;\n' % ('enable' if self.operational else 'disable'),
 				'\t\taigp %s;\n' % ('enable' if self.aigp else 'disable'),
 				families,
-				'\t\tprocesses [ %s ]' % (' '.join(self.api['processes'])),
-				'\t\tTODO - globals & for each process what is sent / received',
+				apis,
 				changes
 			)
 		# '\t\treceive {\n%s\t\t}\n' % receive if receive else '',
