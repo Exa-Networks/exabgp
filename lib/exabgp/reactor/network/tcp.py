@@ -169,7 +169,7 @@ def MD5 (io, ip, port, md5, md5_base64):
 		except socket.error as exc:
 			if exc.errno != errno.ENOENT:
 				raise MD5Error('This linux machine does not support TCP_MD5SIG, you can not use MD5 (%s)' % errstr(exc))
-	else:
+	elif md5:
 		raise MD5Error('ExaBGP has no MD5 support for %s' % platform_os)
 
 
