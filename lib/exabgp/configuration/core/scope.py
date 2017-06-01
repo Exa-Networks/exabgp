@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2015-06-04.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+import pprint
+
 # from copy import deepcopy
 from exabgp.vendoring import six
 from exabgp.configuration.core.error import Error
@@ -21,7 +23,7 @@ class Scope (Error):
 		self._current = self._all
 
 	def __repr__ (self):
-		return str(self.__dict__)
+		return pprint.pformat(self.__dict__,indent=3)
 
 	def clear (self):
 		self._location = []
