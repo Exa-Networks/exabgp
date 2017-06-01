@@ -26,6 +26,8 @@ from exabgp.configuration.neighbor.api import ParseSend
 from exabgp.configuration.neighbor.api import ParseReceive
 from exabgp.configuration.family import ParseFamily
 from exabgp.configuration.capability import ParseCapability
+from exabgp.configuration.announce import ParseAnnounce
+from exabgp.configuration.announce.ipv4 import ParseIPv4
 from exabgp.configuration.static import ParseStatic
 from exabgp.configuration.static import ParseStaticRoute
 from exabgp.configuration.flow import ParseFlow
@@ -121,11 +123,13 @@ class Configuration (_Configuration):
 		self.api_receive         = ParseReceive          (*params)
 		self.static              = ParseStatic           (*params)
 		self.static_route        = ParseStaticRoute      (*params)
+		self.announce            = ParseAnnounce         (*params)
+		self.announce_ipv4       = ParseIPv4             (*params)
 		self.flow                = ParseFlow             (*params)
 		self.flow_route          = ParseFlowRoute        (*params)
 		self.flow_match          = ParseFlowMatch        (*params)
 		self.flow_then           = ParseFlowThen         (*params)
-		self.flow_scope		 = ParseFlowScope	 (*params)
+		self.flow_scope          = ParseFlowScope        (*params)
 		self.l2vpn               = ParseL2VPN            (*params)
 		self.vpls                = ParseVPLS             (*params)
 		self.operational         = ParseOperational      (*params)
@@ -161,6 +165,7 @@ class Configuration (_Configuration):
 					'family':      self.family.name,
 					'capability':  self.capability.name,
 					'api':         self.api.name,
+					'announce':    self.announce.name,
 					'static':      self.static.name,
 					'flow':        self.flow.name,
 					'l2vpn':       self.l2vpn.name,
@@ -171,6 +176,7 @@ class Configuration (_Configuration):
 				'class':    self.neighbor,
 				'commands': self.neighbor.known.keys(),
 				'sections': {
+					'announce':    self.announce.name,
 					'family':      self.family.name,
 					'capability':  self.capability.name,
 					'api':         self.api.name,
@@ -209,6 +215,19 @@ class Configuration (_Configuration):
 			self.api_receive.name: {
 				'class':    self.api_receive,
 				'commands': self.api_receive.known.keys(),
+				'sections': {
+				},
+			},
+			self.announce.name: {
+				'class':    self.announce,
+				'commands': self.announce.known.keys(),
+				'sections': {
+					'ipv4': self.announce_ipv4.name,
+				},
+			},
+			self.announce_ipv4.name: {
+				'class':    self.announce_ipv4,
+				'commands': ['unicast', 'multicast'],
 				'sections': {
 				},
 			},
@@ -304,6 +323,8 @@ class Configuration (_Configuration):
 		self.api.clear()
 		self.api_send.clear()
 		self.api_receive.clear()
+		self.announce_ipv4.clear()
+		self.announce.clear()
 		self.static.clear()
 		self.static_route.clear()
 		self.flow.clear()

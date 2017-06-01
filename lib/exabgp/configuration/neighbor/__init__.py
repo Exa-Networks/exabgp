@@ -188,11 +188,18 @@ class ParseNeighbor (Section):
 
 		neighbor.changes = []
 
+		# old format
 		for section in ('static','l2vpn','flow'):
 			routes = local.get(section,{}).get('routes',[])
 			for route in routes:
 				route.nlri.action = OUT.ANNOUNCE
 			neighbor.changes.extend(routes)
+
+		# new format
+		routes = local.get('routes',[])
+		for route in routes:
+			route.nlri.action = OUT.ANNOUNCE
+		neighbor.changes.extend(routes)
 
 		messages = local.get('operational',{}).get('routes',[])
 
