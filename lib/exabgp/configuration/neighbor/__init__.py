@@ -158,8 +158,11 @@ class ParseNeighbor (Section):
 		neighbor.group_updates    = local.get('group-updates',True)
 		neighbor.manual_eor       = local.get('manual-eor', False)
 
-		self.scope.merge('api',ParseAPI.extract())
-		neighbor.api              = self.scope.get('api',{})
+		local_api = ParseAPI.extract()
+		for k,values in self.scope.get('api',{}).items():
+			for value in values:
+				local_api.setdefault(k,[]).append(value)
+		neighbor.api              = local_api
 
 		# capabilities
 		capability = local.get('capability',{})
