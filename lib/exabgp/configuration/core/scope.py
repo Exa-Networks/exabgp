@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2015-06-04.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+import sys
 import pprint
 
 # from copy import deepcopy
@@ -13,8 +14,13 @@ from exabgp.vendoring import six
 from exabgp.configuration.core.error import Error
 
 
+if sys.version_info > (3,):
+	long = int
+
+
 class Scope (Error):
 	def __init__ (self):
+		Error.__init__(self)
 		self._location = []
 		self._added = set()
 		self._all = {
@@ -112,10 +118,12 @@ class Scope (Error):
 					for element in source[key]:
 						if element not in destination[key]:
 							destination[key].append(element)
-			elif isinstance(source[key], list):
-				destination.setdefault(key,[]).extend(value)
+			elif isinstance(source[key], int):
+				destination[key] = value
+			elif isinstance(source[key], long):
+				destination[key] = value
 			else:
-				self.throw('can not recursively copy this type of data')
+				self.throw('can not recursively copy this type of data %s' % type(source[key]))
 
 	def get (self, name='', default=None):
 		if name:
