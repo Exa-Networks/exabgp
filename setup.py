@@ -14,7 +14,6 @@ import platform
 from shutil import rmtree
 from setuptools import setup
 from distutils.util import get_platform
-import six
 
 CHANGELOG = os.path.join(os.getcwd(),os.path.dirname(sys.argv[0]),'CHANGELOG')
 VERSION_PY = os.path.join(os.getcwd(),os.path.dirname(sys.argv[0]),'lib/exabgp/version.py')
@@ -71,7 +70,7 @@ python setup.py debian   prepend the current version to debian/changelog
 def versions ():
 	versions = []
 	with open(CHANGELOG) as changelog:
-		six.next(changelog)  # skip the word version on the first line
+		next(changelog)  # skip the word version on the first line
 		for line in changelog:
 			if line.lower().startswith('version '):
 				version = line.split()[1]
@@ -318,7 +317,7 @@ def packages (lib):
 			yield location
 
 	def modules (lib):
-		return six.next(os.walk(lib))[1]
+		return next(os.walk(lib))[1]
 
 	r = []
 	for module in modules(lib):
