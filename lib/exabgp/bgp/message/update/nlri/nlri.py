@@ -101,7 +101,7 @@ class NLRI (Family):
 		cls.logger.parser(LazyNLRI(afi,safi,addpath,data))
 
 		a,s = AFI.create(afi),SAFI.create(safi)
-		key = '%s/%s' % ()
+		key = '%s/%s' % (a, s)
 		if key in cls.registered_nlri:
 			return cls.registered_nlri[key].unpack_nlri(afi,safi,data,action,addpath)
 		raise Notify(3,0,'trying to decode unknown family %s/%s' % (a,s))
