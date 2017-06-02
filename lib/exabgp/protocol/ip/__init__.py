@@ -200,7 +200,11 @@ class IPRange (IP):
 		return klass(ip,mask)
 
 	def __repr__ (self):
-		return '%s/%d' % (self.top(), int(self.mask))
+		if (self.ipv4() and self.mask == 32) or \
+		   (self.ipv6() and self.mask == 128):
+			return super(IPRange, self).__repr__()
+		else:
+			return '%s/%d' % (self.top(), int(self.mask))
 
 
 # ==================================================================== NoNextHop
