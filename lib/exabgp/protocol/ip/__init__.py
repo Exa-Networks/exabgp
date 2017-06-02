@@ -200,7 +200,7 @@ class IPRange (IP):
 		return klass(ip,mask)
 
 	def __repr__ (self):
-		return '%s/%d' % (self.top(),self.mask)
+		return '%s/%d' % (self.top(), int(self.mask))
 
 
 # ==================================================================== NoNextHop
