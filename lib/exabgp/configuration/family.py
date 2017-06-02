@@ -33,27 +33,27 @@ class ParseFamily (Section):
 
 	convert = {
 		'ipv4': {
-			'unicast':   	(AFI(AFI.ipv4),SAFI(SAFI.unicast)),
-			'multicast': 	(AFI(AFI.ipv4),SAFI(SAFI.multicast)),
-			'nlri-mpls': 	(AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)),
-			'mpls-vpn':  	(AFI(AFI.ipv4),SAFI(SAFI.mpls_vpn)),
-			'flow':      	(AFI(AFI.ipv4),SAFI(SAFI.flow_ip)),
-			'flow-vpn':  	(AFI(AFI.ipv4),SAFI(SAFI.flow_vpn)),
+			'unicast':   	(AFI.ipv4,SAFI.unicast),
+			'multicast': 	(AFI.ipv4,SAFI.multicast),
+			'nlri-mpls': 	(AFI.ipv4,SAFI.nlri_mpls),
+			'mpls-vpn':  	(AFI.ipv4,SAFI.mpls_vpn),
+			'flow':      	(AFI.ipv4,SAFI.flow_ip),
+			'flow-vpn':  	(AFI.ipv4,SAFI.flow_vpn),
 		},
 		'ipv6': {
-			'unicast':   	(AFI(AFI.ipv6),SAFI(SAFI.unicast)),
-			'nlri-mpls': 	(AFI(AFI.ipv6),SAFI(SAFI.nlri_mpls)),
-			'mpls-vpn':  	(AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)),
-			'flow':      	(AFI(AFI.ipv6),SAFI(SAFI.flow_ip)),
-			'flow-vpn':  	(AFI(AFI.ipv6),SAFI(SAFI.flow_vpn)),
+			'unicast':   	(AFI.ipv6,SAFI.unicast),
+			'nlri-mpls': 	(AFI.ipv6,SAFI.nlri_mpls),
+			'mpls-vpn':  	(AFI.ipv6,SAFI.mpls_vpn),
+			'flow':      	(AFI.ipv6,SAFI.flow_ip),
+			'flow-vpn':  	(AFI.ipv6,SAFI.flow_vpn),
 		},
 		'l2vpn': {
-			'vpls':      	(AFI(AFI.l2vpn),SAFI(SAFI.vpls)),
-			'evpn':      	(AFI(AFI.l2vpn),SAFI(SAFI.evpn)),
+			'vpls':      	(AFI.l2vpn,SAFI.vpls),
+			'evpn':      	(AFI.l2vpn,SAFI.evpn),
 		},
 		'bgpls': {
-			'bgp-ls':		(AFI(AFI.bgpls),SAFI(SAFI.bgp_ls)),
-			'bgp-ls-vpn':	(AFI(AFI.bgpls),SAFI(SAFI.bgp_ls_vpn)),
+			'bgp-ls':		(AFI.bgpls,SAFI.bgp_ls),
+			'bgp-ls-vpn':	(AFI.bgpls,SAFI.bgp_ls_vpn),
 		},
 	}
 

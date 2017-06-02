@@ -54,13 +54,13 @@ class TestNLRIs(unittest.TestCase):
 
     def test200_IPVPNCreatePackUnpack(self):
         '''Test pack/unpack for IPVPN routes'''
-        nlri = IPVPN.new(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
+        nlri = IPVPN.new(AFI.ipv4, SAFI.mpls_vpn,
                          IP.pton("1.2.3.0"), 24,
                          Labels([42], True), 
                          RouteDistinguisher.fromElements("42.42.42.42", 5))
 
         packed = nlri.pack()
-        unpacked,leftover = IPVPN.unpack_nlri(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
+        unpacked,leftover = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn,
                                               packed, OUT.UNSET, None)
 
         self.assertEqual(0, len(leftover))
@@ -88,7 +88,7 @@ class TestNLRIs(unittest.TestCase):
 
         packed = nlri.pack()
 
-        unpacked,leftover = EVPN.unpack_nlri(AFI(AFI.l2vpn), SAFI(SAFI.evpn),
+        unpacked,leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn,
                                              packed, OUT.UNSET, None)
 
         self.assertEqual(0, len(leftover))
@@ -117,7 +117,7 @@ class TestNLRIs(unittest.TestCase):
 
         packed = nlri.pack()
 
-        unpacked,leftover = EVPN.unpack_nlri(AFI(AFI.l2vpn), SAFI(SAFI.evpn),
+        unpacked,leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn,
                                              packed, OUT.UNSET, None)
 
         self.assertEqual(0, len(leftover))
@@ -144,7 +144,7 @@ class TestNLRIs(unittest.TestCase):
 
         packed = nlri.pack()
 
-        unpacked,leftover = EVPN.unpack_nlri(AFI(AFI.l2vpn), SAFI(SAFI.evpn),
+        unpacked,leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn,
                                              packed, OUT.UNSET, None)
 
         self.assertEqual(0, len(leftover))
@@ -262,12 +262,12 @@ class TestNLRIs(unittest.TestCase):
     def test99_RTCCreatePackUnpack(self):
         '''Test pack/unpack for RTC routes'''
 
-        nlri = RTC.new(AFI(AFI.ipv4), SAFI(SAFI.rtc),
+        nlri = RTC.new(AFI.ipv4, SAFI.rtc,
                        64512,
                        RouteTarget(64577,123))
 
         packed = nlri.pack()
-        unpacked,leftover = RTC.unpack_nlri(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
+        unpacked,leftover = RTC.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn,
                                             packed, OUT.UNSET, None)
 
         self.assertEqual(0, len(leftover))
@@ -286,11 +286,11 @@ class TestNLRIs(unittest.TestCase):
     def test98_RTCWildcardPackUnpack(self):
         '''Test pack/unpack for RTC routes'''
 
-        nlri = RTC.new(AFI(AFI.ipv4), SAFI(SAFI.rtc),
+        nlri = RTC.new(AFI.ipv4, SAFI.rtc,
                        0, None)
 
         packed = nlri.pack()
-        unpacked,leftover = RTC.unpack_nlri(AFI(AFI.ipv4), SAFI(SAFI.mpls_vpn),
+        unpacked,leftover = RTC.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn,
                                             packed, OUT.UNSET, None)
 
         self.assertEqual(0, len(leftover))

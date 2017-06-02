@@ -205,4 +205,4 @@ class MPRNLRI (Attribute,Family):
 		return cls(afi,safi,nlris)
 
 
-EMPTY_MPRNLRI  = MPRNLRI(AFI(AFI.undefined),SAFI(SAFI.undefined),[])
+EMPTY_MPRNLRI  = MPRNLRI(AFI.undefined,SAFI.undefined,[])

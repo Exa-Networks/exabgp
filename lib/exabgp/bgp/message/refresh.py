@@ -42,8 +42,8 @@ class RouteRefresh (Message):
 	end = 2
 
 	def __init__ (self, afi, safi, reserved=0):
-		self.afi = AFI(afi)
-		self.safi = SAFI(safi)
+		self.afi = AFI.create(afi)
+		self.safi = SAFI.create(safi)
 		self.reserved = Reserved(reserved)
 
 	def message (self,negotiated=None):

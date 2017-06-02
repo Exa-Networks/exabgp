@@ -186,7 +186,7 @@ class Update (Message):
 
 		# This could be speed up massively by changing the order of the IF
 		if length == 4 and data == b'\x00\x00\x00\x00':
-			return EOR(AFI(AFI.ipv4),SAFI(SAFI.unicast))  # pylint: disable=E1101
+			return EOR(AFI.ipv4,SAFI.unicast)  # pylint: disable=E1101
 		if length == 11 and data.startswith(EOR.NLRI.PREFIX):
 			return EOR.unpack_message(data,negotiated)
 
@@ -201,7 +201,7 @@ class Update (Message):
 			logger.parser("announced NLRI none")
 
 		# Is the peer going to send us some Path Information with the route (AddPath)
-		addpath = negotiated.addpath.receive(AFI(AFI.ipv4),SAFI(SAFI.unicast))
+		addpath = negotiated.addpath.receive(AFI.ipv4,SAFI.unicast)
 
 		# empty string for NoNextHop, the packed IP otherwise (without the 3/4 bytes of attributes headers)
 		nexthop = attributes.get(Attribute.CODE.NEXT_HOP,NoNextHop)
@@ -235,7 +235,7 @@ class Update (Message):
 		if not attributes and not nlris:
 			# Careful do not use == or != as the comparaison does not work
 			if unreach is None and reach is None:
-				return EOR(AFI(AFI.ipv4),SAFI(SAFI.unicast))
+				return EOR(AFI.ipv4,SAFI.unicast)
 			if unreach is not None:
 				return EOR(unreach.afi,unreach.safi)
 			if reach is not None:

@@ -58,11 +58,11 @@ class Parameter (int):
 
 class Capabilities (dict):
 	_ADD_PATH = [
-		(AFI(AFI.ipv4),SAFI(SAFI.unicast)),
-		(AFI(AFI.ipv6),SAFI(SAFI.unicast)),
-		(AFI(AFI.ipv4),SAFI(SAFI.nlri_mpls)),
-		(AFI(AFI.ipv4),SAFI(SAFI.mpls_vpn)),
-		(AFI(AFI.ipv6),SAFI(SAFI.mpls_vpn)),
+		(AFI.ipv4,SAFI.unicast),
+		(AFI.ipv6,SAFI.unicast),
+		(AFI.ipv4,SAFI.nlri_mpls),
+		(AFI.ipv4,SAFI.mpls_vpn),
+		(AFI.ipv6,SAFI.mpls_vpn),
 	]
 
 	def announced (self, capability):

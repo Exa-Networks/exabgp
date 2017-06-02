@@ -140,8 +140,8 @@ class OperationalFamily (Operational):
 
 	def __init__ (self, what, afi, safi, data=b''):
 		Operational.__init__(self,what)
-		self.afi = AFI(afi)
-		self.safi = SAFI(safi)
+		self.afi = AFI.create(afi)
+		self.safi = SAFI.create(safi)
 		self.data = data
 
 	def family (self):

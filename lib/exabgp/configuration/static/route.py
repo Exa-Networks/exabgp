@@ -172,10 +172,10 @@ class ParseStaticRoute (Section):
 			for route in routes:
 				# if route.nlri.has_rd():
 				if route.nlri.rd is not RouteDistinguisher.NORD:
-					route.nlri.safi = SAFI(SAFI.mpls_vpn)
+					route.nlri.safi = SAFI.mpls_vpn
 				# elif route.nlri.has_label():
 				elif route.nlri.labels is not Labels.NOLABEL:
-					route.nlri.safi = SAFI(SAFI.nlri_mpls)
+					route.nlri.safi = SAFI.nlri_mpls
 
 			self.scope.extend('routes',routes)
 		return True
@@ -183,7 +183,7 @@ class ParseStaticRoute (Section):
 	# def _family (self):
 	# 	last = self.scope.get(self.name)
 	# 	if last.nlri.labels and not last.nlri.safi.has_label():
-	# 		last.nlri.safi = SAFI(SAFI.nlri_mpls)
+	# 		last.nlri.safi = SAFI.nlri_mpls
 
 	def _check (self):
 		if not self.check(self.scope.get(self.name)):

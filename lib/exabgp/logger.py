@@ -104,7 +104,7 @@ class LazyNLRI (object):
 		return str(self).split(char)
 
 	def __str__ (self):
-		family = '%s %s' % (AFI(self.afi),SAFI(self.safi))
+		family = '%s %s' % (self.afi,self.safi)
 		path = 'with path-information' if self.addpath else 'without path-information'
 		payload = od(self.data) if self.data else 'none'
 		return 'NLRI      %-18s %-28s payload %s' % (family,path,payload)

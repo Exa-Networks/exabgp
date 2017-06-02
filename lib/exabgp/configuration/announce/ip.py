@@ -223,7 +223,7 @@ class ParseIP (Section):
 def ip (tokeniser,afi,safi):
 	ipmask = prefix(tokeniser)
 
-	nlri = INET(AFI(afi),SAFI(safi),OUT.ANNOUNCE)
+	nlri = INET(afi,safi,OUT.ANNOUNCE)
 	nlri.cidr = CIDR(ipmask.pack(),ipmask.mask)
 
 	change = Change(

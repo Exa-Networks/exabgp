@@ -70,7 +70,7 @@ class ParseFlowRoute (Section):
 
 		# if route.nlri.has_rd(): # ???
 		if route.nlri.rd is not RouteDistinguisher.NORD:
-			route.nlri.safi = SAFI(SAFI.flow_vpn)
+			route.nlri.safi = SAFI.flow_vpn
 
 		if route:
 			self.scope.append('routes',route)

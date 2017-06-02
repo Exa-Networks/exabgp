@@ -90,7 +90,7 @@ class MPURNLRI (Attribute,Family):
 		data = data[offset:]
 
 		if negotiated and (afi,safi) not in negotiated.families:
-			raise Notify(3,0,'presented a non-negotiated family %s %s' % (AFI(afi),SAFI(safi)))
+			raise Notify(3,0,'presented a non-negotiated family %s %s' % (AFI.create(afi),SAFI.create(safi)))
 
 		# Is the peer going to send us some Path Information with the route (AddPath)
 		addpath = negotiated.addpath.receive(afi,safi)
@@ -102,4 +102,4 @@ class MPURNLRI (Attribute,Family):
 		return cls(afi,safi,nlris)
 
 
-EMPTY_MPURNLRI = MPURNLRI(AFI(AFI.undefined),SAFI(SAFI.undefined),[])
+EMPTY_MPURNLRI = MPURNLRI(AFI.undefined,SAFI.undefined,[])

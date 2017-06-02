@@ -22,7 +22,7 @@ class NLRI (Family):
 	EOR = False
 
 	registered_nlri = dict()
-	registered_families = [(AFI(AFI.ipv4), SAFI(SAFI.multicast))]
+	registered_families = [(AFI.ipv4, SAFI.multicast)]
 	logger = None
 
 	def __init__ (self, afi, safi, action=OUT.UNSET):
@@ -74,7 +74,7 @@ class NLRI (Family):
 	@classmethod
 	def register (cls, afi, safi, force=False):
 		def register_nlri (klass):
-			new = (AFI(afi),SAFI(safi))
+			new = (AFI.create(afi),SAFI.create(safi))
 			if new in cls.registered_nlri:
 				if force:
 					# python has a bug and does not allow %ld/%ld (pypy does)
@@ -100,7 +100,8 @@ class NLRI (Family):
 			cls.logger = Logger()
 		cls.logger.parser(LazyNLRI(afi,safi,addpath,data))
 
-		key = '%s/%s' % (AFI(afi),SAFI(safi))
+		a,s = AFI.create(afi),SAFI.create(safi)
+		key = '%s/%s' % ()
 		if key in cls.registered_nlri:
 			return cls.registered_nlri[key].unpack_nlri(afi,safi,data,action,addpath)
-		raise Notify(3,0,'trying to decode unknown family %s/%s' % (AFI(afi),SAFI(safi)))
+		raise Notify(3,0,'trying to decode unknown family %s/%s' % (a,s))
