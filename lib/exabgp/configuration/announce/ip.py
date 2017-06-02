@@ -58,7 +58,7 @@ def pack_int (afi, integer):
 	return concat_bytes_i(character((integer >> (offset * 8)) & 0xff) for offset in range(IP.length(afi)-1,-1,-1))
 
 
-class ParseIPv4 (Section):
+class ParseIP (Section):
 	# put next-hop first as it is a requirement atm
 	definition = [
 		'next-hop <ip>',
@@ -133,7 +133,8 @@ class ParseIPv4 (Section):
 	assign = {
 	}
 
-	name = 'ipv4'
+	name = 'ip'
+	afi = None
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)
@@ -153,15 +154,15 @@ class ParseIPv4 (Section):
 		return True
 
 	def _check (self):
-		if not self.check(self.scope.get(self.name)):
+		if not self.check(self.scope.get(self.name),self.afi):
 			return self.error.set(self.syntax)
 		return True
 
 	@staticmethod
-	def check (change):
+	def check (change,afi):
 		if change.nlri.nexthop is NoNextHop \
 			and change.nlri.action == OUT.ANNOUNCE \
-			and change.nlri.afi == AFI.ipv4 \
+			and change.nlri.afi == afi \
 			and change.nlri.safi in (SAFI.unicast,SAFI.multicast):
 			return False
 		return True
@@ -219,10 +220,10 @@ class ParseIPv4 (Section):
 				self.scope.append(self.name,splat)
 
 
-def ipv4 (tokeniser,safi):
+def ip (tokeniser,afi,safi):
 	ipmask = prefix(tokeniser)
 
-	nlri = INET(AFI(AFI.ipv4),SAFI(safi),OUT.ANNOUNCE)
+	nlri = INET(AFI(afi),SAFI(safi),OUT.ANNOUNCE)
 	nlri.cidr = CIDR(ipmask.pack(),ipmask.mask)
 
 	change = Change(
@@ -236,14 +237,14 @@ def ipv4 (tokeniser,safi):
 		if not command:
 			break
 
-		action = ParseIPv4.action.get(command,'')
+		action = ParseIP.action.get(command,'')
 
 		if action == 'attribute-add':
-			change.attributes.add(ParseIPv4.known[command](tokeniser))
+			change.attributes.add(ParseIP.known[command](tokeniser))
 		elif action == 'nlri-set':
-			change.nlri.assign(ParseIPv4.assign[command],ParseIPv4.known[command](tokeniser))
+			change.nlri.assign(ParseIP.assign[command],ParseIP.known[command](tokeniser))
 		elif action == 'nexthop-and-attribute':
-			nexthop,attribute = ParseIPv4.known[command](tokeniser)
+			nexthop,attribute = ParseIP.known[command](tokeniser)
 			change.nlri.nexthop = nexthop
 			change.attributes.add(attribute)
 		else:
@@ -252,11 +253,31 @@ def ipv4 (tokeniser,safi):
 	return [change]
 
 
-@ParseIPv4.register('unicast','extend-name')
-def unicast (tokeniser):
-	return ipv4(tokeniser,SAFI.unicast)
+class ParseIPv4 (ParseIP):
+	name = 'ipv4'
+	afi = AFI.ipv4
 
 
-@ParseIPv4.register('multicast','extend-name')
-def multicast (tokeniser):
-	return ipv4(tokeniser,SAFI.multicast)
+@ParseIPv4.register('unicast','extend-name',True)
+def unicast_v4 (tokeniser):
+	return ip(tokeniser,AFI.ipv4,SAFI.unicast)
+
+
+@ParseIPv4.register('multicast','extend-name',True)
+def multicast_v4 (tokeniser):
+	return ip(tokeniser,AFI.ipv4,SAFI.multicast)
+
+
+class ParseIPv6 (ParseIP):
+	name = 'ipv6'
+	afi = AFI.ipv6
+
+
+@ParseIPv6.register('unicast','extend-name',True)
+def unicast_v6 (tokeniser):
+	return ip(tokeniser,AFI.ipv6,SAFI.unicast)
+
+
+@ParseIPv6.register('multicast','extend-name',True)
+def multicast_v6 (tokeniser):
+	return ip(tokeniser,AFI.ipv6,SAFI.multicast)

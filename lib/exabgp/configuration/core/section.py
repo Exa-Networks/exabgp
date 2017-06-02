@@ -31,12 +31,13 @@ class Section (Error):
 		raise RuntimeError('%s did not implemented clear as should be' % self.__class__.__name__)
 
 	@classmethod
-	def register (cls, name, action):
+	def register (cls, name, action,multiple=False):
 		def inner (function):
-			if name in cls.known:
+			identifier = (cls.name,name) if multiple else name
+			if identifier in cls.known:
 				raise RuntimeError('more than one registration per command attempted')
-			cls.known[name] = function
-			cls.action[name] = action
+			cls.known[identifier] = function
+			cls.action[identifier] = action
 			return function
 		return inner
 
@@ -54,16 +55,17 @@ class Section (Error):
 		return True
 
 	def parse (self, name, command):
-		if command not in self.known:
+		identifier = command if command in self.known else (self.name,command)
+		if identifier not in self.known:
 			return self.error.set('unknown command %s options are %s' % (command,', '.join(self.known)))
 
 		try:
 			if command in self.default:
-				insert = self.known[command](self.tokeniser.iterate,self.default[command])
+				insert = self.known[identifier](self.tokeniser.iterate,self.default[command])
 			else:
-				insert = self.known[command](self.tokeniser.iterate)
+				insert = self.known[identifier](self.tokeniser.iterate)
 
-			action = self.action.get(command,'')
+			action = self.action.get(identifier,'')
 
 			if action == 'set-command':
 				self.scope.set(command,insert)

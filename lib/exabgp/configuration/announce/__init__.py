@@ -8,8 +8,6 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 
 from exabgp.configuration.core import Section
 
-from exabgp.configuration.announce.ipv4 import ParseIPv4
-
 
 class ParseAnnounce (Section):
 	name = 'announce'

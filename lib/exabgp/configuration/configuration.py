@@ -27,7 +27,8 @@ from exabgp.configuration.neighbor.api import ParseReceive
 from exabgp.configuration.family import ParseFamily
 from exabgp.configuration.capability import ParseCapability
 from exabgp.configuration.announce import ParseAnnounce
-from exabgp.configuration.announce.ipv4 import ParseIPv4
+from exabgp.configuration.announce.ip import ParseIPv4
+from exabgp.configuration.announce.ip import ParseIPv6
 from exabgp.configuration.static import ParseStatic
 from exabgp.configuration.static import ParseStaticRoute
 from exabgp.configuration.flow import ParseFlow
@@ -125,6 +126,7 @@ class Configuration (_Configuration):
 		self.static_route        = ParseStaticRoute      (*params)
 		self.announce            = ParseAnnounce         (*params)
 		self.announce_ipv4       = ParseIPv4             (*params)
+		self.announce_ipv6       = ParseIPv6             (*params)
 		self.flow                = ParseFlow             (*params)
 		self.flow_route          = ParseFlowRoute        (*params)
 		self.flow_match          = ParseFlowMatch        (*params)
@@ -223,10 +225,17 @@ class Configuration (_Configuration):
 				'commands': self.announce.known.keys(),
 				'sections': {
 					'ipv4': self.announce_ipv4.name,
+					'ipv6': self.announce_ipv6.name,
 				},
 			},
 			self.announce_ipv4.name: {
 				'class':    self.announce_ipv4,
+				'commands': ['unicast', 'multicast'],
+				'sections': {
+				},
+			},
+			self.announce_ipv6.name: {
+				'class':    self.announce_ipv6,
 				'commands': ['unicast', 'multicast'],
 				'sections': {
 				},
@@ -323,6 +332,7 @@ class Configuration (_Configuration):
 		self.api.clear()
 		self.api_send.clear()
 		self.api_receive.clear()
+		self.announce_ipv6.clear()
 		self.announce_ipv4.clear()
 		self.announce.clear()
 		self.static.clear()
