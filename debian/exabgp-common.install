@@ -1,0 +1,2 @@
+etc/exabgp/* usr/share/exabgp
+qa/conf/* usr/share/exabgp/etc

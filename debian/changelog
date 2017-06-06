@@ -1,3 +1,18 @@
+exabgp (4.0.0-1) UNRELEASED; urgency=medium
+
+  * New upstream release.
+  * Add Python 3 support:
+    - d/control: Add python{3}-exabgp, exabgp-common packages.
+    - d/exabgp-common.install: Install /usr/share/exabgp/*.
+    - d/control,rules: Switch buildsystem to pybuild.
+    - d/rules: Limit unit testing to Python 2 for now.
+    - d/control: Add required BD's for Python 3 support.
+    - d/python{3}-exabgp.{postinst,prerm}: Install exabgp binary
+      using alternatives for Python 2 or Python 3 versions.
+  * d/rules: Tidy etc/exabgp/exabgp.env on clean.
+
+ -- James Page <james.page@ubuntu.com>  Wed, 24 May 2017 16:54:34 +0100
+
 exabgp (3.4.17-3) unstable; urgency=medium
 
   * d/exabgp.postinst: provide complete paths to dpkg-maintscript-helper.
