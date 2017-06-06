@@ -23,8 +23,6 @@ Vcs-Git: https://github.com/Exa-Networks/exabgp.git -b debian/sid
 Package: exabgp-common
 Architecture: all
 Depends: ${misc:Depends},
-         ${python3:Depends},
-         ${python:Depends},
 Description: BGP swiss army knife of networking - common files
  ExaBGP allows engineers to control their network from commodity
  servers. Think of it as Software Defined Networking using BGP by
@@ -45,8 +43,8 @@ Section: python
 Depends: exabgp-common (= ${binary:Version}),
          ${misc:Depends},
          ${python:Depends},
-Breaks: exabgp (<< 4.0.0-0ubuntu1~),
-Replaces: exabgp (<< 4.0.0-0ubuntu1~),
+Breaks: exabgp (<< 4.0.0-1~),
+Replaces: exabgp (<< 4.0.0-1~),
 Description: BGP swiss army knife of networking - Python 2 module
  ExaBGP allows engineers to control their network from commodity
  servers. Think of it as Software Defined Networking using BGP by
