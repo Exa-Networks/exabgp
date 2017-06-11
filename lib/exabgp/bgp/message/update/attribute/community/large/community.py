@@ -61,9 +61,10 @@ class LargeCommunity (Attribute):
 
 	@classmethod
 	def cached (cls, large_community):
-		if cls.caching and large_community in cls.cache:
+		if not cls.caching:
+			return cls(large_community)
+		if large_community in cls.cache:
 			return cls.cache[large_community]
 		instance = cls(large_community)
-		if cls.caching:
-			cls.cache[large_community] = instance
+		cls.cache[large_community] = instance
 		return instance

@@ -176,33 +176,36 @@ class Store (object):
 			del dict_sorted[old_attr_index][change_nlri_index]
 			if not dict_sorted[old_attr_index]:
 				del dict_sorted[old_attr_index]
-			# route removed before announcement, all goo
-			if old_change.nlri.action == OUT.ANNOUNCE and change.nlri.action == OUT.WITHDRAW:
-				# if we cache sent NLRI and this NLRI was never sent before, we do not need to send a withdrawal
-				if self.cache and change_nlri_index not in self._seen.get(change.nlri.family(),{}):
+
+			# if we cache sent NLRI and this NLRI was never sent before, we do not need to send a withdrawal
+			# as the route removed before we could announce it
+			if self.cache and old_change.nlri.action == OUT.ANNOUNCE and change.nlri.action == OUT.WITHDRAW:
+				if change_nlri_index not in self._seen.get(change.nlri.family(),{}):
 					return
 
-		if not force and self.cache:
-			announced = self._seen.get(change.nlri.family(),{})
-			if change_nlri_index in announced and change.nlri.action == OUT.ANNOUNCE:
-				old_change = announced[change_nlri_index]
-				# it is a duplicate route
-				if old_change.attributes.index() == change.attributes.index() and old_change.nlri.nexthop.index() == change.nlri.nexthop.index():
-					return
+		if self.cache and not force:
+			if change.nlri.action == OUT.ANNOUNCE:
+				announced = self._seen.get(change.nlri.family(),{})
+				if change_nlri_index in announced:
+					old_change = announced[change_nlri_index]
+					# it is a duplicate route
+					if old_change.attributes.index() == change.attributes.index() and old_change.nlri.nexthop.index() == change.nlri.nexthop.index():
+						return
 
 		# add the route to the list to be announced
 		dict_sorted.setdefault(change_attr_index,{})[change_nlri_index] = change
 		dict_nlri[change_nlri_index] = change
+
 		if change_attr_index not in dict_attr:
 			dict_attr[change_attr_index] = change
 
 	def updates (self, grouped):
-		if self._changes:
-			dict_nlri = self._modify_nlri
+		dict_nlri = self._modify_nlri
 
+		if self._changes:
 			for family in self._seen:
 				for change in six.itervalues(self._seen[family]):
-					if change.index() not in self._modify_nlri:
+					if change.index() not in dict_nlri:
 						change.nlri.action = OUT.WITHDRAW
 						self.insert_announced(change,True)
 
@@ -218,7 +221,6 @@ class Store (object):
 			yield Update(RouteRefresh(afi,safi,RouteRefresh.start),Attributes())
 
 		dict_sorted = self._modify_sorted
-		dict_nlri = self._modify_nlri
 		dict_attr = self._cache_attribute
 
 		for attr_index,dict_change in dict_sorted.items():
@@ -231,7 +233,7 @@ class Store (object):
 
 			for change in dict_change.values():
 				updates.setdefault(change.nlri.family(),[]).append(change.nlri)
-				nlri_index = change.index()
+				# nlri_index = change.index()
 
 			# only yield once we have a consistent state, otherwise it will go wrong
 			# as we will try to modify things we are iterating over and using
@@ -264,7 +266,7 @@ class Store (object):
 
 			for change in self._enhanced_refresh_delay:
 				self.insert_announced(change,True)
-			self.enhanced_refresh_delay = []
+			self._enhanced_refresh_delay = []
 
 			for update in self.updates(grouped):
 				yield update

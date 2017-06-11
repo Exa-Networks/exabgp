@@ -78,11 +78,12 @@ class Community (object):
 
 	@classmethod
 	def cached (cls, community):
-		if cls.caching and community in cls.cache:
+		if not cls.caching:
+			return cls(community)
+		if community in cls.cache:
 			return cls.cache[community]
 		instance = cls(community)
-		if cls.caching:
-			cls.cache[community] = instance
+		cls.cache[community] = instance
 		return instance
 
 
