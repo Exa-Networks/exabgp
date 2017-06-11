@@ -6,11 +6,12 @@ Created by Thomas Mangin on 2010-01-15.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.protocol.enum import Enum
 
 # ===================================================================== Protocol
 # http://www.iana.org/assignments/protocol-numbers/
 
-class Protocol (int):
+class Protocol (Enum):
 	ICMP  = 0x01
 	IGMP  = 0x02
 	TCP   = 0x06
@@ -25,66 +26,40 @@ class Protocol (int):
 	PIM   = 0x67
 	SCTP  = 0x84
 
-	def __str__ (self):
-		if self == Protocol.ICMP:
-			return 'ICMP'
-		if self == Protocol.IGMP:
-			return 'IGMP'
-		if self == Protocol.TCP:
-			return 'TCP'
-		if self == Protocol.EGP:
-			return 'EGP'
-		if self == Protocol.UDP:
-			return 'UDP'
-		if self == Protocol.RSVP:
-			return 'RSVP'
-		if self == Protocol.GRE:
-			return 'GRE'
-		if self == Protocol.ESP:
-			return 'ESP'
-		if self == Protocol.AH:
-			return 'AH'
-		if self == Protocol.OSPF:
-			return 'OSPF'
-		if self == Protocol.IPIP:
-			return 'IPIP'
-		if self == Protocol.PIM:
-			return 'PIM'
-		if self == Protocol.SCTP:
-			return 'SCTP'
-		return "unknown protocol %d" % int(self)
-
 	def pack (self):
 			return chr(self)
 
 
-def NamedProtocol (protocol):
-	name = protocol.upper()
-	if name == 'ICMP':
-		return Protocol(Protocol.ICMP)
-	elif name == 'IGMP':
-		return Protocol(Protocol.IGMP)
-	elif name == 'TCP':
-		return Protocol(Protocol.TCP)
-	elif name == 'EGP':
-		return Protocol(Protocol.EGP)
-	elif name == 'UDP':
-		return Protocol(Protocol.UDP)
-	elif name == 'RSVP':
-		return Protocol(Protocol.RSVP)
-	elif name == 'GRE':
-		return Protocol(Protocol.GRE)
-	elif name == 'ESP':
-		return Protocol(Protocol.ESP)
-	elif name == 'AH':
-		return Protocol(Protocol.AH)
-	elif name == 'OSPF':
-		return Protocol(Protocol.OSPF)
-	elif name == 'IPIP':
-		return Protocol(Protocol.IPIP)
-	elif name == 'PIM':
-		return Protocol(Protocol.PIM)
-	elif name == 'SCTP':
-		return Protocol(Protocol.SCTP)
-	else:
-		raise ValueError('unknown protocol %s' % name)
+Protocol.UNKNOWN = "unknown protocol %s"
+
+Protocol.NAME = {
+	Protocol(Protocol.ICMP):  'ICMP',
+	Protocol(Protocol.IGMP):  'IGMP',
+	Protocol(Protocol.TCP):   'TCP',
+	Protocol(Protocol.EGP):   'EGP',
+	Protocol(Protocol.UDP):   'UDP',
+	Protocol(Protocol.RSVP):  'RSVP',
+	Protocol(Protocol.GRE):   'GRE',
+	Protocol(Protocol.ESP):   'ESP',
+	Protocol(Protocol.AH):    'AH',
+	Protocol(Protocol.OSPF):  'OSPF',
+	Protocol(Protocol.IPIP):  'IPIP',
+	Protocol(Protocol.PIM):   'PIM',
+	Protocol(Protocol.SCTP):  'SCTP',
+}
+
+Protocol.VALUE = {
+	'ICMP':  Protocol(Protocol.ICMP),
+	'IGMP':  Protocol(Protocol.IGMP),
+	'TCP':   Protocol(Protocol.TCP),
+	'EGP':   Protocol(Protocol.EGP),
+	'UDP':   Protocol(Protocol.UDP),
+	'RSVP':  Protocol(Protocol.RSVP),
+	'GRE':   Protocol(Protocol.GRE),
+	'ESP':   Protocol(Protocol.ESP),
+	'AH':    Protocol(Protocol.AH),
+	'OSPF':  Protocol(Protocol.OSPF),
+	'IPIP':  Protocol(Protocol.IPIP),
+	'PIM':   Protocol(Protocol.PIM),
+	'SCTP':  Protocol(Protocol.SCTP),
+}

@@ -6,11 +6,12 @@ Created by Thomas Mangin on 2010-01-15.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from exabgp.protocol.enum import Enum
 
 # ============================================================== ICMP Code Field
 # http://www.iana.org/assignments/icmp-parameters
 
-class ICMPType (int):
+class ICMPType (Enum):
 	ECHO_REPLY               = 0x00
 	DESTINATION_UNREACHEABLE = 0x03
 	SOURCE_QUENCH            = 0x04
@@ -28,77 +29,48 @@ class ICMPType (int):
 	MASK_REPLY               = 0x12
 	TRACEROUTE               = 0x1E
 
-	def __str__ (self):
-		if self == ICMPType.ECHO_REPLY:
-			return 'echo-reply'
-		if self == ICMPType.ECHO_REQUEST:
-			return 'echo-request'
-		if self == ICMPType.INFO_REPLY:
-			return 'info-reply'
-		if self == ICMPType.INFO_REQUEST:
-			return 'info-request'
-		if self == ICMPType.MASK_REPLY:
-			return 'mask-reply'
-		if self == ICMPType.MASK_REQUEST:
-			return 'mask-request'
-		if self == ICMPType.PARAMETER_PROBLEM:
-			return 'parameter-problem'
-		if self == ICMPType.REDIRECT:
-			return 'redirect'
-		if self == ICMPType.ROUTER_ADVERTISEMENT:
-			return 'router-advertisement'
-		if self == ICMPType.ROUTER_SOLICIT:
-			return 'router-solicit'
-		if self == ICMPType.SOURCE_QUENCH:
-			return 'source-quench'
-		if self == ICMPType.TIME_EXCEEDED:
-			return 'time-exceeded'
-		if self == ICMPType.TIMESTAMP:
-			return 'timestamp'
-		if self == ICMPType.TIMESTAMP_REPLY:
-			return 'timestamp-reply'
-		if self == ICMPType.DESTINATION_UNREACHEABLE:
-			return 'unreachable'
-		return 'unknown icmp type %d' % int(self)
 
+ICMPType.UNKNOWN = 'unknown icmp type %s'
 
-def NamedICMPType (name):
-	icmp = name.lower()
-	if icmp == 'echo-reply':
-		return ICMPType(ICMPType.ECHO_REPLY)
-	if icmp == 'echo-request':
-		return ICMPType(ICMPType.ECHO_REQUEST)
-	if icmp == 'info-reply':
-		return ICMPType(ICMPType.INFO_REPLY)
-	if icmp == 'info-request':
-		return ICMPType(ICMPType.INFO_REQUEST)
-	if icmp == 'mask-reply':
-		return ICMPType(ICMPType.MASK_REPLY)
-	if icmp == 'mask-request':
-		return ICMPType(ICMPType.MASK_REQUEST)
-	if icmp == 'parameter-problem':
-		return ICMPType(ICMPType.PARAMETER_PROBLEM)
-	if icmp == 'redirect':
-		return ICMPType(ICMPType.REDIRECT)
-	if icmp == 'router-advertisement':
-		return ICMPType(ICMPType.ROUTER_ADVERTISEMENT)
-	if icmp == 'router-solicit':
-		return ICMPType(ICMPType.ROUTER_SOLICIT)
-	if icmp == 'source-quench':
-		return ICMPType(ICMPType.SOURCE_QUENCH)
-	if icmp == 'time-exceeded':
-		return ICMPType(ICMPType.TIME_EXCEEDED)
-	if icmp == 'timestamp':
-		return ICMPType(ICMPType.TIMESTAMP)
-	if icmp == 'timestamp-reply':
-		return ICMPType(ICMPType.TIMESTAMP_REPLY)
-	if icmp == 'unreachable':
-		return ICMPType(ICMPType.DESTINATION_UNREACHEABLE)
-	raise ValueError('unknown icmp type %s' % icmp)
+ICMPType.NAME = {
+	ICMPType(ICMPType.ECHO_REPLY):               'echo-reply',
+	ICMPType(ICMPType.ECHO_REQUEST):             'echo-request',
+	ICMPType(ICMPType.INFO_REPLY):               'info-reply',
+	ICMPType(ICMPType.INFO_REQUEST):             'info-request',
+	ICMPType(ICMPType.MASK_REPLY):               'mask-reply',
+	ICMPType(ICMPType.MASK_REQUEST):             'mask-request',
+	ICMPType(ICMPType.PARAMETER_PROBLEM):        'parameter-problem',
+	ICMPType(ICMPType.REDIRECT):                 'redirect',
+	ICMPType(ICMPType.ROUTER_ADVERTISEMENT):     'router-advertisement',
+	ICMPType(ICMPType.ROUTER_SOLICIT):           'router-solicit',
+	ICMPType(ICMPType.SOURCE_QUENCH):            'source-quench',
+	ICMPType(ICMPType.TIME_EXCEEDED):            'time-exceeded',
+	ICMPType(ICMPType.TIMESTAMP):                'timestamp',
+	ICMPType(ICMPType.TIMESTAMP_REPLY):          'timestamp-reply',
+	ICMPType(ICMPType.DESTINATION_UNREACHEABLE): 'unreachable',
+}
+
+ICMPType.VALUE = {
+	'echo-reply':               ICMPType(ICMPType.ECHO_REPLY),
+	'echo-request':             ICMPType(ICMPType.ECHO_REQUEST),
+	'info-reply':               ICMPType(ICMPType.INFO_REPLY),
+	'info-request':             ICMPType(ICMPType.INFO_REQUEST),
+	'mask-reply':               ICMPType(ICMPType.MASK_REPLY),
+	'mask-request':             ICMPType(ICMPType.MASK_REQUEST),
+	'parameter-problem':        ICMPType(ICMPType.PARAMETER_PROBLEM),
+	'redirect':                 ICMPType(ICMPType.REDIRECT),
+	'router-advertisement':     ICMPType(ICMPType.ROUTER_ADVERTISEMENT),
+	'router-solicit':           ICMPType(ICMPType.ROUTER_SOLICIT),
+	'source-quench':            ICMPType(ICMPType.SOURCE_QUENCH),
+	'time-exceeded':            ICMPType(ICMPType.TIME_EXCEEDED),
+	'timestamp':                ICMPType(ICMPType.TIMESTAMP),
+	'timestamp-reply':          ICMPType(ICMPType.TIMESTAMP_REPLY),
+	'unreachable': ICMPType(ICMPType.DESTINATION_UNREACHEABLE),
+}
 
 
 # http://www.iana.org/assignments/icmp-parameters
-class ICMPCode (int):
+class ICMPCode (Enum):
 	# Destination Unreacheable (type 3)
 	NETWORK_UNREACHABLE                   = 0x0
 	HOST_UNREACHABLE                      = 0x1
@@ -131,58 +103,59 @@ class ICMPCode (int):
 	REQUIRED_OPTION_MISSING               = 0x1
 	IP_HEADER_BAD                         = 0x2
 
-	def __str__ (self):
-		return '%d' % int(self)
 
+ICMPCode.UNKNOWN = 'unknown icmp code %s'
 
-def NamedICMPCode (name):
-	icmp = name.lower()
-	if icmp == 'communication-prohibited-by-filtering':
-		return ICMPCode(ICMPCode.COMMUNICATION_PROHIBITED_BY_FILTERING)
-	if icmp == 'destination-host-prohibited':
-		return ICMPCode(ICMPCode.DESTINATION_HOST_PROHIBITED)
-	if icmp == 'destination-host-unknown':
-		return ICMPCode(ICMPCode.DESTINATION_HOST_UNKNOWN)
-	if icmp == 'destination-network-prohibited':
-		return ICMPCode(ICMPCode.DESTINATION_NETWORK_PROHIBITED)
-	if icmp == 'destination-network-unknown':
-		return ICMPCode(ICMPCode.DESTINATION_NETWORK_UNKNOWN)
-	if icmp == 'fragmentation-needed':
-		return ICMPCode(ICMPCode.FRAGMENTATION_NEEDED)
-	if icmp == 'host-precedence-violation':
-		return ICMPCode(ICMPCode.HOST_PRECEDENCE_VIOLATION)
-	if icmp == 'host-unreachable':
-		return ICMPCode(ICMPCode.HOST_UNREACHABLE)
-	if icmp == 'host-unreachable-for-tos':
-		return ICMPCode(ICMPCode.HOST_UNREACHABLE_FOR_TOS)
-	if icmp == 'ip-header-bad':
-		return ICMPCode(ICMPCode.IP_HEADER_BAD)
-	if icmp == 'network-unreachable':
-		return ICMPCode(ICMPCode.NETWORK_UNREACHABLE)
-	if icmp == 'network-unreachable-for-tos':
-		return ICMPCode(ICMPCode.NETWORK_UNREACHABLE_FOR_TOS)
-	if icmp == 'port-unreachable':
-		return ICMPCode(ICMPCode.PORT_UNREACHABLE)
-	if icmp == 'precedence-cutoff-in-effect':
-		return ICMPCode(ICMPCode.PRECEDENCE_CUTOFF_IN_EFFECT)
-	if icmp == 'protocol-unreachable':
-		return ICMPCode(ICMPCode.PROTOCOL_UNREACHABLE)
-	if icmp == 'redirect-for-host':
-		return ICMPCode(ICMPCode.REDIRECT_FOR_HOST)
-	if icmp == 'redirect-for-network':
-		return ICMPCode(ICMPCode.REDIRECT_FOR_NETWORK)
-	if icmp == 'redirect-for-tos-and-host':
-		return ICMPCode(ICMPCode.REDIRECT_FOR_TOS_AND_HOST)
-	if icmp == 'redirect-for-tos-and-net':
-		return ICMPCode(ICMPCode.REDIRECT_FOR_TOS_AND_NET)
-	if icmp == 'required-option-missing':
-		return ICMPCode(ICMPCode.REQUIRED_OPTION_MISSING)
-	if icmp == 'source-host-isolated':
-		return ICMPCode(ICMPCode.SOURCE_HOST_ISOLATED)
-	if icmp == 'source-route-failed':
-		return ICMPCode(ICMPCode.SOURCE_ROUTE_FAILED)
-	if icmp == 'ttl-eq-zero-during-reassembly':
-		return ICMPCode(ICMPCode.TTL_EQ_ZERO_DURING_REASSEMBLY)
-	if icmp == 'ttl-eq-zero-during-transit':
-		return ICMPCode(ICMPCode.TTL_EQ_ZERO_DURING_TRANSIT)
-	raise ValueError('unknown icmp code %s' % icmp)
+ICMPCode.VALUE = {
+	'communication-prohibited-by-filtering': ICMPCode(ICMPCode.COMMUNICATION_PROHIBITED_BY_FILTERING),
+	'destination-host-prohibited':           ICMPCode(ICMPCode.DESTINATION_HOST_PROHIBITED),
+	'destination-host-unknown':              ICMPCode(ICMPCode.DESTINATION_HOST_UNKNOWN),
+	'destination-network-prohibited':        ICMPCode(ICMPCode.DESTINATION_NETWORK_PROHIBITED),
+	'destination-network-unknown':           ICMPCode(ICMPCode.DESTINATION_NETWORK_UNKNOWN),
+	'fragmentation-needed':                  ICMPCode(ICMPCode.FRAGMENTATION_NEEDED),
+	'host-precedence-violation':             ICMPCode(ICMPCode.HOST_PRECEDENCE_VIOLATION),
+	'host-unreachable':                      ICMPCode(ICMPCode.HOST_UNREACHABLE),
+	'host-unreachable-for-tos':              ICMPCode(ICMPCode.HOST_UNREACHABLE_FOR_TOS),
+	'ip-header-bad':                         ICMPCode(ICMPCode.IP_HEADER_BAD),
+	'network-unreachable':                   ICMPCode(ICMPCode.NETWORK_UNREACHABLE),
+	'network-unreachable-for-tos':           ICMPCode(ICMPCode.NETWORK_UNREACHABLE_FOR_TOS),
+	'port-unreachable':                      ICMPCode(ICMPCode.PORT_UNREACHABLE),
+	'precedence-cutoff-in-effect':           ICMPCode(ICMPCode.PRECEDENCE_CUTOFF_IN_EFFECT),
+	'protocol-unreachable':                  ICMPCode(ICMPCode.PROTOCOL_UNREACHABLE),
+	'redirect-for-host':                     ICMPCode(ICMPCode.REDIRECT_FOR_HOST),
+	'redirect-for-network':                  ICMPCode(ICMPCode.REDIRECT_FOR_NETWORK),
+	'redirect-for-tos-and-host':             ICMPCode(ICMPCode.REDIRECT_FOR_TOS_AND_HOST),
+	'redirect-for-tos-and-net':              ICMPCode(ICMPCode.REDIRECT_FOR_TOS_AND_NET),
+	'required-option-missing':               ICMPCode(ICMPCode.REQUIRED_OPTION_MISSING),
+	'source-host-isolated':                  ICMPCode(ICMPCode.SOURCE_HOST_ISOLATED),
+	'source-route-failed':                   ICMPCode(ICMPCode.SOURCE_ROUTE_FAILED),
+	'ttl-eq-zero-during-reassembly':         ICMPCode(ICMPCode.TTL_EQ_ZERO_DURING_REASSEMBLY),
+	'ttl-eq-zero-during-transit':            ICMPCode(ICMPCode.TTL_EQ_ZERO_DURING_TRANSIT),
+}
+
+ICMPCode.NAME = {
+	ICMPCode(ICMPCode.COMMUNICATION_PROHIBITED_BY_FILTERING): 'communication-prohibited-by-filtering',
+	ICMPCode(ICMPCode.DESTINATION_HOST_PROHIBITED):           'destination-host-prohibited',
+	ICMPCode(ICMPCode.DESTINATION_HOST_UNKNOWN):              'destination-host-unknown',
+	ICMPCode(ICMPCode.DESTINATION_NETWORK_PROHIBITED):        'destination-network-prohibited',
+	ICMPCode(ICMPCode.DESTINATION_NETWORK_UNKNOWN):           'destination-network-unknown',
+	ICMPCode(ICMPCode.FRAGMENTATION_NEEDED):                  'fragmentation-needed',
+	ICMPCode(ICMPCode.HOST_PRECEDENCE_VIOLATION):             'host-precedence-violation',
+	ICMPCode(ICMPCode.HOST_UNREACHABLE):                      'host-unreachable',
+	ICMPCode(ICMPCode.HOST_UNREACHABLE_FOR_TOS):              'host-unreachable-for-tos',
+	ICMPCode(ICMPCode.IP_HEADER_BAD):                         'ip-header-bad',
+	ICMPCode(ICMPCode.NETWORK_UNREACHABLE):                   'network-unreachable',
+	ICMPCode(ICMPCode.NETWORK_UNREACHABLE_FOR_TOS):           'network-unreachable-for-tos',
+	ICMPCode(ICMPCode.PORT_UNREACHABLE):                      'port-unreachable',
+	ICMPCode(ICMPCode.PRECEDENCE_CUTOFF_IN_EFFECT):           'precedence-cutoff-in-effect',
+	ICMPCode(ICMPCode.PROTOCOL_UNREACHABLE):                  'protocol-unreachable',
+	ICMPCode(ICMPCode.REDIRECT_FOR_HOST):                     'redirect-for-host',
+	ICMPCode(ICMPCode.REDIRECT_FOR_NETWORK):                  'redirect-for-network',
+	ICMPCode(ICMPCode.REDIRECT_FOR_TOS_AND_HOST):             'redirect-for-tos-and-host',
+	ICMPCode(ICMPCode.REDIRECT_FOR_TOS_AND_NET):              'redirect-for-tos-and-net',
+	ICMPCode(ICMPCode.REQUIRED_OPTION_MISSING):               'required-option-missing',
+	ICMPCode(ICMPCode.SOURCE_HOST_ISOLATED):                  'source-host-isolated',
+	ICMPCode(ICMPCode.SOURCE_ROUTE_FAILED):                   'source-route-failed',
+	ICMPCode(ICMPCode.TTL_EQ_ZERO_DURING_REASSEMBLY):         'ttl-eq-zero-during-reassembly',
+	ICMPCode(ICMPCode.TTL_EQ_ZERO_DURING_TRANSIT):            'ttl-eq-zero-during-transit',
+}

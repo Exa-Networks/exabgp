@@ -21,15 +21,10 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 
 from exabgp.protocol import Protocol
-from exabgp.protocol import NamedProtocol
 from exabgp.protocol.ip.icmp import ICMPType
 from exabgp.protocol.ip.icmp import ICMPCode
-from exabgp.protocol.ip.icmp import NamedICMPType
-from exabgp.protocol.ip.icmp import NamedICMPCode
 from exabgp.protocol.ip.fragment import Fragment
-from exabgp.protocol.ip.fragment import NamedFragment
 from exabgp.protocol.ip.tcp.flag import TCPFlag
-from exabgp.protocol.ip.tcp.flag import NamedTCPFlag
 
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
@@ -345,14 +340,14 @@ class Flow6Source (IPrefix6,FlowSource):
 class FlowIPProtocol (IOperationByte,NumericString,IPv4):
 	ID  = 0x03
 	NAME = 'protocol'
-	converter = staticmethod(converter(NamedProtocol,Protocol))
+	converter = staticmethod(converter(Protocol.Name,Protocol))
 	decoder = staticmethod(decoder(ord,Protocol))
 
 
 class FlowNextHeader (IOperationByte,NumericString,IPv6):
 	ID  = 0x03
 	NAME = 'next-header'
-	converter = staticmethod(converter(NamedProtocol,Protocol))
+	converter = staticmethod(converter(Protocol.Name,Protocol))
 	decoder = staticmethod(decoder(ord,Protocol))
 
 
@@ -380,21 +375,21 @@ class FlowSourcePort (IOperationByteShort,NumericString,IPv4,IPv6):
 class FlowICMPType (IOperationByte,NumericString,IPv4,IPv6):
 	ID = 0x07
 	NAME = 'icmp-type'
-	converter = staticmethod(converter(NamedICMPType))
+	converter = staticmethod(converter(ICMPType.Name))
 	decoder = staticmethod(decoder(_number,ICMPType))
 
 
 class FlowICMPCode (IOperationByte,NumericString,IPv4,IPv6):
 	ID = 0x08
 	NAME = 'icmp-code'
-	converter = staticmethod(converter(NamedICMPCode))
+	converter = staticmethod(converter(ICMPCode.Name))
 	decoder = staticmethod(decoder(_number,ICMPCode))
 
 
 class FlowTCPFlag (IOperationByte,BinaryString,IPv4,IPv6):
 	ID = 0x09
 	NAME = 'tcp-flags'
-	converter = staticmethod(converter(NamedTCPFlag))
+	converter = staticmethod(converter(TCPFlag.Name))
 	decoder = staticmethod(decoder(ord,TCPFlag))
 
 
@@ -425,7 +420,7 @@ class FlowTrafficClass (IOperationByte,NumericString,IPv6):
 class FlowFragment (IOperationByteShort,BinaryString,IPv4):
 	ID = 0x0C
 	NAME = 'fragment'
-	converter = staticmethod(converter(NamedFragment))
+	converter = staticmethod(converter(Fragment.Name))
 	decoder = staticmethod(decoder(ord,Fragment))
 
 
