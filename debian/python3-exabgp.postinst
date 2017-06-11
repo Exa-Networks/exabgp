@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = "configure" ] ; then
+	update-alternatives --install /usr/sbin/exabgp exabgp /usr/sbin/python3-exabgp 200
+fi
+
+#DEBHELPER#
+
+exit 0

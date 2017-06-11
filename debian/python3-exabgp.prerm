@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = "remove" ] ; then
+	update-alternatives --remove exabgp /usr/sbin/python3-exabgp
+fi
+
+#DEBHELPER#
+
+exit 0
