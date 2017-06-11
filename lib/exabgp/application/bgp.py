@@ -250,6 +250,8 @@ def main ():
 
 
 def run (env, comment, configurations, pid=0):
+	cwd = os.getcwd()
+
 	from exabgp.logger import Logger
 	logger = Logger()
 
@@ -265,8 +267,8 @@ def run (env, comment, configurations, pid=0):
 	except ImportError:
 		import profile
 
-	if not env.profile.file or env.profile.file == 'stdout':
-		ok = profile.run('Reactor(configurations).run()')
+	if env.profile.file == 'stdout':
+		ok = profile.run('Reactor('+str(configurations)+').run()')
 		__exit(env.debug.memory,0 if ok else 1)
 
 	if pid:
@@ -292,8 +294,15 @@ def run (env, comment, configurations, pid=0):
 			profiler.disable()
 			kprofile = lsprofcalltree.KCacheGrind(profiler)
 
-			with open(profile_name, 'w+') as write:
-				kprofile.output(write)
+			try:
+				destination = profile_name if profile_name.startswith('/') else os.path.join(cwd,profile_name)
+				with open(destination, 'w+') as write:
+					kprofile.output(write)
+			except IOError:
+				notice = 'could not save profiling in formation at: ' + destination
+				logger.reactor("-"*len(notice))
+				logger.reactor(notice)
+				logger.reactor("-"*len(notice))
 
 			__exit(env.debug.memory,0 if ok else 1)
 	else:
