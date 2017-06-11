@@ -318,7 +318,7 @@ def run (env, comment, configurations, validate, pid=0):
 		profiler = profile.Profile()
 		profiler.enable()
 		try:
-			ok = Reactor(configurations).run()
+			ok = Reactor(configurations).run(validate)
 		except Exception:
 			ok = False
 			raise
