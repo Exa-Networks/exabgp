@@ -25,6 +25,7 @@ Version 4.0.1
  * Feature: Allow binding to multiple global IP addresses
  * Feature: Add --validate option to check configuration
  * Fix: Handle MD5 authentication on global IP addresses
+ * Fix: profiling code
 
 Version 4.0.0
  * Feature: add support for interface-set for BGP flowspec routes

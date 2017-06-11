@@ -297,8 +297,8 @@ def run (env, comment, configurations, validate, pid=0):
 	except ImportError:
 		import profile
 
-	if not env.profile.file or env.profile.file == 'stdout':
-		ok = profile.run('Reactor(configurations).run(validate)')
+	if env.profile.file == 'stdout':
+		ok = profile.run('Reactor('+str(configurations)+').run('+str(validate)+')')
 		__exit(env.debug.memory,0 if ok else 1)
 
 	if pid:
@@ -313,26 +313,33 @@ def run (env, comment, configurations, validate, pid=0):
 		notice = 'profile can not use this filename as output, it already exists (%s)' % profile_name
 
 	if not notice:
+		cwd = os.getcwd()
 		logger.reactor('profiling ....')
 		profiler = profile.Profile()
 		profiler.enable()
 		try:
 			ok = Reactor(configurations).run()
 		except Exception:
+			ok = False
 			raise
 		finally:
 			profiler.disable()
 			kprofile = lsprofcalltree.KCacheGrind(profiler)
-
-			with open(profile_name, 'w+') as write:
-				kprofile.output(write)
-
+			try:
+				destination = profile_name if profile_name.startswith('/') else os.path.join(cwd,profile_name)
+				with open(destination, 'w+') as write:
+					kprofile.output(write)
+			except IOError:
+				notice = 'could not save profiling in formation at: ' + destination
+				logger.reactor("-"*len(notice))
+				logger.reactor(notice)
+				logger.reactor("-"*len(notice))
 			__exit(env.debug.memory,0 if ok else 1)
 	else:
 		logger.reactor("-"*len(notice))
 		logger.reactor(notice)
 		logger.reactor("-"*len(notice))
-		Reactor(configurations).run()
+		Reactor(configurations).run(validate)
 		__exit(env.debug.memory,1)
 
 
