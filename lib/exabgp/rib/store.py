@@ -30,7 +30,6 @@ class Store (object):
 		self._seen = {}
 		self._modify_nlri = {}
 		self._modify_sorted = {}
-		self._changes = None
 
 		# clear + reset
 		self._enhanced_refresh_start = []
@@ -50,7 +49,6 @@ class Store (object):
 		self._seen = {}
 		self._modify_nlri = {}
 		self._modify_sorted = {}
-		self._changes = None
 		self.reset()
 
 	def sent_changes (self, families=None):
@@ -201,18 +199,6 @@ class Store (object):
 
 	def updates (self, grouped):
 		dict_nlri = self._modify_nlri
-
-		if self._changes:
-			for family in self._seen:
-				for change in six.itervalues(self._seen[family]):
-					if change.index() not in dict_nlri:
-						change.nlri.action = OUT.WITHDRAW
-						self.insert_announced(change,True)
-
-			for new in self._changes:
-				self.insert_announced(new,True)
-			self._changes = None
-		# end of changes
 
 		rr_announced = []
 
