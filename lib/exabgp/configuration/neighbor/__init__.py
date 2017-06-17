@@ -72,6 +72,7 @@ class ParseNeighbor (Section):
 		'group-updates': boolean,
 		'auto-flush':    boolean,
 		'adj-rib-out':   boolean,
+		'adj-rib-in':    boolean,
 		'manual-eor':    boolean,
 	}
 
@@ -97,6 +98,7 @@ class ParseNeighbor (Section):
 		'group-updates': 'set-command',
 		'auto-flush':    'set-command',
 		'adj-rib-out':   'set-command',
+		'adj-rib-in':    'set-command',
 		'manual-eor':    'set-command',
 		'route':         'append-name',
 	}
@@ -107,6 +109,7 @@ class ParseNeighbor (Section):
 		'group-updates': True,
 		'auto-flush': True,
 		'adj-rib-out': False,
+		'adj-rib-in': False,
 		'manual-eor': False,
 	}
 
@@ -151,7 +154,8 @@ class ParseNeighbor (Section):
 		neighbor.md5_ip           = local.get('md5-ip',neighbor.local_address)
 		neighbor.description      = local.get('description','')
 		neighbor.flush            = local.get('auto-flush',True)
-		neighbor.adjribout        = local.get('adj-rib-out',True)
+		neighbor.adj_rib_out      = local.get('adj-rib-out',True)
+		neighbor.adj_rib_in       = local.get('adj-rib-in',True)
 		neighbor.aigp             = local.get('aigp',None)
 		neighbor.ttl_out          = local.get('outgoing-ttl',None)
 		neighbor.ttl_in           = local.get('incoming-ttl',None)
@@ -212,7 +216,7 @@ class ParseNeighbor (Section):
 			neighbor.router_id = neighbor.local_address
 
 		if neighbor.route_refresh:
-			if neighbor.adjribout:
+			if neighbor.adj_rib_out:
 				self.logger.configuration('route-refresh requested, enabling adj-rib-out')
 
 		missing = neighbor.missing()

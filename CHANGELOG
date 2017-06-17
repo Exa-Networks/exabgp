@@ -24,6 +24,7 @@ Version 4.0.1
  * Feature: local-as can be set to "auto", to auto-setup an iBGP session using the OPEN's ASN
  * Feature: Allow binding to multiple global IP addresses
  * Feature: Add --validate option to check configuration
+ * Feature: Added option to save ADJ-RIB-IN
  * Fix: Handle MD5 authentication on global IP addresses
  * Fix: profiling code
 

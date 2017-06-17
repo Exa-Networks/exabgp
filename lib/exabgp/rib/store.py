@@ -137,9 +137,9 @@ class Store (object):
 		if not self.cache:
 			return
 		elif change.nlri.action == IN.ANNOUNCED:
-			self._seen[change.index()] = change
+			self._seen.get(change.nlri.family(),{})[change.index()] = change
 		else:
-			self._seen.pop(change.index(),None)
+			self._seen.get(change.nlri.family(),{}).pop(change.index(),None)
 
 	def insert_announced (self, change, force=False):
 		# WARNING: do not call change.nlri.index as it does not prepend the family

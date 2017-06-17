@@ -16,7 +16,7 @@ class RIB (object):
 
 	_cache = {}
 
-	def __init__ (self, name, adjribout, families):
+	def __init__ (self, name, adj_rib_in, adj_rib_out, families):
 		self.name = name
 
 		if name in self._cache:
@@ -28,7 +28,7 @@ class RIB (object):
 				if family not in families:
 					del self.outgoing._seen[family]
 
-			if adjribout:
+			if adj_rib_out:
 				self.outgoing.resend(None,False)
 			else:
 				self.outgoing.clear()
@@ -37,7 +37,8 @@ class RIB (object):
 			self.outgoing = Store(families)
 			self._cache[name] = self
 
-		self.outgoing.cache = adjribout
+		self.outgoing.adj_rib_out = adj_rib_out
+		self.outgoing.adj_rib_in = adj_rib_in
 
 	def reset (self):
 		self.incoming.reset()
