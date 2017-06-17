@@ -55,11 +55,12 @@ class SrPrefix(object):
 		#  	 Section 3.1.  In this case V and L flags MUST be unset.
 		sids = []
 		while data:
-			if flags.flags['V'] and flags.flags['L']:
+			if int(flags.flags['V']) and int(flags.flags['L']):
 				b = BitArray(bytes=data[:3])
 				sid = b.unpack('uintbe:24')[0]
 				data = data[3:]
-			elif (not flags.flags['V']) and (not flags.flags['L']):
+			elif (not int(flags.flags['V'])) and \
+				(not int(flags.flags['L'])):
 				sid = unpack('!I',data[:4])[0]
 				data = data[4:]
 			sids.append(sid)
