@@ -149,7 +149,7 @@ class Store (object):
 
 		# self._modify_nlri[nlri-index] = change : we are modifying this nlri
 		# self._modify_sorted[attr-index][nlri-index] = change : add or remove the nlri
-		# self._cache_attribute[attr-index] = change
+		# self._cache_attribute[attr-index] = attributes of one of the changes
 		# and it allow to overwrite change easily :-)
 
 		# import traceback
@@ -197,7 +197,7 @@ class Store (object):
 		dict_nlri[change_nlri_index] = change
 
 		if change_attr_index not in dict_attr:
-			dict_attr[change_attr_index] = change
+			dict_attr[change_attr_index] = change.attributes
 
 	def updates (self, grouped):
 		dict_nlri = self._modify_nlri
@@ -229,7 +229,7 @@ class Store (object):
 
 			updates = {}
 			changed = dict_change.values()
-			attributes = dict_attr[attr_index].attributes
+			attributes = dict_attr[attr_index]
 
 			for change in dict_change.values():
 				updates.setdefault(change.nlri.family(),[]).append(change.nlri)
