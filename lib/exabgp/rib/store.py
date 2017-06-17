@@ -217,9 +217,8 @@ class Store (object):
 			changed = dict_change.values()
 			attributes = dict_attr[attr_index]
 
-			for change in dict_change.values():
+			for change in changed:
 				updates.setdefault(change.nlri.family(),[]).append(change.nlri)
-				# nlri_index = change.index()
 
 			# only yield once we have a consistent state, otherwise it will go wrong
 			# as we will try to modify things we are iterating over and using
