@@ -86,7 +86,7 @@ def check_neighbor (neighbors):
 		for _ in neighbor.rib.outgoing.updates(False):
 			pass
 
-		for change1 in neighbor.rib.outgoing.sent_changes():
+		for change1 in neighbor.rib.outgoing.cached_changes():
 			str1 = change1.extensive()
 			packed = list(Update([change1.nlri],change1.attributes).messages(negotiated))
 			pack1 = packed[0]

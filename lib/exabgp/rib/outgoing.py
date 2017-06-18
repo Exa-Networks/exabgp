@@ -6,24 +6,24 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.bgp.message import IN
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message import Update
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.attribute import Attributes
 
-from exabgp.vendoring import six
+from exabgp.rib.cache import Cache
 
 # XXX: FIXME: we would not have to use so many setdefault if we pre-filled the dicts with the families
 
 
-class Store (object):
+class OutgoingRIB (Cache):
 	def __init__ (self, families):
+		Cache.__init__(self,families)
+
 		self._watchdog = {}
 		self.cache = False
 		self.families = families
 
-		self._seen = {}              # self._seen[family][nlri-index] = change
 		self._new_nlri = {}          # self._new_nlri[nlri-index] = change
 		self._new_attr_af_nlri = {}  # self._new_attr_af_nlri[attr-index][family][nlri-index] = change
 		self._new_attribute = {}     # self._new_attribute[attr-index] = attributes
@@ -53,52 +53,23 @@ class Store (object):
 
 	# back to square one, all the routes are removed
 	def clear (self):
-		self._seen = {}
+		self.clear_cache()
 		self._new_nlri = {}
 		self._new_attr_af_nlri = {}
 		self._new_attribute = {}
 		self.reset()
 
-	def sent_changes (self, families=None):
-		# families can be None or []
-		requested_families = self.families if families is None else set(families).intersection(self.families)
-
-		# we use list() to make a snapshot of the data at the time we run the command
-		for family in requested_families:
-			for change in self._seen.get(family,{}).values():
-				if change.nlri.action == OUT.ANNOUNCE:
-					yield change
-
 	def resend (self, families, enhanced_refresh):
 		# families can be None or []
 		requested_families = self.families if not families else set(families).intersection(self.families)
-
-		def _announced (family):
-			for change in self._seen.get(family,{}).values():
-				if change.nlri.action == OUT.ANNOUNCE:
-					yield change
-			self._seen[family] = {}
 
 		if enhanced_refresh:
 			for family in requested_families:
 				if family not in self._enhanced_refresh_start:
 					self._enhanced_refresh_start.append(family)
-					for change in _announced(family):
-						self.add_to_rib(change,True)
-		else:
-			for family in requested_families:
-				for change in _announced(family):
-					self.add_to_rib(change,True)
 
-	# def dump (self):
-	# 	# This function returns a hash and not a list as "in" tests are O(n) with lists and O(1) with hash
-	# 	# and with ten thousands routes this makes an enormous difference (60 seconds to 2)
-	# 	changes = {}
-	# 	for family in self._seen.keys():
-	# 		for change in self._seen[family].values():
-	# 			if change.nlri.action == OUT.ANNOUNCE:
-	# 				changes[change.index()] = change
-	# 	return changes
+		for change in self.cached_changes(requested_families):
+			self.add_to_rib(change,True)
 
 	def queued_changes (self):
 		for change in self._new_nlri.values():
@@ -139,14 +110,6 @@ class Store (object):
 				self._watchdog[watchdog].setdefault('-',{})[change.index()] = change
 				self._watchdog[watchdog]['+'].pop(change.index())
 
-	def insert_received (self, change):
-		if not self.cache:
-			return
-		elif change.nlri.action == IN.ANNOUNCED:
-			self._seen.get(change.nlri.family(),{})[change.index()] = change
-		else:
-			self._seen.get(change.nlri.family(),{}).pop(change.index(),None)
-
 	def add_to_rib (self, change, force=False):
 		# WARNING: do not call change.nlri.index as it does not prepend the family
 		# WARNING : this function can run while we are in the updates() loop
@@ -181,18 +144,12 @@ class Store (object):
 
 			# if we cache sent NLRI and this NLRI was never sent before, we do not need to send a withdrawal
 			# as the route removed before we could announce it
-			if self.cache and old_change.nlri.action == OUT.ANNOUNCE and change.nlri.action == OUT.WITHDRAW:
-				if change_nlri_index not in self._seen.get(change.nlri.family(),{}):
+			if self.is_cached(change):
+				if old_change.nlri.action == OUT.ANNOUNCE and change.nlri.action == OUT.WITHDRAW:
 					return
 
-		if self.cache and not force:
-			if change.nlri.action == OUT.ANNOUNCE:
-				seen = self._seen.get(change.nlri.family(),{})
-				if change_nlri_index in seen:
-					old_change = seen[change_nlri_index]
-					# it is a duplicate route
-					if old_change.attributes.index() == change.attributes.index() and old_change.nlri.nexthop.index() == change.nlri.nexthop.index():
-						return
+		if not force and self.in_cache(change):
+			return
 
 		# add the route to the list to be announced
 		attr_af_nlri.setdefault(change_attr_index,{}).setdefault(change_family,{})[change_nlri_index] = change
@@ -202,17 +159,6 @@ class Store (object):
 			new_attr[change_attr_index] = change.attributes
 
 	def updates (self, grouped):
-		# add a change to the cache of seen Change
-		def _update (seen,change):
-			if not self.cache:
-				return
-			family = change.nlri.family()
-			index = change.index()
-			if change.nlri.action == OUT.ANNOUNCE:
-				seen.setdefault(family,{})[index] = change
-			elif family in seen:
-				seen[family].pop(index,None)
-
 		# if we need to perform a route-refresh, sending the message
 		# to indicate the start of the announcements
 
@@ -235,18 +181,17 @@ class Store (object):
 				# only yield once we have a consistent state, otherwise it will go wrong
 				# as we will try to modify things we are iterating over and using
 
-				seen = self._seen
 				attributes = new_attr[attr_index]
 
 				if grouped:
+					yield Update([change.nlri for change in changes.values()], attributes)
 					for change in changes.values():
-						yield Update(change.nlri, attributes)
-						_update(seen,change)
+						self.update_cache(change)
 				else:
 					for change in changes.values():
 						for nlri in change.nlri:
 							yield Update([nlri,], attributes)
-						_update(seen,change)
+						self.update_cache(change)
 
 		# Update were send, clear the data we used
 

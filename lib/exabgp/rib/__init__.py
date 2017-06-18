@@ -6,7 +6,8 @@ Created by Thomas Mangin on 2010-01-15.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
-from exabgp.rib.store import Store
+from exabgp.rib.incoming import IncomingRIB
+from exabgp.rib.outgoing import OutgoingRIB
 
 
 class RIB (object):
@@ -24,17 +25,15 @@ class RIB (object):
 			self.outgoing = self._cache[name].outgoing
 			self.incoming.families = families
 			self.outgoing.families = families
-			for family in self.outgoing._seen.keys():
-				if family not in families:
-					del self.outgoing._seen[family]
+			self.outgoing.delete_cached_family(families)
 
 			if adj_rib_out:
 				self.outgoing.resend(None,False)
 			else:
 				self.outgoing.clear()
 		else:
-			self.incoming = Store(families)
-			self.outgoing = Store(families)
+			self.incoming = IncomingRIB(families)
+			self.outgoing = OutgoingRIB(families)
 			self._cache[name] = self
 
 		self.outgoing.adj_rib_out = adj_rib_out
@@ -50,5 +49,5 @@ class RIB (object):
 
 	# This code was never tested ...
 	def clear (self):
-		self._cache[self.name].incoming = Store(self._cache[self.name].incoming.families)
-		self._cache[self.name].outgoing = Store(self._cache[self.name].incoming.families)
+		self._cache[self.name].incoming = IncomingRIB(self._cache[self.name].incoming.families)
+		self._cache[self.name].outgoing = OutgoingRIB(self._cache[self.name].incoming.families)
