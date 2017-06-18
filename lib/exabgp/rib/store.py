@@ -26,10 +26,10 @@ class Store (object):
 		self.clear()
 
 		# clear
-		self._cache_attribute = {}
 		self._seen = {}
-		self._modify_nlri = {}
-		self._modify_sorted = {}
+		self._new_nlri = {}
+		self._new_attr_af_nlri = {}
+		self._new_attribute = {}
 
 		# clear + reset
 		self._enhanced_refresh_start = []
@@ -45,10 +45,10 @@ class Store (object):
 
 	# back to square one, all the routes are removed
 	def clear (self):
-		self._cache_attribute = {}
 		self._seen = {}
-		self._modify_nlri = {}
-		self._modify_sorted = {}
+		self._new_nlri = {}
+		self._new_attr_af_nlri = {}
+		self._new_attribute = {}
 		self.reset()
 
 	def sent_changes (self, families=None):
@@ -76,11 +76,11 @@ class Store (object):
 				if family not in self._enhanced_refresh_start:
 					self._enhanced_refresh_start.append(family)
 					for change in _announced(family):
-						self.insert_announced(change,True)
+						self.add_to_rib(change,True)
 		else:
 			for family in requested_families:
 				for change in _announced(family):
-					self.insert_announced(change,True)
+					self.add_to_rib(change,True)
 
 	# def dump (self):
 	# 	# This function returns a hash and not a list as "in" tests are O(n) with lists and O(1) with hash
@@ -93,18 +93,18 @@ class Store (object):
 	# 	return changes
 
 	def queued_changes (self):
-		for change in self._modify_nlri.values():
+		for change in self._new_nlri.values():
 			yield change
 
 	def replace (self, previous, changes):
 		for change in previous:
 			change.nlri.action = OUT.WITHDRAW
-			self.insert_announced(change,True)
+			self.add_to_rib(change,True)
 
 		for change in changes:
-			self.insert_announced(change,True)
+			self.add_to_rib(change,True)
 
-	def insert_announced_watchdog (self, change):
+	def add_to_rib_watchdog (self, change):
 		watchdog = change.attributes.watchdog()
 		withdraw = change.attributes.withdraw()
 		if watchdog:
@@ -112,14 +112,14 @@ class Store (object):
 				self._watchdog.setdefault(watchdog,{}).setdefault('-',{})[change.index()] = change
 				return True
 			self._watchdog.setdefault(watchdog,{}).setdefault('+',{})[change.index()] = change
-		self.insert_announced(change)
+		self.add_to_rib(change)
 		return True
 
 	def announce_watchdog (self, watchdog):
 		if watchdog in self._watchdog:
 			for change in self._watchdog[watchdog].get('-',{}).values():
 				change.nlri.action = OUT.ANNOUNCE  # pylint: disable=E1101
-				self.insert_announced(change)
+				self.add_to_rib(change)
 				self._watchdog[watchdog].setdefault('+',{})[change.index()] = change
 				self._watchdog[watchdog]['-'].pop(change.index())
 
@@ -127,7 +127,7 @@ class Store (object):
 		if watchdog in self._watchdog:
 			for change in self._watchdog[watchdog].get('+',{}).values():
 				change.nlri.action = OUT.WITHDRAW
-				self.insert_announced(change)
+				self.add_to_rib(change)
 				self._watchdog[watchdog].setdefault('-',{})[change.index()] = change
 				self._watchdog[watchdog]['+'].pop(change.index())
 
@@ -139,16 +139,21 @@ class Store (object):
 		else:
 			self._seen.get(change.nlri.family(),{}).pop(change.index(),None)
 
-	def insert_announced (self, change, force=False):
+	def add_to_rib (self, change, force=False):
 		# WARNING: do not call change.nlri.index as it does not prepend the family
 		# WARNING : this function can run while we are in the updates() loop
 
 		# self._seen[family][nlri-index] = change
 
-		# self._modify_nlri[nlri-index] = change : we are modifying this nlri
-		# self._modify_sorted[attr-index][nlri-index] = change : add or remove the nlri
-		# self._cache_attribute[attr-index] = attributes of one of the changes
-		# and it allow to overwrite change easily :-)
+		# self._new_nlri[nlri-index] = change : we are modifying this nlri
+		# this is useful to iterate and find nlri currently handled
+
+		# self._new_attr_af_nlri[attr-index][family][nlri-index] = change : add or remove the nlri
+		# this is the best way to iterate over NLRI when generating updates
+		# sharing attributes, then family
+
+		# self._new_attribute[attr-index] = attributes of one of the changes
+		# makes our life easier, but could be removed
 
 		# import traceback
 		# traceback.print_stack()
@@ -159,21 +164,24 @@ class Store (object):
 			return
 
 		change_nlri_index = change.index()
+		change_family = change.nlri.family()
 		change_attr_index = change.attributes.index()
 
-		dict_sorted = self._modify_sorted
-		dict_nlri = self._modify_nlri
-		dict_attr = self._cache_attribute
+		attr_af_nlri = self._new_attr_af_nlri
+		new_nlri = self._new_nlri
+		new_attr = self._new_attribute
 
 		# removing a route before we had time to announce it ?
-		if change_nlri_index in dict_nlri:
+		if change_nlri_index in new_nlri:
 			# pop removes the entry
-			old_change = dict_nlri.pop(change_nlri_index)
+			old_change = new_nlri.pop(change_nlri_index)
 			old_attr_index = old_change.attributes.index()
-			# do not delete dict_attr, other routes may use it
-			del dict_sorted[old_attr_index][change_nlri_index]
-			if not dict_sorted[old_attr_index]:
-				del dict_sorted[old_attr_index]
+			# do not delete new_attr, other routes may use it
+			del attr_af_nlri[old_attr_index][change_family][change_nlri_index]
+			# do not delete the rest of the dict tree as:
+			#  we may have to recreate it otherwise
+			#  it will be deleted once used anyway
+			#  we have to check for empty data in the updates() loop (so why do it twice!)
 
 			# if we cache sent NLRI and this NLRI was never sent before, we do not need to send a withdrawal
 			# as the route removed before we could announce it
@@ -183,22 +191,32 @@ class Store (object):
 
 		if self.cache and not force:
 			if change.nlri.action == OUT.ANNOUNCE:
-				announced = self._seen.get(change.nlri.family(),{})
-				if change_nlri_index in announced:
-					old_change = announced[change_nlri_index]
+				seen = self._seen.get(change.nlri.family(),{})
+				if change_nlri_index in seen:
+					old_change = seen[change_nlri_index]
 					# it is a duplicate route
 					if old_change.attributes.index() == change.attributes.index() and old_change.nlri.nexthop.index() == change.nlri.nexthop.index():
 						return
 
 		# add the route to the list to be announced
-		dict_sorted.setdefault(change_attr_index,{})[change_nlri_index] = change
-		dict_nlri[change_nlri_index] = change
+		attr_af_nlri.setdefault(change_attr_index,{}).setdefault(change_family,{})[change_nlri_index] = change
+		new_nlri[change_nlri_index] = change
 
-		if change_attr_index not in dict_attr:
-			dict_attr[change_attr_index] = change.attributes
+		if change_attr_index not in new_attr:
+			new_attr[change_attr_index] = change.attributes
 
 	def updates (self, grouped):
-		dict_nlri = self._modify_nlri
+		def _update (seen,change):
+			if not self.cache:
+				return
+			family = change.nlri.family()
+			index = change.index()
+			if change.nlri.action == OUT.ANNOUNCE:
+				seen.setdefault(family,{})[index] = change
+			else:
+				if family not in seen:
+					return
+				seen[family].pop(index,None)
 
 		rr_announced = []
 
@@ -206,43 +224,33 @@ class Store (object):
 			rr_announced.append((afi,safi))
 			yield Update(RouteRefresh(afi,safi,RouteRefresh.start),Attributes())
 
-		dict_sorted = self._modify_sorted
-		dict_attr = self._cache_attribute
+		attr_af_nlri = self._new_attr_af_nlri
+		new_attr = self._new_attribute
 
-		for attr_index,dict_change in dict_sorted.items():
-			if not dict_change:
-				continue
+		for attr_index,per_family in attr_af_nlri.items():
+			for family, changes in per_family.items():
+				if not changes:
+					continue
 
-			updates = {}
-			changed = dict_change.values()
-			attributes = dict_attr[attr_index]
+				# only yield once we have a consistent state, otherwise it will go wrong
+				# as we will try to modify things we are iterating over and using
 
-			for change in changed:
-				updates.setdefault(change.nlri.family(),[]).append(change.nlri)
+				seen = self._seen
+				attributes = new_attr[attr_index]
 
-			# only yield once we have a consistent state, otherwise it will go wrong
-			# as we will try to modify things we are iterating over and using
+				if grouped:
+					for change in changes.values():
+						yield Update(change.nlri, attributes)
+						_update(seen,change)
+				else:
+					for change in changes.values():
+						for nlri in change.nlri:
+							yield Update([nlri,], attributes)
+						_update(seen,change)
 
-			if grouped:
-				for nlris in six.itervalues(updates):
-					yield Update(nlris, attributes)
-			else:
-				for nlris in six.itervalues(updates):
-					for nlri in nlris:
-						yield Update([nlri,], attributes)
-
-			if self.cache:
-				announced = self._seen
-				for change in changed:
-					if change.nlri.action == OUT.ANNOUNCE:
-						announced.setdefault(change.nlri.family(),{})[change.index()] = change
-					else:
-						family = change.nlri.family()
-						if family in announced:
-							announced[family].pop(change.index(),None)
-
-		self._modify_sorted = {}
-		self._modify_nlri = {}
+		self._new_nlri = {}
+		self._new_attr_af_nlri = {}
+		self._new_attribute = {}
 
 		if rr_announced:
 			for afi,safi in rr_announced:
@@ -250,7 +258,7 @@ class Store (object):
 				yield Update(RouteRefresh(afi,safi,RouteRefresh.end),Attributes())
 
 			for change in self._enhanced_refresh_delay:
-				self.insert_announced(change,True)
+				self.add_to_rib(change,True)
 			self._enhanced_refresh_delay = []
 
 			for update in self.updates(grouped):

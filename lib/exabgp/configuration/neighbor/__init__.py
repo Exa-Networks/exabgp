@@ -254,7 +254,7 @@ class ParseNeighbor (Section):
 			for change in neighbor.changes:
 				if change.nlri.family() in families:
 					# This add the family to neighbor.families()
-					neighbor.rib.outgoing.insert_announced_watchdog(change)
+					neighbor.rib.outgoing.add_to_rib_watchdog(change)
 			for message in messages:
 				if message.family() in families:
 					if message.name == 'ASM':

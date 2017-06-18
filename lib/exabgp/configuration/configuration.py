@@ -58,7 +58,7 @@ class _Configuration (object):
 		for neighbor in self.neighbors:
 			if neighbor in peers:
 				if change.nlri.family() in self.neighbors[neighbor].families():
-					self.neighbors[neighbor].rib.outgoing.insert_announced(change)
+					self.neighbors[neighbor].rib.outgoing.add_to_rib(change)
 				else:
 					self.logger.configuration('the route family is not configured on neighbor','error')
 					result = False
