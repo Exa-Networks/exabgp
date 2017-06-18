@@ -143,6 +143,9 @@ class Reactor (object):
 			if exc.errno in error.fatal:
 				raise exc
 			return []
+		except ValueError as exc:
+			# The peer closing the TCP connection lead to a negative file descritor
+			return []
 		except KeyboardInterrupt:
 			self._termination('^C received')
 			return []
