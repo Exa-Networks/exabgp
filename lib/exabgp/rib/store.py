@@ -19,21 +19,29 @@ from exabgp.vendoring import six
 
 class Store (object):
 	def __init__ (self, families):
-		# XXX: FIXME: we can decide to not cache the routes we seen and let the backend do it for us and save the memory
 		self._watchdog = {}
 		self.cache = False
 		self.families = families
-		self.clear()
 
-		# clear
-		self._seen = {}
-		self._new_nlri = {}
-		self._new_attr_af_nlri = {}
-		self._new_attribute = {}
+		self._seen = {}              # self._seen[family][nlri-index] = change
+		self._new_nlri = {}          # self._new_nlri[nlri-index] = change
+		self._new_attr_af_nlri = {}  # self._new_attr_af_nlri[attr-index][family][nlri-index] = change
+		self._new_attribute = {}     # self._new_attribute[attr-index] = attributes
 
-		# clear + reset
+		# _new_nlri: we are modifying this nlri
+		# this is useful to iterate and find nlri currently handled
+
+		# _new_attr_af_nlri: add or remove the nlri
+		# this is the best way to iterate over NLRI when generating updates
+		# sharing attributes, then family
+
+		# _new_attribute: attributes of one of the changes
+		# makes our life easier, but could be removed
+
 		self._enhanced_refresh_start = []
 		self._enhanced_refresh_delay = []
+
+		self.reset()
 
 	# will resend all the routes once we reconnect
 	def reset (self):
@@ -143,18 +151,6 @@ class Store (object):
 		# WARNING: do not call change.nlri.index as it does not prepend the family
 		# WARNING : this function can run while we are in the updates() loop
 
-		# self._seen[family][nlri-index] = change
-
-		# self._new_nlri[nlri-index] = change : we are modifying this nlri
-		# this is useful to iterate and find nlri currently handled
-
-		# self._new_attr_af_nlri[attr-index][family][nlri-index] = change : add or remove the nlri
-		# this is the best way to iterate over NLRI when generating updates
-		# sharing attributes, then family
-
-		# self._new_attribute[attr-index] = attributes of one of the changes
-		# makes our life easier, but could be removed
-
 		# import traceback
 		# traceback.print_stack()
 		# print "inserting", change.extensive()
@@ -206,6 +202,7 @@ class Store (object):
 			new_attr[change_attr_index] = change.attributes
 
 	def updates (self, grouped):
+		# add a change to the cache of seen Change
 		def _update (seen,change):
 			if not self.cache:
 				return
@@ -213,16 +210,19 @@ class Store (object):
 			index = change.index()
 			if change.nlri.action == OUT.ANNOUNCE:
 				seen.setdefault(family,{})[index] = change
-			else:
-				if family not in seen:
-					return
+			elif family in seen:
 				seen[family].pop(index,None)
+
+		# if we need to perform a route-refresh, sending the message
+		# to indicate the start of the announcements
 
 		rr_announced = []
 
 		for afi,safi in self._enhanced_refresh_start:
 			rr_announced.append((afi,safi))
 			yield Update(RouteRefresh(afi,safi,RouteRefresh.start),Attributes())
+
+		# generating Updates from what is in the RIB
 
 		attr_af_nlri = self._new_attr_af_nlri
 		new_attr = self._new_attribute
@@ -248,9 +248,14 @@ class Store (object):
 							yield Update([nlri,], attributes)
 						_update(seen,change)
 
+		# Update were send, clear the data we used
+
 		self._new_nlri = {}
 		self._new_attr_af_nlri = {}
 		self._new_attribute = {}
+
+		# If we are performing a route-refresh, indicating that the
+		# update were all sent
 
 		if rr_announced:
 			for afi,safi in rr_announced:
