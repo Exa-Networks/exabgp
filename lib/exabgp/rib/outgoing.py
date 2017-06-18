@@ -189,8 +189,7 @@ class OutgoingRIB (Cache):
 						self.update_cache(change)
 				else:
 					for change in changes.values():
-						for nlri in change.nlri:
-							yield Update([nlri,], attributes)
+						yield Update([change.nlri,], attributes)
 						self.update_cache(change)
 
 		# Update were send, clear the data we used
