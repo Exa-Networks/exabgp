@@ -40,11 +40,11 @@ class Resource (long):
 			return cls.codes[name]
 		if string.isdigit():
 			value = int(string)
-			if value in cls.names:
+			if 0 <= value <= 0xFFFF:
 				return value
 		if string_is_hex(string):
 			value = int(string[2:],16)
-			if value in cls.names:
+			if 0 <= value <= 0xFFFF:
 				return value
 		raise ValueError('unknown %s %s' % (cls.NAME,name))
 
