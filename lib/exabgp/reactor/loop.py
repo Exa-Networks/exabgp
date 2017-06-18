@@ -112,6 +112,11 @@ class Reactor (object):
 			if exc.errno in error.fatal:
 				raise exc
 			return []
+		except ValueError,exc:
+			# pulled on a closed FD
+			return []
+		except KeyboardInterrupt,exc:
+			raise exc
 
 	def run (self):
 		self.daemon.daemonise()

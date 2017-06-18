@@ -5,6 +5,7 @@ Version explained:
 
 Version 3.4.20
   * Fix: profiling
+  * Fix: potential issue with networking (select on closed FD/TCP session)
 
 Version 3.4.19
  * Add: IPv6 nlri-mpls to list of enabled protocol (was missing)
