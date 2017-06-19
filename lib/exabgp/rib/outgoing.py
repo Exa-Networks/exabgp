@@ -131,8 +131,6 @@ class OutgoingRIB (Cache):
 
 		in_cache,same_in_cache = self.in_cache(change)
 
-		print(in_cache,same_in_cache)
-
 		if same_in_cache:
 			if not force:
 				return
