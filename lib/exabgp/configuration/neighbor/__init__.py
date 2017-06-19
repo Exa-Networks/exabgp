@@ -186,6 +186,10 @@ class ParseNeighbor (Section):
 			for pair in local.get('family',{}).get(family,[]):
 				families.append(pair)
 
+		for k,values in self.scope.get('family',{}).items():
+			for value in values:
+				families.append(value)
+
 		families = families or NLRI.known_families()
 
 		for family in families:
