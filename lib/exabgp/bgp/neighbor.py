@@ -282,7 +282,7 @@ class Neighbor (object):
 			'\tmanual-eor %s;\n' \
 			'%s%s%s%s%s%s%s%s%s%s%s\n' \
 			'\tcapability {\n' \
-			'%s%s%s%s%s%s%s\t}\n' \
+			'%s%s%s%s%s%s%s%s\t}\n' \
 			'\tfamily {%s\n' \
 			'\t}\n' \
 			'%s' \
@@ -321,6 +321,7 @@ class Neighbor (object):
 				apis,
 				changes
 			)
+
 		# '\t\treceive {\n%s\t\t}\n' % receive if receive else '',
 		# '\t\tsend {\n%s\t\t}\n' % send if send else '',
 		return returned.replace('\t','  ')

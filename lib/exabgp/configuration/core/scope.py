@@ -102,7 +102,15 @@ class Scope (Error):
 
 	def merge (self, name, data):
 		for key in data:
-			self.set(key,data[key])
+			value = data[key]
+			if key not in self._current:
+				self.set(key,value)
+			elif isinstance(value, list):
+				self._current[key].extend(value)
+			elif isinstance(value, dict):
+				self.transfer(value,self._current[key])
+			else:
+				self.set(key,value)
 
 	def inherit (self, data):
 		return self.transfer(data,self._current)
@@ -111,13 +119,13 @@ class Scope (Error):
 		for key,value in six.iteritems(source):
 			if key not in destination:
 				destination[key] = value
+			elif isinstance(source[key], list):
+				destination[key].extend(value)
 			elif isinstance(source[key], dict):
 				if key not in destination:
 					destination[key] = source[key]
 				else:
-					for element in source[key]:
-						if element not in destination[key]:
-							destination[key].append(element)
+					self.transfer(source[key],destination[key])
 			elif isinstance(source[key], int):
 				destination[key] = value
 			elif isinstance(source[key], long):

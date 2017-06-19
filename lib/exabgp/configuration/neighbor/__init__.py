@@ -129,7 +129,8 @@ class ParseNeighbor (Section):
 		return self.parse(self.name,'peer-address')
 
 	def post (self):
-		local = self.scope.pop_context(self.name)
+		self.scope.to_context()
+		local = self.scope.get(self.name)
 		neighbor = Neighbor()
 
 		for inherit in local.get('inherit',[]):

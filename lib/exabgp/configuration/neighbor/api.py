@@ -149,12 +149,13 @@ class ParseAPI (Section):
 		named = self.tokeniser.iterate()
 		self.named = named if named else 'auto-named-%d' % int(time.time()*1000000)
 		self.check_name(self.named)
+		self.scope.enter(self.named)
 		self.scope.to_context()
 		return True
 
 	def post (self):
-		self.scope.to_context(self.name)
-		api = self.scope.pop()
+		self.scope.to_context()
+		api = self.scope.pop(self.named)
 		procs = api.get('processes',[])
 
 		type(self)._built['processes'].extend(procs)
@@ -168,9 +169,8 @@ class ParseAPI (Section):
 				type(self)._built["%s-%s" % (direction,action)].extend(procs if data.get(action,False) else [])
 
 		if self.scope.location().startswith('template/'):
-			self.scope.enter('api')
 			for k,v in self.extract().items():
-				self.scope.set(k,v)
+				self.scope.set(k,self.scope.get(k,[])+v)
 			self.scope.leave()
 		return True
 
