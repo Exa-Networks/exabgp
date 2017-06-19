@@ -130,7 +130,7 @@ class ParseNeighbor (Section):
 
 	def post (self):
 		self.scope.to_context()
-		local = self.scope.get(self.name)
+		local = self.scope.pop_context(self.name)
 		neighbor = Neighbor()
 
 		for inherit in local.get('inherit',[]):
