@@ -129,9 +129,11 @@ class OutgoingRIB (Cache):
 		new_nlri = self._new_nlri
 		new_attr = self._new_attribute
 
-		in_cache = self.in_cache(change)
+		in_cache,same_in_cache = self.in_cache(change)
 
-		if in_cache:
+		print(in_cache,same_in_cache)
+
+		if same_in_cache:
 			if not force:
 				return
 
@@ -151,11 +153,13 @@ class OutgoingRIB (Cache):
 					#  we may have to recreate it otherwise
 					#  it will be deleted once used anyway
 					#  we have to check for empty data in the updates() loop (so why do it twice!)
+					self.update_cache(change)
 					return
 
 		# add the route to the list to be announced
 		attr_af_nlri.setdefault(change_attr_index,{}).setdefault(change_family,{})[change_nlri_index] = change
 		new_nlri[change_nlri_index] = change
+		self.update_cache(change)
 
 		if change_attr_index not in new_attr:
 			new_attr[change_attr_index] = change.attributes
@@ -187,12 +191,9 @@ class OutgoingRIB (Cache):
 
 				if grouped:
 					yield Update([change.nlri for change in changes.values()], attributes)
-					for change in changes.values():
-						self.update_cache(change)
 				else:
 					for change in changes.values():
 						yield Update([change.nlri,], attributes)
-						self.update_cache(change)
 
 		# Update were send, clear the data we used
 

@@ -39,33 +39,34 @@ class Cache (object):
 			return False
 		# if we cache sent NLRI and this NLRI was never sent before, we do not need to send a withdrawal
 		# as the route removed before we could announce it
-		return change.index() not in self._seen.get(change.nlri.family(),{})
+		return change.nlri.index() not in self._seen.get(change.nlri.family(),{})
 
+	# return a tuple exists in cache, same in cache
 	def in_cache (self,change):
 		if not self.cache:
-			return False
+			return False,False
 
 		if change.nlri.action != OUT.ANNOUNCE:
-			return False
+			return False,False
 
 		old_change = self._seen.get(change.nlri.family(),{}).get(change.nlri.index(),None)
 		if not old_change:
-			return False
+			return False,False
 
-		if old_change.attributes.index() == change.attributes.index():
-			return False
+		if old_change.attributes.index() != change.attributes.index():
+			return True,False
 
-		if old_change.nlri.nexthop.index() == change.nlri.nexthop.index():
-			return False
+		if old_change.nlri.nexthop.index() != change.nlri.nexthop.index():
+			return True,False
 
-		return True
+		return True,True
 
 	# add a change to the cache of seen Change
 	def update_cache (self,change):
 		if not self.cache:
 			return
 		family = change.nlri.family()
-		index = change.index()
+		index = change.nlri.index()
 		if change.nlri.action == OUT.ANNOUNCE:
 			self._seen.setdefault(family,{})[index] = change
 		elif family in self._seen:
