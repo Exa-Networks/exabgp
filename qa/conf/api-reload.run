@@ -8,7 +8,7 @@ messages = [
 ]
 
 while messages:
-	time.sleep(5)
+	time.sleep(10)
 	message = messages.pop(0)
 	sys.stdout.write(message + '\n')
 	sys.stdout.flush()

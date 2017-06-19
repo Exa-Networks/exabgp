@@ -171,7 +171,7 @@ class ParseAPI (Section):
 		if self.scope.location().startswith('template/'):
 			for k,v in self.extract().items():
 				self.scope.set(k,self.scope.get(k,[])+v)
-			self.scope.leave()
+		self.scope.leave()
 		return True
 
 

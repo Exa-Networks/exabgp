@@ -89,9 +89,9 @@ class BGPHandler(asyncore.dispatcher_with_send):
 				processes.append(pid)
 
 			except psutil.NoSuchProcess:
-				pass
+				self.announce('signal/psutil: no such processes')
 			except psutil.AccessDenied:
-				pass
+				self.announce('signal/psutil: access denied')
 
 		if len(processes) == 0:
 			self.announce('no running process found, this should not happend, quitting')
