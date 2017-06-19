@@ -11,8 +11,10 @@ announce_flow_2 = 'announce flow route { match { source 10.0.0.1/32; destination
 
 messages = [
 	'sleep',
+	'sleep',
 	announce_flow_1,
 	withdraw_flow_1,
+	# 'sleep',
 	announce_broken_1,
 	announce_flow_2,
 	'sleep',
@@ -26,7 +28,7 @@ messages = [
 while messages:
 	message = messages.pop(0)
 	if message == 'sleep':
-		time.sleep(1)
+		time.sleep(2)
 	else:
 		sys.stdout.write(message + '\n')
 		sys.stdout.flush()
