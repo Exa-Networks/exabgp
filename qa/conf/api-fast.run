@@ -7,6 +7,7 @@ messages1 = [
 	'announce route 1.1.0.0/24 next-hop 101.1.101.1 med 200',
 	'announce route 1.1.0.0/25 next-hop 101.1.101.1',
 	'withdraw route 1.1.0.0/24 next-hop 101.1.101.1',
+	'announce route 1.1.0.0/25 next-hop 101.1.101.1',
 	'show routes'
 ]
 
@@ -14,6 +15,7 @@ messages2 = [
 	'announce route 2.2.0.0/25 next-hop 101.1.101.1',
 	'announce route 2.2.0.0/24 next-hop 101.1.101.1',
 	'withdraw route 2.2.0.0/25 next-hop 101.1.101.1',
+	'announce route 0.0.0.0/0  next-hop 1.101.1.101'
 ]
 
 time.sleep(3)

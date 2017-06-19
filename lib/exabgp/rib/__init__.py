@@ -32,12 +32,9 @@ class RIB (object):
 			else:
 				self.outgoing.clear()
 		else:
-			self.incoming = IncomingRIB(families)
-			self.outgoing = OutgoingRIB(families)
+			self.incoming = IncomingRIB(adj_rib_in,families)
+			self.outgoing = OutgoingRIB(adj_rib_out,families)
 			self._cache[name] = self
-
-		self.outgoing.adj_rib_out = adj_rib_out
-		self.outgoing.adj_rib_in = adj_rib_in
 
 	def reset (self):
 		self.incoming.reset()

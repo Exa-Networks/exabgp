@@ -11,8 +11,8 @@ from exabgp.bgp.message import OUT
 
 
 class Cache (object):
-	def __init__ (self, families):
-		self.cache = False
+	def __init__ (self, cache, families):
+		self.cache = cache
 		self._seen = {}              # self._seen[family][nlri-index] = change
 		self.families = families
 

@@ -17,11 +17,10 @@ from exabgp.rib.cache import Cache
 
 
 class OutgoingRIB (Cache):
-	def __init__ (self, families):
-		Cache.__init__(self,families)
+	def __init__ (self, cache, families):
+		Cache.__init__(self,cache,families)
 
 		self._watchdog = {}
-		self.cache = False
 		self.families = families
 
 		self._new_nlri = {}          # self._new_nlri[nlri-index] = change

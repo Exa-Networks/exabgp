@@ -10,8 +10,8 @@ from exabgp.rib.cache import Cache
 
 
 class IncomingRIB (Cache):
-	def __init__ (self, families):
-		Cache.__init__(self,families)
+	def __init__ (self, cache, families):
+		Cache.__init__(self,cache,families)
 
 	# back to square one, all the routes are removed
 	def clear (self):
