@@ -60,14 +60,6 @@ class Cache (object):
 
 		return True
 
-	def add_cache (self, change):
-		if not self.cache:
-			return
-		elif change.nlri.action == IN.ANNOUNCED:
-			self._seen.get(change.nlri.family(),{})[change.index()] = change
-		else:
-			self._seen.get(change.nlri.family(),{}).pop(change.index(),None)
-
 	# add a change to the cache of seen Change
 	def update_cache (self,change):
 		if not self.cache:
