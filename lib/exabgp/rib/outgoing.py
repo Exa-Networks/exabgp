@@ -130,26 +130,29 @@ class OutgoingRIB (Cache):
 		new_nlri = self._new_nlri
 		new_attr = self._new_attribute
 
+		in_cache = self.in_cache(change)
+
+		if in_cache:
+			if not force:
+				return
+
 		# removing a route before we had time to announce it ?
 		if change_nlri_index in new_nlri:
 			# pop removes the entry
 			old_change = new_nlri.pop(change_nlri_index)
 			old_attr_index = old_change.attributes.index()
-			# do not delete new_attr, other routes may use it
-			del attr_af_nlri[old_attr_index][change_family][change_nlri_index]
-			# do not delete the rest of the dict tree as:
-			#  we may have to recreate it otherwise
-			#  it will be deleted once used anyway
-			#  we have to check for empty data in the updates() loop (so why do it twice!)
 
 			# if we cache sent NLRI and this NLRI was never sent before, we do not need to send a withdrawal
 			# as the route removed before we could announce it
-			if self.is_cached(change):
+			if self.cache and not in_cache:
 				if old_change.nlri.action == OUT.ANNOUNCE and change.nlri.action == OUT.WITHDRAW:
+					# do not delete new_attr, other routes may use it
+					del attr_af_nlri[old_attr_index][change_family][change_nlri_index]
+					# do not delete the rest of the dict tree as:
+					#  we may have to recreate it otherwise
+					#  it will be deleted once used anyway
+					#  we have to check for empty data in the updates() loop (so why do it twice!)
 					return
-
-		if not force and self.in_cache(change):
-			return
 
 		# add the route to the list to be announced
 		attr_af_nlri.setdefault(change_attr_index,{}).setdefault(change_family,{})[change_nlri_index] = change
