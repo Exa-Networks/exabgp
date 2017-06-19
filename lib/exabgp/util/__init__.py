@@ -15,7 +15,7 @@ PY2 = sys.version_info[0] < 3
 def hexstring (value):
 	def spaced (value):
 		for v in value:
-			yield '%02X' % ord(v)
+			yield '%02X' % ordinal(v)
 	return '0x' + concat_strs_i(spaced(value))
 
 

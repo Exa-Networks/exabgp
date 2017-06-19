@@ -30,6 +30,7 @@ Version 4.0.1
  * Fix: issue when waiting on a TCP connection then closed
  * Fix: parsing flowspec port
  * Fix: correctly inherit API data when using templated neighbors
+ * Fix: hexstring function
 
 Version 4.0.0
  * Feature: add support for interface-set for BGP flowspec routes
