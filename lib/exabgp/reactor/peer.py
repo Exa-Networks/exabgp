@@ -378,12 +378,11 @@ class Peer (object):
 				# Received update
 				if message.TYPE == Update.TYPE:
 					number += 1
-
-					self.logger.routes(LazyFormat('<< UPDATE (%d)' % number,message.attributes,lambda _: "%s%s" % (' attributes' if _ else '',_)),source=self.proto.connection.session())
+					self.logger.routes('%s << UPDATE #%d' % (self.proto.connection.session(),number))
 
 					for nlri in message.nlris:
 						self.neighbor.rib.incoming.add_cache(Change(nlri,message.attributes))
-						self.logger.routes(LazyFormat('<< UPDATE (%d) nlri ' % number,nlri,str),source=self.proto.connection.session())
+						self.logger.routes(LazyFormat('<< UPDATE #%d nlri ' % number,nlri,str),source=self.proto.connection.session())
 
 				elif message.TYPE == RouteRefresh.TYPE:
 					if message.reserved == RouteRefresh.request:

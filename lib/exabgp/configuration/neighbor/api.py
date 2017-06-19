@@ -167,6 +167,11 @@ class ParseAPI (Section):
 			for action in ('parsed','packets','consolidate','open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
 				type(self)._built["%s-%s" % (direction,action)].extend(procs if data.get(action,False) else [])
 
+		if self.scope.location().startswith('template/'):
+			self.scope.enter('api')
+			for k,v in self.extract().items():
+				self.scope.set(k,v)
+			self.scope.leave()
 		return True
 
 
