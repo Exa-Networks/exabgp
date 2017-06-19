@@ -545,7 +545,7 @@ class Reactor (object):
 	@staticmethod
 	def match_neighbor (description, name):
 		for string in description:
-			if re.search(r'(^|[\s])%s($|[\s,])' % re.escape(string), name) is None:
+			if re.search(r'(^|\s)%s($|\s|,)' % re.escape(string), name) is None:
 				return False
 		return True
 
