@@ -9,14 +9,19 @@ lines = [
 	'neighbor 127.0.0.1 receive update end',
 ]
 
+length = len(lines)
+
 while lines:
 	line = sys.stdin.readline().strip()
 	if line in lines:
 		lines.remove(line)
 	sys.stderr.flush()
-	print >> sys.stderr, '\n%s\n' % line
-	print >> sys.stderr, 'left', lines
+	if length != len(lines):
+		print >> sys.stderr, '\n%s\n' % line
+		print >> sys.stderr, 'left', lines
+		length = len(lines)
 	sys.stderr.flush()
+	time.sleep(0.2)
 
 time.sleep(2)
 sys.stdout.write('neighbor 127.0.0.1 announce route 1.2.3.4 next-hop 5.6.7.8\n')

@@ -250,6 +250,8 @@ class BGPHandler(asyncore.dispatcher_with_send):
 					chr(0x40)+chr(0x05)+chr(0x04)+chr(0x00)+chr(0x00)+chr(0x00)+chr(0x64)+
 				chr(0x20)+chr(0x00)+chr(0x00)+chr(0x00)+chr(0x00)
 			)
+			self.announce('sending default-route\n')
+
 
 		self.handle_read = self.handle_keepalive
 
