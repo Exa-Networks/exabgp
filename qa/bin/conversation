@@ -357,7 +357,7 @@ if __name__ == '__main__':
 	signal.alarm(STATUS.timeout)
 
 	to_run = STATUS.names
-	chunk = 10
+	chunk = 100
 	while to_run:
 		running, to_run = to_run[:chunk], to_run[chunk:]
 		success = dispatch(running)

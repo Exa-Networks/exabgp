@@ -43,6 +43,7 @@ def cdr_to_length (cidr):
 
 
 class BGPHandler(asyncore.dispatcher_with_send):
+	counter = 0
 
 	keepalive = chr(0xFF)*16 + chr(0x0) + chr(0x13) + chr(0x4)
 
@@ -280,18 +281,19 @@ class BGPHandler(asyncore.dispatcher_with_send):
 					self.announce('skipping multiprotocol :',dump(body))
 					continue
 
+				self.counter += 1
 				if announcement in self.messages:
 					self.messages.remove(announcement)
 					if self.raw:
-						self.announce('received (%1s%s):' % (self.options['letter'],self.step),'%s:%s:%s:%s' % (announcement[:32],announcement[32:36],announcement[36:38],announcement[38:]))
+						self.announce('received %d (%1s%s):' % (self.counter,self.options['letter'],self.step),'%s:%s:%s:%s' % (announcement[:32],announcement[32:36],announcement[36:38],announcement[38:]))
 					else:
-						self.announce('received (%1s%s):' % (self.options['letter'],self.step), announcement)
+						self.announce('received %d (%1s%s):' % (self.counter,self.options['letter'],self.step), announcement)
 					self.check_signal()
 				else:
 					if self.raw:
-						self.announce('received (%1s%s):' % (self.options['letter'],self.step),'%s:%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:18]),bytestream(header[18:]),bytestream(body)))
+						self.announce('received %d (%1s%s):' % (self.counter,self.options['letter'],self.step),'%s:%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:18]),bytestream(header[18:]),bytestream(body)))
 					else:
-						self.announce('received     :',announcement)
+						self.announce('received %d     :' % self.counter,announcement)
 
 					if len(self.messages) > 1:
 						self.announce('expected one of the following :')
