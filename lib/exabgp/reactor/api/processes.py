@@ -75,7 +75,7 @@ class Processes (object):
 		self._terminate(process)
 
 	def handle_problem (self, process):
-		if self.reactor.respawn:
+		if self.respawn_number:
 			self.handle_respawn(process)
 		else:
 			self.handle_terminate(process)
