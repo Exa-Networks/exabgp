@@ -28,12 +28,18 @@ def display (*args):
 class PATH:
 	exabgp = ''
 	daemon = ''
+	etc = ''
 	conf = ''
 	groups = []
 
 	@classmethod
 	def init (cls):
 		location = os.path.abspath(os.path.join(os.path.realpath(__file__),'..','..','..'))
+
+		etc = os.path.join(location,'etc','exabgp')
+		if not os.path.isdir(etc):
+			sys.exit('could not find etc folder')
+		cls.etc = etc
 
 		conf = os.path.join(location,'qa','conf')
 		if not os.path.isdir(conf):
@@ -81,7 +87,7 @@ class STATUS (object):
 		name,extension = os.path.splitext(filename.split('/')[-1])
 		with open(filename,'r') as reader:
 			content = reader.readline()
-			files = ' '.join([os.path.join(PATH.conf,_) for _ in content.split()])
+			files = ' '.join([os.path.join(PATH.etc,_) for _ in content.split()])
 			cls.conf[name] = files
 		cls.group[name] = os.path.join(PATH.conf,name) + '.group'
 		cls.sequence[name] = os.path.join(PATH.conf,name) + '.sequence'
