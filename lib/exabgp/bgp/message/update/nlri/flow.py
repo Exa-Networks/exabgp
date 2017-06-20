@@ -3,7 +3,8 @@
 flow.py
 
 Created by Thomas Mangin on 2010-01-14.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 # Do not use __slots__ here, we never create enough of them to be worth it

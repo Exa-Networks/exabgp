@@ -3,7 +3,8 @@
 labelled.py
 
 Created by Thomas Mangin on 2014-06-27.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.protocol.family import AFI

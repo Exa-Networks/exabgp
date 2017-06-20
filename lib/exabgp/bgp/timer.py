@@ -3,7 +3,8 @@
 timer.py
 
 Created by Thomas Mangin on 2012-07-21.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import time

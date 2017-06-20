@@ -3,7 +3,8 @@
 tcp.py
 
 Created by Thomas Mangin on 2013-07-13.
-Copyright (c) 2013-2015 Exa Networks. All rights reserved.
+Copyright (c) 2013-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import base64

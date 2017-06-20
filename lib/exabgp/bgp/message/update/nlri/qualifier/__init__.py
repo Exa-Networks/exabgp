@@ -3,7 +3,8 @@
 qualifier/__init__.py
 
 Created by Thomas Mangin on 2015-06-01.
-Copyright (c) 2015-2015 Exa Networks. All rights reserved.
+Copyright (c) 2015-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 # Every Qualifier should be imported from this file

@@ -4,7 +4,8 @@
 Support for RFC 8092
 
 Copyright (c) 2016 Job Snijders <job@ntt.net>
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.bgp.message.update.attribute import Attribute

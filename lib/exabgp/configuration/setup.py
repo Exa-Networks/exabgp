@@ -3,7 +3,8 @@
 setup.py
 
 Created by Thomas Mangin on 2014-12-23.
-Copyright (c) 2014-2015 Exa Networks. All rights reserved.
+Copyright (c) 2014-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.configuration.environment import environment

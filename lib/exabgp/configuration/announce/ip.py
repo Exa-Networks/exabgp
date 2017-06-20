@@ -3,7 +3,8 @@
 announce/ipv4.py
 
 Created by Thomas Mangin on 2015-06-04.
-Copyright (c) 2009-2015 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 # This is a legacy file to handle 3.4.x like format

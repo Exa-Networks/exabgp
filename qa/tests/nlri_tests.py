@@ -5,6 +5,7 @@ open.py
 
 Created by Thomas Morin, Orange on 2015-07-10.
 Copyright (c) 2009-2015 Orange. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import unittest
@@ -56,7 +57,7 @@ class TestNLRIs(unittest.TestCase):
         '''Test pack/unpack for IPVPN routes'''
         nlri = IPVPN.new(AFI.ipv4, SAFI.mpls_vpn,
                          IP.pton("1.2.3.0"), 24,
-                         Labels([42], True), 
+                         Labels([42], True),
                          RouteDistinguisher.fromElements("42.42.42.42", 5))
 
         packed = nlri.pack()
@@ -65,7 +66,7 @@ class TestNLRIs(unittest.TestCase):
 
         self.assertEqual(0, len(leftover))
 
-        # TODO: compare packed with a reference encoding verified 
+        # TODO: compare packed with a reference encoding verified
         # as conformant with RFC4364
 
         self.assertTrue(isinstance(unpacked, IPVPN))
@@ -93,7 +94,7 @@ class TestNLRIs(unittest.TestCase):
 
         self.assertEqual(0, len(leftover))
 
-        # TODO: compare packed with a reference encoding verified 
+        # TODO: compare packed with a reference encoding verified
         # as conformant with RFC7432
 
         self.assertTrue(isinstance(unpacked, EVPNMAC))
@@ -122,7 +123,7 @@ class TestNLRIs(unittest.TestCase):
 
         self.assertEqual(0, len(leftover))
 
-        # TODO: compare packed with a reference encoding verified 
+        # TODO: compare packed with a reference encoding verified
         # as conformant with RFC7432
 
         self.assertTrue(isinstance(unpacked, EVPNMulticast))
@@ -149,7 +150,7 @@ class TestNLRIs(unittest.TestCase):
 
         self.assertEqual(0, len(leftover))
 
-        # TODO: compare packed with a reference encoding verified 
+        # TODO: compare packed with a reference encoding verified
         # as conformant with RFC7432
 
         self.assertTrue(isinstance(unpacked, EVPNPrefix))
@@ -272,7 +273,7 @@ class TestNLRIs(unittest.TestCase):
 
         self.assertEqual(0, len(leftover))
 
-        # TODO: compare packed with a reference encoding verified 
+        # TODO: compare packed with a reference encoding verified
         # as conformant with RFC4684
 
         self.assertTrue(isinstance(unpacked, RTC))
@@ -295,7 +296,7 @@ class TestNLRIs(unittest.TestCase):
 
         self.assertEqual(0, len(leftover))
 
-        # TODO: compare packed with a reference encoding verified 
+        # TODO: compare packed with a reference encoding verified
         # as conformant with RFC4684
 
         self.assertTrue(isinstance(unpacked, RTC))

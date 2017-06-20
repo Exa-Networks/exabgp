@@ -3,7 +3,7 @@
 bgpls/__init__.py
 
 Created by Evelio Vila 2016-12-01
-Copyright (c) 2009-2016 Exa Networks. All rights reserved.
+Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 """
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE
