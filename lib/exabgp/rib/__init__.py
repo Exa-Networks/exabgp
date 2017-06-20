@@ -47,5 +47,5 @@ class RIB (object):
 
 	# This code was never tested ...
 	def clear (self):
-		self._cache[self.name].incoming = IncomingRIB(self._cache[self.name].incoming.families)
-		self._cache[self.name].outgoing = OutgoingRIB(self._cache[self.name].incoming.families)
+		self._cache[self.name].incoming = IncomingRIB(self.incoming.cache,self._cache[self.name].incoming.families)
+		self._cache[self.name].outgoing = OutgoingRIB(self.outgoing.cache,self._cache[self.name].incoming.families)
