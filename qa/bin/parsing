@@ -7,12 +7,12 @@ retval=0
 
 case $dirname in
 	/*)
-		cd $dirname/.. > /dev/null
+		cd $dirname/../.. > /dev/null
 		path=`pwd`
 		cd - > /dev/null
 	;;
 	*)
-		cd `pwd`/$dirname/.. > /dev/null
+		cd `pwd`/$dirname/../.. > /dev/null
 		path=`pwd`
 		cd - > /dev/null
 	;;
@@ -20,9 +20,11 @@ esac
 
 export PYTHONPATH=$path/lib
 
-cd $path/conf
+cd $path/etc/exabgp
 names=`ls *.conf`
 cd -
+
+echo $names
 
 export exabgp_tcp_bind=''
 export exabgp_debug_selfcheck=true
@@ -30,7 +32,7 @@ export exabgp_debug_selfcheck=true
 for conf in $names
 do
 	printf "%-50s " $conf
-	result=`$path/../sbin/exabgp $path/conf/$conf 2>&1`
+	result=`$path/sbin/exabgp $path/etc/exabgp/$conf 2>&1`
 	retcode=$?
 	problem=`echo $result | grep 'Problem with the configuration file' || true`
 
@@ -40,7 +42,7 @@ do
 	else
 		printf "failed\n"
 		printf "\n"
-		printf "env exabgp.debug.configuration=true exabgp.tcp.bind='' exabgp.debug.selfcheck=true $path/../sbin/exabgp -d -p $path/conf/$conf 2>&1"
+		printf "env exabgp.debug.configuration=true exabgp.tcp.bind='' exabgp.debug.selfcheck=true $path/sbin/exabgp -d -p $path/etc/exabgp/$conf 2>&1"
 		printf "\n\n"
 		printf "$result"
 		printf "\n\n"
