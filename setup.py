@@ -115,7 +115,6 @@ def set_version ():
 	version = imp.load_source('version',VERSION_PY).version
 
 	if version != full_version:
-		import pdb; pdb.set_trace()
 		print('version setting failed')
 		sys.exit(1)
 

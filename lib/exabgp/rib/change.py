@@ -17,14 +17,24 @@ class Source (object):
 class Change (object):
 	SOURCE = Source.UNSET
 
-	__slots__ = ['nlri','attributes']
+	__slots__ = ['nlri','attributes','__index']
+
+	@staticmethod
+	def family_prefix (family):
+		return '%02x%02x' % family
 
 	def __init__ (self, nlri, attributes):
 		self.nlri = nlri
 		self.attributes = attributes
+		# prevent multiple allocation of the index when calling .index()
+		# storing the value at __init__ time causes api-attributes.sequence to fail
+		# XXX: the NLRI content is half missing !!
+		self.__index = ''
 
 	def index (self):
-		return '%02x%02x' % self.nlri.family() + self.nlri.index()
+		if not self.__index:
+			self.__index = '%02x%02x' % self.nlri.family() + self.nlri.index()
+		return self.__index
 
 	def __eq__ (self, other):
 		return self.nlri == other.nlri and self.attributes == other.attributes

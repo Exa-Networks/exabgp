@@ -3,32 +3,32 @@
 import sys
 import time
 
-announce_broken_1 = 'announce flow route { match { source 10.0.0.2/32; destination 10.0.0.3/32; destination-port =3128; protocol tcp; } then { rate-limit 9600; } }'
-announce_flow_1 = 'announce flow route { match { source 10.0.0.2/32; destination 10.0.0.3/32; destination-port =3128; protocol tcp; } then { rate-limit 9600; } }'
-withdraw_flow_1 = 'withdraw flow route { match { source 10.0.0.2/32; destination 10.0.0.3/32; destination-port =3128; protocol tcp; } then { rate-limit 9600; } }'
-announce_flow_2 = 'announce flow route { match { source 10.0.0.1/32; destination 192.168.0.1/32; port [ =80 =8080 ]; destination-port [ >8080&<8088 =3128 ]; source-port >1024; protocol [ udp tcp ]; } then { rate-limit 9600; } }'
+announce_flow_A = 'announce flow route { match { source 170.170.170.170/32; destination 170.170.170.170/32; } then { rate-limit 1; } }'
+withdraw_flow_A = 'withdraw flow route { match { source 170.170.170.170/32; destination 170.170.170.170/32; } then { rate-limit 1; } }'
+announce_flow_B = 'announce flow route { match { source 187.187.187.187/32; destination 187.187.187.187/32; } then { rate-limit 2; } }'
+announce_flow_C = 'announce flow route { match { source 204.204.204.204/32; destination 187.187.187.187/32; } then { rate-limit 3; } }'
 
 
 messages = [
 	'sleep',
+	announce_flow_A,
+	withdraw_flow_A,
 	'sleep',
-	announce_flow_1,
-	withdraw_flow_1,
-	# 'sleep',
-	announce_broken_1,
-	announce_flow_2,
+	announce_flow_C,
+	announce_flow_B,
+	announce_flow_A,
 	'sleep',
-	announce_flow_1,
+	withdraw_flow_A,
 	'sleep',
-	withdraw_flow_1,
+	announce_flow_A,  # to catch if a withdraw 2 is sent
 	'sleep',
-	announce_flow_1,  # to catch if a withdraw 2 is sent
+	withdraw_flow_A,
 ]
 
 while messages:
 	message = messages.pop(0)
 	if message == 'sleep':
-		time.sleep(2)
+		time.sleep(3)
 	else:
 		sys.stdout.write(message + '\n')
 		sys.stdout.flush()

@@ -13,7 +13,11 @@ from exabgp.bgp.message import OUT
 class Cache (object):
 	def __init__ (self, cache, families):
 		self.cache = cache
-		self._seen = {}              # self._seen[family][nlri-index] = change
+		self._seen = {}
+		# self._seen[family][change-index] = change
+		# nlri.index() would be a few bytes shorter than change.index() but ..
+		# we need change.index() in other part of the code
+		# we pre-compute change.index() so that it is only allocted once
 		self.families = families
 
 	def clear_cache (self):
@@ -39,19 +43,19 @@ class Cache (object):
 			return False
 		# if we cache sent NLRI and this NLRI was never sent before, we do not need to send a withdrawal
 		# as the route removed before we could announce it
-		return change.nlri.index() not in self._seen.get(change.nlri.family(),{})
+		return change.index() not in self._seen.get(change.nlri.family(),{})
 
 	# return a tuple exists in cache, same in cache
 	def in_cache (self,change):
 		if not self.cache:
 			return False,False
 
-		if change.nlri.action != OUT.ANNOUNCE:
-			return False,False
-
-		old_change = self._seen.get(change.nlri.family(),{}).get(change.nlri.index(),None)
+		old_change = self._seen.get(change.nlri.family(),{}).get(change.index(),None)
 		if not old_change:
 			return False,False
+
+		if change.nlri.action != OUT.ANNOUNCE:
+			return True,False
 
 		if old_change.attributes.index() != change.attributes.index():
 			return True,False
@@ -66,7 +70,7 @@ class Cache (object):
 		if not self.cache:
 			return
 		family = change.nlri.family()
-		index = change.nlri.index()
+		index = change.index()
 		if change.nlri.action == OUT.ANNOUNCE:
 			self._seen.setdefault(family,{})[index] = change
 		elif family in self._seen:

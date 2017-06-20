@@ -33,7 +33,7 @@ class NLRI (Family):
 		setattr(self,name,value)
 
 	def _index (self):
-		return '%s%s' % (self.afi,self.safi)
+		return '%02x%02x' % (self.afi,self.safi)
 
 	def index (self):
 		return self._index() + str(self.pack())

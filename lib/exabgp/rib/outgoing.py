@@ -23,8 +23,10 @@ class OutgoingRIB (Cache):
 		self._watchdog = {}
 		self.families = families
 
-		self._new_nlri = {}          # self._new_nlri[nlri-index] = change
-		self._new_attr_af_nlri = {}  # self._new_attr_af_nlri[attr-index][family][nlri-index] = change
+		# using change-inde and not nlri-index as it is cached as same us memory
+		# even if it is a few bytes longer
+		self._new_nlri = {}          # self._new_nlri[change-index] = change
+		self._new_attr_af_nlri = {}  # self._new_attr_af_nlri[attr-index][family][change-index] = change
 		self._new_attribute = {}     # self._new_attribute[attr-index] = attributes
 
 		# _new_nlri: we are modifying this nlri
@@ -121,7 +123,7 @@ class OutgoingRIB (Cache):
 			self._enhanced_refresh_delay.append(change)
 			return
 
-		change_nlri_index = change.index()
+		change_index = change.index()
 		change_family = change.nlri.family()
 		change_attr_index = change.attributes.index()
 
@@ -135,28 +137,19 @@ class OutgoingRIB (Cache):
 			if not force:
 				return
 
-		# removing a route before we had time to announce it ?
-		if change_nlri_index in new_nlri:
-			# pop removes the entry
-			old_change = new_nlri.pop(change_nlri_index)
-			old_attr_index = old_change.attributes.index()
+		# withdrawal of a route before we had time to announce it ?
 
-			# if we cache sent NLRI and this NLRI was never sent before, we do not need to send a withdrawal
-			# as the route removed before we could announce it
-			if self.cache and not in_cache:
-				if old_change.nlri.action == OUT.ANNOUNCE and change.nlri.action == OUT.WITHDRAW:
-					# do not delete new_attr, other routes may use it
-					del attr_af_nlri[old_attr_index][change_family][change_nlri_index]
-					# do not delete the rest of the dict tree as:
-					#  we may have to recreate it otherwise
-					#  it will be deleted once used anyway
-					#  we have to check for empty data in the updates() loop (so why do it twice!)
-					self.update_cache(change)
-					return
+		# this optimisation require much calculation when announcing routes
+		# and an extra withdrawal is harmless.
+		# Also, just having the data in new_nlri, does not mean we should not
+		# send the withdraw (as you can have chain announced and need to
+		# cancel a announcement done a long time ago)
+		# So to work correctly, you need to track sent changes (which costs)
+		# And the yield makes it very cpu/memory intensive ..
 
 		# add the route to the list to be announced
-		attr_af_nlri.setdefault(change_attr_index,{}).setdefault(change_family,{})[change_nlri_index] = change
-		new_nlri[change_nlri_index] = change
+		attr_af_nlri.setdefault(change_attr_index,{}).setdefault(change_family,{})[change_index] = change
+		new_nlri[change_index] = change
 		self.update_cache(change)
 
 		if change_attr_index not in new_attr:
