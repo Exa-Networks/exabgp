@@ -23,7 +23,8 @@ class NetMask (Resource):
 		return pow(2,self.maximum - self)
 
 	def __str__ (self):
-		return self.names.get(self,'%d' % int(self))
+		# return self.names.get(self,'%d' % int(self))
+		return '%d' % self
 
 	names = {
 		32: '255.255.255.255',

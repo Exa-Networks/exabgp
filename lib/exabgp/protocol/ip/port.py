@@ -17,6 +17,9 @@ class Port (Resource):
 	NAME = 'port'
 
 	def __str__ (self):
+		return str(int(self))
+
+	def name (self):
 		return self.names.get(self,'%d' % int(self))
 
 	names = {
