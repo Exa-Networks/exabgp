@@ -31,6 +31,10 @@ def main ():
 	if not path.isfile(exabgp):
 		print "could not find exabgp"
 
+	etc = path.abspath(path.join(location,'..','..','..','etc','exabgp'))
+	if not path.isdir(etc):
+		sys.exit('could not find etc folder')
+
 	conf = path.abspath(path.join(location,'..','..','conf'))
 	if not path.isdir(conf):
 		sys.exit('could not find conf folder')
@@ -40,7 +44,8 @@ def main ():
 		sys.exit('could not find the sequence daemon')
 
 	match = '*' if len(sys.argv) < 2 else sys.argv[1].split('/')[-1].split('.')[0]
-	if match == 'all': match = '*'
+	if match == 'all':
+		match = '*'
 
 	if len(sys.argv) >= 3:
 		reverse = reversed if sys.argv[2].startswith('rev') else lambda _:_
@@ -57,13 +62,12 @@ def main ():
 	success = True
 
 	for group in groups:
-		directory = os.path.dirname(group)
 		if skip:
 			print 'skiped ', group
 			skip -= 1
 			continue
 
-		configurations = [os.path.join(directory,name) for name in open(group).read().strip().split()]
+		configurations = [os.path.join(etc,name) for name in open(group).read().strip().split()]
 		sequence_file = group.replace('.group','.sequence')
 
 		if path.isfile(sequence_file):
