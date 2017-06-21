@@ -65,8 +65,8 @@ def vpls (tokeniser):
 		else:
 			raise ValueError('vpls: unknown command "%s"' % command)
 
-	feedback = change.nlri.feedback(change.nlri.action)
-	if feedback:
-		raise ValueError('vpls: issue validating "%s"' % feedback)
-
+	# feedback = change.nlri.feedback(change.nlri.action)
+	# if feedback:
+	# 	raise ValueError('vpls: issue validating "%s"' % feedback)
+	#
 	return change
