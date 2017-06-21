@@ -44,6 +44,11 @@ class EVPN (NLRI):
 		NLRI.__init__(self, AFI.l2vpn, SAFI.evpn, action)
 		self._packed = b''
 
+	def feedback (self, action):
+		# if self.nexthop is None and action == OUT.ANNOUNCE:
+		# 	return 'evpn nlri next-hop is missing'
+		return ''
+
 	def __eq__ (self, other):
 		return \
 			NLRI.__eq__(self,other) and \

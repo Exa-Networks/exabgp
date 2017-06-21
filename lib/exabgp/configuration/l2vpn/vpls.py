@@ -140,26 +140,13 @@ class ParseVPLS (Section):
 			return False
 		# self.scope.to_context()
 		route = self.scope.pop(self.name)
+
 		if route:
 			self.scope.append('routes',route)
 		return True
 
 	def _check (self):
-		nlri = self.scope.get(self.name).nlri
-
-		if nlri.nexthop is None:
-			return self.error.set('vpls next-hop missing')
-		if nlri.endpoint is None:
-			return self.error.set('vpls endpoint missing')
-		if nlri.base is None:
-			return self.error.set('vpls base missing')
-		if nlri.offset is None:
-			return self.error.set('vpls offset missing')
-		if nlri.size is None:
-			return self.error.set('vpls size missing')
-		if nlri.base > (0xFFFFF - nlri.size):  # 20 bits, 3 bytes
-			return self.error.set('vpls size inconsistency')
-		return True
-
-	def check (self,change):
+		feedback = self.scope.get(self.name).feedback()
+		if feedback:
+			return self.error.set(feedback)
 		return True

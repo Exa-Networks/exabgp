@@ -36,6 +36,11 @@ class IPVPN (Labelled):
 		Labelled.__init__(self, afi, safi, action)
 		self.rd = RouteDistinguisher.NORD
 
+	def feedback (self, action):
+		if self.nexthop is None and action == OUT.ANNOUNCE:
+			return 'ip-vpn nlri next-hop missing'
+		return ''
+
 	@classmethod
 	def new (cls, afi, safi, packed, mask, labels, rd, nexthop=None, action=OUT.UNSET):
 		instance = cls(afi,safi,action)

@@ -11,6 +11,7 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.util import character
 from exabgp.util import ordinal
+from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
@@ -28,6 +29,11 @@ class Labelled (INET):
 	def __init__ (self, afi, safi, action):
 		INET.__init__(self, afi, safi, action)
 		self.labels = Labels.NOLABEL
+
+	def feedback (self, action):
+		if self.nexthop is None and action == OUT.ANNOUNCE:
+			return 'labelled nlri next-hop missing'
+		return ''
 
 	def __len__ (self):
 		return INET.__len__(self) + len(self.labels)

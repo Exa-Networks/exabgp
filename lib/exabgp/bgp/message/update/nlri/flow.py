@@ -516,6 +516,11 @@ class Flow (NLRI):
 		self.nexthop = NoNextHop
 		self.rd = RouteDistinguisher.NORD
 
+	def feedback (self, action):
+		if self.nexthop is None and action == OUT.ANNOUNCE:
+			return 'flow nlri next-hop missing'
+		return ''
+
 	def __eq__ (self, other):
 		return \
 			self.rules == other.rules and \

@@ -39,6 +39,11 @@ class INET (NLRI):
 		self.cidr = CIDR.NOCIDR
 		self.nexthop = NoNextHop
 
+	def feedback (self, action):
+		if self.nexthop is None and action == OUT.ANNOUNCE:
+			return 'inet nlri next-hop missing'
+		return ''
+
 	def __len__ (self):
 		return len(self.cidr) + len(self.path_info)
 

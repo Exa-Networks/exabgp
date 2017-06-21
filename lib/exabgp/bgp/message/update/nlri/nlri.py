@@ -30,6 +30,9 @@ class NLRI (Family):
 		Family.__init__(self,afi,safi)
 		self.action = action
 
+	def feedback (self, action):
+		raise RuntimeError('feedback is not implemented')
+
 	def assign (self, name, value):
 		setattr(self,name,value)
 

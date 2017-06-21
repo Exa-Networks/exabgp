@@ -47,6 +47,23 @@ class VPLS (NLRI):
 		self.endpoint = endpoint
 		self.unique = six.next(unique)
 
+	def feedback (self, action):
+		if self.nexthop is None and action == OUT.ANNOUNCE:
+			return 'vpls nlri next-hop missing'
+		if self.endpoint is None:
+			return 'vpls nlri endpoint missing'
+		if self.base is None:
+			return 'vpls nlri base missing'
+		if self.offset is None:
+			return 'vpls nlri offset missing'
+		if self.size is None:
+			return 'vpls nlri size missing'
+		if self.rd is None:
+			return 'vpls nlri route-distinguisher missing'
+		if self.base > (0xFFFFF - self.size):  # 20 bits, 3 bytes
+			return 'vpls nlri size inconsistency'
+		return ''
+
 	def __eq__ (self,other):
 		return self.nexthop == other.nexthop \
 			and self.rd == other.rd \

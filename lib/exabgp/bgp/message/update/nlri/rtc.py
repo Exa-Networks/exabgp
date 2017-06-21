@@ -40,6 +40,11 @@ class RTC (NLRI):
 		self.rt = rt
 		self.nexthop = NoNextHop
 
+	def feedback (self, action):
+		if self.nexthop is None and action == OUT.ANNOUNCE:
+			return 'rtc nlri next-hop missing'
+		return ''
+
 	@classmethod
 	def new (cls, afi, safi, origin, rt, nexthop=NoNextHop, action=OUT.UNSET):
 		instance = cls(afi,safi,action,origin,rt)
