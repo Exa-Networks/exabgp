@@ -31,6 +31,7 @@ Version 4.0.1
  * Fix: parsing flowspec port
  * Fix: correctly inherit API data when using templated neighbors
  * Fix: hexstring function
+ * Fix: VPLS JSON decoding
 
 Version 4.0.0
  * Feature: add support for interface-set for BGP flowspec routes

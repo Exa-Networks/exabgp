@@ -76,7 +76,7 @@ class VPLS (NLRI):
 
 	# XXX: FIXME: we need an unique key here.
 	# XXX: What can we use as unique key ?
-	def json (self):
+	def json (self,compact=None):
 		content = ', '.join([
 			self.rd.json(),
 			'"endpoint": %s' % self.endpoint,
