@@ -207,8 +207,7 @@ def commands (exabgp, daemon, port):
 
 
 def check (group, delay=1):
-	directory = os.path.dirname(group)
-	configurations = [os.path.join(directory,name) for name in open(group).read().strip().split()]
+	configurations = [os.path.join(PATH.etc,name) for name in open(group).read().strip().split()]
 	sequence_file = group.replace('.group','.sequence')
 
 	if not os.path.isfile(sequence_file):
