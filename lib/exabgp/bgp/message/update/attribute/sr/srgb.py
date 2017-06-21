@@ -42,7 +42,7 @@ class SrGb(object):
 	LENGTH = -1
 
 	def __init__ (self, srgbs, packed=None):
-		self.srgbs = srgbs
+		self.srgbs = sorted(srgbs)
 		self.packed = self.pack()
 
 	def __repr__ (self):
