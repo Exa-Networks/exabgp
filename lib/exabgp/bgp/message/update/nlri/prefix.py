@@ -49,6 +49,9 @@ class Prefix (CIDR,NLRI):
 		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
 		return "%s%s" % (self.prefix(),nexthop)
 
+	def __hash__ (self):
+		return hash(self.pack())
+
 	@classmethod
 	def unpack (cls, afi, safi, data, addpath, nexthop, action):
 		labels,rd,path_identifier,mask,size,prefix,left = NLRI._nlri(afi,safi,data,action,addpath)
