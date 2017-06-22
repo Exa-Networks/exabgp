@@ -35,7 +35,7 @@ def main ():
 	if not path.isdir(etc):
 		sys.exit('could not find etc folder')
 
-	conf = path.abspath(path.join(location,'..','..','conf'))
+	conf = path.abspath(path.join(location,'..','..','ci'))
 	if not path.isdir(conf):
 		sys.exit('could not find conf folder')
 
@@ -56,7 +56,7 @@ def main ():
 		skip = 0
 		show = False
 
-	groups = sorted(glob.glob(path.join(conf,'%s.group' % match.replace('all','*'))))
+	groups = sorted(glob.glob(path.join(conf,'%s.ci' % match.replace('all','*'))))
 	groups = reverse(groups)
 
 	success = True
@@ -68,7 +68,7 @@ def main ():
 			continue
 
 		configurations = [os.path.join(etc,name) for name in open(group).read().strip().split()]
-		sequence_file = group.replace('.group','.sequence')
+		sequence_file = group.replace('.ci','.msg')
 
 		if path.isfile(sequence_file):
 			if check_sequence(group,exabgp,configurations,sequence_daemon,sequence_file,show) == False:

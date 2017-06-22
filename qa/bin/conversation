@@ -41,9 +41,9 @@ class PATH:
 			sys.exit('could not find etc folder')
 		cls.etc = etc
 
-		conf = os.path.join(location,'qa','conf')
+		conf = os.path.join(location,'qa','ci')
 		if not os.path.isdir(conf):
-			sys.exit('could not find conf folder')
+			sys.exit('could not find qa/ci folder')
 		cls.conf = conf
 
 		exabgp = os.path.join(location,'sbin','exabgp')
@@ -56,7 +56,7 @@ class PATH:
 			sys.exit('could not find the sequence daemon')
 		cls.daemon = daemon
 
-		cls.groups = glob.glob(os.path.join(PATH.conf,'*.group'))
+		cls.groups = glob.glob(os.path.join(PATH.conf,'*.ci'))
 
 
 class Color (object):
@@ -89,8 +89,8 @@ class STATUS (object):
 			content = reader.readline()
 			files = ' '.join([os.path.join(PATH.etc,_) for _ in content.split()])
 			cls.conf[name] = files
-		cls.group[name] = os.path.join(PATH.conf,name) + '.group'
-		cls.sequence[name] = os.path.join(PATH.conf,name) + '.sequence'
+		cls.group[name] = os.path.join(PATH.conf,name) + '.ci'
+		cls.sequence[name] = os.path.join(PATH.conf,name) + '.msg'
 		cls.names.append(name)
 		cls.names = sorted(cls.names)
 		cls.color[name] = Color.END
@@ -208,7 +208,7 @@ def commands (exabgp, daemon, port):
 
 def check (group, delay=1):
 	configurations = [os.path.join(PATH.etc,name) for name in open(group).read().strip().split()]
-	sequence_file = group.replace('.group','.sequence')
+	sequence_file = group.replace('.ci','.msg')
 
 	if not os.path.isfile(sequence_file):
 		return False
@@ -334,8 +334,8 @@ if __name__ == '__main__':
 	def extract_group ():
 		if len(sys.argv) > 1:
 			group = sys.argv[1]
-			if not group.endswith('.group'):
-				sys.exit('wrong name as parameter, it must be the group file ending in .group (%s)' % group)
+			if not group.endswith('.ci'):
+				sys.exit('wrong name as parameter, it must be the configuration list file ending in .ci (%s)' % group)
 			return group
 
 	def extract_port ():

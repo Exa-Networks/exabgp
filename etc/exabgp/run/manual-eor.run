@@ -3,8 +3,16 @@
 import sys
 import time
 
-sys.stdout.write('announce eor\n')
-sys.stdout.flush()
+messages = [
+	'announce eor',
+	'announce eor ipv6 unicast',
+	'announce eor ipv4 unicast',
+]
+
+while messages:
+	message = messages.pop(0)
+	sys.stdout.write(message + '\n')
+	sys.stdout.flush()
 
 try:
 	now = time.time()
