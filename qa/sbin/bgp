@@ -309,9 +309,9 @@ class BGPHandler(asyncore.dispatcher_with_send):
 						self.announce('expected one of the following :')
 						for message in self.messages:
 							if message.startswith('F'*32):
-								self.announce('               %s:%s:%s:%s' % (message[:32],message[32:36],message[36:38],message[38:]))
+								self.announce('                 %s:%s:%s:%s' % (message[:32],message[32:36],message[36:38],message[38:]))
 							else:
-								self.announce('               %s' % message)
+								self.announce('                 %s' % message)
 					elif self.messages:
 						message = self.messages[0].upper()
 						if message.startswith('F'*32):
