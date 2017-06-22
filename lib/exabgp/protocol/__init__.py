@@ -27,39 +27,39 @@ class Protocol (Enum):
 	SCTP  = 0x84
 
 	def pack (self):
-			return chr(self)
+		return chr(self)
 
 
 Protocol.UNKNOWN = "unknown protocol %s"
 
 Protocol.NAME = {
-	Protocol(Protocol.ICMP):  'ICMP',
-	Protocol(Protocol.IGMP):  'IGMP',
-	Protocol(Protocol.TCP):   'TCP',
-	Protocol(Protocol.EGP):   'EGP',
-	Protocol(Protocol.UDP):   'UDP',
-	Protocol(Protocol.RSVP):  'RSVP',
-	Protocol(Protocol.GRE):   'GRE',
-	Protocol(Protocol.ESP):   'ESP',
-	Protocol(Protocol.AH):    'AH',
-	Protocol(Protocol.OSPF):  'OSPF',
-	Protocol(Protocol.IPIP):  'IPIP',
-	Protocol(Protocol.PIM):   'PIM',
-	Protocol(Protocol.SCTP):  'SCTP',
+	Protocol(Protocol.ICMP):  'icmp',
+	Protocol(Protocol.IGMP):  'igmp',
+	Protocol(Protocol.TCP):   'tcp',
+	Protocol(Protocol.EGP):   'egp',
+	Protocol(Protocol.UDP):   'udp',
+	Protocol(Protocol.RSVP):  'rsvp',
+	Protocol(Protocol.GRE):   'gre',
+	Protocol(Protocol.ESP):   'esp',
+	Protocol(Protocol.AH):    'ah',
+	Protocol(Protocol.OSPF):  'ospf',
+	Protocol(Protocol.IPIP):  'ipip',
+	Protocol(Protocol.PIM):   'pim',
+	Protocol(Protocol.SCTP):  'sctp',
 }
 
 Protocol.VALUE = {
-	'ICMP':  Protocol(Protocol.ICMP),
-	'IGMP':  Protocol(Protocol.IGMP),
-	'TCP':   Protocol(Protocol.TCP),
-	'EGP':   Protocol(Protocol.EGP),
-	'UDP':   Protocol(Protocol.UDP),
-	'RSVP':  Protocol(Protocol.RSVP),
-	'GRE':   Protocol(Protocol.GRE),
-	'ESP':   Protocol(Protocol.ESP),
-	'AH':    Protocol(Protocol.AH),
-	'OSPF':  Protocol(Protocol.OSPF),
-	'IPIP':  Protocol(Protocol.IPIP),
-	'PIM':   Protocol(Protocol.PIM),
-	'SCTP':  Protocol(Protocol.SCTP),
+	'icmp':  Protocol(Protocol.ICMP),
+	'igmp':  Protocol(Protocol.IGMP),
+	'tcp':   Protocol(Protocol.TCP),
+	'egp':   Protocol(Protocol.EGP),
+	'udp':   Protocol(Protocol.UDP),
+	'rsvp':  Protocol(Protocol.RSVP),
+	'gre':   Protocol(Protocol.GRE),
+	'esp':   Protocol(Protocol.ESP),
+	'ah':    Protocol(Protocol.AH),
+	'ospf':  Protocol(Protocol.OSPF),
+	'ipip':  Protocol(Protocol.IPIP),
+	'pim':   Protocol(Protocol.PIM),
+	'sctp':  Protocol(Protocol.SCTP),
 }
