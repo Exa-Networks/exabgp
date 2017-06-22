@@ -43,6 +43,9 @@ class Labelled (INET):
 			INET.__eq__(self, other) and \
 			self.labels == other.labels
 
+	def __hash__ (self):
+		return hash(self.pack())
+
 	@classmethod
 	def has_label (cls):
 		return True

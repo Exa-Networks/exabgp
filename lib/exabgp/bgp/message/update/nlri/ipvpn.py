@@ -66,6 +66,12 @@ class IPVPN (Labelled):
 			Labelled.__eq__(self, other) and \
 			self.rd == other.rd
 
+	def __ne__ (self, other):
+		return not self.__eq__(other)
+
+	def __hash__ (self):
+		return hash(self.pack())
+
 	@classmethod
 	def has_rd (cls):
 		return True

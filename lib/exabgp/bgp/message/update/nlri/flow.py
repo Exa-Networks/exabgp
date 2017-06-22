@@ -521,6 +521,9 @@ class Flow (NLRI):
 			return 'flow nlri next-hop missing'
 		return ''
 
+	def __hash__ (self):
+		return hash(self.pack())
+
 	def __eq__ (self, other):
 		return \
 			self.rules == other.rules and \
