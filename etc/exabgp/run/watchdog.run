@@ -3,6 +3,8 @@
 import sys
 import time
 
+time.sleep(1)  # time for configuration routes to pass
+
 while True:
 	print "announce watchdog dnsr"
 	sys.stdout.flush()

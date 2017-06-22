@@ -102,7 +102,7 @@ class OutgoingRIB (Cache):
 
 	def announce_watchdog (self, watchdog):
 		if watchdog in self._watchdog:
-			for change in self._watchdog[watchdog].get('-',{}).values():
+			for change in list(self._watchdog[watchdog].get('-',{}).values()):
 				change.nlri.action = OUT.ANNOUNCE  # pylint: disable=E1101
 				self.add_to_rib(change)
 				self._watchdog[watchdog].setdefault('+',{})[change.index()] = change
@@ -110,7 +110,7 @@ class OutgoingRIB (Cache):
 
 	def withdraw_watchdog (self, watchdog):
 		if watchdog in self._watchdog:
-			for change in self._watchdog[watchdog].get('+',{}).values():
+			for change in list(self._watchdog[watchdog].get('+',{}).values()):
 				change.nlri.action = OUT.WITHDRAW
 				self.add_to_rib(change)
 				self._watchdog[watchdog].setdefault('-',{})[change.index()] = change
