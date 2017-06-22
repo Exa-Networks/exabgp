@@ -62,6 +62,10 @@ class Change (object):
 	def __repr__ (self):
 		return self.extensive()
 
+	def feedback (self):
+		if self.nlri is not None:
+			return self.nlri.feedback(self.nlri.action)
+		return 'no check implemented for the family %s %s' % self.nlri.family()
 
 class ConfigurationChange (Change):
 	SOURCE = Source.CONFIGURATION
