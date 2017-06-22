@@ -250,18 +250,18 @@ class Logger (object):
 	def restart (self, first=False):
 		try:
 			if first:
-				self._where = 'stderr'
-				self._default = logging.StreamHandler(sys.stderr)
+				self._where = 'stdout'
+				self._default = logging.StreamHandler(sys.stdout)
 				self._syslog = logging.getLogger()
 				self._syslog.setLevel(logging.DEBUG)
 				self._syslog.addHandler(self._default)
 				return True
 		except IOError:
-			# no way to report anything via stderr, silently failing
+			# no way to report anything via stdout, silently failing
 			return False
 
 		if not self._syslog:
-			# no way to report anything via stderr, silently failing
+			# no way to report anything via stdout, silently failing
 			return False
 
 		for handler in self._syslog.handlers:
