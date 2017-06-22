@@ -6,6 +6,7 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
+import sys
 
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message import Update
@@ -14,7 +15,10 @@ from exabgp.bgp.message.update.attribute import Attributes
 
 from exabgp.rib.cache import Cache
 
-# XXX: FIXME: we would not have to use so many setdefault if we pre-filled the dicts with the families
+if sys.version_info[0] >= 3 and sys.version_info[1] >= 6:
+	RIBdict = dict
+else:
+	from exabgp.vendoring.ordereddict import OrderedDict as RIBdict
 
 
 class OutgoingRIB (Cache):
@@ -149,7 +153,7 @@ class OutgoingRIB (Cache):
 		# And the yield makes it very cpu/memory intensive ..
 
 		# add the route to the list to be announced
-		attr_af_nlri.setdefault(change_attr_index,{}).setdefault(change_family,{})[change_index] = change
+		attr_af_nlri.setdefault(change_attr_index,{}).setdefault(change_family,RIBdict())[change_index] = change
 		new_nlri[change_index] = change
 		self.update_cache(change)
 
