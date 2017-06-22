@@ -2,7 +2,7 @@
 %{!?python2_sitelib:  %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Name:           python-exabgp
-Version:        3.4.18
+Version:        3.4.19
 Release:        1%{?dist}
 Summary:        The BGP swiss army knife of networking (Library)
 
@@ -84,6 +84,5 @@ install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 %{_mandir}/man5/*
 
 %changelog
-* Tue Jun 09 2015 Arun Babu Neelicattu <arun.neelicattu@gmail.com> - 3.4.18-1
-- Initial release
-
+* Tue Jun 21 2017 Arun Babu Neelicattu <arun.neelicattu@gmail.com> - 3.4.19-1
+- Updated to 3.4.19
