@@ -13,6 +13,7 @@ from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
 from exabgp.util import str_ascii
+from exabgp.util import bytes_ascii
 from exabgp.util import hexbytes
 
 from exabgp.bgp.message.message import Message
@@ -162,7 +163,7 @@ class Notify (Notification):
 	def __init__ (self, code, subcode, data=None):
 		if data is None:
 			data = self._str_subcode.get((code,subcode),'unknown notification type')
-		Notification.__init__(self,code,subcode,data)
+		Notification.__init__(self,code,subcode,bytes_ascii(data))
 
 	def message (self,negotiated=None):
 		return self._message(concat_bytes(
