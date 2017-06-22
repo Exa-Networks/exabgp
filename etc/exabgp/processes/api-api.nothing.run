@@ -8,12 +8,20 @@ line = sys.stdin.readline().strip()
 if 'shutdown' in line:
 	print >> sys.stderr, '  (shutdown - 2)', line
 	sys.stderr.flush()
-	time.sleep(5)
+	time.sleep(3)
 	sys.exit(1)
 
 print >> sys.stderr, '  (failure) we received data on this worker: ', line
 sys.stderr.flush()
 print "announce route 6.6.6.0/24 next-hop 9.9.9.9"
 sys.stdout.flush()
-time.sleep(5)
-sys.exit(1)
+
+try:
+	now = time.time()
+	while True and time.time() < now + 5:
+		line = sys.stdin.readline().strip()
+		if not line or 'shutdown' in line:
+			break
+		time.sleep(1)
+except IOError:
+	pass

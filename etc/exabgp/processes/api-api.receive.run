@@ -31,7 +31,7 @@ while True:
 			sys.stderr.flush()
 			print "announce route 6.6.6.0/24 next-hop 9.9.9.9"
 			sys.stdout.flush()
-			time.sleep(5)
+			time.sleep(3)
 			sys.exit(1)
 	except KeyboardInterrupt:
 		sys.exit(1)

@@ -3,32 +3,30 @@
 import sys
 import time
 
-lines = [
-	'neighbor 127.0.0.1 receive update start',
-	'neighbor 127.0.0.1 receive update announced 0.0.0.0/32 next-hop 127.0.0.1 origin igp local-preference 100',
-	'neighbor 127.0.0.1 receive update end',
-]
-
-length = len(lines)
-
-while lines:
-	line = sys.stdin.readline().strip()
-	if line in lines:
-		lines.remove(line)
-	sys.stderr.flush()
-	if length != len(lines):
-		print >> sys.stderr, '\n%s\n' % line
-		print >> sys.stderr, 'left', lines
-		length = len(lines)
-	sys.stderr.flush()
-	time.sleep(0.2)
-
-time.sleep(2)
-sys.stdout.write('neighbor 127.0.0.1 announce route 1.2.3.4 next-hop 5.6.7.8\n')
-sys.stdout.flush()
-
-now = time.time()
-while True and time.time() < now + 20:
-	if 'shutdown' in sys.stdin.readline():
+try:
+	while True:
+		line = sys.stdin.readline().strip()
+		if 'start' in line:
+			continue
+		if 'end' in line:
+			continue
+		if 'eor' in line:
+			continue
+		if 'neighbor 127.0.0.1 receive update announced 0.0.0.0/32 next-hop 127.0.0.1 origin igp local-preference 100' not in line:
+			sys.stdout.write('neighbor 127.0.0.1 announce route 0.0.0.0/0 next-hop 255.255.255.255\n')
+			sys.stdout.flush()
+			time.sleep(5)
+			sys.exit(1)
 		break
-	time.sleep(1)
+
+	sys.stdout.write('neighbor 127.0.0.1 announce route 1.2.3.4 next-hop 5.6.7.8\n')
+	sys.stdout.flush()
+
+	now = time.time()
+	while True and time.time() < now + 5:
+		line = sys.stdin.readline().strip()
+		if not line or 'shutdown' in line:
+			break
+		time.sleep(1)
+except IOError:
+	pass

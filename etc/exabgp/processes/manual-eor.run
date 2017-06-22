@@ -3,10 +3,15 @@
 import sys
 import time
 
-time.sleep(6)
-
 sys.stdout.write('announce eor\n')
 sys.stdout.flush()
 
-while True:
-	sys.stdin.readline()
+try:
+	now = time.time()
+	while True and time.time() < now + 5:
+		line = sys.stdin.readline().strip()
+		if not line or 'shutdown' in line:
+			break
+		time.sleep(1)
+except IOError:
+	pass

@@ -43,7 +43,7 @@ try:
 	line = sys.stdin.readline().strip()
 	if not line or line in ['done','shutdown']:
 		sys.exit(0)
-	print >> sys.stderr, 'BAD BAD'
+	print >> sys.stderr, 'Bad termination'
 	sys.exit(1)
 except KeyboardInterrupt:
 	pass
