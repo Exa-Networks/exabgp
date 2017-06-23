@@ -70,7 +70,7 @@ python setup.py debian   prepend the current version to debian/changelog
 def versions ():
 	versions = []
 	with open(CHANGELOG) as changelog:
-		next(changelog)  # skip the word version on the first line
+		changelog.readline()
 		for line in changelog:
 			if line.lower().startswith('version '):
 				version = line.split()[1]
