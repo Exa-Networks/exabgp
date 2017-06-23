@@ -102,9 +102,10 @@ class NLRI (Family):
 	def unpack_nlri (cls, afi, safi, data, action, addpath):
 		if not cls.logger:
 			cls.logger = Logger()
-		cls.logger.parser(LazyNLRI(afi,safi,addpath,data))
 
 		a,s = AFI.create(afi),SAFI.create(safi)
+		cls.logger.parser(LazyNLRI(a,s,addpath,data))
+
 		key = '%s/%s' % (a, s)
 		if key in cls.registered_nlri:
 			return cls.registered_nlri[key].unpack_nlri(afi,safi,data,action,addpath)

@@ -115,6 +115,7 @@ def check_neighbor (neighbors):
 				str1 = str1.replace('attribute [ 0x04 0x80 0x00000064 ]','med 100')
 				str1r = str1.lower().replace(' med 100','').replace(' local-preference 100','').replace(' origin igp','')
 				str2r = str2.lower().replace(' med 100','').replace(' local-preference 100','').replace(' origin igp','')
+				str2r = str2r.replace('large-community [ 1:2:3 10:11:12 ]','attribute [ 0x20 0xc0 0x0000000100000002000000030000000a0000000b0000000c ]')
 
 				if 'next-hop self' in str1r:
 					if ':' in str1r:

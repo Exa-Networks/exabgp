@@ -11,6 +11,7 @@ from struct import pack
 from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes
+from exabgp.util import hexstring
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 
@@ -57,3 +58,6 @@ class GenericAttribute (Attribute):
 	@classmethod
 	def unpack (cls, code, flag, data):
 		return cls(code,flag,data)
+
+	def json (self):
+		return '{ "id": %d, "flag": %d, "payload": "%s"}' % (self.ID,self.FLAG,hexstring(self.data))
