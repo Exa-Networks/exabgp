@@ -7,22 +7,27 @@ announce_flow_1 = 'announce flow route { match { source 0.0.0.0/32; destination 
 withdraw_flow_1 = 'withdraw flow route { match { source 0.0.0.0/32; destination 0.0.0.0/32; destination-port =3128; protocol tcp; } }'
 announce_flow_2 = 'announce flow route { match { source 255.255.255.255/32; destination 255.255.255.255/32; } then { rate-limit 65535; } }'
 
+time.sleep(1)  # let the EOR pass
+
 messages = [
-	'sleep',  # to let the EOR pass
 	withdraw_flow_1,
 	announce_flow_1,
 	'sleep',
 	announce_flow_2,
+	'sleep',
 	announce_flow_1,  # nop
+	'sleep',
 	announce_flow_2,  # nop
+	'sleep',
 	withdraw_flow_1,
+	'sleep',
 	announce_flow_1,
 ]
 
 while messages:
 	message = messages.pop(0)
 	if message == 'sleep':
-		time.sleep(1)
+		time.sleep(0.3)
 	else:
 		try:
 			sys.stdout.write(message + '\n')
