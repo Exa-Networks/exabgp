@@ -15,6 +15,7 @@ from exabgp.util import concat_bytes
 from exabgp.util import str_ascii
 from exabgp.util import bytes_ascii
 from exabgp.util import hexbytes
+from exabgp.util import hexstring
 
 from exabgp.bgp.message.message import Message
 
