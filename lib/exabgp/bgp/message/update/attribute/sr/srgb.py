@@ -48,8 +48,8 @@ class SrGb(object):
 
 	def __repr__ (self):
 		items = []
-		for base, range in self.srgbs:
-			items.append("( {},{} )".format(base,range))
+		for base, srange in self.srgbs:
+			items.append("( {},{} )".format(base, srange))
 		return '[ {} ]'.format(', '.join(items))
 
 	def pack (self):
