@@ -49,7 +49,7 @@
 		"_": "the names defined here can be used in the neighbors",
 		"syslog-json": {
 			"encoder": "json",
-			"program": "etc/exabgp/processes/syslog-1.py"
+			"program": "etc/exabgp/run/syslog-1.py"
 		},
 		"_": "be careful to not loose comment if you use multiple _",
 		"syslog-text": {
