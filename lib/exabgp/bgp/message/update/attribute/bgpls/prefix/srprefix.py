@@ -6,6 +6,7 @@ Created by Evelio Vila
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
+import json
 from struct import unpack
 from exabgp.vendoring import six
 
@@ -41,7 +42,7 @@ class SrPrefix(object):
 		flags = LsGenericFlags.unpack(data[0],LsGenericFlags.ISIS_SR_FLAGS)
 		#
 		# Parse Algorithm
-		sr_algo = six.indexbytes(data,1)
+		sr_algo = six.indexbytes(data, 1)
 		# Move pointer 4 bytes: Flags(1) + Algorithm(1) + Reserved(2)
 		data = data[4:]
      	# SID/Index/Label: according to the V and L flags, it contains
@@ -55,18 +56,19 @@ class SrPrefix(object):
 		#  	 Section 3.1.  In this case V and L flags MUST be unset.
 		sids = []
 		while data:
-			if int(flags.flags['V']) and int(flags.flags['L']):
+			if flags.flags['V'] and flags.flags['L']:
 				b = BitArray(bytes=data[:3])
 				sid = b.unpack('uintbe:24')[0]
 				data = data[3:]
-			elif (not int(flags.flags['V'])) and \
-				(not int(flags.flags['L'])):
-				sid = unpack('!I',data[:4])[0]
+			elif (not flags.flags['V']) and \
+				(not flags.flags['L']):
+				sid = unpack('!I', data[:4])[0]
 				data = data[4:]
 			sids.append(sid)
 
-		return cls(flags=flags.flags, sids=sids, sr_algo=sr_algo)
+		return cls(flags=flags, sids=sids, sr_algo=sr_algo)
 
 	def json (self,compact=None):
-		return '"sr-prefix-flags": "%s", "sids": "%s", "sr-algorithm": "%s"' % (self.flags,
-				self.sids, self.sr_algo)
+		return ', '.join(['"sr-prefix-flags": {}'.format(self.flags.json()),
+			'"sids": {}'.format(json.dumps(self.sids)),
+			'"sr-algorithm": {}'.format(json.dumps(self.sr_algo))])

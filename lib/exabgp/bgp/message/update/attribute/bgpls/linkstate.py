@@ -5,6 +5,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+import json
 import binascii
 import itertools
 from struct import unpack
@@ -124,7 +125,14 @@ class LsGenericFlags(object):
 		valid_flags.append('0000')
 		if bit_array.bin in valid_flags:
 			flags = dict(zip(pattern, bit_array.bin))
+			print(flags)
+			flags = {k:int(v) for k, v in flags.items()}
 		else:
 			raise Notify(3,5, "Invalid SR flags mask")
 		return cls(flags=flags)
 
+	def json (self,compact=None):
+    		return json.dumps(self.flags)
+
+	def __repr__ (self):
+		return str(self.flags)
