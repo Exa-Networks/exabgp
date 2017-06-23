@@ -68,5 +68,5 @@ class SrPrefix(object):
 		return cls(flags=flags.flags, sids=sids, sr_algo=sr_algo)
 
 	def json (self,compact=None):
-		return '"sr-adj-flags": "%s", "sids": "%s", "sr-algorithm": "%s"' % (self.flags,
+		return '"sr-prefix-flags": "%s", "sids": "%s", "sr-algorithm": "%s"' % (self.flags,
 				self.sids, self.sr_algo)

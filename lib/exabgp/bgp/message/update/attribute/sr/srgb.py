@@ -5,6 +5,7 @@ sr/srgb.py
 Created by Evelio Vila 2017-02-16
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 """
+import json
 from struct import pack, unpack
 
 from exabgp.util import concat_bytes
@@ -42,11 +43,14 @@ class SrGb(object):
 	LENGTH = -1
 
 	def __init__ (self, srgbs, packed=None):
-		self.srgbs = sorted(srgbs)
+		self.srgbs = srgbs
 		self.packed = self.pack()
 
 	def __repr__ (self):
-		return "sr-srgbs %s" % (self.srgbs)
+		items = []
+		for base, srange in self.srgbs:
+			items.append("( {},{} )".format(base, srange))
+		return '[ {} ]'.format(', '.join(items))
 
 	def pack (self):
 		t = pack('!B', self.TLV)
@@ -80,4 +84,4 @@ class SrGb(object):
 		return cls(srgbs=srgbs)
 
 	def json (self,compact=None):
-		return '"sr-srgbs": "%s"' % (self.srgbs)
+		return '"sr-srgbs": {}'.format((json.dumps(self.srgbs)))

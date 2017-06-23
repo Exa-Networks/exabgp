@@ -66,7 +66,12 @@ class PrefixSid (Attribute):
 		return '{ %s }' % (content)
 
 	def __str__(self):
-		return ', '.join(str(d) for d in self.sr_attrs)
+		label_index = next((i for i in self.sr_attrs if i.TLV == 1), None)
+		srgb = next((i for i in self.sr_attrs if i.TLV == 3), None)
+		if srgb:
+			return "[ {}, {} ]".format(str(label_index), str(srgb))
+		else:
+			return "[ {} ]".format(str(label_index))
 
 	def pack (self, negotiated=None):
 		return self._packed
