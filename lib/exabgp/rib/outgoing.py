@@ -153,7 +153,7 @@ class OutgoingRIB (Cache):
 		# And the yield makes it very cpu/memory intensive ..
 
 		# add the route to the list to be announced
-		attr_af_nlri.setdefault(change_attr_index,{}).setdefault(change_family,RIBdict())[change_index] = change
+		attr_af_nlri.setdefault(change_attr_index,{}).setdefault(change_family,RIBdict({}))[change_index] = change
 		new_nlri[change_index] = change
 		self.update_cache(change)
 
