@@ -112,7 +112,7 @@ class Update (Message):
 		nlris = []
 		mp_nlris = {}
 
-		for nlri in self.nlris:
+		for nlri in sorted(self.nlris):
 			if nlri.family() in negotiated.families:
 				if nlri.afi == AFI.ipv4 and nlri.safi in [SAFI.unicast, SAFI.multicast]:
 					nlris.append(nlri)

@@ -39,40 +39,30 @@ class INET (NLRI):
 		self.cidr = CIDR.NOCIDR
 		self.nexthop = NoNextHop
 
+	def __len__ (self):
+		return len(self.cidr) + len(self.path_info)
+
+	def __str__ (self):
+		return self.extensive()
+
+	def __repr__ (self):
+		return str(self)
+
 	def feedback (self, action):
 		if self.nexthop is None and action == OUT.ANNOUNCE:
 			return 'inet nlri next-hop missing'
 		return ''
 
-	def __len__ (self):
-		return len(self.cidr) + len(self.path_info)
-
-	def __repr__ (self):
-		return self.extensive()
-
-	def __eq__ (self, other):
-		return \
-			NLRI.__eq__(self, other) and \
-			self.cidr == other.cidr and \
-			self.path_info == other.path_info and \
-			self.nexthop == other.nexthop
-
-	def __ne__ (self, other):
-		return not self.__eq__(other)
-
-	def __hash__ (self):
-		return hash(self.pack())
-
-	def prefix (self):
-		return "%s%s" % (self.cidr.prefix(),str(self.path_info))
-
-	def pack (self, negotiated=None):
+	def pack_nlri (self, negotiated=None):
 		addpath = self.path_info.pack() if negotiated and negotiated.addpath.send(self.afi,self.safi) else b''
 		return addpath + self.cidr.pack_nlri()
 
 	def index (self):
 		addpath = 'no-pi' if self.path_info is PathInfo.NOPATH else str(self.path_info.pack())
-		return NLRI._index(self) + addpath + str(self.cidr.index())
+		return self._index() + addpath + str(self.cidr.pack_nlri())
+
+	def prefix (self):
+		return "%s%s" % (self.cidr.prefix(),str(self.path_info))
 
 	def extensive (self):
 		return "%s%s" % (self.prefix(),'' if self.nexthop is NoNextHop else ' next-hop %s' % self.nexthop)

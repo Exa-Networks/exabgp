@@ -521,31 +521,6 @@ class Flow (NLRI):
 			return 'flow nlri next-hop missing'
 		return ''
 
-	def __hash__ (self):
-		return hash(self.pack())
-
-	def __eq__ (self, other):
-		return \
-			self.rules == other.rules and \
-			self.action == other.action and \
-			self.nexthop == other.nexthop and \
-			self.rd == other.rd
-
-	def __ne__ (self, other):
-		return not self.__eq__(other)
-
-	def __lt__ (self, other):
-		raise RuntimeError('comparing Flow for ordering does not make sense')
-
-	def __le__ (self, other):
-		raise RuntimeError('comparing Flow for ordering does not make sense')
-
-	def __gt__ (self, other):
-		raise RuntimeError('comparing Flow for ordering does not make sense')
-
-	def __ge__ (self, other):
-		raise RuntimeError('comparing Flow for ordering does not make sense')
-
 	def __len__ (self):
 		return len(self.pack())
 
@@ -567,7 +542,7 @@ class Flow (NLRI):
 		return True
 
 	# The API requires addpath, but it is irrelevant here.
-	def pack (self, negotiated=None):
+	def pack_nlri (self, negotiated=None):
 		ordered_rules = []
 		# the order is a RFC requirement
 		for ID in sorted(self.rules.keys()):

@@ -54,15 +54,6 @@ class RTC (NLRI):
 		instance.action = action
 		return instance
 
-	def __eq__ (self, other):
-		return \
-			NLRI.__eq__(self,other) and \
-			self.origin == other.origin and \
-			self.rt == other.rt
-
-	def __ne__ (self, other):
-		return not self.__eq__(other)
-
 	def __len__ (self):
 		return (4 + len(self.rt))*8 if self.rt else 1
 
@@ -72,14 +63,11 @@ class RTC (NLRI):
 	def __repr__ (self):
 		return str(self)
 
-	def __hash__ (self):
-		return hash(self.pack())
-
 	@staticmethod
 	def resetFlags(char):
 		return character(ordinal(char) & ~(Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL))
 
-	def pack (self, negotiated=None):
+	def pack_nlri (self, negotiated=None):
 		# XXX: no support for addpath yet
 		# We reset ext com flag bits from the first byte in the packed RT
 		# because in an RTC route these flags never appear.

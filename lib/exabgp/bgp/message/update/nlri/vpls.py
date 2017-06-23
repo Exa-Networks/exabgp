@@ -64,18 +64,10 @@ class VPLS (NLRI):
 			return 'vpls nlri size inconsistency'
 		return ''
 
-	def __eq__ (self,other):
-		return self.nexthop == other.nexthop \
-			and self.rd == other.rd \
-			and self.base == other.base \
-			and self.offset == other.offset \
-			and self.size == other.size \
-			and self.endpoint == other.endpoint
-
 	def assign (self, name, value):
 		setattr(self,name,value)
 
-	def pack (self, negotiated=None):
+	def pack_nlri (self, negotiated=None):
 		return concat_bytes(
 			b'\x00\x11',  # pack('!H',17)
 			self.rd.pack(),

@@ -44,22 +44,16 @@ class EVPN (NLRI):
 		NLRI.__init__(self, AFI.l2vpn, SAFI.evpn, action)
 		self._packed = b''
 
-	def feedback (self, action):
-		# if self.nexthop is None and action == OUT.ANNOUNCE:
-		# 	return 'evpn nlri next-hop is missing'
-		return ''
+	def __hash__ (self):
+		return hash("%s:%s:%s:%s" % (self.afi,self.safi,self.CODE,self._packed))
+
+	def __len__ (self):
+		return len(self._packed) + 2
 
 	def __eq__ (self, other):
 		return \
 			NLRI.__eq__(self,other) and \
-			self.CODE == other.CODE and \
-			self.pack() == other.pack()
-
-	def __neq__(self, other):
-		return not self.__eq__(other)
-
-	def _prefix (self):
-		return "evpn:%s:" % (self.registered_evpn.get(self.CODE,self).SHORT_NAME.lower())
+			self.CODE == other.CODE
 
 	def __str__ (self):
 		return "evpn:%s:%s" % (self.registered_evpn.get(self.CODE,self).SHORT_NAME.lower(),'0x' + ''.join('%02x' % ordinal(_) for _ in self._packed))
@@ -67,15 +61,17 @@ class EVPN (NLRI):
 	def __repr__ (self):
 		return str(self)
 
-	def pack (self, negotiated=None):
-		# XXXXXX: addpath not supported yet
+	def feedback (self, action):
+		# if self.nexthop is None and action == OUT.ANNOUNCE:
+		# 	return 'evpn nlri next-hop is missing'
+		return ''
+
+	def _prefix (self):
+		return "evpn:%s:" % (self.registered_evpn.get(self.CODE,self).SHORT_NAME.lower())
+
+	def pack_nlri (self, negotiated=None):
+		# XXX: addpath not supported yet
 		return pack('!BB',self.CODE,len(self._packed)) + self._packed
-
-	def __len__ (self):
-		return len(self._packed) + 2
-
-	def __hash__ (self):
-		return hash("%s:%s:%s:%s" % (self.afi,self.safi,self.CODE,self._packed))
 
 	@classmethod
 	def register (cls, klass):
@@ -100,7 +96,7 @@ class EVPN (NLRI):
 		return klass,bgp[length+2:]
 
 	def _raw (self):
-		return ''.join('%02X' % ordinal(_) for _ in self.pack())
+		return ''.join('%02X' % ordinal(_) for _ in self.pack_nlri())
 
 
 class GenericEVPN (EVPN):
