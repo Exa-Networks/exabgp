@@ -33,7 +33,7 @@ class SrLabelIndex(object):
 		self.packed = self.pack()
 
 	def __repr__ (self):
-		return "sr-label-index %s" % (self.labelindex)
+		return "%s" % (self.labelindex)
 
 	def pack (self):
 		t = pack('!B', self.TLV)
@@ -60,4 +60,4 @@ class SrLabelIndex(object):
 		return cls(labelindex=labelindex,packed=data)
 
 	def json (self,compact=None):
-		return '"sr-label-index": "%s"' % (self.labelindex)
+		return '"sr-label-index": %d' % (self.labelindex)
