@@ -5,9 +5,9 @@ import time
 
 messages = [
 	('announce route 1.1.0.0/16 next-hop 1.1.1.1',1),
-	('neighbor 127.0.0.1 teardown 4',1),
+	('neighbor 127.0.0.1 teardown 4',2.5),
 	('announce route 2.2.0.0/16 next-hop 2.2.2.2',1),
-	('neighbor 127.0.0.1 teardown 4',1),
+	('neighbor 127.0.0.1 teardown 4',2.5),
 	('announce route 3.3.0.0/16 next-hop 3.3.3.3',1),
 ]
 

@@ -102,9 +102,13 @@ class Notification (Message):
 		(7,2): "Malformed Message Subtype",
 	}
 
-	def __init__ (self, code, subcode, data=b''):
+	def __init__ (self, code, subcode, data=b'', parse_data=True):
 		self.code = code
 		self.subcode = subcode
+
+		if not parse_data:
+			self.data = data
+			return
 
 		if not (code, subcode) in [(6, 2), (6, 4)]:
 			self.data = data if not len([_ for _ in str(data) if _ not in string.printable]) else hexbytes(data)
@@ -121,28 +125,28 @@ class Notification (Message):
 		data = data[1:]
 
 		if shutdown_length == 0:
-			self.data = "empty Shutdown Communication."
+			self.data = b"empty Shutdown Communication."
 			# move offset past length field
 			return
 
 		if len(data) < shutdown_length:
-			self.data = "invalid Shutdown Communication (buffer underrun) length : %i [%s]" % (shutdown_length, hexstring(data))
+			self.data = b"invalid Shutdown Communication (buffer underrun) length : %i [%s]" % (shutdown_length, hexstring(data))
 			return
 
 		if shutdown_length > 128:
-			self.data = "invalid Shutdown Communication (too large) length : %i [%s]" % (shutdown_length, hexstring(data))
+			self.data = b"invalid Shutdown Communication (too large) length : %i [%s]" % (shutdown_length, hexstring(data))
 			return
 
 		try:
-			self.data = 'Shutdown Communication: "%s"' % \
+			self.data = b'Shutdown Communication: "%s"' % \
 				data[:shutdown_length].decode('utf-8').replace('\r',' ').replace('\n',' ')
 		except UnicodeDecodeError:
-			self.data = "invalid Shutdown Communication (invalid UTF-8) length : %i [%s]" % (shutdown_length, hexstring(data))
+			self.data = b"invalid Shutdown Communication (invalid UTF-8) length : %i [%s]" % (shutdown_length, hexstring(data))
 			return
 
 		trailer = data[shutdown_length:]
 		if trailer:
-			self.data += ", trailing data: " + hexstring(trailer)
+			self.data += b", trailing data: " + hexstring(trailer)
 
 	def __str__ (self):
 		return "%s / %s%s" % (
@@ -164,11 +168,13 @@ class Notify (Notification):
 	def __init__ (self, code, subcode, data=None):
 		if data is None:
 			data = self._str_subcode.get((code,subcode),'unknown notification type')
-		Notification.__init__(self,code,subcode,bytes_ascii(data))
+		if (code, subcode) in [(6, 2), (6, 4)]:
+			data = chr(len(data)) + data
+		Notification.__init__(self,code,subcode,bytes_ascii(data),False)
 
 	def message (self,negotiated=None):
-		return self._message(concat_bytes(
-			character(self.code),
-			character(self.subcode),
+		return self._message(
+			character(self.code) +
+			character(self.subcode) +
 			self.data
-		))
+		)
