@@ -24,7 +24,7 @@ class NetMask (Resource):
 
 	def __str__ (self):
 		# return self.names.get(self,'%d' % int(self))
-		return '%d' % self
+		return '%d' % int(self)
 
 	names = {
 		32: '255.255.255.255',
