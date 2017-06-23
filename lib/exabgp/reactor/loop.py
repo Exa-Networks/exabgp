@@ -141,8 +141,12 @@ class Reactor (object):
 				raise exc
 			return []
 		except socket.error as exc:
-			if exc.errno in error.fatal:
-				raise exc
+			# python 3 does not raise on closed FD, but python2 does
+			# we have lost a peer and it is causing the select
+			# to complain, the code will self-heal, ignore the issue
+			# (EBADF from python2 must be ignored if when checkign error.fatal)
+			# otherwise sending  notification causes TCP to drop and cause
+			# this code to kill ExaBGP
 			return []
 		except ValueError as exc:
 			# The peer closing the TCP connection lead to a negative file descritor
