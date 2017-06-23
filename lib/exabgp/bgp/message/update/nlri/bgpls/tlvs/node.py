@@ -131,7 +131,7 @@ class NodeDescriptor (object):
 		if self.dtype == 515:
 			router_id = '"router-id": "%s"' % self.node_id
 		if self.dtype == 512:
-			asn = '"autonomous-system": "%d"' % self.node_id
+			asn = '"autonomous-system": %d' % self.node_id
 		if self.dtype == 513:
 			bgpls_id = '"bgp-ls-identifier": "%d"' % self.node_id
 		content = ', '.join(d for d in [ospf,designated,psn,router_id,asn,bgpls_id] if d)

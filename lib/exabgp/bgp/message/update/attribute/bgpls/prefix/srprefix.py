@@ -11,6 +11,7 @@ from struct import unpack
 from exabgp.vendoring import six
 
 from exabgp.vendoring.bitstring import BitArray
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LINKSTATE, LsGenericFlags
 
 #    draft-gredler-idr-bgp-ls-segment-routing-ext-03
@@ -62,10 +63,13 @@ class SrPrefix(object):
 				data = data[3:]
 			elif (not flags.flags['V']) and \
 				(not flags.flags['L']):
+				if len(data) != 4:
+    				# Cisco IOS XR Software, Version 6.1.1.19I is not
+					# correctly setting the flags
+					raise Notify(3,5, "SID/Label size doesn't match V and L flag state")
 				sid = unpack('!I', data[:4])[0]
 				data = data[4:]
 			sids.append(sid)
-
 		return cls(flags=flags, sids=sids, sr_algo=sr_algo)
 
 	def json (self,compact=None):

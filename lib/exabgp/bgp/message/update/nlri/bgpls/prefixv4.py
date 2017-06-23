@@ -115,8 +115,8 @@ class PREFIXv4(BGPLS):
 		nodes = ', '.join(d.json() for d in self.local_node)
 		content = ', '.join([
 			'"ls-nlri-type": 3',
-			'"l3-routing-topology": %s' % self.domain,
-			'"protocol-id": %s' % self.proto_id,
+			'"l3-routing-topology": %d' % int(self.domain),
+			'"protocol-id": %d' % int(self.proto_id),
 			'"node-descriptors": { %s }' % nodes,
 			self.prefix.json(),
 			'"nexthop": "%s"' % self.nexthop,

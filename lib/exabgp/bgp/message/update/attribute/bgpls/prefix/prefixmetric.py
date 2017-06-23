@@ -43,4 +43,4 @@ class PrefixMetric(object):
 			return cls(prefixmetric=metric)
 
 	def json (self,compact=None):
-		return '"prefix-metric": %d' % self.prefixmetric
+		return '"prefix-metric": %d' % int(self.prefixmetric)
