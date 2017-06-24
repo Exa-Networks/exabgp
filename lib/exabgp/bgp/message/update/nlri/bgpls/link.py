@@ -169,8 +169,8 @@ class LINK(BGPLS):
 		interface_addrs = ', '.join(d.json() for d in self.iface_addrs)
 		neighbor_addrs = ', '.join(d.json() for d in self.neigh_addrs)
 		content = '"ls-nlri-type": 2, '
-		content += '"l3-routing-topology": "%s", ' % self.domain
-		content += '"protocol-id": %d, ' % self.proto_id
+		content += '"l3-routing-topology": %d, ' % int(self.domain)
+		content += '"protocol-id": %d, ' % int(self.proto_id)
 		content += '"local-node-descriptors": { %s }, ' % local
 		content += '"remote-node-descriptors": { %s }, ' % remote
 		content += '"interface-address": { %s }, ' % interface_addrs

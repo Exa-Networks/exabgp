@@ -44,7 +44,7 @@ class IgpFlags(object):
 			raise Notify(3,5, "IGP Flags TLV length too large")
 		else:
 			flags = LsGenericFlags.unpack(data[0],LsGenericFlags.LS_IGP_FLAGS)
-			return cls(igpflags=flags.flags)
+			return cls(igpflags=flags)
 
 	def json (self,compact=None):
-		return '"igp-flags": "%s"' % str(self.igpflags)
+		return '"igp-flags": {}'.format(self.igpflags.json())

@@ -42,7 +42,7 @@ class LinkProtectionType(object):
 			# We only care about the first octect
 			protection_mask = LsGenericFlags.unpack(data[0],
 				LsGenericFlags.LS_PROTECTION_MASK)
-		return cls(protectionflags=protection_mask.flags)
+		return cls(protectionflags=protection_mask)
 
 	def json (self,compact=None):
-		return '"link-protection-flags": "%s"' % str(self.protectionflags)
+		return '"link-protection-flags": {}'.format(self.protectionflags.json())

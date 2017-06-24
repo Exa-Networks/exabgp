@@ -6,6 +6,7 @@ Created by Evelio Vila
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
+import json
 from struct import unpack
 from exabgp.vendoring import six
 
@@ -71,13 +72,14 @@ class SrAdjacencyLan(object):
 				b = BitArray(bytes=data[:3])
 				sid = b.unpack('uintbe:24')[0]
 				data = data[3:]
-			elif (not int(flags.flags['V'])) and \
-				(not int(flags.flags['L'])):
+			elif (not flags.flags['V']) and \
+				(not flags.flags['L']):
 				sid = unpack('!I',data[:4])[0]
 				data = data[4:]
 			sids.append(sid)
-		return cls(flags=flags.flags, sids=sids, weight=weight)
+		return cls(flags=flags, sids=sids, weight=weight)
 
 	def json (self,compact=None):
-		return '"sr-adj-lan-flags": "%s", "sids": "%s", "sr-adj-weight": "%s"' % (self.flags,
-				self.sids, self.weight)
+		return ', '.join(['"sr-adj-lan-flags": {}'.format(self.flags.json()),
+			'"sids": {}'.format(json.dumps(self.sids)),
+			'"sr-adj-lan-weight": {}'.format(json.dumps(self.weight))])

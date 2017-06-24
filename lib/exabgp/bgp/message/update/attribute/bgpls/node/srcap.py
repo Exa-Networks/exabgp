@@ -6,6 +6,7 @@ Created by Evelio Vila
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
+import json
 from struct import unpack
 
 from exabgp.vendoring.bitstring import BitArray
@@ -74,9 +75,9 @@ class SrCapabilities(object):
 			sids.append((range_size, sid))
 			data = data[l+7:]
 
-		return cls(sr_flags=flags.flags, sids=sids)
+		return cls(sr_flags=flags, sids=sids)
 
 	def json (self,compact=None):
-		return '"sr-capability-flags": "%s", "sids": "%s"' % (self.sr_flags,
-				self.sids)
+		return ', '.join(['"sr-capability-flags": {}'.format(self.sr_flags.json()),
+			'"sids": {}'.format(json.dumps(self.sids))])
 

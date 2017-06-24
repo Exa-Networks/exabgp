@@ -6,6 +6,7 @@ Created by Evelio Vila
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
+import json
 from struct import unpack
 from exabgp.vendoring import six
 
@@ -46,4 +47,4 @@ class SrAlgorithm(object):
 		return cls(sr_algos=sr_algos)
 
 	def json (self,compact=None):
-		return '"sr-algorithms": "%s"' % (self.sr_algos)
+		return '"sr-algorithms": {}'.format(json.dumps(self.sr_algos))
