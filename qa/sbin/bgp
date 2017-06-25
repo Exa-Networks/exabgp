@@ -25,8 +25,15 @@ import psutil
 PORT = os.environ.get('exabgp.tcp.port',os.environ.get('exabgp_tcp_port','179'))
 SIGNAL = dict([(name,getattr(signal,name)) for name in dir(signal) if name.startswith('SIG')])
 
+
+def flushed (*output):
+	print ' '.join(str(_) for _ in output)
+	sys.stdout.flush()
+
+
 def bytestream (value):
 	return ''.join(['%02X' % ord(_) for _ in value])
+
 
 def dump (value):
 	def spaced (value):
@@ -37,6 +44,7 @@ def dump (value):
 			yield '%02X' % ord(v)
 			even = not even
 	return ''.join(spaced(value))
+
 
 def cdr_to_length (cidr):
 	if cidr > 24:
@@ -56,10 +64,10 @@ class BGPHandler(asyncore.dispatcher_with_send):
 	keepalive = chr(0xFF)*16 + chr(0x0) + chr(0x13) + chr(0x4)
 
 	_name = {
-		chr(1) : 'OPEN',
-		chr(2) : 'UPDATE',
-		chr(3) : 'NOTIFICATION',
-		chr(4) : 'KEEPALIVE',
+		chr(1): 'OPEN',
+		chr(2): 'UPDATE',
+		chr(3): 'NOTIFICATION',
+		chr(4): 'KEEPALIVE',
 	}
 
 	def signal (self,myself,signal_name='SIGUSR1'):
@@ -162,7 +170,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		yield 'notification:%d,%d' % (ord(body[0]),ord(body[1])), bytestream(body)
 
 	def announce (self, *args):
-		print '    ',self.ip,self.port,' '.join(str(_) for _ in args) if len(args) > 1 else args[0]
+		flushed('    ',self.ip,self.port,' '.join(str(_) for _ in args) if len(args) > 1 else args[0])
 
 	def check_signal (self):
 		if self.messages and self.messages[0].startswith('signal:'):
@@ -186,6 +194,9 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		return self
 
 	def update_sequence (self):
+		if self.options['sink']:
+			self.messages = []
+			return True
 		keys = sorted(list(self.sequence))
 		if keys:
 			key = keys[0]
@@ -247,19 +258,18 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 		if self.options['send-default-route']:
 			self.send(
-				chr(0xFF)*16+
-				chr(0x00)+chr(0x31)+
-				chr(0x02)+
-				chr(0x00)+chr(0x00)+
-				chr(0x00)+chr(0x15)+
-					chr(0x40)+chr(0x01)+chr(0x01)+chr(0x00)+
-					chr(0x40)+chr(0x02)+chr(0x00)+
-					chr(0x40)+chr(0x03)+chr(0x04)+chr(0x7F)+chr(0x00)+chr(0x00)+chr(0x01)+
-					chr(0x40)+chr(0x05)+chr(0x04)+chr(0x00)+chr(0x00)+chr(0x00)+chr(0x64)+
-				chr(0x20)+chr(0x00)+chr(0x00)+chr(0x00)+chr(0x00)
+				chr(0xFF)*16 +
+				chr(0x00) + chr(0x31) +
+				chr(0x02) +
+				chr(0x00) + chr(0x00) +
+				chr(0x00) + chr(0x15) +
+				'' + chr(0x40) + chr(0x01) + chr(0x01) + chr(0x00) +
+				'' + chr(0x40) + chr(0x02) + chr(0x00) +
+				'' + chr(0x40) + chr(0x03) + chr(0x04) + chr(0x7F) + chr(0x00) + chr(0x00) + chr(0x01) +
+				'' + chr(0x40) + chr(0x05) + chr(0x04) + chr(0x00) + chr(0x00) + chr(0x00) + chr(0x64) +
+				chr(0x20) + chr(0x00) + chr(0x00) + chr(0x00) + chr(0x00)
 			)
 			self.announce('sending default-route\n')
-
 
 		self.handle_read = self.handle_keepalive
 
@@ -277,7 +287,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		if self.raw:
 			def parser (self, header, body):
 				if body:
-					yield bytestream(header+body)
+					yield bytestream(header + body)
 		else:
 			parser = self._decoder.get(self.kind(header),None)
 
@@ -292,6 +302,11 @@ class BGPHandler(asyncore.dispatcher_with_send):
 					continue
 
 				self.counter += 1
+
+				if self.options['sink']:
+					self.announce('received %d: %s' % (self.counter,'%s:%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:18]),bytestream(header[18:]),bytestream(body))))
+					continue
+
 				if announcement in self.messages:
 					self.messages.remove(announcement)
 					if self.raw:
@@ -300,6 +315,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 						self.announce('received %d (%1s%s):' % (self.counter,self.options['letter'],self.step), announcement)
 					self.check_signal()
 				else:
+					flushed(announcement)
 					if self.raw:
 						self.announce('received %d (%1s%s):' % (self.counter,self.options['letter'],self.step),'%s:%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:18]),bytestream(header[18:]),bytestream(body)))
 					else:
@@ -340,24 +356,25 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		if self.options['send-notification']:
 			notification = 'closing session because we can'
 			self.send(
-				chr(0xFF)*16+
-				chr(0x00)+ chr(19+2+len(notification))+
-				chr(0x03)+
-				chr(0x06)+
-				chr(0x00)+
+				chr(0xFF)*16 +
+				chr(0x00) + chr(19+2+len(notification)) +
+				chr(0x03) +
+				chr(0x06) +
+				chr(0x00) +
 				notification
 			)
 
-	_decoder= {
-		chr(2) : routes,
-		chr(3) : notification,
+	_decoder = {
+		chr(2): routes,
+		chr(3): notification,
 	}
+
 
 class BGPServer (asyncore.dispatcher):
 	def announce (self, *args):
-		print '    ' + ' '.join(str(_) for _ in args) if len(args) > 1 else args[0]
+		flushed('    ' + ' '.join(str(_) for _ in args) if len(args) > 1 else args[0])
 
-	def __init__ (self, host, port, messages):
+	def __init__ (self, host, port, messages, options):
 		asyncore.dispatcher.__init__(self)
 
 		if ':' in host:
@@ -376,7 +393,9 @@ class BGPServer (asyncore.dispatcher):
 			'send-notification': False,        # send notification messages to the backend
 			'signal-SIGUSR1': 0,               # send SIGUSR1 after X seconds
 			'single-shot': False,              # we can not test signal on python 2.6
+			'sink': False,                     # just accept whatever is sent
 		}
+		self.options.update(options)
 
 		for message in messages:
 			if message.strip() == 'option:open:send-unknown-capability':
@@ -417,11 +436,14 @@ class BGPServer (asyncore.dispatcher):
 				del self.messages[letter]
 				break
 
-		if not messages:
+		if self.options['sink']:
+			flushed('connection received in sink mode - send us whatever, we can take it ! :p\n')
+			messages = []
+		elif not messages:
 			self.announce('we used all the test data available, can not handle this new connection')
 			sys.exit(1)
 		else:
-			print 'using :\n   ', '\n    '.join(messages),'\n\nconversation:\n'
+			flushed('using :\n   ', '\n    '.join(messages),'\n\nconversation:\n')
 
 		self.options['exit'] = not len(self.messages.keys())
 		self.options['letter'] = letter
@@ -434,6 +456,7 @@ class BGPServer (asyncore.dispatcher):
 				messages=messages,
 				options=self.options
 			)
+
 
 def drop ():
 	uid = os.getuid()
@@ -455,32 +478,40 @@ def drop ():
 	if not uid:
 		os.setuid(nuid)
 
+
 def main ():
 	if len(sys.argv) <= 1:
-		print 'a list of expected route announcement/withdrawl in the format <number>:announce:<ipv4-route> <number>:withdraw:<ipv4-route> <number>:raw:<exabgp hex dump : separated>'
-		print 'for example:',sys.argv[0],'1:announce:10.0.0.0/8 1:announce:192.0.2.0/24 2:withdraw:10.0.0.0/8 '
-		print 'routes with the same <number> can arrive in any order'
+		flushed('a list of expected route announcement/withdrawl in the format <number>:announce:<ipv4-route> <number>:withdraw:<ipv4-route> <number>:raw:<exabgp hex dump : separated>')
+		flushed('for example:',sys.argv[0],'1:announce:10.0.0.0/8 1:announce:192.0.2.0/24 2:withdraw:10.0.0.0/8 ')
+		flushed('routes with the same <number> can arrive in any order')
 		sys.exit(1)
 
-	try:
-		with open(sys.argv[1]) as content:
-			messages = [_.strip() for _ in content.readlines() if _.strip() and '#' not in _]
-	except IOError:
-		print 'could not open file', sys.argv[1]
-		sys.exit(1)
+	options = {}
+
+	if sys.argv[1] == '--sink':
+		messages = []
+		options['sink'] = True
+	else:
+		try:
+			with open(sys.argv[1]) as content:
+				messages = [_.strip() for _ in content.readlines() if _.strip() and '#' not in _]
+		except IOError:
+			flushed('could not open file', sys.argv[1])
+			sys.exit(1)
 
 	try:
-		BGPServer('127.0.0.1',int(PORT),messages)
-		BGPServer('::1',int(PORT),messages)
+		BGPServer('127.0.0.1',int(PORT),messages,options)
+		BGPServer('::1',int(PORT),messages,options)
 		drop()
 		asyncore.loop()
 	except socket.error,exc:
 		if exc.errno == errno.EACCES:
-			print "failure: could not bind to port %s - most likely not run as root" % PORT
+			flushed('failure: could not bind to port %s - most likely not run as root' % PORT)
 		elif exc.errno == errno.EADDRINUSE:
-			print "failure: could not bind to port %s - port already in use" % PORT
+			flushed('failure: could not bind to port %s - port already in use' % PORT)
 		else:
-			print "failure", str(exc)
+			flushed('failure', str(exc))
+
 
 if __name__ == '__main__':
 	main()
