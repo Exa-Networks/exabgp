@@ -284,6 +284,8 @@ class BGPHandler(asyncore.dispatcher_with_send):
 				sys.exit(0)
 			return
 
+		self.send(self.keepalive)
+
 		if self.raw:
 			def parser (self, header, body):
 				if body:
@@ -350,8 +352,6 @@ class BGPHandler(asyncore.dispatcher_with_send):
 						if self.options['exit']:
 							self.announce('successful')
 							sys.exit(0)
-
-		self.send(self.keepalive)
 
 		if self.options['send-notification']:
 			notification = 'closing session because we can'
