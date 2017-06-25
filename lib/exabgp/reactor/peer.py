@@ -264,7 +264,7 @@ class Peer (object):
 
 	def _read_open (self):
 		wait = environment.settings().bgp.openwait
-		opentimer = ReceiveTimer(self.proto.connection.session,wait,1,1,'waited for open too long, we do not like stuck in active')
+		opentimer = ReceiveTimer(self.proto.connection.session,wait,1,1,b'waited for open too long, we do not like stuck in active')
 		# Only yield if we have not the open, otherwise the reactor can run the other connection
 		# which would be bad as we need to do the collission check without going to the other peer
 		for message in self.proto.read_open(self.neighbor.peer_address.top()):

@@ -6,6 +6,7 @@ Version explained:
 Version 4.0.2
  * Fix: BGP-LS encoding
    patch by: Evelio Vila
+ * Fix: Issue with received timer
 
 Version 4.0.1
  * Change: makes python3 the default interpreter
