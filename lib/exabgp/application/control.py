@@ -19,6 +19,27 @@ from exabgp.util import str_ascii
 from exabgp.reactor.network.error import error
 
 
+def check_fifo (name):
+	try:
+		if not stat.S_ISFIFO(os.stat(name).st_mode):
+			sys.stdout.write('error: a file exist which is not a named pipe (%s)\n' % os.path.abspath(name))
+			return False
+
+		if not os.access(name,os.R_OK):
+			sys.stdout.write('error: a named pipe exists and we can not read/write to it (%s)\n' % os.path.abspath(name))
+			return False
+		return True
+	except OSError:
+		sys.stdout.write('error: could not create the named pipe %s\n' % os.path.abspath(name))
+		return False
+	except IOError:
+		sys.stdout.write('error: could not access/delete the named pipe %s\n' % os.path.abspath(name))
+		sys.stdout.flush()
+	except socket.error:
+		sys.stdout.write('error: could not write on the named pipe %s\n' % os.path.abspath(name))
+		sys.stdout.flush()
+
+
 class Control (object):
 	terminating = False
 
@@ -28,33 +49,13 @@ class Control (object):
 		self.r_pipe = None
 
 	def init (self):
-		def _check_fifo (name):
-			try:
-				if not stat.S_ISFIFO(os.stat(name).st_mode):
-					sys.stdout.write('error: a file exist which is not a named pipe (%s)\n' % os.path.abspath(name))
-					return False
-
-				if not os.access(name,os.R_OK):
-					sys.stdout.write('error: a named pipe exists and we can not read/write to it (%s)\n' % os.path.abspath(name))
-					return False
-				return True
-			except OSError:
-				sys.stdout.write('error: could not create the named pipe %s\n' % os.path.abspath(name))
-				return False
-			except IOError:
-				sys.stdout.write('error: could not access/delete the named pipe %s\n' % os.path.abspath(name))
-				sys.stdout.flush()
-			except socket.error:
-				sys.stdout.write('error: could not write on the named pipe %s\n' % os.path.abspath(name))
-				sys.stdout.flush()
-
 		# obviously this is vulnerable to race conditions ... if an attacker can create fifo in the folder
 
-		if not _check_fifo(self.recv):
+		if not check_fifo(self.recv):
 			self.terminate()
 			sys.exit(1)
 
-		if not _check_fifo(self.send):
+		if not check_fifo(self.send):
 			self.terminate()
 			sys.exit(1)
 

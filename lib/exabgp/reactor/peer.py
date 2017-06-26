@@ -7,6 +7,8 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+import time
+
 # import traceback
 from exabgp.vendoring import six
 from exabgp.util import ordinal
@@ -86,6 +88,11 @@ class Peer (object):
 
 		self.proto = None
 		self.fsm = FSM(self,FSM.IDLE)
+		self.stats = {
+			'fsm':      self.fsm,
+			'creation': time.time(),
+			'reset':    time.time(),
+		}
 		self.generator = None
 
 		# The peer should restart after a stop
@@ -108,7 +115,12 @@ class Peer (object):
 
 	def _reset (self, message='',error=''):
 		self.fsm.change(FSM.IDLE)
-
+		self.restart_time = time.time()
+		self.stats = {
+			'fsm':      self.fsm,
+			'creation': self.stats['creation'],
+			'reset':    time.time(),
+		}
 		if self.proto:
 			self.proto.close(u"peer reset, message [{0}] error[{1}]".format(message, error))
 		self._delay.increase()
@@ -146,6 +158,11 @@ class Peer (object):
 		self._restarted = False
 		self._delay.reset()
 		self.fsm.change(FSM.IDLE)
+		self.stats = {
+			'fsm':      self.fsm,
+			'creation': self.stats['creation'],
+			'reset':    time.time(),
+		}
 		self.neighbor.rib.uncache()
 
 	def resend (self):
@@ -340,6 +357,7 @@ class Peer (object):
 
 		# Announce to the process BGP is up
 		self.logger.network('Connected to peer %s' % self.neighbor.name())
+		self.stats['up'] = self.stats.get('up',0) + 1
 		if self.neighbor.api['neighbor-changes']:
 			try:
 				self.reactor.processes.up(self.neighbor)

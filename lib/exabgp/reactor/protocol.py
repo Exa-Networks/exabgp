@@ -135,6 +135,7 @@ class Protocol (object):
 			self.connection.close()
 			self.connection = None
 
+			self.peer.stats['down'] = self.peer.stats.get('down',0) + 1
 			try:
 				if self.peer.neighbor.api['neighbor-changes']:
 					self.peer.reactor.processes.down(self.peer.neighbor,reason)
@@ -160,14 +161,18 @@ class Protocol (object):
 	def write (self, message, negotiated=None):
 		raw = message.message(negotiated)
 
-		if self.neighbor.api.get('send-%s' % Message.CODE.short(message.ID),False):
+		code = 'send-%s' % Message.CODE.short(message.ID)
+		self.peer.stats[code] = self.peer.stats.get(code,0) + 1
+		if self.neighbor.api.get(code,False):
 			self._to_api('send',message,raw)
 
 		for boolean in self.connection.writer(raw):
 			yield boolean
 
 	def send (self,raw):
-		if self.neighbor.api.get('send-%s' % Message.CODE.short(ordinal(raw[18])),False):
+		code = 'send-%s' % Message.CODE.short(ordinal(raw[18]))
+		self.peer.stats[code] = self.peer.stats.get(code,0) + 1
+		if self.neighbor.api.get(code,False):
 			message = Update.unpack_message(raw[19:],self.negotiated)
 			self._to_api('send',message,raw)
 
@@ -187,9 +192,11 @@ class Protocol (object):
 		body,header = b'',b''  # just because pylint/pylama are getting more clever
 
 		for length,msg_id,header,body,notify in self.connection.reader():
+			code = 'send-%s' % Message.CODE.NOTIFICATION.SHORT
+			self.peer.stats[code] = self.peer.stats.get(code,0) + 1
 			# internal issue
 			if notify:
-				if self.neighbor.api.get('send-%s' % Message.CODE.NOTIFICATION.SHORT,False):
+				if self.neighbor.api.get(code,False):
 					if consolidate:
 						self.peer.reactor.processes.notification(self.peer.neighbor,'send',notify.code,notify.subcode,str(notify),header,body)
 					elif parsed:
@@ -205,7 +212,9 @@ class Protocol (object):
 
 			self.logger.message('<< %s' % Message.CODE.name(msg_id),source=self.connection.session())
 
-			for_api = self.neighbor.api.get('receive-%s' % Message.CODE.short(msg_id),False)
+			code = 'receive-%s' % Message.CODE.short(msg_id)
+			self.peer.stats[code] = self.peer.stats.get(code,0) + 1
+			for_api = self.neighbor.api.get(code,False)
 
 			if for_api and packets and not consolidate:
 				self.peer.reactor.processes.packets(self.peer.neighbor,'receive',msg_id,header,body)

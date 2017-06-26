@@ -47,9 +47,7 @@ def __exit (memory, code):
 	sys.exit(code)
 
 
-def named_pipe (env, root):
-	if not env.api.cli:
-		return True
+def named_pipe (root):
 	locations = [
 		'/run/%d/exabgp' % os.getuid(),
 		'/run/exabgp',
@@ -76,6 +74,36 @@ def named_pipe (env, root):
 		os.environ['EXABGP_CLI_NAMED_PIPE'] = location
 		return [location]
 	return locations
+
+
+def root_folder (options,ends):
+	if options['--root']:
+		return os.path.realpath(os.path.normpath(options['--root'])).rstrip('/')
+	elif sys.argv[0].endswith(ends):
+		return sys.argv[0][:-len(ends)]
+	elif sys.argv[0].endswith(ends):
+		return sys.argv[0][:-len(ends)]
+	else:
+		return ''
+
+
+def get_envfile (options, etc):
+	envfile = 'exabgp.env' if not options["--env"] else options["--env"]
+	if not envfile.startswith('/'):
+		envfile = '%s/%s' % (etc, envfile)
+	return envfile
+
+
+def get_env (envfile):
+	from exabgp.configuration.setup import environment
+
+	try:
+		return environment.setup(envfile)
+	except environment.Error as exc:
+		sys.stdout.write(usage)
+		sys.stdout.flush()
+		print('\nconfiguration issue,', str(exc))
+		sys.exit(1)
 
 
 def main ():
@@ -109,15 +137,7 @@ def main ():
 			sys.exit(0)
 		return
 
-	if options['--root']:
-		root = os.path.realpath(os.path.normpath(options['--root'])).rstrip('/')
-	elif sys.argv[0].endswith('/bin/exabgp'):
-		root = sys.argv[0][:-len('/bin/exabgp')]
-	elif sys.argv[0].endswith('/sbin/exabgp'):
-		root = sys.argv[0][:-len('/sbin/exabgp')]
-	else:
-		root = ''
-
+	root = root_folder(options,'/bin/exabgp')
 	etc = root + '/etc/exabgp'
 	os.environ['EXABGP_ETC'] = etc  # This is not most pretty
 
@@ -129,28 +149,18 @@ def main ():
 		sys.stdout.flush()
 		sys.exit(0)
 
-	envfile = 'exabgp.env' if not options["--env"] else options["--env"]
-	if not envfile.startswith('/'):
-		envfile = '%s/%s' % (etc, envfile)
+	envfile = get_envfile(options,etc)
+	env = get_env(envfile)
 
-	from exabgp.configuration.setup import environment
-
-	try:
-		env = environment.setup(envfile)
-	except environment.Error as exc:
-		sys.stdout.write(usage)
+	if env.api.cli:
+		pipes = named_pipe(root)
+		if len(pipes) != 1:
+			sys.stdout.write('Could not find the named pipes for the cli in any of ' + ', '.join(pipes))
+			sys.stdout.flush()
+			return
+		os.environ['EXABGP_CLI_NAMED_PIPE'] = pipes[0]
+		sys.stdout.write('named pipes for the cli are %s.in & .out' % pipes[0])
 		sys.stdout.flush()
-		print('\nconfiguration issue,', str(exc))
-		sys.exit(1)
-
-	pipes = named_pipe(env,root)
-	if len(pipes) != 1:
-		sys.stdout.write('Could not find the named pipes for the cli in any of ' + ', '.join(pipes))
-		sys.stdout.flush()
-		return
-	os.environ['EXABGP_CLI_NAMED_PIPE'] = pipes[0]
-	sys.stdout.write('named pipes for the cli are %s.in & .out' % pipes[0])
-	sys.stdout.flush()
 
 	# Must be done before setting the logger as it modify its behaviour
 
@@ -159,6 +169,8 @@ def main ():
 		env.log.level = syslog.LOG_DEBUG
 
 	logger = Logger()
+
+	from exabgp.configuration.setup import environment
 
 	if options["--decode"]:
 		decode = ''.join(options["--decode"]).replace(':','').replace(' ','')
