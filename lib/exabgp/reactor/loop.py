@@ -136,8 +136,8 @@ class Reactor (object):
 					read.remove(fd)
 			return read
 		except select.error as exc:
-			errno,message = exc.args  # pylint: disable=W0633
-			if errno not in error.block:
+			err_no,message = exc.args  # pylint: disable=W0633
+			if err_no not in error.block:
 				raise exc
 			return []
 		except socket.error as exc:
@@ -241,7 +241,7 @@ class Reactor (object):
 				self.peers[new_neighbor.name()] = new_peer
 				return
 
-	def run (self, validate):
+	def run (self, validate, root):
 		self.daemon.daemonise()
 
 		# Make sure we create processes once we have closed file descriptor

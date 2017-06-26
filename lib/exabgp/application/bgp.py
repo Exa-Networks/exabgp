@@ -9,6 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import os
 import sys
+import stat
 import platform
 import syslog
 import string
@@ -36,43 +37,63 @@ def is_bgp (s):
 def __exit (memory, code):
 	if memory:
 		from exabgp.vendoring import objgraph
-		print("memory utilisation")
-		print()
-		print(objgraph.show_most_common_types(limit=20))
-		print()
-		print()
-		print("generating memory utilisation graph")
-		print()
+		sys.stdout.write('memory utilisation\n\n')
+		sys.stdout.write(objgraph.show_most_common_types(limit=20))
+		sys.stdout.write('\n\n\n')
+		sys.stdout.write('generating memory utilisation graph\n\n')
+		sys.stdout.write()
 		obj = objgraph.by_type('Reactor')
 		objgraph.show_backrefs([obj], max_depth=10)
 	sys.exit(code)
 
 
-def main ():
-	options = docopt.docopt(usage, help=False)
+def named_pipe (env, root):
+	if not env.api.cli:
+		return True
+	locations = [
+		'/run/%d/exabgp' % os.getuid(),
+		'/run/exabgp',
+		'/var/run/%d/exabgp' % os.getuid(),
+		'/var/run/exabgp',
+		root + '/run/%d/exabgp' % os.getuid(),
+		root + '/run/exabgp',
+		root + '/var/run/%d/exabgp' % os.getuid(),
+		root + '/var/run/exabgp',
+	]
+	for location in locations:
+		cli_in = location + '.in'
+		cli_out = location + '.out'
 
+		try:
+			if not stat.S_ISFIFO(os.stat(cli_in).st_mode):
+				continue
+			if not stat.S_ISFIFO(os.stat(cli_out).st_mode):
+				continue
+		except KeyboardInterrupt:
+			raise
+		except Exception:
+			continue
+		os.environ['EXABGP_CLI_NAMED_PIPE'] = location
+		return [location]
+	return locations
+
+
+def main ():
 	major = int(sys.version[0])
 	minor = int(sys.version[2])
 
 	if major <= 2 and minor < 5:
-		sys.exit('This program can not work (is not tested) with your python version (< 2.5)')
+		sys.stdout.write('This program can not work (is not tested) with your python version (< 2.5)\n')
+		sys.stdout.flush()
+		sys.exit(1)
 
-	if options["--version"]:
-		print('ExaBGP : %s' % version)
-		print('Python : %s' % sys.version.replace('\n',' '))
-		print('Uname  : %s' % ' '.join(platform.uname()[:5]))
+	cli_named_pipe = os.environ.get('EXABGP_CLI_NAMED_PIPE','')
+	if cli_named_pipe:
+		from exabgp.application.control import main as control
+		control(cli_named_pipe)
 		sys.exit(0)
 
-	if options["--folder"]:
-		folder = os.path.realpath(os.path.normpath(options["--folder"]))
-	elif sys.argv[0].endswith('/bin/exabgp'):
-		folder = sys.argv[0][:-len('/bin/exabgp')] + '/etc/exabgp'
-	elif sys.argv[0].endswith('/sbin/exabgp'):
-		folder = sys.argv[0][:-len('/sbin/exabgp')] + '/etc/exabgp'
-	else:
-		folder = '/etc/exabgp'
-
-	os.environ['EXABGP_ETC'] = folder  # This is not most pretty
+	options = docopt.docopt(usage, help=False)
 
 	if options["--run"]:
 		sys.argv = sys.argv[sys.argv.index('--run')+1:]
@@ -83,22 +104,53 @@ def main ():
 			from exabgp.application import run_cli
 			run_cli()
 		else:
-			print(usage)
+			sys.stdout.write(usage)
+			sys.stdout.flush()
 			sys.exit(0)
 		return
 
+	if options['--root']:
+		root = os.path.realpath(os.path.normpath(options['--root'])).rstrip('/')
+	elif sys.argv[0].endswith('/bin/exabgp'):
+		root = sys.argv[0][:-len('/bin/exabgp')]
+	elif sys.argv[0].endswith('/sbin/exabgp'):
+		root = sys.argv[0][:-len('/sbin/exabgp')]
+	else:
+		root = ''
+
+	etc = root + '/etc/exabgp'
+	os.environ['EXABGP_ETC'] = etc  # This is not most pretty
+
+	if options["--version"]:
+		sys.stdout.write('ExaBGP : %s\n' % version)
+		sys.stdout.write('Python : %s\n' % sys.version.replace('\n',' '))
+		sys.stdout.write('Uname  : %s\n' % ' '.join(platform.uname()[:5]))
+		sys.stdout.write('Root   : %s\n' % root)
+		sys.stdout.flush()
+		sys.exit(0)
+
 	envfile = 'exabgp.env' if not options["--env"] else options["--env"]
 	if not envfile.startswith('/'):
-		envfile = '%s/%s' % (folder, envfile)
+		envfile = '%s/%s' % (etc, envfile)
 
 	from exabgp.configuration.setup import environment
 
 	try:
 		env = environment.setup(envfile)
 	except environment.Error as exc:
-		print(usage)
+		sys.stdout.write(usage)
+		sys.stdout.flush()
 		print('\nconfiguration issue,', str(exc))
 		sys.exit(1)
+
+	pipes = named_pipe(env,root)
+	if len(pipes) != 1:
+		sys.stdout.write('Could not find the named pipes for the cli in any of ' + ', '.join(pipes))
+		sys.stdout.flush()
+		return
+	os.environ['EXABGP_CLI_NAMED_PIPE'] = pipes[0]
+	sys.stdout.write('named pipes for the cli are %s.in & .out' % pipes[0])
+	sys.stdout.flush()
 
 	# Must be done before setting the logger as it modify its behaviour
 
@@ -108,34 +160,22 @@ def main ():
 
 	logger = Logger()
 
-	named_pipe = os.environ.get('NAMED_PIPE','')
-	if named_pipe:
-		from exabgp.application.control import main as control
-		control(named_pipe)
-		sys.exit(0)
-
 	if options["--decode"]:
 		decode = ''.join(options["--decode"]).replace(':','').replace(' ','')
 		if not is_bgp(decode):
-			print(usage)
-			print('Environment values are:\n' + '\n'.join(' - %s' % _ for _ in environment.default()))
-			print("")
-			print("The BGP message must be an hexadecimal string.")
-			print("")
-			print("All colons or spaces are ignored, for example:")
-			print("")
-			print("  --decode 001E0200000007900F0003000101")
-			print("  --decode 001E:02:0000:0007:900F:0003:0001:01")
-			print("  --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001E0200000007900F0003000101")
-			print("  --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:0000:0007:900F:0003:0001:01")
-			print("  --decode 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF 001E02 00000007900F0003000101'")
+			sys.stdout.write(usage)
+			sys.stdout.write('Environment values are:\n%s\n\n' % '\n'.join(' - %s' % _ for _ in environment.default()))
+			sys.stdout.write('The BGP message must be an hexadecimal string.\n\n')
+			sys.stdout.write('All colons or spaces are ignored, for example:\n\n')
+			sys.stdout.write('  --decode 001E0200000007900F0003000101\n')
+			sys.stdout.write('  --decode 001E:02:0000:0007:900F:0003:0001:01\n')
+			sys.stdout.write('  --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001E0200000007900F0003000101\n')
+			sys.stdout.write('  --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:0000:0007:900F:0003:0001:01\n')
+			sys.stdout.write('  --decode \'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF 001E02 00000007900F0003000101\n\'')
+			sys.stdout.flush()
 			sys.exit(1)
 	else:
 		decode = ''
-
-	# Make sure our child has a named pipe name
-	if env.api.file:
-		os.environ['NAMED_PIPE'] = env.api.file
 
 	duration = options["--signal"]
 	if duration and duration.isdigit():
@@ -159,8 +199,9 @@ def main ():
 					sys.exit(0)
 
 	if options["--help"]:
-		print(usage)
-		print('Environment values are:\n' + '\n'.join(' - %s' % _ for _ in environment.default()))
+		sys.stdout.write(usage)
+		sys.stdout.write('Environment values are:\n' + '\n'.join(' - %s' % _ for _ in environment.default()))
+		sys.stdout.flush()
 		sys.exit(0)
 
 	if options["--decode"]:
@@ -184,23 +225,27 @@ def main ():
 
 	if options["--full-ini"] or options["--fi"]:
 		for line in environment.iter_ini():
-			print(line)
+			sys.stdout.write('%s\n' % line)
+			sys.stdout.flush()
 		sys.exit(0)
 
 	if options["--full-env"] or options["--fe"]:
 		print()
 		for line in environment.iter_env():
-			print(line)
+			sys.stdout.write('%s\n' % line)
+			sys.stdout.flush()
 		sys.exit(0)
 
 	if options["--diff-ini"] or options["--di"]:
 		for line in environment.iter_ini(True):
-			print(line)
+			sys.stdout.write('%s\n' % line)
+			sys.stdout.flush()
 		sys.exit(0)
 
 	if options["--diff-env"] or options["--de"]:
 		for line in environment.iter_env(True):
-			print(line)
+			sys.stdout.write('%s\n' % line)
+			sys.stdout.flush()
 		sys.exit(0)
 
 	if options["--once"]:
@@ -227,7 +272,7 @@ def main ():
 				configurations.append(normalised)
 				continue
 			if f.startswith('etc/exabgp'):
-				normalised = os.path.join(folder,f[11:])
+				normalised = os.path.join(etc,f[11:])
 				if os.path.isfile(normalised):
 					configurations.append(normalised)
 					continue
@@ -236,16 +281,17 @@ def main ():
 			sys.exit(1)
 
 	else:
-		print(usage)
-		print('Environment values are:\n' + '\n'.join(' - %s' % _ for _ in environment.default()))
-		print('\nno configuration file provided')
+		sys.stdout.write(usage)
+		sys.stdout.write('Environment values are:\n%s\n\n' % '\n'.join(' - %s' % _ for _ in environment.default()))
+		sys.stdout.write('no configuration file provided')
+		sys.stdout.flush()
 		sys.exit(1)
 
 	from exabgp.bgp.message.update.attribute import Attribute
 	Attribute.caching = env.cache.attributes
 
 	if env.debug.rotate or len(configurations) == 1:
-		run(env,comment,configurations,options["--validate"])
+		run(env,comment,configurations,root,options["--validate"])
 
 	if not (env.log.destination in ('syslog','stdout','stderr') or env.log.destination.startswith('host:')):
 		logger.configuration('can not log to files when running multiple configuration (as we fork)','error')
@@ -257,7 +303,7 @@ def main ():
 		for configuration in configurations:
 			pid = os.fork()
 			if pid == 0:
-				run(env,comment,[configuration],options["--validate"],os.getpid())
+				run(env,comment,[configuration],root,options["--validate"],os.getpid())
 			else:
 				pids.append(pid)
 
@@ -273,7 +319,7 @@ def main ():
 		sys.exit(1)
 
 
-def run (env, comment, configurations, validate, pid=0):
+def run (env, comment, configurations, root, validate, pid=0):
 	logger = Logger()
 
 	logger.error('',source='ExaBGP')
@@ -290,8 +336,8 @@ def run (env, comment, configurations, validate, pid=0):
 		logger.configuration(warning)
 
 	if not env.profile.enable:
-		ok = Reactor(configurations).run(validate)
-		__exit(env.debug.memory,0 if ok else 1)
+		was_ok = Reactor(configurations).run(validate,root)
+		__exit(env.debug.memory,0 if was_ok else 1)
 
 	try:
 		import cProfile as profile
@@ -299,8 +345,9 @@ def run (env, comment, configurations, validate, pid=0):
 		import profile
 
 	if env.profile.file == 'stdout':
-		ok = profile.run('Reactor('+str(configurations)+').run('+str(validate)+')')
-		__exit(env.debug.memory,0 if ok else 1)
+		profiled = 'Reactor(%s).run(%s,"%s")' % (str(configurations),str(validate),str(root))
+		was_ok = profile.run(profiled)
+		__exit(env.debug.memory,0 if was_ok else 1)
 
 	if pid:
 		profile_name = "%s-pid-%d" % (env.profile.file,pid)
@@ -319,9 +366,9 @@ def run (env, comment, configurations, validate, pid=0):
 		profiler = profile.Profile()
 		profiler.enable()
 		try:
-			ok = Reactor(configurations).run(validate)
+			was_ok = Reactor(configurations).run(validate,root)
 		except Exception:
-			ok = False
+			was_ok = False
 			raise
 		finally:
 			profiler.disable()
@@ -335,12 +382,12 @@ def run (env, comment, configurations, validate, pid=0):
 				logger.reactor("-"*len(notice))
 				logger.reactor(notice)
 				logger.reactor("-"*len(notice))
-			__exit(env.debug.memory,0 if ok else 1)
+			__exit(env.debug.memory,0 if was_ok else 1)
 	else:
 		logger.reactor("-"*len(notice))
 		logger.reactor(notice)
 		logger.reactor("-"*len(notice))
-		Reactor(configurations).run(validate)
+		Reactor(configurations).run(validate,root)
 		__exit(env.debug.memory,1)
 
 

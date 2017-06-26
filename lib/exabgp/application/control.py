@@ -15,6 +15,7 @@ import select
 import socket
 import traceback
 
+from exabgp.util import str_ascii
 from exabgp.reactor.network.error import error
 
 
@@ -27,11 +28,9 @@ class Control (object):
 		self.r_pipe = None
 
 	def init (self):
-		def _make_fifo (name):
+		def _check_fifo (name):
 			try:
-				if not os.path.exists(name):
-					os.mkfifo(name)
-				elif not stat.S_ISFIFO(os.stat(name).st_mode):
+				if not stat.S_ISFIFO(os.stat(name).st_mode):
 					sys.stdout.write('error: a file exist which is not a named pipe (%s)\n' % os.path.abspath(name))
 					return False
 
@@ -49,11 +48,13 @@ class Control (object):
 				sys.stdout.write('error: could not write on the named pipe %s\n' % os.path.abspath(name))
 				sys.stdout.flush()
 
-		if not _make_fifo(self.recv):
+		# obviously this is vulnerable to race conditions ... if an attacker can create fifo in the folder
+
+		if not _check_fifo(self.recv):
 			self.terminate()
 			sys.exit(1)
 
-		if not _make_fifo(self.send):
+		if not _check_fifo(self.send):
 			self.terminate()
 			sys.exit(1)
 
@@ -166,8 +167,8 @@ class Control (object):
 		}
 
 		store = {
-			standard_in: '',
-			self.r_pipe: '',
+			standard_in: b'',
+			self.r_pipe: b'',
 		}
 
 		def consume (source):
@@ -186,9 +187,9 @@ class Control (object):
 			# we buffer first so the two ends are not blocking
 			if not ready:
 				for source in reading:
-					if '\n' in store[source]:
-						line,_ = store[source].split('\n',1)
-						line = line + '\n'
+					if b'\n' in store[source]:
+						line,_ = store[source].split(b'\n',1)
+						line = line + b'\n'
 						sent = write[source](line)
 						if sent:
 							store[source] = store[source][sent:]
@@ -203,25 +204,29 @@ class Control (object):
 
 	def run (self):
 		if not self.init():
-			return False
+			sys.exit(1)
 		try:
-			result = self.loop()
-			self.cleanup()
-			return result
+			self.loop()
 		except KeyboardInterrupt:
 			self.cleanup()
+			sys.exit(0)
 		except Exception as exc:
-			print(exc)
-			print('')
-			traceback.print_exc(file=sys.stdout)
-			sys.stdout.flush()
+			sys.stderr.write(exc)
+			sys.stderr.write('\n\n')
+			traceback.print_exc(file=sys.stderr)
+			sys.stderr.flush()
 			self.cleanup()
 			sys.exit(1)
 
 
-def main (location=None):
+def main (location=''):
 	if not location:
-		location = dict(zip(range(len(sys.argv)),sys.argv)).get(1,'/var/run/exabgp.sock')
+		location = os.environ.get('EXABGP_CLI_NAMED_PIPE','')
+	if not location:
+		sys.stderr.write("usage %s %s\n" % (sys.executable,' '.join(sys.argv)))
+		sys.stderr.write("run with 'env EXABGP_CLI_NAMED_PIPE=<location>' if you are trying to mess with ExaBGP's intenals")
+		sys.stderr.flush()
+		sys.exit(1)
 	Control(location).run()
 
 

@@ -7,6 +7,9 @@ Version 4.0.2
  * Fix: BGP-LS encoding
    patch by: Evelio Vila
  * Fix: Issue with received timer
+ * Fix: internal API using named FIFO
+ * Change: renamed exabgp.api.file to exabgp.api.cli - now a boolean, enabled by default
+ * Change: --folder option now --root, and not need when installed in /
 
 Version 4.0.1
  * Change: makes python3 the default interpreter

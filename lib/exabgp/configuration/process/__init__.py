@@ -7,6 +7,9 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+import os
+import sys
+
 from exabgp.configuration.core import Section
 
 from exabgp.configuration.process.parser import encoder
@@ -57,54 +60,15 @@ class ParseProcess (Section):
 		self.processes.update(self.scope.pop(self.name))
 		return True
 
-	# we want to have a socket for the cli
-	# if self.fifo:
-	# 	_cli_name = 'CLI'
-	# 	configuration.processes[_cli_name] = {
-	# 		'neighbor': '*',
-	# 		'encoder': 'json',
-	# 		'run': [sys.executable, sys.argv[0]],
-	#
-	# 		'neighbor-changes': False,
-	#
-	# 		'receive-consolidate': False,
-	# 		'receive-packets': False,
-	# 		'receive-parsed': False,
-	#
-	# 		'send-consolidate': False,
-	# 		'send-packets': False,
-	# 		'send-parsed': False,
-	# 	}
-	#
-	# 	for direction in ['send','receive']:
-	# 		for message in [
-	# 			Message.CODE.NOTIFICATION.SHORT,
-	# 			Message.CODE.OPEN.SHORT,
-	# 			Message.CODE.KEEPALIVE.SHORT,
-	# 			Message.CODE.UPDATE.SHORT,
-	# 			Message.CODE.ROUTE_REFRESH.SHORT,
-	# 			Message.CODE.OPERATIONAL.SHORT,
-	# 		]:
-	# 			configuration.processes[_cli_name]['%s-%s' % (direction,message)] = False
-	#
-	# for name in configuration.processes.keys():
-	# 	process = configuration.processes[name]
-	#
-	# 	neighbor.api.set('neighbor-changes',process.get('neighbor-changes',False))
-	#
-	# 	for direction in ['send','receive']:
-	# 		for option in ['packets','consolidate','parsed']:
-	# 			neighbor.api.set_value(direction,option,process.get('%s-%s' % (direction,option),False))
-	#
-	# 		for message in [
-	# 			Message.CODE.NOTIFICATION.SHORT,
-	# 			Message.CODE.OPEN.SHORT,
-	# 			Message.CODE.KEEPALIVE.SHORT,
-	# 			Message.CODE.UPDATE.SHORT,
-	# 			Message.CODE.ROUTE_REFRESH.SHORT,
-	# 			Message.CODE.OPERATIONAL.SHORT,
-	# 		]:
-	# 			neighbor.api.set_message(direction,message,process.get('%s-%s' % (direction,message),False))
-
-	# XXX: check that if we have any message, we have parsed/packets
-	# XXX: and vice-versa
+	def add_api (self):
+		if not os.environ.get('EXABGP_CLI_NAMED_PIPE',''):
+			return
+		name = 'api-internal-cli'
+		api = {
+			name: {
+				'run': [sys.executable, sys.argv[0]],
+				'encoder': 'json'
+			}
+		}
+		self._processes.append(name)
+		self.processes.update(api)

@@ -11,7 +11,7 @@ usage = """\
 The BGP swiss army knife of networking
 
 usage: exabgp [--help] [--version]
-              [--folder FOLDER] [--env ENV]
+              [--root ROOT] [--env ENV]
               [[--full-ini | --diff-ini | --full-env | --diff-env] |
               [--fi | --di | --fe | --de]]
               [--debug] [--pdb] [--test]
@@ -28,8 +28,8 @@ positional arguments:
 optional arguments:
   --help, -h            exabgp manual page
   --version, -v         shows ExaBGP version
-  --folder FOLDER, -f FOLDER
-                        configuration folder
+  --root ROOT, -f ROOT
+                        root folder where etc,bin,sbin are located
   --env ENV, -e ENV     environment configuration file
   --full-ini            display the configuration using the ini format
   --fi                  (shorthand for above)

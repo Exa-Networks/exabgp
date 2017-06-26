@@ -137,6 +137,8 @@ class Configuration (_Configuration):
 		self.vpls                = ParseVPLS             (*params)
 		self.operational         = ParseOperational      (*params)
 
+		self.process.add_api()
+
 		# We should check if name are unique when running Section.__init__
 
 		self._structure = {

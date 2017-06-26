@@ -20,7 +20,7 @@ DESC="BGP route injector"
 NAME=exabgp
 CONFIG="/etc/exabgp/exabgp.conf"
 DAEMON=/usr/sbin/exabgp
-DAEMON_OPTS="--folder /etc/exabgp $CONFIG"
+DAEMON_OPTS="$CONFIG"
 PIDFILE=/var/run/$NAME/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 

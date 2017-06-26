@@ -267,11 +267,11 @@ environment.configuration = {
 			'value': 'false',
 			'help':  'should we terminate ExaBGP if any helper process dies',
 		},
-		'file':  {
-			'read':  environment.unquote,
-			'write': environment.quote,
-			'value': '',
-			'help':  'where should we create a socket for remote control',
+		'cli':  {
+			'read':  environment.boolean,
+			'write': environment.lower,
+			'value': 'true',
+			'help':  'should we create a named pipe for the cli',
 		},
 	},
 	'reactor':  {
