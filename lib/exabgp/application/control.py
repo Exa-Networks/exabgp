@@ -222,10 +222,10 @@ class Control (object):
 
 def main (location=''):
 	if not location:
-		location = os.environ.get('EXABGP_CLI_NAMED_PIPE','')
+		location = os.environ.get('exabgp_cli_pipe','')
 	if not location:
 		sys.stderr.write("usage %s %s\n" % (sys.executable,' '.join(sys.argv)))
-		sys.stderr.write("run with 'env EXABGP_CLI_NAMED_PIPE=<location>' if you are trying to mess with ExaBGP's intenals")
+		sys.stderr.write("run with 'env exabgp_cli_pipe=<location>' if you are trying to mess with ExaBGP's intenals")
 		sys.stderr.flush()
 		sys.exit(1)
 	Control(location).run()

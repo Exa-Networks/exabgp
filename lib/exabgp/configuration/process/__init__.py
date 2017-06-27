@@ -61,7 +61,7 @@ class ParseProcess (Section):
 		return True
 
 	def add_api (self):
-		if not os.environ.get('EXABGP_CLI_NAMED_PIPE',''):
+		if not os.environ.get('exabgp_cli_pipe',''):
 			return
 		name = 'api-internal-cli'
 		api = {

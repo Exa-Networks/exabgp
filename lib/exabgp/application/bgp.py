@@ -71,7 +71,7 @@ def named_pipe (root):
 			raise
 		except Exception:
 			continue
-		os.environ['EXABGP_CLI_NAMED_PIPE'] = location
+		os.environ['exabgp_cli_pipe'] = location
 		return [location]
 	return locations
 
@@ -115,7 +115,7 @@ def main ():
 		sys.stdout.flush()
 		sys.exit(1)
 
-	cli_named_pipe = os.environ.get('EXABGP_CLI_NAMED_PIPE','')
+	cli_named_pipe = os.environ.get('exabgp_cli_pipe','')
 	if cli_named_pipe:
 		from exabgp.application.control import main as control
 		control(cli_named_pipe)
@@ -158,8 +158,8 @@ def main ():
 			sys.stdout.write('Could not find the named pipes for the cli in any of ' + ', '.join(pipes))
 			sys.stdout.flush()
 			return
-		os.environ['EXABGP_CLI_NAMED_PIPE'] = pipes[0]
-		sys.stdout.write('named pipes for the cli are %s.in & .out' % pipes[0])
+		os.environ['exabgp_cli_pipe'] = pipes[0]
+		sys.stdout.write('named pipes for the cli are %s.in & .out\n' % pipes[0])
 		sys.stdout.flush()
 
 	# Must be done before setting the logger as it modify its behaviour
