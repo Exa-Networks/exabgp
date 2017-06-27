@@ -47,7 +47,7 @@ commands:
 def main ():
 	options = docopt.docopt(usage, help=False)
 
-	root = root_folder(options,'/lib/exabgp/application/cli.py')
+	root = root_folder(options,['/bin/exabgpcli','/sbin/exabgpcli','/lib/exabgp/application/cli.py'])
 	etc = root + '/etc/exabgp'
 	envfile = get_envfile(options,etc)
 	env = get_env(envfile)
@@ -67,13 +67,12 @@ def main ():
 
 	pipes = named_pipe(root)
 	if len(pipes) != 1:
-		sys.stdout.write('could not find named pipe to connect to ExaBGP\n')
-		sys.stdout.write(', '.join(pipes))
+		sys.stdout.write('Could not find ExaBGP\'s named pipes (exabgp.in and exabgp.out) for the cli in any of ' + ', '.join(pipes))
 		sys.stdout.flush()
 		sys.exit(1)
 
-	send = pipes[0] + '.in'
-	recv = pipes[0] + '.out'
+	send = pipes[0] + 'exabgp.in'
+	recv = pipes[0] + 'exabgp.out'
 
 	if not check_fifo(send):
 		sys.stdout.write('could not find write named pipe to connect to ExaBGP')
@@ -117,7 +116,7 @@ def main ():
 		raise
 		sys.stdout.write('could not communicate with ExaBGP')
 		sys.stdout.flush()
-		sys.exit(1)
+
 
 if __name__ == '__main__':
 	try:

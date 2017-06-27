@@ -49,18 +49,18 @@ def __exit (memory, code):
 
 def named_pipe (root):
 	locations = [
-		'/run/%d/exabgp' % os.getuid(),
-		'/run/exabgp',
-		'/var/run/%d/exabgp' % os.getuid(),
-		'/var/run/exabgp',
-		root + '/run/%d/exabgp' % os.getuid(),
-		root + '/run/exabgp',
-		root + '/var/run/%d/exabgp' % os.getuid(),
-		root + '/var/run/exabgp',
+		'/run/%d/' % os.getuid(),
+		'/run/',
+		'/var/run/%d/' % os.getuid(),
+		'/var/run/',
+		root + '/run/%d/' % os.getuid(),
+		root + '/run/',
+		root + '/var/run/%d/' % os.getuid(),
+		root + '/var/run/',
 	]
 	for location in locations:
-		cli_in = location + '.in'
-		cli_out = location + '.out'
+		cli_in = location + 'exabgp.in'
+		cli_out = location + 'exabgp.out'
 
 		try:
 			if not stat.S_ISFIFO(os.stat(cli_in).st_mode):
@@ -76,15 +76,16 @@ def named_pipe (root):
 	return locations
 
 
-def root_folder (options,ends):
+def root_folder (options,locations):
 	if options['--root']:
 		return os.path.realpath(os.path.normpath(options['--root'])).rstrip('/')
-	elif sys.argv[0].endswith(ends):
-		return sys.argv[0][:-len(ends)]
-	elif sys.argv[0].endswith(ends):
-		return sys.argv[0][:-len(ends)]
-	else:
-		return ''
+
+	argv = os.path.realpath(os.path.normpath(os.path.join(os.getcwd(),sys.argv[0])))
+
+	for location in locations:
+		if argv.endswith(location):
+			return argv[:-len(location)]
+	return ''
 
 
 def get_envfile (options, etc):
@@ -137,7 +138,7 @@ def main ():
 			sys.exit(0)
 		return
 
-	root = root_folder(options,'/bin/exabgp')
+	root = root_folder(options,['/bin/exabgp','/sbin/exabgp','/lib/exabgp/application/bgp.py','/lib/exabgp/application/control.py'])
 	etc = root + '/etc/exabgp'
 	os.environ['EXABGP_ETC'] = etc  # This is not most pretty
 
@@ -152,18 +153,7 @@ def main ():
 	envfile = get_envfile(options,etc)
 	env = get_env(envfile)
 
-	if env.api.cli:
-		pipes = named_pipe(root)
-		if len(pipes) != 1:
-			sys.stdout.write('Could not find the named pipes for the cli in any of ' + ', '.join(pipes))
-			sys.stdout.flush()
-			return
-		os.environ['exabgp_cli_pipe'] = pipes[0]
-		sys.stdout.write('named pipes for the cli are %s.in & .out\n' % pipes[0])
-		sys.stdout.flush()
-
 	# Must be done before setting the logger as it modify its behaviour
-
 	if options["--debug"]:
 		env.log.all = True
 		env.log.level = syslog.LOG_DEBUG
@@ -346,6 +336,24 @@ def run (env, comment, configurations, root, validate, pid=0):
 	warning = warn()
 	if warning:
 		logger.configuration(warning)
+
+	if env.api.cli:
+		pipes = named_pipe(root)
+		if len(pipes) != 1:
+			logger.error('Could not find the named pipes (exabgp.in and exabgp.out) for the cli in any of:',source='cli')
+			for location in pipes:
+				logger.error(' %s' % location,source='cli')
+			logger.error('please make them with:\n',source='cli')
+			logger.error('> mkfifo ./run/exabgp.in\n',source='cli')
+			logger.error('> mkfifo ./run/exabgp.out\n',source='cli')
+			return
+
+		pipe = pipes[0]
+		os.environ['exabgp_cli_pipe'] = pipe
+
+		logger.error('named pipes for the cli are:',source='cli')
+		logger.error('to send commands  %sexabgp.in' % pipe,source='cli')
+		logger.error('to read responses %sexabgp.out' % pipe,source='cli')
 
 	if not env.profile.enable:
 		was_ok = Reactor(configurations).run(validate,root)

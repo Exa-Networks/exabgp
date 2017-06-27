@@ -66,7 +66,7 @@ class ParseProcess (Section):
 		name = 'api-internal-cli'
 		api = {
 			name: {
-				'run': [sys.executable, sys.argv[0]],
+				'run': [sys.executable, os.path.join(os.environ.get('PWD',''),sys.argv[0])],
 				'encoder': 'json'
 			}
 		}

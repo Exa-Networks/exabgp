@@ -44,8 +44,8 @@ class Control (object):
 	terminating = False
 
 	def __init__ (self, location):
-		self.send = location + '.out'
-		self.recv = location + '.in'
+		self.send = location + 'exabgp.out'
+		self.recv = location + 'exabgp.in'
 		self.r_pipe = None
 
 	def init (self):
@@ -118,7 +118,7 @@ class Control (object):
 			except OSError as exc:
 				if exc.errno in error.block:
 					return ''
-				raise e
+				sys.exit(1)
 
 		@monitor
 		def std_writer (line):
@@ -127,7 +127,7 @@ class Control (object):
 			except OSError as exc:
 				if exc.errno in error.block:
 					return 0
-				raise e
+				sys.exit(1)
 
 		@monitor
 		def fifo_reader (number):
@@ -136,7 +136,7 @@ class Control (object):
 			except OSError as exc:
 				if exc.errno in error.block:
 					return ''
-				raise e
+				sys.exit(1)
 
 		@monitor
 		def fifo_writer (line):
@@ -212,8 +212,9 @@ class Control (object):
 			self.cleanup()
 			sys.exit(0)
 		except Exception as exc:
-			sys.stderr.write(exc)
+			sys.stderr.write(str(exc))
 			sys.stderr.write('\n\n')
+			sys.stderr.flush()
 			traceback.print_exc(file=sys.stderr)
 			sys.stderr.flush()
 			self.cleanup()
