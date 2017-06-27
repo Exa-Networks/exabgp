@@ -324,36 +324,39 @@ def main ():
 def run (env, comment, configurations, root, validate, pid=0):
 	logger = Logger()
 
-	logger.error('',source='ExaBGP')
-	logger.error('%s' % version,source='version')
-	logger.error('%s' % sys.version.replace('\n',' '),source='interpreter')
-	logger.error('%s' % ' '.join(platform.uname()[:5]),source='os')
-	logger.error('',source='ExaBGP')
+	logger.info('Thank you for using ExaBGP',source='welcome')
+	logger.info('%s' % version,source='version')
+	logger.info('%s' % sys.version.replace('\n',' '),source='interpreter')
+	logger.info('%s' % ' '.join(platform.uname()[:5]),source='os')
+	logger.info('%s' % root,source='installation')
 
 	if comment:
-		logger.configuration(comment)
+		logger.info(comment,source='advice')
 
 	warning = warn()
 	if warning:
-		logger.configuration(warning)
+		logger.info(warning,source='advice')
 
 	if env.api.cli:
 		pipes = named_pipe(root)
 		if len(pipes) != 1:
-			logger.error('Could not find the named pipes (exabgp.in and exabgp.out) for the cli in any of:',source='cli')
+			logger.error('Could not find the named pipes (exabgp.in and exabgp.out) required for the cli',source='cli')
+			logger.error('We scanned the following folders (the number is your PID):',source='cli')
 			for location in pipes:
-				logger.error(' %s' % location,source='cli')
-			logger.error('please make them with:\n',source='cli')
-			logger.error('> mkfifo ./run/exabgp.in\n',source='cli')
-			logger.error('> mkfifo ./run/exabgp.out\n',source='cli')
-			return
+				logger.error(' - %s' % location,source='cli control')
+			logger.error('please make them in one of the folder with the following commands:',source='cli control')
+			logger.error('> mkfifo %s/run/exabgp.{in,out}' % os.getcwd(),source='cli control')
+			logger.error('> chmod 600 %s/run/exabgp.{in,out}' % os.getcwd(),source='cli control')
+			if os.getuid() != 0:
+				logger.error('> chown %d:%d %s/run/exabgp.{in,out}' % (os.getuid(),os.getgid(),os.getcwd()),source='cli control')
+			__exit(env.debug.memory,1)
 
 		pipe = pipes[0]
 		os.environ['exabgp_cli_pipe'] = pipe
 
-		logger.error('named pipes for the cli are:',source='cli')
-		logger.error('to send commands  %sexabgp.in' % pipe,source='cli')
-		logger.error('to read responses %sexabgp.out' % pipe,source='cli')
+		logger.info('named pipes for the cli are:',source='cli control')
+		logger.info('to send commands  %sexabgp.in' % pipe,source='cli control')
+		logger.info('to read responses %sexabgp.out' % pipe,source='cli control')
 
 	if not env.profile.enable:
 		was_ok = Reactor(configurations).run(validate,root)

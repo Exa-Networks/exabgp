@@ -300,19 +300,19 @@ class Logger (object):
 				print(self._prefixed(level,source,line))
 				sys.stdout.flush()
 
-	def debug (self, message, source='', level='debug'):
+	def debug (self, message, source='', level='DEBUG'):
 		self.report(message,source,level)
 
-	def info (self, message, source='', level='info'):
+	def info (self, message, source='', level='INFO'):
 		self.report(message,source,level)
 
-	def warning (self, message, source='', level='warning'):
+	def warning (self, message, source='', level='WARNING'):
 		self.report(message,source,level)
 
-	def error (self, message, source='', level='error'):
+	def error (self, message, source='', level='ERROR'):
 		self.report(message,source,level)
 
-	def critical (self, message, source='', level='critical'):
+	def critical (self, message, source='', level='CRITICAL'):
 		self.report(message,source,level)
 
 	def raw (self, message):
