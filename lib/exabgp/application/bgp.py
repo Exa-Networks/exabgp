@@ -340,6 +340,7 @@ def run (env, comment, configurations, root, validate, pid=0):
 	if env.api.cli:
 		pipes = named_pipe(root)
 		if len(pipes) != 1:
+			env.api.cli = False
 			logger.error('Could not find the named pipes (exabgp.in and exabgp.out) required for the cli',source='cli')
 			logger.error('We scanned the following folders (the number is your PID):',source='cli')
 			for location in pipes:
@@ -349,14 +350,13 @@ def run (env, comment, configurations, root, validate, pid=0):
 			logger.error('> chmod 600 %s/run/exabgp.{in,out}' % os.getcwd(),source='cli control')
 			if os.getuid() != 0:
 				logger.error('> chown %d:%d %s/run/exabgp.{in,out}' % (os.getuid(),os.getgid(),os.getcwd()),source='cli control')
-			__exit(env.debug.memory,1)
+		else:
+			pipe = pipes[0]
+			os.environ['exabgp_cli_pipe'] = pipe
 
-		pipe = pipes[0]
-		os.environ['exabgp_cli_pipe'] = pipe
-
-		logger.info('named pipes for the cli are:',source='cli control')
-		logger.info('to send commands  %sexabgp.in' % pipe,source='cli control')
-		logger.info('to read responses %sexabgp.out' % pipe,source='cli control')
+			logger.info('named pipes for the cli are:',source='cli control')
+			logger.info('to send commands  %sexabgp.in' % pipe,source='cli control')
+			logger.info('to read responses %sexabgp.out' % pipe,source='cli control')
 
 	if not env.profile.enable:
 		was_ok = Reactor(configurations).run(validate,root)
