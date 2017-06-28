@@ -188,10 +188,11 @@ class Processes (object):
 		consumed_data = False
 		processes = list(self._process)
 		replenish = list(self._process)
+		all_done = True
 
 		while True:
 			if not processes:
-				if time.time() < end_time:
+				if all_done or time.time() > end_time:
 					return
 				processes.append(replenish)
 			process = processes.pop()
@@ -205,6 +206,7 @@ class Processes (object):
 					return
 				r,_,_ = select.select([proc.stdout,],[],[],0)
 				if r:
+					all_done = False
 					try:
 						# Calling next() on Linux and OSX works perfectly well
 						# but not on OpenBSD where it always raise StopIteration
