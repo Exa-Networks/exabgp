@@ -19,6 +19,8 @@ from exabgp.application.bgp import get_envfile
 from exabgp.application.bgp import get_env
 from exabgp.application.control import check_fifo
 
+from exabgp.reactor.network.error import error
+
 from exabgp.vendoring import docopt
 
 usage = """\
@@ -124,13 +126,19 @@ def main ():
 						sys.stdout.write('ExaBGP returns an error\n')
 						break
 					sys.stdout.write('%s\n' % line)
+			except OSError as exc:
+				if exc.errno in error.block:
+					break
 			except IOError as exc:
-				if exc.errno != 35:
+				if exc.errno in error.block:
 					break
 		os.close(reader)
 
 		sys.exit(0)
 	except IOError:
+		sys.stdout.write('could not read answer from ExaBGP')
+		sys.stdout.flush()
+	except OSError:
 		sys.stdout.write('could not read answer from ExaBGP')
 		sys.stdout.flush()
 
