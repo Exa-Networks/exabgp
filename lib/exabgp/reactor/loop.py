@@ -7,25 +7,19 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-import os
 import re
-import copy
 import time
 import signal
 import select
 import socket
 
-from collections import deque
 from exabgp.vendoring import six
 
 from exabgp.util import character
 from exabgp.util import concat_bytes_i
 
-from exabgp.protocol.ip import IP
-
 from exabgp.reactor.daemon import Daemon
 from exabgp.reactor.listener import Listener
-from exabgp.reactor.listener import NetworkError
 from exabgp.reactor.api.processes import Processes
 from exabgp.reactor.api.processes import ProcessError
 from exabgp.reactor.peer import Peer
@@ -62,7 +56,7 @@ class Reactor (object):
 		self.logger = Logger()
 		self.daemon = Daemon(self)
 		self.processes = None
-		self.listener = None
+		self.listener = Listener(self)
 		self.configuration = Configuration(configurations)
 		self.api = API(self,self.configuration)
 
@@ -175,92 +169,6 @@ class Reactor (object):
 			self._termination('^C received')
 			return []
 
-	def _setup_listener (self, local_addr, remote_addr, port, md5_password, md5_base64, ttl_in):
-		try:
-			if not self.listener:
-				self.listener = Listener()
-			if not remote_addr:
-				remote_addr = IP.create('0.0.0.0') if local_addr.ipv4() else IP.create('::')
-			self.listener.listen(local_addr, remote_addr, port, md5_password, md5_base64, ttl_in)
-			self.logger.reactor('Listening for BGP session(s) on %s:%d%s' % (local_addr, port,' with MD5' if md5_password else ''))
-			return True
-		except NetworkError as exc:
-			if os.geteuid() != 0 and port <= 1024:
-				self.logger.reactor('Can not bind to %s:%d, you may need to run ExaBGP as root' % (local_addr, port),'critical')
-			else:
-				self.logger.reactor('Can not bind to %s:%d (%s)' % (local_addr, port,str(exc)),'critical')
-			self.logger.reactor('unset exabgp.tcp.bind if you do not want listen for incoming connections','critical')
-			self.logger.reactor('and check that no other daemon is already binding to port %d' % port,'critical')
-			return False
-
-	def _handle_listener (self):
-		if not self.listener:
-			return
-
-		ranged_neighbor = []
-
-		for connection in self.listener.connected():
-			for key in self.peers:
-				peer = self.peers[key]
-				neighbor = peer.neighbor
-
-				connection_local = IP.create(connection.local).address()
-				neighbor_peer_start = neighbor.peer_address.address()
-				neighbor_peer_next = neighbor_peer_start + neighbor.range_size
-
-				if not neighbor_peer_start <= connection_local < neighbor_peer_next:
-					continue
-
-				connection_peer = IP.create(connection.peer).address()
-				neighbor_local = neighbor.local_address.address()
-
-				if connection_peer != neighbor_local:
-					if not neighbor.auto_discovery:
-						continue
-
-				# we found a range matching for this connection
-				# but the peer may already have connected, so
-				# we need to iterate all individual peers before
-				# handling "range" peers
-				if neighbor.range_size > 1:
-					ranged_neighbor.append(peer.neighbor)
-					continue
-
-				denied = peer.handle_connection(connection)
-				if denied:
-					self.logger.reactor('refused connection from %s due to the state machine' % connection.name())
-					self._async.append(denied)
-					break
-				self.logger.reactor('accepted connection from %s' % connection.name())
-				break
-			else:
-				# we did not break (and nothign was found/done or we have group match)
-				matched = len(ranged_neighbor)
-				if matched > 1:
-					self.logger.reactor('could not accept connection from %s (more than one neighbor match)' % connection.name())
-					self._async.append(connection.notification(6,5,b'could not accept the connection (more than one neighbor match)'))
-					return
-				if not matched:
-					self.logger.reactor('no session configured for %s' % connection.name())
-					self._async.append(connection.notification(6,3,b'no session configured for the peer'))
-					return
-
-				new_neighbor = copy.copy(ranged_neighbor[0])
-				new_neighbor.range_size = 1
-				new_neighbor.generated = True
-				new_neighbor.local_address = IP.create(connection.peer)
-				new_neighbor.peer_address = IP.create(connection.local)
-
-				new_peer = Peer(new_neighbor,self)
-				denied = new_peer.handle_connection(connection)
-				if denied:
-					self.logger.reactor('refused connection from %s due to the state machine' % connection.name())
-					self._async.append(denied)
-					return
-
-				self.peers[new_neighbor.name()] = new_peer
-				return
-
 	def schedule_rib_check (self):
 		self.logger.reactor('performing dynamic route update')
 		for key in self.configuration.neighbors.keys():
@@ -291,7 +199,7 @@ class Reactor (object):
 
 		# but I can not see any way to avoid it
 		for ip in self.ips:
-			if not self._setup_listener(ip, None, self.port, None, False, None):
+			if not self.listener.listen_on(ip, None, self.port, None, False, None):
 				return False
 
 		if not self.load():
@@ -309,7 +217,7 @@ class Reactor (object):
 
 		for neighbor in self.configuration.neighbors.values():
 			if neighbor.listen:
-				if not self._setup_listener(neighbor.md5_ip, neighbor.peer_address, neighbor.listen, neighbor.md5_password, neighbor.md5_base64, neighbor.ttl_in):
+				if not self.listener.listen_on(neighbor.md5_ip, neighbor.peer_address, neighbor.listen, neighbor.md5_password, neighbor.md5_base64, neighbor.ttl_in):
 					return False
 
 		if not self.early_drop:
@@ -376,8 +284,9 @@ class Reactor (object):
 						self._reload_processes = False
 						continue
 
-				# check all incoming connection
-				self._handle_listener()
+				if self.listener.serving:
+					# check all incoming connection
+					self.async('check new connection',self.listener.new_connections())
 
 				peers = self._active_peers()
 				if not peers:
@@ -418,10 +327,10 @@ class Reactor (object):
 				for service,command in self.processes.received():
 					self.api.text(self,service,command)
 
-				busy = True
-				while busy and time.time() < end_loop:
+				while time.time() < end_loop:
 					# handle API calls
-					busy  = self._run_async()
+					if not self._run_async():
+						break
 
 				for io in self._api_ready(list(workers)):
 					peers.add(workers[io])
@@ -493,10 +402,14 @@ class Reactor (object):
 				self.peers[key].reconfigure(neighbor)
 			for ip in self.ips:
 				if ip.afi == neighbor.peer_address.afi:
-					self._setup_listener(ip, neighbor.peer_address, self.port, neighbor.md5_password, neighbor.md5_base64, None)
+					self.listener.listen_on(ip, neighbor.peer_address, self.port, neighbor.md5_password, neighbor.md5_base64, None)
 		self.logger.configuration('loaded new configuration successfully','info')
 
 		return True
+
+	def async (self, name, callback):
+		self.logger.reactor('async | %s' % name)
+		self._async.append(callback)
 
 	def _run_async (self, flipflop=[]):
 		try:
@@ -577,7 +490,3 @@ class Reactor (object):
 
 	def nexthops (self, peers):
 		return dict((peer,self.peers[peer].neighbor.local_address) for peer in peers)
-
-	def plan (self, callback,name):
-		self.logger.reactor('async | installing %s' % name)
-		self._async.append(callback)

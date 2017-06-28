@@ -141,7 +141,7 @@ def show_neighbor (self, reactor, service, command):
 				yield True
 		reactor.answer(service,'done')
 
-	reactor.plan(callback(),'show_neighbor')
+	reactor.async('show_neighbor',callback())
 	return True
 
 
@@ -157,7 +157,7 @@ def show_neighbors (self, reactor, service, command):
 				yield True
 		reactor.answer(service,'done')
 
-	reactor.plan(callback(),'show_neighbors')
+	reactor.async('show_neighbors',callback())
 	return True
 
 
@@ -177,7 +177,7 @@ def show_neighbor_status (self, reactor, service, command):
 			yield True
 		reactor.answer(service,"done")
 
-	reactor.plan(callback(), 'show_neighbor_status')
+	reactor.async('show_neighbor_status',callback())
 	return True
 
 
@@ -185,7 +185,7 @@ def show_neighbor_status (self, reactor, service, command):
 def show_routes (self, reactor, service, command):
 	last = command.split()[-1]
 	callback = _show_routes_callback(reactor, service, last, NLRI, False, False)
-	reactor.plan(callback(),'show_routes')
+	reactor.async('show_routes',callback())
 	return True
 
 
@@ -193,7 +193,7 @@ def show_routes (self, reactor, service, command):
 def show_routes_extensive (self, reactor, service, command):
 	last = command.split()[-1]
 	callback = _show_routes_callback(reactor, service, last, NLRI, False, True)
-	reactor.plan(callback(),'show_routes_extensive')
+	reactor.async('show_routes_extensive',callback())
 	return True
 
 
@@ -201,7 +201,7 @@ def show_routes_extensive (self, reactor, service, command):
 def show_routes_static (self, reactor, service, command):
 	last = command.split()[-1]
 	callback = _show_routes_callback(reactor, service, last, INET, True, True)
-	reactor.plan(callback(), 'show_routes_static')
+	reactor.async('show_routes_static',callback())
 	return True
 
 
@@ -209,7 +209,7 @@ def show_routes_static (self, reactor, service, command):
 def show_routes_flow (self, reactor, service, command):
 	last = command.split()[-1]
 	callback = _show_routes_callback(reactor, service, last, Flow, True, True)
-	reactor.plan(callback(), 'show_routes_flow')
+	reactor.async('show_routes_flow',callback())
 	return True
 
 
@@ -217,7 +217,7 @@ def show_routes_flow (self, reactor, service, command):
 def show_routes_l2vpn (self, reactor, service, command):
 	last = command.split()[-1]
 	callback = _show_routes_callback(reactor, service, last, (VPLS, EVPN), True, True)
-	reactor.plan(callback(), 'show_routes_l2vpn')
+	reactor.async('show_routes_l2vpn',callback())
 	return True
 
 
@@ -239,7 +239,7 @@ def announce_watchdog (self, reactor, service, command):
 		name = command.split(' ')[2]
 	except IndexError:
 		name = service
-	reactor.plan(callback(name),'announce_watchdog')
+	reactor.async('announce_watchdog',callback(name))
 	return True
 
 
@@ -261,7 +261,7 @@ def withdraw_watchdog (self, reactor, service, command):
 		name = command.split(' ')[2]
 	except IndexError:
 		name = service
-	reactor.plan(callback(name),'withdraw_watchdog')
+	reactor.async('withdraw_watchdog',callback(name))
 	return True
 
 
@@ -285,7 +285,7 @@ def flush_route (self, reactor, service, command):
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.answer(service,'error')
 			return False
-		reactor.plan(callback(self,peers),'flush_route')
+		reactor.async('flush_route',callback(self,peers))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')
@@ -336,7 +336,7 @@ def announce_route (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.plan(callback(),'announce_route')
+	reactor.async('announce_route',callback())
 	return True
 
 
@@ -387,7 +387,7 @@ def withdraw_route (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.plan(callback(),'withdraw_route')
+	reactor.async('withdraw_route',callback())
 	return True
 
 
@@ -427,7 +427,7 @@ def announce_vpls (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.plan(callback(),'announce_vpls')
+	reactor.async('announce_vpls',callback())
 	return True
 
 
@@ -471,7 +471,7 @@ def withdraw_vpls (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.plan(callback(),'withdraw_vpls')
+	reactor.async('withdraw_vpls',callback())
 	return True
 
 
@@ -511,7 +511,7 @@ def announce_attributes (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.plan(callback(),'announce_attributes')
+	reactor.async('announce_attributes',callback())
 	return True
 
 
@@ -554,7 +554,7 @@ def withdraw_attribute (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.plan(callback(),'withdraw_route')
+	reactor.async('withdraw_route',callback())
 	return True
 
 
@@ -594,7 +594,7 @@ def announce_flow (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.plan(callback(),'announce_flow')
+	reactor.async('announce_flow',callback())
 	return True
 
 
@@ -637,7 +637,7 @@ def withdraw_flow (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.plan(callback(),'withdraw_flow')
+	reactor.async('withdraw_flow',callback())
 	return True
 
 
@@ -665,7 +665,7 @@ def announce_eor (self, reactor, service, command):
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.answer(service,'error')
 			return False
-		reactor.plan(callback(self,command,peers),'announce_eor')
+		reactor.async('announce_eor',callback(self,command,peers))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')
@@ -701,7 +701,7 @@ def announce_refresh (self, reactor, service, command):
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.answer(service,'error')
 			return False
-		reactor.plan(callback(self,command,peers),'announce_refresh')
+		reactor.async('announce_refresh',callback(self,command,peers))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')
@@ -743,7 +743,7 @@ def announce_operational (self, reactor, service, command):
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.answer(service,'error')
 			return False
-		reactor.plan(callback(self,command,peers),'announce_operational')
+		reactor.async('announce_operational',callback(self,command,peers))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')

@@ -43,7 +43,6 @@ class API (Command):
 				self.logger.reactor("callback | handling '%s' with %s" % (command,self.callback['text'][registered].func_name),'warning')
 				# XXX: should we not test the return value ?
 				self.callback['text'][registered](self,reactor,service,command)
-				# reactor.plan(self.callback['text'][registered](self,reactor,service,command),registered)
 				return True
 		reactor.answer(service,'error')
 		self.logger.reactor("Command from process not understood : %s" % command,'warning')
