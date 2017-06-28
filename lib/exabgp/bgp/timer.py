@@ -19,7 +19,7 @@ from exabgp.bgp.message import Notify
 
 
 class ReceiveTimer (object):
-	def __init__ (self, session, holdtime, code, subcode, message=b''):
+	def __init__ (self, session, holdtime, code, subcode, message=''):
 		self.logger = Logger()
 		self.session = session
 

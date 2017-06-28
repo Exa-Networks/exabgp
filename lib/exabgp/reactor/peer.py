@@ -281,7 +281,7 @@ class Peer (object):
 
 	def _read_open (self):
 		wait = environment.settings().bgp.openwait
-		opentimer = ReceiveTimer(self.proto.connection.session,wait,1,1,b'waited for open too long, we do not like stuck in active')
+		opentimer = ReceiveTimer(self.proto.connection.session,wait,1,1,'waited for open too long, we do not like stuck in active')
 		# Only yield if we have not the open, otherwise the reactor can run the other connection
 		# which would be bad as we need to do the collission check without going to the other peer
 		for message in self.proto.read_open(self.neighbor.peer_address.top()):
@@ -603,7 +603,7 @@ class Peer (object):
 			# XXX: we should perhaps try to restart the process ??
 			self.logger.processes('ExaBGP lost the helper process for this peer - stopping','error')
 			if self.reactor.processes.terminate_on_error:
-				self.api_shutdown()
+				self.reactor.api_shutdown()
 			else:
 				self.stop()
 			return True
@@ -628,7 +628,7 @@ class Peer (object):
 			if self._delay.backoff():
 				return ACTION.LATER
 			if self._restart:
-				self.logger.network('intialising connection to %s' % self.neighbor.name(),'debug')
+				self.logger.network('initialising connection to %s' % self.neighbor.name(),'debug')
 				self.generator = self._run()
 				return ACTION.LATER  # make sure we go through a clean loop
 			return ACTION.CLOSE
