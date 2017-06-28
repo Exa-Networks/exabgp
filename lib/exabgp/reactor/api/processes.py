@@ -60,6 +60,9 @@ class Processes (object):
 		self.respawn_number = 5 if environment.settings().api.respawn else 0
 		self.terminate_on_error = environment.settings().api.terminate
 
+	def number (self):
+		return len(self._process)
+
 	def clean (self):
 		self._process = {}
 		self._encoder = {}
@@ -181,10 +184,17 @@ class Processes (object):
 	def fds (self):
 		return [self._process[process].stdout for process in self._process]
 
-	def received (self):
+	def received (self, end_time):
 		consumed_data = False
+		processes = list(self._process)
+		replenish = list(self._process)
 
-		for process in list(self._process):
+		while True:
+			if not processes:
+				if time.time() < end_time:
+					return
+				processes.append(replenish)
+			process = processes.pop()
 			try:
 				proc = self._process[process]
 				poll = proc.poll()
@@ -196,30 +206,28 @@ class Processes (object):
 				r,_,_ = select.select([proc.stdout,],[],[],0)
 				if r:
 					try:
-						while True:
-							# Calling next() on Linux and OSX works perfectly well
-							# but not on OpenBSD where it always raise StopIteration
-							# and only readline() works
-							buf = str_ascii(proc.stdout.readline())
-							if buf == '' and poll is not None:
-								# if proc.poll() is None then
-								# process is fine, we received an empty line because
-								# we're doing .readline() on a non-blocking pipe and
-								# the process maybe has nothing to send yet
-								self.handle_problem(process)
-								return
-							raw = self._buffer.get(process,'') + buf
+						# Calling next() on Linux and OSX works perfectly well
+						# but not on OpenBSD where it always raise StopIteration
+						# and only readline() works
+						buf = str_ascii(proc.stdout.readline())
+						if buf == '' and poll is not None:
+							# if proc.poll() is None then
+							# process is fine, we received an empty line because
+							# we're doing .readline() on a non-blocking pipe and
+							# the process maybe has nothing to send yet
+							self.handle_problem(process)
+							return
+						raw = self._buffer.get(process,'') + buf
 
-							if not raw.endswith('\n'):
-								self._buffer[process] = raw
-								break
+						if not raw.endswith('\n'):
+							self._buffer[process] = raw
+							continue
 
-							self._buffer[process] = ''
-							line = raw.rstrip()
-							consumed_data = True
-							self.logger.processes("Command from process %s : %s " % (process,line))
-							yield (process,formated(line))
-							poll = proc.poll()
+						self._buffer[process] = ''
+						line = raw.rstrip()
+						consumed_data = True
+						self.logger.processes("Command from process %s : %s " % (process,line))
+						yield (process,formated(line))
 					except IOError as exc:
 						if not exc.errno or exc.errno in error.fatal:
 							# if the program exits we can get an IOError with errno code zero !

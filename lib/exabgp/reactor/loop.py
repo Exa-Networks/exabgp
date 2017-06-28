@@ -323,7 +323,6 @@ class Reactor (object):
 		while True:
 			try:
 				start = time.time()
-				end = start + self.max_loop_time
 
 				if self._shutdown:
 					self._shutdown = False
@@ -351,11 +350,17 @@ class Reactor (object):
 						self.peers[key].reactor.processes.signal(self.peers[key].neighbor,self._signal[key])
 				self._signal = {}
 
+				nb_peers = len(peers)
+				nb_processes = self.processes.number() * 2  # one for reading, one for processing
+				nb_sources = nb_peers + nb_processes
+				end_peers = start + (self.max_loop_time * nb_sources / nb_peers)
+				end_loop = start + self.max_loop_time
+
 				# check all incoming connection
 				self._handle_listener()
 
 				# give a turn to all the peers
-				while start < time.time() < end:
+				while start < time.time() < end_peers:
 					for key in list(peers):
 						peer = self.peers[key]
 						action = peer.run()
@@ -375,7 +380,7 @@ class Reactor (object):
 							peers.discard(key)
 
 					# handle API calls
-					busy  = self._scheduled_api()
+					busy  = self._scheduled_api(end_loop)
 					# handle new connections
 					busy |= self._scheduled_listener()
 
@@ -475,16 +480,11 @@ class Reactor (object):
 			self._termination('^C received')
 			return False
 
-	def _scheduled_api (self):
+	def _scheduled_api (self, end_time):
 		try:
-			# read at least on message per process if there is some and parse it
-			for service,command in self.processes.received():
-				self.api.text(self,service,command)
-
+			pending_callbacks = False
 			# if we have nothing to do, return or save the work
-			if not self._running:
-				if not self._pending:
-					return False
+			if not self._running and self._pending:
 				self._running,name = self._pending.popleft()
 				self.logger.reactor('callback | installing %s' % name)
 
@@ -496,12 +496,16 @@ class Reactor (object):
 					# should raise StopIteration in most case
 					# and prevent us to have to run twice to run one command
 					six.next(self._running)  # run
+					pending_callbacks = True
 				except StopIteration:
 					self._running = None
 					self.logger.reactor('callback | removing')
-				return True
-			return False
 
+			# read at least on message per process if there is some and parse it
+			for service,command in self.processes.received(end_time):
+				self.api.text(self,service,command)
+
+			return pending_callbacks
 		except KeyboardInterrupt:
 			self._termination('^C received')
 			return False
