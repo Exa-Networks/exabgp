@@ -63,8 +63,7 @@ def main ():
 		sys.stdout.flush()
 		sys.exit(0)
 
-	if options['<command>'] == ['version']:
-		command = 'version\n'
+	command = ' '.join(options['<command>'])
 
 	pipes = named_pipe(root)
 	if len(pipes) != 1:
@@ -87,7 +86,7 @@ def main ():
 
 	try:
 		writer = os.open(send, os.O_WRONLY | os.O_NONBLOCK | os.O_EXCL)
-		os.write(writer,command)
+		os.write(writer,command + '\n')
 		os.close(writer)
 	except OSError as exc:
 		if exc.errno == errno.ENXIO:
