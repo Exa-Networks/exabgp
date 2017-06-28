@@ -42,7 +42,7 @@ class EOR (Message):
 			self.afi = afi
 			self.safi = safi
 
-		def pack (self, negotiated=None):
+		def pack_nlri (self, negotiated=None):
 			if self.afi == AFI.ipv4 and self.safi == SAFI.unicast:
 				return b'\x00\x00\x00\x00'
 			return self.PREFIX + self.afi.pack() + self.safi.pack()
