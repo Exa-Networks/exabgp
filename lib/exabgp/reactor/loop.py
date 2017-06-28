@@ -48,6 +48,13 @@ from exabgp.protocol.family import Family
 from exabgp.bgp.message.refresh import RouteRefresh
 
 
+class SIGNAL (object):
+	NONE     = 0
+	SHUTDOWN = 1
+	RESTART  = 2
+	RELOAD   = 3
+
+
 class Reactor (object):
 	# [hex(ord(c)) for c in os.popen('clear').read()]
 	clear = concat_bytes_i(character(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a'])
@@ -71,10 +78,8 @@ class Reactor (object):
 		self.route_update = False
 
 		self._stopping = environment.settings().tcp.once
-		self._shutdown = False
-		self._reload = False
+		self._signaled = SIGNAL.NONE
 		self._reload_processes = False
-		self._restart = False
 		self._saved_pid = False
 		self._running = None
 		self._pending = deque()
@@ -91,43 +96,60 @@ class Reactor (object):
 	def _termination (self,reason):
 		while True:
 			try:
-				self._shutdown = True
+				self._signaled = SIGNAL.SHUTDOWN
 				self.logger.reactor(reason,'warning')
 				break
 			except KeyboardInterrupt:
 				pass
 
+	# XXX: It seems odd to find all the signal api processes via peers
+
 	def sigterm (self, signum, frame):
+		if self._signaled:
+			self.logger.reactor('SIG TERM received - ignoring - still handling previous signal')
+			return
 		self.logger.reactor('SIG TERM received - shutdown')
-		self._shutdown = True
+		self._signaled = SIGNAL.SHUTDOWN
 		for key in self.peers:
 			if self.peers[key].neighbor.api['signal']:
 				self._signal[key] = signum
 
 	def sighup (self, signum, frame):
+		if self._signaled:
+			self.logger.reactor('SIG HUP received - ignoring - still handling previous signal')
+			return
 		self.logger.reactor('SIG HUP received - shutdown')
-		self._shutdown = True
+		self._signaled = SIGNAL.SHUTDOWN
 		for key in self.peers:
 			if self.peers[key].neighbor.api['signal']:
 				self._signal[key] = signum
 
 	def sigalrm (self, signum, frame):
+		if self._signaled:
+			self.logger.reactor('SIG ALRM received - ignoring - still handling previous signal')
+			return
 		self.logger.reactor('SIG ALRM received - restart')
-		self._restart = True
+		self._signaled = SIGNAL.RESTART
 		for key in self.peers:
 			if self.peers[key].neighbor.api['signal']:
 				self._signal[key] = signum
 
 	def sigusr1 (self, signum, frame):
+		if self._signaled:
+			self.logger.reactor('SIG USR1 received - ignoring - still handling previous signal')
+			return
 		self.logger.reactor('SIG USR1 received - reload configuration')
-		self._reload = True
+		self._signaled = SIGNAL.RELOAD
 		for key in self.peers:
 			if self.peers[key].neighbor.api['signal']:
 				self._signal[key] = signum
 
 	def sigusr2 (self, signum, frame):
+		if self._signaled:
+			self.logger.reactor('SIG USR1 received - ignoring - still handling previous signal')
+			return
 		self.logger.reactor('SIG USR2 received - reload configuration and processes')
-		self._reload = True
+		self._signaled = SIGNAL.RELOAD
 		self._reload_processes = True
 		for key in self.peers:
 			if self.peers[key].neighbor.api['signal']:
@@ -249,6 +271,13 @@ class Reactor (object):
 				self.peers[new_neighbor.name()] = new_peer
 				return
 
+	def _active_peers (self):
+		peers = set()
+		for key,peer in self.peers.items():
+			if not peer.neighbor.passive or peer.proto:
+				peers.add(key)
+		return peers
+
 	def run (self, validate, root):
 		self.daemon.daemonise()
 
@@ -308,7 +337,7 @@ class Reactor (object):
 			return
 
 		# did we complete the run of updates caused by the last SIGUSR1/SIGUSR2 ?
-		reload_completed = True
+		reload_completed = False
 
 		wait = environment.settings().tcp.delay
 		if wait:
@@ -317,78 +346,90 @@ class Reactor (object):
 			time.sleep(float(sleeptime))
 
 		workers = {}
+		evaluated = []
 		peers = set()
-		busy = False
+
+		max_loop_time = self.max_loop_time
+		half_loop_time = self.max_loop_time / 2
 
 		while True:
 			try:
 				start = time.time()
 
-				if self._shutdown:
-					self._shutdown = False
-					self.shutdown()
-					break
+				if self._signaled:
+					signaled = self._signaled
+					self._signaled = SIGNAL.NONE
 
-				if self._reload and reload_completed:
-					self._reload = False
-					self.load()
-					self.processes.start(self._reload_processes)
-					self._reload_processes = False
-				elif self._restart:
-					self._restart = False
-					self.restart()
+					# Handle signal message to API
+					for key in self._signal:
+						self.peers[key].reactor.processes.signal(self.peers[key].neighbor,self._signal[key])
+					self._signal = {}
 
-				# We got some API routes to announce
+					if signaled == SIGNAL.SHUTDOWN:
+						self.shutdown()
+						break
+
+					if signaled == SIGNAL.RESTART:
+						self.restart()
+						continue
+
+					if not reload_completed:
+						continue
+					if signaled == SIGNAL.RELOAD:
+						self.load()
+						self.processes.start(self._reload_processes)
+						self._reload_processes = False
+						continue
+
+				# We got some API routes to announce, adding them to the peers
 				if self.route_update:
 					self.route_update = False
 					self.route_send()
 
-				for key,peer in self.peers.items():
-					if not peer.neighbor.passive or peer.proto:
-						peers.add(key)
-					if key in self._signal:
-						self.peers[key].reactor.processes.signal(self.peers[key].neighbor,self._signal[key])
-				self._signal = {}
-
-				nb_peers = len(peers)
-				nb_processes = self.processes.number() * 2  # one for reading, one for processing
-				nb_sources = nb_peers + nb_processes
-				end_peers = start + (self.max_loop_time * nb_sources / nb_peers)
-				end_loop = start + self.max_loop_time
-
 				# check all incoming connection
 				self._handle_listener()
 
-				# give a turn to all the peers
-				while start < time.time() < end_peers:
-					for key in list(peers):
-						peer = self.peers[key]
-						action = peer.run()
-
-						# .run() returns an ACTION enum:
-						# * immediate if it wants to be called again
-						# * later if it should be called again but has no work atm
-						# * close if it is finished and is closing down, or restarting
-						if action == ACTION.CLOSE:
-							self._unschedule(key)
-							peers.discard(key)
-						# we are loosing this peer, not point to schedule more process work
-						elif action == ACTION.LATER:
-							for io in peer.sockets():
-								workers[io] = key
-							# no need to come back to it before a a full cycle
-							peers.discard(key)
-
-					# handle API calls
-					busy  = self._scheduled_api(end_loop)
-					# handle new connections
-					busy |= self._scheduled_listener()
-
-					if not peers and not busy:
-						break
-
+				peers = self._active_peers()
 				if not peers:
 					reload_completed = True
+
+				end_peers = start + half_loop_time
+				end_loop = start + max_loop_time
+
+				if not evaluated:
+					evaluated.extend(list(peers))
+
+				# give a turn to all the peers
+				while evaluated:
+					if not start < time.time() < end_peers:
+						break
+					key = evaluated.pop()
+					peer = self.peers[key]
+					action = peer.run()
+
+					# .run() returns an ACTION enum:
+					# * immediate if it wants to be called again
+					# * later if it should be called again but has no work atm
+					# * close if it is finished and is closing down, or restarting
+					if action == ACTION.CLOSE:
+						self._unschedule(key)
+						peers.discard(key)
+					# we are loosing this peer, not point to schedule more process work
+					elif action == ACTION.LATER:
+						for io in peer.sockets():
+							workers[io] = key
+						# no need to come back to it before a a full cycle
+						peers.discard(key)
+
+					if not peers:
+						break
+
+				busy = True
+				while busy and time.time() < end_loop:
+					# handle API calls
+					busy  = self._scheduled_api()
+					# handle new connections
+					busy |= self._scheduled_listener()
 
 				for io in self._api_ready(list(workers)):
 					peers.add(workers[io])
@@ -412,7 +453,7 @@ class Reactor (object):
 				self._termination('problem using select, stopping')
 
 	def shutdown (self):
-		"""terminate all the current BGP connections"""
+		"""Terminate all the current BGP connections"""
 		self.logger.reactor('performing shutdown')
 		if self.listener:
 			self.listener.stop()
@@ -424,7 +465,7 @@ class Reactor (object):
 		self._stopping = True
 
 	def load (self):
-		"""reload the configuration and send to the peer the route which changed"""
+		"""Reload the configuration and send to the peer the route which changed"""
 		self.logger.reactor('performing reload of exabgp %s' % version)
 
 		reloaded = self.configuration.reload()
@@ -480,9 +521,14 @@ class Reactor (object):
 			self._termination('^C received')
 			return False
 
-	def _scheduled_api (self, end_time):
+	def _scheduled_api (self):
 		try:
 			pending_callbacks = False
+
+			# read at least on message per process if there is some and parse it
+			for service,command in self.processes.received():
+				self.api.text(self,service,command)
+
 			# if we have nothing to do, return or save the work
 			if not self._running and self._pending:
 				self._running,name = self._pending.popleft()
@@ -501,24 +547,20 @@ class Reactor (object):
 					self._running = None
 					self.logger.reactor('callback | removing')
 
-			# read at least on message per process if there is some and parse it
-			for service,command in self.processes.received(end_time):
-				self.api.text(self,service,command)
-
 			return pending_callbacks
 		except KeyboardInterrupt:
 			self._termination('^C received')
 			return False
 
 	def route_send (self):
-		"""the process ran and we need to figure what routes to changes"""
+		"""The process ran and we need to figure what routes to changes"""
 		self.logger.reactor('performing dynamic route update')
 		for key in self.configuration.neighbors.keys():
 			self.peers[key].send_new()
 		self.logger.reactor('updated peers dynamic routes successfully')
 
 	def restart (self):
-		"""kill the BGP session and restart it"""
+		"""Kill the BGP session and restart it"""
 		self.logger.reactor('performing restart of exabgp %s' % version)
 		self.configuration.reload()
 
@@ -545,17 +587,17 @@ class Reactor (object):
 		self.logger.reactor('responding to %s : %s' % (service,string.replace('\n','\\n')))
 
 	def api_shutdown (self):
-		self._shutdown = True
+		self._signaled = SIGNAL.SHUTDOWN
 		self._pending = deque()
 		self._running = None
 
 	def api_reload (self):
-		self._reload = True
+		self._signaled = SIGNAL.RELOAD
 		self._pending = deque()
 		self._running = None
 
 	def api_restart (self):
-		self._restart = True
+		self._signaled = SIGNAL.RESTART
 		self._pending = deque()
 		self._running = None
 
@@ -567,7 +609,7 @@ class Reactor (object):
 		return True
 
 	def match_neighbors (self, descriptions):
-		"""return the sublist of peers matching the description passed, or None if no description is given"""
+		"""Return the sublist of peers matching the description passed, or None if no description is given"""
 		if not descriptions:
 			return self.peers.keys()
 
@@ -587,7 +629,7 @@ class Reactor (object):
 
 	@staticmethod
 	def extract_neighbors (command):
-		"""return a list of neighbor definition : the neighbor definition is a list of string which are in the neighbor indexing string"""
+		"""Return a list of neighbor definition : the neighbor definition is a list of string which are in the neighbor indexing string"""
 		# This function returns a list and a string
 		# The first list contains parsed neighbor to match against our defined peers
 		# The string is the command to be run for those peers

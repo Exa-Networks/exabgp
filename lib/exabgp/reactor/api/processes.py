@@ -184,18 +184,10 @@ class Processes (object):
 	def fds (self):
 		return [self._process[process].stdout for process in self._process]
 
-	def received (self, end_time):
+	def received (self):
 		consumed_data = False
-		processes = list(self._process)
-		replenish = list(self._process)
-		all_done = True
 
-		while True:
-			if not processes:
-				if all_done or time.time() > end_time:
-					return
-				processes.extend(replenish)
-			process = processes.pop()
+		for process in list(self._process):
 			try:
 				proc = self._process[process]
 				poll = proc.poll()
@@ -206,7 +198,6 @@ class Processes (object):
 					return
 				r,_,_ = select.select([proc.stdout,],[],[],0)
 				if r:
-					all_done = False
 					try:
 						# Calling next() on Linux and OSX works perfectly well
 						# but not on OpenBSD where it always raise StopIteration
@@ -218,9 +209,9 @@ class Processes (object):
 							# we're doing .readline() on a non-blocking pipe and
 							# the process maybe has nothing to send yet
 							self.handle_problem(process)
-							return
-						raw = self._buffer.get(process,'') + buf
+							continue
 
+						raw = self._buffer.get(process,'') + buf
 						if not raw.endswith('\n'):
 							self._buffer[process] = raw
 							continue
