@@ -11,6 +11,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 import os
 import sys
 import time
+import errno
 
 from exabgp.application.bgp import root_folder
 from exabgp.application.bgp import named_pipe
@@ -88,7 +89,20 @@ def main ():
 		writer = os.open(send, os.O_WRONLY | os.O_NONBLOCK | os.O_EXCL)
 		os.write(writer,command)
 		os.close(writer)
+	except OSError as exc:
+		if exc.errno == errno.ENXIO:
+			sys.stdout.write('ExaBGP is not running / using the configured named pipe')
+			sys.stdout.flush()
+			sys.exit(1)
+		sys.stdout.write('could not communicate with ExaBGP')
+		sys.stdout.flush()
+		sys.exit(1)
+	except IOError as exc:
+		sys.stdout.write('could not communicate with ExaBGP')
+		sys.stdout.flush()
+		sys.exit(1)
 
+	try:
 		reader = os.open(recv, os.O_RDONLY | os.O_NONBLOCK | os.O_EXCL)
 		buf = ''
 		done = False
@@ -113,8 +127,7 @@ def main ():
 
 		sys.exit(0)
 	except IOError:
-		raise
-		sys.stdout.write('could not communicate with ExaBGP')
+		sys.stdout.write('could not read answer from ExaBGP')
 		sys.stdout.flush()
 
 
