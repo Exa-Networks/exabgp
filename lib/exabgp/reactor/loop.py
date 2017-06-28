@@ -67,15 +67,13 @@ class Reactor (object):
 		self.api = API(self,self.configuration)
 
 		self.peers = {}
-		self.route_update = False
 
 		self._stopping = environment.settings().tcp.once
 		self._signaled = SIGNAL.NONE
 		self._reload_processes = False
 		self._saved_pid = False
 		self._running = None
-		self._pending = deque()
-		self._async = deque()
+		self._async = []
 
 		self._signal = {}
 
@@ -263,6 +261,11 @@ class Reactor (object):
 				self.peers[new_neighbor.name()] = new_peer
 				return
 
+	def schedule_rib_check (self):
+		self.logger.reactor('performing dynamic route update')
+		for key in self.configuration.neighbors.keys():
+			self.peers[key].schedule_rib_check()
+
 	def _active_peers (self):
 		peers = set()
 		for key,peer in self.peers.items():
@@ -373,11 +376,6 @@ class Reactor (object):
 						self._reload_processes = False
 						continue
 
-				# We got some API routes to announce, adding them to the peers
-				if self.route_update:
-					self.route_update = False
-					self.route_send()
-
 				# check all incoming connection
 				self._handle_listener()
 
@@ -416,12 +414,14 @@ class Reactor (object):
 					if not peers:
 						break
 
+				# read at least on message per process if there is some and parse it
+				for service,command in self.processes.received():
+					self.api.text(self,service,command)
+
 				busy = True
 				while busy and time.time() < end_loop:
 					# handle API calls
-					busy  = self._scheduled_api()
-					# handle new connections
-					busy |= self._scheduled_listener()
+					busy  = self._run_async()
 
 				for io in self._api_ready(list(workers)):
 					peers.add(workers[io])
@@ -498,7 +498,7 @@ class Reactor (object):
 
 		return True
 
-	def _scheduled_listener (self, flipflop=[]):
+	def _run_async (self, flipflop=[]):
 		try:
 			for generator in self._async:
 				try:
@@ -507,49 +507,11 @@ class Reactor (object):
 					flipflop.append(generator)
 				except StopIteration:
 					pass
-			self._async, flipflop = flipflop, self._async
+			self._async, flipflop = flipflop, []
 			return len(self._async) > 0
 		except KeyboardInterrupt:
 			self._termination('^C received')
 			return False
-
-	def _scheduled_api (self):
-		try:
-			pending_callbacks = False
-
-			# read at least on message per process if there is some and parse it
-			for service,command in self.processes.received():
-				self.api.text(self,service,command)
-
-			# if we have nothing to do, return or save the work
-			if not self._running and self._pending:
-				self._running,name = self._pending.popleft()
-				self.logger.reactor('callback | installing %s' % name)
-
-			if self._running:
-				# run it
-				try:
-					self.logger.reactor('callback | running')
-					six.next(self._running)  # run
-					# should raise StopIteration in most case
-					# and prevent us to have to run twice to run one command
-					six.next(self._running)  # run
-					pending_callbacks = True
-				except StopIteration:
-					self._running = None
-					self.logger.reactor('callback | removing')
-
-			return pending_callbacks
-		except KeyboardInterrupt:
-			self._termination('^C received')
-			return False
-
-	def route_send (self):
-		"""The process ran and we need to figure what routes to changes"""
-		self.logger.reactor('performing dynamic route update')
-		for key in self.configuration.neighbors.keys():
-			self.peers[key].send_new()
-		self.logger.reactor('updated peers dynamic routes successfully')
 
 	def restart (self):
 		"""Kill the BGP session and restart it"""
@@ -580,17 +542,17 @@ class Reactor (object):
 
 	def api_shutdown (self):
 		self._signaled = SIGNAL.SHUTDOWN
-		self._pending = deque()
+		self._async = []
 		self._running = None
 
 	def api_reload (self):
 		self._signaled = SIGNAL.RELOAD
-		self._pending = deque()
+		self._async = []
 		self._running = None
 
 	def api_restart (self):
 		self._signaled = SIGNAL.RESTART
-		self._pending = deque()
+		self._async = []
 		self._running = None
 
 	@staticmethod
@@ -617,4 +579,5 @@ class Reactor (object):
 		return dict((peer,self.peers[peer].neighbor.local_address) for peer in peers)
 
 	def plan (self, callback,name):
-		self._pending.append((callback,name))
+		self.logger.reactor('async | installing %s' % name)
+		self._async.append(callback)

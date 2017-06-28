@@ -232,7 +232,7 @@ def announce_watchdog (self, reactor, service, command):
 			neighbor.rib.outgoing.announce_watchdog(name)
 			yield False
 
-		reactor.route_update = True
+		reactor.schedule_rib_check()
 		reactor.answer(service,'done')
 
 	try:
@@ -254,7 +254,7 @@ def withdraw_watchdog (self, reactor, service, command):
 			neighbor.rib.outgoing.withdraw_watchdog(name)
 			yield False
 
-		reactor.route_update = True
+		reactor.schedule_rib_check()
 		reactor.answer(service,'done')
 
 	try:
@@ -273,7 +273,7 @@ def flush_route (self, reactor, service, command):
 			peer = reactor.peers.get(peer_name, None)
 			if not peer:
 				continue
-			peer.send_new(update=True)
+			peer.schedule_rib_check(update=True)
 			yield False
 
 		reactor.answer(service,'done')
@@ -325,7 +325,7 @@ def announce_route (self, reactor, service, line):
 				self.log_message('route added to %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 				yield False
 
-			reactor.route_update = True
+			reactor.schedule_rib_check()
 			reactor.answer(service,'done')
 		except ValueError:
 			self.log_failure('issue parsing the route')
@@ -376,7 +376,7 @@ def withdraw_route (self, reactor, service, line):
 					self.log_failure('route not found on %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 					yield False
 
-			reactor.route_update = True
+			reactor.schedule_rib_check()
 			reactor.answer(service,'done')
 		except ValueError:
 			self.log_failure('issue parsing the route')
@@ -416,7 +416,7 @@ def announce_vpls (self, reactor, service, line):
 				self.log_message('vpls added to %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 				yield False
 
-			reactor.route_update = True
+			reactor.schedule_rib_check()
 			reactor.answer(service,'done')
 		except ValueError:
 			self.log_failure('issue parsing the vpls')
@@ -460,7 +460,7 @@ def withdraw_vpls (self, reactor, service, line):
 					self.log_failure('vpls not found on %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 					yield False
 
-			reactor.route_update = True
+			reactor.schedule_rib_check()
 			reactor.answer(service,'done')
 		except ValueError:
 			self.log_failure('issue parsing the vpls')
@@ -500,7 +500,7 @@ def announce_attributes (self, reactor, service, line):
 				self.log_message('route added to %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 				yield False
 
-			reactor.route_update = True
+			reactor.schedule_rib_check()
 			reactor.answer(service,'done')
 		except ValueError:
 			self.log_failure('issue parsing the route')
@@ -543,7 +543,7 @@ def withdraw_attribute (self, reactor, service, line):
 					self.log_failure('route not found on %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 					yield False
 
-			reactor.route_update = True
+			reactor.schedule_rib_check()
 			reactor.answer(service,'done')
 		except ValueError:
 			self.log_failure('issue parsing the route')
@@ -583,7 +583,7 @@ def announce_flow (self, reactor, service, line):
 				self.log_message('flow added to %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 				yield False
 
-			reactor.route_update = True
+			reactor.schedule_rib_check()
 			reactor.answer(service,'done')
 		except ValueError:
 			self.log_failure('issue parsing the flow')
@@ -626,7 +626,7 @@ def withdraw_flow (self, reactor, service, line):
 					self.log_failure('flow not found on %s : %s' % (', '.join(peers) if peers else 'all peers',change.extensive()))
 				yield False
 
-			reactor.route_update = True
+			reactor.schedule_rib_check()
 			reactor.answer(service,'done')
 		except ValueError:
 			self.log_failure('issue parsing the flow')
@@ -655,7 +655,7 @@ def announce_eor (self, reactor, service, command):
 		self.log_message("Sent to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',family.extensive()))
 		yield False
 
-		reactor.route_update = True
+		reactor.schedule_rib_check()
 		reactor.answer(service,'done')
 
 	try:
@@ -691,7 +691,7 @@ def announce_refresh (self, reactor, service, command):
 		self.log_message("Sent to %s : %s" % (', '.join(peers if peers else []) if peers is not None else 'all peers',refresh.extensive()))
 
 		yield False
-		reactor.route_update = True
+		reactor.schedule_rib_check()
 		reactor.answer(service,'done')
 
 	try:
@@ -729,7 +729,7 @@ def announce_operational (self, reactor, service, command):
 			)
 		)
 		yield False
-		reactor.route_update = True
+		reactor.schedule_rib_check()
 		reactor.answer(service,'done')
 
 	if (command.split() + ['be','safe'])[2].lower() not in ('asm','adm','rpcq','rpcp','apcq','apcp','lpcq','lpcp'):

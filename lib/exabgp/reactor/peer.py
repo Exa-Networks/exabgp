@@ -169,7 +169,7 @@ class Peer (object):
 		self._resend_routes = SEND.NORMAL
 		self._delay.reset()
 
-	def send_new (self, changes=None,update=None):
+	def schedule_rib_check (self, changes=None, update=None):
 		if changes:
 			self.neighbor.rib.outgoing.replace(changes)
 		self._have_routes = self.neighbor.flush if update is None else update
