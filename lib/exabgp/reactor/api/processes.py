@@ -194,7 +194,7 @@ class Processes (object):
 			if not processes:
 				if all_done or time.time() > end_time:
 					return
-				processes.append(replenish)
+				processes.extend(replenish)
 			process = processes.pop()
 			try:
 				proc = self._process[process]
