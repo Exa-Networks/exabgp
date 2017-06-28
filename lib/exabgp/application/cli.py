@@ -110,13 +110,18 @@ def main ():
 				time.sleep(0.1)
 				raw = os.read(reader,4096)
 				buf += raw
-				if buf == 'done':
+				if buf == 'done' or buf == 'error':
 					break
 				raw = ''
 				while '\n' in buf:
 					line,buf = buf.split('\n',1)
 					if line == 'done':
+						sys.stdout.write('command sent\n')
 						done = True
+						break
+					if line == 'error':
+						done = True
+						sys.stdout.write('ExaBGP returns an error\n')
 						break
 					sys.stdout.write('%s\n' % line)
 			except IOError as exc:

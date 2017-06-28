@@ -45,6 +45,7 @@ class API (Command):
 				self.callback['text'][registered](self,reactor,service,command)
 				# reactor.plan(self.callback['text'][registered](self,reactor,service,command),registered)
 				return True
+		reactor.answer(service,'error')
 		self.logger.reactor("Command from process not understood : %s" % command,'warning')
 		return False
 
