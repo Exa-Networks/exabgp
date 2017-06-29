@@ -18,16 +18,17 @@ from exabgp.bgp.message.refresh import RouteRefresh
 
 from exabgp.logger import Logger
 from exabgp.reactor.api.command import Command
+from exabgp.configuration.configuration import Configuration
 
 # ======================================================================= Parser
 #
 
 
 class API (Command):
-	def __init__ (self, reactor, configuration):
+	def __init__ (self, reactor):
 		self.reactor = reactor
 		self.logger = Logger()
-		self.configuration = configuration
+		self.configuration = Configuration([])
 
 	def log_message (self, message, level='info'):
 		self.logger.reactor(message,level)

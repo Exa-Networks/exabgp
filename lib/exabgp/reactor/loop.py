@@ -58,7 +58,7 @@ class Reactor (object):
 		self.processes = None
 		self.listener = Listener(self)
 		self.configuration = Configuration(configurations)
-		self.api = API(self,self.configuration)
+		self.api = API(self)
 
 		self.peers = {}
 
