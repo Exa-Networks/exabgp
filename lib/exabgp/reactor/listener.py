@@ -150,8 +150,6 @@ class Listener (object):
 			return
 		yield None
 
-		self.logger.network('================================================================','critical')
-
 		reactor = self._reactor
 		ranged_neighbor = []
 

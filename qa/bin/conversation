@@ -160,7 +160,7 @@ def run_client (display_only=False):
 		return ''
 
 	name = STATUS.long[config]
-	command = "env exabgp_debug_configuration=true exabgp_tcp_port=%d exabgp_tcp_once=true exabgp_debug_rotate=true exabgp_tcp_bind='' %s -d -p %s" % (STATUS.port[name],PATH.exabgp,STATUS.conf[name])
+	command = "env exabgp_api_cli=false exabgp_debug_configuration=true exabgp_tcp_port=%d exabgp_tcp_once=true exabgp_debug_rotate=true exabgp_tcp_bind='' %s -d -p %s" % (STATUS.port[name],PATH.exabgp,STATUS.conf[name])
 	if display_only:
 		return '> ' + command
 

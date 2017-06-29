@@ -140,7 +140,7 @@ class Reactor (object):
 				self._signal[key] = signum
 
 	def _api_ready (self,sockets):
-		sleeptime = self.max_loop_time / 20
+		sleeptime = self.max_loop_time / 200
 		fds = self.processes.fds()
 		ios = fds + sockets
 		try:
@@ -252,13 +252,8 @@ class Reactor (object):
 		evaluated = []
 		peers = set()
 
-		max_loop_time = self.max_loop_time
-		half_loop_time = self.max_loop_time / 2
-
 		while True:
 			try:
-				start = time.time()
-
 				if self._signaled:
 					signaled = self._signaled
 					self._signaled = SIGNAL.NONE
@@ -292,16 +287,11 @@ class Reactor (object):
 				if not peers:
 					reload_completed = True
 
-				end_peers = start + half_loop_time
-				end_loop = start + max_loop_time
-
 				if not evaluated:
 					evaluated.extend(list(peers))
 
 				# give a turn to all the peers
 				while evaluated:
-					if not start < time.time() < end_peers:
-						break
 					key = evaluated.pop()
 					peer = self.peers[key]
 					action = peer.run()
@@ -327,9 +317,7 @@ class Reactor (object):
 				for service,command in self.processes.received():
 					self.api.text(self,service,command)
 
-				while time.time() < end_loop:
-					if not self._run_async():
-						break
+				self._run_async()
 
 				for io in self._api_ready(list(workers)):
 					peers.add(workers[io])
@@ -411,7 +399,7 @@ class Reactor (object):
 		self._async.append(callback)
 
 	def _run_async (self, flipflop=[]):
-		if not len(self._async):
+		if not self._async:
 			return False
 		try:
 			for generator in self._async:
