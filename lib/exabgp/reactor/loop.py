@@ -284,7 +284,7 @@ class Reactor (object):
 						self._reload_processes = False
 						continue
 
-				if self.listener.serving:
+				if self.listener.incoming():
 					# check all incoming connection
 					self.async('check new connection',self.listener.new_connections())
 
@@ -328,7 +328,6 @@ class Reactor (object):
 					self.api.text(self,service,command)
 
 				while time.time() < end_loop:
-					# handle API calls
 					if not self._run_async():
 						break
 
@@ -412,6 +411,8 @@ class Reactor (object):
 		self._async.append(callback)
 
 	def _run_async (self, flipflop=[]):
+		if not len(self._async):
+			return False
 		try:
 			for generator in self._async:
 				try:
@@ -421,7 +422,7 @@ class Reactor (object):
 				except StopIteration:
 					pass
 			self._async, flipflop = flipflop, []
-			return len(self._async) > 0
+			return True
 		except KeyboardInterrupt:
 			self._termination('^C received')
 			return False

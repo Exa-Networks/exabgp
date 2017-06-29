@@ -42,22 +42,8 @@ class Listener (object):
 		self._reactor = reactor
 		self._backlog = backlog
 		self._sockets = {}
-
-	def listen_on (self, local_addr, remote_addr, port, md5_password, md5_base64, ttl_in):
-		try:
-			if not remote_addr:
-				remote_addr = IP.create('0.0.0.0') if local_addr.ipv4() else IP.create('::')
-			self._listen(local_addr, remote_addr, port, md5_password, md5_base64, ttl_in)
-			self.logger.network('Listening for BGP session(s) on %s:%d%s' % (local_addr, port,' with MD5' if md5_password else ''))
-			return True
-		except NetworkError as exc:
-			if os.geteuid() != 0 and port <= 1024:
-				self.logger.network('Can not bind to %s:%d, you may need to run ExaBGP as root' % (local_addr, port),'critical')
-			else:
-				self.logger.network('Can not bind to %s:%d (%s)' % (local_addr, port,str(exc)),'critical')
-			self.logger.network('unset exabgp.tcp.bind if you do not want listen for incoming connections','critical')
-			self.logger.network('and check that no other daemon is already binding to port %d' % port,'critical')
-			return False
+		self._accepted = {}
+		self._pending = 0
 
 	def _new_socket (self, ip):
 		if ip.afi == AFI.ipv6:
@@ -106,43 +92,67 @@ class Listener (object):
 			self.logger.network(str(exc),'critical')
 			raise exc
 
-	def _connected (self):
-		if not self.serving:
-			return
-
+	def listen_on (self, local_addr, remote_addr, port, md5_password, md5_base64, ttl_in):
 		try:
-			for sock in self._sockets:
-				try:
-					io, _ = sock.accept()
-				except socket.error as exc:
-					if exc.errno in error.block:
-						continue
-					raise AcceptError('could not accept a new connection (%s)' % errstr(exc))
+			if not remote_addr:
+				remote_addr = IP.create('0.0.0.0') if local_addr.ipv4() else IP.create('::')
+			self._listen(local_addr, remote_addr, port, md5_password, md5_base64, ttl_in)
+			self.logger.network('Listening for BGP session(s) on %s:%d%s' % (local_addr, port,' with MD5' if md5_password else ''))
+			return True
+		except NetworkError as exc:
+			if os.geteuid() != 0 and port <= 1024:
+				self.logger.network('Can not bind to %s:%d, you may need to run ExaBGP as root' % (local_addr, port),'critical')
+			else:
+				self.logger.network('Can not bind to %s:%d (%s)' % (local_addr, port,str(exc)),'critical')
+			self.logger.network('unset exabgp.tcp.bind if you do not want listen for incoming connections','critical')
+			self.logger.network('and check that no other daemon is already binding to port %d' % port,'critical')
+			return False
 
-				try:
-					if sock.family == socket.AF_INET:
-						local_ip  = io.getpeername()[0]  # local_ip,local_port
-						remote_ip = io.getsockname()[0]  # remote_ip,remote_port
-					elif sock.family == socket.AF_INET6:
-						local_ip  = io.getpeername()[0]  # local_ip,local_port,local_flow,local_scope
-						remote_ip = io.getsockname()[0]  # remote_ip,remote_port,remote_flow,remote_scope
-					else:
-						raise AcceptError('unexpected address family (%d)' % sock.family)
-					fam = self._family_AFI_map[sock.family]
-					yield Incoming(fam,remote_ip,local_ip,io)
-				except socket.error as exc:
-					raise AcceptError('could not setup a new connection (%s)' % errstr(exc))
+	def incoming (self):
+		if not self.serving:
+			return False
+
+		for sock in self._sockets:
+			if sock in self._accepted:
+				continue
+			try:
+				io, _ = sock.accept()
+				self._accepted[sock] = io
+				self._pending += 1
+			except socket.error as exc:
+				if exc.errno in error.block:
+					continue
+				self.logger.network(str(exc),'critical')
+		if self._pending:
+			self._pending -= 1
+			return True
+		return False
+
+	def _connected (self):
+		try:
+			for sock,io in list(self._accepted.items()):
+				del self._accepted[sock]
+				if sock.family == socket.AF_INET:
+					local_ip  = io.getpeername()[0]  # local_ip,local_port
+					remote_ip = io.getsockname()[0]  # remote_ip,remote_port
+				elif sock.family == socket.AF_INET6:
+					local_ip  = io.getpeername()[0]  # local_ip,local_port,local_flow,local_scope
+					remote_ip = io.getsockname()[0]  # remote_ip,remote_port,remote_flow,remote_scope
+				else:
+					raise AcceptError('unexpected address family (%d)' % sock.family)
+				fam = self._family_AFI_map[sock.family]
+				yield Incoming(fam,remote_ip,local_ip,io)
 		except NetworkError as exc:
 			self.logger.network(str(exc),'critical')
 
 	def new_connections (self):
-		reactor = self._reactor
-
 		if not self.serving:
 			return
-
 		yield None
 
+		self.logger.network('================================================================','critical')
+
+		reactor = self._reactor
 		ranged_neighbor = []
 
 		for connection in self._connected():
