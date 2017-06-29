@@ -179,29 +179,27 @@ class Control (object):
 
 		while True:
 			try:
-				ready,_,_ = select.select(reading,[],[],0.05)
+				ready,_,_ = select.select(reading,[],[],1.0)
 			except select.error as e:
-				if e.args[0] == 4:  # Interrupted system call
-					raise KeyboardInterrupt()
+				if e.args[0] in error.block:
+					continue
 				sys.exit(1)  # Unknow error, ending
-
-			# we buffer first so the two ends are not blocking
-			if not ready:
-				for source in reading:
-					if b'\n' in store[source]:
-						line,_ = store[source].split(b'\n',1)
-						line = line + b'\n'
-						sent = write[source](line)
-						if sent:
-							store[source] = store[source][sent:]
-							continue
-				continue
 
 			# command from user
 			if self.r_pipe in ready:
 				consume(self.r_pipe)
 			if standard_in in ready:
 				consume(standard_in)
+
+			for source in reading:
+				while b'\n' in store[source]:
+					line,_ = store[source].split(b'\n',1)
+					line = line + b'\n'
+					sent = write[source](line)
+					if sent:
+						store[source] = store[source][sent:]
+						continue
+					break
 
 	def run (self):
 		if not self.init():

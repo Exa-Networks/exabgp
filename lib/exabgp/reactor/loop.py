@@ -140,7 +140,7 @@ class Reactor (object):
 				self._signal[key] = signum
 
 	def _api_ready (self,sockets):
-		sleeptime = self.max_loop_time / 200
+		sleeptime = self.max_loop_time / 100
 		fds = self.processes.fds()
 		ios = fds + sockets
 		try:
@@ -249,7 +249,6 @@ class Reactor (object):
 			time.sleep(float(sleeptime))
 
 		workers = {}
-		evaluated = []
 		peers = set()
 
 		while True:
@@ -287,12 +286,8 @@ class Reactor (object):
 				if not peers:
 					reload_completed = True
 
-				if not evaluated:
-					evaluated.extend(list(peers))
-
 				# give a turn to all the peers
-				while evaluated:
-					key = evaluated.pop()
+				for key in list(peers):
 					peer = self.peers[key]
 					action = peer.run()
 
@@ -322,6 +317,7 @@ class Reactor (object):
 				for io in self._api_ready(list(workers)):
 					peers.add(workers[io])
 					del workers[io]
+
 
 				if self._stopping and not self.peers.keys():
 					break
@@ -396,20 +392,26 @@ class Reactor (object):
 
 	def async (self, name, callback):
 		self.logger.reactor('async | %s' % name)
-		self._async.append(callback)
+		if self._async:
+			self._async[0].append(callback)
+		else:
+			self._async.append([callback])
 
-	def _run_async (self, flipflop=[]):
+	def _run_async (self):
 		if not self._async:
 			return False
+		running = []
 		try:
-			for generator in self._async:
+			for generator in self._async[0]:
 				try:
 					six.next(generator)
 					six.next(generator)
-					flipflop.append(generator)
+					running.append(generator)
 				except StopIteration:
 					pass
-			self._async, flipflop = flipflop, []
+			self._async.pop()
+			if running:
+				self._async.append(running)
 			return True
 		except KeyboardInterrupt:
 			self._termination('^C received')

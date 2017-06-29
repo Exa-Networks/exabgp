@@ -10,7 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import os
 import sys
-import time
+import select
 import errno
 
 from exabgp.application.bgp import root_folder
@@ -87,7 +87,7 @@ def main ():
 		sys.exit(1)
 
 	try:
-		writer = os.open(send, os.O_WRONLY | os.O_NONBLOCK | os.O_EXCL)
+		writer = os.open(send, os.O_WRONLY | os.O_EXCL)
 		os.write(writer,command + '\n')
 		os.close(writer)
 	except OSError as exc:
@@ -103,29 +103,32 @@ def main ():
 		sys.stdout.flush()
 		sys.exit(1)
 
+	sys.stdout.write('command sent: %s\n' % command)
+
 	try:
-		reader = os.open(recv, os.O_RDONLY | os.O_NONBLOCK | os.O_EXCL)
+		reader = os.open(recv, os.O_RDONLY | os.O_EXCL)
+
 		buf = ''
 		done = False
 		while not done:
 			try:
-				time.sleep(0.1)
 				raw = os.read(reader,4096)
 				buf += raw
-				if buf == 'done' or buf == 'error':
-					break
-				raw = ''
+
 				while '\n' in buf:
 					line,buf = buf.split('\n',1)
 					if line == 'done':
-						sys.stdout.write('command sent\n')
 						done = True
+						sys.stdout.write('command completed\n')
 						break
 					if line == 'error':
 						done = True
 						sys.stdout.write('ExaBGP returns an error\n')
 						break
 					sys.stdout.write('%s\n' % line)
+					sys.stdout.flush()
+
+				select.select([reader],[],[],0)
 			except OSError as exc:
 				if exc.errno in error.block:
 					break

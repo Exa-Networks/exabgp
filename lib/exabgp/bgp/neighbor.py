@@ -241,7 +241,7 @@ class Neighbor (object):
 
 		apis = ''
 
-		for process in self.api['processes']:
+		for process in self.api.get('processes',[]):
 			_global = []
 			_receive = []
 			_send = []
