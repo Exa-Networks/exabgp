@@ -652,32 +652,38 @@ class Peer (object):
 			peer.update({
 				'multi-session': self.proto.negotiated.multisession,
 				'operational':   self.proto.negotiated.operational,
-				'aigp':          self.proto.negotiated.aigp,
 			})
 
 		if have_open:
+			capa = self.proto.negotiated.received_open.capabilities
 			peer.update({
 				'router-id':     self.proto.negotiated.received_open.router_id,
 				'hold-time':     self.proto.negotiated.received_open.hold_time,
 				'asn4':          self.proto.negotiated.asn4,
-				'route-refresh': self.proto.negotiated.refresh != REFRESH.ABSENT
-				# 'gr':   self.proto.proto.negotiated.received_open.capabilities.announced(Capability.CODE.GRACEFUL_RESTART),
+				'route-refresh': capa.announced(Capability.CODE.ROUTE_REFRESH),
+				'multi-session': capa.announced(Capability.CODE.MULTISESSION) or capa.announced(Capability.CODE.MULTISESSION_CISCO),
+				'add-path':      capa.announced(Capability.CODE.ADD_PATH),
+				'graceful-restart': capa.announced(Capability.CODE.GRACEFUL_RESTART),
 			})
 
 		capabilities = {
 			'asn4':             (tri(self.neighbor.asn4), tri(peer['asn4'])),
 			'route-refresh':    (tri(self.neighbor.route_refresh),tri(peer['route-refresh'])),
-			'multi-session':    (tri(self.neighbor), tri(peer['multi-session'])),
-			'operational':      (tri(self.neighbor), tri(peer['operational'])),
-			'aigp':             (tri(self.neighbor), tri(peer['aigp'])),
-			# 'add-path':         (present(AddPath.string[self.neighbor.add_path]),),
-			# 'graceful-restart': (en(self.neighbor.graceful_restart),en(peer['gr'])),
+			'multi-session':    (tri(self.neighbor.multisession), tri(peer['multi-session'])),
+			'operational':      (tri(self.neighbor.operational), tri(peer['operational'])),
+			'add-path':         (tri(self.neighbor.add_path),tri(peer['add-path'])),
+			'graceful-restart': (tri(self.neighbor.graceful_restart),tri(peer['graceful-restart'])),
 		}
 
 		families = {}
 		for family in self.neighbor.families():
-			common = True if have_open and family in self.proto.negotiated.families else False
-			families[family] = (True,common if have_open else None)
+			if have_open:
+				common = True if family in self.proto.negotiated.families else False
+				addpath = self.proto.negotiated.addpath.receive(*family) and self.proto.negotiated.addpath.receive(*family)
+			else:
+				common = False
+				addpath = False
+			families[family] = (True,common if have_open else None,addpath)
 
 		messages = {}
 		total_sent = 0
@@ -725,20 +731,20 @@ class Peer (object):
 
 		formated = {
 			'peer-address':  answer['peer-address'],
-			'local-address': self.template_kv % ('local',answer['local-address'],''),
-			'state':         self.template_kv % ('state',answer['state'],''),
-			'duration':      self.template_kv % ('up for',timedelta(seconds=answer['duration']),''),
-			'as':            self.template_kv % ('AS',answer['local-as'],present(answer['peer-as'])),
-			'id':            self.template_kv % ('ID',answer['local-id'],present(answer['peer-id'])),
-			'hold':          self.template_kv % ('hold-time',answer['local-hold'],present(answer['peer-hold'])),
-			'capabilities':  '\n'.join(self.template_kv % ('%s:' % k,en(l),en(p)) for k,(l,p) in answer['capabilities'].items()),
-			'families':      '\n'.join([self.template_kv % ('%s %s:' % (a,s),en(l),en(p)) for (a,s),(l,p) in answer['families'].items()]),
-			'messages':      '\n'.join(self.template_kv % ('%s:' % k,str(s),str(r)) for k,(s,r) in answer['messages'].items()),
+			'local-address': self.template_kv % ('local',answer['local-address'],'',''),
+			'state':         self.template_kv % ('state',answer['state'],'',''),
+			'duration':      self.template_kv % ('up for',timedelta(seconds=answer['duration']),'',''),
+			'as':            self.template_kv % ('AS',answer['local-as'],present(answer['peer-as']),''),
+			'id':            self.template_kv % ('ID',answer['local-id'],present(answer['peer-id']),''),
+			'hold':          self.template_kv % ('hold-time',answer['local-hold'],present(answer['peer-hold']),''),
+			'capabilities':  '\n'.join(self.template_kv % ('%s:' % k, en(l), en(p), '') for k,(l,p) in answer['capabilities'].items()),
+			'families':      '\n'.join(self.template_kv % ('%s %s:' % (a,s), en(l), en(p), en(a)) for (a,s),(l,p,a) in answer['families'].items()),
+			'messages':      '\n'.join(self.template_kv % ('%s:' % k, str(s), str(r), '') for k,(s,r) in answer['messages'].items()),
 		}
 
 		return self.template % formated
 
-	template_kv = '   %-20s %15s %15s'
+	template_kv = '   %-20s %15s %15s %15s'
 	template = """\
 Neighbor %(peer-address)s
 
@@ -757,7 +763,7 @@ Neighbor %(peer-address)s
     # missing GR
     # missing ADD-PATH
 
-  Families                        Local          Remote
+  Families                        Local          Remote        Add-Path
 %(families)s
 
   Message Statistic                Sent        Received
