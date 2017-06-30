@@ -284,8 +284,6 @@ class BGPHandler(asyncore.dispatcher_with_send):
 				sys.exit(0)
 			return
 
-		self.send(self.keepalive)
-
 		if self.raw:
 			def parser (self, header, body):
 				if body:
@@ -295,14 +293,16 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 		if parser:
 			for announcement in parser(self,header,body):
-				if self.options['sink']:
-					self.announce('received %d: %s' % (self.counter,'%s:%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:18]),bytestream(header[18:]),bytestream(body))))
-					continue
-
 				if self.options['echo']:
 					self.announce('received %d: %s' % (self.counter,'%s:%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:18]),bytestream(header[18:]),bytestream(body))))
 					self.send(header+body)
 					self.announce('sent     %d: %s' % (self.counter,'%s:%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:18]),bytestream(header[18:]),bytestream(body))))
+					continue
+
+				self.send(self.keepalive)
+
+				if self.options['sink']:
+					self.announce('received %d: %s' % (self.counter,'%s:%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:18]),bytestream(header[18:]),bytestream(body))))
 					continue
 
 				if announcement.startswith('eor:'):  # skip EOR
@@ -358,6 +358,8 @@ class BGPHandler(asyncore.dispatcher_with_send):
 						if self.options['exit']:
 							self.announce('successful')
 							sys.exit(0)
+		else:
+			self.send(self.keepalive)
 
 		if self.options['send-notification']:
 			notification = 'closing session because we can'

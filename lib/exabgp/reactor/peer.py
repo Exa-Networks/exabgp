@@ -8,6 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import time
+from datetime import timedelta
+from collections import defaultdict
 
 # import traceback
 from exabgp.vendoring import six
@@ -81,6 +83,8 @@ class Peer (object):
 			self.once = False
 			self.bind = True
 
+		now = time.time()
+
 		self.reactor = reactor
 		self.neighbor = neighbor
 		# The next restart neighbor definition
@@ -90,8 +94,8 @@ class Peer (object):
 		self.fsm = FSM(self,FSM.IDLE)
 		self.stats = {
 			'fsm':      self.fsm,
-			'creation': time.time(),
-			'reset':    time.time(),
+			'creation': now,
+			'complete': now,
 		}
 		self.generator = None
 
@@ -115,11 +119,10 @@ class Peer (object):
 
 	def _reset (self, message='',error=''):
 		self.fsm.change(FSM.IDLE)
-		self.restart_time = time.time()
 		self.stats = {
 			'fsm':      self.fsm,
 			'creation': self.stats['creation'],
-			'reset':    time.time(),
+			'complete': self.stats['creation'],
 		}
 		if self.proto:
 			self.proto.close(u"peer reset, message [{0}] error[{1}]".format(message, error))
@@ -344,6 +347,7 @@ class Peer (object):
 		for action in self._read_ka():
 			yield action
 		self.fsm.change(FSM.ESTABLISHED)
+		self.stats['complete'] = time.time()
 
 		# let the caller know that we were sucesfull
 		yield ACTION.NOW
@@ -632,3 +636,130 @@ class Peer (object):
 				self.generator = self._run()
 				return ACTION.LATER  # make sure we go through a clean loop
 			return ACTION.CLOSE
+
+	def cli_data (self):
+		def tri (value):
+			if value is None:
+				return None
+			return True if value else False
+
+		peer = defaultdict(lambda: None)
+
+		have_peer = self.proto is not None
+		have_open = self.proto and self.proto.negotiated.received_open
+
+		if have_peer:
+			peer.update({
+				'multi-session': self.proto.negotiated.multisession,
+				'operational':   self.proto.negotiated.operational,
+				'aigp':          self.proto.negotiated.aigp,
+			})
+
+		if have_open:
+			peer.update({
+				'router-id':     self.proto.negotiated.received_open.router_id,
+				'hold-time':     self.proto.negotiated.received_open.hold_time,
+				'asn4':          self.proto.negotiated.asn4,
+				'route-refresh': self.proto.negotiated.refresh != REFRESH.ABSENT
+				# 'gr':   self.proto.proto.negotiated.received_open.capabilities.announced(Capability.CODE.GRACEFUL_RESTART),
+			})
+
+		capabilities = {
+			'asn4':             (tri(self.neighbor.asn4), tri(peer['asn4'])),
+			'route-refresh':    (tri(self.neighbor.route_refresh),tri(peer['route-refresh'])),
+			'multi-session':    (tri(self.neighbor), tri(peer['multi-session'])),
+			'operational':      (tri(self.neighbor), tri(peer['operational'])),
+			'aigp':             (tri(self.neighbor), tri(peer['aigp'])),
+			# 'add-path':         (present(AddPath.string[self.neighbor.add_path]),),
+			# 'graceful-restart': (en(self.neighbor.graceful_restart),en(peer['gr'])),
+		}
+
+		families = {}
+		for family in self.neighbor.families():
+			common = True if have_open and family in self.proto.negotiated.families else False
+			families[family] = (True,common if have_open else None)
+
+		messages = {}
+		total_sent = 0
+		total_rcvd = 0
+		for message in ('open','notification','keepalive','update','refresh'):
+			sent = self.stats.get('send-%s' % message,0)
+			rcvd = self.stats.get('receive-%s' % message,0)
+			total_sent += sent
+			total_rcvd += rcvd
+			messages[message] = (sent, rcvd)
+		messages['total'] = (total_sent, total_rcvd)
+
+		return {
+			'duration':      int(time.time() - self.stats['complete']) if self.stats['complete'] else 0,
+			'local-address': str(self.neighbor.local_address),
+			'peer-address':  str(self.neighbor.peer_address),
+			'local-as':      int(self.neighbor.local_as),
+			'peer-as':       int(self.neighbor.peer_as),
+			'local-id':      str(self.neighbor.router_id),
+			'peer-id':       None if peer['peer-id'] is None else str(peer['router-id']),
+			'local-hold':    int(self.neighbor.hold_time),
+			'peer-hold':     None if peer['hold-time'] is None else int(peer['hold-time']),
+			'state':         self.fsm.name(),
+			'capabilities':  capabilities,
+			'families':      families,
+			'messages':      messages,
+		}
+
+	# def cli_json (self):
+	# 	import json
+	# 	return json.dumps(self.cli_data())
+
+	def cli (self):
+		def en (value):
+			if value is None:
+				return 'n/a'
+			return 'enabled' if value else 'disabled'
+
+		def present (value):
+			if value is None:
+				return 'n/a'
+			return '%s' % value
+
+		answer = self.cli_data()
+
+		formated = {
+			'peer-address':  answer['peer-address'],
+			'local-address': self.template_kv % ('local',answer['local-address'],''),
+			'state':         self.template_kv % ('state',answer['state'],''),
+			'duration':      self.template_kv % ('up for',timedelta(seconds=answer['duration']),''),
+			'as':            self.template_kv % ('AS',answer['local-as'],present(answer['peer-as'])),
+			'id':            self.template_kv % ('ID',answer['local-id'],present(answer['peer-id'])),
+			'hold':          self.template_kv % ('hold-time',answer['local-hold'],present(answer['peer-hold'])),
+			'capabilities':  '\n'.join(self.template_kv % ('%s:' % k,en(l),en(p)) for k,(l,p) in answer['capabilities'].items()),
+			'families':      '\n'.join([self.template_kv % ('%s %s:' % (a,s),en(l),en(p)) for (a,s),(l,p) in answer['families'].items()]),
+			'messages':      '\n'.join(self.template_kv % ('%s:' % k,str(s),str(r)) for k,(s,r) in answer['messages'].items()),
+		}
+
+		return self.template % formated
+
+	template_kv = '   %-20s %15s %15s'
+	template = """\
+Neighbor %(peer-address)s
+
+  Session                         Local
+%(local-address)s
+%(state)s
+%(duration)s
+
+  Setup                           Local          Remote
+%(as)s
+%(id)s
+%(hold)s
+
+  Capability                      Local          Remote
+%(capabilities)s
+    # missing GR
+    # missing ADD-PATH
+
+  Families                        Local          Remote
+%(families)s
+
+  Message Statistic                Sent        Received
+%(messages)s
+"""

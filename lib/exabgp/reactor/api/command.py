@@ -154,6 +154,21 @@ def show_neighbor (self, reactor, service, command):
 	reactor.async(command,callback())
 	return True
 
+@Command.register('text','show neighbor')
+def show_neighbor (self, reactor, service, command):
+	def callback ():
+		for peer_name in reactor.peers.keys():
+			peer = reactor.peers.get(peer_name,None)
+			if not peer:
+				continue
+			for line in peer.cli().split('\n'):
+				reactor.answer(service,line)
+				yield True
+		reactor.answer(service,'done')
+
+	reactor.async(command,callback())
+	return True
+
 
 @Command.register('text','show neighbors')
 def show_neighbors (self, reactor, service, command):

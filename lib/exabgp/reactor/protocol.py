@@ -192,10 +192,9 @@ class Protocol (object):
 		body,header = b'',b''  # just because pylint/pylama are getting more clever
 
 		for length,msg_id,header,body,notify in self.connection.reader():
-			code = 'send-%s' % Message.CODE.NOTIFICATION.SHORT
-			self.peer.stats[code] = self.peer.stats.get(code,0) + 1
 			# internal issue
 			if notify:
+				code = 'receive-%s' % Message.CODE.NOTIFICATION.SHORT
 				if self.neighbor.api.get(code,False):
 					if consolidate:
 						self.peer.reactor.processes.notification(self.peer.neighbor,'send',notify.code,notify.subcode,str(notify),header,body)
