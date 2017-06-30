@@ -8,7 +8,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import time
-from datetime import timedelta
 from collections import defaultdict
 
 # import traceback
@@ -711,61 +710,3 @@ class Peer (object):
 			'families':      families,
 			'messages':      messages,
 		}
-
-	# def cli_json (self):
-	# 	import json
-	# 	return json.dumps(self.cli_data())
-
-	def cli (self):
-		def en (value):
-			if value is None:
-				return 'n/a'
-			return 'enabled' if value else 'disabled'
-
-		def present (value):
-			if value is None:
-				return 'n/a'
-			return '%s' % value
-
-		answer = self.cli_data()
-
-		formated = {
-			'peer-address':  answer['peer-address'],
-			'local-address': self.template_kv % ('local',answer['local-address'],'',''),
-			'state':         self.template_kv % ('state',answer['state'],'',''),
-			'duration':      self.template_kv % ('up for',timedelta(seconds=answer['duration']),'',''),
-			'as':            self.template_kv % ('AS',answer['local-as'],present(answer['peer-as']),''),
-			'id':            self.template_kv % ('ID',answer['local-id'],present(answer['peer-id']),''),
-			'hold':          self.template_kv % ('hold-time',answer['local-hold'],present(answer['peer-hold']),''),
-			'capabilities':  '\n'.join(self.template_kv % ('%s:' % k, en(l), en(p), '') for k,(l,p) in answer['capabilities'].items()),
-			'families':      '\n'.join(self.template_kv % ('%s %s:' % (a,s), en(l), en(p), en(a)) for (a,s),(l,p,a) in answer['families'].items()),
-			'messages':      '\n'.join(self.template_kv % ('%s:' % k, str(s), str(r), '') for k,(s,r) in answer['messages'].items()),
-		}
-
-		return self.template % formated
-
-	template_kv = '   %-20s %15s %15s %15s'
-	template = """\
-Neighbor %(peer-address)s
-
-  Session                         Local
-%(local-address)s
-%(state)s
-%(duration)s
-
-  Setup                           Local          Remote
-%(as)s
-%(id)s
-%(hold)s
-
-  Capability                      Local          Remote
-%(capabilities)s
-    # missing GR
-    # missing ADD-PATH
-
-  Families                        Local          Remote        Add-Path
-%(families)s
-
-  Message Statistic                Sent        Received
-%(messages)s
-"""

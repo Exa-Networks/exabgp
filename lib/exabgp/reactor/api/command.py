@@ -7,6 +7,8 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from datetime import timedelta
+
 from exabgp.protocol.ip import NoNextHop
 from exabgp.bgp.message.update.attribute import NextHop
 from exabgp.bgp.message.update.nlri.nlri import NLRI
@@ -19,6 +21,77 @@ from exabgp.configuration.static import ParseStaticRoute
 
 from exabgp.version import version as _version
 from exabgp.configuration.environment import environment
+
+
+def en (value):
+	if value is None:
+		return 'n/a'
+	return 'enabled' if value else 'disabled'
+
+
+def present (value):
+	if value is None:
+		return 'n/a'
+	return '%s' % value
+
+
+class Neighbor (object):
+	extensive_kv = '   %-20s %15s %15s %15s'
+	extensive_template = """\
+Neighbor %(peer-address)s
+
+  Session                         Local
+%(local-address)s
+%(state)s
+%(duration)s
+
+  Setup                           Local          Remote
+%(as)s
+%(id)s
+%(hold)s
+
+  Capability                      Local          Remote
+%(capabilities)s
+    # missing GR
+    # missing ADD-PATH
+
+  Families                        Local          Remote        Add-Path
+%(families)s
+
+  Message Statistic                Sent        Received
+%(messages)s
+"""
+
+	summary_header   = 'Peer            AS        up/down state       |     #sent     #recvd'
+	summary_template = '%-15s %-7s %9s %-12s %10d %10d'
+
+	@classmethod
+	def extensive (cls,answer):
+		formated = {
+			'peer-address':  answer['peer-address'],
+			'local-address': cls.extensive_kv % ('local',answer['local-address'],'',''),
+			'state':         cls.extensive_kv % ('state',answer['state'],'',''),
+			'duration':      cls.extensive_kv % ('up for',timedelta(seconds=answer['duration']),'',''),
+			'as':            cls.extensive_kv % ('AS',answer['local-as'],present(answer['peer-as']),''),
+			'id':            cls.extensive_kv % ('ID',answer['local-id'],present(answer['peer-id']),''),
+			'hold':          cls.extensive_kv % ('hold-time',answer['local-hold'],present(answer['peer-hold']),''),
+			'capabilities':  '\n'.join(cls.extensive_kv % ('%s:' % k, en(l), en(p), '') for k,(l,p) in answer['capabilities'].items()),
+			'families':      '\n'.join(cls.extensive_kv % ('%s %s:' % (a,s), en(l), en(p), en(a)) for (a,s),(l,p,a) in answer['families'].items()),
+			'messages':      '\n'.join(cls.extensive_kv % ('%s:' % k, str(s), str(r), '') for k,(s,r) in answer['messages'].items()),
+		}
+
+		return cls.extensive_template % formated
+
+	@classmethod
+	def summary (cls,answer):
+		return cls.summary_template % (
+			answer['peer-address'],
+			present(answer['peer-as']),
+			timedelta(seconds=answer['duration']) if answer['duration'] else 'down',
+			answer['state'].lower(),
+			answer['messages']['update'][0],
+			answer['messages']['update'][1]
+		)
 
 
 class Command (object):
@@ -141,48 +214,64 @@ def teardown (self, reactor, service, command):
 
 @Command.register('text','show neighbor')
 def show_neighbor (self, reactor, service, command):
-	def callback ():
+	words = command.split()
+
+	extensive = 'extensive' in words
+	configuration = 'configuration' in words
+
+	if extensive:
+		words.remove('extensive')
+	if configuration:
+		words.remove('configuration')
+
+	limit = words[-1] if words[-1] != 'neighbor' else ''
+
+	def callback_configuration ():
 		for neighbor_name in reactor.configuration.neighbors.keys():
 			neighbor = reactor.configuration.neighbors.get(neighbor_name,None)
 			if not neighbor:
+				continue
+			if limit and limit not in neighbor_name:
 				continue
 			for line in str(neighbor).split('\n'):
 				reactor.answer(service,line)
 				yield True
 		reactor.answer(service,'done')
 
-	reactor.async(command,callback())
-	return True
-
-@Command.register('text','show neighbor')
-def show_neighbor (self, reactor, service, command):
-	def callback ():
+	def callback_extensive ():
 		for peer_name in reactor.peers.keys():
 			peer = reactor.peers.get(peer_name,None)
 			if not peer:
 				continue
-			for line in peer.cli().split('\n'):
-				reactor.answer(service,line)
-				yield True
-		reactor.answer(service,'done')
-
-	reactor.async(command,callback())
-	return True
-
-
-@Command.register('text','show neighbors')
-def show_neighbors (self, reactor, service, command):
-	def callback ():
-		for neighbor_name in reactor.configuration.neighbors.keys():
-			neighbor = reactor.configuration.neighbors.get(neighbor_name,None)
-			if not neighbor:
+			if limit and limit not in peer.neighbor.name():
 				continue
-			for line in str(neighbor).split('\n'):
+			for line in Neighbor.extensive(peer.cli_data()).split('\n'):
 				reactor.answer(service,line)
 				yield True
 		reactor.answer(service,'done')
 
-	reactor.async(command,callback())
+	def callback_summary ():
+		reactor.answer(service,Neighbor.summary_header)
+		for peer_name in reactor.peers.keys():
+			peer = reactor.peers.get(peer_name,None)
+			if not peer:
+				continue
+			if limit and limit not in peer.neighbor.name():
+				continue
+			for line in Neighbor.summary(peer.cli_data()).split('\n'):
+				reactor.answer(service,line)
+				yield True
+		reactor.answer(service,'done')
+
+	if extensive:
+		reactor.async(command,callback_extensive())
+		return True
+
+	if configuration:
+		reactor.async(command,callback_configuration())
+		return True
+
+	reactor.async(command,callback_summary())
 	return True
 
 
