@@ -52,8 +52,6 @@ Neighbor %(peer-address)s
 
   Capability                      Local          Remote
 %(capabilities)s
-    # missing GR
-    # missing ADD-PATH
 
   Families                        Local          Remote        Add-Path
 %(families)s
@@ -266,6 +264,10 @@ def show_neighbor (self, reactor, service, command):
 				yield True
 		reactor.answer(service,'done')
 
+	if summary:
+		reactor.async(command,callback_summary())
+		return True
+
 	if extensive:
 		reactor.async(command,callback_extensive())
 		return True
@@ -274,8 +276,9 @@ def show_neighbor (self, reactor, service, command):
 		reactor.async(command,callback_configuration())
 		return True
 
-	reactor.async(command,callback_summary())
-	return True
+	reactor.answer(service,'please specify summary, extensive or configuration')
+	reactor.answer(service,'please specify summary, you can filter by per ip')
+	reactor.answer(service,'done')
 
 
 @Command.register('text','show neighbor status')
