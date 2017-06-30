@@ -419,6 +419,7 @@ class Configuration (_Configuration):
 				)
 			)
 
+		self.process.add_api()
 		self._commit_reload()
 		self._link()
 		self.debug_check_route()

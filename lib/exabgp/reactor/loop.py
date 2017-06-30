@@ -428,8 +428,7 @@ class Reactor (object):
 				self.peers[key].stop()
 			else:
 				self.peers[key].reestablish()
-		self.processes.terminate()
-		self.processes.start()
+		self.processes.start(True)
 
 	def _unschedule (self, peer):
 		if peer in self.peers:
