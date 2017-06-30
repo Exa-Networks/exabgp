@@ -194,7 +194,7 @@ class BGPHandler(asyncore.dispatcher_with_send):
 		return self
 
 	def update_sequence (self):
-		if self.options['sink']:
+		if self.options['sink'] or self.options['echo']:
 			self.messages = []
 			return True
 		keys = sorted(list(self.sequence))
@@ -295,6 +295,16 @@ class BGPHandler(asyncore.dispatcher_with_send):
 
 		if parser:
 			for announcement in parser(self,header,body):
+				if self.options['sink']:
+					self.announce('received %d: %s' % (self.counter,'%s:%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:18]),bytestream(header[18:]),bytestream(body))))
+					continue
+
+				if self.options['echo']:
+					self.announce('received %d: %s' % (self.counter,'%s:%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:18]),bytestream(header[18:]),bytestream(body))))
+					self.send(header+body)
+					self.announce('sent     %d: %s' % (self.counter,'%s:%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:18]),bytestream(header[18:]),bytestream(body))))
+					continue
+
 				if announcement.startswith('eor:'):  # skip EOR
 					self.announce('skipping eor',announcement)
 					continue
@@ -304,10 +314,6 @@ class BGPHandler(asyncore.dispatcher_with_send):
 					continue
 
 				self.counter += 1
-
-				if self.options['sink']:
-					self.announce('received %d: %s' % (self.counter,'%s:%s:%s:%s' % (bytestream(header[:16]),bytestream(header[16:18]),bytestream(header[18:]),bytestream(body))))
-					continue
 
 				if announcement in self.messages:
 					self.messages.remove(announcement)
@@ -394,6 +400,7 @@ class BGPServer (asyncore.dispatcher):
 			'signal-SIGUSR1': 0,               # send SIGUSR1 after X seconds
 			'single-shot': False,              # we can not test signal on python 2.6
 			'sink': False,                     # just accept whatever is sent
+			'echo': False,                     # just accept whatever is sent
 		}
 		self.options.update(options)
 
@@ -437,7 +444,10 @@ class BGPServer (asyncore.dispatcher):
 				break
 
 		if self.options['sink']:
-			flushed('connection received in sink mode - send us whatever, we can take it ! :p\n')
+			flushed('\nsink mode - send us whatever, we can take it ! :p\n')
+			messages = []
+		elif self.options['echo']:
+			flushed('\necho mode - send us whatever, we can parrot it ! :p\n')
 			messages = []
 		elif not messages:
 			self.announce('we used all the test data available, can not handle this new connection')
@@ -481,16 +491,24 @@ def drop ():
 
 def main ():
 	if len(sys.argv) <= 1:
+		flushed('--sink   accept any BGP messages and reply with a keepalive')
+		flushed('--echo   accept any BGP messages send it back to the emiter')
 		flushed('a list of expected route announcement/withdrawl in the format <number>:announce:<ipv4-route> <number>:withdraw:<ipv4-route> <number>:raw:<exabgp hex dump : separated>')
 		flushed('for example:',sys.argv[0],'1:announce:10.0.0.0/8 1:announce:192.0.2.0/24 2:withdraw:10.0.0.0/8 ')
 		flushed('routes with the same <number> can arrive in any order')
 		sys.exit(1)
 
-	options = {}
+	options = {
+		'sink': False,
+		'echo': False,
+	}
 
 	if sys.argv[1] == '--sink':
 		messages = []
 		options['sink'] = True
+	elif sys.argv[1] == '--echo':
+		messages = []
+		options['echo'] = True
 	else:
 		try:
 			with open(sys.argv[1]) as content:

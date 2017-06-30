@@ -318,7 +318,6 @@ class Reactor (object):
 					peers.add(workers[io])
 					del workers[io]
 
-
 				if self._stopping and not self.peers.keys():
 					break
 

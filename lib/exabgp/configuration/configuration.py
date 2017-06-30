@@ -99,7 +99,6 @@ class _Configuration (object):
 
 
 class Configuration (_Configuration):
-
 	def __init__ (self, configurations, text=False):
 		_Configuration.__init__(self)
 		self.api_encoder = environment.settings().api.encoder

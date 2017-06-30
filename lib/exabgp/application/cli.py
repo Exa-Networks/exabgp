@@ -11,6 +11,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 import os
 import sys
 import select
+import signal
 import errno
 
 from exabgp.application.bgp import root_folder
@@ -26,7 +27,7 @@ from exabgp.vendoring import docopt
 usage = """\
 The BGP swiss army knife of networking
 
-usage: exabgpcli [--root ROOT] [--env ENV] [--test]
+usage: exabgpcli [--root ROOT]
 \t\t\t\t\t\t\t\t [--help|<command>...]
 
 positional arguments:
@@ -35,20 +36,15 @@ positional arguments:
 optional arguments:
 \t--help,      -h       exabgp manual page
 \t--root ROOT, -f ROOT  root folder where etc,bin,sbin are located
-\t--env ENV,   -e ENV   environment configuration file
-
-debugging:
-\t--test,      -t       perform a configuration validity check only
 
 commands:
-\tversion               show the version of exabgp running
-\tneighbors             show the configured neighbors
-\tneigbor <ip>          show details for one neighbor
+\thelp                  show the commands known by ExaBGP
 """.replace('\t','  ')
 
 
 def main ():
 	options = docopt.docopt(usage, help=False)
+	options['--env'] = ''  # exabgp compatibility
 
 	root = root_folder(options,['/bin/exabgpcli','/sbin/exabgpcli','/lib/exabgp/application/cli.py'])
 	etc = root + '/etc/exabgp'
@@ -86,6 +82,14 @@ def main ():
 		sys.stdout.flush()
 		sys.exit(1)
 
+	def write_timeout(signum, frame):
+		sys.stderr.write('could not send command to ExaBGP')
+		sys.stderr.flush()
+		sys.exit(1)
+
+	signal.signal(signal.SIGALRM, write_timeout)
+	signal.alarm(2)
+
 	try:
 		writer = os.open(send, os.O_WRONLY | os.O_EXCL)
 		os.write(writer,command + '\n')
@@ -103,10 +107,19 @@ def main ():
 		sys.stdout.flush()
 		sys.exit(1)
 
-	sys.stdout.write('command sent: %s\n' % command)
+	signal.alarm(0)
+
+	def read_timeout(signum, frame):
+		sys.stderr.write('could not read answer to ExaBGP')
+		sys.stderr.flush()
+		sys.exit(1)
+
+	signal.signal(signal.SIGALRM, read_timeout)
 
 	try:
+		signal.alarm(5)
 		reader = os.open(recv, os.O_RDONLY | os.O_EXCL)
+		signal.alarm(0)
 
 		buf = ''
 		done = False
@@ -119,11 +132,11 @@ def main ():
 					line,buf = buf.split('\n',1)
 					if line == 'done':
 						done = True
-						sys.stdout.write('command completed\n')
 						break
 					if line == 'error':
 						done = True
-						sys.stdout.write('ExaBGP returns an error\n')
+						sys.stderr.write('ExaBGP returns an error\n')
+						sys.stderr.flush()
 						break
 					sys.stdout.write('%s\n' % line)
 					sys.stdout.flush()

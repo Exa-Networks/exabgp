@@ -79,7 +79,7 @@ class Protocol (object):
 		self.message_size = Message.MAX_LEN-Message.HEADER_LEN
 
 		from exabgp.configuration.environment import environment
-		self.log_routes = environment.settings().log.routes
+		self.log_routes = peer.neighbor.adj_rib_in or environment.settings().log.routes
 
 	# XXX: we use self.peer.neighbor.peer_address when we could use self.neighbor.peer_address
 

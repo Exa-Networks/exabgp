@@ -41,7 +41,6 @@ class API (Command):
 	def text (self, reactor, service, command):
 		for registered in self.functions:
 			if registered in command:
-				self.logger.reactor("callback | handling '%s' with %s" % (command,self.callback['text'][registered].func_name),'warning')
 				# XXX: should we not test the return value ?
 				self.callback['text'][registered](self,reactor,service,command)
 				return True

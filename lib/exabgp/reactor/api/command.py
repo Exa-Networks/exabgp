@@ -43,7 +43,7 @@ class Command (object):
 		return register
 
 
-def _show_routes_callback(reactor, service, last, route_type, advertised, extensive):
+def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_name, extensive):
 	def callback ():
 		families = None
 		lines_per_yield = environment.settings().api.chunk
@@ -57,18 +57,28 @@ def _show_routes_callback(reactor, service, last, route_type, advertised, extens
 				continue
 			if advertised:
 				families = peer.proto.negotiated.families if peer.proto else []
-			routes = list(peer.neighbor.rib.outgoing.cached_changes(families))
+			rib = peer.neighbor.rib.outgoing if rib_name == 'out' else peer.neighbor.rib.incoming
+			routes = list(rib.cached_changes(families))
 			while routes:
 				changes, routes = routes[:lines_per_yield], routes[lines_per_yield:]
 				for change in changes:
 					if isinstance(change.nlri, route_type):
 						if extensive:
-							reactor.always_answer(service,'neighbor %s %s' % (peer.neighbor.name(),change.extensive()))
+							reactor.always_answer(service,'neighbor %s %s %s' % (peer.neighbor.name(),'%s %s' % change.nlri.family(),change.extensive()))
 						else:
-							reactor.always_answer(service,'neighbor %s %s' % (peer.neighbor.peer_address,str(change.nlri)))
+							reactor.always_answer(service,'neighbor %s %s %s' % (peer.neighbor.peer_address,'%s %s' % change.nlri.family(),str(change.nlri)))
 				yield True
 		reactor.answer(service,'done')
 	return callback
+
+
+@Command.register('text','help')
+def shutdown (self, reactor, service, command):
+	reactor.answer(service,'commands are:')
+	for command in sorted(self.callback['text']):
+		reactor.answer(service,command)
+	reactor.answer(service,'done')
+	return True
 
 
 @Command.register('text','shutdown')
@@ -97,7 +107,7 @@ def restart (self, reactor, service, command):
 
 @Command.register('text','version')
 def version (self, reactor, service, command):
-	reactor.always_answer(service,'exabgp %s\n' % _version)
+	reactor.always_answer(service,'exabgp %s' % _version)
 	reactor.answer(service,'done')
 	return True
 
@@ -141,7 +151,7 @@ def show_neighbor (self, reactor, service, command):
 				yield True
 		reactor.answer(service,'done')
 
-	reactor.async('show_neighbor',callback())
+	reactor.async(command,callback())
 	return True
 
 
@@ -157,7 +167,7 @@ def show_neighbors (self, reactor, service, command):
 				yield True
 		reactor.answer(service,'done')
 
-	reactor.async('show_neighbors',callback())
+	reactor.async(command,callback())
 	return True
 
 
@@ -177,47 +187,33 @@ def show_neighbor_status (self, reactor, service, command):
 			yield True
 		reactor.answer(service,"done")
 
-	reactor.async('show_neighbor_status',callback())
+	reactor.async(command,callback())
 	return True
 
 
-@Command.register('text','show routes')
-def show_routes (self, reactor, service, command):
-	last = command.split()[-1]
-	callback = _show_routes_callback(reactor, service, last, NLRI, False, False)
-	reactor.async('show_routes',callback())
-	return True
+@Command.register('text','show adj-rib')
+def show_adj_rib (self, reactor, service, command):
+	words = command.split()
+	extensive = command.endswith(' extensive')
+	try:
+		rib = words[2]
+	except IndexError:
+		rib = 'in' if 'in' in words[1] else 'out'
+	klass = NLRI
 
+	if 'inet' in words:
+		klass = INET
+	elif 'flow' in words:
+		klass = Flow
+	elif 'l2vpn' in words:
+		klass = (VPLS, EVPN)
 
-@Command.register('text','show routes extensive')
-def show_routes_extensive (self, reactor, service, command):
-	last = command.split()[-1]
-	callback = _show_routes_callback(reactor, service, last, NLRI, False, True)
-	reactor.async('show_routes_extensive',callback())
-	return True
-
-
-@Command.register('text','show routes static')
-def show_routes_static (self, reactor, service, command):
-	last = command.split()[-1]
-	callback = _show_routes_callback(reactor, service, last, INET, True, True)
-	reactor.async('show_routes_static',callback())
-	return True
-
-
-@Command.register('text','show routes flow')
-def show_routes_flow (self, reactor, service, command):
-	last = command.split()[-1]
-	callback = _show_routes_callback(reactor, service, last, Flow, True, True)
-	reactor.async('show_routes_flow',callback())
-	return True
-
-
-@Command.register('text','show routes l2vpn')
-def show_routes_l2vpn (self, reactor, service, command):
-	last = command.split()[-1]
-	callback = _show_routes_callback(reactor, service, last, (VPLS, EVPN), True, True)
-	reactor.async('show_routes_l2vpn',callback())
+	for remove in ('show','adj-rib','adj-rib-in','adj-rib-out','in','out','extensive'):
+		if remove in words:
+			words.remove(remove)
+	last = '' if not words else words[0]
+	callback = _show_adjrib_callback(reactor, service, last, klass, False, rib, extensive)
+	reactor.async(command,callback())
 	return True
 
 
@@ -239,7 +235,7 @@ def announce_watchdog (self, reactor, service, command):
 		name = command.split(' ')[2]
 	except IndexError:
 		name = service
-	reactor.async('announce_watchdog',callback(name))
+	reactor.async(command,callback(name))
 	return True
 
 
@@ -261,14 +257,14 @@ def withdraw_watchdog (self, reactor, service, command):
 		name = command.split(' ')[2]
 	except IndexError:
 		name = service
-	reactor.async('withdraw_watchdog',callback(name))
+	reactor.async(command,callback(name))
 	return True
 
 
-@Command.register('text','flush route')
-def flush_route (self, reactor, service, command):
+@Command.register('text','flush adj-rib out')
+def flush_adj_rib_out (self, reactor, service, command):
 	def callback (self, peers):
-		self.log_message("Flushing routes for %s" % ', '.join(peers if peers else []) if peers is not None else 'all peers')
+		self.log_message("Flushing adjb-rib out for %s" % ', '.join(peers if peers else []) if peers is not None else 'all peers')
 		for peer_name in peers:
 			peer = reactor.peers.get(peer_name, None)
 			if not peer:
@@ -285,7 +281,7 @@ def flush_route (self, reactor, service, command):
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.answer(service,'error')
 			return False
-		reactor.async('flush_route',callback(self,peers))
+		reactor.async(command,callback(self,peers))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')
@@ -336,7 +332,7 @@ def announce_route (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.async('announce_route',callback())
+	reactor.async(command,callback())
 	return True
 
 
@@ -387,7 +383,7 @@ def withdraw_route (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.async('withdraw_route',callback())
+	reactor.async(command,callback())
 	return True
 
 
@@ -427,7 +423,7 @@ def announce_vpls (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.async('announce_vpls',callback())
+	reactor.async(command,callback())
 	return True
 
 
@@ -471,7 +467,7 @@ def withdraw_vpls (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.async('withdraw_vpls',callback())
+	reactor.async(command,callback())
 	return True
 
 
@@ -511,7 +507,7 @@ def announce_attributes (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.async('announce_attributes',callback())
+	reactor.async(command,callback())
 	return True
 
 
@@ -554,7 +550,7 @@ def withdraw_attribute (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.async('withdraw_route',callback())
+	reactor.async(command,callback())
 	return True
 
 
@@ -594,7 +590,7 @@ def announce_flow (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.async('announce_flow',callback())
+	reactor.async(command,callback())
 	return True
 
 
@@ -637,7 +633,7 @@ def withdraw_flow (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.async('withdraw_flow',callback())
+	reactor.async(command,callback())
 	return True
 
 
@@ -665,7 +661,7 @@ def announce_eor (self, reactor, service, command):
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.answer(service,'error')
 			return False
-		reactor.async('announce_eor',callback(self,command,peers))
+		reactor.async(command,callback(self,command,peers))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')
@@ -701,7 +697,7 @@ def announce_refresh (self, reactor, service, command):
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.answer(service,'error')
 			return False
-		reactor.async('announce_refresh',callback(self,command,peers))
+		reactor.async(command,callback(self,command,peers))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')
@@ -743,7 +739,7 @@ def announce_operational (self, reactor, service, command):
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.answer(service,'error')
 			return False
-		reactor.async('announce_operational',callback(self,command,peers))
+		reactor.async(command,callback(self,command,peers))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')
