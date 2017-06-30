@@ -146,7 +146,7 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
 
 
 @Command.register('text','help')
-def shutdown (self, reactor, service, command):
+def help (self, reactor, service, command):
 	reactor.answer(service,'commands are:')
 	for command in sorted(self.callback['text']):
 		reactor.answer(service,command)
@@ -436,7 +436,7 @@ def announce_route (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.async(command,callback())
+	reactor.async(line,callback())
 	return True
 
 
@@ -487,7 +487,7 @@ def withdraw_route (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.async(command,callback())
+	reactor.async(line,callback())
 	return True
 
 
@@ -527,7 +527,7 @@ def announce_vpls (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.async(command,callback())
+	reactor.async(line,callback())
 	return True
 
 
@@ -571,7 +571,7 @@ def withdraw_vpls (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.async(command,callback())
+	reactor.async(line,callback())
 	return True
 
 
@@ -611,7 +611,7 @@ def announce_attributes (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.async(command,callback())
+	reactor.async(line,callback())
 	return True
 
 
@@ -654,7 +654,7 @@ def withdraw_attribute (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.async(command,callback())
+	reactor.async(line,callback())
 	return True
 
 
@@ -694,7 +694,7 @@ def announce_flow (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.async(command,callback())
+	reactor.async(line,callback())
 	return True
 
 
@@ -737,7 +737,7 @@ def withdraw_flow (self, reactor, service, line):
 			reactor.answer(service,'error')
 			yield True
 
-	reactor.async(command,callback())
+	reactor.async(line,callback())
 	return True
 
 
