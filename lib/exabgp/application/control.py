@@ -177,13 +177,23 @@ class Control (object):
 
 		reading = [standard_in, self.r_pipe]
 
+		sleep_time = 1.0
+		fault_time = 0.9 * sleep_time
+
 		while True:
+			now = time.time()
 			try:
-				ready,_,_ = select.select(reading,[],[],1.0)
+				ready,_,_ = select.select(reading,[],[],sleep_time)
 			except select.error as e:
 				if e.args[0] in error.block:
 					continue
 				sys.exit(1)  # Unknow error, ending
+
+			# select stoped before the 1 second but we have no data
+			# the PIPE with ExaBGP is dead
+			elapsed = time.time() - now
+			if not reading and elapsed < fault_time:
+				sys.exit(1)
 
 			# command from user
 			if self.r_pipe in ready:
