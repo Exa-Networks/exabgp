@@ -218,7 +218,10 @@ def show_neighbor (self, reactor, service, command):
 
 	extensive = 'extensive' in words
 	configuration = 'configuration' in words
+	summary = 'summary' in words
 
+	if summary:
+		words.remove('summary')
 	if extensive:
 		words.remove('extensive')
 	if configuration:
@@ -302,7 +305,18 @@ def show_adj_rib (self, reactor, service, command):
 	try:
 		rib = words[2]
 	except IndexError:
-		rib = 'in' if 'in' in words[1] else 'out'
+		if words[1] == 'adj-rib-in':
+			rib = 'in'
+		elif words[1] == 'adj-rib-out':
+			rib = 'out'
+		else:
+			reactor.answer(service,"error")
+			return False
+
+	if rib not in ('in','out'):
+		reactor.answer(service,"error")
+		return False
+
 	klass = NLRI
 
 	if 'inet' in words:
