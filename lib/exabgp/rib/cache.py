@@ -30,7 +30,6 @@ class Cache (object):
 				del self._seen[family]
 
 	def cached_changes (self, families=None):
-		print(self._seen)
 		# families can be None or []
 		requested_families = self.families if families is None else set(families).intersection(self.families)
 
