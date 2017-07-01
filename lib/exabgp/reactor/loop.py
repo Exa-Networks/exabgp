@@ -41,6 +41,50 @@ class SIGNAL (object):
 	RELOAD   = 3
 
 
+class ASYNC (object):
+	def __init__ (self):
+		self.logger = Logger()
+		self._async = []
+
+	def schedule (self, uid, command, callback):
+		self.logger.reactor('async | %s' % command)
+		if self._async:
+			self._async[0].append((uid,callback))
+		else:
+			self._async.append([(uid,callback),])
+
+	def clear (self, deluid=None):
+		if not self._async:
+			return
+		if deluid is None:
+			self._async = []
+			return
+		running = []
+		for (uid,generator) in self._async[0]:
+			if uid != deluid:
+				running.append((uid,generator))
+		self._async.pop()
+		if running:
+			self._async.append(running)
+
+	def run (self):
+		if not self._async:
+			return False
+		running = []
+
+		for (uid,generator) in self._async[0]:
+			try:
+				six.next(generator)
+				six.next(generator)
+				running.append((uid,generator))
+			except StopIteration:
+				pass
+		self._async.pop()
+		if running:
+			self._async.append(running)
+		return True
+
+
 class Reactor (object):
 	# [hex(ord(c)) for c in os.popen('clear').read()]
 	clear = concat_bytes_i(character(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a'])
@@ -67,9 +111,9 @@ class Reactor (object):
 		self._reload_processes = False
 		self._saved_pid = False
 		self._running = None
-		self._async = []
 
 		self._signal = {}
+		self.async = ASYNC()
 
 		signal.signal(signal.SIGTERM, self.sigterm)
 		signal.signal(signal.SIGHUP, self.sighup)
@@ -312,7 +356,7 @@ class Reactor (object):
 				for service,command in self.processes.received():
 					self.api.text(self,service,command)
 
-				self._run_async()
+				self.async.run()
 
 				for io in self._api_ready(list(workers)):
 					peers.add(workers[io])
@@ -389,44 +433,6 @@ class Reactor (object):
 
 		return True
 
-	def async (self, uid, command, callback):
-		self.logger.reactor('async | %s' % command)
-		if self._async:
-			self._async[0].append((uid,callback))
-		else:
-			self._async.append([(uid,callback),])
-
-	def api_clear_async (self, deluid):
-		if not self._async:
-			return
-		running = []
-		for (uid,generator) in self._async[0]:
-			if uid != deluid:
-				running.append((uid,generator))
-		self._async.pop()
-		if running:
-			self._async.append(running)
-
-	def _run_async (self):
-		if not self._async:
-			return False
-		running = []
-		try:
-			for (uid,generator) in self._async[0]:
-				try:
-					six.next(generator)
-					six.next(generator)
-					running.append((uid,generator))
-				except StopIteration:
-					pass
-			self._async.pop()
-			if running:
-				self._async.append(running)
-			return True
-		except KeyboardInterrupt:
-			self._termination('^C received')
-			return False
-
 	def restart (self):
 		"""Kill the BGP session and restart it"""
 		self.logger.reactor('performing restart of exabgp %s' % version)
@@ -447,17 +453,17 @@ class Reactor (object):
 
 	def api_shutdown (self):
 		self._signaled = SIGNAL.SHUTDOWN
-		self._async = []
+		self.async.clear()
 		self._running = None
 
 	def api_reload (self):
 		self._signaled = SIGNAL.RELOAD
-		self._async = []
+		self.async.clear()
 		self._running = None
 
 	def api_restart (self):
 		self._signaled = SIGNAL.RESTART
-		self._async = []
+		self.async.clear()
 		self._running = None
 
 	def nexthops (self, peers):

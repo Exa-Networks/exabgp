@@ -267,7 +267,7 @@ class Processes (object):
 		return True
 
 	def answer (self, service, string, force=False):
-		if self.ack and not force:
+		if force or self.ack:
 			self.logger.processes('responding to %s : %s' % (service,string.replace('\n','\\n')))
 			self._write(service,string)
 

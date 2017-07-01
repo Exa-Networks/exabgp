@@ -157,9 +157,9 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
 				for change in changes:
 					if isinstance(change.nlri, route_type):
 						if extensive:
-							reactor.processes.always(service,'neighbor %s %s %s' % (peer.neighbor.name(),'%s %s' % change.nlri.family(),change.extensive()),force=True)
+							reactor.processes.answer(service,'neighbor %s %s %s' % (peer.neighbor.name(),'%s %s' % change.nlri.family(),change.extensive()),force=True)
 						else:
-							reactor.processes.always(service,'neighbor %s %s %s' % (peer.neighbor.peer_address,'%s %s' % change.nlri.family(),str(change.nlri)),force=True)
+							reactor.processes.answer(service,'neighbor %s %s %s' % (peer.neighbor.peer_address,'%s %s' % change.nlri.family(),str(change.nlri)),force=True)
 				yield True
 		reactor.processes.answer_done(service)
 	return callback
@@ -234,7 +234,7 @@ def teardown (self, reactor, service, command):
 
 @Command.register('text','reset')
 def reset (self, reactor, service, command):
-	reactor.api_clear_async(service)
+	reactor.async.clear(service)
 
 
 @Command.register('text','show neighbor')
@@ -292,15 +292,15 @@ def show_neighbor (self, reactor, service, command):
 		reactor.processes.answer_done(service)
 
 	if summary:
-		reactor.async(service,command,callback_summary())
+		reactor.async.schedule(service,command,callback_summary())
 		return True
 
 	if extensive:
-		reactor.async(service,command,callback_extensive())
+		reactor.async.schedule(service,command,callback_extensive())
 		return True
 
 	if configuration:
-		reactor.async(service,command,callback_configuration())
+		reactor.async.schedule(service,command,callback_configuration())
 		return True
 
 	reactor.processes.answer(service,'please specify summary, extensive or configuration')
@@ -324,7 +324,7 @@ def show_neighbor (self, reactor, service, command):
 # 			yield True
 # 		reactor.processes.answer(service,"done")
 #
-# 	reactor.async(service,command,callback())
+# 	reactor.async.schedule(service,command,callback())
 # 	return True
 
 @Command.register('text','show adj-rib')
@@ -360,7 +360,7 @@ def show_adj_rib (self, reactor, service, command):
 			words.remove(remove)
 	last = '' if not words else words[0]
 	callback = _show_adjrib_callback(reactor, service, last, klass, False, rib, extensive)
-	reactor.async(service,command,callback())
+	reactor.async.schedule(service,command,callback())
 	return True
 
 
@@ -382,7 +382,7 @@ def announce_watchdog (self, reactor, service, command):
 		name = command.split(' ')[2]
 	except IndexError:
 		name = service
-	reactor.async(service,command,callback(name))
+	reactor.async.schedule(service,command,callback(name))
 	return True
 
 
@@ -404,7 +404,7 @@ def withdraw_watchdog (self, reactor, service, command):
 		name = command.split(' ')[2]
 	except IndexError:
 		name = service
-	reactor.async(service,command,callback(name))
+	reactor.async.schedule(service,command,callback(name))
 	return True
 
 
@@ -428,7 +428,7 @@ def flush_adj_rib_out (self, reactor, service, command):
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.processes.answer(service,'error')
 			return False
-		reactor.async(service,command,callback(self,peers))
+		reactor.async.schedule(service,command,callback(self,peers))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')
@@ -479,7 +479,7 @@ def announce_route (self, reactor, service, line):
 			reactor.processes.answer(service,'error')
 			yield True
 
-	reactor.async(service,line,callback())
+	reactor.async.schedule(service,line,callback())
 	return True
 
 
@@ -530,7 +530,7 @@ def withdraw_route (self, reactor, service, line):
 			reactor.processes.answer(service,'error')
 			yield True
 
-	reactor.async(service,line,callback())
+	reactor.async.schedule(service,line,callback())
 	return True
 
 
@@ -570,7 +570,7 @@ def announce_vpls (self, reactor, service, line):
 			reactor.processes.answer(service,'error')
 			yield True
 
-	reactor.async(service,line,callback())
+	reactor.async.schedule(service,line,callback())
 	return True
 
 
@@ -614,7 +614,7 @@ def withdraw_vpls (self, reactor, service, line):
 			reactor.processes.answer(service,'error')
 			yield True
 
-	reactor.async(service,line,callback())
+	reactor.async.schedule(service,line,callback())
 	return True
 
 
@@ -654,7 +654,7 @@ def announce_attributes (self, reactor, service, line):
 			reactor.processes.answer(service,'error')
 			yield True
 
-	reactor.async(service,line,callback())
+	reactor.async.schedule(service,line,callback())
 	return True
 
 
@@ -697,7 +697,7 @@ def withdraw_attribute (self, reactor, service, line):
 			reactor.processes.answer(service,'error')
 			yield True
 
-	reactor.async(service,line,callback())
+	reactor.async.schedule(service,line,callback())
 	return True
 
 
@@ -737,7 +737,7 @@ def announce_flow (self, reactor, service, line):
 			reactor.processes.answer(service,'error')
 			yield True
 
-	reactor.async(service,line,callback())
+	reactor.async.schedule(service,line,callback())
 	return True
 
 
@@ -780,7 +780,7 @@ def withdraw_flow (self, reactor, service, line):
 			reactor.processes.answer(service,'error')
 			yield True
 
-	reactor.async(service,line,callback())
+	reactor.async.schedule(service,line,callback())
 	return True
 
 
@@ -808,7 +808,7 @@ def announce_eor (self, reactor, service, command):
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.processes.answer(service,'error')
 			return False
-		reactor.async(service,command,callback(self,command,peers))
+		reactor.async.schedule(service,command,callback(self,command,peers))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')
@@ -844,7 +844,7 @@ def announce_refresh (self, reactor, service, command):
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.processes.answer(service,'error')
 			return False
-		reactor.async(service,command,callback(self,command,peers))
+		reactor.async.schedule(service,command,callback(self,command,peers))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')
@@ -886,7 +886,7 @@ def announce_operational (self, reactor, service, command):
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.processes.answer(service,'error')
 			return False
-		reactor.async(service,command,callback(self,command,peers))
+		reactor.async.schedule(service,command,callback(self,command,peers))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')
