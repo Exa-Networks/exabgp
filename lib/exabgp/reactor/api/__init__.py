@@ -48,41 +48,6 @@ class API (Command):
 		self.logger.reactor("Command from process not understood : %s" % command,'warning')
 		return False
 
-	@staticmethod
-	def extract_neighbors (command):
-		"""Return a list of neighbor definition : the neighbor definition is a list of string which are in the neighbor indexing string"""
-		# This function returns a list and a string
-		# The first list contains parsed neighbor to match against our defined peers
-		# The string is the command to be run for those peers
-		# The parsed neighbor is a list of the element making the neighbor string so each part can be checked against the neighbor name
-
-		returned = []
-		neighbor,remaining = command.split(' ',1)
-		if neighbor != 'neighbor':
-			return [],command
-
-		ip,command = remaining.split(' ',1)
-		definition = ['neighbor %s' % (ip)]
-
-		while True:
-			try:
-				key,value,remaining = command.split(' ',2)
-			except ValueError:
-				key,value = command.split(' ',1)
-			if key == ',':
-				returned.append(definition)
-				_,command = command.split(' ',1)
-				definition = []
-				continue
-			if key not in ['neighbor','local-ip','local-as','peer-as','router-id','family-allowed']:
-				if definition:
-					returned.append(definition)
-				break
-			definition.append('%s %s' % (key,value))
-			command = remaining
-
-		return returned,command
-
 	def api_route (self, command):
 		action, line = command.split(' ',1)
 
