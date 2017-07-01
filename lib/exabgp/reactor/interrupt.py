@@ -26,7 +26,7 @@ class Signal (object):
 		self.rearm()
 
 	def rearm (self):
-		self._signaled = Signal.NONE
+		self.received = Signal.NONE
 		self.number = 0
 
 		signal.signal(signal.SIGTERM, self.sigterm)
@@ -34,7 +34,6 @@ class Signal (object):
 		signal.signal(signal.SIGALRM, self.sigalrm)
 		signal.signal(signal.SIGUSR1, self.sigusr1)
 		signal.signal(signal.SIGUSR2, self.sigusr2)
-
 
 	def sigterm (self, signum, frame):
 		self.logger.reactor('SIG TERM received')
