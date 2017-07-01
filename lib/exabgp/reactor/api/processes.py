@@ -163,14 +163,14 @@ class Processes (object):
 			self.logger.processes("reason: %s" % str(exc))
 
 	def start (self, configuration, restart=False):
+		for process in list(self._process):
+			if process not in configuration:
+				self._terminate(process)
 		self._configuration = configuration
 		for process in configuration:
 			if restart and process in list(self._process):
 				self._terminate(process)
 			self._start(process)
-		for process in list(self._process):
-			if process not in configuration:
-				self._terminate(process)
 
 	def broken (self, neighbor):
 		if self._broken:
