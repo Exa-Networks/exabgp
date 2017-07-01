@@ -94,7 +94,7 @@ class Neighbor (object):
 		# - have multiple exabgp toward one peer on the same host ( use of pid )
 		# - have more than once connection toward a peer
 		# - each connection has it own neihgbor (hence why identificator is not in Protocol)
-		self.uid = '%d-%s' % (os.getpid(),uuid.uuid1())
+		self.uid = '%d-%x' % (os.getpid(),uuid.uuid1().fields[0])
 
 	def make_rib (self):
 		self.rib = RIB(self.name(),self.adj_rib_in,self.adj_rib_out,self._families)

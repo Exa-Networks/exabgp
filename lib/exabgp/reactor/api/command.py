@@ -135,58 +135,58 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
 				for change in changes:
 					if isinstance(change.nlri, route_type):
 						if extensive:
-							reactor.always_answer(service,'neighbor %s %s %s' % (peer.neighbor.name(),'%s %s' % change.nlri.family(),change.extensive()))
+							reactor.processes.always(service,'neighbor %s %s %s' % (peer.neighbor.name(),'%s %s' % change.nlri.family(),change.extensive()),force=True)
 						else:
-							reactor.always_answer(service,'neighbor %s %s %s' % (peer.neighbor.peer_address,'%s %s' % change.nlri.family(),str(change.nlri)))
+							reactor.processes.always(service,'neighbor %s %s %s' % (peer.neighbor.peer_address,'%s %s' % change.nlri.family(),str(change.nlri)),force=True)
 				yield True
-		reactor.answer(service,'done')
+		reactor.processes.answer_done(service)
 	return callback
 
 
 @Command.register('text','help')
 def help (self, reactor, service, command):
-	reactor.answer(service,'commands are:')
+	reactor.processes.answer(service,'commands are:')
 	for command in sorted(self.callback['text']):
-		reactor.answer(service,command)
-	reactor.answer(service,'done')
+		reactor.processes.answer(service,command)
+	reactor.processes.answer_done(service)
 	return True
 
 
 @Command.register('text','shutdown')
 def shutdown (self, reactor, service, command):
-	reactor.answer(service,'shutdown in progress')
-	reactor.answer(service,'done')
+	reactor.processes.answer(service,'shutdown in progress')
+	reactor.processes.answer_done(service)
 	reactor.api_shutdown()
 	return True
 
 
 @Command.register('text','reload')
 def reload (self, reactor, service, command):
-	reactor.answer(service,'reload in progress')
-	reactor.answer(service,'done')
+	reactor.processes.answer(service,'reload in progress')
+	reactor.processes.answer_done(service)
 	reactor.api_reload()
 	return True
 
 
 @Command.register('text','restart')
 def restart (self, reactor, service, command):
-	reactor.answer(service,'restart in progress')
-	reactor.answer(service,'done')
+	reactor.processes.answer(service,'restart in progress')
+	reactor.processes.answer_done(service)
 	reactor.api_restart()
 	return True
 
 
 @Command.register('text','version')
 def version (self, reactor, service, command):
-	reactor.always_answer(service,'exabgp %s' % _version)
-	reactor.answer(service,'done')
+	reactor.processes.answer(service,'exabgp %s' % _version,force=True)
+	reactor.processes.answer_done(service)
 	return True
 
 
 @Command.register('text','#')
 def comment (self, reactor, service, command):
 	self.logger.processes(command.lstrip().lstrip('#').strip())
-	reactor.answer(service,'done')
+	reactor.processes.answer_done(service)
 	return True
 
 
@@ -200,13 +200,13 @@ def teardown (self, reactor, service, command):
 				if reactor.match_neighbor(description,key):
 					reactor.peers[key].teardown(int(code))
 					self.log_message('teardown scheduled for %s' % ' '.join(description))
-		reactor.answer(service,'done')
+		reactor.processes.answer_done(service)
 		return True
 	except ValueError:
-		reactor.answer(service,'error')
+		reactor.processes.answer(service,'error')
 		return False
 	except IndexError:
-		reactor.answer(service,'error')
+		reactor.processes.answer(service,'error')
 		return False
 
 
@@ -240,9 +240,9 @@ def show_neighbor (self, reactor, service, command):
 			if limit and limit not in neighbor_name:
 				continue
 			for line in str(neighbor).split('\n'):
-				reactor.answer(service,line)
+				reactor.processes.answer(service,line)
 				yield True
-		reactor.answer(service,'done')
+		reactor.processes.answer_done(service)
 
 	def callback_extensive ():
 		for peer_name in reactor.peers.keys():
@@ -252,12 +252,12 @@ def show_neighbor (self, reactor, service, command):
 			if limit and limit not in peer.neighbor.name():
 				continue
 			for line in Neighbor.extensive(peer.cli_data()).split('\n'):
-				reactor.answer(service,line)
+				reactor.processes.answer(service,line)
 				yield True
-		reactor.answer(service,'done')
+		reactor.processes.answer_done(service)
 
 	def callback_summary ():
-		reactor.answer(service,Neighbor.summary_header)
+		reactor.processes.answer(service,Neighbor.summary_header)
 		for peer_name in reactor.peers.keys():
 			peer = reactor.peers.get(peer_name,None)
 			if not peer:
@@ -265,9 +265,9 @@ def show_neighbor (self, reactor, service, command):
 			if limit and limit not in peer.neighbor.name():
 				continue
 			for line in Neighbor.summary(peer.cli_data()).split('\n'):
-				reactor.answer(service,line)
+				reactor.processes.answer(service,line)
 				yield True
-		reactor.answer(service,'done')
+		reactor.processes.answer_done(service)
 
 	if summary:
 		reactor.async(service,command,callback_summary())
@@ -281,30 +281,29 @@ def show_neighbor (self, reactor, service, command):
 		reactor.async(service,command,callback_configuration())
 		return True
 
-	reactor.answer(service,'please specify summary, extensive or configuration')
-	reactor.answer(service,'you can filter by per ip address adding it after the word neighbor')
-	reactor.answer(service,'done')
+	reactor.processes.answer(service,'please specify summary, extensive or configuration')
+	reactor.processes.answer(service,'you can filter by per ip address adding it after the word neighbor')
+	reactor.processes.answer_done(service)
 
 
-@Command.register('text','show neighbor status')
-def show_neighbor_status (self, reactor, service, command):
-	def callback ():
-		for peer_name in reactor.peers.keys():
-			peer = reactor.peers.get(peer_name, None)
-			if not peer:
-				continue
-			peer_name = peer.neighbor.name()
-			detailed_status = peer.fsm.name()
-			families = peer.negotiated_families()
-			if families:
-				families = "negotiated %s" % families
-			reactor.always_answer(service, "%s %s state %s" % (peer_name, families, detailed_status))
-			yield True
-		reactor.answer(service,"done")
-
-	reactor.async(service,command,callback())
-	return True
-
+# @Command.register('text','show neighbor status')
+# def show_neighbor_status (self, reactor, service, command):
+# 	def callback ():
+# 		for peer_name in reactor.peers.keys():
+# 			peer = reactor.peers.get(peer_name, None)
+# 			if not peer:
+# 				continue
+# 			peer_name = peer.neighbor.name()
+# 			detailed_status = peer.fsm.name()
+# 			families = peer.negotiated_families()
+# 			if families:
+# 				families = "negotiated %s" % families
+# 			reactor.processes.answer(service, "%s %s state %s" % (peer_name, families, detailed_status),force=True)
+# 			yield True
+# 		reactor.processes.answer(service,"done")
+#
+# 	reactor.async(service,command,callback())
+# 	return True
 
 @Command.register('text','show adj-rib')
 def show_adj_rib (self, reactor, service, command):
@@ -318,11 +317,11 @@ def show_adj_rib (self, reactor, service, command):
 		elif words[1] == 'adj-rib-out':
 			rib = 'out'
 		else:
-			reactor.answer(service,"error")
+			reactor.processes.answer(service,"error")
 			return False
 
 	if rib not in ('in','out'):
-		reactor.answer(service,"error")
+		reactor.processes.answer(service,"error")
 		return False
 
 	klass = NLRI
@@ -355,7 +354,7 @@ def announce_watchdog (self, reactor, service, command):
 			yield False
 
 		reactor.schedule_rib_check()
-		reactor.answer(service,'done')
+		reactor.processes.answer_done(service)
 
 	try:
 		name = command.split(' ')[2]
@@ -377,7 +376,7 @@ def withdraw_watchdog (self, reactor, service, command):
 			yield False
 
 		reactor.schedule_rib_check()
-		reactor.answer(service,'done')
+		reactor.processes.answer_done(service)
 
 	try:
 		name = command.split(' ')[2]
@@ -398,24 +397,24 @@ def flush_adj_rib_out (self, reactor, service, command):
 			peer.schedule_rib_check(update=True)
 			yield False
 
-		reactor.answer(service,'done')
+		reactor.processes.answer_done(service)
 
 	try:
 		descriptions,command = self.extract_neighbors(command)
 		peers = reactor.match_neighbors(descriptions)
 		if not peers:
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			return False
 		reactor.async(service,command,callback(self,peers))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')
-		reactor.answer(service,'error')
+		reactor.processes.answer(service,'error')
 		return False
 	except IndexError:
 		self.log_failure('issue parsing the command')
-		reactor.answer(service,'error')
+		reactor.processes.answer(service,'error')
 		return False
 
 
@@ -427,14 +426,14 @@ def announce_route (self, reactor, service, line):
 			peers = reactor.match_neighbors(descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command,'warning')
-				reactor.answer(service,'error')
+				reactor.processes.answer(service,'error')
 				yield True
 				return
 
 			changes = self.api_route(command)
 			if not changes:
 				self.log_failure('command could not parse route in : %s' % command,'warning')
-				reactor.answer(service,'error')
+				reactor.processes.answer(service,'error')
 				yield True
 				return
 
@@ -448,14 +447,14 @@ def announce_route (self, reactor, service, line):
 				yield False
 
 			reactor.schedule_rib_check()
-			reactor.answer(service,'done')
+			reactor.processes.answer_done(service)
 		except ValueError:
 			self.log_failure('issue parsing the route')
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			yield True
 		except IndexError:
 			self.log_failure('issue parsing the route')
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			yield True
 
 	reactor.async(service,line,callback())
@@ -470,14 +469,14 @@ def withdraw_route (self, reactor, service, line):
 			peers = reactor.match_neighbors(descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command,'warning')
-				reactor.answer(service,'error')
+				reactor.processes.answer(service,'error')
 				yield True
 				return
 
 			changes = self.api_route(command)
 			if not changes:
 				self.log_failure('command could not parse route in : %s' % command,'warning')
-				reactor.answer(service,'error')
+				reactor.processes.answer(service,'error')
 				yield True
 				return
 
@@ -499,14 +498,14 @@ def withdraw_route (self, reactor, service, line):
 					yield False
 
 			reactor.schedule_rib_check()
-			reactor.answer(service,'done')
+			reactor.processes.answer_done(service)
 		except ValueError:
 			self.log_failure('issue parsing the route')
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			yield True
 		except IndexError:
 			self.log_failure('issue parsing the route')
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			yield True
 
 	reactor.async(service,line,callback())
@@ -521,14 +520,14 @@ def announce_vpls (self, reactor, service, line):
 			peers = reactor.match_neighbors(descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command,'warning')
-				reactor.answer(service,'error')
+				reactor.processes.answer(service,'error')
 				yield True
 				return
 
 			changes = self.api_vpls(command)
 			if not changes:
 				self.log_failure('command could not parse vpls in : %s' % command,'warning')
-				reactor.answer(service,'error')
+				reactor.processes.answer(service,'error')
 				yield True
 				return
 
@@ -539,14 +538,14 @@ def announce_vpls (self, reactor, service, line):
 				yield False
 
 			reactor.schedule_rib_check()
-			reactor.answer(service,'done')
+			reactor.processes.answer_done(service)
 		except ValueError:
 			self.log_failure('issue parsing the vpls')
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			yield True
 		except IndexError:
 			self.log_failure('issue parsing the vpls')
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			yield True
 
 	reactor.async(service,line,callback())
@@ -561,7 +560,7 @@ def withdraw_vpls (self, reactor, service, line):
 			peers = reactor.match_neighbors(descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command,'warning')
-				reactor.answer(service,'error')
+				reactor.processes.answer(service,'error')
 				yield True
 				return
 
@@ -569,7 +568,7 @@ def withdraw_vpls (self, reactor, service, line):
 
 			if not changes:
 				self.log_failure('command could not parse vpls in : %s' % command,'warning')
-				reactor.answer(service,'error')
+				reactor.processes.answer(service,'error')
 				yield True
 				return
 
@@ -583,14 +582,14 @@ def withdraw_vpls (self, reactor, service, line):
 					yield False
 
 			reactor.schedule_rib_check()
-			reactor.answer(service,'done')
+			reactor.processes.answer_done(service)
 		except ValueError:
 			self.log_failure('issue parsing the vpls')
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			yield True
 		except IndexError:
 			self.log_failure('issue parsing the vpls')
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			yield True
 
 	reactor.async(service,line,callback())
@@ -605,14 +604,14 @@ def announce_attributes (self, reactor, service, line):
 			peers = reactor.match_neighbors(descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command,'warning')
-				reactor.answer(service,'error')
+				reactor.processes.answer(service,'error')
 				yield True
 				return
 
 			changes = self.api_attributes(command,peers)
 			if not changes:
 				self.log_failure('command could not parse route in : %s' % command,'warning')
-				reactor.answer(service,'error')
+				reactor.processes.answer(service,'error')
 				yield True
 				return
 
@@ -623,14 +622,14 @@ def announce_attributes (self, reactor, service, line):
 				yield False
 
 			reactor.schedule_rib_check()
-			reactor.answer(service,'done')
+			reactor.processes.answer_done(service)
 		except ValueError:
 			self.log_failure('issue parsing the route')
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			yield True
 		except IndexError:
 			self.log_failure('issue parsing the route')
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			yield True
 
 	reactor.async(service,line,callback())
@@ -645,14 +644,14 @@ def withdraw_attribute (self, reactor, service, line):
 			peers = reactor.match_neighbors(descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command,'warning')
-				reactor.answer(service,'error')
+				reactor.processes.answer(service,'error')
 				yield True
 				return
 
 			changes = self.api_attributes(command,peers)
 			if not changes:
 				self.log_failure('command could not parse route in : %s' % command,'warning')
-				reactor.answer(service,'error')
+				reactor.processes.answer(service,'error')
 				yield True
 				return
 
@@ -666,14 +665,14 @@ def withdraw_attribute (self, reactor, service, line):
 					yield False
 
 			reactor.schedule_rib_check()
-			reactor.answer(service,'done')
+			reactor.processes.answer_done(service)
 		except ValueError:
 			self.log_failure('issue parsing the route')
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			yield True
 		except IndexError:
 			self.log_failure('issue parsing the route')
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			yield True
 
 	reactor.async(service,line,callback())
@@ -688,14 +687,14 @@ def announce_flow (self, reactor, service, line):
 			peers = reactor.match_neighbors(descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command,'warning')
-				reactor.answer(service,'error')
+				reactor.processes.answer(service,'error')
 				yield True
 				return
 
 			changes = self.api_flow(command)
 			if not changes:
 				self.log_failure('command could not parse flow in : %s' % command,'warning')
-				reactor.answer(service,'error')
+				reactor.processes.answer(service,'error')
 				yield True
 				return
 
@@ -706,14 +705,14 @@ def announce_flow (self, reactor, service, line):
 				yield False
 
 			reactor.schedule_rib_check()
-			reactor.answer(service,'done')
+			reactor.processes.answer_done(service)
 		except ValueError:
 			self.log_failure('issue parsing the flow')
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			yield True
 		except IndexError:
 			self.log_failure('issue parsing the flow')
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			yield True
 
 	reactor.async(service,line,callback())
@@ -728,7 +727,7 @@ def withdraw_flow (self, reactor, service, line):
 			peers = reactor.match_neighbors(descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command,'warning')
-				reactor.answer(service,'error')
+				reactor.processes.answer(service,'error')
 				yield True
 				return
 
@@ -736,7 +735,7 @@ def withdraw_flow (self, reactor, service, line):
 
 			if not changes:
 				self.log_failure('command could not parse flow in : %s' % command,'warning')
-				reactor.answer(service,'error')
+				reactor.processes.answer(service,'error')
 				yield True
 				return
 
@@ -749,14 +748,14 @@ def withdraw_flow (self, reactor, service, line):
 				yield False
 
 			reactor.schedule_rib_check()
-			reactor.answer(service,'done')
+			reactor.processes.answer_done(service)
 		except ValueError:
 			self.log_failure('issue parsing the flow')
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			yield True
 		except IndexError:
 			self.log_failure('issue parsing the flow')
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			yield True
 
 	reactor.async(service,line,callback())
@@ -769,7 +768,7 @@ def announce_eor (self, reactor, service, command):
 		family = self.api_eor(command)
 		if not family:
 			self.log_failure("Command could not parse eor : %s" % command)
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			yield True
 			return
 
@@ -778,24 +777,24 @@ def announce_eor (self, reactor, service, command):
 		yield False
 
 		reactor.schedule_rib_check()
-		reactor.answer(service,'done')
+		reactor.processes.answer_done(service)
 
 	try:
 		descriptions,command = self.extract_neighbors(command)
 		peers = reactor.match_neighbors(descriptions)
 		if not peers:
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			return False
 		reactor.async(service,command,callback(self,command,peers))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')
-		reactor.answer(service,'error')
+		reactor.processes.answer(service,'error')
 		return False
 	except IndexError:
 		self.log_failure('issue parsing the command')
-		reactor.answer(service,'error')
+		reactor.processes.answer(service,'error')
 		return False
 
 
@@ -805,7 +804,7 @@ def announce_refresh (self, reactor, service, command):
 		refresh = self.api_refresh(command)
 		if not refresh:
 			self.log_failure("Command could not parse route-refresh command : %s" % command)
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			yield True
 			return
 
@@ -814,24 +813,24 @@ def announce_refresh (self, reactor, service, command):
 
 		yield False
 		reactor.schedule_rib_check()
-		reactor.answer(service,'done')
+		reactor.processes.answer_done(service)
 
 	try:
 		descriptions,command = self.extract_neighbors(command)
 		peers = reactor.match_neighbors(descriptions)
 		if not peers:
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			return False
 		reactor.async(service,command,callback(self,command,peers))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')
-		reactor.answer(service,'error')
+		reactor.processes.answer(service,'error')
 		return False
 	except IndexError:
 		self.log_failure('issue parsing the command')
-		reactor.answer(service,'error')
+		reactor.processes.answer(service,'error')
 		return False
 
 
@@ -841,7 +840,7 @@ def announce_operational (self, reactor, service, command):
 		operational = self.api_operational(command)
 		if not operational:
 			self.log_failure("Command could not parse operational command : %s" % command)
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			yield True
 			return
 
@@ -852,10 +851,10 @@ def announce_operational (self, reactor, service, command):
 		)
 		yield False
 		reactor.schedule_rib_check()
-		reactor.answer(service,'done')
+		reactor.processes.answer_done(service)
 
 	if (command.split() + ['be','safe'])[2].lower() not in ('asm','adm','rpcq','rpcp','apcq','apcp','lpcq','lpcp'):
-		reactor.answer(service,'done')
+		reactor.processes.answer_done(service)
 		return False
 
 	try:
@@ -863,15 +862,15 @@ def announce_operational (self, reactor, service, command):
 		peers = reactor.match_neighbors(descriptions)
 		if not peers:
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
-			reactor.answer(service,'error')
+			reactor.processes.answer(service,'error')
 			return False
 		reactor.async(service,command,callback(self,command,peers))
 		return True
 	except ValueError:
 		self.log_failure('issue parsing the command')
-		reactor.answer(service,'error')
+		reactor.processes.answer(service,'error')
 		return False
 	except IndexError:
 		self.log_failure('issue parsing the command')
-		reactor.answer(service,'error')
+		reactor.processes.answer(service,'error')
 		return False

@@ -446,14 +446,6 @@ class Reactor (object):
 		if peer in self.peers:
 			del self.peers[peer]
 
-	def answer (self, service, string):
-		if self.ack:
-			self.always_answer(service,string)
-
-	def always_answer (self, service, string):
-		self.processes.write(service,string)
-		self.logger.reactor('responding to %s : %s' % (service,string.replace('\n','\\n')))
-
 	def api_shutdown (self):
 		self._signaled = SIGNAL.SHUTDOWN
 		self._async = []

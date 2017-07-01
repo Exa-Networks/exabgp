@@ -64,7 +64,7 @@ class ParseProcess (Section):
 	def add_api (self):
 		if not os.environ.get('exabgp_cli_pipe',''):
 			return
-		name = 'api-internal-cli-%s' % uuid.uuid1()
+		name = 'api-internal-cli-%x' % uuid.uuid1().fields[0]
 		api = {
 			name: {
 				'run': [sys.executable, os.path.join(os.environ.get('PWD',''),sys.argv[0])],
