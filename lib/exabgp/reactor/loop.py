@@ -34,12 +34,6 @@ from exabgp.version import version
 from exabgp.logger import Logger
 
 
-class SIGNAL (object):
-	NONE     = 0
-	SHUTDOWN = 1
-	RESTART  = 2
-	RELOAD   = 3
-
 
 class ASYNC (object):
 	def __init__ (self):
@@ -85,6 +79,76 @@ class ASYNC (object):
 		return True
 
 
+class Signal (object):
+	NONE        = 0
+	SHUTDOWN    = 1
+	RESTART     = 2
+	RELOAD      = 4
+	FULL_RELOAD = 8
+
+	def __init__ (self):
+		self.logger = Logger()
+		self.received = self.NONE
+		self.number = 0
+		self.rearm()
+
+	def rearm (self):
+		self._signaled = Signal.NONE
+		self.number = 0
+
+		signal.signal(signal.SIGTERM, self.sigterm)
+		signal.signal(signal.SIGHUP, self.sighup)
+		signal.signal(signal.SIGALRM, self.sigalrm)
+		signal.signal(signal.SIGUSR1, self.sigusr1)
+		signal.signal(signal.SIGUSR2, self.sigusr2)
+
+
+	def sigterm (self, signum, frame):
+		self.logger.reactor('SIG TERM received')
+		if self.received:
+			self.logger.reactor('ignoring - still handling previous signal')
+			return
+		self.logger.reactor('scheduling shutdown')
+		self.received = self.SHUTDOWN
+		self.number = signum
+
+	def sighup (self, signum, frame):
+		self.logger.reactor('SIG HUP received')
+		if self.received:
+			self.logger.reactor('ignoring - still handling previous signal')
+			return
+		self.logger.reactor('scheduling shutdown')
+		self.received = self.SHUTDOWN
+		self.number = signum
+
+	def sigalrm (self, signum, frame):
+		self.logger.reactor('SIG ALRM received')
+		if self.received:
+			self.logger.reactor('ignoring - still handling previous signal')
+			return
+		self.logger.reactor('scheduling restart')
+		self.received = self.RESTART
+		self.number = signum
+
+	def sigusr1 (self, signum, frame):
+		self.logger.reactor('SIG USR1 received')
+		if self.received:
+			self.logger.reactor('ignoring - still handling previous signal')
+			return
+		self.logger.reactor('scheduling reload of configuration')
+		self.received = self.RELOAD
+		self.number = signum
+
+	def sigusr2 (self, signum, frame):
+		self.logger.reactor('SIG USR1 received')
+		if self.received:
+			self.logger.reactor('ignoring - still handling previous signal')
+			return
+		self.logger.reactor('scheduling reload of configuration and processes')
+		self.received = self.FULL_RELOAD
+		self.number = signum
+
+
 class Reactor (object):
 	# [hex(ord(c)) for c in os.popen('clear').read()]
 	clear = concat_bytes_i(character(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a'])
@@ -107,81 +171,22 @@ class Reactor (object):
 		self.peers = {}
 
 		self._stopping = environment.settings().tcp.once
-		self._signaled = SIGNAL.NONE
 		self._reload_processes = False
 		self._saved_pid = False
-		self._running = None
 
-		self._signal = {}
 		self.async = ASYNC()
-
-		signal.signal(signal.SIGTERM, self.sigterm)
-		signal.signal(signal.SIGHUP, self.sighup)
-		signal.signal(signal.SIGALRM, self.sigalrm)
-		signal.signal(signal.SIGUSR1, self.sigusr1)
-		signal.signal(signal.SIGUSR2, self.sigusr2)
+		self.signal = Signal()
 
 	def _termination (self,reason):
 		while True:
 			try:
-				self._signaled = SIGNAL.SHUTDOWN
+				self._signaled = Signal.SHUTDOWN
 				self.logger.reactor(reason,'warning')
 				break
 			except KeyboardInterrupt:
 				pass
 
 	# XXX: It seems odd to find all the signal api processes via peers
-
-	def sigterm (self, signum, frame):
-		if self._signaled:
-			self.logger.reactor('SIG TERM received - ignoring - still handling previous signal')
-			return
-		self.logger.reactor('SIG TERM received - shutdown')
-		self._signaled = SIGNAL.SHUTDOWN
-		for key in self.peers:
-			if self.peers[key].neighbor.api['signal']:
-				self._signal[key] = signum
-
-	def sighup (self, signum, frame):
-		if self._signaled:
-			self.logger.reactor('SIG HUP received - ignoring - still handling previous signal')
-			return
-		self.logger.reactor('SIG HUP received - shutdown')
-		self._signaled = SIGNAL.SHUTDOWN
-		for key in self.peers:
-			if self.peers[key].neighbor.api['signal']:
-				self._signal[key] = signum
-
-	def sigalrm (self, signum, frame):
-		if self._signaled:
-			self.logger.reactor('SIG ALRM received - ignoring - still handling previous signal')
-			return
-		self.logger.reactor('SIG ALRM received - restart')
-		self._signaled = SIGNAL.RESTART
-		for key in self.peers:
-			if self.peers[key].neighbor.api['signal']:
-				self._signal[key] = signum
-
-	def sigusr1 (self, signum, frame):
-		if self._signaled:
-			self.logger.reactor('SIG USR1 received - ignoring - still handling previous signal')
-			return
-		self.logger.reactor('SIG USR1 received - reload configuration')
-		self._signaled = SIGNAL.RELOAD
-		for key in self.peers:
-			if self.peers[key].neighbor.api['signal']:
-				self._signal[key] = signum
-
-	def sigusr2 (self, signum, frame):
-		if self._signaled:
-			self.logger.reactor('SIG USR1 received - ignoring - still handling previous signal')
-			return
-		self.logger.reactor('SIG USR2 received - reload configuration and processes')
-		self._signaled = SIGNAL.RELOAD
-		self._reload_processes = True
-		for key in self.peers:
-			if self.peers[key].neighbor.api['signal']:
-				self._signal[key] = signum
 
 	def _api_ready (self,sockets):
 		sleeptime = self.max_loop_time / 100
@@ -297,26 +302,29 @@ class Reactor (object):
 
 		while True:
 			try:
-				if self._signaled:
-					signaled = self._signaled
-					self._signaled = SIGNAL.NONE
+				if self.signal.received:
+					for key in self.peers:
+						if self.peers[key].neighbor.api['signal']:
+							self.peers[key].reactor.processes.signal(self.peers[key].neighbor,self.signal.number)
 
-					# Handle signal message to API
-					for key in self._signal:
-						self.peers[key].reactor.processes.signal(self.peers[key].neighbor,self._signal[key])
-					self._signal = {}
+					signaled = self.signal.received
+					self.signal.rearm()
 
-					if signaled == SIGNAL.SHUTDOWN:
+					if signaled == Signal.SHUTDOWN:
 						self.shutdown()
 						break
 
-					if signaled == SIGNAL.RESTART:
+					if signaled == Signal.RESTART:
 						self.restart()
 						continue
 
 					if not reload_completed:
 						continue
-					if signaled == SIGNAL.RELOAD:
+
+					if signaled == Signal.RELOAD:
+						self._reload_processes = True
+
+					if signaled in (Signal.RELOAD, Signal.FULL_ROAD):
 						self.load()
 						self.processes.start(self._reload_processes)
 						self._reload_processes = False
@@ -340,7 +348,8 @@ class Reactor (object):
 					# * later if it should be called again but has no work atm
 					# * close if it is finished and is closing down, or restarting
 					if action == ACTION.CLOSE:
-						self._unschedule(key)
+						if key in self.peers:
+							del self.peers[key]
 						peers.discard(key)
 					# we are loosing this peer, not point to schedule more process work
 					elif action == ACTION.LATER:
@@ -387,6 +396,7 @@ class Reactor (object):
 			self.listener = None
 		for key in self.peers.keys():
 			self.peers[key].stop()
+		self.async.clear()
 		self.processes.terminate()
 		self.daemon.removepid()
 		self._stopping = True
@@ -447,24 +457,5 @@ class Reactor (object):
 				self.peers[key].reestablish()
 		self.processes.start(True)
 
-	def _unschedule (self, peer):
-		if peer in self.peers:
-			del self.peers[peer]
-
-	def api_shutdown (self):
-		self._signaled = SIGNAL.SHUTDOWN
-		self.async.clear()
-		self._running = None
-
-	def api_reload (self):
-		self._signaled = SIGNAL.RELOAD
-		self.async.clear()
-		self._running = None
-
-	def api_restart (self):
-		self._signaled = SIGNAL.RESTART
-		self.async.clear()
-		self._running = None
-
-	def nexthops (self, peers):
-		return dict((peer,self.peers[peer].neighbor.local_address) for peer in peers)
+	# def nexthops (self, peers):
+	# 	return dict((peer,self.peers[peer].neighbor.local_address) for peer in peers)

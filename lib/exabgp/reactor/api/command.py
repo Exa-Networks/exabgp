@@ -176,25 +176,25 @@ def help (self, reactor, service, command):
 
 @Command.register('text','shutdown')
 def shutdown (self, reactor, service, command):
+	reactor.signal.received = reactor.signal.SHUTDOWN
 	reactor.processes.answer(service,'shutdown in progress')
 	reactor.processes.answer_done(service)
-	reactor.api_shutdown()
 	return True
 
 
 @Command.register('text','reload')
 def reload (self, reactor, service, command):
+	reactor.signal.received = reactor.signal.RELOAD
 	reactor.processes.answer(service,'reload in progress')
 	reactor.processes.answer_done(service)
-	reactor.api_reload()
 	return True
 
 
 @Command.register('text','restart')
 def restart (self, reactor, service, command):
+	reactor.signal.received = reactor.signal.RESTART
 	reactor.processes.answer(service,'restart in progress')
 	reactor.processes.answer_done(service)
-	reactor.api_restart()
 	return True
 
 
