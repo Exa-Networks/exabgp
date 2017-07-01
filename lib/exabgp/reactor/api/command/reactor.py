@@ -10,6 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from exabgp.version import version as _version
 from exabgp.reactor.api.command.command import Command
 
+
 def register_reactor ():
 	pass
 
