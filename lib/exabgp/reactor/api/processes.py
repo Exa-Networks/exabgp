@@ -50,12 +50,12 @@ class Processes (object):
 
 	_dispatch = {}
 
-	def __init__ (self, reactor):
+	def __init__ (self):
 		self.logger = Logger()
-		self.reactor = reactor
 		self.clean()
 		self.silence = False
 		self._buffer = {}
+		self._configuration = {}
 
 		self.respawn_number = 5 if environment.settings().api.respawn else 0
 		self.terminate_on_error = environment.settings().api.terminate
@@ -70,20 +70,14 @@ class Processes (object):
 		self._broken = []
 		self._respawning = {}
 
-	def handle_respawn (self, process):
-		self.logger.processes("Issue with the process, restarting it")
-		self._terminate(process)
-		self._start(process)
-
-	def handle_terminate (self, process):
-		self.logger.processes("Issue with the process, terminating it")
-		self._terminate(process)
-
-	def handle_problem (self, process):
+	def _handle_problem (self, process):
 		if self.respawn_number:
-			self.handle_respawn(process)
+			self.logger.processes("Issue with the process, restarting it")
+			self._terminate(process)
+			self._start(process)
 		else:
-			self.handle_terminate(process)
+			self.logger.processes("Issue with the process, terminating it")
+			self._terminate(process)
 
 	def _terminate (self, process):
 		self.logger.processes("Terminating process %s" % process)
@@ -103,6 +97,8 @@ class Processes (object):
 				except ProcessError:
 					pass
 		self.silence = True
+		# waiting a little to make sure IO is flushed to the pipes
+		# we are using unbuffered IO but still ..
 		time.sleep(0.1)
 		for process in list(self._process):
 			try:
@@ -110,25 +106,25 @@ class Processes (object):
 			except OSError:
 				# we most likely received a SIGTERM signal and our child is already dead
 				self.logger.processes("child process %s was already dead" % process)
-
 		self.clean()
 
-	def _start (self, process):
+	def _start (self,process):
 		try:
 			if process in self._process:
 				self.logger.processes("process already running")
 				return
-			if process not in self.reactor.configuration.processes:
-				self.logger.processes("Can not start process, no configuration for it (anymore ?)")
+			if process not in self._configuration:
+				self.logger.processes("Can not start process, no configuration for it")
 				return
-
 			# Prevent some weird termcap data to be created at the start of the PIPE
 			# \x1b[?1034h (no-eol) (esc)
 			os.environ['TERM'] = 'dumb'
 
-			run = self.reactor.configuration.processes[process].get('run','')
+			configuration = self._configuration[process]
+
+			run = configuration.get('run','')
 			if run:
-				api = self.reactor.configuration.processes[process]['encoder']
+				api = configuration.get('encoder','')
 				self._encoder[process] = Response.Text(text_version) if api == 'text' else Response.JSON(json_version)
 
 				self._process[process] = subprocess.Popen(
@@ -166,18 +162,19 @@ class Processes (object):
 			self.logger.processes("Could not start process %s" % process)
 			self.logger.processes("reason: %s" % str(exc))
 
-	def start (self, restart=False):
-		for process in self.reactor.configuration.processes:
+	def start (self, configuration, restart=False):
+		self._configuration = configuration
+		for process in configuration:
 			if restart and process in list(self._process):
 				self._terminate(process)
 			self._start(process)
 		for process in list(self._process):
-			if process not in self.reactor.configuration.processes:
+			if process not in configuration:
 				self._terminate(process)
 
 	def broken (self, neighbor):
 		if self._broken:
-			for process in self.reactor.configuration.processes:
+			for process in self._configuration:
 				if process in self._broken:
 					return True
 		return False
@@ -195,7 +192,7 @@ class Processes (object):
 				# proc.poll returns None if the process is still fine
 				# -[signal], like -15, if the process was terminated
 				if poll is not None:
-					self.handle_problem(process)
+					self._handle_problem(process)
 					return
 				r,_,_ = select.select([proc.stdout,],[],[],0)
 				if r:
@@ -209,7 +206,7 @@ class Processes (object):
 							# process is fine, we received an empty line because
 							# we're doing .readline() on a non-blocking pipe and
 							# the process maybe has nothing to send yet
-							self.handle_problem(process)
+							self._handle_problem(process)
 							continue
 
 						raw = self._buffer.get(process,'') + buf
@@ -225,7 +222,7 @@ class Processes (object):
 					except IOError as exc:
 						if not exc.errno or exc.errno in error.fatal:
 							# if the program exits we can get an IOError with errno code zero !
-							self.handle_problem(process)
+							self._handle_problem(process)
 						elif exc.errno in error.block:
 							# we often see errno.EINTR: call interrupted and
 							# we most likely have data, we will try to read them a the next loop iteration
@@ -234,9 +231,9 @@ class Processes (object):
 							self.logger.processes("unexpected errno received from forked process (%s)" % errstr(exc))
 					except StopIteration:
 						if not consumed_data:
-							self.handle_problem(process)
+							self._handle_problem(process)
 			except (subprocess.CalledProcessError,OSError,ValueError):
-				self.handle_problem(process)
+				self._handle_problem(process)
 
 	def _write (self, process, string, neighbor=None):
 		if string is None:

@@ -112,7 +112,7 @@ class Reactor (object):
 		# Make sure we create processes once we have closed file descriptor
 		# unfortunately, this must be done before reading the configuration file
 		# so we can not do it with dropped privileges
-		self.processes = Processes(self)
+		self.processes = Processes()
 
 		# we have to read the configuration possibly with root privileges
 		# as we need the MD5 information when we bind, and root is needed
@@ -146,7 +146,7 @@ class Reactor (object):
 					return False
 
 		if not self.early_drop:
-			self.processes.start()
+			self.processes.start(self.configuration.processes)
 
 		if not self.daemon.drop_privileges():
 			self.logger.reactor('Could not drop privileges to \'%s\' refusing to run as root' % self.daemon.user,'critical')
@@ -154,7 +154,7 @@ class Reactor (object):
 			return
 
 		if self.early_drop:
-			self.processes.start()
+			self.processes.start(self.configuration.processes)
 
 		# This is required to make sure we can write in the log location as we now have dropped root privileges
 		if not self.logger.restart():
@@ -202,7 +202,7 @@ class Reactor (object):
 
 					if signaled in (Signal.RELOAD, Signal.FULL_RELOAD):
 						self.load()
-						self.processes.start(self._reload_processes)
+						self.processes.start(self.configuration.processes,self._reload_processes)
 						self._reload_processes = False
 						continue
 
@@ -331,7 +331,7 @@ class Reactor (object):
 				self.peers[key].stop()
 			else:
 				self.peers[key].reestablish()
-		self.processes.start(True)
+		self.processes.start(self.configuration.processes,True)
 
 	# def nexthops (self, peers):
 	# 	return dict((peer,self.peers[peer].neighbor.local_address) for peer in peers)
