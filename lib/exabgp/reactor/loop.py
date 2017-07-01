@@ -9,6 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import re
 import time
+import uuid
 import signal
 import select
 import socket
@@ -280,7 +281,7 @@ class Reactor (object):
 
 				if self.listener.incoming():
 					# check all incoming connection
-					self.async('check new connection',self.listener.new_connections())
+					self.async(str(uuid.uuid1()),'check new connection',self.listener.new_connections())
 
 				peers = self._active_peers()
 				if not peers:
@@ -389,23 +390,34 @@ class Reactor (object):
 
 		return True
 
-	def async (self, name, callback):
-		self.logger.reactor('async | %s' % name)
+	def async (self, uid, command, callback):
+		self.logger.reactor('async | %s' % command)
 		if self._async:
-			self._async[0].append(callback)
+			self._async[0].append((uid,callback))
 		else:
-			self._async.append([callback])
+			self._async.append([(uid,callback),])
+
+	def api_clear_async (self, deluid):
+		if not self._async:
+			return
+		running = []
+		for (uid,generator) in self._async[0]:
+			if uid != deluid:
+				running.append((uid,generator))
+		self._async.pop()
+		if running:
+			self._async.append(running)
 
 	def _run_async (self):
 		if not self._async:
 			return False
 		running = []
 		try:
-			for generator in self._async[0]:
+			for (uid,generator) in self._async[0]:
 				try:
 					six.next(generator)
 					six.next(generator)
-					running.append(generator)
+					running.append((uid,generator))
 				except StopIteration:
 					pass
 			self._async.pop()

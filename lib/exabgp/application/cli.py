@@ -109,6 +109,9 @@ def main ():
 
 	signal.alarm(0)
 
+	if command == 'reset':
+		sys.exit(0)
+
 	def read_timeout(signum, frame):
 		sys.stderr.write('could not read answer to ExaBGP')
 		sys.stderr.flush()
