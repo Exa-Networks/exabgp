@@ -9,11 +9,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import time
 import uuid
-import signal
 import select
 import socket
-
-from exabgp.vendoring import six
 
 from exabgp.util import character
 from exabgp.util import concat_bytes_i
@@ -24,6 +21,8 @@ from exabgp.reactor.api.processes import Processes
 from exabgp.reactor.api.processes import ProcessError
 from exabgp.reactor.peer import Peer
 from exabgp.reactor.peer import ACTION
+from exabgp.reactor.async import ASYNC
+from exabgp.reactor.interrupt import Signal
 from exabgp.reactor.network.error import error
 
 from exabgp.reactor.api import API
@@ -34,159 +33,36 @@ from exabgp.version import version
 from exabgp.logger import Logger
 
 
-
-class ASYNC (object):
-	def __init__ (self):
-		self.logger = Logger()
-		self._async = []
-
-	def schedule (self, uid, command, callback):
-		self.logger.reactor('async | %s' % command)
-		if self._async:
-			self._async[0].append((uid,callback))
-		else:
-			self._async.append([(uid,callback),])
-
-	def clear (self, deluid=None):
-		if not self._async:
-			return
-		if deluid is None:
-			self._async = []
-			return
-		running = []
-		for (uid,generator) in self._async[0]:
-			if uid != deluid:
-				running.append((uid,generator))
-		self._async.pop()
-		if running:
-			self._async.append(running)
-
-	def run (self):
-		if not self._async:
-			return False
-		running = []
-
-		for (uid,generator) in self._async[0]:
-			try:
-				six.next(generator)
-				six.next(generator)
-				running.append((uid,generator))
-			except StopIteration:
-				pass
-		self._async.pop()
-		if running:
-			self._async.append(running)
-		return True
-
-
-class Signal (object):
-	NONE        = 0
-	SHUTDOWN    = 1
-	RESTART     = 2
-	RELOAD      = 4
-	FULL_RELOAD = 8
-
-	def __init__ (self):
-		self.logger = Logger()
-		self.received = self.NONE
-		self.number = 0
-		self.rearm()
-
-	def rearm (self):
-		self._signaled = Signal.NONE
-		self.number = 0
-
-		signal.signal(signal.SIGTERM, self.sigterm)
-		signal.signal(signal.SIGHUP, self.sighup)
-		signal.signal(signal.SIGALRM, self.sigalrm)
-		signal.signal(signal.SIGUSR1, self.sigusr1)
-		signal.signal(signal.SIGUSR2, self.sigusr2)
-
-
-	def sigterm (self, signum, frame):
-		self.logger.reactor('SIG TERM received')
-		if self.received:
-			self.logger.reactor('ignoring - still handling previous signal')
-			return
-		self.logger.reactor('scheduling shutdown')
-		self.received = self.SHUTDOWN
-		self.number = signum
-
-	def sighup (self, signum, frame):
-		self.logger.reactor('SIG HUP received')
-		if self.received:
-			self.logger.reactor('ignoring - still handling previous signal')
-			return
-		self.logger.reactor('scheduling shutdown')
-		self.received = self.SHUTDOWN
-		self.number = signum
-
-	def sigalrm (self, signum, frame):
-		self.logger.reactor('SIG ALRM received')
-		if self.received:
-			self.logger.reactor('ignoring - still handling previous signal')
-			return
-		self.logger.reactor('scheduling restart')
-		self.received = self.RESTART
-		self.number = signum
-
-	def sigusr1 (self, signum, frame):
-		self.logger.reactor('SIG USR1 received')
-		if self.received:
-			self.logger.reactor('ignoring - still handling previous signal')
-			return
-		self.logger.reactor('scheduling reload of configuration')
-		self.received = self.RELOAD
-		self.number = signum
-
-	def sigusr2 (self, signum, frame):
-		self.logger.reactor('SIG USR1 received')
-		if self.received:
-			self.logger.reactor('ignoring - still handling previous signal')
-			return
-		self.logger.reactor('scheduling reload of configuration and processes')
-		self.received = self.FULL_RELOAD
-		self.number = signum
-
-
 class Reactor (object):
 	# [hex(ord(c)) for c in os.popen('clear').read()]
 	clear = concat_bytes_i(character(int(c,16)) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a'])
 
 	def __init__ (self, configurations):
-		self.ips = environment.settings().tcp.bind
-		self.port = environment.settings().tcp.port
-		self.ack = environment.settings().api.ack
+		self._ips = environment.settings().tcp.bind
+		self._port = environment.settings().tcp.port
+		self._stopping = environment.settings().tcp.once
 
 		self.max_loop_time = environment.settings().reactor.speed
 		self.early_drop = environment.settings().daemon.drop
 
-		self.logger = Logger()
-		self.daemon = Daemon(self)
 		self.processes = None
-		self.listener = Listener(self)
+
 		self.configuration = Configuration(configurations)
+		self.logger = Logger()
+		self.async = ASYNC()
+		self.signal = Signal()
+		self.daemon = Daemon(self)
+		self.listener = Listener(self)
 		self.api = API(self)
 
 		self.peers = {}
 
-		self._stopping = environment.settings().tcp.once
 		self._reload_processes = False
 		self._saved_pid = False
 
-		self.async = ASYNC()
-		self.signal = Signal()
-
 	def _termination (self,reason):
-		while True:
-			try:
-				self._signaled = Signal.SHUTDOWN
-				self.logger.reactor(reason,'warning')
-				break
-			except KeyboardInterrupt:
-				pass
-
-	# XXX: It seems odd to find all the signal api processes via peers
+		self.signal.received = Signal.SHUTDOWN
+		self.logger.reactor(reason,'warning')
 
 	def _api_ready (self,sockets):
 		sleeptime = self.max_loop_time / 100
@@ -247,8 +123,8 @@ class Reactor (object):
 		# - we may not be able to reload the configuration once the privileges are dropped
 
 		# but I can not see any way to avoid it
-		for ip in self.ips:
-			if not self.listener.listen_on(ip, None, self.port, None, False, None):
+		for ip in self._ips:
+			if not self.listener.listen_on(ip, None, self._port, None, False, None):
 				return False
 
 		if not self.load():
@@ -324,7 +200,7 @@ class Reactor (object):
 					if signaled == Signal.RELOAD:
 						self._reload_processes = True
 
-					if signaled in (Signal.RELOAD, Signal.FULL_ROAD):
+					if signaled in (Signal.RELOAD, Signal.FULL_RELOAD):
 						self.load()
 						self.processes.start(self._reload_processes)
 						self._reload_processes = False
@@ -332,7 +208,7 @@ class Reactor (object):
 
 				if self.listener.incoming():
 					# check all incoming connection
-					self.async(str(uuid.uuid1()),'check new connection',self.listener.new_connections())
+					self.async.schedule(str(uuid.uuid1()),'check new connection',self.listener.new_connections())
 
 				peers = self._active_peers()
 				if not peers:
@@ -436,9 +312,9 @@ class Reactor (object):
 				# finding what route changed and sending the delta is not obvious
 				self.logger.reactor('peer definition identical, updating peer routes if required for %s' % str(key))
 				self.peers[key].reconfigure(neighbor)
-			for ip in self.ips:
+			for ip in self._ips:
 				if ip.afi == neighbor.peer_address.afi:
-					self.listener.listen_on(ip, neighbor.peer_address, self.port, neighbor.md5_password, neighbor.md5_base64, None)
+					self.listener.listen_on(ip, neighbor.peer_address, self._port, neighbor.md5_password, neighbor.md5_base64, None)
 		self.logger.configuration('loaded new configuration successfully','info')
 
 		return True
