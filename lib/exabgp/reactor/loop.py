@@ -7,7 +7,6 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-import re
 import time
 import uuid
 import signal
@@ -460,26 +459,6 @@ class Reactor (object):
 		self._signaled = SIGNAL.RESTART
 		self._async = []
 		self._running = None
-
-	@staticmethod
-	def match_neighbor (description, name):
-		for string in description:
-			if re.search(r'(^|\s)%s($|\s|,)' % re.escape(string), name) is None:
-				return False
-		return True
-
-	def match_neighbors (self, descriptions):
-		"""Return the sublist of peers matching the description passed, or None if no description is given"""
-		if not descriptions:
-			return self.peers.keys()
-
-		returned = []
-		for key in self.peers:
-			for description in descriptions:
-				if Reactor.match_neighbor(description,key):
-					if key not in returned:
-						returned.append(key)
-		return returned
 
 	def nexthops (self, peers):
 		return dict((peer,self.peers[peer].neighbor.local_address) for peer in peers)

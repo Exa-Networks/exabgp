@@ -7,6 +7,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+import re
 from datetime import timedelta
 
 from exabgp.protocol.ip import NoNextHop
@@ -23,16 +24,37 @@ from exabgp.version import version as _version
 from exabgp.configuration.environment import environment
 
 
-def en (value):
+def _en (value):
 	if value is None:
 		return 'n/a'
 	return 'enabled' if value else 'disabled'
 
 
-def present (value):
+def _pr (value):
 	if value is None:
 		return 'n/a'
 	return '%s' % value
+
+
+def match_neighbor (description, name):
+	for string in description:
+		if re.search(r'(^|\s)%s($|\s|,)' % re.escape(string), name) is None:
+			return False
+	return True
+
+
+def match_neighbors (self, descriptions):
+	"""Return the sublist of peers matching the description passed, or None if no description is given"""
+	if not descriptions:
+		return self.peers.keys()
+
+	returned = []
+	for key in self.peers:
+		for description in descriptions:
+			if match_neighbor(description,key):
+				if key not in returned:
+					returned.append(key)
+	return returned
 
 
 class Neighbor (object):
@@ -40,25 +62,25 @@ class Neighbor (object):
 	extensive_template = """\
 Neighbor %(peer-address)s
 
-  Session                         Local
+	Session                         Local
 %(local-address)s
 %(state)s
 %(duration)s
 
-  Setup                           Local          Remote
+	Setup                           Local          Remote
 %(as)s
 %(id)s
 %(hold)s
 
-  Capability                      Local          Remote
+	Capability                      Local          Remote
 %(capabilities)s
 
-  Families                        Local          Remote        Add-Path
+	Families                        Local          Remote        Add-Path
 %(families)s
 
-  Message Statistic                Sent        Received
+	Message Statistic                Sent        Received
 %(messages)s
-"""
+""".replace('\t','  ')
 
 	summary_header   = 'Peer            AS        up/down state       |     #sent     #recvd'
 	summary_template = '%-15s %-7s %9s %-12s %10d %10d'
@@ -70,11 +92,11 @@ Neighbor %(peer-address)s
 			'local-address': cls.extensive_kv % ('local',answer['local-address'],'',''),
 			'state':         cls.extensive_kv % ('state',answer['state'],'',''),
 			'duration':      cls.extensive_kv % ('up for',timedelta(seconds=answer['duration']),'',''),
-			'as':            cls.extensive_kv % ('AS',answer['local-as'],present(answer['peer-as']),''),
-			'id':            cls.extensive_kv % ('ID',answer['local-id'],present(answer['peer-id']),''),
-			'hold':          cls.extensive_kv % ('hold-time',answer['local-hold'],present(answer['peer-hold']),''),
-			'capabilities':  '\n'.join(cls.extensive_kv % ('%s:' % k, en(l), en(p), '') for k,(l,p) in answer['capabilities'].items()),
-			'families':      '\n'.join(cls.extensive_kv % ('%s %s:' % (a,s), en(l), en(p), en(a)) for (a,s),(l,p,a) in answer['families'].items()),
+			'as':            cls.extensive_kv % ('AS',answer['local-as'],_pr(answer['peer-as']),''),
+			'id':            cls.extensive_kv % ('ID',answer['local-id'],_pr(answer['peer-id']),''),
+			'hold':          cls.extensive_kv % ('hold-time',answer['local-hold'],_pr(answer['peer-hold']),''),
+			'capabilities':  '\n'.join(cls.extensive_kv % ('%s:' % k, _en(l), _en(p), '') for k,(l,p) in answer['capabilities'].items()),
+			'families':      '\n'.join(cls.extensive_kv % ('%s %s:' % (a,s), _en(l), _en(p), _en(a)) for (a,s),(l,p,a) in answer['families'].items()),
 			'messages':      '\n'.join(cls.extensive_kv % ('%s:' % k, str(s), str(r), '') for k,(s,r) in answer['messages'].items()),
 		}
 
@@ -84,7 +106,7 @@ Neighbor %(peer-address)s
 	def summary (cls,answer):
 		return cls.summary_template % (
 			answer['peer-address'],
-			present(answer['peer-as']),
+			_pr(answer['peer-as']),
 			timedelta(seconds=answer['duration']) if answer['duration'] else 'down',
 			answer['state'].lower(),
 			answer['messages']['update'][0],
@@ -197,7 +219,7 @@ def teardown (self, reactor, service, command):
 		_,code = command.split(' ',1)
 		for key in reactor.peers:
 			for description in descriptions:
-				if reactor.match_neighbor(description,key):
+				if match_neighbor(description,key):
 					reactor.peers[key].teardown(int(code))
 					self.log_message('teardown scheduled for %s' % ' '.join(description))
 		reactor.processes.answer_done(service)
@@ -401,7 +423,7 @@ def flush_adj_rib_out (self, reactor, service, command):
 
 	try:
 		descriptions,command = self.extract_neighbors(command)
-		peers = reactor.match_neighbors(descriptions)
+		peers = match_neighbors(descriptions)
 		if not peers:
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.processes.answer(service,'error')
@@ -423,7 +445,7 @@ def announce_route (self, reactor, service, line):
 	def callback ():
 		try:
 			descriptions,command = self.extract_neighbors(line)
-			peers = reactor.match_neighbors(descriptions)
+			peers = match_neighbors(descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command,'warning')
 				reactor.processes.answer(service,'error')
@@ -466,7 +488,7 @@ def withdraw_route (self, reactor, service, line):
 	def callback ():
 		try:
 			descriptions,command = self.extract_neighbors(line)
-			peers = reactor.match_neighbors(descriptions)
+			peers = match_neighbors(descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command,'warning')
 				reactor.processes.answer(service,'error')
@@ -517,7 +539,7 @@ def announce_vpls (self, reactor, service, line):
 	def callback ():
 		try:
 			descriptions,command = self.extract_neighbors(line)
-			peers = reactor.match_neighbors(descriptions)
+			peers = match_neighbors(descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command,'warning')
 				reactor.processes.answer(service,'error')
@@ -557,7 +579,7 @@ def withdraw_vpls (self, reactor, service, line):
 	def callback ():
 		try:
 			descriptions,command = self.extract_neighbors(line)
-			peers = reactor.match_neighbors(descriptions)
+			peers = match_neighbors(descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command,'warning')
 				reactor.processes.answer(service,'error')
@@ -601,7 +623,7 @@ def announce_attributes (self, reactor, service, line):
 	def callback ():
 		try:
 			descriptions,command = self.extract_neighbors(line)
-			peers = reactor.match_neighbors(descriptions)
+			peers = match_neighbors(descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command,'warning')
 				reactor.processes.answer(service,'error')
@@ -641,7 +663,7 @@ def withdraw_attribute (self, reactor, service, line):
 	def callback ():
 		try:
 			descriptions,command = self.extract_neighbors(line)
-			peers = reactor.match_neighbors(descriptions)
+			peers = match_neighbors(descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command,'warning')
 				reactor.processes.answer(service,'error')
@@ -684,7 +706,7 @@ def announce_flow (self, reactor, service, line):
 	def callback ():
 		try:
 			descriptions,command = self.extract_neighbors(line)
-			peers = reactor.match_neighbors(descriptions)
+			peers = match_neighbors(descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command,'warning')
 				reactor.processes.answer(service,'error')
@@ -724,7 +746,7 @@ def withdraw_flow (self, reactor, service, line):
 	def callback ():
 		try:
 			descriptions,command = self.extract_neighbors(line)
-			peers = reactor.match_neighbors(descriptions)
+			peers = match_neighbors(descriptions)
 			if not peers:
 				self.log_failure('no neighbor matching the command : %s' % command,'warning')
 				reactor.processes.answer(service,'error')
@@ -781,7 +803,7 @@ def announce_eor (self, reactor, service, command):
 
 	try:
 		descriptions,command = self.extract_neighbors(command)
-		peers = reactor.match_neighbors(descriptions)
+		peers = match_neighbors(descriptions)
 		if not peers:
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.processes.answer(service,'error')
@@ -817,7 +839,7 @@ def announce_refresh (self, reactor, service, command):
 
 	try:
 		descriptions,command = self.extract_neighbors(command)
-		peers = reactor.match_neighbors(descriptions)
+		peers = match_neighbors(descriptions)
 		if not peers:
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.processes.answer(service,'error')
@@ -859,7 +881,7 @@ def announce_operational (self, reactor, service, command):
 
 	try:
 		descriptions,command = self.extract_neighbors(command)
-		peers = reactor.match_neighbors(descriptions)
+		peers = match_neighbors(descriptions)
 		if not peers:
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.processes.answer(service,'error')
