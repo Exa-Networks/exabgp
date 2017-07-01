@@ -219,7 +219,7 @@ class Protocol (object):
 				self.peer.reactor.processes.packets(self.peer.neighbor,'receive',msg_id,header,body)
 
 			if msg_id == Message.CODE.UPDATE:
-				if not (for_api or self.log_routes) and not (parsed or consolidate):
+				if not self.neighbor.adj_rib_in and not (for_api or self.log_routes) and not (parsed or consolidate):
 					yield _UPDATE
 					return
 
