@@ -8,16 +8,20 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import os
 import sys
+import fcntl
 import stat
 import time
 import signal
 import select
 import socket
 import traceback
+from collections import deque
 
 from exabgp.util import str_ascii
 from exabgp.reactor.network.error import error
 
+kb = 1024
+mb = kb*1024
 
 def check_fifo (name):
 	try:
@@ -94,6 +98,30 @@ class Control (object):
 		# self._remove_fifo(self.recv)
 		# self._remove_fifo(self.send)
 
+	def read_on (self,reading):
+		sleep_time = 1.0
+		fault_time = 0.9 * sleep_time
+		now = time.time()
+
+		try:
+			ready,_,_ = select.select(reading,[],[],sleep_time)
+		except select.error as e:
+			if e.args[0] in error.block:
+				return []
+			sys.exit(1)  # Unknow error, ending
+
+		# select stoped before the 1 second but we have no data
+		# the PIPE with ExaBGP is dead
+		elapsed = time.time() - now
+		if not reading and elapsed < fault_time:
+			sys.exit(1)
+		return ready
+
+	def no_buffer (self,fd):
+		mfl = fcntl.fcntl(fd, fcntl.F_GETFL)
+		mfl |= os.O_SYNC
+		fcntl.fcntl(fd, fcntl.F_SETFL, mfl)
+
 	def loop (self):
 		try:
 			self.r_pipe = os.open(self.recv, os.O_RDONLY | os.O_NONBLOCK | os.O_EXCL)
@@ -143,6 +171,7 @@ class Control (object):
 			pipe,nb = None,0
 			try:
 				pipe = os.open(self.send, os.O_WRONLY | os.O_NONBLOCK | os.O_EXCL)
+				self.no_buffer(pipe)
 			except OSError:
 				time.sleep(0.05)
 				return 0
@@ -167,33 +196,31 @@ class Control (object):
 			self.r_pipe: std_writer,
 		}
 
+		backlog = {
+			standard_in: deque(),
+			self.r_pipe: deque(),
+		}
+
 		store = {
 			standard_in: b'',
 			self.r_pipe: b'',
 		}
 
 		def consume (source):
-			store[source] += read[source](1024)
+			if not backlog and b'\n' not in store:
+				store[source] += read[source](1024)
+			else:
+				backlog[source].append(read[source](1024))
+				# assuming a route takes 80 chars, 100 Mb is over 1Millions routes
+				# something is really wrong if it was not consummed
+				if len(backlog) > 100*mb:
+					sys.stderr.write('using too much memory - exiting')
+					sys.exit(1)
 
 		reading = [standard_in, self.r_pipe]
 
-		sleep_time = 1.0
-		fault_time = 0.9 * sleep_time
-
 		while True:
-			now = time.time()
-			try:
-				ready,_,_ = select.select(reading,[],[],sleep_time)
-			except select.error as e:
-				if e.args[0] in error.block:
-					continue
-				sys.exit(1)  # Unknow error, ending
-
-			# select stoped before the 1 second but we have no data
-			# the PIPE with ExaBGP is dead
-			elapsed = time.time() - now
-			if not reading and elapsed < fault_time:
-				sys.exit(1)
+			ready = self.read_on(reading)
 
 			# command from user
 			if self.r_pipe in ready:
@@ -210,6 +237,8 @@ class Control (object):
 						store[source] = store[source][sent:]
 						continue
 					break
+				if backlog[source]:
+					store[source] += backlog[source].popleft()
 
 	def run (self):
 		if not self.init():

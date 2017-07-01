@@ -20,7 +20,8 @@ errno_fatal = set((
 	errno.ECONNREFUSED, errno.EBADF,
 	errno.ESHUTDOWN, errno.ENOTCONN,
 	errno.ECONNRESET, errno.ETIMEDOUT,
-	errno.EINVAL,
+	errno.EINVAL, errno.ENOTSUP,
+	errno.EPERM,
 ))
 
 errno_unavailable = set((

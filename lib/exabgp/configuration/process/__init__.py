@@ -9,6 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import os
 import sys
+import uuid
 
 from exabgp.configuration.core import Section
 
@@ -63,7 +64,7 @@ class ParseProcess (Section):
 	def add_api (self):
 		if not os.environ.get('exabgp_cli_pipe',''):
 			return
-		name = 'api-internal-cli'
+		name = 'api-internal-cli-%s' % uuid.uuid1()
 		api = {
 			name: {
 				'run': [sys.executable, os.path.join(os.environ.get('PWD',''),sys.argv[0])],
