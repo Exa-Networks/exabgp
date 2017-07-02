@@ -416,6 +416,7 @@ _HEADER = {
 	'redirect':            character(0x80)+character(0x08),
 	'l2info':              character(0x80)+character(0x0A),
 	'redirect-to-nexthop': character(0x08)+character(0x00),
+	'bandwidth':           character(0x40)+character(0x04),
 }
 
 _SIZE = {
@@ -426,6 +427,7 @@ _SIZE = {
 	'redirect':            2,
 	'l2info':              4,
 	'redirect-to-nexthop': 0,
+	'bandwidth':           2,
 }
 
 _SIZE_H = 0xFFFF
@@ -492,8 +494,11 @@ def _extended_community (value):
 		if command == 'orgin4':
 			return ExtendedCommunity.unpack(_HEADER['origin4']+pack('!LH',iga,ila),None)
 
-		if command in ('redirect',):
+		if command == 'redirect':
 			return ExtendedCommunity.unpack(header+pack('!HL',iga,ila),None)
+
+		if command == 'bandwidth':
+			return ExtendedCommunity.unpack(_HEADER['bandwidth']+pack('!Hf',iga,ila),None)
 
 		raise ValueError('invalid extended community %s' % command)
 	elif value == 'redirect-to-nexthop':
