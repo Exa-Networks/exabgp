@@ -34,7 +34,7 @@ class Bandwidth (ExtendedCommunity):
 		)
 
 	def __repr__ (self):
-		return "bandwith:%d:%f" % (self.asn,self.speed)
+		return "bandwith:%d:%0.f" % (self.asn,self.speed)
 
 	@staticmethod
 	def unpack (data):
