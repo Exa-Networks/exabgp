@@ -6,6 +6,8 @@ Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 """
 
+from collections import OrderedDict
+
 from exabgp.bgp.message import IN
 from exabgp.bgp.message import OUT
 from exabgp.bgp.message.update import Update
@@ -189,7 +191,7 @@ class Store (object):
 						return
 
 		# add the route to the list to be announced
-		dict_sorted.setdefault(change_attr_index,{})[change_nlri_index] = change
+		dict_sorted.setdefault(change_attr_index,OrderedDict())[change_nlri_index] = change
 		dict_nlri[change_nlri_index] = change
 
 		if change_attr_index not in dict_attr:
