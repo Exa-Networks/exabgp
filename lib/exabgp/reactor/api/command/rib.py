@@ -98,7 +98,7 @@ def flush_adj_rib_out (self, reactor, service, line):
 			peer = reactor.peers.get(peer_name, None)
 			if not peer:
 				continue
-			peer.schedule_rib_check(update=True)
+			peer.schedule_rib_check(True)
 			yield False
 
 		reactor.processes.answer_done(service)
