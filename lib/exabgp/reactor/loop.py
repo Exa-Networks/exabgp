@@ -65,7 +65,7 @@ class Reactor (object):
 		self.logger.reactor(reason,'warning')
 
 	def _api_ready (self,sockets):
-		sleeptime = self.max_loop_time / 100
+		sleeptime = 0 if self.async.ready() else self.max_loop_time / 100
 		fds = self.processes.fds()
 		ios = fds + sockets
 		try:

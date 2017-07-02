@@ -16,6 +16,9 @@ class ASYNC (object):
 		self.logger = Logger()
 		self._async = []
 
+	def ready (self):
+		return len(self._async) > 0
+
 	def schedule (self, uid, command, callback):
 		self.logger.reactor('async | %s' % command)
 		if self._async:
