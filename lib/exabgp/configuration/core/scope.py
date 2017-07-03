@@ -12,6 +12,7 @@ import pprint
 
 # from copy import deepcopy
 from exabgp.vendoring import six
+from exabgp.protocol.ip import IP
 from exabgp.configuration.core.error import Error
 
 
@@ -130,6 +131,8 @@ class Scope (Error):
 			elif isinstance(source[key], int):
 				destination[key] = value
 			elif isinstance(source[key], long):
+				destination[key] = value
+			elif isinstance(source[key],IP):
 				destination[key] = value
 			else:
 				self.throw('can not recursively copy this type of data %s' % type(source[key]))

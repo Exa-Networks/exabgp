@@ -78,7 +78,7 @@ class ParseNeighbor (Section):
 	}
 
 	action = {
-		'inherit':       'set-command',
+		'inherit':       'extend-command',
 		'description':   'set-command',
 		'host-name':     'set-command',
 		'domain-name':   'set-command',

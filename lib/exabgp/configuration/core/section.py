@@ -76,6 +76,8 @@ class Section (Error):
 				self.scope.append(name,insert)
 			elif action == 'append-command':
 				self.scope.append(command,insert)
+			elif action == 'extend-command':
+				self.scope.extend(command,insert)
 			elif action == 'attribute-add':
 				self.scope.attribute_add(name,insert)
 			elif action == 'nlri-set':
