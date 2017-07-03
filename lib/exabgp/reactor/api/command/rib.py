@@ -105,7 +105,7 @@ def flush_adj_rib_out (self, reactor, service, line):
 
 	try:
 		descriptions,command = extract_neighbors(line)
-		peers = match_neighbors(descriptions)
+		peers = match_neighbors(reactor.peers,descriptions)
 		if not peers:
 			self.log_failure('no neighbor matching the command : %s' % command,'warning')
 			reactor.processes.answer(service,'error')

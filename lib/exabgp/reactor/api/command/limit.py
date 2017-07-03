@@ -52,13 +52,13 @@ def match_neighbor (description, name):
 	return True
 
 
-def match_neighbors (self, descriptions):
+def match_neighbors (peers,descriptions):
 	"""Return the sublist of peers matching the description passed, or None if no description is given"""
 	if not descriptions:
-		return self.peers.keys()
+		return peers.keys()
 
 	returned = []
-	for key in self.peers:
+	for key in peers:
 		for description in descriptions:
 			if match_neighbor(description,key):
 				if key not in returned:
