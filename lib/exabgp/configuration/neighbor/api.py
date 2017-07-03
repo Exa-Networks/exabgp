@@ -8,13 +8,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 import time
+import copy
 from collections import defaultdict
 
 from exabgp.configuration.core import Section
 from exabgp.configuration.parser import boolean
 from exabgp.configuration.neighbor.parser import processes
-
-from exabgp.bgp.message import Message
 
 
 class _ParseDirection (Section):
@@ -124,26 +123,21 @@ class ParseAPI (Section):
 		'negotiated':       [],
 		'fsm':              [],
 		'signal':           [],
+		'processes':        [],
 	}
 
 	name = 'api'
-
-	_built = defaultdict(list)
 
 	def __init__ (self, tokeniser, scope, error, logger):
 		Section.__init__(self,tokeniser,scope,error,logger)
 		self.named = ''
 
 	@classmethod
-	def extract (cls):
-		if cls._built:
-			parsed = cls._built
-			cls._built = defaultdict(list)
-			return parsed
-		return cls.DEFAULT_API
+	def empty (cls):
+		return copy.deepcopy(cls.DEFAULT_API)
 
 	def clear (self):
-		type(self)._built = defaultdict(list)
+		self._built = defaultdict(list)
 
 	def pre (self):
 		self.scope.to_context()
@@ -157,61 +151,26 @@ class ParseAPI (Section):
 	def post (self):
 		self.scope.to_context()
 		api = self.scope.pop(self.named)
+		self.scope.leave()
+		self.scope.to_context()
+		built = self.scope.pop('api')
+
 		procs = api.get('processes',[])
 
-		type(self)._built['processes'].extend(procs)
+		built.setdefault('processes',[]).extend(procs)
 
 		for command in ('neighbor-changes','negotiated','fsm','signal'):
-			type(self)._built[command].extend(procs if api.get(command,False) else [])
+			built.setdefault(command,[]).extend(procs if api.get(command,False) else [])
 
 		for direction in ('send','receive'):
 			data = api.get(direction,{})
 			for action in ('parsed','packets','consolidate','open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
-				type(self)._built["%s-%s" % (direction,action)].extend(procs if data.get(action,False) else [])
+				built.setdefault("%s-%s" % (direction,action),[]).extend(procs if data.get(action,False) else [])
 
-		if self.scope.location().startswith('template/'):
-			for k,v in self.extract().items():
-				self.scope.set(k,self.scope.get(k,[])+v)
-		self.scope.leave()
+		self.scope.set(self.name,built)
 		return True
 
 
 for way in ('send','receive'):
 	for name in ('parsed','packets','consolidate','open', 'update', 'notification', 'keepalive', 'refresh', 'operational'):
 		ParseAPI.DEFAULT_API["%s-%s" % (way,name)] = []
-
-	# we want to have a socket for the cli
-	# if self.fifo:
-	# 	_cli_name = 'CLI'
-	# 	configuration.processes[_cli_name] = {
-	# 		'neighbor': '*',
-	# 		'encoder': 'json',
-	# 		'run': [sys.executable, sys.argv[0]],
-	#
-	# 		'neighbor-changes': False,
-	# 		'negotiated': False,
-	# 		'fsm': False,
-	# 		'signal': False,
-	#
-	# 		'receive-consolidate': False,
-	# 		'receive-packets': False,
-	# 		'receive-parsed': False,
-	#
-	# 		'send-consolidate': False,
-	# 		'send-packets': False,
-	# 		'send-parsed': False,
-	# 	}
-	#
-	# 	for receive in ['send','receive']:
-	# 		for message in [
-	# 			Message.CODE.NOTIFICATION.SHORT,
-	# 			Message.CODE.OPEN.SHORT,
-	# 			Message.CODE.KEEPALIVE.SHORT,
-	# 			Message.CODE.UPDATE.SHORT,
-	# 			Message.CODE.ROUTE_REFRESH.SHORT,
-	# 			Message.CODE.OPERATIONAL.SHORT,
-	# 		]:
-	# 			configuration.processes[_cli_name]['%s-%s' % (receive,message)] = False
-
-	# XXX: check that if we have any message, we have parsed/packets
-	# XXX: and vice-versa

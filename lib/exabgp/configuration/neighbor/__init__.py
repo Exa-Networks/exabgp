@@ -134,6 +134,11 @@ class ParseNeighbor (Section):
 		local = self.scope.pop_context(self.name)
 		neighbor = Neighbor()
 
+		local_api = ParseAPI.empty()
+		for k,values in self.scope.get('api',{}).items():
+			for value in values:
+				local_api.setdefault(k,[]).append(value)
+
 		for inherit in local.get('inherit',[]):
 			data = self.scope.template('neighbor',inherit)
 			self.scope.inherit(data)
@@ -164,15 +169,7 @@ class ParseNeighbor (Section):
 		neighbor.group_updates    = local.get('group-updates',True)
 		neighbor.manual_eor       = local.get('manual-eor', False)
 
-		local_api = ParseAPI.extract()
-		for k,values in self.scope.get('api',{}).items():
-			for value in values:
-				local_api.setdefault(k,[]).append(value)
-		neighbor.api              = local_api
-
-		# capabilities
 		capability = local.get('capability',{})
-
 		neighbor.add_path         = capability.get('add-path',0)
 		neighbor.asn4             = capability.get('asn4',True)
 		neighbor.multisession     = capability.get('multi-session',False)
@@ -181,6 +178,8 @@ class ParseNeighbor (Section):
 
 		if capability.get('graceful-restart',False) is not False:
 			neighbor.graceful_restart = capability.get('graceful-restart',0) or int(neighbor.hold_time)
+
+		neighbor.api              = local_api
 
 		families = []
 		for family in ParseFamily.convert.keys():

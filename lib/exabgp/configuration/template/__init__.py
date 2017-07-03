@@ -28,5 +28,4 @@ class ParseTemplate (Section):
 		return True
 
 	def post (self):
-		self.scope.merge('api',ParseAPI.extract())
 		return True
