@@ -137,7 +137,7 @@ class ParseAPI (Section):
 		return copy.deepcopy(cls.DEFAULT_API)
 
 	def clear (self):
-		self._built = defaultdict(list)
+		pass
 
 	def pre (self):
 		self.scope.to_context()
