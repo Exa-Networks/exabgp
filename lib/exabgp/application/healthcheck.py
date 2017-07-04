@@ -203,10 +203,12 @@ def setup_logging (debug, silent, name, syslog_facility, syslog):
     """Setup logger"""
 
     def syslog_address():
-        """Return a sensitive syslog address"""
+        """Return a sensible syslog address"""
         if sys.platform == "darwin":
             return "/var/run/syslog"
         if sys.platform.startswith("freebsd"):
+            return "/var/run/log"
+        if sys.platform.startswith("netbsd"):
             return "/var/run/log"
         if sys.platform.startswith("linux"):
             return "/dev/log"
