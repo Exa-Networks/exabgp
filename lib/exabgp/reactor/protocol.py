@@ -146,17 +146,18 @@ class Protocol (object):
 		packets = self.neighbor.api['%s-packets' % direction]
 		parsed = self.neighbor.api['%s-parsed' % direction]
 		consolidate = self.neighbor.api['%s-consolidate' % direction]
+		negotiated = self.negotiated if self.neighbor.api['negotiated'] else None
 
 		if consolidate:
 			if packets:
-				self.peer.reactor.processes.message(self.peer.neighbor,direction,message,raw[:19],raw[19:])
+				self.peer.reactor.processes.message(self.peer.neighbor,direction,message,negotiated,raw[:19],raw[19:])
 			else:
-				self.peer.reactor.processes.message(self.peer.neighbor,direction,message,b'',b'')
+				self.peer.reactor.processes.message(self.peer.neighbor,direction,message,negotiated,b'',b'')
 		else:
 			if packets:
-				self.peer.reactor.processes.packets(self.peer.neighbor,direction,int(message.ID),raw[:19],raw[19:])
+				self.peer.reactor.processes.packets(self.peer.neighbor,direction,int(message.ID),negotiated,raw[:19],raw[19:])
 			if parsed:
-				self.peer.reactor.processes.message(message.ID,self.peer.neighbor,direction,message,b'',b'')
+				self.peer.reactor.processes.message(message.ID,self.peer.neighbor,direction,message,negotiated,b'',b'')
 
 	def write (self, message, negotiated=None):
 		raw = message.message(negotiated)
@@ -197,11 +198,11 @@ class Protocol (object):
 				code = 'receive-%s' % Message.CODE.NOTIFICATION.SHORT
 				if self.neighbor.api.get(code,False):
 					if consolidate:
-						self.peer.reactor.processes.notification(self.peer.neighbor,'send',notify.code,notify.subcode,str(notify),header,body)
+						self.peer.reactor.processes.notification(self.peer.neighbor,'send',notify.code,notify.subcode,str(notify),None,header,body)
 					elif parsed:
-						self.peer.reactor.processes.notification(self.peer.neighbor,'send',notify.code,notify.subcode,str(notify),b'',b'')
+						self.peer.reactor.processes.notification(self.peer.neighbor,'send',notify.code,notify.subcode,str(notify),None,b'',b'')
 					elif packets:
-						self.peer.reactor.processes.packets(self.peer.neighbor,'send',msg_id,header,body)
+						self.peer.reactor.processes.packets(self.peer.neighbor,'send',msg_id,None,header,body)
 				# XXX: is notify not already Notify class ?
 				raise Notify(notify.code,notify.subcode,str(notify))
 
@@ -216,7 +217,8 @@ class Protocol (object):
 			for_api = self.neighbor.api.get(code,False)
 
 			if for_api and packets and not consolidate:
-				self.peer.reactor.processes.packets(self.peer.neighbor,'receive',msg_id,header,body)
+				negotiated = self.negotiated if self.neighbor.api.get('negotiated',False) else None
+				self.peer.reactor.processes.packets(self.peer.neighbor,'receive',msg_id,negotiated,header,body)
 
 			if msg_id == Message.CODE.UPDATE:
 				if not self.neighbor.adj_rib_in and not (for_api or self.log_routes) and not (parsed or consolidate):
@@ -240,10 +242,11 @@ class Protocol (object):
 						nlri.action = IN.WITHDRAWN
 
 			if for_api:
+				negotiated = self.negotiated if self.neighbor.api.get('negotiated',False) else None
 				if consolidate:
-					self.peer.reactor.processes.message(msg_id,self.neighbor,'receive',message,header,body)
+					self.peer.reactor.processes.message(msg_id,self.neighbor,'receive',message,negotiated,header,body)
 				elif parsed:
-					self.peer.reactor.processes.message(msg_id,self.neighbor,'receive',message,b'',b'')
+					self.peer.reactor.processes.message(msg_id,self.neighbor,'receive',message,negotiated,b'',b'')
 
 			if message.TYPE == Notification.TYPE:
 				raise message
