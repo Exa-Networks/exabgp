@@ -21,9 +21,10 @@ try:
 		except Exception:
 			print >> sys.stderr, 'failure, json can not be decoded'
 			sys.stderr.flush()
-			print >> sys.stderr, 'json received:', line.rstrip()
-			sys.stderr.flush()
 			sys.exit(1)
+
+		print >> sys.stderr, 'json received:', line.rstrip()
+		sys.stderr.flush()
 
 		if 'shutdown' in line:
 			sys.exit(1)

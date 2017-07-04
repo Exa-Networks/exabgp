@@ -31,7 +31,7 @@ class MultiSession (Capability,list):
 
 	def json (self):
 		variant = 'RFC' if self.ID == Capability.CODE.MULTISESSION else 'Cisco'
-		return '{ "name": "multisession", "variant": "%s" ,"capabilities": [%s ] }' % (variant, ','.join(' %s' % str(capa) for capa in self))
+		return '{ "name": "multisession", "variant": "%s", "capabilities": [%s ] }' % (variant, ','.join(' "%s"' % str(capa) for capa in self))
 
 	def extract (self):
 		rs = [character(0),]
