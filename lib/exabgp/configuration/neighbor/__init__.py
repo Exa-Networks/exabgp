@@ -130,18 +130,19 @@ class ParseNeighbor (Section):
 		return self.parse(self.name,'peer-address')
 
 	def post (self):
-		self.scope.to_context()
-		local = self.scope.pop_context(self.name)
-		neighbor = Neighbor()
+		self.scope.to_context(self.name)
 
-		local_api = ParseAPI.empty()
-		for k,values in self.scope.get('api',{}).items():
-			for value in values:
-				local_api.setdefault(k,[]).append(value)
-
-		for inherit in local.get('inherit',[]):
+		for inherit in self.scope.pop('inherit',[]):
 			data = self.scope.template('neighbor',inherit)
 			self.scope.inherit(data)
+
+		neighbor = Neighbor()
+		local = self.scope.get()
+		local_api = ParseAPI.empty()
+
+		for k,values in local.pop('api',{}).items():
+			for value in values:
+				local_api.setdefault(k,[]).append(value)
 
 		# XXX: use the right class for the data type
 		# XXX: we can use the scope.nlri interface ( and rename it ) to set some values
