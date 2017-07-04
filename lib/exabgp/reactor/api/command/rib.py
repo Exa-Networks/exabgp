@@ -120,3 +120,40 @@ def flush_adj_rib_out (self, reactor, service, line):
 		self.log_failure('issue parsing the command')
 		reactor.processes.answer(service,'error')
 		return False
+
+
+@Command.register('text','clear adj-rib')
+def clear_adj_rib (self, reactor, service, line):
+	def callback (self, peers, direction):
+		self.log_message("clearing adjb-rib-%s for %s" % (direction,', '.join(peers if peers else []) if peers is not None else 'all peers'))
+		for peer_name in peers:
+			peer = reactor.peers.get(peer_name, None)
+			if not peer:
+				continue
+			if direction == 'out':
+				peer.neighbor.rib.outgoing.clear()
+			else:
+				peer.neighbor.rib.incoming.clear()
+			yield False
+
+		reactor.processes.answer_done(service)
+
+	try:
+		descriptions,command = extract_neighbors(line)
+		peers = match_neighbors(reactor.peers,descriptions)
+		if not peers:
+			self.log_failure('no neighbor matching the command : %s' % command,'warning')
+			reactor.processes.answer(service,'error')
+			return False
+		words = line.split()
+		direction = 'in' if 'adj-rib-in' in words or 'in' in words else 'out'
+		reactor.async.schedule(service,command,callback(self,peers,direction))
+		return True
+	except ValueError:
+		self.log_failure('issue parsing the command')
+		reactor.processes.answer(service,'error')
+		return False
+	except IndexError:
+		self.log_failure('issue parsing the command')
+		reactor.processes.answer(service,'error')
+		return False
