@@ -75,6 +75,7 @@ class Neighbor (object):
 		self.aigp = None
 
 		self._families = []
+		self._addpaths = []
 		self.rib = None
 
 		# The routes we have parsed from the configuration
@@ -129,8 +130,13 @@ class Neighbor (object):
 		# this list() is important .. as we use the function to modify self._families
 		return list(self._families)
 
+	def addpaths (self):
+		# this list() is important .. as we use the function to modify self._families
+		return list(self._addpaths)
+
 	def add_family (self, family):
 		# the families MUST be sorted for neighbor indexing name to be predictable for API users
+		# this list() is important .. as we use the function to modify self._families
 		if family not in self.families():
 			afi,safi = family
 			d = dict()
@@ -139,9 +145,24 @@ class Neighbor (object):
 				d.setdefault(afi,[]).append(safi)
 			self._families = [(afi,safi) for afi in sorted(d) for safi in sorted(d[afi])]
 
+	def add_addpath (self, family):
+		# the families MUST be sorted for neighbor indexing name to be predictable for API users
+		# this list() is important .. as we use the function to modify self._families
+		if family not in self.addpaths():
+			afi,safi = family
+			d = dict()
+			d[afi] = [safi,]
+			for afi,safi in self._addpaths:
+				d.setdefault(afi,[]).append(safi)
+			self._addpaths = [(afi,safi) for afi in sorted(d) for safi in sorted(d[afi])]
+
 	def remove_family (self, family):
 		if family in self.families():
 			self._families.remove(family)
+
+	def remove_addpath (self, family):
+		if family in self.addpaths():
+			self._addpaths.remove(family)
 
 	def missing (self):
 		if self.local_address is None and not self.auto_discovery:
@@ -205,6 +226,10 @@ class Neighbor (object):
 		families = ''
 		for afi,safi in self.families():
 			families += '\n\t\t%s %s;' % (afi.name(),safi.name())
+
+		addpaths = ''
+		for afi,safi in self.addpaths():
+			addpaths += '\n\t\t%s %s;' % (afi.name(),safi.name())
 
 		codes = Message.CODE
 
@@ -286,6 +311,8 @@ class Neighbor (object):
 			'%s%s%s%s%s%s%s%s\t}\n' \
 			'\tfamily {%s\n' \
 			'\t}\n' \
+			'\tadd-path {%s\n' \
+			'\t}\n' \
 			'%s' \
 			'%s' \
 			'}' % (
@@ -319,6 +346,7 @@ class Neighbor (object):
 				'\t\toperational %s;\n' % ('enable' if self.operational else 'disable'),
 				'\t\taigp %s;\n' % ('enable' if self.aigp else 'disable'),
 				families,
+				addpaths,
 				apis,
 				changes
 			)

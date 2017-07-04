@@ -125,3 +125,7 @@ class ParseFamily (Section):
 		self._all = True
 		for pair in NLRI.known_families():
 			self._seen.append(pair)
+
+
+class ParseAddPath (ParseFamily):
+	name = 'add-path'

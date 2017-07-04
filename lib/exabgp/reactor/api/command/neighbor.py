@@ -69,7 +69,7 @@ Neighbor %(peer-address)s
 			'id':            cls.extensive_kv % ('ID',answer['local-id'],_pr(answer['peer-id']),''),
 			'hold':          cls.extensive_kv % ('hold-time',answer['local-hold'],_pr(answer['peer-hold']),''),
 			'capabilities':  '\n'.join(cls.extensive_kv % ('%s:' % k, _en(l), _en(p), '') for k,(l,p) in answer['capabilities'].items()),
-			'families':      '\n'.join(cls.extensive_kv % ('%s %s:' % (a,s), _en(l), _en(p), _en(a)) for (a,s),(l,p,a) in answer['families'].items()),
+			'families':      '\n'.join(cls.extensive_kv % ('%s %s:' % (a,s), _en(l), _en(r), _en(p)) for (a,s),(l,r,p) in answer['families'].items()),
 			'messages':      '\n'.join(cls.extensive_kv % ('%s:' % k, str(s), str(r), '') for k,(s,r) in answer['messages'].items()),
 		}
 

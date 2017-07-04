@@ -26,7 +26,8 @@ from exabgp.bgp.message.update.nlri.flow import NLRI
 
 from exabgp.configuration.core import Section
 from exabgp.configuration.neighbor.api import ParseAPI
-from exabgp.configuration.family import ParseFamily
+from exabgp.configuration.neighbor.family import ParseFamily
+from exabgp.configuration.neighbor.family import ParseAddPath
 
 from exabgp.configuration.parser import boolean
 from exabgp.configuration.parser import auto_boolean
@@ -183,18 +184,27 @@ class ParseNeighbor (Section):
 		neighbor.api              = local_api
 
 		families = []
-		for family in ParseFamily.convert.keys():
+		for family in ParseFamily.convert:
 			for pair in local.get('family',{}).get(family,[]):
 				families.append(pair)
-
-		for k,values in self.scope.get('family',{}).items():
-			for value in values:
-				families.append(value)
 
 		families = families or NLRI.known_families()
 
 		for family in families:
 			neighbor.add_family(family)
+
+		if neighbor.add_path:
+			add_path = local.get('add-path',{})
+			if add_path:
+				for family in ParseAddPath.convert:
+					for pair in add_path.get(family,[]):
+						if pair not in families:
+							self.logger.configuration('skipping add-path family %s as it is not negotiated' % pair)
+							continue
+						neighbor.add_addpath(pair)
+			else:
+				for family in families:
+					neighbor.add_addpath(family)
 
 		neighbor.changes = []
 

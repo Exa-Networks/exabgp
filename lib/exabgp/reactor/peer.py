@@ -678,9 +678,9 @@ class Peer (object):
 				common = True if family in self.proto.negotiated.families else False
 				addpath = self.proto.negotiated.addpath.receive(*family) and self.proto.negotiated.addpath.receive(*family)
 			else:
-				common = False
-				addpath = False
-			families[family] = (True,common if have_open else None,addpath)
+				common = None
+				addpath = None if family in self.neighbor.addpaths() else False
+			families[family] = (True,common,addpath)
 
 		messages = {}
 		total_sent = 0

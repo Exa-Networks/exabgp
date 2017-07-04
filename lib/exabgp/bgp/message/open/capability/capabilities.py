@@ -91,7 +91,7 @@ class Capabilities (dict):
 		if not neighbor.add_path:
 			return
 
-		families = neighbor.families()
+		families = neighbor.addpaths()
 		ap_families = []
 		for allowed in self._ADD_PATH:
 			if allowed in families:

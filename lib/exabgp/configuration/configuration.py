@@ -25,7 +25,8 @@ from exabgp.configuration.neighbor import ParseNeighbor
 from exabgp.configuration.neighbor.api import ParseAPI
 from exabgp.configuration.neighbor.api import ParseSend
 from exabgp.configuration.neighbor.api import ParseReceive
-from exabgp.configuration.family import ParseFamily
+from exabgp.configuration.neighbor.family import ParseFamily
+from exabgp.configuration.neighbor.family import ParseAddPath
 from exabgp.configuration.capability import ParseCapability
 from exabgp.configuration.announce import ParseAnnounce
 from exabgp.configuration.announce.ip import ParseIPv4
@@ -118,6 +119,7 @@ class Configuration (_Configuration):
 		self.template_neighbor   = ParseTemplateNeighbor (*params)
 		self.neighbor            = ParseNeighbor         (*params)
 		self.family              = ParseFamily           (*params)
+		self.addpath             = ParseAddPath          (*params)
 		self.capability          = ParseCapability       (*params)
 		self.api                 = ParseAPI              (*params)
 		self.api_send            = ParseSend             (*params)
@@ -166,26 +168,28 @@ class Configuration (_Configuration):
 				'sections': {
 					'family':      self.family.name,
 					'capability':  self.capability.name,
+					'add-path':    self.addpath.name,
 					'api':         self.api.name,
-					'announce':    self.announce.name,
 					'static':      self.static.name,
 					'flow':        self.flow.name,
 					'l2vpn':       self.l2vpn.name,
 					'operational': self.operational.name,
+					'announce':    self.announce.name,
 				},
 			},
 			self.neighbor.name: {
 				'class':    self.neighbor,
 				'commands': self.neighbor.known.keys(),
 				'sections': {
-					'announce':    self.announce.name,
 					'family':      self.family.name,
 					'capability':  self.capability.name,
+					'add-path':    self.addpath.name,
 					'api':         self.api.name,
 					'static':      self.static.name,
 					'flow':        self.flow.name,
 					'l2vpn':       self.l2vpn.name,
 					'operational': self.operational.name,
+					'announce':    self.announce.name,
 				},
 			},
 			self.family.name: {
@@ -197,6 +201,12 @@ class Configuration (_Configuration):
 			self.capability.name: {
 				'class':    self.capability,
 				'commands': self.capability.known.keys(),
+				'sections': {
+				},
+			},
+			self.addpath.name: {
+				'class':    self.addpath,
+				'commands': self.addpath.known.keys(),
 				'sections': {
 				},
 			},
