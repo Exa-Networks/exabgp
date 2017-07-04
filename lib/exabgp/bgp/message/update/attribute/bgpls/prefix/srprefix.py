@@ -40,7 +40,7 @@ class SrPrefix(object):
 	@classmethod
 	def unpack (cls,data,length):
 		# We only support IS-IS flags for now.
-		flags = LsGenericFlags.unpack(data[0],LsGenericFlags.ISIS_SR_FLAGS)
+		flags = LsGenericFlags.unpack(data[0:1],LsGenericFlags.ISIS_SR_FLAGS)
 		#
 		# Parse Algorithm
 		sr_algo = six.indexbytes(data, 1)

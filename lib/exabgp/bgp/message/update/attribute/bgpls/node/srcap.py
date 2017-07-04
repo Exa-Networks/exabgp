@@ -51,7 +51,7 @@ class SrCapabilities(object):
 	@classmethod
 	def unpack (cls,data,length):
 		# Extract node capability flags
-		flags = LsGenericFlags.unpack(data[0],LsGenericFlags.ISIS_SR_CAP_FLAGS)
+		flags = LsGenericFlags.unpack(data[0:1],LsGenericFlags.ISIS_SR_CAP_FLAGS)
 		# Move pointer past flags and reserved bytes
 		data = data[2:]
 		sids = []
@@ -80,4 +80,3 @@ class SrCapabilities(object):
 	def json (self,compact=None):
 		return ', '.join(['"sr-capability-flags": {}'.format(self.sr_flags.json()),
 			'"sids": {}'.format(json.dumps(self.sids))])
-

@@ -32,7 +32,7 @@ class SrIgpPrefixAttr(object):
 	@classmethod
 	def unpack (cls,data,length):
 		# We only support IS-IS for now.
-		flags = LsGenericFlags.unpack(data[0],LsGenericFlags.ISIS_SR_ATTR_FLAGS)
+		flags = LsGenericFlags.unpack(data[0:1],LsGenericFlags.ISIS_SR_ATTR_FLAGS)
 		return cls(flags=flags)
 
 	def json (self,compact=None):

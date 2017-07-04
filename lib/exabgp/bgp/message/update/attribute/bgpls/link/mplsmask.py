@@ -41,7 +41,7 @@ class MplsMask(object):
 		if length > 1:
 			raise Notify(3,5, "LINK TLV length too large")
 		else:
-			mpls_mask = LsGenericFlags.unpack(data[0],LsGenericFlags.LS_MPLS_MASK)
+			mpls_mask = LsGenericFlags.unpack(data[0:1],LsGenericFlags.LS_MPLS_MASK)
 			return cls(mplsflags=mpls_mask)
 
 	def json (self,compact=None):

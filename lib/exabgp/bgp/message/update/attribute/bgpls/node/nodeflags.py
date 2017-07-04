@@ -45,7 +45,7 @@ class NodeFlags(object):
 		if length > 1:
 			raise Notify(3,5, "Node Flags TLV length too large")
 		else:
-			flags = LsGenericFlags.unpack(data[0],LsGenericFlags.LS_NODE_FLAGS)
+			flags = LsGenericFlags.unpack(data[0:1],LsGenericFlags.LS_NODE_FLAGS)
 		return cls(nodeflags=flags)
 
 	def json (self,compact=None):

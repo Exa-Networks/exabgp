@@ -40,7 +40,7 @@ class SrAdjacency(object):
 	@classmethod
 	def unpack (cls,data,length):
 		# We only support IS-IS flags for now.
-		flags = LsGenericFlags.unpack(data[0],LsGenericFlags.ISIS_SR_ADJ_FLAGS)
+		flags = LsGenericFlags.unpack(data[0:1],LsGenericFlags.ISIS_SR_ADJ_FLAGS)
 		# Parse adj weight
 		weight = six.indexbytes(data,1)
 		# Move pointer 4 bytes: Flags(1) + Weight(1) + Reserved(2)
@@ -60,11 +60,11 @@ class SrAdjacency(object):
 			# the range.
 			if int(flags.flags['V']) and int(flags.flags['L']):
 				b = BitArray(bytes=data[:3])
-				sid = b.unpack('uintbe:24')[0]
+				sid = b.unpack('uintbe:24')[0:1]
 				data = data[3:]
 			elif (not flags.flags['V']) and \
 				(not flags.flags['L']):
-				sid = unpack('!I',data[:4])[0]
+				sid = unpack('!I',data[:4])[0:1]
 				data = data[4:]
 			sids.append(sid)
 		return cls(flags=flags, sids=sids, weight=weight)

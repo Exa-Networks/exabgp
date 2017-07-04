@@ -40,7 +40,7 @@ class LinkProtectionType(object):
 			raise Notify(3,5, "Wrong size for protection type TLV")
 		else:
 			# We only care about the first octect
-			protection_mask = LsGenericFlags.unpack(data[0],
+			protection_mask = LsGenericFlags.unpack(data[0:1],
 				LsGenericFlags.LS_PROTECTION_MASK)
 		return cls(protectionflags=protection_mask)
 
