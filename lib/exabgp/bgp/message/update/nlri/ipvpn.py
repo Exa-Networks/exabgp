@@ -16,7 +16,7 @@ from exabgp.bgp.message import OUT
 
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.cidr import CIDR
-from exabgp.bgp.message.update.nlri.labelled import Labelled
+from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 
@@ -29,11 +29,11 @@ from exabgp.protocol.ip import NoNextHop
 
 @NLRI.register(AFI.ipv4,SAFI.mpls_vpn)
 @NLRI.register(AFI.ipv6,SAFI.mpls_vpn)
-class IPVPN (Labelled):
+class IPVPN (Label):
 	__slots__ = ['rd']
 
 	def __init__ (self, afi, safi, action=OUT.UNSET):
-		Labelled.__init__(self, afi, safi, action)
+		Label.__init__(self, afi, safi, action)
 		self.rd = RouteDistinguisher.NORD
 
 	def feedback (self, action):
@@ -55,7 +55,7 @@ class IPVPN (Labelled):
 		return "%s%s%s%s%s" % (self.prefix(),str(self.labels),str(self.rd),str(self.path_info),str(self.rd))
 
 	def __len__ (self):
-		return Labelled.__len__(self) + len(self.rd)
+		return Label.__len__(self) + len(self.rd)
 
 	def __repr__ (self):
 		nexthop = ' next-hop %s' % self.nexthop if self.nexthop else ''
@@ -63,7 +63,7 @@ class IPVPN (Labelled):
 
 	def __eq__ (self, other):
 		return \
-			Labelled.__eq__(self, other) and \
+			Label.__eq__(self, other) and \
 			self.rd == other.rd
 
 	def __ne__ (self, other):
@@ -87,7 +87,7 @@ class IPVPN (Labelled):
 		return NLRI._index(self) + addpath + mask + str(self.rd.pack()) + str(self.cidr.pack_ip())
 
 	def _internal (self, announced=True):
-		r = Labelled._internal(self,announced)
+		r = Label._internal(self,announced)
 		if announced and self.rd:
 			r.append(self.rd.json())
 		return r
