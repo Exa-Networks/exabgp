@@ -64,7 +64,7 @@ class RouteDistinguisher (object):
 	def json (self):
 		if not self.rd:
 			return ''
-		return '"route-distinguisher": "%s"' % self._str()
+		return '"rd": "%s"' % self._str()
 
 	def __hash__(self):
 		return hash(self.rd)
@@ -72,7 +72,7 @@ class RouteDistinguisher (object):
 	def __repr__ (self):
 		if not self.rd:
 			return ''
-		return ' route-distinguisher %s' % self._str()
+		return ' rd %s' % self._str()
 
 	@classmethod
 	def unpack (cls, data):

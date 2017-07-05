@@ -68,7 +68,7 @@ group <groupname> {
 			     <extended-community> ... ] );
       split /<prefixlength>;
       label ( <label> | [ <label> <label> ... ] );
-      ( rd | route-distinguisher ) <route-distinguisher>;
+      rd  <route-distinguisher>;
       watchdog <watchdog-name>;
       bgp-prefix-sid ( [<label-index-value>] |
          [ <label-index-value>, [ ( <srgb-base_1>,<srgb-range_1> ), ... ] ]);
@@ -81,7 +81,7 @@ group <groupname> {
   }
   flow {
     route <route-name> {
-      (rd | route-distinguisher ) <route-distinguisher>;
+      rd <route-distinguisher>;
       next-hop <ip-address>; // for redirect-to-nexthop
       match {
 	// one or more match terms
@@ -150,7 +150,7 @@ group <groupname> {
       extended-community ( <extended-community> |
 			   [ <extended-community>
 			     <extended-community> ... ] );
-      ( rd | route-distinguisher ) <route-distinguisher>;
+      rd <route-distinguisher>;
       withdraw;
       endpoint ( <vpls-endpoint> | <integer> );
       offset ( <block-offset> | <integer> );
