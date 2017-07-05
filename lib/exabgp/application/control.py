@@ -231,8 +231,11 @@ class Control (object):
 			for source in reading:
 				while b'\n' in store[source]:
 					line,_ = store[source].split(b'\n',1)
-					line = line + b'\n'
-					sent = write[source](line)
+					# sys.stderr.write(str(line).replace('\n','\\n') + '\n')
+					# sys.stderr.flush()
+					sent = write[source](line + b'\n')
+					# sys.stderr.write('sent %d\n' % sent)
+					# sys.stderr.flush()
 					if sent:
 						store[source] = store[source][sent:]
 						continue

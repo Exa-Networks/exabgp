@@ -12,17 +12,19 @@ class Command (object):
 	callback = {
 		'text': {},
 		'json': {},
+		'neighbor': {},
 	}
 
 	functions = []
 
 	@classmethod
-	def register (cls, encoding, name):
+	def register (cls, encoding, name, neighbor=True):
 		if name not in cls.functions:
 			cls.functions.append(name)
 			cls.functions.sort(reverse=True)
 
 		def register (function):
+			cls.callback['neighbor'][name] = neighbor
 			cls.callback[encoding][name] = function
 			function.func_name = name.replace(' ','_')
 			return function

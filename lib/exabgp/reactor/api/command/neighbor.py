@@ -87,7 +87,7 @@ Neighbor %(peer-address)s
 		)
 
 
-@Command.register('text','teardown')
+@Command.register('text','teardown',True)
 def teardown (self, reactor, service, line):
 	try:
 		descriptions,line = extract_neighbors(line)
@@ -107,7 +107,7 @@ def teardown (self, reactor, service, line):
 		return False
 
 
-@Command.register('text','show neighbor')
+@Command.register('text','show neighbor',False)
 def show_neighbor (self, reactor, service, command):
 	words = command.split()
 
@@ -176,23 +176,3 @@ def show_neighbor (self, reactor, service, command):
 	reactor.processes.answer(service,'please specify summary, extensive or configuration')
 	reactor.processes.answer(service,'you can filter by per ip address adding it after the word neighbor')
 	reactor.processes.answer_done(service)
-
-
-# @Command.register('text','show neighbor status')
-# def show_neighbor_status (self, reactor, service, command):
-# 	def callback ():
-# 		for peer_name in reactor.peers.keys():
-# 			peer = reactor.peers.get(peer_name, None)
-# 			if not peer:
-# 				continue
-# 			peer_name = peer.neighbor.name()
-# 			detailed_status = peer.fsm.name()
-# 			families = peer.negotiated_families()
-# 			if families:
-# 				families = "negotiated %s" % families
-# 			reactor.processes.answer(service, "%s %s state %s" % (peer_name, families, detailed_status),force=True)
-# 			yield True
-# 		reactor.processes.answer(service,"done")
-#
-# 	reactor.async.schedule(service,command,callback())
-# 	return True

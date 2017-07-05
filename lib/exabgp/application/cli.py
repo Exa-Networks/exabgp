@@ -130,13 +130,12 @@ def main ():
 			try:
 				raw = os.read(reader,4096)
 				buf += raw
-
 				while '\n' in buf:
 					line,buf = buf.split('\n',1)
-					if line in 'done':
+					if line == 'done':
 						done = True
 						break
-					if line in 'done':
+					if line == 'shutdown':
 						sys.stderr.write('ExaBGP is shutting down, command aborted\n')
 						sys.stderr.flush()
 						done = True
@@ -149,7 +148,7 @@ def main ():
 					sys.stdout.write('%s\n' % line)
 					sys.stdout.flush()
 
-				select.select([reader],[],[],0)
+				select.select([reader],[],[],0.01)
 			except OSError as exc:
 				if exc.errno in error.block:
 					break
