@@ -65,7 +65,7 @@ class Connection (object):
 	# Just in case ..
 	def __del__ (self):
 		if self.io:
-			self.logger.network("connection to %s closed" % self.peer,'info',self.session())
+			self.logger.network("connection to %s closed" % self.peer,'warning',self.session())
 			self.close()
 
 	def name (self):
@@ -76,7 +76,7 @@ class Connection (object):
 
 	def close (self):
 		try:
-			self.logger.wire("%s, closing connection from %s to %s" % (self.name(),self.local,self.peer),source=self.session())
+			self.logger.wire("%s, closing connection from %s to %s" % (self.name(),self.local,self.peer),source=self.session(),level='warning')
 			if self.io:
 				self.io.close()
 				self.io = None

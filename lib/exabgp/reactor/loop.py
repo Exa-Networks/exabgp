@@ -62,7 +62,7 @@ class Reactor (object):
 
 	def _termination (self,reason):
 		self.signal.received = Signal.SHUTDOWN
-		self.logger.reactor(reason,'warning')
+		self.logger.reactor(reason,'critical')
 
 	def _api_ready (self,sockets):
 		sleeptime = 0 if self.async.ready() else self.max_loop_time / 100

@@ -28,6 +28,8 @@ from exabgp.rib import RIB
 
 # The definition of a neighbor (from reading the configuration)
 class Neighbor (object):
+	_GLOBAL = {'uid':0}
+
 	def __init__ (self):
 		# self.logger should not be used here as long as we do use deepcopy as it contains a Lock
 		self.description = None
@@ -95,7 +97,11 @@ class Neighbor (object):
 		# - have multiple exabgp toward one peer on the same host ( use of pid )
 		# - have more than once connection toward a peer
 		# - each connection has it own neihgbor (hence why identificator is not in Protocol)
-		self.uid = '%d-%x' % (os.getpid(),uuid.uuid1().fields[0])
+		self.uid = 'UID-%d' % self._GLOBAL['uid']
+		self._GLOBAL['uid'] += 1
+
+	def id (self):
+		return '%s-%s' % (self.peer_address,self.uid)
 
 	def make_rib (self):
 		self.rib = RIB(self.name(),self.adj_rib_in,self.adj_rib_out,self._families)

@@ -232,7 +232,7 @@ def ready (io):
 			_,w,_ = select.select([],[io,],[],0)
 			if not w:
 				if not warned and time.time()-start > 1.0:
-					logger.network('attempting to establish connection','warning')
+					logger.network('attempting to establish connection','debug')
 					warned = True
 				yield False
 				continue

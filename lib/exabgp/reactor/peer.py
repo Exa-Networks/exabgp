@@ -629,7 +629,7 @@ class Peer (object):
 			if self._delay.backoff():
 				return ACTION.LATER
 			if self._restart:
-				self.logger.network('initialising connection to %s' % self.neighbor.name(),'debug')
+				self.logger.network('initialising connection to neighbor %s' % self.neighbor.id(),'info')
 				self.generator = self._run()
 				return ACTION.LATER  # make sure we go through a clean loop
 			return ACTION.CLOSE

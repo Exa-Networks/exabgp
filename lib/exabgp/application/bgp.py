@@ -324,18 +324,18 @@ def main ():
 def run (env, comment, configurations, root, validate, pid=0):
 	logger = Logger()
 
-	logger.info('Thank you for using ExaBGP',source='welcome')
-	logger.info('%s' % version,source='version')
-	logger.info('%s' % sys.version.replace('\n',' '),source='interpreter')
-	logger.info('%s' % ' '.join(platform.uname()[:5]),source='os')
-	logger.info('%s' % root,source='installation')
+	logger.debug('Thank you for using ExaBGP',source='welcome')
+	logger.debug('%s' % version,source='version',level='START')
+	logger.debug('%s' % sys.version.replace('\n',' '),source='interpreter',level='START')
+	logger.debug('%s' % ' '.join(platform.uname()[:5]),source='os',level='START')
+	logger.debug('%s' % root,source='installation',level='START')
 
 	if comment:
 		logger.info(comment,source='advice')
 
 	warning = warn()
 	if warning:
-		logger.info(warning,source='advice')
+		logger.info(warning,source='advice',level='warning')
 
 	if env.api.cli:
 		pipes = named_pipe(root)
