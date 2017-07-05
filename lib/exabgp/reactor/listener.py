@@ -90,7 +90,7 @@ class Listener (object):
 				raise BindingError('could not listen on %s:%d, this is an invalid address' % (local_ip,local_port))
 			raise NetworkError(str(exc))
 		except NetworkError as exc:
-			self.logger.network(str(exc),'critical')
+			self.logger.critical(str(exc),'network')
 			raise exc
 
 	def listen_on (self, local_addr, remote_addr, port, md5_password, md5_base64, ttl_in):
@@ -98,15 +98,15 @@ class Listener (object):
 			if not remote_addr:
 				remote_addr = IP.create('0.0.0.0') if local_addr.ipv4() else IP.create('::')
 			self._listen(local_addr, remote_addr, port, md5_password, md5_base64, ttl_in)
-			self.logger.network('Listening for BGP session(s) on %s:%d%s' % (local_addr, port,' with MD5' if md5_password else ''))
+			self.logger.debug('listening for BGP session(s) on %s:%d%s' % (local_addr, port,' with MD5' if md5_password else ''),'network')
 			return True
 		except NetworkError as exc:
 			if os.geteuid() != 0 and port <= 1024:
-				self.logger.network('Can not bind to %s:%d, you may need to run ExaBGP as root' % (local_addr, port),'critical')
+				self.logger.critical('can not bind to %s:%d, you may need to run ExaBGP as root' % (local_addr, port),'network')
 			else:
-				self.logger.network('Can not bind to %s:%d (%s)' % (local_addr, port,str(exc)),'critical')
-			self.logger.network('unset exabgp.tcp.bind if you do not want listen for incoming connections','critical')
-			self.logger.network('and check that no other daemon is already binding to port %d' % port,'critical')
+				self.logger.critical('can not bind to %s:%d (%s)' % (local_addr, port,str(exc)),'network')
+			self.logger.critical('unset exabgp.tcp.bind if you do not want listen for incoming connections','network')
+			self.logger.critical('and check that no other daemon is already binding to port %d' % port,'network')
 			return False
 
 	def incoming (self):
@@ -123,7 +123,7 @@ class Listener (object):
 			except socket.error as exc:
 				if exc.errno in error.block:
 					continue
-				self.logger.network(str(exc),'critical')
+				self.logger.critical(str(exc),'network')
 		if self._pending:
 			self._pending -= 1
 			return True
@@ -144,7 +144,7 @@ class Listener (object):
 				fam = self._family_AFI_map[sock.family]
 				yield Incoming(fam,remote_ip,local_ip,io)
 		except NetworkError as exc:
-			self.logger.network(str(exc),'critical')
+			self.logger.critical(str(exc),'network')
 
 	def new_connections (self):
 		if not self.serving:
@@ -183,19 +183,19 @@ class Listener (object):
 
 				denied = peer.handle_connection(connection)
 				if denied:
-					self.logger.network('refused connection from %s due to the state machine' % connection.name())
+					self.logger.debug('refused connection from %s due to the state machine' % connection.name(),'network')
 					break
-				self.logger.network('accepted connection from %s' % connection.name())
+				self.logger.debug('accepted connection from %s' % connection.name(),'network')
 				break
 			else:
 				# we did not break (and nothign was found/done or we have group match)
 				matched = len(ranged_neighbor)
 				if matched > 1:
-					self.logger.network('could not accept connection from %s (more than one neighbor match)' % connection.name())
+					self.logger.debug('could not accept connection from %s (more than one neighbor match)' % connection.name(),'network')
 					reactor.async.schedule(str(uuid.uuid1()),'sending notification (6,5)',connection.notification(6,5,b'could not accept the connection (more than one neighbor match)'))
 					return
 				if not matched:
-					self.logger.network('no session configured for %s' % connection.name())
+					self.logger.debug('no session configured for %s' % connection.name(),'network')
 					reactor.async.schedule(str(uuid.uuid1()),'sending notification (6,3)',connection.notification(6,3,b'no session configured for the peer'))
 					return
 
@@ -208,7 +208,7 @@ class Listener (object):
 				new_peer = Peer(new_neighbor,self)
 				denied = new_peer.handle_connection(connection)
 				if denied:
-					self.logger.network('refused connection from %s due to the state machine' % connection.name())
+					self.logger.debug('refused connection from %s due to the state machine' % connection.name(),'network')
 					return
 
 				reactor.peers[new_neighbor.name()] = new_peer
@@ -220,7 +220,7 @@ class Listener (object):
 
 		for sock,(ip,port,_,_) in self._sockets.items():
 			sock.close()
-			self.logger.network('stopped listening on %s:%d' % (ip,port),'info')
+			self.logger.info('stopped listening on %s:%d' % (ip,port),'network')
 
 		self._sockets = {}
 		self.serving = False

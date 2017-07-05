@@ -62,7 +62,7 @@ class _Configuration (object):
 				if change.nlri.family() in self.neighbors[neighbor].families():
 					self.neighbors[neighbor].rib.outgoing.add_to_rib(change)
 				else:
-					self.logger.configuration('the route family is not configured on neighbor','error')
+					self.logger.error('the route family is not configured on neighbor','configuration')
 					result = False
 		return result
 
@@ -83,7 +83,7 @@ class _Configuration (object):
 						self.neighbors[neighbor].asm[operational.family()] = operational
 					self.neighbors[neighbor].messages.append(operational)
 				else:
-					self.logger.configuration('the route family is not configured on neighbor','error')
+					self.logger.error('the route family is not configured on neighbor','configuration')
 					result = False
 		return result
 
@@ -459,7 +459,7 @@ class Configuration (_Configuration):
 
 		if self.section(section) is not True:
 			self._rollback_reload()
-			self.logger.configuration(
+			self.logger.debug(
 				"\n"
 				"syntax error in api command %s\n"
 				"line %d: %s\n"
@@ -468,14 +468,15 @@ class Configuration (_Configuration):
 					self.tokeniser.number,
 					' '.join(self.tokeniser.line),
 					str(self.error)
-				)
+				),
+				'configuration'
 			)
 			return False
 		return True
 
 	def _enter (self,name):
 		location = self.tokeniser.iterate()
-		self.logger.configuration("> %-16s | %s" % (location,self.tokeniser.params()))
+		self.logger.debug("> %-16s | %s" % (location,self.tokeniser.params()),'configuration')
 
 		if location not in self._structure[name]['sections']:
 			return self.error.set('section %s is invalid in %s, %s' % (location,name,self.scope.location()))
@@ -487,7 +488,7 @@ class Configuration (_Configuration):
 
 	def _leave (self):
 		left = self.scope.leave()
-		self.logger.configuration("< %-16s | %s" % (left,self.tokeniser.params()))
+		self.logger.debug("< %-16s | %s" % (left,self.tokeniser.params()),'configuration')
 
 		if not left:
 			return self.error.set('closing too many parenthesis')
@@ -495,7 +496,7 @@ class Configuration (_Configuration):
 
 	def _run (self,name):
 		command = self.tokeniser.iterate()
-		self.logger.configuration(". %-16s | %s" % (command,self.tokeniser.params()))
+		self.logger.debug(". %-16s | %s" % (command,self.tokeniser.params()),'configuration')
 
 		if not self.run(name,command):
 			return False

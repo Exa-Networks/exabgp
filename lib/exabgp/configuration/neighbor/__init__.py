@@ -199,7 +199,7 @@ class ParseNeighbor (Section):
 				for family in ParseAddPath.convert:
 					for pair in add_path.get(family,[]):
 						if pair not in families:
-							self.logger.configuration('skipping add-path family %s as it is not negotiated' % pair)
+							self.logger.debug('skipping add-path family %s as it is not negotiated' % pair,'configuration')
 							continue
 						neighbor.add_addpath(pair)
 			else:
@@ -233,7 +233,7 @@ class ParseNeighbor (Section):
 
 		if neighbor.route_refresh:
 			if neighbor.adj_rib_out:
-				self.logger.configuration('route-refresh requested, enabling adj-rib-out')
+				self.logger.debug('route-refresh requested, enabling adj-rib-out','configuration')
 
 		missing = neighbor.missing()
 		if missing:
@@ -292,8 +292,3 @@ class ParseNeighbor (Section):
 			_init_neighbor(neighbor)
 
 		return True
-
-		# display configuration
-		# for line in str(neighbor).split('\n'):
-		# 	self.logger.configuration(line)
-		# self.logger.configuration("\n")

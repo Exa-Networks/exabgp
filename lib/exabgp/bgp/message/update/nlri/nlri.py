@@ -110,7 +110,7 @@ class NLRI (Family):
 			cls.logger = Logger()
 
 		a,s = AFI.create(afi),SAFI.create(safi)
-		cls.logger.parser(LazyNLRI(a,s,addpath,data))
+		cls.logger.debug(LazyNLRI(a,s,addpath,data),'parser')
 
 		key = '%s/%s' % (a, s)
 		if key in cls.registered_nlri:

@@ -181,7 +181,7 @@ class Update (Message):
 	def unpack_message (cls, data, negotiated):
 		logger = Logger()
 
-		logger.parser(LazyFormat("parsing UPDATE",data))
+		logger.debug(LazyFormat('parsing UPDATE',data),'parser')
 
 		length = len(data)
 
@@ -194,12 +194,12 @@ class Update (Message):
 		withdrawn, _attributes, announced = cls.split(data)
 
 		if not withdrawn:
-			logger.parser("withdrawn NLRI none")
+			logger.debug('withdrawn NLRI none','parser')
 
 		attributes = Attributes.unpack(_attributes,negotiated)
 
 		if not announced:
-			logger.parser("announced NLRI none")
+			logger.debug('announced NLRI none','parser')
 
 		# Is the peer going to send us some Path Information with the route (AddPath)
 		addpath = negotiated.addpath.receive(AFI.ipv4,SAFI.unicast)
@@ -213,14 +213,14 @@ class Update (Message):
 		nlris = []
 		while withdrawn:
 			nlri,left = NLRI.unpack_nlri(AFI.ipv4,SAFI.unicast,withdrawn,IN.WITHDRAWN,addpath)
-			logger.parser("withdrawn NLRI %s" % nlri)
+			logger.debug('withdrawn NLRI %s' % nlri,'parser')
 			withdrawn = left
 			nlris.append(nlri)
 
 		while announced:
 			nlri,left = NLRI.unpack_nlri(AFI.ipv4,SAFI.unicast,announced,IN.ANNOUNCED,addpath)
 			nlri.nexthop = nexthop
-			logger.parser("announced NLRI %s" % nlri)
+			logger.debug('announced NLRI %s' % nlri,'parser')
 			announced = left
 			nlris.append(nlri)
 

@@ -236,14 +236,14 @@ class Attributes (dict):
 		message = b''
 
 		default = {
-			Attribute.CODE.ORIGIN: lambda l,r: Origin(Origin.IGP),
-			Attribute.CODE.AS_PATH: lambda l,r: ASPath([],[]) if l == r else ASPath([local_asn,],[]),
-			Attribute.CODE.LOCAL_PREF: lambda l,r: LocalPreference(100) if l == r else NOTHING,
+			Attribute.CODE.ORIGIN: lambda left,right: Origin(Origin.IGP),
+			Attribute.CODE.AS_PATH: lambda left,right: ASPath([],[]) if left == right else ASPath([local_asn,],[]),
+			Attribute.CODE.LOCAL_PREF: lambda left,right: LocalPreference(100) if left == right else NOTHING,
 		}
 
 		skip = {
-			Attribute.CODE.NEXT_HOP: lambda l,r,nh: nh.ipv4() is not True,
-			Attribute.CODE.LOCAL_PREF: lambda l,r,nh: l != r,
+			Attribute.CODE.NEXT_HOP: lambda left,right,nh: nh.ipv4() is not True,
+			Attribute.CODE.LOCAL_PREF: lambda left,right,nh: left != right,
 		}
 
 		keys = list(self)
@@ -346,7 +346,7 @@ class Attributes (dict):
 		attribute = data[:length]
 
 		logger = Logger()
-		logger.parser(LazyAttribute(flag,aid,length,data[:length]))
+		logger.debug(LazyAttribute(flag,aid,length,data[:length]),'parser')
 
 		# remove the PARTIAL bit before comparaison if the attribute is optional
 		if aid in Attribute.attributes_optional:
@@ -357,7 +357,7 @@ class Attributes (dict):
 			if aid in self.NO_DUPLICATE:
 				raise Notify(3,1,'multiple attribute for %s' % str(Attribute.CODE(attribute.ID)))
 
-			logger.parser('duplicate attribute %s (flag 0x%02X, aid 0x%02X) skipping' % (Attribute.CODE.names.get(aid,'unset'),flag,aid))
+			logger.debug('duplicate attribute %s (flag 0x%02X, aid 0x%02X) skipping' % (Attribute.CODE.names.get(aid,'unset'),flag,aid),'parser')
 			return self.parse(left,negotiated)
 
 		# handle the attribute if we know it
@@ -388,18 +388,18 @@ class Attributes (dict):
 		# if we know the attribute but the flag is not what the RFC says.
 		if aid in Attribute.attributes_known:
 			if aid in self.TREAT_AS_WITHDRAW:
-				logger.parser('invalid flag for attribute %s (flag 0x%02X, aid 0x%02X) treat as withdraw' % (Attribute.CODE.names.get(aid,'unset'),flag,aid))
+				logger.debug('invalid flag for attribute %s (flag 0x%02X, aid 0x%02X) treat as withdraw' % (Attribute.CODE.names.get(aid,'unset'),flag,aid),'parser')
 				self.add(TreatAsWithdraw())
 			if aid in self.DISCARD:
-				logger.parser('invalid flag for attribute %s (flag 0x%02X, aid 0x%02X) discard' % (Attribute.CODE.names.get(aid,'unset'),flag,aid))
+				logger.debug('invalid flag for attribute %s (flag 0x%02X, aid 0x%02X) discard' % (Attribute.CODE.names.get(aid,'unset'),flag,aid),'parser')
 				return self.parse(left,negotiated)
 			# XXX: Check if we are missing any
-			logger.parser('invalid flag for attribute %s (flag 0x%02X, aid 0x%02X) unspecified (should not happen)' % (Attribute.CODE.names.get(aid,'unset'),flag,aid))
+			logger.debug('invalid flag for attribute %s (flag 0x%02X, aid 0x%02X) unspecified (should not happen)' % (Attribute.CODE.names.get(aid,'unset'),flag,aid),'parser')
 			return self.parse(left,negotiated)
 
 		# it is an unknown transitive attribute we need to pass on
 		if flag & Attribute.Flag.TRANSITIVE:
-			logger.parser('unknown transitive attribute (flag 0x%02X, aid 0x%02X)' % (flag,aid))
+			logger.debug('unknown transitive attribute (flag 0x%02X, aid 0x%02X)' % (flag,aid),'parser')
 			try:
 				decoded = GenericAttribute(aid,flag | Attribute.Flag.PARTIAL,attribute)
 			except IndexError:
@@ -408,7 +408,7 @@ class Attributes (dict):
 			return self.parse(left,negotiated)
 
 		# it is an unknown non-transitive attribute we can ignore.
-		logger.parser('ignoring unknown non-transitive attribute (flag 0x%02X, aid 0x%02X)' % (flag,aid))
+		logger.debug('ignoring unknown non-transitive attribute (flag 0x%02X, aid 0x%02X)' % (flag,aid),'parser')
 		return self.parse(left,negotiated)
 
 	def merge_attributes (self):
@@ -453,9 +453,8 @@ class Attributes (dict):
 		self.add(aspath,key)
 
 	def __hash__ (self):
-		# XXX: FIXME: not excellent... :-(
 		# FIXME: two routes with distinct nh but other attributes equal
-		#        will hash to the same value until repr represents the nh (??)
+		# will hash to the same value until repr represents the nh (??)
 		return hash(repr(self))
 
 	def __eq__ (self, other):

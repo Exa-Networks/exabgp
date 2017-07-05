@@ -32,7 +32,7 @@ class ParseFlowRoute (Section):
 		'  %s\n' \
 		'}\n' % (
 			'\n  '.join(ParseFlowMatch.syntax.split('\n')),
-			'\n  '.join(ParseFlowScope.syntax.split('\n')),			
+			'\n  '.join(ParseFlowScope.syntax.split('\n')),
 			'\n  '.join(ParseFlowThen.syntax.split('\n'))
 		)
 
@@ -78,5 +78,5 @@ class ParseFlowRoute (Section):
 		return True
 
 	def _check (self,change):
-		self.logger.configuration('warning: no check on flows are implemented')
+		self.logger.debug('warning: no check on flows are implemented','configuration')
 		return True

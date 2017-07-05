@@ -232,18 +232,18 @@ def ready (io):
 			_,w,_ = select.select([],[io,],[],0)
 			if not w:
 				if not warned and time.time()-start > 1.0:
-					logger.network('attempting to establish connection','debug')
+					logger.debug('attempting to establish connection','network')
 					warned = True
 				yield False
 				continue
 			err = io.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
 			if not err:
 				if warned:
-					logger.network('connection established','warning')
+					logger.warning('connection established','network')
 				yield True
 				return
 			elif err in error.block:
-				logger.network('connect attempt failed, retrying, reason %s' % errno.errorcode[err],'warning')
+				logger.warning('connect attempt failed, retrying, reason %s' % errno.errorcode[err],'network')
 				yield False
 			else:
 				yield False

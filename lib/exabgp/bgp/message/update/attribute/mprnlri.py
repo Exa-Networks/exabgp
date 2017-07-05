@@ -201,7 +201,6 @@ class MPRNLRI (Attribute,Family):
 			if left == data:
 				raise RuntimeError("sub-calls should consume data")
 
-			# logger.parser(LazyFormat("parsed announce mp nlri %s payload " % nlri,data[:length]))
 			data = left
 		return cls(afi,safi,nlris)
 

@@ -279,7 +279,7 @@ def main ():
 					configurations.append(normalised)
 					continue
 
-			logger.configuration('one of the arguments passed as configuration is not a file (%s)' % f,'error')
+			logger.debug('one of the arguments passed as configuration is not a file (%s)' % f,'error','configuration')
 			sys.exit(1)
 
 	else:
@@ -296,7 +296,7 @@ def main ():
 		run(env,comment,configurations,root,options["--validate"])
 
 	if not (env.log.destination in ('syslog','stdout','stderr') or env.log.destination.startswith('host:')):
-		logger.configuration('can not log to files when running multiple configuration (as we fork)','error')
+		logger.error('can not log to files when running multiple configuration (as we fork)','configuration')
 		sys.exit(1)
 
 	try:
@@ -317,46 +317,46 @@ def main ():
 		for pid in pids:
 			os.waitpid(pid,0)
 	except OSError as exc:
-		logger.reactor('Can not fork, errno %d : %s' % (exc.errno,exc.strerror),'critical')
+		logger.critical('can not fork, errno %d : %s' % (exc.errno,exc.strerror),'reactor')
 		sys.exit(1)
 
 
 def run (env, comment, configurations, root, validate, pid=0):
 	logger = Logger()
 
-	logger.debug('Thank you for using ExaBGP',source='welcome',level='notice')
-	logger.debug('%s' % version,source='version',level='notice')
-	logger.debug('%s' % sys.version.replace('\n',' '),source='interpreter',level='notice')
-	logger.debug('%s' % ' '.join(platform.uname()[:5]),source='os',level='notice')
-	logger.debug('%s' % root,source='installation',level='notice')
+	logger.notice('Thank you for using ExaBGP','welcome')
+	logger.notice('%s' % version,'version')
+	logger.notice('%s' % sys.version.replace('\n',' '),'interpreter')
+	logger.notice('%s' % ' '.join(platform.uname()[:5]),'os')
+	logger.notice('%s' % root,'installation')
 
 	if comment:
-		logger.info(comment,source='advice',level='notice')
+		logger.notice(comment,'advice')
 
 	warning = warn()
 	if warning:
-		logger.info(warning,source='advice',level='warning')
+		logger.warning(warning,'advice')
 
 	if env.api.cli:
 		pipes = named_pipe(root)
 		if len(pipes) != 1:
 			env.api.cli = False
-			logger.error('Could not find the named pipes (exabgp.in and exabgp.out) required for the cli',source='cli')
-			logger.error('We scanned the following folders (the number is your PID):',source='cli')
+			logger.error('could not find the named pipes (exabgp.in and exabgp.out) required for the cli','cli')
+			logger.error('we scanned the following folders (the number is your PID):','cli')
 			for location in pipes:
-				logger.error(' - %s' % location,source='cli control')
-			logger.error('please make them in one of the folder with the following commands:',source='cli control')
-			logger.error('> mkfifo %s/run/exabgp.{in,out}' % os.getcwd(),source='cli control')
-			logger.error('> chmod 600 %s/run/exabgp.{in,out}' % os.getcwd(),source='cli control')
+				logger.error(' - %s' % location,'cli control')
+			logger.error('please make them in one of the folder with the following commands:','cli control')
+			logger.error('> mkfifo %s/run/exabgp.{in,out}' % os.getcwd(),'cli control')
+			logger.error('> chmod 600 %s/run/exabgp.{in,out}' % os.getcwd(),'cli control')
 			if os.getuid() != 0:
-				logger.error('> chown %d:%d %s/run/exabgp.{in,out}' % (os.getuid(),os.getgid(),os.getcwd()),source='cli control')
+				logger.error('> chown %d:%d %s/run/exabgp.{in,out}' % (os.getuid(),os.getgid(),os.getcwd()),'cli control')
 		else:
 			pipe = pipes[0]
 			os.environ['exabgp_cli_pipe'] = pipe
 
-			logger.info('named pipes for the cli are:',source='cli control')
-			logger.info('to send commands  %sexabgp.in' % pipe,source='cli control')
-			logger.info('to read responses %sexabgp.out' % pipe,source='cli control')
+			logger.info('named pipes for the cli are:','cli control')
+			logger.info('to send commands  %sexabgp.in' % pipe,'cli control')
+			logger.info('to read responses %sexabgp.out' % pipe,'cli control')
 
 	if not env.profile.enable:
 		was_ok = Reactor(configurations).run(validate,root)
@@ -385,7 +385,7 @@ def run (env, comment, configurations, root, validate, pid=0):
 
 	if not notice:
 		cwd = os.getcwd()
-		logger.reactor('profiling ....')
+		logger.debug('profiling ....','reactor')
 		profiler = profile.Profile()
 		profiler.enable()
 		try:
@@ -402,14 +402,14 @@ def run (env, comment, configurations, root, validate, pid=0):
 					kprofile.output(write)
 			except IOError:
 				notice = 'could not save profiling in formation at: ' + destination
-				logger.reactor("-"*len(notice))
-				logger.reactor(notice)
-				logger.reactor("-"*len(notice))
+				logger.debug("-"*len(notice),'reactor')
+				logger.debug(notice,'reactor')
+				logger.debug("-"*len(notice),'reactor')
 			__exit(env.debug.memory,0 if was_ok else 1)
 	else:
-		logger.reactor("-"*len(notice))
-		logger.reactor(notice)
-		logger.reactor("-"*len(notice))
+		logger.debug("-"*len(notice),'reactor')
+		logger.debug(notice,'reactor')
+		logger.debug("-"*len(notice),'reactor')
 		Reactor(configurations).run(validate,root)
 		__exit(env.debug.memory,1)
 

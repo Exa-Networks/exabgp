@@ -20,7 +20,7 @@ class ASYNC (object):
 		return len(self._async) > 0
 
 	def schedule (self, uid, command, callback):
-		self.logger.reactor('async | %s' % command)
+		self.logger.debug('async | %s' % command,'reactor')
 		if self._async:
 			self._async[0].append((uid,callback))
 		else:

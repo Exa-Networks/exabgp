@@ -31,12 +31,12 @@ class API (Command):
 		self.configuration = Configuration([])
 
 	def log_message (self, message, level='info'):
-		self.logger.reactor(message,level)
+		self.logger.notice(message,'api',level)
 
 	def log_failure (self, message, level='error'):
 		error = str(self.configuration.tokeniser.error)
 		report = '%s\nreason: %s' % (message, error) if error else message
-		self.logger.reactor(report,level)
+		self.logger.error(report,'api',level)
 
 	def text (self, reactor, service, command):
 		for registered in self.functions:
@@ -45,7 +45,7 @@ class API (Command):
 				self.callback['text'][registered](self,reactor,service,command)
 				return True
 		reactor.answer(service,'error')
-		self.logger.reactor("Command from process not understood : %s" % command,'warning')
+		self.logger.warning('command from process not understood : %s' % command,'api')
 		return False
 
 	def api_route (self, command):

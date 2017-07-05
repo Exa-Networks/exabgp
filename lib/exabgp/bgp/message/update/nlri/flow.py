@@ -648,7 +648,6 @@ class Flow (NLRI):
 				adding,bgp = klass.make(bgp)
 				if not nlri.add(adding):
 					raise Notify(3,10,'components are incompatible (two sources, two destinations, mix ipv4/ipv6) %s' % seen)
-				# logger.parser(LazyFormat("added flow %s (%s) payload " % (klass.NAME,adding),bgp[:-len(left)]))
 			else:
 				end = False
 				while not end:
@@ -659,6 +658,5 @@ class Flow (NLRI):
 					value,bgp = bgp[:length],bgp[length:]
 					adding = klass.decoder(value)
 					nlri.add(klass(operator,adding))
-					# logger.parser(LazyFormat("added flow %s (%s) operator %d len %d payload " % (klass.NAME,adding,byte,length),value))
 
 		return nlri, bgp+over

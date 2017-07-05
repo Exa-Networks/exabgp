@@ -37,7 +37,7 @@ class ReceiveTimer (object):
 		if self.holdtime:
 			left = int(self.last_read  + self.holdtime - time.time())
 			if self.last_print != left:
-				self.logger.timers('Receive Timer %d second(s) left' % left,source=self.session())
+				self.logger.debug('receive-timer %d second(s) left' % left,source=self.session())
 				self.last_print = left
 			if left <= 0:
 				raise Notify(self.code,self.subcode,self.message)
@@ -62,7 +62,7 @@ class SendTimer (object):
 		left = self.last_sent + self.keepalive - now
 
 		if now != self.last_print:
-			self.logger.timers('Send Timer %d second(s) left' % left,source=self.session())
+			self.logger.debug('send-timer %d second(s) left' % left,source=self.session())
 			self.last_print = now
 
 		if left <= 0:
