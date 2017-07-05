@@ -57,7 +57,7 @@ if sys.version_info[0] >= 3:
 
 def check_neighbor (neighbors):
 	logger = Logger()
-	logger._option.parser = True
+	logger._option['parser'] = True
 
 	logger.notice('\ndecoding routes in configuration','parser')
 
@@ -201,7 +201,7 @@ def check_open (neighbor, raw):
 
 def check_update (neighbor, raw):
 	logger = Logger()
-	logger._option.parser = True
+	logger._option['parser'] = True
 	logger.debug('\ndecoding routes in configuration','parser')
 
 	neighbor = neighbor[list(neighbor)[0]]
