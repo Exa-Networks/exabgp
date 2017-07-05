@@ -58,6 +58,9 @@ class Section (Error):
 	def parse (self, name, command):
 		identifier = command if command in self.known else (self.name,command)
 		if identifier not in self.known:
+			import pdb; pdb.set_trace()
+			identifier = (name,command)
+		if identifier not in self.known:
 			return self.error.set('unknown command %s options are %s' % (command,', '.join(self.known)))
 
 		try:

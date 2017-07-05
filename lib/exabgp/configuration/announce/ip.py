@@ -7,12 +7,9 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-# This is a legacy file to handle 3.4.x like format
-
 from exabgp.util import character
 from exabgp.util import ordinal
 from exabgp.util import concat_bytes_i
-
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import NoNextHop
@@ -24,7 +21,7 @@ from exabgp.bgp.message import OUT
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.bgp.message.update.nlri import INET
+from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute import Attributes
@@ -32,8 +29,7 @@ from exabgp.bgp.message.update.attribute import Attributes
 from exabgp.configuration.core import Section
 
 from exabgp.configuration.static.parser import prefix
-from exabgp.configuration.static.parser import inet
-from exabgp.configuration.static.parser import path_information
+# from exabgp.configuration.static.parser import inet
 from exabgp.configuration.static.parser import attribute
 from exabgp.configuration.static.parser import next_hop
 from exabgp.configuration.static.parser import origin
@@ -52,7 +48,6 @@ from exabgp.configuration.static.parser import name as named
 from exabgp.configuration.static.parser import split
 from exabgp.configuration.static.parser import watchdog
 from exabgp.configuration.static.parser import withdraw
-from exabgp.configuration.static.mpls import label
 
 
 # Take an integer an created it networked packed representation for the right family (ipv4/ipv6)
@@ -90,8 +85,6 @@ class ParseIP (Section):
 		'\n   ' + ' ;\n   '.join(definition) + '\n}'
 
 	known = {
-		'path-information':    path_information,
-		'label':               label,
 		'attribute':           attribute,
 		'next-hop':            next_hop,
 		'origin':              origin,
@@ -113,7 +106,6 @@ class ParseIP (Section):
 	}
 
 	action = {
-		'path-information':    'nlri-set',
 		'attribute':           'attribute-add',
 		'next-hop':            'nexthop-and-attribute',
 		'origin':              'attribute-add',
@@ -135,7 +127,6 @@ class ParseIP (Section):
 	}
 
 	assign = {
-		'path-information':    'path_info',
 	}
 
 	name = 'ip'
@@ -258,19 +249,47 @@ def ip (tokeniser,afi,safi):
 	return [change]
 
 
+def ip_multicast (tokeniser,afi,safi):
+	ipmask = prefix(tokeniser)
+
+	nlri = INET(afi,safi,OUT.ANNOUNCE)
+	nlri.cidr = CIDR(ipmask.pack(),ipmask.mask)
+
+	change = Change(
+		nlri,
+		Attributes()
+	)
+
+	while True:
+		command = tokeniser()
+
+		if not command:
+			break
+
+		action = ParseIP.action.get(command,'')
+
+		if action == 'attribute-add':
+			change.attributes.add(ParseIP.known[command](tokeniser))
+		elif action == 'nlri-set':
+			change.nlri.assign(ParseIP.assign[command],ParseIP.known[command](tokeniser))
+		elif action == 'nexthop-and-attribute':
+			nexthop,attribute = ParseIP.known[command](tokeniser)
+			change.nlri.nexthop = nexthop
+			change.attributes.add(attribute)
+		else:
+			raise ValueError('route: unknown command "%s"' % command)
+
+	return [change]
+
+
 class ParseIPv4 (ParseIP):
 	name = 'ipv4'
 	afi = AFI.ipv4
 
 
-@ParseIPv4.register('unicast','extend-name',True)
-def unicast_v4 (tokeniser):
-	return ip(tokeniser,AFI.ipv4,SAFI.unicast)
-
-
 @ParseIPv4.register('multicast','extend-name',True)
 def multicast_v4 (tokeniser):
-	return ip(tokeniser,AFI.ipv4,SAFI.multicast)
+	return ip_multicast(tokeniser,AFI.ipv4,SAFI.multicast)
 
 
 class ParseIPv6 (ParseIP):
@@ -278,11 +297,6 @@ class ParseIPv6 (ParseIP):
 	afi = AFI.ipv6
 
 
-@ParseIPv6.register('unicast','extend-name',True)
-def unicast_v6 (tokeniser):
-	return ip(tokeniser,AFI.ipv6,SAFI.unicast)
-
-
 @ParseIPv6.register('multicast','extend-name',True)
 def multicast_v6 (tokeniser):
-	return ip(tokeniser,AFI.ipv6,SAFI.multicast)
+	return ip_multicast(tokeniser,AFI.ipv6,SAFI.multicast)
