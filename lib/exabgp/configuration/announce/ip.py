@@ -1,6 +1,6 @@
 # encoding: utf-8
 """
-announce/ipv4.py
+announce/ip.py
 
 Created by Thomas Mangin on 2015-06-04.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
@@ -33,6 +33,7 @@ from exabgp.configuration.core import Section
 
 from exabgp.configuration.static.parser import prefix
 from exabgp.configuration.static.parser import inet
+from exabgp.configuration.static.parser import path_information
 from exabgp.configuration.static.parser import attribute
 from exabgp.configuration.static.parser import next_hop
 from exabgp.configuration.static.parser import origin
@@ -89,6 +90,7 @@ class ParseIP (Section):
 		'\n   ' + ' ;\n   '.join(definition) + '\n}'
 
 	known = {
+		'path-information':    path_information,
 		'label':               label,
 		'attribute':           attribute,
 		'next-hop':            next_hop,
@@ -111,6 +113,7 @@ class ParseIP (Section):
 	}
 
 	action = {
+		'path-information':    'nlri-set',
 		'attribute':           'attribute-add',
 		'next-hop':            'nexthop-and-attribute',
 		'origin':              'attribute-add',
@@ -132,6 +135,7 @@ class ParseIP (Section):
 	}
 
 	assign = {
+		'path-information':    'path_info',
 	}
 
 	name = 'ip'
