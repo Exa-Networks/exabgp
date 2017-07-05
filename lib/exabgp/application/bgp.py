@@ -324,14 +324,14 @@ def main ():
 def run (env, comment, configurations, root, validate, pid=0):
 	logger = Logger()
 
-	logger.debug('Thank you for using ExaBGP',source='welcome')
-	logger.debug('%s' % version,source='version',level='START')
-	logger.debug('%s' % sys.version.replace('\n',' '),source='interpreter',level='START')
-	logger.debug('%s' % ' '.join(platform.uname()[:5]),source='os',level='START')
-	logger.debug('%s' % root,source='installation',level='START')
+	logger.debug('Thank you for using ExaBGP',source='welcome',level='notice')
+	logger.debug('%s' % version,source='version',level='notice')
+	logger.debug('%s' % sys.version.replace('\n',' '),source='interpreter',level='notice')
+	logger.debug('%s' % ' '.join(platform.uname()[:5]),source='os',level='notice')
+	logger.debug('%s' % root,source='installation',level='notice')
 
 	if comment:
-		logger.info(comment,source='advice')
+		logger.info(comment,source='advice',level='notice')
 
 	warning = warn()
 	if warning:

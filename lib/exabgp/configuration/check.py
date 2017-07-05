@@ -261,8 +261,8 @@ def check_update (neighbor, raw):
 		logger.parser('')  # new line
 		for number in range(len(update.nlris)):
 			change = Change(update.nlris[number],update.attributes)
-			logger.parser('decoded %s %s %s' % (decoding,change.nlri.action,change.extensive()))
-		logger.parser('update json %s' % Response.JSON(json_version).update(neighbor,'in',update,None,'',''))
+			logger.parser('decoded %s %s %s' % (decoding,change.nlri.action,change.extensive()),'info')
+		logger.parser('update json %s' % Response.JSON(json_version).update(neighbor,'in',update,None,'',''),'info')
 
 	return True
 

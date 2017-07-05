@@ -111,16 +111,33 @@ class LazyNLRI (object):
 		return 'NLRI      %-18s %-28s payload %s' % (family,path,payload)
 
 
+def istty (std):
+	try:
+		return std.isatty()
+	except KeyboardInterrupt:
+		raise
+	except Exception:
+		return False
+
+
 class Logger (object):
 	COLORS = {
 		'START':    '\033[01;32m',  # Green
 		'DEBUG':    '',
-		'INFO':     '\033[01;34m',  # Blue
+		'INFO':     '\033[01;32m',  # Green
+		'NOTICE':   '\033[01;34m',  # Blue
 		'WARNING':  '\033[01;33m',  # Yellow
 		'ERROR':    '\033[01;31m',  # Red
 		'CRITICAL': '\033[00;31m',  # Strong Red
 	}
+	COLOR_BOLD    = '\033[1m'       # Bold
 	COLOR_END     = '\033[0m'
+
+	TTY = {
+		'stderr': lambda: istty(sys.stderr),
+		'stdout': lambda: istty(sys.stdout),
+		'out': lambda: istty(sys.stdout),
+	}
 
 	_instance = dict()
 	_syslog = None
@@ -165,16 +182,20 @@ class Logger (object):
 	def _format (self, timestamp, level, source, message):
 		if self.short:
 			return message
-		now = time.strftime('%a, %d %b %Y %H:%M:%S',timestamp)
-		if self._where in ['stderr','stdout','out']:
-			start = self.COLORS.get(level,'') if self._where in ('stdout','stderr','out') else ''
-			end = self.COLOR_END if start else ''
-			_source = '%s%-13s%s' % (start,source,end)
-			_message = '%s%-8s%s' % (start,message,end)
-			return "%s | %-8s | %-6d | %s | %s" % (now,level,self._pid,_source,_message)
+		if self._where in ['stdout','stderr','out']:
+			now = time.strftime('%H:%M:%S',timestamp)
+			if not self.TTY[self._where]():
+				return "%s | %-6d | %s | %s" % (now,self._pid,source,message)
+			return "%s | %-6d | '%s%-13s%s' | %s%-8s%s" % (
+				now,
+				self._pid,
+				self.COLORS.get(level,''),source,self.COLOR_END,
+				self.COLOR_BOLD,message,self.COLOR_END
+			)
 		elif self._where in ['syslog',]:
 			return "%s[%d]: %-13s %s" % (environment.application,self._pid,source,message)
 		elif self._where in ['file',]:
+			now = time.strftime('%a, %d %b %Y %H:%M:%S',timestamp)
 			return "%s %-6d %-13s %s" % (now,self._pid,source,message)
 		else:
 			# failsafe
@@ -318,6 +339,9 @@ class Logger (object):
 		self.report(message,source,level)
 
 	def info (self, message, source='', level='INFO'):
+		self.report(message,source,level)
+
+	def notice (self, message, source='', level='NOTICE'):
 		self.report(message,source,level)
 
 	def warning (self, message, source='', level='WARNING'):

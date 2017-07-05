@@ -133,7 +133,12 @@ def main ():
 
 				while '\n' in buf:
 					line,buf = buf.split('\n',1)
-					if line == 'done':
+					if line in 'done':
+						done = True
+						break
+					if line in 'done':
+						sys.stderr.write('ExaBGP is shutting down, command aborted\n')
+						sys.stderr.flush()
 						done = True
 						break
 					if line == 'error':
